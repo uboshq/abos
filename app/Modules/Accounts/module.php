@@ -18,6 +18,9 @@ use App\Modules\Accounts\Imports\OpeningBalanceImporter;
 use App\Modules\Accounts\Integrity\AccountsChecks;
 use App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetCapitalisationPaper;
+use App\Modules\Accounts\Models\AssetCategory;
+use App\Modules\Accounts\Models\AssetDisposalPaper;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
@@ -533,6 +536,8 @@ return [
      */
     'duplicates' => [
         ['model' => MoneyCategory::class, 'name' => ['name_en', 'name_bn']],
+        // ⭐ সম্পদের শ্রেণি — "যানবাহন" দুইবার নয় (স্থায়ী সম্পদ ধাপ ১)
+        ['model' => AssetCategory::class, 'name' => ['name_en', 'name_bn']],
     ],
 
     'drill_sources' => [
@@ -576,11 +581,11 @@ return [
          * বিদায়ের সারির উৎস-আইডি সম্পদেরই ([[FixedAsset::disposalSourceType()]])।
          */
         'fixed_asset' => FixedAsset::class,
-        'asset_disposal' => FixedAsset::class,
+        'asset_disposal' => AssetDisposalPaper::class,
         'depreciation' => DepreciationEntry::class,
         'asset_transfer' => AssetTransfer::class,
         // ⓘ ক্রয় বিলের মাল মজুদ থেকে সম্পদে — দাখিলা ক্রয়ের ([[BillLinesForAssets]]), উৎস-আইডি সম্পদের
-        'asset_capitalise' => FixedAsset::class,
+        'asset_capitalise' => AssetCapitalisationPaper::class,
     ],
 
     /*

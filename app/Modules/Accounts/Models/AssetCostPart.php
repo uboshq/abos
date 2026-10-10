@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AssetCostPart extends Model
 {
     use BelongsToCompany;
+    use IsAudited;
 
     public const PURCHASE = 'purchase';
 

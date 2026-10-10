@@ -15,11 +15,6 @@ use App\Modules\Accounts\Models\FixedAsset;
  */
 class FixedAssetPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        return $user->can('accounts.asset.view');
-    }
-
     public function view(User $user, FixedAsset $asset): bool
     {
         return $user->can('accounts.asset.view');

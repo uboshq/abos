@@ -76,6 +76,8 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
         'DepositPolicy' => 'একই কারণে',
         'HandLoanAccountPolicy' => 'একই কারণে',
         'RentalContractPolicy' => 'একই কারণে',
+        // ⭐ স্থায়ী সম্পদের ছবি-কাগজ — একই কারণে (স্থায়ী সম্পদ ধাপ ১, ১০ অক্টোবর ২০২৬)
+        'FixedAssetPolicy' => 'একই কারণে',
 
         /*
          * ⓘ নিচের তিনটা অন্য কারণে — ২১ সেপ্টেম্বর ২০২৬।
