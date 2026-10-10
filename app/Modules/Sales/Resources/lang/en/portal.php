@@ -46,6 +46,8 @@ return [
     'rejected' => 'Rejected',
     'start_verifying' => 'Start verifying',
     'already_verifying' => 'Verification has already started on this one.',
+    // ⛔ একই স্লিপ দুইবার নয় — টাকার পরিকল্পনা ৪, ৭ অক্টোবর ২০২৬
+    'reference_taken' => 'A payment advice with this reference on this bank account has already been sent — the same money cannot be paid in twice.',
 
     'claim_raised' => 'Thank you — we will check it against the bank.',
     'accepted_message' => 'Accepted, and the collection is on the books.',
