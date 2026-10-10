@@ -1217,6 +1217,7 @@ return [
         'push_failed' => 'That did not work — check the browser permission, then try again.',
         'push_unsupported' => 'This browser does not support push.',
         'push_not_connected' => 'Web Push is not connected for this company.',
+        'push_unknown_service' => 'This browser\'s push service is not one we know, so push could not be turned on.',
         'mine' => 'My notifications',
         'mine_note' => 'Everything sent to you — unread, read and archived. Opening a notification marks it read.',
         'see_all' => 'All notifications',

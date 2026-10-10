@@ -34,6 +34,13 @@ class NotificationPushController extends Controller
             'expirationTime' => ['nullable', 'integer'],
         ]);
 
+        // ⛔ কেবল চেনা পুশ-সেবার ঠিকানা — সার্ভার এখানে অনুরোধ পাঠায়, তাই অচেনা ঠিকানা নয় (SSRF)
+        $check->after(function ($validator) use ($request) {
+            if (! NotificationSubscription::knownEndpoint((string) $request->input('endpoint'))) {
+                $validator->errors()->add('endpoint', (string) __('core.notify.push_unknown_service'));
+            }
+        });
+
         if ($check->fails()) {
             return response()->json(['errors' => $check->errors()], 422);
         }

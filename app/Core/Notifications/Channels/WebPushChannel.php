@@ -54,7 +54,9 @@ final class WebPushChannel implements DeliveryChannel
             return DeliveryResult::permanent('web push is not connected (no VAPID keys)');
         }
 
-        $subscriptions = NotificationSubscription::query()->where('user_id', $user->id)->live()->get();
+        // ⛔ পুরনো বা হাতে বসানো সারিতেও কেবল চেনা পুশ-সেবার ঠিকানা — অচেনা ঠিকানায় সার্ভার কখনো অনুরোধ পাঠায় না
+        $subscriptions = NotificationSubscription::query()->where('user_id', $user->id)->live()->get()
+            ->filter(fn (NotificationSubscription $s) => NotificationSubscription::knownEndpoint((string) $s->endpoint))->values();
 
         if ($subscriptions->isEmpty()) {
             return DeliveryResult::permanent('the recipient has no browser subscription');

@@ -132,7 +132,7 @@ final class TheChannelKeysStayLockedTest extends TestCase
 
     public function test_web_push_subscriptions_need_a_connected_channel_and_keep_their_keys_encrypted(): void
     {
-        $sub = ['endpoint' => 'https://push.example.com/send/abc123', 'keys' => ['p256dh' => 'BPublicKeyOfTheBrowser0123456789', 'auth' => 'authsecret-xyz']];
+        $sub = ['endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123', 'keys' => ['p256dh' => 'BPublicKeyOfTheBrowser0123456789', 'auth' => 'authsecret-xyz']];
 
         $this->actingAs($this->clerk)->postJson(route('notifications.push.subscribe'), $sub)->assertStatus(409);
 
@@ -146,7 +146,7 @@ final class TheChannelKeysStayLockedTest extends TestCase
         // ⓘ প্রেরক mailto: বা https:// ছাড়া চলে না
         $this->put(route('notification.channels.update', 'web_push'), ['enabled' => '1', 'sender_id' => 'just text'])->assertSessionHasErrors('sender_id');
 
-        $this->actingAs($this->clerk)->postJson(route('notifications.push.subscribe'), array_merge($sub, ['endpoint' => 'http://push.example.com/x']))
+        $this->actingAs($this->clerk)->postJson(route('notifications.push.subscribe'), array_merge($sub, ['endpoint' => 'https://push.example.com/x']))
             ->assertStatus(422)->assertJsonValidationErrors('endpoint');
         $this->actingAs($this->clerk)->postJson(route('notifications.push.subscribe'), $sub)->assertOk();
 
