@@ -1106,6 +1106,7 @@ final class SalesInvoiceService
         $warnings = [];
         $cost = '0';
         $lineNo = 0;
+        $inclusiveLines = [];
 
         foreach ($lines as $line) {
             $productId = (int) ($line['product_id'] ?? 0);
@@ -1229,7 +1230,7 @@ final class SalesInvoiceService
              */
             $unitCost = '0';
 
-            SalesInvoiceLine::create([
+            $created = SalesInvoiceLine::create([
                 'sales_invoice_id' => $invoice->id,
                 'product_id' => $productId,
                 'delivery_challan_line_id' => $challanLine?->id,
@@ -1248,6 +1249,7 @@ final class SalesInvoiceService
                 'narration' => $line['narration'] ?? null,
             ]);
 
+            $inclusiveLines[(int) $created->id] = (bool) $figures['inclusive'];
             $totals = $this->addToTotals($totals, $figures);
             $cost = bcadd($cost, bcmul($qty, $unitCost, 4), 4);
         }
@@ -1299,7 +1301,7 @@ final class SalesInvoiceService
             ]);
         }
 
-        $totals = $this->vatAfterBillDiscount($invoice, $totals, $billDiscount, $beforeVat);
+        $totals = $this->vatAfterBillDiscount($invoice, $totals, $billDiscount, $beforeVat, $inclusiveLines);
 
         $totals['total'] = bcsub(bcadd($totals['total'], $rounding, 4), $billDiscount, 4);
 
@@ -1334,9 +1336,10 @@ final class SalesInvoiceService
      * ([[SalesReturnService]], [[SalesReports]])। দামের বাইরের ভ্যাট কমলে মোটও কমে; ভেতরের ভ্যাট দামেই ছিল, মোট বদলায় না।
      *
      * @param  array{subtotal: string, discount: string, tax: string, total: string}  $totals
+     * @param  array<int, bool>  $inclusiveLines  সারির id → ভ্যাট দামের ভিতরে কি না, [[lineFigures()]] যা বলেছিল
      * @return array{subtotal: string, discount: string, tax: string, total: string}
      */
-    private function vatAfterBillDiscount(SalesInvoice $invoice, array $totals, string $billDiscount, string $beforeVat): array
+    private function vatAfterBillDiscount(SalesInvoice $invoice, array $totals, string $billDiscount, string $beforeVat, array $inclusiveLines): array
     {
         if (bccomp($billDiscount, '0', 4) <= 0 || bccomp($totals['tax'], '0', 4) <= 0 || bccomp($beforeVat, '0', 4) <= 0) {
             return $totals;
@@ -1350,7 +1353,13 @@ final class SalesInvoiceService
             }
 
             $cut = Money::round(bcdiv(bcmul($tax, $billDiscount, 8), $beforeVat, 8), 4);
-            $outside = bccomp(bcsub((string) $line->amount, bcsub(bcmul((string) $line->qty, (string) $line->rate, 4), (string) $line->discount, 4), 4), '0', 4) > 0;
+            /*
+             * ⛔ ভিতরে না বাইরে — সারি গোনার মুহূর্তের কথা, সংরক্ষিত দর থেকে আবার গুনে নয় (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⛔৪)।
+             * ⓘ প্যাকের দর ৬ দশমিকে হয় ([[PackConversion::toStockRate()]]) আর ঘরে বসে ৪-এ: ১ বক্স ১০০০ টাকা = ১২ × ৮৩.৩৩৩৩,
+             * তখন amount (৯৯৯.৯৯৯৯) > qty × rate (৯৯৯.৯৯৯৬), আর ভিতরের ভ্যাট "বাইরে" ধরা পড়ে মোট থেকে আরও ~১৩ টাকা কাটত —
+             * ক্রেতা কম বিল পেতেন, খাতা তবু মিলত, কেউ টের পেত না।
+             */
+            $outside = ! ($inclusiveLines[(int) $line->id] ?? false);
 
             $line->update([
                 'tax' => bcsub($tax, $cut, 4),

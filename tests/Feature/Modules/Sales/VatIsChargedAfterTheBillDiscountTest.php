@@ -60,6 +60,34 @@ final class VatIsChargedAfterTheBillDiscountTest extends TestCase
         $this->assertSame('135.0000', (string) $bill->lines->first()->tax);
     }
 
+    /**
+     * ⛔ বাক্সে বেচা, ভ্যাট দামের ভিতরে — মোট কেবল ছাড়টুকুই কমে (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⛔৪)।
+     *
+     * ⓘ ১ বক্স (১২ পিস) ১০০০ টাকা → পিসের দর ৮৩.৩৩৩৩৩৩, ঘরে বসে ৮৩.৩৩৩৩। আগে "ভিতরে না বাইরে" ঠিক হত সংরক্ষিত দর দিয়ে আবার
+     * গুনে, আর ১২ × ৮৩.৩৩৩৩ < amount হওয়ায় সারিটা "বাইরে" ধরা পড়ত — ১০০ টাকা ছাড়ে মোট ৯০০ না হয়ে ~৮৮৬.৯৬।
+     */
+    public function test_a_boxed_line_with_vat_inside_still_falls_by_the_discount_only(): void
+    {
+        $tax = Tax::query()->create(['code' => 'VAB-BOX', 'name_en' => 'VAB-BOX', 'name_bn' => 'VAB-BOX', 'rate' => '15', 'kind' => 'vat',
+            'is_inclusive' => true, 'is_active' => true]);
+        $piece = Unit::query()->where('code', 'PCS')->firstOrFail();
+        $box = Unit::query()->create(['code' => 'VBOX12', 'name_en' => 'Box', 'name_bn' => 'বাক্স', 'base_unit_id' => $piece->id, 'factor' => '12', 'is_active' => true]);
+        $product = app(ProductService::class)->create(['code' => 'VAB-BOX', 'name_en' => 'VAB-BOX', 'name_bn' => 'VAB-BOX',
+            'unit_id' => $piece->id, 'purchase_price' => '50', 'sale_price' => '84', 'tax_id' => $tax->id]);
+
+        $invoice = app(SalesInvoiceService::class)->create([
+            'customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'),
+            'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
+            'trx_date' => now()->toDateString(), 'bill_discount' => '100',
+        ], [['product_id' => $product->id, 'qty' => '1', 'rate' => '1000', 'unit_id' => $box->id]]);
+
+        $bill = SalesInvoice::query()->with('lines')->findOrFail($invoice->id);
+
+        $this->assertLessThan(0.01, abs((float) bcsub((string) $bill->subtotal, '1000', 4)), "ⓘ দৃশ্যটা বানানো যায়নি — উপমোট {$bill->subtotal}, ১ বক্স ১০০০ টাকা নয়।");
+        $this->assertLessThan(0.01, abs((float) bcsub((string) $bill->total, '900', 4)),
+            "⛔ ভিতরের ভ্যাট \"বাইরে\" ধরা পড়েছে — মোট {$bill->total}, হওয়ার কথা ৯০০।");
+    }
+
     public function test_a_discount_bigger_than_the_price_before_vat_is_refused(): void
     {
         $this->expectException(ValidationException::class);
