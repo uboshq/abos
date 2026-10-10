@@ -78,29 +78,43 @@ final class TheTemplateStudioKeepsEveryVersionTest extends TestCase
         $page->assertSee('১,২৫,০০০.০০ টাকা বাকি — মেসার্স রহমান ট্রেডার্স')->assertDontSee('<b>১,২৫,০০০.০০</b>', false);
     }
 
-    public function test_publishing_needs_its_own_key_and_an_older_version_rolls_back(): void
+    public function test_publishing_needs_its_own_key_a_second_person_and_an_older_version_rolls_back(): void
     {
-        $this->post(route('notification.templates.store'), $this->form())->assertRedirect();
+        // ⓘ লেখক লেখেন — প্রকাশের চাবি নেই
+        $this->grant($this->writer, 'notification.templates');
+        $this->actingAs($this->writer->fresh())->post(route('notification.templates.store'), $this->form())->assertRedirect();
         $template = NotificationTemplate::query()->where('code', 'due_soon')->firstOrFail();
-        $this->put(route('notification.templates.update', $template), $this->form(['title_bn' => 'দ্বিতীয় লেখা {amount}']))->assertRedirect();
+        $this->actingAs($this->writer->fresh())->put(route('notification.templates.update', $template), $this->form(['title_bn' => 'দ্বিতীয় লেখা {amount}']))->assertRedirect();
         [$v1, $v2] = NotificationTemplateVersion::query()->where('template_id', $template->id)->orderBy('version')->get()->all();
 
-        $this->grant($this->writer, 'notification.templates');
         $this->actingAs($this->writer->fresh())->get(route('notification.templates.edit', $template))->assertOk()
             ->assertDontSee(route('notification.templates.publish', $template), false);
         $this->actingAs($this->writer->fresh())->post(route('notification.templates.publish', $template), ['version_id' => $v2->id])->assertForbidden();
-        $this->assertNull($template->fresh()->published_version_id);
+
+        // ⭐ চাবি পেলেও নিজের লেখা নিজে প্রকাশ নয় — দ্বিতীয় একজন
+        $this->grant($this->writer, 'notification.templates.publish');
+        $this->actingAs($this->writer->fresh())->get(route('notification.templates.edit', $template))->assertOk()
+            ->assertSee('data-own-version', false)->assertDontSee(route('notification.templates.publish', $template), false);
+        $this->actingAs($this->writer->fresh())->post(route('notification.templates.publish', $template), ['version_id' => $v2->id])->assertSessionHas('failed');
+        $this->assertNull($template->fresh()->published_version_id, '⛔ লেখক নিজের লেখা নিজেই প্রকাশ করলেন');
+        $this->assertSame(1, NotificationAuditLog::query()->where('action', 'template_publish')->where('outcome', 'denied')->count());
 
         $this->actingAs($this->owner)->post(route('notification.templates.publish', $template), ['version_id' => $v2->id])->assertRedirect();
         $this->assertSame($v2->id, (int) $template->fresh()->published_version_id);
 
         $this->post(route('notification.templates.publish', $template), ['version_id' => $v1->id])->assertRedirect();
         $this->assertSame($v1->id, (int) $template->fresh()->published_version_id, '⛔ আগের সংস্করণে ফেরা গেল না');
-        $this->assertSame(1, NotificationAuditLog::query()->where('action', 'template_publish')->count());
+        $this->assertSame(1, NotificationAuditLog::query()->where('action', 'template_publish')->where('outcome', 'done')->count());
         $this->assertSame(1, NotificationAuditLog::query()->where('action', 'template_rollback')->count());
 
+        // ⓘ একা চালানো কোম্পানিতে সুইচ বন্ধ করলে নিজের লেখাও প্রকাশ করা যায়
+        app(SettingsService::class)->set('notification.templates_four_eyes', false);
+        app(SettingsService::class)->flush();
+        $this->actingAs($this->writer->fresh())->post(route('notification.templates.publish', $template), ['version_id' => $v2->id])->assertSessionHas('saved');
+        $this->assertSame($v2->id, (int) $template->fresh()->published_version_id);
+
         // ⓘ অন্য টেমপ্লেটের সংস্করণ এখানে প্রকাশ হয় না
-        $this->post(route('notification.templates.store'), $this->form(['code' => 'other']))->assertRedirect();
+        $this->actingAs($this->owner)->post(route('notification.templates.store'), $this->form(['code' => 'other']))->assertRedirect();
         $foreign = NotificationTemplateVersion::query()->where('template_id', '!=', $template->id)->firstOrFail();
         $this->post(route('notification.templates.publish', $template), ['version_id' => $foreign->id])->assertNotFound();
     }

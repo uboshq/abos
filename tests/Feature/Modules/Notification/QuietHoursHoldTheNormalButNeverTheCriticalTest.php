@@ -165,6 +165,26 @@ final class QuietHoursHoldTheNormalButNeverTheCriticalTest extends TestCase
         $this->assertSame(1, $this->mail->calls, '⛔ জরুরি খবর চুপ করা শ্রেণিতে আটকাল');
     }
 
+    public function test_a_daily_limit_holds_back_extra_notices_but_never_a_critical_one(): void
+    {
+        app(SettingsService::class)->set('notification.daily_limit', 2);
+        app(SettingsService::class)->flush();
+
+        foreach (['প্রথম', 'দ্বিতীয়', 'তৃতীয়'] as $title) {
+            $this->assertNotNull(app(NotificationService::class)->send($this->clerk, 'approval.rejected', $title), '⛔ সীমার জন্য ঘণ্টার খবরও আটকাল');
+        }
+        $this->assertSame(2, $this->mail->calls, '⛔ দিনের সীমা পেরিয়েও চিঠি গেল');
+        $this->assertSame(1, NotificationSuppression::query()->where('reason', 'limit')->count());
+
+        app(NotificationService::class)->send($this->clerk, 'backup.failed', 'জরুরি — সীমা মানে না');
+        $this->assertSame(3, $this->mail->calls, '⛔ দিনের সীমায় জরুরি খবর আটকাল');
+
+        // ⓘ পরের দিন আবার
+        $this->travel(1)->days();
+        app(NotificationService::class)->send($this->clerk, 'approval.rejected', 'পরের দিন');
+        $this->assertSame(4, $this->mail->calls);
+    }
+
     public function test_people_set_their_own_preferences_on_their_settings_page(): void
     {
         $this->actingAs($this->clerk)->get(route('notifications.settings'))->assertOk()->assertSee('data-notify-preferences', false);

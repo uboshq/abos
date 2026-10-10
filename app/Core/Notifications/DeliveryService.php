@@ -71,6 +71,16 @@ final class DeliveryService
 
             [$after, $quiet, $frequency] = $this->timing($bell, $user);
 
+            // ⭐ একজনের কাছে দিনে সর্বোচ্চ কয়টা খবর বাইরের মাধ্যমে (স্পেক §১৪ "Frequency/Max Limit") — ⛔ জরুরি কখনো আটকায় না;
+            //   ঘণ্টায় সব থাকে, আটকানোটা লেখা থাকে
+            if ($plan['channels'] !== [] && $this->overLimit($bell, $user)) {
+                foreach ($plan['channels'] as $key) {
+                    $this->suppress($bell, $key, 'limit');
+                }
+
+                return;
+            }
+
             foreach ($plan['channels'] as $key) {
                 // ⭐ ধাপ ৩ — সারসংক্ষেপে ধরে রাখা, নয়তো নীরব সময় বা নিয়মের দেরি পর্যন্ত পিছানো
                 $held = DigestService::holds($key, (string) $bell->priority, $frequency);
@@ -123,6 +133,23 @@ final class DeliveryService
         $frequency = $bell->priority === 'critical' ? 'instant' : (string) ($pref->frequency ?: 'instant');
 
         return [$after !== null && $after->isFuture() ? $after : null, $quiet, $frequency];
+    }
+
+    /** আজ এই মানুষটার কাছে বাইরের মাধ্যমে কয়টা খবর গেছে — সীমা পেরোলে `true` (`notification.daily_limit`, ০ = সীমা নেই) */
+    private function overLimit(Notification $bell, User $user): bool
+    {
+        $limit = max(0, (int) app(SettingsService::class)->get('notification.daily_limit', 0));
+
+        if ($limit === 0 || $bell->priority === 'critical') {
+            return false;
+        }
+
+        $today = NotificationJob::query()->withoutGlobalScopes()
+            ->where('company_id', $bell->company_id)->where('user_id', $user->id)
+            ->where('created_at', '>=', now()->startOfDay())
+            ->distinct()->count('notification_id');
+
+        return $today >= $limit;
     }
 
     /** কোনো মাধ্যমে আটকানো বা পিছানো — কেন, লেখা থাকে (স্পেক §১৭ "Preference & Suppression") */

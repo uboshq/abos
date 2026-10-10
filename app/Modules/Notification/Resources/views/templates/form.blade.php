@@ -113,6 +113,9 @@
                         <input type="hidden" name="version_id" value="{{ $version->id }}">
                         <button type="submit" class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm">{{ __('notification::template.test') }}</button>
                     </form>
+                    @if ($ownVersion && (int) $template->published_version_id !== (int) $version->id)
+                        <p class="self-center text-2xs text-(--color-ink-muted)" data-own-version>{{ __('notification::template.own_version') }}</p>
+                    @endif
                     @if ($canPublish && (int) $template->published_version_id !== (int) $version->id)
                         <form method="POST" action="{{ route('notification.templates.publish', $template) }}">
                             @csrf

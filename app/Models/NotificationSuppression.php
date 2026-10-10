@@ -21,7 +21,7 @@ class NotificationSuppression extends Model
     public const UPDATED_AT = null;
 
     /** @var list<string> */
-    public const REASONS = ['cooldown', 'quiet_hours', 'preference', 'muted', 'expired', 'digest'];
+    public const REASONS = ['cooldown', 'quiet_hours', 'preference', 'muted', 'expired', 'digest', 'limit'];
 
     protected $fillable = ['company_id', 'user_id', 'event_id', 'rule_id', 'type', 'channel', 'reason'];
 

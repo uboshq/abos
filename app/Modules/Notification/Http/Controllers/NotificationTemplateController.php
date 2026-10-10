@@ -9,6 +9,7 @@ use App\Core\Notifications\TemplateStudio;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\NotificationKinds;
 use App\Http\Controllers\Controller;
@@ -109,6 +110,13 @@ class NotificationTemplateController extends Controller
         $data = $request->validate(['version_id' => ['required', 'integer']]);
         $version = NotificationTemplateVersion::query()->where('template_id', $template->id)->findOrFail((int) $data['version_id']);
 
+        // ⭐ লেখক নিজের লেখা প্রকাশ করেন না — দ্বিতীয় একজন দেখে প্রকাশ করেন (স্পেক §৯গ "Approval"); সুইচ দিয়ে বন্ধ করা যায়
+        if ($this->needsSecondPerson() && (int) $version->created_by === (int) $request->user()->id) {
+            app(NotificationAudit::class)->record('template_publish', $template, 'denied', ['template_id' => $template->id, 'version' => (int) $version->version]);
+
+            return back()->with('failed', __('notification::template.own_version'));
+        }
+
         $this->studio->publish($template, $version);
 
         return redirect()->route('notification.templates.edit', $template)
@@ -133,6 +141,11 @@ class NotificationTemplateController extends Controller
         return back()->with('saved', __('notification::template.test_sent'));
     }
 
+    private function needsSecondPerson(): bool
+    {
+        return (bool) app(SettingsService::class)->get('notification.templates_four_eyes', true);
+    }
+
     private function form(Request $request, NotificationTemplate $template, ?NotificationTemplateVersion $version): View
     {
         return view('notification::templates.form', [
@@ -142,7 +155,9 @@ class NotificationTemplateController extends Controller
             'versions' => $template->exists ? $template->versions()->with('author')->limit(30)->get() : collect(),
             'previews' => $version === null ? [] : ['bn' => $this->studio->preview($version, 'bn'), 'en' => $this->studio->preview($version, 'en')],
             'variables' => NotificationVariables::ALL,
-            'canPublish' => $request->user()->can('notification.templates.publish'),
+            'canPublish' => $request->user()->can('notification.templates.publish')
+                && ! ($version !== null && $this->needsSecondPerson() && (int) $version->created_by === (int) $request->user()->id),
+            'ownVersion' => $version !== null && $this->needsSecondPerson() && (int) $version->created_by === (int) $request->user()->id,
         ]);
     }
 

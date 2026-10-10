@@ -10,4 +10,6 @@ return [
     'quiet_end' => 'Company default quiet hours end (e.g. 07:00)',
     'archive_after_days' => 'Archive read notifications older than this many days (0 = never)',
     'retention_days' => 'Remove delivery records and the archive older than this many days (0 = nothing; at least 90)',
+    'daily_limit' => 'Most notifications one person gets by e-mail or push per day (0 = no limit; critical is never held back)',
+    'templates_four_eyes' => 'Whoever wrote a template version cannot publish it — a second person does',
 ];

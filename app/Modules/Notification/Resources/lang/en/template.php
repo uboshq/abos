@@ -37,4 +37,5 @@ return [
     'live' => 'Live now',
     'was_live' => 'Was live',
     'draft' => 'Draft',
+    'own_version' => 'You wrote this version — a second person publishes it.',
 ];

@@ -181,6 +181,22 @@ return [
             'group' => 'quiet',
         ],
         [
+            // ⭐ টেমপ্লেট যিনি লিখলেন তিনি নিজে প্রকাশ করেন না — দ্বিতীয় একজন (স্পেক §৯গ "Approval"); একা চালানো কোম্পানিতে বন্ধ করা যায়
+            'key' => 'notification.templates_four_eyes',
+            'label' => 'notification::settings.templates_four_eyes',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'delivery',
+        ],
+        [
+            // ⭐ একজনের কাছে দিনে সর্বোচ্চ কয়টা খবর বাইরের মাধ্যমে (০ = সীমা নেই); জরুরি কখনো আটকায় না — স্পেক §১৪
+            'key' => 'notification.daily_limit',
+            'label' => 'notification::settings.daily_limit',
+            'type' => 'integer',
+            'default' => 0,
+            'group' => 'delivery',
+        ],
+        [
             // ⭐ ধাপ ৪ — এত দিনের পুরনো পড়া খবর নিজে আর্কাইভে (০ = কখনো নয়)
             'key' => 'notification.archive_after_days',
             'label' => 'notification::settings.archive_after_days',

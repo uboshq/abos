@@ -96,6 +96,7 @@ return [
         'target_id' => 'ID',
     ],
     'reasons' => [
+        'limit' => 'Daily limit reached',
         'cooldown' => 'Same notice again (within cooldown)',
         'quiet_hours' => 'Deferred by quiet hours',
         'preference' => 'Channel switched off by the person',
