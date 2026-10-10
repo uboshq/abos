@@ -508,7 +508,17 @@ final class StockReports
         );
     }
 
-    /** এক পণ্যের প্রতিটা নড়াচড়া, ক্রমানুসারে। */
+    /**
+     * এক পণ্যের প্রতিটা নড়াচড়া, ক্রমানুসারে — শুরুর জের থেকে চলমান জেরসহ।
+     *
+     * ⭐ শুরুর জের আর চলমান জের (পুরো-ERP অডিট, মজুদ ছ১৯; মালিকের "সব খোলা ভুল", ১০ অক্টোবর ২০২৬;
+     * [[TheStockLedgerCarriesItsBalanceTest]])। ⛔ আগে কেবল প্রতিটা সারির নড়াচড়া — "এখন তাকে কত" মনে মনে যোগ করতে হত,
+     * অথচ মানুষ এই খাতাটাই সবচেয়ে বেশি খোলেন। পণ্য আর গুদাম বাছাও যেত না।
+     *
+     * ⓘ ভেতরের কোয়েরি `to` পর্যন্ত **সব** চলাচল নেয় আর পণ্য ধরে চলমান যোগ করে (`SUM … OVER`); বাইরেরটা কেবল `from` থেকে
+     * দেখায়। তাই প্রথম সারির জেরেই পরিসরের আগের জের বসে থাকে, আর দেয়াল-ছাঁকনি দুই জায়গায় আলাদা করে লিখতে হয় না —
+     * শুরুর জের ঠিক সেই মালেরই, যা পাঠক দেখতে পান। ⓘ জের পণ্য ধরে (গুদাম বাছলে সেই গুদামের); তাকের মাল (`floor`)।
+     */
     public static function stockLedger(): ReportDefinition
     {
         return new ReportDefinition(
@@ -516,28 +526,35 @@ final class StockReports
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'inventory.report',
             title: 'inventory::menu.stock_ledger',
-            filters: ['date_range', 'branch'],
-            query: fn (array $f) => DB::table('inv_stock_movements as m')
-                ->join('inv_products as p', 'p.id', '=', 'm.product_id')
-                ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
-                ->where('m.company_id', $f['company_id'])
-                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
-                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
-                ->whereBetween('m.trx_date', [$f['from'], $f['to']])
-                ->orderBy('m.trx_date')
-                ->orderBy('m.id')
-                ->select([
-                    'm.trx_date',
-                    'm.document_no',
-                    self::productName(),
-                    self::warehouseName(),
-                    'm.floor_change',
-                    'm.reserved_change',
-                    'm.hold_change',
-                    'm.narration',
-                    'm.source_type',
-                    'm.source_id',
-                ]),
+            filters: ['date_range', 'branch', 'product_id', 'warehouse_id'],
+            query: fn (array $f) => DB::query()
+                ->fromSub(DB::table('inv_stock_movements as m')
+                    ->join('inv_products as p', 'p.id', '=', 'm.product_id')
+                    ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+                    ->where('m.company_id', $f['company_id'])
+                    ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                    ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
+                    ->when(! empty($f['product_id']), fn ($q) => $q->where('m.product_id', (int) $f['product_id']))
+                    ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
+                    ->where('m.trx_date', '<=', $f['to'])
+                    ->select([
+                        'm.id as movement_id',
+                        'm.trx_date',
+                        'm.document_no',
+                        self::productName(),
+                        self::warehouseName(),
+                        'm.floor_change',
+                        'm.reserved_change',
+                        'm.hold_change',
+                        'm.narration',
+                        'm.source_type',
+                        'm.source_id',
+                        DB::raw('SUM(m.floor_change) OVER (PARTITION BY m.product_id ORDER BY m.trx_date, m.id) as balance'),
+                    ]), 'l')
+                ->where('l.trx_date', '>=', $f['from'])
+                ->orderBy('l.trx_date')
+                ->orderBy('l.movement_id')
+                ->select('l.*'),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 [
@@ -552,6 +569,8 @@ final class StockReports
                 ['key' => 'floor_change', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'reserved_change', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'hold_change', 'label' => 'inventory::field.hold', 'type' => ReportColumn::QUANTITY],
+                // ⭐ সারির পরে তাকে কত — পণ্য ধরে, পরিসরের আগের জের থেকে (ছ১৯); যোগফল অর্থহীন, তাই নেই
+                ['key' => 'balance', 'label' => 'inventory::field.running_balance', 'type' => ReportColumn::QUANTITY, 'total' => false],
             ],
         );
     }

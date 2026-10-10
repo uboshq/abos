@@ -187,4 +187,5 @@ return [
     'pool_paid' => 'Paid goods (for sale)',
     'pool_free' => 'Free goods',
     'free_count_paper' => 'Free goods adjustment - no money moves in the books',
+    'running_balance' => 'Balance',
 ];
