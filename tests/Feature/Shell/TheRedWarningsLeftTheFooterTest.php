@@ -133,6 +133,9 @@ final class TheRedWarningsLeftTheFooterTest extends TestCase
 
         $response = $this->actingAs($sales)->get(route('dashboard'));
         $this->assertStringNotContainsString('data-notice-banner', (string) $response->getContent());
+
+        // ⓘ বন্ধ করার দরজাও তাঁর নয় — রুটের can:backup.view ([[EveryRouteIsGuardedTest]])
+        $this->actingAs($sales)->post(route('notifications.banner.close'), ['key' => sha1('x')])->assertForbidden();
     }
 
     private function owner(): User

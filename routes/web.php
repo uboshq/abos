@@ -90,7 +90,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
     // ⭐ উপরের হলুদ ব্যানার একবার বন্ধ — এই লগইনে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]])
+    // ⓘ ব্যানারটা কেবল ব্যাকআপ দেখার অধিকার যাঁর তাঁর পাতায় আসে ([[StatusNotices::backupNotice()]]) — বন্ধ করার দরজাও তাঁরই
     Route::post('/notifications/banner/close', [NotificationController::class, 'closeBanner'])
+        ->middleware('can:backup.view')
         ->name('notifications.banner.close');
 
     /*
