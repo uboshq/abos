@@ -66,6 +66,16 @@ final class ASignatureBelongsToTheBytesItSignedTest extends TestCase
         $this->assertTrue($this->told($first, DocumentNotices::SIGNATURE_REQUIRED), 'প্রথম সইকারী খবর পাননি।');
         $this->assertFalse($this->told($second, DocumentNotices::SIGNATURE_REQUIRED), 'দ্বিতীয়জন আগেই খবর পেলেন।');
 
+        /*
+         * ⛔ সই চলাকালীন ফাইল নড়ে না, আর সই একসাথে অনেকগুলোয় যায় না (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১১, ⚠️১২)।
+         * ⓘ আগে সইয়ের মাঝে নতুন ভার্সন দিলে সইকারী নতুন ফাইল দেখতেন, অথচ সই বসত পুরনো hash-এ।
+         */
+        $this->actingAs($this->owner)->post(route('documents.version.store', $document), ['file' => $this->pdf('jv.pdf', 'swapped-mid-signing')])
+            ->assertForbidden();
+        $this->useCompany();
+        $this->assertSame($version->id, (int) $document->fresh()->current_version_id, '⛔ সই চলার মাঝে ফাইল বদলে গেল।');
+        $this->assertTrue(app(\App\Core\Engines\Approval\BulkApproval::class)->movesMoney($approval), '⛔ সই না খুলে একসাথে অনেকগুলোয় দেওয়া যায়।');
+
         // ⭐ সইকারী গোপন কাগজটা পড়েই সই দেন; সই কেন্দ্রে তাঁর সারিতে কাগজ
         $this->actingAs($first)->get(route('documents.show', $document))->assertOk();
         $center = (string) $this->actingAs($first)->get(route('documents.signatures'))->assertOk()->getContent();

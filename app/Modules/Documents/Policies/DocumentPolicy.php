@@ -56,7 +56,20 @@ class DocumentPolicy
     {
         return $this->mayEdit($user, $document)
             && ! $document->isArchived()
-            && ($document->isEditableInPlace() || $document->isApproved());
+            && ($document->isEditableInPlace() || $document->isApproved())
+            && ! $this->awaitsSignatures($document);
+    }
+
+    /**
+     * ⛔ সই চলাকালীন ফাইল নড়ে না (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১১)।
+     *
+     * ⓘ সই চাওয়া হলে সই বসে সেই ভার্সনের SHA-256-এ ([[DocumentSignatures::request()]])। খসড়া বা অনুমোদিত কাগজে সই চলার মাঝে নতুন
+     * ভার্সন দিলে সইকারীর পাতা আর প্রিভিউ নতুন ফাইল দেখাত, অথচ সই বসত পুরনো hash-এ — যিনি সই করছেন তিনি যে বাইট দেখেননি তাতে সই।
+     * পরে পাতায় "পুরনো" দেখাত, কিন্তু সইয়ের মুহূর্তে ভুল দেখানো হয়েছিল। ⭐ সই শেষ (বা ফেরত) হলে আবার নতুন ভার্সন।
+     */
+    private function awaitsSignatures(Document $document): bool
+    {
+        return app(\App\Modules\Documents\Services\DocumentSignatures::class)->state($document) === \App\Modules\Documents\Services\DocumentSignatures::PENDING;
     }
 
     /** পুরনো ভার্সন ফেরানো — নতুন ভার্সন বানায়, তাই বদলের চাবিও লাগে */
