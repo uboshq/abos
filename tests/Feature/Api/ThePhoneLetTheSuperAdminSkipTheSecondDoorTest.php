@@ -91,6 +91,45 @@ final class ThePhoneLetTheSuperAdminSkipTheSecondDoorTest extends TestCase
         $this->login('sales@abos.test')->assertOk();
     }
 
+    /**
+     * ⭐ লাইভের আজকের অবস্থা — সুইচ বন্ধ, মালিকের দুই ধাপ শুরু হয়েছিল কিন্তু নিশ্চিত হয়নি (চাবি আছে, `mfa_confirmed_at` খালি)।
+     * ⓘ তখন ফোনে লগইন আর নবায়ন আজকের মতোই — কোড চায় না, ফেরায়ও না (cb-র রিভিউ, fe-র চাওয়া, ১১ অক্টোবর ২০২৬)।
+     */
+    public function test_with_the_switch_off_an_owner_whose_two_step_was_started_but_not_confirmed_signs_in_as_today(): void
+    {
+        config(['abos.super_admin_two_step' => false]);
+        $this->owner()->forceFill(['mfa_secret' => Totp::newSecret(), 'mfa_confirmed_at' => null, 'two_step_required' => false])->save();
+
+        $tokens = $this->login('owner@abos.test')->assertOk()->json();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($tokens['refreshToken'])
+            ->postJson('/api/v1/auth/refresh', ['deviceId' => self::DEVICE])
+            ->assertOk();
+    }
+
+    /**
+     * ⭐ সুইচ খুললে তালাবদ্ধ নয় — ফোন ফেরায় আর বলে "আগে ওয়েবে বসান"; ওয়েবে ঐ শুরু-হওয়া চাবিটাই দেখায়, প্রথম কোডে নিশ্চিত হয়,
+     * তারপর ফোন কোড চেয়ে ঢোকায় (cb-র রিভিউ, ১১ অক্টোবর ২০২৬)।
+     */
+    public function test_with_the_switch_on_the_started_two_step_is_finished_on_the_web_and_then_the_phone_opens(): void
+    {
+        $secret = Totp::newSecret();
+        $this->owner()->forceFill(['mfa_secret' => $secret, 'mfa_confirmed_at' => null, 'two_step_required' => false])->save();
+
+        $this->login('owner@abos.test')->assertForbidden()->assertJsonPath('message', __('auth.two_step_set_up_on_web_first'));
+
+        // ⓘ ওয়েব: বসানোর পর্দা খোলে, একই চাবি দেখায়, কোডে নিশ্চিত
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->owner())->get(route('mfa'))->assertOk()->assertSee($secret);
+        $this->actingAs($this->owner())->post(route('mfa.confirm'), ['code' => Totp::codeFor($secret)])->assertSessionHasNoErrors();
+        $this->assertTrue(app(MfaService::class)->isOn($this->owner()->fresh()), '⛔ ওয়েবে নিশ্চিত করা গেল না — মালিক কোনো পথেই ঢুকতে পারতেন না।');
+
+        // ⓘ ফোন: এখন কোড চায়, আর কোডে ঢোকায়
+        $this->login('owner@abos.test')->assertStatus(409)->assertJsonPath('needsCode', true);
+        $this->login('owner@abos.test', Totp::codeFor($secret, time() + 30))->assertOk();
+    }
+
     private function owner(): User
     {
         return User::query()->where('email', 'owner@abos.test')->firstOrFail();
