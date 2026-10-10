@@ -317,7 +317,7 @@ final class SalesReturnService
                  * ⛔ এটা ছাড়া বাতিলের পরে তাক আর খাতা ফিরত, স্তর ফিরত না:
                  * ১০ বেচা, ৪ ফেরত, বাতিল → স্তরে ১৪ একক, খাতায় ১০-এর দাম।
                  */
-                $this->costs->undoReturn(SalesReturn::STOCK_SOURCE, $return->id);
+                $this->costs->undoReturn(SalesReturn::STOCK_SOURCE, $return->id, $date);
 
                 foreach ($return->lines as $line) {
                     $this->freeBack($return, $line, '-1', $date, $reason);

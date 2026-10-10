@@ -422,9 +422,11 @@ final class CostLayerService
                 $alreadyBack = (string) (CostLayerUse::query()
                     ->where('cost_layer_id', $use->cost_layer_id)
                     ->where('product_id', $product->id)
-                    ->where('source_type', $sourceType)
+                    // ⓘ বাতিল ফেরতের উল্টো সারি (`…:cancel`, ধনাত্মক) কাটাকাটি করে — বাতিল ফেরত আর "আগে ফিরেছে" নয়, ডাকার পক্ষ
+                    // তালিকায় তাকে রাখলেও (⚠️৫; [[OneBillsReturnAteAnotherBillsHeadroomTest]])
+                    ->where(fn ($q) => $q->where(fn ($r) => $r->where('source_type', $sourceType)->whereRaw('qty < 0'))
+                        ->orWhere('source_type', $sourceType.':cancel'))
                     ->when($returnedBy !== null, fn ($q) => $q->whereIn('source_id', $returnedBy))
-                    ->whereRaw('qty < 0')
                     ->sum('qty') ?: '0');
 
                 $available = bcadd($issuedOnLayer[$use->cost_layer_id], $alreadyBack, 4);
@@ -498,9 +500,9 @@ final class CostLayerService
      *
      * @return string যত টাকার মাল স্তর থেকে তোলা হলো
      */
-    public function undoReturn(string $sourceType, int $sourceId): string
+    public function undoReturn(string $sourceType, int $sourceId, Carbon|string|null $date = null): string
     {
-        return DB::transaction(function () use ($sourceType, $sourceId) {
+        return DB::transaction(function () use ($sourceType, $sourceId, $date) {
             $rows = CostLayerUse::query()
                 ->where('source_type', $sourceType)
                 ->where('source_id', $sourceId)
@@ -508,10 +510,37 @@ final class CostLayerService
                 ->orderBy('id')
                 ->get();
 
+            /*
+             * ⛔ ফেরতের সারি আর মোছা হয় না — আজকের (বাতিলের) তারিখে উল্টো সারি, `…:cancel` (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬,
+             * মজুদ ⚠️৫; [[ACancelNeverRewritesAClosedMonthsStockTest]])। ⓘ মুছলে ফেরতের দিনের মজুদ-মূল্য পেছনে বদলাত, অথচ খাতা
+             * উল্টো হয় বাতিলের দিনে — বন্ধ মাসের দুই সংখ্যা আলাদা। বিক্রির বাতিলের একই রীতি (`sales_invoice:cancel`)।
+             * ⓘ আগে কতটা উল্টানো হয়েছে, তা বাদ — দুইবার ডাকলেও দ্বিতীয়বার কিছু লেখা হয় না।
+             */
+            $undone = CostLayerUse::query()
+                ->where('source_type', $sourceType.':cancel')
+                ->where('source_id', $sourceId)
+                ->groupBy('cost_layer_id')
+                ->selectRaw('cost_layer_id, COALESCE(SUM(qty), 0) as q')
+                ->pluck('q', 'cost_layer_id')
+                ->map(fn ($q) => (string) $q)
+                ->all();
+
             $value = '0';
 
             foreach ($rows as $row) {
                 $back = bcmul((string) $row->qty, '-1', 4);
+                $already = $undone[$row->cost_layer_id] ?? '0';
+
+                if (bccomp($already, '0', 4) > 0) {
+                    $settled = bccomp($already, $back, 4) >= 0 ? $back : $already;
+                    $undone[$row->cost_layer_id] = bcsub($already, $settled, 4);
+                    $back = bcsub($back, $settled, 4);
+                }
+
+                if (bccomp($back, '0', 4) <= 0) {
+                    continue;
+                }
+
                 $layer = CostLayer::query()->lockForUpdate()->find($row->cost_layer_id);
 
                 if ($layer === null || bccomp((string) $layer->qty_remaining, $back, 4) < 0) {
@@ -525,8 +554,23 @@ final class CostLayerService
                 $layer->qty_remaining = bcsub((string) $layer->qty_remaining, $back, 4);
                 $layer->save();
 
-                $value = bcadd($value, bcmul((string) $row->amount, '-1', 4), 4);
-                $row->delete();
+                $amount = bcmul($back, (string) $row->unit_cost, 4);
+
+                CostLayerUse::create([
+                    'company_id' => $this->companyId(),
+                    'cost_layer_id' => $row->cost_layer_id,
+                    'product_id' => $row->product_id,
+                    'source_type' => $sourceType.':cancel',
+                    'source_id' => $sourceId,
+                    'document_no' => $row->document_no,
+                    'trx_date' => $this->date($date),
+                    'qty' => $back,
+                    'unit_cost' => $row->unit_cost,
+                    'amount' => $amount,
+                    'created_by' => auth()->id(),
+                ]);
+
+                $value = bcadd($value, $amount, 4);
             }
 
             return $value;
@@ -599,6 +643,9 @@ final class CostLayerService
      * স্তরে কেউ হাত দেয়নি — বাতিল করা যায়। ছোঁয়া হয়ে গেলে সৎ পথ
      * বাতিল নয়, ক্রয় ফেরত।
      *
+     * ⚠️ স্তরটা **মোছে** — তাই কেবল সেই সংশোধনের জন্য যা মূল তারিখেই উল্টায় (খোলা মজুদের সংশোধন: মজুদ আর খাতা
+     * দুটোই মূল দিনে ফেরে)। আজকের তারিখে বাতিল হলে [[cancelLayers()]] — মুছলে আগের মাসের মজুদ-মূল্য বদলাত (⚠️৫)।
+     *
      * @return int কতগুলো স্তর তোলা হলো
      */
     public function withdraw(string $sourceType, int $sourceId): int
@@ -622,6 +669,70 @@ final class CostLayerService
 
             foreach ($layers as $layer) {
                 $layer->delete();
+            }
+
+            return $layers->count();
+        });
+    }
+
+    /**
+     * ⭐ নথি বাতিল — বাতিলের তারিখে স্তরগুলো খালি করা, কিছু না মুছে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️৫;
+     * [[ACancelNeverRewritesAClosedMonthsStockTest]])।
+     *
+     * ⛔ [[withdraw()]] স্তরটা মুছত — কেনার তারিখসহ। খাতা উল্টায় বাতিলের দিনে, তাই কেনার মাসের মজুদ-মূল্য রিপোর্ট পেছনে
+     * বদলাত, খাতা বদলাত না: বন্ধ মাসের দুই সংখ্যা আলাদা। ⓘ এখন স্তর থাকে (কেনার দিনে আগমন), আর বাতিলের দিনে `…:cancel`
+     * ব্যবহার-সারি পুরো স্তরটা টেনে নেয় — বিক্রির বাতিলের একই রীতি। ⓘ ডাকার পক্ষ তারিখ দেয় — খাতা আর মজুদ যেদিন উল্টায়।
+     *
+     * ⓘ ছোঁয়া স্তরে থামে, [[withdraw()]]-এর একই কারণে। আগে বাতিল হওয়া স্তর (সম্পাদনায় উল্টে আবার বসানো বিল) বাদ।
+     *
+     * @return int কতগুলো স্তর খালি হলো
+     */
+    public function cancelLayers(string $sourceType, int $sourceId, Carbon|string|null $date = null): int
+    {
+        return DB::transaction(function () use ($sourceType, $sourceId, $date) {
+            $gone = CostLayerUse::query()
+                ->where('source_type', $sourceType.':cancel')
+                ->where('source_id', $sourceId)
+                ->pluck('cost_layer_id');
+
+            $layers = CostLayer::query()
+                ->where('source_type', $sourceType)
+                ->where('source_id', $sourceId)
+                ->whereNotIn('id', $gone)
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($layers as $layer) {
+                if (bccomp((string) $layer->qty_remaining, (string) $layer->qty_in, 4) !== 0) {
+                    throw ValidationException::withMessages([
+                        'status' => __('inventory::validation.layer_already_used', [
+                            'document' => $layer->document_no ?? (string) $layer->id,
+                        ]),
+                    ]);
+                }
+            }
+
+            foreach ($layers as $layer) {
+                if (bccomp((string) $layer->qty_in, '0', 4) <= 0) {
+                    continue;
+                }
+
+                CostLayerUse::create([
+                    'company_id' => $this->companyId(),
+                    'cost_layer_id' => $layer->id,
+                    'product_id' => $layer->product_id,
+                    'source_type' => $sourceType.':cancel',
+                    'source_id' => $sourceId,
+                    'document_no' => $layer->document_no,
+                    'trx_date' => $this->date($date),
+                    'qty' => $layer->qty_in,
+                    'unit_cost' => $layer->unit_cost,
+                    'amount' => bcmul((string) $layer->qty_in, (string) $layer->unit_cost, 4),
+                    'created_by' => auth()->id(),
+                ]);
+
+                $layer->qty_remaining = '0';
+                $layer->save();
             }
 
             return $layers->count();

@@ -754,7 +754,8 @@ final class PurchaseBillService
      */
     private function takeBackDirectLines(PurchaseBill $bill, Carbon $date, string $reason): void
     {
-        $this->costs->withdraw(PurchaseBill::STOCK_SOURCE, $bill->id);
+        // ⓘ বাতিলের দিনে স্তর খালি, মুছে নয় — খাতা আর মজুদ যেদিন উল্টায় (⚠️৫, [[CostLayerService::cancelLayers()]])
+        $this->costs->cancelLayers(PurchaseBill::STOCK_SOURCE, $bill->id, $date);
 
         foreach ([PurchaseBill::STOCK_SOURCE, PurchaseBill::STOCK_SOURCE.':free'] as $source) {
             $this->stock->reverse(
