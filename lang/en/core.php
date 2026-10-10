@@ -492,6 +492,15 @@ return [
         'all_time' => 'From the start to today',
     ],
 
+    'trend' => [
+        'daily' => 'By day',
+        'weekly' => 'By week',
+        'monthly' => 'By month',
+        'quarterly' => 'By quarter',
+        'yearly' => 'By year',
+        'quarter' => 'Q:q :year',
+    ],
+
     'export' => [
         'someone_gone' => 'A removed user',
     ],
