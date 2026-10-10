@@ -599,41 +599,6 @@ final class StockService
     }
 
     /**
-     * গণনার পর সমন্বয় — তাকে যা পাওয়া গেল সেটাই সত্যি।
-     *
-     * পার্থক্যটা লেখা হয়, নতুন সংখ্যাটা নয়। "৫০ ছিল, ৪৭ পাওয়া গেল, তাই
-     * −৩" — এভাবে লিখলে পরে প্রশ্ন করা যায় "ওই তিনটা কোথায় গেল"। শুধু
-     * ৪৭ লিখে দিলে প্রশ্নটাই আর করা যেত না।
-     */
-    public function adjust(
-        Product $product,
-        Warehouse $warehouse,
-        string $countedQty,
-        ReasonCode $reason,
-        Carbon|string|null $date = null,
-        ?string $narration = null,
-    ): ?StockMovement {
-        $current = $this->floorQty($product, $warehouse);
-        $difference = bcsub($countedQty, $current, 4);
-
-        // মিলে গেলে কোনো সারি নয় — শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
-        if (bccomp($difference, '0', 4) === 0) {
-            return null;
-        }
-
-        return $this->move(
-            product: $product,
-            warehouse: $warehouse,
-            sourceType: self::ADJUSTMENT,
-            sourceId: $product->id,
-            floor: $difference,
-            reason: $reason,
-            date: $date,
-            narration: $narration,
-        );
-    }
-
-    /**
      * মাল আটকানো — কারণ সহ।
      *
      * কারণ ছাড়া আটকানো যায় না, আর কারণটা মাস্টার তালিকা থেকে। মুক্ত

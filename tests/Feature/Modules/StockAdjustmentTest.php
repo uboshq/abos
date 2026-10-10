@@ -70,12 +70,16 @@ class StockAdjustmentTest extends TestCase
         $lossBefore = $this->balanceOf(StandardChart::INVENTORY_SHORTAGE_SURPLUS);
 
         // তিন বস্তা কম পাওয়া গেল
-        $this->adjustments()->adjust(
+        $movement = $this->adjustments()->adjust(
             product: $this->product,
             warehouse: $this->warehouse,
             countedQty: bcsub($onFloor, '3', 4),
             reason: $this->reason(ReasonCode::STOCK_ADJUSTMENT),
         );
+
+        // ⓘ সারিতে পার্থক্যটা (−৩), নতুন সংখ্যাটা নয় — "ওই তিনটা কোথায় গেল" জিজ্ঞেস করা যায় (মৃত `StockService::adjust()`-এর
+        // দাবি, আসল পথে; মজুদ ⓘ১৫)
+        $this->assertSame(0, bccomp((string) $movement?->floor_change, '-3', 4), '⛔ সমন্বয়ের সারিতে পার্থক্য নয়, অন্য কিছু।');
 
         $cost = bcmul('3', (string) $this->product->purchase_price, 4);
 
