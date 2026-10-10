@@ -29,7 +29,7 @@ class PurchaseReceiptLine extends Model
         'purchase_receipt_id', 'product_id', 'purchase_order_line_id',
         'received_qty', 'free_qty', 'entered_qty', 'entered_unit_id',
         'batch_no', 'expiry_date', 'mrp',
-        'rate', 'sales_price', 'amount', 'line_no', 'narration',
+        'rate', 'sales_price', 'amount', 'tax', 'line_no', 'narration',
     ];
 
     protected function casts(): array
@@ -43,6 +43,7 @@ class PurchaseReceiptLine extends Model
             'rate' => 'decimal:4',
             'sales_price' => 'decimal:4',
             'amount' => 'decimal:4',
+            'tax' => 'decimal:4',
         ];
     }
 

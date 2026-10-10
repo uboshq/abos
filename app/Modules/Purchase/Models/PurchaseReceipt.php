@@ -63,6 +63,24 @@ class PurchaseReceipt extends Model implements Drillable
         return $this->hasMany(PurchaseReceiptLine::class)->orderBy('line_no');
     }
 
+    /**
+     * ⭐ দামের ভেতরের ভ্যাট, সব সারির যোগ — কাগজে বিলের মতো আলাদা লাইনে (মালিক, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ `total` ভ্যাট বাদে থাকে — মজুদ আর GRNI ওটাই ধরে; ভ্যাট বিলেই খাতায় ওঠে।
+     */
+    public function taxTotal(): string
+    {
+        $lines = $this->relationLoaded('lines') ? $this->lines : $this->lines()->get();
+
+        return $lines->reduce(fn (string $sum, PurchaseReceiptLine $line) => bcadd($sum, (string) $line->tax, 4), '0');
+    }
+
+    /** কাগজের মোট — ভ্যাট বাদের মূল্য + দামের ভেতরের ভ্যাট, বিলের "মোট"-এর মতো */
+    public function totalWithTax(): string
+    {
+        return bcadd((string) $this->total, $this->taxTotal(), 4);
+    }
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);

@@ -664,10 +664,12 @@ final class PurchaseReceiptService
              * চালানের দর ধরেই ২১৬০ সরায়, তাই দুইটা মেলে। ⓘ ভ্যাট বন্ধ বা দামের বাইরে হলে কিছুই বদলায় না।
              */
             $amount = bcmul($qty, $rate, 4);
+            $tax = '0';
 
             if ((bool) $product->tax?->is_inclusive) {
                 $figures = $this->lineFigures($qty, $rate, '0', null, $product->tax);
-                $amount = bcsub($figures['amount'], $figures['tax'], 4);
+                $tax = $figures['tax'];
+                $amount = bcsub($figures['amount'], $tax, 4);
                 $rate = bcdiv($amount, $qty, 4);
             }
 
@@ -724,6 +726,8 @@ final class PurchaseReceiptService
                     : $this->packed($product, '1', $pack['entered_unit_id'], $this->money($line['sales_price']))['rate'],
 
                 'amount' => $amount,
+                // ⭐ দামের ভেতরের ভ্যাট আলাদা ঘরে — কাগজ বিলের মতো: দর ভ্যাট বাদে, ভ্যাট আলাদা, মোট ভ্যাটসহ (মালিক, ১০ অক্টোবর ২০২৬)
+                'tax' => $tax,
                 'line_no' => ++$lineNo,
                 'narration' => $line['narration'] ?? null,
             ]);

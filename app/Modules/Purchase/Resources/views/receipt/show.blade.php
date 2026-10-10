@@ -126,13 +126,21 @@
                     ['key' => 'rate', 'label' => __('purchase::field.rate'),
                      'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
+                    /* ⭐ দর ও মূল্য ভ্যাট বাদে, ভ্যাট আলাদা, মোট ভ্যাটসহ — বিলের হুবহু ছাঁদে (মালিক, ১০ অক্টোবর ২০২৬) */
+                    ['key' => 'tax', 'label' => __('purchase::field.tax'),
+                     'numeric' => true, 'width' => '8rem',
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->tax)],
                     ['key' => 'amount', 'label' => __('purchase::field.amount'),
                      'numeric' => true, 'width' => '9rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">
-                <x-purchase::totals :rows="['purchase::field.total' => $receipt->total]" />
+                <x-purchase::totals :rows="[
+                    'purchase::field.subtotal' => $receipt->total,
+                    'purchase::field.tax' => $receipt->taxTotal(),
+                    'purchase::field.total' => $receipt->totalWithTax(),
+                ]" />
             </div>
         </section>
 

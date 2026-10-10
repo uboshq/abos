@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Purchase;
 
 use App\Core\Services\SettingsService;
+use App\Core\Support\Money;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\LedgerEntry;
@@ -62,6 +63,20 @@ final class VatInsideThePriceBrokeReceiptsAndReturnsTest extends TestCase
 
         $this->assertSame(0, bccomp((string) $receipt->fresh()->total, '1000', 2),
             "⛔ চালানের মূল্য {$receipt->fresh()->total} — দামের ভেতরের ভ্যাট মজুদে ঢুকল।");
+
+        // ── ⭐ কাগজ বিলের মতো: দর ১০০, ভ্যাট ১৫০ আলাদা, মোট ১,১৫০ (মালিক, ১০ অক্টোবর ২০২৬) ──
+        $line = $receipt->fresh('lines')->lines->first();
+        $this->assertSame(0, bccomp((string) $line->rate, '100', 4), "⛔ চালানের দর {$line->rate}, ভ্যাট বাদে ১০০ নয়।");
+        $this->assertSame(0, bccomp((string) $line->tax, '150', 4), "⛔ চালানের সারির ভ্যাট {$line->tax}, ১৫০ নয় — ভ্যাটটা হারাল।");
+        $this->assertSame(0, bccomp($receipt->fresh()->taxTotal(), '150', 4), '⛔ চালানের মোট ভ্যাট ১৫০ নয়।');
+        $this->assertSame(0, bccomp($receipt->fresh()->totalWithTax(), '1150', 4), '⛔ চালানের ভ্যাটসহ মোট ১,১৫০ নয়।');
+
+        $page = $this->get(route('purchase.receipt.show', $receipt))->assertOk();
+        $page->assertSeeInOrder([
+            __('purchase::field.subtotal'), Money::format('1000'),
+            __('purchase::field.tax'), Money::format('150'),
+            __('purchase::field.total'), Money::format('1150'),
+        ], false);
 
         // ── বিল: একই মাল @ ১১৫ → মোট ১,১৫০, ভ্যাট ১৫০; দর-পার্থক্য শূন্য ──
         $bills = app(PurchaseBillService::class);
