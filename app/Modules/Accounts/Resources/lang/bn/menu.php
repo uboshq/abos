@@ -73,4 +73,17 @@ return [
 
     // ⭐ স্থায়ী সম্পদ ধাপ ৪
     'asset_verifications' => 'সম্পদ গোনা',
+
+    // ⭐ স্থায়ী সম্পদ ধাপ ৫
+    'asset_dashboard' => 'স্থায়ী সম্পদের ড্যাশবোর্ড',
+    'asset_register' => 'স্থায়ী সম্পদের নিবন্ধন',
+    'asset_schedule' => 'অবচয়ের তফসিল',
+    'asset_movement' => 'স্থায়ী সম্পদের চলাচল',
+    'asset_nbv' => 'সম্পদের খাতার দাম',
+    'asset_disposals' => 'সম্পদ বিদায় ও লাভ-লোকসান',
+    'asset_fully_depreciated' => 'পুরো ক্ষয় হওয়া সম্পদ',
+    'asset_expiring' => 'ওয়ারেন্টি ও বিমা শেষ',
+    'asset_variance' => 'সম্পদ গোনার পার্থক্য',
+    'asset_book_vs_tax' => 'খাতা বনাম করের অবচয়',
+    'asset_maintenance' => 'সম্পদের মেরামতের খরচ',
 ];

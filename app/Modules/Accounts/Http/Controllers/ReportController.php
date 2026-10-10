@@ -6,18 +6,21 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
-use App\Modules\Accounts\Reports\ChequeReports;
 use App\Modules\Accounts\Reports\BranchesSideBySideReport;
+use App\Modules\Accounts\Reports\ChequeReports;
 use App\Modules\Accounts\Reports\ExpenseAnalysisReport;
+use App\Modules\Accounts\Reports\FixedAssetReports;
 use App\Modules\Accounts\Reports\MonthlyCashReport;
 use App\Modules\Accounts\Reports\PartyLedgerReports;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -85,10 +88,10 @@ class ReportController extends Controller implements HasMiddleware
         'inflow' => 'accounts.inflow',
         'ledger' => 'accounts.ledger',
         // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — মালিক, ৩ অক্টোবর ২০২৬
-        'customer-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::CUSTOMER,
-        'supplier-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::SUPPLIER,
+        'customer-ledger' => PartyLedgerReports::CUSTOMER,
+        'supplier-ledger' => PartyLedgerReports::SUPPLIER,
         // ⭐ ব্যক্তির লেজার — মালিক, ৫ অক্টোবর ২০২৬ ([[PartyLedgerReports::PERSON]])
-        'person-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::PERSON,
+        'person-ledger' => PartyLedgerReports::PERSON,
         'trial-balance' => 'accounts.trial_balance',
         // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
         'branch-dues' => 'accounts.branch_dues',
@@ -103,6 +106,18 @@ class ReportController extends Controller implements HasMiddleware
         'expense-analysis' => ExpenseAnalysisReport::KEY,
         // ⭐ শাখা পাশাপাশি — বিক্রি, লাভ, টাকা, পাওনা, দেনা, মজুদ (২ অক্টোবর ২০২৬)
         'branches' => BranchesSideBySideReport::KEY,
+
+        // ⭐ স্থায়ী সম্পদের দশটা কাগজ — স্থায়ী সম্পদ ধাপ ৫ ([[FixedAssetReports]])
+        'asset-register' => FixedAssetReports::REGISTER,
+        'asset-depreciation' => FixedAssetReports::SCHEDULE,
+        'asset-movement' => FixedAssetReports::MOVEMENT,
+        'asset-nbv' => FixedAssetReports::NBV,
+        'asset-disposals' => FixedAssetReports::DISPOSALS,
+        'asset-fully-depreciated' => FixedAssetReports::FULLY_DEPRECIATED,
+        'asset-expiring' => FixedAssetReports::EXPIRING,
+        'asset-variance' => FixedAssetReports::VARIANCE,
+        'asset-book-vs-tax' => FixedAssetReports::BOOK_VS_TAX,
+        'asset-maintenance' => FixedAssetReports::MAINTENANCE,
     ];
 
     /** যেগুলোতে চূড়ান্ত হিসাবের অনুমতি লাগে। */
@@ -236,12 +251,12 @@ class ReportController extends Controller implements HasMiddleware
              * ⓘ মডেল নয়, টেবিল: গ্রাহক, সরবরাহকারী আর ব্যক্তি অন্য মডিউলের, আর Accounts কারও উপর দাঁড়ায় না
              * ([[BoundariesTest]]; উপরের partyTypes-এর একই কারণ)। কোম্পানি আর মোছা-নয় নিজেই ছাঁকা।
              */
-            'partyFilter' => $partyFilter = collect(\App\Modules\Accounts\Reports\PartyLedgerReports::PARTY_FILTERS)
+            'partyFilter' => $partyFilter = collect(PartyLedgerReports::PARTY_FILTERS)
                 ->keys()->first(fn (string $f) => $definition->hasFilter($f)),
-            'parties' => $partyFilter === null ? collect() : \Illuminate\Support\Facades\DB::table(
+            'parties' => $partyFilter === null ? collect() : DB::table(
                 ['customer_id' => 'customers', 'supplier_id' => 'suppliers', 'person_id' => 'mdm_people'][$partyFilter],
             )
-                ->where('company_id', \App\Core\Support\CompanyContext::id())
+                ->where('company_id', CompanyContext::id())
                 ->whereNull('deleted_at')
                 ->orderBy('name_en')
                 ->get(['id', 'name_en', 'name_bn'])

@@ -319,4 +319,14 @@ return [
     'labels_action' => 'Print labels',
     'custodian_ack' => 'Custodian\'s acknowledgement',
     'custodian_ack_none' => 'Not acknowledged yet',
+
+    // ⭐ Tax depreciation — fixed assets phase 5
+    'tax_method' => 'Tax method',
+    'tax_method_reducing' => 'On written-down value',
+    'tax_method_straight' => 'On cost',
+    'tax_rate' => 'Tax rate (% a year)',
+    'tax_rate_hint' => 'The income-tax schedule rate — leave empty and this category is not calculated',
+    'tax_rate_out_of_range' => 'The tax rate must be more than 0 and at most 100.',
+    'tax_method_required' => 'Pick a method when you set a tax rate.',
+    'tax_nothing' => 'No category has a tax rate, or no asset falls in this year.',
 ];

@@ -85,6 +85,14 @@
                 <x-ui.field name="capitalisation_threshold" type="number" numeric :label="__('accounts::asset.category_threshold')"
                             :value="old('capitalisation_threshold', $category->capitalisation_threshold)"
                             :hint="__('accounts::asset.category_threshold_hint')" />
+
+                {{-- ⭐ করের অবচয় — মালিকের বসানো হার; আইনের হার কোডে নেই (ধাপ ৫) --}}
+                <x-ui.select name="tax_method" :label="__('accounts::asset.tax_method')" placeholder="—"
+                             :selected="old('tax_method', $category->tax_method)"
+                             :options="collect(\App\Modules\Accounts\Services\AssetTaxService::METHODS)->mapWithKeys(fn ($m) => [$m => __('accounts::asset.tax_method_'.$m)])->all()" />
+
+                <x-ui.field name="tax_rate" type="number" numeric :label="__('accounts::asset.tax_rate')"
+                            :value="old('tax_rate', $category->tax_rate)" :hint="__('accounts::asset.tax_rate_hint')" />
             </div>
 
             <label class="mt-3 flex items-center gap-2 text-sm">

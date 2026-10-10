@@ -16,6 +16,7 @@ use App\Modules\Accounts\Imports\ChartOfAccountsImporter;
 use App\Modules\Accounts\Imports\FixedAssetOpeningImporter;
 use App\Modules\Accounts\Imports\OpeningBalanceImporter;
 use App\Modules\Accounts\Integrity\AccountsChecks;
+use App\Modules\Accounts\Integrity\FixedAssetChecks;
 use App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetCapitalisationPaper;
@@ -40,6 +41,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\YearClosing;
 use App\Modules\Accounts\Reports\BranchDuesReports;
 use App\Modules\Accounts\Reports\CoreReports;
+use App\Modules\Accounts\Reports\FixedAssetReports;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Support\VoucherDesigns;
@@ -184,6 +186,28 @@ return [
             ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
 
+            // ⭐ স্থায়ী সম্পদের কাগজ — নিবন্ধন, অবচয়, চলাচল, খাতা বনাম কর (স্থায়ী সম্পদ ধাপ ৫)
+            ['label' => 'accounts::menu.asset_register', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-register'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_schedule', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-depreciation'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_movement', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-movement'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_nbv', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-nbv'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_disposals', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-disposals'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_fully_depreciated', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-fully-depreciated'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_expiring', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-expiring'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_variance', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-variance'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_book_vs_tax', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-book-vs-tax'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_maintenance', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-maintenance'], 'permission' => 'accounts.report'],
+
             // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল, সবচেয়ে বড় খরচ কত (রিপোর্ট সেন্টার ধাপ ৪)
             ['label' => 'accounts::expense.title', 'icon' => 'reports', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'expense-analysis'], 'permission' => 'accounts.report'],
@@ -297,6 +321,7 @@ return [
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
             // ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১)
+            ['label' => 'accounts::menu.asset_dashboard', 'icon' => 'dashboard', 'route' => 'accounts.asset.dashboard', 'permission' => 'accounts.asset.view'],
             ['label' => 'accounts::menu.asset_verifications', 'icon' => 'building', 'route' => 'accounts.asset.verify.index', 'permission' => 'accounts.asset.view'],
             ['label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
             ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
@@ -736,6 +761,8 @@ return [
     'reports' => [
         CoreReports::class,
         BranchDuesReports::class,
+        // ⭐ স্থায়ী সম্পদের দশটা কাগজ (ধাপ ৫)
+        FixedAssetReports::class,
     ],
 
     // হোম পর্দার টাকার সংখ্যাগুলো
@@ -753,6 +780,8 @@ return [
      */
     'integrity' => [
         AccountsChecks::class,
+        // ⭐ সম্পদের খাতা = হিসাবের খাতা (স্থায়ী সম্পদ ধাপ ৫)
+        FixedAssetChecks::class,
     ],
 
     // "সদ্য কী হয়েছে" — টাকার দিক থেকে

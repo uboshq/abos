@@ -6,6 +6,7 @@ use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\AssetCategoryController;
 use App\Modules\Accounts\Http\Controllers\AssetCustodyController;
+use App\Modules\Accounts\Http\Controllers\AssetOverviewController;
 use App\Modules\Accounts\Http\Controllers\AssetVerificationController;
 use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
@@ -449,6 +450,10 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/mine', [AssetCustodyController::class, 'mine'])->name('mine');
         Route::post('/{asset}/acknowledge', [AssetCustodyController::class, 'acknowledge'])->whereNumber('asset')->name('acknowledge');
         Route::get('/labels', [AssetCustodyController::class, 'labels'])->name('labels');
+        // ⭐ ড্যাশবোর্ড আর করের অবচয় (স্থায়ী সম্পদ ধাপ ৫)
+        Route::get('/dashboard', [AssetOverviewController::class, 'dashboard'])->name('dashboard');
+        Route::get('/tax', [AssetOverviewController::class, 'tax'])->name('tax');
+        Route::post('/tax', [AssetOverviewController::class, 'taxRun'])->name('tax.run');
         Route::prefix('verify')->name('verify.')->group(function () {
             Route::get('/', [AssetVerificationController::class, 'index'])->name('index');
             Route::post('/', [AssetVerificationController::class, 'store'])->name('store');

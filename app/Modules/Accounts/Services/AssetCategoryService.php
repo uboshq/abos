@@ -91,6 +91,18 @@ final class AssetCategoryService
             $errors['residual_percent'] = __('accounts::asset.residual_out_of_range');
         }
 
+        // ⭐ করের হার — খালি থাকলে এই শ্রেণির করের হিসাব হয় না; থাকলে পদ্ধতিসহ, ০-এর বেশি আর ১০০ পর্যন্ত (ধাপ ৫)
+        $taxRate = blank($data['tax_rate'] ?? null) ? null : (string) $data['tax_rate'];
+        $taxMethod = blank($data['tax_method'] ?? null) ? null : (string) $data['tax_method'];
+
+        if ($taxRate !== null && (! is_numeric($taxRate) || bccomp($taxRate, '0', 4) <= 0 || bccomp($taxRate, '100', 4) > 0)) {
+            $errors['tax_rate'] = __('accounts::asset.tax_rate_out_of_range');
+        }
+
+        if ($taxRate !== null && ! in_array($taxMethod, AssetTaxService::METHODS, true)) {
+            $errors['tax_method'] = __('accounts::asset.tax_method_required');
+        }
+
         $taken = AssetCategory::query()->where('code', (string) ($data['code'] ?? ''))
             ->when($current !== null, fn ($q) => $q->whereKeyNot($current->id))->exists();
 
@@ -117,6 +129,8 @@ final class AssetCategoryService
             'rate' => blank($data['rate'] ?? null) ? null : (string) $data['rate'],
             'residual_percent' => $residual,
             'capitalisation_threshold' => blank($data['capitalisation_threshold'] ?? null) ? null : (string) $data['capitalisation_threshold'],
+            'tax_method' => $taxRate === null ? null : $taxMethod,
+            'tax_rate' => $taxRate,
             'is_active' => (bool) ($data['is_active'] ?? true),
         ];
     }

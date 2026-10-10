@@ -34,6 +34,8 @@ class AssetCategory extends Model
         'asset_account_id', 'accumulated_account_id', 'expense_account_id',
         'gain_account_id', 'loss_account_id', 'impairment_account_id',
         'method', 'life_months', 'rate', 'residual_percent', 'capitalisation_threshold',
+        // ⭐ করের অবচয় — মালিকের বসানো হার আর পদ্ধতি (ধাপ ৫)
+        'tax_method', 'tax_rate',
         'is_active', 'created_by',
     ];
 

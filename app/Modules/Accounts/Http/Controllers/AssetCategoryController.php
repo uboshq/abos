@@ -110,6 +110,8 @@ class AssetCategoryController extends Controller implements HasMiddleware
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'residual_percent' => ['nullable', 'numeric', 'min:0', 'max:99.99'],
             'capitalisation_threshold' => ['nullable', 'numeric', 'min:0'],
+            'tax_method' => ['nullable', 'string', 'max:16'],
+            'tax_rate' => ['nullable', 'numeric'],
             'is_active' => ['nullable', 'boolean'],
         ]) + ['gain_account_id' => null, 'loss_account_id' => null, 'impairment_account_id' => null]
             // ⓘ টিক তুলে নিলে ঘরটা আসেই না — তাই হাতে, নইলে বন্ধ করা শ্রেণি কখনো বন্ধ হত না
