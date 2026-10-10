@@ -120,12 +120,14 @@
                          :selected="old('confidentiality', $internal)" required />
             <x-ui.field name="document_date" type="date" :label="__('documents::field.document_date')" :value="old('document_date')" />
 
-            <div class="flex items-end justify-end gap-2 lg:col-span-3">
-                <x-ui.button :href="route('documents.index')">{{ __('documents::action.cancel') }}</x-ui.button>
-                <x-ui.button type="submit" tone="primary" icon="attachment" ::disabled="busy || ! pages.length">
-                    {{ __('documents::action.save_scan') }}
-                </x-ui.button>
-            </div>
+            {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে (documents রিভিউ) --}}
+            <x-ui.form-actions class="lg:col-span-3" :cancel="route('documents.index')">
+                <x-slot:submit>
+                    <x-ui.button type="submit" tone="primary" icon="attachment" ::disabled="busy || ! pages.length">
+                        {{ __('documents::action.save_scan') }}
+                    </x-ui.button>
+                </x-slot:submit>
+            </x-ui.form-actions>
         </section>
     </form>
 

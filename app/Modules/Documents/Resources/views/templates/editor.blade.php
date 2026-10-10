@@ -53,10 +53,8 @@
                     {{ __('documents::field.is_active') }}
                 </label>
             @endunless
-            <div class="flex justify-end gap-2">
-                <x-ui.button :href="route('documents.templates')">{{ __('documents::action.cancel') }}</x-ui.button>
-                <x-ui.button type="submit" tone="primary">{{ __('documents::action.save') }}</x-ui.button>
-            </div>
+            {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে (documents রিভিউ) --}}
+            <x-ui.form-actions :cancel="route('documents.templates')" :save="__('documents::action.save')" />
         </section>
 
         <aside data-boxed class="space-y-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm">

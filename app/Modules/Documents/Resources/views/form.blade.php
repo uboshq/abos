@@ -151,16 +151,15 @@
                     </section>
                 @endif
 
-                <div class="flex flex-wrap justify-end gap-2">
-                    <x-ui.button :href="$isNew ? route('documents.index') : route('documents.show', $document)">
-                        {{ __('documents::action.cancel') }}
-                    </x-ui.button>
-
-                    <x-ui.button type="submit" tone="primary" :icon="$isNew ? 'attachment' : null"
-                                 ::class="busy && 'pointer-events-none opacity-70'">
-                        {{ $isNew ? __('documents::action.upload') : __('documents::action.save') }}
-                    </x-ui.button>
-                </div>
+                {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে ([[x-ui.form-actions]]; documents রিভিউ) --}}
+                <x-ui.form-actions :cancel="$isNew ? route('documents.index') : route('documents.show', $document)">
+                    <x-slot:submit>
+                        <x-ui.button type="submit" tone="primary" :icon="$isNew ? 'attachment' : null"
+                                     ::class="busy && 'pointer-events-none opacity-70'">
+                            {{ $isNew ? __('documents::action.upload') : __('documents::action.save') }}
+                        </x-ui.button>
+                    </x-slot:submit>
+                </x-ui.form-actions>
             </div>
         </div>
     </form>
