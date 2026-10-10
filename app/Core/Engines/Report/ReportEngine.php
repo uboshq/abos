@@ -888,7 +888,14 @@ final class ReportEngine
 
     private function countFor(ReportDefinition $report, $query): int
     {
-        if ($report->groupBy === null) {
+        /*
+         * ⛔ কোয়েরি নিজে দল বাঁধলে (`GROUP BY`) সরল `count()` প্রথম দলের সারি গোনে, দলের সংখ্যা নয় — পাতা-ঝাড়ু ধাপ ০
+         * (১০ অক্টোবর ২০২৬): "শাখা পাশাপাশি" দেখাত "৯০টি সারি", অথচ শাখা একটা (৯০ = প্রধান শাখার খাতার সারি)।
+         * ⓘ তাই ঘোষণা না থাকলেও কোয়েরির নিজের দল দেখা হয়।
+         */
+        $base = $query instanceof EloquentBuilder ? $query->getQuery() : $query;
+
+        if ($report->groupBy === null && empty($base->groups) && empty($base->havings)) {
             return $query->count();
         }
 
