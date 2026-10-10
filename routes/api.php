@@ -163,6 +163,8 @@ Route::prefix('v1')
         Route::get('/notifications', [NotificationApiController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/read-all', [NotificationApiController::class, 'readAll'])->name('notifications.read-all');
         Route::post('/notifications/{notification}/read', [NotificationApiController::class, 'read'])->name('notifications.read');
+        Route::get('/notifications/unread-count', [NotificationApiController::class, 'unreadCount'])->name('notifications.unread-count');
+        Route::post('/notifications/{notification}/archive', [NotificationApiController::class, 'archive'])->name('notifications.archive');
 
         /*
          * "আমি কে, আর আমি কী দেখব" — অ্যাপের প্রথম প্রশ্ন।

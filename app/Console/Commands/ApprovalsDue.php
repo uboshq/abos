@@ -163,6 +163,9 @@ final class ApprovalsDue extends Command
                 __('core.notify.approval_reminder', ['document' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
                 Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+                // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                key: 'approval:'.$approval->id.':reminder:'.$approval->current_level,
+                about: $approval->approvable instanceof \Illuminate\Database\Eloquent\Model ? $approval->approvable : null,
             );
         }
     }
@@ -194,6 +197,9 @@ final class ApprovalsDue extends Command
                 __('core.notify.approval_escalated', ['document' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
                 Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+                // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                key: 'approval:'.$approval->id.':escalated:'.$approval->current_level,
+                about: $approval->approvable instanceof \Illuminate\Database\Eloquent\Model ? $approval->approvable : null,
             );
         }
     }

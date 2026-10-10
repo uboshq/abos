@@ -5,21 +5,27 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
 use App\Core\Support\MailReach;
 use App\Core\Support\NotificationKinds;
 use App\Models\Notification;
 use App\Models\NotificationChoice;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
  * বিজ্ঞপ্তি খোলা ও পড়া।
  *
- * নিজের কোনো পর্দা নেই — খবরটা যেখানে নিয়ে যাওয়ার কথা, সেখানেই নিয়ে
- * যায়। "বিজ্ঞপ্তির তালিকা" নামে একটা আলাদা পাতা বানালে সেটা আরেকটা
- * ইনবক্স হত, আর মানুষ ইতিমধ্যেই যথেষ্ট ইনবক্স খোলেন।
+ * খবরটা যেখানে নিয়ে যাওয়ার কথা, সেখানেই নিয়ে যায়।
+ *
+ * ── ⭐ আর এখন নিজের একটা পাতাও — "আমার বিজ্ঞপ্তি" (মালিকের স্পেক §২, §৪, §৯খ; ১০ অক্টোবর ২০২৬) ──────────────
+ * আগে নিজের পাতা ইচ্ছে করেই ছিল না ("আরেকটা ইনবক্স হত")। মালিকের স্পেক সেটা চায়: সব / না-পড়া / পড়া / আর্কাইভ,
+ * খোঁজা, ছাঁকনি, সাজানো, বাছাগুলো একসাথে পড়া বা আর্কাইভ। ⓘ তবু এটা নিজের খবরেরই পাতা — কারও চাবি লাগে না, অন্যের
+ * খবর দেখা যায় না, আর অন্য শাখার কাগজের খবর নাগালের বাইরে গেলে লুকায় ([[Notification::scopeVisibleTo()]])।
  */
 class NotificationController extends Controller
 {
@@ -114,6 +120,110 @@ class NotificationController extends Controller
         return back()->with('saved', __('core.notify.settings_saved'));
     }
 
+    /** কত খবর এক পাতায় */
+    private const PER_PAGE = 30;
+
+    /**
+     * ⭐ আমার বিজ্ঞপ্তি — নিজের সব খবর (স্পেক §৯খ)।
+     */
+    public function index(Request $request): View
+    {
+        $user = $request->user();
+        $f = $request->validate([
+            'tab' => ['nullable', Rule::in(['all', 'unread', 'read', 'archived'])],
+            'category' => ['nullable', Rule::in(NotificationKinds::CATEGORIES)],
+            'priority' => ['nullable', Rule::in(NotificationKinds::PRIORITIES)],
+            'module' => ['nullable', 'string', 'max:32'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'sort' => ['nullable', Rule::in(['newest', 'oldest', 'priority'])],
+        ]);
+        $tab = $f['tab'] ?? 'all';
+
+        $query = $this->notifications->mine($user)
+            ->when($tab === 'archived', fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))
+            ->when($tab === 'unread', fn ($q) => $q->whereNull('read_at'))
+            ->when($tab === 'read', fn ($q) => $q->whereNotNull('read_at'))
+            ->when($f['category'] ?? null, fn ($q, $c) => $q->where('category', $c))
+            ->when($f['priority'] ?? null, fn ($q, $p) => $q->where('priority', $p))
+            ->when($f['module'] ?? null, fn ($q, $m) => $q->where('module', $m))
+            ->when($f['q'] ?? null, fn ($q, $term) => $q->where(fn ($w) => $w->where('title', 'like', '%'.$term.'%')
+                ->orWhere('body', 'like', '%'.$term.'%')));
+
+        match ($f['sort'] ?? 'newest') {
+            'oldest' => $query->orderBy('id'),
+            // ⓘ সবচেয়ে জরুরি আগে — ক্রম NotificationKinds::PRIORITIES-এর
+            'priority' => $query->orderByRaw('FIELD(priority, ?, ?, ?, ?)', NotificationKinds::PRIORITIES)->orderByDesc('id'),
+            default => $query->orderByDesc('id'),
+        };
+
+        $rows = $query->paginate(self::PER_PAGE)->withQueryString();
+
+        // ⓘ পাতায় যা দেখানো হলো তা "দেখা" — খোলা নয়, তাই পড়া নয় (স্পেক: দেখা আর পড়া আলাদা)
+        $this->notifications->markSeen($user, $rows->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        $counts = $this->notifications->mine($user)->whereNull('archived_at')
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN read_at IS NULL THEN 1 ELSE 0 END) as unread')
+            ->where('notifications.company_id', \App\Core\Support\CompanyContext::id())
+            ->first();
+
+        return view('notifications.index', [
+            'menu' => $this->menu->forUser($user),
+            'rows' => $rows,
+            'tab' => $tab,
+            'filters' => $f,
+            'unread' => (int) ($counts->unread ?? 0),
+            'total' => (int) ($counts->total ?? 0),
+            'modules' => $this->notifications->mine($user)->distinct()->orderBy('module')->pluck('module')->filter()->values(),
+        ]);
+    }
+
+    /**
+     * ⭐ বাছা খবরগুলো — পড়া, না-পড়া, আর্কাইভ বা ফেরত (স্পেক §৪ "Bulk Read, Archive")।
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'max:200'],
+            'ids.*' => ['integer'],
+            'action' => ['required', Rule::in(['read', 'unread', 'archive', 'restore'])],
+        ]);
+
+        $changed = $this->notifications->act($request->user(), array_map('intval', $data['ids']), $data['action']);
+
+        app(NotificationAudit::class)->record('bulk_'.$data['action'], null, 'done', ['asked' => count($data['ids']), 'changed' => $changed]);
+
+        return back()->with('saved', __('core.notify.bulk_done', ['count' => $changed]));
+    }
+
+    /** একটা খবর পড়া — খোলা ছাড়া (ঘণ্টার ✓ বোতাম) */
+    public function read(Request $request, Notification $notification): RedirectResponse
+    {
+        abort_unless($this->notifications->markRead($notification, $request->user()), 403);
+
+        return back();
+    }
+
+    /** একটা খবর আর্কাইভে, বা আর্কাইভ থেকে ফেরত */
+    public function archive(Request $request, Notification $notification): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($notification->user_id === $user->id, 403);
+
+        $action = $notification->isArchived() ? 'restore' : 'archive';
+        $this->notifications->act($user, [(int) $notification->id], $action);
+        app(NotificationAudit::class)->record($action, $notification);
+
+        return back();
+    }
+
+    /**
+     * ⭐ না-পড়া গোনা — ঘণ্টার নিরাপদ polling-এর জন্য (স্পেক §৯ক)। ⓘ সুইচ বন্ধ থাকলে (ডিফল্ট) পর্দা এটা ডাকেই না।
+     */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return response()->json(['unread' => $this->notifications->unreadCount($request->user())]);
+    }
+
     /**
      * একটা খবর খোলা — পড়া হিসেবে বসিয়ে তার গন্তব্যে পাঠানো।
      *
@@ -121,18 +231,35 @@ class NotificationController extends Controller
      * এখানে সেই ফলটা ধরেই সিদ্ধান্ত হয় — নাহলে অন্যের খবরের লিংকে
      * ক্লিক করে তাঁর ঘণ্টা খালি করে দেওয়া যেত।
      */
-    public function open(Request $request, Notification $notification): RedirectResponse
+    public function open(Request $request, Notification $notification): RedirectResponse|View
     {
-        if (! $this->notifications->markRead($notification, $request->user())) {
+        $user = $request->user();
+
+        if ($notification->user_id !== $user->id) {
             abort(403);
         }
 
-        return redirect()->to($notification->url ?? route('dashboard'));
+        /*
+         * ⛔ যে কাগজের খবর, সেটা আর তাঁর নাগালে নেই (শাখা সরানো হয়েছে, কাগজ মোছা) — খোলা নয়, আর কারণটা বলা হয়
+         * (স্পেক §১৩)। ⓘ চেষ্টাটা নিরীক্ষার খাতায় যায়; খবরটা পড়া হিসেবে বসে, যাতে ঘণ্টায় ঝুলে না থাকে।
+         */
+        if (! $this->notifications->mayOpen($notification, $user)) {
+            $this->notifications->markRead($notification, $user);
+            app(NotificationAudit::class)->record('open_denied', $notification, 'denied');
+
+            return view('notifications.no-access', ['menu' => $this->menu->forUser($user)]);
+        }
+
+        $this->notifications->markRead($notification, $user);
+
+        return redirect()->to($notification->url ?? route('notifications.index'));
     }
 
     public function readAll(Request $request): RedirectResponse
     {
-        $this->notifications->markAllRead($request->user());
+        $count = $this->notifications->markAllRead($request->user());
+
+        app(NotificationAudit::class)->record('read_all', null, 'done', ['changed' => $count]);
 
         return back();
     }

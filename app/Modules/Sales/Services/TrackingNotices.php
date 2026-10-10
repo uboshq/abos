@@ -77,6 +77,9 @@ final class TrackingNotices
                 // ⭐ গ্রাহকের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬ ([[Customer::nameWithPoint()]])
                 __('sales::tracking.notice.body', ['customer' => (string) $challan->customer?->nameWithPoint()], 'bn'),
                 route('sales.tracking.show', ['challan', $challan->public_id]),
+                // ⭐ একই ধাপ-বদলের খবর একবারই, আর কোন চালান (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                key: 'sales:delivery-event:'.$event->getKey(),
+                about: $challan,
             );
 
             /*
@@ -150,8 +153,11 @@ final class TrackingNotices
             return;
         }
 
+        // ⭐ কোন আদেশ — শাখার দেয়াল খবরেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)। ⓘ চাবি নেই: একই আদেশ পরের স্তরে আবার কারও
+        // সইয়ের অপেক্ষায় যেতে পারে, আর একই মানুষ দুই স্তরে থাকলে দ্বিতীয় খবরটা হারাত
         $sent = $this->notices->sendMany($users, $type, $title,
-            __('sales::tracking.notice.body', ['customer' => (string) $order->customer?->nameWithPoint()], 'bn'), $url);
+            __('sales::tracking.notice.body', ['customer' => (string) $order->customer?->nameWithPoint()], 'bn'), $url,
+            about: $order);
 
         foreach ($sent->pluck('user_id')->unique() as $userId) {
             \App\Jobs\SendPushToUser::dispatch((int) $userId, $title, [

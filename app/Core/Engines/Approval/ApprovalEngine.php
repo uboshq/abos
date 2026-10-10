@@ -527,6 +527,9 @@ final class ApprovalEngine
             ]),
             $remarks,
             Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+            // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+            key: 'approval:'.$approval->id.':'.$outcome,
+            about: $approval->approvable instanceof \Illuminate\Database\Eloquent\Model ? $approval->approvable : null,
         );
     }
 

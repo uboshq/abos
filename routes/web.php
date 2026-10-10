@@ -80,13 +80,21 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('attachment')->name('attachment.destroy');
 
     /*
-     * বিজ্ঞপ্তি — নিজের কোনো পাতা নেই, কেবল খোলা ও পড়া।
+     * বিজ্ঞপ্তি — খোলা ও পড়া, আর নিজের পাতা "আমার বিজ্ঞপ্তি"।
      *
-     * খবরটা যেখানে নিয়ে যাওয়ার কথা সেখানেই নিয়ে যায়; "বিজ্ঞপ্তির
-     * তালিকা" নামে আলাদা পাতা বানালে সেটা আরেকটা ইনবক্স হত।
+     * ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ (মালিকের স্পেক §৯, ১০ অক্টোবর ২০২৬): নিজের সব খবরের পাতা, একটা একটা পড়া ও আর্কাইভ,
+     * বাছাগুলো একসাথে, আর polling-এর জন্য না-পড়া গোনা। ⓘ সবই নিজের খবরে — কারও চাবি লাগে না, অন্যেরটায় ৪০৩।
      */
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])
+        ->middleware('throttle:30,1')->name('notifications.unread-count');
+    Route::post('/notifications/bulk', [NotificationController::class, 'bulk'])->name('notifications.bulk');
     Route::get('/notifications/{notification}', [NotificationController::class, 'open'])
         ->whereNumber('notification')->name('notifications.open');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])
+        ->whereNumber('notification')->name('notifications.read');
+    Route::post('/notifications/{notification}/archive', [NotificationController::class, 'archive'])
+        ->whereNumber('notification')->name('notifications.archive');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
 

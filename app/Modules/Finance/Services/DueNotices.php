@@ -370,7 +370,8 @@ final class DueNotices
                 continue;
             }
 
-            if ($this->notifications->send($user, $type, $title, $body, $url) !== null) {
+            // ⭐ একই কাগজের একই দিনের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+            if ($this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString()) !== null) {
                 $sent++;
             }
         }

@@ -441,6 +441,9 @@ final class HeldCounterSaleFinisher
                     route('sales.direct.drafts', ['tab' => 'signed']),
                     // ⓘ সইকারী নিজেই সই দিলেন, কিন্তু থেমে যাওয়াটা দেখেননি — তাই নিজের কাজ হলেও খবর
                     evenToSelf: true,
+                    // ⭐ কোন বিল — শাখার দেয়াল খবরেও; একই থেমে যাওয়ার খবর দিনে একবার (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                    key: 'sales:invoice:'.$invoice->id.':stuck:'.now()->toDateString(),
+                    about: $invoice,
                 );
             } catch (Throwable $e) {
                 report($e);

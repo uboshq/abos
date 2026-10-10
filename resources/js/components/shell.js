@@ -742,3 +742,72 @@ export function peek () {
         },
     }
 }
+
+/**
+ * ⭐ ঘণ্টা — ড্রয়ারের ট্যাব আর নিরাপদ polling (মালিকের স্পেক §৯ক; বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)।
+ *
+ * ⓘ ট্যাব (সব / না-পড়া / অনুমোদন / কাজ / ব্যবস্থা) কেবল দেখানো-লুকানো — সারিগুলো সার্ভার একবারই এঁকে দেয়, তাই JS বন্ধ
+ * থাকলেও সব খবর দেখা যায়।
+ *
+ * ── ⛔ polling ডিফল্টে বন্ধ ────────────────────────────────────────────
+ * মালিক ২১ অক্টোবর ২০২৬ পর্যন্ত চলমান polling স্থগিত রেখেছেন। `data-poll-seconds` শূন্য হলে (সুইচ বন্ধ) কিছুই চলে না —
+ * পাতা খোলার সময়ের সংখ্যাটাই থাকে, আগের মতো। চালু হলে কেবল না-পড়া গোনা আনে (একটা ছোট JSON), পাতা লুকানো থাকলে আনে
+ * না, আর ভুল হলে চুপচাপ পরের পালায় আবার চেষ্টা করে — ঘণ্টা কখনো পাতা ভাঙে না। ⓘ সার্ভারে প্রতি মিনিটে ৩০ বারের সীমা।
+ */
+export function notifyBell () {
+    return {
+        open: false,
+        tab: 'all',
+        count: 0,
+
+        init () {
+            const el = this.$el
+            const base = Number(el.dataset.base || 0)
+            const seconds = Number(el.dataset.pollSeconds || 0)
+            const url = el.dataset.pollUrl || ''
+
+            this.count = Number(el.dataset.count || 0)
+
+            if (seconds < 15 || url === '') return
+
+            setInterval(() => {
+                if (document.hidden) return
+
+                fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+                    .then((response) => response.ok ? response.json() : null)
+                    .then((data) => {
+                        if (data && typeof data.unread === 'number') this.count = base + data.unread
+                    })
+                    .catch(() => {})
+            }, seconds * 1000)
+        },
+
+        toggle () {
+            this.open = ! this.open
+        },
+
+        close () {
+            this.open = false
+        },
+
+        pick (tab) {
+            this.tab = tab
+        },
+
+        picked (tab) {
+            return this.tab === tab
+        },
+
+        /** এই সারিটা এখনকার ট্যাবে দেখাবে কি — `category` আর পড়া কি না */
+        shows (category, unread) {
+            if (this.tab === 'all') return true
+            if (this.tab === 'unread') return unread
+
+            return this.tab === category
+        },
+
+        hasCount () {
+            return this.count > 0
+        },
+    }
+}

@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'title' => 'Notification center',
+    'note' => 'Every notification sent in the company — who got it and how many read it. You see the branches within your reach.',
+    'search' => 'Search title, message or type',
+    'empty' => 'Nothing here.',
+    'archived_only' => 'Archived only',
+    'from' => 'From',
+    'to' => 'To',
+    'col_title' => 'Notification',
+    'col_source' => 'From',
+    'col_priority' => 'Priority',
+    'col_branch' => 'Branch',
+    'col_recipients' => 'Sent to',
+    'col_read' => 'Read by',
+    'col_when' => 'When',
+    'no_branch' => 'All branches',
+    'sort_recipients' => 'Most recipients first',
+    'archive' => 'Archive from the center',
+    'restore' => 'Restore to the center',
+    'archived' => ':count notifications changed.',
+    'selected' => 'Selected',
+    'detail' => 'Notification detail',
+    'type' => 'Type',
+    'by' => 'Caused by',
+    'nobody' => 'The system',
+    'key' => 'Duplicate-prevention key',
+    'recipients' => 'Recipients',
+    'recipient' => 'Recipient',
+    'seen' => 'Seen',
+    'read' => 'Read',
+    'archived_by_user' => 'Archived',
+    'not_yet' => 'Not yet',
+    'back' => 'Back to the center',
+];

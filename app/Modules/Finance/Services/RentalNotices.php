@@ -146,7 +146,8 @@ final class RentalNotices
                 ->when($quietDays !== null, fn ($q) => $q->where('created_at', '>=', now()->subDays($quietDays)))
                 ->exists();
 
-            if (! $told && $this->notifications->send($user, $type, $title, $body, $url) !== null) {
+            // ⭐ একই চুক্তির একই দিনের খবর একবারই (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+            if (! $told && $this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString()) !== null) {
                 $sent++;
             }
         }

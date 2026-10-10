@@ -341,7 +341,8 @@ final class ScheduledReportRunner
             $told = collect([$owner])->concat($recipients)->unique('id');
 
             foreach ($told as $user) {
-                $this->notify->send($user, 'report_ready', $title, $body, $url);
+                // ⭐ একই চালানোর খবর একবারই (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                $this->notify->send($user, 'report_ready', $title, $body, $url, key: 'report:run:'.$run->getKey());
             }
         });
     }

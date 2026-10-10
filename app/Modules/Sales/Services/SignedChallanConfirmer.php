@@ -151,6 +151,9 @@ final class SignedChallanConfirmer
             __('sales::auto_finish.challan_stuck_title', ['no' => $challan->document_no]),
             __('sales::auto_finish.challan_stuck_body', ['reason' => $reason]),
             route('sales.challan.show', $challan),
+            // ⭐ কোন চালান — শাখার দেয়াল খবরেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১); একই আটকানোর খবর দিনে একবার
+            key: 'sales:challan:'.$challan->id.':stuck:'.now()->toDateString(),
+            about: $challan,
         );
     }
 }

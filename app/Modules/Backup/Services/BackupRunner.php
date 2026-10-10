@@ -119,6 +119,8 @@ final class BackupRunner
                         : __('backup::message.failed_detail_hidden'),
                 ]),
                 route('backup.index'),
+                // ⭐ একই রাতের ব্যর্থতা একবারই — দুই দলের বার্তা আলাদা, তাই চাবিও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                key: 'backup:'.$run->id.':failed:'.$i,
             );
         }
     }
