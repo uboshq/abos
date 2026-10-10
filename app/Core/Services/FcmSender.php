@@ -40,6 +40,33 @@ final class FcmSender
      */
     public function send(string $token, string $title, ?string $body, array $data = []): string
     {
+        return $this->post([
+            'token' => $token,
+            'notification' => array_filter(['title' => $title, 'body' => $body]),
+            'data' => array_map('strval', $data),
+            'android' => ['priority' => 'HIGH'],
+        ]);
+    }
+
+    /**
+     * ⭐ নীরব বার্তা — কেবল `data`, কোনো শিরোনাম বা লেখা নয় (রিয়েল-টাইম সিঙ্ক, মালিক, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ফোন দেখায় না, কেবল খোলা অ্যাপ শোনে ([[SyncNudge]])। ⛔ ভেতরে ব্যবসার কোনো তথ্য নয় — কেবল "সিঙ্ক করো"।
+     *
+     * @param  array<string, string>  $data
+     */
+    public function sendData(string $token, array $data): string
+    {
+        return $this->post([
+            'token' => $token,
+            'data' => array_map('strval', $data),
+            'android' => ['priority' => 'HIGH'],
+        ]);
+    }
+
+    /** @param  array<string, mixed>  $message */
+    private function post(array $message): string
+    {
         $credentials = $this->credentials();
         $project = (string) config('services.firebase.project_id');
 
@@ -49,14 +76,7 @@ final class FcmSender
 
         $response = Http::withToken($this->accessToken($credentials))
             ->timeout(15)
-            ->post("https://fcm.googleapis.com/v1/projects/{$project}/messages:send", [
-                'message' => [
-                    'token' => $token,
-                    'notification' => array_filter(['title' => $title, 'body' => $body]),
-                    'data' => array_map('strval', $data),
-                    'android' => ['priority' => 'HIGH'],
-                ],
-            ]);
+            ->post("https://fcm.googleapis.com/v1/projects/{$project}/messages:send", ['message' => $message]);
 
         if ($response->successful()) {
             return self::SENT;
