@@ -57,10 +57,10 @@ class PosParkedBillTest extends TestCase
         return app(PosService::class);
     }
 
-    private function park(string $qty = '2'): SalesInvoice
+    private function park(string $qty = '2', ?int $customerId = null): SalesInvoice
     {
         return $this->pos()->park(
-            ['warehouse_id' => $this->warehouse->id],
+            ['warehouse_id' => $this->warehouse->id, ...($customerId === null ? [] : ['customer_id' => $customerId])],
             [['product_id' => $this->product->id, 'qty' => $qty, 'rate' => '100']],
         );
     }
@@ -285,7 +285,14 @@ class PosParkedBillTest extends TestCase
         $stock = app(StockService::class);
         $before = $stock->availableQty($this->product, $this->warehouse);
 
-        $invoice = $this->park('2');
+        /*
+         * ⓘ টাকা না নিয়ে নিশ্চিত = বাকি — নগদ গ্রাহকের সীমা ০ (মালিক, ১ অক্টোবর ২০২৬), তাই বাকির জায়গা থাকা ডিলার।
+         * এই দাবি মাল মাপে, সীমা নয় ([[PosTest::test_the_walk_in_customer_gets_no_credit_but_a_paid_sale_goes_through()]])।
+         */
+        $dealer = \App\Modules\Customer\Models\Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
+        $dealer->forceFill(['credit_limit' => '1000'])->save();
+
+        $invoice = $this->park('2', (int) $dealer->id);
         app(SalesInvoiceService::class)->confirm($invoice->fresh(['lines.product']));
 
         $after = $stock->statesFor($this->product, $this->warehouse);
