@@ -560,6 +560,9 @@ class EveryRouteIsGuardedTest extends TestCase
         'notifications.bulk' => 'নিজের বাছা খবরে পড়া/আর্কাইভ — অন্যের সারি ছোঁয় না',
         'notifications.read' => 'নিজের খবরে পড়ার দাগ — অন্যেরটায় ৪০৩',
         'notifications.archive' => 'নিজের খবর আর্কাইভে — অন্যেরটায় ৪০৩',
+        // ⭐ ধাপ ২ — নিজের ব্রাউজারের Web Push; অনুমতি ব্রাউজার নিজে চায়, সারি কেবল নিজের নামে
+        'notifications.push.subscribe' => 'এই ব্রাউজারে নিজের Web Push চালু — নিজের নামে, মাধ্যম সংযুক্ত হলে তবেই',
+        'notifications.push.unsubscribe' => 'নিজের ব্রাউজারের Web Push বন্ধ — কেবল নিজের সারি',
         'components' => 'নকশার নমুনা পাতা, কোনো ডেটা নেই',
 
         /*

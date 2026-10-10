@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Notifications\ChannelRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
@@ -11,6 +12,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\MailReach;
 use App\Core\Support\NotificationKinds;
 use App\Models\Notification;
+use App\Models\NotificationChannel;
 use App\Models\NotificationChoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -71,7 +73,22 @@ class NotificationController extends Controller
             'silenced' => NotificationChoice::silencedFor((int) $user->id),
             'mailed' => $mailed,
             'postable' => ! MailReach::silent(),
+            // ⭐ এই ব্রাউজারে Web Push — মাধ্যম সংযুক্ত হলে তবেই বোতাম (ধাপ ২)
+            'pushKey' => $this->pushKey(),
         ]);
+    }
+
+    /** VAPID-এর প্রকাশ্য চাবি — Web Push সংযুক্ত না হলে `null` */
+    private function pushKey(): ?string
+    {
+        $registry = app(ChannelRegistry::class);
+        $company = (int) CompanyContext::id();
+
+        if (! $registry->connected($company, NotificationChannel::WEB_PUSH)) {
+            return null;
+        }
+
+        return $registry->config($company, NotificationChannel::WEB_PUSH)?->secret('vapid_public');
     }
 
     /**

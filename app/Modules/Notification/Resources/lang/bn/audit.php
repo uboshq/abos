@@ -16,6 +16,13 @@ return [
     'to' => 'পর্যন্ত',
     'system' => 'ব্যবস্থা নিজে',
     'actions' => [
+        'delivery_retry' => 'হাতে আবার চেষ্টা',
+        'delivery_cancel' => 'ডেলিভারি বাতিল',
+        'channel_update' => 'মাধ্যমের সেটিং বদল',
+        'channel_vapid' => 'Web Push-এর চাবি তৈরি',
+        'channel_test' => 'মাধ্যমের সংযোগ পরীক্ষা',
+        'push_subscribe' => 'ব্রাউজারে পুশ চালু',
+        'push_unsubscribe' => 'ব্রাউজারে পুশ বন্ধ',
         'read_all' => 'সব পড়া',
         'bulk_read' => 'বাছাগুলো পড়া',
         'bulk_unread' => 'বাছাগুলো না-পড়া',

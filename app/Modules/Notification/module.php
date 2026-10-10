@@ -25,10 +25,20 @@ return [
         'transactions' => [
             // ⭐ কোম্পানির সব খবর — কে পেলেন, কে পড়লেন (স্পেক §২, §৪)
             ['label' => 'notification::menu.center', 'icon' => 'bell', 'route' => 'notification.center.index', 'permission' => 'notification.center'],
+            // ⭐ ধাপ ২ — ডেলিভারির কিউ আর ব্যর্থ-তালিকা
+            ['label' => 'notification::menu.queue', 'icon' => 'outbox', 'route' => 'notification.deliveries.queue', 'permission' => 'notification.deliveries'],
+            ['label' => 'notification::menu.failed', 'icon' => 'alert-triangle', 'route' => 'notification.deliveries.failed', 'permission' => 'notification.deliveries'],
         ],
         'reports' => [
             // ⭐ কে কখন কোন খবরে কী করলেন (স্পেক §১৩)
             ['label' => 'notification::menu.audit', 'icon' => 'book', 'route' => 'notification.audit.index', 'permission' => 'notification.audit'],
+            // ⭐ ধাপ ২ — প্রতিটা চেষ্টা, আর মাধ্যমের স্বাস্থ্য
+            ['label' => 'notification::menu.logs', 'icon' => 'list', 'route' => 'notification.deliveries.logs', 'permission' => 'notification.deliveries'],
+            ['label' => 'notification::menu.health', 'icon' => 'check-circle', 'route' => 'notification.deliveries.health', 'permission' => 'notification.deliveries'],
+        ],
+        'settings' => [
+            // ⭐ ধাপ ২ — মাধ্যমের সাজানো আর সংযোগ পরীক্ষা
+            ['label' => 'notification::menu.channels', 'icon' => 'settings', 'route' => 'notification.channels.index', 'permission' => 'notification.channels'],
         ],
     ],
 
@@ -36,11 +46,15 @@ return [
         'notification.center',  // বিজ্ঞপ্তি কেন্দ্র দেখা — কোম্পানির খবর, নাগালের শাখার
         'notification.manage',  // কেন্দ্র থেকে আর্কাইভ বা ফেরত
         'notification.audit',   // নিরীক্ষার খাতা দেখা
+        'notification.channels',   // মাধ্যম সাজানো, চাবি, সংযোগ পরীক্ষা (ধাপ ২)
+        'notification.deliveries', // কিউ, লগ, ব্যর্থ-তালিকা, স্বাস্থ্য দেখা
+        'notification.retry',      // হাতে আবার চেষ্টা বা বাতিল
     ],
 
     'role_templates' => [
         'Notification Watcher' => ['notification.center'],
-        'Notification Manager' => ['notification.center', 'notification.manage', 'notification.audit'],
+        'Notification Manager' => ['notification.center', 'notification.manage', 'notification.audit',
+            'notification.channels', 'notification.deliveries', 'notification.retry'],
     ],
 
     'settings' => [
@@ -62,6 +76,14 @@ return [
             'type' => 'integer',
             'default' => 60,
             'group' => 'bell',
+        ],
+        [
+            // ⭐ ধাপ ২ — একটা খবর একটা মাধ্যমে সর্বোচ্চ কতবার (১–১০); পেরোলে ব্যর্থ-তালিকা
+            'key' => 'notification.max_attempts',
+            'label' => 'notification::settings.max_attempts',
+            'type' => 'integer',
+            'default' => 5,
+            'group' => 'delivery',
         ],
     ],
 

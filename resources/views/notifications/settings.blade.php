@@ -99,4 +99,29 @@
             <p class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.settings_warning') }}</p>
         </div>
     </form>
+
+    {{--
+        ⭐ এই ব্রাউজারে Web Push — বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২ (মালিকের স্পেক §৭)।
+        ⓘ মাধ্যম সংযুক্ত হলে (প্রশাসক VAPID চাবি বানালে) তবেই; জরুরি আর বেশি গুরুত্বের খবর ব্রাউজার বন্ধ থাকলেও আসে।
+        অনুমতি ব্রাউজার নিজে চায়। ⓘ ফর্মটা কেবল CSRF টোকেনের জন্য — পাঠায় কম্পোনেন্ট।
+    --}}
+    @if ($pushKey)
+        <form x-data="pushToggle" data-push-toggle data-key="{{ $pushKey }}"
+              data-subscribe-url="{{ route('notifications.push.subscribe') }}"
+              data-unsubscribe-url="{{ route('notifications.push.unsubscribe') }}"
+              class="mt-4 flex flex-wrap items-center gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 py-3">
+            @csrf
+            <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium">{{ __('core.notify.push_title') }}</p>
+                <p class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.push_note') }}</p>
+                <p x-show="failed" x-cloak class="text-2xs text-(--color-danger)">{{ __('core.notify.push_failed') }}</p>
+            </div>
+            <button type="button" x-show="canUse()" @click="toggle" :disabled="busy"
+                    class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--color-surface-hover)">
+                <span x-show="isOn()" x-cloak>{{ __('core.notify.push_off') }}</span>
+                <span x-show="! isOn()">{{ __('core.notify.push_on') }}</span>
+            </button>
+            <p x-show="! canUse()" x-cloak class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.push_unsupported') }}</p>
+        </form>
+    @endif
 </x-layouts.app>

@@ -811,3 +811,104 @@ export function notifyBell () {
         },
     }
 }
+
+/**
+ * ⭐ এই ব্রাউজারে Web Push চালু/বন্ধ — নিজের সেটিংসের পাতায় (মালিকের স্পেক §৭; বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২)।
+ *
+ * ⓘ অনুমতি ব্রাউজার নিজে চায়; "না" বললে কিছুই হয় না। VAPID-এর প্রকাশ্য চাবি পাতা থেকে (`data-key`); মাধ্যম সংযুক্ত না
+ * থাকলে বোতামটাই আঁকা হয় না। ঠিকানা আর ব্রাউজারের চাবি সার্ভারে যায় CSRF টোকেনসহ।
+ */
+export function pushToggle () {
+    return {
+        supported: false,
+        subscribed: false,
+        busy: false,
+        failed: false,
+
+        init () {
+            this.supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+            if (! this.supported) return
+
+            navigator.serviceWorker.getRegistration('/notification-sw.js')
+                .then((reg) => reg ? reg.pushManager.getSubscription() : null)
+                .then((sub) => { this.subscribed = sub !== null })
+                .catch(() => {})
+        },
+
+        isOn () {
+            return this.subscribed
+        },
+
+        canUse () {
+            return this.supported
+        },
+
+        toggle () {
+            if (this.busy) return
+            this.busy = true
+            this.failed = false
+
+            const done = () => { this.busy = false }
+            const fail = () => { this.failed = true; this.busy = false }
+
+            if (this.subscribed) {
+                this.leave().then(done, fail)
+            } else {
+                this.join().then(done, fail)
+            }
+        },
+
+        join () {
+            const el = this.$el
+            const key = el.dataset.key || ''
+
+            return Notification.requestPermission().then((answer) => {
+                if (answer !== 'granted') throw new Error('denied')
+
+                return navigator.serviceWorker.register('/notification-sw.js')
+            }).then((reg) => reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlKey(key),
+            })).then((sub) => send(el.dataset.subscribeUrl, el, sub.toJSON()))
+                .then(() => { this.subscribed = true })
+        },
+
+        leave () {
+            const el = this.$el
+
+            return navigator.serviceWorker.getRegistration('/notification-sw.js')
+                .then((reg) => reg ? reg.pushManager.getSubscription() : null)
+                .then((sub) => {
+                    if (! sub) return null
+                    const endpoint = sub.endpoint
+
+                    return sub.unsubscribe().then(() => send(el.dataset.unsubscribeUrl, el, { endpoint }))
+                })
+                .then(() => { this.subscribed = false })
+        },
+    }
+}
+
+function urlKey (base64) {
+    const padded = (base64 + '='.repeat((4 - base64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')
+    const raw = atob(padded)
+
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0))
+}
+
+function send (url, el, body) {
+    const token = el.querySelector('input[name="_token"]')?.value ?? ''
+
+    return fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        // ⓘ ফেরত-পাঠানো (redirect) মানে সার্ভার রাজি হয়নি — অনুসরণ করলে পরের পাতার ২০০ সফল দেখাত
+        redirect: 'manual',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': token },
+        body: JSON.stringify(body),
+    }).then((response) => {
+        if (! response.ok) throw new Error('refused')
+
+        return response
+    })
+}

@@ -219,6 +219,15 @@ Schedule::call(fn () => app(FormIsNotSubmittedTwice::class)->prune())
  * ⓘ কিছু জমা না থাকলে খরচ কার্যত শূন্য — একটা PHP প্রক্রিয়া চালু হয়ে
  * সাথে সাথেই বেরিয়ে যায়।
  */
+/*
+ * ⭐ বিজ্ঞপ্তির আবার-চেষ্টা আর মাধ্যমের স্বাস্থ্য — বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২ (মালিকের স্পেক, ১০ অক্টোবর ২০২৬)।
+ *
+ * ⓘ পাঠানো নিজে নিচের `queue:work`-এ (database কিউ); এই কমান্ড কেবল সময় হওয়া আবার-চেষ্টা কিউয়ে দেয় আর আটকে থাকা সারি
+ * ছাড়ায় ([[DeliveryService::retryDue()]])। স্বাস্থ্য ঘণ্টায় একবার — কিছু পাঠায় না, কেবল "সংযুক্ত কি" লেখে।
+ */
+Schedule::command('abos:notifications-deliver')->everyMinute()->withoutOverlapping();
+Schedule::command('abos:notifications-health')->hourly()->withoutOverlapping();
+
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
     ->withoutOverlapping()

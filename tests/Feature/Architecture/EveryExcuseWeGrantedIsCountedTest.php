@@ -358,7 +358,15 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationEvent (ঘটনার প্রতিধ্বনি) আর
      *       NotificationAuditLog (নিজেই নিরীক্ষার খাতা), Notification-এর একই যুক্তি
      */
-    private const CEILING = 352;
+    /*
+     * ── ⚠️ ৩৫২ → ৩৫৭, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২ — পৌঁছানোর মাধ্যম) ──────────────────────────────
+     *   +২  EveryRouteIsGuardedTest (চাবিহীন, লগইন) — notifications.push.subscribe / unsubscribe: নিজের ব্রাউজারের Web
+     *       Push; সারি কেবল নিজের নামে, মাধ্যম সংযুক্ত না হলে ৪০৯, throttle:10,1
+     *   +৩  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationJob আর NotificationDeliveryAttempt (যন্ত্রের
+     *       পৌঁছানোর খাতা; মানুষের আবার-চেষ্টা আর বাতিল notification_audit_logs-এ) আর NotificationSubscription (ব্যক্তির
+     *       নিজের ব্রাউজার; চালু-বন্ধ নিরীক্ষায়)। NotificationChannel নিরীক্ষিত — ছাড় নয়
+     */
+    private const CEILING = 357;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -16,6 +16,13 @@ return [
     'to' => 'To',
     'system' => 'The system',
     'actions' => [
+        'delivery_retry' => 'Retried by hand',
+        'delivery_cancel' => 'Delivery cancelled',
+        'channel_update' => 'Channel settings changed',
+        'channel_vapid' => 'Web Push keys generated',
+        'channel_test' => 'Channel connection test',
+        'push_subscribe' => 'Browser push turned on',
+        'push_unsubscribe' => 'Browser push turned off',
         'read_all' => 'Read all',
         'bulk_read' => 'Selected marked read',
         'bulk_unread' => 'Selected marked unread',

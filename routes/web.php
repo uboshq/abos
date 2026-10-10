@@ -8,6 +8,7 @@ use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ModuleDashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationPushController;
 use App\Http\Controllers\PaperHistoryController;
 use App\Http\Controllers\PaperShareController;
 use App\Http\Controllers\ProfileController;
@@ -89,6 +90,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])
         ->middleware('throttle:30,1')->name('notifications.unread-count');
     Route::post('/notifications/bulk', [NotificationController::class, 'bulk'])->name('notifications.bulk');
+    // ⭐ এই ব্রাউজারে Web Push — নিজের সাবস্ক্রিপশন (ধাপ ২)
+    Route::post('/notifications/push/subscribe', [NotificationPushController::class, 'subscribe'])
+        ->middleware('throttle:10,1')->name('notifications.push.subscribe');
+    Route::post('/notifications/push/unsubscribe', [NotificationPushController::class, 'unsubscribe'])
+        ->middleware('throttle:10,1')->name('notifications.push.unsubscribe');
     Route::get('/notifications/{notification}', [NotificationController::class, 'open'])
         ->whereNumber('notification')->name('notifications.open');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])

@@ -35,6 +35,12 @@ final class FcmSender
 
     private const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 
+    /** ⭐ Firebase-এর চাবি আর প্রজেক্ট বসানো আছে কি — বিজ্ঞপ্তির মাধ্যমের "সংযুক্ত" প্রশ্ন (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২) */
+    public function configured(): bool
+    {
+        return $this->credentials() !== null && (string) config('services.firebase.project_id') !== '';
+    }
+
     /**
      * @param  array<string, string>  $data  চাপলে কোথায় যাবে ইত্যাদি — সব মান লেখা (FCM-এর নিয়ম)
      */
