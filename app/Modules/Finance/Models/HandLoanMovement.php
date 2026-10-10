@@ -85,8 +85,10 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \A
      */
     public function scopeCounted(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
+        // ⛔ ভাউচারের শাখা-দেয়াল ছাড়া — ভাউচার বসে হিসাবের নিজের শাখায়; হেডারে অন্য শাখা বাছা থাকলে দেয়াল সেটাকে বাদ দিত আর জের
+        // ভুল হত (cloud/finance-fixes রিভিউ ⚠️১, ১০ অক্টোবর ২০২৬)। কোন হিসাব দেখা যায় তা তালিকা ঠিক করে ([[HandLoanAccount::inViewedBranch]])।
         return $query->where(fn ($q) => $q->whereNull('voucher_id')
-            ->orWhereHas('voucher', fn ($v) => $v->where('status', \App\Core\Support\DocumentStatus::CONFIRMED)));
+            ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', \App\Core\Support\DocumentStatus::CONFIRMED)));
     }
 
     /**

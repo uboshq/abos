@@ -57,6 +57,8 @@ class PurchaseRequisitionPolicy
     public function approve(User $user, PurchaseRequisition $document): bool
     {
         return $user->can('purchase.requisition.approve')
-            && $document->status === DocumentStatus::DRAFT;
+            && $document->status === DocumentStatus::DRAFT
+            // ⛔ সুইচ চালু থাকলে নিজের চাহিদা নিজে নয় — নিয়মটা সেবায়, এখানে কেবল বোতাম লুকানো (ক্রয় ⚠️২)
+            && ! app(\App\Modules\Purchase\Services\PurchaseRequisitionService::class)->requesterMayNotApprove($document);
     }
 }

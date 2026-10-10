@@ -23,9 +23,9 @@
                 <x-slot:actions>
                     <label class="flex items-center gap-2 text-sm">
                         <span class="text-(--color-ink-muted)">{{ __('accounts::control.month') }}</span>
-                        <input type="month" name="month" value="{{ $month->format('Y-m') }}"
-                               class="min-h-(--spacing-touch) rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2">
+                        <x-ui.month name="month" :value="$month->format('Y-m')"
+                                    class="min-h-(--spacing-touch) rounded-(--radius-field) border border-(--color-border)
+                                           bg-(--color-surface-card) px-2" />
                     </label>
                     <x-ui.button type="submit">{{ __('accounts::control.show') }}</x-ui.button>
                 </x-slot:actions>

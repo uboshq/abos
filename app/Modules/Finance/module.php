@@ -5,6 +5,8 @@ use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
 use App\Core\Events\ApprovalDecided;
 use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\OpeningCapitalBooked;
+use App\Modules\Accounts\Events\VoucherCancelled;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Finance\Dashboard\FinanceDashboard;
 use App\Modules\Finance\Listeners\CapitalFromReceipt;
@@ -12,6 +14,8 @@ use App\Modules\Finance\Listeners\FinishTheFinancePaperOnTheLastSignature;
 use App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm;
 use App\Modules\Finance\Listeners\InstitutionFromAccountForm;
 use App\Modules\Finance\Listeners\PostTheProfitOnTheLastSignature;
+use App\Modules\Finance\Listeners\UndoThePaperOfACancelledVoucher;
+use App\Modules\Finance\Listeners\ReconcileOpeningCapital;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
@@ -19,11 +23,23 @@ use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Models\Institution;
+use App\Modules\Finance\Models\InsuranceClaim;
 use App\Modules\Finance\Models\InsurancePremium;
+use App\Modules\Finance\Models\InsurancePrepayment;
 use App\Modules\Finance\Models\RentalAdjustment;
 use App\Modules\Finance\Models\RentalContract;
+use App\Modules\Finance\Models\Tenancy;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Reports\BankLoanReports;
+use App\Modules\Finance\Reports\CapitalReports;
+use App\Modules\Finance\Reports\DepositReports;
+use App\Modules\Finance\Reports\HandLoanReports;
+use App\Modules\Finance\Reports\InsuranceReports;
+use App\Modules\Finance\Reports\LoanLedgerReports;
+use App\Modules\Finance\Reports\RentalReports;
+use App\Modules\Finance\Reports\TenancyReports;
 use App\Modules\Finance\Services\CapitalContributors;
+use App\Modules\Finance\Services\OwnerCapital;
 
 /**
  * অর্থ — টাকা কোথা থেকে আসে, কোথায় থাকে, কোথায় যায়, আর কার।
@@ -152,8 +168,11 @@ return [
              * এল বিক্রয় ছাড়া" — ওটা পড়ার পর্দা, লেখার নয়। লেখা হয়
              * বিক্রয়ে আর ভাউচারে।
              */
-            ['label' => 'finance::menu.plan', 'cluster' => 'overview', 'icon' => 'book',
-                'route' => 'finance.plan', 'permission' => 'finance.plan.view'],
+            /*
+             * ⛔ মেনু থেকে সরানো — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬; fe): কাজের পর্দার পাশে এটা মালিকের চোখে "এখনও তৈরি
+             * হয়নি"-র তালিকা দেখাত। ⓘ পাতা আর রুট থাকে (`finance.plan`, সরাসরি ঠিকানায় খোলে) — মানচিত্রের খাপ-মেলানোর
+             * পরীক্ষা ([[EveryFinanceScreenIsOnTheMapTest]]) ওটাই পড়ে।
+             */
 
             /* ⭐ পরিকল্পনা — মানচিত্র §১, §৮, §১৬, §২৯; ২০ সেপ্টেম্বর ২০২৬ */
             ['label' => 'finance::forecast.cfo', 'cluster' => 'overview', 'icon' => 'dashboard',
@@ -564,6 +583,9 @@ return [
         'rental' => 'finance::approval.rental',
         'bank_facility' => 'finance::approval.bank_facility',
         'capitalise' => 'finance::approval.capitalise',
+
+        // ⛔ বীমা দাবির অনুমোদন, টাকা আসা আর বন্ধ — সই ছাড়া খাতায় বসত (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[InsuranceClaimService]])
+        'insurance_claim' => 'finance::approval.insurance_claim',
     ],
 
     /*
@@ -578,7 +600,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['withdrawal', 'profit', 'hand_loan', 'deposit', 'rental', 'bank_facility', 'capitalise'],
+    'moves_money' => ['withdrawal', 'profit', 'hand_loan', 'deposit', 'rental', 'bank_facility', 'capitalise', 'insurance_claim'],
 
     /*
      * ⛔ এই ব্লকটা এতদিন **ছিলই না**, আর সেটা একটা নীরব ফাঁক ছিল।
@@ -639,9 +661,9 @@ return [
         'capital_entry' => CapitalEntry::class,
         'insurance_premium' => InsurancePremium::class,
         // ⭐ মাস শেষের অগ্রিম বীমা — ভাউচার থেকে পলিসিতে ফেরা (পরিকল্পনা ৬.৩)
-        'insurance_prepayment' => \App\Modules\Finance\Models\InsurancePrepayment::class,
+        'insurance_prepayment' => InsurancePrepayment::class,
         // ⭐ বীমার দাবি — টাকা আসার রসিদ এর বিপরীতে, পোস্ট হলে দাবি নিজে গোনে (পরিকল্পনা ৬.৪)
-        'insurance_claim' => \App\Modules\Finance\Models\InsuranceClaim::class,
+        'insurance_claim' => InsuranceClaim::class,
         'withdrawal' => Withdrawal::class,
         'deposit_movement' => DepositMovement::class,
         'hand_loan_movement' => HandLoanMovement::class,
@@ -660,26 +682,26 @@ return [
         'hand_loan' => HandLoanAccount::class,
         'rental_contract' => RentalContract::class,
         // ⭐ ভাড়াটের চুক্তি — তার ভাউচার থেকে চুক্তিতে ফেরা, আর চুক্তিপত্র তোলা (প্র৩)
-        'tenancy' => \App\Modules\Finance\Models\Tenancy::class,
+        'tenancy' => Tenancy::class,
     ],
 
     // ⭐ হাতধার আর ব্যাংক ঋণের খাতা — মালিক, ৫ অক্টোবর ২০২৬ ([[LoanLedgerReports]])
     'reports' => [
-        \App\Modules\Finance\Reports\LoanLedgerReports::class,
+        LoanLedgerReports::class,
         // ⭐ হাতধারের রিপোর্ট ৩–৭ — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬
-        \App\Modules\Finance\Reports\HandLoanReports::class,
+        HandLoanReports::class,
         // ⭐ ব্যাংক ঋণের কিস্তি আর সীমার ব্যবহার — অর্থ-মডিউলের পরিকল্পনা ৩, ৬ অক্টোবর ২০২৬
-        \App\Modules\Finance\Reports\BankLoanReports::class,
+        BankLoanReports::class,
         // ⭐ বীমার প্রিমিয়ামের সূচি — অর্থ-মডিউলের পরিকল্পনা ৬.২, ৬ অক্টোবর ২০২৬
-        \App\Modules\Finance\Reports\InsuranceReports::class,
+        InsuranceReports::class,
         // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২
-        \App\Modules\Finance\Reports\CapitalReports::class,
+        CapitalReports::class,
         // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫
-        \App\Modules\Finance\Reports\RentalReports::class,
+        RentalReports::class,
         // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪
-        \App\Modules\Finance\Reports\DepositReports::class,
+        DepositReports::class,
         // ⭐ ভাড়াটের আদায় আর বকেয়া — মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬
-        \App\Modules\Finance\Reports\TenancyReports::class,
+        TenancyReports::class,
     ],
 
     'events' => [],
@@ -691,6 +713,9 @@ return [
     'listeners' => [
         VoucherPosted::class => [CapitalFromReceipt::class],
 
+        // ⭐ Accounts থেকে ভাউচার বাতিল — উত্তোলন, লাভের ভাগ আর ভাড়ার মাস নিজেও ফেরে (অর্থ M22; [[UndoThePaperOfACancelledVoucher]])
+        VoucherCancelled::class => [UndoThePaperOfACancelledVoucher::class],
+
         // ⓘ খাতের ফর্মে "কোন প্রতিষ্ঠান" — ঘর আঁকা আর জমা ([[InstitutionFieldOnAccountForm]])
         AccountFormOpened::class => [InstitutionFieldOnAccountForm::class],
         AccountSaved::class => [InstitutionFromAccountForm::class],
@@ -700,7 +725,7 @@ return [
         ApprovalDecided::class => [PostTheProfitOnTheLastSignature::class, FinishTheFinancePaperOnTheLastSignature::class],
 
         // ⭐ খোলা জের মালিকের মূলধনে — রেজিস্টারে মালিকের নামে, শাখা ধরে ([[ReconcileOpeningCapital]])
-        \App\Modules\Accounts\Events\OpeningCapitalBooked::class => [\App\Modules\Finance\Listeners\ReconcileOpeningCapital::class],
+        OpeningCapitalBooked::class => [ReconcileOpeningCapital::class],
     ],
 
     /*
@@ -712,7 +737,7 @@ return [
             'key' => 'finance.owner_person_id',
             'label' => 'finance::settings.owner_person',
             'type' => 'integer',
-            'options' => [\App\Modules\Finance\Services\OwnerCapital::class, 'choices'],
+            'options' => [OwnerCapital::class, 'choices'],
             'default' => 0,
             'group' => 'capital',
         ],

@@ -155,7 +155,6 @@ return [
     'rental_place_gone' => 'That thing is no longer on the list',
     'rental_for_place' => 'Contracts for this place',
 
-
     /* The "with whom" tab — the owner's instruction, 20 Sep 2026 */
     'person_added' => ':who is on the list now.',
     'no_people_yet' => 'Nobody on the list yet.',
@@ -190,4 +189,8 @@ return [
     'branch_capital' => 'Capital by branch',
     'branch_none' => 'No branch',
     'company_total' => 'Company total',
+    // Re-audit, 9 Oct 2026 — one contract's error does not stop the rest
+    'rent_accrual_some_failed' => 'Rent was not booked for these contracts; the rest were booked: :list',
+    'rent_accrual_contract_failed' => ':no (:who) — :why',
+    'rent_accrual_contract_broke' => 'a technical error, written to the log',
 ];

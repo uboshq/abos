@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 
+import 'package:abos_mobile/core/approvals/approvals_api.dart';
 import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
@@ -79,6 +80,8 @@ void main() {
     DateTime Function()? now,
     TodayRecord? Function()? lastKnown,
     Future<List<NoticeBarItem>> Function()? noticeBar,
+    Future<ApprovalPage> Function()? pending,
+    Future<void> Function()? syncNow,
   }) =>
       ProviderScope(
         overrides: [authStateProvider.overrideWith((ref) => _SignedIn(user))],
@@ -92,6 +95,10 @@ void main() {
             checkUpdate: () async => UpdateStatus.fine,
             now: now ?? () => DateTime(2026, 9, 27, 10, 30),
             fetchNoticeBar: noticeBar ?? () async => const [],
+            // ⓘ ডিফল্টে সার্ভার "না" বলে (৪০৩-এর মতো) — অনুমোদন আইকন লুকানো
+            fetchPending:
+                pending ?? () async => throw StateError('not an approver'),
+            syncNow: syncNow ?? () async {},
           ),
         ),
       );
@@ -126,6 +133,54 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যান'), findsOneWidget,
         reason: 'the photo opens the profile');
+  });
+
+  // ⭐ মালিক, ১০ অক্টোবর ২০২৬: ঘণ্টার পাশে অনুমোদনের আইকন — অপেক্ষার সংখ্যাসহ, চাপলে তালিকা
+  testWidgets('beside the bell, the approval icon counts what waits for me',
+      (tester) async {
+    await tester.pumpWidget(shell(
+        pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('header-approvals')), findsOneWidget,
+        reason: 'an approver sees the icon even with nothing waiting');
+    expect(find.text('0'), findsNothing, reason: 'nothing waits — no badge');
+  });
+
+  testWidgets('more pages waiting show as a plus on the approval icon',
+      (tester) async {
+    await tester.pumpWidget(shell(
+        pending: () async =>
+            const ApprovalPage(rows: [], nextCursor: 'next-page')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('header-approvals')), findsOneWidget);
+    expect(find.text('0+'), findsOneWidget,
+        reason: 'more pages wait — the count says so');
+  });
+
+  // ⭐ মালিক, ১০ অক্টোবর ২০২৬: "Sync icon tule daw r upor theke niche tanlei zate sync hoy"
+  testWidgets('no sync icon in the header; pulling the home down syncs',
+      (tester) async {
+    var syncs = 0;
+    await tester.pumpWidget(shell(syncNow: () async => syncs++));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.descendant(
+            of: find.byType(AppBar), matching: find.byIcon(Icons.sync_outlined)),
+        findsNothing);
+
+    await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    expect(syncs, 1, reason: 'a pull on the home is a full sync');
+  });
+
+  testWidgets('somebody who may not approve gets no approval icon',
+      (tester) async {
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('header-approvals')), findsNothing);
+    expect(find.byKey(const ValueKey('header-bell')), findsOneWidget);
   });
 
   // ⭐ মালিক, ৬ অক্টোবর ২০২৬: ওয়েবের চলমান নোটিশ ফোনেও — মাথার নিচে, প্রতিটা ট্যাবে; কিছু না থাকলে চুপ

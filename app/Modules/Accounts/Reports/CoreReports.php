@@ -258,6 +258,16 @@ final class CoreReports
             title: 'accounts::menu.project_ledger',
             filters: ['date_range', 'branch', 'cost_centre'],
             runningBalance: true,
+            /*
+             * ⭐ শুরুর জের — অডিট (সমন্বয়ক, ১০ অক্টোবর ২০২৬): আগে প্রকল্পের খতিয়ান পরিসরের প্রথম দিন শূন্য থেকে গুনত, তাই
+             * চলমান প্রকল্পের জের প্রতি মাসে ভুল ছাপত। ⓘ খতিয়ান, নগদ বই আর ব্যাংক বইয়ের একই নিয়ম (801247e2) — একই কেন্দ্র,
+             * একই শাখার দেয়াল, পরিসরের আগের সব সারি। কেন্দ্র না বাছলে শূন্য, নিচের সারিগুলোর মতোই।
+             */
+            opening: fn (array $f) => self::openingOf(DB::table('ledger_entries')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->where('ledger_entries.cost_center_id', $f['cost_center_id'] ?? 0)
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+                ->where('ledger_entries.trx_date', '<', $f['from']), 'ledger_entries.debit', 'ledger_entries.credit'),
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])

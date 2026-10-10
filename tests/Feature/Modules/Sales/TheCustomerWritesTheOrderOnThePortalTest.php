@@ -129,6 +129,34 @@ final class TheCustomerWritesTheOrderOnThePortalTest extends TestCase
         $this->assertSame(SalesOrderStatus::DRAFT, $office->fresh()->status, '⛔ গ্রাহক অফিসের লেখা আদেশ জমা দিয়ে ফেললেন।');
     }
 
+    /**
+     * ⛔ ফর্মে যে দাম দেখায়, সংরক্ষণেও সেই দাম — ডিলারের দর তালিকা (Sales অডিট ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিপজ্জনক ইনপুট: পণ্যের দাম ৪০, এই ডিলারের তালিকায় ৩৩। আগে আদেশ আর DO-র ফর্মে ৪০ দেখাত,
+     * অথচ আদেশে বসত ৩৩ — ডিলার যা দেখে লিখলেন, কাগজে এল অন্য দাম।
+     */
+    public function test_the_order_and_do_forms_show_the_dealers_own_price_that_the_order_then_takes(): void
+    {
+        $list = \App\Modules\MasterData\Models\PriceList::query()->create(['code' => 'PRT1', 'name_en' => 'Portal dealer', 'customer_id' => $this->customer->id, 'is_active' => true]);
+        \App\Modules\Sales\Models\PriceListItem::query()->create([
+            'price_list_id' => $list->id, 'product_id' => $this->product->id, 'price' => '33',
+            'valid_from' => now()->subMonth()->toDateString(),
+        ]);
+        $shown = $this->product->name().' — '.\App\Core\Support\Money::format('33');
+        $shelf = $this->product->name().' — '.\App\Core\Support\Money::format('40');
+
+        $this->actingAs($this->customer->fresh(), 'portal');
+        $this->get(route('sales.portal.do.create'))->assertOk()->assertSee($shown)->assertDontSee($shelf);
+
+        $this->replaceDo(true);
+        $this->get(route('sales.portal.order.create'))->assertOk()->assertSee($shown)->assertDontSee($shelf);
+        $this->post(route('sales.portal.order.store'), $this->body())->assertSessionHasNoErrors();
+
+        $order = SalesOrder::query()->where('customer_id', $this->customer->id)->latest('id')->firstOrFail();
+        $this->assertSame(0, bccomp('396', (string) $order->subtotal, 4), '⛔ ফর্মে ৩৩ দেখিয়ে আদেশে অন্য দাম: '.$order->subtotal);
+        $this->assertSame(now()->toDateString(), $order->trx_date->toDateString(), '⛔ দর যে দিনের, আদেশ সেই দিনের নয়।');
+    }
+
     /** @return array<string, mixed> */
     private function body(bool $submit = false): array
     {

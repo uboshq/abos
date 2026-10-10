@@ -351,5 +351,16 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, text
             this.pickedType = '';
             this.pickedId = '';
         },
+
+        /*
+         * ⭐ এই বিলটাই কি বাছা — রেডিওর `:checked`-এর জন্য (১০ অক্টোবর ২০২৬)। ⚠️ নাম `isPicked` নয় — ওটা পক্ষের তালিকার
+         * নিজের ([[isPicked()]]); একই নামে লিখলে বস্তুর শেষ চাবিটাই টিকত আর পক্ষের দাগ ভাঙত (vitest ধরেছে)।
+         *
+         * ⛔ আগে ব্লেডে লেখা ছিল `String(b.id) === pickedId && …` — আর `@alpinejs/csp` বৈশ্বিক নাম (`String`) চেনে না,
+         * তাই এক্সপ্রেশনটা চুপচাপ ভাঙত: বাছা বিলের রেডিওতে দাগ পড়ত না (csp-expressions.test.js)। তুলনাটা এখন এখানে।
+         */
+        isBillPicked(bill) {
+            return String(bill.id) === this.pickedId && bill.against_type === this.pickedType;
+        },
     };
 }

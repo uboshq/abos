@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 return [
     'super_admin_only_switch' => 'Only a super admin can change these, so they were left as they were: :switches',
+    'setting_not_a_number' => 'These boxes need a number, so nothing was saved: :settings',
     'screen_holds_records' => 'These screens already hold documents, so they cannot be hidden: :screens. '
         .'Finish or cancel those documents first — otherwise they would have no way in.',
     'cannot_deactivate_yourself' => 'You cannot deactivate yourself — nobody would be left who could undo it.',
     'cannot_drop_your_own_key' => 'You cannot take user management away from yourself — the only way back would be the command line.',
     'owner_role_is_fixed' => 'The owner role cannot be edited; every deploy puts those permissions back.',
+    'owner_only_permission' => 'This permission belongs to the owner alone and cannot be put on a role: :keys',
+    'cannot_grant_what_you_lack' => 'You cannot give a role a permission you do not hold yourself: :keys',
 
     // Every refusal names the way out as well. "You cannot" alone leaves
     // the next question unanswered — "then how do I hand it over?" — and

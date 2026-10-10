@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Engines\Print\PrintEngine;
 use App\Core\Services\ListExport;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
@@ -94,6 +95,24 @@ final class ReportExport
         );
 
         /*
+         * ⭐ মোটের সারি ফাইলেও — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ শাখা-ভাগ ছাড়া রিপোর্টে পর্দার নিচে "মোট" সারি থাকত, অথচ CSV/Excel/PDF-এ
+         * কেবল সারিগুলো — হিসাবরক্ষক ফাইলে নিজে যোগ করতেন, আর হার-দামের ঘরও যোগ হয়ে যেত।
+         * ⓘ যোগফল গোটা ফলের ([[ReportEngine::run()]]), তাই পাতা জোড়া লাগলেও একবারই বসে
+         * (ফুটার একটা, সারি নয়)। শাখা-ভাগে মোটগুলো আগে থেকেই সারি হয়ে আছে ([[rowsOf()]])।
+         */
+        if (! $result->isSplitByBranch() && $result->totals !== []) {
+            $export->footer(array_map(
+                fn (ReportColumn $column, int $i): string => $i === 0
+                    ? (string) __('core.print.total')
+                    : ($column->total && isset($result->totals[$column->key]) ? self::text($column, $result->totals[$column->key]) : ''),
+                $columns,
+                array_keys($columns),
+            ));
+        }
+
+        /*
          * ⭐ রিপোর্টের সব পাতা ফাইলে যায় (৩০ সেপ্টেম্বর ২০২৬) — [[ExportListing]] পাতাগুলো জোড়ে।
          * ⚠️ শাখা-ভাগের রিপোর্টে নয়: সেখানে প্রতিটা শাখার অংশ পাতা-নির্ভর নয়, আবার চালালে
          * একই অংশ দুইবার বসত।
@@ -101,6 +120,39 @@ final class ReportExport
         if (! $result->isSplitByBranch()) {
             $export->paged($result->lastPage());
         }
+    }
+
+    /**
+     * ⭐ রিপোর্টের PDF — রপ্তানির একই ধরা টেবিল কাগজে, ছাপার একই যন্ত্রে ([[PrintEngine]], [[print.report]]):
+     * কোম্পানির নাম, শিরোনাম, তারিখের সীমা, সারি আর সর্বমোট। ⓘ সংখ্যা এখানে কষা হয় না।
+     *
+     * ⓘ ফোনের রপ্তানি ([[ReportExportApiController]]) থেকে এখানে সরানো — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬:
+     * নির্ধারিত রিপোর্টে "PDF" বাছলে এতদিন CSV-র বাইট `.pdf` নামে যেত ([[ScheduledReportRunner]]),
+     * কারণ ঐ পথে PDF-এর কোনো শাখাই ছিল না। ⛔ দুই জায়গায় দুই কাগজ না হয়, তাই যন্ত্র একটাই।
+     *
+     * @param  list<ReportColumn>  $columns  [[into()]]-এ যা দেওয়া হয়েছিল
+     * @param  array<string, mixed>  $filters
+     */
+    public static function pdf(ListExport $export, array $columns, string $title, array $filters): string
+    {
+        $table = $export->captured() ?? ['columns' => [], 'values' => []];
+        $numeric = [];
+        foreach ($columns as $column) {
+            $numeric[$column->key] = in_array($column->type, ['money', 'quantity', 'percent', 'dr_cr'], true);
+        }
+
+        $from = (string) ($filters['from'] ?? '');
+        $to = (string) ($filters['to'] ?? '');
+
+        return app(PrintEngine::class)->render('print.report', [
+            'title' => $title,
+            'range' => $from !== '' || $to !== ''
+                ? trim(DateFormat::format($from ?: null).' — '.DateFormat::format($to ?: null), ' —')
+                : null,
+            'columns' => array_map(fn (array $c) => ['label' => $c['label'], 'numeric' => $numeric[$c['key']] ?? false], $table['columns']),
+            'rows' => $table['values'],
+            'footer' => $export->footerRow(),
+        ]);
     }
 
     /** @param  list<ReportColumn>  $columns */

@@ -12,6 +12,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Core\Support\PlainNumber;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
@@ -1223,7 +1224,12 @@ final class ApprovalEngine
      */
     private function selfLimit(): string
     {
-        return $this->selfLimit ??= (string) (app(SettingsService::class)->get('approval.self_limit') ?? '0');
+        /*
+         * ⛔ আগে বসে যাওয়া "10,000"-এর মতো লেখাও সংখ্যা হয় — নইলে `bccomp()` ভেঙে প্রতিটা অনুমোদন থামত।
+         * ⓘ সংরক্ষণে এখন যাচাই হয় ([[ControlPanelController]]); এটা লাইভে আগেই জমা মানের জন্য
+         * (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)। পড়া না গেলে ০ — অর্থাৎ নিজের সীমা বন্ধ, কড়া দিকটা।
+         */
+        return $this->selfLimit ??= PlainNumber::from(app(SettingsService::class)->get('approval.self_limit') ?? '0') ?? '0';
     }
 
     /**

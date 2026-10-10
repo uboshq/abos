@@ -23,7 +23,7 @@ use Illuminate\Validation\ValidationException;
  * দুইটা আলাদা কাজ: তালিকাটা অফিসে বসে তৈরি হয়, আর গণনাটা গুদামে
  * দাঁড়িয়ে। একসাথে চাইলে ব্যবহারকারী কোনোটাই শেষ করতে পারতেন না।
  *
- * মজুদ বসে গণনার পর্দা থেকে (StockService::adjust), আর তখন প্রতিটা
+ * মজুদ বসে গণনার পর্দা থেকে (StockAdjustmentService::adjust), আর তখন প্রতিটা
  * সংখ্যার পেছনে একটা কারণ ও একটা তারিখ থাকে — যা একটা CSV কলামে থাকত না।
  */
 final class ProductImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer

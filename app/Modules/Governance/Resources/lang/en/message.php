@@ -28,6 +28,8 @@ return [
     'why_wrong_code' => 'Two-step code wrong',
     'why_locked' => 'Locked after repeated failures',
     'error_why' => 'What the system wrote down for itself when something failed. The same fault appearing again adds to its count rather than making a new row.',
+    'broke_on_page' => 'Failed on this page: :page',
+    'broke_in_background' => 'Failed in a background job (not a page)',
     'errors_today' => ':count fault(s) in the last 24 hours.',
     'no_errors' => 'Nothing has broken.',
     'error_acknowledged' => 'Marked as seen.',

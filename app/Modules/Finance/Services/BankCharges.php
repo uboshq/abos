@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
@@ -133,7 +134,12 @@ final class BankCharges
     {
         $ids = $this->chargeAccountIds();
 
-        return LedgerEntry::query()
+        /*
+         * ⛔ দেখার শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ ([[ViewedBranch::narrow()]])। ⓘ আগে গোটা কোম্পানির চার্জ দেখাত:
+         * হেডারে এক শাখা বাছলেও, আর এক শাখায় আটকানো কর্মীকেও অন্য শাখার ব্যাংকের কাটা। তালিকা, ব্যাংক ধরে যোগফল আর মোট —
+         * তিনটাই এই এক জায়গা থেকে, তাই তিনটা একই কথা বলে।
+         */
+        return ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->whereIn('account_id', $ids === [] ? [0] : $ids)
             ->whereBetween('trx_date', [$from, $to]);
     }

@@ -20,6 +20,8 @@ return [
     // Screen
     'title' => 'Scheduled Reports',
     'subtitle' => 'Reports that build themselves and reach the right people',
+    'first' => 'Schedule the first report',
+    'zone_dhaka' => 'Dhaka (Bangladesh)',
     'add' => 'New schedule',
     'none' => 'No reports are scheduled yet.',
     'edit' => 'Edit schedule',

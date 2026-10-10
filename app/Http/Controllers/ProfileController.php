@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Core\Panels\FactRegistry;
 use App\Core\Services\AvatarService;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\LoginMobile;
 use App\Core\Support\MailReach;
 use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Models\User;
@@ -85,6 +86,9 @@ class ProfileController extends Controller
          * ⛔ না মিললে ডাটাবেজ নিজে ছুঁড়ত, আর সেই বার্তাটা ব্যবহারকারীর
          * পড়ার মতো নয় — ভ্যালিডেশন আগে ধরলে বার্তাটা তাঁর ভাষায় আসে।
          */
+        // ⛔ মোবাইল লগইনের ছাঁদে আর একজনের একটাই — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ ([[LoginMobile]])
+        LoginMobile::prepare($request);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
 
@@ -109,10 +113,10 @@ class ProfileController extends Controller
                 Rule::unique('users', 'login_id')->ignore($request->user()->id),
             ],
 
-            'mobile' => ['nullable', 'string', 'max:25'],
+            'mobile' => LoginMobile::rules($request->user()->id),
             'mobile_alt' => ['nullable', 'string', 'max:25'],
             'address' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], LoginMobile::messages());
 
         $request->user()->forceFill($validated)->save();
 

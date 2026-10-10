@@ -654,6 +654,11 @@ return [
         'fixed_asset_dispose' => 'accounts::approval.fixed_asset_dispose',
         // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর (অডিট ম৮)
         'till_handover' => 'accounts::approval.till_handover',
+        // ⛔ ঋণের টাকা — সই ছাড়া নড়ত (অডিট, ১০ অক্টোবর ২০২৬; [[LoanService]])
+        'loan_draw' => 'accounts::approval.loan_draw',
+        'loan_instalment' => 'accounts::approval.loan_instalment',
+        'loan_repay' => 'accounts::approval.loan_repay',
+        'loan_interest' => 'accounts::approval.loan_interest',
     ],
 
     /*
@@ -668,7 +673,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'loan_draw', 'loan_instalment', 'loan_repay', 'loan_interest'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।

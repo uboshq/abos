@@ -16,7 +16,7 @@
                     <option value="">{{ __('sales::delivery_order.pick_product') }}</option>
                     @foreach ($products as $product)
                         <option value="{{ $product->id }}" @selected((string) old("lines.$i.product_id") === (string) $product->id)>
-                            {{ $product->name() }} — {{ \App\Core\Support\Money::format($product->sale_price) }}
+                            {{ $product->name() }} — {{ \App\Core\Support\Money::format($prices[$product->id]->price ?? $product->sale_price) }}
                         </option>
                     @endforeach
                 </select>

@@ -49,6 +49,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Customer/Services/CustomerMetrics.php' => 'গ্রাহকের পাতার অঙ্ক',
         'app/Modules/Finance/Http/Controllers/InstitutionController.php' => 'প্রতিষ্ঠানের পাতা',
         'app/Modules/Finance/Services/AccountAnalysis.php' => 'খাত-বিশ্লেষণের পর্দা',
+        // ⛔ পুনঃঅডিট, ৯ অক্টোবর ২০২৬: আগে CHECKS-এ ছিল ("পোস্টিং"), অথচ ফাইলটা কেবল চার্জের রিপোর্ট — গোটা কোম্পানি দেখাত
+        'app/Modules/Finance/Services/BankCharges.php' => 'ব্যাংক চার্জের রিপোর্ট — দেখার শাখায় (ViewedBranch::narrow)',
         'app/Modules/Finance/Services/BudgetService.php' => 'বাজেট বনাম আসল — পর্দা',
         'app/Modules/Finance/Services/CarrierAndLabourLedger.php' => 'বাহক আর শ্রমিকের খতিয়ান — পর্দা',
         'app/Modules/Finance/Services/CfoFigures.php' => 'অর্থ-প্রধানের সংখ্যা — পর্দা',
@@ -90,7 +92,6 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Services/OpeningBalanceService.php' => 'খোলা জের — পোস্টিং',
         'app/Modules/Accounts/Services/YearEndService.php' => 'বছর বন্ধ — পোস্টিং',
         'app/Modules/Customer/Models/Customer.php' => 'মূল উপকরণ — বকেয়া (বাকির সীমা এখান থেকে পড়ে)',
-        'app/Modules/Finance/Services/BankCharges.php' => 'ব্যাংক চার্জের পোস্টিং',
         'app/Modules/Finance/Services/BankFacilityService.php' => 'ব্যাংক সুবিধার সীমা',
         'app/Modules/Finance/Services/ProfitDistribution.php' => 'লাভ বণ্টন — পোস্টিং',
         'app/Modules/Customer/Sync/CustomerDueSync.php' => '⛔ ফোনের বকেয়া বাকির সীমার পাশে বসে — বিক্রয়কর্মী সীমা মেনে অর্ডার নেন; হেডারের শাখা ওয়েবের ধারণা, আর জলচিহ্ন শাখা বদলালে ভাঙত (৩০ সেপ্টেম্বর)',
@@ -103,6 +104,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Services/SalesReturnService.php' => 'ফেরতের পোস্টিং',
         'app/Modules/Sales/Services/ShiftService.php' => 'কাউন্টারের পালার নগদ মেলানো',
         'app/Modules/Supplier/Models/Supplier.php' => 'মূল উপকরণ — পাওনা',
+        'app/Modules/Purchase/Services/PurchaseBillService.php' => 'বিলের দামে মালের দামের সংশোধনী — একটা বিলের নিজের খোলা দাখিলা উল্টে মিলিয়ে আবার বসায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ত (ক্রয় ⚠️৩, ১০ অক্টোবর ২০২৬)',
     ];
 
     public function test_every_ledger_reader_is_declared_and_no_declaration_is_stale(): void

@@ -16,23 +16,23 @@
          'render' => fn ($r) => $r->last_seen_at?->format('d M Y, H:i')],
 
         /*
-         * শ্রেণির ছোট নাম, আর নিচে বার্তাটা।
+         * ⭐ উপরে এক লাইনের বাংলা — কোন পাতায় ভাঙল; প্রোগ্রামের ইংরেজি "কারিগরি তথ্য" ভাঁজে, শুরুতে বন্ধ (পাতা-ঝাড়ু
+         * ধাপ ০, ১০ অক্টোবর ২০২৬; fe)। ⛔ আগে শ্রেণি, বার্তা আর কোডের ফাইল সরাসরি মালিকের সামনে।
          *
-         * পুরো namespace দেখালে প্রতিটা সারির অর্ধেক জায়গা
-         * `Illuminate\Database\Eloquent\` জাতীয় লেখায় চলে যেত, আর
-         * যেটা আলাদা করে চেনায় সেই শেষ শব্দটাই কাটা পড়ত।
+         * ⓘ ভাঁজের ভেতরে শ্রেণির ছোট নাম — পুরো namespace দেখালে যেটা আলাদা করে চেনায় সেই শেষ শব্দটাই কাটা পড়ত।
          */
         ['key' => 'class', 'label' => __('governance::field.what_broke'),
          'render' => fn ($r) => new \Illuminate\Support\HtmlString(
-             '<span class="font-medium">'.e($r->shortClass()).'</span>'
-             .'<br><span class="text-2xs text-(--color-ink-muted)">'
-             .e(\Illuminate\Support\Str::limit($r->message, 140)).'</span>')],
-
-        ['key' => 'where', 'label' => __('governance::field.where_in_code'), 'width' => '18rem',
-         'render' => fn ($r) => new \Illuminate\Support\HtmlString(
-             '<span class="text-2xs">'.e($r->shortFile()).($r->line ? ':'.$r->line : '').'</span>'
-             .($r->path ? '<br><span class="text-2xs text-(--color-ink-muted)">'
-                 .e($r->method.' '.$r->path).'</span>' : ''))],
+             '<span class="font-medium" data-error-summary>'
+             .e($r->path
+                 ? __('governance::message.broke_on_page', ['page' => $r->method.' '.$r->path])
+                 : __('governance::message.broke_in_background')).'</span>'
+             .'<details class="mt-0.5 text-2xs text-(--color-ink-muted)" data-technical>'
+             .'<summary class="cursor-pointer">'.e(__('governance::field.technical_detail')).'</summary>'
+             .'<span class="block font-medium">'.e($r->shortClass()).'</span>'
+             .'<span class="block">'.e(\Illuminate\Support\Str::limit($r->message, 500)).'</span>'
+             .'<span class="block">'.e($r->shortFile()).($r->line ? ':'.$r->line : '').'</span>'
+             .'</details>')],
 
         /*
          * কতবার — সংখ্যাটাই বলে দেয় জিনিসটা নতুন না পুরনো।

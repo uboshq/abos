@@ -32,9 +32,9 @@
             <label class="block">
                 <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                              text-(--color-ink-muted)">{{ __('hr::field.month') }}</span>
-                <input type="month" name="month" required value="{{ old('month', $month) }}"
-                       class="w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                <x-ui.month name="month" required :value="old('month', $month)"
+                            class="w-full rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2 py-1.5 text-sm" />
             </label>
 
             {{-- খরচের তারিখ আলাদা: বেতন জুনের, কিন্তু খরচটা কোন দিনে বসবে

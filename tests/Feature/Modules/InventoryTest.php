@@ -264,48 +264,11 @@ class InventoryTest extends TestCase
 
     // ── গণনা ও সমন্বয় ───────────────────────────────────────────────────
 
-    /**
-     * সমন্বয়ে পার্থক্যটা লেখা হয়, নতুন সংখ্যাটা নয়।
-     *
-     * "৫০ ছিল, ৪৭ পাওয়া গেল, তাই −৩" — এভাবে লিখলে পরে জিজ্ঞেস করা
-     * যায় "ওই তিনটা কোথায় গেল"। শুধু ৪৭ বসিয়ে দিলে প্রশ্নটাই আর করা
-     * যেত না, আর খতিয়ানে একটা ব্যাখ্যাহীন লাফ থাকত।
+    /*
+     * ⓘ এখানে দুইটা পরীক্ষা ছিল `StockService::adjust()`-এর — মৃত পথ, অ্যাপের কেউ ডাকত না, আর সে মাল নাড়াত খরচ-স্তর আর
+     * খাতা ছাড়া (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⓘ১৫)। পথটা সরানো হয়েছে; দুই দাবি আসল পথে বেঁচে আছে —
+     * [[StockAdjustmentTest]]: ঘাটতিতে পার্থক্যটাই সারিতে (−৩), আর মিলে গেলে কিছুই লেখা হয় না।
      */
-    public function test_a_count_records_the_difference_not_the_new_figure(): void
-    {
-        $product = $this->product();
-        $this->receive($product, '50');
-
-        $movement = $this->stock()->adjust(
-            product: $product,
-            warehouse: $this->warehouse,
-            countedQty: '47',
-            reason: $this->reason(ReasonCode::STOCK_ADJUSTMENT),
-        );
-
-        $this->assertNotNull($movement);
-        $this->assertSame(0, bccomp((string) $movement->floor_change, '-3', 4));
-        $this->assertSame(0, bccomp($this->stock()->floorQty($product), '47', 4));
-    }
-
-    public function test_a_count_that_matches_writes_nothing(): void
-    {
-        $product = $this->product();
-        $this->receive($product, '50');
-
-        $before = StockMovement::query()->count();
-
-        $movement = $this->stock()->adjust(
-            product: $product,
-            warehouse: $this->warehouse,
-            countedQty: '50',
-            reason: $this->reason(ReasonCode::STOCK_ADJUSTMENT),
-        );
-
-        // শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
-        $this->assertNull($movement);
-        $this->assertSame($before, StockMovement::query()->count());
-    }
 
     // ── ফ্রি পণ্যের ভাণ্ডার ─────────────────────────────────────────────
 

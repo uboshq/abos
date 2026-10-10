@@ -47,6 +47,8 @@ return [
     'start_verifying' => 'Start verifying',
     'already_verifying' => 'Verification has already started on this one.',
     // ⛔ একই স্লিপ দুইবার নয় — টাকার পরিকল্পনা ৪, ৭ অক্টোবর ২০২৬
+    // ⛔ যিনি পাঠালেন তিনি নিজে গ্রহণ করেন না — টাকার পরিকল্পনা ৩
+    'own_advice' => 'You sent this payment advice yourself — someone else must check and accept it.',
     'reference_taken' => 'A payment advice with this reference on this bank account has already been sent — the same money cannot be paid in twice.',
 
     'claim_raised' => 'Thank you — we will check it against the bank.',

@@ -12,7 +12,9 @@ use App\Core\Services\PartyRegistry;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\RentalContract;
+use App\Modules\Finance\Services\RentalAccrualService;
 use App\Modules\Finance\Services\RentalContractService;
+use App\Modules\Finance\Services\RentalDues;
 use App\Modules\Finance\Services\RentalSubjects;
 use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
@@ -21,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -202,7 +205,7 @@ class RentalContractController extends Controller implements HasMiddleware
              */
             'endingSoon' => RentalContract::query()->inViewedBranch()
                 // ⓘ ঘণ্টির খবর আর ড্যাশবোর্ডের একই দিন ([[RentalDues::WINDOWS]]) — পাতা আর খবর কখনো আলাদা কথা বলে না
-                ->endingSoon(\App\Modules\Finance\Services\RentalDues::WINDOWS[0])->orderBy('ends_on')->get(),
+                ->endingSoon(RentalDues::WINDOWS[0])->orderBy('ends_on')->get(),
             'tab' => $tab,
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা চুক্তি
@@ -257,6 +260,8 @@ class RentalContractController extends Controller implements HasMiddleware
                 ->orderByDesc('for_month')
                 ->get(),
             'money' => $this->moneyAccounts(),
+            // ⭐ বসানো অথচ না-দেওয়া মাস — শেষ হওয়া চুক্তিতেও মাসের ফর্মটা এদের জন্য থাকে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+            'owed' => $this->contracts->owedMonths($contract),
         ]);
     }
 
@@ -388,10 +393,14 @@ class RentalContractController extends Controller implements HasMiddleware
             'month' => ['required', 'date_format:Y-m'],
         ]);
 
-        $done = app(\App\Modules\Finance\Services\RentalAccrualService::class)
-            ->run(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
+        $done = app(RentalAccrualService::class)
+            ->run(Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
 
-        return back()->with('saved', __('finance::message.rent_accrual_done', $done));
+        $saved = back()->with('saved', __('finance::message.rent_accrual_done', ['accrued' => $done['accrued'], 'held' => $done['held']]));
+
+        // ⛔ যে চুক্তিগুলো বসেনি — নাম ধরে, যাতে চুপচাপ বাদ না পড়ে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+        return $done['failed'] === [] ? $saved
+            : $saved->withErrors(['month' => __('finance::message.rent_accrual_some_failed', ['list' => implode(' · ', $done['failed'])])]);
     }
 
     /**

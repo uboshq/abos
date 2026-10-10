@@ -274,6 +274,29 @@ class BankMoneyIsBookedOnceTest extends TestCase
         $this->assertSame($this->bank, (int) $voucher->money_account_id);
     }
 
+    /**
+     * ⛔ নম্বর ছাড়া চাপলে ভাউচারের পাতায় ফেরে, তালিকায় নয় — মালিক, ১০ অক্টোবর ২০২৬, লাইভে RCV-0030।
+     *
+     * ⚠️ তালিকার পপ-আপ থেকে চাপা পোস্টের "আগের পাতা" তালিকা; বার্তাটা সেখানে ফিরত যেখানে ঘর নেই, আর মনে হত
+     * বোতাম কাজ করে না।
+     */
+    public function test_a_refused_post_from_the_list_lands_on_the_voucher_with_the_reason(): void
+    {
+        $voucher = $this->draft($this->bank, $this->rent);
+        $list = route('accounts.voucher.index', ['type' => $voucher->type]);
+
+        $this->from($list)
+            ->post(route('accounts.voucher.post', $voucher), ['instrument_no' => ''])
+            ->assertRedirect(route('accounts.voucher.show', $voucher))
+            ->assertSessionHasErrors('instrument_no');
+
+        $this->assertTrue($voucher->fresh()->isDraft());
+
+        $this->get(route('accounts.voucher.show', $voucher))
+            ->assertOk()
+            ->assertSee('name="instrument_no"', false);
+    }
+
     public function test_a_cash_voucher_screen_does_not_ask(): void
     {
         // নগদে ঘরটা দেখালে ব্যবহারকারী ভাবতেন কিছু একটা লিখতে হবে

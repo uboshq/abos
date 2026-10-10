@@ -309,8 +309,55 @@ final class CostLayerService
                 ]);
             }
 
+            $this->markLaterLayers($product, $uses, $date, $documentNo ?? $sourceType.'#'.$sourceId);
+
             return ['cost' => $cost, 'uses' => $uses];
         });
+    }
+
+    /**
+     * ⭐ কাগজের তারিখের **পরে** আসা স্তর থেকে খরচ টানা হলে অডিটে চিহ্ন — পুরো-ERP অডিট, মজুদ ছ১০ (fe-র সিদ্ধান্ত (গ),
+     * ১০ অক্টোবর ২০২৬; [[ALaterLayerLeavesAMarkTest]])।
+     *
+     * ⓘ স্তর তারিখের ক্রমে টানা হয়, তাই পেছনের তারিখের বিক্রি নিজের দিনের আগের স্তরই আগে পায়। কেবল সেই স্তর পরের তারিখের
+     * বিক্রি আগেই খেয়ে ফেললে সে পরে আসা স্তর থেকে টানে — মোট খরচ ঠিক, দুই দিনের ভাগ উল্টো। ⚠️ পুরো সারাই মানে পরের
+     * বিক্রিগুলোর খরচ নতুন করে গোনা (খাতার পুরনো সারি বদলায়) — মালিকের সিদ্ধান্তে, ফ্রিজের পরে। ততদিন চিহ্নটা থাকে:
+     * কোন কাগজ, কত, কোন তারিখের স্তর — হিসাবরক্ষক দেখে বুঝতে পারেন। খাতা নিজে কিছুই বদলায় না।
+     *
+     * @param  list<CostLayerUse>  $uses
+     */
+    private function markLaterLayers(Product $product, array $uses, Carbon|string|null $date, string $paper): void
+    {
+        if ($uses === []) {
+            return;
+        }
+
+        $day = $this->date($date);
+        $later = CostLayer::query()
+            ->whereIn('id', array_map(fn (CostLayerUse $use) => $use->cost_layer_id, $uses))
+            ->whereDate('trx_date', '>', $day)
+            ->pluck('trx_date', 'id');
+
+        if ($later->isEmpty()) {
+            return;
+        }
+
+        $qty = '0';
+
+        foreach ($uses as $use) {
+            if ($later->has($use->cost_layer_id)) {
+                $qty = bcadd($qty, (string) $use->qty, 4);
+            }
+        }
+
+        app(AuditEngine::class)->recordAction($product, 'cost_from_later_layer', sprintf(
+            '%s (%s): %s of %s drew cost from layer(s) dated %s',
+            $paper,
+            $day,
+            rtrim(rtrim($qty, '0'), '.'),
+            $product->name(),
+            $later->map(fn ($d) => Carbon::parse($d)->toDateString())->unique()->implode(', '),
+        ));
     }
 
     /**
@@ -399,6 +446,29 @@ final class CostLayerService
                 $issuedOnLayer[$use->cost_layer_id] = bcadd(
                     $issuedOnLayer[$use->cost_layer_id] ?? '0', (string) $use->qty, 4,
                 );
+            }
+
+            /*
+             * ⛔ মূল নথির নিজের উল্টানো টান বাদ — বিল সম্পাদনায় পুরনো টান `…:cancel`-এ ফেরে, তারপর নতুন টান (পুরো-ERP অডিট,
+             * ৬ অক্টোবর ২০২৬, মজুদ M8; [[AReturnAfterABillEditFindsOnlyWhatTheBillHoldsTest]])। ⓘ আগে ধনাত্মক টানগুলোই গোনা হত,
+             * তাই ফেরানো পুরনো টানের স্তরেও "এখনো ধরা" দেখাত, আর ফেরত সেখানে নামতে পারত যেখানে বিলটার আর কিছু নেই।
+             * ⚠️ যখন ফেরতটাই সেই উল্টানো (বাতিল/সম্পাদনা নিজে এই পথে আসে), ঐ সারিগুলো নিচে "আগে ফিরেছে"-তেই বাদ পড়ে — দুবার নয়।
+             */
+            if ($sourceType !== $issuedSourceType.':cancel') {
+                $reversed = CostLayerUse::query()
+                    ->where('product_id', $product->id)
+                    ->where('source_type', $issuedSourceType.':cancel')
+                    ->where('source_id', $issuedSourceId)
+                    ->whereRaw('qty < 0')
+                    ->groupBy('cost_layer_id')
+                    ->selectRaw('cost_layer_id, COALESCE(SUM(qty), 0) as q')
+                    ->pluck('q', 'cost_layer_id');
+
+                foreach ($reversed as $layerId => $q) {
+                    if (isset($issuedOnLayer[$layerId])) {
+                        $issuedOnLayer[$layerId] = bcadd($issuedOnLayer[$layerId], (string) $q, 4);
+                    }
+                }
             }
 
             $uses = $uses->unique('cost_layer_id')->values();

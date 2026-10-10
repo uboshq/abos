@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Services;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\ReportSchedule;
 use App\Models\User;
@@ -77,7 +78,8 @@ final class ScheduleService
 
             $schedule->fill([
                 'report_key' => $data['report_key'],
-                'filters' => $data['filters'] ?? [],
+                // ⛔ ছাঁকনি না এলে আগেরটাই — সম্পাদনার ফর্মে ঘরটা নেই, আর আগে প্রতিটা সম্পাদনা ছাঁকনি মুছে দিত (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                'filters' => array_key_exists('filters', $data) ? ($data['filters'] ?? []) : ($schedule->filters ?? []),
                 'format' => $data['format'] ?? 'xlsx',
                 'frequency' => $data['frequency'],
                 'at_time' => $this->cleanTime($data['at_time'] ?? '08:00'),
@@ -108,7 +110,7 @@ final class ScheduleService
         $user = auth()->user();
 
         if ($user === null || (int) $schedule->created_by === (int) $user->id
-            || $user->hasRole(\App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            || $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
             return;
         }
 

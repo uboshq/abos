@@ -340,10 +340,11 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
         $controller = app(DocumentApiController::class);
         $printable = (new ReflectionMethod($controller, 'printable'))->invoke($controller);
 
+        // ⓘ বাতিলের অনুরোধ আর নোট পরে কাগজের তালিকায় এসেছে ([[PaperTrail::DOCUMENT_ROUTES]]) — ফোনও সেগুলো ছাপে
         $this->assertSame([
-            'SalesInvoice', 'DeliveryChallan', 'SalesOrder', 'Collection',
+            'SalesInvoice', 'SalesInvoiceCancellation', 'DeliveryChallan', 'SalesOrder', 'Collection',
             'PurchaseBill', 'PurchaseOrder', 'PurchaseReceipt', 'PurchaseReturn',
-            'Voucher', 'MoneyTransfer', 'StockTransfer',
+            'Voucher', 'MoneyTransfer', 'Note', 'StockTransfer',
         ], array_keys($printable));
 
         foreach ($printable as $type => [, $class]) {

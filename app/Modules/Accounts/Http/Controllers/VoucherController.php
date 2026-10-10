@@ -438,7 +438,22 @@ class VoucherController extends Controller implements HasMiddleware
          * পোস্ট হওয়া পর্যন্ত; তারপর ওটা আর নড়ে না।
          */
         // ⭐ লেনদেন নম্বর কেবল খসড়ায়, তালায় আবার পড়ে, তারপর সই, তারপর সেবা — একই লেখকের হাতে ([[VoucherWriter::post()]])
-        $stopping = $this->writer->post($voucher, $validated['instrument_no'] ?? null);
+        try {
+            $stopping = $this->writer->post($voucher, $validated['instrument_no'] ?? null);
+        } catch (ValidationException $e) {
+            /*
+             * ⛔ আটকালে ভাউচারের নিজের পাতায় — মালিক, ১০ অক্টোবর ২০২৬, লাইভে RCV-0030।
+             *
+             * ⚠️ তালিকার পপ-আপ থেকে পোস্ট চাপলে "আগের পাতা" ছিল তালিকা; ভুলবার্তা (যেমন "ব্যাংকের লেনদেন নম্বর
+             * লাগবে") সেখানে ফিরত, যেখানে ঘরটাই নেই — কিছুই দেখা যেত না, মনে হত বোতাম কাজ করে না। ⓘ ঘর আর
+             * বার্তা দুটোই এই পাতায়।
+             */
+            return redirect()
+                ->route('accounts.voucher.show', $voucher)
+                ->withErrors($e->errors())
+                ->withInput($request->only('instrument_no'))
+                ->with('warning', collect($e->errors())->flatten()->first());
+        }
 
         if ($stopping !== null) {
             return back()->with('warning', $stopping->status === Approval::REJECTED

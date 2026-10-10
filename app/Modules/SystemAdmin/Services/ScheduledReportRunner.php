@@ -236,9 +236,12 @@ final class ScheduledReportRunner
                 $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, self::MAX_ROWS);
 
                 $export = new ListExport;
-                ReportExport::into($export, $result, $this->mutuallyVisibleColumns($result, $owner, $recipients));
+                $columns = $this->mutuallyVisibleColumns($result, $owner, $recipients);
+                ReportExport::into($export, $result, $columns);
 
                 $bytes = match ($schedule->format) {
+                    // ⛔ "PDF" বাছলে আগে CSV-র বাইট `.pdf` নামে যেত — খুললে নষ্ট ফাইল (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                    'pdf' => ReportExport::pdf($export, $columns, (string) __($result->report->title), $result->filters),
                     'xlsx' => $export->xlsx(),
                     'json' => $export->json(),
                     default => $export->csv(),

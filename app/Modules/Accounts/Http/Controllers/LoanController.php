@@ -288,14 +288,15 @@ class LoanController extends Controller implements HasMiddleware
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $this->loans->drawDown(
+        $moved = $this->loans->drawDown(
             $loan,
             (string) $data['amount'],
             (int) $data['into_account_id'],
             $data['trx_date'] ?? null,
         );
 
-        return back()->with('saved', __('accounts::message.loan_drawn'));
+        // ⓘ সইয়ের ছক থামালে "পাঠানো হলো", নইলে আগের কথা (অডিট, ১০ অক্টোবর ২০২৬)
+        return back()->with('saved', __($moved->isAwaiting() ? 'accounts::message.loan_awaiting_signature' : 'accounts::message.loan_drawn'));
     }
 
     /** একটা কিস্তি পরিশোধ — আসল দায় কমায়, সুদ খরচে যায়। */
@@ -320,14 +321,14 @@ class LoanController extends Controller implements HasMiddleware
             'amount' => ['nullable', 'numeric', 'gt:0'],
         ]);
 
-        $this->loans->payInstalment(
+        $after = $this->loans->payInstalment(
             $row,
             (int) $data['from_account_id'],
             $data['trx_date'] ?? null,
             isset($data['amount']) ? (string) $data['amount'] : null,
         );
 
-        return back()->with('saved', __('accounts::message.instalment_paid'));
+        return back()->with('saved', __($after->isPaid() ? 'accounts::message.instalment_paid' : 'accounts::message.loan_awaiting_signature'));
     }
 
     /** CC-তে জমা — কেবল দায় কমে। */
@@ -339,14 +340,14 @@ class LoanController extends Controller implements HasMiddleware
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $this->loans->repay(
+        $moved = $this->loans->repay(
             $loan,
             (string) $data['amount'],
             (int) $data['from_account_id'],
             $data['trx_date'] ?? null,
         );
 
-        return back()->with('saved', __('accounts::message.loan_repaid'));
+        return back()->with('saved', __($moved->isAwaiting() ? 'accounts::message.loan_awaiting_signature' : 'accounts::message.loan_repaid'));
     }
 
     /**
@@ -367,9 +368,9 @@ class LoanController extends Controller implements HasMiddleware
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
-        $this->loans->chargeInterest($loan, (string) $data['amount'], $data['trx_date'] ?? null);
+        $moved = $this->loans->chargeInterest($loan, (string) $data['amount'], $data['trx_date'] ?? null);
 
-        return back()->with('saved', __('accounts::message.interest_charged'));
+        return back()->with('saved', __($moved?->isAwaiting() ? 'accounts::message.loan_awaiting_signature' : 'accounts::message.interest_charged'));
     }
 
     /** একটা মাথার নিচের সব খাত — যেগুলোয় সত্যিই দাখিলা বসে। */

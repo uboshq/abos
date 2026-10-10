@@ -61,6 +61,17 @@ class PushService {
     }
   }
 
+  /// ⭐ রিয়েল-টাইম সিঙ্ক — অফিসে কিছু লেখা হলে সার্ভারের নীরব ডাক ([isSyncNudge]); খোলা অ্যাপ তখনই
+  /// [run] চালায় (মালিক, ১০ অক্টোবর ২০২৬)। ⓘ অ্যাপ বন্ধ থাকলে কিছু নয় — খুললেই নিজের গোল চলে।
+  void listenForSync(Future<void> Function() run) {
+    if (!_ready) return;
+    try {
+      FirebaseMessaging.onMessage.listen((m) {
+        if (isSyncNudge(m.data)) unawaited(run().catchError((Object _) {}));
+      });
+    } catch (_) {}
+  }
+
   /// বার্তায় চেপে অ্যাপ খুলল — শুরুতে একবার আর চলার সময়। ঠিকানা দেয় [destinationOf]।
   void listenForTaps(void Function(String path) open) {
     if (!_ready) return;
@@ -76,6 +87,9 @@ class PushService {
     } catch (_) {}
   }
 }
+
+/// সার্ভারের নীরব "সিঙ্ক করো" ডাক — `{abos: sync}` ([[SyncNudge]]); ভেতরে আর কিছু নেই।
+bool isSyncNudge(Map<String, dynamic>? data) => data?['abos'] == 'sync';
 
 /// বার্তার `data` থেকে অ্যাপের ঠিকানা — সার্ভার পাঠায় `{open: tracking, kind, id}` ([[TrackingNotices]])।
 /// ⓘ অচেনা কিছু হলে null — অ্যাপ যেখানে ছিল সেখানেই খোলে।

@@ -42,6 +42,7 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Modules/Approval/Services/OwnerSignsDiscounts.php' => 'ছাড়ে মালিকের সইয়ের ছক বসানো — নতুন কোম্পানির প্রভিশনিং আর একবারের মাইগ্রেশন, কারও চাবিতে নয়',
         'app/Modules/Inventory/Services/PackBackfill.php' => 'কনসোলের ব্যাকফিল — মানুষ নেই',
         'app/Core/Services/CompanyProvisioner.php' => 'নতুন কোম্পানি খোলা — মালিক/প্রভিশনিং',
+        'app/Http/Controllers/Api/AuthController.php' => 'টোকেন নবায়নে দুই ধাপ বাধ্যতামূলক কি না পড়া — কেবল মানুষটার নিজের চলতি কোম্পানিতে, শুধু পড়া, কিছু লেখা নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)',
         'app/Modules/Sales/Services/TrackingNotices.php' => 'ঘটনার শ্রোতা — কোনো মানুষ নেই; চালানটা যে কোম্পানির, কেবল সেই কোম্পানির ভেতরে চলে (CompanyContext::forCompany) আর সেই কোম্পানিরই লেখক, অনুমোদনকারী ও মালিককে জানায়',
         'app/Core/Services/Ownership.php' => 'মালিকের সুপার ক্ষমতা সব কোম্পানিতে (ABOS_OWNER_EMAILS)',
         'app/Core/Services/PermissionSyncer.php' => 'চাবির তালিকা সব কোম্পানিতে মেলানো — ডিপ্লয়/কনসোল',

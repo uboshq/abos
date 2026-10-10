@@ -274,6 +274,28 @@ class ImportTest extends TestCase
     }
 
     /**
+     * ⛔ সীমার বেশি সারির ফাইল বসানোয় — কিছুই বসে না, আর স্পষ্ট বলা হয় (পুরো-ERP অডিট; fe, ১০ অক্টোবর ২০২৬)।
+     * ⚠️ আগে প্রথম ২,০০০ বসত আর বাকিটা নীরবে বাদ। ⓘ ঠিক সীমা পর্যন্ত আগের মতোই চলে।
+     */
+    public function test_importing_a_file_over_the_limit_saves_nothing_and_says_so(): void
+    {
+        $rows = fn (int $n, string $tag) => implode('', array_map(fn ($i) => "IMP-{$tag}-{$i},Row {$i},,,,,,,,,,0,0,\n", range(1, $n)));
+        $before = \App\Modules\Supplier\Models\Supplier::query()->count();
+
+        try {
+            $this->runner()->run('supplier', $this->csv($this->header()."\n".$rows(ImportRunner::MAX_ROWS + 1, 'OVER')));
+            $this->fail('⛔ সীমার বেশি সারির ফাইল চুপচাপ কেটে বসানো হলো।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertSame(__('core.import.too_many_rows', ['max' => number_format(ImportRunner::MAX_ROWS)]), $e->errors()['file'][0] ?? null);
+        }
+
+        $this->assertSame($before, \App\Modules\Supplier\Models\Supplier::query()->count(), '⛔ ফিরিয়েও কিছু বসল।');
+
+        $result = $this->runner()->run('supplier', $this->csv($this->header()."\n".$rows(ImportRunner::MAX_ROWS, 'EXACT')));
+        $this->assertSame(ImportRunner::MAX_ROWS, $result['imported'], '⛔ ঠিক সীমা পর্যন্তও বসল না।');
+    }
+
+    /**
      * Excel-এর BOM কলামের নাম নষ্ট করে না।
      *
      * BOM প্রথম কলামের নামে লেগে থাকে, আর তখন "code" কলামটা "নেই" বলে

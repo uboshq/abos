@@ -17,4 +17,6 @@ return [
     'combine_selection' => 'সব সারির জন্য একসাথে বাছুন',
     'purchase_placement' => 'ক্রয়ের মাল বসানো',
     'return_placement' => 'ফেরত আসা মাল বসানো',
+    // ⓘ ফ্রি মালের সমন্বয়ের চলাচলে লেখা (মজুদ ⚠️৬ক)
+    'free_adjustment_narration' => 'ফ্রি মাল সমন্বয় — :document',
 ];

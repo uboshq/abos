@@ -100,9 +100,9 @@
 
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('accounts::asset.run_month') }}</span>
-                <input type="month" name="month" required value="{{ old('month', $defaultMonth) }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) px-2">
+                <x-ui.month name="month" required :value="old('month', $defaultMonth)"
+                            class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2" />
             </label>
 
             <x-ui.button type="submit" tone="primary">

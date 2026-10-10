@@ -43,11 +43,7 @@
                 <span>{{ \App\Core\Support\DateFormat::format($paper['trx_date']) }}</span>
             </div>
 
-            <div class="sm:col-span-2">
-                <span class="text-(--color-ink-muted)">{{ __('inventory::field.paper_id') }}:</span>
-                <span class="num text-2xs">{{ $paper['source_type'] }}:{{ $paper['source_id'] }}</span>
-            </div>
-
+            {{-- ⛔ ভেতরের আইডি ("purchase_bill:18") আর দেখানো হয় না — কাগজের নম্বর উপরেই (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬) --}}
             <div>
                 <span class="text-(--color-ink-muted)">{{ __('inventory::field.processed_by') }}:</span>
                 <span>{{ $paper['by'] ?? '—' }}</span>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Security;
 
+use App\Core\Services\LoginJournal;
 use App\Models\LoginAttempt;
 use Illuminate\Support\Carbon;
 
@@ -69,7 +70,8 @@ final class LoginLock
         $since = $this->lastSuccessAt($identifier);
 
         $failures = LoginAttempt::query()
-            ->where('identifier', $identifier)
+            // ⓘ অচেনা নামের চেষ্টা খাতায় ঢাকা ছাপে বসে ([[LoginJournal::unknownKey()]]) — দুটোই গোনা
+            ->whereIn('identifier', [$identifier, LoginJournal::unknownKey($identifier)])
             ->where('succeeded', false)
 
             /*

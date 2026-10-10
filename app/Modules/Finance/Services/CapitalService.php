@@ -8,6 +8,7 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -60,7 +61,11 @@ final class CapitalService
 
             return CapitalEntry::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
+                /*
+                 * ⛔ রসিদ থেকে বানানো সারি রসিদের শাখায় — হেডারের শাখায় নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬;
+                 * [[CapitalFromReceipt]])। ⓘ পর্দা থেকে নতুন সারি কাজ করা শাখায়, আগের মতো।
+                 */
+                'branch_id' => array_key_exists('branch_id', $data) ? $data['branch_id'] : CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('CAP'),
                 'person_id' => (int) $data['person_id'],
                 'contributor_type' => $data['contributor_type'],
@@ -315,6 +320,8 @@ final class CapitalService
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::RECEIPT,
+                    // ⛔ সারির নিজের শাখায় — পোস্ট যে শাখা থেকেই হোক (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; ভাড়ার একই নিয়ম)
+                    'branch_id' => $entry->branch_id,
                     'trx_date' => $entry->trx_date->toDateString(),
                     'narration' => $entry->narration
                         ?? __('finance::message.capital_narration', [
@@ -396,7 +403,7 @@ final class CapitalService
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as total')
             ->pluck('total', 'branch_id');
 
-        $names = \App\Models\Branch::query()->whereKey($sums->keys()->filter()->all())->get()->keyBy('id');
+        $names = Branch::query()->whereKey($sums->keys()->filter()->all())->get()->keyBy('id');
         $rows = [];
         $total = '0';
 
@@ -413,9 +420,9 @@ final class CapitalService
 
     /**
      * @param  bool  $wholeCompany  ⛔ লাভ বণ্টন আর বিনিয়োগের আয় — সবসময় পুরো কোম্পানি (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৪)।
-     *                               ⓘ লাভ-দেনার জাবেদা (৩৩০০ / ২১৯০) পুরো কোম্পানির জন্য বসে; হেডারে এক শাখা বাছা থাকলে আগে
-     *                               কেবল সেই শাখায় মূলধন দেওয়া মানুষেরা ভাগ পেতেন, আর পুরো % ভাগ হত সেই শাখার মূলধনে।
-     *                               মূলধনের পাতা আগের মতোই হেডারের শাখা মানে।
+     *                              ⓘ লাভ-দেনার জাবেদা (৩৩০০ / ২১৯০) পুরো কোম্পানির জন্য বসে; হেডারে এক শাখা বাছা থাকলে আগে
+     *                              কেবল সেই শাখায় মূলধন দেওয়া মানুষেরা ভাগ পেতেন, আর পুরো % ভাগ হত সেই শাখার মূলধনে।
+     *                              মূলধনের পাতা আগের মতোই হেডারের শাখা মানে।
      */
     public function positions(?string $profit = null, bool $wholeCompany = false): array
     {
@@ -439,7 +446,12 @@ final class CapitalService
              * হয়; খাতায় তো উল্টো দাখিলা বসেই গেছে।
              */
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                /*
+                 * ⛔ ভাউচারের শাখার দেয়াল ছাড়া — কেবল বাতিল কি না দেখা (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)। ⓘ ভাউচারে গ্লোবাল
+                 * শাখার দেয়াল আছে; হেডারে অন্য শাখা থাকলে অন্য শাখার রসিদের মূলধন "নেই" হত, আর পুরো কোম্পানির লাভ বণ্টনে
+                 * সেই অংশীদার বাদ পড়তেন। কোন শাখার মূলধন গোনা হবে সেটা উপরের ছাঁকনির কাজ।
+                 */
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
 
             /*
              * ⛔ দল কেবল মানুষ ধরে — অডিট গ১৩, ৪ অক্টোবর ২০২৬। ⓘ আগে `(person_id, contributor_type)` ধরে, তাই

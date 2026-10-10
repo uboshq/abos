@@ -64,6 +64,7 @@ class TheCompanyCouldNotPutItsOwnLogoOnItsOwnPapersTest extends TestCase
                 ...$this->identity(),
                 'logo' => UploadedFile::fake()->image('মালিকের লোগো.png', 400, 120),
             ])
+            ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $company = $this->company->fresh();
@@ -97,6 +98,7 @@ class TheCompanyCouldNotPutItsOwnLogoOnItsOwnPapersTest extends TestCase
                 ...$this->identity(),
                 'logo' => UploadedFile::fake()->image('logo.png', 400, 120),
             ])
+            ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $company = $this->company->fresh();
@@ -120,6 +122,7 @@ class TheCompanyCouldNotPutItsOwnLogoOnItsOwnPapersTest extends TestCase
 
         $this->actingAs($this->owner)
             ->put(route('system_admin.company.update', $this->company), $this->identity())
+            ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $this->assertSame('logos/already-there.png', $this->company->fresh()->logo_path,
@@ -136,6 +139,7 @@ class TheCompanyCouldNotPutItsOwnLogoOnItsOwnPapersTest extends TestCase
                 ...$this->identity(),
                 'remove_logo' => '1',
             ])
+            ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $this->assertNull($this->company->fresh()->logo_path);
@@ -189,10 +193,21 @@ class TheCompanyCouldNotPutItsOwnLogoOnItsOwnPapersTest extends TestCase
             ->assertSee('name="logo"', false);
     }
 
-    /** @return array<string, string> */
+    /**
+     * ⓘ পর্দা যা পাঠায় ঠিক তাই — কোডসহ।
+     *
+     * ⛔ আগে এখানে কোড ছিল না। ⓘ মালিক সুপার অ্যাডমিন, আর ২০ সেপ্টেম্বর থেকে সুপার অ্যাডমিনের জন্য কোডের ঘর পর্দায় থাকে
+     * (তালাবদ্ধ কোম্পানিতেও, পুরনো কোড লিখে বদলানোর জন্য) আর সার্ভার সেটা চায় ([[CompanyController::mayChangeCode()]])।
+     * ⚠️ ফলে প্রতিটা অনুরোধ ত্রুটিসহ ফিরত, লোগো বসতই না — আর `assertRedirect()` ত্রুটির ফেরাকেও মেনে নিত, তাই "ফাইল না দিলে
+     * লোগো থাকে" দাবিটা কিছু না মেপেই সবুজ ছিল। ⭐ এখন কোড আগের মানেই যায় (পর্দার মতো), আর প্রতিটা অনুরোধ
+     * `assertSessionHasNoErrors()` — ১০ অক্টোবর ২০২৬।
+     *
+     * @return array<string, string>
+     */
     private function identity(): array
     {
         return [
+            'code' => $this->company->code,
             'name_en' => $this->company->name_en,
             'name_bn' => (string) $this->company->name_bn,
         ];

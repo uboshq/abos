@@ -7,15 +7,7 @@
     "বাতিল" লাল আর অন্যটায় ধূসর হয়ে যেত, আর ব্যবহারকারী কোনটার কী মানে
     সেটা শিখতেই পারত না।
 --}}
-@php
-    $tones = [
-        \App\Core\Support\DocumentStatus::DRAFT => 'draft',
-        \App\Core\Support\DocumentStatus::CONFIRMED => 'success',
-        \App\Core\Support\DocumentStatus::CANCELLED => 'danger',
-        \App\Core\Support\DocumentStatus::CLOSED => 'info',
-    ];
-@endphp
-
-<x-ui.badge :tone="$tones[$status] ?? 'draft'" {{ $attributes }}>
+{{-- ⭐ রং এক মানচিত্র থেকে — [[StatusTone]] (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬); এখানে আলাদা তালিকা আর নেই --}}
+<x-ui.badge :tone="\App\Core\Support\StatusTone::of((string) $status)" {{ $attributes }}>
     {{ __('core.status.' . $status) }}
 </x-ui.badge>

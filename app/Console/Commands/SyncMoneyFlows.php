@@ -74,6 +74,12 @@ class SyncMoneyFlows extends Command
                     .implode(', ', $report['created']));
             }
 
+            // ⓘ মালিক কোম্পানির সব সই বন্ধ রেখেছেন — নতুন ছক বসানো হয়নি, সেটাই ঠিক
+            if ($report['switched_off'] !== []) {
+                $this->line("{$company->code}: সব সই বন্ধ — ".count($report['switched_off']).'টা কাজে ছক বসানো হয়নি: '
+                    .implode(', ', $report['switched_off']));
+            }
+
             foreach ($report['inactive'] as $key) {
                 $this->warn("{$company->code}: {$key} — ছক আছে কিন্তু বন্ধ; এই কাজের টাকার কাগজ পোস্ট হবে না।");
             }

@@ -6,6 +6,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::tracking.title') }} — {{ $sale['no'] }}</x-slot:title>
 
+    {{-- ⛔ কেন হলো না, এই পাতাতেই — বোতাম আটকালে বার্তাটা এখানে দেখায় (ARefusalNobodyEverSawTest, ১০ অক্টোবর ২০২৬) --}}
+    <x-ui.errors />
+
     {{-- ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — পপ-আপের ভেতরেও, তাই ঠিকানাটা হাতে ([[screens.js::liveRefresh]]) --}}
     <div class="mx-auto grid max-w-3xl gap-3" data-tracking-story data-live
          x-data="liveRefresh({ url: '{{ route('sales.tracking.show', [$sale['kind'], $sale['id']]) }}', seconds: 30 })">

@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Dashboard;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
@@ -14,6 +15,7 @@ use App\Core\Engines\Dashboard\Tile;
 use App\Core\Services\DataScope;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Branch;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
@@ -21,8 +23,11 @@ use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
+use App\Modules\MasterData\Models\Department;
+use App\Modules\MasterData\Models\Designation;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * কর্মী ও বেতন মডিউলের ড্যাশবোর্ড।
@@ -81,7 +86,8 @@ final class HrDashboard implements ProvidesDashboard
                  */
                 new Stat(
                     label: __('hr::dashboard.pending_leave'),
-                    value: (string) LeaveApplication::query()->where('status', 'pending')->count(),
+                    // ⭐ দেখার শাখার কর্মীর ছুটি — ছুটির সারিতে শাখা নেই, কর্মীর আছে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                    value: (string) self::leaveInView()->where('status', 'pending')->count(),
                     hint: __('hr::dashboard.pending_leave_hint'),
                     href: route('hr.leave.index'),
                     tone: Stat::WARN,
@@ -108,13 +114,26 @@ final class HrDashboard implements ProvidesDashboard
                         ['key' => 'days', 'label' => __('hr::dashboard.days'), 'width' => '5rem',
                             'render' => fn ($l) => $l->days],
                     ],
-                    rows: LeaveApplication::query()->where('status', 'pending')
+                    rows: self::leaveInView()->where('status', 'pending')
                         ->with('employee')->latest('id')->limit(8)->get(),
                     empty: __('hr::dashboard.no_pending_leave'),
                     href: route('hr.leave.index'),
                 ),
             ],
         );
+    }
+
+    /**
+     * ⛔ ছুটির আবেদন দেখার শাখার কর্মীদের — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ `LeaveApplication`-এ শাখার স্কোপ নেই, তাই এক শাখার মানুষ গোটা কোম্পানির
+     * অপেক্ষমাণ ছুটি গুনতেন আর নাম দেখতেন। ⓘ "আজ উপস্থিত" ঘরের হুবহু নিয়ম:
+     * কর্মীর শাখা ধরে।
+     */
+    private static function leaveInView(): Builder
+    {
+        return LeaveApplication::query()
+            ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'));
     }
 
     /**
@@ -156,7 +175,7 @@ final class HrDashboard implements ProvidesDashboard
             ],
             hint: __('hr::dashboard.todays_roll_hint', ['count' => $headcount]),
             // ⭐ কোন দিনের (মালিক, ৫ অক্টোবর ২০২৬)
-            range: \App\Core\Engines\Dashboard\DateRange::label(\Illuminate\Support\Carbon::today(), \Illuminate\Support\Carbon::today()),
+            range: DateRange::label(Carbon::today(), Carbon::today()),
         );
     }
 
@@ -184,7 +203,7 @@ final class HrDashboard implements ProvidesDashboard
             return [];
         }
 
-        $names = \App\Modules\MasterData\Models\Department::query()
+        $names = Department::query()
             ->whereIn('id', $rows->pluck('department_id')->filter()->all())
             ->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]);
 
@@ -233,7 +252,7 @@ final class HrDashboard implements ProvidesDashboard
 
         return [new Breakdown(
             label: __('hr::dashboard.leave_this_month'),
-            range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
+            range: DateRange::label($start, Carbon::today()),
             parts: array_map(fn (string $status) => [
                 'label' => __('hr::dashboard.leave_'.$status),
                 'value' => (string) (int) ($byStatus[$status] ?? 0),
@@ -318,7 +337,7 @@ final class HrDashboard implements ProvidesDashboard
             firstLabel: __('hr::field.gross'),
             secondLabel: __('hr::field.net'),
             // ⓘ কবে থেকে কবে — মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ
-            range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
+            range: DateRange::label($start, Carbon::today()),
         )];
     }
 
@@ -335,7 +354,7 @@ final class HrDashboard implements ProvidesDashboard
     {
         return self::workforceBy(
             'branch_id',
-            fn (array $ids) => \App\Models\Branch::query()->whereIn('id', $ids)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name()]),
+            fn (array $ids) => Branch::query()->whereIn('id', $ids)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name()]),
             label: __('hr::dashboard.by_branch'),
             none: __('hr::dashboard.no_branch'),
             others: __('hr::dashboard.other_branches'),
@@ -356,7 +375,7 @@ final class HrDashboard implements ProvidesDashboard
     {
         return self::workforceBy(
             'designation_id',
-            fn (array $ids) => \App\Modules\MasterData\Models\Designation::query()->whereIn('id', $ids)->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]),
+            fn (array $ids) => Designation::query()->whereIn('id', $ids)->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]),
             label: __('hr::dashboard.by_designation'),
             none: __('hr::dashboard.no_designation'),
             others: __('hr::dashboard.other_designations'),
@@ -368,7 +387,7 @@ final class HrDashboard implements ProvidesDashboard
     /**
      * চালু কর্মী এক ঘর ধরে ভাগ — শাখা আর পদবির চার্টের একটাই নিয়ম (৬ অক্টোবর ২০২৬)।
      *
-     * @param  callable(list<int>): \Illuminate\Support\Collection<int, string>  $names
+     * @param  callable(list<int>): Collection<int, string>  $names
      * @return list<Breakdown>
      */
     private static function workforceBy(string $column, callable $names, string $label, string $none, string $others, int $top, string $chart): array
@@ -494,7 +513,7 @@ final class HrDashboard implements ProvidesDashboard
             parts: $parts,
             hint: __('hr::dashboard.allowance_deduction_hint', ['earning' => Money::format($earning), 'deduction' => Money::format($deduction)]),
             chart: 'columns',
-            range: \App\Core\Engines\Dashboard\DateRange::label($month, $month->copy()->endOfMonth()),
+            range: DateRange::label($month, $month->copy()->endOfMonth()),
         )];
     }
 
@@ -531,7 +550,7 @@ final class HrDashboard implements ProvidesDashboard
             return [];
         }
 
-        $names = \App\Modules\MasterData\Models\Department::query()
+        $names = Department::query()
             ->whereIn('id', $rows->pluck('k')->filter()->all())
             ->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]);
 
@@ -554,7 +573,7 @@ final class HrDashboard implements ProvidesDashboard
             parts: $shown->map(fn ($p) => ['label' => $p['label'], 'value' => Money::format($p['cost'])])->all(),
             hint: __('hr::dashboard.cost_by_department_hint', ['total' => Money::format($sum($parts))]),
             chart: 'hbars',
-            range: \App\Core\Engines\Dashboard\DateRange::label($month, $month->copy()->endOfMonth()),
+            range: DateRange::label($month, $month->copy()->endOfMonth()),
         )];
     }
 

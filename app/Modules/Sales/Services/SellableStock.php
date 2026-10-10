@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Services\StockService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -55,9 +56,8 @@ final class SellableStock
         $rows = Product::query()
             ->active()
             ->select('inv_products.id')
-            ->selectSub($sum('floor_change'), 'floor_total')
-            ->selectSub($sum('reserved_change'), 'reserved_total')
-            ->selectSub($sum('hold_change'), 'hold_total')
+            // ⓘ মজুদের একটাই সূত্র — মেয়াদ পেরোনো লট বাদ ([[StockService::availableSql()]], মজুদ M27)
+            ->selectSub($sum(StockService::availableSql()), 'available_total')
             ->when($productIds !== null, fn ($q) => $q->whereIn('inv_products.id', $productIds))
             ->get();
 
@@ -65,15 +65,10 @@ final class SellableStock
 
         foreach ($rows as $row) {
             /*
-             * ⓘ মেঝের মাল বাদ সংরক্ষিত বাদ আটকে রাখা — তারপর খাবারের
-             * নিজের উত্তর। ⚠️ `bcsub` দিয়ে, float দিয়ে নয়: ভগ্নাংশ
-             * পরিমাণে (১.৩৩ কেজি) float-এ শেষ ঘরটা নড়ে যায়।
+             * ⓘ মেঝের মাল বাদ সংরক্ষিত বাদ আটকে রাখা বাদ মেয়াদ পেরোনো লট — মজুদের সূত্রে
+             * ([[StockService::availableSql()]]), তারপর খাবারের নিজের উত্তর।
              */
-            $onFloor = bcsub(
-                bcsub((string) $row->floor_total, (string) $row->reserved_total, 4),
-                (string) $row->hold_total,
-                4,
-            );
+            $onFloor = (string) $row->available_total;
 
             $available[(string) $row->id] = (string) $this->recipes->sellableQty(
                 (int) $row->id,

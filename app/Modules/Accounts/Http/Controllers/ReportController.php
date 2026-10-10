@@ -136,7 +136,11 @@ class ReportController extends Controller implements HasMiddleware
         $definition = $this->reports->get($key);
 
         // ⓘ মাসওয়ারি হিসাব এক মাসে অর্থহীন — ডিফল্ট চলতি অর্থবছর (মালিকের চাওয়া, ১ অক্টোবর ২০২৬)
-        if ($key === MonthlyCashReport::KEY && ! $request->filled('from')) {
+        /*
+         * ⭐ লাভ-ক্ষতিও চলতি অর্থবছর থেকে — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬)। ⛔ আগে এই মাসের শুরু থেকে: স্থিতিপত্রে
+         * "চলতি বছরের লাভ ৩৬৫" অথচ লাভ-ক্ষতিতে নিট ০ — দুটো পাতা দুই সময় দেখত। ⓘ স্থিতিপত্রের একই বছর ([[MonthlyCashReport::yearStart()]])।
+         */
+        if (in_array($key, [MonthlyCashReport::KEY, 'accounts.profit_loss'], true) && ! $request->filled('from')) {
             $request->merge(['from' => MonthlyCashReport::yearStart()]);
         }
 

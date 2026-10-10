@@ -11,11 +11,8 @@
 @php
     // সংখ্যাগুলো কোয়েরি থেকেই আসে (floor_total ইত্যাদি); এখানে শুধু
     // বিয়োগটা, আর সেটা bcmath-এ — টাকার মতো পরিমাণেও ভাসমান সংখ্যা নয়
-    $available = fn ($p) => bcsub(
-        bcsub((string) $p->floor_total, (string) $p->reserved_total, 4),
-        (string) $p->hold_total,
-        4,
-    );
+    // ⓘ বিক্রয়যোগ্য কোয়েরি থেকেই, একটাই সূত্রে — মেয়াদ পেরোনো লট বাদ (StockService::availableSql(), মজুদ M27)
+    $available = fn ($p) => (string) $p->available_total;
 
     /*
      * ⭐ ফ্রি মালের বিক্রয়যোগ্য অংশ — ১৮ সেপ্টেম্বর ২০২৬।
@@ -455,6 +452,11 @@
 
             if (isset($grand['stock_value']) && collect($columns)->contains('key', 'stock_value')) {
                 $barTotals[] = ['label' => __('inventory::field.stock_value'), 'value' => \App\Core\Support\Money::format((string) $grand['stock_value'])];
+
+                // ⓘ চালান হয়েছে, বিল হয়নি — গোটা কোম্পানির দৃশ্যেই আসে; মূল্য আর এটা মিলে খাতার মজুদ খাত (মজুদ ⚠️৪)
+                if (isset($grand['not_billed_value'])) {
+                    $barTotals[] = ['label' => __('inventory::field.not_billed_value'), 'value' => \App\Core\Support\Money::format((string) $grand['not_billed_value'])];
+                }
             }
         @endphp
         <x-ui.list-totals :rows="$products" :totals="$barTotals" />

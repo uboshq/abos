@@ -46,8 +46,11 @@ final class FinanceSignature
     /** বছর শেষে না-তোলা লাভ মূলধনে */
     public const CAPITALISE = 'capitalise';
 
+    /** বীমা দাবি — লিখিত অনুমোদন, টাকা আসা, বন্ধ বা নাকচ (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[InsuranceClaimService]]) */
+    public const INSURANCE_CLAIM = 'insurance_claim';
+
     /** শেষ সই-এর শ্রোতা যে কাজগুলো সামলায় — উত্তোলন আর মুনাফা ঘোষণার নিজের পথ আছে */
-    public const ACTIONS = [self::HAND_LOAN, self::DEPOSIT, self::RENTAL, self::BANK_FACILITY, self::CAPITALISE];
+    public const ACTIONS = [self::HAND_LOAN, self::DEPOSIT, self::RENTAL, self::BANK_FACILITY, self::CAPITALISE, self::INSURANCE_CLAIM];
 
     public function __construct(
         private readonly DocumentApproval $approval,
