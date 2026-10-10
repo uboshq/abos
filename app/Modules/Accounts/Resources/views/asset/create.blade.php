@@ -257,7 +257,8 @@
                         @foreach ($billLines as $line)
                             <option value="{{ $line['id'] }}" @selected(old('purchase_bill_line_id', $pickedLine) == $line['id'])>
                                 {{ $line['bill_no'] }} · {{ $line['date'] }} · {{ $line['supplier'] }} · {{ $line['product'] }}
-                                ({{ \App\Core\Support\Money::quantity($line['qty']) }} × {{ \App\Core\Support\Money::format($line['unit_cost']) }})
+                                {{-- ⓘ ক্রয়মূল্য এখানে নয় — দামের চাবি ছাড়া কারও চোখে পড়ার কথা নয় ([[FieldSecurity]]) --}}
+                                ({{ \App\Core\Support\Money::quantity($line['qty']) }})
                             </option>
                         @endforeach
                     </select>

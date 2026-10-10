@@ -88,6 +88,7 @@ return new class extends Migration
 
         Schema::create('acc_asset_cost_parts', function (Blueprint $table): void {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
             $table->string('kind', 24);
