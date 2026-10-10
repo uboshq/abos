@@ -109,4 +109,8 @@ return [
     // Two challan print buttons (owner, 2 Oct 2026)
     'challan_with_amounts' => 'Challan — with amounts',
     'challan_without_amounts' => 'Challan — without amounts',
+    'closing_balance' => 'Closing balance',
+    'this_invoice' => 'This invoice',
+    'previous_short' => 'Previous',
+    'bill_short' => 'Bill',
 ];
