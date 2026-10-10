@@ -103,6 +103,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Services/SalesReturnService.php' => 'ফেরতের পোস্টিং',
         'app/Modules/Sales/Services/ShiftService.php' => 'কাউন্টারের পালার নগদ মেলানো',
         'app/Modules/Supplier/Models/Supplier.php' => 'মূল উপকরণ — পাওনা',
+        'app/Modules/Purchase/Services/PurchaseBillService.php' => 'বিলের দামে মালের দামের সংশোধনী — একটা বিলের নিজের খোলা দাখিলা উল্টে মিলিয়ে আবার বসায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ত (ক্রয় ⚠️৩, ১০ অক্টোবর ২০২৬)',
     ];
 
     public function test_every_ledger_reader_is_declared_and_no_declaration_is_stale(): void

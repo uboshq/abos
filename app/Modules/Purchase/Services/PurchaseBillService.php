@@ -1131,6 +1131,9 @@ final class PurchaseBillService
                 reason: $reason,
             );
 
+            // ⓘ স্তর চালানের দামে ফেরে — পুরনো লাইন দিয়ে, বদলানোর আগে (ক্রয় ⚠️৩)
+            $this->revalueBackToReceipts($bill, $date, $reason);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $bill->trx_date);
             $billNo = $data['supplier_bill_no'] ?? null;
 
@@ -1209,6 +1212,9 @@ final class PurchaseBillService
                     reversalDate: $date,
                     reason: $reason,
                 );
+
+                // ⓘ স্তর চালানের দামে ফেরে (ক্রয় ⚠️৩)
+                $this->revalueBackToReceipts($bill, $date, $reason);
             }
 
             $bill->update([
@@ -1361,7 +1367,25 @@ final class PurchaseBillService
 
         if (bccomp($difference, '0', 4) !== 0) {
             $this->assertDifferenceAllowed($bill, $difference);
+        }
 
+        /*
+         * ⭐ বিল গোটা মাল-গ্রহণের দাম বললে মালের দামই বিলের দাম — পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬, ক্রয় ⚠️৩, খাতার দিক
+         * (স্তরের দিক cb-র [[CostLayerService::revalue()]], 90bb3435)। ⛔ আগে পুরো পার্থক্য ৫১৫০-এ, আর স্তর থাকত চালানের দামে:
+         * তাকের মালের দাম ভুল, পরের বিক্রয়ের খরচও ভুল। ⓘ এখন তাকে যা আছে তার পার্থক্য মজুদে (১১২০), আগেই যা বেরিয়েছে তার
+         * পার্থক্য বিক্রীত মালের খরচে (৫১০০), বিলের দিনে। ⓘ আংশিক বিল (চালানের সব পরিমাণ নয়) আগের মতো ৫১৫০-এ — দুই বিলের দুই
+         * দাম এক স্তরে বসানো যায় না (স্কিমা লাগবে, ফ্রিজের পরে)। মিল আর অনুমতির সীমা (উপরে) পুরো পার্থক্যই দেখে, আগের মতো।
+         */
+        $revalued = '0';
+
+        foreach ($this->revalueWholeReceipts($bill) as $line) {
+            $lines[] = $line;
+            $revalued = bcadd($revalued, bcsub($line['debit'] ?? '0', $line['credit'] ?? '0', 4), 4);
+        }
+
+        $difference = bcsub($difference, $revalued, 4);
+
+        if (bccomp($difference, '0', 4) !== 0) {
             $variance = $this->account(StandardChart::PURCHASE_PRICE_VARIANCE);
 
             $lines[] = bccomp($difference, '0', 4) > 0
@@ -1389,6 +1413,177 @@ final class PurchaseBillService
             documentNo: $bill->document_no,
             branchId: $bill->branch_id,
         );
+    }
+
+    /**
+     * এই বিল যে মাল-গ্রহণের যে পণ্যের **সবটুকুর** বিল — চালান·পণ্য ধরে, বিলের নিজের দামে (ক্রয় ⚠️৩)।
+     *
+     * ⓘ "সবটুকু" = এই বিলের পরিমাণ চালানের মোট পরিমাণের সমান। বিল চালানের বাকির বেশি হয় না ([[resolveReceiptLine()]]), তাই
+     * তখন অন্য কোনো জীবিত বিল ঐ চালান·পণ্যের নয় — এক স্তরে দুই বিলের দাম বসার প্রশ্নই ওঠে না।
+     *
+     * @return list<array{receipt_id: int, product_id: int, qty: string, net: string, receipt_value: string}>
+     */
+    private function wholeReceipts(PurchaseBill $bill): array
+    {
+        $groups = [];
+
+        foreach ($bill->lines as $line) {
+            $receiptLine = $line->receiptLine;
+
+            if ($receiptLine === null) {
+                continue;
+            }
+
+            $key = $receiptLine->purchase_receipt_id.':'.$line->product_id;
+            $groups[$key] ??= ['receipt_id' => (int) $receiptLine->purchase_receipt_id, 'product_id' => (int) $line->product_id, 'qty' => '0', 'net' => '0'];
+            $groups[$key]['qty'] = bcadd($groups[$key]['qty'], (string) $line->qty, 4);
+            // ⓘ ভ্যাট বাদে — ২১৬০ সরানোর আর পার্থক্যের একই ভিত্তি ([[postToLedger()]])
+            $groups[$key]['net'] = bcadd($groups[$key]['net'], bcsub((string) $line->amount, (string) $line->tax, 4), 4);
+        }
+
+        $whole = [];
+
+        foreach ($groups as $group) {
+            $received = PurchaseReceiptLine::query()
+                ->where('purchase_receipt_id', $group['receipt_id'])
+                ->where('product_id', $group['product_id'])
+                ->selectRaw('COALESCE(SUM(received_qty), 0) as qty, COALESCE(SUM(received_qty * rate), 0) as value')
+                ->first();
+
+            if (bccomp($group['qty'], '0', 4) <= 0 || bccomp($group['qty'], (string) $received->qty, 4) !== 0) {
+                continue;
+            }
+
+            $whole[] = $group + ['receipt_value' => (string) $received->value];
+        }
+
+        return $whole;
+    }
+
+    /**
+     * স্তরগুলো বিলের দামে, আর তার খাতার লাইন — তাকের পার্থক্য মজুদে, বেরোনোর পার্থক্য বিক্রীত মালের খরচে (ক্রয় ⚠️৩)।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function revalueWholeReceipts(PurchaseBill $bill): array
+    {
+        $shelf = '0';
+        $sold = '0';
+
+        foreach ($this->wholeReceipts($bill) as $group) {
+            $moved = $this->costs->revalue(
+                PurchaseReceipt::STOCK_SOURCE,
+                $group['receipt_id'],
+                $group['product_id'],
+                bcdiv($group['net'], $group['qty'], 6),
+                $bill->trx_date,
+            );
+
+            $shelf = bcadd($shelf, (string) $moved['shelf_diff'], 6);
+            $sold = bcadd($sold, (string) $moved['sold_diff'], 6);
+        }
+
+        return $this->stockAndCostLines($bill, $shelf, $sold, __('purchase::message.price_to_stock', ['no' => $bill->document_no]));
+    }
+
+    /**
+     * বিল বাতিল বা সম্পাদনায় স্তর আবার চালানের দামে (ক্রয় ⚠️৩)।
+     *
+     * ⓘ বিলের দাখিলা উল্টালে তার মজুদ আর খরচের লাইনও উল্টায় — ঠিক বিলের দিনের অঙ্কে। কিন্তু তার পরে নতুন দামে যা বেরিয়েছে
+     * (`sold`), তার খরচ বিলের দামে বসেছে, আর স্তর ফেরার পরে মজুদ খাত আর স্তর ঠিক ততটাই সরে থাকত। ⭐ তাই সেই অংশের জন্য
+     * একটা সংশোধনী: মজুদে −বেরোনো-পার্থক্য, খরচে +বেরোনো-পার্থক্য, উৎস `purchase_bill:revalue` (এই বিলেই খোলে)।
+     * ⓘ বিলের পরে কিছু না বেরোলে সংশোধনী নেই। ⚠️ উল্টানোর **পরে** ডাকতে হয়, লাইন বদলানোর **আগে**।
+     */
+    private function revalueBackToReceipts(PurchaseBill $bill, Carbon $date, string $reason): void
+    {
+        $sold = '0';
+
+        foreach ($this->wholeReceipts($bill) as $group) {
+            $moved = $this->costs->revalue(
+                PurchaseReceipt::STOCK_SOURCE,
+                $group['receipt_id'],
+                $group['product_id'],
+                bcdiv($group['receipt_value'], $group['qty'], 6),
+                $date,
+            );
+
+            $sold = bcadd($sold, (string) $moved['sold_diff'], 6);
+        }
+
+        $lines = $this->stockAndCostLines($bill, bcmul($sold, '-1', 6), $sold, $reason);
+
+        if ($lines === []) {
+            return;
+        }
+
+        $source = PurchaseBill::drillSourceType().':revalue';
+
+        // ⓘ একই বিলে আগের সংশোধনী খোলা থাকলে উল্টে, দুটো মিলিয়ে আবার — খাতা একটা উৎসে একবারই খোলা থাকে ([[PostingEngine]])
+        $open = $this->openLines($source, (int) $bill->id);
+
+        if ($open !== []) {
+            $this->posting->reverse(sourceType: $source, sourceId: $bill->id, reversalDate: $date, reason: $reason);
+            $lines = array_merge($open, $lines);
+        }
+
+        $this->posting->post(
+            sourceType: $source,
+            sourceId: $bill->id,
+            trxDate: $date,
+            lines: $lines,
+            documentNo: $bill->document_no,
+            branchId: $bill->branch_id,
+        );
+    }
+
+    /**
+     * মজুদ (১১২০) আর বিক্রীত মালের খরচ (৫১০০) — ধনাত্মক ডেবিট, ঋণাত্মক ক্রেডিট, চার দশমিকে; শূন্য হলে লাইন নেই।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function stockAndCostLines(PurchaseBill $bill, string $stock, string $cost, string $narration): array
+    {
+        $lines = [];
+
+        foreach ([StandardChart::INVENTORY => $stock, StandardChart::COST_OF_GOODS_SOLD => $cost] as $code => $amount) {
+            $amount = Money::round($amount, 4);
+
+            if (bccomp($amount, '0', 4) === 0) {
+                continue;
+            }
+
+            $lines[] = bccomp($amount, '0', 4) > 0
+                ? ['account_id' => $this->account((string) $code)->id, 'debit' => $amount, 'narration' => $narration]
+                : ['account_id' => $this->account((string) $code)->id, 'credit' => bcmul($amount, '-1', 4), 'narration' => $narration];
+        }
+
+        return $lines;
+    }
+
+    /**
+     * একটা উৎসের শেষ উল্টানোর পরের খোলা লাইনগুলো — আবার বসানোর মতো করে।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function openLines(string $source, int $id): array
+    {
+        $lastReversal = \App\Models\LedgerEntry::query()->withoutGlobalScopes()
+            ->where('source_type', $source.':reversal')->where('source_id', $id)->max('id');
+
+        return \App\Models\LedgerEntry::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->where('source_type', $source)->where('source_id', $id)
+            ->when($lastReversal !== null, fn ($q) => $q->where('id', '>', (int) $lastReversal))
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($e) => array_filter([
+                'account_id' => (int) $e->account_id,
+                'debit' => bccomp((string) $e->debit, '0', 4) > 0 ? (string) $e->debit : null,
+                'credit' => bccomp((string) $e->credit, '0', 4) > 0 ? (string) $e->credit : null,
+                'narration' => $e->narration,
+            ], fn ($v) => $v !== null))
+            ->values()
+            ->all();
     }
 
     /**
