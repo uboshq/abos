@@ -698,7 +698,12 @@ class SalesPrintController extends Controller implements HasMiddleware
             totals: $this->totals($invoice),
             signatures: [],
             narration: $invoice->narration,
-            notice: __('core.print.draft_notice'),
+            /*
+             * ⛔ বাতিল বিলে "খসড়া — চূড়ান্ত বিল নয়" নয় (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১৫)। ⓘ খসড়া আর পাকা দুইটাই উপরে ফেরে, তাই
+             * এই দরজায় বাকি থাকে কেবল বাতিল বিল — আর তার গায়ে [[pdf()]] নিজেই "বাতিল" বাক্স আর জলছাপ দেয়। পাশে "খসড়া" লিখলে
+             * কাগজ দুই কথা বলত।
+             */
+            notice: $invoice->status === DocumentStatus::CANCELLED ? null : __('core.print.draft_notice'),
         );
 
         return $this->pdf(
