@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\Documents;
 use App\Core\Services\DataScope;
 use App\Models\AuditTrail;
 use App\Models\Company;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Documents\Models\Document;
@@ -116,7 +117,7 @@ final class AGrantOpensOneDocumentAndNoWallTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->useCompany();
 
-        $this->assertSame(0, \App\Models\Notification::query()->withoutGlobalScopes()->where('user_id', $clerk->id)->count(),
+        $this->assertSame(0, Notification::query()->withoutGlobalScopes()->where('user_id', $clerk->id)->count(),
             'অন্য শাখার মানুষ কাগজ-ধরে অধিকারের খবর পেলেন — খবরে কাগজের নাম যায়।');
         $this->assertShut($clerk, $document, 'Mymensingh tender');
     }
@@ -232,7 +233,7 @@ final class AGrantOpensOneDocumentAndNoWallTest extends TestCase
          * [[test_a_grant_never_opens_the_branch_wall]] নিজে আলাদা করে দেখে।
          */
         if ($this->name() !== 'test_a_grant_never_opens_the_branch_wall') {
-            \App\Models\Notification::query()->withoutGlobalScopes()->where('user_id', $user->id)->delete();
+            Notification::query()->withoutGlobalScopes()->where('user_id', $user->id)->delete();
         }
 
         $this->assertStringNotContainsString($name, $this->listFor($user), $name.' তালিকায় দেখা যায়।');
