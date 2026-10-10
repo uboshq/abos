@@ -110,6 +110,23 @@ final class ThePhoneCounterHoldsEveryWallOfTheWebCounterTest extends TestCase
             ->where('floor_change', '<', 0)->latest('id')->value('batch_id'), '⛔ বাছা লটটা বেরোয়নি।');
     }
 
+    /**
+     * ⛔ "1e3" দরে ৫০০ নয়, ৪২২ — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬ ([[DirectSaleApiController::plainNumbers()]])। বিক্রি আর দাম-হিসাব
+     * দুই দরজায়; সাধারণ দশমিক আগের মতোই চলে।
+     */
+    public function test_a_scientific_or_oversized_number_is_a_422_on_both_counter_doors_and_a_plain_decimal_goes_through(): void
+    {
+        $this->asSeller();
+
+        foreach (['/api/v1/sales/direct', '/api/v1/sales/direct/overview'] as $door) {
+            $this->postJson($door, $this->sale(['rate' => '1e3']))->assertStatus(422)->assertJsonValidationErrors('lines.0.rate');
+            $this->postJson($door, $this->sale(['qty' => '1e1']))->assertStatus(422)->assertJsonValidationErrors('lines.0.qty');
+            $this->postJson($door, $this->sale(['rate' => '123456789012345678']))->assertStatus(422)->assertJsonValidationErrors('lines.0.rate');
+        }
+        $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'rounding_amount' => '5e-1'])->assertStatus(422)->assertJsonValidationErrors('rounding_amount');
+        $this->postJson('/api/v1/sales/direct/overview', $this->sale(['rate' => '100.50']))->assertOk();
+    }
+
     public function test_a_tracked_product_without_a_lot_a_zero_price_and_an_unknown_id_are_refused(): void
     {
         $this->asSeller();

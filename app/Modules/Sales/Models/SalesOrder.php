@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class SalesOrder extends Model implements \App\Modules\Sales\Contracts\CounterSaleSource, Drillable
 {
+    // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
+    use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
     // ⭐ কাউন্টারের উৎস, চাবি `so` — অংশে অংশে (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬; [[OpensAtTheCounter]])
     use \App\Modules\Sales\Models\Concerns\OpensAtTheCounter;
     use BelongsToCompany;

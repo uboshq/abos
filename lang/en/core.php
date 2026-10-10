@@ -1268,6 +1268,7 @@ return [
             'delivery_stage' => 'When a sale moves to its next delivery step',
             'order_credit_held' => 'When a sales order is held at the credit limit',
             'order_awaits_you' => 'When a sales order waits for my signature',
+            'adjusting_reversal_stuck' => 'When an adjusting journal could not reverse on its date',
             'backup_failed_note' => 'The nightly backup could not be taken or could not reach a destination, with the reason. ⛔ Off means you learn about it on the day you need the backup.',
         ],
     ],

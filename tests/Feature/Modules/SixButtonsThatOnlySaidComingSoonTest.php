@@ -162,6 +162,8 @@ class SixButtonsThatOnlySaidComingSoonTest extends TestCase
 
             'carrier_name' => 'করিম পরিবহন',
             'transport_cost' => '450',
+            // ⓘ ভাড়া কে দেবে — খাত ছাড়া "আমরা" এখন থামে (পুরনো Main Counter পথ বন্ধ, ৭ অক্টোবর ২০২৬; [[FarePayment]]); এই দাবি প্যানেলের ঘর নিয়ে, খাতা নয়
+            'fare_paid_by' => 'customer',
             'vehicle_no' => 'ঢাকা মেট্রো ব ১১-২২৩৩',
             'driver_name' => 'রফিক',
 

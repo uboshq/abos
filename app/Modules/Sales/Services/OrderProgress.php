@@ -152,7 +152,50 @@ final class OrderProgress
 
         $order->forceFill(['delivery_status' => $now['delivery'], 'billing_status' => $now['billing']])->syncOriginal();
 
+        /*
+         * ⛔ লেনদেন পাকা হওয়ার পরে, তখনকার হিসাব দেখে — মাঝপথে নয় (১০ অক্টোবর ২০২৬, Mac-এর পুরো বিক্রয়ের রানে ধরা)।
+         * ⓘ কাউন্টারে আদেশের শেষ অংশ বিক্রির সময় বিল বসতেই আদেশ "পুরো বিল" হয়; তখনই বন্ধ করলে একই লেনদেনের পরের ধাপে
+         * কাউন্টার আদেশটা আবার যাচাই করে দেখত "বন্ধ", আর গোটা বিক্রিটা ফিরে যেত।
+         */
+        $id = (int) $order->getKey();
+        DB::afterCommit(function () use ($id): void {
+            $fresh = SalesOrder::query()->withoutGlobalScopes()->with('lines')->find($id);
+
+            if ($fresh !== null) {
+                $this->closeWhenFullyBilled($fresh, $this->of($fresh)['billing']);
+            }
+        });
+
         return $now;
+    }
+
+    /**
+     * ⭐ পুরো বিল হলে আদেশ নিজেই বন্ধ — সমন্বয়ক, ৬ অক্টোবর ২০২৬ (ধাপ ১৪-এর পর্দার পরীক্ষা: SO-0001 পুরো পৌঁছে বিল হয়েও
+     * "নিশ্চিত" আর "মাল পাঠান" নিয়ে বসে ছিল)। ⓘ নিজে বন্ধ হওয়া চেনা যায় কারণ ছাড়া আর মানুষ ছাড়া (`closed_by`, `close_reason`
+     * খালি); পরে কোনো বিল উল্টে গেলে (CXL) সেই আদেশ আবার খোলে। ⛔ হাতে বন্ধ করা আদেশ (মানুষ বা কারণ আছে) কখনো নিজে খোলে না।
+     */
+    private function closeWhenFullyBilled(SalesOrder $order, string $billing): void
+    {
+        $status = (string) $order->status;
+
+        // ⭐ হাতে বন্ধের একই পথ — লাইন বন্ধ, ধরা মাল ছাড়া, বন্ধের ঘটনা; কেবল কারও নামে নয় ([[SalesOrderService::close()]])
+        if ($status === SalesOrderStatus::CONFIRMED && $billing === SalesOrderStatus::FULL) {
+            app(SalesOrderService::class)->close($order, null, itself: true);
+
+            return;
+        }
+
+        // ⓘ নিজে বন্ধ আদেশের কোনো বিল পরে উল্টে গেলে (CXL) আদেশ আবার খোলে, লাইনগুলোও; হাতে বন্ধ (মানুষ বা কারণ আছে) কখনো নয়
+        if ($status === SalesOrderStatus::CLOSED && $billing !== SalesOrderStatus::FULL
+            && $order->closed_by === null && $order->close_reason === null) {
+            DB::transaction(function () use ($order): void {
+                SalesOrder::query()->withoutGlobalScopes()->whereKey($order->getKey())
+                    ->update(['status' => SalesOrderStatus::CONFIRMED, 'closed_at' => null]);
+                SalesOrderLine::query()->withoutGlobalScopes()->where('sales_order_id', $order->getKey())
+                    ->where('line_status', SalesOrderStatus::LINE_CLOSED)
+                    ->update(['line_status' => SalesOrderStatus::LINE_OPEN]);
+            });
+        }
     }
 
     /**

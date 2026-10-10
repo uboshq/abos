@@ -153,6 +153,8 @@ return [
     'difference' => 'Difference',
     'counted_by' => 'Counted by',
     'adjustment' => 'Adjustment journal',
+    'pl_section' => 'Section',
+    'cf_section' => 'Activity',
     'money_in' => 'In',
     'money_out' => 'Out',
     'net_change' => 'Net change',

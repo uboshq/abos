@@ -147,7 +147,7 @@ class BatchAllocator
      */
     private function lockedBalance(Batch $batch, Warehouse $warehouse, bool $free): string
     {
-        return (string) StockMovement::query()
+        return (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('batch_id', $batch->id)
             ->where('warehouse_id', $warehouse->id)
             ->lockForUpdate()
@@ -166,7 +166,7 @@ class BatchAllocator
      */
     public function lockedFreeBalance(Batch $batch, Warehouse $warehouse): string
     {
-        Batch::query()->whereKey($batch->id)->lockForUpdate()->first();
+        Batch::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->whereKey($batch->id)->lockForUpdate()->first();
 
         return $this->lockedBalance($batch, $warehouse, free: true);
     }
@@ -185,7 +185,7 @@ class BatchAllocator
      */
     private function shortMessage(Product $product, Warehouse $warehouse, string $short): string
     {
-        $untracked = (string) StockMovement::query()
+        $untracked = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             ->whereNull('batch_id')
@@ -221,7 +221,7 @@ class BatchAllocator
      */
     private function candidates(Product $product, ?Carbon $on)
     {
-        return Batch::query()
+        return Batch::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->unexpired($on)
             ->fefo()
@@ -248,7 +248,7 @@ class BatchAllocator
         $taken = [];
         $left = $wanted;
 
-        $batches = Batch::query()
+        $batches = Batch::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->unexpired($on)
             ->fefo()
@@ -260,7 +260,7 @@ class BatchAllocator
             }
 
             // ⓘ পর্দার দেখা আর আসল বাছাই একই সংখ্যা দেখে — তাকের মাল, লটের আটকানো বাদ (গ২)
-            $available = bcsub($batch->floorBalance($warehouse), (string) StockMovement::query()
+            $available = bcsub($batch->floorBalance($warehouse), (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
                 ->where('batch_id', $batch->id)
                 ->where('warehouse_id', $warehouse->id)
                 ->sum('hold_change'), 4);

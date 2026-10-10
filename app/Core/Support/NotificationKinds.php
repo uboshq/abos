@@ -73,6 +73,9 @@ final class NotificationKinds
             'sales.order_credit_held' => 'core.notify.kind.order_credit_held',
             'sales.order_awaits_you' => 'core.notify.kind.order_awaits_you',
 
+            // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
+            'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
+
             /*
              * ⭐ ডকুমেন্ট ম্যানেজমেন্টের বারোটা খবর — মালিকের পরিকল্পনা §২৩ (৯ অক্টোবর ২০২৬)।
              * ⓘ কেবল নামের চিহ্ন; কাকে যায় সেটা মডিউলের সিদ্ধান্ত, আর যিনি কাগজটা দেখতে পান না
@@ -152,6 +155,9 @@ final class NotificationKinds
          * ব্যাকআপটা ফেরানোর দরকার পড়ে, আর তখন **অনেক দেরি হয়ে গেছে**।
          */
         'backup.failed',
+
+        /* ⓘ উল্টো আটকে — মাস না খোলা পর্যন্ত বকেয়াটা পরের মাসে দুইবার গোনা থাকে, আর খবরটা একবারই যায় */
+        'accounts.adjusting_reversal_stuck',
 
         /* ⓘ কাগজের মেয়াদ পেরোলে লাইসেন্স বা চুক্তি অচল — কেউ না ধরলে জরিমানা আসে */
         'documents.expired',

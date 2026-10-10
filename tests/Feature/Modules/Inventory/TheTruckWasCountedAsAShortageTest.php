@@ -25,7 +25,7 @@ use Tests\TestCase;
  *
  * ⛔ বদলি পাঠালে উৎসের তাক কমে না (মাল আটকে থাকে, পৌঁছালে তবেই নামে), অথচ মালটা ট্রাকে। তখন উৎসে গুনলে খাতা বলত তাকে আছে,
  * হাতে মিলত না — মিথ্যা ঘাটতি, আর মেনে নিলে সেটা খরচে। ⭐ এখন পথে থাকা পণ্য উৎসে গোনা যায় না, বার্তায় বদলির নম্বর; পৌঁছানোর
- * পরে খাতা ঠিক সংখ্যা দেখায়। গন্তব্যে গোনা চলে — সেখানে মাল খাতাতেও নেই, হাতেও নেই।
+ * পরে খাতা ঠিক সংখ্যা দেখায়। ⓘ গন্তব্যেও গ্রহণ পর্যন্ত গোনা থামে (৯ অক্টোবর ২০২৬): মাল নেমে গেলেও খাতায় নেই।
  */
 final class TheTruckWasCountedAsAShortageTest extends TestCase
 {
@@ -66,9 +66,17 @@ final class TheTruckWasCountedAsAShortageTest extends TestCase
             $this->assertStringContainsString((string) $transfer->fresh()->document_no, implode(' ', $e->validator->errors()->all()));
         }
 
-        // ⓘ অন্য পণ্য আর গন্তব্য — কোনো বাধা নেই
+        // ⓘ অন্য পণ্য — কোনো বাধা নেই
         $this->assertSame(0, bccomp((string) $this->countIn($this->from, $other, '20')->lines->first()->difference, '0', 4));
-        $this->assertSame(0, bccomp((string) $this->countIn($this->to, $rice, '0')->lines->first()->difference, '0', 4));
+
+        // ⛔ গন্তব্যেও গ্রহণ পর্যন্ত থামা — নেমে আসা মাল খাতায় নেই, গুনলে মিথ্যা বাড়তি, পরে গ্রহণে দ্বিগুণ
+        // (পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬; [[ACountWaitsForATransferFromAnyBranchTest]])
+        try {
+            $this->countIn($this->to, $rice, '10');
+            $this->fail('⛔ গ্রহণের আগে গন্তব্যে গোনা গেল।');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString((string) $transfer->fresh()->document_no, implode(' ', $e->validator->errors()->all()));
+        }
 
         $transfers->receive($transfer->fresh());
         $this->assertSame(StockTransfer::query()->find($transfer->id)->status, 'closed');

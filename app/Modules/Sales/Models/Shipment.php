@@ -77,6 +77,8 @@ class Shipment extends Model implements Drillable
             'cancelled_at' => 'datetime',
             'opening_km' => 'decimal:4',
             'closing_km' => 'decimal:4',
+            /* টাকা float নয় — [[MoneyIsNeverAFloatTest]] */
+            'transport_cost' => 'decimal:4',
         ];
     }
 
@@ -108,6 +110,20 @@ class Shipment extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * ⭐ ট্রিপের ভাড়া — বাহক আর ভাড়ার ভাউচার (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment]])।
+     * ⓘ ভাড়ার ঘরগুলো fillable নয়: কেবল সেবা বসায় (forceFill), অনুরোধের ভর-বসানো দিয়ে নয়।
+     */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Supplier\Models\Supplier::class, 'carrier_id');
+    }
+
+    public function fareVoucher(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class, 'fare_voucher_id');
     }
 
     /**

@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms, \App\Core\Contracts\NoteTarget
 {
+    // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
+    use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
     use BelongsToCompany;
     use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use HasDocumentStatus;

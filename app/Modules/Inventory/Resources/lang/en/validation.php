@@ -7,6 +7,7 @@ return [
     'reason_not_for_this' => '“:reason” is not a reason for this - pick one from the list.',
     'count_already_waiting' => 'Count :document for :product is already waiting to be accepted - accept or cancel it, then write a new count.',
     'count_while_on_the_way' => ':product is on the way in transfer :transfer: on the truck but still on the shelf in the books. Count it after it arrives.',
+    'count_while_arriving' => ':product is coming to this warehouse in transfer :transfer and is not in the books until it is received. Receive the transfer first, then count.',
     'count_settled_by_another' => 'The difference for :product was already settled by count :document - accepting this one would book it twice. Cancel this one.',
     'count_cancel_needs_reason' => 'Write why it is cancelled - at least 3 characters.',
     'code_taken' => 'Another product already uses this code.',

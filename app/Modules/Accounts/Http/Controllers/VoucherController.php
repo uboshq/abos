@@ -127,7 +127,7 @@ class VoucherController extends Controller implements HasMiddleware
         $sort = $this->applySort($query, $request, $this->sorts());
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
-        $grand = $this->grandTotals($query, ['amount' => 't.amount']);
+        $grand = $this->grandTotals($query, ['amount' => Voucher::countedAmountSql()]); // ⓘ কেবল পাকা — [[Voucher::countedAmount()]]
 
         $vouchers = $query->paginate(50)->withQueryString();
 

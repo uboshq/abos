@@ -101,8 +101,12 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
         $mover = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
         $mover->companies()->attach($this->company->id, ['is_active' => true]);
         $this->actingAs($mover);
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendPushToUser::class]);
         app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DISPATCHED);
         $this->actingAs($this->owner);
+        // ⭐ লক-স্ক্রিনের পুশেও — নিচের লাইনে "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: "obosoi point dibe")
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\SendPushToUser::class,
+            fn (\App\Jobs\SendPushToUser $job) => $job->userId === $this->owner->id && $job->body === $this->shop->name().' · কারওয়ান বাজার');
 
         // ⭐ বিজ্ঞপ্তিতেও — মালিক, ৭ অক্টোবর ২০২৬: "app e notification e customer er sathe point nai" ([[TrackingNotices]])
         $bodies = \App\Models\Notification::query()->where('user_id', $this->owner->id)->pluck('body')->all();
@@ -147,6 +151,24 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
         $this->assertStringStartsWith($this->shop->name().' · কারওয়ান বাজার', (string) $mine, '⛔ সই-বাক্সের সারিতে দোকানের পয়েন্ট নেই।');
         $this->assertStringNotContainsString('কারওয়ান', (string) $theirs, '⛔ পয়েন্ট ছাড়া দোকানে অন্যের পয়েন্ট বসল।');
         $this->assertNotNull($theirs);
+
+        /*
+         * ⭐ অনুমোদনের বিজ্ঞপ্তিতেও — মালিক, ৮ অক্টোবর ২০২৬: "notification e point name ase na" ([[ApprovalEngine::noticeLabel()]])।
+         * সইকারী সই দিলে অনুরোধকারীর বিজ্ঞপ্তি: ধরন, নম্বর, "নাম · পয়েন্ট"; মনে করানোর বিজ্ঞপ্তিও একই লেবেলে।
+         */
+        $mineApproval = \App\Models\Approval::query()->pending()->get()
+            ->first(fn ($ap) => (int) \App\Modules\Sales\Models\DeliveryOrder::query()->whereKey($ap->approvable_id)->value('customer_id') === (int) $this->shop->id);
+        $do = \App\Modules\Sales\Models\DeliveryOrder::query()->findOrFail($mineApproval->approvable_id);
+        $label = app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($mineApproval);
+        $this->assertStringContainsString((string) $do->document_no, $label);
+        $this->assertStringEndsWith($this->shop->name().' · কারওয়ান বাজার', $label, '⛔ বিজ্ঞপ্তির লেবেলে দোকান আর পয়েন্ট নেই।');
+        $this->assertStringNotContainsString('delivery_order', $label, '⛔ কাঁচা ইংরেজি চাবি।');
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($supervisor);
+        app(\App\Core\Engines\Approval\ApprovalEngine::class)->approve($mineApproval->fresh(), $supervisor);
+        $titles = \App\Models\Notification::query()->where('user_id', $this->owner->id)->where('type', 'approval.approved')->pluck('title')->all();
+        $this->assertContains(__('core.notify.approval_approved', ['document' => $label]), $titles, '⛔ অনুমোদনের বিজ্ঞপ্তিতে দোকান আর পয়েন্ট নেই।');
         // ⛔ পয়েন্ট নেই — ফাঁকা অংশ নয় ("নাম ·  · …")
         $this->assertNotContains('', array_map('trim', explode(' · ', (string) $theirs)), '⛔ পয়েন্ট ছাড়া দোকানে ফাঁকা "·" বসল।');
     }

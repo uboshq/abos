@@ -648,23 +648,33 @@ final class SalesOrderService
      * ([[DeliveryChallanService::releasableQty()]]) — দুইবার নয়। ⓘ কতটা ধরা, তা মজুদের খাতা থেকে ([[heldByThisOrder()]]) —
      * দুই ধারাতেই, কারণ নতুন ধারার আদেশও নিজের মাল একই উৎসে ধরে (abos-86, 60ac3abf)।
      */
-    public function close(SalesOrder $order, ?string $reason = null): SalesOrder
+    /**
+     * @param  bool  $itself  ⭐ পুরো বিল হতেই আদেশ নিজে বন্ধ ([[OrderProgress]], ১০ অক্টোবর ২০২৬) — কারও নামে নয় (`closed_by` খালি),
+     *                        কারণ ছাড়া; হাতে বন্ধের একই পথ, যাতে লাইন, ধরা মাল আর [[SalesOrderClosed]] দুই দিকে এক থাকে।
+     *                        ⛔ পুরো বিল না হলে কিছুই করে না।
+     */
+    public function close(SalesOrder $order, ?string $reason = null, bool $itself = false): SalesOrder
     {
-        $reason = trim((string) $reason);
+        $reason = $itself ? '' : trim((string) $reason);
 
         $order->loadMissing(['lines.product', 'warehouse']);
 
-        return DB::transaction(function () use ($order, $reason) {
+        return DB::transaction(function () use ($order, $reason, $itself) {
             // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
             $this->lockAndReread($order);
+
+            $progress = $order->status === SalesOrderStatus::CONFIRMED ? app(OrderProgress::class)->of($order) : null;
+
+            // ⓘ নিজে বন্ধ — কেবল নিশ্চিত আর পুরো বিল হওয়া আদেশ; নইলে চুপচাপ যেমন ছিল (তালার ভিতরে আবার দেখা)
+            if ($itself && ($progress === null || $progress['billing'] !== SalesOrderStatus::FULL)) {
+                return $order;
+            }
 
             if ($order->status !== SalesOrderStatus::CONFIRMED) {
                 throw ValidationException::withMessages([
                     'status' => __('sales::order_status.only_confirmed_closes', ['no' => $order->document_no]),
                 ]);
             }
-
-            $progress = app(OrderProgress::class)->of($order);
 
             if ($progress['billing'] !== SalesOrderStatus::FULL && $reason === '') {
                 throw ValidationException::withMessages([
@@ -716,7 +726,7 @@ final class SalesOrderService
             $order->update([
                 'status' => SalesOrderStatus::CLOSED,
                 'closed_at' => now(),
-                'closed_by' => Actor::userId(),
+                'closed_by' => $itself ? null : Actor::userId(),
                 'close_reason' => $reason !== '' ? $reason : null,
             ]);
 

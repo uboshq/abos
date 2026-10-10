@@ -46,7 +46,9 @@ final class ApprovalFacts
      * ⓘ মালিকের হেডারে সুপার বাছা, আর কাউসারের লায়নের রসিদ RCV-0010 সইয়ের জন্য তাঁর কাছেই — তবু কাগজটা
      * শাখার দেয়ালে লুকাত: ঘর খালি, পাতায় না ভাউচার, না সারি। ⚠️ যাঁর কাছে কাগজটা পড়ে (সইকারী বা
      * অনুরোধকারী) তাঁকে কাগজটা দেখতেই হয় — না দেখে সই চাওয়া যায় না। কোম্পানির দেয়াল (টেন্যান্ট) থাকে।
-     * ⓘ ডাকেন কেবল সেই পথগুলো যারা আগেই "ইনি সিদ্ধান্ত দেন বা নিজের অনুরোধ" যাচাই করেছে।
+     * ⓘ ডাকেন কেবল সেই পথগুলো যারা আগেই "ইনি সিদ্ধান্ত দেন বা নিজের অনুরোধ" যাচাই করেছে — তাঁরাই
+     * [[of()]]-এ `$pastWalls = true` দেন। ⛔ ৯ অক্টোবর ২০২৬ (অডিট): ইনবক্সে `?person=` দিয়ে অন্যের সারি দেখা
+     * রিপোর্ট-পাঠকও এই সেবা ডাকেন, আর ডিফল্ট খোলা থাকায় অন্য শাখার কাগজের পক্ষ-অঙ্ক তাঁর চোখে পড়ত।
      */
     public const VIEW_WALLS = ['user-branch', 'user-warehouse', 'viewed-branch-warehouse'];
 
@@ -56,7 +58,7 @@ final class ApprovalFacts
      * @param  iterable<Approval>  $approvals
      * @return array<int, array{party: ?string, about: ?string, where: ?string}>
      */
-    public function of(iterable $approvals): array
+    public function of(iterable $approvals, bool $pastWalls = false): array
     {
         $idsByType = [];
         $rows = [];
@@ -75,7 +77,7 @@ final class ApprovalFacts
             }
 
             $documents = $class::query()
-                ->withoutGlobalScopes(self::VIEW_WALLS)
+                ->when($pastWalls, fn ($q) => $q->withoutGlobalScopes(self::VIEW_WALLS))
                 /*
                  * ⓘ ভাউচারে টাকার খাতটা মাথায় নয়, দাখিলার লাইনে — তাই
                  * লাইনগুলোও একবারেই আসে।

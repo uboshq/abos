@@ -114,6 +114,13 @@ final class StockCountService
                 }
 
                 /*
+                 * ⛔ পিস-বাক্সে আধা গোনা যায় না, কেজি-লিটারে যায় — কাগজের লাইনের একই নিয়ম ([[PackConversion::toStockQty()]];
+                 * মালিক, ৬ অক্টোবর ২০২৬)। পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️১২: গণনা এই দরজা দিয়ে যেত না, তাই "২.৫ পিস"
+                 * মেনে নিলে আধা পিসের ঘাটতি বা বাড়তি খাতায় বসত ([[AHalfPieceIsNeitherCountedNorAdjustedTest]])।
+                 */
+                app(PackConversion::class)->toStockQty($product, $line['counted_qty']);
+
+                /*
                  * খাতার সংখ্যা — গণনার মুহূর্তের floor, ওই গুদামে।
                  * ⛔ লট ধরে গোনা হলে সেই **লটের** সংখ্যা — ২৯ সেপ্টেম্বর ২০২৬। ⚠️ আগে পুরো
                  * পণ্যের সংখ্যা বসত, তাই লট A-র ৩ গুনলে পার্থক্য হত "১০ থেকে −৭", আর
@@ -145,17 +152,26 @@ final class StockCountService
                  * খাতা বলত তাকে আছে, হাতে মিলত না — মিথ্যা ঘাটতি, আর মেনে নিলে সেটা খরচে। ⚠️ কোন লট গেছে তা জানা যায় কেবল
                  * পৌঁছানোর দিন, তাই বাদ দিয়ে গোনা যায় না — পৌঁছানো পর্যন্ত থামা।
                  */
+                /*
+                 * ⛔ খোঁজা দেয়াল ছাড়া — বদলি লেখা হয় পাঠকের শাখায়, তাই অন্য শাখার মানুষ পাঠালে এই গুদামের কেরানি সেটা
+                 * দেখতেনই না, আর মিথ্যা ঘাটতি আবার বসত। ⓘ গন্তব্যেও থামা: মাল গুদামে নামলেও গ্রহণ পর্যন্ত খাতায় নেই — তখন
+                 * গুনলে মিথ্যা বাড়তি, মেনে নিলে পরে গ্রহণে দ্বিগুণ (পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬, মজুদের নতুন ⚠️ আর ⓘ;
+                 * [[ACountWaitsForATransferFromAnyBranchTest]])।
+                 */
                 $onTheWay = \App\Modules\Inventory\Models\StockTransfer::query()
-                    ->where('from_warehouse_id', $warehouse->id)
+                    ->withoutGlobalScopes(StockService::VIEW_WALLS)
+                    ->where(fn ($q) => $q->where('from_warehouse_id', $warehouse->id)->orWhere('to_warehouse_id', $warehouse->id))
                     ->where('status', DocumentStatus::CONFIRMED)
                     ->whereHas('lines', fn ($q) => $q->where('product_id', $product->id))
-                    ->value('document_no');
+                    ->first(['document_no', 'to_warehouse_id']);
 
                 if ($onTheWay !== null) {
+                    $arriving = (int) $onTheWay->to_warehouse_id === (int) $warehouse->id;
+
                     throw ValidationException::withMessages([
-                        'lines' => __('inventory::validation.count_while_on_the_way', [
+                        'lines' => __($arriving ? 'inventory::validation.count_while_arriving' : 'inventory::validation.count_while_on_the_way', [
                             'product' => $product->name(),
-                            'transfer' => $onTheWay,
+                            'transfer' => $onTheWay->document_no,
                         ]),
                     ]);
                 }
