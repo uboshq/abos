@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\ApprovalSla;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
@@ -12,6 +13,7 @@ use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -160,12 +162,12 @@ final class ApprovalsDue extends Command
             $notify->send(
                 $userId,
                 'approval.reminder',
-                __('core.notify.approval_reminder', ['document' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($approval)]),
+                __('core.notify.approval_reminder', ['document' => app(ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
                 Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
                 // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
                 key: 'approval:'.$approval->id.':reminder:'.$approval->current_level,
-                about: $approval->approvable instanceof \Illuminate\Database\Eloquent\Model ? $approval->approvable : null,
+                about: $approval->approvable instanceof Model ? $approval->approvable : null,
             );
         }
     }
@@ -194,12 +196,12 @@ final class ApprovalsDue extends Command
             $notify->send(
                 $userId,
                 'approval.escalated',
-                __('core.notify.approval_escalated', ['document' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($approval)]),
+                __('core.notify.approval_escalated', ['document' => app(ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
                 Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
                 // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
                 key: 'approval:'.$approval->id.':escalated:'.$approval->current_level,
-                about: $approval->approvable instanceof \Illuminate\Database\Eloquent\Model ? $approval->approvable : null,
+                about: $approval->approvable instanceof Model ? $approval->approvable : null,
             );
         }
     }

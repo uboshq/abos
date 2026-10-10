@@ -10,13 +10,14 @@ use App\Core\Services\NotificationService;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
+use App\Models\AuditTrail;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -98,8 +99,8 @@ final class HeldCounterSaleFinisher
      * ⓘ দুই রকম: সবগুলো "হ্যাঁ" অথচ শেষ করতে গিয়ে থামল ([[finish()]] REFUSED — ধরুন ফ্রির দেয়াল), নয় কেউ "না" বলেছেন।
      * দুটোই আগে কোনো তালিকায় ছিল না।
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>|null  $query
-     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     * @param  Builder<SalesInvoice>|null  $query
+     * @return Builder<SalesInvoice>
      */
     public static function signedNotFinished($query = null)
     {
@@ -111,8 +112,8 @@ final class HeldCounterSaleFinisher
     /**
      * আসল খসড়া — উপরের ভাগ বাদে (খসড়ার ট্যাব আর গোনা দুজনেই এটা নেয়)।
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     * @param  Builder<SalesInvoice>  $query
+     * @return Builder<SalesInvoice>
      */
     public static function exceptSigned($query)
     {
@@ -131,7 +132,7 @@ final class HeldCounterSaleFinisher
             return $ready['reason'];
         }
 
-        return (string) (\App\Models\AuditTrail::query()
+        return (string) (AuditTrail::query()
             ->where('auditable_type', $invoice->getMorphClass())
             ->where('auditable_id', $invoice->id)
             ->where('action', self::AUDIT_REFUSED)

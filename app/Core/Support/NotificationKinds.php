@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Support;
 
+use App\Core\Module\ModuleRegistry;
+
 /**
  * কী কী ধরনের খবর পাঠানো হয় — সেটিংসের পর্দা এই তালিকাটাই দেখায়।
  *
@@ -130,7 +132,7 @@ final class NotificationKinds
      */
     public static function sourceLabel(?string $module): string
     {
-        $definition = $module === null ? null : app(\App\Core\Module\ModuleRegistry::class)->get($module);
+        $definition = $module === null ? null : app(ModuleRegistry::class)->get($module);
 
         if ($definition === null) {
             return (string) __('core.notify.source_system');

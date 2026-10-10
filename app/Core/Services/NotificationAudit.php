@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Models\NotificationAuditLog;
 use Illuminate\Database\Eloquent\Model;
@@ -33,7 +34,7 @@ final class NotificationAudit
 
         return NotificationAuditLog::query()->create([
             'company_id' => $company,
-            'actor_id' => \App\Core\Support\Actor::userId(),
+            'actor_id' => Actor::userId(),
             'action' => $action,
             'target_type' => $target === null ? null : class_basename($target),
             'target_id' => $target?->getKey(),

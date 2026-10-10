@@ -8,10 +8,15 @@ use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\NotificationService;
 use App\Core\Services\Ownership;
 use App\Core\Support\CompanyContext;
+use App\Jobs\SendPushToUser;
+use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryEvent;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ধাপ বদলালে বার্তা — ডেলিভারি ট্র্যাকিং, ধাপ ২ (মালিকের আদেশ, ২ অক্টোবর ২০২৬)।
@@ -88,7 +93,7 @@ final class TrackingNotices
              * ⓘ চাপলে অ্যাপ ট্র্যাকিং খোলে — `kind`/`id` দিয়ে।
              */
             foreach ($sent->pluck('user_id')->unique() as $userId) {
-                \App\Jobs\SendPushToUser::dispatch((int) $userId, $title, [
+                SendPushToUser::dispatch((int) $userId, $title, [
                     'open' => 'tracking', 'kind' => 'challan', 'id' => (string) $challan->public_id,
                 ]);
             }
@@ -160,7 +165,7 @@ final class TrackingNotices
             about: $order);
 
         foreach ($sent->pluck('user_id')->unique() as $userId) {
-            \App\Jobs\SendPushToUser::dispatch((int) $userId, $title, [
+            SendPushToUser::dispatch((int) $userId, $title, [
                 'open' => 'tracking', 'kind' => 'order', 'id' => (string) $order->public_id,
             ]);
         }
@@ -169,28 +174,28 @@ final class TrackingNotices
     /**
      * লেখক আর অনুমোদনকারীরা — এই বিক্রির কাগজ ধরে।
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
-    private function recipientsOf(DeliveryChallan $challan): \Illuminate\Support\Collection
+    private function recipientsOf(DeliveryChallan $challan): Collection
     {
         $people = collect([(int) $challan->created_by]);
 
         if ($challan->sales_order_id !== null) {
-            $people->push((int) \App\Modules\Sales\Models\SalesOrder::query()->withoutGlobalScopes()
+            $people->push((int) SalesOrder::query()->withoutGlobalScopes()
                 ->whereKey($challan->sales_order_id)->value('created_by'));
         }
 
-        $invoiceIds = \Illuminate\Support\Facades\DB::table('sal_challan_lines as cl')
+        $invoiceIds = DB::table('sal_challan_lines as cl')
             ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
             ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
             ->where('i.company_id', $challan->company_id) // ⓘ লাইনে কোম্পানি নেই — চালানের নিজের কোম্পানি
             ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
 
-        $approvals = \App\Models\Approval::query()->withoutGlobalScopes()
+        $approvals = Approval::query()->withoutGlobalScopes()
             ->where('company_id', $challan->company_id)
             ->where(fn ($q) => $q
                 ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)->where('approvable_id', $challan->id))
-                ->orWhere(fn ($w) => $w->where('approvable_type', \App\Modules\Sales\Models\SalesInvoice::class)->whereIn('approvable_id', $invoiceIds)))
+                ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)->whereIn('approvable_id', $invoiceIds)))
             ->with('decisions')->get();
 
         foreach ($approvals as $approval) {

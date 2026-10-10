@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
@@ -11,6 +12,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\HandLoanAccount;
+use App\Modules\Finance\Reports\DepositReports;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -168,7 +170,7 @@ final class DueNotices
      */
     public function dpsInstalmentsDue(): int
     {
-        $rows = app(\App\Core\Engines\Report\ReportEngine::class)->run(\App\Modules\Finance\Reports\DepositReports::INSTALMENTS, [
+        $rows = app(ReportEngine::class)->run(DepositReports::INSTALMENTS, [
             'from' => now()->subYears(10)->toDateString(), 'to' => now()->toDateString(),
         ], 1, 100000)->rows;
 

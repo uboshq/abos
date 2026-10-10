@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Events\ApprovalDecided;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\NotificationService;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
@@ -139,8 +142,8 @@ final class ApprovalEngine
          * ওয়েব, বা দুইবার চাপ — দুইজনেই "অপেক্ষমাণ নেই" দেখে দুইটা অনুরোধ বানাত।
          * ⓘ তালাটা কাগজে, অনুমোদনে নয় — যে সারি এখনো নেই তাতে তালা দেওয়া যায় না।
          */
-        $userId ??= $customerId === null ? \App\Core\Support\Actor::userId() : null;
-        $customerId ??= $userId === null ? \App\Core\Support\Actor::portalCustomerId() : null;
+        $userId ??= $customerId === null ? Actor::userId() : null;
+        $customerId ??= $userId === null ? Actor::portalCustomerId() : null;
 
         return DB::transaction(function () use ($document, $flow, $module, $action, $amount, $payload, $reason, $userId, $customerId, $stateHash) {
             $document->newQueryWithoutScopes()->whereKey($document->getKey())->lockForUpdate()->first();
@@ -316,7 +319,7 @@ final class ApprovalEngine
              * ([[ApprovalDecided]])।
              */
             $decided = $approval->fresh();
-            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+            DB::afterCommit(fn () => event(ApprovalDecided::from($decided)));
 
             return $approval->fresh();
         });
@@ -484,7 +487,7 @@ final class ApprovalEngine
              * ⚠️ পুরনো শ্রোতারা (বিক্রির শেষ সই, চালান) কেবল `approved` শোনে — তাদের কিছু বদলায় না।
              */
             $decided = $approval->fresh();
-            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+            DB::afterCommit(fn () => event(ApprovalDecided::from($decided)));
 
             return $approval->fresh();
         });
@@ -529,7 +532,7 @@ final class ApprovalEngine
             Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
             // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             key: 'approval:'.$approval->id.':'.$outcome,
-            about: $approval->approvable instanceof \Illuminate\Database\Eloquent\Model ? $approval->approvable : null,
+            about: $approval->approvable instanceof Model ? $approval->approvable : null,
         );
     }
 
@@ -600,7 +603,7 @@ final class ApprovalEngine
          * ⛔ আগে `core.module.*` আর `core.approval.action.*` খোঁজা হত, যা কখনো লেখাই হয়নি — বিজ্ঞপ্তিতে কাঁচা ইংরেজি যেত
          * ("sales · delivery_order"), অথচ মালিক কেবল বাংলা পড়েন (৮ অক্টোবর ২০২৬)। মডিউল না চিনলে আগের মতো।
          */
-        $definition = app(\App\Core\Module\ModuleRegistry::class)->get((string) $approval->module);
+        $definition = app(ModuleRegistry::class)->get((string) $approval->module);
         if ($definition !== null) {
             $key = $definition->approvals[(string) $approval->action] ?? null;
             $action = $key === null ? null : __($key);

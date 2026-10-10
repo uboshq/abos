@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
@@ -69,7 +70,7 @@ class NotificationApiController extends Controller
 
         $action = $row->isArchived() ? 'restore' : 'archive';
         $this->notifications->act($user, [(int) $row->id], $action);
-        app(\App\Core\Services\NotificationAudit::class)->record($action, $row);
+        app(NotificationAudit::class)->record($action, $row);
 
         return response()->json(['data' => ['archived' => $action === 'archive']]);
     }

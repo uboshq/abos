@@ -9,7 +9,6 @@ use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\Company;
-use App\Models\Notification;
 use App\Models\NotificationAuditLog;
 use App\Models\User;
 use App\Models\UserDataScope;

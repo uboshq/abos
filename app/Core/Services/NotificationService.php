@@ -6,6 +6,7 @@ namespace App\Core\Services;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Engines\Drill\DrillResolver;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\MailReach;
 use App\Core\Support\NotificationKinds;
@@ -15,6 +16,7 @@ use App\Models\NotificationEvent;
 use App\Models\User;
 use App\Models\UserDataScope;
 use App\Notifications\NewsByMail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -93,7 +95,7 @@ final class NotificationService
          * নিজেকে "আপনার দাবি অনুমোদিত" পাঠাত। ওরকম একটা খবর ঘণ্টায়
          * বসে থাকে, কিছু জানায় না, শুধু সংখ্যাটা বাড়ায়।
          */
-        if (! $evenToSelf && $userId === \App\Core\Support\Actor::userId()) {
+        if (! $evenToSelf && $userId === Actor::userId()) {
             return null;
         }
 
@@ -166,7 +168,7 @@ final class NotificationService
             'url' => $url,
             'subject_type' => $about instanceof Drillable ? $about::drillSourceType() : null,
             'subject_id' => $about instanceof Drillable ? (int) $about->getKey() : null,
-            'actor_id' => \App\Core\Support\Actor::userId(),
+            'actor_id' => Actor::userId(),
         ];
 
         if ($key === null) {
@@ -322,9 +324,9 @@ final class NotificationService
     /**
      * ⛔ এই মানুষটার দেখার মতো খবর — নিজের, আর কাগজের শাখা নাগালে ([[Notification::scopeVisibleTo()]])।
      *
-     * @return \Illuminate\Database\Eloquent\Builder<Notification>
+     * @return Builder<Notification>
      */
-    public function mine(User|int $user): \Illuminate\Database\Eloquent\Builder
+    public function mine(User|int $user): Builder
     {
         $user = $user instanceof User ? $user : User::query()->withoutGlobalScope('company')->findOrFail($user);
 
@@ -381,8 +383,8 @@ final class NotificationService
         };
     }
 
-    /** @param  \Illuminate\Database\Eloquent\Builder<Notification>  $rows */
-    private function readThese(\Illuminate\Database\Eloquent\Builder $rows): int
+    /** @param  Builder<Notification>  $rows */
+    private function readThese(Builder $rows): int
     {
         // ⓘ পড়া মানে দেখাও — আগে দেখা থাকলে সেই সময়টাই থাকে
         (clone $rows)->whereNull('seen_at')->update(['seen_at' => now()]);

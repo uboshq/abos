@@ -2,17 +2,22 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\AppCrashController;
 use App\Http\Controllers\Api\ApprovalApiController;
 use App\Http\Controllers\Api\AppVersionController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardApiController;
 use App\Http\Controllers\Api\DashboardTodayController;
 use App\Http\Controllers\Api\DocumentApiController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\NotificationApiController;
+use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportApiController;
 use App\Http\Controllers\Api\ReportExportApiController;
 use App\Http\Controllers\Api\SyncController;
+use App\Http\Controllers\Api\WorkspaceApiController;
+use App\Http\Middleware\RefuseModulesOffOnThePhone;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Support\Facades\Route;
 
@@ -108,7 +113,7 @@ Route::get('v1/app/version', AppVersionController::class)
  * ⭐ ফোনের ক্র্যাশের খবর — টোকেন ছাড়াও (লগইনের পর্দাতেও অ্যাপ ভাঙে), তাই সীমা কড়া: মিনিটে ১০টা, আর প্রতিটা ঘরের
  * আকারের সীমা দরজায় ([[AppCrashController]])। কেবল ভুলের খাতায় যায়, কিছু ফেরে না (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)।
  */
-Route::post('v1/app/crash', \App\Http\Controllers\Api\AppCrashController::class)
+Route::post('v1/app/crash', AppCrashController::class)
     ->middleware('throttle:10,1,app-crash')
     ->name('api.app.crash');
 
@@ -183,7 +188,7 @@ Route::prefix('v1')
         Route::get('/me', MeController::class)->name('me');
 
         // ⭐ ফোনের FCM টোকেন — নিজের ফোনে নিজের টোকেন ([[PushTokenController]], ২ অক্টোবর ২০২৬)
-        Route::post('/devices/push-token', \App\Http\Controllers\Api\PushTokenController::class)->name('devices.push_token');
+        Route::post('/devices/push-token', PushTokenController::class)->name('devices.push_token');
 
         /*
          * ⭐ কোম্পানি ও শাখা বদল — ফোনের সুইচার (১ অক্টোবর ২০২৬)।
@@ -193,7 +198,7 @@ Route::prefix('v1')
          * নিয়মে: সদস্যপদ আর শাখার নাগাল ([[User::switchCompany()]]), আর
          * `abilities:app` — refresh টোকেনে খোলে না।
          */
-        Route::post('/workspace', \App\Http\Controllers\Api\WorkspaceApiController::class)->name('workspace');
+        Route::post('/workspace', WorkspaceApiController::class)->name('workspace');
 
         /*
          * "আজ কেমন গেল" — চুক্তি §৮। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা ঘর
@@ -207,8 +212,8 @@ Route::prefix('v1')
          * ইঞ্জিন, একই দরজা: চাবি মডিউলের নিজের মেনু-সারি থেকে, পদ্ধতির ভেতরে — রুটে `can:` নেই, ইচ্ছা করে।
          * ⚠️ `today`-এর পরে, যাতে `{module}` ওটা গিলে না ফেলে।
          */
-        Route::get('/dashboard', [\App\Http\Controllers\Api\DashboardApiController::class, 'index'])->name('dashboard.index');
-        Route::get('/dashboard/{module}', [\App\Http\Controllers\Api\DashboardApiController::class, 'show'])
+        Route::get('/dashboard', [DashboardApiController::class, 'index'])->name('dashboard.index');
+        Route::get('/dashboard/{module}', [DashboardApiController::class, 'show'])
             ->where('module', '[a-z_]+')->name('dashboard.module');
 
         /*
@@ -220,17 +225,17 @@ Route::prefix('v1')
          * ([[ApprovalApiController]]), আর বেতন ফোনে আসেই না।
          */
         Route::get('/approvals/pending', [ApprovalApiController::class, 'pending'])
-            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.pending');
         // ⭐ সইয়ের আগে কাগজের বিস্তারিত — মালিক, ৭ অক্টোবর ২০২৬ ("approval e kono kichui details dekhay na")
         Route::get('/approvals/{approval}/sheet', [ApprovalApiController::class, 'sheet'])
-            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.sheet');
         Route::post('/approvals/{approval}/approve', [ApprovalApiController::class, 'approve'])
-            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.approve');
         Route::post('/approvals/{approval}/reject', [ApprovalApiController::class, 'reject'])
-            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.reject');
 
         /*
@@ -313,16 +318,16 @@ Route::prefix('v1')
                 ->name('conflicts.resolve');
 
             Route::post('/{module}/push', [SyncController::class, 'push'])
-                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
+                ->middleware(RefuseModulesOffOnThePhone::class)
                 ->name('push');
             Route::get('/{module}/pull', [SyncController::class, 'pull'])
-                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
+                ->middleware(RefuseModulesOffOnThePhone::class)
                 ->name('pull');
             Route::post('/{module}/pull-complete', [SyncController::class, 'pullComplete'])
-                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
+                ->middleware(RefuseModulesOffOnThePhone::class)
                 ->name('pull-complete');
             Route::get('/{module}/last-sync', [SyncController::class, 'lastSync'])
-                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
+                ->middleware(RefuseModulesOffOnThePhone::class)
                 ->name('last-sync');
         });
     });

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Services\DataScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,7 +75,7 @@ class Notification extends Model
     {
         $query->where($query->getModel()->getTable().'.user_id', $user->id);
 
-        $reach = app(\App\Core\Services\DataScope::class)->idsFor($user, UserDataScope::BRANCH);
+        $reach = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
 
         if ($reach !== null) {
             $query->where(fn (Builder $q) => $q->whereNull('branch_id')->orWhereIn('branch_id', $reach));

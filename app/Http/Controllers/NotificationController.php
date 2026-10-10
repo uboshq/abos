@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\MailReach;
 use App\Core\Support\NotificationKinds;
 use App\Models\Notification;
@@ -163,7 +164,7 @@ class NotificationController extends Controller
 
         $counts = $this->notifications->mine($user)->whereNull('archived_at')
             ->selectRaw('COUNT(*) as total, SUM(CASE WHEN read_at IS NULL THEN 1 ELSE 0 END) as unread')
-            ->where('notifications.company_id', \App\Core\Support\CompanyContext::id())
+            ->where('notifications.company_id', CompanyContext::id())
             ->first();
 
         return view('notifications.index', [
