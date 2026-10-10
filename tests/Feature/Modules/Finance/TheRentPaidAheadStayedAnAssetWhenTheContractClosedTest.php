@@ -103,6 +103,39 @@ final class TheRentPaidAheadStayedAnAssetWhenTheContractClosedTest extends TestC
         $this->assertMoney('20000', $this->net(StandardChart::PREPAID_RENT), '⛔ থামার পরেও ১১৩৭ নড়েছে');
     }
 
+    /**
+     * ⛔ বন্ধের ফেরত সইয়ের অপেক্ষায়, এর মাঝে মাসের জমা আগাম মাসটা ১১৩৭ থেকে খরচে সরাত — সই পড়লে ফেরতও ১১৩৭-এ জমা, একই
+     * টাকা দুবার, ১১৩৭ ঋণাত্মক (cloud/finance-fixes রিভিউ ⛔২, ১০ অক্টোবর ২০২৬; [[RentalAccrualService::assertNothingWaiting()]])।
+     */
+    public function test_the_month_waits_while_the_closing_refund_waits_for_its_signature(): void
+    {
+        $contract = $this->contractWithTwoMonthsAhead();
+
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'finance', 'action' => 'rental', 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => \App\Models\ApprovalFlowStep::BY_USER,
+            'approver_id' => User::query()->where('email', 'accounts@abos.test')->value('id'),
+        ]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        app(RentalContractService::class)->close($contract->fresh(), ['money_account_id' => $this->cash()->id]);
+        $this->assertTrue(app(RentalContractService::class)->isWaiting($contract->fresh()), 'দৃশ্যটাই বানানো যায়নি — বন্ধের ফেরত সইয়ের অপেক্ষায় নেই।');
+        $this->assertMoney('20000', $this->net(StandardChart::PREPAID_RENT), 'দৃশ্যটাই বানানো যায়নি — ফেরত খাতায় বসে গেছে');
+
+        // ⓘ পরের মাস এলো — আগাম দেওয়া মাসটা জমার পালা, অথচ ফেরত এখনো সইয়ের অপেক্ষায়
+        Carbon::setTestNow(now()->startOfMonth()->addMonthNoOverflow()->addDays(9));
+        $result = app(RentalAccrualService::class)->run(now()->startOfMonth());
+
+        $this->assertMoney('20000', $this->net(StandardChart::PREPAID_RENT), '⛔ ফেরত সইয়ের অপেক্ষায়, তবু আগাম মাস ১১৩৭ থেকে খরচে সরল');
+        $this->assertNotEmpty($result['failed'], '⛔ থেমে থাকা চুক্তি "বসেনি"-র তালিকায় নেই — মালিক জানবেন না কেন');
+
+        $pending = \App\Models\Approval::query()->where('status', \App\Models\Approval::PENDING)->latest('id')->firstOrFail();
+        app(\App\Core\Engines\Approval\ApprovalEngine::class)->approve($pending, User::query()->where('email', 'accounts@abos.test')->firstOrFail());
+
+        $this->assertMoney('0', $this->net(StandardChart::PREPAID_RENT), '⛔ সই পড়ার পরে ১১৩৭ শূন্যে নেই — আগাম ভাড়া দুবার গোনা হলো');
+    }
+
     /** চুক্তি গত মাস থেকে, এই মাস জমা ও দেওয়া, পরের দুই মাস আগাম দেওয়া */
     private function contractWithTwoMonthsAhead(): RentalContract
     {

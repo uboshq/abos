@@ -84,6 +84,9 @@ final class RentalAccrualService
              * চুক্তি নিজের লেনদেনে, তাই ভুলটা কেবল সেই চুক্তির — নাম ধরে জানানো হয়, বাকিরা চলে।
              */
             try {
+                // ⛔ চুক্তির কোনো টাকা সইয়ের অপেক্ষায় — এবার নয়, পরের চালে (cloud/finance-fixes রিভিউ ⛔২; [[assertNothingWaiting()]])
+                $this->assertNothingWaiting($contract);
+
                 // ⭐ মাসটা আগাম দেওয়া — অগ্রিম থেকে খরচে সরানো (অডিট ⛔৬); অন্যভাবে দেওয়া বা বসানো মাস আগের মতোই বাদ
                 if (! $this->accrued($contract, $start) && $contract->adjustments()->whereDate('for_month', $start->toDateString())->exists()) {
                     $accrued += $this->release($contract, $start);
@@ -102,6 +105,8 @@ final class RentalAccrualService
                     if (! $contract->isActive() || $this->monthTaken($contract, $start)) {
                         return null;
                     }
+
+                    $this->assertNothingWaiting($contract);
 
                     $amount = bcadd($contract->rentFor($start), '0', 2);
 
@@ -196,6 +201,8 @@ final class RentalAccrualService
                 return 0;
             }
 
+            $this->assertNothingWaiting($contract);
+
             $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with('voucher.lines')->first()?->voucher;
 
             if ($paid === null || $paid->status !== DocumentStatus::CONFIRMED) {
@@ -237,6 +244,23 @@ final class RentalAccrualService
 
             return 1;
         });
+    }
+
+    /**
+     * ⛔ চুক্তির কোনো টাকা সইয়ের অপেক্ষায় থাকলে মাস বসে না — cloud/finance-fixes-এর রিভিউ ⛔২, ১০ অক্টোবর ২০২৬।
+     *
+     * ⓘ বন্ধের ফেরত সইয়ের অপেক্ষায় থাকলে সেটা অগ্রিম ভাড়ার (১১৩৭) বাকিটা ফেরতে গুনে রেখেছে; এর মাঝে এখানে আগাম মাস ১১৩৭ থেকে
+     * খরচে সরালে সই পড়ার দিন ফেরতও ১১৩৭-এ জমা হত — একই টাকা দুবার। ⓘ চুক্তির নিজের নিয়মটাই
+     * ([[RentalContractService::isWaiting()]], `awaits_signature_first`); থামা চুক্তি "বসেনি"-র তালিকায় নাম আর কারণসহ ওঠে,
+     * বাকিরা চলে, আর সই পড়ার পরের চালে মাসটা বসে।
+     */
+    private function assertNothingWaiting(RentalContract $contract): void
+    {
+        if (app(RentalContractService::class)->isWaiting($contract)) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.awaits_signature_first'),
+            ]);
+        }
     }
 
     /** ১১৩৭ অগ্রিম ভাড়া — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয় */
