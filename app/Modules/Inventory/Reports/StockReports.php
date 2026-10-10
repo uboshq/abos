@@ -459,14 +459,15 @@ final class StockReports
                 ->whereNotNull('b.expiry_date')
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
-                ->groupBy('b.id', 'b.batch_no', 'b.expiry_date', 'b.mrp', 'p.code', 'p.name_en')
+                ->groupBy('b.id', 'b.batch_no', 'b.expiry_date', 'b.mrp', 'p.code', 'p.name_en', 'p.name_bn')
                 // শূন্য বা ঋণাত্মক লট বাদ — তালিকাটা কাজের জিনিস, ইতিহাস নয়
                 ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
                 ->orderBy('b.expiry_date')
                 ->select([
                     'b.expiry_date',
                     'p.code as product_code',
-                    'p.name_en as product_name',
+                    // ⓘ নাম পড়ার ভাষায় — বাংলায় বাংলা নাম, না থাকলে ইংরেজি; কোড আলাদা ঘরে আছে (পুরো-ERP অডিট, মজুদ ছ১৮-এর লেজ)
+                    DB::raw((app()->getLocale() === 'bn' ? "COALESCE(NULLIF(p.name_bn, ''), p.name_en)" : 'p.name_en').' as product_name'),
                     'b.batch_no',
                     'b.mrp',
                     DB::raw('COALESCE(SUM(m.floor_change), 0) as on_hand'),
