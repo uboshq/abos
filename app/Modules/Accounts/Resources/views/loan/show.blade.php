@@ -29,7 +29,9 @@
         ['key' => 'trx_date', 'label' => __('accounts::field.date'), 'width' => '8rem',
          'render' => fn ($m) => $m->trx_date?->format('d/m/Y')],
         ['key' => 'type', 'label' => __('accounts::field.type'), 'width' => '9rem',
-         'render' => fn ($m) => $m->label()],
+         // ⓘ সইয়ের অপেক্ষায় বা ফেরত সারি — খাতায় ওঠেনি, তাই আলাদা করে বলা (অডিট, ১০ অক্টোবর ২০২৬)
+         'render' => fn ($m) => $m->label().(in_array($m->status, [\App\Modules\Accounts\Models\LoanMovement::AWAITING, \App\Modules\Accounts\Models\LoanMovement::REJECTED], true)
+             ? ' — '.__('accounts::message.loan_status_'.$m->status) : '')],
         ['key' => 'account', 'label' => __('core.print.account'),
          'render' => fn ($m) => view('accounts::loan.partials.counter', ['movement' => $m])],
         ['key' => 'amount', 'label' => __('accounts::field.amount'),

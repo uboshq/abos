@@ -29,4 +29,8 @@ return [
     'fixed_asset_register' => 'Fixed asset registered (with funding)',
     'fixed_asset_dispose' => 'Fixed asset sold or written off',
     'till_handover' => 'Handover of a cash box',
+    'loan_draw' => 'Loan drawdown',
+    'loan_instalment' => 'Loan instalment payment',
+    'loan_repay' => 'Loan repayment',
+    'loan_interest' => 'Loan interest charge',
 ];

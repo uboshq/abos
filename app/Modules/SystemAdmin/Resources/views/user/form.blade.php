@@ -41,7 +41,10 @@
             </div>
         @endif
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        {{-- ⭐ প্রতিটা অংশের মাথায় নাম — সিস্টেম পর্দার নকশা, ১০ অক্টোবর ২০২৬ (ধাপ C, ব্যবহারকারীর ফর্ম)। ⓘ রোল আর কোম্পানির
+             অংশে নাম আগেই ছিল, কেবল প্রথমটায় নয় — লম্বা পর্দায় চোখ কোথা থেকে শুরু করবে বুঝত না। --}}
+        <section data-boxed data-form-section="identity" class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('system_admin::field.identity_and_login') }}</h2>
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.field name="name" :label="__('system_admin::field.user_name')"
                             :value="old('name', $user->name)" required />
@@ -390,11 +393,8 @@
             </section>
         @endif
 
-        <div class="flex flex-wrap gap-2">
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            <x-ui.button tone="secondary" :href="route('system_admin.user.index')">
-                {{ __('core.action.cancel') }}
-            </x-ui.button>
-        </div>
+        {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে, ডানে ([[x-ui.form-actions]]) — রোল, কোম্পানি আর আসল ক্ষমতার অংশ মিলিয়ে
+             ফর্মটা ১০৮০p-তে এক পর্দার চেয়ে লম্বা, আর সংরক্ষণ নিচে হারাত। --}}
+        <x-ui.form-actions :cancel="route('system_admin.user.index')" />
     </form>
 </x-layouts.app>

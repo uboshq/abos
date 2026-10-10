@@ -1135,7 +1135,9 @@ final class SalesInvoiceService
              */
             $promotion = app(\App\Modules\Sales\Services\ChallanOfferShare::class)->of($challanLine, $qty, (int) $invoice->id);
 
-            $figures = $this->lineFigures($qty, $rate, bcadd($this->money($line['discount'] ?? '0'), $promotion, 4), $line['tax'] ?? null, $product->tax);
+            // ⓘ কাউন্টারের পুরো-কাগজের ভ্যাট বাছাই ([[CounterVat]]) — কেবল ভেতর থেকে আসে, ফর্মের লেখা নয়
+            $standard = ($line['vat_rule'] ?? null) instanceof \App\Modules\MasterData\Models\Tax ? $line['vat_rule'] : $product->tax;
+            $figures = $this->lineFigures($qty, $rate, bcadd($this->money($line['discount'] ?? '0'), $promotion, 4), $line['tax'] ?? null, $standard);
 
             /*
              * দরটা মান দাম থেকে কতটা সরে আছে — নীতিটা যা বলে।

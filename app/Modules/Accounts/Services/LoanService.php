@@ -114,7 +114,10 @@ final class LoanService
      *
      * @throws ValidationException
      */
-    public function drawDown(Loan $loan, string $amount, int $intoAccountId, Carbon|string|null $date = null): void
+    /**
+     * @return LoanMovement তোলার সারি — সইয়ের ছক থামালে `awaiting`, নইলে খাতায় বসা
+     */
+    public function drawDown(Loan $loan, string $amount, int $intoAccountId, Carbon|string|null $date = null): LoanMovement
     {
         if (bccomp($amount, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -128,15 +131,15 @@ final class LoanService
          * বাইরে: দুইজন একসাথে ৬০০ তুললে দুইজনেই "১,০০০ খালি" দেখতেন আর খাতায় ১,২০০ বসত।
          * আর খাতায় বসানো আটকালে তোলার সারিটা একা পড়ে থাকত।
          */
-        DB::transaction(function () use ($loan, $amount, $intoAccountId, $date): void {
+        return DB::transaction(function () use ($loan, $amount, $intoAccountId, $date): LoanMovement {
             Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
 
-            $this->draw($loan, $amount, $intoAccountId, $date);
+            return $this->draw($loan, $amount, $intoAccountId, $date);
         });
     }
 
-    /** তালার ভিতরে তোলা — সীমা তাজা বাকি দেখে, তারপর সারি আর দাখিলা। */
-    private function draw(Loan $loan, string $amount, int $intoAccountId, Carbon|string|null $date): void
+    /** তালার ভিতরে তোলা — সীমা তাজা বাকি দেখে, তারপর সারি আর দাখিলা (সইয়ের ছক থামালে কেবল সারি)। */
+    private function draw(Loan $loan, string $amount, int $intoAccountId, Carbon|string|null $date): LoanMovement
     {
         /*
          * সীমার বাইরে তোলা যায় না।
@@ -160,30 +163,121 @@ final class LoanService
 
         $movement = $this->movement($loan, LoanMovement::DRAW, $amount, $date, $intoAccountId);
 
-        /*
-         * নেওয়া ধারে: টাকা এল (সম্পদ ডেবিট), দায় জন্মাল (ক্রেডিট)।
-         *
-         * দেওয়া ধারে ঠিক উল্টো — টাকা বেরোল, আর পাওনা জন্মাল। একই
-         * দাখিলা দুই দিকেই বসালে দেওয়া টাকাটা খাতায় দায় হয়ে বসত,
-         * অর্থাৎ যাঁকে ধার দিলাম তাঁকেই আমাদের পাওনাদার দেখাত।
-         */
-        $lines = $loan->isGiven()
-            ? [
-                ['account_id' => $loan->principal_account_id, 'debit' => $amount],
-                ['account_id' => $intoAccountId, 'credit' => $amount],
-            ]
-            : [
-                ['account_id' => $intoAccountId, 'debit' => $amount],
-                ['account_id' => $loan->principal_account_id, 'credit' => $amount],
-            ];
+        return $this->postOrHold($movement, AccountsSignature::LOAN_DRAW);
+    }
 
+    /**
+     * ⛔ সইয়ের ছক থাকলে থামে, নইলে এখনই খাতায় — অডিট (সমন্বয়ক, ১০ অক্টোবর ২০২৬): ঋণের টাকা আগে সই ছাড়াই নড়ত।
+     *
+     * ⓘ কাগজ প্রতিটা নড়াচড়ার নিজের সারি, ঋণ নয় — ঋণের সারি নড়ায় বদলায় না, তাই একবার সই হওয়া ৫০ হাজারের তোলা পরের ৫০ হাজারকেও
+     * ঢেকে দিত ([[DocumentApproval::stopping()]] কাগজের ছাপ আর অঙ্ক মেলায়)। ছক না থাকলে (UB-এর মতো সব বন্ধ) আজকের মতোই এখনই।
+     * শেষ সইয়ে [[finishSigned()]]।
+     */
+    private function postOrHold(LoanMovement $movement, string $action): LoanMovement
+    {
+        if (app(AccountsSignature::class)->holds($movement, $action, (string) $movement->amount, $movement->narration)) {
+            $movement->forceFill(['status' => LoanMovement::AWAITING])->save();
+
+            return $movement;
+        }
+
+        $this->postMovement($movement);
+
+        return $movement;
+    }
+
+    /**
+     * ⭐ শেষ সই পড়ল — অপেক্ষার সারিটা এবার খাতায় ([[FinishTheAccountsPaperOnTheLastSignature]])।
+     *
+     * ⓘ ঋণের সারিতে তালা, নড়াচড়ার সারি আবার পড়া: একই সই দুইবার ঘটনা পাঠালে দ্বিতীয়বার কিছু হয় না। ⛔ CC-র তোলায় সীমা আবার
+     * দেখা হয় — একাধিক তোলা একসাথে সইয়ের অপেক্ষায় থাকলে প্রতিটা চাওয়ার সময় সীমার ভিতরে ছিল, সব মিলে নাও থাকতে পারে;
+     * সীমা পেরোলে সারিটা অপেক্ষাতেই থাকে, খাতায় ওঠে না।
+     */
+    public function finishSigned(LoanMovement $movement): void
+    {
+        DB::transaction(function () use ($movement): void {
+            $loan = Loan::query()->whereKey($movement->loan_id)->lockForUpdate()->firstOrFail();
+            $fresh = LoanMovement::query()->whereKey($movement->getKey())->lockForUpdate()->first();
+
+            if ($fresh === null || ! $fresh->isAwaiting()) {
+                return;
+            }
+
+            if ($fresh->kind === LoanMovement::DRAW && $loan->isCc()
+                && bccomp(bcadd($loan->outstanding(), (string) $fresh->amount, 4), (string) $loan->sanctioned, 4) > 0) {
+                return;
+            }
+
+            $this->postMovement($fresh);
+        });
+    }
+
+    /** ⓘ সই ফেরত — অপেক্ষার সারি "প্রত্যাখ্যাত", খাতায় কিছুই ওঠেনি */
+    public function rejectSigned(LoanMovement $movement): void
+    {
+        LoanMovement::query()->whereKey($movement->getKey())->where('status', LoanMovement::AWAITING)
+            ->update(['status' => LoanMovement::REJECTED]);
+    }
+
+    /** নড়াচড়ার সারিটা খাতায় — দাখিলা তার ধরন থেকে ([[linesFor()]]), তারপর অবস্থা "posted" */
+    private function postMovement(LoanMovement $movement): void
+    {
         $this->posting->post(
             sourceType: LoanMovement::drillSourceType(),
             sourceId: $movement->id,
             trxDate: $movement->trx_date->toDateString(),
-            lines: $lines,
+            lines: $this->linesFor($movement),
             documentNo: $movement->document_no,
         );
+
+        if ($movement->status !== LoanMovement::POSTED) {
+            $movement->forceFill(['status' => LoanMovement::POSTED])->save();
+        }
+    }
+
+    /**
+     * দাখিলার সারিগুলো — নড়াচড়ার ধরন আর ঋণের দিক থেকে।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function linesFor(LoanMovement $movement): array
+    {
+        $loan = $movement->loan;
+        $amount = (string) $movement->amount;
+        $other = $movement->counter_account_id;
+
+        return match ($movement->kind) {
+            /*
+             * নেওয়া ধারে: টাকা এল (সম্পদ ডেবিট), দায় জন্মাল (ক্রেডিট)।
+             *
+             * দেওয়া ধারে ঠিক উল্টো — টাকা বেরোল, আর পাওনা জন্মাল। একই
+             * দাখিলা দুই দিকেই বসালে দেওয়া টাকাটা খাতায় দায় হয়ে বসত,
+             * অর্থাৎ যাঁকে ধার দিলাম তাঁকেই আমাদের পাওনাদার দেখাত।
+             */
+            LoanMovement::DRAW => $loan->isGiven()
+                ? [['account_id' => $loan->principal_account_id, 'debit' => $amount], ['account_id' => $other, 'credit' => $amount]]
+                : [['account_id' => $other, 'debit' => $amount], ['account_id' => $loan->principal_account_id, 'credit' => $amount]],
+
+            /*
+             * নেওয়া ধারে পরিশোধ মানে দায় কমা; দেওয়া ধারে "পরিশোধ" মানে
+             * টাকা ফেরত আসা, অর্থাৎ পাওনা কমা আর নগদ বাড়া।
+             */
+            LoanMovement::REPAY => $loan->isGiven()
+                ? [['account_id' => $other, 'debit' => $amount], ['account_id' => $loan->principal_account_id, 'credit' => $amount]]
+                : [['account_id' => $loan->principal_account_id, 'debit' => $amount], ['account_id' => $other, 'credit' => $amount]],
+
+            /*
+             * নেওয়া ঋণে সুদ খরচ; দেওয়া টাকায় সুদ আয়।
+             *
+             * FD বা DPS-এ ব্যাংক আমাদের সুদ দেয়, আর ওটা টাকাটার সাথেই
+             * জমে — অর্থাৎ সম্পদ বাড়ে, আয় হয়। একই দাখিলা দুই দিকেই বসালে
+             * পাওয়া সুদটা খরচ হয়ে বসত, আর মুনাফা দুইবার কমত: একবার আয়টা
+             * না দেখিয়ে, আরেকবার ওটাকে খরচ দেখিয়ে।
+             */
+            default => $loan->isGiven()
+                ? [['account_id' => $loan->principal_account_id, 'debit' => $amount], ['account_id' => $loan->interest_account_id, 'credit' => $amount]]
+                : [['account_id' => $loan->interest_account_id, 'debit' => $amount], ['account_id' => $loan->principal_account_id, 'credit' => $amount]],
+        };
     }
 
     /**
@@ -235,6 +329,16 @@ final class LoanService
             $principal = bcsub($paid, $interest, 4);
 
             /*
+             * ⛔ সইয়ের ছক থাকলে থামে — অডিট (সমন্বয়ক, ১০ অক্টোবর ২০২৬)। ⓘ কাগজ কিস্তির নিজের সারি; শেষ সইয়ে একই তথ্যে আবার
+             * এখানে আসে ([[FinishTheAccountsPaperOnTheLastSignature]]), তখন সইটা খাটে আর খাতায় বসে। ছক না থাকলে আজকের মতো এখনই।
+             */
+            if (app(AccountsSignature::class)->holds($instalment, AccountsSignature::LOAN_INSTALMENT, $paid, null, [
+                'from_account_id' => $fromAccountId, 'on' => $this->dateFor($date), 'amount' => $paid,
+            ])) {
+                return $instalment;
+            }
+
+            /*
              * কিস্তিটাই এখানে ডকুমেন্ট — ঋণ নয়।
              *
              * প্রতিটা কিস্তির নিজের id আছে, তাই ছত্রিশটা কিস্তি মানে
@@ -272,7 +376,8 @@ final class LoanService
      *
      * @throws ValidationException
      */
-    public function repay(Loan $loan, string $amount, int $fromAccountId, Carbon|string|null $date = null): void
+    /** @return LoanMovement জমার সারি — সইয়ের ছক থামালে `awaiting` ([[postOrHold()]]) */
+    public function repay(Loan $loan, string $amount, int $fromAccountId, Carbon|string|null $date = null): LoanMovement
     {
         if (bccomp($amount, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -280,29 +385,10 @@ final class LoanService
             ]);
         }
 
-        $movement = $this->movement($loan, LoanMovement::REPAY, $amount, $date, $fromAccountId);
-
-        /*
-         * নেওয়া ধারে পরিশোধ মানে দায় কমা; দেওয়া ধারে "পরিশোধ" মানে
-         * টাকা ফেরত আসা, অর্থাৎ পাওনা কমা আর নগদ বাড়া।
-         */
-        $lines = $loan->isGiven()
-            ? [
-                ['account_id' => $fromAccountId, 'debit' => $amount],
-                ['account_id' => $loan->principal_account_id, 'credit' => $amount],
-            ]
-            : [
-                ['account_id' => $loan->principal_account_id, 'debit' => $amount],
-                ['account_id' => $fromAccountId, 'credit' => $amount],
-            ];
-
-        $this->posting->post(
-            sourceType: LoanMovement::drillSourceType(),
-            sourceId: $movement->id,
-            trxDate: $movement->trx_date->toDateString(),
-            lines: $lines,
-            documentNo: $movement->document_no,
-        );
+        return DB::transaction(fn (): LoanMovement => $this->postOrHold(
+            $this->movement($loan, LoanMovement::REPAY, $amount, $date, $fromAccountId),
+            AccountsSignature::LOAN_REPAY,
+        ));
     }
 
     /**
@@ -315,39 +401,17 @@ final class LoanService
      *
      * টার্ম লোনে এটা লাগে না: ওখানে সুদ কিস্তির ভেতরেই আছে।
      */
-    public function chargeInterest(Loan $loan, string $amount, Carbon|string|null $date = null): void
+    /** @return LoanMovement|null সুদের সারি — শূন্য হলে কিছুই নয়; সইয়ের ছক থামালে `awaiting` ([[postOrHold()]]) */
+    public function chargeInterest(Loan $loan, string $amount, Carbon|string|null $date = null): ?LoanMovement
     {
         if (bccomp($amount, '0', 4) <= 0) {
-            return;
+            return null;
         }
 
-        $movement = $this->movement($loan, LoanMovement::INTEREST, $amount, $date, null);
-
-        /*
-         * নেওয়া ঋণে সুদ খরচ; দেওয়া টাকায় সুদ আয়।
-         *
-         * FD বা DPS-এ ব্যাংক আমাদের সুদ দেয়, আর ওটা টাকাটার সাথেই
-         * জমে — অর্থাৎ সম্পদ বাড়ে, আয় হয়। একই দাখিলা দুই দিকেই বসালে
-         * পাওয়া সুদটা খরচ হয়ে বসত, আর মুনাফা দুইবার কমত: একবার আয়টা
-         * না দেখিয়ে, আরেকবার ওটাকে খরচ দেখিয়ে।
-         */
-        $lines = $loan->isGiven()
-            ? [
-                ['account_id' => $loan->principal_account_id, 'debit' => $amount],
-                ['account_id' => $loan->interest_account_id, 'credit' => $amount],
-            ]
-            : [
-                ['account_id' => $loan->interest_account_id, 'debit' => $amount],
-                ['account_id' => $loan->principal_account_id, 'credit' => $amount],
-            ];
-
-        $this->posting->post(
-            sourceType: LoanMovement::drillSourceType(),
-            sourceId: $movement->id,
-            trxDate: $movement->trx_date->toDateString(),
-            lines: $lines,
-            documentNo: $movement->document_no,
-        );
+        return DB::transaction(fn (): LoanMovement => $this->postOrHold(
+            $this->movement($loan, LoanMovement::INTEREST, $amount, $date, null),
+            AccountsSignature::LOAN_INTEREST,
+        ));
     }
 
     /**

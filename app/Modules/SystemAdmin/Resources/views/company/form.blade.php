@@ -159,11 +159,8 @@
                              ফেরত দেয়, অর্থাৎ স্বচ্ছ PNG-র স্বচ্ছতা মারা
                              যেত। ⭐ সার্ভারের `ImageEngine::mark()` এটাকে
                              PNG রেখেই ছোট করে। --}}
-                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp"
-                               class="text-sm file:me-3 file:rounded-(--radius-field)
-                                      file:border file:border-(--color-border)
-                                      file:bg-(--color-surface-app) file:px-3 file:py-1.5
-                                      file:text-sm file:text-(--color-ink)">
+                        {{-- ⭐ বাংলা বোতাম, ব্রাউজারের ইংরেজি "Choose File" নয় — সিস্টেম পর্দার নকশা §৪, ১০ অক্টোবর ২০২৬ --}}
+                        <x-ui.file-input name="logo" accept="image/png,image/jpeg,image/webp" />
                     </div>
 
                     <p class="mt-1 text-2xs text-(--color-ink-muted)">
@@ -223,12 +220,10 @@
             </section>
         @endif
 
-        <div class="flex flex-wrap gap-2">
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            <x-ui.button tone="secondary" :href="route('system_admin.company.index')">
-                {{ __('core.action.cancel') }}
-            </x-ui.button>
-        </div>
+        {{-- ⭐ বাতিল · সংরক্ষণ স্থির পট্টিতে — সিস্টেম পর্দার নকশা §৪, ১০ অক্টোবর ২০২৬: *"সংরক্ষণ দুই ভাগের মাঝখানে"* ছিল,
+             নিচে শাখার ফর্ম জোড়া। ⓘ পট্টিটা এই ফর্মের ভিতরে `sticky`, তাই কোম্পানির ঘরগুলো পার হলেই নিজের জায়গায় বসে —
+             শাখার "তৈরি" বোতামের সাথে গুলিয়ে যায় না। --}}
+        <x-ui.form-actions :cancel="route('system_admin.company.index')" />
     </form>
 
     @unless ($isNew)
