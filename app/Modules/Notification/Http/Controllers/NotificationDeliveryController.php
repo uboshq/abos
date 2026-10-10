@@ -6,12 +6,15 @@ namespace App\Modules\Notification\Http\Controllers;
 
 use App\Core\Notifications\ChannelRegistry;
 use App\Core\Notifications\DeliveryService;
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\NotificationChannel;
 use App\Models\NotificationDeliveryAttempt;
 use App\Models\NotificationJob;
+use App\Models\UserDataScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -57,6 +60,8 @@ class NotificationDeliveryController extends Controller
 
         $rows = NotificationDeliveryAttempt::query()
             ->with('job.user')
+            // ⛔ শাখার দেয়াল — খবরটা যে শাখার (cb-র রিভিউ, মেশানোর আগে, ১১ অক্টোবর ২০২৬; [[TheDeliveryScreensStayInsideTheBranchWallTest]])
+            ->whereHas('job.notification', fn ($q) => ViewedBranch::narrow($q, 'notifications.branch_id'))
             ->when($f['channel'] ?? null, fn ($q, $c) => $q->where('channel', $c))
             ->when($f['outcome'] ?? null, fn ($q, $o) => $q->where('outcome', $o))
             ->when($f['from'] ?? null, fn ($q, $d) => $q->where('created_at', '>=', $d.' 00:00:00'))
@@ -104,6 +109,8 @@ class NotificationDeliveryController extends Controller
 
     public function retry(Request $request, NotificationJob $job): RedirectResponse
     {
+        $this->assertReaches($request, $job);
+
         return back()->with(...($this->delivery->retryByHand($job)
             ? ['saved', __('notification::delivery.retried')]
             : ['failed', __('notification::delivery.not_retryable')]));
@@ -111,11 +118,21 @@ class NotificationDeliveryController extends Controller
 
     public function cancel(Request $request, NotificationJob $job): RedirectResponse
     {
+        $this->assertReaches($request, $job);
+
         $data = $request->validate(['resolution' => ['required', 'string', 'max:255']]);
 
         return back()->with(...($this->delivery->cancel($job, $data['resolution'])
             ? ['saved', __('notification::delivery.cancelled')]
             : ['failed', __('notification::delivery.not_cancellable')]));
+    }
+
+    /** ⛔ অন্য শাখার খবরের পাঠানো আবার চালানো বা বাতিল নয় — নাগালের বাইরে ৪০৪, Center-এর মতো */
+    private function assertReaches(Request $request, NotificationJob $job): void
+    {
+        $branch = $job->notification?->branch_id;
+
+        abort_unless(app(DataScope::class)->allows($request->user(), UserDataScope::BRANCH, $branch === null ? null : (int) $branch), 404);
     }
 
     /** @param  list<string>  $statuses */
@@ -128,6 +145,12 @@ class NotificationDeliveryController extends Controller
 
         $rows = NotificationJob::query()
             ->with(['user', 'notification'])
+            /*
+             * ⛔ শাখার দেয়াল — Center আর "আমার বিজ্ঞপ্তি"-র মতোই (cb-র রিভিউ, মেশানোর আগে, ১১ অক্টোবর ২০২৬;
+             * [[TheDeliveryScreensStayInsideTheBranchWallTest]])। আগে কেবল কোম্পানি: ময়মনসিংহে আটকানো কেউ নেত্রকোনার বিক্রির
+             * শিরোনাম আর কার কাছে গেল, সব দেখতেন।
+             */
+            ->whereHas('notification', fn ($q) => ViewedBranch::narrow($q, 'notifications.branch_id'))
             ->whereIn('status', isset($f['status']) ? [$f['status']] : $statuses)
             ->when($f['channel'] ?? null, fn ($q, $c) => $q->where('channel', $c))
             ->orderByDesc('id')
