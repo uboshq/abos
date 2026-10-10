@@ -265,6 +265,8 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     reason: $reason,
+                    // ⓘ হারানো বা নষ্ট মাল মেয়াদি লটেরও হতে পারে — আগে-মেয়াদ আগে, ভালো লট শেষে (মজুদ ছ১৩)
+                    anyLot: true,
                 ));
 
             $movement = $movements[0];
@@ -421,7 +423,7 @@ final class StockAdjustmentService
 
             $first = null;
 
-            foreach ($allocator->allocateFree($product, $warehouse, $short) as $take) {
+            foreach ($allocator->allocateFree($product, $warehouse, $short, anyLot: true) as $take) {
                 $out = $write(bcmul($take['qty'], '-1', 4), $take['batch']);
                 $first ??= $out;
             }

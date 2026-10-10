@@ -330,6 +330,8 @@ final class StockService
         /* ⭐ গ১১ — বিক্রির ডাকে "পাওয়া যায়"-এর পাহারা; অর্থ [[move()]]-এর একই নামের ঘরে */
         bool $fromAvailable = false,
         array $ownReservations = [],
+        // ⭐ ঘাটতি লেখা — লট না বললে মেয়াদ পেরোনো লটও, আগে-মেয়াদ আগে (মজুদ ছ১৩; [[BatchAllocator::allocate()]])
+        bool $anyLot = false,
     ): array {
         $out = bcmul($qty, '-1', 4);
 
@@ -458,6 +460,7 @@ final class StockService
             $warehouse,
             $qty,
             $date === null ? null : ($date instanceof Carbon ? $date : Carbon::parse($date)),
+            anyLot: $anyLot,
         );
 
         $movements = [];
