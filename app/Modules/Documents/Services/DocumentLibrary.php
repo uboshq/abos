@@ -83,7 +83,7 @@ final class DocumentLibrary
                 };
 
                 $document = new Document([
-                    ...$this->detailFields($details),
+                    ...$this->guarded($this->detailFields($details), null),
                     'name' => mb_substr($name, 0, 191),
                     'status' => DocumentCatalog::DRAFT,
                     'created_by' => Actor::userId(),
@@ -197,7 +197,7 @@ final class DocumentLibrary
     {
         DB::transaction(function () use ($document, $details) {
             $document->fill([
-                ...$this->detailFields($details),
+                ...$this->guarded($this->detailFields($details), $document),
                 'name' => mb_substr(trim((string) $details['name']), 0, 191),
                 'updated_by' => Actor::userId(),
             ]);
@@ -410,6 +410,44 @@ final class DocumentLibrary
      * @param  array<string, mixed>  $details
      * @return array<string, mixed>
      */
+    /**
+     * ⛔ কাগজের মালিক, গোপনীয়তা, শাখা আর বিভাগ — কে বদলাতে পারেন (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔৩, ⚠️৫)।
+     *
+     * ⓘ মালিক সবসময় নিজের কাগজ দেখেন ([[DocumentAccess::canSee()]]), তাই মালিক বসানো একটা শেয়ার — শেয়ারের চাবি আর খবর ছাড়াই।
+     * - কাগজ-ধরে "বদল" অধিকার (কোম্পানির `documents.edit` চাবি ছাড়া) কেবল বিবরণ বদলায়: আগে ঐ অধিকারে মানুষ নিজেকে মালিক বানাতেন
+     *   (তখন অধিকার তুলে নিলেও দেখতেন), বা "সংরক্ষিত" কাগজ "সবার" করে দিতেন — জীবন-বদলানো কাজ কাগজ-ধরে দেওয়া যায় না, পলিসির
+     *   নিজের নিয়ম। এখন ঐ চার ঘর আগের মতোই থাকে।
+     * - মালিক বসানো (নিজে ছাড়া অন্য কাউকে) কেবল অধিকার দেওয়ার চাবি (`documents.permissions`) যাঁর; নইলে নতুন কাগজে নিজে,
+     *   পুরনোয় আগের মালিক। ⓘ আগে সম্পাদনায় ঘরটা ফাঁকা পাঠালে যিনি সংরক্ষণ করতেন তিনিই মালিক হয়ে যেতেন।
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    private function guarded(array $fields, ?Document $current): array
+    {
+        $user = auth()->user();
+        $self = Actor::userId();
+
+        if ($current !== null && ! ($user?->can('documents.edit') ?? false)) {
+            foreach (['owner_id', 'confidentiality', 'branch_id', 'department_id'] as $field) {
+                $fields[$field] = $current->{$field};
+            }
+
+            return $fields;
+        }
+
+        $mayAssign = $user?->can('documents.permissions') ?? false;
+        $asked = $fields['owner_id'] === null ? null : (int) $fields['owner_id'];
+
+        $fields['owner_id'] = match (true) {
+            $asked !== null && ($mayAssign || $asked === $self) => $asked,
+            $current !== null => $current->owner_id,
+            default => $self,
+        };
+
+        return $fields;
+    }
+
     private function detailFields(array $details): array
     {
         $tags = array_values(array_unique(array_filter(array_map(
@@ -422,7 +460,7 @@ final class DocumentLibrary
             'folder' => $details['folder'],
             'branch_id' => $details['branch_id'] ?? null,
             'department_id' => $details['department_id'] ?? null,
-            'owner_id' => $details['owner_id'] ?? Actor::userId(),
+            'owner_id' => $details['owner_id'] ?? null,
             'document_date' => filled($details['document_date'] ?? null) ? Carbon::parse($details['document_date']) : null,
             'expiry_date' => filled($details['expiry_date'] ?? null) ? Carbon::parse($details['expiry_date']) : null,
             'confidentiality' => $details['confidentiality'],

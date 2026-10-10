@@ -61,8 +61,11 @@ class DocumentDetailsRequest extends FormRequest
             // ⛔ শাখা কেবল নিজের দেয়ালের ভিতরের; ফাঁকা (গোটা কোম্পানি) কেবল যিনি সব দেখেন
             'branch_id' => [$companyWide ? 'nullable' : 'required', 'integer', Rule::in($branches)],
 
-            'department_id' => ['nullable', 'integer',
-                Rule::exists('mdm_departments', 'id')->where('company_id', $companyId)->whereNull('deleted_at')],
+            // ⛔ বিভাগে সীমিত মানুষ কেবল নিজের বিভাগে রাখেন — অন্য বিভাগে কাগজ রাখা মানে সেই বিভাগের দেয়ালে ঢোকানো
+            //    (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৯; [[DocumentAccess::departmentsFor()]])
+            'department_id' => array_values(array_filter(['nullable', 'integer',
+                Rule::exists('mdm_departments', 'id')->where('company_id', $companyId)->whereNull('deleted_at'),
+                $this->ownDepartments() === null ? null : Rule::in($this->ownDepartments())])),
 
             'owner_id' => ['nullable', 'integer',
                 Rule::exists('company_user', 'user_id')->where('company_id', $companyId)],
@@ -77,6 +80,14 @@ class DocumentDetailsRequest extends FormRequest
 
             ...$this->metadataRules($choices),
         ];
+    }
+
+    /** @return list<int>|null বিভাগের সীমা — null মানে সীমা নেই */
+    private function ownDepartments(): ?array
+    {
+        $user = $this->user();
+
+        return $user instanceof User ? app(\App\Modules\Documents\Services\DocumentAccess::class)->departmentsFor($user) : [];
     }
 
     /**
