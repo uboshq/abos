@@ -1864,24 +1864,6 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
-     * এই সারিতে ফ্রি কতটা — কাগজে দেখানোর জন্য।
-     *
-     * ── ⭐ কেন তিন জায়গায় খোঁজা হয়, ১৮ সেপ্টেম্বর ২০২৬ ──────────────
-     * মালিকের নির্দেশ: *"ইনভয়েস প্রিন্টিংয়ে ফ্রি আলাদা দেখাতে হবে।"*
-     *
-     * ⚠️ কিন্তু ফ্রি পরিমাণটা সব সারিতে থাকে না। ⓘ `sal_challan_lines`-এ
-     * `free_qty` কলামটা আছে; **`sal_invoice_lines`-এ নেই** — চালানের
-     * বিলে ফ্রি-টা তার চালানের সারি থেকেই আসে, আর ছাপার কন্ট্রোলার
-     * `lines.challanLine` এমনিতেই সাথে তোলে।
-     *
-     * ⛔ `method_exists()` পরীক্ষাটা বাদ দেওয়া যায় না: ক্রয়াদেশের
-     * সারিতে ঐ সম্পর্কটা নেই, আর না দেখে ডাকলে `BadMethodCallException`
-     * হয়ে গোটা ছাপার পাতা ৫০০ দিত।
-     *
-     * ⓘ শূন্য মানে খালি লেখা, "0" নয় — কাগজে শূন্যের কলাম কেবল জায়গা
-     * নেয়, আর সরু রোলে জায়গাটাই সবচেয়ে দামি।
-     */
-    /**
      * ⭐ গেট পাসে মাল বেরোনোর পথে ফ্রি মাল আলাদা লাইনে, "ফ্রি" লেখা — মালিক, ১০ অক্টোবর ২০২৬ (সুইচ
      * `sales.invoice_at_goods_issue`; [[TheFreeGoodsLeaveOnTheirOwnGateLineTest]])।
      *
@@ -1925,6 +1907,24 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $out;
     }
 
+    /**
+     * এই সারিতে ফ্রি কতটা — কাগজে দেখানোর জন্য।
+     *
+     * ── ⭐ কেন তিন জায়গায় খোঁজা হয়, ১৮ সেপ্টেম্বর ২০২৬ ──────────────
+     * মালিকের নির্দেশ: *"ইনভয়েস প্রিন্টিংয়ে ফ্রি আলাদা দেখাতে হবে।"*
+     *
+     * ⚠️ কিন্তু ফ্রি পরিমাণটা সব সারিতে থাকে না। ⓘ `sal_challan_lines`-এ
+     * `free_qty` কলামটা আছে; **`sal_invoice_lines`-এ নেই** — চালানের
+     * বিলে ফ্রি-টা তার চালানের সারি থেকেই আসে, আর ছাপার কন্ট্রোলার
+     * `lines.challanLine` এমনিতেই সাথে তোলে।
+     *
+     * ⛔ `method_exists()` পরীক্ষাটা বাদ দেওয়া যায় না: ক্রয়াদেশের
+     * সারিতে ঐ সম্পর্কটা নেই, আর না দেখে ডাকলে `BadMethodCallException`
+     * হয়ে গোটা ছাপার পাতা ৫০০ দিত।
+     *
+     * ⓘ শূন্য মানে খালি লেখা, "0" নয় — কাগজে শূন্যের কলাম কেবল জায়গা
+     * নেয়, আর সরু রোলে জায়গাটাই সবচেয়ে দামি।
+     */
     private function freeOf(object $line): string
     {
         $free = $line->free_qty
@@ -1937,9 +1937,6 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $this->qty($free);
     }
 
-    /**
-     * @return array<string, string>
-     */
     /**
      * ভ্যাটের দুই ভাগ — উপরে যোগ হওয়া, আর দামের ভিতরের — মোট থেকেই মাপা ([[totals()]] আর নামওয়ালা নকশার `sums`, দুইয়েরই)।
      *
@@ -1965,6 +1962,9 @@ class SalesPrintController extends Controller implements HasMiddleware
         return [$added, bcsub($tax, $added, 4)];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function totals(object $document): array
     {
         $rows = [];
