@@ -624,6 +624,29 @@ class PurchaseTest extends TestCase
         $this->assertSame(0, bccomp((string) $row['unbilled_value'], '5000', 4));
     }
 
+    /**
+     * ⛔ খসড়া বিল চালান মেটায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে শর্ত ছিল "বাতিল নয়", তাই খসড়া বিলেই চালানটা রিপোর্ট থেকে উধাও হত, অথচ ২১৬০ খাত তখনো ভরা।
+     * ⓘ বিল নিশ্চিত হলে তবেই চালানটা সরে।
+     */
+    public function test_a_draft_bill_does_not_take_a_receipt_off_the_uninvoiced_report(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '100', '50'));
+        $bill = $this->makeBill($receipt->fresh('lines'), '100', '50');
+
+        $range = ['from' => now()->subYear()->toDateString(), 'to' => now()->addDay()->toDateString()];
+        $rows = app(ReportEngine::class)->run('purchase.uninvoiced', $range)->rows;
+
+        $this->assertCount(1, $rows, '⛔ খসড়া বিলেই চালানটা "বিল হয়ে গেছে" ধরা হলো, অথচ খাতায় ২১৬০ তখনো ভরা।');
+        $this->assertSame(0, bccomp((string) ((array) $rows[0])['unbilled_qty'], '100', 4));
+
+        $this->bills()->confirm($bill->fresh());
+
+        $this->assertCount(0, app(ReportEngine::class)->run('purchase.uninvoiced', $range)->rows,
+            'নিশ্চিত বিলের পরেও চালানটা রিপোর্টে — দাবি অন্ধ।');
+    }
+
     // ── ক্রয়ের কাগজে বিক্রয়মূল্য ──────────────────────────────────────
 
     /**
