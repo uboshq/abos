@@ -102,4 +102,5 @@ return [
     'document_abe_used' => 'Document Intelligence (ABE) used',
     'document_from_template' => 'Document made from a template',
     'document_retained' => 'Document moved to the bin by a retention rule',
+    'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
 ];

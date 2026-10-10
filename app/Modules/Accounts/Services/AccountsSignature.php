@@ -47,10 +47,23 @@ final class AccountsSignature
     // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর — টাকার দায় বদলায় (Accounts-Finance অডিট ম৮; [[TillHandoverService]])
     public const TILL_HANDOVER = 'till_handover';
 
+    /*
+     * ⛔ ঋণের টাকা — অডিট (সমন্বয়ক, ১০ অক্টোবর ২০২৬): তোলা, কিস্তি, শোধ আর সুদ সই ছাড়াই খাতায় বসত ([[LoanService]])।
+     * ⓘ প্রতিটা নিজের কাজ, কারণ প্রতিটার ঝুঁকি আলাদা — তোলায় টাকা আসে, কিস্তি আর শোধে বেরোয়, সুদে দায় বাড়ে।
+     */
+    public const LOAN_DRAW = 'loan_draw';
+
+    public const LOAN_INSTALMENT = 'loan_instalment';
+
+    public const LOAN_REPAY = 'loan_repay';
+
+    public const LOAN_INTEREST = 'loan_interest';
+
     /** শেষ সই পড়লে যে কাজগুলো এই মডিউল নিজে শেষ করে */
     public const ACTIONS = [
         self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY, self::TILL_OPENING,
         self::FIXED_ASSET_REGISTER, self::FIXED_ASSET_DISPOSE, self::TILL_HANDOVER,
+        self::LOAN_DRAW, self::LOAN_INSTALMENT, self::LOAN_REPAY, self::LOAN_INTEREST,
     ];
 
     public function __construct(private readonly DocumentApproval $approval) {}

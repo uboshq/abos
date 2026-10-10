@@ -344,6 +344,7 @@ final class StockCountService
                         date: $count->count_date,
                         narration: __('inventory::label.free_adjustment_narration', ['document' => $count->narration ?: $count->document_no]),
                         batch: $line->batch,
+                        documentNo: $count->document_no,
                     )
                     : $this->adjustments->settle(
                         product: $line->product,
@@ -354,6 +355,8 @@ final class StockCountService
                         narration: $count->narration ?: $count->document_no,
                         unitCost: $line->unit_cost === null ? null : (string) $line->unit_cost,
                         batch: $line->batch,
+                        // ⭐ চলাচল আর খাতার সারিতে গণনার নম্বর (মজুদ ছ২)
+                        documentNo: $count->document_no,
                     );
 
                 $line->update(['reason_code_id' => $reason->id]);
@@ -497,6 +500,7 @@ final class StockCountService
                 reason: $paper->reason,
                 date: $paper->count_date,
                 narration: $paper->narration ?: $paper->document_no,
+                documentNo: $paper->document_no,
             );
 
             $paper->update([

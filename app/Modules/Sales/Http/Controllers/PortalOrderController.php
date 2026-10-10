@@ -45,9 +45,14 @@ class PortalOrderController extends Controller
                 ->withErrors(['order' => __('sales::portal_order.not_open')]);
         }
 
+        $customer = $this->papers->customer();
+        $products = $this->papers->orderableProducts();
+
         return view('sales::portal.order-form', [
-            'customer' => $this->papers->customer(),
-            'products' => $this->papers->orderableProducts(),
+            'customer' => $customer,
+            'products' => $products,
+            // ⭐ ফর্মে সেই দামই যা সংরক্ষণে বসে — ডিলারের দর তালিকা, আজকের তারিখে ([[SalesPrice]], Sales অডিট ১০ অক্টোবর ২০২৬)
+            'prices' => app(\App\Modules\Sales\Services\SalesPrice::class)->forMany($customer, $products, now()->toDateString()),
         ]);
     }
 
@@ -68,6 +73,7 @@ class PortalOrderController extends Controller
 
         // ⓘ ফর্মের খালি সারি বাদ — পরিমাণ দেওয়া সারিই লাইন; দাম পণ্যের ([[CustomerPapers::orderableProducts()]]-এর একই দাম)
         $products = $this->papers->orderableProducts()->keyBy('id');
+        $today = now()->toDateString();
         $lines = [];
         foreach ($data['lines'] as $line) {
             $product = $products->get((int) ($line['product_id'] ?? 0));
@@ -78,13 +84,14 @@ class PortalOrderController extends Controller
                 'product_id' => (int) $product->id,
                 'ordered_qty' => (string) $line['qty'],
                 // ⭐ এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
-                'rate' => app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price,
+                'rate' => app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product, $today)->price,
                 'discount' => '0',
             ];
         }
 
         $order = $this->orders->create([
             'customer_id' => $customer->id,
+            'trx_date' => $today, // ⓘ দরটা যে দিনের, আদেশও সেই দিনের
             'narration' => $data['narration'] ?? null,
             'source' => SalesOrderStatus::SOURCE_PORTAL,
             'created_by_customer_id' => $customer->id,

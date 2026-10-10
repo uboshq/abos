@@ -164,6 +164,8 @@ final class StockAdjustmentService
         ?string $narration = null,
         ?string $unitCost = null,
         ?Batch $batch = null,
+        // ⭐ কাগজের নম্বর — চলাচল আর খাতার সারি থেকে গণনায় ফেরা যায় (মজুদ ছ২; [[ACountsMovementsCarryItsNumberTest]])
+        ?string $documentNo = null,
     ): ?StockMovement {
         // মিলে গেলে কোনো সারি নয় — শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
         if (bccomp($difference, '0', 4) === 0) {
@@ -208,7 +210,7 @@ final class StockAdjustmentService
         }
 
         return DB::transaction(function () use (
-            $product, $warehouse, $reason, $date, $narration, $difference, $surplus, $unitCost, $batch
+            $product, $warehouse, $reason, $date, $narration, $difference, $surplus, $unitCost, $batch, $documentNo
         ) {
             /*
              * ⚠️ দুই দিকে দুই পথ, আর তফাতটা কেবল সুবিধার নয়।
@@ -241,6 +243,7 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     batch: $batch,
+                    documentNo: $documentNo,
                 )]
                 /*
                  * ⛔ গোনা লটের ঘাটতি সেই লট থেকেই — ২৯ সেপ্টেম্বর ২০২৬ (অডিটে প্রমাণিত)।
@@ -249,7 +252,7 @@ final class StockAdjustmentService
                  * থাকলে (গণনার পরে বিক্রি) থামে — লট ঋণাত্মক হয় না।
                  */
                 : ($batch !== null
-                    ? [$this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch)]
+                    ? [$this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch, $documentNo)]
                     /*
                  * ⓘ কয়টা সারি হবে তা আগে জানা যায় না — তিন লট জুড়ে
                  * ঘাটতি হলে তিনটা। ⚠️ খরচ ও খতিয়ানের নোঙর প্রথমটা,
@@ -265,6 +268,9 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     reason: $reason,
+                    documentNo: $documentNo,
+                    // ⓘ হারানো বা নষ্ট মাল মেয়াদি লটেরও হতে পারে — আগে-মেয়াদ আগে, ভালো লট শেষে (মজুদ ছ১৩)
+                    anyLot: true,
                 ));
 
             $movement = $movements[0];
@@ -342,6 +348,8 @@ final class StockAdjustmentService
         Carbon|string|null $date = null,
         ?string $narration = null,
         ?Batch $batch = null,
+        // ⭐ কাগজের নম্বর — চলাচল আর খাতার সারি থেকে গণনায় ফেরা যায় (মজুদ ছ২; [[ACountsMovementsCarryItsNumberTest]])
+        ?string $documentNo = null,
     ): ?StockMovement {
         if (bccomp($difference, '0', 4) === 0) {
             return null;
@@ -364,7 +372,7 @@ final class StockAdjustmentService
             ]);
         }
 
-        return DB::transaction(function () use ($product, $warehouse, $difference, $surplus, $reason, $date, $narration, $batch) {
+        return DB::transaction(function () use ($product, $warehouse, $difference, $surplus, $reason, $date, $narration, $batch, $documentNo) {
             $write = fn (string $qty, ?Batch $lot) => $this->stock->move(
                 product: $product,
                 warehouse: $warehouse,
@@ -375,6 +383,7 @@ final class StockAdjustmentService
                 narration: $narration,
                 free: $qty,
                 batch: $lot,
+                documentNo: $documentNo,
             );
 
             if ($surplus) {
@@ -421,7 +430,7 @@ final class StockAdjustmentService
 
             $first = null;
 
-            foreach ($allocator->allocateFree($product, $warehouse, $short) as $take) {
+            foreach ($allocator->allocateFree($product, $warehouse, $short, anyLot: true) as $take) {
                 $out = $write(bcmul($take['qty'], '-1', 4), $take['batch']);
                 $first ??= $out;
             }
@@ -441,6 +450,7 @@ final class StockAdjustmentService
         Carbon|string|null $date,
         ?string $narration,
         Batch $batch,
+        ?string $documentNo = null,
     ): StockMovement {
         $inLot = $this->lotFloor($batch, $warehouse);
 
@@ -464,6 +474,7 @@ final class StockAdjustmentService
             date: $date,
             narration: $narration,
             batch: $batch,
+            documentNo: $documentNo,
         );
     }
 

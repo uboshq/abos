@@ -69,7 +69,14 @@ final class TheUserListSaysWhoEachPersonIsTest extends TestCase
         foreach ([
             __('system_admin::field.user_name'),
             __('system_admin::field.roles'),
-            __('core.profile.contact'),
+            /*
+             * ⓘ "যোগাযোগ"-এর এক ঘর নয় — মালিকের ২২ সেপ্টেম্বরের নমুনায় লগইন, মোবাইল আর ইমেইল **আলাদা কলাম**
+             * (*"ব্যবহারকারী তালিকা এইরকম ক্লিন একটা লিস্ট করো"*; এক ঘরে তিন তথ্য খোঁজা-সাজানো যায় না)। পর্দা ঐ নির্দেশই মানে;
+             * এই দাবি তার আগের (২১ সেপ্টেম্বর) নমুনায় দাঁড়িয়ে ছিল (১০ অক্টোবর ২০২৬)।
+             */
+            __('system_admin::field.login_id'),
+            __('core.profile.mobile'),
+            __('core.profile.email'),
             __('core.company.branch'),
             __('system_admin::field.two_step'),
             __('core.table.status'),
