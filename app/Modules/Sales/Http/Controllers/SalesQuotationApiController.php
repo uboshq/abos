@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ⭐ ফোনে উদ্ধৃতি (কোটেশন) — মাঠ থেকেই দাম দেওয়া, জমা, পাঠানো, দোকানির উত্তর আর আদেশে রূপান্তর
@@ -90,12 +91,21 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
             'lines' => array_map(function (array $l) use ($customer): array {
                 $product = $this->product($l['product']);
 
+                /*
+                 * ⛔ দর সার্ভারের — ফোনের পাঠানো দর নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬; অফলাইন আদেশের একই নিয়ম,
+                 * [[SalesOrderSync]]): এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]])। আগে ফোনের দর দামের সহনসীমার
+                 * ভেতরে থাকলেই বসত, আর রূপান্তরে আদেশে যেত। ছাড় ফোন থেকে আসেই না; দেন মালিক, ওয়েবে। ⓘ শূন্য দাম — ফেরত
+                 * (মালিকের "sales price chara entry nibe na")।
+                 */
+                $rate = $product === null ? '0' : (string) app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price;
+                if ($product !== null && bccomp($rate, '0', 4) <= 0) {
+                    throw ValidationException::withMessages(['lines' => __('sales::sync.order_line_has_no_price', ['product' => (string) ($product->name_bn ?: $product->name_en)])]);
+                }
+
                 return [
                     'product_id' => $product?->id,
                     'qty' => (string) $l['qty'],
-                    // ⭐ দর না পাঠালে এই ডিলারের দর তালিকার দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
-                    'rate' => isset($l['rate']) ? (string) $l['rate']
-                        : ($product !== null ? app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price : '0'),
+                    'rate' => $rate,
                 ];
             }, array_values($data['lines'])),
         ]);

@@ -29,7 +29,9 @@
     {{-- সূচিগুলো --}}
     <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         @if ($schedules->isEmpty())
-            <p class="p-8 text-center text-(--color-ink-muted)">{{ __('system_admin::schedule.none') }}</p>
+            {{-- ⭐ খালি অবস্থায় পরের কাজ — "প্রথম রিপোর্ট নির্ধারণ করুন" (সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬) --}}
+            <x-ui.empty-state :message="__('system_admin::schedule.none')"
+                              :action="['url' => route('system_admin.reports.schedule.create'), 'label' => __('system_admin::schedule.first')]" />
         @else
             <table class="ui-list w-full text-sm">
                 <thead>
@@ -52,7 +54,8 @@
                             </td>
                             <td class="text-(--color-ink-muted)">
                                 {{ __('system_admin::schedule.freq.'.$s->frequency) }} ·
-                                <span class="num">{{ $s->at_time }}</span>
+                                {{-- ⓘ কোম্পানির সময়ের ছকে (DateFormat::time()) — কাঁচা "08:00" নয়, অন্য সব পর্দার মতো --}}
+                                <span class="num">{{ $s->at_time ? \Illuminate\Support\Carbon::createFromFormat('H:i', substr((string) $s->at_time, 0, 5))->format(\App\Core\Support\DateFormat::time()) : '—' }}</span>
                             </td>
                             <td class="num text-(--color-ink-muted)">
                                 {{ $s->next_run_at ? \App\Core\Support\DateFormat::formatWithTime($s->next_run_at) : '—' }}

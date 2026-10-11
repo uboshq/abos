@@ -34,6 +34,11 @@ class SendPushToUser implements ShouldQueue
         public readonly int $userId,
         public readonly string $title,
         public readonly array $data = [],
+        /*
+         * ⭐ নিচের লাইন — দোকানের "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: লক-স্ক্রিনে "obosoi point dibe")।
+         * ⓘ আগে কেবল শিরোনাম (নম্বর আর ধাপ) যেত, দোকানের নাম নয় — মালিকের সিদ্ধান্তে বদলাল। টাকা এখনো নয়।
+         */
+        public readonly ?string $body = null,
     ) {}
 
     public function handle(FcmSender $fcm): void
@@ -46,7 +51,7 @@ class SendPushToUser implements ShouldQueue
         $retry = false;
 
         foreach ($devices as $device) {
-            $result = $fcm->send((string) $device->push_token, $this->title, null, $this->data);
+            $result = $fcm->send((string) $device->push_token, $this->title, $this->body, $this->data);
 
             if ($result === FcmSender::OFF) {
                 return;

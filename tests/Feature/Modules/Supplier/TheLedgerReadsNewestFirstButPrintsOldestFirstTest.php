@@ -71,6 +71,8 @@ final class TheLedgerReadsNewestFirstButPrintsOldestFirstTest extends TestCase
             $row = $sample->replicate(['public_id']);
 
             $row->forceFill([
+                // ⓘ দেনার খাতে — "দেনা" কেবল দেনার খাত-পরিবার গোনে (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬)
+                'account_id' => Supplier::payableAccountIds()[0],
                 'party_type' => Supplier::drillSourceType(),
                 'party_id' => $this->supplier->id,
                 'company_id' => $this->supplier->company_id,
@@ -123,7 +125,11 @@ final class TheLedgerReadsNewestFirstButPrintsOldestFirstTest extends TestCase
 
         $this->assertSame(
             0,
-            bccomp((string) $rows->last()->running_balance, (string) $this->supplier->payable(), 2),
+            bccomp((string) $rows->last()->running_balance, /*
+                 * ⓘ খাতার পাতা সরবরাহকারীর নামের সব সারি দেখায় — দেনা আর বিল-না-আসা মাল দুটোই; তাই শেষ জের দুটোর যোগফল
+                 * (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬: তালিকায় দুই ভাগে, খাতায় পুরো ছবি)
+                 */
+                bcadd($this->supplier->payable(), $this->supplier->goodsNotBilled(), 4), 2),
             implode("\n", [
                 '⛔ শেষ সারির চলমান জের মোট প্রদেয়ের সাথে মিলছে না।',
                 '',

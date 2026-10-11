@@ -123,10 +123,11 @@ final class StatusNotices
                  * আর ফেরত পাঠানো যায় না।
                  */
                 $this->expiryNotice(),
-                // প্রতিষ্ঠানের নিজের নোটিশ সবার শেষে, কিন্তু বারে সবচেয়ে
-                // বেশি জায়গা নেয় — ওটা নিয়ম, ক্ষণিকের অবস্থা নয়, তাই
-                // সিস্টেমের সতর্কতাগুলো আগে চোখে পড়া উচিত
-                $this->companyNotice(),
+                /*
+                 * ⓘ প্রতিষ্ঠানের নিজের নোটিশ এখন যোগাযোগ কেন্দ্রের প্রকাশিত নোটিশ ([[ownNotices()]], a6072a34)।
+                 * ⛔ পুরনো `system.notice` পথটা ১০ অক্টোবর ২০২৬-এ সরানো — সেটিংটা ২৪ সেপ্টেম্বর থেকে ঘোষিত নয়, কেউ লিখতে
+                 * পারত না, আর লাইভের লেখাটা তখনই আসল নোটিশে সরানো হয়েছিল; পথটা কেবল একটা মৃত পড়া ছিল।
+                 */
             ])),
         );
     }
@@ -142,27 +143,28 @@ final class StatusNotices
     }
 
     /**
-     * প্রতিষ্ঠানের নিজের লেখা নোটিশ।
+     * ⭐ নিচের চলন্ত বারে কেবল মানুষের লেখা — যোগাযোগ কেন্দ্রের প্রকাশিত নোটিশ, বারে টিক দেওয়া (পাতা সাজানোর পরিকল্পনা ধাপ ১,
+     * ১০ অক্টোবর ২০২৬: *"প্রতিটা পাতায় সবসময় দুটো লাল বার্তা — মানুষ লাল দেখাই বন্ধ করে দেয়"*)।
      *
-     * সিস্টেমের কোনো অবস্থা নয় — ব্যবসার সিদ্ধান্ত ("বাকি দেওয়া নিষেধ")।
-     * লেখার জায়গা System Management → Control Panel, দেখার জায়গা প্রতিটা
-     * পাতা।
+     * ⓘ যন্ত্রের সতর্কতা (ব্যাকআপ, খসড়া, অনুমোদন, বদলি, মেয়াদ) হারায় না — ঘণ্টায় সব থাকে ([[all()]]), আর ব্যাকআপের
+     * লালগুলো উপরের হলুদ ব্যানারেও ([[forBanner()]])।
      *
-     * @return array{text: string, url: ?string, tone: string}|null
+     * @return list<array{text: string, url: ?string, tone: string}>
      */
-    private function companyNotice(): ?array
+    public function forTicker(): array
     {
-        $text = trim((string) app(SettingsService::class)->get('system.notice', ''));
+        return array_values(array_filter($this->all(), fn (array $n): bool => ($n['kind'] ?? null) === 'own'));
+    }
 
-        if ($text === '') {
-            return null;
-        }
-
-        return [
-            'text' => $text,
-            'url' => null,
-            'tone' => 'danger',
-        ];
+    /**
+     * ⭐ উপরের হলুদ ব্যানার — যন্ত্রের লাল সতর্কতা (ব্যাকআপ নেই, দ্বিতীয় কপি নেই বা থেমে গেছে)। ⓘ এগুলো কেবল ব্যাকআপ
+     * দেখার অধিকার যাঁর তাঁর জন্যই তৈরি হয় ([[backupNotice()]]) — তাই ব্যানারও কেবল সিস্টেম প্রশাসকের পাতায়।
+     *
+     * @return list<array{text: string, url: ?string, tone: string}>
+     */
+    public function forBanner(): array
+    {
+        return array_values(array_filter($this->all(), fn (array $n): bool => ($n['kind'] ?? null) === null && $n['tone'] === 'danger'));
     }
 
     /**
@@ -274,6 +276,9 @@ final class StatusNotices
 
                 // ⓘ নীল — এটা সতর্কতা নয়, খবর।
                 'tone' => 'info',
+
+                // ⭐ মানুষের লেখা — নিচের চলন্ত বারে থাকে; যন্ত্রের সতর্কতা কেবল ঘণ্টায় (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬)
+                'kind' => 'own',
             ])
             ->all();
     }

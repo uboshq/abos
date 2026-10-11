@@ -59,7 +59,17 @@ final class TheFieldQuotesAPriceOnThePhoneTest extends TestCase
         $sr = $this->staff(['sales.quotation.view', 'sales.quotation.create', 'sales.quotation.update', 'sales.quotation.convert'], $sr);
         Sanctum::actingAs($sr, [AuthController::APP]);
 
-        $this->postJson('/api/v1/sales/quotations', $this->body(rate: '0'))->assertStatus(422);
+        // ⛔ ফোনের দর গোনা হয় না — সার্ভারের দাম বসে, ফোন ১ টাকা বা ০ পাঠালেও (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬)
+        foreach (['1', '0'] as $phoneRate) {
+            $this->assertSame('40.00', $this->postJson('/api/v1/sales/quotations', $this->body(rate: $phoneRate))->assertCreated()->json('lines.0.rate'),
+                "⛔ ফোনের দর {$phoneRate} দরপত্রে বসল।");
+        }
+        // ⓘ পণ্যের নিজের দাম শূন্য হলে দরপত্রই নয়
+        \Illuminate\Support\Facades\DB::table('sal_price_list_items')->where('product_id', $this->product->id)->delete();
+        $this->product->forceFill(['sale_price' => '0'])->save();
+        $this->postJson('/api/v1/sales/quotations', $this->body())->assertStatus(422)->assertJsonValidationErrors('lines');
+        $this->product->forceFill(['sale_price' => '40'])->save();
+
         $made = $this->postJson('/api/v1/sales/quotations', $this->body(submit: true))->assertCreated()->json();
         $this->assertSame(SalesQuotation::APPROVED, $made['status'], 'ছক নেই — জমাতেই অনুমোদিত');
         $this->assertSame('40.00', $made['lines'][0]['rate'], 'দর না দিলে পণ্যের দাম');

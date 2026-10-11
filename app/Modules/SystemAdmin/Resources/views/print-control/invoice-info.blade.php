@@ -25,7 +25,8 @@
         </div>
     @endif
 
-    @include('system_admin::control-panel.partials.tabs')
+    {{-- ⭐ বাঁয়ে দলবদ্ধ তালিকা আর খোঁজা, ডানে পর্দা — ট্যাবের সারির বদলে (সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬) --}}
+    @component('system_admin::control-panel.partials.side', ['tab' => $tab])
     @include('system_admin::print-control.partials.papers', ['current' => 'invoice_info'])
 
     {{-- ── কোন শাখার — প্রতিটার নিজের ঠিকানা ────────────────────────────── --}}
@@ -211,4 +212,5 @@
             @endif
         </div>
     </form>
+    @endcomponent
 </x-layouts.app>

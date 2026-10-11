@@ -67,14 +67,17 @@ class StockOverviewController extends Controller implements HasMiddleware
     {
         $warehouse = $this->warehouseAsked($request);
 
+        // ⭐ প্রতিটা টালি বাছা গুদামের — আগে কেবল চারটা অবস্থা (মজুদ M28c, ১০ অক্টোবর ২০২৬); মূল্য গুদাম জানে না, আগের মতো
+        $facts = $this->facts->forWarehouse($warehouse?->id);
+
         return view('inventory::stock.overview', [
             'menu' => $this->menu->forUser($request->user()),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
 
             'states' => $this->facts->states($warehouse?->id),
-            'belowReorder' => $this->facts->belowReorder(),
-            'outOfStock' => $this->facts->outOfStock(),
+            'belowReorder' => $facts->belowReorder(),
+            'outOfStock' => $facts->outOfStock(),
 
             /*
              * ⚠️ `null` হতে পারে, আর পর্দাটা সেটা সামলায়।
@@ -86,10 +89,10 @@ class StockOverviewController extends Controller implements HasMiddleware
              */
             'value' => $this->facts->value(),
 
-            'movementsToday' => $this->facts->movementsToday(),
-            'flow' => $this->facts->monthlyFlow(),
-            'lowStock' => $this->facts->lowStock(),
-            'recent' => $this->facts->recentMovements(),
+            'movementsToday' => $facts->movementsToday(),
+            'flow' => $facts->monthlyFlow(),
+            'lowStock' => $facts->lowStock(),
+            'recent' => $facts->recentMovements(),
         ]);
     }
 

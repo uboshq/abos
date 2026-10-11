@@ -120,6 +120,35 @@
                             :label="__('sales::field.transport_cost')"
                             :value="old('transport_cost', $challan->transport_cost)" />
 
+                {{-- ⭐ ভাড়া কে দেবে, কোন খাত থেকে, কে দিলেন — কাউন্টারের একই ঘর আর একই নিয়ম (মালিক, ৭ অক্টোবর ২০২৬:
+                     *"যা-ই করো, সব জায়গায় একই রকম"*; [[FarePayment::stamp()]])। ⓘ Main Counter আর নিজে থেকে নয়।
+                     "বিলে যোগ" এখানে নয় — অফিসের চালানের বিল আলাদা কাগজ। --}}
+                @php($fareOptions = app(\App\Modules\Sales\Services\DirectSaleOptions::class))
+                <div class="sm:col-span-2 xl:col-span-4 grid gap-2" data-challan-fare-form
+                     x-data="{ who: @js((string) old('fare_paid_by', $challan->fare_paid_by ?: 'us')), fareWhen: @js((string) old('fare_when', $challan->fare_status === 'due' ? 'later' : 'now')) }">
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('sales::field.fare_paid_by') }}</span>
+                    <div class="ds-seg" role="radiogroup">
+                        @foreach (['us', 'customer', 'none'] as $choice)
+                            <button type="button" @click="who = '{{ $choice }}'" :class="who === '{{ $choice }}' ? 'is-on' : ''">{{ __('sales::field.fare_'.$choice) }}</button>
+                        @endforeach
+                    </div>
+                    <input type="hidden" name="fare_paid_by" :value="who">
+
+                    <div class="grid gap-2" x-show="who === 'us'">
+                        <x-ui.select name="carrier_id" :label="__('sales::fare.carrier')" :options="$fareOptions->carriers()->pluck('label', 'id')"
+                                     :selected="old('carrier_id', $challan->carrier_id)" placeholder="-" />
+                        <div class="ds-seg" role="radiogroup">
+                            <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
+                            <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
+                        </div>
+                        <input type="hidden" name="fare_when" :value="fareWhen">
+                        <div x-show="fareWhen === 'now'">
+                            @include('sales::challan.partials.fare-money', ['options' => $fareOptions])
+                        </div>
+                        <p class="text-2xs text-(--color-ink-muted)" x-show="fareWhen === 'later'">{{ __('sales::fare.later_hint') }}</p>
+                    </div>
+                </div>
+
                 {{-- ⭐ ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬: গাড়ি না লাগলে বলার জায়গা — নিশ্চিত করতে তিনটার একটা লাগে ([[TransportRule]]) --}}
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="hidden" name="own_transport" value="0">

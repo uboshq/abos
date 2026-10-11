@@ -42,8 +42,12 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
     /** `GET /returns/setup?customer=` — ফেরতের কারণ, আর ক্রেতার নিশ্চিত বিল (নতুন থেকে ৫০টা) */
     public function setup(Request $request): JsonResponse
     {
+        /*
+         * ⛔ দেখা শাখার গ্রাহকই — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬। আগে শাখা ছাড়া খোঁজা হত, আর না মিললে ছাঁকনিই বসত না —
+         * দোকান চেয়ে সব দোকানের বিল আসত। এখন অন্য শাখার বা অচেনা দোকান ৪০৪ ([[DirectSaleApiController]]-এর দামের দরজার একই দেয়াল)।
+         */
         $customer = filled($request->query('customer'))
-            ? Customer::query()->where('public_id', PhoneInput::text($request, 'customer'))->first()
+            ? Customer::query()->inViewedBranch()->where('public_id', PhoneInput::text($request, 'customer'))->firstOrFail()
             : null;
 
         $invoices = SalesInvoice::query()

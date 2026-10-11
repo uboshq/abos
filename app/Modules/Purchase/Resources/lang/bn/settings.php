@@ -9,6 +9,7 @@ return [
     'block_price_mismatch' => 'বিলের দাম চালানের সাথে না মিললে আটকাও',
     'block_order_price_mismatch' => 'বিলের দর আদেশের দরের সাথে না মিললে আটকাও',
     'payment_three_hands' => 'প্রস্তাবক, সইদাতা আর টাকাদাতা তিনজন আলাদা মানুষ',
+    'requisition_maker_checker' => 'যিনি চাহিদা করেন তিনি নিজে মঞ্জুর করেন না',
 
     'screen_direct' => 'সরাসরি ক্রয়ের পর্দা দেখাও',
     'screen_orders' => 'ক্রয় আদেশের পর্দা দেখাও',

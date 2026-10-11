@@ -148,6 +148,17 @@ final class ImportRunner
 
         $parsed = $this->read($file, $class::columns());
 
+        /*
+         * ⛔ সীমার বেশি সারি — কিছুই বসে না, আর স্পষ্ট বলা হয় (পুরো-ERP অডিট, নিরাপত্তা ও সিস্টেম; fe, ১০ অক্টোবর ২০২৬;
+         * [[AnImportOverTheLimitSaysSoTest]])। ⚠️ আগে প্রথম [[MAX_ROWS]] সারি বসত আর বাকিটা নীরবে বাদ — "২,০০০ বসেছে" দেখে
+         * কেউ বুঝতেন না যে ২,৫০০-র শেষ ৫০০ পড়েই নেই, আর অর্ধেক পণ্য-তালিকা বা অর্ধেক ব্যাংক বিবরণী সত্যি বলে ধরা হত।
+         */
+        if ($parsed['truncated']) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => __('core.import.too_many_rows', ['max' => number_format(self::MAX_ROWS)]),
+            ]);
+        }
+
         if ($importer instanceof RefusesAPartialImport) {
             return $this->runAllOrNothing($importer, $class, $parsed['rows']);
         }

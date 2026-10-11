@@ -298,8 +298,13 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
          */
         $preloaded = $this->getAttribute('paid_total');
 
+        /*
+         * ⛔ শাখার দেয়াল ছাড়া — পুরো ERP অডিট, ক্রয় ⚠️৯ (৬ অক্টোবর ২০২৬)। ⓘ পরিশোধ বসে লেখকের শাখায়, বিল গুদামের শাখায়;
+         * দেয়াল থাকলে অন্য শাখার পরিশোধ যিনি দেখেন না তাঁর কাছে বিলটা পুরো বাকি দেখাত — আর আবার দেওয়া যেত। টাকার যাচাই
+         * গোটা কোম্পানিতে (কোম্পানির দেয়াল থাকে)।
+         */
         $paid = $preloaded ?? $this->paymentLines()
-            ->whereHas('payment', fn ($q) => $q->posted())
+            ->whereHas('payment', fn ($q) => $q->withoutGlobalScope('user-branch')->posted())
             ->sum('amount');
 
         /*
@@ -330,7 +335,8 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
      */
     public function paidByPaymentVouchers(): string
     {
-        return (string) (Voucher::query()
+        // ⛔ শাখার দেয়াল ছাড়া — ক্রয় ⚠️৯ ([[paidAmount()]])
+        return (string) (Voucher::acrossBranches()
             ->where('type', Voucher::PAYMENT)
             ->where('against_type', static::drillSourceType())
             ->where('against_id', $this->getKey())
@@ -346,19 +352,30 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
      * দেখা যেত। একটা বদলালে অন্যটাও বদলাতে হবে — PaymentServiceTest
      * দুই পথেই একই ফল আসছে কি না দেখে।
      */
-    public function scopeWithPaid(Builder $query): Builder
+    /**
+     * বিলের তিন কাটার উপ-কোয়েরি — পরিশোধ, পরিশোধ-ভাউচার আর পাকা ফেরত ([[scopeWithPaid()]], [[scopeStillOwed()]] দুজনেই নেয়, যাতে
+     * তালিকার অঙ্ক আর ছাঁকনির অঙ্ক কখনো আলাদা না হয়)।
+     *
+     * @return array{0: Builder, 1: Builder, 2: Builder}
+     */
+    private static function owedParts(): array
     {
+        /*
+         * ⛔ শাখার দেয়াল ছাড়া — পুরো ERP অডিট, ক্রয় ⚠️৯ (৬ অক্টোবর ২০২৬)। ⓘ পরিশোধ বসে লেখকের শাখায়, বিল গুদামের শাখায়;
+         * দেয়াল থাকলে অন্য শাখার পরিশোধ যিনি দেখেন না তাঁর কাছে বিলটা পুরো বাকি দেখাত — আর আবার দেওয়া যেত। টাকার যাচাই
+         * গোটা কোম্পানিতে (কোম্পানির দেয়াল থাকে)।
+         */
         $paid = PaymentLine::query()
             ->selectRaw('COALESCE(SUM(amount), 0)')
             ->whereColumn('pur_payment_lines.purchase_bill_id', 'pur_bills.id')
-            ->whereHas('payment', fn ($q) => $q->posted());
+            ->whereHas('payment', fn ($q) => $q->withoutGlobalScope('user-branch')->posted());
 
         /*
          * ⭐ পরিশোধ ভাউচারও — [[paidByPaymentVouchers()]]-এর হুবহু শর্ত।
          * ⚠️ এখানে বাদ পড়লে তালিকায় বিলটা পুরো বাকি দেখাত আর একক পাতায়
          * শোধ — ঠিক ঐ দুই-অঙ্কের ভুল, যার কথা উপরের মন্তব্যে লেখা।
          */
-        $byVoucher = Voucher::query()
+        $byVoucher = Voucher::acrossBranches()
             ->selectRaw('COALESCE(SUM(amount), 0)')
             ->where('type', Voucher::PAYMENT)
             ->where('against_type', static::drillSourceType())
@@ -366,10 +383,34 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
             ->posted();
 
         // ⭐ পাকা ফেরতও — [[returnedAmount()]]-এর হুবহু শর্ত (পুরো ERP অডিট, ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬)
-        $returned = PurchaseReturn::query()
+        $returned = PurchaseReturn::acrossBranches()
             ->selectRaw('COALESCE(SUM(total), 0)')
             ->whereColumn('pur_returns.purchase_bill_id', 'pur_bills.id')
             ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED);
+
+        return [$paid, $byVoucher, $returned];
+    }
+
+    /**
+     * ⭐ যে বিলে এখনো টাকা বাকি — ছাঁকনিটা ডাটাবেজে (পুরো ERP অডিট, ক্রয় ⚠️১৩, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে পরিশোধের পর্দা সাম্প্রতিক ২০০টা নিশ্চিত বিল এনে তারপর PHP-তে বাকিগুলো রাখত — তাই পুরনো বাকি বিল কখনো তালিকায়
+     * আসত না, অথচ পুরনো বাকি শোধই সবচেয়ে দরকারি। ⓘ বাকি = মোট − পরিশোধ − ভাউচারে দেওয়া − পাকা ফেরত, [[dueAmount()]]-এর
+     * হুবহু, [[owedParts()]] থেকে।
+     */
+    public function scopeStillOwed(Builder $query): Builder
+    {
+        [$paid, $byVoucher, $returned] = self::owedParts();
+
+        return $query->whereRaw(
+            'pur_bills.total - ('.$paid->toSql().') - ('.$byVoucher->toSql().') - ('.$returned->toSql().') > 0',
+            [...$paid->getBindings(), ...$byVoucher->getBindings(), ...$returned->getBindings()],
+        );
+    }
+
+    public function scopeWithPaid(Builder $query): Builder
+    {
+        [$paid, $byVoucher, $returned] = self::owedParts();
 
         // pur_bills.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect([
@@ -395,7 +436,8 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
     {
         $preloaded = $this->getAttribute('returned_total');
 
-        return bcadd((string) ($preloaded ?? PurchaseReturn::query()->where('purchase_bill_id', $this->id)
+        // ⛔ শাখার দেয়াল ছাড়া — ক্রয় ⚠️৯ ([[paidAmount()]])
+        return bcadd((string) ($preloaded ?? PurchaseReturn::acrossBranches()->where('purchase_bill_id', $this->id)
             ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)->sum('total')), '0', 4);
     }
 

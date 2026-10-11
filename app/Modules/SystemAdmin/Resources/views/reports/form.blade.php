@@ -93,8 +93,13 @@
                     </label>
                 </div>
 
-                <x-ui.field name="timezone" :label="__('system_admin::schedule.timezone')"
-                            :value="$sel('timezone', config('app.timezone'))" />
+                {{-- ⭐ সময় অঞ্চল বাছাই, লেখা নয় — "Asia/Dhaka" নয়, "ঢাকা" (সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬)। ⓘ মানটা আগের মতোই
+                     IANA নাম (সার্ভারের `timezone` নিয়ম)। আগে অন্য অঞ্চল বসানো থাকলে সেটাও তালিকায় থাকে, যাতে সম্পাদনায় হারায় না। --}}
+                @php
+                    $zone = (string) $sel('timezone', config('app.timezone'));
+                    $zones = ['Asia/Dhaka' => __('system_admin::schedule.zone_dhaka')] + ($zone !== 'Asia/Dhaka' && $zone !== '' ? [$zone => $zone] : []);
+                @endphp
+                <x-ui.select name="timezone" :label="__('system_admin::schedule.timezone')" :options="$zones" :selected="$zone" />
             </div>
         </section>
 
@@ -114,11 +119,7 @@
             </div>
         </section>
 
-        <div class="flex flex-wrap gap-2">
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            <x-ui.button tone="secondary" :href="route('system_admin.reports.schedule.index')">
-                {{ __('core.action.cancel') }}
-            </x-ui.button>
-        </div>
+        {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে, ডানে (সিস্টেম পর্দার নকশা) --}}
+        <x-ui.form-actions :cancel="route('system_admin.reports.schedule.index')" />
     </form>
 </x-layouts.app>

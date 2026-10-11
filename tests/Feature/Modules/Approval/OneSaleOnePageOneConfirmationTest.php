@@ -368,6 +368,8 @@ final class OneSaleOnePageOneConfirmationTest extends TestCase
             'driver_name' => 'Rafiq Driver',
             'driver_phone' => self::DRIVER_PHONE,
             'transport_cost' => self::FREIGHT,
+            // ⓘ ভাড়া কে দেবে — খাত ছাড়া "আমরা" এখন থামে (পুরনো Main Counter পথ বন্ধ, ৭ অক্টোবর ২০২৬; [[FarePayment]]); এই দাবি সই নিয়ে, খাতা নয়
+            'fare_paid_by' => 'customer',
             'lines' => array_map(
                 fn (Product $p) => ['product_id' => $p->id, 'qty' => '5', 'rate' => '100'],
                 $this->products,

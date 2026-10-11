@@ -192,7 +192,12 @@ class PurchaseReturnController extends Controller implements HasMiddleware
                 ->with('supplier')
                 ->orderByDesc('trx_date')
                 ->limit(200)
-                ->get(),
+                ->get()
+                /*
+                 * ⭐ বিলের পাতা থেকে পুরনো বিলের ফেরত — বিলটা সাম্প্রতিক ২০০-র বাইরে হলেও তালিকায় (ক্রয় ⚠️১৩, ৬ অক্টোবর ২০২৬)।
+                 * ⛔ আগে ঘরটা খালি দেখাত, অথচ নিচের সারিগুলো ঐ বিলেরই ([[chosenBill()]])।
+                 */
+                ->when($chosen = $this->chosenBill(request()), fn ($bills) => $bills->contains('id', $chosen->id) ? $bills : $bills->prepend($chosen)),
         ];
     }
 

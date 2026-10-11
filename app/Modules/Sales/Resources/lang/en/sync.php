@@ -20,4 +20,6 @@ return [
     // Phone collections (7 Oct 2026)
     'unknown_money_account' => 'The chosen money account was not found on the server. Refresh the account list and pick again.',
     'unknown_invoice' => 'One of the bills on this collection was not found on the server. Sync the list and try again.',
+    // ⛔ অফলাইন আদেশের তারিখের নিচের সীমা (অডিট, ৯ অক্টোবর ২০২৬)
+    'order_too_old' => 'The order is dated more than :days days back and cannot take an old price. Write it again with today\'s date.',
 ];

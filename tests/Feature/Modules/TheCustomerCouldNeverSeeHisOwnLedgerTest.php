@@ -19,7 +19,6 @@ use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Services\DepositClaimService;
 use Database\Seeders\DemoSeeder;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -246,8 +245,16 @@ class TheCustomerCouldNeverSeeHisOwnLedgerTest extends TestCase
     {
         $this->claimFor($this->karim, '50000', 'TRX-SAME');
 
-        $this->expectException(QueryException::class);
-        $this->claimFor($this->karim, '50000', 'TRX-SAME');
+        /*
+         * ⓘ ১০ অক্টোবর ২০২৬ থেকে থামে সেবার পাহারায়, বাংলায়, রেফারেন্সের ঘরে — ডাটাবেজের ভাঙা বার্তায় নয় (টাকার পরিকল্পনা ৪,
+         * 6b1dcc50; পুরনো unique `sal_claim_reference_once` উঠে গেছে, [[OnePaymentAdviceForOneBankReferenceTest]])।
+         */
+        try {
+            $this->claimFor($this->karim, '50000', 'TRX-SAME');
+            $this->fail('⛔ একই রেফারেন্স দুইবার দাবি করা গেল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('reference', $e->errors());
+        }
     }
 
     /** রেফারেন্সবিহীন নগদ জমা একাধিকবার হতেই পারে। */

@@ -186,10 +186,15 @@ class TheWholeCatalogueAsOneSheetTest extends TestCase
          * উদ্ধৃতিগুলো `"` হয়ে যায়। কাঁচা লেখা খুঁজলে টেস্টটা
          * এসকেপের নিয়ম বদলালেই ভাঙত — তাই খোঁজা হয় ওই রূপেই।
          */
-        $this->get(route('sales.challan.create'))
-            ->assertOk()
-            ->assertSee('NEVER-MOVED', false)
-            ->assertSee('available\u0022:\u00220\u0022', false);
+        /*
+         * ⓘ ১৯ সেপ্টেম্বর ২০২৬ থেকে (d9aeeb94, unsafe-eval বাদ) শীট আসে [[AlpineLiteral]]-এ — JSON, তারপর HTML-এস্কেপ
+         * (`&quot;`), আর আগের `@js`-এর `\u0022` নয়; এই টেস্ট পুরনো রূপটা হুবহু খুঁজত, তাই তখন থেকে লাল ছিল, অথচ ঘরটা শূন্যই।
+         * এখন লেখার রূপ খুলে (দুই রূপই) ঠিক এই পণ্যের সারিতে খোঁজা — অন্য পণ্যের "0" দেখে পাশ নয়।
+         */
+        $html = (string) $this->get(route('sales.challan.create'))->assertOk()->getContent();
+        $plain = str_replace('\u0022', '"', html_entity_decode($html, ENT_QUOTES | ENT_HTML5));
+        $this->assertMatchesRegularExpression('/"code":"NEVER-MOVED"[^{}]*"available":"0"/', $plain,
+            '⛔ কখনো না-নড়া পণ্যের শীটে উপলব্ধ শূন্য নয়, বা সারিটাই নেই।');
     }
 
     /**

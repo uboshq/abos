@@ -132,6 +132,10 @@ final class StockAdjustmentService
         ?string $unitCost = null,
         ?Batch $batch = null,
     ): ?StockMovement {
+        // ⛔ পিস-বাক্সে আধা গোনা যায় না, কেজি-লিটারে যায় (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️১২;
+        // [[AHalfPieceIsNeitherCountedNorAdjustedTest]]) — [[issue()]] এখানেই আসে (তাক − দেওয়া), তাই দিয়ে-দেওয়াও থামে
+        app(PackConversion::class)->toStockQty($product, $countedQty);
+
         $current = $this->stock->floorQty($product, $warehouse);
 
         return $this->settle(
@@ -160,6 +164,8 @@ final class StockAdjustmentService
         ?string $narration = null,
         ?string $unitCost = null,
         ?Batch $batch = null,
+        // ⭐ কাগজের নম্বর — চলাচল আর খাতার সারি থেকে গণনায় ফেরা যায় (মজুদ ছ২; [[ACountsMovementsCarryItsNumberTest]])
+        ?string $documentNo = null,
     ): ?StockMovement {
         // মিলে গেলে কোনো সারি নয় — শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
         if (bccomp($difference, '0', 4) === 0) {
@@ -204,7 +210,7 @@ final class StockAdjustmentService
         }
 
         return DB::transaction(function () use (
-            $product, $warehouse, $reason, $date, $narration, $difference, $surplus, $unitCost, $batch
+            $product, $warehouse, $reason, $date, $narration, $difference, $surplus, $unitCost, $batch, $documentNo
         ) {
             /*
              * ⚠️ দুই দিকে দুই পথ, আর তফাতটা কেবল সুবিধার নয়।
@@ -237,6 +243,7 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     batch: $batch,
+                    documentNo: $documentNo,
                 )]
                 /*
                  * ⛔ গোনা লটের ঘাটতি সেই লট থেকেই — ২৯ সেপ্টেম্বর ২০২৬ (অডিটে প্রমাণিত)।
@@ -245,7 +252,7 @@ final class StockAdjustmentService
                  * থাকলে (গণনার পরে বিক্রি) থামে — লট ঋণাত্মক হয় না।
                  */
                 : ($batch !== null
-                    ? [$this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch)]
+                    ? [$this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch, $documentNo)]
                     /*
                  * ⓘ কয়টা সারি হবে তা আগে জানা যায় না — তিন লট জুড়ে
                  * ঘাটতি হলে তিনটা। ⚠️ খরচ ও খতিয়ানের নোঙর প্রথমটা,
@@ -261,6 +268,9 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     reason: $reason,
+                    documentNo: $documentNo,
+                    // ⓘ হারানো বা নষ্ট মাল মেয়াদি লটেরও হতে পারে — আগে-মেয়াদ আগে, ভালো লট শেষে (মজুদ ছ১৩)
+                    anyLot: true,
                 ));
 
             $movement = $movements[0];
@@ -318,6 +328,118 @@ final class StockAdjustmentService
     }
 
     /**
+     * ⭐ ফ্রি মালের জানা পার্থক্য বসানো — ধনাত্মক বাড়তি, ঋণাত্মক ঘাটতি (পুরো-ERP অডিট, মজুদ ⚠️৬ক; fe, ১০ অক্টোবর ২০২৬;
+     * [[TheFreeGoodsCanBeSetRightTest]])।
+     *
+     * ⛔ আগে সমন্বয় কেবল দামি মাল নাড়ত — হারানো ফ্রি কার্টন, বা গুনে পাওয়া বাড়তি ফ্রি, সারানোর কোনো পথ ছিল না; ভুল গুদামের
+     * ফ্রি মালও না (এখন দুই গুদামে দুই সমন্বয়)।
+     *
+     * ⓘ [[settle()]]-এর মতোই, তিনটা তফাত:
+     *   · ফ্রি মালের দাম নেই — খরচের স্তর নেই, খাতায় কিছু যায় না, দর চাওয়া হয় না;
+     *   · ঘাটতি অর্ডারে ধরা ফ্রি মাল খায় না — (ফ্রি − ফ্রি-ধরা)-র বেশি নয়, তালাসহ;
+     *   · লট দেওয়া থাকলে ঘাটতি সেই লট থেকেই, না থাকলে লট-ধরা পণ্যে মেয়াদের ক্রমে ([[BatchAllocator::allocateFree()]])।
+     * ⛔ বাড়তি লট-ধরা পণ্যে লট ছাড়া ওঠে না — দামি মালের সেই একই নিয়ম।
+     */
+    public function settleFree(
+        Product $product,
+        Warehouse $warehouse,
+        string $difference,
+        ReasonCode $reason,
+        Carbon|string|null $date = null,
+        ?string $narration = null,
+        ?Batch $batch = null,
+        // ⭐ কাগজের নম্বর — চলাচল আর খাতার সারি থেকে গণনায় ফেরা যায় (মজুদ ছ২; [[ACountsMovementsCarryItsNumberTest]])
+        ?string $documentNo = null,
+    ): ?StockMovement {
+        if (bccomp($difference, '0', 4) === 0) {
+            return null;
+        }
+
+        $surplus = bccomp($difference, '0', 4) > 0;
+
+        if ($surplus && $product->track_batch && $batch === null) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.batch_no_required', ['product' => $product->name()]),
+            ]);
+        }
+
+        if ($batch !== null && (int) $batch->product_id !== (int) $product->id) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.lot_of_another_product', [
+                    'lot' => $batch->batch_no,
+                    'product' => $product->name(),
+                ]),
+            ]);
+        }
+
+        return DB::transaction(function () use ($product, $warehouse, $difference, $surplus, $reason, $date, $narration, $batch, $documentNo) {
+            $write = fn (string $qty, ?Batch $lot) => $this->stock->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: StockService::ADJUSTMENT,
+                sourceId: $product->id,
+                reason: $reason,
+                date: $date,
+                narration: $narration,
+                free: $qty,
+                batch: $lot,
+                documentNo: $documentNo,
+            );
+
+            if ($surplus) {
+                return $write($difference, $batch);
+            }
+
+            $short = bcmul($difference, '-1', 4);
+
+            // ⛔ অর্ডারে ধরা ফ্রি মাল ঘাটতিতে যায় না — আগে অর্ডার ছাড়ুন; তালাসহ, দুই সমন্বয় একসাথে শেষ কার্টন দুবার নেয় না
+            $spare = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
+                ->where('product_id', $product->id)
+                ->where('warehouse_id', $warehouse->id)
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(free_change - free_reserved_change), 0) as spare')
+                ->value('spare');
+
+            if (bccomp($short, $spare, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'counted' => __('inventory::validation.free_short_beyond_spare', [
+                        'product' => $product->name(),
+                        'spare' => rtrim(rtrim($spare, '0'), '.') ?: '0',
+                    ]),
+                ]);
+            }
+
+            $allocator = app(BatchAllocator::class);
+
+            if ($batch !== null) {
+                if (bccomp($short, $allocator->lockedFreeBalance($batch, $warehouse), 4) > 0) {
+                    throw ValidationException::withMessages([
+                        'counted' => __('inventory::validation.free_batch_short', [
+                            'product' => $product->name(),
+                            'short' => rtrim(rtrim($short, '0'), '.'),
+                        ]),
+                    ]);
+                }
+
+                return $write(bcmul($short, '-1', 4), $batch);
+            }
+
+            if (! $product->track_batch) {
+                return $write(bcmul($short, '-1', 4), null);
+            }
+
+            $first = null;
+
+            foreach ($allocator->allocateFree($product, $warehouse, $short, anyLot: true) as $take) {
+                $out = $write(bcmul($take['qty'], '-1', 4), $take['batch']);
+                $first ??= $out;
+            }
+
+            return $first;
+        });
+    }
+
+    /**
      * গোনা লটের ঘাটতি — ঐ লট থেকেই, আর লটে যা আছে তার বেশি নয়।
      */
     private function lotShortage(
@@ -328,6 +450,7 @@ final class StockAdjustmentService
         Carbon|string|null $date,
         ?string $narration,
         Batch $batch,
+        ?string $documentNo = null,
     ): StockMovement {
         $inLot = $this->lotFloor($batch, $warehouse);
 
@@ -351,6 +474,7 @@ final class StockAdjustmentService
             date: $date,
             narration: $narration,
             batch: $batch,
+            documentNo: $documentNo,
         );
     }
 

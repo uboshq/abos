@@ -55,4 +55,6 @@ return [
     'accrual_booked' => 'In the books',
     'accrual_waiting' => 'Awaiting signature',
     'accrual_reversed' => 'Reversed',
+    // Re-audit, 9 Oct 2026
+    'accrual_month_closed' => ':month is closed — interest is not accrued in a closed month. Nothing was posted.',
 ];

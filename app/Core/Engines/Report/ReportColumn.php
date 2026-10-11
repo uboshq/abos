@@ -96,13 +96,31 @@ final class ReportColumn
             type: $type,
             // টাকা ও পরিমাণ ডিফল্টে যোগ হয়; তারিখ বা লেখা নয়। একটা রিপোর্টে
             // "মোট" সারিতে তারিখের যোগফল দেখানোর কোনো মানে হয় না।
-            total: $definition['total'] ?? in_array($type, [self::MONEY, self::QUANTITY], true),
+            // ⛔ হার, দাম, দিন আর স্তরও নয় — [[self::isNotASum()]]
+            total: $definition['total'] ?? (in_array($type, [self::MONEY, self::QUANTITY], true) && ! self::isNotASum((string) $definition['key'])),
             width: $definition['width'] ?? null,
             sourceTypeKey: $definition['source_type'] ?? null,
             sourceIdKey: $definition['source_id'] ?? null,
             permission: $definition['permission'] ?? null,
             words: isset($definition['words']) ? [(string) $definition['words'][0], (string) $definition['words'][1]] : null,
         );
+    }
+
+    /**
+     * ⛔ টাকা বা পরিমাণের ঘর, অথচ যোগ করলে অর্থহীন — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ "মোট" সারি এতদিন প্রতিটা টাকা/পরিমাণের ঘর যোগ করত: দশটা পণ্যের **একক দাম**
+     * (`rate`, `mrp`, `sale_price`), দশটা অনুমোদনের **গড় দিন** (`avg_days`), পুনঃঅর্ডারের
+     * **স্তর** (`reorder_level`) — সবই যোগ হয়ে একটা বিশ্বাসযোগ্য দেখতে, কিন্তু মিথ্যা সংখ্যা।
+     * ⭐ এখন ঘোষণায় `total` না থাকলে এই নামগুলো খালি থাকে; গড় দরকার হলে রিপোর্টের
+     * নিজের সারাংশ (`summary`) মোট থেকে সেটা আবার গোনে, যেমন মূলধনের আয়ের হার।
+     *
+     * ⓘ নাম ধরে, কারণ এগুলো ১৫টা মডিউলের ঘোষণায় ছড়ানো; ঘোষণায় `'total' => true`
+     * লিখলে নিয়মটা ভাঙা যায় — জেনেবুঝে।
+     */
+    public static function isNotASum(string $key): bool
+    {
+        return preg_match('/(^|_)(rate|price|mrp|avg|days|level)(_|$)/', $key) === 1;
     }
 
     /**

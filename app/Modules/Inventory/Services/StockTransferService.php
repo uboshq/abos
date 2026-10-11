@@ -12,6 +12,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\StockTransferLine;
 use App\Modules\Inventory\Models\Warehouse;
@@ -506,8 +507,13 @@ final class StockTransferService
      *
      * ⛔ আগে গুদাম বদলে খাতায় কিছুই নড়ত না: নেত্রকোনায় কেনা মাল ময়মনসিংহে গিয়ে বিক্রি হলে ময়মনসিংহের স্থিতিপত্রে মজুদ ঋণাত্মক,
      * নেত্রকোনায় বাড়তি — শাখার খাতা মিথ্যা, কোম্পানির মোট ঠিক।
-     * ⓘ গ্রহণে মজুদ খাতের একটা দাখিলা: পাঠানো শাখায় ক্রেডিট, পাওয়া শাখায় ডেবিট; দাম গড় খরচে (স্তর কোম্পানির, শাখার নয় —
-     * [[CostLayerService]])। একই শাখার গুদাম বা শাখাহীন গুদামে কিছু নয়। ⓘ গ্রহণের পরে স্থানান্তর বাতিল হয় না, তাই উল্টানোর পথ লাগে না।
+     * ⓘ গ্রহণে মজুদ খাতের একটা দাখিলা: পাঠানো শাখায় ক্রেডিট, পাওয়া শাখায় ডেবিট। একই শাখার গুদাম বা শাখাহীন গুদামে কিছু নয়।
+     * ⓘ গ্রহণের পরে স্থানান্তর বাতিল হয় না, তাই উল্টানোর পথ লাগে না।
+     *
+     * ⛔ দাম আর কোম্পানির গড়ে নয় — চলে যাওয়া মালের আসল খরচে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️৮;
+     * [[ABranchTransferCarriesWhatTheGoodsCostTest]])। ⓘ গড়ে সরালে পরের বিক্রি টানত লটের বা FIFO-র আসল খরচ: দামি লট
+     * পাঠালে গন্তব্যের মজুদ খাত বিক্রির পরে ঋণাত্মক, উৎসে বাড়তি — কোম্পানির মোট ঠিক, শাখার স্থিতিপত্র ভুল। এখন গন্তব্যে যে লট
+     * যতটা নামল ([[receive()]]-এর সারি), তার খরচ [[CostLayerService::costOf()]] থেকে — বিক্রি ঠিক যে ক্রমে টানবে।
      */
     private function moveTheValueBetweenBranches(StockTransfer $transfer): void
     {
@@ -521,15 +527,17 @@ final class StockTransferService
         $layers = app(\App\Modules\Inventory\Services\CostLayerService::class);
         $amount = '0';
 
-        foreach ($transfer->lines as $line) {
-            $qtyOnHand = $layers->qtyOnHand($line->product);
+        $arrived = StockMovement::query()
+            ->withoutGlobalScopes(StockService::VIEW_WALLS)
+            ->where('source_type', StockTransfer::STOCK_SOURCE)
+            ->where('source_id', $transfer->id)
+            ->where('warehouse_id', $transfer->to_warehouse_id)
+            ->where('floor_change', '>', 0)
+            ->with(['product', 'batch' => fn ($q) => $q->withoutGlobalScopes(StockService::VIEW_WALLS)])
+            ->get();
 
-            if (bccomp($qtyOnHand, '0', 4) <= 0) {
-                continue;
-            }
-
-            $average = bcdiv($layers->valueOnHand($line->product), $qtyOnHand, 6);
-            $amount = bcadd($amount, bcmul((string) $line->qty, $average, 6), 6);
+        foreach ($arrived as $row) {
+            $amount = bcadd($amount, $layers->costOf($row->product, (string) $row->floor_change, $row->batch), 6);
         }
 
         $amount = bcadd($amount, '0', 2);

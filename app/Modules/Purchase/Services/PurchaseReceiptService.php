@@ -502,7 +502,8 @@ final class PurchaseReceiptService
                  * হওয়া অবস্থায় লেনদেনটা ফেরত যেত — ফল একই, কিন্তু
                  * ব্যবহারকারী ততক্ষণে "স্টক কমে গেছে" দেখে ফেলতেন।
                  */
-                $this->costs->withdraw(PurchaseReceipt::STOCK_SOURCE, $receipt->id);
+                // ⓘ বাতিলের দিনে স্তর খালি, মুছে নয় (⚠️৫, [[CostLayerService::cancelLayers()]])
+                $this->costs->cancelLayers(PurchaseReceipt::STOCK_SOURCE, $receipt->id, $date);
 
                 /*
                  * ⭐ মাল ফেরে যেখানে আছে সেখান থেকেই, নিজের লট সহ — ২৯ সেপ্টেম্বর ২০২৬।

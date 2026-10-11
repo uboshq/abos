@@ -2,9 +2,11 @@
     ৫ · পুরো বাংলা — প্রতিটা ঘরের নাম বাংলায় (`sales::print.classic.*`-এর `bn`), মেরুন ফ্রেম, মাঝখানে
     "বিক্রয় বিল"। নমুনা: Design canvas, ৫। ⓘ সুইচ আর `data-*` চিহ্ন ভাগের partial-এ ([[InvoicePaperView]])।
 
-    ⚠️ সংখ্যা ইংরেজি অঙ্কেই — বিলের নম্বর, তারিখ আর টাকা সফটওয়্যারের বাকি সব জায়গার সাথে মেলাতে হয়;
-    এক কাগজে দুই রকম অঙ্ক ([[OnePaperShouldNotCarryTwoKindsOfDigitsTest]]) নয়।
+    ⭐ অঙ্কও বাংলায় — মালিক, ১০ অক্টোবর ২০২৬: বাংলা নকশায় বাংলা সংখ্যা। ছাপা শেষে পুরো কাগজের লেখা একবারে বদলায়
+    ([[BanglaDigits::inText()]]), তাই এক কাগজে দুই রকম অঙ্ক ([[OnePaperShouldNotCarryTwoKindsOfDigitsTest]]) থাকে না।
 --}}
+{{-- ⭐ বাংলা নকশা — অঙ্কও বাংলায় (মালিক, ১০ অক্টোবর ২০২৬; [[BanglaDigits::inText()]]) --}}
+<?php ob_start(); ?>
 @php
     $v = new \App\Modules\Sales\Support\InvoicePaperView($doc, $facts, $company, $profile);
     $accent = '#7a1f2b';
@@ -100,3 +102,4 @@
     @include('sales::print.partials.invoice-signatures', ['v' => $v])
     <div class="printed">{{ $v->printedAt() }}</div>
 </div>
+{!! \App\Core\Support\BanglaDigits::inText((string) ob_get_clean()) !!}

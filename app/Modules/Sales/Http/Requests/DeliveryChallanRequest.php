@@ -83,6 +83,18 @@ class DeliveryChallanRequest extends FormRequest
             'driver_phone' => ['nullable', 'string', 'max:32'],
             'carrier_name' => ['nullable', 'string', 'max:191'],
             'transport_cost' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * ⭐ ভাড়া কে দেবে, কোন খাত থেকে, কে দিলেন — কাউন্টারের একই ঘর (মালিক, ৭ অক্টোবর ২০২৬: *"যা-ই করো, সব জায়গায়
+             * একই রকম"*; [[FarePayment::stamp()]])। ⓘ এখানে কেবল আকার; আসল নিয়ম সেবায়। "বিলে যোগ" এখানে নয় — অফিসের চালানের
+             * বিল আলাদা কাগজ, তার ভাড়ার সারি এই পর্দা বসায় না।
+             */
+            'fare_paid_by' => ['nullable', 'in:us,customer,none'],
+            'carrier_id' => ['nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
+            'fare_when' => ['nullable', 'in:now,later'],
+            'fare_account_id' => ['nullable', 'integer'],
+            'fare_reference' => ['nullable', 'string', 'max:64'],
+            'fare_payer_id' => ['nullable', 'integer'],
             // ⓘ "পরিবহন লাগবে না (ক্রেতার নিজের)" — ধাপ ৫ ([[TransportRule]])
             'own_transport' => ['nullable', 'boolean'],
             'narration' => ['nullable', 'string', 'max:500'],
@@ -126,6 +138,8 @@ class DeliveryChallanRequest extends FormRequest
             'customer_id', 'warehouse_id', 'sales_order_id',
             'trx_date', 'vehicle_id', 'vehicle_no', 'driver_name', 'narration',
             'driver_phone', 'carrier_name', 'transport_cost',
+            // ⭐ ভাড়ার ঘর — পাঠানো হলে তবেই ([[FarePayment::stamp()]])
+            'fare_paid_by', 'carrier_id', 'fare_when', 'fare_account_id', 'fare_reference', 'fare_payer_id',
         ]) + ['own_transport' => $this->boolean('own_transport')];
     }
 

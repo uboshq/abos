@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 // Deposit request with a bank slip — 1 October 2026 ([[DepositSlip]])
 return [
-    'title' => 'Deposit request — with the bank slip',
+    'title' => 'Payment advice — with the bank slip', // ⭐ টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬
     'hint' => 'When the shop pays into the bank, send a photo of the slip. The due drops only after accounts check and accept it.',
     'customer' => 'Shop / customer',
     'slip' => 'Bank slip (photo or PDF, up to 5 MB)',
-    'required' => 'A bank deposit request needs the slip photo.',
-    'sent' => 'Request sent (no. :no) — accounts will check it.',
+    'required' => 'A bank payment advice needs the slip photo.',
+    'sent' => 'Payment advice sent (no. :no) — accounts will check it.',
     'by' => '[sent by: :name]',
-    'new' => 'New request with slip',
+    'new' => 'New payment advice',
     'view' => 'View slip',
     'none' => 'No slip',
 
@@ -22,6 +22,7 @@ return [
     'bill_due' => 'Due',
     'bill_pay' => 'On this bill',
     'bill_not_theirs' => 'The bill picked is not this customer\'s.',
+    'bill_other_branch' => 'Bill :no belongs to another branch — this deposit is collected in the customer’s own branch; send a separate deposit for that branch.',
     'bill_not_open' => 'Bill :no is not confirmed; a deposit cannot be shown against it.',
     'bill_twice' => 'Bill :no is picked twice.',
     'bill_over_due' => 'Bill :no has ৳:due due; no more than that can go on it.',

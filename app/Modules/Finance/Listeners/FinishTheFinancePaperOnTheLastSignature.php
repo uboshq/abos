@@ -14,6 +14,7 @@ use App\Modules\Finance\Services\DepositAccrualService;
 use App\Modules\Finance\Services\DepositService;
 use App\Modules\Finance\Services\FinanceSignature;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\Finance\Services\InsuranceClaimService;
 use App\Modules\Finance\Services\InterestAccrualService;
 use App\Modules\Finance\Services\ProfitDistribution;
 use App\Modules\Finance\Services\RentalAccrualService;
@@ -90,6 +91,10 @@ final class FinishTheFinancePaperOnTheLastSignature
             FinanceSignature::BANK_FACILITY => ! InterestAccrualService::isAccrual($voucher) ? null : ($yes
                 ? app(InterestAccrualService::class)->finishSigned($voucher)
                 : app(InterestAccrualService::class)->dropRefused($voucher, $why)),
+            // ⭐ বীমা দাবির অনুমোদন, টাকা আসা আর বন্ধ (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+            FinanceSignature::INSURANCE_CLAIM => $yes
+                ? app(InsuranceClaimService::class)->finishSigned($voucher)
+                : app(InsuranceClaimService::class)->dropRefused($voucher, $why),
             default => null,
         };
     }

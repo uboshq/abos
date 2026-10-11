@@ -185,12 +185,11 @@
                          border border-(--color-border) bg-(--color-surface-card) p-3">
                 @csrf
 
-                <label class="text-2xs text-(--color-ink-muted)">
+                {{-- ⓘ বাংলা ফাইল-বোতাম নিজের <label> আনে — তাই বাইরেরটা span (লেবেলের ভেতরে লেবেল চলে না) --}}
+                <span class="block text-2xs text-(--color-ink-muted)">
                     {{ __('accounts::recon.statement_file') }}
-                    <input type="file" name="file" accept=".csv,text/csv,text/plain" required
-                           class="block h-(--spacing-field) rounded-(--radius-field)
-                                  border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                </label>
+                    <span class="block"><x-ui.file-input id="statement-file" name="file" accept=".csv,text/csv,text/plain" required /></span>
+                </span>
 
                 <x-ui.button type="submit" tone="secondary">
                     {{ __('accounts::recon.load_statement') }}

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Metrics;
 
 use App\Core\Contracts\ProvidesMetrics;
+use App\Core\Dashboard\HomeFilter;
 use App\Core\Metrics\Metric;
+use App\Core\Services\DealerScope;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
@@ -210,14 +212,19 @@ final class SalesMetrics implements ProvidesMetrics
         );
     }
 
-    public static function invoiceTotal(string $from, string $to): string
+    public static function invoiceTotal(string $from, string $to, ?array $customerIds = null): string
     {
         $query = SalesInvoice::query()
             ->posted()
-            ->whereBetween('trx_date', [$from, $to]);
+            ->whereBetween('trx_date', [$from, $to])
+            /*
+             * ⓘ কয়েকজন গ্রাহকের ভাগ — মালিকের কেন্দ্রে ভাই-কোম্পানির বিক্রি বাদ দিতে ([[SisterTrade]], ৮ অক্টোবর ২০২৬)।
+             * ⓘ একই সংজ্ঞা, কেবল গ্রাহকে ছাঁকা — তাই বাদ দেওয়া অংশ কখনো মোটের চেয়ে অন্য নিয়মে গোনা হয় না।
+             */
+            ->when($customerIds !== null, fn ($q) => $q->whereIn('customer_id', $customerIds ?: [0]));
 
         // ⭐ হোমের ছাঁকনি (গুদাম/এলাকা/SR) — কেবল হোমের সংখ্যা গোনার সময়টুকু চালু ([[HomeFilter::during()]], ৪ অক্টোবর ২০২৬)
-        \App\Core\Dashboard\HomeFilter::current()?->onInvoices($query, 'sal_invoices');
+        HomeFilter::current()?->onInvoices($query, 'sal_invoices');
 
         return Money::of($query->sum('total'));
     }
@@ -245,7 +252,7 @@ final class SalesMetrics implements ProvidesMetrics
             ->where('type', Voucher::RECEIPT)
             ->where('party_type', 'customer')
             // ⭐ বিক্রয়কর্মী কেবল নিজের ডিলারের রসিদ গোনেন (⛔১৬, ২ অক্টোবর ২০২৬)
-            ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'party_id'))
+            ->tap(fn ($q) => app(DealerScope::class)->restrict($q, 'party_id'))
             ->posted()
             ->whereBetween('trx_date', [$from, $to])
             ->sum('amount') ?: '0');
@@ -264,7 +271,7 @@ final class SalesMetrics implements ProvidesMetrics
             + Voucher::query()
                 ->where('type', Voucher::RECEIPT)
                 ->where('party_type', 'customer')
-                ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'party_id'))
+                ->tap(fn ($q) => app(DealerScope::class)->restrict($q, 'party_id'))
                 ->posted()
                 ->whereBetween('trx_date', [$from, $to])
                 ->count();

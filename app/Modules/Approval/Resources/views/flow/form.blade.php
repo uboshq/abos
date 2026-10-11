@@ -131,6 +131,8 @@
                 $rows = array_pad(array_values($existing), count($existing) + 3, null);
             @endphp
 
+            {{-- ⭐ প্রতিটা ঘরের মাথায় দেখা যায় এমন নাম (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬; fe)। ⛔ আগে নাম কেবল aria-label-এ:
+                 পাঁচজন একই স্তরে থাকলে পর্দায় পাঁচটা "১" — পড়া যেত না সেটা স্তর, কয়জনের সই, না ধাপের ক্রম। --}}
             <div class="space-y-2">
                 @foreach ($rows as $index => $step)
                     @php
@@ -138,11 +140,14 @@
                     @endphp
 
                     <div class="grid gap-2 sm:grid-cols-[5rem_10rem_1fr_auto]">
-                        <input type="number" name="steps[{{ $index }}][level]" min="1" max="9"
-                               value="{{ $step['level'] ?? $index + 1 }}"
-                               aria-label="{{ __('approval::field.level') }}"
-                               class="rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.level') }}</span>
+                            <input type="number" name="steps[{{ $index }}][level]" min="1" max="9"
+                                   value="{{ $step['level'] ?? $index + 1 }}"
+                                   aria-label="{{ __('approval::field.level') }}"
+                                   class="rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        </label>
 
                         {{-- ধাপের নাম — "সুপারভাইজার", "সিইও"।
 
@@ -154,40 +159,46 @@
                              ঐচ্ছিক, কারণ পুরনো ছকগুলোর নাম নেই — আর
                              বাধ্য করলে মানুষ "ধাপ ২" লিখে ফর্ম পার
                              করতেন, যা নম্বরটার চেয়ে বেশি কিছু বলত না। --}}
-                        <input type="text" name="steps[{{ $index }}][step_name]" maxlength="64"
-                               value="{{ $step['step_name'] ?? '' }}"
-                               placeholder="{{ __('approval::field.step_name') }}"
-                               aria-label="{{ __('approval::field.step_name') }}"
-                               class="rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.step_name') }}</span>
+                            <input type="text" name="steps[{{ $index }}][step_name]" maxlength="64"
+                                   value="{{ $step['step_name'] ?? '' }}"
+                                   placeholder="{{ __('approval::field.step_name') }}"
+                                   aria-label="{{ __('approval::field.step_name') }}"
+                                   class="rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        </label>
 
                         {{-- ধরন ও ব্যক্তি একটাই ঘরে।
 
                              আলাদা রাখলে "ধরন: রোল, অনুমোদনকারী: রফিক" এমন
                              অসম্ভব জোড়া বাছা যেত, আর সেটা সংরক্ষিতও হয়ে
                              যেত — ছকটা তখন কাউকেই মেলাত না। --}}
-                        <select name="steps[{{ $index }}][approver]"
-                                aria-label="{{ __('approval::field.approver') }}"
-                                class="rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 py-1.5 text-sm">
-                            <option value="">—</option>
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.approver') }}</span>
+                            <select name="steps[{{ $index }}][approver]"
+                                    aria-label="{{ __('approval::field.approver') }}"
+                                    class="rounded-(--radius-field) border border-(--color-border)
+                                           bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                                <option value="">—</option>
 
-                            <optgroup label="{{ __('approval::action.by_role') }}">
-                                @foreach ($roles as $role)
-                                    <option value="role|{{ $role->id }}" @selected($chosen === 'role|'.$role->id)>
-                                        {{ $role->name }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
+                                <optgroup label="{{ __('approval::action.by_role') }}">
+                                    @foreach ($roles as $role)
+                                        <option value="role|{{ $role->id }}" @selected($chosen === 'role|'.$role->id)>
+                                            {{ $role->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
 
-                            <optgroup label="{{ __('approval::action.by_user') }}">
-                                @foreach ($users as $user)
-                                    <option value="user|{{ $user->id }}" @selected($chosen === 'user|'.$user->id)>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        </select>
+                                <optgroup label="{{ __('approval::action.by_user') }}">
+                                    @foreach ($users as $user)
+                                        <option value="user|{{ $user->id }}" @selected($chosen === 'user|'.$user->id)>
+                                            {{ $user->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            </select>
+                        </label>
 
                         <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                             <input type="checkbox" name="steps[{{ $index }}][requires_all]" value="1"
@@ -207,35 +218,47 @@
                          "এই ধাপে ঘড়ি নেই", আর পুরনো ছকগুলো অবিকল আগের মতো চলে। --}}
                     <div class="mb-1 grid gap-2 border-l-2 border-(--color-border) pl-3
                                 sm:ml-2 sm:grid-cols-[6rem_6rem_6rem_6rem_1fr]">
-                        <input type="number" name="steps[{{ $index }}][min_approvals]" min="1" max="9"
-                               value="{{ $step['min_approvals'] ?? '' }}"
-                               placeholder="{{ __('approval::field.min_approvals') }}"
-                               title="{{ __('approval::message.min_approvals_hint') }}"
-                               aria-label="{{ __('approval::field.min_approvals') }}"
-                               class="rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.min_approvals') }}</span>
+                            <input type="number" name="steps[{{ $index }}][min_approvals]" min="1" max="9"
+                                   value="{{ $step['min_approvals'] ?? '' }}"
+                                   placeholder="{{ __('approval::field.min_approvals') }}"
+                                   title="{{ __('approval::message.min_approvals_hint') }}"
+                                   aria-label="{{ __('approval::field.min_approvals') }}"
+                                   class="rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        </label>
 
-                        <input type="number" name="steps[{{ $index }}][sla_hours]" min="1" max="8760"
-                               value="{{ $step['sla_hours'] ?? '' }}"
-                               placeholder="{{ __('approval::field.sla_hours') }}"
-                               title="{{ __('approval::message.sla_hint') }}"
-                               aria-label="{{ __('approval::field.sla_hours') }}"
-                               class="rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.sla_hours') }}</span>
+                            <input type="number" name="steps[{{ $index }}][sla_hours]" min="1" max="8760"
+                                   value="{{ $step['sla_hours'] ?? '' }}"
+                                   placeholder="{{ __('approval::field.sla_hours') }}"
+                                   title="{{ __('approval::message.sla_hint') }}"
+                                   aria-label="{{ __('approval::field.sla_hours') }}"
+                                   class="rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        </label>
 
-                        <input type="number" name="steps[{{ $index }}][warn_hours]" min="1" max="8760"
-                               value="{{ $step['warn_hours'] ?? '' }}"
-                               placeholder="{{ __('approval::field.warn_hours') }}"
-                               aria-label="{{ __('approval::field.warn_hours') }}"
-                               class="rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.warn_hours') }}</span>
+                            <input type="number" name="steps[{{ $index }}][warn_hours]" min="1" max="8760"
+                                   value="{{ $step['warn_hours'] ?? '' }}"
+                                   placeholder="{{ __('approval::field.warn_hours') }}"
+                                   aria-label="{{ __('approval::field.warn_hours') }}"
+                                   class="rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        </label>
 
-                        <input type="number" name="steps[{{ $index }}][escalate_hours]" min="1" max="8760"
-                               value="{{ $step['escalate_hours'] ?? '' }}"
-                               placeholder="{{ __('approval::field.escalate_hours') }}"
-                               aria-label="{{ __('approval::field.escalate_hours') }}"
-                               class="rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.escalate_hours') }}</span>
+                            <input type="number" name="steps[{{ $index }}][escalate_hours]" min="1" max="8760"
+                                   value="{{ $step['escalate_hours'] ?? '' }}"
+                                   placeholder="{{ __('approval::field.escalate_hours') }}"
+                                   aria-label="{{ __('approval::field.escalate_hours') }}"
+                                   class="rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                        </label>
 
                         {{-- ⓘ গন্তব্যও একটাই ঘরে, সইকারীর মতোই — কারণটা
                              [[ApprovalFlowRequest::prepareForValidation()]]-এ। --}}
@@ -243,29 +266,32 @@
                             $target = ($step['escalate_to_type'] ?? '').'|'.($step['escalate_to_id'] ?? '');
                         @endphp
 
-                        <select name="steps[{{ $index }}][escalate_to]"
-                                title="{{ __('approval::message.escalate_hint') }}"
-                                aria-label="{{ __('approval::field.escalate_to') }}"
-                                class="rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 py-1.5 text-sm">
-                            <option value="">{{ __('approval::field.escalate_to') }}</option>
+                        <label class="grid content-start gap-0.5">
+                            <span class="text-2xs text-(--color-ink-muted)">{{ __('approval::field.escalate_to') }}</span>
+                            <select name="steps[{{ $index }}][escalate_to]"
+                                    title="{{ __('approval::message.escalate_hint') }}"
+                                    aria-label="{{ __('approval::field.escalate_to') }}"
+                                    class="rounded-(--radius-field) border border-(--color-border)
+                                           bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                                <option value="">{{ __('approval::field.escalate_to') }}</option>
 
-                            <optgroup label="{{ __('approval::action.by_role') }}">
-                                @foreach ($roles as $role)
-                                    <option value="role|{{ $role->id }}" @selected($target === 'role|'.$role->id)>
-                                        {{ $role->name }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
+                                <optgroup label="{{ __('approval::action.by_role') }}">
+                                    @foreach ($roles as $role)
+                                        <option value="role|{{ $role->id }}" @selected($target === 'role|'.$role->id)>
+                                            {{ $role->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
 
-                            <optgroup label="{{ __('approval::action.by_user') }}">
-                                @foreach ($users as $user)
-                                    <option value="user|{{ $user->id }}" @selected($target === 'user|'.$user->id)>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </optgroup>
-                        </select>
+                                <optgroup label="{{ __('approval::action.by_user') }}">
+                                    @foreach ($users as $user)
+                                        <option value="user|{{ $user->id }}" @selected($target === 'user|'.$user->id)>
+                                            {{ $user->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            </select>
+                        </label>
                     </div>
                 @endforeach
             </div>

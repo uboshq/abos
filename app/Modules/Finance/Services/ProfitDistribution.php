@@ -9,6 +9,7 @@ use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -196,6 +197,7 @@ final class ProfitDistribution
 
             $voucher = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
+                'branch_id' => $this->companyBranch(),
                 'trx_date' => $data['trx_date'],
                 'narration' => $data['narration'] ?? __('finance::message.profit_narration', [
                     'no' => $documentNo,
@@ -219,8 +221,8 @@ final class ProfitDistribution
 
             foreach ($rows as $row) {
                 $shares[] = ProfitShare::query()->create([
-                    // ⭐ ঘোষণার শাখা — তালিকার শাখার দেয়ালের জন্য (১ অক্টোবর ২০২৬)
-                    'branch_id' => CompanyContext::branchId(),
+                    // ⭐ ঘোষণার শাখা — তালিকার শাখার দেয়ালের জন্য (১ অক্টোবর ২০২৬); ভাউচারের একই শাখা ([[companyBranch()]])
+                    'branch_id' => $this->companyBranch(),
                     'document_no' => $documentNo,
                     'trx_date' => $data['trx_date'],
                     'person_id' => $row['person_id'],
@@ -236,6 +238,21 @@ final class ProfitDistribution
 
             return $shares;
         });
+    }
+
+    /**
+     * ⭐ লাভের ঘোষণা আর মূলধনে নেওয়া কোন শাখায় বসে — কোম্পানির প্রধান শাখায়, হেডারে যে শাখাই বাছা থাকুক।
+     *
+     * ⛔ পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬: দুইটাই হেডারের শাখায় বসত। লাভ ভাগ পুরো কোম্পানির
+     * ([[TheProfitIsSharedOverTheWholeCompanyTest]]), অথচ ২১৯০ আর ৩৩০০-এর সারি বসত যে শাখা হেডারে ছিল সেখানে — এক ঘোষণা
+     * এক শাখায়, তার মূলধনে নেওয়া আরেক শাখায়, আর শাখা ধরে ২১৯০ কখনো শূন্যে নামত না। ⓘ এ কাগজের নিজের কোনো শাখা নেই
+     * (কোম্পানি-স্তরের সিদ্ধান্ত), তাই সবসময় একটাই জায়গা: প্রধান শাখা ([[Company::defaultBranch()]])।
+     */
+    private function companyBranch(): ?int
+    {
+        $branch = Company::query()->find(CompanyContext::id())?->defaultBranch();
+
+        return $branch?->id ?? CompanyContext::branchId();
     }
 
     /**
@@ -276,7 +293,6 @@ final class ProfitDistribution
             ]);
         }
     }
-
 
     /**
      * ⛔ চুক্তির অংশের যোগ ১০০-র বেশি নয় — অডিট গ১৩, ৪ অক্টোবর ২০২৬।
@@ -556,7 +572,7 @@ final class ProfitDistribution
      * ধরে। ⛔ কেবল খতিয়ানে লিখলে মূলধনে যোগ হওয়া লাভ
      * কারও **অংশ বাড়াত না**, আর পরের বছরের ভাগ ভুল হত।
      *
-     * @param array{trx_date: string, entry_type?: string, narration?: string|null} $data
+     * @param  array{trx_date: string, entry_type?: string, narration?: string|null}  $data
      * @return list<CapitalEntry>
      */
     public function capitalise(array $data): array
@@ -624,6 +640,7 @@ final class ProfitDistribution
              */
             $voucher = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
+                'branch_id' => $this->companyBranch(),
                 'trx_date' => $data['trx_date'],
                 'narration' => $data['narration'] ?? __('finance::message.capitalise_narration'),
             ], $lines);
@@ -638,7 +655,7 @@ final class ProfitDistribution
 
             foreach ($rows as $row) {
                 $entries[] = CapitalEntry::query()->create([
-                    'branch_id' => CompanyContext::branchId(),
+                    'branch_id' => $this->companyBranch(),
 
                     /*
                      * ⛔ প্রতিটা সারির নিজস্ব নম্বর।

@@ -43,9 +43,14 @@ class PortalDeliveryOrderController extends Controller
                 ->withErrors(['order' => __('sales::delivery_order.write_an_order_now')]);
         }
 
+        $customer = $this->papers->customer();
+        $products = $this->papers->orderableProducts();
+
         return view('sales::portal.do-form', [
-            'customer' => $this->papers->customer(),
-            'products' => $this->papers->orderableProducts(),
+            'customer' => $customer,
+            'products' => $products,
+            // ⭐ ফর্মে সেই দামই যা সংরক্ষণে বসে — ডিলারের দর তালিকা, আজকের তারিখে ([[SalesPrice]], Sales অডিট ১০ অক্টোবর ২০২৬)
+            'prices' => app(\App\Modules\Sales\Services\SalesPrice::class)->forMany($customer, $products, now()->toDateString()),
         ]);
     }
 

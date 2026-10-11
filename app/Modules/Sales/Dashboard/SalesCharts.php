@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Dashboard;
 
 use App\Core\Engines\Dashboard\Breakdown;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -17,6 +18,7 @@ use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuotation;
+use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Reports\SalesReturnReasonReports;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
 use Illuminate\Support\Carbon;
@@ -157,13 +159,14 @@ final class SalesCharts
          * ⛔ ভ্যাট বাদ, ফেরত বাদ — অডিট ⛔২ (৬ অক্টোবর ২০২৬)। ⓘ ভ্যাট সরকারের টাকা, আমাদের বিক্রি নয়; আর এ মাসে ফেরত আসা
          * মাল বিক্রিও কমায়, তার খরচও। আগে বিলের মোট (ভ্যাটসহ) থেকে খরচ বাদ দিয়ে "লাভ" বলা হত, ফেরত ধরা হত না।
          */
+        // ⛔ বিলে যোগ করা ভাড়াও বাদ — খাতায় ওটা ভাড়ার আয়, বিক্রি নয় (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ৮; [[MonthlySalesReport]]-এর একই মাপ)
         $row = SalesInvoice::query()
             ->posted()
             ->whereBetween('trx_date', $month)
-            ->selectRaw('COALESCE(SUM(total - tax), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
+            ->selectRaw('COALESCE(SUM(total - tax - freight_charge), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
             ->toBase()
             ->first();
-        $back = \App\Modules\Sales\Models\SalesReturn::query()
+        $back = SalesReturn::query()
             ->posted()
             ->whereBetween('trx_date', $month)
             ->selectRaw('COALESCE(SUM(total - tax), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
@@ -282,6 +285,6 @@ final class SalesCharts
     /** ⓘ কবে থেকে কবে — মাসের ১ তারিখ থেকে আজ (মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ) */
     private static function monthRange(): string
     {
-        return \App\Core\Engines\Dashboard\DateRange::label(now()->startOfMonth(), now());
+        return DateRange::label(now()->startOfMonth(), now());
     }
 }

@@ -19,6 +19,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -130,8 +131,8 @@ class AccountReportsTest extends TestCase
     /** খাতা থেকে আলাদা করে: যে খাতগুলোর জের ডেবিটে, তাদের জেরের যোগ */
     private function debitBalancesUpTo(string $to): string
     {
-        return (string) \Illuminate\Support\Facades\DB::query()->fromSub(
-            \Illuminate\Support\Facades\DB::table('ledger_entries')->where('company_id', CompanyContext::id())->where('trx_date', '<=', $to)
+        return (string) DB::query()->fromSub(
+            DB::table('ledger_entries')->where('company_id', CompanyContext::id())->where('trx_date', '<=', $to)
                 ->groupBy('account_id')->selectRaw('SUM(debit) - SUM(credit) as net'),
             'nets',
         )->where('net', '>', 0)->sum('net');
@@ -400,14 +401,19 @@ class AccountReportsTest extends TestCase
         $this->assertNotSame($wide->totals['credit'], $narrow->totals['credit']);
     }
 
-    public function test_the_cash_flow_groups_by_day(): void
+    /**
+     * ⛔ দিনে দিনে নয়, উল্টো দিকের খাত ধরে — আর ব্যাংকে জমা কোথাও নেই (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; IAS 7)।
+     * ⓘ আগে এই দাবি ব্যাংকে জমার ৫,০০০ "ঢুকল" আর "বেরোল" দুই দিকেই গুনত — নিজের খাতের মধ্যে স্থানান্তর
+     * ([[TheProfitAndCashFlowHadNoShapeTest]])।
+     */
+    public function test_the_cash_flow_shows_where_money_came_from_and_leaves_out_the_deposit(): void
     {
         $result = $this->report('accounts.cash_flow');
 
-        // তিনটা আলাদা দিন
-        $this->assertSame(3, $result->totalRows);
-        $this->assertSame('25000.00', $result->totals['debit']);   // ২০,০০০ নগদ + ৫,০০০ ব্যাংক
-        $this->assertSame('11000.00', $result->totals['credit']);
+        // বিক্রয় আর ভাড়া — দুইটা উল্টো দিকের খাত
+        $this->assertSame(2, $result->totalRows);
+        $this->assertSame('20000.00', $result->totals['money_in']);   // বিক্রয় নগদে
+        $this->assertSame('6000.00', $result->totals['money_out']);   // ভাড়া নগদে
     }
 
     /**

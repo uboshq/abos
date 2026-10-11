@@ -15,7 +15,12 @@
 --}}
 @php
     $user = auth()->user();
-    $notices = $user ? app(\App\Core\Services\StatusNotices::class)->all() : [];
+    /*
+     * ⭐ কেবল মানুষের লেখা নোটিশ — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬ ([[StatusNotices::forTicker()]])।
+     * ⓘ যন্ত্রের সতর্কতা ঘণ্টায়, আর ব্যাকআপের লালগুলো উপরের হলুদ ব্যানারে — প্রতিটা পাতায় সবসময় লাল দেখলে মানুষ লাল
+     * দেখাই বন্ধ করে দেয়। মালিকের "footer e notice cholbe" থাকে: তাঁর নিজের নোটিশ এখানেই চলে।
+     */
+    $notices = $user ? app(\App\Core\Services\StatusNotices::class)->forTicker() : [];
 
     /*
      * ⭐ পদবি — মালিকের নির্দেশ, ১৩ সেপ্টেম্বর ২০২৬:

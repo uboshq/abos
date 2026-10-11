@@ -256,8 +256,8 @@
                 <form method="GET" action="{{ route('hr.employee.show', $employee) }}#attendance" class="flex items-end gap-2">
                     <label class="flex flex-col gap-1 text-2xs text-(--color-ink-muted)">
                         {{ __('hr::profile.month') }}
-                        <input type="month" name="month" value="{{ $month->format('Y-m') }}"
-                               class="h-10 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                        <x-ui.month name="month" :value="$month->format('Y-m')"
+                                    class="h-10 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)" />
                     </label>
                     <x-ui.button type="submit">{{ __('hr::profile.show') }}</x-ui.button>
                 </form>
@@ -417,4 +417,7 @@
             @endif
         </section>
     @endcan
+
+    {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}
+    <x-ui.linked-documents :record="$employee" />
 </x-layouts.app>

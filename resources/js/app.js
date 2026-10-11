@@ -14,7 +14,9 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
+import { listenForFreshData } from './live.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -95,6 +97,12 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('openingCart', openingCart)
 
     /*
+     * ⭐ ডকুমেন্টের স্ক্যান ও OCR — ব্রাউজারে, নিজের সার্ভারের ফাইলে (ডকুমেন্ট পরিকল্পনা §৭; ৯ অক্টোবর ২০২৬)।
+     * ⓘ কারণ আর পথের পাহারা `document-scan.js`-এ।
+     */
+    Alpine.data('documentScan', documentScan)
+
+    /*
      * ⭐ শেল, টাকার ঘর ও বাকি পর্দার ছোট কম্পোনেন্ট — ১৯ সেপ্টেম্বর ২০২৬।
      * ⓘ ব্লেডের অ্যাট্রিবিউটে লেখা যুক্তি CSP-Alpine পড়তে পারে না; তাই
      * প্রতিটা এখন একটা নাম, আর যুক্তিটা `components/`-এ।
@@ -142,6 +150,9 @@ searchAsYouType()
  * ⓘ এটা না থাকায় মেনুটা কোনো তালিকাতেই কিছু লুকাত না; কারণ `columns.js`-এ।
  */
 listenForColumnChoice()
+
+// ⭐ রিয়েল-টাইম সিঙ্ক — অন্য কেউ কিছু লিখলে খোলা পাতায় "নতুন তথ্য এসেছে" (মালিক, ১০ অক্টোবর ২০২৬)
+listenForFreshData()
 
 /*
  * ⛔ ছাপা ও "বদলালেই জমা" — CSP ইনলাইন হ্যান্ডলার চালাতে দেয় না।

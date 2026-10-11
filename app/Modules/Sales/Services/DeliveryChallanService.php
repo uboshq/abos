@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
@@ -14,9 +15,11 @@ use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\PrintedPriceCeiling;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\SellableHere;
@@ -157,7 +160,7 @@ final class DeliveryChallanService
                  */
                 'issue_at_gate' => array_key_exists('issue_at_gate', $data)
                     ? (bool) $data['issue_at_gate']
-                    : (bool) app(\App\Core\Services\SettingsService::class)->get('sales.invoice_at_goods_issue', false),
+                    : (bool) app(SettingsService::class)->get('sales.invoice_at_goods_issue', false),
                 'driver_name' => $data['driver_name'] ?? null,
                 // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
                 'driver_phone' => $data['driver_phone'] ?? null,
@@ -168,6 +171,8 @@ final class DeliveryChallanService
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
                 'transport_cost' => $data['transport_cost'] ?? null,
+                // ⭐ ভাড়া কে দেবে — অফিসের চালানের পর্দাও পাঠায় (মালিক, ৭ অক্টোবর ২০২৬)
+                'fare_paid_by' => $data['fare_paid_by'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -175,6 +180,7 @@ final class DeliveryChallanService
             ]);
 
             $this->replaceLines($challan, $lines);
+            $this->stampFare($challan, $data);
 
             IssuedNumber::query()
                 ->where('document_no', $documentNo)
@@ -220,6 +226,8 @@ final class DeliveryChallanService
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
                 'transport_cost' => $data['transport_cost'] ?? null,
+                // ⓘ কেবল পাঠানো হলে — কাউন্টারের খসড়া এই পর্দায় খুললে তার "কে দেবে" চুপচাপ মুছত না
+                'fare_paid_by' => array_key_exists('fare_paid_by', $data) ? $data['fare_paid_by'] : $challan->fare_paid_by,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
@@ -230,12 +238,35 @@ final class DeliveryChallanService
              * ⓘ নিচের replaceLines() সারিগুলো মুছে নতুন বসায়; বসানো অফার পুরনো সারির আইডিতে
              * অনাথ হত আর বাজেট ঐ টাকা খরচ ধরে রাখত ([[ChallanOffers::reverseAll()]])।
              */
-            app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+            app(ChallanOffers::class)->reverseAll($challan);
 
             $this->replaceLines($challan, $lines);
+            $this->stampFare($challan, $data);
 
             return $challan->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ অফিসের চালানের পর্দার ভাড়ার ঘর — কাউন্টারের একই নিয়মে (মালিক, ৭ অক্টোবর ২০২৬: *"যা-ই করো, সব জায়গায় একই
+     * রকম"*; [[FarePayment::stamp()]])। ⓘ পর্দা ঘরগুলো পাঠালে তবেই।
+     *
+     * ⛔ ঘর না পাঠালে (হাতে বানানো অনুরোধ, পুরনো খোলা পাতা) আর ভাড়া আমাদের, বাহকও নেই — পাকা হলে টাকা প্রধান টিল থেকে
+     * নিজে থেকে কাটত ([[postTransportCost()]])। এখন চালানটাই এখানে থামে, কাউন্টারের একই কারণে (পুরো ভাড়া-প্রবাহ যাচাই,
+     * ১০ অক্টোবর ২০২৬; [[DirectSaleService::stampExtras()]])। ⓘ কাউন্টারের মাথায় ভাড়া থাকে না — তাই এই থামা কাউন্টারকে ছোঁয় না;
+     * বাহক থাকলে পুরনো পথ বাহকের নামে ২১১৬-এ দেনা (সিদ্ধান্ত খ), তাই চলে।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function stampFare(DeliveryChallan $challan, array $data): void
+    {
+        $fares = app(FarePayment::class);
+
+        if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
+            $fares->stamp($challan->fresh(), $data);
+        } elseif ($fares->isOurs($challan->fresh()) && $challan->fresh()->carrier_id === null) {
+            throw ValidationException::withMessages(['fare_account_id' => __('sales::fare.needs_account')]);
+        }
     }
 
     /**
@@ -246,8 +277,8 @@ final class DeliveryChallanService
      *                             কাউন্টার পাঠায়। ⓘ অফিসের ডিও-তে শূন্য:
      *                             মাল যায়, টাকা আসে পরে।
      * @param  list<array{0: string, 1: int}>  $ownReservations  এই বিক্রিরই অন্য সংরক্ষণ (যেমন DO-র কড়া
-     *                             আটকানো, [[DeliveryOrderStock::reservationsOf()]]) — "পাওয়া যায়"-এর পাহারায় এগুলো
-     *                             এই চালানের জন্যই রাখা বলে গোনা হয় (অডিট গ১১, ৪ অক্টোবর ২০২৬)।
+     *                                                           আটকানো, [[DeliveryOrderStock::reservationsOf()]]) — "পাওয়া যায়"-এর পাহারায় এগুলো
+     *                                                           এই চালানের জন্যই রাখা বলে গোনা হয় (অডিট গ১১, ৪ অক্টোবর ২০২৬)।
      */
     public function confirm(DeliveryChallan $challan, string $payingNow = '0', array $ownReservations = []): DeliveryChallan
     {
@@ -377,9 +408,9 @@ final class DeliveryChallanService
              * ⛔ আগে ধরে নেওয়া হত আদেশের "অর্ডার − আগে ডেলিভার" পুরোটাই ধরা আছে। অথচ সুইচ বন্ধে নিশ্চিত হওয়া আদেশ
              * কিছুই ধরে না — তার চালান তখন অন্য কাগজের ধরা মাল ছেড়ে দিত।
              */
-            $own = $challan->sales_order_id !== null && $challan->order !== null
-                ? app(SalesOrderService::class)->heldByThisOrder($challan->order)
-                : [];
+            // ⛔ আদেশ শাখার দেয়াল ছাড়া — অন্য শাখার হেডারে থাকা মানুষের নামে পাকা হলেও আদেশটা পাওয়া যায় (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১)
+            $order = $challan->sales_order_id === null ? null : SalesOrder::acrossBranches()->find($challan->sales_order_id);
+            $own = $order !== null ? app(SalesOrderService::class)->heldByThisOrder($order) : [];
 
             foreach ($challan->lines->sortBy('line_no') as $line) {
                 $qty = (string) $line->delivered_qty;
@@ -538,7 +569,7 @@ final class DeliveryChallanService
              * ⭐ বাতিলে অফারও ফেরে — ছাড়, বাজেট, কুপন, পয়েন্ট ([[PromotionReversal::forSource()]])।
              * ⓘ খসড়া বা পাকা দুই অবস্থাতেই; বসানো না থাকলে কিছুই হয় না।
              */
-            app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+            app(ChallanOffers::class)->reverseAll($challan);
 
             if ($challan->status === DocumentStatus::CONFIRMED) {
                 $this->unpost($challan, $date, $reason);
@@ -1081,7 +1112,7 @@ final class DeliveryChallanService
         $challan->loadMissing(['lines.product', 'lines.orderLine.order', 'warehouse']);
 
         // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
-        app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+        app(ChallanOffers::class)->reverseAll($challan);
 
         $this->unpost($challan, $date, $reason, $paperNo);
 
@@ -1308,12 +1339,12 @@ final class DeliveryChallanService
                 continue;
             }
 
-            $drew = \App\Modules\Inventory\Models\CostLayerUse::query()
+            $drew = CostLayerUse::query()
                 ->where('source_type', $sourceType)->where('source_id', $challan->id)
                 ->where('product_id', $productId)->where('qty', '>', 0)->exists();
 
             if ($drew) {
-                app(\App\Modules\Inventory\Services\CostLayerService::class)->returnToLayers(
+                app(CostLayerService::class)->returnToLayers(
                     product: Product::query()->findOrFail($productId),
                     qty: $back,
                     issuedSourceType: $sourceType,

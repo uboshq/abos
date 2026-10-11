@@ -41,8 +41,10 @@ class BatchAllocator
         Warehouse $warehouse,
         string $wanted,
         ?Carbon $on = null,
+        // ⭐ ঘাটতি লেখার ডাক — মেয়াদ পেরোনো লটও, আগে-মেয়াদ আগে (মজুদ ছ১৩; [[expiredFirst()]])
+        bool $anyLot = false,
     ): array {
-        return $this->take($product, $warehouse, $wanted, $on, free: false);
+        return $this->take($product, $warehouse, $wanted, $on, free: false, anyLot: $anyLot);
     }
 
     /**
@@ -66,8 +68,9 @@ class BatchAllocator
         Warehouse $warehouse,
         string $wanted,
         ?Carbon $on = null,
+        bool $anyLot = false,
     ): array {
-        return $this->take($product, $warehouse, $wanted, $on, free: true);
+        return $this->take($product, $warehouse, $wanted, $on, free: true, anyLot: $anyLot);
     }
 
     /**
@@ -81,6 +84,7 @@ class BatchAllocator
         string $wanted,
         ?Carbon $on,
         bool $free,
+        bool $anyLot = false,
     ): array {
         if (bccomp($wanted, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -91,7 +95,7 @@ class BatchAllocator
         $taken = [];
         $left = $wanted;
 
-        foreach ($this->candidates($product, $on) as $batch) {
+        foreach ($this->candidates($product, $on, $anyLot) as $batch) {
             if (bccomp($left, '0', 4) <= 0) {
                 break;
             }
@@ -147,7 +151,7 @@ class BatchAllocator
      */
     private function lockedBalance(Batch $batch, Warehouse $warehouse, bool $free): string
     {
-        return (string) StockMovement::query()
+        return (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('batch_id', $batch->id)
             ->where('warehouse_id', $warehouse->id)
             ->lockForUpdate()
@@ -166,7 +170,7 @@ class BatchAllocator
      */
     public function lockedFreeBalance(Batch $batch, Warehouse $warehouse): string
     {
-        Batch::query()->whereKey($batch->id)->lockForUpdate()->first();
+        Batch::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->whereKey($batch->id)->lockForUpdate()->first();
 
         return $this->lockedBalance($batch, $warehouse, free: true);
     }
@@ -185,7 +189,7 @@ class BatchAllocator
      */
     private function shortMessage(Product $product, Warehouse $warehouse, string $short): string
     {
-        $untracked = (string) StockMovement::query()
+        $untracked = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             ->whereNull('batch_id')
@@ -219,14 +223,29 @@ class BatchAllocator
      *
      * @return Collection<int, Batch>
      */
-    private function candidates(Product $product, ?Carbon $on)
+    private function candidates(Product $product, ?Carbon $on, bool $anyLot = false)
     {
-        return Batch::query()
+        return Batch::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
-            ->unexpired($on)
+            ->when(! $anyLot, fn ($q) => $q->unexpired(self::judgedOn($on)))
             ->fefo()
             ->lockForUpdate()
             ->get();
+    }
+
+    /**
+     * ⭐ কোন দিন ধরে মেয়াদ দেখা হবে — কাগজের তারিখ আর আজকের মধ্যে যেটা পরে (পুরো-ERP অডিট, মজুদ ছ১৩; মালিকের "সব খোলা ভুল",
+     * ১০ অক্টোবর ২০২৬; [[NoExpiredLotLeavesOnABackdatedPaperTest]])।
+     *
+     * ⛔ আগে কাগজের তারিখই ধরা হত: তিন দিন আগের তারিখে চালান লিখলে গতকাল মেয়াদ পেরোনো লট "তখনো ভালো" বলে বাছা হত, অথচ
+     * মালটা আজ তাক থেকে বেরোয় — মেয়াদি মাল ক্রেতার হাতে। ⓘ সামনের তারিখে সেই দিন ধরেই (কড়া দিকটা)।
+     *
+     * ⓘ মেয়াদ পেরোনো লটও নেওয়া হয় কেবল ঘাটতি লেখায় (`anyLot`) — হারানো বা নষ্ট মাল প্রায়ই সেই লটেরই; না নিলে
+     * ঘাটতি ভালো লট থেকে কাটত, আর মেয়াদি লট খাতায় অমর হয়ে পড়ে থাকত।
+     */
+    private static function judgedOn(?Carbon $on): ?Carbon
+    {
+        return $on !== null && $on->copy()->startOfDay()->greaterThan(now()->startOfDay()) ? $on : null;
     }
 
     /**
@@ -248,9 +267,9 @@ class BatchAllocator
         $taken = [];
         $left = $wanted;
 
-        $batches = Batch::query()
+        $batches = Batch::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
-            ->unexpired($on)
+            ->unexpired(self::judgedOn($on))
             ->fefo()
             ->get();
 
@@ -260,7 +279,7 @@ class BatchAllocator
             }
 
             // ⓘ পর্দার দেখা আর আসল বাছাই একই সংখ্যা দেখে — তাকের মাল, লটের আটকানো বাদ (গ২)
-            $available = bcsub($batch->floorBalance($warehouse), (string) StockMovement::query()
+            $available = bcsub($batch->floorBalance($warehouse), (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
                 ->where('batch_id', $batch->id)
                 ->where('warehouse_id', $warehouse->id)
                 ->sum('hold_change'), 4);

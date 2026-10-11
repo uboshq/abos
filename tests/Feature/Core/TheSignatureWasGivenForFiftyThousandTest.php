@@ -130,8 +130,13 @@ final class TheSignatureWasGivenForFiftyThousandTest extends TestCase
         $first = $this->guard->stopping($this->document(), 'sales', 'discount', '50000');
 
         $this->assertNotNull($first);
-        $this->assertNull($first->payload,
-            'প্রথম অনুরোধটাই বলছে সে কারো বদলে এসেছে।');
+
+        /*
+         * ⓘ ঘরটা আর খালি থাকে না — পরে `fields_seen` (কোন ঘরগুলো এল, [[ApprovalExceptions]]-এর জন্য) সব অনুরোধে বসে। ⭐ দাবিটা
+         * তাই যা বলার কথা সেটাই দেখে: প্রথম অনুরোধ কারো বদলে আসার কথা বলে না (main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)।
+         */
+        $this->assertArrayNotHasKey('supersedes', $first->payload ?? [], 'প্রথম অনুরোধটাই বলছে সে কারো বদলে এসেছে।');
+        $this->assertArrayNotHasKey('was_amount', $first->payload ?? [], 'প্রথম অনুরোধটাই আগের অঙ্ক দাবি করছে।');
     }
 
     /** ⓘ অঙ্ক নামলেও সই বাতিল — কারণ "কত কম চলবে" প্রশ্নের সৎ উত্তর নেই। */
@@ -253,10 +258,16 @@ final class TheSignatureWasGivenForFiftyThousandTest extends TestCase
                 continue;
             }
 
-            if (! str_contains($m[1], '->covers(')) {
+            // ⓘ `stillCovers()` — অঙ্ক আর কাগজের ছাপ দুটোই; অঙ্কের প্রশ্নটা ভেতরে `covers()`-ই (নিচে বাঁধা)
+            if (! str_contains($m[1], '->covers(') && ! str_contains($m[1], '->stillCovers(')) {
                 $blind[] = $file->getRelativePathname();
             }
         }
+
+        // ⛔ `stillCovers()` নিজে অঙ্কের প্রশ্ন না করলে উপরের ছাড় মিথ্যা — তাই তার শরীরও দেখা হয় (main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)
+        $body = (string) file_get_contents(app_path('Models/Approval.php'));
+        $this->assertSame(1, preg_match('/function stillCovers\(.*?\{(.*?)\n    \}/s', $body, $still), 'Approval::stillCovers() পাওয়া গেল না।');
+        $this->assertStringContainsString('$this->covers(', $still[1], '⛔ stillCovers() অঙ্কটা আর মেলায় না।');
 
         $this->assertGreaterThan(0, $swept,
             'একটা ফাইলেও `Approval::APPROVED` পাওয়া গেল না — সুইপটা কিছুই পড়ছে না।');

@@ -200,7 +200,14 @@ class VoucherPrintTest extends TestCase
 
         $with = $this->paperHtml($voucher);
 
-        $this->assertStringContainsString(__('core.print.in_words'), $with,
+        /*
+         * ⓘ কথায় লেখা অঙ্কটাই খোঁজা হয়, "কথায়:" শিরোনাম নয় (১০ অক্টোবর ২০২৬) — বাছা নকশাগুলো (ডিফল্ট ট্যালি ক্লাসিক)
+         * অঙ্কের ঘরের নিচে শিরোনাম ছাড়াই কথায় লেখে ([[PaperLook::amountBox()]])। ⭐ লেখাটা খোঁজা শিরোনাম খোঁজার চেয়ে কড়া:
+         * শিরোনাম থাকত অথচ কথাগুলো ফাঁকা — তাও ধরা পড়ে।
+         */
+        $words = e(\App\Core\Support\AmountInWords::of((string) $voucher->amount, app()->getLocale()));
+        $this->assertNotSame('', $words);
+        $this->assertStringContainsString($words, $with,
             'কথায় অঙ্কটা তো আগে থেকেই ছাপা হত না — দাবিটা কিছুই মাপছে না।');
 
         /*
@@ -215,7 +222,7 @@ class VoucherPrintTest extends TestCase
 
         $without = $this->paperHtml($voucher);
 
-        $this->assertStringNotContainsString(__('core.print.in_words'), $without, implode(PHP_EOL, [
+        $this->assertStringNotContainsString($words, $without, implode(PHP_EOL, [
             'সুইচটা বন্ধ করার পরেও কথায় অঙ্কটা ছাপা হচ্ছে।',
             '',
             '⛔ তিনটার একটা জোড়া নেই: টার্গেট, `profile:`, বা `shows()`।',
@@ -229,16 +236,25 @@ class VoucherPrintTest extends TestCase
 
     private function paperHtml(Voucher $voucher, string $paper = PaperSize::A4): string
     {
+        /*
+         * ⭐ যে নকশা সত্যিই কাগজটা আঁকে সেটাই — `print.voucher` নয়, `print.voucher*` (১০ অক্টোবর ২০২৬)।
+         *
+         * ⓘ ৩০ সেপ্টেম্বর থেকে ভাউচার ছাপে বাছা নকশায় (ডিফল্ট ট্যালি ক্লাসিক, [[VoucherDesigns]]) — `print.voucher` কেবল
+         * "standard"-এ। ⛔ এখানে আগে কেবল `print.voucher` শোনা হত, তাই নকশা আসার পর এই দাবিগুলো কাগজটাই আর দেখত না
+         * ("ছাপার টেমপ্লেটটাই ডাকা হয়নি")। দাবি বদলায়নি — কেবল এখন মালিক যে কাগজ পান, সেটাই মাপা হয়।
+         */
         $seen = [];
-        View::composer('print.voucher', function ($view) use (&$seen) {
+        $template = null;
+        View::composer('print.voucher*', function ($view) use (&$seen, &$template) {
             $seen = $view->getData();
+            $template = $view->name();
         });
 
         $this->get(route('accounts.voucher.print', $voucher).'?paper='.$paper)->assertOk();
 
         $this->assertNotSame([], $seen, 'ছাপার টেমপ্লেটটাই ডাকা হয়নি।');
 
-        return view('print.voucher', $seen)->render();
+        return view($template, $seen)->render();
     }
 
     /**
@@ -318,7 +334,7 @@ class VoucherPrintTest extends TestCase
         app(VoucherService::class)->cancel($voucher->fresh(), 'ভুল খাতে বসেছিল');
 
         $seen = [];
-        View::composer('print.voucher', function ($view) use (&$seen) {
+        View::composer('print.voucher*', function ($view) use (&$seen) {
             $seen = $view->getData();
         });
 
@@ -333,10 +349,14 @@ class VoucherPrintTest extends TestCase
     /** চালু ভাউচারে ওই ছাপটা থাকে না। */
     public function test_a_live_voucher_carries_no_cancelled_stamp(): void
     {
-        $voucher = $this->receipt();
+        /*
+         * ⓘ "চালু" মানে পোস্ট করা — খসড়া ভাউচার এখন নিজের "খসড়া" বাক্স পায় (PR #17, 4bbed979: খসড়া কাগজ খসড়া হয়েই ছাপে), তাই
+         * এখানে আগে পোস্ট করা; নইলে দাবিটা আসলে খসড়া মাপত (১১ অক্টোবর ২০২৬)।
+         */
+        $voucher = app(\App\Modules\Accounts\Services\VoucherService::class)->post($this->receipt());
 
         $seen = [];
-        View::composer('print.voucher', function ($view) use (&$seen) {
+        View::composer('print.voucher*', function ($view) use (&$seen) {
             $seen = $view->getData();
         });
 

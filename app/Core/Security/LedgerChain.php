@@ -120,23 +120,16 @@ final class LedgerChain
     {
         $companyId = (int) $entry->company_id;
 
+        // ⓘ মাথা আগে, তালা পরে ([[ensureHead()]]): না-থাকা সারিতে তালাসহ পড়লে দুজনেই ফাঁকের তালা পায়, আর তারপর দুজনের বসানো
+        // একে অপরের অপেক্ষায় — deadlock। তালা ছাড়া দেখা কোনো তালা নেয় না, আর মাথা থাকলে (প্রায় সবসময়) বসানোর ধাপই আসে না।
+        if (! DB::table('ledger_chain_heads')->where('company_id', $companyId)->exists()) {
+            self::ensureHead($companyId);
+        }
+
         $previous = DB::table('ledger_chain_heads')
             ->where('company_id', $companyId)
             ->lockForUpdate()
             ->value('last_hash');
-
-        if ($previous === null && ! DB::table('ledger_chain_heads')->where('company_id', $companyId)->exists()) {
-            DB::table('ledger_chain_heads')->insert([
-                'company_id' => $companyId,
-                'last_hash' => null,
-                'entries' => 0,
-            ]);
-
-            $previous = DB::table('ledger_chain_heads')
-                ->where('company_id', $companyId)
-                ->lockForUpdate()
-                ->value('last_hash');
-        }
 
         /*
          * ⭐ সংস্করণটা এখানেই একবার পড়া হয়, আর সারির সাথেই ফেরত যায় —
@@ -159,6 +152,26 @@ final class LedgerChain
         ]);
 
         return [$previous, $hash, $version];
+    }
+
+    /**
+     * ⛔ কোম্পানির চেইনের মাথা — না থাকলে বসানো, দুজন একসাথে এলেও একটাই (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, হিসাব ⓘ১৮;
+     * [[TheFirstTwoPostingsOfACompanyMeetAtTheChainHeadTest]])।
+     *
+     * ⓘ আগে "নেই কি?" দেখে তারপর `insert` — কোম্পানির প্রথম দুই দাখিলা একসাথে এলে দুজনেই "নেই" দেখত, আর দ্বিতীয়টার `insert`
+     * প্রাথমিক চাবিতে (company_id) ধাক্কা খেয়ে ৫০০। এখন যে আগে পৌঁছায় সে বসায়, পরেরজন প্রথমজনের লেনদেন শেষ হওয়া পর্যন্ত দাঁড়ায়,
+     * তারপর কিছু না বদলে এগোয় আর তালাসহ মাথাটা পড়ে। Mac-এর MySQL-এ দুই আর তিন সংযোগে হাতে চালিয়ে দেখা (৯ অক্টোবর ২০২৬):
+     *  ⛔ তালাসহ পড়ার পরে বসালে — দুজনেই deadlock (1213): না-থাকা সারির ফাঁকের তালা দুজনেরই, আর বসানো একে অপরের অপেক্ষায়।
+     *  ⛔ `INSERT IGNORE` — তিনজনে deadlock: আগে থাকা সারিতে সে ভাগের তালা (S) নেয়, পরে দুজনেই নিজস্ব তালায় (X) উঠতে চায়।
+     *  ✅ `ON DUPLICATE KEY UPDATE` আগে, তালা পরে — সরাসরি নিজস্ব তালা; তিনজনই পার, entries = ৩।
+     * ⓘ চেইনের নিয়ম, সংস্করণ বা কোনো ছাপ বদলায় না — কেবল মাথা বসানোর ধাপ।
+     */
+    private static function ensureHead(int $companyId): void
+    {
+        DB::statement(
+            'INSERT INTO ledger_chain_heads (company_id, last_hash, entries) VALUES (?, NULL, 0) ON DUPLICATE KEY UPDATE company_id = company_id',
+            [$companyId],
+        );
     }
 
     /**

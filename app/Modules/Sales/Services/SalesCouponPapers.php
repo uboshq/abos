@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Contracts\CouponPapers;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\NoteService;
@@ -61,22 +62,28 @@ final class SalesCouponPapers implements CouponPapers
         $discount = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
         $notes = app(NoteService::class);
 
-        $note = $notes->create([
-            'direction' => Note::CREDIT,
-            'party_kind' => Note::KIND_CUSTOMER,
-            'party_id' => (int) $invoice->customer_id,
-            'other_account_id' => $discount?->id,
-            // ⓘ বিলের শাখায় আর বিলের দিনে — হেডারের শাখায় বা আজকের দিনে নয় (রিভিউ, ১০ অক্টোবর ২০২৬)
-            'branch_id' => $invoice->branch_id,
-            'trx_date' => $invoice->trx_date?->toDateString() ?? now()->toDateString(),
-            'amount' => bcadd($worth, '0', 4),
-            'tax_amount' => '0',
-            'reason' => 'agreed_discount',
-            'against_no' => (string) $invoice->document_no,
-            'narration' => __('sales::message.coupon_note', ['code' => $code]),
-        ]);
+        /*
+         * ⛔ বিলের নিজের শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (বিক্রয় ২; [[ACouponNoteLandsInTheBillsBranchTest]])। ⓘ নোট শাখা নেয়
+         * প্রসঙ্গ থেকে ([[NoteService::create()]]); কুপন কাটা মানুষের হেডারে অন্য শাখা থাকলে ছাড়টা সেই শাখার খাতায় বসত, আর বিলের
+         * শাখায় পাওনা কমত না।
+         */
+        CompanyContext::inBranch($invoice->branch_id === null ? null : (int) $invoice->branch_id, function () use ($notes, $invoice, $discount, $worth, $code): void {
+            $note = $notes->create([
+                'direction' => Note::CREDIT,
+                'party_kind' => Note::KIND_CUSTOMER,
+                'party_id' => (int) $invoice->customer_id,
+                'other_account_id' => $discount?->id,
+                // ⓘ বিলের দিনে — আজকের দিনে নয় (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬); শাখা উপরের মোড়ক থেকে
+                'trx_date' => $invoice->trx_date?->toDateString() ?? now()->toDateString(),
+                'amount' => bcadd($worth, '0', 4),
+                'tax_amount' => '0',
+                'reason' => 'agreed_discount',
+                'against_no' => (string) $invoice->document_no,
+                'narration' => __('sales::message.coupon_note', ['code' => $code]),
+            ]);
 
-        $notes->confirm($note);
+            $notes->confirm($note);
+        });
     }
 
     /**

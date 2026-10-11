@@ -523,10 +523,12 @@ final class ThePurchaseCycleRanEndToEndTest extends TestCase
 
         $this->assertSame($stockBefore, $this->onHand(),
             '⛔ বাতিলের পর গুদামের মাল আগের জায়গায় ফেরেনি।');
-        $this->assertSame(0, CostLayer::query()
+        // ⓘ স্তর থাকে, খালি — মুছলে গ্রহণের দিনের মজুদ-মূল্য পেছনে বদলাত (পুরো-ERP অডিট ⚠️৫, ৬ অক্টোবর ২০২৬;
+        // [[ACancelNeverRewritesAClosedMonthsStockTest]]); দাবিটা মাপে যা জরুরি — বাতিল মালের দামে আর কিছু বেরোয় না
+        $this->assertSame(0, bccomp((string) CostLayer::query()
             ->where('source_type', PurchaseReceipt::STOCK_SOURCE)
-            ->where('source_id', $receipt->id)->count(),
-            '⛔ বাতিল গ্রহণের দামের স্তর রয়ে গেছে — না-আসা মালের দামে বিক্রির খরচ বসবে।');
+            ->where('source_id', $receipt->id)->sum('qty_remaining'), '0', 4),
+            '⛔ বাতিল গ্রহণের দামের স্তরে মাল রয়ে গেছে — না-আসা মালের দামে বিক্রির খরচ বসবে।');
 
         $this->assertDocumentBalanced(PurchaseReceipt::drillSourceType(), $receipt->id, 'বাতিল মাল গ্রহণ', withReversal: true);
         $this->assertDocumentBalanced(PurchaseBill::drillSourceType(), $bill->id, 'বাতিল বিল', withReversal: true);

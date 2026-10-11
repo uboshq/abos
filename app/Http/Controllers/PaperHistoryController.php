@@ -61,6 +61,9 @@ class PaperHistoryController extends Controller
             $this->authorize($ability);
         }
 
+        // ⛔ কাগজটা নিজে এই মানুষের নাগালে কি না — নইলে অন্য শাখার কাগজের ইতিহাস আর জীবিত লিংক খুলে যেত (পুরো-ERP অডিট)
+        PaperShareController::visibleDocument($type, $id);
+
         /*
          * ⭐ এখনো বেঁচে থাকা গোপন লিংকগুলো — ২১ সেপ্টেম্বর ২০২৬।
          *

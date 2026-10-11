@@ -249,7 +249,17 @@ class OpeningStockController extends Controller implements HasMiddleware
             'supplier_id' => ['nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', $companyId)->whereNull('deleted_at')],
         ]);
 
-        $product = Product::query()->findOrFail($validated['product_id']);
+        /*
+         * ⛔ এই শাখায় বিক্রি হয় এমন পণ্যই — কার্টের সেই একই প্রশ্ন (পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬, মজুদ ⓘ;
+         * [[OpeningStockFollowsTheWholeCompanyTest]])। ⚠️ আগে সোজা `findOrFail` — অন্য শাখার পণ্যের নম্বর পাঠালেই এই শাখার
+         * গুদামে তার খোলা মজুদ বসত, যদিও তালিকায় পণ্যটা দেখাই যায় না।
+         */
+        $product = Product::query()->soldInViewedBranch()->whereKey((int) $validated['product_id'])->first();
+
+        if ($product === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['product_id' => __('inventory::message.opening_unknown_product')]);
+        }
+
         $warehouse = Warehouse::query()->findOrFail($validated['warehouse_id']);
 
         $this->opening->bringIn(
@@ -265,7 +275,8 @@ class OpeningStockController extends Controller implements HasMiddleware
 
         return back()->with('saved', __('inventory::message.opening_saved', [
             'product' => $product->name(),
-            'qty' => Money::format($validated['qty']),
+            // ⛔ পরিমাণ, টাকা নয় — দুই ঘরে গোল হত (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⓘ১৪); মূল্যটা টাকা, তাই format-ই
+            'qty' => Money::quantity($validated['qty']),
             'value' => Money::format(bcmul((string) $validated['qty'], (string) $validated['unit_cost'], 4)),
         ]));
     }

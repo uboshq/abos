@@ -70,6 +70,12 @@
                    :required="$required" :readonly="$readonly"
                    :hasError="$hasError" :describedBy="$describedBy ?: null"
                    {{ $attributes }} />
+    @elseif ($type === 'month')
+        {{-- ⭐ মাসও ব্রাউজারের ঘরে নয় — একই কারণ ("October 2026" ইংরেজিতে); [[x-ui.month]] বাংলায় (পাতা সাজানো ধাপ ১,
+             ১০ অক্টোবর ২০২৬) --}}
+        <x-ui.month :name="$name" :id="$name" :value="$value" :required="$required"
+                    :class="'h-(--spacing-field) w-full rounded-(--radius-field) border bg-(--color-surface-card) px-3 '
+                        .($hasError ? 'border-(--color-danger)' : 'border-(--color-border)')" />
     @else
     <input id="{{ $name }}"
            name="{{ $name }}"

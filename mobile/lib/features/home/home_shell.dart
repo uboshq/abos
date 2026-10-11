@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/auth/session_profile.dart';
@@ -19,6 +20,7 @@ import '../../core/privacy/phone_privacy.dart';
 import '../../core/records/notice_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
+import '../../core/sync_engine/auto_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -63,6 +65,8 @@ class HomeShell extends ConsumerStatefulWidget {
     this.switcher,
     this.fetchNotifications,
     this.fetchNoticeBar,
+    this.fetchPending,
+    this.syncNow,
   });
 
   /// Seams — the real ones need a server or a secure store.
@@ -83,6 +87,12 @@ class HomeShell extends ConsumerStatefulWidget {
 
   /// Seam for the running notice line — the real one needs a server.
   final Future<List<NoticeBarItem>> Function()? fetchNoticeBar;
+
+  /// Seam for the pull-to-sync round — the real one needs a server.
+  final Future<void> Function()? syncNow;
+
+  /// Seam for the approval icon's count — the real one needs a server.
+  final Future<ApprovalPage> Function()? fetchPending;
 
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
@@ -117,11 +127,45 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   /// belong to the company and branch they were fetched for.
   int _generation = 0;
 
+  /// ⭐ How many signatures wait for this person — null while unknown, and the
+  /// icon stays hidden for somebody the server does not let approve.
+  int? _pending;
+  bool _pendingMore = false;
+
+  Future<void> _loadPending() async {
+    try {
+      final page = await (widget.fetchPending ?? () => ApprovalsApi.pending())();
+      if (mounted) {
+        setState(() {
+          _pending = page.rows.length;
+          _pendingMore = page.nextCursor != null;
+        });
+      }
+    } catch (_) {
+      // ⓘ সই করার অধিকার নেই (৪০৩), পুরনো সার্ভার বা সিগন্যাল নেই — আইকন আগের অবস্থায়
+    }
+  }
+
+  /// ⭐ নিচে টানলে পুরো সিঙ্ক — অ্যাপের নিজের গোল ([[AutoSync.current]]), যাতে টাইমারেরটা চলতে থাকলে একই গোল;
+  /// তারপর ঘণ্টা আর অনুমোদনের গোনা। ⓘ ব্যর্থ হলে ছুড়ে দেয় — টানার জায়গা এক লাইনে বলে।
+  Future<void> _syncNow() async {
+    try {
+      await (widget.syncNow ??
+          () => AutoSync.current?.runNow() ?? AutoSync.fullRound())();
+    } finally {
+      if (mounted) {
+        _loadUnread();
+        _loadPending();
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _load();
     _loadUnread();
+    _loadPending();
   }
 
   Future<void> _load() async {
@@ -196,6 +240,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (!moved || !mounted) return;
     setState(() => _generation++);
     await _load();
+    // ⓘ অপেক্ষার সই কোম্পানি ধরে — নতুন কোম্পানিতে আবার গোনা
+    _loadPending();
   }
 
   static Future<SessionProfile?> _fetchProfile() async {
@@ -244,7 +290,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
         // ⭐ মালিক, ৬ অক্টোবর ২০২৬: সবুজ মাথার একদম ডানে ব্যবহারকারীর ছবি (চাপলে প্রোফাইল), তার পাশে ঘণ্টা
         actions: [
-          _SyncAction(onTap: () => context.go('/home/sync-status')),
+          // ⓘ সিঙ্কের আইকন নেই — মালিক, ১০ অক্টোবর ২০২৬: নিচে টানলে সিঙ্ক, আর নিজে থেকেও ([[AutoSync]])
+          // ⭐ মালিক, ১০ অক্টোবর ২০২৬: "Notification icon er pase approval icon … pending gulu dekha zay"
+          if (_pending != null)
+            _ApprovalAction(
+              pending: _pending!,
+              more: _pendingMore,
+              onTap: () async {
+                await context.push('/home/approvals');
+                if (mounted) _loadPending();
+              },
+            ),
           _BellAction(
             unread: _unread,
             onTap: () async {
@@ -285,6 +341,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 lastKnownToday: widget.lastKnownToday,
                 onRecord: _onRecord,
                 now: widget.now,
+                // ⭐ উপর থেকে নিচে টানলে পুরো সিঙ্ক — পাঠানো আর আনা (মালিক, ১০ অক্টোবর ২০২৬)
+                onPull: _syncNow,
               ),
               _menuLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -295,7 +353,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                           message:
                               'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
                         )
-                      : _MenuGrid(items: _items),
+                      : RefreshIndicator(
+                          onRefresh: _syncNow,
+                          child: _MenuGrid(items: _items)),
               _MoreTab(
                   user: user,
                   org: org,
@@ -399,6 +459,31 @@ class _BellAction extends StatelessWidget {
   }
 }
 
+/// ⭐ Signatures waiting for this person, next to the bell — a tap opens the
+/// approval inbox (owner, 10 Oct 2026).
+class _ApprovalAction extends StatelessWidget {
+  const _ApprovalAction(
+      {required this.pending, required this.more, required this.onTap});
+
+  final int pending;
+  final bool more;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: const ValueKey('header-approvals'),
+      tooltip: 'অনুমোদন',
+      onPressed: onTap,
+      icon: Badge(
+        isLabelVisible: pending > 0 || more,
+        label: Text(more || pending > 99 ? '$pending+' : '$pending'),
+        child: const Icon(Icons.fact_check_outlined),
+      ),
+    );
+  }
+}
+
 /// ⭐ The person's photo at the far right of the green header — a tap opens
 /// the profile (the "আরও" tab, which is the profile page).
 class _AvatarAction extends StatelessWidget {
@@ -427,29 +512,6 @@ class _AvatarAction extends StatelessWidget {
   }
 }
 
-/// The sync icon, with how many orders are still on this phone. A plain
-/// count, not a status colour: waiting for a connection is normal, not a
-/// problem, so it must not read the way a red badge would.
-class _SyncAction extends StatelessWidget {
-  const _SyncAction({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final pending = SyncEngine.instance.pendingCount;
-    return IconButton(
-      tooltip: 'সিঙ্কের অবস্থা',
-      onPressed: onTap,
-      icon: Badge(
-        isLabelVisible: pending > 0,
-        label: Text('$pending'),
-        child: const Icon(Icons.sync_outlined),
-      ),
-    );
-  }
-}
-
 class _MenuGrid extends StatelessWidget {
   const _MenuGrid({required this.items});
 
@@ -458,6 +520,8 @@ class _MenuGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
+      // ⓘ কম ঘর হলেও টানা যায় — নিচে টানলে সিঙ্ক
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.md),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,

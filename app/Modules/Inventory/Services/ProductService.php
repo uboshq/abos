@@ -108,6 +108,15 @@ final class ProductService
         // নাম বদলে আরেকটা পণ্যের নকল হয়ে গেলেও একই পাহারা; নিজের সারি বাদ
         $this->duplicates->check(Product::class, $data, $product->id, $this->sameBranches($data, $product));
 
+        /*
+         * ⛔ ফাঁকা কোড মানে "যেমন আছে" — পুরো-ERP অডিট, মজুদ ছ১৫ ([[AnEmptyCodeKeepsTheOldOneTest]])। ⓘ ফর্মের ফাঁকা ঘর
+         * `null` হয়ে আসে, আর ঘরটা `NOT NULL` — আগে সোজা লেখা হত, পাতা ৫০০। নতুন পণ্যে ফাঁকা কোড সিরিজ থেকে আসে ([[create()]]);
+         * পুরনো পণ্যের কোড কাগজে ছাপা হয়ে গেছে, তাই ফাঁকা রাখলে পুরনোটাই থাকে।
+         */
+        if (array_key_exists('code', $data) && blank($data['code'])) {
+            unset($data['code']);
+        }
+
         if (isset($data['code']) && trim((string) $data['code']) !== $product->code) {
             $this->assertCodeIsFree(trim((string) $data['code']), $product->id);
         }

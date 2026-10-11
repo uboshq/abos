@@ -423,7 +423,8 @@ void main() {
         r"$payload['lines']",
         r"$line['productId']",
         r"$line['qty']",
-        r"$line['rate']",
+        // ⓘ `rate` নেই — ৭ অক্টোবর ২০২৬ থেকে (129dcba9) সার্ভার ফোনের দাম মানে না, দর-তালিকা থেকে নিজে বসায়।
+        // ফোন এখনো পাঠায়; সেটা পর্দায় দেখানো দাম, খাতার নয়।
         r"$payload['trxDate']",
         r"$payload['narration']",
       ]) {

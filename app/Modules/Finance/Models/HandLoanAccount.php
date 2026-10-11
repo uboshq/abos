@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -36,6 +37,7 @@ class HandLoanAccount extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
 
     /** চলছে — টাকা বাইরে বা ভেতরে আছে */
     public const ACTIVE = 'active';

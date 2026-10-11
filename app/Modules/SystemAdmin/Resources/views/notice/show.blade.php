@@ -9,6 +9,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $notice->title }}</x-slot:title>
 
+    {{-- ⛔ কেন হলো না, এই পাতাতেই — বোতাম আটকালে বার্তাটা এখানে দেখায় (ARefusalNobodyEverSawTest, ১০ অক্টোবর ২০২৬) --}}
+    <x-ui.errors />
+
     <x-slot:header>
         <x-ui.page-header :title="$notice->title"
                           :subtitle="$notice->starts_on?->format('d M Y')">
@@ -121,7 +124,7 @@
                         </dt>
                         <dd class="text-sm">
                             @php $who = $notice->audience->pluck('role')->all(); @endphp
-                            {{ $who === [] ? __('system_admin::notice.everyone') : implode(' · ', $who) }}
+                            {{ $who === [] ? __('system_admin::notice.everyone') : implode(' · ', array_map(\App\Core\Support\RoleLabel::for(...), $who)) }}
                         </dd>
                     </div>
 

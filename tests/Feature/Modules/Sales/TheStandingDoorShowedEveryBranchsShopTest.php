@@ -94,6 +94,32 @@ class TheStandingDoorShowedEveryBranchsShopTest extends TestCase
         $this->get(route('sales.order.standing', [$this->shop->id, 'total' => 100]))->assertNotFound();
     }
 
+    /**
+     * ⛔ ফেরতের বিল-তালিকা আর কাউন্টারের বাতিল — দেখা শাখার দোকানই (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬)। আগে শাখা ছাড়া খোঁজা
+     * হত: অন্য শাখার দোকান চাইলে ফেরতে ছাঁকনিই বসত না, আর বাতিলে সেই দোকানের নামে নিরীক্ষার সারি বসত।
+     */
+    public function test_the_return_list_and_the_counter_void_reach_only_the_viewed_branchs_shop(): void
+    {
+        CompanyContext::forCompany($this->company->id, fn () => $this->sr->givePermissionTo([
+            Permission::findOrCreate('sales.return.create', 'web'), Permission::findOrCreate('sales.challan.create', 'web'),
+            Permission::findOrCreate('sales.invoice.create', 'web'),
+        ]));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $voided = fn () => \App\Models\AuditTrail::query()->where('action', 'counter_bill_voided')
+            ->where('auditable_type', $this->shop->getMorphClass())->where('auditable_id', $this->shop->id)->count();
+
+        $this->phone();
+        $this->getJson('/api/v1/sales/returns/setup?customer='.$this->shop->public_id)->assertOk();
+        $this->postJson('/api/v1/sales/direct/void', ['reason' => 'ভুল', 'customer' => (string) $this->shop->public_id])->assertOk();
+        $this->assertSame(1, $voided());
+
+        $this->shop->forceFill(['branch_id' => $this->other->id])->save();
+        $this->phone();
+        $this->getJson('/api/v1/sales/returns/setup?customer='.$this->shop->public_id)->assertNotFound();
+        $this->postJson('/api/v1/sales/direct/void', ['reason' => 'ভুল', 'customer' => (string) $this->shop->public_id])->assertOk();
+        $this->assertSame(1, $voided(), '⛔ অন্য শাখার দোকানের নামে বাতিলের নিরীক্ষা বসল।');
+    }
+
     private function phone(): void
     {
         $this->app['auth']->forgetGuards();

@@ -171,6 +171,8 @@ class Supplier extends Model implements Drillable
             ? $this->getAttribute('payable_net')
             : LedgerEntry::query()
                 ->forParty(self::drillSourceType(), $this->id)
+                // ⭐ কেবল দেনার খাত — বিল-না-আসা মাল আলাদা ([[goodsNotBilled()]]; ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬)
+                ->whereIn('account_id', self::payableAccountIds())
                 ->when($upto, fn (Builder $q, string $date) => $q->whereDate('trx_date', '<=', $date))
                 ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as net')
                 ->value('net') ?? 0;
@@ -287,7 +289,8 @@ class Supplier extends Model implements Drillable
         $net = LedgerEntry::query()
             ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0)')
             ->whereColumn('ledger_entries.party_id', 'suppliers.id')
-            ->where('ledger_entries.party_type', self::drillSourceType());
+            ->where('ledger_entries.party_type', self::drillSourceType())
+            ->whereIn('ledger_entries.account_id', self::payableAccountIds()); // ⭐ ক্রয় ⚠️১২ ([[payable()]])
 
         // suppliers.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect(['suppliers.*', 'payable_net' => $net]);
@@ -320,7 +323,8 @@ class Supplier extends Model implements Drillable
         $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0)')
             ->whereColumn('ledger_entries.party_id', 'suppliers.id')
-            ->where('ledger_entries.party_type', self::drillSourceType());
+            ->where('ledger_entries.party_type', self::drillSourceType())
+            ->whereIn('ledger_entries.account_id', self::payableAccountIds()); // ⭐ ক্রয় ⚠️১২ ([[payable()]])
 
         return $query->addSelect(['suppliers.*', 'payable_in_view' => $net]);
     }
@@ -338,7 +342,73 @@ class Supplier extends Model implements Drillable
             return false;
         }
 
-        return bccomp($this->payable(), (string) $this->credit_limit, 4) > 0;
+        // ⓘ সীমা দুটো মিলিয়ে — বিল-না-আসা মালও তাদের পাওনা (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬)
+        return bccomp(bcadd($this->payable(), $this->goodsNotBilled(), 4), (string) $this->credit_limit, 4) > 0;
+    }
+
+    // ── ⭐ দেনা আর বিল-না-আসা মাল — দুই ভাগে (পুরো ERP অডিট, ক্রয় ⚠️১২; মালিকের বাছাই, ১০ অক্টোবর ২০২৬) ──────────────────
+
+    /**
+     * দেনার খাত-পরিবার (২১১০ আর তার নিচের সব) — সরবরাহকারীর "দেনা" কেবল এখান থেকে।
+     *
+     * ⛔ আগে সরবরাহকারীর নামের সব সারি যোগ হত, আর মাল-গ্রহণে GRNI-র সারিতেও তাঁর নাম বসে — তাই "দেনা" = দেনা + বিল-না-আসা
+     * মাল, আর উপখাতা দেনার খাত ২১১০-এর সাথে মিলত না। ⚠️ মনে রাখা হয় না — কোম্পানি বা পরীক্ষার ডাটাবেজ বদলালে পুরনো id থেকে
+     * যেত (একটা প্রক্রিয়া এক অনুরোধের বেশি বাঁচে); তালিকায় এটা একবারই খোঁজা হয়।
+     *
+     * @return list<int>
+     */
+    public static function payableAccountIds(): array
+    {
+        return self::familyIds(\App\Modules\Accounts\Services\StandardChart::PAYABLE_GROUP);
+    }
+
+    /** @return list<int> বিল-না-আসা মালের খাত (GRNI ২১৬০) আর তার নিচের সব */
+    public static function goodsNotBilledAccountIds(): array
+    {
+        return self::familyIds(\App\Modules\Accounts\Services\StandardChart::GOODS_RECEIVED_NOT_INVOICED);
+    }
+
+    /** @return list<int> ⓘ খাত না থাকলে [0] — `whereIn` খালি তালিকায় সব বাদ দেয়, আর তাই চাই */
+    private static function familyIds(string $code): array
+    {
+        return (\App\Modules\Accounts\Services\StandardChart::find($code)?->selfAndDescendants() ?? collect())
+            ->pluck('id')->map(fn ($id) => (int) $id)->values()->all() ?: [0];
+    }
+
+    /**
+     * ⭐ বিল-না-আসা মাল — মাল এসেছে, সরবরাহকারীর বিল এখনো আসেনি (GRNI-তে তাঁর নামের নিট)।
+     *
+     * ⓘ দেনার পাশে আলাদা ঘরে দেখানো হয় ([[scopeWithGoodsNotBilledInView()]]); বাকির সীমায় দুটো মিলিয়ে ([[isOverTheirLimit()]])।
+     */
+    public function goodsNotBilled(): string
+    {
+        $net = $this->getAttribute('grni_in_view') ?? LedgerEntry::query()
+            ->forParty(self::drillSourceType(), $this->id)
+            ->whereIn('account_id', self::goodsNotBilledAccountIds())
+            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as net')
+            ->value('net') ?? 0;
+
+        return bcadd((string) $net, '0', 4);
+    }
+
+    /**
+     * তালিকার জন্য বিল-না-আসা মাল — হেডারে বাছা শাখায়, [[scopeWithPayableInView()]]-এর একই ছাঁদে; ঘর `grni_in_view`।
+     *
+     * ⓘ আগে কোনো কলাম বাছা না থাকলে `suppliers.*` বসায় — একা ডাকলেও সারিটা পুরো আসে।
+     */
+    public function scopeWithGoodsNotBilledInView(Builder $query): Builder
+    {
+        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'suppliers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType())
+            ->whereIn('ledger_entries.account_id', self::goodsNotBilledAccountIds());
+
+        if ($query->getQuery()->columns === null) {
+            $query->select('suppliers.*');
+        }
+
+        return $query->addSelect(['grni_in_view' => $net]);
     }
 
     /** শর্ত অনুযায়ী শেষ তারিখ — শর্ত না থাকলে credit_days। */

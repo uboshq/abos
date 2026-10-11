@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\InsurancePolicy;
 use App\Modules\Finance\Models\InsurancePremium;
 use App\Modules\Finance\Models\InsurancePrepayment;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -67,9 +68,11 @@ final class InsurancePrepaymentService
             ->where('status', InsurancePremium::POSTED)
             ->whereNotNull('voucher_id')
             ->where('period_to', '>', $end->toDateString())
-            ->whereIn('policy_id', InsurancePolicy::query()->inViewedBranch()->select('id'))
-            ->whereHas('voucher', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '<=', $end->toDateString()))
-            ->with(['policy', 'voucher.lines.account'])
+            // ⛔ নাগালের শাখা, হেডারের নয় — উল্টো দাখিলার একই সারি ([[reverseBefore()]], [[ActingBranches]]; পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+            ->whereIn('policy_id', ActingBranches::narrow(InsurancePolicy::query(), 'fin_insurance_policies.branch_id')->select('id'))
+            // ⓘ ভাউচারের শাখার দেয়াল ছাড়া — নইলে হেডারের শাখাই আবার ফিরে আসত, অন্য শাখার কিস্তি বাদ পড়ত
+            ->whereHas('voucher', fn ($q) => $q->withoutGlobalScope('user-branch')->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '<=', $end->toDateString()))
+            ->with(['policy', 'voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'voucher.lines.account'])
             ->orderBy('period_from')->orderBy('id')->get();
 
         foreach ($premiums as $premium) {
@@ -157,6 +160,8 @@ final class InsurancePrepaymentService
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    // ⛔ পলিসির শাখায় — হেডারের শাখায় নয় (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+                    'branch_id' => $policy->branch_id,
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::insurance.prepaid_narration', [
                         'month' => $start->translatedFormat('F Y'), 'policy' => $policy->policy_no,
@@ -185,10 +190,11 @@ final class InsurancePrepaymentService
         $count = 0;
         $asset = null;
 
-        $open = InsurancePrepayment::query()
+        // ⛔ আগাম দেখার একই শাখাগুলো ([[preview()]]) — হেডারে এক শাখা বাছা থাকলেও বাকি শাখার অগ্রিম নীরবে উল্টাত না
+        $open = ActingBranches::narrow(InsurancePrepayment::query(), 'fin_insurance_prepayments.branch_id')
             ->whereNull('reversal_voucher_id')
             ->where('for_month', '<', $start->toDateString())
-            ->with(['voucher', 'policy'])
+            ->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'policy'])
             ->orderBy('for_month')->orderBy('id')->get();
 
         foreach ($open as $paper) {
@@ -208,6 +214,7 @@ final class InsurancePrepaymentService
             $reversal = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
                 'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                'branch_id' => $paper->branch_id,
                 'trx_date' => $paper->for_month->copy()->endOfMonth()->addDay()->toDateString(),
                 'narration' => __('finance::insurance.prepaid_reversal_narration', [
                     'month' => $paper->for_month->translatedFormat('F Y'), 'policy' => (string) $paper->policy?->policy_no,

@@ -11,8 +11,11 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryState;
+use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Models\SalesReturnLine;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Models\ShipmentLine;
 use Illuminate\Support\Carbon;
@@ -62,6 +65,7 @@ final class ShipmentService
             ]);
 
             $this->replaceLines($shipment, $challanIds);
+            $this->stampFare($shipment, $data);
 
             IssuedNumber::query()
                 ->where('document_no', $documentNo)
@@ -96,9 +100,40 @@ final class ShipmentService
             ]);
 
             $this->replaceLines($shipment, $challanIds);
+            $this->stampFare($shipment, $data);
 
             return $shipment->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ ট্রিপের ভাড়া — অঙ্ক, বাহক, এখন বা পরে, খাত (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment::stamp()]])।
+     *
+     * ⓘ ফর্ম ঘরগুলো পাঠালে তবেই; না পাঠালে (পুরনো দরজা) কিছুই বদলায় না। ⓘ ভাড়ার ঘর fillable নয় — এখানে forceFill।
+     * ⛔ ভাড়াওয়ালা ট্রিপে নিজের ভাড়াওয়ালা চালান নয় ([[FarePayment::assertOneFarePerTrip()]])।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function stampFare(Shipment $shipment, array $data): void
+    {
+        if (! array_key_exists('fare_when', $data) && ! array_key_exists('transport_cost', $data)) {
+            return;
+        }
+
+        $shipment->forceFill([
+            'transport_cost' => is_numeric($data['transport_cost'] ?? null) ? (string) $data['transport_cost'] : null,
+            'carrier_id' => ($data['carrier_id'] ?? null) ?: null,
+        ])->save();
+
+        $fares = app(FarePayment::class);
+        $fares->stamp($shipment->fresh(), $data);
+        $fares->assertOneFarePerTrip($shipment->fresh(), $this->challansOf($shipment));
+    }
+
+    /** @return \Illuminate\Support\Collection<int, DeliveryChallan> */
+    private function challansOf(Shipment $shipment): \Illuminate\Support\Collection
+    {
+        return DeliveryChallan::query()->whereIn('id', ShipmentLine::query()->where('shipment_id', $shipment->id)->select('delivery_challan_id'))->get();
     }
 
     /**
@@ -131,12 +166,29 @@ final class ShipmentService
 
             $this->assertChallansCanTravel($ids, $shipment);
 
-            $shipment->update([
+            /*
+             * ⭐ ট্রাক রওনা — ভাড়াও খাতায়, একই লেনদেনে (সিদ্ধান্ত ঘ; [[FarePayment::bookTrip()]])। ⓘ সারি তালা দিয়ে আসল
+             * অবস্থা — দুই চাপে দুইবার রওনা আর দুইবার ভাড়া নয়; খসড়ার পরে কোনো চালানে ভাড়া বসে থাকলে এখানে আবার ধরা পড়ে।
+             */
+            $locked = Shipment::query()->lockForUpdate()->findOrFail($shipment->id);
+
+            if ($locked->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_dispatches', ['no' => $shipment->document_no]),
+                ]);
+            }
+
+            $fares = app(FarePayment::class);
+            $fares->assertOneFarePerTrip($locked, $this->challansOf($locked));
+
+            $locked->update([
                 'status' => DocumentStatus::CONFIRMED,
                 'dispatched_at' => now(),
             ]);
 
-            return $shipment->fresh(['lines']);
+            $fares->bookTrip($locked->fresh());
+
+            return $locked->fresh(['lines']);
         });
     }
 
@@ -260,14 +312,50 @@ final class ShipmentService
             ]);
         }
 
-        $shipment->update([
-            'status' => DocumentStatus::CANCELLED,
-            'cancelled_by' => auth()->id(),
-            'cancelled_at' => now(),
-            'cancel_reason' => $reason,
-        ]);
+        /*
+         * ⭐ ভাড়াও ফেরে — EV বাতিল বা দেনার দাখিলা উল্টো ([[FarePayment::undoTrip()]], ১০ অক্টোবর ২০২৬)। ⓘ টাকা নড়ে,
+         * তাই সারি তালা দিয়ে আসল অবস্থা আবার দেখা — দুই চাপে ভাড়া দুইবার উল্টায় না ([[EveryMoneyActionLocksItsRowTest]])।
+         */
+        return DB::transaction(function () use ($shipment, $reason) {
+            $locked = Shipment::query()->lockForUpdate()->findOrFail($shipment->id);
 
-        return $shipment->fresh(['lines']);
+            if (in_array($locked->status, [DocumentStatus::CANCELLED, DocumentStatus::CLOSED], true)) {
+                throw ValidationException::withMessages([
+                    'status' => __($locked->status === DocumentStatus::CANCELLED ? 'sales::validation.already_cancelled'
+                        : 'sales::validation.a_finished_trip_does_not_cancel', ['no' => $locked->document_no]),
+                ]);
+            }
+
+            $locked->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
+
+            app(FarePayment::class)->undoTrip($locked->fresh(), $reason);
+
+            /*
+             * ⛔ যে চালান গুদামের ধাপে ফিরল, তার এই ট্রিপের গেট পাসও বাতিল — Sales অডিট, ১০ অক্টোবর ২০২৬।
+             * ⚠️ আগে পাসটা "জারি" থেকে যেত: গাড়ি বেরোয়নি, অথচ কাগজে মাল গেট পেরিয়েছে। ⓘ চালকের কথা বসে যাওয়া
+             * চালান (পৌঁছেছে ইত্যাদি) ধাপে ফেরে না ([[DeliveryStageService::tripChanged()]]) — তাদের পাস থাকে, মাল সত্যিই গেছে।
+             * ⓘ বিল আর মাল বের হওয়া থাকে: বিক্রিটা দাঁড়িয়ে, পরের ট্রিপে আবার হয় না ([[DispatchBill]], [[GoodsIssue]]
+             * একবারই) — আর নিশ্চিত বিল বাতিল হয় না (মালিক, ২ অক্টোবর ২০২৬)। পরের রওনায় নতুন পাস (/2)।
+             */
+            $backHome = DeliveryState::query()
+                ->whereIn('delivery_challan_id', $locked->lines()->pluck('delivery_challan_id'))
+                ->whereIn('stage', DeliveryStage::DISPATCHABLE)
+                ->pluck('delivery_challan_id');
+
+            GatePass::query()
+                ->where('shipment_id', $locked->id)
+                ->where('status', GatePass::ISSUED)
+                ->whereIn('delivery_challan_id', $backHome)
+                ->get()
+                ->each(fn (GatePass $pass) => app(GatePassService::class)->cancel($pass, $reason));
+
+            return $locked->fresh(['lines']);
+        });
     }
 
     // ── ভেতরের কাজ ──────────────────────────────────────────────────────
@@ -295,23 +383,34 @@ final class ShipmentService
             return true;
         }
 
-        $invoiceIds = SalesInvoiceLine::query()
+        $billed = SalesInvoiceLine::query()
             ->whereIn('delivery_challan_line_id',
                 fn ($q) => $q->select('id')->from('sal_challan_lines')
                     ->where('delivery_challan_id', $challan->id))
-            ->pluck('sales_invoice_id')
-            ->unique()
-            ->filter()
-            ->all();
+            ->pluck('qty', 'id');
 
-        if ($invoiceIds === []) {
+        if ($billed->isEmpty()) {
             return false;
         }
 
-        return SalesReturn::query()
-            ->whereIn('sales_invoice_id', $invoiceIds)
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->exists();
+        /*
+         * ⛔ এই চালানের বিলের সারিতেই ফেরত, আর যতটা ফেরার কথা ততটা — Sales অডিট, ১০ অক্টোবর ২০২৬।
+         * ⚠️ আগে বিলের যেকোনো একটা পাকা ফেরতই "মাল ফিরেছে" বলত: পুরো চালান ফেরত এলেও এক পিসের ফেরত লিখে ট্রিপ
+         * বন্ধ করা যেত, বাকিটা খাতায় ক্রেতার কাছে চিরকাল। ⓘ "পুরো ফেরত" = প্রতিটা সারির পুরো পরিমাণ; "কম পৌঁছেছে"
+         * = কিছু একটা ফেরত, কতটা কম তা চালকের কথাতেই।
+         */
+        $returned = SalesReturnLine::query()
+            ->whereIn('sales_invoice_line_id', $billed->keys())
+            ->whereIn('sales_return_id', SalesReturn::query()->whereIn('status', DocumentStatus::POSTED)->select('id'))
+            ->groupBy('sales_invoice_line_id')
+            ->selectRaw('sales_invoice_line_id, SUM(qty) as returned')
+            ->pluck('returned', 'sales_invoice_line_id');
+
+        if ($line->outcome === ShipmentLine::SHORT) {
+            return $returned->contains(fn ($qty) => bccomp((string) $qty, '0', 4) > 0);
+        }
+
+        return $billed->every(fn ($qty, $id) => bccomp((string) ($returned[$id] ?? '0'), (string) $qty, 4) >= 0);
     }
 
     /**

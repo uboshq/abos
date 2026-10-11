@@ -11,10 +11,12 @@ use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -46,6 +48,7 @@ class BankFacility extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
     use SoftDeletes;
 
     /**
@@ -171,7 +174,7 @@ class BankFacility extends Model implements Drillable
      * ঐতিহাসিক সত্য। নতুন সারিতে ঘরটা আর চাওয়া হয় না।
      */
     /** ⭐ ব্যাংকের বিবরণীর জের — পুরনো থেকে নতুন ([[FacilityStatement]], পরিকল্পনা ৩.৬) */
-    public function statements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function statements(): HasMany
     {
         return $this->hasMany(FacilityStatement::class, 'bank_facility_id')->orderBy('statement_on');
     }

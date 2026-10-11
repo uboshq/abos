@@ -212,6 +212,12 @@ class SyncController extends Controller
     {
         $this->staff($request);
 
+        /*
+         * ⓘ উত্তরটা আগের মতোই একটা তালিকা — আজকের ফোন `List` পড়ে (mobile sync_history_api.dart); তাই পাতার খবর মাথায়
+         * (`X-Total-Count`, `X-Has-More`), শরীরে নয়। পুরনো ফোন প্রথম পাতা, অর্থাৎ নতুন ১০০টা পায় (পুরো-ERP অডিট, ফোন)।
+         */
+        $page = $this->sync->conflicts($request->integer('page', 1));
+
         $rows = array_map(fn (SyncConflict $conflict) => [
             'id' => $conflict->public_id,
             'module' => $conflict->module,
@@ -220,9 +226,12 @@ class SyncController extends Controller
             'reason' => $conflict->reason,
             'status' => $conflict->status,
             'detectedAt' => $conflict->detected_at?->toIso8601String(),
-        ], $this->sync->conflicts());
+        ], $page['rows']);
 
-        return response()->json($rows);
+        return response()->json($rows)->withHeaders([
+            'X-Total-Count' => (string) $page['total'],
+            'X-Has-More' => $page['hasMore'] ? '1' : '0',
+        ]);
     }
 
     public function resolveConflict(Request $request, string $conflict): JsonResponse

@@ -116,12 +116,14 @@ class SupplierController extends Controller implements HasMiddleware
             ->with(['partyType', 'paymentTerm'])
             // প্রদেয় সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
             // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[Supplier::scopeWithPayableInView()]]
-            ->withPayableInView();
+            ->withPayableInView()
+            // ⭐ বিল-না-আসা মাল — দেনার পাশে আলাদা ঘরে (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬)
+            ->withGoodsNotBilledInView();
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
-        $grand = $this->grandTotals($query, ['payable' => 't.payable_in_view']);
+        $grand = $this->grandTotals($query, ['payable' => 't.payable_in_view', 'goods_not_billed' => 't.grni_in_view']);
 
         $suppliers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯)

@@ -139,6 +139,18 @@ class PeriodLockController extends Controller implements HasMiddleware
             return back()->withErrors(['month' => __('accounts::validation.cannot_close_future_month')]);
         }
 
+        /*
+         * ⛔ আগের মাস খোলা রেখে পরের মাস নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ৬)।
+         * ⚠️ আগে সেপ্টেম্বর বন্ধ করা যেত আগস্ট খোলা রেখেই: আগস্টে পরে বসা বিল সেপ্টেম্বরের ছাপা প্রারম্ভিক জের বদলে দিত,
+         * অথচ সেপ্টেম্বর "বন্ধ" দেখাত। ⓘ কেবল একই অর্থবছরের আগের মাস — বছরের প্রথম মাসের আগে বছর বন্ধ নিজেই পাহারা।
+         */
+        if (($open = $this->earliestOpenMonthBefore($month)) !== null) {
+            return back()->withErrors(['month' => __('accounts::validation.earlier_month_open', [
+                'earlier' => $open->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
+                'month' => $month->locale(app()->getLocale())->isoFormat('MMMM YYYY'),
+            ])]);
+        }
+
         $rows = collect(app(MonthEndChecklist::class)->run($month))->keyBy('key');
         $drafts = (int) ($rows['drafts']['count'] ?? 0);
         $awaiting = (int) ($rows['awaiting']['count'] ?? 0);
@@ -153,6 +165,28 @@ class PeriodLockController extends Controller implements HasMiddleware
         );
 
         return back()->with('saved', __('accounts::message.period_closed', ['month' => $lock->label()]));
+    }
+
+    /** একই অর্থবছরে এই মাসের আগের প্রথম খোলা মাস — সব বন্ধ থাকলে `null` */
+    private function earliestOpenMonthBefore(CarbonImmutable $month): ?CarbonImmutable
+    {
+        $year = FinancialYear::forDate($month->toDateString());
+
+        if ($year === null) {
+            return null;
+        }
+
+        $locked = PeriodLock::query()->get(['year', 'month'])
+            ->map(fn (PeriodLock $lock) => $lock->year.'-'.$lock->month)
+            ->all();
+
+        for ($cursor = CarbonImmutable::parse($year->starts_on)->startOfMonth(); $cursor->lessThan($month); $cursor = $cursor->addMonthNoOverflow()) {
+            if (! in_array($cursor->year.'-'.$cursor->month, $locked, true)) {
+                return $cursor;
+            }
+        }
+
+        return null;
     }
 
     /**

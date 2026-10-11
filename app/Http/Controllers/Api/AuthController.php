@@ -7,12 +7,16 @@ namespace App\Http\Controllers\Api;
 use App\Core\Engines\Sync\SyncService;
 use App\Core\Security\CredentialCheck;
 use App\Core\Security\MfaCodeRequired;
+use App\Core\Security\MfaService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseInactiveAccounts;
+use App\Http\Middleware\SuperAdminMustHaveTwoSteps;
+use App\Models\SyncDevice;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -75,6 +79,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly CredentialCheck $credentials,
         private readonly SyncService $sync,
+        private readonly MfaService $mfa,
     ) {}
 
     /**
@@ -174,6 +179,25 @@ class AuthController extends Controller
 
         CompanyContext::set($companyId, $user->current_branch_id);
 
+        /*
+         * ⛔ যাঁর দুই ধাপ বাধ্যতামূলক অথচ বসানো নেই, ফোন তাঁকে ঢোকায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⓘ ওয়েবে [[SuperAdminMustHaveTwoSteps]] তাঁকে বসানোর পর্দায়
+         * আটকে রাখে, কিন্তু ঐ মিডলওয়্যার কেবল web গ্রুপে। ⚠️ [[CredentialCheck]]
+         * দেখে কেবল "চালু আছে কি না" — তাই চালু না করা সুপার অ্যাডমিন
+         * ফোন দিয়ে কেবল পাসওয়ার্ডেই পুরো টোকেন পেয়ে যেতেন, আর
+         * বাধ্যতামূলক তালাটা দ্বিতীয় দরজায় ঐচ্ছিক হয়ে যেত।
+         * ⓘ বসানোর পর্দা ফোনে নেই, তাই উত্তরটা: আগে ওয়েবে বসান। বসানো
+         * থাকলে কোডটা উপরের যাচাই-ই চায়।
+         *
+         * ⚠️ কোম্পানির প্রসঙ্গ বসার **পরে**, আগে নয়: রোলগুলো কোম্পানি-ভিত্তিক
+         * (Spatie teams), তাই প্রসঙ্গ ছাড়া `hasRole()` সুপার অ্যাডমিনকেও
+         * "না" বলত আর তালাটা নীরবে খোলা থাকত — পরীক্ষা ঠিক এটাই ধরেছিল।
+         */
+        if ($this->twoStepMissing($user)) {
+            return response()->json(['message' => __('auth.two_step_set_up_on_web_first')], 403);
+        }
+
         $this->sync->register(
             $user,
             $data['deviceId'],
@@ -204,6 +228,8 @@ class AuthController extends Controller
         $current = $this->refreshTokenFrom($request);
 
         if ($current === null) {
+            $this->refuseAReusedToken($request);
+
             return response()->json(['message' => 'Unauthenticated.'], 401); // ⓘ Laravel-এর নিজের ৪০১-এর একই কথা — অ্যাপ এটাই চেনে
         }
 
@@ -230,26 +256,89 @@ class AuthController extends Controller
             return response()->json(['message' => __('auth.dismissed')], 401);
         }
 
+        /*
+         * ⛔ নবায়নেও একই তালা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ নাহলে নিয়মটা চালুর আগে নেওয়া একটা refresh টোকেন প্রতি
+         * ৩০ দিনে নিজেকে নতুন করে চিরকাল চলত, দুই ধাপ ছাড়াই।
+         */
+        if ($this->twoStepMissing($user)) {
+            return response()->json(['message' => __('auth.two_step_set_up_on_web_first')], 403);
+        }
+
         $data = $request->validate([
             'deviceId' => ['nullable', 'string', 'max:64'],
         ]);
 
         /*
-         * ⓘ deviceId না পাঠালে টোকেনের নিজের নাম থেকে (`refresh:<deviceId>`) — অ্যাপ ০.৪.৮ পর্যন্ত নবায়নে deviceId
-         * পাঠাত না, আর তাতে প্রতিটা নবায়ন ৪২২ হত ([[refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
+         * ⛔ ডিভাইস টোকেনের নিজের নাম থেকে (`refresh:<deviceId>`) — ফোনের পাঠানো নামে নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬:
+         * আগে body-র deviceId আগে নেওয়া হত, তাই চুরি যাওয়া একটা নবায়ন-টোকেন দিয়ে অন্য যেকোনো ফোনের নামে জোড়া বানানো যেত)।
+         * ⓘ নামে ডিভাইস না থাকলে তবেই body — অ্যাপ ০.৪.৮ পর্যন্ত deviceId পাঠাত না ([[refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
          */
-        $deviceId = filled($data['deviceId'] ?? null)
-            ? (string) $data['deviceId']
-            : ($current instanceof PersonalAccessToken && str_starts_with((string) $current->name, self::REFRESH.':')
-                ? substr((string) $current->name, strlen(self::REFRESH) + 1) : '');
+        $deviceId = str_starts_with((string) $current->name, self::REFRESH.':')
+            ? substr((string) $current->name, strlen(self::REFRESH) + 1)
+            : (string) ($data['deviceId'] ?? '');
 
         if ($deviceId === '') {
             return response()->json(['message' => __('validation.required', ['attribute' => 'deviceId'])], 422);
         }
 
-        $current->delete();
+        /*
+         * ⛔ একটা টোকেন একবারই — মুছে ফেলাটাই প্রমাণ: দুইটা নবায়ন একসাথে এলে কেবল যে মুছতে পেরেছে সে নতুন জোড়া পায়
+         * (আগে দুটোই পেত)। ব্যবহার করা টোকেনের ছাপ রাখা হয়, যাতে পরে কেউ আবার আনলে চুরি বলে ধরা পড়ে ([[refuseAReusedToken()]])।
+         */
+        if (PersonalAccessToken::query()->whereKey($current->getKey())->delete() !== 1) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+        Cache::put(self::usedKey((string) $this->plainRefreshToken($request)), [
+            'user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp(),
+        ], now()->addDays(self::REFRESH_DAYS + 1));
 
         return response()->json($this->issue($user, $deviceId));
+    }
+
+    /**
+     * ⛔ ব্যবহার হয়ে যাওয়া নবায়ন-টোকেন আবার এলে — চুরির চিহ্ন (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬; OAuth-এর refresh-token
+     * rotation-এর "reuse detection")। ঘোরানোর পরে আসল ফোন নতুন টোকেন রাখে; পুরনোটা যে আনে সে অন্য কেউ, অথবা আসল ফোন আর
+     * চোর দুজনই একই টোকেন পেয়েছে। তাই ঐ ফোনের নামের সব টোকেন বাতিল — দুজনকেই আবার লগইন করতে হয়, আর চোর বেরিয়ে যায়।
+     * ⓘ ঘোরানোর পর এক মিনিটের মধ্যে আবার এলে বাতিল নয়: দুর্বল নেটে একই নবায়ন দুবার যেতে পারে, আর তখন আসল ফোনকে বের করে
+     * দেওয়া ভুল হত।
+     */
+    private function refuseAReusedToken(Request $request): void
+    {
+        $plain = $this->plainRefreshToken($request);
+        $used = is_string($plain) && $plain !== '' ? Cache::get(self::usedKey($plain)) : null;
+
+        if (! is_array($used) || now()->getTimestamp() - (int) ($used['at'] ?? 0) < self::REUSE_GRACE_SECONDS) {
+            return;
+        }
+
+        PersonalAccessToken::query()
+            ->where('tokenable_type', (new User)->getMorphClass())
+            ->where('tokenable_id', (int) ($used['user'] ?? 0))
+            ->whereIn('name', [
+                $this->tokenName((string) ($used['device'] ?? ''), self::ACCESS),
+                $this->tokenName((string) ($used['device'] ?? ''), self::REFRESH),
+            ])
+            ->delete();
+    }
+
+    private const REUSE_GRACE_SECONDS = 60;
+
+    private static function usedKey(string $plain): string
+    {
+        return 'refresh-used:'.hash('sha256', $plain);
+    }
+
+    /** নবায়ন-টোকেনের লেখা — হেডারে, না পেলে body-তে */
+    private function plainRefreshToken(Request $request): ?string
+    {
+        $plain = $request->bearerToken();
+        if (! is_string($plain) || $plain === '') {
+            $plain = $request->input('refreshToken');
+        }
+
+        return is_string($plain) && $plain !== '' ? $plain : null;
     }
 
     /**
@@ -258,6 +347,27 @@ class AuthController extends Controller
      * ⓘ পাহারা আগের মতোই, কেবল এখানে স্পষ্ট: টোকেন আছে, মেয়াদ ফুরোয়নি, ক্ষমতা `refresh` (access টোকেনে নবায়ন নয়),
      * আর ব্যবহার করা টোকেন মুছে যায় বলে দ্বিতীয়বার চলে না।
      */
+    /**
+     * দুই ধাপ এই মানুষের জন্য বাধ্যতামূলক, অথচ এখনো বসানো হয়নি।
+     *
+     * ⓘ "বাধ্যতামূলক" এর সংজ্ঞা একটাই, ওয়েবের তালার সাথে ভাগ করা
+     * ([[SuperAdminMustHaveTwoSteps::isRequiredFor()]]): দুই জায়গায় দুইটা
+     * নিয়ম হলে একদিন একটা বদলাত, অন্যটা নয়।
+     */
+    private function twoStepMissing(User $user): bool
+    {
+        /*
+         * ⓘ নবায়নের দরজায় কোম্পানির প্রসঙ্গ বসানো থাকে না, তাই রোলটা
+         * তাঁর চলতি কোম্পানিতেই পড়া হয় — ওয়েবের তালা যেখানে পড়ে।
+         */
+        $required = $user->current_company_id === null
+            ? SuperAdminMustHaveTwoSteps::isRequiredFor($user)
+            : CompanyContext::forCompany((int) $user->current_company_id,
+                fn (): bool => SuperAdminMustHaveTwoSteps::isRequiredFor($user));
+
+        return $required && ! $this->mfa->isOn($user);
+    }
+
     private function refreshTokenFrom(Request $request): ?PersonalAccessToken
     {
         $plain = $request->bearerToken();
@@ -306,7 +416,7 @@ class AuthController extends Controller
 
         // ⭐ বের হলে এই ফোনে আর বার্তা নয় — FCM টোকেন মোছা ([[PushTokenController]], ২ অক্টোবর ২০২৬)
         if ($deviceId !== '') {
-            \App\Models\SyncDevice::query()->withoutGlobalScopes()
+            SyncDevice::query()->withoutGlobalScopes()
                 ->where('device_id', $deviceId)->where('user_id', $user->id)
                 ->update(['push_token' => null, 'push_token_at' => null]);
         }

@@ -36,20 +36,29 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
         $this->company = Company::create(['code' => 'PU', 'name_en' => 'Push Co']);
     }
 
-    public function test_a_phone_registers_its_own_token_and_takes_it_from_whoever_had_it(): void
+    /**
+     * ⭐ ফোন নিজের টোকেন বসায়, আর নিজেরই পুরনো ইনস্টলের সারি থেকে সেটা সরে আসে। ⛔ আরেকজনের ফোনের টোকেন নয় — ৪০৯, কিছু
+     * বদলায় না (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: আগে যেকোনো সারি থেকে কেড়ে নেওয়া যেত)। ⓘ ফোনপ্রতি সারি একটাই — একই ফোনে
+     * লোক বদলালে সারিটাই নতুন জনের হয়।
+     */
+    public function test_a_phone_takes_its_token_from_its_own_old_install_but_never_from_another_persons_phone(): void
     {
-        $before = $this->member();
+        $someone = $this->member();
         $now = $this->member();
-        $old = $this->device($before, 'dev-old', 'tok-shared');
+        $stale = $this->device($now, 'dev-old-install', 'tok-mine');
         $mine = $this->device($now, 'dev-new');
 
         Sanctum::actingAs($now, [AuthController::APP]);
-        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-new', 'token' => 'tok-shared'])->assertOk();
+        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-new', 'token' => 'tok-mine'])->assertOk();
+        $this->assertSame('tok-mine', $mine->fresh()->push_token);
+        $this->assertNull($stale->fresh()->push_token, '⛔ পুরনো ইনস্টলে টোকেন থেকে গেল — একই বার্তা দুবার যেত।');
 
-        $this->assertSame('tok-shared', $mine->fresh()->push_token);
-        $this->assertNull($old->fresh()->push_token, '⛔ একই ফোনে আগের জনের টোকেন থেকে গেল — তাঁর বার্তা এই ফোনে আসত।');
+        $theirs = $this->device($someone, 'dev-theirs', 'tok-theirs');
+        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-new', 'token' => 'tok-theirs'])->assertStatus(409);
+        $this->assertSame('tok-theirs', $theirs->fresh()->push_token, '⛔ অন্যের ফোনের টোকেন কেড়ে নেওয়া গেল।');
+        $this->assertSame('tok-mine', $mine->fresh()->push_token);
 
-        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-old', 'token' => 'x'])->assertNotFound();
+        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-theirs', 'token' => 'x'])->assertNotFound();
     }
 
     public function test_signing_out_stops_the_pushes_to_that_phone(): void
@@ -75,7 +84,10 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_a_push_carries_only_the_title_and_a_gone_token_is_dropped(): void
+    /**
+     * ⭐ শিরোনামে নম্বর আর ধাপ, নিচের লাইনে দোকানের "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: "obosoi point dibe")।
+     */
+    public function test_a_push_carries_the_title_and_the_shop_with_its_point_and_a_gone_token_is_dropped(): void
     {
         $user = $this->member();
         $live = $this->device($user, 'dev-a', 'tok-live');
@@ -89,7 +101,7 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
                 : Http::response(['name' => 'projects/p/messages/1']),
         ]);
 
-        (new SendPushToUser($user->id, 'S-0007 — গেট পেরিয়েছে', ['open' => 'tracking']))->handle(app(FcmSender::class));
+        (new SendPushToUser($user->id, 'S-0007 — গেট পেরিয়েছে', ['open' => 'tracking'], 'রহিম স্টোর · কারওয়ান বাজার'))->handle(app(FcmSender::class));
 
         Http::assertSent(function ($request) {
             if (! str_contains($request->url(), 'fcm.googleapis.com')) {
@@ -98,7 +110,7 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
             $message = $request->data()['message'] ?? [];
 
             return ($message['notification']['title'] ?? null) === 'S-0007 — গেট পেরিয়েছে'
-                && ! array_key_exists('body', $message['notification'] ?? []);
+                && ($message['notification']['body'] ?? null) === 'রহিম স্টোর · কারওয়ান বাজার';
         });
         $this->assertSame('tok-live', $live->fresh()->push_token);
         $this->assertNull($gone->fresh()->push_token, '"আর নেই" বলা টোকেন রয়ে গেল।');

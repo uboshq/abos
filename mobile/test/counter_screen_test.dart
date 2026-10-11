@@ -86,6 +86,7 @@ class _FakeApi implements DirectSaleApi {
               id: 'm-cash', label: 'নগদ', kind: 'cash', accountId: 'ac-1')
         ],
         carriers: [const CounterChoice('car-1', 'করিম পরিবহন')],
+        farePayers: [const CounterChoice('u-7', 'রহিম (ক্যাশিয়ার)')],
         voidReasons:
             reasonList ? const ['গ্রাহক কিনবেন না', 'অন্য কারণ'] : const [],
         lots: noWarehouse
@@ -462,6 +463,97 @@ void main() {
       'vehicle_owner': 'hired',
       'transport_cost': '150.00',
       'fare_paid_by': 'customer',
+    });
+  });
+
+  /// ⭐ ভাড়া আমরা দিলে — কখন, কোন খাত, TrxID আর কে দিলেন (মালিক, ৭ অক্টোবর ২০২৬; a5, সার্ভার 272141b9)
+  Future<void> fareSheet(WidgetTester tester, {required String when, String? account, String? reference, bool payer = false, bool carrier = false}) async {
+    await tester.tap(find.byKey(const ValueKey('counter-vehicle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('counter-vehicle-owner')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('আমাদের গাড়ি').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('counter-fare')), '200');
+    await tester.tap(find.byKey(const ValueKey('counter-fare-paid-by')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('আমরা — আমাদের খরচ').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(when == 'now' ? 'এখনই দিলাম' : 'পরে দেব'));
+    await tester.pumpAndSettle();
+    if (account != null) {
+      await tester.tap(find.byKey(const ValueKey('counter-fare-account')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(account).last);
+      await tester.pumpAndSettle();
+    }
+    if (reference != null) {
+      await tester.enterText(find.byKey(const ValueKey('counter-fare-reference')), reference);
+    }
+    if (payer) {
+      await tester.tap(find.byKey(const ValueKey('counter-fare-payer')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('রহিম (ক্যাশিয়ার)').last);
+      await tester.pumpAndSettle();
+    }
+    if (carrier) {
+      await tester.tap(find.byKey(const ValueKey('counter-fare-carrier')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('করিম পরিবহন').last);
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(find.byKey(const ValueKey('counter-vehicle-save')));
+    await tester.tap(find.byKey(const ValueKey('counter-vehicle-save')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a fare we pay now from a bank sends the account, the TrxID and who paid', (tester) async {
+    final api = _FakeApi();
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await fareSheet(tester, when: 'now', account: '1102 · ব্যাংক', reference: 'TRX-9001', payer: true);
+    await _confirm(tester);
+    expect(api.sentExtras!.delivery.toJson(), {
+      'vehicle_owner': 'own', 'transport_cost': '200.00', 'fare_paid_by': 'us',
+      'fare_when': 'now', 'fare_account': 'ac-2', 'fare_reference': 'TRX-9001', 'fare_payer': 'u-7',
+    });
+  });
+
+  testWidgets('a fare paid now in cash sends no TrxID and no payer', (tester) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final api = _FakeApi();
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await fareSheet(tester, when: 'now', account: '1101 · নগদ');
+    expect(find.byKey(const ValueKey('counter-fare-reference')), findsNothing);
+    await _confirm(tester);
+    expect(api.sentExtras!.delivery.toJson(), {
+      'vehicle_owner': 'own', 'transport_cost': '200.00', 'fare_paid_by': 'us', 'fare_when': 'now', 'fare_account': 'ac-1',
+    });
+  });
+
+  testWidgets('a fare we pay later sends the carrier it is owed to', (tester) async {
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final api = _FakeApi();
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await fareSheet(tester, when: 'later', carrier: true);
+    await _confirm(tester);
+    expect(api.sentExtras!.delivery.toJson(), {
+      'vehicle_owner': 'own', 'carrier': 'car-1', 'transport_cost': '200.00', 'fare_paid_by': 'us', 'fare_when': 'later',
     });
   });
 

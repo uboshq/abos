@@ -33,6 +33,20 @@ class PushTokenController extends Controller
 
         $token = trim((string) ($data['token'] ?? '')) ?: null;
 
+        /*
+         * ⛔ অন্যের ফোনের টোকেন নিজের নামে নয় — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬। ⓘ ফোনপ্রতি সারি একটাই (`device_id` অনন্য),
+         * আর একই ফোনে লোক বদলালে সারিটাই নতুন জনের হয় — তাই অন্য সারিতে একই টোকেন মানে আরেকটা ইনস্টল। নিজের পুরনো ইনস্টল
+         * হলে টোকেন সরে আসে (আগের মতো); আরেকজনের হলে ৪০৯, কিছু বদলায় না। আগে যেকোনো সারি থেকে কেড়ে নেওয়া যেত: কেউ অন্যের
+         * টোকেন জানলে তাঁর পুশ বন্ধ করে নিজের দিকে নিতে পারতেন।
+         */
+        if ($token !== null && SyncDevice::query()->withoutGlobalScopes()
+            ->where('push_token', $token)
+            ->whereKeyNot($device->id)
+            ->where('user_id', '!=', $device->user_id)
+            ->exists()) {
+            abort(409, __('mobile.push_token_elsewhere'));
+        }
+
         DB::transaction(function () use ($device, $token): void {
             if ($token !== null) {
                 SyncDevice::query()->withoutGlobalScopes()

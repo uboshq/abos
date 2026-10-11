@@ -192,7 +192,12 @@ final class SalesInvoiceService
             return;
         }
 
-        if ($decided?->status === Approval::REJECTED) {
+        /*
+         * ⛔ "না" কেবল সেই অঙ্কের — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (বিক্রয় ৬; [[ARejectedDiscountCanAskAgainWhenItChangesTest]])।
+         * ⓘ আগে যেকোনো প্রত্যাখ্যাত সই বিলটা চিরকাল আটকাত: সইকারী "এত ছাড় নয়" বলার পর ছাড় কমিয়েও আর নতুন সই চাওয়া যেত না।
+         * এখন একই অঙ্ক আবার এলে আগের মতো "নামঞ্জুর"; অঙ্ক বদলালে নিচে নতুন অনুরোধ — সইকারী আবার দেখেন।
+         */
+        if ($decided?->status === Approval::REJECTED && $decided->covers($discount)) {
             throw ValidationException::withMessages([
                 'discount' => __('sales::validation.discount_rejected'),
             ]);
@@ -345,7 +350,9 @@ final class SalesInvoiceService
             $given = trim((string) ($data['document_no'] ?? ''));
 
             if ($given !== '') {
-                $taken = SalesInvoice::query()
+                // ⛔ গোটা কোম্পানিতে, শাখার দেয়াল ছাড়া — পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ৫ ([[AManualBillNumberIsCheckedAcrossTheCompanyTest]]);
+                // ⓘ আগে কেবল নিজের শাখায় দেখা হত, অন্য শাখার একই নম্বর ইউনিক ইনডেক্সে ধাক্কা খেয়ে ৫০০ দিত (ক্রয়ের দিক আগেই এভাবে)
+                $taken = SalesInvoice::acrossBranches()
                     ->where('document_no', $given)
                     ->exists();
 
@@ -1105,6 +1112,7 @@ final class SalesInvoiceService
         $warnings = [];
         $cost = '0';
         $lineNo = 0;
+        $inclusiveLines = [];
 
         foreach ($lines as $line) {
             $productId = (int) ($line['product_id'] ?? 0);
@@ -1145,7 +1153,9 @@ final class SalesInvoiceService
              */
             $promotion = app(ChallanOfferShare::class)->of($challanLine, $qty, (int) $invoice->id);
 
-            $figures = $this->lineFigures($qty, $rate, bcadd($this->money($line['discount'] ?? '0'), $promotion, 4), $line['tax'] ?? null, $product->tax);
+            // ⓘ কাউন্টারের পুরো-কাগজের ভ্যাট বাছাই ([[CounterVat]]) — কেবল ভেতর থেকে আসে, ফর্মের লেখা নয়
+            $standard = ($line['vat_rule'] ?? null) instanceof \App\Modules\MasterData\Models\Tax ? $line['vat_rule'] : $product->tax;
+            $figures = $this->lineFigures($qty, $rate, bcadd($this->money($line['discount'] ?? '0'), $promotion, 4), $line['tax'] ?? null, $standard);
 
             /*
              * দরটা মান দাম থেকে কতটা সরে আছে — নীতিটা যা বলে।
@@ -1226,7 +1236,7 @@ final class SalesInvoiceService
              */
             $unitCost = '0';
 
-            SalesInvoiceLine::create([
+            $created = SalesInvoiceLine::create([
                 'sales_invoice_id' => $invoice->id,
                 'product_id' => $productId,
                 'delivery_challan_line_id' => $challanLine?->id,
@@ -1245,6 +1255,7 @@ final class SalesInvoiceService
                 'narration' => $line['narration'] ?? null,
             ]);
 
+            $inclusiveLines[(int) $created->id] = (bool) $figures['inclusive'];
             $totals = $this->addToTotals($totals, $figures);
             $cost = bcadd($cost, bcmul($qty, $unitCost, 4), 4);
         }
@@ -1278,21 +1289,25 @@ final class SalesInvoiceService
          * আর বাইরে বসালে প্রথম হালনাগাদেই ছাড়টা হারাত। খাতা নিজেই মেলে —
          * বিক্রয় = মোট − ভ্যাট ([[postToLedger()]])।
          *
-         * ⚠️ ভ্যাট ছাড়ের আগের দামেই থাকে — পর্দাও তাই গোনে (`grossTotal −
-         * discountValue`)।
+         * ⭐ ভ্যাট বিলের ছাড়ের পরে — মালিক, ১০ অক্টোবর ২০২৬: *"ছাড় বাদ দিয়ে যে দাম, তার উপর ভ্যাট"*
+         * ([[VatIsChargedAfterTheBillDiscountTest]])। ⛔ আগে ভ্যাট ছাড়ের আগের দামে বসত, ক্রেতা যে টাকা দেননি তার উপরেও।
+         * ⓘ ছাড়টা দামে খাটে, তাই সীমাও ভ্যাটের আগের দাম (+ রাউন্ডিং); ভ্যাট বন্ধ থাকলে অঙ্কটা আগের মতোই।
          */
         $billDiscount = (string) ($invoice->bill_discount ?? '0');
+        $beforeVat = bcsub($totals['subtotal'], $totals['discount'], 4);
 
         if (bccomp($billDiscount, '0', 4) < 0
-            || bccomp($billDiscount, bcadd($totals['total'], $rounding, 4), 4) > 0) {
+            || bccomp($billDiscount, bcadd($beforeVat, $rounding, 4), 4) > 0) {
             throw ValidationException::withMessages([
                 'discount_amount' => __('sales::validation.bill_discount_over_total', [
                     'no' => $invoice->document_no,
                     'discount' => Money::format($billDiscount),
-                    'total' => Money::format(bcadd($totals['total'], $rounding, 4)),
+                    'total' => Money::format(bcadd($beforeVat, $rounding, 4)),
                 ]),
             ]);
         }
+
+        $totals = $this->vatAfterBillDiscount($invoice, $totals, $billDiscount, $beforeVat, $inclusiveLines);
 
         $totals['total'] = bcsub(bcadd($totals['total'], $rounding, 4), $billDiscount, 4);
 
@@ -1317,6 +1332,51 @@ final class SalesInvoiceService
         if ($warnings !== []) {
             session()->flash('price_warnings', array_values(array_unique($warnings)));
         }
+    }
+
+    /**
+     * ⭐ বিলের ছাড়ের ভাগে ভ্যাট নেই — প্রতিটা সারির ভ্যাট সেই অনুপাতে কমে (মালিক, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ছাড়টা সারিগুলোর ভ্যাটের আগের দামের অনুপাতে ভাগ হয়, তাই সারির ভ্যাট × (ছাড় ÷ মোট দাম) কাটা যায় — হারের
+     * ভ্যাটে এটা হুবহু "ছাড়ের পরের দামের উপর হার"। সারিতেই লেখা হয়, কারণ ফেরত আর প্রতিবেদন সারির ভ্যাট পড়ে
+     * ([[SalesReturnService]], [[SalesReports]])। দামের বাইরের ভ্যাট কমলে মোটও কমে; ভেতরের ভ্যাট দামেই ছিল, মোট বদলায় না।
+     *
+     * @param  array{subtotal: string, discount: string, tax: string, total: string}  $totals
+     * @param  array<int, bool>  $inclusiveLines  সারির id → ভ্যাট দামের ভিতরে কি না, [[lineFigures()]] যা বলেছিল
+     * @return array{subtotal: string, discount: string, tax: string, total: string}
+     */
+    private function vatAfterBillDiscount(SalesInvoice $invoice, array $totals, string $billDiscount, string $beforeVat, array $inclusiveLines): array
+    {
+        if (bccomp($billDiscount, '0', 4) <= 0 || bccomp($totals['tax'], '0', 4) <= 0 || bccomp($beforeVat, '0', 4) <= 0) {
+            return $totals;
+        }
+
+        foreach ($invoice->lines()->get() as $line) {
+            $tax = (string) $line->tax;
+
+            if (bccomp($tax, '0', 4) <= 0) {
+                continue;
+            }
+
+            $cut = Money::round(bcdiv(bcmul($tax, $billDiscount, 8), $beforeVat, 8), 4);
+            /*
+             * ⛔ ভিতরে না বাইরে — সারি গোনার মুহূর্তের কথা, সংরক্ষিত দর থেকে আবার গুনে নয় (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⛔৪)।
+             * ⓘ প্যাকের দর ৬ দশমিকে হয় ([[PackConversion::toStockRate()]]) আর ঘরে বসে ৪-এ: ১ বক্স ১০০০ টাকা = ১২ × ৮৩.৩৩৩৩,
+             * তখন amount (৯৯৯.৯৯৯৯) > qty × rate (৯৯৯.৯৯৯৬), আর ভিতরের ভ্যাট "বাইরে" ধরা পড়ে মোট থেকে আরও ~১৩ টাকা কাটত —
+             * ক্রেতা কম বিল পেতেন, খাতা তবু মিলত, কেউ টের পেত না।
+             */
+            $outside = ! ($inclusiveLines[(int) $line->id] ?? false);
+
+            $line->update([
+                'tax' => bcsub($tax, $cut, 4),
+                'amount' => $outside ? bcsub((string) $line->amount, $cut, 4) : (string) $line->amount,
+            ]);
+
+            $totals['tax'] = bcsub($totals['tax'], $cut, 4);
+            $totals['total'] = $outside ? bcsub($totals['total'], $cut, 4) : $totals['total'];
+        }
+
+        return $totals;
     }
 
     /**

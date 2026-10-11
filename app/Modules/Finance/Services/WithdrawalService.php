@@ -296,6 +296,8 @@ final class WithdrawalService
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::PAYMENT,
+                    // ⛔ উত্তোলনের নিজের শাখায়, হেডারের শাখায় নয় (রিভিউ ⚠️১, ১০ অক্টোবর ২০২৬; [[FinancePapersPostInTheirOwnBranchTest]])
+                    'branch_id' => $withdrawal->branch_id,
                     'trx_date' => $withdrawal->trx_date->toDateString(),
                     'narration' => __('finance::message.withdrawal_narration', [
                         /*

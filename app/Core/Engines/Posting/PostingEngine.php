@@ -6,6 +6,7 @@ namespace App\Core\Engines\Posting;
 
 use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -530,8 +531,29 @@ final class PostingEngine
         return $year;
     }
 
+    /**
+     * ⛔ টাকার অঙ্ক চার ঘরে, গোল করে — কেটে নয় (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, হিসাব ⓘ১৯; [[TheEngineRoundsAmountsInsteadOfCuttingThemTest]])।
+     *
+     * ⓘ আগে `bcadd((string) $amount, '0', 4)`: float-এর রূপ "1.0E-5" হলে bcmath ValueError ছুড়ত, আর পঞ্চম ঘর কেটে ফেলত —
+     * ১০০০.০০০০৫-এর ডেবিট ১০০০.০০০০ হয়ে বসত, অথচ ক্রেডিট ১০০০.০০০১, আর দাখিলাটা "মেলে না" বলে থামত। এখন [[Money::round()]]:
+     * অর্ধেকে উপরে; বৈজ্ঞানিক রূপের সংখ্যা-লেখাও আগে সংখ্যায়।
+     *
+     * ⓘ float সোজা [[Money::round()]]-এ দিলে চলে না: সে আগে `%.4F` করে, আর ১০০০.০০০০৫ বাইনারিতে ১০০০.০০০০৪৯৯… — চার ঘরে
+     * আগেই ১০০০.০০০০। তাই float আগে তার সবচেয়ে ছোট সঠিক রূপে ("1000.00005"); সেটা বৈজ্ঞানিক হলে (খুব ছোট বা খুব বড়) দশ ঘরে।
+     * ⓘ বৈজ্ঞানিক রূপের লেখা ("5.0E-5") float-এ না নিয়ে bcmath-এই — অংশ × ১০^ঘাত ([[MoneyIsNeverAFloatTest]])।
+     */
     private function normalise(string|float|int $amount): string
     {
-        return bcadd((string) $amount, '0', 4);
+        if (is_string($amount) && is_numeric($amount) && stripos($amount, 'e') !== false) {
+            [$mantissa, $exponent] = explode('e', strtolower(trim($amount)));
+            $amount = bcmul($mantissa, bcpow('10', (string) (int) $exponent, 20), 20);
+        }
+
+        if (is_float($amount)) {
+            $shortest = var_export($amount, true);
+            $amount = stripos($shortest, 'e') === false ? $shortest : sprintf('%.10F', $amount);
+        }
+
+        return Money::round($amount, 4);
     }
 }

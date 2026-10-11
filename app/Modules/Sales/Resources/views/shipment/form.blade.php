@@ -100,6 +100,30 @@
                 <x-ui.field name="opening_km" type="number" step="0.01"
                             :label="__('sales::shipment.opening_km')"
                             :value="old('opening_km', $shipment->opening_km)" />
+
+                {{-- ⭐ ট্রিপের ভাড়া — এক ট্রাক, এক ভাড়া, এক ভাউচার (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment]])।
+                     ⓘ কাউন্টারের একই নিয়ম: এখনই দিলে খাত বাধ্যতামূলক (Main Counter নিজে থেকে নয়), পরে দিলে বাহক। খাতায় বসে
+                     ট্রাক রওনা হলে। ⛔ ভাড়াওয়ালা ট্রিপে নিজের ভাড়াওয়ালা চালান তোলা যায় না। --}}
+                @php($fareOptions = app(\App\Modules\Sales\Services\DirectSaleOptions::class))
+                <div class="sm:col-span-2 xl:col-span-4 grid gap-2" data-trip-fare-form
+                     x-data="{ fareWhen: @js((string) old('fare_when', $shipment->fare_status === 'due' ? 'later' : 'now')) }">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <x-ui.field name="transport_cost" type="number" step="0.01" min="0" :label="__('sales::fare.trip_amount')"
+                                    :value="old('transport_cost', $shipment->transport_cost)" />
+                        <x-ui.select name="carrier_id" :label="__('sales::fare.carrier')" :options="$fareOptions->carriers()->pluck('label', 'id')"
+                                     :selected="old('carrier_id', $shipment->carrier_id)" placeholder="-" />
+                    </div>
+                    <div class="ds-seg" role="radiogroup">
+                        <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
+                        <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
+                    </div>
+                    <input type="hidden" name="fare_when" :value="fareWhen">
+                    <div x-show="fareWhen === 'now'">
+                        @include('sales::challan.partials.fare-money', ['options' => $fareOptions])
+                    </div>
+                    <p class="text-2xs text-(--color-ink-muted)" x-show="fareWhen === 'later'">{{ __('sales::fare.later_hint') }}</p>
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('sales::fare.trip_hint') }}</p>
+                </div>
             </div>
 
             <div class="mt-3">

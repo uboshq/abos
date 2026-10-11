@@ -43,6 +43,11 @@ class TokenStorage {
 
   Future<String?> refreshToken() => _storage.read(key: _refreshTokenKey);
 
+  /// এই isolate-এর ক্যাশ ছাড়া, সরাসরি storage থেকে — আরেক isolate (পটভূমির সিঙ্ক) নবায়ন করে রাখলে সেটাই
+  Future<String?> reloadAccessToken() async {
+    return _accessTokenCache = await _storage.read(key: _accessTokenKey);
+  }
+
   Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,

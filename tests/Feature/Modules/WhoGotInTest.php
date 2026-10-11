@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Security\LoginLock;
+use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\LoginAttempt;
@@ -109,7 +111,12 @@ class WhoGotInTest extends TestCase
         $this->assertSame($this->owner->id, $row->user_id);
     }
 
-    /** অচেনা নামে চেষ্টাও — আর সেখানে যা টাইপ করা হয়েছিল সেটাই সূত্র। */
+    /**
+     * অচেনা নামে চেষ্টাও — কিন্তু ঢাকা ছাপে (৩০ সেপ্টেম্বরের নিরীক্ষা, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ আগে এখানে টাইপ করা নামটাই কাঁচা বসত — আর নামের ঘরে ভুলে লেখা পাসওয়ার্ডও ঠিক এই সারিতেই আসে।
+     * ⓘ প্রথম দুই অক্ষর থাকে, যাতে সারিটা চেনা যায়; একই নামে বারবার চেষ্টা একই ছাপে পড়ে।
+     */
     public function test_an_unknown_name_is_written_down(): void
     {
         $this->tryLogin('admin', 'letmein');
@@ -119,8 +126,26 @@ class WhoGotInTest extends TestCase
         $this->assertFalse($row->succeeded);
         $this->assertSame(LoginAttempt::UNKNOWN, $row->reason);
         $this->assertNull($row->user_id);
-        $this->assertSame('admin', $row->identifier);
-        $this->assertSame('admin', $row->who(), 'অচেনা নামটাই একমাত্র সূত্র, আর সেটা দেখা যায় না।');
+        $this->assertSame(LoginJournal::unknownKey('admin'), $row->identifier);
+        $this->assertStringStartsWith('ad…#', $row->identifier);
+        $this->assertSame(LoginJournal::unknownKey(' ADMIN '), $row->identifier, 'একই নাম, ভিন্ন ছাপ — তালার গোনা ভাঙবে।');
+    }
+
+    /** ⛔ নামের ঘরে ভুলে লেখা পাসওয়ার্ড খাতায় কাঁচা বসে না — আর তবু একই চেষ্টা গুনে তালা পড়ে। */
+    public function test_a_password_typed_as_the_name_never_reaches_the_journal(): void
+    {
+        foreach (range(1, LoginLock::TRIES) as $i) {
+            $this->tryLogin('MyRealPass#2026', 'whatever');
+        }
+
+        foreach (LoginAttempt::query()->get() as $row) {
+            foreach ($row->getAttributes() as $value) {
+                $this->assertStringNotContainsString('MyRealPass#2026', (string) $value, '⛔ নামের ঘরে লেখা পাসওয়ার্ড খাতায় কাঁচা বসেছে।');
+            }
+        }
+
+        $this->assertNotNull(app(LoginLock::class)->locked('MyRealPass#2026'),
+            'ঢাকা ছাপে অচেনা নামের বারবার চেষ্টা আর গোনা হয় না — তালা পড়ল না।');
     }
 
     /** বন্ধ অ্যাকাউন্টে চেষ্টা — সরানো কর্মী এখনো চেষ্টা করছেন। */
@@ -236,7 +261,7 @@ class WhoGotInTest extends TestCase
         $this->actingAs($this->owner)
             ->get(route('governance.login.index'))
             ->assertOk()
-            ->assertSee('admin')
+            ->assertSee(LoginJournal::unknownKey('admin'))
             ->assertSee(__('governance::message.why_unknown'));
     }
 

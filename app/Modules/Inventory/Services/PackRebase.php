@@ -132,9 +132,15 @@ final class PackRebase
             throw $e;
         }
 
-        $apply ? DB::commit() : DB::rollBack();
+        /*
+         * ⛔ মূল্য নড়লে পাকা নয় — পুরো-ERP অডিট, মজুদ ছ১৪ ([[ARebaseThatMovesTheValueWritesNothingTest]])। ⓘ আগে `--apply` হলেই
+         * commit, আর কমান্ড তারপর বলত "মূল্য বদলে গেছে — লেখা হয়নি", অথচ লেখা হয়ে গিয়েছিল: খাতার মজুদ খাত আর স্তর আলাদা।
+         */
+        $written = $apply && bccomp($before['value'], $after['value'], 4) === 0;
+        $written ? DB::commit() : DB::rollBack();
 
         return [
+            'written' => $written,
             'product' => (string) $product->code,
             'from' => (string) $from->code,
             'to' => (string) $to->code,

@@ -7,7 +7,18 @@
 @endphp
 
 @if (count($items) === 0)
-    <x-ui.empty-state :message="$empty" />
+    @php
+        /*
+         * ⭐ খালি কেন — খোঁজা বা ছাঁকনির জন্য হলে পরের কাজ "ছাঁকনি মুছে সব দেখুন" (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬)।
+         * ⓘ সব তালিকায় একসাথে, কোনো পাতাকে কিছু লিখতে হয় না। ⓘ দেখার পছন্দগুলো (পাতা, সাজানো, ঘনত্ব, দৃশ্য, কলাম, ট্যাব)
+         * ছাঁকনি নয় — ওগুলো থাকলে "কিছু মেলেনি" বলা মিথ্যা হত।
+         */
+        $looks = ['page', 'sort', 'dir', 'direction', 'compact', 'view', 'show', 'per_page', 'tab', 'print', 'peek'];
+        $filtered = collect(request()->query())->except($looks)->filter(fn ($v) => $v !== null && $v !== '' && $v !== [])->isNotEmpty();
+    @endphp
+    <x-ui.empty-state :message="$empty"
+                      :hint="$filtered ? __('core.empty.filtered_hint') : null"
+                      :action="$filtered ? ['label' => __('core.empty.clear_filters'), 'url' => url()->current()] : null" />
 @else
     <div class="table-responsive">
         <table @class([

@@ -755,8 +755,6 @@ return [
         'DS' => 'sales::doc.counter_do',
         // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
         'DO' => 'sales::doc.delivery_order',
-        // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
-        'DO' => 'sales::doc.delivery_order',
         'TRP' => 'sales::doc.shipment',
         'INV' => 'sales::doc.invoice',
         // ⭐ বাতিল-ইনভয়েস — নিজের ক্রম, CXL-0001 (মালিক, ৪ অক্টোবর ২০২৬); নম্বরের পর্দা থেকে বদলানো যায়
@@ -1508,6 +1506,19 @@ return [
              */
             'key' => 'sales.invoice_at_goods_issue',
             'label' => 'sales::settings.invoice_at_goods_issue',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'limits',
+        ],
+        [
+            /*
+             * ⭐ জমার বিজ্ঞপ্তি যিনি পাঠালেন তিনি নিজে গ্রহণ করেন না — টাকার পরিকল্পনা ৩ (সমন্বয়ক, ৭ অক্টোবর ২০২৬)।
+             * ⓘ ডিফল্ট বন্ধ, সব কোম্পানিতে (সমন্বয়ক, ১০ অক্টোবর ২০২৬) — বন্ধে আজকের আচরণ অবিকল। চালু করলে মালিক একা করলে
+             * আটকায় না, নিরীক্ষায় দাগ পড়ে ([[DepositClaim::booted()]])।
+             */
+            'key' => 'sales.advice_four_eyes',
+            'super_admin_only' => true,
+            'label' => 'sales::settings.advice_four_eyes',
             'type' => 'boolean',
             'default' => false,
             'group' => 'limits',

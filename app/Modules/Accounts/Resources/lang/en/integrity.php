@@ -22,6 +22,10 @@ return [
     'paper_gone_q' => 'Are there ledger entries whose paper was deleted while the entries were never reversed?',
     'paper_gone_broken' => 'The money is still in the books but its paper can no longer be opened — restore the paper or reverse the entries.',
     'paper_gone_detail' => ':type #:id — the paper is gone',
+    'party_control' => 'Party balances add up to their control account',
+    'party_control_q' => 'On every account that holds parties (receivable, payable, advances…), does the account balance equal the sum of its parties\' balances?',
+    'party_control_broken' => 'The account has lines with no party (or a party of another kind), so the balance sheet and the party ledger disagree. Nothing was changed; find the lines and move them to the right party with a journal.',
+    'party_control_detail' => 'Account balance :control, parties add up to :parties, difference :diff',
     'and_more_what' => 'More',
     'and_more' => 'The first hundred are shown; :more more (:total in all).',
 ];

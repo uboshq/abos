@@ -293,7 +293,7 @@ class StockPlacementController extends Controller implements HasMiddleware
             ->groupBy(
                 DB::raw("REPLACE(m.source_type, ':cancel', '')"), 'm.source_id',
                 'm.product_id', 'p.code', 'p.name_en', 'p.name_bn',
-                'm.warehouse_id', 'w.code', 'w.name_en',
+                'm.warehouse_id', 'w.code', 'w.name_en', 'w.name_bn',
                 'm.batch_id', 'b.batch_no',
             )
             /*
@@ -311,8 +311,9 @@ class StockPlacementController extends Controller implements HasMiddleware
                 /* ⭐ কে বুঝিয়ে দিলেন — মালিকের ছবির "Process By"।
                    ⓘ এক কাগজের সব সারি একজনেরই লেখা, তাই MAX ধরলেই চলে। */
                 DB::raw('MAX(m.created_by) as created_by'),
-                'm.product_id', 'p.code as product_code', 'p.name_en as product_name',
-                'm.warehouse_id', 'w.name_en as warehouse_name',
+                /* ⛔ নাম ব্যবহারকারীর ভাষায় — আগে সবসময় ইংরেজি (পুরো-ERP অডিট, মজুদ ছ১৮; [[ThePlacementListSpeaksBengaliTest]]) */
+                'm.product_id', 'p.code as product_code', DB::raw($this->localName('p').' as product_name'),
+                'm.warehouse_id', DB::raw($this->localName('w').' as warehouse_name'),
                 'm.batch_id', 'b.batch_no',
                 DB::raw('SUM(m.unplaced_change) as waiting'),
                 DB::raw('SUM(m.unplaced_free_change) as waiting_free'),
@@ -637,5 +638,11 @@ class StockPlacementController extends Controller implements HasMiddleware
         });
 
         return back()->with('saved', __('inventory::message.placed', ['count' => $placed]));
+    }
+
+    /** নাম ব্যবহারকারীর ভাষায় — বাংলা থাকলে বাংলা, না থাকলে ইংরেজি ([[StockReports]]-এর একই নিয়ম; মজুদ ছ১৮) */
+    private function localName(string $alias): string
+    {
+        return app()->getLocale() === 'bn' ? "COALESCE(NULLIF({$alias}.name_bn, ''), {$alias}.name_en)" : "{$alias}.name_en";
     }
 }

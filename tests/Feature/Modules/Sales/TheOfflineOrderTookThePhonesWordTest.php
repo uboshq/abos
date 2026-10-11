@@ -179,6 +179,24 @@ class TheOfflineOrderTookThePhonesWordTest extends TestCase
     }
 
     /** @return array<string, mixed> */
+    /**
+     * ⛔ পুরনো তারিখে পুরনো দাম নয় — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬। ৭ দিন পেছন পর্যন্ত বসে, তার আগের তারিখ বাংলা কারণে ফেরে
+     * ([[SalesOrderSync::OFFLINE_DAYS]])।
+     */
+    public function test_an_offline_order_dated_more_than_a_week_back_is_refused_and_a_week_back_lands(): void
+    {
+        $writer = $this->person(['sales.order.view', 'sales.order.create']);
+        $before = SalesOrder::query()->count();
+
+        $out = $this->push($writer, [$this->change('old-1', $this->order(trxDate: now()->subDays(8)->toDateString()))]);
+        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ আট দিন পুরনো তারিখের আদেশ বসল — পুরনো দাম পেত।');
+        $this->assertStringContainsString('পুরনো তারিখের', (string) ($out[0]['message'] ?? ''), json_encode($out, JSON_UNESCAPED_UNICODE));
+        $this->assertSame($before, SalesOrder::query()->count());
+
+        $out = $this->push($writer, [$this->change('old-2', $this->order(trxDate: now()->subDays(7)->toDateString()))]);
+        $this->assertSame(SyncChange::APPLIED, $out[0]['status'], json_encode($out, JSON_UNESCAPED_UNICODE));
+    }
+
     private function order(string $rate = '100', string $discount = '0', mixed $qty = 2, ?string $trxDate = null, ?string $deliverOn = null): array
     {
         return array_filter([

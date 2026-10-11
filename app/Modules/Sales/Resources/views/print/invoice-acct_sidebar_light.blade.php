@@ -117,7 +117,7 @@
                 @if ($v->shows('previous_due'))
                     <tr data-previous-due><td>{{ $v->label('previous_due') }}</td><td class="num">{{ $v->previousBeforeBill() }}</td></tr>
                 @endif
-                <tr><td>+ This invoice</td><td class="num">{{ $paper->money($s['net_payable']) }}</td></tr>
+                <tr><td>+ {{ __('sales::print.this_invoice', [], 'en') }}</td><td class="num">{{ $paper->money($s['net_payable']) }}</td></tr>
                 <tr><td>− {{ $v->label('paid') }}</td><td class="num">{{ $paper->money($s['paid']) }}</td></tr>
                 @if ($v->shows('previous_due'))
                     <tr class="final"><td data-balance-word>{{ $v->balanceWord() }}</td><td class="num">{{ $v->balanceAmount() }}</td></tr>

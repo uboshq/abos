@@ -13,6 +13,7 @@ use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Services\RentalContractService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
@@ -296,6 +297,13 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
      */
     public function test_leaving_after_six_months_returns_what_is_actually_left(): void
     {
+        /*
+         * ⓘ আজ ছাড়ার দিন — পুনঃঅডিট, ৯ অক্টোবর ২০২৬। টেস্টটা লেখার সময় এই ছয় মাস আগাম ছিল না; অক্টোবরে চালালে নভেম্বর–
+         * ফেব্রুয়ারি আগাম দেওয়া হয়ে ১১৩৭-এ বসে, আর খরচে না যাওয়া আগাম মাস রেখে চুক্তি শেষ হয় না
+         * ([[TheRentPaidAheadStayedAnAssetWhenTheContractClosedTest]])। এই টেস্টের প্রশ্ন জামানতের বাকি, তাই সময়টা বাঁধা।
+         */
+        Carbon::setTestNow('2027-03-01 10:00:00');
+
         $contract = $this->godown();
         $cash = $this->cash();
 
@@ -323,6 +331,7 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
             $cash->fresh()->balanceOn(),
             'ছয় মাস পর ছাড়লে বাকি ১১,৪০,০০০ ফেরত আসেনি।',
         );
+        Carbon::setTestNow();
     }
 
     /**

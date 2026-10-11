@@ -84,7 +84,8 @@ final class ADealerAsksForASignatureInTheirOwnNameTest extends TestCase
         $approval = Approval::query()->where('approvable_id', $order->id)->where('approvable_type', $order->getMorphClass())->firstOrFail();
         $this->assertNull($approval->requested_by, '⛔ ডিলারের অনুরোধ কোনো কর্মীর নামে বসল।');
         $this->assertSame((int) $this->dealer->id, (int) $approval->requested_by_customer_id);
-        $this->assertSame($this->dealer->name(), $approval->requesterName());
+        // ⓘ নামের পাশে পয়েন্ট — মালিকের "সব জায়গায় পয়েন্ট" (১০ অক্টোবর ২০২৬; [[Customer::nameWithPoint()]])
+        $this->assertSame($this->dealer->fresh()->nameWithPoint(), $approval->requesterName());
 
         // ⓘ একই সুপারভাইজার — চাবি ছাড়া ইনবক্স বন্ধ, চাবি দিলে খোলে আর ডিলারের অনুরোধ সেখানে, নামসহ
         $this->actingAs($this->supervisor, 'web');
@@ -102,7 +103,7 @@ final class ADealerAsksForASignatureInTheirOwnNameTest extends TestCase
 
         Sanctum::actingAs($supervisor, [AuthController::APP]);
         $names = array_column($this->getJson('/api/v1/approvals/pending')->assertOk()->json('rows') ?? [], 'requesterName');
-        $this->assertContains($this->dealer->name(), $names, '⛔ ফোনের ইনবক্সে ডিলারের নাম নেই।');
+        $this->assertContains($this->dealer->fresh()->nameWithPoint(), $names, '⛔ ফোনের ইনবক্সে ডিলারের নাম নেই।');
 
         // আর সই দিলে DO এগোয়
         $this->postJson('/api/v1/approvals/'.$approval->public_id.'/approve')->assertOk();

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Shell;
 
-use App\Core\Services\SettingsService;
+use App\Core\Services\NoticeLifecycle;
+use App\Core\Support\NoticePriority;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -42,10 +43,19 @@ class TheNoticeRunsTest extends TestCase
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
     }
 
-    /** প্রতিষ্ঠানের নিজের একটা নোটিশ বসানো। */
+    /**
+     * প্রতিষ্ঠানের নিজের একটা নোটিশ — যোগাযোগ কেন্দ্রে লেখা, সই করা, প্রকাশ করা, চলন্ত বারে।
+     *
+     * ⓘ ১০ অক্টোবর ২০২৬: আগে এখানে `system.notice` সেটিং বসানো হত। a6072a34 (২৪ সেপ্টেম্বর) থেকে ঐ সেটিং ঘোষিত নয় আর
+     * পড়ার পথটাও সরানো হয়েছে ([[StatusNotices]]) — বারে মানুষের লেখা খবর কেবল প্রকাশিত নোটিশ থেকে আসে।
+     */
     private function notice(string $text): void
     {
-        app(SettingsService::class)->set('system.notice', $text);
+        $this->actingAs($this->owner);
+        $life = app(NoticeLifecycle::class);
+        // ⓘ "জরুরি" আর তার উপরে বারে যায় ([[NoticePriority::goesToTheBar()]])
+        $notice = $life->draft(['title' => $text, 'body' => $text, 'priority' => NoticePriority::IMPORTANT->value]);
+        $life->publish($life->approve($life->submit($notice)));
 
         // নোটিশগুলো ক্যাশ হয়, তাই পরের অনুরোধে নতুনটাই যেন আসে
         Cache::flush();

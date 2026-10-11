@@ -189,4 +189,5 @@ return [
     'discount_over_bill_cap' => 'The discount on the whole bill is :given%, above the bill limit of :cap%. Lower the discount.',
     'commission_bill_not_theirs' => ':no is not a posted bill of this dealer — commission only on the dealer\'s own posted bill.',
     'commission_bill_claimed' => ':no already has a commission claim (:claim) — one claim per bill.',
+    'posted_not_a_draft_print' => ':no is posted — it cannot be printed as a draft; use the normal bill print.',
 ];

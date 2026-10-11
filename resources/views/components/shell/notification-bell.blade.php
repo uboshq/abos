@@ -36,7 +36,9 @@
     $total = count($notices) + $mine->count();
 @endphp
 
-<div x-data="{ open: false }" class="relative">
+{{-- ⓘ data-notification-bell — যন্ত্রের সতর্কতা এখন কেবল এখানে আর উপরের ব্যানারে, নিচের বারে নয়; পরীক্ষা এই ঘরটা ধরে
+     দেখে সতর্কতা হারায়নি (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬) --}}
+<div x-data="{ open: false }" class="relative" data-notification-bell>
     <button type="button"
             @click="open = !open"
             @click.outside="open = false"

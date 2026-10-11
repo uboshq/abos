@@ -209,15 +209,32 @@ class StockCountController extends Controller implements HasMiddleware
             /*
              * ⓘ খাতার সংখ্যাগুলো একবারে, পণ্য ধরে ধরে নয় — একশো
              * পণ্যের শিটে একশোটা আলাদা প্রশ্ন করলে পাতাটা খুলতই না।
+             * ⛔ টীকা এটাই বলত, কোড পণ্যপ্রতি floorQty() ডাকত (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬,
+             * মজুদ ⚠️১১; [[TheCountSheetAsksTheBooksOnceTest]]) — এখন এক কোয়েরিতে, একই মুহূর্তের ছবি।
              */
-            'bookQty' => $warehouse === null
-                ? []
-                : $products->mapWithKeys(fn (Product $product) => [
-                    $product->id => $this->stock->floorQty($product, $warehouse),
-                ])->all(),
+            'bookQty' => $this->bookQty($products, $warehouse),
 
             'blind' => $request->boolean('blind'),
         ];
+    }
+
+    /**
+     * শিটের প্রতিটা পণ্যের তাকের খাতার পরিমাণ — একটা কোয়েরিতে ([[StockService::statesForAll()]])।
+     *
+     * @param  \Illuminate\Support\Collection<int, Product>  $products
+     * @return array<int, string>
+     */
+    private function bookQty($products, ?Warehouse $warehouse): array
+    {
+        if ($warehouse === null) {
+            return [];
+        }
+
+        $states = $this->stock->statesForAll($warehouse);
+
+        return $products->mapWithKeys(fn (Product $product) => [
+            $product->id => $states[$product->id]['floor'] ?? '0',
+        ])->all();
     }
 
     /**

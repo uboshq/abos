@@ -36,7 +36,7 @@ class DepositClaimController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:sales.claim.view', only: ['index']),
-            new Middleware('can:sales.claim.decide', only: ['accept', 'reject']),
+            new Middleware('can:sales.claim.decide', only: ['accept', 'reject', 'verify']),
         ];
     }
 
@@ -46,7 +46,9 @@ class DepositClaimController extends Controller implements HasMiddleware
 
         $query = DepositClaim::query()->inViewedBranch()
             ->with(['customer', 'bankAccount', 'decider'])
-            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            // ⓘ "অপেক্ষমাণ" ট্যাব = সিদ্ধান্ত বাকি সব — যাচাই চলছে এমনগুলোও (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
+            ->when($status === DepositClaim::PENDING, fn ($q) => $q->open())
+            ->when($status !== 'all' && $status !== DepositClaim::PENDING, fn ($q) => $q->where('status', $status))
             /*
              * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
              * ⓘ রেফারেন্স, নোট, আর গ্রাহকের নাম/কোড।
@@ -66,7 +68,7 @@ class DepositClaimController extends Controller implements HasMiddleware
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির দাবির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'status' => $status,
-            'pendingCount' => DepositClaim::query()->inViewedBranch()->pending()->count(),
+            'pendingCount' => DepositClaim::query()->inViewedBranch()->open()->count(),
             // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             'moneyAccounts' => Account::query()->notAnotherBranchsTill()
@@ -107,5 +109,13 @@ class DepositClaimController extends Controller implements HasMiddleware
         $this->claims->reject($claim, $data['decision_reason']);
 
         return back()->with('status', __('sales::portal.rejected'));
+    }
+
+    /** ⭐ যাচাই শুরু — Submitted → Under Verification (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬; [[DepositClaimService::startVerifying()]]) */
+    public function verify(DepositClaim $claim): RedirectResponse
+    {
+        $this->claims->startVerifying($claim);
+
+        return back()->with('status', __('sales::portal.verifying'));
     }
 }

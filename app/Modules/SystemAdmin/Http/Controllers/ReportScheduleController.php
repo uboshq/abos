@@ -115,8 +115,16 @@ final class ReportScheduleController extends Controller implements HasMiddleware
      */
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'report_key' => ['required', 'string'],
+
+            /*
+             * ⛔ ছাঁকনি — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ আগে এই তালিকায় ছিলই না, তাই
+             * পাঠানো শাখা/খাত/তারিখ নীরবে ঝরে যেত, আর সূচি গোটা নাগালের রিপোর্ট পাঠাত।
+             * ⓘ কেবল এক-একটা লেখা বা সংখ্যা; কোন চাবি চলবে তা রিপোর্টের ঘোষণা বলে (নিচে)।
+             */
+            'filters' => ['nullable', 'array'],
+            'filters.*' => ['nullable', 'string', 'max:191'],
             'format' => ['required', 'string', 'in:csv,xlsx,json,pdf'],
             'frequency' => ['required', 'string', 'in:daily,weekly,monthly'],
             'at_time' => ['required', 'string'],
@@ -148,6 +156,24 @@ final class ReportScheduleController extends Controller implements HasMiddleware
                     ->where('company_id', CompanyContext::id())
                     ->where('is_active', true)],
         ]);
+
+        /*
+         * ⓘ রিপোর্ট যে ছাঁকনি চেনে কেবল সেগুলো — অচেনা চাবি সূচিতে বসে থাকলে কেউ জানত না
+         * কেন রিপোর্টটা অন্য রকম আসছে। ⓘ ঘরটা না এলে চাবিটাই থাকে না, যাতে সম্পাদনায় আগের
+         * ছাঁকনি মুছে না যায় ([[ScheduleService::update()]])।
+         */
+        if (array_key_exists('filters', $data)) {
+            $keys = in_array((string) $data['report_key'], $this->reports->keys(), true)
+                ? $this->reports->get((string) $data['report_key'])->requestKeys()
+                : [];
+
+            $data['filters'] = array_filter(
+                array_intersect_key($data['filters'] ?? [], array_flip($keys)),
+                fn ($value) => $value !== null && $value !== '',
+            );
+        }
+
+        return $data;
     }
 
     /**

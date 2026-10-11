@@ -89,7 +89,7 @@ final class PlacementTookAnotherPapersGoodsTest extends TestCase
         $a = $this->lot($product, 'A');
         $this->arrive($product, 9202, '10', $a);
 
-        $this->assertPlacingRefused($product, 9202, '5');
+        $this->assertPlacingRefused($product, 9202, '5', null, 'batch_id', 'place_needs_lot', ['product' => $product->name()]);
     }
 
     public function test_another_products_lot_cannot_be_placed(): void
@@ -101,7 +101,8 @@ final class PlacementTookAnotherPapersGoodsTest extends TestCase
         $this->arrive($product, 9203, '10', $this->lot($product, 'A'));
         $this->arrive($other, 9203, '10', $theirs);
 
-        $this->assertPlacingRefused($product, 9203, '5', $theirs);
+        $this->assertPlacingRefused($product, 9203, '5', $theirs, 'batch_id', 'lot_of_another_product',
+            ['lot' => 'X', 'product' => $product->name()]);
     }
 
     // ── ৩ · পর্দার কাগজের নাম ────────────────────────────────────────
@@ -190,8 +191,20 @@ final class PlacementTookAnotherPapersGoodsTest extends TestCase
         );
     }
 
-    private function assertPlacingRefused(Product $product, int $bill, string $qty, ?Batch $batch = null): void
+    /**
+     * ⓘ কেবল "ফিরিয়েছে" নয় — **কোন কারণে** ফিরিয়েছে, আর তাকে কিছু ওঠেনি (fe, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে যেকোনো ValidationException-এই চুপচাপ পাস, কোনো যাচাই ছাড়া — তিনটা লটের পরীক্ষা "কোনো যাচাই নেই" বলে লাল
+     * (ঝুঁকিপূর্ণ) থাকত, আর অন্য কারণে ফেরালেও (ধরা যাক লট তৈরিতেই গলদ) সবুজ দেখাত। এখন ঘর আর বার্তা দুটোই মেলে; বার্তার যে
+     * অংশ গোনা থেকে আসে (`:waiting`), সেটা যেকোনো সংখ্যা।
+     *
+     * @param  array<string, string>  $params  জানা প্যারামিটার; বাকিগুলো যেকোনো লেখা
+     */
+    private function assertPlacingRefused(Product $product, int $bill, string $qty, ?Batch $batch = null,
+        string $field = 'qty', string $because = 'more_than_unplaced', array $params = []): void
     {
+        $before = app(StockService::class)->floorQty($product, $this->warehouse);
+
         try {
             app(StockService::class)->place(
                 product: $product,
@@ -203,8 +216,17 @@ final class PlacementTookAnotherPapersGoodsTest extends TestCase
             );
 
             $this->fail("বিল {$bill}-এর নামে {$qty} বসে গেছে — অন্য কাগজ বা অন্য লটের অপেক্ষা থেকে।");
-        } catch (ValidationException) {
-            // আশা করাই হচ্ছিল
+        } catch (ValidationException $e) {
+            $said = $e->errors()[$field][0] ?? null;
+            $this->assertNotNull($said, "⛔ বিল {$bill} ফিরল, কিন্তু অন্য ঘরে: ".implode(' ', $e->validator->errors()->all()));
+
+            $mark = '@@ANY@@';
+            $shape = __('inventory::validation.'.$because, $params + ['waiting' => $mark, 'lot' => $mark, 'product' => $mark]);
+            $pattern = '/^'.str_replace(preg_quote($mark, '/'), '.+', preg_quote($shape, '/')).'$/u';
+            $this->assertMatchesRegularExpression($pattern, $said, "⛔ বিল {$bill} ফিরল, কিন্তু অন্য কারণে।");
         }
+
+        $this->assertSame(0, bccomp(app(StockService::class)->floorQty($product, $this->warehouse), $before, 4),
+            "⛔ ফিরিয়েও বিল {$bill}-এর কিছু তাকে উঠল।");
     }
 }
