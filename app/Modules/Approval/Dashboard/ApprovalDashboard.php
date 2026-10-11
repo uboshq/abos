@@ -40,7 +40,20 @@ final class ApprovalDashboard implements ProvidesDashboard
      */
     public static function pendingCount(): int
     {
-        return self::seen()->where('status', Approval::PENDING)->count();
+        return self::pendingSeen()->count();
+    }
+
+    /**
+     * অপেক্ষমাণ অনুরোধ — এই মানুষের চোখে যতটুকু পড়ে ([[seen()]])।
+     *
+     * ⓘ মালিকের কেন্দ্রের "সইয়ের অপেক্ষায়" তালিকাও এটাই পড়ে — ⛔ নিজে `Approval::query()` লিখলে রিপোর্টের
+     * চাবি ছাড়া মানুষও গোটা কোম্পানির কাগজ দেখতেন, যে ফাঁকটা ৯ অক্টোবর এই পাতায় বন্ধ হলো।
+     *
+     * @return Builder<Approval>
+     */
+    public static function pendingSeen(): Builder
+    {
+        return self::seen()->where('approvals.status', Approval::PENDING);
     }
 
     public static function dashboard(): DashboardDefinition

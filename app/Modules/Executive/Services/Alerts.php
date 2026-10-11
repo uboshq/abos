@@ -7,6 +7,7 @@ namespace App\Modules\Executive\Services;
 use App\Core\Engines\Report\ReportEngine;
 use App\Models\Approval;
 use App\Models\User;
+use App\Modules\Approval\Dashboard\ApprovalDashboard;
 use App\Modules\Governance\Services\CompanylessRows;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -101,8 +102,8 @@ final class Alerts
                     return [];
                 }
 
-                return Approval::query()
-                    ->pending()
+                // ⓘ অনুমোদন পাতার নিজের চোখ — রিপোর্টের চাবি না থাকলে কেবল নিজের অনুরোধ আর নিজের সারি
+                return ApprovalDashboard::pendingSeen()
                     ->orderByDesc('requested_at')
                     ->orderByDesc('id')
                     ->limit($limit)
