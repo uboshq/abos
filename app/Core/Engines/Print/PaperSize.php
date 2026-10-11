@@ -131,6 +131,24 @@ final class PaperSize
      * ⚠️ অচেনা মাপ এলে ৪০৪ নয়: পুরনো বুকমার্ক বা হাতে বদলানো ঠিকানার
      * জন্য কাগজটা না ছাপার কোনো কারণ নেই — বসানো মাপেই ছাপে।
      */
+    /**
+     * ঠিকানায় চাওয়া মাপ — লেখা হলে সেটা, না থাকলে `null`; ⛔ তালিকা বা অন্য কিছু এলে ৪২২ (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১৩)।
+     *
+     * ⓘ `?paper[]=a4` এলে মানটা তালিকা, আর [[chosen()]] লেখা ছাড়া কিছু নেয় না — পাতা ভেঙে ৫০০। PR #17 কেবল বিক্রয়ের ছাপায়
+     * সারিয়েছিল ([[SalesPrintController::askedPaper()]]); ভাউচার, নোট, টাকা হস্তান্তর, মজুদ, ক্রয়, পেস্লিপ, কোটেশন, বছর-শেষ আর
+     * হ্যান্ড লোনের দরজায় একই ফাঁক ছিল — এখন সবাই এই এক জায়গা ডাকে।
+     */
+    public static function fromQuery(\Illuminate\Http\Request $request): ?string
+    {
+        $asked = $request->query('paper');
+
+        if ($asked !== null && ! is_string($asked)) {
+            abort(422, __('core.print.paper_not_a_size'));
+        }
+
+        return $asked;
+    }
+
     public static function chosen(?string $requested, ?string $configured): string
     {
         foreach ([$requested, $configured] as $candidate) {

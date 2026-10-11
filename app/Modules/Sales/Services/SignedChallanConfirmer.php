@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\NotificationService;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -91,7 +92,9 @@ final class SignedChallanConfirmer
 
             // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
 
-            $this->challans->confirm($challan->fresh());
+            // ⛔ চালানের নিজের শাখায় — হেডারে অন্য শাখা থাকলে আদেশটা "নেই" হত আর আদেশের ধরা মাল ছাড়া হত না (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১)
+            CompanyContext::inBranch($challan->branch_id === null ? null : (int) $challan->branch_id,
+                fn () => $this->challans->confirm($challan->fresh()));
         } catch (HeldForApproval) {
             // ⓘ আরেকটা সই বাকি — ঐ সই পড়লে এই পথই আবার চলবে
             return false;

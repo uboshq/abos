@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
+use App\Core\Dashboard\MasterHealth;
 use App\Core\Dashboard\Widget;
 use App\Core\Services\DataScope;
 use App\Modules\Hr\Models\Attendance;
@@ -42,7 +43,10 @@ final class HrWidgets implements DashboardWidgets
             new Widget(
                 group: 'todo',
                 label: __('hr::dashboard.leave_awaiting'),
-                value: (string) LeaveApplication::query()->pending()->count(),
+                // ⭐ দেখার শাখার কর্মীর ছুটি — ছুটির সারিতে শাখা নেই, কর্মীর আছে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                value: (string) LeaveApplication::query()->pending()
+                    ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'))
+                    ->count(),
                 href: route('hr.leave.index'),
                 permission: 'hr.leave.approve',
                 tone: 'warn',
@@ -92,7 +96,7 @@ final class HrWidgets implements DashboardWidgets
      */
     public static function health(): array
     {
-        return [\App\Core\Dashboard\MasterHealth::widget(
+        return [MasterHealth::widget(
             label: __('hr::menu.employees'),
             href: route('hr.employee.index'),
             permission: 'hr.employee.view',

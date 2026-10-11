@@ -16,6 +16,8 @@
         DocumentPlan::SHELL => 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)',
         DocumentPlan::PLANNED => 'bg-(--color-badge-pending-bg) text-(--color-badge-pending-ink)',
         DocumentPlan::RULE => 'bg-(--color-badge-info-bg) text-(--color-badge-info-ink)',
+        DocumentPlan::LIVE => 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)',
+        DocumentPlan::PARTLY => 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)',
     ];
 @endphp
 
@@ -29,9 +31,10 @@
 
     <div data-doc-page="dashboard">
         <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
-            <p class="inline-flex rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-1 text-sm
-                      font-semibold text-(--color-badge-pending-ink)">
-                {{ __('documents::page.coming_soon') }}
+            {{-- ⭐ প্রথম ধাপ চালু (৮ অক্টোবর ২০২৬) — সেন্টার, আপলোড, আমার, সাম্প্রতিক; বাকিটা "আসছে" --}}
+            <p class="inline-flex rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-1 text-sm
+                      font-semibold text-(--color-badge-success-ink)">
+                {{ __('documents::page.phase_one_live') }}
             </p>
 
             <p class="mt-4 max-w-3xl text-sm leading-relaxed text-(--color-ink-body)">
@@ -39,7 +42,15 @@
             </p>
 
             <p class="mt-2 max-w-3xl text-sm leading-relaxed text-(--color-ink-muted)">
-                {{ __('documents::page.nothing_works_yet') }}
+                {{ __('documents::page.phase_one_what') }}
+            </p>
+
+            <p class="mt-3 flex flex-wrap gap-3 text-sm">
+                @foreach (['index' => 'center', 'create' => 'upload', 'mine' => 'mine', 'recent' => 'recent'] as $route => $label)
+                    <a href="{{ route('documents.'.$route) }}" class="text-(--color-link) hover:underline">
+                        {{ __('documents::menu.'.$label) }}
+                    </a>
+                @endforeach
             </p>
         </section>
 

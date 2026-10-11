@@ -216,6 +216,32 @@ describe('ভ্যাট — সহ না বাদে', () => {
         expect(c.entryVat).toBeCloseTo(15, 6)
     })
 
+    /*
+     * ⭐ ভ্যাট বিলের ছাড়ের পরে — মালিক, ১০ অক্টোবর ২০২৬: "ছাড় বাদ দিয়ে যে দাম, তার উপর ভ্যাট"।
+     * ⛔ আগে ১,০০০ টাকার মালে ১০০ ছাড় দিলেও ভ্যাট ১৫০ — দিতে হবে ১,০৫০; এখন ভ্যাট ৯০০-র উপর ১৩৫, দিতে হবে ১,০৩৫।
+     */
+    it('বিলের ছাড়ের পরের দামে ভ্যাট — টাকায় আর শতাংশে', () => {
+        const c = counter({ vatEnabled: true })
+        c.lines = [{ key: 1, id: 1, qty: '10', rate: '100', freeQty: '', discountPercent: '', vatRate: 15, vatInclusive: false, gifts: [] }]
+
+        c.discountInput = '100'
+        expect(c.vatAfterDiscount).toBeCloseTo(135, 6)
+        expect(c.netPayable).toBeCloseTo(1035, 6)
+
+        c.discountInput = '10%'
+        expect(c.discountValue).toBeCloseTo(100, 6)
+        expect(c.netPayable).toBeCloseTo(1035, 6)
+    })
+
+    it('দামের ভিতরের ভ্যাটও ছাড়ের অনুপাতে কমে, দিতে হবে কেবল ছাড়টুকু কমে', () => {
+        const c = counter({ vatEnabled: true })
+        c.lines = [{ key: 1, id: 1, qty: '10', rate: '115', freeQty: '', discountPercent: '', vatRate: 15, vatInclusive: true, gifts: [] }]
+
+        c.discountInput = '115'
+        expect(c.vatAfterDiscount).toBeCloseTo(135, 6)
+        expect(c.netPayable).toBeCloseTo(1035, 6)
+    })
+
     it('অব্যাহতি দিলে ভ্যাট শূন্য, আর দর ভ্যাট-সহ নয়', () => {
         const c = counter({ vatEnabled: true })
         c.picked = product({ vatRate: 15, vatInclusive: true })

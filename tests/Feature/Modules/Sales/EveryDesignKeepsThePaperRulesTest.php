@@ -139,7 +139,11 @@ final class EveryDesignKeepsThePaperRulesTest extends TestCase
         /* ⓘ পরের ডাকের composer যেন এই ফলটা না ছোঁয় */
         View::getFacadeRoot()->getDispatcher()->forget('composing: '.$view);
 
-        return $html;
+        /*
+         * ⓘ বাংলা নকশা অঙ্ক বাংলায় ছাপে (মালিক, ১০ অক্টোবর ২০২৬; [[BanglaDigits]]) — "৭৭৭.৭৭"। মাপার আগে ইংরেজি অঙ্কে ফেরানো, যাতে
+         * "দর আছে" আর "দর নেই" দুই দাবিই সব নকশায় সমান কড়া থাকে। ⛔ কেবল ইতিবাচকটা ঢিলে করলে নেতিবাচকটা বাংলা নকশায় কিছুই মাপত না।
+         */
+        return strtr($html, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
     }
 
     private function aChallanWithARate(): DeliveryChallan

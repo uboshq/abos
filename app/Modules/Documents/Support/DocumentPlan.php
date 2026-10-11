@@ -42,7 +42,8 @@ use App\Models\ApprovalFlow;
  * ⭐ `::class` আর তার পরীক্ষা ([[TheDocumentModuleShowsItsPlanTest]]) মিলে
  * নিশ্চিত করে পাতায় যে নাম ছাপা হয়, সেটা রিপোতে সত্যিই আছে।
  *
- * ⛔ এখানে কোনো টেবিল, কোনো মডেল, কোনো লেখার পথ নেই — কোড পরে (মালিক)।
+ * ⓘ প্রথম ধাপের আসল কাজ এখানে নয় — মডেল, সেবা আর পর্দা নিজেদের জায়গায়
+ * ([[Document]], [[DocumentLibrary]], [[DocumentController]])। এই ক্লাস কেবল পরিকল্পনা।
  */
 final class DocumentPlan
 {
@@ -54,6 +55,12 @@ final class DocumentPlan
 
     /** অংশের অবস্থা — কোনো পর্দা নয়, কোড লেখার দিন মানার নিয়ম */
     public const RULE = 'rule';
+
+    /** অংশের অবস্থা — চালু, পুরোটা (প্রথম ধাপ, ৮ অক্টোবর ২০২৬) */
+    public const LIVE = 'live';
+
+    /** অংশের অবস্থা — চালু, কিন্তু কেবল একটা অংশ; বাকিটা পরের ধাপে */
+    public const PARTLY = 'partly';
 
     /**
      * ABOS-এর যে ব্যবস্থাগুলোর উপর DOC দাঁড়াবে — চাবি => আসল ক্লাস বা trait।
@@ -85,7 +92,16 @@ final class DocumentPlan
     ];
 
     /**
-     * মেনুর বিশটা পর্দা (ড্যাশবোর্ড বাদে), মালিকের দেওয়া ক্রমে।
+     * মেনুর যে পর্দাগুলো এখনো পরিকল্পনার পাতা খোলে, মালিকের দেওয়া ক্রমে।
+     *
+     * ⭐ ৮ অক্টোবর ২০২৬, প্রথম ধাপ: সেন্টার, আপলোড, আমার আর সাম্প্রতিক নিজের আসল রুটে
+     * সরেছে ([[DocumentController]]) আর এখান থেকে মুছেছে।
+     * ⭐ ৯ অক্টোবর ২০২৬, দ্বিতীয় ধাপ: আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ আর প্রশাসনও — বাকি বারোটা আগের মতোই।
+     * ⭐ তৃতীয় ধাপ: অনুমোদনের সারি আর মেয়াদ ও নবায়নও — বাকি দশটা আগের মতোই।
+     * ⭐ চতুর্থ ধাপ: শেয়ার করা ডকুমেন্ট আর সই কেন্দ্রও — বাকি আটটা আগের মতোই।
+     * ⭐ পঞ্চম ধাপ: স্ক্যান ও OCR-ও — বাকি সাতটা আগের মতোই।
+     * ⭐ ষষ্ঠ ধাপ: Document Intelligence (ABE)-ও — বাকি ছয়টা আগের মতোই।
+     * ⭐ সপ্তম ধাপ: ছাঁচ, সম্পাদক, রিপোর্ট আর অডিট ট্রেইলও — বাকি দুইটা (ইনবক্স, প্রিয়) আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -95,80 +111,45 @@ final class DocumentPlan
      * @var array<string, array{icon: string, group: string, sections: list<int>, systems: list<string>, new: bool}>
      */
     public const SCREENS = [
-        'center' => ['icon' => 'building', 'group' => 'transactions', 'sections' => [4, 5],
-            'systems' => ['attachment', 'data_scope', 'branch_wall', 'number_series'], 'new' => false],
         'inbox' => ['icon' => 'inbox', 'group' => 'transactions', 'sections' => [2, 10, 11, 23],
             'systems' => ['notification', 'approval'], 'new' => false],
-        'upload' => ['icon' => 'attachment', 'group' => 'transactions', 'sections' => [6],
-            'systems' => ['attachment', 'image', 'number_series', 'audit_trait'], 'new' => false],
-        'scan' => ['icon' => 'receipt', 'group' => 'transactions', 'sections' => [7],
-            'systems' => ['image', 'attachment', 'search'], 'new' => true],
-        'intelligence' => ['icon' => 'filter', 'group' => 'transactions', 'sections' => [8],
-            'systems' => ['search', 'audit_engine'], 'new' => true],
-        'mine' => ['icon' => 'list', 'group' => 'transactions', 'sections' => [4, 13],
-            'systems' => ['data_scope', 'branch_wall'], 'new' => false],
-        'shared' => ['icon' => 'share', 'group' => 'transactions', 'sections' => [5, 13, 23],
-            'systems' => ['notification', 'data_scope', 'audit_engine'], 'new' => false],
-        'recent' => ['icon' => 'clock', 'group' => 'transactions', 'sections' => [3],
-            'systems' => ['audit_engine', 'data_scope'], 'new' => false],
         'favourite' => ['icon' => 'star', 'group' => 'transactions', 'sections' => [2],
             'systems' => ['data_scope'], 'new' => true],
-        'templates' => ['icon' => 'columns', 'group' => 'transactions', 'sections' => [2, 21],
-            'systems' => ['print', 'number_series'], 'new' => false],
-        'editor' => ['icon' => 'edit', 'group' => 'transactions', 'sections' => [9],
-            'systems' => ['audit_trait', 'audit_engine', 'attachment'], 'new' => true],
-        'approval' => ['icon' => 'check_circle', 'group' => 'approval', 'sections' => [10, 22],
-            'systems' => ['approval', 'notification'], 'new' => false],
-        'signature' => ['icon' => 'handover', 'group' => 'approval', 'sections' => [11],
-            'systems' => ['approval', 'approval_flow', 'notification'], 'new' => false],
-        'expiry' => ['icon' => 'calendar', 'group' => 'transactions', 'sections' => [12],
-            'systems' => ['notification'], 'new' => false],
-        'archive' => ['icon' => 'drawer', 'group' => 'transactions', 'sections' => [10, 20],
-            'systems' => ['audit_trait', 'data_scope'], 'new' => false],
-        'recycle' => ['icon' => 'trash', 'group' => 'transactions', 'sections' => [19],
-            'systems' => ['audit_engine', 'audit_trait'], 'new' => false],
-        'search' => ['icon' => 'search', 'group' => 'transactions', 'sections' => [16],
-            'systems' => ['search', 'data_scope', 'branch_wall'], 'new' => false],
-        'reports' => ['icon' => 'reports', 'group' => 'reports', 'sections' => [17],
-            'systems' => ['report', 'data_scope'], 'new' => false],
-        'audit' => ['icon' => 'eye', 'group' => 'reports', 'sections' => [18],
-            'systems' => ['audit_engine', 'audit_trait'], 'new' => false],
-        'admin' => ['icon' => 'settings', 'group' => 'settings', 'sections' => [20, 13, 14],
-            'systems' => ['settings', 'number_series', 'approval', 'permissions'], 'new' => false],
     ];
 
     /**
      * পরিকল্পনার ২৫টা অংশ — অবস্থা, আর কীসের উপর দাঁড়াবে।
      *
-     * ⚠️ অবস্থাটা সৎ: আজ কেবল §২ (মেনুর কাঠামো) লাইভে। §২৪ আর §২৫ কোনো পর্দা
-     * নয় — কোড লেখার দিন মানার নিয়ম। ⛔ বাকি সব "আসছে"।
+     * ⚠️ অবস্থাটা সৎ: §২ (মেনুর কাঠামো) লাইভে; প্রথম ধাপে (৮ অক্টোবর ২০২৬) §১, §৪
+     * আর §১৪ পুরোটা, আর §৫, §৬, §৯, §১২, §১৩, §২১, §২২-এর একটা অংশ। §২৪ আর §২৫ কোনো
+     * পর্দা নয় — কোড লেখার দিন মানার নিয়ম। ⛔ বাকি সব "আসছে"।
      *
      * @var array<int, array{status: string, systems: list<string>}>
      */
     public const SECTIONS = [
-        1 => ['status' => self::PLANNED, 'systems' => ['attachment', 'approval', 'audit_engine']],
+        1 => ['status' => self::LIVE, 'systems' => ['attachment', 'approval', 'audit_engine']],
         2 => ['status' => self::SHELL, 'systems' => ['menu', 'permissions']],
-        3 => ['status' => self::PLANNED, 'systems' => ['dashboard', 'data_scope']],
-        4 => ['status' => self::PLANNED, 'systems' => ['attachment', 'data_scope', 'branch_wall']],
-        5 => ['status' => self::PLANNED, 'systems' => ['print', 'approval', 'audit_engine']],
-        6 => ['status' => self::PLANNED, 'systems' => ['attachment', 'image']],
-        7 => ['status' => self::PLANNED, 'systems' => ['image', 'attachment']],
-        8 => ['status' => self::PLANNED, 'systems' => ['search']],
-        9 => ['status' => self::PLANNED, 'systems' => ['attachment', 'audit_trait']],
-        10 => ['status' => self::PLANNED, 'systems' => ['approval']],
-        11 => ['status' => self::PLANNED, 'systems' => ['approval', 'approval_flow']],
-        12 => ['status' => self::PLANNED, 'systems' => ['notification']],
-        13 => ['status' => self::PLANNED, 'systems' => ['permissions', 'data_scope', 'branch_wall']],
-        14 => ['status' => self::PLANNED, 'systems' => ['permissions']],
-        15 => ['status' => self::PLANNED, 'systems' => ['drill']],
-        16 => ['status' => self::PLANNED, 'systems' => ['search', 'data_scope']],
-        17 => ['status' => self::PLANNED, 'systems' => ['report', 'data_scope']],
-        18 => ['status' => self::PLANNED, 'systems' => ['audit_engine', 'audit_trait']],
-        19 => ['status' => self::PLANNED, 'systems' => ['audit_engine']],
-        20 => ['status' => self::PLANNED, 'systems' => ['settings', 'number_series']],
-        21 => ['status' => self::PLANNED, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
-        22 => ['status' => self::PLANNED, 'systems' => ['approval']],
-        23 => ['status' => self::PLANNED, 'systems' => ['notification']],
+        3 => ['status' => self::LIVE, 'systems' => ['dashboard', 'data_scope']],
+        4 => ['status' => self::LIVE, 'systems' => ['attachment', 'data_scope', 'branch_wall']],
+        5 => ['status' => self::LIVE, 'systems' => ['print', 'approval', 'audit_engine']],
+        6 => ['status' => self::LIVE, 'systems' => ['attachment', 'image']],
+        7 => ['status' => self::LIVE, 'systems' => ['image', 'attachment']],
+        8 => ['status' => self::LIVE, 'systems' => ['search']],
+        9 => ['status' => self::LIVE, 'systems' => ['attachment', 'audit_trait']],
+        10 => ['status' => self::LIVE, 'systems' => ['approval']],
+        11 => ['status' => self::LIVE, 'systems' => ['approval', 'approval_flow']],
+        12 => ['status' => self::LIVE, 'systems' => ['notification']],
+        13 => ['status' => self::LIVE, 'systems' => ['permissions', 'data_scope', 'branch_wall']],
+        14 => ['status' => self::LIVE, 'systems' => ['permissions']],
+        15 => ['status' => self::LIVE, 'systems' => ['drill']],
+        16 => ['status' => self::LIVE, 'systems' => ['search', 'data_scope']],
+        17 => ['status' => self::LIVE, 'systems' => ['report', 'data_scope']],
+        18 => ['status' => self::LIVE, 'systems' => ['audit_engine', 'audit_trait']],
+        19 => ['status' => self::LIVE, 'systems' => ['audit_engine']],
+        20 => ['status' => self::LIVE, 'systems' => ['settings', 'number_series']],
+        21 => ['status' => self::LIVE, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
+        22 => ['status' => self::LIVE, 'systems' => ['approval']],
+        23 => ['status' => self::LIVE, 'systems' => ['notification']],
         24 => ['status' => self::RULE, 'systems' => ['menu']],
         25 => ['status' => self::RULE, 'systems' => ['attachment', 'search', 'approval', 'audit_engine']],
     ];

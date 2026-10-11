@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Contracts\CouponPapers;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Services\NoteService;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 
@@ -47,23 +51,30 @@ final class SalesCouponPapers implements CouponPapers
         if ($invoice === null) {
             return;
         }
-        $discount = \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::DISCOUNT_GIVEN);
-        $notes = app(\App\Modules\Accounts\Services\NoteService::class);
+        $discount = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
+        $notes = app(NoteService::class);
 
-        $note = $notes->create([
-            'direction' => \App\Modules\Accounts\Models\Note::CREDIT,
-            'party_kind' => \App\Modules\Accounts\Models\Note::KIND_CUSTOMER,
-            'party_id' => (int) $invoice->customer_id,
-            'other_account_id' => $discount?->id,
-            'trx_date' => now()->toDateString(),
-            'amount' => bcadd($worth, '0', 4),
-            'tax_amount' => '0',
-            'reason' => 'agreed_discount',
-            'against_no' => (string) $invoice->document_no,
-            'narration' => __('sales::message.coupon_note', ['code' => $code]),
-        ]);
+        /*
+         * ⛔ বিলের নিজের শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (বিক্রয় ২; [[ACouponNoteLandsInTheBillsBranchTest]])। ⓘ নোট শাখা নেয়
+         * প্রসঙ্গ থেকে ([[NoteService::create()]]); কুপন কাটা মানুষের হেডারে অন্য শাখা থাকলে ছাড়টা সেই শাখার খাতায় বসত, আর বিলের
+         * শাখায় পাওনা কমত না।
+         */
+        CompanyContext::inBranch($invoice->branch_id === null ? null : (int) $invoice->branch_id, function () use ($notes, $invoice, $discount, $worth, $code): void {
+            $note = $notes->create([
+                'direction' => Note::CREDIT,
+                'party_kind' => Note::KIND_CUSTOMER,
+                'party_id' => (int) $invoice->customer_id,
+                'other_account_id' => $discount?->id,
+                'trx_date' => now()->toDateString(),
+                'amount' => bcadd($worth, '0', 4),
+                'tax_amount' => '0',
+                'reason' => 'agreed_discount',
+                'against_no' => (string) $invoice->document_no,
+                'narration' => __('sales::message.coupon_note', ['code' => $code]),
+            ]);
 
-        $notes->confirm($note);
+            $notes->confirm($note);
+        });
     }
 
     /** @return array{customer_id: ?int, branch_id: ?int, warehouse_id: ?int, product_id: int, qty: string, value: string}|null */

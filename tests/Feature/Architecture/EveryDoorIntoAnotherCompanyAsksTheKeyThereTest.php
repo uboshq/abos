@@ -33,6 +33,10 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Modules/Accounts/Services/InterCompanyService.php' => null,
         // ⓘ দলগত রিপোর্ট — প্রতিটা কোম্পানিতে শাখার নাগাল পড়তে ঢোকে; কোম্পানির তালিকাই আগে সেখানের চাবি দেখে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
         'app/Modules/Accounts/Services/GroupLedgerService.php' => null,
+        // ⭐ মালিকের কেন্দ্র — প্রতিটা কোম্পানিতে `executive.view` ঐ কোম্পানিতে বসে জিজ্ঞেস করে (৯ অক্টোবর ২০২৬)
+        'app/Modules/Executive/Services/CompanyLens.php' => null,
+        'app/Modules/Executive/Services/Snapshots.php' => 'রাতের ক্রন — মানুষ নেই, প্রতিটা কোম্পানির নিজের super_admin-এর চোখে লেখে; '
+            .'পড়ার সময় কেবল CompanyLens-এর কোম্পানি (যেখানে executive.view আছে), আর শাখার সীমা পড়তে প্রসঙ্গে বসে',
         'app/Modules/SystemAdmin/Http/Controllers/CompanyController.php' => null,
         'app/Modules/SystemAdmin/Http/Controllers/BranchController.php' => null,
         'app/Modules/SystemAdmin/Http/Controllers/UserController.php' => 'অন্য কোম্পানি কেবল যেখানে কর্তা নিজে সুপার অ্যাডমিন (companiesWithinReach); বাকিগুলো কেবল গুদামের নাম পড়া',
@@ -42,6 +46,7 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Modules/Approval/Services/OwnerSignsDiscounts.php' => 'ছাড়ে মালিকের সইয়ের ছক বসানো — নতুন কোম্পানির প্রভিশনিং আর একবারের মাইগ্রেশন, কারও চাবিতে নয়',
         'app/Modules/Inventory/Services/PackBackfill.php' => 'কনসোলের ব্যাকফিল — মানুষ নেই',
         'app/Core/Services/CompanyProvisioner.php' => 'নতুন কোম্পানি খোলা — মালিক/প্রভিশনিং',
+        'app/Http/Controllers/Api/AuthController.php' => 'টোকেন নবায়নে দুই ধাপ বাধ্যতামূলক কি না পড়া — কেবল মানুষটার নিজের চলতি কোম্পানিতে, শুধু পড়া, কিছু লেখা নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)',
         'app/Modules/Sales/Services/TrackingNotices.php' => 'ঘটনার শ্রোতা — কোনো মানুষ নেই; চালানটা যে কোম্পানির, কেবল সেই কোম্পানির ভেতরে চলে (CompanyContext::forCompany) আর সেই কোম্পানিরই লেখক, অনুমোদনকারী ও মালিককে জানায়',
         'app/Core/Services/Ownership.php' => 'মালিকের সুপার ক্ষমতা সব কোম্পানিতে (ABOS_OWNER_EMAILS)',
         'app/Core/Services/PermissionSyncer.php' => 'চাবির তালিকা সব কোম্পানিতে মেলানো — ডিপ্লয়/কনসোল',

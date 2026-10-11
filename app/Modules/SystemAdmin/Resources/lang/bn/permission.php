@@ -44,6 +44,9 @@ return [
         'customer.conduct' => 'গ্রাহকের আচরণ',
         'customer.credit_limit' => 'বাকির সীমা',
 
+        'executive' => 'মালিকের কেন্দ্র',
+        'executive.links' => 'মালিকের কেন্দ্রের লিংক',
+
         'finance.bank_facility' => 'ব্যাংক ঋণ',
         'finance.capital' => 'মূলধন ও বিনিয়োগ',
         'finance.deposit' => 'আমানত',
@@ -208,6 +211,23 @@ return [
         'analytics' => 'পরিসংখ্যান',
         'import' => 'আমদানি',
         'verify' => 'সরেজমিন যাচাই',
+
+        /* ⭐ ডকুমেন্টের ক্রিয়া — documents রিভিউ ⛔৮, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
+        'upload' => 'তোলা',
+        'edit' => 'বদল',
+        'print' => 'ছাপা',
+        'archive' => 'আর্কাইভ',
+        'purge' => 'চিরতরে মোছা',
+        'permissions' => 'অধিকার দেওয়া',
+        'admin' => 'প্রশাসন',
+        'publish' => 'প্রকাশ',
+        'share' => 'শেয়ার',
+        'signature_request' => 'সই চাওয়া',
+        'audit' => 'অডিট দেখা',
+        'templates' => 'ছাঁচ',
+        'confidential' => 'গোপনীয় দেখা',
+        'highly_confidential' => 'অতি গোপনীয় দেখা',
+        'restricted' => 'সংরক্ষিত দেখা',
     ],
 
     // ── পর্দার লেখা ──────────────────────────────────────────────────────

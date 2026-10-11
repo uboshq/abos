@@ -157,7 +157,7 @@
                                               border-(--color-border) bg-(--color-surface-app) px-1 text-end">
                             </template>
 
-                            <span class="num ms-auto" x-text="'৳' + money(vatTotal)"></span>
+                            <span class="num ms-auto" x-text="'৳' + money(vatAfterDiscount)"></span>
                         </span>
                     </x-sales::panel-row>
                 @endif

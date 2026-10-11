@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Engines\Print\PrintsInItsBranch;
 use App\Core\Security\FieldSecurity;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
@@ -15,6 +16,8 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Support\BranchReach;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -29,6 +32,19 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class PayslipPrintController extends Controller implements HasMiddleware
 {
+    // ⭐ শাখার মাথা আর লোগো — বিক্রয়ের ছাপার মতো (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৮)
+    use PrintsInItsBranch;
+
+    /** ⓘ বেতনশিটের শাখা নেই — কর্মীর শাখা (রানের পাতার একই নিয়ম); রান ছাপলে রানের শাখা */
+    protected function branchOfPaper(Model $document): ?int
+    {
+        $branch = $document instanceof Payslip
+            ? $document->employee()->withTrashed()->value('branch_id')
+            : $document->getAttribute('branch_id');
+
+        return $branch === null ? null : (int) $branch;
+    }
+
     public function __construct(
         private readonly PrintEngine $print,
 
@@ -63,7 +79,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
     public function all(Request $request, PayrollRun $run): Response
     {
         // ⛔ কেবল নাগালের কর্মীদের স্লিপ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔২; [[BranchReach]])
-        $run->setRelation('payslips', app(\App\Modules\Hr\Support\BranchReach::class)
+        $run->setRelation('payslips', app(BranchReach::class)
             ->throughEmployee($run->payslips()->getQuery(), $request->user())
             ->with(['employee.department', 'employee.designation', 'lines'])->get());
 
@@ -151,7 +167,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
          * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('hr.print.paper.payslip'));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->settings->get('hr.print.paper.payslip'));
 
         $locale = app()->getLocale();
 

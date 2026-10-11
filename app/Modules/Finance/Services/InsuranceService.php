@@ -99,13 +99,20 @@ final class InsuranceService
         $from = CarbonImmutable::parse($data['starts_on']);
         $to = CarbonImmutable::parse($data['ends_on']);
 
-        if ($from->lte($policy->ends_on)) {
-            throw ValidationException::withMessages([
-                'starts_on' => __('finance::insurance.renew_overlaps', ['date' => $policy->ends_on->toDateString()]),
-            ]);
-        }
-
         return DB::transaction(function () use ($policy, $data, $from, $to) {
+            /*
+             * ⛔ তালায় আবার পড়া, তারপর মেয়াদ মেলানো — পুরো-ERP অডিট, অর্থ ১০ অক্টোবর ২০২৬ (বীমা নবায়ন একসাথে দুবার)। ⓘ আগে খোঁজ
+             * তালার বাইরে: দুই চাপ একসাথে পুরনো শেষের দিন দেখত, দুটোই পার হত, আর একই মেয়াদের প্রিমিয়াম দুবার বসত। এখন দ্বিতীয়জন
+             * প্রথমজনের বসানো নতুন মেয়াদ দেখে "মেয়াদ জুড়ে যায়"-এ থামেন।
+             */
+            $policy = InsurancePolicy::query()->withoutGlobalScope('user-branch')->whereKey($policy->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($from->lte($policy->ends_on)) {
+                throw ValidationException::withMessages([
+                    'starts_on' => __('finance::insurance.renew_overlaps', ['date' => $policy->ends_on->toDateString()]),
+                ]);
+            }
+
             $policy->update([
                 'starts_on' => $from->toDateString(),
                 'ends_on' => $to->toDateString(),

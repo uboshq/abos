@@ -574,6 +574,16 @@ return [
         'all_time' => 'শুরু থেকে আজ পর্যন্ত',
     ],
 
+    // ⭐ সময়ের ধারা — দিন, সপ্তাহ, মাস, ত্রৈমাসিক, বছর ([[Trend]], মালিকের কেন্দ্র, ৮ অক্টোবর ২০২৬)
+    'trend' => [
+        'daily' => 'দিন ধরে',
+        'weekly' => 'সপ্তাহ ধরে',
+        'monthly' => 'মাস ধরে',
+        'quarterly' => 'ত্রৈমাসিক ধরে',
+        'yearly' => 'বছর ধরে',
+        'quarter' => 'ত্রৈমাসিক :q, :year',
+    ],
+
     'export' => [
         'someone_gone' => 'সরিয়ে ফেলা ব্যবহারকারী',
     ],
@@ -875,6 +885,9 @@ return [
         'cancelled_watermark' => 'বাতিল',
         // ⛔ খসড়া টাকার রসিদ — টাকা এখনো খাতায় ওঠেনি (অডিট, ৬ অক্টোবর ২০২৬; [[SalesPrintController::pdf()]])
         'draft_receipt_notice' => 'খসড়া — এটি চূড়ান্ত রসিদ নয়, টাকা এখনো খাতায় ওঠেনি',
+        'draft_paper_notice' => 'খসড়া — এটি চূড়ান্ত কাগজ নয়, মাল বা টাকা এর ভরসায় ছাড়বেন না',
+        'paper_not_a_size' => 'কাগজের মাপ একটাই লিখুন — যেমন a4, a5 বা 80mm।',
+        'tax_included' => 'ভ্যাট (দামের ভিতরে, মোটে আলাদা যোগ নয়)',
         'draft_watermark' => 'খসড়া',
         'print' => 'ছাপুন',
         'choose_paper' => 'কাগজ বাছুন',
@@ -1423,6 +1436,30 @@ return [
         'mail_fallback' => 'বোতামটা না খুললে এই ঠিকানাটা ব্রাউজারে বসান:',
         'mail_optout' => 'এই ধরনের চিঠি বন্ধ করতে চাইলে ABOS-এ ঢুকে "কোন খবর পাব" পাতায় গিয়ে "ইমেইলেও" টিকটা তুলে দিন।',
         'kind' => [
+            'documents_new' => 'নতুন ডকুমেন্ট',
+            'documents_new_note' => 'আপনাকে মালিক করে কেউ একটা কাগজ তুললে',
+            'documents_shared' => 'ডকুমেন্ট শেয়ার',
+            'documents_shared_note' => 'কেউ আপনার সাথে একটা কাগজ শেয়ার করলে',
+            'documents_approval_required' => 'ডকুমেন্টে অনুমোদন দরকার',
+            'documents_approval_required_note' => 'আপনার সইয়ের অপেক্ষায় একটা কাগজ এলে',
+            'documents_approved' => 'ডকুমেন্ট অনুমোদিত',
+            'documents_approved_note' => 'আপনার কাগজ অনুমোদন পেলে',
+            'documents_rejected' => 'ডকুমেন্ট ফেরত বা বাতিল',
+            'documents_rejected_note' => 'আপনার কাগজ বাতিল হলে বা সংশোধনে ফেরত এলে',
+            'documents_signature_required' => 'ডকুমেন্টে সই দরকার',
+            'documents_signature_required_note' => 'একটা কাগজে আপনার সই চাওয়া হলে',
+            'documents_signature_completed' => 'ডকুমেন্টে সব সই হলো',
+            'documents_signature_completed_note' => 'আপনার চাওয়া সব সই পড়ে গেলে',
+            'documents_expiry_warning' => 'ডকুমেন্টের মেয়াদ আসছে',
+            'documents_expiry_warning_note' => 'মেয়াদ শেষের ৯০ আর ৬০ দিন আগে',
+            'documents_expired' => 'ডকুমেন্টের মেয়াদ শেষ',
+            'documents_expired_note' => 'কাগজের মেয়াদ পেরিয়ে গেলে',
+            'documents_renewal_required' => 'ডকুমেন্ট নবায়ন দরকার',
+            'documents_renewal_required_note' => 'মেয়াদ শেষের ৩০, ১৫, ৭ আর ১ দিন আগে',
+            'documents_updated' => 'ডকুমেন্টের নতুন ভার্সন',
+            'documents_updated_note' => 'আপনার কাগজে নতুন ভার্সন উঠলে',
+            'documents_permission_changed' => 'ডকুমেন্টের অধিকার বদল',
+            'documents_permission_changed_note' => 'কোনো কাগজে আপনার অধিকার দেওয়া বা সরানো হলে',
             'approval_approved' => 'আমার কাগজ অনুমোদিত হলে',
             'approval_approved_note' => 'যে কাগজ আপনি অনুমোদনে পাঠিয়েছেন, সেটায় সই হলে।',
             'approval_rejected' => 'আমার কাগজ ফেরত এলে',
@@ -1538,4 +1575,9 @@ return [
     // ⛔ কোনো কোম্পানির সদস্য নন — [[ResolveCompanyContext::WITHOUT_A_COMPANY]], ৩০ সেপ্টেম্বর ২০২৬
     'no_company' => 'আপনাকে এখনো কোনো কোম্পানিতে যোগ করা হয়নি। মালিক বা প্রশাসকের সঙ্গে যোগাযোগ করুন।',
     'restore_reason' => 'ব্যাকআপ থেকে ফেরানো: :file · ফেরানোর আগের অবস্থা: :safety · চালিয়েছেন: :by',
+
+    // ⭐ রেকর্ডের সাথে জোড়া কাগজ — ডকুমেন্ট পরিকল্পনা §১৫ ([[x-ui.linked-documents]])
+    'linked_documents' => [
+        'title' => 'জোড়া ডকুমেন্ট',
+    ],
 ];

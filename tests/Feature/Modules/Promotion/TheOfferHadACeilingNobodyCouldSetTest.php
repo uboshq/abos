@@ -106,16 +106,58 @@ final class TheOfferHadACeilingNobodyCouldSetTest extends TestCase
      *
      * ⓘ দুইটা হলে পাহারা ছোটটা মানত, আর পাতায় মানুষ বড়টা দেখতেন।
      */
-    public function test_raising_the_ceiling_changes_the_one_row(): void
+    public function test_changing_the_ceiling_changes_the_one_row(): void
     {
-        foreach (['500', '800'] as $ceiling) {
+        // ⓘ নামানো — সই হওয়া অফারে বাড়ানো চলে না (নিচের দাবি); এই দাবি মাপে "একটাই সারি"
+        foreach (['800', '500'] as $ceiling) {
             $this->actingAs($this->owner)
                 ->post(route('promotion.budget.store', $this->offer), ['kind' => 'total', 'ceiling' => $ceiling])
                 ->assertSessionHasNoErrors();
         }
 
         $this->assertSame(1, PromotionBudget::query()->where('promotion_id', $this->offer->id)->count());
-        $this->assertSame(0, bccomp((string) $this->ceiling(), '800', 4));
+        $this->assertSame(0, bccomp((string) $this->ceiling(), '500', 4));
+    }
+
+    /**
+     * ⛔ সই হওয়া অফারের ছাদ নতুন সই ছাড়া বাড়ে না — Sales অডিট, ১০ অক্টোবর ২০২৬।
+     *
+     * ⓘ বিপজ্জনক ইনপুট: চালু অফার, ছাদ ৫০০, বাড়িয়ে ৫০,০০০ — একই মালিক, বাজেটের চাবিসহ। ⚠️ সইয়ের ছক
+     * ছাদ দেখেই ঠিক করে কে কে সই দেবেন, তাই সইয়ের পরে বাড়ানো মানে না-দেখা টাকা। ⭐ পাল্টা-দাবি: একই বাড়ানো
+     * খসড়ায় চলে, আর অনুমোদন বন্ধ থাকলে চালু অফারেও — নাহলে "সব বাড়ানো থামাও" লিখেও দাবি সবুজ হত।
+     */
+    public function test_a_signed_offers_ceiling_does_not_rise_without_a_new_signature(): void
+    {
+        $post = fn (string $ceiling) => $this->actingAs($this->owner)
+            ->post(route('promotion.budget.store', $this->offer), ['kind' => 'total', 'ceiling' => $ceiling]);
+
+        $post('500')->assertSessionHasNoErrors();
+        $post('50000')->assertSessionHasErrors('ceiling');
+        $this->assertSame(0, bccomp((string) $this->ceiling(), '500', 4), '⛔ সই হওয়া অফারের ছাদ নতুন সই ছাড়া বেড়ে গেল।');
+
+        // ⓘ একই ছাদ, কেবল সতর্কতার শতাংশ — বাড়ানো নয়, তাই চলে
+        $this->actingAs($this->owner)
+            ->post(route('promotion.budget.store', $this->offer), ['kind' => 'total', 'ceiling' => '500', 'warn_at_percent' => '90'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(90, (int) PromotionBudget::query()->where('promotion_id', $this->offer->id)->value('warn_at_percent'));
+
+        foreach ([PromotionStatus::SUBMITTED, PromotionStatus::APPROVED, PromotionStatus::PAUSED] as $status) {
+            $this->offer->status = $status;
+            $this->offer->save();
+            $post('50000')->assertSessionHasErrors('ceiling');
+        }
+        $this->assertSame(0, bccomp((string) $this->ceiling(), '500', 4));
+
+        $this->offer->status = PromotionStatus::DRAFT;
+        $this->offer->save();
+        $post('50000')->assertSessionHasNoErrors();
+        $this->assertSame(0, bccomp((string) $this->ceiling(), '50000', 4), 'খসড়ায় বাড়ানো চলার কথা — সই তো এখনো হয়নি।');
+
+        $this->offer->status = PromotionStatus::ACTIVE;
+        $this->offer->save();
+        app(\App\Core\Services\SettingsService::class)->set('promotion.needs_approval', false);
+        $post('60000')->assertSessionHasNoErrors();
+        $this->assertSame(0, bccomp((string) $this->ceiling(), '60000', 4), 'অনুমোদন বন্ধ — সই বলে কিছু নেই, বাড়ানো চলার কথা।');
     }
 
     /**

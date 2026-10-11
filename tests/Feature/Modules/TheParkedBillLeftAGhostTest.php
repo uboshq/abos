@@ -71,8 +71,16 @@ class TheParkedBillLeftAGhostTest extends TestCase
         $this->assertSame($parked->id, $sold->id,
             'তোলা বিলটাই বিক্রি হয়নি — নতুন একটা বানানো হয়েছে।');
 
-        $this->assertSame($parked->document_no, $sold->document_no,
-            'নম্বরটা বদলে গেছে, অথচ ক্রেতাকে আগের নম্বরই বলা হয়েছিল।');
+        /*
+         * ⓘ খসড়া অপেক্ষা করে DRF নম্বরে, আসল নম্বর নিশ্চিত করার মুহূর্তে — মালিকের বিক্রয়ের ধারা, ২ অক্টোবর ২০২৬
+         * (1e402eb1): ফেলে দেওয়া খসড়া বিক্রির নম্বরে ফাঁক রাখে না। ⚠️ আগে এখানে "নম্বর বদলায় না" চাওয়া হত —
+         * ঐ নিয়মের আগের কথা (fe, ১১ অক্টোবর ২০২৬)। ⛔ যা থাকে: একই সারি, একটাই আসল নম্বর, আর খসড়ার নম্বরটা নয়।
+         */
+        $this->assertStringStartsWith('DRF-', (string) $parked->document_no, 'দৃশ্যটাই বানানো যায়নি — ধরে রাখা বিল খসড়ার নম্বরে নেই।');
+        $this->assertStringStartsWith('INV-', (string) $sold->document_no,
+            '⛔ বিক্রি হলো, অথচ বিলটা আসল নম্বর পায়নি: '.$sold->document_no);
+        $this->assertSame(1, SalesInvoice::query()->where('document_no', $sold->document_no)->count(),
+            '⛔ একই আসল নম্বর দুটো বিলে।');
     }
 
     /**
