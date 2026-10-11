@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Concerns\GrandTotals;
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -41,6 +43,7 @@ class WithdrawalController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly WithdrawalService $withdrawals,
         private readonly PersonResolver $people,
+        private readonly AttachmentEngine $attachments,
     ) {}
 
     /** @return list<Middleware> */
@@ -207,6 +210,8 @@ class WithdrawalController extends Controller implements HasMiddleware
 
         $withdrawal = $this->withdrawals->request($data);
 
+        $this->keepThePaper($request, $withdrawal);
+
         return back()->with('saved', __('finance::message.withdrawal_recorded', [
             'no' => $withdrawal->document_no,
         ]));
@@ -304,5 +309,32 @@ class WithdrawalController extends Controller implements HasMiddleware
             ->whereIn('parent_id', Account::query()
                 ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
             ->orderBy('code')->get();
+    }
+
+    /**
+     * ⭐ উত্তোলনের কাগজ (চিঠি, রসিদ, ছবি) — উত্তোলনের সারির নামে রাখা (পুরো-ERP অডিট, অর্থ S20, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⛔ ফর্মে ঘরটা ছিল, যাচাইও ছিল (`paper`), কিন্তু ফাইলটা কোথাও রাখা হত না — মানুষ কাগজ দিতেন আর সেটা হারিয়ে যেত।
+     * ⓘ ব্যাংক সুবিধার একই ছাঁচ ([[BankFacilityController::keepThePaper()]]): কাগজ বসে সারি তৈরির পরে, আর কাগজ আটকালে সারিটা
+     * থাকে, কেবল সতর্কবার্তা যায়।
+     */
+    private function keepThePaper(Request $request, Withdrawal $row): void
+    {
+        if (! $request->hasFile('paper')) {
+            return;
+        }
+
+        try {
+            $this->attachments->store(
+                file: $request->file('paper'),
+                module: 'finance',
+                entity: Withdrawal::drillSourceType(),
+                entityId: (int) $row->getKey(),
+            );
+        } catch (AttachmentException $refused) {
+            session()->flash('warning', __('core.attachment.refused', [
+                'reason' => $refused->getMessage(),
+            ]));
+        }
     }
 }
