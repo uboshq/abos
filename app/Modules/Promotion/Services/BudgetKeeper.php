@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Services;
 
+use App\Core\Services\SettingsService;
+use App\Core\Support\Money;
 use App\Modules\Promotion\Models\Promotion;
 use App\Modules\Promotion\Models\PromotionBudget;
 use App\Modules\Promotion\Support\PromotionStatus;
@@ -113,6 +115,23 @@ final class BudgetKeeper
                 ->where('kind', $kind)
                 ->where('per', $per)
                 ->first() ?? new PromotionBudget(['promotion_id' => $offer->id, 'kind' => $kind, 'per' => $per]);
+
+            /*
+             * ⛔ সই হওয়া (বা সইয়ের অপেক্ষার) অফারের ছাদ বাড়ে না — Sales অডিট, ১০ অক্টোবর ২০২৬।
+             *
+             * ⚠️ সইয়ের ছক অফারের ছাদ দেখে ঠিক করে কে কে সই দেবেন ([[PromotionApprovalChain::amountOf()]]);
+             * আগে সইয়ের পরে ছাদ যত খুশি বাড়ানো যেত, নতুন সই ছাড়া — এক লাখে সই, দশ লাখে চলা। ⓘ কমানো চলে
+             * (কম টাকা, ঝুঁকি কম), আর সীমাহীন অফারে প্রথম ছাদ বসানোও (ওটা সীমা টানা)। ⓘ অনুমোদন বন্ধ থাকলে
+             * সই বলে কিছু নেই — আগের মতোই।
+             */
+            $signed = in_array($offer->status, [PromotionStatus::SUBMITTED, PromotionStatus::APPROVED, PromotionStatus::ACTIVE, PromotionStatus::PAUSED], true);
+
+            if ($signed && $budget->exists && bccomp($ceiling, (string) $budget->ceiling, 4) > 0
+                && (bool) app(SettingsService::class)->get('promotion.needs_approval', true)) {
+                throw ValidationException::withMessages([
+                    'ceiling' => __('promotion::validation.budget_raise_needs_signature', ['ceiling' => Money::format((string) $budget->ceiling)]),
+                ]);
+            }
 
             $budget->ceiling = $ceiling;
             $budget->warn_at_percent = max(1, min(100, $warnAt));

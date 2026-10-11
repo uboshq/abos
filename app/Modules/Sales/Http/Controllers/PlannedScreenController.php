@@ -34,8 +34,23 @@ final class PlannedScreenController extends Controller implements HasMiddleware
         // ⓘ 'do_new' নিজের পাতায় সরেছে — DO ডেস্কের বোতাম ([[DeliveryOrderDeskController]], ৩ অক্টোবর ২০২৬); আংশিক আর ব্যাক DO — মালিক, ২ অক্টোবর ২০২৬
         // ⓘ 'transport_assign' নিজের পাতায় সরেছে ([[TransportAssignmentController]], ৩ অক্টোবর ২০২৬)
         // ⓘ 'do_partial' আর 'do_back' DO ডেস্কের ট্যাবে সরেছে ([[DeliveryOrderDeskController]], ৩ অক্টোবর ২০২৬)
-        'pricing_customer', 'pricing_channel', 'pricing_territory',
-        'pricing_special', 'pricing_dynamic',
+        // ⓘ 'pricing_customer', 'pricing_channel', 'pricing_territory', 'pricing_special' দর তালিকার পাতায় সরেছে ([[PRICE_BOOK]], ৫ অক্টোবর ২০২৬)
+        'pricing_dynamic',
+    ];
+
+    /**
+     * ⭐ পুরনো ঠিকানা → দর তালিকার পাতা — ৫ অক্টোবর ২০২৬ থেকে চার সারি আসল পাতা ([[PriceBookController]])।
+     *
+     * ⓘ মেনু তখনই নতুন পাতায় গিয়েছিল, কিন্তু নামগুলো [[SCREENS]]-এ থেকে গিয়েছিল — "তৈরি হচ্ছে" পাতাও খুলত, আর মেনুর দাবি
+     * পুরনো লিংক খুঁজত, যা [[ThePricingPagesWereOnlyASignTest]] নিষেধ করে (১১ অক্টোবর ২০২৬)। ⚠️ বুকমার্ক মরে না, ঠিক তালিকায় নামে।
+     *
+     * @var array<string, string>
+     */
+    public const PRICE_BOOK = [
+        'pricing_customer' => 'customer',
+        'pricing_channel' => 'tier',
+        'pricing_territory' => 'territory',
+        'pricing_special' => 'all',
     ];
 
     /**
@@ -83,6 +98,10 @@ final class PlannedScreenController extends Controller implements HasMiddleware
 
         if (isset(self::MOVED[$screen])) {
             return redirect()->route(self::MOVED[$screen]);
+        }
+
+        if (isset(self::PRICE_BOOK[$screen])) {
+            return redirect()->route('sales.price_book.index', ['target' => self::PRICE_BOOK[$screen]]);
         }
 
         abort_unless(in_array($screen, self::SCREENS, true), 404);

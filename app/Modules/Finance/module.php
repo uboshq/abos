@@ -445,7 +445,8 @@ return [
         'Accountant' => [
             'finance.capital.view',
             'finance.capital.create',
-            'finance.capital.post',
+            // ⛔ `finance.capital.post` নয় — লাভ ঘোষণা আর মূলধনে নেওয়া মালিকের সিদ্ধান্ত (পুরো-ERP অডিট, অর্থ M27, ১০ অক্টোবর ২০২৬)।
+            // ⓘ ছাঁচ পুরনো রোল চওড়া বা সরু করে না — আজকের হিসাবরক্ষকদের চাবি মালিক নিজে সরান ([[role-templates-never-widen-an-existing-role]])
             'finance.deposit.view',
             'finance.deposit.create',
             'finance.deposit.move',

@@ -51,6 +51,7 @@ return [
     'kind_in_use' => 'Deposits were opened under :name, so it cannot be removed — deactivate it instead and the old papers stay whole.',
 
     'opening_needs_a_liability_account' => 'Bringing in a running loan needs its liability account. A cash credit\'s outstanding lives in the bank account\'s own balance — set it there instead.',
+    'facility_sanction_taken' => 'Sanction number :no of this bank is already recorded (:doc); the same loan cannot be added twice.',
     'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',
     'more_than_retained' => 'The books do not hold that much profit. You asked to declare :asked and the retained profit is :have. Sharing profit that was never earned leaves nothing to pay out later.',
     'profit_signature_refused' => 'The signer turned the profit declaration down. It is cancelled and nothing was posted.',
