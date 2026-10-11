@@ -155,4 +155,14 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->actingAs($clerk->fresh())->get(route('sales.planned', ['screen' => 'order_pending']))
             ->assertRedirect(route('sales.order.index', ['tab' => 'pending']));
     }
+
+    /** ⭐ ৫ অক্টোবরের চার দর-তালিকার পুরনো ঠিকানা "তৈরি হচ্ছে" নয় — আসল তালিকায় নামে ([[PlannedScreenController::PRICE_BOOK]]) */
+    public function test_the_old_pricing_addresses_land_on_the_real_price_lists(): void
+    {
+        foreach (PlannedScreenController::PRICE_BOOK as $screen => $target) {
+            $this->assertNotContains($screen, PlannedScreenController::SCREENS, "⛔ '{$screen}' এখনো 'তৈরি হচ্ছে' তালিকায়।");
+            $this->get(route('sales.planned', ['screen' => $screen]))
+                ->assertRedirect(route('sales.price_book.index', ['target' => $target]));
+        }
+    }
 }

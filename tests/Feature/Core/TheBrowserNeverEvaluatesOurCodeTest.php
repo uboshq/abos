@@ -55,6 +55,15 @@ final class TheBrowserNeverEvaluatesOurCodeTest extends TestCase
         $this->assertStringNotContainsString("'unsafe-eval'", $policy,
             '`unsafe-eval` ফিরে এসেছে। ⛔ Alpine-এর CSP সংস্করণে এর দরকার নেই —'
             .' কোন পর্দা ভাঙছে সেটা খুঁজুন, দরজাটা খোলা নয়।');
+
+        /*
+         * ⭐ স্ক্যানের ছোট ছবি (`URL.createObjectURL` → blob:) ছবিতে চলে, আর blob: কেবল ছবিতেই — লিপি বা সংযোগে নয়
+         * (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔৭)।
+         */
+        $directives = collect($method->invoke(app(ContentSecurityPolicy::class), 'test-nonce'));
+        $this->assertStringContainsString('blob:', (string) $directives->first(fn ($d) => str_starts_with($d, 'img-src')), '⛔ স্ক্যানের ছবি লাইভে আসবে না।');
+        $this->assertSame([], $directives->filter(fn ($d) => str_contains($d, 'blob:') && ! str_starts_with($d, 'img-src'))->values()->all(),
+            '⛔ blob: ছবির বাইরেও খুলে গেল।');
     }
 
     /**

@@ -25,5 +25,10 @@
         <x-ui.button tone="secondary" :href="$cancel">{{ __('core.action.cancel') }}</x-ui.button>
     @endif
 
-    <x-ui.button type="submit" tone="primary">{{ $save ?? __('core.action.save') }}</x-ui.button>
+    {{-- ⓘ নিজের জমার বোতাম লাগলে (ব্যস্ত অবস্থা, বন্ধ রাখা, চিহ্ন) `submit` slot — নইলে সাধারণ "সংরক্ষণ" (documents রিভিউ, ১১ অক্টোবর ২০২৬) --}}
+    @isset($submit)
+        {{ $submit }}
+    @else
+        <x-ui.button type="submit" tone="primary">{{ $save ?? __('core.action.save') }}</x-ui.button>
+    @endisset
 </div>

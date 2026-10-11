@@ -33,6 +33,10 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Modules/Accounts/Services/InterCompanyService.php' => null,
         // ⓘ দলগত রিপোর্ট — প্রতিটা কোম্পানিতে শাখার নাগাল পড়তে ঢোকে; কোম্পানির তালিকাই আগে সেখানের চাবি দেখে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
         'app/Modules/Accounts/Services/GroupLedgerService.php' => null,
+        // ⭐ মালিকের কেন্দ্র — প্রতিটা কোম্পানিতে `executive.view` ঐ কোম্পানিতে বসে জিজ্ঞেস করে (৯ অক্টোবর ২০২৬)
+        'app/Modules/Executive/Services/CompanyLens.php' => null,
+        'app/Modules/Executive/Services/Snapshots.php' => 'রাতের ক্রন — মানুষ নেই, প্রতিটা কোম্পানির নিজের super_admin-এর চোখে লেখে; '
+            .'পড়ার সময় কেবল CompanyLens-এর কোম্পানি (যেখানে executive.view আছে), আর শাখার সীমা পড়তে প্রসঙ্গে বসে',
         'app/Modules/SystemAdmin/Http/Controllers/CompanyController.php' => null,
         'app/Modules/SystemAdmin/Http/Controllers/BranchController.php' => null,
         'app/Modules/SystemAdmin/Http/Controllers/UserController.php' => 'অন্য কোম্পানি কেবল যেখানে কর্তা নিজে সুপার অ্যাডমিন (companiesWithinReach); বাকিগুলো কেবল গুদামের নাম পড়া',

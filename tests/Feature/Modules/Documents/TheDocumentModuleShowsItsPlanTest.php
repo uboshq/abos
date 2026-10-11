@@ -39,6 +39,28 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * ⭐ যে সারিগুলো এখন আসল পর্দা খোলে, পরিকল্পনার পাতা নয় — প্রথম ধাপ (৮ অক্টোবর ২০২৬)।
+     * ⓘ এদের কাজ নিজের টেস্টে ([[ADocumentKeepsEveryVersionTest]], [[ADocumentStaysBehindItsWallsTest]])।
+     */
+    private const REAL_SCREENS = [
+        'documents.index', 'documents.create', 'documents.mine', 'documents.recent',
+        // ⓘ ড্যাশবোর্ডের সারি ৬ অক্টোবর থেকেই ড্যাশবোর্ড ইঞ্জিনের আসল পাতা ([[DocumentsDashboard]]), পরিকল্পনা নয়
+        'module.dashboard',
+        // ⭐ দ্বিতীয় ধাপ (৯ অক্টোবর ২০২৬) — নিজের টেস্টে ([[TheBinTheSearchAndTheAdminWorkTest]])
+        'documents.archived', 'documents.bin', 'documents.search', 'documents.admin',
+        // ⭐ তৃতীয় ধাপ — নিজের টেস্টে ([[ADocumentGoesThroughItsSignaturesTest]])
+        'documents.approval', 'documents.expiry',
+        // ⭐ চতুর্থ ধাপ — নিজের টেস্টে ([[ASignatureBelongsToTheBytesItSignedTest]])
+        'documents.shared', 'documents.signatures',
+        // ⭐ পঞ্চম ধাপ — নিজের টেস্টে ([[AScannedPageIsReadOnOurOwnServerTest]])
+        'documents.scan',
+        // ⭐ ষষ্ঠ ধাপ — নিজের টেস্টে ([[TheIntelligenceIsRulesOnOurOwnServerTest]])
+        'documents.intelligence',
+        // ⭐ সপ্তম ধাপ — নিজের টেস্টে ([[TheShelfReportsAndRemembersTest]])
+        'documents.templates', 'documents.templates.create', 'documents.reports', 'documents.audit',
+    ];
+
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void
     {
         $this->seed(DemoSeeder::class);
@@ -50,7 +72,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
 
         $pages = $this->menuPages();
 
-        $this->assertCount(21, $pages, 'DOC-এর মেনুতে ২১টা পাতা থাকার কথা — পাওয়া গেল '.count($pages).'টা।');
+        // ⓘ ১৯ — "ইনবক্স" আর "প্রিয়" (এখনো "আসছে") মেনু থেকে সরানো, আসল না হওয়া পর্যন্ত (fe, ১১ অক্টোবর ২০২৬)
+        $this->assertCount(19, $pages, 'DOC-এর মেনুতে ১৯টা পাতা থাকার কথা — পাওয়া গেল '.count($pages).'টা।');
 
         $person = User::factory()->create(['current_company_id' => $company->id]);
         $person->companies()->attach($company->id);
@@ -71,7 +94,14 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         ]));
 
         /* ── একই মানুষ, এবার চাবিসহ ── */
-        $person->givePermissionTo('documents.view');
+        // ⓘ আপলোডের সারি নিজের চাবি চায় (§১৩) — সেটাও, যাতে সাইডবারে ১৯টা সারিই আসে
+        Permission::findOrCreate('documents.upload', 'web');
+        Permission::findOrCreate('documents.admin', 'web');
+        foreach (['documents.templates', 'documents.report', 'documents.audit'] as $key) {
+            Permission::findOrCreate($key, 'web');
+        }
+        $person->givePermissionTo(['documents.view', 'documents.upload', 'documents.admin',
+            'documents.templates', 'documents.report', 'documents.audit']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $person = $person->fresh();
 
@@ -90,6 +120,14 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
             }
 
             $html = (string) $response->getContent();
+
+            /* ⭐ প্রথম ধাপের আসল পর্দা (৮ অক্টোবর ২০২৬) — ফর্ম আছে, "আসছে" ব্যাজ নেই; কেবল খোলা আর সাইডবার */
+            if (in_array($name, self::REAL_SCREENS, true)) {
+                $this->sidebarHasEveryRow($html, $pages, $sidebarMisses);
+
+                continue;
+            }
+
             $own = $this->ownPart($html);
 
             if ($own === null) {
@@ -110,14 +148,7 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
                 $badgeless[] = $name.json_encode($params);
             }
 
-            /* সাইডবারে DOC-এর ২১টা সারিই, প্রতিটা নিজের ঠিকানাসহ */
-            $aside = $this->sidebar($html);
-
-            foreach ($pages as [, , $rowUrl]) {
-                if ($aside === null || ! str_contains($aside, 'href="'.e($rowUrl).'"')) {
-                    $sidebarMisses[$rowUrl] = $rowUrl;
-                }
-            }
+            $this->sidebarHasEveryRow($html, $pages, $sidebarMisses);
         }
 
         $this->assertSame([], $shut, implode("\n", [
@@ -143,7 +174,13 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
 
         $rows = collect($doc['groups'])->flatten(1);
 
-        $this->assertCount(21, $rows, 'মেনুতে DOC-এর সারি ২১টা নয়।');
+        $this->assertCount(19, $rows, 'মেনুতে DOC-এর সারি ১৯টা নয়।');
+
+        // ⛔ "আসছে" পাতা মেনুতে নেই — আসল না হওয়া পর্যন্ত
+        foreach (['inbox', 'favourite'] as $planned) {
+            $this->assertFalse($rows->contains(fn ($row) => str_contains((string) ($row['url'] ?? ''), '/'.$planned)),
+                "⛔ পরিকল্পনার পাতা «{$planned}» এখনো মেনুতে।");
+        }
         $this->assertSame(0, $rows->where('url', null)->count(), 'DOC-এর কোনো সারি নিভে আছে (ঠিকানা নেই)।');
     }
 
@@ -199,10 +236,28 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         }
 
         sort($onMenu);
-        $planned = DocumentPlan::screenSlugs();
+        // ⓘ "ইনবক্স" আর "প্রিয়" পরিকল্পনায় আছে কিন্তু মেনুতে নেই — আসল না হওয়া পর্যন্ত (fe, ১১ অক্টোবর ২০২৬; documents রিভিউ ⛔৪)
+        $planned = array_values(array_diff(DocumentPlan::screenSlugs(), ['favourite', 'inbox']));
         sort($planned);
 
         $this->assertSame($planned, $onMenu, 'মেনুর সারি আর পরিকল্পনার পর্দা এক তালিকা নয়।');
+    }
+
+    /**
+     * সাইডবারে DOC-এর ২১টা সারিই, প্রতিটা নিজের ঠিকানাসহ।
+     *
+     * @param  list<array{0: string, 1: array<string, mixed>, 2: string}>  $pages
+     * @param  array<string, string>  $misses
+     */
+    private function sidebarHasEveryRow(string $html, array $pages, array &$misses): void
+    {
+        $aside = $this->sidebar($html);
+
+        foreach ($pages as [, , $rowUrl]) {
+            if ($aside === null || ! str_contains($aside, 'href="'.e($rowUrl).'"')) {
+                $misses[$rowUrl] = $rowUrl;
+            }
+        }
     }
 
     /**

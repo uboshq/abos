@@ -75,6 +75,24 @@ final class NotificationKinds
 
             // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
             'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
+
+            /*
+             * ⭐ ডকুমেন্ট ম্যানেজমেন্টের বারোটা খবর — মালিকের পরিকল্পনা §২৩ (৯ অক্টোবর ২০২৬)।
+             * ⓘ কেবল নামের চিহ্ন; কাকে যায় সেটা মডিউলের সিদ্ধান্ত, আর যিনি কাগজটা দেখতে পান না
+             * তিনি খবরও পান না।
+             */
+            'documents.new' => 'core.notify.kind.documents_new',
+            'documents.shared' => 'core.notify.kind.documents_shared',
+            'documents.approval_required' => 'core.notify.kind.documents_approval_required',
+            'documents.approved' => 'core.notify.kind.documents_approved',
+            'documents.rejected' => 'core.notify.kind.documents_rejected',
+            'documents.signature_required' => 'core.notify.kind.documents_signature_required',
+            'documents.signature_completed' => 'core.notify.kind.documents_signature_completed',
+            'documents.expiry_warning' => 'core.notify.kind.documents_expiry_warning',
+            'documents.expired' => 'core.notify.kind.documents_expired',
+            'documents.renewal_required' => 'core.notify.kind.documents_renewal_required',
+            'documents.updated' => 'core.notify.kind.documents_updated',
+            'documents.permission_changed' => 'core.notify.kind.documents_permission_changed',
         ];
     }
 
@@ -140,6 +158,10 @@ final class NotificationKinds
 
         /* ⓘ উল্টো আটকে — মাস না খোলা পর্যন্ত বকেয়াটা পরের মাসে দুইবার গোনা থাকে, আর খবরটা একবারই যায় */
         'accounts.adjusting_reversal_stuck',
+
+        /* ⓘ কাগজের মেয়াদ পেরোলে লাইসেন্স বা চুক্তি অচল — কেউ না ধরলে জরিমানা আসে */
+        'documents.expired',
+        'documents.renewal_required',
     ];
 
     /**

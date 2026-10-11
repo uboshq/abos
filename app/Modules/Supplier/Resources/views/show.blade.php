@@ -224,4 +224,7 @@
         <x-ui.pager :rows="$entries" />
         <x-ui.list-totals :rows="$entries" />
     </section>
+
+    {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}
+    <x-ui.linked-documents :record="$supplier" />
 </x-layouts.app>

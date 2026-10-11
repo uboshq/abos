@@ -22,6 +22,7 @@ return [
     'bill_due' => 'Due',
     'bill_pay' => 'On this bill',
     'bill_not_theirs' => 'The bill picked is not this customer\'s.',
+    'bill_other_branch' => 'Bill :no belongs to another branch — this deposit is collected in the customer’s own branch; send a separate deposit for that branch.',
     'bill_not_open' => 'Bill :no is not confirmed; a deposit cannot be shown against it.',
     'bill_twice' => 'Bill :no is picked twice.',
     'bill_over_due' => 'Bill :no has ৳:due due; no more than that can go on it.',

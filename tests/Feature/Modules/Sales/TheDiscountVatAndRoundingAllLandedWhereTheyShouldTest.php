@@ -6,6 +6,7 @@ namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -24,11 +25,11 @@ use App\Modules\MasterData\Models\Unit;
 use App\Modules\Sales\Models\SalesInvoice;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\PrintsTheStandardPaper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\ChecksTheFiveMatches;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
 
@@ -210,10 +211,11 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
      *   সারি ১ (ভ্যাট ১৫% বাইরে, স্তর @ ১২০): ৫ × ২০০ = ১,০০০ · ছাড় ৮% = ৮০ → ৯২০
      *                                        · ভ্যাট ৯২০ × ১৫% = ১৩৮ → ১,০৫৮
      *   সারি ২ (ভ্যাট নেই, স্তর @ ১০০):      ৪ × ১৫০ = ৬০০ · ছাড় ৫% = ৩০ → ৫৭০
-     *   সারির মোট ১,৬২৮ · বিলের ছাড় ১২৮ → মোট ১,৫০০
-     *   নগদ ১,০০০ · বাকি ৫০০
-     *   ভ্যাট ১৩৮ · বিক্রয় ১,৫০০ − ১৩৮ = ১,৩৬২ (= ৯২০ + ৫৭০ − ১২৮)
-     *   খরচ ৫ × ১২০ + ৪ × ১০০ = ১,০০০ · লাভ ৩৬২
+     *   ভ্যাটের আগের দাম ৯২০ + ৫৭০ = ১,৪৯০ · বিলের ছাড় ১৪৯ (১০%)
+     *   ⭐ ভ্যাট ছাড়ের পরের দামে (মালিক, ১০ অক্টোবর ২০২৬): ১৩৮ × (১ − ১৪৯ ÷ ১,৪৯০) = ১২৪.২০
+     *   মোট ১,৪৯০ − ১৪৯ + ১২৪.২০ = ১,৪৬৫.২০ · নগদ ১,০০০ · বাকি ৪৬৫.২০
+     *   বিক্রয় ১,৪৬৫.২০ − ১২৪.২০ = ১,৩৪১ (= ৯২০ + ৫৭০ − ১৪৯)
+     *   খরচ ৫ × ১২০ + ৪ × ১০০ = ১,০০০ · লাভ ৩৪১
      */
     public function test_line_and_bill_discount_with_vat_each_reach_their_own_account(): void
     {
@@ -224,46 +226,46 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         $this->sell(
             [$this->line($vatted, '5', '200', '8'), $this->line($plain, '4', '150', '5')],
             [$this->cash('1000')],
-            ['discount_amount' => '128'],
+            ['discount_amount' => '149'],
         )->assertSessionHasNoErrors();
 
         $invoice = $this->lastInvoice();
 
-        $this->assertInvoiceFigures($invoice, subtotal: '1600', discount: '110', tax: '138', billDiscount: '128', rounding: '0', total: '1500');
+        $this->assertInvoiceFigures($invoice, subtotal: '1600', discount: '110', tax: '124.2', billDiscount: '149', rounding: '0', total: '1465.2');
 
         $this->assertTheNewEntriesAre($before['id'], [
             $this->tillCode() => '1000',
-            StandardChart::RECEIVABLE => '500',
-            StandardChart::SALES => '-1362',
-            StandardChart::VAT_PAYABLE => '-138',
+            StandardChart::RECEIVABLE => '465.2',
+            StandardChart::SALES => '-1341',
+            StandardChart::VAT_PAYABLE => '-124.2',
             StandardChart::COST_OF_GOODS_SOLD => '1000',
             StandardChart::INVENTORY => '-1000',
         ]);
 
         $this->assertFiveMatches($before, [
-            StandardChart::SALES => '-1362',
-            StandardChart::VAT_PAYABLE => '-138',
+            StandardChart::SALES => '-1341',
+            StandardChart::VAT_PAYABLE => '-124.2',
             StandardChart::DISCOUNT_GIVEN => '0',
-            StandardChart::RECEIVABLE => '500',
+            StandardChart::RECEIVABLE => '465.2',
             StandardChart::COST_OF_GOODS_SOLD => '1000',
             StandardChart::INVENTORY => '-1000',
         ], stock: [
             $vatted->id => ['qty' => '15', 'value' => '1800'],
             $plain->id => ['qty' => '16', 'value' => '1600'],
-        ], dealer: '500', cash: '1000', profit: '362');
+        ], dealer: '465.2', cash: '1000', profit: '341');
 
-        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '500', 4), '⛔ বিলের বকেয়া হাতে গোনা ৫০০ নয়।');
+        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '465.2', 4), '⛔ বিলের বকেয়া হাতে গোনা ৪৬৫.২০ নয়।');
 
-        $this->assertTheReceivableDebitIs($invoice, '1500');
+        $this->assertTheReceivableDebitIs($invoice, '1465.2');
         $this->assertPrinted($invoice, 'a4', [
             'core.print.subtotal' => '1,600.00',
             'core.print.discount' => '110.00',
-            'core.print.tax' => '138.00',
-            'sales::print.bill_discount' => '128.00',
-            'core.print.total' => '1,500.00',
+            'core.print.tax' => '124.20',
+            'sales::print.bill_discount' => '149.00',
+            'core.print.total' => '1,465.20',
             'sales::print.paid' => '1,000.00',
-            'sales::print.invoice_due' => '500.00',
-            'sales::print.outstanding' => '500.00',
+            'sales::print.invoice_due' => '465.20',
+            'sales::print.outstanding' => '465.20',
         ]);
     }
 
@@ -434,7 +436,8 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         $this->assertPrinted($first, 'a4', [
             'core.print.subtotal' => '1,150.00',
             'core.print.discount' => '115.00',
-            'core.print.tax' => '135.00',
+            // ⓘ দামের ভিতরের ভ্যাট নিজের নামে — যোগে আবার ধরা নয় (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৪)
+            'core.print.tax_included' => '135.00',
             'core.print.total' => '1,035.00',
             'sales::print.paid' => '1,035.00',
             'sales::print.invoice_due' => '0.00',
@@ -467,9 +470,10 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         ], stock: [$salt->id => ['qty' => '7', 'value' => '490']], dealer: '300', cash: '0', profit: '50.87');
 
         $this->assertTheReceivableDebitIs($second, '300');
+        // ⓘ দামের ভিতরের ভ্যাট নিজের লেখায় (PR #17, ছাপা ১৪) — অঙ্ক একই, সারির নাম "ভ্যাট (দামের ভিতরে)"; মোট আবার যোগ হয় না
         $this->assertPrinted($second, 'a4', [
             'core.print.subtotal' => '300.00',
-            'core.print.tax' => '39.13',
+            'core.print.tax_included' => '39.13',
             'core.print.total' => '300.00',
             'sales::print.invoice_due' => '300.00',
             'sales::print.outstanding' => '300.00',
@@ -559,7 +563,7 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
      */
     private function assertItAsksForASignature(TestResponse $response, string $why): void
     {
-        $asked = \App\Models\Approval::query()->where('action', 'discount')->where('status', \App\Models\Approval::PENDING)->count();
+        $asked = Approval::query()->where('action', 'discount')->where('status', Approval::PENDING)->count();
 
         $this->assertGreaterThan($this->askedSoFar, $asked, $why.' ফেরত এসেছে (HTTP '.$response->getStatusCode().')');
         $this->assertNotNull($response->getSession()?->get('approval_notice'), $why.' — কাউন্টার কোনো বার্তা দেয়নি।');

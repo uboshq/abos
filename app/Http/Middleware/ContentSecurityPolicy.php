@@ -106,8 +106,13 @@ class ContentSecurityPolicy
              */
             "style-src-attr 'unsafe-inline'",
 
-            // data: — বারকোড ও কিউআর ছবি ইনলাইন হিসেবে তৈরি হয়
-            "img-src 'self' data:",
+            /*
+             * data: — বারকোড ও কিউআর ছবি ইনলাইন হিসেবে তৈরি হয়।
+             * ⭐ blob: — স্ক্যানের পাতার ছোট ছবি, ব্যবহারকারীর নিজের বাছা ফাইল থেকে ব্রাউজারেই (`URL.createObjectURL`,
+             * [[documentScan.addPages]]; ১১ অক্টোবর ২০২৬, documents রিভিউ ⛔৭)। ⓘ `'self'` blob: ঢাকে না, তাই লাইভে ছবিগুলো আসত না।
+             * ⓘ blob: কেবল ছবিতে — লিপি (`script-src`) আর সংযোগে (`connect-src`) নয়; একটা blob ছবি কোড চালায় না।
+             */
+            "img-src 'self' data: blob:",
             "font-src 'self' data:",
 
             "connect-src 'self'",

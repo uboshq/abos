@@ -48,7 +48,7 @@ final class NotePrintController extends Controller implements HasMiddleware
     public function __invoke(Request $request, Note $note): Response
     {
         return $this->branch->during($note->branch_id, function () use ($request, $note) {
-            $paper = PaperSize::chosen($request->query('paper'), $this->branch->get('accounts.print.paper.note'));
+            $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->branch->get('accounts.print.paper.note'));
             $asFile = $request->boolean('download');
 
             $printed = $this->trail->countsFor('accounts_note', (int) $note->id)[DocumentDelivery::PRINTED] ?? 0;

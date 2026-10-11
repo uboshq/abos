@@ -31,6 +31,8 @@ final class AFileIsChosenInBengaliTest extends TestCase
     /** @var list<string> নিজের আচরণসহ ফাইল-ঘর — পাতা ধরে বদলাবে, ততদিন গোনা */
     private const KNOWN = [
         'Modules/Accounts/Resources/views/voucher/partials/attachment-field.blade.php',
+        // ⓘ স্ক্যানের আসল জমার ঘর — লুকানো, জাভাস্ক্রিপ্ট পাতাগুলো জোড়ে ([[documentScan.syncInput]]); দেখার বোতাম বাংলা
+        'Modules/Documents/Resources/views/scan/create.blade.php',
         'Modules/Hr/Resources/views/employee/form.blade.php',
         'Modules/Inventory/Resources/views/product/form.blade.php',
         'Modules/Sales/Resources/views/claim/request.blade.php',
