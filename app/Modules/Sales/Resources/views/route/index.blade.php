@@ -37,27 +37,19 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::route.title') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('sales::route.title')" :subtitle="__('sales::route.subtitle')">
-            <x-slot:actions>
-                <form method="GET" class="flex items-end gap-2">
-                    <label class="text-sm">
-                        <span class="mb-1 block text-(--color-ink-muted)">{{ __('sales::route.search') }}</span>
-                        <input type="search" name="q" value="{{ $q }}"
-                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2">
-                    </label>
-                    <label class="text-sm">
-                        <span class="mb-1 block text-(--color-ink-muted)">{{ __('sales::route.month') }}</span>
-                        <x-ui.month name="month" :value="$month->format('Y-m')"
-                                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                           bg-(--color-surface-card) px-2" />
-                    </label>
-                    <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
-                </form>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+    {{-- ⓘ ভাগের টুলবার — খোঁজ, ছাপা আর ছাঁকনি অন্য তালিকার জায়গাতেই; মাস ছাঁকনির ঘরে (১১ অক্টোবর ২০২৬, Design: নিজের লেখা
+         টুলবার)। রপ্তানি বন্ধ: এই পাতার নিয়ন্ত্রক রপ্তানি দেয় না, তাই বোতামটা কেবল পাতাটাই আবার আনত। --}}
+    <form method="GET" class="contents">
+        <x-ui.toolbar :title="__('sales::route.title')" :subtitle="__('sales::route.subtitle')"
+                      :search-placeholder="__('sales::route.search')" :export="false">
+            <label class="text-sm">
+                <span class="mb-1 block text-(--color-ink-muted)">{{ __('sales::route.month') }}</span>
+                <x-ui.month name="month" :value="$month->format('Y-m')"
+                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-card) px-2" />
+            </label>
+        </x-ui.toolbar>
+    </form>
 
     @if ($unrouted > 0)
         <div role="status"
