@@ -201,7 +201,7 @@ final class CreditControlLists
                     $why .= ' WHEN '.$pdo->quote($r).' THEN '.$pdo->quote((string) __('credit_control::profile.reason_'.$r));
                 }
 
-                return self::onCustomers(DB::table('sal_credit_decisions as d')->join('customers', 'customers.id', '=', 'd.customer_id'), $f, 'd')
+                return self::onCustomers(DB::table('sal_credit_decisions as d')->where('d.company_id', $f['company_id'])->join('customers', 'customers.id', '=', 'd.customer_id'), $f, 'd')
                     ->when($result !== null, fn ($q) => $q->where('d.result', $result))
                     ->whereBetween(DB::raw('DATE(d.created_at)'), [$f['from'], $f['to']])
                     ->selectRaw('DATE(d.created_at) as decided_on, d.paper_no')
@@ -241,7 +241,7 @@ final class CreditControlLists
                     $what .= ' WHEN '.$pdo->quote($field).' THEN '.$pdo->quote((string) __('customer::credit_history.'.$field));
                 }
 
-                return self::onCustomers(DB::table('customer_credit_changes as c')->join('customers', 'customers.id', '=', 'c.customer_id'), $f, 'c')
+                return self::onCustomers(DB::table('customer_credit_changes as c')->where('c.company_id', $f['company_id'])->join('customers', 'customers.id', '=', 'c.customer_id'), $f, 'c')
                     ->leftJoin('users as u', 'u.id', '=', 'c.changed_by')
                     ->whereBetween(DB::raw('DATE(c.created_at)'), [$f['from'], $f['to']])
                     ->selectRaw('DATE(c.created_at) as changed_on')
@@ -284,7 +284,7 @@ final class CreditControlLists
                 $kind = "CASE r.kind WHEN 'temporary' THEN ".$pdo->quote((string) __('customer::credit_request.kind_temporary'))
                     .' ELSE '.$pdo->quote((string) __('customer::credit_request.kind_limit')).' END';
 
-                return self::onCustomers(DB::table('customer_credit_requests as r')->join('customers', 'customers.id', '=', 'r.customer_id'), $f, 'r')
+                return self::onCustomers(DB::table('customer_credit_requests as r')->where('r.company_id', $f['company_id'])->join('customers', 'customers.id', '=', 'r.customer_id'), $f, 'r')
                     ->leftJoin('approvals as a', 'a.id', '=', 'r.approval_id')
                     ->leftJoin('users as u', 'u.id', '=', 'r.requested_by')
                     ->whereBetween(DB::raw('DATE(r.created_at)'), [$f['from'], $f['to']])

@@ -11,6 +11,7 @@ use App\Modules\CreditControl\Services\CreditRisk;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -52,7 +53,7 @@ final class TheRiskTrendRemembersEachDayTest extends TestCase
         $this->assertSame(CreditRisk::CRITICAL, (clone $today)->where('customer_id', $bad->id)->value('level'));
 
         DB::table('credit_risk_snapshots')->insert([
-            'company_id' => $this->company->id, 'customer_id' => $bad->id, 'taken_on' => now()->subDay()->toDateString(),
+            'public_id' => (string) Str::uuid7(), 'company_id' => $this->company->id, 'customer_id' => $bad->id, 'taken_on' => now()->subDay()->toDateString(),
             'level' => CreditRisk::MEDIUM, 'score' => 25, 'created_at' => now()->subDay(),
         ]);
 

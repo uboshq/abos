@@ -23,6 +23,7 @@ return new class extends Migration
 
         Schema::create('credit_risk_snapshots', function (Blueprint $table): void {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained('companies', 'id', 'credit_risk_snap_company_fk');
             $table->foreignId('customer_id')->constrained('customers', 'id', 'credit_risk_snap_customer_fk');
             $table->date('taken_on');

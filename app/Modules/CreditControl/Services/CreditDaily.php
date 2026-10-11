@@ -12,6 +12,7 @@ use App\Core\Support\Money;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * ⭐ বাকি নিয়ন্ত্রণের রোজকার কাজ — চলতি কোম্পানিতে (বাকি নিয়ন্ত্রণ ধাপ ৩, `abos:credit-due` ডাকে)।
@@ -38,7 +39,7 @@ final class CreditDaily
             $rows = [];
 
             foreach ($this->risk->rateAll($chunk->keyBy('id')->all()) as $id => $r) {
-                $rows[] = ['company_id' => $companyId, 'customer_id' => $id, 'taken_on' => $day,
+                $rows[] = ['public_id' => (string) Str::uuid7(), 'company_id' => $companyId, 'customer_id' => $id, 'taken_on' => $day,
                     'level' => $r['level'], 'score' => min(65535, $r['score']), 'created_at' => now()];
             }
 
