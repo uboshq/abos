@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Contracts\ParkedStock;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -42,7 +43,7 @@ use Illuminate\Support\Facades\DB;
  * ⚠️ তাই **ভুলে যাওয়াই একমাত্র ঝুঁকি**, আর তার একমাত্র ওষুধ ধরে-রাখা
  * বিলের তালিকা — পুরনোটা উপরে ([[PosService::parked()]] ওই ক্রমেই দেয়)।
  */
-final class ParkedStockReservation
+final class ParkedStockReservation implements ParkedStock
 {
     public function __construct(private readonly StockService $stock) {}
 
@@ -72,7 +73,7 @@ final class ParkedStockReservation
      * **মাল বিক্রি হয়ে যাওয়ার পরেও আটকে থাকত, চিরকাল** — আর কেউ
      * ধরতে পারত না, কারণ কোথাও কিছু ভাঙত না।
      */
-    public function release(SalesInvoice $invoice): void
+    public function release(int $invoiceId, ?string $documentNo): void
     {
         /*
          * ⭐ যতটা সত্যিই ধরা আছে, ঠিক ততটা — খাতায় এই বিলের নামে লেখা সংরক্ষণ থেকে (অডিট গ১২, ৪ অক্টোবর ২০২৬)।
@@ -89,8 +90,8 @@ final class ParkedStockReservation
          */
         $this->stock->releaseReservedBy(
             sourceType: SalesInvoice::STOCK_SOURCE,
-            sourceId: (int) $invoice->id,
-            documentNo: $invoice->document_no,
+            sourceId: $invoiceId,
+            documentNo: $documentNo,
         );
     }
 

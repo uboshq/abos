@@ -99,6 +99,9 @@ return [
     'bindings' => [
         CreditHolds::class => CreditExposure::class,
 
+        // ⓘ ধরে রাখা বিলের আটকানো মাল — বিল নিশ্চিত বা বাতিল হলে ছাড়ে ([[ParkedStock]]; পিওএস ধাপ ২-এ বাঁধনটা পিওএসে যাবে)
+        \App\Core\Contracts\ParkedStock::class => \App\Modules\Sales\Services\ParkedStockReservation::class,
+
         // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
 

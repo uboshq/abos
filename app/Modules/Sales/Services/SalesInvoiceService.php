@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
+use App\Core\Contracts\ParkedStock;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Contracts\SalesOffers;
 use App\Core\Engines\Approval\ApprovalEngine;
@@ -542,9 +543,9 @@ final class SalesInvoiceService
          *
          * ⛔ আগে শর্ত ছিল `parked_at`-এ — কিন্তু ফিরিয়ে আনলে (`resume`) ওটা মুছে যায়, তাই আবার খুলে বেচা বিলের
          * সংরক্ষণ চিরকাল থেকে যেত (অডিট গ১২, ৪ অক্টোবর ২০২৬)। ⭐ এখন সবসময় ডাকা হয়: এই বিলের নামে খাতায় যতটা
-         * ধরা আছে ততটাই ফেরে, কিছু না থাকলে কিছুই নয় ([[ParkedStockReservation::release()]])।
+         * ধরা আছে ততটাই ফেরে, কিছু না থাকলে কিছুই নয় ([[ParkedStock::release()]])।
          */
-        app(ParkedStockReservation::class)->release($invoice);
+        app(ParkedStock::class)->release((int) $invoice->id, $invoice->document_no);
 
         /*
          * লেনদেনের বাইরে, ইচ্ছাকৃতভাবে।
@@ -795,7 +796,7 @@ final class SalesInvoiceService
              * DRAFT অবস্থায় থাকে — দুইটা আলাদা প্রশ্ন, তাই আলাদা জায়গা।
              */
             // ⭐ গ১২ — `parked_at` দেখে নয়: ফিরিয়ে আনা বিলে ওটা মোছা, অথচ সংরক্ষণ তখনো খাতায়; ধরা না থাকলে কিছুই হয় না
-            app(ParkedStockReservation::class)->release($invoice);
+            app(ParkedStock::class)->release((int) $invoice->id, $invoice->document_no);
 
             if ($locked->status === DocumentStatus::CONFIRMED) {
                 $this->unpost($invoice, $date, $reason);

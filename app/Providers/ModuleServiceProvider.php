@@ -10,6 +10,7 @@ use App\Core\Contracts\CustomerTrade;
 use App\Core\Contracts\FreeGoodsOffers;
 use App\Core\Contracts\HomeSalesFilters;
 use App\Core\Contracts\LinkedDocuments;
+use App\Core\Contracts\ParkedStock;
 use App\Core\Contracts\PartyOpenBills;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Contracts\SalesOffers;
@@ -22,6 +23,7 @@ use App\Core\Services\NoCustomerTrade;
 use App\Core\Services\NoFreeGoodsOffers;
 use App\Core\Services\NoHomeSalesFilters;
 use App\Core\Services\NoLinkedDocuments;
+use App\Core\Services\NoParkedStock;
 use App\Core\Services\NoPartyOpenBills;
 use App\Core\Services\NoRecipeBook;
 use App\Core\Services\NoSalesOffers;
@@ -85,6 +87,9 @@ class ModuleServiceProvider extends ServiceProvider
 
         // ⓘ জোড়া কাগজ — ডকুমেন্ট মডিউল বন্ধ থাকলে খালি ([[NoLinkedDocuments]])
         $this->app->bind(LinkedDocuments::class, NoLinkedDocuments::class);
+
+        // ⓘ কাউন্টার না থাকলে ধরে রাখা বিল নেই, তাই ছাড়ার মতো আটকানো মালও নেই ([[NoParkedStock]])
+        $this->app->bind(ParkedStock::class, NoParkedStock::class);
     }
 
     /**
