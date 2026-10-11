@@ -55,11 +55,8 @@
                     <span class="sr-only">({{ __('core.form.required') }})</span>
                 </label>
 
-                <input type="file" id="files" name="files[]" multiple required accept="{{ $accept }}"
-                       aria-describedby="files-hint"
-                       class="block w-full text-sm file:me-2 file:rounded-(--radius-field)
-                              file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                              file:px-3 file:py-1.5 file:text-sm">
+                {{-- ⭐ বাংলা বোতাম, ব্রাউজারের "Choose File" নয় (documents রিভিউ ⛔৫; [[x-ui.file-input]]) — নাম `files[]` থাকে --}}
+                <x-ui.file-input id="files" name="files" :multiple="true" :required="true" :accept="$accept" aria-describedby="files-hint" />
 
                 <p id="files-hint" class="mt-1 text-2xs text-(--color-ink-muted)">
                     {{ __('documents::message.files_hint', ['max' => $maxMb.' MB', 'count' => $maxFiles]) }}
@@ -154,16 +151,15 @@
                     </section>
                 @endif
 
-                <div class="flex flex-wrap justify-end gap-2">
-                    <x-ui.button :href="$isNew ? route('documents.index') : route('documents.show', $document)">
-                        {{ __('documents::action.cancel') }}
-                    </x-ui.button>
-
-                    <x-ui.button type="submit" tone="primary" :icon="$isNew ? 'attachment' : null"
-                                 ::class="busy && 'pointer-events-none opacity-70'">
-                        {{ $isNew ? __('documents::action.upload') : __('documents::action.save') }}
-                    </x-ui.button>
-                </div>
+                {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে ([[x-ui.form-actions]]; documents রিভিউ) --}}
+                <x-ui.form-actions :cancel="$isNew ? route('documents.index') : route('documents.show', $document)">
+                    <x-slot:submit>
+                        <x-ui.button type="submit" tone="primary" :icon="$isNew ? 'attachment' : null"
+                                     ::class="busy && 'pointer-events-none opacity-70'">
+                            {{ $isNew ? __('documents::action.upload') : __('documents::action.save') }}
+                        </x-ui.button>
+                    </x-slot:submit>
+                </x-ui.form-actions>
             </div>
         </div>
     </form>

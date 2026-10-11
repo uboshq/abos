@@ -115,6 +115,7 @@ final class CustomerService
      */
     public function update(Customer $customer, array $data): Customer
     {
+        $this->assertMayChangeActive($customer, $data);
         $this->assertBanglaNameIfRequired($data, $customer);
         $this->assertNotADuplicate($data, $customer->id, $customer->branch_id, $customer);
         $this->assertOnlyOneDistributorPerPoint($data, $customer);
@@ -449,6 +450,33 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * ⛔ চালু/বন্ধ বদলাতে বন্ধ করার চাবিই লাগে — Sales অডিট, ১০ অক্টোবর ২০২৬।
+     *
+     * ⚠️ বন্ধ করার নিজের দরজা `customer.delete` চায় ([[CustomerController::destroy()]]), অথচ সম্পাদনার ফর্মের
+     * "চালু" ঘর দিয়ে কেবল `customer.update`-এ একই কাজ হয়ে যেত — আর বন্ধ গ্রাহক আবার চালুও। ⓘ ঘরটা না বদলালে
+     * কিছু চায় না — ফর্ম সব সময় ঘরটা পাঠায়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertMayChangeActive(Customer $customer, array $data): void
+    {
+        if (! array_key_exists('is_active', $data) || $data['is_active'] === null
+            || (bool) $data['is_active'] === (bool) $customer->is_active) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user === null || $user->can('customer.delete')) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'is_active' => __('customer::validation.active_needs_delete_key'),
+        ]);
+    }
+
     private function assertMayOpenABalance(array $data): void
     {
         $amount = trim((string) ($data['opening_balance'] ?? ''));

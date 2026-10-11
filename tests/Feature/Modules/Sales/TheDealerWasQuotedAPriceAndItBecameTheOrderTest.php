@@ -349,6 +349,8 @@ final class TheDealerWasQuotedAPriceAndItBecameTheOrderTest extends TestCase
         $this->assertSame(0, bccomp('33.33', $shares, 4),
             '⛔ পুরো কাগজের ছাড় সারিতে ভাগ করতে গিয়ে পয়সা হারিয়েছে বা বেড়েছে: '.$shares);
 
+        // ⓘ ছাড় আছে — মালিকের ছাড়ের সই আগে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ৭; [[AQuotedDiscountNeedsTheOwnersSignatureTest]])
+        $this->signTheDiscount($quotation);
         $order = app(SalesQuotationService::class)->convert($quotation);
 
         foreach (['subtotal', 'discount', 'tax', 'total'] as $field) {
@@ -632,6 +634,24 @@ final class TheDealerWasQuotedAPriceAndItBecameTheOrderTest extends TestCase
     private function accepted(?array $lines = null, string $header = '0', ?string $validUntil = null): SalesQuotation
     {
         return app(SalesQuotationService::class)->accept($this->sent($lines, $header, $validUntil));
+    }
+
+    /** ⓘ ছাড়ের সই — রূপান্তর অনুরোধ বসিয়ে থামে, মালিক সই দেন */
+    private function signTheDiscount(SalesQuotation $quotation): void
+    {
+        $signer = User::factory()->create(['current_company_id' => $this->company->id]);
+        $signer->companies()->attach($this->company->id, ['is_active' => true]);
+        $flow = ApprovalFlow::query()->where('module', 'sales')->where('action', 'discount')->firstOrFail();
+        $flow->steps()->delete();
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER,
+            'approver_id' => $signer->id, 'requires_all' => false]);
+        $this->app->forgetInstance(ApprovalEngine::class);
+        $this->app->forgetScopedInstances();
+
+        $this->assertSame('discount', $this->refusedOn(fn () => app(SalesQuotationService::class)->convert($quotation)));
+        $asked = Approval::query()->where('approvable_type', $quotation->getMorphClass())->where('approvable_id', $quotation->id)
+            ->where('action', 'discount')->where('status', Approval::PENDING)->firstOrFail();
+        app(ApprovalEngine::class)->approve($asked, $signer, 'ঠিক আছে');
     }
 
     /** ব্যর্থ হলে কোন ঘরের বার্তা — আর কোনো ব্যতিক্রম না হলে দাবিটা ব্যর্থ। */

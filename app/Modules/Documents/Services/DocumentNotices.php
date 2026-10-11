@@ -202,14 +202,23 @@ final class DocumentNotices
         return $this->companyPeople()->filter(fn (User $u) => in_array((int) $u->getKey(), $ids, true))->values();
     }
 
-    /** @return Collection<int, User> এই কোম্পানির চালু মানুষ */
+    /** @var array<int, Collection<int, User>> কোম্পানি ধরে, এক চালানের ভিতরে একবার */
+    private array $people = [];
+
+    /**
+     * @return Collection<int, User> এই কোম্পানির চালু মানুষ
+     *
+     * ⛔ এক চালানে একবার পড়া (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৮) — আগে প্রতিটা খবরে আবার পুরো তালিকা উঠত, আর মেয়াদের রানে
+     * কাগজ × মানুষ × কোয়েরি প্রতি ঘণ্টায়। রোলগুলো সাথে তোলা, যাতে `can()` প্রতিজনে আলাদা কোয়েরি না করে।
+     */
     private function companyPeople(): Collection
     {
-        $companyId = CompanyContext::id();
+        $companyId = (int) CompanyContext::id();
 
-        return User::query()
+        return $this->people[$companyId] ??= User::query()
             ->where('is_active', true)
             ->whereHas('companies', fn ($q) => $q->where('companies.id', $companyId))
+            ->with(['roles', 'permissions'])
             ->get();
     }
 

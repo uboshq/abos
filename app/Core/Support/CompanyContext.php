@@ -124,6 +124,31 @@ final class CompanyContext
     }
 
     /**
+     * ⭐ কাগজের নিজের শাখায় কাজ — কোম্পানি আর অর্থবছর একই, কেবল শাখা কাগজের (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, বিক্রয় ১;
+     * [[AHeldSaleFinishesInItsOwnBranchTest]])।
+     *
+     * ⓘ সইয়ের পরে কাউন্টারের বিক্রি বা অফিসের চালান বানানেওয়ালার নামে পাকা হয়, আর শাখার দেয়াল দেখে "এই মুহূর্তের" শাখা — সইকারীর
+     * হেডারের শাখা, বা বানানেওয়ালার। অন্য শাখার কাগজ তখন "নেই" হত। ⚠️ এটা কারও দেখার সীমা বাড়ায় না: দেখার শাখা নাগালের বাইরে
+     * হলে [[DataScope]] আগের মতোই ছাঁকে। `null` শাখা মানে কিছু বদলায় না।
+     */
+    public static function inBranch(?int $branchId, callable $callback): mixed
+    {
+        if ($branchId === null || self::$companyId === null) {
+            return $callback();
+        }
+
+        $previous = [self::$companyId, self::$branchId, self::$financialYearId];
+
+        self::set(self::$companyId, $branchId, self::$financialYearId);
+
+        try {
+            return $callback();
+        } finally {
+            self::set(...$previous);
+        }
+    }
+
+    /**
      * সাময়িকভাবে অন্য কোম্পানির প্রসঙ্গে কাজ — শেষে আগেরটা ফিরে আসে।
      *
      * finally ছাড়া লিখলে ভেতরে একটা এক্সসেপশন হলে প্রসঙ্গ ভুল কোম্পানিতে

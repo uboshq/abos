@@ -313,7 +313,13 @@ final class DocumentApiController extends Controller
                 $class = $type instanceof ReflectionNamedType ? $type->getName() : null;
 
                 if (is_string($class) && is_subclass_of($class, Model::class)) {
-                    $out[class_basename($class)] = [$documentType, $class];
+                    /*
+                     * ⛔ প্রথমটাই থাকে (`??=`) — একই মডেলের দ্বিতীয় কাগজ ফোনের "ধরন" দখল করে না (১১ অক্টোবর ২০২৬)।
+                     * ⓘ চালানের গেট পাস (`sales_challan_gatepass`) আর DO (`sales_delivery_order`) বাঁধে চালান আর
+                     * অর্ডারের মডেলই; `=` থাকলে ফোন `DeliveryChallan` চাইলে দাম-ছাড়া গেট পাস পেত, `SalesOrder`-এ DO —
+                     * অন্য কাগজ, অন্য অনুমতি। ⭐ মূল কাগজ তালিকায় আগে বসানো, তাই সেটাই জেতে।
+                     */
+                    $out[class_basename($class)] ??= [$documentType, $class];
 
                     break;
                 }

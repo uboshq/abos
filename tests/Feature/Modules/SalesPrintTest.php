@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintProfile;
+use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -66,7 +67,7 @@ class SalesPrintTest extends TestCase
          * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
          * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
          */
-        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+        app(SettingsService::class)->set('sales.print.design.invoice', 'standard');
         $this->actingAs($this->user);
 
         $this->customer = Customer::query()->firstOrFail();
@@ -107,6 +108,15 @@ class SalesPrintTest extends TestCase
         );
     }
 
+    /** ⓘ খসড়া দরজা পাকা বিল ফেরায় আর খসড়া ছাপে না — বাকি থাকে বাতিল বিল (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৭) */
+    private function draftInvoice(): SalesInvoice
+    {
+        return app(SalesInvoiceService::class)->cancel(app(SalesInvoiceService::class)->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '250']],
+        ), 'Printed as not final');
+    }
+
     /**
      * ছয়টা কাগজই তিনটা মাপে বেরোয়।
      *
@@ -125,7 +135,7 @@ class SalesPrintTest extends TestCase
             route('sales.print.challan', $challan),
             route('sales.print.gatepass', $challan),
             route('sales.print.invoice', $invoice),
-            route('sales.print.draft', $invoice),
+            route('sales.print.draft', $this->draftInvoice()),
         ];
 
         foreach ($urls as $url) {
@@ -258,7 +268,7 @@ class SalesPrintTest extends TestCase
             $rendered = $view->getData()['doc'] ?? null;
         });
 
-        $invoice = $this->invoice();
+        $invoice = $this->draftInvoice();
 
         $this->actingAs($this->user)->get(route('sales.print.draft', $invoice))->assertOk();
 

@@ -69,6 +69,7 @@ return [
     'cannot_publish' => 'Only an approved document can be published.',
     'submitted_submitted' => 'The document went for approval — the signers have been told.',
     'submitted_approved' => 'There is no approval flow, so the document was approved straight away.',
+    'submitted_published_unapproved' => 'Approvals are off, so the document was published without approval.',
     'withdrawn' => 'The approval request was withdrawn — the document is a draft again.',
     'published' => 'The document was published.',
     'never_submitted' => 'Not sent for approval yet.',
@@ -163,4 +164,8 @@ Blank line = new paragraph
     'by_policy' => 'Retention rule #:id',
     'retention_hint' => 'After the set days a document goes to the archive, then to the recycle bin — once a night. A rule never deletes for good, and never touches a document that is under approval.',
     'bin_after_archive' => 'The recycle bin days must come after the archive days.',
+
+    // ⛔ শেয়ার আর অধিকার — নিজেকে নয়, নিজের নেই এমন কিছু নয় (documents রিভিউ ⚠️৪, ⚠️১০)
+    'not_to_yourself' => 'Not to yourself — choose someone else.',
+    'cannot_give_download' => 'You cannot give download in a share without the right to download it yourself.',
 ];

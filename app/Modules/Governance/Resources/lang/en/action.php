@@ -80,6 +80,9 @@ return [
     'document_printed' => 'Document opened for printing',
     'document_version_added' => 'New document version',
     'doc_version_restored' => 'Earlier document version restored',
+    'doc_published_unapproved' => 'Document published without approval (flow off)',
+    'doc_requests_cancelled' => 'Pending document requests cancelled',
+    'document_back_to_draft' => 'Document back to draft on a new file',
     'document_archived' => 'Document archived',
     'document_unarchived' => 'Document restored from the archive',
     'document_restored' => 'Document restored from the recycle bin',
@@ -104,4 +107,5 @@ return [
     'document_abe_used' => 'Document Intelligence (ABE) used',
     'document_from_template' => 'Document made from a template',
     'document_retained' => 'Document moved to the bin by a retention rule',
+    'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
 ];

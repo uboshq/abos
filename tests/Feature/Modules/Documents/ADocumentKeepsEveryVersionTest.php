@@ -151,6 +151,15 @@ final class ADocumentKeepsEveryVersionTest extends TestCase
             ->post(route('documents.version.store', $document), ['file' => $this->pdf('contract.pdf', 'amended')])
             ->assertSessionHasNoErrors()
             ->assertRedirect();
+
+        /*
+         * ⛔ নতুন ফাইল কেউ অনুমোদন করেননি — কাগজ খসড়ায় ফেরে, আর আবার জমা দেওয়া যায় (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔২)।
+         * ⓘ আগে "অনুমোদিত" থেকে যেত নতুন ফাইলের মাথায়, আর জমার দরজা খসড়া ছাড়া নেয় না বলে কোনোদিন আর অনুমোদনে যেত না।
+         */
+        $this->useCompany();
+        $fresh = $document->fresh();
+        $this->assertSame(DocumentCatalog::DRAFT, $fresh->status, '⛔ অননুমোদিত নতুন ফাইল এখনো "অনুমোদিত" দেখাচ্ছে।');
+        $this->assertTrue(\App\Modules\Documents\Services\DocumentWorkflow::canBeSubmitted($fresh), '⛔ নতুন ভার্সন আর অনুমোদনে পাঠানো যায় না।');
     }
 
     public function test_a_file_dressed_as_a_pdf_is_refused(): void

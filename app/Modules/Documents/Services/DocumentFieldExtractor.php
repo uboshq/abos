@@ -116,6 +116,8 @@ final class DocumentFieldExtractor
     {
         $haystack = mb_strtolower(preg_replace('/\s+/u', ' ', $text) ?? $text);
         $best = null;
+        $user = auth()->user();
+        $user = $user instanceof \App\Models\User ? $user : null;
 
         foreach ($this->parties->types() as $type) {
             $class = $this->drill->map()[$type] ?? null;
@@ -126,6 +128,15 @@ final class DocumentFieldExtractor
             }
 
             foreach ($class::query()->limit(5000)->get() as $row) {
+                /*
+                 * ⛔ যে পক্ষকে দেখার অধিকার নেই, তার নাম ফেরে না — [[DocumentLinks::candidates()]]-এর একই পাহারা (১১ অক্টোবর ২০২৬,
+                 * documents রিভিউ ⚠️৮)। ⓘ আগে যেকোনো লেখা পাঠালে দেয়ালের বাইরের ডিলারের নামও মিলিয়ে ফেরত দিত — নামের তালিকা পেস্ট করে
+                 * জানা যেত কোন ডিলার আছে।
+                 */
+                if ($user === null || ! $this->search->maySee($user, $row)) {
+                    continue;
+                }
+
                 foreach ($columns as $column) {
                     $name = mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $row->getAttribute($column)) ?? ''));
 

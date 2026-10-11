@@ -18,6 +18,26 @@
 /** WebAssembly SIMD আছে কি না — থাকলে দ্রুত core, নয়তো সাধারণটা (দুইটাই আমাদের সার্ভারে) */
 const SIMD_PROBE = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])
 
+/**
+ * প্রস্তাবিত মান ঘরে বসানো — ⛔ তারিখের ঘর আলাদা (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔৬)।
+ *
+ * ⓘ `x-ui.date`-এ `data-ocr-field` বসে দেখার লেখার ঘরে, কিন্তু জমা যায় লুকানো ISO ঘর থেকে (`abosDate`-এর `iso`)। আগে মান কেবল
+ * দেখার ঘরে বসত — মানুষ "2026-10-05" দেখতেন, জমা যেত খালি। ⭐ এখন একই কম্পোনেন্টের নিজের তারিখ-ঘরে (`type="date"`) বসিয়ে
+ * `change` ছোড়া হয় — `fromNative()` লুকানো আর দেখার দুই ঘরই ঠিক করে, যা দেখা যায় তাই জমা হয়।
+ */
+export function fillField (input, value) {
+    const native = input.parentElement?.querySelector?.('input[type="date"]')
+
+    if (native && /^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+        native.value = String(value)
+        native.dispatchEvent(new Event('change', { bubbles: true }))
+
+        return
+    }
+
+    input.value = value
+}
+
 export function hasSimd (wasm = globalThis.WebAssembly) {
     try {
         return Boolean(wasm && wasm.validate(SIMD_PROBE))
@@ -224,7 +244,7 @@ export default function documentScan () {
                 const input = this.$el.querySelector(`[data-ocr-field="${key}"]`)
 
                 if (input && !input.value && value) {
-                    input.value = value
+                    fillField(input, value)
                 }
             }
         },

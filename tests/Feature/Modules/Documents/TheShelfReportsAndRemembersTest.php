@@ -181,7 +181,16 @@ final class TheShelfReportsAndRemembersTest extends TestCase
         $this->assertSame(1, AuditTrail::query()->forRecord(Document::class, $old->id)->where('action', 'document_archived')->count(), 'দুইবার চালালে দুইবার আর্কাইভ।');
         $this->assertNull($pending->fresh()->archived_at, '⛔ অনুমোদনের মাঝের কাগজে নিয়ম হাত দিল।');
 
+        /*
+         * ⛔ বিনের ৬০ দিন গোনা আর্কাইভের দিন (১৫ নভেম্বর) থেকে, তৈরির দিন থেকে নয় (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৭)।
+         * ⓘ ১৫ ডিসেম্বর তৈরির ৭৫ দিন, আর্কাইভের মাত্র ৩০ — আগে এখানেই বিনে যেত।
+         */
         Carbon::setTestNow('2026-12-15 03:00:00');
+        $this->artisan('abos:documents-retention')->assertSuccessful();
+        $this->useCompany();
+        $this->assertNull(Document::withTrashed()->find($old->id)?->deleted_at, '⛔ আর্কাইভের মাত্র ৩০ দিনে বিনে গেল — দিন গোনা তৈরির দিন থেকে।');
+
+        Carbon::setTestNow('2027-01-15 03:00:00');
         $this->artisan('abos:documents-retention')->assertSuccessful();
         $this->useCompany();
 

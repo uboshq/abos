@@ -398,6 +398,37 @@ class CustomerTest extends TestCase
     }
 
     /**
+     * ⛔ সম্পাদনার ফর্মে "চালু" ঘর বদলাতে বন্ধ করার চাবি লাগে — Sales অডিট, ১০ অক্টোবর ২০২৬।
+     *
+     * ⓘ একই মানুষ দুবার: কেবল `customer.update` থাকলে বন্ধ করা যায় না (আর নাম বদলানো চলে), `customer.delete`
+     * পেলে যায়। ⚠️ আগে বন্ধের দরজা চাবি চাইত, অথচ ফর্ম দিয়ে একই কাজ চাবি ছাড়াই হত।
+     */
+    public function test_switching_a_customer_off_on_the_edit_form_needs_the_deactivate_key(): void
+    {
+        $customer = $this->make();
+        $clerk = User::factory()->create(['is_active' => true]);
+        $clerk->companies()->attach($this->company, ['is_active' => true]);
+        $clerk->forceFill(['current_company_id' => $this->company->id])->save();
+        $clerk->givePermissionTo([Permission::findOrCreate('customer.view', 'web'), Permission::findOrCreate('customer.update', 'web')]);
+
+        $this->actingAs($clerk)
+            ->put(route('customer.update', $customer), ['name_en' => 'Karim Store', 'is_active' => '0'])
+            ->assertSessionHasErrors('is_active');
+        $this->assertTrue($customer->fresh()->is_active, '⛔ কেবল সম্পাদনার চাবিতে গ্রাহক বন্ধ হয়ে গেল।');
+
+        $this->actingAs($clerk)
+            ->put(route('customer.update', $customer), ['name_en' => 'Karim Store Two', 'is_active' => '1'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Karim Store Two', $customer->fresh()->name_en, 'ঘর না বদলালে সম্পাদনা চলার কথা।');
+
+        $clerk->givePermissionTo(Permission::findOrCreate('customer.delete', 'web'));
+        $this->actingAs($clerk->fresh())
+            ->put(route('customer.update', $customer), ['name_en' => 'Karim Store Two', 'is_active' => '0'])
+            ->assertSessionHasNoErrors();
+        $this->assertFalse($customer->fresh()->is_active, 'চাবি পাওয়ার পরেও বন্ধ হলো না — তাহলে আটকানোটা চাবির জন্য ছিল না।');
+    }
+
+    /**
      * লগইন থেকে শুরু করে একটা রেকর্ডের পাতা — প্রসঙ্গ নিজে না বসিয়ে।
      *
      * বাকি পরীক্ষাগুলো setUp()-এ CompanyContext::set() ডাকে, যা আসল

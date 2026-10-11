@@ -55,7 +55,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-(--color-ink-muted)">{{ __('documents::message.queue_empty') }}</td></tr>
+                        <tr><td colspan="6"><x-ui.empty-state :message="__('documents::message.queue_empty')" /></td></tr>
                     @endforelse
                 </tbody>
             </table>

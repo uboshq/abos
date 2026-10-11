@@ -80,6 +80,8 @@ class BankFacilityService
          */
         $institutionId = $this->institutions->resolve($data, Institution::BANK);
 
+        $this->assertSanctionIsNew($institutionId, $data['sanction_no'] ?? null);
+
         return BankFacility::query()->create([
             /*
              * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো, আর এটা আমার
@@ -217,6 +219,36 @@ class BankFacilityService
 
         if ($missing !== []) {
             throw ValidationException::withMessages($missing);
+        }
+    }
+
+    /**
+     * ⛔ একই ব্যাংকের একই মঞ্জুরি নম্বর দুবার নয় — পুরো-ERP অডিট, অর্থ ১০ অক্টোবর ২০২৬ (ব্যাংক সুবিধা দুই ক্লিকে দুটো)।
+     *
+     * ⓘ ফর্মের এক-জমার চিহ্ন ([[FormIsNotSubmittedTwice]]) একই পাতার দ্বিতীয় চাপ থামায়; দুই ট্যাব বা "পেছনে গিয়ে আবার"-এ চিহ্ন
+     * নতুন, তখন একই ঋণ দুবার বসত — দুই সূচি, দুই খোলা বকেয়া। ⭐ ব্যাংকের সারিতে তালা, তারপর খোঁজ: দ্বিতীয়জন প্রথমজনের সারি
+     * দেখে থামেন। ⓘ মঞ্জুরি নম্বর না দিলে চেনার কিছু নেই — তখন কেবল এক-জমার চিহ্নই পাহারা। ডাকা হয় লেনদেনের ভেতরে
+     * ([[BankFacilityController::store()]])।
+     */
+    private function assertSanctionIsNew(?int $institutionId, mixed $sanctionNo): void
+    {
+        $sanctionNo = trim((string) ($sanctionNo ?? ''));
+
+        if ($sanctionNo === '' || $institutionId === null) {
+            return;
+        }
+
+        DB::table('fin_institutions')->where('company_id', CompanyContext::id())->where('id', $institutionId)->lockForUpdate()->value('id');
+
+        $taken = BankFacility::query()->withoutGlobalScope('user-branch')
+            ->where('institution_id', $institutionId)
+            ->where('sanction_no', $sanctionNo)
+            ->value('document_no');
+
+        if ($taken !== null) {
+            throw ValidationException::withMessages([
+                'sanction_no' => __('finance::validation.facility_sanction_taken', ['no' => $sanctionNo, 'doc' => $taken]),
+            ]);
         }
     }
 

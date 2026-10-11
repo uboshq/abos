@@ -271,6 +271,30 @@ Schedule::command('abos:adjusting-reverse')
         logger()->critical('সমন্বয় জাবেদা নিজে উল্টানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ মালিকের কেন্দ্রের রাতের হিসাব — প্রতিটা কোম্পানি ও শাখার আটটা সংখ্যা (৯ অক্টোবর ২০২৬)।
+ *
+ * ⓘ ২৩:৫৫ — দিনের শেষ কাগজ বসার পরে, তারিখ বদলানোর আগে; "গত মাসের এই দিনে বাকি কত ছিল" এখান থেকেই পড়া হয়।
+ * ⓘ তিন বছরের পুরনো সারি একই আদেশে সরে।
+ */
+Schedule::command('abos:owner-snapshot')
+    ->dailyAt('23:55')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মালিকের কেন্দ্রের রাতের হিসাব লেখা ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
+/*
+ * ⭐ মালিকের কেন্দ্রের সকালের মেইল — মালিকের উত্তর ৪, ১০ অক্টোবর ২০২৬ ([[OwnerMorningMail]])।
+ * ⓘ সকাল ৮টা — রাত ২৩:৫৫-র হিসাব লেখা হয়ে গেছে, দিনের কাজ শুরুর আগে।
+ */
+Schedule::command('abos:owner-morning-mail')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মালিকের সকালের সারাংশ মেইল পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:money-due')
     ->dailyAt('08:00')
     ->withoutOverlapping()

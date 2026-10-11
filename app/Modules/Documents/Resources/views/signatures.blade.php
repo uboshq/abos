@@ -55,7 +55,7 @@
                                 <td class="num text-2xs" title="{{ $row->file_hash }}">{{ substr($row->file_hash, 0, 12) }}…</td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-(--color-ink-muted)">{{ __('documents::message.sign_empty') }}</td></tr>
+                            <tr><td colspan="7"><x-ui.empty-state :message="__('documents::message.sign_empty')" /></td></tr>
                         @endforelse
                     </tbody>
                 @else
@@ -87,7 +87,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-(--color-ink-muted)">{{ __('documents::message.sign_empty') }}</td></tr>
+                            <tr><td colspan="7"><x-ui.empty-state :message="__('documents::message.sign_empty')" /></td></tr>
                         @endforelse
                     </tbody>
                 @endif

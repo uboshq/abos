@@ -35,22 +35,25 @@ final class ADocumentGoesThroughItsSignaturesTest extends TestCase
         $this->setUpDocuments();
     }
 
-    public function test_without_a_flow_a_submitted_document_is_approved_and_can_be_published(): void
+    /**
+     * ⭐ ধারা বন্ধ থাকলে জমা দিলেই "অনুমোদন ছাড়া প্রকাশিত" — কখনো "অনুমোদিত" নয় (fe, ১১ অক্টোবর ২০২৬; মালিকের "সব সইয়ে চালু/বন্ধ সুইচ")।
+     * ⓘ আগে কেউ অনুমোদন না করলেও কাগজ "অনুমোদিত" দেখাত, অডিটে "document_approved" — UB-তে সব ধারা বন্ধ, তাই প্রতিটা কাগজে মিথ্যা।
+     */
+    public function test_without_a_flow_a_submitted_document_is_published_without_approval_and_never_called_approved(): void
     {
         $document = $this->upload('House rules');
 
         $this->actingAs($this->owner)->post(route('documents.submit', $document))->assertSessionHasNoErrors();
         $this->useCompany();
-        $this->assertSame(DocumentCatalog::APPROVED, $document->fresh()->status, 'ধারা ছাড়া জমা অনুমোদিত হয়নি।');
-
-        $this->actingAs($this->owner)->post(route('documents.publish', $document))->assertRedirect();
-        $this->useCompany();
-        $this->assertSame(DocumentCatalog::PUBLISHED, $document->fresh()->status);
+        $this->assertSame(DocumentCatalog::PUBLISHED_UNAPPROVED, $document->fresh()->status, '⛔ ধারা ছাড়া জমা "অনুমোদিত" দেখাচ্ছে, অথচ কেউ অনুমোদন করেননি।');
 
         $actions = AuditTrail::query()->forRecord(Document::class, $document->id)->pluck('action')->all();
-        foreach (['document_submitted', 'document_approved', 'document_published'] as $action) {
-            $this->assertContains($action, $actions, $action.' অডিটে নেই।');
-        }
+        $this->assertContains('document_submitted', $actions);
+        $this->assertContains('doc_published_unapproved', $actions, 'অডিটে "অনুমোদন ছাড়া প্রকাশিত" নেই।');
+        $this->assertNotContains('document_approved', $actions, '⛔ অডিটে মিথ্যা "অনুমোদিত"।');
+
+        $page = (string) $this->actingAs($this->owner)->get(route('documents.show', $document))->assertOk()->getContent();
+        $this->assertStringContainsString(__('documents::catalog.status.published_unapproved'), $page, 'পাতায় অবস্থার লেখা নেই।');
     }
 
     public function test_two_signatures_move_it_from_submitted_through_review_to_approved(): void
@@ -86,9 +89,14 @@ final class ADocumentGoesThroughItsSignaturesTest extends TestCase
         $this->actingAs($first)->post(route('approval.inbox.approve', $approval->id))->assertRedirect();
         $this->useCompany();
 
-        $this->actingAs($this->owner)->get(route('documents.show', $document))->assertOk();
+        /*
+         * ⓘ প্রথম সইয়ের পরে পাতা "পর্যালোচনায়" দেখায় — ⛔ কিন্তু পাতা খোলা (GET) সারিতে কিছু লেখে না (১১ অক্টোবর ২০২৬, documents রিভিউ)।
+         * আগে খুললেই অবস্থা বদলে খাতায় বসত, আর `updated_by` হতেন দর্শক।
+         */
+        $page = (string) $this->actingAs($this->owner)->get(route('documents.show', $document))->assertOk()->getContent();
         $this->useCompany();
-        $this->assertSame(DocumentCatalog::UNDER_REVIEW, $document->fresh()->status, 'প্রথম সইয়ের পরে "পর্যালোচনায়" হয়নি।');
+        $this->assertStringContainsString(__('documents::catalog.status.under_review'), $page, 'প্রথম সইয়ের পরে পাতা "পর্যালোচনায়" দেখায় না।');
+        $this->assertSame(DocumentCatalog::SUBMITTED, $document->fresh()->status, '⛔ পাতা খোলায় (GET) অবস্থা বদলে খাতায় বসল।');
 
         // ⛔ পর্যালোচনার মাঝে কাগজ নিজের জায়গায় বদলায় না
         $this->actingAs($this->owner)

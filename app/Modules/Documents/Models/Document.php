@@ -227,8 +227,13 @@ class Document extends Model implements ShowsItselfForSigning
             return $visible;
         }
 
-        // ⭐ সইকারী — তালিকার দেয়ালের বাইরে, কিন্তু সইয়ের অপেক্ষায় তাঁর সামনে ([[DocumentAccess::isSigner()]])
-        $waiting = $query->first();
+        /*
+         * ⭐ সইকারী — তালিকার দেয়ালের বাইরে, কিন্তু সইয়ের অপেক্ষায় তাঁর সামনে ([[DocumentAccess::isSigner()]])।
+         * ⛔ শাখার স্কোপ ছাড়া খোঁজা (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৩) — আগে `newQuery()`-এর শাখার দেয়াল আগেই কাগজটা
+         * ফেলে দিত, তাই অন্য শাখার সইকারী ইনবক্সের লিংকে ৪০৪ পেতেন, যে কাগজে সই চাওয়া তা পড়তেই পারতেন না। ⓘ দরজা কেবল
+         * সইকারীর জন্য খোলে — বাকি সবার জন্য উপরের দেয়ালই শেষ কথা; কোম্পানির দেয়াল থাকে।
+         */
+        $waiting = (clone $query)->withoutGlobalScope('user-branch')->first();
 
         return $waiting !== null && app(DocumentAccess::class)->isSigner($user, $waiting) ? $waiting : null;
     }

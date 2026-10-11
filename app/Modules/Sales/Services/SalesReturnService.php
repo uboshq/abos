@@ -697,9 +697,9 @@ final class SalesReturnService
     /**
      * বিলের এই লাইনের `$qty` পরিমাণের ভাগ — [অঙ্ক (ভ্যাট ছাড়া), ভ্যাট]।
      *
-     * ⓘ লাইনের অঙ্কে তার নিজের ছাড় (প্রমোশনসহ) আর ভ্যাট আগেই বসা; বিলের মাথার ছাড় আর রাউন্ডিং বিলের
-     * মোটে বসে, তাই লাইনের ভাগকে বিলের মোট ÷ লাইনগুলোর যোগ দিয়ে গুণ করা হয় — পুরো বিল ফেরত দিলে জমা
-     * হুবহু বিলের মোট। ভ্যাট বিলে বসে মাথার ছাড়ের আগের দামে, তাই ভ্যাটের ভাগ কেবল পরিমাণের অনুপাতে।
+     * ⓘ লাইনের অঙ্কে তার নিজের ছাড় (প্রমোশনসহ) আর ভ্যাট আগেই বসা — আর বিলের ছাড়ের ভাগে কমা ভ্যাটও সারিতেই লেখা
+     * ([[SalesInvoiceService::vatAfterBillDiscount()]]), তাই ভ্যাটের ভাগ কেবল পরিমাণের অনুপাতে। বিলের মাথার ছাড় আর রাউন্ডিং
+     * বিলের মোটে বসে, আর সারিগুলোর মধ্যে ভাগ হয় ভ্যাটের আগের দামে — বিল যেভাবে; পুরো বিল ফেরত দিলে জমা হুবহু মোট − ভাড়া।
      *
      * @return array{0: string, 1: string}
      */
@@ -711,24 +711,37 @@ final class SalesReturnService
             return ['0.0000', '0.0000'];
         }
 
-        $gross = bcdiv(bcmul((string) $invoiceLine->amount, $qty, 8), $lineQty, 8);
         $tax = bcdiv(bcmul((string) $invoiceLine->tax, $qty, 8), $lineQty, 4);
 
         $invoice = $invoiceLine->invoice;
-        $linesTotal = $invoice === null ? '0' : $invoice->lines()->pluck('amount')
-            ->reduce(fn (string $sum, $amount) => bcadd($sum, (string) $amount, 4), '0');
 
         /*
-         * ⛔ ভাড়া বাদ দিয়ে ভাগ — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️৯; [[AReturnDoesNotRefundTheFreightTest]])। ⓘ বিলের মোটে
-         * বিলে যোগ করা ভাড়াও আছে, আর খাতায় সেটা ভাড়ার আয়ে বসেছিল ([[SalesInvoiceService::postToLedger()]]); মোট ধরে ভাগ করলে
-         * ফেরতে ভাড়ার ভাগও বিক্রয়-ফেরতে ডেবিট হত আর গ্রাহক ফেরত পেতেন — বিক্রি কম, ভাড়ার আয় বেশি। মাল ফেরতে ভাড়া ফেরত নয়;
-         * বিলের ছাড় আর গোল-সংশোধন বিক্রির ভেতরে, তাই সেগুলো আগের মতো ভাগে।
+         * ⛔ বিলের ছাড় আর গোল-সংশোধন সারিগুলোর ভ্যাটের আগের দামের অনুপাতে — বিল যেভাবে ভাগ করে ঠিক সেভাবে (১১ অক্টোবর ২০২৬,
+         * PR #17 রিভিউ ⚠️৭; [[SalesInvoiceService::vatAfterBillDiscount()]])।
+         *
+         * ⓘ আগে ভাগ হত সারির ভ্যাটসহ অঙ্কে, আর বিল তখন ভ্যাট বসাত ছাড়ের আগে — দুইটা মিলত। মালিকের ১০ অক্টোবরের নিয়মে ("ছাড়ের পরের
+         * দামে ভ্যাট") বিল ছাড়টা ভাগ করে ভ্যাটের আগের দামে, অথচ ফেরত পুরনো পথে: A ১০০০ + ১৫% ভ্যাট, B ১০০০ ভ্যাট ছাড়া, ছাড় ২০০ →
+         * A ফেরতে জমা ১০২৮.৬৯ (হওয়ার কথা ১০৩৫), B ৯০৬.৩১ (হওয়ার কথা ৯০০)। ⭐ এখন সারির জমা = তার অঙ্ক − ছাড়ের ভাগ + গোলের ভাগ,
+         * ভাগ ভ্যাটের আগের দাম (পরিমাণ × দর − সারির ছাড়) ধরে। পুরো বিল ফেরতে জমা হুবহু বিলের মোট − ভাড়া — পুরনো নিয়মের বিলেও।
+         *
+         * ⛔ ভাড়া বাদ — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️৯; [[AReturnDoesNotRefundTheFreightTest]])। ⓘ ভাড়া খাতায় ভাড়ার আয়ে
+         * বসেছিল ([[SalesInvoiceService::postToLedger()]]); মাল ফেরতে ভাড়া ফেরত নয়। এখানে ভাড়া কোনো ভাগেই ঢোকে না।
          */
-        $goods = $invoice === null ? '0' : bcsub((string) $invoice->total, (string) ($invoice->freight_charge ?? '0'), 4);
+        $basisOf = fn ($line) => bcsub(bcmul((string) $line->qty, (string) $line->rate, 8), (string) $line->discount, 8);
+        $basis = $invoice === null ? '0' : $invoice->lines()->get(['qty', 'rate', 'discount'])
+            ->reduce(fn (string $sum, $line) => bcadd($sum, $basisOf($line), 8), '0');
 
-        $credit = bccomp($linesTotal, '0', 4) > 0
-            ? bcdiv(bcmul($gross, $goods, 8), $linesTotal, 4)
-            : bcadd($gross, '0', 4);
+        $lineCredit = (string) $invoiceLine->amount;
+
+        if ($invoice !== null && bccomp($basis, '0', 8) > 0) {
+            $share = bcdiv($basisOf($invoiceLine), $basis, 12);
+            $billDiscount = (string) ($invoice->bill_discount ?? '0');
+            $rounding = (string) ($invoice->rounding_amount ?? '0');
+
+            $lineCredit = bcadd(bcsub($lineCredit, bcmul($billDiscount, $share, 8), 8), bcmul($rounding, $share, 8), 8);
+        }
+
+        $credit = bcdiv(bcmul($lineCredit, $qty, 8), $lineQty, 4);
 
         return [bcsub($credit, $tax, 4), $tax];
     }

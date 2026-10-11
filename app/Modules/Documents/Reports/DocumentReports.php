@@ -47,9 +47,15 @@ final class DocumentReports
 
         $query = Document::query()->where('dms_documents.company_id', $f['company_id']);
 
-        if ($user instanceof User) {
-            $query->visibleTo($user);
+        /*
+         * ⛔ পরিচয় না থাকলে কিছুই নয় — ড্যাশবোর্ডের মতো (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৬)। ⓘ আগে লগইন ছাড়া (কনসোল,
+         * নির্ধারিত কাজ) দেয়ালের ছাঁকনিটাই বাদ পড়ত, আর রিপোর্টে সব কাগজ আসত — দরজা খোলা রেখে ব্যর্থ হওয়া।
+         */
+        if (! $user instanceof User) {
+            return $query->whereRaw('1 = 0')->toBase();
         }
+
+        $query->visibleTo($user);
 
         return $query->toBase()->tap(ReportEngine::branchWall($f, 'dms_documents.branch_id'));
     }

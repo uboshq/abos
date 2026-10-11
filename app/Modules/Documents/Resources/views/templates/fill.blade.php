@@ -28,9 +28,11 @@
             <x-ui.field :name="'values['.$variable.']'" :label="$variable" :value="old('values.'.$variable)" maxlength="2000" />
         @endforeach
 
-        <div class="flex justify-end gap-2 lg:col-span-3">
-            <x-ui.button :href="route('documents.templates')">{{ __('documents::action.cancel') }}</x-ui.button>
-            <x-ui.button type="submit" tone="primary" icon="attachment">{{ __('documents::action.make_document') }}</x-ui.button>
-        </div>
+        {{-- ⭐ বাতিল · তৈরি নিচের স্থির পট্টিতে (documents রিভিউ) --}}
+        <x-ui.form-actions class="lg:col-span-3" :cancel="route('documents.templates')">
+            <x-slot:submit>
+                <x-ui.button type="submit" tone="primary" icon="attachment">{{ __('documents::action.make_document') }}</x-ui.button>
+            </x-slot:submit>
+        </x-ui.form-actions>
     </form>
 </x-layouts.app>

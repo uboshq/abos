@@ -52,7 +52,7 @@
                             <td class="max-w-[14rem] truncate text-2xs text-(--color-ink-muted)" title="{{ $row->user_agent }}">{{ $row->user_agent ?? '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="text-(--color-ink-muted)">{{ __('core.empty.no_results') }}</td></tr>
+                        <tr><td colspan="8"><x-ui.empty-state :message="__('core.empty.no_results')" /></td></tr>
                     @endforelse
                 </tbody>
             </table>

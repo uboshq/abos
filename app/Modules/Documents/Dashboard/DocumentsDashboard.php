@@ -302,12 +302,24 @@ final class DocumentsDashboard implements ProvidesDashboard
         );
     }
 
+    /**
+     * ⛔ অন্য কাজে জোড়া নথি — ডকুমেন্টের নিজের ফাইল বাদ (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৭)।
+     *
+     * ⓘ এই তিন টালি ("সদ্য জোড়া", ধরন, মডিউল) ডকুমেন্ট মডিউলের আগের — বিল, ভাউচার, কর্মীর কাগজে জোড়া ফাইল গোনে। ডকুমেন্টের ফাইলও
+     * এখন attachments-এ বসে, আর এই টালিগুলো দেয়াল দেখে না: "সংরক্ষিত" কাগজের আসল ফাইলের নাম যে-কারও ড্যাশবোর্ডে উঠত। ডকুমেন্টের
+     * নিজের সংখ্যা উপরের টালিগুলোয়, দেয়াল মেনে।
+     */
+    private static function attachedElsewhere(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Attachment::query()->where('source_module', '!=', \App\Modules\Documents\Services\DocumentLibrary::MODULE);
+    }
+
     /** নথির ধরন — PDF, ছবি, হিসাবের খাতা (এক্সেল/CSV), লেখা (ওয়ার্ড), অন্যান্য; ডোনাট */
     private static function byKind(): Breakdown
     {
         $kinds = ['pdf' => 0, 'image' => 0, 'sheet' => 0, 'word' => 0, 'other' => 0];
 
-        foreach (Attachment::query()->selectRaw('mime_type, COUNT(*) as n')->groupBy('mime_type')->pluck('n', 'mime_type') as $mime => $n) {
+        foreach (self::attachedElsewhere()->selectRaw('mime_type, COUNT(*) as n')->groupBy('mime_type')->pluck('n', 'mime_type') as $mime => $n) {
             $kinds[self::kindOf((string) $mime)] += (int) $n;
         }
 
@@ -322,7 +334,7 @@ final class DocumentsDashboard implements ProvidesDashboard
     /** কোন কাজে কত নথি জোড়া — মডিউল ধরে, বড় ছয়টা; আড়াআড়ি দণ্ড */
     private static function byModule(): Breakdown
     {
-        $rows = Attachment::query()
+        $rows = self::attachedElsewhere()
             ->selectRaw('source_module, COUNT(*) as n')
             ->groupBy('source_module')
             ->orderByDesc('n')
@@ -357,7 +369,7 @@ final class DocumentsDashboard implements ProvidesDashboard
                 ['key' => 'when', 'label' => __('documents::dashboard.col_when'), 'width' => '9rem',
                     'render' => fn (Attachment $a) => $a->created_at?->locale(app()->getLocale())->translatedFormat('j M, H:i') ?? ''],
             ],
-            rows: Attachment::query()->latest('id')->limit(8)->get(),
+            rows: self::attachedElsewhere()->latest('id')->limit(8)->get(),
             empty: __('documents::dashboard.none_yet'),
         );
     }

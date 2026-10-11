@@ -75,11 +75,12 @@ final class DocumentWorkflow
                 throw ValidationException::withMessages(['status' => __('documents::message.change_before_resubmit')]);
             }
 
-            $this->move($locked, $approval === null ? DocumentCatalog::APPROVED : DocumentCatalog::SUBMITTED);
+            // ⛔ ধারা বন্ধ থাকলে "অনুমোদিত" নয় — "অনুমোদন ছাড়া প্রকাশিত", অডিটেও তাই (fe, ১১ অক্টোবর ২০২৬)
+            $this->move($locked, $approval === null ? DocumentCatalog::PUBLISHED_UNAPPROVED : DocumentCatalog::SUBMITTED);
             $locked->auditAction('document_submitted', $note);
 
             if ($approval === null) {
-                $locked->auditAction('document_approved', __('documents::message.no_flow_needed'));
+                $locked->auditAction('doc_published_unapproved', __('documents::message.no_flow_needed'));
             }
 
             return $approval;
@@ -177,8 +178,14 @@ final class DocumentWorkflow
 
         $approval = $this->pending($document);
 
+        /*
+         * ⛔ কেবল দেখানো, লেখা নয় (১১ অক্টোবর ২০২৬, documents রিভিউ — GET-এ অবস্থা বদল)। ⓘ আগে কাগজের পাতা খুললেই (GET) তালা ছাড়া
+         * অবস্থা বদলে খাতায় বসত, আর `updated_by` হয়ে যেতেন যিনি কেবল দেখছিলেন। মাঝের সইয়ে ইঞ্জিন কোনো ঘটনা ছোড়ে না (কেবল শেষ
+         * সিদ্ধান্তে, [[ApprovalDecided]]), তাই "পর্যালোচনায়" এখানে গুনে দেখানো হয় — সারিতে লেখা হয় না; শেষ সিদ্ধান্তে
+         * [[decided()]] আসল অবস্থা বসায়।
+         */
         if ($approval !== null && $approval->decisions()->where('decision', ApprovalDecision::APPROVED)->exists()) {
-            $this->move($document, DocumentCatalog::UNDER_REVIEW);
+            $document->setAttribute('status', DocumentCatalog::UNDER_REVIEW);
         }
     }
 

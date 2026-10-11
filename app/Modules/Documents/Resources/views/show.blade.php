@@ -294,10 +294,8 @@
                 @csrf
                 <div>
                     <label for="version-file" class="mb-1 block text-sm font-medium">{{ __('documents::action.new_version') }}</label>
-                    <input type="file" id="version-file" name="file" required
-                           class="block w-full text-sm file:me-2 file:rounded-(--radius-field)
-                                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                                  file:px-3 file:py-1.5 file:text-sm">
+                    {{-- ⭐ বাংলা বোতাম (documents রিভিউ ⛔৫) --}}
+                    <x-ui.file-input id="version-file" name="file" :required="true" />
                     <label class="mt-2 flex items-center gap-2 text-sm">
                         <input type="checkbox" name="major" value="1" class="size-4">
                         {{ __('documents::message.major_hint') }}

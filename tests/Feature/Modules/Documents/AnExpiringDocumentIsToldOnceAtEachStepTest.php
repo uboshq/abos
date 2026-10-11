@@ -70,6 +70,20 @@ final class AnExpiringDocumentIsToldOnceAtEachStepTest extends TestCase
         $this->assertSame(DocumentCatalog::EXPIRED, $document->fresh()->status, 'পেরোনো কাগজ "মেয়াদোত্তীর্ণ" হয়নি।');
         $this->assertSame(1, AuditTrail::query()->forRecord(Document::class, $document->id)->where('action', 'document_expired')->count());
 
+        /*
+         * ⛔ শেষ ধাপের খবর যাওয়ার পর কাগজটা আর প্রতি ঘণ্টায় তোলা হয় না (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৮)। ⓘ আগে প্রতিটা চালানে
+         * মেয়াদ পেরোনো প্রতিটা কাগজের জন্য একটা তালা-দেওয়া খোঁজ চলত — খরচ চিরকাল বাড়ত।
+         */
+        \Illuminate\Support\Facades\DB::flushQueryLog();
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $this->artisan('abos:documents-expiry')->assertSuccessful();
+        $locks = collect(\Illuminate\Support\Facades\DB::getQueryLog())
+            ->filter(fn ($q) => str_contains((string) $q['query'], 'dms_expiry_notices') && stripos((string) $q['query'], 'for update') !== false)
+            ->count();
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $this->assertSame(0, $locks, '⛔ খবর শেষ হওয়া মেয়াদোত্তীর্ণ কাগজ আবার তোলা হলো।');
+        $this->useCompany();
+
         // ⭐ নবায়ন — নতুন মেয়াদ বসালে কাগজ খসড়া, আর খবরের চক্র নতুন করে
         $this->actingAs($this->owner)->put(route('documents.update', $document), [
             'name' => 'Trade licence 2026', 'doc_type' => 'contract', 'folder' => 'contracts',
@@ -78,6 +92,24 @@ final class AnExpiringDocumentIsToldOnceAtEachStepTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->useCompany();
         $this->assertSame(DocumentCatalog::DRAFT, $document->fresh()->status, 'নবায়নের পরেও মেয়াদোত্তীর্ণ।');
+    }
+
+    /**
+     * ⭐ প্রথম ডেপ্লয়ে ইমেইল-বন্যা নেই (fe, ১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৮)।
+     *
+     * ⓘ মেয়াদের রান পড়ে কেবল ডকুমেন্টের নিজের টেবিল (`dms_documents`) — পুরনো জোড়া ফাইল (`attachments`) নয়। লাইভে প্রথম দিনে
+     * টেবিলটা খালি, তাই "আগে থেকেই মেয়াদ পেরোনো" কাগজ বলে কিছু নেই, আর চালানটা কাউকে কিছু পাঠায় না।
+     */
+    public function test_the_first_run_on_a_fresh_shelf_tells_nobody_anything(): void
+    {
+        $source = (new \ReflectionMethod(\App\Modules\Documents\Services\DocumentExpiry::class, 'papers'))
+            ->invoke(app(\App\Modules\Documents\Services\DocumentExpiry::class), $this->company->id);
+        $this->assertSame('dms_documents', $source->getQuery()->from, '⛔ মেয়াদের রান ডকুমেন্টের টেবিলের বাইরে পড়ে — প্রথম রানে পুরনো ফাইলের বন্যা।');
+
+        $before = Notification::query()->withoutGlobalScopes()->count();
+        $this->artisan('abos:documents-expiry')->assertSuccessful();
+        $this->assertSame($before, Notification::query()->withoutGlobalScopes()->count(), '⛔ খালি তাকে প্রথম রানেই খবর গেল।');
+        $this->assertSame(0, ExpiryNotice::query()->count());
     }
 
     public function test_a_warning_never_reaches_someone_who_cannot_see_the_document(): void

@@ -119,12 +119,13 @@ class PosTest extends TestCase
      * @param  list<array<string, mixed>>|null  $lines
      * @return array{invoice: SalesInvoice, change: string}
      */
-    private function sell(string $qty = '2', string $rate = '100', ?string $paid = null, ?array $lines = null): array
+    private function sell(string $qty = '2', string $rate = '100', ?string $paid = null, ?array $lines = null, ?Customer $customer = null): array
     {
         return $this->pos()->checkout(
             [
                 'warehouse_id' => $this->warehouse->id,
                 'paid' => $paid ?? bcmul($qty, $rate, 2),
+                ...($customer === null ? [] : ['customer_id' => $customer->id]),
             ],
             $lines ?? [['product_id' => $this->product->id, 'qty' => $qty, 'rate' => $rate]],
         );
@@ -252,7 +253,7 @@ class PosTest extends TestCase
      */
     public function test_a_part_payment_leaves_the_rest_outstanding(): void
     {
-        $result = $this->sell('2', '100', '50');
+        $result = $this->sell('2', '100', '50', customer: $this->dealerWithRoom());
 
         $this->assertSame(0, bccomp($result['change'], '0', 4));
         $this->assertSame(0, bccomp($result['invoice']->fresh()->dueAmount(), '150', 4));
@@ -264,10 +265,46 @@ class PosTest extends TestCase
     {
         $before = Collection::query()->count();
 
-        $result = $this->sell('2', '100', '0');
+        $result = $this->sell('2', '100', '0', customer: $this->dealerWithRoom());
 
         $this->assertSame($before, Collection::query()->count());
         $this->assertSame(0, bccomp($result['invoice']->fresh()->dueAmount(), '200', 4));
+    }
+
+    /**
+     * ⛔ নগদ গ্রাহকের সীমা ০ — বাকি নেই, আর কিছুই লেখা হয় না; পুরো টাকায় বিক্রি চলে।
+     *
+     * ⓘ মালিক, ১ অক্টোবর ২০২৬: সীমা না থাকলে বাকি নেই; সীমা পরম। আগে উপরের দুই দাবি নগদ গ্রাহককেই
+     * বাকিতে বেচত — নিয়মটা আসার পর থেকে ওরা লাল ছিল (fe, ১১ অক্টোবর ২০২৬)। এখন বাকি চেনা ডিলারের নামে,
+     * আর নগদ গ্রাহকের দেয়ালটা এখানে মাপা।
+     */
+    public function test_the_walk_in_customer_gets_no_credit_but_a_paid_sale_goes_through(): void
+    {
+        $receivable = $this->balanceOf(StandardChart::RECEIVABLE);
+        $confirmed = SalesInvoice::query()->where('status', DocumentStatus::CONFIRMED)->count();
+
+        try {
+            $this->sell('2', '100', '50');
+            $this->fail('⛔ নগদ গ্রাহকের সীমা ০, অথচ ১৫০ টাকা বাকিতে বিক্রি হয়ে গেল।');
+        } catch (ValidationException) {
+        }
+        // ⓘ খসড়াটা নিজের লেনদেনে আগেই বসে (ছাড়ের পাহারার নকশা, [[PosService::checkout()]]) — মাপা হয় নিশ্চিত বিল আর খাতা
+        $this->assertSame([$confirmed, 0], [
+            SalesInvoice::query()->where('status', DocumentStatus::CONFIRMED)->count(),
+            bccomp($this->balanceOf(StandardChart::RECEIVABLE), $receivable, 4),
+        ], '⛔ বাকি আটকাল, কিন্তু বিল নিশ্চিত হলো বা পাওনা নড়ল।');
+
+        $result = $this->sell('2', '100', '200');
+        $this->assertSame(0, bccomp($result['invoice']->fresh()->dueAmount(), '0', 4), '⛔ পুরো টাকায় নগদ বিক্রিও আটকাল।');
+    }
+
+    /** বাকির জায়গা আছে এমন চেনা ডিলার — সীমা ১,০০০ */
+    private function dealerWithRoom(): Customer
+    {
+        $dealer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
+        $dealer->forceFill(['credit_limit' => '1000'])->save();
+
+        return $dealer->fresh();
     }
 
     public function test_an_empty_basket_is_refused(): void

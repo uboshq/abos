@@ -83,7 +83,7 @@ final class DocumentLibrary
                 };
 
                 $document = new Document([
-                    ...$this->detailFields($details),
+                    ...$this->guarded($this->detailFields($details), null),
                     'name' => mb_substr($name, 0, 191),
                     'status' => DocumentCatalog::DRAFT,
                     'created_by' => Actor::userId(),
@@ -129,6 +129,7 @@ final class DocumentLibrary
             $version = $this->addVersionRow($locked, $this->store($file, $locked), $nextMajor, $nextMinor, $comment);
 
             $locked->auditAction('document_version_added', 'v'.$version->label());
+            $this->backToDraftIfSigned($locked, $version);
 
             return $version;
         });
@@ -160,9 +161,28 @@ final class DocumentLibrary
             );
 
             $locked->auditAction('doc_version_restored', 'v'.$from->label().' → v'.$version->label());
+            $this->backToDraftIfSigned($locked, $version);
 
             return $version;
         });
+    }
+
+    /**
+     * ⛔ অনুমোদিত বা প্রকাশিত কাগজে নতুন ফাইল এলে কাগজটা খসড়ায় ফেরে — নতুন বাইট কেউ অনুমোদন করেননি (১১ অক্টোবর ২০২৬,
+     * documents রিভিউ ⛔২)।
+     *
+     * ⓘ নিয়মটা প্রথম দিন থেকে লেখা (§৯: "অনুমোদিত কাগজ নিজের জায়গায় বদলায় না, বদল মানে নতুন ভার্সন"), কিন্তু অবস্থা বদলাত না:
+     * নতুন, অননুমোদিত ফাইলের মাথায় "অনুমোদিত/প্রকাশিত" বসে থাকত, আর [[DocumentWorkflow::canBeSubmitted()]] খসড়া ছাড়া কিছু নেয়
+     * না বলে সেটা আর কোনোদিন অনুমোদনে পাঠানোও যেত না। ⭐ এখন খসড়া, অডিটে কোন ভার্সনের জন্য — আবার জমা দিলে সেই পথ।
+     */
+    private function backToDraftIfSigned(Document $locked, DocumentVersion $version): void
+    {
+        if (! in_array($locked->status, DocumentCatalog::SEALED, true)) {
+            return;
+        }
+
+        $locked->forceFill(['status' => DocumentCatalog::DRAFT])->saveQuietly();
+        $locked->auditAction('document_back_to_draft', 'v'.$version->label());
     }
 
     /**
@@ -177,7 +197,7 @@ final class DocumentLibrary
     {
         DB::transaction(function () use ($document, $details) {
             $document->fill([
-                ...$this->detailFields($details),
+                ...$this->guarded($this->detailFields($details), $document),
                 'name' => mb_substr(trim((string) $details['name']), 0, 191),
                 'updated_by' => Actor::userId(),
             ]);
@@ -214,8 +234,10 @@ final class DocumentLibrary
     public function archive(Document $document, ?string $reason): void
     {
         DB::transaction(function () use ($document, $reason) {
+            $dropped = $this->dropPendingRequests($document);
+
             $document->forceFill([
-                'archived_from_status' => $document->status,
+                'archived_from_status' => $dropped ? DocumentCatalog::DRAFT : $document->status,
                 'status' => DocumentCatalog::ARCHIVED,
                 'archived_at' => now(),
                 'archived_by' => Actor::userId(),
@@ -224,6 +246,34 @@ final class DocumentLibrary
 
             $document->auditAction('document_archived', $reason);
         });
+    }
+
+    /**
+     * ⛔ আর্কাইভ বা বিনে যাওয়া কাগজের চলমান অনুরোধ — অনুমোদন আর সই — বাতিল (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৪)।
+     *
+     * ⓘ আগে অনুরোধগুলো সইকারীদের ইনবক্সে চিরকাল বসে থাকত; কেউ সই করলে [[DocumentSignatures::decided()]] (নরম-মোছা না দেখে পড়ে)
+     * বিনের কাগজেও সইয়ের সারি লিখত। অনুরোধকারী ছাড়া অন্য কেউ আর্কাইভ করতে পারেন, তাই ইঞ্জিনের "প্রত্যাহার"
+     * ([[ApprovalEngine::cancel()]], কেবল অনুরোধকারী) নয় — তালা দিয়ে সরাসরি বাতিল, আর অডিটে লেখা।
+     * ⭐ ফেরানোর অবস্থা তখন খসড়া — "জমা" অবস্থায় ফিরলে অনুমোদন ছাড়াই ঝুলে থাকত। ফেরত `true` হলে কিছু বাতিল হয়েছে।
+     */
+    private function dropPendingRequests(Document $document): bool
+    {
+        $pending = \App\Models\Approval::query()
+            ->where('approvable_type', $document::class)
+            ->where('approvable_id', $document->getKey())
+            ->where('status', \App\Models\Approval::PENDING)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($pending as $approval) {
+            $approval->update(['status' => \App\Models\Approval::CANCELLED, 'decided_at' => now()]);
+        }
+
+        if ($pending->isNotEmpty()) {
+            $document->auditAction('doc_requests_cancelled', (string) $pending->count());
+        }
+
+        return $pending->isNotEmpty();
     }
 
     /** আর্কাইভ থেকে ফেরানো — আগের অবস্থায়, সেন্টারে আবার দেখা যায় */
@@ -251,9 +301,11 @@ final class DocumentLibrary
     public function delete(Document $document): void
     {
         DB::transaction(function () use ($document) {
+            $dropped = $this->dropPendingRequests($document);
+
             $document->forceFill([
                 'deleted_by' => Actor::userId(),
-                'deleted_from_status' => $document->status,
+                'deleted_from_status' => $dropped ? DocumentCatalog::DRAFT : $document->status,
                 'status' => DocumentCatalog::DELETED,
             ])->saveQuietly();
             $document->delete();
@@ -288,7 +340,14 @@ final class DocumentLibrary
      */
     public function purge(Document $document): void
     {
-        DB::transaction(function () use ($document) {
+        /*
+         * ⛔ ডিস্কের ফাইল মোছা ট্রানজ্যাকশন শেষ হওয়ার পরে (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৬)। ⓘ আগে ভিতরেই মুছত, শেষ DELETE-এর
+         * আগে — পরে কিছু ব্যর্থ হলে সারিগুলো ফিরে আসত, কিন্তু ফাইল চলে গেছে; ভার্সনগুলো তখন না-থাকা ফাইলের দিকে দেখাত।
+         * ⭐ এখন আগে সারি, পাকা হলে তবে ফাইল; ফাইল মোছায় কিছু হলে বড়জোর একটা অনাথ ফাইল থাকে, ভাঙা কাগজ নয়।
+         */
+        $paths = [];
+
+        DB::transaction(function () use ($document, &$paths) {
             $document->auditAction('document_purged', $document->document_no.' · '.$document->name);
 
             $attachments = DB::table('dms_document_versions')
@@ -314,7 +373,7 @@ final class DocumentLibrary
                 ->delete();
 
             foreach (Attachment::query()->withTrashed()->whereIn('id', $attachments)->get() as $file) {
-                Storage::disk('local')->delete($file->stored_path);
+                $paths[] = (string) $file->stored_path;
                 $file->forceDelete();
             }
 
@@ -323,6 +382,10 @@ final class DocumentLibrary
                 ->where('id', $document->getKey())
                 ->delete();
         });
+
+        foreach ($paths as $path) {
+            Storage::disk('local')->delete($path);
+        }
     }
 
     /**
@@ -339,6 +402,14 @@ final class DocumentLibrary
         abort_if($file === null || ! $this->attachments->exists($file), 404);
 
         $inline = $how === 'download' ? null : AttachmentEngine::inlineType($file->mime_type);
+
+        /*
+         * ⛔ পাতার ভিতরে খোলা যায় না এমন ফাইল (docx, xlsx, txt…) প্রিভিউ বা ছাপার দরজায় নামানো হয়েই যায় — তাই সেখানে নামানোর
+         * অনুমতিও লাগে (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔১)। ⓘ আগে প্রিভিউ কেবল "দেখা" চাইত: "শুধু দেখা" শেয়ার বা নামানোর চাবি
+         * ছাড়া মানুষ `/preview` খুলে পুরো ফাইলটা নামিয়ে নিতেন, আর নামানোর চাবি, অধিকার আর শেয়ারের টিক কিছুই আটকাত না।
+         * ⭐ PDF আর ছবি পাতার ভিতরে দেখা — "দেখা" মানে ঠিক এটাই; সেখানে নামানোর চাবি চাওয়া হয় না।
+         */
+        abort_if($inline === null && $how !== 'download' && ! (auth()->user()?->can('download', $document) ?? false), 403);
 
         $document->auditAction(match ($how) {
             'preview' => 'document_previewed',
@@ -382,6 +453,44 @@ final class DocumentLibrary
      * @param  array<string, mixed>  $details
      * @return array<string, mixed>
      */
+    /**
+     * ⛔ কাগজের মালিক, গোপনীয়তা, শাখা আর বিভাগ — কে বদলাতে পারেন (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔৩, ⚠️৫)।
+     *
+     * ⓘ মালিক সবসময় নিজের কাগজ দেখেন ([[DocumentAccess::canSee()]]), তাই মালিক বসানো একটা শেয়ার — শেয়ারের চাবি আর খবর ছাড়াই।
+     * - কাগজ-ধরে "বদল" অধিকার (কোম্পানির `documents.edit` চাবি ছাড়া) কেবল বিবরণ বদলায়: আগে ঐ অধিকারে মানুষ নিজেকে মালিক বানাতেন
+     *   (তখন অধিকার তুলে নিলেও দেখতেন), বা "সংরক্ষিত" কাগজ "সবার" করে দিতেন — জীবন-বদলানো কাজ কাগজ-ধরে দেওয়া যায় না, পলিসির
+     *   নিজের নিয়ম। এখন ঐ চার ঘর আগের মতোই থাকে।
+     * - মালিক বসানো (নিজে ছাড়া অন্য কাউকে) কেবল অধিকার দেওয়ার চাবি (`documents.permissions`) যাঁর; নইলে নতুন কাগজে নিজে,
+     *   পুরনোয় আগের মালিক। ⓘ আগে সম্পাদনায় ঘরটা ফাঁকা পাঠালে যিনি সংরক্ষণ করতেন তিনিই মালিক হয়ে যেতেন।
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    private function guarded(array $fields, ?Document $current): array
+    {
+        $user = auth()->user();
+        $self = Actor::userId();
+
+        if ($current !== null && ! ($user?->can('documents.edit') ?? false)) {
+            foreach (['owner_id', 'confidentiality', 'branch_id', 'department_id'] as $field) {
+                $fields[$field] = $current->{$field};
+            }
+
+            return $fields;
+        }
+
+        $mayAssign = $user?->can('documents.permissions') ?? false;
+        $asked = $fields['owner_id'] === null ? null : (int) $fields['owner_id'];
+
+        $fields['owner_id'] = match (true) {
+            $asked !== null && ($mayAssign || $asked === $self) => $asked,
+            $current !== null => $current->owner_id,
+            default => $self,
+        };
+
+        return $fields;
+    }
+
     private function detailFields(array $details): array
     {
         $tags = array_values(array_unique(array_filter(array_map(
@@ -394,7 +503,7 @@ final class DocumentLibrary
             'folder' => $details['folder'],
             'branch_id' => $details['branch_id'] ?? null,
             'department_id' => $details['department_id'] ?? null,
-            'owner_id' => $details['owner_id'] ?? Actor::userId(),
+            'owner_id' => $details['owner_id'] ?? null,
             'document_date' => filled($details['document_date'] ?? null) ? Carbon::parse($details['document_date']) : null,
             'expiry_date' => filled($details['expiry_date'] ?? null) ? Carbon::parse($details['expiry_date']) : null,
             'confidentiality' => $details['confidentiality'],

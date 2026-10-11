@@ -217,7 +217,8 @@ final class PosService
          * বার্তা পেতেন, মালিকের তালিকা ফাঁকাই থাকত, আর সীমা ছাড়ানো
          * ছাড়ের বিক্রয়টা কোনোদিন হত না।
          */
-        $invoice = DB::transaction(function () use ($data, $lines, $customer, $key) {
+        $fresh = false;
+        $invoice = DB::transaction(function () use ($data, $lines, $customer, $key, &$fresh) {
             $head = [
                 'customer_id' => $customer->id,
                 'warehouse_id' => $data['warehouse_id'] ?? null,
@@ -239,6 +240,7 @@ final class PosService
              * পুরনো কাগজে পড়ে থাকত, আর নতুনটা আবার অনুমোদন চাইত।
              */
             $resumed = $this->draftToFinish($data['resumed_invoice_id'] ?? null);
+            $fresh = $resumed === null;
 
             $invoice = $resumed !== null
                 ? $this->invoices->update($resumed, $head, $lines)
@@ -294,6 +296,33 @@ final class PosService
             $this->invoices->assertDiscountApproved($invoice);
         }
 
+        try {
+            return $this->confirmAndTakeMoney($data, $customer, $paid, $invoice);
+        } catch (ValidationException $refused) {
+            /*
+             * ⛔ নিশ্চিত আটকালে এই ডাকের নতুন খসড়া থাকে না — Sales অডিট, ১১ অক্টোবর ২০২৬।
+             *
+             * ⚠️ খসড়া বিল ধারের সীমায় গোনা হয় ([[CreditExposure]])। নগদ গ্রাহককে (সীমা ০) বাকিতে বেচতে গিয়ে
+             * আটকালে খসড়াটা থেকে যেত, আর তারপর **পুরো টাকার নগদ বিক্রিও** আটকাত — কাউন্টার বন্ধ, যতক্ষণ না
+             * কেউ খুঁজে খসড়াটা মোছে। কার্ট পর্দাতেই থাকে; ক্যাশিয়ার টাকা ঠিক করে আবার চাপেন।
+             * ⓘ তুলে আনা (ধরে রাখা) বিল থাকে — ওটা ক্যাশিয়ারের নিজের রাখা কাগজ। চাবিটা মোছা হয়, নাহলে একই
+             * চাবিতে আবার চাপলে মোছা সারির সাথে ইউনিক ইনডেক্সে ধাক্কা লাগত।
+             */
+            if ($fresh) {
+                $invoice->forceFill(['idempotency_key' => null])->save();
+                $invoice->delete();
+            }
+
+            throw $refused;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{invoice: SalesInvoice, change: string}
+     */
+    private function confirmAndTakeMoney(array $data, ?Customer $customer, string $paid, SalesInvoice $invoice): array
+    {
         return DB::transaction(function () use ($data, $customer, $paid, $invoice) {
             /*
              * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের **প্রথম** কাজ, ২৭ সেপ্টেম্বর ২০২৬।

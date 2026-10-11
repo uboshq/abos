@@ -107,6 +107,24 @@ final class AScannedPageIsReadOnOurOwnServerTest extends TestCase
         $this->assertSame('456', substr((string) $bangla['invoice_no'], 0, 3));
     }
 
+    /**
+     * ⛔ যে পক্ষ দেখার অধিকার নেই, তার নাম প্রস্তাবে আসে না (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৮; [[DocumentFieldExtractor::party()]])।
+     * ⓘ আগে নামের তালিকা পেস্ট করে জানা যেত দেয়ালের বাইরে কোন ডিলার বা সরবরাহকারী আছে।
+     */
+    public function test_a_party_outside_the_readers_reach_is_not_named(): void
+    {
+        Supplier::query()->create(['code' => 'SUP-PAD', 'name_en' => 'Padma Packaging Ltd', 'name_bn' => 'পদ্মা প্যাকেজিং', 'is_active' => true]);
+
+        $owner = $this->actingAs($this->owner)->postJson(route('documents.ocr.fields'), ['text' => self::TEXT])->assertOk()->json();
+        $this->assertNotNull($owner['party'], 'ⓘ মালিকের কাছেও নাম আসেনি — দাবিটা কিছু মাপছে না।');
+        $this->useCompany();
+
+        $outsider = $this->person('ocr-outsider@abos.test', ['documents.view']);
+        $fields = $this->actingAs($outsider)->postJson(route('documents.ocr.fields'), ['text' => self::TEXT])->assertOk()->json();
+        $this->assertNull($fields['party'], '⛔ সরবরাহকারী দেখার চাবি ছাড়াই তাঁর নাম মিলিয়ে ফেরত এল।');
+        $this->assertSame('12500.00', $fields['amount'], 'বাকি ঘর আগের মতোই প্রস্তাব হয়।');
+    }
+
     public function test_read_text_on_an_existing_picture_respects_the_walls_and_the_edit_key(): void
     {
         $document = $this->upload('Shop sign photo', file: UploadedFile::fake()->image('sign.png', 200, 200));
