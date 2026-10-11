@@ -58,13 +58,16 @@ final class TheCreditNoticesReachTheOwnerOnceTest extends TestCase
             ->where('user_id', $this->owner->id)->where('type', CreditDaily::TEMPORARY_ENDING)->value('title'));
     }
 
-    public function test_a_new_limit_request_tells_the_owner_and_a_direct_change_does_not(): void
+    public function test_a_direct_change_by_the_owner_with_approvals_off_tells_nobody(): void
     {
-        // ⓘ সই বন্ধ — মালিকের সরাসরি বদল, কোনো খবর নয়
         $direct = $this->customer('NT-DIRECT', '1000');
         app(CreditLimitRequests::class)->raise($direct, CustomerCreditRequest::LIMIT, '5000', null, 'মালিক নিজে', null, $this->owner);
-        $this->assertSame(0, $this->notices(CreditLimitRequests::WAITING));
 
+        $this->assertSame(0, $this->notices(CreditLimitRequests::WAITING));
+    }
+
+    public function test_a_new_limit_request_tells_the_owner_once_with_the_signature_page(): void
+    {
         $flow = ApprovalFlow::create(['module' => 'customer', 'action' => 'credit_limit', 'threshold_amount' => null, 'is_active' => true]);
         $role = Role::query()->where('company_id', $this->company->id)->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->firstOrFail();
         ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_ROLE, 'approver_id' => $role->id]);
