@@ -7,6 +7,7 @@ namespace App\Modules\Customer\Services;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * গ্রাহককে নিজের পাতার চাবি দেওয়া — আর ফেরত নেওয়া।
@@ -76,6 +77,26 @@ final class CustomerPortalService
      * ভুল করে বন্ধ করা গ্রাহককে আবার চালু করতে নতুন পাসওয়ার্ড লাগে না,
      * অর্থাৎ তাকে ফোন করে নতুন একটা বলতে হয় না।
      */
+    /**
+     * ⭐ গ্রাহক নিজে পাসওয়ার্ড বদলান — পোর্টালের প্রোফাইল থেকে।
+     *
+     * ⓘ খাতায় ওঠে অফিসের পাসওয়ার্ড বসানোর সেই একই নিরীক্ষার খাতায় ([[AuditEngine::recordAction()]]), কর্মীর ঘর খালি —
+     * অর্থাৎ "গ্রাহক নিজে"। ⓘ মনে রাখার চাবিটাও নতুন — অন্য কোনো ফোনে "মনে রাখুন" দিয়ে খোলা পুরনো দরজা আর খোলে না।
+     */
+    public function changeOwnPassword(Customer $customer, string $password): Customer
+    {
+        DB::transaction(function () use ($customer, $password): void {
+            $customer->forceFill([
+                'portal_password' => $password,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            $this->audit->recordAction($customer, 'portal_password_changed', __('customer::message.portal_password_changed_by_customer'));
+        });
+
+        return $customer->fresh();
+    }
+
     public function disable(Customer $customer): Customer
     {
         DB::transaction(function () use ($customer): void {

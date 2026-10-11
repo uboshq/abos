@@ -31,6 +31,13 @@ Route::middleware('auth')->prefix('customers')->group(function () {
      */
     Route::get('/reports/{slug}', [CustomerReportController::class, 'show'])->name('report.show');
 
+    // ⭐ পোর্টাল থেকে গ্রাহকের অনুরোধ — তথ্য বদল আর কাগজ ([[ProfileRequestController]]; গ্রাহক পোর্টাল, ধাপ ১)
+    Route::get('/portal-requests', [\App\Modules\Customer\Http\Controllers\ProfileRequestController::class, 'index'])->name('profile_request.index');
+    Route::post('/portal-requests/{profileRequest}/decide', [\App\Modules\Customer\Http\Controllers\ProfileRequestController::class, 'decide'])
+        ->whereNumber('profileRequest')->name('profile_request.decide');
+    Route::get('/portal-requests/{profileRequest}/paper', [\App\Modules\Customer\Http\Controllers\ProfileRequestController::class, 'paper'])
+        ->whereNumber('profileRequest')->name('profile_request.paper');
+
     /*
      * ⭐ কোন কর্মী কোন ডিলারের — ⛔১৬, ২ অক্টোবর ২০২৬। ⓘ স্থির পথ, {customer}-এর আগে।
      */

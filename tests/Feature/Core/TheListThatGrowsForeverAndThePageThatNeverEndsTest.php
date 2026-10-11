@@ -126,6 +126,8 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Finance\Http\Controllers\BudgetController' => 'App\Modules\Finance\Services\BudgetService::plan',
         'App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController' => 'App\Modules\Sales\Services\CustomerPapers::deliveryOrders',
         'App\Modules\Sales\Http\Controllers\PortalOrderController' => 'App\Modules\Sales\Services\CustomerPapers::salesOrders',
+        // ⭐ গ্রাহকের বিলের ঘর — পাতা ভাগ সরু পথেই (গ্রাহক পোর্টাল, ধাপ ১)
+        'App\Modules\Sales\Http\Controllers\PortalInvoiceController' => 'App\Modules\Sales\Services\CustomerPapers::bills',
         'App\Modules\Sales\Http\Controllers\PriceBookController' => 'App\Modules\Sales\Services\PriceBookService::lists',
         'App\Modules\Sales\Http\Controllers\PriceListController' => 'App\Modules\Sales\Services\SalePriceBook::list',
     ];

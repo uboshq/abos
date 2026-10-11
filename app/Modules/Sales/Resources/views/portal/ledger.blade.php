@@ -12,13 +12,42 @@
 --}}
 <x-sales::portal.layout :customer="$customer">
 
-    {{-- বকেয়া — পাতার আসল উত্তর --}}
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h1 class="text-lg font-semibold">{{ __('sales::portal_statement.title') }}</h1>
+
+        {{-- ⭐ PDF — পর্দার সেই একই সময় ([[PortalStatementController::pdf()]]) --}}
+        <div class="flex gap-2">
+            <a href="{{ route('sales.portal.statement.pdf', ['from' => $from, 'to' => $to, 'download' => 1]) }}" data-portal-statement-pdf
+               class="inline-flex h-(--spacing-field) items-center gap-1 rounded-(--radius-field) bg-(--color-brand-500) px-3 text-sm font-medium text-white">
+                <x-ui.icon name="download" :size="16" />
+                {{ __('sales::portal_statement.pdf') }}
+            </a>
+            <a href="{{ route('sales.portal.statement.pdf', ['from' => $from, 'to' => $to]) }}" target="_blank" rel="noopener"
+               class="inline-flex h-(--spacing-field) items-center gap-1 rounded-(--radius-field) border border-(--color-border) px-3 text-sm font-medium">
+                <x-ui.icon name="printer" :size="16" />
+                {{ __('sales::portal_statement.print') }}
+            </a>
+        </div>
+    </div>
+
+    {{--
+        বকেয়া — পাতার আসল উত্তর।
+
+        ⭐ জের গ্রাহকের পক্ষে (Cr) হলে "আপনার জমা" — মালিকের নিয়ম (গ্রাহক পোর্টাল, ধাপ ১): আলাদা কোনো "অগ্রিম হিসাব"
+        নেই, বিলের চেয়ে বেশি দেওয়া টাকা খাতারই জের। ⓘ অঙ্কটা খাতার শেষ জের থেকে, নতুন কোনো যোগফল নয়।
+    --}}
+    @php($inCredit = bccomp((string) $closing, '0', 4) < 0)
     <div data-boxed class="mb-3 rounded-(--radius-card) border border-(--color-border)
-                bg-(--color-surface-card) px-4 py-4">
+                bg-(--color-surface-card) px-4 py-4" @if ($inCredit) data-portal-your-credit @endif>
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
-            {{ __('sales::portal.due') }}
+            {{ $inCredit ? __('sales::portal_statement.your_credit') : __('sales::portal.due') }}
         </p>
-        <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::drCr($closing) }}</p>
+        @if ($inCredit)
+            <p class="num text-3xl font-semibold">৳{{ \App\Core\Support\Money::format(bcmul((string) $closing, '-1', 4)) }}</p>
+            <p class="mt-1 text-sm text-(--color-ink-muted)">{{ __('sales::portal_statement.your_credit_hint') }}</p>
+        @else
+            <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::drCr($closing) }}</p>
+        @endif
     </div>
 
     {{--
@@ -46,9 +75,27 @@
         </div>
     @endif
 
+    {{-- ⭐ সময় — আজ / এই মাস / এই অর্থবছর, নয়তো নিচে নিজের দুই তারিখ ([[StatementPeriod]]) --}}
+    <x-ui.list-tabs :label="__('sales::portal_statement.title')" :tabs="collect([
+        \App\Modules\Sales\Support\StatementPeriod::TODAY,
+        \App\Modules\Sales\Support\StatementPeriod::MONTH,
+        \App\Modules\Sales\Support\StatementPeriod::YEAR,
+    ])->map(fn ($key) => [
+        'key' => $key,
+        'label' => __('sales::portal_statement.'.$key),
+        'url' => route('sales.portal.ledger', ['period' => $key, 'view' => $view]),
+        'active' => $period === $key,
+    ])->push([
+        'key' => 'custom',
+        'label' => __('sales::portal_statement.custom'),
+        'url' => '#statement-dates',
+        'active' => $period === 'custom',
+    ])->all()" />
+
     {{-- ছাঁকনি — GET, কারণ এটা দেখা, কোনো কাজ নয় --}}
-    <form method="GET" action="{{ route('sales.portal.ledger') }}"
-          class="mb-4 flex flex-wrap items-end gap-2">
+    <form id="statement-dates" method="GET" action="{{ route('sales.portal.ledger') }}"
+          class="mb-4 flex flex-wrap items-end gap-2" data-portal-statement-dates>
+        <input type="hidden" name="view" value="{{ $view }}">
         <label class="flex-1">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::portal.from') }}</span>
             {{--
@@ -76,6 +123,18 @@
         </button>
     </form>
 
+
+    {{-- ⭐ দুই দৃশ্য — ভাউচার ধরে (খাতার প্রতিটা সারি) আর বিল ধরে (প্রতিটা বিল, শোধ আর বাকি) --}}
+    <x-ui.list-tabs :label="__('sales::portal_statement.title')" :tabs="collect(['voucher', 'bill'])->map(fn ($key) => [
+        'key' => $key,
+        'label' => __('sales::portal_statement.by_'.$key),
+        'url' => route('sales.portal.ledger', ['from' => $from, 'to' => $to, 'view' => $key]),
+        'active' => $view === $key,
+    ])->all()" />
+
+    @if ($view === 'bill')
+        @include('sales::portal.partials.statement-bills')
+    @else
     @if ($rows->isEmpty())
         <p class="text-sm text-(--color-ink-muted)">{{ __('sales::portal.no_entries') }}</p>
     @else
@@ -132,10 +191,9 @@
                                 কাগজের নম্বর — আর ওটাই "কেন এত" প্রশ্নের উত্তর।
                                 গ্রাহক নম্বরটা নিজের কাগজের সাথে মিলিয়ে নেন।
 
-                                ⓘ লিংক নয়, কেবল নম্বর: ওই ডকুমেন্টের পর্দাগুলো
-                                কর্মীর, আর সেখানে দর ও মজুদ দুইটাই থাকে।
-                                গ্রাহককে ওখানে পাঠানো মানে ঠিক যা লুকানোর কথা
-                                তাই দেখানো।
+                                ⓘ কর্মীর পর্দায় কোনো লিংক নয়: ওই ডকুমেন্টের পর্দাগুলো
+                                কর্মীর, আর সেখানে মজুদ আর অন্যের তথ্য থাকে। ⭐ লিংক
+                                কেবল পোর্টালের নিজের পাতায় (নিচে) — ১১ অক্টোবর ২০২৬।
 
                                 ⚠️ ── কেন `$row->drill()` ডাকা হয় না ──────────
                                 ওটা উৎস-ডকুমেন্টের **মডেল লোড করে**, আর
@@ -151,7 +209,21 @@
                                 পঞ্চাশ সারিতে পঞ্চাশটা কোয়েরিও বাঁচে।
                             --}}
                             <td >
-                                {{ $row->document_no ?: $row->narration }}
+                                {{--
+                                    ⭐ সারিটা এখন পোর্টালের ভিতরেই খোলে (গ্রাহক পোর্টাল, ধাপ ১) — বিল বিলের ঘরে, বাকিগুলো
+                                    নিজের কাগজের পাতায় ([[PortalStatementController::entry()]]); কর্মীর পর্দায় কখনো নয়।
+                                    ⓘ বিলের public id আসে [[CustomerPapers::billLinks()]] থেকে, এক কোয়েরিতে — মডেল লোড নয়।
+                                --}}
+                                @php($billId = $row->source_type === \App\Modules\Sales\Models\SalesInvoice::drillSourceType() ? ($billLinks[(int) $row->source_id] ?? null) : null)
+                                @if ($billId !== null)
+                                    <a href="{{ route('sales.portal.bill.show', $billId) }}" data-portal-statement-link="bill"
+                                       class="text-(--color-brand-500) hover:underline">{{ $row->document_no ?: $row->narration }}</a>
+                                @elseif ($row->public_id)
+                                    <a href="{{ route('sales.portal.statement.entry', $row->public_id) }}" data-portal-statement-link="entry"
+                                       class="text-(--color-brand-500) hover:underline">{{ $row->document_no ?: $row->narration }}</a>
+                                @else
+                                    {{ $row->document_no ?: $row->narration }}
+                                @endif
                             </td>
 
                             <td class="num text-end">
@@ -174,5 +246,6 @@
                 </tbody>
             </table>
         </div>
+    @endif
     @endif
 </x-sales::portal.layout>

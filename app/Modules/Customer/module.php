@@ -98,6 +98,8 @@ return [
             ['label' => 'customer::menu.customers', 'icon' => 'customer', 'route' => 'customer.index', 'permission' => 'customer.view'],
             // ⭐ কোন কর্মী কোন ডিলারের — চালুর আগে এই পর্দা (⛔১৬, ২ অক্টোবর ২০২৬)
             ['label' => 'customer::binding.menu', 'icon' => 'customer', 'route' => 'customer.binding.index', 'permission' => 'customer.binding.manage'],
+            // ⭐ পোর্টাল থেকে গ্রাহকের অনুরোধ — তথ্য বদল আর কাগজ (গ্রাহক পোর্টাল, ধাপ ১, ১১ অক্টোবর ২০২৬)
+            ['label' => 'customer::profile_request.title', 'icon' => 'inbox', 'route' => 'customer.profile_request.index', 'permission' => 'customer.update'],
         ],
         'reports' => [
             // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)

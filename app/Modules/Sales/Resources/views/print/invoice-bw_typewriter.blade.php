@@ -255,5 +255,5 @@
 </table>
 
 <div class="printed">
-    -- {{ $label('printed_at') }} {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}@if (auth()->check()) · {{ auth()->user()->name }}@endif --
+    -- {{ $label('printed_at') }} {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}@if (\App\Core\Support\Actor::displayName() !== null) · {{ \App\Core\Support\Actor::displayName() }}@endif --
 </div>

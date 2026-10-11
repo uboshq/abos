@@ -646,7 +646,21 @@ Route::prefix('portal')->name('portal.')->group(function () {
          * বদলে অন্যের খাতা দেখে ফেলতেন।
          */
         Route::get('/ledger', [PortalController::class, 'ledger'])->name('ledger');
+        // ⭐ বিবরণীর PDF আর একটা সারির কাগজ — পোর্টালের ভিতরেই ([[PortalStatementController]]; গ্রাহক পোর্টাল, ধাপ ১)
+        Route::get('/ledger/pdf', [\App\Modules\Sales\Http\Controllers\PortalStatementController::class, 'pdf'])->name('statement.pdf');
+        Route::get('/ledger/{id}', [\App\Modules\Sales\Http\Controllers\PortalStatementController::class, 'entry'])->whereUuid('id')->name('statement.entry');
         Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
+        // ⭐ প্রোফাইল — নিজের তথ্য দেখা, পাসওয়ার্ড বদল ([[PortalProfileController]]; গ্রাহক পোর্টাল, ধাপ ১)
+        Route::get('/profile', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'show'])->name('profile');
+        Route::post('/profile/password', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'password'])
+            ->middleware('throttle:5,1,portal-password')->name('profile.password');
+        // ⭐ তথ্য বদলের অনুরোধ আর কাগজ — অফিসে যায়, রেকর্ড নিজে বদলায় না ([[ProfileRequestService]])
+        Route::post('/profile/requests', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'requestContact'])
+            ->middleware('throttle:10,1,portal-profile')->name('profile.request');
+        Route::post('/profile/papers', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'uploadPaper'])
+            ->middleware('throttle:10,1,portal-profile')->name('profile.paper');
+        Route::get('/profile/papers/{id}', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'paper'])
+            ->whereUuid('id')->name('profile.paper.show');
         Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');
         Route::post('/claims', [PortalController::class, 'storeClaim'])->name('claim.store');
         Route::get('/claims/{claim}', [PortalController::class, 'showOwnClaim'])
@@ -666,6 +680,10 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::post('/orders', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'store'])->name('order.store');
         Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'show'])->whereUuid('id')->name('order.show');
         Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'submit'])->whereUuid('id')->name('order.submit');
+        // ⭐ বিলের ঘর — নিজের পাকা বিল, দামসহ, আর তার PDF ([[PortalInvoiceController]]; গ্রাহক পোর্টাল, ধাপ ১)
+        Route::get('/bills', [\App\Modules\Sales\Http\Controllers\PortalInvoiceController::class, 'index'])->name('bill.index');
+        Route::get('/bills/{id}', [\App\Modules\Sales\Http\Controllers\PortalInvoiceController::class, 'show'])->whereUuid('id')->name('bill.show');
+        Route::get('/bills/{id}/pdf', [\App\Modules\Sales\Http\Controllers\PortalInvoiceController::class, 'pdf'])->whereUuid('id')->name('bill.pdf');
         Route::get('/tracking', [PortalController::class, 'tracking'])->name('tracking');
         Route::get('/tracking/{kind}/{id}', [PortalController::class, 'trackingStory'])
             ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');

@@ -40,4 +40,22 @@ final class Actor
 
         return $id === null ? null : (int) $id;
     }
+
+    /**
+     * ⭐ কাগজের নিচে "কে ছাপল" — কর্মী হলে তাঁর নাম, পোর্টালের গ্রাহক হলে গ্রাহকের নাম (গ্রাহক পোর্টাল, ধাপ ১)।
+     *
+     * ⛔ আগে ছাপার পাতা সরাসরি `auth()->user()->name` পড়ত। পোর্টালের দরজায় `auth()` গ্রাহককে দেয়, আর গ্রাহকের
+     * `name` একটা পদ্ধতি — ফলে গ্রাহক নিজের বিলের PDF চাইলেই ৫০০।
+     */
+    public static function displayName(): ?string
+    {
+        $who = auth()->user();
+
+        if ($who instanceof User) {
+            return (string) $who->name;
+        }
+
+        // ⓘ কোর কোনো মডিউলের নাম জানে না — পোর্টালের গ্রাহক নিজের `name()` দেন (Customer::name())
+        return $who !== null && method_exists($who, 'name') ? (string) $who->name() : null;
+    }
 }

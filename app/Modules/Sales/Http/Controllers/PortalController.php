@@ -15,11 +15,13 @@ use App\Models\LoginAttempt;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DepositClaim;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CustomerPapers;
 use App\Modules\Sales\Services\DepositClaimService;
 use App\Modules\Sales\Services\DepositSlip;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Services\SaleTracking;
+use App\Modules\Sales\Support\StatementPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -279,7 +281,16 @@ class PortalController extends Controller
     {
         $customer = $this->customer();
 
-        [$from, $to] = $this->range($request);
+        /*
+         * ⭐ সময় — আজ / এই মাস / চলতি অর্থবছর / নিজের দুই তারিখ ([[StatementPeriod]]; গ্রাহক পোর্টাল, ধাপ ১)।
+         * ⓘ কিছু না বললে চলতি অর্থবছরের শুরু থেকে — পুরনো নিয়মটাই।
+         */
+        $period = StatementPeriod::of($request, $this->papers->yearStart());
+        $from = $period->from;
+        $to = $period->to;
+
+        // ⭐ দুই দৃশ্য — "ভাউচার ধরে" (খাতার প্রতিটা সারি, চলমান জেরসহ) আর "বিল ধরে" (প্রতিটা বিল, শোধ আর বাকিসহ)
+        $view = $request->query('view') === 'bill' ? 'bill' : 'voucher';
 
         /*
          * ⭐ কোয়েরিগুলো এখন [[CustomerPapers]]-এ, এখানে নয়।
@@ -298,9 +309,20 @@ class PortalController extends Controller
             'customer' => $customer,
             'from' => $from,
             'to' => $to,
+            'period' => $period->period,
+            'view' => $view,
             'opening' => $opening,
             'rows' => $rows,
             'closing' => $this->runningBalance($rows, $opening),
+
+            /*
+             * ⭐ প্রতিটা সারি পোর্টালের ভিতরেই খোলে — বিলের সারি বিলের ঘরে, বাকিগুলো নিজের কাগজের পাতায়
+             * ([[PortalStatementController::entry()]])। ⓘ লিংক কেবল নিজের পাকা বিলের ([[CustomerPapers::billLinks()]])।
+             */
+            'billLinks' => $this->papers->billLinks(
+                $rows->where('source_type', SalesInvoice::drillSourceType())->pluck('source_id'),
+            ),
+            'bills' => $view === 'bill' ? $this->papers->billsBetween($from, $to) : collect(),
 
             /*
              * ⚠️ সীমাটা কেবল তখনই, যখন কোম্পানি সুইচটা চালু রেখেছে।
@@ -333,28 +355,6 @@ class PortalController extends Controller
         }
 
         return $balance;
-    }
-
-    /**
-     * কোন সময়টা — না বললে চলতি অর্থবছর নয়, **সবটা**।
-     *
-     * ⓘ চেকলিস্ট বলে "Lifetime": গ্রাহক খতিয়ান খোলেন হিসাব মেলাতে, আর
-     * তখন মাঝপথে কাটা একটা তালিকা কোনো কাজে আসে না। ছাঁকনি আছে, কিন্তু
-     * ডিফল্ট নয়।
-     *
-     * @return array{0: string, 1: string}
-     */
-    private function range(Request $request): array
-    {
-        /*
-         * ⛔ ১৯৭০ নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৫)। ⓘ ডিফল্ট শুরু চলতি অর্থবছরের প্রথম দিন: আগের সব লেনদেন
-         * "আগের জের" সারিতে একটা অঙ্ক হয়ে আসে ([[CustomerPapers::openingBefore()]]), তাই শেষ জের একই থাকে, কেবল বছরের পর বছরের সারি
-         * একবারে টানা হয় না। পুরনো সময় দেখতে ছাঁকনি আছে।
-         */
-        return [
-            (string) $request->query('from', $this->papers->yearStart()),
-            (string) $request->query('to', now()->toDateString()),
-        ];
     }
 
     public function showClaim(): View

@@ -291,5 +291,5 @@
 
 <div class="printed">
     {{ __('sales::print.classic.printed_at', [], 'en') }} {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}
-    @if (auth()->check()) · {{ auth()->user()->name }} @endif
+    @if (\App\Core\Support\Actor::displayName() !== null) · {{ \App\Core\Support\Actor::displayName() }} @endif
 </div>
