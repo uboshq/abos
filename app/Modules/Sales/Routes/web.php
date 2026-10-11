@@ -17,11 +17,11 @@ use App\Modules\Sales\Http\Controllers\OrderSampleController;
 use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
+use App\Modules\Sales\Http\Controllers\ReceiptSampleController;
 use App\Modules\Sales\Http\Controllers\RouteAccountController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\LoadingSheetController;
-use App\Modules\Sales\Http\Controllers\ReceiptSampleController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\SalesOverviewController;
 use App\Modules\Sales\Http\Controllers\DeliveryScanController;
@@ -251,6 +251,7 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         // ⭐ পাঠানোর আগের হিসাব আর লাইনের অফার — JSON (১ অক্টোবর ২০২৬, [[OrderStandingController]])
         Route::get('/standing/{customer}', [\App\Modules\Sales\Http\Controllers\OrderStandingController::class, 'standing'])->name('standing');
         Route::post('/offers', [\App\Modules\Sales\Http\Controllers\OrderStandingController::class, 'offers'])->name('offers');
+
         Route::get('/', [SalesOrderController::class, 'index'])->name('index');
         /*
          * ⭐ আদেশ কোথায় দাঁড়িয়ে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬।
@@ -371,6 +372,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('claim')->name('settle');
         Route::post('/{claim}/reject', [CommissionClaimController::class, 'reject'])
             ->whereNumber('claim')->name('reject');
+        Route::post('/{claim}/cancel', [CommissionClaimController::class, 'cancel'])
+            ->whereNumber('claim')->name('cancel');
     });
 
     Route::prefix('targets')->name('target.')->group(function () {

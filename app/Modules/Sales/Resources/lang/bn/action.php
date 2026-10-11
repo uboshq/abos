@@ -77,6 +77,7 @@ return [
     // ডিলারের কমিশন
     'commission_settle' => 'মেনেছে',
     'commission_reject' => 'মানেনি',
+    'commission_cancel' => 'বাতিল',
     'new_commission' => 'নতুন কমিশন',
     'new_scheme' => 'নতুন স্কিম',
     'add_band' => 'ধাপ যোগ করুন',

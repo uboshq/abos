@@ -70,7 +70,7 @@ final class CollectionDueReport
                 ->tap(ReportEngine::dealerWall($f, 'sal_invoices.customer_id'))
             ->when($f['customer_id'] ?? null, fn ($w, $id) => $w->where('sal_invoices.customer_id', (int) $id));
 
-        $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total)';
+        $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total)';
         $on = 'COALESCE(i.due_on, i.trx_date)';
 
         /*

@@ -255,6 +255,7 @@ return [
     'commission_saved' => 'Commission recorded — :no.',
     'commission_settled' => 'Adjusted against the principal.',
     'commission_rejected' => 'The claim has been written off.',
+    'commission_cancelled' => 'The claim is cancelled: its entry is reversed and the bill owes what it did before.',
 
     // ডিলারের কমিশন
     'commission_note' => 'Commission given to a dealer is claimed back from the principal — it is not your discount, so it never touches your margin.',
