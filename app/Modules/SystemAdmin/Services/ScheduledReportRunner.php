@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Services;
 
-use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportColumn;
+use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Engines\Report\ReportExport;
 use App\Core\Engines\Report\ReportResult;
+use App\Core\Services\DataScope;
+use App\Core\Services\DealerScope;
 use App\Core\Services\ListExport;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Models\ReportRun;
 use App\Models\ReportSchedule;
 use App\Models\User;
+use App\Models\UserDataScope;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -153,7 +157,7 @@ final class ScheduledReportRunner
         $walled = CompanyContext::forCompany(
             (int) $schedule->company_id,
             fn (): Collection => $recipients
-                ->filter(fn (User $user): bool => app(\App\Core\Services\DealerScope::class)->walled($user->fresh())
+                ->filter(fn (User $user): bool => app(DealerScope::class)->walled($user->fresh())
                     || self::hasBranchLimit($user->fresh(), (int) $schedule->company_id))
                 ->values(),
         );
@@ -168,7 +172,7 @@ final class ScheduledReportRunner
             try {
                 $own = $this->generate($schedule, $person, collect());
                 $this->notifyReady($schedule, $own, $person, collect());
-            } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            } catch (AuthorizationException) {
                 // ⓘ রিপোর্টটা ডিলারের দেয়াল বসায় না — তাঁর জন্য কোনো ফাইলই নয়, ফাঁস নয়
             }
         }
@@ -194,7 +198,7 @@ final class ScheduledReportRunner
      */
     private static function hasBranchLimit(User $user, int $companyId): bool
     {
-        $allowed = app(\App\Core\Services\DataScope::class)->idsFor($user, \App\Models\UserDataScope::BRANCH);
+        $allowed = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
 
         if ($allowed === null) {
             return false;
@@ -232,9 +236,12 @@ final class ScheduledReportRunner
                 $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, self::MAX_ROWS);
 
                 $export = new ListExport;
-                ReportExport::into($export, $result, $this->mutuallyVisibleColumns($result, $owner, $recipients));
+                $columns = $this->mutuallyVisibleColumns($result, $owner, $recipients);
+                ReportExport::into($export, $result, $columns);
 
                 $bytes = match ($schedule->format) {
+                    // ⛔ "PDF" বাছলে আগে CSV-র বাইট `.pdf` নামে যেত — খুললে নষ্ট ফাইল (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                    'pdf' => ReportExport::pdf($export, $columns, (string) __($result->report->title), $result->filters),
                     'xlsx' => $export->xlsx(),
                     'json' => $export->json(),
                     default => $export->csv(),

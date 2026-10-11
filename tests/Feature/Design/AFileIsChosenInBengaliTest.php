@@ -35,7 +35,6 @@ final class AFileIsChosenInBengaliTest extends TestCase
         'Modules/Inventory/Resources/views/product/form.blade.php',
         'Modules/Sales/Resources/views/claim/request.blade.php',
         'Modules/Sales/Resources/views/portal/claim.blade.php',
-        'Modules/SystemAdmin/Resources/views/company/form.blade.php',
         'Modules/SystemAdmin/Resources/views/looks/index.blade.php',
         'Modules/SystemAdmin/Resources/views/print-control/invoice-info.blade.php',
         'components/ui/attachments.blade.php',
