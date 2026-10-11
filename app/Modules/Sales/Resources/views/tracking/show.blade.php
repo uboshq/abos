@@ -10,7 +10,7 @@
     <x-ui.errors />
 
     {{-- ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — পপ-আপের ভেতরেও, তাই ঠিকানাটা হাতে ([[screens.js::liveRefresh]]) --}}
-    <div class="mx-auto grid max-w-3xl gap-3" data-tracking-story data-live
+    <div class="grid gap-3" data-tracking-story data-live
          x-data="liveRefresh({ url: '{{ route('sales.tracking.show', [$sale['kind'], $sale['id']]) }}', seconds: 30 })">
         <div>
             <h1 class="text-lg font-semibold">{{ $sale['no'] }}</h1>

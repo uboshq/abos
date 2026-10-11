@@ -24,7 +24,7 @@
         </div>
     @endif
 
-    <section data-boxed class="max-w-3xl rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+    <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <p class="mb-1 font-semibold">{{ $product->code }} — {{ $product->name() }}</p>
         <p class="mb-3 text-sm text-(--color-ink-muted)">
             {{ $warehouse->name() }} · {{ \App\Core\Support\DateFormat::format($movement->trx_date) }}
