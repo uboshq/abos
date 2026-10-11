@@ -32,17 +32,29 @@
         ? app(\App\Core\Services\NotificationService::class)->unreadFor(auth()->id())
         : collect();
 
-    $urgent = collect($notices)->firstWhere('tone', 'danger') !== null;
+    /*
+     * ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ (মালিকের স্পেক §৯ক): জরুরি খবরে ব্যাজ লাল, আর polling-এর সুইচ।
+     * ⛔ polling ডিফল্টে বন্ধ (মালিক ২১ অক্টোবর ২০২৬ পর্যন্ত স্থগিত রেখেছেন) — বন্ধ থাকলে `data-poll-seconds` শূন্য।
+     */
+    $settings = app(\App\Core\Services\SettingsService::class);
+    $pollSeconds = auth()->check() && $settings->get('notification.bell_polling', false)
+        ? max(15, (int) $settings->get('notification.bell_poll_seconds', 60))
+        : 0;
+
+    $urgent = collect($notices)->firstWhere('tone', 'danger') !== null
+        || $mine->contains(fn ($note) => $note->isCritical());
     $total = count($notices) + $mine->count();
 @endphp
 
 {{-- ⓘ data-notification-bell — যন্ত্রের সতর্কতা এখন কেবল এখানে আর উপরের ব্যানারে, নিচের বারে নয়; পরীক্ষা এই ঘরটা ধরে
      দেখে সতর্কতা হারায়নি (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬) --}}
-<div x-data="{ open: false }" class="relative" data-notification-bell>
+<div x-data="notifyBell" class="relative" data-notify-bell-root data-notification-bell
+     data-count="{{ $total }}" data-base="{{ count($notices) }}"
+     data-poll-seconds="{{ $pollSeconds }}" data-poll-url="{{ auth()->check() ? route('notifications.unread-count') : '' }}">
     <button type="button"
-            @click="open = !open"
-            @click.outside="open = false"
-            @keydown.escape.window="open = false"
+            @click="toggle"
+            @click.outside="close"
+            @keydown.escape.window="close"
             :aria-expanded="open.toString()"
             class="relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)
                    text-(--color-ink-muted) transition-colors hover:bg-(--color-surface-hover)"
@@ -57,16 +69,16 @@
              সিলটা এই কারণেই আগে থেকেই আঁকা। --}}
         <x-ui.icon name="bell" :size="18" />
 
-        @if ($total > 0)
-            {{-- সংখ্যাটা ব্যাজে, কারণ "কিছু একটা আছে" আর "সাতটা আছে" দুটো
-                 আলাদা খবর, আর দ্বিতীয়টাই ঠিক করে দেয় এখনই দেখব না পরে। --}}
-            <span @class([
-                'absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full px-1',
-                'text-[10px] font-semibold leading-4 text-white',
-                'bg-(--color-danger)' => $urgent,
-                'bg-(--color-brand-500)' => ! $urgent,
-            ])>{{ $total }}</span>
-        @endif
+        {{-- সংখ্যাটা ব্যাজে, কারণ "কিছু একটা আছে" আর "সাতটা আছে" দুটো
+             আলাদা খবর, আর দ্বিতীয়টাই ঠিক করে দেয় এখনই দেখব না পরে।
+             ⓘ শূন্যে লুকানো (`x-show`) — polling চালু থাকলে সংখ্যাটা নিজে বদলায়; বন্ধ থাকলে পাতার সংখ্যাই থাকে। --}}
+        <span x-show="hasCount()" x-text="count" @if ($total === 0) x-cloak @endif data-notify-count
+              @class([
+                  'absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full px-1',
+                  'text-[10px] font-semibold leading-4 text-white',
+                  'bg-(--color-danger)' => $urgent,
+                  'bg-(--color-brand-500)' => ! $urgent,
+              ])>{{ $total }}</span>
     </button>
 
     <div x-show="open" x-cloak x-transition.opacity
@@ -86,27 +98,61 @@
                 </form>
             </div>
 
-            @foreach ($mine as $note)
-                {{--
-                    খবরটা খোলা মানেই পড়া — তাই লিংকে ক্লিক করলে সারিটা
-                    পড়া হিসেবে বসে। ক্লিক না করলে বসে না, কারণ ঘণ্টা
-                    খোলা আর খবরটা পড়া এক জিনিস নয়: কেউ ঘণ্টা খুলে
-                    দেখে বন্ধ করে দিতেই পারেন, আর তখন খবরটা হারিয়ে
-                    গেলে সেটাই সবচেয়ে খারাপ।
-                --}}
-                <a href="{{ route('notifications.open', $note) }}"
-                   class="flex items-start gap-2 border-b border-(--color-border) px-3 py-2 text-sm
-                          hover:bg-(--color-surface-hover)">
-                    <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand-500)"
-                          aria-hidden="true"></span>
-                    <span class="min-w-0">
-                        <span class="block font-medium">{{ $note->title }}</span>
-                        @if ($note->body)
-                            <span class="block text-2xs text-(--color-ink-muted)">{{ $note->body }}</span>
-                        @endif
-                    </span>
-                </a>
-            @endforeach
+            {{-- ⭐ ছাঁকনি — সব / না-পড়া / অনুমোদন / কাজ / ব্যবস্থা (স্পেক §৯ক); কেবল দেখানো-লুকানো, সারি সার্ভারের --}}
+            <div class="flex gap-1 overflow-x-auto border-b border-(--color-border) px-2 py-1 text-2xs" role="tablist">
+                @foreach (['all', 'unread', 'approval', 'task', 'system'] as $tab)
+                    <button type="button" role="tab" @click="pick('{{ $tab }}')"
+                            :class="picked('{{ $tab }}') ? 'bg-(--color-surface-hover) font-semibold' : ''"
+                            class="whitespace-nowrap rounded-(--radius-field) px-2 py-0.5">{{ __('core.notify.drawer.'.$tab) }}</button>
+                @endforeach
+            </div>
+
+            <div class="max-h-96 overflow-y-auto">
+                @foreach ($mine as $note)
+                    {{--
+                        খবরটা খোলা মানেই পড়া — তাই লিংকে ক্লিক করলে সারিটা
+                        পড়া হিসেবে বসে। ক্লিক না করলে বসে না, কারণ ঘণ্টা
+                        খোলা আর খবরটা পড়া এক জিনিস নয়: কেউ ঘণ্টা খুলে
+                        দেখে বন্ধ করে দিতেই পারেন, আর তখন খবরটা হারিয়ে
+                        গেলে সেটাই সবচেয়ে খারাপ।
+                        ⓘ খোলার আগে দেখা হয় কাগজটা এখনো নাগালে কি না ([[NotificationController::open()]])।
+                    --}}
+                    <div x-show="shows('{{ $note->category }}', true)" data-bell-note="{{ $note->id }}"
+                         class="flex items-start gap-2 border-b border-(--color-border) px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
+                        <span @class([
+                            'mt-1.5 size-1.5 shrink-0 rounded-full',
+                            'bg-(--color-danger)' => $note->isCritical(),
+                            'bg-(--color-brand-500)' => ! $note->isCritical(),
+                        ]) aria-hidden="true"></span>
+                        <a href="{{ route('notifications.open', $note) }}" class="min-w-0 flex-1">
+                            <span class="block font-medium">
+                                @if ($note->isCritical())
+                                    <span class="me-1 rounded-full bg-(--color-danger) px-1.5 text-[10px] text-white" data-critical>{{ __('core.notify.critical_mark') }}</span>
+                                @endif
+                                {{ $note->title }}
+                            </span>
+                            @if ($note->body)
+                                <span class="block text-2xs text-(--color-ink-muted)">{{ $note->body }}</span>
+                            @endif
+                            <span class="block text-[10px] text-(--color-ink-muted)">
+                                {{ \App\Core\Support\NotificationKinds::sourceLabel($note->module) }}
+                                · {{ __('core.notify.priority.'.$note->priority) }}
+                                · {{ $note->created_at?->diffForHumans() }}
+                            </span>
+                        </a>
+                        <span class="flex shrink-0 flex-col items-end gap-1 text-[10px]">
+                            <form method="POST" action="{{ route('notifications.read', $note) }}">
+                                @csrf
+                                <button type="submit" class="text-(--color-brand-500) hover:underline">{{ __('core.notify.action.read') }}</button>
+                            </form>
+                            <form method="POST" action="{{ route('notifications.archive', $note) }}">
+                                @csrf
+                                <button type="submit" class="text-(--color-ink-muted) hover:underline">{{ __('core.notify.action.archive') }}</button>
+                            </form>
+                        </span>
+                    </div>
+                @endforeach
+            </div>
         @endif
 
         <p class="border-b border-(--color-border) px-3 py-2 text-2xs font-semibold uppercase
@@ -152,6 +198,14 @@
              ⓘ সেটিংসের দরজাটা ঘণ্টার ভিতরেই, কারণ প্রশ্নটা ঠিক তখনই মাথায়
              আসে যখন একটা অবাঞ্ছিত খবর চোখে পড়ে। প্রোফাইলের গভীরে রাখলে
              মানুষ খুঁজতেন না, খবরগুলো দেখাই ছেড়ে দিতেন। --}}
+        {{-- ⭐ নিজের সব খবর — পড়া, আর্কাইভ, খোঁজা (স্পেক §৯খ) --}}
+        <a href="{{ route('notifications.index') }}" data-notify-all
+           class="flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-2xs
+                  text-(--color-brand-500) hover:bg-(--color-surface-hover)">
+            <x-ui.icon name="bell" class="size-3.5" />
+            {{ __('core.notify.see_all') }}
+        </a>
+
         <a href="{{ route('notifications.settings') }}"
            class="flex items-center gap-2 border-t border-(--color-border) px-3 py-2 text-2xs
                   text-(--color-ink-muted) hover:bg-(--color-surface-hover) hover:text-(--color-ink)">

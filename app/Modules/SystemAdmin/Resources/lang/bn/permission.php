@@ -130,6 +130,10 @@ return [
         'customer.dealers' => 'কোন গ্রাহক দেখা যায়',
         'customer.binding' => 'গ্রাহকের বাঁধন',
         'documents' => 'পুরো ডকুমেন্ট মডিউল',
+        'notification' => 'পুরো বিজ্ঞপ্তি মডিউল',
+        'notification.templates' => 'বিজ্ঞপ্তির ছাঁচ',
+        'notification.archive' => 'বিজ্ঞপ্তির আর্কাইভ',
+        'notification.reports' => 'বিজ্ঞপ্তির রিপোর্ট',
         'inventory.count' => 'মাল গোনা',
         'inventory.qc' => 'গুণমান পরিদর্শন',
         'inventory.serial' => 'সিরিয়াল নম্বর',
@@ -228,6 +232,20 @@ return [
         'confidential' => 'গোপনীয় দেখা',
         'highly_confidential' => 'অতি গোপনীয় দেখা',
         'restricted' => 'সংরক্ষিত দেখা',
+
+        /* ⭐ বিজ্ঞপ্তির ক্রিয়া — fe-র Mac রান, ad1ac9f3, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
+        'center' => 'খবরের কেন্দ্র',
+        'channels' => 'পাঠানোর মাধ্যম',
+        'deliveries' => 'পাঠানোর খাতা',
+        'retry' => 'আবার পাঠানো',
+        'rules' => 'নিয়ম',
+        'recipients' => 'প্রাপকের দল',
+        'schedules' => 'সময়সূচি',
+        'preferences' => 'সবার পছন্দ',
+        'dashboard' => 'ড্যাশবোর্ড',
+        'escalations' => 'উপরে পাঠানো',
+        'export' => 'নামানো',
+        'reports' => 'রিপোর্ট',
     ],
 
     // ── পর্দার লেখা ──────────────────────────────────────────────────────

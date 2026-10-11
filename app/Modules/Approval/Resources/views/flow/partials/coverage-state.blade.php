@@ -44,4 +44,8 @@
           title="{{ __('approval::message.escalate_hint') }}">
         {{ __('approval::message.coverage_hole', ['levels' => implode(', ', $holes)]) }}
     </span>
+    {{-- ⓘ ফাঁক থাকলেও কাগজ এখন কোথাও যায় — মালিকের ক্রমে (ApprovalSla::fallbackRecipients(), ১১ অক্টোবর ২০২৬) --}}
+    <span class="mt-0.5 block text-2xs text-(--color-ink-muted)" data-escalation-fallback>
+        {{ __('approval::message.escalation_fallback') }}
+    </span>
 @endif
