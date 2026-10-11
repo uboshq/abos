@@ -79,6 +79,12 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['business', 'sales'],
 
         /*
+         * ⭐ পিওএস ও খুচরা বিক্রি বিক্রয়ের ঠিক পরে, অফারের আগে (order ৫১) — মালিকের নকশা, ১১ অক্টোবর ২০২৬
+         * (docs/cloud-tasks/pos-module.md): POS বিক্রয় থেকে বেরিয়ে নিজের ভাঁজে। ⓘ কাউন্টার বিক্রয়েরই একটা রূপ।
+         */
+        ['business', 'pos'],
+
+        /*
          * ⓘ অফার বিক্রয়ের ঠিক পরে (order ৫২) — ২৭ সেপ্টেম্বর ২০২৬ নিজের মডিউল হলো (`869396c5`);
          * মানুষ অফার খোঁজেন বিক্রয়ের সাথেই।
          */
