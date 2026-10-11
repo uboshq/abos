@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
 import { EVERY_MS, isFresh, isTouched, placeFresh } from './live.js'
 
