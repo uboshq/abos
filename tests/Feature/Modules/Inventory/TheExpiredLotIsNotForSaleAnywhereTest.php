@@ -114,5 +114,11 @@ final class TheExpiredLotIsNotForSaleAnywhereTest extends TestCase
         $is('5', $products->firstWhere('id', $lotted->id)?->available_total ?? 'নেই', 'স্টক পর্দা, লটের পণ্য');
         $is('5', $products->firstWhere('id', $plain->id)?->available_total ?? 'নেই', 'স্টক পর্দা, লট ছাড়া পণ্য');
         $is('10', $response->viewData('grand')['available'] ?? 'নেই', 'স্টক পর্দার যোগফল');
+
+        // ── POS কাউন্টার ───────────────────────────────────────────────
+        app(\App\Core\Services\SettingsService::class)->set('sales.screen_pos', true); // ⓘ কাউন্টার পর্দা ডিফল্টে বন্ধ
+        $pos =collect($this->get(route('sales.pos.index', ['warehouse_id' => $warehouse->id]))->assertOk()->viewData('products'));
+        $is('5', $pos->firstWhere('id', $lotted->id)?->available ?? 'নেই', 'POS কাউন্টার, লটের পণ্য');
+        $is('5', $pos->firstWhere('id', $plain->id)?->available ?? 'নেই', 'POS কাউন্টার, লট ছাড়া পণ্য');
     }
 }

@@ -236,17 +236,35 @@ final class ProductionService
                 batch: $lot,
             );
 
-            $this->costs->receive(
-                product: $production->product,
-                qty: (string) $production->qty,
-                unitCost: $production->unitCost(),
-                sourceType: Production::STOCK_SOURCE,
-                sourceId: $production->id,
-                documentNo: $production->document_no,
-                date: $production->trx_date,
-                // ⭐ তৈরি খাবারের স্তরও তার লটে — অডিট ম৭; ⛔ আগে লটহীন, আর লট ধরে বিক্রিতে "লটের স্তর নেই"
-                batch: $lot,
-            );
+            /*
+             * ⭐ ভাঙা পয়সা হারায় না — পুরো-ERP অডিট, মজুদ ছ৮ (মালিকের "সব খোলা ভুল", ১০ অক্টোবর ২০২৬;
+             * [[NoPaisaIsLostWhenFoodIsCookedTest]])।
+             * ⛔ আগে একটাই স্তর, দর = মোট ÷ প্লেট, চার ঘরে কাটা: ১০০ টাকার উপকরণে ১২ প্লেট → ৮.৩৩৩৩ × ১২ = ৯৯.৯৯৯৬; উপকরণের
+             * স্তর থেকে ১০০ বেরোল, খাবারের স্তরে ঢুকল ৯৯.৯৯৯৬ — মজুদের মূল্য প্রতিটা রান্নায় একটু করে খাতা থেকে সরে যেত।
+             * ⓘ এখন বাকিটা শেষ প্লেটের দরে: ১১ প্লেট ৮.৩৩৩৩-এ, ১টা ৮.৩৩৩৭-এ — মোট ঠিক ১০০। প্লেট পূর্ণ সংখ্যা না হলে (কেজি)
+             * আগের মতো একটা স্তর; চার ঘরের দরে ভগ্নাংশ পরিমাণের গুণফল এমনিতেই চার ঘরে মেলে না।
+             */
+            $qty = (string) $production->qty;
+            $unit = $production->unitCost();
+            $left = bcsub((string) $production->cost_total, bcmul($unit, $qty, 4), 4);
+            $whole = bccomp($qty, bcadd($qty, '0', 0), 4) === 0;
+            $parts = bccomp($left, '0', 4) > 0 && $whole && bccomp($qty, '1', 4) > 0
+                ? [[bcsub($qty, '1', 4), $unit], ['1', bcadd($unit, $left, 4)]]
+                : [[$qty, $unit]];
+
+            foreach ($parts as [$partQty, $partCost]) {
+                $this->costs->receive(
+                    product: $production->product,
+                    qty: $partQty,
+                    unitCost: $partCost,
+                    sourceType: Production::STOCK_SOURCE,
+                    sourceId: $production->id,
+                    documentNo: $production->document_no,
+                    date: $production->trx_date,
+                    // ⭐ তৈরি খাবারের স্তরও তার লটে — অডিট ম৭; ⛔ আগে লটহীন, আর লট ধরে বিক্রিতে "লটের স্তর নেই"
+                    batch: $lot,
+                );
+            }
 
             return $production->fresh(['lines.product', 'product', 'recipe']);
         });

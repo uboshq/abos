@@ -190,6 +190,8 @@ return [
         'mobile' => 'Mobile app',
         'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'Paper size',
+        // ⓘ Finance: who the owner is in the capital register
+        'capital' => 'Capital',
     ],
 
     'action' => [
@@ -492,6 +494,15 @@ return [
         'all_time' => 'From the start to today',
     ],
 
+    'trend' => [
+        'daily' => 'By day',
+        'weekly' => 'By week',
+        'monthly' => 'By month',
+        'quarterly' => 'By quarter',
+        'yearly' => 'By year',
+        'quarter' => 'Q:q :year',
+    ],
+
     'export' => [
         'someone_gone' => 'A removed user',
     ],
@@ -738,6 +749,9 @@ return [
         'cancelled_watermark' => 'CANCELLED',
         // ⛔ খসড়া টাকার রসিদ — টাকা এখনো খাতায় ওঠেনি (অডিট, ৬ অক্টোবর ২০২৬; [[SalesPrintController::pdf()]])
         'draft_receipt_notice' => 'DRAFT — this is not a final receipt; the money is not in the books yet',
+        'draft_paper_notice' => 'DRAFT — this is not a final paper; do not release goods or money on it',
+        'paper_not_a_size' => 'Give one paper size — for example a4, a5 or 80mm.',
+        'tax_included' => 'VAT (included in the price, not added again)',
         'draft_watermark' => 'DRAFT',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
@@ -767,6 +781,21 @@ return [
         'super_admin' => 'Super Admin',
         'accountant' => 'Accountant',
         'salesman' => 'Salesman',
+
+        /* ⓘ মডিউলের রোল-ছাঁচ — ইংরেজিতে নামটাই, বাংলা ফাইলের জোড়া (BothLanguagesSayTheSameThingTest) */
+        'Accountant' => 'Accountant',
+        'Manager' => 'Manager',
+        'Counter' => 'Counter',
+        'Field Sales' => 'Field Sales',
+        'Warehouse' => 'Warehouse',
+        'HR' => 'HR',
+        'Auditor' => 'Auditor',
+        'Security Watch' => 'Security Watch',
+        'Backup Watcher' => 'Backup Watcher',
+        'Backup Operator' => 'Backup Operator',
+        'Kitchen' => 'Kitchen',
+        'User Admin' => 'User Admin',
+        'Settings Keeper' => 'Settings Keeper',
     ],
 
     /*
@@ -936,6 +965,7 @@ return [
         'not_a_date' => ':column is not a date — use day/month/year.',
         'unknown_value' => 'Could not match ":value" in :column.',
         'nothing_to_import' => 'No usable rows, so nothing was saved.',
+        'too_many_rows' => 'The file has more than :max rows - nothing was saved. Split it into parts and send them again.',
         'partial_warning' => 'Some rows did not load. Fix them and upload again — otherwise the import is incomplete.',
     ],
 
@@ -1233,6 +1263,30 @@ return [
         'mail_fallback' => 'If the button does not open, paste this address into your browser:',
         'mail_optout' => 'To stop letters like this one, open ABOS, go to "Which news I get" and untick "By email".',
         'kind' => [
+            'documents_new' => 'New document',
+            'documents_new_note' => 'When someone uploads a document that you own',
+            'documents_shared' => 'Document shared',
+            'documents_shared_note' => 'When someone shares a document with you',
+            'documents_approval_required' => 'Document approval required',
+            'documents_approval_required_note' => 'When a document waits for your approval',
+            'documents_approved' => 'Document approved',
+            'documents_approved_note' => 'When your document is approved',
+            'documents_rejected' => 'Document returned or rejected',
+            'documents_rejected_note' => 'When your document is rejected or sent back for changes',
+            'documents_signature_required' => 'Document signature required',
+            'documents_signature_required_note' => 'When your signature is requested on a document',
+            'documents_signature_completed' => 'Document signatures completed',
+            'documents_signature_completed_note' => 'When every signature you asked for is in',
+            'documents_expiry_warning' => 'Document expiry coming',
+            'documents_expiry_warning_note' => '90 and 60 days before a document expires',
+            'documents_expired' => 'Document expired',
+            'documents_expired_note' => 'When a document has expired',
+            'documents_renewal_required' => 'Document renewal required',
+            'documents_renewal_required_note' => '30, 15, 7 and 1 days before a document expires',
+            'documents_updated' => 'Document updated',
+            'documents_updated_note' => 'When a new version of your document is uploaded',
+            'documents_permission_changed' => 'Document access changed',
+            'documents_permission_changed_note' => 'When your access to a document is given or removed',
             'approval_approved' => 'When my paper is approved',
             'approval_approved_note' => 'A paper you sent for approval has been signed.',
             'approval_rejected' => 'When my paper comes back',
@@ -1337,4 +1391,9 @@ return [
     // Not a member of any company — [[ResolveCompanyContext::WITHOUT_A_COMPANY]], 30 September 2026
     'no_company' => 'You have not been added to any company yet. Please contact the owner or an administrator.',
     'restore_reason' => 'Restored from backup: :file · State before the restore: :safety · Run by: :by',
+
+    // ⭐ রেকর্ডের সাথে জোড়া কাগজ — ডকুমেন্ট পরিকল্পনা §১৫ ([[x-ui.linked-documents]])
+    'linked_documents' => [
+        'title' => 'Linked documents',
+    ],
 ];

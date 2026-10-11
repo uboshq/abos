@@ -144,6 +144,7 @@
             </label>
         </div>
 
-        <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+        {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে — সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬ (আগে "বাতিল" ছিলই না) --}}
+        <x-ui.form-actions :cancel="route('system_admin.notice.index')" />
     </form>
 </x-layouts.app>

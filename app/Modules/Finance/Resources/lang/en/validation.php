@@ -51,6 +51,7 @@ return [
     'kind_in_use' => 'Deposits were opened under :name, so it cannot be removed — deactivate it instead and the old papers stay whole.',
 
     'opening_needs_a_liability_account' => 'Bringing in a running loan needs its liability account. A cash credit\'s outstanding lives in the bank account\'s own balance — set it there instead.',
+    'facility_sanction_taken' => 'Sanction number :no of this bank is already recorded (:doc); the same loan cannot be added twice.',
     'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',
     'more_than_retained' => 'The books do not hold that much profit. You asked to declare :asked and the retained profit is :have. Sharing profit that was never earned leaves nothing to pay out later.',
     'profit_signature_refused' => 'The signer turned the profit declaration down. It is cancelled and nothing was posted.',
@@ -60,6 +61,7 @@ return [
     // Audit 4 Oct 2026 — signatures, money accounts, pledged deposits, profit shares
     'not_a_money_account' => 'That is not a money account — pick an active cash, bank or mobile banking account.',
     'awaits_signature_first' => 'A money step on this is still waiting for its signature — try again once it is signed or refused.',
+    'rental_close_day_out_of_range' => 'The closing day must fall between the contract start (:from) and today (:to).',
     'deposit_is_pledged' => ':no is pledged against a loan — it cannot be encashed until the loan is repaid.',
     'shares_pay_more_than_declared' => 'The shares add up to :total, but the declaration is :asked — correct the shares, then declare.',
     'shares_over_a_hundred' => 'The agreed shares add up to :total% — more than 100% cannot be shared. Correct them on the capital page.',

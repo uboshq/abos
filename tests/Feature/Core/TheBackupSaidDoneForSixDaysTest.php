@@ -166,6 +166,14 @@ class TheBackupSaidDoneForSixDaysTest extends TestCase
      */
     public function test_the_guard_shouts_when_the_newest_backup_is_too_old(): void
     {
+        /*
+         * ⓘ খালি ফোল্ডার — ১০ অক্টোবর ২০২৬। ⚠️ স্যুটে আগের কোনো পরীক্ষা সত্যিকারের ব্যাকআপ নিলে সেই ফাইল
+         * আসল ফোল্ডারে থেকে যেত, আর এই দাবি "একটাও নেই" ধরে নিয়ে লাল হত — একা চালালে সবুজ।
+         */
+        $empty = $this->scratch('none-'.uniqid());
+        mkdir($empty, 0775, true);
+        config(['abos.backup.path' => $empty]);
+
         $freshness = app(BackupFreshness::class);
 
         $this->assertTrue($freshness->isStale(),

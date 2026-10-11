@@ -45,7 +45,7 @@ final class AccountsFacts
     public function bankBalance(): string
     {
         return $this->sumOf(
-            Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all()
+            Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all(), true
         );
     }
 
@@ -59,6 +59,52 @@ final class AccountsFacts
     public function payable(): string
     {
         return $this->balanceOfCode(StandardChart::PAYABLE);
+    }
+
+    /**
+     * ⭐ মোট তহবিল — নগদ + ব্যাংক + MFS, তিন ঝুড়ির যোগ ([[moneyPositions()]])।
+     *
+     * ⓘ অর্থের ড্যাশবোর্ডের "মোট তহবিল" আর মালিকের কেন্দ্রের "নগদ ও ব্যাংক" একই সংখ্যা — তাই সংজ্ঞাটা
+     * এখানে, একবার (৮ অক্টোবর ২০২৬)। ⛔ দুই জায়গায় দুইটা bcadd লিখলে একদিন একটায় MFS বাদ পড়ত।
+     * ⓘ ঝুড়িগুলো আগেই পড়া থাকলে সেটাই দেওয়া যায় — আবার পড়া হয় না।
+     *
+     * @param  array{cash: string, bank: string, mfs: string}|null  $money
+     */
+    public function fund(?array $money = null): string
+    {
+        $money ??= $this->moneyPositions();
+
+        return bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
+    }
+
+    /**
+     * ⭐ কয়েকজন পক্ষের জের একটা নিয়ন্ত্রক খাতে (ও তার বংশধরে) — দেখার শাখায়, খাতের স্বাভাবিক দিকে।
+     *
+     * ⓘ মালিকের কেন্দ্রে ভাই-কোম্পানির প্রাপ্য/প্রদেয় বাদ দিতে ([[SisterTrade]]): [[receivable()]] গোটা খাতের
+     * জের, আর এটা তার ভিতরে কেবল ঐ পক্ষগুলোর ভাগ — একই খাত, একই শাখার নিয়ম ([[inView()]]), তাই বাদ দেওয়া
+     * অংশটা কখনো মোটের চেয়ে অন্য হিসাবে গোনা হয় না (৮ অক্টোবর ২০২৬)।
+     * ⚠️ [[dueFrom()]] নয়: সেটা পক্ষের **সব** খাতের সারি (অগ্রিমসহ), আর শাখা মানে না।
+     *
+     * @param  list<int>  $partyIds
+     */
+    public function controlBalanceOf(string $code, string $partyType, array $partyIds): string
+    {
+        $account = StandardChart::find($code);
+
+        if ($account === null || $partyIds === []) {
+            return '0';
+        }
+
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->whereIn('account_id', $account->selfAndDescendants()->pluck('id')->all())
+            ->where('party_type', $partyType)
+            ->whereIn('party_id', $partyIds)
+            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->first();
+
+        $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
+
+        return $account->nature === Account::CREDIT ? bcmul($net, '-1', 4) : $net;
     }
 
     /** এই মাসের আয়। */
@@ -81,9 +127,15 @@ final class AccountsFacts
     }
 
     /**
+     * ⭐ `$byBranch` — ব্যাংক আর MFS-এর খাত কোম্পানির, তাই সারি ধরে দেখার শাখায় ছাঁকা হয়;
+     * টিল আগেই শাখা ধরে বাছা, তাই তার সারিতে আর নয় (হোমের [[AccountsWidgets::sumOf()]]-এর একই নিয়ম)।
+     *
+     * ⛔ পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬: ব্যাংকের জের ছাঁকা হত না, তাই এক শাখার মানুষ
+     * "সব শাখা"-তে গোটা কোম্পানির ব্যাংকের টাকা দেখতেন।
+     *
      * @param  list<int>  $accountIds
      */
-    public function sumOf(array $accountIds): string
+    public function sumOf(array $accountIds, bool $byBranch = false): string
     {
         if ($accountIds === []) {
             return '0';
@@ -91,6 +143,7 @@ final class AccountsFacts
 
         $row = LedgerEntry::query()
             ->whereIn('account_id', $accountIds)
+            ->when($byBranch, fn ($q) => $this->inView($q, 'ledger_entries.branch_id'))
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
 
@@ -298,7 +351,8 @@ final class AccountsFacts
          * নেস্টিং কল্পনা নয়। `selfAndDescendants()` নিজেই এক কোয়েরিতে
          * পুরো গাছ আনে (Account:299)।
          */
-        $row = LedgerEntry::query()
+        // ⭐ দেখার শাখায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ (আগে এক শাখার মানুষও গোটা কোম্পানির সম্পদ দেখতেন)
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->whereIn('account_id', $parent->selfAndDescendants()->pluck('id'))
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
@@ -397,7 +451,8 @@ final class AccountsFacts
         // প্রাপ্য ডেবিটে বাড়ে, প্রদেয় ক্রেডিটে — তাই দিকটা খাত থেকেই নেওয়া
         $receivable = $accountCode === StandardChart::RECEIVABLE;
 
-        $rows = LedgerEntry::query()
+        // ⭐ দেখার শাখায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ (আগে এক শাখার মানুষও গোটা কোম্পানির বকেয়ার তালিকা দেখতেন)
+        $rows = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->where('account_id', $account->id)
             ->where('party_type', $partyType)
             ->whereNotNull('party_id')
@@ -497,7 +552,7 @@ final class AccountsFacts
      * ⛔ নিজের মধ্যে স্থানান্তর বাদ — যে কাগজের প্রতিটা সারি টাকার খাতেই (নগদ থেকে ব্যাংকে জমা, বিকাশ থেকে নগদ),
      * সেটা টাকা আসাও নয়, যাওয়াও নয়। ⚠️ না বাদ দিলে একটা জমাই দুই দণ্ডে বসত আর মাসটা আসলের দ্বিগুণ ব্যস্ত দেখাত।
      *
-     * @return list<array{month: string, in: string, out: string}>  পুরনো থেকে নতুন
+     * @return list<array{month: string, in: string, out: string}> পুরনো থেকে নতুন
      */
     public function moneyFlowByMonth(int $months = 6): array
     {

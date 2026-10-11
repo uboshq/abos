@@ -23,6 +23,7 @@ use App\Models\DocumentRevision;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Models\User;
+use App\Modules\Accounts\Events\VoucherCancelled;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankStatementLine;
@@ -942,6 +943,9 @@ final class VoucherService
                 // `instrument_no`-তে থেকেই যায়, শুধু জোড়াটা ছাড়া পায়
                 'money_account_id' => null,
             ])->save();
+
+            // ⭐ যে কাগজ এই ভাউচারে টাকা নিয়েছিল সে নিজের অবস্থা ফেরায় — একই লেনদেনে (অর্থ M22, ১০ অক্টোবর ২০২৬; [[VoucherCancelled]])
+            event(VoucherCancelled::from($voucher));
 
             /*
              * ⚠️ নথিটা আবার খসড়া — নাহলে ভুল করে কাটা একটা রসিদ বাতিল

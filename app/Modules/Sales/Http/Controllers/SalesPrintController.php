@@ -8,15 +8,17 @@ use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Engines\Print\PrintProfile;
-use App\Core\Services\PaperTrail;
 use App\Core\Services\BranchSettings;
+use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
-use App\Core\Support\DateFormat;
 use App\Core\Support\AmountInWords;
+use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Core\Support\PartyLedger;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Inventory\Services\IssuedLots;
@@ -27,18 +29,23 @@ use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\PrintJob;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesInvoiceCancellation;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\Shipment;
+use App\Modules\Sales\Services\CustomerTargetService;
+use App\Modules\Sales\Services\PaperToken;
 use App\Modules\Sales\Services\PrintQueue;
 use App\Modules\Sales\Support\ChallanPaperFacts;
-use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\Sales\Support\InvoicePrintLook;
 use App\Modules\Sales\Support\OrderPaperFacts;
 use App\Modules\Sales\Support\PaperDesigns;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 
@@ -94,7 +101,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     public function callAction($method, $parameters): mixed
     {
         $document = collect($parameters)->first(
-            fn ($value) => $value instanceof \Illuminate\Database\Eloquent\Model && $value->getAttribute('branch_id') !== null,
+            fn ($value) => $value instanceof Model && $value->getAttribute('branch_id') !== null,
         );
 
         return $this->branch->during(
@@ -167,7 +174,7 @@ class SalesPrintController extends Controller implements HasMiddleware
              * বিলের কাগজ দেখিয়েই বলেছেন।
              */
             // ⭐ পণ্যের কোড বিলের সুইচে (মালিক, ৩ অক্টোবর ২০২৬) — [[withoutCodeUnlessShown()]]
-            lines: $this->withoutCodeUnlessShown(fn (string $what) => app(\App\Modules\Sales\Support\InvoicePrintLook::class)->shows($what), $this->productLines(
+            lines: $this->withoutCodeUnlessShown(fn (string $what) => app(InvoicePrintLook::class)->shows($what), $this->productLines(
                 $invoice->lines,
                 'qty',
                 $this->lotsForInvoice($invoice),
@@ -193,7 +200,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             totals: $this->invoiceTotals(
                 $invoice,
                 roll: PaperSize::of(PaperSize::chosen(
-                    $request->query('paper'),
+                    $this->askedPaper($request),
                     $this->branch->get('sales.print.paper.invoice'),
                 ))->isThermal,
             ),
@@ -231,7 +238,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ছাঁচ আসে কাগজ-মাপের নিজের বাছাই থেকে ([[PaperDesigns]]) — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
          * A4 · A5 · থার্মাল তিনটারই নিজের নকশা। `standard` বা অচেনা → চলতি কাগজ।
          */
-        $chosenPaper = PaperSize::chosen($request->query('paper'), $this->branch->get('sales.print.paper.invoice'));
+        $chosenPaper = PaperSize::chosen($this->askedPaper($request), $this->branch->get('sales.print.paper.invoice'));
         $designSize = PaperDesigns::sizeOf($chosenPaper, PaperSize::of($chosenPaper)->isThermal);
         $designTemplate = PaperDesigns::template(
             'invoice', $designSize,
@@ -272,12 +279,19 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function challanMoney(DeliveryChallan $challan): array
     {
-        $invoice = SalesInvoice::query()
-            ->where('status', '<>', DocumentStatus::CANCELLED)
+        /*
+         * ⛔ চালানের নিজের একটাই পাকা বিল — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১২; [[TheMoneyChallanShowsItsOwnBillTest]])।
+         * ⓘ আগে খসড়াসহ যেকোনো বিল, কোনো ক্রম ছাড়া `first()`: আংশিক দুই বিলের একটার, খসড়ার, বা কয়েকটা চালান মেলানো বিলের মোট
+         * চালানে বসত। এখন কেবল পাকা বিল; ঠিক একটা থাকলে আর তার সব সারি এই চালানেরই হলে সেটার হিসাব, নাহলে চালানের নিজেরটাই।
+         */
+        $bills = SalesInvoice::query()
+            ->whereIn('status', DocumentStatus::POSTED)
             ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
-            ->first();
+            ->orderBy('id')
+            ->get();
+        $invoice = $bills->count() === 1 ? $bills->first() : null;
 
-        if ($invoice === null) {
+        if ($invoice === null || $invoice->lines()->whereDoesntHave('challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))->exists()) {
             return [];
         }
 
@@ -303,7 +317,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function paperDesign(Request $request, string $kind, string $paperSetting, \Closure $facts): array
     {
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
+        $paper = PaperSize::chosen($this->askedPaper($request), $this->branch->get($paperSetting));
         $size = PaperDesigns::sizeOf($paper, PaperSize::of($paper)->isThermal);
         $template = PaperDesigns::template($kind, $size, (string) $this->branch->get(PaperDesigns::key($kind, $size)));
 
@@ -375,10 +389,18 @@ class SalesPrintController extends Controller implements HasMiddleware
         $due = $invoice->dueAmount();
         $earlier = $this->earlierDue($invoice, $due);
 
+        /*
+         * ⛔ "ভ্যাট" সারিতে কেবল উপরে যোগ হওয়া ভ্যাট ([[vatSplit()]], PR #17 রিভিউ ⛔৩) — প্রতিটা নকশায় সর্বমোট − ছাড় + ভ্যাট
+         * + পয়সা + ভাড়া = দেয়। দামের ভিতরেরটা আর ভাড়া নিজের সারিতে ([[invoice-sums]], [[invoice-thermal]]), শূন্য হলে নেই।
+         */
+        [$vatAdded, $vatIncluded] = $this->vatSplit($invoice);
+
         $sums = [
             'grand_total' => (string) $invoice->subtotal,
             'discount' => bcadd((string) ($invoice->discount ?? '0'), (string) ($invoice->bill_discount ?? '0'), 4),
-            'vat' => (string) ($invoice->tax ?? '0'),
+            'vat' => $vatAdded,
+            'vat_included' => $vatIncluded,
+            'freight' => (string) ($invoice->freight_charge ?? '0'),
             'rounding' => (string) ($invoice->rounding_amount ?? '0'),
             'net_payable' => (string) $invoice->total,
             'paid' => $paid,
@@ -468,7 +490,7 @@ class SalesPrintController extends Controller implements HasMiddleware
              */
             // ⭐ সই-করা টোকেন (১ অক্টোবর ২০২৬) — [[PaperToken]]
             'scan_url' => $challan?->public_id !== null && Route::has('sales.qr')
-                ? route('sales.qr', app(\App\Modules\Sales\Services\PaperToken::class)->for($challan))
+                ? route('sales.qr', app(PaperToken::class)->for($challan))
                 : '',
         ];
     }
@@ -498,7 +520,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * আলাদা দর এক লাইনে বসালে লাইনের দর মিথ্যা বলত। ⓘ কোড আর লট দেখায় কেবল বিলের সুইচ চালু থাকলে
          * ([[InvoicePrintLook::SHOWS]]); আগে এই সারিতে কোড-লট ছিলই না, তাই সুইচ চালু করলেও আসল বিলে আসত না।
          */
-        $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
+        $look = app(InvoicePrintLook::class);
         $showCode = $look->shows('product_code');
         $showLot = $look->shows('lot');
         $merged = [];
@@ -601,9 +623,15 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function sampleWords(string $amount): string
     {
-        $words = \App\Core\Support\AmountInWords::of($amount, 'en');
+        $words = AmountInWords::of($amount, 'en');
         $words = (string) preg_replace('/\s+only$/i', '', trim($words));
-        $words = (string) preg_replace('/\btaka\b\s*/i', '', $words);
+        /*
+         * ⛔ পয়সা থাকলে "Taka" থাকে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১৫; [[TheSampleWordsKeepThePaisaApartTest]])। ⓘ আগে সবসময়
+         * কেটে ফেলা হত: ১০০.০৫ ছাপা হত "One Hundred And Five Paisa" — পড়তে একশো পাঁচ পয়সা, টাকা আর পয়সার সীমাটাই হারাত।
+         */
+        if (! preg_match('/\bpaisa\b/i', $words)) {
+            $words = (string) preg_replace('/\btaka\b\s*/i', '', $words);
+        }
         $words = str_replace('-', ' ', $words);
         $words = ucwords(strtolower(trim((string) preg_replace('/\s+/', ' ', $words))));
         $words = (string) preg_replace('/\bLakh\b/', 'Lac', $words);
@@ -638,6 +666,17 @@ class SalesPrintController extends Controller implements HasMiddleware
         }
 
         /*
+         * ⛔ পাকা বিল "চূড়ান্ত নয়" হয়ে ছাপা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১৭; [[APostedBillIsNotPrintedAsADraftTest]])।
+         * ⓘ এই দরজা খাতায় বসা বিলও "খসড়া — চূড়ান্ত বিল নয়" লিখে ছাপত; গ্রাহক তখন ভাবতেন বিলটা বাতিল বা বদলাবে। পাকা বিল ছাপা হয়
+         * আসল দরজায় ([[invoice()]]), গোনা আর DUPLICATE-সহ।
+         */
+        if (in_array($invoice->status, DocumentStatus::POSTED, true)) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.posted_not_a_draft_print', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        /*
          * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
          *
          * ── কী ঘটেছিল (মাপা, ৩ সেপ্টেম্বর ২০২৬) ─────────────────────
@@ -654,12 +693,17 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->withoutCodeUnlessShown(fn (string $what) => app(\App\Modules\Sales\Support\InvoicePrintLook::class)->shows($what),
+            lines: $this->withoutCodeUnlessShown(fn (string $what) => app(InvoicePrintLook::class)->shows($what),
                 $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice))),
             totals: $this->totals($invoice),
             signatures: [],
             narration: $invoice->narration,
-            notice: __('core.print.draft_notice'),
+            /*
+             * ⛔ বাতিল বিলে "খসড়া — চূড়ান্ত বিল নয়" নয় (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১৫)। ⓘ খসড়া আর পাকা দুইটাই উপরে ফেরে, তাই
+             * এই দরজায় বাকি থাকে কেবল বাতিল বিল — আর তার গায়ে [[pdf()]] নিজেই "বাতিল" বাক্স আর জলছাপ দেয়। পাশে "খসড়া" লিখলে
+             * কাগজ দুই কথা বলত।
+             */
+            notice: $invoice->status === DocumentStatus::CANCELLED ? null : __('core.print.draft_notice'),
         );
 
         return $this->pdf(
@@ -679,7 +723,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⓘ ছাপার বোতাম (`?prices=1|0`) বললে সেটাই; না বললে শাখার চালানের সুইচ ([[InvoicePrintLook::challanShows()]])।
          * ⓘ কোনটা ছাপা হলো, ছাপার খাতায় লেখা থাকে ([[PaperTrail::record()]] — `variant`)।
          */
-        $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
+        $look = app(InvoicePrintLook::class);
         $chosen = $request->has('prices') ? $request->boolean('prices') : null;
         $withMoney = $chosen ?? $look->challanShows('prices');
         $money = $withMoney ? $this->challanMoney($challan) : [];
@@ -712,8 +756,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             ...$money,
             // ⓘ চালানের সুইচগুলো নকশার কাছে — কী আঁকবে, কী নয়
             'shows' => array_combine(
-                \App\Modules\Sales\Support\InvoicePrintLook::CHALLAN_SHOWS,
-                array_map(fn (string $what) => $look->challanShows($what), \App\Modules\Sales\Support\InvoicePrintLook::CHALLAN_SHOWS),
+                InvoicePrintLook::CHALLAN_SHOWS,
+                array_map(fn (string $what) => $look->challanShows($what), InvoicePrintLook::CHALLAN_SHOWS),
             ),
         ]);
 
@@ -742,17 +786,19 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.gatepass'),
             meta: $this->challanMeta($challan),
-            lines: $this->productLines(
+            lines: $this->freeOnItsOwnLine($challan, $this->productLines(
                 $challan->lines,
                 'delivered_qty',
                 $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
-            ),
+            )),
             signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
             showMoney: false,
             notice: __('core.print.no_price_notice'),
         );
 
+        // ⛔ দ্বিতীয় ছাপায় DUPLICATE — বিলের মতোই গোনা (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৩; [[EveryReprintSaysDuplicateTest]])
         return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
+            type: PrintJob::CHALLAN_GATEPASS, id: (int) $challan->id,
             paperSetting: 'sales.print.paper.challan', target: 'challan');
     }
 
@@ -783,7 +829,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             'free' => bccomp($row['free'], '0', 4) > 0 ? $this->qty($row['free']) : '',
             'total_qty' => $this->qty(bcadd($row['qty'], $row['free'], 4)),
             'group' => '',
-        ], \App\Modules\Sales\Http\Controllers\LoadingSheetController::productTotals($shipment));
+        ], LoadingSheetController::productTotals($shipment));
 
         $byChallan = $shipment->lines->map(fn ($tripLine) => trim(($tripLine->challan?->document_no ?? '').' · '
             .($tripLine->challan?->customer?->name() ?? '')).' — '
@@ -841,7 +887,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             'sales::field.vehicle_type' => $t['vehicle_type'],
             ($self ? 'sales::field.collected_by' : 'sales::field.driver_name') => $t['driver_name'] ?: $gatePass->driver_name,
             'sales::field.driver_phone' => $t['driver_phone'] ?: $gatePass->driver_phone,
-            'sales::field.transport_cost' => $t['cost'] === null ? null : \App\Core\Support\Money::format($t['cost']),
+            'sales::field.transport_cost' => $t['cost'] === null ? null : Money::format($t['cost']),
         ], fn ($v) => filled($v));
 
         $doc = new PrintableDocument(
@@ -853,21 +899,22 @@ class SalesPrintController extends Controller implements HasMiddleware
                 ...$transport,
                 'sales::gate_pass.column.issued_by' => trim(($gatePass->issuer?->name ?? '').' · '.DateFormat::format($gatePass->issued_at), ' ·'),
             ],
-            lines: $this->productLines(
+            lines: $this->freeOnItsOwnLine($challan, $this->productLines(
                 $challan->lines,
                 'delivered_qty',
                 $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
-            ),
+            )),
             signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
             showMoney: false,
             notice: __('core.print.no_price_notice'),
             // ⭐ গেটম্যান এটাই স্ক্যান করেন — চালানের সই-করা টোকেন ([[PaperToken]], [[QrScanController::gateOut()]])
             qrUrl: $challan->public_id !== null && Route::has('sales.qr')
-                ? route('sales.qr', app(\App\Modules\Sales\Services\PaperToken::class)->for($challan))
+                ? route('sales.qr', app(PaperToken::class)->for($challan))
                 : null,
         );
 
         return $this->pdf($request, $doc, '0', $gatePass->document_no, document: $gatePass,
+            type: PrintJob::GATE_PASS, id: (int) $gatePass->id,
             paperSetting: 'sales.print.paper.gate_pass', target: 'challan');
     }
 
@@ -875,7 +922,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      * ⭐ বাতিল-ইনভয়েসের কাগজ — নিজের নম্বরে, উল্টানো ইনভয়েসের সারি আর অঙ্ক (মালিক, ৪ অক্টোবর ২০২৬;
      * [[SalesInvoiceCancellationService]])। ⓘ কাগজের শিরোনামই বলে এটা বাতিল; অঙ্ক বিয়োগ চিহ্ন ছাড়া — কাগজটা পুরোটাই উল্টো।
      */
-    public function cancellation(Request $request, \App\Modules\Sales\Models\SalesInvoiceCancellation $cancellation): Response
+    public function cancellation(Request $request, SalesInvoiceCancellation $cancellation): Response
     {
         $invoice = SalesInvoice::query()->with(['lines.product.unit', 'customer'])->findOrFail($cancellation->sales_invoice_id);
         $cancellation->loadMissing(['creator', 'confirmer']);
@@ -895,7 +942,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             totals: $this->totals($invoice),
             signatures: ['core.print.prepared_by', 'core.print.approved_by'],
             notice: bccomp($collected, '0', 4) > 0
-                ? (string) __('sales::cancellation.advance_note', ['amount' => \App\Core\Support\Money::format($collected)])
+                ? (string) __('sales::cancellation.advance_note', ['amount' => Money::format($collected)])
                 : null,
         );
 
@@ -952,6 +999,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $design = $this->paperDesign($request, 'order', 'sales.print.paper.order', fn () => OrderPaperFacts::order($order));
 
         return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order,
+            type: PrintJob::ORDER, id: (int) $order->id,
             paperSetting: 'sales.print.paper.order', target: 'order',
             template: $design['template'] ?? 'print.document',
             extra: $design['extra'] ?? []);
@@ -994,6 +1042,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, '0', $order->document_no, document: $order,
+            type: PrintJob::DELIVERY_ORDER, id: (int) $order->id,
             paperSetting: 'sales.print.paper.order', target: 'order');
     }
 
@@ -1026,6 +1075,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection));
 
         return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
+            type: PrintJob::RECEIPT, id: (int) $collection->id,
             paperSetting: 'sales.print.paper.receipt', target: 'receipt',
             template: $design['template'] ?? 'print.document',
             extra: $design['extra'] ?? []);
@@ -1107,6 +1157,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      * @var array<int, string>
      */
     private array $accountNames = [];
+
     /**
      * ⭐ জমার সারির "কোন পথে" — টাকাটা যে খাতে ঢুকল তার নাম ("নগদ", "বিকাশ", "ব্র্যাক ব্যাংক")।
      *
@@ -1281,7 +1332,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function targetFacts(int $customerId, mixed $billDate): ?array
     {
-        $r = app(\App\Modules\Sales\Services\CustomerTargetService::class)->reminderFor($customerId, \Illuminate\Support\Carbon::parse($billDate));
+        $r = app(CustomerTargetService::class)->reminderFor($customerId, Carbon::parse($billDate));
 
         if ($r === null) {
             return null;
@@ -1299,10 +1350,10 @@ class SalesPrintController extends Controller implements HasMiddleware
 
     private function monthMovement(int $customerId, mixed $billDate): array
     {
-        $from = \Illuminate\Support\Carbon::parse($billDate)->startOfMonth();
+        $from = Carbon::parse($billDate)->startOfMonth();
         $next = $from->copy()->addMonth();
         // ⭐ সম্পাদিত বিলের আগের সারি আর উল্টো সারি বাদ — দলের খাতার একই নিয়ম (মালিক, ৪ অক্টোবর ২০২৬; [[PartyLedger::withoutUndoneEdits()]])
-        $party = fn () => \App\Core\Support\PartyLedger::withoutUndoneEdits(\App\Models\LedgerEntry::query()->forParty('customer', $customerId));
+        $party = fn () => PartyLedger::withoutUndoneEdits(LedgerEntry::query()->forParty('customer', $customerId));
 
         $balance = bcadd((string) ($party()->where('trx_date', '<', $from->toDateString())
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')->value('net') ?? 0), '0', 4);
@@ -1325,7 +1376,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             }
 
             $entries = $entries->slice(-$limit)->values();
-            $from = \Illuminate\Support\Carbon::parse($entries->first()->trx_date);
+            $from = Carbon::parse($entries->first()->trx_date);
         }
 
         $rows = [['date' => DateFormat::format($from), 'text' => '', 'debit' => '', 'credit' => '', 'balance' => $balance]];
@@ -1379,8 +1430,21 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         return match (true) {
             ($document?->status ?? null) === DocumentStatus::CANCELLED => __('core.print.cancelled_watermark'),
-            $this->isDraftMoney($document) => __('core.print.draft_watermark'),
+            $this->isDraftMoney($document) || $this->isDraftPaper($document) => __('core.print.draft_watermark'),
             default => null,
+        };
+    }
+
+    /**
+     * ⛔ খসড়া চালান, তার গেটপাস আর খসড়া আদেশ — পাকা কাগজের মতো ছাপা হত (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, ছাপা ১০;
+     * [[ADraftPaperPrintsAsADraftTest]])। ⓘ "খসড়া" চিহ্ন ছিল কেবল আদায়ের রসিদে; খসড়া চালান হাতে পেয়ে গেটে মাল ছাড়া যেত।
+     */
+    private function isDraftPaper(?object $document): bool
+    {
+        return match (true) {
+            $document instanceof DeliveryChallan, $document instanceof SalesOrder => ($document->status ?? null) === DocumentStatus::DRAFT,
+            $document instanceof GatePass => ($document->challan()->value('status') ?? null) === DocumentStatus::DRAFT,
+            default => false,
         };
     }
 
@@ -1429,9 +1493,9 @@ class SalesPrintController extends Controller implements HasMiddleware
         $own = fn ($q) => $q->where('source_id', $invoice->id)
             ->whereIn('source_type', ['sales_invoice', 'sales_invoice:cancel', 'sales_invoice:reversal', 'sales_invoice_cancellation']);
 
-        $mark = \App\Models\LedgerEntry::query()->forParty('customer', $customerId)->where($own)->min('id');
+        $mark = LedgerEntry::query()->forParty('customer', $customerId)->where($own)->min('id');
 
-        $net = \App\Models\LedgerEntry::query()->forParty('customer', $customerId)
+        $net = LedgerEntry::query()->forParty('customer', $customerId)
             ->when($mark !== null, fn ($q) => $q->where('id', '<', $mark))
             ->whereNot($own)
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
@@ -1541,7 +1605,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     private function lotsForInvoice(SalesInvoice $invoice): array
     {
         // ⭐ লট ও মেয়াদ — বিলের সুইচে (ডিফল্ট চালু, লট সবসময়; মালিক, ৩ অক্টোবর ২০২৬)
-        if (! app(\App\Modules\Sales\Support\InvoicePrintLook::class)->shows('lot')) {
+        if (! app(InvoicePrintLook::class)->shows('lot')) {
             return [];
         }
 
@@ -1660,6 +1724,8 @@ class SalesPrintController extends Controller implements HasMiddleware
              * আগের মতো।
              */
             'free' => $this->freeOf($line),
+            // ⓘ ফ্রি-র একক — ফ্রি পরিমাণটা ভিত্তি এককে থাকে (পিস), প্যাকে নয়; গেট পাসের "ফ্রি" লাইন এটাই ছাপে ([[freeOnItsOwnLine()]])
+            'free_unit' => (string) ($line->product?->unit?->name() ?? ''),
 
             /*
              * ⭐ মোট পরিমাণ = পরিমাণ + ফ্রি, প্যাকের এককেই — মালিক, ২ অক্টোবর ২০২৬: *"Challan e total qty nai"*।
@@ -1798,6 +1864,50 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
+     * ⭐ গেট পাসে মাল বেরোনোর পথে ফ্রি মাল আলাদা লাইনে, "ফ্রি" লেখা — মালিক, ১০ অক্টোবর ২০২৬ (সুইচ
+     * `sales.invoice_at_goods_issue`; [[TheFreeGoodsLeaveOnTheirOwnGateLineTest]])।
+     *
+     * ⓘ এই পথে মাল বেরোয় গেট পাসেই ([[GoodsIssue]]), তাই গেটের লোক যা গোনেন কাগজে তা আলাদা থাকে: বিক্রির পরিমাণ এক লাইনে,
+     * ফ্রি তার নিচে নিজের লাইনে, দাম ০। ⓘ সুইচ বন্ধের পুরনো কাগজ (`issue_at_gate` false) যেমন ছিল তেমন।
+     *
+     * @param  list<array<string, string>>  $rows
+     * @return list<array<string, string>>
+     */
+    private function freeOnItsOwnLine(DeliveryChallan $challan, array $rows): array
+    {
+        if (! $challan->issue_at_gate) {
+            return $rows;
+        }
+
+        $out = [];
+
+        foreach ($rows as $row) {
+            if (($row['free'] ?? '') === '') {
+                $out[] = $row;
+
+                continue;
+            }
+
+            /*
+             * ⛔ ফ্রি নিজের ভিত্তি এককে — যেমন আগে ফ্রি-র ঘরে ছাপা হত (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️৬)। ⓘ আগে এখানে মোট − বিক্রি
+             * প্যাকের এককে নেওয়া হত: ১২-পিসের কার্টনে ১ পিস ফ্রি ছাপত "০.০৮৩৩ Ctn — ফ্রি", গেটের লোক গুনতে পারতেন না।
+             */
+            $out[] = [...$row, 'free' => '', 'total_qty' => $row['qty']];
+            $out[] = [...$row,
+                'name' => (string) __('sales::print.free_line', ['name' => $row['name']]),
+                'qty' => $row['free'],
+                'unit' => ($row['free_unit'] ?? '') !== '' ? $row['free_unit'] : ($row['unit'] ?? ''),
+                'rate' => $this->money('0'),
+                'amount' => $this->money('0'),
+                'free' => '',
+                'total_qty' => $row['free'],
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * এই সারিতে ফ্রি কতটা — কাগজে দেখানোর জন্য।
      *
      * ── ⭐ কেন তিন জায়গায় খোঁজা হয়, ১৮ সেপ্টেম্বর ২০২৬ ──────────────
@@ -1828,6 +1938,31 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
+     * ভ্যাটের দুই ভাগ — উপরে যোগ হওয়া, আর দামের ভিতরের — মোট থেকেই মাপা ([[totals()]] আর নামওয়ালা নকশার `sums`, দুইয়েরই)।
+     *
+     * ⓘ দামের ভিতরের ভ্যাট মোটে আবার যোগ হয় না; যতটা সত্যিই উপরে বসেছে সেটাই "ভ্যাট"। ⛔ ভাগটা এক জায়গায় (১১ অক্টোবর
+     * ২০২৬, PR #17 রিভিউ ⛔৩): আগে কেবল `totals()` জানত, আর ডিফল্ট `mono_light`-সহ নামওয়ালা নকশাগুলো পুরো ভ্যাটকে
+     * সাধারণ সারিতে ছাপত — ১০০০ টাকার বিলে ভিতরে ১৩০ ভ্যাট: মোট ১০০০ + ভ্যাট ১৩০ = দেয় ১০০০।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function vatSplit(object $document): array
+    {
+        $tax = (string) ($document->tax ?? '0');
+
+        if (bccomp($tax, '0', 4) <= 0) {
+            return ['0', '0'];
+        }
+
+        $before = bcsub(bcsub((string) $document->subtotal, (string) $document->discount, 4), (string) ($document->bill_discount ?? '0'), 4);
+        $before = bcadd(bcadd($before, (string) ($document->rounding_amount ?? '0'), 4), (string) ($document->freight_charge ?? '0'), 4);
+        $added = bcsub((string) $document->total, $before, 4);
+        $added = bccomp($added, '0', 4) < 0 ? '0' : (bccomp($added, $tax, 4) > 0 ? $tax : $added);
+
+        return [$added, bcsub($tax, $added, 4)];
+    }
+
+    /**
      * @return array<string, string>
      */
     private function totals(object $document): array
@@ -1842,8 +1977,19 @@ class SalesPrintController extends Controller implements HasMiddleware
             $rows['core.print.discount'] = $this->money($document->discount);
         }
 
-        if (bccomp((string) $document->tax, '0', 4) > 0) {
-            $rows['core.print.tax'] = $this->money($document->tax);
+        /*
+         * ⛔ দামের ভিতরের ভ্যাট আলাদা লেখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১৪; [[TheIncludedVatIsNotAddedTwiceOnPaperTest]])।
+         * ⓘ ভেতরের ভ্যাট মোটে আবার যোগ হয় না, অথচ কাগজে সাধারণ "ভ্যাট" সারি হয়ে বসত — উপমোট − ছাড় + ভ্যাট আর মোট মিলত না।
+         * এখন মোট থেকেই মাপা: যতটা ভ্যাট সত্যিই উপরে যোগ হয়েছে সেটা "ভ্যাট", বাকিটা "ভ্যাট (দামের ভিতরে)" — শুধু জানানোর সারি।
+         */
+        [$added, $included] = $this->vatSplit($document);
+
+        if (bccomp($added, '0', 4) > 0) {
+            $rows['core.print.tax'] = $this->money($added);
+        }
+
+        if (bccomp($included, '0', 4) > 0) {
+            $rows['core.print.tax_included'] = $this->money($included);
         }
 
         /*
@@ -1880,6 +2026,16 @@ class SalesPrintController extends Controller implements HasMiddleware
         $rows['core.print.total'] = $this->money($document->total);
 
         return $rows;
+    }
+
+    /**
+     * ⛔ ঠিকানায় চাওয়া কাগজের মাপ — কেবল লেখা, নইলে ৪২২ (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, ছাপা ১৬; [[APaperListInTheAddressIsRefusedTest]])।
+     * ⓘ `?paper[]=a4` এলে মানটা তালিকা, আর [[PaperSize::chosen()]] লেখা ছাড়া কিছু নেয় না — পাতা ভেঙে ৫০০।
+     */
+    private function askedPaper(Request $request): ?string
+    {
+        // ⓘ নিয়মটা এখন এক জায়গায়, সব ছাপার দরজার জন্য ([[PaperSize::fromQuery()]], PR #17 রিভিউ ⚠️১৩)
+        return PaperSize::fromQuery($request);
     }
 
     private function money(mixed $value): string
@@ -1919,7 +2075,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function profileFor(Request $request, string $paperSetting, string $target = 'invoice'): PrintProfile
     {
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
+        $paper = PaperSize::chosen($this->askedPaper($request), $this->branch->get($paperSetting));
 
         if ($target === 'invoice' && PaperSize::of($paper)->isThermal) {
             $target = 'pos';
@@ -1957,7 +2113,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
          * ⓘ কারণটা [[PaperSize::chosen()]]-এ — আগে এখানে হাতে লেখা A4 ছিল।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
+        $paper = PaperSize::chosen($this->askedPaper($request), $this->branch->get($paperSetting));
 
         /*
          * বাতিল করা কাগজের গায়ে "বাতিল" — সবার আগে।
@@ -1991,6 +2147,11 @@ class SalesPrintController extends Controller implements HasMiddleware
             $doc = $doc->withNotice(__('core.print.draft_receipt_notice'));
         }
 
+        // ⛔ খসড়া চালান, গেটপাস আর আদেশ — একই "খসড়া" বাক্স আর জলছাপ ([[isDraftPaper()]])
+        if ($this->isDraftPaper($document)) {
+            $doc = $doc->withNotice(__('core.print.draft_paper_notice'));
+        }
+
         /*
          * দ্বিতীয়বার ছাপা কাগজে DUPLICATE।
          *
@@ -2003,7 +2164,14 @@ class SalesPrintController extends Controller implements HasMiddleware
          * কোনো কাগজ বেরোয় না, আর সেটা গুনলে প্রথম সত্যিকারের কাগজেই
          * DUPLICATE বসত।
          */
-        $job = $type === null ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
+        /*
+         * ⛔ খসড়া ছাপা গোনায় পড়ে না (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১০)। ⓘ খসড়া অর্ডার বা রসিদ মিলিয়ে দেখার জন্য ছাপা হয়,
+         * তার গায়ে "খসড়া" বাক্স আর জলছাপ থাকে। গুনলে অনুমোদনের পরের প্রথম আসল ছাপাতেই "DUPLICATE (২য় ছাপা)" বসত —
+         * আসল কাগজ নিজেকে নকল বলত।
+         */
+        $draftPrint = $this->isDraftMoney($document) || $this->isDraftPaper($document);
+
+        $job = $type === null || $draftPrint ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
         /*
          * সীমা পেরোলে এখানেই থামে — PDF তৈরির আগে।

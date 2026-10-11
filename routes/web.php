@@ -220,6 +220,13 @@ Route::get('/profile/email/confirm/{token}', [ProfileController::class, 'confirm
  */
 Route::get('/p/{token}', [SharedPaperController::class, 'show'])
     ->where('token', '[A-Za-z0-9]{64}')
+    /*
+     * ⛔ গতির সীমা — মিনিটে ৬০, নিজের নামের ঝুড়িতে (পুরো-ERP অডিট, নিরাপত্তা; fe, ১০ অক্টোবর ২০২৬;
+     * [[ASharedLinkHasASpeedLimitTest]])। ⓘ লগইন নেই, তাই আইপি ধরে; চাবি অনুমান করা অসম্ভব হলেও কেউ লাখ লাখ ঠিকানা
+     * ঠুকে সার্ভার ব্যস্ত রাখতে পারত, আর প্রতিটা খোলা একটা PDF আঁকে। ⚠️ নামসহ (`paper-shared`) — নামহীন সংখ্যার সীমা
+     * একই আইপির অন্য দরজার সাথে এক ঝুড়ি ভাগ করত।
+     */
+    ->middleware('throttle:60,1,paper-shared')
     ->name('paper.shared');
 
 /*

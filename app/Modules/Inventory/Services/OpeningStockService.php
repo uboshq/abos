@@ -549,6 +549,26 @@ final class OpeningStockService
          */
         $day = Carbon::parse($date)->toDateString();
 
+        /*
+         * ⛔ (ঘ) অন্য গুদামেও — খোলার দিনে বা পরে কোনো বের হওয়া (পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬, মজুদ ⓘ;
+         * [[OpeningStockFollowsTheWholeCompanyTest]])। ⓘ খরচের স্তর গোটা কোম্পানির, পণ্য ধরে, তারিখের ক্রমে
+         * ([[CostLayerService::issue()]]); অন্য গুদামের সেই বিক্রি তখন পরের স্তর খেয়েছে, আর পেছনের তারিখে খোলার স্তর
+         * সারির মাথায় বসলে FIFO বলত তার এই সস্তা মালই যাওয়ার কথা ছিল — খরচ আর লাভ চুপচাপ ভুল। ⚠️ দেয়াল ছাড়া খোঁজা:
+         * গুদাম-সীমিত মানুষের চোখে অন্য গুদাম পড়ে না, অথচ স্তর পড়ে।
+         */
+        $elsewhere = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
+            ->where('company_id', $product->company_id)
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', '!=', $warehouse->id)
+            ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])
+            ->whereDate('trx_date', '>=', $day)
+            ->whereRaw('(floor_change + unplaced_change + free_change + unplaced_free_change) < 0')
+            ->exists();
+
+        if ($elsewhere) {
+            return false;
+        }
+
         return ! $moves->where(fn ($q) => $q
             ->whereDate('trx_date', '<', $day)
             ->orWhereRaw('(floor_change + unplaced_change + free_change + unplaced_free_change) < 0')

@@ -413,7 +413,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
             $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
-        $paper = PaperSize::chosen($request->query('paper'), $settings->get('sales.print.paper.order'));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $settings->get('sales.print.paper.order'));
 
         $pdf = $print->render(
             template: 'print.document',

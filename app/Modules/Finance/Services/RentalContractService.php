@@ -520,14 +520,21 @@ class RentalContractService
     {
         $this->assertActive($contract);
 
-        $left = $contract->depositLeft();
         $on = (string) ($data['closed_on'] ?? now()->toDateString());
 
-        return DB::transaction(function () use ($contract, $data, $left, $on) {
+        return DB::transaction(function () use ($contract, $data, $on) {
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($contract);
             $this->assertActive($contract);
             $this->assertNothingWaiting($contract);
+
+            /*
+             * ⛔ বাকি জামানত তালার পরে পড়া, আর শেষের দিন চুক্তির শুরু থেকে আজ পর্যন্ত — cloud/finance-fixes রিভিউ ⚠️৪, ১০ অক্টোবর
+             * ২০২৬। ⓘ আগে জামানত তালার আগে পড়া হত (মাঝে কেউ জামানত বাড়ালে বা কাটলে পুরনো অঙ্ক ফেরত যেত), আর শেষের দিনের সীমা
+             * ছিল না: আগামী বছর বা শুরুর আগের দিনে বন্ধ করা যেত, আর আগাম মাসের ফেরত সেই দিন ধরে গোনা হত।
+             */
+            $left = $contract->depositLeft();
+            $this->assertClosingDay($contract, $on);
 
             // ⛔ বসানো অথচ না-দেওয়া মাস থাকলে নয় — ২১৪১-এর দায় চুক্তির সাথে হারাত (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
             $this->assertNothingOwed($contract);
@@ -703,6 +710,21 @@ class RentalContractService
         return ltrim($net, '-');
     }
 
+    /** ⛔ শেষের দিন — চুক্তির শুরু থেকে আজ পর্যন্ত (রিভিউ ⚠️৪; [[close()]]) */
+    private function assertClosingDay(RentalContract $contract, string $on): void
+    {
+        $day = rescue(fn () => Carbon::parse($on)->startOfDay(), null, false);
+
+        if ($day === null || $day->lt($contract->starts_on->copy()->startOfDay()) || $day->gt(Carbon::today())) {
+            throw ValidationException::withMessages([
+                'closed_on' => __('finance::validation.rental_close_day_out_of_range', [
+                    'from' => \App\Core\Support\DateFormat::format($contract->starts_on),
+                    'to' => \App\Core\Support\DateFormat::format(Carbon::today()),
+                ]),
+            ]);
+        }
+    }
+
     /**
      * ⛔ এই চুক্তির কোনো টাকা সই-এর অপেক্ষায় থাকলে আরেকটা নয় — অডিট গ১, ৪ অক্টোবর ২০২৬।
      *
@@ -720,7 +742,8 @@ class RentalContractService
     /** এই চুক্তির কোনো টাকা সইয়ের অপেক্ষায় কি — পর্দার বার্তার জন্যও ([[RentalContractController]])। */
     public function isWaiting(RentalContract $contract): bool
     {
-        return Voucher::query()
+        // ⛔ শাখা-দেয়াল ছাড়া — অন্য শাখা দেখানো অবস্থায় অপেক্ষার কাগজ চোখ এড়াত (১০ অক্টোবর ২০২৬; [[RentalContract::depositFree()]])
+        return Voucher::acrossBranches()
             ->where('status', DocumentStatus::DRAFT)
             ->where(fn ($q) => $q
                 ->where(fn ($v) => $v->where('against_type', RentalContract::drillSourceType())->where('against_id', $contract->id))

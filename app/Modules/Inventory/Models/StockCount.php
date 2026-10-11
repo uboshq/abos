@@ -50,6 +50,12 @@ class StockCount extends Model
     /** ⭐ বিনা বিক্রয়ে মাল বের করা — কারণ কাগজেই, শেষ সইয়ে নিজেই খাতায় (Inventory অডিট গ৫, ৪ অক্টোবর ২০২৬) */
     public const KIND_ISSUE = 'issue';
 
+    /**
+     * ⭐ ফ্রি মালের সমন্বয় — গোনা ফ্রি ভাণ্ডারে, দামি মালের নয় (পুরো-ERP অডিট, মজুদ ⚠️৬ক; fe, ১০ অক্টোবর ২০২৬)।
+     * ⓘ গণনার একই কাগজ, একই সই আর একই চাবি; তফাত কেবল কোন ভাণ্ডার — খাতায় কিছু যায় না ([[StockAdjustmentService::settleFree()]])।
+     */
+    public const KIND_FREE = 'free';
+
     protected $table = 'inv_stock_counts';
 
     protected $fillable = [
@@ -103,6 +109,11 @@ class StockCount extends Model
     public function isIssue(): bool
     {
         return $this->kind === self::KIND_ISSUE;
+    }
+
+    public function isFree(): bool
+    {
+        return $this->kind === self::KIND_FREE;
     }
 
     public function canceller(): BelongsTo

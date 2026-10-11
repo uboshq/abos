@@ -318,7 +318,8 @@ class TenancyService
     /** ভাড়াটের কোনো কাগজ কি সইয়ের অপেক্ষায় — পর্দার বার্তার জন্য */
     public function isWaiting(Tenancy $tenancy): bool
     {
-        return Voucher::query()->where('against_type', Tenancy::drillSourceType())->where('against_id', $tenancy->id)
+        // ⛔ শাখা-দেয়াল ছাড়া — অন্য শাখা দেখানো অবস্থায় অপেক্ষার কাগজ চোখ এড়াত (১০ অক্টোবর ২০২৬; [[Tenancy::depositFree()]])
+        return Voucher::acrossBranches()->where('against_type', Tenancy::drillSourceType())->where('against_id', $tenancy->id)
             ->where('status', DocumentStatus::DRAFT)->exists();
     }
 

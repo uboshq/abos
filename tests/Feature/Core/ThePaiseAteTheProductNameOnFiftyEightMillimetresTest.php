@@ -87,32 +87,43 @@ final class ThePaiseAteTheProductNameOnFiftyEightMillimetresTest extends TestCas
      */
     public function test_the_columns_actually_fit_on_the_paper(): void
     {
-        $body = (string) file_get_contents(
-            resource_path('views/print/document-body.blade.php')
-        );
+        /*
+         * ⭐ মাপ পড়া হয় কাগজ যেখান থেকে নেয় সেখান থেকেই — [[PrintProfile::columnTable()]] আর
+         * [[PrintProfile::columnsFor()]] (১০ অক্টোবর ২০২৬)।
+         *
+         * ⛔ আগে মাপগুলো টেমপ্লেটে `$thermal ? 'Nmm'` হয়ে লেখা ছিল, আর এই দাবি টেমপ্লেটের লেখা পড়ত। মাপগুলো এখন
+         * ছকে (mPDF-এ মেপে বসানো), টেমপ্লেট কেবল `$col['thermal']` বসায় — পুরনো ছাঁচ আর মিলত না, দাবিটা লাল হল
+         * ("কলাম-মাপ পাওয়া গেল না")। দাবি একই: সবচেয়ে ভরা ৫৮মিমি কাগজে (টাকা আর ফ্রি-সহ) নামের বাইরের কলামগুলো
+         * কত নেয় — আর নামের জন্য অন্তত ১০মিমি থাকে কি না।
+         */
+        $table = \App\Core\Engines\Print\PrintProfile::columnTable();
+        $cols = \App\Core\Engines\Print\PrintProfile::everything()
+            ->columnsFor(PaperSize::of(PaperSize::THERMAL_58), true, true);
+
+        $widths = [];
+        foreach ($cols as $name) {
+            if ($name !== 'name' && $table[$name]['thermal'] !== null) {
+                $widths[] = (int) $table[$name]['thermal'];
+            }
+        }
 
         /*
-         * ⛔ প্রথম খসড়ায় এই দাবিটা **ভুল ঘর গুনত** — ২২ সেপ্টেম্বর ২০২৬।
-         *
-         * পুরো ফাইল থেকে সব মাপ তুলে "সবচেয়ে বড় চারটা" নেওয়া হত। ⚠️ তাতে
-         * মেটার লেবেল (১৭mm) আর মোটের ঘর (১৫mm) গুনে সারির কলাম বলে
-         * চালানো হত — যোগফলটা ৬০mm আসত, অথচ সারির কলাম নেয় ৩৯mm।
-         *
-         * ⓘ এখন কেবল পণ্যের সারির `<thead>` পড়া হয়।
+         * ⚠️ কিছুই না পেলে নিচের যোগফল শূন্য, আর দাবিটা অর্থহীন সবুজ। ⓘ ৫৮মিমি-তে কলাম তিনটা ([[PaperSize::maxColumns()]],
+         * `keep` ধরে: নাম, পরিমাণ, মোট) — তাই নামের বাইরের প্রতিটা কলামের নিজের থার্মাল মাপ থাকতেই হবে, আর অন্তত একটা।
+         * ⓘ আগের "অন্তত চারটা" লেখা হয়েছিল যখন ৫৮মিমি-তে চারটা কলাম ছিল।
          */
-        $head = $this->lineTableHead($body);
-
-        // ⓘ থার্মালের মাপগুলো `$thermal ? 'Nmm' : ...` ছাঁচে লেখা
-        preg_match_all("/\\\$thermal \\? '(\\d+)mm'/", $head, $hits);
-
-        $widths = array_map('intval', $hits[1]);
-
-        // ⚠️ কিছুই না পেলে নিচের যোগফল শূন্য, আর দাবিটা অর্থহীন সবুজ
-        $this->assertGreaterThanOrEqual(4, count($widths), implode("\n", [
-            'ছাপার টেমপ্লেটে থার্মালের কলাম-মাপ পাওয়া গেল না।',
+        $this->assertNotEmpty($widths, implode("\n", [
+            'ছাপার ছকে থার্মালের কলাম-মাপ পাওয়া গেল না।',
             '',
-            '⛔ ছাঁচটা বদলে থাকলে এই দাবিটা কিছুই না মেপে সবুজ থাকত।',
+            '⛔ ছকটা বদলে থাকলে এই দাবিটা কিছুই না মেপে সবুজ থাকত।',
         ]));
+        $this->assertCount(count($cols) - 1, $widths, '⛔ ৫৮মিমি-র কোনো কলামের নিজের মাপ নেই — সে কতটা নেবে কেউ জানে না।');
+        $this->assertContains('name', $cols, '⛔ ৫৮মিমি কাগজে পণ্যের নামের কলামই নেই।');
+
+        // ⓘ আর কাগজটা সত্যিই এই ছক থেকে মাপ নেয় — নইলে ছক মাপলে কাগজ মাপা হত না
+        $head = $this->lineTableHead((string) file_get_contents(resource_path('views/print/document-body.blade.php')));
+        $this->assertStringContainsString("width: {{ \$col[\$thermal ? 'thermal' : 'a4'] }}", $head,
+            '⛔ পণ্যের সারির মাথা ছকের মাপ নেয় না — এই দাবি তখন কাগজ মাপে না।');
 
         $paper = PaperSize::of(PaperSize::THERMAL_58);
 
@@ -148,7 +159,8 @@ final class ThePaiseAteTheProductNameOnFiftyEightMillimetresTest extends TestCas
         preg_match_all('/<thead.*?<\/thead>/s', $body, $heads);
 
         foreach ($heads[0] as $head) {
-            if (str_contains($head, 'core.print.qty')) {
+            // ⓘ কলামের নাম এখন `core.print.column.` থেকে ([[PrintProfile::columnsFor()]]); আগে `core.print.qty` হাতে লেখা ছিল
+            if (str_contains($head, 'core.print.column.')) {
                 return $head;
             }
         }

@@ -169,8 +169,10 @@
                         <form method="POST" action="{{ route('finance.profit.declare') }}" class="mt-3">
                             @csrf
                             <input type="hidden" name="profit" value="{{ $profit }}">
-                            <input type="hidden" name="trx_date" value="{{ old('trx_date', now()->format('Y-m-d')) }}">
-                            <input type="hidden" name="narration" value="{{ old('narration') }}">
+                            {{-- ⛔ পূর্বরূপে বাছা তারিখ আর বিবরণ — পূর্বরূপ পুনঃনির্দেশ নয়, তাই `old()` খালি থাকত আর ঘোষণা আজকের তারিখে,
+                                 বিবরণ ছাড়া বসত (অর্থ M27, ১০ অক্টোবর ২০২৬); এখন এই অনুরোধের ঘর থেকেই --}}
+                            <input type="hidden" name="trx_date" value="{{ old('trx_date', request('trx_date', now()->format('Y-m-d'))) }}">
+                            <input type="hidden" name="narration" value="{{ old('narration', request('narration')) }}">
 
                             <button type="submit"
                                     class="min-h-(--spacing-touch) w-full rounded-(--radius-field)

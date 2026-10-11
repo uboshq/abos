@@ -6,6 +6,7 @@ use App\Core\Events\ApprovalDecided;
 use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
 use App\Modules\Accounts\Events\OpeningCapitalBooked;
+use App\Modules\Accounts\Events\VoucherCancelled;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Finance\Dashboard\FinanceDashboard;
 use App\Modules\Finance\Listeners\CapitalFromReceipt;
@@ -13,6 +14,7 @@ use App\Modules\Finance\Listeners\FinishTheFinancePaperOnTheLastSignature;
 use App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm;
 use App\Modules\Finance\Listeners\InstitutionFromAccountForm;
 use App\Modules\Finance\Listeners\PostTheProfitOnTheLastSignature;
+use App\Modules\Finance\Listeners\UndoThePaperOfACancelledVoucher;
 use App\Modules\Finance\Listeners\ReconcileOpeningCapital;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\CapitalEntry;
@@ -443,7 +445,8 @@ return [
         'Accountant' => [
             'finance.capital.view',
             'finance.capital.create',
-            'finance.capital.post',
+            // ⛔ `finance.capital.post` নয় — লাভ ঘোষণা আর মূলধনে নেওয়া মালিকের সিদ্ধান্ত (পুরো-ERP অডিট, অর্থ M27, ১০ অক্টোবর ২০২৬)।
+            // ⓘ ছাঁচ পুরনো রোল চওড়া বা সরু করে না — আজকের হিসাবরক্ষকদের চাবি মালিক নিজে সরান ([[role-templates-never-widen-an-existing-role]])
             'finance.deposit.view',
             'finance.deposit.create',
             'finance.deposit.move',
@@ -710,6 +713,9 @@ return [
      */
     'listeners' => [
         VoucherPosted::class => [CapitalFromReceipt::class],
+
+        // ⭐ Accounts থেকে ভাউচার বাতিল — উত্তোলন, লাভের ভাগ আর ভাড়ার মাস নিজেও ফেরে (অর্থ M22; [[UndoThePaperOfACancelledVoucher]])
+        VoucherCancelled::class => [UndoThePaperOfACancelledVoucher::class],
 
         // ⓘ খাতের ফর্মে "কোন প্রতিষ্ঠান" — ঘর আঁকা আর জমা ([[InstitutionFieldOnAccountForm]])
         AccountFormOpened::class => [InstitutionFieldOnAccountForm::class],

@@ -168,4 +168,6 @@ return [
     'release_lot_not_this_product' => 'Lot :lot does not belong to this product.',
     'place_needs_lot' => ':product is kept by lot — say which lot is being placed.',
     'place_source_unknown' => 'Goods from this paper do not wait to be placed.',
+    'free_short_beyond_spare' => 'The free goods of :product cannot go down by more than this - :spare is left beside what orders hold. Release the order first.',
+    'too_many_labels' => 'At most :max labels in one print - choose fewer products or copies and print in parts.',
 ];

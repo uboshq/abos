@@ -41,8 +41,9 @@
                 @csrf
 
                 <x-ui.field name="code" :label="__('core.table.code')" required maxlength="32" />
-                <x-ui.field name="name_en" :label="__('core.table.name')" required maxlength="120" />
-                <x-ui.field name="name_bn" :label="__('core.table.name')" maxlength="120" />
+                {{-- ⓘ দুটো ঘরের নামই "নাম" ছিল — কোনটা কোন ভাষা বোঝা যেত না (সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬) --}}
+                <x-ui.field name="name_en" :label="__('master_data::field.name_en')" required maxlength="120" />
+                <x-ui.field name="name_bn" :label="__('master_data::field.name_bn')" maxlength="120" />
 
                 <x-ui.select name="default_priority"
                              :label="__('core.notice.priority_label')"

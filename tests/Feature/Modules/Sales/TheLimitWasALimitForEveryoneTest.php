@@ -18,7 +18,6 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\DeliveryChallan;
-use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesOrderService;
@@ -207,7 +206,15 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
             $this->refusedOn(fn () => app(DeliveryChallanService::class)->confirm($this->challan(3)->fresh(['lines']))));
     }
 
-    /** ⛔ খসড়া বিলও সীমা আটকায় — *"bill khosora hole … balanceo atkabe"*। */
+    /**
+     * ⛔ খসড়া বিলও সীমা আটকায় — *"bill khosora hole … balanceo atkabe"*।
+     *
+     * ⚠️ ২৬ সেপ্টেম্বর ২০২৬ (রাতে) থেকে দ্বিতীয় চেষ্টাটা **অফিসের চালানে**,
+     * কাউন্টারে নয়। ⓘ কারণ মালিকের নতুন নিয়ম: খোলা খসড়া থাকলে সেই ক্রেতার
+     * নতুন কাউন্টার-বিলই নেওয়া হয় না (`open_draft_blocks_new_bill`) — আর
+     * সেটাও `customer_id` ঘরে বলে। ⛔ কাউন্টারে চেষ্টা করলে দাবিটা সবুজ হত
+     * সীমার জন্য নয়, ঐ নিয়মের জন্য — সীমা ভেঙে গেলেও টের পাওয়া যেত না।
+     */
     public function test_a_draft_bill_holds_the_limit(): void
     {
         $held = $this->sell(8, '0', ['save_as_draft' => '1']);
@@ -215,19 +222,52 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
         $this->assertSame(DocumentStatus::DRAFT, $held['invoice']->status,
             'দৃশ্যটাই বানানো যায়নি — খসড়া রাখা হয়নি।');
 
-        $this->assertSame('customer_id', $this->refusedOn(fn () => $this->sell(3)));
+        $this->assertSame('customer_id',
+            $this->refusedOn(fn () => app(DeliveryChallanService::class)->confirm($this->challan(3)->fresh(['lines']))),
+            '⛔ ৮০০ টাকার খসড়া থাকা অবস্থায় ৩০০ টাকার চালান ১,০০০ সীমায় চলে গেল — খসড়া সীমা ধরে রাখেনি।');
     }
 
-    /** ⛔ সীমার বাইরে খসড়াও হয় না — সীমার বেশি টাকা আটকে রাখা যায় না। */
-    public function test_an_over_limit_draft_is_refused_too(): void
+    /**
+     * ⭐ সীমার বাইরে খসড়া **রাখা যায়** — কিন্তু সে সীমা আটকায়, আর পাকা হয় না।
+     *
+     * ── ⚠️ দাবিটা উল্টে গেছে, ইচ্ছাকৃতভাবে ─────────────────────────────
+     * আগে এখানে লেখা ছিল "সীমার বাইরে খসড়াও হয় না"। ⭐ মালিকের নির্দেশ,
+     * ২৬ সেপ্টেম্বর ২০২৬ (রাতে): *"bill atkanor kotha cilo conf/নিশ্চিত
+     * করুন e kintu খসড়া hobe"* — আর খসড়া নিয়ে: *"sudu challan inv print
+     * hobe na approval e zabe na"*। ⓘ অর্থাৎ দেয়াল পাকা করার মুহূর্তে,
+     * রাখার মুহূর্তে নয়।
+     *
+     * ⛔ তবু খসড়াটা বিনামূল্যের নয়: রাখা থাকলে সে সীমা **আটকে রাখে**, আর
+     * সেটা পাকা করতে গেলে দেয়াল ঠিকই থামায় — আর খসড়াটা অক্ষত থাকে।
+     */
+    public function test_an_over_limit_draft_is_kept_holds_the_limit_and_cannot_be_confirmed(): void
     {
-        $before = SalesInvoice::query()->count();
+        $held = $this->sell(15, '0', ['save_as_draft' => '1']);
 
+        $invoice = $held['invoice']->fresh();
+
+        $this->assertSame(DocumentStatus::DRAFT, $invoice->status,
+            '⛔ ১,৫০০ টাকার খসড়া ১,০০০ সীমায় রাখা গেল না — মালিকের নতুন নিয়মের উল্টো।');
+        $this->assertNotNull($invoice->counter_draft,
+            '⛔ খসড়াটা কাউন্টারের "পেন্ডিং"-এ নেই — পরে পর্দায় ফেরানো যাবে না।');
+
+        /* ⛔ সীমা আটকে রাখে — বকেয়া শূন্য, তবু ১০০ টাকার চালানও যায় না */
+        $this->assertSame(0, bccomp($this->customer->fresh()->outstanding(), '0', 4),
+            'দৃশ্যটাই বানানো যায়নি — খসড়ায় খাতায় কিছু বসার কথা নয়।');
         $this->assertSame('customer_id',
-            $this->refusedOn(fn () => $this->sell(15, '0', ['save_as_draft' => '1'])));
+            $this->refusedOn(fn () => app(DeliveryChallanService::class)->confirm($this->challan(1)->fresh(['lines']))),
+            '⛔ সীমার বাইরের খসড়া রাখা আছে, অথচ অফিসের চালান দিব্যি গেল।');
 
-        $this->assertSame($before, SalesInvoice::query()->count(),
-            '⛔ বাধা পেয়েও খসড়াটা থেকে গেছে — লেনদেন ফেরেনি।');
+        /* ⛔ আর পাকা করা যায় না — একই খসড়া পর্দা থেকে "নিশ্চিত করুন" */
+        $this->assertSame('customer_id',
+            $this->refusedOn(fn () => $this->sell(15, '0', ['resume_invoice_id' => $invoice->id])),
+            '⛔ সীমার বাইরের খসড়া পাকা হয়ে গেল।');
+
+        $after = $invoice->fresh();
+        $this->assertSame(DocumentStatus::DRAFT, $after->status,
+            '⛔ দেয়ালে থেমেও খসড়াটার অবস্থা বদলেছে — লেনদেন ফেরেনি।');
+        $this->assertNotNull($after->counter_draft,
+            '⛔ দেয়ালে থামার পরে খসড়াটা "পেন্ডিং" থেকে হারিয়ে গেছে।');
     }
 
     /**

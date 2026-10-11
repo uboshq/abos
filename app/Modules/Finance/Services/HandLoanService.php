@@ -641,7 +641,8 @@ final class HandLoanService
     {
         return HandLoanMovement::query()
             ->where('account_id', $account->id)
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            // ⛔ শাখা-দেয়াল ছাড়া — অন্য শাখা দেখানো অবস্থায় অপেক্ষার ভাউচার চোখ এড়াত (রিভিউ ⚠️১, [[HandLoanMovement::scopeCounted()]])
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::DRAFT))
             ->exists();
     }
 

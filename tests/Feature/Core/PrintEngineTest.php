@@ -165,7 +165,9 @@ class PrintEngineTest extends TestCase
             }
         }
 
-        $this->assertSame(6, $count);
+        // ⓘ কাগজ × দুই ভাষা — কাগজের সংখ্যা তালিকা থেকে (A5 এসেছে ২৮ সেপ্টেম্বর ২০২৬, গেট পাসের জন্য); হাতে লেখা ৬ পুরনো হয়ে লাল হত
+        $this->assertSame(count(PaperSize::all()) * 2, $count);
+        $this->assertContains(PaperSize::A5, PaperSize::all());
     }
 
     public function test_printing_does_not_leave_the_app_in_another_language(): void
@@ -268,7 +270,8 @@ class PrintEngineTest extends TestCase
     public function test_an_unknown_paper_size_says_which_ones_exist(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageMatches('/a4, 80mm or 58mm/');
+        // ⓘ বার্তাটা প্রতিটা চেনা মাপের নাম বলে — A5-সহ (২৮ সেপ্টেম্বর ২০২৬)
+        $this->expectExceptionMessageMatches('/'.implode(', ', array_map(fn ($p) => preg_quote($p, '/'), array_slice(PaperSize::all(), 0, -1))).' or '.preg_quote(PaperSize::all()[count(PaperSize::all()) - 1], '/').'/');
 
         PaperSize::of('letter');
     }
@@ -285,7 +288,8 @@ class PrintEngineTest extends TestCase
     {
         // ৫৮mm-এ ট্রায়াল ব্যালেন্স পড়া যায় না — অপশনটা দেওয়াই ভুল।
         $this->assertSame([PaperSize::A4], $this->engine->papersFor('report.trial_balance'));
-        $this->assertCount(3, $this->engine->papersFor('voucher'));
+        // ⓘ ভাউচার প্রতিটা কাগজে — তালিকা থেকে গোনা (A5 এসেছে ২৮ সেপ্টেম্বর ২০২৬)
+        $this->assertSame(PaperSize::all(), $this->engine->papersFor('voucher'));
     }
 
     public function test_the_vendor_credit_can_be_switched_off(): void
