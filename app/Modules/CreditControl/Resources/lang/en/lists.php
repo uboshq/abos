@@ -27,4 +27,5 @@ return [
     'branch' => 'Branch',
     'salesperson' => 'Salesperson',
     'customers' => 'Customers',
+    'trend_title' => 'Risk trend by day',
 ];

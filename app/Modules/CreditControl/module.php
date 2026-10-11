@@ -82,6 +82,8 @@ return [
                 'route_params' => ['slug' => 'exposure-by-branch'], 'permission' => 'credit_control.view'],
             ['label' => 'credit_control::lists.by_salesperson_title', 'icon' => 'customer', 'route' => 'credit_control.report.show',
                 'route_params' => ['slug' => 'exposure-by-salesperson'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.trend_title', 'icon' => 'reports', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'risk-trend'], 'permission' => 'credit_control.view'],
         ],
     ],
 

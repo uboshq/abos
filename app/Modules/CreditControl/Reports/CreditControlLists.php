@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  * ⓘ মালিকের তালিকা থেকে যা আগেই আছে ([[CreditPositionReports]]): বাকির অবস্থা (= বাকির পাতা, ব্যবহার, অবশিষ্ট, ব্যবহৃত — এক
  * রিপোর্টের কলাম), সীমা পার, মেয়াদ পেরোনো বিল, মেয়াদে বন্ধ, অপেক্ষার অনুরোধ। এখানে নতুনগুলো: বয়সের ছক, বেশি ঝুঁকির গ্রাহক,
  * পরিশোধের আচরণ, দেয়ালে থামা, দেয়ালের সাক্ষ্য, সীমা বদলের নিরীক্ষা, অনুরোধের ইতিহাস, শেষ হয়ে আসা অস্থায়ী সীমা, শাখা আর
- * বিক্রয়কর্মী ধরে ব্যবহৃত বাকি। ঝুঁকির ধারা [[CreditRiskTrend]]-এ।
+ * বিক্রয়কর্মী ধরে ব্যবহৃত বাকি, আর ঝুঁকির ধারা (রোজকার ছবি থেকে, [[CreditDaily::snapshot()]])।
  *
  * ⛔ এক হিসাব: প্রতিটা অঙ্ক দেয়ালের নিজের হিসাব ([[CreditExposure]]) বা মাত্রার উপকরণ ([[CreditRisk::factsFor()]]) থেকে।
  */
@@ -51,6 +51,8 @@ final class CreditControlLists
 
     public const BY_SALESPERSON = 'credit_control.exposure_by_salesperson';
 
+    public const RISK_TREND = 'credit_control.risk_trend';
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::ageing());
@@ -63,6 +65,7 @@ final class CreditControlLists
         $engine->register(self::temporary());
         $engine->register(self::byBranch());
         $engine->register(self::bySalesperson());
+        $engine->register(self::riskTrend());
     }
 
     /** বয়সের ছক — গ্রাহক × সাত ধাপ, বিলের বাকি দেয়ালের হিসাবে */
@@ -330,6 +333,45 @@ final class CreditControlLists
                 ['key' => 'temp_credit_limit', 'label' => 'credit_control::profile.temporary_limit', 'type' => ReportColumn::MONEY, 'total' => false],
                 ['key' => 'temp_credit_limit_until', 'label' => 'customer::credit_request.temp_until', 'type' => ReportColumn::DATE],
                 ['key' => 'days_left', 'label' => 'credit_control::lists.days_left', 'type' => ReportColumn::QUANTITY, 'total' => false],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ ঝুঁকির ধারা — দিন ধরে কোন মাত্রায় কতজন (রোজ সকালের ছবি, [[CreditDaily::snapshot()]])।
+     *
+     * ⓘ দেয়াল গ্রাহকের: কোম্পানি, শাখা, বিক্রয়কর্মী কেবল নিজের ডিলার। ⓘ ছবি না থাকা দিনের সারি নেই — আন্দাজ করে ভরা হয় না।
+     */
+    private static function riskTrend(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: self::RISK_TREND,
+            permission: 'credit_control.view',
+            title: 'credit_control::lists.trend_title',
+            filters: ['date_range', 'branch', 'salesman_id'],
+            splitByBranch: false,
+            query: function (array $f): Builder {
+                $query = DB::table('credit_risk_snapshots as s')
+                    ->join('customers', 'customers.id', '=', 's.customer_id')
+                    ->where('s.company_id', $f['company_id'])
+                    ->where('customers.company_id', $f['company_id'])
+                    ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'customers.id'))
+                    ->when(! empty($f['salesman_id']), fn ($q) => $q->whereIn('customers.id', DealerBinding::query()
+                        ->current()->where('user_id', (int) $f['salesman_id'])->select('customer_id')))
+                    ->whereBetween('s.taken_on', [$f['from'], $f['to']])
+                    ->groupBy('s.taken_on')
+                    ->select('s.taken_on');
+
+                foreach (CreditRisk::LEVELS as $level) {
+                    $query->selectRaw("SUM(CASE WHEN s.level = '{$level}' THEN 1 ELSE 0 END) as {$level}");
+                }
+
+                return $query->orderBy('s.taken_on');
+            },
+            columns: [
+                ['key' => 'taken_on', 'label' => 'credit_control::profile.when', 'type' => ReportColumn::DATE],
+                ...array_map(fn (string $l) => ['key' => $l, 'label' => 'credit_control::risk.'.$l, 'type' => ReportColumn::QUANTITY], CreditRisk::LEVELS),
             ],
         );
     }

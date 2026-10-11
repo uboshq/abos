@@ -36,6 +36,7 @@ class CreditReportController extends Controller implements HasMiddleware
         'temporary-limits' => CreditControlLists::TEMPORARY,
         'exposure-by-branch' => CreditControlLists::BY_BRANCH,
         'exposure-by-salesperson' => CreditControlLists::BY_SALESPERSON,
+        'risk-trend' => CreditControlLists::RISK_TREND,
     ];
 
     public function __construct(

@@ -27,4 +27,5 @@ return [
     'branch' => 'শাখা',
     'salesperson' => 'বিক্রয়কর্মী',
     'customers' => 'গ্রাহক',
+    'trend_title' => 'ঝুঁকির ধারা — দিন ধরে',
 ];
