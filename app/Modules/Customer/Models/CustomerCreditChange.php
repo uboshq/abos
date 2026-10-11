@@ -34,7 +34,10 @@ class CustomerCreditChange extends Model
     use ScopedToUserDealers;
 
     /** যে ঘরগুলোর বদল এখানে ওঠে */
-    public const FIELDS = ['credit_limit', 'credit_days'];
+    public const FIELDS = ['credit_limit', 'credit_days', 'temp_credit_limit', 'temp_credit_limit_until'];
+
+    /** টাকার ঘর — "৫০০০০" আর "৫০০০০.০০০০" একই */
+    public const MONEY = ['credit_limit', 'temp_credit_limit'];
 
     public const UPDATED_AT = null;
 
@@ -80,7 +83,21 @@ class CustomerCreditChange extends Model
             $new = $customer->getAttribute($field);
 
             // ⓘ "৫০০০০" আর "৫০০০০.০০০০" একই — অঙ্ক না বদলালে সারি নয়
+            // ⓘ সাধারণ সীমায় খালি আর ০ একই (খালি = ০, শূন্য মানে শূন্য); অস্থায়ীতে খালি মানে "নেই", ০ নয়
             if ($field === 'credit_limit' && bccomp((string) ($old ?? '0'), (string) ($new ?? '0'), 4) === 0) {
+                continue;
+            }
+
+            if (in_array($field, self::MONEY, true) && $old !== null && $new !== null
+                && bccomp((string) $old, (string) $new, 4) === 0) {
+                continue;
+            }
+
+            // ⓘ তারিখের ঘর ছাঁচ ছাড়া, কেবল দিন ("২০২৭-০৩-১০")
+            $old = $old instanceof \DateTimeInterface ? $old->format('Y-m-d') : $old;
+            $new = $new instanceof \DateTimeInterface ? $new->format('Y-m-d') : $new;
+
+            if ($old === $new) {
                 continue;
             }
 

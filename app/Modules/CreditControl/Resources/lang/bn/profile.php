@@ -10,6 +10,7 @@ return [
     'used' => 'সীমার :p% ব্যবহৃত',
     'limit' => 'সীমা',
     'temporary_limit' => 'অস্থায়ী সীমা',
+    'temporary_until' => ':amount (:date পর্যন্ত)',
     'effective_limit' => 'চলতি সীমা',
     'credit_days' => 'বাকির দিন',
     'days' => ':n দিন',

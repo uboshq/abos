@@ -43,7 +43,7 @@ class CreditProfileController extends Controller
                 'what' => __('customer::credit_history.'.$c->field),
                 'old' => $c->old_value,
                 'new' => $c->new_value,
-                'money' => $c->field === 'credit_limit',
+                'money' => in_array($c->field, CustomerCreditChange::MONEY, true),
                 'who' => $c->changer?->name,
                 'reason' => $c->reason,
                 'approval' => $c->approval_id,

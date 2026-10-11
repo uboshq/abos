@@ -153,6 +153,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     {
         return [
             'credit_limit' => 'decimal:4',
+            'temp_credit_limit' => 'decimal:4',
+            'temp_credit_limit_until' => 'date',
             'credit_days' => 'integer',
             'opening_balance' => 'decimal:4',
             'opening_date' => 'date',
@@ -173,6 +175,51 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     public function isCreditBlocked(): bool
     {
         return $this->credit_blocked_at !== null;
+    }
+
+    /**
+     * ⭐ চলতি সীমা — অস্থায়ী সীমা তার শেষ দিন পর্যন্ত, তারপর নিজে থেকেই সাধারণ সীমা (মালিকের উত্তর ৩, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ফেরানোর কোনো কাজ চলে না — প্রতিবার পড়ার সময়েই হিসাব, তাই শেষ দিনের পরদিন সকালে কাউকে কিছু করতে হয় না।
+     * ⓘ অস্থায়ীটা সাধারণের চেয়ে কম হলে সাধারণই — অস্থায়ী সীমা বাড়তি দেওয়ার জন্য, কেটে নেওয়ার জন্য নয় (পরে সাধারণ সীমা
+     * বাড়ালে পুরনো অস্থায়ী সেটা কমাত)।
+     * ⛔ দেয়াল, পাতা আর তালিকা সবাই এটাই পড়ে ([[wouldExceedCreditLimit()]], [[CreditExposure]]); `credit_limit` সরাসরি পড়লে
+     * অস্থায়ী সীমা কোথাও গোনা হত, কোথাও না।
+     */
+    public function effectiveCreditLimit(): string
+    {
+        $base = bcadd((string) ($this->credit_limit ?? '0') ?: '0', '0', 4);
+
+        if (! $this->hasLiveTemporaryLimit()) {
+            return $base;
+        }
+
+        $temporary = bcadd((string) $this->temp_credit_limit, '0', 4);
+
+        return bccomp($temporary, $base, 4) > 0 ? $temporary : $base;
+    }
+
+    /** অস্থায়ী সীমা আজও চলছে কি না — শেষ দিনটাও গোনা */
+    public function hasLiveTemporaryLimit(): bool
+    {
+        return $this->temp_credit_limit !== null
+            && $this->temp_credit_limit_until !== null
+            && ! Carbon::today()->gt($this->temp_credit_limit_until);
+    }
+
+    /**
+     * চলতি সীমা, SQL-এ — তালিকার ছাঁকনির জন্য ([[scopeOverCreditLimit()]]); নিয়ম [[effectiveCreditLimit()]]-এরই।
+     *
+     * @return array{0: string, 1: list<string>}
+     */
+    public static function effectiveLimitSql(string $table = 'customers'): array
+    {
+        return [
+            "CASE WHEN {$table}.temp_credit_limit IS NOT NULL AND {$table}.temp_credit_limit_until >= ? "
+            ."AND {$table}.temp_credit_limit > COALESCE({$table}.credit_limit, 0) "
+            ."THEN {$table}.temp_credit_limit ELSE COALESCE({$table}.credit_limit, 0) END",
+            [Carbon::today()->toDateString()],
+        ];
     }
 
     /** কে বাকি বন্ধ করেছেন */
@@ -429,7 +476,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
      */
     public function availableLimit(): ?string
     {
-        $limit = (string) $this->credit_limit;
+        // ⭐ চলতি সীমা — অস্থায়ীসহ ([[effectiveCreditLimit()]])
+        $limit = $this->effectiveCreditLimit();
 
         if (bccomp($limit, '0', 4) === 0) {
             return null;
@@ -578,7 +626,10 @@ class Customer extends Model implements AuthenticatableContract, Drillable
          * ⓘ সীমা না থাকা গ্রাহকের এক পয়সা বকেয়াও সীমা ছাড়ানো; আগে এটা
          * `customer.zero_limit_blocks` সুইচে বাঁধা ছিল, সেটা আর দেয়াল নরম করে না।
          */
-        return $query->whereRaw('('.$net->toRawSql().') > COALESCE(customers.credit_limit, 0)');
+        // ⭐ চলতি সীমা — অস্থায়ীসহ ([[effectiveLimitSql()]])
+        [$limit, $bindings] = self::effectiveLimitSql();
+
+        return $query->whereRaw('('.$net->toRawSql().') > '.$limit, $bindings);
     }
 
     /**
@@ -595,8 +646,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
          * সারিতে গিয়েছিল (S-0009)। সুইচটা আর দেয়াল নরম করে না
          * ([[NoLimitMeansNoCreditForAnyoneTest]])।
          */
-        $limit = (string) ($this->credit_limit ?? '0');
-        $limit = $limit === '' ? '0' : $limit;
+        // ⭐ চলতি সীমা — অস্থায়ী সীমা শেষ দিন পর্যন্ত ([[effectiveCreditLimit()]], ১১ অক্টোবর ২০২৬)
+        $limit = $this->effectiveCreditLimit();
 
         return bccomp(bcadd($this->outstanding(), $additional, 4), $limit, 4) > 0;
     }

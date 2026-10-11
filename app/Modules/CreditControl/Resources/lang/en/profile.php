@@ -10,6 +10,7 @@ return [
     'used' => ':p% of the limit used',
     'limit' => 'Limit',
     'temporary_limit' => 'Temporary limit',
+    'temporary_until' => ':amount (until :date)',
     'effective_limit' => 'Effective limit',
     'credit_days' => 'Credit days',
     'days' => ':n days',
