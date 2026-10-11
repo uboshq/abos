@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Contracts\CounterSales;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -15,7 +17,6 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Services\MethodFitsAccount;
-use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
@@ -46,15 +47,11 @@ use Illuminate\Validation\ValidationException;
 final class PosService
 {
     public function __construct(
-        private readonly SalesInvoiceService $invoices,
-        private readonly CollectionService $collections,
+        private readonly CounterSales $sales,
         private readonly SettingsService $settings,
-        private readonly SalesReturnService $returns,
         private readonly VoucherService $vouchers,
         private readonly CashTillService $tills,
-        private readonly CounterApproval $counter,
         private readonly AuditEngine $audit,
-        private readonly CreditExposure $credit,
     ) {}
 
     /**
@@ -76,7 +73,8 @@ final class PosService
         $customer = $this->resolveCustomer($data['customer_id'] ?? null);
 
         return DB::transaction(function () use ($data, $lines, $customer) {
-            $invoice = $this->invoices->create(
+            /** @var SalesInvoice $invoice বিক্রয়ের বিল — চুক্তি কোরে `Model` বলে ([[CounterSales]]) */
+            $invoice = $this->sales->draftInvoice(
                 [
                     'customer_id' => $customer->id,
                     'warehouse_id' => $data['warehouse_id'] ?? null,
@@ -242,9 +240,10 @@ final class PosService
             $resumed = $this->draftToFinish($data['resumed_invoice_id'] ?? null);
             $fresh = $resumed === null;
 
+            /** @var SalesInvoice $invoice */
             $invoice = $resumed !== null
-                ? $this->invoices->update($resumed, $head, $lines)
-                : $this->invoices->create($head, $lines);
+                ? $this->sales->redraftInvoice($resumed, $head, $lines)
+                : $this->sales->draftInvoice($head, $lines);
 
             /*
              * চাবিটা বিলের গায়ে বসে, আর ইনডেক্সই আসল পাহারা।
@@ -268,7 +267,7 @@ final class PosService
          * আবার বেচতে পারেন — কার্ট নতুন করে টাইপ করতে হয় না।
          */
         try {
-            $this->invoices->assertDiscountApproved($invoice);
+            $this->sales->assertDiscountSigned($invoice);
         } catch (ValidationException $blocked) {
             /*
              * ম্যানেজার পাশে দাঁড়িয়ে থাকলে এখানেই মিটে যায়।
@@ -293,7 +292,7 @@ final class PosService
                 throw $blocked;
             }
 
-            $this->invoices->assertDiscountApproved($invoice);
+            $this->sales->assertDiscountSigned($invoice);
         }
 
         try {
@@ -333,7 +332,7 @@ final class PosService
              * পুরনো ছবি থেকে আসত। ⭐ তাই তালাটা সবার আগে।
              */
             if ($customer !== null) {
-                $this->credit->lockCustomer($customer);
+                $this->sales->lockCustomer($customer);
             }
 
             /*
@@ -344,7 +343,8 @@ final class PosService
              * অঙ্ক, আর **নগদ POS বিক্রিও** সীমার নিচে পড়ত — যদিও সেখানে
              * কারও এক পয়সা ধারও বাড়ে না।
              */
-            $invoice = $this->invoices->confirm($invoice, $paid);
+            /** @var SalesInvoice $invoice */
+            $invoice = $this->sales->confirmInvoice($invoice, $paid);
 
             $total = (string) $invoice->total;
 
@@ -417,7 +417,7 @@ final class PosService
                 }
             }
 
-            $collection = $this->collections->create(
+            $collection = $this->sales->draftCollection(
                 [
                     'customer_id' => $customer->id,
                     /*
@@ -438,7 +438,7 @@ final class PosService
                 [['sales_invoice_id' => $invoice->id, 'amount' => $part['amount']]],
             );
 
-            $this->collections->confirm($collection);
+            $this->sales->confirmCollection($collection);
         }
     }
 
@@ -471,7 +471,8 @@ final class PosService
         $invoice = $this->soldOn($data['document_no'] ?? '');
 
         return DB::transaction(function () use ($data, $lines, $invoice) {
-            $return = $this->returns->create([
+            /** @var SalesReturn $return */
+            $return = $this->sales->draftReturn([
                 'customer_id' => $invoice->customer_id,
                 'warehouse_id' => $data['warehouse_id'] ?? $invoice->warehouse_id,
                 'sales_invoice_id' => $invoice->id,
@@ -480,7 +481,8 @@ final class PosService
                 'narration' => __('sales::message.pos_return_narration', ['no' => $invoice->document_no]),
             ], $lines);
 
-            $return = $this->returns->confirm($return);
+            /** @var SalesReturn $return */
+            $return = $this->sales->confirmReturn($return);
 
             $refund = null;
 
@@ -795,13 +797,14 @@ final class PosService
             return false;
         }
 
-        $approval = $this->counter->pending($invoice, 'discount');
+        $approval = $this->sales->pendingSignature($invoice, 'discount');
 
         if ($approval === null) {
             return false;
         }
 
-        $approver = $this->counter->decide(
+        /** @var User $approver */
+        $approver = $this->sales->signAtCounter(
             $approval,
             $email,
             $password,
@@ -938,6 +941,6 @@ final class PosService
      */
     public function todaysTotal(): string
     {
-        return SalesMetrics::salesTodayAtMyCounter()->value();
+        return $this->sales->salesTodayAtMyCounter();
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Contracts\CounterSales;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
@@ -19,7 +20,6 @@ use App\Modules\Inventory\Services\PackBarcode;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
-use App\Modules\Sales\Services\CounterApproval;
 use App\Modules\Sales\Services\PosService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -53,7 +53,7 @@ class PosController extends Controller implements HasMiddleware
         private readonly PosService $pos,
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
-        private readonly CounterApproval $approvals,
+        private readonly CounterSales $sales,
         private readonly RecipeBook $recipes,
     ) {}
 
@@ -172,7 +172,7 @@ class PosController extends Controller implements HasMiddleware
     {
         $invoice = $this->resumedInvoice($request);
 
-        return $invoice !== null && $this->approvals->pending($invoice, 'discount') !== null;
+        return $invoice !== null && $this->sales->pendingSignature($invoice, 'discount') !== null;
     }
 
     public function checkout(Request $request): RedirectResponse

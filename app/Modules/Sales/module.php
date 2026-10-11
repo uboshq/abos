@@ -102,6 +102,9 @@ return [
         // ⓘ ধরে রাখা বিলের আটকানো মাল — বিল নিশ্চিত বা বাতিল হলে ছাড়ে ([[ParkedStock]]; পিওএস ধাপ ২-এ বাঁধনটা পিওএসে যাবে)
         \App\Core\Contracts\ParkedStock::class => \App\Modules\Sales\Services\ParkedStockReservation::class,
 
+        // ⓘ কাউন্টার যা বিক্রয়ের ঘর থেকে চায় — বিল, আদায়, ফেরত, সীমা, সই ([[CounterSales]]; পিওএস ধাপ ২)
+        \App\Core\Contracts\CounterSales::class => \App\Modules\Sales\Services\SalesCounterSales::class,
+
         // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
 
