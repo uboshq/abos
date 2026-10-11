@@ -58,7 +58,7 @@
         <div class="grid gap-3 xl:grid-cols-2">
             <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.open_bills') }}</h2>
-                <div class="max-h-80 overflow-y-auto">
+                <div class="max-h-80 overflow-auto">
                     <table class="w-full text-sm" data-open-bills>
                         <thead>
                             <tr class="text-left text-2xs text-(--color-ink-muted)">
@@ -88,7 +88,7 @@
 
             <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.history') }}</h2>
-                <div class="max-h-80 overflow-y-auto">
+                <div class="max-h-80 overflow-auto">
                     <table class="w-full text-sm" data-credit-history>
                         <thead>
                             <tr class="text-left text-2xs text-(--color-ink-muted)">
@@ -126,6 +126,7 @@
 
         <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.decisions') }}</h2>
+            <div class="overflow-x-auto">
             <table class="w-full text-sm" data-wall-decisions>
                 <thead>
                     <tr class="text-left text-2xs text-(--color-ink-muted)">
@@ -156,6 +157,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </section>
     </div>
 </x-layouts.app>
