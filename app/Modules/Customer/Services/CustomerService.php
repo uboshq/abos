@@ -368,23 +368,26 @@ final class CustomerService
         });
     }
 
-    /** মালিক(দের) খবর — একই চেকে একবারই (`key`) */
+    /**
+     * মালিক(দের) খবর — একই চেকে একবারই (`key`)।
+     *
+     * ⓘ কোম্পানির প্রসঙ্গ ডাকার পক্ষের — শ্রোতা ঘটনার কোম্পানিতে বসেই ডাকে ([[BlockTheCustomerOnABouncedCheque]]); এখানে অন্য
+     * কোম্পানিতে ঢোকা হয় না।
+     */
     private function tellTheOwnersOfTheBounce(Customer $customer, int $companyId, int $chequeId, string $word): void
     {
-        CompanyContext::forCompany($companyId, function () use ($customer, $companyId, $chequeId, $word): void {
-            foreach (app(Ownership::class)->activeOwnersIn($companyId) as $owner) {
-                app(NotificationService::class)->send(
-                    $owner,
-                    'customer.cheque_bounce_block',
-                    __('customer::credit_block.bounce_notice_title', ['customer' => $customer->name()]),
-                    __('customer::credit_block.bounce_notice_body', ['reason' => $word]),
-                    route('customer.show', $customer),
-                    evenToSelf: true,
-                    key: 'customer:bounce_block:'.$chequeId,
-                    about: $customer,
-                );
-            }
-        });
+        foreach (app(Ownership::class)->activeOwnersIn($companyId) as $owner) {
+            app(NotificationService::class)->send(
+                $owner,
+                'customer.cheque_bounce_block',
+                __('customer::credit_block.bounce_notice_title', ['customer' => $customer->name()]),
+                __('customer::credit_block.bounce_notice_body', ['reason' => $word]),
+                route('customer.show', $customer),
+                evenToSelf: true,
+                key: 'customer:bounce_block:'.$chequeId,
+                about: $customer,
+            );
+        }
     }
 
     /** ইনি কি এই কোম্পানির সুপার অ্যাডমিন (মালিক) — রোলটা চলতি কোম্পানির (spatie teams) */
