@@ -165,7 +165,12 @@
         </div>
         <div class="flex gap-2 px-4 pt-1 pb-2">
             @foreach ($parts as $part)
-                <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $part['label'] }}</div>
+                {{-- ⓘ ধাপে চাপলে তার তালিকা — যে ভাগ নিজের ঠিকানা দেয় (`href`; বাকি নিয়ন্ত্রণ, ১১ অক্টোবর ২০২৬) --}}
+                @if (! empty($part['href']))
+                    <a href="{{ $part['href'] }}" class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-brand-500) hover:underline">{{ $part['label'] }}</a>
+                @else
+                    <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $part['label'] }}</div>
+                @endif
             @endforeach
         </div>
     @else
@@ -174,7 +179,11 @@
             @foreach ($compact ? array_slice($parts, 0, 5) : $parts as $part)
                 <div>
                     <div class="mb-1 flex items-baseline justify-between gap-3 text-xs">
-                        <span class="min-w-0 truncate text-(--color-ink-body)">{{ $part['label'] }}</span>
+                        @if (! empty($part['href']))
+                            <a href="{{ $part['href'] }}" class="min-w-0 truncate text-(--color-brand-500) hover:underline">{{ $part['label'] }}</a>
+                        @else
+                            <span class="min-w-0 truncate text-(--color-ink-body)">{{ $part['label'] }}</span>
+                        @endif
                         <span data-bar-value class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
                     </div>
                     <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">

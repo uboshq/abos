@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\CreditControl\Dashboard\CreditDashboard;
+use App\Modules\CreditControl\Models\CreditProfile;
+use App\Modules\CreditControl\Reports\CreditPositionReports;
 
 /**
  * ⭐ বাকি নিয়ন্ত্রণ — মালিকের "Credit Control & Credit Risk Management v2.0", তাঁর নিজের চূড়ান্ত নিয়মে বাঁকানো
@@ -44,6 +46,20 @@ return [
             ['label' => 'credit_control::menu.dashboard', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'credit_control'], 'permission' => 'credit_control.view'],
         ],
+
+        // ⭐ ড্যাশবোর্ডের প্রতিটা সংখ্যার নিচের তালিকা ([[CreditPositionReports]])
+        'reports' => [
+            ['label' => 'credit_control::report.positions_title', 'icon' => 'reports', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'positions'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::report.over_limit_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'over-limit'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::report.overdue_stopped_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'overdue-stopped'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::report.overdue_bills_title', 'icon' => 'wallet', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'overdue-bills'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::report.pending_requests_title', 'icon' => 'inbox', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'pending-requests'], 'permission' => 'credit_control.view'],
+        ],
     ],
 
     'permissions' => [
@@ -66,4 +82,13 @@ return [
     ],
 
     'moves_money' => [],
+
+    // ⓘ গ্রাহকের নামে চাপলে তাঁর বাকির পাতা ([[CreditProfile]])
+    'drill_sources' => [
+        CreditPositionReports::PROFILE => CreditProfile::class,
+    ],
+
+    'reports' => [
+        CreditPositionReports::class,
+    ],
 ];

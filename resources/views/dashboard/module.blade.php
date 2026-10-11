@@ -175,12 +175,18 @@
                             @foreach ($panel->parts as $part)
                                 <div>
                                     <div class="mb-1 flex items-baseline justify-between text-xs">
-                                        <span class="text-(--color-ink-muted)">{{ $part['label'] }}</span>
+                                        {{-- ⓘ ভাগে চাপলে তার তালিকা — যে ভাগ নিজের ঠিকানা দেয় (`href`; বাকি নিয়ন্ত্রণ, ১১ অক্টোবর ২০২৬) --}}
+                                        @if (! empty($part['href']))
+                                            <a href="{{ $part['href'] }}" class="text-(--color-brand-500) hover:underline">{{ $part['label'] }}</a>
+                                        @else
+                                            <span class="text-(--color-ink-muted)">{{ $part['label'] }}</span>
+                                        @endif
                                         <span class="font-semibold tabular-nums">{{ $part['value'] }}</span>
                                     </div>
                                     <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
+                                        {{-- ⓘ সাজানো অঙ্ক ("১,২০,০০০") সংখ্যায় ফেরে — নইলে কমায় কেটে ১ হত ([[Breakdown::number()]]) --}}
                                         <div class="h-full bg-(--color-brand-500)"
-                                             style="width:{{ min(100, max(0, (int) round((float) $part['value'] / $total * 100))) }}%"></div>
+                                             style="width:{{ min(100, max(0, (int) round(\App\Core\Engines\Dashboard\Breakdown::number($part['value']) / $total * 100))) }}%"></div>
                                     </div>
                                 </div>
                             @endforeach

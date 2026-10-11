@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'positions_title' => 'বাকির অবস্থা — গ্রাহক ধরে',
+    'over_limit_title' => 'সীমা পার গ্রাহক',
+    'overdue_stopped_title' => 'মেয়াদ পেরোনো বাকিতে বন্ধ গ্রাহক',
+    'overdue_bills_title' => 'মেয়াদ পেরোনো বিল',
+    'pending_requests_title' => 'সই না পড়া সীমা বাড়ানোর অনুরোধ',
+    'code' => 'কোড',
+    'customer' => 'গ্রাহক',
+    'limit' => 'সীমা',
+    'due' => 'খাতার বকেয়া',
+    'held' => 'আটকে থাকা',
+    'uncleared' => 'ক্লিয়ার না হওয়া চেক',
+    'exposure' => 'ব্যবহৃত',
+    'available' => 'অবশিষ্ট',
+    'used' => 'ব্যবহার',
+    'overdue' => 'মেয়াদ পেরোনো',
+    'state' => 'অবস্থা',
+    'bill' => 'বিল',
+    'due_on' => 'মেয়াদ',
+    'days_overdue' => 'দিন পেরিয়েছে',
+    'bucket' => 'ধাপ',
+    'unpaid' => 'বাকি',
+    'requested_on' => 'অনুরোধের দিন',
+    'asked_limit' => 'চাওয়া সীমা',
+    'requested_by' => 'অনুরোধ করেছেন',
+    'reason' => 'কারণ',
+    'bucket_not_due' => 'মেয়াদ আসেনি',
+    'bucket_d1_7' => '১–৭ দিন',
+    'bucket_d8_15' => '৮–১৫ দিন',
+    'bucket_d16_30' => '১৬–৩০ দিন',
+    'bucket_d31_60' => '৩১–৬০ দিন',
+    'bucket_d61_90' => '৬১–৯০ দিন',
+    'bucket_d90_plus' => '৯০+ দিন',
+];

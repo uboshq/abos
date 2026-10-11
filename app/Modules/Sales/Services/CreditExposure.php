@@ -201,8 +201,49 @@ final class CreditExposure implements CreditHolds
         }
 
         $cutoff = Carbon::today()->subDays($days)->toDateString();
+        $out = [];
+
+        foreach ($this->openBillRows($customers, $cutoff) as $customerId => $bills) {
+            foreach ($bills as $bill) {
+                if ($bill['due_on'] < $cutoff) {
+                    $out[$customerId][] = ['no' => $bill['no'], 'unpaid' => $bill['unpaid'], 'due_on' => $bill['due_on']];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ খোলা বিল — মেয়াদ আর কত দিন পেরিয়েছে, পুরনোটা আগে (বাকি নিয়ন্ত্রণ ধাপ ১.৩; গ্রাহকের বাকির পাতা আর ড্যাশবোর্ডের বয়স)।
+     *
+     * ⓘ [[overdueBills()]]-এর হুবহু হিসাব — বিলের বাকি, মেয়াদ, আর কোনো বিলে না বসা জমা সবচেয়ে পুরনো বিল থেকে কাটা। ⛔ আলাদা
+     * হিসাব লিখলে পাতা এক বিলকে "বাকি" আর দেয়াল "শোধ" বলত।
+     *
+     * ⓘ `days_overdue` ঋণাত্মক বা ০ = মেয়াদ আসেনি।
+     *
+     * @param  array<int, Customer>  $customers  id → গ্রাহক
+     * @return array<int, list<array{id: int, no: string, unpaid: string, due_on: string, days_overdue: int}>>
+     */
+    public function openBills(array $customers): array
+    {
+        return $this->openBillRows($customers, null);
+    }
+
+    /**
+     * @param  array<int, Customer>  $customers
+     * @param  string|null  $onlyIfOlderThan  দেয়ালের জন্য: যাঁর এর আগের মেয়াদের খোলা বিল নেই, তাঁর খাতা পড়াই হয় না
+     * @return array<int, list<array{id: int, no: string, unpaid: string, due_on: string, days_overdue: int}>>
+     */
+    private function openBillRows(array $customers, ?string $onlyIfOlderThan): array
+    {
+        if ($customers === []) {
+            return [];
+        }
+
         $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total)';
         $on = 'COALESCE(i.due_on, i.trx_date)';
+        $today = Carbon::today();
 
         $bills = SalesInvoice::query()->posted()->withCollected()->toBase()
             ->where('sal_invoices.company_id', CompanyContext::id())
@@ -213,7 +254,7 @@ final class CreditExposure implements CreditHolds
             ->orderBy('i.customer_id')
             ->orderByRaw($on)
             ->orderBy('i.id')
-            ->selectRaw("i.customer_id, i.document_no, {$on} as due_date, {$due} as unpaid")
+            ->selectRaw("i.id, i.customer_id, i.document_no, {$on} as due_date, {$due} as unpaid")
             ->get()
             ->groupBy('customer_id');
 
@@ -223,7 +264,8 @@ final class CreditExposure implements CreditHolds
             $customer = $customers[(int) $customerId] ?? null;
 
             // ⓘ কেবল যাঁর অন্তত একটা পুরনো খোলা বিল আছে — বাকিদের খাতা পড়ার দরকারই নেই
-            if ($customer === null || ! $open->contains(fn ($r) => (string) $r->due_date < $cutoff)) {
+            if ($customer === null
+                || ($onlyIfOlderThan !== null && ! $open->contains(fn ($r) => (string) $r->due_date < $onlyIfOlderThan))) {
                 continue;
             }
 
@@ -237,13 +279,80 @@ final class CreditExposure implements CreditHolds
                 $left = bcsub($left, $take, 4);
                 $loose = bcsub($loose, $take, 4);
 
-                if ((string) $row->due_date < $cutoff && bccomp($left, '0.0001', 4) > 0) {
-                    $out[(int) $customerId][] = ['no' => (string) $row->document_no, 'unpaid' => $left, 'due_on' => (string) $row->due_date];
+                if (bccomp($left, '0.0001', 4) > 0) {
+                    $out[(int) $customerId][] = [
+                        'id' => (int) $row->id,
+                        'no' => (string) $row->document_no,
+                        'unpaid' => $left,
+                        'due_on' => (string) $row->due_date,
+                        'days_overdue' => (int) Carbon::parse((string) $row->due_date)->diffInDays($today, false),
+                    ];
                 }
             }
         }
 
         return $out;
+    }
+
+    /**
+     * ⭐ অনেক গ্রাহকের বাকির অবস্থা একবারে — ড্যাশবোর্ড, গ্রাহকের বাকির পাতা আর তালিকার জন্য (বাকি নিয়ন্ত্রণ ধাপ ১.২–১.৩)।
+     *
+     * ⛔ দেয়ালের হুবহু ভাগ, নতুন সূত্র নয়: খাতার বকেয়া ([[Customer::outstanding()]]) + আটকে থাকা ([[pendingFor()]]) + ক্লিয়ার না
+     * হওয়া চেক ([[unclearedChequesFor()]]) = ব্যবহৃত; সীমা − ব্যবহৃত = অবশিষ্ট (০-এর নিচে নয়)। অবস্থা [[stopDetails()]] থেকে:
+     * বাকি বন্ধ, মেয়াদ পেরোনো বাকিতে বন্ধ, সীমা পার, নইলে চালু। ⓘ সীমার সুইচ বন্ধ থাকলে অবস্থা `unchecked` — অঙ্ক থাকে, দেয়াল নেই।
+     *
+     * ⓘ বকেয়া প্রতিটা গ্রাহকে আলাদা কোয়েরি না চাইলে তালিকা `withOutstanding()` দিয়ে আনুন।
+     *
+     * @param  iterable<Customer>  $customers
+     * @return array<int, array{limit: string, due: string, held: string, uncleared: string, exposure: string, available: string, used_percent: ?string, state: string, stop: ?string}>
+     */
+    public function positionsFor(iterable $customers): array
+    {
+        $list = [];
+
+        foreach ($customers as $customer) {
+            $list[(int) $customer->id] = $customer;
+        }
+
+        if ($list === []) {
+            return [];
+        }
+
+        $ids = array_keys($list);
+        $held = $this->pendingFor($ids);
+        $cheques = $this->unclearedChequesFor($ids);
+        $stops = $this->stopDetails($list);
+        $on = $this->isOn();
+        $out = [];
+
+        foreach ($list as $id => $customer) {
+            $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
+            $due = $customer->outstanding();
+            $h = bcadd($held[$id] ?? '0', '0', 4);
+            $u = bcadd($cheques[$id] ?? '0', '0', 4);
+            $exposure = bcadd(bcadd($due, $h, 4), $u, 4);
+            $left = bcsub($limit, $exposure, 4);
+
+            $out[$id] = [
+                'limit' => $limit,
+                'due' => $due,
+                'held' => $h,
+                'uncleared' => $u,
+                'exposure' => $exposure,
+                'available' => bccomp($left, '0', 4) > 0 ? $left : '0.0000',
+                'used_percent' => bccomp($limit, '0', 4) > 0 ? bcdiv(bcmul($exposure, '100', 4), $limit, 2) : null,
+                'state' => ! $on ? 'unchecked' : ($stops[$id]['kind'] ?? (bccomp($exposure, $limit, 4) > 0 ? 'over_limit' : 'active')),
+                'stop' => $stops[$id]['message'] ?? null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /** একজনের — [[positionsFor()]]-এর একই হিসাব */
+    public function positionOf(Customer $customer): array
+    {
+        return $this->positionsFor([$customer])[(int) $customer->id];
     }
 
     /**

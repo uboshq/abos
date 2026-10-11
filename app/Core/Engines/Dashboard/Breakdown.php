@@ -20,7 +20,7 @@ use InvalidArgumentException;
 final class Breakdown
 {
     /**
-     * @param  list<array{label: string, value: string, tone?: string}>  $parts
+     * @param  list<array{label: string, value: string, tone?: string, href?: string}>  $parts
      */
     /** ⓘ ভাগের চার আন্তর্জাতিক রূপ — ডোনাট, আড়াআড়ি দণ্ড, খাড়া স্তম্ভ, ফানেল */
     public const CHARTS = ['donut', 'hbars', 'columns', 'funnel'];
@@ -55,7 +55,8 @@ final class Breakdown
         $total = 0.0;
 
         foreach ($this->parts as $part) {
-            $total += (float) $part['value'];
+            // ⓘ সাজানো অঙ্কও ("১,২০,০০০") — [[number()]]; আগে `(float)` কমায় কেটে ১ পড়ত
+            $total += self::number($part['value']);
         }
 
         return $total > 0 ? $total : 1.0;
