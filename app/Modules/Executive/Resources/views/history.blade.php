@@ -38,10 +38,9 @@
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}</h1>
             <form method="GET" action="{{ route('executive.history') }}" class="flex flex-wrap items-center gap-2">
                 <label for="hist-date" class="text-sm text-(--color-ink-muted)">{{ __('executive::history.date') }}</label>
-                <input id="hist-date" type="date" name="date" value="{{ $date }}" max="{{ now()->toDateString() }}"
-                       class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date id="hist-date" name="date" :value="$date" :max="now()->toDateString()" />
                 <label class="sr-only" for="hist-figure">{{ __('executive::compare.figure') }}</label>
-                <select id="hist-figure" name="figure" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="hist-figure" name="figure" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Figures::KEYS as $key)
                         <option value="{{ $key }}" @selected($figure === $key)>{{ __('executive::figure.'.$key) }}</option>
                     @endforeach
@@ -56,25 +55,25 @@
                 {{ __('executive::history.as_kept', ['date' => \App\Core\Engines\Dashboard\DateRange::label($date, $date)]) }}
             </p>
             <div class="min-h-0 flex-1 overflow-auto">
-                <table class="w-full text-sm">
+                <table class="ui-grid w-full text-sm">
                     <thead class="sticky top-0 bg-(--color-surface-card)">
                         <tr class="text-left text-2xs text-(--color-ink-muted)">
-                            <th class="px-3 py-2 font-semibold">{{ __('executive::today.col_place') }}</th>
+                            <th class="font-semibold">{{ __('executive::today.col_place') }}</th>
                             @foreach (Figures::KEYS as $key)
-                                <th class="px-3 py-2 text-right font-semibold">{{ __('executive::figure.'.$key) }}</th>
+                                <th class="text-right font-semibold">{{ __('executive::figure.'.$key) }}</th>
                             @endforeach
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($rows as $row)
                             <tr data-history-row="{{ $row['company_id'] }}-{{ $row['branch_id'] ?? 0 }}" @class(['border-t border-(--color-border)', 'bg-(--color-surface-hover) font-semibold' => $row['branch_id'] === null])>
-                                <td class="px-3 py-1.5">{{ $row['name'] }}
+                                <td>{{ $row['name'] }}
                                     @if ($row['branch_id'] !== null)
                                         <span class="text-2xs text-(--color-ink-muted)">· {{ $row['company_name'] }}</span>
                                     @endif
                                 </td>
                                 @foreach (Figures::KEYS as $key)
-                                    <td class="tabular px-3 py-1.5 text-right" data-cell="{{ $key }}">{{ $show($row['values'][$key], $key) }}</td>
+                                    <td class="tabular text-right" data-cell="{{ $key }}">{{ $show($row['values'][$key], $key) }}</td>
                                 @endforeach
                             </tr>
                         @empty

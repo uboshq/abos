@@ -12,7 +12,7 @@
         default => (string) (int) $value,
     };
 @endphp
-<td class="tabular px-3 py-1.5 text-right" data-cell="{{ $key }}">
+<td class="tabular text-right" data-cell="{{ $key }}">
     @if ($value === null || $hidden)
         <span class="text-(--color-ink-muted)" title="{{ $hidden ? __('executive::today.hidden') : __('executive::today.not_by_branch') }}">{{ $text }}</span>
     @else

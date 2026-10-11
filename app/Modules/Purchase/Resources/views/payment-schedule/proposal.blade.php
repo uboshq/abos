@@ -26,11 +26,11 @@
         <table class="ui-list w-full text-sm">
             <thead>
                 <tr class="border-b border-(--color-border) text-left text-(--color-ink-muted)">
-                    <th class="px-3 py-2">{{ __('purchase::doc.payment') }}</th>
-                    <th class="px-3 py-2">{{ __('purchase::schedule.supplier') }}</th>
-                    <th class="px-3 py-2">{{ __('purchase::schedule.bill') }}</th>
-                    <th class="px-3 py-2 text-right">{{ __('purchase::schedule.due') }}</th>
-                    <th class="px-3 py-2">{{ __('purchase::schedule.proposal_state') }}</th>
+                    <th>{{ __('purchase::doc.payment') }}</th>
+                    <th>{{ __('purchase::schedule.supplier') }}</th>
+                    <th>{{ __('purchase::schedule.bill') }}</th>
+                    <th class="text-right">{{ __('purchase::schedule.due') }}</th>
+                    <th>{{ __('purchase::schedule.proposal_state') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,11 +47,11 @@
                         };
                     @endphp
                     <tr class="border-b border-(--color-border)/60" data-proposal-row="{{ $payment->id }}" data-proposal-state="{{ $state }}">
-                        <td class="px-3 py-2"><a class="text-(--color-brand-600) hover:underline" href="{{ route('purchase.payment.show', $payment) }}">{{ $payment->document_no }}</a></td>
-                        <td class="px-3 py-2">{{ $payment->supplier?->name() }}</td>
-                        <td class="px-3 py-2">{{ $payment->lines->map(fn ($l) => $l->bill?->document_no)->filter()->implode(', ') }}</td>
-                        <td class="num px-3 py-2 text-right">{{ Money::format((string) $payment->amount) }}</td>
-                        <td class="px-3 py-2">{{ __('purchase::schedule.state_'.$state) }}</td>
+                        <td><a class="text-(--color-brand-600) hover:underline" href="{{ route('purchase.payment.show', $payment) }}">{{ $payment->document_no }}</a></td>
+                        <td>{{ $payment->supplier?->name() }}</td>
+                        <td>{{ $payment->lines->map(fn ($l) => $l->bill?->document_no)->filter()->implode(', ') }}</td>
+                        <td class="num text-right">{{ Money::format((string) $payment->amount) }}</td>
+                        <td>{{ __('purchase::schedule.state_'.$state) }}</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -38,7 +38,7 @@
 
             <form method="GET" action="{{ route('executive.analysis') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="an-period">{{ __('executive::today.period') }}</label>
-                <select id="an-period" name="period" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="an-period" name="period" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (AnalysisController::PERIODS as $p)
                         <option value="{{ $p }}" @selected($period === $p)>{{ __('executive::analysis.period_'.$p) }}</option>
                     @endforeach

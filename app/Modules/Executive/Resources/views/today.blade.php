@@ -46,7 +46,7 @@
             <form method="GET" action="{{ route('executive.today') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="ex-company">{{ __('executive::today.company') }}</label>
                 <select id="ex-company" name="company"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     <option value="">{{ __('executive::today.all_companies') }}</option>
                     @foreach ($board['choices'] as $choice)
                         <option value="{{ $choice['id'] }}" @selected($filters['company'] === $choice['id'])>{{ $choice['name'] }}</option>
@@ -55,7 +55,7 @@
 
                 <label class="sr-only" for="ex-branch">{{ __('executive::today.branch') }}</label>
                 <select id="ex-branch" name="branch"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     <option value="">{{ __('executive::today.all_branches') }}</option>
                     @foreach ($board['choices'] as $choice)
                         @if ($filters['company'] === $choice['id'])
@@ -68,7 +68,7 @@
 
                 <label class="sr-only" for="ex-period">{{ __('executive::today.period') }}</label>
                 <select id="ex-period" name="period"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Figures::PERIODS as $period)
                         <option value="{{ $period }}" @selected($filters['period'] === $period)>{{ __('executive::today.period_'.$period) }}</option>
                     @endforeach
@@ -137,12 +137,12 @@
 
                 {{-- ⓘ দশটার বেশি সারি হলে ছকটা নিজের ভিতরে সরে — পাতা নয় --}}
                 <div class="min-h-0 flex-1 overflow-auto">
-                    <table class="w-full text-sm">
+                    <table class="ui-grid w-full text-sm">
                         <thead class="sticky top-0 bg-(--color-surface-card)">
                             <tr class="text-left text-2xs text-(--color-ink-muted)">
-                                <th class="px-3 py-2 font-semibold">{{ __('executive::today.col_place') }}</th>
+                                <th class="font-semibold">{{ __('executive::today.col_place') }}</th>
                                 @foreach (Figures::KEYS as $key)
-                                    <th class="px-3 py-2 text-right font-semibold" title="{{ __('executive::figure.'.$key.'_hint') }}">{{ __('executive::figure.'.$key) }}</th>
+                                    <th class="text-right font-semibold" title="{{ __('executive::figure.'.$key.'_hint') }}">{{ __('executive::figure.'.$key) }}</th>
                                 @endforeach
                             </tr>
                         </thead>
@@ -150,7 +150,7 @@
                             @foreach ($board['companies'] as $company)
                                 @foreach ($company['rows'] as $row)
                                     <tr data-row="branch" data-company="{{ $company['id'] }}" data-branch="{{ $row['id'] }}" class="border-t border-(--color-border)">
-                                        <td class="px-3 py-1.5">
+                                        <td>
                                             <span class="text-(--color-ink)">{{ $row['name'] }}</span>
                                             @if (count($board['companies']) > 1)
                                                 <span class="text-2xs text-(--color-ink-muted)">· {{ $company['name'] }}</span>
@@ -164,20 +164,20 @@
 
                                 @if ($company['unsplit'] !== null)
                                     <tr data-row="unsplit" data-company="{{ $company['id'] }}" class="border-t border-(--color-border)">
-                                        <td class="px-3 py-1.5 text-(--color-ink-muted)" title="{{ __('executive::today.unsplit_hint') }}">
+                                        <td class="text-(--color-ink-muted)" title="{{ __('executive::today.unsplit_hint') }}">
                                             {{ __('executive::today.unsplit') }}
                                             @if (count($board['companies']) > 1)
                                                 <span class="text-2xs">· {{ $company['name'] }}</span>
                                             @endif
                                         </td>
                                         @foreach (Figures::KEYS as $key)
-                                            <td class="tabular px-3 py-1.5 text-right text-(--color-ink-muted)" data-cell="{{ $key }}">{{ $show($company['unsplit'][$key], $key) }}</td>
+                                            <td class="tabular text-right text-(--color-ink-muted)" data-cell="{{ $key }}">{{ $show($company['unsplit'][$key], $key) }}</td>
                                         @endforeach
                                     </tr>
                                 @endif
 
                                 <tr data-row="company" data-company="{{ $company['id'] }}" class="border-t border-(--color-border) bg-(--color-surface-hover) font-semibold">
-                                    <td class="px-3 py-1.5">{{ __('executive::today.company_total', ['company' => $company['name']]) }}</td>
+                                    <td>{{ __('executive::today.company_total', ['company' => $company['name']]) }}</td>
                                     @foreach (Figures::KEYS as $key)
                                         @include('executive::partials.cell', ['value' => $company['values'][$key], 'key' => $key, 'company' => $company['id'], 'branch' => $company['only']])
                                     @endforeach
@@ -187,18 +187,18 @@
                         <tfoot class="sticky bottom-0 bg-(--color-surface-card)">
                             @if ($board['eliminated'] !== null)
                                 <tr data-row="eliminated" class="border-t border-(--color-border) text-(--color-ink-muted)">
-                                    <td class="px-3 py-1.5" title="{{ __('executive::today.eliminated_hint') }}">{{ __('executive::today.eliminated') }}</td>
+                                    <td title="{{ __('executive::today.eliminated_hint') }}">{{ __('executive::today.eliminated') }}</td>
                                     @foreach (Figures::KEYS as $key)
-                                        <td class="tabular px-3 py-1.5 text-right" data-cell="{{ $key }}">
+                                        <td class="tabular text-right" data-cell="{{ $key }}">
                                             {{ isset($board['eliminated'][$key]) ? '−'.Money::format($board['eliminated'][$key], 0) : '' }}
                                         </td>
                                     @endforeach
                                 </tr>
                             @endif
                             <tr data-row="group" class="border-t-2 border-(--color-border) font-bold">
-                                <td class="px-3 py-2">{{ __('executive::today.group_total') }}</td>
+                                <td>{{ __('executive::today.group_total') }}</td>
                                 @foreach (Figures::KEYS as $key)
-                                    <td class="tabular px-3 py-2 text-right" data-cell="{{ $key }}"
+                                    <td class="tabular text-right" data-cell="{{ $key }}"
                                         @if ($board['partial'][$key]) title="{{ __('executive::today.partial') }}" @endif>
                                         {{ $show($board['total'][$key], $key) }}@if ($board['partial'][$key])*@endif
                                     </td>

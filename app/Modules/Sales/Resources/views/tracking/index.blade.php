@@ -41,7 +41,7 @@
             'label' => __('sales::field.state'),
             'width' => '10rem',
             'render' => fn ($r) => new \Illuminate\Support\HtmlString(
-                '<span class="font-medium" style="color: '.e($trackingColours[$r['category']] ?? '#111827').'">'
+                '<span class="font-medium" style="color: '.e($trackingColours[$r['category']] ?? 'var(--color-ink)').'">'
                 .e(__('sales::tracking.step.'.$r['step'])).'</span>'),
         ],
         [

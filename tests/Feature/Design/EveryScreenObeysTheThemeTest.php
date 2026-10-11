@@ -42,6 +42,16 @@ class EveryScreenObeysTheThemeTest extends TestCase
         'resources/views/print/' => 'ছাপা থিম মানে না — বিল সবার জন্য এক, ব্যক্তির পছন্দ নয়',
         'app/Modules/Accounts/Resources/views/print/asset-labels.blade.php' => 'সম্পদের লেবেলের কাগজ (mPDF) — ছাপার ছাঁচ, থিম নয় (স্থায়ী সম্পদ, ১১ অক্টোবর ২০২৬)',
         'resources/views/welcome.blade.php' => 'Laravel-এর নিজের স্বাগত পাতা; ব্যবহারকারী কোনোদিন দেখেন না',
+
+        /* ⓘ নিচেরগুলো ১১ অক্টোবর ২০২৬ যোগ (Design: হাতে লেখা রং) — বাকি ১০টা পাতা টোকেনে সারানো, এগুলো সত্যিই থিমের বাইরে */
+        'app/Modules/Sales/Resources/views/print/' => 'বিল-চালান-অর্ডারের ছাপার নকশা — উপরের resources/views/print/-এর একই কারণ',
+        'app/Modules/Purchase/Resources/views/print/' => 'ক্রয় বিলের ছাপার নকশা — একই কারণ',
+        'app/Modules/Finance/Resources/views/hand-loan/print/' => 'হাওলাতের চিঠি, ছাপার কাগজ — একই কারণ',
+        'resources/views/mail/' => 'ইমেইল — মেইল-প্রোগ্রাম CSS ভেরিয়েবল পড়ে না, রং ইনলাইন হেক্সেই যেতে হয়',
+        'resources/views/errors/layout.blade.php' => 'ত্রুটির পাতা ইচ্ছা করে কোনো CSS টানে না (বিল্ড ভাঙলেও যেন পড়া যায়) — টোকেনই সেখানে নেই',
+        'resources/views/auth/signin.blade.php' => 'মালিকের বাছা "মুক্তা" লগইন নকশা — লগইনের আগে কারও থিম নেই',
+        'resources/views/auth/_form.blade.php' => 'ঐ লগইন নকশার ফর্ম — একই কারণ',
+        'resources/views/components/shell/scanner.blade.php' => 'ক্যামেরার ছবির উপর কোণ আর আড়াল — যেকোনো ছবির উপর চোখে পড়তে হয়, থিমের রঙে নয়',
     ];
 
     /**
@@ -53,6 +63,11 @@ class EveryScreenObeysTheThemeTest extends TestCase
         'resources/views/components/ui/table.blade.php' => 'কম্পোনেন্টটাই — টেবিলটা এখানেই লেখা',
         'resources/views/print/' => 'ছাপার কাগজ নিজের ছাঁচে; থিমের সাথে সম্পর্ক নেই',
         'app/Modules/Accounts/Resources/views/print/asset-labels.blade.php' => 'সম্পদের লেবেলের কাগজ (mPDF) — ছাপার ছাঁচ, থিম নয় (স্থায়ী সম্পদ, ১১ অক্টোবর ২০২৬)',
+        /* ⓘ ১১ অক্টোবর ২০২৬ (Design: টেবিলের নাম, ঘরের প্যাডিং) — বাকি ১৮টা টেবিল ui-grid পরেছে */
+        'app/Modules/Sales/Resources/views/print/' => 'বিল-চালান-অর্ডারের ছাপার নকশা — উপরের একই কারণ',
+        'app/Modules/Purchase/Resources/views/print/' => 'ক্রয় বিলের ছাপার নকশা — একই কারণ',
+        'app/Modules/Finance/Resources/views/hand-loan/print/' => 'হাওলাতের চিঠি, ছাপার কাগজ — একই কারণ',
+        'resources/views/components/dashboard/hero-listing.blade.php' => 'ড্যাশবোর্ডের গাঢ় হিরো কার্ডে সাদা লেখার ছোট তালিকা — ui-grid-এর হালকা ডোরা-সারি আর মাথার পটি ওখানে লেখা ঢেকে দিত',
     ];
 
     /**
@@ -68,6 +83,9 @@ class EveryScreenObeysTheThemeTest extends TestCase
         'resources/views/workspace/appearance.blade.php' => 'এখানেই বাছাই হয় — না জানলে বাছার কিছু থাকে না',
         'resources/views/workspace/partials/ui-card.blade.php' => 'বাছাইয়ের নমুনা: চেহারাটার নিজের রঙে আঁকা হয়, তাই রংটা এখান থেকেই আসে',
         'resources/views/components/shell/' => 'শেলের অংশ — কোন খোলসে বসবে সেটা জানাই ওদের কাজ',
+        /* ⓘ ১১ অক্টোবর ২০২৬ (Design: থিম জানে) */
+        'resources/views/components/layouts/app.blade.php' => 'শেলের মূল খোলস — ABOS রূপে মডিউল-বার, বাকিতে পথের পটি; ভিতরের পাতা কিছু জানে না',
+        'app/Modules/Sales/Resources/views/print/' => 'ছাপার নকশার নিজের নাম, থিমের নামের সাথে কেবল বানানে মেলে — কাগজ থিম মানে না',
     ];
 
     /**

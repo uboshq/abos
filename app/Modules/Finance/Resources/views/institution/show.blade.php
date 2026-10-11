@@ -93,18 +93,18 @@
             @if ($links->isEmpty())
                 <p class="px-4 py-3 text-sm text-(--color-ink-muted)">{{ __('finance::institution.no_accounts') }}</p>
             @else
-                <table class="w-full text-sm">
+                <table class="ui-grid w-full text-sm">
                     <thead class="text-2xs text-(--color-ink-muted)">
                         <tr>
-                            <th class="px-4 py-2 text-start font-medium">{{ __('finance::institution.account') }}</th>
-                            <th class="num px-4 py-2 font-medium">{{ __('finance::institution.balance_today') }}</th>
-                            <th class="w-24 px-4 py-2"></th>
+                            <th class="text-start font-medium">{{ __('finance::institution.account') }}</th>
+                            <th class="num font-medium">{{ __('finance::institution.balance_today') }}</th>
+                            <th class="w-24"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($links as $link)
                             <tr class="border-t border-(--color-border)">
-                                <td class="px-4 py-2">
+                                <td>
                                     <a href="{{ route('accounts.report.show', ['slug' => 'ledger', 'account_id' => $link['account']->id]) }}"
                                        class="text-(--color-brand-600) underline-offset-2 hover:underline">
                                         {{ $link['account']->label() }}
@@ -114,13 +114,13 @@
                                      ২০২৬: সংখ্যা মানে তার পিছনের সারিগুলো। ⓘ নামের ঘরে
                                      লিংকটা ছিল, কিন্তু চোখ যায় সংখ্যাটায়, আর হাতও যায়
                                      সেখানেই — মানুষ নামে ক্লিক করে না, টাকায় করে। --}}
-                                <td class="num px-4 py-2 tabular-nums">
+                                <td class="num tabular-nums">
                                     <a href="{{ route('accounts.report.show', ['slug' => 'ledger', 'account_id' => $link['account']->id]) }}"
                                        class="text-(--color-brand-600) underline-offset-2 hover:underline">
                                         {{ Money::format($link['balance']) }}
                                     </a>
                                 </td>
-                                <td class="px-4 py-2 text-end">
+                                <td class="text-end">
                                     @can('finance.institution.manage')
                                         <form method="POST"
                                               action="{{ route('finance.institution.unlink', [$institution, $link['account']->id]) }}">

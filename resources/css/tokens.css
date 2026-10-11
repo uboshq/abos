@@ -604,6 +604,11 @@
     --color-topnav-hover: var(--color-surface-hover);
     --color-topnav-selected: var(--color-surface-selected);
 
+    /* মডিউল-বারের রং — চেহারা (Look) নিজের রং দেয়; না দিলে এই ডিফল্ট, যা বার এতদিন `var(…, ফলব্যাক)`-এ নিত।
+       ⓘ ঘোষণা ছাড়া টোকেনটা কেবল একটা চেহারায় বাঁচত (১১ অক্টোবর ২০২৬, Design: টোকেন নেই)। মান হুবহু আগের ফলব্যাক, তাই কিছু বদলায় না। */
+    --color-modulebar: var(--color-surface-muted);
+    --color-modulebar-border: var(--color-border);
+
     --color-topbar: var(--color-surface-card);
     --color-topbar-ink: var(--color-ink);
     --color-topbar-ink-muted: var(--color-ink-muted);

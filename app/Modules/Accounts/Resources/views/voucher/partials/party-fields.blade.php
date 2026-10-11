@@ -435,29 +435,29 @@
         <template x-if="bills.length > 0">
             <div>
                 <div class="mt-3 overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="ui-grid w-full text-sm">
                         <thead class="text-xs text-(--color-ink-muted)">
                             <tr class="border-b border-(--color-border)">
                                 <th class="w-8"></th>
-                                <th class="p-2 text-start">{{ __('accounts::field.invoice') }}</th>
-                                <th class="p-2 text-start">{{ __('accounts::field.date') }}</th>
-                                <th class="p-2 text-end">{{ __('accounts::field.age') }}</th>
-                                <th class="p-2 text-end">{{ __('accounts::field.outstanding') }}</th>
+                                <th class="text-start">{{ __('accounts::field.invoice') }}</th>
+                                <th class="text-start">{{ __('accounts::field.date') }}</th>
+                                <th class="text-end">{{ __('accounts::field.age') }}</th>
+                                <th class="text-end">{{ __('accounts::field.outstanding') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-for="b in bills" :key="b.against_type + '-' + b.id">
                                 <tr class="border-b border-(--color-border)">
-                                    <td class="p-2">
+                                    <td>
                                         <input type="radio" name="bill_pick"
                                                :aria-label="b.no"
                                                :checked="isBillPicked(b)"
                                                x-on:change="pick(b)">
                                     </td>
-                                    <td class="p-2 font-medium" x-text="b.no"></td>
-                                    <td class="p-2" x-text="b.date"></td>
-                                    <td class="num p-2 text-end" x-text="b.age"></td>
-                                    <td class="num p-2 text-end" x-text="$fixed(b.outstanding)"></td>
+                                    <td class="font-medium" x-text="b.no"></td>
+                                    <td x-text="b.date"></td>
+                                    <td class="num text-end" x-text="b.age"></td>
+                                    <td class="num text-end" x-text="$fixed(b.outstanding)"></td>
                                 </tr>
                             </template>
                         </tbody>

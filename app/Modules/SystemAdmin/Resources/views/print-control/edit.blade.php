@@ -111,7 +111,7 @@
                                         <iframe src="{{ $card['sample'] }}"
                                                 title="{{ __('system_admin::settings.print_sample_of', ['format' => $card['name']]) }}"
                                                 loading="lazy" tabindex="-1" sandbox="allow-same-origin"
-                                                style="width: 760px; height: 1000px; border: 0; transform: scale(0.34);
+                                                style="width: 760px; aspect-ratio: 760 / 1000; border: 0; transform: scale(0.34);
                                                        transform-origin: top left; pointer-events: none;"></iframe>
                                     </span>
                                 @endif
@@ -192,7 +192,7 @@
              aria-label="{{ __('system_admin::settings.print_sample') }}"
              @keydown.escape.window="src = ''" @click.self="src = ''"
              style="position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:flex-start;
-                    padding:3vh 16px 16px;background:rgb(0 0 0 / 0.55)">
+                    padding:3vh 16px 16px;background:color-mix(in srgb, black 55%, transparent)">
             <div class="w-full rounded-(--radius-field) bg-(--color-surface-app) shadow-lg"
                  style="max-width:900px;height:94vh;display:flex;flex-direction:column">
                 <div class="flex items-center justify-between gap-3 border-b border-(--color-border) px-4 py-2">
@@ -202,7 +202,7 @@
                             class="text-xs text-(--color-ink-muted) underline underline-offset-2">{{ __('core.peek.close') }}</button>
                 </div>
                 <iframe x-bind:src="src" title="{{ __('system_admin::settings.print_sample') }}"
-                        style="flex:1;width:100%;border:0;background:#fff"></iframe>
+                        style="flex:1;width:100%;border:0;background:white"></iframe>
             </div>
         </div>
         </div>

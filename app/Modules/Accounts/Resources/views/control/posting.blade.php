@@ -79,9 +79,7 @@
                     <x-slot:actions>
                         <label class="flex items-center gap-2 text-sm">
                             <span class="text-(--color-ink-muted)">{{ __('accounts::control.date') }}</span>
-                            <input type="date" name="date" value="{{ $date->toDateString() }}"
-                                   class="min-h-(--spacing-touch) rounded-(--radius-field) border border-(--color-border)
-                                          bg-(--color-surface-card) px-2">
+                            <x-ui.date name="date" :value="$date->toDateString()" />
                         </label>
                         <x-ui.button type="submit">{{ __('accounts::control.show') }}</x-ui.button>
                     </x-slot:actions>

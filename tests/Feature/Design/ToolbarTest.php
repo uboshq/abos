@@ -359,10 +359,21 @@ class ToolbarTest extends TestCase
 
         $this->assertNotEmpty($matches[0], 'টুলবারে একটাও বোতাম নেই — কম্পোনেন্টটা কি সরে গেছে?');
 
+        /*
+         * ⓘ CSP-র নিয়মে ছাপার বোতাম `data-action="print"` বহন করে, আর ক্লিকটা ধরে [[actions.js]]-এর ভাগের শ্রোতা — ইনলাইন
+         * `onclick` CSP চালাতে দেয় না। ⚠️ তাই `data-action` তখনই "কাজ" যখন actions.js সত্যিই ঐ নামটা ধরে; নাম ভুল হলে বোতামটা
+         * আবার সাজসজ্জা, আর এই দাবি লাল (১১ অক্টোবর ২০২৬)। `x-on:click` হলো `@click`-এরই পুরো বানান।
+         */
+        $handled = File::get(resource_path('js/components/actions.js'));
+
         foreach ($matches[0] as $button) {
+            $action = preg_match('/data-action="([a-z-]+)"/', $button, $a) === 1 ? $a[1] : null;
+
             $doesSomething = str_contains($button, 'type="submit"')
                 || str_contains($button, 'onclick=')
-                || str_contains($button, '@click');
+                || str_contains($button, '@click')
+                || str_contains($button, 'x-on:click')
+                || ($action !== null && str_contains($handled, '[data-action="'.$action.'"]'));
 
             $this->assertTrue(
                 $doesSomething,

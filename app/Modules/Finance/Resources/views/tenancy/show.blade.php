@@ -119,7 +119,7 @@
 
     <section data-boxed data-tenancy-charges class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <h2 class="mb-2 font-semibold">{{ __('finance::tenancy.charges_title') }}</h2>
-        <table class="w-full text-sm">
+        <table class="ui-grid w-full text-sm">
             <thead>
                 <tr class="text-start text-2xs text-(--color-ink-muted)">
                     <th class="text-start">{{ __('finance::tenancy.month') }}</th>
@@ -150,7 +150,7 @@
 
     <section data-boxed data-tenancy-moves class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <h2 class="mb-2 font-semibold">{{ __('finance::tenancy.moves_title') }}</h2>
-        <table class="w-full text-sm">
+        <table class="ui-grid w-full text-sm">
             <thead>
                 <tr class="text-start text-2xs text-(--color-ink-muted)">
                     <th class="text-start">{{ __('finance::tenancy.date') }}</th>
