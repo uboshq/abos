@@ -30,6 +30,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class PrintQueue
 {
+    /** ছাপার সীমা যে কাগজে খাটে — বিল আর চালান ([[mayPrint()]]) */
+    public const LIMITED = [PrintJob::INVOICE, PrintJob::CHALLAN];
+
     public function __construct(private readonly SettingsService $settings) {}
 
     /**
@@ -41,7 +44,13 @@ final class PrintQueue
      */
     public function queue(string $type, int $id, string $paper, ?string $documentNo = null): PrintJob
     {
-        return DB::transaction(fn () => PrintJob::query()->firstOrCreate(
+        /*
+         * ⛔ ডিলার-দেয়াল ছাড়া খোঁজা (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⛔২)। ⓘ দেয়াল ([[PrintJob::applyDealerWall()]]) কেবল বিল
+         * আর চালানের সারি চেনে; অর্ডার, DO, গেট পাস আর রসিদও এখন সারিতে ওঠে। দেয়ালের ভিতরের বিক্রয়কর্মী দ্বিতীয়বার ছাপলে
+         * `firstOrCreate` আগের সারিটা দেখত না, আবার বসাতে যেত, আর `uq_sal_print_job_document` → ৫০০। ⭐ এই সারিটা
+         * হিসাবের খাতা, দেখার তালিকা নয় — কাগজটা খোলার অনুমতি ছাপার দরজাই আগে যাচাই করেছে; কোম্পানির দেয়াল থাকে।
+         */
+        return DB::transaction(fn () => PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->firstOrCreate(
             [
                 'document_type' => $type,
                 'document_id' => $id,
@@ -81,6 +90,15 @@ final class PrintQueue
      */
     public function mayPrint(PrintJob $job): bool
     {
+        /*
+         * ⛔ সীমা কেবল বিল আর চালানে — আগের মতোই (fe, ১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১১)। ⓘ অর্ডার, DO, গেট পাস আর রসিদ
+         * এখন গোনায় আছে, তাই DUPLICATE বসে; কিন্তু ফ্রিজে নতুন করে আটকানো চলে না — সীমা বসানো কোম্পানিতে গেটের তৃতীয়
+         * ছাপাটা হঠাৎ থেমে যেত। সীমা এগুলোয় নেবে কি না, সেটা মালিকের পরের সিদ্ধান্ত।
+         */
+        if (! in_array($job->document_type, self::LIMITED, true)) {
+            return true;
+        }
+
         $limit = (int) $this->settings->get('sales.reprint_limit', 0);
 
         if ($limit <= 0 || $job->printed_count < $limit) {
@@ -126,7 +144,7 @@ final class PrintQueue
             'failure' => null,
         ]);
 
-        return $job->fresh();
+        return $this->reread($job);
     }
 
     /** চেষ্টা ব্যর্থ — কারণসহ, কারণ কাগজ ফুরানো আর প্রিন্টার বন্ধ এক নয়। */
@@ -137,7 +155,16 @@ final class PrintQueue
             'failure' => mb_substr($reason, 0, 255),
         ]);
 
-        return $job->fresh();
+        return $this->reread($job);
+    }
+
+    /**
+     * ⛔ আবার পড়া — দেয়াল ছাড়া, [[queue()]]-এর একই কারণে। ⓘ `$job->fresh()` দেয়ালসহ খোঁজে; দেয়ালের ভিতরের মানুষের
+     * অর্ডার/রসিদের সারি তখন `null`, আর ফেরার ধরন `PrintJob` বলে প্রথম ছাপাতেই ৫০০ (১১ অক্টোবর ২০২৬)।
+     */
+    private function reread(PrintJob $job): PrintJob
+    {
+        return PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->findOrFail($job->getKey());
     }
 
     /**

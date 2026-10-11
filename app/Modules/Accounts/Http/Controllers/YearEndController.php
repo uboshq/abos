@@ -162,7 +162,7 @@ class YearEndController extends Controller implements HasMiddleware
         $papers = $this->yearEnd->closingPaper($year);
         abort_if($papers === [], 404);
 
-        $paper = \App\Core\Engines\Print\PaperSize::chosen($request->query('paper'), 'a4');
+        $paper = \App\Core\Engines\Print\PaperSize::chosen(\App\Core\Engines\Print\PaperSize::fromQuery($request), 'a4');
         $asFile = $request->boolean('download');
         $no = (string) $papers[array_key_last($papers)]['document_no'];
 

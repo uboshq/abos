@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Engines\Print\PaperSize;
+use App\Core\Engines\Print\PrintScale;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Models\DocumentDelivery;
 use App\Models\DocumentShare;
@@ -54,6 +56,10 @@ final class PaperTrail
         'sales_invoice_cancellation' => 'sales.cancellation.print',
         'sales_challan' => 'sales.print.challan',
         'sales_order' => 'sales.print.order',
+        // ⭐ গোনা শুরু হলো (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৩) — ইতিহাসের পাতাও খোলে
+        'sales_challan_gatepass' => 'sales.print.gatepass',
+        'sales_gate_pass' => 'sales.print.gate_pass',
+        'sales_delivery_order' => 'sales.print.delivery_order',
         'sales_collection' => 'sales.print.receipt',
         'purchase_bill' => 'purchase.print.bill',
         'purchase_order' => 'purchase.print.order',
@@ -195,11 +201,11 @@ final class PaperTrail
             'share_id' => $share?->id,
             'from_ip' => $fromIp,
             // ⭐ কোন মাপে — স্বয়ংক্রিয় কি না সহ ([[PrintScale]]); ফাইল না আঁকলে (শেয়ার) খালি
-            'scale' => app(\App\Core\Engines\Print\PrintScale::class)->used(),
-            'scale_auto' => app(\App\Core\Engines\Print\PrintScale::class)->wasAuto(),
+            'scale' => app(PrintScale::class)->used(),
+            'scale_auto' => app(PrintScale::class)->wasAuto(),
             // ⭐ কোন রূপ ছাপা হলো — চালান টাকাসহ/টাকা ছাড়া (মালিক, ২ অক্টোবর ২০২৬); ছাপার দরজা অনুরোধে বসায়
             'variant' => request()->attributes->get('print_variant'),
-            'created_by' => \App\Core\Support\Actor::userId(),
+            'created_by' => Actor::userId(),
         ]);
     }
 
@@ -257,7 +263,7 @@ final class PaperTrail
                  */
                 'token' => bin2hex(random_bytes(32)),
                 'expires_at' => Carbon::now()->addDays(DocumentShare::LIVES_DAYS),
-                'created_by' => \App\Core\Support\Actor::userId(),
+                'created_by' => Actor::userId(),
             ]);
 
             $this->record($documentType, $documentId, $paper, DocumentDelivery::SHARED, $documentNo, $share);

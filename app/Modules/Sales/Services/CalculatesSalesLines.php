@@ -147,6 +147,8 @@ trait CalculatesSalesLines
             'tax' => $tax,
             'tax_variance' => $variance,
             'amount' => $inclusive ? $net : bcadd($net, $tax, 4),
+            // ⓘ ভ্যাট দামের ভিতরে কি না — পরে সংরক্ষিত অঙ্ক থেকে আন্দাজ নয় ([[SalesInvoiceService::vatAfterBillDiscount()]])
+            'inclusive' => $inclusive,
         ];
     }
 
