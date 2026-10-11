@@ -203,6 +203,19 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
 
             foreach (app(ModuleRegistry::class)->all() as $one) {
                 $switches->set($one->code.'.enabled', true);
+
+                /*
+                 * ⭐ পর্দার সুইচও — পিওএস, ১১ অক্টোবর ২০২৬। ⓘ পিওএস-এর দুইটা সারিই `sales.screen_pos`-এর
+                 * পেছনে, যেটা ডিফল্টে বন্ধ (ডিপো কাউন্টার চালায় না) — তাই মডিউল চালু থাকলেও ভাঁজটা রেলে
+                 * আসত না, আর দাবিটা আবার সুইচের অবস্থা মাপত, ঘোষণার ক্রম নয়। উপরের যুক্তিটাই, এক ধাপ নিচে।
+                 */
+                foreach ($one->menu as $items) {
+                    foreach ($items as $item) {
+                        if (isset($item['setting'])) {
+                            $switches->set($item['setting'], true);
+                        }
+                    }
+                }
             }
 
             $switches->flush();
