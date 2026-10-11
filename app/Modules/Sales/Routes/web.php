@@ -666,6 +666,10 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::post('/orders', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'store'])->name('order.store');
         Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'show'])->whereUuid('id')->name('order.show');
         Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'submit'])->whereUuid('id')->name('order.submit');
+        // ⭐ বিলের ঘর — নিজের পাকা বিল, দামসহ, আর তার PDF ([[PortalInvoiceController]]; গ্রাহক পোর্টাল, ধাপ ১)
+        Route::get('/bills', [\App\Modules\Sales\Http\Controllers\PortalInvoiceController::class, 'index'])->name('bill.index');
+        Route::get('/bills/{id}', [\App\Modules\Sales\Http\Controllers\PortalInvoiceController::class, 'show'])->whereUuid('id')->name('bill.show');
+        Route::get('/bills/{id}/pdf', [\App\Modules\Sales\Http\Controllers\PortalInvoiceController::class, 'pdf'])->whereUuid('id')->name('bill.pdf');
         Route::get('/tracking', [PortalController::class, 'tracking'])->name('tracking');
         Route::get('/tracking/{kind}/{id}', [PortalController::class, 'trackingStory'])
             ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');

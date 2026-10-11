@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
@@ -118,6 +119,66 @@ final class CustomerPapers
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * ⭐ বিলের ঘর — নিজের পাকা বিল, বাকি আর শোধ সহ (গ্রাহক পোর্টাল, ধাপ ১, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বাকির অঙ্ক অফিসের আদায়ের পর্দার সেই একই হিসাব — [[SalesInvoice::scopeWithCollected()]] আর
+     * [[SalesInvoice::dueAmount()]]; এখানে নতুন কোনো যোগ-বিয়োগ নেই।
+     * ⛔ খসড়া আর বাতিল বিল আসে না — খসড়া এখনো গ্রাহকের কাগজ নয়, বাতিল আর পাওনা নয়।
+     * ⓘ "খোলা / শোধ" ছাঁকা হয় সারি আনার পরে, কারণ বাকিটা ফেরত আর রসিদ ভাউচারও ধরে — SQL-এ আলাদা করে লিখলে
+     * দ্বিতীয় একটা হিসাব জন্মাত। একজন গ্রাহকের বিল কয়েক হাজারের বেশি হয় না।
+     *
+     * @param  'open'|'paid'|'all'  $state
+     * @return LengthAwarePaginator<int, SalesInvoice>
+     */
+    public function bills(string $state, ?string $from, ?string $to, int $perPage = 30): LengthAwarePaginator
+    {
+        $rows = $this->postedBills()
+            ->withCollected()
+            ->when($from !== null && $from !== '', fn ($q) => $q->whereDate('trx_date', '>=', $from))
+            ->when($to !== null && $to !== '', fn ($q) => $q->whereDate('trx_date', '<=', $to))
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->get()
+            ->filter(fn (SalesInvoice $bill) => match ($state) {
+                'open' => bccomp($bill->dueAmount(), '0', 4) > 0,
+                'paid' => bccomp($bill->dueAmount(), '0', 4) === 0,
+                default => true,
+            })
+            ->values();
+
+        $page = LengthAwarePaginator::resolveCurrentPage();
+
+        return (new LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(), $rows->count(), $perPage, $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath()],
+        ))->withQueryString();
+    }
+
+    /**
+     * নিজের একটা পাকা বিল, লাইন আর আদায়সহ — অন্যের, খসড়া বা বাতিল হলে ৪০৪।
+     *
+     * ⛔ আইডিটা ঠিকানার, তাই খোঁজাটাই "নিজের" শর্তে — অন্যের বিল "আছে কি নেই" সেটাও বলা হয় না।
+     */
+    public function bill(string $publicId): SalesInvoice
+    {
+        return $this->postedBills()
+            ->withCollected()
+            ->where('public_id', $publicId)
+            ->with([
+                'lines.product',
+                // ⓘ কেবল খাতায় বসা আদায় — [[SalesInvoice::collectedAmount()]]-এর একই শর্ত, যাতে তালিকা আর যোগফল এক কথা বলে
+                'collectionLines' => fn ($q) => $q->whereHas('collection', fn ($c) => $c->posted())->with('collection'),
+                'receiptVouchers',
+            ])
+            ->firstOrFail();
+    }
+
+    /** ⓘ নিজের পাকা বিল — [[bills()]] আর [[bill()]] দুইটাই এখান থেকে, যাতে "কোন বিল দেখা যায়" এক জায়গায় থাকে */
+    private function postedBills()
+    {
+        return $this->mine(SalesInvoice::query())->whereIn('sal_invoices.status', DocumentStatus::POSTED);
     }
 
     /**

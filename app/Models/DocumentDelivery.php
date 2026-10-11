@@ -50,6 +50,8 @@ class DocumentDelivery extends Model
         'scale', 'scale_auto',
         // ⭐ কোন রূপ — চালান টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬)
         'variant',
+        // ⭐ পোর্টাল থেকে নামালে কোন গ্রাহক (গ্রাহক পোর্টাল, ধাপ ১, ১১ অক্টোবর ২০২৬)
+        'customer_id',
     ];
 
     public function share(): BelongsTo

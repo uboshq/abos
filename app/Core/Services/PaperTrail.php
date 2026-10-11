@@ -206,6 +206,8 @@ final class PaperTrail
             // ⭐ কোন রূপ ছাপা হলো — চালান টাকাসহ/টাকা ছাড়া (মালিক, ২ অক্টোবর ২০২৬); ছাপার দরজা অনুরোধে বসায়
             'variant' => request()->attributes->get('print_variant'),
             'created_by' => Actor::userId(),
+            // ⭐ পোর্টালের গ্রাহক নিজে নামালে তাঁর নাম — কর্মী নন বলে `created_by` খালি থাকত (গ্রাহক পোর্টাল, ধাপ ১)
+            'customer_id' => Actor::portalCustomerId(),
         ]);
     }
 

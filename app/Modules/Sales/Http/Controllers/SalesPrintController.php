@@ -124,6 +124,27 @@ class SalesPrintController extends Controller implements HasMiddleware
 
     public function invoice(Request $request, SalesInvoice $invoice): Response
     {
+        return $this->invoicePaper($request, $invoice, customerCopy: false);
+    }
+
+    /**
+     * ⭐ গ্রাহকের নিজের কপি — পোর্টালের বিলের ঘর থেকে (গ্রাহক পোর্টাল, ধাপ ১, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অফিসের বিলের **হুবহু একই** নকশা আর একই হিসাব — দ্বিতীয় কোনো বিলের ছাঁচ নয়। মালিকের নিয়ম: বিলটা গ্রাহকের নিজের
+     * কাগজ, তাই দামসহ পুরো বিল।
+     *
+     * ⛔ রুটে বাঁধা নয়: ডাকে কেবল [[PortalInvoiceController]], আর সে বিলটা আনে [[CustomerPapers::bill()]] থেকে —
+     * অর্থাৎ "নিজের, পাকা" যাচাই এখানে পৌঁছানোর **আগেই** হয়ে গেছে।
+     * ⚠️ ছাপার সারিতে ওঠে না: গ্রাহক যতবার নামান, অফিসের পরের ছাপায় তাতে DUPLICATE বসবে না, আর আবার-ছাপার সীমাও
+     * খরচ হবে না। খাতায় (`doc_deliveries`) ঠিকই ওঠে — কে, কোন বিল, কখন ([[PaperTrail::record()]])।
+     */
+    public function customerCopy(Request $request, SalesInvoice $invoice): Response
+    {
+        return $this->invoicePaper($request, $invoice, customerCopy: true);
+    }
+
+    private function invoicePaper(Request $request, SalesInvoice $invoice, bool $customerCopy): Response
+    {
         /*
          * ⛔ খসড়া বিল ছাপা হয় না — মালিকের নিয়ম।
          *
@@ -252,6 +273,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             paperSetting: 'sales.print.paper.invoice',
             template: $classic ? $designTemplate : 'print.document',
             extra: $classic ? ['facts' => $this->classicFacts($invoice)] : [],
+            customerCopy: $customerCopy,
         );
     }
 
@@ -2108,6 +2130,9 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         /** @var array<string, mixed> ছাঁচের বাড়তি তথ্য */
         array $extra = [],
+
+        /* ⓘ গ্রাহকের নিজের কপি — ছাপার সারিতে ওঠে না ([[customerCopy()]]) */
+        bool $customerCopy = false,
     ): Response {
         /*
          * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
@@ -2171,7 +2196,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         $draftPrint = $this->isDraftMoney($document) || $this->isDraftPaper($document);
 
-        $job = $type === null || $draftPrint ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
+        $job = $type === null || $draftPrint || $customerCopy ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
         /*
          * সীমা পেরোলে এখানেই থামে — PDF তৈরির আগে।
