@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Engines\Report\ReportExport;
 use App\Core\Services\ExportJournal;
@@ -132,29 +133,13 @@ final class ReportExportApiController extends Controller
      * ⭐ রিপোর্টের PDF — রপ্তানির একই ধরা টেবিল ([[ReportExport::into()]]) কাগজে, ছাপার একই যন্ত্রে ([[PrintEngine]],
      * [[print.report]]): কোম্পানির নাম, শিরোনাম, তারিখের সীমা, সারি আর সর্বমোট। ⓘ সংখ্যা এখানে কষা হয় না।
      *
-     * @param  list<\App\Core\Engines\Report\ReportColumn>  $columns
+     * @param  list<ReportColumn>  $columns
      * @param  array<string, mixed>  $filters
      */
     private function pdf(ListExport $export, array $columns, string $title, array $filters, string $slug): Response
     {
-        $table = $export->captured() ?? ['columns' => [], 'values' => []];
-        $numeric = [];
-        foreach ($columns as $column) {
-            $numeric[$column->key] = in_array($column->type, ['money', 'quantity', 'percent', 'dr_cr'], true);
-        }
-
-        $from = (string) ($filters['from'] ?? '');
-        $to = (string) ($filters['to'] ?? '');
-
-        $pdf = app(\App\Core\Engines\Print\PrintEngine::class)->render('print.report', [
-            'title' => $title,
-            'range' => $from !== '' || $to !== ''
-                ? trim(\App\Core\Support\DateFormat::format($from ?: null).' — '.\App\Core\Support\DateFormat::format($to ?: null), ' —')
-                : null,
-            'columns' => array_map(fn (array $c) => ['label' => $c['label'], 'numeric' => $numeric[$c['key']] ?? false], $table['columns']),
-            'rows' => $table['values'],
-            'footer' => $export->footerRow(),
-        ]);
+        // ⓘ কাগজটা বানায় [[ReportExport::pdf()]] — নির্ধারিত রিপোর্টও একই পথে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+        $pdf = ReportExport::pdf($export, $columns, $title, $filters);
 
         app(ExportJournal::class)->wrote($export->rowCount());
 

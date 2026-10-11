@@ -8,6 +8,7 @@ use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -155,9 +156,8 @@ class SettingsController extends Controller implements HasMiddleware
                  * একদিন কেউ এই মানটা ধরে হিসাব করবেন, আর তখন উৎসটা
                  * float হলে ভুলটা এখান থেকেই শুরু হত।
                  */
-                'number' => $raw === null || trim((string) $raw) === '' || ! is_numeric($raw)
-                    ? null
-                    : trim((string) $raw),
+                // ⭐ "১০,০০০" → "10000", আর `1e5` নয় — Control Panel-এর একই নিয়ম ([[PlainNumber]], পুনঃনিরীক্ষা ৯ অক্টোবর ২০২৬)
+                'number' => PlainNumber::from($raw),
 
                 /*
                  * ⓘ বাছাইয়ের ঘর — ছাপার কাগজের মাপ। ⛔ তালিকার বাইরের কিছু
