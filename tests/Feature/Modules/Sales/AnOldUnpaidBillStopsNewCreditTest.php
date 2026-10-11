@@ -27,7 +27,7 @@ use Tests\TestCase;
  * কোম্পানি `customer.overdue_block_days` = ৬০ বসিয়েছে। গ্রাহকের সীমা ১,০০,০০০ — জায়গা অনেক, তবু:
  *   · ৫,০০০-এর বিল, মেয়াদ ৬১ দিন আগে, এক পয়সাও আসেনি → নতুন বাকি বন্ধ (DO/আদেশ, কাউন্টার, সারাংশ — সব পথে)।
  *   · পুরো টাকা এখনই দিলে কেনা চলে।
- *   · মেয়াদ ৫৯ দিন আগে → এখনো চলে; সুইচ ০ বা সীমার সুইচ বন্ধ → দেয়াল নেই।
+ *   · মেয়াদ ৫৯ দিন আগে → এখনো চলে; মেয়াদের সুইচ বা সীমার সুইচ বন্ধ → দেয়াল নেই (১১ অক্টোবর ২০২৬ থেকে দিন কেবল ছাড়)।
  *   · বিলে না বাঁধা অগ্রিম ৫,০০০ এসেছে → সবচেয়ে পুরনো বিলেই কাটে, দেয়াল ওঠে।
  */
 final class AnOldUnpaidBillStopsNewCreditTest extends TestCase
@@ -54,6 +54,7 @@ final class AnOldUnpaidBillStopsNewCreditTest extends TestCase
 
         $settings = app(SettingsService::class);
         $settings->set('customer.credit_limit_enabled', true);
+        $settings->set('customer.overdue_stop', true);
         $settings->set('customer.overdue_block_days', 60);
     }
 
@@ -94,12 +95,15 @@ final class AnOldUnpaidBillStopsNewCreditTest extends TestCase
         $this->assertFits();
     }
 
-    public function test_zero_days_or_the_credit_switch_off_means_no_wall(): void
+    /** ⓘ ১১ অক্টোবর ২০২৬ থেকে দিন আর সুইচ নয় (০ = মেয়াদের পরদিন থেকেই) — বন্ধ করে নিজের সুইচ `customer.overdue_stop` */
+    public function test_the_overdue_switch_off_or_the_credit_switch_off_means_no_wall(): void
     {
         $this->bill('INV-OLD3', '5000', daysPastDue: 200);
 
-        app(SettingsService::class)->set('customer.overdue_block_days', 0);
+        app(SettingsService::class)->set('customer.overdue_stop', false);
         $this->assertFits();
+
+        app(SettingsService::class)->set('customer.overdue_stop', true);
 
         app(SettingsService::class)->set('customer.overdue_block_days', 60);
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);

@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 return [
     'overdue_stop' => ':days দিনের পুরনো বাকি আছে (:bills, :amount) — নতুন বাকি বন্ধ',
+    'overdue_stop_due' => 'মেয়াদ পেরোনো বাকি আছে (:bills, :amount) — নতুন বাকি বন্ধ',
     'uncleared_cheques' => 'ক্লিয়ার না হওয়া চেক',
     'blocked_stop' => 'এই গ্রাহকের বাকি বন্ধ (:reason) — পুরো টাকা দিলে কেনা যাবে',
     // ── বাকি ও আদায়ের রিপোর্ট ([[CreditControlReports]]) ──

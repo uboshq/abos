@@ -124,7 +124,8 @@ final class CreditControlReports
             filters: ['branch'],
             query: function (array $f): Builder {
                 $credit = app(CreditExposure::class);
-                $days = $credit->overdueDays() > 0 ? $credit->overdueDays() : self::RISK_DAYS_FALLBACK;
+                // ⓘ দেয়াল চালু থাকলে দেয়ালেরই ছাড়ের দিন (০ হলেও), নইলে [[RISK_DAYS_FALLBACK]] (১১ অক্টোবর ২০২৬)
+                $days = $credit->overdueStopOn() ? $credit->overdueDays() : self::RISK_DAYS_FALLBACK;
 
                 $customers = Customer::query()
                     ->where('customers.company_id', $f['company_id'])
