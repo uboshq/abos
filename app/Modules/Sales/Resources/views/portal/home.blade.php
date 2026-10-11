@@ -5,12 +5,19 @@
     সংখ্যা দেখতে। বাকি সব তার ব্যাখ্যা।
 --}}
 <x-sales::portal.layout :customer="$customer">
+    {{-- ⭐ জের গ্রাহকের পক্ষে হলে "আপনার জমা" — খাতারই জের, আলাদা "অগ্রিম হিসাব" নয় (মালিকের নিয়ম; গ্রাহক পোর্টাল, ধাপ ১) --}}
+    @php($inCredit = bccomp((string) $due, '0', 4) < 0)
     <div data-boxed class="mb-5 rounded-(--radius-card) border border-(--color-border)
-                bg-(--color-surface-card) px-4 py-4">
+                bg-(--color-surface-card) px-4 py-4" @if ($inCredit) data-portal-your-credit @endif>
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
-            {{ __('sales::portal.due') }}
+            {{ $inCredit ? __('sales::portal_statement.your_credit') : __('sales::portal.due') }}
         </p>
-        <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::format($due) }}</p>
+        <p class="num text-3xl font-semibold">
+            {{ $inCredit ? '৳'.\App\Core\Support\Money::format(bcmul((string) $due, '-1', 4)) : \App\Core\Support\Money::format($due) }}
+        </p>
+        <a href="{{ route('sales.portal.ledger') }}" class="mt-1 inline-block text-sm text-(--color-brand-500) hover:underline">
+            {{ __('sales::portal_statement.title') }}
+        </a>
     </div>
 
     <a href="{{ route('sales.portal.claim.create') }}"
