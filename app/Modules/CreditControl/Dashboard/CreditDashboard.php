@@ -163,6 +163,7 @@ final class CreditDashboard implements ProvidesDashboard
             ], array_keys($ageing)),
             hint: __('credit_control::dashboard.ageing_hint'),
             chart: 'columns',
+            dense: true,
         );
     }
 
@@ -253,7 +254,7 @@ final class CreditDashboard implements ProvidesDashboard
                         : ($c->old_value ?? '—').' → '.($c->new_value ?? '—')],
             ],
             rows: $ids === [] ? collect() : CustomerCreditChange::query()->whereIn('customer_id', $ids)
-                ->with('customer')->latest('id')->limit(8)->get(),
+                ->with('customer')->latest('id')->limit(3)->get(),
             empty: __('credit_control::dashboard.no_changes'),
         );
     }
@@ -279,7 +280,7 @@ final class CreditDashboard implements ProvidesDashboard
                 ->where('auditable_type', Customer::class)
                 ->whereIn('auditable_id', $ids)
                 ->whereIn('action', ['credit_blocked', 'credit_unblocked'])
-                ->latest('id')->limit(8)->get(),
+                ->latest('id')->limit(3)->get(),
             empty: __('credit_control::dashboard.no_blocks'),
             href: route('sales.report.show', ['slug' => 'blocked-customers'] + self::branch()),
         );

@@ -76,7 +76,7 @@
                                     <td @class(['tabular px-3 py-1.5 text-right', 'font-semibold text-(--color-badge-danger-ink)' => $bill['days_overdue'] > 0])>
                                         {{ $bill['days_overdue'] > 0 ? $bill['days_overdue'] : __('credit_control::report.bucket_not_due') }}
                                     </td>
-                                    <td class="tabular px-3 py-1.5 text-right"><x-ui.amount :value="$bill['unpaid']" /></td>
+                                    <td class="tabular px-3 py-1.5 text-right">{{ Money::format($bill['unpaid']) }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="4" class="px-3 py-3 text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
@@ -144,7 +144,7 @@
                             <td class="px-3 py-1.5 whitespace-nowrap">{{ DateFormat::formatWithTime($d->created_at) }}</td>
                             <td class="px-3 py-1.5">{{ __('credit_control::profile.stage_'.$d->stage) }}</td>
                             <td class="px-3 py-1.5">{{ $d->paper_no ?? '—' }}</td>
-                            <td class="tabular px-3 py-1.5 text-right"><x-ui.amount :value="$d->adding" /></td>
+                            <td class="tabular px-3 py-1.5 text-right">{{ Money::format($d->adding) }}</td>
                             <td class="tabular px-3 py-1.5 text-right">{{ $d->exposure_after === null ? '—' : Money::format($d->exposure_after) }}</td>
                             <td class="tabular px-3 py-1.5 text-right">{{ $d->credit_limit === null ? '—' : Money::format($d->credit_limit) }}</td>
                             <td class="px-3 py-1.5">

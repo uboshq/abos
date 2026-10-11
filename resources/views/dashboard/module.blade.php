@@ -171,10 +171,10 @@
                         <h2 class="border-b border-(--color-border) px-4 py-3 text-xs font-semibold
                                    text-(--color-ink-muted)">{{ $panel->label }}</h2>
 
-                        <div class="space-y-3 p-4">
+                        <div @class(['p-4', 'space-y-3' => ! $panel->dense, 'space-y-1 py-2' => $panel->dense])>
                             @foreach ($panel->parts as $part)
                                 <div>
-                                    <div class="mb-1 flex items-baseline justify-between text-xs">
+                                    <div @class(['flex items-baseline justify-between text-xs', 'mb-1' => ! $panel->dense, 'mb-0.5' => $panel->dense])>
                                         {{-- ⓘ ভাগে চাপলে তার তালিকা — যে ভাগ নিজের ঠিকানা দেয় (`href`; বাকি নিয়ন্ত্রণ, ১১ অক্টোবর ২০২৬) --}}
                                         @if (! empty($part['href']))
                                             <a href="{{ $part['href'] }}" class="text-(--color-brand-500) hover:underline">{{ $part['label'] }}</a>
@@ -183,7 +183,7 @@
                                         @endif
                                         <span class="font-semibold tabular-nums">{{ $part['value'] }}</span>
                                     </div>
-                                    <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
+                                    <div @class(['overflow-hidden rounded-full bg-(--color-surface-hover)', 'h-2' => ! $panel->dense, 'h-1.5' => $panel->dense])>
                                         {{-- ⓘ সাজানো অঙ্ক ("১,২০,০০০") সংখ্যায় ফেরে — নইলে কমায় কেটে ১ হত ([[Breakdown::number()]]) --}}
                                         <div class="h-full bg-(--color-brand-500)"
                                              style="width:{{ min(100, max(0, (int) round(\App\Core\Engines\Dashboard\Breakdown::number($part['value']) / $total * 100))) }}%"></div>

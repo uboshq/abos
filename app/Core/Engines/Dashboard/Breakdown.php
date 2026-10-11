@@ -39,6 +39,11 @@ final class Breakdown
          * ⓘ [[DateRange::label()]] দিয়ে বানানো লেখা ("১ অক্টো – ৫ অক্টো ২০২৬"); চার্টের নিচে বসে। `null` মানে সময়ের নয় (যেমন তালিকা কতটা ভরা)।
          */
         public readonly ?string $range = null,
+        /**
+         * ⓘ ঘন সারি — অনেক ভাগের তালিকা (যেমন বয়সের সাত ধাপ) যেন পর্দার নিচে না নামে; পুরনো ড্যাশবোর্ড-ভিউ সারির ফাঁক
+         * কমায় (বাকি নিয়ন্ত্রণ, ১১ অক্টোবর ২০২৬: "প্রতিটা পর্দা এক ১৯২০×১০৮০-এ")। না বললে আগের মতোই।
+         */
+        public readonly bool $dense = false,
     ) {
         if ($chart !== null && ! in_array($chart, self::CHARTS, true)) {
             throw new InvalidArgumentException("Breakdown '{$label}' asks for an unknown chart '{$chart}'.");
