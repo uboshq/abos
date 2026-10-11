@@ -15,7 +15,6 @@ use App\Modules\Sales\Http\Controllers\LotTraceController;
 use App\Modules\Sales\Http\Controllers\OpportunityController;
 use App\Modules\Sales\Http\Controllers\OrderSampleController;
 use App\Modules\Sales\Http\Controllers\PortalController;
-use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\RouteAccountController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
@@ -34,7 +33,6 @@ use App\Modules\Sales\Http\Controllers\SalesReturnController;
 use App\Modules\Sales\Http\Controllers\SalesReturnReasonReportController;
 use App\Modules\Sales\Http\Controllers\SalesTargetController;
 use App\Modules\Sales\Http\Controllers\SchemeController;
-use App\Modules\Sales\Http\Controllers\ShiftController;
 use App\Modules\Sales\Http\Controllers\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
@@ -59,34 +57,9 @@ Route::get('/q/{token}', [\App\Modules\Sales\Http\Controllers\QrScanController::
 Route::middleware('auth')->prefix('sales')->group(function () {
 
     /*
-     * কাউন্টার — সবচেয়ে উপরে, কারণ দিনের সবচেয়ে বেশি ব্যবহৃত পর্দা এটাই।
+     * ⓘ কাউন্টার (`pos.*`) আর শিফট (`shift.*`) এখন পিওএস মডিউলের ঘরে — নাম আর ঠিকানা একই
+     * ([[Pos/Routes/web.sales.php]], পিওএস ধাপ ২, ১১ অক্টোবর ২০২৬)।
      */
-    Route::prefix('pos')->name('pos.')->group(function () {
-        Route::get('/', [PosController::class, 'index'])->name('index');
-        Route::post('/', [PosController::class, 'checkout'])->name('checkout');
-        Route::get('/lookup', [PosController::class, 'lookup'])->name('lookup');
-
-        /*
-         * কাউন্টারে ধরে রাখা বিল — ক্রেতা টাকা আনতে গেছেন।
-         *
-         * তোলাটা POST, GET নয়: তোলার সময় বিলটার parked_at মুছে যায়,
-         * অর্থাৎ অবস্থা বদলায়। GET হলে ব্রাউজারের prefetch বা কারো
-         * পাঠানো লিংকেই বিলটা কাউন্টারের তালিকা থেকে হারিয়ে যেত।
-         */
-        Route::post('/park', [PosController::class, 'park'])->name('park');
-
-        Route::post('/{invoice}/resume', [PosController::class, 'resume'])
-            ->whereNumber('invoice')->name('resume');
-
-        /*
-         * কাউন্টার থেকেই ফেরত।
-         *
-         * খোঁজাটা GET (কিছু বদলায় না), নেওয়াটা POST — মাল গুদামে ফেরে,
-         * খাতায় দাখিলা বসে, আর টাকা ড্রয়ার থেকে যেতে পারে।
-         */
-        Route::get('/bill', [PosController::class, 'bill'])->name('bill');
-        Route::post('/return', [PosController::class, 'takeBack'])->name('return');
-    });
 
     /*
      * সরাসরি বিক্রয় — অর্ডার ছাড়াই মাল ও বিল, এক চাপে।
@@ -479,21 +452,6 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * সবগুলো GET, কারণ ছাপা কিছু বদলায় না — আর তাতে কাগজটা বুকমার্ক করা
      * যায়, আর ব্রাউজারের ফিরে যাওয়ার বোতামও ভাঙে না।
      */
-    /*
-     * শিফট — ড্রয়ারটার জন্য কেউ একজন দায়ী।
-     *
-     * খোলা ও বন্ধ দুইটাই POST: অবস্থা বদলায়, আর টাকার দায় বদলায়।
-     * Z-রিপোর্ট GET — ওটা প্রশ্ন, তাই লিংকটা পাঠানো যায়।
-     */
-    Route::prefix('shifts')->name('shift.')->group(function () {
-        Route::get('/', [ShiftController::class, 'index'])->name('index');
-        Route::post('/', [ShiftController::class, 'open'])->name('open');
-        Route::post('/{shift}/close', [ShiftController::class, 'close'])
-            ->whereNumber('shift')->name('close');
-        Route::get('/{shift}', [ShiftController::class, 'show'])
-            ->whereNumber('shift')->name('show');
-    });
-
     /*
      * রিকল — "এই লটটা কাদের কাছে গেছে"।
      *

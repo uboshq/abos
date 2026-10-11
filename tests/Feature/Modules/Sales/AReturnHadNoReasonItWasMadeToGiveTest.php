@@ -19,7 +19,7 @@ use App\Modules\MasterData\Support\SalesReturnReasons;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Reports\SalesReturnReasonReports;
-use App\Modules\Sales\Services\PosService;
+use App\Modules\Pos\Services\PosService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Sales\Services\SalesReturnService;
 use Database\Seeders\DemoSeeder;

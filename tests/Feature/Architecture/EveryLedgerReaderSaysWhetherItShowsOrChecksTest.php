@@ -102,7 +102,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Sales/Http/Controllers/SalesPrintController.php' => '⛔ ছাপা বিলে ডিলারের মাসের খাতা আর লক্ষ্য — কাগজ যায় ডিলারের হাতে; কে কোন শাখা বেছে ছাপলেন তাতে বিবরণী বদলালে কাগজটাই মিথ্যা হত (৩ অক্টোবর)',
         'app/Modules/Sales/Services/DeliveryChallanService.php' => 'চালানে বাকির দেয়াল',
         'app/Modules/Sales/Services/SalesReturnService.php' => 'ফেরতের পোস্টিং',
-        'app/Modules/Sales/Services/ShiftService.php' => 'কাউন্টারের পালার নগদ মেলানো',
+        'app/Modules/Pos/Services/ShiftService.php' => 'কাউন্টারের পালার নগদ মেলানো',
         'app/Modules/Supplier/Models/Supplier.php' => 'মূল উপকরণ — পাওনা',
         'app/Modules/Purchase/Services/PurchaseBillService.php' => 'বিলের দামে মালের দামের সংশোধনী — একটা বিলের নিজের খোলা দাখিলা উল্টে মিলিয়ে আবার বসায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ত (ক্রয় ⚠️৩, ১০ অক্টোবর ২০২৬)',
     ];

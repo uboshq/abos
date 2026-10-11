@@ -15,7 +15,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\Collection;
-use App\Modules\Sales\Services\PosService;
+use App\Modules\Pos\Services\PosService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;

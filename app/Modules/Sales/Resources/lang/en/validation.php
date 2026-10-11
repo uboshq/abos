@@ -10,8 +10,6 @@ return [
     'held_no_print' => 'Invoice :no is waiting on a deposit approval — it is not printed before that.',
     'group_takes_no_money' => '":name" is a head, not an account — money posted there shows up in no balance. Pick one of the accounts under it.',
     'no_cash_counter' => 'There is no cash counter yet. Open one first — without it there is no way to say whose custody the money went into.',
-    'unknown_payment_method' => 'That payment method was not found, or it has been switched off.',
-    'reference_required' => 'Money taken through :method needs its transaction number — without it there is no way to reconcile against the statement later.',
     'free_over_allowance' => 'At most :allowed free can go on this line — no more than the supplier gave.',
 
     /*
@@ -41,15 +39,8 @@ return [
     'parked_draft_other_customer' => 'Draft :no belongs to another customer — the customer cannot change; start a new bill.',
     'open_draft_blocks_new_bill' => 'Draft bill :no is still open for this customer — confirm, cancel or edit it first (open it from Pending).',
 
-    // Counter shifts
-    'till_already_open' => 'A shift is already open on :till. Two people answerable for one drawer means nobody is — close the other one first.',
-    'you_already_have_a_shift' => 'You already have a shift open. With two open there would be no saying which drawer a shortfall came from.',
-    'shift_already_closed' => 'That shift is already closed.',
     'shift_required' => 'Open a shift first — which drawer the money goes into, and who answers for it, both need to be known.',
 
-    // Bills held at the counter
-    'not_parked' => 'That bill is not waiting at the counter, so there is nothing to bring back.',
-    'already_done' => 'Bill :no has already been completed — it cannot be picked up again.',
     'only_draft_confirms' => ':no is not a draft, so it cannot be confirmed again.',
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',
@@ -133,13 +124,8 @@ return [
     'approver_unknown' => 'That email and password do not match.',
     'approver_not_allowed' => ':name cannot approve this discount — either they are not an approver, or they asked for it themselves.',
     'approver_too_many' => 'Too many failed tries. Try again in :seconds seconds.',
-    'approved_at_counter' => 'Approved at the counter by :name.',
     'no_walkin_customer' => 'No cash-sale customer is set — choose one in the Control Panel, otherwise there is no saying whose name the day\'s sales go under.',
     'return_needs_invoice' => 'A return must name the sales invoice it comes from — without it there is no way to know what those goods cost. For goods sold on an invoice ABOS never held, use a stock adjustment that carries a rate.',
-    'no_payment_parts' => 'None of the payment rows has an amount.',
-    'split_does_not_add_up' => 'The rows add to :sum but :paid was taken — the two do not agree.',
-    'change_needs_cash' => 'Change has to come out of a cash row — money sent by bKash or card cannot be handed back.',
-    'no_such_bill' => 'No confirmed bill numbered :no was found.',
     'reprint_limit_reached' => ':no has already been printed :count times, which is the limit. Printing it again needs permission.',
     // ── Shipment (trip) ─────────────────────────────────────────────
     'shipment_needs_a_challan' => 'No challan has been loaded — there is nothing to write a trip sheet about.',

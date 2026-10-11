@@ -101,8 +101,6 @@ return [
     'instrument_no' => 'Cheque / reference no',
     'instrument_date' => 'Cheque date',
     'cost_of_goods' => 'Cost of goods sold',
-    'paid' => 'Paid',
-    'change' => 'Change',
     /*
      * ⚠️ Was "have", now "Available" (3 Sep 2026).
      *
@@ -270,7 +268,6 @@ return [
     'reserved_short' => 'Reserved',
     'total_qty' => 'Total Qty',
     'challan_date' => 'Invoice Date',
-    'inv_number' => 'INV Number',
     'on_confirm' => 'on confirm',
     'days' => 'days',
     /*
@@ -407,16 +404,9 @@ return [
      * Same word in English, which is why nobody here noticed.
      */
     'invoice_count_panel' => 'Invoices',
-    'user' => 'User',
-    'time' => 'Time',
-    'till' => 'Drawer',
     'paper' => 'Paper',
     'print_failure' => 'What went wrong',
     'cash' => 'Cash',
-
-    // কাউন্টারে ছাড়ের অনুমোদন — ম্যানেজারের নিজের লগইন
-    'approver_email' => "Manager's email",
-    'approver_password' => "Manager's password",
 
     // ডিলারের কমিশন
     'commission_base' => 'Base',

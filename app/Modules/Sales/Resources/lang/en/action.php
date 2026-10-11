@@ -27,8 +27,6 @@ return [
     'invoice_against' => 'Invoice this challan',
     'challan_bills' => 'Bills of this challan:',
     'collect_against' => 'Collect against this invoice',
-    'checkout' => 'Complete sale',
-    'exact' => 'Exact',
     'add_to_cart' => 'Add to Cart',
     'cart' => 'Cart',
     /*
@@ -68,13 +66,8 @@ return [
     'add_note' => 'Add Note',
     'expense' => 'Expense',
     'new_return' => 'New return',
-    'shift_open' => 'Open shift',
-    'shift_close' => 'Close shift',
     'print_again' => 'Print again',
     'print_settled' => 'It came out',
-    'split_payment' => 'Split the payment',
-    'add_payment_row' => 'Another method',
-    'take_back' => 'Take it back',
 
     /*
      * ⚠️ These two were written in Bangla only, and the guard caught it —

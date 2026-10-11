@@ -48,7 +48,7 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
         // ⓘ কমিশনের দাবি — পাস/বাতিল সারিতেই, আলাদা পাতা নেই
         'Sales/Resources/views/commission/index.blade.php',
         // ⓘ আজকের বন্ধ শিফট — সারির নিজের "দেখুন" আগে থেকেই আছে ([[shift/partials/view]])
-        'Sales/Resources/views/shift/index.blade.php',
+        'Pos/Resources/views/shift/index.blade.php',
     ];
 
     public function test_every_money_list_has_a_grand_total_or_is_named_pending(): void

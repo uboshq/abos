@@ -33,8 +33,6 @@ return [
     'invoice_against' => 'এই চালানের বিল করুন',
     'challan_bills' => 'এই চালানের বিল:',
     'collect_against' => 'এই বিলের টাকা নিন',
-    'checkout' => 'বিক্রি সম্পূর্ণ করুন',
-    'exact' => 'ঠিক টাকা',
     'add_to_cart' => 'কার্টে যোগ করুন',
     'cart' => 'কার্ট',
     'clear_data' => 'ঘর খালি করুন',
@@ -66,13 +64,8 @@ return [
     'add_note' => 'নোট যোগ',
     'expense' => 'খরচ',
     'new_return' => 'নতুন ফেরত',
-    'shift_open' => 'শিফট খুলুন',
-    'shift_close' => 'শিফট বন্ধ করুন',
     'print_again' => 'আবার ছাপুন',
     'print_settled' => 'বেরিয়ে গেছে',
-    'split_payment' => 'ভাগ করে দিন',
-    'add_payment_row' => 'আরেকটা উপায়',
-    'take_back' => 'ফেরত নিন',
 
     // ডিলারের কমিশন
     'commission_settle' => 'মেনেছে',

@@ -71,7 +71,7 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
          * "আজকের শিফট", "এখনো বসানো হয়নি এমন মাল", "চলতি মাসের লক্ষ্য"।
          * ⚠️ সারি জমে ডাটাবেজে, কিন্তু **পর্দায় নয়**।
          */
-        'App\Modules\Sales\Http\Controllers\ShiftController' => 'আজকের শিফট — তারিখেই বাঁধা।',
+        'App\Modules\Pos\Http\Controllers\ShiftController' => 'আজকের শিফট — তারিখেই বাঁধা।',
         'App\Modules\Sales\Http\Controllers\SalesTargetController' => 'চলতি মাসের স্কোরবোর্ড — মাস ও কর্মীর সংখ্যায় বাঁধা।',
         'App\Modules\Sales\Http\Controllers\PrintQueueController' => 'ছাপার অপেক্ষায় থাকা কাজ — ছাপা হলেই সারি চলে যায়।',
         'App\Modules\Inventory\Http\Controllers\StockPlacementController' => 'এখনো বসানো হয়নি এমন মাল — বসালেই তালিকা থেকে যায়।',
@@ -84,7 +84,7 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
          * নয় — **ক্ষতিকর**।
          */
         'App\Modules\Inventory\Http\Controllers\LabelController' => 'চেকবক্সে পণ্য বাছার পর্দা — পাতা বদলালে আগের পাতার বাছাই হারাত।',
-        'App\Modules\Sales\Http\Controllers\PosController' => 'কাউন্টারের ক্যাটালগ — খোঁজা তাৎক্ষণিক হতে হয়, পাতা ভাগ করলে প্রতিটা বিক্রিতে অপেক্ষা।',
+        'App\Modules\Pos\Http\Controllers\PosController' => 'কাউন্টারের ক্যাটালগ — খোঁজা তাৎক্ষণিক হতে হয়, পাতা ভাগ করলে প্রতিটা বিক্রিতে অপেক্ষা।',
         'App\Modules\Restaurant\Http\Controllers\KitchenBoardController' => 'রান্নাঘরের বোর্ড — সব কাজ একসাথে দেখাই উদ্দেশ্য।',
         'App\Modules\Inventory\Http\Controllers\StorageLocationController' => 'গুদামের তাকের ক্রম — হাঁটার পথ ধরে সাজানো, ভাগ করলে পথ ভাঙত।',
 

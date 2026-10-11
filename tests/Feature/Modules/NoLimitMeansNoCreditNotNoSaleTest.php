@@ -14,7 +14,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Services\DirectSaleService;
-use App\Modules\Sales\Services\PosService;
+use App\Modules\Pos\Services\PosService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;

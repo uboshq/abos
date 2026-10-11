@@ -17,7 +17,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Dashboard\SalesWidgets;
 use App\Modules\Sales\Metrics\SalesMetrics;
-use App\Modules\Sales\Services\PosService;
+use App\Modules\Pos\Services\PosService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
