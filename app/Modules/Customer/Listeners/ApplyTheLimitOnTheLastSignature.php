@@ -7,6 +7,7 @@ namespace App\Modules\Customer\Listeners;
 use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Models\CustomerCreditChange;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,7 +23,10 @@ final class ApplyTheLimitOnTheLastSignature
     {
         if (($event->payload['module'] ?? null) !== 'customer'
             || ($event->payload['action'] ?? null) !== 'credit_limit'
-            || ($event->payload['status'] ?? null) !== Approval::APPROVED) {
+            || ($event->payload['status'] ?? null) !== Approval::APPROVED
+            // ⛔ কেবল গ্রাহকের সারিতে বসা সই — বাকি নিয়ন্ত্রণের অনুরোধও একই কাজের নামে সই চায় (ধাপ ২.৫), আর তার `approvable_id`
+            // অনুরোধের নম্বর, গ্রাহকের নয়; না দেখলে অন্য কোনো গ্রাহকের সীমা বসে যেত ([[ApplyTheRequestOnTheOwnersSignature]])
+            || ($event->payload['approvable_type'] ?? null) !== (new Customer)->getMorphClass()) {
             return;
         }
 
@@ -43,7 +47,12 @@ final class ApplyTheLimitOnTheLastSignature
                 return;
             }
 
-            $customer->forceFill(['credit_limit' => (string) $approval->amount])->save();
+            // ⭐ ইতিহাসে কারণ আর সইয়ের সূত্রসহ (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
+            CustomerCreditChange::because(
+                $approval->requested_reason,
+                (int) $approval->id,
+                fn () => $customer->forceFill(['credit_limit' => (string) $approval->amount])->save(),
+            );
         });
     }
 }

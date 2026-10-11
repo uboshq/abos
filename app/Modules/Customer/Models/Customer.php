@@ -79,6 +79,14 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     protected $hidden = ['portal_password', 'remember_token'];
 
     /**
+     * ⭐ সীমা আর বাকির দিনের প্রতিটা বদল নিজের ইতিহাসে — যে পথেই বদলাক (বাকি নিয়ন্ত্রণ ধাপ ১.৪, [[CustomerCreditChange]])।
+     */
+    protected static function booted(): void
+    {
+        static::updated(fn (self $customer) => CustomerCreditChange::recordFor($customer));
+    }
+
+    /**
      * অডিটে যা কখনো বসবে না।
      *
      * ── কেন hash-টাও নয় ────────────────────────────────────────────
@@ -153,6 +161,51 @@ class Customer extends Model implements AuthenticatableContract, Drillable
             'portal_password' => 'hashed',
             'is_active' => 'boolean',
             'credit_blocked_at' => 'datetime',
+            'temporary_credit_limit' => 'decimal:4',
+            'temporary_credit_until' => 'date',
+        ];
+    }
+
+    /**
+     * ⭐ চলতি বাকির সীমা — দেয়াল এটাই মাপে (বাকি নিয়ন্ত্রণ ধাপ ২.৩, মালিকের উত্তর ৩, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অস্থায়ী সীমা বসানো থাকলে আর আজ ≤ তার শেষ তারিখ হলে সেটা, নইলে সাধারণ সীমা। ⭐ ফিরিয়ে আনার কোনো কাজ (job) নেই —
+     * শেষ তারিখের পরের দিন থেকে এই প্রশ্নই সাধারণ সীমা বলে। ⛔ অনুরোধ ঝুলে থাকলে কিছুই বদলায় না: ঘরগুলো বসে কেবল মালিকের
+     * সইয়ে বা সুপার অ্যাডমিনের নিজের হাতে ([[CustomerService::setTemporaryLimit()]])।
+     * ⓘ সীমা খালি = ০ (শূন্য মানে শূন্য, ১ অক্টোবরের চূড়ান্ত কথা)।
+     */
+    public function effectiveCreditLimit(?Carbon $on = null): string
+    {
+        if ($this->temporaryLimitActive($on)) {
+            return bcadd((string) $this->temporary_credit_limit, '0', 4);
+        }
+
+        $limit = (string) ($this->credit_limit ?? '0');
+
+        return bcadd($limit === '' ? '0' : $limit, '0', 4);
+    }
+
+    /** অস্থায়ী সীমা আজ (বা `$on` দিনে) খাটে কি না — শেষ তারিখের দিনও খাটে, পরের দিন নয় */
+    public function temporaryLimitActive(?Carbon $on = null): bool
+    {
+        if ($this->temporary_credit_limit === null || $this->temporary_credit_until === null) {
+            return false;
+        }
+
+        return ($on ?? Carbon::today())->toDateString() <= $this->temporary_credit_until->toDateString();
+    }
+
+    /**
+     * [[effectiveCreditLimit()]]-এর একই নিয়ম, SQL-এ — তালিকা আর গোনার জন্য ([[scopeOverCreditLimit()]])।
+     *
+     * @return array{0: string, 1: list<string>}  এক্সপ্রেশন আর তার বাঁধন (আজকের তারিখ)
+     */
+    public static function effectiveLimitSql(string $table = 'customers'): array
+    {
+        return [
+            "(CASE WHEN {$table}.temporary_credit_limit IS NOT NULL AND {$table}.temporary_credit_until >= ? "
+            ."THEN {$table}.temporary_credit_limit ELSE COALESCE({$table}.credit_limit, 0) END)",
+            [Carbon::today()->toDateString()],
         ];
     }
 
@@ -165,6 +218,15 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     public function isCreditBlocked(): bool
     {
         return $this->credit_blocked_at !== null;
+    }
+
+    /** ⭐ বাকি বন্ধের উৎস — চেক ফেরত (ধাপ ২.৪); খালি = হাতে বসানো */
+    public const BLOCK_BOUNCED_CHEQUE = 'bounced_cheque';
+
+    /** ⭐ চেক ফেরতে বন্ধ — তোলেন কেবল সুপার অ্যাডমিন ([[CustomerService::clearCreditBlock()]]) */
+    public function isBlockedByBouncedCheque(): bool
+    {
+        return $this->isCreditBlocked() && $this->credit_block_source === self::BLOCK_BOUNCED_CHEQUE;
     }
 
     /** কে বাকি বন্ধ করেছেন */
@@ -421,7 +483,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
      */
     public function availableLimit(): ?string
     {
-        $limit = (string) $this->credit_limit;
+        // ⭐ চলতি সীমা — অস্থায়ী সীমা খাটলে সেটা (ধাপ ২.৩)
+        $limit = $this->effectiveCreditLimit();
 
         if (bccomp($limit, '0', 4) === 0) {
             return null;
@@ -570,7 +633,10 @@ class Customer extends Model implements AuthenticatableContract, Drillable
          * ⓘ সীমা না থাকা গ্রাহকের এক পয়সা বকেয়াও সীমা ছাড়ানো; আগে এটা
          * `customer.zero_limit_blocks` সুইচে বাঁধা ছিল, সেটা আর দেয়াল নরম করে না।
          */
-        return $query->whereRaw('('.$net->toRawSql().') > COALESCE(customers.credit_limit, 0)');
+        // ⭐ চলতি সীমা — অস্থায়ী সীমা খাটলে সেটা, [[effectiveCreditLimit()]]-এর একই নিয়ম (ধাপ ২.৩)
+        [$limit, $bindings] = self::effectiveLimitSql();
+
+        return $query->whereRaw('('.$net->toRawSql().') > '.$limit, $bindings);
     }
 
     /**
@@ -587,8 +653,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
          * সারিতে গিয়েছিল (S-0009)। সুইচটা আর দেয়াল নরম করে না
          * ([[NoLimitMeansNoCreditForAnyoneTest]])।
          */
-        $limit = (string) ($this->credit_limit ?? '0');
-        $limit = $limit === '' ? '0' : $limit;
+        // ⭐ চলতি সীমা — অস্থায়ী সীমা খাটলে সেটা, শেষ তারিখের পরের দিন থেকে সাধারণ (ধাপ ২.৩)
+        $limit = $this->effectiveCreditLimit();
 
         return bccomp(bcadd($this->outstanding(), $additional, 4), $limit, 4) > 0;
     }

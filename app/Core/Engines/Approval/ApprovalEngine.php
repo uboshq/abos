@@ -1050,6 +1050,20 @@ final class ApprovalEngine
     public function canDecide(Approval $approval, User $user): bool
     {
         /*
+         * ⭐ কাগজের নিজের "না" — ছকের আগে (বাকি নিয়ন্ত্রণ ধাপ ২.৫; [[ChoosesItsSigners]])। ⓘ কেবল যে কাগজ এটা দেয়, তাকেই
+         * পড়া হয় — বাকি সতেরো রকম কাগজে একটা বাড়তি প্রশ্নও নয়। ⛔ কেবল সরু করে: "হ্যাঁ"-র পরে নিচের সব নিয়ম তবুও খাটে।
+         */
+        $type = (string) $approval->approvable_type;
+
+        if ($type !== '' && is_a($type, \App\Core\Contracts\ChoosesItsSigners::class, true)) {
+            $paper = $type::query()->withoutGlobalScopes()->find($approval->approvable_id);
+
+            if (! $paper instanceof \App\Core\Contracts\ChoosesItsSigners || ! $paper->mayBeSignedBy($user, $approval)) {
+                return false;
+            }
+        }
+
+        /*
          * ছক আছে, ওই স্তরে ধাপ আছে, আর ধাপটা ইনাকে অনুমতি দেয় —
          * তিনটাই একসাথে এখানে। ⚠️ `pendingFor()` ঠিক এই দুইটা মেথডই
          * ব্যবহার করে ([[flowOf]] · [[levelsIn]]), যাতে ইনবক্স আর এই

@@ -286,7 +286,7 @@ final class SalesPaperOverview
             return;
         }
 
-        $o->money(__('sales::overview_confirm.limit'), Money::format((string) $customer->credit_limit));
+        $o->money(__('sales::overview_confirm.limit'), Money::format($customer->effectiveCreditLimit()));
 
         if ($wall === null) {
             return;

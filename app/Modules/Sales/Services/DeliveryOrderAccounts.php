@@ -8,6 +8,7 @@ use App\Core\Services\SettingsService;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryOrder;
+use App\Modules\Sales\Support\CreditPaper;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +58,7 @@ final class DeliveryOrderAccounts
                 return null;
             }
 
-            $result = $this->credit->check($customer, (string) $order->total, (int) $order->id);
+            $result = $this->credit->check($customer, (string) $order->total, (int) $order->id, CreditPaper::of('delivery_order', $order));
 
             if (! $result['fits']) {
                 $order->forceFill([

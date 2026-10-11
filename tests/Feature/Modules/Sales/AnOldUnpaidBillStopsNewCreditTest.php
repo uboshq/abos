@@ -94,12 +94,14 @@ final class AnOldUnpaidBillStopsNewCreditTest extends TestCase
         $this->assertFits();
     }
 
-    public function test_zero_days_or_the_credit_switch_off_means_no_wall(): void
+    public function test_the_overdue_switch_or_the_credit_switch_off_means_no_wall(): void
     {
         $this->bill('INV-OLD3', '5000', daysPastDue: 200);
 
-        app(SettingsService::class)->set('customer.overdue_block_days', 0);
+        // ⓘ ১১ অক্টোবর ২০২৬ থেকে ০ দিন মানে "মেয়াদ পেরোলেই", বন্ধ নয় — বন্ধ এখন নিজের সুইচে (বাকি নিয়ন্ত্রণ ধাপ ২.১)
+        app(SettingsService::class)->set('customer.overdue_stop_enabled', false);
         $this->assertFits();
+        app(SettingsService::class)->set('customer.overdue_stop_enabled', true);
 
         app(SettingsService::class)->set('customer.overdue_block_days', 60);
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
