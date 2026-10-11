@@ -82,12 +82,14 @@ final class SignedButNotPosted
             try {
                 $table = (new $class)->getTable();
 
-                // ⓘ কেবল যে কাগজের "খসড়া" অবস্থা আছে — গ্রাহকের সীমা বা ছকের মতো কাগজ এখানে আসে না
-                if (! Schema::hasColumn($table, 'status')) {
+                // ⓘ কেবল যে কাগজের "খসড়া" অবস্থা আর কোম্পানি আছে — গ্রাহকের সীমা বা ছকের মতো কাগজ এখানে আসে না
+                if (! Schema::hasColumn($table, 'status') || ! Schema::hasColumn($table, 'company_id')) {
                     continue;
                 }
 
+                // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
                 $drafts = DB::table($table)
+                    ->where('company_id', CompanyContext::id())
                     ->whereIn('id', $rows->pluck('approvable_id')->all())
                     ->where('status', DocumentStatus::DRAFT)
                     ->when(Schema::hasColumn($table, 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
