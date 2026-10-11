@@ -59,14 +59,17 @@
              class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-(--radius-field)
                     bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
             <div>
-                <span class="font-semibold">{{ __('customer::credit_block.badge') }}</span>
+                <span class="font-semibold">{{ $customer->isBlockedByBouncedCheque() ? __('customer::credit_block.bounced_badge') : __('customer::credit_block.badge') }}</span>
                 · {{ __('customer::credit_block.reason') }}: {{ $customer->credit_block_reason }}
                 · {{ __('customer::credit_block.by_on', [
                         'user' => $customer->creditBlocker?->name ?? '—',
                         'date' => \App\Core\Support\DateFormat::format($customer->credit_blocked_at),
                     ]) }}
             </div>
-            @can('update', $customer)
+            {{-- ⛔ চেক ফেরতের বন্ধ খোলেন কেবল মালিক (ধাপ ২.৪) — সেবাও ৪০৩ দেয়, এখানে কেবল বোতাম না আঁকা --}}
+            @if ($customer->isBlockedByBouncedCheque()
+                    ? (auth()->user()?->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE) ?? false)
+                    : auth()->user()?->can('update', $customer))
                 <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2">
                     @csrf
                     @method('DELETE')
@@ -76,7 +79,7 @@
                                   bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
                     <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.clear') }}</x-ui.button>
                 </form>
-            @endcan
+            @endif
         </div>
     @endif
 

@@ -11,6 +11,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Models\LedgerEntry;
+use App\Modules\Accounts\Events\ChequeBounced;
 use App\Modules\Accounts\Events\ChequeCleared;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
@@ -567,6 +568,11 @@ final class ChequeService
             'bounce_reason' => $reason,
             'cleared_on' => null,
         ]);
+
+        // ⭐ ফেরতের প্রতিটা পথ এখানে — অন্য মডিউলকে জানানো, একই লেনদেনে (গ্রাহকের বাকি বন্ধ; বাকি নিয়ন্ত্রণ ধাপ ২.৪, [[ChequeBounced]])
+        if ($status === Cheque::BOUNCED) {
+            event(ChequeBounced::from($cheque->fresh()));
+        }
 
         return $cheque->fresh();
     }

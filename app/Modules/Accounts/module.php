@@ -8,6 +8,7 @@ use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\ChequeBounced;
 use App\Modules\Accounts\Events\ChequeCleared;
 use App\Modules\Accounts\Events\OpeningCapitalBooked;
 use App\Modules\Accounts\Events\VoucherPosted;
@@ -966,6 +967,8 @@ return [
         AccountFormOpened::class,
         // ⭐ চেক পাশ — টাকার জন্য আটকে থাকা DO আবার যাচাই হয় (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
         ChequeCleared::class,
+        // ⭐ চেক ফেরত — গ্রাহকের বাকি নিজেই বন্ধ, খোলেন কেবল মালিক (বাকি নিয়ন্ত্রণ ধাপ ২.৪, ১১ অক্টোবর ২০২৬)
+        ChequeBounced::class,
         // ⭐ খোলা জের মালিকের মূলধনে — অর্থ রেজিস্টারে মালিকের নামে তোলে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
         OpeningCapitalBooked::class,
     ],

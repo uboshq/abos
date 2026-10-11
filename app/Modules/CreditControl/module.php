@@ -91,4 +91,9 @@ return [
     'reports' => [
         CreditPositionReports::class,
     ],
+
+    'listeners' => [
+        // ⭐ চেক ফেরত — গ্রাহকের বাকি নিজেই বন্ধ, মালিককে খবর; খোলেন কেবল মালিক (ধাপ ২.৪, মালিকের উত্তর ৪)
+        \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\CreditControl\Listeners\BlockTheCustomerOnABouncedCheque::class],
+    ],
 ];

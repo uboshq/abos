@@ -18,4 +18,8 @@ return [
     'already' => 'Credit is already blocked for this customer.',
     'not_blocked' => 'Credit is not blocked for this customer.',
     'help' => 'While blocked, no new credit goes out at the counter, on a challan, bill, DO or order; a sale paid in full still goes through.',
+    // বাকি নিয়ন্ত্রণ ধাপ ২.৪ — চেক ফেরতে নিজে বন্ধ
+    'bounced_reason' => 'Cheque bounced — :no',
+    'owner_only' => 'Credit blocked by a bounced cheque can be released only by the owner (super admin).',
+    'bounced_badge' => 'Blocked by a bounced cheque — only the owner releases it',
 ];

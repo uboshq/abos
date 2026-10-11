@@ -220,6 +220,15 @@ class Customer extends Model implements AuthenticatableContract, Drillable
         return $this->credit_blocked_at !== null;
     }
 
+    /** ⭐ বাকি বন্ধের উৎস — চেক ফেরত (ধাপ ২.৪); খালি = হাতে বসানো */
+    public const BLOCK_BOUNCED_CHEQUE = 'bounced_cheque';
+
+    /** ⭐ চেক ফেরতে বন্ধ — তোলেন কেবল সুপার অ্যাডমিন ([[CustomerService::clearCreditBlock()]]) */
+    public function isBlockedByBouncedCheque(): bool
+    {
+        return $this->isCreditBlocked() && $this->credit_block_source === self::BLOCK_BOUNCED_CHEQUE;
+    }
+
     /** কে বাকি বন্ধ করেছেন */
     public function creditBlocker(): BelongsTo
     {

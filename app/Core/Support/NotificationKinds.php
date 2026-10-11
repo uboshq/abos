@@ -82,6 +82,9 @@ final class NotificationKinds
             'notification.scheduled' => 'core.notify.kind.notification_scheduled',
             'notification.template_test' => 'core.notify.kind.notification_template_test',
 
+            // ⭐ বাকি নিয়ন্ত্রণ, ধাপ ২ — চেক ফেরতে গ্রাহকের বাকি নিজেই বন্ধ; পান মালিক ([[BlockTheCustomerOnABouncedCheque]])
+            'credit_control.cheque_block' => 'core.notify.kind.credit_cheque_block',
+
             // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
             'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
 
@@ -143,7 +146,7 @@ final class NotificationKinds
             $type === 'approval.rejected' => ['approval', 'normal'],
             str_starts_with($type, 'approval.') => ['approval', 'high'],
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
-            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue'], true) => ['task', 'high'],
+            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'credit_control.cheque_block'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
             $type === 'notification.scheduled' => ['update', 'normal'],
             $type === 'notification.template_test' => ['system', 'low'],

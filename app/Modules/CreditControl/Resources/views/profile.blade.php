@@ -59,6 +59,25 @@
 
         <x-ui.errors />
 
+        {{-- ⭐ বাকি বন্ধ — কারণ, আর খোলার ঘর; চেক ফেরতের বন্ধ খোলেন কেবল মালিক (ধাপ ২.৪) --}}
+        @if ($customer->isCreditBlocked())
+            <section data-credit-block class="flex flex-wrap items-center justify-between gap-2 rounded-(--radius-card) bg-(--color-badge-danger-bg) px-4 py-2 text-sm text-(--color-badge-danger-ink)">
+                <div>
+                    <span class="font-semibold">{{ $customer->isBlockedByBouncedCheque() ? __('customer::credit_block.bounced_badge') : __('customer::credit_block.badge') }}</span>
+                    · {{ $customer->credit_block_reason }} · {{ DateFormat::format($customer->credit_blocked_at) }}
+                </div>
+                @if ($customer->isBlockedByBouncedCheque() ? $isOwner : $canEdit)
+                    <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2" data-credit-release-form>
+                        @csrf
+                        @method('DELETE')
+                        <input type="text" name="reason" required maxlength="500" placeholder="{{ __('customer::credit_block.clear_reason') }}"
+                               class="h-(--spacing-field-dense) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                        <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.clear') }}</x-ui.button>
+                    </form>
+                @endif
+            </section>
+        @endif
+
         {{-- ⭐ কাজ — এক সারিতে, কারণ বাধ্যতামূলক (বাকি নিয়ন্ত্রণ ধাপ ২); দরজা নিজে চাবি দেখে, এখানে কেবল আঁকা না-আঁকা --}}
         @if ($canEdit)
             <section class="grid gap-2 lg:grid-cols-3" data-credit-actions>
