@@ -34,7 +34,7 @@
                 @endphp
                 <li class="flex gap-3" data-milestone="{{ $m['key'] }}" data-state="{{ $m['state'] }}">
                     <div class="flex flex-col items-center">
-                        <span style="width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+                        <span style="width:22px;aspect-ratio:1;border-radius:999px;display:flex;align-items:center;justify-content:center;
                                      font-size:12px;font-weight:700;color:var(--color-ink-inverse);
                                      background: {{ $m['state'] === 'done' || $m['state'] === 'rejected' || $m['state'] === 'hold' ? $c : 'var(--color-surface-card)' }};
                                      border: 2px solid {{ $on ? $c : 'var(--color-border-strong)' }}">

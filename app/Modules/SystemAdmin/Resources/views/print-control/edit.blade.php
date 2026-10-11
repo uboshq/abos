@@ -111,7 +111,7 @@
                                         <iframe src="{{ $card['sample'] }}"
                                                 title="{{ __('system_admin::settings.print_sample_of', ['format' => $card['name']]) }}"
                                                 loading="lazy" tabindex="-1" sandbox="allow-same-origin"
-                                                style="width: 760px; height: 1000px; border: 0; transform: scale(0.34);
+                                                style="width: 760px; aspect-ratio: 760 / 1000; border: 0; transform: scale(0.34);
                                                        transform-origin: top left; pointer-events: none;"></iframe>
                                     </span>
                                 @endif

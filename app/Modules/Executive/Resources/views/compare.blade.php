@@ -40,14 +40,14 @@
 
             <form method="GET" action="{{ route('executive.compare') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="cmp-mode">{{ __('executive::compare.mode') }}</label>
-                <select id="cmp-mode" name="mode" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="cmp-mode" name="mode" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach ([Comparison::COMPANIES, Comparison::BRANCHES] as $mode)
                         <option value="{{ $mode }}" @selected($result['mode'] === $mode)>{{ __('executive::compare.mode_'.$mode) }}</option>
                     @endforeach
                 </select>
 
                 <label class="sr-only" for="cmp-company">{{ __('executive::today.company') }}</label>
-                <select id="cmp-company" name="company" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="cmp-company" name="company" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @if ($result['mode'] === Comparison::COMPANIES)
                         <option value="">{{ __('executive::today.all_companies') }}</option>
                     @endif
@@ -57,7 +57,7 @@
                 </select>
 
                 <label class="sr-only" for="cmp-against">{{ __('executive::compare.against') }}</label>
-                <select id="cmp-against" name="against" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="cmp-against" name="against" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Comparison::AGAINST as $against)
                         <option value="{{ $against }}" @selected($result['against'] === $against)>{{ __('executive::compare.against_'.$against) }}</option>
                     @endforeach
@@ -129,7 +129,7 @@
                 <h2 class="min-w-0 flex-1 text-sm font-semibold text-(--color-ink)">{{ $series?->label }}</h2>
 
                 <label class="sr-only" for="cmp-figure">{{ __('executive::compare.figure') }}</label>
-                <select id="cmp-figure" name="figure" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="cmp-figure" name="figure" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Figures::COMPARED as $key)
                         @if (Figures::definition($key)['period'])
                             <option value="{{ $key }}" @selected($figure === $key)>{{ __('executive::figure.'.$key) }}</option>
@@ -138,7 +138,7 @@
                 </select>
 
                 <label class="sr-only" for="cmp-grain">{{ __('executive::compare.grain') }}</label>
-                <select id="cmp-grain" name="grain" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="cmp-grain" name="grain" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (\App\Core\Engines\Report\Trend::GRAINS as $g)
                         <option value="{{ $g }}" @selected($grain === $g)>{{ __('executive::compare.grain_'.$g) }}</option>
                     @endforeach

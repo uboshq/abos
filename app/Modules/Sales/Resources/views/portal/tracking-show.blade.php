@@ -15,7 +15,7 @@
             @foreach ($sale['milestones'] ?? [] as $m)
                 @php $c = $trackingColours[$m['category']] ?? 'var(--color-ink-muted)'; @endphp
                 <li class="flex items-start gap-3 pb-2" data-milestone="{{ $m['key'] }}" data-state="{{ $m['state'] }}">
-                    <span style="width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+                    <span style="width:20px;aspect-ratio:1;border-radius:999px;display:flex;align-items:center;justify-content:center;
                                  font-size:11px;font-weight:700;color:var(--color-ink-inverse);flex:none;
                                  background: {{ in_array($m['state'], ['done', 'rejected', 'hold'], true) ? $c : 'var(--color-surface-card)' }};
                                  border: 2px solid {{ $m['state'] === 'todo' ? 'var(--color-border-strong)' : $c }}">

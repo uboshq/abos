@@ -40,7 +40,7 @@
                 <label for="hist-date" class="text-sm text-(--color-ink-muted)">{{ __('executive::history.date') }}</label>
                 <x-ui.date id="hist-date" name="date" :value="$date" :max="now()->toDateString()" />
                 <label class="sr-only" for="hist-figure">{{ __('executive::compare.figure') }}</label>
-                <select id="hist-figure" name="figure" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="hist-figure" name="figure" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Figures::KEYS as $key)
                         <option value="{{ $key }}" @selected($figure === $key)>{{ __('executive::figure.'.$key) }}</option>
                     @endforeach

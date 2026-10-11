@@ -46,7 +46,7 @@
             <form method="GET" action="{{ route('executive.today') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="ex-company">{{ __('executive::today.company') }}</label>
                 <select id="ex-company" name="company"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     <option value="">{{ __('executive::today.all_companies') }}</option>
                     @foreach ($board['choices'] as $choice)
                         <option value="{{ $choice['id'] }}" @selected($filters['company'] === $choice['id'])>{{ $choice['name'] }}</option>
@@ -55,7 +55,7 @@
 
                 <label class="sr-only" for="ex-branch">{{ __('executive::today.branch') }}</label>
                 <select id="ex-branch" name="branch"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     <option value="">{{ __('executive::today.all_branches') }}</option>
                     @foreach ($board['choices'] as $choice)
                         @if ($filters['company'] === $choice['id'])
@@ -68,7 +68,7 @@
 
                 <label class="sr-only" for="ex-period">{{ __('executive::today.period') }}</label>
                 <select id="ex-period" name="period"
-                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Figures::PERIODS as $period)
                         <option value="{{ $period }}" @selected($filters['period'] === $period)>{{ __('executive::today.period_'.$period) }}</option>
                     @endforeach
