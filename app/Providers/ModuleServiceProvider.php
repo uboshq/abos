@@ -124,6 +124,7 @@ class ModuleServiceProvider extends ServiceProvider
             $this->registerViews($module->dir('Resources', 'views'), $module->code);
             $this->registerMigrations($module->dir('Database', 'Migrations'));
             $this->registerRoutes($module->dir('Routes'), $module->code, $module->namespace);
+            $this->registerBorrowedRouteNames($module->dir('Routes'), $module->code, $module->namespace, $module->dependsOn);
 
             // রিপোর্টও মডিউলের নিজের — module.php-তে ঘোষিত, তাই নতুন
             // মডিউলের রিপোর্ট যোগ করতে কোর ফাইলে নাম লিখতে হয় না।
@@ -176,6 +177,44 @@ class ModuleServiceProvider extends ServiceProvider
     {
         if (is_dir($path)) {
             $this->loadMigrationsFrom($path);
+        }
+    }
+
+    /**
+     * ধার করা রুটের নাম — `Routes/web.<আশ্রয়দাতা>.php` (পিওএস ধাপ ২, ১১ অক্টোবর ২০২৬)।
+     *
+     * ── ⭐ কেন ─────────────────────────────────────────────────────────
+     * একটা পর্দা এক মডিউল থেকে আরেক মডিউলে সরলে তার কোড সরে, কিন্তু **রুটের নাম
+     * আর ঠিকানা সরতে পারে না** — ফোনের অ্যাপ, বুকমার্ক আর ছাপা কাগজের লিংক ঐ
+     * নামের উপর দাঁড়িয়ে। ⓘ সাধারণ `web.php`-র নাম মডিউলের কোড দিয়ে শুরু হয়, তাই
+     * নতুন ঘরে বসালে `sales.pos.index` হয়ে যেত `pos.sales.pos.index`।
+     *
+     * ⓘ তাই এই ফাইলের নামগুলো আশ্রয়দাতার কোড দিয়ে শুরু হয়, আর controller খোঁজা
+     * হয় **নিজের** নামস্থানে। ⚠️ কোনো মডিউলের নাম এখানে লেখা নেই — ফাইলের নামটাই বলে।
+     *
+     * ── ⛔ কেবল ঘোষিত নির্ভরতার নাম ──────────────────────────────────
+     * যার উপর মডিউলটা দাঁড়ায় না তার নামে রুট বসালে দুইটা মডিউল একই নাম দাবি করতে
+     * পারত, আর পরেরটা নীরবে আগেরটাকে ঢেকে দিত। ⓘ তাই অঘোষিত নাম এখানেই থামে।
+     *
+     * @param  list<string>  $dependsOn
+     */
+    private function registerBorrowedRouteNames(string $path, string $code, string $namespace, array $dependsOn): void
+    {
+        foreach (glob($path.DIRECTORY_SEPARATOR.'web.*.php') ?: [] as $file) {
+            $host = substr(basename($file, '.php'), strlen('web.'));
+
+            if (! in_array($host, $dependsOn, true)) {
+                throw new \InvalidArgumentException(
+                    "{$file}: module '{$code}' registers routes under '{$host}.' names, but '{$host}' is not in "
+                    .'its depends_on. A route may only keep the name of a module this one stands on, or two '
+                    .'modules could claim the same name and the later one would silently win.'
+                );
+            }
+
+            Route::middleware('web')
+                ->namespace($namespace.'\\Http\\Controllers')
+                ->name($host.'.')
+                ->group($file);
         }
     }
 
