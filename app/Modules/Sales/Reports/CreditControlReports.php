@@ -110,7 +110,7 @@ final class CreditControlReports
     /**
      * ঝুঁকির গ্রাহক — চার লক্ষণের যেকোনোটা।
      *
-     * ⓘ পুরনো বাকি: কোম্পানির দেয়ালের দিন (`customer.overdue_block_days`), না বসানো থাকলে [[RISK_DAYS_FALLBACK]]।
+     * ⓘ পুরনো বাকি: কোম্পানির দেয়াল চালু থাকলে তার ছাড়ের দিন (`customer.overdue_block_days`), বন্ধ থাকলে [[RISK_DAYS_FALLBACK]]।
      * ⓘ চেক ফেরত: গত ৯০ দিনে ফেরত যাওয়া চেক (চেকের নিজের পাতায় ফেরত হওয়ার দিনের ঘর নেই, তাই শেষ বদলের দিন)।
      * ⓘ সীমা পার: খাতার বকেয়া + আটকে থাকা (চেকসহ) > সীমা — দেয়ালের মাপ।
      * ⓘ আচরণ: চলমান নোট, যার ধরন "ঝুঁকি" ([[ConductType::RISK]])।
@@ -124,7 +124,8 @@ final class CreditControlReports
             filters: ['branch'],
             query: function (array $f): Builder {
                 $credit = app(CreditExposure::class);
-                $days = $credit->overdueDays() > 0 ? $credit->overdueDays() : self::RISK_DAYS_FALLBACK;
+                // ⓘ দেয়াল চালু থাকলে তার ছাড়ের দিন (০ = মেয়াদ পেরোলেই), বন্ধ থাকলে ঝুঁকির নিজের দিন
+                $days = $credit->overdueStopOn() ? $credit->overdueGraceDays() : self::RISK_DAYS_FALLBACK;
 
                 $customers = Customer::query()
                     ->where('customers.company_id', $f['company_id'])

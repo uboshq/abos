@@ -102,8 +102,10 @@ final class CreditExposure implements CreditHolds
     /**
      * ⭐ নতুন বাকি বন্ধ কি না, আর কেন — বাকি ও আদায়, ৫ অক্টোবর ২০২৬ (SAP Credit Management-এর "oldest open item")।
      *
-     * ⓘ সীমা দেখে "কত", এটা দেখে "আদৌ কি": কোম্পানি `customer.overdue_block_days` = X বসালে, কোনো বিলের টাকা মেয়াদের
-     * X দিনের বেশি পরেও বাকি থাকলে সেই গ্রাহক নতুন বাকি পান না। ⛔ সীমার সুইচ বন্ধ থাকলে কিছুই নয় ([[isOn()]])।
+     * ⓘ সীমা দেখে "কত", এটা দেখে "আদৌ কি": কোম্পানির `customer.overdue_stop_enabled` চালু থাকলে, কোনো বিলের টাকা মেয়াদের
+     * `customer.overdue_block_days` (ছাড়ের দিন) দিনের বেশি পরেও বাকি থাকলে সেই গ্রাহক নতুন বাকি পান না। ⭐ ছাড়ের দিন ০ = মেয়াদ
+     * পেরোলেই — মালিকের উত্তর, ১১ অক্টোবর ২০২৬ (বাকি নিয়ন্ত্রণ ধাপ ২.১): *"মেয়াদ পেরোলেই নতুন বাকি বন্ধ, সীমায় জায়গা থাকলেও"*।
+     * ⛔ সীমার সুইচ বন্ধ থাকলে কিছুই নয় ([[isOn()]])।
      * ⓘ পুরো টাকা দিলে কেনা চলে — দেয়ালটা কেবল **নতুন বাকি** আটকায় ([[newCredit()]])।
      *
      * @param  iterable<Customer>  $customers
@@ -127,7 +129,8 @@ final class CreditExposure implements CreditHolds
         }
 
         $out = [];
-        $days = $this->overdueDays();
+        $stopsOnOverdue = $this->overdueStopOn();
+        $days = $this->overdueGraceDays();
 
         $list = [];
         foreach ($customers as $customer) {
@@ -146,12 +149,13 @@ final class CreditExposure implements CreditHolds
             }
         }
 
-        if ($days > 0) {
+        if ($stopsOnOverdue) {
             foreach ($this->overdueBills($list, $days) as $id => $bills) {
                 $total = array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, $b['unpaid'], 4), '0');
                 $names = array_column(array_slice($bills, 0, 3), 'no');
                 $out[$id] = [
-                    'message' => __('sales::credit.overdue_stop', [
+                    // ⓘ ছাড়ের দিন ০ হলে "মেয়াদ পেরোনো বাকি" — "০ দিনের পুরনো" পড়তে ভুল লাগত
+                    'message' => __($days > 0 ? 'sales::credit.overdue_stop' : 'sales::credit.overdue_stop_past_due', [
                         'days' => $days,
                         'bills' => implode(', ', $names).(count($bills) > 3 ? ' …' : ''),
                         'amount' => Money::format($total),
@@ -171,8 +175,20 @@ final class CreditExposure implements CreditHolds
         return $this->stopDetails([$customer])[(int) $customer->id]['message'] ?? null;
     }
 
-    /** কোম্পানির দেয়ালের দিন — ০ মানে বন্ধ */
-    public function overdueDays(): int
+    /**
+     * ⭐ মেয়াদ পেরোনো বাকিতে নতুন বাকি বন্ধ — কোম্পানির চালু/বন্ধ (বাকি নিয়ন্ত্রণ ধাপ ২.১, মালিকের উত্তর ১, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে "চালু কি না" আর "কত দিন" একই সংখ্যায় ছিল (`overdue_block_days` = ০ মানে বন্ধ), তাই "মেয়াদ পেরোলেই" বলাই যেত
+     * না। ⭐ এখন সুইচ আলাদা; নতুন কোম্পানিতে ডিফল্ট চালু, ছাড় ০। ⛔ চলতি কোম্পানির মান মাইগ্রেশন বদলায় না — যার দিন ০ ছিল
+     * তার সুইচ বন্ধ বসেছে, যার দিন বসানো ছিল তার চালু (`2027_03_02_100000_overdue_could_not_say_on_the_due_date`)।
+     */
+    public function overdueStopOn(): bool
+    {
+        return app(\App\Core\Services\SettingsService::class)->enabled('customer.overdue_stop_enabled');
+    }
+
+    /** মেয়াদের পরে কত দিন ছাড় — ০ মানে মেয়াদ পেরোলেই (পরের দিন থেকে) দেয়াল */
+    public function overdueGraceDays(): int
     {
         return max(0, (int) app(\App\Core\Services\SettingsService::class)->get('customer.overdue_block_days', 0));
     }
@@ -196,7 +212,8 @@ final class CreditExposure implements CreditHolds
      */
     public function overdueBills(array $customers, int $days): array
     {
-        if ($customers === [] || $days <= 0) {
+        // ⓘ ০ = মেয়াদ পেরোলেই: মেয়াদ আজকের আগে (আজ মেয়াদ হলে এখনো পেরোয়নি)
+        if ($customers === [] || $days < 0) {
             return [];
         }
 
