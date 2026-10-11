@@ -187,6 +187,10 @@ final class TheOverrideLeftNoTraceTest extends TestCase
      */
     public function test_raising_the_ceiling_leaves_the_old_and_new_ceiling(): void
     {
+        // ⓘ খসড়ায় — সই হওয়া অফারের ছাদ নতুন সই ছাড়া বাড়ে না (Sales অডিট, ১০ অক্টোবর ২০২৬; [[BudgetKeeper::set()]])
+        $this->offer->status = PromotionStatus::DRAFT;
+        $this->offer->save();
+
         foreach (['500', '800'] as $ceiling) {
             $this->actingAs($this->owner)
                 ->post(route('promotion.budget.store', $this->offer), ['kind' => 'total', 'ceiling' => $ceiling])
