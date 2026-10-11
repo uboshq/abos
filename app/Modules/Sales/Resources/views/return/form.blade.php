@@ -152,7 +152,7 @@
                                 <th class="text-end">{{ __('sales::field.quantity') }}</th>
                                 <th class="text-end">{{ __('sales::field.free_qty') }}</th>
                                 <th class="text-end">{{ __('sales::field.rate') }}</th>
-                                <th class="text-end">{{ __('sales::field.tax') }}</th>
+                                {{-- ⓘ ভ্যাটের ঘর নেই — সার্ভার হাতে লেখা ভ্যাট নেয় না, বিলের সারি বা পণ্যের হার থেকে গোনে ([[SalesReturnService::replaceLines()]]); ঘরটা টাইপ করলেও কিছু হত না (Sales অডিট, ১০ অক্টোবর ২০২৬) --}}
                                 <th class="text-start">{{ __('sales::return_reason.line_reason') }}</th>
                                 <th class="text-start">{{ __('sales::return_reason.lot') }}</th>
                                 <th class="text-start">{{ __('sales::field.not_sellable') }}</th>
@@ -198,14 +198,6 @@
                                     <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
-                                               class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
-                                                      border border-(--color-border)
-                                                      bg-(--color-surface-card) px-2 text-end">
-                                    </td>
-
-                                    <td class="cell-input" data-label="{{ __('sales::field.tax') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
-                                               :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">

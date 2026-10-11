@@ -268,6 +268,14 @@ class SalesReturnTest extends TestCase
         $this->get(route('sales.return.create'))->assertOk();
         $this->get(route('sales.return.show', $return))->assertOk();
         $this->get(route('sales.return.edit', $return))->assertOk();
+
+        /*
+         * ⛔ ফর্মে ভ্যাটের ঘর নেই — সার্ভার হাতে লেখা ভ্যাট নেয় না, তাই ঘরটা মিথ্যা বলত (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+         * ⓘ নতুন আর সম্পাদনা দুই পর্দাতেই।
+         */
+        foreach ([route('sales.return.create'), route('sales.return.edit', $return)] as $page) {
+            $this->get($page)->assertOk()->assertDontSee("[tax]", false);
+        }
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
