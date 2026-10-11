@@ -89,6 +89,23 @@ return [
 
     'moves_money' => [],
 
+    /*
+     * ⭐ ঝুঁকির মাত্রার নিয়ম — প্রতিটা লক্ষণের নম্বর আর তিন মাত্রার সীমা (ধাপ ৩.১, [[CreditRisk]])।
+     * ⓘ ০ = ঐ লক্ষণ বন্ধ। মাত্রা কেবল জানায়, কোনো সীমা বা দেয়াল বদলায় না — তাই সুপার অ্যাডমিনের তালা নেই।
+     * ⓘ নতুন চাবি, ডিফল্টে — কোনো কোম্পানির পুরনো সেটিং ছোঁয়া হয় না।
+     */
+    'settings' => [
+        ['key' => 'credit_control.risk_points_overdue_age', 'label' => 'credit_control::settings.risk_points_overdue_age', 'type' => 'integer', 'default' => 10, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_overdue_share', 'label' => 'credit_control::settings.risk_points_overdue_share', 'type' => 'integer', 'default' => 20, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_late_beyond_terms', 'label' => 'credit_control::settings.risk_points_late_beyond_terms', 'type' => 'integer', 'default' => 15, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_wall_stop', 'label' => 'credit_control::settings.risk_points_wall_stop', 'type' => 'integer', 'default' => 5, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_bounced_cheque', 'label' => 'credit_control::settings.risk_points_bounced_cheque', 'type' => 'integer', 'default' => 25, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_block', 'label' => 'credit_control::settings.risk_points_block', 'type' => 'integer', 'default' => 10, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_medium_at', 'label' => 'credit_control::settings.risk_medium_at', 'type' => 'integer', 'default' => 20, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_high_at', 'label' => 'credit_control::settings.risk_high_at', 'type' => 'integer', 'default' => 45, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_critical_at', 'label' => 'credit_control::settings.risk_critical_at', 'type' => 'integer', 'default' => 75, 'group' => 'risk'],
+    ],
+
     // ⓘ গ্রাহকের নামে চাপলে তাঁর বাকির পাতা ([[CreditProfile]])
     'drill_sources' => [
         CreditPositionReports::PROFILE => CreditProfile::class,

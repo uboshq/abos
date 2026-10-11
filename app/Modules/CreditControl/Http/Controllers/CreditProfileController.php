@@ -6,6 +6,7 @@ namespace App\Modules\CreditControl\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Modules\CreditControl\Services\CreditRisk;
 use App\Models\AuditTrail;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
@@ -72,6 +73,8 @@ class CreditProfileController extends Controller
             'menu' => $this->menu->forUser($request->user()),
             'customer' => $customer,
             'position' => $this->credit->positionOf($customer),
+            // ⭐ ঝুঁকির মাত্রা আর তার কারণ — কেবল জানায় (ধাপ ৩.১)
+            'risk' => app(CreditRisk::class)->rate($customer),
             'bills' => $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [],
             'history' => $history->concat($blocks)->sortByDesc('at')->values(),
             'decisions' => CreditDecision::query()->where('customer_id', $customer->id)->latest('id')->limit(10)->get(),
