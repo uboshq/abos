@@ -211,7 +211,7 @@ final class PurchaseBillService
                  * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
                  * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
                  */
-                'branch_id' => $this->branchOfWarehouse($data['warehouse_id'] ?? null) ?? $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $this->branchForBill($data['warehouse_id'] ?? null, $lines) ?? $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $supplierId,
@@ -350,7 +350,7 @@ final class PurchaseBillService
             $bill->update([
                 'warehouse_id' => $this->warehouseKept($bill, $data),
                 // ⛔ গুদাম বদলালে শাখাও — create()-এর একই নিয়ম (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
-                'branch_id' => $this->branchOfWarehouse($this->warehouseKept($bill, $data)) ?? $bill->branch_id,
+                'branch_id' => $this->branchForBill($this->warehouseKept($bill, $data), $lines) ?? $bill->branch_id,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
@@ -1135,6 +1135,38 @@ final class PurchaseBillService
             : (int) $data['warehouse_id'];
     }
 
+    /**
+     * ⭐ বিলের শাখা — যে গুদামে মাল সত্যিই যায় তার শাখা (cb-র রিভিউ, cloud/purchase-fixes মেশানোর আগে, ১০ অক্টোবর ২০২৬;
+     * [[TheBillScreenBooksWhereTheGoodsAreTest]])।
+     *
+     * ⛔ 4843b36f কেবল বলা গুদাম দেখত — অথচ বিলের পর্দা গুদাম পাঠায়ই না ([[PurchaseBillRequest::documentData()]]), তাই শাখা
+     * আসত হেডার থেকে আর মাল যেত মূল গুদামে ([[warehouseFor()]]); চালানের বিলে ২১৬০-এর ডেবিট হেডারের শাখায়, ক্রেডিট
+     * চালানের শাখায় — শাখা ধরে ২১৬০ কখনো শূন্য হত না। ⓘ ক্রম: বলা গুদাম → সারিগুলো যে একটাই চালানের, তার গুদাম →
+     * মূল গুদাম। কিছুই না মিললে `null`, ডাকা জায়গার আগের নিয়ম।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function branchForBill(mixed $warehouseId, array $lines): ?int
+    {
+        if ($warehouseId === null || $warehouseId === '') {
+            $receiptLines = array_values(array_filter(array_map(
+                fn (array $line) => $line['purchase_receipt_line_id'] ?? null, $lines), 'filled'));
+
+            $fromReceipts = $receiptLines === [] ? collect() : DB::table('pur_receipt_lines as l')
+                ->join('pur_receipts as r', 'r.id', '=', 'l.purchase_receipt_id')
+                ->whereIn('l.id', array_map('intval', $receiptLines))
+                ->where('r.company_id', CompanyContext::id())
+                ->distinct()
+                ->pluck('r.warehouse_id');
+
+            $warehouseId = $fromReceipts->count() === 1
+                ? $fromReceipts->first()
+                : Warehouse::query()->where('is_default', true)->active()->value('id');
+        }
+
+        return $this->branchOfWarehouse($warehouseId);
+    }
+
     /** গুদামটা যে শাখার — শাখাহীন গুদাম বা গুদাম না থাকলে null। */
     private function branchOfWarehouse(mixed $warehouseId): ?int
     {
@@ -1232,7 +1264,7 @@ final class PurchaseBillService
             $bill->update([
                 'warehouse_id' => $this->warehouseKept($bill, $data),
                 // ⛔ গুদাম বদলালে শাখাও — create()-এর একই নিয়ম (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
-                'branch_id' => $this->branchOfWarehouse($this->warehouseKept($bill, $data)) ?? $bill->branch_id,
+                'branch_id' => $this->branchForBill($this->warehouseKept($bill, $data), $lines) ?? $bill->branch_id,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
