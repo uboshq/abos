@@ -28,6 +28,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
+use App\Modules\Sales\Support\CreditPaper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -321,6 +322,7 @@ final class DeliveryChallanService
                 adding: $this->credit->billedAs($challan),
                 payingNow: $payingNow,
                 exceptChallanId: (int) $challan->id,
+                paper: CreditPaper::of('challan', $challan),
             );
         }
 
@@ -386,6 +388,7 @@ final class DeliveryChallanService
                     adding: $this->credit->billedAs($challan),
                     payingNow: $payingNow,
                     exceptChallanId: (int) $challan->id,
+                    paper: CreditPaper::of('challan', $challan),
                 );
             }
 

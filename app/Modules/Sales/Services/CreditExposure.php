@@ -10,8 +10,10 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Models\CreditDecision;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Support\CreditPaper;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +68,12 @@ final class CreditExposure implements CreditHolds
     private bool $readLatest = false;
 
     /**
+     * ⓘ কাউন্টারের ভিতরে কত স্তর গভীরে — [[atCounter()]]। ⓘ static, কারণ কাউন্টারের সেবা আর বিল-চালানের সেবা প্রত্যেকে
+     * নিজের [[CreditExposure]] পায়, অথচ প্রশ্নটা একটাই অনুরোধের: এই সিদ্ধান্ত কি কাউন্টারে?
+     */
+    private static int $counterDepth = 0;
+
+    /**
      * [[CreditHolds]] — গ্রাহকের পাতার জন্য, একই হিসাব।
      *
      * ⚠️ আলাদা যুক্তি নয়, [[pendingFor()]]-ই — নইলে পাতা আর কাউন্টার
@@ -110,7 +118,7 @@ final class CreditExposure implements CreditHolds
      * [[stopsFor()]]-এর ভিতর — কথার সাথে কত দিলে দেয়াল ওঠে (`clears`; null = পুরো দায় শোধ ছাড়া নয়)।
      *
      * @param  iterable<Customer>  $customers
-     * @return array<int, array{message: string, clears: ?string}>
+     * @return array<int, array{message: string, clears: ?string, kind: string}>
      */
     private function stopDetails(iterable $customers): array
     {
@@ -132,6 +140,7 @@ final class CreditExposure implements CreditHolds
                 $out[$id] = [
                     'message' => __('sales::credit.blocked_stop', ['reason' => (string) $customer->credit_block_reason]),
                     'clears' => null,
+                    'kind' => 'blocked',
                 ];
                 unset($list[$id]);
             }
@@ -148,6 +157,7 @@ final class CreditExposure implements CreditHolds
                         'amount' => Money::format($total),
                     ]),
                     'clears' => $total,
+                    'kind' => 'overdue',
                 ];
             }
         }
@@ -288,20 +298,20 @@ final class CreditExposure implements CreditHolds
      *
      * @return array{fits: bool, short: string, used_percent: ?string, reason: ?string}  ⓘ `used_percent` সীমা ০ হলে null; `reason` বাকি বন্ধের কথা ([[stopsFor()]])
      */
-    public function check(Customer $customer, string $adding, ?int $exceptDeliveryOrderId = null): array
+    public function check(Customer $customer, string $adding, ?int $exceptDeliveryOrderId = null, ?CreditPaper $paper = null): array
     {
         // ⓘ সুইচ বন্ধ — সীমা যাচাই হয় না, DO-র হিসাবের "সীমা" সতর্কতাও চুপ ([[isOn()]])
         if (! $this->isOn()) {
+            $this->witness($paper, $customer, CreditDecision::PASS, 'switch_off', null, $adding, '0', null, final: true);
+
             return ['fits' => true, 'short' => '0', 'used_percent' => null, 'reason' => null];
         }
 
         $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
 
-        $exposure = bcadd(
-            bcadd($customer->outstanding(), $this->pending($customer, exceptDeliveryOrderId: $exceptDeliveryOrderId), 4),
-            bcadd($this->unclearedCheques($customer), $adding, 4),
-            4,
-        );
+        $due = $customer->outstanding();
+        $held = bcadd($this->pending($customer, exceptDeliveryOrderId: $exceptDeliveryOrderId), $this->unclearedCheques($customer), 4);
+        $exposure = bcadd(bcadd($due, $held, 4), $adding, 4);
 
         $short = bcsub($exposure, $limit, 4);
         $short = bccomp($short, '0', 4) > 0 ? $short : '0.0000';
@@ -319,8 +329,19 @@ final class CreditExposure implements CreditHolds
             $short = bccomp($clears, $short, 4) > 0 ? bcadd($clears, '0', 4) : $short;
         }
 
+        $fits = $reason === null && bccomp($short, '0', 4) <= 0;
+
+        // ⭐ DO-র যাচাইয়ের ফলই সিদ্ধান্ত — হ্যাঁ-না দুইটাই সাক্ষ্যে (ধাপ ১.৫)
+        $this->witness(
+            $paper, $customer,
+            $fits ? CreditDecision::PASS : CreditDecision::STOP,
+            $fits ? 'within_limit' : ($stop !== null && $reason !== null ? $stop['kind'] : 'over_limit'),
+            ['limit' => $limit, 'due' => $due, 'held' => $held],
+            $adding, '0', $reason, final: true,
+        );
+
         return [
-            'fits' => $reason === null && bccomp($short, '0', 4) <= 0,
+            'fits' => $fits,
             'short' => $short,
             'used_percent' => bccomp($limit, '0', 4) > 0 ? bcdiv(bcmul($exposure, '100', 4), $limit, 2) : null,
             'reason' => $reason,
@@ -628,10 +649,35 @@ final class CreditExposure implements CreditHolds
         string $payingNow = '0',
         ?int $exceptInvoiceId = null,
         ?int $exceptChallanId = null,
+        ?CreditPaper $paper = null,
     ): void {
         if (! $this->isOn()) {
+            $this->witness($paper, $customer, CreditDecision::PASS, 'switch_off', null, $adding, $payingNow, null);
+
             return;
         }
+
+        try {
+            $this->decideRoom($customer, $adding, $payingNow, $exceptInvoiceId, $exceptChallanId, $paper);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            // ⛔ হিসাবই চলেনি — কাগজ থামে, কখনো নীরবে পার হয় না; আর সাক্ষ্যে লেখা থাকে কেন (ধাপ ১.৫, মালিকের CC-০১৮)
+            $this->witness($paper, $customer, CreditDecision::STOP, 'error', null, $adding, $payingNow, mb_substr($e::class.': '.$e->getMessage(), 0, 500));
+
+            throw $e;
+        }
+    }
+
+    /** [[assertRoom()]]-এর ভিতর — সুইচ চালু থাকলে */
+    private function decideRoom(
+        Customer $customer,
+        string $adding,
+        string $payingNow,
+        ?int $exceptInvoiceId,
+        ?int $exceptChallanId,
+        ?CreditPaper $paper,
+    ): void {
 
         /*
          * ⭐ বিক্রির **পরে** গ্রাহকের মোট বকেয়া সীমার ভিতরে — মালিকের সিদ্ধান্ত, ৩ অক্টোবর ২০২৬।
@@ -655,16 +701,22 @@ final class CreditExposure implements CreditHolds
          * ⛔ বাকি বন্ধ ([[stopsFor()]]) — সীমার আগে, ৫ অক্টোবর ২০২৬। এই কাগজে নতুন বাকি জন্মালে "না"; পুরো টাকা দিলে
          * (বা অগ্রিমে ঢাকলে) চলে। ⓘ আগেই গেট পেরোনো মালের বিল আটকায় না ([[billsGoodsAlreadyGone()]])।
          */
+        $seen = ['limit' => bcadd((string) ($customer->credit_limit ?? '0'), '0', 4), 'due' => $customer->outstanding(), 'held' => $pending];
+
         if (bccomp($unpaid, '0', 4) > 0 && ! $this->billsGoodsAlreadyGone($exceptInvoiceId)) {
-            $stop = $this->stopFor($customer);
+            $stop = $this->stopDetails([$customer])[(int) $customer->id] ?? null;
             $after = bcadd(bcadd($customer->outstanding(), $pending, 4), $unpaid, 4);
 
             if ($stop !== null && bccomp($this->newCredit($unpaid, $after), '0', 4) > 0) {
-                throw ValidationException::withMessages(['customer_id' => $stop]);
+                $this->witness($paper, $customer, CreditDecision::STOP, $stop['kind'], $seen, $adding, $payingNow, $stop['message']);
+
+                throw ValidationException::withMessages(['customer_id' => $stop['message']]);
             }
         }
 
         if (! $customer->wouldExceedCreditLimit(bcadd($pending, $unpaid, 4))) {
+            $this->witness($paper, $customer, CreditDecision::PASS, 'within_limit', $seen, $adding, $payingNow, null);
+
             return;
         }
 
@@ -681,14 +733,16 @@ final class CreditExposure implements CreditHolds
          * আঁকে না: বিল আটকাত, অথচ কারণটা কেউ দেখত না। ⓘ ধরা পড়েছে
          * [[ZeroMeansZeroOnTheDayYouSayTest]]-এ, ২৬ সেপ্টেম্বর ২০২৬।
          */
-        throw ValidationException::withMessages([
-            'customer_id' => __('sales::validation.over_credit_limit_hard', [
-                'customer' => $customer->name(),
-                'limit' => Money::format($limit),
-                'left' => Money::format($left),
-                'short' => Money::format($short),
-            ]),
+        $message = __('sales::validation.over_credit_limit_hard', [
+            'customer' => $customer->name(),
+            'limit' => Money::format($limit),
+            'left' => Money::format($left),
+            'short' => Money::format($short),
         ]);
+
+        $this->witness($paper, $customer, CreditDecision::STOP, 'over_limit', $seen, $adding, $payingNow, $message);
+
+        throw ValidationException::withMessages(['customer_id' => $message]);
     }
 
     /**
@@ -729,13 +783,14 @@ final class CreditExposure implements CreditHolds
         string $payingNow = '0',
         ?int $exceptInvoiceId = null,
         ?int $exceptChallanId = null,
+        ?CreditPaper $paper = null,
     ): void {
         $fresh = $this->lockCustomer($customer);
 
         $this->readLatest = true;
 
         try {
-            $this->assertRoom($fresh, $adding, $payingNow, $exceptInvoiceId, $exceptChallanId);
+            $this->assertRoom($fresh, $adding, $payingNow, $exceptInvoiceId, $exceptChallanId, $paper);
         } finally {
             $this->readLatest = false;
         }
@@ -860,5 +915,114 @@ final class CreditExposure implements CreditHolds
         }
 
         return bcadd((string) $query->sum('i.total'), '0', 4);
+    }
+
+    /**
+     * ⭐ কাউন্টারের কাজ — এর ভিতরের প্রতিটা দেয়াল-সিদ্ধান্ত সাক্ষ্যে "কাউন্টার" হয়ে বসে (ধাপ ১.৫)।
+     *
+     * @template T
+     *
+     * @param  callable(): T  $work
+     * @return T
+     */
+    public static function atCounter(callable $work): mixed
+    {
+        self::$counterDepth++;
+
+        try {
+            return $work();
+        } finally {
+            self::$counterDepth--;
+        }
+    }
+
+    /**
+     * ⭐ দেয়ালের সাক্ষ্য — দেয়াল কী দেখেছিল আর কী বলেছিল, একটা সারি ([[CreditDecision]], ধাপ ১.৫)।
+     *
+     * ⓘ কাগজ না বললে (পর্দার আগাম হিসাব) কিছুই লেখা হয় না। ⓘ "হ্যাঁ" লেখে কেবল শেষ দেয়াল — তালাসহটা, যে কাগজকে খাতায়
+     * যেতে দেয় (`$final`, বা DO-র যাচাই); তালা ছাড়া আগের ধাপের "হ্যাঁ" কেবল আগাম, তার পরেই তালাসহটা আসে। ⛔ "না" লেখে
+     * যে দেয়াল থামায়।
+     *
+     * ⓘ একটাই INSERT, কাগজের নিজের লেনদেনের ভিতরে — কাউন্টারকে টের পাওয়ার মতো ধীর করে না। ⚠️ "না"-র পরে লেনদেন
+     * ফেরত যায় ([[settle()]]), তাই থামার সারি লেনদেন মিটে গেলে বসে — নইলে ফেরার সাথে সাথে সাক্ষ্যও মুছে যেত।
+     *
+     * @param  array{limit: string, due: string, held: string}|null  $seen
+     */
+    private function witness(
+        ?CreditPaper $paper,
+        Customer $customer,
+        string $result,
+        string $reason,
+        ?array $seen,
+        string $adding,
+        string $payingNow,
+        ?string $message,
+        bool $final = false,
+    ): void {
+        if ($paper === null || ($result === CreditDecision::PASS && ! $final && ! $this->readLatest)) {
+            return;
+        }
+
+        if (self::$counterDepth > 0) {
+            $paper = $paper->at('counter');
+        }
+
+        $adding = bcadd($adding, '0', 4);
+        $payingNow = bcadd($payingNow, '0', 4);
+
+        $row = [
+            'company_id' => (int) $customer->company_id,
+            'branch_id' => $paper->branchId,
+            'customer_id' => (int) $customer->id,
+            'stage' => $paper->stage,
+            'paper_type' => $paper->type,
+            'paper_id' => $paper->id,
+            'paper_no' => $paper->no,
+            'credit_limit' => $seen['limit'] ?? null,
+            'due' => $seen['due'] ?? null,
+            'held' => $seen['held'] ?? null,
+            'adding' => $adding,
+            'paying_now' => $payingNow,
+            'exposure_after' => $seen === null ? null : bcsub(bcadd(bcadd($seen['due'], $seen['held'], 4), $adding, 4), $payingNow, 4),
+            'result' => $result,
+            'reason' => $reason,
+            'message' => $message === null ? null : mb_substr($message, 0, 500),
+            'user_id' => \App\Core\Support\Actor::userId(),
+        ];
+
+        if ($result === CreditDecision::PASS) {
+            CreditDecision::query()->create($row);
+
+            return;
+        }
+
+        $this->settle($row);
+    }
+
+    /**
+     * ⓘ থামার সারি — চলমান লেনদেন মিটলে (কমিট বা ফেরত, যেটাই হোক), সবচেয়ে বাইরেরটা পর্যন্ত; লেনদেন না থাকলে এখনই।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function settle(array $row): void
+    {
+        if (app('db.transactions')->callbackApplicableTransactions()->isEmpty()) {
+            CreditDecision::query()->create($row);
+
+            return;
+        }
+
+        $done = false;
+        $later = function () use (&$done, $row): void {
+            if ($done) {
+                return;
+            }
+
+            $done = true;
+            $this->settle($row);
+        };
+
+        DB::afterCommit($later);
+        DB::afterRollBack($later);
     }
 }

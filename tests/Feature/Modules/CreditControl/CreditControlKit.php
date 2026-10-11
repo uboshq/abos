@@ -12,6 +12,14 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Purchase\Models\PurchaseReceipt;
+use App\Modules\Purchase\Services\PurchaseReceiptService;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\SalesInvoiceService;
+use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -115,6 +123,35 @@ trait CreditControlKit
         app(PostingEngine::class)->post(
             sourceType: $source, sourceId: $sourceId ?? random_int(1, 9_999_999), trxDate: now()->toDateString(), lines: $lines,
             branchId: $this->company->defaultBranch()?->id,
+        );
+    }
+
+    /** গুদামে ১০০টা মাল, ক্রয় থেকে তাকে — বিল করার জন্য ([[ZeroMeansZeroOnTheDayYouSayTest]]-এর ছাঁচ) */
+    private function stockedProduct(string $code = 'CC-P1'): Product
+    {
+        $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
+        $product = Product::query()->create([
+            'company_id' => CompanyContext::id(), 'code' => $code, 'name_en' => $code, 'name_bn' => $code,
+            'unit_id' => Product::query()->value('unit_id'), 'purchase_price' => '100', 'sale_price' => '120', 'is_active' => true,
+        ]);
+
+        $receipt = app(PurchaseReceiptService::class)->confirm(app(PurchaseReceiptService::class)->create(
+            ['supplier_id' => Supplier::query()->value('id'), 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'received_qty' => '100', 'rate' => '100']],
+        ));
+
+        app(StockService::class)->place(product: $product, warehouse: $warehouse, qty: '100',
+            sourceType: PurchaseReceipt::STOCK_SOURCE, sourceId: $receipt->id);
+
+        return $product;
+    }
+
+    /** খসড়া বিল, ১২০ টাকা দরে */
+    private function draftBill(Customer $c, Product $p, string $qty): SalesInvoice
+    {
+        return app(SalesInvoiceService::class)->create(
+            ['customer_id' => $c->id, 'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'trx_date' => now()->toDateString()],
+            [['product_id' => $p->id, 'qty' => $qty, 'rate' => '120']],
         );
     }
 }

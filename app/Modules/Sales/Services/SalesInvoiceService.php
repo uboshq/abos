@@ -37,6 +37,7 @@ use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Support\CreditPaper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -140,6 +141,7 @@ final class SalesInvoiceService
             adding: (string) $invoice->total,
             payingNow: $this->money($payingNow),
             exceptInvoiceId: (int) $invoice->id,
+            paper: CreditPaper::of('invoice', $invoice),
         );
     }
 
@@ -595,6 +597,7 @@ final class SalesInvoiceService
                     adding: (string) $invoice->total,
                     payingNow: $this->money($payingNow),
                     exceptInvoiceId: (int) $invoice->id,
+                    paper: CreditPaper::of('invoice', $invoice),
                 );
             }
 
