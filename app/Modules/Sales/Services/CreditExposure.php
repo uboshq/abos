@@ -146,12 +146,13 @@ final class CreditExposure implements CreditHolds
             }
         }
 
-        if ($days > 0) {
+        // ⭐ মেয়াদ পেরোনোর দেয়াল নিজের সুইচে; দিন কেবল ছাড় — ০ মানে মেয়াদের পরদিন থেকেই (মালিকের উত্তর ১, ১১ অক্টোবর ২০২৬)
+        if ($this->overdueStopOn()) {
             foreach ($this->overdueBills($list, $days) as $id => $bills) {
                 $total = array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, $b['unpaid'], 4), '0');
                 $names = array_column(array_slice($bills, 0, 3), 'no');
                 $out[$id] = [
-                    'message' => __('sales::credit.overdue_stop', [
+                    'message' => __($days > 0 ? 'sales::credit.overdue_stop' : 'sales::credit.overdue_stop_due', [
                         'days' => $days,
                         'bills' => implode(', ', $names).(count($bills) > 3 ? ' …' : ''),
                         'amount' => Money::format($total),
@@ -171,7 +172,18 @@ final class CreditExposure implements CreditHolds
         return $this->stopDetails([$customer])[(int) $customer->id]['message'] ?? null;
     }
 
-    /** কোম্পানির দেয়ালের দিন — ০ মানে বন্ধ */
+    /**
+     * ⭐ মেয়াদ পেরোনো বিল নতুন বাকি থামায় কি না — কোম্পানির সুইচ (মালিকের উত্তর ১, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে দিনের ঘরটাই সুইচ ছিল (০ = বন্ধ), তাই "মেয়াদ পেরোলেই" বলা যেত না। চলতি কোম্পানির আগের আচরণ মাইগ্রেশন
+     * সুইচে লিখে রেখেছে; নতুন কোম্পানিতে খোলার দিনেই চালু ([[CustomerCreditDefaults]])।
+     */
+    public function overdueStopOn(): bool
+    {
+        return app(\App\Core\Services\SettingsService::class)->enabled('customer.overdue_stop');
+    }
+
+    /** মেয়াদের পরে ছাড়ের দিন — ০ মানে মেয়াদের পরদিন থেকেই দেয়াল ([[overdueStopOn()]] চালু থাকলে) */
     public function overdueDays(): int
     {
         return max(0, (int) app(\App\Core\Services\SettingsService::class)->get('customer.overdue_block_days', 0));
@@ -196,7 +208,8 @@ final class CreditExposure implements CreditHolds
      */
     public function overdueBills(array $customers, int $days): array
     {
-        if ($customers === [] || $days <= 0) {
+        // ⓘ ০ চলে — মেয়াদের দিনটা পেরোলেই (কাটার দিন আজ: মেয়াদ আজকের আগে মানে অন্তত একদিন পেরিয়েছে)
+        if ($customers === [] || $days < 0) {
             return [];
         }
 
