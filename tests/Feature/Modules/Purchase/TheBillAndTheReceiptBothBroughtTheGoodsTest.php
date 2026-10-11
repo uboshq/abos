@@ -160,10 +160,16 @@ final class TheBillAndTheReceiptBothBroughtTheGoodsTest extends TestCase
         $refused = null;
         $result = null;
 
-        try {
-            $result = app(PurchaseReceiptService::class)->confirmAndBill($receipt->fresh());
-        } catch (ValidationException $e) {
-            $refused = collect($e->errors())->flatten()->first();
+        /*
+         * ⓘ শেষ সইয়ে মাল গ্রহণ নিজেই পাকা হয় — পর্দার "নিশ্চিত"-এর একই দরজায় (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])।
+         * আটকালে খসড়াই থাকে; তখন পর্দার বোতাম চাপলে একই কারণ বলে — সেটাই এখানে ধরা হয়।
+         */
+        if ($receipt->fresh()->status === DocumentStatus::DRAFT) {
+            try {
+                $result = app(PurchaseReceiptService::class)->confirmAndBill($receipt->fresh());
+            } catch (ValidationException $e) {
+                $refused = collect($e->errors())->flatten()->first();
+            }
         }
 
         $afterGrn = $this->measure();

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Contracts\ApprovalBundles;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
+use App\Models\Approval;
 use App\Models\User;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +74,24 @@ final class SignedPaperFinisher
         $this->stuck($paper, $signer, $url, $reason);
 
         return $reason;
+    }
+
+    /**
+     * ⛔ একসাথে সই হওয়া দলের কাগজ এখানে নয় — কাউন্টারের এক বিক্রির চালান, বিল আর প্রতিটা জমা ([[ApprovalBundles]])।
+     *
+     * ⓘ দলের প্রতিটা সই আলাদা পড়ে; একটা জমার সই পড়ামাত্র সেটা পোস্ট করলে বাকি সই (ছাড়, বাকির সীমা) বাকি থাকতেই অর্ধেক টাকা
+     * খাতায় উঠত ([[TheSaleWaitedForAButtonAfterItsLastSignatureTest]])। দলটা শেষ করে তার নিজের শেষকারী, সব সই পড়লে একসাথে
+     * ([[HeldCounterSaleFinisher]])।
+     */
+    public function bundled(int $approvalId): bool
+    {
+        if (! app()->bound(ApprovalBundles::class)) {
+            return false;
+        }
+
+        $approval = Approval::query()->find($approvalId);
+
+        return $approval !== null && app(ApprovalBundles::class)->bundleFor($approval) !== null;
     }
 
     private function makerOf(Model $paper): ?User

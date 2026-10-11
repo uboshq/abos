@@ -33,13 +33,14 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  */
 final class ConfirmThePurchasePaperOnTheLastSignature
 {
-    /** কাগজ → [সেবা, দেখার পাতার রুট] */
+    /** কাগজ → [সেবা, দেখার পাতার রুট, পর্দার "নিশ্চিত" যে কাজ ডাকে] */
     private const PAPERS = [
-        PurchaseBill::class => [PurchaseBillService::class, 'purchase.bill.show'],
-        Payment::class => [PaymentService::class, 'purchase.payment.show'],
-        PurchaseReceipt::class => [PurchaseReceiptService::class, 'purchase.receipt.show'],
-        PurchaseReturn::class => [PurchaseReturnService::class, 'purchase.return.show'],
-        PurchaseOrder::class => [PurchaseOrderService::class, 'purchase.order.show'],
+        PurchaseBill::class => [PurchaseBillService::class, 'purchase.bill.show', 'confirm'],
+        Payment::class => [PaymentService::class, 'purchase.payment.show', 'confirm'],
+        // ⓘ মাল গ্রহণের পর্দা নিশ্চিত করেই বাকি অংশের বিল বানায় ([[PurchaseReceiptService::confirmAndBill()]]) — সইয়ের পরেও একই
+        PurchaseReceipt::class => [PurchaseReceiptService::class, 'purchase.receipt.show', 'confirmAndBill'],
+        PurchaseReturn::class => [PurchaseReturnService::class, 'purchase.return.show', 'confirm'],
+        PurchaseOrder::class => [PurchaseOrderService::class, 'purchase.order.show', 'confirm'],
     ];
 
     public function __construct(private readonly SignedPaperFinisher $finisher) {}
@@ -57,7 +58,7 @@ final class ConfirmThePurchasePaperOnTheLastSignature
             return;
         }
 
-        [$service, $route] = self::PAPERS[$class];
+        [$service, $route, $method] = self::PAPERS[$class];
 
         // ⓘ সইদাতার শাখার দেয়াল ছাড়া — হেডারে অন্য শাখা বাছা মালিক শেষ সই দিলেও কাগজটা পাওয়া যায় (কোম্পানির দেয়াল থাকে)
         $paper = $class::query()->withoutGlobalScope('user-branch')->find((int) ($event->payload['approvable_id'] ?? 0));
@@ -67,13 +68,18 @@ final class ConfirmThePurchasePaperOnTheLastSignature
             return;
         }
 
+        // ⛔ কাউন্টারের এক বিক্রির দলের কাগজ — দলটা নিজের শেষকারী সব সই পড়লে একসাথে শেষ করে ([[SignedPaperFinisher::bundled()]])
+        if ($this->finisher->bundled((int) ($event->payload['approval_id'] ?? 0))) {
+            return;
+        }
+
         $signer = $event->actorId === null ? null : User::query()->find($event->actorId);
 
         $this->finisher->finish(
             $paper,
             $signer,
             route($route, $paper),
-            fn (Model $p) => app($service)->confirm($class::query()->withoutGlobalScope('user-branch')->findOrFail($p->getKey())),
+            fn (Model $p) => app($service)->{$method}($class::query()->withoutGlobalScope('user-branch')->findOrFail($p->getKey())),
         );
     }
 }

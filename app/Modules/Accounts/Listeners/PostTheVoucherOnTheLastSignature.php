@@ -47,6 +47,11 @@ final class PostTheVoucherOnTheLastSignature
             return;
         }
 
+        // ⛔ কাউন্টারের এক বিক্রির দলের কাগজ — দলটা নিজের শেষকারী সব সই পড়লে একসাথে শেষ করে ([[SignedPaperFinisher::bundled()]])
+        if ($this->finisher->bundled((int) ($event->payload['approval_id'] ?? 0))) {
+            return;
+        }
+
         $signer = $event->actorId === null ? null : User::query()->find($event->actorId);
 
         $this->finisher->finish(
