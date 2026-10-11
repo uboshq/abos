@@ -21,6 +21,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Accounts\Services\VoucherWriter;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -96,6 +97,27 @@ final class ASignedPaperPostsItselfTest extends TestCase
             DB::table('notifications')->where('user_id', $this->writer->id)->where('type', SignedPaperFinisher::NOTICE)->exists(),
             '⛔ ভাউচার আটকে রইল, অথচ লেখক কোনো খবর পেলেন না।',
         );
+
+        // ⭐ টপবারের "সই হয়েছে, পোস্ট হয়নি" — লেখক আর সইকারী দুজনেই তালিকায় পান; অচেনা কেউ নয়
+        foreach ([$this->writer, $this->signer] as $person) {
+            $this->as($person);
+            Cache::flush();
+            $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertSee($voucher->document_no);
+            $this->assertStringContainsString('data-signed-unposted-count', $this->get(route('dashboard'))->getContent(),
+                '⛔ আটকে থাকা কাগজের সংখ্যা টপবারে নেই।');
+        }
+
+        $stranger = $this->person(['accounts.voucher.create']);
+        $this->as($stranger);
+        Cache::flush();
+        $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertDontSee($voucher->document_no);
+
+        // ⓘ হাতে পোস্ট হলে নিজে থেকেই তালিকা থেকে নামে — আলাদা কোনো খাতা নেই
+        PeriodLock::query()->delete();
+        $this->as($this->writer);
+        app(VoucherWriter::class)->post(Voucher::query()->withoutGlobalScope('user-branch')->findOrFail($voucher->id));
+        Cache::flush();
+        $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertDontSee($voucher->document_no);
     }
 
     /** @return array{0: Voucher, 1: Approval} লেখকের খসড়া, সইয়ের অপেক্ষায় */

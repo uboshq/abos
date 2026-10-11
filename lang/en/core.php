@@ -847,6 +847,7 @@ return [
     ],
     'notice' => [
         'awaiting_mine' => 'Waiting for your decision',
+        'signed_unposted' => 'Signed, not posted',
         'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',
         'title' => 'Needs attention',
         'none' => 'Nothing needs attention.',

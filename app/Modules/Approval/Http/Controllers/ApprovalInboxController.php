@@ -424,6 +424,25 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * ⭐ সই হয়েছে, পোস্ট হয়নি — মালিক, ১১ অক্টোবর ২০২৬ (ক): শেষ সইয়ে কাগজ নিজেই পোস্ট হয়, যা আটকায় তা এখানে
+     * ([[SignedButNotPosted]])। ⓘ সই দেন বা রিপোর্ট দেখেন যিনি — গোটা কোম্পানির; বাকিরা নিজের পাঠানো কাগজ — প্রশ্নটা
+     * সেবার ভেতরে, তাই যেকোনো লগইন করা মানুষ পাতা খোলেন কিন্তু অন্যের কাগজ দেখেন না।
+     */
+    public function signedUnposted(Request $request): View
+    {
+        return view('approval::inbox.mine', [
+            'menu' => $this->menu->forUser($request->user()),
+            'labels' => $this->flows->labels(),
+            'heading' => __('approval::menu.signed_unposted'),
+            'emptyText' => __('approval::message.no_signed_unposted'),
+            'approvals' => self::searched(app(\App\Core\Engines\Approval\SignedButNotPosted::class)->query($request->user()), (string) $request->query('q', ''))
+                ->with(['decisions.user'])
+                ->orderByDesc('decided_at')
+                ->paginate(50),
+        ]);
+    }
+
     public function show(Request $request, int $approval): View
     {
         /** @var User $user */

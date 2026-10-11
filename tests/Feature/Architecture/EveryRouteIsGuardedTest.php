@@ -388,6 +388,7 @@ class EveryRouteIsGuardedTest extends TestCase
          * পাতা খোলা (নিজের · সিদ্ধান্তদাতা · নিরীক্ষক) · কাগজ দেখা
          * (নিরীক্ষক নয়) · বোতাম (কেবল সিদ্ধান্তদাতা)।
          */
+        'approval.inbox.signed_unposted' => 'সই দেন বা রিপোর্ট দেখেন যিনি — গোটা কোম্পানির; বাকিরা নিজের পাঠানো কাগজ — SignedButNotPosted::query()-এর ভেতরে',
         'approval.inbox.show' => 'নিজের অনুরোধ · সিদ্ধান্তদাতা · approval.report — তিনটা প্রশ্ন show()-এর ভেতরে',
 
         /*
