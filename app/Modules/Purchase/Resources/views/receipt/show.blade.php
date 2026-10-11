@@ -123,6 +123,15 @@
                     ['key' => 'unbilled', 'label' => __('purchase::field.unbilled'),
                      'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->unbilledQty())],
+                    /*
+                     * ⭐ লেখা দর — ভ্যাটসহ যা লেখা হয়েছিল (মালিক, ১০ অক্টোবর ২০২৬: লেখা ১১৫, ভ্যাট বাদে ১০০, ভ্যাট ১৫ আলাদা;
+                     * [[AReceiptShowsTheRateAsTypedTest]])। ⓘ কেবল যে চালানে দামের ভেতরের ভ্যাট আছে — বাকিগুলোয় দুটো একই সংখ্যা।
+                     */
+                    ...($receipt->lines->contains(fn ($l) => bccomp((string) $l->tax, '0', 4) !== 0) ? [
+                        ['key' => 'typed_rate', 'label' => __('purchase::field.typed_rate'),
+                         'numeric' => true, 'width' => '8rem',
+                         'render' => fn ($l) => \App\Core\Support\Money::format($l->typedRate())],
+                    ] : []),
                     ['key' => 'rate', 'label' => __('purchase::field.rate'),
                      'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
