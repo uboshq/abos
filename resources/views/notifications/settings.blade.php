@@ -194,13 +194,11 @@
                 </label>
                 <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                     {{ __('core.notify.pref_delegate_from') }}
-                    <input type="date" name="pref[delegate_from]" value="{{ $pref->delegate_from?->toDateString() }}"
-                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    <x-ui.date name="pref[delegate_from]" :value="$pref->delegate_from?->toDateString()" />
                 </label>
                 <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                     {{ __('core.notify.pref_delegate_until') }}
-                    <input type="date" name="pref[delegate_until]" value="{{ $pref->delegate_until?->toDateString() }}"
-                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    <x-ui.date name="pref[delegate_until]" :value="$pref->delegate_until?->toDateString()" />
                 </label>
             </div>
         </div>
