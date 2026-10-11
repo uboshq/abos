@@ -10,8 +10,8 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
