@@ -140,7 +140,8 @@ final class EveryBillTakesItsDueDateFromTheCustomerTest extends TestCase
             'customer' => (string) $this->customer->public_id, 'warehouse' => (string) $this->warehouse->public_id,
             'payment_term' => 'credit', 'vehicle_owner' => 'hired', 'vehicle_no' => 'ঢাকা-ম ১২', 'driver_name' => 'রহিম',
             'transport_cost' => '100', 'fare_paid_by' => 'customer',
-            'lines' => [['product' => (string) $this->product->public_id, 'lot' => (string) $lot->public_id, 'qty' => '2', 'rate' => '100']],
+            // ⓘ ওয়েবের বিক্রি থেকে আলাদা পরিমাণ — নইলে "এইমাত্র একই বিল" পাহারা থামায়
+            'lines' => [['product' => (string) $this->product->public_id, 'lot' => (string) $lot->public_id, 'qty' => '3', 'rate' => '100']],
         ])->assertCreated();
 
         $phone = $this->latestBill();
