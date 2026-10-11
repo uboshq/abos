@@ -10,9 +10,14 @@
     use App\Modules\Sales\Http\Controllers\DepotCheckController;
     use Illuminate\Support\Facades\Blade;
     use Illuminate\Support\HtmlString;
+    use Illuminate\View\AnonymousComponent;
 
-    /* ⓘ সতর্কবার্তার চিহ্ন সেটের আঁকা, টাইপ করা ইমোজি নয় ([[IconSetTest]], ১১ অক্টোবর ২০২৬); একবার আঁকা, প্রতিটা সারিতে বসানো */
-    $warnIcon = Blade::render('<x-ui.icon name="alert-triangle" :size="12" />');
+    /*
+     * ⓘ সতর্কবার্তার চিহ্ন সেটের আঁকা, টাইপ করা ইমোজি নয় ([[IconSetTest]], ১১ অক্টোবর ২০২৬); একবার আঁকা, প্রতিটা সারিতে বসানো।
+     * ⛔ কম্পোনেন্টের ট্যাগ এখানে লেখা যায় না — ব্লেড @php-র ভিতরের স্ট্রিংয়েও ট্যাগটা কম্পাইল করে ফেলে
+     * ([[NoBladeTagIsQuietlyLeftAsTextTest]]), তাই কম্পোনেন্টটা নাম ধরে আঁকা।
+     */
+    $warnIcon = Blade::renderComponent(new AnonymousComponent('components.ui.icon', ['name' => 'alert-triangle', 'size' => 12]));
 
     $columns = [
         [
