@@ -14,7 +14,7 @@
 @endphp
 
 @auth
-    <a href="{{ route('approval.inbox.signed_unposted') }}" data-signed-unposted
+    <a href="{{ route('approval.inbox.signed_unposted') }}" data-signed-unposted data-live="signed-unposted"
        class="relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)
               text-(--color-ink-muted) transition-colors hover:bg-(--color-surface-hover)"
        title="{{ __('core.notice.signed_unposted') }}"
