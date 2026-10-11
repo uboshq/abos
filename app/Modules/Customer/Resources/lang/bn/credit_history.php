@@ -6,4 +6,6 @@ return [
     'by_import' => 'একসাথে অনেকের সীমা বসানো (ইমপোর্ট)',
     'credit_limit' => 'বাকির সীমা',
     'credit_days' => 'বাকির দিন',
+    'temporary_credit_limit' => 'অস্থায়ী সীমা',
+    'temporary_credit_until' => 'অস্থায়ী সীমার শেষ দিন',
 ];

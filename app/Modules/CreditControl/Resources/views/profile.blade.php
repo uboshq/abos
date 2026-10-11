@@ -10,8 +10,10 @@
 
     $tone = ['active' => 'success', 'over_limit' => 'danger', 'overdue' => 'danger', 'blocked' => 'danger', 'unchecked' => 'draft'][$position['state']] ?? 'draft';
     $figures = [
-        ['key' => 'limit', 'label' => __('credit_control::profile.limit'), 'value' => Money::format($position['limit'])],
-        ['key' => 'temporary', 'label' => __('credit_control::profile.temporary_limit'), 'value' => '—'],
+        ['key' => 'limit', 'label' => __('credit_control::profile.limit'), 'value' => Money::format($position['normal_limit'])],
+        // ⭐ অস্থায়ী সীমা আর তার শেষ দিন — খাটলে তবেই (ধাপ ২.৩); শেষ দিনের পরে চলতি সীমা নিজেই সাধারণে ফেরে
+        ['key' => 'temporary', 'label' => __('credit_control::profile.temporary_limit'), 'value' => $position['temporary_limit'] === null ? '—'
+            : Money::format($position['temporary_limit']).' · '.__('credit_control::profile.until', ['date' => DateFormat::format($position['temporary_until'])])],
         ['key' => 'effective', 'label' => __('credit_control::profile.effective_limit'), 'value' => Money::format($position['limit'])],
         ['key' => 'days', 'label' => __('credit_control::profile.credit_days'), 'value' => $customer->credit_days === null ? '—' : __('credit_control::profile.days', ['n' => $customer->credit_days])],
         ['key' => 'due', 'label' => __('credit_control::profile.due'), 'value' => Money::format($position['due'])],

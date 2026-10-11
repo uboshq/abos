@@ -19,6 +19,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -301,6 +302,42 @@ final class CustomerService
             $fresh = Customer::query()->whereKey($customer->getKey())->lockForUpdate()->firstOrFail();
 
             CustomerCreditChange::because($reason, null, fn () => $fresh->forceFill(['credit_days' => $days])->save());
+
+            return $fresh->fresh();
+        });
+    }
+
+    /**
+     * ⭐ অস্থায়ী সীমা বসানো বা তোলা — বাকি নিয়ন্ত্রণ ধাপ ২.৩ (মালিকের উত্তর ৩, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ দেয়া মানে সীমা বাড়ানো, তাই এই দরজা নিজে কোনো চাবি দেখে না — ডাকে কেবল দুই পক্ষ: মালিকের সই পড়লে
+     * ([[ApplyTheLimitOnTheLastSignature]], `$approvalId` সহ) আর সুপার অ্যাডমিনের নিজের হাত ([[CreditLimitRequests]])।
+     * ⓘ তোলা (`$amount` null) ঝুঁকি কমায় — আগেভাগে শেষ করা যায়।
+     * ⛔ অস্থায়ী সীমা সাধারণ সীমার বেশি হতে হয় আর শেষ দিন আজ বা পরে — নইলে "অস্থায়ী" কথাটার মানে থাকে না।
+     * ⓘ বদলটা সীমা বদলের ইতিহাসে, কারণ আর সইয়ের সূত্রসহ ([[CustomerCreditChange]])।
+     */
+    public function setTemporaryLimit(Customer $customer, ?string $amount, ?string $until, string $reason, ?int $approvalId = null): Customer
+    {
+        return DB::transaction(function () use ($customer, $amount, $until, $reason, $approvalId) {
+            $fresh = Customer::query()->withoutGlobalScopes()->whereKey($customer->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($amount !== null) {
+                $amount = bcadd($amount, '0', 4);
+                $normal = bcadd((string) ($fresh->credit_limit ?? '0') ?: '0', '0', 4);
+
+                if (bccomp($amount, $normal, 4) <= 0) {
+                    throw ValidationException::withMessages(['temporary_limit' => __('customer::validation.temporary_above_normal')]);
+                }
+
+                if ($until === null || Carbon::parse($until)->lt(Carbon::today())) {
+                    throw ValidationException::withMessages(['temporary_until' => __('customer::validation.temporary_until_future')]);
+                }
+            }
+
+            CustomerCreditChange::because(trim($reason), $approvalId, fn () => $fresh->forceFill([
+                'temporary_credit_limit' => $amount,
+                'temporary_credit_until' => $amount === null ? null : Carbon::parse((string) $until)->toDateString(),
+            ])->save());
 
             return $fresh->fresh();
         });

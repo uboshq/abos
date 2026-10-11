@@ -52,4 +52,5 @@ return [
     'reason_required' => 'Reason (required)',
     'save' => 'Save',
     'credit_days_saved' => 'Credit days changed — new bills fall due by these days from now on.',
+    'until' => 'until :date',
 ];

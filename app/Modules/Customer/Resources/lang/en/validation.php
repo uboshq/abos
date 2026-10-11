@@ -14,4 +14,7 @@ return [
     'limit_on_create' => 'A new customer starts with a zero credit limit. A limit needs a signature — create the customer first, then raise the limit from Edit; the approval request goes from there.',
     // বাকি নিয়ন্ত্রণ ধাপ ২.২ — বাকির পাতা থেকে বাকির দিন
     'credit_days_range' => 'Credit days must be between 0 and 3650.',
+    // বাকি নিয়ন্ত্রণ ধাপ ২.৩ — অস্থায়ী সীমা
+    'temporary_above_normal' => 'A temporary limit must be above the normal limit — otherwise it adds nothing.',
+    'temporary_until_future' => 'A temporary limit must end today or later.',
 ];

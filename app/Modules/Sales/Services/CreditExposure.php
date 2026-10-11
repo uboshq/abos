@@ -321,7 +321,7 @@ final class CreditExposure implements CreditHolds
      * ⓘ বকেয়া প্রতিটা গ্রাহকে আলাদা কোয়েরি না চাইলে তালিকা `withOutstanding()` দিয়ে আনুন।
      *
      * @param  iterable<Customer>  $customers
-     * @return array<int, array{limit: string, due: string, held: string, uncleared: string, exposure: string, available: string, used_percent: ?string, state: string, stop: ?string}>
+     * @return array<int, array{limit: string, normal_limit: string, temporary_limit: ?string, temporary_until: ?string, due: string, held: string, uncleared: string, exposure: string, available: string, used_percent: ?string, state: string, stop: ?string}>
      */
     public function positionsFor(iterable $customers): array
     {
@@ -343,7 +343,7 @@ final class CreditExposure implements CreditHolds
         $out = [];
 
         foreach ($list as $id => $customer) {
-            $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
+            $limit = $customer->effectiveCreditLimit();
             $due = $customer->outstanding();
             $h = bcadd($held[$id] ?? '0', '0', 4);
             $u = bcadd($cheques[$id] ?? '0', '0', 4);
@@ -351,7 +351,11 @@ final class CreditExposure implements CreditHolds
             $left = bcsub($limit, $exposure, 4);
 
             $out[$id] = [
+                // ⭐ চলতি সীমা (অস্থায়ী খাটলে সেটা) — দেয়াল যা মাপে; সাধারণ আর অস্থায়ী আলাদা করেও (ধাপ ২.৩)
                 'limit' => $limit,
+                'normal_limit' => bcadd((string) ($customer->credit_limit ?? '0') ?: '0', '0', 4),
+                'temporary_limit' => $customer->temporaryLimitActive() ? bcadd((string) $customer->temporary_credit_limit, '0', 4) : null,
+                'temporary_until' => $customer->temporaryLimitActive() ? $customer->temporary_credit_until?->toDateString() : null,
                 'due' => $due,
                 'held' => $h,
                 'uncleared' => $u,
@@ -433,7 +437,7 @@ final class CreditExposure implements CreditHolds
             return ['fits' => true, 'short' => '0', 'used_percent' => null, 'reason' => null];
         }
 
-        $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
+        $limit = $customer->effectiveCreditLimit();
 
         $due = $customer->outstanding();
         $held = bcadd($this->pending($customer, exceptDeliveryOrderId: $exceptDeliveryOrderId), $this->unclearedCheques($customer), 4);
@@ -827,7 +831,7 @@ final class CreditExposure implements CreditHolds
          * ⛔ বাকি বন্ধ ([[stopsFor()]]) — সীমার আগে, ৫ অক্টোবর ২০২৬। এই কাগজে নতুন বাকি জন্মালে "না"; পুরো টাকা দিলে
          * (বা অগ্রিমে ঢাকলে) চলে। ⓘ আগেই গেট পেরোনো মালের বিল আটকায় না ([[billsGoodsAlreadyGone()]])।
          */
-        $seen = ['limit' => bcadd((string) ($customer->credit_limit ?? '0'), '0', 4), 'due' => $customer->outstanding(), 'held' => $pending];
+        $seen = ['limit' => $customer->effectiveCreditLimit(), 'due' => $customer->outstanding(), 'held' => $pending];
 
         if (bccomp($unpaid, '0', 4) > 0 && ! $this->billsGoodsAlreadyGone($exceptInvoiceId)) {
             $stop = $this->stopDetails([$customer])[(int) $customer->id] ?? null;
@@ -846,12 +850,12 @@ final class CreditExposure implements CreditHolds
             return;
         }
 
-        $limit = (string) $customer->credit_limit;
+        $limit = $seen['limit'];
         $used = bcadd($customer->outstanding(), $pending, 4);
         $left = bcsub($limit, $used, 4);
         $left = bccomp($left, '0', 4) > 0 ? $left : '0';
         // ⓘ কত বেশি = বিক্রির পরের মোট − সীমা; কম জমা দিলে ঠিক ততটা আরও দিলে চলে
-        $short = bcsub(bcadd($used, $unpaid, 4), $limit === '' ? '0' : $limit, 4);
+        $short = bcsub(bcadd($used, $unpaid, 4), $limit, 4);
 
         /*
          * ⚠️ ঘরের নাম `customer_id` — বিলের পর্দাগুলো ঐ ঘরের বার্তা গ্রাহকের

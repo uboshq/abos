@@ -49,7 +49,8 @@ final class OrderStanding
         $held = bcadd($this->exposure->pending($customer), '0', 4);
         // ⭐ ক্লিয়ার না হওয়া চেক — দেয়ালের একই ভাগ ([[CreditExposure::unclearedCheques()]]), ৫ অক্টোবর ২০২৬
         $cheques = $this->exposure->unclearedCheques($customer);
-        $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
+        // ⭐ চলতি সীমা — দেয়ালের একই (অস্থায়ী খাটলে সেটা, ধাপ ২.৩)
+        $limit = $customer->effectiveCreditLimit();
 
         $claims = DepositClaim::query()
             ->where('customer_id', $customer->id)

@@ -253,8 +253,8 @@ final class CreditDashboard implements ProvidesDashboard
                 ['key' => 'what', 'label' => __('credit_control::profile.what'),
                     'render' => fn (CustomerCreditChange $c) => __('customer::credit_history.'.$c->field)],
                 ['key' => 'change', 'label' => __('credit_control::dashboard.old_new'),
-                    'render' => fn (CustomerCreditChange $c) => $c->field === 'credit_limit'
-                        ? Money::format($c->old_value).' → '.Money::format($c->new_value)
+                    'render' => fn (CustomerCreditChange $c) => in_array($c->field, CustomerCreditChange::MONEY_FIELDS, true)
+                        ? ($c->old_value === null ? '—' : Money::format($c->old_value)).' → '.($c->new_value === null ? '—' : Money::format($c->new_value))
                         : ($c->old_value ?? '—').' → '.($c->new_value ?? '—')],
             ],
             rows: $ids === [] ? collect() : CustomerCreditChange::query()->whereIn('customer_id', $ids)
