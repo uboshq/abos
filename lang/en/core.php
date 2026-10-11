@@ -1239,6 +1239,8 @@ return [
      * the message, or the next step is a phone call.
      */
     'approval' => [
+        'signed_paper_stuck_title' => ':no is signed but was not posted',
+        'signed_paper_stuck_body' => 'Reason: :reason. Fix it, open the paper and press "Post".',
         'delegate_not_self' => 'You cannot delegate to yourself — that would open a path to approving your own request.',
         'delegate_bad_dates' => 'The end date cannot fall before the start date.',
         'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
@@ -1389,6 +1391,7 @@ return [
             'backup_failed' => 'When a backup fails',
             'signed_challan_stuck' => 'When a signed challan could not be confirmed',
             'signed_sale_stuck' => 'When a signed counter sale could not be finished',
+            'signed_paper_stuck' => 'When a signed voucher or bill could not be posted',
             'delivery_stage' => 'When a sale moves to its next delivery step',
             'order_credit_held' => 'When a sales order is held at the credit limit',
             'order_awaits_you' => 'When a sales order waits for my signature',
