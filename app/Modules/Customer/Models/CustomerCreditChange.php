@@ -6,6 +6,8 @@ namespace App\Modules\Customer\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserDealers;
 use App\Core\Support\Actor;
 use App\Models\Approval;
 use App\Models\User;
@@ -24,6 +26,12 @@ class CustomerCreditChange extends Model
 {
     use BelongsToCompany;
     use HasPublicId;
+
+    // ⓘ সারি বসার দাগটা সাধারণ নিরীক্ষাতেও — বদল বিরল, তাই দাম নেই; বদলানো আর মোছা নিচে বন্ধ
+    use IsAudited;
+
+    // ⛔ বিক্রয়কর্মী কেবল নিজের ডিলারের ইতিহাস দেখেন (⛔১৬)
+    use ScopedToUserDealers;
 
     /** যে ঘরগুলোর বদল এখানে ওঠে */
     public const FIELDS = ['credit_limit', 'credit_days'];

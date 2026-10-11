@@ -94,7 +94,6 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\IssuedNumber' => 'একবার দেওয়া নম্বর ফেরত নেওয়া হয় না',
         // ⭐ দেয়ালের সাক্ষ্য — কী দেখেছিল আর কী বলেছিল; সারি বদলানো আর মোছা মডেলেই বন্ধ (বাকি নিয়ন্ত্রণ, ১১ অক্টোবর ২০২৬)
         'App\Modules\Sales\Models\CreditDecision' => 'দেয়ালের সিদ্ধান্ত — শুধু যোগের, নিজেই সাক্ষ্য',
-        'App\Modules\Customer\Models\CustomerCreditChange' => 'সীমা বদলের ইতিহাস — শুধু যোগের; গ্রাহকের সারি নিজে অডিটে',
 
         // ── ⭐ `ApprovalDecision`-ও এখান থেকে তোলা — ২৫ সেপ্টেম্বর ২০২৬ ──
         //

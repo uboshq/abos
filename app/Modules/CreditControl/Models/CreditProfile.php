@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\CreditControl\Models;
 
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Modules\Customer\Models\Customer;
 
 /**
@@ -14,6 +15,9 @@ use App\Modules\Customer\Models\Customer;
  */
 class CreditProfile extends Customer
 {
+    // ⛔ শাখার দেয়াল — ড্রিলের ঠিকানা হিসেবে অন্য শাখার গ্রাহক খোলে না (পাতাও নিজে যাচাই করে, [[CreditProfileController]])
+    use ScopedToUserBranch;
+
     protected $table = 'customers';
 
     public static function drillSourceType(): string

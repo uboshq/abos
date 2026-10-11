@@ -349,7 +349,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — api.app.crash: লগইনের পর্দাতেও অ্যাপ ভাঙে, তাই টোকেন ছাড়া;
      *       কেবল ভুলের খাতায় লেখে, কিছু ফেরায় না, throttle:10,1 আর প্রতিটা ঘরের আকারের সীমা (সমন্বয়কের অ্যাপ-অডিট)
      */
-    private const CEILING = 343;
+    /*
+     * ── ⚠️ ৩৪৩ → ৩৪৪, ১১ অক্টোবর ২০২৬ (বাকি নিয়ন্ত্রণ ধাপ ১.৫, দেয়ালের সাক্ষ্য) ─────────────────────────────────────
+     *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — `CreditDecision`: প্রতিটা কাউন্টার-বিক্রিতে দেয়ালের একটা
+     *       সারি, আর মালিকের শর্ত "কাউন্টার ধীর নয় — একটাই INSERT"; অডিট বসালে প্রতি বিক্রিতে আরেকটা। সারি নিজেই সাক্ষ্য,
+     *       বদলানো আর মোছা মডেলেই বন্ধ। ⓘ সীমা বদলের ইতিহাস (`CustomerCreditChange`) ছাড় নেয়নি — সে অডিটে।
+     */
+    private const CEILING = 344;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

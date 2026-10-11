@@ -59,27 +59,27 @@
             <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.open_bills') }}</h2>
                 <div class="max-h-80 overflow-auto">
-                    <table class="w-full text-sm" data-open-bills>
+                    <table class="ui-list w-full text-sm" data-open-bills>
                         <thead>
                             <tr class="text-left text-2xs text-(--color-ink-muted)">
-                                <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::report.bill') }}</th>
-                                <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::report.due_on') }}</th>
-                                <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::report.days_overdue') }}</th>
-                                <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::report.unpaid') }}</th>
+                                <th class="font-semibold">{{ __('credit_control::report.bill') }}</th>
+                                <th class="font-semibold">{{ __('credit_control::report.due_on') }}</th>
+                                <th class="text-right font-semibold">{{ __('credit_control::report.days_overdue') }}</th>
+                                <th class="text-right font-semibold">{{ __('credit_control::report.unpaid') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($bills as $bill)
                                 <tr class="border-t border-(--color-border)" data-bill="{{ $bill['no'] }}">
-                                    <td class="px-3 py-1.5"><x-ui.drill source="sales_invoice" :id="$bill['id']">{{ $bill['no'] }}</x-ui.drill></td>
-                                    <td class="px-3 py-1.5">{{ DateFormat::format($bill['due_on']) }}</td>
-                                    <td @class(['tabular px-3 py-1.5 text-right', 'font-semibold text-(--color-badge-danger-ink)' => $bill['days_overdue'] > 0])>
+                                    <td><x-ui.drill source="sales_invoice" :id="$bill['id']">{{ $bill['no'] }}</x-ui.drill></td>
+                                    <td>{{ DateFormat::format($bill['due_on']) }}</td>
+                                    <td @class(['tabular text-right', 'font-semibold text-(--color-badge-danger-ink)' => $bill['days_overdue'] > 0])>
                                         {{ $bill['days_overdue'] > 0 ? $bill['days_overdue'] : __('credit_control::report.bucket_not_due') }}
                                     </td>
-                                    <td class="tabular px-3 py-1.5 text-right">{{ Money::format($bill['unpaid']) }}</td>
+                                    <td class="tabular text-right">{{ Money::format($bill['unpaid']) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="px-3 py-3 text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
+                                <tr><td colspan="4" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -89,26 +89,26 @@
             <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.history') }}</h2>
                 <div class="max-h-80 overflow-auto">
-                    <table class="w-full text-sm" data-credit-history>
+                    <table class="ui-list w-full text-sm" data-credit-history>
                         <thead>
                             <tr class="text-left text-2xs text-(--color-ink-muted)">
-                                <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.when') }}</th>
-                                <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.what') }}</th>
-                                <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::profile.old') }}</th>
-                                <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::profile.new') }}</th>
-                                <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.who') }}</th>
-                                <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.reason') }}</th>
+                                <th class="font-semibold">{{ __('credit_control::profile.when') }}</th>
+                                <th class="font-semibold">{{ __('credit_control::profile.what') }}</th>
+                                <th class="text-right font-semibold">{{ __('credit_control::profile.old') }}</th>
+                                <th class="text-right font-semibold">{{ __('credit_control::profile.new') }}</th>
+                                <th class="font-semibold">{{ __('credit_control::profile.who') }}</th>
+                                <th class="font-semibold">{{ __('credit_control::profile.reason') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($history as $row)
                                 <tr class="border-t border-(--color-border)">
-                                    <td class="px-3 py-1.5 whitespace-nowrap">{{ DateFormat::format($row['at']) }}</td>
-                                    <td class="px-3 py-1.5">{{ $row['what'] }}</td>
-                                    <td class="tabular px-3 py-1.5 text-right">{{ $row['old'] === null ? '—' : ($row['money'] ? Money::format($row['old']) : $row['old']) }}</td>
-                                    <td class="tabular px-3 py-1.5 text-right">{{ $row['new'] === null ? '—' : ($row['money'] ? Money::format($row['new']) : $row['new']) }}</td>
-                                    <td class="px-3 py-1.5">{{ $row['who'] ?? '—' }}</td>
-                                    <td class="px-3 py-1.5">
+                                    <td class="whitespace-nowrap">{{ DateFormat::format($row['at']) }}</td>
+                                    <td>{{ $row['what'] }}</td>
+                                    <td class="tabular text-right">{{ $row['old'] === null ? '—' : ($row['money'] ? Money::format($row['old']) : $row['old']) }}</td>
+                                    <td class="tabular text-right">{{ $row['new'] === null ? '—' : ($row['money'] ? Money::format($row['new']) : $row['new']) }}</td>
+                                    <td>{{ $row['who'] ?? '—' }}</td>
+                                    <td>
                                         {{ $row['reason'] ?? '—' }}
                                         @if ($row['approval'] !== null)
                                             · <x-ui.drill source="approval" :id="$row['approval']">{{ __('credit_control::profile.signature') }}</x-ui.drill>
@@ -116,7 +116,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="px-3 py-3 text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_history') }}</td></tr>
+                                <tr><td colspan="6" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_history') }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -127,33 +127,33 @@
         <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.decisions') }}</h2>
             <div class="overflow-x-auto">
-            <table class="w-full text-sm" data-wall-decisions>
+            <table class="ui-list w-full text-sm" data-wall-decisions>
                 <thead>
                     <tr class="text-left text-2xs text-(--color-ink-muted)">
-                        <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.when') }}</th>
-                        <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.where') }}</th>
-                        <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.paper') }}</th>
-                        <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::profile.this_paper') }}</th>
-                        <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::profile.after') }}</th>
-                        <th class="px-3 py-1.5 text-right font-semibold">{{ __('credit_control::profile.limit') }}</th>
-                        <th class="px-3 py-1.5 font-semibold">{{ __('credit_control::profile.result') }}</th>
+                        <th class="font-semibold">{{ __('credit_control::profile.when') }}</th>
+                        <th class="font-semibold">{{ __('credit_control::profile.where') }}</th>
+                        <th class="font-semibold">{{ __('credit_control::profile.paper') }}</th>
+                        <th class="text-right font-semibold">{{ __('credit_control::profile.this_paper') }}</th>
+                        <th class="text-right font-semibold">{{ __('credit_control::profile.after') }}</th>
+                        <th class="text-right font-semibold">{{ __('credit_control::profile.limit') }}</th>
+                        <th class="font-semibold">{{ __('credit_control::profile.result') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($decisions as $d)
                         <tr class="border-t border-(--color-border)">
-                            <td class="px-3 py-1.5 whitespace-nowrap">{{ DateFormat::formatWithTime($d->created_at) }}</td>
-                            <td class="px-3 py-1.5">{{ __('credit_control::profile.stage_'.$d->stage) }}</td>
-                            <td class="px-3 py-1.5">{{ $d->paper_no ?? '—' }}</td>
-                            <td class="tabular px-3 py-1.5 text-right">{{ Money::format($d->adding) }}</td>
-                            <td class="tabular px-3 py-1.5 text-right">{{ $d->exposure_after === null ? '—' : Money::format($d->exposure_after) }}</td>
-                            <td class="tabular px-3 py-1.5 text-right">{{ $d->credit_limit === null ? '—' : Money::format($d->credit_limit) }}</td>
-                            <td class="px-3 py-1.5">
+                            <td class="whitespace-nowrap">{{ DateFormat::formatWithTime($d->created_at) }}</td>
+                            <td>{{ __('credit_control::profile.stage_'.$d->stage) }}</td>
+                            <td>{{ $d->paper_no ?? '—' }}</td>
+                            <td class="tabular text-right">{{ Money::format($d->adding) }}</td>
+                            <td class="tabular text-right">{{ $d->exposure_after === null ? '—' : Money::format($d->exposure_after) }}</td>
+                            <td class="tabular text-right">{{ $d->credit_limit === null ? '—' : Money::format($d->credit_limit) }}</td>
+                            <td>
                                 <x-ui.badge :tone="$d->result === 'pass' ? 'success' : 'danger'">{{ __('credit_control::profile.reason_'.$d->reason) }}</x-ui.badge>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-3 py-3 text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_decisions') }}</td></tr>
+                        <tr><td colspan="7" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_decisions') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

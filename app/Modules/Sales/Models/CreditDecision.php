@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\ScopedToUserDealers;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,9 @@ class CreditDecision extends Model
 {
     use BelongsToCompany;
     use HasPublicId;
+
+    // ⛔ বিক্রয়কর্মী কেবল নিজের ডিলারের সাক্ষ্য দেখেন (⛔১৬)
+    use ScopedToUserDealers;
 
     public const PASS = 'pass';
 

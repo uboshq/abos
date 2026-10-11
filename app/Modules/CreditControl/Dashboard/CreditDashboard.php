@@ -9,6 +9,7 @@ use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Core\Support\ViewedBranch;
@@ -222,7 +223,10 @@ final class CreditDashboard implements ProvidesDashboard
         }
 
         arsort($sums, SORT_NUMERIC);
-        $names = User::query()->whereIn('id', array_keys($sums))->pluck('name', 'id');
+        $names = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->whereIn('id', array_keys($sums))
+            ->pluck('name', 'id');
 
         return new Breakdown(
             label: __('credit_control::dashboard.by_salesperson'),
@@ -262,7 +266,7 @@ final class CreditDashboard implements ProvidesDashboard
     /** @param  list<int>  $ids */
     private static function recentBlocks(array $ids): Listing
     {
-        $names = Customer::query()->whereIn('id', $ids)->get()->keyBy('id');
+        $names = Customer::query()->inViewedBranch()->whereIn('customers.id', $ids)->get()->keyBy('id');
 
         return new Listing(
             label: __('credit_control::dashboard.recent_blocks'),

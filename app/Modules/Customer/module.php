@@ -458,14 +458,6 @@ return [
     /*
      * ⭐ সীমা বাড়ানোর শেষ সই পড়লে নতুন সীমা নিজে বসে — ২ অক্টোবর ২০২৬ ([[ApplyTheLimitOnTheLastSignature]])।
      */
-    /*
-     * ⭐ সীমা বদলের ইতিহাস — কেবল যোগের খাতা, প্রতিটা সারি নিজেই একটা ঘটনা (বাকি নিয়ন্ত্রণ ধাপ ১.৪, ১১ অক্টোবর ২০২৬)।
-     * ⓘ গ্রাহকের সারির বদল এমনিতেই নিরীক্ষায় ওঠে; এটা তার পাশে সীমার নিজের, কারণ আর সইসহ ইতিহাস।
-     */
-    'audit_exempt' => [
-        \App\Modules\Customer\Models\CustomerCreditChange::class => 'append-only history of limit and credit-day changes; the customer row itself is audited',
-    ],
-
     'listeners' => [
         \App\Core\Events\ApprovalDecided::class => [\App\Modules\Customer\Listeners\ApplyTheLimitOnTheLastSignature::class],
     ],
