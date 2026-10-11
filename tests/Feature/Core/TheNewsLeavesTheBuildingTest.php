@@ -48,6 +48,8 @@ final class TheNewsLeavesTheBuildingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ⓘ দিনের বেলা — মালিকের নীরব সময় (২২–০৮) রাতে চালালে চিঠি আটকে রাখে; এই দাবি পাঠানো নিয়ে, নীরবতা নিয়ে নয়
+        $this->travelTo(now()->setTime(12, 0));
         $this->seed(DemoSeeder::class);
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();

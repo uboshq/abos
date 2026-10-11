@@ -37,11 +37,11 @@
                 {{ __('documents::page.phase_one_live') }}
             </p>
 
-            <p class="mt-4 max-w-3xl text-sm leading-relaxed text-(--color-ink-body)">
+            <p class="mt-4 max-w-(--spacing-prose-max) text-sm leading-relaxed text-(--color-ink-body)">
                 {{ __('documents::page.purpose') }}
             </p>
 
-            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-(--color-ink-muted)">
+            <p class="mt-2 max-w-(--spacing-prose-max) text-sm leading-relaxed text-(--color-ink-muted)">
                 {{ __('documents::page.phase_one_what') }}
             </p>
 

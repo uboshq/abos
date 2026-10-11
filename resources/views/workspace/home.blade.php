@@ -93,7 +93,7 @@
                             <label class="block text-xs text-(--color-ink-muted)">
                                 {{ __('home.filter_'.$key) }}
                                 <select name="{{ $key }}" data-filter-{{ $key }}
-                                        class="mt-1 h-9 w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                                        class="mt-1 h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
                                     <option value="">{{ __('home.filter_all') }}</option>
                                     @foreach ($filterChoices[$list] as $id => $name)
                                         <option value="{{ $id }}" @selected($filter->{$key} === (int) $id)>{{ $name }}</option>
@@ -112,7 +112,7 @@
 
                 {{-- ⭐ "লেআউট সাজান" — কোন অংশ দেখা যাবে আর কোনটা আগে; কেবল নিজের জন্য ([[HomeLayout]]) --}}
                 <details data-layout-menu class="relative">
-                    <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
+                    <summary class="flex h-(--spacing-field-compact) cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
                                     border border-(--color-border) bg-(--color-surface-card) px-3 text-sm text-(--color-ink)">
                         <x-ui.icon name="settings" :size="14" class="text-(--color-ink-muted)" />
                         <span class="font-semibold">{{ __('home.layout') }}</span>
@@ -131,7 +131,7 @@
                                 @if ($part !== 'happenings')
                                     <input type="number" name="position[{{ $unit }}]" min="1" max="{{ count(\App\Core\Dashboard\HomeLayout::UNITS) }}" value="{{ $layout->position($unit) }}"
                                            aria-label="{{ __('home.layout_position') }}"
-                                           class="num h-8 w-14 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
+                                           class="num h-(--spacing-field-dense) w-14 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
                                 @else
                                     <span class="w-14 text-center text-2xs text-(--color-ink-muted)">↑</span>
                                 @endif
@@ -148,7 +148,7 @@
 
                 {{-- সময় — আজ · এ মাস · এ বছর; বদলায় কেবল প্রবাহের সূচক ([[HomePeriod]]) --}}
                 <details data-period-menu class="relative">
-                    <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
+                    <summary class="flex h-(--spacing-field-compact) cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
                                     border border-(--color-border) bg-(--color-surface-card) px-3 text-sm text-(--color-ink)">
                         <span class="text-2xs text-(--color-ink-muted)">{{ __('home.period') }}</span>
                         <span class="font-semibold">{{ $titles[$period] }}</span>
@@ -310,7 +310,7 @@
                                     @endphp
                                     <svg viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true" class="mt-1 block h-4 w-full">
                                         <polyline points="{{ implode(' ', $points) }}" fill="none" stroke-width="1.5"
-                                                  vector-effect="non-scaling-stroke" style="stroke: var(--color-chart-1, #2563eb)" />
+                                                  vector-effect="non-scaling-stroke" style="stroke: var(--color-chart-1)" />
                                     </svg>
                                 @endif
                             </a>

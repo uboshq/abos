@@ -45,14 +45,14 @@
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
         <div data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <table class="w-full text-sm" data-customer-targets>
+            <table class="ui-grid w-full text-sm" data-customer-targets>
                 <thead>
                     <tr class="border-b border-(--color-border) text-start text-(--color-ink-muted)">
-                        <th class="px-3 py-2 text-start">{{ __('sales::customer_target.dealer') }}</th>
-                        <th class="px-3 py-2 text-end">{{ __('sales::customer_target.target') }}</th>
-                        <th class="px-3 py-2 text-start">{{ __('sales::customer_target.closes_on') }}</th>
-                        <th class="px-3 py-2 text-end">{{ __('sales::customer_target.achieved') }}</th>
-                        <th class="px-3 py-2 text-end">{{ __('sales::customer_target.remaining') }}</th>
+                        <th class="text-start">{{ __('sales::customer_target.dealer') }}</th>
+                        <th class="text-end">{{ __('sales::customer_target.target') }}</th>
+                        <th class="text-start">{{ __('sales::customer_target.closes_on') }}</th>
+                        <th class="text-end">{{ __('sales::customer_target.achieved') }}</th>
+                        <th class="text-end">{{ __('sales::customer_target.remaining') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,8 +62,8 @@
                             $left = $row['target'] === null ? null : (bccomp($row['achieved'], $row['target'], 4) >= 0 ? '0' : bcsub($row['target'], $row['achieved'], 4));
                         @endphp
                         <tr class="border-b border-(--color-border)" data-target-row="{{ $c->code }}">
-                            <td class="px-3 py-1.5">{{ $c->code }} · {{ $c->name() }}</td>
-                            <td class="px-3 py-1.5 text-end">
+                            <td>{{ $c->code }} · {{ $c->name() }}</td>
+                            <td class="text-end">
                                 @if ($canManage)
                                     <input type="number" step="0.01" min="0" inputmode="decimal" name="target[{{ $c->id }}][amount]"
                                            value="{{ $row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '' }}"
@@ -73,18 +73,17 @@
                                     <span class="tabular">{{ $row['target'] === null ? '—' : Money::format($row['target']) }}</span>
                                 @endif
                             </td>
-                            <td class="px-3 py-1.5">
+                            <td>
                                 @if ($canManage)
-                                    <input type="date" name="target[{{ $c->id }}][closes_on]" value="{{ $row['closes_on'] }}"
-                                           min="{{ $month->toDateString() }}" max="{{ $month->copy()->endOfMonth()->toDateString() }}"
-                                           aria-label="{{ __('sales::customer_target.closes_on') }} — {{ $c->name() }}"
-                                           class="{{ $input }}">
+                                    <x-ui.date dense :name="'target['.$c->id.'][closes_on]'" :id="'closes-on-'.$c->id" :value="$row['closes_on']"
+                                               :min="$month->toDateString()" :max="$month->copy()->endOfMonth()->toDateString()"
+                                               aria-label="{{ __('sales::customer_target.closes_on') }} — {{ $c->name() }}" />
                                 @else
                                     {{ $row['closes_on'] ?? '—' }}
                                 @endif
                             </td>
-                            <td class="px-3 py-1.5 text-end tabular" data-achieved>{{ Money::format($row['achieved']) }}</td>
-                            <td class="px-3 py-1.5 text-end tabular">{{ $left === null ? '—' : Money::format((string) $left) }}</td>
+                            <td class="text-end tabular" data-achieved>{{ Money::format($row['achieved']) }}</td>
+                            <td class="text-end tabular">{{ $left === null ? '—' : Money::format((string) $left) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5" class="px-3 py-6 text-center text-(--color-ink-muted)">{{ __('sales::customer_target.nobody') }}</td></tr>

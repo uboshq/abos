@@ -226,7 +226,7 @@ class WithdrawalController extends Controller implements HasMiddleware
     public function post(Request $request, Withdrawal $withdrawal): RedirectResponse
     {
         $data = $request->validate([
-            'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             /*
              * ব্যাংক বা MFS হলে যে নম্বরটা লাগে — চেক নম্বর, TrxID।
              *

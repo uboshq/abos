@@ -33,6 +33,7 @@ return [
     'period' => 'Period',
     'scope_ytd' => 'Year to this month',
     'scope_year' => 'Whole year',
+    'scope_fy' => 'Financial year',
     'plan_for' => 'Plan for :year',
     'no_plan' => 'No budget has been written for this year yet.',
     'no_plan_for_period' => 'No account has a budget in this period.',

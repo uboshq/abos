@@ -35,6 +35,8 @@ class AssetTransfer extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'asset_id', 'from_branch_id', 'to_branch_id',
+        // ⭐ কর্মী, জায়গা, বিভাগ — ধাপ ৩ (শাখা না বদলালে দাখিলা নেই)
+        'from_custodian_id', 'to_custodian_id', 'from_location', 'to_location', 'from_department', 'to_department',
         'moved_on', 'note', 'created_by',
     ];
 
@@ -57,6 +59,11 @@ class AssetTransfer extends Model implements Drillable
     public function toBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'to_branch_id');
+    }
+
+    public function movedBranch(): bool
+    {
+        return (int) $this->from_branch_id !== (int) $this->to_branch_id;
     }
 
     public function creator(): BelongsTo

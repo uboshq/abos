@@ -32,7 +32,7 @@
      x-show="open" x-cloak
      x-transition.opacity.duration.100ms
      style="position:fixed;inset:0;z-index:60;display:flex;justify-content:center;
-            align-items:flex-start;padding:10vh 16px 16px;background:rgb(0 0 0 / 0.35)"
+            align-items:flex-start;padding:10vh 16px 16px;background:color-mix(in srgb, black 35%, transparent)"
      @click.self="open = false"
      role="dialog" aria-modal="true">
 
@@ -40,7 +40,7 @@
          না হলে গোটা গড়নটা ভেঙে পড়ে, আর ভুলের কোনো বার্তা থাকে না। --}}
     <div style="width:100%;max-width:640px;border-radius:12px;overflow:hidden;
                 border:1px solid var(--color-border);background:var(--color-surface-card);
-                box-shadow:0 20px 60px rgb(0 0 0 / 0.25)">
+                box-shadow:0 20px 60px color-mix(in srgb, black 25%, transparent)">
 
         <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;
                     border-bottom:1px solid var(--color-border)">

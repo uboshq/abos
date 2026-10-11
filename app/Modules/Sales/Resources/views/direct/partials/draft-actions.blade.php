@@ -70,29 +70,29 @@
                 </span>
             </div>
 
-            <table class="mt-4 w-full text-sm">
+            <table class="ui-grid mt-4 w-full text-sm">
                 <thead>
                     <tr class="border-b border-(--color-border) text-2xs text-(--color-ink-muted)">
-                        <th class="py-1 text-start">{{ __('sales::field.product') }}</th>
-                        <th class="py-1 text-end">{{ __('sales::field.qty') }}</th>
-                        <th class="py-1 text-end">{{ __('sales::field.rate') }}</th>
-                        <th class="py-1 text-end">{{ __('sales::field.amount') }}</th>
+                        <th class="text-start">{{ __('sales::field.product') }}</th>
+                        <th class="text-end">{{ __('sales::field.qty') }}</th>
+                        <th class="text-end">{{ __('sales::field.rate') }}</th>
+                        <th class="text-end">{{ __('sales::field.amount') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($draft->lines as $line)
                         <tr class="border-b border-(--color-border)">
-                            <td class="py-1">{{ $line->product?->name() }}</td>
-                            <td class="num py-1 text-end">{{ \App\Core\Support\Money::format($line->qty) }}</td>
-                            <td class="num py-1 text-end">{{ \App\Core\Support\Money::format($line->rate) }}</td>
-                            <td class="num py-1 text-end">{{ \App\Core\Support\Money::format($line->amount) }}</td>
+                            <td>{{ $line->product?->name() }}</td>
+                            <td class="num text-end">{{ \App\Core\Support\Money::format($line->qty) }}</td>
+                            <td class="num text-end">{{ \App\Core\Support\Money::format($line->rate) }}</td>
+                            <td class="num text-end">{{ \App\Core\Support\Money::format($line->amount) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr class="font-semibold">
                         <td class="py-2" colspan="3">{{ __('sales::field.total') }}</td>
-                        <td class="num py-2 text-end">{{ \App\Core\Support\Money::format($draft->total) }}</td>
+                        <td class="num text-end">{{ \App\Core\Support\Money::format($draft->total) }}</td>
                     </tr>
                 </tfoot>
             </table>

@@ -98,7 +98,7 @@
 
                 {{-- ⛔ বন্ধের নিজের চাবি — দেখা যায়, বন্ধ করা যায় না (অডিট হিসাব ⚠️৭) --}}
                 @cannot('accounts.year.close')
-                    <p class="text-sm text-(--color-text-muted)">{{ __('accounts::message.year_close_needs_key') }}</p>
+                    <p class="text-sm text-(--color-ink-muted)">{{ __('accounts::message.year_close_needs_key') }}</p>
                 @else
                 <form method="POST" action="{{ route('accounts.year_end.close', $year) }}"
                       x-data="{ busy: false }"

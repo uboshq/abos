@@ -35,9 +35,10 @@
 
     $sum = fn (string $field) => $rows->reduce(fn (string $s, array $r) => bcadd($s, $r[$field], 4), '0');
 
-    $periodLabel = $from === $to
+    // ⓘ অর্থবছরের পরিসর দুই বছর ছোঁয় — লেবেলটা কন্ট্রোলার থেকে ([[BudgetController::comparison()]], অর্থ M29)
+    $periodLabel = $fyLabel ?? ($from === $to
         ? __('finance::budget.month_long.'.$from).' '.$year
-        : __('finance::budget.month_long.'.$from).' – '.__('finance::budget.month_long.'.$to).' '.$year;
+        : __('finance::budget.month_long.'.$from).' – '.__('finance::budget.month_long.'.$to).' '.$year);
 @endphp
 
 <x-layouts.app :menu="$menu">

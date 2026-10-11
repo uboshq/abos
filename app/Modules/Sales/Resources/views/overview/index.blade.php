@@ -103,15 +103,11 @@
                     </label>
                     <label class="text-sm">
                         <span class="mb-1 block text-(--color-ink-muted)">{{ __('core.table.from_date') }}</span>
-                        <input type="date" name="from" value="{{ $period->from }}"
-                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2">
+                        <x-ui.date dense name="from" :value="$period->from" />
                     </label>
                     <label class="text-sm">
                         <span class="mb-1 block text-(--color-ink-muted)">{{ __('core.table.to_date') }}</span>
-                        <input type="date" name="to" value="{{ $period->to }}"
-                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2">
+                        <x-ui.date dense name="to" :value="$period->to" />
                     </label>
                     <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
                 </form>

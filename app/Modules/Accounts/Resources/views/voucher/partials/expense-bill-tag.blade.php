@@ -63,15 +63,15 @@
         </p>
     @else
         <div class="mt-3 overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="ui-grid w-full text-sm">
                 <thead class="text-xs text-(--color-ink-muted)">
                     <tr class="border-b border-(--color-border)">
                         <th class="w-8"></th>
-                        <th class="p-2 text-start">{{ __('accounts::field.bill') }}</th>
-                        <th class="p-2 text-start">{{ __('accounts::field.goods') }}</th>
-                        <th class="p-2 text-end">{{ __('accounts::field.qty') }}</th>
-                        <th class="p-2 text-end">{{ __('accounts::field.already_charged') }}</th>
-                        <th class="p-2 text-end">{{ __('accounts::field.this_share') }}</th>
+                        <th class="text-start">{{ __('accounts::field.bill') }}</th>
+                        <th class="text-start">{{ __('accounts::field.goods') }}</th>
+                        <th class="text-end">{{ __('accounts::field.qty') }}</th>
+                        <th class="text-end">{{ __('accounts::field.already_charged') }}</th>
+                        <th class="text-end">{{ __('accounts::field.this_share') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -87,7 +87,7 @@
                         @endphp
                         <tr class="border-b border-(--color-border)"
                             x-show="! onlyUntagged || {{ $bill->already_charged > 0 ? 'false' : 'true' }}">
-                            <td class="p-2">
+                            <td>
                                 <input type="checkbox"
                                        name="bill_shares[{{ $i }}][purchase_bill_id]"
                                        value="{{ $bill->id }}"
@@ -107,7 +107,7 @@
                                 লিংক দিলে ক্লিক করে তিনি 403 পেতেন। ⓘ মালিকের
                                 পুরনো নিয়ম: যে ঘর কোথাও নিয়ে যায় না, সেটা সাদা থাকে।
                             --}}
-                            <td class="p-2 font-medium">
+                            <td class="font-medium">
                                 @can('view', $bill)
                                     <a href="{{ route('purchase.bill.show', ['bill' => $bill->id]) }}"
                                        target="_blank" rel="noopener"
@@ -137,7 +137,7 @@
                                 উপর বাকি সবাই দাঁড়ায়, তাই সে কারও উপর দাঁড়াতে
                                 পারে না ([[BoundariesTest]])।
                             --}}
-                            <td class="p-2">
+                            <td>
                                 @if ($bill->goods_folded)
                                     <details>
                                         <summary class="cursor-pointer">{{ $bill->goods_summary }}</summary>
@@ -151,12 +151,12 @@
                                     {{ $bill->goods_summary }}
                                 @endif
                             </td>
-                            <td class="num p-2 text-end">{{ \App\Core\Support\Money::quantity($bill->total_qty) }}</td>
-                            <td class="num p-2 text-end text-(--color-ink-muted)">
+                            <td class="num text-end">{{ \App\Core\Support\Money::quantity($bill->total_qty) }}</td>
+                            <td class="num text-end text-(--color-ink-muted)">
                                 {{-- ⛔ লাখের কমা — টাকার নিজের লেখক ([[Money::format()]]); `number_format` হাজারের কমা দিত (পুনঃঅডিট, ৯ অক্টোবর ২০২৬) --}}
                                 {{ bccomp((string) $bill->already_charged, '0', 4) > 0 ? \App\Core\Support\Money::format($bill->already_charged) : '—' }}
                             </td>
-                            <td class="p-2 text-end">
+                            <td class="text-end">
                                 {{--
                                     ⓘ `x-ref` — ভাগ বসানোর কোড এই ঘরটায় লেখে।
                                     ⚠️ `x-model` নয়: তাহলে Alpine ঘরটার মালিক হত আর

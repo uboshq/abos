@@ -189,12 +189,21 @@ class IconSetTest extends TestCase
             $body = $this->markupOf($path);
 
             // icon="…" — ভেতরে যদি সেটের নামের বদলে অন্য কিছু থাকে
-            preg_match_all('/\bicon="([^"]*)"/u', $body, $m);
+            preg_match_all('/(:?)\bicon="([^"]*)"/u', $body, $m, PREG_SET_ORDER);
 
-            foreach ($m[1] as $value) {
-                // সেটের নাম: শুধু ছোট হাতের অক্ষর ও আন্ডারস্কোর
-                if ($value !== '' && preg_match('/^[a-z_]+$/', $value) !== 1) {
-                    $offenders[] = basename($path).' → icon="'.$value.'"';
+            foreach ($m as [, $bound, $value]) {
+                /*
+                 * ⓘ `:icon="…"` একটা PHP প্রকাশ — চলকটা নিজে টাইপ করা অক্ষর নয়। তাই ভিতরের প্রতিটা উদ্ধৃত লেখাই মাপা হয়
+                 * (`$isNew ? 'attachment' : null` → 'attachment')। ⚠️ আগে পুরো প্রকাশটাই "অক্ষর" ধরা হত, আর `$`
+                 * দেখেই লাল — অথচ `:icon="'+'"` এভাবে এখনো ধরা পড়ে (১১ অক্টোবর ২০২৬)।
+                 */
+                $names = $bound === ':' ? (preg_match_all("/'([^']*)'/u", $value, $q) ? $q[1] : []) : [$value];
+
+                foreach ($names as $name) {
+                    // সেটের নাম: শুধু ছোট হাতের অক্ষর ও আন্ডারস্কোর
+                    if ($name !== '' && preg_match('/^[a-z_]+$/', $name) !== 1) {
+                        $offenders[] = basename($path).' → '.$bound.'icon="'.$value.'"';
+                    }
                 }
             }
         }

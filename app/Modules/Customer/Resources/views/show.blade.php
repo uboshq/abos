@@ -14,7 +14,7 @@
             <x-slot:actions>
                 {{-- ⭐ 👁 — বাকি সব (বকেয়া, পরিচয়, আচরণ, পোর্টাল) এক পপ-আপে; পাতায় খোলা থাকে কেবল লেনদেন (মালিক, ৩ অক্টোবর ২০২৬) --}}
                 <x-ui.button tone="secondary" type="button" x-data @click="$dispatch('party-eye')" data-party-eye>
-                    👁 {{ __('customer::action.details') }}
+                    <x-ui.icon name="eye" :size="16" /> {{ __('customer::action.details') }}
                 </x-ui.button>
                 @can('update', $customer)
                     <x-ui.button tone="secondary" :href="route('customer.edit', $customer)">

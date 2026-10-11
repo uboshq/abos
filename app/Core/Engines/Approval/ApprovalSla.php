@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Services\DataScope;
+use App\Core\Services\PermissionSyncer;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\ApprovalFlowStep;
+use App\Models\User;
+use App\Models\UserDataScope;
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Carbon;
 
 /**
@@ -104,6 +111,62 @@ final class ApprovalSla
         }
 
         return ['type' => (string) $step->escalate_to_type, 'id' => (int) $step->escalate_to_id];
+    }
+
+    /**
+     * ⭐ ধাপে গন্তব্য না থাকলে দেরির কাগজ কার কাছে — মালিকের ডিফল্ট (fe-র মাধ্যমে, ১১ অক্টোবর ২০২৬;
+     * [[ALateApprovalWithNoTargetGoesUpTheLadderTest]])।
+     *
+     * ⓘ ক্রম: (১) ধাপে বসানো গন্তব্য — [[escalationTarget()]], আগের মতো, এখানে আসেই না; (২) কাগজের শাখায় নাগাল আছে এমন
+     * চালু "Manager" রোলধারী — শাখা-সীমা না থাকলে সব শাখায় নাগাল; (৩) তা-ও না থাকলে কোম্পানির সুপার অ্যাডমিন।
+     * ⚠️ রোলটা ভিতরের নাম `Manager` দিয়ে ধরা, পর্দার বাংলা নাম ("ব্যবস্থাপক") দিয়ে নয় — মালিক নাম বদলালেও ভাঙে না।
+     * ⓘ ফল খালি মানে সত্যিই কেউ নেই — তখনও ফাঁকটা গোনা হয় আর জানানো হয় ([[hasHoleAt()]] ধাপের নিজের গন্তব্যই দেখে)।
+     *
+     * @return list<int> ব্যবহারকারীর আইডি, ছোটটা আগে
+     */
+    public function fallbackRecipients(Approval $approval): array
+    {
+        $companyId = (int) $approval->company_id;
+
+        return CompanyContext::forCompany($companyId, function () use ($approval, $companyId): array {
+            $paper = $approval->approvable;
+            $branch = $paper !== null && $paper->getAttribute('branch_id') !== null ? (int) $paper->getAttribute('branch_id') : null;
+
+            $managers = $this->holdersOf(self::FALLBACK_ROLE, $companyId)
+                ->filter(function (User $user) use ($branch): bool {
+                    if ($branch === null) {
+                        return true;
+                    }
+
+                    $reach = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
+
+                    return $reach === null || in_array($branch, array_map('intval', $reach), true);
+                });
+
+            $chosen = $managers->isNotEmpty() ? $managers : $this->holdersOf(PermissionSyncer::SUPER_ADMIN_ROLE, $companyId);
+
+            return $chosen->map(fn (User $user) => (int) $user->id)->values()->all();
+        });
+    }
+
+    /** ⓘ দেরির কাগজের দ্বিতীয় ধাপ — রোলের ভিতরের নাম */
+    public const FALLBACK_ROLE = 'Manager';
+
+    /** @return Collection<int, User> এই কোম্পানিতে ঐ রোলের চালু মানুষেরা */
+    private function holdersOf(string $roleName, int $companyId): Collection
+    {
+        $role = Role::query()->where('company_id', $companyId)->where('name', $roleName)->first();
+
+        if ($role === null) {
+            return collect();
+        }
+
+        return User::query()->withoutGlobalScopes()
+            ->whereNull('deleted_at')
+            ->where('is_active', true)
+            ->whereHas('roles', fn ($q) => $q->whereKey($role->getKey()))
+            ->orderBy('id')
+            ->get();
     }
 
     /**

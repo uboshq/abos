@@ -67,20 +67,20 @@
                 <dd>{{ $pass->issuer?->name ?? '—' }} · {{ DateFormat::format($pass->issued_at) }}</dd></div>
         </dl>
 
-        <table class="w-full text-sm">
+        <table class="ui-grid w-full text-sm">
             <thead>
                 <tr class="border-b border-(--color-border) text-(--color-ink-muted)">
-                    <th class="py-1 text-start">{{ __('sales::field.product') }}</th>
-                    <th class="py-1 text-end">{{ __('sales::field.qty') }}</th>
-                    <th class="py-1 text-end">{{ __('sales::field.free_qty') }}</th>
+                    <th class="text-start">{{ __('sales::field.product') }}</th>
+                    <th class="text-end">{{ __('sales::field.qty') }}</th>
+                    <th class="text-end">{{ __('sales::field.free_qty') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($pass->challan?->lines ?? [] as $line)
                     <tr class="border-b border-(--color-border) last:border-b-0">
-                        <td class="py-1">{{ $line->product?->name() }}</td>
-                        <td class="num py-1 text-end">{{ Money::format($line->delivered_qty) }}</td>
-                        <td class="num py-1 text-end">{{ Money::format($line->free_qty ?? 0) }}</td>
+                        <td>{{ $line->product?->name() }}</td>
+                        <td class="num text-end">{{ Money::format($line->delivered_qty) }}</td>
+                        <td class="num text-end">{{ Money::format($line->free_qty ?? 0) }}</td>
                     </tr>
                 @endforeach
             </tbody>

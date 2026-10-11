@@ -31,13 +31,11 @@
         <input type="hidden" name="period" value="custom">
         <label class="text-2xs text-(--color-ink-muted)">
             {{ __('finance::account_analysis.from') }}
-            <input type="date" name="from" value="{{ $from }}"
-                   class="block h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+            <x-ui.date name="from" :value="$from" />
         </label>
         <label class="text-2xs text-(--color-ink-muted)">
             {{ __('finance::account_analysis.to') }}
-            <input type="date" name="to" value="{{ $to }}"
-                   class="block h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+            <x-ui.date name="to" :value="$to" />
         </label>
         <x-ui.button type="submit" tone="primary">{{ __('finance::account_analysis.show') }}</x-ui.button>
     </form>

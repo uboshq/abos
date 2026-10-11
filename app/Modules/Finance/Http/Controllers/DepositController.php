@@ -401,7 +401,7 @@ class DepositController extends Controller implements HasMiddleware
     public function store(Request $request, string $issuer): RedirectResponse
     {
         $data = $request->validate([
-            'kind_id' => ['required', 'integer', 'exists:fin_deposit_kinds,id'],
+            'kind_id' => ['required', 'integer', Rule::exists('fin_deposit_kinds', 'id')->where('company_id', CompanyContext::id())],
             'institution_id' => ['nullable', 'integer',
                 Rule::exists('fin_institutions', 'id')->where('company_id', CompanyContext::id())],
             'institution_new' => ['nullable', 'string', 'max:160',
@@ -449,8 +449,8 @@ class DepositController extends Controller implements HasMiddleware
             'matures_on' => ['nullable', 'date', 'after:opened_on'],
             'instalment_amount' => ['nullable', 'numeric', 'gt:0'],
             'instalment_day' => ['nullable', 'integer', 'min:1', 'max:28'],
-            'payout_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
-            'funded_from_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'payout_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'funded_from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
             'instrument_no' => ['nullable', 'string', 'max:64'],
@@ -462,7 +462,7 @@ class DepositController extends Controller implements HasMiddleware
              * যাবে না ([[Deposit::isLocked()]]) -- আর ওই টাকার উপর
              * ভরসা করে নেওয়া সিদ্ধান্তই সবচেয়ে দামি ভুল।
              */
-            'pledged_to_loan_id' => ['nullable', 'integer', 'exists:acc_loans,id'],
+            'pledged_to_loan_id' => ['nullable', 'integer', Rule::exists('acc_loans', 'id')->where('company_id', CompanyContext::id())],
             // ⭐ ব্যাংক ঋণের বিপরীতে — চালু আর এই কোম্পানির কি না সার্ভিস দেখে ([[DepositService::liveFacility()]])
             'pledged_to_facility_id' => ['nullable', 'integer'],
 
@@ -531,7 +531,7 @@ class DepositController extends Controller implements HasMiddleware
             'source_tax' => ['nullable', 'numeric', 'min:0'],
             'excise_duty' => ['nullable', 'numeric', 'min:0'],
             'moved_on' => ['required', 'date'],
-            'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
             'instrument_no' => ['nullable', 'string', 'max:64'],
@@ -557,7 +557,7 @@ class DepositController extends Controller implements HasMiddleware
             'excise_duty' => ['nullable', 'numeric', 'min:0'],
             'penalty' => ['nullable', 'numeric', 'min:0'],
             'moved_on' => ['required', 'date'],
-            'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
             'instrument_no' => ['nullable', 'string', 'max:64'],

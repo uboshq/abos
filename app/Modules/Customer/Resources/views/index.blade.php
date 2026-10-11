@@ -226,7 +226,7 @@
                 <div class="grid w-full grid-cols-2 gap-2 text-sm sm:grid-cols-4 lg:grid-cols-6">
                     @foreach (['created_from', 'created_to'] as $k)
                         <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
-                            <input type="date" name="{{ $k }}" value="{{ request($k) }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2"></label>
+                            <x-ui.date dense :name="$k" :value="request($k)" /></label>
                     @endforeach
                     @foreach (['due_min', 'due_max', 'advance_min', 'advance_max'] as $k)
                         <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
@@ -256,7 +256,7 @@
                         </select></label>
                     @foreach (['sales_from', 'sales_to'] as $k)
                         <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
-                            <input type="date" name="{{ $k }}" value="{{ request($k) }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2"></label>
+                            <x-ui.date dense :name="$k" :value="request($k)" /></label>
                     @endforeach
                 </div>
             </x-ui.toolbar>
