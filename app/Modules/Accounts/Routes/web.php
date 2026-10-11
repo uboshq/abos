@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
+use App\Modules\Accounts\Http\Controllers\AssetCategoryController;
+use App\Modules\Accounts\Http\Controllers\AssetCustodyController;
+use App\Modules\Accounts\Http\Controllers\AssetOverviewController;
+use App\Modules\Accounts\Http\Controllers\AssetVerificationController;
 use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
@@ -11,9 +15,9 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
+use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
 use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
-use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
 use App\Modules\Accounts\Http\Controllers\GroupReportController;
 use App\Modules\Accounts\Http\Controllers\InterCompanyController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
@@ -26,6 +30,7 @@ use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Http\Controllers\VoucherListController;
+use App\Modules\Accounts\Http\Controllers\VoucherOverviewController;
 use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
 use App\Modules\Accounts\Http\Controllers\VoucherSampleController;
 use App\Modules\Accounts\Http\Controllers\YearEndController;
@@ -160,7 +165,7 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::post('/{voucher}/post', [VoucherController::class, 'post'])
             ->whereNumber('voucher')->name('post');
         // ⭐ পোস্টের আগে সারাংশ — পপ-আপের ভিতর ([[VoucherOverviewController]], ৪ অক্টোবর ২০২৬)
-        Route::post('/{voucher}/overview', \App\Modules\Accounts\Http\Controllers\VoucherOverviewController::class)
+        Route::post('/{voucher}/overview', VoucherOverviewController::class)
             ->whereNumber('voucher')->name('overview');
         Route::post('/{voucher}/cancel', [VoucherController::class, 'cancel'])
             ->whereNumber('voucher')->name('cancel');
@@ -434,6 +439,28 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/create', [FixedAssetController::class, 'create'])->name('create');
         Route::post('/', [FixedAssetController::class, 'store'])->name('store');
         Route::post('/depreciate', [FixedAssetController::class, 'depreciate'])->name('depreciate');
+        // ⭐ মাসের দৌড় — আগে দেখা, আর শাখার কাগজ (স্থায়ী সম্পদ ধাপ ২)
+        Route::get('/run', [FixedAssetController::class, 'preview'])->name('run.preview');
+        Route::get('/runs/{run}', [FixedAssetController::class, 'run'])->whereNumber('run')->name('run.show');
+
+        /*
+         * ⭐ সরেজমিন গোনা, দায়িত্ব আর লেবেল (স্থায়ী সম্পদ ধাপ ৪)।
+         * ⓘ "আমার সম্পদ" আর "বুঝে নিয়েছি"-র পাহারা নিয়ামকের ভেতরে নীতি দিয়ে — দেয়ালটা দায়িত্বের, চাবির নয়।
+         */
+        Route::get('/mine', [AssetCustodyController::class, 'mine'])->name('mine');
+        Route::post('/{asset}/acknowledge', [AssetCustodyController::class, 'acknowledge'])->whereNumber('asset')->name('acknowledge');
+        Route::get('/labels', [AssetCustodyController::class, 'labels'])->name('labels');
+        // ⭐ ড্যাশবোর্ড আর করের অবচয় (স্থায়ী সম্পদ ধাপ ৫)
+        Route::get('/dashboard', [AssetOverviewController::class, 'dashboard'])->name('dashboard');
+        Route::get('/tax', [AssetOverviewController::class, 'tax'])->name('tax');
+        Route::post('/tax', [AssetOverviewController::class, 'taxRun'])->name('tax.run');
+        Route::prefix('verify')->name('verify.')->group(function () {
+            Route::get('/', [AssetVerificationController::class, 'index'])->name('index');
+            Route::post('/', [AssetVerificationController::class, 'store'])->name('store');
+            Route::get('/{verification}', [AssetVerificationController::class, 'show'])->whereNumber('verification')->name('show');
+            Route::post('/{verification}/close', [AssetVerificationController::class, 'close'])->whereNumber('verification')->name('close');
+            Route::post('/lines/{line}', [AssetVerificationController::class, 'mark'])->whereNumber('line')->name('mark');
+        });
         Route::get('/{asset}', [FixedAssetController::class, 'show'])
             ->whereNumber('asset')->name('show');
         Route::post('/{asset}/dispose', [FixedAssetController::class, 'dispose'])
@@ -445,6 +472,32 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          */
         Route::post('/{asset}/transfer', [FixedAssetController::class, 'transfer'])
             ->whereNumber('asset')->name('transfer');
+
+        // ⭐ অবস্থা — ব্যবহারে, অলস, মেরামতে; টাকা নড়ে না (স্থায়ী সম্পদ ধাপ ১)
+        Route::post('/{asset}/status', [FixedAssetController::class, 'status'])
+            ->whereNumber('asset')->name('status');
+
+        // ⭐ আয়ু-শেষ দাম-পদ্ধতি বদল (আগামীর দিকে) আর মাসের একক (স্থায়ী সম্পদ ধাপ ২)
+        Route::post('/{asset}/estimate', [FixedAssetController::class, 'estimate'])
+            ->whereNumber('asset')->name('estimate');
+        Route::post('/{asset}/usage', [FixedAssetController::class, 'usage'])
+            ->whereNumber('asset')->name('usage');
+
+        // ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া (স্থায়ী সম্পদ ধাপ ৩)
+        Route::post('/{asset}/event/{kind}', [FixedAssetController::class, 'event'])
+            ->whereNumber('asset')->whereIn('kind', ['addition', 'repair', 'revaluation', 'impairment'])->name('event');
+
+        /*
+         * ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১, ১০ অক্টোবর ২০২৬)।
+         * ⓘ `/{asset}`-এর সাথে ঝগড়া নেই — সংখ্যা ছাড়া কিছু ওখানে মেলে না।
+         */
+        Route::prefix('categories')->name('category.')->group(function () {
+            Route::get('/', [AssetCategoryController::class, 'index'])->name('index');
+            Route::get('/create', [AssetCategoryController::class, 'create'])->name('create');
+            Route::post('/', [AssetCategoryController::class, 'store'])->name('store');
+            Route::get('/{category}/edit', [AssetCategoryController::class, 'edit'])->whereNumber('category')->name('edit');
+            Route::put('/{category}', [AssetCategoryController::class, 'update'])->whereNumber('category')->name('update');
+        });
     });
 
     Route::prefix('periods')->name('period.')->group(function () {

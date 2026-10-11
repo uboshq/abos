@@ -182,6 +182,8 @@ return [
         'loyalty' => 'Loyalty',
         'recall' => 'Recall',
         'analytics' => 'Analytics',
+        'import' => 'Import',
+        'verify' => 'Verify',
 
         /* ⭐ ডকুমেন্টের ক্রিয়া — documents রিভিউ ⛔৮, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
         'upload' => 'Upload',

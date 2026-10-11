@@ -209,6 +209,8 @@ return [
         'loyalty' => 'লয়্যালটি',
         'recall' => 'ফিরিয়ে নেওয়া',
         'analytics' => 'পরিসংখ্যান',
+        'import' => 'আমদানি',
+        'verify' => 'সরেজমিন যাচাই',
 
         /* ⭐ ডকুমেন্টের ক্রিয়া — documents রিভিউ ⛔৮, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
         'upload' => 'তোলা',
