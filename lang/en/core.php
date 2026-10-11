@@ -796,6 +796,10 @@ return [
         'Kitchen' => 'Kitchen',
         'User Admin' => 'User Admin',
         'Settings Keeper' => 'Settings Keeper',
+        'Notification Watcher' => 'Notification Watcher',
+        'Notification Manager' => 'Notification Manager',
+        'Notification Analyst' => 'Notification Analyst',
+        'Notification Writer' => 'Notification Writer',
     ],
 
     /*

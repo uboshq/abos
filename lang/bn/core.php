@@ -946,6 +946,10 @@ return [
         'Kitchen' => 'রান্নাঘর',
         'User Admin' => 'ব্যবহারকারী প্রশাসক',
         'Settings Keeper' => 'সেটিংস রক্ষক',
+        'Notification Watcher' => 'বিজ্ঞপ্তি পর্যবেক্ষক',
+        'Notification Manager' => 'বিজ্ঞপ্তি ব্যবস্থাপক',
+        'Notification Analyst' => 'বিজ্ঞপ্তি বিশ্লেষক',
+        'Notification Writer' => 'বিজ্ঞপ্তি লেখক',
     ],
 
     /* সক্রিয় / নিষ্ক্রিয় — সব মডিউলে একই দুইটা শব্দ (ইংরেজি ফাইলে কারণ) */
