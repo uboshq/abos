@@ -646,6 +646,9 @@ Route::prefix('portal')->name('portal.')->group(function () {
          * বদলে অন্যের খাতা দেখে ফেলতেন।
          */
         Route::get('/ledger', [PortalController::class, 'ledger'])->name('ledger');
+        // ⭐ বিবরণীর PDF আর একটা সারির কাগজ — পোর্টালের ভিতরেই ([[PortalStatementController]]; গ্রাহক পোর্টাল, ধাপ ১)
+        Route::get('/ledger/pdf', [\App\Modules\Sales\Http\Controllers\PortalStatementController::class, 'pdf'])->name('statement.pdf');
+        Route::get('/ledger/{id}', [\App\Modules\Sales\Http\Controllers\PortalStatementController::class, 'entry'])->whereUuid('id')->name('statement.entry');
         Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
         Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');
         Route::post('/claims', [PortalController::class, 'storeClaim'])->name('claim.store');

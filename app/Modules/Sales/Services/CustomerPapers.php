@@ -11,6 +11,8 @@ use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Sales\Models\Collection as SalesCollection;
+use App\Modules\Sales\Models\CollectionLine;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -135,12 +137,8 @@ final class CustomerPapers
      */
     public function bills(string $state, ?string $from, ?string $to, int $perPage = 30): LengthAwarePaginator
     {
-        $rows = $this->postedBills()
-            ->withCollected()
-            ->when($from !== null && $from !== '', fn ($q) => $q->whereDate('trx_date', '>=', $from))
-            ->when($to !== null && $to !== '', fn ($q) => $q->whereDate('trx_date', '<=', $to))
-            ->orderByDesc('trx_date')->orderByDesc('id')
-            ->get()
+        $rows = $this->billsBetween($from, $to)
+            ->sortByDesc(fn (SalesInvoice $bill) => $bill->trx_date?->toDateString().'#'.str_pad((string) $bill->id, 12, '0', STR_PAD_LEFT))
             ->filter(fn (SalesInvoice $bill) => match ($state) {
                 'open' => bccomp($bill->dueAmount(), '0', 4) > 0,
                 'paid' => bccomp($bill->dueAmount(), '0', 4) === 0,
@@ -154,6 +152,22 @@ final class CustomerPapers
             $rows->forPage($page, $perPage)->values(), $rows->count(), $perPage, $page,
             ['path' => LengthAwarePaginator::resolveCurrentPath()],
         ))->withQueryString();
+    }
+
+    /**
+     * ⭐ একটা সময়ের নিজের পাকা বিল, পুরনো আগে — বাকি আর শোধের অঙ্কসহ ([[SalesInvoice::scopeWithCollected()]])।
+     * ⓘ বিলের ঘর আর বিবরণীর "বিল ধরে" দৃশ্য দুইটাই এখান থেকে, যাতে দুই পাতা একই অঙ্ক বলে।
+     *
+     * @return Collection<int, SalesInvoice>
+     */
+    public function billsBetween(?string $from, ?string $to): Collection
+    {
+        return $this->postedBills()
+            ->withCollected()
+            ->when($from !== null && $from !== '', fn ($q) => $q->whereDate('trx_date', '>=', $from))
+            ->when($to !== null && $to !== '', fn ($q) => $q->whereDate('trx_date', '<=', $to))
+            ->orderBy('trx_date')->orderBy('id')
+            ->get();
     }
 
     /**
@@ -198,6 +212,64 @@ final class CustomerPapers
             ->whereDate('trx_date', '<=', $to)
             ->orderBy('trx_date')->orderBy('id')
             ->get();
+    }
+
+    /**
+     * ⭐ বিবরণীর একটা সারি — নিজের খতিয়ানের, public id ধরে (গ্রাহক পোর্টাল, ধাপ ১)।
+     * ⛔ অন্যের সারি খোঁজাতেই আসে না — ৪০৪।
+     */
+    public function statementEntry(string $publicId): LedgerEntry
+    {
+        return $this->ledgerRows()->where('public_id', $publicId)->firstOrFail();
+    }
+
+    /**
+     * ⭐ একই কাগজের নিজের সব সারি — একটা আদায় বা ভাউচারের যে অংশ এই গ্রাহকের খাতায় বসেছে, তার বেশি নয়।
+     * ⓘ ভাউচারের অন্য পায়ের সারি (ব্যাংক, আয়, অন্য পার্টি) গ্রাহকের কাগজ নয়, তাই আসে না।
+     *
+     * @return Collection<int, LedgerEntry>
+     */
+    public function entriesOfSameSource(LedgerEntry $entry): Collection
+    {
+        return $this->ledgerRows()
+            ->where('source_type', $entry->source_type)
+            ->where('source_id', $entry->source_id)
+            ->orderBy('trx_date')->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * ⭐ বিবরণীর সারি থেকে বিলের পাতা — খাতার সারির উৎস-আইডি থেকে নিজের পাকা বিলের public id।
+     * ⓘ যেটা নিজের পাকা বিল নয় (বাতিল, অন্য কারো), সেটা তালিকায় আসে না — সারিটা তখন নিজের কাগজের পাতায় খোলে।
+     *
+     * @param  iterable<int|string>  $invoiceIds
+     * @return array<int, string> বিলের id → public id
+     */
+    public function billLinks(iterable $invoiceIds): array
+    {
+        $ids = collect($invoiceIds)->map(fn ($id) => (int) $id)->filter()->unique()->values();
+
+        return $ids->isEmpty() ? [] : $this->postedBills()
+            ->whereIn('sal_invoices.id', $ids->all())
+            ->pluck('public_id', 'id')
+            ->map(fn ($publicId) => (string) $publicId)
+            ->all();
+    }
+
+    /**
+     * ⭐ নিজের একটা আদায়ে কোন কোন বিল শোধ হলো — বিবরণীর আদায়ের সারি খুললে (গ্রাহক পোর্টাল, ধাপ ১)।
+     * ⛔ আদায়টা নিজের না হলে খালি তালিকা — অন্যের আদায়ের ভেতর দেখা যায় না।
+     *
+     * @return Collection<int, CollectionLine>
+     */
+    public function collectionBills(int $collectionId): Collection
+    {
+        $collection = $this->mine(SalesCollection::query())
+            ->whereKey($collectionId)
+            ->with(['lines.invoice'])
+            ->first();
+
+        return $collection === null ? collect() : $collection->lines;
     }
 
     /**
