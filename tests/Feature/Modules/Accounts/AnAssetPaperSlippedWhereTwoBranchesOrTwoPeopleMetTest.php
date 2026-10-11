@@ -203,11 +203,12 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
     public function test_a_skipped_month_is_not_posted_once_a_later_month_is(): void
     {
         $asset = app(FixedAssetService::class)->register([
-            'category_id' => $this->category()->id, 'name' => 'Laptop', 'acquired_on' => '2026-01-01', 'cost' => '12000', 'salvage' => '0',
+            'category_id' => $this->category()->id, 'name' => 'Laptop', 'acquired_on' => '2026-07-01', 'cost' => '12000', 'salvage' => '0',
             'method' => FixedAsset::STRAIGHT_LINE, 'life_months' => 12, 'funded_by' => FixedAssetService::FUNDED_ALREADY, 'branch_id' => $this->a->id,
         ]);
 
-        foreach (['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-09'] as $month) {
+        // ⓘ জুলাই বসে, আগস্ট বাদ, সেপ্টেম্বর বসে (অর্থবছর জুলাই থেকে)
+        foreach (['2026-07', '2026-09'] as $month) {
             app(FixedAssetService::class)->depreciate($asset->fresh(), $month.'-01');
         }
 
