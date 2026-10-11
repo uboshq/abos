@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Modules\CreditControl\Reports\CreditPositionReports;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
+use App\Modules\Customer\Models\CustomerCreditRequest;
 use App\Modules\Customer\Models\DealerBinding;
 use App\Modules\Sales\Services\CreditExposure;
 
@@ -112,12 +113,16 @@ final class CreditDashboard implements ProvidesDashboard
 
         $totals['used_percent'] = bccomp($totals['limit'], '0', 4) > 0
             ? bcdiv(bcmul($totals['exposure'], '100', 4), $totals['limit'], 1) : null;
+        // ⓘ দুই পথের অনুরোধ — গ্রাহকের ফর্মে সরাসরি বাড়ানো, আর বাকির পাতার অনুরোধের কাগজ (ধাপ ২.৫, [[CustomerCreditRequest]])
         $totals['pending_requests'] = $customers === [] ? 0 : Approval::query()
             ->where('module', 'customer')
             ->where('action', 'credit_limit')
             ->where('status', Approval::PENDING)
-            ->where('approvable_type', (new Customer)->getMorphClass())
-            ->whereIn('approvable_id', array_keys($customers))
+            ->where(fn ($q) => $q
+                ->where(fn ($c) => $c->where('approvable_type', (new Customer)->getMorphClass())
+                    ->whereIn('approvable_id', array_keys($customers)))
+                ->orWhere(fn ($r) => $r->where('approvable_type', CustomerCreditRequest::class)
+                    ->whereIn('approvable_id', CustomerCreditRequest::query()->whereIn('customer_id', array_keys($customers))->select('id'))))
             ->count();
 
         return [

@@ -21,8 +21,14 @@ final class ApplyTheLimitOnTheLastSignature
 {
     public function handle(ApprovalDecided $event): void
     {
+        /*
+         * ⛔ কেবল গ্রাহকের নিজের সারির সই — ১১ অক্টোবর ২০২৬ থেকে একই ছকে সীমা বাড়ানোর **অনুরোধের কাগজও** আসে
+         * ([[CustomerCreditRequest]]), যার আইডি গ্রাহকের নয়; না দেখলে অনুরোধ #৭-এর সইয়ে গ্রাহক #৭-এর সীমা বসত।
+         * ⓘ অনুরোধ বসায় [[ApplyTheSignedCreditRequest]]।
+         */
         if (($event->payload['module'] ?? null) !== 'customer'
             || ($event->payload['action'] ?? null) !== 'credit_limit'
+            || ($event->payload['approvable_type'] ?? null) !== Customer::class
             || ($event->payload['status'] ?? null) !== Approval::APPROVED) {
             return;
         }

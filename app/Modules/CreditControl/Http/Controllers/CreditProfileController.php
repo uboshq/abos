@@ -9,6 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditTrail;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
+use App\Modules\Customer\Models\CustomerCreditRequest;
+use App\Modules\Customer\Services\CustomerService;
 use App\Modules\Sales\Models\CreditDecision;
 use App\Modules\Sales\Services\CreditExposure;
 use Illuminate\Http\Request;
@@ -73,6 +75,14 @@ class CreditProfileController extends Controller
             'bills' => $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [],
             'history' => $history->concat($blocks)->sortByDesc('at')->values(),
             'decisions' => CreditDecision::query()->where('customer_id', $customer->id)->latest('id')->limit(10)->get(),
+
+            // ⭐ সীমা বাড়ানোর অনুরোধ — লেখার ঘর আর সবগুলোর তালিকা, না হওয়াগুলোসহ (ধাপ ২.৫)
+            'requests' => CustomerCreditRequest::query()->where('customer_id', $customer->id)
+                ->with(['requester', 'approval'])->latest('id')->limit(10)->get(),
+            'canRequest' => (bool) $request->user()?->can('credit_control.request_limit'),
+            // ⓘ চেক ফেরতের বন্ধ খোলার ঘর কেবল মালিকের পর্দায়; পাহারা সার্ভারে ([[CustomerService::clearCreditBlock()]])
+            'mayLift' => $customer->isCreditBlocked() && (bool) $request->user()?->can('update', $customer)
+                && ($customer->credit_block_kind !== Customer::BLOCK_BOUNCED_CHEQUE || CustomerService::isSuperAdmin($request->user())),
         ]);
     }
 }

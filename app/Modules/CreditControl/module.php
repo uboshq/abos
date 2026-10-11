@@ -70,6 +70,12 @@ return [
          * সবকিছু ছাঁকে।
          */
         'credit_control.view',
+
+        /*
+         * ⭐ সীমা বাড়ানোর অনুরোধ লেখা — মালিকের উত্তর ৫, ১১ অক্টোবর ২০২৬ (ধাপ ২.৫)। ⓘ কেবল অনুরোধ; বসে মালিকের সইয়ে
+         * ([[CreditLimitRequests]]), আর যিনি চাইলেন তিনি সই দিতে পারেন না।
+         */
+        'credit_control.request_limit',
     ],
 
     /*
@@ -77,8 +83,8 @@ return [
      * এমনিতেই সব চাবি পান।
      */
     'role_templates' => [
-        'Accountant' => ['credit_control.view'],
-        'Manager' => ['credit_control.view'],
+        'Accountant' => ['credit_control.view', 'credit_control.request_limit'],
+        'Manager' => ['credit_control.view', 'credit_control.request_limit'],
     ],
 
     'moves_money' => [],

@@ -479,7 +479,11 @@ return [
      * ⭐ সীমা বাড়ানোর শেষ সই পড়লে নতুন সীমা নিজে বসে — ২ অক্টোবর ২০২৬ ([[ApplyTheLimitOnTheLastSignature]])।
      */
     'listeners' => [
-        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Customer\Listeners\ApplyTheLimitOnTheLastSignature::class],
+        \App\Core\Events\ApprovalDecided::class => [
+            \App\Modules\Customer\Listeners\ApplyTheLimitOnTheLastSignature::class,
+            // ⭐ সীমা বাড়ানোর অনুরোধ — মালিকের সই পড়লে বসে, "না" হলে থাকে (বাকি নিয়ন্ত্রণ ধাপ ২.৫)
+            \App\Modules\Customer\Listeners\ApplyTheSignedCreditRequest::class,
+        ],
         // ⭐ চেক ফেরত — গ্রাহকের বাকি নিজে থেকেই বন্ধ, খোলেন কেবল মালিক (বাকি নিয়ন্ত্রণ ধাপ ২.৪)
         \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\Customer\Listeners\BlockTheCustomerOnABouncedCheque::class],
     ],

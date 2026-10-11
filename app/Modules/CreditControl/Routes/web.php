@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\CreditControl\Http\Controllers\CreditLimitRequestController;
 use App\Modules\CreditControl\Http\Controllers\CreditProfileController;
 use App\Modules\CreditControl\Http\Controllers\CreditReportController;
 use Illuminate\Support\Facades\Route;
@@ -16,4 +17,10 @@ Route::middleware('auth')->prefix('credit-control')->group(function () {
         ->whereNumber('customer')
         ->name('customer.show')
         ->middleware('can:credit_control.view');
+
+    // ⭐ সীমা বাড়ানোর অনুরোধ — মালিকের সইয়ে যায় (ধাপ ২.৫)
+    Route::post('/customers/{customer}/limit-requests', [CreditLimitRequestController::class, 'store'])
+        ->whereNumber('customer')
+        ->name('limit_request.store')
+        ->middleware('can:credit_control.request_limit');
 });

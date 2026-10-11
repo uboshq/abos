@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Models\CustomerCreditRequest;
 use App\Modules\Customer\Models\DealerBinding;
 use App\Modules\Sales\Services\CreditExposure;
 use Illuminate\Database\Query\Builder;
@@ -200,12 +201,16 @@ final class CreditPositionReports
             permission: 'credit_control.view',
             title: 'credit_control::report.pending_requests_title',
             filters: ['branch', 'salesman_id'],
+            // ⓘ দুই পথের অনুরোধ — গ্রাহকের ফর্মে সরাসরি বাড়ানো (কাগজ গ্রাহক নিজে), আর বাকির পাতার অনুরোধ (কাগজ
+            // [[CustomerCreditRequest]], ধাপ ২.৫); গ্রাহক আর চাওয়া সীমা যার যার ঘর থেকে
             query: fn (array $f): Builder => DB::table('approvals as a')
-                ->join('customers', 'customers.id', '=', 'a.approvable_id')
+                ->leftJoin('customer_credit_requests as r', fn ($j) => $j->on('r.id', '=', 'a.approvable_id')
+                    ->where('a.approvable_type', CustomerCreditRequest::class))
+                ->join('customers', 'customers.id', '=', DB::raw('COALESCE(r.customer_id, a.approvable_id)'))
                 ->leftJoin('users as ru', 'ru.id', '=', 'a.requested_by')
                 ->where('a.company_id', $f['company_id'])
                 ->where('customers.company_id', $f['company_id'])
-                ->where('a.approvable_type', (new Customer)->getMorphClass())
+                ->whereIn('a.approvable_type', [(new Customer)->getMorphClass(), CustomerCreditRequest::class])
                 ->where('a.module', 'customer')
                 ->where('a.action', 'credit_limit')
                 ->where('a.status', Approval::PENDING)
@@ -215,7 +220,7 @@ final class CreditPositionReports
                 ->select(['a.id as approval_id', 'customers.id', 'customers.code as customer_code'])
                 ->selectRaw(self::name().' as customer_name')
                 ->selectRaw("'".self::PROFILE."' as party_type_literal")
-                ->selectRaw('DATE(a.requested_at) as requested_on, COALESCE(customers.credit_limit, 0) as current_limit, a.amount as asked_limit')
+                ->selectRaw('DATE(a.requested_at) as requested_on, COALESCE(customers.credit_limit, 0) as current_limit, COALESCE(r.requested_limit, a.amount) as asked_limit')
                 ->selectRaw('ru.name as requested_by, a.requested_reason as reason')
                 ->orderBy('a.requested_at')
                 ->orderBy('a.id'),
