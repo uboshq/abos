@@ -15,7 +15,7 @@
 @php
     use App\Modules\Sales\Services\DeliveryStage;
 
-    // ⚠️ local-এ lazy loading বন্ধ — চালানের পাতা সারিগুলো আগেই টানে, ডেলিভারির পাতা নাও টানতে পারে
+    /* ⚠️ local-এ lazy loading বন্ধ — চালানের পাতা সারিগুলো আগেই টানে, ডেলিভারির পাতা নাও টানতে পারে */
     $challan->loadMissing('lines.product');
 
     $choices = $deliveryStages->manualChoices($challan);

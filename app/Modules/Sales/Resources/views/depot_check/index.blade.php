@@ -8,7 +8,11 @@
     use App\Core\Support\DateFormat;
     use App\Core\Support\Money;
     use App\Modules\Sales\Http\Controllers\DepotCheckController;
+    use Illuminate\Support\Facades\Blade;
     use Illuminate\Support\HtmlString;
+
+    /* ⓘ সতর্কবার্তার চিহ্ন সেটের আঁকা, টাইপ করা ইমোজি নয় ([[IconSetTest]], ১১ অক্টোবর ২০২৬); একবার আঁকা, প্রতিটা সারিতে বসানো */
+    $warnIcon = Blade::render('<x-ui.icon name="alert-triangle" :size="12" />');
 
     $columns = [
         [
@@ -54,7 +58,7 @@
             'label' => __('sales::counter_source.column.warnings'),
             'render' => fn ($o) => new HtmlString(collect((array) ($o->accounts_warnings ?? []))
                 ->filter(fn ($w) => is_array($w))
-                ->map(fn (array $w) => '<span class="block text-2xs text-(--color-badge-pending-ink)">⚠️ '
+                ->map(fn (array $w) => '<span class="block text-2xs text-(--color-badge-pending-ink)">'.$warnIcon.' '
                     .e(DepotCheckController::warningText($w)).'</span>')
                 ->implode('') ?: '—'),
         ],
@@ -68,13 +72,13 @@
     ];
 
     // ⭐ বিক্রয় আদেশের তালিকা — একই ঘর, কেবল উৎসের চাবি `so`, অবস্থা অগ্রগতিসহ, আর সতর্কবার্তা আদেশের নিজের (নকশার ধাপ ৬)
-    $orderColumns = array_map(function (array $column) {
+    $orderColumns = array_map(function (array $column) use ($warnIcon) {
         return match ($column['key']) {
             'document_no' => [...$column, 'label' => __('sales::counter_source.column.so')],
             'status' => [...$column, 'render' => fn ($o) => \App\Modules\Sales\Support\SalesOrderStatus::deliveryLabel((string) $o->delivery_status)],
             'warnings' => [...$column, 'render' => fn ($o) => new HtmlString(collect((array) ($o->credit_warnings ?? []))
                 ->filter(fn ($w) => is_array($w))
-                ->map(fn (array $w) => '<span class="block text-2xs text-(--color-badge-pending-ink)">⚠️ '
+                ->map(fn (array $w) => '<span class="block text-2xs text-(--color-badge-pending-ink)">'.$warnIcon.' '
                     .e(DepotCheckController::warningText($w)).'</span>')
                 ->implode('') ?: '—')],
             'action' => [...$column, 'render' => fn ($o) => new HtmlString(view('sales::depot_check.partials.open', ['order' => $o, 'sourceKey' => 'so'])->render())],

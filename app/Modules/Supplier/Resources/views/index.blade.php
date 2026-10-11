@@ -66,7 +66,7 @@
             ]),
         ],
         [
-            // ⭐ বিল-না-আসা মাল — দেনা থেকে আলাদা (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬; [[Supplier::goodsNotBilled()]])
+            /* ⭐ বিল-না-আসা মাল — দেনা থেকে আলাদা (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬; [[Supplier::goodsNotBilled()]]) */
             'key' => 'goods_not_billed',
             'total' => 'money',
             'raw' => fn ($s) => $s->grni_in_view ?? $s->goodsNotBilled(),
