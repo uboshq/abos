@@ -155,27 +155,6 @@ final class CustomerPapers
     }
 
     /**
-     * ছাঁকনির **আগের** সব সারির নিট — খোলার জের।
-     *
-     * ⚠️ এটা না গুনলে জেরের কলাম শূন্য থেকে শুরু হত, আর গ্রাহক পড়তেন
-     * "আমার কোনো বকেয়া ছিল না" — যা প্রায় সবসময়ই মিথ্যা।
-     */
-    /**
-     * ⭐ খতিয়ানের ডিফল্ট শুরু — গ্রাহকের কোম্পানির চলতি অর্থবছরের প্রথম দিন, না থাকলে বছরের প্রথম দিন (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৫)।
-     * ⓘ গ্রাহক আসে গার্ড থেকে, তাই কোম্পানি তাঁরই।
-     */
-    public function yearStart(): string
-    {
-        $start = FinancialYear::query()->withoutGlobalScopes()
-            ->where('company_id', $this->customer()->company_id)
-            ->whereDate('starts_on', '<=', now()->toDateString())
-            ->whereDate('ends_on', '>=', now()->toDateString())
-            ->value('starts_on');
-
-        return $start === null ? now()->startOfYear()->toDateString() : Carbon::parse($start)->toDateString();
-    }
-
-    /**
      * ⭐ গ্রাহকের প্রথম লেনদেনের দিন — খতিয়ানের "সবটা" (Lifetime) এখান থেকে শুরু; কিছু না থাকলে আজ (মালিকের চেকলিস্ট;
      * রিভিউ, ১০ অক্টোবর ২০২৬)। ⓘ ১৯৭০ বসানোর দরকার নেই — একই সারিগুলো, পর্দায় একটা অর্থবহ তারিখ।
      */
@@ -186,6 +165,12 @@ final class CustomerPapers
         return $first === null ? now()->toDateString() : Carbon::parse((string) $first)->toDateString();
     }
 
+    /**
+     * ছাঁকনির **আগের** সব সারির নিট — খোলার জের।
+     *
+     * ⚠️ এটা না গুনলে জেরের কলাম শূন্য থেকে শুরু হত, আর গ্রাহক পড়তেন
+     * "আমার কোনো বকেয়া ছিল না" — যা প্রায় সবসময়ই মিথ্যা।
+     */
     public function openingBefore(string $from): string
     {
         return (string) ($this->ledgerRows()
