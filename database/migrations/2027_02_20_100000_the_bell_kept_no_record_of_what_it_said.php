@@ -143,10 +143,19 @@ return new class extends Migration
     {
         Schema::dropIfExists('notification_audit_logs');
 
+        /*
+         * ⛔ আগে event_id-র বিদেশি চাবি, তারপর অনন্য-চাবি (fe-র Mac রান, ১১ অক্টোবর ২০২৬; [[TheBellMigrationGoesBackCleanlyTest]])।
+         * ⚠️ MySQL বিদেশি চাবির জন্য `notify_recipient_once`-কেই নিজের সূচক ধরে (প্রথম ঘর event_id) — আগে সেটা মুছতে গেলে
+         * "1553 Cannot drop index … needed in a foreign key constraint", ফেরত-যাওয়া মাঝপথে থামত আর পরীক্ষার DB আধা-মোছা থাকত।
+         */
+        Schema::table('notifications', function (Blueprint $table) {
+            $table->dropForeign(['event_id']);
+        });
+
         Schema::table('notifications', function (Blueprint $table) {
             $table->dropUnique('notify_recipient_once');
             $table->dropIndex('notify_recipient_inbox');
-            $table->dropConstrainedForeignId('event_id');
+            $table->dropColumn('event_id');
             $table->dropConstrainedForeignId('branch_id');
             $table->dropColumn(['module', 'category', 'priority', 'subject_type', 'subject_id', 'seen_at', 'archived_at']);
         });
