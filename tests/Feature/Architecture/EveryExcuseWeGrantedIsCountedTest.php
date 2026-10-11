@@ -383,7 +383,15 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       মাধ্যমের গোপন চাবির HMAC স্বাক্ষর আর সময়-সীমা
      *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationProviderEvent (যন্ত্রের একবার-লেখা সারি)
      */
-    private const CEILING = 367;
+    /*
+     * ── ⚠️ 367 → 376, ১১ অক্টোবর ২০২৬ (গ্রাহক পোর্টাল, ধাপ ১ — বিল, বিবরণী, প্রোফাইল) ──────────────────────────────────
+     *   +১০ EveryRouteIsGuardedTest::CUSTOMER_PORTAL — sales.portal.bill.index/show/pdf, statement.entry/pdf, profile,
+     *       profile.password/request/paper/paper.show: গ্রাহকের কোনো চাবি নেই, সীমানা পরিচয় (`auth:portal`) আর
+     *       [[CustomerPapers]]-এর সরু পথ; অন্যের কাগজ ৪০৪ ([[EveryPortalScreenAsksTheNarrowPathTest]]) — আগের পোর্টাল-রুটগুলোর মতোই
+     *   +২  EveryListCarriesItsTotalsBarTest::EXEMPT — portal/bill-index (পোর্টালের নিজের লেআউট, পট্টির খোলস নেই; প্রতিটা
+     *       বিল কার্ডে নিজের অঙ্ক) আর অফিসের profile-requests (টাকার কোনো ঘর নেই)
+     */
+    private const CEILING = 376;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
