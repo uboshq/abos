@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\CreditControl\Http\Controllers\CreditLimitRequestController;
 use App\Modules\CreditControl\Http\Controllers\CreditProfileController;
 use App\Modules\CreditControl\Http\Controllers\CreditReportController;
 use Illuminate\Support\Facades\Route;
@@ -21,5 +22,15 @@ Route::middleware('auth')->prefix('credit-control')->group(function () {
     Route::post('/customers/{customer}/credit-days', [CreditProfileController::class, 'creditDays'])
         ->whereNumber('customer')
         ->name('customer.credit_days')
+        ->middleware('can:credit_control.view');
+
+    // ⭐ সীমা বাড়ানোর অনুরোধ (হিসাবরক্ষক/ম্যানেজার) আর মালিকের সরাসরি বসানো (ধাপ ২.৫); চাবি সেবার ভিতরে
+    Route::post('/customers/{customer}/limit-requests', [CreditLimitRequestController::class, 'store'])
+        ->whereNumber('customer')
+        ->name('customer.limit_request')
+        ->middleware('can:credit_control.request_limit');
+    Route::post('/customers/{customer}/limit', [CreditLimitRequestController::class, 'direct'])
+        ->whereNumber('customer')
+        ->name('customer.limit_direct')
         ->middleware('can:credit_control.view');
 });

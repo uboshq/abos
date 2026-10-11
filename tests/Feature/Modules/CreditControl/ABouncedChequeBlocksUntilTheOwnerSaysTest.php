@@ -113,6 +113,19 @@ final class ABouncedChequeBlocksUntilTheOwnerSaysTest extends TestCase
         $this->assertFalse($other->fresh()->isCreditBlocked());
     }
 
+    public function test_the_release_button_is_drawn_only_for_the_owner(): void
+    {
+        app(ChequeService::class)->bounce($this->receive('5000', 'BC-777'), 'তহবিল নেই');
+
+        $this->get(route('credit_control.customer.show', $this->dealer->id))->assertOk()
+            ->assertSee('data-credit-release-form', false)
+            ->assertSee('চেক ফেরত — BC-777');
+
+        $clerk = $this->staffWith(['customer.view', 'customer.update', 'credit_control.view']);
+        $this->actingAs($clerk)->get(route('credit_control.customer.show', $this->dealer->id))->assertOk()
+            ->assertDontSee('data-credit-release-form', false);
+    }
+
     public function test_a_payment_does_not_release_it(): void
     {
         app(ChequeService::class)->bounce($this->receive('5000', 'BC-444'), 'তহবিল নেই');

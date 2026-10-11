@@ -70,6 +70,12 @@ return [
          * সবকিছু ছাঁকে।
          */
         'credit_control.view',
+
+        /*
+         * ⭐ সীমা বাড়ানোর অনুরোধ লেখা — হিসাবরক্ষক আর ম্যানেজার (ধাপ ২.৫, মালিকের উত্তর ৫)। ⓘ সীমা বসে কেবল মালিকের সইয়ে,
+         * আর যিনি লেখেন তিনি সই দিতে পারেন না ([[CreditLimitRequest::mayBeSignedBy()]])।
+         */
+        'credit_control.request_limit',
     ],
 
     /*
@@ -77,8 +83,8 @@ return [
      * এমনিতেই সব চাবি পান।
      */
     'role_templates' => [
-        'Accountant' => ['credit_control.view'],
-        'Manager' => ['credit_control.view'],
+        'Accountant' => ['credit_control.view', 'credit_control.request_limit'],
+        'Manager' => ['credit_control.view', 'credit_control.request_limit'],
     ],
 
     'moves_money' => [],
@@ -86,6 +92,8 @@ return [
     // ⓘ গ্রাহকের নামে চাপলে তাঁর বাকির পাতা ([[CreditProfile]])
     'drill_sources' => [
         CreditPositionReports::PROFILE => CreditProfile::class,
+        // ⓘ সইয়ের পর্দা আর কাগজপত্র এখান থেকে অনুরোধটা চেনে (ধাপ ২.৫)
+        'credit_limit_request' => \App\Modules\CreditControl\Models\CreditLimitRequest::class,
     ],
 
     'reports' => [
@@ -95,5 +103,7 @@ return [
     'listeners' => [
         // ⭐ চেক ফেরত — গ্রাহকের বাকি নিজেই বন্ধ, মালিককে খবর; খোলেন কেবল মালিক (ধাপ ২.৪, মালিকের উত্তর ৪)
         \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\CreditControl\Listeners\BlockTheCustomerOnABouncedCheque::class],
+        // ⭐ সীমা বাড়ানোর অনুরোধে মালিকের সই — ঠিক চাওয়া অঙ্কটা বসে; "না" হলে কেবল অবস্থা (ধাপ ২.৫, মালিকের উত্তর ৫)
+        \App\Core\Events\ApprovalDecided::class => [\App\Modules\CreditControl\Listeners\ApplyTheRequestOnTheOwnersSignature::class],
     ],
 ];

@@ -200,7 +200,7 @@ final class CreditPositionReports
             permission: 'credit_control.view',
             title: 'credit_control::report.pending_requests_title',
             filters: ['branch', 'salesman_id'],
-            query: fn (array $f): Builder => DB::table('approvals as a')
+            query: fn (array $f): Builder => DB::query()->fromSub(self::requestRows($f)->unionAll(DB::table('approvals as a')
                 ->join('customers', 'customers.id', '=', 'a.approvable_id')
                 ->leftJoin('users as ru', 'ru.id', '=', 'a.requested_by')
                 ->where('a.company_id', $f['company_id'])
@@ -217,8 +217,9 @@ final class CreditPositionReports
                 ->selectRaw("'".self::PROFILE."' as party_type_literal")
                 ->selectRaw('DATE(a.requested_at) as requested_on, COALESCE(customers.credit_limit, 0) as current_limit, a.amount as asked_limit')
                 ->selectRaw('ru.name as requested_by, a.requested_reason as reason')
-                ->orderBy('a.requested_at')
-                ->orderBy('a.id'),
+                ->selectRaw('a.requested_at as sort_at')), 'r')
+                ->orderBy('r.sort_at')
+                ->orderBy('r.approval_id'),
             columns: [
                 ['key' => 'requested_on', 'label' => 'credit_control::report.requested_on', 'type' => ReportColumn::DATE],
                 ...self::identityColumns(),
@@ -228,6 +229,30 @@ final class CreditPositionReports
                 ['key' => 'reason', 'label' => 'credit_control::report.reason'],
             ],
         );
+    }
+
+    /**
+     * ⭐ বাকির পাতা থেকে লেখা অনুরোধ (ধাপ ২.৫) — পুরনো সম্পাদনার সইয়ের সারির পাশে, একই ঘরে।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function requestRows(array $f): Builder
+    {
+        return DB::table('cc_limit_requests as q')
+            ->join('customers', 'customers.id', '=', 'q.customer_id')
+            ->leftJoin('users as ru', 'ru.id', '=', 'q.requested_by')
+            ->where('q.company_id', $f['company_id'])
+            ->where('customers.company_id', $f['company_id'])
+            ->where('q.status', 'pending')
+            ->whereIn('customers.id', array_keys(self::customers($f)) ?: [0])
+            ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'customers.id'))
+            ->select(['q.approval_id', 'customers.id', 'customers.code as customer_code'])
+            ->selectRaw(self::name().' as customer_name')
+            ->selectRaw("'".self::PROFILE."' as party_type_literal")
+            ->selectRaw('DATE(q.created_at) as requested_on, q.current_limit, q.requested_limit as asked_limit')
+            ->selectRaw('ru.name as requested_by, q.reason')
+            ->selectRaw('q.created_at as sort_at');
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────

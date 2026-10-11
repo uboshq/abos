@@ -89,6 +89,8 @@ final class TheCreditDeskCountsWhatTheWallCountsTest extends TestCase
 
     public function test_the_dashboard_totals_are_the_sum_of_the_customers_and_its_lists_agree(): void
     {
+        // ⓘ এই দাবি সীমা-পার গোনে; ধাপ ২.১ থেকে নতুন কোম্পানিতে মেয়াদ পেরোলেই দেয়াল (অবস্থা "মেয়াদ পেরোনো" আগে বসে), তাই সেটা বন্ধ
+        app(SettingsService::class)->set('customer.overdue_stop_enabled', false);
         $a = $this->customer('CD-A', '10000');
         $this->owes($a, '4000');
         $b = $this->customer('CD-B', '1000');
@@ -125,6 +127,8 @@ final class TheCreditDeskCountsWhatTheWallCountsTest extends TestCase
 
     public function test_the_profile_shows_the_figures_the_bills_and_the_history(): void
     {
+        // ⓘ অবস্থা "চালু" দেখাতে — ধাপ ২.১ থেকে ৩ দিনের মেয়াদ পেরোনো বিল নিজেই নতুন বাকি থামায়, তাই সেই দেয়াল এখানে বন্ধ
+        app(SettingsService::class)->set('customer.overdue_stop_enabled', false);
         $c = $this->customer('CD-PROF', '10000');
         $this->bill($c, 'INV-CD-PROF', '2500', daysPastDue: 3);
         app(CustomerService::class)->update($c->fresh(), ['credit_limit' => '8000']);

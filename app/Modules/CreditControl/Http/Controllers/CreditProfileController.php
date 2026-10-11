@@ -78,6 +78,10 @@ class CreditProfileController extends Controller
             // ⓘ কাজের ঘরগুলো কেবল চাবি থাকলে আঁকা হয় — পাহারা আসলে দরজায় ([[creditDays()]])
             'canEdit' => $request->user()?->can('update', $customer) ?? false,
             // ⓘ চেক ফেরতের বন্ধ খোলেন কেবল সুপার অ্যাডমিন — পাহারা সেবায় ([[CustomerService::clearCreditBlock()]]), এখানে কেবল আঁকা
+            // ⭐ এই গ্রাহকের সীমা বাড়ানোর অনুরোধ — "না" আর মেয়াদ ফুরানোও (ধাপ ২.৫)
+            'requests' => \App\Modules\CreditControl\Models\CreditLimitRequest::query()->where('customer_id', $customer->id)
+                ->with('requester')->latest('id')->limit(5)->get(),
+            'canRequest' => $request->user()?->can('credit_control.request_limit') ?? false,
             'isOwner' => $request->user()?->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE) ?? false,
         ]);
     }

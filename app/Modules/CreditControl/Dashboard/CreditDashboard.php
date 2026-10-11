@@ -118,7 +118,12 @@ final class CreditDashboard implements ProvidesDashboard
             ->where('status', Approval::PENDING)
             ->where('approvable_type', (new Customer)->getMorphClass())
             ->whereIn('approvable_id', array_keys($customers))
-            ->count();
+            ->count()
+            // ⭐ বাকির পাতা থেকে লেখা অনুরোধ — নিজের কাগজে (ধাপ ২.৫)
+            + \App\Modules\CreditControl\Models\CreditLimitRequest::query()
+                ->where('status', \App\Modules\CreditControl\Models\CreditLimitRequest::PENDING)
+                ->whereIn('customer_id', array_keys($customers))
+                ->count();
 
         return [
             'on' => $credit->isOn(),
