@@ -16,6 +16,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Models\ShipmentLine;
 use App\Modules\Sales\Services\DeliveryChallanService;
@@ -57,7 +58,7 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
     }
 
-    private function challan(bool $confirm = true, ?Warehouse $warehouse = null): DeliveryChallan
+    private function challan(bool $confirm = true, ?Warehouse $warehouse = null, string $qty = '1'): DeliveryChallan
     {
         $service = app(DeliveryChallanService::class);
 
@@ -67,7 +68,7 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
                 'warehouse_id' => ($warehouse ?? $this->warehouse)->id,
                 'trx_date' => now()->toDateString(),
             ],
-            [['product_id' => Product::query()->value('id'), 'delivered_qty' => '1', 'rate' => '100']],
+            [['product_id' => Product::query()->value('id'), 'delivered_qty' => $qty, 'rate' => '100']],
         );
 
         return $confirm ? $service->confirm($challan) : $challan;
@@ -293,6 +294,74 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
         $this->assertSame(DocumentStatus::CLOSED, $closed->status);
     }
 
+    /**
+     * ⛔ পুরো ফেরতের ট্রিপ এক পিসের ফেরতে বন্ধ হয় না — যতটা গেছে ততটা ফিরতে হয় (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিপজ্জনক ইনপুট: ৩টা গেল, চালক বললেন "ফেরত এসেছে", ফেরত লেখা হলো ১টার। ⚠️ আগে যেকোনো পাকা ফেরতেই
+     * ট্রিপ বন্ধ হত — বাকি ২টা খাতায় ক্রেতার কাছে, গুদামে মাল। বাকি ২টা লিখলে তবে বন্ধ।
+     */
+    public function test_one_piece_returned_does_not_close_a_trip_whose_whole_challan_came_back(): void
+    {
+        $challan = $this->challan(qty: '3');
+        $trip = app(ShipmentService::class)->dispatch($this->trip([$challan]));
+        $this->settleAll($trip, ShipmentLine::RETURNED, 'দোকান বন্ধ ছিল');
+
+        $this->returnFrom($challan, '1');
+
+        try {
+            app(ShipmentService::class)->close($trip->fresh());
+            $this->fail('⛔ ৩টার ১টা ফেরত লিখেই "পুরো ফেরত" ট্রিপ বন্ধ হয়ে গেল।');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString($challan->document_no, implode(' ', $e->validator->errors()->all()));
+        }
+
+        $this->returnFrom($challan, '2');
+        $this->assertSame(DocumentStatus::CLOSED, app(ShipmentService::class)->close($trip->fresh())->status,
+            '⛔ পুরোটা ফেরত লেখার পরেও ট্রিপ বন্ধ হলো না।');
+    }
+
+    /** ⭐ "কম পৌঁছেছে" — যা ফিরল তার ফেরত লিখলেই বন্ধ; কতটা কম তা চালকের কথায় */
+    public function test_a_short_delivery_closes_once_what_came_back_is_returned(): void
+    {
+        $challan = $this->challan(qty: '3');
+        $trip = app(ShipmentService::class)->dispatch($this->trip([$challan]));
+        $this->settleAll($trip, ShipmentLine::SHORT, 'একটা কার্টন নেননি');
+
+        try {
+            app(ShipmentService::class)->close($trip->fresh());
+            $this->fail('⛔ কম পৌঁছেছে, অথচ কোনো ফেরত ছাড়াই ট্রিপ বন্ধ হলো।');
+        } catch (ValidationException) {
+        }
+
+        $this->returnFrom($challan, '1');
+        $this->assertSame(DocumentStatus::CLOSED, app(ShipmentService::class)->close($trip->fresh())->status);
+    }
+
+    /**
+     * ⛔ পথে বাতিল হওয়া ট্রিপের গেট পাস বাতিল — গাড়ি বেরোয়নি, কাগজেও না (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিক্রি আর বিল থাকে (নিশ্চিত বিল বাতিল হয় না, মালিক ২ অক্টোবর ২০২৬); পরের ট্রিপে নতুন পাস, দ্বিতীয় বিল নয়।
+     */
+    public function test_a_trip_cancelled_on_the_road_cancels_its_gate_pass_and_the_next_trip_issues_a_new_one(): void
+    {
+        $challan = $this->challan();
+        $first = app(ShipmentService::class)->dispatch($this->trip([$challan]));
+
+        $pass = GatePass::query()->where('shipment_id', $first->id)->where('delivery_challan_id', $challan->id)->firstOrFail();
+        $this->assertSame(GatePass::ISSUED, $pass->status, 'দৃশ্যটাই বানানো যায়নি — রওনায় গেট পাস হয়নি।');
+
+        app(ShipmentService::class)->cancel($first->fresh(), 'গাড়ি নষ্ট');
+
+        $this->assertSame(GatePass::CANCELLED, $pass->fresh()->status, '⛔ ট্রিপ বাতিল, অথচ গেট পাস এখনো "জারি"।');
+        $this->assertSame('গাড়ি নষ্ট', $pass->fresh()->cancel_reason);
+
+        $second = app(ShipmentService::class)->dispatch($this->trip([$challan]));
+        $this->assertSame(1, GatePass::query()->where('shipment_id', $second->id)->where('status', GatePass::ISSUED)->count(),
+            '⛔ পরের ট্রিপে নতুন গেট পাস হয়নি।');
+        $this->assertSame(1, SalesInvoice::query()->where('sale_no', $challan->fresh()->sale_no)->count(),
+            '⛔ দ্বিতীয় রওনায় একই বিক্রির দ্বিতীয় বিল।');
+    }
+
     /** ফেরত লিখতে গেলে কারণটাও লিখতে হয়। */
     public function test_goods_coming_back_need_a_reason(): void
     {
@@ -425,6 +494,24 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
         ])->assertNotFound();
 
         $this->assertSame(ShipmentLine::PENDING, $theirs->lines->first()->fresh()->outcome);
+    }
+
+    /** এই চালানের বিল থেকে এতগুলো ফেরত — পাকা */
+    private function returnFrom(DeliveryChallan $challan, string $qty): void
+    {
+        $bill = SalesInvoice::query()->where('sale_no', $challan->fresh()->sale_no)->with('lines')->firstOrFail();
+        $returns = app(SalesReturnService::class);
+        $returns->confirm($returns->create([
+            'customer_id' => $bill->customer_id,
+            'warehouse_id' => $bill->warehouse_id,
+            'sales_invoice_id' => $bill->id,
+            'reason_code_id' => ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->value('id'),
+            'trx_date' => now()->toDateString(),
+        ], $bill->lines->map(fn ($line) => [
+            'product_id' => $line->product_id,
+            'sales_invoice_line_id' => $line->id,
+            'qty' => $qty,
+        ])->all()));
     }
 
     private function settleAll(Shipment $trip, string $outcome, ?string $note = null): void

@@ -11,8 +11,11 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryState;
+use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Models\SalesReturnLine;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Models\ShipmentLine;
 use Illuminate\Support\Carbon;
@@ -332,6 +335,25 @@ final class ShipmentService
 
             app(FarePayment::class)->undoTrip($locked->fresh(), $reason);
 
+            /*
+             * ⛔ যে চালান গুদামের ধাপে ফিরল, তার এই ট্রিপের গেট পাসও বাতিল — Sales অডিট, ১০ অক্টোবর ২০২৬।
+             * ⚠️ আগে পাসটা "জারি" থেকে যেত: গাড়ি বেরোয়নি, অথচ কাগজে মাল গেট পেরিয়েছে। ⓘ চালকের কথা বসে যাওয়া
+             * চালান (পৌঁছেছে ইত্যাদি) ধাপে ফেরে না ([[DeliveryStageService::tripChanged()]]) — তাদের পাস থাকে, মাল সত্যিই গেছে।
+             * ⓘ বিল আর মাল বের হওয়া থাকে: বিক্রিটা দাঁড়িয়ে, পরের ট্রিপে আবার হয় না ([[DispatchBill]], [[GoodsIssue]]
+             * একবারই) — আর নিশ্চিত বিল বাতিল হয় না (মালিক, ২ অক্টোবর ২০২৬)। পরের রওনায় নতুন পাস (/2)।
+             */
+            $backHome = DeliveryState::query()
+                ->whereIn('delivery_challan_id', $locked->lines()->pluck('delivery_challan_id'))
+                ->whereIn('stage', DeliveryStage::DISPATCHABLE)
+                ->pluck('delivery_challan_id');
+
+            GatePass::query()
+                ->where('shipment_id', $locked->id)
+                ->where('status', GatePass::ISSUED)
+                ->whereIn('delivery_challan_id', $backHome)
+                ->get()
+                ->each(fn (GatePass $pass) => app(GatePassService::class)->cancel($pass, $reason));
+
             return $locked->fresh(['lines']);
         });
     }
@@ -361,23 +383,34 @@ final class ShipmentService
             return true;
         }
 
-        $invoiceIds = SalesInvoiceLine::query()
+        $billed = SalesInvoiceLine::query()
             ->whereIn('delivery_challan_line_id',
                 fn ($q) => $q->select('id')->from('sal_challan_lines')
                     ->where('delivery_challan_id', $challan->id))
-            ->pluck('sales_invoice_id')
-            ->unique()
-            ->filter()
-            ->all();
+            ->pluck('qty', 'id');
 
-        if ($invoiceIds === []) {
+        if ($billed->isEmpty()) {
             return false;
         }
 
-        return SalesReturn::query()
-            ->whereIn('sales_invoice_id', $invoiceIds)
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->exists();
+        /*
+         * ⛔ এই চালানের বিলের সারিতেই ফেরত, আর যতটা ফেরার কথা ততটা — Sales অডিট, ১০ অক্টোবর ২০২৬।
+         * ⚠️ আগে বিলের যেকোনো একটা পাকা ফেরতই "মাল ফিরেছে" বলত: পুরো চালান ফেরত এলেও এক পিসের ফেরত লিখে ট্রিপ
+         * বন্ধ করা যেত, বাকিটা খাতায় ক্রেতার কাছে চিরকাল। ⓘ "পুরো ফেরত" = প্রতিটা সারির পুরো পরিমাণ; "কম পৌঁছেছে"
+         * = কিছু একটা ফেরত, কতটা কম তা চালকের কথাতেই।
+         */
+        $returned = SalesReturnLine::query()
+            ->whereIn('sales_invoice_line_id', $billed->keys())
+            ->whereIn('sales_return_id', SalesReturn::query()->whereIn('status', DocumentStatus::POSTED)->select('id'))
+            ->groupBy('sales_invoice_line_id')
+            ->selectRaw('sales_invoice_line_id, SUM(qty) as returned')
+            ->pluck('returned', 'sales_invoice_line_id');
+
+        if ($line->outcome === ShipmentLine::SHORT) {
+            return $returned->contains(fn ($qty) => bccomp((string) $qty, '0', 4) > 0);
+        }
+
+        return $billed->every(fn ($qty, $id) => bccomp((string) ($returned[$id] ?? '0'), (string) $qty, 4) >= 0);
     }
 
     /**
