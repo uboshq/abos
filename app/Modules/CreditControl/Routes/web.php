@@ -16,4 +16,10 @@ Route::middleware('auth')->prefix('credit-control')->group(function () {
         ->whereNumber('customer')
         ->name('customer.show')
         ->middleware('can:credit_control.view');
+
+    // ⭐ বাকির দিন — বাকির পাতা থেকে, কারণসহ (ধাপ ২.২); চাবি নিয়ন্ত্রকের ভিতরে (`update` নীতি)
+    Route::post('/customers/{customer}/credit-days', [CreditProfileController::class, 'creditDays'])
+        ->whereNumber('customer')
+        ->name('customer.credit_days')
+        ->middleware('can:credit_control.view');
 });

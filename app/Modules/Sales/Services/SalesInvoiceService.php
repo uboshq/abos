@@ -323,6 +323,33 @@ final class SalesInvoiceService
         }
     }
 
+    /**
+     * ⭐ বিলের মেয়াদ — লেখা থাকলে সেটাই, নইলে বিলের দিন + গ্রাহকের বাকির দিন (বাকি নিয়ন্ত্রণ ধাপ ২.২, মালিকের উত্তর ২, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে কেবল কাউন্টার গ্রাহকের `credit_days` থেকে মেয়াদ বসাত; অফিসের বিল, চালান থেকে বিল আর রওনার বিল (DO, ফোন, পোর্টাল —
+     * [[DispatchBill]]) মেয়াদ খালি রাখত, আর দেয়াল তখন বিলের দিনকেই মেয়াদ ধরত — ৩০ দিনের বাকির গ্রাহক পরের দিনই "মেয়াদ
+     * পেরোনো" হয়ে আটকাতেন (ধাপ ২.১-এর দেয়াল মেয়াদ পেরোলেই থামায়)। ⭐ এখন প্রতিটা বিলের পথ এই একটা জায়গা দিয়ে যায়।
+     * ⓘ গোনা বিলের দিন থেকে, আজ থেকে নয় — পুরনো তারিখের বিলেও ঠিক দিন ([[DirectSaleService::dueOn()]]-এর একই নিয়ম)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function dueOnFor(array $data, int $customerId, Carbon $trxDate): string
+    {
+        $given = trim((string) ($data['due_on'] ?? ''));
+
+        if ($given !== '') {
+            return Carbon::parse($given)->toDateString();
+        }
+
+        // ⓘ ডিলারের দেয়াল ছাড়া — বিল যিনিই লিখুন, মেয়াদ গ্রাহকের নিজের কথা; কোম্পানির ছাঁকনি স্পষ্ট
+        $days = (int) DB::table('customers')
+            ->where('company_id', CompanyContext::id())
+            ->where('id', $customerId)
+            ->value('credit_days');
+
+        return $trxDate->copy()->addDays(max(0, $days))->toDateString();
+    }
+
     /** ⓘ [[createForHeldCounterSale()]] চলাকালীন কেবল — বাকি সময় খালি। */
     private ?int $heldChallanId = null;
 
@@ -403,7 +430,8 @@ final class SalesInvoiceService
                 'customer_id' => $data['customer_id'],
                 'warehouse_id' => $data['warehouse_id'] ?? $this->defaultWarehouse()?->id,
                 'trx_date' => $trxDate->toDateString(),
-                'due_on' => $data['due_on'] ?? null,
+                // ⭐ না বললে গ্রাহকের বাকির দিন থেকে — প্রতিটা বিলের পথ এখানে দিয়েই যায় (বাকি নিয়ন্ত্রণ ধাপ ২.২, [[dueOnFor()]])
+                'due_on' => $this->dueOnFor($data, (int) $data['customer_id'], $trxDate),
                 'narration' => $data['narration'] ?? null,
 
                 /*
@@ -450,7 +478,7 @@ final class SalesInvoiceService
 
             $invoice->update([
                 'trx_date' => $trxDate->toDateString(),
-                'due_on' => $data['due_on'] ?? null,
+                'due_on' => $this->dueOnFor($data, (int) $invoice->customer_id, $trxDate),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
 

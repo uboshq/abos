@@ -282,6 +282,30 @@ final class CustomerService
         });
     }
 
+    /**
+     * ⭐ গ্রাহকের বাকির দিন — বাকির পাতা থেকে, কারণসহ (বাকি নিয়ন্ত্রণ ধাপ ২.২, মালিকের উত্তর ২, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বাকির দিন এখন প্রতিটা বিলের মেয়াদ ঠিক করে ([[SalesInvoiceService::dueOnFor()]]), আর মেয়াদ পেরোলেই নতুন বাকি বন্ধ — তাই
+     * এই সংখ্যা বাড়ানো মানে দেয়াল পিছোনো। ⓘ বদলটা সীমা বদলের ইতিহাসে ওঠে, কে-কখন-আগে-পরে-কেন ([[CustomerCreditChange]])।
+     * ⛔ ডাকার পক্ষ চাবি দেখে (`customer.update`, সীমা বদলানোর একই চাবি)। ⓘ সমান হলে কিছুই লেখা হয় না।
+     */
+    public function setCreditDays(Customer $customer, int $days, string $reason): Customer
+    {
+        $reason = trim($reason);
+
+        if ($days < 0 || $days > 3650) {
+            throw ValidationException::withMessages(['credit_days' => __('customer::validation.credit_days_range')]);
+        }
+
+        return DB::transaction(function () use ($customer, $days, $reason) {
+            $fresh = Customer::query()->whereKey($customer->getKey())->lockForUpdate()->firstOrFail();
+
+            CustomerCreditChange::because($reason, null, fn () => $fresh->forceFill(['credit_days' => $days])->save());
+
+            return $fresh->fresh();
+        });
+    }
+
     /** ⭐ "বাকি বন্ধ" তোলা — একই চাবি, কারণ বাধ্যতামূলক, খাতায় `credit_unblocked` */
     public function clearCreditBlock(Customer $customer, string $reason): Customer
     {

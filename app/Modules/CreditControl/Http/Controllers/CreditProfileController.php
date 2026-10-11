@@ -11,6 +11,8 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
 use App\Modules\Sales\Models\CreditDecision;
 use App\Modules\Sales\Services\CreditExposure;
+use App\Modules\Customer\Services\CustomerService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -73,6 +75,29 @@ class CreditProfileController extends Controller
             'bills' => $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [],
             'history' => $history->concat($blocks)->sortByDesc('at')->values(),
             'decisions' => CreditDecision::query()->where('customer_id', $customer->id)->latest('id')->limit(10)->get(),
+            // ⓘ কাজের ঘরগুলো কেবল চাবি থাকলে আঁকা হয় — পাহারা আসলে দরজায় ([[creditDays()]])
+            'canEdit' => $request->user()?->can('update', $customer) ?? false,
         ]);
+    }
+
+    /**
+     * ⭐ বাকির দিন বদল — বাকির পাতা থেকে, কারণসহ (বাকি নিয়ন্ত্রণ ধাপ ২.২)।
+     *
+     * ⛔ দেয়াল সার্ভারে: দেখার একই দেয়াল (কোম্পানি, শাখা, ডিলার — না মিললে ৪০৪) আর গ্রাহক বদলানোর চাবি (`update` নীতি) —
+     * কেবল লুকানো বোতাম নয়।
+     */
+    public function creditDays(Request $request, int $customer, CustomerService $customers): RedirectResponse
+    {
+        $customer = Customer::query()->inViewedBranch()->whereKey($customer)->firstOrFail();
+        $this->authorize('update', $customer);
+
+        $data = $request->validate([
+            'credit_days' => ['required', 'integer', 'min:0', 'max:3650'],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $customers->setCreditDays($customer, (int) $data['credit_days'], $data['reason']);
+
+        return back()->with('saved', __('credit_control::profile.credit_days_saved'));
     }
 }

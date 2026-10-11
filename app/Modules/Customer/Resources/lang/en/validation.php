@@ -12,4 +12,6 @@ return [
     'opening_needs_key' => 'An opening balance puts money in the books and needs its own permission (the accountant\'s). Create the customer with zero; the accountant sets the opening balance.',
     'point_in_other_branch' => 'This point belongs to another branch. Pick a point in the customer\'s own branch.',
     'limit_on_create' => 'A new customer starts with a zero credit limit. A limit needs a signature — create the customer first, then raise the limit from Edit; the approval request goes from there.',
+    // বাকি নিয়ন্ত্রণ ধাপ ২.২ — বাকির পাতা থেকে বাকির দিন
+    'credit_days_range' => 'Credit days must be between 0 and 3650.',
 ];

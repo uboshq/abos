@@ -55,6 +55,25 @@
             @endforeach
         </section>
 
+        <x-ui.errors />
+
+        {{-- ⭐ কাজ — এক সারিতে, কারণ বাধ্যতামূলক (বাকি নিয়ন্ত্রণ ধাপ ২); দরজা নিজে চাবি দেখে, এখানে কেবল আঁকা না-আঁকা --}}
+        @if ($canEdit)
+            <section class="grid gap-2 lg:grid-cols-3" data-credit-actions>
+                <form method="POST" action="{{ route('credit_control.customer.credit_days', $customer->id) }}" data-credit-days-form
+                      class="flex flex-wrap items-center gap-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-3 py-2">
+                    @csrf
+                    <label class="text-sm text-(--color-ink-muted)" for="cc-credit-days">{{ __('credit_control::profile.credit_days') }}</label>
+                    <input id="cc-credit-days" type="number" name="credit_days" min="0" max="3650" required
+                           value="{{ old('credit_days', (int) $customer->credit_days) }}"
+                           class="h-(--spacing-field-dense) w-20 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                    <input type="text" name="reason" required maxlength="500" placeholder="{{ __('credit_control::profile.reason_required') }}"
+                           class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                    <x-ui.button type="submit" tone="secondary">{{ __('credit_control::profile.save') }}</x-ui.button>
+                </form>
+            </section>
+        @endif
+
         <div class="grid gap-3 xl:grid-cols-2">
             <section class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('credit_control::profile.open_bills') }}</h2>
