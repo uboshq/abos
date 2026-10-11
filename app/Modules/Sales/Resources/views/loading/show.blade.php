@@ -92,7 +92,7 @@
                 @can('sales.delivery.update')
                     <form method="POST" action="{{ route('sales.loading_sheet.confirm', $trip) }}">
                         @csrf
-                        <x-ui.button type="submit" tone="primary" icon="check-circle">
+                        <x-ui.button type="submit" tone="primary" icon="check_circle">
                             {{ __('sales::loading.confirm') }}
                         </x-ui.button>
                     </form>
