@@ -265,7 +265,9 @@ final class InvoicePaperView
     /** নিচের "ছাপার সময়" লাইন */
     public function printedAt(): string
     {
-        $who = auth()->check() ? ' · '.auth()->user()->name : '';
+        // ⓘ কর্মী বা পোর্টালের গ্রাহক — [[Actor::displayName()]]
+        $name = \App\Core\Support\Actor::displayName();
+        $who = $name === null ? '' : ' · '.$name;
 
         return $this->en('printed_at').' '.DateFormat::formatWithTime(now()).$who;
     }

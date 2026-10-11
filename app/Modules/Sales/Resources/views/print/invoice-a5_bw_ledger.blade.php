@@ -313,5 +313,5 @@
 
 <div class="printed">
     {{ $en('printed_at') }} {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}
-    @if (auth()->check()) · {{ auth()->user()->name }} @endif
+    @if (\App\Core\Support\Actor::displayName() !== null) · {{ \App\Core\Support\Actor::displayName() }} @endif
 </div>

@@ -220,7 +220,8 @@
 <div class="foot">
     @if ($profile->shows('printed_at'))
         {{ __('core.print.printed_at') }}: {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}
-        @if (auth()->check()) · {{ auth()->user()->name }} @endif
+        {{-- ⓘ কর্মী বা পোর্টালের গ্রাহক — [[Actor::displayName()]] --}}
+        @if (\App\Core\Support\Actor::displayName() !== null) · {{ \App\Core\Support\Actor::displayName() }} @endif
     @endif
 
     @if ($vendorCredit)
