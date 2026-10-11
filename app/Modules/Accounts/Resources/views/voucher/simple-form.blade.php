@@ -229,7 +229,7 @@
         @if ($expenseLayout)
             <details class="text-sm">
                 <summary class="cursor-pointer text-(--color-ink-muted)">
-                    &#9432; {{ __('accounts::field.why_this_way') }}
+                    ⓘ {{ __('accounts::field.why_this_way') }}
                 </summary>
                 <p class="mt-2 text-xs text-(--color-ink-muted)">
                     {{ __('accounts::message.why_expense_this_way') }}

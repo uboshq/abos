@@ -7,18 +7,18 @@
     <div data-live x-data="liveRefresh({ url: '{{ route('sales.portal.tracking.show', [$sale['kind'], $sale['id']]) }}', seconds: 30 })">
         <h1 class="text-lg font-semibold">{{ $sale['no'] }}</h1>
 {{-- ⓘ ডিলারের ট্র্যাকিংয়ে টাকা নেই — মালিক, ৬ অক্টোবর ২০২৬ (খ): ধাপ দেখবেন, দাম নয়; দাম আদেশের ফর্মে --}}
-        <div class="mb-3 text-sm font-semibold" style="color: {{ $trackingColours[$sale['category']] ?? '#111827' }}">
+        <div class="mb-3 text-sm font-semibold" style="color: {{ $trackingColours[$sale['category']] ?? 'var(--color-ink)' }}">
             {{ __('sales::tracking.step.'.$sale['step']) }}
         </div>
 
         <ol data-tracking-milestones>
             @foreach ($sale['milestones'] ?? [] as $m)
-                @php $c = $trackingColours[$m['category']] ?? '#9CA3AF'; @endphp
+                @php $c = $trackingColours[$m['category']] ?? 'var(--color-ink-muted)'; @endphp
                 <li class="flex items-start gap-3 pb-2" data-milestone="{{ $m['key'] }}" data-state="{{ $m['state'] }}">
                     <span style="width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;
-                                 font-size:11px;font-weight:700;color:#fff;flex:none;
-                                 background: {{ in_array($m['state'], ['done', 'rejected', 'hold'], true) ? $c : '#fff' }};
-                                 border: 2px solid {{ $m['state'] === 'todo' ? '#D1D5DB' : $c }}">
+                                 font-size:11px;font-weight:700;color:var(--color-ink-inverse);flex:none;
+                                 background: {{ in_array($m['state'], ['done', 'rejected', 'hold'], true) ? $c : 'var(--color-surface-card)' }};
+                                 border: 2px solid {{ $m['state'] === 'todo' ? 'var(--color-border-strong)' : $c }}">
                         @switch($m['state'])
                             @case('done') ✓ @break
                             @case('rejected') ✕ @break

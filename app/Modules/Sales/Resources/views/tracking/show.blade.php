@@ -17,7 +17,7 @@
             <div class="text-sm">{{ $sale['customer'] }}</div>
             <div class="text-sm text-(--color-ink-muted)">{{ $sale['date'] }}</div>
             <div class="num text-sm">{{ \App\Core\Support\Money::format($sale['total']) }}</div>
-            <div class="mt-1 text-sm font-semibold" style="color: {{ $trackingColours[$sale['category']] ?? '#111827' }}">
+            <div class="mt-1 text-sm font-semibold" style="color: {{ $trackingColours[$sale['category']] ?? 'var(--color-ink)' }}">
                 {{ __('sales::tracking.step.'.$sale['step']) }}
                 @if ($sale['billed'])
                     · {{ __('sales::tracking.step.billed') }}
@@ -29,15 +29,15 @@
         <ol class="grid gap-0" data-tracking-milestones>
             @foreach ($sale['milestones'] ?? [] as $m)
                 @php
-                    $c = $trackingColours[$m['category']] ?? '#9CA3AF';
+                    $c = $trackingColours[$m['category']] ?? 'var(--color-ink-muted)';
                     $on = in_array($m['state'], ['done', 'current', 'rejected', 'hold'], true);
                 @endphp
                 <li class="flex gap-3" data-milestone="{{ $m['key'] }}" data-state="{{ $m['state'] }}">
                     <div class="flex flex-col items-center">
                         <span style="width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;
-                                     font-size:12px;font-weight:700;color:#fff;
-                                     background: {{ $m['state'] === 'done' || $m['state'] === 'rejected' || $m['state'] === 'hold' ? $c : '#fff' }};
-                                     border: 2px solid {{ $on ? $c : '#D1D5DB' }}">
+                                     font-size:12px;font-weight:700;color:var(--color-ink-inverse);
+                                     background: {{ $m['state'] === 'done' || $m['state'] === 'rejected' || $m['state'] === 'hold' ? $c : 'var(--color-surface-card)' }};
+                                     border: 2px solid {{ $on ? $c : 'var(--color-border-strong)' }}">
                             @switch($m['state'])
                                 @case('done') ✓ @break
                                 @case('rejected') ✕ @break
@@ -46,7 +46,7 @@
                             @endswitch
                         </span>
                         @unless ($loop->last)
-                            <span style="width:2px;flex:1;min-height:18px;background: {{ $m['state'] === 'done' ? $c : '#E5E7EB' }}"></span>
+                            <span style="width:2px;flex:1;min-height:18px;background: {{ $m['state'] === 'done' ? $c : 'var(--color-border)' }}"></span>
                         @endunless
                     </div>
                     <div class="pb-3">

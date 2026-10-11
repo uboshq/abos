@@ -310,7 +310,7 @@
                                     @endphp
                                     <svg viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true" class="mt-1 block h-4 w-full">
                                         <polyline points="{{ implode(' ', $points) }}" fill="none" stroke-width="1.5"
-                                                  vector-effect="non-scaling-stroke" style="stroke: var(--color-chart-1, #2563eb)" />
+                                                  vector-effect="non-scaling-stroke" style="stroke: var(--color-chart-1)" />
                                     </svg>
                                 @endif
                             </a>
