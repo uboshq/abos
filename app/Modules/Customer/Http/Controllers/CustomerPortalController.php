@@ -9,6 +9,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerPortalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * পোর্টালের দরজা — মালিকের দিক থেকে।
@@ -72,8 +73,7 @@ class CustomerPortalController extends Controller
             'password' => [
                 'required', 'string', 'max:191', 'confirmed',
                 // ⛔ ১২ অক্ষর আর ফাঁসের তালিকা — নিরীক্ষা ২৭ সেপ্টেম্বর ২০২৬; কারণ UserController-এ
-                // ⓘ গ্রাহক নিজে বদলালেও এই একই নিয়ম ([[CustomerPortalService::passwordRule()]])
-                CustomerPortalService::passwordRule(),
+                Password::min(12)->letters()->numbers()->uncompromised(),
             ],
         ]);
 

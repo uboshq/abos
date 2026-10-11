@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Core\Support;
 
 use App\Models\User;
-use App\Modules\Customer\Models\Customer;
 
 /**
  * কে করছেন — কেবল কর্মী (`users`) হলে তাঁর id, নাহলে null (২ অক্টোবর ২০২৬)।
@@ -56,6 +55,7 @@ final class Actor
             return (string) $who->name;
         }
 
-        return $who instanceof Customer ? $who->name() : null;
+        // ⓘ কোর কোনো মডিউলের নাম জানে না — পোর্টালের গ্রাহক নিজের `name()` দেন (Customer::name())
+        return $who !== null && method_exists($who, 'name') ? (string) $who->name() : null;
     }
 }

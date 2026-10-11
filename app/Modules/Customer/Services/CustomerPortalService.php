@@ -8,7 +8,6 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password;
 
 /**
  * গ্রাহককে নিজের পাতার চাবি দেওয়া — আর ফেরত নেওয়া।
@@ -78,18 +77,6 @@ final class CustomerPortalService
      * ভুল করে বন্ধ করা গ্রাহককে আবার চালু করতে নতুন পাসওয়ার্ড লাগে না,
      * অর্থাৎ তাকে ফোন করে নতুন একটা বলতে হয় না।
      */
-    /**
-     * ⭐ পোর্টালের পাসওয়ার্ডের নিয়ম — এক জায়গায় (গ্রাহক পোর্টাল, ধাপ ১, ১১ অক্টোবর ২০২৬)।
-     *
-     * ⓘ অফিস যখন পাসওয়ার্ড বসায় ([[CustomerPortalController::store()]]) আর গ্রাহক যখন নিজে বদলান
-     * ([[PortalProfileController::password()]]) — দুই দরজায় একই নিয়ম। ⛔ দুই কপি হলে একদিন গ্রাহক নিজে এমন
-     * পাসওয়ার্ড বসাতে পারতেন যেটা অফিস কখনো বসাতে দিত না।
-     */
-    public static function passwordRule(): Password
-    {
-        return Password::min(12)->letters()->numbers()->uncompromised();
-    }
-
     /**
      * ⭐ গ্রাহক নিজে পাসওয়ার্ড বদলান — পোর্টালের প্রোফাইল থেকে।
      *
