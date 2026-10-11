@@ -431,12 +431,15 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      */
     public function signedUnposted(Request $request): View
     {
+        $signed = app(\App\Core\Engines\Approval\SignedButNotPosted::class);
+
         return view('approval::inbox.mine', [
+            'papers' => $signed->papers($request->user()),
             'menu' => $this->menu->forUser($request->user()),
             'labels' => $this->flows->labels(),
             'heading' => __('approval::menu.signed_unposted'),
             'emptyText' => __('approval::message.no_signed_unposted'),
-            'approvals' => self::searched(app(\App\Core\Engines\Approval\SignedButNotPosted::class)->query($request->user()), (string) $request->query('q', ''))
+            'approvals' => self::searched($signed->query($request->user()), (string) $request->query('q', ''))
                 ->with(['decisions.user'])
                 ->orderByDesc('decided_at')
                 ->paginate(50),

@@ -33,7 +33,7 @@ final class SignedButNotPosted
     /** @return Builder<Approval> */
     public function query(User $user): Builder
     {
-        $ids = $this->ids($user);
+        $ids = array_keys($this->papers($user));
 
         return Approval::query()->whereIn('id', $ids === [] ? [0] : $ids);
     }
@@ -46,11 +46,15 @@ final class SignedButNotPosted
             return 0;
         }
 
-        return (int) Cache::remember("abos.signed-unposted.{$companyId}.{$user->id}", 60, fn () => count($this->ids($user)));
+        return (int) Cache::remember("abos.signed-unposted.{$companyId}.{$user->id}", 60, fn () => count($this->papers($user)));
     }
 
-    /** @return list<int> */
-    private function ids(User $user): array
+    /**
+     * সই → কাগজের নম্বর (তালিকায় কাগজটা চেনার জন্য)।
+     *
+     * @return array<int, string>
+     */
+    public function papers(User $user): array
     {
         $companyId = CompanyContext::id();
 
@@ -87,7 +91,7 @@ final class SignedButNotPosted
                     ->whereIn('id', $rows->pluck('approvable_id')->all())
                     ->where('status', DocumentStatus::DRAFT)
                     ->when(Schema::hasColumn($table, 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
-                    ->pluck('id')
+                    ->pluck(Schema::hasColumn($table, 'document_no') ? 'document_no' : 'id', 'id')
                     ->all();
             } catch (Throwable $e) {
                 report($e);
@@ -96,8 +100,8 @@ final class SignedButNotPosted
             }
 
             foreach ($rows as $row) {
-                if (in_array($row->approvable_id, $drafts)) {
-                    $out[] = (int) $row->id;
+                if (array_key_exists((int) $row->approvable_id, $drafts)) {
+                    $out[(int) $row->id] = (string) $drafts[(int) $row->approvable_id];
                 }
             }
         }
