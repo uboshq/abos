@@ -19,6 +19,8 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
      */
     Route::get('/', [ApprovalInboxController::class, 'index'])->name('inbox.index');
     Route::get('/mine', [ApprovalInboxController::class, 'mine'])->name('inbox.mine');
+    // ⭐ সই হয়েছে, পোস্ট হয়নি — টপবারের আইকন (মালিক, ১১ অক্টোবর ২০২৬; [[SignedButNotPosted]])
+    Route::get('/signed-unposted', [ApprovalInboxController::class, 'signedUnposted'])->name('inbox.signed_unposted');
 
     /* ⭐ একসাথে অনেকগুলো — স্থির পথ, `{approval}`-এর আগে */
     Route::post('/bulk-approve', [ApprovalInboxController::class, 'bulkApprove'])->name('inbox.bulk');

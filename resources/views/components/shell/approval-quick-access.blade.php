@@ -76,7 +76,8 @@
     $href = $hasScreen ? 'href="'.e(route('approval.inbox.index')).'"' : '';
 @endphp
 
-<{{ $tag }} {!! $href !!}
+{{-- ⓘ data-live — নতুন তথ্য এলে সংখ্যাটা নিজে বসে ([[live.js]], ১১ অক্টোবর ২০২৬) --}}
+<{{ $tag }} {!! $href !!} data-live="approvals"
    @class([
        'relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)',
        'transition-colors hover:bg-(--color-surface-hover)' => $hasScreen,

@@ -64,6 +64,8 @@ final class NotificationKinds
             'sales.signed_challan_stuck' => 'core.notify.kind.signed_challan_stuck',
             // ⭐ সই হলো, অথচ কাউন্টারের বিক্রি শেষ হলো না — পান বানানেওয়ালা আর সইকারী (লাইভ DRF-0008; [[HeldCounterSaleFinisher]])
             'sales.signed_sale_stuck' => 'core.notify.kind.signed_sale_stuck',
+            // ⭐ সই হলো, অথচ ভাউচার বা ক্রয়-বিল পোস্ট হলো না — পান লেখক আর সইকারী ([[SignedPaperFinisher]], ১১ অক্টোবর ২০২৬)
+            'approval.signed_paper_stuck' => 'core.notify.kind.signed_paper_stuck',
 
             /*
              * ⭐ ডেলিভারির ধাপ বদলাল — ২ অক্টোবর ২০২৬ ([[TrackingNotices]])।
@@ -209,6 +211,8 @@ final class NotificationKinds
         'sales.signed_challan_stuck',
         /* ⓘ একই কারণ: সই হয়ে গেছে, তবু বিক্রি থেমে — কেউ না ধরলে বিল কোথাও দেখা যায় না */
         'sales.signed_sale_stuck',
+        /* ⓘ একই কারণ: সই হয়ে গেছে, তবু ভাউচার বা বিল খসড়ায় আটকে */
+        'approval.signed_paper_stuck',
 
         /*
          * ⭐ সূচির গোটা মানেই "না চাইতেই এসে পৌঁছাবে"।

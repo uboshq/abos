@@ -834,5 +834,7 @@ return [
      */
     'listeners' => [
         GoodsReceived::class => [OpenInspectionsForGoodsThatNeedThem::class],
+        // ⭐ বিল, পেমেন্ট, মাল গ্রহণ, ফেরত, আদেশ — শেষ সইয়ে নিজে পাকা (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
+        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Purchase\Listeners\ConfirmThePurchasePaperOnTheLastSignature::class],
     ],
 ];

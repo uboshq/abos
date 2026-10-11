@@ -25,6 +25,19 @@
                     {{ __('sales::action.commission_reject') }}
                 </x-ui.button>
             </form>
+
+            {{-- ⓘ ভুল দাবি — দাখিলা উল্টায়, বিলের বাকি ফেরে (Sales অডিট, ১০ অক্টোবর ২০২৬) --}}
+            <form method="POST" action="{{ route('sales.commission.cancel', $claim) }}"
+                  class="flex items-center gap-2">
+                @csrf
+                <input type="text" name="decision_reason" required minlength="3"
+                       placeholder="{{ __('sales::field.commission_cancel_reason') }}"
+                       class="h-(--spacing-field) w-48 rounded-(--radius-field) border
+                              border-(--color-border) bg-(--color-surface-app) px-2">
+                <x-ui.button type="submit" tone="secondary">
+                    {{ __('sales::action.commission_cancel') }}
+                </x-ui.button>
+            </form>
         </div>
     @endcan
 @else

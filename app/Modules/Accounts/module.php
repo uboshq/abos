@@ -975,6 +975,10 @@ return [
 
     // ⭐ শেষ সই পড়লে হিসাবের কাগজ নিজেই শেষ হয় — গ১ ([[AccountsSignature]])
     'listeners' => [
-        ApprovalDecided::class => [FinishTheAccountsPaperOnTheLastSignature::class],
+        ApprovalDecided::class => [
+            FinishTheAccountsPaperOnTheLastSignature::class,
+            // ⭐ ভাউচারও — শেষ সইয়ে নিজে পোস্ট (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
+            \App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature::class,
+        ],
     ],
 ];

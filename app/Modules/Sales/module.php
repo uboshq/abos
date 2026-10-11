@@ -922,6 +922,8 @@ return [
             \App\Modules\Sales\Listeners\FinishTheCancellationOnTheLastSignature::class,
             // ⭐ ফেরত — শেষ সইয়ে পাকা, প্রত্যাখ্যানে বাতিল (বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬)
             \App\Modules\Sales\Listeners\FinishTheReturnOnTheLastSignature::class,
+            // ⭐ টাকা আদায় — শেষ সইয়ে নিজে পাকা (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
+            \App\Modules\Sales\Listeners\ConfirmTheCollectionOnTheLastSignature::class,
         ],
     ],
 

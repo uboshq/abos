@@ -81,7 +81,7 @@ final class CashForecast
         $invoices = SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon);
 
         foreach (SalesInvoice::query()->fromSub($invoices, 'sal_invoices')
-            ->whereRaw('sal_invoices.total - sal_invoices.collected_total - sal_invoices.voucher_total - sal_invoices.returned_total > 0')
+            ->whereRaw('sal_invoices.total - sal_invoices.collected_total - sal_invoices.voucher_total - sal_invoices.returned_total - sal_invoices.claimed_total > 0')
             ->get() as $invoice) {
             $this->add($sums, $this->bucketOf($invoice->due_on, $today), 'receivables', $invoice->dueAmount());
         }

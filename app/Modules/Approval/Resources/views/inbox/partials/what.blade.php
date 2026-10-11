@@ -10,6 +10,11 @@
     {{ $labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action }}
 </span>
 
+{{-- ⓘ কাগজের নম্বর — "সই হয়েছে, পোস্ট হয়নি" তালিকায় কাগজটা চেনার জন্য (১১ অক্টোবর ২০২৬) --}}
+@if (! empty($paperNo))
+    <span class="num ms-1 text-(--color-ink-muted)">{{ $paperNo }}</span>
+@endif
+
 @if ($approval->requested_reason)
     <span class="block text-2xs text-(--color-ink-muted)">{{ $approval->requested_reason }}</span>
 @endif

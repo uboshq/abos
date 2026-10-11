@@ -4,12 +4,17 @@
     এখানে যিনি আসেন তিনি জানতে চান "আমারটার কী হলো", আর সেটা সাধারণত
     সবচেয়ে শেষ অনুরোধটা।
 --}}
+@php
+    // ⓘ একই ছক "সই হয়েছে, পোস্ট হয়নি" তালিকাতেও ([[ApprovalInboxController::signedUnposted()]], ১১ অক্টোবর ২০২৬)
+    $heading ??= __('approval::menu.mine');
+    $emptyText ??= __('approval::message.no_requests');
+@endphp
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ __('approval::menu.mine') }}</x-slot:title>
+    <x-slot:title>{{ $heading }}</x-slot:title>
 
     <x-slot:header>
         <x-ui.page-header
-            :title="__('approval::menu.mine')"
+            :title="$heading"
             :subtitle="trans_choice('core.count.records', $approvals->total(), ['count' => $approvals->total()])" />
     </x-slot:header>
 
@@ -61,19 +66,19 @@
         {{-- ⭐ ছাঁকনির সারি আর খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: অন্য তালিকার
              মতোই টুলবার ([[ApprovalInboxController::searched()]])। --}}
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('approval::menu.mine')"
+            <x-ui.toolbar :title="$heading"
                           :count="trans_choice('core.count.records', $approvals->total(), ['count' => $approvals->total()])" />
         </form>
 
         <x-ui.table
-            :empty="request('q') ? __('core.empty.no_results') : __('approval::message.no_requests')"
+            :empty="request('q') ? __('core.empty.no_results') : $emptyText"
             :rows="$approvals"
             :compact="request()->boolean('compact')"
             :columns="[
                 ['key' => 'requested_at', 'label' => __('approval::field.requested_at'), 'width' => '11rem',
                  'render' => fn ($a) => $a->requested_at?->format('d M Y, H:i')],
                 ['key' => 'module', 'label' => __('approval::field.action'),
-                 'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels])],
+                 'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels, 'paperNo' => ($papers ?? [])[$a->id] ?? null])],
                 ['key' => 'amount', 'label' => __('approval::field.amount'), 'numeric' => true, 'width' => '9rem',
                  'render' => fn ($a) => $a->amount === null ? '—' : \App\Core\Support\Money::format($a->amount)],
                 ['key' => 'status', 'label' => __('approval::field.status'), 'width' => '8rem',
