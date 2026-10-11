@@ -30,12 +30,14 @@ class CreditDue extends Command
 
         $broke = false;
         $rated = 0;
+        $ending = 0;
 
         foreach ($companies as $company) {
             CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
             try {
                 $rated += $daily->snapshot();
+                $ending += $daily->temporaryEnding();
             } catch (\Throwable $e) {
                 $broke = true;
                 $this->error("{$company->code}: {$e->getMessage()}");
@@ -44,7 +46,7 @@ class CreditDue extends Command
         }
 
         CompanyContext::clear();
-        $this->info("ঝুঁকির ছবি {$rated} জনের।");
+        $this->info("ঝুঁকির ছবি {$rated} জনের, অস্থায়ী সীমা শেষের খবর {$ending}টা।");
 
         return $broke ? self::FAILURE : self::SUCCESS;
     }

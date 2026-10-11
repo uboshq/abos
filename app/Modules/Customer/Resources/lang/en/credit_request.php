@@ -38,4 +38,5 @@ return [
     'status_cancelled' => 'Withdrawn',
     'status_expired' => 'Expired',
     'status_void' => 'No owner signature — not set',
+    'waiting_title' => ':customer — a credit-limit raise waits for your signature',
 ];

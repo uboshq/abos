@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\CreditControl\Services;
 
+use App\Core\Services\NotificationService;
+use App\Core\Services\Ownership;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DateFormat;
+use App\Core\Support\Money;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +48,56 @@ final class CreditDaily
 
         return $done;
     }
+
+    /**
+     * ⭐ অস্থায়ী সীমা শেষ হয়ে আসছে — শেষ দিন আজ থেকে তিন দিনের মধ্যে, মালিক(দের) খবর (ধাপ ৩.৪)।
+     *
+     * ⓘ একই সীমার একই শেষ দিনে একবারই (চাবি গ্রাহক + শেষ দিন) — রোজ চললেও; নতুন শেষ দিন বসালে নতুন খবর।
+     * ⓘ খবর কেবল জানায়: শেষ দিনের পরদিন সীমা নিজে থেকেই সাধারণে নামে ([[Customer::effectiveCreditLimit()]])।
+     *
+     * @return int কতটা সীমার খবর গেল
+     */
+    public function temporaryEnding(?Carbon $on = null): int
+    {
+        $today = ($on ?? Carbon::today())->copy()->startOfDay();
+        $companyId = (int) CompanyContext::id();
+        $owners = app(Ownership::class)->activeOwnersIn($companyId);
+        $told = 0;
+
+        $ending = $this->activeCustomers()
+            ->whereNotNull('temp_credit_limit')
+            ->whereBetween('temp_credit_limit_until', [$today->toDateString(), $today->copy()->addDays(self::ENDING_DAYS)->toDateString()])
+            ->get();
+
+        foreach ($ending as $customer) {
+            $until = $customer->temp_credit_limit_until->toDateString();
+
+            foreach ($owners as $owner) {
+                app(NotificationService::class)->send(
+                    $owner,
+                    self::TEMPORARY_ENDING,
+                    __('credit_control::notice.temporary_ending_title', ['customer' => $customer->name(), 'date' => DateFormat::format($until)]),
+                    __('credit_control::notice.temporary_ending_body', [
+                        'amount' => Money::format((string) $customer->temp_credit_limit),
+                        'normal' => Money::format((string) ($customer->credit_limit ?? '0')),
+                    ]),
+                    route('credit_control.customer.show', $customer->id),
+                    evenToSelf: true,
+                    key: 'credit_control:temp_ending:'.$customer->id.':'.$until,
+                    about: $customer,
+                );
+            }
+
+            $told++;
+        }
+
+        return $told;
+    }
+
+    /** কত দিন আগে খবর — মালিকের তালিকা: "৩ দিনের মধ্যে শেষ হবে" */
+    public const ENDING_DAYS = 3;
+
+    public const TEMPORARY_ENDING = 'credit_control.temporary_limit_ending';
 
     /** @return \Illuminate\Database\Eloquent\Builder<Customer> */
     private function activeCustomers()
