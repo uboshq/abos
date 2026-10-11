@@ -20,6 +20,8 @@ return [
     'portal_enabled' => 'Portal opened',
     'portal_disabled' => 'Portal closed',
     'portal_password_set' => 'Portal password set',
+    // ⭐ গ্রাহক পোর্টাল, ধাপ ১ — [[CustomerPortalService::changeOwnPassword()]]
+    'portal_password_changed' => 'Portal password changed by the customer',
     'password_set' => 'Password set',
     'password_reset' => 'Password reset by the user',
     'roles_changed' => 'Roles changed',

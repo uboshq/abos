@@ -31,6 +31,7 @@ return [
     'point_search' => 'Type a point name or code',
     'portal_enabled' => 'The portal is open. Tell the customer their code :code and the password.',
     'portal_password_set' => 'The new password is set. Tell the customer — the old one no longer works.',
+    'portal_password_changed_by_customer' => 'By the customer, from the portal',
     'portal_disabled' => 'The portal is closed. They are signed out now, not when the session expires.',
     'portal_note' => 'Once open, the customer can see their own dues and bills over the internet, and raise a deposit claim. They can change nothing, and see nobody else.',
     'portal_never' => 'Never signed in',

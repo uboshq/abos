@@ -650,6 +650,10 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::get('/ledger/pdf', [\App\Modules\Sales\Http\Controllers\PortalStatementController::class, 'pdf'])->name('statement.pdf');
         Route::get('/ledger/{id}', [\App\Modules\Sales\Http\Controllers\PortalStatementController::class, 'entry'])->whereUuid('id')->name('statement.entry');
         Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
+        // ⭐ প্রোফাইল — নিজের তথ্য দেখা, পাসওয়ার্ড বদল ([[PortalProfileController]]; গ্রাহক পোর্টাল, ধাপ ১)
+        Route::get('/profile', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'show'])->name('profile');
+        Route::post('/profile/password', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'password'])
+            ->middleware('throttle:5,1,portal-password')->name('profile.password');
         Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');
         Route::post('/claims', [PortalController::class, 'storeClaim'])->name('claim.store');
         Route::get('/claims/{claim}', [PortalController::class, 'showOwnClaim'])

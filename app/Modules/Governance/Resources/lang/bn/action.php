@@ -20,6 +20,8 @@ return [
     'portal_enabled' => 'পোর্টাল চালু',
     'portal_disabled' => 'পোর্টাল বন্ধ',
     'portal_password_set' => 'পোর্টালের পাসওয়ার্ড বসানো',
+    // ⭐ গ্রাহক পোর্টাল, ধাপ ১ — [[CustomerPortalService::changeOwnPassword()]]
+    'portal_password_changed' => 'পোর্টালের পাসওয়ার্ড গ্রাহক নিজে বদলেছেন',
     'password_set' => 'পাসওয়ার্ড বসানো',
     'password_reset' => 'নিজে পাসওয়ার্ড রিসেট',
     'roles_changed' => 'রোল বদল',

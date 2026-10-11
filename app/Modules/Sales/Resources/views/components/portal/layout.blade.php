@@ -18,10 +18,11 @@
 <body class="min-h-screen bg-(--color-surface-app) text-(--color-ink)">
     <header class="border-b border-(--color-border) bg-(--color-surface-card)">
         <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-            <div class="min-w-0">
+            {{-- ⭐ নামটা প্রোফাইলে নেয় — নিজের তথ্য আর পাসওয়ার্ড (গ্রাহক পোর্টাল, ধাপ ১) --}}
+            <a href="{{ route('sales.portal.profile') }}" class="min-w-0 hover:underline" data-portal-profile-link>
                 <p class="truncate font-semibold">{{ $customer->name_bn ?: $customer->name_en }}</p>
                 <p class="text-2xs text-(--color-ink-muted)">{{ $customer->code }}</p>
-            </div>
+            </a>
 
             <form method="POST" action="{{ route('sales.portal.logout') }}">
                 @csrf
