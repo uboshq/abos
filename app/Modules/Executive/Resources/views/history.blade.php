@@ -38,8 +38,7 @@
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}</h1>
             <form method="GET" action="{{ route('executive.history') }}" class="flex flex-wrap items-center gap-2">
                 <label for="hist-date" class="text-sm text-(--color-ink-muted)">{{ __('executive::history.date') }}</label>
-                <input id="hist-date" type="date" name="date" value="{{ $date }}" max="{{ now()->toDateString() }}"
-                       class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date id="hist-date" name="date" :value="$date" :max="now()->toDateString()" />
                 <label class="sr-only" for="hist-figure">{{ __('executive::compare.figure') }}</label>
                 <select id="hist-figure" name="figure" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (Figures::KEYS as $key)

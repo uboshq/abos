@@ -442,13 +442,13 @@
                               bg-(--color-surface-card) px-2 text-2xs">
             </label>
 
-            {{-- ⓘ সাধারণ তারিখের ঘর, `x-ui.date` নয় — ঐ কম্পোনেন্টের নিজের স্কোপ,
-                 তাই `x-model` ভিতরে পৌঁছায় না; আদায় ভাউচারও এখানে সাধারণ ঘরই নেয়। --}}
+            {{-- ⓘ `x-ui.date`, বাঁধা মানসহ (`bind-iso` · `bind-model`) — কম্পোনেন্টের নিজের স্কোপে `x-model` পৌঁছায় না, তাই মানটা
+                 এভাবে `depositDraft.landsOn`-এ ফেরে, ক্রয়ের জমার ঘরের মতো। খালি `bind-name` — ঘরটা ফর্মে যায় না, আগের মতোই
+                 কেবল খসড়ায় (Design: তারিখের ঘর, ১১ অক্টোবর ২০২৬)। --}}
             <label class="block" x-show="depositIsBank" x-cloak>
                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::field.lands_on') }}</span>
-                <input type="date" x-model="depositDraft.landsOn"
-                       class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-card) px-2 text-2xs">
+                <x-ui.date dense name="deposit_lands_on" bind-name="''"
+                           bind-iso="depositDraft.landsOn" bind-model="depositDraft.landsOn" />
             </label>
 
             <label class="block" x-show="depositIsMfs" x-cloak>

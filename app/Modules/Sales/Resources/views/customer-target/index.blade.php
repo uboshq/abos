@@ -75,10 +75,9 @@
                             </td>
                             <td class="px-3 py-1.5">
                                 @if ($canManage)
-                                    <input type="date" name="target[{{ $c->id }}][closes_on]" value="{{ $row['closes_on'] }}"
-                                           min="{{ $month->toDateString() }}" max="{{ $month->copy()->endOfMonth()->toDateString() }}"
-                                           aria-label="{{ __('sales::customer_target.closes_on') }} — {{ $c->name() }}"
-                                           class="{{ $input }}">
+                                    <x-ui.date dense :name="'target['.$c->id.'][closes_on]'" :id="'closes-on-'.$c->id" :value="$row['closes_on']"
+                                               :min="$month->toDateString()" :max="$month->copy()->endOfMonth()->toDateString()"
+                                               aria-label="{{ __('sales::customer_target.closes_on') }} — {{ $c->name() }}" />
                                 @else
                                     {{ $row['closes_on'] ?? '—' }}
                                 @endif

@@ -137,11 +137,11 @@
                                                        aria-label="{{ __('inventory::field.batch_no') }}"
                                                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
                                                               border-(--color-border) bg-(--color-surface-card) px-2 sm:w-28">
-                                                <input type="date" name="lines[{{ $i }}][expiry_date]"
-                                                       value="{{ old('lines.'.$i.'.expiry_date') }}"
-                                                       aria-label="{{ __('inventory::field.expiry_date') }}"
-                                                       class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
-                                                              border-(--color-border) bg-(--color-surface-card) px-2 sm:w-36">
+                                                <div class="w-full sm:w-36">
+                                                    <x-ui.date dense :name="'lines['.$i.'][expiry_date]'" :id="'count-expiry-'.$i"
+                                                               :value="old('lines.'.$i.'.expiry_date')"
+                                                               aria-label="{{ __('inventory::field.expiry_date') }}" />
+                                                </div>
                                             </div>
                                         @endif
                                     </td>
