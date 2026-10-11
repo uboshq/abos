@@ -109,7 +109,11 @@ final class PurchaseBillService
                  */
                 'free_qty' => $this->unbilledFree($line),
 
-                'rate' => (string) $line->rate,
+                /*
+                 * ⛔ লেখা দর (ভ্যাটসহ) — চালান নিট রাখে, বিল নিজে নিট বের করে; জমা দর দিলে ভ্যাট দুইবার বাদ যেত (cb-র রিভিউ, B1;
+                 * [[ABillFromAReceiptKeepsTheVatOnceTest]])। ⓘ জমা ভ্যাট থেকে, পণ্যের আজকের হার থেকে নয় ([[PurchaseReceiptLine::typedRate()]])।
+                 */
+                'rate' => $line->typedRate(),
                 'discount' => '0',
                 'tax' => null,
                 'purchase_receipt_line_id' => $line->id,
