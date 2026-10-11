@@ -79,6 +79,14 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     protected $hidden = ['portal_password', 'remember_token'];
 
     /**
+     * ⭐ সীমা আর বাকির দিনের প্রতিটা বদল নিজের ইতিহাসে — যে পথেই বদলাক (বাকি নিয়ন্ত্রণ ধাপ ১.৪, [[CustomerCreditChange]])।
+     */
+    protected static function booted(): void
+    {
+        static::updated(fn (self $customer) => CustomerCreditChange::recordFor($customer));
+    }
+
+    /**
      * অডিটে যা কখনো বসবে না।
      *
      * ── কেন hash-টাও নয় ────────────────────────────────────────────

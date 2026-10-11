@@ -7,6 +7,7 @@ namespace App\Modules\Customer\Listeners;
 use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Models\CustomerCreditChange;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -43,7 +44,12 @@ final class ApplyTheLimitOnTheLastSignature
                 return;
             }
 
-            $customer->forceFill(['credit_limit' => (string) $approval->amount])->save();
+            // ⭐ ইতিহাসে কারণ আর সইয়ের সূত্রসহ (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
+            CustomerCreditChange::because(
+                $approval->requested_reason,
+                (int) $approval->id,
+                fn () => $customer->forceFill(['credit_limit' => (string) $approval->amount])->save(),
+            );
         });
     }
 }

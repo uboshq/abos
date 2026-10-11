@@ -16,6 +16,7 @@ use App\Models\Approval;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Models\CustomerCreditChange;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Support\Facades\DB;
@@ -189,7 +190,8 @@ final class CustomerService
             $this->assertRaiseIsSigned($customer, $before, $after);
         }
 
-        $customer->update($data);
+        // ⭐ সীমা বদলের ইতিহাসে কোন সইয়ে — বাড়ানো হলে যে সই এইমাত্র মিলল (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
+        CustomerCreditChange::because(null, $this->signedRaise($customer, $before, $after), fn () => $customer->update($data));
 
         return $customer->fresh();
     }
@@ -235,7 +237,11 @@ final class CustomerService
             }
         }
 
-        $customer->forceFill(['credit_limit' => $after])->save();
+        CustomerCreditChange::because(
+            __('customer::credit_history.by_import'),
+            $this->signedRaise($customer, $before, $after),
+            fn () => $customer->forceFill(['credit_limit' => $after])->save(),
+        );
 
         return 'applied';
     }
@@ -408,6 +414,18 @@ final class CustomerService
         throw ValidationException::withMessages([
             'credit_limit' => __('core.approval.awaiting'),
         ]);
+    }
+
+    /** বাড়ানো হলে যে সই সেটা ঢাকে, তার সারি — ইতিহাসের সূত্রের জন্য; কমানো বা সমান হলে null */
+    private function signedRaise(Customer $customer, string $before, string $after): ?int
+    {
+        if (bccomp($after, $before, 4) <= 0) {
+            return null;
+        }
+
+        $latest = app(ApprovalEngine::class)->latestFor($customer, 'credit_limit');
+
+        return $latest?->status === Approval::APPROVED ? (int) $latest->id : null;
     }
 
     /**
