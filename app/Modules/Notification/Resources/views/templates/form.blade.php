@@ -13,7 +13,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $template->exists ? $template->name : __('notification::template.new') }}</x-slot:title>
 
-    <div class="mx-auto max-w-5xl space-y-4">
+    <div class="space-y-4">
         <div class="flex items-center justify-between gap-2">
             <h1 class="text-lg font-semibold">{{ $template->exists ? $template->name : __('notification::template.new') }}</h1>
             <a href="{{ route('notification.templates.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::template.back') }}</a>
