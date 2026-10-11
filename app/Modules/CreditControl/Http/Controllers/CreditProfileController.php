@@ -46,6 +46,7 @@ class CreditProfileController extends Controller
                 'old' => $c->old_value,
                 'new' => $c->new_value,
                 'money' => in_array($c->field, CustomerCreditChange::MONEY_FIELDS, true),
+                'date' => $c->field === 'temporary_credit_until',
                 'who' => $c->changer?->name,
                 'reason' => $c->reason,
                 'approval' => $c->approval_id,

@@ -12,8 +12,9 @@
     $figures = [
         ['key' => 'limit', 'label' => __('credit_control::profile.limit'), 'value' => Money::format($position['normal_limit'])],
         // ⭐ অস্থায়ী সীমা আর তার শেষ দিন — খাটলে তবেই (ধাপ ২.৩); শেষ দিনের পরে চলতি সীমা নিজেই সাধারণে ফেরে
-        ['key' => 'temporary', 'label' => __('credit_control::profile.temporary_limit'), 'value' => $position['temporary_limit'] === null ? '—'
-            : Money::format($position['temporary_limit']).' · '.__('credit_control::profile.until', ['date' => DateFormat::format($position['temporary_until'])])],
+        ['key' => 'temporary', 'label' => $position['temporary_limit'] === null ? __('credit_control::profile.temporary_limit')
+            : __('credit_control::profile.temporary_limit').' · '.__('credit_control::profile.until', ['date' => DateFormat::format($position['temporary_until'])]),
+            'value' => $position['temporary_limit'] === null ? '—' : Money::format($position['temporary_limit'])],
         ['key' => 'effective', 'label' => __('credit_control::profile.effective_limit'), 'value' => Money::format($position['limit'])],
         ['key' => 'days', 'label' => __('credit_control::profile.credit_days'), 'value' => $customer->credit_days === null ? '—' : __('credit_control::profile.days', ['n' => $customer->credit_days])],
         ['key' => 'due', 'label' => __('credit_control::profile.due'), 'value' => Money::format($position['due'])],
@@ -115,9 +116,9 @@
                             <x-ui.date name="temporary_until" dense :value="old('temporary_until')" />
                         </div>
                         <input type="text" name="reason" required maxlength="500" value="{{ old('reason') }}" placeholder="{{ __('credit_control::profile.reason_required') }}"
-                               class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                               class="h-(--spacing-field-dense) min-w-48 flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
                         @unless ($isOwner)
-                            <input type="file" name="file" aria-label="{{ __('credit_control::request.file') }}" class="max-w-48 text-2xs text-(--color-ink-muted)">
+                            <x-ui.file-input id="cc-request-file" name="file" />
                         @endunless
                         <x-ui.button type="submit" tone="secondary">{{ $isOwner ? __('credit_control::request.direct_submit') : __('credit_control::request.submit') }}</x-ui.button>
                     </form>
@@ -175,8 +176,8 @@
                                 <tr class="border-t border-(--color-border)">
                                     <td class="whitespace-nowrap">{{ DateFormat::format($row['at']) }}</td>
                                     <td>{{ $row['what'] }}</td>
-                                    <td class="tabular text-right">{{ $row['old'] === null ? '—' : ($row['money'] ? Money::format($row['old']) : $row['old']) }}</td>
-                                    <td class="tabular text-right">{{ $row['new'] === null ? '—' : ($row['money'] ? Money::format($row['new']) : $row['new']) }}</td>
+                                    <td class="tabular text-right">{{ $row['old'] === null ? '—' : ($row['money'] ? Money::format($row['old']) : (($row['date'] ?? false) ? DateFormat::format($row['old']) : $row['old'])) }}</td>
+                                    <td class="tabular text-right">{{ $row['new'] === null ? '—' : ($row['money'] ? Money::format($row['new']) : (($row['date'] ?? false) ? DateFormat::format($row['new']) : $row['new'])) }}</td>
                                     <td>{{ $row['who'] ?? '—' }}</td>
                                     <td>
                                         {{ $row['reason'] ?? '—' }}
