@@ -654,6 +654,13 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::get('/profile', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'show'])->name('profile');
         Route::post('/profile/password', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'password'])
             ->middleware('throttle:5,1,portal-password')->name('profile.password');
+        // ⭐ তথ্য বদলের অনুরোধ আর কাগজ — অফিসে যায়, রেকর্ড নিজে বদলায় না ([[ProfileRequestService]])
+        Route::post('/profile/requests', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'requestContact'])
+            ->middleware('throttle:10,1,portal-profile')->name('profile.request');
+        Route::post('/profile/papers', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'uploadPaper'])
+            ->middleware('throttle:10,1,portal-profile')->name('profile.paper');
+        Route::get('/profile/papers/{id}', [\App\Modules\Sales\Http\Controllers\PortalProfileController::class, 'paper'])
+            ->whereUuid('id')->name('profile.paper.show');
         Route::get('/claims/new', [PortalController::class, 'showClaim'])->name('claim.create');
         Route::post('/claims', [PortalController::class, 'storeClaim'])->name('claim.store');
         Route::get('/claims/{claim}', [PortalController::class, 'showOwnClaim'])

@@ -341,6 +341,17 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.portal.claim.slip' => 'নিজের দাবির ব্যাংক স্লিপ — অন্যের দাবিতে ৪০৩ ([[PortalController::ownClaimSlip()]])',
         'sales.portal.scan' => 'QR থেকে নিজের চালান — অন্যের চালান ৪০৪ ([[ScannedPaper::dealer()]])',
         'sales.portal.scan.received' => 'নিজের চালানের মাল পাওয়া নিশ্চিত — কেবল রওনার পরে, অন্যেরটা ৪০৪',
+        // ⭐ গ্রাহক পোর্টাল, ধাপ ১ (১১ অক্টোবর ২০২৬) — সব পাতা [[CustomerPapers]]-এর সরু পথে, গ্রাহক আসে গার্ড থেকে
+        'sales.portal.bill.index' => 'নিজের পাকা বিল — তালিকা নিজের গ্রাহক-id ধরে ছাঁকা ([[CustomerPapers::bills()]])',
+        'sales.portal.bill.show' => 'নিজের একটা পাকা বিল — অন্যের, খসড়া বা বাতিল বিল ৪০৪ ([[CustomerPapers::bill()]])',
+        'sales.portal.bill.pdf' => 'নিজের পাকা বিলের PDF — অন্যেরটা ৪০৪, নামানো খাতায় গ্রাহকের নামে',
+        'sales.portal.statement.entry' => 'নিজের খতিয়ানের একটা সারির কাগজ — অন্যের সারি ৪০৪ ([[CustomerPapers::statementEntry()]])',
+        'sales.portal.statement.pdf' => 'নিজের বিবরণীর PDF — নিজের খতিয়ানের সারিই, খাতায় গ্রাহকের নামে',
+        'sales.portal.profile' => 'নিজের তথ্য আর নিজের অনুরোধ — কেবল দেখা',
+        'sales.portal.profile.password' => 'নিজের পাসওয়ার্ড বদল — আগেরটা জানলে তবেই, কর্মীর দরজার নিয়মে',
+        'sales.portal.profile.request' => 'নিজের তথ্য বদলের অনুরোধ — অফিসে যায়, রেকর্ড নিজে বদলায় না',
+        'sales.portal.profile.paper' => 'নিজের কাগজ তোলা (ছবি/PDF) — নিজের নামেই, ফর্ম থেকে নয়',
+        'sales.portal.profile.paper.show' => 'নিজের তোলা কাগজ — অন্যেরটা ৪০৪ ([[CustomerPapers::profileRequest()]])',
         /*
          * ⚠️ খতিয়ানের পাতাটাও এই তালিকায়, আর কারণটা বাকিগুলোর মতোই:
          * পোর্টালে লগইন করেন একজন **গ্রাহক**, আর গ্রাহকের কোনো অনুমতি

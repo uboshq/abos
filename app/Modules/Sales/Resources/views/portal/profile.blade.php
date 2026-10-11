@@ -1,7 +1,7 @@
 {{--
-    ⭐ গ্রাহকের প্রোফাইল — নিজের তথ্য, আর পাসওয়ার্ড বদল (গ্রাহক পোর্টাল, ধাপ ১; [[PortalProfileController]])।
+    ⭐ গ্রাহকের প্রোফাইল — নিজের তথ্য, বদলের অনুরোধ ও কাগজ, আর পাসওয়ার্ড বদল (গ্রাহক পোর্টাল, ধাপ ১; [[PortalProfileController]])।
 
-    ⛔ মূল রেকর্ড এখানে বদলায় না — মালিকের নিয়ম। তথ্য কেবল দেখা।
+    ⛔ মূল রেকর্ড এখানে বদলায় না — মালিকের নিয়ম। তথ্য দেখা যায়; বদল অফিসে অনুরোধ হয়ে যায়।
 --}}
 <x-sales::portal.layout :customer="$customer" :title="__('sales::portal_profile.title')">
     <h1 class="mb-3 text-lg font-semibold">{{ __('sales::portal_profile.title') }}</h1>
@@ -27,6 +27,8 @@
             @endforeach
         </dl>
     </section>
+
+    @include('sales::portal.partials.profile-requests')
 
     <section data-boxed id="password"
              class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

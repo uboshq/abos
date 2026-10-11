@@ -22,6 +22,8 @@ return [
     'portal_password_set' => 'পোর্টালের পাসওয়ার্ড বসানো',
     // ⭐ গ্রাহক পোর্টাল, ধাপ ১ — [[CustomerPortalService::changeOwnPassword()]]
     'portal_password_changed' => 'পোর্টালের পাসওয়ার্ড গ্রাহক নিজে বদলেছেন',
+    'profile_request_done' => 'পোর্টালের অনুরোধ বসানো হলো',
+    'profile_request_refused' => 'পোর্টালের অনুরোধ হলো না',
     'password_set' => 'পাসওয়ার্ড বসানো',
     'password_reset' => 'নিজে পাসওয়ার্ড রিসেট',
     'roles_changed' => 'রোল বদল',

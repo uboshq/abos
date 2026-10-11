@@ -18,7 +18,7 @@ use Tests\TestCase;
  * ⭐ গ্রাহকের প্রোফাইল আর নিজের পাসওয়ার্ড — গ্রাহক পোর্টাল, ধাপ ১ (১১ অক্টোবর ২০২৬)।
  *
  * ── দাবিগুলো ─────────────────────────────────────────────────────────────
- *   · প্রোফাইলে নিজের তথ্য, আর সেটা কেবল দেখা — বদলের কোনো ঘর নেই
+ *   · প্রোফাইলে নিজের তথ্য (বদল কেবল অনুরোধে — আলাদা দাবি)
  *   · এখনকার পাসওয়ার্ড না জানলে বদল নয়
  *   · নতুন পাসওয়ার্ড অফিসের সেই একই নিয়মে (১২ অক্ষর, অক্ষর + সংখ্যা)
  *   · বদল নিরীক্ষার খাতায় ওঠে — কর্মীর ঘর খালি, অর্থাৎ গ্রাহক নিজে
@@ -48,8 +48,8 @@ final class ThePortalCustomerChangesOnlyTheirOwnPasswordTest extends TestCase
     {
         $this->asMe()->get(route('sales.portal.profile'))->assertOk()
             ->assertSee('data-portal-profile-contact', false)
-            ->assertSee('Rahman Mia')->assertSee('01711000111')->assertSee('PROFILE-1')
-            ->assertDontSee('name="phone"', false)->assertDontSee('name="owner_name"', false);
+            ->assertSee('Rahman Mia')->assertSee('01711000111')->assertSee('PROFILE-1');
+        // ⓘ বদলের ঘরগুলো অনুরোধের ফর্মে — রেকর্ড নিজে বদলায় না ([[ThePortalCustomerAsksTheOfficeToChangeTheirDetailsTest]])
     }
 
     public function test_a_wrong_current_password_or_a_weak_new_one_changes_nothing(): void
