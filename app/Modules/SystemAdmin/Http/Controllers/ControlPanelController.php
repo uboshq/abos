@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use App\Modules\SystemAdmin\Support\ControlPanelTabs;
 use Illuminate\Http\RedirectResponse;
@@ -309,6 +310,31 @@ class ControlPanelController extends Controller implements HasMiddleware
         $refused = [];
         $superAdminOnly = [];
 
+        /*
+         * ⛔ সংখ্যার ঘর আগে যাচাই, কিছু বসানোর আগেই — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ আগে যা লেখা হত তাই বসত: "10,000" টেক্সট হয়ে জমত, আর অনুমোদনের ইঞ্জিনের
+         * `bccomp()` ঐ লেখায় ভেঙে প্রতিটা অনুমোদন থামিয়ে দিত। ⭐ এখন কমা আর বাংলা অঙ্ক
+         * সরিয়ে সংখ্যা বসে ([[PlainNumber]]); সংখ্যাই না হলে কিছুই বসে না, আর পাতায় ঘরের
+         * নাম লেখা আসে — অর্ধেক বসানো ফর্মের চেয়ে পুরোটা ফেরত ভালো।
+         */
+        $notNumbers = [];
+
+        foreach ($this->settings->definitions() as $key => $definition) {
+            $raw = $submitted[$key] ?? null;
+
+            if (isset($scope[$key]) && ($definition['type'] ?? null) === 'number'
+                && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::from($raw) === null) {
+                $notNumbers[] = __($definition['label']);
+            }
+        }
+
+        if ($notNumbers !== []) {
+            return back()->withInput()->withErrors(['settings' => __('system_admin::validation.setting_not_a_number', [
+                'settings' => implode('; ', $notNumbers),
+            ])]);
+        }
+
         $changed += $this->saveMenuSwitches($scope, $submitted);
 
         foreach ($this->settings->definitions() as $key => $definition) {
@@ -334,6 +360,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                 // অনুপস্থিতিই "বন্ধ"
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
                 'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+                // ⭐ "১০,০০০" → "10000"; খালি মানে "যা ছিল তাই থাক" ([[SettingsController]]-এর মতো)
+                'number' => PlainNumber::from($raw),
 
                 /*
                  * ⛔ বাছাইয়ের ঘরে তালিকার বাইরের কিছু নয় — ২৯ সেপ্টেম্বর ২০২৬।

@@ -7,9 +7,12 @@ namespace App\Http\Controllers\Api;
 use App\Core\Engines\Sync\SyncService;
 use App\Core\Security\CredentialCheck;
 use App\Core\Security\MfaCodeRequired;
+use App\Core\Security\MfaService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseInactiveAccounts;
+use App\Http\Middleware\SuperAdminMustHaveTwoSteps;
+use App\Models\SyncDevice;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,6 +79,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly CredentialCheck $credentials,
         private readonly SyncService $sync,
+        private readonly MfaService $mfa,
     ) {}
 
     /**
@@ -175,6 +179,25 @@ class AuthController extends Controller
 
         CompanyContext::set($companyId, $user->current_branch_id);
 
+        /*
+         * ⛔ যাঁর দুই ধাপ বাধ্যতামূলক অথচ বসানো নেই, ফোন তাঁকে ঢোকায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⓘ ওয়েবে [[SuperAdminMustHaveTwoSteps]] তাঁকে বসানোর পর্দায়
+         * আটকে রাখে, কিন্তু ঐ মিডলওয়্যার কেবল web গ্রুপে। ⚠️ [[CredentialCheck]]
+         * দেখে কেবল "চালু আছে কি না" — তাই চালু না করা সুপার অ্যাডমিন
+         * ফোন দিয়ে কেবল পাসওয়ার্ডেই পুরো টোকেন পেয়ে যেতেন, আর
+         * বাধ্যতামূলক তালাটা দ্বিতীয় দরজায় ঐচ্ছিক হয়ে যেত।
+         * ⓘ বসানোর পর্দা ফোনে নেই, তাই উত্তরটা: আগে ওয়েবে বসান। বসানো
+         * থাকলে কোডটা উপরের যাচাই-ই চায়।
+         *
+         * ⚠️ কোম্পানির প্রসঙ্গ বসার **পরে**, আগে নয়: রোলগুলো কোম্পানি-ভিত্তিক
+         * (Spatie teams), তাই প্রসঙ্গ ছাড়া `hasRole()` সুপার অ্যাডমিনকেও
+         * "না" বলত আর তালাটা নীরবে খোলা থাকত — পরীক্ষা ঠিক এটাই ধরেছিল।
+         */
+        if ($this->twoStepMissing($user)) {
+            return response()->json(['message' => __('auth.two_step_set_up_on_web_first')], 403);
+        }
+
         $this->sync->register(
             $user,
             $data['deviceId'],
@@ -231,6 +254,16 @@ class AuthController extends Controller
             RefuseInactiveAccounts::revokeStandingAccess($user);
 
             return response()->json(['message' => __('auth.dismissed')], 401);
+        }
+
+        /*
+         * ⛔ নবায়নেও একই তালা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ নাহলে নিয়মটা চালুর আগে নেওয়া একটা refresh টোকেন প্রতি
+         * ৩০ দিনে নিজেকে নতুন করে চিরকাল চলত, দুই ধাপ ছাড়াই।
+         */
+        if ($this->twoStepMissing($user)) {
+            return response()->json(['message' => __('auth.two_step_set_up_on_web_first')], 403);
         }
 
         $data = $request->validate([
@@ -314,6 +347,27 @@ class AuthController extends Controller
      * ⓘ পাহারা আগের মতোই, কেবল এখানে স্পষ্ট: টোকেন আছে, মেয়াদ ফুরোয়নি, ক্ষমতা `refresh` (access টোকেনে নবায়ন নয়),
      * আর ব্যবহার করা টোকেন মুছে যায় বলে দ্বিতীয়বার চলে না।
      */
+    /**
+     * দুই ধাপ এই মানুষের জন্য বাধ্যতামূলক, অথচ এখনো বসানো হয়নি।
+     *
+     * ⓘ "বাধ্যতামূলক" এর সংজ্ঞা একটাই, ওয়েবের তালার সাথে ভাগ করা
+     * ([[SuperAdminMustHaveTwoSteps::isRequiredFor()]]): দুই জায়গায় দুইটা
+     * নিয়ম হলে একদিন একটা বদলাত, অন্যটা নয়।
+     */
+    private function twoStepMissing(User $user): bool
+    {
+        /*
+         * ⓘ নবায়নের দরজায় কোম্পানির প্রসঙ্গ বসানো থাকে না, তাই রোলটা
+         * তাঁর চলতি কোম্পানিতেই পড়া হয় — ওয়েবের তালা যেখানে পড়ে।
+         */
+        $required = $user->current_company_id === null
+            ? SuperAdminMustHaveTwoSteps::isRequiredFor($user)
+            : CompanyContext::forCompany((int) $user->current_company_id,
+                fn (): bool => SuperAdminMustHaveTwoSteps::isRequiredFor($user));
+
+        return $required && ! $this->mfa->isOn($user);
+    }
+
     private function refreshTokenFrom(Request $request): ?PersonalAccessToken
     {
         $plain = $request->bearerToken();
@@ -362,7 +416,7 @@ class AuthController extends Controller
 
         // ⭐ বের হলে এই ফোনে আর বার্তা নয় — FCM টোকেন মোছা ([[PushTokenController]], ২ অক্টোবর ২০২৬)
         if ($deviceId !== '') {
-            \App\Models\SyncDevice::query()->withoutGlobalScopes()
+            SyncDevice::query()->withoutGlobalScopes()
                 ->where('device_id', $deviceId)->where('user_id', $user->id)
                 ->update(['push_token' => null, 'push_token_at' => null]);
         }
