@@ -133,12 +133,25 @@
     কিছুই বসে না। পুরো নিয়মটা resources/js/pricing.js-এ, তার ১৪টা
     পরীক্ষা সহ।
 --}}
+@php
+    /*
+     * ⭐ দামের ভেতরের ভ্যাটের পণ্য — সারির মোটে ভ্যাট আবার যোগ না করতে (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     * ⓘ একটা কোয়েরি, পণ্যপ্রতি নয় — ভেতরের হারগুলো তুলে পণ্যের `tax_id` মেলানো।
+     */
+    $inclusiveTaxes = \App\Modules\MasterData\Models\Tax::query()->where('is_inclusive', true)->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $inclusive = collect($products)
+        ->filter(fn ($product) => $product->tax_id !== null && in_array((int) $product->tax_id, $inclusiveTaxes, true))
+        ->map(fn ($product) => (string) $product->id)
+        ->values()
+        ->all();
+@endphp
 <div x-data="purchaseLineEditor({
                  rows: @js($lines),
                  packs: @js($packs),
                  packDefaults: @js($packDefaults),
                  lots: @js($lotProducts),
                  pricing: @js($pricing ?? []),
+                 inclusive: @js($inclusive),
                })">
 
     <div class="table-responsive">
