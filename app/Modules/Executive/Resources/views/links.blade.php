@@ -62,22 +62,22 @@
         @endif
 
         <section class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <table class="w-full text-sm">
+            <table class="ui-grid w-full text-sm">
                 <thead>
                     <tr class="text-left text-2xs text-(--color-ink-muted)">
-                        <th class="px-3 py-2 font-semibold">{{ __('executive::links.company') }}</th>
-                        <th class="px-3 py-2 font-semibold">{{ __('executive::links.party') }}</th>
-                        <th class="px-3 py-2 font-semibold">{{ __('executive::links.is_sister') }}</th>
-                        <th class="px-3 py-2"></th>
+                        <th class="font-semibold">{{ __('executive::links.company') }}</th>
+                        <th class="font-semibold">{{ __('executive::links.party') }}</th>
+                        <th class="font-semibold">{{ __('executive::links.is_sister') }}</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($links as $link)
                         <tr data-link="{{ $link['id'] }}" class="border-t border-(--color-border)">
-                            <td class="px-3 py-1.5">{{ $link['company'] }}</td>
-                            <td class="px-3 py-1.5">{{ $link['party'] }} <span class="text-2xs text-(--color-ink-muted)">· {{ __('executive::links.type_'.$link['type']) }}</span></td>
-                            <td class="px-3 py-1.5">{{ $link['sister'] }}</td>
-                            <td class="px-3 py-1.5 text-right">
+                            <td>{{ $link['company'] }}</td>
+                            <td>{{ $link['party'] }} <span class="text-2xs text-(--color-ink-muted)">· {{ __('executive::links.type_'.$link['type']) }}</span></td>
+                            <td>{{ $link['sister'] }}</td>
+                            <td class="text-right">
                                 <form method="POST" action="{{ route('executive.links.destroy', ['link' => $link['id']]) }}">
                                     @csrf
                                     @method('DELETE')

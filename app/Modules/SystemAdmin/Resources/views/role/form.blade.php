@@ -445,10 +445,10 @@
 
                     <div class="border-t border-(--color-border) px-4 pb-3 pt-1">
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[40rem] text-sm">
+                            <table class="ui-grid w-full min-w-[40rem] text-sm">
                                 <thead>
                                     <tr class="border-b border-(--color-border) text-left text-xs text-(--color-ink-muted)">
-                                        <th class="py-2 pr-3 font-medium">{{ __('system_admin::permission.column_subject') }}</th>
+                                        <th class="pr-3 font-medium">{{ __('system_admin::permission.column_subject') }}</th>
                                         {{--
                                             ⭐ কলামের মাথায়ও একটা টিক — "এই মডিউলের সব দেখা"।
 
@@ -458,7 +458,7 @@
                                             ভূমিকাটা এক ক্লিকে বসে।
                                         --}}
                                         @foreach ($columns as $column => $label)
-                                            <th class="w-20 px-2 py-2 text-center font-medium">
+                                            <th class="w-20 text-center font-medium">
                                                 <label class="flex cursor-pointer flex-col items-center gap-1">
                                                     <span>{{ $label }}</span>
                                                     <input type="checkbox" data-permission-column="{{ $column }}"
@@ -467,7 +467,7 @@
                                                 </label>
                                             </th>
                                         @endforeach
-                                        <th class="py-2 pl-3 font-medium">{{ __('system_admin::permission.column_special') }}</th>
+                                        <th class="pl-3 font-medium">{{ __('system_admin::permission.column_special') }}</th>
                                     </tr>
                                 </thead>
                                 {{--
@@ -518,7 +518,7 @@
                                         @endphp
                                         <tr data-permission-row data-permission-text="{{ $haystack }}"
                                             class="border-b border-(--color-border) last:border-0">
-                                            <th scope="row" class="py-2 pr-3 text-left font-normal">{{ $row['label'] }}</th>
+                                            <th scope="row" class="pr-3 text-left font-normal">{{ $row['label'] }}</th>
 
                                             @foreach ($columns as $column => $label)
                                                 @if ($column === 'create' && $row['manage'])
@@ -534,7 +534,7 @@
                                                 @elseif ($row['manage'] && in_array($column, ['update', 'delete'], true))
                                                     {{-- তিন কলাম জুড়ে বসেছে — উপরের ঘরেই --}}
                                                 @elseif (isset($row['cells'][$column]))
-                                                    <td class="px-2 py-2 text-center">
+                                                    <td class="text-center">
                                                         @include('system_admin::role.partials.switch', [
                                                             'name' => $row['cells'][$column],
                                                             'label' => $row['label'].' — '.$label,
@@ -555,7 +555,7 @@
                                                          ঘরটা **নীরব** ছিল: যিনি চোখে দেখেন না, তিনি
                                                          "দেওয়া নেই" আর "এমন কাজই নেই" আলাদা করতে
                                                          পারতেন না — অথচ পার্থক্যটাই এখানে আসল কথা। --}}
-                                                    <td class="px-2 py-2 text-center text-(--color-ink-disabled)"
+                                                    <td class="text-center text-(--color-ink-disabled)"
                                                         title="{{ __('system_admin::permission.state_absent') }}">
                                                         <span aria-hidden="true">∅</span>
                                                         <span class="sr-only">{{ __('system_admin::permission.state_absent') }}</span>
@@ -563,7 +563,7 @@
                                                 @endif
                                             @endforeach
 
-                                            <td class="py-2 pl-3">
+                                            <td class="pl-3">
                                                 <div class="flex flex-wrap gap-1.5">
                                                     @foreach ($row['special'] as $name => $verb)
                                                         <label class="cursor-pointer" title="{{ $name }}">

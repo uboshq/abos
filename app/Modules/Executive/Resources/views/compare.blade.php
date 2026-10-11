@@ -76,12 +76,12 @@
                 <span>{{ __('executive::compare.was') }}: {{ \App\Core\Engines\Dashboard\DateRange::label($result['was']['from'], $result['was']['to']) }}</span>
             </div>
             <div class="min-h-0 flex-1 overflow-auto">
-                <table class="w-full text-sm">
+                <table class="ui-grid w-full text-sm">
                     <thead class="sticky top-0 bg-(--color-surface-card)">
                         <tr class="text-left text-2xs text-(--color-ink-muted)">
-                            <th class="px-3 py-2 font-semibold">{{ __('executive::today.col_place') }}</th>
+                            <th class="font-semibold">{{ __('executive::today.col_place') }}</th>
                             @foreach (Figures::COMPARED as $key)
-                                <th class="px-3 py-2 text-right font-semibold">{{ __('executive::figure.'.$key) }}</th>
+                                <th class="text-right font-semibold">{{ __('executive::figure.'.$key) }}</th>
                             @endforeach
                         </tr>
                     </thead>
@@ -93,10 +93,10 @@
                                     : ['sales.report.show', ['slug' => 'monthly']];
                             @endphp
                             <tr data-compare-row="{{ $row['id'] }}" class="border-t border-(--color-border)">
-                                <td class="px-3 py-1.5 font-semibold text-(--color-ink)">{{ $row['name'] }}</td>
+                                <td class="font-semibold text-(--color-ink)">{{ $row['name'] }}</td>
                                 @foreach (Figures::COMPARED as $key)
                                     @php $change = $row['change'][$key]; @endphp
-                                    <td class="tabular px-3 py-1.5 text-right" data-cell="{{ $key }}">
+                                    <td class="tabular text-right" data-cell="{{ $key }}">
                                         @if ($row['now'][$key] === Figures::HIDDEN)
                                             <span class="text-(--color-ink-muted)" title="{{ __('executive::today.hidden') }}">{{ Figures::HIDDEN }}</span>
                                         @else

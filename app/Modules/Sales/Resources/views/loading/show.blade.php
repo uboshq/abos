@@ -31,18 +31,18 @@
 
         <section>
             <h3 class="mb-2 font-semibold">{{ __('sales::loading.by_product') }}</h3>
-            <table class="w-full text-sm">
+            <table class="ui-grid w-full text-sm">
                 <thead>
                     <tr class="border-b border-(--color-border) text-(--color-ink-muted)">
-                        <th class="py-1 text-start">{{ __('sales::field.product') }}</th>
-                        <th class="py-1 text-end">{{ __('sales::field.qty') }}</th>
-                        <th class="py-1 text-end">{{ __('sales::field.free_qty') }}</th>
+                        <th class="text-start">{{ __('sales::field.product') }}</th>
+                        <th class="text-end">{{ __('sales::field.qty') }}</th>
+                        <th class="text-end">{{ __('sales::field.free_qty') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($totals as $row)
                         <tr class="border-b border-(--color-border) last:border-b-0">
-                            <td class="py-1">{{ $row['product'] }}
+                            <td>{{ $row['product'] }}
                                 {{-- ⭐ কোন লট থেকে কত — তোলার লোকের জন্য (ধাপ ৪) --}}
                                 @if (($row['lots'] ?? []) !== [])
                                     <div class="text-xs text-(--color-ink-muted)" data-loading-lots>
@@ -50,8 +50,8 @@
                                     </div>
                                 @endif
                             </td>
-                            <td class="num py-1 text-end">{{ Money::format($row['qty']) }} {{ $row['unit'] }}</td>
-                            <td class="num py-1 text-end">{{ Money::format($row['free']) }}</td>
+                            <td class="num text-end">{{ Money::format($row['qty']) }} {{ $row['unit'] }}</td>
+                            <td class="num text-end">{{ Money::format($row['free']) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="3" class="py-2 text-(--color-ink-muted)">{{ __('sales::loading.no_lines') }}</td></tr>

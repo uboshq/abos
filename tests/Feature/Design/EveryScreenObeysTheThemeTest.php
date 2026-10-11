@@ -61,6 +61,11 @@ class EveryScreenObeysTheThemeTest extends TestCase
     private const TABLE_ALLOWED = [
         'resources/views/components/ui/table.blade.php' => 'কম্পোনেন্টটাই — টেবিলটা এখানেই লেখা',
         'resources/views/print/' => 'ছাপার কাগজ নিজের ছাঁচে; থিমের সাথে সম্পর্ক নেই',
+        /* ⓘ ১১ অক্টোবর ২০২৬ (Design: টেবিলের নাম, ঘরের প্যাডিং) — বাকি ১৮টা টেবিল ui-grid পরেছে */
+        'app/Modules/Sales/Resources/views/print/' => 'বিল-চালান-অর্ডারের ছাপার নকশা — উপরের একই কারণ',
+        'app/Modules/Purchase/Resources/views/print/' => 'ক্রয় বিলের ছাপার নকশা — একই কারণ',
+        'app/Modules/Finance/Resources/views/hand-loan/print/' => 'হাওলাতের চিঠি, ছাপার কাগজ — একই কারণ',
+        'resources/views/components/dashboard/hero-listing.blade.php' => 'ড্যাশবোর্ডের গাঢ় হিরো কার্ডে সাদা লেখার ছোট তালিকা — ui-grid-এর হালকা ডোরা-সারি আর মাথার পটি ওখানে লেখা ঢেকে দিত',
     ];
 
     /**

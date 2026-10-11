@@ -55,25 +55,25 @@
                 {{ __('executive::history.as_kept', ['date' => \App\Core\Engines\Dashboard\DateRange::label($date, $date)]) }}
             </p>
             <div class="min-h-0 flex-1 overflow-auto">
-                <table class="w-full text-sm">
+                <table class="ui-grid w-full text-sm">
                     <thead class="sticky top-0 bg-(--color-surface-card)">
                         <tr class="text-left text-2xs text-(--color-ink-muted)">
-                            <th class="px-3 py-2 font-semibold">{{ __('executive::today.col_place') }}</th>
+                            <th class="font-semibold">{{ __('executive::today.col_place') }}</th>
                             @foreach (Figures::KEYS as $key)
-                                <th class="px-3 py-2 text-right font-semibold">{{ __('executive::figure.'.$key) }}</th>
+                                <th class="text-right font-semibold">{{ __('executive::figure.'.$key) }}</th>
                             @endforeach
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($rows as $row)
                             <tr data-history-row="{{ $row['company_id'] }}-{{ $row['branch_id'] ?? 0 }}" @class(['border-t border-(--color-border)', 'bg-(--color-surface-hover) font-semibold' => $row['branch_id'] === null])>
-                                <td class="px-3 py-1.5">{{ $row['name'] }}
+                                <td>{{ $row['name'] }}
                                     @if ($row['branch_id'] !== null)
                                         <span class="text-2xs text-(--color-ink-muted)">· {{ $row['company_name'] }}</span>
                                     @endif
                                 </td>
                                 @foreach (Figures::KEYS as $key)
-                                    <td class="tabular px-3 py-1.5 text-right" data-cell="{{ $key }}">{{ $show($row['values'][$key], $key) }}</td>
+                                    <td class="tabular text-right" data-cell="{{ $key }}">{{ $show($row['values'][$key], $key) }}</td>
                                 @endforeach
                             </tr>
                         @empty
