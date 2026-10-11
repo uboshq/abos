@@ -103,6 +103,10 @@ return [
         'customer.dealers' => 'Which customers one sees',
         'customer.binding' => 'Customer bindings',
         'documents' => 'Whole documents module',
+        'notification' => 'Whole notification module',
+        'notification.templates' => 'Notification templates',
+        'notification.archive' => 'Notification archive',
+        'notification.reports' => 'Notification reports',
         'inventory.count' => 'Stock counts',
         'inventory.qc' => 'Quality inspection',
         'inventory.serial' => 'Serial numbers',
@@ -182,6 +186,8 @@ return [
         'loyalty' => 'Loyalty',
         'recall' => 'Recall',
         'analytics' => 'Analytics',
+        'import' => 'Import',
+        'verify' => 'Verify',
 
         /* ⭐ ডকুমেন্টের ক্রিয়া — documents রিভিউ ⛔৮, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
         'upload' => 'Upload',
@@ -199,6 +205,20 @@ return [
         'confidential' => 'Confidential',
         'highly_confidential' => 'Highly confidential',
         'restricted' => 'Restricted',
+
+        /* Notification verbs — fe's Mac run on ad1ac9f3, 11 Oct 2026 (TheRoleScreenSaidCoaAndTillTest) */
+        'center' => 'Notification centre',
+        'channels' => 'Channels',
+        'deliveries' => 'Delivery log',
+        'retry' => 'Send again',
+        'rules' => 'Rules',
+        'recipients' => 'Recipient groups',
+        'schedules' => 'Schedules',
+        'preferences' => 'Everyone\'s preferences',
+        'dashboard' => 'Dashboard',
+        'escalations' => 'Escalations',
+        'export' => 'Export',
+        'reports' => 'Reports',
     ],
 
     'granted_only' => 'Granted only',

@@ -59,6 +59,15 @@
     'bindName' => null,   // x-bind:name — Alpine expression
     'bindIso' => null,    // শুরুর মান কোথা থেকে — Alpine expression
     'bindModel' => null,  // পাকা ISO কোথায় ফিরে যাবে — Alpine expression
+
+    /*
+     * ক্যালেন্ডারের সীমা — ISO (`2026-10-11`), ব্রাউজারের পিকারে বসে।
+     *
+     * ⓘ কাঁচা `<input type="date" min max>` থেকে এই ঘরে আসা পাতাগুলো (১১ অক্টোবর ২০২৬, Design: তারিখের ঘর) সীমাটা হারায় না —
+     * পিকার আগের মতোই সীমার বাইরের দিন ধূসর করে। ⚠️ হাতে লেখা তারিখ সীমা মানে না; আসল পাহারা সার্ভারের যাচাই, এটা কেবল সুবিধা।
+     */
+    'min' => null,
+    'max' => null,
 ])
 
 {{--
@@ -161,6 +170,7 @@
          showPicker() Chrome/Edge ৯৯+ এ আছে; না থাকলে ঘরটায় হাতে লেখা যায়,
          তাই কোথাও আটকে যায় না। --}}
     <input type="date" x-ref="native" x-bind:value="iso" tabindex="-1" aria-hidden="true"
+           @if ($min) min="{{ $min }}" @endif @if ($max) max="{{ $max }}" @endif
            x-on:change="fromNative($event.target.value)"
            @class(['pointer-events-none absolute bottom-0 h-0 w-0 opacity-0', 'end-9' => ! $dense, 'end-7' => $dense])>
 

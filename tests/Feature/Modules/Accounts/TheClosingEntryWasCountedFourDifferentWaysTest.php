@@ -80,7 +80,8 @@ final class TheClosingEntryWasCountedFourDifferentWaysTest extends TestCase
             asset: $asset,
             amount: '40000',
             intoAccountId: app(CashTillService::class)->ensurePrimaryTill()->account_id,
-            date: $this->year->starts_on->copy()->addMonths(6)->toDateString(),
+            // ⓘ বছরের ছয় মাসে, তবে আজকের পরে নয় — বিদায় ভবিষ্যতের দিনে হয় না (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+            date: $this->year->starts_on->copy()->addMonths(6)->min(now())->toDateString(),
         );
 
         $this->assertSame(FixedAsset::DISPOSED, $sold->status);

@@ -51,7 +51,7 @@
             <section data-credit-warnings class="{{ $box }}">
                 <h2 class="font-semibold">{{ __('sales::order_status.box_warnings') }}</h2>
                 @foreach ($warnings as $warning)
-                    <p class="mt-1">⚠️ {{ DepotCheckController::warningText($warning) }}</p>
+                    <p class="mt-1"><x-ui.icon name="alert-triangle" :size="14" /> {{ DepotCheckController::warningText($warning) }}</p>
                 @endforeach
             </section>
         @endif

@@ -114,7 +114,9 @@ final class AdjustingReversals
                     ->exists();
 
                 if (! $told) {
-                    app(NotificationService::class)->send($user, self::STUCK, $title, $body, $url);
+                    // ⓘ একটাই চাবি সবার জন্য — একটা ঘটনা, যাতে নিয়মের বাড়তি প্রাপক N-টা কপি না পান (cb-র রিভিউ, ১১ অক্টোবর ২০২৬;
+                    // [[OneStuckReversalIsOneNoticeForARulesPeopleTest]])
+                    app(NotificationService::class)->send($user, self::STUCK, $title, $body, $url, key: 'accounts:adjusting_stuck:'.$voucher->id);
                 }
             }
         } catch (\Throwable $e) {

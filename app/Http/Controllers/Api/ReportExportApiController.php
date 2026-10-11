@@ -85,6 +85,9 @@ final class ReportExportApiController extends Controller
 
         $definition = $this->reports->get($slug);
 
+        // ⛔ রপ্তানির নিজের চাবি থাকলে সেটাও — ওয়েবের রপ্তানির সমান (বিজ্ঞপ্তির রিপোর্ট; [[ANotificationReportExportsOnlyWithItsKeyTest]])
+        abort_if($definition->exportPermission !== null && ! $user->can($definition->exportPermission), 403);
+
         $result = $this->reports->run(
             $slug,
             // ⭐ §৯-এর ছাঁকনি, হুবহু একই নামে (চুক্তি §১০)

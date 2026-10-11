@@ -10,11 +10,11 @@
         @forelse ($list['rows'] as $row)
             <a href="{{ route('sales.portal.tracking.show', [$row['kind'], $row['id']]) }}" data-tracking-row
                class="block rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3"
-               style="border-left: 4px solid {{ $trackingColours[$row['category']] ?? '#9CA3AF' }}">
+               style="border-left: 4px solid {{ $trackingColours[$row['category']] ?? 'var(--color-ink-muted)' }}">
                 <div class="font-semibold">{{ $row['no'] }}</div>
                 <div class="text-sm text-(--color-ink-muted)">{{ $row['date'] }}</div>
 {{-- ⓘ ডিলারের ট্র্যাকিংয়ে টাকা নেই — মালিক, ৬ অক্টোবর ২০২৬ (খ): ধাপ দেখবেন, দাম নয়; দাম আদেশের ফর্মে --}}
-                <div class="text-sm font-medium" style="color: {{ $trackingColours[$row['category']] ?? '#111827' }}">
+                <div class="text-sm font-medium" style="color: {{ $trackingColours[$row['category']] ?? 'var(--color-ink)' }}">
                     {{ __('sales::tracking.step.'.$row['step']) }}
                 </div>
             </a>

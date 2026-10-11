@@ -65,6 +65,29 @@
         @endforeach
     </div>
 
+    @include('accounts::asset.partials.details')
+
+    {{-- ⭐ দায়িত্বে থাকা কর্মীর স্বীকৃতি আর লেবেল (ধাপ ৪) --}}
+    <div class="mb-5 flex flex-wrap items-center gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 py-3 text-sm">
+        <span class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">{{ __('accounts::asset.custodian_ack') }}</span>
+        @if ($asset->custodian_id === null)
+            <span>—</span>
+        @elseif ($ack = $asset->acknowledgedByCustodian())
+            <x-ui.badge tone="success">{{ __('accounts::asset.ack_done', ['date' => $ack->acknowledged_at?->format('d M Y')]) }} · {{ __('accounts::asset.ack_'.$ack->condition) }}</x-ui.badge>
+        @else
+            <x-ui.badge tone="pending">{{ __('accounts::asset.custodian_ack_none') }}</x-ui.badge>
+        @endif
+        <span class="ms-auto">
+            <x-ui.button tone="secondary" icon="printer" :href="route('accounts.asset.labels', ['assets' => [$asset->id]])" target="_blank">
+                {{ __('accounts::asset.labels_action') }}
+            </x-ui.button>
+        </span>
+    </div>
+
+    @include('accounts::asset.partials.estimate')
+
+    @include('accounts::asset.partials.events')
+
     {{-- ── ⭐ শাখা বদল — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬ ──────────────
 
          ⚠️ কেন কেবল একটা কলাম বদলানো যথেষ্ট নয়: ফ্রিজটা ঢাকা থেকে খুলনায়
@@ -73,7 +96,8 @@
 
          ⓘ ইতিহাসটা নিচে থাকে, কারণ "গত বছর এটা কোথায় ছিল" প্রশ্নটা
          ছয় মাস পরে ওঠে, আর তখন উত্তর দেওয়ার মতো আর কিছু থাকে না। --}}
-    @if ($asset->isActive() && $branches->isNotEmpty())
+    {{-- ⭐ ধাপ ৩: কর্মী, জায়গা আর বিভাগও — শাখা না বদলালে দাখিলা নেই --}}
+    @if ($asset->isInService())
         @can('accounts.asset.manage')
             <form method="POST" action="{{ route('accounts.asset.transfer', $asset) }}"
                   class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
@@ -88,7 +112,14 @@
                 <x-ui.select name="to_branch_id"
                              :label="__('accounts::asset.to_branch')"
                              :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()"
-                             placeholder="—" required />
+                             :placeholder="__('accounts::asset.same_branch')" />
+
+                <x-ui.select name="custodian_id" :label="__('accounts::asset.custodian')"
+                             :options="$employees" :selected="$asset->custodian_id" placeholder="—" />
+
+                <x-ui.field name="location" :label="__('accounts::asset.location')" :value="$asset->location" />
+
+                <x-ui.field name="department" :label="__('accounts::asset.department')" :value="$asset->department" />
 
                 <label class="block">
                     <span class="text-sm font-medium">{{ __('accounts::asset.moved_on') }}</span>
@@ -118,7 +149,18 @@
                 @foreach ($moves as $move)
                     <li class="flex flex-wrap items-center gap-x-3 px-4 py-2">
                         <span class="tabular-nums text-(--color-ink-muted)">{{ $move->moved_on?->format('d M Y') }}</span>
-                        <span>{{ $move->fromBranch?->name() ?? '—' }} → {{ $move->toBranch?->name() ?? '—' }}</span>
+                        @if ($move->movedBranch())
+                            <span>{{ $move->fromBranch?->name() ?? '—' }} → {{ $move->toBranch?->name() ?? '—' }}</span>
+                        @endif
+                        @if ((int) $move->from_custodian_id !== (int) $move->to_custodian_id)
+                            <span>{{ __('accounts::asset.custodian') }}: {{ $people[$move->from_custodian_id] ?? '—' }} → {{ $people[$move->to_custodian_id] ?? '—' }}</span>
+                        @endif
+                        @if ((string) $move->from_location !== (string) $move->to_location)
+                            <span>{{ __('accounts::asset.location') }}: {{ $move->from_location ?? '—' }} → {{ $move->to_location ?? '—' }}</span>
+                        @endif
+                        @if ((string) $move->from_department !== (string) $move->to_department)
+                            <span>{{ __('accounts::asset.department') }}: {{ $move->from_department ?? '—' }} → {{ $move->to_department ?? '—' }}</span>
+                        @endif
                         @if (filled($move->note))
                             <span class="text-2xs text-(--color-ink-muted)">{{ $move->note }}</span>
                         @endif
@@ -129,14 +171,21 @@
         </section>
     @endif
 
-    @if ($asset->isActive())
+    @if ($asset->isInService())
         @can('accounts.asset.manage')
             <form method="POST" action="{{ route('accounts.asset.dispose', $asset) }}"
                   class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
                          bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-4">
                 @csrf
 
-                <p class="text-sm font-semibold lg:col-span-4">{{ __('accounts::asset.dispose_title') }}</p>
+                <div class="lg:col-span-4">
+                    <p class="text-sm font-semibold">{{ __('accounts::asset.dispose_title') }}</p>
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.dispose_hint') }}</p>
+                </div>
+
+                {{-- ⭐ বিক্রি, বাতিল (ভাঙারি) বা হারানো/চুরি — ধাপ ৩ --}}
+                <x-ui.select name="as" :label="__('accounts::asset.leaving_as')" required
+                             :options="collect(\App\Modules\Accounts\Models\FixedAsset::LEAVING)->mapWithKeys(fn ($s) => [$s => __('accounts::asset.leaving_'.$s)])->all()" />
 
                 <label class="flex flex-col gap-1">
                     <span class="text-sm font-medium">{{ __('accounts::asset.disposal_amount') }}</span>
@@ -147,9 +196,10 @@
 
                 <label class="flex flex-col gap-1">
                     <span class="text-sm font-medium">{{ __('accounts::asset.into_account') }}</span>
-                    <select name="into_account_id" required
+                    <select name="into_account_id"
                             class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                                    bg-(--color-surface-app) px-2">
+                        <option value="">—</option>
                         @foreach ($moneyAccounts as $account)
                             <option value="{{ $account->id }}">{{ $account->label() }}</option>
                         @endforeach
@@ -160,6 +210,10 @@
                     <span class="text-sm font-medium">{{ __('accounts::asset.disposed_on') }}</span>
                     <x-ui.date name="disposed_on" :required="true" :value="now()->toDateString()" />
                 </label>
+
+                <div class="lg:col-span-3">
+                    <x-ui.field name="reason" :label="__('accounts::asset.leaving_reason')" />
+                </div>
 
                 <div class="flex items-end">
                     <x-ui.button type="submit" class="w-full">
@@ -173,5 +227,10 @@
     <x-ui.table :rows="$asset->depreciation"
                 :columns="$columns"
                 :empty="__('accounts::asset.empty_entries')" />
+
+    {{-- ⭐ ছবি আর কাগজ — রসিদ, ওয়ারেন্টি কার্ড, জিনিসের ছবি (স্থায়ী সম্পদ ধাপ ১; সংযুক্তির ইঞ্জিন) --}}
+    <div class="mt-5">
+        <x-ui.attachments :document="$asset" />
+    </div>
 
 </x-layouts.app>

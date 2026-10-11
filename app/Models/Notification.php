@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Services\DataScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,13 +28,62 @@ class Notification extends Model
 
     protected $fillable = [
         'company_id', 'user_id', 'type', 'title', 'body', 'url', 'read_at',
+        // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ — কোন ঘটনার, কোন শাখার, কোন কাগজের; শ্রেণি-গুরুত্ব; দেখা আর আর্কাইভ (প্রাপকের নিজের)
+        'event_id', 'branch_id', 'module', 'category', 'priority', 'subject_type', 'subject_id', 'seen_at', 'archived_at',
+        // ⭐ ছুটির দায়িত্বপ্রাপ্তের কপি — কার হয়ে এল
+        'on_behalf_of',
     ];
 
     protected function casts(): array
     {
         return [
             'read_at' => 'datetime',
+            'seen_at' => 'datetime',
+            'archived_at' => 'datetime',
+            'subject_id' => 'integer',
         ];
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(NotificationEvent::class, 'event_id');
+    }
+
+    public function isCritical(): bool
+    {
+        return $this->priority === 'critical';
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    /** @param  Builder<self>  $query */
+    public function scopeInbox(Builder $query): Builder
+    {
+        return $query->whereNull('archived_at');
+    }
+
+    /**
+     * ⛔ এই মানুষটা যা দেখতে পারেন — নিজের খবর, আর কাগজের শাখা তাঁর নাগালে (ধাপ ১; স্পেক §১৩)।
+     *
+     * ⓘ শাখাহীন খবর (কোম্পানির ব্যাপার, পুরনো সারি) সবসময় দেখা যায় — [[DataScope::allows()]]-এর একই নিয়ম। নাগাল পরে
+     * কমানো হলে আগের পাওয়া অন্য শাখার খবরও লুকায়; খোলার সময় কাগজটা আবার দেখা হয় ([[NotificationService::mayOpen()]])।
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        $query->where($query->getModel()->getTable().'.user_id', $user->id);
+
+        $reach = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
+
+        if ($reach !== null) {
+            $query->where(fn (Builder $q) => $q->whereNull('branch_id')->orWhereIn('branch_id', $reach));
+        }
+
+        return $query;
     }
 
     public function user(): BelongsTo
@@ -56,5 +106,11 @@ class Notification extends Model
     public function scopeFor(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
+    }
+
+    /** ছুটিতে থাকা যাঁর হয়ে এই কপিটা এল */
+    public function onBehalfOf(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'on_behalf_of');
     }
 }

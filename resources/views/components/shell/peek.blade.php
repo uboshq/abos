@@ -32,7 +32,7 @@
      @keydown.escape.window="close()"
      @click.self="close()"
      style="position:fixed;inset:0;z-index:60;display:flex;justify-content:center;
-            align-items:flex-start;padding:6vh 16px 16px;background:rgb(0 0 0 / 0.45)">
+            align-items:flex-start;padding:6vh 16px 16px;background:color-mix(in srgb, black 45%, transparent)">
 
     <div x-ref="panel"
          tabindex="-1"

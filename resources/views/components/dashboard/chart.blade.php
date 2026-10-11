@@ -12,8 +12,8 @@
 @props(['panel', 'compact' => false, 'showRange' => true, 'wide' => false])
 
 @php
-    $palette = ['var(--color-chart-1, #2563eb)', 'var(--color-chart-2, #d97706)', 'var(--color-chart-3, #7c3aed)',
-        'var(--color-chart-4, #059669)', 'var(--color-chart-5, #dc2626)', 'var(--color-chart-6, #0891b2)'];
+    $palette = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)',
+        'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)'];
     $zero = fn ($v) => (float) str_replace(',', '', (string) $v) == 0.0;
     $short = fn ($v) => \App\Core\Engines\Dashboard\Series::short($v);
     $isSeries = $panel instanceof \App\Core\Engines\Dashboard\Series;
@@ -35,7 +35,7 @@
                     @endphp
                     <div class="flex h-full w-1/2 flex-col items-center justify-end" style="position: relative">
                         <span data-bar-value @class(['whitespace-nowrap leading-none tabular-nums', 'mb-0.5 text-(--color-ink-muted)' => ! $inside])
-                              @if ($inside) style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%) rotate(180deg); writing-mode: vertical-rl; color: var(--color-ink-inverse); font-weight: 700; font-size: 0.62rem; z-index: 1; text-shadow: 0 0 2px rgb(0 0 0 / 0.35)"
+                              @if ($inside) style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%) rotate(180deg); writing-mode: vertical-rl; color: var(--color-ink-inverse); font-weight: 700; font-size: 0.62rem; z-index: 1; text-shadow: 0 0 2px color-mix(in srgb, black 35%, transparent)"
                               @else style="font-size: 0.6rem" @endif>{{ $zero($point[$side]) ? '' : ($point[$side.'Note'] ?? $short($point[$side])) }}</span>
                         <div class="w-full rounded-t"
                              style="height:{{ $barH }}%; background: {{ $fill }}"
@@ -145,7 +145,7 @@
                         <div class="flex h-6 items-center justify-center rounded text-white"
                              style="width: {{ max(8, (int) round(abs($v) / $max * 100)) }}%; min-width: 2.5rem; background: {{ $palette[$i % 6] }}"
                              title="{{ $part['label'] }}: {{ $part['value'] }}">
-                            <span data-bar-value class="font-semibold tabular-nums" style="text-shadow: 0 0 2px rgb(0 0 0 / 0.45)">{{ $part['value'] }}</span>
+                            <span data-bar-value class="font-semibold tabular-nums" style="text-shadow: 0 0 2px color-mix(in srgb, black 45%, transparent)">{{ $part['value'] }}</span>
                         </div>
                     </div>
                     <span class="w-10 shrink-0 text-end tabular-nums text-(--color-ink-muted)">{{ $prev !== null && $prev > 0 ? (int) round($v / $prev * 100).'%' : '' }}</span>
