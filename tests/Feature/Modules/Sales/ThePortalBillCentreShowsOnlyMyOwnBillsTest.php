@@ -140,6 +140,20 @@ final class ThePortalBillCentreShowsOnlyMyOwnBillsTest extends TestCase
             '⛔ গ্রাহকের কপি অফিসের ছাপার সারিতে উঠল — পরের ছাপায় DUPLICATE বসত।');
     }
 
+    /**
+     * ⛔ হোম পাতার "সাম্প্রতিক বিল" প্রতিটা বিলে ৳০.০০ দেখাত — পড়ত `grand_total`, যে কলাম বিলের নেই।
+     * ⭐ এখন বিলের আসল মোট, আর পাকা বিলটা বিলের ঘরে খোলে (খসড়ার নিজের পাতা নেই)।
+     */
+    public function test_the_home_page_shows_each_recent_bills_real_total_and_opens_it(): void
+    {
+        $bill = $this->bill('INV-H-1', '4321', now()->subDay());
+
+        $this->asMe()->get(route('sales.portal.home'))->assertOk()
+            ->assertSee('4,321.00')
+            ->assertSee(route('sales.portal.bill.show', $bill->public_id), false)
+            ->assertSee('data-portal-bills', false);
+    }
+
     // ── খুঁটিনাটি ────────────────────────────────────────────────────
 
     private function asMe(): static

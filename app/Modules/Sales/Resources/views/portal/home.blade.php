@@ -37,6 +37,13 @@
         </a>
     @endif
 
+    {{-- ⭐ বিলের ঘর — নিজের পাকা বিল, বাকি আর শোধ, PDF (গ্রাহক পোর্টাল, ধাপ ১) --}}
+    <a href="{{ route('sales.portal.bill.index') }}" data-portal-bills
+       class="mb-3 block rounded-(--radius-field) border border-(--color-brand-500) px-4 py-3 text-center
+              font-medium text-(--color-brand-500)">
+        {{ __('sales::portal_bill.title') }}
+    </a>
+
     {{-- ⭐ নিজের অর্ডার কোথায় — ডেলিভারি ট্র্যাকিং (মালিক, ২ অক্টোবর ২০২৬) --}}
     <a href="{{ route('sales.portal.tracking') }}" data-portal-tracking
        class="mb-6 block rounded-(--radius-field) border border-(--color-brand-500) px-4 py-3 text-center
@@ -87,16 +94,28 @@
         <ul class="divide-y divide-(--color-border) rounded-(--radius-card) border
                    border-(--color-border) bg-(--color-surface-card)">
             @foreach ($invoices as $invoice)
-                <li class="flex items-center justify-between gap-3 px-4 py-3">
-                    <span class="min-w-0">
-                        <span class="block font-medium">{{ $invoice->document_no }}</span>
-                        <span class="block text-2xs text-(--color-ink-muted)">
-                            {{ $invoice->trx_date?->format('d M Y') }}
+                <li>
+                    {{-- ⭐ বিলটা এখন খোলে — পাকা হলে বিলের ঘরে (গ্রাহক পোর্টাল, ধাপ ১); খসড়ার নিজের পাতা নেই --}}
+                    @if (in_array($invoice->status, \App\Core\Support\DocumentStatus::POSTED, true))
+                        <a href="{{ route('sales.portal.bill.show', $invoice->public_id) }}"
+                           class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-(--color-surface-hover)">
+                    @else
+                        <div class="flex items-center justify-between gap-3 px-4 py-3">
+                    @endif
+                        <span class="min-w-0">
+                            <span class="block font-medium">{{ $invoice->document_no }}</span>
+                            <span class="block text-2xs text-(--color-ink-muted)">
+                                {{ \App\Core\Support\DateFormat::format($invoice->trx_date) }}
+                            </span>
                         </span>
-                    </span>
-                    <span class="num font-medium">
-                        {{ \App\Core\Support\Money::format($invoice->grand_total) }}
-                    </span>
+                        <span class="num font-medium">
+                            {{ \App\Core\Support\Money::format($invoice->total) }}
+                        </span>
+                    @if (in_array($invoice->status, \App\Core\Support\DocumentStatus::POSTED, true))
+                        </a>
+                    @else
+                        </div>
+                    @endif
                 </li>
             @endforeach
         </ul>
