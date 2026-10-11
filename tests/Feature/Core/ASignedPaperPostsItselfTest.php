@@ -102,7 +102,7 @@ final class ASignedPaperPostsItselfTest extends TestCase
         foreach ([$this->writer, $this->signer] as $person) {
             $this->as($person);
             Cache::flush();
-            $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertSee($voucher->document_no);
+            $this->assertStringContainsString($voucher->document_no, $this->listed(), '⛔ আটকে থাকা কাগজ তালিকায় নেই।');
             $this->assertStringContainsString('data-signed-unposted-count', $this->get(route('dashboard'))->getContent(),
                 '⛔ আটকে থাকা কাগজের সংখ্যা টপবারে নেই।');
         }
@@ -110,14 +110,14 @@ final class ASignedPaperPostsItselfTest extends TestCase
         $stranger = $this->person(['accounts.voucher.create']);
         $this->as($stranger);
         Cache::flush();
-        $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertDontSee($voucher->document_no);
+        $this->assertStringNotContainsString($voucher->document_no, $this->listed(), '⛔ তালিকায় এমন কাগজ যা এই মানুষের দেখার কথা নয়, বা যা আর আটকে নেই।');
 
         // ⓘ হাতে পোস্ট হলে নিজে থেকেই তালিকা থেকে নামে — আলাদা কোনো খাতা নেই
         PeriodLock::query()->delete();
         $this->as($this->writer);
         app(VoucherWriter::class)->post(Voucher::query()->withoutGlobalScope('user-branch')->findOrFail($voucher->id));
         Cache::flush();
-        $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertDontSee($voucher->document_no);
+        $this->assertStringNotContainsString($voucher->document_no, $this->listed(), '⛔ তালিকায় এমন কাগজ যা এই মানুষের দেখার কথা নয়, বা যা আর আটকে নেই।');
     }
 
     /** @return array{0: Voucher, 1: Approval} লেখকের খসড়া, সইয়ের অপেক্ষায় */
@@ -137,6 +137,14 @@ final class ASignedPaperPostsItselfTest extends TestCase
         $this->assertTrue($voucher->fresh()->isDraft());
 
         return [$voucher, $stopping];
+    }
+
+    /** তালিকার অংশটুকু — ⓘ উপরের ঘণ্টায় "সই হয়েছে, পোস্ট হয়নি" খবরে কাগজের নম্বর থাকে, তাই পুরো পাতা নয় */
+    private function listed(): string
+    {
+        $html = $this->get(route('approval.inbox.signed_unposted'))->assertOk()->getContent();
+
+        return substr($html, (int) strpos($html, '<main'));
     }
 
     private function as(User $user): void
