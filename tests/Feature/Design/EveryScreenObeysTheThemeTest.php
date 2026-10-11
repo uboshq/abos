@@ -76,6 +76,9 @@ class EveryScreenObeysTheThemeTest extends TestCase
         'resources/views/workspace/appearance.blade.php' => 'এখানেই বাছাই হয় — না জানলে বাছার কিছু থাকে না',
         'resources/views/workspace/partials/ui-card.blade.php' => 'বাছাইয়ের নমুনা: চেহারাটার নিজের রঙে আঁকা হয়, তাই রংটা এখান থেকেই আসে',
         'resources/views/components/shell/' => 'শেলের অংশ — কোন খোলসে বসবে সেটা জানাই ওদের কাজ',
+        /* ⓘ ১১ অক্টোবর ২০২৬ (Design: থিম জানে) */
+        'resources/views/components/layouts/app.blade.php' => 'শেলের মূল খোলস — ABOS রূপে মডিউল-বার, বাকিতে পথের পটি; ভিতরের পাতা কিছু জানে না',
+        'app/Modules/Sales/Resources/views/print/' => 'ছাপার নকশার নিজের নাম, থিমের নামের সাথে কেবল বানানে মেলে — কাগজ থিম মানে না',
     ];
 
     /**
