@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Modules\CreditControl\Reports\CreditControlLists;
 use App\Modules\CreditControl\Reports\CreditPositionReports;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -23,6 +24,18 @@ class CreditReportController extends Controller implements HasMiddleware
         'overdue-stopped' => CreditPositionReports::OVERDUE_STOPPED,
         'overdue-bills' => CreditPositionReports::OVERDUE_BILLS,
         'pending-requests' => CreditPositionReports::PENDING_REQUESTS,
+        // ⭐ ধাপ ৩.২ — মালিকের রিপোর্টের তালিকা ([[CreditControlLists]])
+        'blocked' => CreditPositionReports::BLOCKED,
+        'ageing' => CreditControlLists::AGEING,
+        'high-risk' => CreditControlLists::HIGH_RISK,
+        'payment-behaviour' => CreditControlLists::BEHAVIOUR,
+        'limit-breaches' => CreditControlLists::BREACHES,
+        'wall-evidence' => CreditControlLists::EVIDENCE,
+        'limit-changes' => CreditControlLists::CHANGES,
+        'limit-requests' => CreditControlLists::REQUESTS,
+        'temporary-limits' => CreditControlLists::TEMPORARY,
+        'exposure-by-branch' => CreditControlLists::BY_BRANCH,
+        'exposure-by-salesperson' => CreditControlLists::BY_SALESPERSON,
     ];
 
     public function __construct(

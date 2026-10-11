@@ -63,9 +63,10 @@ final class CreditRisk
 
     /**
      * @param  iterable<Customer>  $customers
+     * @param  array<int, array<string, mixed>>|null  $facts  আগেই তোলা উপকরণ ([[factsFor()]]) — রিপোর্ট দুইবার না তুলুক
      * @return array<int, array{level: string, score: int, reasons: list<string>}>
      */
-    public function rateAll(iterable $customers): array
+    public function rateAll(iterable $customers, ?array $facts = null): array
     {
         $list = [];
         foreach ($customers as $customer) {
@@ -76,24 +77,17 @@ final class CreditRisk
             return [];
         }
 
-        $ids = array_keys($list);
         $points = $this->points();
-        $positions = $this->credit->positionsFor($list);
-        $bills = $this->credit->openBills($list);
-        $stops = $this->countBy('sal_credit_decisions', 'customer_id', $ids, 90, fn ($q) => $q->where('result', CreditDecision::STOP));
-        $bounces = $this->countBy('acc_cheques', 'party_id', $ids, 180, fn ($q) => $q->whereNull('deleted_at')
-            ->where('direction', 'received')->where('party_type', 'customer')->where('status', 'bounced'), 'updated_at');
-        $blocks = $this->countBy('audit_trails', 'auditable_id', $ids, 365, fn ($q) => $q
-            ->where('auditable_type', Customer::class)->where('action', 'credit_blocked'));
-
+        $facts ??= $this->factsFor($list);
         $out = [];
 
         foreach ($list as $id => $customer) {
             $score = 0;
             $reasons = [];
-            $overdue = array_values(array_filter($bills[$id] ?? [], fn (array $b) => $b['days_overdue'] > 0));
-            $oldest = $overdue === [] ? 0 : max(array_column($overdue, 'days_overdue'));
-            $amount = array_reduce($overdue, fn (string $s, array $b) => bcadd($s, $b['unpaid'], 4), '0');
+            ['oldest' => $oldest, 'overdue' => $amount, 'limit' => $limit] = $facts[$id];
+            $stops = [$id => $facts[$id]['stops']];
+            $bounces = [$id => $facts[$id]['bounces']];
+            $blocks = [$id => $facts[$id]['blocks']];
 
             if ($oldest > 0 && $points['credit_control.risk_points_overdue_age'] > 0) {
                 $steps = min(4, intdiv($oldest - 1, 30) + 1);
@@ -101,7 +95,6 @@ final class CreditRisk
                 $reasons[] = __('credit_control::risk.reason_overdue_age', ['days' => $oldest]);
             }
 
-            $limit = $positions[$id]['limit'] ?? '0';
             $half = bcdiv($limit, '2', 4);
             if (bccomp($amount, '0', 4) > 0 && bccomp($amount, $half, 4) >= 0 && $points['credit_control.risk_points_overdue_share'] > 0) {
                 $score += $points['credit_control.risk_points_overdue_share'];
@@ -126,6 +119,49 @@ final class CreditRisk
             }
 
             $out[$id] = ['level' => $this->levelOf($score), 'score' => $score, 'reasons' => $reasons];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ মাত্রার উপকরণ — কাঁচা সংখ্যা, নম্বর ছাড়া (রিপোর্টের "পরিশোধের আচরণ"-ও এটাই দেখায়, যাতে দুই জায়গা এক কথা বলে)।
+     *
+     * @param  array<int, Customer>  $list
+     * @return array<int, array{limit: string, exposure: string, credit_days: int, open: int, overdue_bills: int, oldest: int, overdue: string, stops: int, bounces: int, blocks: int}>
+     */
+    public function factsFor(array $list): array
+    {
+        if ($list === []) {
+            return [];
+        }
+
+        $ids = array_keys($list);
+        $positions = $this->credit->positionsFor($list);
+        $bills = $this->credit->openBills($list);
+        $stops = $this->countBy('sal_credit_decisions', 'customer_id', $ids, 90, fn ($q) => $q->where('result', CreditDecision::STOP));
+        $bounces = $this->countBy('acc_cheques', 'party_id', $ids, 180, fn ($q) => $q->whereNull('deleted_at')
+            ->where('direction', 'received')->where('party_type', 'customer')->where('status', 'bounced'), 'updated_at');
+        $blocks = $this->countBy('audit_trails', 'auditable_id', $ids, 365, fn ($q) => $q
+            ->where('auditable_type', Customer::class)->where('action', 'credit_blocked'));
+
+        $out = [];
+
+        foreach ($list as $id => $customer) {
+            $overdue = array_values(array_filter($bills[$id] ?? [], fn (array $b) => $b['days_overdue'] > 0));
+
+            $out[$id] = [
+                'limit' => $positions[$id]['limit'] ?? '0',
+                'exposure' => $positions[$id]['exposure'] ?? '0',
+                'credit_days' => (int) ($customer->credit_days ?? 0),
+                'open' => count($bills[$id] ?? []),
+                'overdue_bills' => count($overdue),
+                'oldest' => $overdue === [] ? 0 : (int) max(array_column($overdue, 'days_overdue')),
+                'overdue' => array_reduce($overdue, fn (string $s, array $b) => bcadd($s, $b['unpaid'], 4), '0'),
+                'stops' => $stops[$id] ?? 0,
+                'bounces' => $bounces[$id] ?? 0,
+                'blocks' => $blocks[$id] ?? 0,
+            ];
         }
 
         return $out;

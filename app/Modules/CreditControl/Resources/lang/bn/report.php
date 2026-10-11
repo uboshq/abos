@@ -35,4 +35,5 @@ return [
     'bucket_d31_60' => '৩১–৬০ দিন',
     'bucket_d61_90' => '৬১–৯০ দিন',
     'bucket_d90_plus' => '৯০+ দিন',
+    'blocked_title' => 'বাকি বন্ধ গ্রাহক',
 ];

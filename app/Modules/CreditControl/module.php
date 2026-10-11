@@ -59,6 +59,29 @@ return [
                 'route_params' => ['slug' => 'overdue-bills'], 'permission' => 'credit_control.view'],
             ['label' => 'credit_control::report.pending_requests_title', 'icon' => 'inbox', 'route' => 'credit_control.report.show',
                 'route_params' => ['slug' => 'pending-requests'], 'permission' => 'credit_control.view'],
+            // ⭐ ধাপ ৩.২ — মালিকের রিপোর্টের তালিকার বাকিগুলো
+            ['label' => 'credit_control::report.blocked_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'blocked'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.ageing_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'ageing'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.high_risk_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'high-risk'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.behaviour_title', 'icon' => 'reports', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'payment-behaviour'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.breaches_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'limit-breaches'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.evidence_title', 'icon' => 'book', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'wall-evidence'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.changes_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'limit-changes'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.requests_title', 'icon' => 'inbox', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'limit-requests'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.temporary_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'temporary-limits'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.by_branch_title', 'icon' => 'building', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'exposure-by-branch'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.by_salesperson_title', 'icon' => 'customer', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'exposure-by-salesperson'], 'permission' => 'credit_control.view'],
         ],
     ],
 
@@ -113,5 +136,6 @@ return [
 
     'reports' => [
         CreditPositionReports::class,
+        \App\Modules\CreditControl\Reports\CreditControlLists::class,
     ],
 ];

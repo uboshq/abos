@@ -40,6 +40,9 @@ final class CreditPositionReports
 
     public const PENDING_REQUESTS = 'credit_control.pending_requests';
 
+    /** ⭐ বাকি বন্ধ গ্রাহক — দেয়ালের নিজের অবস্থা থেকে (ধাপ ৩.২) */
+    public const BLOCKED = 'credit_control.blocked';
+
     /** ড্যাশবোর্ডের বয়সের ধাপ — মালিকের তালিকা: মেয়াদ আসেনি, ১–৭, ৮–১৫, ১৬–৩০, ৩১–৬০, ৬১–৯০, ৯০+ */
     public const BUCKETS = ['not_due' => [null, 0], 'd1_7' => [1, 7], 'd8_15' => [8, 15], 'd16_30' => [16, 30],
         'd31_60' => [31, 60], 'd61_90' => [61, 90], 'd90_plus' => [91, null]];
@@ -49,6 +52,7 @@ final class CreditPositionReports
         $engine->register(self::positions(self::POSITIONS, 'credit_control::report.positions_title', null));
         $engine->register(self::positions(self::OVER_LIMIT, 'credit_control::report.over_limit_title', 'over_limit'));
         $engine->register(self::positions(self::OVERDUE_STOPPED, 'credit_control::report.overdue_stopped_title', 'overdue'));
+        $engine->register(self::positions(self::BLOCKED, 'credit_control::report.blocked_title', 'blocked'));
         $engine->register(self::overdueBills());
         $engine->register(self::pendingRequests());
     }
@@ -244,7 +248,7 @@ final class CreditPositionReports
      * @param  array<string, mixed>  $f
      * @param  list<int>  $ids
      */
-    private static function base(array $f, array $ids): Builder
+    public static function base(array $f, array $ids): Builder
     {
         return DB::table('customers')
             ->where('customers.company_id', $f['company_id'])
@@ -262,7 +266,7 @@ final class CreditPositionReports
      *
      * @param  array<int, string>  $values
      */
-    private static function cases(array $values, string $column = 'customers.id'): string
+    public static function cases(array $values, string $column = 'customers.id'): string
     {
         $cases = '';
 
@@ -278,7 +282,7 @@ final class CreditPositionReports
      *
      * @param  array<int, string>  $values
      */
-    private static function texts(array $values, string $column = 'customers.id'): string
+    public static function texts(array $values, string $column = 'customers.id'): string
     {
         $pdo = DB::getPdo();
         $cases = '';
@@ -290,7 +294,7 @@ final class CreditPositionReports
         return $cases === '' ? "''" : "(CASE {$column}{$cases} ELSE '' END)";
     }
 
-    private static function name(): string
+    public static function name(): string
     {
         return app()->getLocale() === 'bn'
             ? "COALESCE(NULLIF(customers.name_bn, ''), customers.name_en)"
@@ -298,7 +302,7 @@ final class CreditPositionReports
     }
 
     /** @return list<array<string, string>> */
-    private static function identityColumns(): array
+    public static function identityColumns(): array
     {
         return [
             ['key' => 'customer_code', 'label' => 'credit_control::report.code', 'type' => ReportColumn::TEXT, 'width' => '7rem'],
