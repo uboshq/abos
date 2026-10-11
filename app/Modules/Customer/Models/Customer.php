@@ -222,6 +222,9 @@ class Customer extends Model implements AuthenticatableContract, Drillable
         ];
     }
 
+    /** ⭐ বাকি বন্ধের ধরন — চেক ফেরতে নিজে থেকে বসা; খোলেন কেবল মালিক ([[CustomerService::clearCreditBlock()]]); খালি = হাতে বসানো */
+    public const BLOCK_BOUNCED_CHEQUE = 'bounced_cheque';
+
     /** কে বাকি বন্ধ করেছেন */
     public function creditBlocker(): BelongsTo
     {

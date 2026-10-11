@@ -65,8 +65,14 @@
                         'user' => $customer->creditBlocker?->name ?? '—',
                         'date' => \App\Core\Support\DateFormat::format($customer->credit_blocked_at),
                     ]) }}
+                {{-- ⓘ চেক ফেরতের বন্ধ — খোলেন কেবল মালিক (বাকি নিয়ন্ত্রণ ধাপ ২.৪; পাহারা সার্ভারে, [[CustomerService::clearCreditBlock()]]) --}}
+                @if ($customer->credit_block_kind === \App\Modules\Customer\Models\Customer::BLOCK_BOUNCED_CHEQUE)
+                    · <span data-block-kind="bounced_cheque">{{ __('customer::credit_block.kind_bounced_cheque') }}</span>
+                @endif
             </div>
-            @can('update', $customer)
+            @if (auth()->user()?->can('update', $customer)
+                && ($customer->credit_block_kind !== \App\Modules\Customer\Models\Customer::BLOCK_BOUNCED_CHEQUE
+                    || \App\Modules\Customer\Services\CustomerService::isSuperAdmin(auth()->user())))
                 <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2">
                     @csrf
                     @method('DELETE')
@@ -76,7 +82,7 @@
                                   bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
                     <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.clear') }}</x-ui.button>
                 </form>
-            @endcan
+            @endif
         </div>
     @endif
 

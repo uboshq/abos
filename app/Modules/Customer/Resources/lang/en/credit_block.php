@@ -18,4 +18,9 @@ return [
     'already' => 'Credit is already blocked for this customer.',
     'not_blocked' => 'Credit is not blocked for this customer.',
     'help' => 'While blocked, no new credit goes out at the counter, on a challan, bill, DO or order; a sale paid in full still goes through.',
+    'bounced_cheque' => 'Cheque bounced — :no',
+    'owner_only' => 'Only the owner (super admin) can lift a block set by a bounced cheque.',
+    'kind_bounced_cheque' => 'Blocked by a bounced cheque — only the owner can lift it',
+    'bounce_notice_title' => ':customer — cheque bounced, credit blocked',
+    'bounce_notice_body' => ':reason. Only you can lift it; a payment does not lift it.',
 ];

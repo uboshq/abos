@@ -9,6 +9,9 @@ use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\DuplicateGuard;
+use App\Core\Services\NotificationService;
+use App\Core\Services\Ownership;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -19,6 +22,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\CustomerCreditChange;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -282,7 +286,14 @@ final class CustomerService
         });
     }
 
-    /** ⭐ "বাকি বন্ধ" তোলা — একই চাবি, কারণ বাধ্যতামূলক, খাতায় `credit_unblocked` */
+    /**
+     * ⭐ "বাকি বন্ধ" তোলা — একই চাবি, কারণ বাধ্যতামূলক, খাতায় `credit_unblocked`।
+     *
+     * ⛔ চেক ফেরতের বন্ধ খোলেন কেবল মালিক (সুপার অ্যাডমিন) — মালিকের উত্তর ৪, ১১ অক্টোবর ২০২৬: *"টাকা দিলেও না, সময় গেলেও
+     * না, আর কেউ না"*। পাহারাটা এখানে, সার্ভারে — বোতাম লুকানো কেবল পর্দার সৌজন্য; অন্য কেউ ডাকলে ৪০৩।
+     *
+     * @throws AuthorizationException
+     */
     public function clearCreditBlock(Customer $customer, string $reason): Customer
     {
         $reason = trim($reason);
@@ -294,16 +305,93 @@ final class CustomerService
                 throw ValidationException::withMessages(['reason' => __('customer::credit_block.not_blocked')]);
             }
 
+            if ($fresh->credit_block_kind === Customer::BLOCK_BOUNCED_CHEQUE && ! self::isSuperAdmin(auth()->user())) {
+                throw new AuthorizationException(__('customer::credit_block.owner_only'));
+            }
+
             $fresh->forceFill([
                 'credit_blocked_at' => null,
                 'credit_blocked_by' => null,
                 'credit_block_reason' => null,
+                'credit_block_kind' => null,
             ])->save();
 
             $fresh->auditAction('credit_unblocked', $reason);
 
             return $fresh->fresh();
         });
+    }
+
+    /**
+     * ⭐ চেক ফেরত — গ্রাহকের নতুন বাকি নিজে থেকেই বন্ধ (মালিকের উত্তর ৪, ১১ অক্টোবর ২০২৬; বাকি নিয়ন্ত্রণ ধাপ ২.৪)।
+     *
+     * ⓘ কারণ "চেক ফেরত — <চেক নং>"; বন্ধের ধরন [[Customer::BLOCK_BOUNCED_CHEQUE]], তাই খোলেন কেবল মালিক ([[clearCreditBlock()]])।
+     * ⓘ আগেই হাতে বন্ধ থাকলে এখন চেক ফেরতের বন্ধ হয়ে যায় (কারণে যোগ হয়) — নইলে চেক ফেরত গ্রাহক হাতের চাবিতে খুলে যেত।
+     * ⓘ একই চেকের ঘটনা দুইবার এলে (পুনরায় চেষ্টা) দ্বিতীয়বার কিছুই নয় — নিরীক্ষার সারিও না, খবরও না।
+     * ⛔ টাকা এলে বা সময় গেলে এই বন্ধ ওঠে না — কোনো পথে নয়।
+     * ⓘ মালিককে খবর — লেনদেন পাকা হওয়ার পরে, প্রতি চেকে একবার।
+     */
+    public function blockForBouncedCheque(int $customerId, string $chequeNo, int $chequeId): ?Customer
+    {
+        $word = __('customer::credit_block.bounced_cheque', ['no' => $chequeNo]);
+
+        return DB::transaction(function () use ($customerId, $chequeId, $word) {
+            $fresh = Customer::query()->withoutGlobalScopes()
+                ->where('company_id', CompanyContext::id())
+                ->whereKey($customerId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($fresh === null) {
+                return null;
+            }
+
+            $was = (string) $fresh->credit_block_reason;
+
+            if ($fresh->isCreditBlocked() && $fresh->credit_block_kind === Customer::BLOCK_BOUNCED_CHEQUE && str_contains($was, $word)) {
+                return $fresh;
+            }
+
+            $fresh->forceFill([
+                'credit_blocked_at' => $fresh->credit_blocked_at ?? now(),
+                'credit_blocked_by' => $fresh->isCreditBlocked() ? $fresh->credit_blocked_by : auth()->id(),
+                'credit_block_reason' => mb_substr($fresh->isCreditBlocked() && $was !== '' ? $was.' · '.$word : $word, 0, 500),
+                'credit_block_kind' => Customer::BLOCK_BOUNCED_CHEQUE,
+            ])->save();
+
+            $fresh->auditAction('credit_blocked', $word);
+
+            $companyId = (int) $fresh->company_id;
+            DB::afterCommit(fn () => $this->tellTheOwnersOfTheBounce($fresh, $companyId, $chequeId, $word));
+
+            return $fresh->fresh();
+        });
+    }
+
+    /** মালিক(দের) খবর — একই চেকে একবারই (`key`) */
+    private function tellTheOwnersOfTheBounce(Customer $customer, int $companyId, int $chequeId, string $word): void
+    {
+        CompanyContext::forCompany($companyId, function () use ($customer, $companyId, $chequeId, $word): void {
+            foreach (app(Ownership::class)->activeOwnersIn($companyId) as $owner) {
+                app(NotificationService::class)->send(
+                    $owner,
+                    'customer.cheque_bounce_block',
+                    __('customer::credit_block.bounce_notice_title', ['customer' => $customer->name()]),
+                    __('customer::credit_block.bounce_notice_body', ['reason' => $word]),
+                    route('customer.show', $customer),
+                    evenToSelf: true,
+                    key: 'customer:bounce_block:'.$chequeId,
+                    about: $customer,
+                );
+            }
+        });
+    }
+
+    /** ইনি কি এই কোম্পানির সুপার অ্যাডমিন (মালিক) — রোলটা চলতি কোম্পানির (spatie teams) */
+    public static function isSuperAdmin(mixed $user): bool
+    {
+        return $user instanceof \App\Models\User
+            && $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
     }
 
     public function deactivate(Customer $customer): Customer

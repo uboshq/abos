@@ -480,6 +480,8 @@ return [
      */
     'listeners' => [
         \App\Core\Events\ApprovalDecided::class => [\App\Modules\Customer\Listeners\ApplyTheLimitOnTheLastSignature::class],
+        // ⭐ চেক ফেরত — গ্রাহকের বাকি নিজে থেকেই বন্ধ, খোলেন কেবল মালিক (বাকি নিয়ন্ত্রণ ধাপ ২.৪)
+        \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\Customer\Listeners\BlockTheCustomerOnABouncedCheque::class],
     ],
 
     /*
