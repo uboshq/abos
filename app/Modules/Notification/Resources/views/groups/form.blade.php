@@ -6,7 +6,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $group->exists ? $group->name : __('notification::group.new') }}</x-slot:title>
 
-    <div class="mx-auto max-w-4xl space-y-4">
+    <div class="space-y-4">
         <div class="flex items-center justify-between gap-2">
             <h1 class="text-lg font-semibold">{{ $group->exists ? $group->name : __('notification::group.new') }}</h1>
             <a href="{{ route('notification.groups.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::group.back') }}</a>

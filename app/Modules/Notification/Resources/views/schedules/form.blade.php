@@ -6,7 +6,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $schedule->exists ? $schedule->name : __('notification::schedule.new') }}</x-slot:title>
 
-    <div class="mx-auto max-w-3xl space-y-4">
+    <div class="space-y-4">
         <div class="flex items-center justify-between gap-2">
             <h1 class="text-lg font-semibold">{{ $schedule->exists ? $schedule->name : __('notification::schedule.new') }}</h1>
             <a href="{{ route('notification.schedules.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::schedule.back') }}</a>

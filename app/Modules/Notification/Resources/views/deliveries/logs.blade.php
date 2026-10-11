@@ -27,11 +27,11 @@
             </label>
             <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                 {{ __('notification::delivery.from') }}
-                <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="from" :value="$filters['from'] ?? ''" />
             </label>
             <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                 {{ __('notification::delivery.to') }}
-                <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="to" :value="$filters['to'] ?? ''" />
             </label>
         </x-ui.toolbar>
 

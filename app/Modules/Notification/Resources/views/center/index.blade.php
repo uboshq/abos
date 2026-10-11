@@ -40,11 +40,11 @@
             </label>
             <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                 {{ __('notification::center.from') }}
-                <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="from" :value="$filters['from'] ?? ''" />
             </label>
             <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                 {{ __('notification::center.to') }}
-                <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="to" :value="$filters['to'] ?? ''" />
             </label>
             <label class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
                 <input type="checkbox" name="archived" value="1" @checked(! empty($filters['archived']))>

@@ -14,7 +14,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $rule->exists ? $rule->name : __('notification::rule.new') }}</x-slot:title>
 
-    <div class="mx-auto max-w-5xl space-y-4">
+    <div class="space-y-4">
         <div class="flex items-center justify-between gap-2">
             <h1 class="text-lg font-semibold">{{ $rule->exists ? $rule->name.' · v'.$rule->version : __('notification::rule.new') }}</h1>
             <a href="{{ route('notification.rules.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::rule.back') }}</a>
@@ -138,11 +138,11 @@
                 @endforeach
                 <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                     {{ __('notification::rule.effective_from') }}
-                    <input type="date" name="effective_from" value="{{ old('effective_from', $rule->effective_from?->toDateString()) }}" class="{{ $field }}">
+                    <x-ui.date name="effective_from" :value="old('effective_from', $rule->effective_from?->toDateString())" />
                 </label>
                 <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                     {{ __('notification::rule.effective_to') }}
-                    <input type="date" name="effective_to" value="{{ old('effective_to', $rule->effective_to?->toDateString()) }}" class="{{ $field }}">
+                    <x-ui.date name="effective_to" :value="old('effective_to', $rule->effective_to?->toDateString())" />
                 </label>
             </div>
 
