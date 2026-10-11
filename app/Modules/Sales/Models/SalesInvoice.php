@@ -268,6 +268,28 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
 
     public function scopeWithCollected(Builder $query): Builder
     {
+        [$collected, $byVoucher, $returned] = self::paidParts();
+
+        // sal_invoices.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
+        return $query->addSelect([
+            'sal_invoices.*',
+            'collected_total' => $collected,
+            'voucher_total' => $byVoucher,
+            // ⓘ পাকা ফেরত — [[returnedAmount()]]-এর হুবহু শর্ত, যাতে তালিকা আর একক পাতা একই বাকি বলে
+            'returned_total' => $returned,
+        ]);
+    }
+
+    /**
+     * বিলের বিপরীতে আসা তিন অঙ্কের সাব-কোয়েরি — আদায়, রসিদ ভাউচার, পাকা ফেরত।
+     *
+     * ⓘ [[scopeWithCollected()]] আর [[scopeWhereDue()]] দুইটাই এখান থেকে নেয় — এক জায়গায় লেখা, যাতে সারির সাথে আসা
+     * অঙ্ক আর "বাকি আছে" ছাঁকনি কখনো আলাদা কথা না বলে।
+     *
+     * @return array{0: Builder, 1: Builder, 2: Builder}
+     */
+    private static function paidParts(): array
+    {
         $collected = CollectionLine::query()
             ->selectRaw('COALESCE(SUM(amount), 0)')
             ->whereColumn('sal_collection_lines.sales_invoice_id', 'sal_invoices.id')
@@ -285,17 +307,29 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             ->whereColumn('against_id', 'sal_invoices.id')
             ->posted();
 
-        // sal_invoices.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
-        return $query->addSelect([
-            'sal_invoices.*',
-            'collected_total' => $collected,
-            'voucher_total' => $byVoucher,
-            // ⓘ পাকা ফেরত — [[returnedAmount()]]-এর হুবহু শর্ত, যাতে তালিকা আর একক পাতা একই বাকি বলে
-            'returned_total' => SalesReturn::query()
-                ->selectRaw('COALESCE(SUM(total), 0)')
-                ->whereColumn('sal_returns.sales_invoice_id', 'sal_invoices.id')
-                ->posted(),
-        ]);
+        $returned = SalesReturn::query()
+            ->selectRaw('COALESCE(SUM(total), 0)')
+            ->whereColumn('sal_returns.sales_invoice_id', 'sal_invoices.id')
+            ->posted();
+
+        return [$collected, $byVoucher, $returned];
+    }
+
+    /**
+     * ⭐ বাকি আছে / শোধ — SQL-এ, [[withCollected()]]-এর সেই তিন অঙ্কে (গ্রাহক পোর্টাল, ধাপ ১, ১১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[dueAmount()]]-এর হুবহু হিসাব: মোট − (আদায় + রসিদ) − পাকা ফেরত, শূন্যের নিচে নয়। সাব-কোয়েরিগুলো
+     * [[paidParts()]] থেকে — নতুন কোনো সূত্র নয়, কেবল ছাঁকনিটা SQL-এ বলে তালিকা পাতা ধরে ভাগ হয়।
+     * ⚠️ HAVING নয়: চলতি সার্ভারের ONLY_FULL_GROUP_BY ওটা ফেরায়। ⓘ [[ThePortalBillCentreShowsOnlyMyOwnBillsTest]]
+     * প্রতিটা সারির বাকি [[dueAmount()]]-এর সাথে মিলিয়ে দেখে।
+     */
+    public function scopeWhereDue(Builder $query, bool $open): Builder
+    {
+        $parts = array_map(fn (Builder $part) => $part->toBase(), self::paidParts());
+        $sql = implode(' - ', array_map(fn ($part) => '('.$part->toSql().')', $parts));
+        $bindings = array_merge(...array_map(fn ($part) => $part->getBindings(), $parts));
+
+        return $query->whereRaw('(sal_invoices.total - '.$sql.') '.($open ? '> 0' : '<= 0'), $bindings);
     }
 
     /**

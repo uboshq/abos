@@ -28,6 +28,8 @@ final class EveryListCarriesItsTotalsBarTest extends TestCase
         // `listfoot` ([[chrome/navy]]); এখানে ঘোষণা করলে কোথাও আঁকা হত না, অর্থাৎ পাহারাটা মিথ্যা সবুজ হত
         'Sales/Resources/views/portal/do-index.blade.php' => 'গ্রাহকের পোর্টাল — নিজের লেআউট, পট্টি আঁকার খোলস নেই; প্রতিটা DO কার্ডে নিজের অঙ্ক',
         'Sales/Resources/views/portal/order-index.blade.php' => 'গ্রাহকের পোর্টাল — নিজের লেআউট, পট্টি আঁকার খোলস নেই; প্রতিটা আদেশ কার্ডে নিজের অঙ্ক',
+        'Sales/Resources/views/portal/bill-index.blade.php' => 'গ্রাহকের পোর্টাল — নিজের লেআউট, পট্টি আঁকার খোলস নেই; প্রতিটা বিল কার্ডে নিজের মোট, শোধ আর বাকি (গ্রাহক পোর্টাল, ধাপ ১)',
+        'Customer/Resources/views/profile-requests.blade.php' => 'পোর্টাল থেকে গ্রাহকের অনুরোধ — তথ্য বদল আর কাগজ; টাকার কোনো ঘর নেই, যোগ করার কিছু নেই (গ্রাহক পোর্টাল, ধাপ ১)',
     ];
 
     /**

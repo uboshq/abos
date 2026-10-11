@@ -10,6 +10,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Models\ProfileRequest;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\Collection as SalesCollection;
 use App\Modules\Sales\Models\CollectionLine;
@@ -129,29 +130,20 @@ final class CustomerPapers
      * ⓘ বাকির অঙ্ক অফিসের আদায়ের পর্দার সেই একই হিসাব — [[SalesInvoice::scopeWithCollected()]] আর
      * [[SalesInvoice::dueAmount()]]; এখানে নতুন কোনো যোগ-বিয়োগ নেই।
      * ⛔ খসড়া আর বাতিল বিল আসে না — খসড়া এখনো গ্রাহকের কাগজ নয়, বাতিল আর পাওনা নয়।
-     * ⓘ "খোলা / শোধ" ছাঁকা হয় সারি আনার পরে, কারণ বাকিটা ফেরত আর রসিদ ভাউচারও ধরে — SQL-এ আলাদা করে লিখলে
-     * দ্বিতীয় একটা হিসাব জন্মাত। একজন গ্রাহকের বিল কয়েক হাজারের বেশি হয় না।
+     * ⓘ "খোলা / শোধ" ছাঁকা হয় [[SalesInvoice::scopeWhereDue()]]-এ — [[SalesInvoice::dueAmount()]]-এর পাশে, একই অঙ্কে।
      *
      * @param  'open'|'paid'|'all'  $state
      * @return LengthAwarePaginator<int, SalesInvoice>
      */
     public function bills(string $state, ?string $from, ?string $to, int $perPage = 30): LengthAwarePaginator
     {
-        $rows = $this->billsBetween($from, $to)
-            ->sortByDesc(fn (SalesInvoice $bill) => $bill->trx_date?->toDateString().'#'.str_pad((string) $bill->id, 12, '0', STR_PAD_LEFT))
-            ->filter(fn (SalesInvoice $bill) => match ($state) {
-                'open' => bccomp($bill->dueAmount(), '0', 4) > 0,
-                'paid' => bccomp($bill->dueAmount(), '0', 4) === 0,
-                default => true,
-            })
-            ->values();
-
-        $page = LengthAwarePaginator::resolveCurrentPage();
-
-        return (new LengthAwarePaginator(
-            $rows->forPage($page, $perPage)->values(), $rows->count(), $perPage, $page,
-            ['path' => LengthAwarePaginator::resolveCurrentPath()],
-        ))->withQueryString();
+        return $this->postedBills()
+            ->withCollected()
+            ->when($from !== null && $from !== '', fn ($q) => $q->whereDate('trx_date', '>=', $from))
+            ->when($to !== null && $to !== '', fn ($q) => $q->whereDate('trx_date', '<=', $to))
+            ->when($state !== 'all', fn ($q) => $q->whereDue($state === 'open'))
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->paginate($perPage)->withQueryString();
     }
 
     /**
@@ -270,6 +262,25 @@ final class CustomerPapers
             ->first();
 
         return $collection === null ? collect() : $collection->lines;
+    }
+
+    /**
+     * ⭐ নিজের অনুরোধগুলো — তথ্য বদল আর কাগজ, নতুনটা আগে (গ্রাহক পোর্টাল, ধাপ ১; [[ProfileRequest]])।
+     *
+     * @return Collection<int, ProfileRequest>
+     */
+    public function profileRequests(int $limit = 30): Collection
+    {
+        return $this->mine(ProfileRequest::query())
+            ->orderByDesc('created_at')->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /** নিজের একটা অনুরোধ — অন্যেরটা ৪০৪ */
+    public function profileRequest(string $publicId): ProfileRequest
+    {
+        return $this->mine(ProfileRequest::query())->where('public_id', $publicId)->firstOrFail();
     }
 
     /**
