@@ -757,6 +757,8 @@ final class FixedAssetService
                     ['account_id' => $asset->accumulated_account_id, 'credit' => $amount],
                 ],
                 documentNo: $entry->document_no,
+                // ⛔ সম্পদের শাখায়, যিনি চালালেন তাঁর শাখায় নয় — অডিট ম১৫, ১০ অক্টোবর ২০২৬ ([[OneAssetsWearSitsInItsOwnBranchTest]])
+                branchId: $asset->branch_id === null ? null : (int) $asset->branch_id,
             );
 
             return $entry;
