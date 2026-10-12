@@ -38,6 +38,12 @@ final class AQuantityShowedFourZerosTest extends TestCase
         // ⓘ নামের শেষে held/available, অথচ টাকা — দুই দশমিকেই দেখানোর কথা
         'sales.credit_use.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
         'sales.credit_use.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.positions.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.positions.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.over_limit.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.over_limit.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.overdue_stopped.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.overdue_stopped.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
         'finance.tenancy_arrears.deposit_held' => 'ভাড়াটের হাতে রাখা জামানত — টাকা, পরিমাণ নয়',
     ];
 
