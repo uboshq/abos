@@ -16,7 +16,6 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -325,7 +324,11 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
     {
         $this->received('1000', ['cheque_no' => 'DUP-1']);
 
-        $this->expectException(QueryException::class);
+        /*
+         * ⓘ আগে দাবি ছিল DB-র unique পাহারা (QueryException)। এখন সেবাটা নিজেই আগে ধরে আর বাংলায় বলে
+         * "চেক … আগেই রেজিস্টারে আছে" — মানুষ একটা বোধগম্য বার্তা পান, ৫০০ নয়। দাবিটা সেই বার্তাকে মাপে।
+         */
+        $this->expectException(ValidationException::class);
 
         $this->received('1000', ['cheque_no' => 'DUP-1']);
     }

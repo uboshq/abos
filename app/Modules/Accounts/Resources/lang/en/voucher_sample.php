@@ -20,4 +20,12 @@ return [
     'payment' => 'Supplier payment by bank transfer',
     'expense' => 'Depot running costs',
     'journal' => 'Month-end adjustment',
+
+    // the 21 designs' extra fields (12 Oct 2026) — made-up names
+    'party' => 'Rahim Traders',
+    'point' => 'Kawran Bazar',
+    'payee' => 'Karim Property Management',
+    'money_account' => '1102 Bank',
+    'prepared_by' => 'Ashraful Islam',
+    'approved_by' => 'Managing Director',
 ];

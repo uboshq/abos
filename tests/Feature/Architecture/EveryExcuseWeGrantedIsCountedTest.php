@@ -383,7 +383,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       মাধ্যমের গোপন চাবির HMAC স্বাক্ষর আর সময়-সীমা
      *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationProviderEvent (যন্ত্রের একবার-লেখা সারি)
      */
-    private const CEILING = 367;
+    /*
+     * ── ⚠️ ৩৬৭ → ৩৬৮, ১১ অক্টোবর ২০২৬ (বাকি নিয়ন্ত্রণ ধাপ ১.৫, দেয়ালের সাক্ষ্য) ─────────────────────────────────────
+     *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — `CreditDecision`: প্রতিটা কাউন্টার-বিক্রিতে দেয়ালের একটা
+     *       সারি, আর মালিকের শর্ত "কাউন্টার ধীর নয় — একটাই INSERT"; অডিট বসালে প্রতি বিক্রিতে আরেকটা। সারি নিজেই সাক্ষ্য,
+     *       বদলানো আর মোছা মডেলেই বন্ধ। ⓘ সীমা বদলের ইতিহাস (`CustomerCreditChange`) ছাড় নেয়নি — সে অডিটে।
+     */
+    private const CEILING = 368;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -1899,4 +1899,12 @@ return [
         ],
     ],
 
+    /*
+     * ⭐ দেয়ালের সাক্ষ্য — কেবল যোগের খাতা, প্রতিটা সারি নিজেই একটা ঘটনা (বাকি নিয়ন্ত্রণ ধাপ ১.৫, ১১ অক্টোবর ২০২৬)।
+     * ⓘ অডিট বসালে প্রতিটা কাউন্টার বিক্রিতে আরও দুই সারি জমত, নতুন কোনো তথ্য ছাড়া; আর সারি বদলানো বা মোছা মডেলেই বন্ধ।
+     */
+    'audit_exempt' => [
+        \App\Modules\Sales\Models\CreditDecision::class => 'append-only record of what the credit wall saw and said; never edited',
+    ],
+
 ];

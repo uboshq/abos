@@ -60,7 +60,11 @@ final class TheTabBarTookTheWholePageSidewaysTest extends TestCase
      */
     private const CROWDED = '/sales/overview';
 
-    private const ROOMY = '/customers';
+    /*
+     * ⓘ আগে `/customers` — ১২ অক্টোবর ২০২৬ নাগাদ গ্রাহকের বারে নয়টা ঘর, তাই সে নিজেই ভিড়ে গেছে। ব্যাকআপের বারে সাতটা,
+     * আর ব্যাকআপ রোজ বাড়ে না।
+     */
+    private const ROOMY = '/backup';
 
     private User $owner;
 

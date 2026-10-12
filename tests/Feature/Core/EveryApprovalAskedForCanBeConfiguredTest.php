@@ -99,6 +99,31 @@ class EveryApprovalAskedForCanBeConfiguredTest extends TestCase
             }
 
             /*
+             * ⭐ মডিউল অন্য ক্লাসের ধ্রুবকে, কাজ নিজের — `module: DocumentWorkflow::MODULE, action: self::ACTION`
+             * ([[DocumentSignatures::request()]], ১২ অক্টোবর ২০২৬)। ⓘ সই সত্যিই চাওয়া হয়, কেবল পাহারা এই গড়ন চিনত না।
+             * মডিউলের ক্লাস `use` সারি থেকে, নাহলে একই namespace থেকে; দুই মানই reflection দিয়ে।
+             */
+            preg_match_all("/module:\s*([A-Z]\w*)::([A-Z_]+)\s*,\s*action:\s*self::([A-Z_]+)/", $code, $mixed, PREG_SET_ORDER);
+
+            if ($mixed !== []
+                && preg_match('/^namespace\s+([^;]+);/m', $code, $ns4) === 1
+                && preg_match('/^(?:final\s+|abstract\s+)?class\s+(\w+)/m', $code, $cls4) === 1
+                && class_exists($ns4[1].'\\'.$cls4[1])
+            ) {
+                $own = (new \ReflectionClass($ns4[1].'\\'.$cls4[1]))->getConstants();
+                preg_match_all('/^use\s+([^;]+);/m', $code, $uses4);
+
+                foreach ($mixed as $one) {
+                    $moduleClass = collect($uses4[1])->first(fn (string $u) => str_ends_with($u, '\\'.$one[1])) ?? $ns4[1].'\\'.$one[1];
+                    $module = class_exists($moduleClass) ? ((new \ReflectionClass($moduleClass))->getConstants()[$one[2]] ?? null) : null;
+
+                    if (is_string($module) && is_string($own[$one[3]] ?? null)) {
+                        $asked[] = $module.'.'.$own[$one[3]];
+                    }
+                }
+            }
+
+            /*
              * ⭐ ধ্রুবক দিয়ে চাওয়া — `self::MODULE, self::ACTION` (২৮ সেপ্টেম্বর ২০২৬)।
              *
              * ⛔ উপরের regex কেবল লেখা নাম দেখে। [[PromotionApprovalChain::open()]]

@@ -4,6 +4,8 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $event->title }}</x-slot:title>
 
+    <x-ui.errors />
+
     <div class="space-y-4" data-center-detail>
         <a href="{{ route('notification.center.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::center.back') }}</a>
 

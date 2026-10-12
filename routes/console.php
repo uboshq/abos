@@ -164,6 +164,14 @@ Schedule::command('abos:backup-fresh')
  * একবার দেখলে ওই সূচিটা ৫৩ মিনিট দেরিতে চলত। withoutOverlapping — একটা
  * বড় রিপোর্ট চললে পরের রানটা তার ঘাড়ে চড়ে বসে না।
  */
+/*
+ * ⭐ বাকি নিয়ন্ত্রণের রোজকার কাজ — সকালে একবার: ঝুঁকির দিনের ছবি আর শেষ হয়ে আসা অস্থায়ী সীমার খবর (বাকি নিয়ন্ত্রণ ধাপ ৩)।
+ * ⓘ বারবার চললেও একই দিনের একটাই ছবি, একই খবর একবারই ([[CreditDaily]])।
+ */
+Schedule::command('abos:credit-due')
+    ->dailyAt('06:40')
+    ->withoutOverlapping();
+
 Schedule::command('abos:reports-due')
     ->everyFifteenMinutes()
     ->withoutOverlapping()

@@ -50,9 +50,12 @@ final class DocumentReports
         /*
          * ⛔ পরিচয় না থাকলে কিছুই নয় — ড্যাশবোর্ডের মতো (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৬)। ⓘ আগে লগইন ছাড়া (কনসোল,
          * নির্ধারিত কাজ) দেয়ালের ছাঁকনিটাই বাদ পড়ত, আর রিপোর্টে সব কাগজ আসত — দরজা খোলা রেখে ব্যর্থ হওয়া।
+         *
+         * ⓘ শাখার ছাঁকনি তবু আগে বসে, বন্ধের আগেই (১২ অক্টোবর ২০২৬) — বন্ধ কোয়েরি আগে ঘোষিত `branch` ছাঁকনি একেবারেই পড়ত না,
+         * আর [[ADrawnFilterBoxThatChangesNothingTest]] ঠিক সেটাই ধরল। ফল বদলায় না: পরিচয় ছাড়া এখনো শূন্য সারি।
          */
         if (! $user instanceof User) {
-            return $query->whereRaw('1 = 0')->toBase();
+            return $query->toBase()->tap(ReportEngine::branchWall($f, 'dms_documents.branch_id'))->whereRaw('1 = 0');
         }
 
         $query->visibleTo($user);

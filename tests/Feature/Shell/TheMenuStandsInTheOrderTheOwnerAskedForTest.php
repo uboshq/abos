@@ -41,13 +41,6 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
      * রেলের মাথায় আলাদা করে আঁকে।
      */
     private const AS_HE_ASKED = [
-        /*
-         * ⓘ মালিকের কেন্দ্র — "আলাদা একটা মেনু-ভাঁজ" (নকশা, ৬ অক্টোবর ২০২৬; docs/cloud-tasks/command-center.md)।
-         * ⚠️ কোথায় বসবে তা নকশায় লেখা নেই; বসানো হয়েছে সবার উপরে (`nav.section = top`), আর মার্জের আগে
-         * সমন্বয়কারী মালিকের সাথে মিলিয়ে নেবেন (PR-এ খোলা প্রশ্ন)। বদলালে এই সারিটাও বদলাবে।
-         */
-        ['top', 'executive'],
-
         ['finance', 'accounts'],
         ['finance', 'finance'],
 
@@ -76,6 +69,10 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['business', 'purchase'],
         ['business', 'inventory'],
         ['business', 'customer'],
+
+        // ⭐ বাকি নিয়ন্ত্রণ — গ্রাহক আর বিক্রয়ের মাঝে (order ৪৭): বাকি দুইজনেরই কথা (১১ অক্টোবর ২০২৬)
+        ['business', 'credit_control'],
+
         ['business', 'sales'],
 
         /*
@@ -119,7 +116,15 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
          * ⭐ ডকুমেন্ট প্রশাসনের ঠিক নিচে — মালিক, ১০ অক্টোবর ২০২৬: নতুন মডিউলগুলো সিস্টেম প্রশাসনের নিচে। ⓘ আগের নির্দেশ ছিল
          * মাস্টার ডাটা আর প্রশাসনের মাঝে (৩০ সেপ্টেম্বর: *"DOC system r MDM er majkhane dibe"*) — নতুন নির্দেশ সেটা বদলেছে।
          */
+        /*
+         * ⭐ নতুন মডিউলগুলো সিস্টেম প্রশাসনের নিচে, এই ক্রমে — মালিক, ১০ অক্টোবর ২০২৬: মালিকের কেন্দ্র (১১), ডকুমেন্ট (১২),
+         * বিজ্ঞপ্তি (১৩), স্থায়ী সম্পদ (১৪)। ⓘ মালিকের কেন্দ্র আগে সবার উপরে (`top`) বসত — নকশায় জায়গা লেখা ছিল না, আর
+         * এই নির্দেশ সেই খোলা প্রশ্নের উত্তর।
+         */
+        ['system', 'executive'],
         ['system', 'documents'],
+        ['system', 'notification'],
+        ['system', 'fixed_assets'],
 
         /*
          * ⭐ ব্যাকআপ সবার শেষে — মালিকের সিদ্ধান্ত।

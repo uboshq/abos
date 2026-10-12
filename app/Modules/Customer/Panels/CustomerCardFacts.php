@@ -41,7 +41,8 @@ final class CustomerCardFacts implements ContributesFacts
             return [];
         }
 
-        $limit = (string) $customer->credit_limit;
+        // ⓘ চলতি সীমা — অস্থায়ীসহ (বাকি নিয়ন্ত্রণ ধাপ ২.৩)
+        $limit = $customer->effectiveCreditLimit();
         $hasLimit = bccomp($limit, '0', 4) > 0;
         $available = $customer->availableLimit();
 

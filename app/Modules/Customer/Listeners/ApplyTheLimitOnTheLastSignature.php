@@ -7,6 +7,7 @@ namespace App\Modules\Customer\Listeners;
 use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Models\CustomerCreditChange;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,8 +21,14 @@ final class ApplyTheLimitOnTheLastSignature
 {
     public function handle(ApprovalDecided $event): void
     {
+        /*
+         * ⛔ কেবল গ্রাহকের নিজের সারির সই — ১১ অক্টোবর ২০২৬ থেকে একই ছকে সীমা বাড়ানোর **অনুরোধের কাগজও** আসে
+         * ([[CustomerCreditRequest]]), যার আইডি গ্রাহকের নয়; না দেখলে অনুরোধ #৭-এর সইয়ে গ্রাহক #৭-এর সীমা বসত।
+         * ⓘ অনুরোধ বসায় [[ApplyTheSignedCreditRequest]]।
+         */
         if (($event->payload['module'] ?? null) !== 'customer'
             || ($event->payload['action'] ?? null) !== 'credit_limit'
+            || ($event->payload['approvable_type'] ?? null) !== Customer::class
             || ($event->payload['status'] ?? null) !== Approval::APPROVED) {
             return;
         }
@@ -43,7 +50,12 @@ final class ApplyTheLimitOnTheLastSignature
                 return;
             }
 
-            $customer->forceFill(['credit_limit' => (string) $approval->amount])->save();
+            // ⭐ ইতিহাসে কারণ আর সইয়ের সূত্রসহ (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
+            CustomerCreditChange::because(
+                $approval->requested_reason,
+                (int) $approval->id,
+                fn () => $customer->forceFill(['credit_limit' => (string) $approval->amount])->save(),
+            );
         });
     }
 }
