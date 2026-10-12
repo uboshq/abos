@@ -295,6 +295,11 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
                 ->selectRaw('COALESCE(SUM(total), 0)')
                 ->whereColumn('sal_returns.sales_invoice_id', 'sal_invoices.id')
                 ->posted(),
+            // ⓘ কমিশন দাবি — [[claimedAmount()]]-এর হুবহু শর্ত
+            'claimed_total' => CommissionClaim::query()
+                ->selectRaw('COALESCE(SUM(amount), 0)')
+                ->whereColumn('sal_commission_claims.sales_invoice_id', 'sal_invoices.id')
+                ->where('status', '!=', CommissionClaim::CANCELLED),
         ]);
     }
 
@@ -388,8 +393,30 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
          * পাওনা কমাত, অথচ বিলের বাকি থেকে বাদ যেত না — আদায়ের পর্দা ফেরত যাওয়া অংশও আবার নিত।
          */
         $due = bcsub(bcsub((string) $this->total, $this->collectedAmount(), 4), $this->returnedAmount(), 4);
+        $due = bcsub($due, $this->claimedAmount(), 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
+    }
+
+    /**
+     * ⛔ এই বিলের কমিশন দাবি — গ্রাহকের পাওনায় জমা বসায়, তাই বিলের বাকিও কমায় (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ আগে খাতায় পাওনা কমত ([[CommissionClaimService::create()]]), অথচ বিলের বাকি পুরোটাই থাকত — আদায়ের পর্দা
+     * দাবির টাকাও আবার নিত। ⓘ বাতিল দাবি বাদ (দাখিলা উল্টানো); মানা বা না-মানা দাবি থাকে — দুইটাতেই গ্রাহকের
+     * জমাটা থেকে যায়। ⓘ তালিকা withCollected() দিয়ে এলে অঙ্কটা সারির সাথেই (`claimed_total`)।
+     */
+    public function claimedAmount(): string
+    {
+        $preloaded = $this->getAttribute('claimed_total');
+
+        if ($preloaded !== null) {
+            return bcadd((string) ($preloaded ?: '0'), '0', 4);
+        }
+
+        return bcadd((string) (CommissionClaim::query()
+            ->where('sales_invoice_id', $this->getKey())
+            ->where('status', '!=', CommissionClaim::CANCELLED)
+            ->sum('amount') ?: '0'), '0', 4);
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

@@ -94,6 +94,7 @@ return [
     // ডিলারের কমিশন
     'commission_settle' => 'Accepted',
     'commission_reject' => 'Refused',
+    'commission_cancel' => 'Cancel',
     'new_commission' => 'New commission',
     'new_scheme' => 'New scheme',
     'add_band' => 'Add a band',

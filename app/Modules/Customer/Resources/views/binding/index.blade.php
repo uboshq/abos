@@ -108,7 +108,7 @@
 
             <label class="block">
                 <span class="{{ $label }}">{{ __('customer::binding.starts_on') }}</span>
-                <input type="date" name="starts_on" required value="{{ old('starts_on', $today) }}" class="{{ $field }}">
+                <x-ui.date name="starts_on" :required="true" :value="old('starts_on', $today)" />
             </label>
 
             <x-ui.button type="submit" tone="primary">{{ __('customer::binding.bind_button') }}</x-ui.button>
@@ -142,7 +142,7 @@
             </label>
             <label class="block">
                 <span class="{{ $label }}">{{ __('customer::binding.on_date') }}</span>
-                <input type="date" name="on_date" required value="{{ $today }}" class="{{ $field }}">
+                <x-ui.date name="on_date" :required="true" :value="$today" />
             </label>
 
             <x-ui.button type="submit" tone="secondary">{{ __('customer::binding.handover_button') }}</x-ui.button>
@@ -218,7 +218,7 @@
                         @if ($row->ends_on === null)
                             <form method="POST" action="{{ route('customer.binding.end', $row) }}" class="mt-2 flex items-end gap-2">
                                 @csrf
-                                <input type="date" name="ends_on" required value="{{ $today }}" class="{{ $field }} max-w-48">
+                                <div class="max-w-48"><x-ui.date name="ends_on" :required="true" :value="$today" /></div>
                                 <x-ui.button type="submit" tone="secondary">{{ __('customer::binding.end_button') }}</x-ui.button>
                             </form>
                         @endif

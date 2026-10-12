@@ -129,12 +129,11 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
             'status' => 'pending',
         ]);
 
-        // ⓘ সই হলে ভাউচারটা খাতায় বসানো যায়, আর তখন বিল শোধ দেখায়
+        // ⓘ সই হলে ভাউচারটা নিজেই খাতায় বসে — কেউ "পোস্ট" চাপেন না (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]]), আর তখন বিল শোধ দেখায়
         $approval = Approval::query()->where('approvable_id', $voucher->id)->firstOrFail();
         app(ApprovalEngine::class)->approve($approval, $this->user);
 
-        app(\App\Modules\Accounts\Services\VoucherService::class)->post($voucher->fresh());
-
+        $this->assertTrue($voucher->fresh()->isPosted(), '⛔ শেষ সইয়ের পরেও কাউন্টারের টাকা খসড়ায়।');
         $this->assertSame(0, bccomp($bill->fresh()->paidAmount(), '600', 4));
     }
 

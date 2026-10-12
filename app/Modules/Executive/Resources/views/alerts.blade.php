@@ -27,22 +27,22 @@
 
         <div class="grid gap-3 xl:grid-cols-3">
             <section data-alert-grid class="min-w-0 overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
-                <table class="w-full text-sm">
+                <table class="ui-grid w-full text-sm">
                     <thead>
                         <tr class="text-left text-2xs text-(--color-ink-muted)">
-                            <th class="px-3 py-2 font-semibold">{{ __('executive::alerts_page.what') }}</th>
+                            <th class="font-semibold">{{ __('executive::alerts_page.what') }}</th>
                             @foreach ($companies as $company)
-                                <th class="px-3 py-2 text-right font-semibold">{{ $company['name'] }}</th>
+                                <th class="text-right font-semibold">{{ $company['name'] }}</th>
                             @endforeach
-                            <th class="px-3 py-2 text-right font-semibold">{{ __('executive::today.group_total') }}</th>
+                            <th class="text-right font-semibold">{{ __('executive::today.group_total') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($alerts as $alert)
                             <tr data-alert="{{ $alert['kind'] }}" class="border-t border-(--color-border)">
-                                <td class="px-3 py-2 text-(--color-ink)">{{ __('executive::alert.'.$alert['kind']) }}</td>
+                                <td class="text-(--color-ink)">{{ __('executive::alert.'.$alert['kind']) }}</td>
                                 @foreach ($alert['companies'] as $part)
-                                    <td class="tabular px-3 py-2 text-right" data-company="{{ $part['id'] }}">
+                                    <td class="tabular text-right" data-company="{{ $part['id'] }}">
                                         @if ($part['count'] === null)
                                             <span class="text-2xs text-(--color-ink-muted)">{{ __('executive::alert.no_key') }}</span>
                                         @else
@@ -52,7 +52,7 @@
                                         @endif
                                     </td>
                                 @endforeach
-                                <td class="tabular px-3 py-2 text-right font-bold">{{ $alert['total'] }}</td>
+                                <td class="tabular text-right font-bold">{{ $alert['total'] }}</td>
                             </tr>
                         @endforeach
                     </tbody>

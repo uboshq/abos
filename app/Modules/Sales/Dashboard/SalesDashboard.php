@@ -295,8 +295,8 @@ final class SalesDashboard implements ProvidesDashboard
     {
         $ranked = DB::query()
             ->fromSub(SalesInvoice::query()->posted()->withCollected(), 'i')
-            ->selectRaw('i.id, (i.total - i.collected_total - i.voucher_total - i.returned_total) as due')
-            ->whereRaw('(i.total - i.collected_total - i.voucher_total - i.returned_total) > 0')
+            ->selectRaw('i.id, (i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total) as due')
+            ->whereRaw('(i.total - i.collected_total - i.voucher_total - i.returned_total - i.claimed_total) > 0')
             ->orderByDesc('due')
             ->orderBy('i.id')
             ->limit(8)
@@ -341,7 +341,7 @@ final class SalesDashboard implements ProvidesDashboard
                 label: __('sales::action.new_order'),
                 href: route('sales.order.create'),
                 permission: 'sales.order.create',
-                icon: 'clipboard',
+                icon: 'plus', // ⓘ সেটে 'clipboard' নেই — খালি ঘর আঁকত ([[IconSetTest]], ১১ অক্টোবর ২০২৬)
             );
     }
 }

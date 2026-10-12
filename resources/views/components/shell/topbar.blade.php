@@ -210,6 +210,8 @@
         <x-shell.create-menu />
 
         <x-shell.approval-quick-access />
+        {{-- ⭐ সই হয়েছে, পোস্ট হয়নি — মালিক, ১১ অক্টোবর ২০২৬ --}}
+        <x-shell.signed-unposted />
         <x-shell.notification-bell />
 
         <x-shell.fullscreen-toggle />

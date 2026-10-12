@@ -12,6 +12,9 @@ import { fetchPrices } from '../counter/customer-prices.js'
 export function salesLineEditor (config = {}) {
     return {
         rows: config.rows,
+
+        // ⓘ যে পণ্যের দরেই ভ্যাট ধরা (ভেতরের হার) — তাদের সারিতে ভ্যাট মোটে যোগ হয় না
+        inclusive: (config.inclusive || []).map(String),
         packs: config.packs,
         packDefaults: config.packDefaults || {},
 
@@ -102,7 +105,12 @@ export function salesLineEditor (config = {}) {
         amount(row) {
             const base = (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
             const net = base - (parseFloat(row.discount) || 0);
-            return net + (parseFloat(row.tax) || 0);
+
+            // ⛔ দামের ভেতরের ভ্যাট মোটে আবার নয় — সার্ভারের একই নিয়ম ([[CalculatesSalesLines::lineFigures()]], ১০ অক্টোবর ২০২৬)
+            return this.isInclusive(row) ? net : net + (parseFloat(row.tax) || 0);
+        },
+        isInclusive(row) {
+            return this.inclusive.includes(String(row.product_id));
         },
         get total() {
             return this.rows.reduce((sum, row) => sum + this.amount(row), 0);
@@ -274,6 +282,9 @@ export function salesOrderDesk (config = {}) {
 export function purchaseLineEditor (config = {}) {
     return {
         rows: config.rows,
+
+        // ⓘ যে পণ্যের দরেই ভ্যাট ধরা (ভেতরের হার) — তাদের সারিতে ভ্যাট মোটে যোগ হয় না
+        inclusive: (config.inclusive || []).map(String),
         packs: config.packs,
         packDefaults: config.packDefaults || {},
         lots: config.lots,
@@ -382,7 +393,12 @@ export function purchaseLineEditor (config = {}) {
         amount(row) {
             const base = (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
             const net = base - (parseFloat(row.discount) || 0);
-            return net + (parseFloat(row.tax) || 0);
+
+            // ⛔ দামের ভেতরের ভ্যাট মোটে আবার নয় — সার্ভারের একই নিয়ম ([[CalculatesSalesLines::lineFigures()]], ১০ অক্টোবর ২০২৬)
+            return this.isInclusive(row) ? net : net + (parseFloat(row.tax) || 0);
+        },
+        isInclusive(row) {
+            return this.inclusive.includes(String(row.product_id));
         },
         get total() {
             return this.rows.reduce((sum, row) => sum + this.amount(row), 0);

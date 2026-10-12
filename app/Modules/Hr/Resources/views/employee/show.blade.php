@@ -257,7 +257,7 @@
                     <label class="flex flex-col gap-1 text-2xs text-(--color-ink-muted)">
                         {{ __('hr::profile.month') }}
                         <x-ui.month name="month" :value="$month->format('Y-m')"
-                                    class="h-10 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)" />
+                                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)" />
                     </label>
                     <x-ui.button type="submit">{{ __('hr::profile.show') }}</x-ui.button>
                 </form>
@@ -377,7 +377,7 @@
                         @endforelse
 
                         <a href="{{ route('hr.leave.index', ['employee' => $employee->id]) }}"
-                           class="mt-1 flex h-11 items-center justify-center rounded-(--radius-field) bg-(--color-brand-50)
+                           class="mt-1 flex h-(--spacing-field) items-center justify-center rounded-(--radius-field) bg-(--color-brand-50)
                                   text-sm font-semibold text-(--color-brand-700) hover:bg-(--color-brand-100)">
                             {{ __('hr::profile.see_leave') }}
                         </a>

@@ -274,6 +274,39 @@ final class CommissionClaimService
     }
 
     /**
+     * ⛔ ভুল দাবি বাতিল — কেবল অপেক্ষায় থাকা, কারণসহ (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ আগে কোনো পথ ছিল না: ভুল অঙ্কে বা ভুল বিলে দাবি লিখলে গ্রাহকের পাওনা কমেই থাকত, আর একমাত্র উপায় ছিল
+     * "মানেনি" — যা টাকাটাকে ডিপোর খরচ বানায়, ভুলটাকে নয়। ⓘ খাতা মোছা হয় না: দাবির দাখিলা উল্টো সারিতে
+     * ফেরে ([[PostingEngine::reverse()]]), গ্রাহকের পাওনা আর বিলের বাকি আগের জায়গায়।
+     */
+    public function cancel(CommissionClaim $claim, string $reason): CommissionClaim
+    {
+        $this->assertPending($claim);
+
+        if (trim($reason) === '') {
+            throw ValidationException::withMessages([
+                'decision_reason' => __('sales::validation.commission_cancel_needs_reason'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($claim, $reason) {
+            $this->lockPending($claim);
+
+            $this->posting->reverse(CommissionClaim::STOCK_SOURCE, (int) $claim->id, now()->toDateString(), $reason, auth()->id());
+
+            $claim->update([
+                'status' => CommissionClaim::CANCELLED,
+                'decision_reason' => $reason,
+                'decided_on' => now()->toDateString(),
+                'decided_by' => auth()->id(),
+            ]);
+
+            return $claim->fresh();
+        });
+    }
+
+    /**
      * শতাংশ কিসের উপর বসবে।
      *
      * বিলের সাথে জোড়া থাকলে বিলের অঙ্কই ভিত্তি; নগদে দিলে ব্যবহারকারী

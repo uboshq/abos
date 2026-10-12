@@ -180,7 +180,21 @@ class TheCounterSaidZeroWhileTheRiceWasInTheStoreTest extends TestCase
 
         $kacchi = $this->dish('Kacchi', [[$rice, '1'], [$saffron, '1']]);
 
-        $this->assertSame(0, bccomp((string) $this->onCounter($kacchi)['available'], '0', 0));
+        /*
+         * ⓘ শূন্য মানে এখন তালিকা থেকে বাদ — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬:
+         * *"0 stock products ekhane asbe na"* (47a67ace, [[PosController::catalogue()]])।
+         * ⚠️ আগে এই দাবি সারিটা খুঁজে তার পাশে "০" চাইত — নির্দেশের পরে সারিটাই
+         * আর আসে না, তাই null-এর ঘর পড়তে গিয়ে ভাঙত।
+         *
+         * ⛔ দাবিটা একই থাকে: উপকরণ ফুরালে খাবারটা বেচার মতো দেখায় না।
+         * ⓘ চালটা (মজুদ আছে) তালিকায় থাকা চাই — নাহলে ফাঁকা তালিকাও এই
+         * দাবি পার করে দিত। ⓘ তালিকা নামের ক্রমে কাটা হয় (`limit`, ছাঁকনির আগে) —
+         * "Kacchi" নামে "Rice"-এর আগে, তাই চাল এলে কাচ্চি সীমার কারণে বাদ পড়েনি।
+         */
+        $this->assertNotNull($this->onCounter($rice),
+            'চাল গুদামে আছে, তবু কাউন্টারের তালিকায় নেই — তালিকাটাই ফাঁকা।');
+        $this->assertNull($this->onCounter($kacchi),
+            '⛔ জাফরান ফুরিয়েছে, তবু কাচ্চি কাউন্টারের তালিকায় বেচার মতো বসে আছে।');
     }
 
     /**

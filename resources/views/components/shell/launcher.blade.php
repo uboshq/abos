@@ -104,7 +104,7 @@
                           gap:8px;min-height:104px;padding:12px 8px;text-align:center;
                           border:1px solid var(--color-border);border-radius:10px;
                           background:var(--color-surface-app)">
-                    <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;
+                    <span style="display:grid;place-items:center;width:40px;aspect-ratio:1;flex:none;
                                  border-radius:10px;background:var(--color-surface-muted)">
                         <x-ui.icon :name="$module['icon']" :size="24" />
                     </span>
@@ -123,7 +123,7 @@
                           gap:8px;min-height:104px;padding:12px 8px;text-align:center;
                           border:1px solid var(--color-border);border-radius:10px;
                           background:var(--color-surface-app)">
-                    <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;
+                    <span style="display:grid;place-items:center;width:40px;aspect-ratio:1;flex:none;
                                  border-radius:10px;background:var(--color-surface-muted)">
                         <x-ui.icon name="reports" :size="24" />
                     </span>

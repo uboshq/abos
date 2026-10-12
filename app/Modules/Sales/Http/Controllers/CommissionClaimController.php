@@ -46,7 +46,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:sales.commission.view', only: ['index']),
-            new Middleware('can:sales.commission.manage', only: ['create', 'store', 'settle', 'reject']),
+            new Middleware('can:sales.commission.manage', only: ['create', 'store', 'settle', 'reject', 'cancel']),
         ];
     }
 
@@ -178,5 +178,16 @@ class CommissionClaimController extends Controller implements HasMiddleware
         $this->claims->reject($claim, $data['decision_reason']);
 
         return back()->with('saved', __('sales::message.commission_rejected'));
+    }
+
+    public function cancel(Request $request, CommissionClaim $claim): RedirectResponse
+    {
+        $data = $request->validate([
+            'decision_reason' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+
+        $this->claims->cancel($claim, $data['decision_reason']);
+
+        return back()->with('saved', __('sales::message.commission_cancelled'));
     }
 }

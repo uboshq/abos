@@ -13,7 +13,7 @@
             {{ __('sales::planned.being_built') }}
         </p>
 
-        <p class="mt-4 max-w-3xl text-sm leading-relaxed text-(--color-ink-body)">
+        <p class="mt-4 max-w-(--spacing-prose-max) text-sm leading-relaxed text-(--color-ink-body)">
             {{ __('sales::planned.about_'.$screen) }}
         </p>
     </div>

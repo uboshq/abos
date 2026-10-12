@@ -28,7 +28,7 @@ class DepreciationEntry extends Model implements Drillable
     protected $table = 'acc_depreciation_entries';
 
     protected $fillable = [
-        'company_id', 'fixed_asset_id', 'period_end', 'amount',
+        'company_id', 'fixed_asset_id', 'run_id', 'period_end', 'amount',
         'document_no', 'created_by',
     ];
 

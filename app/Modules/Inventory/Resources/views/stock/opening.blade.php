@@ -175,8 +175,9 @@
                                     <td><input :name="name(i, 'batch_no')" x-model="row.batch_no" data-cell="batch_no"
                                                placeholder="{{ __('inventory::message.opening_cart_lot_auto') }}" aria-label="{{ __('inventory::field.batch_no') }}"
                                                x-on:keydown.enter="enter($event, row)" class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1"></td>
-                                    <td><input :name="name(i, 'expiry_date')" x-model="row.expiry_date" data-cell="expiry_date" type="date"
-                                               aria-label="{{ __('inventory::field.expiry_date') }}" x-on:keydown.enter="enter($event, row)" class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1"></td>
+                                    <td><x-ui.date dense name="expiry_date" bind-name="name(i, 'expiry_date')"
+                                               bind-iso="row.expiry_date" bind-model="row.expiry_date" data-cell="expiry_date"
+                                               aria-label="{{ __('inventory::field.expiry_date') }}" x-on:keydown.enter="enter($event, row)" /></td>
                                     <td>
                                         <select :name="name(i, 'supplier_id')" x-model="row.supplier_id" data-cell="supplier_id"
                                                 aria-label="{{ __('inventory::field.opening_principal') }}" x-on:keydown.enter="enter($event, row)" class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1">

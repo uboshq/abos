@@ -78,8 +78,14 @@ class SixButtonsThatOnlySaidComingSoonTest extends TestCase
     {
         $html = $this->markup();
 
-        foreach (['chart_bulk_do', 'expense', 'transportation', 'shipment', 'add_deposit', 'add_note'] as $key) {
-            $this->assertStringContainsString(__('sales::action.'.$key), $html,
+        /*
+         * ⓘ কাউন্টারের নতুন নকশা — মালিক, ৪ অক্টোবর ২০২৬ (478770c1): আটটা বোতাম, প্রতিটা নিজের পপ-আপে; "চার্ট এন্ট্রি"
+         * এখন "অনেক পণ্য", নোট এখন "মেমো", আর শিপমেন্টের ঘর "মাল কীভাবে যাবে"-র ভেতরে। ⚠️ আগে এই দাবি পুরনো ছয়টা নাম
+         * খুঁজত, আর নকশার পর থেকে লাল ছিল — বোতামগুলো ছিল, নামগুলো নয় (fe, ১১ অক্টোবর ২০২৬)।
+         */
+        foreach (['btn_money', 'btn_transport', 'btn_price', 'btn_return', 'btn_delivery', 'btn_drafts', 'btn_reprint', 'btn_cancel', 'btn_many', 'btn_memo'] as $button) {
+            $key = 'sales::field.'.$button;
+            $this->assertStringContainsString(__($key), $html,
                 "বোতামটাই নেই: {$key}");
         }
 
@@ -152,7 +158,7 @@ class SixButtonsThatOnlySaidComingSoonTest extends TestCase
      */
     public function test_what_the_panels_collect_is_what_the_challan_keeps(): void
     {
-        $this->actingAs($this->user)->post(route('sales.direct.store'), [
+        $form = [
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '100']],
@@ -175,7 +181,31 @@ class SixButtonsThatOnlySaidComingSoonTest extends TestCase
             'deposit_ref' => 'CHQ-77',
 
             'narration' => 'সকালে পাঠাতে হবে',
-        ])->assertRedirect();
+        ];
+
+        /*
+         * ⛔ পুরনো ঘরে আক্ষরিক `cheque` এখন কাউন্টারে ফেরত — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিকের নিয়ম *"cheek sudu accounts e"*। ⚠️ আগে এই দাবি `cheque`
+         * পাঠিয়ে চালান আশা করত, আর সেটা সবুজ হত কেবল একটা ফাঁকের জন্য:
+         * ডেমোতে চেকের পদ্ধতির কোড `CHQ`, তাই কোড ধরে খোঁজায় আক্ষরিক
+         * `cheque` কিছুই পেত না, আর চেকটা কাউন্টার পার হয়ে যেত।
+         * ⭐ [[DirectSaleService::assertNoChequeAtTheCounter()]] এখন ওটাকেও
+         * চেক ধরে, আর `deposits` ঘরে থামায় — কোনো চালান বসে না।
+         */
+        $challans = DeliveryChallan::query()->count();
+
+        $this->actingAs($this->user)->post(route('sales.direct.store'), $form)
+            ->assertSessionHasErrors(['deposits' => __('sales::validation.no_cheque_at_counter')]);
+
+        $this->assertSame($challans, DeliveryChallan::query()->count(),
+            '⛔ চেক ফেরত দিয়েও একটা চালান বসে গেছে।');
+
+        /* ⓘ প্যানেলের দাবিটা অক্ষত — কাউন্টারে যা চলে, সেই নগদ দিয়ে */
+        $this->actingAs($this->user)->post(route('sales.direct.store'), [
+            ...$form,
+            'deposit_method' => 'cash',
+        ])->assertSessionHasNoErrors()->assertRedirect();
 
         $challan = DeliveryChallan::query()->latest('id')->firstOrFail();
 
@@ -185,7 +215,7 @@ class SixButtonsThatOnlySaidComingSoonTest extends TestCase
         $this->assertSame('ঢাকা মেট্রো ব ১১-২২৩৩', $challan->vehicle_no);
         $this->assertSame('রফিক', $challan->driver_name);
         $this->assertSame('চরপাড়া বাজার', $challan->ship_to);
-        $this->assertSame('cheque', $challan->deposit_method);
+        $this->assertSame('cash', $challan->deposit_method);
         $this->assertSame('CHQ-77', $challan->deposit_ref);
         $this->assertSame('সকালে পাঠাতে হবে', $challan->narration);
     }

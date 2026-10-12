@@ -14,7 +14,7 @@
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
             <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>
-                <select id="ln-company" name="company" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <select id="ln-company" name="company" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach ($companies as $company)
                         <option value="{{ $company['id'] }}" @selected($chosen === $company['id'])>{{ $company['name'] }}</option>
                     @endforeach
@@ -37,7 +37,7 @@
                 <input type="hidden" name="company_id" value="{{ $chosen }}">
                 <div>
                     <label for="ln-party" class="block text-2xs text-(--color-ink-muted)">{{ __('executive::links.party') }}</label>
-                    <select id="ln-party" name="party" required class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    <select id="ln-party" name="party" required class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                         @foreach ($parties as $type => $list)
                             <optgroup label="{{ __('executive::links.type_'.$type) }}">
                                 @foreach ($list as $party)
@@ -49,7 +49,7 @@
                 </div>
                 <div>
                     <label for="ln-sister" class="block text-2xs text-(--color-ink-muted)">{{ __('executive::links.is_sister') }}</label>
-                    <select id="ln-sister" name="sister_company_id" required class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    <select id="ln-sister" name="sister_company_id" required class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                         @foreach ($companies as $company)
                             @if ($company['id'] !== $chosen)
                                 <option value="{{ $company['id'] }}">{{ $company['name'] }}</option>
@@ -62,22 +62,22 @@
         @endif
 
         <section class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <table class="w-full text-sm">
+            <table class="ui-grid w-full text-sm">
                 <thead>
                     <tr class="text-left text-2xs text-(--color-ink-muted)">
-                        <th class="px-3 py-2 font-semibold">{{ __('executive::links.company') }}</th>
-                        <th class="px-3 py-2 font-semibold">{{ __('executive::links.party') }}</th>
-                        <th class="px-3 py-2 font-semibold">{{ __('executive::links.is_sister') }}</th>
-                        <th class="px-3 py-2"></th>
+                        <th class="font-semibold">{{ __('executive::links.company') }}</th>
+                        <th class="font-semibold">{{ __('executive::links.party') }}</th>
+                        <th class="font-semibold">{{ __('executive::links.is_sister') }}</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($links as $link)
                         <tr data-link="{{ $link['id'] }}" class="border-t border-(--color-border)">
-                            <td class="px-3 py-1.5">{{ $link['company'] }}</td>
-                            <td class="px-3 py-1.5">{{ $link['party'] }} <span class="text-2xs text-(--color-ink-muted)">· {{ __('executive::links.type_'.$link['type']) }}</span></td>
-                            <td class="px-3 py-1.5">{{ $link['sister'] }}</td>
-                            <td class="px-3 py-1.5 text-right">
+                            <td>{{ $link['company'] }}</td>
+                            <td>{{ $link['party'] }} <span class="text-2xs text-(--color-ink-muted)">· {{ __('executive::links.type_'.$link['type']) }}</span></td>
+                            <td>{{ $link['sister'] }}</td>
+                            <td class="text-right">
                                 <form method="POST" action="{{ route('executive.links.destroy', ['link' => $link['id']]) }}">
                                     @csrf
                                     @method('DELETE')

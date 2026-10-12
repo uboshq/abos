@@ -57,6 +57,15 @@ final class HalfTheMonitorWentUnusedTest extends TestCase
          * মতো দেখাত, অথচ এটা গ্রাহকের কাছে যাওয়া পাতা।
          */
         'Sales/Resources/views/components/portal/layout.blade.php' => 'গ্রাহকের পোর্টাল, ফোনই প্রধান',
+
+        /*
+         * ⓘ পপ-আপ, পাতা নয় (১১ অক্টোবর ২০২৬) — পর্দার মাঝখানে ভাসা বাক্স, পেছনের পাতা পুরো চওড়াই থাকে। বাঁধন তুললে বাক্সটা
+         * ঘষা-কাচের পর্দা জুড়ে ছড়াত, আর চোখ বোতাম থেকে লেখা পর্যন্ত গোটা মনিটর পার হত।
+         */
+        'Approval/Resources/views/inbox/partials/sheet.blade.php' => 'সইয়ের পপ-আপ',
+        'Sales/Resources/views/direct/partials/draft-actions.blade.php' => 'খসড়া বিলের পপ-আপ',
+        'Customer/Resources/views/show.blade.php' => 'গ্রাহকের 👁 বিস্তারিত পপ-আপ (মালিক, ৩ অক্টোবর ২০২৬)',
+        'Supplier/Resources/views/show.blade.php' => 'সরবরাহকারীর 👁 বিস্তারিত পপ-আপ (মালিক, ৩ অক্টোবর ২০২৬)',
     ];
 
     /*

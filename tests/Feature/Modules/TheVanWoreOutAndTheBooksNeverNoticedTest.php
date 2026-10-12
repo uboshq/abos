@@ -309,10 +309,12 @@ class TheVanWoreOutAndTheBooksNeverNoticedTest extends TestCase
         $expense = $this->account(StandardChart::DEPRECIATION_EXPENSE)->id;
         $loss = $this->account(StandardChart::ASSET_DISPOSAL_LOSS)->id;
 
-        // ১০,০০০ অবচয়
-        $this->assertSame('10000.0000', (string) LedgerEntry::query()->where('account_id', $expense)->sum('debit'));
-        // ৯০,০০০ লোকসান — খাতায় দাম ১১,৯০,০০০, পাওয়া ১১,০০,০০০
-        $this->assertSame('90000.0000', (string) LedgerEntry::query()->where('account_id', $loss)->sum('debit'));
+        /*
+         * ⓘ ২ অক্টোবর ২০২৬ থেকে লোকসান নিজের খাতে (৫৩২০), অবচয়ে নয় ([[TheAssetSaleGainHidInTheDepreciationTest]]) — খাতায় দাম
+         * ১১,৯০,০০০, পাওয়া ১১,০০,০০০।
+         */
+        $this->assertSame('10000.0000', (string) LedgerEntry::query()->where('account_id', $expense)->sum('debit'), 'অবচয়ে কেবল ১০,০০০।');
+        $this->assertSame('90000.0000', (string) LedgerEntry::query()->where('account_id', $loss)->sum('debit'), '⛔ ৯০,০০০ লোকসান নিজের খাতে বসেনি।');
         $this->assertSame('0.0000', (string) LedgerEntry::query()->where('account_id', $loss)->sum('credit'));
     }
 

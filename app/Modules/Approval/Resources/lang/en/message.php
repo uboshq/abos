@@ -18,6 +18,7 @@ return [
 
     'inbox_capped' => 'Showing the :shown oldest; :total are waiting in all.',
     'no_requests' => 'You have not asked for an approval yet.',
+    'no_signed_unposted' => 'Every signed paper has been posted — nothing is stuck.',
     'no_match' => 'No rule matches this search — try another word, or clear it to see the whole list.',
     'no_flows' => 'No rules are set up — so nothing needs approval anywhere.',
     'no_flows_hint' => 'Without a rule, discounts, cancellations and back-dated entries all go through unasked.',
@@ -92,4 +93,5 @@ return [
     'bundle_confirmed' => ':count papers confirmed.',
     'bundle_nothing' => 'Nothing in this sale is still waiting to be confirmed.',
     'bundle_remark' => 'Confirmed together on one page',
+    'escalation_fallback' => 'With no target: Manager → super admin',
 ];

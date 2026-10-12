@@ -277,7 +277,7 @@ class HandLoanController extends Controller implements HasMiddleware
              */
             'principal' => ['nullable', 'numeric', 'min:0'],
             'opening_repaid' => ['nullable', 'numeric', 'min:0'],
-            'money_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
+            'money_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'paper' => ['nullable', 'file'],
 
             'note' => ['nullable', 'string', 'max:500'],
@@ -331,6 +331,7 @@ class HandLoanController extends Controller implements HasMiddleware
          */
         if (filled($data['party'] ?? null)) {
             [$kind, $id] = explode(':', (string) $data['party']);
+            $this->assertPartyIsHere($kind, (int) $id);
 
             $data['partner_type'] = $kind;
             $data['partner_id'] = (int) $id;
@@ -396,6 +397,7 @@ class HandLoanController extends Controller implements HasMiddleware
 
         if (filled($data['party'] ?? null)) {
             [$kind, $id] = explode(':', (string) $data['party']);
+            $this->assertPartyIsHere($kind, (int) $id);
 
             $handLoan->forceFill(['partner_type' => $kind, 'partner_id' => (int) $id])->save();
         } else {
@@ -413,7 +415,7 @@ class HandLoanController extends Controller implements HasMiddleware
             'moved_on' => ['required', 'date'],
             // ⭐ কবে ফেরতের কথা — ঐচ্ছিক, দেওয়া-নেওয়ার দিনের আগে নয় (পরিকল্পনা ১.৮, ৫ অক্টোবর ২০২৬)
             'return_on' => ['nullable', 'date', 'after_or_equal:moved_on'],
-            'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
             'instrument_no' => ['nullable', 'string', 'max:64'],
@@ -513,6 +515,21 @@ class HandLoanController extends Controller implements HasMiddleware
             session()->flash('warning', __('core.attachment.refused', [
                 'reason' => $refused->getMessage(),
             ]));
+        }
+    }
+
+    /**
+     * ⛔ ধারের সাথে জোড়া ডিলার বা সরবরাহকারী এই কোম্পানির আছে কি না — পুরো-ERP অডিট, অর্থ ১০ অক্টোবর ২০২৬।
+     *
+     * ⓘ ঘরটা কেবল ছাঁদ দেখত ("customer:12"), সংখ্যাটা নয়: অন্য কোম্পানির বা মুছে যাওয়া পক্ষের আইডি বসে যেত, আর তালিকায় নাম
+     * আসত না বা অন্য কোম্পানির নাম পড়ার পথ খুলত। ⭐ পক্ষের এক নিয়ম ([[PartyRegistry::exists()]]) — কোম্পানির দেয়ালসহ।
+     */
+    private function assertPartyIsHere(string $kind, int $id): void
+    {
+        if (! app(PartyRegistry::class)->exists($kind, $id)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'party' => __('validation.exists', ['attribute' => __('finance::field.party_link')]),
+            ]);
         }
     }
 }

@@ -116,9 +116,11 @@ class BankFacilityService
              * মেয়াদ বদলালে পুরনো মঞ্জুরিপত্রে লেখা তারিখটাও নীরবে বদলে
              * যেত, আর কোনটা সত্যি তা বলার উপায় থাকত না।
              */
+            // ⛔ মেয়াদ গোনা মঞ্জুরির দিন থেকে, আজ থেকে নয় — পুরো-ERP অডিট, অর্থ M25b, ১০ অক্টোবর ২০২৬। ⓘ আগে চলতি ঋণ তুললে
+            // (মঞ্জুরি দুই বছর আগে) নবায়নের দিন দুই বছর পিছিয়ে বসত, আর সতর্কবার্তা ঠিক সময়ে আসত না।
             'renews_on' => $data['renews_on'] ?? (
                 isset($data['term_months'])
-                    ? now()->addMonths((int) $data['term_months'])->toDateString()
+                    ? \Illuminate\Support\Carbon::parse((string) $data['sanctioned_on'])->addMonthsNoOverflow((int) $data['term_months'])->toDateString()
                     : null
             ),
 

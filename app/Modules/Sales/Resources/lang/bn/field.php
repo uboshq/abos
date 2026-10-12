@@ -386,6 +386,8 @@ return [
     'commission_pending' => 'অপেক্ষায়',
     'commission_settled' => 'সমন্বয় হয়েছে',
     'commission_rejected' => 'মানা হয়নি',
+    'commission_cancelled' => 'বাতিল',
+    'commission_cancel_reason' => 'কেন বাতিল (ভুল দাবি)',
     'commission_pending_total' => 'কোম্পানির কাছে দাবি, এখনো বাকি',
     'commission_reject_reason' => 'কেন মানা হলো না',
     'expense_for' => 'খরচটা কীসের',

@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ViewedBranch;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Sales\Models\DeliveryChallan;
 use Illuminate\Support\Collection;
@@ -85,6 +86,12 @@ final class BatchTrace
              * অবিশ্বাস্য হয়ে যেত।
              */
             ->where('c.status', '<>', DocumentStatus::CANCELLED)
+
+            /*
+             * ⛔ শাখার দেয়াল — চালানের শাখা ধরে, Sales অডিট ১০ অক্টোবর ২০২৬। ⚠️ আগে লট বাছলেই সব শাখার
+             * চালান আর গ্রাহকের নাম-ফোন আসত — অন্য শাখার দোকানের তালিকা, যা এই মানুষের দেখার কথা নয়।
+             */
+            ->tap(fn ($q) => ViewedBranch::narrow($q, 'c.branch_id'))
             ->orderByDesc('c.trx_date')
             ->orderByDesc('c.id')
             ->select([

@@ -23,19 +23,19 @@
 
             <h2 class="mt-4 text-sm font-semibold text-(--color-ink)">{{ __('documents::page.what_heading') }}</h2>
 
-            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-(--color-ink-body)">
+            <p class="mt-2 max-w-(--spacing-prose-max) text-sm leading-relaxed text-(--color-ink-body)">
                 {{ __('documents::screen.'.$screen.'.what') }}
             </p>
 
             @if ($plan['new'])
                 <h2 class="mt-4 text-sm font-semibold text-(--color-ink)">{{ __('documents::page.new_heading') }}</h2>
 
-                <p class="mt-2 max-w-3xl text-sm leading-relaxed text-(--color-ink-body)">
+                <p class="mt-2 max-w-(--spacing-prose-max) text-sm leading-relaxed text-(--color-ink-body)">
                     {{ __('documents::screen.'.$screen.'.new') }}
                 </p>
             @endif
 
-            <p class="mt-4 max-w-3xl text-2xs text-(--color-ink-muted)">
+            <p class="mt-4 max-w-(--spacing-prose-max) text-2xs text-(--color-ink-muted)">
                 {{ __('documents::page.nothing_works_yet') }}
             </p>
         </section>

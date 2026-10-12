@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
@@ -11,6 +12,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\HandLoanAccount;
+use App\Modules\Finance\Reports\DepositReports;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -125,6 +127,7 @@ final class DueNotices
                     'days' => $this->daysLeft($deposit->matures_on),
                 ]),
                 quietDays: null,
+                data: $this->facts($deposit->document_no, null, $deposit->matures_on),
             );
         }
 
@@ -156,6 +159,7 @@ final class DueNotices
                 $days < 0
                     ? __('finance::deposit_report.notice_matured_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => -$days])
                     : __('finance::message.notice_maturing_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => $days]),
+                data: $this->facts($deposit->document_no, null, $deposit->matures_on),
             );
         }
 
@@ -168,7 +172,7 @@ final class DueNotices
      */
     public function dpsInstalmentsDue(): int
     {
-        $rows = app(\App\Core\Engines\Report\ReportEngine::class)->run(\App\Modules\Finance\Reports\DepositReports::INSTALMENTS, [
+        $rows = app(ReportEngine::class)->run(DepositReports::INSTALMENTS, [
             'from' => now()->subYears(10)->toDateString(), 'to' => now()->toDateString(),
         ], 1, 100000)->rows;
 
@@ -197,6 +201,7 @@ final class DueNotices
                     'count' => $owed[$deposit->id]['months'],
                     'amount' => Money::format($owed[$deposit->id]['amount']),
                 ]),
+                data: $this->facts($deposit->document_no, $owed[$deposit->id]['amount'], null),
             );
         }
 
@@ -252,6 +257,7 @@ final class DueNotices
                     'date' => $due->translatedFormat('j M Y'),
                     'days' => $this->daysLeft($due),
                 ]),
+                data: $this->facts(null, $this->balanceOf($account), $due, $account->person?->name()),
             );
         }
 
@@ -286,6 +292,7 @@ final class DueNotices
                     'amount' => Money::format($due['amount']),
                     'no' => $due['month'],
                 ]),
+                data: $this->facts($facility->document_no, (string) $due['amount'], Carbon::parse($due['due_on']), $facility->bank),
             );
         }
 
@@ -306,6 +313,7 @@ final class DueNotices
                 route('finance.bank_facility.show', $facility->id),
                 __('finance::bank_loan_report.notice_renewal', ['facility' => trim($facility->bank.' · '.$facility->document_no, ' ·')]),
                 __('finance::bank_loan_report.notice_renewal_body', ['date' => $facility->renews_on->translatedFormat('j M Y')]),
+                data: $this->facts($facility->document_no, null, $facility->renews_on, $facility->bank),
             );
         }
 
@@ -326,6 +334,7 @@ final class DueNotices
                 route('finance.insurance.show', $policy->id),
                 __('finance::insurance_alert.notice_renewal', ['policy' => $policy->policy_no, 'insurer' => $policy->institution?->name() ?? '']),
                 __('finance::insurance_alert.notice_renewal_body', ['date' => $policy->ends_on->translatedFormat('j M Y'), 'days' => $policy->daysLeft()]),
+                data: $this->facts($policy->policy_no, null, $policy->ends_on, $policy->institution?->name()),
             );
         }
 
@@ -349,10 +358,27 @@ final class DueNotices
                     'amount' => Money::format($premium->amount),
                     'date' => $premium->period_from->translatedFormat('j M Y'),
                 ]),
+                data: $this->facts($premium->policy?->policy_no, (string) $premium->amount, $premium->period_from),
             );
         }
 
         return $sent;
+    }
+
+    /**
+     * ⭐ বিজ্ঞপ্তির মান — কাগজ, টাকা (লেখা হিসেবে, float নয়), শেষ তারিখ, আর কত দিন বাকি (পেরোলে ঋণাত্মক), পক্ষ।
+     *
+     * @return array<string, string>
+     */
+    private function facts(?string $paper, int|string|null $amount, ?\DateTimeInterface $due, ?string $party = null): array
+    {
+        return array_filter([
+            'paper_no' => (string) ($paper ?? ''),
+            'amount' => $amount === null ? '' : Money::format((string) $amount),
+            'due_date' => $due === null ? '' : Carbon::instance($due)->format('d/m/Y'),
+            'days_left' => $due === null ? '' : (string) $this->daysLeft(Carbon::instance($due)),
+            'party' => (string) ($party ?? ''),
+        ], fn ($v) => $v !== '');
     }
 
     /**
@@ -361,7 +387,7 @@ final class DueNotices
      *
      * @return int কয়জনের কাছে সত্যিই গেল
      */
-    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS): int
+    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS, array $data = []): int
     {
         $sent = 0;
 
@@ -370,7 +396,9 @@ final class DueNotices
                 continue;
             }
 
-            if ($this->notifications->send($user, $type, $title, $body, $url) !== null) {
+            // ⭐ একই কাগজের একই দিনের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+            // ⓘ নিয়মের শর্ত আর টেমপ্লেটের মান — কাগজ, টাকা, শেষ তারিখ, আর কত দিন (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ)
+            if ($this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString(), data: $data) !== null) {
                 $sent++;
             }
         }

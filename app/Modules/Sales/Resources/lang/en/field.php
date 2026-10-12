@@ -426,6 +426,8 @@ return [
     'commission_pending' => 'Pending',
     'commission_settled' => 'Settled',
     'commission_rejected' => 'Refused',
+    'commission_cancelled' => 'Cancelled',
+    'commission_cancel_reason' => 'Why cancel (wrong claim)',
     'commission_pending_total' => 'Claimed and still outstanding',
     'commission_reject_reason' => 'Why it was refused',
     'expense_for' => 'What the expense is for',

@@ -124,6 +124,29 @@ final class ASalesmanSeesOnlyHisOwnDealersTest extends TestCase
 
     // ── তালিকা, খোঁজা, ঠিকানা ───────────────────────────────────────────────
 
+    /**
+     * ⛔ দেয়ালের প্রশ্ন রোল আলসেভাবে তোলে না — Sales অডিট, ১০ অক্টোবর ২০২৬ ([[DealerScope::walled()]])।
+     *
+     * ⚠️ তালিকা থেকে আসা মানুষে (একাধিক সারি) `roles` আলসে তুললে lazy-load পাহারা ছোড়ে — /customers/bindings আর
+     * /sales/targets ৫০০ দিত (local-এ পাহারা চালু)। ⓘ বিপজ্জনক ইনপুট: দুইজনের তালিকা, পাহারা চালু।
+     */
+    public function test_the_wall_question_never_lazy_loads_the_roles(): void
+    {
+        $this->wall();
+
+        // ⓘ পাহারা তোলার আগে চালু — নইলে আগে তোলা সারিতে খাটে না, আর দাবিটা কিছুই মাপে না
+        \Illuminate\Database\Eloquent\Model::preventLazyLoading(true);
+
+        try {
+            $people = User::query()->whereIn('id', [$this->sales->id, $this->owner->id])->get();
+            $this->assertTrue(app(DealerScope::class)->walled($people->firstWhere('id', $this->sales->id)),
+                'দৃশ্যটাই বানানো যায়নি — চিহ্নসহ বিক্রয়কর্মী দেয়ালে নেই।');
+            $this->assertFalse(app(DealerScope::class)->walled($people->firstWhere('id', $this->owner->id)));
+        } finally {
+            \Illuminate\Database\Eloquent\Model::preventLazyLoading(false);
+        }
+    }
+
     /** ⭐ একই বিক্রয়কর্মী: চিহ্ন ছাড়া তিনজনই; চিহ্নসহ কেবল নিজের — অন্যের আর বাঁধনহীন দুইজনই নেই। */
     public function test_the_dealer_list_shows_only_his_own_dealer_once_he_is_walled(): void
     {

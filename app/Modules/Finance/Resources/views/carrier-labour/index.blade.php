@@ -38,13 +38,11 @@
             @endif
             <label class="text-2xs text-(--color-ink-muted)">
                 {{ __('finance::carrier_labour.from') }}
-                <input type="date" name="from" value="{{ $from }}"
-                       class="block h-8 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="from" :value="$from" />
             </label>
             <label class="text-2xs text-(--color-ink-muted)">
                 {{ __('finance::carrier_labour.to') }}
-                <input type="date" name="to" value="{{ $to }}"
-                       class="block h-8 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                <x-ui.date name="to" :value="$to" />
             </label>
             <x-ui.button type="submit" tone="secondary">{{ __('finance::carrier_labour.show') }}</x-ui.button>
         </form>

@@ -1,4 +1,9 @@
-{{-- ⓘ তিন অবস্থা — সইয়ের অপেক্ষা "বাতিল" নয় (গ১, ৪ অক্টোবর ২০২৬) --}}
-<x-ui.badge :tone="$asset->isActive() ? 'success' : ($asset->isAwaiting() ? 'pending' : 'neutral')">
-    {{ $asset->isActive() ? __('accounts::asset.active') : ($asset->isAwaiting() ? __('accounts::asset.awaiting') : __('accounts::asset.disposed')) }}
+{{-- ⓘ অবস্থার রং — ব্যবহারে সবুজ, সইয়ের অপেক্ষা আলাদা (গ১), অলস/মেরামতে সতর্ক, খাতার বাইরে ধূসর (স্থায়ী সম্পদ ধাপ ১) --}}
+<x-ui.badge :tone="match ($asset->status) {
+    \App\Modules\Accounts\Models\FixedAsset::ACTIVE => 'success',
+    \App\Modules\Accounts\Models\FixedAsset::AWAITING => 'pending',
+    \App\Modules\Accounts\Models\FixedAsset::IDLE, \App\Modules\Accounts\Models\FixedAsset::UNDER_REPAIR => 'info',
+    default => 'draft',
+}">
+    {{ $asset->statusLabel() }}
 </x-ui.badge>

@@ -1512,7 +1512,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function balanceAfterBill(SalesInvoice $invoice, string $earlier): string
     {
-        $own = bcsub(bcsub((string) $invoice->total, $invoice->collectedAmount(), 4), $invoice->returnedAmount(), 4);
+        $own = bcsub(bcsub(bcsub((string) $invoice->total, $invoice->collectedAmount(), 4), $invoice->returnedAmount(), 4), $invoice->claimedAmount(), 4);
 
         return bcadd($earlier, $own, 4);
     }
