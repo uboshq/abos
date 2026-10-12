@@ -33,6 +33,16 @@ final class PostTheVoucherOnTheLastSignature
             return;
         }
 
+        /*
+         * ⛔ অর্থের কাগজ অর্থের নিজের শেষকারীর ([[FinishTheFinancePaperOnTheLastSignature]]) — ১২ অক্টোবর ২০২৬, WeLetSpaceOutTooTest।
+         * ⓘ ভাড়া, হাওলাত, জমা, মুনাফা, সুদ, বীমার ভাউচার শেষ সইয়ে কেবল পোস্ট হয় না: সাথে চুক্তি চালু, জমার হিসাব ইত্যাদি। ঐ শেষকারীরা
+         * "খসড়া না হলে কিছু নয়" দিয়ে শুরু করে, আর অর্থ মডিউল নিবন্ধিত হয় হিসাবের পরে। ⛔ তাই এখানে আগে পোস্ট হলে বাকি কাজটা চুপচাপ
+         * বাদ পড়ত: শেষ সইয়ের পরেও ভাড়ার চুক্তি "অপেক্ষায়"।
+         */
+        if (($event->payload['module'] ?? null) === 'finance') {
+            return;
+        }
+
         $type = (string) ($event->payload['approvable_type'] ?? '');
 
         if ((Relation::getMorphedModel($type) ?? $type) !== Voucher::class) {
