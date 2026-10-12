@@ -143,6 +143,7 @@ return [
         'approve' => 'Approve',
         'override' => 'Override',
         'close' => 'Close',
+        'request_limit' => 'Request a limit raise',
         'reopen' => 'Reopen',
         'confirm' => 'Confirm',
         'decide' => 'Decide',
