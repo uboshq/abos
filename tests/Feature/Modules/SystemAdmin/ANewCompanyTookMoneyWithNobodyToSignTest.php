@@ -265,18 +265,16 @@ final class ANewCompanyTookMoneyWithNobodyToSignTest extends TestCase
          */
         app(ApprovalEngine::class)->approve($waiting, $signer);
 
-        $this->assertSame(DocumentStatus::DRAFT, $voucher->fresh()->status,
-            'সই দিতেই কাগজটা নিজে পোস্ট হয়ে গেছে — রিপোর্টের ⚠️ কথাটা তাহলে পুরনো।');
-
-        $this->actingAs($this->maker);
-
-        $again = $this->post(route('accounts.voucher.post', $voucher));
-
-        $again->assertSessionHasNoErrors();
-        $again->assertRedirect();
-
+        /*
+         * ⭐ মালিক, ১১ অক্টোবর ২০২৬ (ক): শেষ সইয়েই কাগজ নিজে পোস্ট হয় ([[SignedPaperFinisher]],
+         * [[PostTheVoucherOnTheLastSignature]]) — ওপরের ⚠️ কথাটা এখন পুরনো, আর আবার "নিশ্চিত" চাপতে হয় না।
+         */
         $this->assertSame(DocumentStatus::CONFIRMED, $voucher->fresh()->status,
-            'সই দেওয়ার পরেও কাগজটা খাতায় যাচ্ছে না — তাহলে সইটা একটা দেয়াল।');
+            'সই দেওয়ার পরেও কাগজটা খাতায় যায়নি — শেষ সইয়ে নিজে পোস্ট হওয়ার কথা।');
+
+        $this->assertGreaterThan(0, LedgerEntry::query()->where('source_id', $voucher->id)
+            ->where('source_type', 'voucher')->count(),
+            'সইয়ের পর কাগজটা খাতায় সারি লেখেনি — তাহলে সইটা একটা দেয়াল।');
     }
 
     public function test_a_missing_accountant_is_healed_not_ignored(): void
