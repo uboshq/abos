@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/quotation_api.dart';
@@ -330,6 +331,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
           _q = q;
           _done = doneText;
         });
+        // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
+        RecentPapers.note(kind: 'quotation', id: widget.id, number: q.no);
       }
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'কাজটা হলো না। আবার চেষ্টা করুন।'));

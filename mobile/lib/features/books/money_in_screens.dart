@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
@@ -206,6 +207,8 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
     super.initState();
     widget.api.moneyInDetail(widget.id).then((d) {
       if (mounted) setState(() => _detail = d);
+      // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
+      RecentPapers.note(kind: 'money-in', id: widget.id, number: d.row.no);
     }).catchError((Object e) {
       if (mounted) {
         setState(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/hr/claims_api.dart';
@@ -136,6 +137,8 @@ class _ClaimScreenState extends State<ClaimScreen> {
     super.initState();
     widget.api.one(widget.id).then((c) {
       if (mounted) setState(() => _claim = c);
+      // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
+      RecentPapers.note(kind: 'claim', id: widget.id, number: c.number);
     }, onError: (Object e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'দাবিটা আনা গেল না।'));
     });

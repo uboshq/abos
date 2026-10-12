@@ -16,6 +16,7 @@ import '../../core/menu/module_gate.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/navigation/nav_prefs.dart';
 import '../../core/navigation/nav_state.dart';
+import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
@@ -209,6 +210,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _loadUnread();
     _loadPending();
     _loadPrefs();
+    RecentPapers.changes.addListener(_loadPrefs);
+  }
+
+  @override
+  void dispose() {
+    RecentPapers.changes.removeListener(_loadPrefs);
+    if (identical(RecentPapers.active, _prefs)) RecentPapers.active = null;
+    super.dispose();
   }
 
   Future<void> _loadPrefs() async {
@@ -216,6 +225,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (user == null) return;
     final prefs = _prefs ??=
         NavPrefs(widget.prefs ?? ref.read(navPrefsStoreProvider), user.id);
+    // ⭐ কাগজের পর্দা খুললে এই তালিকাতেই লেখে ([[RecentPapers.note]])
+    RecentPapers.active = prefs;
     final favourites = await prefs.favourites();
     final recents = await prefs.recents();
     if (!mounted) return;
@@ -395,6 +406,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         final name = (widget.customerName ?? syncedCustomerName)(
             e.path.substring('customers/'.length));
         if (name != null) out.add(RecentEntry(path: e.path, label: name));
+      } else if (RecentPapers.listPathOf(e.path) case final String list) {
+        // ⓘ কাগজ — তার তালিকার দরজা যতক্ষণ আছে; নাম কাগজ খোলার সময়ের
+        if (_tree.screen(list) != null) out.add(e);
       } else if (_tree.screen(e.path) case final NavRow row) {
         out.add(RecentEntry(path: e.path, label: row.label));
       }
@@ -579,6 +593,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         key: ValueKey('menu-${module.code}'),
         crumb: 'সব মডিউল',
         onCrumb: () => _setPage(HomePage.modules),
+        note: module.live
+            ? null
+            : '${module.label}-এর পর্দাগুলো এখনো ফোনে আসেনি — নিচের সারিগুলো শীঘ্রই আসছে।',
         groups: module.groups,
         counts: counts,
         favourites: favourites,

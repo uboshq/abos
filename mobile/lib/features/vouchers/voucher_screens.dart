@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/recent_papers.dart';
 import '../../core/accounts/voucher_api.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
@@ -197,6 +198,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
     try {
       final page = await widget.api.one(widget.id);
       if (mounted) setState(() => _page = page);
+      // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
+      RecentPapers.note(kind: 'voucher', id: widget.id, number: page.row.no);
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ভাউচারটা আনা গেল না।'));
     }

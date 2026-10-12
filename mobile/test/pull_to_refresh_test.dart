@@ -64,6 +64,9 @@ void main() {
     // office rather than to a gesture. (ⓘ 12 Oct 2026: the "no menu" state
     // moved with the module grid from home_shell.dart to module_pages.dart.)
     'module_pages.dart',
+    // A paper reopened from "সাম্প্রতিক" whose kind this build does not know —
+    // a pull would fetch nothing; the message says to update the app.
+    'paper_route.dart',
     // Two empty states, neither refreshable here: the catalogue one sends the
     // person to the products screen to pull *there*, and the other is a
     // search box reporting no match, where a pull would fetch nothing the

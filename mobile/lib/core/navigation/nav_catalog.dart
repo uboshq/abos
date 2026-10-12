@@ -119,6 +119,9 @@ class NavModule {
   String get label => def.label;
   Color get color => def.color;
 
+  /// False when every row is "শীঘ্রই আসছে" — the tile is drawn greyed.
+  bool get live => screens.isNotEmpty;
+
   /// Every screen this module opens, children included — never a planned row.
   Iterable<NavRow> get screens sync* {
     for (final group in groups) {
@@ -292,10 +295,10 @@ class NavCatalog {
         label: 'ক্রয়',
         icon: Icons.shopping_cart_outlined,
         aliases: ['purchase', 'কেনা', 'বিল', 'grn', 'মাল গ্রহণ']),
-    // ── সরবরাহকারী ──
+    // ⭐ প্রিন্সিপাল ক্রয়ের ভিতরে, আলাদা টাইল নয় (মালিক, ১২ অক্টোবর ২০২৬); দরজা ক্রয়ের সুইচেই ([[ModuleGate]])
     NavScreenDef(
         path: 'principals',
-        module: 'supplier',
+        module: 'purchase',
         group: 'তালিকা',
         label: 'প্রিন্সিপাল',
         icon: Icons.business_outlined,
@@ -527,11 +530,13 @@ class NavTree {
                 ));
     }
 
-    // "শীঘ্রই আসছে" — dimmed rows at the bottom of a module that has live
-    // doors; a module with nothing live gets no tile at all.
+    // "শীঘ্রই আসছে" — dimmed rows at the bottom of their module. ⭐ A module
+    // with nothing live still gets its tile, greyed, whose menu is only these
+    // rows (owner, 12 Oct 2026): hiding it would let a person conclude the
+    // module is never coming.
     for (final item in items.where((i) => i.planned)) {
       final module = NavCatalog.moduleOfRoute(item.key);
-      if (module == null || !rowsByModule.containsKey(module)) continue;
+      if (module == null) continue;
       place(
           module,
           NavCatalog.plannedGroup,
@@ -545,6 +550,7 @@ class NavTree {
     }
 
     final modules = <NavModule>[];
+    final comingSoon = <NavModule>[];
     for (final def in NavCatalog.modules) {
       final groups = rowsByModule[def.code];
       if (groups == null) continue;
@@ -557,11 +563,13 @@ class NavTree {
 
           return at(a).compareTo(at(b));
         });
-      modules.add(NavModule(def: def, groups: [
+      final module = NavModule(def: def, groups: [
         for (final g in ordered) NavGroup(g, groups[g]!),
-      ]));
+      ]);
+      // ⓘ কাজের টাইল আগে, ধূসর টাইল পরে — যা চলে না তার পিছনে যা চলে তা খুঁজতে হয় না
+      (module.live ? modules : comingSoon).add(module);
     }
-    return NavTree._(modules, extra);
+    return NavTree._([...modules, ...comingSoon], extra);
   }
 
   NavModule? module(String code) {

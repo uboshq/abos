@@ -103,6 +103,8 @@ class _ModuleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ সব সারি "শীঘ্রই আসছে" — টাইল থাকে, ধূসর (মালিক, ১২ অক্টোবর ২০২৬)
+    final live = module.live;
     return Card(
       key: ValueKey('module-${module.code}'),
       child: InkWell(
@@ -122,7 +124,7 @@ class _ModuleTile extends StatelessWidget {
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: module.color,
+                    color: live ? module.color : AppColors.border,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(module.def.icon, color: Colors.white, size: 28),
@@ -134,8 +136,14 @@ class _ModuleTile extends StatelessWidget {
                 maxLines: 2,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: live ? AppColors.onSurface : AppColors.onSurfaceMuted),
               ),
+              if (!live)
+                const Text('শীঘ্রই আসছে',
+                    style: TextStyle(fontSize: 10.5, color: AppColors.onSurfaceMuted)),
             ],
           ),
         ),
@@ -156,7 +164,11 @@ class ModuleMenuPage extends StatelessWidget {
     required this.favourites,
     required this.onRow,
     required this.onFavourite,
+    this.note,
   });
+
+  /// A line above the rows — said on a module whose rows are all coming.
+  final String? note;
 
   /// "সব মডিউল", or the module's own name on a sub-list.
   final String crumb;
@@ -186,6 +198,23 @@ class ModuleMenuPage extends StatelessWidget {
             label: Text(crumb),
           ),
         ),
+        if (note != null)
+          Container(
+            key: const ValueKey('menu-note'),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.pendingSurface,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(children: [
+              const Icon(Icons.schedule_outlined, size: 20, color: AppColors.pending),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                  child: Text(note!,
+                      style: const TextStyle(fontSize: 13, color: AppColors.pending))),
+            ]),
+          ),
         for (final group in groups) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.xs, AppSpacing.sm, 0, AppSpacing.xs),

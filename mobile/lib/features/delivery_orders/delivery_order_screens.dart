@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/delivery_order_api.dart';
@@ -331,6 +332,9 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
 
   void _take(DeliveryOrder order) {
     _order = order;
+    // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ — DO, বা বিক্রয় আদেশ (মালিক, ১২ অক্টোবর ২০২৬)
+    RecentPapers.note(
+        kind: widget.api.forOrders ? 'order' : 'do', id: widget.id, number: order.no);
     for (final line in order.lines) {
       (_boxes[line.id] ??= TextEditingController()).text = _qty(line.finalQty);
     }

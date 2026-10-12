@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/accounts/voucher_api.dart';
 import 'package:abos_mobile/core/approvals/approvals_api.dart';
 import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
+import 'package:abos_mobile/core/menu/module_gate.dart';
 import 'package:abos_mobile/core/navigation/nav_prefs.dart';
+import 'package:abos_mobile/core/navigation/recent_papers.dart';
 import 'package:abos_mobile/core/records/approval_record.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
 import 'package:abos_mobile/features/home/home_shell.dart';
 import 'package:abos_mobile/features/home/nav_search.dart';
+import 'package:abos_mobile/features/home/paper_route.dart';
+import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
 
 /// ⭐ মালিক, ১২ অক্টোবর ২০২৬: "app icon e tap korle age module asbe, module e dhukle tar menu, menu r vitore
 /// kichu thakle vitore dekhabe" — the home, all modules, a module's menu, a
@@ -293,4 +298,109 @@ void main() {
     await tester.pumpAndSettle();
     expect(opened, ['approvals', 'notifications']);
   });
+
+  // ── মালিকের চার উত্তর, ১২ অক্টোবর ২০২৬ ──
+
+  testWidgets('the principals sit under ক্রয়', (tester) async {
+    await tester.pumpWidget(shell(items: [
+      _item('purchases', 'ক্রয়'),
+      _item('principals', 'প্রিন্সিপাল'),
+    ]));
+    await tester.pumpAndSettle();
+    await toModules(tester);
+
+    expect(find.byKey(const ValueKey('module-supplier')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('module-purchase')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('প্রিন্সিপাল'));
+    await tester.pumpAndSettle();
+    expect(opened, ['principals']);
+  });
+
+  testWidgets('a module whose rows are all coming is shown greyed, with a note', (tester) async {
+    await tester.pumpWidget(shell(items: [
+      ..._salesman,
+      const MenuItem(
+          key: 'finance.cheque.index',
+          label: 'চেক',
+          icon: Icons.schedule,
+          routeName: '',
+          planned: true),
+    ]));
+    await tester.pumpAndSettle();
+    await toModules(tester);
+
+    final tile = find.byKey(const ValueKey('module-finance'));
+    expect(tile, findsOneWidget);
+    expect(find.descendant(of: tile, matching: find.text('শীঘ্রই আসছে')), findsOneWidget);
+
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('menu-note')), findsOneWidget);
+    expect(find.text('চেক'), findsOneWidget);
+    await tester.tap(find.text('চেক'));
+    await tester.pumpAndSettle();
+    expect(opened, isEmpty, reason: 'a coming row opens nothing');
+  });
+
+  testWidgets('an opened paper is under সাম্প্রতিক and reopens by its own route', (tester) async {
+    await tester.pumpWidget(shell(
+        items: [..._salesman, _item('delivery-orders', 'ডেলিভারি অর্ডার')]));
+    await tester.pumpAndSettle();
+
+    await tester.runAsync(() => RecentPapers.note(kind: 'do', id: 'd1', number: 'DO-0412'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DO-0412 · ডেলিভারি অর্ডার'), findsOneWidget);
+    await tester.tap(find.text('DO-0412 · ডেলিভারি অর্ডার'));
+    await tester.pumpAndSettle();
+    expect(opened, ['paper/do/d1']);
+  });
+
+  testWidgets('a paper whose list is no longer this person\'s is not shown', (tester) async {
+    await NavPrefs(store, 'u1').remember(
+        RecentEntry(path: RecentPapers.path('voucher', 'v9'), label: 'JV-0009 · ভাউচার'));
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+    expect(find.text('JV-0009 · ভাউচার'), findsNothing);
+  });
+
+  testWidgets('a paper screen notes itself once its number is known', (tester) async {
+    final prefs = NavPrefs(MemoryNavPrefsStore(), 'u1');
+    RecentPapers.active = prefs;
+    addTearDown(() => RecentPapers.active = null);
+
+    await tester.pumpWidget(MaterialApp(home: VoucherScreen(id: 'v1', api: _OneVoucher())));
+    await tester.pumpAndSettle();
+
+    final recents = await prefs.recents();
+    expect(recents.single.path, 'paper/voucher/v1');
+    expect(recents.single.label, 'RV-0001 · ভাউচার');
+  });
+
+  testWidgets('a reopened paper meets its list\'s module switch', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [phoneModulesProvider.overrideWith((ref) => {'sales'})],
+      child: const MaterialApp(home: PaperRoute(kind: 'voucher', id: 'v1')),
+    ));
+    await tester.pump();
+    expect(find.text(ModuleGate.offTitle), findsWidgets);
+  });
+
+  test('purchase papers carry their own kind in the route', () {
+    expect(RecentPapers.path('purchase', 'p1', extra: 'bill'), 'paper/purchase/p1?k=bill');
+    expect(RecentPapers.listPathOf('paper/purchase/p1?k=bill'), 'purchases');
+    expect(RecentPapers.listPathOf('orders'), isNull);
+  });
+}
+
+class _OneVoucher implements VoucherApi {
+  @override
+  Future<VoucherPage> one(String id) async => const VoucherPage(
+      row: VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'draft', amount: 500));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

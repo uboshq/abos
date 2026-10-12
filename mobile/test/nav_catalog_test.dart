@@ -83,6 +83,12 @@ void main() {
     expect(tree.screen('customers')!.label, 'গ্রাহক তালিকা');
   });
 
+  test('the principals sit under ক্রয়, not a tile of their own', () {
+    final tree = NavTree.from([_item('principals', 'প্রিন্সিপাল'), _item('purchases', 'ক্রয়')]);
+    expect(tree.module('supplier'), isNull);
+    expect(tree.module('purchase')!.screens.map((r) => r.path), ['purchases', 'principals']);
+  });
+
   test('rows stand under their headings, in the catalogue order', () {
     final tree = NavTree.from([
       _item('today', 'আজকের হিসাব'),
@@ -111,7 +117,7 @@ void main() {
     expect(one.module('sales')!.groups.single.rows.single.path, 'tracking');
   });
 
-  test('"coming soon" rows sit at the bottom of a live module only', () {
+  test('"coming soon" rows sit at the bottom; a module with only those is greyed, not hidden', () {
     final tree = NavTree.from([
       _item('orders', 'অর্ডারের অবস্থা'),
       _planned('sales.invoice.index', 'বিল'),
@@ -121,8 +127,10 @@ void main() {
     final sales = tree.module('sales')!;
     expect(sales.groups.last.title, NavCatalog.plannedGroup);
     expect(sales.groups.last.rows.single.planned, isTrue);
-    expect(tree.module('finance'), isNull,
-        reason: 'a tile with nothing that opens is not a door');
+    // ⭐ মালিক, ১২ অক্টোবর ২০২৬: ধূসর দেখাও, লুকিও না
+    expect(tree.module('finance')!.live, isFalse);
+    expect(tree.module('finance')!.groups.single.rows.single.planned, isTrue);
+    expect(tree.modules.last.code, 'finance', reason: 'greyed tiles after the live ones');
     expect(tree.screens.where((r) => r.planned), isEmpty);
   });
 

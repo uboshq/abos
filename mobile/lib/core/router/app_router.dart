@@ -15,6 +15,7 @@ import '../../features/customers/due_list_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/nav_bottom_bar.dart';
+import '../../features/home/paper_route.dart';
 import '../orders/delivery_order_api.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/leads/lead_screens.dart';
@@ -315,6 +316,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           _framed(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          // ⭐ "সাম্প্রতিক" থেকে খোলা কাগজ — DO, আদেশ, উদ্ধৃতি, আদায়, ক্রয়, ভাউচার, দাবি (মালিক, ১২ অক্টোবর ২০২৬);
+          // সুইচ কাগজের নিজের তালিকার ([[PaperRoute]])
+          _framed(
+            path: 'paper/:kind/:id',
+            builder: (context, state) => PaperRoute(
+              kind: state.pathParameters['kind'] ?? '',
+              id: state.pathParameters['id'] ?? '',
+              extra: state.uri.queryParameters['k'],
+            ),
           ),
         ],
       ),
