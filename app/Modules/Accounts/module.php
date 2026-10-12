@@ -791,6 +791,21 @@ return [
             'group' => 'print',
         ],
         /*
+         * ⭐ A4-এ রসিদ কয় কপি — মালিক, ১২ অক্টোবর ২০২৬: *"Eta custo mize kore daw zate control penel e set kora zay
+         * ekta na duto"*। ⓘ ২ = একই A4-এ অফিস কপি আর গ্রাহক কপি, মাঝে কাটার দাগ; ১ = কেবল গ্রাহকের ([[VoucherPaper::copies()]])।
+         * ⓘ এখন "টাকা প্রাপ্তির রসিদ" নকশার A4 রূপ এটা পড়ে; A5-এ একটাই কপি ধরে।
+         */
+        [
+            'key' => \App\Modules\Accounts\Support\VoucherPaper::COPIES,
+            'per_branch' => true,
+            'label' => 'accounts::settings.voucher_copies',
+            'type' => 'choice',
+            'options' => ['1', '2'],
+            'option_label' => 'accounts::settings.voucher_copies_',
+            'default' => '2',
+            'group' => 'print',
+        ],
+        /*
          * ⭐ ভাউচারের নকশা, প্রতিটা মাপে আলাদা — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"printe template sob gulo kore
          * deploy diba A4 A5 tharmal tintiroi"*। ⓘ বিকল্প ফাইল থেকে ([[VoucherDesigns::codes()]]); `standard`
          * = চলতি ভাউচার, আর সেটাই ডিফল্ট। গ্রুপ `print_paper`: কেবল ছাপার নিয়ন্ত্রণ আঁকে ("ভাউচার" ট্যাব)।
