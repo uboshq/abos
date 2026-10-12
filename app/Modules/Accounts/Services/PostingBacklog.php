@@ -160,11 +160,12 @@ final class PostingBacklog
 
             $table = (new $type)->getTable();
 
-            if (! \Illuminate\Support\Facades\Schema::hasColumn($table, 'trx_date')) {
+            if (! \Illuminate\Support\Facades\Schema::hasColumn($table, 'trx_date') || ! \Illuminate\Support\Facades\Schema::hasColumn($table, 'company_id')) {
                 continue;
             }
 
             $query = DB::table($table)
+                ->where('company_id', CompanyContext::id())
                 ->whereIn('id', $rows->pluck('approvable_id')->all())
                 ->whereBetween('trx_date', [$from, $to]);
 
