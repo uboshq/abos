@@ -421,7 +421,7 @@
 
         @if ($result->rows === [])
             {{-- ⓘ খালি হলে কোন সময়টা খালি আর কী করতে হবে, বার্তাতেই (১২ অক্টোবর ২০২৬, পাতা-সাজানো ধাপ ০) --}}
-            <x-ui.empty-state :message="$period !== null ? __('accounts::message.nothing_in_period', ['period' => $period]) : __('accounts::message.nothing_in_range')" />
+            <x-ui.empty-state :message="$period !== null ? __('accounts::message.nothing_in_period', ['period' => $period]) : __($report->hasFilter('date_range') ? 'accounts::message.nothing_in_range' : 'accounts::message.nothing_to_show')" />
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
