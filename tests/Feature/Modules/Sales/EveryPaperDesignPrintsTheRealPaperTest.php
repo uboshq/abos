@@ -152,9 +152,24 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
             }
         }
 
+        /*
+         * ⭐ ভাউচার — সংখ্যা হাতে লেখা নয়, ঘোষণা থেকে (cb, fe মারফত, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে প্রতিটা মাপে "২০" লেখা ছিল;
+         * মালিকের ২১ নকশা (১২ অক্টোবর: "ei gulo control panel e bosaw sobgulo") নিজের নিজের মাপে বসার পর A4-এ ৩৪ — দাবি
+         * পুরনো হয়ে লাল। ⓘ নিয়ম দুটো, দুটোই [[VoucherDesigns]]-এর ঘোষিত তালিকা ধরে:
+         *   ১. প্রথম ২০টা (৩০ সেপ্টেম্বর: "A4 A5 tharmal tintiroi") তিন মাপেই থাকে।
+         *   ২. ঘোষিত প্রতিটা নকশা অন্তত একটা মাপে ছাপে — ফাইল হারালে নকশাটা নীরবে তালিকা থেকে পড়ে যেত
+         *      ([[VoucherDesigns::codes()]] কেবল ফাইল-থাকা নকশা তোলে), আর উপরের ছাপার দাবি তখন তাকে দেখতই না।
+         */
+        $declared = (new \ReflectionClassConstant(VoucherDesigns::class, 'ORDER'))->getValue();
+        $this->assertGreaterThanOrEqual(41, count($declared), 'দাবির ভিত্তি: ঘোষিত তালিকায় মালিকের ২০ + ২১ নেই।');
+
         foreach (VoucherDesigns::SIZES as $size) {
-            $this->assertCount(20, VoucherDesigns::codes($size), "voucher/{$size}");
+            $missing = array_values(array_diff(array_slice($declared, 0, 20), VoucherDesigns::codes($size)));
+            $this->assertSame([], $missing, "⛔ voucher/{$size}: প্রথম ২০-এর এগুলো এই মাপে নেই।");
         }
+
+        $printed = array_unique(array_merge(...array_map(fn (string $size) => VoucherDesigns::codes($size), VoucherDesigns::SIZES)));
+        $this->assertSame([], array_values(array_diff($declared, $printed)), '⛔ ঘোষিত এই ভাউচার-নকশাগুলো কোনো মাপেই ছাপে না।');
     }
 
     /**
