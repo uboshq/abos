@@ -13,7 +13,10 @@ use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Models\Approval;
+use App\Models\AuditTrail;
 use App\Models\DocumentDelivery;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use App\Modules\Accounts\Support\VoucherDesigns;
@@ -183,7 +186,114 @@ class VoucherPrintController extends Controller implements HasMiddleware
             'total_debit' => $debit,
             'total_credit' => $credit,
             'amount_in_words' => AmountInWords::of((string) $voucher->amount, app()->getLocale()),
+
+            // ⭐ মালিকের ২১ নকশা (১২ অক্টোবর ২০২৬) যা দেখায় — পুরনো ঘরগুলো অক্ষত, নতুন সব এক জায়গায়
+            'details' => $this->details($voucher),
         ];
+    }
+
+    /**
+     * কাগজের বাড়তি কথা — কার কাছ থেকে বা কাকে, কোন পথে, কোন খাতে, কোন কাগজের বিপরীতে, কে কখন।
+     *
+     * ⭐ মালিক, ১২ অক্টোবর ২০২৬: *"ei gulo control panel e bosaw sobgulo"* — ২১টা নকশা ([[VoucherDesigns]])।
+     * ⓘ সব ঘর লেখা (না থাকলে খালি), তাই নকশা কেবল ভরা ঘর আঁকে। পক্ষ আর কাগজের নম্বর [[DrillResolver]] দিয়ে —
+     * Accounts কারও উপর দাঁড়ায় না (উপরের `party`-র টীকা)। ⚠️ পুরনো `party` ঘর ইচ্ছা করে খালিই থাকে, যাতে পুরনো ২০টা
+     * নকশার কাগজ এক চুলও না বদলায়।
+     *
+     * @return array<string, mixed>
+     */
+    private function details(Voucher $voucher): array
+    {
+        $party = $this->partyName($voucher->party_type, $voucher->party_id);
+        $point = '';
+
+        if ($party !== '' && filled($voucher->party_type)) {
+            $model = app(DrillResolver::class)->resolve((string) $voucher->party_type, (int) $voucher->party_id);
+            $point = $model !== null && method_exists($model, 'pointName') ? (string) $model->pointName() : '';
+        }
+
+        $against = '';
+
+        if (filled($voucher->against_type) && (int) $voucher->against_id > 0) {
+            $paper = app(DrillResolver::class)->resolve((string) $voucher->against_type, (int) $voucher->against_id);
+            $against = $paper !== null && method_exists($paper, 'drillDocumentNo') ? (string) $paper->drillDocumentNo() : '';
+        }
+
+        $money = $voucher->money_account_id === null ? null
+            : Account::query()->whereKey($voucher->money_account_id)->first();
+
+        $instrument = (string) ($voucher->instrument ?? '');
+
+        return [
+            'party' => $party,
+            'point' => $point,
+            'payee' => (string) ($voucher->payee_name ?? ''),
+            'money_account' => $money === null ? '' : trim($money->code.' '.$money->name()),
+            'method' => $instrument === '' ? '' : (string) __('accounts::instrument.'.$instrument),
+            'instrument' => $instrument,
+            'instrument_no' => (string) ($voucher->instrument_no ?? ''),
+            'instrument_date' => $voucher->instrument_date === null ? '' : DateFormat::format($voucher->instrument_date),
+            'from_bank' => trim(implode(' · ', array_filter([(string) $voucher->from_bank, (string) $voucher->from_account_no]))),
+            'wallet' => (string) ($voucher->wallet ?? ''),
+            'against' => $against,
+            'bill_no' => (string) ($voucher->bill_no ?? ''),
+            'notes' => array_filter((array) ($voucher->note_counts ?? []), fn ($n) => (int) $n > 0),
+            'entered_on' => $voucher->created_at === null ? '' : $voucher->created_at->format('d/m/Y h:i:s A'),
+            'prepared_by' => (string) ($voucher->creator?->name ?? ''),
+            'approved_by' => (string) ($voucher->approver?->name ?? ''),
+            'approved_on' => $voucher->approved_at === null ? '' : $voucher->approved_at->format('d/m/Y h:i A'),
+            'trail' => $this->trail($voucher),
+            'history' => $this->history($voucher),
+            'printed_on' => now()->format('d/m/Y h:i A'),
+            'printed_by' => (string) (auth()->user()?->name ?? ''),
+        ];
+    }
+
+    /**
+     * সইয়ের ধারা — অনুমোদনের খাতা থেকে, ধাপে ধাপে (নকশা ১৬)।
+     *
+     * @return list<array{step: string, name: string, decision: string, at: string, remarks: string}>
+     */
+    private function trail(Voucher $voucher): array
+    {
+        $approval = Approval::query()
+            ->where('approvable_type', $voucher->getMorphClass())
+            ->where('approvable_id', $voucher->getKey())
+            ->latest('id')
+            ->first();
+
+        if ($approval === null) {
+            return [];
+        }
+
+        return $approval->decisions()->with('user')->orderBy('id')->get()->map(fn ($d) => [
+            'step' => (string) $d->level,
+            'name' => (string) ($d->user?->name ?? ''),
+            'decision' => (string) __('accounts::vx.decision.'.$d->decision),
+            'at' => $d->decided_at === null ? '' : $d->decided_at->format('d/m/Y h:i A'),
+            'remarks' => (string) ($d->remarks ?? ''),
+        ])->values()->all();
+    }
+
+    /**
+     * নথির ইতিহাস — কে কখন কী করলেন (নকশা ২১)।
+     *
+     * @return list<array{at: string, who: string, what: string}>
+     */
+    private function history(Voucher $voucher): array
+    {
+        return AuditTrail::query()
+            ->where('auditable_type', $voucher->getMorphClass())
+            ->where('auditable_id', $voucher->getKey())
+            ->with('user')
+            ->orderBy('id')
+            ->limit(12)
+            ->get()
+            ->map(fn (AuditTrail $t) => [
+                'at' => $t->created_at === null ? '' : $t->created_at->format('d/m/Y h:i:s A'),
+                'who' => (string) ($t->user?->name ?? ''),
+                'what' => trim(implode(' — ', array_filter([(string) $t->action, (string) $t->reason]))),
+            ])->values()->all();
     }
 
     /**
