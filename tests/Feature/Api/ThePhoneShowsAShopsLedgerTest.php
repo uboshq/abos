@@ -9,9 +9,14 @@ use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -50,6 +55,7 @@ final class ThePhoneShowsAShopsLedgerTest extends TestCase
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')->value('net');
 
         $this->assertSame($customer->public_id, $body['id']);
+        $this->assertSame(0, bccomp((string) $body['due'], '600', 4), '⛔ ১০০০ নিয়ে ৪০০ দিলে বাকি ৬০০ নয়।');
         $this->assertSame(0, bccomp((string) $body['due'], $net, 4), '⛔ মাথার বকেয়া খাতার যোগ নয়।');
         $this->assertNotEmpty($body['entries'], '⛔ খাতার সারি আসেনি।');
         $this->assertSame(0, bccomp((string) $body['entries'][0]['balance'], (string) $body['due'], 4), '⛔ প্রথম সারির জের মাথার বকেয়া নয়।');
@@ -87,13 +93,45 @@ final class ThePhoneShowsAShopsLedgerTest extends TestCase
         $this->phone($sales, '/api/v1/sales/customers/'.$other->public_id.'/ledger')->assertNotFound();
     }
 
+    /**
+     * ⓘ ডেমোতে গ্রাহকের খাতার সারি নেই — দুই দিনের দুই ভাউচার: আগে মাল (বাকি বাড়ে), পরে টাকা (বাকি কমে)।
+     * ⓘ বিপজ্জনক উপাত্ত: পুরনো সারি আগে লেখা — উল্টো ক্রমে দিলে "নতুন আগে" দাবি ধরা পড়ে।
+     */
     private function customerWithEntries(): Customer
     {
-        $id = LedgerEntry::query()->where('company_id', $this->company->id)
-            ->where('party_type', Customer::drillSourceType())->orderBy('id')->value('party_id');
-        $this->assertNotNull($id, '⛔ দাবির ভিত্তি নেই — ডেমোতে গ্রাহকের খাতার সারি নেই।');
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->actingAs($owner);
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        app(StandardChart::class)->install();
 
-        return Customer::withoutGlobalScopes()->findOrFail($id);
+        $customer = Customer::query()->orderBy('id')->firstOrFail();
+        $cash = Account::query()->where('money_kind', Account::CASH)->postable()->active()->firstOrFail();
+        $receivable = StandardChart::find(StandardChart::RECEIVABLE)->id;
+        $party = ['party_type' => Customer::drillSourceType(), 'party_id' => $customer->id];
+
+        $this->journal(Carbon::today()->subDays(3), [
+            ['account_id' => $receivable, 'debit' => '1000', 'credit' => '0'] + $party,
+            ['account_id' => $cash->id, 'debit' => '0', 'credit' => '1000'],
+        ]);
+        $this->journal(Carbon::today(), [
+            ['account_id' => $cash->id, 'debit' => '400', 'credit' => '0'],
+            ['account_id' => $receivable, 'debit' => '0', 'credit' => '400'] + $party,
+        ]);
+
+        $this->assertTrue(LedgerEntry::query()->forParty(Customer::drillSourceType(), $customer->id)->exists(),
+            '⛔ দাবির ভিত্তি নেই — গ্রাহকের খাতায় সারি ওঠেনি।');
+
+        return $customer;
+    }
+
+    /** @param list<array<string, mixed>> $lines */
+    private function journal(Carbon $date, array $lines): void
+    {
+        $vouchers = app(VoucherService::class);
+        $vouchers->post($vouchers->create([
+            'type' => Voucher::JOURNAL, 'trx_date' => $date->toDateString(), 'narration' => 'phone ledger',
+            'instrument_no' => 'TST-PL-'.random_int(1, 999999),
+        ], $lines));
     }
 
     private function phone(User $user, string $url): \Illuminate\Testing\TestResponse
