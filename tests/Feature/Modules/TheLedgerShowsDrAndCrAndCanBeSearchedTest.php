@@ -99,17 +99,18 @@ final class TheLedgerShowsDrAndCrAndCanBeSearchedTest extends TestCase
             return collect($entries->items())->mapWithKeys(fn ($e) => [$e->document_no => Money::drCr($e->net_balance)])->all();
         };
 
+        // ⓘ সারিগুলো তারিখের ক্রমে, পুরনো আগে — মালিক, ৬ অক্টোবর ২০২৬ ([[PartyLedger::page()]]); এই দাবিগুলো ৩ অক্টোবরের, তখন নতুন আগে আসত
         // ⭐ কেবল ক্রেডিট — আদায়ের পাশে জের ৭০০ (১,০০০ − ৩০০), ফেরতের পাশে ১,০০০ (৭০০ + ৫০০ − ২০০); শূন্য থেকে নয়
-        $this->assertSame(['RET-F-1' => '(Dr) '.Money::format('1000'), 'COL-F-1' => '(Dr) '.Money::format('700')], $rows(['side' => 'credit']),
+        $this->assertSame(['COL-F-1' => '(Dr) '.Money::format('700'), 'RET-F-1' => '(Dr) '.Money::format('1000')], $rows(['side' => 'credit']),
             '⛔ ছাঁকনিতে জের ভুল — ছাঁকা সারিগুলোই যোগ হয়েছে, খাতার সব সারি নয়।');
 
         // ⭐ তারিখ — আগস্টের প্রথম সারির জের জুলাইয়ের জের (৭০০) থেকে শুরু
-        $this->assertSame(['RET-F-1' => '(Dr) '.Money::format('1000'), 'INV-F-2' => '(Dr) '.Money::format('1200')], $rows(['from' => '2026-08-01']),
+        $this->assertSame(['INV-F-2' => '(Dr) '.Money::format('1200'), 'RET-F-1' => '(Dr) '.Money::format('1000')], $rows(['from' => '2026-08-01']),
             '⛔ তারিখের ছাঁকনিতে জের শূন্য থেকে শুরু।');
 
         $this->assertSame(['COL-F-1'], array_keys($rows(['kind' => 'money'])), 'ধরনের ছাঁকনি (আদায়) ভুল সারি দিল।');
         $this->assertSame(['RET-F-1'], array_keys($rows(['kind' => 'return'])), 'ধরনের ছাঁকনি (ফেরত) ভুল সারি দিল।');
-        $this->assertSame(['INV-F-2', 'INV-F-1'], array_keys($rows(['side' => 'debit'])), '"কেবল ডেবিট" ভুল সারি দিল।');
+        $this->assertSame(['INV-F-1', 'INV-F-2'], array_keys($rows(['side' => 'debit'])), '"কেবল ডেবিট" ভুল সারি দিল।');
         $this->assertSame(['INV-F-2'], array_keys($rows(['q' => 'August'])), 'বিবরণে খোঁজা কাজ করেনি।');
         $this->assertSame(['COL-F-1'], array_keys($rows(['q' => 'COL-F'])), 'নম্বরে খোঁজা কাজ করেনি।');
         $this->assertSame(['RET-F-1'], array_keys($rows(['q' => '200'])), 'অঙ্কে খোঁজা কাজ করেনি।');
