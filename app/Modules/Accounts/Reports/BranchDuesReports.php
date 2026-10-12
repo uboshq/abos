@@ -64,7 +64,11 @@ final class BranchDuesReports
             ->selectRaw($branchName.' as branch_name')
             ->selectRaw('s.debit')
             ->selectRaw('s.credit')
-            ->selectRaw('s.debit - s.credit as net')
+            /*
+             * ⛔ ক্রেডিট − ডেবিট — অডিট ম১৪ (সমন্বয়ক, ১০ অক্টোবর ২০২৬): আগে ডেবিট − ক্রেডিট, তাই যে শাখা টাকা **পেল** (নগদের
+             * ডেবিট তার খাতায়) সে "+ পাবে" দেখাত — উল্টো। যে শাখা টাকা দিল, অন্যের কাছে সে-ই পাবে; যে পেল, সে দেবে।
+             */
+            ->selectRaw('s.credit - s.debit as net')
             ->orderByRaw('ABS(s.debit - s.credit) DESC')
             /* ⛔ নাম নয়, অভিব্যক্তি — রিপোর্টের খোঁজা ক্রমটা `ROW_NUMBER() OVER (ORDER BY …)`-এ তোলে, আর সেখানে
                একই SELECT-এর ডাকনাম চেনা যায় না ([[TheReportSearchBrokeOnTheLiveServerTest]]) */
