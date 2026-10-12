@@ -34,7 +34,8 @@ final class ARequiredFieldLeftEmptyLookedFineTest extends TestCase
         $set = PaymentMethod::query()->where('code', 'CASH')->firstOrFail();
         $cash = Account::query()->money()->postable()->orderBy('code')->firstOrFail();
         $set->forceFill(['account_id' => $cash->id])->save();
-        PaymentMethod::query()->where('code', 'BANK')->update(['account_id' => null]);
+        // ⓘ ধরনও খালি — ঐচ্ছিক ঘর, তাই চিপ নয়
+        PaymentMethod::query()->where('code', 'BANK')->update(['account_id' => null, 'kind' => null]);
 
         $page = $this->get(route('master_data.payment_method.index'))->assertOk();
 
@@ -43,6 +44,8 @@ final class ARequiredFieldLeftEmptyLookedFineTest extends TestCase
         $this->assertStringNotContainsString(route('master_data.payment_method.edit', $set->id).'" data-required-missing', $page->getContent(),
             '⛔ খাত বসানো সারিতেও লাল চিপ');
         $page->assertSee($cash->name());
+        $this->assertStringContainsString('data-required-missing="account_id"', $page->getContent());
+        $this->assertStringNotContainsString('data-required-missing="kind"', $page->getContent(), '⛔ ঐচ্ছিক ঘর খালি, তবু লাল চিপ');
 
         // ⓘ ঐচ্ছিক ঘর — ভ্যাটের তালিকায় কোনো চিপ নয়
         $this->get(route('master_data.tax.index'))->assertOk()->assertDontSee(__('master_data::message.required_not_set'));
