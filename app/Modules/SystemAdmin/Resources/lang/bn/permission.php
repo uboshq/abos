@@ -43,6 +43,7 @@ return [
         'customer' => 'গ্রাহক',
         'customer.conduct' => 'গ্রাহকের আচরণ',
         'customer.credit_limit' => 'বাকির সীমা',
+        'credit_control' => 'বাকি নিয়ন্ত্রণ',
 
         'executive' => 'মালিকের কেন্দ্র',
         'executive.links' => 'মালিকের কেন্দ্রের লিংক',

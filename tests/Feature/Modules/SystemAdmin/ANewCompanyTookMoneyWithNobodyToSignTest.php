@@ -237,7 +237,7 @@ final class ANewCompanyTookMoneyWithNobodyToSignTest extends TestCase
             'সই ছাড়াই কাগজটা পোস্ট হয়ে গেছে।');
 
         $this->assertSame(0, LedgerEntry::query()->where('source_id', $voucher->id)
-            ->where('source_type', 'voucher')->count(),
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::JOURNAL])->count(),
             'কাগজটা সই ছাড়াই খাতায় সারি লিখেছে।');
 
         $waiting = Approval::query()
@@ -273,7 +273,7 @@ final class ANewCompanyTookMoneyWithNobodyToSignTest extends TestCase
             'সই দেওয়ার পরেও কাগজটা খাতায় যায়নি — শেষ সইয়ে নিজে পোস্ট হওয়ার কথা।');
 
         $this->assertGreaterThan(0, LedgerEntry::query()->where('source_id', $voucher->id)
-            ->where('source_type', 'voucher')->count(),
+            ->where('source_type', Voucher::SOURCE_TYPES[Voucher::JOURNAL])->count(),
             'সইয়ের পর কাগজটা খাতায় সারি লেখেনি — তাহলে সইটা একটা দেয়াল।');
     }
 
