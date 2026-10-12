@@ -8,6 +8,7 @@ import '../../features/claims/claims_screens.dart';
 import '../../features/vouchers/voucher_screens.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_detail_screen.dart';
+import '../../features/customers/customer_ledger_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
@@ -150,6 +151,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   ),
                 ),
                 routes: [
+                  // ⭐ দোকানের খাতা, সহজ করে — মালিক, ১২ অক্টোবর ২০২৬
+                  GoRoute(
+                    path: 'ledger',
+                    builder: (context, state) => ModuleGateView(
+                      path: 'customers',
+                      child: CustomerLedgerScreen(
+                        customerId: state.pathParameters['id'] ?? '',
+                      ),
+                    ),
+                  ),
                   // জমার বিজ্ঞপ্তি, স্লিপসহ (0.4.3) — দোকানের পাতা থেকে
                   _framed(
                     path: 'deposit',

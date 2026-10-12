@@ -309,7 +309,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              * দোকানটা কোথায়, সেটা জায়গাটুকুরও যোগ্য নয়।
              */
             'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
-                'limit' => (float) $c->credit_limit,
+                // ⓘ চলতি সীমা — অস্থায়ীসহ, দেয়াল যা মাপে ([[Customer::effectiveCreditLimit()]])
+                'limit' => (float) $c->effectiveCreditLimit(),
                 'due' => (float) $c->outstanding()
                     - ($editing !== null && (int) $editing->customer_id === (int) $c->id ? (float) $editing->total : 0),
                 'held' => (float) ($held[(int) $c->id] ?? 0),

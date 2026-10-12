@@ -43,4 +43,11 @@ return [
     'nobody_yet' => 'এ মাসে এখনো কিছু নেই।',
     'refused' => 'দেখার অনুমতি নেই: :companies',
     'not_yours' => 'এটা আপনার নাগালের বাইরে।',
+
+    // ⭐ বাকির চার সংখ্যা (বাকি নিয়ন্ত্রণ ধাপ ৩.৩)
+    'credit_title' => 'বাকি',
+    'credit_exposure' => 'ব্যবহৃত বাকি',
+    'credit_overdue' => 'মেয়াদ পেরোনো',
+    'credit_blocked' => 'বাকি বন্ধ গ্রাহক',
+    'credit_pending_requests' => 'সীমার অনুরোধ অপেক্ষায়',
 ];

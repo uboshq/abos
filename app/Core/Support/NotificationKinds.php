@@ -87,6 +87,12 @@ final class NotificationKinds
             // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
             'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
 
+            // ⭐ চেক ফেরতে গ্রাহকের বাকি নিজে থেকেই বন্ধ — মালিককে, প্রতি চেকে একবার (বাকি নিয়ন্ত্রণ ধাপ ২.৪, ১১ অক্টোবর ২০২৬)
+            'customer.cheque_bounce_block' => 'core.notify.kind.cheque_bounce_block',
+            // ⭐ নতুন সীমা বাড়ানোর অনুরোধ মালিকের সইয়ের অপেক্ষায়; অস্থায়ী সীমা তিন দিনে শেষ (বাকি নিয়ন্ত্রণ ধাপ ৩.৪)
+            'customer.limit_request_waiting' => 'core.notify.kind.limit_request_waiting',
+            'credit_control.temporary_limit_ending' => 'core.notify.kind.temporary_limit_ending',
+
             /*
              * ⭐ ডকুমেন্ট ম্যানেজমেন্টের বারোটা খবর — মালিকের পরিকল্পনা §২৩ (৯ অক্টোবর ২০২৬)।
              * ⓘ কেবল নামের চিহ্ন; কাকে যায় সেটা মডিউলের সিদ্ধান্ত, আর যিনি কাগজটা দেখতে পান না
@@ -145,7 +151,7 @@ final class NotificationKinds
             $type === 'approval.rejected' => ['approval', 'normal'],
             str_starts_with($type, 'approval.') => ['approval', 'high'],
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
-            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue'], true) => ['task', 'high'],
+            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'customer.cheque_bounce_block', 'customer.limit_request_waiting'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
             $type === 'notification.scheduled' => ['update', 'normal'],
             $type === 'notification.template_test' => ['system', 'low'],

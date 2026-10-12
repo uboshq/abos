@@ -211,6 +211,34 @@
 
             {{-- ── ডানে: সতর্কতা আর সই ─────────────────────────────────── --}}
             <aside class="flex min-h-0 min-w-0 flex-col gap-3">
+                {{-- ⭐ বাকির চার সংখ্যা — বাকি নিয়ন্ত্রণের ড্যাশবোর্ড থেকে, চাপলে ঐ কোম্পানির বাকির ড্যাশবোর্ড (ধাপ ৩.৩, [[CreditHeadlines]]) --}}
+                @if ($credit !== null)
+                    <section data-credit class="shrink-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                        <h2 class="flex items-center justify-between border-b border-(--color-border) px-4 py-1.5 text-sm font-semibold text-(--color-ink)">
+                            {{ __('executive::today.credit_title') }}
+                            @if ($credit['partial'])
+                                <span class="text-2xs font-normal text-(--color-ink-muted)" title="{{ __('executive::today.partial') }}">*</span>
+                            @endif
+                        </h2>
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-1 px-4 py-1.5 text-sm">
+                            @foreach (\App\Modules\Executive\Services\CreditHeadlines::KEYS as $key)
+                                <div class="flex min-w-0 items-center justify-between gap-2" data-credit-figure="{{ $key }}">
+                                    <span class="truncate text-2xs text-(--color-ink-muted)">{{ __('executive::today.credit_'.$key) }}</span>
+                                    <span class="tabular font-semibold text-(--color-ink)">{{ in_array($key, ['exposure', 'overdue'], true) ? Money::format($credit['totals'][$key], 0) : (int) $credit['totals'][$key] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        {{-- ⓘ কোম্পানি ধরে — চাপলে ঐ কোম্পানির বাকির ড্যাশবোর্ড --}}
+                        <div class="flex flex-wrap gap-x-3 px-4 pb-1.5 text-2xs">
+                            @foreach ($credit['companies'] as $part)
+                                <button type="submit" form="executive-open" name="go" data-credit-company="{{ $part['id'] }}"
+                                        value="{{ $go($part['id'], $part['only'], 'module.dashboard', ['module' => 'credit_control']) }}"
+                                        class="text-(--color-brand-700) hover:underline">{{ $part['name'] }}: {{ Money::format($part['values']['exposure'], 0) }}</button>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
+
                 <section data-alerts class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                     <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('executive::today.alerts_title') }}</h2>
                     <ul class="min-h-0 flex-1 overflow-auto text-sm">

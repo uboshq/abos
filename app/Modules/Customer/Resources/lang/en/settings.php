@@ -9,7 +9,8 @@ return [
     'show_photo_on_print' => 'Customer photo on printouts',
     'alert_over_limit' => 'Say on the home screen when a customer is over their credit limit',
     'alert_receivable_over' => 'Say when total receivable passes this amount (0 = do not)',
-    'overdue_block_days' => 'Stop new credit when a bill is still unpaid this many days after its due date (0 = never)',
+    'overdue_stop' => 'Stop new credit once any bill is past its due date — even with limit room left',
+    'overdue_block_days' => 'Grace days after the due date before new credit stops (0 = from the day after the due date)',
 
     // শূন্য লিমিটের অর্থ — মালিকের সুইচ
     'zero_limit_blocks' => 'No limit means no credit (zero means zero)',

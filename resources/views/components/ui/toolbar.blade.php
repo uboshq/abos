@@ -129,7 +129,12 @@
 @php
     // টুলবার সবসময় একটা GET ফর্মের ভেতরে বসে, তাই প্রতিটা নিয়ন্ত্রণ
     // ফর্মটা জমা দিলেই কাজ করে — আলাদা JavaScript লাগে না।
-    $currentSort = (string) request('sort');
+    /*
+     * ⛔ ঠিকানার মান অ্যারেও হতে পারে (`?q[]=x`, `?sort[]=x`) — তখন ঘরে ছাপতে গিয়ে পাতা ৫০০ দিত। লেখা না হলে খালি
+     * (১১ অক্টোবর ২০২৬; রুট-তালিকা ভাগের টুলবারে আসার পর [[ARouteHadDealersButNoBooksTest]] ধরল)।
+     */
+    $searched = is_string(request('q')) ? request('q') : '';
+    $currentSort = is_string(request('sort')) ? request('sort') : '';
     $currentView = request('view') === 'grid' ? 'grid' : 'list';
     $isCompact = request()->boolean('compact');
     $hasFilters = $filter && trim($slot->toHtml()) !== '';
@@ -465,11 +470,11 @@
                      মোবাইল নম্বর দিয়েও যে খোঁজা যায় তা কখনো জানে না। --}}
                 {{-- ⭐ টাইপ করতেই খোঁজ (মালিক, ১ অক্টোবর ২০২৬) — `data-live-search` ধরে রাখে এখন কী খোঁজা আছে,
                      আর খোঁজের পরে ফেরা পাতায় `autofocus` কার্সর ঘরেই রাখে; নিয়মগুলো `search-as-you-type.js`-এ। --}}
-                <input type="search" name="q" value="{{ request('q') }}"
+                <input type="search" name="q" value="{{ $searched }}"
                        placeholder="{{ $searchPlaceholder ?? __('core.action.search') }}"
                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                               bg-(--color-surface-app) ps-8 pe-3 text-sm" data-quick-find
-                       data-live-search="{{ request('q') }}" @if (request()->has('q')) autofocus @endif>
+                       data-live-search="{{ $searched }}" @if (request()->has('q')) autofocus @endif>
                 <svg viewBox="0 0 24 24" aria-hidden="true"
                      class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2
                             fill-(--color-ink-muted)">

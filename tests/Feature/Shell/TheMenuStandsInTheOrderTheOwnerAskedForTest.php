@@ -76,6 +76,10 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['business', 'purchase'],
         ['business', 'inventory'],
         ['business', 'customer'],
+
+        // ⭐ বাকি নিয়ন্ত্রণ — গ্রাহক আর বিক্রয়ের মাঝে (order ৪৭): বাকি দুইজনেরই কথা (১১ অক্টোবর ২০২৬)
+        ['business', 'credit_control'],
+
         ['business', 'sales'],
 
         /*

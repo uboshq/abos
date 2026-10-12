@@ -10,6 +10,7 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Executive\Services\Alerts;
 use App\Modules\Executive\Services\Board;
+use App\Modules\Executive\Services\CreditHeadlines;
 use App\Modules\Executive\Services\Figures;
 use App\Modules\Executive\Services\Rankings;
 use Illuminate\Http\RedirectResponse;
@@ -55,6 +56,8 @@ final class TodayController extends Controller implements HasMiddleware
             'board' => $board,
             'alerts' => $this->alerts->all($user, $companies),
             'waiting' => $this->alerts->waiting($user, $companies, 6),
+            // ⭐ বাকির চার সংখ্যা — বাকি নিয়ন্ত্রণের নিজের ড্যাশবোর্ড থেকে (ধাপ ৩.৩)
+            'credit' => app(CreditHeadlines::class)->for($user, $companies),
             'topCustomers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'total', 5, $month),
             'topProducts' => $this->rankings->top($user, $companies, 'sales.by_product', 'revenue', 5, $month),
             'trend' => $this->series($board['trend']),
