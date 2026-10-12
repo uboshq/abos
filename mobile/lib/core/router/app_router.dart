@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,6 +14,8 @@ import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/home/home_shell.dart';
+import '../../features/home/nav_bottom_bar.dart';
+import '../../features/home/paper_route.dart';
 import '../orders/delivery_order_api.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/leads/lead_screens.dart';
@@ -86,58 +88,60 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // ⭐ Every screen under /home sits behind [ModuleGateView]: a module
       // the company switched off for the phone shows "এই অংশটা এখন বন্ধ"
       // however it was reached — tile, saved link or a widget's tap.
+      // ⭐ And every one is [_framed]: the bottom bar under it (owner, 12 Oct
+      // 2026) — the screen and its route unchanged.
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeShell(),
         routes: [
-          GoRoute(
+          _framed(
             path: 'approvals',
             builder: (context, state) => const ModuleGateView(
                 path: 'approvals', child: ApprovalInboxScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'attendance',
             builder: (context, state) => const ModuleGateView(
                 path: 'attendance', child: AttendanceScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'vouchers',
             // ⭐ অফিসের লোকের ভাউচার (৭ অক্টোবর ২০২৬) — ফোনের হিসাব-সুইচের পিছনে
             builder: (context, state) => const ModuleGateView(
                 path: 'vouchers', child: VoucherListScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'claims',
             // ⭐ খরচের দাবি ও অগ্রিম (৭ অক্টোবর ২০২৬) — ফোনের HR সুইচের পিছনে
             builder: (context, state) => const ModuleGateView(
                 path: 'claims', child: ClaimListScreen()),
           ),
           // ⭐ মডিউলের ড্যাশবোর্ড — মালিক, ৪ অক্টোবর ২০২৬; দরজা সার্ভারের (চাবি, ফোনে চালু)
-          GoRoute(
+          _framed(
             path: 'dashboards',
             builder: (context, state) => const DashboardsScreen(),
           ),
-          GoRoute(
+          _framed(
             path: 'reports',
             builder: (context, state) =>
                 const ModuleGateView(path: 'reports', child: ReportsScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'today',
             builder: (context, state) =>
                 const ModuleGateView(path: 'today', child: TodayScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'dues',
             builder: (context, state) =>
                 const ModuleGateView(path: 'dues', child: DueListScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'customers',
             builder: (context, state) => const ModuleGateView(
                 path: 'customers', child: CustomerListScreen()),
             routes: [
-              GoRoute(
+              _framed(
                 // The public_id in the path, never a sequential one — the
                 // same rule the wire follows (docs/Contract §৩ ক).
                 path: ':id',
@@ -149,7 +153,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 ),
                 routes: [
                   // ⭐ দোকানের খাতা, সহজ করে — মালিক, ১২ অক্টোবর ২০২৬
-                  GoRoute(
+                  _framed(
                     path: 'ledger',
                     builder: (context, state) => ModuleGateView(
                       path: 'customers',
@@ -159,7 +163,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   // জমার বিজ্ঞপ্তি, স্লিপসহ (0.4.3) — দোকানের পাতা থেকে
-                  GoRoute(
+                  _framed(
                     path: 'deposit',
                     builder: (context, state) => ModuleGateView(
                       path: 'customers',
@@ -172,17 +176,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          GoRoute(
+          _framed(
             path: 'products',
             builder: (context, state) => const ModuleGateView(
                 path: 'products', child: ProductListScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'stock',
             builder: (context, state) =>
                 const ModuleGateView(path: 'stock', child: StockListScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'new-order',
             // `extra` carries an OrderPrefill only when opened from "নতুন
             // করে লিখুন" on a rejected order (order_list_screen.dart /
@@ -193,19 +197,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               child: NewOrderScreen(prefill: state.extra as OrderPrefill?),
             ),
           ),
-          GoRoute(
+          _framed(
             path: 'orders',
             builder: (context, state) =>
                 const ModuleGateView(path: 'orders', child: OrderListScreen()),
           ),
           // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের চাবি; টাকা আছে, তাই কেবল অনলাইনে
-          GoRoute(
+          _framed(
             path: 'counter',
             builder: (context, state) =>
                 const ModuleGateView(path: 'counter', child: CounterScreen()),
           ),
           // ⭐ ডেলিভারি অর্ডার (0.4.8) — লেখা, জমা, সুপারভাইজারের পরিমাণ আর সই; "নতুন DO" কেবল লেখার চাবিতে
-          GoRoute(
+          _framed(
             path: 'delivery-orders',
             builder: (context, state) => ModuleGateView(
               path: 'delivery-orders',
@@ -227,18 +231,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে payment received, principal list
           // আর purchase list দরকার"); চাবি সার্ভারে, টাইল চাবি অনুযায়ী ([[MenuRepository]])
           // ⭐ আজকের ডেলিভারি — পথে থাকা চালান, "বুঝিয়ে দিন" (ধাপ ৭, ৬ অক্টোবর ২০২৬)
-          GoRoute(
+          _framed(
             path: 'deliveries',
             builder: (context, state) => const ModuleGateView(
                 path: 'deliveries', child: DeliveriesScreen()),
           ),
           // ⭐ লোডিং শিট — খোলা ট্রিপ, "প্যাক হয়েছে" (ধাপ ৪, ৬ অক্টোবর ২০২৬)
-          GoRoute(
+          _framed(
             path: 'loading',
             builder: (context, state) => const ModuleGateView(
                 path: 'loading', child: LoadingListScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'collections',
             // ⭐ অফিসের লোকের "নতুন আদায়" (`mayCollect`, ৭ অক্টোবর ২০২৬)
             builder: (context, state) => Consumer(
@@ -246,12 +250,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                     path: 'collections',
                     child: MoneyInListScreen(canCollect: ref.watch(mayCollectProvider)))),
           ),
-          GoRoute(
+          _framed(
             path: 'principals',
             builder: (context, state) => const ModuleGateView(
                 path: 'principals', child: PrincipalListScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'purchases',
             builder: (context, state) => ModuleGateView(
               path: 'purchases',
@@ -267,19 +271,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           // ⭐ আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)
-          GoRoute(
+          _framed(
             path: 'my-route',
             builder: (context, state) =>
                 const ModuleGateView(path: 'my-route', child: MyRouteScreen()),
           ),
           // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ (সমন্বয়কের ক্রম "ঘ")
-          GoRoute(
+          _framed(
             path: 'leads',
             builder: (context, state) =>
                 const ModuleGateView(path: 'leads', child: LeadListScreen()),
           ),
           // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর (সমন্বয়কের ক্রম "ঘ")
-          GoRoute(
+          _framed(
             path: 'quotations',
             builder: (context, state) => ModuleGateView(
               path: 'quotations',
@@ -294,27 +298,52 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               ),
             ),
           ),
-          GoRoute(
+          _framed(
             path: 'tracking',
             builder: (context, state) => const ModuleGateView(
                 path: 'tracking', child: DeliveryTrackingScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'scan',
             builder: (context, state) =>
                 const ModuleGateView(path: 'scan', child: PaperScanScreen()),
           ),
-          GoRoute(
+          _framed(
             path: 'sync-status',
             builder: (context, state) => const SyncStatusScreen(),
           ),
           // ⭐ মাথার ঘণ্টা — নিজের নোটিফিকেশন (মালিক, ৬ অক্টোবর ২০২৬)
-          GoRoute(
+          _framed(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          // ⭐ "সাম্প্রতিক" থেকে খোলা কাগজ — DO, আদেশ, উদ্ধৃতি, আদায়, ক্রয়, ভাউচার, দাবি (মালিক, ১২ অক্টোবর ২০২৬);
+          // সুইচ কাগজের নিজের তালিকার ([[PaperRoute]])
+          _framed(
+            path: 'paper/:kind/:id',
+            builder: (context, state) => PaperRoute(
+              kind: state.pathParameters['kind'] ?? '',
+              id: state.pathParameters['id'] ?? '',
+              extra: state.uri.queryParameters['k'],
+            ),
           ),
         ],
       ),
     ],
   );
 });
+
+/// A `/home/<screen>` route with the bottom bar under its screen
+/// ([ScreenFrame]). A plain [GoRoute] otherwise — same path, same builder, on
+/// the root navigator, so the screen's own back arrow still goes one level up.
+GoRoute _framed({
+  required String path,
+  required Widget Function(BuildContext context, GoRouterState state) builder,
+  List<RouteBase> routes = const <RouteBase>[],
+}) =>
+    GoRoute(
+      path: path,
+      routes: routes,
+      builder: (context, state) =>
+          ScreenFrame(location: state.uri.path, child: builder(context, state)),
+    );

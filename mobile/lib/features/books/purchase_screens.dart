@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
@@ -227,6 +228,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     super.initState();
     widget.api.purchase(widget.kind, widget.id).then((d) {
       if (mounted) setState(() => _detail = d);
+      // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
+      RecentPapers.note(
+          kind: 'purchase', id: widget.id, number: d.row.no, extra: widget.kind);
     }).catchError((Object e) {
       if (mounted) {
         setState(

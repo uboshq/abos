@@ -13,6 +13,10 @@ import '../../core/menu/me_api.dart';
 import '../../core/menu/menu_item.dart';
 import '../../core/menu/menu_repository.dart';
 import '../../core/menu/module_gate.dart';
+import '../../core/navigation/nav_catalog.dart';
+import '../../core/navigation/nav_prefs.dart';
+import '../../core/navigation/nav_state.dart';
+import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
@@ -25,32 +29,38 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
-import '../../core/widgets/empty_state.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
+import 'module_pages.dart';
+import 'nav_bottom_bar.dart';
+import 'nav_search.dart';
 import 'notice_ticker.dart';
 import 'workspace_picker.dart';
 
-/// The signed-in person's home: three tabs under one header that always
-/// says which company and branch the phone is looking at.
+/// The signed-in person's home — the owner's navigation of 12 Oct 2026:
+/// *"app icon e tap korle age module asbe, module e dhukle tar menu, menu r
+/// vitore kichu thakle vitore dekhabe"*, built to the mockup he approved
+/// (4.10.2026/মোবাইল-নেভিগেশন-১০-স্কিনের-নমুনা.pdf, skin ১ ABOS).
 ///
-/// <p><b>হোম</b> — the day's figures under a greeting ([HomeDashboard]).
-/// <b>অ্যাপ</b> — the grid of what `GET /me` says they may do and this build
-/// can actually open; see [MenuRepository]'s own doc comment for the two
-/// filters a row passes through before it becomes a tile. <b>আরও</b> — who is
-/// signed in, the sync status, and the way out.
+/// <p>Three levels, never more: <b>সব মডিউল</b> (coloured tiles) → a module's
+/// menu (rows under small headings) → the screen; a row with children opens
+/// one short sub-list first. Under every one of them, and under every screen
+/// ([ScreenFrame]), the same bar: হোম · অনুমোদন · সব মডিউল · বিজ্ঞপ্তি · আমি.
 ///
-/// <p>The header names the company because docs/Contract §৮ rule খ says the
-/// figures must, and the header is the one place that is on screen for every
-/// tab. The names come from `/me`; when that cannot be reached they come from
-/// the last `/me` that could (see [SessionRepository.readOrg]); only when the
-/// phone has never heard does the header fall back to the person's own name.
+/// <p><b>হোম</b> — the search box, today's figures (the same [TodayPanel] as
+/// before), the person's favourites and what they opened last. <b>আমি</b> —
+/// who is signed in, the sync status, the update button and the way out.
 ///
-/// <p>⭐ Tapping the header opens the company/branch picker (0.4.2) — only
-/// when `/me` lists more than one company or branch, since a picker with
-/// nothing to pick is a button that does nothing.
+/// <p>⚠️ Which doors show is not decided here: the tree is built from the very
+/// menu the old grid drew — `/me`'s menu through [RouteRegistry], the phone's
+/// own permission tiles ([MenuRepository]) and the company's phone switches
+/// ([ModuleGate]) — see [NavTree.from].
+///
+/// <p>The header names the company on the home because docs/Contract §৮ rule
+/// খ says the figures must. ⭐ Tapping it opens the company/branch picker
+/// (0.4.2) — only when `/me` lists more than one company or branch.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({
     super.key,
@@ -67,6 +77,10 @@ class HomeShell extends ConsumerStatefulWidget {
     this.fetchNoticeBar,
     this.fetchPending,
     this.syncNow,
+    this.prefs,
+    this.openPath,
+    this.findCustomers,
+    this.customerName,
   });
 
   /// Seams — the real ones need a server or a secure store.
@@ -91,8 +105,18 @@ class HomeShell extends ConsumerStatefulWidget {
   /// Seam for the pull-to-sync round — the real one needs a server.
   final Future<void> Function()? syncNow;
 
-  /// Seam for the approval icon's count — the real one needs a server.
+  /// Seam for the approval tab's count — the real one needs a server.
   final Future<ApprovalPage> Function()? fetchPending;
+
+  /// Where favourites and recents are kept — the encrypted box by default.
+  final NavPrefsStore? prefs;
+
+  /// Opens `/home/<path>` — the router by default; a test records it.
+  final Future<void> Function(String path)? openPath;
+
+  /// The synced customers a search finds, and one customer's current name.
+  final List<CustomerHit> Function(String query)? findCustomers;
+  final String? Function(String id)? customerName;
 
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
@@ -101,8 +125,8 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   static const MenuRepository _menuRepository = MenuRepository();
 
-  int _tab = 0;
   List<MenuItem> _items = const [];
+  NavTree _tree = NavTree.empty();
   bool _menuLoading = true;
   OrgSnapshot? _org;
   SessionProfile? _profile;
@@ -114,10 +138,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   /// How many bell messages are unread — null until the server has said.
   int? _unread;
 
+  /// ⭐ প্রিয় আর সাম্প্রতিক — এই ফোনে, এই মানুষের ([[NavPrefs]])
+  NavPrefs? _prefs;
+  List<String> _favourites = const [];
+  List<RecentEntry> _recents = const [];
+
   Future<void> _loadUnread() async {
     try {
       final page = await (widget.fetchNotifications ?? NotificationApi.fetch)();
-      if (mounted) setState(() => _unread = page.unread);
+      if (mounted) {
+        setState(() => _unread = page.unread);
+        _publishBadges();
+      }
     } catch (_) {
       // ⓘ পুরনো সার্ভার বা সিগন্যাল নেই — ঘণ্টা থাকে, কেবল গোনা ছাড়া
     }
@@ -128,7 +160,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int _generation = 0;
 
   /// ⭐ How many signatures wait for this person — null while unknown, and the
-  /// icon stays hidden for somebody the server does not let approve.
+  /// tab stays hidden for somebody the server does not let approve.
   int? _pending;
   bool _pendingMore = false;
 
@@ -140,10 +172,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           _pending = page.rows.length;
           _pendingMore = page.nextCursor != null;
         });
+        _publishBadges();
       }
     } catch (_) {
-      // ⓘ সই করার অধিকার নেই (৪০৩), পুরনো সার্ভার বা সিগন্যাল নেই — আইকন আগের অবস্থায়
+      // ⓘ সই করার অধিকার নেই (৪০৩), পুরনো সার্ভার বা সিগন্যাল নেই — ঘর আগের অবস্থায়
     }
+  }
+
+  /// The bar under every screen reads the same counts ([ScreenFrame]).
+  void _publishBadges() {
+    ref.read(navBadgesProvider.notifier).state = NavBadges(
+        pending: _pending, pendingMore: _pendingMore, unread: _unread);
   }
 
   /// ⭐ নিচে টানলে পুরো সিঙ্ক — অ্যাপের নিজের গোল ([[AutoSync.current]]), যাতে টাইমারেরটা চলতে থাকলে একই গোল;
@@ -163,9 +202,38 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   void initState() {
     super.initState();
+    // ⓘ নতুন করে ঢুকলে হোম থেকে শুরু — আগের জনের খোলা মডিউল নয়
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _setPage(HomePage.home);
+    });
     _load();
     _loadUnread();
     _loadPending();
+    _loadPrefs();
+    RecentPapers.changes.addListener(_loadPrefs);
+  }
+
+  @override
+  void dispose() {
+    RecentPapers.changes.removeListener(_loadPrefs);
+    if (identical(RecentPapers.active, _prefs)) RecentPapers.active = null;
+    super.dispose();
+  }
+
+  Future<void> _loadPrefs() async {
+    final user = ref.read(authStateProvider).user;
+    if (user == null) return;
+    final prefs = _prefs ??=
+        NavPrefs(widget.prefs ?? ref.read(navPrefsStoreProvider), user.id);
+    // ⭐ কাগজের পর্দা খুললে এই তালিকাতেই লেখে ([[RecentPapers.note]])
+    RecentPapers.active = prefs;
+    final favourites = await prefs.favourites();
+    final recents = await prefs.recents();
+    if (!mounted) return;
+    setState(() {
+      _favourites = favourites;
+      _recents = recents;
+    });
   }
 
   Future<void> _load() async {
@@ -215,6 +283,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // ⭐ The company's phone switches ([ModuleGate]) — `/me`'s menu is
       // already filtered, this catches this app's own tiles too.
       _items = ModuleGate.visible(home.items, modules);
+      _tree = NavTree.from(_items);
       _menuLoading = false;
       if (profile != null) _profile = profile;
       if (home.me != null) {
@@ -264,6 +333,101 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         _org = OrgSnapshot(company: company, branch: record.branch ?? ''));
   }
 
+  void _setPage(HomePage page) =>
+      ref.read(homePageProvider.notifier).state = page;
+
+  /// Opens `/home/<path>` and remembers it under "সাম্প্রতিক".
+  Future<void> _open(String path, String label) async {
+    final prefs = _prefs;
+    if (prefs != null) {
+      unawaited(prefs
+          .remember(RecentEntry(path: path, label: label))
+          .then((_) => _loadPrefs()));
+    }
+    await (widget.openPath ?? _push)(path);
+    if (mounted) {
+      _loadPending();
+      _loadUnread();
+    }
+  }
+
+  Future<void> _push(String path) async {
+    await context.push('/home/$path');
+  }
+
+  Future<void> _toggleFavourite(NavRow row) async {
+    final prefs = _prefs;
+    final path = row.path;
+    if (prefs == null || path == null) return;
+    final change = await prefs.toggleFavourite(path);
+    await _loadPrefs();
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(
+      content: Text(switch (change) {
+        FavouriteChange.added => '"${row.label}" প্রিয়-তে যোগ হলো',
+        FavouriteChange.removed => '"${row.label}" প্রিয় থেকে সরানো হলো',
+        FavouriteChange.full =>
+          'প্রিয়-তে ছয়টার বেশি রাখা যায় না — আগে একটা সরান (হোমে চেপে ধরে)।',
+      }),
+    ));
+  }
+
+  Future<void> _openSearch() async {
+    final pick = await showSearch<NavPick?>(
+      context: context,
+      delegate: NavSearchDelegate(
+        tree: _tree,
+        // ⓘ গ্রাহকের তালিকার দরজা যাঁর আছে, কেবল তাঁর খোঁজায় দোকান
+        findCustomers: _tree.screen('customers') == null
+            ? null
+            : (widget.findCustomers ?? findSyncedCustomers),
+      ),
+    );
+    if (pick != null && mounted) await _open(pick.path, pick.label);
+  }
+
+  /// The favourites this person may still open — a door the menu no longer
+  /// gives is not kept on the home.
+  List<NavRow> get _favouriteRows => [
+        for (final path in _favourites)
+          if (_tree.screen(path) case final NavRow row) row,
+      ];
+
+  /// The recents this person may still open, under today's names; a shop
+  /// this phone's cache no longer knows (another company, a sign-out) is left
+  /// off rather than named from memory.
+  List<RecentEntry> get _recentRows {
+    final out = <RecentEntry>[];
+    for (final e in _recents) {
+      if (e.path.startsWith('customers/')) {
+        if (_tree.screen('customers') == null) continue;
+        final name = (widget.customerName ?? syncedCustomerName)(
+            e.path.substring('customers/'.length));
+        if (name != null) out.add(RecentEntry(path: e.path, label: name));
+      } else if (RecentPapers.listPathOf(e.path) case final String list) {
+        // ⓘ কাগজ — তার তালিকার দরজা যতক্ষণ আছে; নাম কাগজ খোলার সময়ের
+        if (_tree.screen(list) != null) out.add(e);
+      } else if (_tree.screen(e.path) case final NavRow row) {
+        out.add(RecentEntry(path: e.path, label: row.label));
+      }
+    }
+    return out;
+  }
+
+  NavCounts get _counts {
+    final pending = _pending ?? 0;
+    final queued = SyncEngine.instance.pendingCount;
+    return NavCounts(
+      byModule: {if (pending > 0) 'approval': pending},
+      byPath: {if (pending > 0) 'approvals': pending},
+      // "N অপেক্ষমাণ" — a plain grey line, not a red count: waiting for a
+      // connection is normal, not a problem (the old grid's own rule).
+      quietByPath: {if (queued > 0) 'orders': '$queued অপেক্ষমাণ'},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).user;
@@ -274,119 +438,192 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       return const Scaffold(body: SizedBox.shrink());
     }
 
+    var page = ref.watch(homePageProvider);
+    // ⓘ যে মডিউল এখন এই মানুষের নেই (কোম্পানি বদল, সুইচ বন্ধ), তার মেনু নয় — সব মডিউলে
+    final module = page.module == null ? null : _tree.module(page.module!);
+    if (!_menuLoading &&
+        page.module != null &&
+        (module == null ||
+            (page.kind == HomePageKind.subList &&
+                _tree.parent(page.parent!) == null))) {
+      page = HomePage.modules;
+    }
+
     final org = _org;
     final headerNamesOrg = org != null && org.company.isNotEmpty;
+    final tab = switch (page.kind) {
+      HomePageKind.home => NavTab.home,
+      HomePageKind.me => NavTab.me,
+      _ => NavTab.modules,
+    };
+    final counts = _counts;
 
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: AppSpacing.md,
-        title: _Header(
-          title: headerNamesOrg ? org.company : user.name,
-          subtitle: headerNamesOrg
-              ? (org.branch.isNotEmpty ? org.branch : null)
-              // ⭐ পদবি, রোল নয় (মালিক, ২ অক্টোবর ২০২৬)
-              : _designation,
-          onTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
-        ),
-        // ⭐ মালিক, ৬ অক্টোবর ২০২৬: সবুজ মাথার একদম ডানে ব্যবহারকারীর ছবি (চাপলে প্রোফাইল), তার পাশে ঘণ্টা
-        actions: [
-          // ⓘ সিঙ্কের আইকন নেই — মালিক, ১০ অক্টোবর ২০২৬: নিচে টানলে সিঙ্ক, আর নিজে থেকেও ([[AutoSync]])
-          // ⭐ মালিক, ১০ অক্টোবর ২০২৬: "Notification icon er pase approval icon … pending gulu dekha zay"
-          if (_pending != null)
-            _ApprovalAction(
-              pending: _pending!,
-              more: _pendingMore,
-              onTap: () async {
-                await context.push('/home/approvals');
-                if (mounted) _loadPending();
-              },
-            ),
-          _BellAction(
-            unread: _unread,
-            onTap: () async {
-              await context.push('/home/notifications');
-              if (mounted) _loadUnread();
-            },
-          ),
-          _AvatarAction(
-            name: user.name,
-            avatarUrl: _avatarUrl,
-            onTap: () => setState(() => _tab = 2),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-      ),
-      // docs/Contract §৬. Wrapped here rather than around the whole app: the
-      // login screen must stay reachable for somebody whose build is too old,
-      // because signing in is how they find out anything at all, and a wall
-      // in front of it would leave them with a blank app and no explanation.
-      body: UpdateGate(
-        check: widget.checkUpdate,
-        child: Column(children: [
-          // ⭐ ওয়েবের চলমান নোটিশ — মাথার ঠিক নিচে, প্রতিটা ট্যাবে (মালিক, ৬ অক্টোবর ২০২৬); কিছু না থাকলে চুপ।
-          // ⓘ কোম্পানি বদলালে নতুন key — আগের কোম্পানির নোটিশ এক মুহূর্তও থাকে না
-          NoticeTicker(
-              key: ValueKey('notice-ticker-$_generation'),
-              fetch: widget.fetchNoticeBar),
-          Expanded(
-              child: IndexedStack(
-            index: _tab,
-            children: [
-              HomeDashboard(
-                key: ValueKey('home-dashboard-$_generation'),
-                user: user,
-                items: _items,
-                headerNamesOrg: headerNamesOrg,
-                fetchToday: widget.fetchToday,
-                lastKnownToday: widget.lastKnownToday,
-                onRecord: _onRecord,
-                now: widget.now,
-                // ⭐ উপর থেকে নিচে টানলে পুরো সিঙ্ক — পাঠানো আর আনা (মালিক, ১০ অক্টোবর ২০২৬)
-                onPull: _syncNow,
+    return PopScope(
+      // ⭐ অ্যান্ড্রয়েডের "পিছনে" — সবসময় এক ধাপ উপরে; হোমে থাকলে তবেই অ্যাপ বন্ধ
+      canPop: page.up == null,
+      onPopInvokedWithResult: (didPop, _) {
+        final up = page.up;
+        if (!didPop && up != null) _setPage(up);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          titleSpacing: AppSpacing.md,
+          title: switch (page.kind) {
+            HomePageKind.home => _Header(
+                title: headerNamesOrg ? org.company : user.name,
+                subtitle: headerNamesOrg
+                    ? (org.branch.isNotEmpty ? org.branch : null)
+                    // ⭐ পদবি, রোল নয় (মালিক, ২ অক্টোবর ২০২৬)
+                    : _designation,
+                onTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
               ),
-              _menuLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _items.isEmpty
-                      ? const EmptyState(
-                          icon: Icons.lock_outline,
-                          title: 'আপনার জন্য কোনো মেনু নেই',
-                          message:
-                              'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _syncNow,
-                          child: _MenuGrid(items: _items)),
-              _MoreTab(
+            HomePageKind.modules => const _PageTitle('সব মডিউল'),
+            HomePageKind.module => _PageTitle(module?.label ?? 'সব মডিউল'),
+            HomePageKind.subList =>
+              _PageTitle(_tree.parent(page.parent!)?.label ?? ''),
+            HomePageKind.me => const _PageTitle('আমি'),
+          },
+          // ⭐ মালিক, ৬ অক্টোবর ২০২৬: মাথার একদম ডানে ব্যবহারকারীর ছবি (চাপলে প্রোফাইল)।
+          // ⓘ ঘণ্টা আর অনুমোদন এখন নিচের বারে — প্রতিটা পর্দায় এক চাপে (মালিক, ১২ অক্টোবর ২০২৬)
+          actions: [
+            _AvatarAction(
+              name: user.name,
+              avatarUrl: _avatarUrl,
+              onTap: () => _setPage(HomePage.me),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+        ),
+        // docs/Contract §৬. Wrapped here rather than around the whole app: the
+        // login screen must stay reachable for somebody whose build is too old,
+        // because signing in is how they find out anything at all, and a wall
+        // in front of it would leave them with a blank app and no explanation.
+        body: UpdateGate(
+          check: widget.checkUpdate,
+          child: Column(children: [
+            // ⭐ ওয়েবের চলমান নোটিশ — মাথার ঠিক নিচে, প্রতিটা ট্যাবে (মালিক, ৬ অক্টোবর ২০২৬); কিছু না থাকলে চুপ।
+            // ⓘ কোম্পানি বদলালে নতুন key — আগের কোম্পানির নোটিশ এক মুহূর্তও থাকে না
+            NoticeTicker(
+                key: ValueKey('notice-ticker-$_generation'),
+                fetch: widget.fetchNoticeBar),
+            Expanded(
+                child: IndexedStack(
+              index: tab == NavTab.home ? 0 : (tab == NavTab.me ? 2 : 1),
+              children: [
+                HomeDashboard(
+                  key: ValueKey('home-dashboard-$_generation'),
                   user: user,
-                  org: org,
-                  designation: _designation,
-                  avatarUrl: _avatarUrl),
-            ],
-          )),
-        ]),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (index) => setState(() => _tab = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'হোম',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view),
-            label: 'অ্যাপ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.menu),
-            label: 'আরও',
-          ),
-        ],
+                  items: _items,
+                  headerNamesOrg: headerNamesOrg,
+                  fetchToday: widget.fetchToday,
+                  lastKnownToday: widget.lastKnownToday,
+                  onRecord: _onRecord,
+                  now: widget.now,
+                  // ⭐ উপর থেকে নিচে টানলে পুরো সিঙ্ক — পাঠানো আর আনা (মালিক, ১০ অক্টোবর ২০২৬)
+                  onPull: _syncNow,
+                  search: NavSearchBox(onTap: _openSearch),
+                  favourites: _favouriteRows,
+                  recents: _recentRows,
+                  onOpen: _open,
+                  onUnfavourite: _toggleFavourite,
+                ),
+                _modulesArea(page, module, counts),
+                _MoreTab(
+                    user: user,
+                    org: org,
+                    designation: _designation,
+                    avatarUrl: _avatarUrl,
+                    onOpen: _open),
+              ],
+            )),
+          ]),
+        ),
+        bottomNavigationBar: AbosBottomBar(
+          selected: tab,
+          badges: NavBadges(
+              pending: _pending, pendingMore: _pendingMore, unread: _unread),
+          onSelect: (selected) async {
+            switch (selected) {
+              case NavTab.home:
+                _setPage(HomePage.home);
+              case NavTab.modules:
+                _setPage(HomePage.modules);
+              case NavTab.me:
+                _setPage(HomePage.me);
+              case NavTab.approvals:
+                await (widget.openPath ?? _push)('approvals');
+                if (mounted) _loadPending();
+              case NavTab.notifications:
+                await (widget.openPath ?? _push)('notifications');
+                if (mounted) _loadUnread();
+            }
+          },
+        ),
       ),
     );
   }
+
+  Widget _modulesArea(HomePage page, NavModule? module, NavCounts counts) {
+    final favourites = _favourites.toSet();
+    void onRow(NavRow row) {
+      if (row.isParent) {
+        _setPage(HomePage.subList(row.module, row.id));
+      } else if (row.path != null) {
+        _open(row.path!, row.label);
+      }
+    }
+
+    if (page.kind == HomePageKind.subList && module != null) {
+      final parent = _tree.parent(page.parent!);
+      if (parent != null) {
+        return ModuleMenuPage(
+          key: ValueKey('sub-${parent.id}'),
+          crumb: module.label,
+          onCrumb: () => _setPage(HomePage.module(module.code)),
+          groups: [NavGroup(parent.label, parent.children)],
+          counts: counts,
+          favourites: favourites,
+          onRow: onRow,
+          onFavourite: _toggleFavourite,
+        );
+      }
+    }
+    if (page.kind == HomePageKind.module && module != null) {
+      return ModuleMenuPage(
+        key: ValueKey('menu-${module.code}'),
+        crumb: 'সব মডিউল',
+        onCrumb: () => _setPage(HomePage.modules),
+        note: module.live
+            ? null
+            : '${module.label}-এর পর্দাগুলো এখনো ফোনে আসেনি — নিচের সারিগুলো শীঘ্রই আসছে।',
+        groups: module.groups,
+        counts: counts,
+        favourites: favourites,
+        onRow: onRow,
+        onFavourite: _toggleFavourite,
+      );
+    }
+    return AllModulesPage(
+      modules: _tree.modules,
+      counts: counts,
+      loading: _menuLoading,
+      header: NavSearchBox(onTap: _openSearch),
+      onRefresh: _syncNow,
+      onOpen: (m) => _setPage(HomePage.module(m.code)),
+    );
+  }
+}
+
+class _PageTitle extends StatelessWidget {
+  const _PageTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700));
 }
 
 class _Header extends StatelessWidget {
@@ -435,57 +672,8 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// ⭐ The bell — this person's messages (server `NotificationApiController`),
-/// with how many are unread.
-class _BellAction extends StatelessWidget {
-  const _BellAction({required this.unread, required this.onTap});
-
-  final int? unread;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final count = unread ?? 0;
-    return IconButton(
-      key: const ValueKey('header-bell'),
-      tooltip: 'নোটিফিকেশন',
-      onPressed: onTap,
-      icon: Badge(
-        isLabelVisible: count > 0,
-        label: Text(count > 99 ? '99+' : '$count'),
-        child: const Icon(Icons.notifications_outlined),
-      ),
-    );
-  }
-}
-
-/// ⭐ Signatures waiting for this person, next to the bell — a tap opens the
-/// approval inbox (owner, 10 Oct 2026).
-class _ApprovalAction extends StatelessWidget {
-  const _ApprovalAction(
-      {required this.pending, required this.more, required this.onTap});
-
-  final int pending;
-  final bool more;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      key: const ValueKey('header-approvals'),
-      tooltip: 'অনুমোদন',
-      onPressed: onTap,
-      icon: Badge(
-        isLabelVisible: pending > 0 || more,
-        label: Text(more || pending > 99 ? '$pending+' : '$pending'),
-        child: const Icon(Icons.fact_check_outlined),
-      ),
-    );
-  }
-}
-
-/// ⭐ The person's photo at the far right of the green header — a tap opens
-/// the profile (the "আরও" tab, which is the profile page).
+/// ⭐ The person's photo at the far right of the header — a tap opens the
+/// profile ("আমি").
 class _AvatarAction extends StatelessWidget {
   const _AvatarAction(
       {required this.name, required this.avatarUrl, required this.onTap});
@@ -512,105 +700,14 @@ class _AvatarAction extends StatelessWidget {
   }
 }
 
-class _MenuGrid extends StatelessWidget {
-  const _MenuGrid({required this.items});
-
-  final List<MenuItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      // ⓘ কম ঘর হলেও টানা যায় — নিচে টানলে সিঙ্ক
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: AppSpacing.md,
-        crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 1.1,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _MenuTile(item: item);
-      },
-    );
-  }
-}
-
-class _MenuTile extends ConsumerWidget {
-  const _MenuTile({required this.item});
-
-  final MenuItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // A "coming soon" row is shown, not hidden — matching the web side's own
-    // convention — but dimmed and inert, per the /me briefing's point ৪:
-    // planned means visible, never tappable.
-    final color = item.planned ? AppColors.onSurfaceMuted : AppColors.primary;
-
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap:
-            item.planned ? null : () => context.go('/home/${item.routeName}'),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(item.icon, size: 36, color: color),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                item.label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: item.planned ? AppColors.onSurfaceMuted : null),
-              ),
-              if (item.planned) ...[
-                const SizedBox(height: AppSpacing.xs),
-                const Text('শীঘ্রই আসছে',
-                    style: TextStyle(
-                        fontSize: 11, color: AppColors.onSurfaceMuted)),
-              ] else if (item.key == 'sales.order.index') ...[
-                const SizedBox(height: AppSpacing.xs),
-                const _PendingBadge(),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// "N অপেক্ষমাণ" — a plain count, not a status colour: waiting for a
-/// connection is normal, not a problem, so it must not read the way a red
-/// badge would. Rejected changes have their own, separate warning colour on
-/// the sync-status screen once someone opens it.
-class _PendingBadge extends StatelessWidget {
-  const _PendingBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final pending = SyncEngine.instance.pendingCount;
-    if (pending == 0) return const SizedBox.shrink();
-    return Text(
-      '$pending অপেক্ষমাণ',
-      style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceMuted),
-    );
-  }
-}
-
-/// Who is signed in, where, and the way out. Signing out asks first: on a
-/// shared phone one stray tap must not cost somebody their session and the
-/// login that follows.
+/// "আমি" — who is signed in, where, the sync status, the update button and
+/// the way out. Signing out asks first: on a shared phone one stray tap must
+/// not cost somebody their session and the login that follows.
 class _MoreTab extends ConsumerWidget {
   const _MoreTab(
       {required this.user,
       required this.org,
+      required this.onOpen,
       this.designation,
       this.avatarUrl});
 
@@ -619,6 +716,7 @@ class _MoreTab extends ConsumerWidget {
 
   final AuthUser user;
   final OrgSnapshot? org;
+  final Future<void> Function(String path, String label) onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -658,11 +756,12 @@ class _MoreTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         Card(
           child: ListTile(
+            key: const ValueKey('me-sync-status'),
             leading: const Icon(Icons.sync_outlined),
             title: const Text('সিঙ্কের অবস্থা'),
             subtitle: const Text('কী গেছে, কী যায়নি, কী ফেরত এসেছে'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go('/home/sync-status'),
+            onTap: () => onOpen('sync-status', 'সিঙ্কের অবস্থা'),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
