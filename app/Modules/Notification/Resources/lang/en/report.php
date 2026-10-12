@@ -21,7 +21,7 @@ return [
         'latency' => 'Delivery latency',
         'channel_availability' => 'Channel availability',
         'suppression' => 'Preferences and suppression',
-        'audit_report' => 'Notification audit',
+        'audit_report' => 'Notification audit report',
     ],
     'menu' => [
         'summary' => 'Notification summary',
@@ -40,7 +40,7 @@ return [
         'latency' => 'Delivery latency',
         'channel-availability' => 'Channel availability',
         'suppression' => 'Preferences and suppression',
-        'audit' => 'Notification audit',
+        'audit' => 'Notification audit report',
     ],
     'col' => [
         'day' => 'Day',
