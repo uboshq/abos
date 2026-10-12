@@ -29,6 +29,8 @@ Route::prefix('v1/sales')
     ])
     ->group(function (): void {
         Route::get('/standing/{customer}', [OrderStandingController::class, 'standing'])->name('standing');
+        // ⭐ গ্রাহকের খাতা, ফোনে — মালিক, ১২ অক্টোবর ২০২৬ ([[CustomerLedgerApiController]])
+        Route::get('/customers/{id}/ledger', [\App\Modules\Sales\Http\Controllers\CustomerLedgerApiController::class, 'show'])->whereUuid('id')->name('customer.ledger');
         Route::post('/offers', [OrderStandingController::class, 'offers'])->name('offers');
 
         // ⭐ এক কাগজে এক QR — দেখা, "মাল বেরোল", "ডেলিভারি নিশ্চিত" ([[QrScanController]])
