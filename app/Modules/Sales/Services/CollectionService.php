@@ -133,6 +133,16 @@ final class CollectionService
                 'created_by' => auth()->id(),
             ]);
 
+            /*
+             * ⭐ বিল বাছা না থাকলে সবচেয়ে পুরনো বিল আগে (FIFO) — টাকার পরিকল্পনা ৬ (মালিক, ৭ অক্টোবর ২০২৬;
+             * [[AnUnpointedCollectionPaysTheOldestBillFirstTest]])। ⓘ আগে বিল না বাছা আদায় খালি বসত: পাওনা কমত, অথচ প্রতিটা বিল
+             * "বাকি" দেখাত — তাগাদার তালিকা আর বিলের বয়স দুটোই ভুল। ⓘ বাছা থাকলে আগের মতোই; বাড়তি টাকা আগের মতো গ্রাহকের
+             * খাতায় Cr। কেবল তৈরিতে — সম্পাদনায় খালি রাখা মানে ইচ্ছা করে খালি।
+             */
+            if ($lines === []) {
+                $lines = $this->oldestFirst($collection);
+            }
+
             $this->replaceLines($collection, $lines);
 
             IssuedNumber::query()
@@ -506,6 +516,46 @@ final class CollectionService
      *
      * @param  list<array<string, mixed>>  $lines
      */
+    /**
+     * আদায়ের টাকা গ্রাহকের খোলা বিলে, পুরনো আগে — প্রতিটায় তার বকেয়া পর্যন্ত, টাকা ফুরোলে থামা (টাকার পরিকল্পনা ৬)।
+     *
+     * ⓘ কেবল আদায়ের নিজের শাখার বিল — অন্য শাখার বিলে ভাগ দিলে দুই শাখার পাওনা ভুল হত ([[DepositClaimService::sharesAt()]]-এর একই নিয়ম)।
+     *
+     * @return list<array{sales_invoice_id: int, amount: string}>
+     */
+    private function oldestFirst(Collection $collection): array
+    {
+        $left = (string) $collection->amount;
+        $lines = [];
+
+        $bills = SalesInvoice::acrossBranches()
+            ->where('sal_invoices.company_id', $collection->company_id)
+            ->where('sal_invoices.customer_id', $collection->customer_id)
+            ->where('sal_invoices.status', DocumentStatus::CONFIRMED)
+            ->when($collection->branch_id !== null, fn ($q) => $q->where('sal_invoices.branch_id', $collection->branch_id))
+            ->withCollected()
+            ->orderBy('sal_invoices.trx_date')->orderBy('sal_invoices.id')
+            ->get();
+
+        foreach ($bills as $bill) {
+            if (bccomp($left, '0', 4) <= 0) {
+                break;
+            }
+
+            $due = $bill->dueAmount();
+            $share = bccomp($due, $left, 4) < 0 ? $due : $left;
+
+            if (bccomp($share, '0', 4) <= 0) {
+                continue;
+            }
+
+            $lines[] = ['sales_invoice_id' => (int) $bill->id, 'amount' => $share];
+            $left = bcsub($left, $share, 4);
+        }
+
+        return $lines;
+    }
+
     private function replaceLines(Collection $collection, array $lines): void
     {
         $collection->lines()->delete();
