@@ -116,6 +116,32 @@ class BatchRecallTest extends TestCase
         $this->assertSame(0, bccomp('4', (string) $recipients->first()->qty, 4));
     }
 
+    /**
+     * ⛔ রিকলের তালিকা শাখার দেয়াল মানে — অন্য শাখার চালান আর তার গ্রাহক আসে না (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই মানুষ, একই লট, কেবল দেখার শাখা বদলায়: নিজের শাখায় চালানটা আছে, দূরের শাখায় নেই।
+     * ⚠️ আগে যেকোনো শাখা থেকে সব শাখার দোকানের নাম আর ফোন দেখা যেত।
+     */
+    public function test_the_recall_list_stays_behind_the_branch_wall(): void
+    {
+        $home = (int) CompanyContext::branchId();
+        $far = \App\Models\Branch::query()->create([
+            'company_id' => CompanyContext::id(), 'code' => 'RECALL-FAR', 'name_en' => 'Far branch', 'name_bn' => 'দূরের শাখা', 'is_active' => true,
+        ]);
+        $this->sell('4');
+
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $owner->forceFill(['view_all_branches' => false, 'current_branch_id' => $home])->save();
+        $this->actingAs($owner->fresh());
+        $trace = app(\App\Modules\Sales\Services\BatchTrace::class);
+
+        $this->assertCount(1, $trace->recipients($this->batch), 'দৃশ্যটাই বানানো যায়নি — নিজের শাখায় চালানটা নেই।');
+
+        CompanyContext::set(CompanyContext::id(), $far->id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->assertCount(0, $trace->recipients($this->batch), '⛔ দূরের শাখা থেকে এই শাখার রিকলের গ্রাহক দেখা গেল।');
+    }
+
     /** দুইজন গ্রাহক, দুইটা সারি — কে কতটা পেয়েছেন আলাদা করে। */
     public function test_two_customers_appear_separately(): void
     {

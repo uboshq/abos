@@ -2,6 +2,7 @@
     $badge = match ($claim->status) {
         \App\Modules\Sales\Models\CommissionClaim::SETTLED => 'success',
         \App\Modules\Sales\Models\CommissionClaim::REJECTED => 'danger',
+        \App\Modules\Sales\Models\CommissionClaim::CANCELLED => 'danger',
         default => 'pending',
     };
 @endphp

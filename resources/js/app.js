@@ -1,4 +1,5 @@
 import Alpine from '@alpinejs/csp'
+import morph from '@alpinejs/morph'
 import { wireActions } from './components/actions.js'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
@@ -151,8 +152,9 @@ searchAsYouType()
  */
 listenForColumnChoice()
 
-// ⭐ রিয়েল-টাইম সিঙ্ক — অন্য কেউ কিছু লিখলে খোলা পাতায় "নতুন তথ্য এসেছে" (মালিক, ১০ অক্টোবর ২০২৬)
-listenForFreshData()
+// ⭐ রিয়েল-টাইম সিঙ্ক — অন্য কেউ কিছু লিখলে খোলা পাতার বদলানো অংশ নিজে বসে, ১০ সেকেন্ডে (মালিক, ১১ অক্টোবর ২০২৬)
+Alpine.plugin(morph)
+listenForFreshData(document, window.fetch.bind(window), (from, to, options) => Alpine.morph(from, to, options))
 
 /*
  * ⛔ ছাপা ও "বদলালেই জমা" — CSP ইনলাইন হ্যান্ডলার চালাতে দেয় না।

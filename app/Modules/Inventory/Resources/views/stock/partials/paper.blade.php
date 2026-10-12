@@ -252,7 +252,7 @@
                              বসেনি-র বেশি হলে পাতাতেই সতর্কতা, আর সার্ভারও নেয় না ([[StockService::place()]])। --}}
                         <template x-for="(s, n) in splits" :key="n">
                             <tr class="border-t border-dashed border-(--color-border) bg-(--color-surface-muted)">
-                                <td class="ps-6 text-sm text-(--color-ink-muted)">
+                                <td class="text-sm text-(--color-ink-muted)" style="padding-inline-start: calc(var(--grid-pad-x) * 2)">
                                     ↳ {{ __('inventory::field.another_place') }}
                                         <input type="hidden" :name="splitName({{ $i }}, n, 'product_id')" value="{{ $line['product_id'] }}">
                                         <input type="hidden" :name="splitName({{ $i }}, n, 'warehouse_id')" value="{{ $line['warehouse_id'] }}">

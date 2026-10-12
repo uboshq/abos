@@ -432,6 +432,63 @@ class TheCommissionIPayFirstTest extends TestCase
         $this->assertSame(CommissionClaim::SETTLED, $claim->fresh()->status);
     }
 
+    /**
+     * ⛔ বিলের দাবি বিলের বাকিও কমায় — একক পাতা আর তালিকা একই কথা (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ হাতে গোনা: বিল ১,৭৯৪.৪০, আদায় নেই · দাবি ৫% = ৮৯.৭২ → বাকি ১,৭০৪.৬৮। ⚠️ আগে খাতায় ডিলারের দেনা
+     * কমত, অথচ বিলের বাকি ১,৭৯৪.৪০ থাকত — আদায়ের পর্দা দাবির টাকাও আবার নিত। ⓘ মানা না হলেও বাকি একই —
+     * ডিলারের জমাটা থাকে, খরচটা ডিপোর।
+     */
+    public function test_a_claim_on_a_bill_lowers_that_bills_due_on_the_page_and_in_the_list(): void
+    {
+        $invoice = $this->anInvoice();
+        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '1794.40', 2), 'দৃশ্যটাই বানানো যায়নি — বিলের বাকি পুরোটা নয়।');
+
+        $claim = $this->service()->create([
+            'customer_id' => $this->dealer->id, 'supplier_id' => $this->principal->id,
+            'sales_invoice_id' => $invoice->id, 'rate_percent' => '5',
+        ]);
+
+        $listed = SalesInvoice::query()->withCollected()->whereKey($invoice->id)->firstOrFail();
+        $this->assertSame([0, 0], [
+            bccomp($invoice->fresh()->dueAmount(), '1704.68', 2),
+            bccomp($listed->dueAmount(), '1704.68', 2),
+        ], '⛔ দাবি খাতায় ডিলারের দেনা কমাল, অথচ বিলের বাকি (পাতা '.$invoice->fresh()->dueAmount().', তালিকা '.$listed->dueAmount().') কমল না।');
+
+        $this->service()->reject($claim, 'কোম্পানি মানেনি');
+        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '1704.68', 2), '⛔ না-মানা দাবিতে বিলের বাকি ফিরে এল, অথচ ডিলারের জমা থাকে।');
+    }
+
+    /**
+     * ⛔ ভুল দাবি বাতিল হয় — দাখিলা উল্টায়, ডিলারের দেনা আর বিলের বাকি আগের জায়গায় (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কারণ ছাড়া নয়, সিদ্ধান্ত হয়ে যাওয়া দাবিতে নয়, আর পর্দার সারি থেকেও।
+     */
+    public function test_a_wrong_claim_is_cancelled_and_everything_goes_back(): void
+    {
+        $invoice = $this->anInvoice();
+        $dueBefore = $this->dealerDue();
+
+        $claim = $this->service()->create([
+            'customer_id' => $this->dealer->id, 'supplier_id' => $this->principal->id,
+            'sales_invoice_id' => $invoice->id, 'rate_percent' => '5',
+        ]);
+
+        $this->post(route('sales.commission.cancel', $claim))->assertSessionHasErrors('decision_reason');
+        $this->assertSame(CommissionClaim::PENDING, $claim->fresh()->status);
+
+        $this->post(route('sales.commission.cancel', $claim), ['decision_reason' => 'ভুল বিলে লেখা হয়েছিল'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(CommissionClaim::CANCELLED, $claim->fresh()->status, '⛔ পর্দা থেকে বাতিল হলো না।');
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::COMMISSION_CLAIM), '0', 2), '⛔ বাতিলের পরেও দাবির খাতে টাকা।');
+        $this->assertSame(0, bccomp($this->dealerDue(), $dueBefore, 2), '⛔ বাতিলের পরেও ডিলারের দেনা কমে আছে।');
+        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '1794.40', 2), '⛔ বাতিল দাবি এখনো বিলের বাকি কমিয়ে রেখেছে।');
+
+        $this->expectException(ValidationException::class);
+        $this->service()->cancel($claim->fresh(), 'আবার');
+    }
+
     /** যিনি কমিশন দেখতে পারেন না, তাঁর কাছে পর্দাটাই নেই। */
     public function test_a_user_without_the_permission_is_refused(): void
     {

@@ -163,12 +163,10 @@
                     ⓘ লেবেলটা উপরেই আছে ("কবে পৌঁছাবে"), তাই স্ক্রিন
                     রিডারের জন্য `aria-label`।
                 --}}
-                <input type="date" name="lands_on"
-                       value="{{ $onTheWay ? $landsOn : '' }}"
-                       aria-label="{{ __('accounts::field.lands_on') }}"
-                       x-show="onTheWay" x-cloak
-                       class="h-(--spacing-field) w-44 rounded-(--radius-field) border
-                              border-(--color-border) bg-(--color-surface-card) px-3">
+                <div x-show="onTheWay" x-cloak class="w-44">
+                    <x-ui.date name="lands_on" :value="$onTheWay ? $landsOn : null"
+                               aria-label="{{ __('accounts::field.lands_on') }}" />
+                </div>
             </div>
 
             <p class="mt-2 text-xs text-(--color-ink-muted)"

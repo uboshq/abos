@@ -48,6 +48,9 @@ class CommissionClaim extends Model implements Drillable
     /** কোম্পানি মানেনি — দাবিটা এখন ডিপোর নিজের খরচ। */
     public const REJECTED = 'rejected';
 
+    /** ভুল দাবি — দাখিলা উল্টানো, বিলের বাকি ফেরে ([[CommissionClaimService::cancel()]], Sales অডিট ১০ অক্টোবর ২০২৬)। */
+    public const CANCELLED = 'cancelled';
+
     protected $table = 'sal_commission_claims';
 
     /** খতিয়ানে এই কাগজের নাম। */

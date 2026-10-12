@@ -28,7 +28,7 @@
             <div class="flex flex-wrap gap-2">
                 @foreach ($dashboard->tiles as $tile)
                     <a href="{{ $tile->href }}" data-tile
-                       class="inline-flex h-11 items-center gap-2 rounded-(--radius-field) border border-(--color-border)
+                       class="inline-flex h-(--spacing-field) items-center gap-2 rounded-(--radius-field) border border-(--color-border)
                               bg-(--color-surface-card) px-4 text-sm font-semibold text-(--color-brand-700)
                               hover:bg-(--color-surface-hover)">
                         @if ($tile->icon)

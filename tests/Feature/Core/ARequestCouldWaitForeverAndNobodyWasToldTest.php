@@ -180,6 +180,16 @@ final class ARequestCouldWaitForeverAndNobodyWasToldTest extends TestCase
      */
     public function test_a_clock_with_nowhere_to_go_is_reported(): void
     {
+        /*
+         * ⓘ ১১ অক্টোবর ২০২৬ থেকে গন্তব্যহীন ধাপের কাগজ মালিকের ক্রমে যায় — ব্যবস্থাপক, নইলে সুপার অ্যাডমিন
+         * ([[ALateApprovalWithNoTargetGoesUpTheLadderTest]])। "কোথাও যাওয়ার নেই" মানে এখন সেই ক্রমেও কেউ নেই — তাই এখানে
+         * এই কোম্পানির সুপার অ্যাডমিন রোল কারও কাছে নেই, আর ব্যবস্থাপকও নেই; তখনও ফাঁকটা চুপচাপ পার হয় না।
+         */
+        $super = \Spatie\Permission\Models\Role::query()->where('company_id', CompanyContext::id())
+            ->where('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)->value('id');
+        \Illuminate\Support\Facades\DB::table('model_has_roles')->where('role_id', $super)->delete();
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->flow(slaHours: 4, escalateTo: null);
 
         $approval = $this->ask();

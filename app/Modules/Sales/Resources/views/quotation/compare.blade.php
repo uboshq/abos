@@ -65,12 +65,12 @@
     @else
         <section data-boxed data-comparison
                  class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <table class="w-full text-sm">
+            <table class="ui-grid w-full text-sm">
                 <thead class="bg-(--color-section-head)">
                     <tr>
-                        <th scope="col" class="w-64 px-4 py-3 text-start font-semibold"></th>
+                        <th scope="col" class="w-64 text-start font-semibold"></th>
                         @foreach ($quotations as $i => $quotation)
-                            <th scope="col" class="min-w-56 px-4 py-3 text-start align-top font-semibold" data-column="{{ $quotation->id }}">
+                            <th scope="col" class="min-w-56 text-start align-top font-semibold" data-column="{{ $quotation->id }}">
                                 <span class="block">@include('sales::components.doc-link', ['document' => $quotation, 'route' => 'sales.quotation.show'])</span>
                                 <span class="block font-normal">{{ $quotation->customer?->name() }}</span>
                                 @if ($i === 0)
@@ -86,9 +86,9 @@
 
                     @foreach ($comparison['head'] as $row)
                         <tr>
-                            <th scope="row" class="px-4 py-2 text-start font-normal text-(--color-ink-muted)">{{ $row['label'] }}</th>
+                            <th scope="row" class="text-start font-normal text-(--color-ink-muted)">{{ $row['label'] }}</th>
                             @foreach ($row['values'] as $i => $value)
-                                <td class="px-4 py-2 align-top">
+                                <td class="align-top">
                                     <span @if ($row['changed'][$i]) data-changed class="{{ $changedClass }}" title="{{ __('sales::quotation.compare.changed') }}" @endif>{{ $value }}</span>
                                 </td>
                             @endforeach
@@ -99,15 +99,15 @@
 
                     @foreach ($comparison['lines'] as $line)
                         <tr data-line>
-                            <th scope="row" class="px-4 py-2 text-start align-top font-normal">{{ $line['label'] }}</th>
+                            <th scope="row" class="text-start align-top font-normal">{{ $line['label'] }}</th>
                             @foreach ($line['cells'] as $i => $cell)
                                 @if ($cell === null)
-                                    <td data-missing class="bg-(--color-badge-danger-bg) px-4 py-2 align-top text-(--color-badge-danger-ink)">
+                                    <td data-missing class="bg-(--color-badge-danger-bg) align-top text-(--color-badge-danger-ink)">
                                         — {{ __('sales::quotation.compare.missing') }}
                                     </td>
                                 @else
                                     <td @if ($cell['added']) data-added title="{{ __('sales::quotation.compare.added') }}" @endif
-                                        @class(['px-4 py-2 align-top', 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' => $cell['added']])>
+                                        @class(['align-top', 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' => $cell['added']])>
                                         @foreach (\App\Modules\Sales\Support\QuotationComparison::LINE_FIELDS as $field)
                                             <span class="block">
                                                 <span class="text-(--color-ink-muted)">{{ __('sales::quotation.compare.field.'.$field) }}:</span>

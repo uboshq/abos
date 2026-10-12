@@ -157,6 +157,18 @@ class BudgetController extends Controller implements HasMiddleware
 
         $center = $request->integer('center') ?: null;
 
+        /*
+         * ⭐ অর্থবছর — জুলাই (বা কোম্পানির অর্থবছরের শুরু) থেকে এ মাস, বছর পেরিয়ে (পুরো-ERP অডিট, অর্থ M29, ১০ অক্টোবর ২০২৬; fe)।
+         * ⓘ বাকি পরিসর আগের মতো পঞ্জিকা-বছরে; ছক আর ফর্মও। পুরো অর্থবছর-নকশা ফ্রিজের পরে।
+         */
+        if ($scope === 'fy' && $month === 0) {
+            $start = \Illuminate\Support\Carbon::parse(\App\Modules\Accounts\Reports\MonthlyCashReport::yearStart())->startOfMonth();
+            $end = now()->startOfMonth();
+            $rows = $this->budgets->vsActualBetween($start, $end, $center, $byCenter);
+            $periodLabel = __('finance::budget.month_long.'.$start->month).' '.$start->year.' – '
+                .__('finance::budget.month_long.'.$end->month).' '.$end->year.' ('.__('finance::budget.scope_fy').')';
+        }
+
         return view('finance::budget.actual', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
@@ -168,7 +180,8 @@ class BudgetController extends Controller implements HasMiddleware
             'center' => $center,
             'centers' => $this->centerList(),
             'byCenter' => $byCenter,
-            'rows' => $this->budgets->vsActual($year, $from, $to, $center, $byCenter),
+            'rows' => $rows ?? $this->budgets->vsActual($year, $from, $to, $center, $byCenter),
+            'fyLabel' => $periodLabel ?? null,
         ]);
     }
 

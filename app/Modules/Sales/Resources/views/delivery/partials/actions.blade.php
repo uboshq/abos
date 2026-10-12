@@ -15,7 +15,7 @@
 @php
     use App\Modules\Sales\Services\DeliveryStage;
 
-    // ⚠️ local-এ lazy loading বন্ধ — চালানের পাতা সারিগুলো আগেই টানে, ডেলিভারির পাতা নাও টানতে পারে
+    /* ⚠️ local-এ lazy loading বন্ধ — চালানের পাতা সারিগুলো আগেই টানে, ডেলিভারির পাতা নাও টানতে পারে */
     $challan->loadMissing('lines.product');
 
     $choices = $deliveryStages->manualChoices($challan);
@@ -53,7 +53,7 @@
                 <x-ui.field name="receiver_phone" type="tel"
                             :value="old('receiver_phone', $challan->customer?->phone)"
                             :label="__('sales::delivery.field.receiver_phone')" class="w-52" />
-                <x-ui.button type="submit" tone="primary" icon="check-circle">
+                <x-ui.button type="submit" tone="primary" icon="check_circle">
                     {{ __('sales::delivery.action.confirm') }}
                 </x-ui.button>
             </div>

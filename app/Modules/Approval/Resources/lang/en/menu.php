@@ -6,6 +6,7 @@ return [
     'coverage' => 'Where approval is required',
     'inbox' => 'Waiting for me',
     'mine' => 'My requests',
+    'signed_unposted' => 'Signed, not posted',
     'inbox_of' => 'Waiting for :name',
     'flows' => 'Approval rules',
 

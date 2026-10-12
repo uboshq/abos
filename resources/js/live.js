@@ -1,15 +1,20 @@
 /*
  * ⭐ রিয়েল-টাইম সিঙ্ক, ওয়েবের দিক — মালিক, ১০ অক্টোবর ২০২৬: "Real Time sync app r web dutotei koro", পথ (ক)।
  *
- * পাতা যে মুহূর্তের তথ্য নিয়ে এসেছে (`<meta name="abos-live" data-stamp>`), প্রতি কুড়ি সেকেন্ডে সার্ভারকে
- * জিজ্ঞেস করা হয় তার পরে কোম্পানিতে কিছু লেখা হয়েছে কি না ([[LiveStamp]])। হলে উপরে একটা ছোট খবর আর
- * "হালনাগাদ করুন" বোতাম।
+ * ⭐ ১১ অক্টোবর ২০২৬, মালিক: *"refresh korbe keno ze infota update hoyeche seta sei jaygay auto bosbe keu ter pabena"* আর
+ * *"10 second e koro"* — "হালনাগাদ করুন" ফিতা উঠে গেল। প্রতি দশ সেকেন্ডে সার্ভারকে জিজ্ঞেস করা হয় পাতার মুহূর্তের পরে
+ * কোম্পানিতে কিছু লেখা হয়েছে কি না ([[LiveStamp]]); হলে একই ঠিকানার নতুন পাতা পেছনে আনা হয়, আর কেবল যা বদলেছে সেটুকু
+ * জায়গায় বসে (Alpine Morph) — স্ক্রল, খোলা পপআপ, ছাঁকনি, ট্যাব যেমন ছিল তেমন।
  *
- * ⓘ পাতা নিজে নিজে নতুন হয় না — কেউ ফর্মে লিখছেন বা তালিকায় কিছু পড়ছেন, তখন পাতা বদলে গেলে কাজ হারায়।
- * ⓘ লুকানো ট্যাব জিজ্ঞেস করে না; ফিরে এলেই একবার জিজ্ঞেস করে। ⛔ জিজ্ঞাসায় কুকি যায় না — সেশন জাগে না।
+ * ⛔ যে ঘরে মানুষ লিখছেন (ফোকাসে আছে, বা পাতা খোলার পর হাতে বদলেছেন) সেটা কখনো বদলায় না — লেখা হারায় না।
+ * ⓘ লুকানো ট্যাব জিজ্ঞেস করে না; ফিরে এলেই একবার জিজ্ঞেস করে। ⛔ চিহ্নের জিজ্ঞাসায় কুকি যায় না — সেশন জাগে না;
+ * কেবল নতুন পাতা আনার সময় যায় (পাতাটা তো এই মানুষেরই)।
  */
 
-export const EVERY_MS = 20000
+export const EVERY_MS = 10000
+
+/** কোন অংশগুলো জায়গায় বসে — পাতার মূল অংশ, নিচের বার, আর টপবারের সংখ্যাগুলো ([data-live]) */
+export const REGIONS = ['main#main', 'footer[data-footer]', '[data-live]']
 
 /** নতুন তথ্য এসেছে কি — সার্ভারের চিহ্ন পাতার চিহ্নের পরে হলে। */
 export function isFresh (pageStamp, serverStamp) {
@@ -18,40 +23,94 @@ export function isFresh (pageStamp, serverStamp) {
     return server > page
 }
 
-function showBanner (meta) {
-    if (document.querySelector('[data-live-banner]')) return
-
-    const bar = document.createElement('div')
-    bar.setAttribute('data-live-banner', '')
-    bar.setAttribute('role', 'status')
-    bar.className = 'fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-(--color-brand-600) px-4 py-2 text-sm text-white shadow'
-
-    const text = document.createElement('span')
-    text.textContent = meta.dataset.message || ''
-
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'rounded-(--radius-field) bg-white px-3 py-1 text-sm font-semibold text-(--color-brand-700)'
-    button.textContent = meta.dataset.action || '↻'
-    button.addEventListener('click', () => window.location.reload())
-
-    bar.append(text, button)
-    document.body.append(bar)
+/** মানুষ এই ঘরে হাত দিয়েছেন কি — ফোকাসে আছে, বা পাতা খোলার পর বদলেছেন */
+export function isTouched (el, doc = document) {
+    if (!el || el.nodeType !== 1) return false
+    if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) && !el.isContentEditable) return false
+    return el === doc.activeElement || el.dataset?.liveTouched === '1'
 }
 
-export function listenForFreshData (doc = document, fetcher = window.fetch.bind(window)) {
+/** হাতে লেখা ঘর চিহ্নিত — একবার লিখলেই, যতক্ষণ পাতা খোলা */
+export function rememberTyping (doc = document) {
+    const mark = (event) => {
+        if (event.target && event.target.dataset) event.target.dataset.liveTouched = '1'
+    }
+    doc.addEventListener('input', mark, true)
+    doc.addEventListener('change', mark, true)
+}
+
+/**
+ * নতুন পাতার অংশগুলো এখনকার পাতায় বসানো।
+ *
+ * @param {Document} doc  এখনকার পাতা
+ * @param {Document} fresh  পেছনে আনা নতুন পাতা
+ * @param {(from: Element, to: Element, options: object) => void} morph  Alpine.morph
+ * @returns {number} কয়টা অংশ বসল
+ */
+export function placeFresh (doc, fresh, morph) {
+    let placed = 0
+
+    for (const selector of REGIONS) {
+        const now = Array.from(doc.querySelectorAll(selector))
+        const next = Array.from(fresh.querySelectorAll(selector))
+
+        now.forEach((el, i) => {
+            // ⓘ [data-live] ধরে মেলানো হয় নাম দিয়ে, ক্রম দিয়ে নয় — একটা আইকন না থাকলে বাকিগুলো গুলিয়ে যেত না
+            const to = selector === '[data-live]'
+                ? next.find((n) => n.getAttribute('data-live') === el.getAttribute('data-live'))
+                : next[i]
+
+            if (!to) return
+
+            morph(el, to, {
+                updating (from, toEl, childrenOnly, skip) {
+                    if (isTouched(from, doc)) skip()
+                },
+            })
+            placed++
+        })
+    }
+
+    return placed
+}
+
+export function listenForFreshData (doc = document, fetcher = window.fetch.bind(window), morph = window.Alpine?.morph) {
     const meta = doc.querySelector('meta[name="abos-live"]')
     if (!meta || !meta.content) return null
 
+    rememberTyping(doc)
+    let busy = false
+
+    const refresh = async (stamp) => {
+        const response = await fetcher(window.location.href, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'X-ABOS-Live': '1' },
+        })
+
+        // ⓘ লগইনের পাতায় ফিরল, বা ঠিকানা বদলাল — কিছুই বসে না, পরের বার আবার
+        if (!response.ok || response.redirected) return
+
+        const fresh = new DOMParser().parseFromString(await response.text(), 'text/html')
+        if (!fresh.querySelector('main#main')) return
+
+        if (typeof morph === 'function') placeFresh(doc, fresh, morph)
+
+        meta.dataset.stamp = fresh.querySelector('meta[name="abos-live"]')?.dataset.stamp || String(stamp)
+    }
+
     const ask = async () => {
-        if (doc.visibilityState === 'hidden' || doc.querySelector('[data-live-banner]')) return
+        if (busy || doc.visibilityState === 'hidden') return
+        busy = true
         try {
             const response = await fetcher(meta.content, { credentials: 'omit', cache: 'no-store' })
             if (!response.ok) return
             const body = await response.json()
-            if (isFresh(meta.dataset.stamp, body.s)) showBanner(meta)
+            if (isFresh(meta.dataset.stamp, body.s)) await refresh(body.s)
         } catch {
             // ⓘ সংযোগ নেই — পরের বার
+        } finally {
+            busy = false
         }
     }
 

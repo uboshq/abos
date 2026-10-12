@@ -61,6 +61,16 @@
     $packDefaults = $packs === []
         ? []
         : app(App\Modules\Inventory\Services\PackConversion::class)->defaultsFor($products, 'sales');
+    /*
+     * ⭐ দামের ভেতরের ভ্যাটের পণ্য — সারির মোটে ভ্যাট আবার যোগ না করতে (Sales অডিট, ১০ অক্টোবর ২০২৬)।
+     * ⓘ একটা কোয়েরি, পণ্যপ্রতি নয় — ভেতরের হারগুলো তুলে পণ্যের `tax_id` মেলানো।
+     */
+    $inclusiveTaxes = \App\Modules\MasterData\Models\Tax::query()->where('is_inclusive', true)->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $inclusive = collect($products)
+        ->filter(fn ($product) => $product->tax_id !== null && in_array((int) $product->tax_id, $inclusiveTaxes, true))
+        ->map(fn ($product) => (string) $product->id)
+        ->values()
+        ->all();
 @endphp
 
 <div x-data="salesLineEditor({
@@ -69,6 +79,7 @@
                  packDefaults: @js($packDefaults),
                  stock: @js((object) $stock),
                  pricesUrl: @js((string) $pricesUrl),
+                 inclusive: @js($inclusive),
                })"
      @bulk-applied.window="absorb($event.detail.rows)">
 

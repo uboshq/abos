@@ -80,6 +80,12 @@ final class BudgetService
         }
 
         DB::transaction(function () use ($year, $accountId, $costCenterId, $clean) {
+            /*
+             * ⛔ আগে খাতের সারিতে তালা, তারপর ঘর খোঁজা — পুরো-ERP অডিট, অর্থ M29, ১০ অক্টোবর ২০২৬। ⓘ তালা ছাড়া একই খাতের বছর দুই
+             * চাপে একসাথে সংরক্ষণ হলে দুটোই "ঘর নেই" দেখত আর একই মাসের দুটো সারি বসত — বাজেট দ্বিগুণ, বনাম-প্রকৃত ভুল।
+             */
+            DB::table('accounts')->where('company_id', CompanyContext::id())->where('id', $accountId)->lockForUpdate()->value('id');
+
             foreach ($clean as $month => $amount) {
                 $existing = $this->slot($year, $month, $accountId, $costCenterId);
 
@@ -208,12 +214,26 @@ final class BudgetService
      */
     public function vsActual(int $year, int $fromMonth, int $toMonth, ?int $costCenterId = null, bool $byCenter = false): Collection
     {
-        [$from, $to] = $this->period($year, $fromMonth, $toMonth);
+        return $this->vsActualBetween(Carbon::create($year, $fromMonth, 1), Carbon::create($year, $toMonth, 1), $costCenterId, $byCenter);
+    }
+
+    /**
+     * ⭐ বাজেট বনাম প্রকৃত — যেকোনো মাস থেকে যেকোনো মাস, বছর পেরিয়েও (পুরো-ERP অডিট, অর্থ M29, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অর্থবছর (জুলাই–জুন) দুই পঞ্জিকা-বছর ছোঁয়; বাজেট জমা থাকে বছর+মাস ধরে, তাই মাসের ক্রম `year*100+month` ধরে মেলানো।
+     * ছক আর ফর্ম আগের মতো পঞ্জিকা-বছরে — পুরো অর্থবছর-নকশা ফ্রিজের পরে (fe)।
+     *
+     * @return Collection<int, array{account: Account, center: ?CostCenter, budget: string, actual: string,
+     *     variance: string, used_pct: ?string, over_is_bad: bool, over: bool}>
+     */
+    public function vsActualBetween(Carbon $start, Carbon $end, ?int $costCenterId = null, bool $byCenter = false): Collection
+    {
+        $from = $start->copy()->startOfMonth()->toDateString();
+        $to = $end->copy()->endOfMonth()->toDateString();
 
         $budgets = Budget::query()
             ->with(['account', 'costCenter'])
-            ->where('year', $year)
-            ->whereBetween('month', [$fromMonth, $toMonth])
+            ->whereRaw('(year * 100 + month) BETWEEN ? AND ?', [$start->year * 100 + $start->month, $end->year * 100 + $end->month])
             ->when($costCenterId, fn ($q, $id) => $q->where('cost_center_id', $id))
             ->get()
             ->groupBy(fn (Budget $b) => $b->account_id.':'.($byCenter ? ($b->cost_center_id ?? 0) : 0));
@@ -293,15 +313,6 @@ final class BudgetService
         $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
 
         return $account->nature === Account::CREDIT ? bcmul($net, '-1', 4) : $net;
-    }
-
-    /** @return array{0: string, 1: string} মাসগুলোর প্রথম আর শেষ দিন */
-    private function period(int $year, int $fromMonth, int $toMonth): array
-    {
-        return [
-            Carbon::create($year, $fromMonth, 1)->toDateString(),
-            Carbon::create($year, $toMonth, 1)->endOfMonth()->toDateString(),
-        ];
     }
 
     private function slot(int $year, int $month, int $accountId, ?int $costCenterId): ?Budget

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
@@ -29,7 +30,11 @@ class NotificationApiController extends Controller
     {
         $user = $request->user();
 
-        $rows = Notification::query()->for((int) $user->id)->latest('id')->limit(self::LIMIT)->get();
+        // ⭐ ধাপ ১: নাগালের শাখার খবরই, আর্কাইভ করা বাদ ([[NotificationService::mine()]]); `?archived=1` দিলে কেবল আর্কাইভ
+        $archived = $request->boolean('archived');
+        $rows = $this->notifications->mine($user)
+            ->when($archived, fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))
+            ->latest('id')->limit(self::LIMIT)->get();
 
         return response()->json([
             'data' => $rows->map(fn (Notification $n) => [
@@ -40,9 +45,34 @@ class NotificationApiController extends Controller
                 'url' => $n->url,
                 'read' => ! $n->isUnread(),
                 'at' => $n->created_at?->toIso8601String(),
+                'priority' => (string) $n->priority,
+                'category' => (string) $n->category,
+                'module' => $n->module,
+                'archived' => $n->isArchived(),
             ])->values(),
-            'meta' => ['unread' => Notification::query()->for((int) $user->id)->unread()->count()],
+            'meta' => ['unread' => $this->notifications->unreadCount($user)],
         ]);
+    }
+
+    /** ⭐ না-পড়া গোনা — ফোনের ব্যাজ (স্পেক §১২ `unread-count`) */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return response()->json(['data' => ['unread' => $this->notifications->unreadCount($request->user())]]);
+    }
+
+    /** ⭐ আর্কাইভে বা ফেরত (স্পেক §১২ `archive`) — নিজের খবরই, অন্যেরটায় ৪০৪ */
+    public function archive(Request $request, string $notification): JsonResponse
+    {
+        $user = $request->user();
+        $row = Notification::query()->wherePublicId($notification)->firstOrFail();
+
+        abort_unless($row->user_id === $user->id, 404);
+
+        $action = $row->isArchived() ? 'restore' : 'archive';
+        $this->notifications->act($user, [(int) $row->id], $action);
+        app(NotificationAudit::class)->record($action, $row);
+
+        return response()->json(['data' => ['archived' => $action === 'archive']]);
     }
 
     public function read(Request $request, string $notification): JsonResponse

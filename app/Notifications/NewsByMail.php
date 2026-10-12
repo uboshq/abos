@@ -81,7 +81,15 @@ final class NewsByMail extends Notification
          * অনূদিত লেখার বদলে চাবি+মান রাখতে হত — সেটা আলাদা একটা কাজ,
          * আর আজ ঐটুকুর জন্য গোটা ঘণ্টা ভাঙার মানে নেই।
          */
+        $ref = $this->bell->public_id === null ? null : 'abos-'.$this->bell->public_id;
+
         return (new MailMessage)
+            // ⭐ নিজের রেফারেন্স — প্রোভাইডারের bounce আর রসিদ এটা ফেরত দেয় ([[ProviderCallbacks]])
+            ->withSymfonyMessage(function ($message) use ($ref): void {
+                if ($ref !== null) {
+                    $message->getHeaders()->addTextHeader('X-ABOS-Ref', $ref);
+                }
+            })
             ->subject($this->bell->title)
             ->view('mail.news', [
                 'name' => $notifiable->name,

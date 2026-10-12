@@ -101,7 +101,8 @@ final class DealerScope
         }
 
         // ⛔ মালিক কখনো দেয়ালে নন — রোল আর চাবি, দুই তালা
-        if ($user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
+        // ⓘ loadMissing — তালিকা থেকে আসা মানুষে আলসে তোলা lazy-load পাহারায় ৫০০ দিত (Sales অডিট, ১০ অক্টোবর ২০২৬)
+        if ($user->loadMissing('roles')->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
             return false;
         }
 
