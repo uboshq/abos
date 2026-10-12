@@ -80,6 +80,17 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         // ⓘ বীমার দাবির খাতা নিজের অবস্থাই মানে (জমা · অনুমোদিত · আংশিক · নিষ্পন্ন · নাকচ — [[InsuranceClaim::STATES]])
         'state' => [['state' => 'overdue'], ['state' => 'today'], ['state' => 'lodged']],
         'group_by' => [['group_by' => 'brand'], ['group_by' => 'product']],
+
+        /*
+         * ⭐ নোটিফিকেশন রিপোর্টের ছাঁকনি — ১২ অক্টোবর ২০২৬। ⓘ মডিউল, গুরুত্ব, মাধ্যম আর অবস্থার আইডি একটা স্থির তালিকার ক্রম (১ থেকে,
+         * [[FixedListFilter::value()]]) — বানানো বড় আইডি তালিকায় নেই, তাই কোয়েরিতে কিছুই বসত না আর ছাঁকনিটা মরা দেখাত। ১ মানে
+         * তালিকার প্রথমটা। প্রাপক আসল ব্যবহারকারীর আইডি, তাই বানানোটাই চলে।
+         */
+        'notify_module_id' => ['notify_module_id' => 1],
+        'notify_priority_id' => ['notify_priority_id' => 1],
+        'notify_channel_id' => ['notify_channel_id' => 1],
+        'notify_status_id' => ['notify_status_id' => 1],
+        'notify_recipient_id' => ['notify_recipient_id' => 987638],
     ];
 
     /**
