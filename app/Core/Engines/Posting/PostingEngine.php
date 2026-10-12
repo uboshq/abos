@@ -378,7 +378,7 @@ final class PostingEngine
         $found = DB::table('accounts')
             ->whereIn('id', $wanted)
             ->where('company_id', CompanyContext::id())
-            ->get(['id', 'code', 'is_group', 'party_types'])
+            ->get(['id', 'code', 'is_group', 'is_active', 'party_types'])
             ->keyBy('id');
 
         foreach ($lines as $index => $line) {
@@ -418,6 +418,18 @@ final class PostingEngine
                     .'A group holds no entries of its own — its balance is the sum of its children — so the '
                     .'money would sit in the ledger and appear in no report at all. Post to one of its '
                     .'children instead. Nothing was written.'
+                );
+            }
+
+            /*
+             * ⛔ নিষ্ক্রিয় খাতে নতুন সারি নয় — অডিট ম২০, ১০ অক্টোবর ২০২৬ ([[AnInactiveAccountTakesNoNewMoneyTest]])। ⓘ খাত বন্ধ করা
+             * মানে "আর লেনদেন নয়", অথচ ইঞ্জিন দেখত না — পুরনো ফর্ম বা সেটিংসে বসে থাকা খাতে টাকা চুপচাপ বসত। ⓘ বছর বন্ধ বাদ:
+             * সমাপনী প্রতিটা আয়-ব্যয় খাতের জের শূন্য করে, নিষ্ক্রিয়টারও — নাহলে বছর বন্ধই হত না।
+             */
+            if (! $account->is_active && $sourceType !== self::YEAR_CLOSE) {
+                throw new PostingException(
+                    "Line {$index} of {$sourceType}#{$sourceId} posts to {$account->code}, which is inactive. "
+                    .'An inactive account takes no new entries — activate it or pick another. Nothing was written.'
                 );
             }
         }

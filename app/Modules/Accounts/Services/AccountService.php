@@ -154,6 +154,16 @@ final class AccountService
             $type = $this->resolveType($data + ['type' => $account->type], $parent);
 
             /*
+             * ⛔ বাবা বদলে ধরন বদলালেও একই নিষেধ — অডিট ম২০, ১০ অক্টোবর ২০২৬ ([[AnInactiveAccountTakesNoNewMoneyTest]])। ⓘ উপরের পাহারা
+             * কেবল সরাসরি পাঠানো `type` দেখত, অথচ ধরন আসে বাবার থেকে ([[resolveType()]]): লেনদেনসহ খরচের খাত সম্পদের নিচে সরালে
+             * সে চুপচাপ সম্পদ হয়ে যেত, আর আগের সব খরচ লাভ-ক্ষতি থেকে স্থিতিপত্রে সরে যেত।
+             */
+            if ($type !== $account->type) {
+                $this->assertNotSystem($account, 'parent_id');
+                $this->assertTypeCanChange($account);
+            }
+
+            /*
              * গ্রুপ ↔ সাধারণ বদলানোর দুইটা নিষেধ।
              *
              * এন্ট্রি আছে এমন খাত গ্রুপ বানানো যায় না: গ্রুপে সরাসরি এন্ট্রি
