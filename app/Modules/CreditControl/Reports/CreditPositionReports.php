@@ -174,6 +174,10 @@ final class CreditPositionReports
                     ->where('i.company_id', $f['company_id'])
                     ->where('customers.company_id', $f['company_id'])
                     ->whereIn('i.id', $unpaid === [] ? [0] : array_keys($unpaid))
+                    // ⓘ দেয়াল আর ছাঁকনি কোয়েরিতেও — গ্রাহকের তালিকা PHP-তে ছাঁকে, কিন্তু ছাঁকনি যেন কোয়েরিতেও বসে (ADrawnFilterBox)
+                    ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'customers.id'))
+                    ->tap(self::salesmanWall($f))
                     ->select(['i.id as invoice_id', 'i.document_no', 'customers.id', 'customers.code as customer_code'])
                     ->selectRaw("'sales_invoice' as invoice_type_literal")
                     ->selectRaw(self::name().' as customer_name')
@@ -256,9 +260,24 @@ final class CreditPositionReports
             ->whereIn('customers.id', $ids === [] ? [0] : $ids)
             ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
             ->tap(ReportEngine::dealerWall($f, 'customers.id'))
+            ->tap(self::salesmanWall($f))
             ->select(['customers.id', 'customers.code as customer_code'])
             ->selectRaw(self::name().' as customer_name')
             ->selectRaw("'".self::PROFILE."' as party_type_literal");
+    }
+
+    /**
+     * ⭐ বিক্রয়কর্মী ছাঁকনি, কোয়েরিতে — আজ যাঁর সাথে বাঁধা ([[DealerBinding::current()]]), গ্রাহকের তালিকার একই নিয়ম ([[customers()]])।
+     *
+     * ⓘ তালিকা PHP-তে আগেই ছাঁকা, তবু কোয়েরিতেও বসে: নইলে খালি ফলের দিনে ছাঁকনিটা কোয়েরির চেহারা বদলাত না, আর মরা ছাঁকনি
+     * আর জীবিত ছাঁকনি আলাদা করা যেত না ([[ADrawnFilterBoxThatChangesNothingTest]])।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    public static function salesmanWall(array $f): \Closure
+    {
+        return fn ($q) => $q->when(! empty($f['salesman_id']), fn ($q) => $q->whereIn('customers.id', DealerBinding::query()
+            ->current()->where('user_id', (int) $f['salesman_id'])->select('customer_id')));
     }
 
     /**

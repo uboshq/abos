@@ -44,6 +44,10 @@ final class AQuantityShowedFourZerosTest extends TestCase
         'credit_control.over_limit.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
         'credit_control.overdue_stopped.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
         'credit_control.overdue_stopped.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.blocked.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.blocked.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.exposure_by_branch.available' => 'শাখার সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'credit_control.exposure_by_salesperson.available' => 'বিক্রয়কর্মীর ডিলারদের সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
         'finance.tenancy_arrears.deposit_held' => 'ভাড়াটের হাতে রাখা জামানত — টাকা, পরিমাণ নয়',
     ];
 
