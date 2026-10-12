@@ -57,7 +57,16 @@ final class TheWarningSignsWereScatteredAcrossSixScreensTest extends TestCase
      */
     public function test_every_row_is_shaped_the_way_the_page_reads_it(): void
     {
-        foreach (app(RiskBoard::class)->risks() as $risk) {
+        /*
+         * ⛔ আগে খালি ডেটাবেসে বোর্ড কোনো সারিই দিত না, তাই লুপ একবারও ঘুরত না আর দাবিটা কিছুই মাপত না (PHPUnit "risky",
+         * ১২ অক্টোবর ২০২৬)। ⓘ তাই আসল সেবা দিয়ে একটা সত্যিকারের ঝুঁকি বানানো — দশ দিন পরে মেয়াদ শেষ হওয়া জমা — আর আগে দাবি,
+         * অন্তত একটা সারি এসেছে।
+         */
+        $this->deposit('FDR-SHAPE', now()->addDays(10)->toDateString(), '100000');
+        $risks = app(RiskBoard::class)->risks();
+        $this->assertNotEmpty($risks, '⛔ বোর্ডে একটাও সারি নেই — নিচের আকারের দাবি কিছুই মাপত না।');
+
+        foreach ($risks as $risk) {
             $this->assertSame(
                 ['key', 'level', 'value', 'hint', 'href'],
                 array_keys($risk),
