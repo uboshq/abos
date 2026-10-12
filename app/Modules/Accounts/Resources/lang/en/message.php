@@ -129,6 +129,7 @@ return [
     'no_notes_recorded' => 'No note breakdown was recorded.',
     'row_count' => '{0} No rows|{1} 1 row|[2,*] :count rows',
     'nothing_in_range' => 'No transactions in this range.',
+    'nothing_in_period' => ':period — no transactions in this range. Change the dates in the filter above.',
     'page_of' => 'Page :page of :pages — totals cover everything',
     'settings_saved' => 'Settings saved.',
     'settings_note' => 'For this company — other companies keep their own.',
