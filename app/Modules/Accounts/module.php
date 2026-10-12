@@ -223,21 +223,21 @@ return [
              * সংখ্যা নেই, কেবল খরচ।
              */
             ['label' => 'accounts::menu.expense_by_head', 'icon' => 'wallet', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'expense-by-head'], 'permission' => 'accounts.report'],
+                'route_params' => ['slug' => 'expense-by-head'], 'permission' => 'accounts.report.final'], // ⛔ অডিট ম১৩/ম১৮
             /*
              * ⭐ আয়ের আয়না — ২০ সেপ্টেম্বর ২০২৬, মানচিত্রের §১০। খরচের
              * পাতার ঠিক পাশে, কারণ প্রশ্ন দুইটা একসাথেই ওঠে: কোন খাতে কত
              * গেল, আর কোন খাত থেকে কত এল।
              */
             ['label' => 'accounts::menu.income_by_head', 'icon' => 'star', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'income-by-head'], 'permission' => 'accounts.report'],
+                'route_params' => ['slug' => 'income-by-head'], 'permission' => 'accounts.report.final'], // ⛔ অডিট ম১৩/ম১৮
             ['label' => 'accounts::menu.ledger', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — খতিয়ানের পাশে (মালিক, ৩ অক্টোবর ২০২৬: "একাউন্টসে কাস্টমার লেজার দিতে হবে জরুরি")
             ['label' => 'accounts::party_ledger.customer_title', 'icon' => 'customer', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'customer-ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::party_ledger.supplier_title', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'supplier-ledger'], 'permission' => 'accounts.report'],
             // ⭐ ব্যক্তির লেজার — মালিক, ৫ অক্টোবর ২০২৬
             ['label' => 'accounts::party_ledger.person_title', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'person-ledger'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report.final'], // ⛔ অডিট ম১৩/ম১৮
             // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
             ['label' => 'accounts::branch_dues.title', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'branch-dues'], 'permission' => 'accounts.report'],
 
@@ -454,6 +454,11 @@ return [
         'Accountant' => [
             'accounts.view',
             'accounts.report',
+            /*
+             * ⭐ চূড়ান্ত হিসাব — অডিট ম১৩/ম১৮ (১০ অক্টোবর ২০২৬): রেওয়ামিল, খাত-ধরে আয়-খরচ আর ড্যাশবোর্ডের আয়-খরচ-ব্যাংকের
+             * অঙ্ক এখন এই চাবির পেছনে। ⓘ ছাঁচ কেবল নতুন কোম্পানিতে লাগে — লাইভের হিসাবরক্ষককে দিতে হয় ভূমিকার পর্দা থেকে।
+             */
+            'accounts.report.final',
             'accounts.report.group',
             'accounts.voucher.create',
             'accounts.voucher.update',

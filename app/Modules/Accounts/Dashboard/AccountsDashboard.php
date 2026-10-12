@@ -173,6 +173,8 @@ final class AccountsDashboard implements ProvidesDashboard
                     value: Money::format($facts->bankBalance()),
                     hint: __('accounts::dashboard.bank_balance_hint'),
                     href: route('accounts.coa.index'),
+                    // ⛔ ব্যাংকের জের — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬)
+                    permission: 'accounts.report.final',
                 ),
 
                 new Stat(
@@ -387,7 +389,8 @@ final class AccountsDashboard implements ProvidesDashboard
      */
     private static function trialBalance(AccountsFacts $facts): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+        // ⛔ চূড়ান্ত হিসাবের অঙ্ক — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬); আগে accounts.view-ই যথেষ্ট ছিল
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.report.final')) {
             return [];
         }
 
@@ -445,7 +448,8 @@ final class AccountsDashboard implements ProvidesDashboard
      */
     private static function incomeAndExpense(AccountsFacts $facts): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+        // ⛔ চূড়ান্ত হিসাবের অঙ্ক — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬); আগে accounts.view-ই যথেষ্ট ছিল
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.report.final')) {
             return [];
         }
 
@@ -533,6 +537,8 @@ final class AccountsDashboard implements ProvidesDashboard
                 value: Money::format($profit),
                 hint: __('accounts::dashboard.net_profit_month_hint'),
                 href: Route::has('accounts.report.final.profit_loss') ? route('accounts.report.final.profit_loss') : null,
+                // ⛔ মাসের নিট লাভ — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮)
+                permission: 'accounts.report.final',
                 tone: bccomp($profit, '0', 4) < 0 ? Stat::BAD : Stat::GOOD,
             ),
             new Stat(
@@ -581,7 +587,8 @@ final class AccountsDashboard implements ProvidesDashboard
      */
     private static function currentPosition(AccountsFacts $facts): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+        // ⛔ চূড়ান্ত হিসাবের অঙ্ক — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬); আগে accounts.view-ই যথেষ্ট ছিল
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.report.final')) {
             return [];
         }
 

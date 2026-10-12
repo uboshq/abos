@@ -326,7 +326,8 @@ final class CoreReports
         return new ReportDefinition(
             key: 'accounts.trial_balance',
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
-            permission: 'accounts.report',
+            // ⛔ চূড়ান্ত হিসাবের অঙ্ক — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬); আগে accounts.report-ই যথেষ্ট ছিল
+            permission: ['accounts.report', 'accounts.report.final'], // ⓘ দরজার দুই চাবিই — রুটের আর নিয়ন্ত্রকের
             asOfDate: true,
             title: 'accounts::menu.trial_balance',
             filters: ['date_range', 'branch'],
@@ -1013,7 +1014,8 @@ final class CoreReports
         return new ReportDefinition(
             key: 'accounts.expense_by_head',
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
-            permission: 'accounts.report',
+            // ⛔ চূড়ান্ত হিসাবের অঙ্ক — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬); আগে accounts.report-ই যথেষ্ট ছিল
+            permission: ['accounts.report', 'accounts.report.final'], // ⓘ দরজার দুই চাবিই — রুটের আর নিয়ন্ত্রকের
             title: 'accounts::menu.expense_by_head',
             filters: ['date_range', 'branch'],
             groupBy: 'account_id',
@@ -1065,7 +1067,8 @@ final class CoreReports
         return new ReportDefinition(
             key: 'accounts.income_by_head',
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
-            permission: 'accounts.report',
+            // ⛔ চূড়ান্ত হিসাবের অঙ্ক — চূড়ান্ত রিপোর্টের চাবি (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬); আগে accounts.report-ই যথেষ্ট ছিল
+            permission: ['accounts.report', 'accounts.report.final'], // ⓘ দরজার দুই চাবিই — রুটের আর নিয়ন্ত্রকের
             title: 'accounts::field.income_by_head',
             filters: ['date_range', 'branch'],
             groupBy: 'account_id',
