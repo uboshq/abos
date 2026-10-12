@@ -140,7 +140,102 @@ final class AHeldSaleFinishesInItsOwnBranchTest extends TestCase
             '⛔ চালান পাকা, অথচ আদেশের ধরা মাল ছাড়া হলো না');
     }
 
+    /*
+     * ── ⛔ বাকি তিন শেষকারী — fe, ১২–১৩ অক্টোবর ২০২৬ (৮ অক্টোবরের লাইভ বাগ: ADI-তে Kawser-এর হেডার শাখা ৪, Super শাখার বিল "পাওয়া
+     * যায়নি") ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     * ⓘ বিক্রি আর চালান ৯ অক্টোবরেই নিজের শাখায় ঢুকেছিল (উপরের তিনটা)। ফেরত, বিল-বাতিল আর আদেশের মাল-ধরা শেষ সইয়ের ঘটনায় কাগজ খুঁজত
+     * সইকারীর হেডারের শাখা দিয়ে — না পেলে নীরবে ফিরে যেত: ফেরত চিরকাল খসড়া, বাতিল চিরকাল "সইয়ের অপেক্ষায়", আদেশ "অনুমোদিত"-তেই
+     * আটকে, কোনো খবর ছাড়া।
+     */
+
+    public function test_a_signed_return_confirms_while_the_signers_header_shows_another_branch(): void
+    {
+        $this->flow('sales', 'return');
+        $return = $this->returnDraft();
+
+        try {
+            app(\App\Modules\Sales\Services\SalesReturnService::class)->confirm($return);
+        } catch (\Illuminate\Validation\ValidationException) {
+            // ⓘ সইয়ের অপেক্ষায় থামে — প্রত্যাশিত
+        }
+        $approval = Approval::query()->where('approvable_type', \App\Modules\Sales\Models\SalesReturn::class)->where('approvable_id', $return->id)
+            ->where('status', Approval::PENDING)->firstOrFail();
+
+        $this->lookElsewhere();
+        $this->sign([$approval]);
+
+        $this->assertSame(DocumentStatus::CONFIRMED, \App\Modules\Sales\Models\SalesReturn::acrossBranches()->findOrFail($return->id)->status,
+            '⛔ অন্য শাখার হেডারে সই — ফেরত খসড়াই রইল, খবরও গেল না');
+    }
+
+    public function test_a_signed_bill_cancellation_finishes_while_the_signers_header_shows_another_branch(): void
+    {
+        $this->flow('sales', \App\Modules\Sales\Services\SalesInvoiceCancellationService::APPROVAL_ACTION);
+        $bill = $this->sale();
+        $clerk = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+        $paper = app(\App\Modules\Sales\Services\SalesInvoiceCancellationService::class)->request($bill, $clerk, 'ভুল গ্রাহক');
+        $this->assertSame(\App\Modules\Sales\Models\SalesInvoiceCancellation::AWAITING, $paper->status, 'দৃশ্যটাই বানানো যায়নি — বাতিল সইয়ের অপেক্ষায় থাকার কথা');
+        $approval = Approval::query()->where('approvable_type', \App\Modules\Sales\Models\SalesInvoiceCancellation::class)->where('approvable_id', $paper->id)
+            ->where('status', Approval::PENDING)->firstOrFail();
+
+        $this->lookElsewhere();
+        $this->sign([$approval]);
+
+        $this->assertSame(DocumentStatus::CONFIRMED, \App\Modules\Sales\Models\SalesInvoiceCancellation::acrossBranches()->findOrFail($paper->id)->status,
+            '⛔ অন্য শাখার হেডারে সই — বিল-বাতিল "সইয়ের অপেক্ষায়"-তেই রইল');
+    }
+
+    public function test_a_signed_order_holds_its_stock_while_the_signers_header_shows_another_branch(): void
+    {
+        app(SettingsService::class)->set('sales.reserve_on_order', true);
+        $this->flow('sales', SalesOrderService::APPROVAL_ACTION);
+        $orders = app(SalesOrderService::class);
+        $order = $orders->create(['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'ordered_qty' => '4', 'rate' => (string) $this->product->sale_price]]);
+
+        // ⓘ নতুন ধারার আদেশ (সুইচ `sales.orders_replace_do`) — জমা দিলে সই চায়, আর শেষ সইয়ে মাল ধরে নিশ্চিত হয়
+        app(SettingsService::class)->set(SalesOrderService::REPLACES_DO, true);
+        $this->assertSame(\App\Modules\Sales\Support\SalesOrderStatus::AWAITING_APPROVAL, $orders->submit($order->fresh(['lines']))->status,
+            'দৃশ্যটাই বানানো যায়নি — আদেশ সইয়ের অপেক্ষায় থাকার কথা');
+        $approval = Approval::query()->where('approvable_type', SalesOrder::class)->where('approvable_id', $order->id)
+            ->where('status', Approval::PENDING)->firstOrFail();
+
+        $this->lookElsewhere();
+        $this->sign([$approval]);
+
+        $fresh = SalesOrder::acrossBranches()->findOrFail($order->id);
+        $this->assertSame(\App\Modules\Sales\Support\SalesOrderStatus::CONFIRMED, $fresh->status,
+            '⛔ অন্য শাখার হেডারে সই — আদেশ "অনুমোদিত"-তেই আটকে রইল');
+        CompanyContext::set($this->company->id, $this->home->id);
+        $this->assertSame('4.0000', $orders->heldByThisOrder($fresh->fresh(['lines']))[$this->product->id] ?? '0', '⛔ সই পড়ল, অথচ আদেশ মাল ধরল না');
+    }
+
     // ── যন্ত্রপাতি ─────────────────────────────────────────────────────
+
+    /** বানানেওয়ালার এক পাকা বিক্রি (ছক ছাড়া, এক চাপে) — নিজের শাখায় */
+    private function sale(): SalesInvoice
+    {
+        $invoice = app(\App\Modules\Sales\Services\DirectSaleService::class)->complete(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'own_transport' => '1'],
+            [['product_id' => $this->product->id, 'qty' => '3', 'rate' => (string) $this->product->sale_price, 'free_qty' => '0']],
+        )['invoice']->fresh();
+        $this->assertSame((int) $this->home->id, (int) $invoice->branch_id);
+
+        return $invoice;
+    }
+
+    private function returnDraft(): \App\Modules\Sales\Models\SalesReturn
+    {
+        $sale = $this->sale();
+
+        return app(\App\Modules\Sales\Services\SalesReturnService::class)->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'sales_invoice_id' => $sale->id,
+                'trx_date' => now()->toDateString(),
+                'reason_code_id' => \App\Modules\MasterData\Models\ReasonCode::query()->inContext(\App\Modules\MasterData\Models\ReasonCode::SALES_RETURN)
+                    ->where('code', 'DAMAGE')->firstOrFail()->id],
+            [['product_id' => $this->product->id, 'sales_invoice_line_id' => $sale->lines()->firstOrFail()->id, 'qty' => '1', 'rate' => (string) $this->product->sale_price]],
+        );
+    }
 
     /** ⓘ বানানেওয়ালার হেডারে নেত্রকোনা, আর সইকারীর অনুরোধও নেত্রকোনার প্রসঙ্গে (মিডলওয়্যার যা বসায়) */
     private function lookElsewhere(): void

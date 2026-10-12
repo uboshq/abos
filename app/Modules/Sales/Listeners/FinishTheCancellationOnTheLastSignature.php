@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Listeners;
 
 use App\Core\Events\ApprovalDecided;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Sales\Models\SalesInvoiceCancellation;
@@ -30,24 +31,27 @@ final class FinishTheCancellationOnTheLastSignature
             return;
         }
 
-        $cancellation = SalesInvoiceCancellation::query()->find((int) $approval->approvable_id);
+        // ⛔ খোঁজা সব শাখা জুড়ে, কাজ কাগজের নিজের শাখায় — সইকারীর হেডারে অন্য শাখা থাকলে বাতিলটা "নেই" হয়ে চিরকাল
+        // সইয়ের অপেক্ষায় থাকত (fe, ১২–১৩ অক্টোবর ২০২৬; [[AHeldSaleFinishesInItsOwnBranchTest]])
+        $cancellation = SalesInvoiceCancellation::acrossBranches()->find((int) $approval->approvable_id);
 
         if ($cancellation === null) {
             return;
         }
 
-        if (($event->payload['status'] ?? null) === Approval::REJECTED) {
-            $this->cancellations->reject($cancellation);
-
-            return;
-        }
-
-        if (($event->payload['status'] ?? null) !== Approval::APPROVED) {
-            return;
-        }
-
+        $status = $event->payload['status'] ?? null;
         $signer = $event->actorId === null ? null : User::query()->find($event->actorId);
 
-        $this->cancellations->confirm($cancellation, $signer);
+        CompanyContext::inBranch($cancellation->branch_id === null ? null : (int) $cancellation->branch_id, function () use ($cancellation, $status, $signer): void {
+            if ($status === Approval::REJECTED) {
+                $this->cancellations->reject($cancellation);
+
+                return;
+            }
+
+            if ($status === Approval::APPROVED) {
+                $this->cancellations->confirm($cancellation, $signer);
+            }
+        });
     }
 }
