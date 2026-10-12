@@ -94,6 +94,10 @@ class AlpineHandlersHaveAScopeTest extends TestCase
                 continue;
             }
 
+            if ($this->nobodyAsksForItsAlpine($file)) {
+                continue;
+            }
+
             $offenders[] = $this->relative($file).' → '.implode(', ', array_unique($found));
         }
 
@@ -211,6 +215,15 @@ class AlpineHandlersHaveAScopeTest extends TestCase
                 continue;
             }
 
+            /*
+             * ⓘ `x-ref` ডাকা পার্শিয়ালেও থাকতে পারে — ১২ অক্টোবর ২০২৬।
+             * সরাসরি বিক্রয়ের পর্দা ভেঙে পার্শিয়াল হলো, আর "নিশ্চিত" বোতামের `x-ref="confirm"` গেল
+             * `direct/partials/totals`-এ; `$refs.confirm` রইল `direct/index`-এ। ব্রাউজারে `@include` দুইটাকে এক
+             * স্কোপে বসায়, তাই ঠিকই চলে — পাহারাটা কেবল এক ফাইল পড়ত বলে মিথ্যা অভিযোগ করছিল।
+             * ⚠️ কেবল `@include` — একটা `<x-…>` কম্পোনেন্টের `x-ref` তার নিজের স্কোপেও থাকতে পারে ([[withoutProse]]-এর নোট)।
+             */
+            $source .= $this->includedSources($source);
+
             preg_match_all('/x-ref="([^"]+)"/', $source, $declared);
 
             foreach (array_unique($uses[1]) as $ref) {
@@ -313,15 +326,24 @@ class AlpineHandlersHaveAScopeTest extends TestCase
      * নামটা ফাইলের পথ থেকেই বানানো হয় -- `.../views/a/b.blade.php`
      * হয় `a.b`, আর মডিউলের হলে `code::a.b`। দুইটা রূপই খোঁজা হয়,
      * কারণ মডিউলের ভেতর থেকে ছোট নামেও ডাকা যায়।
+     *
+     * ── ⓘ ডাকার জায়গাটা নিজেও পার্শিয়াল হতে পারে — ১২ অক্টোবর ২০২৬ ──
+     * সরাসরি বিক্রয়ের পর্দা ভেঙে পার্শিয়াল হলো: `index` (x-data আছে) ডাকে `work-panels`, আর সে ডাকে `panels` ও
+     * `counter.deposit-fields`। মাঝের ফাইলে নিজের `x-data` নেই, তবু ব্রাউজারে সবাই `index`-এর স্কোপেই বসে।
+     * ⛔ পাহারাটা এক ধাপ দেখত বলে চারটা মিথ্যা অভিযোগ দিচ্ছিল। ⭐ নিয়ম একই — **প্রতিটা** পথের মাথায় `x-data` থাকতে
+     * হবে; কেবল পথটা এখন শেষ পর্যন্ত হাঁটা হয় (চক্র আর অতি-গভীরতা আটকে)।
+     *
+     * @param  array<string, true>  $seen
      */
-    private function everyIncluderHasScope(string $file): bool
+    private function everyIncluderHasScope(string $file, array $seen = []): bool
     {
         $name = $this->viewName($file);
 
-        if ($name === null) {
+        if ($name === null || count($seen) > 6) {
             return false;
         }
 
+        $seen[$file] = true;
         $includers = [];
 
         foreach ($this->bladeFiles() as $other) {
@@ -336,11 +358,81 @@ class AlpineHandlersHaveAScopeTest extends TestCase
             }
 
             if ($this->callsIt($source, $name, $this->componentTags($file))) {
-                $includers[$other] = $this->hasScope($source);
+                $includers[$other] = $this->hasScope($source)
+                    || (! isset($seen[$other]) && $this->everyIncluderHasScope($other, $seen));
             }
         }
 
         return $includers !== [] && ! in_array(false, $includers, true);
+    }
+
+    /**
+     * কম্পোনেন্টের Alpine কেবল ডাকার জায়গা চাইলে আঁকা হয় — আর কেউ চায় না।
+     *
+     * ⓘ `x-ui.select`-এর তারা, `required` আর ফাঁকা সারির Alpine অংশ কেবল `required-when` দিলে আসে (`@if`-এর ভেতরে),
+     * আর শর্তটা ডাকার জায়গার নিজের Alpine অভিব্যক্তি। ⓘ ৬ অক্টোবর ২০২৬ থেকে (`3f5c360d`, গ্রাহকের ফর্ম) কেউ ওটা দেয় না, তাই
+     * কোনো পাতায় ওই অংশ আঁকাই হয় না, আর x-data-হীন সত্তরটা ফর্মে select বসানো নিরাপদ।
+     * ⚠️ কেউ আবার `required-when` দিলে ছাড়টা নিজে থেকেই উঠে যায় আর পুরো নিয়ম ফেরে।
+     */
+    private function nobodyAsksForItsAlpine(string $file): bool
+    {
+        $askedBy = ['ui.select' => 'required-when'];
+
+        foreach ($this->componentTags($file) as $tag) {
+            if (! isset($askedBy[$tag])) {
+                continue;
+            }
+
+            $call = '/<x-'.preg_quote($tag, '/').'(?![\w.\-])(?:(?!<x-|\/>).)*?\b'.preg_quote($askedBy[$tag], '/').'=/s';
+
+            foreach ($this->bladeFiles() as $other) {
+                if ($other !== $file && preg_match($call, (string) file_get_contents($other)) === 1) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * এই সোর্স `@include` দিয়ে যে পার্শিয়ালগুলো ডাকে, তাদের কোড (মন্তব্য ছাড়া), ভেতরের ধাপসহ।
+     *
+     * @param  array<string, true>  $seen
+     */
+    private function includedSources(string $source, array $seen = []): string
+    {
+        static $byName = null;
+
+        if ($byName === null) {
+            $byName = [];
+
+            foreach ($this->bladeFiles() as $one) {
+                foreach (array_filter($this->viewName($one) ?? []) as $name) {
+                    // ⚠️ দুই মডিউলে একই ছোট নাম (`direct.partials.totals`) — কোনটা তা জানা নেই, তাই কোনোটাই নয়: ভুল ফাইল পড়লে ভুয়া সবুজ
+                    $byName[$name] = isset($byName[$name]) && $byName[$name] !== $one ? false : $one;
+                }
+            }
+        }
+
+        preg_match_all('/@include(?:If)?\(\s*[\'"]([^\'"]+)[\'"]/', $source, $m);
+        $out = '';
+
+        foreach (array_unique($m[1]) as $name) {
+            $file = $byName[$name] ?? false;
+
+            if ($file === false || isset($seen[$file]) || count($seen) > 6) {
+                continue;
+            }
+
+            $seen[$file] = true;
+            $inner = $this->withoutProse((string) file_get_contents($file));
+            $out .= "\n".$inner.$this->includedSources($inner, $seen);
+        }
+
+        return $out;
     }
 
     /**
