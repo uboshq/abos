@@ -21,6 +21,8 @@
                           :subtitle="__('accounts::asset.run_label', ['month' => $run->period_end?->translatedFormat('F Y')]).' · '.($run->branch?->name() ?? __('accounts::asset.no_branch'))" />
     </x-slot:header>
 
+    <x-ui.errors />
+
     <div class="mb-4 flex justify-end">
         <p class="num text-xl font-semibold">{{ \App\Core\Support\Money::format((string) $run->total) }}</p>
     </div>
