@@ -46,7 +46,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="@string/widget_col_today"
-            android:textColor="#8FC7B0"
+            android:textColor="#9FD0D8"
             android:textSize="9sp"
             android:maxLines="1" />
         <TextView
@@ -55,7 +55,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="@string/widget_col_month"
-            android:textColor="#8FC7B0"
+            android:textColor="#9FD0D8"
             android:textSize="9sp"
             android:maxLines="1" />
         <TextView
@@ -64,7 +64,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="@string/widget_col_change"
-            android:textColor="#8FC7B0"
+            android:textColor="#9FD0D8"
             android:textSize="9sp"
             android:maxLines="1" />
     </LinearLayout>
@@ -80,7 +80,7 @@
             android:layout_weight="1.1"
             android:layout_height="wrap_content"
             android:text="@string/widget_row_sales"
-            android:textColor="#BFE3D3"
+            android:textColor="#BFE0E5"
             android:textSize="12sp"
             android:maxLines="1" />
         <TextView
@@ -112,7 +112,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="—"
-            android:textColor="#C8F7DC"
+            android:textColor="#C9F1F6"
             android:textSize="11sp"
             android:textStyle="bold"
             android:maxLines="1" />
@@ -128,7 +128,7 @@
             android:layout_weight="1.1"
             android:layout_height="wrap_content"
             android:text="@string/widget_row_expense"
-            android:textColor="#BFE3D3"
+            android:textColor="#BFE0E5"
             android:textSize="12sp"
             android:maxLines="1" />
         <TextView
@@ -160,7 +160,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="—"
-            android:textColor="#C8F7DC"
+            android:textColor="#C9F1F6"
             android:textSize="11sp"
             android:textStyle="bold"
             android:maxLines="1" />
@@ -176,7 +176,7 @@
             android:layout_weight="1.1"
             android:layout_height="wrap_content"
             android:text="@string/widget_row_purchase"
-            android:textColor="#BFE3D3"
+            android:textColor="#BFE0E5"
             android:textSize="12sp"
             android:maxLines="1" />
         <TextView
@@ -208,7 +208,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="—"
-            android:textColor="#C8F7DC"
+            android:textColor="#C9F1F6"
             android:textSize="11sp"
             android:textStyle="bold"
             android:maxLines="1" />
@@ -224,7 +224,7 @@
             android:layout_weight="1.1"
             android:layout_height="wrap_content"
             android:text="@string/widget_row_inflow"
-            android:textColor="#BFE3D3"
+            android:textColor="#BFE0E5"
             android:textSize="12sp"
             android:maxLines="1" />
         <TextView
@@ -256,7 +256,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="—"
-            android:textColor="#C8F7DC"
+            android:textColor="#C9F1F6"
             android:textSize="11sp"
             android:textStyle="bold"
             android:maxLines="1" />
@@ -271,7 +271,7 @@
         android:layout_height="1dp"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="4dp"
-        android:background="#2A8466" />
+        android:background="#2B9AAB" />
 
     <!-- Where the money is, by kind. Notes in a till can be spent this
          afternoon, a bank balance cannot, and money on the road is
@@ -289,7 +289,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_cash"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -311,7 +311,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_mfs"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -333,7 +333,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_bank"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -355,7 +355,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_in_transit"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -381,14 +381,14 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="@string/widget_total_money"
-            android:textColor="#BFE3D3"
+            android:textColor="#BFE0E5"
             android:textSize="12sp" />
         <TextView
             android:id="@+id/widget_total_money"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="—"
-            android:textColor="#C8F7DC"
+            android:textColor="#C9F1F6"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -402,7 +402,7 @@
         android:layout_height="1dp"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="4dp"
-        android:background="#2A8466" />
+        android:background="#2B9AAB" />
 
     <!-- Owed to the company, owed by it, and standing on the shelf. -->
     <LinearLayout
@@ -418,7 +418,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_receivable"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -440,7 +440,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_payable"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -462,7 +462,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stock_value"
-                android:textColor="#8FC7B0"
+                android:textColor="#9FD0D8"
                 android:textSize="9sp"
                 android:maxLines="1" />
             <TextView
@@ -485,7 +485,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:text=""
-        android:textColor="#8FC7B0"
+        android:textColor="#9FD0D8"
         android:textSize="9sp"
         android:maxLines="1"
         android:ellipsize="end" />

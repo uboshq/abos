@@ -29,7 +29,7 @@
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="@string/approvals_title"
-            android:textColor="#BFE3D3"
+            android:textColor="#BFE0E5"
             android:textSize="11sp"
             android:maxLines="1"
             android:ellipsize="end" />
@@ -96,7 +96,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text=""
-        android:textColor="#C8F7DC"
+        android:textColor="#C9F1F6"
         android:textSize="10sp"
         android:textStyle="bold"
         android:visibility="gone" />
@@ -117,7 +117,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text=""
-        android:textColor="#8FC7B0"
+        android:textColor="#9FD0D8"
         android:textSize="9sp"
         android:maxLines="1"
         android:ellipsize="end" />

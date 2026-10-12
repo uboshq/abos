@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The widgets' own ground: the app's primary green (AppColors.primary,
-  0F6B4C), so the launcher tile and the app behind it read as one product.
+  The widgets' own ground: the ABOS skin (owner, 12 Oct 2026) - the app's
+  teal (AppColors.primary, 087F91) running down into its header (AppColors.header,
+  06323C), so the launcher tile and the app behind it read as one product.
 
   A shape, not a colour on the root view, because RemoteViews has no way to
   round a corner: the radius has to be baked into a drawable. 22dp matches
@@ -9,6 +10,9 @@
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#0F6B4C" />
+    <gradient
+        android:angle="270"
+        android:startColor="#087F91"
+        android:endColor="#06323C" />
     <corners android:radius="22dp" />
 </shape>
