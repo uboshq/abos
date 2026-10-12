@@ -11,6 +11,7 @@ import 'package:abos_mobile/core/auth/session_profile.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
+import 'package:abos_mobile/core/navigation/nav_prefs.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
 import 'package:abos_mobile/features/home/home_shell.dart';
@@ -162,15 +163,27 @@ void main() {
           cacheOrg: (_) async {},
           checkUpdate: () async => UpdateStatus.fine,
           now: () => DateTime(2026, 10, 1, 10),
+          prefs: MemoryNavPrefsStore(),
         ),
       ),
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('অ্যাপ'));
+    // ⓘ ১২ অক্টোবর ২০২৬: "অ্যাপ" ট্যাবের সমতল টাইল এখন "সব মডিউল" → মডিউলের মেনু
+    await tester.tap(find.byKey(const ValueKey('nav-modules')));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('module-sales')), findsOneWidget);
+    expect(find.byKey(const ValueKey('module-hr')), findsNothing,
+        reason: 'hr is off for this company\'s phones');
+
+    await tester.tap(find.byKey(const ValueKey('module-sales')));
+    await tester.pumpAndSettle();
     expect(find.text('নতুন অর্ডার'), findsWidgets);
+    expect(find.text('হাজিরা'), findsNothing, reason: 'hr is off for this company\'s phones');
+
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    await tester.pumpAndSettle();
     expect(find.text('সিঙ্কের অবস্থা'), findsWidgets);
     expect(find.text('হাজিরা'), findsNothing, reason: 'hr is off for this company\'s phones');
   });

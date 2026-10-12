@@ -11,6 +11,7 @@ import 'package:abos_mobile/core/auth/session_profile.dart';
 import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
+import 'package:abos_mobile/core/navigation/nav_prefs.dart';
 import 'package:abos_mobile/core/records/notice_bar.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
@@ -99,6 +100,8 @@ void main() {
             fetchPending:
                 pending ?? () async => throw StateError('not an approver'),
             syncNow: syncNow ?? () async {},
+            prefs: MemoryNavPrefsStore(),
+            openPath: (_) async {},
           ),
         ),
       );
@@ -117,16 +120,16 @@ void main() {
   });
 
   // ⭐ The owner, 6 Oct 2026: no greeting, no name on the home — the photo sits
-  // at the far right of the green header and opens the profile; the bell
-  // sits beside it.
+  // at the far right of the header and opens the profile. ⓘ 12 Oct 2026: the
+  // bell moved to the bottom bar ("বিজ্ঞপ্তি"), one tap from every screen.
   testWidgets(
-      'no greeting on the home; the photo and the bell are in the header',
+      'no greeting on the home; the photo is in the header, the bell in the bottom bar',
       (tester) async {
     await tester.pumpWidget(shell(now: () => DateTime(2026, 9, 27, 20, 15)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('শুভ রাত্রি'), findsNothing);
-    expect(find.byKey(const ValueKey('header-bell')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav-notifications')), findsOneWidget);
     expect(find.byKey(const ValueKey('header-avatar')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
@@ -136,13 +139,14 @@ void main() {
   });
 
   // ⭐ মালিক, ১০ অক্টোবর ২০২৬: ঘণ্টার পাশে অনুমোদনের আইকন — অপেক্ষার সংখ্যাসহ, চাপলে তালিকা
-  testWidgets('beside the bell, the approval icon counts what waits for me',
+  // ⓘ ১২ অক্টোবর ২০২৬: এখন নিচের বারের "অনুমোদন" ঘর
+  testWidgets('beside the bell, the approval tab counts what waits for me',
       (tester) async {
     await tester.pumpWidget(shell(
         pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('header-approvals')), findsOneWidget,
-        reason: 'an approver sees the icon even with nothing waiting');
+    expect(find.byKey(const ValueKey('nav-approvals')), findsOneWidget,
+        reason: 'an approver sees the tab even with nothing waiting');
     expect(find.text('0'), findsNothing, reason: 'nothing waits — no badge');
   });
 
@@ -152,7 +156,7 @@ void main() {
         pending: () async =>
             const ApprovalPage(rows: [], nextCursor: 'next-page')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('header-approvals')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav-approvals')), findsOneWidget);
     expect(find.text('0+'), findsOneWidget,
         reason: 'more pages wait — the count says so');
   });
@@ -179,8 +183,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('header-approvals')), findsNothing);
-    expect(find.byKey(const ValueKey('header-bell')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav-approvals')), findsNothing);
+    expect(find.byKey(const ValueKey('nav-notifications')), findsOneWidget);
   });
 
   // ⭐ মালিক, ৬ অক্টোবর ২০২৬: ওয়েবের চলমান নোটিশ ফোনেও — মাথার নিচে, প্রতিটা ট্যাবে; কিছু না থাকলে চুপ
@@ -195,7 +199,7 @@ void main() {
     expect(find.byKey(const ValueKey('notice-ticker')), findsOneWidget);
     expect(find.textContaining('কাল অফিস বন্ধ'), findsWidgets);
 
-    await tester.tap(find.text('অ্যাপ'));
+    await tester.tap(find.byKey(const ValueKey('nav-modules')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('notice-ticker')), findsOneWidget,
         reason: 'নোটিশ কেবল হোম ট্যাবে — মাথার নিচে নয়');
@@ -231,15 +235,22 @@ void main() {
     expect(find.byType(ActionChip), findsNothing);
   });
 
+  // ⓘ ১২ অক্টোবর ২০২৬: তিন ট্যাব (হোম · অ্যাপ · আরও) এখন নিচের পাঁচ ঘরের বার
   testWidgets('the tabs are in Bangla and each one opens', (tester) async {
-    await tester.pumpWidget(shell());
+    await tester.pumpWidget(shell(
+        pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('অ্যাপ'));
+    for (final label in ['হোম', 'অনুমোদন', 'সব মডিউল', 'বিজ্ঞপ্তি', 'আমি']) {
+      expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
+          findsOneWidget, reason: label);
+    }
+
+    await tester.tap(find.byKey(const ValueKey('nav-modules')));
     await tester.pumpAndSettle();
     expect(find.text('গ্রাহক'), findsOneWidget);
 
-    await tester.tap(find.text('আরও'));
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যান'), findsOneWidget);
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
@@ -263,7 +274,7 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('আরও'));
+    await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));
     await tester.pumpAndSettle();
