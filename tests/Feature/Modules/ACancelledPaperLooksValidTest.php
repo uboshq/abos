@@ -236,6 +236,7 @@ class ACancelledPaperLooksValidTest extends TestCase
             'accounts.note.print' => 'ডেবিট/ক্রেডিট নোট — ANoteCouldNotBePrintedTest ধরে (বাতিল নোট "বাতিল" বলে)',
             'hr.payslip.print' => 'পে-স্লিপ — বাতিল হয় না, খসড়া হয়',
             'inventory.label.print' => 'পণ্যের লেবেল — কোনো ডকুমেন্ট নয়',
+            'documents.print' => 'আপলোড করা ফাইলই হুবহু (DocumentFileController::print) — ABOS কোনো কাগজ আঁকে না, আর ডকুমেন্টের "বাতিল" অবস্থা নেই',
             'sales.print_queue.index' => 'কিউয়ের পর্দা, কাগজ নয়',
             'sales.print_queue.settle' => 'কিউয়ের সারি মেটানোর কাজ, কাগজ নয়',
             'system_admin.print_control' => 'ছাপার সেটিংসের পর্দা, কাগজ নয়',
