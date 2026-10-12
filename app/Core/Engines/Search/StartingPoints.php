@@ -136,8 +136,14 @@ final class StartingPoints
          * ⓘ একই মুহূর্তে দুইটা ট্যাবে একই কাগজ — দ্বিতীয়টা একক-সূচিতে ধাক্কা
          * খায়। ⭐ তখন সারিটা আছেই, কেবল সময়টা বসানো বাকি।
          */
+        /*
+         * ⛔ আবার খুললে সারিটা নতুন করে — সময় সেকেন্ডে, তাই একই সেকেন্ডে দুইটা খুললে "শেষে খোলা" আগে আসত না
+         * (`opened_at` সমান, আর `id` পুরনো সারির)। ⓘ মুছে নতুন বসালে `id`-ই ক্রম বলে (AnEmptySearchBoxShowedNothingTest,
+         * ১২ অক্টোবর ২০২৬)।
+         */
         try {
-            RecentPaper::query()->updateOrCreate($keys, ['opened_at' => now()]);
+            RecentPaper::query()->where($keys)->delete();
+            RecentPaper::query()->create($keys + ['opened_at' => now()]);
         } catch (UniqueConstraintViolationException) {
             RecentPaper::query()->where($keys)->update(['opened_at' => now()]);
         }
