@@ -9,6 +9,7 @@ use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherWriter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -39,7 +40,11 @@ final class PostTheVoucherOnTheLastSignature
          * "খসড়া না হলে কিছু নয়" দিয়ে শুরু করে, আর অর্থ মডিউল নিবন্ধিত হয় হিসাবের পরে। ⛔ তাই এখানে আগে পোস্ট হলে বাকি কাজটা চুপচাপ
          * বাদ পড়ত: শেষ সইয়ের পরেও ভাড়ার চুক্তি "অপেক্ষায়"।
          */
-        if (($event->payload['module'] ?? null) === 'finance') {
+        /*
+         * ⛔ কেবল হিসাবের নিজের ভাউচার-সই ([[VoucherApproval::MODULE]]) — fe, ১২ অক্টোবর ২০২৬। ⓘ "অর্থ বাদ" লিখলে কাল অন্য কোনো
+         * মডিউল (HR-এর দাবি, বা নতুন কোনো মডিউল) নিজের শেষকারী দিয়ে ভাউচার বানালে একই ফাঁদ ফিরত; তাই তালিকা উল্টো — যা আমাদের, শুধু তাই।
+         */
+        if (($event->payload['module'] ?? null) !== VoucherApproval::MODULE) {
             return;
         }
 
