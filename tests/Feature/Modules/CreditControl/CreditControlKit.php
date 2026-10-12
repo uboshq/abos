@@ -118,6 +118,27 @@ trait CreditControlKit
         return $id;
     }
 
+    /** ফেরত চেক — `$daysAgo` দিন আগে (ঝুঁকির মাত্রা, ধাপ ৩) */
+    private function bouncedCheque(Customer $c, string $amount, int $daysAgo = 5): void
+    {
+        DB::table('acc_cheques')->insert([
+            'public_id' => (string) Str::uuid7(), 'company_id' => $this->company->id, 'branch_id' => $this->company->defaultBranch()?->id,
+            'direction' => 'received', 'cheque_date' => now()->toDateString(), 'received_on' => now()->toDateString(),
+            'cheque_no' => 'BC-'.random_int(1000, 9999), 'amount' => $amount, 'party_type' => 'customer', 'party_id' => $c->id,
+            'status' => 'bounced', 'created_at' => now()->subDays($daysAgo), 'updated_at' => now()->subDays($daysAgo),
+        ]);
+    }
+
+    /** দেয়ালের সাক্ষ্যে একটা সারি (ঝুঁকির মাত্রা আর রিপোর্ট, ধাপ ৩) */
+    private function wallSaid(Customer $c, string $result, string $reason = 'over_limit', int $daysAgo = 1, string $stage = 'invoice'): void
+    {
+        DB::table('sal_credit_decisions')->insert([
+            'public_id' => (string) Str::uuid7(), 'company_id' => $this->company->id, 'branch_id' => $c->branch_id,
+            'customer_id' => $c->id, 'stage' => $stage, 'paper_no' => 'P-'.random_int(1000, 9999), 'adding' => '100', 'paying_now' => '0',
+            'result' => $result, 'reason' => $reason, 'created_at' => now()->subDays($daysAgo),
+        ]);
+    }
+
     private function postLines(array $lines, string $source = 'test:credit-control', ?int $sourceId = null): void
     {
         app(PostingEngine::class)->post(

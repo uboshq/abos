@@ -6,6 +6,7 @@ namespace App\Modules\Customer\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Services\NotificationService;
 use App\Core\Services\Ownership;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
@@ -130,6 +131,9 @@ final class CreditLimitRequests
 
             $request->forceFill(['approval_id' => $approval->id])->save();
 
+            // ⭐ মালিককে খবর — নতুন অনুরোধ তাঁর সইয়ের অপেক্ষায়, লেনদেন পাকা হলে, একবারই (বাকি নিয়ন্ত্রণ ধাপ ৩.৪)
+            DB::afterCommit(fn () => $this->tellTheOwners($request->fresh(), $locked, $approval));
+
             return $request->fresh();
         });
     }
@@ -229,6 +233,24 @@ final class CreditLimitRequests
             fn ($step) => $owners->contains(fn (User $owner) => $step->allows($owner)),
         ));
     }
+
+    /** ⓘ যিনি চাইলেন তিনি নিজে মালিক হলে নিজের খবর পান না (তিনি নিজেই জানেন) */
+    private function tellTheOwners(CustomerCreditRequest $request, Customer $customer, Approval $approval): void
+    {
+        foreach ($this->owners->activeOwnersIn((int) $request->company_id) as $owner) {
+            app(NotificationService::class)->send(
+                $owner,
+                self::WAITING,
+                __('customer::credit_request.waiting_title', ['customer' => $customer->name()]),
+                $this->wordFor($request, $customer),
+                route(...$approval->drillRoute()),
+                key: 'customer:limit_request:'.$request->id,
+                about: $customer,
+            );
+        }
+    }
+
+    public const WAITING = 'customer.limit_request_waiting';
 
     /** সইকারী যা পড়েন — কার, কত থেকে কত, কবে পর্যন্ত, কেন */
     private function wordFor(CustomerCreditRequest $request, Customer $customer): string

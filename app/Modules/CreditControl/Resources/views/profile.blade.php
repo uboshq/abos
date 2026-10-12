@@ -75,6 +75,13 @@
             @if ($position['stop'] !== null)
                 <span class="text-sm text-(--color-badge-danger-ink)">· {{ $position['stop'] }}</span>
             @endif
+            {{-- ⭐ ঝুঁকির মাত্রা — নিয়ম ধরে, প্রতিটা কারণসহ; কেবল জানায় (ধাপ ৩.১, [[CreditRisk]]) --}}
+            <span class="ms-auto text-sm text-(--color-ink-muted)" title="{{ __('credit_control::risk.informs') }}">{{ __('credit_control::risk.title') }}</span>
+            <x-ui.badge :tone="['low' => 'success', 'medium' => 'pending', 'high' => 'danger', 'critical' => 'danger'][$risk['level']]"
+                        data-risk-level="{{ $risk['level'] }}">{{ __('credit_control::risk.'.$risk['level']) }} · {{ $risk['score'] }}</x-ui.badge>
+            <span class="text-sm text-(--color-ink-muted)" data-risk-reasons>
+                {{ $risk['reasons'] === [] ? __('credit_control::risk.no_reason') : implode(' · ', $risk['reasons']) }}
+            </span>
         </section>
 
         <section class="grid grid-cols-3 gap-2 lg:grid-cols-9">

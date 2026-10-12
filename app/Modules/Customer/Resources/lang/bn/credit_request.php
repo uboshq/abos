@@ -38,4 +38,5 @@ return [
     'status_cancelled' => 'ফিরিয়ে নেওয়া',
     'status_expired' => 'মেয়াদ পেরিয়েছে',
     'status_void' => 'মালিকের সই নেই — বসেনি',
+    'waiting_title' => ':customer — বাকির সীমা বাড়ানোর অনুরোধ আপনার সইয়ের অপেক্ষায়',
 ];

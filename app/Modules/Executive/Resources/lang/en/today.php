@@ -43,4 +43,11 @@ return [
     'nobody_yet' => 'Nothing yet this month.',
     'refused' => 'Not allowed to see: :companies',
     'not_yours' => 'This is outside your reach.',
+
+    // ⭐ বাকির চার সংখ্যা (বাকি নিয়ন্ত্রণ ধাপ ৩.৩)
+    'credit_title' => 'Credit',
+    'credit_exposure' => 'Exposure',
+    'credit_overdue' => 'Overdue',
+    'credit_blocked' => 'Blocked customers',
+    'credit_pending_requests' => 'Limit requests waiting',
 ];

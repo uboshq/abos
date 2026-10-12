@@ -35,4 +35,5 @@ return [
     'bucket_d31_60' => '31–60 days',
     'bucket_d61_90' => '61–90 days',
     'bucket_d90_plus' => '90+ days',
+    'blocked_title' => 'Blocked customers',
 ];

@@ -59,6 +59,31 @@ return [
                 'route_params' => ['slug' => 'overdue-bills'], 'permission' => 'credit_control.view'],
             ['label' => 'credit_control::report.pending_requests_title', 'icon' => 'inbox', 'route' => 'credit_control.report.show',
                 'route_params' => ['slug' => 'pending-requests'], 'permission' => 'credit_control.view'],
+            // ⭐ ধাপ ৩.২ — মালিকের রিপোর্টের তালিকার বাকিগুলো
+            ['label' => 'credit_control::report.blocked_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'blocked'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.ageing_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'ageing'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.high_risk_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'high-risk'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.behaviour_title', 'icon' => 'reports', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'payment-behaviour'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.breaches_title', 'icon' => 'alert-triangle', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'limit-breaches'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.evidence_title', 'icon' => 'book', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'wall-evidence'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.changes_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'limit-changes'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.requests_title', 'icon' => 'inbox', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'limit-requests'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.temporary_title', 'icon' => 'clock', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'temporary-limits'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.by_branch_title', 'icon' => 'building', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'exposure-by-branch'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.by_salesperson_title', 'icon' => 'customer', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'exposure-by-salesperson'], 'permission' => 'credit_control.view'],
+            ['label' => 'credit_control::lists.trend_title', 'icon' => 'reports', 'route' => 'credit_control.report.show',
+                'route_params' => ['slug' => 'risk-trend'], 'permission' => 'credit_control.view'],
         ],
     ],
 
@@ -89,6 +114,23 @@ return [
 
     'moves_money' => [],
 
+    /*
+     * ⭐ ঝুঁকির মাত্রার নিয়ম — প্রতিটা লক্ষণের নম্বর আর তিন মাত্রার সীমা (ধাপ ৩.১, [[CreditRisk]])।
+     * ⓘ ০ = ঐ লক্ষণ বন্ধ। মাত্রা কেবল জানায়, কোনো সীমা বা দেয়াল বদলায় না — তাই সুপার অ্যাডমিনের তালা নেই।
+     * ⓘ নতুন চাবি, ডিফল্টে — কোনো কোম্পানির পুরনো সেটিং ছোঁয়া হয় না।
+     */
+    'settings' => [
+        ['key' => 'credit_control.risk_points_overdue_age', 'label' => 'credit_control::settings.risk_points_overdue_age', 'type' => 'integer', 'default' => 10, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_overdue_share', 'label' => 'credit_control::settings.risk_points_overdue_share', 'type' => 'integer', 'default' => 20, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_late_beyond_terms', 'label' => 'credit_control::settings.risk_points_late_beyond_terms', 'type' => 'integer', 'default' => 15, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_wall_stop', 'label' => 'credit_control::settings.risk_points_wall_stop', 'type' => 'integer', 'default' => 5, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_bounced_cheque', 'label' => 'credit_control::settings.risk_points_bounced_cheque', 'type' => 'integer', 'default' => 25, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_points_block', 'label' => 'credit_control::settings.risk_points_block', 'type' => 'integer', 'default' => 10, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_medium_at', 'label' => 'credit_control::settings.risk_medium_at', 'type' => 'integer', 'default' => 20, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_high_at', 'label' => 'credit_control::settings.risk_high_at', 'type' => 'integer', 'default' => 45, 'group' => 'risk'],
+        ['key' => 'credit_control.risk_critical_at', 'label' => 'credit_control::settings.risk_critical_at', 'type' => 'integer', 'default' => 75, 'group' => 'risk'],
+    ],
+
     // ⓘ গ্রাহকের নামে চাপলে তাঁর বাকির পাতা ([[CreditProfile]])
     'drill_sources' => [
         CreditPositionReports::PROFILE => CreditProfile::class,
@@ -96,5 +138,6 @@ return [
 
     'reports' => [
         CreditPositionReports::class,
+        \App\Modules\CreditControl\Reports\CreditControlLists::class,
     ],
 ];
