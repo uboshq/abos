@@ -16,6 +16,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Services\PosService;
 use Database\Seeders\DemoSeeder;
@@ -363,6 +364,7 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
         $result = app(PosService::class)->takeBack([
             'document_no' => $sale['invoice']->document_no,
             'warehouse_id' => $this->warehouse->id,
+            'reason_code_id' => $this->returnReasonId(),
         ], [
             ['product_id' => $this->product->id, 'qty' => '1',
                 'sales_invoice_line_id' => $sale['invoice']->lines->first()->id],
@@ -389,6 +391,7 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
         $result = app(PosService::class)->takeBack([
             'document_no' => $sale['invoice']->document_no,
             'warehouse_id' => $this->warehouse->id,
+            'reason_code_id' => $this->returnReasonId(),
             'refund' => true,
         ], [
             ['product_id' => $this->product->id, 'qty' => '1',
@@ -427,6 +430,7 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
         app(PosService::class)->takeBack([
             'document_no' => $sale['invoice']->document_no,
             'warehouse_id' => $this->warehouse->id,
+            'reason_code_id' => $this->returnReasonId(),
         ], [
             ['product_id' => $this->product->id, 'qty' => '5',
                 'sales_invoice_line_id' => $sale['invoice']->lines->first()->id],
@@ -496,5 +500,16 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
 
         $this->assertStringContainsString('payments[', $html, 'ভাগ করে দেওয়ার ঘরগুলো নেই।');
         $this->assertStringContainsString('বিকাশ', $html, 'উপায়ের তালিকায় বিকাশ নেই।');
+    }
+
+    /**
+     * ফেরতের একটা কারণ — NEXUS §২৪-এর পর কারণ ছাড়া ফেরত হয় না।
+     *
+     * ⓘ এই ফাইলের দাবিগুলো কারণ নিয়ে নয়; ⚠️ কারণ না দিলে "থামল" দাবিগুলো
+     * ভুল কারণে (কারণ নেই বলে) সবুজ হত।
+     */
+    private function returnReasonId(): int
+    {
+        return (int) ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->value('id');
     }
 }
