@@ -76,6 +76,19 @@ final class CollectionService
             }
 
             /*
+             * ⭐ ব্যাংক চার্জ নিজের খাতে — টাকার পরিকল্পনা ৫ (মালিক, ৭ অক্টোবর ২০২৬; [[TheBankChargeGoesToItsOwnHeadTest]])।
+             * ⓘ `amount` ডিলারের পাওনা থেকে যা কমে; চার্জ তার যে অংশ ব্যাংক রেখে দিয়েছে। টাকার খাতে আসে বাকিটা — তাই চার্জ
+             * শূন্যের নিচে বা পুরো অঙ্কের সমান-বেশি হতে পারে না (তখন খাতে কিছুই আসত না)।
+             */
+            $charge = $this->money($data['bank_charge'] ?? '0');
+
+            if (bccomp($charge, '0', 4) < 0 || bccomp($charge, $amount, 4) >= 0) {
+                throw ValidationException::withMessages([
+                    'bank_charge' => __('sales::validation.bank_charge_out_of_range', ['amount' => Money::format($amount)]),
+                ]);
+            }
+
+            /*
              * ⛔ একই স্লিপ দুইবার নয় — মালিকের নিয়ম, ৫ সেপ্টেম্বর ২০২৬।
              *
              * ⚠️ আদায়ে এটা পরিশোধের চেয়েও দামি: একই বিকাশ TrxID দুইবার
@@ -111,6 +124,7 @@ final class CollectionService
                 )->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
+                'bank_charge' => $charge,
                 'instrument' => $data['instrument'] ?? null,
                 'instrument_no' => $data['instrument_no'] ?? null,
                 'instrument_date' => $data['instrument_date'] ?? null,
@@ -246,6 +260,9 @@ final class CollectionService
              */
             $this->assertStillFits($collection, lock: true);
 
+            // ⭐ চার্জ থাকলে টাকার খাতে কম আসে, আর তফাতটা ব্যাংক চার্জের খাতে — পাওনা কমে পুরো অঙ্কেই (টাকার পরিকল্পনা ৫)
+            $charge = bcadd((string) ($collection->bank_charge ?? '0'), '0', 4);
+
             $this->posting->post(
                 sourceType: Collection::drillSourceType(),
                 sourceId: $collection->id,
@@ -253,9 +270,14 @@ final class CollectionService
                 lines: [
                     [
                         'account_id' => $collection->account_id,
-                        'debit' => (string) $collection->amount,
+                        'debit' => bcsub((string) $collection->amount, $charge, 4),
                         'narration' => __('sales::message.money_in', ['no' => $collection->document_no]),
                     ],
+                    ...(bccomp($charge, '0', 4) > 0 ? [[
+                        'account_id' => $this->account(StandardChart::BANK_CHARGES)->id,
+                        'debit' => $charge,
+                        'narration' => __('sales::message.bank_charge_on', ['no' => $collection->document_no]),
+                    ]] : []),
                     [
                         'account_id' => $this->account(StandardChart::RECEIVABLE)->id,
                         'credit' => (string) $collection->amount,

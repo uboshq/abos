@@ -123,6 +123,7 @@ return [
     'over_allocated' => ':no has :due due — no more than that can be put against it.',
     'allocation_over_amount' => ':allocated has been allocated but the collection is :amount.',
     'collection_must_be_positive' => 'A collection must be more than zero.',
+    'bank_charge_out_of_range' => 'The bank charge must be zero or more and less than :amount — otherwise nothing reaches the money account.',
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
     'cheque_not_from_receipt' => 'This cheque was not taken on a receipt — its bounce is handled differently.',

@@ -16,6 +16,7 @@ return [
     'branch' => 'শাখা',
     'ordered' => 'আদেশ',
     'received' => 'এসেছে',
+    'bank_charge' => 'ব্যাংক চার্জ',
     'pending' => 'বাকি',
     'challan_no_short' => 'চালান নম্বর',
     'editing_sale' => 'সম্পাদনা হচ্ছে',

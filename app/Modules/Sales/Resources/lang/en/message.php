@@ -86,6 +86,7 @@ return [
     'cost_of_goods' => ':no — cost of goods sold',
     'stock_out' => ':no — inventory reduced',
     'money_in' => ':no — money received',
+    'bank_charge_on' => ':no — bank charge (kept by the bank)',
     'against_receivable' => ':no — against the receivable',
     'challan_created' => 'Challan created — confirming it sends the goods out.',
     'challan_updated' => 'Challan updated.',

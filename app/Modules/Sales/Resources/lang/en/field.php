@@ -16,6 +16,7 @@ return [
     'branch' => 'Branch',
     'ordered' => 'Ordered',
     'received' => 'Received',
+    'bank_charge' => 'Bank charge',
     'pending' => 'Pending',
     'challan_no_short' => 'Challan No.',
     'editing_sale' => 'Editing',

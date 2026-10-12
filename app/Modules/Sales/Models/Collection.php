@@ -42,7 +42,7 @@ class Collection extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
-        'customer_id', 'account_id', 'trx_date', 'amount',
+        'customer_id', 'account_id', 'trx_date', 'amount', 'bank_charge',
         'instrument', 'instrument_no', 'instrument_date',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
@@ -55,6 +55,8 @@ class Collection extends Model implements Drillable
             'instrument_date' => 'date',
             'cancelled_at' => 'datetime',
             'amount' => 'decimal:4',
+            // ⓘ পাওনা থেকে কমা অঙ্কের যে অংশ ব্যাংক কেটে রেখেছে — টাকার খাতে আসে `amount − bank_charge` (টাকার পরিকল্পনা ৫)
+            'bank_charge' => 'decimal:4',
         ];
     }
 

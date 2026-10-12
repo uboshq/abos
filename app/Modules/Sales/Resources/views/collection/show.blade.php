@@ -76,8 +76,13 @@
                 ]" />
 
             <div class="flex border-t border-(--color-border) p-4">
+                {{-- ⓘ ব্যাংক চার্জ থাকলে নিজের সারিতে — টাকার খাতে এসেছে অঙ্ক বিয়োগ চার্জ (টাকার পরিকল্পনা ৫) --}}
                 <x-sales::totals :rows="[
                     'sales::field.amount' => $collection->amount,
+                    ...(bccomp((string) $collection->bank_charge, '0', 4) > 0 ? [
+                        'sales::field.bank_charge' => $collection->bank_charge,
+                        'sales::field.received' => bcsub((string) $collection->amount, (string) $collection->bank_charge, 4),
+                    ] : []),
                 ]" />
             </div>
         </section>
