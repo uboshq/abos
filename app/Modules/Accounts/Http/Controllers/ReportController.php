@@ -206,7 +206,8 @@ class ReportController extends Controller implements HasMiddleware
              */
             'summary' => $definition->summary === null
                 ? null
-                : ($definition->summary)($result->totals),
+                // ⓘ ছাঁকনিও যায় — স্থিতিপত্র চলতি বছর আলাদা করে ([[CoreReports::unclosedSplit()]]); বাকিরা দ্বিতীয়টা নেয় না
+                : ($definition->summary)($result->totals, $result->filters),
             'branches' => $definition->hasFilter('branch')
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),

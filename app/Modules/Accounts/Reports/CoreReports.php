@@ -7,11 +7,13 @@ namespace App\Modules\Accounts\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\YearEndService;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -559,11 +561,13 @@ final class CoreReports
              * দায়-মূলধনের ফারাক কোথাও ব্যাখ্যা হত না, আর রিপোর্টটা কখনো মিলত না। খাতা সবসময় মেলে, তাই এখানের নিট ডেবিট ঠিক
              * চলতি বছরের বন্ধ-না-হওয়া লাভ ([[BalanceSheetService::profitSoFar()]]-এর একই অঙ্ক) — সেটাই নাম ধরে দেখানো।
              */
-            summary: function (array $totals): array {
+            summary: function (array $totals, array $f = []): array {
                 $profit = bcsub((string) ($totals['debit'] ?? '0') ?: '0', (string) ($totals['credit'] ?? '0') ?: '0', 4);
                 $good = bccomp($profit, '0', 4) >= 0;
 
                 return [
+                    // ⛔ পাতার স্থিতিপত্রের একই ভাগ — চলতি বছর আর আগের বন্ধ-না-হওয়া বছর ([[self::unclosedSplit()]]; ধাপ ০, ১২ অক্টোবর ২০২৬)
+                    'lines' => self::unclosedSplit($profit, $f),
                     'label' => $good ? __('accounts::message.unclosed_profit') : __('accounts::message.unclosed_loss'),
                     'value' => $good ? $profit : bcmul($profit, '-1', 4),
                     'good' => $good,
@@ -573,6 +577,42 @@ final class CoreReports
                আর সেটা কেবল এই চাবি চায় — ইঞ্জিনের এই সংস্করণ ওয়েবে পৌঁছায়ই না */
             permission: 'accounts.report.final',
         );
+    }
+
+    /**
+     * বন্ধ-না-হওয়া লাভের দুই ভাগ — চলতি বছরের, আর তার আগের বন্ধ-না-হওয়া বছরগুলোর ([[BalanceSheetService::build()]]-এর একই ভাগ)।
+     *
+     * ⛔ a5-এর পাতা-সাজানোর পরিকল্পনা, ধাপ ০ (সমন্বয়ক, ১২ অক্টোবর ২০২৬; [[TheSheetsProfitThisYearIsTheProfitAndLossTest]])। ⓘ পাতার স্থিতিপত্রে
+     * "চলতি বছরের লাভ" এখন লাভ-ক্ষতির নিট লাভ; এখানে না ভাঙলে ফোন আর নির্ধারিত রিপোর্ট অন্য অঙ্ক বলত। ছাঁকনি না পেলে (পুরনো ডাক) ভাগ নেই।
+     *
+     * @param  array<string, mixed>  $f
+     * @return list<array{label: string, value: string}>
+     */
+    private static function unclosedSplit(string $profit, array $f): array
+    {
+        if (! isset($f['to'], $f['company_id'])) {
+            return [];
+        }
+
+        $start = FinancialYear::forDate((string) $f['to'])?->starts_on;
+
+        $thisYear = DB::table('ledger_entries')
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            ->whereIn('accounts.type', [Account::INCOME, Account::EXPENSE])
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->when($start !== null, fn ($q) => $q->where('ledger_entries.trx_date', '>=', Carbon::parse($start)->toDateString()))
+            ->where('ledger_entries.trx_date', '<=', $f['to'])
+            ->selectRaw('COALESCE(SUM(ledger_entries.credit - ledger_entries.debit), 0) as net')
+            ->value('net');
+
+        $thisYear = bcadd((string) $thisYear, '0', 4);
+        $earlier = bcsub($profit, $thisYear, 4);
+
+        return array_values(array_filter([
+            ['label' => __('accounts::field.profit_this_year'), 'value' => $thisYear],
+            bccomp($earlier, '0', 4) !== 0 ? ['label' => __('accounts::field.profit_earlier_years'), 'value' => $earlier] : null,
+        ]));
     }
 
     /**

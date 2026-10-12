@@ -71,6 +71,40 @@ final class TheSheetsProfitThisYearIsTheProfitAndLossTest extends TestCase
             ->assertSee(__('accounts::field.profit_this_year'));
     }
 
+    /** ⓘ ইঞ্জিনের স্থিতিপত্র (রিপোর্টের পাতা, ফোন, নির্ধারিত রিপোর্ট) একই দুই ভাগ বলে — পাতার স্থিতিপত্রের অঙ্কে ([[CoreReports::unclosedSplit()]]) */
+    public function test_the_engine_balance_sheet_splits_the_same_way(): void
+    {
+        $this->seed(DemoSeeder::class);
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+
+        $year = FinancialYear::query()->where('is_current', true)->firstOrFail();
+        $earlier = FinancialYear::query()->where('ends_on', $year->starts_on->copy()->subDay()->toDateString())->first()
+            ?? FinancialYear::query()->create([
+                'name' => 'earlier', 'starts_on' => $year->starts_on->copy()->subYear()->toDateString(),
+                'ends_on' => $year->starts_on->copy()->subDay()->toDateString(), 'is_closed' => false, 'is_current' => false,
+            ]);
+
+        $this->trade(1, $earlier->ends_on->copy()->subMonths(2)->toDateString(), '10000', '0');
+        $this->trade(2, $year->starts_on->copy()->addMonths(3)->toDateString(), '50000', '30000');
+
+        $asOf = $year->ends_on->toDateString();
+        $sheet = app(BalanceSheetService::class)->build($asOf);
+        $result = app(ReportEngine::class)->run('accounts.balance_sheet', ['from' => '2000-01-01', 'to' => $asOf], 1, 500);
+        $summary = (app(ReportEngine::class)->get('accounts.balance_sheet')->summary)($result->totals, $result->filters);
+
+        $lines = collect($summary['lines'] ?? [])->pluck('value', 'label');
+
+        $this->assertSame(0, bccomp((string) $lines->get(__('accounts::field.profit_this_year')), $sheet['profit_this_year'], 4),
+            '⛔ ইঞ্জিনের স্থিতিপত্রের চলতি বছরের লাভ পাতার স্থিতিপত্রের সাথে মেলে না');
+        $this->assertSame(0, bccomp((string) $lines->get(__('accounts::field.profit_earlier_years')), $sheet['profit_earlier'], 4),
+            '⛔ ইঞ্জিনের স্থিতিপত্রে আগের বন্ধ-না-হওয়া বছরের সারি নেই');
+        $this->assertSame(0, bccomp($summary['value'], ltrim($sheet['profit'], '-'), 4), 'মোট বন্ধ-না-হওয়া লাভ আগের মতোই');
+    }
+
     private function trade(int $id, string $date, string $income, string $expense): void
     {
         $cash = app(CashTillService::class)->ensurePrimaryTill()->account;
