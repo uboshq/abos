@@ -20,6 +20,7 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
@@ -37,6 +38,7 @@ use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Support\CreditPaper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -140,6 +142,7 @@ final class SalesInvoiceService
             adding: (string) $invoice->total,
             payingNow: $this->money($payingNow),
             exceptInvoiceId: (int) $invoice->id,
+            paper: CreditPaper::of('invoice', $invoice),
         );
     }
 
@@ -401,7 +404,7 @@ final class SalesInvoiceService
                 'customer_id' => $data['customer_id'],
                 'warehouse_id' => $data['warehouse_id'] ?? $this->defaultWarehouse()?->id,
                 'trx_date' => $trxDate->toDateString(),
-                'due_on' => $data['due_on'] ?? null,
+                'due_on' => $this->dueOn($data, $trxDate, (int) $data['customer_id']),
                 'narration' => $data['narration'] ?? null,
 
                 /*
@@ -432,6 +435,32 @@ final class SalesInvoiceService
     }
 
     /**
+     * ⭐ বিলের মেয়াদ — লেখা থাকলে সেটাই, নইলে গ্রাহকের নিজের বাকির দিন থেকে (মালিকের উত্তর ২, ১১ অক্টোবর ২০২৬; বাকি নিয়ন্ত্রণ ধাপ ২.২)।
+     *
+     * ⛔ আগে কেবল কাউন্টার মেয়াদ বসাত ([[DirectSaleService::dueOn()]]); অফিসের বিল, চালান থেকে বিল আর রওনার বিল
+     * ([[DispatchBill]] — DO, ফোন আর পোর্টালের অর্ডার এই পথেই বিল হয়) মেয়াদ খালি রাখত, আর খালি মেয়াদ মানে বিলের দিনই
+     * মেয়াদ ([[CreditExposure::openBills()]]) — ৩০ দিনের বাকির গ্রাহক পরদিনই "মেয়াদ পেরোনো"-তে আটকাতেন।
+     * ⭐ এখন প্রতিটা বিল এই এক দরজা দিয়ে জন্মায়, তাই সবার মেয়াদ একই নিয়মে: বিলের দিন + গ্রাহকের বাকির দিন।
+     * ⓘ বাকির দিন ০ হলে খালি — আগের মতোই বিলের দিনে মেয়াদ।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function dueOn(array $data, Carbon $trxDate, int $customerId): ?string
+    {
+        if (filled($data['due_on'] ?? null)) {
+            return (string) $data['due_on'];
+        }
+
+        // ⓘ কেবল দিনের সংখ্যা — দেয়াল (ডিলার, শাখা) এখানে প্রশ্ন নয়, গ্রাহক আগেই কাগজে বসেছেন; কোম্পানি তবু নিজের
+        $days = (int) (Customer::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->whereKey($customerId)
+            ->value('credit_days') ?? 0);
+
+        return $days > 0 ? $trxDate->copy()->addDays($days)->toDateString() : null;
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
@@ -448,7 +477,7 @@ final class SalesInvoiceService
 
             $invoice->update([
                 'trx_date' => $trxDate->toDateString(),
-                'due_on' => $data['due_on'] ?? null,
+                'due_on' => $this->dueOn($data, $trxDate, (int) ($data['customer_id'] ?? $invoice->customer_id)),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
 
@@ -595,6 +624,7 @@ final class SalesInvoiceService
                     adding: (string) $invoice->total,
                     payingNow: $this->money($payingNow),
                     exceptInvoiceId: (int) $invoice->id,
+                    paper: CreditPaper::of('invoice', $invoice),
                 );
             }
 

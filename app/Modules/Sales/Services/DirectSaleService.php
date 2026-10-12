@@ -30,6 +30,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Contracts\CounterSaleSource;
+use App\Modules\Sales\Support\CreditPaper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Core\Support\DocumentStatus;
@@ -113,6 +114,18 @@ final class DirectSaleService
      * @return array{challan: DeliveryChallan, invoice: SalesInvoice, extra: string, held: list<mixed>, awaiting?: list<Voucher>}
      */
     public function complete(array $data, array $lines, array $gifts = []): array
+    {
+        // ⓘ ভিতরের প্রতিটা দেয়াল-সিদ্ধান্ত সাক্ষ্যে "কাউন্টার" ([[CreditExposure::atCounter()]], বাকি নিয়ন্ত্রণ ধাপ ১.৫)
+        return CreditExposure::atCounter(fn () => $this->completeAtCounter($data, $lines, $gifts));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     * @param  list<array<string, mixed>>  $gifts
+     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, extra: string, held: list<mixed>, awaiting?: list<Voucher>}
+     */
+    private function completeAtCounter(array $data, array $lines, array $gifts): array
     {
         if ($lines === []) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
@@ -664,6 +677,7 @@ final class DirectSaleService
                 adding: (string) $invoice->fresh()->total,
                 payingNow: $this->depositTotal($data),
                 exceptInvoiceId: (int) $invoice->id,
+                paper: CreditPaper::of('counter', $invoice),
             );
 
             /* ⓘ সইয়ের পথে গেলে আর খসড়া নয় — শেষ হয় শেষ সইয়ের পরে। ⭐ পর্দার ছবিটা
@@ -1497,6 +1511,11 @@ final class DirectSaleService
      * মাল বের হলো অথচ বিল খসড়া — এমন অবস্থা কোনো মুহূর্তেও থাকে না।
      */
     public function finishHeld(SalesInvoice $invoice): SalesInvoice
+    {
+        return CreditExposure::atCounter(fn () => $this->finishHeldAtCounter($invoice));
+    }
+
+    private function finishHeldAtCounter(SalesInvoice $invoice): SalesInvoice
     {
         $invoice->loadMissing(['lines.challanLine']);
 

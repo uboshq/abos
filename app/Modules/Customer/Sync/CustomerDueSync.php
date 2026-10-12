@@ -140,7 +140,7 @@ final class CustomerDueSync implements SyncsToDevices
                      * ব্রাঞ্চের ব্যালেন্সও হিসাবে ঢুকেছে")। ⛔ সীমার যাচাই `outstanding`-এই — সীমা পরম, গোটা কোম্পানির।
                      */
                     'outstandingInView' => bcadd((string) ($customer->getAttribute('outstanding_in_view') ?? '0'), '0', 2),
-                    'creditLimit' => (string) $customer->credit_limit,
+                    'creditLimit' => $customer->effectiveCreditLimit(),
                     'creditDays' => (int) $customer->credit_days,
 
                     /*

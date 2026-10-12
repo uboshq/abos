@@ -434,9 +434,9 @@ class SalesOrderController extends Controller implements HasMiddleware
                  * `decimal:4`), নয় তুলনায় `12,31,87,500.00`-র কমাগুলো
                  * `parseFloat` ভেঙে দিত।
                  */
-                'limit' => (string) $c->credit_limit,
+                'limit' => $c->effectiveCreditLimit(),
                 'due' => (string) $c->outstanding(),
-                'limit_text' => Money::format($c->credit_limit),
+                'limit_text' => Money::format($c->effectiveCreditLimit()),
                 'due_text' => Money::format($c->outstanding()),
             ]])->all(),
 
