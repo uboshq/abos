@@ -94,7 +94,7 @@ final class ThePhoneShowsAShopsLedgerTest extends TestCase
     }
 
     /**
-     * ⓘ ডেমোতে গ্রাহকের খাতার সারি নেই — দুই দিনের দুই ভাউচার: আগে মাল (বাকি বাড়ে), পরে টাকা (বাকি কমে)।
+     * ⓘ ডেমোতে গ্রাহকের খাতার সারি নেই — দুই দিনের দুই ভাউচার: আগে মাল (বাকি বাড়ে, বিক্রির খাতে জমা), পরে নগদ টাকা (বাকি কমে)। ⓘ নগদ শূন্যের নিচে নামে না, তাই প্রথম ভাউচারে নগদ নয়।
      * ⓘ বিপজ্জনক উপাত্ত: পুরনো সারি আগে লেখা — উল্টো ক্রমে দিলে "নতুন আগে" দাবি ধরা পড়ে।
      */
     private function customerWithEntries(): Customer
@@ -111,7 +111,7 @@ final class ThePhoneShowsAShopsLedgerTest extends TestCase
 
         $this->journal(Carbon::today()->subDays(3), [
             ['account_id' => $receivable, 'debit' => '1000', 'credit' => '0'] + $party,
-            ['account_id' => $cash->id, 'debit' => '0', 'credit' => '1000'],
+            ['account_id' => StandardChart::find(StandardChart::SALES)->id, 'debit' => '0', 'credit' => '1000'],
         ]);
         $this->journal(Carbon::today(), [
             ['account_id' => $cash->id, 'debit' => '400', 'credit' => '0'],
