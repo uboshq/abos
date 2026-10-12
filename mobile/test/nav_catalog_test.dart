@@ -30,8 +30,8 @@ void main() {
     final paths = RegExp(r"path: '([a-z\-]+)'")
         .allMatches(home)
         .map((m) => m.group(1)!)
-        // ⓘ নিচের পাতা — দোকানের পাতার "জমার বিজ্ঞপ্তি" দোকানের পাতা থেকেই খোলে
-        .where((p) => p != 'deposit')
+        // ⓘ নিচের পাতা — দোকানের পাতার "জমার বিজ্ঞপ্তি" আর "খাতা" দোকানের পাতা থেকেই খোলে
+        .where((p) => p != 'deposit' && p != 'ledger')
         .toSet();
 
     expect(paths, isNotEmpty);

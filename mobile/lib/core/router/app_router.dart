@@ -152,7 +152,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 ),
                 routes: [
                   // ⭐ দোকানের খাতা, সহজ করে — মালিক, ১২ অক্টোবর ২০২৬
-                  GoRoute(
+                  _framed(
                     path: 'ledger',
                     builder: (context, state) => ModuleGateView(
                       path: 'customers',

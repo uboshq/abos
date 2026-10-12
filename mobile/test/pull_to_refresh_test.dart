@@ -61,8 +61,9 @@ void main() {
   const notPullable = {
     // The menu is built from GET /me at sign-in; there is nothing on this
     // screen for a pull to fetch, and its message sends the person to the
-    // office rather than to a gesture.
-    'home_shell.dart',
+    // office rather than to a gesture. (ⓘ 12 Oct 2026: the "no menu" state
+    // moved with the module grid from home_shell.dart to module_pages.dart.)
+    'module_pages.dart',
     // Two empty states, neither refreshable here: the catalogue one sends the
     // person to the products screen to pull *there*, and the other is a
     // search box reporting no match, where a pull would fetch nothing the
