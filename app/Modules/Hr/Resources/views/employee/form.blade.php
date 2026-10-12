@@ -72,7 +72,8 @@
         <section data-boxed data-person class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             {{-- ⭐ ছবি — মালিক, ২ অক্টোবর ২০২৬। ⛔ asset() নয়, attachment.download: ওই রুট আগে কর্মীর view নীতি
                  জিজ্ঞেস করে, নাহলে ঠিকানা অনুমান করেই অন্য কোম্পানির লোক ছবি দেখতেন। `face` স্ক্যানার বর্গাকারে কাটতে দেয়। --}}
-            <div data-photo-field class="mb-4 flex flex-wrap items-center gap-4">
+            {{-- ⛔ `x-data` না থাকলে Alpine নিচের `x-on:change` পড়েই না — ছবি বাছলে কাটার স্ক্যানারটা খুলত না, কোনো এরর ছাড়াই --}}
+            <div data-photo-field x-data class="mb-4 flex flex-wrap items-center gap-4">
                 @if ($employee->exists && $employee->photo)
                     <img src="{{ route('attachment.download', $employee->photo) }}" alt="{{ $employee->name() }}"
                          class="shrink-0 rounded-full border border-(--color-border) object-cover" style="width: 4rem; height: 4rem" />
