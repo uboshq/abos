@@ -59,7 +59,12 @@ class CustomerDetailScreen extends StatelessWidget {
         children: [
           _Header(customer: customer),
           const SizedBox(height: AppSpacing.md),
-          if (due != null) _DueCard(due: due),
+          // ⓘ বকেয়ার অঙ্কে চাপলেও খাতা — "এই অঙ্ক কোথা থেকে" প্রশ্নের উত্তর এক চাপে
+          if (due != null)
+            InkWell(
+              onTap: () => context.push('/home/customers/$customerId/ledger'),
+              child: _DueCard(due: due),
+            ),
           const SizedBox(height: AppSpacing.md),
           _Actions(customer: customer),
           const SizedBox(height: AppSpacing.lg),
@@ -211,6 +216,14 @@ class _Actions extends StatelessWidget {
             icon: const Icon(Icons.location_on_outlined),
             label: const Text('ঠিকানা'),
           ),
+        // ⭐ দোকানের খাতা — মালিক, ১২ অক্টোবর ২০২৬
+        FilledButton.tonalIcon(
+          key: const ValueKey('customer-ledger'),
+          onPressed: () =>
+              context.push('/home/customers/${customer.id}/ledger'),
+          icon: const Icon(Icons.menu_book_outlined),
+          label: const Text('খাতা দেখুন'),
+        ),
         // ⭐ জমার বিজ্ঞপ্তি, স্লিপসহ (0.4.3)
         OutlinedButton.icon(
           onPressed: () =>
