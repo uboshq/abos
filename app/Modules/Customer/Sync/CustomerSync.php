@@ -144,7 +144,7 @@ final class CustomerSync implements SyncsToDevices
                 'addressEn' => $customer->address_en,
                 'addressBn' => $customer->address_bn,
                 'customerType' => $customer->customer_type,
-                'creditLimit' => (string) $customer->credit_limit,
+                'creditLimit' => $customer->effectiveCreditLimit(),
                 'creditDays' => (int) $customer->credit_days,
                 'isActive' => (bool) $customer->is_active,
             ],

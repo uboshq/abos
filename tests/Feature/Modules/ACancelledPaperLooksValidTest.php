@@ -236,6 +236,7 @@ class ACancelledPaperLooksValidTest extends TestCase
             'accounts.note.print' => 'ডেবিট/ক্রেডিট নোট — ANoteCouldNotBePrintedTest ধরে (বাতিল নোট "বাতিল" বলে)',
             'hr.payslip.print' => 'পে-স্লিপ — বাতিল হয় না, খসড়া হয়',
             'inventory.label.print' => 'পণ্যের লেবেল — কোনো ডকুমেন্ট নয়',
+            'documents.print' => 'আপলোড করা ফাইলই হুবহু (DocumentFileController::print) — ABOS কোনো কাগজ আঁকে না, আর ডকুমেন্টের "বাতিল" অবস্থা নেই',
             'sales.print_queue.index' => 'কিউয়ের পর্দা, কাগজ নয়',
             'sales.print_queue.settle' => 'কিউয়ের সারি মেটানোর কাজ, কাগজ নয়',
             'system_admin.print_control' => 'ছাপার সেটিংসের পর্দা, কাগজ নয়',
@@ -243,6 +244,7 @@ class ACancelledPaperLooksValidTest extends TestCase
             'system_admin.print_control.preview' => 'বানানো নমুনা (PrintSample), সংরক্ষিত কাগজ নয় — বাতিল হতে পারে না',
             'system_admin.print_control.invoice_info' => '"Set Invoice Information"-এর পর্দা, কাগজ নয়',
             'system_admin.print_control.invoice_info.update' => '"Set Invoice Information" সংরক্ষণ, কাগজ নয়',
+            'documents.print' => 'তোলা আসল ফাইলটাই ব্রাউজারে খোলে (DocumentFileController::print) — ABOS-এর আঁকা কাগজ নয়, চিহ্ন বসানোর জায়গা নেই; ডকুমেন্টের "বাতিল" অবস্থাও নেই, আর কে ছাপতে পারেন তা দেয়াল ঠিক করে (ADocumentStaysBehindItsWallsTest)',
         ];
 
         $unaccounted = collect(app('router')->getRoutes()->getRoutes())

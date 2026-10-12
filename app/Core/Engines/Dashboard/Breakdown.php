@@ -20,7 +20,7 @@ use InvalidArgumentException;
 final class Breakdown
 {
     /**
-     * @param  list<array{label: string, value: string, tone?: string}>  $parts
+     * @param  list<array{label: string, value: string, tone?: string, href?: string}>  $parts
      */
     /** ⓘ ভাগের চার আন্তর্জাতিক রূপ — ডোনাট, আড়াআড়ি দণ্ড, খাড়া স্তম্ভ, ফানেল */
     public const CHARTS = ['donut', 'hbars', 'columns', 'funnel'];
@@ -39,6 +39,11 @@ final class Breakdown
          * ⓘ [[DateRange::label()]] দিয়ে বানানো লেখা ("১ অক্টো – ৫ অক্টো ২০২৬"); চার্টের নিচে বসে। `null` মানে সময়ের নয় (যেমন তালিকা কতটা ভরা)।
          */
         public readonly ?string $range = null,
+        /**
+         * ⓘ ঘন সারি — অনেক ভাগের তালিকা (যেমন বয়সের সাত ধাপ) যেন পর্দার নিচে না নামে; পুরনো ড্যাশবোর্ড-ভিউ সারির ফাঁক
+         * কমায় (বাকি নিয়ন্ত্রণ, ১১ অক্টোবর ২০২৬: "প্রতিটা পর্দা এক ১৯২০×১০৮০-এ")। না বললে আগের মতোই।
+         */
+        public readonly bool $dense = false,
     ) {
         if ($chart !== null && ! in_array($chart, self::CHARTS, true)) {
             throw new InvalidArgumentException("Breakdown '{$label}' asks for an unknown chart '{$chart}'.");
@@ -55,7 +60,8 @@ final class Breakdown
         $total = 0.0;
 
         foreach ($this->parts as $part) {
-            $total += (float) $part['value'];
+            // ⓘ সাজানো অঙ্কও ("১,২০,০০০") — [[number()]]; আগে `(float)` কমায় কেটে ১ পড়ত
+            $total += self::number($part['value']);
         }
 
         return $total > 0 ? $total : 1.0;

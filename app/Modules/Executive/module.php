@@ -41,7 +41,8 @@ return [
      * ⓘ যাদের সংখ্যা পড়া হয় — প্রতিটা মডিউলের নিজের সংজ্ঞা, নিজের ক্লাস।
      * ⚠️ চক্র হয় না: এদের কেউ মালিকের কেন্দ্রের উপর দাঁড়ায় না।
      */
-    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance'],
+    // ⓘ credit_control — মালিকের কেন্দ্রে বাকির চার সংখ্যা ([[CreditHeadlines]], বাকি নিয়ন্ত্রণ ধাপ ৩.৩)
+    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance', 'credit_control'],
 
     'menu' => [
         'dashboard' => [

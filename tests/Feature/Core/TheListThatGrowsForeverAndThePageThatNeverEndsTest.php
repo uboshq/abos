@@ -51,6 +51,9 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Accounts\Http\Controllers\PeriodLockController' => 'হিসাববর্ষের মাসগুলো — বছরে বারোটা।',
         'App\Modules\Accounts\Http\Controllers\YearEndController' => 'কেবল চলতি বছর, একটাই।',
 
+        // ⓘ বিজ্ঞপ্তির মাধ্যম কোডে নিবন্ধিত — নতুন মাধ্যম কেবল কোড লিখে আসে (১২ অক্টোবর ২০২৬, বিজ্ঞপ্তি মডিউল)
+        'App\Modules\Notification\Http\Controllers\NotificationChannelController' => 'কোডে নিবন্ধিত মাধ্যমগুলো (ইমেইল, এসএমএস, পুশ, অ্যাপ) — সারি নয়, তালিকা কোডের সাথে বাঁধা।',
+
         // ── প্রতিষ্ঠানের নিজের সাজানো, আর সাজানো জিনিস গোনা যায় ────────
         'App\Modules\MasterData\Http\Controllers\NumberSeriesController' => 'প্রতি কাগজের ধরনে একটা সিরিজ — সংখ্যাটা ধরনের সংখ্যায় বাঁধা।',
         'App\Modules\SystemAdmin\Http\Controllers\CompanyController' => 'প্রতিষ্ঠানের কোম্পানি — হাতে গোনা।',

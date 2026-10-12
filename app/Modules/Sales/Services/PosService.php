@@ -166,6 +166,17 @@ final class PosService
      */
     public function checkout(array $data, array $lines): array
     {
+        // ⓘ ভিতরের দেয়াল-সিদ্ধান্ত সাক্ষ্যে "কাউন্টার" ([[CreditExposure::atCounter()]], বাকি নিয়ন্ত্রণ ধাপ ১.৫)
+        return CreditExposure::atCounter(fn () => $this->checkoutAtCounter($data, $lines));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{invoice: SalesInvoice, change: string}
+     */
+    private function checkoutAtCounter(array $data, array $lines): array
+    {
         if ($lines === []) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
         }

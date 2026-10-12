@@ -173,7 +173,15 @@ class _CustomerTile extends StatelessWidget {
         // yet — the two entity types have separate watermarks, so one can
         // arrive a sync ahead of the other, and a shop showing "বকেয়া নেই"
         // when the truth is simply unknown is the one wrong thing to say.
-        trailing: due == null ? null : _DuePill(due: due),
+        // ⭐ বকেয়ার অঙ্কে চাপলে সোজা খাতা — মালিক, ১২ অক্টোবর ২০২৬
+        trailing: due == null
+            ? null
+            : InkWell(
+                key: ValueKey('ledger-${customer.id}'),
+                onTap: () =>
+                    context.push('/home/customers/${customer.id}/ledger'),
+                child: _DuePill(due: due),
+              ),
       ),
     );
   }
