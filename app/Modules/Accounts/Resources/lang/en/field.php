@@ -272,6 +272,7 @@ return [
     'total_assets' => 'Total assets',
     'total_funding' => 'Total liabilities & equity',
     'profit_this_year' => 'Profit this year',
+    'profit_earlier_years' => 'Profit of earlier years (not yet closed)',
     'against_which_bill' => 'Against which bill',
     'ait' => 'AIT',
     'all_bills' => 'All bills',
