@@ -84,6 +84,8 @@ return [
     'line_both_sides' => 'A line cannot carry both a debit and a credit — split it into two.',
     'journal_needs_two_lines' => 'A journal needs amounts on at least two lines.',
     'till_not_found' => 'That cash counter was not found.',
+    'till_inactive' => 'The till ":name" is closed — no money can be sent to a closed till.',
+    'inter_company_branch_unknown' => 'That branch does not belong to this company — pick one of its own branches.',
     'transfer_no_destination' => 'Choose where the money goes — a counter or the bank.',
     'same_till_both_sides' => 'The same counter cannot be on both sides.',
     'not_enough_in_hand' => 'Only :have is in hand — more than that cannot be handed over.',
