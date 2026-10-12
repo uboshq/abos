@@ -8,6 +8,7 @@ return [
     'year_confirm_name' => 'Type ":name" exactly to confirm.',
     'year_already_closed' => 'This financial year is already closed.',
     'year_has_drafts' => ':count draft vouchers are still unposted. Once the year closes they can never be posted — post or cancel them first.',
+    'year_has_open_papers' => 'This year still has :awaiting paper(s) awaiting signature and :unposted paper(s) not yet in the books — sign, post or cancel them first, or they could never reach this year.',
     'year_overlaps' => 'These dates overlap another financial year. With the same date in two years there is no way to say which one an entry belongs to.',
     'code_taken' => 'Another account already uses code :code.',
     'import_group_no_opening' => 'A group account (:code) cannot hold an opening balance — put it on the accounts beneath it.',

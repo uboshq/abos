@@ -81,6 +81,8 @@ final class PostingEngine
         $userId = $userId ?? \App\Core\Support\Actor::userId();
 
         return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear, $claimKey) {
+            $this->assertYearStillOpen($financialYear);
+
             /*
              * উপরের `assertNotAlreadyPosted()` ভদ্রতা; আসল পাহারা এটা।
              *
@@ -253,6 +255,8 @@ final class PostingEngine
             : $reversalType.'@'.$original->last()->id;
 
         return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId, $claimKey, $documentNo) {
+            $this->assertYearStillOpen($financialYear);
+
             $this->claim($claimKey, $sourceId, $userId);
 
             $created = [];
@@ -529,6 +533,23 @@ final class PostingEngine
         }
 
         return $year;
+    }
+
+    /**
+     * ⛔ বছরটা লেনদেনের ভিতরে, ভাগের তালায় আবার পড়া — অডিট ম১৭/স১২/ছ৮, ১০ অক্টোবর ২০২৬ ([[TheYearWaitsForEveryOpenPaperTest]])।
+     *
+     * ⓘ [[resolveFinancialYear()]] লেনদেনের বাইরে পড়ে: ঠিক তখন কেউ বছর বন্ধ করলে এই দাখিলা বন্ধ বছরে বসে যেত, সমাপনীর বাইরে।
+     * ভাগের তালায় [[YearEndService::close()]]-এর একক তালা অপেক্ষা করে, আর বন্ধ শেষ হলে এখানে টাটকা `is_closed` দেখা যায়।
+     */
+    private function assertYearStillOpen(FinancialYear $year): void
+    {
+        $closed = FinancialYear::query()->whereKey($year->getKey())->sharedLock()->value('is_closed');
+
+        if ((bool) $closed) {
+            throw new PostingException(
+                "Financial year {$year->name} is closed. Reopening it is an approved action, not a side effect of posting."
+            );
+        }
     }
 
     /**
