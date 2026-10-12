@@ -501,7 +501,7 @@
                     ⚠️ নতুন কোনো সাবমিট বোতাম এর **আগে** বসালে বাগটা ফিরে
                     আসবে। পাহারা: [[EnterInTheSearchBoxOnlySearchesTest]]।
                 --}}
-                <button type="submit" class="sr-only">{{ __('core.action.search') }}</button>
+                <button type="submit" class="sr-only" aria-label="{{ __('core.action.search') }}">{{ __('core.action.search') }}</button>
             </label>
         @endif
 
