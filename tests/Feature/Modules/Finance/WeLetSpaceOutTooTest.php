@@ -252,6 +252,21 @@ final class WeLetSpaceOutTooTest extends TestCase
         $this->assertSame(1, TenancyMove::query()->where('kind', TenancyMove::RENT)->count(), '⛔ চাবি ছাড়া আদায় বসল');
     }
 
+    /** ⛔ শেষের দিন যেকোনো দিন চলত — শুরুর আগে, আগামী দিনে, দাবি বসা মাসের আগে (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
+    public function test_a_tenancy_closes_only_on_a_day_that_makes_sense(): void
+    {
+        $tenancy = $this->open($this->person('Closing Tenant'), '10000', starts: $this->month(-2));
+        app(TenancyService::class)->charge($this->month(0));
+
+        $this->assertRefused(fn () => app(TenancyService::class)->close($tenancy->fresh(), ['closed_on' => $this->month(-3)->toDateString()]),
+            'closed_on', '⛔ শুরুর আগের দিনে চুক্তি শেষ হল');
+        $this->assertRefused(fn () => app(TenancyService::class)->close($tenancy->fresh(), ['closed_on' => now()->addDay()->toDateString()]),
+            'closed_on', '⛔ আগামী দিনে চুক্তি শেষ হল');
+        $this->assertRefused(fn () => app(TenancyService::class)->close($tenancy->fresh(), ['closed_on' => $this->month(-1)->toDateString()]),
+            'closed_on', '⛔ দাবি বসা মাসের আগে চুক্তি শেষ হল — সেই মাসের দাবি আয়ে রয়ে যেত');
+        $this->assertSame(Tenancy::ACTIVE, $tenancy->fresh()->status);
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function month(int $offset): Carbon

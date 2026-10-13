@@ -156,9 +156,21 @@ class TenancyService
                 throw ValidationException::withMessages(['status' => __('finance::tenancy.not_active')]);
             }
 
+            /*
+             * ⛔ শেষের দিন — শুরুর আগে নয়, আগামী দিনে নয়, আর যে মাসের দাবি বসে গেছে তার আগে নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর
+             * ২০২৬)। ⓘ আগে যেকোনো দিন চলত: শেষের পরের মাসের দাবি আয়ে থেকে যেত, আর শুরুর আগের "শেষ" কোনো অর্থই বলত না।
+             */
+            $on = Carbon::parse((string) (($data['closed_on'] ?? '') ?: now()->toDateString()))->startOfDay();
+            $lastCharged = TenancyCharge::query()->where('tenancy_id', $tenancy->id)->max('for_month');
+
+            if ($on->lt($tenancy->starts_on) || $on->gt(Carbon::today())
+                || ($lastCharged !== null && $on->lt(Carbon::parse((string) $lastCharged)->startOfMonth()))) {
+                throw ValidationException::withMessages(['closed_on' => __('finance::tenancy.close_day_out_of_range')]);
+            }
+
             $tenancy->update([
                 'status' => Tenancy::CLOSED,
-                'closed_on' => Carbon::parse((string) ($data['closed_on'] ?? now()->toDateString()))->toDateString(),
+                'closed_on' => $on->toDateString(),
             ]);
 
             return $tenancy->fresh();
