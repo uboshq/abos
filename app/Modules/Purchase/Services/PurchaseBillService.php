@@ -1357,6 +1357,10 @@ final class PurchaseBillService
              */
             $locked = PurchaseBill::acrossBranches()->whereKey($bill->id)->lockForUpdate()->firstOrFail();
 
+            // ⛔ সিদ্ধান্ত তালার কপিতে — হাতের কপি পুরনো হতে পারে (খসড়া দেখে খোলা, মাঝে আরেক ট্যাবে পাকা): তখন উল্টানো বাদ পড়ত,
+            // বিল "বাতিল" অথচ খাতা আর মজুদ চালু (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABillCancelledFromAnOldCopyUndidNothingTest]])
+            $bill->setRawAttributes($locked->getAttributes(), true);
+
             if ($locked->status === DocumentStatus::CANCELLED) {
                 throw ValidationException::withMessages([
                     'status' => __('purchase::validation.already_cancelled', ['no' => $bill->document_no]),
