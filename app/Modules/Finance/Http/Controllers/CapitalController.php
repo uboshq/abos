@@ -390,6 +390,13 @@ orm]]): *"সম্পাদনা
                 ]),
             ]);
         }
+
+        // ⛔ সইয়ের অপেক্ষার মূলধনে-নেওয়া লাভ — সেবার একই পাহারা ([[CapitalService::assertStillADraft()]])
+        if ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
+            ]);
+        }
     }
 
     /*

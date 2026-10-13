@@ -720,6 +720,15 @@ final class ProfitDistribution
                 ->lockForUpdate()
                 ->get();
 
+            // ⛔ সারিগুলো আর ভাউচারের অঙ্ক না মিললে খাতায় নয় — নইলে পাওনা থেকে না কেটেই ২১৯০ → ৩১০০ বসত (১৩ অক্টোবর ২০২৬)
+            $rows = array_reduce($entries->all(), fn (string $sum, CapitalEntry $e) => bcadd($sum, (string) $e->amount, 4), '0');
+
+            if ($entries->isEmpty() || bccomp($rows, (string) $voucher->totals()['debit'], 4) !== 0) {
+                $this->dropCapitalised($voucher, __('finance::validation.capital_rows_changed'));
+
+                return;
+            }
+
             foreach ($entries as $entry) {
                 $left = $this->outstandingFor((int) $entry->person_id, (int) $voucher->id);
 

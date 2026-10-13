@@ -265,6 +265,33 @@ final class FinanceMoneyMovedWithNobodyToSignTest extends TestCase
         $this->assertSame(0, bccomp(app(ProfitDistribution::class)->outstandingFor($partner->id), '0', 4));
     }
 
+    /**
+     * ⛔ সইয়ের অপেক্ষার মূলধনে-নেওয়া লাভ মোছা বা বদলানো যেত — তারপর শেষ সইয়ে ২১৯০ → ৩১০০ তবু বসত, অথচ পাওনা থেকে কাটা হত না:
+     * একই লাভ নগদেও তোলা যেত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function test_a_held_capitalisation_cannot_be_edited_away_and_a_vanished_row_is_not_posted(): void
+    {
+        $this->partner('SIGN-CAP2');
+        app(ProfitDistribution::class)->declare(['profit' => '10000', 'trx_date' => now()->toDateString()]);
+        $this->flow('capitalise');
+        $entries = app(ProfitDistribution::class)->capitalise(['trx_date' => now()->toDateString()]);
+        $entry = $entries[0]->fresh();
+        $before = $this->net(StandardChart::OWNER_CAPITAL);
+
+        $this->assertRefused(fn () => app(CapitalService::class)->discard($entry), 'status', '⛔ সইয়ের অপেক্ষার মূলধনে-নেওয়া লাভ মুছে গেল');
+        $this->assertRefused(fn () => app(CapitalService::class)->revise($entry, [
+            'person_id' => $entry->person_id, 'contributor_type' => $entry->contributor_type, 'entry_type' => $entry->entry_type,
+            'trx_date' => now()->toDateString(), 'amount' => (string) $entry->amount,
+        ]), 'status', '⛔ সইয়ের অপেক্ষার মূলধনে-নেওয়া লাভ নগদে বদলে গেল');
+        $this->delete(route('finance.capital.destroy', $entry))->assertSessionHasErrors('status');
+        $this->assertNotNull($entry->fresh(), '⛔ পর্দা থেকে মুছে গেল');
+
+        // ⓘ কোনোভাবে সারিটা গেলেও (পুরনো ভুল) শেষ সই খাতায় বসায় না
+        CapitalEntry::query()->whereKey($entry->id)->delete();
+        $this->sign('capitalise');
+        $this->assertSame(0, bccomp($this->net(StandardChart::OWNER_CAPITAL), $before, 4), '⛔ সারি ছাড়াই মূলধন খাতায় বসল');
+    }
+
     // ── মূলধন পোস্টের পুরনো দরজা ────────────────────────────────────────
 
     public function test_the_old_capital_post_door_is_gone_and_the_service_takes_only_money(): void

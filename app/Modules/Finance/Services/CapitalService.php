@@ -247,6 +247,17 @@ final class CapitalService
                 ]),
             ]);
         }
+
+        /*
+         * ⛔ লাভকে মূলধনে নেওয়ার খসড়া সইয়ের ভাউচারে বাঁধা — বদলানো বা মোছা যায় না (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে
+         * মুছলে বা নগদে বদলালে শেষ সইয়ে ভাউচারটা তবু খাতায় বসত (২১৯০ → ৩১০০), অথচ পাওনা থেকে আর কাটা হত না — একই লাভ নগদেও
+         * তোলা যেত। ফেরাতে হলে সইকারী "না" বলবেন, বা ভাউচারটা বাতিল।
+         */
+        if ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
+            ]);
+        }
     }
 
     /**

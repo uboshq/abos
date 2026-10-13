@@ -46,6 +46,8 @@ return [
 
     'person_pick_or_type' => 'Either pick from the list or type a new name, not both.',
     'capital_needs_a_name' => 'Pick who is contributing, or type a new name.',
+    'capital_held_for_signature' => ':no is profit taken into capital and waits for its signature — it cannot be edited or deleted; the signer can refuse it, or its voucher can be cancelled.',
+    'capital_rows_changed' => 'The capital rows behind this voucher no longer match it — nothing was posted.',
     'facility_needs' => 'A :kind facility cannot be worked out without this field.',
     'facility_already_closed' => 'Facility :no is already closed.',
     'facility_still_owed' => 'Facility :no still owes :owed in the books — post the repayment (or the bank\'s waiver) first, then close it.',
