@@ -134,6 +134,11 @@ class BackupController extends Controller
             ]);
         }
 
+        // ⛔ যাচাইয়ে ফেরত আনা যায়নি — "নেওয়া হয়েছে" নয়, ব্যর্থতাই (১৪ অক্টোবর ২০২৬; [[BackupRunner::runNow()]])
+        if ($run->status === 'failed') {
+            return back()->withErrors(['backup' => __('backup::message.verification_failed')]);
+        }
+
         /*
          * ⚠️ বার্তাটা বলে **কয়টা গন্তব্যে পৌঁছেছে**, কেবল "সফল" নয়।
          *
