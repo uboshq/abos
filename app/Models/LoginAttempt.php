@@ -57,6 +57,12 @@ class LoginAttempt extends Model
      */
     public const LOCKED = 'locked';
 
+    /**
+     * ⭐ অ্যাপের ভিতরের ওয়েবের চাবি ফেরানো — অচল, পুরনো, দ্বিতীয়বার, অন্য ফোনের ([[WebHandoffController]], ১৩ অক্টোবর ২০২৬)।
+     * ⓘ তালায় গোনা হয় না: চাবিটা ২৫৬-বিটের, আন্দাজের প্রশ্ন নেই — আর গুনলে একটা পুরনো লিংক বারবার খুলে মালিকের লগইনেই তালা পড়ত।
+     */
+    public const HANDOFF_REFUSED = 'handoff_refused';
+
     protected $fillable = [
         'company_id', 'user_id', 'identifier', 'succeeded',
         'reason', 'ip_address', 'user_agent',

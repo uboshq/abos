@@ -191,6 +191,13 @@ class EveryRouteIsGuardedTest extends TestCase
          * ⓘ দুইটা অনুরোধ একই মুহূর্তে এলে সেটা থামায় ডাটাবেস, throttle
          * নয় ([[FirstRun::open]]) — throttle হারের সীমা, পারমাণবিকতা নয়।
          */
+        /*
+         * ⭐ অ্যাপের ভিতরের ওয়েব-জানালার দরজা — ১৩ অক্টোবর ২০২৬ (মালিক: "web e na dhuke jar jar kaj 100% app ei korte pare")।
+         * ⓘ `profile.email.confirm`-এর মতোই: জানালাটা সংজ্ঞামতোই তখনো লগইন করা নয়, আর চাবিটাই চাবি — ২৫৬-বিটের, সার্ভারে কেবল
+         * sha256, ৬০ সেকেন্ড, একবার, হ্যান্ডসেটের হেডারে বাঁধা; খরচের আগে কোনো ডেটা নয় ([[WebHandoffController]])।
+         */
+        'web_handoff' => 'অ্যাপের ভিতরের ওয়েবের একবারের চাবি — ৬০ সেকেন্ড, একবার, মানুষ+হ্যান্ডসেট+কোম্পানি+শাখায় বাঁধা; চাবির বদলে throttle:20,1',
+
         'system_admin.setup.show' => 'প্রথম দরজা — `users` খালি থাকলেই খোলে, একটাও বসলে ৪০৪',
         'system_admin.setup.store' => 'প্রথম দরজাটাই; এখানেও চাবির বদলে throttle, লগইনের সমান',
     ];
@@ -300,6 +307,7 @@ class EveryRouteIsGuardedTest extends TestCase
          * তাই চুরি যাওয়া refresh টোকেনে এটা খোলে না।
          */
         'api.me' => 'নিজের পরিচয় ও মেনু — ব্যবসার ডেটা নয়, আর abilities:app চায়',
+        'api.web-handoff' => 'নিজের জন্য অ্যাপের ভিতরে ওয়েব খোলার চাবি — ওয়েবে নিজের চেয়ে বেশি কিছু দেয় না (প্রতিটা পর্দা নিজের চাবি দেখে); কোম্পানির সুইচ, হ্যান্ডসেট, গন্তব্য আর দুই ধাপ নিয়ামকে; abilities:app চায় ([[WebHandoffApiController]])',
         'api.workspace' => 'নিজের কোম্পানি/শাখা বদল — ওয়েবের company.switch-এর মতো; সদস্যপদ ও শাখার নাগাল User::switchCompany() দেখে; abilities:app চায়',
         'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',
         'api.dashboard.index' => 'কেবল যে মডিউলের ড্যাশবোর্ড খোলার চাবি আছে আর ফোনে চালু ([[DashboardEngine::overall()]]); রুটে can: নেই',
