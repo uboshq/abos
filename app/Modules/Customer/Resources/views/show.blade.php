@@ -123,7 +123,8 @@
             @if ($outstandingAll !== null)
                 <p class="mt-1 text-2xs text-(--color-ink-muted)" data-due-all-branches>
                     {{ __('customer::field.outstanding_all_branches') }}:
-                    <span class="num">{{ \App\Core\Support\Money::format($outstandingAll) }}</span>
+                    {{-- ⛔ (Dr)/(Cr) — ওপরের অঙ্কের একই ভাষা ([[AnAdvanceReadAsABareMinusTest]]) --}}
+                    <span class="num">{{ \App\Core\Support\Money::drCr($outstandingAll) }}</span>
                 </p>
             @endif
 

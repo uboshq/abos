@@ -43,7 +43,7 @@
             <p class="mt-1 text-2xl font-semibold">
                 <a href="{{ $ledgerUrl }}" data-figure="outstanding"
                    title="{{ __('customer::summary.open_ledger') }}"
-                   class="num {{ $link }} {{ bccomp($outstanding, '0', 4) < 0 ? 'text-(--color-danger)' : '' }}">{{ $money($outstanding) }}</a>
+                   class="num {{ $link }}">{{-- ⛔ (Dr)/(Cr), খালি বিয়োগ নয়, আর অগ্রিম বিপদ নয় — লাল ছিল (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnAdvanceReadAsABareMinusTest]]) --}}{{ \App\Core\Support\Money::drCr($outstanding) }}</a>
             </p>
 
             @if ($trade !== null)
