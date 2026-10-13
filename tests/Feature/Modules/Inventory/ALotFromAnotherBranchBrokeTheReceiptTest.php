@@ -49,6 +49,7 @@ final class ALotFromAnotherBranchBrokeTheReceiptTest extends TestCase
 
         // ⭐ এখন হেডারে কেবল নিজের শাখা — লটটা দেয়ালের আড়ালে
         $owner->forceFill(['view_all_branches' => false])->save();
+        app(\App\Core\Services\DataScope::class)->forget();
         $this->assertNull(Batch::query()->find($lot->id), 'পরীক্ষার পূর্বশর্ত ভাঙা: লটটা দেয়ালের আড়ালে নেই, দাবিটা কিছু মাপছে না।');
 
         $again = app(BatchService::class)->receive($product, 'LOT-SHARED');

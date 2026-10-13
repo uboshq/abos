@@ -50,6 +50,8 @@ final class TheApprovedLotsRejectsCouldBeReleasedForSaleTest extends TestCase
             'unit_id' => Unit::query()->orderBy('id')->firstOrFail()->id, 'qc_required' => true, 'is_active' => true,
         ]);
         app(StockService::class)->move(product: $this->product, warehouse: $this->warehouse, sourceType: 'test_opening', sourceId: $this->product->id, floor: '100');
+        // ⓘ দরসহ — বিনাশের খরচ স্তর থেকে আসে, আর স্তরহীন মাল খাতা থেকে বাদ যায় না ([[CostLayerService::issue()]])
+        app(\App\Modules\Inventory\Services\CostLayerService::class)->receive($this->product, '100', '10', 'test_opening', (int) $this->product->id);
     }
 
     private function approvedWithFiveBad(): QualityInspection
