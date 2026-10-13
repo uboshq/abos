@@ -46,6 +46,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 
@@ -725,6 +726,16 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         $look = app(InvoicePrintLook::class);
         $chosen = $request->has('prices') ? $request->boolean('prices') : null;
+
+        /*
+         * ⛔ "টাকাসহ" বাছাই কেবল বিল দেখার চাবিওয়ালার — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা
+         * ([[OnlyABillViewerCanAskForAChallanWithPricesTest]])। ⓘ এই দরজা খোলে `sales.challan.view`-এ, গেটপাসের একই চাবিতে;
+         * ঠিকানায় `?prices=1` লিখে দারোয়ান বা চালক শাখার "দাম লুকাও" সুইচ পেরিয়ে দর আর বিলের মোট দেখতেন। টাকাগুলো বিলেরই
+         * ([[challanMoney()]]), তাই চাবিও বিলের; না থাকলে বাছাই বাতিল, শাখার সুইচই বলে। "টাকা ছাড়া" সবাই বাছতে পারেন।
+         */
+        if ($chosen === true && $request->user()?->can('sales.invoice.view') !== true) {
+            $chosen = null;
+        }
         $withMoney = $chosen ?? $look->challanShows('prices');
         $money = $withMoney ? $this->challanMoney($challan) : [];
         $request->attributes->set('print_variant', $withMoney ? 'with_amounts' : 'without_amounts');
@@ -2017,6 +2028,17 @@ class SalesPrintController extends Controller implements HasMiddleware
             $rows['sales::print.bill_discount'] = $this->money($billDiscount);
         }
 
+        /*
+         * ⛔ ভাড়ার সারি — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা ([[TheFreightHasItsOwnRowOnPaperTest]])। ⓘ মোটে ভাড়া ধরা
+         * ([[vatSplit()]], [[classicFacts()]] দুইটাই গোনে), অথচ চলতি বিল, খসড়া, বাতিল আর টাকাসহ চালানে সারিটা ছিল না — সারির যোগ
+         * মোটের সাথে মিলত না। নামটা নকশার বিলেরই ("ভাড়া"); শূন্য হলে সারি নেই, বাকি সারির মতো।
+         */
+        $freight = (string) ($document->freight_charge ?? '0');
+
+        if (bccomp($freight, '0', 4) > 0) {
+            $rows['sales::print.classic.freight'] = $this->money($freight);
+        }
+
         $rounding = (string) ($document->rounding_amount ?? '0');
 
         if (bccomp($rounding, '0', 4) !== 0) {
@@ -2173,24 +2195,9 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         $job = $type === null || $draftPrint ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
-        /*
-         * সীমা পেরোলে এখানেই থামে — PDF তৈরির আগে।
-         *
-         * পরে বসালে কাগজটা তৈরি হয়ে যেত, শুধু ফেরত দেওয়া হত না — আর
-         * তখন গোনাটা বেড়ে যেত এমন একটা কাগজের জন্য যেটা কেউ পায়নি।
-         */
-        if ($job !== null) {
-            $this->queue->assertMayPrint($job);
-        }
-
-        if ($job?->isReprint()) {
-            // ⭐ কততম ছাপা — আগে যতবার + এইবার (মালিক, ৩০ সেপ্টেম্বর ২০২৬)
-            $doc = $doc->withNotice(__('core.print.duplicate_notice', ['n' => $job->printed_count + 1]));
-        }
-
         $locale = app()->getLocale();
 
-        $pdf = $this->print->render(
+        $render = fn (PrintableDocument $doc): string => $this->print->render(
             template: $template,
             data: [
                 ...$extra,
@@ -2208,9 +2215,24 @@ class SalesPrintController extends Controller implements HasMiddleware
             watermark: $this->watermarkFor($document),
         );
 
-        if ($job !== null) {
-            $this->queue->printed($job);
-        }
+        /*
+         * সীমা পেরোলে থামে — PDF তৈরির আগে। পরে বসালে কাগজটা তৈরি হয়ে যেত, শুধু ফেরত দেওয়া হত না।
+         *
+         * ⛔ সীমা, গোনা আর DUPLICATE — এক তালায়, এক লেনদেনে (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা; [[PrintQueue::claim()]])।
+         * ⓘ আগে সীমা আর "আগে ছাপা কি না" দেখা হত বাসি সারিতে, গোনা বাড়ত পরে — একই বিল দুই ট্যাবে একসাথে ছাপলে দুইটাই আসল কাগজ
+         * হয়ে বেরোত। এখন জায়গা নেওয়া আগে, নোটিশ তাজা গোনা দেখে; আঁকা ব্যর্থ হলে লেনদেন ফেরে, গোনাও ফেরে — ব্যর্থ চেষ্টা আগের
+         * মতোই গোনায় পড়ে না।
+         */
+        $pdf = $job === null ? $render($doc) : DB::transaction(function () use ($job, $doc, $render): string {
+            $claimed = $this->queue->claim($job);
+
+            if ($claimed->printed_count > 1) {
+                // ⭐ কততম ছাপা — এইবারেরটা সহ (মালিক, ৩০ সেপ্টেম্বর ২০২৬)
+                $doc = $doc->withNotice(__('core.print.duplicate_notice', ['n' => $claimed->printed_count]));
+            }
+
+            return $render($doc);
+        });
 
         /*
          * ⭐ কাগজটা কোথায় গেল — ছাপা নাকি ফাইল হয়ে নামানো (২০ সেপ্টেম্বর ২০২৬)।

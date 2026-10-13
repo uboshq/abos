@@ -50,7 +50,7 @@ final class PrintQueue
          * `firstOrCreate` আগের সারিটা দেখত না, আবার বসাতে যেত, আর `uq_sal_print_job_document` → ৫০০। ⭐ এই সারিটা
          * হিসাবের খাতা, দেখার তালিকা নয় — কাগজটা খোলার অনুমতি ছাপার দরজাই আগে যাচাই করেছে; কোম্পানির দেয়াল থাকে।
          */
-        return DB::transaction(fn () => PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->firstOrCreate(
+        return DB::transaction(fn () => PrintJob::query()->withoutGlobalScopes([PrintJob::DEALER_WALL, 'user-branch'])->firstOrCreate(
             [
                 'document_type' => $type,
                 'document_id' => $id,
@@ -137,14 +137,52 @@ final class PrintQueue
      */
     public function printed(PrintJob $job): PrintJob
     {
-        $job->update([
+        return DB::transaction(fn () => $this->count($job, $this->lock($job)));
+    }
+
+    /**
+     * ⭐ ছাপার জায়গা নেওয়া — সীমা দেখা আর গোনা বাড়ানো একই তালার ভিতরে (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা;
+     * [[TwoPrintsAtOnceAreNotBothOriginalsTest]])।
+     *
+     * ⛔ আগে সীমা দেখা হত তালা ছাড়া পড়া সারিতে ([[mayPrint()]]), আর গোনা লেখা হত সেই বাসি কপির `printed_count + 1`। একই বিল
+     * দুই ট্যাবে একসাথে ছাপলে দুইটাই ০ দেখত: দুইটাই সীমা পেরোত, দুইটাই DUPLICATE ছাড়া "আসল" ছাপা হত, আর গোনা হত ১ — দুইটা
+     * আসল কাগজ, খাতায় একটা। ⓘ এখন দ্বিতীয়জন প্রথমজনের কমিট পর্যন্ত অপেক্ষা করেন, তাজা গোনা দেখেন: ২য় ছাপা, বা সীমা পেরোলে থামা।
+     *
+     * ফেরে তাজা সারি — `printed_count` = এইবারেরটা সহ; ১-এর বেশি মানে এই কাগজ DUPLICATE। ⚠️ লেনদেনের ভিতরে ডাকুন যদি কাগজ
+     * আঁকা ব্যর্থ হলে গোনাটাও ফেরাতে চান ([[SalesPrintController::pdf()]])।
+     */
+    public function claim(PrintJob $job): PrintJob
+    {
+        return DB::transaction(function () use ($job): PrintJob {
+            $fresh = $this->lock($job);
+            $this->assertMayPrint($fresh);
+
+            return $this->count($job, $fresh);
+        });
+    }
+
+    /** ⓘ তালাসহ তাজা সারি — দেয়াল ছাড়া, [[reread()]]-এর একই কারণে */
+    private function lock(PrintJob $job): PrintJob
+    {
+        return PrintJob::query()->withoutGlobalScopes([PrintJob::DEALER_WALL, 'user-branch'])->lockForUpdate()->findOrFail($job->getKey());
+    }
+
+    /**
+     * গোনা এক বাড়ানো — তাজা (তালাবন্ধ) সারির ওপর, মডেলের `update()` দিয়ে যাতে অডিটে ৩ → ৪ থাকে।
+     * ⓘ হাতের কপিটাও তাজা করা হয়, যাতে ডাকা জায়গা বাসি গোনা নিয়ে না থাকে।
+     */
+    private function count(PrintJob $job, PrintJob $fresh): PrintJob
+    {
+        $fresh->update([
             'status' => PrintJob::PRINTED,
-            'printed_count' => $job->printed_count + 1,
+            'printed_count' => $fresh->printed_count + 1,
             'printed_at' => now(),
             'failure' => null,
         ]);
 
-        return $this->reread($job);
+        $job->setRawAttributes($fresh->getAttributes(), true);
+
+        return $fresh;
     }
 
     /** চেষ্টা ব্যর্থ — কারণসহ, কারণ কাগজ ফুরানো আর প্রিন্টার বন্ধ এক নয়। */
@@ -164,7 +202,7 @@ final class PrintQueue
      */
     private function reread(PrintJob $job): PrintJob
     {
-        return PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->findOrFail($job->getKey());
+        return PrintJob::query()->withoutGlobalScopes([PrintJob::DEALER_WALL, 'user-branch'])->findOrFail($job->getKey());
     }
 
     /**
