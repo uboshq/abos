@@ -212,6 +212,25 @@ class PeriodLockController extends Controller implements HasMiddleware
 
         $label = $lock->label();
 
+        /*
+         * ⛔ পরের মাস তালাবন্ধ থাকলে আগেরটা খোলে না — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AnEarlierMonthStaysShutWhileALaterOneIsTest]])।
+         * ⓘ বন্ধের দিকে নিয়মটা আছে ([[earliestOpenMonthBefore()]]): আগের মাস খোলা রেখে পরেরটা বন্ধ নয়, কারণ আগের মাসে পরে বসা হিসাব
+         * পরের মাসের ছাপা শুরুর জের বদলায়। খোলার দিকে ছিল না — আগস্ট খুলে বসালে সেপ্টেম্বর "বন্ধ" দেখাত, অথচ তার শুরুর জের বদলে গেছে।
+         * ক্রম উল্টো: আগে পরের মাস খুলুন।
+         */
+        $later = PeriodLock::query()
+            ->where(fn ($q) => $q->where('year', '>', $lock->year)
+                ->orWhere(fn ($w) => $w->where('year', $lock->year)->where('month', '>', $lock->month)))
+            ->orderByDesc('year')->orderByDesc('month')
+            ->first();
+
+        if ($later !== null) {
+            return back()->withErrors(['reason' => __('accounts::validation.later_month_locked', [
+                'later' => $later->label(),
+                'month' => $label,
+            ])]);
+        }
+
         $this->audit->recordAction($lock, 'reopened', $data['reason']);
 
         $lock->delete();
