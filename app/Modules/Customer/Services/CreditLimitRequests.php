@@ -194,6 +194,19 @@ final class CreditLimitRequests
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            /*
+             * ⛔ সই "বাড়ানো"-র, কমানোর নয় — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⚠️ অপেক্ষার মাঝে সীমা অন্য পথে
+             * (গ্রাহকের ফর্মে মালিক) চাওয়ার চেয়েও বেশি উঠে গেলে পুরনো অনুরোধের সই সেটা নীরবে নামিয়ে দিত। ⓘ তখন অনুরোধ বাতিল,
+             * কারণ লেখা, সীমা যেমন আছে।
+             */
+            if ($request->kind === CustomerCreditRequest::LIMIT
+                && bccomp((string) $request->requested_limit, bcadd((string) ($customer->credit_limit ?? '0') ?: '0', '0', 4), 4) <= 0) {
+                $request->forceFill(['status' => CustomerCreditRequest::VOID, 'decided_at' => now(),
+                    'note' => __('customer::credit_request.already_higher')])->save();
+
+                return;
+            }
+
             $this->apply($request, $customer, (int) $approval->id);
         });
     }
