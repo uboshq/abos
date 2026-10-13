@@ -190,25 +190,30 @@ final class PayrollService
          * সীমাটা মানুষ ওই সংখ্যাটা ধরেই ভাবেন ("দুই লাখের উপরে হলে
          * আমাকে জিজ্ঞেস কোরো"), আর কর্তনের আগের সংখ্যাটা সবসময় বড় বলে
          * সীমাটা নীরবে কড়া হয়ে যেত।
+         *
+         * ⛔ সই যে অঙ্কে দেখা হল, তুলনাও সেই অঙ্কে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+         * ([[TheSignatureCoversTheNetThatIsPostedTest]])। ⓘ আগে তুলনার অঙ্কটা পড়া হত তালার পরে, তাজা সারি থেকে: সই দেখা হল
+         * ১,৯৯,০০০-এ, এর মধ্যে আরেক ট্যাবে "আবার বানান" net তুলল ২,০৫,০০০-এ, আর তালার পরে সেটাই "সই হওয়া" অঙ্ক ধরে সই
+         * ছাড়া খাতায় বসত। এখন সই-দেখা অঙ্কটাই ধরে রাখা হয় — তাজা net তার বেশি হলে নিচের যাচাই থামায়, আর নতুন অঙ্কে আবার সই দেখা হয়।
          */
+        $signedNet = (string) $run->net_total;
+
         $this->approvals->assertClear(
             document: $run,
             module: 'hr',
             action: 'payroll',
             field: 'status',
-            amount: (string) $run->net_total,
+            amount: $signedNet,
             reason: $run->narration,
         );
 
-        $posted = DB::transaction(function () use ($run) {
+        $posted = DB::transaction(function () use ($run, $signedNet) {
             /*
              * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
              * ⓘ পুরনো কপি থেকে "নিশ্চিত" চাপলে বাতিল হয়ে যাওয়া রানও খাতায় বসত।
              */
             $this->lockFresh($run);
             $this->assertDraft($run);
-
-            $signedNet = (string) $run->net_total;
 
             $this->capAdvancesNow($run);
 
