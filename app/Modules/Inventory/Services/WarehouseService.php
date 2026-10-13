@@ -73,8 +73,17 @@ final class WarehouseService
      */
     public function update(Warehouse $warehouse, array $data): Warehouse
     {
-        if (trim((string) $data['code']) !== $warehouse->code) {
-            $this->assertCodeIsFree(trim((string) $data['code']), $warehouse->id);
+        /*
+         * ⓘ খালি কোড মানে পুরনোটাই থাকে — পণ্যের একই নিয়ম ([[ProductService::update()]], ছ১৫)। ⛔ আগে ঘর খালি করে রাখলে
+         * NULL বসাতে গিয়ে ৫০০ (কলাম NOT NULL), আর ঘরটা না এলে "undefined key" (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+         */
+        $code = trim((string) ($data['code'] ?? ''));
+
+        if ($code === '') {
+            unset($data['code']);
+        } elseif ($code !== $warehouse->code) {
+            $this->assertCodeIsFree($code, $warehouse->id);
+            $data['code'] = $code;
         }
 
         /*
