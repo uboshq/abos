@@ -30,8 +30,8 @@ use Illuminate\Validation\ValidationException;
  * মাসে (IAS 1 / IFRS 9-এর জমা-ভিত্তি)।
  *
  * ── অঙ্ক ──────────────────────────────────────────────────────────────────────
- *   · মেয়াদি / LTR / লিজ — মাসের শেষ দিনে খাতার বাকি আসল × হার × (শেষ কিস্তির দিন বা মঞ্জুরি থেকে মাসের শেষ পর্যন্ত দিন) ÷ ৩৬৫
- *   · CC — মাসের প্রতিটা দিনের তোলা জের × হার ÷ ৩৬৫, যোগ (দৈনিক জের)
+ *   · কিস্তির সূচিওয়ালা ঋণ (মেয়াদি, লিজ) — মাসের শেষ দিনে খাতার বাকি আসল × হার × (শেষ কিস্তির দিন বা মঞ্জুরি থেকে মাসের শেষ পর্যন্ত দিন) ÷ ৩৬৫
+ *   · CC, LTR আর সূচিহীন লিজ — মাসের প্রতিটা দিনের তোলা জের × হার ÷ ৩৬৫, যোগ (দৈনিক জের)
  *   জের আসে [[BankFacilityService::owedOn()]] থেকে — ঋণের পাতা, রিপোর্ট আর বিবরণী যেটা পড়ে।
  *
  * ── ⛔ পাহারা ───────────────────────────────────────────────────────────────────
@@ -75,7 +75,13 @@ final class InterestAccrualService
 
         foreach ($facilities as $facility) {
             $rate = bcadd((string) $facility->interest_rate, '0', 4);
-            [$days, $base, $amount] = $facility->kind === BankFacility::CC
+
+            /*
+             * ⛔ কিস্তির সূচি নেই (LTR, কিস্তির সংখ্যা ছাড়া লিজ) — CC-র মতো মাসের দৈনিক জের (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⓘ আগে "শেষ কিস্তির দিন" খুঁজে না পেয়ে মঞ্জুরির দিন থেকে গোনা হত: জানুয়ারিতে মঞ্জুর ১০ লাখের LTR-এ অক্টোবরের শেষে
+             * ৩০৩ দিনের সুদ (~৯৯,৬০০) প্রদেয়তে, অথচ মাসের সুদ ~১০,২০০ — ব্যাংক যা কেটেছে তা আবার জমত, দায় দশ গুণ।
+             */
+            [$days, $base, $amount] = $facility->kind === BankFacility::CC || $this->facilities->schedule($facility) === null
                 ? $this->daily($facility, $start, $end, $rate)
                 : $this->sinceLastInstalment($facility, $end, $rate);
 
@@ -307,7 +313,8 @@ final class InterestAccrualService
         }
 
         $days = (int) $from->diffInDays($end);
-        $amount = bcdiv(bcmul(bcmul($owed, $rate, 8), (string) $days, 8), '36500', 2);
+        // ⓘ পয়সায় গোল, কেটে নয় — আগে প্রতি ঋণে মাসে এক পয়সা পর্যন্ত হারাত (ec, Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $amount = \App\Core\Support\Money::round(bcdiv(bcmul(bcmul($owed, $rate, 8), (string) $days, 8), '36500', 8), 2);
 
         return [$days, bcadd($owed, '0', 4), $amount];
     }
@@ -332,7 +339,7 @@ final class InterestAccrualService
             return [0, '0', '0'];
         }
 
-        return [$days, bcdiv($sum, (string) $days, 4), bcdiv(bcmul($sum, $rate, 8), '36500', 2)];
+        return [$days, bcdiv($sum, (string) $days, 4), \App\Core\Support\Money::round(bcdiv(bcmul($sum, $rate, 8), '36500', 8), 2)];
     }
 
     /** ছকের খাত — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয়; [[StandardChart::install()]] কেবল যা নেই তা-ই বসায় */

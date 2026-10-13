@@ -44,6 +44,9 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
 
     private const RATE = '12';
 
+    /** ⓘ কিস্তির সাথে দেওয়া সুদ — জমা সেদিন থেকে শুরু হয় */
+    private const PAID = '100';
+
     private BankFacility $loan;
 
     protected function setUp(): void
@@ -72,12 +75,14 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
 
     public function test_a_term_loan_accrues_from_its_last_instalment_to_month_end(): void
     {
+        // ⓘ ৭ আগস্টের কিস্তিতে সুদ দেওয়া — জমা সেদিন থেকে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬: আগে সূচির দিন ধরেই গুনত, দেওয়া হোক বা না হোক)
+        $this->payInterest('2026-08-07');
         $done = app(InterestAccrualService::class)->run(Carbon::parse('2026-08-01'));
         $accrual = InterestAccrual::query()->where('bank_facility_id', $this->loan->id)->firstOrFail();
 
         // ⓘ শেষ কিস্তির দিন ৭ আগস্ট → ৩১ আগস্ট = ২৪ দিন; বাকি আসল ১২,০০,০০০
         $this->assertSame(24, $accrual->days);
-        $this->assertSame(bcdiv(bcmul(bcmul(self::LIMIT, self::RATE, 8), '24', 8), '36500', 2), bcadd((string) $accrual->amount, '0', 2));
+        $this->assertSame(\App\Core\Support\Money::round(bcdiv(bcmul(bcmul(self::LIMIT, self::RATE, 8), '24', 8), '36500', 8), 2), bcadd((string) $accrual->amount, '0', 2));
         $this->assertSame(1, $done['accrued']);
 
         $voucher = $this->settle($accrual->voucher);
@@ -85,7 +90,7 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
         $this->assertSame('2026-08-31', $voucher->trx_date->toDateString(), 'জমা মাসের শেষ দিনে নয়।');
         $this->assertSame(0, bccomp($this->balance(StandardChart::INTEREST_PAYABLE), bcadd((string) $accrual->amount, '0', 4), 2),
             '⛔ প্রদেয় সুদে জমাটা বসেনি।');
-        $this->assertSame(0, bccomp($this->balance(StandardChart::INTEREST_EXPENSE), bcadd((string) $accrual->amount, '0', 4), 2));
+        $this->assertSame(0, bccomp($this->balance(StandardChart::INTEREST_EXPENSE), bcadd((string) $accrual->amount, self::PAID, 4), 2));
     }
 
     public function test_one_month_once_and_never_a_month_not_yet_over(): void
@@ -103,10 +108,12 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
     public function test_the_next_month_reverses_the_last_one_on_its_first_day(): void
     {
         $service = app(InterestAccrualService::class);
+        $this->payInterest('2026-08-07');
         $service->run(Carbon::parse('2026-08-01'));
         $august = InterestAccrual::query()->firstOrFail();
         $this->settle($august->voucher);
 
+        $this->payInterest('2026-09-07');
         $done = $service->run(Carbon::parse('2026-09-01'));
         $september = InterestAccrual::query()->where('for_month', '2026-09-01')->firstOrFail();
         $this->settle($september->voucher);
@@ -152,7 +159,7 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
         $accrual = InterestAccrual::query()->where('bank_facility_id', $cc->id)->firstOrFail();
 
         $sum = bcadd(bcmul('300000', '6', 4), bcmul('400000', '16', 4), 4);
-        $this->assertSame(bcdiv(bcmul($sum, '10', 8), '36500', 2), bcadd((string) $accrual->amount, '0', 2), '⛔ CC-র সুদ দৈনিক জের ধরে নয়।');
+        $this->assertSame(\App\Core\Support\Money::round(bcdiv(bcmul($sum, '10', 8), '36500', 8), 2), bcadd((string) $accrual->amount, '0', 2), '⛔ CC-র সুদ দৈনিক জের ধরে নয়।');
         $this->assertSame(31, $accrual->days);
     }
 
@@ -253,6 +260,15 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
     private function liability(): Account
     {
         return Account::query()->where('code', '2211')->firstOrFail();
+    }
+
+    /** কিস্তির দিনে সুদ দেওয়া — ঋণের নামে, ৫৩১০-এ ডেবিট */
+    private function payInterest(string $on): void
+    {
+        $this->journal($this->loan, $on, [
+            ['account_id' => StandardChart::find(StandardChart::INTEREST_EXPENSE)->id, 'debit' => self::PAID, 'credit' => '0'],
+            ['account_id' => $this->equity()->id, 'debit' => '0', 'credit' => self::PAID],
+        ]);
     }
 
     private function equity(): Account

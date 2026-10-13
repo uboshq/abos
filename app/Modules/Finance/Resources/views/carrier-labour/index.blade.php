@@ -101,7 +101,7 @@
 
             <x-ui.table :rows="$statement['rows']" :empty="__('finance::carrier_labour.none')" :columns="[
                 ['key' => 'date', 'label' => __('finance::carrier_labour.date'), 'width' => '7rem',
-                 'render' => fn ($e) => $e->trx_date?->format('d M Y')],
+                 'render' => fn ($e) => $e->trx_date?->translatedFormat('j M Y')],
                 ['key' => 'document', 'label' => __('finance::carrier_labour.document'), 'width' => '9rem',
                  'render' => fn ($e) => view('finance::bank-charge.partials.drill', ['entry' => $e])],
                 ['key' => 'narration', 'label' => __('finance::carrier_labour.narration'),

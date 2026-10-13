@@ -12,7 +12,9 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Finance\Listeners\UndoThePaperOfACancelledVoucher;
 use App\Modules\Finance\Models\Deposit;
+use App\Modules\Finance\Models\DepositAccrual;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
 use App\Modules\Finance\Models\Institution;
@@ -215,6 +217,8 @@ final class DepositService
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::RECEIPT,
+                    // ⛔ জমার শাখায় — হেডারের শাখায় নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[putMoneyIn()]])
+                    'branch_id' => $deposit->branch_id,
                     'trx_date' => (string) $data['moved_on'],
                     'narration' => $data['note'] ?? __('finance::message.deposit_payout_narration', [
                         'no' => $deposit->document_no,
@@ -308,6 +312,7 @@ final class DepositService
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::RECEIPT,
+                    'branch_id' => $deposit->branch_id,
                     'trx_date' => (string) $data['moved_on'],
                     'narration' => $data['note'] ?? __('finance::message.deposit_closed_narration', [
                         'no' => $deposit->document_no,
@@ -369,8 +374,18 @@ final class DepositService
             ]);
         }
 
-        return DB::transaction(function () use ($deposit, $reason) {
-            foreach ($deposit->movements()->with('voucher')->get() as $movement) {
+        // ⓘ জমার নিজের বাতিল — Accounts-এর পাহারা ([[UndoThePaperOfACancelledVoucher]]) এখানে থামায় না, জমা নিজেই অবস্থা বদলায়
+        return DB::transaction(fn () => UndoThePaperOfACancelledVoucher::byFinance(function () use ($deposit, $reason) {
+            $this->lockFresh($deposit);
+
+            if ($deposit->isCancelled()) {
+                throw ValidationException::withMessages([
+                    'status' => __('finance::validation.deposit_already_cancelled', ['no' => $deposit->document_no]),
+                ]);
+            }
+
+            // ⛔ ভাউচার শাখার দেয়াল ছাড়া — হেডারে অন্য শাখা থাকলে জমার ভাউচার "নেই" হয়ে বাতিল না হয়ে খাতায় থেকে যেত (১৩ অক্টোবর ২০২৬)
+            foreach ($deposit->movements()->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch')])->get() as $movement) {
                 $voucher = $movement->voucher;
 
                 /*
@@ -388,6 +403,23 @@ final class DepositService
                 ]));
             }
 
+            /*
+             * ⛔ মাসের অর্জিত মুনাফাও ফেরে — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে জমা বাতিল হত, অথচ তার মাসশেষের মুনাফা
+             * (১১৬৫/৪৩১০) খাতায় থাকত — যে জমা কখনো ছিল না তার আয়; সইয়ের অপেক্ষার জমা পরে সই পেলে আবার বসত। ভাউচার বাতিল হলে
+             * উল্টো দাখিলা আর মাসের সারি নিজে যায় ([[UndoThePaperOfACancelledVoucher]])।
+             */
+            $accruals = Voucher::acrossBranches()
+                ->whereIn('id', DepositAccrual::query()->where('deposit_id', $deposit->id)->select('voucher_id'))
+                ->where('status', '!=', DocumentStatus::CANCELLED)
+                ->get();
+
+            foreach ($accruals as $accrual) {
+                $this->vouchers->cancel($accrual, __('finance::message.deposit_cancel_narration', [
+                    'no' => $deposit->document_no,
+                    'why' => $reason,
+                ]));
+            }
+
             $deposit->forceFill([
                 'status' => Deposit::CANCELLED,
                 'cancel_reason' => trim($reason),
@@ -396,7 +428,7 @@ final class DepositService
             ])->save();
 
             return $deposit->fresh();
-        });
+        }));
     }
 
     /**
@@ -410,7 +442,8 @@ final class DepositService
      */
     public function standing(?string $issuer = null): array
     {
-        $rows = Deposit::query()->open()
+        // ⛔ হেডারে বাছা শাখা — নিচের তালিকার একই সারি; আগে মোট সব শাখার, তালিকা এক শাখার (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $rows = Deposit::query()->inViewedBranch()->open()
             ->when($issuer !== null, fn ($q) => $q->issuedBy($issuer))
             ->with('kind')->get();
 
@@ -445,6 +478,11 @@ final class DepositService
         $voucher = $this->vouchers->create(
             [
                 'type' => Voucher::PAYMENT,
+                /*
+                 * ⛔ জমার শাখায় — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে খোলা, কিস্তি, মুনাফা আর ভাঙা হেডারের শাখায় বসত: ক শাখার
+                 * জমা খ শাখা দেখানো অবস্থায় ভাঙলে ১১৬০ ক-তে +, খ-তে − থাকত, আর মুনাফাও খ-এর আয়ে।
+                 */
+                'branch_id' => $deposit->branch_id,
                 'trx_date' => $on,
                 'narration' => $note ?? __('finance::message.deposit_opened_narration', [
                     'no' => $deposit->document_no,
@@ -587,6 +625,7 @@ final class DepositService
 
             $voucher = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
+                'branch_id' => $deposit->branch_id,
                 'trx_date' => $on,
                 'narration' => $data['note'] ?? __('finance::deposit_report.lien_narration', [
                     'no' => $deposit->document_no, 'loan' => trim($facility->bank.' · '.$facility->document_no, ' ·'),
@@ -738,6 +777,16 @@ final class DepositService
                 return;
             }
 
+            /*
+             * ⛔ জমাটা এর মধ্যে বন্ধ হয়ে গেলে খোলা ছাড়া কিছুই বসে না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (ec)। ⓘ আগে দুটো
+             * অপেক্ষার ভাঙায় দুটো সই পড়লে দুটোই বসত: ১১৬০ থেকে দুবার মূলধন বেরোত।
+             */
+            if ($movement->kind !== DepositMovement::OPENED && $deposit->status !== Deposit::ACTIVE) {
+                throw ValidationException::withMessages([
+                    'status' => __('finance::validation.deposit_already_closed', ['no' => $deposit->document_no]),
+                ]);
+            }
+
             $this->vouchers->post($voucher);
 
             match ($movement->kind) {
@@ -785,7 +834,8 @@ final class DepositService
     /** চলাচলের ভাউচারটা কি সই-এর অপেক্ষায় (খসড়া)? */
     private function waits(DepositMovement $movement): bool
     {
-        return Voucher::query()->whereKey($movement->voucher_id)->value('status') === DocumentStatus::DRAFT;
+        // ⓘ শাখার দেয়াল ছাড়া — ভাউচার জমার শাখায়, হেডারে অন্য শাখা থাকলেও অবস্থাটা সত্যি
+        return Voucher::acrossBranches()->whereKey($movement->voucher_id)->value('status') === DocumentStatus::DRAFT;
     }
 
     /**
@@ -832,7 +882,7 @@ final class DepositService
          */
         $waiting = DepositMovement::query()
             ->where('deposit_id', $deposit->id)
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::DRAFT))
             ->exists();
 
         if ($waiting) {

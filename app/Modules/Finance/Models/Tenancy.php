@@ -147,7 +147,7 @@ class Tenancy extends Model implements Drillable
     {
         $left = $this->collected();
 
-        foreach ($this->charges()->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED))->get() as $charge) {
+        foreach ($this->charges()->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::CONFIRMED))->get() as $charge) {
             $left = bcsub($left, (string) $charge->amount, 4);
 
             if (bccomp($left, '0', 4) < 0) {

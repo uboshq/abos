@@ -8,8 +8,11 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
@@ -69,6 +72,19 @@ class BankFacilityService
         $kind = (string) ($data['kind'] ?? '');
 
         $this->assertKindHasWhatItNeeds($kind, $data);
+
+        /*
+         * ⛔ CC-তে খোলার দিনের "তোলা" নেওয়া হয় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️১)।
+         * ⓘ CC-র দেনা ব্যাংক হিসাবের নিজের জেরেই থাকে ([[openingFor()]] তাই খোলা দাখিলা বসায় না); এখানে লেখা অঙ্কটা
+         * [[standing()]] ব্যাংকের জেরের ওপর আবার যোগ করত — পর্দায় ব্যবহৃত দ্বিগুণ, আর মাসের সুদও দ্বিগুণ।
+         */
+        $drawn = (string) ($data['opening_drawn'] ?? '');
+
+        if ($kind === BankFacility::CC && $drawn !== '' && bccomp($drawn, '0', 4) !== 0) {
+            throw ValidationException::withMessages([
+                'opening_drawn' => __('finance::validation.cc_opening_drawn_lives_in_the_bank'),
+            ]);
+        }
 
         /*
          * ⭐ ব্যাংকটা এখন তালিকা থেকে ([[Institution]]), আর নতুন নাম
@@ -304,10 +320,21 @@ class BankFacilityService
             return true;
         }
 
+        /*
+         * ⛔ মঞ্জুরির মাস বন্ধ থাকলে আজকের তারিখে — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️২)।
+         * ⓘ আগে বন্ধ মাসে পুরো জমাটাই থামত, আর বছর আগের ঋণ কোনোদিন তোলা যেত না। খোলা মাসে আগের মতোই মঞ্জুরির দিন —
+         * সব সময় আজকের তারিখে (খোলা ব্যালেন্সের নিয়ম) বসানো হবে কি না, সেটা মালিকের সিদ্ধান্তের অপেক্ষায়।
+         */
+        $on = $facility->sanctioned_on->toDateString();
+
+        if (app(OpenPeriod::class)->lockOn($on) !== null) {
+            $on = now()->toDateString();
+        }
+
         $this->posting->post(
             sourceType: self::OPENING_SOURCE,
             sourceId: (int) $facility->id,
-            trxDate: $facility->sanctioned_on->toDateString(),
+            trxDate: $on,
             lines: [
                 ['account_id' => (int) $equity->id, 'debit' => $outstanding],
                 ['account_id' => (int) $facility->liability_account_id, 'credit' => $outstanding],
@@ -528,6 +555,8 @@ class BankFacilityService
     {
         return BankFacility::query()
             ->live()
+            // ⛔ দেখার শাখায় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️৪); আগে হেডারে এক শাখা বাছা থাকলেও অন্য শাখার ঋণ দেখাত
+            ->inViewedBranch()
             ->whereNotNull('renews_on')
             ->where('renews_on', '<=', now()->addDays(30)->toDateString())
             ->orderBy('renews_on')
@@ -578,15 +607,18 @@ class BankFacilityService
             }
         }
 
-        /* ⓘ কার খোলা বকেয়া ইতিমধ্যে খাতায় বসেছে — এক কোয়েরিতে */
-        $opened = DB::table('ledger_entries')
+        /*
+         * ⓘ কার খোলা বকেয়া ইতিমধ্যে খাতায় বসেছে — এক কোয়েরিতে। ⛔ সইয়ের পথে যাওয়া খোলা বকেয়াও "পুরনো" নয় (লাইন-ধরে নিরীক্ষা,
+         * ১৩ অক্টোবর ২০২৬): সই বাকি বা "না" হলে খাতায় নেই, আর লেখা অঙ্কটা বকেয়ায় যোগ হলে না-নেওয়া ঋণে সুদ জমত ([[signedPath()]])।
+         */
+        $opened = [...DB::table('ledger_entries')
             ->where('company_id', CompanyContext::id())
             ->where('source_type', self::OPENING_SOURCE)
             ->whereIn('source_id', $facilities->pluck('id')->all())
             ->distinct()
             ->pluck('source_id')
             ->map(fn ($id) => (int) $id)
-            ->all();
+            ->all(), ...$this->signedPath($facilities->pluck('id')->all())];
 
         $standing = [];
 
@@ -607,7 +639,8 @@ class BankFacilityService
              * ⚠️ পুরনো সারিগুলোর খোলা দাখিলা নেই, তাই ওদের লেখা
              * সংখ্যাটাই যোগ হয় — নাহলে ওদের বকেয়া হঠাৎ শূন্য দেখাত।
              */
-            $used = in_array((int) $facility->id, $opened, true)
+            // ⛔ CC-তে লেখা অঙ্ক কখনো যোগ নয় — দেনাটা ব্যাংকের জেরেই আছে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️১)
+            $used = in_array((int) $facility->id, $opened, true) || $facility->kind === BankFacility::CC
                 ? $ledger
                 : bcadd((string) ($facility->opening_drawn ?? '0'), $ledger, 4);
 
@@ -783,13 +816,47 @@ class BankFacilityService
      */
     public function legacyOpening(BankFacility $facility): string
     {
+        // ⛔ CC-র দেনা ব্যাংকের জেরেই — লেখা অঙ্ক যোগ করলে দ্বিগুণ, সুদও দ্বিগুণ (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️১)
+        if ($facility->kind === BankFacility::CC) {
+            return '0.0000';
+        }
+
         $opened = DB::table('ledger_entries')
             ->where('company_id', CompanyContext::id())
             ->where('source_type', self::OPENING_SOURCE)
             ->where('source_id', (int) $facility->id)
             ->exists();
 
-        return $opened ? '0.0000' : bcadd((string) ($facility->opening_drawn ?? '0'), '0', 4);
+        return $opened || $this->signedPath([(int) $facility->id]) !== []
+            ? '0.0000'
+            : bcadd((string) ($facility->opening_drawn ?? '0'), '0', 4);
+    }
+
+    /**
+     * ⭐ যে সুবিধাগুলোর খোলা বকেয়া সইয়ের পথে গেছে — অপেক্ষায়, "হ্যাঁ" বা "না" (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে খাতায় খোলা দাখিলা না থাকলেই লেখা `opening_drawn` "পুরনো তোলা" ধরে বকেয়ায় যোগ হত — সই বাকি বা ফিরিয়ে দেওয়া
+     * ২৫ লাখও বকেয়া দেখাত, আর মাসের সুদ জমা সেই না-নেওয়া ঋণে সুদ খরচ বসাত। ⓘ "পুরনো" মানে সই-ব্যবস্থার আগের সারি, যার কোনো
+     * সই চাওয়া হয়নি; সই চাওয়া হয়ে থাকলে খাতায় যা বসেছে কেবল তা-ই।
+     *
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private function signedPath(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return Approval::query()
+            ->where('approvable_type', BankFacility::class)
+            ->whereIn('approvable_id', $ids)
+            ->where('module', FinanceSignature::MODULE)
+            ->where('action', FinanceSignature::BANK_FACILITY)
+            ->distinct()
+            ->pluck('approvable_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
@@ -976,10 +1043,34 @@ class BankFacilityService
      */
     public function close(BankFacility $facility, ?string $note = null): void
     {
-        $facility->forceFill([
-            'status' => DocumentStatus::CLOSED,
-            'closed_on' => now()->toDateString(),
-            'note' => $note ?: $facility->note,
-        ])->save();
+        /*
+         * ⛔ সারিতে তালা, তারপর দুইটা পাহারা — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬:
+         *   · আগেই বন্ধ হলে আবার নয় — দুই ট্যাবের দ্বিতীয় চাপ বন্ধের দিনটা নীরবে বদলে দিত
+         *   · খাতায় বকেয়া থাকলে নয় — বন্ধ ঋণ সুদ জমা, কিস্তির ঘণ্টা আর সীমার তালিকা থেকে সরে যায়, অথচ দায়টা খাতায়
+         *     থেকে যেত কারো চোখের বাইরে; আগে শোধ (বা ব্যাংকের মওকুফ) খাতায় বসাতে হয়
+         */
+        DB::transaction(function () use ($facility, $note): void {
+            $this->lockFresh($facility);
+
+            if ($facility->status === DocumentStatus::CLOSED) {
+                throw ValidationException::withMessages([
+                    'note' => __('finance::validation.facility_already_closed', ['no' => $facility->document_no]),
+                ]);
+            }
+
+            $owed = $this->standing(collect([$facility]))[(int) $facility->id]['used'] ?? '0';
+
+            if (bccomp($owed, '0', 4) > 0) {
+                throw ValidationException::withMessages([
+                    'note' => __('finance::validation.facility_still_owed', ['no' => $facility->document_no, 'owed' => Money::format($owed)]),
+                ]);
+            }
+
+            $facility->forceFill([
+                'status' => DocumentStatus::CLOSED,
+                'closed_on' => now()->toDateString(),
+                'note' => $note ?: $facility->note,
+            ])->save();
+        });
     }
 }

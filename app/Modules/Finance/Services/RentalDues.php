@@ -70,7 +70,7 @@ final class RentalDues
         $done = RentalAdjustment::query()
             ->where('rental_contract_id', $contract->id)
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::DRAFT])))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::DRAFT])))
             ->pluck('for_month')
             ->map(fn ($m) => Carbon::parse((string) $m)->toDateString())
             ->all();
