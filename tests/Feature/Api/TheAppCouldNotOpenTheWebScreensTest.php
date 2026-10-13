@@ -139,6 +139,18 @@ final class TheAppCouldNotOpenTheWebScreensTest extends TestCase
         $this->assertSame(0, WebHandoff::query()->count());
     }
 
+    public function test_a_token_that_is_not_a_phone_sign_in_gets_no_key_even_if_its_name_ends_in_a_real_phone(): void
+    {
+        $this->login('accounts@abos.test');
+        $accountant = $this->user('accounts@abos.test');
+
+        // ⛔ অ্যাপের চাবিওয়ালা কিন্তু ফোনের লগইনের নয় — নামের শেষটা একটা আসল ফোনের, শুরুটা নয়
+        $other = $accountant->createToken('evil:'.self::PHONE, ['app'])->plainTextToken;
+
+        $this->key($other, route('accounts.coa.index', [], false))->assertForbidden()->assertJsonPath('reason', 'device_unknown');
+        $this->assertSame(0, WebHandoff::query()->count());
+    }
+
     // ── কোম্পানি ও শাখা ──────────────────────────────────────────────────────
 
     public function test_the_key_lands_in_the_company_it_was_made_for(): void
