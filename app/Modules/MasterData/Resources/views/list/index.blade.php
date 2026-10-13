@@ -94,7 +94,7 @@
                     'width' => '10rem',
                     'render' => fn ($r) => view('master_data::list.partials.value', [
                         'record' => $r, 'column' => $column,
-                        'field' => $spec['fields'][$column], 'options' => $options,
+                        'field' => $spec['fields'][$column], 'options' => $options, 'spec' => $spec,
                     ]),
                 ])->all(),
                 [
