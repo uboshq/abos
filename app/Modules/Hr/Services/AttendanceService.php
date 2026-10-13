@@ -74,13 +74,16 @@ final class AttendanceService
             }
         }
 
-        return Attendance::query()->updateOrCreate(
-            [
-                'employee_id' => $employee->id,
-                'work_date' => $day->toDateString(),
-            ],
-            $values,
-        )->fresh();
+        /*
+         * ⛔ কর্মীর সারিতে তালা, তারপর দিনের সারি — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ১২; [[Attendance::writeDay()]])।
+         * ⓘ একই দিন দুইজন একসাথে সংরক্ষণ করলে দ্বিতীয়জন এক-দিনে-এক-সারির চাবিতে ঠেকে ৫০০ পেতেন; এখন একই কর্মীর লেখা
+         * একটার পর একটা, আর দ্বিতীয়টা আগেরটার উপর বদল হয়ে বসে। ছুটির মঞ্জুরি আর প্রত্যাহারও আগে এই সারিতেই তালা দেয়।
+         */
+        return DB::transaction(function () use ($employee, $day, $values) {
+            Employee::query()->withoutGlobalScopes()->whereKey($employee->id)->lockForUpdate()->first();
+
+            return Attendance::writeDay($employee->id, $day->toDateString(), $values)->fresh();
+        });
     }
 
     /**
@@ -95,6 +98,9 @@ final class AttendanceService
             $marked = 0;
 
             $employees = Employee::query()->whereKey(array_keys($rows))->get()->keyBy('id');
+
+            // ⓘ কর্মীর তালা সবসময় id-র ক্রমে — দুইটা পাতা উল্টো ক্রমে পাঠালেও একে অন্যকে আটকে না রাখে (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            ksort($rows);
 
             foreach ($rows as $employeeId => $row) {
                 $employee = $employees->get((int) $employeeId);

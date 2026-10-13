@@ -253,18 +253,13 @@ final class LeaveService
              */
             $share = Attendance::shareOf($application, $day);
 
-            Attendance::query()->updateOrCreate(
-                [
-                    'employee_id' => $application->employee_id,
-                    'work_date' => $day->toDateString(),
-                ],
-                [
-                    'status' => Attendance::LEAVE,
-                    'leave_application_id' => $application->id,
-                    'remarks' => bccomp($share, '1', 1) < 0 ? __('hr::message.leave_part_day', ['share' => $share]) : null,
-                    'created_by' => auth()->id(),
-                ],
-            );
+            // ⓘ কর্মীর সারিতে তালা [[approve()]]-এ আগেই; একসাথে অফিসের পাতা বা ফোন একই দিন লিখলে ৫০০ নয় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬, ⓘ১২)
+            Attendance::writeDay((int) $application->employee_id, $day->toDateString(), [
+                'status' => Attendance::LEAVE,
+                'leave_application_id' => $application->id,
+                'remarks' => bccomp($share, '1', 1) < 0 ? __('hr::message.leave_part_day', ['share' => $share]) : null,
+                'created_by' => auth()->id(),
+            ]);
 
             $day->addDay();
         }

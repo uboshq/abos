@@ -15,7 +15,9 @@ use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Services\AttendanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -198,6 +200,44 @@ final class AttendanceAndLeaveStayInsideTheBranchTest extends TestCase
         // ⓘ ঠিক তারিখ আগের মতোই সেই দিন খোলে
         $this->assertSame('2026-10-05', $this->get(route('hr.attendance.index', ['date' => '2026-10-05']))->assertOk()->viewData('date')->toDateString());
         $this->assertSame('2026-09', $this->get(route('hr.attendance.sheet', ['month' => '2026-09']))->assertOk()->viewData('month')->format('Y-m'));
+    }
+
+    /**
+     * ⛔ একই দিনের দুইটা লেখা একটার পর একটা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ১২; [[Attendance::writeDay()]])।
+     * ⓘ একসাথে দুইটা সংরক্ষণ পরীক্ষায় চালানো যায় না, তাই ক্রমটাই দেখা হয়: আগে কর্মীর সারিতে তালা, তারপর দিনের সারি — আছে
+     * তো তালা দিয়ে পড়ে বদল, নেই তো বসানো। আগে `updateOrCreate` তালা ছাড়া দেখত আর বসাত, আর দ্বিতীয়জন চাবিতে ঠেকে ৫০০ পেতেন।
+     */
+    public function test_a_day_is_written_under_the_employees_lock_so_a_second_save_becomes_an_update(): void
+    {
+        $sql = function (callable $write): array {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $write();
+            $log = array_map(fn (array $q) => strtolower((string) $q['query']), DB::getQueryLog());
+            DB::disableQueryLog();
+
+            return $log;
+        };
+        $first = fn (array $log, string $pattern): ?int => array_key_first(array_filter($log, fn (string $q) => preg_match($pattern, $q) === 1));
+
+        $created = $sql(fn () => app(AttendanceService::class)->mark($this->ours, '2026-10-05', Attendance::ABSENT));
+        $lock = $first($created, '/from `hr_employees`.* for update/');
+        $insert = $first($created, '/^insert into `hr_attendance`/');
+        $this->assertNotNull($lock, '⛔ কর্মীর সারিতে তালা ছাড়াই হাজিরা লেখা হল');
+        $this->assertNotNull($insert);
+        $this->assertLessThan($insert, $lock, '⛔ তালার আগেই হাজিরার সারি বসল');
+
+        $updated = $sql(fn () => app(AttendanceService::class)->mark($this->ours, '2026-10-05', Attendance::PRESENT));
+        $lock = $first($updated, '/from `hr_employees`.* for update/');
+        $rowLock = $first($updated, '/from `hr_attendance`.* for update/');
+        $update = $first($updated, '/^update `hr_attendance`/');
+        $this->assertNotNull($lock, '⛔ কর্মীর সারিতে তালা ছাড়াই হাজিরা বদলাল');
+        $this->assertNotNull($rowLock, '⛔ দিনের সারিটা তালা ছাড়া পড়ে বদলানো হল');
+        $this->assertNotNull($update);
+        $this->assertTrue($lock < $rowLock && $rowLock < $update, '⛔ তালার ক্রম উল্টো');
+        $this->assertNull($first($updated, '/^insert into `hr_attendance`/'), '⛔ থাকা সারির উপর আবার বসাতে গেল');
+
+        $this->assertSame([Attendance::PRESENT], Attendance::query()->where('employee_id', $this->ours->id)->pluck('status')->all());
     }
 
     /** ⭐ মালিকের শর্ত — super_admin-কে শাখার সারি থাকলেও দেয়াল আটকায় না */
