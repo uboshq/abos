@@ -313,6 +313,25 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
             ->sum(DB::raw('ledger_entries.debit - ledger_entries.credit'));
     }
 
+    /**
+     * ⛔ মঞ্জুরির আগের নবায়নের দিন আর ১০০%-এর বেশি আগাম শোধের চার্জ নেওয়া হত — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+     */
+    public function test_a_renewal_before_the_sanction_and_a_charge_over_a_hundred_percent_are_refused(): void
+    {
+        $this->post(route('finance.bank_facility.store'), $this->terms([
+            'sanctioned_on' => '2026-10-01', 'renews_on' => '2025-10-01',
+        ]))->assertSessionHasErrors('renews_on');
+
+        $this->post(route('finance.bank_facility.store'), $this->terms([
+            'early_charge' => '500', 'early_charge_kind' => BankFacility::CHARGE_PERCENT, 'early_charge_basis' => BankFacility::ON_PRINCIPAL,
+        ]))->assertSessionHasErrors('early_charge');
+
+        // ⓘ থোক অঙ্কে ১০০-এর বেশি চলে
+        $this->post(route('finance.bank_facility.store'), $this->terms([
+            'early_charge' => '500', 'early_charge_kind' => BankFacility::CHARGE_FLAT,
+        ]))->assertSessionDoesntHaveErrors('early_charge');
+    }
+
     /** আগে থেকেই চলা একটা মেয়াদি ঋণ — ছয় লাখ বকেয়া, দুইটা কিস্তি দেওয়া। */
     private function openRunningLoan(array $with = []): BankFacility
     {

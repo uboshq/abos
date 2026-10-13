@@ -253,7 +253,8 @@ class BankFacilityController extends Controller implements HasMiddleware
             'limit_amount' => ['required', 'numeric', 'min:0'],
             'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'term_months' => ['nullable', 'integer', 'min:1', 'max:600'],
-            'renews_on' => ['nullable', 'date'],
+            // ⛔ নবায়ন মঞ্জুরির আগে নয় — নইলে সুবিধাটা চিরকাল "নবায়ন বাকি" দেখাত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'renews_on' => ['nullable', 'date', 'after_or_equal:sanctioned_on'],
 
             'stock_value' => ['nullable', 'numeric', 'min:0'],
 
@@ -296,7 +297,9 @@ class BankFacilityController extends Controller implements HasMiddleware
              * ⓘ শতাংশ হলে ১০০-এর বেশি হতে পারে না; থোক হলে পারে,
              * তাই উপরের সীমাটা শতাংশের ক্ষেত্রেই।
              */
-            'early_charge' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ শতাংশে ১০০-এর বেশি নয় (উপরের টীকার নিয়ম, এতদিন লেখা ছিল না) — ৫০০ লিখলে আজকের শোধ বকেয়ার পাঁচ গুণ দেখাত
+            'early_charge' => ['nullable', 'numeric', 'min:0',
+                Rule::when($request->input('early_charge_kind') === BankFacility::CHARGE_PERCENT, ['max:100'])],
             'early_charge_kind' => ['nullable', Rule::in(BankFacility::CHARGE_KINDS)],
             'early_charge_basis' => ['nullable', Rule::in(BankFacility::CHARGE_BASES)],
 
