@@ -502,6 +502,14 @@ final class VoucherService
             throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_unknown')]);
         }
 
+        /*
+         * ⛔ বন্ধ কাগজ আর ভাউচার নেয় না — অর্থের নিরীক্ষা (fe, ১৪ অক্টোবর ২০২৬; [[AClosedFacilityTakesNoVoucherTest]])। ⓘ বন্ধ ব্যাংক
+         * সুবিধার বিপরীতে Accounts-এর ভাউচারে টাকা তোলা যেত; সুবিধার খাত সব ঋণের ভাগের, তাই খাত নয় — কাগজটাকেই প্রশ্ন ([[AcceptsVouchers]])।
+         */
+        if ($document instanceof \App\Core\Contracts\AcceptsVouchers && ! $document->acceptsVouchers()) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_closed')]);
+        }
+
         if (! $document instanceof SettlementTerms) {
             if ($document instanceof SettledByAVoucher) {
                 throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_unknown')]);
