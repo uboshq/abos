@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  *   সরাসরি    → কাউন্টারের বিক্রি — ইনভয়েসই, পর্দার ছবি থাকে (`counter_screen` / `counter_draft`); ১০০% বিল
  *   ফেরত     → মিলের প্রশ্ন নেই
  * ⓘ "বয়স" কেবল খোলা কাগজের (খসড়া বা নিশ্চিত) — বন্ধ বা বাতিল কাগজ আর কারও কাজ নয়।
- * ⓘ সংখ্যা লাইন থেকে, বাতিল চালান/বিল বাদ; শাখার দেয়াল প্রতিটা অংশে আলাদা করে ([[ReportEngine::branchWall()]])।
+ * ⓘ সংখ্যা লাইন থেকে, কেবল পাকা চালান/বিল (খসড়া আর বাতিল বাদ); শাখার দেয়াল প্রতিটা অংশে আলাদা করে ([[ReportEngine::branchWall()]])।
  */
 final class SalesRegisterReports
 {
@@ -72,7 +72,12 @@ final class SalesRegisterReports
     /** অর্ডার — ডেলিভারি % (চালানের লাইন) আর বিল % (সেই চালান-লাইনের বিল) */
     private static function orders(array $f): Builder
     {
-        $cancelled = DocumentStatus::CANCELLED;
+        /*
+         * ⛔ কেবল পাকা চালান আর বিল — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা ([[TheRegisterCountsOnlyPostedPapersTest]])।
+         * ⓘ আগে "বাতিল ছাড়া সব", তাই খসড়া চালান "ডেলিভারি হয়েছে" আর খসড়া বিল "বিল হয়েছে" দেখাত — মাল নড়েনি, খাতায় কিছু বসেনি।
+         * অবস্থার মান ধ্রুবক, ব্যবহারকারীর লেখা নয় — তাই সরাসরি বসানো ([[SalesReports]]-এর মাথার কারণ)।
+         */
+        $posted = "'".implode("', '", DocumentStatus::POSTED)."'";
 
         // ⭐ "আর দেওয়া হবে না" অংশ বাদ — বাকিটা বন্ধ করা আদেশ যা গেছে তাতেই ১০০% (নকশার ধাপ ৭)
         $ordered = '(select COALESCE(SUM(ol.ordered_qty - ol.rejected_qty), 0) from sal_order_lines ol where ol.sales_order_id = o.id)';
@@ -81,14 +86,14 @@ final class SalesRegisterReports
                 from sal_challan_lines cl
                 join sal_challans c on c.id = cl.delivery_challan_id
                 join sal_order_lines ol on ol.id = cl.sales_order_line_id
-                where ol.sales_order_id = o.id and c.status <> '{$cancelled}')";
+                where ol.sales_order_id = o.id and c.status in ({$posted}) and c.deleted_at is null)";
 
         $invoiced = "(select COALESCE(SUM(il.qty), 0)
                 from sal_invoice_lines il
                 join sal_invoices i on i.id = il.sales_invoice_id
                 join sal_challan_lines cl on cl.id = il.delivery_challan_line_id
                 join sal_order_lines ol on ol.id = cl.sales_order_line_id
-                where ol.sales_order_id = o.id and i.status <> '{$cancelled}')";
+                where ol.sales_order_id = o.id and i.status in ({$posted}) and i.deleted_at is null)";
 
         return self::paper($f, 'sal_orders as o', 'o', 1, DB::getPdo()->quote((string) __('sales::register.kind_order')), SalesOrder::drillSourceType())
             ->selectRaw("CASE WHEN {$ordered} > 0 THEN ROUND({$delivered} * 100 / {$ordered}, 0) END as delivered_pct")

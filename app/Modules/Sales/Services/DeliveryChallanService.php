@@ -208,6 +208,14 @@ final class DeliveryChallanService
         }
 
         return DB::transaction(function () use ($challan, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই ([[lockAndReread()]]; Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⚠️ আগে "খসড়া কি না" দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত (মাল বেরোল) আর আরেক ট্যাবে সম্পাদনা একসাথে হলে
+             * সম্পাদনা পাকা চালানের সারি মুছে নতুন বসাত — কাগজ এক কথা, মজুদ আরেক।
+             */
+            $this->lockAndReread($challan);
+            $this->assertEditable($challan);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $challan->trx_date);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $challan->warehouse_id);
 
@@ -418,6 +426,8 @@ final class DeliveryChallanService
             foreach ($challan->lines->sortBy('line_no') as $line) {
                 $qty = (string) $line->delivered_qty;
 
+                $this->assertLotNotExpired($line);
+
                 /*
                  * অর্ডারে যতটুকু ধরা ছিল ঠিক ততটুকুই ছাড়া হয়, বেশি নয়।
                  *
@@ -523,6 +533,8 @@ final class DeliveryChallanService
         foreach ($challan->lines->sortBy('line_no') as $line) {
             $qty = (string) $line->delivered_qty;
 
+            $this->assertLotNotExpired($line);
+
             $movements = $this->stock->issue(
                 product: $line->product,
                 warehouse: $challan->warehouse,
@@ -536,6 +548,28 @@ final class DeliveryChallanService
             );
 
             $this->assertWithinPrintedPrice($line, $movements);
+        }
+    }
+
+    /**
+     * ⛔ মেয়াদ পেরোনো বাছা লট চালান বা গেট পাস দিয়ে বেরোয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (a4-এর মজুদ নিরীক্ষা, fe)।
+     *
+     * ⚠️ কাউন্টারে পাহারা ছিল ([[DirectSaleService]] `lot_expired_for`), কিন্তু চালান আর গেট পাস বাছা লট সরাসরি
+     * [[StockService::issue()]]-এ দিত — সেখানে কেবল পরিমাণ দেখা হয়। তাই আটকে রাখা চালানের লট গেট পাসের দিন মেয়াদ পেরোলেও মাল
+     * বেরিয়ে যেত। ⓘ পাহারা বিক্রয়ের পথে, মজুদের সেবায় নয় — বিনাশ আর ফেরত মেয়াদি লট থেকেই হয়। ⓘ লট না বাছলে FEFO নিজেই
+     * মেয়াদি লট বাদ দেয়।
+     */
+    private function assertLotNotExpired(DeliveryChallanLine $line): void
+    {
+        $lot = $line->batch;
+
+        if ($lot !== null && $lot->hasExpired(now())) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.lot_expired_for', [
+                    'product' => $line->product?->name() ?? '',
+                    'lot' => $lot->batch_no,
+                ]),
+            ]);
         }
     }
 
@@ -1172,9 +1206,20 @@ final class DeliveryChallanService
          * বাতিলই ভেঙে যেত** — আর ভুলটা দেখা দিত কেবল বাতিলের
          * মুহূর্তে, অর্থাৎ যখন ব্যবহারকারী তাড়াহুড়োয় আছেন।
          */
+        /*
+         * ⛔ কেবল এখনো না-উল্টানো দাখিলা — শেষ উল্টো সারির পরেরগুলো, [[PostingEngine::reverse()]]-এর একই নিয়ম (Sales লাইন-ধরা
+         * নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে যেকোনো সারি থাকলেই "আছে" বলত: সম্পাদনায় ভাড়ার দাখিলা উল্টানো আর নতুন করে ভাড়া
+         * শূন্য — তারপর বাতিলে reverse() কিছুই না পেয়ে ভেঙে পড়ত, চালানটা আর বাতিল বা আবার সম্পাদনা করা যেত না।
+         */
+        $lastReversal = LedgerEntry::query()
+            ->where('source_type', DeliveryChallan::STOCK_SOURCE.':reversal')
+            ->where('source_id', $challan->id)
+            ->max('id');
+
         $hasPosting = LedgerEntry::query()
             ->where('source_type', DeliveryChallan::STOCK_SOURCE)
             ->where('source_id', $challan->id)
+            ->when($lastReversal !== null, fn ($q) => $q->where('id', '>', $lastReversal))
             ->exists();
 
         if ($hasPosting) {

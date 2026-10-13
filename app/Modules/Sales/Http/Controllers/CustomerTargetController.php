@@ -49,7 +49,7 @@ class CustomerTargetController extends Controller implements HasMiddleware
         $data = $request->validate([
             'month' => ['required', 'date'],
             'target' => ['nullable', 'array'],
-            'target.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'target.*.amount' => ['nullable', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0'],
             'target.*.closes_on' => ['nullable', 'date'],
         ]);
 

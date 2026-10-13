@@ -21,11 +21,21 @@ class CollectionRequest extends FormRequest
 
         return [
             'customer_id' => ['required', 'integer',
-                Rule::exists('customers', 'id')->where('company_id', $companyId)],
+                /*
+                 * ⛔ মুছে ফেলা গ্রাহকে আদায় নয় — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
+                 * ⓘ `exists` কাঁচা কোয়েরি: SoftDeletes আর ডিলারের দেয়াল সেখানে চলে না, তাই দুটোই হাতে।
+                 * ⓘ নিষ্ক্রিয় গ্রাহক আটকানো হয় না — বন্ধ ডিলারও পুরনো বাকি শোধ করেন; শাখার দেয়ালও নয় — পক্ষ শাখা পেরোয় ([[Customer::scopeInViewedBranch()]])।
+                 */
+                Rule::exists('customers', 'id')->where('company_id', $companyId)->whereNull('deleted_at'),
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! app(\App\Core\Services\DealerScope::class)->allowsCustomer((int) $value)) {
+                        $fail(__('customer::binding.dealer_out_of_reach'));
+                    }
+                }],
             'account_id' => ['required', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'instrument' => ['nullable', 'string', 'max:32'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'instrument_date' => ['nullable', 'date'],
@@ -34,7 +44,7 @@ class CollectionRequest extends FormRequest
             'lines' => ['nullable', 'array'],
             'lines.*.sales_invoice_id' => ['nullable', 'integer',
                 Rule::exists('sal_invoices', 'id')->where('company_id', $companyId)],
-            'lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
         ];
     }
 

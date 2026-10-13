@@ -84,11 +84,25 @@ final class ChallanOffers
         return $rows;
     }
 
+    /**
+     * ⛔ চালানের সারি তালায়, তাজা — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে "খসড়া কি না" দেখা হত হাতের পুরনো কপিতে,
+     * লেনদেনের বাইরে: আরেক ট্যাবে চালান পাকা হওয়ার পরেও অফার বসত বা উঠত — খাতায় বসা দামের নিচে সারির ছাড় বদলাত।
+     */
+    private function lockAndReread(DeliveryChallan $challan): void
+    {
+        $fresh = DeliveryChallan::query()->withoutGlobalScopes()->whereKey($challan->getKey())->lockForUpdate()->firstOrFail();
+
+        $challan->setRawAttributes($fresh->getAttributes(), true);
+    }
+
     public function apply(DeliveryChallan $challan, int $lineId, int $offerId): void
     {
         $this->assertEditable($challan);
 
         DB::transaction(function () use ($challan, $lineId, $offerId) {
+            $this->lockAndReread($challan);
+            $this->assertEditable($challan);
+
             $line = $this->lineOf($challan, $lineId);
 
             $this->offers->apply(
@@ -108,6 +122,9 @@ final class ChallanOffers
         $this->assertEditable($challan);
 
         DB::transaction(function () use ($challan, $lineId, $offerId) {
+            $this->lockAndReread($challan);
+            $this->assertEditable($challan);
+
             $line = $this->lineOf($challan, $lineId);
 
             $this->offers->remove($offerId, DeliveryChallan::drillSourceType(), (int) $challan->id, (int) $line->id);

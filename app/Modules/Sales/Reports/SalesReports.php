@@ -211,7 +211,8 @@ final class SalesReports
                     DB::raw('SUM(i.tax) as tax'),
                     DB::raw('SUM(i.total) as total'),
                     // মুনাফা — বিক্রয় বাদ খরচ; খরচটা বিলের সময় জমা রাখা
-                    DB::raw('SUM(i.total - i.tax - i.cost_of_goods) as gross_profit'),
+                    // ⛔ বিলে যোগ করা ভাড়া খাতায় ভাড়ার আয়, বিক্রি নয় — লাভে নয় (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+                    DB::raw('SUM(i.total - i.tax - i.freight_charge - i.cost_of_goods) as gross_profit'),
                 ]),
             columns: [
                 [
@@ -279,6 +280,8 @@ final class SalesReports
             query: fn (array $f) => DB::table('sal_invoice_lines as il')
                 ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
                 ->join('inv_products as p', 'p.id', '=', 'il.product_id')
+                // ⛔ বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগ সারিতে ([[LineNetSale]], ১৩ অক্টোবর ২০২৬)
+                ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
                 ->where('i.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
                 ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
@@ -287,7 +290,7 @@ final class SalesReports
                 // খাতায় বসা বিল — byCustomer()-এর একই কারণে
                 ->whereIn('i.status', DocumentStatus::POSTED)
                 ->groupBy('il.product_id', 'p.code', 'p.name_en', 'p.name_bn')
-                ->orderByRaw('SUM(il.amount - il.tax - il.qty * il.unit_cost) desc')
+                ->orderByRaw('SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) desc')
                 ->select([
                     'il.product_id',
                     DB::raw("'".Product::drillSourceType()."' as source_type_literal"),
@@ -305,11 +308,12 @@ final class SalesReports
                      * পণ্যকে ৫% বেশি লাভজনক দেখাত, আর সেই ভুল তুলনার
                      * উপর দাঁড়িয়েই দর ঠিক করা হত।
                      *
-                     * গ্রাহকভিত্তিক রিপোর্টে নিয়মটা একই: `total − tax`।
+                     * গ্রাহকভিত্তিক রিপোর্টে নিয়মটা একই: `total − tax − ভাড়া`। ⛔ বিলের ছাড়ের ভাগও
+                     * সারিতে ([[LineNetSale]]) — নইলে ছাড়ের বিল পুরো দামে বিকোত দেখাত।
                      */
-                    DB::raw('SUM(il.amount - il.tax) as revenue'),
+                    DB::raw('SUM('.LineNetSale::sql().') as revenue'),
                     DB::raw('SUM(il.qty * il.unit_cost) as cost'),
-                    DB::raw('SUM(il.amount - il.tax - il.qty * il.unit_cost) as gross_profit'),
+                    DB::raw('SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) as gross_profit'),
 
                     /*
                      * মার্জিন — টাকার অঙ্ক নয়, শতাংশ।
@@ -322,9 +326,9 @@ final class SalesReports
                      * শূন্য বিক্রয়ে ভাগ করা হয় না — শূন্য বিক্রয়ে মার্জিন
                      * বলে কিছু নেই, আর ডাটাবেজ ওখানে NULL দিত।
                      */
-                    DB::raw('CASE WHEN SUM(il.amount - il.tax) = 0 THEN 0
-                             ELSE ROUND(SUM(il.amount - il.tax - il.qty * il.unit_cost) * 100
-                                        / SUM(il.amount - il.tax), 2) END as margin_percent'),
+                    DB::raw('CASE WHEN SUM('.LineNetSale::sql().') = 0 THEN 0
+                             ELSE ROUND(SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) * 100
+                                        / SUM('.LineNetSale::sql().'), 2) END as margin_percent'),
                 ]),
             columns: [
                 [
@@ -392,6 +396,8 @@ final class SalesReports
                 ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
                 ->join('inv_products as p', 'p.id', '=', 'il.product_id')
                 ->leftJoin('mdm_brands as b', 'b.id', '=', 'p.brand_id')
+                // ⛔ বিলের ছাড়ের ভাগ সারিতে — পণ্য ধরে রিপোর্টের একই নিয়ম ([[LineNetSale]], ১৩ অক্টোবর ২০২৬)
+                ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
                 ->where('i.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
                 ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
@@ -399,7 +405,7 @@ final class SalesReports
                 ->whereNull('i.deleted_at')
                 ->whereIn('i.status', DocumentStatus::POSTED)
                 ->groupBy('p.brand_id', 'b.name_en', 'b.name_bn')
-                ->orderByRaw('SUM(il.amount - il.tax) desc')
+                ->orderByRaw('SUM('.LineNetSale::sql().') desc')
                 ->select([
                     'p.brand_id',
                     self::brandName(),
@@ -407,9 +413,9 @@ final class SalesReports
                     DB::raw('SUM(il.qty) as qty'),
 
                     // ভ্যাট বাদ — ওটা সরকারের টাকা, আমাদের আয় নয়
-                    DB::raw('SUM(il.amount - il.tax) as revenue'),
+                    DB::raw('SUM('.LineNetSale::sql().') as revenue'),
                     DB::raw('SUM(il.qty * il.unit_cost) as cost'),
-                    DB::raw('SUM(il.amount - il.tax - il.qty * il.unit_cost) as gross_profit'),
+                    DB::raw('SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) as gross_profit'),
                 ]),
             columns: [
                 ['key' => 'brand_name', 'label' => 'inventory::field.brand'],

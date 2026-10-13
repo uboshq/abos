@@ -75,20 +75,20 @@ final class SalesInvoiceCancellationService
 
         $existing = SalesInvoiceCancellation::query()->where('sales_invoice_id', $invoice->id)->first();
 
-        if ($existing !== null) {
+        /*
+         * ⛔ নাকচ হওয়া কাগজ পথ আটকায় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে একবার সই নাকচ হলে বিলটা আর
+         * কোনোদিন বাতিল-ইনভয়েসে যেত না (বিলপ্রতি একটাই কাগজ — `sal_cxl_one_per_invoice`)। ⓘ এখন নাকচ কাগজটাই নতুন কারণে আবার
+         * খোলে, নম্বর একই; আগের নাকচের ছাপ অনুমোদনের সারিতে থাকে।
+         */
+        if ($existing !== null && $existing->status !== DocumentStatus::CANCELLED) {
             throw ValidationException::withMessages(['reason' => __('sales::cancellation.already', [
                 'no' => $invoice->document_no, 'cxl' => $existing->document_no,
             ])]);
         }
 
         // ⓘ এক লেনদেনে — মালিকের হাতে পাকা হতে না পারলে (মাস বন্ধ ইত্যাদি) কাগজ আর নম্বর দুইটাই ফেরে
-        return DB::transaction(function () use ($invoice, $by, $reason) {
-            $paper = SalesInvoiceCancellation::query()->create([
-                'company_id' => $invoice->company_id,
-                'branch_id' => $invoice->branch_id,
-                'sales_invoice_id' => $invoice->id,
-                'customer_id' => $invoice->customer_id,
-                'document_no' => $this->numbers->next(self::DOC_TYPE, $invoice->branch_id),
+        return DB::transaction(function () use ($invoice, $by, $reason, $existing) {
+            $fields = [
                 'trx_date' => Carbon::today()->toDateString(),
                 'reason' => $reason,
                 'subtotal' => bcsub((string) $invoice->total, (string) ($invoice->tax ?? '0'), 4),
@@ -96,7 +96,28 @@ final class SalesInvoiceCancellationService
                 'total' => (string) $invoice->total,
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => $by->id,
-            ]);
+            ];
+
+            if ($existing !== null) {
+                $paper = SalesInvoiceCancellation::acrossBranches()->whereKey($existing->id)->lockForUpdate()->firstOrFail();
+
+                // ⛔ দুই হাত একসাথে — একজনই আবার খোলে
+                if ($paper->status !== DocumentStatus::CANCELLED) {
+                    throw ValidationException::withMessages(['reason' => __('sales::cancellation.already', [
+                        'no' => $invoice->document_no, 'cxl' => $paper->document_no,
+                    ])]);
+                }
+
+                $paper->update($fields + ['confirmed_by' => null, 'confirmed_at' => null]);
+            } else {
+                $paper = SalesInvoiceCancellation::query()->create($fields + [
+                    'company_id' => $invoice->company_id,
+                    'branch_id' => $invoice->branch_id,
+                    'sales_invoice_id' => $invoice->id,
+                    'customer_id' => $invoice->customer_id,
+                    'document_no' => $this->numbers->next(self::DOC_TYPE, $invoice->branch_id),
+                ]);
+            }
 
             // ⭐ মালিক নিজে — তাঁর হাতই সই
             if ($this->ownership->isOwnerIn($by, (int) $invoice->company_id)) {

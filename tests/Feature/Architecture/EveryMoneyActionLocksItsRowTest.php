@@ -46,9 +46,7 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         // ⓘ নিচের তিনটা নিজে কিছু লেখে না — ডাকে এমন সেবাকে যেটা তালা দেয়; তবু পাহারা শরীর পড়ে, তাই তালিকায়
         'Sales/Services/HeldCounterSaleFinisher.php::finish',
         'Sales/Services/SalesQuotationService.php::approve',
-        'Sales/Services/SalesQuotationService.php::cancel',
         'Sales/Services/SchemeService.php::cancel',
-        'Sales/Services/ShipmentService.php::close',
         'Sales/Services/SignedChallanConfirmer.php::confirm',
     ];
 

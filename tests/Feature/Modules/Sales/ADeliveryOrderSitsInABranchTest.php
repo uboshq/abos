@@ -66,6 +66,63 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
         $this->assertSame($this->home->id, $this->branchOf($this->customer->fresh()), '⛔ ডিলারের নিজের DO তাঁর শাখায় বসেনি।');
     }
 
+    /**
+     * ⛔ নতুন ধারার আদেশে DO লেখা যায় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে সুইচ বন্ধ করে ঐ আদেশের উপর DO লেখা যেত:
+     * আদেশ আর DO দুইটাই বাকির সীমায় গোনা হত, একই বিক্রি দুবার।
+     */
+    public function test_a_do_cannot_ride_on_an_order_that_holds_its_own_goods(): void
+    {
+        $product = Product::query()->orderBy('id')->value('id');
+        $order = app(\App\Modules\Sales\Services\SalesOrderService::class)->create(
+            ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product, 'ordered_qty' => '2', 'rate' => '10']]);
+
+        $write = fn () => app(DeliveryOrderService::class)->create(
+            ['customer_id' => $this->customer->id, 'sales_order_id' => $order->id], [['product_id' => $product, 'qty' => '2']], auth()->user());
+
+        $this->assertNotNull($write(), 'দৃশ্যটাই ভুল — পুরনো ধারার আদেশে DO লেখা গেল না।');
+
+        \Illuminate\Support\Facades\DB::table('sal_orders')->where('id', $order->id)->update([
+            'hold_mode' => \App\Modules\Sales\Support\SalesOrderStatus::HOLD_HOLDS,
+            'status' => \App\Modules\Sales\Support\SalesOrderStatus::APPROVED,
+        ]);
+
+        try {
+            $write();
+            $this->fail('⛔ মাল-ধরা আদেশের উপর DO লেখা হয়ে গেল — সীমায় একই বিক্রি দুবার।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('sales_order_id', $e->errors());
+        }
+    }
+
+    /** ⛔ ঋণাত্মক বা অক্ষরের ফ্রি DO-তে বসে না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ */
+    public function test_a_negative_or_wordy_free_quantity_is_refused(): void
+    {
+        $product = Product::query()->orderBy('id')->value('id');
+
+        foreach (['-3', 'abc', '1e3'] as $free) {
+            try {
+                app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
+                    [['product_id' => $product, 'qty' => '2', 'free_qty' => $free]], auth()->user());
+                $this->fail("⛔ ফ্রি '{$free}' DO-তে বসে গেল।");
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $this->assertArrayHasKey('lines.0.free_qty', $e->errors());
+            }
+        }
+
+        // ⓘ `1e3` is_numeric পার হয়, কিন্তু bcmath-এ ValueError — পরিমাণেও কথায় ফেরে, ৫০০ নয় (১৩ অক্টোবর ২০২৬)
+        try {
+            app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
+                [['product_id' => $product, 'qty' => '1e3']], auth()->user());
+            $this->fail('⛔ পরিমাণ 1e3 DO-তে বসে গেল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('lines.0.qty', $e->errors());
+        }
+
+        $this->assertNotNull(app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
+            [['product_id' => $product, 'qty' => '2', 'free_qty' => '1']], auth()->user()), 'ঠিক ফ্রি-ও আটকে গেল।');
+    }
+
     private function branchOf(User|Customer $by): ?int
     {
         $branch = $this->write($by)->branch_id;

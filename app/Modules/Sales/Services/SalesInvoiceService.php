@@ -473,11 +473,20 @@ final class SalesInvoiceService
         }
 
         return DB::transaction(function () use ($invoice, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে "খসড়া কি না"
+             * দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত আর আরেক ট্যাবে সম্পাদনা একসাথে হলে সম্পাদনা পাকা কাগজের সারি আর অঙ্ক
+             * বদলে দিত — খাতা এক কথা, কাগজ আরেক।
+             */
+            $this->lockFresh($invoice);
+            $this->assertEditable($invoice);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $invoice->trx_date);
 
             $invoice->update([
                 'trx_date' => $trxDate->toDateString(),
-                'due_on' => $this->dueOn($data, $trxDate, (int) ($data['customer_id'] ?? $invoice->customer_id)),
+                // ⛔ বিলের নিজের গ্রাহক — সম্পাদনায় গ্রাহক বদলায় না, তাই অন্য গ্রাহকের বাকির দিন নয় (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+                'due_on' => $this->dueOn($data, $trxDate, (int) $invoice->customer_id),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
 

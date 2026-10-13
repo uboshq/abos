@@ -7,7 +7,9 @@ namespace App\Modules\Sales\Services;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
+use App\Modules\Sales\Http\Requests\PlainNumber;
 use App\Modules\Sales\Models\SalesTarget;
+use App\Modules\Sales\Reports\LineNetSale;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +60,15 @@ final class SalesTargetService
 
         if (array_diff($ids, $members) !== []) {
             throw ValidationException::withMessages(['amount' => __('sales::validation.target_unknown_staff')]);
+        }
+
+        // ⛔ কেবল সাধারণ দশমিক — `1e5` is_numeric পাশ করে, অথচ bcmath ValueError ছোড়ে, ৫০০ (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+        foreach ($amounts as $amount) {
+            $amount = trim((string) $amount);
+
+            if ($amount !== '' && ! PlainNumber::is($amount)) {
+                throw ValidationException::withMessages(['amount' => __('sales::validation.not_a_number')]);
+            }
         }
 
         return DB::transaction(function () use ($first, $amounts) {
@@ -149,6 +160,7 @@ final class SalesTargetService
          */
         $perLine = DB::table('sal_invoices as i')
             ->join('sal_invoice_lines as il', 'il.sales_invoice_id', '=', 'i.id')
+            ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) CompanyContext::id(), $from->toDateString(), $to->toDateString()))
             ->where('i.company_id', CompanyContext::id())
             ->whereNull('i.deleted_at')
             ->whereIn('i.status', DocumentStatus::POSTED)
@@ -167,8 +179,8 @@ final class SalesTargetService
                 fn ($q) => $q->selectRaw('i.created_by as seller_id'),
             )
 
-            // ভ্যাট বাদ — ওটা সরকারের টাকা, কারও বিক্রয় নয়
-            ->selectRaw('il.amount - il.tax as line_amount');
+            // ভ্যাট বাদ — ওটা সরকারের টাকা, কারও বিক্রয় নয়; ⛔ বিলের ছাড়ের ভাগও বাদ ([[LineNetSale]], ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+            ->selectRaw(LineNetSale::sql().' as line_amount');
 
         $rows = DB::query()->fromSub($perLine, 'x')
             ->whereNotNull('x.seller_id')

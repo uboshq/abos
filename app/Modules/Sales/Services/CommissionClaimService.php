@@ -105,6 +105,7 @@ final class CommissionClaimService
                 sourceId: $claim->id,
                 trxDate: $claim->trx_date,
                 documentNo: $claim->document_no,
+                branchId: $this->branchOf($claim),
                 lines: [
                     /*
                      * দাবির লাইনে কোনো পক্ষ বসে না — ইচ্ছাকৃত।
@@ -161,6 +162,7 @@ final class CommissionClaimService
                 sourceId: $claim->id,
                 trxDate: $date,
                 documentNo: $claim->document_no,
+                branchId: $this->branchOf($claim),
                 lines: [
                     [
                         'account_id' => StandardChart::find(StandardChart::PAYABLE)->id,
@@ -214,6 +216,7 @@ final class CommissionClaimService
                 sourceId: $claim->id,
                 trxDate: $date,
                 documentNo: $claim->document_no,
+                branchId: $this->branchOf($claim),
                 lines: [
                     [
                         'account_id' => StandardChart::find(StandardChart::COMMISSION_WRITTEN_OFF)->id,
@@ -397,6 +400,15 @@ final class CommissionClaimService
                 ]),
             ]);
         }
+    }
+
+    /**
+     * ⛔ দাবির দাখিলা দাবির নিজের শাখায় — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে শাখা দেওয়া হত না, তাই খাতার সারি
+     * বসত দেখার লোকের হেডারের শাখায় (বা "সব শাখা" হলে শাখাহীন) — বিলের শাখার পাওনা কমত না, অন্য শাখার কমত।
+     */
+    private function branchOf(CommissionClaim $claim): ?int
+    {
+        return $claim->branch_id === null ? null : (int) $claim->branch_id;
     }
 
     /**

@@ -34,14 +34,14 @@ class ShipmentRequest extends FormRequest
             'route_location_id' => ['nullable', 'integer',
                 Rule::exists('mdm_locations', 'id')->where('company_id', $companyId)],
 
-            'opening_km' => ['nullable', 'numeric', 'min:0'],
+            'opening_km' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             /*
              * ⭐ ট্রিপের ভাড়া — এক ট্রাক, এক ভাড়া (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment::stamp()]])। ⓘ এখানে
              * কেবল আকার; আসল নিয়ম (খাত, নিজের টিল, TrxID, পরে দিলে বাহক) সেবায়।
              */
-            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+            'transport_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'carrier_id' => ['nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
             'fare_when' => ['nullable', 'in:now,later'],
             'fare_account_id' => ['nullable', 'integer'],

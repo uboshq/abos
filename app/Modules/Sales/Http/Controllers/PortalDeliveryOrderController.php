@@ -60,7 +60,7 @@ class PortalDeliveryOrderController extends Controller
         $data = $request->validate([
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.product_id' => ['nullable', 'integer'],
-            'lines.*.qty' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.qty' => ['nullable', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
 

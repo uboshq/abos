@@ -85,6 +85,7 @@ final class AnApprovedOrderOpensAtTheCounterAndIsBilledOnceTest extends TestCase
 
         FakeCounterSource::$lines = [];
         FakeCounterSource::$marked = [];
+        FakeCounterSource::$resized = [];
         CounterSaleSources::extend('fake', FakeCounterSource::class);
     }
 
@@ -210,6 +211,24 @@ final class AnApprovedOrderOpensAtTheCounterAndIsBilledOnceTest extends TestCase
 
         $this->assertSame(DocumentStatus::CANCELLED, $draft->fresh()->status);
         $this->assertSame(FakeCounterSource::READY, $source->fresh()->status, '⛔ খসড়া বাতিল হলো, অথচ উৎস ডিপো যাচাইয়েই আটকে রইল।');
+    }
+
+    /**
+     * ⛔ "খসড়া রাখুন" উৎসের আটকানো মাল কমায় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে ১০-এর DO থেকে ৭ রেখে
+     * খসড়া করলেই আটকানো মাল ৭-এ নামত আর বাকি ৩ মুক্ত মজুদে চলে যেত — কমানোর পথ একমুখী, তাই খসড়া বাতিল বা ১০-এ পাকা করলে
+     * ঘাটতি থেকে যেত। ⓘ কমে কেবল পাকা হওয়ার মুহূর্তে ([[DirectSaleService::settleSource()]])।
+     */
+    public function test_saving_a_draft_does_not_shrink_the_sources_held_stock(): void
+    {
+        $source = $this->source();
+
+        $this->sell($source, [$this->line(qty: '7')], ['save_as_draft' => '1'])->assertSessionHasNoErrors();
+        $draft = SalesInvoice::query()->latest('id')->firstOrFail();
+        $this->assertSame(DocumentStatus::DRAFT, $draft->status, 'দৃশ্যটাই বানানো যায়নি — খসড়া হয়নি।');
+        $this->assertSame([], FakeCounterSource::$resized, '⛔ খসড়া রাখতেই উৎসের আটকানো মাল কমে গেল।');
+
+        $this->post(route('sales.direct.discard', $draft), ['reason' => 'ক্রেতা আসেননি'])->assertSessionHasNoErrors();
+        $this->assertSame([], FakeCounterSource::$resized, '⛔ বাতিল খসড়ার পরেও আটকানো মাল কম।');
     }
 
     /** ⛔ একটা উৎস একবারই বিল হয় — দ্বিতীয় বিক্রি থামে, কোনো বিল জন্মায় না। */
