@@ -12,6 +12,7 @@ return [
     'owner_not_in_flow' => 'The owner is not on the credit-limit signature flow — no limit rises without the owner\'s signature. Put the owner on the flow first.',
     'already_waiting' => 'A request for this customer is already waiting for a signature — a new one after it is decided.',
     'no_owner_signature' => 'Signed, but not by the owner — the limit was not set.',
+    'limit_moved' => 'Signed, but the limit changed another way after the request — the old paper set nothing. Raise a new request if needed.',
     'word_limit' => ':customer — credit limit :from to :to. Reason: :reason',
     'word_temporary' => ':customer — temporary limit :to until :until (now :from). Reason: :reason',
     'saved' => 'The request went to the owner for signature — the limit does not change before it is signed.',

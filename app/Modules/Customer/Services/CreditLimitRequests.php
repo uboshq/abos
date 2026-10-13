@@ -186,6 +186,18 @@ final class CreditLimitRequests
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            /*
+             * ⛔ অনুরোধের পরে সীমা অন্য পথে বদলে থাকলে কাগজটা পুরনো — মালিক পড়েছেন "১ লাখ থেকে দেড় লাখ", অথচ মাঝে ঝুঁকিতে
+             * সীমা ০ করা হয়েছিল; আগে সইয়ে দেড় লাখ বসে কমানোটা নীরবে মুছত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[ASignedRequestUndidALaterCutTest]])। ⓘ বসে না, কারণসহ `void`; দরকার হলে নতুন অনুরোধ, নতুন অঙ্কে।
+             */
+            if (bccomp((string) ($customer->credit_limit ?? '0'), (string) $request->current_limit, 4) !== 0) {
+                $request->forceFill(['status' => CustomerCreditRequest::VOID, 'decided_at' => now(),
+                    'note' => __('customer::credit_request.limit_moved')])->save();
+
+                return;
+            }
+
             $this->apply($request, $customer, (int) $approval->id);
         });
     }
