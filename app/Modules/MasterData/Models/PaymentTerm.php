@@ -62,7 +62,16 @@ class PaymentTerm extends Model implements Drillable
     {
         $date = $invoiceDate instanceof Carbon ? $invoiceDate->copy() : Carbon::parse($invoiceDate);
 
-        return $date->addDays($this->days);
+        /*
+         * ⭐ "মাস শেষে" আর "বছর শেষে" দিন গোনা নয়, একটা ঘটনা — মালিক, ১৬ সেপ্টেম্বর ২০২৬ (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর
+         * ২০২৬)। ⛔ সারি দুইটার `days` ইচ্ছা করে ০, কিন্তু এখানে কেবল দিন যোগ হত — "মাস শেষে"-র সরবরাহকারীর ৩ তারিখের বিল ৩
+         * তারিখেই মেয়াদোত্তীর্ণ, পরদিন থেকে "বাকি পেরোনো"। ⓘ বছর মানে কোম্পানির আর্থিক বছর; না পেলে ক্যালেন্ডারের শেষ দিন।
+         */
+        return match ($this->code) {
+            'MONTH_END' => $date->endOfMonth()->startOfDay(),
+            'YEAR_END' => (\App\Models\FinancialYear::forDate($date)?->ends_on?->copy() ?? $date->endOfYear())->startOfDay(),
+            default => $date->addDays($this->days),
+        };
     }
 
     /** সময়মতো দিলে ছাড় আছে কি না। */
