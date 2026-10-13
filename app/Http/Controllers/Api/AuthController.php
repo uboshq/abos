@@ -420,7 +420,15 @@ class AuthController extends Controller
          */
         abort_unless($user instanceof User, 403, 'staff-token-only');
 
-        $deviceId = trim((string) $request->input('deviceId', ''));
+        /*
+         * ⛔ কোন যন্ত্র — ডাকা টোকেনের নিজের নাম থেকে (`sync:<deviceId>`), শরীরের ঘর থেকে নয় (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[ALogoutLeftItsOwnTokensAliveTest]])। ⚠️ শরীরে অন্য নাম গেলে ডাকা জোড়াটাই বেঁচে থাকত (প্রবেশের ৩০ মিনিট, নবায়নের
+         * ৩০ দিন), আর নাম না দিলে সব যন্ত্রের টোকেন মুছত। ⓘ নামহীন পুরনো টোকেনে আগের মতো শরীরের ঘর।
+         */
+        $current = (string) ($user->currentAccessToken()->name ?? '');
+        $deviceId = str_starts_with($current, self::ACCESS.':')
+            ? substr($current, strlen(self::ACCESS.':'))
+            : trim((string) $request->input('deviceId', ''));
 
         // ⭐ বের হলে এই ফোনে আর বার্তা নয় — FCM টোকেন মোছা ([[PushTokenController]], ২ অক্টোবর ২০২৬)
         if ($deviceId !== '') {
