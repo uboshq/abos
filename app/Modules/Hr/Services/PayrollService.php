@@ -150,7 +150,13 @@ final class PayrollService
 
             $monthEnd = $run->month->copy()->endOfMonth();
 
-            $run->payslips()->each(function (Payslip $slip) {
+            /*
+             * ⛔ id ধরে পাতা, অফসেটে নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[ARebuildClearsEveryOldPayslipTest]])।
+             * ⓘ `each()` হাজারে হাজারে অফসেট ধরে পড়ে, অথচ পড়তে পড়তেই মোছে: প্রথম হাজার মোছার পর দ্বিতীয় পাতা বাকিগুলোর ১,০০০
+             * নম্বর থেকে খোঁজে আর কিছু পায় না। হাজারের বেশি কর্মী থাকলে পুরনো শিট টিকে থাকত, নতুনগুলোর পাশে — মোট, খাতা আর ব্যাংকে
+             * তাঁদের বেতন দুইবার। `lazyById()` শেষ পড়া id-র পর থেকে খোঁজে, তাই মুছলেও কিছু বাদ পড়ে না।
+             */
+            $run->payslips()->lazyById(500)->each(function (Payslip $slip) {
                 $slip->lines()->delete();
                 $slip->forceDelete();
             });
