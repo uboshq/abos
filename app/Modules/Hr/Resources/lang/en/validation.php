@@ -40,4 +40,7 @@ return [
     'user_not_in_company' => 'This user is not in this company — only a user of this company can be tied to an employee.',
     'manager_out_of_reach' => 'This manager is outside your branch reach — you cannot place someone under them.',
     'leave_month_paid' => 'The :month payroll (:no) is already confirmed, so this leave cannot be withdrawn. Cancel that month\'s payroll run first.',
+    // ⓘ ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+    'basic_cannot_be_unset' => 'The basic salary head cannot stop being basic — the percentage allowances stand on it. To make another head basic, tick basic on that head.',
+    'head_in_use_keeps_its_shape' => 'The salary structures of employees use this head — changing its kind (earning/deduction) or calculation (fixed/percent) would turn the next payslips upside down. Create a new head and put it in the structures instead.',
 ];
