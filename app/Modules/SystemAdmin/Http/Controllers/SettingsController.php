@@ -129,7 +129,8 @@ class SettingsController extends Controller implements HasMiddleware
 
             $value = match ($definition['type']) {
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
-                'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+                // ⛔ ভুল লেখা হলে "যা ছিল তাই থাক" — `(int)` আর কেটে নেয় না ([[PlainNumber::wholeFrom()]], ১৪ অক্টোবর ২০২৬)
+                'integer' => $raw === null || $raw === '' ? null : \App\Core\Support\PlainNumber::wholeFrom($raw),
 
                 /*
                  * ⚠️ `number` ঘরটা প্রথম খসড়ায় ছিল না — ৭ সেপ্টেম্বর ২০২৬।
