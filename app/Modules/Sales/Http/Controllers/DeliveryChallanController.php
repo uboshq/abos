@@ -60,22 +60,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
         $tab = in_array($request->query('tab'), \App\Modules\Sales\Services\DeliveryOrderTabs::LISTED, true)
             ? (string) $request->query('tab') : null;
 
-        $query = DeliveryChallan::query()
-            ->search($request->query('q'))
-            /*
-             * ⭐ কাউন্টারের রাখা খসড়া এখানে নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
-             * *"খসড়া challan r Invoice list e zabena, sekhane sudu pure challan guloi"*।
-             * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
-             * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
-             */
-            // ⓘ খসড়া চালান যার বিলও খসড়া — কাউন্টারের খসড়া ([[DirectSaleService::openCounterDrafts()]])
-            ->whereNot(fn ($q) => $q->where('sal_challans.status', DocumentStatus::DRAFT)
-                ->whereExists(fn ($e) => $e->selectRaw('1')
-                    ->from('sal_challan_lines as cl')
-                    ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
-                    ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
-                    ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
-                    ->where('i.status', DocumentStatus::DRAFT)))
+        $query = self::listed($request)
             ->with(['customer.location', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled') && $tab !== 'cancelled',
@@ -126,6 +111,32 @@ class DeliveryChallanController extends Controller implements HasMiddleware
                 $stage !== '' ? $stage : null,
             ),
         ]);
+    }
+
+    /**
+     * ⭐ তালিকার কোয়েরি — ওয়েবের তালিকা আর ফোনের তালিকা ([[SalesPaperApiController]]) একই দরজা দিয়ে ঢোকে (১৩ অক্টোবর ২০২৬):
+     * খোঁজা, আর কাউন্টারের খোলা খসড়া বাদ। ⓘ দেয়াল মডেলের নিজের স্কোপে।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<DeliveryChallan>
+     */
+    public static function listed(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        return DeliveryChallan::query()
+            ->search($request->query('q'))
+            /*
+             * ⭐ কাউন্টারের রাখা খসড়া এখানে নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+             * *"খসড়া challan r Invoice list e zabena, sekhane sudu pure challan guloi"*।
+             * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
+             * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
+             */
+            // ⓘ খসড়া চালান যার বিলও খসড়া — কাউন্টারের খসড়া ([[DirectSaleService::openCounterDrafts()]])
+            ->whereNot(fn ($q) => $q->where('sal_challans.status', DocumentStatus::DRAFT)
+                ->whereExists(fn ($e) => $e->selectRaw('1')
+                    ->from('sal_challan_lines as cl')
+                    ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+                    ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                    ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
+                    ->where('i.status', DocumentStatus::DRAFT)));
     }
 
     public function create(Request $request): View

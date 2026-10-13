@@ -28,6 +28,9 @@ class RecentPapers {
     'purchase': ('purchases', 'ক্রয়'),
     'voucher': ('vouchers', 'ভাউচার'),
     'claim': ('claims', 'খরচের দাবি'),
+    // ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬)
+    'invoice': ('invoices', 'বিক্রয় বিল'),
+    'challan': ('challans', 'চালান'),
   };
 
   /// `paper/<kind>/<id>`, with the purchase's own kind (`bill`, `receipt` …)

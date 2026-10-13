@@ -16,6 +16,7 @@ return [
     'word_temporary' => ':customer — temporary limit :to until :until (now :from). Reason: :reason',
     'saved' => 'The request went to the owner for signature — the limit does not change before it is signed.',
     'saved_direct' => 'The limit is set (the owner\'s direct change in a company with approvals off).',
+    'customer' => 'Customer',
     'title' => 'Ask for a higher limit',
     'kind' => 'What is asked',
     'kind_limit' => 'Raise the normal limit',

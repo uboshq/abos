@@ -109,13 +109,13 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
             ->assertJsonPath('module', $code);
     }
 
-    /** ⭐ গ্রাহক সপ্তম — মালিক, ২ অক্টোবর ২০২৬: *"ha calu thakbe"* */
+    /** ⭐ গ্রাহক সপ্তম — মালিক, ২ অক্টোবর ২০২৬: *"ha calu thakbe"*; মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ — ১৩ অক্টোবর ২০২৬ */
     public function test_a_new_company_starts_with_the_owners_seven(): void
     {
         $body = $this->phone('GET', '/api/v1/me')->assertOk()->json();
 
         $this->assertEqualsCanonicalizing(
-            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'],
+            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control'],
             $body['phoneModules'],
         );
 

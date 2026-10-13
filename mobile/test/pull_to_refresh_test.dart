@@ -53,6 +53,12 @@ void main() {
     'lead_screens.dart',
     'quotation_screens.dart',
     'sync_status_screen.dart',
+    // ⭐ ১৩ অক্টোবর ২০২৬ — মালিকের কেন্দ্র, বাকি নিয়ন্ত্রণ, নোটিশ বোর্ড; প্রত্যেকটার টান নিজের টেস্টে দেখা
+    'executive_screen.dart',
+    'credit_screens.dart',
+    'notice_board_screen.dart',
+    // ⭐ বিক্রয় বিল আর চালান (১৩ অক্টোবর ২০২৬) — টান নিজের টেস্টে দেখা
+    'sales_paper_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each

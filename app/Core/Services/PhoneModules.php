@@ -63,7 +63,20 @@ final class PhoneModules
     /** ⭐ হোম-স্ক্রিনের উইজেটে টাকার অঙ্ক — ডিফল্ট বন্ধ ("•••"); অ্যাপ না খুলেই হাতের নগদ চোখে পড়ত (একই অডিট) */
     public const WIDGET_AMOUNTS = 'mobile.widget_amounts';
 
-    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'];
+    /*
+     * ⭐ মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ — সমন্বয়কের সিদ্ধান্ত, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu")। ⓘ দরজা
+     * এমনিতেই চাবিতে (`executive.view`, `credit_control.view`) — কেবল মালিক আর যাঁকে তিনি দেন; সুইচটা কোম্পানি ধরে বন্ধ করা যায়।
+     */
+    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control'];
+
+    /**
+     * ⭐ যে মডিউলের ফোনের পর্দা কেবল নিজের দরজা ডাকে — মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ (১৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ এরা অন্য মডিউলের সংখ্যা সার্ভারের ভিতরেই পড়ে (নিজের সেবায়), ফোনকে বিক্রয় বা অনুমোদনের দরজায় পাঠায় না। তাই এরা চালু
+     * থাকলেও নির্ভরতা ধরে বিক্রয়/অনুমোদন/মজুদের দরজা খোলা থাকে না — নইলে নিজে থেকে চালু এই দুইটার জন্য কোম্পানির বিক্রয় বা
+     * অনুমোদনের সুইচ বন্ধ করা আর কিছুই বন্ধ করত না (ThePhoneShowedEveryModuleTest ধরেছে)।
+     */
+    public const OWN_DOORS_ONLY = ['executive', 'credit_control'];
 
     public function __construct(
         private readonly ModuleRegistry $registry,
@@ -160,6 +173,11 @@ final class PhoneModules
             }
 
             $reach[$code] = true;
+
+            // ⛔ নিজের দরজাতেই সব — এদের নির্ভরতা ধরে অন্যের দরজা খোলে না ([[OWN_DOORS_ONLY]])
+            if (in_array($code, self::OWN_DOORS_ONLY, true)) {
+                continue;
+            }
 
             foreach ($this->registry->get($code)?->dependsOn ?? [] as $dependency) {
                 $queue[] = (string) $dependency;

@@ -163,6 +163,11 @@ class NavCatalog {
         ['documents', 'ডকুমেন্ট']),
     NavModuleDef('executive', 'মালিকের কেন্দ্র', Icons.speed_outlined,
         ['executive', 'command']),
+    // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+    NavModuleDef('credit_control', 'বাকি নিয়ন্ত্রণ', Icons.credit_score_outlined,
+        ['credit', 'বাকি', 'সীমা', 'limit']),
+    NavModuleDef('notification', 'নোটিশ', Icons.campaign_outlined,
+        ['notice', 'নোটিশ', 'বিজ্ঞপ্তি']),
   ];
 
   /// The order the headings stand in, inside any module.
@@ -379,6 +384,43 @@ class NavCatalog {
         label: 'ব্যবসার ড্যাশবোর্ড',
         icon: Icons.insights_outlined,
         aliases: ['dashboard', 'ড্যাশবোর্ড']),
+    // ── ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na") ──
+    NavScreenDef(
+        path: 'invoices',
+        module: 'sales',
+        group: 'লেনদেন',
+        label: 'বিক্রয় বিল',
+        icon: Icons.receipt_long_outlined,
+        aliases: ['invoice', 'বিল', 'ইনভয়েস', 'বিক্রি', 'inv']),
+    NavScreenDef(
+        path: 'challans',
+        module: 'sales',
+        group: 'লেনদেন',
+        label: 'চালান',
+        icon: Icons.local_shipping_outlined,
+        aliases: ['challan', 'চালান', 'gate pass', 'cha']),
+    // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+    NavScreenDef(
+        path: 'owner-centre',
+        module: 'executive',
+        group: 'ড্যাশবোর্ড',
+        label: 'আজ — গোটা গ্রুপ',
+        icon: Icons.speed_outlined,
+        aliases: ['owner', 'মালিক', 'আজ', 'গ্রুপ', 'কোম্পানি', 'executive']),
+    NavScreenDef(
+        path: 'credit',
+        module: 'credit_control',
+        group: 'ড্যাশবোর্ড',
+        label: 'বাকির হিসাব',
+        icon: Icons.credit_score_outlined,
+        aliases: ['credit', 'বাকি', 'সীমা', 'ঝুঁকি', 'মেয়াদ', 'overdue', 'risk']),
+    NavScreenDef(
+        path: 'notices',
+        module: 'notification',
+        group: 'তালিকা',
+        label: 'নোটিশ বোর্ড',
+        icon: Icons.campaign_outlined,
+        aliases: ['notice', 'নোটিশ', 'সই', 'বিজ্ঞপ্তি']),
   ];
 
   /// Screens that hang on no module: the bottom bar and the "আমি" page reach

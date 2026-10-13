@@ -62,6 +62,8 @@ class AppColors {
     'reports': Color(0xFF475569),
     'documents': Color(0xFF65A30D),
     'executive': Color(0xFFA16207),
+    'credit_control': Color(0xFF9F1239),
+    'notification': Color(0xFF155E75),
   };
 
   static Color moduleColor(String code) => module[code] ?? primary;
