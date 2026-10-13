@@ -50,6 +50,19 @@ final class HeadTotals
             ->get();
 
         /*
+         * ⚠️ **খাতের সাথে তার পুরো বংশ** — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+         *
+         * ⛔ আগে প্রতিটা খাতের কেবল নিজের সারি গোনা হত। ক্রেতা "যানবাহন → ট্রাক ভাড়া" বানালে টাকা বসত
+         * নাতির ঘরে, দলের খাতটার নিজের কোনো সারি নেই — দুই সময়েই শূন্য, তাই পাতা থেকে বাদ। ড্যাশবোর্ড
+         * ([[topUnder()]]) টাকাটা দেখাত, খরচের পাতা দেখাত না। ⭐ এখন নাতির টাকা তার খাতে ওঠে, দুই জায়গায় একই নিয়মে।
+         */
+        $members = [];
+
+        foreach ($this->headOf($parent) as $nodeId => $headId) {
+            $members[$headId][] = $nodeId;
+        }
+
+        /*
          * আগের সমান দৈর্ঘ্যের সময়টা।
          *
          * "গত মাস" নয়, **সমান দৈর্ঘ্য** — কেউ দশ দিনের পরিসর দেখলে
@@ -63,8 +76,9 @@ final class HeadTotals
         $rows = [];
 
         foreach ($accounts as $account) {
-            $now = $this->sum($account, $from, $to, $debitPositive);
-            $before = $this->sum($account, $prevFrom, $prevTo, $debitPositive);
+            $ids = $members[$account->id] ?? [$account->id];
+            $now = $this->sum($ids, $from, $to, $debitPositive);
+            $before = $this->sum($ids, $prevFrom, $prevTo, $debitPositive);
 
             /*
              * যে খাতে দুই সময়েই কিছু হয়নি সেটা দেখানো হয় না।
@@ -86,7 +100,8 @@ final class HeadTotals
         return $rows;
     }
 
-    private function sum(Account $account, string $from, string $to, bool $debitPositive): string
+    /** @param  list<int>  $accountIds  খাত আর তার নিচের সবাই */
+    private function sum(array $accountIds, string $from, string $to, bool $debitPositive): string
     {
         $expression = $debitPositive
             ? 'COALESCE(SUM(debit) - SUM(credit), 0) as net'
@@ -95,7 +110,7 @@ final class HeadTotals
         // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
         $net = ViewedBranch::narrow(DB::table('ledger_entries'), 'ledger_entries.branch_id')
             ->where('company_id', CompanyContext::id())
-            ->where('account_id', $account->id)
+            ->whereIn('account_id', $accountIds)
             ->whereBetween('trx_date', [$from, $to])
             /*
              * ⛔ বছর বন্ধের দাখিলা বাদ — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
@@ -148,31 +163,7 @@ final class HeadTotals
          * নাতির টাকা তার নিজের খাতে উঠে আসে — তাই তালিকাটা স্থির থাকে,
          * আর কোনো টাকা হারায় না।
          */
-        $family = $parent->selfAndDescendants()->keyBy('id');
-
-        // নাতি → তার খাত (৫২০০-এর সরাসরি সন্তান)
-        $headOf = [];
-
-        foreach ($family as $node) {
-            if ($node->id === $parent->id) {
-                continue;
-            }
-
-            $walk = $node;
-
-            // ৩২ ধাপের সীমা — চক্র থাকলে থেমে যেতে হবে, `Account`-এর মতোই
-            for ($depth = 0; $depth < 32 && $walk->parent_id !== $parent->id; $depth++) {
-                $up = $family->get($walk->parent_id);
-
-                if ($up === null) {
-                    break;
-                }
-
-                $walk = $up;
-            }
-
-            $headOf[$node->id] = $walk->id;
-        }
+        $headOf = $this->headOf($parent);
 
         // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
         $rows = ViewedBranch::narrow(DB::table('ledger_entries as l'), 'l.branch_id')
@@ -233,5 +224,42 @@ final class HeadTotals
         }
 
         return $out;
+    }
+
+    /**
+     * নাতি → তার খাত (মাথার সরাসরি সন্তান); খাত নিজেও নিজের দিকে।
+     *
+     * ⓘ [[topUnder()]] আর [[forParent()]] দুজনেই এটা ডাকে — একই গাছ, একই নিয়ম (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * @return array<int, int>
+     */
+    private function headOf(Account $parent): array
+    {
+        $family = $parent->selfAndDescendants()->keyBy('id');
+
+        $headOf = [];
+
+        foreach ($family as $node) {
+            if ($node->id === $parent->id) {
+                continue;
+            }
+
+            $walk = $node;
+
+            // ৩২ ধাপের সীমা — চক্র থাকলে থেমে যেতে হবে, `Account`-এর মতোই
+            for ($depth = 0; $depth < 32 && $walk->parent_id !== $parent->id; $depth++) {
+                $up = $family->get($walk->parent_id);
+
+                if ($up === null) {
+                    break;
+                }
+
+                $walk = $up;
+            }
+
+            $headOf[$node->id] = $walk->id;
+        }
+
+        return $headOf;
     }
 }
