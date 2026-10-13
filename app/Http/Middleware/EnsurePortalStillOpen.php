@@ -81,17 +81,25 @@ class EnsurePortalStillOpen
 
         $seen = $request->session()->get(self::FINGERPRINT);
 
-        if (! is_string($seen)) {
+        /*
+         * ⓘ ছাপ কার, সেটাও রাখা — অন্য গ্রাহকের ছাপ মানে এই সেশনে নতুন জন ঢুকেছেন (ঢোকার পথ নিজেই ছাপ বসায়), পাসওয়ার্ড
+         * বদল নয়; তখন নতুন ছাপ, বের করা নয়। ⚠️ আগে কেবল হ্যাশ রাখায় এক সেশনে গ্রাহক বদলালে ভুলে বের করে দিত।
+         */
+        if (! is_array($seen) || (string) ($seen['id'] ?? '') !== (string) $customer->getAuthIdentifier()) {
             self::remember($request, $customer);
 
             return false;
         }
 
-        return ! hash_equals($seen, self::fingerprintOf($customer));
+        return ! hash_equals((string) ($seen['hash'] ?? ''), self::fingerprintOf($customer)['hash']);
     }
 
-    private static function fingerprintOf(\Illuminate\Contracts\Auth\Authenticatable $customer): string
+    /** @return array{id: string, hash: string} */
+    private static function fingerprintOf(\Illuminate\Contracts\Auth\Authenticatable $customer): array
     {
-        return hash_hmac('sha256', $customer->getAuthIdentifier().'|'.$customer->getAuthPassword(), (string) config('app.key'));
+        return [
+            'id' => (string) $customer->getAuthIdentifier(),
+            'hash' => hash_hmac('sha256', $customer->getAuthIdentifier().'|'.$customer->getAuthPassword(), (string) config('app.key')),
+        ];
     }
 }
