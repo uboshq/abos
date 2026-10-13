@@ -75,11 +75,13 @@ final class SupplierImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
             $errors[] = __('supplier::validation.code_taken', ['code' => $row['code']]);
         }
 
-        if (filled($row['opening_balance']) && ! is_numeric($row['opening_balance'])) {
+        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric`-এ পার হয়ে bccomp-এ ভাঙত, যাচাই সবুজ অথচ ইমপোর্টে সারি পড়ত
+        // (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneEFiveBrokeTheSupplierFormTest]])
+        if (filled($row['opening_balance']) && preg_match('/^-?\d{1,12}(\.\d{1,4})?$/', trim((string) $row['opening_balance'])) !== 1) {
             $errors[] = __('core.import.not_a_number', ['column' => 'opening_balance']);
         }
 
-        if (filled($row['credit_limit']) && ! is_numeric($row['credit_limit'])) {
+        if (filled($row['credit_limit']) && preg_match('/^\d{1,14}(\.\d{1,4})?$/', trim((string) $row['credit_limit'])) !== 1) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
         }
 

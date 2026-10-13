@@ -100,10 +100,12 @@ class SupplierRequest extends FormRequest
             'tin' => ['nullable', 'string', 'max:32'],
 
             // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে সীমা বলা নেই
-            'credit_limit' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ decimal, numeric নয় — "1e5" `numeric` পেরিয়ে শুরুর দেনার bccomp-এ ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+            // [[OneEFiveBrokeTheSupplierFormTest]]); গ্রাহকের ফর্মে ৯ অক্টোবর থেকেই এভাবে
+            'credit_limit' => ['nullable', 'decimal:0,4', 'min:0', 'max:99999999999999'],
             'credit_days' => ['nullable', 'integer', 'min:0', 'max:365'],
 
-            'opening_balance' => ['nullable', 'numeric'],
+            'opening_balance' => ['nullable', 'decimal:0,4', 'min:-999999999999', 'max:999999999999'],
             'opening_date' => ['nullable', 'date'],
 
             /*
