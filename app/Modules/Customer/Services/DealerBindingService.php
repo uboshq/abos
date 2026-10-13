@@ -119,6 +119,15 @@ final class DealerBindingService
             throw ValidationException::withMessages(['ends_on' => __('customer::binding.end_before_start')]);
         }
 
+        /*
+         * ⛔ শেষ হওয়া বাঁধন আবার খোলে না — কেবল আগে টানা যায়। আগে হাতবদলে শেষ হওয়া বাঁধনে পরের কোনো দিন "শেষ" বসালে পুরনো
+         * বিক্রয়কর্মী ঐ দিন পর্যন্ত ডিলারকে আবার দেখতেন, নতুনজনের পাশাপাশি (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+         * [[AnEndedBindingWasOpenedAgainTest]])। ⓘ আবার দিতে হলে নতুন বাঁধন — ইতিহাসে আলাদা সারি।
+         */
+        if ($binding->ends_on !== null && $end->gt($binding->ends_on)) {
+            throw ValidationException::withMessages(['ends_on' => __('customer::binding.already_ended')]);
+        }
+
         $binding->forceFill(['ends_on' => $end, 'ended_by' => auth()->id()])->save();
         $this->scope->forget();
     }
