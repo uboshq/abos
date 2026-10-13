@@ -264,6 +264,22 @@ final class AccountsChecks implements ChecksItsOwnBooks
             whenBroken: __('accounts::integrity.party_control_broken'),
             permission: 'accounts.report',
             run: function (): array {
+                /*
+                 * ⛔ মালিকের মূলধন (৩১০০) পক্ষ-নিয়ন্ত্রণ খাত নয় — লাইভের রাতের যাচাই, ১২–১৩ অক্টোবর ২০২৬ ([[APartysBalanceNeverMetItsControlAccountTest]])।
+                 * ⓘ খোলা জেরের প্রতিপক্ষ ৩১০০ ([[OpeningBalanceService]]), নাম ছাড়া; মালিক একক মালিক, তাই নামহীন অংশ তাঁরই। "person" সেখানে
+                 * বসাতে পারে (বিনিয়োগকারী), বাধ্য নয়; মূলধন মেলে অর্থ মডিউলের নিজের রেজিস্টারে। ⛔ না বাদ দিলে ADI-র ১৬৬, UB-র ১৪ আর AVA-র
+                 * ৩টা খোলা জের রোজ রাতে "ভাঙা" বলত, আর আসল ভাঙাটা ঐ ভিড়ে হারাত।
+                 */
+                $notControl = DB::table('accounts')->where('company_id', CompanyContext::id())->whereNull('deleted_at')->get(['id', 'parent_id', 'code']);
+                $optional = [];
+                $queue = $notControl->where('code', \App\Modules\Accounts\Services\StandardChart::OWNER_CAPITAL)->pluck('id')->all();
+
+                while ($queue !== []) {
+                    $id = (int) array_shift($queue);
+                    $optional[$id] = true;
+                    array_push($queue, ...$notControl->where('parent_id', $id)->pluck('id')->map(fn ($i) => (int) $i)->reject(fn ($i) => isset($optional[$i]))->all());
+                }
+
                 // ⓘ ONLY_FULL_GROUP_BY: কেবল গোষ্ঠীর কলাম আর যোগফল; নাম পরে আলাদা করে
                 $rows = DB::table('ledger_entries as le')
                     ->join('accounts as a', fn ($join) => $join
@@ -272,6 +288,7 @@ final class AccountsChecks implements ChecksItsOwnBooks
                     ->where('le.company_id', CompanyContext::id())
                     ->whereNotNull('a.party_types')
                     ->where('a.party_types', '<>', '[]')
+                    ->whereNotIn('le.account_id', array_keys($optional) ?: [0])
                     ->groupBy('le.account_id')
                     ->selectRaw('le.account_id,
                         COALESCE(SUM(le.debit), 0) - COALESCE(SUM(le.credit), 0) AS control,
