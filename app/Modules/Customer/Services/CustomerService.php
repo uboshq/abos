@@ -64,6 +64,12 @@ final class CustomerService
 
             $data['code'] = $givenCode ? trim($data['code']) : $this->numbers->next('CUS');
 
+            // ⛔ সিরিজের নম্বর হাতে লেখা কোডে আগেই বসে থাকলে পরেরটা — আগে লেনদেন ফিরত সিরিজের গুনতিসহ, আর পরের বার আবার
+            // একই নম্বর: কোনো গ্রাহকই বানানো যেত না (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ATypedCodeBlockedEveryNewCustomerTest]])
+            for ($tries = 0; ! $givenCode && $tries < 1000 && $this->codeTaken($data['code']); $tries++) {
+                $data['code'] = $this->numbers->next('CUS');
+            }
+
             $this->assertCodeIsFree($data['code']);
 
             $customer = Customer::create([
@@ -892,10 +898,10 @@ final class CustomerService
         }
     }
 
-    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    private function codeTaken(string $code, ?int $exceptId = null): bool
     {
         // ⛔ দেয়াল ছাড়া — অন্যের ডিলারের সংকেত না দেখলে "খালি" বলত, আর unique নিয়ম ৫০০ দিত (⛔১৬, §গ৫)
-        $taken = Customer::acrossDealers()
+        return Customer::acrossDealers()
             ->where('code', $code)
             ->when($exceptId, fn ($q) => $q->whereKeyNot($exceptId))
             // মুছে ফেলা গ্রাহকের কোডও দখলে থাকে: সফট ডিলিট মানে রেকর্ডটা
@@ -903,8 +909,11 @@ final class CustomerService
             // কোনটায় যাবে বলা যেত না।
             ->withTrashed()
             ->exists();
+    }
 
-        if ($taken) {
+    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    {
+        if ($this->codeTaken($code, $exceptId)) {
             throw ValidationException::withMessages([
                 'code' => __('customer::validation.code_taken', ['code' => $code]),
             ]);
