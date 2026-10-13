@@ -226,6 +226,37 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $this->get(route('hr.claim.create'))->assertForbidden();
     }
 
+    /**
+     * ⛔ সইয়ের চাবি থাকলেই সহকর্মীর দাবি নয় — কেবল যে দাবিতে তিনি সইকারী (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     * ⓘ আগে `approval.decide` থাকলেই নাগালের যেকোনো দাবি, কারণ আর রসিদ খোলা যেত।
+     */
+    public function test_a_signer_of_other_papers_cannot_read_a_colleagues_claim_but_the_claims_own_signer_can(): void
+    {
+        $own = $this->member('own-signer@claims.test', ['approval.decide']);
+        $bystander = $this->member('bystander@claims.test', ['approval.decide']);
+        $flow = ApprovalFlow::query()->create(['module' => 'hr', 'action' => 'expense_claim', 'is_active' => true]);
+        ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $own->id]);
+        $this->app->forgetInstance(ApprovalEngine::class);
+
+        $claim = $this->submit(ExpenseClaim::EXPENSE, '650');
+        $this->assertSame(ExpenseClaim::SUBMITTED, $claim->status);
+
+        $this->actingAs($bystander);
+        $this->get(route('hr.claim.show', $claim))->assertForbidden();
+
+        $this->actingAs($own);
+        $this->get(route('hr.claim.show', $claim))->assertOk();
+
+        // ⓘ সই দেওয়ার পরেও নিজের সিদ্ধান্তের দাবিটা খোলে; অন্যজন তখনো নয়
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_id', $claim->id)
+            ->where('approvable_type', $claim->getMorphClass())->where('status', Approval::PENDING)->sole(), $own);
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->fresh()->status);
+        $this->get(route('hr.claim.show', $claim))->assertOk();
+
+        $this->actingAs($bystander);
+        $this->get(route('hr.claim.show', $claim))->assertForbidden();
+    }
+
     public function test_the_roles_that_mark_their_own_attendance_are_given_the_claim_key(): void
     {
         $role = Role::query()->whereHas('permissions', fn ($q) => $q->where('name', 'hr.attendance.self'))->firstOrFail();
