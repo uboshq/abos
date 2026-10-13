@@ -188,8 +188,12 @@ final class TheAppCouldNotOpenTheWebScreensTest extends TestCase
     public function test_no_key_is_made_for_somewhere_outside_or_for_the_doors_themselves(): void
     {
         $access = $this->login('accounts@abos.test')->json('accessToken');
+        $real = $this->menuPath($access, 'accounts.coa.index');
 
         foreach ([
+            // ⛔ একটা আসল পর্দার পথ, অন্যের ঠিকানায় — পথ মিললেও বাইরে নয়
+            'https://evil.example'.$real,
+            '//evil.example'.$real,
             'https://evil.example/x',
             '//evil.example/x',
             '/\\evil.example',
