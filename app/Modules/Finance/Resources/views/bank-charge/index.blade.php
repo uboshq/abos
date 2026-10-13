@@ -123,7 +123,7 @@
             :grand="['amount' => $bank_id ? (string) ($byBank->first(fn ($b) => $b['bank']?->id === (int) $bank_id)['amount'] ?? '0') : $total]"
             :columns="[
             ['key' => 'date', 'label' => __('finance::bank_charge.date'), 'width' => '7rem',
-             'render' => fn ($e) => $e->trx_date?->format('d M Y')],
+             'render' => fn ($e) => $e->trx_date?->translatedFormat('j M Y')],
             ['key' => 'document', 'label' => __('finance::bank_charge.document'), 'width' => '9rem',
              'render' => fn ($e) => view('finance::bank-charge.partials.drill', ['entry' => $e])],
             ['key' => 'bank', 'label' => __('finance::bank_charge.bank'), 'width' => '14rem',
