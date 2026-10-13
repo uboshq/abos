@@ -50,7 +50,7 @@ final class PrintQueue
          * `firstOrCreate` আগের সারিটা দেখত না, আবার বসাতে যেত, আর `uq_sal_print_job_document` → ৫০০। ⭐ এই সারিটা
          * হিসাবের খাতা, দেখার তালিকা নয় — কাগজটা খোলার অনুমতি ছাপার দরজাই আগে যাচাই করেছে; কোম্পানির দেয়াল থাকে।
          */
-        return DB::transaction(fn () => PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->firstOrCreate(
+        return DB::transaction(fn () => PrintJob::query()->withoutGlobalScopes([PrintJob::DEALER_WALL, 'user-branch'])->firstOrCreate(
             [
                 'document_type' => $type,
                 'document_id' => $id,
@@ -164,7 +164,7 @@ final class PrintQueue
     /** ⓘ তালাসহ তাজা সারি — দেয়াল ছাড়া, [[reread()]]-এর একই কারণে */
     private function lock(PrintJob $job): PrintJob
     {
-        return PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->lockForUpdate()->findOrFail($job->getKey());
+        return PrintJob::query()->withoutGlobalScopes([PrintJob::DEALER_WALL, 'user-branch'])->lockForUpdate()->findOrFail($job->getKey());
     }
 
     /**
@@ -202,7 +202,7 @@ final class PrintQueue
      */
     private function reread(PrintJob $job): PrintJob
     {
-        return PrintJob::query()->withoutGlobalScope(PrintJob::DEALER_WALL)->findOrFail($job->getKey());
+        return PrintJob::query()->withoutGlobalScopes([PrintJob::DEALER_WALL, 'user-branch'])->findOrFail($job->getKey());
     }
 
     /**
