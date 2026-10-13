@@ -99,7 +99,7 @@ final class SalesInvoiceCancellationService
             ];
 
             if ($existing !== null) {
-                $paper = SalesInvoiceCancellation::query()->whereKey($existing->id)->lockForUpdate()->firstOrFail();
+                $paper = SalesInvoiceCancellation::acrossBranches()->whereKey($existing->id)->lockForUpdate()->firstOrFail();
 
                 // ⛔ দুই হাত একসাথে — একজনই আবার খোলে
                 if ($paper->status !== DocumentStatus::CANCELLED) {
