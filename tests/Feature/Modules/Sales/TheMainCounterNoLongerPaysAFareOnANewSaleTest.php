@@ -103,6 +103,25 @@ final class TheMainCounterNoLongerPaysAFareOnANewSaleTest extends TestCase
         $this->assertSame(0, bccomp($main, $this->mainTillBalance(), 4), '⛔ প্রধান টিল থেকে ভাড়া কাটল — পুরনো পথ খোলা।');
     }
 
+    /**
+     * ⛔ ফোনের কাউন্টার ধীর নেটে দুবার বেচত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; `/api/v1/sales/direct`-এ [[RemembersAPhoneWrite]])।
+     *
+     * ⚠️ উত্তর হারালে ক্যাশিয়ার আবার চাপেন — অর্ডার, ফেরত, ডিও-র দরজায় একই চাবিতে একবারই, অথচ কাউন্টারে পাহারা ছিল না: দ্বিতীয়
+     * বিল, দ্বিতীয় চালান, মাল দুবার বেরোত। ⭐ এখন একই চাবিতে একটাই বিক্রি, দ্বিতীয়বার আগের উত্তর।
+     */
+    public function test_the_same_key_sells_once_at_the_phone_counter(): void
+    {
+        Sanctum::actingAs($this->seller->fresh(), [AuthController::APP]);
+        $sale = $this->phoneSale(['carrier' => (string) $this->carrier()->public_id]);
+        $challans = DeliveryChallan::query()->count();
+
+        $this->withHeader('Idempotency-Key', 'counter-key-0001')->postJson('/api/v1/sales/direct', $sale)->assertCreated();
+        $this->withHeader('Idempotency-Key', 'counter-key-0001')->postJson('/api/v1/sales/direct', $sale)->assertCreated()
+            ->assertHeader('Idempotent-Replay', 'true');
+
+        $this->assertSame($challans + 1, DeliveryChallan::query()->count(), '⛔ একই চাবিতে কাউন্টার দুবার বেচল।');
+    }
+
     public function test_the_web_counter_without_fare_fields_stops_too_but_customer_pays_still_goes(): void
     {
         $this->actingAs($this->seller->fresh());

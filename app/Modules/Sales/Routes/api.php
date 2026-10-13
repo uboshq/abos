@@ -60,7 +60,8 @@ Route::prefix('v1/sales')
         Route::get('/direct/setup', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'setup'])->name('direct.setup');
         Route::get('/direct/free-allowed', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'freeAllowed'])->name('direct.free_allowed');
         Route::post('/direct/overview', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'overview'])->name('direct.overview');
-        Route::post('/direct', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'store'])->name('direct.store');
+        // ⛔ একটা বিক্রি একবারই — নেট ধীর হলে দ্বিতীয় চাপে দ্বিতীয় বিল আর চালান হত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheMainCounterNoLongerPaysAFareOnANewSaleTest::test_the_same_key_sells_once_at_the_phone_counter]])
+        Route::post('/direct', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('direct.store');
         // ⭐ কাউন্টারের বাকি বোতাম — খসড়া খোলা আর কারণসহ বাতিল, ওয়েবের একই সেবা (মালিক, ৪ অক্টোবর ২০২৬)
         Route::get('/direct/drafts', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'drafts'])->name('direct.drafts');
         Route::get('/direct/drafts/{id}', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'draft'])->whereUuid('id')->name('direct.draft');

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/direct_sale_api.dart';
 import '../../core/orders/sales_return_api.dart';
@@ -44,6 +45,9 @@ class CounterScreen extends StatefulWidget {
 }
 
 class _CounterScreenState extends State<CounterScreen> {
+  // ⭐ একটা বিক্রি একবারই — উত্তর হারালে আবার চাপলে একই চাবি, সার্ভার আগের উত্তর ফেরায় (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+  final _once = OnceKey();
+
   CounterSetup? _setup;
   String? _warehouseId;
   String _term = 'cash';
@@ -301,14 +305,14 @@ class _CounterScreenState extends State<CounterScreen> {
       _error = null;
     });
     try {
-      final result = await widget.api.sell(
-        customerId: customer.id,
-        warehouseId: _warehouseId,
-        paymentTerm: _term,
-        lines: List.of(_cart),
-        draft: draft,
-        extras: repeat ? _extras.repeating() : _extras,
-      );
+      final result = await _once.send(() => widget.api.sell(
+            customerId: customer.id,
+            warehouseId: _warehouseId,
+            paymentTerm: _term,
+            lines: List.of(_cart),
+            draft: draft,
+            extras: repeat ? _extras.repeating() : _extras,
+          ));
       if (!mounted) return;
       setState(() => _busy =
           false); // ⓘ পপ-আপের আগেই — নইলে "চলছে" দাগ পপ-আপের পেছনে ঘুরতেই থাকে
