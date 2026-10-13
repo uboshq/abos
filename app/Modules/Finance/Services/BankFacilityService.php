@@ -554,6 +554,8 @@ class BankFacilityService
     {
         return BankFacility::query()
             ->live()
+            // ⛔ দেখার শাখায় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️৪); আগে হেডারে এক শাখা বাছা থাকলেও অন্য শাখার ঋণ দেখাত
+            ->inViewedBranch()
             ->whereNotNull('renews_on')
             ->where('renews_on', '<=', now()->addDays(30)->toDateString())
             ->orderBy('renews_on')
