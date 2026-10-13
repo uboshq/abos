@@ -837,9 +837,11 @@ final class VoucherService
          * `information_schema.COLUMNS`, চলতি ডাটাবেস (`DATABASE()`) ধরে ছাঁকা; টেবিলের নাম ছোট হাতে, তাই অক্ষরের নিয়মে আটকায় না।
          */
         $version = (string) DB::table('migrations')->max('migration');
-        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), fn () => collect(DB::select(
-            "SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME LIKE '%voucher\_id'"
-        ))->map(fn ($r) => ['t' => strtolower((string) $r->t), 'c' => (string) $r->c])
+        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), fn () => DB::table('information_schema.COLUMNS')
+            ->whereRaw('TABLE_SCHEMA = DATABASE()')
+            ->where('COLUMN_NAME', 'like', '%voucher\_id')
+            ->get(['TABLE_NAME as t', 'COLUMN_NAME as c'])
+            ->map(fn ($r) => ['t' => strtolower((string) $r->t), 'c' => (string) $r->c])
             ->reject(fn (array $r) => in_array($r['t'], ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true))
             ->values()->all());
 

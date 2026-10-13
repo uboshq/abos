@@ -43,6 +43,7 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
         'users' => 'একজন ব্যবহারকারী একাধিক কোম্পানিতে থাকতে পারেন',
         'companies' => 'কোম্পানির তালিকা নিজেই',
         'migrations' => 'ফ্রেমওয়ার্কের নিজের খাতা',
+        'information_schema.COLUMNS' => 'ডাটাবেসের স্কিমা — কোম্পানির সারি নয় ([[VoucherService::ownerOf()]], ১৪ অক্টোবর ২০২৬)',
         'cache' => 'ফ্রেমওয়ার্ক',
         'cache_locks' => 'ফ্রেমওয়ার্ক',
         'jobs' => 'ফ্রেমওয়ার্ক',
