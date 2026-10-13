@@ -69,6 +69,15 @@ final class PhoneModules
      */
     public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control'];
 
+    /**
+     * ⭐ যে মডিউলের ফোনের পর্দা কেবল নিজের দরজা ডাকে — মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ (১৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ এরা অন্য মডিউলের সংখ্যা সার্ভারের ভিতরেই পড়ে (নিজের সেবায়), ফোনকে বিক্রয় বা অনুমোদনের দরজায় পাঠায় না। তাই এরা চালু
+     * থাকলেও নির্ভরতা ধরে বিক্রয়/অনুমোদন/মজুদের দরজা খোলা থাকে না — নইলে নিজে থেকে চালু এই দুইটার জন্য কোম্পানির বিক্রয় বা
+     * অনুমোদনের সুইচ বন্ধ করা আর কিছুই বন্ধ করত না (ThePhoneShowedEveryModuleTest ধরেছে)।
+     */
+    public const OWN_DOORS_ONLY = ['executive', 'credit_control'];
+
     public function __construct(
         private readonly ModuleRegistry $registry,
         private readonly SettingsService $settings,
@@ -164,6 +173,11 @@ final class PhoneModules
             }
 
             $reach[$code] = true;
+
+            // ⛔ নিজের দরজাতেই সব — এদের নির্ভরতা ধরে অন্যের দরজা খোলে না ([[OWN_DOORS_ONLY]])
+            if (in_array($code, self::OWN_DOORS_ONLY, true)) {
+                continue;
+            }
 
             foreach ($this->registry->get($code)?->dependsOn ?? [] as $dependency) {
                 $queue[] = (string) $dependency;
