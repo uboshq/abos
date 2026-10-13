@@ -48,4 +48,6 @@ return [
     // ⭐ Own leave from the phone — with no employee record there is nobody to apply for (13 Oct 2026)
     'leave_no_employee' => 'There is no employee record in your name, so leave cannot be applied for. Ask HR.',
     'leave_part_day' => ':share day leave',
+    // ⓘ ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+    'leave_employee_gone' => 'Your employee record is closed (inactive or deleted), so leave cannot be applied for. If this is wrong, tell HR or the owner.',
 ];

@@ -105,8 +105,9 @@ class LeaveController extends Controller implements HasMiddleware
         $data = $request->validate([
             'employee_id' => ['required', 'integer',
                 Rule::exists('hr_employees', 'id')->where('company_id', $companyId)],
+            // ⛔ কেবল চালু ধরন — ফোনের একই নিয়ম (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬, ⓘ১৭); ⓘ বানানো POST বন্ধ করা ধরনেও আবেদন বসাত
             'leave_type_id' => ['required', 'integer',
-                Rule::exists('hr_leave_types', 'id')->where('company_id', $companyId)],
+                Rule::exists('hr_leave_types', 'id')->where('company_id', $companyId)->where('is_active', true)->whereNull('deleted_at')],
             'from_date' => ['required', 'date'],
             'to_date' => ['required', 'date'],
             // ⛔ সাধারণ সংখ্যা, দশমিকের পরে বড়জোর এক ঘর — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯; [[LeaveIsCountedWhenItIsApprovedTest]]);
@@ -116,6 +117,7 @@ class LeaveController extends Controller implements HasMiddleware
         ], [
             'days.decimal' => __('hr::validation.days_format'),
             'days.regex' => __('hr::validation.days_format'),
+            'leave_type_id.exists' => __('hr::validation.leave_type_closed'),
         ]);
 
         $employee = Employee::query()->findOrFail($data['employee_id']);
