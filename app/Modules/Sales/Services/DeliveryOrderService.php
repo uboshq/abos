@@ -315,6 +315,14 @@ final class DeliveryOrderService
             throw ValidationException::withMessages(['sales_order_id' => __('sales::delivery_order.order_elsewhere')]);
         }
 
+        /*
+         * ⛔ নতুন ধারার আদেশে DO নয় — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ ঐ আদেশ নিজেই মাল ধরে আর বাকির সীমায় গোনা হয়
+         * ([[CreditExposure::openOrders()]]); সুইচ বন্ধ করে তার উপর DO লিখলে একই বিক্রি সীমায় দুবার, মালও দুবার ধরা।
+         */
+        if ($order->hold_mode === \App\Modules\Sales\Support\SalesOrderStatus::HOLD_HOLDS) {
+            throw ValidationException::withMessages(['sales_order_id' => __('sales::delivery_order.order_holds_itself', ['no' => $order->document_no])]);
+        }
+
         return (int) $order->id;
     }
 }

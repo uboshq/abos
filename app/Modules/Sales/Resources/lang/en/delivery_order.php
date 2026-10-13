@@ -11,6 +11,7 @@ return [
     'locked_after_submit' => 'After submitting, the writer can no longer change it — only the approver can.',
     'no_customer' => 'Choose a dealer.',
     'order_elsewhere' => 'That order belongs to another dealer.',
+    'order_holds_itself' => 'Order :no already holds its goods and counts against the credit limit, so a DO cannot be written on it. Make the challan from the order.',
     'approval' => 'Delivery order (DO)',
     'not_awaiting_you' => 'This DO is not awaiting a supervisor now.',
     'approved_qty_range' => 'Quantity must be between zero and what was asked.',

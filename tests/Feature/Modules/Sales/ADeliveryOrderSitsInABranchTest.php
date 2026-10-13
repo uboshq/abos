@@ -66,6 +66,35 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
         $this->assertSame($this->home->id, $this->branchOf($this->customer->fresh()), '⛔ ডিলারের নিজের DO তাঁর শাখায় বসেনি।');
     }
 
+    /**
+     * ⛔ নতুন ধারার আদেশে DO লেখা যায় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে সুইচ বন্ধ করে ঐ আদেশের উপর DO লেখা যেত:
+     * আদেশ আর DO দুইটাই বাকির সীমায় গোনা হত, একই বিক্রি দুবার।
+     */
+    public function test_a_do_cannot_ride_on_an_order_that_holds_its_own_goods(): void
+    {
+        $product = Product::query()->orderBy('id')->value('id');
+        $order = app(\App\Modules\Sales\Services\SalesOrderService::class)->create(
+            ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product, 'qty' => '2', 'rate' => '10']]);
+
+        $write = fn () => app(DeliveryOrderService::class)->create(
+            ['customer_id' => $this->customer->id, 'sales_order_id' => $order->id], [['product_id' => $product, 'qty' => '2']], auth()->user());
+
+        $this->assertNotNull($write(), 'দৃশ্যটাই ভুল — পুরনো ধারার আদেশে DO লেখা গেল না।');
+
+        \Illuminate\Support\Facades\DB::table('sal_orders')->where('id', $order->id)->update([
+            'hold_mode' => \App\Modules\Sales\Support\SalesOrderStatus::HOLD_HOLDS,
+            'status' => \App\Modules\Sales\Support\SalesOrderStatus::APPROVED,
+        ]);
+
+        try {
+            $write();
+            $this->fail('⛔ মাল-ধরা আদেশের উপর DO লেখা হয়ে গেল — সীমায় একই বিক্রি দুবার।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('sales_order_id', $e->errors());
+        }
+    }
+
     private function branchOf(User|Customer $by): ?int
     {
         $branch = $this->write($by)->branch_id;
