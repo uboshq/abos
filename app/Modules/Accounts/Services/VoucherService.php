@@ -317,7 +317,17 @@ final class VoucherService
             ]);
         }
 
-        return DB::transaction(fn () => $this->writeHeaderAndLines($voucher, $data, $lines));
+        return DB::transaction(function () use ($voucher, $data, $lines) {
+            /*
+             * ⛔ তালা দিয়ে অবস্থা আবার — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[APostedVoucherKeepsItsLinesTest]])। ⓘ উপরের দেখা
+             * হাতের কপিতে: একই মুহূর্তে অন্যজন পাকা করলে এই সম্পাদনা পাকা ভাউচারের সারি বদলে দিত, খাতা আগের অঙ্কেই — কাগজ আর খাতা দুই কথা।
+             * ⓘ [[post()]] আর [[cancel()]]-এর একই ধাঁচ ([[lockedStatus()]])।
+             */
+            $voucher->setAttribute('status', $this->lockedStatus($voucher));
+            $this->assertEditable($voucher);
+
+            return $this->writeHeaderAndLines($voucher, $data, $lines);
+        });
     }
 
     /**
