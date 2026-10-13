@@ -230,6 +230,32 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
             app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-10-20', '2026-10-21', '1.5')->status);
     }
 
+    /**
+     * ⛔ নিজের মঞ্জুর হওয়া ছুটি নিজে প্রত্যাহার নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৭; [[LeaveService::cancel()]])।
+     * ⓘ কেবল `hr.leave.manage`-ওয়ালা কর্মী নিজের মঞ্জুর হওয়া বিনা বেতনের ছুটি বেতনের আগে তুলে নিতে পারতেন — মঞ্জুরিটাই উল্টে যেত।
+     */
+    public function test_a_clerk_cannot_withdraw_their_own_approved_leave(): void
+    {
+        $clerk = User::factory()->create(['email' => 'clerk@leave.test', 'current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->company->id, fn () => $clerk->givePermissionTo(
+            array_map(fn (string $key) => Permission::findOrCreate($key, 'web'), ['hr.leave.view', 'hr.leave.manage'])));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->employee->forceFill(['user_id' => $clerk->id])->save();
+
+        $leave = app(LeaveService::class)->approve(
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-03-02', '2026-03-04', '3'), $this->owner);
+
+        $this->actingAs($clerk)->post(route('hr.leave.cancel', $leave->id))->assertSessionHasErrors('status');
+
+        $this->assertSame(LeaveApplication::APPROVED, $leave->fresh()->status, '⛔ কর্মী নিজের মঞ্জুর হওয়া ছুটি নিজেই প্রত্যাহার করলেন');
+        $this->assertSame(3, Attendance::query()->where('leave_application_id', $leave->id)->count());
+
+        // ⓘ আরেকজন (মালিক) প্রত্যাহার করতে পারেন
+        $this->actingAs($this->owner)->post(route('hr.leave.cancel', $leave->id))->assertSessionHasNoErrors();
+        $this->assertSame(LeaveApplication::CANCELLED, $leave->fresh()->status);
+    }
+
     private function type(string $code): LeaveType
     {
         return LeaveType::query()->where('code', $code)->firstOrFail();

@@ -152,9 +152,11 @@ final class LeaveService
      *
      * সারিগুলো রেখে দিলে লোকটা কাজে ফিরেও খাতায় ছুটিতে থাকতেন।
      */
-    public function cancel(LeaveApplication $application): LeaveApplication
+    public function cancel(LeaveApplication $application, ?User $by = null): LeaveApplication
     {
-        return DB::transaction(function () use ($application) {
+        $by ??= auth()->user();
+
+        return DB::transaction(function () use ($application, $by) {
             /*
              * ⛔ তালা দিয়ে তাজা অবস্থা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩)। ⓘ হাতের পুরনো কপি দেখে প্রত্যাহার হত: একই
              * সময়ে মঞ্জুরি চললে প্রত্যাহারটা তার আগের অবস্থা দেখত, আর বাতিল আবেদনের নামে ছুটির সারি থেকে যেতে পারত। কর্মীর সারিতে
@@ -167,6 +169,16 @@ final class LeaveService
                 throw ValidationException::withMessages([
                     'status' => __('hr::validation.leave_already_cancelled'),
                 ]);
+            }
+
+            /*
+             * ⛔ নিজের মঞ্জুর হওয়া ছুটি নিজে প্রত্যাহার নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৭; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ নিজের ছুটি নিজে মঞ্জুর আটকানো ছিল, কিন্তু কেবল `hr.leave.manage`-ওয়ালা কর্মী বিনা বেতনের ছুটি কাটিয়ে বেতনের আগে নিজেই
+             * সেটা প্রত্যাহার করতে পারতেন — ছুটির সারি মুছে যেত, খালি দিন কাটে না, আর কোটাও ফিরত। মঞ্জুরির একই নিয়ম ([[assertNotOwn()]]):
+             * কেবল মালিক (সুপার অ্যাডমিন) নিজেরটা পারেন। অপেক্ষমাণ আবেদন নিজে তুলে নেওয়া আগের মতোই চলে।
+             */
+            if ($by instanceof User && $application->isApproved()) {
+                $this->assertNotOwn($application, $by, 'hr::validation.leave_own_withdrawal');
             }
 
             /*
@@ -256,13 +268,13 @@ final class LeaveService
      * ⛔ নিজের ছুটি নিজে মঞ্জুর নয় — একই পুনঃঅডিট (HR ৮)। ⓘ ছুটি মঞ্জুরের চাবি থাকলে ব্যবস্থাপক নিজের আবেদনও মঞ্জুর করতে
      * পারতেন। সইয়ের ইঞ্জিনের নিয়মেই ([[ApprovalEngine::canDecide()]]) কেবল মালিক (সুপার অ্যাডমিন) নিজের কাগজে সই দিতে পারেন।
      */
-    private function assertNotOwn(LeaveApplication $application, User $decider): void
+    private function assertNotOwn(LeaveApplication $application, User $decider, string $messageKey = 'hr::validation.leave_own_approval'): void
     {
         $own = Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->value('user_id');
 
         if ($own !== null && (int) $own === (int) $decider->id && ! $decider->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
             throw ValidationException::withMessages([
-                'status' => __('hr::validation.leave_own_approval'),
+                'status' => __($messageKey),
             ]);
         }
     }

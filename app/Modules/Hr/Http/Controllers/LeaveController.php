@@ -157,7 +157,7 @@ class LeaveController extends Controller implements HasMiddleware
 
     public function cancel(Request $request, int $application): RedirectResponse
     {
-        $this->leave->cancel($this->reachable($request, $application));
+        $this->leave->cancel($this->reachable($request, $application), $request->user());
 
         return back()->with('saved', __('hr::message.leave_cancelled'));
     }
