@@ -739,6 +739,12 @@ final class SalesInvoiceService
             // ⭐ আদেশের বিলের অগ্রগতি — খাতা বসার পরে, একই লেনদেনে (SO+DO ধাপ ৫; [[OrderProgress::refreshOrders()]])
             app(OrderProgress::class)->refreshOrders($this->ordersOf($invoice));
 
+            /*
+             * ⛔ আদেশে কাটা টাকার কুপন এই বিলের ক্রেডিট নোটে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (প্রমোশন ১৮;
+             * [[TheOrderCouponReachesTheBillTest]])। ⓘ আগে আদেশের কুপন কখনো খাতায় পৌঁছাত না; বিলের অঙ্কের বেশি নয়।
+             */
+            app(SalesOffers::class)->carryOrderCoupons($this->ordersOf($invoice), (int) $invoice->id, $invoice->fresh()->noteCreditRoom(null));
+
             $confirmed = $invoice->fresh(['lines']);
 
             /*

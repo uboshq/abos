@@ -100,7 +100,8 @@ class ExpenseClaimController extends Controller implements HasMiddleware
     /** ⭐ বাকি অগ্রিম নগদে ফেরত — খসড়া আদায় ভাউচার, ক্যাশিয়ার নিজের টিলে পাকা করেন (টাকার পরিকল্পনা দফা ১৩, ধাপ ৪) */
     public function takeBackAdvance(Request $request, ExpenseClaim $claim): RedirectResponse
     {
-        $data = $request->validate(['amount' => ['required', 'numeric', 'gt:0']]);
+        // ⛔ decimal:0,2 — "1e5"-এর মতো লেখা `numeric` পেরোয়, bcmath-এ ভেঙে ৫০০ (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, HR ৪)
+        $data = $request->validate(['amount' => ['required', 'decimal:0,2', 'gt:0', 'max:99999999999999']]);
 
         $voucher = $this->claims->takeBackAdvance($claim, (string) $data['amount']);
 
@@ -151,7 +152,8 @@ class ExpenseClaimController extends Controller implements HasMiddleware
     {
         return $request->validate([
             'kind' => ['required', Rule::in(ExpenseClaim::KINDS)],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            // ⛔ decimal:0,2 — "1e5"-এর মতো লেখা `numeric` পেরোয়, bcmath-এ ভেঙে ৫০০; ওয়েব আর ফোন দুই দরজাই এখান দিয়ে (HR ৪)
+            'amount' => ['required', 'decimal:0,2', 'gt:0', 'max:99999999999999'],
             'expense_account_id' => ['nullable', 'integer'],
             'spent_on' => ['nullable', 'date', 'before_or_equal:today'],
             'reason' => ['required', 'string', 'max:500'],

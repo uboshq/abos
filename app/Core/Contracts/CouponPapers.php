@@ -35,4 +35,13 @@ interface CouponPapers
      * @param  string  $worth  সুবিধার টাকার মূল্য
      */
     public function redeemed(string $sourceType, int $sourceId, string $kind, string $worth, string $code): void;
+
+    /**
+     * ⭐ একটা কাগজের সারিতে বসানো অফারের অঙ্ক হাতে বদলাল — কাগজের মালিক সারিটা নতুন করে গোনে (পুরো-ERP পুনঃঅডিট,
+     * ৯ অক্টোবর ২০২৬, প্রমোশন ২০; [[\App\Modules\Promotion\Services\PromotionDesk::override()]])।
+     *
+     * ⛔ কাগজ আর খসড়া না থাকলে (পাকা বিল, পাকা চালান) `ValidationException` — খাতা বসে গেছে, বদল তখন নোটে। বদলের একই লেনদেনে
+     * ডাকা হয়, তাই এখানে থামলে বদলও বসে না। ⓘ কাগজটা না পাওয়া গেলে কিছুই করে না।
+     */
+    public function offerChanged(string $sourceType, int $sourceId, ?int $sourceLineId): void;
 }

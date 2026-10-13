@@ -185,7 +185,8 @@ final class CustomerListFilters
     {
         $value = is_string($value) ? trim(str_replace(',', '', $value)) : '';
 
-        return is_numeric($value) && (float) $value >= 0 ? bcadd($value, '0', 4) : null;
+        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric` পেরিয়ে bcmath-এ ভেঙে ৫০০ দিত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৭)
+        return preg_match('/^\d{1,14}(\.\d{1,4})?$/', $value) === 1 ? bcadd($value, '0', 4) : null;
     }
 
     private function date(mixed $value): ?string

@@ -17,6 +17,7 @@ return [
     'applied' => 'Offer applied — the line discount goes to the bill.',
     'removed' => 'Offer taken off.',
     'only_draft' => ':no is no longer a draft — offers are applied or taken off only on a draft challan.',
+    'paper_missing' => 'The paper of this offer was not found; nothing was changed.',
     'counter_later' => 'Offers on a counter challan are applied at the counter, not here.',
     'line_not_here' => 'That line is not on this challan.',
 ];

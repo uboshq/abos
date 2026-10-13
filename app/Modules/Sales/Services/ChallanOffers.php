@@ -6,7 +6,6 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Contracts\SalesOffers;
 use App\Core\Support\DocumentStatus;
-use App\Models\User;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesInvoiceLine;
@@ -164,6 +163,12 @@ final class ChallanOffers
      * ⚠️ যোগ-বিয়োগ করে রাখলে দুইবার চাপা বা ব্যর্থ একটা চেষ্টায় অঙ্কটা সরে যেত;
      * অফারের খাতা থেকে গুনলে দুইটা কখনো আলাদা হয় না।
      */
+    /** ⭐ একটা সারি নতুন করে গোনা — অফারের অঙ্ক হাতে বদলালে ([[SalesCouponPapers::offerChanged()]], পুনঃঅডিট ৯ অক্টোবর ২০২৬) */
+    public function refreshLine(DeliveryChallan $challan, int $lineId): void
+    {
+        $this->resync($challan, $this->lineOf($challan, $lineId));
+    }
+
     private function resync(DeliveryChallan $challan, DeliveryChallanLine $line): void
     {
         $sum = collect($this->offers->appliedOn(DeliveryChallan::drillSourceType(), (int) $challan->id))

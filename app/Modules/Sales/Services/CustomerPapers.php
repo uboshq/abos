@@ -155,6 +155,17 @@ final class CustomerPapers
     }
 
     /**
+     * ⭐ গ্রাহকের প্রথম লেনদেনের দিন — খতিয়ানের "সবটা" (Lifetime) এখান থেকে শুরু; কিছু না থাকলে আজ (মালিকের চেকলিস্ট;
+     * রিভিউ, ১০ অক্টোবর ২০২৬)। ⓘ ১৯৭০ বসানোর দরকার নেই — একই সারিগুলো, পর্দায় একটা অর্থবহ তারিখ।
+     */
+    public function firstDay(): string
+    {
+        $first = $this->ledgerRows()->min('trx_date');
+
+        return $first === null ? now()->toDateString() : Carbon::parse((string) $first)->toDateString();
+    }
+
+    /**
      * ছাঁকনির **আগের** সব সারির নিট — খোলার জের।
      *
      * ⚠️ এটা না গুনলে জেরের কলাম শূন্য থেকে শুরু হত, আর গ্রাহক পড়তেন

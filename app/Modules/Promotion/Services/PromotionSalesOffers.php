@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Promotion\Services;
 
 use App\Core\Contracts\SalesOffers;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 use App\Modules\Promotion\Models\Promotion;
 use App\Modules\Promotion\Models\PromotionApplication;
 use App\Modules\Promotion\Support\BenefitKind;
@@ -40,11 +43,11 @@ final class PromotionSalesOffers implements SalesOffers
      */
     public function enabled(): bool
     {
-        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('promotion.enabled', true)) {
+        if (! (bool) app(SettingsService::class)->get('promotion.enabled', true)) {
             return false;
         }
 
-        return ! in_array('promotion', \App\Models\BranchModule::switchedOffIn(\App\Core\Support\CompanyContext::branchId()), true);
+        return ! in_array('promotion', BranchModule::switchedOffIn(CompanyContext::branchId()), true);
     }
 
     public function suggest(array $line): array
@@ -147,5 +150,10 @@ final class PromotionSalesOffers implements SalesOffers
     public function reverseAll(string $sourceType, int $sourceId): void
     {
         $this->reversal->forSource($sourceType, $sourceId);
+    }
+
+    public function carryOrderCoupons(array $orderIds, int $invoiceId, string $room): void
+    {
+        app(CouponDesk::class)->carryToBill($orderIds, $invoiceId, $room);
     }
 }

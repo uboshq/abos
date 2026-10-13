@@ -44,4 +44,5 @@ return [
     'no_leave_types' => 'No leave types yet.',
     'empty_leave_types' => 'Nobody can apply for leave until there are leave types.',
     'no_employees_for_day' => 'Nobody was employed on that day.',
+    'leave_part_day' => ':share day leave',
 ];

@@ -40,7 +40,9 @@ class EnsurePortalStillOpen
          * তাই মানটা এই মুহূর্তের। আরেকবার পড়লে প্রতিটা অনুরোধে একটা
          * বাড়তি কোয়েরি যেত, কিছু নতুন না জেনে।
          */
-        if ($customer !== null && ! $customer->portal_enabled) {
+        // ⛔ নিষ্ক্রিয় বা মুছে ফেলা গ্রাহকও — দরজা বন্ধের একই মানে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৫)
+        if ($customer !== null && (! $customer->portal_enabled || ! $customer->is_active
+            || (method_exists($customer, 'trashed') && $customer->trashed()))) {
             Auth::guard('portal')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

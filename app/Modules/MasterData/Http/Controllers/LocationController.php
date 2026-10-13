@@ -155,7 +155,7 @@ class LocationController extends Controller implements HasMiddleware
      * আটকে যেতেন আর কারণ বুঝতেন না।
      *
      * @param  list<string>  $ladder
-     * @param  \Illuminate\Support\Collection<string, int>  $counts
+     * @param  Collection<string, int>  $counts
      */
     private function levelList(Request $request, string $level, array $ladder, $counts, bool $showInactive): View
     {
@@ -384,7 +384,18 @@ class LocationController extends Controller implements HasMiddleware
             'name_bn' => ['nullable', 'string', 'max:120'],
             'level' => [$editing ? 'nullable' : 'required', 'string'],
             'parent_id' => ['nullable', 'integer'],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            /*
+             * ⛔ এই কোম্পানির ব্যবহারকারীই — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (মাস্টার ২৩; [[AnAreaIsGivenOnlyToThisCompanysPeopleTest]])।
+             * ⓘ `exists:users,id` যেকোনো কোম্পানির লগইন মেনে নিত — অন্য কোম্পানির মানুষ এই কোম্পানির এলাকার দায়িত্বে বসতেন, আর
+             * এলাকা ধরে দেওয়া রিপোর্ট আর সতর্কতা তাঁর কাছে যেত। [[User]] কোম্পানির ছাঁকনি পায় না, তাই পিভট ধরে হাতে।
+             */
+            'assigned_to' => ['nullable', 'integer',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! User::query()->whereKey($value)
+                        ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->exists()) {
+                        $fail(__('master_data::validation.user_not_in_company'));
+                    }
+                }],
         ]);
     }
 

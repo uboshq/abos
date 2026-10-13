@@ -34,7 +34,7 @@ class PromotionApplication extends Model
     use IsAudited;
 
     protected $fillable = [
-        'promotion_id', 'source_type', 'source_id', 'source_line_id',
+        'promotion_id', 'branch_id', 'source_type', 'source_id', 'source_line_id',
         'customer_id', 'product_id', 'promotion_benefit_id',
         'benefit_kind', 'benefit_amount', 'worth',
         'was_overridden', 'override_reason', 'applied_by',

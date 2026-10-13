@@ -6,12 +6,13 @@ namespace App\Modules\Hr\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
-use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\User;
@@ -79,6 +80,15 @@ final class ExpenseClaimService
 
         if ($employee === null) {
             throw ValidationException::withMessages(['employee' => __('hr::claim.no_employee')]);
+        }
+
+        /*
+         * ⛔ চলে যাওয়া বা মুছে ফেলা কর্মী টাকা চান না — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৩; [[AGoneEmployeeCannotAskForMoneyTest]])।
+         * ⓘ খাতা খোঁজা হয় সব ছাঁকনি সরিয়ে ([[employeeOf()]] — কোম্পানি-ভাগের সুইচের জন্য), তাতে মুছে ফেলা খাতাও উঠত; আর নিষ্ক্রিয়
+         * বা ছাড়ার তারিখ পেরোনো কর্মীর লগইন খোলা থাকলে তিনি অগ্রিম চাইতে পারতেন, যা আর বেতন থেকে কাটার উপায় নেই।
+         */
+        if ($employee->trashed() || ! $employee->is_active || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()))) {
+            throw ValidationException::withMessages(['employee' => __('hr::claim.employee_gone')]);
         }
 
         $kind = (string) ($data['kind'] ?? '');
@@ -210,7 +220,12 @@ final class ExpenseClaimService
                 return;
             }
 
-            // ⭐ আগে খোলা অগ্রিম থেকে — খাতায় বসা জের পর্যন্ত
+            /*
+             * ⭐ আগে খোলা অগ্রিম থেকে — খাতায় বসা জের পর্যন্ত।
+             * ⛔ কর্মীর সারিতে তালা দিয়ে পড়া — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ২; [[TwoClaimsTakeTheSameAdvanceTest]])। ⓘ তালা
+             * কেবল দাবির সারিতে ছিল; একই কর্মীর দুইটা দাবি একসাথে সই হলে দুইজনেই একই জের পড়ে দুইজনেই কাটতেন, অগ্রিম ঋণাত্মক হত।
+             */
+            $this->advances->lock([(int) $employee->id]);
             $open = $this->advances->open($employee, Carbon::today());
             $fromAdvance = bccomp($open, '0', 2) > 0 ? (bccomp($open, (string) $claim->amount, 2) < 0 ? $open : (string) $claim->amount) : '0.00';
 
@@ -291,7 +306,7 @@ final class ExpenseClaimService
         $open = $this->advances->open($employee, Carbon::today());
 
         if (bccomp($amount, $open, 2) > 0) {
-            throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => \App\Core\Support\Money::format($open)])]);
+            throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => Money::format($open)])]);
         }
 
         $party = ['party_type' => Employee::drillSourceType(), 'party_id' => (int) $employee->id];

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * একজনের এক দিনের হাজিরা।
@@ -67,6 +68,28 @@ class Attendance extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * ⛔ ছুটির এই দিনটা কত ভাগ — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৮; [[LeaveIsCountedWhenItIsApprovedTest]])।
+     *
+     * ⓘ আবেদনের দিনগুলো তারিখের ক্রমে ভরে: "১.৫ দিন" দুই তারিখে মানে প্রথমটা পুরো, দ্বিতীয়টা আধা; "০.৫ দিন" এক তারিখে আধা।
+     * আবেদনে যত দিন লেখা, বেতনে ঠিক ততই — তারিখের সংখ্যা নয়।
+     */
+    public static function shareOf(LeaveApplication $application, Carbon $day): string
+    {
+        $before = (string) $application->from_date->copy()->startOfDay()->diffInDays($day->copy()->startOfDay());
+        $left = bcsub((string) $application->days, $before, 1);
+
+        return bccomp($left, '1', 1) >= 0 ? '1' : (bccomp($left, '0', 1) > 0 ? $left : '0');
+    }
+
+    /** এই সারিটা ছুটির কত ভাগ — ছুটির সারি না হলে বা আবেদন না থাকলে পুরো দিন */
+    public function leaveShare(): string
+    {
+        return $this->status === self::LEAVE && $this->leaveApplication !== null
+            ? self::shareOf($this->leaveApplication, $this->work_date)
+            : '1';
     }
 
     public function scopeForMonth(Builder $query, string $monthStart, string $monthEnd): Builder

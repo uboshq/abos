@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Services;
 
+use App\Core\Contracts\CouponPapers;
 use App\Modules\Promotion\Models\Promotion;
 use App\Modules\Promotion\Models\PromotionApplication;
 use App\Modules\Promotion\Models\PromotionBenefit;
@@ -138,15 +139,17 @@ final class PromotionDesk
             );
 
             $applied = PromotionApplication::query()->create([
-            'promotion_id' => $offer->id,
-            'source_type' => $sourceType,
-            'source_id' => $sourceId,
-            'source_line_id' => $sourceLineId,
-            'customer_id' => $line['customer_id'] ?? null,
-            'product_id' => $line['product_id'] ?? null,
-            'promotion_benefit_id' => $benefit->id,
+                'promotion_id' => $offer->id,
+                // ⓘ কাগজের শাখা — দেখানোর দেয়ালের জন্য (পুনঃঅডিট ৯ অক্টোবর ২০২৬, প্রমোশন ২১); বাজেট গোটা কোম্পানির
+                'branch_id' => isset($line['branch_id']) ? (int) $line['branch_id'] : null,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'source_line_id' => $sourceLineId,
+                'customer_id' => $line['customer_id'] ?? null,
+                'product_id' => $line['product_id'] ?? null,
+                'promotion_benefit_id' => $benefit->id,
 
-            /*
+                /*
              * ⭐ এই তিনটা ঘরই §১৮-এর পাহারা।
              *
              * ⓘ অঙ্কটা এখানে **জমে যায়**। ⚠️ মালিক মেয়াদ কমানোর অনুমতি
@@ -154,13 +157,13 @@ final class PromotionDesk
              * যায় না — বাঁচে এই সারিতে। ⛔ ছাড়টা পরে আর অফারের কাগজ থেকে
              * পড়া হয় না।
              */
-            'benefit_kind' => $benefit->kind,
+                'benefit_kind' => $benefit->kind,
 
-            /* ⓘ উপহারে প্রতি-বিলের সীমা মানার পরের পরিমাণ — [[PromotionEngine::worthOf()]] */
-            'benefit_amount' => $benefit->kind->movesStock() ? (string) $fit['qty'] : (string) $benefit->amount,
-            'worth' => $fit['worth'],
+                /* ⓘ উপহারে প্রতি-বিলের সীমা মানার পরের পরিমাণ — [[PromotionEngine::worthOf()]] */
+                'benefit_amount' => $benefit->kind->movesStock() ? (string) $fit['qty'] : (string) $benefit->amount,
+                'worth' => $fit['worth'],
 
-            'applied_by' => auth()->id(),
+                'applied_by' => auth()->id(),
             ]);
 
             /* ⓘ পয়েন্টের সুবিধা হলে একই লেনদেনে খাতায় জমা — অন্য সুবিধায় কিছুই করে না */
@@ -242,6 +245,19 @@ final class PromotionDesk
             $applied->overridden_by = auth()->id();
             $applied->overridden_at = Carbon::now();
             $applied->save();
+
+            /*
+             * ⛔ কাগজে পৌঁছানো, আর কেবল খসড়ায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (প্রমোশন ২০; [[AnOverrideReachesTheDraftAndOnlyTheDraftTest]])।
+             * ⓘ আগে বদল কেবল এই সারিতে থাকত: চালানের সারির ছাড় আগের অঙ্কে, বিলেও আগের ছাড়; আর পাকা কাগজের অফারও বদলানো যেত।
+             * কাগজের মালিক একই লেনদেনে সারিটা নতুন করে গোনে, বা কাগজ পাকা হলে থামায় — তখন বদলও বসে না।
+             */
+            if (app()->bound(CouponPapers::class)) {
+                app(CouponPapers::class)->offerChanged(
+                    (string) $applied->source_type,
+                    (int) $applied->source_id,
+                    $applied->source_line_id === null ? null : (int) $applied->source_line_id,
+                );
+            }
 
             return $applied;
         });

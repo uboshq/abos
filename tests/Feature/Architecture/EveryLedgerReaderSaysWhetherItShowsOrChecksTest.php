@@ -36,6 +36,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
     private const SHOWS = [
         'app/Modules/Accounts/Dashboard/AccountsWidgets.php' => 'ড্যাশবোর্ডের টাকার ঘর',
         'app/Modules/Customer/Support/CustomerListFilters.php' => 'গ্রাহক তালিকার বকেয়া ও অগ্রিমের ছাঁকনি — দেখার শাখা ধরে',
+        'app/Modules/Customer/Http/Controllers/CustomerSummaryController.php' => 'গ্রাহকের সারাংশের বকেয়া — দেখার শাখা ধরে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৩)',
         'app/Modules/Accounts/Http/Controllers/CashTillController.php' => 'টিলের তালিকা আর জের',
         'app/Modules/Accounts/Http/Controllers/ChartOfAccountsController.php' => 'খাতের তালিকার জের',
         'app/Modules/Accounts/Http/Controllers/FinanceControlController.php' => 'অর্থ-নিয়ন্ত্রণের পর্দা',

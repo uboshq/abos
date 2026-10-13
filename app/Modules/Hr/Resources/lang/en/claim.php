@@ -52,6 +52,7 @@ return [
     'narration_from_advance' => ':who — expense claim :no, from advance',
 
     'no_employee' => 'There is no employee record in your name. HR or the owner: HR → Employees → your name → Edit → pick you in "System User" and save (if you are not an employee yet, add one first).',
+    'employee_gone' => 'Your employee record is closed (left, inactive or deleted), so you cannot ask for an expense or an advance. If this is wrong, tell HR or the owner.',
     'kind_bad' => 'Pick expense claim or cash advance request.',
     'amount_bad' => 'The amount must be above zero.',
     'reason_required' => 'Write the reason.',
