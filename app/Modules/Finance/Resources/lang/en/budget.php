@@ -41,6 +41,7 @@ return [
     'account_must_be_income_or_expense' => 'A budget goes on an income or expense account — not a group.',
     'unknown_center' => 'That department was not found.',
     'amount_not_negative' => 'A budget cannot be negative.',
+    'amount_plain' => 'Write the budget as a plain amount, such as 12500 or 12500.50: up to four decimals and 14 digits.',
 
     // Dashboard card — §1 budget status
     'status' => 'Budget status',

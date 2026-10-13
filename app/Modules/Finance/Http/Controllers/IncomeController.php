@@ -58,8 +58,10 @@ class IncomeController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
-        $from = (string) $request->query('from', now()->startOfMonth()->toDateString());
-        $to = (string) $request->query('to', now()->endOfMonth()->toDateString());
+        // ⛔ কেবল Y-m-d — "?from=abc" আগে Carbon::parse-এ ৫০০ দিত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৭)
+        $day = fn (mixed $v): ?string => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) === 1 ? $v : null;
+        $from = $day($request->query('from')) ?? now()->startOfMonth()->toDateString();
+        $to = $day($request->query('to')) ?? now()->endOfMonth()->toDateString();
 
         $rows = $this->heads->forParent(
             StandardChart::INCOME,

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Finance\Models\RentalContract;
 use Illuminate\Support\Collection;
 
@@ -78,6 +80,7 @@ final class RentalNotices
                 null,
                 // ⓘ নিয়মের মান (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ)
                 ['party' => (string) $contract->counterparty, 'amount' => Money::format($raised), 'due_date' => $next->format('d/m/Y')],
+                $contract->branch_id,
             );
         }
 
@@ -103,6 +106,7 @@ final class RentalNotices
                 // ⓘ প্রথম ধাপ একবারই; শেষের ধাপ সপ্তাহে সপ্তাহে
                 $stage === $first ? null : self::QUIET_DAYS,
                 ['party' => (string) $contract->counterparty, 'due_date' => $contract->ends_on->format('d/m/Y'), 'days_left' => (string) $days],
+                $contract->branch_id,
             );
         }
 
@@ -125,6 +129,7 @@ final class RentalNotices
                 ]),
                 self::QUIET_DAYS,
                 ['party' => (string) $row['contract']->counterparty, 'amount' => Money::format($row['amount']), 'status' => 'overdue'],
+                $row['contract']->branch_id,
             );
         }
 
@@ -140,12 +145,19 @@ final class RentalNotices
      * যাঁদের ভাড়ার পাতা দেখার অধিকার আছে তাঁদের বলা — `$quietDays` দিনের মধ্যে একই খবর পেলে আবার নয়; `null` = কখনো আবার নয়।
      *
      * ⓘ [[DueNotices::tell()]]-এর একই নিয়ম, কেবল "একবারই" ধাপটা বাড়তি।
+     * ⛔ চুক্তির শাখা যাঁর নাগালে নেই, তাঁকে নয় — ভাড়ার পাতা ঐ চুক্তি তাঁকে খোলে না ([[OpensOnlyInReach]]), অথচ খবরটা
+     * পক্ষের নাম আর অঙ্ক নিয়ে যেত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
      */
-    private function tell(string $type, string $url, string $title, string $body, ?int $quietDays, array $data = []): int
+    private function tell(string $type, string $url, string $title, string $body, ?int $quietDays, array $data = [], int|string|null $branchId = null): int
     {
         $sent = 0;
+        $scope = app(DataScope::class);
 
         foreach ($this->whoCan('finance.rental.view') as $user) {
+            if (! $scope->allows($user, UserDataScope::BRANCH, $branchId === null ? null : (int) $branchId)) {
+                continue;
+            }
+
             $told = Notification::query()->where('user_id', $user->id)->where('type', $type)->where('url', $url)
                 ->when($quietDays !== null, fn ($q) => $q->where('created_at', '>=', now()->subDays($quietDays)))
                 ->exists();
