@@ -189,7 +189,11 @@ class TenancyController extends Controller implements HasMiddleware
 
         $done = $this->tenancies->charge(Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
 
-        return back()->with('saved', __('finance::tenancy.charge_done', $done));
+        $saved = back()->with('saved', __('finance::tenancy.charge_done', ['charged' => $done['charged'], 'held' => $done['held']]));
+
+        // ⛔ যে ভাড়াটের দাবি বসেনি — নাম ধরে, যাতে চুপচাপ বাদ না পড়ে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬; ভাড়ার মাসের জমার একই ছাঁদ)
+        return $done['failed'] === [] ? $saved
+            : $saved->withErrors(['month' => __('finance::tenancy.charge_some_failed', ['list' => implode(' · ', $done['failed'])])]);
     }
 
     public function report(Request $request, string $slug): View

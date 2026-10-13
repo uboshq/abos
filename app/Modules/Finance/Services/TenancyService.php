@@ -192,7 +192,7 @@ class TenancyService
     /**
      * ⭐ মাসের ভাড়া দাবি — চালু প্রতিটা চুক্তি, যার মেয়াদে মাসটা পড়ে আর যার মাসটা এখনো বসেনি।
      *
-     * @return array{charged: int, held: int}
+     * @return array{charged: int, held: int, failed: list<string>} `failed` — যে ভাড়াটের দাবি বসেনি, নম্বর আর কারণসহ
      */
     public function charge(Carbon $month): array
     {
@@ -209,6 +209,7 @@ class TenancyService
 
         $charged = 0;
         $held = 0;
+        $failed = [];
 
         $tenancies = Tenancy::query()->active()
             ->whereDate('starts_on', '<=', $end->toDateString())
@@ -220,50 +221,81 @@ class TenancyService
                 continue;
             }
 
-            $wasHeld = DB::transaction(function () use ($tenancy, $start, &$charged): ?bool {
-                $this->lockFresh($tenancy);
+            /*
+             * ⛔ এক ভাড়াটের ভুল বাকিদের মাস থামায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (ভাড়ার মাসের জমার একই নিয়ম,
+             * [[RentalAccrualService::run()]])। ⓘ আগে একটা চুক্তির খাত মুছে যাওয়া বা ভুল শর্তে ব্যতিক্রম উঠলে তার পরের সব ভাড়াটের
+             * দাবি বসত না। আর গোনা লেনদেনের পরে — ভেতরে ভুল উঠে সব ফিরে গেলেও আগে "বসল" গোনা হত।
+             */
+            try {
+                $wasHeld = $this->chargeOne($tenancy, $start);
+            } catch (\Throwable $e) {
+                $failed[] = $this->failure($tenancy, $e);
 
-                // ⛔ তালার পরে আবার — দুইজন একসাথে একই মাস চালালেও একবারই
-                if (! $tenancy->isActive() || $this->monthCharged($tenancy, $start)) {
-                    return null;
-                }
+                continue;
+            }
 
-                $amount = bcadd((string) $tenancy->monthly_rent, '0', 2);
-                $on = $tenancy->starts_on->gt($start) ? $tenancy->starts_on->copy() : $start->copy();
-
-                $voucher = $this->vouchers->create([
-                    'type' => Voucher::JOURNAL,
-                    'branch_id' => $tenancy->branch_id,
-                    'trx_date' => $on->toDateString(),
-                    'narration' => __('finance::tenancy.charge_narration', [
-                        'who' => $tenancy->tenant, 'month' => $start->translatedFormat('F Y'),
-                    ]),
-                    'against_type' => Tenancy::drillSourceType(),
-                    'against_id' => $tenancy->id,
-                ], [
-                    $this->partyLine($tenancy, $this->head(StandardChart::RENT_RECEIVABLE), $amount, '0'),
-                    ['account_id' => $tenancy->income_account_id, 'debit' => '0', 'credit' => $amount],
-                ]);
-
-                TenancyCharge::query()->create([
-                    'company_id' => CompanyContext::id(),
-                    'branch_id' => $tenancy->branch_id,
-                    'tenancy_id' => $tenancy->id,
-                    'for_month' => $start->toDateString(),
-                    'amount' => $amount,
-                    'voucher_id' => $voucher->id,
-                    'created_by' => auth()->id(),
-                ]);
-
-                $charged++;
-
-                return $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount);
-            });
-
+            $charged += $wasHeld === null ? 0 : 1;
             $held += $wasHeld === true ? 1 : 0;
         }
 
-        return ['charged' => $charged, 'held' => $held];
+        return ['charged' => $charged, 'held' => $held, 'failed' => $failed];
+    }
+
+    /** একটা ভাড়াটের মাসের দাবি — নিজের লেনদেনে; null = বসেনি (আগেই বসেছে বা চালু নেই), নাহলে সইয়ের অপেক্ষায় কি না */
+    private function chargeOne(Tenancy $tenancy, Carbon $start): ?bool
+    {
+        return DB::transaction(function () use ($tenancy, $start): ?bool {
+            $this->lockFresh($tenancy);
+
+            // ⛔ তালার পরে আবার — দুইজন একসাথে একই মাস চালালেও একবারই
+            if (! $tenancy->isActive() || $this->monthCharged($tenancy, $start)) {
+                return null;
+            }
+
+            $amount = bcadd((string) $tenancy->monthly_rent, '0', 2);
+            $on = $tenancy->starts_on->gt($start) ? $tenancy->starts_on->copy() : $start->copy();
+
+            $voucher = $this->vouchers->create([
+                'type' => Voucher::JOURNAL,
+                'branch_id' => $tenancy->branch_id,
+                'trx_date' => $on->toDateString(),
+                'narration' => __('finance::tenancy.charge_narration', [
+                    'who' => $tenancy->tenant, 'month' => $start->translatedFormat('F Y'),
+                ]),
+                'against_type' => Tenancy::drillSourceType(),
+                'against_id' => $tenancy->id,
+            ], [
+                $this->partyLine($tenancy, $this->head(StandardChart::RENT_RECEIVABLE), $amount, '0'),
+                ['account_id' => $tenancy->income_account_id, 'debit' => '0', 'credit' => $amount],
+            ]);
+
+            TenancyCharge::query()->create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $tenancy->branch_id,
+                'tenancy_id' => $tenancy->id,
+                'for_month' => $start->toDateString(),
+                'amount' => $amount,
+                'voucher_id' => $voucher->id,
+                'created_by' => auth()->id(),
+            ]);
+
+            return $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount);
+        });
+    }
+
+    /** একটা ভাড়াটের দাবি বসল না — নম্বর আর কারণ; যাচাইয়ের বার্তা যেমন আছে, বাকি ভুল লগে যায় ([[RentalAccrualService]]-এর একই ছাঁদ) */
+    private function failure(Tenancy $tenancy, \Throwable $e): string
+    {
+        if ($e instanceof ValidationException) {
+            $why = (string) collect($e->errors())->flatten()->first();
+        } else {
+            report($e);
+            $why = __('finance::message.rent_accrual_contract_broke');
+        }
+
+        return __('finance::message.rent_accrual_contract_failed', [
+            'no' => $tenancy->document_no ?? '#'.$tenancy->id, 'who' => $tenancy->tenant, 'why' => $why,
+        ]);
     }
 
     /** ⭐ শেষ সই পড়ল — খসড়া খাতায়; জামানতের অপেক্ষায় থাকা চুক্তি চালু ([[FinishTheFinancePaperOnTheLastSignature]]) */
