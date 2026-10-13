@@ -29,8 +29,8 @@ final class TheSupplierImportTookAnyCreditDaysTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
-        $row = ['code' => '', 'name_en' => 'Days Mills', 'opening_balance' => '', 'credit_limit' => '', 'credit_days' => '',
-            'opening_date' => '', 'party_type' => '', 'payment_term' => ''];
+        // ⓘ আমদানির পথ প্রতিটা ঘোষিত কলাম ভরে পাঠায় (খালি হলেও) — সারিটা সেভাবেই
+        $row = ['name_en' => 'Days Mills'] + array_fill_keys(array_keys(SupplierImporter::columns()), '');
         $importer = app(SupplierImporter::class);
         $reason = __('core.import.not_a_number', ['column' => 'credit_days']);
 

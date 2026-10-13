@@ -45,14 +45,11 @@ final class TheCustomerImportCouldNotBringADistributorTest extends TestCase
         $default = PartyType::query()->for(PartyType::CUSTOMER)->where('is_default', true)->firstOrFail();
         $this->assertTrue($default->isDistributor(), 'ডিফল্ট ধরন পরিবেশক — এই দাবির ভিত্তি');
 
-        // ⓘ চলতি শাখার একটা পয়েন্ট যেখানে কোনো সক্রিয় পরিবেশক নেই
-        $point = Location::query()
-            ->where('level', Location::POINT)
-            ->where('branch_id', CompanyContext::branchId())
-            ->whereNotIn('id', Customer::acrossDealers()->where('is_active', true)->whereNotNull('location_id')
-                ->whereHas('partyType', fn ($q) => $q->where('code', PartyType::DISTRIBUTOR))->pluck('location_id'))
-            ->orderBy('id')
-            ->firstOrFail();
+        // ⓘ চলতি শাখার একটা নতুন পয়েন্ট, যেখানে কোনো পরিবেশক নেই — ডেমোর প্রতিটা পয়েন্টে আগেই পরিবেশক বসা থাকতে পারে
+        $point = Location::query()->create([
+            'company_id' => CompanyContext::id(), 'branch_id' => CompanyContext::branchId(), 'code' => 'IMP-PT-1',
+            'name_en' => 'Import Point', 'name_bn' => 'আমদানির পয়েন্ট', 'level' => Location::POINT, 'is_active' => true,
+        ]);
 
         $row = ['point' => (string) $point->code] + $this->row;
         $importer = app(CustomerImporter::class);
