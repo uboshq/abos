@@ -596,6 +596,19 @@ class CompanyController extends Controller implements HasMiddleware
             return true;
         }
 
-        return $request->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE) ?? false;
+        /*
+         * ⛔ সুপার অ্যাডমিন **এই** কোম্পানির — হেডারের চলতি কোম্পানির নয় (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+         * ⓘ `roles` ভূমিকা পড়ে চলতি কোম্পানির দল থেকে; ক-তে সুপার অ্যাডমিন আর খ-তে কেবল ম্যানেজার মানুষটা খ-এর ছাপা-হয়ে-যাওয়া
+         * কোড বদলে দিতে পারতেন, আর খ-এর আসল মালিক ক-তে দাঁড়িয়ে থাকলে আটকাতেন।
+         */
+        $user = $request->user();
+
+        return $user !== null && \Illuminate\Support\Facades\DB::table('model_has_roles as mhr')
+            ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+            ->where('mhr.model_type', $user->getMorphClass())
+            ->where('mhr.model_id', $user->getKey())
+            ->where('mhr.company_id', $company->id)
+            ->where('r.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->exists();
     }
 }
