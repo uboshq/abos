@@ -383,7 +383,7 @@ final class PurchaseBillService
 
         // ছক বসানো থাকলে সই আগে, খতিয়ান পরে — লেনদেনের বাইরে, কারণ
         // অপেক্ষা করা মানে কিছুই না বসা, আধা-বসা নয়।
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $bill,
             module: 'purchase',
             action: 'bill',
@@ -392,7 +392,7 @@ final class PurchaseBillService
             reason: $bill->narration,
         );
 
-        return DB::transaction(function () use ($bill) {
+        return DB::transaction(function () use ($bill, $print) {
             /*
              * ⛔ বিলের সারিতে তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
              * ([[ThePurchaseBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
@@ -405,6 +405,9 @@ final class PurchaseBillService
                     'status' => __('purchase::validation.only_draft_confirms', ['no' => $bill->document_no]),
                 ]);
             }
+
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($bill, $print, 'status');
 
             $this->bringInDirectLines($bill);
             $this->postToLedger($bill);

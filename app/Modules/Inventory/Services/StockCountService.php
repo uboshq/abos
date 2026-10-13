@@ -284,7 +284,7 @@ final class StockCountService
             ), 4);
         }
 
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $count,
             module: 'inventory',
             action: 'count',
@@ -293,7 +293,7 @@ final class StockCountService
             reason: $count->narration,
         );
 
-        return DB::transaction(function () use ($count, $reason) {
+        return DB::transaction(function () use ($count, $reason, $print) {
             /*
              * ⛔ সারি আটকে অবস্থা আবার পড়া — চূড়ান্ত অডিট ⛔১৩, ৩০ সেপ্টেম্বর ২০২৬ — [[StockTransferService]]-এর সেই একই সারাই।
              * ওপরের পরখটা হাতে ধরা মডেল দেখে; দুইবার চাপ দিলে দুইটা অনুরোধই "খসড়া" দেখত, আর গোনার প্রতিটা
@@ -304,6 +304,9 @@ final class StockCountService
                     'status' => __('inventory::validation.count_not_draft'),
                 ]);
             }
+
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($count, $print, 'status');
 
             foreach ($count->lines as $line) {
                 if (bccomp((string) $line->difference, '0', 4) === 0) {

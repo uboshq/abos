@@ -7,6 +7,7 @@ namespace App\Core\Engines\Approval;
 use App\Core\Support\Money;
 use App\Models\Approval;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 /**
  * একটা কাগজ নিশ্চিত করার আগে অনুমোদন লাগে কি না।
@@ -232,11 +233,14 @@ final class DocumentApproval
         array $fields = [],
         // ⓘ সই যে তথ্যে চাওয়া — [[signedTheSame()]] (১৩ অক্টোবর ২০২৬)
         array $payload = [],
-    ): void {
+    ): string {
+        // ⓘ যাচাইয়ের মুহূর্তের ছাপ — ফেরত যায়, তালার পরে আবার মেলানোর জন্য ([[assertUnchangedSince()]])
+        $print = app(DocumentFingerprint::class)->of($document);
+
         $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields, $payload);
 
         if ($stopping === null) {
-            return;
+            return $print;
         }
 
         /*
@@ -254,6 +258,22 @@ final class DocumentApproval
                 ])
                 : $this->awaitingWord($stopping, $module, $action),
         );
+    }
+
+    /**
+     * ⛔ সই যাচাই আর তালার মাঝখানে কাগজটা বদলায়নি তো — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+     * ([[APaperChangedBetweenTheCheckAndTheLockIsNotPostedTest]])।
+     *
+     * ⓘ বেশিরভাগ সেবা সই দেখে লেনদেনের **বাইরে** ([[assertClear()]] — অনুরোধটা টিকে থাকার জন্য), তারপর লেনদেনে সারিতে তালা দেয়।
+     * ⛔ ঐ ফাঁকে আরেক জানালা থেকে খসড়া বদলালে বদলানোটাই খাতায় উঠত — সই দেখা হয়েছিল আগের কাগজে। ⓘ তালার পরে এটা ডেকে
+     * ছাপ আবার মেলানো হয় ([[StockTransferService]]-এর পুরনো ছাঁচ); না মিললে কিছুই খাতায় যায় না, মানুষ আবার চাপেন — তখন
+     * নতুন কাগজে নতুন যাচাই।
+     */
+    public function assertUnchangedSince(Model $document, string $print, string $field): void
+    {
+        if (! hash_equals($print, app(DocumentFingerprint::class)->of($document))) {
+            throw ValidationException::withMessages([$field => __('core.approval.changed_while_posting')]);
+        }
     }
 
     /**

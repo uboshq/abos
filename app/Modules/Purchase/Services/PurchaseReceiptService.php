@@ -318,7 +318,7 @@ final class PurchaseReceiptService
          * ⓘ কত টাকার উপরে সই লাগবে সেটা প্রতিটা কোম্পানি নিজে বসায় —
          * এক ডিপোর "বড় কাজ" আরেকটার রোজকার কাজ।
          */
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $receipt,
             module: 'purchase',
             action: 'receipt',
@@ -326,7 +326,7 @@ final class PurchaseReceiptService
             reason: $receipt->narration,
         );
 
-        $confirmed = DB::transaction(function () use ($receipt) {
+        $confirmed = DB::transaction(function () use ($receipt, $print) {
             /*
              * ⛔ মাল গ্রহণের সারিতে তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
              * ([[ThePurchaseBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
@@ -339,6 +339,9 @@ final class PurchaseReceiptService
                     'status' => __('purchase::validation.only_draft_confirms', ['no' => $receipt->document_no]),
                 ]);
             }
+
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($receipt, $print, 'status');
 
             /*
              * ⛔ আদেশের সীমা আবার — ঠিক এখানে, মাল ঢোকার আগের মুহূর্তে।

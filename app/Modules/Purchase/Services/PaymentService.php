@@ -180,7 +180,7 @@ final class PaymentService
         $this->assertStillFits($payment);
 
         // টাকা বেরোনোর আগেই সই — ছক বসানো না থাকলে আগের মতোই চলে।
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $payment,
             module: 'purchase',
             action: 'payment',
@@ -189,7 +189,7 @@ final class PaymentService
             reason: $payment->narration,
         );
 
-        return DB::transaction(function () use ($payment) {
+        return DB::transaction(function () use ($payment, $print) {
             /*
              * ⛔ তালা আগে, তারপর আবার দেখা — ২৯ সেপ্টেম্বর ২০২৬।
              *
@@ -210,6 +210,9 @@ final class PaymentService
                     'status' => __('purchase::validation.only_draft_confirms', ['no' => $payment->document_no]),
                 ]);
             }
+
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($payment, $print, 'status');
 
             PurchaseBill::query()
                 ->whereKey($payment->lines()->pluck('purchase_bill_id')->filter()->unique()->all())

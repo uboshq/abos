@@ -1242,6 +1242,7 @@ return [
     'approval' => [
         'signed_paper_stuck_title' => ':no is signed but was not posted',
         'signed_paper_stuck_body' => 'Reason: :reason. Fix it, open the paper and press "Post".',
+        'changed_while_posting' => 'The paper changed elsewhere while it was being confirmed — nothing was posted. Open it again, check it and confirm.',
         'changed_after_signing' => ':no changed after the signature was asked for — the signature is for the earlier paper, not this one. Nothing was posted; ask for a new signature.',
         'delegate_not_self' => 'You cannot delegate to yourself — that would open a path to approving your own request.',
         'delegate_bad_dates' => 'The end date cannot fall before the start date.',

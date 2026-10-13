@@ -148,7 +148,7 @@ final class PurchaseReturnService
 
         // মাল ফেরত মানে সরবরাহকারীর কাছে দায় কমে — ছক বসানো থাকলে
         // সেটাও একটা সিদ্ধান্ত, আর সিদ্ধান্তে সই লাগে।
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $return,
             module: 'purchase',
             action: 'return',
@@ -157,7 +157,7 @@ final class PurchaseReturnService
             reason: $return->narration,
         );
 
-        return DB::transaction(function () use ($return) {
+        return DB::transaction(function () use ($return, $print) {
             /*
              * ⛔ তালা দিয়ে আবার দেখা — ২৯ সেপ্টেম্বর ২০২৬।
              *
@@ -174,6 +174,9 @@ final class PurchaseReturnService
                     'status' => __('purchase::validation.only_draft_confirms', ['no' => $return->document_no]),
                 ]);
             }
+
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($return, $print, 'status');
 
             foreach ($return->lines as $line) {
                 /*

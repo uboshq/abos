@@ -191,7 +191,7 @@ final class PayrollService
          * আমাকে জিজ্ঞেস কোরো"), আর কর্তনের আগের সংখ্যাটা সবসময় বড় বলে
          * সীমাটা নীরবে কড়া হয়ে যেত।
          */
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $run,
             module: 'hr',
             action: 'payroll',
@@ -200,13 +200,15 @@ final class PayrollService
             reason: $run->narration,
         );
 
-        $posted = DB::transaction(function () use ($run) {
+        $posted = DB::transaction(function () use ($run, $print) {
             /*
              * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
              * ⓘ পুরনো কপি থেকে "নিশ্চিত" চাপলে বাতিল হয়ে যাওয়া রানও খাতায় বসত।
              */
             $this->lockFresh($run);
             $this->assertDraft($run);
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($run, $print, 'status');
 
             $signedNet = (string) $run->net_total;
 
