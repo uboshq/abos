@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Hr;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\PhoneModules;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -306,6 +307,23 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         // ⓘ নিজের জোড়া আবার সেভ করা আটকায় না
         $service->update($this->employee->fresh(), ['user_id' => $this->worker->id, 'mobile' => '01700000001']);
         $this->assertSame((int) $this->worker->id, (int) $this->employee->fresh()->user_id);
+    }
+
+    /**
+     * ⓘ ওয়েবের দাবির ফর্মে দুইবার চাপ — একটাই দাবি (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। নিরীক্ষা ভেবেছিল ওয়েবে পাহারা নেই;
+     * আসলে `@csrf` একবারের টোকেন বসায় আর [[OneSubmitPerForm]] সব ওয়েব জমায় খাটে। এই পরীক্ষা পাহারাটা দাবির ফর্মে বেঁধে রাখে।
+     */
+    public function test_a_double_click_on_the_web_claim_form_makes_one_claim(): void
+    {
+        $this->actingAs($this->worker);
+        $this->get(route('hr.claim.create'))->assertOk()->assertSee('name="'.FormIsNotSubmittedTwice::FIELD.'"', false);
+
+        $token = app(FormIsNotSubmittedTwice::class)->newToken();
+        $form = [FormIsNotSubmittedTwice::FIELD => $token] + $this->data(ExpenseClaim::EXPENSE, '300');
+        $this->post(route('hr.claim.store'), $form)->assertSessionHasNoErrors()->assertRedirect();
+        $this->post(route('hr.claim.store'), $form)->assertRedirect();
+
+        $this->assertSame(1, ExpenseClaim::query()->count(), '⛔ দাবির ফর্মে দুইবার চাপে দুইটা দাবি');
     }
 
     public function test_the_roles_that_mark_their_own_attendance_are_given_the_claim_key(): void
