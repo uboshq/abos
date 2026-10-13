@@ -448,7 +448,7 @@ final class StockTransferService
      */
     private function lockedStatus(StockTransfer $transfer): string
     {
-        return (string) StockTransfer::query()
+        return (string) StockTransfer::acrossBranches()
             ->whereKey($transfer->id)
             ->lockForUpdate()
             ->value('status');

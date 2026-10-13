@@ -183,6 +183,22 @@ final class PurchaseRequisitionService
         $requisition->loadMissing('lines.product');
 
         return DB::transaction(function () use ($requisition, $data) {
+            /*
+             * ⛔ তালা, তারপর আবার "আদেশ হতে পারে?" — Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[ThePersonWhoNeededItHadNoWayToAskTest]])।
+             * ⚠️ উপরের দেখা হাতের কপিতে: দুই ক্লিক বা দুই ট্যাবে দুজনেই "নিশ্চিত, আদেশ নেই" দেখতেন — দুটো আদেশ হত, একটা এতিম, মাল
+             * দুবার আসত।
+             */
+            $locked = PurchaseRequisition::acrossBranches()->whereKey($requisition->id)->lockForUpdate()->firstOrFail();
+            $requisition->setRawAttributes($locked->getAttributes(), true);
+
+            if (! $requisition->canBecomeAnOrder()) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.requisition_already_ordered', [
+                        'no' => $requisition->order?->document_no ?? '',
+                    ]),
+                ]);
+            }
+
             $order = $this->orders->create(
                 [
                     'supplier_id' => $data['supplier_id'] ?? null,

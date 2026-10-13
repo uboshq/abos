@@ -239,7 +239,12 @@ final class GroupLedgerService
         foreach ($rows as $row) {
             $type = (string) $row->type;
 
-            $net = (string) $row->nature === Account::DEBIT
+            /*
+             * ⛔ চিহ্ন যে ধরনের ঘরে যোগ হচ্ছে তার স্বাভাবিক দিকে, খাতের নিজের প্রকৃতিতে নয় — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+             * ([[AContraAccountReducesItsGroupTest]])। ⓘ উপরের মন্তব্যের যুক্তি উল্টো দিকে খাটত: সঞ্চিত অবচয় (Cr প্রকৃতি) নিজের প্রকৃতিতে
+             * ধনাত্মক হয়ে "সম্পদ" ঘরে **যোগ** হত — ১০০ অবচয়ে সম্পদ +১০০; উত্তোলনও মূলধনে যোগ হত। সম্পদের ঘরে Dr−Cr, দায়-মূলধন-আয়ে Cr−Dr।
+             */
+            $net = Account::defaultNatureFor($type) === Account::DEBIT
                 ? bcsub((string) $row->debit, (string) $row->credit, self::SCALE)
                 : bcsub((string) $row->credit, (string) $row->debit, self::SCALE);
 

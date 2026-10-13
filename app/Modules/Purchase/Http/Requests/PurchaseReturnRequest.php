@@ -29,7 +29,7 @@ class PurchaseReturnRequest extends FormRequest
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
 
-            'lines' => ['required', 'array', 'min:1'],
+            'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             // বিলের লাইনটা এই কোম্পানির কি না তা সেবা স্তর দেখে —

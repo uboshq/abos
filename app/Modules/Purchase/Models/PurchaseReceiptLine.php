@@ -44,6 +44,9 @@ class PurchaseReceiptLine extends Model
             'sales_price' => 'decimal:4',
             'amount' => 'decimal:4',
             'tax' => 'decimal:4',
+            // ⓘ পাকা হওয়ার আগে পণ্যের দাম — বাতিলে ফেরানোর জন্য (১৩ অক্টোবর ২০২৬)
+            'prior_purchase_price' => 'decimal:4',
+            'prior_sale_price' => 'decimal:4',
         ];
     }
 
@@ -85,8 +88,10 @@ class PurchaseReceiptLine extends Model
      */
     public function billedQty(): string
     {
+        // ⛔ সব শাখার বিল — দেখার দেয়াল দিয়ে গুনলে অন্য শাখার বিল বাদ যেত, "বাকি" বেশি দেখাত আর একই মাল আবার বিল হত
+        // (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneReceiptWasBilledTwiceTest]])
         $billed = $this->billLines()
-            ->whereHas('bill', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->whereHas('bill', fn ($q) => $q->withoutGlobalScope('user-branch')->where('status', '<>', 'cancelled'))
             ->sum('qty');
 
         return (string) ($billed ?: '0');
