@@ -23,6 +23,7 @@ use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\BankFacilityService;
+use App\Modules\Finance\Services\DepositKindInstaller;
 use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\Finance\Services\LoanSchedule;
 use App\Modules\Finance\Services\RentalContractService;
@@ -65,6 +66,7 @@ final class ThePhoneReadsTheFinanceBooksTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->actingAs($this->owner);
         app(StandardChart::class)->install();
+        app(DepositKindInstaller::class)->install();
         app(SettingsService::class)->set(PhoneModules::key('finance'), true);
     }
 
