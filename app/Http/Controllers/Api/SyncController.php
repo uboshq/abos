@@ -29,6 +29,9 @@ use Illuminate\Http\Request;
  */
 class SyncController extends Controller
 {
+    /** একবারের পুশে সর্বোচ্চ বদল — আজকের ফোনের ৫০-এর চারগুণ ([[push()]]) */
+    public const MAX_CHANGES_PER_PUSH = 200;
+
     public function __construct(
         private readonly SyncService $sync,
         private readonly SyncRegistry $registry,
@@ -109,6 +112,17 @@ class SyncController extends Controller
         if (! array_is_list($rows)) {
             return response()->json([
                 'message' => __('sync.change_needs_payload'),
+            ], 422);
+        }
+
+        /*
+         * ⛔ একবারের পুশে সীমা — প্রতিটা সারি একটা খোঁজা, এক-দুটো লেখা আর একটা লেনদেন; সীমা ছাড়া একটা টোকেন একবারে
+         * হাজারো সারি পাঠিয়ে PHP আর ডাটাবেজ আটকে রাখতে পারত, থ্রটল গোনে অনুরোধ, সারি নয় (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[OnePushCarriedTenThousandChangesTest]])। ⓘ আজকের ফোন ৫০টা করে পাঠায় (`AppConfig.syncBatchSize`)।
+         */
+        if (count($rows) > self::MAX_CHANGES_PER_PUSH) {
+            return response()->json([
+                'message' => __('sync.too_many_changes', ['max' => self::MAX_CHANGES_PER_PUSH]),
             ], 422);
         }
 

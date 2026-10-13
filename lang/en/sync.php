@@ -15,6 +15,7 @@ return [
     'change_needs_id' => 'This entry carries no identifier of its own, so it could not be sent. Update the app and try again.',
     'change_needs_entity_type' => 'What kind of entry this is could not be read. Update the app and try again.',
     'change_needs_payload' => 'The entry arrived empty — there is nothing inside it.',
+    'too_many_changes' => 'No more than :max changes go in one push — send them in parts.',
     'payload_is_not_readable' => 'The entry could not be read; its contents are damaged. It has to be written again.',
     'unknown_operation' => 'That is not something that can be done (:operation) — a new entry or a correction, those two only.',
     'update_needs_entity_id' => 'Which entry is being corrected has not been said.',
