@@ -98,6 +98,11 @@ final class OpeningBalanceImporter implements \App\Core\Contracts\ImportNeedsKey
             ])];
         }
 
+        // ⛔ পক্ষ-রাখা খাতে খাতের খোলা জের নয় — গ্রাহক বা সরবরাহকারীর খোলা জেরের আমদানিতে, পক্ষের নামে ([[OpeningBalanceService::needsAParty()]])
+        if (\App\Modules\Accounts\Services\OpeningBalanceService::needsAParty($account)) {
+            $errors[] = __('accounts::validation.opening_needs_party', ['name' => $account->name()]);
+        }
+
         // গ্রুপ খাতে সরাসরি জের বসে না — তার নিচের খাতগুলোতে বসে
         if ($account->is_group) {
             $errors[] = __('accounts::validation.import_group_no_opening', [
