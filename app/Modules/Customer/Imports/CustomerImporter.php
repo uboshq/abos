@@ -8,6 +8,7 @@ use App\Core\Contracts\Importer;
 use App\Core\Contracts\ImportNeedsKeys;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
+use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +52,9 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
             'email' => ['label' => 'customer::field.email', 'required' => false],
             'address' => ['label' => 'customer::field.address', 'required' => false],
             'party_type' => ['label' => 'customer::field.party_type', 'required' => false],
+            // ⛔ পরিবেশকের পয়েন্ট লাগে — ধরন খালি হলে ডিফল্ট পরিবেশক, আর পয়েন্টের ঘর না থাকায় কোনো সারিই বসত না
+            // (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheCustomerImportCouldNotBringADistributorTest]])
+            'point' => ['label' => 'customer::field.point', 'required' => false],
             'payment_term' => ['label' => 'customer::field.payment_term', 'required' => false],
             'credit_limit' => ['label' => 'customer::field.credit_limit', 'required' => false],
             'credit_days' => ['label' => 'customer::field.credit_days', 'required' => false],
@@ -78,6 +82,18 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
 
         if (filled($row['credit_limit']) && ! self::plainDecimal((string) $row['credit_limit'])) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
+        } elseif (filled($row['credit_limit']) && bccomp(trim((string) $row['credit_limit']), '0', 4) < 0) {
+            // ⛔ ফর্ম (min:0) আর সীমার ফাইলের একই নিয়ম — ঋণাত্মক সীমা বসলে পরে প্রতিটা সম্পাদনা আটকাত, আর ০ লেখাও "বাড়ানো" হয়ে সই চাইত
+            $errors[] = __('customer::import.limit_not_negative');
+        }
+
+        // ⛔ বাকির দিন ফর্মের মতোই ০–৩৬৫ পূর্ণসংখ্যা — আগে "৩০"/"abc" চুপচাপ ০ (সব বিল সেদিনই মেয়াদোত্তীর্ণ), "-5" SQL-এ ভাঙত
+        if (filled($row['credit_days'] ?? '') && ! self::creditDays((string) $row['credit_days'])) {
+            $errors[] = __('core.import.not_a_number', ['column' => 'credit_days']);
+        }
+
+        if (filled($row['point'] ?? '') && $this->point((string) $row['point']) === null) {
+            $errors[] = __('core.import.unknown_value', ['column' => 'point', 'value' => $row['point']]);
         }
 
         if (filled($row['opening_date']) && $this->date($row['opening_date']) === null) {
@@ -152,11 +168,29 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
             // গ্রাহক ধরনহীন বসত, আর ধরন ধরে রিপোর্ট তাঁদের কখনো গুনত না
             'party_type_id' => $this->partyType($row['party_type'])?->id
                 ?? PartyType::query()->for(PartyType::CUSTOMER)->where('is_default', true)->value('id'),
+            'location_id' => $this->point((string) ($row['point'] ?? ''))?->id,
             'credit_limit' => $row['credit_limit'] !== '' ? $row['credit_limit'] : 0,
-            'credit_days' => $row['credit_days'] !== '' ? (int) $row['credit_days'] : 0,
+            'credit_days' => $row['credit_days'] !== '' ? (int) trim($row['credit_days']) : 0,
             'opening_balance' => $row['opening_balance'] !== '' ? $row['opening_balance'] : 0,
             'opening_date' => $this->date($row['opening_date'])?->toDateString(),
         ];
+    }
+
+    /** পয়েন্ট — কোড বা নাম, এই কোম্পানির (গ্লোবাল স্কোপ) */
+    private function point(string $value): ?Location
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return Location::query()
+            ->where(fn ($q) => $q->where('code', $value)
+                ->orWhere('name_en', $value)
+                ->orWhere('name_bn', $value))
+            ->orderBy('id')
+            ->first();
     }
 
     private function partyType(string $value): ?PartyType
@@ -209,5 +243,11 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
     private static function plainDecimal(string $value): bool
     {
         return preg_match('/^[+-]?\d+(\.\d+)?$/', trim($value)) === 1;
+    }
+
+    /** বাকির দিন — ০ থেকে ৩৬৫, কেবল ইংরেজি অঙ্ক ([[CustomerRequest]]-এর `integer|min:0|max:365`) */
+    private static function creditDays(string $value): bool
+    {
+        return preg_match('/^\d{1,3}$/', trim($value)) === 1 && (int) trim($value) <= 365;
     }
 }
