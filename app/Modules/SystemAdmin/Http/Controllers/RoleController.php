@@ -191,7 +191,7 @@ class RoleController extends Controller implements HasMiddleware
      *
      * @var list<string>
      */
-    private const SUPER_ADMIN_GRANTS = ['executive.view', 'executive.links.manage'];
+    private const SUPER_ADMIN_GRANTS = PermissionSyncer::SUPER_ADMIN_GRANTS;
 
     /**
      * ⛔ যা নিজের হাতে নেই, তা অন্যকে দেওয়া যায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।

@@ -161,6 +161,15 @@ class UserPolicy
             return false;
         }
 
+        /*
+         * ⛔ মালিকের কেন্দ্রের চাবিসহ রোল কেবল মালিক দেন — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+         * ([[OnlyTheOwnerHandsOutHisCentreTest]])। ⚠️ আগে চাবিটা রোলে বসানো বন্ধ ছিল, কিন্তু চাবি-ধরা রোলটা কাউকে দেওয়া
+         * খোলা: চাবি আর মানুষ সামলানোর চাবি দুটোই যাঁর, তিনি যে কাউকে মালিকের কেন্দ্র খুলে দিতে পারতেন।
+         */
+        if ($role->permissions->pluck('name')->intersect(PermissionSyncer::SUPER_ADMIN_GRANTS)->isNotEmpty()) {
+            return false;
+        }
+
         foreach ($role->permissions->pluck('name') as $permission) {
             if (! $actor->can($permission)) {
                 return false;
