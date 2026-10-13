@@ -41,8 +41,17 @@ class InsuranceClaimController extends Controller implements HasMiddleware
     {
         return view('finance::insurance.claim', [
             'menu' => $this->menu->forUser($request->user()),
-            'claim' => $claim->load(['policy.institution', 'approvalVoucher', 'closeVoucher']),
-            'receipts' => \App\Modules\Accounts\Models\Voucher::query()
+            /*
+             * ⛔ শাখার দেয়াল ছাড়া — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⓘ৮)। দাবির রসিদ আর অনুমোদন/বন্ধের দাখিলা
+             * দাবির শাখায় বসে; হেডারে অন্য শাখা বাছা মানুষ (মালিক খতিয়ানের লিংক ধরে আসেন) আগে রসিদের তালিকা ফাঁকা দেখতেন,
+             * সইয়ের অপেক্ষার রসিদও। ⓘ পাতাটা নিজেই নাগাল দেখে খোলে ([[OpensOnlyInReach]]), তাই এখানে আর দেয়াল লাগে না।
+             */
+            'claim' => $claim->load([
+                'policy.institution',
+                'approvalVoucher' => fn ($q) => $q->withoutGlobalScope('user-branch'),
+                'closeVoucher' => fn ($q) => $q->withoutGlobalScope('user-branch'),
+            ]),
+            'receipts' => \App\Modules\Accounts\Models\Voucher::acrossBranches()
                 ->where('against_type', InsuranceClaim::drillSourceType())->where('against_id', $claim->id)
                 ->orderBy('trx_date')->orderBy('id')->get(),
             'accounts' => app(VoucherService::class)->moneyAccounts(),
@@ -57,7 +66,9 @@ class InsuranceClaimController extends Controller implements HasMiddleware
             'incident_on' => ['required', 'date', 'before_or_equal:today'],
             'claimed_on' => ['required', 'date', 'after_or_equal:incident_on', 'before_or_equal:today'],
             'incident' => ['required', 'string', 'max:500'],
-            'claimed_amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999'],
+            // ⛔ দাবির অঙ্ক কেবল সাধারণ টাকা, পয়সা পর্যন্ত — "1e5" bcmath-এ ৫০০ দিত, আর ১০০.০০৫-এর আধা পয়সা কখনো আসত না,
+            // দাবি নিজে মিটত না (খাতার রসিদ দুই দশমিকে); অনুমোদন আর টাকা আসার ঘরেও একই (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'claimed_amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,2})?$/', 'gt:0', 'max:9999999999999'],
         ]);
 
         $claim = $this->claims->lodge($policy, $data);
@@ -69,7 +80,7 @@ class InsuranceClaimController extends Controller implements HasMiddleware
     public function approve(Request $request, InsuranceClaim $claim): RedirectResponse
     {
         $data = $request->validate([
-            'approved_amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999'],
+            'approved_amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,2})?$/', 'gt:0', 'max:9999999999999'],
             'approved_on' => ['required', 'date', 'before_or_equal:today'],
             'approval_ref' => ['required', 'string', 'max:100'],
         ]);
@@ -83,7 +94,7 @@ class InsuranceClaimController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'money_account_id' => ['required', 'integer'],
-            'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,2})?$/', 'gt:0', 'max:9999999999999'],
             'received_on' => ['required', 'date', 'before_or_equal:today'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
         ]);

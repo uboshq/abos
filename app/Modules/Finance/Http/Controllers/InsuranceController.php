@@ -144,8 +144,9 @@ class InsuranceController extends Controller implements HasMiddleware
         $data = $request->validate([
             'starts_on' => ['required', 'date'],
             'ends_on' => ['required', 'date', 'after:starts_on'],
-            'premium' => ['required', 'numeric', 'min:0', 'max:9999999999'],
-            'sum_insured' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
+            // ⛔ "1e5" `numeric` পার হয়ে bcmath-এ ৫০০ দিত — কেবল সাধারণ অঙ্ক, পলিসির ঘরের চার দশমিক পর্যন্ত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'premium' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0', 'max:9999999999'],
+            'sum_insured' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0', 'max:9999999999999'],
         ]);
 
         $this->insurance->renew($policy, $data);
@@ -201,8 +202,9 @@ class InsuranceController extends Controller implements HasMiddleware
             'policy_no' => ['required', 'string', 'max:60'],
             'covers' => ['required', Rule::in(InsurancePolicy::COVERS)],
             'subject' => ['required', 'string', 'max:200'],
-            'sum_insured' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
-            'premium' => ['required', 'numeric', 'min:0', 'max:9999999999'],
+            // ⛔ "1e5" `numeric` পার হয়ে bcmath-এ ৫০০ দিত; চার দশমিক — সম্পাদনার ফর্মে ঘরের মান "4500.0000" হয়েই ফেরে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'sum_insured' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0', 'max:9999999999999'],
+            'premium' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0', 'max:9999999999'],
             // ⭐ প্রিমিয়ামের কিস্তি — ডিফল্ট বছরে (পরিকল্পনা ৬.২)
             'frequency' => ['nullable', Rule::in(array_keys(InsurancePolicy::FREQUENCIES))],
             'starts_on' => ['required', 'date'],
