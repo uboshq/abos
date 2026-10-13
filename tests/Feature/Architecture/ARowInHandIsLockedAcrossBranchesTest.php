@@ -30,7 +30,6 @@ final class ARowInHandIsLockedAcrossBranchesTest extends TestCase
      * @var array<string, int>
      */
     private const NOT_YET = [
-        'app/Modules/Documents/Services/DocumentWorkflow.php' => 1,
     ];
 
     /**
