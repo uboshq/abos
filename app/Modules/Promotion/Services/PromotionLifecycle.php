@@ -246,9 +246,11 @@ final class PromotionLifecycle
              *
              * ⓘ দুই ট্যাব: একটায় অফারটা বাতিল হলো, অন্যটার হাতে তখনো *"চলছে"*-র কপি। ⚠️ সেখান থেকে
              * "থামাও" চাপলে বাতিল অফার থামানো হত, আর থামানো থেকে আবার চালু — চূড়ান্ত অবস্থা ভেঙে।
-             * ⭐ তাই সারিতে তালা দিয়ে নতুন করে পড়া, আর মানচিত্র সেই অবস্থাকেই জিজ্ঞেস করে।
+             * ⭐ তাই সারিতে তালা দিয়ে নতুন করে পড়া, আর মানচিত্র সেই অবস্থাকেই জিজ্ঞেস করে। ⓘ তালাটা এখানেই
+             * লেখা, সহায়কে নয় — [[EveryMoneyActionLocksItsRowTest]] এক ধাপ নিচ পর্যন্ত পড়ে।
              */
-            $this->lockAndReread($offer);
+            $offer->setRawAttributes(
+                Promotion::query()->whereKey($offer->getKey())->lockForUpdate()->firstOrFail()->getAttributes(), true);
 
             if (! $offer->status->canBecome($next)) {
                 throw ValidationException::withMessages([
