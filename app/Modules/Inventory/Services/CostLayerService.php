@@ -40,12 +40,13 @@ final class CostLayerService
      * করা হয় না।
      */
     /**
-     * ⭐ স্তরে যতটুকু আছে FIFO-তে, বাকিটুকু কেনা দামে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⓘ১২; [[FreeGoodsTakeTheirCostFromTheLayersFirstTest]])।
+     * ⭐ ফ্রি মাল আর উপহারের খরচ — কেবল স্তর থেকে, FIFO-তে; স্তরে না কুলালে থামে (fe-র সিদ্ধান্ত, ১৩ অক্টোবর ২০২৬; মজুদ লাইন-ধরে নিরীক্ষা)।
      *
-     * ⓘ ফ্রি মাল আর উপহার ([[DirectSaleService::giveFromStock()]], [[GiftIssuer::bookTheCost()]]) আগে স্তরে পুরোটা না কুলালে পুরো
-     * পরিমাণ কেনা দামে ধরত, স্তর না ছুঁয়ে — যেটুকু স্তরে ছিল তাও FIFO-র বাইরে, আর সেই সস্তা বা দামি স্তর পরের বিক্রিতে পড়ে থাকত।
-     * এখন যতটুকু স্তরে আছে ততটুকু [[issue()]]-এ (একই FIFO, একই লটের নিয়ম), কেবল ঘাটতিটুকু পণ্যের কেনা দামে — খোলা মজুদের মতো
-     * স্তরহীন মাল দেওয়া আগের মতো চলে, থামে না। ঘাটতি না থাকলে আগের [[issue()]] হুবহু।
+     * ⛔ ৬ অক্টোবর থেকে (বিক্রয় ⓘ১২) ঘাটতিটুকু পণ্যের কেনা দামে ধরা হত, স্তর না ছুঁয়ে — আর [[GiftIssuer]] পুরো খরচ মজুদের খাত
+     * (১১২০) থেকে কাটত। ফলে খাত নামত, স্তর নামত না: দুইটা আলাদা কথা বলত, আর খাত ঋণাত্মকও হতে পারত। ⓘ মালিকের নিয়ম —
+     * মজুদ শূন্যের নিচে নামে না — তাই এখন [[issue()]]-এর পাহারাই খাটে: ঘাটতি থাকলে স্পষ্ট বাংলা বার্তায় থামে
+     * (`no_cost_layer`: "সমন্বয় দিয়ে দরসহ মালটা ঢোকান")। ⓘ গোনাটাও এখন তালার ভিতরে ([[issue()]]), তাই দুই কাউন্টার একসাথে
+     * পুরো স্তর টানার পরিকল্পনা আর করে না। ⓘ নামটা রইল, যাতে দুই ডাকার জায়গা বদলাতে না হয়।
      *
      * @return string মোট খরচ
      */
@@ -58,18 +59,7 @@ final class CostLayerService
         Carbon|string|null $date = null,
         ?Batch $batch = null,
     ): string {
-        $have = $this->qtyOnHand($product);
-        $fromLayers = bccomp($have, $qty, 4) >= 0 ? $qty : (bccomp($have, '0', 4) > 0 ? $have : '0');
-
-        $cost = bccomp($fromLayers, '0', 4) > 0
-            ? $this->issue($product, $fromLayers, $sourceType, $sourceId, $documentNo, $date, $batch)['cost']
-            : '0';
-
-        $short = bcsub($qty, $fromLayers, 4);
-
-        return bccomp($short, '0', 4) > 0
-            ? bcadd($cost, bcmul((string) ($product->purchase_price ?? '0'), $short, 4), 4)
-            : $cost;
+        return $this->issue($product, $qty, $sourceType, $sourceId, $documentNo, $date, $batch)['cost'];
     }
 
     public function receive(
