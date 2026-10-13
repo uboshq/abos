@@ -177,6 +177,32 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ একই দিনের দুইটা আবেদন দুটোই মঞ্জুর নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪; [[LeaveService::approve()]])।
+     * ⓘ দুইবার চাপায় বসে যাওয়া জোড়াটা এখানে সরাসরি বসানো; আগে মঞ্জুরি আর মেলাত না, তাই দুটোই পার হত আর দিনগুলো দুইবার কাটত।
+     */
+    public function test_two_applications_for_the_same_days_cannot_both_be_approved(): void
+    {
+        [$first, $second] = collect([1, 2])->map(fn () => LeaveApplication::query()->create([
+            'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('CASUAL')->id,
+            'from_date' => '2026-03-02', 'to_date' => '2026-03-03', 'days' => '2', 'status' => LeaveApplication::PENDING,
+        ]))->all();
+
+        try {
+            app(LeaveService::class)->approve($first, $this->owner);
+            $this->fail('⛔ একই দিনের আরেকটা আবেদন থাকতেও মঞ্জুর হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.leave_overlaps'), $e->errors()['from_date'][0]);
+        }
+
+        $this->assertSame(LeaveApplication::PENDING, $first->fresh()->status);
+
+        // ⓘ জোড়ার একটা নামঞ্জুর হলে অন্যটা আগের মতোই মঞ্জুর হয়, আর কোটা একবারই কাটে
+        app(LeaveService::class)->reject($second, $this->owner, 'দুইবার চাপা');
+        $this->assertSame(LeaveApplication::APPROVED, app(LeaveService::class)->approve($first->fresh(), $this->owner)->status);
+        $this->assertSame('8.0', app(LeaveService::class)->balance($this->employee, $this->type('CASUAL'), Carbon::parse('2026-03-02'))['left']);
+    }
+
     private function type(string $code): LeaveType
     {
         return LeaveType::query()->where('code', $code)->firstOrFail();

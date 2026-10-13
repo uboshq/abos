@@ -44,19 +44,29 @@ final class LeaveService
 
         $this->assertDatesMakeSense($from, $to, $days);
         $this->assertEmployedThroughout($employee, $from, $to);
-        $this->assertNoOverlap($employee, $from, $to);
-        $this->assertWithinYearlyLimit($employee, $type, $from, $days);
 
-        return LeaveApplication::create([
-            'employee_id' => $employee->id,
-            'leave_type_id' => $type->id,
-            'from_date' => $from->toDateString(),
-            'to_date' => $to->toDateString(),
-            'days' => $days,
-            'reason' => $reason,
-            'status' => LeaveApplication::PENDING,
-            'created_by' => auth()->id(),
-        ])->fresh();
+        return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason) {
+            /*
+             * ⛔ কর্মীর সারিতে তালা, তারপর মেলা আর কোটা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪)।
+             * ⓘ লেনদেন বা তালা ছিল না: দুইবার চাপলে বা ফোন আবার পাঠালে দুইটা অনুরোধই "মেলে না" দেখে একই দিনের দুইটা আবেদন বসাত।
+             * তালাটা আগে, যাতে লেনদেনের প্রথম পড়াটাই তালার পরে হয় আর আগের অনুরোধের বসানো আবেদন চোখে পড়ে।
+             */
+            Employee::query()->withoutGlobalScopes()->whereKey($employee->id)->lockForUpdate()->first();
+
+            $this->assertNoOverlap($employee, $from, $to);
+            $this->assertWithinYearlyLimit($employee, $type, $from, $days);
+
+            return LeaveApplication::create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $type->id,
+                'from_date' => $from->toDateString(),
+                'to_date' => $to->toDateString(),
+                'days' => $days,
+                'reason' => $reason,
+                'status' => LeaveApplication::PENDING,
+                'created_by' => auth()->id(),
+            ])->fresh();
+        });
     }
 
     /**
@@ -88,6 +98,13 @@ final class LeaveService
             $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
             $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
             $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
+
+            /*
+             * ⛔ মঞ্জুরের মুহূর্তে আবার মেলানো — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ একই দিনের দুইটা আবেদন (আগের দুইবার চাপা) দুটোই মঞ্জুর হত: দিনগুলো কোটায় দুইবার কাটত, হাজিরার সারি দ্বিতীয়টার নামে
+             * সরে যেত, আর সেটা প্রত্যাহার করলে প্রথমটা "মঞ্জুর" থেকেও হাজিরায় কিছু থাকত না। কর্মীর তালার নিচে, এই আবেদন বাদে।
+             */
+            $this->assertNoOverlap($employee, $application->from_date->copy(), $application->to_date->copy(), $application->id);
 
             $application->forceFill([
                 'status' => LeaveApplication::APPROVED,
@@ -307,10 +324,11 @@ final class LeaveService
      * থাকতে দিলে একই দিন দুইবার কোটা থেকে কাটত, আর হাজিরার সারিটা
      * শেষে যেটা বসত সেটাই টিকত — কোনটা, তা নির্ধারিত থাকত না।
      */
-    private function assertNoOverlap(Employee $employee, Carbon $from, Carbon $to): void
+    private function assertNoOverlap(Employee $employee, Carbon $from, Carbon $to, ?int $except = null): void
     {
         $clash = LeaveApplication::query()
             ->where('employee_id', $employee->id)
+            ->when($except !== null, fn ($q) => $q->whereKeyNot($except))
             ->whereIn('status', [LeaveApplication::PENDING, LeaveApplication::APPROVED])
             ->whereDate('from_date', '<=', $to->toDateString())
             ->whereDate('to_date', '>=', $from->toDateString())
