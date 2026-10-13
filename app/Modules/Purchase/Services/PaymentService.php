@@ -211,7 +211,9 @@ final class PaymentService
                 ]);
             }
 
-            PurchaseBill::query()
+            // ⛔ সব শাখা জুড়ে — বিলগুলো খসড়া লেখার সময়ই দেয়াল পেরিয়ে যাচাই হয়েছে; পাকা যিনি করছেন তাঁর দেখা শাখার বাইরের বিলে
+            // তালাও পড়ত না, বাকির যাচাইও নয় (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OnePaymentPaidOneBillTwiceTest]])
+            PurchaseBill::acrossBranches()
                 ->whereKey($payment->lines()->pluck('purchase_bill_id')->filter()->unique()->all())
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -453,10 +455,23 @@ final class PaymentService
      */
     private function assertStillFits(Payment $payment): void
     {
-        $payment->loadMissing('lines.bill');
+        /*
+         * ⛔ বিলপ্রতি যোগ, সব শাখা জুড়ে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OnePaymentPaidOneBillTwiceTest]])। ⚠️ আগে লাইন ধরে
+         * আলাদা করে মেলানো হত — একই বিল দুই লাইনে ১,০০০ + ১,০০০ দিলে প্রতিটা ১,০০০-এর বাকির ভেতরে পড়ত, বিলে বসত ২,০০০;
+         * আর সম্পর্কটা দেয়াল দিয়ে পড়ত, অন্য শাখা দেখানো অবস্থায় বিল "নেই" হয়ে যাচাই বাদ পড়ত।
+         */
+        $byBill = [];
 
-        foreach ($payment->lines as $line) {
-            $bill = $line->bill;
+        foreach ($payment->lines()->get() as $line) {
+            $id = (int) $line->purchase_bill_id;
+
+            if ($id > 0) {
+                $byBill[$id] = bcadd($byBill[$id] ?? '0', (string) $line->amount, 4);
+            }
+        }
+
+        foreach ($byBill as $billId => $amount) {
+            $bill = PurchaseBill::acrossBranches()->find($billId);
 
             if ($bill === null) {
                 continue;
@@ -465,7 +480,7 @@ final class PaymentService
             // এই পরিশোধটা এখনো খসড়া, তাই নিজের ভাগটা বাকির হিসাবে নেই
             $due = $bill->dueAmount();
 
-            if (bccomp((string) $line->amount, $due, 4) > 0) {
+            if (bccomp($amount, $due, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.over_allocated', [
                         'no' => $bill->document_no,
@@ -487,6 +502,8 @@ final class PaymentService
 
         $allocated = '0';
         $lineNo = 0;
+        // ⓘ এই পরিশোধেই একই বিলে আগের লাইনে যা বসল — বাকি থেকে সেটাও বাদ ([[assertStillFits()]]-এর একই কারণ)
+        $usedByBill = [];
 
         foreach ($lines as $line) {
             $billId = (int) ($line['purchase_bill_id'] ?? 0);
@@ -522,16 +539,18 @@ final class PaymentService
              * এই পরিশোধের নিজের লাইনগুলো আগেই মুছে ফেলা হয়েছে, তাই
              * সম্পাদনার সময় নিজের পুরনো ভাগটা দুইবার গোনা হয় না।
              */
-            $due = $bill->dueAmount();
+            $due = bcsub($bill->dueAmount(), $usedByBill[$bill->id] ?? '0', 4);
 
             if (bccomp($amount, $due, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.over_allocated', [
                         'no' => $bill->document_no,
-                        'due' => Money::format($due),
+                        'due' => Money::format(bccomp($due, '0', 4) > 0 ? $due : '0'),
                     ]),
                 ]);
             }
+
+            $usedByBill[$bill->id] = bcadd($usedByBill[$bill->id] ?? '0', $amount, 4);
 
             PaymentLine::create([
                 'company_id' => $payment->company_id,
