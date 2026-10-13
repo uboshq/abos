@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\YearEndService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -96,6 +97,12 @@ final class HeadTotals
             ->where('company_id', CompanyContext::id())
             ->where('account_id', $account->id)
             ->whereBetween('trx_date', [$from, $to])
+            /*
+             * ⛔ বছর বন্ধের দাখিলা বাদ — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+             * ওটা বছরের শেষ দিনে প্রতিটা আয়-খরচের খাত শূন্য করে; না বাদ দিলে বছরের শেষ দিনটা
+             * পরিসরে পড়লেই খাতটা শূন্য দেখাত আর তালিকা থেকে হারাত ([[YearEndService::closingSources()]])।
+             */
+            ->whereNotIn('source_type', YearEndService::closingSources())
             ->selectRaw($expression)
             ->value('net');
 
@@ -181,6 +188,8 @@ final class HeadTotals
              */
             ->where('l.company_id', CompanyContext::id())
             ->whereBetween('l.trx_date', [$from, $to])
+            // ⛔ বছর বন্ধের দাখিলা বাদ, `sum()`-এর মতোই — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+            ->whereNotIn('l.source_type', YearEndService::closingSources())
             ->groupBy('a.id')
             ->selectRaw('a.id, COALESCE(SUM(l.debit) - SUM(l.credit), 0) as net')
             ->get();
