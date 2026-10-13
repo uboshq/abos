@@ -118,6 +118,7 @@ return [
     'quotation_not_invited' => 'This supplier was not invited to this request, so their quote does not go here.',
     'quotation_product_not_asked' => 'A price for a product the request did not ask for does not go here.',
     'quotation_discount_beyond_line' => 'A discount cannot be negative or more than the line.',
+    'asset_line_no_warehouse' => 'Which warehouse the goods of this bill line went into is not known. Set the warehouse on the bill or the receipt, then make the asset.',
     'quotation_needs_lines' => 'A quotation needs at least one priced line.',
     'quotation_rate_negative' => 'A rate cannot be less than zero.',
     'contract_ends_before_it_starts' => 'The contract cannot end before it begins.',

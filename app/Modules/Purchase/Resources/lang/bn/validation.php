@@ -135,6 +135,7 @@ return [
     'quotation_not_invited' => 'এই সরবরাহকারীকে এই দরপত্রে আমন্ত্রণ জানানো হয়নি — তাঁর দর এখানে বসে না।',
     'quotation_product_not_asked' => 'দরপত্রে নেই এমন পণ্যের দর এখানে বসে না।',
     'quotation_discount_beyond_line' => 'ছাড় ঋণাত্মক বা লাইনের মোটের বেশি হতে পারে না।',
+    'asset_line_no_warehouse' => 'এই বিলের লাইনের মাল কোন গুদামে ঢুকেছিল, জানা যায়নি — বিলে বা রসিদে গুদাম বসান, তারপর সম্পদে নিন।',
     'quotation_needs_lines' => 'দরে অন্তত একটা দরওয়ালা সারি লাগে।',
     'quotation_rate_negative' => 'দর শূন্যের কম হতে পারে না।',
     'contract_ends_before_it_starts' => 'চুক্তি শুরুর আগেই শেষ হতে পারে না।',
