@@ -250,12 +250,13 @@ class BankFacilityController extends Controller implements HasMiddleware
             'sanction_no' => ['nullable', 'string', 'max:64'],
             'sanctioned_on' => ['required', 'date'],
 
-            'limit_amount' => ['required', 'numeric', 'min:0'],
+            // ⛔ `numeric` "1e5"-ও নেয়, আর bcmath তাতে ValueError ছুড়ে ৫০০ দিত — টাকার ঘর কেবল দশমিক অঙ্ক (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৮)
+            'limit_amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'term_months' => ['nullable', 'integer', 'min:1', 'max:600'],
             'renews_on' => ['nullable', 'date'],
 
-            'stock_value' => ['nullable', 'numeric', 'min:0'],
+            'stock_value' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
 
             /*
              * ⓘ স্টকের অঙ্কটা কবেকার — ড্রয়িং পাওয়ারের বয়স।
@@ -270,7 +271,7 @@ class BankFacilityController extends Controller implements HasMiddleware
              * ⛔ পাহারাটা না থাকলে ড্রয়িং পাওয়ার ঋণাত্মক হয়ে যেত, আর
              * পর্দা বলত ব্যবসাটা সীমার চেয়ে বেশি তুলে ফেলেছে।
              */
-            'opening_drawn' => ['nullable', 'numeric', 'min:0', 'lte:limit_amount'],
+            'opening_drawn' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0', 'lte:limit_amount'],
 
             /*
              * ⭐ এই ঋণ কি নতুন, নাকি আগে থেকেই চলছে — ২০ সেপ্টেম্বর ২০২৬।
@@ -285,23 +286,25 @@ class BankFacilityController extends Controller implements HasMiddleware
             'paper' => ['nullable', 'file'],
             'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'instalments' => ['nullable', 'integer', 'min:1', 'max:600'],
-            'instalment_amount' => ['nullable', 'numeric', 'min:0'],
+            'instalment_amount' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             // ⭐ প্রথম কিস্তির দিন — মঞ্জুরির আগে নয় (পরিকল্পনা ৩.২, ৬ অক্টোবর ২০২৬)
             'first_instalment_on' => ['nullable', 'date', 'after_or_equal:sanctioned_on'],
-            'down_payment' => ['nullable', 'numeric', 'min:0'],
-            'charges' => ['nullable', 'numeric', 'min:0'],
+            'down_payment' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'charges' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
 
             /*
              * ⭐ মাঝপথে শোধের চার্জ — ২০ সেপ্টেম্বর ২০২৬।
              * ⓘ শতাংশ হলে ১০০-এর বেশি হতে পারে না; থোক হলে পারে,
              * তাই উপরের সীমাটা শতাংশের ক্ষেত্রেই।
              */
-            'early_charge' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ সীমাটা আগে কেবল মন্তব্যে ছিল — ১৫০% দিলে শোধের মোট বকেয়ার আড়াই গুণ দেখাত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৯)
+            'early_charge' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0',
+                Rule::when($request->input('early_charge_kind') === BankFacility::CHARGE_PERCENT, ['max:100'])],
             'early_charge_kind' => ['nullable', Rule::in(BankFacility::CHARGE_KINDS)],
             'early_charge_basis' => ['nullable', Rule::in(BankFacility::CHARGE_BASES)],
 
             'security_type' => ['nullable', Rule::in(BankFacility::SECURITIES)],
-            'security_value' => ['nullable', 'numeric', 'min:0'],
+            'security_value' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             'guarantors' => ['nullable', 'string', 'max:500'],
             'covenant' => ['nullable', 'string', 'max:500'],
 
@@ -411,7 +414,7 @@ class BankFacilityController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'statement_on' => ['required', 'date', 'before_or_equal:today'],
-            'bank_balance' => ['required', 'numeric'],
+            'bank_balance' => ['required', 'numeric', 'regex:/^-?\d+(\.\d{1,4})?$/'],
             'note' => ['nullable', 'string', 'max:191'],
         ]);
 

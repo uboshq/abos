@@ -138,6 +138,19 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
     }
 
     /**
+     * ⛔ "1e5" বকেয়া কারণ বলে থামে, ৫০০ নয়; শতাংশের চার্জ ১০০-এর বেশি নয়, থোক চার্জ পারে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৮–৯)।
+     */
+    public function test_an_exponent_amount_and_a_charge_past_a_hundred_percent_are_refused(): void
+    {
+        $this->post(route('finance.bank_facility.store'), $this->terms(['already_running' => '1', 'opening_drawn' => '1e5', 'instalments_paid' => 2]))
+            ->assertSessionHasErrors('opening_drawn');
+        $this->post(route('finance.bank_facility.store'), $this->terms(['early_charge_kind' => BankFacility::CHARGE_PERCENT, 'early_charge' => '150']))
+            ->assertSessionHasErrors('early_charge');
+        $this->post(route('finance.bank_facility.store'), $this->terms(['early_charge_kind' => BankFacility::CHARGE_FLAT, 'early_charge' => '150']))
+            ->assertSessionHasNoErrors();
+    }
+
+    /**
      * ⛔ নতুন ঋণে কোনো খোলা দাখিলা বসে না — টাকা আসে রসিদ ভাউচারে।
      */
     public function test_a_new_loan_posts_no_opening_at_all(): void
