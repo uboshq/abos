@@ -47,9 +47,15 @@ final class ALotFromAnotherBranchBrokeTheReceiptTest extends TestCase
         $lot = app(BatchService::class)->receive($product, 'LOT-SHARED');
         app(StockService::class)->move(product: $product, warehouse: $far, sourceType: 'test.in', sourceId: 1, floor: '5', batch: $lot);
 
-        // ⭐ এখন হেডারে কেবল নিজের শাখা — লটটা দেয়ালের আড়ালে
-        $owner->forceFill(['view_all_branches' => false])->save();
+        // ⭐ এখন একজন কেরানি, নিজের শাখার একটা গুদামে সীমিত — লটটা তাঁর দেয়ালের আড়ালে
+        $near = Warehouse::acrossWarehouses()->create(['code' => 'LOT-NEAR', 'name_en' => 'Near', 'is_active' => true, 'branch_id' => $home->id]);
+        $clerk = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
+        \App\Models\UserDataScope::query()->create([
+            'company_id' => $company->id, 'user_id' => $clerk->id,
+            'scope_type' => \App\Models\UserDataScope::WAREHOUSE, 'scope_id' => $near->id,
+        ]);
         app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($clerk);
         $this->assertNull(Batch::query()->find($lot->id), 'পরীক্ষার পূর্বশর্ত ভাঙা: লটটা দেয়ালের আড়ালে নেই, দাবিটা কিছু মাপছে না।');
 
         $again = app(BatchService::class)->receive($product, 'LOT-SHARED');
