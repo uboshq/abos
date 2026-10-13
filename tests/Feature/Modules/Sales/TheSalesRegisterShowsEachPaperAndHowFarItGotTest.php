@@ -55,6 +55,8 @@ final class TheSalesRegisterShowsEachPaperAndHowFarItGotTest extends TestCase
             'product_id' => $product->id, 'qty' => '6', 'rate' => '100',
             'delivery_challan_line_id' => $challan->lines->first()->id,
         ]]);
+        // ⓘ খাতা কেবল পাকা বিল গোনে ([[TheRegisterCountsOnlyPostedPapersTest]], ১৩ অক্টোবর ২০২৬) — এখানে কেবল অবস্থাটা লাগে
+        $invoice->forceFill(['status' => \App\Core\Support\DocumentStatus::CONFIRMED])->saveQuietly();
 
         // ⓘ কাউন্টারের বিক্রি — পর্দার ছবি থাকে ([[DirectSaleService]])
         $counter = app(SalesInvoiceService::class)->create($head, [['product_id' => $product->id, 'qty' => '1', 'rate' => '100']]);
