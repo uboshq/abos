@@ -170,9 +170,12 @@ final class DealerBindingService
                  * ⓘ শেষ দিন = হাতবদলের আগের দিন — সবসময়। বাঁধনটা ঐ দিনেই বা পরে শুরু হলে শেষ দিন শুরুর
                  * আগে পড়ে, অর্থাৎ বাঁধনটা কোনোদিন চালুই হয়নি (মোছা নয় — ইতিহাসে থাকে)। ⛔ শুরুর দিনে
                  * আটকালে পুরনো জন হাতবদলের দিনটাও দেখতেন।
+                 * ⛔ আগে থেকে বসানো শেষ দিন পরে সরে না — কেবল আগে ([[end()]]-এর নিয়ম; [[AHandoverPushedAnEndingBindingLaterTest]])।
                  */
+                $endsOn = $on->copy()->subDay();
+
                 $row->forceFill([
-                    'ends_on' => $on->copy()->subDay(),
+                    'ends_on' => $row->ends_on !== null && $row->ends_on->lt($endsOn) ? $row->ends_on : $endsOn,
                     'ended_by' => auth()->id(),
                 ])->save();
             }
