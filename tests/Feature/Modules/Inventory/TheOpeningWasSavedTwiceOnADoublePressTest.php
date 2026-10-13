@@ -64,4 +64,46 @@ final class TheOpeningWasSavedTwiceOnADoublePressTest extends TestCase
         $this->expectException(ValidationException::class);
         app(OpeningStockService::class)->bringIn(product: $product, warehouse: $warehouse, qty: '10', unitCost: '50');
     }
+
+    /**
+     * ⛔ কার্টের পথে তালাই লেনদেনের প্রথম কোয়েরি (১৩ অক্টোবর ২০২৬)। ⚠️ MySQL-এর REPEATABLE READ-এ প্রথম সাধারণ পড়াতেই
+     * ছবি তোলা হয়; তালার আগে `Product::find()` চললে দ্বিতীয় চাপ অপেক্ষা শেষেও পুরনো ছবিতে "বসেনি" দেখত।
+     */
+    public function test_the_cart_locks_its_products_before_any_other_read_in_its_transaction(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+
+        $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
+        $unit = Unit::query()->orderBy('id')->firstOrFail()->id;
+        $make = fn (string $tag) => Product::query()->create([
+            'code' => 'OPC'.$tag.'-'.mb_substr(md5(microtime().$tag), 0, 6), 'name_en' => 'Cart probe '.$tag, 'name_bn' => 'কার্টের নমুনা',
+            'unit_id' => $unit, 'track_batch' => false, 'is_active' => true,
+        ]);
+        $first = $make('A');
+        $second = $make('B');
+
+        $base = DB::transactionLevel();
+        $seen = [];
+        DB::listen(function (QueryExecuted $q) use (&$seen): void {
+            $seen[] = ['sql' => strtolower($q->sql), 'level' => DB::transactionLevel()];
+        });
+
+        app(OpeningStockService::class)->bringInMany($warehouse, [
+            ['product_id' => $second->id, 'qty' => '4', 'unit_cost' => '20'],
+            ['product_id' => $first->id, 'qty' => '6', 'unit_cost' => '30'],
+        ]);
+
+        $inside = collect($seen)->filter(fn ($q) => $q['level'] > $base)->values();
+
+        $this->assertNotEmpty($inside, 'পূর্বশর্ত: কার্টের লেনদেনের কোনো কোয়েরি চোখে পড়েনি।');
+        $this->assertStringContainsString('from `inv_products`', $inside[0]['sql'], 'কার্টের লেনদেনের প্রথম কোয়েরি পণ্যের তালা নয়।');
+        $this->assertStringContainsString('for update', $inside[0]['sql'], 'প্রথম কোয়েরি সাধারণ পড়া — ছবি তালার আগেই তোলা হয়ে যেত।');
+
+        // ⭐ আর দ্বিতীয় চাপ সত্যিই থামে
+        $this->expectException(ValidationException::class);
+        app(OpeningStockService::class)->bringInMany($warehouse, [['product_id' => $first->id, 'qty' => '6', 'unit_cost' => '30']]);
+    }
 }

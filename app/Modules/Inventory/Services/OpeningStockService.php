@@ -159,6 +159,20 @@ final class OpeningStockService
         }
 
         return DB::transaction(function () use ($warehouse, $rows, $date, $narration) {
+            /*
+             * ⛔ কার্টের সব পণ্যে তালা — লেনদেনের একেবারে প্রথম কাজ, id-র ক্রমে (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⚠️ MySQL-এর REPEATABLE READ-এ লেনদেনের প্রথম সাধারণ পড়াতেই ছবি তোলা হয়ে যায়। নিচের সারি-প্রতি
+             * [[lockProduct()]]-এর আগে `Product::find()` আর লটের খোঁজ চলে — তাই দ্বিতীয় চাপ তালার জন্য অপেক্ষা শেষ করেও
+             * পুরনো ছবিতে "এখনো বসেনি" দেখত, আর খোলা মজুদ দুইবার বসত। ⓘ তালা-পড়া (FOR UPDATE) ছবি তোলে না, সর্বশেষ কমিট
+             * পড়ে; তালাগুলো আগে পড়লে পরের সব সাধারণ পড়া প্রথম চাপের কমিটের পরের ছবি দেখে। ⓘ id-র ক্রমে — দুই কার্ট উল্টো
+             * ক্রমে একই পণ্য ধরলে আটকাআটকি (deadlock) হত না।
+             */
+            $ids = collect($rows)->map(fn ($row) => (int) ($row['product_id'] ?? 0))->filter()->unique()->sort()->values()->all();
+
+            if ($ids !== []) {
+                Product::query()->withoutGlobalScopes()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->pluck('id');
+            }
+
             $errors = [];
             $movements = [];
             $total = '0';
