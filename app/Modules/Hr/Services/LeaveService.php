@@ -106,14 +106,25 @@ final class LeaveService
     {
         $this->assertPending($application);
 
-        $application->forceFill([
-            'status' => LeaveApplication::REJECTED,
-            'decided_by' => $decider->id,
-            'decided_at' => now(),
-            'decision_remarks' => $remarks,
-        ])->save();
+        return DB::transaction(function () use ($application, $decider, $remarks) {
+            /*
+             * ⛔ তালা দিয়ে তাজা অবস্থা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ অবস্থা দেখা হত তালার আগের কপি থেকে: একই সেকেন্ডে একজন মঞ্জুর আর আরেকজন নামঞ্জুর চাপলে মঞ্জুরিটা বসে হাজিরায় ছুটির
+             * সারি লিখত, তারপর নামঞ্জুর পুরনো কপি দেখে "অপেক্ষমাণ" ভেবে অবস্থা "নামঞ্জুর" করে দিত — কোটায় গোনা নেই, অথচ সারিগুলো রয়ে
+             * গেল। [[approve()]]-এর একই নিয়ম: সারিতে তালা, তারপর আবার দেখা।
+             */
+            $this->lockFresh($application);
+            $this->assertPending($application);
 
-        return $application->fresh();
+            $application->forceFill([
+                'status' => LeaveApplication::REJECTED,
+                'decided_by' => $decider->id,
+                'decided_at' => now(),
+                'decision_remarks' => $remarks,
+            ])->save();
+
+            return $application->fresh();
+        });
     }
 
     /**
@@ -123,20 +134,28 @@ final class LeaveService
      */
     public function cancel(LeaveApplication $application): LeaveApplication
     {
-        if ($application->status === LeaveApplication::CANCELLED) {
-            throw ValidationException::withMessages([
-                'status' => __('hr::validation.leave_already_cancelled'),
-            ]);
-        }
-
-        /*
-         * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা মোছা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ১০; [[ALeaveInAPaidMonthStaysTest]])।
-         * ⓘ প্রত্যাহারে ছুটির দিনগুলোর হাজিরা মুছে যেত, অথচ সেই মাসের বেতন ওই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে — বেতনশিট আর
-         * হাজিরার পাতা আলাদা কথা বলত, আর বিনা বেতনের ছুটি হলে কাটা টাকার কোনো কারণ আর খুঁজে পাওয়া যেত না। আগে সে মাসের রান বাতিল।
-         */
-        PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
-
         return DB::transaction(function () use ($application) {
+            /*
+             * ⛔ তালা দিয়ে তাজা অবস্থা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩)। ⓘ হাতের পুরনো কপি দেখে প্রত্যাহার হত: একই
+             * সময়ে মঞ্জুরি চললে প্রত্যাহারটা তার আগের অবস্থা দেখত, আর বাতিল আবেদনের নামে ছুটির সারি থেকে যেতে পারত। কর্মীর সারিতে
+             * আগে তালা — [[approve()]]-এর একই ক্রম, তাই দুইটা একে অন্যের জন্য আটকে থাকে না।
+             */
+            Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->lockForUpdate()->first();
+            $this->lockFresh($application);
+
+            if ($application->status === LeaveApplication::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('hr::validation.leave_already_cancelled'),
+                ]);
+            }
+
+            /*
+             * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা মোছা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ১০; [[ALeaveInAPaidMonthStaysTest]])।
+             * ⓘ প্রত্যাহারে ছুটির দিনগুলোর হাজিরা মুছে যেত, অথচ সেই মাসের বেতন ওই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে — বেতনশিট আর
+             * হাজিরার পাতা আলাদা কথা বলত, আর বিনা বেতনের ছুটি হলে কাটা টাকার কোনো কারণ আর খুঁজে পাওয়া যেত না। আগে সে মাসের রান বাতিল।
+             */
+            PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
+
             Attendance::query()
                 ->where('leave_application_id', $application->id)
                 ->delete();
@@ -226,6 +245,13 @@ final class LeaveService
                 'status' => __('hr::validation.leave_own_approval'),
             ]);
         }
+    }
+
+    /** আবেদনের সারিতে তালা, আর হাতের কপিতে তালার নিচের তাজা অবস্থা — লেনদেনের ভিতরেই ডাকতে হয় */
+    private function lockFresh(LeaveApplication $application): void
+    {
+        $fresh = LeaveApplication::query()->whereKey($application->id)->lockForUpdate()->firstOrFail();
+        $application->setRawAttributes($fresh->getAttributes(), true);
     }
 
     private function assertPending(LeaveApplication $application): void

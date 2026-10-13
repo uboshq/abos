@@ -146,6 +146,37 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
         $this->assertSame(1, Attendance::query()->where('employee_id', $this->employee->id)->count());
     }
 
+    /**
+     * ⛔ নামঞ্জুর আর প্রত্যাহার তালার নিচের অবস্থা দেখে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩; [[LeaveService::reject()]])।
+     * ⓘ দুই ট্যাবের দৌড়টা এখানে পুরনো কপি দিয়ে: মঞ্জুরি বসে যাওয়ার পর পুরনো "অপেক্ষমাণ" কপি দিয়ে নামঞ্জুর চাপলে আগে সেটা পার হত।
+     */
+    public function test_a_stale_copy_cannot_reject_an_approved_leave_or_withdraw_it_twice(): void
+    {
+        $stale = app(LeaveService::class)->apply($this->employee, $this->type('CASUAL'), '2026-03-02', '2026-03-03', '2');
+        app(LeaveService::class)->approve($stale->fresh(), $this->owner);
+
+        try {
+            app(LeaveService::class)->reject($stale, $this->owner, 'পরে চাপা');
+            $this->fail('⛔ মঞ্জুর হয়ে যাওয়া ছুটি পুরনো কপি দিয়ে নামঞ্জুর হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.leave_already_decided'), $e->errors()['status'][0]);
+        }
+
+        $this->assertSame(LeaveApplication::APPROVED, $stale->fresh()->status);
+        $this->assertSame(2, Attendance::query()->where('leave_application_id', $stale->id)->count());
+
+        // ⓘ প্রত্যাহার: একটা কপি দিয়ে হয়ে গেছে, তারপর আরেকটা পুরনো "মঞ্জুর" কপি দিয়ে আবার
+        $approved = $stale->fresh();
+        app(LeaveService::class)->cancel($approved->fresh());
+
+        try {
+            app(LeaveService::class)->cancel($approved);
+            $this->fail('⛔ প্রত্যাহার হয়ে যাওয়া ছুটি পুরনো কপি দিয়ে আবার প্রত্যাহার হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.leave_already_cancelled'), $e->errors()['status'][0]);
+        }
+    }
+
     private function type(string $code): LeaveType
     {
         return LeaveType::query()->where('code', $code)->firstOrFail();
