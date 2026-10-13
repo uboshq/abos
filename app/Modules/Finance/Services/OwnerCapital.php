@@ -87,7 +87,7 @@ final class OwnerCapital
             ->where('company_id', CompanyContext::id())
             ->posted()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
             ->groupBy('branch_id')
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as n')
             ->pluck('n', 'branch_id');

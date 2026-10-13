@@ -187,7 +187,7 @@ class RentalContract extends Model implements Drillable
     {
         return (string) $this->adjustments()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::CONFIRMED)))
             ->sum('from_deposit');
     }
 

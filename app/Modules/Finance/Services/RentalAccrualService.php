@@ -203,7 +203,7 @@ final class RentalAccrualService
 
             $this->assertNothingWaiting($contract);
 
-            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with('voucher.lines')->first()?->voucher;
+            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'voucher.lines'])->first()?->voucher;
 
             if ($paid === null || $paid->status !== DocumentStatus::CONFIRMED) {
                 return 0;
@@ -290,7 +290,7 @@ final class RentalAccrualService
      */
     public static function settles(RentalContract $contract, Carbon $month): ?string
     {
-        $accrual = RentalAccrual::query()->with('voucher')
+        $accrual = RentalAccrual::query()->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch')])
             ->where('rental_contract_id', $contract->id)->whereDate('for_month', $month->copy()->startOfMonth()->toDateString())
             ->first();
 

@@ -410,7 +410,7 @@ final class CapitalService
             ->posted()
             ->inViewedBranch()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
             ->groupBy('branch_id')
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as total')
             ->pluck('total', 'branch_id');
@@ -602,7 +602,7 @@ final class CapitalService
             ->posted()
             ->whereIn('person_id', $personIds)
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
             ->get(['person_id', 'contributor_type', 'share_percent']);
