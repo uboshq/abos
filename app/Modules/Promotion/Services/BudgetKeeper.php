@@ -80,15 +80,25 @@ final class BudgetKeeper
             ]);
         }
 
-        return DB::transaction(function () use ($offer, $kind, $ceiling, $warnAt, $per): PromotionBudget {
-            /*
+        return DB::transaction(function () use ($offer, $kind, $ceiling, $warnAt, $per): PromotionBudget {            /*
              * ⚠️ অফারের সারিতে তালা — ছাদ বসানো আর বিল কাটা একই মুহূর্তে।
              *
              * ⓘ তালা ছাড়া: খরচ ৯০০ পড়া হলো, ছাদ ৯০০ বসানো হলো, এর মধ্যে
              * আরেক কাউন্টারে ১০০-র বিল বসে গেল — ছাদের উপরে ১,০০০ খরচ,
              * আর কেউ টের পেলেন না।
              */
-            Promotion::query()->whereKey($offer->id)->lockForUpdate()->first();
+            $locked = Promotion::query()->whereKey($offer->id)->lockForUpdate()->firstOrFail();
+
+            /*
+             * ⛔ অবস্থা তালার সারি থেকে, হাতের কপি থেকে নয় — Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+             * ([[TheCeilingWasRaisedOnAStaleCopyTest]])। ⓘ আগে হাতের কপি বলত "খসড়া" অথচ অন্য পর্দায় অফারটা ততক্ষণে জমা বা
+             * বাতিল — তখন সই ছাড়া ছাদ বাড়ত, বা বাতিল অফারে ছাদ বসত।
+             */
+            if (! in_array($locked->status, self::OPEN, true)) {
+                throw ValidationException::withMessages([
+                    'ceiling' => __('promotion::validation.budget_closed', ['status' => $locked->status->label()]),
+                ]);
+            }
 
             /*
              * ⛔ ছাদ ইতিমধ্যে খরচের নিচে নামানো যায় না।
@@ -124,7 +134,7 @@ final class BudgetKeeper
              * (কম টাকা, ঝুঁকি কম), আর সীমাহীন অফারে প্রথম ছাদ বসানোও (ওটা সীমা টানা)। ⓘ অনুমোদন বন্ধ থাকলে
              * সই বলে কিছু নেই — আগের মতোই।
              */
-            $signed = in_array($offer->status, [PromotionStatus::SUBMITTED, PromotionStatus::APPROVED, PromotionStatus::ACTIVE, PromotionStatus::PAUSED], true);
+            $signed = in_array($locked->status, [PromotionStatus::SUBMITTED, PromotionStatus::APPROVED, PromotionStatus::ACTIVE, PromotionStatus::PAUSED], true);
 
             if ($signed && $budget->exists && bccomp($ceiling, (string) $budget->ceiling, 4) > 0
                 && (bool) app(SettingsService::class)->get('promotion.needs_approval', true)) {
