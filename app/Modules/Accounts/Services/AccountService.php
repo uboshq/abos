@@ -522,7 +522,16 @@ final class AccountService
 
     private function assertTypeCanChange(Account $account): void
     {
-        if ($account->hasEntries()) {
+        /*
+         * ⛔ নিজে আর নিচের সব — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[MovingAGroupDoesNotRetypeItsEntriesTest]])। ⓘ দলের নিজের
+         * কোনো সারি থাকে না, তাই আগে "লেনদেন নেই" বলে পার হত; তারপর [[cascadeType()]] নিচের লেনদেনসহ খাতগুলোর ধরন বদলাত —
+         * "অফিস খরচ" দল চলতি সম্পদের নিচে সরালে গোটা বছরের ভাড়া লাভ-ক্ষতি ছেড়ে স্থিতিপত্রে উঠত।
+         */
+        $hasEntries = \App\Models\LedgerEntry::query()
+            ->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))
+            ->exists();
+
+        if ($hasEntries) {
             throw ValidationException::withMessages([
                 'type' => __('accounts::validation.has_entries_cannot_retype'),
             ]);
