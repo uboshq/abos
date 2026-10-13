@@ -1979,9 +1979,15 @@ final class PurchaseBillService
             return null;
         }
 
+        /*
+         * ⛔ রসিদের সারিতে তালা — Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[OneReceiptWasBilledTwiceTest]])। ⚠️ আগে তালা ছাড়া পড়া: "বিল তৈরি"
+         * দুবার চাপলে (বা সইয়ের শ্রোতা আর হাতের চাপ একসাথে) দুজনেই "১০ বাকি" দেখতেন — দুটো বিল, ২১৬০ দুবার কাটা, দেনা দ্বিগুণ।
+         * ⓘ বিল লেখা নিজের লেনদেনের ভিতরে; দ্বিতীয়জন প্রথমজনের কমিট পর্যন্ত অপেক্ষা করেন, তারপর তাঁর বিলটাও গোনেন।
+         */
         $receiptLine = PurchaseReceiptLine::query()
             ->with('receipt')
             ->whereKey((int) $receiptLineId)
+            ->lockForUpdate()
             ->first();
 
         if ($receiptLine === null || $receiptLine->receipt === null) {
@@ -2017,9 +2023,11 @@ final class PurchaseBillService
          * বসায়নি, অথচ সরানো হয়েছে। আর সরবরাহকারীকে একই মালের দাম দুইবার
          * দেওয়া হত।
          */
+        // ⛔ আগের বিল সব শাখা জুড়ে — বিলের শাখা গুদামের; দেখার দেয়াল দিয়ে গুনলে অন্য শাখার বিল বাদ যেত আর একই মাল আবার বিল হত
+        // (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneReceiptWasBilledTwiceTest]])
         $alreadyBilled = $receiptLine->billLines()
             ->where('purchase_bill_id', '<>', $bill->id)
-            ->whereHas('bill', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->whereHas('bill', fn ($q) => $q->withoutGlobalScope('user-branch')->where('status', '<>', DocumentStatus::CANCELLED))
             ->sum('qty');
 
         $wouldBe = bcadd((string) ($alreadyBilled ?: '0'), $qty, 4);
