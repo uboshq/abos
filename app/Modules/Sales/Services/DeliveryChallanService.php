@@ -208,6 +208,14 @@ final class DeliveryChallanService
         }
 
         return DB::transaction(function () use ($challan, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই ([[lockAndReread()]]; Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⚠️ আগে "খসড়া কি না" দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত (মাল বেরোল) আর আরেক ট্যাবে সম্পাদনা একসাথে হলে
+             * সম্পাদনা পাকা চালানের সারি মুছে নতুন বসাত — কাগজ এক কথা, মজুদ আরেক।
+             */
+            $this->lockAndReread($challan);
+            $this->assertEditable($challan);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $challan->trx_date);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $challan->warehouse_id);
 

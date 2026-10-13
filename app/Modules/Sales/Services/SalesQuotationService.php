@@ -111,6 +111,14 @@ final class SalesQuotationService
         $this->assertHasLines($lines);
 
         return DB::transaction(function () use ($quotation, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে "খসড়া কি না"
+             * দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত আর আরেক ট্যাবে সম্পাদনা একসাথে হলে সম্পাদনা পাকা কাগজের সারি আর অঙ্ক
+             * বদলে দিত — খাতা এক কথা, কাগজ আরেক।
+             */
+            $this->lockAndReread($quotation);
+            $this->assertIn($quotation, [SalesQuotation::DRAFT], 'only_draft_edits');
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $quotation->trx_date);
 
             $quotation->update([
@@ -149,10 +157,16 @@ final class SalesQuotationService
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
         }
 
-        $quotation->update([
-            'status' => SalesQuotation::SUBMITTED,
-            'submitted_at' => now(),
-        ]);
+        // ⛔ দুইবার চাপ — তালার ভিতরে আবার "খসড়া কি না"; আগে দুটো অনুরোধই জমা হয়ে দুটো অনুমোদন চাইত (১৩ অক্টোবর ২০২৬)
+        DB::transaction(function () use ($quotation) {
+            $this->lockAndReread($quotation);
+            $this->assertIn($quotation, [SalesQuotation::DRAFT], 'quotation_not_draft');
+
+            $quotation->update([
+                'status' => SalesQuotation::SUBMITTED,
+                'submitted_at' => now(),
+            ]);
+        });
 
         return $this->approve($quotation->fresh());
     }
@@ -358,14 +372,25 @@ final class SalesQuotationService
             ]);
         }
 
-        $this->assertIn($quotation, [...SalesQuotation::EXPIRABLE, SalesQuotation::REJECTED], 'quotation_converted');
+        // ⛔ রূপান্তরের সাথে একই মুহূর্তে — তালার ভিতরে আবার, নইলে সদ্য আদেশ হওয়া উদ্ধৃতি "বাতিল" হত (১৩ অক্টোবর ২০২৬)
+        DB::transaction(function () use ($quotation, $reason) {
+            $this->lockAndReread($quotation);
 
-        $quotation->update([
-            'status' => SalesQuotation::CANCELLED,
-            'cancelled_by' => auth()->id(),
-            'cancelled_at' => now(),
-            'cancel_reason' => $reason,
-        ]);
+            if ($quotation->status === SalesQuotation::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.already_cancelled', ['no' => $quotation->document_no]),
+                ]);
+            }
+
+            $this->assertIn($quotation, [...SalesQuotation::EXPIRABLE, SalesQuotation::REJECTED], 'quotation_converted');
+
+            $quotation->update([
+                'status' => SalesQuotation::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
+        });
 
         return $quotation->fresh(['lines']);
     }
@@ -702,6 +727,14 @@ final class SalesQuotationService
     /**
      * @param  list<string>  $allowed
      */
+    /** ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — সম্পাদনা, জমা আর বাতিল হাতের কপিতে নয় (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
+    private function lockAndReread(SalesQuotation $quotation): void
+    {
+        $fresh = SalesQuotation::query()->withoutGlobalScopes()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
+
+        $quotation->setRawAttributes($fresh->getAttributes(), true);
+    }
+
     private function assertIn(SalesQuotation $quotation, array $allowed, string $message): void
     {
         // ⛔ পুরনো সংস্করণ কেবল পড়ার জন্য — বার্তাটা বলে কেন, আর কাজ কোন কাগজে চলবে

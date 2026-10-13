@@ -473,6 +473,14 @@ final class SalesInvoiceService
         }
 
         return DB::transaction(function () use ($invoice, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে "খসড়া কি না"
+             * দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত আর আরেক ট্যাবে সম্পাদনা একসাথে হলে সম্পাদনা পাকা কাগজের সারি আর অঙ্ক
+             * বদলে দিত — খাতা এক কথা, কাগজ আরেক।
+             */
+            $this->lockFresh($invoice);
+            $this->assertEditable($invoice);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $invoice->trx_date);
 
             $invoice->update([
