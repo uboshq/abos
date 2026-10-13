@@ -78,6 +78,9 @@ final class PartyReports
                 // শুরুর তারিখ ধরা হয় না: বকেয়া একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — "কত দিন থেকে বাকি" প্রশ্নটা ageing-এর
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
+                // ⛔ কেবল দেনার খাত — বিল-না-আসা মাল (২১৬০) দেনা নয় (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                // [[GoodsNotYetBilledReadAsOwedTest]]); সরবরাহকারীর পাতা ১০ অক্টোবর থেকেই এভাবে গোনে ([[Supplier::payable()]])
+                ->whereIn('ledger_entries.account_id', Supplier::payableAccountIds())
                 ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                 ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
                 ->orderByRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) DESC')
@@ -300,6 +303,8 @@ final class PartyReports
                         fn ($q, $type) => $q->where('suppliers.party_type_id', $type),
                         fn ($q) => $q->whereIn('suppliers.id', Supplier::onlySuppliersIds()))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
+                    // ⛔ কেবল দেনার খাত — বিল-না-আসা মাল দেনা নয় ([[GoodsNotYetBilledReadAsOwedTest]])
+                    ->whereIn('ledger_entries.account_id', Supplier::payableAccountIds())
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
                     ->select([

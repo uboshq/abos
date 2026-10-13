@@ -236,6 +236,9 @@ final class ReturnOnCapitalReport
             ->where('company_id', $company)
             ->where('party_type', Supplier::drillSourceType())
             ->where('trx_date', '<=', $to)
+            // ⛔ কেবল দেনার খাত — বিল-না-আসা মালের ক্রেডিট অগ্রিমকে খেয়ে ফেলত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+            // [[GoodsNotYetBilledReadAsOwedTest]])
+            ->whereIn('account_id', Supplier::payableAccountIds())
             ->groupBy('party_id')
             ->select(['party_id', DB::raw('SUM(debit) - SUM(credit) as advance')]);
     }
