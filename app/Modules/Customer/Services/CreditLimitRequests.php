@@ -241,9 +241,17 @@ final class CreditLimitRequests
             ->with('steps')
             ->get();
 
-        return $flows->contains(fn (ApprovalFlow $flow) => $flow->steps->contains(
+        /*
+         * ⛔ ইঞ্জিন যে ছক চালাবে, কেবল সেটাই — অনুরোধের নিজের ধরনের ছক থাকলে সেটা, নইলে সাধারণটা ([[ApprovalEngine::flowFor()]])।
+         * আগে যেকোনো একটায় মালিক থাকলেই "পারেন" বলত: সাধারণ ছকে মালিক, অথচ অনুরোধের ছকে কেবল ম্যানেজার — অনুরোধ উঠত, ম্যানেজার
+         * সই দিতেন, আর প্রতিবার `void` (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheOwnerWasOnAFlowThatNeverRanTest]])।
+         */
+        $flow = $flows->first(fn (ApprovalFlow $f) => $f->document_type === class_basename(CustomerCreditRequest::class))
+            ?? $flows->first(fn (ApprovalFlow $f) => (string) $f->document_type === '');
+
+        return $flow !== null && $flow->steps->contains(
             fn ($step) => $owners->contains(fn (User $owner) => $step->allows($owner)),
-        ));
+        );
     }
 
     /** ⓘ যিনি চাইলেন তিনি নিজে মালিক হলে নিজের খবর পান না (তিনি নিজেই জানেন) */
