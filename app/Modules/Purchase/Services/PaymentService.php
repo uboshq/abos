@@ -664,6 +664,19 @@ final class PaymentService
             ]);
         }
 
+        /*
+         * ⛔ নগদ কেবল নিজের বাক্স থেকে — ভাউচারের একই নিয়ম ([[VoucherService::assertCashLandsInOwnTill()]]; মালিক ২১/২৮ সেপ্টেম্বর
+         * ২০২৬; Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ASupplierWasPaidFromSomeoneElsesTillTest]])। ⚠️ পর্দা কেবল অন্য শাখার বাক্স লুকাত,
+         * সার্ভার কিছুই দেখত না: সহকর্মীর বাক্সের খাত পাঠালে তাঁর সই ছাড়াই তাঁর বাক্স খালি হত। ⓘ ব্যাংক খাতে এই নিয়ম নেই।
+         */
+        if ($account->isCash() && ! \App\Modules\Accounts\Models\CashTill::mayUse(auth()->id(), (int) $account->id)) {
+            throw ValidationException::withMessages([
+                'account_id' => \App\Modules\Accounts\Models\CashTill::heldByAnyone()
+                    ? __('accounts::validation.cash_not_your_till', ['account' => $account->label()])
+                    : __('accounts::validation.no_till_of_your_own'),
+            ]);
+        }
+
         return $account;
     }
 
