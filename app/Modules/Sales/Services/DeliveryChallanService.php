@@ -1180,9 +1180,20 @@ final class DeliveryChallanService
          * বাতিলই ভেঙে যেত** — আর ভুলটা দেখা দিত কেবল বাতিলের
          * মুহূর্তে, অর্থাৎ যখন ব্যবহারকারী তাড়াহুড়োয় আছেন।
          */
+        /*
+         * ⛔ কেবল এখনো না-উল্টানো দাখিলা — শেষ উল্টো সারির পরেরগুলো, [[PostingEngine::reverse()]]-এর একই নিয়ম (Sales লাইন-ধরা
+         * নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে যেকোনো সারি থাকলেই "আছে" বলত: সম্পাদনায় ভাড়ার দাখিলা উল্টানো আর নতুন করে ভাড়া
+         * শূন্য — তারপর বাতিলে reverse() কিছুই না পেয়ে ভেঙে পড়ত, চালানটা আর বাতিল বা আবার সম্পাদনা করা যেত না।
+         */
+        $lastReversal = LedgerEntry::query()
+            ->where('source_type', DeliveryChallan::STOCK_SOURCE.':reversal')
+            ->where('source_id', $challan->id)
+            ->max('id');
+
         $hasPosting = LedgerEntry::query()
             ->where('source_type', DeliveryChallan::STOCK_SOURCE)
             ->where('source_id', $challan->id)
+            ->when($lastReversal !== null, fn ($q) => $q->where('id', '>', $lastReversal))
             ->exists();
 
         if ($hasPosting) {

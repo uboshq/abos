@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\LedgerEntry;
@@ -176,6 +177,26 @@ final class TheLorryFareNeverReachedTheBooksTest extends TestCase
         $service->cancel($challan->fresh(['lines']), 'ভাড়া ছাড়া বাতিল');
 
         $this->assertSame('cancelled', $challan->fresh()->status->value ?? (string) $challan->fresh()->status);
+    }
+
+    /**
+     * ⛔ ভাড়ার দাখিলা আগেই উল্টানো (সম্পাদনার পথ: [[SaleEditor]] → unpost) — তারপর বাতিলও ভাঙে না (Sales লাইন-ধরা নিরীক্ষা,
+     * ১৩ অক্টোবর ২০২৬)। ⚠️ আগে "কোনো সারি আছে কি না" দেখত, উল্টানো কি না নয় — reverse() কিছু না পেয়ে ব্যতিক্রম ছুড়ত।
+     */
+    public function test_cancelling_after_the_fare_was_already_reversed_still_works(): void
+    {
+        $challan = $this->challanWithFare('350.0000', $this->carrier());
+        $service = app(DeliveryChallanService::class);
+        $service->confirm($challan->fresh(['lines']));
+        $this->assertCount(2, $this->ledgerOf($challan), 'দৃশ্যটাই বানানো যায়নি — ভাড়ার দাখিলা নেই।');
+
+        // ⓘ সম্পাদনা যা রেখে যায়: ভাড়ার দাখিলা উল্টানো, নতুন ভাড়া শূন্য — খাতায় না-উল্টানো কিছু নেই
+        app(PostingEngine::class)->reverse(DeliveryChallan::STOCK_SOURCE, (int) $challan->id, now(), 'সম্পাদনা');
+
+        $service->cancel($challan->fresh(['lines']), 'ভুল চালান');
+
+        $this->assertSame('cancelled', $challan->fresh()->status->value ?? (string) $challan->fresh()->status,
+            '⛔ ভাড়া আগেই উল্টানো চালান বাতিল হলো না।');
     }
 
     // ── সহায়ক ────────────────────────────────────────────────────────
