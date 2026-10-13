@@ -70,6 +70,16 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
             'status' => DocumentStatus::CONFIRMED,
             'is_active' => true,
         ]);
+
+        /*
+         * ⓘ গ্রাহকটা বিক্রয়কর্মীর নিজের ডিলার — নইলে ডিলারের দেয়ালই (২–৩ অক্টোবর ২০২৬) আগে থামাত (৪০৪), আর নিচের পরীক্ষাগুলো
+         * পোর্টালের চাবি নয়, দেয়াল মাপত। ডেমোর বিক্রয়কর্মী দেয়ালের ভিতরে, তাই এই ফাইলের তিনটা পরীক্ষা তখন থেকে লাল ছিল
+         * (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+         */
+        \App\Modules\Customer\Models\DealerBinding::query()->create([
+            'company_id' => $this->company->id, 'user_id' => $this->salesman->id, 'customer_id' => $this->customer->id,
+            'starts_on' => now()->toDateString(), 'created_by' => $this->owner->id,
+        ]);
     }
 
     /* ── দরজাটা আছে ─────────────────────────────────────────────── */
