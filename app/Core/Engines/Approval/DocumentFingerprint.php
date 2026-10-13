@@ -98,7 +98,12 @@ final class DocumentFingerprint
             return $document;
         }
 
-        $stored = $document->newQuery()->find($document->getKey());
+        /*
+         * ⓘ দেখার শাখার ছাঁকনি ছাড়া (১৩ অক্টোবর ২০২৬) — ছাপ কাগজের, যিনি দেখছেন তাঁর নয়। ⛔ হেডারে অন্য শাখা বাছা
+         * সইকারীর কাছে সারিটা "নেই" হত, তখন হাতের কপি (সারি ছাড়া) ছাপে যেত আর বদলহীন কাগজও "বদলেছে" দেখাত।
+         * কোম্পানির দেয়াল থাকে।
+         */
+        $stored = $document->newQuery()->withoutGlobalScope('user-branch')->find($document->getKey());
 
         if ($stored === null) {
             /*

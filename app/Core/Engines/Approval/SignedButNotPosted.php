@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -68,7 +69,7 @@ final class SignedButNotPosted
             ->where('decided_at', '>=', now()->subDays(self::DAYS))
             ->when(! ($user->can('approval.decide') || $user->can('approval.report')),
                 fn ($q) => $q->where('requested_by', $user->id))
-            ->get(['id', 'approvable_type', 'approvable_id']);
+            ->get(['id', 'approvable_type', 'approvable_id', 'action', 'state_hash']);
 
         $out = [];
 
@@ -101,13 +102,67 @@ final class SignedButNotPosted
                 continue;
             }
 
-            foreach ($rows as $row) {
-                if (array_key_exists((int) $row->approvable_id, $drafts)) {
-                    $out[(int) $row->id] = (string) $drafts[(int) $row->approvable_id];
-                }
+            $rows = $rows->filter(fn (object $row) => array_key_exists((int) $row->approvable_id, $drafts));
+
+            foreach ($this->stillSigned($class, (string) $type, $rows) as $row) {
+                $out[(int) $row->id] = (string) $drafts[(int) $row->approvable_id];
             }
         }
 
         return $out;
+    }
+
+    /**
+     * ⭐ কেবল যে সই এখনো কাগজটাকে ঢাকে — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে সই APPROVED আর কাগজ খসড়া হলেই তালিকায়। কিন্তু সইয়ের পরে লেখক কাগজটা বদলালে (খাত, তারিখ, পক্ষ, সারি) পোস্ট
+     * নতুন সই চায় ([[DocumentApproval::stopping()]], [[Approval::stillCovers()]]) — অথচ তালিকা বলত "সই হয়েছে, কেবল
+     * পোস্ট বাকি", আর নতুন অনুরোধ বসার পরেও পুরনো সইয়ের জোরে কাগজটা এখানে থাকত।
+     *
+     * ⓘ বাদ যায়: (১) একই কাগজ-কাজে পরে আরেকটা অনুরোধ বসেছে — পুরনো সইয়ের জায়গা সে নিয়েছে; (২) সইয়ের ছাপ আর কাগজের
+     * এখনকার ছাপ মেলে না। ⓘ ছাপ ছাড়া পুরনো সই আগের মতোই থাকে — [[Approval::stillCovers()]]-এর একই নিয়ম।
+     * ⓘ বদলে যাওয়া কাগজ নিরীক্ষার পর্দায় আলাদা দেখা যায় ([[ApprovalExceptions::changedAfterSigning()]])।
+     *
+     * @param  class-string<Model>  $class
+     * @param  Collection<int, object>  $rows
+     * @return Collection<int, object>
+     */
+    private function stillSigned(string $class, string $type, Collection $rows): Collection
+    {
+        if ($rows->isEmpty()) {
+            return $rows;
+        }
+
+        // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
+        $latest = DB::table('approvals')
+            ->where('company_id', CompanyContext::id())
+            ->where('approvable_type', $type)
+            ->whereIn('approvable_id', $rows->pluck('approvable_id')->unique()->values()->all())
+            ->groupBy('approvable_id', 'action')
+            ->selectRaw('approvable_id, action, MAX(id) AS last_id')
+            ->get()
+            ->mapWithKeys(fn (object $r) => [$r->approvable_id.'|'.$r->action => (int) $r->last_id]);
+
+        return $rows->filter(function (object $row) use ($class, $latest): bool {
+            if (($latest[$row->approvable_id.'|'.$row->action] ?? (int) $row->id) !== (int) $row->id) {
+                return false;
+            }
+
+            if ($row->state_hash === null) {
+                return true;
+            }
+
+            try {
+                $paper = $class::query()->withoutGlobalScope('user-branch')->find((int) $row->approvable_id);
+
+                return $paper !== null
+                    && hash_equals((string) $row->state_hash, app(DocumentFingerprint::class)->of($paper));
+            } catch (Throwable $e) {
+                report($e);
+
+                // ⓘ ছাপ নেওয়া না গেলে আগের মতো তালিকায় — চুপচাপ লুকানোর চেয়ে দেখানো ভালো
+                return true;
+            }
+        });
     }
 }
