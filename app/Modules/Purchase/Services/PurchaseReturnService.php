@@ -175,6 +175,21 @@ final class PurchaseReturnService
                 ]);
             }
 
+            /*
+             * ⛔ বিলের লাইনে তালা, তারপর "বিলের বেশি নয়" আবার — দুই ফেরত একসাথে পাকা হলে দুটোই বাইরের যাচাইয়ে "০ ফেরত হয়েছে"
+             * দেখত, আর ১০-এর লাইনে ১৬ যেত (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneBillLineWasReturnedTwiceTest]])। ⓘ দ্বিতীয়জন
+             * তালায় অপেক্ষা করেন, তারপর প্রথমজনের ফেরত গুনে থামেন।
+             */
+            $billLineIds = $return->lines->pluck('purchase_bill_line_id')->filter()->unique()->values()->all();
+
+            if ($billLineIds !== []) {
+                \App\Modules\Purchase\Models\PurchaseBillLine::query()->whereKey($billLineIds)->orderBy('id')->lockForUpdate()->get();
+
+                foreach ($return->lines as $line) {
+                    $this->assertWithinBilled($line);
+                }
+            }
+
             foreach ($return->lines as $line) {
                 /*
                  * ⛔ কার্টন না খুলেই ফেরত — ৫ সেপ্টেম্বর ২০২৬।
@@ -793,13 +808,25 @@ final class PurchaseReturnService
             return;
         }
 
+        /*
+         * ⛔ তিনটা ফাঁক বন্ধ (Purchase লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneBillLineWasReturnedTwiceTest]]):
+         *   · আগের ফেরত সব শাখা জুড়ে — ফেরতের শাখা তার গুদামের, বিলের শাখা আলাদা হতে পারে; দেয়াল দিয়ে গুনলে অন্য শাখার ফেরত বাদ যেত
+         *   · একই ফেরতের অন্য সারিও — একই বিলের লাইন দুই সারিতে ৮ + ৮ ভাগ করলে প্রতিটা আলাদা করে ১০-এর ভেতরে পড়ত, ফেরত যেত ১৬
+         *   · পাকা করার সময় তালার ভিতরে আবার ([[confirm()]]) — দুই ফেরত একসাথে পাকা হলে দুটোই "০ ফেরত হয়েছে" দেখত
+         */
         $alreadyReturned = PurchaseReturnLine::query()
             ->where('purchase_bill_line_id', $billLine->id)
             ->whereKeyNot($line->id)
-            ->whereHas('return', fn ($q) => $q->posted())
+            ->whereHas('return', fn ($q) => $q->withoutGlobalScope('user-branch')->posted())
             ->sum('qty');
 
-        $room = bcsub((string) $billLine->qty, (string) ($alreadyReturned ?: '0'), 4);
+        $sameReturn = PurchaseReturnLine::query()
+            ->where('purchase_return_id', $line->purchase_return_id)
+            ->where('purchase_bill_line_id', $billLine->id)
+            ->whereKeyNot($line->id)
+            ->sum('qty');
+
+        $room = bcsub(bcsub((string) $billLine->qty, (string) ($alreadyReturned ?: '0'), 4), (string) ($sameReturn ?: '0'), 4);
 
         if (bccomp((string) $line->qty, $room, 4) > 0) {
             throw ValidationException::withMessages([
