@@ -30,7 +30,6 @@ final class ARowInHandIsLockedAcrossBranchesTest extends TestCase
      * @var array<string, int>
      */
     private const NOT_YET = [
-        'app/Modules/Accounts/Services/FixedAssetService.php' => 1,
         'app/Modules/Accounts/Services/LoanService.php' => 3,
         'app/Modules/Documents/Services/DocumentLibrary.php' => 1,
         'app/Modules/Documents/Services/DocumentSignatures.php' => 1,
