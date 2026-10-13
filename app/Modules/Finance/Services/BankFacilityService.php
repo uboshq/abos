@@ -10,6 +10,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
@@ -578,15 +579,18 @@ class BankFacilityService
             }
         }
 
-        /* ⓘ কার খোলা বকেয়া ইতিমধ্যে খাতায় বসেছে — এক কোয়েরিতে */
-        $opened = DB::table('ledger_entries')
+        /*
+         * ⓘ কার খোলা বকেয়া ইতিমধ্যে খাতায় বসেছে — এক কোয়েরিতে। ⛔ সইয়ের পথে যাওয়া খোলা বকেয়াও "পুরনো" নয় (লাইন-ধরে নিরীক্ষা,
+         * ১৩ অক্টোবর ২০২৬): সই বাকি বা "না" হলে খাতায় নেই, আর লেখা অঙ্কটা বকেয়ায় যোগ হলে না-নেওয়া ঋণে সুদ জমত ([[signedPath()]])।
+         */
+        $opened = [...DB::table('ledger_entries')
             ->where('company_id', CompanyContext::id())
             ->where('source_type', self::OPENING_SOURCE)
             ->whereIn('source_id', $facilities->pluck('id')->all())
             ->distinct()
             ->pluck('source_id')
             ->map(fn ($id) => (int) $id)
-            ->all();
+            ->all(), ...$this->signedPath($facilities->pluck('id')->all())];
 
         $standing = [];
 
@@ -789,7 +793,36 @@ class BankFacilityService
             ->where('source_id', (int) $facility->id)
             ->exists();
 
-        return $opened ? '0.0000' : bcadd((string) ($facility->opening_drawn ?? '0'), '0', 4);
+        return $opened || $this->signedPath([(int) $facility->id]) !== []
+            ? '0.0000'
+            : bcadd((string) ($facility->opening_drawn ?? '0'), '0', 4);
+    }
+
+    /**
+     * ⭐ যে সুবিধাগুলোর খোলা বকেয়া সইয়ের পথে গেছে — অপেক্ষায়, "হ্যাঁ" বা "না" (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে খাতায় খোলা দাখিলা না থাকলেই লেখা `opening_drawn` "পুরনো তোলা" ধরে বকেয়ায় যোগ হত — সই বাকি বা ফিরিয়ে দেওয়া
+     * ২৫ লাখও বকেয়া দেখাত, আর মাসের সুদ জমা সেই না-নেওয়া ঋণে সুদ খরচ বসাত। ⓘ "পুরনো" মানে সই-ব্যবস্থার আগের সারি, যার কোনো
+     * সই চাওয়া হয়নি; সই চাওয়া হয়ে থাকলে খাতায় যা বসেছে কেবল তা-ই।
+     *
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private function signedPath(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return Approval::query()
+            ->where('approvable_type', BankFacility::class)
+            ->whereIn('approvable_id', $ids)
+            ->where('module', FinanceSignature::MODULE)
+            ->where('action', FinanceSignature::BANK_FACILITY)
+            ->distinct()
+            ->pluck('approvable_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
