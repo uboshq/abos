@@ -61,6 +61,12 @@ class RentAccrue extends Command
                 $billed = $tenancies->charge($month);
                 $charged += $billed['charged'];
                 $held += $billed['held'];
+
+                // ⓘ যে ভাড়াটেদের দাবি বসেনি — নাম আর কারণসহ; বাকিরা বসেছে
+                foreach ($billed['failed'] ?? [] as $failure) {
+                    $broke = true;
+                    $this->error("{$company->code}: {$failure}");
+                }
             } catch (\Throwable $e) {
                 $broke = true;
 
