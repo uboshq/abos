@@ -121,6 +121,23 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
     }
 
     /**
+     * ⛔ দায় আর টাকার ঘর কেবল ড্রপডাউনের খাত নেয় — বানানো জমায় নগদ বা আয়ের খাত নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️৫)।
+     */
+    public function test_the_liability_and_money_heads_take_only_what_the_form_offers(): void
+    {
+        $cash = Account::query()->money()->postable()->firstOrFail();
+        $income = Account::query()->postable()->where('type', Account::INCOME)->firstOrFail();
+        $before = BankFacility::query()->count();
+
+        $this->post(route('finance.bank_facility.store'), $this->terms(['liability_account_id' => $cash->id]))
+            ->assertSessionHasErrors('liability_account_id');
+        $this->post(route('finance.bank_facility.store'), $this->terms(['money_account_id' => $income->id]))
+            ->assertSessionHasErrors('money_account_id');
+
+        $this->assertSame($before, BankFacility::query()->count(), '⛔ ভুল খাতে ঋণ বসল');
+    }
+
+    /**
      * ⛔ নতুন ঋণে কোনো খোলা দাখিলা বসে না — টাকা আসে রসিদ ভাউচারে।
      */
     public function test_a_new_loan_posts_no_opening_at_all(): void
@@ -333,9 +350,8 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
      */
     private function terms(array $with = []): array
     {
-        $liability = Account::query()->postable()
-            ->where('code', StandardChart::PAYABLE)->first()
-            ?? Account::query()->postable()->where('nature', Account::CREDIT)->firstOrFail();
+        // ⓘ মেয়াদি ঋণের দায়ের খাত ২২১১ — ফর্ম এখন ঋণের তিনটা খাতের বাইরে কিছু নেয় না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️৫)
+        $liability = Account::query()->postable()->where('code', '2211')->firstOrFail();
 
         return array_merge([
             'kind' => BankFacility::TERM,

@@ -309,10 +309,18 @@ class BankFacilityController extends Controller implements HasMiddleware
              * ⚠️ `exists`-এ `company_id` — নাহলে অন্য কোম্পানির খাতের
              * আইডি বসিয়ে দিলে এখানকার দায় সেখানে গিয়ে বসত।
              */
+            /*
+             * ⛔ ড্রপডাউনের ছাঁকনিটাই সার্ভারেও — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️৫)।
+             * ⓘ আগে কেবল `exists` ছিল: বানানো জমায় দায়ের ঘরে নগদের খাত দিলে চলতি ঋণের খোলা বকেয়া নগদ থেকে ১ লাখ "বের"
+             * করত, আর CC-র টাকার ঘরে আয়ের খাত দিলে "ব্যবহৃত" সেই আয়ের জের পড়ত। দায়: কেবল ঋণের তিনটা খাত
+             * ([[liabilityAccounts()]]); টাকা: কেবল টাকার খাত ([[moneyAccounts()]]); দুইটাই গ্রুপ নয়।
+             */
             'liability_account_id' => ['nullable', 'integer',
-                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+                Rule::exists('accounts', 'id')->where('company_id', $companyId)->where('is_group', false)
+                    ->whereIn('code', [self::TERM_LOAN, self::LEASE_LIABILITY, self::LTR_LIABILITY])],
             'money_account_id' => ['nullable', 'integer',
-                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+                Rule::exists('accounts', 'id')->where('company_id', $companyId)->where('is_group', false)
+                    ->whereNotNull('money_kind')],
 
             'note' => ['nullable', 'string', 'max:500'],
         ]);
