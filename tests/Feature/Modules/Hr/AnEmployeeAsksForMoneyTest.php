@@ -205,7 +205,9 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
 
         // ⓘ ফোন — টোকেনে ঢোকা, ওয়েবের লগইনে নয়
         Sanctum::actingAs($this->worker->fresh(), [AuthController::APP]);
-        // ⓘ ফোনে HR বন্ধ থাকলে দরজা ৪০৩ — মালিক কন্ট্রোল প্যানেলে চালু করেন
+        // ⓘ ফোনে HR বন্ধ থাকলে দরজা ৪০৩ — ⭐ HR এখন ফোনে ডিফল্টে চালু (মালিক, 89bc710d), তাই এখানে আগে বন্ধ করা; আগে দাবিটা
+        // ধরে নিত ডিফল্টে বন্ধ, আর ভিত্তিতেই লাল ছিল (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        app(SettingsService::class)->set(PhoneModules::PREFIX.'hr', false);
         $this->getJson(route('api.hr.claim.heads'))->assertForbidden()->assertJsonPath('module', 'hr');
         app(SettingsService::class)->set(PhoneModules::PREFIX.'hr', true);
         $this->getJson(route('api.hr.claim.heads'))->assertOk()->assertJsonFragment(['id' => $this->expense->id]);
