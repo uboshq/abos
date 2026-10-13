@@ -209,7 +209,13 @@ class CompanyController extends Controller implements HasMiddleware
         $this->assertCodeExists($companyCode, 'code', $data['name_en']);
         $this->assertCodeExists($branchCode, 'branch_code', $data['branch_name_en']);
 
-        $company = $provisioner->create(
+        /*
+         * ⛔ তৈরি আর মালিকের অধিকার এক লেনদেনে — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[FirstRun::open()]]-এর একই
+         * নিয়ম)। ⓘ আগে কোম্পানি নিজের লেনদেনে কমিট হত, আর অধিকার দেওয়া চলত তার বাইরে: সেটা ভাঙলে কোম্পানি থাকত শাখা, বছর আর
+         * নম্বর-সিরিজসহ, কিন্তু কোনো সদস্য বা সুপার অ্যাডমিন ছাড়া — আর [[WholeDatabaseAccess]] সব কোম্পানি গোনে বলে মালিক সাথে
+         * সাথে কোম্পানি বানানো আর পুরো ব্যাকআপ হারাতেন, অ্যাপের ভেতর থেকে ফেরানোর পথ ছাড়া।
+         */
+        $company = \Illuminate\Support\Facades\DB::transaction(fn () => tap($provisioner->create(
             data: [
                 'code' => $companyCode,
                 'name_en' => $data['name_en'],
@@ -233,15 +239,13 @@ class CompanyController extends Controller implements HasMiddleware
                 'starts_on' => $data['year_starts_on'],
                 'ends_on' => $data['year_ends_on'],
             ],
-        );
-
         /*
          * যিনি বানালেন, তিনি ঢুকতে পারবেন।
          *
          * এটা না করলে নতুন কোম্পানিটা তালিকায় দেখা যেত কিন্তু সুইচারে
          * আসত না — আর কেন আসছে না তার কোনো ব্যাখ্যাও পর্দায় থাকত না।
          */
-        $provisioner->grantAccess($company, $request->user());
+        ), fn (Company $created) => $provisioner->grantAccess($created, $request->user())));
 
         return redirect()
             ->route('system_admin.company.index')
