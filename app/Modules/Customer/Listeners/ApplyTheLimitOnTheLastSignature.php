@@ -50,6 +50,22 @@ final class ApplyTheLimitOnTheLastSignature
                 return;
             }
 
+            /*
+             * ⛔ অনুরোধের পরে সীমা অন্য পথে বদলে থাকলে সইটা পুরনো কাগজের — "১ লাখ থেকে ২ লাখ" সই পড়ল, অথচ মাঝে ঝুঁকিতে
+             * সীমা ০ করা হয়েছিল; আগে সইয়ের শেষে ২ লাখ বসে কমানোটা নীরবে মুছত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[AnOldLimitSignatureUndidACutTest]])। ⓘ কিছুই বসে না; আবার বাড়াতে হলে নতুন অনুরোধ, নতুন সই।
+             */
+            $changedSince = CustomerCreditChange::query()->withoutGlobalScopes()
+                ->where('company_id', $approval->company_id)
+                ->where('customer_id', $customer->id)
+                ->where('field', 'credit_limit')
+                ->where('created_at', '>=', $approval->created_at)
+                ->exists();
+
+            if ($changedSince) {
+                return;
+            }
+
             // ⭐ ইতিহাসে কারণ আর সইয়ের সূত্রসহ (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
             CustomerCreditChange::because(
                 $approval->requested_reason,
