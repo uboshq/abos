@@ -81,6 +81,11 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
 
         // ⚠️ আগেই পড়া — `createFrom()` JSON-এর থলেটা ভাগ করে, তাই `replace()`-এর পরে `$request`-এ `submit` আর থাকে না
         $submit = $request->boolean('submit');
+
+        // ⛔ লিখে সাথে সাথে জমা — জমার নিজের দরজার একই চাবি (`sales.quotation.update`); আগে কেবল লেখার চাবিতেই জমা হত, আর ছক না
+        // থাকলে সেবা নিজে অনুমোদিত বসাত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheFieldQuotesAPriceOnThePhoneTest::test_creating_and_submitting_at_once_needs_the_submit_key]])
+        abort_if($submit && ! (bool) $request->user()?->can('sales.quotation.update'), 403);
+
         $today = now();
         $customer = $this->customer($data['customer']);
         $form = SalesQuotationRequest::createFrom($request)->replace([
