@@ -119,6 +119,34 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ সম্পাদনাতেও একই পাহারা — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে খসড়া আদায়ের অঙ্ক সম্পাদনায় শূন্য বা চার্জের
+     * সমান-কম করা যেত (নতুন বানানোয় যা আটকায়); পাকা করার সময় টাকার খাতে ঋণাত্মক ডেবিট গিয়ে খাতার ইঞ্জিন ভাঙত।
+     */
+    public function test_an_edit_cannot_shrink_the_amount_under_the_charge_or_to_zero(): void
+    {
+        $this->actingAs($this->decider->fresh());
+        $service = app(CollectionService::class);
+
+        $draft = $service->create([
+            'customer_id' => $this->dealer->id, 'trx_date' => now()->toDateString(), 'amount' => '50000',
+            'bank_charge' => '900', 'account_id' => $this->bank->id,
+        ], []);
+
+        foreach (['500' => 'amount', '900' => 'amount', '0' => 'amount'] as $amount => $field) {
+            try {
+                $service->update($draft->fresh(), [
+                    'trx_date' => now()->toDateString(), 'amount' => (string) $amount, 'account_id' => $this->bank->id,
+                ], []);
+                $this->fail("⛔ সম্পাদনায় অঙ্ক {$amount} — চার্জ ৯০০ বা শূন্য, তবু সংরক্ষণ হল");
+            } catch (ValidationException $e) {
+                $this->assertArrayHasKey($field, $e->errors());
+            }
+        }
+
+        $this->assertSame(0, bccomp((string) $draft->fresh()->amount, '50000', 4), '⛔ ফেরানো সম্পাদনা তবু অঙ্ক বদলে দিল');
+    }
+
     private function claim(string $amount): DepositClaim
     {
         return app(DepositClaimService::class)->raise($this->dealer, [
