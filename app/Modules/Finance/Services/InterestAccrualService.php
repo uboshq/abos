@@ -78,11 +78,11 @@ final class InterestAccrualService
 
             /*
              * ⛔ কিস্তির সূচি নেই (LTR, কিস্তির সংখ্যা ছাড়া লিজ) — CC-র মতো মাসের দৈনিক জের (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
-             * ⓘ শুরু: শেষ যেদিন ব্যাংক সত্যিই সুদ কেটেছে তার পরের দিন, নইলে প্রথম তোলা ([[accruesFrom()]]); আগের মাস উল্টায়, তাই
-             * ব্যাংক না কাটা পর্যন্ত জমা মোট বাড়ে — নইলে মাঝের মাসের খরচ শূন্য হত (ec, Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⓘ আগে "শেষ কিস্তির দিন" খুঁজে না পেয়ে মঞ্জুরির দিন থেকে গোনা হত: জানুয়ারিতে মঞ্জুর ১০ লাখের LTR-এ অক্টোবরের শেষে
+             * ৩০৩ দিনের সুদ (~৯৯,৬০০) প্রদেয়তে, অথচ মাসের সুদ ~১০,২০০ — ব্যাংক যা কেটেছে তা আবার জমত, দায় দশ গুণ।
              */
             [$days, $base, $amount] = $facility->kind === BankFacility::CC || $this->facilities->schedule($facility) === null
-                ? $this->daily($facility, $this->accruesFrom($facility, $end) ?? $start, $end, $rate)
+                ? $this->daily($facility, $start, $end, $rate)
                 : $this->sinceLastInstalment($facility, $end, $rate);
 
             if ($days < 1 || bccomp($amount, '0', 2) <= 0) {
@@ -287,36 +287,7 @@ final class InterestAccrualService
     }
 
     /**
-     * সুদ কোন দিন থেকে জমছে — শেষ যেদিন সুদ সত্যিই খাতায় বসেছে (ঋণের নামে, সমন্বয় নয়, ৫৩১০-এ ডেবিট), নইলে প্রথম তোলার দিন,
-     * নইলে মঞ্জুরি (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
-     *
-     * ⛔ আগে মেয়াদি ঋণ গুনত শেষ **সূচির** কিস্তির দিন থেকে, শোধ হোক বা না হোক — না-দেওয়া কিস্তির সুদ বাদ পড়ত; কিস্তির সংখ্যা না
-     * থাকলে (LTR, লিজ) গুনত মঞ্জুরি থেকে — জানুয়ারির মঞ্জুরিতে অক্টোবরে তোলা টাকার সুদ ৩০৩ দিনের। আর CC গুনত কেবল চলতি মাস,
-     * অথচ প্রতি মাসে আগেরটা উল্টাত — ব্যাংক তিন মাসে একবার সুদ কাটলে মাঝের মাসের খরচ শূন্য দেখাত। ⭐ এখন জমা সবসময় শেষ সুদ
-     * থেকে মোট, আর মাসের খরচ = এই জমা − আগের মাসেরটা (উল্টো দাখিলা)।
-     */
-    private function accruesFrom(BankFacility $facility, Carbon $end): ?Carbon
-    {
-        $interest = StandardChart::find(StandardChart::INTEREST_EXPENSE);
-        $against = Voucher::query()->withoutGlobalScope('user-branch')
-            ->where('against_type', BankFacility::drillSourceType())
-            ->where('against_id', $facility->id)
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->where('is_adjusting', false)
-            ->whereDate('trx_date', '<=', $end->toDateString());
-
-        $paid = $interest === null ? null : (clone $against)
-            ->whereHas('lines', fn ($l) => $l->where('account_id', $interest->id)->where('debit', '>', 0))
-            ->max('trx_date');
-
-        $first = $paid === null ? (clone $against)->min('trx_date') : null;
-        $date = $paid ?? $first ?? $facility->sanctioned_on;
-
-        return $date === null ? null : Carbon::parse($date)->startOfDay();
-    }
-
-    /**
-     * মেয়াদি ধরনের ঋণ — শেষ সুদ দেওয়ার দিন (বা প্রথম তোলা, বা মঞ্জুরি) থেকে মাসের শেষ পর্যন্ত, খাতার বাকি আসলের উপর।
+     * মেয়াদি ধরনের ঋণ — শেষ কিস্তির দিন (বা মঞ্জুরি) থেকে মাসের শেষ পর্যন্ত, খাতার বাকি আসলের উপর।
      *
      * @return array{0: int, 1: string, 2: string} দিন, জের, সুদ
      */
@@ -328,22 +299,28 @@ final class InterestAccrualService
             return [0, '0', '0'];
         }
 
-        $from = $this->accruesFrom($facility, $end);
+        $from = $facility->sanctioned_on === null ? null : Carbon::parse($facility->sanctioned_on)->startOfDay();
+
+        foreach ($this->facilities->datedSchedule($facility, $end)['rows'] ?? [] as $row) {
+            if ($row['due_on'] !== null && $row['due_on'] <= $end->toDateString()) {
+                $due = Carbon::parse($row['due_on'])->startOfDay();
+                $from = $from === null || $due->gt($from) ? $due : $from;
+            }
+        }
 
         if ($from === null) {
             return [0, '0', '0'];
         }
 
         $days = (int) $from->diffInDays($end);
-        // ⓘ পয়সায় গোল, কেটে নয় — আগে প্রতি ঋণে মাসে এক পয়সা পর্যন্ত হারাত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        // ⓘ পয়সায় গোল, কেটে নয় — আগে প্রতি ঋণে মাসে এক পয়সা পর্যন্ত হারাত (ec, Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
         $amount = \App\Core\Support\Money::round(bcdiv(bcmul(bcmul($owed, $rate, 8), (string) $days, 8), '36500', 8), 2);
 
         return [$days, bcadd($owed, '0', 4), $amount];
     }
 
     /**
-     * CC — শেষ সুদ কাটার পরের দিন থেকে মাসের শেষ পর্যন্ত প্রতিটা দিনের তোলা জের (ঋণাত্মক নয়) × হার ÷ ৩৬৫, যোগ; জের = দিনগুলোর গড়।
-     * ⓘ শুরুটা [[accruesFrom()]]: সুদ কাটা থাকলে সেদিনের **পরের** দিন (সেদিন পর্যন্ত ব্যাংক কেটে নিয়েছে)।
+     * CC — মাসের প্রতিটা দিনের তোলা জের (ঋণাত্মক নয়) × হার ÷ ৩৬৫, যোগ; জের = দিনগুলোর গড়।
      *
      * @return array{0: int, 1: string, 2: string}
      */
@@ -351,14 +328,8 @@ final class InterestAccrualService
     {
         $sum = '0';
         $days = 0;
-        $start = $start->copy();
 
-        // ⓘ শেষ সুদ কাটার দিন পর্যন্ত ব্যাংক নিয়ে নিয়েছে — গোনা পরের দিন থেকে
-        if ($this->interestPaidOn($facility, $end)?->equalTo($start)) {
-            $start->addDay();
-        }
-
-        for ($day = $start; $day->lte($end); $day->addDay()) {
+        for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
             $owed = $this->facilities->owedOn($facility, $day->toDateString());
             $sum = bcadd($sum, bccomp($owed, '0', 4) > 0 ? $owed : '0', 4);
             $days++;
@@ -369,27 +340,6 @@ final class InterestAccrualService
         }
 
         return [$days, bcdiv($sum, (string) $days, 4), \App\Core\Support\Money::round(bcdiv(bcmul($sum, $rate, 8), '36500', 8), 2)];
-    }
-
-    /** শেষ যেদিন সুদ সত্যিই বসেছে — না বসলে null ([[accruesFrom()]]-এর প্রথম ধাপ) */
-    private function interestPaidOn(BankFacility $facility, Carbon $end): ?Carbon
-    {
-        $interest = StandardChart::find(StandardChart::INTEREST_EXPENSE);
-
-        if ($interest === null) {
-            return null;
-        }
-
-        $date = Voucher::query()->withoutGlobalScope('user-branch')
-            ->where('against_type', BankFacility::drillSourceType())
-            ->where('against_id', $facility->id)
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->where('is_adjusting', false)
-            ->whereDate('trx_date', '<=', $end->toDateString())
-            ->whereHas('lines', fn ($l) => $l->where('account_id', $interest->id)->where('debit', '>', 0))
-            ->max('trx_date');
-
-        return $date === null ? null : Carbon::parse($date)->startOfDay();
     }
 
     /** ছকের খাত — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয়; [[StandardChart::install()]] কেবল যা নেই তা-ই বসায় */
