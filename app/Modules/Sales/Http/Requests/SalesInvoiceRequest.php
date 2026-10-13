@@ -59,7 +59,7 @@ class SalesInvoiceRequest extends FormRequest
             // চালানের লাইনটা এই কোম্পানির কি না তা সেবা স্তর দেখে —
             // সন্তান-টেবিলে company_id নেই, বাবার আছে
             'lines.*.delivery_challan_line_id' => ['nullable', 'integer'],
-            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
 
             /*
              * কোন প্যাকে লেখা হয়েছে — খালি মানে পণ্যের নিজের একক।
@@ -85,9 +85,9 @@ class SalesInvoiceRequest extends FormRequest
              * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
              * চাওয়াই হয় না।
              */
-            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
-            'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rate' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.discount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.tax' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];
     }

@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
+use App\Modules\Sales\Http\Requests\PlainNumber;
 use App\Modules\Sales\Models\SalesTarget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -58,6 +59,15 @@ final class SalesTargetService
 
         if (array_diff($ids, $members) !== []) {
             throw ValidationException::withMessages(['amount' => __('sales::validation.target_unknown_staff')]);
+        }
+
+        // ⛔ কেবল সাধারণ দশমিক — `1e5` is_numeric পাশ করে, অথচ bcmath ValueError ছোড়ে, ৫০০ (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+        foreach ($amounts as $amount) {
+            $amount = trim((string) $amount);
+
+            if ($amount !== '' && ! PlainNumber::is($amount)) {
+                throw ValidationException::withMessages(['amount' => __('sales::validation.not_a_number')]);
+            }
         }
 
         return DB::transaction(function () use ($first, $amounts) {

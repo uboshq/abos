@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Http\Requests\PlainNumber;
 use App\Modules\Sales\Models\CustomerTarget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -70,6 +72,11 @@ final class CustomerTargetService
         $month = $month->copy()->startOfMonth();
         $amount = trim((string) ($amount ?? ''));
 
+        // ⛔ কেবল সাধারণ দশমিক — `1e5` is_numeric পাশ করে, অথচ bcmath ValueError ছোড়ে, ৫০০ (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+        if ($amount !== '' && ! PlainNumber::is($amount)) {
+            throw ValidationException::withMessages(['amount' => __('sales::customer_target.amount_invalid')]);
+        }
+
         if ($amount === '' || (is_numeric($amount) && bccomp($amount, '0', 4) === 0)) {
             CustomerTarget::query()->where('customer_id', $customerId)->whereDate('month', $month->toDateString())->delete();
 
@@ -84,6 +91,15 @@ final class CustomerTargetService
 
         if (! $closes->isSameMonth($month)) {
             throw ValidationException::withMessages(['closes_on' => __('sales::customer_target.closes_in_month')]);
+        }
+
+        /*
+         * ⛔ id-টা এই কোম্পানির, নাগালের, না-মোছা ডিলারের — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
+         * ⓘ পাতার `target[...]` চাবিগুলো সরাসরি গ্রাহকের id, কখনো যাচাই হত না: অন্য কোম্পানির বা মুছে ফেলা গ্রাহকের নামে
+         * লক্ষ্য বসে যেত। `Customer::query()` কোম্পানি, ডিলারের দেয়াল আর SoftDeletes — তিনটাই নিজে বহন করে।
+         */
+        if (! Customer::query()->whereKey($customerId)->exists()) {
+            throw ValidationException::withMessages(['target' => __('sales::customer_target.unknown_dealer')]);
         }
 
         CustomerTarget::query()->updateOrCreate(

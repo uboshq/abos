@@ -82,7 +82,7 @@ class DeliveryChallanRequest extends FormRequest
             // ⭐ গেট পাসে পরিবহনের পুরো তথ্য — মালিক, ২ অক্টোবর ২০২৬ ([[DeliveryChallan::transportFacts()]])
             'driver_phone' => ['nullable', 'string', 'max:32'],
             'carrier_name' => ['nullable', 'string', 'max:191'],
-            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+            'transport_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             /*
              * ⭐ ভাড়া কে দেবে, কোন খাত থেকে, কে দিলেন — কাউন্টারের একই ঘর (মালিক, ৭ অক্টোবর ২০২৬: *"যা-ই করো, সব জায়গায়
@@ -104,7 +104,7 @@ class DeliveryChallanRequest extends FormRequest
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             // অর্ডারের লাইনটা কোন অর্ডারের তা সেবা স্তর মিলিয়ে দেখে
             'lines.*.sales_order_line_id' => ['nullable', 'integer'],
-            'lines.*.delivered_qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.delivered_qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
 
             // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
@@ -124,7 +124,7 @@ class DeliveryChallanRequest extends FormRequest
              * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
              * চাওয়াই হয় না।
              */
-            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
+            'lines.*.rate' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];
     }
