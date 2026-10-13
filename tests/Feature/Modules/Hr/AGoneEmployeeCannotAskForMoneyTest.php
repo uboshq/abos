@@ -82,6 +82,33 @@ final class AGoneEmployeeCannotAskForMoneyTest extends TestCase
         $this->assertSame(0, ExpenseClaim::query()->count());
     }
 
+    /**
+     * ⛔ চালু থাকা ছাড়ার তারিখের সাথে মেলে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে নোটিশের ভবিষ্যৎ তারিখেই কর্মী সাথে সাথে নিষ্ক্রিয়, আর তারিখ মুছে আবার নিলেও চিরকাল নিষ্ক্রিয় থাকতেন।
+     */
+    public function test_a_notice_keeps_them_working_and_a_cleared_leaving_date_brings_them_back(): void
+    {
+        $service = app(EmployeeService::class);
+
+        $service->endEmployment($this->employee, now()->addDays(10)->toDateString());
+        $this->assertTrue($this->employee->fresh()->is_active, '⛔ নোটিশের দিন লিখতেই কর্মী নিষ্ক্রিয়, ছাড়ার আগেই');
+
+        $service->endEmployment($this->employee->fresh(), now()->subDay()->toDateString());
+        $this->assertFalse($this->employee->fresh()->is_active, 'ছাড়ার দিন পেরোলে নিষ্ক্রিয়');
+        $this->assertRefused('⛔ চাকরি ছাড়ার পরেও অগ্রিম চাওয়া গেল');
+
+        // ⓘ ভুলে অবসান, বা আবার নেওয়া — সম্পাদনায় ছাড়ার তারিখ খালি
+        $service->update($this->employee->fresh(), ['leaving_date' => null]);
+        $this->assertTrue($this->employee->fresh()->is_active, '⛔ ছাড়ার তারিখ মুছলেও কর্মী নিষ্ক্রিয় থেকে গেলেন');
+        $this->assertSame(ExpenseClaim::ADVANCE, $this->ask()->kind, '⛔ আবার নেওয়া কর্মী টাকা চাইতে পারেন না');
+
+        // ⓘ সম্পাদনায় ভবিষ্যতের তারিখ — চালু; পেরোনো তারিখ — নিষ্ক্রিয়
+        $service->update($this->employee->fresh(), ['leaving_date' => now()->addMonth()->toDateString()]);
+        $this->assertTrue($this->employee->fresh()->is_active);
+        $service->update($this->employee->fresh(), ['leaving_date' => now()->subDays(2)->toDateString()]);
+        $this->assertFalse($this->employee->fresh()->is_active);
+    }
+
     private function ask(): ExpenseClaim
     {
         return app(ExpenseClaimService::class)->submit($this->worker, ['kind' => ExpenseClaim::ADVANCE, 'amount' => '500', 'reason' => 'Need it']);
