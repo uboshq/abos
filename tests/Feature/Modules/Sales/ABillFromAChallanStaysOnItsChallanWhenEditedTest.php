@@ -57,4 +57,42 @@ final class ABillFromAChallanStaysOnItsChallanWhenEditedTest extends TestCase
 
         $put(['delivery_challan_line_id' => $challanLine->id])->assertSessionDoesntHaveErrors('lines');
     }
+
+    /**
+     * ⛔ সম্পাদনার পাতাতেই চালানের ঘর — ফর্ম নিজে যা পাঠায় তাতেই দরজা খোলে (১৩ অক্টোবর ২০২৬)। ⚠️ আগে পাতায় চালানের ঘর
+     * আসত না: দরজার পাহারার পরে ব্রাউজার থেকে চালান-বিলের প্রতিটা সম্পাদনা আটকাত, আর পাহারার আগে চালান-যোগ মুছে যেত।
+     */
+    public function test_the_edit_page_offers_the_bills_own_challan_lines(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+
+        $paper = ['customer_id' => Customer::query()->orderBy('id')->value('id'),
+            'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'trx_date' => now()->toDateString()];
+        $product = Product::query()->orderBy('id')->firstOrFail();
+
+        $challan = app(DeliveryChallanService::class)->create($paper + ['own_transport' => true, 'vehicle_no' => 'DHA-GA-11-2244'],
+            [['product_id' => $product->id, 'delivered_qty' => '5', 'rate' => '10']]);
+        app(DeliveryChallanService::class)->confirm($challan);
+        $challanLine = $challan->lines()->firstOrFail();
+
+        $bill = app(SalesInvoiceService::class)->create($paper, [['product_id' => $product->id, 'qty' => '5', 'rate' => '10']]);
+        DB::table('sal_invoice_lines')->where('sales_invoice_id', $bill->id)->update(['delivery_challan_line_id' => $challanLine->id]);
+
+        $this->get(route('sales.invoice.edit', $bill))
+            ->assertOk()
+            ->assertSee('][delivery_challan_line_id]', false)
+            ->assertSee('value="'.$challanLine->id.'"', false);
+
+        // ⓘ পাতা যা পাঠায় — চালানের সারিসহ — তাতে সংরক্ষণ হয়, আর যোগটা থেকে যায়
+        $this->put(route('sales.invoice.update', $bill), $paper + ['lines' => [[
+            'product_id' => $product->id, 'qty' => '4', 'rate' => '10', 'discount' => '0',
+            'delivery_challan_line_id' => $challanLine->id]]])->assertSessionHasNoErrors();
+
+        $this->assertSame([$challanLine->id], DB::table('sal_invoice_lines')->where('sales_invoice_id', $bill->id)
+            ->pluck('delivery_challan_line_id')->map(fn ($id) => (int) $id)->all());
+    }
 }
