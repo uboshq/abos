@@ -40,7 +40,7 @@ final class ABillCancelledFromAnOldCopyUndidNothingTest extends TestCase
 
         $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $product = Product::query()->where('track_batch', false)->where('track_serial', false)->orderBy('id')->firstOrFail();
-        $before = app(StockService::class)->floorQty($product, $warehouse);
+        $before = $this->onHand($product, $warehouse);
 
         $bills = app(PurchaseBillService::class);
         $draft = $bills->create(
@@ -52,14 +52,14 @@ final class ABillCancelledFromAnOldCopyUndidNothingTest extends TestCase
 
         // ⓘ আরেক ট্যাবে পাকা — হাতের কপিটা এখনো "খসড়া"
         $bills->confirm(PurchaseBill::query()->findOrFail($draft->id));
-        $this->assertSame(0, bccomp(bcadd($before, '10', 4), app(StockService::class)->floorQty($product, $warehouse), 4), 'দৃশ্যটাই বানানো যায়নি — মাল ঢোকেনি');
+        $this->assertSame(0, bccomp(bcadd($before, '10', 4), $this->onHand($product, $warehouse), 4), 'দৃশ্যটাই বানানো যায়নি — মাল ঢোকেনি');
 
         $bills->cancel($draft, 'ভুল বিল');
 
         $this->assertSame(DocumentStatus::CANCELLED, $draft->fresh()->status);
         $this->assertTrue(DB::table('ledger_entries')->where('source_type', PurchaseBill::drillSourceType().':reversal')
             ->where('source_id', $draft->id)->exists(), '⛔ পুরনো কপি থেকে বাতিল — বিলের খাতা উল্টানো হয়নি।');
-        $this->assertSame(0, bccomp($before, app(StockService::class)->floorQty($product, $warehouse), 4),
+        $this->assertSame(0, bccomp($before, $this->onHand($product, $warehouse), 4),
             '⛔ পুরনো কপি থেকে বাতিল — বিলের মাল তাকেই রয়ে গেল।');
     }
 
@@ -99,5 +99,13 @@ final class ABillCancelledFromAnOldCopyUndidNothingTest extends TestCase
         }
 
         $this->assertSame(DocumentStatus::CONFIRMED, $bill->fresh()->status);
+    }
+
+    /** ⓘ তাক আর "বসানো হয়নি" দুটো মিলে — ক্রয়ের মাল আগে না-বসানো ঘরে ঢোকে */
+    private function onHand(Product $product, Warehouse $warehouse): string
+    {
+        $stock = app(StockService::class);
+
+        return bcadd($stock->floorQty($product, $warehouse), $stock->unplacedQty($product, $warehouse), 4);
     }
 }
