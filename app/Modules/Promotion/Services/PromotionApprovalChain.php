@@ -121,7 +121,11 @@ final class PromotionApprovalChain
     public function submit(Promotion $offer): Promotion
     {
         return DB::transaction(function () use ($offer) {
-            $offer = $this->life->submit($offer);
+            /*
+             * ⛔ তালার সারি থেকে — Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[TheSubmitReadAStaleDraftTest]])। ⓘ আগে হাতের
+             * কপির "খসড়া" দেখে জমা হত: অন্য পর্দায় অফারটা ততক্ষণে চালু হলে চালু অফারটা নীরবে "জমা"-তে ফিরে যেত, বিলে আর খাটত না।
+             */
+            $offer = $this->life->submit($this->locked($offer));
 
             if ($this->hasChain($offer)) {
                 $this->open($offer);
