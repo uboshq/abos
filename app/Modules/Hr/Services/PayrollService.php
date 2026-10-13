@@ -285,10 +285,15 @@ final class PayrollService
             if ($run->status === DocumentStatus::CONFIRMED) {
                 $this->assertSalaryNotPaidOut($run);
 
+                /*
+                 * ⛔ উল্টো দাখিলা আসলটার আগে নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AReversalNeverLandsBeforeThePayrollTest]])।
+                 * ⓘ অক্টোবরের রান ৩১ অক্টোবর তারিখে, নিশ্চিত ১৪ তারিখে, বাতিল ১৫ তারিখে — উল্টোটা বসত ১৫ অক্টোবর, আর ১৫ থেকে ৩০
+                 * অক্টোবর খাতায় বেতন-খরচ ঋণাত্মক দেখাত। রানের দিন সামনে হলে উল্টোটাও সেদিনই; নাহলে আগের মতো আজ।
+                 */
                 $this->posting->reverse(
                     sourceType: PayrollRun::SOURCE_TYPE,
                     sourceId: $run->id,
-                    reversalDate: now(),
+                    reversalDate: $run->trx_date->greaterThan(Carbon::today()) ? $run->trx_date->copy() : now(),
                     reason: $reason,
                 );
             }
