@@ -765,6 +765,20 @@ final class VoucherService
      *  · ব্যাংকে মেলানো — মেলানোটা পুরনো অঙ্কে দাঁড়িয়ে
      */
     /**
+     * ⛔ যে কাগজ নিজের খসড়া ভাউচার এই পর্দায় (বা ভাউচারের শেষ সইয়ে, [[VoucherWriter::post()]]) পাকা হতে পাঠায় — তার নিজের পাকা
+     * করার পথ নেই, তাই [[ownerOf()]] এদের ধরে না; ধরলে কাজটা চিরকাল আটকে থাকত (fe, ১৪ অক্টোবর ২০২৬;
+     * [[ADraftHandedToTheVoucherScreenIsPostedThereTest]])। অর্থের (`fin_*`) কাগজ নিজের সইয়ে নিজে পাকা করে, তাই পাহারায় থাকে।
+     *
+     * ⓘ কর্মীর খরচের দাবি/অগ্রিম — শেষ সইয়ে খসড়া, ক্যাশিয়ার নিজের টিল থেকে ভাউচারের পর্দায় পাকা করেন।
+     * ⓘ চালান আর ট্রিপের ভাড়া — হাতে লেখা ভাউচারের পথে; সই লাগলে শেষ সইয়ে, লেখক নিজে হলে অন্য কেউ ভাউচারের পর্দা থেকে।
+     */
+    private const HANDED_TO_THE_VOUCHER_SCREEN = [
+        'hr_expense_claims.payment_voucher_id',
+        'sal_challans.fare_voucher_id',
+        'sal_shipments.fare_voucher_id',
+    ];
+
+    /**
      * ⛔ এই ভাউচার অন্য কোনো কাগজের কি না — আর হলে কোন মডিউলের (অর্থের নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnotherPapersVoucherIsNotTouchedHereTest]])।
      *
      * ⓘ জমা, ঋণ, ভাড়া, মূলধন, বীমা, খরচের দাবি, গাড়িভাড়া — প্রত্যেকে নিজের ভাউচার বানিয়ে নিজের সারিতে `…voucher_id` রাখে। Accounts-এর
@@ -808,6 +822,12 @@ final class VoucherService
 
         foreach ($columns as $row) {
             $table = $row['t'];
+
+            // ⓘ নিজের খসড়া ভাউচারের পর্দায় পাকা হতে পাঠানো কাগজ — পাহারা খাটে না ([[HANDED_TO_THE_VOUCHER_SCREEN]])
+            if (in_array($table.'.'.$row['c'], self::HANDED_TO_THE_VOUCHER_SCREEN, true)) {
+                continue;
+            }
+
             $held = DB::table($table)
                 ->where('company_id', $voucher->company_id)
                 ->where($row['c'], $voucher->getKey())
