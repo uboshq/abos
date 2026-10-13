@@ -288,6 +288,26 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
             ->where('against_id', $claim->id)->where('status', DocumentStatus::DRAFT)->count(), '⛔ একই দাবির দুইটা খোলা খসড়া');
     }
 
+    /**
+     * ⛔ এক লগইন এক কর্মীতে — ফর্মের যাচাই এড়িয়েও (দুইটা সেভ একসাথে) — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে কেবল ফর্মের `unique` ছিল, লেনদেনের বাইরে; দুই ট্যাবে একসাথে সেভ করলে একই লগইন দুই কর্মীতে বসত।
+     */
+    public function test_one_login_cannot_be_tied_to_a_second_employee_even_past_the_form(): void
+    {
+        $service = app(EmployeeService::class);
+
+        $this->assertRefused(fn () => $service->create(['code' => 'EMP-TWIN', 'name_en' => 'Twin', 'joining_date' => '2026-02-01',
+            'payment_method' => 'cash', 'user_id' => $this->worker->id]), 'user_id', '⛔ একই লগইনে দ্বিতীয় কর্মী খোলা গেল');
+
+        $other = $service->create(['code' => 'EMP-OTHER', 'name_en' => 'Other', 'joining_date' => '2026-02-01', 'payment_method' => 'cash']);
+        $this->assertRefused(fn () => $service->update($other, ['user_id' => $this->worker->id]), 'user_id', '⛔ সম্পাদনায় একই লগইন দ্বিতীয় কর্মীতে বসল');
+        $this->assertNull($other->fresh()->user_id);
+
+        // ⓘ নিজের জোড়া আবার সেভ করা আটকায় না
+        $service->update($this->employee->fresh(), ['user_id' => $this->worker->id, 'mobile' => '01700000001']);
+        $this->assertSame((int) $this->worker->id, (int) $this->employee->fresh()->user_id);
+    }
+
     public function test_the_roles_that_mark_their_own_attendance_are_given_the_claim_key(): void
     {
         $role = Role::query()->whereHas('permissions', fn ($q) => $q->where('name', 'hr.attendance.self'))->firstOrFail();

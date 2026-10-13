@@ -65,8 +65,10 @@ final class ExpenseClaimService
     /** ব্যবহারকারীর নিজের কর্মীর খাতা — না থাকলে টাকা চাওয়া যায় না */
     public function employeeOf(?User $user): ?Employee
     {
+        // ⓘ একই লগইনে পুরনো মুছে ফেলা খাতা থাকলেও চালুটা আগে, তারপর পুরনো id আগে — সবসময় একই সারি (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
         return $user === null ? null : Employee::query()->withoutGlobalScopes()
-            ->where('company_id', CompanyContext::id())->where('user_id', $user->id)->first();
+            ->where('company_id', CompanyContext::id())->where('user_id', $user->id)
+            ->orderByRaw('deleted_at IS NULL DESC')->orderBy('id')->first();
     }
 
     /**
