@@ -179,6 +179,8 @@ final class CapitalService
     public function revise(CapitalEntry $entry, array $data): CapitalEntry
     {
         return DB::transaction(function () use ($entry, $data) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — পুরনো পাতা থেকে বদলালে মাঝে রসিদে পাকা হওয়া সারির অঙ্ক বদলে যেত (১৩ অক্টোবর ২০২৬)
+            $this->lockFresh($entry);
             $this->assertStillADraft($entry);
             $this->assertKnown($data);
 
@@ -222,6 +224,7 @@ final class CapitalService
     public function discard(CapitalEntry $entry): void
     {
         DB::transaction(function () use ($entry) {
+            $this->lockFresh($entry);
             $this->assertStillADraft($entry);
 
             $entry->delete();
