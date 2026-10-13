@@ -147,7 +147,9 @@ class PayslipPrintController extends Controller implements HasMiddleware
             lines: $lines,
 
             // খসড়া রানের শিটে বড় করে লেখা — নাহলে কেউ ওটা নিয়ে টাকা চাইতে পারে
-            notice: $run->isDraft() ? __('hr::message.draft_payslip') : null,
+            // ⛔ বাতিল রানের শিটেও — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[ACancelledRunsPayslipSaysSoTest]]); ⓘ আগে খাতায় উল্টানো বেতনের শিট পরিষ্কার, সইয়ের ঘরসহ ছাপা হত
+            notice: $run->isDraft() ? __('hr::message.draft_payslip')
+                : ($run->isCancelled() ? __('hr::message.cancelled_payslip') : null),
         );
     }
 
