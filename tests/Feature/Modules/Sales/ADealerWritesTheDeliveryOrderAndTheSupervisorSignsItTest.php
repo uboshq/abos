@@ -148,6 +148,34 @@ final class ADealerWritesTheDeliveryOrderAndTheSupervisorSignsItTest extends Tes
         Event::assertDispatched(DeliveryOrderCancelled::class, fn ($e) => $e->payload['reason'] === 'rejected');
     }
 
+    /**
+     * ⛔ সুপারভাইজারের হেডারে অন্য শাখা — তবু সইয়ের পরে DO মাল ধরে আর হিসাবে যায় (fe, ১৩ অক্টোবর ২০২৬; [[HoldAndCheckTheDeliveryOrder]])।
+     * ⚠️ আগে শ্রোতা DO খুঁজত সইকারীর শাখার দেয়াল দিয়ে — অন্য শাখা দেখানো সুপারভাইজারের হাতে DO "নেই", তাই মাল ধরা হত না, হিসাবের
+     * যাচাইও চলত না: DO চিরকাল "সুপারভাইজার অনুমোদিত"-তে দাঁড়িয়ে, কোনো খবর ছাড়া।
+     */
+    public function test_a_supervisor_looking_at_another_branch_still_moves_the_do_on_to_accounts(): void
+    {
+        $supervisor = $this->member();
+        $this->flow($supervisor);
+
+        $order = $this->service()->submit($this->draft(), $this->dealer);
+        $this->assertSame(DeliveryOrderStatus::SUPERVISOR_PENDING, $order->status, 'দৃশ্যটাই বানানো যায়নি — DO সইয়ের অপেক্ষায় নেই');
+        $approval = app(ApprovalEngine::class)->latestFor($order, DeliveryOrderService::APPROVAL_ACTION);
+
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
+            ->whereKeyNot((int) $order->branch_id)->orderBy('id')->firstOrFail();
+        $supervisor->forceFill(['view_all_branches' => false, 'current_branch_id' => $other->id])->save();
+        CompanyContext::set($this->company->id, $other->id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($supervisor->fresh());
+
+        app(ApprovalEngine::class)->approve($approval->fresh(), $supervisor->fresh());
+
+        $this->assertContains(DeliveryOrder::acrossBranches()->findOrFail($order->id)->status,
+            [DeliveryOrderStatus::ACCOUNTS_APPROVED, DeliveryOrderStatus::ACCOUNTS_HELD],
+            '⛔ অন্য শাখার হেডারে সই — DO "সুপারভাইজার অনুমোদিত"-তেই দাঁড়িয়ে, হিসাবের যাচাই চলেনি।');
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function service(): DeliveryOrderService

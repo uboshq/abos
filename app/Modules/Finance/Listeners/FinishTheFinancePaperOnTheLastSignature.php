@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Listeners;
 
 use App\Core\Events\ApprovalDecided;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Models\BankFacility;
@@ -52,15 +53,21 @@ final class FinishTheFinancePaperOnTheLastSignature
         }
 
         $yes = $approval->status === Approval::APPROVED;
-        $paper = $approval->approvable;
+        /*
+         * ⛔ কাগজ খোঁজা সব শাখা জুড়ে, কাজ তার নিজের শাখায় (fe, ১৩ অক্টোবর ২০২৬; [[FinancePapersPostInTheirOwnBranchTest]])। ⚠️ আগে
+         * `$approval->approvable` — ভাউচারে শাখার দেয়াল, তাই সইকারী অন্য শাখা দেখালে কাগজটা "নেই", আর জমা-ভাড়া-হাতধার-বীমা
+         * চিরকাল খসড়া, কোনো খবর ছাড়া।
+         */
+        $paper = $approval->approvable()->withoutGlobalScope('user-branch')->first();
         $why = __('finance::validation.signature_refused');
+        $branchId = $paper?->getAttribute('branch_id');
 
-        match (true) {
+        CompanyContext::inBranch($branchId === null ? null : (int) $branchId, fn () => match (true) {
             $paper instanceof Withdrawal => $yes ? null : app(WithdrawalService::class)->dropRefused($paper),
             $paper instanceof BankFacility => $yes ? app(BankFacilityService::class)->finishSigned($paper) : null,
             $paper instanceof Voucher => $this->voucher($action, $paper, $yes, $why),
             default => null,
-        };
+        });
     }
 
     private function voucher(string $action, Voucher $voucher, bool $yes, string $why): void

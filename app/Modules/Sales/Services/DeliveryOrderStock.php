@@ -287,9 +287,13 @@ final class DeliveryOrderStock
             ->get();
     }
 
+    /**
+     * ⓘ হাতে থাকা DO-টাই আবার পড়া, তালাসহ — দেখার শাখার দেয়াল ছাড়া (কোম্পানির দেয়াল থাকে)। ⛔ ডিলারের DO-র শাখা ডিলারের, প্রায়ই
+     * খালি; এক শাখা দেখা সইকারীর দেয়ালে সেটা "নেই" হয়ে সইয়ের পরে মাল ধরা থামত (fe, ১৩ অক্টোবর ২০২৬; [[HoldAndCheckTheDeliveryOrder]])।
+     */
     private function lockOrder(DeliveryOrder $order): DeliveryOrder
     {
-        return DeliveryOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+        return DeliveryOrder::acrossBranches()->whereKey($order->id)->lockForUpdate()->firstOrFail();
     }
 
     /**

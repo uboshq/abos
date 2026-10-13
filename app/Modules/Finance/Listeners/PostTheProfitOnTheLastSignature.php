@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Listeners;
 
 use App\Core\Events\ApprovalDecided;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Services\ProfitDistribution;
@@ -30,16 +31,18 @@ final class PostTheProfitOnTheLastSignature
         }
 
         $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
-        $voucher = $approval?->approvable;
+        // ⛔ খোঁজা সব শাখা জুড়ে, কাজ ভাউচারের শাখায় — সইকারীর হেডারে অন্য শাখা থাকলে ভাউচারটা "নেই" হত (fe, ১৩ অক্টোবর ২০২৬;
+        // [[FinishTheFinancePaperOnTheLastSignature]]-এর একই সারাই)
+        $voucher = $approval?->approvable()->withoutGlobalScope('user-branch')->first();
 
         if (! $voucher instanceof Voucher) {
             return;
         }
 
-        match ($approval->status) {
+        CompanyContext::inBranch($voucher->branch_id === null ? null : (int) $voucher->branch_id, fn () => match ($approval->status) {
             Approval::APPROVED => $this->profit->finishSigned($voucher),
             Approval::REJECTED => $this->profit->dropRefused($voucher, __('finance::validation.profit_signature_refused')),
             default => null,
-        };
+        });
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Listeners;
 
 use App\Core\Events\ApprovalDecided;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\AssetEvent;
 use App\Modules\Accounts\Models\CashTill;
@@ -36,7 +37,28 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  */
 final class FinishTheAccountsPaperOnTheLastSignature
 {
+    /**
+     * ⛔ কাজটা কাগজের নিজের শাখায় চলে (fe, ১৩ অক্টোবর ২০২৬; [[ALoanMovesMoneyOnlyOnceSignedTest]])। ⚠️ কাগজ খোঁজা আগেই দেয়াল ছাড়া
+     * ছিল (নিচে), কিন্তু ভেতরের সেবা আবার শাখার দেয়াল দিয়ে তালা দেয় — ঋণ, বাক্স, নোট। সইকারীর হেডারে অন্য শাখা থাকলে সেখানে
+     * "পাওয়া যায়নি", আর কাগজ চিরকাল সইয়ের অপেক্ষায়। ⓘ শাখাহীন কাগজে যেমন ছিল তেমন।
+     */
     public function handle(ApprovalDecided $event): void
+    {
+        // ⓘ অন্য মডিউলের সইয়ে বাড়তি খোঁজা নয়
+        if (($event->payload['module'] ?? null) !== AccountsSignature::MODULE) {
+            return;
+        }
+
+        $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
+        $type = $approval === null ? '' : (Relation::getMorphedModel((string) $approval->approvable_type) ?? (string) $approval->approvable_type);
+        $branchId = $type !== '' && class_exists($type)
+            ? $type::query()->withoutGlobalScope('user-branch')->find($approval->approvable_id)?->getAttribute('branch_id')
+            : null;
+
+        CompanyContext::inBranch($branchId === null ? null : (int) $branchId, fn () => $this->decide($event));
+    }
+
+    private function decide(ApprovalDecided $event): void
     {
         $action = (string) ($event->payload['action'] ?? '');
 

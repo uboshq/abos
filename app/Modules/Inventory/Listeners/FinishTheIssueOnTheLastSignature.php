@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Listeners;
 
 use App\Core\Events\ApprovalDecided;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Modules\Inventory\Models\StockCount;
@@ -30,11 +31,16 @@ final class FinishTheIssueOnTheLastSignature
             return;
         }
 
-        $paper = $approval->approvable;
+        /*
+         * ⛔ খোঁজা সব শাখা জুড়ে, কাজ কাগজের শাখায় (fe, ১৩ অক্টোবর ২০২৬; [[GoodsGivenAwayWaitForTheirSignatureTest]])। ⚠️ আগে
+         * `$approval->approvable` — মাল-গোনার কাগজে শাখার দেয়াল, তাই সইকারী অন্য শাখা দেখালে কাগজটা "নেই", মাল তাকেই থাকত।
+         */
+        $paper = $approval->approvable()->withoutGlobalScope('user-branch')->first();
 
         // ⓘ খসড়া থাকলেই — বাতিল হয়ে গেলে বা আগেই শেষ হলে কিছু হয় না
         if ($paper instanceof StockCount && $paper->isIssue() && $paper->status === DocumentStatus::DRAFT) {
-            app(StockCountService::class)->finishIssue($paper);
+            CompanyContext::inBranch($paper->branch_id === null ? null : (int) $paper->branch_id,
+                fn () => app(StockCountService::class)->finishIssue($paper));
         }
     }
 }

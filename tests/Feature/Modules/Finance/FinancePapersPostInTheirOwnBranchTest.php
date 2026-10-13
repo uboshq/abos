@@ -113,6 +113,43 @@ final class FinancePapersPostInTheirOwnBranchTest extends TestCase
     }
 
     /**
+     * ⛔ শেষ সই পড়লে অপেক্ষার কাগজ পাকা হয় — সইকারীর হেডারে অন্য শাখা থাকলেও (fe, ১৩ অক্টোবর ২০২৬; [[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⚠️ শ্রোতা কাগজ খুঁজত `$approval->approvable` দিয়ে — ভাউচারে শাখার দেয়াল ([[ScopedToUserBranch]]), তাই সইকারী অন্য শাখা দেখালে
+     * ভাউচারটা "নেই", শ্রোতা নীরবে ফিরত: হাতধার, জমা, ভাড়া, বীমা-দাবি — সবই চিরকাল খসড়া, কোনো খবর ছাড়া।
+     */
+    public function test_a_signed_finance_paper_posts_while_the_signers_header_shows_another_branch(): void
+    {
+        $signer = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'finance', 'action' => 'hand_loan', 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => \App\Models\ApprovalFlowStep::BY_USER, 'approver_id' => $signer->id,
+        ]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        $this->choose('MMS');
+        $account = app(HandLoanService::class)->open(['person_id' => $this->person('Signed Karim')->id]);
+        $movement = app(HandLoanService::class)->move($account->fresh(), [
+            'direction' => 'out', 'amount' => '1000', 'moved_on' => now()->toDateString(), 'money_account_id' => $this->cash()->id,
+        ]);
+        $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, Voucher::acrossBranches()->find($movement->voucher_id)?->status,
+            'দৃশ্যটাই বানানো যায়নি — চলাচল সইয়ের অপেক্ষায় নেই');
+        $approval = \App\Models\Approval::query()->where('approvable_type', Voucher::class)->where('approvable_id', $movement->voucher_id)
+            ->where('status', \App\Models\Approval::PENDING)->firstOrFail();
+
+        // ⓘ সইকারী নেত্রকোনা দেখছেন, একটা শাখা বাছা (মিডলওয়্যার যা বসায়)
+        $signer->forceFill(['view_all_branches' => false, 'current_branch_id' => $this->branch('NTK')->id])->save();
+        CompanyContext::set($this->company->id, $this->branch('NTK')->id);
+        app(DataScope::class)->forget();
+        $this->actingAs($signer->fresh());
+        app(\App\Core\Engines\Approval\ApprovalEngine::class)->approve($approval->fresh(), $signer->fresh());
+
+        $this->assertSame(\App\Core\Support\DocumentStatus::CONFIRMED, Voucher::acrossBranches()->find($movement->voucher_id)?->status,
+            '⛔ অন্য শাখার হেডারে সই — হাতধারের কাগজ খসড়াই রইল');
+        $this->assertRowsIn($movement->voucher_id, 'MMS', 'সই-করা হাতধার');
+    }
+
+    /**
      * ⛔ জামানত থেকে কাটা সইয়ের অপেক্ষায় — অন্য শাখা দেখানো অবস্থায় একই মানুষের দ্বিতীয় কাটা থামে, একই জামানত দুবার নয়
      * (১০ অক্টোবর ২০২৬; [[RentalContract::depositFree()]], [[RentalContractService::isWaiting()]])।
      */
