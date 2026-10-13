@@ -149,6 +149,32 @@ final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
     }
 
     /**
+     * ⛔ টাকা এক শাখায়, আটকে থাকা আদেশ আরেক শাখায় — তবু ছাড়া পায় (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে খোঁজা হত
+     * হেডারের শাখার দেয়ালে, তাই অন্য শাখার আদেশ আটকেই থাকত, অথচ বাকির সীমা গ্রাহকের গোটা।
+     */
+    public function test_money_in_one_branch_moves_a_held_order_of_another_branch(): void
+    {
+        $this->replaceDo(true);
+        $this->signerFlow();
+        $this->limit('0');
+        $orders = app(SalesOrderService::class);
+
+        $order = $orders->submit($this->draft('10')->fresh(['lines']));
+        $this->assertSame(S::CREDIT_HELD, $order->status, 'দৃশ্যটাই ভুল — আদেশ সীমায় আটকায়নি।');
+
+        $other = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'RCB2', 'name_en' => 'Recheck branch', 'is_active' => true]);
+        \Illuminate\Support\Facades\DB::table('sal_orders')->where('id', $order->id)->update(['branch_id' => $other->id]);
+
+        // ⓘ টাকা যিনি তুললেন, তাঁর হেডারে কেবল নিজের শাখা
+        $this->owner->forceFill(['view_all_branches' => false])->save();
+        $this->assertNull(SalesOrder::query()->find($order->id), 'দৃশ্যটাই ভুল — হেডারের দেয়াল অন্য শাখার আদেশ ঢাকেনি।');
+
+        $this->limit('100000000');
+        $this->assertSame(1, $orders->recheckCustomer((int) $this->buyer->id), '⛔ অন্য শাখার আটকে থাকা আদেশ আবার যাচাই হয়নি।');
+        $this->assertSame(S::AWAITING_APPROVAL, SalesOrder::acrossBranches()->findOrFail($order->id)->status);
+    }
+
+    /**
      * ⭐ সুপারভাইজার পরিমাণ কমান — কেবল এখনকার অনুমোদনকারী (একই কাগজে দুই মানুষ), ০ থেকে চাওয়া পর্যন্ত; টাকা আবার গোনা।
      */
     public function test_only_the_current_approver_lowers_the_quantity_and_the_money_follows(): void

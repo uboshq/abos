@@ -5,6 +5,7 @@ class MenuRouteEntry {
     required this.label,
     required this.route,
     required this.planned,
+    this.web,
   });
 
   final String label;
@@ -19,10 +20,19 @@ class MenuRouteEntry {
   /// convention (see [MenuRouteEntry] usage in home_shell.dart).
   final bool planned;
 
+  /// ⭐ The in-app web path (`/…`) for this row, or null — the server sends it only where this person may open the
+  /// row's web screen inside the app (owner, 13 Oct 2026; [WebPaths]). An older server sends nothing, and then the
+  /// row stays what it was: native or absent.
+  final String? web;
+
   factory MenuRouteEntry.fromJson(Map<String, dynamic> json) => MenuRouteEntry(
         label: json['label'] as String? ?? '',
         route: json['route'] as String? ?? '',
         planned: json['planned'] as bool? ?? false,
+        web: switch (json['web']) {
+          final String path when path.startsWith('/') && !path.startsWith('//') => path,
+          _ => null,
+        },
       );
 }
 

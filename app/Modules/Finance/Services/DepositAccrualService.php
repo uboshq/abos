@@ -6,6 +6,7 @@ namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -15,6 +16,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositAccrual;
 use App\Modules\Finance\Reports\DepositReports;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -46,6 +48,7 @@ final class DepositAccrualService
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly FinanceSignature $signature,
+        private readonly OpenPeriod $period,
     ) {}
 
     /**
@@ -103,6 +106,13 @@ final class DepositAccrualService
             ]);
         }
 
+        // ⛔ বন্ধ মাসে নয় — আর কিছু লেখার আগেই থামা, যাতে উল্টো দাখিলা বসে জমা আটকে না থাকে (সুদের জোড়া, লাইন-ধরে নিরীক্ষা ১৩ অক্টোবর ২০২৬)
+        if (($lock = $this->period->lockOn($end)) !== null) {
+            throw ValidationException::withMessages([
+                'month' => __('finance::deposit_report.accrual_month_closed', ['month' => $lock->label()]),
+            ]);
+        }
+
         $reversed = $this->reverseBefore($start);
         $accrued = 0;
         $held = 0;
@@ -124,6 +134,8 @@ final class DepositAccrualService
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    // ⛔ জমার শাখায় — জমার সারির একই শাখা; হেডারের শাখায় বসলে শাখার আয় ভুল, আর উল্টোটা অন্য শাখায় পড়ত (১৩ অক্টোবর ২০২৬)
+                    'branch_id' => $deposit->branch_id,
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::deposit_report.accrual_narration', [
                         'month' => $start->translatedFormat('F Y'), 'deposit' => $deposit->document_no, 'institution' => $deposit->institution,
@@ -164,10 +176,12 @@ final class DepositAccrualService
     {
         $count = 0;
 
-        $open = DepositAccrual::query()
+        // ⛔ আগাম দেখার একই শাখাগুলো ([[ActingBranches]]) — যা বসানো যায়, কেবল তা-ই উল্টায়; ভাউচার শাখার দেয়াল ছাড়া, নইলে অন্য
+        // শাখার জমার ভাউচার "নেই" হয়ে উল্টো দাখিলা চুপচাপ বাদ পড়ত (সুদের জোড়া, ১৩ অক্টোবর ২০২৬)
+        $open = ActingBranches::narrow(DepositAccrual::query(), 'fin_deposit_accruals.branch_id')
             ->whereNull('reversal_voucher_id')
             ->where('for_month', '<', $start->toDateString())
-            ->with(['voucher', 'deposit'])
+            ->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'deposit'])
             ->orderBy('for_month')->orderBy('id')->get();
 
         foreach ($open as $accrual) {
@@ -175,7 +189,7 @@ final class DepositAccrualService
                 continue;
             }
 
-            DB::transaction(function () use ($accrual, &$count): void {
+            DB::transaction(function () use ($accrual, $start, &$count): void {
                 $fresh = $accrual;
                 $this->lockFresh($fresh);
 
@@ -183,12 +197,21 @@ final class DepositAccrualService
                     return;
                 }
 
+                // ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে; নইলে চালটা থেমে পরের কোনো মাসই বসত না
+                $on = $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+                if ($this->period->lockOn($on) !== null) {
+                    $on = $start->toDateString();
+                }
+
                 $amount = bcadd((string) $fresh->amount, '0', 2);
 
                 $reversal = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
-                    'trx_date' => $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString(),
+                    // ⓘ জমার ভাউচারের শাখায় — আগের (হেডারের শাখায় বসা) জমাও নিজের শাখাতেই উল্টায়
+                    'branch_id' => $accrual->voucher->branch_id,
+                    'trx_date' => $on,
                     'narration' => __('finance::deposit_report.accrual_reversal_narration', [
                         'month' => $fresh->for_month->translatedFormat('F Y'), 'deposit' => (string) $accrual->deposit?->document_no,
                     ]),
@@ -215,9 +238,20 @@ final class DepositAccrualService
         DB::transaction(function () use ($voucher): void {
             $this->lockFresh($voucher);
 
-            if ($voucher->isDraft()) {
-                $this->vouchers->post($voucher);
+            if (! $voucher->isDraft()) {
+                return;
             }
+
+            // ⛔ জমাটা এর মধ্যে বাতিল — মুনাফা আর বসে না, খসড়াটাও বাতিল (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            $accrual = DepositAccrual::query()->where('voucher_id', $voucher->id)->with('deposit')->first();
+
+            if ($accrual?->deposit?->isCancelled()) {
+                $this->vouchers->cancel($voucher, __('finance::validation.deposit_already_cancelled', ['no' => $accrual->deposit->document_no]));
+
+                return;
+            }
+
+            $this->vouchers->post($voucher);
         });
     }
 

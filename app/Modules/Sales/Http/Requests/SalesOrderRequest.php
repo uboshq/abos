@@ -42,7 +42,7 @@ class SalesOrderRequest extends FormRequest
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
-            'lines.*.ordered_qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.ordered_qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
 
             // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
@@ -62,9 +62,9 @@ class SalesOrderRequest extends FormRequest
              * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
              * চাওয়াই হয় না।
              */
-            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
-            'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rate' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.discount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.tax' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];
     }

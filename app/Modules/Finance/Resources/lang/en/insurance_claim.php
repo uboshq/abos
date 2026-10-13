@@ -63,6 +63,8 @@ return [
     'close_note_required' => 'Write why it is closed or rejected.',
     'reject_after_money' => 'Money has come — close it instead of rejecting.',
     'wrong_head' => 'Insurance claim money must go to :code :name.',
+    // Finance line review, 13 Oct 2026
+    'undo_approval_first' => 'The approval or closing of this claim is booked on the money received at that time — cancelling this receipt would leave the insurance claim receivable (1152) wrong. Undo the approval or closing first, then cancel the receipt.',
     'approval_narration' => 'Insurance claim written approval — :claim · letter :ref',
     'receipt_narration' => 'Insurance claim money — :claim',
     'close_narration' => 'Insurance claim closed, the approved part not received reversed — :claim · :note',

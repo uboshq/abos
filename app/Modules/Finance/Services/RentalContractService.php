@@ -198,8 +198,13 @@ class RentalContractService
 
         $this->assertCanPay($contract, $month);
 
-        $rent = (string) ($data['rent'] ?? $contract->monthly_rent);
-        $fromDeposit = (string) ($data['from_deposit'] ?? $contract->monthly_adjustment);
+        /*
+         * ⛔ খালি ঘরে সেই মাসের ভাড়া, আজকের দর নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে সেপ্টেম্বর ৩০,০০০-এ বসার
+         * পর অক্টোবর থেকে ৩৫,০০০ হলে, খালি ঘরে সেপ্টেম্বর দিলে ৩৫,০০০ যেত — বাড়িওয়ালা ৫,০০০ বেশি পেতেন, তফাতটা খরচে।
+         * এখন: মাসটা বসে থাকলে বসানো অঙ্ক ([[RentalAccrualService::settles()]]), নাহলে সেই মাসে খাটা শর্ত; জামানতের কাটাও সেই মাসের শর্তে।
+         */
+        $rent = (string) ($data['rent'] ?? RentalAccrualService::settles($contract, $month) ?? $contract->rentFor($month));
+        $fromDeposit = (string) ($data['from_deposit'] ?? $contract->adjustmentFor($month));
         $cash = bcsub($rent, $fromDeposit, 4);
 
         if (bccomp($cash, '0', 4) < 0) {
@@ -315,7 +320,12 @@ class RentalContractService
                     'type' => Voucher::PAYMENT,
                     // ⛔ চুক্তির শাখায় — চলতি শাখায় নয় (অডিট ৬ অক্টোবর ⛔৫): অন্য শাখা থেকে দিলে ২১৪১ বা জামানত শাখা ধরে কখনো মিলত না
                     'branch_id' => $contract->branch_id,
-                    'trx_date' => (string) ($data['paid_on'] ?? $month->toDateString()),
+                    /*
+                     * ⛔ টাকা যেদিন গেল, সেদিন — যে মাসের ভাড়া সেই মাসের প্রথম দিন নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে
+                     * ফর্মে দিনের ঘর ছিল না, তাই সেপ্টেম্বরের ভাড়া ১৩ অক্টোবরে দিলে নগদ ১ সেপ্টেম্বরে কমত (বন্ধ মাসে আটকাত), আর
+                     * মার্চের অগ্রিম জানুয়ারিতে দিলে নগদ মার্চ পর্যন্ত হাতে দেখাত।
+                     */
+                    'trx_date' => (string) (($data['paid_on'] ?? '') ?: now()->toDateString()),
                     'narration' => __('finance::message.rental_month_narration', [
                         'who' => $contract->counterparty,
                         'month' => $month->translatedFormat('F Y'),
@@ -804,7 +814,19 @@ class RentalContractService
     private function depositHead(array $data): Account
     {
         if (filled($data['account_id'] ?? null)) {
-            return Account::query()->postable()->findOrFail($data['account_id']);
+            /*
+             * ⛔ জামানত বা অগ্রিম একটা সম্পদ — টাকার খাত, খরচ বা দেনার খাত নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে যেকোনো
+             * পোস্টযোগ্য খাত চলত: নগদ বাছলে Dr নগদ / Cr নগদ, খরচ বাছলে জামানতটাই খরচ — আর ভুল আইডিতে ৪০৪।
+             */
+            $account = Account::query()->postable()->where('type', Account::ASSET)->whereNull('money_kind')->find($data['account_id']);
+
+            if ($account === null) {
+                throw ValidationException::withMessages([
+                    'account_id' => __('finance::validation.rental_deposit_head_not_asset'),
+                ]);
+            }
+
+            return $account;
         }
 
         $whole = bcmul(
@@ -958,10 +980,11 @@ class RentalContractService
         $ahead = '0';
         $aheadMonths = [];
 
+        // ⛔ শাখা-দেয়াল ছাড়া — হেডারে অন্য শাখা বাছা থাকলে আগাম মাসগুলো চোখ এড়াত, আর ১১৩৭ কোনোদিন ফেরত বসত না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
         $rows = $contract->adjustments()
             ->whereNotIn('for_month', RentalAccrual::query()->where('rental_contract_id', $contract->id)->select('for_month'))
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED))
-            ->with('voucher.lines')
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::CONFIRMED))
+            ->with(['voucher' => fn ($v) => $v->withoutGlobalScope('user-branch'), 'voucher.lines'])
             ->orderBy('for_month')
             ->get();
 

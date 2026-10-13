@@ -7,7 +7,7 @@
     $tone = ! $policy->is_active ? 'draft' : ($days < 0 ? 'danger' : ($days <= \App\Modules\Finance\Models\InsurancePolicy::WARN_DAYS ? 'pending' : 'success'));
 @endphp
 <span class="inline-flex flex-col">
-    <span>{{ $policy->ends_on->format('d M Y') }}</span>
+    <span>{{ $policy->ends_on->translatedFormat('j M Y') }}</span>
     @if ($policy->is_active)
         <x-ui.badge :tone="$tone" class="mt-0.5 self-start">
             {{ $days < 0

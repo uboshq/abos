@@ -65,4 +65,6 @@ return [
     'position_guarantees' => 'Guarantees (contingent)',
     'position_insured' => 'Sum insured',
     'position_premiums_due' => 'Premiums due :amount',
+    // ⓘ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⓘ৮)
+    'typed_name_other_kind' => '":name" is a different kind of institution (a bank, say) and cannot go here. Pick the right one from the list or type another name.',
 ];

@@ -194,13 +194,31 @@ final class CollectionService
                 exceptId: (int) $collection->id,
             );
 
+            /*
+             * ⛔ নতুন বানানোর একই পাহারা ([[create()]]) — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে সম্পাদনায় অঙ্ক শূন্য
+             * বা ব্যাংক চার্জের সমান-কম করা যেত; পাকা করার সময় টাকার খাতের ডেবিট (অঙ্ক − চার্জ) ঋণাত্মক হয়ে খাতার ইঞ্জিন ভাঙত।
+             */
+            $amount = $this->money($data['amount'] ?? $collection->amount);
+
+            if (bccomp($amount, '0', 4) <= 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('sales::validation.collection_must_be_positive'),
+                ]);
+            }
+
+            if (bccomp((string) ($collection->bank_charge ?? '0'), $amount, 4) >= 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('sales::validation.bank_charge_out_of_range', ['amount' => Money::format($amount)]),
+                ]);
+            }
+
             $collection->update([
                 'account_id' => $this->resolveMoneyAccount(
                     $data['account_id'] ?? $collection->account_id,
                     (bool) ($data['allows_holding'] ?? false),
                 )->id,
                 'trx_date' => $trxDate->toDateString(),
-                'amount' => $this->money($data['amount'] ?? $collection->amount),
+                'amount' => $amount,
                 'instrument' => $data['instrument'] ?? null,
                 'instrument_no' => $data['instrument_no'] ?? null,
                 'instrument_date' => $data['instrument_date'] ?? null,

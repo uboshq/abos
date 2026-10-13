@@ -35,8 +35,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Accounts/Services/BankReconciliationService.php::reopen',
         'Accounts/Services/ChequeService.php::cancel',
         'Accounts/Services/YearEndService.php::reopen',
-        'Finance/Services/BankFacilityService.php::close',
-        'Finance/Services/DepositService.php::cancel',
         'Hr/Services/LeaveService.php::cancel',
         'Inventory/Services/StockService.php::reverse',
         'Promotion/Services/PromotionLifecycle.php::approve',
@@ -48,9 +46,7 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         // ⓘ নিচের তিনটা নিজে কিছু লেখে না — ডাকে এমন সেবাকে যেটা তালা দেয়; তবু পাহারা শরীর পড়ে, তাই তালিকায়
         'Sales/Services/HeldCounterSaleFinisher.php::finish',
         'Sales/Services/SalesQuotationService.php::approve',
-        'Sales/Services/SalesQuotationService.php::cancel',
         'Sales/Services/SchemeService.php::cancel',
-        'Sales/Services/ShipmentService.php::close',
         'Sales/Services/SignedChallanConfirmer.php::confirm',
     ];
 

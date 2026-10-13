@@ -59,6 +59,8 @@ return [
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
     'money_opens_on_dr_only' => '":name" holds cash or mobile money — its opening balance can only be Dr; money in hand is never negative.',
     'inter_company_side_missing' => 'One side of this inter-company transfer could not be found — nothing was reversed; tell the accountant.',
+    'hand_loan_needs_person' => '":name" is a hand-loan account — name the person whose loan it is.',
+    'money_holds_no_party' => 'A money account (cash, bank, mobile money) holds no party — parties sit on their receivable or payable.',
     // Bank money cannot be reconciled without a reference, and the same
     // reference twice means the same money twice
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',

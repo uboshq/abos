@@ -95,6 +95,14 @@ final class DirectSaleOverview
         }
         $hasDiscount = $hasDiscount || bccomp($billDiscount, '0', 4) > 0;
 
+        /*
+         * ⛔ বিলে যোগ করা ভাড়া — বিল যেমন গোনে ([[DirectSaleService::billFigures()]], [[SalesInvoiceService]]: ছাড়ের পরে মোটে যোগ)।
+         * ⓘ ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা: আগে সারাংশ ভাড়া বাদ দিয়ে মোট দেখাত, আর তার সীমার হিসাবও ভাড়ার টাকায় খাটো
+         * ছিল — সারাংশ "জায়গা আছে" বলত, দরজা আটকাত। ছাড়ের সইয়ের অঙ্ক আগের মতো ভাড়া ছাড়া ([[DiscountCap]] মালের দামে)।
+         */
+        $freight = ($data['fare_paid_by'] ?? null) === 'us_add_to_bill' ? $this->money($data['transport_cost'] ?? '0') : '0';
+        $billed = bcadd($net, $freight, 4);
+
         $o->total(__('sales::overview_confirm.lines_total'), Money::format($sum));
         if (bccomp($lineDiscount, '0', 4) > 0) {
             $o->total(__('sales::overview_confirm.line_discounts'), Money::format($lineDiscount));
@@ -105,12 +113,15 @@ final class DirectSaleOverview
         if (bccomp($rounding, '0', 4) !== 0) {
             $o->total(__('sales::overview_confirm.rounding'), Money::format($rounding));
         }
-        $o->total(__('sales::overview_confirm.net'), Money::format($net), strong: true);
+        if (bccomp($freight, '0', 4) > 0) {
+            $o->total(__('sales::field.fare_on_bill'), Money::format($freight));
+        }
+        $o->total(__('sales::overview_confirm.net'), Money::format($billed), strong: true);
 
         // ── টাকা আর সীমা ─────────────────────────────────────────────
         $paying = $this->paying($data);
         $o->money(__('sales::overview_confirm.paying_now'), Money::format($paying));
-        $left = bcsub($net, $paying, 4);
+        $left = bcsub($billed, $paying, 4);
         $o->money(__('sales::overview_confirm.left_on_bill'), Money::format(bccomp($left, '0', 4) > 0 ? $left : '0'));
 
         /*

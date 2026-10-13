@@ -122,7 +122,10 @@ class BudgetController extends Controller implements HasMiddleware
             'account_id' => ['required', 'integer'],
             'cost_center_id' => ['nullable', 'integer'],
             'months' => ['nullable', 'array'],
-            'months.*' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ "1e5" numeric-এ পাস করত, তারপর সেবায় ৫০০ — [[BudgetService::AMOUNT_PATTERN]] (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'months.*' => ['nullable', 'numeric', 'min:0', 'regex:'.BudgetService::AMOUNT_PATTERN],
+        ], [
+            'months.*.regex' => __('finance::budget.amount_plain'),
         ]);
 
         $this->budgets->saveYear(

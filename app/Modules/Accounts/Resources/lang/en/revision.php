@@ -12,6 +12,8 @@ return [
     'revised' => 'Revised',
     'note' => 'This voucher is posted. Saving keeps the old entries as a reversal and books the new ones - both show in the history.',
     'from_counter' => ':no came from a counter bill - edit the bill, not this voucher.',
+    'owned_elsewhere' => ':no belongs to a :module paper — it cannot be changed or posted on its own here; do it from the screen of that paper, with its own signature.',
+    'module_fin' => 'Finance', 'module_hr' => 'HR', 'module_sal' => 'Sales', 'module_acc' => 'Accounts', 'module_cash' => 'Accounts (cash count)', 'module_other' => 'another module',
     'settles_a_paper' => ':no settles :paper - changing it here would leave that paper on the old amount. Change it from that paper, or cancel this one and write a new one.',
     'inter_company_side' => ':no is one side of an inter-company transfer - reverse both sides and write a new transfer.',
     'reconciled' => ':no is matched with the bank - reopen the match first, then edit.',

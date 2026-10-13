@@ -63,6 +63,7 @@ return [
     'accrual_note' => 'মাসের শেষ দিনে বসে, পরের মাসের প্রথম দিনে নিজে উল্টায়; এক মাস একবারই।',
     'accrual_done' => ':accrued জমায় মুনাফা বসল, :reversed আগের জমা উল্টাল, :held সইয়ের অপেক্ষায়।',
     'accrual_month_not_over' => 'মাসটা এখনো শেষ হয়নি — শেষ হওয়া মাসই কেবল বসানো যায়।',
+    'accrual_month_closed' => ':month বন্ধ — বন্ধ মাসে অর্জিত মুনাফা বসে না। খাতায় কিছুই বসেনি।',
     'accrual_narration' => ':month-এর অর্জিত মুনাফা — :deposit (:institution)',
     'accrual_reversal_narration' => ':month-এর অর্জিত মুনাফা উল্টানো — :deposit',
 

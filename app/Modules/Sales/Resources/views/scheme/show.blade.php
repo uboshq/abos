@@ -6,7 +6,9 @@
     ধাপগুলো আলাদা পর্দায় পাঠালে উত্তরটা দিতে দুইটা পাতা খুলতে হত।
 --}}
 @php
-    $live = $scheme->status === \App\Modules\Sales\Models\Scheme::ACTIVE;
+    // ⓘ খসড়া ছাড়া সব বন্ধ — চালু, থামানো বা মেয়াদ শেষ; থামানো স্কিম আর বদলায় না বা আবার চালু হয় না
+    // (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[SchemeService::assertEditable()]])
+    $live = $scheme->status !== \App\Modules\Sales\Models\Scheme::DRAFT;
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -158,7 +160,7 @@
                  ইঞ্জিন হিসাব করে বর্তমান নিয়ম দেখে। তাই ফর্মটা দেখানোই
                  হয় না, আর কেন হয় না সেটা লেখা থাকে। --}}
             <p class="text-sm text-(--color-ink-muted)">
-                {{ __('sales::validation.scheme_is_live') }}
+                {{ __($scheme->status === \App\Modules\Sales\Models\Scheme::ACTIVE ? 'sales::validation.scheme_is_live' : 'sales::validation.scheme_is_stopped') }}
             </p>
         @else
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border)

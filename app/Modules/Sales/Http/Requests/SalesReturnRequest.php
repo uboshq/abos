@@ -43,15 +43,15 @@ class SalesReturnRequest extends FormRequest
              * ২৭ সেপ্টেম্বর ২০২৬: ফ্রি/উপহারের মাল ফেরত আসে ফ্রি ভাণ্ডারে,
              * শূন্য দামে। ⓘ দুটোই শূন্য হলে সারিটা নিচে `lineData()`-তে বাদ।
              */
-            'lines.*.qty' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.qty' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.free_qty' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             // কোন প্যাকে ফেরত এসেছে — খালি মানে পণ্যের নিজের একক
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
-            'lines.*.rate' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rate' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.tax' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             // নষ্ট মাল আবার বিক্রি হয়ে যাবে না — টিকটা এখানেই আসে
             'lines.*.to_hold' => ['nullable', 'boolean'],

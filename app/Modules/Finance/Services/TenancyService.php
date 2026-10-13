@@ -18,6 +18,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\Tenancy;
 use App\Modules\Finance\Models\TenancyCharge;
 use App\Modules\Finance\Models\TenancyMove;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -156,9 +157,21 @@ class TenancyService
                 throw ValidationException::withMessages(['status' => __('finance::tenancy.not_active')]);
             }
 
+            /*
+             * ⛔ শেষের দিন — শুরুর আগে নয়, আগামী দিনে নয়, আর যে মাসের দাবি বসে গেছে তার আগে নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর
+             * ২০২৬)। ⓘ আগে যেকোনো দিন চলত: শেষের পরের মাসের দাবি আয়ে থেকে যেত, আর শুরুর আগের "শেষ" কোনো অর্থই বলত না।
+             */
+            $on = Carbon::parse((string) (($data['closed_on'] ?? '') ?: now()->toDateString()))->startOfDay();
+            $lastCharged = TenancyCharge::query()->where('tenancy_id', $tenancy->id)->max('for_month');
+
+            if ($on->lt($tenancy->starts_on) || $on->gt(Carbon::today())
+                || ($lastCharged !== null && $on->lt(Carbon::parse((string) $lastCharged)->startOfMonth()))) {
+                throw ValidationException::withMessages(['closed_on' => __('finance::tenancy.close_day_out_of_range')]);
+            }
+
             $tenancy->update([
                 'status' => Tenancy::CLOSED,
-                'closed_on' => Carbon::parse((string) ($data['closed_on'] ?? now()->toDateString()))->toDateString(),
+                'closed_on' => $on->toDateString(),
             ]);
 
             return $tenancy->fresh();
@@ -178,15 +191,24 @@ class TenancyService
             throw ValidationException::withMessages(['monthly_rent' => __('finance::tenancy.terms_bad')]);
         }
 
-        $tenancy->update(array_filter([
-            'monthly_rent' => $rent,
-            'rent_day' => $data['rent_day'] ?? null,
-            'tenant_phone' => $data['tenant_phone'] ?? null,
-            'premises' => $data['premises'] ?? null,
-            'note' => $data['note'] ?? null,
-        ], fn ($v) => $v !== null && $v !== ''));
+        // ⛔ সারিতে তালা, আর কেবল চালু চুক্তি — বন্ধ বা জামানতের অপেক্ষার চুক্তির শর্ত সরাসরি অনুরোধে বদলাত (১৩ অক্টোবর ২০২৬)
+        return DB::transaction(function () use ($tenancy, $data, $rent) {
+            $this->lockFresh($tenancy);
 
-        return $tenancy->fresh();
+            if (! $tenancy->isActive()) {
+                throw ValidationException::withMessages(['status' => __('finance::tenancy.not_active')]);
+            }
+
+            $tenancy->update(array_filter([
+                'monthly_rent' => $rent,
+                'rent_day' => $data['rent_day'] ?? null,
+                'tenant_phone' => $data['tenant_phone'] ?? null,
+                'premises' => $data['premises'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], fn ($v) => $v !== null && $v !== ''));
+
+            return $tenancy->fresh();
+        });
     }
 
     /**
@@ -210,60 +232,94 @@ class TenancyService
         $charged = 0;
         $held = 0;
 
-        $tenancies = Tenancy::query()->active()
+        // ⛔ মানুষটার নাগালের শাখা ([[ActingBranches]]) — এক শাখায় সীমিত মানুষ অন্য শাখার দাবি বসাতেন (১৩ অক্টোবর ২০২৬); কনসোলে গোটা কোম্পানি
+        $tenancies = ActingBranches::narrow(Tenancy::query()->active(), 'fin_tenancies.branch_id')
             ->whereDate('starts_on', '<=', $end->toDateString())
             ->whereDate('ends_on', '>=', $start->toDateString())
             ->orderBy('id')->get();
+
+        $failed = [];
 
         foreach ($tenancies as $tenancy) {
             if ($this->monthCharged($tenancy, $start)) {
                 continue;
             }
 
-            $wasHeld = DB::transaction(function () use ($tenancy, $start, &$charged): ?bool {
-                $this->lockFresh($tenancy);
+            /*
+             * ⛔ এক ভাড়াটের ভুল বাকিদের মাস থামায় না — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (প্রদেয় ভাড়ার একই সারাই, [[RentalAccrualService::run()]])।
+             * ⓘ আগে একটা ভাড়াটের আয়ের খাত বন্ধ থাকলে তার পরের সবার দাবি প্রতি ঘণ্টার চালে বসত না, আর পর্দা কেবল সাধারণ ভুল বলত।
+             */
+            try {
+                $wasHeld = $this->chargeOne($tenancy, $start);
+            } catch (\Throwable $e) {
+                $failed[] = $this->failure($tenancy, $e);
 
-                // ⛔ তালার পরে আবার — দুইজন একসাথে একই মাস চালালেও একবারই
-                if (! $tenancy->isActive() || $this->monthCharged($tenancy, $start)) {
-                    return null;
-                }
+                continue;
+            }
 
-                $amount = bcadd((string) $tenancy->monthly_rent, '0', 2);
-                $on = $tenancy->starts_on->gt($start) ? $tenancy->starts_on->copy() : $start->copy();
-
-                $voucher = $this->vouchers->create([
-                    'type' => Voucher::JOURNAL,
-                    'branch_id' => $tenancy->branch_id,
-                    'trx_date' => $on->toDateString(),
-                    'narration' => __('finance::tenancy.charge_narration', [
-                        'who' => $tenancy->tenant, 'month' => $start->translatedFormat('F Y'),
-                    ]),
-                    'against_type' => Tenancy::drillSourceType(),
-                    'against_id' => $tenancy->id,
-                ], [
-                    $this->partyLine($tenancy, $this->head(StandardChart::RENT_RECEIVABLE), $amount, '0'),
-                    ['account_id' => $tenancy->income_account_id, 'debit' => '0', 'credit' => $amount],
-                ]);
-
-                TenancyCharge::query()->create([
-                    'company_id' => CompanyContext::id(),
-                    'branch_id' => $tenancy->branch_id,
-                    'tenancy_id' => $tenancy->id,
-                    'for_month' => $start->toDateString(),
-                    'amount' => $amount,
-                    'voucher_id' => $voucher->id,
-                    'created_by' => auth()->id(),
-                ]);
-
-                $charged++;
-
-                return $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount);
-            });
-
+            // ⓘ গোনা লেনদেনের পরে — ভেতরে ভুল উঠে সব ফিরে গেলে "বসল" গোনা হত না
+            $charged += $wasHeld === null ? 0 : 1;
             $held += $wasHeld === true ? 1 : 0;
         }
 
-        return ['charged' => $charged, 'held' => $held];
+        return ['charged' => $charged, 'held' => $held, 'failed' => $failed];
+    }
+
+    /** একটা ভাড়াটের ভুল — নম্বর আর কারণ; যাচাইয়ের বার্তা যেমন আছে, বাকিটা লগে আর পর্দায় সাধারণ কথা */
+    private function failure(Tenancy $tenancy, \Throwable $e): string
+    {
+        if ($e instanceof ValidationException) {
+            $why = (string) collect($e->errors())->flatten()->first();
+        } else {
+            report($e);
+            $why = __('finance::message.rent_accrual_contract_broke');
+        }
+
+        return __('finance::message.rent_accrual_contract_failed', [
+            'no' => $tenancy->document_no ?? '#'.$tenancy->id, 'who' => $tenancy->tenant, 'why' => $why,
+        ]);
+    }
+
+    /** একটা ভাড়াটের মাসের দাবি — নিজের লেনদেনে; `null` মানে বসেনি */
+    private function chargeOne(Tenancy $tenancy, Carbon $start): ?bool
+    {
+        return DB::transaction(function () use ($tenancy, $start): ?bool {
+            $this->lockFresh($tenancy);
+
+            // ⛔ তালার পরে আবার — দুইজন একসাথে একই মাস চালালেও একবারই
+            if (! $tenancy->isActive() || $this->monthCharged($tenancy, $start)) {
+                return null;
+            }
+
+            $amount = bcadd((string) $tenancy->monthly_rent, '0', 2);
+            $on = $tenancy->starts_on->gt($start) ? $tenancy->starts_on->copy() : $start->copy();
+
+            $voucher = $this->vouchers->create([
+                'type' => Voucher::JOURNAL,
+                'branch_id' => $tenancy->branch_id,
+                'trx_date' => $on->toDateString(),
+                'narration' => __('finance::tenancy.charge_narration', [
+                    'who' => $tenancy->tenant, 'month' => $start->translatedFormat('F Y'),
+                ]),
+                'against_type' => Tenancy::drillSourceType(),
+                'against_id' => $tenancy->id,
+            ], [
+                $this->partyLine($tenancy, $this->head(StandardChart::RENT_RECEIVABLE), $amount, '0'),
+                ['account_id' => $tenancy->income_account_id, 'debit' => '0', 'credit' => $amount],
+            ]);
+
+            TenancyCharge::query()->create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $tenancy->branch_id,
+                'tenancy_id' => $tenancy->id,
+                'for_month' => $start->toDateString(),
+                'amount' => $amount,
+                'voucher_id' => $voucher->id,
+                'created_by' => auth()->id(),
+            ]);
+
+            return $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount);
+        });
     }
 
     /** ⭐ শেষ সই পড়ল — খসড়া খাতায়; জামানতের অপেক্ষায় থাকা চুক্তি চালু ([[FinishTheFinancePaperOnTheLastSignature]]) */

@@ -23,4 +23,5 @@ return [
     'amount_invalid' => 'The target must be a positive number.',
     'closes_in_month' => 'The closing date must fall inside that month.',
     'month_too_far' => 'A target cannot be set more than two years ahead.',
+    'unknown_dealer' => 'A dealer in the list was not found. Reload the page and try again.',
 ];

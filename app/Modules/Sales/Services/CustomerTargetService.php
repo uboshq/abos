@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Http\Requests\PlainNumber;
 use App\Modules\Sales\Models\CustomerTarget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -70,6 +72,11 @@ final class CustomerTargetService
         $month = $month->copy()->startOfMonth();
         $amount = trim((string) ($amount ?? ''));
 
+        // ⛔ কেবল সাধারণ দশমিক — `1e5` is_numeric পাশ করে, অথচ bcmath ValueError ছোড়ে, ৫০০ (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+        if ($amount !== '' && ! PlainNumber::is($amount)) {
+            throw ValidationException::withMessages(['amount' => __('sales::customer_target.amount_invalid')]);
+        }
+
         if ($amount === '' || (is_numeric($amount) && bccomp($amount, '0', 4) === 0)) {
             CustomerTarget::query()->where('customer_id', $customerId)->whereDate('month', $month->toDateString())->delete();
 
@@ -84,6 +91,15 @@ final class CustomerTargetService
 
         if (! $closes->isSameMonth($month)) {
             throw ValidationException::withMessages(['closes_on' => __('sales::customer_target.closes_in_month')]);
+        }
+
+        /*
+         * ⛔ id-টা এই কোম্পানির, নাগালের, না-মোছা ডিলারের — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
+         * ⓘ পাতার `target[...]` চাবিগুলো সরাসরি গ্রাহকের id, কখনো যাচাই হত না: অন্য কোম্পানির বা মুছে ফেলা গ্রাহকের নামে
+         * লক্ষ্য বসে যেত। `Customer::query()` কোম্পানি, ডিলারের দেয়াল আর SoftDeletes — তিনটাই নিজে বহন করে।
+         */
+        if (! Customer::query()->whereKey($customerId)->exists()) {
+            throw ValidationException::withMessages(['target' => __('sales::customer_target.unknown_dealer')]);
         }
 
         CustomerTarget::query()->updateOrCreate(
@@ -179,7 +195,7 @@ final class CustomerTargetService
      * ⭐ ডিলার ধরে অর্জন — SQL হিসেবে, যাতে পাতা, বিলের বাক্স আর রিপোর্ট একই নিয়মে গোনে (বিক্রয় পরিকল্পনা সংস্করণ ২ §৯ ঙ, ৬ অক্টোবর
      * ২০২৬)। সারি: `customer_id`, `achieved` (শূন্যের নিচে নয়)।
      *
-     * আসা টাকা ([[INFLOW]]-এর ক্রেডিট) − ফেরত চেক ([[BOUNCED]]-এর ডেবিট) − হাতে আসার দিন খাতায় উঠে যাওয়া অথচ এখনো পাশ না হওয়া চেক।
+     * আসা টাকা ([[INFLOW]]-এর ক্রেডিট) − ফেরত চেক ([[BOUNCED]]-এর ডেবিট) − উল্টানো আদায় (`<INFLOW>:reversal`-এর ডেবিট) − হাতে আসার দিন খাতায় উঠে যাওয়া অথচ এখনো পাশ না হওয়া চেক।
      * ⓘ কোম্পানি ধরে, শাখা ধরে নয় — ডিলারের লক্ষ্য একটাই ([[EveryLedgerReaderSaysWhetherItShowsOrChecksTest]]-এ "যাচাই")।
      */
     public static function achievedQuery(int $company, string $from, string $to): \Illuminate\Database\Query\Builder
@@ -190,6 +206,13 @@ final class CustomerTargetService
 
         $in = $ledger()->whereIn('le.source_type', self::INFLOW)->selectRaw('le.party_id as customer_id, le.credit as v');
         $bounced = $ledger()->where('le.source_type', self::BOUNCED)->selectRaw('le.party_id as customer_id, -le.debit as v');
+        /*
+         * ⛔ উল্টানো আদায় বাদ — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা ([[ACancelledCollectionIsNotATargetMetTest]])।
+         * ⓘ বাতিল আদায় বা রসিদের উল্টো দাখিলা `<উৎস>:reversal` নামে বসে ([[PostingEngine::reverse()]]) — চেক ফেরতে ভাউচার/আদায়
+         * বাতিলও এই পথেই — অথচ এখানে কেবল আসাটা গোনা হত, তাই বাতিল টাকাও লক্ষ্য পূরণ দেখাত।
+         */
+        $reversed = $ledger()->whereIn('le.source_type', array_map(fn (string $s) => $s.':reversal', self::INFLOW))
+            ->selectRaw('le.party_id as customer_id, -le.debit as v');
         $held = DB::table('acc_cheques as ch')
             ->where('ch.company_id', $company)->whereNull('ch.deleted_at')
             ->where('ch.direction', 'received')->where('ch.party_type', 'customer')
@@ -198,7 +221,7 @@ final class CustomerTargetService
                 ->orWhereExists(fn ($e) => $e->from('ledger_entries as le2')->where('le2.source_type', 'cheque')->whereColumn('le2.source_id', 'ch.id')))
             ->selectRaw('ch.party_id as customer_id, -ch.amount as v');
 
-        return DB::query()->fromSub($in->unionAll($bounced)->unionAll($held), 'm')
+        return DB::query()->fromSub($in->unionAll($bounced)->unionAll($reversed)->unionAll($held), 'm')
             ->groupBy('m.customer_id')
             ->selectRaw('m.customer_id as customer_id, GREATEST(COALESCE(SUM(m.v), 0), 0) as achieved');
     }

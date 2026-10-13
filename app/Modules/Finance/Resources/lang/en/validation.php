@@ -46,7 +46,14 @@ return [
 
     'person_pick_or_type' => 'Either pick from the list or type a new name, not both.',
     'capital_needs_a_name' => 'Pick who is contributing, or type a new name.',
+    'capital_held_for_signature' => ':no is profit taken into capital and waits for its signature — it cannot be edited or deleted; the signer can refuse it, or its voucher can be cancelled.',
+    'capital_rows_changed' => 'The capital rows behind this voucher no longer match it — nothing was posted.',
+    'withdrawal_only_cash_posts' => ':no was taken as an asset or goods — only a cash withdrawal leaves a money account; book the asset or stock leaving through its own journal.',
+    'kind_shape_in_use' => 'Deposits were opened under :name, so its shape, issuer and "personal only" cannot change — only its name and order. Add a new kind instead.',
+    'rental_deposit_head_not_asset' => 'The deposit or advance must sit in an asset account that is not cash, bank or MFS.',
     'facility_needs' => 'A :kind facility cannot be worked out without this field.',
+    'facility_already_closed' => 'Facility :no is already closed.',
+    'facility_still_owed' => 'Facility :no still owes :owed in the books — post the repayment (or the bank\'s waiver) first, then close it.',
 
     'kind_in_use' => 'Deposits were opened under :name, so it cannot be removed — deactivate it instead and the old papers stay whole.',
 
@@ -66,9 +73,16 @@ return [
     'shares_pay_more_than_declared' => 'The shares add up to :total, but the declaration is :asked — correct the shares, then declare.',
     'shares_over_a_hundred' => 'The agreed shares add up to :total% — more than 100% cannot be shared. Correct them on the capital page.',
     'signature_refused' => 'The signer turned it down — it is cancelled and nothing was posted.',
+    'voucher_belongs_to_finance_paper' => 'Voucher :no belongs to finance paper :paper, which keeps its own figures — correct or cancel it from that paper\'s page. Nothing was changed.',
+    'month_end_reversal_follows' => 'The month-end entry it reversed was cancelled.',
 
     // Full-ERP re-audit, 9 Oct 2026 — the money on a rent contract before it closes
     'rental_close_unpaid_months' => 'Rent was booked for these months but not paid: :months (:amount in all, owed to the landlord). Pay those months first — in cash or from the deposit — then close the contract.',
     'rental_close_prepaid_not_expensed' => 'Rent paid ahead for :months is still in Prepaid Rent and has not gone to expense. Book that month\'s rent as payable first (from the rent list page), then close the contract.',
     'rental_close_prepaid_needs_refund' => 'Rent for :months after the closing date was paid ahead (:amount) — the landlord gives it back. Pick the money account it comes back to; it goes on the same receipt as the deposit.',
+
+    // ⓘ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+    'profit_share_already_used' => 'Part of this profit has already been withdrawn or capitalised: undo that first, then cancel the declaration.',
+    // Finance line review, 13 Oct 2026 — bank facilities
+    'cc_opening_drawn_lives_in_the_bank' => 'A cash credit\'s drawn money lives in its bank account\'s balance — entering it here would count it twice and double the interest. Leave this at zero and put today\'s drawn amount in the bank account\'s opening balance.',
 ];

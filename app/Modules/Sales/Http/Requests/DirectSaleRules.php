@@ -132,8 +132,8 @@ final class DirectSaleRules
 
             // ⭐ বিক্রি নম্বর (S) — হাতে দেওয়া হলে সেটাই; অনন্যতা সেবায় ([[SaleNumber::begin()]])
             'challan_no' => ['nullable', 'string', 'max:32'],
-            'discount_amount' => ['nullable', 'numeric', 'min:0'],
-            'expense_amount' => ['nullable', 'numeric', 'min:0'],
+            'discount_amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'expense_amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             /*
              * খরচটা কীসের — টাকার অঙ্কের পাশে বাধ্যতামূলক নয়, কিন্তু
              * থাকলে কাগজে ছাপা হয়।
@@ -172,7 +172,7 @@ final class DirectSaleRules
              */
             'carrier_id' => ['nullable', 'integer',
                 Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
-            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+            'transport_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             // ⓘ "পরিবহন লাগবে না (ক্রেতার নিজের)" — `in:0,1`, save_as_draft-এর একই কারণে ([[TransportRule]])
             'own_transport' => ['nullable', 'in:0,1'],
 
@@ -235,14 +235,14 @@ final class DirectSaleRules
              * ⚠️ পর্দার বাধাটা যথেষ্ট নয় — যে কেউ সরাসরি অনুরোধ পাঠাতে
              * পারে, তাই আসল পাহারা এখানেই।
              */
-            'rounding_amount' => ['nullable', 'numeric', function (string $attr, mixed $value, callable $fail) {
+            'rounding_amount' => ['nullable', 'numeric', PlainNumber::RULE, function (string $attr, mixed $value, callable $fail) {
                 $max = (float) app(SettingsService::class)->get('sales.rounding_max', 0);
 
                 if ($max > 0 && abs((float) $value) > $max) {
                     $fail(__('sales::validation.rounding_over_limit', ['max' => $max]));
                 }
             }],
-            'deposit' => ['nullable', 'numeric', 'min:0'],
+            'deposit' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             /*
              * ── একাধিক জমা — প্রতিটার নিজের খাত ─────────────────────────
@@ -260,7 +260,7 @@ final class DirectSaleRules
              * একসাথে এলে `deposits`-ই সত্য, কারণ ওটাই বিস্তারিত।
              */
             'deposits' => ['nullable', 'array', 'max:20'],
-            'deposits.*.amount' => ['required', 'numeric', 'gt:0'],
+            'deposits.*.amount' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'deposits.*.payment_method_id' => ['nullable', 'integer',
                 Rule::exists('mdm_payment_methods', 'id')->where('company_id', $companyId)],
             /*
@@ -338,7 +338,7 @@ final class DirectSaleRules
             'deposits.*.from_account_name' => ['nullable', 'string', 'max:120'],
             'deposits.*.from_account_no' => ['nullable', 'string', 'max:64'],
             'deposits.*.deposit_slip_no' => ['nullable', 'string', 'max:64'],
-            'deposits.*.charge_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposits.*.charge_amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'deposits.*.charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
             'deposits.*.lands_on' => ['nullable', 'date'],
             'deposits.*.wallet' => ['nullable', 'string', 'max:32'],
@@ -348,13 +348,13 @@ final class DirectSaleRules
 
             // ⭐ পুরো কাগজের ভ্যাট বাছাই — সার্ভার এখন মানে ([[CounterVat]], Sales অডিট ১০ অক্টোবর ২০২৬)
             'vat_mode' => ['nullable', Rule::in(\App\Modules\Sales\Services\CounterVat::MODES)],
-            'vat_rate' => ['nullable', 'required_if:vat_mode,exclusive,inclusive', 'numeric', 'min:0', 'max:100'],
+            'vat_rate' => ['nullable', 'required_if:vat_mode,exclusive,inclusive', 'numeric', PlainNumber::RULE, 'min:0', 'max:100'],
 
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
-            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
-            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.free_qty' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             /*
              * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
              *
@@ -369,8 +369,8 @@ final class DirectSaleRules
              * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
              * চাওয়াই হয় না।
              */
-            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
-            'lines.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'lines.*.rate' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.discount_percent' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0', 'max:100'],
             // ⓘ উৎসের কোন সারি — না থাকলে সেবা পণ্য ধরে মেলায় (সারি মুছে আবার বসালে আইডি হারায়)
             'lines.*.source_line_id' => ['nullable', 'integer', 'min:1'],
 
@@ -393,7 +393,7 @@ final class DirectSaleRules
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'gifts.*.against_product_id' => ['nullable', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
-            'gifts.*.qty' => ['nullable', 'numeric', 'min:0'],
+            'gifts.*.qty' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
         ];
     }

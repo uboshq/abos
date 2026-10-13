@@ -65,7 +65,7 @@
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::insurance.period') }}</dt>
                 <dd class="font-medium">
-                    {{ $policy->starts_on->format('d M Y') }} →
+                    {{ $policy->starts_on->translatedFormat('j M Y') }} →
                     @include('finance::insurance.partials.renewal', ['policy' => $policy])
                 </dd>
             </div>
@@ -92,7 +92,7 @@
 
         <x-ui.table :rows="$policy->premiums" :empty="'—'" :columns="[
             ['key' => 'period', 'label' => __('finance::insurance.period'),
-             'render' => fn ($p) => $p->period_from->format('d M Y').' → '.$p->period_to->format('d M Y')],
+             'render' => fn ($p) => $p->period_from->translatedFormat('j M Y').' → '.$p->period_to->translatedFormat('j M Y')],
             ['key' => 'due', 'label' => __('finance::insurance.premium_state'), 'width' => '8rem',
              'render' => fn ($p) => __('finance::insurance.premium_state_'.$p->dueState())],
             ['key' => 'amount', 'label' => __('finance::insurance.premium'), 'numeric' => true, 'width' => '10rem',

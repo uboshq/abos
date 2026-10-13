@@ -14,6 +14,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\RentalAccrual;
 use App\Modules\Finance\Models\RentalContract;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -72,7 +73,8 @@ final class RentalAccrualService
         $held = 0;
         $failed = [];
 
-        $contracts = RentalContract::query()->active()
+        // ⛔ মানুষটার নাগালের শাখা ([[ActingBranches]]; সুদ জমার নিয়ম) — এক শাখায় সীমিত মানুষ অন্য শাখার মাস বসাতেন (১৩ অক্টোবর ২০২৬); কনসোলে গোটা কোম্পানি
+        $contracts = ActingBranches::narrow(RentalContract::query()->active(), 'fin_rental_contracts.branch_id')
             ->whereDate('starts_on', '<=', $end->toDateString())
             ->whereDate('ends_on', '>=', $start->toDateString())
             ->orderBy('id')->get();
@@ -203,7 +205,7 @@ final class RentalAccrualService
 
             $this->assertNothingWaiting($contract);
 
-            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with('voucher.lines')->first()?->voucher;
+            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'voucher.lines'])->first()?->voucher;
 
             if ($paid === null || $paid->status !== DocumentStatus::CONFIRMED) {
                 return 0;
@@ -290,11 +292,12 @@ final class RentalAccrualService
      */
     public static function settles(RentalContract $contract, Carbon $month): ?string
     {
-        $accrual = RentalAccrual::query()->with('voucher')
+        $accrual = RentalAccrual::query()->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch')])
             ->where('rental_contract_id', $contract->id)->whereDate('for_month', $month->copy()->startOfMonth()->toDateString())
             ->first();
 
-        if ($accrual === null) {
+        // ⛔ বাতিল প্রদেয় কিছুই মেটায় না — মাসটা প্রদেয় ছাড়া, সোজা খরচ হিসেবে শোধ হয়
+        if ($accrual === null || $accrual->voucher?->isCancelled()) {
             return null;
         }
 

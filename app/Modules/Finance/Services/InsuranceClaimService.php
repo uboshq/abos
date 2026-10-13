@@ -219,6 +219,10 @@ final class InsuranceClaimService
             $lastOn = $lastOn === null || $receipt->trx_date->gt($lastOn) ? $receipt->trx_date : $lastOn;
         }
 
+        if ($excluding !== null) {
+            $this->assertTheReceivableStaysWhole($claim, $excluding, $received);
+        }
+
         $claim->forceFill(['received_amount' => $received, 'received_on' => $lastOn?->toDateString()]);
 
         // ⓘ বন্ধ বা নাকচ দাবি নিজের অবস্থায় থাকে — সেটা মানুষের সিদ্ধান্ত, রসিদের গোনা নয়
@@ -234,6 +238,32 @@ final class InsuranceClaimService
         $claim->save();
 
         return $claim;
+    }
+
+    /**
+     * ⛔ অনুমোদন বা বন্ধ খাতায় থাকলে যে রসিদ বাতিলে ১১৫২ ভুল হয়, সেটা থামে — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+     *
+     * ⓘ অনুমোদনের দাখিলা বসে "অনুমোদিত − তখন পর্যন্ত পাওয়া" (যেমন ১০,০০০ − ৩,০০০ = Dr 1152 ৭,০০০), আর বন্ধের দাখিলা উল্টায়
+     * "অনুমোদিত − পাওয়া"। দুটোই সেই মুহূর্তের "পাওয়া" ধরে বসে। ⚠️ আগে পরে সেই পাওয়া কমলে (রসিদ বাতিল) দাবি আবার পুরোটা
+     * চাইত: অনুমোদনের আগের ৩,০০০-এর রসিদ (Cr 4370) বাতিলে বাকি ১০,০০০ হত, পরের রসিদ Cr 1152 ১০,০০০ — 1152 −৩,০০০;
+     * আর বন্ধ দাবির 1152-এর রসিদ বাতিলে 1152-এ +r ঝুলে থাকত, পেছনে কোনো খোলা দাবি নেই।
+     * ⭐ এখন সেই বাতিল এখানেই থামে (বাতিলের একই লেনদেনে, তাই রসিদটাও খাতায় থাকে) — আগে দাবির অনুমোদন বা বন্ধ উল্টাতে হয়।
+     * ⓘ সইয়ের অপেক্ষার খসড়া রসিদ কখনো গোনা হয়নি — তার বাতিলে "পাওয়া" কমে না, তাই থামে না ([[dropRefused()]])।
+     */
+    private function assertTheReceivableStaysWhole(InsuranceClaim $claim, int $excluding, string $received): void
+    {
+        if ($claim->approval_voucher_id === null || bccomp($received, (string) $claim->received_amount, 4) >= 0) {
+            return;
+        }
+
+        $creditedIncome = VoucherLine::query()->where('voucher_id', $excluding)
+            ->where('account_id', $this->account(StandardChart::INSURANCE_CLAIM_INCOME)->id)
+            ->where('credit', '>', 0)
+            ->exists();
+
+        if ($claim->closed_on !== null || $creditedIncome) {
+            throw ValidationException::withMessages(['cancel_reason' => __('finance::insurance_claim.undo_approval_first')]);
+        }
     }
 
     /** রসিদ কোন খাতে টাকা নেবে — অনুমোদন খাতায় থাকলে প্রাপ্য, না থাকলে আয় */

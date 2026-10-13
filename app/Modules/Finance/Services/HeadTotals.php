@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\YearEndService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -92,9 +93,15 @@ final class HeadTotals
             : 'COALESCE(SUM(credit) - SUM(debit), 0) as net';
 
         // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+        /*
+         * ⛔ খাতের নিচের খাতগুলোও, আর বছর বন্ধের দাখিলা বাদ — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে কেবল খাতটার নিজের সারি
+         * গোনা হত: "গাড়ি ভাড়া" দল হলে তার নিচের "ট্রাক"/"পিকআপ"-এর খরচ শূন্য দেখিয়ে খাতটাই লুকাত ([[topUnder()]] আগে থেকেই
+         * পুরো পরিবার গোনে)। আর বছরের শেষ দিন পড়া সময়ে বছর বন্ধের উল্টো দাখিলা খরচ-আয় শূন্যে নামাত ([[BudgetService::actual()]]-এর নিয়ম)।
+         */
         $net = ViewedBranch::narrow(DB::table('ledger_entries'), 'ledger_entries.branch_id')
             ->where('company_id', CompanyContext::id())
-            ->where('account_id', $account->id)
+            ->whereIn('account_id', $account->selfAndDescendants()->pluck('id')->all())
+            ->whereNotIn('source_type', YearEndService::closingSources())
             ->whereBetween('trx_date', [$from, $to])
             ->selectRaw($expression)
             ->value('net');
@@ -180,6 +187,7 @@ final class HeadTotals
              * বিচ্ছিন্নতা সুবিধা নয়, আইনি বাধ্যবাধকতা।**
              */
             ->where('l.company_id', CompanyContext::id())
+            ->whereNotIn('l.source_type', YearEndService::closingSources())
             ->whereBetween('l.trx_date', [$from, $to])
             ->groupBy('a.id')
             ->selectRaw('a.id, COALESCE(SUM(l.debit) - SUM(l.credit), 0) as net')

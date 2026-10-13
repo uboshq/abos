@@ -29,7 +29,8 @@
             'link' => (string) ($l->delivery_challan_line_id ?? ''),
         ])->all();
 
-    $challanLines = ($challan?->lines ?? collect())->mapWithKeys(fn ($l) => [
+    // ⓘ সম্পাদনায় বিলের নিজের চালানের সারি ([[SalesInvoiceController::edit()]]) — নইলে চালানের ঘর আসে না, আর দরজা সারি ফেরায়
+    $challanLines = ($challanLineOptions ?? $challan?->lines ?? collect())->mapWithKeys(fn ($l) => [
         $l->id => ($l->product?->code ?? '') . ' - ' . rtrim(rtrim($l->uninvoicedQty(), '0'), '.'),
     ]);
 

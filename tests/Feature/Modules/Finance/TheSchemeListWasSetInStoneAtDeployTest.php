@@ -153,6 +153,32 @@ final class TheSchemeListWasSetInStoneAtDeployTest extends TestCase
     }
 
     /**
+     * ⛔ যে ধরনে জমা খোলা হয়েছে, তার আকার বদলাত — চালু FDR হঠাৎ কিস্তি নিত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬); নাম বদলানো চলে।
+     */
+    public function test_a_scheme_in_use_keeps_its_shape_but_can_be_renamed(): void
+    {
+        $kind = DepositKind::query()->where('code', 'FDR')->firstOrFail();
+
+        app(DepositService::class)->open([
+            'kind_id' => $kind->id, 'institution' => 'সোনালী ব্যাংক', 'held_by' => Deposit::BUSINESS, 'principal' => '100000',
+            'return_word' => 'interest', 'opened_on' => now()->toDateString(), 'matures_on' => now()->addYear()->toDateString(),
+            'funded_from_account_id' => app(CashTillService::class)->ensurePrimaryTill()->account_id,
+        ]);
+        $shape = $kind->shape;
+        $other = collect(DepositKind::SHAPES)->first(fn ($s) => $s !== $shape);
+
+        $this->put(route('finance.deposit_kind.update', $kind), [
+            'code' => 'FDR', 'name_en' => $kind->name_en, 'issuer' => $kind->issuer, 'shape' => $other, 'is_active' => 1,
+        ])->assertSessionHasErrors('shape');
+        $this->assertSame($shape, $kind->fresh()->shape, '⛔ চালু জমার ধরনের আকার বদলে গেল');
+
+        $this->put(route('finance.deposit_kind.update', $kind), [
+            'code' => 'FDR', 'name_en' => 'Fixed Deposit Plus', 'issuer' => $kind->issuer, 'shape' => $shape, 'is_active' => 1,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('Fixed Deposit Plus', $kind->fresh()->name_en);
+    }
+
+    /**
      * ⭐ যে ধরনে কিছুই খোলা হয়নি, সেটা মোছা যায়।
      */
     public function test_an_unused_scheme_can_be_removed(): void

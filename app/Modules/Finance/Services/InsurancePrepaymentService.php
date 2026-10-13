@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -48,7 +49,10 @@ final class InsurancePrepaymentService
 {
     use ReadsTheRowUnderLock;
 
-    public function __construct(private readonly VoucherService $vouchers) {}
+    public function __construct(
+        private readonly VoucherService $vouchers,
+        private readonly OpenPeriod $period,
+    ) {}
 
     /**
      * এই মাস শেষে কোন কিস্তির কত অগ্রিম — কিছু না লিখে।
@@ -125,6 +129,13 @@ final class InsurancePrepaymentService
             ]);
         }
 
+        // ⛔ বন্ধ মাসে নয় — কিছু লেখার আগেই, কারণসহ (সুদের জোড়া, লাইন-ধরে নিরীক্ষা ১৩ অক্টোবর ২০২৬)
+        if (($lock = $this->period->lockOn($end)) !== null) {
+            throw ValidationException::withMessages([
+                'month' => __('finance::insurance.prepaid_month_closed', ['month' => $lock->label()]),
+            ]);
+        }
+
         return DB::transaction(function () use ($month, $start, $end): array {
             $reversed = $this->reverseBefore($start);
             $prepaid = 0;
@@ -160,8 +171,9 @@ final class InsurancePrepaymentService
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
-                    // ⛔ পলিসির শাখায় — হেডারের শাখায় নয় (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
-                    'branch_id' => $policy->branch_id,
+                    // ⛔ পরিশোধ ভাউচারের শাখায় — খরচ যে শাখায় বসেছে, সরেও সেখান থেকে; পলিসির শাখা আলাদা হলে এক শাখার খরচ ঋণাত্মক
+                    // আর অন্যটার ফোলা থাকত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+                    'branch_id' => $premium->voucher->branch_id,
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::insurance.prepaid_narration', [
                         'month' => $start->translatedFormat('F Y'), 'policy' => $policy->policy_no,
@@ -210,12 +222,33 @@ final class InsurancePrepaymentService
 
             $asset ??= $this->account(StandardChart::PREPAID_INSURANCE);
             $amount = bcadd((string) $paper->amount, '0', 2);
+            $on = $paper->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+            /*
+             * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে; সুদের একই নিয়ম ([[InterestAccrualService::reverseBefore()]];
+             * Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে বন্ধ মাসে উল্টো দাখিলা আটকাত, গোটা চাল এক লেনদেনে বলে সবটা ফিরত, আর
+             * পুরনো মাস না খোলা পর্যন্ত কোনো মাসের অগ্রিম বীমাই আর বসত না।
+             */
+            if (app(\App\Core\Services\OpenPeriod::class)->lockOn($on) !== null) {
+                $on = $start->toDateString();
+            }
+
+            /*
+             * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে (সুদের জোড়া, লাইন-ধরে নিরীক্ষা ১৩ অক্টোবর ২০২৬)। ⓘ আগে
+             * খাতা বন্ধ মাসে উল্টো দাখিলা নিত না, আর গোটা চাল থামত — পরের কোনো মাসই আর বসত না।
+             */
+            $on = $paper->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+            if ($this->period->lockOn($on) !== null) {
+                $on = $start->toDateString();
+            }
 
             $reversal = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
                 'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
-                'branch_id' => $paper->branch_id,
-                'trx_date' => $paper->for_month->copy()->endOfMonth()->addDay()->toDateString(),
+                // ⓘ অগ্রিমের নিজের ভাউচারের শাখায় — যেখান থেকে সরেছিল সেখানেই ফেরে
+                'branch_id' => $paper->voucher->branch_id,
+                'trx_date' => $on,
                 'narration' => __('finance::insurance.prepaid_reversal_narration', [
                     'month' => $paper->for_month->translatedFormat('F Y'), 'policy' => (string) $paper->policy?->policy_no,
                 ]),
