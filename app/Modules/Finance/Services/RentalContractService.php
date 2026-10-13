@@ -199,11 +199,12 @@ class RentalContractService
         $this->assertCanPay($contract, $month);
 
         /*
-         * ⛔ ঘর খালি হলে সেই মাসের শর্তের দর — আজকের নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬; মালিকের সিদ্ধান্ত প্র১)। ⓘ আগে
-         * অক্টোবরে ভাড়া বাড়ার পরে সেপ্টেম্বরের বাকি ভাড়া খালি ঘরে দিলে নতুন দরে যেত — বাড়িওয়ালা নীরবে বেশি পেতেন।
+         * ⛔ খালি ঘরে সেই মাসের ভাড়া, আজকের দর নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে সেপ্টেম্বর ৩০,০০০-এ বসার
+         * পর অক্টোবর থেকে ৩৫,০০০ হলে, খালি ঘরে সেপ্টেম্বর দিলে ৩৫,০০০ যেত — বাড়িওয়ালা ৫,০০০ বেশি পেতেন, তফাতটা খরচে।
+         * এখন: মাসটা বসে থাকলে বসানো অঙ্ক ([[RentalAccrualService::settles()]]), নাহলে সেই মাসে খাটা শর্ত; জামানতের কাটাও সেই মাসের শর্তে।
          */
-        $rent = (string) (($data['rent'] ?? '') !== '' ? $data['rent'] : $contract->rentFor($month));
-        $fromDeposit = (string) (($data['from_deposit'] ?? '') !== '' ? $data['from_deposit'] : $contract->adjustmentFor($month));
+        $rent = (string) ($data['rent'] ?? RentalAccrualService::settles($contract, $month) ?? $contract->rentFor($month));
+        $fromDeposit = (string) ($data['from_deposit'] ?? $contract->adjustmentFor($month));
         $cash = bcsub($rent, $fromDeposit, 4);
 
         if (bccomp($cash, '0', 4) < 0) {
@@ -979,10 +980,11 @@ class RentalContractService
         $ahead = '0';
         $aheadMonths = [];
 
+        // ⛔ শাখা-দেয়াল ছাড়া — হেডারে অন্য শাখা বাছা থাকলে আগাম মাসগুলো চোখ এড়াত, আর ১১৩৭ কোনোদিন ফেরত বসত না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
         $rows = $contract->adjustments()
             ->whereNotIn('for_month', RentalAccrual::query()->where('rental_contract_id', $contract->id)->select('for_month'))
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED))
-            ->with('voucher.lines')
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::CONFIRMED))
+            ->with(['voucher' => fn ($v) => $v->withoutGlobalScope('user-branch'), 'voucher.lines'])
             ->orderBy('for_month')
             ->get();
 

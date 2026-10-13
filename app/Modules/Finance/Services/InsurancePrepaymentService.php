@@ -222,6 +222,16 @@ final class InsurancePrepaymentService
 
             $asset ??= $this->account(StandardChart::PREPAID_INSURANCE);
             $amount = bcadd((string) $paper->amount, '0', 2);
+            $on = $paper->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+            /*
+             * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে; সুদের একই নিয়ম ([[InterestAccrualService::reverseBefore()]];
+             * Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে বন্ধ মাসে উল্টো দাখিলা আটকাত, গোটা চাল এক লেনদেনে বলে সবটা ফিরত, আর
+             * পুরনো মাস না খোলা পর্যন্ত কোনো মাসের অগ্রিম বীমাই আর বসত না।
+             */
+            if (app(\App\Core\Services\OpenPeriod::class)->lockOn($on) !== null) {
+                $on = $start->toDateString();
+            }
 
             /*
              * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে (সুদের জোড়া, লাইন-ধরে নিরীক্ষা ১৩ অক্টোবর ২০২৬)। ⓘ আগে

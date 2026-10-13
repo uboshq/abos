@@ -22,6 +22,7 @@ use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Models\TenancyCharge;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\Finance\Services\InsuranceClaimService;
+use App\Modules\Finance\Services\ProfitDistribution;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -90,6 +91,19 @@ final class UndoThePaperOfACancelledVoucher
 
         Withdrawal::query()->where('voucher_id', $voucherId)->where('status', DocumentStatus::CONFIRMED)->get()
             ->each(fn (Withdrawal $withdrawal) => $withdrawal->unsettle($voucherId));
+
+        /*
+         * ⛔ যে ভাগ থেকে টাকা তোলা বা মূলধনে নেওয়া হয়ে গেছে, তার ঘোষণা বাতিল নয় — খাতা ২১৯০ পুরোটা ফেরাত অথচ তোলা টাকা থেকে
+         * যেত, ২১৯০ ঋণাত্মক (ec, Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheProfitOutlivedItsCancelledPaperTest]])।
+         */
+        foreach (ProfitShare::query()->where('voucher_id', $voucherId)->where('status', ProfitShare::POSTED)->get() as $share) {
+            if ($share->person_id !== null
+                && bccomp(app(ProfitDistribution::class)->outstandingFor((int) $share->person_id), (string) $share->amount, 4) < 0) {
+                throw ValidationException::withMessages([
+                    'cancel_reason' => __('finance::validation.profit_share_already_used'),
+                ]);
+            }
+        }
 
         ProfitShare::query()->where('voucher_id', $voucherId)->whereIn('status', [ProfitShare::POSTED, ProfitShare::DRAFT])
             ->update(['status' => ProfitShare::CANCELLED]);

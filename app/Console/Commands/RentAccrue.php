@@ -62,10 +62,14 @@ class RentAccrue extends Command
                 $charged += $billed['charged'];
                 $held += $billed['held'];
 
-                // ⓘ যে ভাড়াটেদের দাবি বসেনি — নাম আর কারণসহ; বাকিরা বসেছে
-                foreach ($billed['failed'] ?? [] as $failure) {
+                /*
+                 * ⛔ যে চুক্তি বা ভাড়াটে বসেনি — লগে আর ব্যর্থতায়, Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ দুই দিকই এখন একটার ভুলে
+                 * বাকিদের থামায় না, ভুলটা `failed`-এ ফেরে; এখানে না দেখলে শিডিউলারের `onFailure()` আর কখনো ডাকত না।
+                 */
+                foreach ([...$done['failed'], ...$billed['failed']] as $why) {
                     $broke = true;
-                    $this->error("{$company->code}: {$failure}");
+                    $this->error("{$company->code}: {$why}");
+                    logger()->error('মাসের ভাড়া একটা চুক্তিতে বসেনি।', ['company' => $company->code, 'error' => $why]);
                 }
             } catch (\Throwable $e) {
                 $broke = true;

@@ -11,6 +11,7 @@ use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Contracts\SettlementTerms;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Services\InsuranceClaimService;
 use App\Modules\Finance\Support\OpensOnlyInReach;
@@ -138,6 +139,11 @@ class InsuranceClaim extends Model implements Drillable, SettledByAVoucher, Sett
 
     /**
      * ⓘ রসিদ, যা এখনো আসতে পারে তার বেশি নয় (কয়েক কিস্তিতে আসে); ⛔ নাকচ বা নিষ্পন্ন দাবিতে নয়।
+     *
+     * ⛔ অনুমোদন বা বন্ধের দাখিলা সইয়ের অপেক্ষায় (খসড়া) থাকলেও নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⚠️৪)।
+     * ⓘ দাবির পর্দার বোতাম তখন থামে ([[InsuranceClaimService::assertNothingWaiting()]]), কিন্তু ভাউচারের পর্দায় লেখা রসিদ এখান
+     * দিয়েই যায়: খাত তখনই 1152 দেখায়, রসিদ Cr 1152 বসত, আর সইকারী অনুমোদনে "না" বললে 1152 −r থাকত, পেছনে কোনো প্রাপ্য নেই।
+     * শাখার দেয়াল ছাড়া খোঁজা — দাখিলা দাবির শাখায় বসে, হেডারে অন্য শাখা থাকলেও।
      */
     public function settlementTerms(): array
     {
@@ -145,8 +151,16 @@ class InsuranceClaim extends Model implements Drillable, SettledByAVoucher, Sett
             'voucher_type' => 'receipt',
             'amount' => $this->outstanding(),
             'up_to' => true,
-            'open' => $this->isOpen() && bccomp($this->outstanding(), '0', 4) > 0,
+            'open' => $this->isOpen() && bccomp($this->outstanding(), '0', 4) > 0 && ! $this->hasAJournalAwaitingSignature(),
         ];
+    }
+
+    /** অনুমোদন বা বন্ধের দাখিলা এখনো খসড়া (সইয়ের অপেক্ষায়) কি না */
+    private function hasAJournalAwaitingSignature(): bool
+    {
+        $own = array_values(array_filter([(int) $this->approval_voucher_id, (int) $this->close_voucher_id]));
+
+        return $own !== [] && Voucher::acrossBranches()->whereIn('id', $own)->where('status', DocumentStatus::DRAFT)->exists();
     }
 
     // ── SettledByAVoucher — রসিদ পোস্ট বা বাতিল হলে আবার গোনা ─────────

@@ -777,6 +777,16 @@ final class DepositService
                 return;
             }
 
+            /*
+             * ⛔ জমাটা এর মধ্যে বন্ধ হয়ে গেলে খোলা ছাড়া কিছুই বসে না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (ec)। ⓘ আগে দুটো
+             * অপেক্ষার ভাঙায় দুটো সই পড়লে দুটোই বসত: ১১৬০ থেকে দুবার মূলধন বেরোত।
+             */
+            if ($movement->kind !== DepositMovement::OPENED && $deposit->status !== Deposit::ACTIVE) {
+                throw ValidationException::withMessages([
+                    'status' => __('finance::validation.deposit_already_closed', ['no' => $deposit->document_no]),
+                ]);
+            }
+
             $this->vouchers->post($voucher);
 
             match ($movement->kind) {

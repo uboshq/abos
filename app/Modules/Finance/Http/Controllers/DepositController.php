@@ -401,7 +401,9 @@ class DepositController extends Controller implements HasMiddleware
     public function store(Request $request, string $issuer): RedirectResponse
     {
         $data = $request->validate([
-            'kind_id' => ['required', 'integer', Rule::exists('fin_deposit_kinds', 'id')->where('company_id', CompanyContext::id())],
+            // ⛔ চালু ধরন, আর এই পাতার প্রতিষ্ঠানের — বন্ধ বা অন্য পাতার ধরনে জমা খোলা যেত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'kind_id' => ['required', 'integer', Rule::exists('fin_deposit_kinds', 'id')->where('company_id', CompanyContext::id())
+                ->where('is_active', true)->where('issuer', $issuer)],
             'institution_id' => ['nullable', 'integer',
                 Rule::exists('fin_institutions', 'id')->where('company_id', CompanyContext::id())],
             'institution_new' => ['nullable', 'string', 'max:160',
@@ -433,7 +435,7 @@ class DepositController extends Controller implements HasMiddleware
             'person_relationship' => ['nullable', 'string', 'max:60'],
             'person_address' => ['nullable', 'string', 'max:191'],
             'person_nid_tin' => ['nullable', 'string', 'max:40'],
-            'principal' => ['required', 'numeric', 'gt:0'],
+            'principal' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'profit_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
             /*
@@ -447,7 +449,7 @@ class DepositController extends Controller implements HasMiddleware
             'return_word' => ['required', 'string', 'in:interest,profit'],
             'opened_on' => ['required', 'date', 'before_or_equal:today'],
             'matures_on' => ['nullable', 'date', 'after:opened_on'],
-            'instalment_amount' => ['nullable', 'numeric', 'gt:0'],
+            'instalment_amount' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'instalment_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'payout_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'funded_from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
@@ -526,10 +528,10 @@ class DepositController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'kind' => ['required', 'string', 'in:'.DepositMovement::INSTALMENT.','.DepositMovement::PAYOUT],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             // ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর আর আবগারি শুল্ক (প্র২, ৬ অক্টোবর ২০২৬; [[DepositService::deductionLines()]])
-            'source_tax' => ['nullable', 'numeric', 'min:0'],
-            'excise_duty' => ['nullable', 'numeric', 'min:0'],
+            'source_tax' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'excise_duty' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             // ⛔ জমা খোলার আগে নয়, আগামী দিনেও নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
             'moved_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$deposit->opened_on->toDateString()],
             'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
@@ -552,11 +554,11 @@ class DepositController extends Controller implements HasMiddleware
     public function close(Request $request, string $issuer, Deposit $deposit): RedirectResponse
     {
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             // ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর, আবগারি শুল্ক, আগে ভাঙানোর জরিমানা (প্র২)
-            'source_tax' => ['nullable', 'numeric', 'min:0'],
-            'excise_duty' => ['nullable', 'numeric', 'min:0'],
-            'penalty' => ['nullable', 'numeric', 'min:0'],
+            'source_tax' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'excise_duty' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'penalty' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             // ⛔ জমা খোলার আগে নয়, আগামী দিনেও নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
             'moved_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$deposit->opened_on->toDateString()],
             'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
@@ -658,12 +660,12 @@ class DepositController extends Controller implements HasMiddleware
     public function lien(Request $request, string $issuer, Deposit $deposit): RedirectResponse
     {
         $data = $request->validate([
-            'applied' => ['required', 'numeric', 'gt:0'],
-            'remainder' => ['nullable', 'numeric', 'min:0'],
+            'applied' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
+            'remainder' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             'money_account_id' => ['nullable', 'integer'],
-            'source_tax' => ['nullable', 'numeric', 'min:0'],
-            'excise_duty' => ['nullable', 'numeric', 'min:0'],
-            'penalty' => ['nullable', 'numeric', 'min:0'],
+            'source_tax' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'excise_duty' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'penalty' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             // ⛔ জমা খোলার আগে নয়, আগামী দিনেও নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
             'moved_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$deposit->opened_on->toDateString()],
             'note' => ['nullable', 'string', 'max:500'],

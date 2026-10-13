@@ -38,7 +38,10 @@ final class HandLoanLetterController extends Controller implements HasMiddleware
 
     public function __invoke(Request $request, Person $person): Response
     {
-        $asOf = Carbon::parse((string) ($request->query('as_of') ?: Carbon::today()->toDateString()))->toDateString();
+        // ⛔ কেবল Y-m-d — "?as_of=abc" আগে Carbon::parse-এ ৫০০ দিত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $raw = $request->query('as_of');
+        $asOf = is_string($raw) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1
+            ? Carbon::parse($raw)->toDateString() : Carbon::today()->toDateString();
         $paper = PaperSize::chosen(PaperSize::fromQuery($request), PaperSize::A4);
         $asFile = $request->boolean('download');
 

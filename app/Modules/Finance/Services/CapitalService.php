@@ -243,7 +243,12 @@ final class CapitalService
      */
     private function assertStillADraft(CapitalEntry $entry): void
     {
-        if ($entry->status !== CapitalEntry::DRAFT) {
+        /*
+         * ⛔ ভাউচারে বাঁধা বা লাভ/খোলা জের থেকে আসা খসড়া হাতে বদলায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ লাভ মূলধনে নেওয়া
+         * সইয়ের অপেক্ষায় থাকলে তার সারি মুছলে শেষ সই তবু গোটা ভাউচার বসাত, অথচ পাওনা থেকে আর কাটা হত না — একই লাভ দুবার দেওয়া যেত।
+         */
+        if ($entry->status !== CapitalEntry::DRAFT || $entry->voucher_id !== null
+            || in_array($entry->in_kind, [CapitalEntry::PROFIT, CapitalEntry::OPENING], true)) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.capital_already_posted', [
                     'no' => $entry->document_no,

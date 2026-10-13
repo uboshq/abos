@@ -38,6 +38,13 @@ final class BudgetService
     public const TYPES = [Account::INCOME, Account::EXPENSE];
 
     /**
+     * ⛔ বাজেটের অঙ্ক — কেবল সাধারণ লেখা: ১৪ অঙ্ক পর্যন্ত, চার দশমিক ঘর পর্যন্ত (ঘরটা `decimal(18,4)`)। Finance লাইন-নিরীক্ষা,
+     * ১৩ অক্টোবর ২০২৬: আগে `is_numeric()` "1e5"-কে সংখ্যা মানত, তারপর `bcadd()` ValueError ছুঁড়ত — ৫০০; আর ঘরের চেয়ে বড়
+     * অঙ্কে SQL ত্রুটি। ⓘ কন্ট্রোলারের নিয়মও এটাই পড়ে।
+     */
+    public const AMOUNT_PATTERN = '/^\d{1,14}(\.\d{1,4})?$/';
+
+    /**
      * এক খাত, এক বছর, (ঐচ্ছিক) এক বিভাগ — বারো মাস একসাথে।
      *
      * ⓘ শূন্য বা ফাঁকা মাস = বাজেট নেই, সারিটা থাকে না। তাই "মুছে ফেলা"
@@ -70,9 +77,11 @@ final class BudgetService
                 continue;
             }
 
-            if (! is_numeric($raw) || bccomp($raw, '0', 4) < 0) {
+            if (preg_match(self::AMOUNT_PATTERN, $raw) !== 1) {
                 throw ValidationException::withMessages([
-                    "months.{$month}" => __('finance::budget.amount_not_negative'),
+                    "months.{$month}" => str_starts_with($raw, '-')
+                        ? __('finance::budget.amount_not_negative')
+                        : __('finance::budget.amount_plain'),
                 ]);
             }
 

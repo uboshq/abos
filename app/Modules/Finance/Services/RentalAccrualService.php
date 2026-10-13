@@ -296,7 +296,8 @@ final class RentalAccrualService
             ->where('rental_contract_id', $contract->id)->whereDate('for_month', $month->copy()->startOfMonth()->toDateString())
             ->first();
 
-        if ($accrual === null) {
+        // ⛔ বাতিল প্রদেয় কিছুই মেটায় না — মাসটা প্রদেয় ছাড়া, সোজা খরচ হিসেবে শোধ হয়
+        if ($accrual === null || $accrual->voucher?->isCancelled()) {
             return null;
         }
 

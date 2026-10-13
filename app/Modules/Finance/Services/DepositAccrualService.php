@@ -238,9 +238,20 @@ final class DepositAccrualService
         DB::transaction(function () use ($voucher): void {
             $this->lockFresh($voucher);
 
-            if ($voucher->isDraft()) {
-                $this->vouchers->post($voucher);
+            if (! $voucher->isDraft()) {
+                return;
             }
+
+            // ⛔ জমাটা এর মধ্যে বাতিল — মুনাফা আর বসে না, খসড়াটাও বাতিল (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            $accrual = DepositAccrual::query()->where('voucher_id', $voucher->id)->with('deposit')->first();
+
+            if ($accrual?->deposit?->isCancelled()) {
+                $this->vouchers->cancel($voucher, __('finance::validation.deposit_already_cancelled', ['no' => $accrual->deposit->document_no]));
+
+                return;
+            }
+
+            $this->vouchers->post($voucher);
         });
     }
 
