@@ -412,7 +412,8 @@ class HandLoanController extends Controller implements HasMiddleware
         $data = $request->validate([
             'direction' => ['required', 'string', 'in:'.implode(',', HandLoanMovement::DIRECTIONS)],
             'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
-            'moved_on' => ['required', 'date'],
+            // ⛔ আজকের পরে নয় — ভবিষ্যতের দিনে টাকা খাতায় বসত, আজকের জেরে তবু গোনা হত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'moved_on' => ['required', 'date', 'before_or_equal:today'],
             // ⭐ কবে ফেরতের কথা — ঐচ্ছিক, দেওয়া-নেওয়ার দিনের আগে নয় (পরিকল্পনা ১.৮, ৫ অক্টোবর ২০২৬)
             'return_on' => ['nullable', 'date', 'after_or_equal:moved_on'],
             'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],

@@ -188,6 +188,10 @@ final class HandLoanService
         $out = $direction === HandLoanMovement::OUT;
 
         return DB::transaction(function () use ($account, $direction, $amount, $on, $money, $head, $out, $data) {
+            // ⛔ তালা দিয়ে আবার "চুকে গেছে কি?" — অন্য ট্যাবে এইমাত্র মেটানো খাতায় টাকা বসত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            $this->lockFresh($account);
+            $this->assertOpen($account);
+
             $voucher = $this->vouchers->create(
                 [
                     'type' => $out ? Voucher::PAYMENT : Voucher::RECEIPT,
@@ -257,6 +261,16 @@ final class HandLoanService
      * ফিচারটা বানানো।
      */
     public function settle(HandLoanAccount $account): HandLoanAccount
+    {
+        // ⛔ তালার নিচে — একই মুহূর্তে আসা চলাচল "শূন্য বাকি" দেখার পরে বসত, আর খাতা বন্ধ অথচ টাকা বাকি (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        return DB::transaction(function () use ($account): HandLoanAccount {
+            $this->lockFresh($account);
+
+            return $this->settleLocked($account);
+        });
+    }
+
+    private function settleLocked(HandLoanAccount $account): HandLoanAccount
     {
         $balance = $this->balanceOf($account);
 
