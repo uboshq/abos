@@ -121,6 +121,7 @@ final class CustomerService
     public function update(Customer $customer, array $data): Customer
     {
         $this->assertMayChangeActive($customer, $data);
+        $this->assertStaysInReach($customer, $data);
         $this->assertBanglaNameIfRequired($data, $customer);
         $this->assertNotADuplicate($data, $customer->id, $customer->branch_id, $customer);
         $this->assertOnlyOneDistributorPerPoint($data, $customer);
@@ -582,6 +583,30 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * ⛔ শাখায় সীমিত মানুষ শাখা মুছে গ্রাহককে কোম্পানি-স্তরে তোলেন না (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ABranchClerkMadeACustomerCompanyWideTest]])।
+     *
+     * ⚠️ অনুরোধের শাখা-নিয়ম খালি মানে চলে না (`nullable`), আর শাখাহীন সারি সবার নাগালে — তাই ময়মনসিংহের কর্মী "—" বেছে
+     * নিজের গ্রাহককে নেত্রকোনারও দেখার, বদলানোর আর বিল করার মতো করে দিতেন। ⓘ যাঁর নাগাল গোটা কোম্পানি, তাঁর আগের মতোই।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertStaysInReach(Customer $customer, array $data): void
+    {
+        if (! array_key_exists('branch_id', $data) || $data['branch_id'] !== null || $customer->branch_id === null) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user === null || ! app(\App\Core\Services\DataScope::class)->isLimited($user, \App\Models\UserDataScope::BRANCH)) {
+            return;
+        }
+
+        throw ValidationException::withMessages(['branch_id' => __('customer::validation.branch_out_of_reach')]);
+    }
+
     private function assertMayChangeActive(Customer $customer, array $data): void
     {
         if (! array_key_exists('is_active', $data) || $data['is_active'] === null
