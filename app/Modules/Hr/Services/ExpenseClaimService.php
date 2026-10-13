@@ -291,36 +291,47 @@ final class ExpenseClaimService
 
         $employee = $claim->employee;
         $advance = $this->head(StandardChart::EMPLOYEE_ADVANCE);
+        $till = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
 
-        $waiting = Voucher::query()
-            ->where('status', DocumentStatus::DRAFT)
-            ->where('type', Voucher::RECEIPT)
-            ->whereHas('lines', fn ($q) => $q->where('account_id', $advance->id)
-                ->where('party_type', Employee::drillSourceType())->where('party_id', $employee->id))
-            ->value('document_no');
+        /*
+         * ⛔ অপেক্ষার খসড়া খোঁজা শাখার দেয়াল পেরিয়ে, কর্মীর সারিতে তালা দিয়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+         * ([[AnUnspentAdvanceComesBackInCashTest]])।
+         * ⓘ আগে খোঁজাটা হেডারের শাখা মানত: খসড়া দাবির শাখায়, আর হেডারে অন্য শাখা বাছলে সেটা চোখে পড়ত না, দ্বিতীয় খসড়া বসত। তালা
+         * বা লেনদেনও ছিল না — দুইবার চাপলে দুইজনেই "খসড়া নেই" পড়তেন। দুইটা পাকা হলে কর্মী দুইবার ফেরত দিতেন, অগ্রিম ঋণাত্মক।
+         */
+        return DB::transaction(function () use ($claim, $employee, $advance, $till, $amount): Voucher {
+            $this->advances->lock([(int) $employee->id]);
 
-        if ($waiting !== null) {
-            throw ValidationException::withMessages(['amount' => __('hr::claim.return_waiting', ['no' => $waiting])]);
-        }
+            $waiting = Voucher::acrossBranches()
+                ->where('status', DocumentStatus::DRAFT)
+                ->where('type', Voucher::RECEIPT)
+                ->whereHas('lines', fn ($q) => $q->where('account_id', $advance->id)
+                    ->where('party_type', Employee::drillSourceType())->where('party_id', $employee->id))
+                ->value('document_no');
 
-        $open = $this->advances->open($employee, Carbon::today());
+            if ($waiting !== null) {
+                throw ValidationException::withMessages(['amount' => __('hr::claim.return_waiting', ['no' => $waiting])]);
+            }
 
-        if (bccomp($amount, $open, 2) > 0) {
-            throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => Money::format($open)])]);
-        }
+            $open = $this->advances->open($employee, Carbon::today());
 
-        $party = ['party_type' => Employee::drillSourceType(), 'party_id' => (int) $employee->id];
+            if (bccomp($amount, $open, 2) > 0) {
+                throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => Money::format($open)])]);
+            }
 
-        return $this->vouchers->create([
-            'type' => Voucher::RECEIPT,
-            'branch_id' => $claim->branch_id,
-            'trx_date' => Carbon::today()->toDateString(),
-            'narration' => __('hr::claim.narration_return', ['no' => $claim->document_no, 'who' => $employee->name()]),
-            ...$party,
-        ], [
-            ['account_id' => (int) app(CashTillService::class)->ensurePrimaryTill()->account_id, 'debit' => $amount, 'credit' => '0'],
-            ['account_id' => (int) $advance->id, 'debit' => '0', 'credit' => $amount, ...$party],
-        ]);
+            $party = ['party_type' => Employee::drillSourceType(), 'party_id' => (int) $employee->id];
+
+            return $this->vouchers->create([
+                'type' => Voucher::RECEIPT,
+                'branch_id' => $claim->branch_id,
+                'trx_date' => Carbon::today()->toDateString(),
+                'narration' => __('hr::claim.narration_return', ['no' => $claim->document_no, 'who' => $employee->name()]),
+                ...$party,
+            ], [
+                ['account_id' => $till, 'debit' => $amount, 'credit' => '0'],
+                ['account_id' => (int) $advance->id, 'debit' => '0', 'credit' => $amount, ...$party],
+            ]);
+        });
     }
 
     /** কর্মীর খোলা অগ্রিম — পর্দা আর ফোনের জন্য */
