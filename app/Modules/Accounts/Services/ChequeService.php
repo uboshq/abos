@@ -387,7 +387,7 @@ final class ChequeService
      * সাথে সম্পর্কের প্রশ্ন, দ্বিতীয়টা কেবল একটা ভুল। ছয় মাস পরে
      * কোনটা ঘটেছিল সেটা কেবল এখানেই লেখা থাকে।
      */
-    public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null): Cheque
+    public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null, bool $asksItsSignature = true): Cheque
     {
         /*
          * ⚠️ আদায়ের কাগজ যে চেকের টাকা পোস্ট করেছে, তার ফেরত এখানে নয়।
@@ -424,7 +424,8 @@ final class ChequeService
          * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ ফেরতের কারণটাই সইয়ের অনুরোধের কারণ; শেষ সই পড়লে
          * [[FinishTheAccountsPaperOnTheLastSignature]] ঐ কারণ নিয়েই এই মেথড আবার ডাকে।
          */
-        if (app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason)) {
+        // ⓘ বাতিলের পথে নয় ([[cancel()]]) — ছেঁড়া চেকের উল্টো সবসময় বসে, ফেরতের সই সেখানে খাটে না
+        if ($asksItsSignature && app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason)) {
             return $cheque->fresh();
         }
 
@@ -517,7 +518,12 @@ final class ChequeService
             ]);
         }
 
-        $cancelled = $this->bounce($cheque, $reason, $onDate);
+        /*
+         * ⛔ ফেরতের সই চালু থাকলেও উল্টো বসে — fe, ১৩ অক্টোবর ২০২৬ (Purchase লাইন-ধরা নিরীক্ষা; [[ACancelledChequeUndidNothingTest]])।
+         * ⚠️ আগে `bounce()` সইয়ের অপেক্ষায় কিছু না করেই ফিরত, আর এখানে চেকটা তবু "বাতিল" লেখা হত: দেনা/পাওনার উল্টো দাখিলা বসত না,
+         * অথচ পরিশোধটাও বাতিল — বিল আবার বাকি, খাতায় শোধ রয়ে গেল; সই শেষে ফেরতও আর চলত না (চেক তো "বাতিল")।
+         */
+        $cancelled = $this->bounce($cheque, $reason, $onDate, asksItsSignature: false);
 
         $cancelled->update(['status' => Cheque::CANCELLED]);
 
