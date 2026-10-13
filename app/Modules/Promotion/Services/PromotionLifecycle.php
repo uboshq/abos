@@ -208,24 +208,29 @@ final class PromotionLifecycle
      */
     public function reschedule(Promotion $offer, string $endsOn, ?string $endsAt = null): Promotion
     {
-        if (! in_array($offer->status, self::RESCHEDULABLE, true)) {
-            throw ValidationException::withMessages([
-                'ends_on' => __('promotion::validation.cannot_reschedule', ['status' => $offer->status->label()]),
+        return DB::transaction(function () use ($offer, $endsOn, $endsAt) {
+            /* ⛔ অবস্থা তালা-দেওয়া সারি থেকে — [[moveTo()]]-এর একই কারণ (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+            $this->lockAndReread($offer);
+
+            if (! in_array($offer->status, self::RESCHEDULABLE, true)) {
+                throw ValidationException::withMessages([
+                    'ends_on' => __('promotion::validation.cannot_reschedule', ['status' => $offer->status->label()]),
+                ]);
+            }
+
+            $this->assertDatesMakeSense([
+                'starts_on' => $offer->starts_on->toDateString(),
+                'ends_on' => $endsOn,
+                'starts_at' => $offer->starts_at,
+                'ends_at' => $endsAt,
             ]);
-        }
 
-        $this->assertDatesMakeSense([
-            'starts_on' => $offer->starts_on->toDateString(),
-            'ends_on' => $endsOn,
-            'starts_at' => $offer->starts_at,
-            'ends_at' => $endsAt,
-        ]);
+            $offer->ends_on = $endsOn;
+            $offer->ends_at = $endsAt;
+            $offer->save();
 
-        $offer->ends_on = $endsOn;
-        $offer->ends_at = $endsAt;
-        $offer->save();
-
-        return $offer;
+            return $offer;
+        });
     }
 
     /**
@@ -235,24 +240,43 @@ final class PromotionLifecycle
      */
     private function moveTo(Promotion $offer, PromotionStatus $next, array $also = []): Promotion
     {
-        if (! $offer->status->canBecome($next)) {
-            throw ValidationException::withMessages([
-                'status' => __('promotion::validation.cannot_move', [
-                    'from' => $offer->status->label(),
-                    'to' => $next->label(),
-                ]),
-            ]);
-        }
+        return DB::transaction(function () use ($offer, $next, $also) {
+            /*
+             * ⛔ পুরনো কপির অবস্থা সিদ্ধান্ত নেয় না — Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+             *
+             * ⓘ দুই ট্যাব: একটায় অফারটা বাতিল হলো, অন্যটার হাতে তখনো *"চলছে"*-র কপি। ⚠️ সেখান থেকে
+             * "থামাও" চাপলে বাতিল অফার থামানো হত, আর থামানো থেকে আবার চালু — চূড়ান্ত অবস্থা ভেঙে।
+             * ⭐ তাই সারিতে তালা দিয়ে নতুন করে পড়া, আর মানচিত্র সেই অবস্থাকেই জিজ্ঞেস করে।
+             */
+            $this->lockAndReread($offer);
 
-        $offer->status = $next;
+            if (! $offer->status->canBecome($next)) {
+                throw ValidationException::withMessages([
+                    'status' => __('promotion::validation.cannot_move', [
+                        'from' => $offer->status->label(),
+                        'to' => $next->label(),
+                    ]),
+                ]);
+            }
 
-        foreach ($also as $key => $value) {
-            $offer->{$key} = $value;
-        }
+            $offer->status = $next;
 
-        $offer->save();
+            foreach ($also as $key => $value) {
+                $offer->{$key} = $value;
+            }
 
-        return $offer;
+            $offer->save();
+
+            return $offer;
+        });
+    }
+
+    /** ⓘ সারিটা তালা দিয়ে নতুন করে পড়া, হাতের কপিতেই — [[ChallanOffers::lockAndReread()]]-এর মতো */
+    private function lockAndReread(Promotion $offer): void
+    {
+        $fresh = Promotion::query()->whereKey($offer->getKey())->lockForUpdate()->firstOrFail();
+
+        $offer->setRawAttributes($fresh->getAttributes(), true);
     }
 
     /**
