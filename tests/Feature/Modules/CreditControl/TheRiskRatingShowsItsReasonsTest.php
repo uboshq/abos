@@ -70,6 +70,21 @@ final class TheRiskRatingShowsItsReasonsTest extends TestCase
         $this->assertSame(120, app(CreditRisk::class)->rate($c->fresh())['score'], 'দেয়ালে তিনবার থামা = ১৫; "গেল" গোনা নয়।');
     }
 
+    /**
+     * ⛔ নিজের শর্তই শর্ত — ৭ দিন কেবল বাকির দিন ০ হলে (বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⚠️ আগে `max(7, …)`:
+     * ৩ দিনের শর্তের গ্রাহক মেয়াদের ৫ দিন পরেও "শর্তের বাইরে" ধরা পড়তেন না।
+     */
+    public function test_a_short_term_customer_is_late_beyond_his_own_days_not_seven(): void
+    {
+        $c = $this->customer('RISK-T', '100000');
+        $c->forceFill(['credit_days' => 3])->save();
+        $this->bill($c, 'INV-RISKT', '1000', daysPastDue: 5);
+
+        $reasons = implode(' | ', app(CreditRisk::class)->rate($c->fresh())['reasons']);
+        $this->assertStringContainsString(__('credit_control::risk.reason_late_beyond_terms', ['days' => 5, 'terms' => 3]), $reasons,
+            '⛔ ৩ দিনের শর্তের গ্রাহক ৫ দিন দেরিতেও "শর্তের বাইরে" নন।');
+    }
+
     public function test_the_rules_are_the_companys_own(): void
     {
         $c = $this->customer('RISK-2', '10000');
