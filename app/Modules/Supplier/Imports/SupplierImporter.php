@@ -85,7 +85,9 @@ final class SupplierImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
         }
 
-        if (filled($row['credit_days']) && ! is_numeric($row['credit_days'])) {
+        // ⛔ ফর্মের মতোই ০–৩৬৫ পূর্ণসংখ্যা — `is_numeric`-এ "-5" পার হয়ে SQL-এ ভাঙত, "30.5" চুপচাপ ৩০, "1e2" ১০০, "400" বসে পরে ফর্ম আটকাত
+        // (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheSupplierImportTookAnyCreditDaysTest]])
+        if (filled($row['credit_days']) && (preg_match('/^\d{1,3}$/', trim((string) $row['credit_days'])) !== 1 || (int) trim((string) $row['credit_days']) > 365)) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_days']);
         }
 
