@@ -42,7 +42,8 @@ class EnsurePortalStillOpen
          */
         // ⛔ নিষ্ক্রিয় বা মুছে ফেলা গ্রাহকও — দরজা বন্ধের একই মানে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৫)
         if ($customer !== null && (! $customer->portal_enabled || ! $customer->is_active
-            || (method_exists($customer, 'trashed') && $customer->trashed()))) {
+            || (method_exists($customer, 'trashed') && $customer->trashed())
+            || $this->passwordChangedSince($request, $customer))) {
             Auth::guard('portal')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -53,5 +54,44 @@ class EnsurePortalStillOpen
         }
 
         return $next($request);
+    }
+
+    /** সেশনে এই গ্রাহকের পাসওয়ার্ডের ছাপ — কর্মীদের দরজার জোড়া ([[RefuseInactiveAccounts::FINGERPRINT]]) */
+    public const FINGERPRINT = 'portal.password_fingerprint';
+
+    /** ঢোকার মুহূর্তে বসানো — [[PortalController::login()]] */
+    public static function remember(Request $request, \Illuminate\Contracts\Auth\Authenticatable $customer): void
+    {
+        $request->session()->put(self::FINGERPRINT, self::fingerprintOf($customer));
+    }
+
+    /**
+     * ⛔ সেশন খোলার পরে পাসওয়ার্ড বদলেছে কি না (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ANewPortalPasswordLeftTheOldSessionInTest]])।
+     *
+     * ⚠️ পাসওয়ার্ড ফাঁস হলে মালিক নতুন পাসওয়ার্ড বসান, পর্দা বলে "পুরনোটা আর চলবে না" — অথচ যিনি পুরনোটা দিয়ে আগেই ঢুকে
+     * আছেন তিনি সেশন শেষ না হওয়া পর্যন্ত খাতা, বকেয়া দেখতেন আর আদেশ দিতেন। ⓘ সেশন ড্রাইভার `file`, তাই অন্যের সেশন মোছা
+     * যায় না — প্রতিটা সেশন নিজের মধ্যে পাসওয়ার্ড-হ্যাশের HMAC রাখে, পরের অনুরোধে মেলায়। ⓘ ছাপ না থাকা পুরনো সেশন প্রথমবার ছাপ
+     * পায় (সবাইকে একসাথে বের করে না)।
+     */
+    private function passwordChangedSince(Request $request, \Illuminate\Contracts\Auth\Authenticatable $customer): bool
+    {
+        if (! $request->hasSession()) {
+            return false;
+        }
+
+        $seen = $request->session()->get(self::FINGERPRINT);
+
+        if (! is_string($seen)) {
+            self::remember($request, $customer);
+
+            return false;
+        }
+
+        return ! hash_equals($seen, self::fingerprintOf($customer));
+    }
+
+    private static function fingerprintOf(\Illuminate\Contracts\Auth\Authenticatable $customer): string
+    {
+        return hash_hmac('sha256', $customer->getAuthIdentifier().'|'.$customer->getAuthPassword(), (string) config('app.key'));
     }
 }
