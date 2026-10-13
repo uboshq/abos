@@ -233,8 +233,9 @@ class ExpenseController extends Controller implements HasMiddleware
     private function range(Request $request): array
     {
         return [
-            (string) $request->query('from', now()->startOfMonth()->toDateString()),
-            (string) $request->query('to', now()->endOfMonth()->toDateString()),
+            // ⛔ কেবল সত্যিকারের তারিখ — আগে "from=abc" সরাসরি খাতার প্রশ্নে যেত, আর পাতা ৫০০ দিত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            self::day($request->query('from')) ?? now()->startOfMonth()->toDateString(),
+            self::day($request->query('to')) ?? now()->endOfMonth()->toDateString(),
         ];
     }
 
@@ -257,5 +258,15 @@ class ExpenseController extends Controller implements HasMiddleware
             /* খরচ ডেবিটে বাড়ে */
             debitPositive: true,
         );
+    }
+
+    /** ⓘ `YYYY-MM-DD` আর ক্যালেন্ডারে আছে এমন দিন — নাহলে `null` (পাতার নিজের ডিফল্ট খাটে) */
+    public static function day(mixed $value): ?string
+    {
+        if (! is_string($value) || preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m) !== 1 || ! checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return null;
+        }
+
+        return $value;
     }
 }
