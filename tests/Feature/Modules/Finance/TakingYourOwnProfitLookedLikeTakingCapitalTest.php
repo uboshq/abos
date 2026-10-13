@@ -205,6 +205,23 @@ final class TakingYourOwnProfitLookedLikeTakingCapitalTest extends TestCase
             'আটকানোর পরেও খাতায় কিছু বসেছে।');
     }
 
+    /**
+     * ⛔ লাভের ভাগ তোলার ডেবিট ২১৯০-এ নামহীন বসত — মানুষটার খতিয়ানে পাওনা কখনো কমত না (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function test_taking_profit_lowers_that_persons_own_line_in_the_payable(): void
+    {
+        $payable = Account::query()->where('code', StandardChart::PROFIT_PAYABLE)->firstOrFail();
+        $owed = fn () => (string) LedgerEntry::query()->where('account_id', $payable->id)
+            ->where('party_type', 'person')->where('party_id', $this->partner->id)
+            ->selectRaw('COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as n')->value('n');
+        $before = $owed();
+        $this->assertSame(1, bccomp($before, '15000', 4) >= 0 ? 1 : 0, 'দৃশ্যটাই বানানো যায়নি — মানুষটার নামে ঘোষিত লাভ নেই');
+
+        $this->take(Withdrawal::PROFIT_SHARE, '15000');
+
+        $this->assertSame(0, bccomp($owed(), bcsub($before, '15000', 4), 4), '⛔ লাভ তোলা হল, অথচ মানুষটার নামে ২১৯০-এর পাওনা কমল না');
+    }
+
     private function take(string $kind, string $amount): void
     {
         $withdrawal = app(WithdrawalService::class)->request([

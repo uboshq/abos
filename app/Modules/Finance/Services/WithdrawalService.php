@@ -316,7 +316,15 @@ final class WithdrawalService
                     'instrument_no' => $reference,
                 ],
                 [
-                    ['account_id' => $drawings->id, 'debit' => $withdrawal->amount, 'credit' => '0'],
+                    [
+                        'account_id' => $drawings->id, 'debit' => $withdrawal->amount, 'credit' => '0',
+                        /*
+                         * ⛔ লাভের ভাগ তোলায় ২১৯০-এ মানুষটার নাম — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ ঘোষণা ২১৯০-এ জমা করে মানুষ ধরে
+                         * ([[ProfitDistribution::declare()]]); আগে তোলার ডেবিট নামহীন বসত, তাই মানুষটার খতিয়ানে পাওনা কখনো কমত না।
+                         */
+                        ...($withdrawal->kind === Withdrawal::PROFIT_SHARE
+                            ? ['party_type' => 'person', 'party_id' => (int) $withdrawal->person_id] : []),
+                    ],
                     ['account_id' => $from->id, 'debit' => '0', 'credit' => $withdrawal->amount],
                 ],
             );
