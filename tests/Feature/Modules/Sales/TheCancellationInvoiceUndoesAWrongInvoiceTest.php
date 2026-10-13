@@ -162,6 +162,33 @@ final class TheCancellationInvoiceUndoesAWrongInvoiceTest extends TestCase
         $this->assertSame(DocumentStatus::CANCELLED, $sale->fresh()->status);
     }
 
+    /**
+     * ⛔ একবার নাকচ মানে চিরকালের "না" নয় — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে নাকচ কাগজটা বিলের একমাত্র ঘর
+     * দখল করে রাখত, আর নতুন কারণে আবার চাইলে "আগেই চাওয়া হয়েছে" বলে থামত — ভুল বিলটা আর কোনোদিন বাতিল হত না।
+     */
+    public function test_a_refused_cancellation_can_be_asked_for_again(): void
+    {
+        $this->signatureFlow();
+        $sale = $this->sell('2');
+        $clerk = $this->clerk(['sales.invoice.view', 'sales.invoice.cancellation']);
+
+        $first = $this->request($sale, $clerk);
+        $this->actingAs($this->owner);
+        app(ApprovalEngine::class)->reject(app(ApprovalEngine::class)->latestFor($first, SalesInvoiceCancellationService::APPROVAL_ACTION), $this->owner, 'কারণ পরিষ্কার নয়');
+        $this->assertSame(DocumentStatus::CANCELLED, $first->fresh()->status, 'দৃশ্যটাই ভুল — নাকচে কাগজ বন্ধ হয়নি।');
+
+        $again = $this->request($sale->fresh(), $clerk);
+
+        $this->assertSame(SalesInvoiceCancellation::AWAITING, $again->status, '⛔ নাকচের পরে আবার চাওয়া গেল না।');
+        $this->assertSame(1, SalesInvoiceCancellation::query()->where('sales_invoice_id', $sale->id)->count());
+
+        $this->actingAs($this->owner);
+        app(ApprovalEngine::class)->approve(app(ApprovalEngine::class)->latestFor($again, SalesInvoiceCancellationService::APPROVAL_ACTION), $this->owner, 'ঠিক আছে');
+
+        $this->assertSame(DocumentStatus::CONFIRMED, $again->fresh()->status);
+        $this->assertSame(DocumentStatus::CANCELLED, $sale->fresh()->status);
+    }
+
     /** ⓘ সইয়ের ছক প্রতিষ্ঠানের, বাধ্যতামূলক নয় (মালিকের সংস্করণ ২) — ছক না থাকলে চাবিওয়ালার হাতেই পাকা */
     public function test_without_a_signature_flow_the_key_holder_issues_it_at_once(): void
     {
