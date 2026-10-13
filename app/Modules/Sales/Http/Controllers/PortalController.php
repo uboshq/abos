@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -358,9 +359,26 @@ class PortalController extends Controller
          * ([[CustomerPapers::firstDay()]]), তাই পর্দায় ১৯৭০ নেই আর সব সারিই আসে। ছোট সময় দেখতে ছাঁকনি আছে।
          */
         return [
-            (string) $request->query('from', $this->papers->firstDay()),
-            (string) $request->query('to', now()->toDateString()),
+            $this->day($request->query('from')) ?? $this->papers->firstDay(),
+            $this->day($request->query('to')) ?? now()->toDateString(),
         ];
+    }
+
+    /**
+     * ঠিকানার একটা তারিখ — কেবল সত্যিকারের `Y-m-d`, নাহলে `null` (ডিফল্ট বসে)।
+     *
+     * ⛔ ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা: আগে মানটা সরাসরি `(string)` — `from[]=x` দিলে অ্যারে থেকে লেখা বানাতে
+     * গিয়ে ৫০০, আর `from=abc` কোয়েরিতে চলে গিয়ে অর্থহীন খতিয়ান দেখাত।
+     */
+    private function day(mixed $raw): ?string
+    {
+        if (! is_string($raw) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) !== 1) {
+            return null;
+        }
+
+        [$y, $m, $d] = array_map('intval', explode('-', $raw));
+
+        return checkdate($m, $d, $y) ? $raw : null;
     }
 
     public function showClaim(): View
@@ -370,8 +388,7 @@ class PortalController extends Controller
         return view('sales::portal.claim', [
             'customer' => $customer,
             // ⛔ কেবল ব্যাংক — MFS নয়; `ofMoneyKind()` নিজেই দল ছাঁকে
-            'banks' => Account::query()
-                ->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
+            'banks' => $this->banks(),
             // ⭐ নিজের খোলা বিল — "কোন বিলের বিপরীতে" (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬)
             'openBills' => $this->claims->openBills($customer),
         ]);
@@ -383,17 +400,21 @@ class PortalController extends Controller
 
         $data = $request->validate([
             'claimed_on' => ['required', 'date'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'gt:0'],
             'method' => ['required', 'in:bank,mfs,cash'],
             'reference' => ['nullable', 'string', 'max:64'],
-            'bank_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
+            /*
+             * ⛔ কেবল এই কোম্পানির চালু ব্যাংক খাত — পর্দার তালিকাটাই ([[banks()]]); ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
+             * ⓘ আগে `exists:accounts,id` — যেকোনো কোম্পানির যেকোনো খাত চলত; কর্মীর দরজা আগে থেকেই `Rule::in` ([[DepositRequestController]])।
+             */
+            'bank_account_id' => ['nullable', 'integer', Rule::in($this->banks()->modelKeys())],
             'note' => ['nullable', 'string', 'max:500'],
             // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF, ৫ MB)
             'slip' => ['nullable', 'file', 'max:'.intdiv(AttachmentEngine::SLIP_MAX_BYTES, 1024)],
             // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক, কেবল নিজের বিল ([[DepositRequestController::billIds()]]-এর একই পাহারা)
             'bills' => ['nullable', 'array', 'max:50'],
             'bills.*.invoice' => ['required', 'string', 'max:64'],
-            'bills.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'bills.*.amount' => ['nullable', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0'],
         ]);
 
         $data['bills'] = DepositRequestController::billIds($customer, (array) ($data['bills'] ?? []));
@@ -403,6 +424,18 @@ class PortalController extends Controller
         return redirect()
             ->route('sales.portal.home')
             ->with('status', __('sales::portal.claim_raised'));
+    }
+
+    /**
+     * দাবির ব্যাংক তালিকা — পর্দা আর যাচাই একই তালিকা পড়ে।
+     *
+     * ⓘ আমাদের নিজের খাত, কারো কাগজ নয়; টেন্যান্ট ছাঁকনি বহাল ([[EveryPortalScreenAsksTheNarrowPathTest]]-এর ঘোষিত একটাই ডাক)।
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Account>
+     */
+    private function banks(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get();
     }
 
     /**

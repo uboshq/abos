@@ -594,6 +594,13 @@ final class DirectSaleService
     private function hold(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse, bool $asDraft): array
     {
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse, $asDraft) {
+            /*
+             * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের প্রথম কাজ, [[sellNow()]]-এর মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⚠️ আগে খসড়া/সইয়ের পথে তালা ছিল না: দুই ক্লিক দুইজনেই "খোলা খসড়া নেই" দেখে দুইটা খসড়া বানাত, আর নিচের সীমার
+             * দেয়াল দুইজনেই পুরনো বকেয়া দেখে পার হত।
+             */
+            $this->credit->lockCustomer($customer);
+
             $trxDate = $data['trx_date'] ?? now()->toDateString();
 
             $parked = $this->parkedFor($data, $customer);
@@ -648,7 +655,15 @@ final class DirectSaleService
             /* ⭐ খসড়া বিল উৎস মনে রাখে — পাকা হলে ওটাকেই "বিল হয়েছে" লেখা হয়; ডিপো কম দিলে আটকানো মালও কমে */
             if ($source !== null && $counted !== null) {
                 $this->stampSource($invoice, $source);
-                $this->resizeSourceStock($source, $counted);
+
+                /*
+                 * ⛔ খসড়ায় আটকানো মাল কমে না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ কমানো একমুখী
+                 * ([[CounterSaleSource::resizeCounterStock()]]): খসড়া বাতিল হলে বা পরে পুরোটা পাকা হলে ঘাটতি থেকে যেত।
+                 * ⓘ পাকা হওয়ার মুহূর্তে [[settleSource()]] নিজেই কমায়; সইয়ের অপেক্ষার পথ আগের মতো।
+                 */
+                if (! $asDraft) {
+                    $this->resizeSourceStock($source, $counted);
+                }
             }
 
             if ($asDraft) {

@@ -12,6 +12,7 @@ use App\Models\LedgerEntry;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\MasterData\Models\Person;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ⭐ মালিকের নামে শুরুর মূলধন — মালিকের আদেশ, ৫ অক্টোবর ২০২৬: *"মূলধন ও বিনিয়োগে মালিকের নামই নেই, কোথায় বসালে তাহলে"*।
@@ -87,7 +88,7 @@ final class OwnerCapital
             ->where('company_id', CompanyContext::id())
             ->posted()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
             ->groupBy('branch_id')
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as n')
             ->pluck('n', 'branch_id');
@@ -118,6 +119,20 @@ final class OwnerCapital
             return [];
         }
 
+        /*
+         * ⛔ কোম্পানির সারিতে তালা — দুবার চাপে দুজনেই একই ফাঁক দেখে দুটো খোলা মূলধন বসাতেন (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+         * ⓘ দ্বিতীয়জন প্রথমজনের কমিট পর্যন্ত অপেক্ষা করেন, তারপর ফাঁক শূন্য দেখেন।
+         */
+        return DB::transaction(function () use ($owner): array {
+            \App\Models\Company::query()->whereKey(CompanyContext::id())->lockForUpdate()->first();
+
+            return $this->fillGaps($owner);
+        });
+    }
+
+    /** @return list<CapitalEntry> */
+    private function fillGaps(Person $owner): array
+    {
         $made = [];
 
         foreach ($this->gaps() as $branch => $gap) {

@@ -102,7 +102,12 @@ final class BatchTrace
                 'cu.name_bn as customer_bn',
                 'cu.id as customer_id',
                 'cu.phone as customer_phone',
-                DB::raw('ABS(m.floor_change) as qty'),
+                /*
+                 * ⛔ তাক থেকে যা গেল আর ফ্রি-ভাণ্ডার থেকে যা গেল, দুইটাই — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে কেবল
+                 * তাক গোনা হত, তাই ফ্রি আর উপহারের সারি তালিকায় থাকত পরিমাণ ০ নিয়ে — রিকলে "কত মাল ফেরাতে হবে" ভুল।
+                 */
+                DB::raw('(CASE WHEN m.floor_change < 0 THEN -m.floor_change ELSE 0 END)'
+                    .' + (CASE WHEN m.free_change < 0 THEN -m.free_change ELSE 0 END) as qty'),
             ])
             ->get();
     }

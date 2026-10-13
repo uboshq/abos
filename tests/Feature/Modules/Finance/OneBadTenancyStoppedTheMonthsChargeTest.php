@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Modules\Finance;
+
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
+use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Models\Tenancy;
+use App\Modules\Finance\Models\TenancyCharge;
+use App\Modules\Finance\Services\TenancyService;
+use App\Modules\MasterData\Models\Person;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * ⛔ এক ভাড়াটের ভুলে বাকি সব ভাড়াটের মাসের দাবি থামত — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TenancyService::charge()]];
+ * প্রদেয় ভাড়ার জোড়া [[OneBadContractStoppedTheMonthsRentTest]])।
+ *
+ * ⭐ দাবি:
+ *   · ভাঙা ভাড়াটে বাদে বাকিদের মাস বসে, ভাঙাটার আধা-বসা সারি থাকে না
+ *   · ভাঙা ভাড়াটে নম্বর ধরে ফলাফলে আসে, আর পর্দার বোতামে ভুলের বার্তা হয়ে দেখায়
+ */
+final class OneBadTenancyStoppedTheMonthsChargeTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+        app(CashTillService::class)->ensurePrimaryTill();
+    }
+
+    public function test_the_other_tenants_are_charged_and_the_broken_one_is_named(): void
+    {
+        $broken = $this->tenancy('Broken Tenant');
+        $fine = $this->tenancy('Fine Tenant');
+        $this->breakIt($broken);
+
+        $done = app(TenancyService::class)->charge(now()->startOfMonth());
+
+        $this->assertSame(1, TenancyCharge::query()->where('tenancy_id', $fine->id)->count(), '⛔ ভাঙা ভাড়াটের পরের ভাড়াটের মাস বসল না');
+        $this->assertSame(0, TenancyCharge::query()->where('tenancy_id', $broken->id)->count(), '⛔ ভাঙা ভাড়াটের আধা-বসা সারি রয়ে গেল');
+        $this->assertSame(1, $done['charged']);
+        $this->assertCount(1, $done['failed']);
+        $this->assertStringContainsString((string) $broken->document_no, $done['failed'][0], '⛔ কোন ভাড়াটের দাবি বসল না তা বলা নেই');
+    }
+
+    public function test_the_button_shows_which_tenant_was_left_out(): void
+    {
+        $this->breakIt($this->tenancy('Broken Tenant'));
+
+        $this->post(route('finance.tenancy.charge'), ['month' => now()->format('Y-m')])
+            ->assertRedirect()
+            ->assertSessionHasErrors('month')
+            ->assertSessionHas('saved');
+    }
+
+    /** ⓘ আয়ের খাত একটা দলের খাত — খাতা এমন খাতে কিছু নেয় না, তাই এই ভাড়াটের পোস্টিং ভাঙে */
+    private function breakIt(Tenancy $tenancy): void
+    {
+        $tenancy->forceFill(['income_account_id' => Account::query()->where('is_group', true)->where('type', Account::INCOME)->value('id')])->save();
+    }
+
+    private function tenancy(string $who): Tenancy
+    {
+        $person = Person::query()->create(['code' => 'T-'.mb_substr(md5($who), 0, 6), 'name_en' => $who, 'name_bn' => $who, 'is_active' => true]);
+
+        return app(TenancyService::class)->open([
+            'party_type' => 'person', 'party_id' => $person->id, 'tenant' => $who, 'monthly_rent' => '10000',
+            'deposit_amount' => '0', 'term_months' => 12, 'starts_on' => now()->startOfMonth()->toDateString(), 'money_account_id' => null,
+        ]);
+    }
+}

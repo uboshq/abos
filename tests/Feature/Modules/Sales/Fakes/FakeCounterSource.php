@@ -43,6 +43,9 @@ final class FakeCounterSource extends Model implements CounterSaleSource
     /** @var list<array{source: int, invoice: int}> প্রতিটা সত্যিকারের "বিল হয়েছে" */
     public static array $marked = [];
 
+    /** @var list<array<int, string>> প্রতিটা "আটকানো মাল কমাও" ডাক — উৎসের লাইন → নতুন পরিমাণ (১৩ অক্টোবর ২০২৬) */
+    public static array $resized = [];
+
     public static function counterSourceKey(): string
     {
         return 'fake';
@@ -104,7 +107,10 @@ final class FakeCounterSource extends Model implements CounterSaleSource
         return null;
     }
 
-    public function resizeCounterStock(array $less): void {}
+    public function resizeCounterStock(array $less): void
+    {
+        self::$resized[] = $less;
+    }
 
     public function consumeCounterStock(DeliveryChallan $challan): void {}
 }

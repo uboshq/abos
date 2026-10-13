@@ -119,6 +119,35 @@ final class ACancelledBillKeptItsOffersTest extends TestCase
         $this->assertSame(0, $this->used('ORDER-1'), '⛔ বাতিল আদেশের কুপনের ব্যবহার ফেরেনি।');
     }
 
+    /**
+     * ⛔ ফেরানো আদেশও কুপন ফেরায়, আর আবার বাতিল হয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে ফেরানোতে অফার ফিরত
+     * না; ফেরানো আদেশ আবার "বাতিল" করলে তবে ফিরত, আর তাতে "ফেরানো"-র ছাপ মুছে যেত।
+     */
+    public function test_a_rejected_order_gives_the_coupon_back_and_is_not_cancelled_again(): void
+    {
+        $this->couponOffer();
+        $orders = app(SalesOrderService::class);
+        $order = $orders->confirm($orders->create(
+            ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'), 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->biscuit->id, 'ordered_qty' => '2', 'rate' => '10']],
+        ));
+        $this->coupon('ORDER-2');
+        $this->redeem('ORDER-2', 'sales_order', $order->id, (int) $order->lines()->value('id'))->assertOk();
+        $this->assertSame(1, $this->used('ORDER-2'), 'দৃশ্যটাই ভুল — কুপন ব্যবহার হয়নি।');
+
+        $orders->reject($order->fresh(), 'সুপারভাইজার ফেরালেন', $this->owner);
+
+        $this->assertSame(0, $this->used('ORDER-2'), '⛔ ফেরানো আদেশের কুপনের ব্যবহার ফেরেনি।');
+
+        try {
+            $orders->cancel($order->fresh(), 'আবার');
+            $this->fail('⛔ ফেরানো আদেশ আবার বাতিল হয়ে গেল।');
+        } catch (\Illuminate\Validation\ValidationException) {
+        }
+
+        $this->assertSame(\App\Modules\Sales\Support\SalesOrderStatus::REJECTED, $order->fresh()->status);
+    }
+
     private function billOf(DeliveryChallan $challan): SalesInvoice
     {
         $line = $challan->lines()->firstOrFail();

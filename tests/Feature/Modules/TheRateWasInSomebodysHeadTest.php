@@ -58,6 +58,12 @@ class TheRateWasInSomebodysHeadTest extends TestCase
 
         // ⓘ সীমা না থাকলে বাকি নেই (মালিক, ১ অক্টোবর ২০২৬) — বিলগুলো ১–৫.৫ লাখ, আর এই দাবি কমিশন মাপে, সীমা নয়
         Customer::query()->whereKey(Customer::query()->value('id'))->update(['credit_limit' => '10000000']);
+
+        /*
+         * ⓘ মেয়াদ পেরোনো বাকির দেয়ালও বন্ধ — একই কারণে (১৩ অক্টোবর ২০২৬)। বিলগুলো ২০২৬-০৮-১০-এর, আর আজ তাদের মেয়াদ
+         * পেরিয়ে গেছে: দ্বিতীয় বিল "মেয়াদ পেরোনো বাকি আছে — নতুন বাকি বন্ধ"-এ থামত, কমিশনের হিসাব পর্যন্ত পৌঁছাতই না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('customer.overdue_stop', false);
     }
 
     private function engine(): CommissionEngine
@@ -510,6 +516,33 @@ class TheRateWasInSomebodysHeadTest extends TestCase
         ]);
     }
 
+    /**
+     * ⛔ থামানো স্কিম বদলায় না, আবার চালুও হয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে থামিয়ে হার বদলে আবার চালু
+     * করা যেত, আর ইঞ্জিন বর্তমান হার পড়ে বলে আগের বিলের কমিশন নীরবে বদলাত।
+     */
+    public function test_a_stopped_scheme_can_be_neither_changed_nor_switched_back_on(): void
+    {
+        $scheme = $this->scheme();
+        $this->rule($scheme, ['slab_to' => null]);
+        app(SchemeService::class)->cancel($scheme, 'মৌসুম শেষ');
+
+        try {
+            app(SchemeService::class)->addRule($scheme->fresh(), [
+                'earner_role' => 'ASM', 'rate_percent' => '5', 'slab_from' => '0', 'level_order' => 2,
+            ]);
+            $this->fail('⛔ থামানো স্কিমে নতুন হার বসে গেল।');
+        } catch (ValidationException) {
+        }
+
+        try {
+            app(SchemeService::class)->activate($scheme->fresh());
+            $this->fail('⛔ থামানো স্কিম আবার চালু হয়ে গেল।');
+        } catch (ValidationException) {
+        }
+
+        $this->assertSame(Scheme::CANCELLED, $scheme->fresh()->status);
+    }
+
     /* ── পর্দা ────────────────────────────────────────────────────── */
 
     /**
@@ -550,6 +583,23 @@ class TheRateWasInSomebodysHeadTest extends TestCase
         $this->get(route('sales.scheme.show', $scheme))
             ->assertOk()
             ->assertDontSee('name="earner_role"', false);
+    }
+
+    /**
+     * ⛔ থামানো স্কিমের পাতায় "চালু করুন" বা ধাপের ফর্ম নেই — সেবা যা নেয় না, পর্দাও তা দেখায় না (Sales লাইন-ধরা নিরীক্ষা,
+     * ১৩ অক্টোবর ২০২৬)। ⚠️ আগে বোতাম থাকত, চাপলে কেবল ভুল-বার্তা।
+     */
+    public function test_a_stopped_scheme_offers_no_button_to_switch_it_back_on(): void
+    {
+        $scheme = $this->scheme();
+        $this->rule($scheme);
+        app(SchemeService::class)->cancel($scheme, 'মৌসুম শেষ');
+
+        $this->get(route('sales.scheme.show', $scheme))
+            ->assertOk()
+            ->assertDontSee(route('sales.scheme.activate', $scheme), false)
+            ->assertDontSee('name="earner_role"', false)
+            ->assertSee(__('sales::validation.scheme_is_stopped'));
     }
 
     /**

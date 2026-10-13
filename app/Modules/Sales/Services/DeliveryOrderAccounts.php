@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryOrder;
@@ -97,14 +98,21 @@ final class DeliveryOrderAccounts
     {
         $approved = 0;
 
-        $orders = DeliveryOrder::query()
+        /*
+         * ⛔ গ্রাহকের সব শাখার আটকে থাকা কাগজ — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে খোঁজা হত টাকা যিনি তুললেন
+         * তাঁর হেডারের শাখার দেয়ালে: শাখা ক-তে টাকা এলে শাখা খ-এর আটকে থাকা কাগজ আটকেই থাকত, অথচ বাকির সীমা গ্রাহকের গোটা।
+         * ⓘ প্রতিটা কাগজের যাচাই তার নিজের শাখায়।
+         */
+        $orders = DeliveryOrder::acrossBranches()->withoutGlobalScope(DeliveryOrder::DEALER_WALL)
             ->where('customer_id', $customerId)
             ->where('status', DeliveryOrderStatus::ACCOUNTS_HELD)
             ->orderBy('id')
             ->get();
 
         foreach ($orders as $order) {
-            if ($this->check($order) === DeliveryOrderStatus::ACCOUNTS_APPROVED) {
+            $branchId = $order->branch_id === null ? null : (int) $order->branch_id;
+
+            if (CompanyContext::inBranch($branchId, fn () => $this->check($order)) === DeliveryOrderStatus::ACCOUNTS_APPROVED) {
                 $approved++;
             }
         }

@@ -108,8 +108,8 @@ final class WeLetSpaceOutTooTest extends TestCase
         $gone = $this->open($this->person('Gone Tenant'), '7000', starts: $this->month(-2));
         app(TenancyService::class)->close($gone, []);
 
-        $this->assertSame(['charged' => 1, 'held' => 0], app(TenancyService::class)->charge($this->month(0)));
-        $this->assertSame(['charged' => 0, 'held' => 0], app(TenancyService::class)->charge($this->month(0)), '⛔ একই মাস দুইবার');
+        $this->assertSame(['charged' => 1, 'held' => 0, 'failed' => []], app(TenancyService::class)->charge($this->month(0)));
+        $this->assertSame(['charged' => 0, 'held' => 0, 'failed' => []], app(TenancyService::class)->charge($this->month(0)), '⛔ একই মাস দুইবার');
 
         $charge = TenancyCharge::query()->sole();
         $this->assertSame($running->id, $charge->tenancy_id, '⛔ বন্ধ বা সামনের চুক্তির দাবি বসল');
@@ -192,7 +192,7 @@ final class WeLetSpaceOutTooTest extends TestCase
         $this->assertSame(Tenancy::ACTIVE, $tenancy->fresh()->status, '⛔ শেষ সই পড়ল, চুক্তি চালু হয়নি');
         $this->assertMoney('-20000', $this->net(StandardChart::TENANT_DEPOSITS), 'সইয়ের পরে জামানত');
 
-        $this->assertSame(['charged' => 1, 'held' => 1], app(TenancyService::class)->charge($this->month(0)));
+        $this->assertSame(['charged' => 1, 'held' => 1, 'failed' => []], app(TenancyService::class)->charge($this->month(0)));
         $this->assertMoney('0', $this->net(StandardChart::RENT_RECEIVABLE), '⛔ সই ছাড়াই দাবি খাতায়');
         $this->assertMoney('0', $tenancy->fresh()->outstanding(), '⛔ সই বাকি দাবি বকেয়ায় গোনা হল');
         $row = collect(app(ReportEngine::class)->run(TenancyReports::ARREARS, ['from' => $this->month(0)->toDateString(), 'to' => now()->toDateString()])->rows)
@@ -250,6 +250,32 @@ final class WeLetSpaceOutTooTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->actingAs($clerk->fresh())->post(route('finance.tenancy.collect', $tenancy), $pay)->assertForbidden();
         $this->assertSame(1, TenancyMove::query()->where('kind', TenancyMove::RENT)->count(), '⛔ চাবি ছাড়া আদায় বসল');
+    }
+
+    /** ⛔ শেষের দিন যেকোনো দিন চলত — শুরুর আগে, আগামী দিনে, দাবি বসা মাসের আগে (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
+    public function test_a_tenancy_closes_only_on_a_day_that_makes_sense(): void
+    {
+        $tenancy = $this->open($this->person('Closing Tenant'), '10000', starts: $this->month(-2));
+        app(TenancyService::class)->charge($this->month(0));
+
+        $this->assertRefused(fn () => app(TenancyService::class)->close($tenancy->fresh(), ['closed_on' => $this->month(-3)->toDateString()]),
+            'closed_on', '⛔ শুরুর আগের দিনে চুক্তি শেষ হল');
+        $this->assertRefused(fn () => app(TenancyService::class)->close($tenancy->fresh(), ['closed_on' => now()->addDay()->toDateString()]),
+            'closed_on', '⛔ আগামী দিনে চুক্তি শেষ হল');
+        $this->assertRefused(fn () => app(TenancyService::class)->close($tenancy->fresh(), ['closed_on' => $this->month(-1)->toDateString()]),
+            'closed_on', '⛔ দাবি বসা মাসের আগে চুক্তি শেষ হল — সেই মাসের দাবি আয়ে রয়ে যেত');
+        $this->assertSame(Tenancy::ACTIVE, $tenancy->fresh()->status);
+    }
+
+    /** ⛔ বন্ধ চুক্তির শর্ত সরাসরি অনুরোধে বদলাত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
+    public function test_a_closed_tenancys_terms_do_not_change(): void
+    {
+        $tenancy = $this->open($this->person('Closed Terms Tenant'), '10000', starts: $this->month(-2));
+        app(TenancyService::class)->close($tenancy, []);
+
+        $this->assertRefused(fn () => app(TenancyService::class)->revise($tenancy->fresh(), ['monthly_rent' => '99999']),
+            'status', '⛔ বন্ধ চুক্তির ভাড়া বদলে গেল');
+        $this->assertSame('10000', bcadd((string) $tenancy->fresh()->monthly_rent, '0', 0));
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────

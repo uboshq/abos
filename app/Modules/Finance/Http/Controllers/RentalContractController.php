@@ -326,9 +326,10 @@ class RentalContractController extends Controller implements HasMiddleware
             'counterparty' => ['required_without:party', 'nullable', 'string', 'max:191'],
             'counterparty_phone' => ['nullable', 'string', 'max:40'],
             'subject' => ['nullable', 'string', 'max:191'],
-            'deposit_amount' => ['required', 'numeric', 'min:0'],
-            'monthly_rent' => ['required', 'numeric', 'min:0'],
-            'monthly_adjustment' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ `numeric` "1e5"-ও নেয়, আর bcmath তাতে ValueError ছুড়ে ৫০০ দিত — টাকার ঘর কেবল দশমিক অঙ্ক, চার ঘর পর্যন্ত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'deposit_amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'monthly_rent' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'monthly_adjustment' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             'starts_on' => ['required', 'date'],
             'term_months' => ['required', 'integer', 'min:1', 'max:600'],
             // ⭐ চুক্তিতে বৃদ্ধির কথা থাকলে বছরে কত % — ঐচ্ছিক (মালিক, প্র১, ৬ অক্টোবর ২০২৬)
@@ -371,9 +372,10 @@ class RentalContractController extends Controller implements HasMiddleware
     {
         $this->contracts->adjustMonth($contract, $request->validate([
             'for_month' => ['required', 'date'],
-            'paid_on' => ['nullable', 'date'],
-            'rent' => ['nullable', 'numeric', 'min:0'],
-            'from_deposit' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ টাকা যাওয়ার দিন — আগামী দিনে নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'paid_on' => ['nullable', 'date', 'before_or_equal:today'],
+            'rent' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'from_deposit' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             'money_account_id' => ['nullable', 'integer'],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
@@ -411,8 +413,8 @@ class RentalContractController extends Controller implements HasMiddleware
     public function revise(Request $request, RentalContract $contract): RedirectResponse
     {
         $this->contracts->reviseTerms($contract, $request->validate([
-            'monthly_rent' => ['nullable', 'numeric', 'min:0'],
-            'monthly_adjustment' => ['nullable', 'numeric', 'min:0'],
+            'monthly_rent' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
+            'monthly_adjustment' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             // ⭐ কোন মাস থেকে নতুন শর্ত (না দিলে চলতি মাস) আর বৃদ্ধির % — শর্তের ইতিহাস (মালিক, প্র১, ৬ অক্টোবর ২০২৬)
             'effective_from' => ['nullable', 'date_format:Y-m'],
             'increase_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -428,7 +430,7 @@ class RentalContractController extends Controller implements HasMiddleware
     public function topUp(Request $request, RentalContract $contract): RedirectResponse
     {
         $this->contracts->addToDeposit($contract, $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.0001'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0.0001'],
             'money_account_id' => ['required', 'integer'],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]

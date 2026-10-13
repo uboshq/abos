@@ -98,6 +98,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Customer/Models/Customer.php' => 'মূল উপকরণ — বকেয়া (বাকির সীমা এখান থেকে পড়ে)',
         'app/Modules/Finance/Services/BankFacilityService.php' => 'ব্যাংক সুবিধার সীমা',
         'app/Modules/Finance/Services/ProfitDistribution.php' => 'লাভ বণ্টন — পোস্টিং',
+        'app/Modules/Finance/Listeners/UndoThePaperOfACancelledVoucher.php' => 'বাতিল ভাউচার খাতায় বসেছিল কি না — একটা ভাউচারের নিজের সারি, শাখা নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Customer/Sync/CustomerDueSync.php' => '⛔ ফোনের বকেয়া বাকির সীমার পাশে বসে — বিক্রয়কর্মী সীমা মেনে অর্ডার নেন; হেডারের শাখা ওয়েবের ধারণা, আর জলচিহ্ন শাখা বদলালে ভাঙত (৩০ সেপ্টেম্বর)',
         'app/Modules/Sales/Services/CustomerPapers.php' => '⛔ গ্রাহক-পোর্টাল: দেখছেন গ্রাহক নিজে, কর্মী নয় — পুরো পক্ষের খাতাই নিরাপত্তার নকশা; হেডারের শাখা এখানে নেই (৩০ সেপ্টেম্বর)',
         'app/Modules/Promotion/Services/PromotionReversal.php' => 'উপহার ফেরতে — উপহারের খরচ খাতায় উঠেছিল কি না, তবেই উল্টানো (৪ অক্টোবর ২০২৬); একটা কাগজের নিজের সারি, শাখা নয়',

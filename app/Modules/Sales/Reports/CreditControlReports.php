@@ -63,7 +63,8 @@ final class CreditControlReports
                 $held = self::held($ids);
                 $heldSql = self::perCustomer($held);
                 $due = 'COALESCE(l.due, 0)';
-                $limit = 'COALESCE(customers.credit_limit, 0)';
+                // ⛔ চলতি সীমা — অস্থায়ী সীমাসহ, দেয়ালের মতো ([[limitSql()]], ১৩ অক্টোবর ২০২৬)
+                $limit = self::limitSql();
 
                 return self::customers($f)
                     ->orderByRaw("CASE WHEN {$limit} > 0 THEN ({$due} + {$heldSql}) / {$limit} ELSE 0 END DESC")
@@ -94,7 +95,7 @@ final class CreditControlReports
                 ->whereNotNull('customers.credit_blocked_at')
                 ->leftJoin('users as bu', 'bu.id', '=', 'customers.credit_blocked_by')
                 ->orderByDesc('customers.credit_blocked_at')
-                ->selectRaw('COALESCE(customers.credit_limit, 0) as credit_limit, COALESCE(l.due, 0) as outstanding')
+                ->selectRaw(self::limitSql().' as credit_limit, COALESCE(l.due, 0) as outstanding')
                 ->selectRaw('customers.credit_block_reason as reason, bu.name as blocked_by, DATE(customers.credit_blocked_at) as blocked_on'),
             columns: [
                 ...self::identityColumns(),
@@ -166,10 +167,15 @@ final class CreditControlReports
                     ->selectRaw('customer_id, COUNT(*) as n')
                     ->pluck('n', 'customer_id')->map(fn ($n) => (string) $n)->all();
 
+                /*
+                 * ⛔ সীমা পার দেয়ালের মাপে — চলতি সীমা (অস্থায়ীসহ) আর সীমার সুইচ (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা;
+                 * [[TheCreditReportsJudgeLikeTheWallTest]])। ⓘ আগে কেবল `credit_limit`: অস্থায়ী সীমায় থাকা গ্রাহক "সীমা পার" ঝুঁকিতে উঠতেন,
+                 * আর সুইচ বন্ধ কোম্পানিতেও — অথচ দেয়াল তখন কিছুই আটকায় না ([[CreditExposure::isOn()]])।
+                 */
                 $held = self::held($ids);
                 $over = [];
-                foreach ($customers as $id => $c) {
-                    $short = bcsub(bcadd($c->outstanding(), $held[$id] ?? '0', 4), bcadd((string) ($c->credit_limit ?? '0'), '0', 4), 4);
+                foreach ($credit->isOn() ? $customers : [] as $id => $c) {
+                    $short = bcsub(bcadd($c->outstanding(), $held[$id] ?? '0', 4), $c->effectiveCreditLimit(), 4);
                     if (bccomp($short, '0', 4) > 0) {
                         $over[$id] = $short;
                     }
@@ -323,6 +329,16 @@ final class CreditControlReports
         }
 
         return $cases === '' ? '(0 + 0)' : "(CASE customers.id{$cases} ELSE 0 END)";
+    }
+
+    /**
+     * চলতি সীমা, SQL-এ — [[Customer::effectiveLimitSql()]]-এর নিয়ম, আজকের তারিখ PDO-উদ্ধৃত (SELECT-এ `?` নয় — [[SalesReports]]-এর মাথার কারণ)।
+     */
+    public static function limitSql(string $table = 'customers'): string
+    {
+        [$sql, $bindings] = Customer::effectiveLimitSql($table);
+
+        return '('.str_replace('?', DB::getPdo()->quote((string) $bindings[0]), $sql).')';
     }
 
     private static function name(): string

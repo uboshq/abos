@@ -11,6 +11,7 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +25,8 @@ use Illuminate\Support\Facades\DB;
  *   ফেরত       পাকা ফেরতের মোট
  *   নিট বিক্রি   বিলের মোট − ফেরতের মোট
  *   আদায়       গ্রাহকের নামে টাকা আসা — আদায় আর রসিদ ভাউচার (কাউন্টারের জমাও), খাতা থেকে,
- *              উল্টে দেওয়াগুলো বাদ ([[SalesCustomerTrade::lastPayment()]]-এর একই উৎস)
+ *              ([[SalesCustomerTrade::lastPayment()]]-এর একই উৎস); পরে উল্টালে নিজের মাসে থাকে, উল্টানোর মাসে বিয়োগ
+ *              (১৩ অক্টোবর ২০২৬) — বাতিল ফেরতও তাই
  *   বাকি যোগ    নিট বিক্রি − আদায় (ঋণাত্মক মানে সেই মাসে পুরনো বাকি কমেছে)
  *   মোট লাভ     (মোট − ভ্যাট − বিলের ভাড়া − বিক্রিত মালের খরচ) বিলে, ফেরতে উল্টো — `sales.cost.view`-এর পেছনে
  *
@@ -55,8 +57,9 @@ final class MonthlySalesReport
                 $byLine = ! empty($f['product_id']) || ! empty($f['brand_id']) || ! empty($f['category_id']);
 
                 $rows = $byLine
-                    ? self::invoiceLines($f)->unionAll(self::returnLines($f))->unionAll(self::cancelledLines($f))
-                    : self::invoices($f)->unionAll(self::returns($f))->unionAll(self::payments($f))->unionAll(self::cancellations($f));
+                    ? self::invoiceLines($f)->unionAll(self::returnLines($f))->unionAll(self::cancelledLines($f))->unionAll(self::cancelledReturnLines($f))
+                    : self::invoices($f)->unionAll(self::returns($f))->unionAll(self::payments($f))->unionAll(self::cancellations($f))
+                        ->unionAll(self::cancelledReturns($f))->unionAll(self::paymentReversals($f));
 
                 return DB::query()->fromSub($rows, 'x')
                     ->groupBy('x.month')
@@ -162,37 +165,124 @@ final class MonthlySalesReport
             ->tap(fn ($w) => self::whoFilters($w, $f, 'd.customer_id'));
     }
 
-    /** পাকা ফেরত, মাথা থেকে — লাভ উল্টো */
+    /** পাকা ফেরত, মাথা থেকে — লাভ উল্টো; খাতায় বসার পরে বাতিল হলেও নিজের মাসে ([[cancelledReturns()]] বাতিলের মাসে উল্টায়) */
     private static function returns(array $f): Builder
     {
         return self::walled(DB::table('sal_returns as d'), $f)
-            ->whereIn('d.status', DocumentStatus::POSTED)
+            ->tap(fn ($q) => self::returnPostedOrBookedThenCancelled($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('0 as gross, 0 as discount, 0 as sold, d.total as returned, 0 as collected')
             ->selectRaw('-(d.total - d.tax - d.cost_of_goods) as profit');
     }
 
-    /** গ্রাহকের নামে টাকা আসা — খাতা থেকে, উল্টে দেওয়া বাদ */
+    /**
+     * ⭐ বাতিল ফেরতের উল্টো — বাতিলের মাসে, খাতার মতো (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা;
+     * [[TheMonthlySalesKeepEveryReversalInItsOwnMonthTest]])। ⓘ আগে বাতিল ফেরত নিজের মাস থেকেই উধাও হত, অথচ খাতায় সেই মাসে
+     * ফেরত থাকে আর উল্টো দাখিলা বসে বাতিলের দিনে। তারিখ খাতার উল্টো সারির, না থাকলে বাতিলের দিন।
+     */
+    private static function cancelledReturns(array $f): Builder
+    {
+        return self::returnCancelledInRange(DB::table('sal_returns as d'), $f)
+            ->selectRaw("DATE_FORMAT(COALESCE(rx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
+            ->selectRaw('0 as gross, 0 as discount, 0 as sold, -d.total as returned, 0 as collected')
+            ->selectRaw('d.total - d.tax - d.cost_of_goods as profit');
+    }
+
+    /** পণ্য ধরে — বাতিলের মাসে ফেরতের লাইনগুলো উল্টো */
+    private static function cancelledReturnLines(array $f): Builder
+    {
+        return self::returnCancelledInRange(DB::table('sal_return_lines as l')->join('sal_returns as d', 'd.id', '=', 'l.sales_return_id'), $f)
+            ->leftJoin('sal_invoice_lines as il', 'il.id', '=', 'l.sales_invoice_line_id')
+            ->tap(fn ($q) => self::productFilters($q, $f))
+            ->selectRaw("DATE_FORMAT(COALESCE(rx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
+            ->selectRaw('0 as gross, 0 as discount, 0 as sold, -(l.amount + l.tax) as returned, 0 as collected')
+            ->selectRaw('l.amount - l.qty * COALESCE(il.unit_cost, 0) as profit');
+    }
+
+    /** পাকা ফেরত, বা খাতায় বসার পরে বাতিল */
+    private static function returnPostedOrBookedThenCancelled(Builder $q, array $f): void
+    {
+        $q->where(fn ($w) => $w->whereIn('d.status', DocumentStatus::POSTED)
+            ->orWhere(fn ($c) => $c->where('d.status', DocumentStatus::CANCELLED)->whereExists(self::returnBooked($f))));
+    }
+
+    /** ফেরতটা কখনো খাতায় বসেছিল কি না — কেবল ফ্রি মালের ফেরত বা খসড়ায় বাতিল হলে বসেনি */
+    private static function returnBooked(array $f): \Closure
+    {
+        return fn ($q) => $q->from('ledger_entries as bk')
+            ->where('bk.company_id', $f['company_id'])
+            ->where('bk.source_type', SalesReturn::drillSourceType())
+            ->whereColumn('bk.source_id', 'd.id');
+    }
+
+    /** খাতায় বসার পরে বাতিল ফেরত, উল্টো দাখিলার দিন পরিসরে — দেয়াল আর কার বিক্রি আগের মতো */
+    private static function returnCancelledInRange(Builder $q, array $f): Builder
+    {
+        return $q->leftJoinSub(
+            DB::table('ledger_entries')
+                ->where('company_id', $f['company_id'])
+                ->where('source_type', SalesReturn::drillSourceType().':reversal')
+                ->groupBy('source_id')
+                ->selectRaw('source_id, MAX(trx_date) as on_date'),
+            'rx',
+            'rx.source_id',
+            '=',
+            'd.id',
+        )
+            ->where('d.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'd.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'd.customer_id'))
+            ->whereNull('d.deleted_at')
+            ->where('d.status', DocumentStatus::CANCELLED)
+            ->whereExists(self::returnBooked($f))
+            ->whereRaw('COALESCE(rx.on_date, DATE(d.cancelled_at)) BETWEEN ? AND ?', [$f['from'], $f['to']])
+            ->tap(fn ($w) => self::whoFilters($w, $f, 'd.customer_id'));
+    }
+
+    /** @return list<string> আদায় আর রসিদ ভাউচার — গ্রাহকের নামে টাকা আসার কাগজ */
+    private static function paymentSources(): array
+    {
+        return [Collection::drillSourceType(), Voucher::SOURCE_TYPES[Voucher::RECEIPT]];
+    }
+
+    /**
+     * গ্রাহকের নামে টাকা আসা — খাতা থেকে, নিজের মাসে।
+     *
+     * ⛔ আগে পরে উল্টানো আদায় নিজের মাস থেকেই উধাও হত, আর উল্টানোর মাসে কিছুই দেখাত না — আগের মাসের ছাপা রিপোর্ট পরে
+     * বদলে যেত (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)। ⭐ এখন খাতার মতো: আদায় নিজের মাসে থাকে, উল্টোটা
+     * [[paymentReversals()]] উল্টানোর মাসে বিয়োগ করে — বিলের বাতিলের ([[cancellations()]]) একই নিয়ম।
+     */
     private static function payments(array $f): Builder
     {
-        $sources = [Collection::drillSourceType(), Voucher::SOURCE_TYPES[Voucher::RECEIPT]];
-
-        return DB::table('ledger_entries as le')
-            ->join('customers as cu', 'cu.id', '=', 'le.party_id')
-            ->where('le.company_id', $f['company_id'])
-            ->tap(ReportEngine::branchWall($f, 'le.branch_id'))
-                ->tap(ReportEngine::dealerWall($f, 'le.party_id'))
-            ->where('le.party_type', 'customer')
-            ->whereIn('le.source_type', $sources)
+        return self::customerMoney(DB::table('ledger_entries as le'), $f)
+            ->whereIn('le.source_type', self::paymentSources())
             ->where('le.credit', '>', 0)
-            ->whereBetween('le.trx_date', [$f['from'], $f['to']])
-            ->whereNotExists(fn ($q) => $q->from('ledger_entries as rev')
-                ->whereColumn('rev.source_id', 'le.source_id')
-                ->whereRaw("rev.source_type = CONCAT(le.source_type, ':reversal')")
-                ->whereColumn('rev.id', '>', 'le.id'))
-            ->tap(fn ($q) => self::whoFilters($q, $f, 'le.party_id'))
             ->selectRaw("DATE_FORMAT(le.trx_date, '%Y-%m') as month, NULL as invoice_id")
             ->selectRaw('0 as gross, 0 as discount, 0 as sold, 0 as returned, le.credit as collected, 0 as profit');
+    }
+
+    /** ⭐ উল্টানো আদায় — উল্টো দাখিলার দিনে, বিয়োগ হয়ে ([[payments()]]) */
+    private static function paymentReversals(array $f): Builder
+    {
+        $reversals = array_map(fn (string $s) => $s.':reversal', self::paymentSources());
+
+        return self::customerMoney(DB::table('ledger_entries as le'), $f)
+            ->whereIn('le.source_type', $reversals)
+            ->where('le.debit', '>', 0)
+            ->selectRaw("DATE_FORMAT(le.trx_date, '%Y-%m') as month, NULL as invoice_id")
+            ->selectRaw('0 as gross, 0 as discount, 0 as sold, 0 as returned, -le.debit as collected, 0 as profit');
+    }
+
+    /** গ্রাহকের খতিয়ানের সারি — কোম্পানি, দুই দেয়াল, তারিখ আর কার বিক্রি */
+    private static function customerMoney(Builder $q, array $f): Builder
+    {
+        return $q->join('customers as cu', 'cu.id', '=', 'le.party_id')
+            ->where('le.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'le.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'le.party_id'))
+            ->where('le.party_type', 'customer')
+            ->whereBetween('le.trx_date', [$f['from'], $f['to']])
+            ->tap(fn ($w) => self::whoFilters($w, $f, 'le.party_id'));
     }
 
     /** পণ্য ধরে — বিলের লাইন */
@@ -212,7 +302,7 @@ final class MonthlySalesReport
     {
         return self::walled(DB::table('sal_return_lines as l')->join('sal_returns as d', 'd.id', '=', 'l.sales_return_id'), $f)
             ->leftJoin('sal_invoice_lines as il', 'il.id', '=', 'l.sales_invoice_line_id')
-            ->whereIn('d.status', DocumentStatus::POSTED)
+            ->tap(fn ($q) => self::returnPostedOrBookedThenCancelled($q, $f))
             ->tap(fn ($q) => self::productFilters($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, NULL as invoice_id")
             // ⓘ ফেরতের সারির `amount` ভ্যাট-বাদ ([[SalesReturnService]]) — "ফেরত" ভ্যাট-সহ, বিক্রির মতো; লাভে ভ্যাট আর বাদ নয়

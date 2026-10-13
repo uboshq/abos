@@ -78,6 +78,25 @@ final class TheOfferOnTheChallanFollowedItIntoTheBillTest extends TestCase
     }
 
     /**
+     * ⛔ আরেক ট্যাবে পাকা হওয়া চালানে হাতের পুরনো কপি দিয়ে অফার বসে না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+     */
+    public function test_an_offer_does_not_land_on_a_challan_confirmed_meanwhile(): void
+    {
+        $offer = $this->tenPercentOffer();
+        $stale = $this->draftChallan();
+        \Illuminate\Support\Facades\DB::table('sal_challans')->where('id', $stale->id)->update(['status' => \App\Core\Support\DocumentStatus::CONFIRMED]);
+
+        try {
+            app(\App\Modules\Sales\Services\ChallanOffers::class)->apply($stale, (int) $stale->lines()->value('id'), (int) $offer->id);
+            $this->fail('⛔ পাকা চালানে পুরনো কপি দিয়ে অফার বসে গেল।');
+        } catch (\Illuminate\Validation\ValidationException) {
+        }
+
+        $this->assertSame(0, $this->openApplications($stale));
+        $this->assertSame(0, bccomp('0', (string) $stale->lines()->firstOrFail()->promotion_discount, 4));
+    }
+
+    /**
      * ⛔ কোম্পানি প্রচার বন্ধ রাখলে অফার বসে না — পাতায় অংশটা নেই, আর সরাসরি অনুরোধেও দরজা বন্ধ; চালু করলে একই মানুষ,
      * একই চালানে বসাতে পারেন (৪ অক্টোবর ২০২৬)।
      */

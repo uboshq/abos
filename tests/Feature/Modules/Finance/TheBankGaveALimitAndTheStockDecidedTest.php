@@ -263,7 +263,8 @@ final class TheBankGaveALimitAndTheStockDecidedTest extends TestCase
             'institution_new' => 'Islami Bank Bangladesh PLC',
             'sanctioned_on' => now()->toDateString(),
             'limit_amount' => '5000000',
-            'money_account_id' => $this->accountId(),
+            // ⓘ ফর্ম এখন কেবল টাকার খাত নেয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️৫)
+            'money_account_id' => \App\Modules\Accounts\Models\Account::query()->money()->orderBy('code')->value('id'),
             'stock_value' => '7200000',
             'margin_percent' => '30',
         ])

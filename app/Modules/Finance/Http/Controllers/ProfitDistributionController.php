@@ -76,7 +76,7 @@ final class ProfitDistributionController implements HasMiddleware
     public function preview(Request $request): View
     {
         $data = $request->validate([
-            'profit' => ['required', 'numeric', 'gt:0'],
+            'profit' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
         ]);
 
         return view('finance::profit.index', [
@@ -103,7 +103,7 @@ final class ProfitDistributionController implements HasMiddleware
              * ⭐ ধরা পড়েছে `NoDocumentIsDatedInTheFuture`-এ।
              */
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            'profit' => ['required', 'numeric', 'gt:0'],
+            'profit' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
 

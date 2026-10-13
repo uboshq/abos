@@ -111,7 +111,11 @@ final class DeliveryOrderService
     {
         $this->assertWriterMayEdit($order, $by);
 
-        return DB::transaction(function () use ($order, $data, $lines) {
+        return DB::transaction(function () use ($order, $data, $lines, $by) {
+            // ⛔ পুরনো কপি নয় — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($order);
+            $this->assertWriterMayEdit($order, $by);
+
             $order->fill(array_intersect_key($data, array_flip(['warehouse_id', 'trx_date', 'deliver_on', 'narration'])))->save();
             $order->lines()->delete();
             $this->writeLines($order, $lines);
@@ -129,7 +133,11 @@ final class DeliveryOrderService
             throw ValidationException::withMessages(['lines' => __('sales::delivery_order.no_lines')]);
         }
 
-        return DB::transaction(function () use ($order) {
+        return DB::transaction(function () use ($order, $by) {
+            // ⛔ দুই ক্লিক বা দুই ট্যাব — তালার ভিতরে অবস্থা আবার; নইলে দুইবার জমা, দুইবার অনুমোদিত আর মাল দুইবার ধরার সংকেত
+            $this->lockAndReread($order);
+            $this->assertWriterMayEdit($order, $by);
+
             $order->forceFill(['status' => DeliveryOrderStatus::SUBMITTED, 'submitted_at' => now()])->save();
 
             $approval = $this->approvals->request(
@@ -233,10 +241,22 @@ final class DeliveryOrderService
         }
 
         foreach ($lines as $i => $line) {
-            $qty = (string) ($line['qty'] ?? '0');
+            $qty = trim((string) ($line['qty'] ?? '0'));
 
-            if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
+            // ⛔ কেবল সাধারণ দশমিক — `1e3` বা ` 5` is_numeric পার হয়, কিন্তু bcmath-এ ValueError, অর্থাৎ ৫০০ (১৩ অক্টোবর ২০২৬)
+            if (! self::plainDecimal($qty) || bccomp($qty, '0', 4) <= 0) {
                 throw ValidationException::withMessages(["lines.{$i}.qty" => __('sales::delivery_order.qty_positive')]);
+            }
+
+            /*
+             * ⛔ ফ্রি শূন্য বা তার বেশি, আর সংখ্যা — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে যা আসত তাই বসত: ফোন বা পোর্টালের
+             * ঋণাত্মক ফ্রি মাল ধরা কমাত, আর অক্ষর ডাটাবেজে ৫০০ দিত। ⓘ ওয়েবের ফর্মে `min:0` ছিল; এই দরজা তিনটাই।
+             */
+            $free = trim((string) ($line['free_qty'] ?? '0'));
+            $free = $free === '' ? '0' : $free;
+
+            if (! self::plainDecimal($free)) {
+                throw ValidationException::withMessages(["lines.{$i}.free_qty" => __('sales::delivery_order.free_not_negative')]);
             }
 
             $product = Product::query()->find((int) ($line['product_id'] ?? 0))
@@ -262,12 +282,29 @@ final class DeliveryOrderService
                 'product_id' => $product->id,
                 'qty' => $qty,
                 'rate' => $rate,
-                'free_qty' => (string) ($line['free_qty'] ?? '0'),
+                'free_qty' => $free,
                 'note' => $line['note'] ?? null,
             ]);
         }
 
         $order->recalculate();
+    }
+
+    /**
+     * ⛔ সম্পাদনা আর জমা তালার ভিতরে নতুন করে পড়া সারি ধরে — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে "খসড়া কি না"
+     * দেখা হত হাতের পুরনো কপিতে, লেনদেনের বাইরে: ফোন আর ওয়েব (বা দুই ক্লিক) দুইজনেই খসড়া দেখে জমা দিত।
+     */
+    private function lockAndReread(DeliveryOrder $order): void
+    {
+        $fresh = DeliveryOrder::query()->withoutGlobalScopes()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+
+        $order->setRawAttributes($fresh->getAttributes(), true);
+    }
+
+    /** ⓘ শূন্য বা তার বেশি সাধারণ দশমিক — চিহ্ন, ঘাত (`1e3`) বা ফাঁকা ঘর নয়; bcmath কেবল এটাই নেয় */
+    private static function plainDecimal(string $value): bool
+    {
+        return preg_match('/^\d+(\.\d+)?$/', $value) === 1;
     }
 
     private function assertWriterMayEdit(DeliveryOrder $order, User|Customer $by): void
@@ -313,6 +350,14 @@ final class DeliveryOrderService
 
         if ($order === null) {
             throw ValidationException::withMessages(['sales_order_id' => __('sales::delivery_order.order_elsewhere')]);
+        }
+
+        /*
+         * ⛔ নতুন ধারার আদেশে DO নয় — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ ঐ আদেশ নিজেই মাল ধরে আর বাকির সীমায় গোনা হয়
+         * ([[CreditExposure::openOrders()]]); সুইচ বন্ধ করে তার উপর DO লিখলে একই বিক্রি সীমায় দুবার, মালও দুবার ধরা।
+         */
+        if ($order->hold_mode === \App\Modules\Sales\Support\SalesOrderStatus::HOLD_HOLDS) {
+            throw ValidationException::withMessages(['sales_order_id' => __('sales::delivery_order.order_holds_itself', ['no' => $order->document_no])]);
         }
 
         return (int) $order->id;

@@ -88,6 +88,10 @@ final class ShipmentService
         $this->assertEditable($shipment);
 
         return DB::transaction(function () use ($shipment, $data, $challanIds) {
+            // ⛔ পুরনো কপি নয় — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($shipment);
+            $this->assertEditable($shipment);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $shipment->trx_date);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $shipment->warehouse_id);
 
@@ -224,13 +228,25 @@ final class ShipmentService
             ]);
         }
 
-        $line->update([
-            'outcome' => $outcome,
-            'outcome_note' => $note,
-            'settled_at' => $outcome === ShipmentLine::PENDING ? null : now(),
-        ]);
+        return DB::transaction(function () use ($line, $outcome, $note): ShipmentLine {
+            // ⛔ ট্রিপ বন্ধের সাথে একই মুহূর্তে — বন্ধ ট্রিপের সারি আর বদলায় না ([[lockAndReread()]])
+            $trip = $line->shipment;
+            $this->lockAndReread($trip);
 
-        return $line->fresh();
+            if ($trip->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'outcome' => __('sales::validation.only_a_dispatched_trip_settles'),
+                ]);
+            }
+
+            $line->update([
+                'outcome' => $outcome,
+                'outcome_note' => $note,
+                'settled_at' => $outcome === ShipmentLine::PENDING ? null : now(),
+            ]);
+
+            return $line->fresh();
+        });
     }
 
     /**
@@ -245,6 +261,18 @@ final class ShipmentService
      * @param  array<string, mixed>  $data
      */
     public function close(Shipment $shipment, array $data = []): Shipment
+    {
+        // ⛔ বাতিল বা আরেক "বন্ধ"-এর সাথে একই মুহূর্তে — তালার ভিতরে তাজা অবস্থা আর তাজা সারি ধরে সব যাচাই ([[lockAndReread()]])
+        return DB::transaction(function () use ($shipment, $data): Shipment {
+            $this->lockAndReread($shipment);
+            $shipment->unsetRelation('lines');
+
+            return $this->closeLocked($shipment, $data);
+        });
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function closeLocked(Shipment $shipment, array $data): Shipment
     {
         if ($shipment->status !== DocumentStatus::CONFIRMED) {
             throw ValidationException::withMessages([
@@ -563,6 +591,18 @@ final class ShipmentService
             'opening_km' => $data['opening_km'] ?? null,
             'narration' => $data['narration'] ?? null,
         ];
+    }
+
+    /**
+     * ⛔ ট্রিপের সারি তালায়, তাজা — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে সম্পাদনা, হিসাব বোঝা আর বন্ধ অবস্থা দেখত
+     * হাতের পুরনো কপিতে, লেনদেনের বাইরে: রওনা হওয়া ট্রিপের চালান বদলাত, বন্ধ ট্রিপের সারি "ফেরত" হত মাল খাতায় না ফিরিয়েই,
+     * আর বাতিল ট্রিপ "বন্ধ" হত।
+     */
+    private function lockAndReread(Shipment $shipment): void
+    {
+        $fresh = Shipment::query()->withoutGlobalScopes()->whereKey($shipment->getKey())->lockForUpdate()->firstOrFail();
+
+        $shipment->setRawAttributes($fresh->getAttributes(), true);
     }
 
     private function assertEditable(Shipment $shipment): void

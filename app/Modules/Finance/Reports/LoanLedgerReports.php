@@ -13,6 +13,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\BankFacilityService;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -108,6 +109,11 @@ final class LoanLedgerReports
     private static function bankLoan(array $f, int $facilityId): Builder
     {
         $facility = $facilityId > 0 ? BankFacility::query()->find($facilityId) : null;
+
+        // ⛔ নাগালের বাইরের শাখার ঋণ নয় — খাতা-সারি শাখার দেয়ালে থামত, অথচ ঋণের খাতার বাইরের খোলা বকেয়া (নিজের লেখা অঙ্ক) দেখা যেত (১৩ অক্টোবর ২০২৬)
+        if ($facility !== null && ! ActingBranches::allows($facility->branch_id)) {
+            $facility = null;
+        }
         $service = app(BankFacilityService::class);
         // ⛔ শাখার দেয়াল — এক শাখায় সীমিত মানুষ অন্য শাখার দাখিলা দেখেন না ([[ReportEngine::branchWall()]])
         $rows = $facility === null ? null : $service->ledgerRowsOf($facility)?->tap(ReportEngine::branchWall($f, 'branch_id'));

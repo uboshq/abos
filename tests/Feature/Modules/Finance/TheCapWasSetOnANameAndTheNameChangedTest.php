@@ -234,6 +234,23 @@ class TheCapWasSetOnANameAndTheNameChangedTest extends TestCase
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
+    /**
+     * ⛔ পর্দার "এই মাসে বাকি" আর সীমার পাহারা দুই রকম গুনত — আজ চাওয়া গত মাসের তারিখের উত্তোলন পাহারা গুনত, পর্দা নয়
+     * (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function test_the_screen_left_matches_what_the_cap_counts(): void
+    {
+        $person = $this->person('Back Dated');
+        app(WithdrawalService::class)->setCap($person->id, '20000');
+
+        app(WithdrawalService::class)->request([
+            'person_id' => $person->id, 'amount' => '15000', 'trx_date' => now()->subMonthNoOverflow()->endOfMonth()->toDateString(),
+        ]);
+
+        $row = collect(app(WithdrawalService::class)->standing())->firstWhere('person_id', (int) $person->id);
+        $this->assertSame(0, bccomp((string) $row['left'], '5000', 4), '⛔ পর্দা পুরো ২০,০০০ বাকি বলল, অথচ পাহারা ৫,০০০-এর বেশি নিতে দেবে না');
+    }
+
     private function person(string $name): Person
     {
         return Person::query()->create([

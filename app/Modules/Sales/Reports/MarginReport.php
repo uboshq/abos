@@ -53,8 +53,10 @@ final class MarginReport
                 /*
                  * ⓘ বিক্রয় = `amount − tax` — পণ্যভিত্তিক রিপোর্টের হুবহু সংজ্ঞা:
                  * ভ্যাট সরকারের টাকা, দামের ভেতরের হোক বা বাইরের।
+                 * ⛔ বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগও সারিতে ([[LineNetSale]], ১৩ অক্টোবর ২০২৬) — নইলে
+                 * বিলের ছাড়ে খরচের নিচে নামা সারি "সীমার উপরে" দেখাত।
                  */
-                $net = '(il.amount - il.tax)';
+                $net = LineNetSale::sql();
                 $cost = '(il.qty * il.unit_cost)';
 
                 /*
@@ -71,6 +73,7 @@ final class MarginReport
                     ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
                     ->join('inv_products as p', 'p.id', '=', 'il.product_id')
                     ->join('customers as cu', 'cu.id', '=', 'i.customer_id')
+                    ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
                     ->where('i.company_id', $f['company_id'])
                     ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
                 ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))

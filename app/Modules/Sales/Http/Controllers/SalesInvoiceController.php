@@ -18,6 +18,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Http\Requests\SalesInvoiceRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\ChallanBills;
 use App\Modules\Sales\Services\DirectSaleService;
@@ -310,10 +311,22 @@ class SalesInvoiceController extends Controller implements HasMiddleware
     {
         $invoice->load(['lines.product', 'lines.challanLine']);
 
+        /*
+         * ⛔ চালান থেকে আসা খসড়ার সম্পাদনায় চালানের সারিগুলোও — দরজা PUT-এ প্রতিটা সারি বিলের চালানের সারি চায়
+         * ([[SalesInvoiceRequest::after()]]; Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে ফর্মে চালানের ঘরই আসত না:
+         * সংরক্ষণে সারির চালান-যোগ মুছে যেত (চালান আবার "বিল বাকি" দেখাত), আর দরজার পাহারার পরে প্রতিটা সম্পাদনা আটকাত।
+         */
+        $challanIds = $invoice->lines->pluck('challanLine.delivery_challan_id')->filter()->unique()->values();
+
         return view('sales::invoice.form', [
             'menu' => $this->menu->forUser($request->user()),
             'invoice' => $invoice,
             'challan' => null,
+            'challanLineOptions' => $challanIds->isEmpty() ? null : DeliveryChallanLine::query()
+                ->with('product')
+                ->whereIn('delivery_challan_id', $challanIds)
+                ->orderBy('delivery_challan_id')->orderBy('id')
+                ->get(),
             ...$this->formData(),
         ]);
     }

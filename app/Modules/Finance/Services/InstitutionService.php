@@ -87,6 +87,20 @@ final class InstitutionService
         $existing = Institution::query()->where('name_key', Institution::keyFor($typed))->first();
 
         if ($existing !== null) {
+            /*
+             * ⛔ ধরন মেলে তবেই — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⓘ৮)। আগে বীমাকারীর ঘরে একটা ব্যাংকের নাম লিখলে
+             * ব্যাংকটাই পলিসির বীমাকারী হয়ে যেত (প্রতিষ্ঠানের পাতায় "পলিসি" ব্যাংকের নিচে)। ⓘ ব্যাংক আর NBFI ঋণদাতা হিসেবে
+             * একে অপরের জায়গায় চলে — ফর্মের তালিকাও দুটো একসাথে দেখায়।
+             */
+            $lenders = [Institution::BANK, Institution::NBFI];
+            $fits = $existing->kind === $kind || (in_array($kind, $lenders, true) && in_array($existing->kind, $lenders, true));
+
+            if (! $fits) {
+                throw ValidationException::withMessages([
+                    'institution_new' => __('finance::institution.typed_name_other_kind', ['name' => $existing->name()]),
+                ]);
+            }
+
             return $existing->id;
         }
 

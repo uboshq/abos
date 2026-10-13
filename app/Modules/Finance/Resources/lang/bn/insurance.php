@@ -78,6 +78,7 @@ return [
     'prepaid_note' => 'দেওয়া প্রিমিয়ামের যে মেয়াদ এখনো আসেনি, তা খরচ থেকে অগ্রিম বীমায় (1136) সরে; পরের মাসের ১ তারিখে নিজে উল্টায়।',
     'prepaid_done' => 'অগ্রিম বীমা বসল: :prepaid টি কিস্তি; আগের মাসের :reversed টি উল্টাল।',
     'prepaid_month_not_over' => 'মাসটা এখনো শেষ হয়নি — কেবল শেষ হওয়া মাসের অগ্রিম বসে।',
+    'prepaid_month_closed' => ':month বন্ধ — বন্ধ মাসে অগ্রিম বীমা বসে না। খাতায় কিছুই বসেনি।',
     'prepaid_narration' => 'অগ্রিম বীমা — :month · পলিসি :policy · মেয়াদের :total দিনের :left দিন বাকি',
     'prepaid_reversal_narration' => 'অগ্রিম বীমা উল্টো — :month · পলিসি :policy',
     'prepaid_days' => 'বাকি দিন',

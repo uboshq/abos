@@ -108,13 +108,17 @@ final class CustomerPapers
     }
 
     /**
-     * নিজের বিলগুলো — নতুনটা আগে।
+     * নিজের বিলগুলো — নতুনটা আগে, কেবল পাকা ([[DocumentStatus::POSTED]])।
+     *
+     * ⛔ ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা: আগে অবস্থার কোনো ছাঁকনি ছিল না — ডিলার খসড়া, ধরে-রাখা আর বাতিল বিলও
+     * দেখতেন, অথচ খতিয়ানে ওগুলোর কোনো সারি নেই; "এই বিলটা কী" প্রশ্নে ফোন আসত।
      *
      * @return Collection<int, SalesInvoice>
      */
     public function invoices(int $limit = 20): Collection
     {
         return $this->mine(SalesInvoice::query())
+            ->posted()
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit($limit)
             ->get();
