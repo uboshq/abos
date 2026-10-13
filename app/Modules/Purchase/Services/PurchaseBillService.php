@@ -415,6 +415,9 @@ final class PurchaseBillService
 
             $bill->update(['status' => DocumentStatus::CONFIRMED]);
 
+            // ⭐ সইয়ের জন্য থামা সরাসরি ক্রয়ের বাকিটা — উপহার, ক্রয়দর, পর্দায় দেওয়া টাকা (১৩ অক্টোবর ২০২৬; [[DirectPurchaseService::finishAfterTheSignature()]])
+            app(DirectPurchaseService::class)->finishAfterTheSignature($bill);
+
             return $bill->fresh(['lines']);
         });
     }

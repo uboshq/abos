@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
@@ -218,10 +220,76 @@ final class DirectPurchaseService
         });
 
         if ($held !== null) {
+            $this->rememberWhatTheScreenAsked($held, $data);
+
             throw $held;
         }
 
         return $result;
+    }
+
+    /** সইয়ের সারিতে চিহ্ন — এটা সরাসরি ক্রয়, শেষ সইয়ে বাকিটা ([[finishAfterTheSignature()]]) */
+    public const HELD_DIRECT = 'direct_purchase';
+
+    /**
+     * ⭐ সইয়ের জন্য থামা সরাসরি ক্রয় পর্দায় যা চেয়েছিল — টাকা — সইয়ের সারিতে রাখা (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[AHeldDirectPurchaseFinishesWhatTheScreenAskedTest]])।
+     *
+     * ⛔ আগে বিল থামলে পর্দার "এখনই দিলাম" কোথাও লেখা থাকত না; শেষ সইয়ে কেবল বিল পাকা হত, টাকাটা আর উপহারের মাল চুপচাপ হারাত।
+     * ⓘ বিলের সারিতে জায়গা নেই (নতুন কলাম মানে মাইগ্রেশন), তাই সইয়ের অনুরোধের `payload`-এ — যেখানে "এই সইয়ের সাথে কী কী" থাকে।
+     * উপহারের সারি বিলেই লেখা ([[writeGifts()]]), তাই সেটা আলাদা রাখার দরকার নেই।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function rememberWhatTheScreenAsked(HeldForApproval $held, array $data): void
+    {
+        $bill = $held->document;
+
+        if (! $bill instanceof PurchaseBill) {
+            return;
+        }
+
+        $asked = app(ApprovalEngine::class)->latestFor($bill, 'bill');
+
+        if ($asked === null || $asked->status !== Approval::PENDING) {
+            return;
+        }
+
+        $rows = filled($data['deposits'] ?? null)
+            ? array_values((array) $data['deposits'])
+            : [['amount' => $data['paid_now'] ?? '0', 'account_id' => $data['paid_from_account_id'] ?? null]];
+
+        $asked->forceFill(['payload' => [...(array) ($asked->payload ?? []), self::HELD_DIRECT => ['pay_now' => $rows]]])->save();
+    }
+
+    /**
+     * ⭐ শেষ সইয়ের পরে বিল পাকা হলে সরাসরি ক্রয়ের বাকিটা — উপহারের মাল, ক্রয়দরের ছাপ আর পর্দায় দেওয়া টাকা; ঠিক একবার।
+     *
+     * ⓘ বিল যেই পাকা করুক (শেষ সইয়ের শ্রোতা বা বিলের পাতায় হাতে), [[PurchaseBillService::confirm()]] একই লেনদেনে এটা ডাকে।
+     * ⓘ কাজ শেষে সারিতে `done_at` — আবার পাকা করার কোনো পথে (বাতিল-সম্পাদনা) দ্বিতীয়বার টাকা বেরোয় না।
+     */
+    public function finishAfterTheSignature(PurchaseBill $bill): void
+    {
+        $asked = Approval::query()
+            ->where('approvable_type', $bill::class)
+            ->where('approvable_id', $bill->id)
+            ->where('action', 'bill')
+            ->whereNotNull('payload')
+            ->orderBy('id')
+            ->get()
+            ->first(fn (Approval $a) => isset(((array) $a->payload)[self::HELD_DIRECT]) && ! isset(((array) $a->payload)[self::HELD_DIRECT]['done_at']));
+
+        if ($asked === null) {
+            return;
+        }
+
+        $this->bringInGifts($bill->fresh(['giftLines.product']));
+        $this->stampSalesPrices($bill->fresh(['lines.product']));
+        $this->payNow(['deposits' => (array) (((array) $asked->payload)[self::HELD_DIRECT]['pay_now'] ?? [])], $bill->fresh());
+
+        $payload = (array) $asked->payload;
+        $payload[self::HELD_DIRECT]['done_at'] = now()->toDateTimeString();
+        $asked->forceFill(['payload' => $payload])->save();
     }
 
     /**
