@@ -580,6 +580,23 @@ class TheRateWasInSomebodysHeadTest extends TestCase
     }
 
     /**
+     * ⛔ থামানো স্কিমের পাতায় "চালু করুন" বা ধাপের ফর্ম নেই — সেবা যা নেয় না, পর্দাও তা দেখায় না (Sales লাইন-ধরা নিরীক্ষা,
+     * ১৩ অক্টোবর ২০২৬)। ⚠️ আগে বোতাম থাকত, চাপলে কেবল ভুল-বার্তা।
+     */
+    public function test_a_stopped_scheme_offers_no_button_to_switch_it_back_on(): void
+    {
+        $scheme = $this->scheme();
+        $this->rule($scheme);
+        app(SchemeService::class)->cancel($scheme, 'মৌসুম শেষ');
+
+        $this->get(route('sales.scheme.show', $scheme))
+            ->assertOk()
+            ->assertDontSee(route('sales.scheme.activate', $scheme), false)
+            ->assertDontSee('name="earner_role"', false)
+            ->assertSee(__('sales::validation.scheme_is_stopped'));
+    }
+
+    /**
      * মেয়াদ পেরিয়ে গেছে অথচ তালিকায় "চালু" — সেটা বলা হয়।
      *
      * হিসাবে ভুল হয় না ([[Scheme::isLiveOn()]] তারিখ দেখে), কিন্তু

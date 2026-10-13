@@ -182,8 +182,8 @@ final class SchemeService
             ]);
         }
 
-        // ⛔ থামানো স্কিমও — তার হারে আগের বিলের কমিশন হিসাব হয়েছে (১৩ অক্টোবর ২০২৬)
-        if ($scheme->status === Scheme::CANCELLED) {
+        // ⛔ থামানো বা মেয়াদ-শেষ স্কিমও — তার হারে আগের বিলের কমিশন হিসাব হয়েছে (১৩ অক্টোবর ২০২৬); খোলা কেবল খসড়া
+        if ($scheme->status !== Scheme::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.scheme_is_stopped'),
             ]);
