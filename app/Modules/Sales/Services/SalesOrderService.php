@@ -420,14 +420,21 @@ final class SalesOrderService
     {
         $moved = 0;
 
-        $held = SalesOrder::query()
+        /*
+         * ⛔ গ্রাহকের সব শাখার আটকে থাকা কাগজ — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে খোঁজা হত টাকা যিনি তুললেন
+         * তাঁর হেডারের শাখার দেয়ালে: শাখা ক-তে টাকা এলে শাখা খ-এর আটকে থাকা কাগজ আটকেই থাকত, অথচ বাকির সীমা গ্রাহকের গোটা।
+         * ⓘ প্রতিটা কাগজের যাচাই তার নিজের শাখায়।
+         */
+        $held = SalesOrder::acrossBranches()->withoutGlobalScope(SalesOrder::DEALER_WALL)
             ->where('customer_id', $customerId)
             ->where('status', SalesOrderStatus::CREDIT_HELD)
             ->orderBy('credit_held_at')->orderBy('id')
             ->get();
 
         foreach ($held as $order) {
-            if ($this->recheckCredit($order) !== SalesOrderStatus::CREDIT_HELD) {
+            $branchId = $order->branch_id === null ? null : (int) $order->branch_id;
+
+            if (CompanyContext::inBranch($branchId, fn () => $this->recheckCredit($order)) !== SalesOrderStatus::CREDIT_HELD) {
                 $moved++;
             }
         }
