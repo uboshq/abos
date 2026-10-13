@@ -276,6 +276,30 @@ final class ThePersonWhoNeededItHadNoWayToAskTest extends TestCase
             ->assertForbidden();
     }
 
+    /**
+     * ⛔ একই পুরনো কপি দিয়ে দুবার "আদেশ বানাও" — দ্বিতীয়টা থামে, আদেশ একটাই (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[PurchaseRequisitionService::toOrder()]])। ⚠️ আগে যাচাই হাতের কপিতে ছিল: দুই ক্লিকে দুটো আদেশ, একটা এতিম।
+     */
+    public function test_two_presses_from_the_same_copy_make_one_order(): void
+    {
+        $requisition = $this->aRequisition(qty: '10', rate: '25');
+        $this->service()->approve($requisition);
+        // ⓘ দ্বিতীয় ক্লিকের হাতের কপি — "নিশ্চিত, আদেশ নেই", প্রথম ক্লিকের আগের মুহূর্তের
+        $secondClick = $requisition->fresh()->getAttributes();
+
+        $this->service()->toOrder($requisition->fresh(), $this->orderData());
+
+        try {
+            $this->service()->toOrder((new PurchaseRequisition)->newFromBuilder($secondClick), $this->orderData());
+            $this->fail('⛔ একই চাহিদা থেকে দ্বিতীয় আদেশ হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors(), 'অন্য কারণে থামল।');
+        }
+
+        $this->assertSame(1, \App\Modules\Purchase\Models\PurchaseOrder::query()
+            ->where('narration', 'like', '%'.$requisition->document_no.'%')->count(), '⛔ একই চাহিদা থেকে দুটো আদেশ।');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function service(): PurchaseRequisitionService
