@@ -256,12 +256,19 @@ final class PartyReports
                     // তাই ধ্রুবক হিসেবেই select করা। engine সারিগুলোকে
                     // সাধারণ অ্যারে হিসেবে দেখে, তাই কলামটা থাকতেই হবে।
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
-                    DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding'),
+                    /*
+                     * ⛔ বকেয়া আর অগ্রিম আলাদা ঘরে — বয়সের তালিকার একই নিয়ম (৯ অক্টোবর)। আগে আগাম রাখা গ্রাহক ঋণাত্মক বকেয়া হয়ে
+                     * মোটে মিশত: ঘরের "গ্রাহকের কাছে পাওনা" ১,০০০, তাতে চাপলে খোলা এই তালিকার মোট ৩০০ (Customer নিরীক্ষা,
+                     * ১৩ অক্টোবর ২০২৬; [[TheDueListNettedTheAdvancesTest]])।
+                     */
+                    DB::raw('GREATEST(SUM(ledger_entries.debit) - SUM(ledger_entries.credit), 0) as outstanding'),
+                    DB::raw('GREATEST(SUM(ledger_entries.credit) - SUM(ledger_entries.debit), 0) as advance'),
                 ]),
             // ⭐ গ্রাহক তালিকার কলামগুলোই, একই ক্রমে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬
             columns: [
                 ...self::identityColumns('party_id', address: true, owner: true, mobile: true),
                 ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
+                ['key' => 'advance', 'label' => 'customer::field.advance_held', 'type' => ReportColumn::MONEY],
             ],
         );
     }
