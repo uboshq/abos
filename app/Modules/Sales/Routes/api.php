@@ -32,6 +32,11 @@ Route::prefix('v1/sales')
         // ⭐ গ্রাহকের খাতা, ফোনে — মালিক, ১২ অক্টোবর ২০২৬ ([[CustomerLedgerApiController]])
         Route::get('/customers/{id}/ledger', [\App\Modules\Sales\Http\Controllers\CustomerLedgerApiController::class, 'show'])->whereUuid('id')->name('customer.ledger');
         Route::post('/offers', [OrderStandingController::class, 'offers'])->name('offers');
+        // ⭐ বিক্রয় বিল আর চালান — তালিকা ও পাতা (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na"; [[SalesPaperApiController]])
+        Route::get('/invoices', [\App\Modules\Sales\Http\Controllers\SalesPaperApiController::class, 'invoices'])->middleware('can:sales.invoice.view')->name('invoice.list');
+        Route::get('/invoices/{id}', [\App\Modules\Sales\Http\Controllers\SalesPaperApiController::class, 'invoice'])->whereUuid('id')->middleware('can:sales.invoice.view')->name('invoice.show');
+        Route::get('/challans', [\App\Modules\Sales\Http\Controllers\SalesPaperApiController::class, 'challans'])->middleware('can:sales.challan.view')->name('challan.list');
+        Route::get('/challans/{id}', [\App\Modules\Sales\Http\Controllers\SalesPaperApiController::class, 'challan'])->whereUuid('id')->middleware('can:sales.challan.view')->name('challan.show');
 
         // ⭐ এক কাগজে এক QR — দেখা, "মাল বেরোল", "ডেলিভারি নিশ্চিত" ([[QrScanController]])
         Route::get('/scan/{token}', [QrScanController::class, 'show'])->middleware('can:sales.delivery.view')->name('scan');
