@@ -867,6 +867,15 @@ final class PayrollService
     /** CSV-র একটা ঘর — কমা বা উদ্ধৃতি থাকলে মুড়ে দেওয়া। */
     private function csvField(string $value): string
     {
+        /*
+         * ⛔ সূত্রের মতো শুরু হলে আগে একটা ' — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[TheBankFileCarriesNoFormulaTest]])।
+         * ⓘ হিসাবের নাম "=HYPERLINK(...)" লেখা থাকলে ফাইলটা এক্সেলে খোলামাত্র সূত্র চলত। = + - @ আর ট্যাব/CR দিয়ে শুরু হওয়া ঘর
+         * এখন লেখা হিসেবেই পড়ে। অঙ্কের ঘর এতে পড়ে না — নিট শূন্যের বেশি না হলে সারিটাই বাদ।
+         */
+        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            $value = "'".$value;
+        }
+
         if (str_contains($value, ',') || str_contains($value, '"') || str_contains($value, "\n")) {
             return '"'.str_replace('"', '""', $value).'"';
         }
