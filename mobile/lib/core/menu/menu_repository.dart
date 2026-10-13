@@ -379,6 +379,21 @@ class MenuRepository {
             icon: Icons.request_quote_outlined,
             routeName: 'claims',
           ),
+        // ⭐ বিক্রয় বিল আর চালান — ওয়েবের তালিকার দেখার চাবি (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na")
+        if (user.can('sales.invoice.view'))
+          const MenuItem(
+            key: 'sales.invoice.index',
+            label: 'বিক্রয় বিল',
+            icon: Icons.receipt_long_outlined,
+            routeName: 'invoices',
+          ),
+        if (user.can('sales.challan.view'))
+          const MenuItem(
+            key: 'sales.challan.index',
+            label: 'চালান',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'challans',
+          ),
         // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
         // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতার চাবি; কোম্পানির ফোন-সুইচ [[ModuleGate]]-এ
         if (user.can('executive.view'))

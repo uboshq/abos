@@ -825,4 +825,30 @@ void main() {
     expect(api.sentDraft, isTrue);
     expect(api.overviews, 2);
   });
+
+  // ⭐ মালিক, ১৩ অক্টোবর ২০২৬: বিক্রির পরে বিলটা ফোনে কোথাও ছিল না — পাকা বিক্রির পপ-আপে "বিলটা দেখুন"
+  testWidgets('a finished sale offers "বিলটা দেখুন"; a parked one does not', (tester) async {
+    final api = _FakeApi()
+      ..answer = const CounterResult(status: 'done', notice: 'বিল INV-0007 হলো।', invoiceNo: 'INV-0007', invoiceId: 'inv-7');
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await _confirm(tester);
+    expect(find.byKey(const ValueKey('counter-open-bill')), findsOneWidget);
+    expect(find.text('বিলটা দেখুন'), findsOneWidget);
+    await tester.tap(find.text('ঠিক আছে'));
+    await tester.pumpAndSettle();
+
+    api.answer = const CounterResult(status: 'parked', notice: 'খসড়া রাখা হলো।');
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await tester.tap(find.byKey(const ValueKey('counter-confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('overview-draft')));
+    await tester.pumpAndSettle();
+    expect(find.text('খসড়া রাখা হলো'), findsOneWidget);
+    expect(find.byKey(const ValueKey('counter-open-bill')), findsNothing);
+  });
 }

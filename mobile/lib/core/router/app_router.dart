@@ -43,6 +43,7 @@ import '../../features/sync/sync_status_screen.dart';
 import '../../features/executive/executive_screen.dart';
 import '../../features/credit_control/credit_screens.dart';
 import '../../features/notices/notice_board_screen.dart';
+import '../../features/sales_papers/sales_paper_screens.dart';
 import '../auth/auth_state.dart';
 import '../menu/module_gate.dart';
 
@@ -321,6 +322,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           _framed(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          // ⭐ বিক্রয় বিল আর চালান — তালিকা; একটা কাগজ খোলে `paper/invoice|challan/:id`-এ (মালিক, ১৩ অক্টোবর ২০২৬)
+          _framed(
+            path: 'invoices',
+            builder: (context, state) => const ModuleGateView(
+                path: 'invoices', child: SalesPaperListScreen(kind: SalesPaperKind.invoice)),
+          ),
+          _framed(
+            path: 'challans',
+            builder: (context, state) => const ModuleGateView(
+                path: 'challans', child: SalesPaperListScreen(kind: SalesPaperKind.challan)),
           ),
           // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
           // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতা, কেবল পড়া

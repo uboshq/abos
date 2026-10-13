@@ -384,6 +384,21 @@ class NavCatalog {
         label: 'ব্যবসার ড্যাশবোর্ড',
         icon: Icons.insights_outlined,
         aliases: ['dashboard', 'ড্যাশবোর্ড']),
+    // ── ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na") ──
+    NavScreenDef(
+        path: 'invoices',
+        module: 'sales',
+        group: 'লেনদেন',
+        label: 'বিক্রয় বিল',
+        icon: Icons.receipt_long_outlined,
+        aliases: ['invoice', 'বিল', 'ইনভয়েস', 'বিক্রি', 'inv']),
+    NavScreenDef(
+        path: 'challans',
+        module: 'sales',
+        group: 'লেনদেন',
+        label: 'চালান',
+        icon: Icons.local_shipping_outlined,
+        aliases: ['challan', 'চালান', 'gate pass', 'cha']),
     // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
     NavScreenDef(
         path: 'owner-centre',

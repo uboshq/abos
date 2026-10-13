@@ -57,6 +57,8 @@ void main() {
     'executive_screen.dart',
     'credit_screens.dart',
     'notice_board_screen.dart',
+    // ⭐ বিক্রয় বিল আর চালান (১৩ অক্টোবর ২০২৬) — টান নিজের টেস্টে দেখা
+    'sales_paper_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each

@@ -9,6 +9,7 @@ import '../books/purchase_screens.dart';
 import '../claims/claims_screens.dart';
 import '../delivery_orders/delivery_order_screens.dart';
 import '../quotations/quotation_screens.dart';
+import '../sales_papers/sales_paper_screens.dart';
 import '../vouchers/voucher_screens.dart';
 
 /// ⭐ `/home/paper/<kind>/<id>` — a paper reopened from "সাম্প্রতিক" (মালিক, ১২ অক্টোবর ২০২৬)।
@@ -37,6 +38,8 @@ class PaperRoute extends StatelessWidget {
       'purchase' => PurchaseScreen(kind: extra ?? '', id: id),
       'voucher' => VoucherScreen(id: id),
       'claim' => ClaimScreen(id: id),
+      'invoice' => SalesPaperScreen(kind: SalesPaperKind.invoice, id: id),
+      'challan' => SalesPaperScreen(kind: SalesPaperKind.challan, id: id),
       _ => null,
     };
     if (list == null || screen == null) {
