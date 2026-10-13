@@ -458,6 +458,20 @@ final class MoneyTransferService
         }
 
         /*
+         * ⛔ গ্রহীতা বাক্স এই কোম্পানির আর চালু — অডিট স১৬/ছ১৬, ১০ অক্টোবর ২০২৬ ([[ATransferGoesOnlyToAnOpenTillOfThisCompanyTest]])।
+         * ⓘ আগে নম্বরটা যেমন এল তেমনি বসত: অন্য কোম্পানির বা বন্ধ করা বাক্সে টাকা "পথে" ঝুলে থাকত, গ্রহণের কেউ নেই।
+         */
+        if (filled($toTill)) {
+            $to = $this->till($toTill, 'to_till_id');
+
+            if (! $to->is_active) {
+                throw ValidationException::withMessages([
+                    'to_till_id' => __('accounts::validation.till_inactive', ['name' => $to->name()]),
+                ]);
+            }
+        }
+
+        /*
          * ⭐ খাত হলে কেবল এই কোম্পানির চালু ব্যাংক খাত (গ৪, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬) — পর্দার
          * তালিকার হুবহু ([[MoneyTransferController::options()]])।
          *
@@ -535,21 +549,23 @@ final class MoneyTransferService
         }
 
         $userId = (int) auth()->id();
-        $expected = $transfer->toTill?->holder_id ?? ($transfer->to_till_id !== null ? $transfer->received_by : null);
+        $holder = $transfer->toTill?->holder_id;
+        $expected = $holder ?? ($transfer->to_till_id !== null ? $transfer->received_by : null);
 
-        if ($expected !== null) {
-            if ((int) $expected !== $userId) {
-                throw ValidationException::withMessages([
-                    'status' => __('accounts::validation.transfer_not_your_box'),
-                ]);
-            }
-
-            return;
-        }
-
-        if (in_array($userId, array_map('intval', array_filter([$transfer->created_by, $transfer->given_by])), true)) {
+        /*
+         * ⛔ মালিকহীন বাক্সে পাঠানো ব্যক্তি নিজে কখনো গ্রহীতা নন — অডিট স১৬/ছ১৬, ১০ অক্টোবর ২০২৬ ([[ATransferGoesOnlyToAnOpenTillOfThisCompanyTest]])।
+         * ⓘ আগে গ্রহীতার নাম লেখা থাকলে কেবল সেটাই দেখা হত — আর নামটা লেখেন পাঠানো ব্যক্তিই। নিজের নাম লিখলে নিজেই গ্রহণ দিতেন,
+         * দুই হাতের নিয়ম শেষ। ⓘ বাক্সের মালিক বসানো থাকলে তিনিই গ্রহীতা — নিজের দুই বাক্সের মাঝে সরানো আগের মতোই চলে।
+         */
+        if ($holder === null && in_array($userId, array_map('intval', array_filter([$transfer->created_by, $transfer->given_by])), true)) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::validation.transfer_sender_cannot_receive'),
+            ]);
+        }
+
+        if ($expected !== null && (int) $expected !== $userId) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_not_your_box'),
             ]);
         }
     }

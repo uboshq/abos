@@ -32,6 +32,13 @@
                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border
                               border-(--color-border) bg-(--color-surface-app) px-2 text-end">
 
+                {{-- ⭐ ব্যাংক যা কেটে রেখেছে — নিজের খাতে যায়, ডিলারের পাওনা কমে "এসেছে + চার্জ" অঙ্কে (টাকার পরিকল্পনা ৫) --}}
+                <input type="number" step="0.01" min="0" name="bank_charge" value="0" data-bank-charge
+                       title="{{ __('sales::field.bank_charge') }}" aria-label="{{ __('sales::field.bank_charge') }}"
+                       placeholder="{{ __('sales::field.bank_charge') }}"
+                       class="num h-(--spacing-field-compact) w-24 rounded-(--radius-field) border
+                              border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+
                 <select name="account_id" required
                         class="h-(--spacing-field-compact) rounded-(--radius-field) border
                                border-(--color-border) bg-(--color-surface-app) px-2">

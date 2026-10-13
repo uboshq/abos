@@ -89,6 +89,7 @@ return [
     'cost_of_goods' => ':no — বিক্রীত পণ্যের ব্যয়',
     'stock_out' => ':no — মজুদ কমল',
     'money_in' => ':no — টাকা জমা',
+    'bank_charge_on' => ':no — ব্যাংক চার্জ (ব্যাংক কেটে রেখেছে)',
     'against_receivable' => ':no — পাওনার বিপরীতে',
     'challan_created' => 'চালান তৈরি হয়েছে — নিশ্চিত করলে মাল বেরিয়ে যাবে।',
     'challan_updated' => 'চালান হালনাগাদ হয়েছে।',

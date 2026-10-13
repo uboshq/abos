@@ -122,7 +122,13 @@ class PeriodLockController extends Controller implements HasMiddleware
          *
          * বন্ধ করলে আজকের বিক্রিই থেমে যেত, আর প্রথম যিনি বিল কাটতে
          * যেতেন তিনি বুঝতেই পারতেন না কী হয়েছে।
+         *
+         * ⛔ সংখ্যায় এনে তুলনা — অডিট ম১৯, ১০ অক্টোবর ২০২৬ ([[TheCurrentMonthStaysOpenTest]])। ⓘ `integer` নিয়ম মান বদলায় না:
+         * ফর্ম থেকে "2026" লেখা হয়েই আসে, আর `===` লেখা-বনাম-সংখ্যায় কখনো মেলে না — তাই চলতি মাসও বন্ধ হয়ে যেত।
          */
+        $data['year'] = (int) $data['year'];
+        $data['month'] = (int) $data['month'];
+
         if ($data['year'] === (int) now()->year && $data['month'] === (int) now()->month) {
             return back()->withErrors(['month' => __('accounts::validation.cannot_close_this_month')]);
         }

@@ -76,6 +76,19 @@ final class CollectionService
             }
 
             /*
+             * ⭐ ব্যাংক চার্জ নিজের খাতে — টাকার পরিকল্পনা ৫ (মালিক, ৭ অক্টোবর ২০২৬; [[TheBankChargeGoesToItsOwnHeadTest]])।
+             * ⓘ `amount` ডিলারের পাওনা থেকে যা কমে; চার্জ তার যে অংশ ব্যাংক রেখে দিয়েছে। টাকার খাতে আসে বাকিটা — তাই চার্জ
+             * শূন্যের নিচে বা পুরো অঙ্কের সমান-বেশি হতে পারে না (তখন খাতে কিছুই আসত না)।
+             */
+            $charge = $this->money($data['bank_charge'] ?? '0');
+
+            if (bccomp($charge, '0', 4) < 0 || bccomp($charge, $amount, 4) >= 0) {
+                throw ValidationException::withMessages([
+                    'bank_charge' => __('sales::validation.bank_charge_out_of_range', ['amount' => Money::format($amount)]),
+                ]);
+            }
+
+            /*
              * ⛔ একই স্লিপ দুইবার নয় — মালিকের নিয়ম, ৫ সেপ্টেম্বর ২০২৬।
              *
              * ⚠️ আদায়ে এটা পরিশোধের চেয়েও দামি: একই বিকাশ TrxID দুইবার
@@ -111,6 +124,7 @@ final class CollectionService
                 )->id,
                 'trx_date' => $trxDate->toDateString(),
                 'amount' => $amount,
+                'bank_charge' => $charge,
                 'instrument' => $data['instrument'] ?? null,
                 'instrument_no' => $data['instrument_no'] ?? null,
                 'instrument_date' => $data['instrument_date'] ?? null,
@@ -118,6 +132,16 @@ final class CollectionService
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
+
+            /*
+             * ⭐ বিল বাছা না থাকলে সবচেয়ে পুরনো বিল আগে (FIFO) — টাকার পরিকল্পনা ৬ (মালিক, ৭ অক্টোবর ২০২৬;
+             * [[AnUnpointedCollectionPaysTheOldestBillFirstTest]])। ⓘ আগে বিল না বাছা আদায় খালি বসত: পাওনা কমত, অথচ প্রতিটা বিল
+             * "বাকি" দেখাত — তাগাদার তালিকা আর বিলের বয়স দুটোই ভুল। ⓘ বাছা থাকলে আগের মতোই; বাড়তি টাকা আগের মতো গ্রাহকের
+             * খাতায় Cr। কেবল তৈরিতে — সম্পাদনায় খালি রাখা মানে ইচ্ছা করে খালি।
+             */
+            if ($lines === []) {
+                $lines = $this->oldestFirst($collection);
+            }
 
             $this->replaceLines($collection, $lines);
 
@@ -246,6 +270,9 @@ final class CollectionService
              */
             $this->assertStillFits($collection, lock: true);
 
+            // ⭐ চার্জ থাকলে টাকার খাতে কম আসে, আর তফাতটা ব্যাংক চার্জের খাতে — পাওনা কমে পুরো অঙ্কেই (টাকার পরিকল্পনা ৫)
+            $charge = bcadd((string) ($collection->bank_charge ?? '0'), '0', 4);
+
             $this->posting->post(
                 sourceType: Collection::drillSourceType(),
                 sourceId: $collection->id,
@@ -253,9 +280,14 @@ final class CollectionService
                 lines: [
                     [
                         'account_id' => $collection->account_id,
-                        'debit' => (string) $collection->amount,
+                        'debit' => bcsub((string) $collection->amount, $charge, 4),
                         'narration' => __('sales::message.money_in', ['no' => $collection->document_no]),
                     ],
+                    ...(bccomp($charge, '0', 4) > 0 ? [[
+                        'account_id' => $this->account(StandardChart::BANK_CHARGES)->id,
+                        'debit' => $charge,
+                        'narration' => __('sales::message.bank_charge_on', ['no' => $collection->document_no]),
+                    ]] : []),
                     [
                         'account_id' => $this->account(StandardChart::RECEIVABLE)->id,
                         'credit' => (string) $collection->amount,
@@ -484,6 +516,46 @@ final class CollectionService
      *
      * @param  list<array<string, mixed>>  $lines
      */
+    /**
+     * আদায়ের টাকা গ্রাহকের খোলা বিলে, পুরনো আগে — প্রতিটায় তার বকেয়া পর্যন্ত, টাকা ফুরোলে থামা (টাকার পরিকল্পনা ৬)।
+     *
+     * ⓘ কেবল আদায়ের নিজের শাখার বিল — অন্য শাখার বিলে ভাগ দিলে দুই শাখার পাওনা ভুল হত ([[DepositClaimService::sharesAt()]]-এর একই নিয়ম)।
+     *
+     * @return list<array{sales_invoice_id: int, amount: string}>
+     */
+    private function oldestFirst(Collection $collection): array
+    {
+        $left = (string) $collection->amount;
+        $lines = [];
+
+        $bills = SalesInvoice::acrossBranches()
+            ->where('sal_invoices.company_id', $collection->company_id)
+            ->where('sal_invoices.customer_id', $collection->customer_id)
+            ->where('sal_invoices.status', DocumentStatus::CONFIRMED)
+            ->when($collection->branch_id !== null, fn ($q) => $q->where('sal_invoices.branch_id', $collection->branch_id))
+            ->withCollected()
+            ->orderBy('sal_invoices.trx_date')->orderBy('sal_invoices.id')
+            ->get();
+
+        foreach ($bills as $bill) {
+            if (bccomp($left, '0', 4) <= 0) {
+                break;
+            }
+
+            $due = $bill->dueAmount();
+            $share = bccomp($due, $left, 4) < 0 ? $due : $left;
+
+            if (bccomp($share, '0', 4) <= 0) {
+                continue;
+            }
+
+            $lines[] = ['sales_invoice_id' => (int) $bill->id, 'amount' => $share];
+            $left = bcsub($left, $share, 4);
+        }
+
+        return $lines;
+    }
+
     private function replaceLines(Collection $collection, array $lines): void
     {
         $collection->lines()->delete();

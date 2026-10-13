@@ -292,6 +292,7 @@ return [
     'total_assets' => 'মোট সম্পদ',
     'total_funding' => 'মোট দায় ও মূলধন',
     'profit_this_year' => 'চলতি বছরের লাভ/ক্ষতি',
+    'profit_earlier_years' => 'আগের বছরগুলোর লাভ/ক্ষতি (বছর বন্ধ হয়নি)',
     'against_which_bill' => 'কোন চালানের জন্য',
     'ait' => 'AIT',
     'all_bills' => 'সব চালান',

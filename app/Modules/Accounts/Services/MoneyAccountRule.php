@@ -45,6 +45,13 @@ final class MoneyAccountRule
             ]);
         }
 
+        // ⛔ নিষ্ক্রিয় খাতে নতুন টাকা নয় — অডিট ম২০, ১০ অক্টোবর ২০২৬ ([[AnInactiveAccountTakesNoNewMoneyTest]])
+        if (! $account->is_active) {
+            throw ValidationException::withMessages([
+                $field => __('accounts::validation.inactive_account', ['name' => $account->name()]),
+            ]);
+        }
+
         // মায়ের সন্তান কোনো খাত — মাথা নিজে নয়
         $isChildOfMother = Account::query()
             ->whereKey($account->parent_id)

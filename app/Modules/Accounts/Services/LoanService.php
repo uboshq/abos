@@ -308,6 +308,21 @@ final class LoanService
 
         return DB::transaction(function () use ($instalment, $loan, $fromAccountId, $date, $paid) {
             /*
+             * ⛔ ঋণ আর কিস্তির সারিতে তালা, তারপর টাটকা সারিতে আবার "দেওয়া হয়েছে?" — অডিট ছ৯, ১০ অক্টোবর ২০২৬
+             * ([[ALoanInstalmentIsPaidOnceTest]])। ⓘ উপরের দেখা লেনদেনের বাইরে, হাতের কপিতে: পুরনো পর্দা থেকে বা দুই ক্লিকে দ্বিতীয়জন
+             * "বাকি" দেখে ঢুকতেন, আর থামতেন কেবল ইঞ্জিনের ভিতরে — নামহীন ত্রুটিতে। ⓘ ক্রম [[finishSigned()]]-এর মতো: আগে ঋণ, পরে সারি।
+             */
+            Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
+            $fresh = LoanInstalment::query()->whereKey($instalment->getKey())->lockForUpdate()->firstOrFail();
+            $instalment->setRawAttributes($fresh->getAttributes(), true);
+
+            if ($instalment->isPaid()) {
+                throw ValidationException::withMessages([
+                    'paid_on' => __('accounts::validation.instalment_already_paid'),
+                ]);
+            }
+
+            /*
              * ব্যাংক যা কেটেছে তা যদি সূচির চেয়ে আলাদা হয়, সুদটাই
              * সূচির মানে থাকে আর বাকিটা আসলে যায়।
              *

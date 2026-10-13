@@ -171,6 +171,7 @@ return [
     'over_allocated' => ':no বিলের বকেয়া :due টাকা — তার বেশি বসানো যাবে না।',
     'allocation_over_amount' => 'বিলে ভাগ করা হয়েছে :allocated টাকা, অথচ আদায় :amount টাকা।',
     'collection_must_be_positive' => 'আদায়ের অঙ্ক শূন্যের বেশি হতে হবে।',
+    'bank_charge_out_of_range' => 'ব্যাংক চার্জ শূন্য বা তার বেশি, আর :amount-এর কম হতে হবে — নাহলে টাকার খাতে কিছুই আসে না।',
     'unknown_account' => 'খাতটা এই কোম্পানির ছকে নেই।',
     'not_a_money_account' => ':name নগদ বা ব্যাংক জাতীয় খাত নয় — টাকা ওখানে জমা হয় না।',
     'cheque_not_from_receipt' => 'এই চেকটা আদায়ের কাগজে নেওয়া হয়নি — এর ফেরত অন্যভাবে হয়।',

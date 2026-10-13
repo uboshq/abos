@@ -55,6 +55,7 @@ final class YearEndService
         private readonly PostingEngine $posting,
         private readonly NumberSeriesProvisioner $series,
         private readonly DocumentApproval $approvals,
+        private readonly PostingBacklog $backlog,
     ) {}
 
     /** বছর বন্ধের দাখিলার উৎস — ড্রিল-ডাউনে চেনা যায়। */
@@ -253,6 +254,16 @@ final class YearEndService
         );
 
         return DB::transaction(function () use ($year, $next) {
+            /*
+             * ⛔ বছরের সারিতে তালা, লেনদেনের প্রথম কাজ — অডিট ম১৭/স১২/ছ৮, ১০ অক্টোবর ২০২৬ ([[TheYearWaitsForEveryOpenPaperTest]])।
+             * ⓘ আগে পাহারা চলত লেনদেনের বাইরে: দুইজন একসাথে বন্ধ করলে দুইজনই "খোলা" দেখে দুইটা সমাপনী বসাতেন, আর পাহারা ও বন্ধের
+             * মাঝখানে বসা কাগজ সমাপনীতে ধরা পড়ত না। ⓘ [[PostingEngine]] বছরটা ভাগের তালায় পড়ে, তাই চলতি পোস্টিং শেষ হলে তবেই এটা এগোয়,
+             * আর এটা শেষ হলে পোস্টিং বন্ধ বছর দেখে থামে। তালার পরে পাহারাটা আবার — এবার টাটকা সারিতে।
+             */
+            $locked = FinancialYear::query()->whereKey($year->getKey())->lockForUpdate()->firstOrFail();
+            $year->setRawAttributes($locked->getAttributes(), true);
+            $this->assertCanClose($year);
+
             $proposed = [...$this->nextYearFor($year), ...array_filter($next)];
 
             $this->assertNoOverlap($year, $proposed);
@@ -489,6 +500,22 @@ final class YearEndService
         if ($drafts > 0) {
             throw ValidationException::withMessages([
                 'year' => __('accounts::validation.year_has_drafts', ['count' => $drafts]),
+            ]);
+        }
+
+        /*
+         * ⛔ সইয়ের অপেক্ষার কাগজ আর খাতায় না-ওঠা কাগজও — অডিট ম১৭/স১২/ছ৮, ১০ অক্টোবর ২০২৬ ([[TheYearWaitsForEveryOpenPaperTest]])।
+         * ⓘ আগে কেবল খসড়া গোনা হত: সইয়ের অপেক্ষার জমা বা ভাউচার, আর নিশ্চিত হয়েও খাতায় না-ওঠা বিল বছর বন্ধের পর আর কখনো
+         * ঐ বছরে বসতে পারত না — মাস বন্ধের একই নিয়ম ([[PeriodLockController::close()]])।
+         */
+        $from = Carbon::parse($year->starts_on)->toDateString();
+        $to = Carbon::parse($year->ends_on)->toDateString();
+        $awaiting = $this->backlog->awaitingSignatureBetween($from, $to);
+        $unposted = $this->backlog->countBetween($from, $to);
+
+        if ($awaiting + $unposted > 0) {
+            throw ValidationException::withMessages([
+                'year' => __('accounts::validation.year_has_open_papers', ['awaiting' => $awaiting, 'unposted' => $unposted]),
             ]);
         }
     }

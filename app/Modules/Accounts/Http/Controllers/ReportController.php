@@ -121,7 +121,11 @@ class ReportController extends Controller implements HasMiddleware
     ];
 
     /** যেগুলোতে চূড়ান্ত হিসাবের অনুমতি লাগে। */
-    private const FINAL_ACCOUNTS = ['profit-loss', 'balance-sheet', 'cash-flow', 'branches'];
+    /*
+     * ⛔ রেওয়ামিল আর খাত-ধরে আয়-খরচও — অডিট ম১৩/ম১৮ (১০ অক্টোবর ২০২৬): এগুলোর যোগফলই লাভ-ক্ষতি, তাই লাভ-ক্ষতির চাবি ছাড়া
+     * খোলা থাকলে মুনাফার প্রশ্নটা পাশের দরজা দিয়ে উত্তর পেত। ⓘ সংজ্ঞার `permission`-ও একই (রিপোর্ট-কেন্দ্র আর ফোন সেটা পড়ে)।
+     */
+    private const FINAL_ACCOUNTS = ['profit-loss', 'balance-sheet', 'cash-flow', 'branches', 'trial-balance', 'expense-by-head', 'income-by-head'];
 
     public function __construct(
         private readonly ReportEngine $reports,
@@ -202,7 +206,8 @@ class ReportController extends Controller implements HasMiddleware
              */
             'summary' => $definition->summary === null
                 ? null
-                : ($definition->summary)($result->totals),
+                // ⓘ ছাঁকনিও যায় — স্থিতিপত্র চলতি বছর আলাদা করে ([[CoreReports::unclosedSplit()]]); বাকিরা দ্বিতীয়টা নেয় না
+                : ($definition->summary)($result->totals, $result->filters),
             'branches' => $definition->hasFilter('branch')
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),

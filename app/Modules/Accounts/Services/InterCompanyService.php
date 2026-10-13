@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -79,6 +80,18 @@ final class InterCompanyService
 
         $counter = $this->assertBothAreMine($user, $own, (int) $data['counter_company_id']);
         $amount = $this->assertAmount($data['amount']);
+
+        /*
+         * ⛔ শাখা কেবল নিজের কোম্পানির — অডিট স১৪, ১০ অক্টোবর ২০২৬ ([[AnInterCompanyPaperStaysInItsOwnBranchesTest]])। ⓘ নম্বরটা
+         * অনুরোধ থেকে সোজা দেওয়ার ভাউচারে বসত: অন্য কোম্পানির শাখার নম্বর দিলে নিজের খাতার সারি এমন শাখায় পড়ত যা এই কোম্পানির
+         * কোনো শাখা-প্রতিবেদনে আসে না।
+         */
+        if (filled($data['branch_id'] ?? null)
+            && ! Branch::query()->withoutGlobalScopes()->whereKey((int) $data['branch_id'])->where('company_id', $own)->exists()) {
+            throw ValidationException::withMessages([
+                'branch_id' => __('accounts::validation.inter_company_branch_unknown'),
+            ]);
+        }
 
         return DB::transaction(function () use ($user, $own, $counter, $amount, $data) {
             $transfer = new InterCompanyTransfer([

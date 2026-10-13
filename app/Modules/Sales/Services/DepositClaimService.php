@@ -295,6 +295,15 @@ final class DepositClaimService
             $date = Carbon::parse((string) ($overrides['trx_date'] ?? $claim->claimed_on))->toDateString();
 
             /*
+             * ⭐ ব্যাংক চার্জ নিজের খাতে — টাকার পরিকল্পনা ৫ (মালিক, ৭ অক্টোবর ২০২৬; [[TheBankChargeGoesToItsOwnHeadTest]])।
+             * ⓘ উপরের অঙ্ক যা সত্যিই ব্যাংকে এসেছে (৪৯,৯৫০); চার্জ (৫০) ব্যাংক রেখে দিয়েছে। ⚠️ আগে চার্জের ঘর ছিল না: অঙ্ক
+             * কমালে ডিলারের পাওনাও কম কমত, ৫০ টাকা তাঁর নামে বকেয়া থেকে যেত — অথচ তিনি পুরোটা পাঠিয়েছেন। এখন আদায়টা
+             * ৫০,০০০-এর (পাওনা ততটাই কমে, বিলেও ততটাই মেলে), আর খাতায় ব্যাংক ৪৯,৯৫০ + ব্যাংক চার্জ ৫০ ([[CollectionService::confirm()]])।
+             */
+            $charge = Money::of((string) ($overrides['bank_charge'] ?? '0'));
+            $credit = bcadd($amount, $charge, 4);
+
+            /*
              * ⛔ গ্রাহক যে পথে পাঠালেন, টাকা সেই ধরনের খাতেই — ২৮ সেপ্টেম্বর ২০২৬।
              *
              * ⓘ অনুমোদনের পর্দা যেকোনো টাকার খাত বাছতে দেয়। "বিকাশে পাঠালাম"
@@ -336,13 +345,14 @@ final class DepositClaimService
                 'customer_id' => $claim->customer_id,
                 'branch_id' => $claim->branch_id,
                 'trx_date' => $date,
-                'amount' => $amount,
+                'amount' => $credit,
+                'bank_charge' => $charge,
                 'account_id' => $accountId,
                 'instrument' => $claim->method,
                 'instrument_no' => $claim->reference,
                 'narration' => __('sales::portal.from_claim', ['no' => $claim->public_id]),
                 // ⭐ বাছা বিলে মেলে — না বাছলে আগের মতো খালি, গ্রাহকের খাতায় মোট টাকা ([[sharesAt()]])
-            ], $this->sharesAt($claim, $amount)));
+            ], $this->sharesAt($claim, $credit)));
 
             CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id, fn () => $this->collections->confirm($collection));
 
