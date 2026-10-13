@@ -62,6 +62,9 @@ final class TheAppCouldNotOpenTheWebScreensTest extends TestCase
         $url = $this->key($access, $this->menuPath($access, 'accounts.coa.index'))->json('url');
 
         $this->open($url, self::PHONE)->assertRedirect();
+
+        // ⓘ এক সেকেন্ড পরে — একই সেকেন্ডে MySQL "বদলায়নি" বলে দ্বিতীয় খরচ এমনিতেই ০ সারি গুনত, আর দাবিটা কিছুই প্রমাণ করত না
+        $this->travel(2)->seconds();
         $this->app['auth']->forgetGuards();
         $this->open($url, self::PHONE)->assertForbidden();
     }
