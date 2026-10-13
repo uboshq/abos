@@ -67,7 +67,8 @@ class LoginJournal
      */
     public static function unknownKey(string $identifier): string
     {
-        $normal = mb_strtolower(trim($identifier));
+        // ⛔ তালার একই রূপ — নম্বর যেভাবেই লেখা হোক একই ছাপ ([[LoginLock::canonical()]])
+        $normal = \App\Core\Security\LoginLock::canonical($identifier);
 
         // ⓘ পোর্টালের দরজা নিজের নামে লেখে (`portal:…`) — দরজার নামটা গোপন নয়, তাই থাকে; ঢাকা হয় তার পরেরটুকু
         $door = str_starts_with($normal, 'portal:') ? 'portal:' : '';
@@ -106,7 +107,8 @@ class LoginJournal
                  */
                 'identifier' => $reason === LoginAttempt::UNKNOWN
                     ? self::unknownKey($identifier)
-                    : mb_substr(trim($identifier), 0, 191),
+                    // ⛔ তালার একই রূপে — নইলে "01711-000000"-এর ব্যর্থতা "01711000000"-এর তালায় গোনা হত না ([[LoginLock::canonical()]])
+                    : mb_substr(\App\Core\Security\LoginLock::canonical($identifier), 0, 191),
 
                 'succeeded' => $succeeded,
                 'reason' => $reason,

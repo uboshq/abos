@@ -127,6 +127,19 @@ final class LoginLock
 
     private function normalise(string $identifier): string
     {
-        return mb_strtolower(trim($identifier));
+        return self::canonical($identifier);
+    }
+
+    /**
+     * ⛔ পরিচয়ের এক রূপ — তালা, খাতা আর থ্রটল তিনজনেই এটা দেখে (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+     * [[ALockedAccountOpenedWithTheNumberWrittenAnotherWayTest]])।
+     *
+     * ⚠️ খোঁজা মোবাইল নম্বর ছাঁদে আনে ([[LoginMobile::normalise()]]), অথচ তালা গুনত কাঁচা লেখা — "01711000000",
+     * "01711-000000", "০১৭১১০০০০০০" একই মানুষ, তিনটা আলাদা তালা। আট ভুলে পনেরো মিনিটের তালা কার্যত দিনে লাখো আন্দাজ।
+     * ⓘ মোবাইলের রূপ হলে ছাঁদের নম্বর, নইলে আগের মতো ছোট হাতের ছাঁটা লেখা (ইমেইল, আইডি)।
+     */
+    public static function canonical(string $identifier): string
+    {
+        return mb_strtolower(trim((string) \App\Core\Support\LoginMobile::normalise(trim($identifier))));
     }
 }

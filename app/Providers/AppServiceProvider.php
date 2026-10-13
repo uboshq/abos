@@ -318,7 +318,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('app', fn ($request) => Limit::perMinute(300)->by('app|'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
         RateLimiter::for('login', fn ($request) => [
-            Limit::perMinute(10)->by('name|'.$request->ip().'|'.mb_strtolower(trim((string) $request->input('identifier')))),
+            // ⛔ তালার একই রূপ — নম্বর অন্যভাবে লিখে নতুন থলে নয় ([[LoginLock::canonical()]], ১৪ অক্টোবর ২০২৬)
+            Limit::perMinute(10)->by('name|'.$request->ip().'|'.\App\Core\Security\LoginLock::canonical((string) $request->input('identifier'))),
             Limit::perMinute(120)->by('address|'.$request->ip()),
         ]);
 
