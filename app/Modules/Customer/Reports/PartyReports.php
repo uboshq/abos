@@ -195,6 +195,13 @@ final class PartyReports
 
                 ->where(fn ($q) => $q->whereNull('customers.credit_limit')
                     ->orWhere('customers.credit_limit', '<=', 0))
+                // ⛔ চলতি অস্থায়ী সীমা থাকলে "সীমা নেই" নয় — দেয়াল সেটা মানে (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                // [[ATemporaryLimitReadAsNoLimitTest]])
+                // ⚠️ NULL-এর পাহারা আগে — নইলে NOT(NULL) পুরো সারিটাই ফেলে দিত ([[a-null-column-falls-out-of-not-equal]])
+                ->whereNot(fn ($q) => $q->whereNotNull('customers.temp_credit_limit')
+                    ->whereNotNull('customers.temp_credit_limit_until')
+                    ->where('customers.temp_credit_limit', '>', 0)
+                    ->where('customers.temp_credit_limit_until', '>=', Carbon::today()->toDateString()))
 
                 // যাঁর কাছে সবচেয়ে বেশি টাকা আটকে, তাঁর সারি আগে
                 ->orderByRaw('COALESCE(l.due, 0) DESC')
