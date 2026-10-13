@@ -115,7 +115,8 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
         $body = $this->phone('GET', '/api/v1/me')->assertOk()->json();
 
         $this->assertEqualsCanonicalizing(
-            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control'],
+            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control',
+                'finance', 'documents', 'promotion', 'hr'],
             $body['phoneModules'],
         );
 
@@ -123,13 +124,16 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
             $this->assertContains($code, $body['phoneModules'], "the menu carries {$code}, which is off");
         }
 
-        $this->assertNotContains('hr', array_column($body['menu'], 'code'));
-        $this->assertNotContains('finance', array_column($body['menu'], 'code'));
+        // ⭐ অর্থ, ডকুমেন্টস, প্রমোশন, HR — মালিক, ১৩ অক্টোবর ২০২৬: *"ok tai koro"*
+        $this->assertContains('hr', array_column($body['menu'], 'code'));
+        $this->assertContains('finance', array_column($body['menu'], 'code'));
     }
 
     public function test_the_menu_follows_the_switch_for_the_same_token(): void
     {
-        $this->assertNotContains('hr', $this->menuCodes(), 'hr is off by default');
+        $this->assertContains('hr', $this->menuCodes(), 'hr is on by default (owner, 13 Oct 2026)');
+        $this->flip(['hr' => false])->assertRedirect();
+        $this->assertNotContains('hr', $this->menuCodes());
 
         $this->flip(['hr' => true])->assertRedirect();
         $this->assertContains('hr', $this->menuCodes());
@@ -258,9 +262,10 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
     {
         $sales = User::query()->where('email', 'sales@abos.test')->firstOrFail();
 
-        $this->flip(['hr' => true], $sales)->assertForbidden();
+        // ⓘ HR এখন ডিফল্টে চালু — অ্যাডমিনের চাবি ছাড়া কেউ বন্ধও করতে পারেন না
+        $this->flip(['hr' => false], $sales)->assertForbidden();
 
-        $this->assertNotContains('hr', $this->menuCodes());
+        $this->assertContains('hr', $this->menuCodes());
         $this->assertFalse(Setting::query()->withoutGlobalScopes()->where('key', 'mobile.modules.hr')->exists());
     }
 
