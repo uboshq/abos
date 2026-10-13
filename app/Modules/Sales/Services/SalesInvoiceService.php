@@ -209,6 +209,14 @@ final class SalesInvoiceService
          * ⓘ আগে যেকোনো প্রত্যাখ্যাত সই বিলটা চিরকাল আটকাত: সইকারী "এত ছাড় নয়" বলার পর ছাড় কমিয়েও আর নতুন সই চাওয়া যেত না।
          * এখন একই অঙ্ক আবার এলে আগের মতো "নামঞ্জুর"; অঙ্ক বদলালে নিচে নতুন অনুরোধ — সইকারী আবার দেখেন।
          */
+        /*
+         * ⓘ অপেক্ষার অনুরোধটা আগের কার্টের হলে (রাখা বিল খুলে কার্ট বদলানো) সেটা তুলে নতুন অনুরোধ — নাহলে কাউন্টারে ম্যানেজার
+         * সই দিতেন পুরনো কার্টে, আর ছাপ না মেলায় বিল আবার আটকাত ([[ApprovalEngine::withdrawStale()]], ১৩ অক্টোবর ২০২৬)।
+         */
+        if ($decided?->status === Approval::PENDING && $decided->state_hash !== null && ! hash_equals((string) $decided->state_hash, $hash)) {
+            $this->approvals->withdrawStale($decided);
+        }
+
         if ($decided?->status === Approval::REJECTED && $decided->covers($discount)) {
             throw ValidationException::withMessages([
                 'discount' => __('sales::validation.discount_rejected'),

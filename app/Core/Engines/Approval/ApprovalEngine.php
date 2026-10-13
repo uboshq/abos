@@ -540,6 +540,30 @@ final class ApprovalEngine
         );
     }
 
+    /**
+     * ⭐ কাগজ বদলে যাওয়ায় অপেক্ষার অনুরোধটা আর এই কাগজের নয় — তুলে নেওয়া (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সইকারী যা দেখে সই দেবেন সেটাই যেন কাগজের এখনকার রূপ: কাউন্টারে রাখা বিল আবার খুলে কার্ট বদলালে পুরনো অনুরোধে সই দিলে
+     * সেই সই পুরনো কার্টের — ছাপ মিলত না আর বিল আবার আটকাত। ⓘ সারিটা মোছা হয় না, "বাতিল" হয়ে থাকে (`payload.stale`);
+     * ডাকার জায়গা তারপর নতুন অনুরোধ লেখে।
+     */
+    public function withdrawStale(Approval $approval): void
+    {
+        DB::transaction(function () use ($approval): void {
+            $locked = Approval::query()->whereKey($approval->getKey())->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== Approval::PENDING) {
+                return;
+            }
+
+            $locked->update([
+                'status' => Approval::CANCELLED,
+                'decided_at' => now(),
+                'payload' => [...(array) ($locked->payload ?? []), 'stale' => true],
+            ]);
+        });
+    }
+
     /** অনুরোধকারী নিজে প্রত্যাহার করলে। */
     public function cancel(Approval $approval, User $user): Approval
     {
