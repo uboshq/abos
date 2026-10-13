@@ -54,6 +54,12 @@ final class ARentalContractNamedAnAccountThatWasNotThereTest extends TestCase
             '⛔ খরচের খাতকে "টাকার খাত" ধরে জামানত দেওয়া গেছে।');
         $this->assertSame('expense_account_id', $this->refused(['expense_account_id' => $this->till->id]),
             '⛔ নগদ খাতকে ভাড়ার "খরচের খাত" বানানো গেছে।');
+        // ⛔ জামানতের খাত সম্পদ — নগদ বা খরচ নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $this->assertSame('account_id', $this->refused(['account_id' => $this->till->id]),
+            '⛔ নগদ খাতকে জামানতের খাত বানানো গেছে — Dr নগদ / Cr নগদ।');
+        $this->assertSame('account_id', $this->refused(['account_id' => StandardChart::find(StandardChart::RENT)->id]),
+            '⛔ খরচের খাতকে জামানতের খাত বানানো গেছে — জামানতটাই খরচ।');
+        $this->assertSame('account_id', $this->refused(['account_id' => 99999999]), '⛔ না-থাকা জামানতের খাতে ৪০৪, বার্তা নয়।');
 
         $this->assertSame(0, RentalContract::query()->where('counterparty', 'Account check')->count(), '⛔ ফেরত যাওয়া চুক্তি তবু বসেছে।');
 

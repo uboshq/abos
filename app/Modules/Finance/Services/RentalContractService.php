@@ -813,7 +813,19 @@ class RentalContractService
     private function depositHead(array $data): Account
     {
         if (filled($data['account_id'] ?? null)) {
-            return Account::query()->postable()->findOrFail($data['account_id']);
+            /*
+             * ⛔ জামানত বা অগ্রিম একটা সম্পদ — টাকার খাত, খরচ বা দেনার খাত নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে যেকোনো
+             * পোস্টযোগ্য খাত চলত: নগদ বাছলে Dr নগদ / Cr নগদ, খরচ বাছলে জামানতটাই খরচ — আর ভুল আইডিতে ৪০৪।
+             */
+            $account = Account::query()->postable()->where('type', Account::ASSET)->whereNull('money_kind')->find($data['account_id']);
+
+            if ($account === null) {
+                throw ValidationException::withMessages([
+                    'account_id' => __('finance::validation.rental_deposit_head_not_asset'),
+                ]);
+            }
+
+            return $account;
         }
 
         $whole = bcmul(
