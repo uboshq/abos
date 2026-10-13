@@ -400,7 +400,7 @@ class PortalController extends Controller
 
         $data = $request->validate([
             'claimed_on' => ['required', 'date'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'gt:0'],
             'method' => ['required', 'in:bank,mfs,cash'],
             'reference' => ['nullable', 'string', 'max:64'],
             /*
@@ -414,7 +414,7 @@ class PortalController extends Controller
             // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক, কেবল নিজের বিল ([[DepositRequestController::billIds()]]-এর একই পাহারা)
             'bills' => ['nullable', 'array', 'max:50'],
             'bills.*.invoice' => ['required', 'string', 'max:64'],
-            'bills.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'bills.*.amount' => ['nullable', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0'],
         ]);
 
         $data['bills'] = DepositRequestController::billIds($customer, (array) ($data['bills'] ?? []));

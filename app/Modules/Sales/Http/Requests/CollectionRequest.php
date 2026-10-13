@@ -35,7 +35,7 @@ class CollectionRequest extends FormRequest
             'account_id' => ['required', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'instrument' => ['nullable', 'string', 'max:32'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'instrument_date' => ['nullable', 'date'],
@@ -44,7 +44,7 @@ class CollectionRequest extends FormRequest
             'lines' => ['nullable', 'array'],
             'lines.*.sales_invoice_id' => ['nullable', 'integer',
                 Rule::exists('sal_invoices', 'id')->where('company_id', $companyId)],
-            'lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
         ];
     }
 

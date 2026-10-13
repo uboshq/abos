@@ -32,20 +32,20 @@ class SalesQuotationRequest extends FormRequest
             'payment_term_id' => ['nullable', 'integer',
                 Rule::exists('mdm_payment_terms', 'id')->where('company_id', $companyId)],
             'delivery_terms' => ['nullable', 'string', 'max:500'],
-            'header_discount' => ['nullable', 'numeric', 'min:0'],
+            'header_discount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
-            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
             // ⛔ দর শূন্য নয় — মালিক, ২৩ সেপ্টেম্বর ২০২৬: *"sales price chara entry nibe na"*
-            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
-            'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rate' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.discount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.tax' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];
     }
