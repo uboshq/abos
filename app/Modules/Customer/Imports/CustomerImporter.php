@@ -123,6 +123,19 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
             $errors[] = __('customer::import.payment_term_not_kept', ['value' => $row['payment_term']]);
         }
 
+        /*
+         * ⛔ লেখার ঘর ফর্মের মাপে, ইমেইল ইমেইলের রূপে (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheImportTookAnyLengthAndAnyEmailTest]])।
+         * ⓘ আগে ৪০ অক্ষরের ফোন বা ২০০ অক্ষরের নাম যাচাইয়ে সবুজ, তারপর ডাটাবেসে ভাঙত; "abc" ইমেইল হয়ে বসত।
+         */
+        $errors = [...$errors, ...\Illuminate\Support\Facades\Validator::make($row, [
+            'code' => ['nullable', 'string', 'max:32'],
+            'name_en' => ['nullable', 'string', 'max:191'],
+            'name_bn' => ['nullable', 'string', 'max:191'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'email' => ['nullable', 'email', 'max:191'],
+            'address' => ['nullable', 'string', 'max:500'],
+        ])->errors()->all()];
+
         // সার্ভিসের নিজের নিয়মগুলো (বাংলা নাম, BIN) — সেটিংস অনুযায়ী।
         // এখানে না দেখলে সেগুলো ভাঙত বসানোর সময়, অর্থাৎ যাচাইয়ের পর্দায়
         // সারিটা সবুজ দেখাত আর তারপর ব্যর্থ হত।
