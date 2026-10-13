@@ -11,6 +11,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
 use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\Drillable;
+use App\Core\Security\FieldSecurity;
 use App\Models\Attachment;
 use App\Models\Branch;
 use App\Models\User;
@@ -250,7 +251,18 @@ class Employee extends Model implements Drillable
             $q->where('code', 'like', $like)
                 ->orWhere('name_en', 'like', $like)
                 ->orWhere('name_bn', 'like', $like)
-                ->orWhere('mobile', 'like', $like)
+                ->orWhere('mobile', 'like', $like);
+
+            /*
+             * ⛔ পরিচয়পত্রে খোঁজা কেবল যিনি সেটা দেখতে পান — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+             * ([[TheIdCardNumberLayInTheOpenTest]])। ⓘ আগে কর্মীর তালিকার চাবি থাকলেই পুরো নম্বর লিখে মিলিয়ে নেওয়া যেত "এই
+             * NID অমুকের" — পরিচয়ের চাবি (`hr.identity.view`) ছাড়াই।
+             */
+            if (! FieldSecurity::visible(self::class, 'national_id')) {
+                return;
+            }
+
+            $q
                 /*
                  * পরিচয়পত্র মেলে হুবহু, `LIKE`-এ নয়।
                  *

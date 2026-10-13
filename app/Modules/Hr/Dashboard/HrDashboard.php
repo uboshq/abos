@@ -91,6 +91,8 @@ final class HrDashboard implements ProvidesDashboard
                     hint: __('hr::dashboard.pending_leave_hint'),
                     href: route('hr.leave.index'),
                     tone: Stat::WARN,
+                    // ⛔ ছুটির চাবি ছাড়া ঢাকা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০; [[ThePendingLeaveCountWentOverTheBranchWallTest]])
+                    permission: 'hr.leave.view',
                 ),
                 new Stat(
                     label: __('hr::dashboard.payroll_runs'),
@@ -103,7 +105,11 @@ final class HrDashboard implements ProvidesDashboard
             panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::byBranch(), ...self::byDesignation(), ...self::leaveThisMonth(),
                 ...self::comingAndGoing(), ...self::salaryCost(), ...self::allowancesAndDeductions(), ...self::costByDepartment()],
 
-            listings: [
+            /*
+             * ⛔ অপেক্ষমাণ ছুটির তালিকা কেবল ছুটির চাবিতে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০)। ⓘ কর্মী দেখার চাবিওয়ালা
+             * কেউ ছুটির চাবি ছাড়াই নাম, তারিখ আর দিন দেখতেন; এ মাসের ছুটির চার্ট ([[leaveThisMonth()]]) আগেই চাবি মানত।
+             */
+            listings: ! auth()->user()?->can('hr.leave.view') ? [] : [
                 new Listing(
                     label: __('hr::dashboard.pending_leave'),
                     columns: [
