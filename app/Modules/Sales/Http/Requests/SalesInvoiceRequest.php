@@ -7,6 +7,8 @@ namespace App\Modules\Sales\Http\Requests;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryChallanLine;
+use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Services\ChallanBills;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -102,8 +104,44 @@ class SalesInvoiceRequest extends FormRequest
      */
     public function after(): array
     {
+        /*
+         * ⛔ সম্পাদনাতেও "চালান ছাড়া বিল নয়" — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (মালিক, ২১ সেপ্টেম্বর: *"r kono vabei
+         * bill generate hobe na"*)। ⚠️ আগে PUT-এ এই পাহারা পুরো বাদ: চালান থেকে বানানো খসড়া বিলে যেকোনো পণ্য, যেকোনো পরিমাণ
+         * চালানের যোগ ছাড়া বসানো যেত, আর পাকা করলে মাল সরাসরি গুদাম থেকে বেরোত। ⓘ নিয়ম: যে বিল চালান থেকে এসেছে, তার প্রতিটা
+         * সারি সেই চালানেরই সারি। চালান ছাড়া বানানো পুরনো বিলে প্রশ্ন ওঠে না — আগের মতো।
+         */
         if ($this->isMethod('PUT')) {
-            return [];
+            return [function (Validator $validator): void {
+                $invoice = $this->route('invoice');
+                $invoiceId = is_object($invoice) ? (int) $invoice->getKey() : (int) $invoice;
+
+                $challanIds = DeliveryChallanLine::query()
+                    ->whereIn('id', SalesInvoiceLine::query()
+                        ->where('sales_invoice_id', $invoiceId)->whereNotNull('delivery_challan_line_id')
+                        ->select('delivery_challan_line_id'))
+                    ->distinct()->pluck('delivery_challan_id');
+
+                if ($challanIds->isEmpty()) {
+                    return;
+                }
+
+                $own = DeliveryChallanLine::query()
+                    ->whereIn('delivery_challan_id', $challanIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+                foreach ((array) $this->input('lines', []) as $line) {
+                    if (! is_array($line) || blank($line['product_id'] ?? null)) {
+                        continue;
+                    }
+
+                    if (! in_array((int) ($line['delivery_challan_line_id'] ?? 0), $own, true)) {
+                        $validator->errors()->add('lines', __('sales::validation.line_not_on_challan', [
+                            'no' => DeliveryChallan::query()->whereIn('id', $challanIds)->pluck('document_no')->implode(', '),
+                        ]));
+
+                        return;
+                    }
+                }
+            }];
         }
 
         return [function (Validator $validator): void {
