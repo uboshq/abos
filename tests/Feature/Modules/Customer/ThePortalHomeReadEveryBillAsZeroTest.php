@@ -70,4 +70,21 @@ final class ThePortalHomeReadEveryBillAsZeroTest extends TestCase
             ->assertDontSee('INV-PZ-DRAFT')
             ->assertDontSee('INV-PZ-GONE');
     }
+
+    public function test_an_advance_reads_as_cr_not_a_bare_minus(): void
+    {
+        // ⓘ টাকা আগে এসেছে — খাতায় কেবল জমা ৫,০০০, অর্থাৎ অগ্রিম
+        LedgerEntry::query()->create([
+            'company_id' => $this->shop->company_id, 'branch_id' => $this->shop->branch_id,
+            'financial_year_id' => FinancialYear::query()->where('is_current', true)->value('id'),
+            'account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id,
+            'source_type' => 'collection', 'source_id' => 1, 'trx_date' => now()->toDateString(),
+            'party_type' => 'customer', 'party_id' => $this->shop->id, 'debit' => '0', 'credit' => '5000', 'narration' => 'test',
+        ]);
+
+        $this->actingAs($this->shop, 'portal')->get(route('sales.portal.home'))
+            ->assertOk()
+            ->assertSee('(Cr) '.Money::format('5000'))
+            ->assertDontSee('-'.Money::format('5000'));
+    }
 }
