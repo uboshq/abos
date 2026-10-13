@@ -132,7 +132,7 @@ final class LoanService
          * আর খাতায় বসানো আটকালে তোলার সারিটা একা পড়ে থাকত।
          */
         return DB::transaction(function () use ($loan, $amount, $intoAccountId, $date): LoanMovement {
-            Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
+            Loan::acrossBranches()->whereKey($loan->getKey())->lockForUpdate()->first();
 
             return $this->draw($loan, $amount, $intoAccountId, $date);
         });
@@ -196,7 +196,7 @@ final class LoanService
     public function finishSigned(LoanMovement $movement): void
     {
         DB::transaction(function () use ($movement): void {
-            $loan = Loan::query()->whereKey($movement->loan_id)->lockForUpdate()->firstOrFail();
+            $loan = Loan::acrossBranches()->whereKey($movement->loan_id)->lockForUpdate()->firstOrFail();
             $fresh = LoanMovement::query()->whereKey($movement->getKey())->lockForUpdate()->first();
 
             if ($fresh === null || ! $fresh->isAwaiting()) {
@@ -312,7 +312,7 @@ final class LoanService
              * ([[ALoanInstalmentIsPaidOnceTest]])। ⓘ উপরের দেখা লেনদেনের বাইরে, হাতের কপিতে: পুরনো পর্দা থেকে বা দুই ক্লিকে দ্বিতীয়জন
              * "বাকি" দেখে ঢুকতেন, আর থামতেন কেবল ইঞ্জিনের ভিতরে — নামহীন ত্রুটিতে। ⓘ ক্রম [[finishSigned()]]-এর মতো: আগে ঋণ, পরে সারি।
              */
-            Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
+            Loan::acrossBranches()->whereKey($loan->getKey())->lockForUpdate()->first();
             $fresh = LoanInstalment::query()->whereKey($instalment->getKey())->lockForUpdate()->firstOrFail();
             $instalment->setRawAttributes($fresh->getAttributes(), true);
 
