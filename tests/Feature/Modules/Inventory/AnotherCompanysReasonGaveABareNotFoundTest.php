@@ -31,19 +31,29 @@ final class AnotherCompanysReasonGaveABareNotFoundTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
-        $foreign = ReasonCode::query()->withoutGlobalScopes()->where('company_id', '!=', $company->id)->first();
+        // ⓘ দাবি নিজেই অন্য কোম্পানির কারণ বানায় — ডেমোর উপর নির্ভর করে বাদ পড়ে না (১৩ অক্টোবর ২০২৬)
+        $other = Company::query()->whereKeyNot($company->id)->orderBy('id')->firstOrFail();
+        $foreign = ReasonCode::query()->withoutGlobalScopes()->create([
+            'company_id' => $other->id, 'code' => 'RSN-FOREIGN', 'name_en' => 'Foreign reason', 'name_bn' => 'অন্য কোম্পানির কারণ',
+            'context' => ReasonCode::STOCK_ADJUSTMENT, 'is_active' => true,
+        ]);
 
-        if ($foreign === null) {
-            $this->markTestSkipped('ডেমোতে দ্বিতীয় কোম্পানির কারণ-কোড নেই।');
-        }
+        // ⓘ আর এই কোম্পানিরই মুছে ফেলা কারণ — `exists` মোছা সারিও পায়, তারপর মোছা-ছাঁকা findOrFail খালি ৪০৪ দিত
+        $deleted = ReasonCode::query()->create([
+            'company_id' => $company->id, 'code' => 'RSN-GONE', 'name_en' => 'Deleted reason', 'name_bn' => 'মোছা কারণ',
+            'context' => ReasonCode::STOCK_ADJUSTMENT, 'is_active' => true,
+        ]);
+        $deleted->delete();
 
         $paper = StockCount::query()->create([
             'document_no' => 'CNT-RSN-1', 'count_date' => now()->toDateString(),
             'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id, 'status' => 'draft',
         ]);
 
-        $this->from(route('inventory.count.show', $paper))
-            ->post(route('inventory.count.approve', $paper), ['reason_code_id' => $foreign->id])
-            ->assertSessionHasErrors('reason_code_id');
+        foreach ([$foreign->id, $deleted->id] as $reasonId) {
+            $this->from(route('inventory.count.show', $paper))
+                ->post(route('inventory.count.approve', $paper), ['reason_code_id' => $reasonId])
+                ->assertSessionHasErrors('reason_code_id');
+        }
     }
 }
