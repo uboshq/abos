@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
@@ -28,6 +29,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseOrderService
 {
+    use ReadsTheRowUnderLock;
+
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
 
@@ -90,6 +93,11 @@ final class PurchaseOrderService
         $this->assertHasLines($lines);
 
         return DB::transaction(function () use ($order, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($order);
+            $this->assertEditable($order);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $order->trx_date);
 
             $order->update([
@@ -129,6 +137,17 @@ final class PurchaseOrderService
         }
 
         /*
+         * ⛔ শূন্য দামের সারি নিয়ে আদেশ পাকা নয় — মালিকের "শূন্য দাম নয়" নিয়ম, ২৩ সেপ্টেম্বর ২০২৬ (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+         * [[AnOrderWentOutAtZeroTest]])। ⚠️ চাহিদা থেকে বানানো আদেশ দাম ০ রেখে আসে (ক্রেতা পরে বসাবেন) — পর্দা ০ আটকায়, কিন্তু সেবা
+         * নয়: না বসিয়েই পাকা করলে ৳০-র আদেশ ছাপা হয়ে সরবরাহকারীর কাছে যেত, সইয়ের অঙ্কও ৳০।
+         */
+        if ($order->lines()->where('rate', '<=', 0)->exists()) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.order_rate_missing', ['no' => $order->document_no]),
+            ]);
+        }
+
+        /*
          * অনুমোদন লাগে কি না — ছক বসানো না থাকলে কিছুই বদলায় না।
          *
          * ⚠️ পাহারাটা সেবার ভেতরে, কন্ট্রোলারে নয়: এই মেথডটা পর্দা ছাড়াও
@@ -164,14 +183,26 @@ final class PurchaseOrderService
             ]);
         }
 
-        $order->update([
-            'status' => DocumentStatus::CANCELLED,
-            'cancelled_by' => auth()->id(),
-            'cancelled_at' => now(),
-            'cancel_reason' => $reason,
-        ]);
+        return DB::transaction(function () use ($order, $reason) {
+            $order->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
 
-        return $order->fresh(['lines']);
+            /*
+             * ⛔ যে চাহিদা থেকে আদেশটা হয়েছিল, সেটা আবার খোলা — fe, ১৩ অক্টোবর ২০২৬ ([[ACancelledOrderLeftItsRequisitionStuckTest]])।
+             * ⚠️ আগে চাহিদা "সম্পন্ন" আর আদেশের দিকে দেখানো অবস্থায় আটকে থাকত: আবার আদেশও হত না, বাতিলও না, অথচ খরচকেন্দ্রের মাসিক
+             * বাজেটে গোনা হত — কেনাই হয়নি এমন মালে বাজেট খরচ। ⓘ এখন অনুমোদিত অবস্থায় ফেরে: নতুন আদেশ বানানো যায়, বা বাতিল করে বাজেট ফেরানো।
+             */
+            \App\Modules\Purchase\Models\PurchaseRequisition::acrossBranches()
+                ->where('purchase_order_id', $order->id)
+                ->where('status', DocumentStatus::CLOSED)
+                ->update(['status' => DocumentStatus::CONFIRMED, 'purchase_order_id' => null]);
+
+            return $order->fresh(['lines']);
+        });
     }
 
     /**

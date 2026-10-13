@@ -285,7 +285,7 @@ final class QualityInspectionService
              * ⛔ সারি আটকে "অপেক্ষমাণ" কি না আবার দেখা — চূড়ান্ত অডিট ⛔১৩, ৩০ সেপ্টেম্বর ২০২৬ — [[StockTransferService]]-এর সেই একই সারাই।
              * দুইবার চাপ দিলে দুইটা অনুরোধই অপেক্ষমাণ দেখত, আর রায়ের মাল দুইবার আটকাত।
              */
-            if (! (QualityInspection::query()->whereKey($inspection->id)->lockForUpdate()->first()?->isPending() ?? false)) {
+            if (! (QualityInspection::acrossBranches()->whereKey($inspection->id)->lockForUpdate()->first()?->isPending() ?? false)) {
                 throw ValidationException::withMessages([
                     'status' => __('inventory::validation.qc_already_decided'),
                 ]);
@@ -484,7 +484,7 @@ final class QualityInspectionService
              * আর কাগজ যা আটকায়নি তাও তাক থেকে যেত। ⓘ আটকানো সারির `disposed_qty` নিচের যোগেও বসে, নইলে পুরনোটার
              * ওপর যোগ হয়ে আগের বিনাশ মুছে যেত।
              */
-            $locked = QualityInspection::query()->whereKey($inspection->id)->lockForUpdate()->firstOrFail();
+            $locked = QualityInspection::acrossBranches()->whereKey($inspection->id)->lockForUpdate()->firstOrFail();
 
             if (bccomp($qty, $this->heldBy($locked), 4) > 0) {
                 throw ValidationException::withMessages([

@@ -464,7 +464,7 @@ final class OpeningStockService
      */
     private function editable(StockMovement $movement): array
     {
-        $movement = StockMovement::query()->whereKey($movement->id)->lockForUpdate()->firstOrFail();
+        $movement = StockMovement::acrossBranches()->whereKey($movement->id)->lockForUpdate()->firstOrFail();
 
         if ($movement->source_type !== self::SOURCE_TYPE || bccomp((string) $movement->floor_change, '0', 4) <= 0
             || StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('source_type', self::CORRECTED)->where('source_id', $movement->id)->exists()) {

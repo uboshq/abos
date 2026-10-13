@@ -132,7 +132,7 @@ final class LoanService
          * আর খাতায় বসানো আটকালে তোলার সারিটা একা পড়ে থাকত।
          */
         return DB::transaction(function () use ($loan, $amount, $intoAccountId, $date): LoanMovement {
-            Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
+            Loan::acrossBranches()->whereKey($loan->getKey())->lockForUpdate()->first();
 
             return $this->draw($loan, $amount, $intoAccountId, $date);
         });
@@ -196,7 +196,7 @@ final class LoanService
     public function finishSigned(LoanMovement $movement): void
     {
         DB::transaction(function () use ($movement): void {
-            $loan = Loan::query()->whereKey($movement->loan_id)->lockForUpdate()->firstOrFail();
+            $loan = Loan::acrossBranches()->whereKey($movement->loan_id)->lockForUpdate()->firstOrFail();
             $fresh = LoanMovement::query()->whereKey($movement->getKey())->lockForUpdate()->first();
 
             if ($fresh === null || ! $fresh->isAwaiting()) {
@@ -228,6 +228,8 @@ final class LoanService
             trxDate: $movement->trx_date->toDateString(),
             lines: $this->linesFor($movement),
             documentNo: $movement->document_no,
+            // ⛔ ঋণের নিজের শাখায় — ক্লিককারীর হেডারের নয় (a6-র নিরীক্ষা, ১৩ অক্টোবর ২০২৬); শাখাহীন ঋণে আগের মতো
+            branchId: $this->branchOf((int) $movement->loan_id),
         );
 
         if ($movement->status !== LoanMovement::POSTED) {
@@ -242,7 +244,8 @@ final class LoanService
      */
     private function linesFor(LoanMovement $movement): array
     {
-        $loan = $movement->loan;
+        // ⛔ ঋণ সব শাখা জুড়ে — [[payInstalment()]]-এর একই কারণে
+        $loan = Loan::acrossBranches()->findOrFail($movement->loan_id);
         $amount = (string) $movement->amount;
         $other = $movement->counter_account_id;
 
@@ -303,7 +306,9 @@ final class LoanService
             ]);
         }
 
-        $loan = $instalment->loan;
+        // ⛔ ঋণ সব শাখা জুড়ে — সম্পর্কটা দেখার শাখার দেয়াল দিয়ে খুঁজত, শাখাহীন বা অন্য শাখার ঋণ এক শাখা দেখা সইকারীর হাতে "নেই"
+        // (a6-র নিরীক্ষা, fe মারফত ১৩ অক্টোবর ২০২৬; [[TheLoanPapersFollowTheirLoanTest]])
+        $loan = Loan::acrossBranches()->findOrFail($instalment->loan_id);
         $paid = $amount ?? $instalment->total();
 
         return DB::transaction(function () use ($instalment, $loan, $fromAccountId, $date, $paid) {
@@ -312,7 +317,7 @@ final class LoanService
              * ([[ALoanInstalmentIsPaidOnceTest]])। ⓘ উপরের দেখা লেনদেনের বাইরে, হাতের কপিতে: পুরনো পর্দা থেকে বা দুই ক্লিকে দ্বিতীয়জন
              * "বাকি" দেখে ঢুকতেন, আর থামতেন কেবল ইঞ্জিনের ভিতরে — নামহীন ত্রুটিতে। ⓘ ক্রম [[finishSigned()]]-এর মতো: আগে ঋণ, পরে সারি।
              */
-            Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
+            Loan::acrossBranches()->whereKey($loan->getKey())->lockForUpdate()->first();
             $fresh = LoanInstalment::query()->whereKey($instalment->getKey())->lockForUpdate()->firstOrFail();
             $instalment->setRawAttributes($fresh->getAttributes(), true);
 
@@ -342,6 +347,24 @@ final class LoanService
             }
 
             $principal = bcsub($paid, $interest, 4);
+
+            /*
+             * ⛔ বাকি আসলের বেশি নয় — a6-র নিরীক্ষা, fe মারফত ১৩ অক্টোবর ২০২৬ ([[TheLoanPapersFollowTheirLoanTest]])। ⚠️ আগে নিচের সীমা
+             * ছিল (সুদ), উপরের নয়: বাকির বেশি দিলে ঋণের খাত উল্টো দিকে যেত — ব্যাংকের কাছে ঋণ "পাওনা"। ⓘ বাকি আসল = মঞ্জুর − আগের
+             * প্রতিটা দেওয়া কিস্তির আসলের ভাগ (দেওয়া − সুদ); খাতা থেকে নয়, কারণ পুরনো ঋণের আসল খাতায় না-ও উঠে থাকতে পারে।
+             */
+            $left = bcsub((string) $loan->sanctioned, (string) LoanInstalment::query()
+                ->where('loan_id', $loan->id)->where('status', LoanInstalment::PAID)
+                ->selectRaw('COALESCE(SUM(paid_amount - interest), 0) as n')->value('n'), 4);
+
+            if (bccomp($principal, $left, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('accounts::validation.instalment_beyond_principal', [
+                        'principal' => \App\Core\Support\Money::format($principal),
+                        'left' => \App\Core\Support\Money::format(bccomp($left, '0', 4) > 0 ? $left : '0'),
+                    ]),
+                ]);
+            }
 
             /*
              * ⛔ সইয়ের ছক থাকলে থামে — অডিট (সমন্বয়ক, ১০ অক্টোবর ২০২৬)। ⓘ কাগজ কিস্তির নিজের সারি; শেষ সইয়ে একই তথ্যে আবার
@@ -374,6 +397,8 @@ final class LoanService
                     ['account_id' => $fromAccountId, 'credit' => $paid],
                 ], fn (array $l) => bccomp((string) ($l['debit'] ?? $l['credit']), '0', 4) > 0)),
                 documentNo: $loan->document_no.'/'.$instalment->no,
+                // ⛔ ঋণের নিজের শাখায় — [[postMovement()]]-এর একই কারণে
+                branchId: $loan->branch_id === null ? null : (int) $loan->branch_id,
             );
 
             $instalment->forceFill([
@@ -442,11 +467,18 @@ final class LoanService
         Carbon|string|null $date,
         ?int $counterAccountId,
     ): LoanMovement {
+        /*
+         * ⛔ গোনার আগে ঋণের সারিতে তালা — a6-র নিরীক্ষা, fe মারফত ১৩ অক্টোবর ২০২৬ ([[TwoRepaymentsReachedForOneNumberTest]])। ⚠️ আগে
+         * দুইজন একসাথে গুনে একই নম্বর পেতেন, আর অনন্য-চাবিতে পরেরজনের শোধ "Duplicate entry"-তে ভাঙত। ⓘ ডাকারা সবাই লেনদেনের ভিতরে;
+         * তোলা আগেই এই সারি ধরে ([[drawDown()]]), তখন এটা একই তালা আবার — খরচ নেই।
+         */
+        Loan::acrossBranches()->whereKey($loan->id)->lockForUpdate()->first();
         $next = LoanMovement::query()->where('loan_id', $loan->id)->count() + 1;
 
         return LoanMovement::create([
             'company_id' => CompanyContext::id(),
-            'branch_id' => CompanyContext::branchId(),
+            // ⛔ ঋণের শাখায় — ক্লিককারীর হেডারের নয় (a6-র নিরীক্ষা, ১৩ অক্টোবর ২০২৬); শাখাহীন ঋণে আগের মতো
+            'branch_id' => $this->branchOf((int) $loan->id) ?? CompanyContext::branchId(),
             'loan_id' => $loan->id,
             'kind' => $kind,
             'document_no' => $loan->document_no.'/M'.$next,
@@ -455,6 +487,14 @@ final class LoanService
             'counter_account_id' => $counterAccountId,
             'created_by' => auth()->id(),
         ]);
+    }
+
+    /** ঋণের নিজের শাখা — শাখাহীন (কোম্পানি-স্তরের) ঋণে null, তখন ইঞ্জিন আগের মতো হেডারের শাখা নেয় */
+    private function branchOf(int $loanId): ?int
+    {
+        $branch = Loan::acrossBranches()->whereKey($loanId)->value('branch_id');
+
+        return $branch === null ? null : (int) $branch;
     }
 
     /** সূচিটা একবারই বসে, ঋণ তৈরির সময়। */

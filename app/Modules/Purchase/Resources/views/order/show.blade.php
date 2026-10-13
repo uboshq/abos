@@ -4,6 +4,8 @@
     উপরে ডকুমেন্ট, নিচে লাইন, আর প্রতিটা লাইনে "কত এসেছে · কত বাকি" —
     এটাই আদেশের একমাত্র কাজ, তাই এটাই সবচেয়ে চোখে পড়া উচিত।
 --}}
+{{-- ⛔ ক্রয়মূল্য কেবল খরচ দেখার চাবিতে — ছাপার একই নিয়ম ([[PurchasePrintController::showsPurchasePrice()]]); fe, ১৩ অক্টোবর ২০২৬ --}}
+@php($showsPrice = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\Product::class, 'purchase_price'))
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $order->document_no }}</x-slot:title>
 
@@ -116,7 +118,7 @@
             <x-ui.table
                 :empty="__('purchase::validation.no_lines')"
                 :rows="$order->lines"
-                :columns="[
+                :columns="array_values(array_filter([
                     ['key' => 'line_no', 'label' => __('purchase::field.line_no'), 'width' => '4rem'],
                     ['key' => 'product_id', 'label' => __('purchase::field.product'),
                      'render' => fn ($l) => $l->product?->code . ' - ' . $l->product?->name()],
@@ -137,8 +139,9 @@
                     ['key' => 'amount', 'label' => __('purchase::field.amount'),
                      'numeric' => true, 'width' => '9rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
-                ]" />
+                ], fn ($c) => $showsPrice || ! in_array($c['key'], ['rate', 'amount', 'discount', 'tax', 'typed_rate'], true)))" />
 
+            @if ($showsPrice)
             <div class="flex border-t border-(--color-border) p-4">
                 <x-purchase::totals :rows="[
                     'purchase::field.subtotal' => $order->subtotal,
@@ -147,6 +150,7 @@
                     'purchase::field.total' => $order->total,
                 ]" />
             </div>
+            @endif
         </section>
 
         @if ($order->receipts->isNotEmpty())

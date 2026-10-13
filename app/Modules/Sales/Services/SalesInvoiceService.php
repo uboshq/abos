@@ -812,7 +812,7 @@ final class SalesInvoiceService
              * আর কাউন্টার অন্য বিলের জন্য ধরা মাল বেচত। ⓘ এখন দ্বিতীয়জন তালা খোলার অপেক্ষায় থাকে,
              * তারপর বাতিল দেখে ফেরে। পাহারা: [[AParkedBillCancelledTwiceReleasesItsGoodsOnceTest]]।
              */
-            $locked = SalesInvoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            $locked = SalesInvoice::acrossBranches()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === DocumentStatus::CANCELLED) {
                 throw ValidationException::withMessages([

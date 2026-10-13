@@ -391,8 +391,11 @@ final class ChequeService
      * @param  bool  $cancelling  ⛔ বাতিলের পথ ([[cancel()]]) — শেষ অবস্থা "বাতিল", "ফেরত" নয়: ফেরতের ঘটনা ছোড়ে না, তাই গ্রাহক
      *                            "চেক ফেরত"-এ আটকান না; আর সইয়ের অনুরোধ বলে রাখে এটা বাতিল, যাতে শেষ সইয়ে বাতিলই হয়
      *                            ([[AChequeCancelWaitsForItsSignatureTest]]; Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+     * @param  bool  $asksItsSignature  ⓘ মিথ্যা কেবল যখন ডাকার কাজটা নিজেই সিদ্ধান্ত — পরিশোধ বাতিল ([[cancel()]]-এর মাধ্যমে
+     *                                  [[PaymentService::cancel()]]): সেখানে পরিশোধ তখনই বাতিল হয়, তাই চেকের উল্টোও তখনই
+     *                                  ([[ACancelledChequeUndidNothingTest]], fe ১৩ অক্টোবর ২০২৬)
      */
-    public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null, bool $cancelling = false): Cheque
+    public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null, bool $cancelling = false, bool $asksItsSignature = true): Cheque
     {
         $final = $cancelling ? Cheque::CANCELLED : Cheque::BOUNCED;
 
@@ -431,7 +434,8 @@ final class ChequeService
          * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ ফেরতের কারণটাই সইয়ের অনুরোধের কারণ; শেষ সই পড়লে
          * [[FinishTheAccountsPaperOnTheLastSignature]] ঐ কারণ নিয়েই এই মেথড আবার ডাকে।
          */
-        if (app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason, $cancelling ? ['cancel' => true] : [])) {
+        if ($asksItsSignature
+            && app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason, $cancelling ? ['cancel' => true] : [])) {
             return $cheque->fresh();
         }
 
@@ -512,7 +516,12 @@ final class ChequeService
      * হিসাবের দিক থেকে এটা ফেরত আসার মতোই: দায়টা মুছে যায়, আর পক্ষের
      * হিসাব আগের জায়গায় ফেরে।
      */
-    public function cancel(Cheque $cheque, string $reason, Carbon|string|null $onDate = null): Cheque
+    /**
+     * @param  bool  $asksItsSignature  ⓘ একা চেক বাতিলে সত্য — সই চালু থাকলে অপেক্ষা, শেষ সইয়ে বাতিল (a6)। ⛔ পরিশোধ বাতিলের পথে
+     *                                  মিথ্যা: পরিশোধ তখনই "বাতিল" হয়, আর চেকের উল্টো অপেক্ষায় থাকলে বিল আবার বাকি অথচ খাতায় শোধ
+     *                                  রয়ে যেত ([[ACancelledChequeUndidNothingTest]]; fe-র মেলানো, ১৩ অক্টোবর ২০২৬)
+     */
+    public function cancel(Cheque $cheque, string $reason, Carbon|string|null $onDate = null, bool $asksItsSignature = true): Cheque
     {
         /*
          * ⓘ পাশ হওয়া চেক ছেঁড়া যায় না — টাকা এসে গেছে। ব্যাংক ফিরিয়ে
@@ -529,7 +538,7 @@ final class ChequeService
          * ⓘ আগে ফেরত করে তারপর "বাতিল" বসানো হত: সইয়ের ছক ফেরত আটকালে কিছুই উল্টাত না, অথচ চেক "বাতিল" দেখাত (দেনা পরিশোধিতই
          * থাকত, ২১১৫-এ ভূতের দায়); আর ফেরতের ঘটনা ছুটত, ফলে ছেঁড়া চেকেও গ্রাহক "চেক ফেরত"-এ আটকাতেন।
          */
-        return $this->bounce($cheque, $reason, $onDate, cancelling: true);
+        return $this->bounce($cheque, $reason, $onDate, cancelling: true, asksItsSignature: $asksItsSignature);
     }
 
     /**
