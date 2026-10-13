@@ -242,7 +242,8 @@ final class LoanService
      */
     private function linesFor(LoanMovement $movement): array
     {
-        $loan = $movement->loan;
+        // ⛔ ঋণ সব শাখা জুড়ে — [[payInstalment()]]-এর একই কারণে
+        $loan = Loan::acrossBranches()->findOrFail($movement->loan_id);
         $amount = (string) $movement->amount;
         $other = $movement->counter_account_id;
 
@@ -303,7 +304,9 @@ final class LoanService
             ]);
         }
 
-        $loan = $instalment->loan;
+        // ⛔ ঋণ সব শাখা জুড়ে — সম্পর্কটা দেখার শাখার দেয়াল দিয়ে খুঁজত, শাখাহীন বা অন্য শাখার ঋণ এক শাখা দেখা সইকারীর হাতে "নেই"
+        // (a6-র নিরীক্ষা, fe মারফত ১৩ অক্টোবর ২০২৬; [[TheLoanPapersFollowTheirLoanTest]])
+        $loan = Loan::acrossBranches()->findOrFail($instalment->loan_id);
         $paid = $amount ?? $instalment->total();
 
         return DB::transaction(function () use ($instalment, $loan, $fromAccountId, $date, $paid) {
