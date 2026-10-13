@@ -725,6 +725,16 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         $look = app(InvoicePrintLook::class);
         $chosen = $request->has('prices') ? $request->boolean('prices') : null;
+
+        /*
+         * ⛔ "টাকাসহ" বাছাই কেবল বিল দেখার চাবিওয়ালার — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা
+         * ([[OnlyABillViewerCanAskForAChallanWithPricesTest]])। ⓘ এই দরজা খোলে `sales.challan.view`-এ, গেটপাসের একই চাবিতে;
+         * ঠিকানায় `?prices=1` লিখে দারোয়ান বা চালক শাখার "দাম লুকাও" সুইচ পেরিয়ে দর আর বিলের মোট দেখতেন। টাকাগুলো বিলেরই
+         * ([[challanMoney()]]), তাই চাবিও বিলের; না থাকলে বাছাই বাতিল, শাখার সুইচই বলে। "টাকা ছাড়া" সবাই বাছতে পারেন।
+         */
+        if ($chosen === true && $request->user()?->can('sales.invoice.view') !== true) {
+            $chosen = null;
+        }
         $withMoney = $chosen ?? $look->challanShows('prices');
         $money = $withMoney ? $this->challanMoney($challan) : [];
         $request->attributes->set('print_variant', $withMoney ? 'with_amounts' : 'without_amounts');
