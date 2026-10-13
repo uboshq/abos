@@ -188,8 +188,14 @@ final class LeaveService
              */
             PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
 
+            /*
+             * ⛔ কেবল যে সারি এখনো "ছুটি" — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৮; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ ছুটির মাঝে কর্মী কাজে এলে অফিস সেদিনের সারি "উপস্থিত" করে, কিন্তু আবেদনের দাগটা সারিতে থেকে যায়; প্রত্যাহারে দাগ ধরে
+             * মোছায় অফিসের সেই সংশোধনও মুছে যেত, আর দিনটা খালি হত — কাজে আসার খবরই হারাত।
+             */
             Attendance::query()
                 ->where('leave_application_id', $application->id)
+                ->where('status', Attendance::LEAVE)
                 ->delete();
 
             $application->forceFill(['status' => LeaveApplication::CANCELLED])->save();

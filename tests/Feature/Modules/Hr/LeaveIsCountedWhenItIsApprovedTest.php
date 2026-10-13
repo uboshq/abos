@@ -256,6 +256,27 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
         $this->assertSame(LeaveApplication::CANCELLED, $leave->fresh()->status);
     }
 
+    /**
+     * ⛔ ছুটি প্রত্যাহারে অফিসের সংশোধন থাকে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৮; [[LeaveService::cancel()]])।
+     * ⓘ ছুটির শেষ দিনে কর্মী এলেন, অফিস "উপস্থিত" বসাল; পরে ছুটি প্রত্যাহার করলে সেই "উপস্থিত" সারিটাও মুছে যেত।
+     */
+    public function test_withdrawing_a_leave_keeps_the_day_the_office_marked_present(): void
+    {
+        $leave = app(LeaveService::class)->approve(
+            app(LeaveService::class)->apply($this->employee, $this->type('CASUAL'), '2026-10-05', '2026-10-07', '3'), $this->owner);
+
+        $this->post(route('hr.attendance.store'), [
+            'work_date' => '2026-10-07',
+            'rows' => [$this->employee->id => ['status' => Attendance::PRESENT]],
+        ])->assertSessionHasNoErrors();
+
+        app(LeaveService::class)->cancel($leave->fresh());
+
+        $rows = Attendance::query()->where('employee_id', $this->employee->id)->get();
+        $this->assertSame(['2026-10-07' => Attendance::PRESENT], $rows->mapWithKeys(fn (Attendance $a) => [$a->work_date->toDateString() => $a->status])->all(),
+            '⛔ ছুটি প্রত্যাহারে অফিসের বসানো "উপস্থিত" দিনটাও মুছে গেল (বা ছুটির সারি রয়ে গেল)');
+    }
+
     private function type(string $code): LeaveType
     {
         return LeaveType::query()->where('code', $code)->firstOrFail();
