@@ -88,6 +88,25 @@ final class CoreReports
                 ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->where('ledger_entries.debit', '>', 0)
+                /*
+                 * ⛔ আদায় মানে বাইরে থেকে টাকা আসা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TheInflowListIsMoneyFromOutsideTest]])।
+                 * ⓘ আগে টাকার খাতের প্রতিটা ডেবিট আসত: টিল থেকে ব্যাংকে জমা পুরো অঙ্কে "আদায়", বাতিল পরিশোধের উল্টো সারিও "আদায়", আর
+                 * বাতিল হওয়া রসিদ তবু তালিকায়। মাসিক নগদের পাতা ([[MonthlyCashReport]]) এগুলো বাদ দেয়, তাই দুই পাতার "আসা টাকা" আলাদা ছিল।
+                 * এখন: উল্টো দাখিলা বাদ, পরে উল্টানো কাগজ বাদ, আর একই কাগজে টাকা-নয় (পথের টাকা নয়) খাতে ক্রেডিট থাকতে হয়।
+                 */
+                ->where('ledger_entries.source_type', 'not like', '%:reversal%')
+                ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
+                    ->whereColumn('rv.company_id', 'ledger_entries.company_id')
+                    ->whereColumn('rv.source_id', 'ledger_entries.source_id')
+                    ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
+                ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
+                    ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
+                    ->whereColumn('o.company_id', 'ledger_entries.company_id')
+                    ->whereColumn('o.source_type', 'ledger_entries.source_type')
+                    ->whereColumn('o.source_id', 'ledger_entries.source_id')
+                    ->where('o.credit', '>', 0)
+                    ->whereNull('oa.money_kind')
+                    ->where('oa.code', '<>', StandardChart::CASH_IN_TRANSIT))
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
                 ->select([
