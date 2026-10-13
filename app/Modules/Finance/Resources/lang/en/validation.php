@@ -77,4 +77,8 @@ return [
     'profit_share_already_used' => 'Part of this profit has already been withdrawn or capitalised: undo that first, then cancel the declaration.',
     'rental_voucher_cancel_not_alone' => 'This voucher is the deposit, top-up or refund of a rental contract: cancelling it alone would leave the contract out of step with the books. Correct it from the contract page.',
     'claim_journal_cancel_not_alone' => 'This journal is the approval or closing of an insurance claim: cancelling it alone would leave the claim out of step with the books. Correct it from the claim page.',
+    // Finance line review, 13 Oct 2026 — bank facilities
+    'cc_opening_drawn_lives_in_the_bank' => 'A cash credit\'s drawn money lives in its bank account\'s balance — entering it here would count it twice and double the interest. Leave this at zero and put today\'s drawn amount in the bank account\'s opening balance.',
+    'facility_close_not_live' => 'This facility is not live — a closed facility cannot be closed again.',
+    'facility_close_still_owed' => ':amount is still owed on this loan (or its opening is waiting for a signature) — repay it first, then close. A closed loan accrues no interest and its debt would drop off the screens.',
 ];
