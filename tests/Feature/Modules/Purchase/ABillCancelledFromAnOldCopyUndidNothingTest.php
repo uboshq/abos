@@ -62,4 +62,42 @@ final class ABillCancelledFromAnOldCopyUndidNothingTest extends TestCase
         $this->assertSame(0, bccomp($before, app(StockService::class)->floorQty($product, $warehouse), 4),
             '⛔ পুরনো কপি থেকে বাতিল — বিলের মাল তাকেই রয়ে গেল।');
     }
+
+    /**
+     * ⛔ ফেরত বসা বিল বাতিল হয় না — পরিশোধের একই নিয়ম। ⚠️ আগে পুরো দেনা উল্টাত আর ফেরতের ডেবিট রয়ে যেত: সরবরাহকারীর খাতায়
+     * ব্যাখ্যাহীন ডেবিট।
+     */
+    public function test_a_bill_with_a_posted_return_cannot_be_cancelled(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+
+        $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
+        $product = Product::query()->where('track_batch', false)->where('track_serial', false)->orderBy('id')->firstOrFail();
+        $supplier = Supplier::query()->orderBy('id')->firstOrFail();
+        $bills = app(PurchaseBillService::class);
+        $bill = $bills->confirm($bills->create(
+            ['supplier_id' => $supplier->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString(), 'supplier_bill_no' => 'RET-1'],
+            [['product_id' => $product->id, 'qty' => '10', 'rate' => '50']],
+        ));
+
+        $returns = app(\App\Modules\Purchase\Services\PurchaseReturnService::class);
+        $returns->confirm($returns->create(
+            ['supplier_id' => $supplier->id, 'warehouse_id' => $warehouse->id, 'purchase_bill_id' => $bill->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'qty' => '2', 'purchase_bill_line_id' => $bill->lines()->firstOrFail()->id]],
+        ));
+        $this->assertSame(0, bccomp($bill->fresh()->returnedAmount(), '100', 4), 'দৃশ্যটাই বানানো যায়নি — ফেরত বসেনি');
+
+        try {
+            $bills->cancel($bill->fresh(), 'ভুল বিল');
+            $this->fail('⛔ ফেরত বসা বিল বাতিল হলো — ফেরতের ডেবিট ঝুলে রইল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('ফেরত', implode(' ', $e->validator->errors()->all()), 'অন্য কারণে থামল।');
+        }
+
+        $this->assertSame(DocumentStatus::CONFIRMED, $bill->fresh()->status);
+    }
 }

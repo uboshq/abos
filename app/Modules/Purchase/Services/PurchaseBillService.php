@@ -1376,6 +1376,20 @@ final class PurchaseBillService
                 ]);
             }
 
+            /*
+             * ⛔ ফেরত বসা বিলও বাতিল নয় — পরিশোধের একই নিয়ম (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABillCancelledFromAnOldCopyUndidNothingTest]])।
+             * ⚠️ আগে বিলের পুরো দেনা উল্টাত, অথচ ফেরতের ডেবিট থেকে যেত: সরবরাহকারীর খাতায় ব্যাখ্যাহীন ডেবিট, আর চালানের বিলে ২১৬০ ফেরত
+             * যাওয়া মালের জন্যও আবার খুলত। ⓘ আগে ফেরত বাতিল করুন, তারপর বিল।
+             */
+            if (bccomp($locked->returnedAmount(), '0', 4) > 0) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.cancel_returned_bill', [
+                        'no' => $bill->document_no,
+                        'returned' => Money::format($locked->returnedAmount()),
+                    ]),
+                ]);
+            }
+
             if ($bill->status === DocumentStatus::CONFIRMED) {
                 $this->takeBackDirectLines($bill, $date, $reason);
                 $this->takeBackGifts($bill, $date, $reason);
