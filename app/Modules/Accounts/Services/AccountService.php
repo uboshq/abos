@@ -202,6 +202,13 @@ final class AccountService
                 $wanted = array_values(array_unique(array_map('strval', (array) ($data['party_types'] ?? []))));
                 sort($wanted);
 
+                // ⛔ টাকার খাত কোনো পক্ষ রাখে না — লাইভের রাতের যাচাই, ১৩ অক্টোবর ২০২৬ ([[NoPartySitsOnAMoneyAccountTest]])
+                if ($wanted !== [] && $account->money_kind !== null) {
+                    throw ValidationException::withMessages([
+                        'party_types' => __('accounts::validation.money_holds_no_party'),
+                    ]);
+                }
+
                 if ($wanted !== ($account->party_types ?? [])
                     && ! (bool) auth()->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
                     throw ValidationException::withMessages([

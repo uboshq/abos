@@ -55,6 +55,8 @@ return [
     'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
+    'hand_loan_needs_person' => '":name" is a hand-loan account — name the person whose loan it is.',
+    'money_holds_no_party' => 'A money account (cash, bank, mobile money) holds no party — parties sit on their receivable or payable.',
     // Bank money cannot be reconciled without a reference, and the same
     // reference twice means the same money twice
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',
