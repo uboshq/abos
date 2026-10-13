@@ -153,6 +153,10 @@ final class SalesReturnService
             $return->update([
                 'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? $return->warehouse_id)->id,
                 'sales_invoice_id' => $data['sales_invoice_id'] ?? null,
+                // ⛔ বিল বদলালে বিক্রির নম্বরও — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (আগে পুরনো বিলের নম্বর থেকে যেত, সূত্র ভুল বিলে)
+                'sale_no' => isset($data['sales_invoice_id'])
+                    ? SalesInvoice::query()->whereKey($data['sales_invoice_id'])->value('sale_no')
+                    : null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
                 'reason_note' => $data['reason_note'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
