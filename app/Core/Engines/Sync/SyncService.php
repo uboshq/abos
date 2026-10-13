@@ -401,6 +401,11 @@ final class SyncService
         $handlers = $this->registry->forModule($module);
 
         $positions = $this->decodeCursor($paged ? $cursor : $this->storedPageCursor($deviceId, $module));
+
+        // ⭐ পালার প্রথম পাতা — কখন পড়া শুরু, সেটাই পরে জলচিহ্ন ([[recordSuccessfulPull()]]; [[AChangeDuringALongPullWasLostTest]])
+        if ($positions === []) {
+            $this->markPassStart($deviceId, $module);
+        }
         $next = [];
 
         $records = [];
@@ -581,12 +586,36 @@ final class SyncService
      */
     public function recordSuccessfulPull(string $deviceId, string $module, ?User $user = null): void
     {
+        /*
+         * ⛔ জলচিহ্ন পালার শুরু, শেষ নয় — Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AChangeDuringALongPullWasLostTest]])।
+         * ⚠️ "এখন" বসালে প্রথম ধরনের পাতা পড়ার পরে আর "পুরোটা পেয়েছি"-র আগে (ধীর নেটে কয়েক মিনিট, পুরনো অ্যাপে পুরো সিঙ্কের
+         * ফাঁক) সেই ধরনের যা বদলাল, পরের টানা (জলচিহ্ন − ৬০ সেকেন্ড) থেকে শুরু হওয়ায় চিরতরে বাদ পড়ত। ⓘ শুরুর দাগ না থাকলে
+         * (পুরনো সারি) আগের মতো "এখন"।
+         */
+        $started = SyncState::query()->where('device_id', $deviceId)->where('module', $module)->value('pass_started_at');
+
         SyncState::query()->updateOrCreate(
             ['device_id' => $deviceId, 'module' => $module],
             // ⓘ পালা শেষ — কার্সরও শেষ ([[pull()]], গ১৮); ⭐ কোন দেখায় পাওয়া, তা-ও ([[sawAnotherView()]])
-            ['company_id' => CompanyContext::id(), 'last_synced_at' => now(), 'page_cursor' => null,
+            ['company_id' => CompanyContext::id(), 'last_synced_at' => $started ?? now(), 'pass_started_at' => null, 'page_cursor' => null,
                 'view_key' => $user === null ? null : $this->viewKey($user)],
         );
+    }
+
+    /** এই পালার প্রথম পাতার সময় — সারি না থাকলে বানিয়ে ([[recordSuccessfulPull()]]) */
+    private function markPassStart(string $deviceId, string $module): void
+    {
+        $state = SyncState::query()->where('device_id', $deviceId)->where('module', $module)->first();
+
+        if ($state === null) {
+            SyncState::query()->create([
+                'company_id' => CompanyContext::id(), 'device_id' => $deviceId, 'module' => $module, 'pass_started_at' => now(),
+            ]);
+
+            return;
+        }
+
+        $state->forceFill(['pass_started_at' => now()])->save();
     }
 
     /**
