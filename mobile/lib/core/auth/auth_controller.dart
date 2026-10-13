@@ -16,6 +16,7 @@ import 'auth_state.dart';
 import 'auth_user.dart';
 import 'session_repository.dart';
 import 'token_storage.dart';
+import '../web_inside/web_inside.dart';
 
 /// Owns the sign-in lifecycle: restoring a saved session at startup,
 /// `/auth/login`, and `/auth/logout`. Screens read [AuthState] through
@@ -152,6 +153,8 @@ class AuthController extends StateNotifier<AuthState> {
     // showing one person's cash in hand and approval queue after they have
     // signed out, possibly to somebody at a different company.
     unawaited(LauncherWidgetRefresh.clear());
+    // ⭐ অ্যাপের ভিতরের ওয়েব-জানালার সেশনও — পরের জন আগের জনের ওয়েবে নয় ([WebInsideSession])
+    unawaited(WebInsideSession.clear());
     state = const AuthState.signedOut();
   }
 }

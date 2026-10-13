@@ -8,6 +8,7 @@ use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PhoneModules;
 use App\Core\Services\SettingsService;
+use App\Core\Services\WebInsideApp;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -64,6 +65,7 @@ class MeController extends Controller
         private readonly MenuBuilder $menu,
         private readonly PhoneModules $phone,
         private readonly DataScope $scope,
+        private readonly WebInsideApp $inside,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -114,6 +116,9 @@ class MeController extends Controller
              */
             'secureScreens' => (bool) app(SettingsService::class)->get(\App\Core\Services\PhoneModules::SECURE_SCREENS, true),
             'widgetAmounts' => (bool) app(SettingsService::class)->get(\App\Core\Services\PhoneModules::WIDGET_AMOUNTS, false),
+
+            // ⭐ অ্যাপের ভিতরে ওয়েবের পর্দা খোলা চালু কি না — কোম্পানির সুইচ ([[WebInsideApp]], ১৩ অক্টোবর ২০২৬)
+            'webInsideApp' => $this->inside->isOn(),
 
             /*
              * কার্যকর অনুমতির তালিকা — রোলের নাম নয়, চাবিগুলো।
@@ -299,6 +304,12 @@ class MeController extends Controller
                             'label' => $row['label'],
                             'route' => $row['route'],
                             'planned' => $row['planned'],
+                            /*
+                             * ⭐ অ্যাপের ভিতরে খোলার ওয়েব-পথ (সাইটের ভিতরের, `/…`) — যে সারির ফোন-পর্দা নেই, অ্যাপ সেটা
+                             * নিজের ভিতরের ওয়েব-জানালায় খোলে (মালিক, ১৩ অক্টোবর ২০২৬)। ⓘ null: কোম্পানির সুইচ বন্ধ, "শীঘ্রই",
+                             * বা এই মানুষের জন্য মজুদ-লুকানো পর্দা ([[WebInsideApp::menuPath()]])। পুরনো অ্যাপ এটা পড়ে না।
+                             */
+                            'web' => $this->inside->menuPath($user, $row),
                         ],
                         $rows,
                     ),

@@ -85,6 +85,17 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
+/*
+ * ⭐ অ্যাপের ভিতরের ওয়েব-জানালা একবারের চাবি দিয়ে ঢোকে — [[WebHandoffController]] (মালিক, ১৩ অক্টোবর ২০২৬)।
+ *
+ * ⓘ `guest`-এর বাইরে: জানালায় আগে কেউ ঢুকে থাকলে নিয়ামক তাঁকে বের করে চাবির মানুষটাকে ঢোকায় — `guest` থাকলে আগের
+ * জন ভিতরে থাকলেই চাবিটা ড্যাশবোর্ডে ফেরত যেত। ⛔ লগইনের দরজার মতোই throttle; চাবি ৬০ সেকেন্ডের, একবারের।
+ */
+Route::get('/handoff/{token}', \App\Http\Controllers\Auth\WebHandoffController::class)
+    ->where('token', '[A-Za-z0-9_-]{43}')
+    ->middleware('throttle:20,1,web-handoff-open')
+    ->name('web_handoff');
+
 Route::post('/logout', [LoginController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
