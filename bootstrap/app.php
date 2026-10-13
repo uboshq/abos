@@ -315,6 +315,8 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->api(append: [
             RefuseInactiveAccounts::class,
+            // ⛔ মেয়াদ শেষে ফোনও বন্ধ, কেবল ঢোকা-বেরোনো খোলা — ওয়েবের একই তালা (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            RefuseWorkWithoutALicence::class,
             // ⭐ ফোন থেকে লেখাও বাকি ফোনগুলোকে ডাকে ([[SyncNudge]])
             NudgePhonesAfterWrite::class,
         ]);

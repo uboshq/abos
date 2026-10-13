@@ -65,6 +65,10 @@ final class RefuseWorkWithoutALicence
 
         /* ⓘ স্বাস্থ্য-পরীক্ষা, নাহলে তালাবদ্ধ সার্ভার "মৃত" দেখাত */
         'up',
+
+        /* ⭐ ফোনের ঢোকা-বেরোনো আর অ্যাপের সংস্করণ — ওয়েবের লগইনের জোড়া (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+        'api.auth.',
+        'api.app.',
     ];
 
     public function __construct(private readonly LicenceReader $licences) {}
@@ -96,6 +100,15 @@ final class RefuseWorkWithoutALicence
          * খুঁজতেন — অথচ সমস্যাটা অনুমতির নয়, কাগজের। ⛔ একটা ভুল
          * ব্যাখ্যা মানুষকে ভুল জায়গায় ঘণ্টাখানেক ঘোরায়।
          */
+        /*
+         * ⛔ ফোনের দরজাও — আগে এই পাহারা কেবল ওয়েবের থলেতে ছিল, তাই মেয়াদ শেষে ওয়েব বন্ধ অথচ ফোন অর্ডার আর আদায় বসাত,
+         * সই দিত, রিপোর্ট টানত — "মেয়াদ শেষে সব বন্ধ, কেবল লগইন খোলা" ভেঙে (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[TheLockIsHonestAndYourBooksStayOpenTest::test_an_expired_licence_stops_the_phone_too_but_not_its_login]])। ⓘ ফোনকে পর্দায় পাঠানো যায় না — কাগজের নিজের বাংলা কথা, JSON-এ।
+         */
+        if ($request->is('api/*') || $request->expectsJson()) {
+            return response()->json(['message' => $verdict->message(), 'reason' => 'licence'], 403);
+        }
+
         return redirect()->route('licence.show');
     }
 }
