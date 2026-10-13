@@ -45,8 +45,12 @@ final class AnotherPapersVoucherIsNotTouchedHereTest extends TestCase
         $owned = $vouchers->create(['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'হাতধারের ভাউচার'], $lines);
 
         // ⓘ অর্থ মডিউলের হাতধার-চলাচল এই ভাউচারকে নিজের বলে ধরে
-        $account = DB::table('fin_hand_loan_accounts')->insertGetId(['company_id' => $company->id, 'person_name' => 'রহিম',
-            'status' => 'active', 'public_id' => (string) Str::uuid(), 'created_at' => now(), 'updated_at' => now()]);
+        // ⓘ হাতধারের হিসাব সেবার পথে — `person_name` ঘর আর নেই, মানুষটা এখন মাস্টার তালিকা থেকে (জোড়া লাগানোর পরে, ১৪ অক্টোবর ২০২৬)
+        $person = \App\Modules\MasterData\Models\Person::query()->firstOrCreate(
+            ['company_id' => $company->id, 'name_en' => 'Rahim'],
+            ['code' => 'P-RHM', 'name_bn' => 'রহিম', 'is_active' => true],
+        );
+        $account = app(\App\Modules\Finance\Services\HandLoanService::class)->open(['person_id' => $person->id])->id;
         DB::table('fin_hand_loan_movements')->insert(['company_id' => $company->id, 'account_id' => $account, 'direction' => 'out',
             'amount' => '500', 'moved_on' => now()->toDateString(), 'voucher_id' => $owned->id,
             'public_id' => (string) Str::uuid(), 'created_at' => now(), 'updated_at' => now()]);
