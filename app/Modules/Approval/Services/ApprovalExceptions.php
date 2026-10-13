@@ -142,9 +142,10 @@ final class ApprovalExceptions
                     return false;
                 }
 
+                // ⓘ সই যে ছাপে বসেছিল সেই ছাপ — ছাড়ের সই গোটা বিলের নয় ([[DocumentFingerprint::forApproval()]])
                 return ! hash_equals(
                     (string) $a->state_hash,
-                    app(DocumentFingerprint::class)->of($document),
+                    app(DocumentFingerprint::class)->forApproval($a, $document),
                 );
             })
             ->map(fn (Approval $a) => [

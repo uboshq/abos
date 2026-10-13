@@ -69,7 +69,7 @@ final class SignedButNotPosted
             ->where('decided_at', '>=', now()->subDays(self::DAYS))
             ->when(! ($user->can('approval.decide') || $user->can('approval.report')),
                 fn ($q) => $q->where('requested_by', $user->id))
-            ->get(['id', 'approvable_type', 'approvable_id', 'action', 'state_hash']);
+            ->get(['id', 'approvable_type', 'approvable_id', 'action', 'state_hash', 'payload']);
 
         $out = [];
 
@@ -155,8 +155,11 @@ final class SignedButNotPosted
             try {
                 $paper = $class::query()->withoutGlobalScope('user-branch')->find((int) $row->approvable_id);
 
+                // ⓘ সারিটা নিজেই বলে কোন ছাপে সই বসেছিল ([[DocumentFingerprint::forApproval()]]) — ছাড়ের সই গোটা বিলের ছাপ নেয় না
+                $signed = (new Approval)->forceFill(['payload' => json_decode((string) ($row->payload ?? 'null'), true)]);
+
                 return $paper !== null
-                    && hash_equals((string) $row->state_hash, app(DocumentFingerprint::class)->of($paper));
+                    && hash_equals((string) $row->state_hash, app(DocumentFingerprint::class)->forApproval($signed, $paper));
             } catch (Throwable $e) {
                 report($e);
 
