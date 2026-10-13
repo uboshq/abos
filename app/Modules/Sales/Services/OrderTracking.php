@@ -148,10 +148,14 @@ final class OrderTracking
             ->latest('trx_date')
             ->latest('id');
 
+        /*
+         * ⛔ বিল হওয়া আদেশ কেবল "বিল হয়েছে"-তে — [[stageOf()]] বিলকে আগে ধরে (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)।
+         * ⓘ আগে আংশিক গিয়ে বিল হওয়া আদেশ "আংশিক" তালিকাতেও আসত, অথচ ট্যাবের গোনা তাকে কেবল "বিল হয়েছে"-তে গুনত।
+         */
         return match ($stage) {
-            self::PLACED => $orders->where('delivered_total', '<=', 0),
-            self::PARTIAL => $orders->whereRaw('delivered_total > 0 AND delivered_total < ordered_total'),
-            self::DELIVERED => $orders->whereRaw('delivered_total >= ordered_total AND invoice_count = 0'),
+            self::PLACED => $orders->where('delivered_total', '<=', 0)->where('invoice_count', 0),
+            self::PARTIAL => $orders->whereRaw('delivered_total > 0 AND delivered_total < ordered_total AND invoice_count = 0'),
+            self::DELIVERED => $orders->whereRaw('delivered_total > 0 AND delivered_total >= ordered_total AND invoice_count = 0'),
             self::BILLED => $orders->where('invoice_count', '>', 0),
             default => $orders,
         };

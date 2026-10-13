@@ -98,11 +98,20 @@ class DeliveryChallanLine extends Model
         return $this->hasMany(SalesInvoiceLine::class, 'delivery_challan_line_id');
     }
 
-    /** এই লাইনের কতটুকু বিলে এসেছে। */
+    /**
+     * এই লাইনের কতটুকু বিলে এসেছে।
+     *
+     * ⛔ যে-ই দেখুক, একই অঙ্ক — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা ([[TheChallanLineIsBilledTheSameForEveryViewerTest]])।
+     * ⓘ বিলটা দেখার মানুষের শাখা আর ডিলারের দেয়ালে ছাঁকা হত, তাই অন্য শাখায় কাটা বিল কারও চোখে "বিল হয়নি" দেখাত — বিলের ফর্ম
+     * আবার পুরোটা ভরত ([[ChallanBills::leftToBill()]])। এখন কেবল কোম্পানি (আর মোছা বাদ)। ⚠️ খসড়া বিল গোনা থাকে, ইচ্ছা করে: খসড়াও
+     * চালানের মাল দাবি করে, না গুনলে একই চালানে দ্বিতীয় বিল লেখা যেত।
+     */
     public function invoicedQty(): string
     {
         $invoiced = $this->invoiceLines()
-            ->whereHas('invoice', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->whereHas('invoice', fn ($q) => $q
+                ->withoutGlobalScopes(['user-branch', SalesInvoice::DEALER_WALL])
+                ->where('status', '<>', 'cancelled'))
             ->sum('qty');
 
         return (string) ($invoiced ?: '0');
