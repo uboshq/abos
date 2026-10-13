@@ -270,6 +270,8 @@ final class SalesOrderService
             ]);
         }
 
+        $this->assertNotRejected($order);
+
         $order->loadMissing(['lines.product', 'warehouse']);
 
         return DB::transaction(function () use ($order, $reason) {
@@ -284,6 +286,7 @@ final class SalesOrderService
 
             // ⛔ বন্ধ আদেশের ধরা মাল বন্ধেই ছাড়া হয়েছে — বাতিলে আবার ছাড়লে Reserved ঋণাত্মক হত
             $this->assertNotClosed($order);
+            $this->assertNotRejected($order);
 
             // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
             app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesOrder::drillSourceType(), (int) $order->id);
@@ -563,6 +566,12 @@ final class SalesOrderService
         if (in_array($order->status, SalesOrderStatus::FINISHED, true)) {
             return $order;
         }
+
+        /*
+         * ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে ফেরানো আদেশে
+         * কুপন খরচ আর পয়েন্ট কাটা থেকেই যেত; একমাত্র পথ ছিল ফেরানো আদেশ আবার "বাতিল" করা। ⓘ দ্বিতীয়বার ডাকলে কিছুই হয় না।
+         */
+        app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesOrder::drillSourceType(), (int) $order->id);
 
         $order->forceFill([
             'status' => SalesOrderStatus::REJECTED,
@@ -1059,6 +1068,19 @@ final class SalesOrderService
      * দুইবার ধরা হত, আর বাতিলে দুইবার ছাড়া (Reserved ঋণাত্মক)। ⭐ এখন লেনদেনের প্রথম কাজ সারিতে তালা আর
      * অবস্থা তাজা পড়া ([[DepositClaimService::lockPending()]]-এর ছাঁচ)।
      */
+    /**
+     * ⛔ ফেরানো আদেশ আর বাতিল হয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ ফেরানোতেই হোল্ড ছাড়া আর অফার ফেরে
+     * ([[reject()]]); আবার বাতিলে "ফেরানো"-র ছাপ মুছে যেত আর ছাড়ার সংকেত দ্বিতীয়বার যেত।
+     */
+    private function assertNotRejected(SalesOrder $order): void
+    {
+        if ($order->status === SalesOrderStatus::REJECTED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::order_status.rejected_cannot_cancel', ['no' => $order->document_no]),
+            ]);
+        }
+    }
+
     private function lockAndReread(SalesOrder $order): void
     {
         $fresh = SalesOrder::query()

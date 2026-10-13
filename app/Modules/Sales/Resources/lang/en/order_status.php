@@ -129,4 +129,5 @@ return [
     'reject_saved' => 'The rest of the line is closed.',
 
     'closed_cannot_cancel' => ':no is closed — a closed order cannot be cancelled.',
+    'rejected_cannot_cancel' => '⛔ :no was rejected. A rejected order is not cancelled again: its goods and offers came back when it was rejected.',
 ];
