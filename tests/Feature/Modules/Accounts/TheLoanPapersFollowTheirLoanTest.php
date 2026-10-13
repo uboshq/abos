@@ -101,6 +101,38 @@ final class TheLoanPapersFollowTheirLoanTest extends TestCase
         $this->assertSame($home, (int) $repay->fresh()->branch_id, '⛔ শোধের সারিটাই অন্য শাখার।');
     }
 
+    /**
+     * ⛔ কিস্তিতে বাকি আসলের বেশি দেওয়া যায় না — বাংলায় কারণসহ থামে, আর বাকি পর্যন্ত দেওয়া যায়। ⚠️ আগে উপরের সীমা ছিল না: ১,২০,০০০-এর
+     * ঋণে এক কিস্তিতে ২,০০,০০০ দিলে ঋণের খাত উল্টো দিকে যেত।
+     */
+    public function test_an_instalment_cannot_pay_more_principal_than_the_loan_has_left(): void
+    {
+        $term = $this->term();
+        $due = $term->instalments()->orderBy('no')->firstOrFail();
+        $interest = (string) $due->interest;
+
+        try {
+            app(LoanService::class)->payInstalment($due, $this->money()->id, null, bcadd('200000', $interest, 4));
+            $this->fail('⛔ বাকি আসলের বেশি কিস্তি নেওয়া হলো — ঋণ উল্টো দিকে।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('বাকি আসলের', (string) ($e->errors()['amount'][0] ?? ''), 'অন্য কারণে থামল।');
+        }
+        $this->assertFalse($due->fresh()->isPaid());
+
+        // ⓘ ঠিক বাকি পর্যন্ত — পুরো ঋণ এক কিস্তিতে শোধ করা যায়
+        app(LoanService::class)->payInstalment($due->fresh(), $this->money()->id, null, bcadd('120000', $interest, 4));
+        $this->assertTrue($due->fresh()->isPaid(), '⛔ বাকি পর্যন্ত দেওয়াটাও থামল।');
+
+        // ⓘ তারপর আর এক টাকার আসলও নয়
+        $next = $term->instalments()->where('no', 2)->firstOrFail();
+        try {
+            app(LoanService::class)->payInstalment($next, $this->money()->id, null, bcadd('1', (string) $next->interest, 4));
+            $this->fail('⛔ শোধ হয়ে যাওয়া ঋণে আবার আসল নেওয়া হলো।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('বাকি আসলের', (string) ($e->errors()['amount'][0] ?? ''));
+        }
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function lookAtOneBranch(User $user, ?Branch $branch = null): void

@@ -103,6 +103,7 @@ return [
     'loan_amount_positive' => 'The amount must be more than zero.',
     'loan_over_limit' => 'Only :available is left on the limit — no more than that can be drawn.',
     'instalment_below_interest' => 'An instalment cannot be less than this month\'s interest (:interest).',
+    'instalment_beyond_principal' => 'The principal in this instalment (:principal) is more than the loan has left (:left) — paying more would turn the loan around. Pay up to what is left.',
     'instalment_already_paid' => 'This instalment has already been paid.',
 
     // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য

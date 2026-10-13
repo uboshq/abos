@@ -115,6 +115,7 @@ return [
     'loan_amount_positive' => 'টাকার অঙ্ক শূন্যের বেশি হতে হবে।',
     'loan_over_limit' => 'সীমার আর মাত্র :available টাকা খালি আছে — এর বেশি তোলা যাবে না।',
     'instalment_below_interest' => 'কিস্তি এই মাসের সুদের (:interest) চেয়ে কম হতে পারে না।',
+    'instalment_beyond_principal' => 'এই কিস্তির আসল (:principal) ঋণের বাকি আসলের (:left) বেশি — বেশি দিলে ঋণ উল্টো দিকে যাবে। বাকি পর্যন্তই দিন।',
     'instalment_already_paid' => 'এই কিস্তিটা আগেই পরিশোধ করা হয়েছে।',
 
     // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য

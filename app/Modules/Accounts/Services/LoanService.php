@@ -349,6 +349,24 @@ final class LoanService
             $principal = bcsub($paid, $interest, 4);
 
             /*
+             * ⛔ বাকি আসলের বেশি নয় — a6-র নিরীক্ষা, fe মারফত ১৩ অক্টোবর ২০২৬ ([[TheLoanPapersFollowTheirLoanTest]])। ⚠️ আগে নিচের সীমা
+             * ছিল (সুদ), উপরের নয়: বাকির বেশি দিলে ঋণের খাত উল্টো দিকে যেত — ব্যাংকের কাছে ঋণ "পাওনা"। ⓘ বাকি আসল = মঞ্জুর − আগের
+             * প্রতিটা দেওয়া কিস্তির আসলের ভাগ (দেওয়া − সুদ); খাতা থেকে নয়, কারণ পুরনো ঋণের আসল খাতায় না-ও উঠে থাকতে পারে।
+             */
+            $left = bcsub((string) $loan->sanctioned, (string) LoanInstalment::query()
+                ->where('loan_id', $loan->id)->where('status', LoanInstalment::PAID)
+                ->selectRaw('COALESCE(SUM(paid_amount - interest), 0) as n')->value('n'), 4);
+
+            if (bccomp($principal, $left, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('accounts::validation.instalment_beyond_principal', [
+                        'principal' => \App\Core\Support\Money::format($principal),
+                        'left' => \App\Core\Support\Money::format(bccomp($left, '0', 4) > 0 ? $left : '0'),
+                    ]),
+                ]);
+            }
+
+            /*
              * ⛔ সইয়ের ছক থাকলে থামে — অডিট (সমন্বয়ক, ১০ অক্টোবর ২০২৬)। ⓘ কাগজ কিস্তির নিজের সারি; শেষ সইয়ে একই তথ্যে আবার
              * এখানে আসে ([[FinishTheAccountsPaperOnTheLastSignature]]), তখন সইটা খাটে আর খাতায় বসে। ছক না থাকলে আজকের মতো এখনই।
              */
