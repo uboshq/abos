@@ -17,12 +17,16 @@ use Illuminate\Database\Eloquent\Model;
  * ⭐ লেনদেনের **ভিতরে** ডাকুন, তারপর অবস্থার যাচাই আবার — দ্বিতীয়জন প্রথমজনের কমিট পর্যন্ত
  * অপেক্ষা করেন আর তাজা অবস্থা দেখে ফেরেন ([[DepositClaimService::lockPending()]]-এর ছাঁচ)।
  * ⚠️ লেনদেনের বাইরে `FOR UPDATE` কোয়েরি শেষ হতেই খুলে যায় — তাই বাইরে ডাকা অর্থহীন।
+ *
+ * ⛔ শাখার দেয়াল ('user-branch') বাদ — সারিটা আগেই হাতে, আবার পড়া কেবল তাজা করা (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+ * ⓘ শেষ সই যিনি দেন তাঁর হেডারে অন্য শাখা থাকলে আগে ভাউচারটা "নেই" হয়ে সই ভেঙে পড়ত
+ * ([[ADepositClosedFromAnotherBranchClosedTwiceTest]])।
  */
 trait ReadsTheRowUnderLock
 {
     protected function lockFresh(Model $model): void
     {
-        $fresh = $model->newQuery()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
+        $fresh = $model->newQuery()->withoutGlobalScope('user-branch')->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
 
         $model->setRawAttributes($fresh->getAttributes(), true);
     }
