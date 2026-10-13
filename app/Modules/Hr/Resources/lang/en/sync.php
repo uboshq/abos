@@ -7,6 +7,8 @@ return [
     'not_an_employee' => 'You are not set up as an employee, so attendance cannot be recorded. Tell the office.',
     'attendance_needs_date' => 'The day being marked was not given.',
     'attendance_already_marked' => 'Attendance for this day is already recorded — corrections happen over the network.',
+    'employee_gone' => 'Your employee record is closed (left or inactive), so attendance cannot be recorded. If this is wrong, tell the office.',
+    'attendance_remarks_text' => 'The attendance note must be text — update the app and send it again.',
     'only_own_attendance' => 'You can only record your own attendance from the app.',
     'synced_days_late' => 'Synced :days day(s) after the marked day (phone time).',
     'attendance_only_today' => 'The app can only mark today\'s attendance. The office marks any earlier or later day.',
