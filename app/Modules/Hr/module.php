@@ -142,6 +142,15 @@ return [
          */
         'hr.claim.self',
         'hr.claim.view',
+
+        /*
+         * ⭐ নিজের ছুটি চাওয়া আর নিজের বেতনের স্লিপ দেখা — ফোনে (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬: বাকি মডিউল অ্যাপে)।
+         * ⓘ `hr.leave.self` — কেবল নিজের নামে আবেদন আর নিজের তালিকা; মঞ্জুরি আগের মতোই `hr.leave.approve`-এ। ⛔ `hr.leave.manage`
+         * নয় — ওটা যেকোনো কর্মীর নামে আবেদন বসায়। `hr.payslip.self` — কেবল নিজের স্লিপ, খসড়া রান ছাড়া; ⛔ `hr.payroll.view` নয়
+         * — ওটা সবার বেতন খোলে।
+         */
+        'hr.leave.self',
+        'hr.payslip.self',
     ],
 
     /*
@@ -157,28 +166,28 @@ return [
          * ⓘ কাউন্টারের কর্মী সব ডিলার দেখেন (মালিক, ২৬ সেপ্টেম্বর) — নাহলে বিল করবেন কীভাবে।
          */
         'Counter' => [
-            'hr.attendance.self', 'hr.claim.self',
+            'hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self',
         ],
         /*
          * ASM — বিক্রয়কর্মীর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
          * ⚠️ SR→ASM→RSM→DSM-এর বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'ASM' => [
-            'hr.attendance.self', 'hr.claim.self',
+            'hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self',
         ],
         /*
          * RSM — ASM-এর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'RSM' => [
-            'hr.attendance.self', 'hr.claim.self',
+            'hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self',
         ],
         /*
          * DSM — বিক্রয়ের সবচেয়ে উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'DSM' => [
-            'hr.attendance.self', 'hr.claim.self',
+            'hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self',
         ],
         /*
          * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
@@ -186,16 +195,17 @@ return [
          * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
          */
         'Accountant' => [
-            'hr.attendance.self', 'hr.claim.self',
+            'hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self',
         ],
         'HR' => [
             'hr.employee.view', 'hr.employee.manage',
             'hr.attendance.view', 'hr.attendance.manage',
             'hr.leave.view', 'hr.leave.manage', 'hr.leave.approve',
             'hr.claim.self', 'hr.claim.view',
+            'hr.leave.self', 'hr.payslip.self',
         ],
-        'Field Sales' => ['hr.attendance.self', 'hr.claim.self'],
-        'Warehouse' => ['hr.attendance.self', 'hr.claim.self'],
+        'Field Sales' => ['hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self'],
+        'Warehouse' => ['hr.attendance.self', 'hr.claim.self', 'hr.leave.self', 'hr.payslip.self'],
     ],
 
     /*

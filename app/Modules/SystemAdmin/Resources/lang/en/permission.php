@@ -128,6 +128,8 @@ return [
         'finance.insurance' => 'Insurance',
         'governance.sync' => 'Phone sync conflicts',
         'hr.claim' => 'Expense claims and advances',
+        // ⭐ One's own payslip, on the phone (13 Oct 2026)
+        'hr.payslip' => 'Payslips',
         'promotion' => 'Whole promotions module',
         'system_admin.notice' => 'Notices',
     ],

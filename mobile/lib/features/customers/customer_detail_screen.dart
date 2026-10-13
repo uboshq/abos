@@ -21,9 +21,12 @@ import '../../core/theme/app_spacing.dart';
 /// the number and open the address. That is most of why an app is worth
 /// having at all for someone who is standing up.
 class CustomerDetailScreen extends StatelessWidget {
-  const CustomerDetailScreen({super.key, required this.customerId});
+  const CustomerDetailScreen({super.key, required this.customerId, this.showCredit = false});
 
   final String customerId;
+
+  /// ⭐ "বাকির অবস্থা" বোতাম — বাকি নিয়ন্ত্রণের দেখার চাবি আর কোম্পানির ফোন-সুইচ থাকলে (রাউটার বলে, ১৩ অক্টোবর ২০২৬)
+  final bool showCredit;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +69,7 @@ class CustomerDetailScreen extends StatelessWidget {
               child: _DueCard(due: due),
             ),
           const SizedBox(height: AppSpacing.md),
-          _Actions(customer: customer),
+          _Actions(customer: customer, showCredit: showCredit),
           const SizedBox(height: AppSpacing.lg),
           Text('এই দোকানের অর্ডার (${orders.length})',
               style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -190,9 +193,10 @@ class _DueCard extends StatelessWidget {
 /// The two things a phone can do that a screen at a desk cannot, plus the one
 /// that starts the actual work.
 class _Actions extends StatelessWidget {
-  const _Actions({required this.customer});
+  const _Actions({required this.customer, this.showCredit = false});
 
   final CustomerRecord customer;
+  final bool showCredit;
 
   @override
   Widget build(BuildContext context) {
@@ -224,6 +228,14 @@ class _Actions extends StatelessWidget {
           icon: const Icon(Icons.menu_book_outlined),
           label: const Text('খাতা দেখুন'),
         ),
+        // ⭐ বাকির পাতা — সীমা, অবশিষ্ট, ঝুঁকি (বাকি নিয়ন্ত্রণ, ১৩ অক্টোবর ২০২৬)
+        if (showCredit)
+          OutlinedButton.icon(
+            key: const ValueKey('customer-credit'),
+            onPressed: () => context.push('/home/credit/${customer.id}'),
+            icon: const Icon(Icons.credit_score_outlined),
+            label: const Text('বাকির অবস্থা'),
+          ),
         // ⭐ জমার বিজ্ঞপ্তি, স্লিপসহ (0.4.3)
         OutlinedButton.icon(
           onPressed: () =>
