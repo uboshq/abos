@@ -350,8 +350,8 @@ final class VoucherService
     public function post(Voucher $voucher, bool $byHand = false): Voucher
     {
         // ⛔ অন্য কাগজের ভাউচার হাতে পাকা নয় — নিজের পথে, নিজের সইয়ে ([[ownerOf()]]; [[AnotherPapersVoucherIsNotTouchedHereTest]])
-        if ($byHand && ($owner = $this->ownerOf($voucher)) !== null) {
-            throw ValidationException::withMessages(['status' => __('accounts::revision.owned_elsewhere', ['no' => $voucher->document_no, 'module' => $owner])]);
+        if ($byHand) {
+            $this->refuseIfOwnedElsewhere($voucher);
         }
 
         if ($voucher->isPosted()) {
@@ -772,6 +772,18 @@ final class VoucherService
      * (নির্ভরতা নেই), তাই উত্তর ডাটাবেসের নিজের তালিকা থেকে: যে টেবিলে `…voucher_id` ঘর আছে (ভাউচারের নিজের সন্তান বাদ), সেখানে এই
      * ভাউচারের সারি থাকলেই সে অন্য কাগজের। মডিউলের নাম টেবিলের আগাম অংশ থেকে, না চিনলে "অন্য মডিউল"।
      */
+    /**
+     * ⛔ অন্য কাগজের ভাউচার হাতে নয় — পাকা করার দরজা ([[VoucherWriter::post()]]) সইয়ের অনুরোধের **আগেই** এটা দেখে (Api/Sync নিরীক্ষা,
+     * ১৪ অক্টোবর ২০২৬; fe-র প্রশ্ন; [[AnotherPapersVoucherAskedForASignatureFirstTest]])। ⚠️ আগে সই চালু থাকলে ওয়েব বা ফোন থেকে হাতে
+     * "পাকা" চাপলে আগে সইয়ের অনুরোধ বসত — সইকারী সই দিতেন, তারপর শেষ সইয়ে পাকা করতে গিয়ে তবে "নিজের মডিউলে" বলে থামত।
+     */
+    public function refuseIfOwnedElsewhere(Voucher $voucher): void
+    {
+        if (($owner = $this->ownerOf($voucher)) !== null) {
+            throw ValidationException::withMessages(['status' => __('accounts::revision.owned_elsewhere', ['no' => $voucher->document_no, 'module' => $owner])]);
+        }
+    }
+
     private function ownerOf(Voucher $voucher): ?string
     {
         /*
