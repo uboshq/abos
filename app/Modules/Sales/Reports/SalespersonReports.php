@@ -50,6 +50,12 @@ final class SalespersonReports
 
                 $sales = DB::table('sal_invoices as i')
                     ->join('sal_invoice_lines as il', 'il.sales_invoice_id', '=', 'i.id')
+                    /*
+                     * ⛔ বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগ সারিতে ([[LineNetSale]]) — লক্ষ্যের অর্জন আর পণ্য ধরে বিক্রির একই
+                     * সংজ্ঞা। আগে `amount − tax`: ৫০০ ছাড়ের ১০,০০০ টাকার বিল কর্মীর নামে ১০,০০০ (ec, Executive লাইন-নিরীক্ষা,
+                     * ১৪ অক্টোবর ২০২৬; [[TheSalespeopleCardCountsTheBillDiscountTest]])। ⓘ ফেরতের সারি ভাগটা নিজেই বহন করে।
+                     */
+                    ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
                     ->where('i.company_id', $f['company_id'])
                     ->whereNull('i.deleted_at')
                     ->whereIn('i.status', DocumentStatus::POSTED)
@@ -61,7 +67,7 @@ final class SalespersonReports
                         fn ($q) => $q->selectSub(DealerOwnership::boundOn('i.customer_id', 'i.trx_date', 'i.company_id'), 'seller_id'),
                         fn ($q) => $q->selectRaw('i.created_by as seller_id'),
                     )
-                    ->selectRaw('i.customer_id as customer_id, i.id as invoice_id, il.amount - il.tax as sold, 0 as returned');
+                    ->selectRaw('i.customer_id as customer_id, i.id as invoice_id, '.LineNetSale::sql().' as sold, 0 as returned');
 
                 $returns = DB::table('sal_returns as r')
                     ->join('sal_return_lines as rl', 'rl.sales_return_id', '=', 'r.id')
