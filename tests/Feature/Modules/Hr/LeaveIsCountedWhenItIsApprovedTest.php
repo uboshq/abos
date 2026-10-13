@@ -203,6 +203,33 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
         $this->assertSame('8.0', app(LeaveService::class)->balance($this->employee, $this->type('CASUAL'), Carbon::parse('2026-03-02'))['left']);
     }
 
+    /**
+     * ⛔ দিন তারিখের সাথে মেলে, আর এক আবেদন এক বছরের বেশি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫; [[LeaveService::apply()]])।
+     * ⓘ "৬ তারিখে ২ দিন" পার হত (চারটা শূন্য দিনের ছুটির সারি), আর সাল ভুল টাইপে বিনা বেতনের ছুটি এক বছরের বেশি জুড়ে বসত।
+     */
+    public function test_the_days_fit_the_dates_and_one_application_spans_at_most_a_year(): void
+    {
+        try {
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-10-20', '2026-10-25', '2');
+            $this->fail('⛔ ছয় তারিখে দুই দিনের ছুটি পার হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.days_below_range', ['span' => '6', 'least' => '5']), $e->errors()['days'][0]);
+        }
+
+        try {
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-02-01', '2027-02-10', '375');
+            $this->fail('⛔ এক বছরের বেশি জুড়ে একটা আবেদন পার হল');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('to_date', $e->errors());
+        }
+
+        $this->assertSame(0, LeaveApplication::query()->where('employee_id', $this->employee->id)->count());
+
+        // ⓘ শেষ দিনটা আধা দিন — আগের মতোই চলে
+        $this->assertSame(LeaveApplication::PENDING,
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-10-20', '2026-10-21', '1.5')->status);
+    }
+
     private function type(string $code): LeaveType
     {
         return LeaveType::query()->where('code', $code)->firstOrFail();

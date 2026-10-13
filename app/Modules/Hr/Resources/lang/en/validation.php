@@ -45,4 +45,6 @@ return [
     'head_in_use_keeps_its_shape' => 'The salary structures of employees use this head — changing its kind (earning/deduction) or calculation (fixed/percent) would turn the next payslips upside down. Create a new head and put it in the structures instead.',
     'leave_month_paid_approve' => 'The :month payroll (:no) is already confirmed, so leave in that month cannot be approved now: the payslip has already counted those days. Cancel the payroll run of that month first.',
     'attendance_month_paid' => 'The :month payroll (:no) is already confirmed, so the attendance of that month cannot be changed: the payslip was worked out from it. Cancel the payroll run of that month first.',
+    'leave_range_too_long' => 'One application can cover at most :max days. Check the year in the dates, or split a longer leave into two applications.',
+    'days_below_range' => 'Those dates span :span days, so more than :least days must be asked for (only the last day can be a part day). For fewer days, shorten the dates to the days actually taken.',
 ];

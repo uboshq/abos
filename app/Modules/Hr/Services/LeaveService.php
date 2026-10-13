@@ -26,6 +26,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class LeaveService
 {
+    /** এক আবেদনের তারিখ সবচেয়ে বেশি কত দিন জুড়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫) */
+    public const MAX_SPAN_DAYS = 366;
+
     /**
      * আবেদন জমা।
      *
@@ -300,11 +303,35 @@ final class LeaveService
          * এক দিনের ছুটিতে "পাঁচ দিন" লিখলে বেতন থেকে পাঁচ দিন কাটত,
          * অথচ কাগজে একটাই দিন — আর মিলটা কেউ মেলাত না।
          */
-        $span = (string) ($from->diffInDays($to) + 1);
+        $spanDays = (int) $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1;
+        $span = (string) $spanDays;
+
+        /*
+         * ⛔ এক আবেদনে এক বছরের বেশি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫; [[LeaveIsCountedWhenItIsApprovedTest]])।
+         * ⓘ সাল ভুল টাইপ করলে (২০২৬-এর বদলে ২০৬২) "২ দিন" চাওয়াও পার হত, আর মঞ্জুরিতে হাজার হাজার "ছুটি"-র সারি বসত।
+         */
+        if ($spanDays > self::MAX_SPAN_DAYS) {
+            throw ValidationException::withMessages([
+                'to_date' => __('hr::validation.leave_range_too_long', ['max' => self::MAX_SPAN_DAYS]),
+            ]);
+        }
 
         if (bccomp($days, $span, 1) > 0) {
             throw ValidationException::withMessages([
                 'days' => __('hr::validation.days_exceed_range', ['span' => $span]),
+            ]);
+        }
+
+        /*
+         * ⛔ দিন তারিখের চেয়ে এক দিনের বেশি কম নয় — একই নিরীক্ষা (⚠️৫)। ⓘ হাজিরায় দিনগুলো প্রথম তারিখ থেকে ভরে
+         * ([[Attendance::shareOf()]]), তাই "৬ তারিখে ২ দিন" লিখলে প্রথম দুইটা পুরো আর বাকি চারটা শূন্য দিনের "ছুটি" হত — বিনা
+         * বেতনের ছুটি ভুল মাসে কাটত, আর সাপ্তাহিক ছুটির সারি চাপা পড়ত। কেবল শেষ তারিখটাই আধা দিন হতে পারে ("২ তারিখে ১.৫ দিন")।
+         */
+        $least = (string) ($spanDays - 1);
+
+        if (bccomp($days, $least, 1) <= 0) {
+            throw ValidationException::withMessages([
+                'days' => __('hr::validation.days_below_range', ['span' => $span, 'least' => $least]),
             ]);
         }
     }
