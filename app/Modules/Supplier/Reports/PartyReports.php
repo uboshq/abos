@@ -189,17 +189,22 @@ final class PartyReports
                  */
                 $posted = "'".implode("','", DocumentStatus::POSTED)."'";
                 $company = (int) $f['company_id'];
+                /*
+                 * ⛔ শোধও তারিখ পর্যন্ত — বিল "to" পর্যন্ত ধরা হত, অথচ পরের পরিশোধ, ভাউচার আর ফেরতও বাকি কমাত: ৩০ সেপ্টেম্বরের
+                 * সূচিতে ৫ অক্টোবরের পরিশোধে বিল "শোধ" দেখাত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePaymentScheduleCountedLaterPaymentsTest]])।
+                 */
+                $asOf = DB::getPdo()->quote((string) $f['to']);
                 $settled = "((select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
                         join pur_payments p on p.id = pl.payment_id
                         where pl.purchase_bill_id = pur_bills.id and p.company_id = {$company}
-                          and p.status in ({$posted}) and p.deleted_at is null)
+                          and p.status in ({$posted}) and p.deleted_at is null and p.trx_date <= {$asOf})
                     + (select COALESCE(SUM(v.amount), 0) from vouchers v
                         where v.company_id = {$company} and v.type = '".Voucher::PAYMENT."'
                           and v.against_type = 'purchase_bill' and v.against_id = pur_bills.id
-                          and v.status = '".DocumentStatus::CONFIRMED."' and v.deleted_at is null)
+                          and v.status = '".DocumentStatus::CONFIRMED."' and v.deleted_at is null and v.trx_date <= {$asOf})
                     + (select COALESCE(SUM(t.total), 0) from pur_returns t
                         where t.purchase_bill_id = pur_bills.id and t.company_id = {$company}
-                          and t.status in ({$posted}) and t.deleted_at is null))";
+                          and t.status in ({$posted}) and t.deleted_at is null and t.trx_date <= {$asOf}))";
 
                 // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
                 $due = 'GREATEST(pur_bills.total - '.$settled.', 0)';
