@@ -87,4 +87,15 @@ final class ThePortalHomeReadEveryBillAsZeroTest extends TestCase
             ->assertSee('(Cr) '.Money::format('5000'))
             ->assertDontSee('-'.Money::format('5000'));
     }
+
+    public function test_the_ledger_page_shows_the_live_temporary_limit(): void
+    {
+        app(SettingsService::class)->set('customer.credit_limit_enabled', true);
+        $this->shop->forceFill(['credit_limit' => '0', 'temp_credit_limit' => '50000', 'temp_credit_limit_until' => now()->addDays(5)->toDateString()])->save();
+
+        $this->actingAs($this->shop, 'portal')->get(route('sales.portal.ledger'))
+            ->assertOk()
+            ->assertSee(Money::format('50000'))
+            ->assertDontSee(__('sales::portal.cash_only'));
+    }
 }
