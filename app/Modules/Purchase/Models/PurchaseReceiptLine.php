@@ -44,6 +44,9 @@ class PurchaseReceiptLine extends Model
             'sales_price' => 'decimal:4',
             'amount' => 'decimal:4',
             'tax' => 'decimal:4',
+            // ⓘ পাকা হওয়ার আগে পণ্যের দাম — বাতিলে ফেরানোর জন্য (১৩ অক্টোবর ২০২৬)
+            'prior_purchase_price' => 'decimal:4',
+            'prior_sale_price' => 'decimal:4',
         ];
     }
 

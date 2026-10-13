@@ -268,6 +268,12 @@ final class PurchaseReceiptService
              * ⓘ `$line->rate` ইতিমধ্যেই মূল এককে নামানো ([[ReadsPackedQuantities::packed()]]),
              * তাই কার্টনের দাম পিসের ঘরে বসার ভয় নেই।
              */
+            // ⓘ আগের দাম সারিতে রাখা — বাতিলে ফেরানোর জন্য ([[restorePrices()]]; fe, ১৩ অক্টোবর ২০২৬)
+            $line->forceFill([
+                'prior_purchase_price' => $line->product->purchase_price,
+                'prior_sale_price' => $line->sales_price === null ? null : $line->product->sale_price,
+            ])->save();
+
             $line->product->update(['purchase_price' => (string) $line->rate]);
 
             if ($line->sales_price === null) {
@@ -566,6 +572,8 @@ final class PurchaseReceiptService
                 );
             }
 
+            $this->restorePrices($receipt);
+
             $receipt->update([
                 'status' => DocumentStatus::CANCELLED,
                 'cancelled_by' => auth()->id(),
@@ -575,6 +583,38 @@ final class PurchaseReceiptService
 
             return $receipt->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⛔ বাতিল রসিদের দাম পণ্য থেকে সরে, আগের দামে ফেরে — fe, ১৩ অক্টোবর ২০২৬ ([[ACancelledReceiptLeftItsPricesTest]])।
+     *
+     * ⚠️ আগে বাতিলের পরেও পণ্যের ক্রয়মূল্য (আর বলা থাকলে বিক্রয়মূল্য) বাতিল রসিদের দরেই থাকত — পরের কেনাবেচা ভুল দরে শুরু।
+     * ⓘ ফেরে কেবল যদি পণ্যে এখনো এই রসিদেরই দাম থাকে: পরে আরেকটা কাগজ দাম বদলে থাকলে সেটাই সাম্প্রতিক, ছোঁয়া হয় না।
+     */
+    private function restorePrices(PurchaseReceipt $receipt): void
+    {
+        foreach ($receipt->lines()->with('product')->get() as $line) {
+            $product = $line->product;
+
+            if ($product === null) {
+                continue;
+            }
+
+            $back = [];
+
+            if ($line->prior_purchase_price !== null && bccomp((string) $product->purchase_price, (string) $line->rate, 4) === 0) {
+                $back['purchase_price'] = (string) $line->prior_purchase_price;
+            }
+
+            if ($line->prior_sale_price !== null && $line->sales_price !== null
+                && bccomp((string) $product->sale_price, (string) $line->sales_price, 4) === 0) {
+                $back['sale_price'] = (string) $line->prior_sale_price;
+            }
+
+            if ($back !== []) {
+                $product->update($back);
+            }
+        }
     }
 
     /**
