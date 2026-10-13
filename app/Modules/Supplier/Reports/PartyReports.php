@@ -34,6 +34,12 @@ final class PartyReports
      */
     public const BUCKETS = [30, 60, 90];
 
+    /** বিল-না-আসা মালের খাতগুলো (২১৬০ পরিবার), SQL-এর `IN`-এর জন্য — ⓘ খাত না থাকলে "0" */
+    private static function notBilledIn(): string
+    {
+        return implode(',', array_map('intval', Supplier::goodsNotBilledAccountIds()));
+    }
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::payableList());
@@ -88,7 +94,13 @@ final class PartyReports
                     // তাই ধ্রুবক হিসেবেই select করা। engine সারিগুলোকে
                     // সাধারণ অ্যারে হিসেবে দেখে, তাই কলামটা থাকতেই হবে।
                     DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
-                    DB::raw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) as payable'),
+                    /*
+                     * ⭐ বিল হওয়া দেনা আর বিল-না-আসা মাল আলাদা ঘরে, দুইয়ের যোগ ঘরের "কোম্পানিকে দিতে হবে" (মালিক, ১৩ অক্টোবর ২০২৬:
+                     * "int standard onuzayi koro" — GRNI জমে থাকা দায়, ট্রেড-প্রদেয় নয়; fe-র সিদ্ধান্ত;
+                     * [[GoodsNotYetBilledAreAnAccrualNotATradePayableTest]])। ⓘ সারি থাকে দুইয়ের যোগ শূন্য না হলে।
+                     */
+                    DB::raw('SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN 0 ELSE ledger_entries.credit - ledger_entries.debit END) as payable'),
+                    DB::raw('SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as not_billed'),
                 ]),
             columns: [
                 [
@@ -100,6 +112,7 @@ final class PartyReports
                     'source_id' => 'party_id',
                 ],
                 ['key' => 'payable', 'label' => 'supplier::field.payable', 'type' => ReportColumn::MONEY],
+                ['key' => 'not_billed', 'label' => 'supplier::field.goods_not_billed', 'type' => ReportColumn::MONEY],
             ],
         );
     }
@@ -302,6 +315,9 @@ final class PartyReports
                         fn ($q, $type) => $q->where('suppliers.party_type_id', $type),
                         fn ($q) => $q->whereIn('suppliers.id', Supplier::onlySuppliersIds()))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
+                    // ⛔ কেবল বিল হওয়া দেনা — বিল-না-আসা মাল জমে থাকা দায়, তার কোনো মেয়াদ নেই যা বয়স মাপে (মালিক, ১৩ অক্টোবর ২০২৬:
+                    // "int standard onuzayi koro"; fe; [[GoodsNotYetBilledAreAnAccrualNotATradePayableTest]])
+                    ->whereNotIn('ledger_entries.account_id', Supplier::goodsNotBilledAccountIds())
                     /*
                      * ⛔ তারিখ পর্যন্ত উল্টানো দাখিলা জোড়া ধরে বাদ, মূল আর উল্টো দুটোই (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
                      * [[ACancelledSupplierBillAgedTheOldDebtTest]])। ⚠️ আগে বাতিল বিলের উল্টো ডেবিট "পরিশোধ" হয়ে সবচেয়ে পুরনো দেনা
