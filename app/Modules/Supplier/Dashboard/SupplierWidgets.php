@@ -78,13 +78,22 @@ final class SupplierWidgets implements DashboardWidgets
         $notBilledIn = implode(',', array_map('intval', $notBilled));
 
         // ⭐ দেখার শাখার সারি (২৯ সেপ্টেম্বর ২০২৬)
-        $row = self::inView(DB::table('ledger_entries'), 'ledger_entries.branch_id')
+        $perSupplier = self::inView(DB::table('ledger_entries'), 'ledger_entries.branch_id')
             ->where('company_id', CompanyContext::id())
             ->where('party_type', Supplier::drillSourceType())
             // ⭐ কেবল মূল কোম্পানি (পণ্যের সরবরাহকারী) — প্রদেয় তালিকার একই নিয়মে, সেবাদাতা বাদ (মালিক, ২ অক্টোবর ২০২৬)
             ->whereIn('party_id', Supplier::onlySuppliersIds())
-            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as owed')
-            ->selectRaw("COALESCE(SUM(CASE WHEN account_id IN ({$notBilledIn}) THEN credit - debit ELSE 0 END), 0) as not_billed")
+            ->groupBy('party_id')
+            ->selectRaw("SUM(CASE WHEN account_id IN ({$notBilledIn}) THEN 0 ELSE credit - debit END) as billed")
+            ->selectRaw("SUM(CASE WHEN account_id IN ({$notBilledIn}) THEN credit - debit ELSE 0 END) as not_billed");
+
+        /*
+         * ⛔ দেনা মোট, নিট নয় (IAS 1 ¶৩২) — প্রতি সরবরাহকারীর বিল হওয়া জের আগে, তারপর কেবল ধনাত্মকগুলো; এক প্রিন্সিপালকে দেওয়া
+         * অগ্রিম আরেকজনের দেনা কাটত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePayableListNettedTheAdvancesTest]])। গ্রাহকের ঘরের একই নিয়ম।
+         */
+        $row = DB::query()->fromSub($perSupplier, 's')
+            ->selectRaw('COALESCE(SUM(GREATEST(s.billed, 0)), 0) + COALESCE(SUM(s.not_billed), 0) as owed')
+            ->selectRaw('COALESCE(SUM(s.not_billed), 0) as not_billed')
             ->first();
         $owed = (string) ($row->owed ?? '0');
         $waiting = (string) ($row->not_billed ?? '0');
