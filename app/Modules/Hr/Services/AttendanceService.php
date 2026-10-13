@@ -49,19 +49,30 @@ final class AttendanceService
             ]);
         }
 
+        $values = [
+            'status' => $status,
+            'is_late' => (bool) ($extra['is_late'] ?? false),
+            'remarks' => $extra['remarks'] ?? null,
+            'created_by' => auth()->id(),
+        ];
+
+        /*
+         * ⛔ ঢোকা-বেরোনোর সময় কেবল পাঠানো হলে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️১; [[AttendanceAndLeaveStayInsideTheBranchTest]])।
+         * ⓘ অফিসের দিনের পাতায় সময়ের ঘর নেই, তবু প্রতিটা সংরক্ষণ সময় দুইটা ফাঁকা করে লিখত — সকালে ফোনে ৯:১২-এ ঢোকা সবার সময়
+         * বিকেলে দুইজনের কামাই বসাতেই মুছে যেত। এখন ঘরটা পাঠানো হলে তবেই লেখা হয়; না পাঠালে আগের সময় থাকে।
+         */
+        foreach (['in_time', 'out_time'] as $clock) {
+            if (array_key_exists($clock, $extra)) {
+                $values[$clock] = $extra[$clock];
+            }
+        }
+
         return Attendance::query()->updateOrCreate(
             [
                 'employee_id' => $employee->id,
                 'work_date' => $day->toDateString(),
             ],
-            [
-                'status' => $status,
-                'is_late' => (bool) ($extra['is_late'] ?? false),
-                'in_time' => $extra['in_time'] ?? null,
-                'out_time' => $extra['out_time'] ?? null,
-                'remarks' => $extra['remarks'] ?? null,
-                'created_by' => auth()->id(),
-            ],
+            $values,
         )->fresh();
     }
 

@@ -157,6 +157,28 @@ final class AttendanceAndLeaveStayInsideTheBranchTest extends TestCase
         $this->assertSame(1, Attendance::query()->where('employee_id', $this->ours->id)->count());
     }
 
+    /**
+     * ⛔ অফিসের দিনের পাতা ফোনের ঢোকার সময় মোছে না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️১; [[AttendanceService::mark()]])।
+     * ⓘ পাতায় সময়ের ঘর নেই, তবু সংরক্ষণ `in_time`/`out_time` ফাঁকা করে লিখত।
+     */
+    public function test_saving_the_day_sheet_keeps_the_time_the_phone_clocked(): void
+    {
+        Attendance::query()->create([
+            'company_id' => $this->company->id, 'employee_id' => $this->ours->id, 'work_date' => '2026-10-05',
+            'status' => Attendance::PRESENT, 'in_time' => '09:12:00', 'out_time' => '17:40:00',
+        ]);
+
+        $this->actingAs($this->manager)->post(route('hr.attendance.store'), [
+            'work_date' => '2026-10-05',
+            'rows' => [$this->ours->id => ['status' => Attendance::PRESENT, 'remarks' => 'ঠিক আছে']],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $row = Attendance::query()->where('employee_id', $this->ours->id)->whereDate('work_date', '2026-10-05')->firstOrFail();
+        $this->assertSame('09:12:00', (string) $row->in_time, '⛔ দিনের পাতা সংরক্ষণে ফোনের ঢোকার সময় মুছে গেল');
+        $this->assertSame('17:40:00', (string) $row->out_time, '⛔ দিনের পাতা সংরক্ষণে বেরোনোর সময় মুছে গেল');
+        $this->assertSame('ঠিক আছে', $row->remarks, 'পাতার পাঠানো ঘরগুলো আগের মতোই বসে');
+    }
+
     /** ⭐ মালিকের শর্ত — super_admin-কে শাখার সারি থাকলেও দেয়াল আটকায় না */
     public function test_the_super_admin_is_never_walled_off(): void
     {
