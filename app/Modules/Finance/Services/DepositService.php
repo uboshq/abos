@@ -12,6 +12,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Finance\Listeners\UndoThePaperOfACancelledVoucher;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
@@ -369,7 +370,8 @@ final class DepositService
             ]);
         }
 
-        return DB::transaction(function () use ($deposit, $reason) {
+        // ⓘ জমার নিজের বাতিল — Accounts-এর পাহারা ([[UndoThePaperOfACancelledVoucher]]) এখানে থামায় না, জমা নিজেই অবস্থা বদলায়
+        return DB::transaction(fn () => UndoThePaperOfACancelledVoucher::byFinance(function () use ($deposit, $reason) {
             foreach ($deposit->movements()->with('voucher')->get() as $movement) {
                 $voucher = $movement->voucher;
 
@@ -396,7 +398,7 @@ final class DepositService
             ])->save();
 
             return $deposit->fresh();
-        });
+        }));
     }
 
     /**

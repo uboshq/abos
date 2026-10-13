@@ -171,6 +171,24 @@ final class AProfitWasSharedWithNobodyToSignTest extends TestCase
         $this->assertRetained($after, '⛔ সীমার বাইরের ঘোষণা খাতায় বসেছে।');
     }
 
+    /**
+     * ⛔ সইয়ের অপেক্ষার ঘোষণার খসড়া ভাউচার Accounts-এর পর্দা থেকে বাতিল — ভাগগুলো খসড়াই থাকত, আর সেই লাভ চিরকাল "ঘোষিত"
+     * গোনা হত, আর কখনো ঘোষণা করা যেত না (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[UndoThePaperOfACancelledVoucher]])।
+     */
+    public function test_a_held_declaration_cancelled_from_the_voucher_screen_frees_the_profit(): void
+    {
+        $this->aProfitFlow();
+        $this->declare($this->share());
+        $voucherId = (int) ProfitShare::query()->where('status', ProfitShare::DRAFT)->value('voucher_id');
+        $this->assertGreaterThan(0, $voucherId, 'দৃশ্যটাই বানানো যায়নি — ঘোষণা সইয়ের অপেক্ষায় নেই');
+
+        app(\App\Modules\Accounts\Services\VoucherService::class)->cancel(\App\Modules\Accounts\Models\Voucher::acrossBranches()->findOrFail($voucherId), 'ভুল ঘোষণা');
+
+        $this->assertSame(0, ProfitShare::query()->where('status', ProfitShare::DRAFT)->count(), '⛔ খসড়া ভাউচার বাতিল, অথচ ভাগগুলো এখনো অপেক্ষায়');
+        $this->declare($this->share());
+        $this->assertSame(1, ProfitShare::query()->where('status', ProfitShare::DRAFT)->distinct()->count('voucher_id'), '⛔ ছেড়ে দেওয়া লাভ আবার ঘোষণা করা গেল না');
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
     private function share(): string

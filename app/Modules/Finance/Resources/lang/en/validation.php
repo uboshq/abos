@@ -66,6 +66,8 @@ return [
     'shares_pay_more_than_declared' => 'The shares add up to :total, but the declaration is :asked — correct the shares, then declare.',
     'shares_over_a_hundred' => 'The agreed shares add up to :total% — more than 100% cannot be shared. Correct them on the capital page.',
     'signature_refused' => 'The signer turned it down — it is cancelled and nothing was posted.',
+    'voucher_belongs_to_finance_paper' => 'Voucher :no belongs to finance paper :paper, which keeps its own figures — correct or cancel it from that paper\'s page. Nothing was changed.',
+    'month_end_reversal_follows' => 'The month-end entry it reversed was cancelled.',
 
     // Full-ERP re-audit, 9 Oct 2026 — the money on a rent contract before it closes
     'rental_close_unpaid_months' => 'Rent was booked for these months but not paid: :months (:amount in all, owed to the landlord). Pay those months first — in cash or from the deposit — then close the contract.',
