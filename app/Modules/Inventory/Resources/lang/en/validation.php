@@ -61,6 +61,7 @@ return [
     'hold_short' => 'Only :have of :product is held in :warehouse — no more can be released. It may already have been released or written off.',
     'not_enough_on_floor' => 'There is not that much :product in :warehouse — there is :have.',
     'warehouse_branch_has_history' => ':warehouse already has stock movements — its branch no longer changes. Open a new warehouse in the other branch and transfer the goods.',
+    'transfer_receiver_not_at_destination' => 'The destination warehouse of this transfer is outside your reach. The receipt is written by someone at the destination who saw the goods arrive.',
     'main_warehouse_stays_in_branch' => ':warehouse is the main warehouse of this branch and cannot move to another branch. Make another warehouse here the main one first.',
     'warehouse_still_holds_stock' => ':warehouse still has goods, or goods reserved or held for someone — move or release them first, then deactivate.',
     'choose_main_warehouse' => 'This branch has several warehouses and none is the main one — mark one as main in the warehouse list, or pick a warehouse at the counter.',
