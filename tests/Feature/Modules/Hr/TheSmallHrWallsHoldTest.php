@@ -95,6 +95,35 @@ final class TheSmallHrWallsHoldTest extends TestCase
             ->assertSessionHasErrors('reports_to_employee_id');
     }
 
+    /**
+     * ⛔ এক শাখার HR কর্মীকে "কোনো শাখা নয়"-তে সরাতে পারেন না — শাখাহীন কর্মী সবার নাগালে (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     * ⓘ আগে খালি শাখা `nullable`-এ পার পেত, নাগালের পাহারা চলতই না।
+     */
+    public function test_a_branch_limited_clerk_cannot_leave_an_employee_without_a_branch(): void
+    {
+        $mine = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'MMS')->firstOrFail();
+        $near = app(EmployeeService::class)->create(['code' => 'EMP-MINE', 'name_en' => 'My Person', 'joining_date' => '2026-01-15', 'payment_method' => 'cash']);
+        $near->forceFill(['branch_id' => $mine->id])->save();
+
+        $clerk = User::factory()->create(['email' => 'clerk-nb@hr.test', 'current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->company->id, fn () => $clerk->givePermissionTo(array_map(fn ($k) => Permission::findOrCreate($k, 'web'), ['hr.employee.view', 'hr.employee.manage'])));
+        UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $clerk->id, 'scope_type' => UserDataScope::BRANCH, 'scope_id' => $mine->id]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        app(DataScope::class)->forget();
+
+        $this->actingAs($clerk)->post(route('hr.employee.store'), $this->form('EMP-NB', ['branch_id' => '']))
+            ->assertSessionHasErrors(['branch_id' => __('hr::validation.branch_required')]);
+        $this->assertFalse(Employee::query()->withoutGlobalScopes()->where('code', 'EMP-NB')->exists(), '⛔ সীমিত HR শাখাহীন কর্মী খুললেন');
+
+        $this->put(route('hr.employee.update', $near), $this->form('EMP-MINE', ['branch_id' => '']))
+            ->assertSessionHasErrors('branch_id');
+        $this->assertSame((int) $mine->id, (int) $near->fresh()->branch_id, '⛔ সীমিত HR নিজের কর্মীকে "কোনো শাখা নয়"-তে সরালেন');
+
+        // ⓘ নিজের নাগালের শাখায় — আগের মতোই
+        $this->post(route('hr.employee.store'), $this->form('EMP-NB', ['branch_id' => $mine->id]))->assertSessionHasNoErrors();
+    }
+
     public function test_the_payroll_pages_name_the_month_in_bengali_and_a_paid_months_leave_stays(): void
     {
         $employee = app(EmployeeService::class)->create(['code' => 'EMP-PAID', 'name_en' => 'Paid Person', 'joining_date' => '2026-01-15', 'payment_method' => 'cash']);
