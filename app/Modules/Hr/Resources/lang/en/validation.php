@@ -48,4 +48,5 @@ return [
     'leave_range_too_long' => 'One application can cover at most :max days. Check the year in the dates, or split a longer leave into two applications.',
     'days_below_range' => 'Those dates span :span days, so more than :least days must be asked for (only the last day can be a part day). For fewer days, shorten the dates to the days actually taken.',
     'leave_own_withdrawal' => 'You cannot withdraw your own approved leave. Ask another manager or the owner.',
+    'days_format' => 'Write the days as a plain number with at most one decimal place, such as 2 or 1.5.',
 ];

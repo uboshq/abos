@@ -277,6 +277,29 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
             '⛔ ছুটি প্রত্যাহারে অফিসের বসানো "উপস্থিত" দিনটাও মুছে গেল (বা ছুটির সারি রয়ে গেল)');
     }
 
+    /**
+     * ⛔ দিনের ঘরে কেবল সাধারণ সংখ্যা, দশমিকের পরে এক ঘর — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯; [[LeaveController::store()]])।
+     * ⓘ "1e1" `numeric` পার হয়ে bcmath-এ ৫০০ দিত; "1.55" এক ঘরে মাপা হয়ে ১.৫ বাকিতেও পার হত, আর খাতায় ১.৬ বসত।
+     */
+    public function test_the_days_box_takes_a_plain_number_with_one_decimal_place(): void
+    {
+        // ⓘ প্রতিটার তারিখ এমন যে দিনের সংখ্যাটা তারিখের সাথে মেলে — কেবল গড়নটাই ভুল
+        foreach ([['1e1', '2026-03-11'], ['1.55', '2026-03-03']] as [$days, $to]) {
+            $this->post(route('hr.leave.store'), [
+                'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('UNPAID')->id,
+                'from_date' => '2026-03-02', 'to_date' => $to, 'days' => $days,
+            ])->assertSessionHasErrors('days');
+        }
+
+        $this->assertSame(0, LeaveApplication::query()->where('employee_id', $this->employee->id)->count(), '⛔ ভুল গড়নের দিন নিয়ে আবেদন বসল');
+
+        $this->post(route('hr.leave.store'), [
+            'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('UNPAID')->id,
+            'from_date' => '2026-03-02', 'to_date' => '2026-03-11', 'days' => '9.5',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('9.5', (string) LeaveApplication::query()->where('employee_id', $this->employee->id)->value('days'));
+    }
+
     private function type(string $code): LeaveType
     {
         return LeaveType::query()->where('code', $code)->firstOrFail();

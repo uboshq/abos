@@ -109,8 +109,13 @@ class LeaveController extends Controller implements HasMiddleware
                 Rule::exists('hr_leave_types', 'id')->where('company_id', $companyId)],
             'from_date' => ['required', 'date'],
             'to_date' => ['required', 'date'],
-            'days' => ['required', 'numeric', 'gt:0'],
+            // ⛔ সাধারণ সংখ্যা, দশমিকের পরে বড়জোর এক ঘর — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯; [[LeaveIsCountedWhenItIsApprovedTest]]);
+            // ⓘ "1e1" পরের হিসাবে (bcmath) ৫০০ দিত, আর "1.55" এক ঘরে মাপা হয়ে কোটা পার হত অথচ খাতায় 1.6 বসত
+            'days' => ['required', 'decimal:0,1', 'regex:/^\d+(\.\d)?$/', 'gt:0', 'max:'.LeaveService::MAX_SPAN_DAYS],
             'reason' => ['nullable', 'string', 'max:500'],
+        ], [
+            'days.decimal' => __('hr::validation.days_format'),
+            'days.regex' => __('hr::validation.days_format'),
         ]);
 
         $employee = Employee::query()->findOrFail($data['employee_id']);
