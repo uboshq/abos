@@ -99,6 +99,16 @@ final class SchemeService
      */
     public function activate(Scheme $scheme): Scheme
     {
+        /*
+         * ⛔ চালু হয় কেবল খসড়া — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে থামানো স্কিমের হার বদলে আবার চালু করা
+         * যেত; ইঞ্জিন বর্তমান হার পড়ে, তাই আগের বিলের কমিশনও নীরবে বদলাত — "থামিয়ে নতুন স্কিম" নিয়মটা পাশ কাটত।
+         */
+        if ($scheme->status !== Scheme::DRAFT) {
+            throw ValidationException::withMessages([
+                'status' => __($scheme->status === Scheme::ACTIVE ? 'sales::validation.scheme_is_live' : 'sales::validation.scheme_is_stopped'),
+            ]);
+        }
+
         $rules = $scheme->rules()->orderBy('slab_from')->get();
 
         if ($rules->isEmpty()) {
@@ -169,6 +179,13 @@ final class SchemeService
         if ($scheme->status === Scheme::ACTIVE) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.scheme_is_live'),
+            ]);
+        }
+
+        // ⛔ থামানো স্কিমও — তার হারে আগের বিলের কমিশন হিসাব হয়েছে (১৩ অক্টোবর ২০২৬)
+        if ($scheme->status === Scheme::CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.scheme_is_stopped'),
             ]);
         }
     }

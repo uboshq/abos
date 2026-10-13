@@ -510,6 +510,33 @@ class TheRateWasInSomebodysHeadTest extends TestCase
         ]);
     }
 
+    /**
+     * ⛔ থামানো স্কিম বদলায় না, আবার চালুও হয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে থামিয়ে হার বদলে আবার চালু
+     * করা যেত, আর ইঞ্জিন বর্তমান হার পড়ে বলে আগের বিলের কমিশন নীরবে বদলাত।
+     */
+    public function test_a_stopped_scheme_can_be_neither_changed_nor_switched_back_on(): void
+    {
+        $scheme = $this->scheme();
+        $this->rule($scheme, ['slab_to' => null]);
+        app(SchemeService::class)->cancel($scheme, 'মৌসুম শেষ');
+
+        try {
+            app(SchemeService::class)->addRule($scheme->fresh(), [
+                'earner_role' => 'ASM', 'rate_percent' => '5', 'slab_from' => '0', 'level_order' => 2,
+            ]);
+            $this->fail('⛔ থামানো স্কিমে নতুন হার বসে গেল।');
+        } catch (ValidationException) {
+        }
+
+        try {
+            app(SchemeService::class)->activate($scheme->fresh());
+            $this->fail('⛔ থামানো স্কিম আবার চালু হয়ে গেল।');
+        } catch (ValidationException) {
+        }
+
+        $this->assertSame(Scheme::CANCELLED, $scheme->fresh()->status);
+    }
+
     /* ── পর্দা ────────────────────────────────────────────────────── */
 
     /**
