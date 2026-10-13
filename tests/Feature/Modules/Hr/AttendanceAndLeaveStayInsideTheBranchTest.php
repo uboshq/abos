@@ -179,6 +179,27 @@ final class AttendanceAndLeaveStayInsideTheBranchTest extends TestCase
         $this->assertSame('ঠিক আছে', $row->remarks, 'পাতার পাঠানো ঘরগুলো আগের মতোই বসে');
     }
 
+    /**
+     * ⛔ ঠিকানায় ভুল তারিখ বা মাস পাতা ভাঙে না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ১১; [[AttendanceController]])।
+     * ⓘ `?date=abc` আর `?month=2026-13` আগে ৫০০ দিত; এখন আজকের দিন বা এ মাস খোলে।
+     */
+    public function test_a_bad_date_or_month_in_the_address_opens_today_instead_of_crashing(): void
+    {
+        $this->actingAs($this->manager);
+
+        foreach (['abc', '2026-02-30', '2026-10-05x'] as $date) {
+            $this->get(route('hr.attendance.index', ['date' => $date]))->assertOk();
+        }
+
+        foreach (['2026-13', 'abc', '2026-1'] as $month) {
+            $this->get(route('hr.attendance.sheet', ['month' => $month]))->assertOk();
+        }
+
+        // ⓘ ঠিক তারিখ আগের মতোই সেই দিন খোলে
+        $this->assertSame('2026-10-05', $this->get(route('hr.attendance.index', ['date' => '2026-10-05']))->assertOk()->viewData('date')->toDateString());
+        $this->assertSame('2026-09', $this->get(route('hr.attendance.sheet', ['month' => '2026-09']))->assertOk()->viewData('month')->format('Y-m'));
+    }
+
     /** ⭐ মালিকের শর্ত — super_admin-কে শাখার সারি থাকলেও দেয়াল আটকায় না */
     public function test_the_super_admin_is_never_walled_off(): void
     {
