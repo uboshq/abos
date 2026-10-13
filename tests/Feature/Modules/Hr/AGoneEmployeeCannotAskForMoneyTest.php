@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Hr;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\CompanyContext;
+use App\Models\Approval;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Services\EmployeeService;
@@ -107,6 +110,26 @@ final class AGoneEmployeeCannotAskForMoneyTest extends TestCase
         $this->assertTrue($this->employee->fresh()->is_active);
         $service->update($this->employee->fresh(), ['leaving_date' => now()->subDays(2)->toDateString()]);
         $this->assertFalse($this->employee->fresh()->is_active);
+    }
+
+    /**
+     * ⛔ চাওয়ার পরে চলে গেলে, পরের সইয়ে টাকা নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে সই কেবল অবস্থা দেখত: চলে যাওয়া কর্মীর অগ্রিমে নগদের খসড়া বসত, যা আর বেতন থেকে কাটা যায় না।
+     */
+    public function test_a_claim_signed_after_the_employee_left_is_rejected_and_never_drafted_for_cash(): void
+    {
+        $claim = $this->ask();
+        $this->assertSame(ExpenseClaim::SUBMITTED, $claim->status);
+
+        app(EmployeeService::class)->endEmployment($this->employee->fresh(), now()->subDay()->toDateString());
+
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_type', $claim->getMorphClass())
+            ->where('approvable_id', $claim->id)->where('status', Approval::PENDING)->sole(), User::query()->where('email', 'owner@abos.test')->firstOrFail());
+
+        $claim->refresh();
+        $this->assertSame(ExpenseClaim::REJECTED, $claim->status, '⛔ চলে যাওয়া কর্মীর দাবি সইয়ে অনুমোদিত');
+        $this->assertNull($claim->payment_voucher_id, '⛔ চলে যাওয়া কর্মীর নামে নগদের খসড়া');
+        $this->assertSame(0, Voucher::acrossBranches()->where('against_type', ExpenseClaim::drillSourceType())->where('against_id', $claim->id)->count());
     }
 
     private function ask(): ExpenseClaim

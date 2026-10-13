@@ -87,7 +87,7 @@ final class ExpenseClaimService
          * ⓘ খাতা খোঁজা হয় সব ছাঁকনি সরিয়ে ([[employeeOf()]] — কোম্পানি-ভাগের সুইচের জন্য), তাতে মুছে ফেলা খাতাও উঠত; আর নিষ্ক্রিয়
          * বা ছাড়ার তারিখ পেরোনো কর্মীর লগইন খোলা থাকলে তিনি অগ্রিম চাইতে পারতেন, যা আর বেতন থেকে কাটার উপায় নেই।
          */
-        if ($employee->trashed() || ! $employee->is_active || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()))) {
+        if ($this->gone($employee)) {
             throw ValidationException::withMessages(['employee' => __('hr::claim.employee_gone')]);
         }
 
@@ -212,6 +212,20 @@ final class ExpenseClaimService
             }
 
             $employee = $claim->employee;
+
+            /*
+             * ⛔ সই পড়ার আগেই কর্মী চলে গেলে দাবি ফেরানো — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AGoneEmployeeCannotAskForMoneyTest]])।
+             * ⓘ চাওয়ার সময় ([[submit()]]) চলে যাওয়া কর্মী আটকাতেন, কিন্তু সই পরে পড়লে আর দেখা হত না: ৯ তারিখে অগ্রিম চেয়ে ১০ তারিখে
+             * চলে যাওয়া কর্মীর নামে ১২ তারিখের সইয়ে নগদের খসড়া বসত, যা আর কোনো বেতন থেকে কাটা যায় না। সই ঘটে যাওয়ার পরে খবর
+             * আসে, তাই ছুঁড়ে দিলে সই ফেরে না — দাবি "ফেরানো", আর কারণটা নিরীক্ষার খাতায়।
+             */
+            if ($this->gone($employee)) {
+                $claim->forceFill(['status' => ExpenseClaim::REJECTED, 'decided_at' => now()])->save();
+                app(AuditEngine::class)->recordAction($claim, 'employee_gone_at_signature', __('hr::claim.rejected_employee_gone', ['no' => $claim->document_no]));
+
+                return;
+            }
+
             $claim->forceFill(['status' => ExpenseClaim::APPROVED, 'decided_at' => now()])->save();
 
             if ($claim->kind === ExpenseClaim::ADVANCE) {
@@ -409,6 +423,13 @@ final class ExpenseClaimService
         ]);
 
         $claim->forceFill(['payment_voucher_id' => $voucher->id])->save();
+    }
+
+    /** চলে গেছেন, নিষ্ক্রিয়, বা মুছে ফেলা — চাওয়া আর সই দুই জায়গার একই নিয়ম */
+    private function gone(?Employee $employee): bool
+    {
+        return $employee === null || $employee->trashed() || ! $employee->is_active
+            || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()));
     }
 
     private function head(string $code): Account
