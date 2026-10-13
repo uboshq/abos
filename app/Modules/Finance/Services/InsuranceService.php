@@ -76,8 +76,16 @@ final class InsuranceService
                 $this->addPremium($policy, $policy->starts_on, $policy->ends_on, (string) $policy->premium);
             }
 
-            // ⓘ শূন্য প্রিমিয়ামে বসানো পলিসিতে পরে অঙ্ক বসলে — তখনই প্রথম সারি
-            if (! InsurancePremium::query()->where('policy_id', $policy->id)->exists()) {
+            /*
+             * ⓘ শূন্য প্রিমিয়ামে বসানো মেয়াদে পরে অঙ্ক বসলে — তখনই সেই মেয়াদের প্রথম সারি।
+             * ⛔ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⚠️৫): আগে শর্তটা ছিল "পলিসিতে একটাও সারি নেই" — শূন্যে নবায়ন করা
+             * মেয়াদে পরে ৫,০০০ বসালে আগের মেয়াদের সারি থাকায় কিছুই বসত না: "দেওয়া বাকি"-তে নেই, দেওয়ার পথও নেই। এখন দেখা হয়
+             * চলতি মেয়াদ (আগের আর নতুন দুই দিনের সীমাই) — দিন সরালে আগের মেয়াদের দেওয়া সারিটা আবার দ্বিতীয়বার বসে না।
+             */
+            if (! InsurancePremium::query()->where('policy_id', $policy->id)
+                ->where(fn ($q) => $q->whereBetween('period_from', [$wasFrom, $wasTo])
+                    ->orWhereBetween('period_from', [$policy->starts_on->toDateString(), $policy->ends_on->toDateString()]))
+                ->exists()) {
                 $this->addPremium($policy, $policy->starts_on, $policy->ends_on, (string) $policy->premium);
             }
 
