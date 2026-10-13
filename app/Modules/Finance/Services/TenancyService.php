@@ -18,6 +18,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\Tenancy;
 use App\Modules\Finance\Models\TenancyCharge;
 use App\Modules\Finance\Models\TenancyMove;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -231,7 +232,8 @@ class TenancyService
         $charged = 0;
         $held = 0;
 
-        $tenancies = Tenancy::query()->active()
+        // ⛔ মানুষটার নাগালের শাখা ([[ActingBranches]]) — এক শাখায় সীমিত মানুষ অন্য শাখার দাবি বসাতেন (১৩ অক্টোবর ২০২৬); কনসোলে গোটা কোম্পানি
+        $tenancies = ActingBranches::narrow(Tenancy::query()->active(), 'fin_tenancies.branch_id')
             ->whereDate('starts_on', '<=', $end->toDateString())
             ->whereDate('ends_on', '>=', $start->toDateString())
             ->orderBy('id')->get();
