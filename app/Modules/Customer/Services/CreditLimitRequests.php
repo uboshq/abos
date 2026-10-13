@@ -48,6 +48,14 @@ final class CreditLimitRequests
      */
     public function raise(Customer $customer, string $kind, string $amount, ?string $until, string $reason, ?UploadedFile $file, User $by): CustomerCreditRequest
     {
+        /*
+         * ⛔ কেবল সাধারণ দশমিক — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⚠️ `1e5` `numeric` পার হত আর bcmath-এ ভেঙে
+         * ৫০০ দিত — ওয়েব আর ফোন দুই দরজাতেই; দরজার নিয়ম ছাড়া অন্য পথেও এখানে থামে।
+         */
+        if (! \App\Modules\Sales\Http\Requests\PlainNumber::is($amount)) {
+            throw ValidationException::withMessages(['amount' => __('validation.numeric', ['attribute' => 'amount'])]);
+        }
+
         $amount = bcadd($amount, '0', 4);
         $reason = trim($reason);
         $base = bcadd((string) ($customer->credit_limit ?? '0') ?: '0', '0', 4);

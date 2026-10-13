@@ -188,6 +188,15 @@ final class ALimitRaiseWaitsForTheOwnersSignatureTest extends TestCase
             ->assertSee('data-request-status="pending"', false);
     }
 
+    /** ⛔ `1e5` ফর্মের ভুল-বার্তা, ৫০০ নয় — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ওয়েব আর ফোন) */
+    public function test_an_exponent_amount_is_a_field_error_not_a_crash(): void
+    {
+        $this->ownerFlow();
+
+        $this->ask(['kind' => 'limit', 'amount' => '1e5', 'reason' => 'চাই'])->assertSessionHasErrors('amount');
+        $this->assertSame(0, CustomerCreditRequest::query()->count());
+    }
+
     // ── যন্ত্রপাতি ──
 
     /** @param  array<string, string>  $data */
