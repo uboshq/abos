@@ -80,11 +80,23 @@ class PortalOrderController extends Controller
             if ($product === null || ! is_numeric($line['qty'] ?? null) || bccomp((string) $line['qty'], '0', 4) <= 0) {
                 continue;
             }
+            // ⭐ এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+            $rate = (string) app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product, $today)->price;
+
+            /*
+             * ⛔ দাম শূন্য হলে আদেশ নয় — ফোনের দরজার একই নিয়ম ([[SalesOrderApiController]]); ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
+             * ⓘ আগে দামহীন পণ্য শূন্য দরে আদেশে বসত — মালিকের *"sales price chara entry nibe na"* কেবল এই দরজায় খোলা ছিল।
+             */
+            if (bccomp($rate, '0', 4) <= 0) {
+                throw ValidationException::withMessages(['lines' => __('sales::sync.order_line_has_no_price', [
+                    'product' => (string) ($product->name_bn ?: $product->name_en),
+                ])]);
+            }
+
             $lines[] = [
                 'product_id' => (int) $product->id,
                 'ordered_qty' => (string) $line['qty'],
-                // ⭐ এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
-                'rate' => app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product, $today)->price,
+                'rate' => $rate,
                 'discount' => '0',
             ];
         }
