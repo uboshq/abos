@@ -231,7 +231,9 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
     public function liftBlock(Request $request, string $id): JsonResponse
     {
         $customer = $this->customer($id);
-        Gate::authorize('update', $customer);
+        // ⛔ ওয়েবের একই নীতি — সীমার সইকারী, কেবল সম্পাদনার চাবি নয় ([[CustomerPolicy::liftCreditBlock()]]; Api/Sync নিরীক্ষা,
+        // ১৪ অক্টোবর ২০২৬; [[ThePhoneRunsTheCreditDeskTest]])। ⚠️ আগে `update` দেখত: ওয়েব যাঁকে ফেরায়, ফোনে তিনিই খুলতেন
+        Gate::authorize('liftCreditBlock', $customer);
 
         $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
 
@@ -248,7 +250,7 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
     /** ⓘ [[CreditProfileController::show()]]-এর `mayLift` হুবহু */
     private function mayLift(Request $request, Customer $customer): bool
     {
-        return $customer->isCreditBlocked() && (bool) $request->user()?->can('update', $customer)
+        return $customer->isCreditBlocked() && (bool) $request->user()?->can('liftCreditBlock', $customer)
             && ($customer->credit_block_kind !== Customer::BLOCK_BOUNCED_CHEQUE || CustomerService::isSuperAdmin($request->user()));
     }
 }
