@@ -75,7 +75,7 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
         $product = Product::query()->orderBy('id')->value('id');
         $order = app(\App\Modules\Sales\Services\SalesOrderService::class)->create(
             ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString()],
-            [['product_id' => $product, 'qty' => '2', 'rate' => '10']]);
+            [['product_id' => $product, 'ordered_qty' => '2', 'rate' => '10']]);
 
         $write = fn () => app(DeliveryOrderService::class)->create(
             ['customer_id' => $this->customer->id, 'sales_order_id' => $order->id], [['product_id' => $product, 'qty' => '2']], auth()->user());
