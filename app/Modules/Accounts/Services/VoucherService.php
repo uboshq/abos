@@ -1731,6 +1731,9 @@ final class VoucherService
      * পাকা করেন অন্য কেউ। ⓘ মালিক (সুপার অ্যাডমিন) একা করলে আটকায় না, নিরীক্ষায় "নিজের লেখা নিজে পাকা" দাগ পড়ে।
      * সুইচ বন্ধে আজকের আচরণ অবিকল।
      */
+    /** ⓘ হাতের সম্পাদনার নিরীক্ষা-চিহ্ন — লেখক ≠ পাকাকারী এটাও গোনে ([[writerMayNotPost()]]) */
+    public const EDITED_BY_HAND = 'lines_edited';
+
     public function writerMayNotPost(Voucher $voucher): bool
     {
         if (! (bool) app(SettingsService::class)->get(self::MAKER_CHECKER, true)) {
@@ -1739,7 +1742,23 @@ final class VoucherService
 
         $actor = (int) (Actor::userId() ?? 0);
 
-        return $actor !== 0 && $actor === (int) ($voucher->created_by ?? 0) && ! $this->actorIsOwner();
+        if ($actor === 0 || $this->actorIsOwner()) {
+            return false;
+        }
+
+        /*
+         * ⛔ লেখক মানে যিনি সারি লিখেছেন — বানানো বা পরে বদলানো — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+         * ([[WhoeverRewroteAVoucherDoesNotPostItTest]])। ⓘ আগে কেবল `created_by` দেখা হত: অন্যের খসড়া খুলে ১,০০০ থেকে ৯০,০০০ করে
+         * নিজেই পাকা করা যেত — একজন মানুষই শেষ কথা লিখলেন আর পাকা করলেন। হাতের প্রতিটা সম্পাদনা নিরীক্ষায় "lines_edited" রাখে
+         * ([[VoucherWriter::update()]])।
+         */
+        return $actor === (int) ($voucher->created_by ?? 0)
+            || \App\Models\AuditTrail::query()
+                ->where('auditable_type', Voucher::class)
+                ->where('auditable_id', $voucher->getKey())
+                ->where('user_id', $actor)
+                ->where('action', self::EDITED_BY_HAND)
+                ->exists();
     }
 
     private function assertAnotherHandPosts(Voucher $voucher): void
