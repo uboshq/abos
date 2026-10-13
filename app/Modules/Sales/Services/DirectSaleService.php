@@ -648,7 +648,15 @@ final class DirectSaleService
             /* ⭐ খসড়া বিল উৎস মনে রাখে — পাকা হলে ওটাকেই "বিল হয়েছে" লেখা হয়; ডিপো কম দিলে আটকানো মালও কমে */
             if ($source !== null && $counted !== null) {
                 $this->stampSource($invoice, $source);
-                $this->resizeSourceStock($source, $counted);
+
+                /*
+                 * ⛔ খসড়ায় আটকানো মাল কমে না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ কমানো একমুখী
+                 * ([[CounterSaleSource::resizeCounterStock()]]): খসড়া বাতিল হলে বা পরে পুরোটা পাকা হলে ঘাটতি থেকে যেত।
+                 * ⓘ পাকা হওয়ার মুহূর্তে [[settleSource()]] নিজেই কমায়; সইয়ের অপেক্ষার পথ আগের মতো।
+                 */
+                if (! $asDraft) {
+                    $this->resizeSourceStock($source, $counted);
+                }
             }
 
             if ($asDraft) {
