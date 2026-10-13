@@ -170,6 +170,17 @@ final class WithdrawalService
         $this->assertNotPosted($withdrawal);
 
         /*
+         * ⛔ কেবল নগদের উত্তোলন খাতায় বসে — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ ফর্মে "কীভাবে" (নগদ / সম্পদ / মাল) বাছা যেত,
+         * অথচ খাতায় সবসময় টাকার খাত থেকে বেরোত: মালিক ৫০,০০০-এর ফ্রিজ নিলে নগদ ৫০,০০০ কমত, আর সম্পদ খাতায় থেকে যেত।
+         * সম্পদ বা মাল নেওয়া খাতায় বসে সেই সম্পদের বা মজুদের নিজের পথে (জাবেদা) — এখানে নয়।
+         */
+        if ((string) ($withdrawal->in_kind ?: CapitalEntry::CASH) !== CapitalEntry::CASH) {
+            throw ValidationException::withMessages([
+                'in_kind' => __('finance::validation.withdrawal_only_cash_posts', ['no' => $withdrawal->document_no]),
+            ]);
+        }
+
+        /*
          * ⛔ টাকা বেরোয় টাকার খাত থেকেই — অডিট ছ৫, ৪ অক্টোবর ২০২৬। ⓘ আগে কেবল "দল নয়" দেখা হত, তাই
          * বিক্রয় বা খরচের খাত থেকেও "উত্তোলন" বসত — নগদ কমত না, অথচ মালিকের নামে টাকা উঠত।
          */

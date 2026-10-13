@@ -222,6 +222,29 @@ final class TakingYourOwnProfitLookedLikeTakingCapitalTest extends TestCase
         $this->assertSame(0, bccomp($owed(), bcsub($before, '15000', 4), 4), '⛔ লাভ তোলা হল, অথচ মানুষটার নামে ২১৯০-এর পাওনা কমল না');
     }
 
+    /**
+     * ⛔ সম্পদ বা মাল হিসেবে নেওয়া উত্তোলনও টাকার খাত থেকে বেরোত — নগদ কমত, সম্পদ খাতায় থাকত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function test_a_withdrawal_taken_as_an_asset_does_not_leave_the_cash(): void
+    {
+        $withdrawal = app(WithdrawalService::class)->request([
+            'person_id' => $this->partner->id, 'kind' => Withdrawal::DRAWING, 'in_kind' => CapitalEntry::ASSET,
+            'trx_date' => now()->toDateString(), 'amount' => '50000', 'reason' => 'ফ্রিজ',
+        ]);
+        $cash = Account::query()->money()->where('is_group', false)->firstOrFail();
+        $this->putMoneyIn($cash, '50000', now()->toDateString());
+        $lines = LedgerEntry::query()->count();
+
+        try {
+            app(WithdrawalService::class)->post($withdrawal->fresh(), $cash);
+            $this->fail('⛔ সম্পদ হিসেবে নেওয়া উত্তোলন নগদ থেকে বেরোল');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('in_kind', $e->errors());
+        }
+
+        $this->assertSame($lines, LedgerEntry::query()->count(), '⛔ খাতায় কিছু বসে গেল');
+    }
+
     private function take(string $kind, string $amount): void
     {
         $withdrawal = app(WithdrawalService::class)->request([
