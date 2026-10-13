@@ -43,7 +43,13 @@ final class TheBuiltAssetsMatchTheSourceTest extends TestCase
             'ⓘ লাইভে node নেই, তাই বিল্ড কমিট করা হয়। চালান: npm run build',
         ]));
 
-        $builtAt = (int) filemtime($manifest);
+        /*
+         * ⭐ সময় গিটের শেষ কমিট থেকে, ফাইলের mtime থেকে নয় — ১২ অক্টোবর ২০২৬ (fe; a6, ec, a5 তিনজনই নতুন clone-এ মিথ্যা লাল)।
+         * ⓘ নতুন clone-এ প্রতিটা ফাইলের mtime হয় checkout-এর মুহূর্ত, আর লেখার ক্রমে JS-গুলো ম্যানিফেস্টের পরে পড়লেই "বিল্ড পুরনো"।
+         * ⭐ কমিটের সময় সেই প্রশ্নেরই উত্তর: সোর্স বদলে বিল্ড না বানিয়ে কমিট করলে সোর্সের কমিট ম্যানিফেস্টের পরের — লাল।
+         * ⚠️ অকমিট বদল (বা গিট নেই) — mtime-এ ফেরে, তাই কাজের গাছে "বদলালাম, বানাইনি" আগের মতোই ধরা পড়ে ([[changedAt()]])।
+         */
+        $builtAt = $this->changedAt($manifest);
         $newer = [];
         $looked = 0;
 
@@ -57,7 +63,7 @@ final class TheBuiltAssetsMatchTheSourceTest extends TestCase
             foreach ($this->filesIn($path) as $file) {
                 $looked++;
 
-                if ((int) filemtime($file) > $builtAt) {
+                if ($this->changedAt($file) > $builtAt) {
                     $newer[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file);
                 }
             }
@@ -97,6 +103,28 @@ final class TheBuiltAssetsMatchTheSourceTest extends TestCase
                 '⚠️ না করলে লাইভে পুরনো আচরণই চলতে থাকবে, আর কোথাও কিছু',
                 'ভাঙবে না — পাতা ২০০ দেবে, পরীক্ষা সবুজ থাকবে।']
         )));
+    }
+
+    /**
+     * ফাইলটা শেষ কবে বদলেছে — কমিট করা আর অবদলানো হলে গিটের শেষ কমিটের সময়, নইলে mtime।
+     *
+     * ⓘ "অবদলানো" মাপা হয় `git status --porcelain`-এ: কাজের গাছে বদলানো বা নতুন ফাইলের কমিট-সময় পুরনো, অথচ বদলটা নতুন —
+     * তাই ওখানে mtime-ই সত্য। গিট না থাকলে (রপ্তানি করা গাছ) সবকিছু আগের মতো mtime-এ।
+     */
+    private function changedAt(string $file): int
+    {
+        $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($file, strlen(base_path()) + 1));
+        $git = 'git -C '.escapeshellarg(base_path());
+
+        if (trim((string) @shell_exec($git.' status --porcelain -- '.escapeshellarg($relative).' 2>&1')) === '') {
+            $committed = trim((string) @shell_exec($git.' log -1 --format=%ct -- '.escapeshellarg($relative).' 2>/dev/null'));
+
+            if (ctype_digit($committed)) {
+                return (int) $committed;
+            }
+        }
+
+        return (int) filemtime($file);
     }
 
     /**
