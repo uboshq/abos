@@ -187,14 +187,6 @@ final class SerialNumberService
     }
 
     /**
-     * ⭐ ফেরত আসা পিস দেখে গুদামে ফেরত নেওয়া — `returned` থেকে `in_stock` (পুরো-ERP অডিট, মজুদ ছ৩; fe-র সিদ্ধান্ত (ক),
-     * ১০ অক্টোবর ২০২৬; [[AReturnedPieceWaitsForItsDecisionTest]])।
-     *
-     * ⓘ মডেলের নিয়ম বলে "ফেরত এসেছে, সিদ্ধান্ত বাকি" — এই দরজাটাই সেই সিদ্ধান্ত। কেবল `returned` পিস; তালাসহ পড়া, যাতে দুইজনে একসাথে
-     * না চাপেন। ⛔ পিসের গুদাম দেখার নাগালে না থাকলে নেই বলে ধরা — সিরিয়ালে কেবল কোম্পানির দেয়াল, শাখা বা গুদামের নয়। ⓘ কে কবে
-     * ফেরত নিলেন, অডিটে লেখা থাকে (`serial_back_to_stock`)।
-     */
-    /**
      * ⓘ পিসটা এই মানুষের নাগালের গুদামে কি না — গুদাম-সীমা আর হেডারের শাখা গুদামের দেয়ালে, আর শাখা-সীমা আলাদা করে
      * ("সব শাখা"-তেও)। গুদামহীন পিস (পুরনো সারি) সবার নাগালে, আগের মতো।
      */
@@ -211,6 +203,14 @@ final class SerialNumberService
             && ($branches === null || $warehouse->branch_id === null || in_array((int) $warehouse->branch_id, $branches, true));
     }
 
+    /**
+     * ⭐ ফেরত আসা পিস দেখে গুদামে ফেরত নেওয়া — `returned` থেকে `in_stock` (পুরো-ERP অডিট, মজুদ ছ৩; fe-র সিদ্ধান্ত (ক),
+     * ১০ অক্টোবর ২০২৬; [[AReturnedPieceWaitsForItsDecisionTest]])।
+     *
+     * ⓘ মডেলের নিয়ম বলে "ফেরত এসেছে, সিদ্ধান্ত বাকি" — এই দরজাটাই সেই সিদ্ধান্ত। কেবল `returned` পিস; তালাসহ পড়া, যাতে দুইজনে একসাথে
+     * না চাপেন। ⛔ পিসের গুদাম দেখার নাগালে না থাকলে নেই বলে ধরা — সিরিয়ালে কেবল কোম্পানির দেয়াল, শাখা বা গুদামের নয়। ⓘ কে কবে
+     * ফেরত নিলেন, অডিটে লেখা থাকে (`serial_back_to_stock`)।
+     */
     public function backToStock(SerialNumber $piece, ?string $note = null): SerialNumber
     {
         $warehouse = Warehouse::query()->find($piece->warehouse_id);

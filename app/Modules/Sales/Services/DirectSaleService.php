@@ -2356,7 +2356,8 @@ final class DirectSaleService
     /**
      * ফ্রির বাড়তিটা লটের নিজের মাল (তাক) থেকে — একই উৎস-নামে, তাই চালান বাতিল বা সম্পাদনায় আগের পথেই ফেরে।
      *
-     * ⓘ খরচ খরচের স্তর থেকে, বিক্রির একই FIFO-তে; স্তরে না কুলালে কেনা দামে ([[GiftIssuer::bookTheCost()]]-এর একই নিয়ম)।
+     * ⓘ খরচ কেবল খরচের স্তর থেকে, বিক্রির একই FIFO-তে; স্তরে না কুলালে থামে, `no_cost_layer` বার্তায় (fe-র সিদ্ধান্ত (গ),
+     * ১৩ অক্টোবর ২০২৬; [[GiftIssuer::bookTheCost()]]-এর একই নিয়ম) — মজুদের খাত আর স্তর সবসময় সমান।
      * খাতায় Dr প্রচারের খরচ / Cr মজুদ — ফ্রি আয় নয়, খরচ (IFRS ১৫)।
      */
     private function giveFromStock(
@@ -2382,7 +2383,7 @@ final class DirectSaleService
 
         $layers = app(\App\Modules\Inventory\Services\CostLayerService::class);
 
-        // ⓘ স্তরে যতটুকু, FIFO-তে; কেবল ঘাটতিটুকু কেনা দামে (ⓘ১২, [[CostLayerService::issueOrPrice()]])
+        // ⓘ কেবল স্তর থেকে, FIFO-তে; ঘাটতি থাকলে থামে (fe-র সিদ্ধান্ত (গ), ১৩ অক্টোবর ২০২৬; [[CostLayerService::issueOrPrice()]])
         $cost = $layers->issueOrPrice(
             product: $product,
             qty: $qty,
