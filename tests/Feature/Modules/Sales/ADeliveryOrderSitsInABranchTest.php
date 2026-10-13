@@ -100,7 +100,7 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
     {
         $product = Product::query()->orderBy('id')->value('id');
 
-        foreach (['-3', 'abc'] as $free) {
+        foreach (['-3', 'abc', '1e3'] as $free) {
             try {
                 app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
                     [['product_id' => $product, 'qty' => '2', 'free_qty' => $free]], auth()->user());
@@ -108,6 +108,15 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
             } catch (\Illuminate\Validation\ValidationException $e) {
                 $this->assertArrayHasKey('lines.0.free_qty', $e->errors());
             }
+        }
+
+        // ⓘ `1e3` is_numeric পার হয়, কিন্তু bcmath-এ ValueError — পরিমাণেও কথায় ফেরে, ৫০০ নয় (১৩ অক্টোবর ২০২৬)
+        try {
+            app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
+                [['product_id' => $product, 'qty' => '1e3']], auth()->user());
+            $this->fail('⛔ পরিমাণ 1e3 DO-তে বসে গেল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('lines.0.qty', $e->errors());
         }
 
         $this->assertNotNull(app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
