@@ -162,8 +162,12 @@ final class InsuranceService
         $step = InsurancePolicy::FREQUENCIES[$policy->frequency ?? InsurancePolicy::YEARLY] ?? 12;
         $parts = [];
 
-        for ($at = $start; $at->lte($end); $at = $at->addMonthsNoOverflow($step)) {
-            $next = $at->addMonthsNoOverflow($step)->subDay();
+        /*
+         * ⛔ প্রতিটা কিস্তির দিন শুরুর দিন থেকে গোনা, আগের কিস্তি থেকে নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⓘ৮)।
+         * ⓘ আগে ধাপে ধাপে যোগ হত: ৩১ জানুয়ারির শুরু ফেব্রুয়ারিতে ২৮ হয়ে বাকি সব কিস্তি ২৮ তারিখে সরে যেত।
+         */
+        for ($i = 0, $at = $start; $at->lte($end); $i++, $at = $start->addMonthsNoOverflow($step * $i)) {
+            $next = $start->addMonthsNoOverflow($step * ($i + 1))->subDay();
             $parts[] = [$at, ($step === 12 || $next->gt($end)) ? $end : $next];
 
             if ($step === 12) {
