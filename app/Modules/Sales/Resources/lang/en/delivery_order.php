@@ -7,6 +7,7 @@ return [
     'title' => 'Delivery order',
     'no_lines' => 'Add at least one product.',
     'qty_positive' => 'Quantity must be more than zero.',
+    'free_not_negative' => 'The free quantity must be a number, zero or more.',
     'no_product' => 'That product was not found.',
     'locked_after_submit' => 'After submitting, the writer can no longer change it — only the approver can.',
     'no_customer' => 'Choose a dealer.',

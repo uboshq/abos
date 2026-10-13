@@ -247,6 +247,17 @@ final class DeliveryOrderService
                 throw ValidationException::withMessages(["lines.{$i}.qty" => __('sales::delivery_order.qty_positive')]);
             }
 
+            /*
+             * ⛔ ফ্রি শূন্য বা তার বেশি, আর সংখ্যা — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে যা আসত তাই বসত: ফোন বা পোর্টালের
+             * ঋণাত্মক ফ্রি মাল ধরা কমাত, আর অক্ষর ডাটাবেজে ৫০০ দিত। ⓘ ওয়েবের ফর্মে `min:0` ছিল; এই দরজা তিনটাই।
+             */
+            $free = (string) ($line['free_qty'] ?? '0');
+            $free = $free === '' ? '0' : $free;
+
+            if (! is_numeric($free) || bccomp($free, '0', 4) < 0) {
+                throw ValidationException::withMessages(["lines.{$i}.free_qty" => __('sales::delivery_order.free_not_negative')]);
+            }
+
             $product = Product::query()->find((int) ($line['product_id'] ?? 0))
                 ?? throw ValidationException::withMessages(["lines.{$i}.product_id" => __('sales::delivery_order.no_product')]);
 
@@ -270,7 +281,7 @@ final class DeliveryOrderService
                 'product_id' => $product->id,
                 'qty' => $qty,
                 'rate' => $rate,
-                'free_qty' => (string) ($line['free_qty'] ?? '0'),
+                'free_qty' => $free,
                 'note' => $line['note'] ?? null,
             ]);
         }

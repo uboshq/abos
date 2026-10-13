@@ -95,6 +95,25 @@ final class ADeliveryOrderSitsInABranchTest extends TestCase
         }
     }
 
+    /** ⛔ ঋণাত্মক বা অক্ষরের ফ্রি DO-তে বসে না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ */
+    public function test_a_negative_or_wordy_free_quantity_is_refused(): void
+    {
+        $product = Product::query()->orderBy('id')->value('id');
+
+        foreach (['-3', 'abc'] as $free) {
+            try {
+                app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
+                    [['product_id' => $product, 'qty' => '2', 'free_qty' => $free]], auth()->user());
+                $this->fail("⛔ ফ্রি '{$free}' DO-তে বসে গেল।");
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $this->assertArrayHasKey('lines.0.free_qty', $e->errors());
+            }
+        }
+
+        $this->assertNotNull(app(DeliveryOrderService::class)->create(['customer_id' => $this->customer->id],
+            [['product_id' => $product, 'qty' => '2', 'free_qty' => '1']], auth()->user()), 'ঠিক ফ্রি-ও আটকে গেল।');
+    }
+
     private function branchOf(User|Customer $by): ?int
     {
         $branch = $this->write($by)->branch_id;
