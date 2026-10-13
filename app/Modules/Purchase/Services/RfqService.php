@@ -163,6 +163,20 @@ final class RfqService
         }
 
         return DB::transaction(function () use ($data, $clean, $rfqId, $supplierId) {
+            /*
+             * ⛔ দরপত্রের সারিতে তালা, তারপর "আগেই দর দিয়েছেন?" আবার — Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TwoQuotesFromOneSupplierTest]])।
+             * ⚠️ উপরের দেখা তালা ছাড়া: দুই ক্লিকে দুজনেই "দেননি" দেখতেন, একজনের দুটো দর বসত — ঠিক যা উপরের নিয়ম নিষেধ করে।
+             */
+            if ($rfqId !== null) {
+                Rfq::acrossBranches()->whereKey((int) $rfqId)->lockForUpdate()->first();
+
+                if ($this->alreadyQuoted((int) $rfqId, (int) $supplierId)) {
+                    throw ValidationException::withMessages([
+                        'supplier_id' => __('purchase::validation.quotation_already_given'),
+                    ]);
+                }
+            }
+
             $quotation = Quotation::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
