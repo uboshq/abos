@@ -426,9 +426,11 @@ final class QualityInspectionService
          * ⚠️ অপেক্ষমাণ কাগজে বিনাশ করতে দিলে পরিদর্শক দেখার আগেই মাল
          * চলে যেত, আর পরিদর্শনটার কোনো মানেই থাকত না।
          */
+        // ⓘ "অনুমোদিত" রায়ও — তার বাতিল অংশ আটকানো থাকে, আর সেটা বিনাশের পথ চায় (১৩ অক্টোবর ২০২৬; সীমা নিচে `heldBy()`)
         if (! in_array($inspection->status, [
             QualityInspection::REJECTED,
             QualityInspection::QUARANTINE,
+            QualityInspection::APPROVED,
         ], true)) {
             throw ValidationException::withMessages([
                 'status' => __('inventory::validation.qc_dispose_needs_verdict'),
@@ -538,7 +540,12 @@ final class QualityInspectionService
 
     private function reasonFor(string $result): ReasonCode
     {
-        $code = $result === QualityInspection::REJECTED ? 'HOLD-REJ' : 'HOLD-RET';
+        /*
+         * ⛔ কোয়ারেন্টাইন ছাড়া যেকোনো রায়ের আটকানো মানে বাতিল মাল — "অনুমোদিত" রায়ের বাতিল অংশও (মজুদ লাইন-ধরে নিরীক্ষা,
+         * ১৩ অক্টোবর ২০২৬)। ⓘ আগে অনুমোদিতের বাতিল অংশ `HOLD-RET`-এ আটকাত — ফেরার কারণ, তাই সাধারণ ছাড়ার পর্দা থেকে
+         * ছেড়ে কাউন্টারে বেচা যেত, অথচ বিনাশ করা যেত না। উপরের নিয়মটাই ("বাতিলের মাল ফেরে না") তখন মিথ্যা।
+         */
+        $code = $result === QualityInspection::QUARANTINE ? 'HOLD-RET' : 'HOLD-REJ';
 
         $reason = ReasonCode::query()->where('code', $code)->first();
 
