@@ -282,7 +282,7 @@ class EmployeeController extends Controller implements HasMiddleware
             }
         }
 
-        return $request->validate([
+        $data = $request->validate([
             // খালি রাখলে সিরিজ থেকে বসে — EmployeeService::create() দেখুন
             'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
@@ -385,6 +385,19 @@ class EmployeeController extends Controller implements HasMiddleware
             'bank_routing_no' => ['nullable', 'string', 'max:32'],
             'mfs_number' => ['nullable', 'string', 'max:32'],
         ]);
+
+        /*
+         * ⛔ যাচাইয়ের পরেও আবার — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ উপরের ছাঁকনি কেবল ফর্মের ঘর সরায়, অথচ `validate()`
+         * ঠিকানার query-ও পড়ে: `PUT /hr/employees/12?bank_account_no=…` পাঠালে পরিচয়ের চাবি ছাড়াই ব্যাংকের নম্বর বদলাত, আর পরের
+         * ব্যাংক-ফাইল বেতন সেই হিসাবে পাঠাত — যিনি বদলালেন তিনি আগের নম্বরটা কখনো দেখেননি।
+         */
+        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+            if (! FieldSecurity::visible(Employee::class, $guarded)) {
+                unset($data[$guarded]);
+            }
+        }
+
+        return $data;
     }
 
     /**
