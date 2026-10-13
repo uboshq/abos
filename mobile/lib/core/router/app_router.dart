@@ -41,6 +41,10 @@ import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
 import '../auth/auth_state.dart';
+import '../../features/documents/document_screens.dart';
+import '../../features/finance/finance_screens.dart';
+import '../../features/promotion/offers_screen.dart';
+import '../../features/self_service/self_service_screens.dart';
 import '../menu/module_gate.dart';
 
 /// Turns `ref.listen(authStateProvider, ...)` into the [Listenable] go_router
@@ -326,6 +330,39 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               id: state.pathParameters['id'] ?? '',
               extra: state.uri.queryParameters['k'],
             ),
+          ),
+          // ⭐ বাকি মডিউল, দ্বিতীয় ভাগ — অর্থ, ডকুমেন্টস, প্রমোশন, নিজের ছুটি ও স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)
+          _framed(
+            path: 'deposits',
+            builder: (context, state) => const ModuleGateView(path: 'deposits', child: DepositListScreen()),
+          ),
+          _framed(
+            path: 'bank-loans',
+            builder: (context, state) => const ModuleGateView(path: 'bank-loans', child: LoanListScreen()),
+          ),
+          _framed(
+            path: 'rents',
+            builder: (context, state) => const ModuleGateView(path: 'rents', child: RentListScreen()),
+          ),
+          _framed(
+            path: 'hand-loans',
+            builder: (context, state) => const ModuleGateView(path: 'hand-loans', child: HandLoanListScreen()),
+          ),
+          _framed(
+            path: 'documents',
+            builder: (context, state) => const ModuleGateView(path: 'documents', child: DocumentListScreen()),
+          ),
+          _framed(
+            path: 'offers',
+            builder: (context, state) => const ModuleGateView(path: 'offers', child: OffersScreen()),
+          ),
+          _framed(
+            path: 'leave',
+            builder: (context, state) => const ModuleGateView(path: 'leave', child: LeaveScreen()),
+          ),
+          _framed(
+            path: 'payslips',
+            builder: (context, state) => const ModuleGateView(path: 'payslips', child: PayslipListScreen()),
           ),
         ],
       ),

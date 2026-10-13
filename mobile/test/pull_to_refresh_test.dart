@@ -53,6 +53,8 @@ void main() {
     'lead_screens.dart',
     'quotation_screens.dart',
     'sync_status_screen.dart',
+    // ⭐ নিজের ছুটি আর বেতনের স্লিপ — ধরা পড়ে test/more_modules_pullable_test.dart-এ (১৩ অক্টোবর ২০২৬)
+    'self_service_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each

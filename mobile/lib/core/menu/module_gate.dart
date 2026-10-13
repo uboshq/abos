@@ -53,6 +53,15 @@ class ModuleGate {
     'today': 'sales',
     'products': 'inventory',
     'stock': 'inventory',
+    // ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)
+    'deposits': 'finance',
+    'bank-loans': 'finance',
+    'rents': 'finance',
+    'hand-loans': 'finance',
+    'documents': 'documents',
+    'offers': 'promotion',
+    'leave': 'hr',
+    'payslips': 'hr',
   };
 
   /// The message a switched-off screen shows — the owner's own words.

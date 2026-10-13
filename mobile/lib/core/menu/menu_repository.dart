@@ -388,5 +388,39 @@ class MenuRepository {
           icon: Icons.sync_outlined,
           routeName: 'sync-status',
         ),
+        ..._moreModuleTiles(user),
+      ];
+
+  /// ⭐ বাকি মডিউল, দ্বিতীয় ভাগ — অর্থ, ডকুমেন্টস, প্রমোশন, নিজের ছুটি ও স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
+  ///
+  /// <p>প্রতিটা টাইল ওয়েবের পর্দার একই চাবিতে, আর সার্ভারের দরজাও ঠিক সেই চাবি চায় — চাবি নেই তো টাইলও নেই, তাই কোনো টাইল
+  /// ৪০৩-এর দরজায় নিয়ে যায় না। ফোনে মডিউল বন্ধ থাকলে [ModuleGate] লুকায়।
+  List<MenuItem> _moreModuleTiles(AuthUser user) => [
+        if (user.can('finance.deposit.view'))
+          const MenuItem(
+              key: 'finance.deposits', label: 'জমা ও সঞ্চয়', icon: Icons.savings_outlined, routeName: 'deposits'),
+        if (user.can('finance.bank_facility.view'))
+          const MenuItem(
+              key: 'finance.bank_loans',
+              label: 'ব্যাংক ঋণ ও কিস্তি',
+              icon: Icons.account_balance_outlined,
+              routeName: 'bank-loans'),
+        if (user.can('finance.rental.view'))
+          const MenuItem(key: 'finance.rents', label: 'ভাড়া', icon: Icons.home_work_outlined, routeName: 'rents'),
+        if (user.can('finance.hand_loan.view'))
+          const MenuItem(
+              key: 'finance.hand_loans', label: 'হাতধার', icon: Icons.handshake_outlined, routeName: 'hand-loans'),
+        if (user.can('documents.view'))
+          const MenuItem(
+              key: 'documents.library', label: 'ডকুমেন্টস', icon: Icons.folder_open_outlined, routeName: 'documents'),
+        if (user.can('promotion.view'))
+          const MenuItem(
+              key: 'promotion.offers', label: 'চলতি অফার', icon: Icons.local_offer_outlined, routeName: 'offers'),
+        if (user.can('hr.leave.self'))
+          const MenuItem(
+              key: 'hr.leave.self', label: 'আমার ছুটি', icon: Icons.event_available_outlined, routeName: 'leave'),
+        if (user.can('hr.payslip.self'))
+          const MenuItem(
+              key: 'hr.payslip.self', label: 'বেতনের স্লিপ', icon: Icons.receipt_long_outlined, routeName: 'payslips'),
       ];
 }

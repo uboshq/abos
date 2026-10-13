@@ -163,6 +163,9 @@ class NavCatalog {
         ['documents', 'ডকুমেন্ট']),
     NavModuleDef('executive', 'মালিকের কেন্দ্র', Icons.speed_outlined,
         ['executive', 'command']),
+    // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
+    NavModuleDef('promotion', 'প্রমোশন', Icons.local_offer_outlined,
+        ['promotion', 'offer', 'অফার']),
   ];
 
   /// The order the headings stand in, inside any module.
@@ -379,6 +382,63 @@ class NavCatalog {
         label: 'ব্যবসার ড্যাশবোর্ড',
         icon: Icons.insights_outlined,
         aliases: ['dashboard', 'ড্যাশবোর্ড']),
+    // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ — অর্থ, ডকুমেন্টস, প্রমোশন, নিজের ছুটি ও স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
+    NavScreenDef(
+        path: 'deposits',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'জমা ও সঞ্চয়',
+        icon: Icons.savings_outlined,
+        aliases: ['deposit', 'fdr', 'dps', 'আমানত', 'সঞ্চয়পত্র', 'মেয়াদ']),
+    NavScreenDef(
+        path: 'bank-loans',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'ব্যাংক ঋণ ও কিস্তি',
+        icon: Icons.account_balance_outlined,
+        aliases: ['loan', 'ঋণ', 'কিস্তি', 'cc', 'bank', 'instalment']),
+    NavScreenDef(
+        path: 'rents',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'ভাড়া',
+        icon: Icons.home_work_outlined,
+        aliases: ['rent', 'ভাড়া', 'গুদাম', 'tenant', 'ভাড়াটে']),
+    NavScreenDef(
+        path: 'hand-loans',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'হাতধার',
+        icon: Icons.handshake_outlined,
+        aliases: ['hand loan', 'ধার', 'হাওলাত', 'loan']),
+    NavScreenDef(
+        path: 'documents',
+        module: 'documents',
+        group: 'তালিকা',
+        label: 'ডকুমেন্টস',
+        icon: Icons.folder_open_outlined,
+        aliases: ['document', 'নথি', 'কাগজ', 'সই', 'signature', 'file']),
+    NavScreenDef(
+        path: 'offers',
+        module: 'promotion',
+        group: 'তালিকা',
+        label: 'চলতি অফার',
+        icon: Icons.local_offer_outlined,
+        aliases: ['offer', 'অফার', 'ছাড়', 'ফ্রি', 'discount', 'free', 'প্রমোশন']),
+    NavScreenDef(
+        path: 'leave',
+        module: 'hr',
+        group: 'নিজের কাজ',
+        label: 'আমার ছুটি',
+        icon: Icons.event_available_outlined,
+        aliases: ['leave', 'ছুটি', 'অবকাশ']),
+    NavScreenDef(
+        path: 'payslips',
+        module: 'hr',
+        group: 'নিজের কাজ',
+        label: 'বেতনের স্লিপ',
+        icon: Icons.receipt_long_outlined,
+        aliases: ['payslip', 'salary', 'বেতন', 'স্লিপ']),
   ];
 
   /// Screens that hang on no module: the bottom bar and the "আমি" page reach

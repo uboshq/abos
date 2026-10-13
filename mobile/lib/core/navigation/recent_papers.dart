@@ -28,6 +28,13 @@ class RecentPapers {
     'purchase': ('purchases', 'ক্রয়'),
     'voucher': ('vouchers', 'ভাউচার'),
     'claim': ('claims', 'খরচের দাবি'),
+    // ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬); ভাড়ার দিক (`pay`/`let`) `?k=`-এ
+    'deposit': ('deposits', 'জমা'),
+    'bank-loan': ('bank-loans', 'ব্যাংক ঋণ'),
+    'rent': ('rents', 'ভাড়া'),
+    'hand-loan': ('hand-loans', 'হাতধার'),
+    'document': ('documents', 'ডকুমেন্ট'),
+    'payslip': ('payslips', 'বেতনের স্লিপ'),
   };
 
   /// `paper/<kind>/<id>`, with the purchase's own kind (`bill`, `receipt` …)
