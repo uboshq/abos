@@ -203,7 +203,9 @@ final class RentalAccrualService
 
             $this->assertNothingWaiting($contract);
 
-            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with('voucher.lines')->first()?->voucher;
+            // ⛔ শাখা-দেয়াল ছাড়া — হেডারে অন্য শাখা বাছা থাকলে পরিশোধটা "নেই" পড়ত, আর আগাম মাস চুপচাপ খরচে যেত না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())
+                ->with(['voucher' => fn ($v) => $v->withoutGlobalScope('user-branch'), 'voucher.lines'])->first()?->voucher;
 
             if ($paid === null || $paid->status !== DocumentStatus::CONFIRMED) {
                 return 0;

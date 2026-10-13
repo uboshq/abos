@@ -55,6 +55,7 @@ return [
     'charge_run' => 'Book the month rent charges',
     'charge_note' => 'Booked to rent income at the start of the month as owed by the tenant; once per month. The current month books itself.',
     'charge_done' => 'Monthly charge booked for :charged tenants, :held awaiting signature.',
+    'charge_some_failed' => 'The charge was not booked for these tenants; the rest were booked: :list',
     'charge_future' => 'Rent for a future month is not income yet — only up to the current month.',
     'charge_closed' => ':month is closed — no rent charge is booked in a closed month.',
     'charge_narration' => ':who — rent due for :month',

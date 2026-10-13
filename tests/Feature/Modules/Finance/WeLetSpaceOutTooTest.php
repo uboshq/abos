@@ -108,8 +108,8 @@ final class WeLetSpaceOutTooTest extends TestCase
         $gone = $this->open($this->person('Gone Tenant'), '7000', starts: $this->month(-2));
         app(TenancyService::class)->close($gone, []);
 
-        $this->assertSame(['charged' => 1, 'held' => 0], app(TenancyService::class)->charge($this->month(0)));
-        $this->assertSame(['charged' => 0, 'held' => 0], app(TenancyService::class)->charge($this->month(0)), '⛔ একই মাস দুইবার');
+        $this->assertSame(['charged' => 1, 'held' => 0, 'failed' => []], app(TenancyService::class)->charge($this->month(0)));
+        $this->assertSame(['charged' => 0, 'held' => 0, 'failed' => []], app(TenancyService::class)->charge($this->month(0)), '⛔ একই মাস দুইবার');
 
         $charge = TenancyCharge::query()->sole();
         $this->assertSame($running->id, $charge->tenancy_id, '⛔ বন্ধ বা সামনের চুক্তির দাবি বসল');
@@ -192,7 +192,7 @@ final class WeLetSpaceOutTooTest extends TestCase
         $this->assertSame(Tenancy::ACTIVE, $tenancy->fresh()->status, '⛔ শেষ সই পড়ল, চুক্তি চালু হয়নি');
         $this->assertMoney('-20000', $this->net(StandardChart::TENANT_DEPOSITS), 'সইয়ের পরে জামানত');
 
-        $this->assertSame(['charged' => 1, 'held' => 1], app(TenancyService::class)->charge($this->month(0)));
+        $this->assertSame(['charged' => 1, 'held' => 1, 'failed' => []], app(TenancyService::class)->charge($this->month(0)));
         $this->assertMoney('0', $this->net(StandardChart::RENT_RECEIVABLE), '⛔ সই ছাড়াই দাবি খাতায়');
         $this->assertMoney('0', $tenancy->fresh()->outstanding(), '⛔ সই বাকি দাবি বকেয়ায় গোনা হল');
         $row = collect(app(ReportEngine::class)->run(TenancyReports::ARREARS, ['from' => $this->month(0)->toDateString(), 'to' => now()->toDateString()])->rows)

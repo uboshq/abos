@@ -132,10 +132,24 @@ class RentalContract extends Model implements Drillable
      */
     public function rentFor(Carbon $month): string
     {
-        $term = $this->terms()->where('effective_from', '<=', $month->copy()->startOfMonth()->toDateString())
-            ->reorder('effective_from', 'desc')->first();
+        return (string) ($this->termOn($month)?->monthly_rent ?? $this->monthly_rent);
+    }
 
-        return (string) ($term?->monthly_rent ?? $this->monthly_rent);
+    /**
+     * ⭐ একটা মাসে জামানত থেকে কত কাটার কথা — সেই মাসে খাটা শর্ত, না থাকলে চুক্তির এখনকার অঙ্ক ([[rentFor()]]-এর একই নিয়ম)।
+     *
+     * ⛔ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬: খালি ঘরে মাস দিলে আজকের অঙ্ক কাটত, সেই মাসের নয়।
+     */
+    public function adjustmentFor(Carbon $month): string
+    {
+        return (string) ($this->termOn($month)?->monthly_adjustment ?? $this->monthly_adjustment);
+    }
+
+    /** মাসটায় খাটা শর্তের দফা — সর্বশেষ যেটা মাসটা বা আগে থেকে */
+    private function termOn(Carbon $month): ?RentalTerm
+    {
+        return $this->terms()->where('effective_from', '<=', $month->copy()->startOfMonth()->toDateString())
+            ->reorder('effective_from', 'desc')->first();
     }
 
     /**
@@ -173,12 +187,15 @@ class RentalContract extends Model implements Drillable
      * দেখাত, আর মাসের ভাউচার পরে বাতিল হলে খাতায় টাকা জামানতে ফিরলেও পাতা চিরদিন কম দেখাত। এখন অগ্রিম সমন্বয়ের
      * রিপোর্টের একই নিয়ম ([[RentalReports::depositMoves()]]), তাই পাতা আর রিপোর্ট একই সংখ্যা বলে।
      * ⓘ ভাউচার ছাড়া পুরনো সারি (সই-ব্যবস্থার আগের) করা ধরা হয়।
+     *
+     * ⛔ শাখা-দেয়াল ছাড়া — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬: ভাউচার বসে চুক্তির শাখায়; হেডারে অন্য শাখা বাছা থাকলে
+     * কাটা মাসগুলো চোখ এড়াত, জামানত পুরোটা "পড়ে আছে" দেখাত, আর চুক্তি শেষে খাতায় যা নেই তা-ও ফেরত বসত (১১৪০ ঋণাত্মক)।
      */
     public function adjustedSoFar(): string
     {
         return (string) $this->adjustments()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::CONFIRMED)))
             ->sum('from_deposit');
     }
 
