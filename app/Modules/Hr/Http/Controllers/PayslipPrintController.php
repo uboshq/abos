@@ -65,7 +65,12 @@ class PayslipPrintController extends Controller implements HasMiddleware
         // ⓘ পাতাটা যায় তার রানের শাখা ধরে — [[PayslipPolicy]]
         $this->authorize('view', $payslip);
 
-        $payslip->load(['employee.department', 'employee.designation', 'lines', 'run']);
+        /*
+         * ⛔ রানটা শাখার দেয়ালের ওপারেও — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[APayrollRunHidInAnotherBranchTest]])। ⓘ অনুমতি উপরে
+         * কর্মীর শাখা ধরে মিলে গেছে; অথচ রানটা পড়া হত বাছা শাখার দেয়ালে, তাই অন্য শাখায় বানানো রান খালি এসে পাতা ৫০০ দিত।
+         * ফোনের দরজার ([[PayslipApiController]]) একই নিয়ম।
+         */
+        $payslip->load(['employee.department', 'employee.designation', 'lines', 'run' => fn ($q) => $q->withoutGlobalScope('user-branch')]);
 
         return $this->pdf(
             $request,
