@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Promotion\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Services\DataScope;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
@@ -129,13 +130,21 @@ final class PromotionDashboard implements ProvidesDashboard
         $from = $today->copy()->startOfMonth();
         $range = DateRange::label($from, $today);
 
-        $discount = (string) PromotionApplication::query()
+        /*
+         * ⛔ দেখার শাখা — হেডারের শাখা আর নাগাল, প্রয়োগের নিজের শাখা ধরে (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[ThePromotionDashboardStaysInMyBranchTest]])। ⓘ আগে ময়মনসিংহে সীমিত মানুষও গোটা কোম্পানির ছাড়ের টাকা আর উপহার দেখতেন।
+         * ⓘ উপহারের পর্দার একই নিয়ম ([[PromotionGiftController::index()]])।
+         */
+        $seen = fn () => app(DataScope::class)->inView(PromotionApplication::query(), 'promotion_applications.branch_id');
+
+        $discount = (string) $seen()
             ->whereNull('reversed_at')
             ->whereIn('benefit_kind', [BenefitKind::PERCENT->value, BenefitKind::AMOUNT->value])
             ->where('created_at', '>=', $from)
             ->sum('worth');
 
         $gifts = PromotionGiftIssue::query()
+            ->whereIn('promotion_application_id', $seen()->select('promotion_applications.id'))
             ->where('issued_at', '>=', $from)
             ->whereColumn('returned_qty', '<', 'qty')
             ->count();
@@ -314,7 +323,8 @@ final class PromotionDashboard implements ProvidesDashboard
             return [];
         }
 
-        $rows = \App\Modules\Promotion\Models\PromotionApplication::query()
+        // ⛔ দেখার শাখা — উপরের ছাড়ের ঘরের একই দেয়াল (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        $rows = app(DataScope::class)->inView(PromotionApplication::query(), 'promotion_applications.branch_id')
             ->whereNull('reversed_at')
             ->where('created_at', '>=', Carbon::today()->startOfMonth())
             ->selectRaw('promotion_id, COUNT(*) as n')
