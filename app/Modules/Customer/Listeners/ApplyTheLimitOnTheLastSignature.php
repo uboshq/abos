@@ -54,15 +54,13 @@ final class ApplyTheLimitOnTheLastSignature
              * ⛔ অনুরোধের পরে সীমা অন্য পথে বদলে থাকলে সইটা পুরনো কাগজের — "১ লাখ থেকে ২ লাখ" সই পড়ল, অথচ মাঝে ঝুঁকিতে
              * সীমা ০ করা হয়েছিল; আগে সইয়ের শেষে ২ লাখ বসে কমানোটা নীরবে মুছত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
              * [[AnOldLimitSignatureUndidACutTest]])। ⓘ কিছুই বসে না; আবার বাড়াতে হলে নতুন অনুরোধ, নতুন সই।
+             *
+             * ⓘ অনুরোধ যে সীমা থেকে উঠেছিল, সেটা তার সাথেই রাখা ([[CustomerService::assertRaiseIsSigned()]], `payload.limit_before`)
+             * — সময় ধরে মেলানো যেত না: একই সেকেন্ডে আগের বদল আর পরের বদল আলাদা করা যায় না। ⓘ পুরনো অনুরোধে ঘরটা নেই, তাদের আগের মতো।
              */
-            $changedSince = CustomerCreditChange::query()->withoutGlobalScopes()
-                ->where('company_id', $approval->company_id)
-                ->where('customer_id', $customer->id)
-                ->where('field', 'credit_limit')
-                ->where('created_at', '>=', $approval->created_at)
-                ->exists();
+            $before = $approval->payload['limit_before'] ?? null;
 
-            if ($changedSince) {
+            if ($before !== null && bccomp((string) ($customer->credit_limit ?? '0'), (string) $before, 4) !== 0) {
                 return;
             }
 

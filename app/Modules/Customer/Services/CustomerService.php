@@ -490,7 +490,8 @@ final class CustomerService
             && $held->amount === null
             && $held->state_hash !== null
             && hash_equals((string) $held->state_hash, $hash)) {
-            $held->update(['amount' => $after]);
+            // ⓘ কোন সীমা থেকে উঠছে, তাও সাথে — সইয়ের দিন সীমা অন্য পথে বদলে থাকলে কাগজটা পুরনো ([[ApplyTheLimitOnTheLastSignature]])
+            $held->update(['amount' => $after, 'payload' => [...($held->payload ?? []), 'limit_before' => bcadd($before, '0', 4)]]);
         }
 
         // ⓘ বার্তাটা (অপেক্ষায় · প্রত্যাখ্যাত) ইঞ্জিনের নিজের — একই অনুরোধটাই ফেরে
