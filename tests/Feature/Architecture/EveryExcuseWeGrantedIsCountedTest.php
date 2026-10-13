@@ -94,8 +94,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
         // ⓘ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — রেস্টুরেন্ট পরে (মালিক, ২১ অক্টোবরের পরে; ১৩ অক্টোবর ২০২৬)
         'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
-        // ⓘ একই নিয়মের এখনো-সারানো-হয়নি তালিকা — প্রতিটা সেবার সারাই নিজের সারি তোলে; খালি হলে নাম সরানো আর CEILING কমানো (১৩ অক্টোবর ২০২৬)
-        'ARowInHandIsLockedAcrossBranchesTest::NOT_YET',
+        // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
     ];

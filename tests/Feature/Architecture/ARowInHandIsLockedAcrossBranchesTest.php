@@ -25,14 +25,6 @@ use Tests\TestCase;
 final class ARowInHandIsLockedAcrossBranchesTest extends TestCase
 {
     /**
-     * এখনো সারানো হয়নি — ফাইল → এমন বাক্যের সংখ্যা। প্রতিটা সেবার সারাই নিজের সারি এখান থেকে তোলে; শেষে তালিকা খালি।
-     *
-     * @var array<string, int>
-     */
-    private const NOT_YET = [
-    ];
-
-    /**
      * ইচ্ছা করে ছাড় — ফাইল → [সংখ্যা, কারণ]। প্রতিটা সারি একটা সিদ্ধান্ত, কারণ পাশে।
      *
      * @var array<string, array{int, string}>
@@ -66,12 +58,11 @@ final class ARowInHandIsLockedAcrossBranchesTest extends TestCase
             unset($found[$path]);
         }
 
+        // ⓘ ৩৫টা জায়গা ১৩ অক্টোবর ২০২৬-এ সেবা ধরে ধরে সারানো (প্রতিটার নিজের কমিট); এখন কোথাও নেই
         ksort($found);
-        $expected = self::NOT_YET;
-        ksort($expected);
 
-        $this->assertSame($expected, $found,
-            '⛔ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — `acrossBranches()` লাগবে (সারানো হলে NOT_YET থেকে সারিটা তুলুন)।');
+        $this->assertSame([], $found,
+            '⛔ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — `acrossBranches()` লাগবে।');
     }
 
     public function test_the_guard_sees_the_shape_it_hunts(): void
