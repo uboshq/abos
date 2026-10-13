@@ -318,8 +318,22 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
                 continue;
             }
 
-            foreach (token_get_all((string) file_get_contents($file->getPathname())) as $token) {
+            $source = (string) file_get_contents($file->getPathname());
+            $lines = explode("
+", $source);
+
+            foreach (token_get_all($source) as $token) {
                 if (! is_array($token) || $token[0] !== T_CONSTANT_ENCAPSED_STRING) {
+                    continue;
+                }
+
+                /*
+                 * ⓘ মডিউলের কোড পক্ষের ধরন নয় — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। "customer"/"supplier" মডিউলের নামও:
+                 * রিপোর্ট-কেন্দ্রের `'module' => 'customer'` আর ফোনের চালু-মডিউলের তালিকা (`ON_BY_DEFAULT`) কোরে বৈধভাবে মডিউল চেনে।
+                 * দাবিটা কেবল **পক্ষের** ধরন হাতে লেখা ধরে; ঐ দুই প্রসঙ্গ বাদ দিলে আসল লঙ্ঘন আগের মতোই ধরা পড়ে।
+                 */
+                $line = $lines[$token[2] - 1] ?? '';
+                if (preg_match("/'module'\s*=>|ON_BY_DEFAULT/", $line) === 1) {
                     continue;
                 }
 
