@@ -85,10 +85,12 @@ final class OpeningStockService
         // ⭐ মালটা কোন সরবরাহকারী/প্রিন্সিপালের — ঐচ্ছিক; স্তরে বসে, "আসল" কমিশন সেখান থেকে পড়ে (মালিক, ৬ অক্টোবর ২০২৬)
         ?int $supplierId = null,
     ): StockMovement {
-        $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
-        $this->assertWhole($product, $qty);
-
         return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch, $supplierId) {
+            // ⛔ যাচাই তালার পরে, লেনদেনের ভেতরে — দুইবার চাপা বা দুই ট্যাবে দুইজনই "এখনো বসেনি" দেখে মজুদ, স্তর আর খাতা দুইবার বসাত
+            $this->lockProduct($product);
+            $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
+            $this->assertWhole($product, $qty);
+
             $movement = $this->stock->move(
                 product: $product,
                 warehouse: $warehouse,
@@ -230,6 +232,7 @@ final class OpeningStockService
             $batch = app(BatchService::class)->receive(product: $product, batchNo: $no, expiry: ($row['expiry_date'] ?? null) ?: null);
         }
 
+        $this->lockProduct($product);
         $this->assertSane($product, $warehouse, $qty, $cost, $batch, $topUp ?? false, $date ?? now());
 
         // ⭐ ফ্রি — খরচ ছাড়া, একই লটে (ক্রয়ের মতো); খরচের স্তরে বসে না
@@ -619,6 +622,18 @@ final class OpeningStockService
                 app(PackConversion::class)->toStockQty($product, $qty);
             }
         }
+    }
+
+    /**
+     * ⛔ পণ্যের সারিতে তালা — "আগেই বসেছে কি না" দেখার আগে (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে যাচাই চলত তালা ছাড়া, আর একক পথে লেনদেনের বাইরেও: দুইবার চাপা বা দুই ট্যাবে দুইজনই "বসেনি" দেখতেন, আর মজুদ,
+     * খরচের স্তর আর Dr মজুদ / Cr শুরুর মূলধন দুইবার বসত। ⓘ তালা পড়ার পরের সাধারণ পড়া সর্বশেষ কমিট দেখে, তাই দ্বিতীয়জন
+     * অপেক্ষা শেষে প্রথমজনের সারি দেখেন আর থামেন। ⚠️ "Opening" লটে যোগ (`$topUp`) ইচ্ছা করেই বারবার চলে — মালিকের নিয়ম।
+     */
+    private function lockProduct(Product $product): void
+    {
+        Product::query()->withoutGlobalScopes()->whereKey($product->id)->lockForUpdate()->first();
     }
 
     private function assertSane(
