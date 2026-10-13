@@ -440,10 +440,19 @@ final class WithdrawalService
                 continue;
             }
 
+            /*
+             * ⛔ সীমার পাহারার একই গোনা — মাসে লেখা তারিখের, আর মাসে চাওয়া (যে তারিখই লেখা) সব ([[assertWithinCap()]]; লাইন-ধরে
+             * নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে পর্দা কেবল তারিখ ধরত: আজ চাওয়া গত মাসের তারিখের উত্তোলন "বাকি"-তে কমত না, অথচ
+             * পাহারা সেটা গুনত — পর্দা "৫,০০০ বাকি" বলত আর অনুরোধ ফিরত।
+             */
             $thisMonth = Withdrawal::query()
                 ->where('person_id', $personId)
                 ->where('status', '!=', DocumentStatus::CANCELLED)
-                ->whereBetween('trx_date', [$from, $to])
+                ->where(fn ($q) => $q
+                    ->whereBetween('trx_date', [$from, $to])
+                    ->orWhereBetween('created_at', [
+                        $month->copy()->startOfMonth()->toDateTimeString(), $month->copy()->endOfMonth()->toDateTimeString(),
+                    ]))
                 ->sum('amount');
 
             $everything = Withdrawal::query()
