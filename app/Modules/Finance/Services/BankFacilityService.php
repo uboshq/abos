@@ -71,6 +71,19 @@ class BankFacilityService
         $this->assertKindHasWhatItNeeds($kind, $data);
 
         /*
+         * ⛔ CC-তে খোলার দিনের "তোলা" নেওয়া হয় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️১)।
+         * ⓘ CC-র দেনা ব্যাংক হিসাবের নিজের জেরেই থাকে ([[openingFor()]] তাই খোলা দাখিলা বসায় না); এখানে লেখা অঙ্কটা
+         * [[standing()]] ব্যাংকের জেরের ওপর আবার যোগ করত — পর্দায় ব্যবহৃত দ্বিগুণ, আর মাসের সুদও দ্বিগুণ।
+         */
+        $drawn = (string) ($data['opening_drawn'] ?? '');
+
+        if ($kind === BankFacility::CC && $drawn !== '' && bccomp($drawn, '0', 4) !== 0) {
+            throw ValidationException::withMessages([
+                'opening_drawn' => __('finance::validation.cc_opening_drawn_lives_in_the_bank'),
+            ]);
+        }
+
+        /*
          * ⭐ ব্যাংকটা এখন তালিকা থেকে ([[Institution]]), আর নতুন নাম
          * ফর্মেই যোগ করা যায় ([[InstitutionService::resolve]])।
          *
@@ -607,7 +620,8 @@ class BankFacilityService
              * ⚠️ পুরনো সারিগুলোর খোলা দাখিলা নেই, তাই ওদের লেখা
              * সংখ্যাটাই যোগ হয় — নাহলে ওদের বকেয়া হঠাৎ শূন্য দেখাত।
              */
-            $used = in_array((int) $facility->id, $opened, true)
+            // ⛔ CC-তে লেখা অঙ্ক কখনো যোগ নয় — দেনাটা ব্যাংকের জেরেই আছে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️১)
+            $used = in_array((int) $facility->id, $opened, true) || $facility->kind === BankFacility::CC
                 ? $ledger
                 : bcadd((string) ($facility->opening_drawn ?? '0'), $ledger, 4);
 
@@ -783,6 +797,11 @@ class BankFacilityService
      */
     public function legacyOpening(BankFacility $facility): string
     {
+        // ⛔ CC-র দেনা ব্যাংকের জেরেই — লেখা অঙ্ক যোগ করলে দ্বিগুণ, সুদও দ্বিগুণ (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️১)
+        if ($facility->kind === BankFacility::CC) {
+            return '0.0000';
+        }
+
         $opened = DB::table('ledger_entries')
             ->where('company_id', CompanyContext::id())
             ->where('source_type', self::OPENING_SOURCE)

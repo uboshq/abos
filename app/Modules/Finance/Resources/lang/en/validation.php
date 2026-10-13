@@ -71,4 +71,7 @@ return [
     'rental_close_unpaid_months' => 'Rent was booked for these months but not paid: :months (:amount in all, owed to the landlord). Pay those months first — in cash or from the deposit — then close the contract.',
     'rental_close_prepaid_not_expensed' => 'Rent paid ahead for :months is still in Prepaid Rent and has not gone to expense. Book that month\'s rent as payable first (from the rent list page), then close the contract.',
     'rental_close_prepaid_needs_refund' => 'Rent for :months after the closing date was paid ahead (:amount) — the landlord gives it back. Pick the money account it comes back to; it goes on the same receipt as the deposit.',
+
+    // Finance line review, 13 Oct 2026 — bank facilities
+    'cc_opening_drawn_lives_in_the_bank' => 'A cash credit\'s drawn money lives in its bank account\'s balance — entering it here would count it twice and double the interest. Leave this at zero and put today\'s drawn amount in the bank account\'s opening balance.',
 ];
