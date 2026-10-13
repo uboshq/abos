@@ -123,11 +123,38 @@ class Approval extends Model implements Drillable
             return false;
         }
 
+        // ⛔ একবার খাটানো সই আবার খাটে না — [[markUsed()]]
+        if ($this->isUsed()) {
+            return false;
+        }
+
         if ($this->state_hash === null || $hash === null) {
             return true;
         }
 
         return hash_equals((string) $this->state_hash, $hash);
+    }
+
+    /**
+     * ⭐ সইটা খাটানো হয়ে গেছে — আবার খাটবে না (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ASignatureIsSpentOnceTest]])।
+     *
+     * ⛔ যে কাগজ কাজের পরে আগের অবস্থায় ফিরতে পারে, তার পুরনো সই ছাপ মিলিয়ে আবার খাটত: বাকির সীমা ১ থেকে ২ লাখে সই পেয়ে
+     * বসল, তারপর ১ লাখে নামানো (নামাতে সই লাগে না), তারপর আবার ২ লাখ — গ্রাহকের সারি আগের মতো, তাই পুরনো সইয়েই পার। বছর বন্ধের
+     * সইও তাই: বন্ধ, আবার খোলা (সব ঘর আগের মতো), আবার বন্ধ — অন্য লাভ-ক্ষতি নিয়ে, পুরনো সইয়ে।
+     * ⓘ যে কাজ সইটা খাটায় সে এটা ডাকে; সারিটা APPROVED-ই থাকে (সিদ্ধান্তের সত্যি বদলায় না), কেবল `payload`-এ সময়টা বসে।
+     */
+    public function markUsed(): void
+    {
+        if ($this->isUsed()) {
+            return;
+        }
+
+        $this->forceFill(['payload' => [...(array) ($this->payload ?? []), 'used_at' => now()->toDateTimeString()]])->save();
+    }
+
+    public function isUsed(): bool
+    {
+        return isset(((array) ($this->payload ?? []))['used_at']);
     }
 
     /**
