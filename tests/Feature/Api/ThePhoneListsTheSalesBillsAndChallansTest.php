@@ -65,7 +65,8 @@ final class ThePhoneListsTheSalesBillsAndChallansTest extends TestCase
         $page = $this->phone($this->owner, '/api/v1/sales/invoices/'.$invoice->public_id)->assertOk()->json();
         $this->assertSame($invoice->document_no, $page['no']);
         $this->assertNotEmpty($page['lines'], '⛔ বিলের সারি ফোনে নেই।');
-        $this->assertStringContainsString('Cosmos', implode(' | ', array_column($page['lines'], 'name')), '⛔ বিলের পণ্যের নাম ফোনে নেই।');
+        $this->assertContains(Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail()->name(), array_column($page['lines'], 'name'),
+            '⛔ বিলের পণ্যের নাম ফোনে নেই।');
         $this->assertCount(1, $page['challans'], '⛔ বিলের চালান ফোনে নেই।');
 
         $challans = $this->phone($this->owner, '/api/v1/sales/challans')->assertOk()->json('rows');
@@ -107,6 +108,8 @@ final class ThePhoneListsTheSalesBillsAndChallansTest extends TestCase
         $other = Customer::acrossDealers()->where('company_id', $this->company->id)->whereNotIn('id', $his)->where('is_active', true)->orderBy('id')->first();
         $this->assertNotNull($other, '⛔ দাবির ভিত্তি নেই — বিক্রয়কর্মী সব দোকান দেখেন।');
 
+        // ⓘ দাবি দেয়ালের, বাকির সীমার নয় — দোকানটার সীমা বড় করে রাখা
+        $other->forceFill(['credit_limit' => '10000000'])->save();
         $invoice = $this->sell($other);
         $this->assertContains($invoice->public_id, array_column($this->phone($this->owner, '/api/v1/sales/invoices')->json('rows'), 'id'),
             'দাবির ভিত্তি নেই — মালিকও বিলটা দেখছেন না।');
