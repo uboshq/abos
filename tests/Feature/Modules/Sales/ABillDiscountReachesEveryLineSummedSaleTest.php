@@ -106,6 +106,12 @@ final class ABillDiscountReachesEveryLineSummedSaleTest extends TestCase
     {
         $from = Carbon::parse('2019-02-01');
 
+        /*
+         * ⓘ এই দাবি বিলের ছাড় মাপে, কার বিক্রি সেটা নয়। ডেমো ডিলারের দেয়াল চালু রাখে, আর তখন বিক্রি যায় বিলের দিনে ডিলারটা
+         * যাঁর নামে বাঁধা তাঁর ঘরে — ২০১৯-এ কেউ বাঁধা নেই, তাই অর্জন শূন্য হত। দেয়াল বন্ধে বিক্রি বিল যিনি কেটেছেন তাঁর।
+         */
+        app(\App\Core\Services\SettingsService::class)->set(\App\Core\Services\DealerScope::SWITCH, false);
+
         $byUser = app(SalesTargetService::class)->achievedByUser($from, $from->copy()->endOfMonth());
         $this->assertEqualsWithDelta(self::NET, (float) ($byUser[$this->owner] ?? 0), 0.01, '⛔ টার্গেটের অর্জনে বিলের ছাড় নেই');
 
