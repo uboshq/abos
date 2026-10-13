@@ -398,7 +398,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  ARowInHandIsLockedAcrossBranchesTest::EXCUSED — রেস্টুরেন্টের উৎপাদন: মালিক বলেছেন ২১ অক্টোবরের পরে
      *   +২৪ ARowInHandIsLockedAcrossBranchesTest::NOT_YET — অস্থায়ী: প্রতিটা সেবার সারাই নিজের সারি তোলে আর ছাদ ততটা কমায়
      */
-    private const CEILING = 384;
+    private const CEILING = 383;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
