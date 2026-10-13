@@ -673,9 +673,16 @@ final class PurchaseReceiptService
 
             if ((bool) $product->tax?->is_inclusive) {
                 $figures = $this->lineFigures($qty, $rate, '0', null, $product->tax);
-                $tax = $figures['tax'];
-                $amount = bcsub($figures['amount'], $tax, 4);
-                $rate = bcdiv($amount, $qty, 4);
+                $rate = bcdiv(bcsub($figures['amount'], $figures['tax'], 4), $qty, 4);
+
+                /*
+                 * ⛔ মূল্য দর থেকেই — স্তর আর খাতা একই সংখ্যা (fe, ১৩ অক্টোবর ২০২৬; [[TheShelfAndTheBooksDriftedByAPaisaTest]])। ⚠️ দর চার
+                 * ঘরে কাটা পড়ে (৬০৮.৬৯৫৭ ÷ ৭ = ৮৬.৯৫৬৫), আর খরচের স্তর বসে পরিমাণ × দরে (৬০৮.৬৯৫৫), অথচ মজুদের খাতা বসত পুরো মূল্যে
+                 * (৬০৮.৬৯৫৭) — প্রতি সারিতে খাতা স্তরের চেয়ে একটু বেশি, পরিমাণের সাথে বাড়ে। ⓘ ভ্যাট বাকিটা নেয়, তাই সারির মোট (লেখা দাম)
+                 * হুবহু থাকে।
+                 */
+                $amount = bcmul($qty, $rate, 4);
+                $tax = bcsub($figures['amount'], $amount, 4);
             }
 
             // ফ্রি পরিমাণ একই সারির একই এককে — "১০ বাক্স, ১ বাক্স ফ্রি"
