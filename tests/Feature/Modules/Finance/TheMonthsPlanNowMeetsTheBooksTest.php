@@ -116,6 +116,26 @@ final class TheMonthsPlanNowMeetsTheBooksTest extends TestCase
     }
 
     /**
+     * ⛔ "1e5" বা ঘরের চেয়ে বড় অঙ্ক — কারণ বলে থামে, ৫০০ নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function test_an_exponent_or_oversized_budget_is_a_reason_not_a_crash(): void
+    {
+        $this->post(route('finance.budget.store'), [
+            'year' => 2026, 'account_id' => $this->expense->id, 'months' => [1 => '1e5'],
+        ])->assertSessionHasErrors('months.1');
+
+        foreach (['1e5', '123456789012345', '-5'] as $raw) {
+            try {
+                app(BudgetService::class)->saveYear(2026, $this->expense->id, null, [1 => $raw]);
+                $this->fail("⛔ বাজেটে \"{$raw}\" বসল");
+            } catch (\Illuminate\Validation\ValidationException) {
+            }
+        }
+
+        $this->assertSame(0, Budget::query()->count());
+    }
+
+    /**
      * ⭐ বাজেট বনাম প্রকৃত — প্রকৃত খতিয়ান থেকে, সময়ের বাইরের খরচ বাদ।
      */
     public function test_actual_comes_from_the_ledger_for_the_months_asked(): void
