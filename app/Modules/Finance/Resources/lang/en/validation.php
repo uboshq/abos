@@ -71,4 +71,10 @@ return [
     'rental_close_unpaid_months' => 'Rent was booked for these months but not paid: :months (:amount in all, owed to the landlord). Pay those months first — in cash or from the deposit — then close the contract.',
     'rental_close_prepaid_not_expensed' => 'Rent paid ahead for :months is still in Prepaid Rent and has not gone to expense. Book that month\'s rent as payable first (from the rent list page), then close the contract.',
     'rental_close_prepaid_needs_refund' => 'Rent for :months after the closing date was paid ahead (:amount) — the landlord gives it back. Pick the money account it comes back to; it goes on the same receipt as the deposit.',
+
+    // ⓘ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+    'deposit_voucher_cancel_from_deposit' => 'This voucher belongs to a deposit: cancel it from the deposit page, which reverses all of its vouchers together.',
+    'profit_share_already_used' => 'Part of this profit has already been withdrawn or capitalised: undo that first, then cancel the declaration.',
+    'rental_voucher_cancel_not_alone' => 'This voucher is the deposit, top-up or refund of a rental contract: cancelling it alone would leave the contract out of step with the books. Correct it from the contract page.',
+    'claim_journal_cancel_not_alone' => 'This journal is the approval or closing of an insurance claim: cancelling it alone would leave the claim out of step with the books. Correct it from the claim page.',
 ];

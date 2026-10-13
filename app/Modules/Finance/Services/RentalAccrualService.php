@@ -290,11 +290,13 @@ final class RentalAccrualService
      */
     public static function settles(RentalContract $contract, Carbon $month): ?string
     {
-        $accrual = RentalAccrual::query()->with('voucher')
+        // ⓘ ভাউচার দেয়াল ছাড়া — হেডারে অন্য শাখা থাকলে প্রদেয় "সই হয়নি" বলে শোধ আটকাত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $accrual = RentalAccrual::query()->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch')])
             ->where('rental_contract_id', $contract->id)->whereDate('for_month', $month->copy()->startOfMonth()->toDateString())
             ->first();
 
-        if ($accrual === null) {
+        // ⛔ বাতিল প্রদেয় কিছুই মেটায় না — মাসটা প্রদেয় ছাড়া, সোজা খরচ হিসেবে শোধ হয়
+        if ($accrual === null || $accrual->voucher?->isCancelled()) {
             return null;
         }
 

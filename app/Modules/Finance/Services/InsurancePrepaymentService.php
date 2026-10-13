@@ -210,12 +210,24 @@ final class InsurancePrepaymentService
 
             $asset ??= $this->account(StandardChart::PREPAID_INSURANCE);
             $amount = bcadd((string) $paper->amount, '0', 2);
+            $on = $paper->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+            /*
+             * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে; সুদের একই নিয়ম ([[InterestAccrualService::reverseBefore()]];
+             * Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে বন্ধ মাসে উল্টো দাখিলা আটকাত, গোটা চাল এক লেনদেনে বলে সবটা ফিরত, আর
+             * পুরনো মাস না খোলা পর্যন্ত কোনো মাসের অগ্রিম বীমাই আর বসত না।
+             */
+            if (app(\App\Core\Services\OpenPeriod::class)->lockOn($on) !== null) {
+                $on = $start->toDateString();
+            }
 
             $reversal = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
                 'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                 'branch_id' => $paper->branch_id,
-                'trx_date' => $paper->for_month->copy()->endOfMonth()->addDay()->toDateString(),
+                // ⛔ আসলটার উল্টো বলে চেনা — আসলটা বাতিল হলে এটাও যায় ([[VoucherService::cancelItsAutoReversal()]])
+                'reversal_of_id' => $paper->voucher_id,
+                'trx_date' => $on,
                 'narration' => __('finance::insurance.prepaid_reversal_narration', [
                     'month' => $paper->for_month->translatedFormat('F Y'), 'policy' => (string) $paper->policy?->policy_no,
                 ]),

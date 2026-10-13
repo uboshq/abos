@@ -124,6 +124,8 @@ final class DepositAccrualService
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    // ⛔ জমার নিজের শাখায় — হেডারের শাখায় নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+                    'branch_id' => $deposit->branch_id,
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::deposit_report.accrual_narration', [
                         'month' => $start->translatedFormat('F Y'), 'deposit' => $deposit->document_no, 'institution' => $deposit->institution,
@@ -167,7 +169,8 @@ final class DepositAccrualService
         $open = DepositAccrual::query()
             ->whereNull('reversal_voucher_id')
             ->where('for_month', '<', $start->toDateString())
-            ->with(['voucher', 'deposit'])
+            // ⓘ ভাউচারের শাখার দেয়াল ছাড়া — হেডারে অন্য শাখা থাকলে জমার ভাউচার "নেই" হয়ে উল্টো দাখিলা চুপচাপ বাদ পড়ত
+            ->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'deposit'])
             ->orderBy('for_month')->orderBy('id')->get();
 
         foreach ($open as $accrual) {
@@ -175,7 +178,7 @@ final class DepositAccrualService
                 continue;
             }
 
-            DB::transaction(function () use ($accrual, &$count): void {
+            DB::transaction(function () use ($accrual, $start, &$count): void {
                 $fresh = $accrual;
                 $this->lockFresh($fresh);
 
@@ -183,12 +186,26 @@ final class DepositAccrualService
                     return;
                 }
 
+                $on = $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+                /*
+                 * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে; সুদের একই নিয়ম ([[InterestAccrualService::reverseBefore()]];
+                 * Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে বন্ধ মাসে উল্টো দাখিলা আটকাত আর পুরো চালটা থামত — পরের কোনো মাসই
+                 * বসানো যেত না, যতদিন না কেউ পুরনো মাস খোলেন। মোট মুনাফা একই, কেবল উল্টোটা প্রথম খোলা মাসে।
+                 */
+                if (app(\App\Core\Services\OpenPeriod::class)->lockOn($on) !== null) {
+                    $on = $start->toDateString();
+                }
+
                 $amount = bcadd((string) $fresh->amount, '0', 2);
 
                 $reversal = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
-                    'trx_date' => $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString(),
+                    // ⛔ জমার শাখায়, আর আসলটার উল্টো বলে চেনা — আসলটা বাতিল হলে এটাও যায় ([[VoucherService::cancelItsAutoReversal()]])
+                    'branch_id' => $fresh->branch_id,
+                    'reversal_of_id' => $fresh->voucher_id,
+                    'trx_date' => $on,
                     'narration' => __('finance::deposit_report.accrual_reversal_narration', [
                         'month' => $fresh->for_month->translatedFormat('F Y'), 'deposit' => (string) $accrual->deposit?->document_no,
                     ]),
@@ -215,9 +232,20 @@ final class DepositAccrualService
         DB::transaction(function () use ($voucher): void {
             $this->lockFresh($voucher);
 
-            if ($voucher->isDraft()) {
-                $this->vouchers->post($voucher);
+            if (! $voucher->isDraft()) {
+                return;
             }
+
+            // ⛔ জমাটা এর মধ্যে বাতিল — মুনাফা আর বসে না, খসড়াটাও বাতিল (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            $accrual = DepositAccrual::query()->where('voucher_id', $voucher->id)->with('deposit')->first();
+
+            if ($accrual?->deposit?->isCancelled()) {
+                $this->vouchers->cancel($voucher, __('finance::validation.deposit_already_cancelled', ['no' => $accrual->deposit->document_no]));
+
+                return;
+            }
+
+            $this->vouchers->post($voucher);
         });
     }
 
