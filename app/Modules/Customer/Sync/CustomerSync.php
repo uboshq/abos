@@ -104,7 +104,8 @@ final class CustomerSync implements SyncsToDevices
                 ->orWhereIn('location_id', fn ($l) => $l->select('l0.id')->from('mdm_locations as l0')
                     ->leftJoin('mdm_locations as l1', 'l1.id', '=', 'l0.parent_id')
                     ->where('l0.company_id', CompanyContext::id())
-                    ->where(fn ($w) => $w->where('l0.updated_at', '>', $since)->orWhere('l1.updated_at', '>', $since))));
+                    ->where(fn ($w) => $w->where('l0.updated_at', '>', $since)->orWhere('l1.updated_at', '>', $since)))
+                ->orWhere(fn ($w) => self::temporaryLimitEndedSince($w, $since, 'temp_credit_limit_until')));
         }
 
         // ⭐ পরের পাতা — (সময়, id) জোড়ার পর থেকে ([[SyncPosition]], গ১৮)
@@ -150,6 +151,18 @@ final class CustomerSync implements SyncsToDevices
             ],
             updatedAt: $customer->updated_at ?? $customer->created_at ?? now(),
         ))->all(), $rows->count(), $limit, $rows->isEmpty() ? null : SyncPosition::of($rows->last()->updated_at, $rows->last()->id));
+    }
+
+    /**
+     * ⛔ অস্থায়ী সীমা শেষ হলে সারিতে কিছুই নড়ে না — অথচ ফোনে যাওয়া `creditLimit` বদলায় ([[Customer::effectiveCreditLimit()]])।
+     * আগে মেয়াদ পেরোনো ২ লাখ সীমা সেলসম্যানের ফোনে থেকে যেত, সারিটা আর কখনো না বদলানো পর্যন্ত (Customer নিরীক্ষা,
+     * ১৩ অক্টোবর ২০২৬; [[AnEndedTemporaryLimitStayedOnThePhoneTest]])। ⓘ শেষ দিনের পরের মধ্যরাতটা জলচিহ্নের পরে আর আজকের আগে।
+     */
+    public static function temporaryLimitEndedSince(\Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query, Carbon $since, string $column): void
+    {
+        $query->whereNotNull($column)
+            ->where($column, '>=', $since->toDateString())
+            ->where($column, '<', Carbon::today()->toDateString());
     }
 
     public function acceptsPush(): bool

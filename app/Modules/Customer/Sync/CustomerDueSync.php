@@ -107,7 +107,9 @@ final class CustomerDueSync implements SyncsToDevices
                     ->orWhere(fn ($inner) => $inner->whereRaw('('.$lastMoved->toSql().') > ?', [
                         ...$lastMoved->getBindings(),
                         $since,
-                    ]));
+                    ]))
+                    // ⛔ অস্থায়ী সীমার মেয়াদ জলচিহ্নের পরে পেরোলেও — সারি নড়ে না, সীমা নড়ে ([[CustomerSync::temporaryLimitEndedSince()]])
+                    ->orWhere(fn ($w) => CustomerSync::temporaryLimitEndedSince($w, $since, 'customers.temp_credit_limit_until'));
             });
         }
 
