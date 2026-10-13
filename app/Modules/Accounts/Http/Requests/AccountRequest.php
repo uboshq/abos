@@ -51,7 +51,13 @@ class AccountRequest extends FormRequest
              * কখনো পড়া হয় না, তার যাচাই একটা প্রতিশ্রুতির ভান।
              */
 
-            'opening_balance' => ['nullable', 'numeric'],
+            /*
+             * ⛔ অঙ্ক ধনাত্মক, দিক আলাদা — খোলা জেরের Dr/Cr (a5-এর ধরা; সমন্বয়ক, ১৩ অক্টোবর ২০২৬; [[AnOpeningBalanceSitsOnTheSideChosenTest]])।
+             * ⓘ আগে কেবল একটা সংখ্যা: ধনাত্মক = খাতের স্বাভাবিক দিক, ঋণাত্মক = উল্টো — নিয়মটা কোথাও লেখা ছিল না, দায়ের খাতে
+             * "Cr ৫০০০" ভেবে −৫০০০ লিখলে Dr হয়ে বসত। এখন ট্রায়াল ব্যালেন্সের মতো: অঙ্ক আর পাশে Dr বা Cr; না বাছলে স্বাভাবিক দিক।
+             */
+            'opening_balance' => ['nullable', 'numeric', 'min:0'],
+            'opening_side' => ['nullable', Rule::in([Account::DEBIT, Account::CREDIT])],
             /*
              * তারিখ লাগে কেবল অশূন্য খোলা ব্যালেন্সে — ক্যাশ টিলের ফর্মে
              * একই ভুল ছিল, একই কারণে।

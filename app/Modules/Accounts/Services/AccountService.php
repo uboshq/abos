@@ -90,6 +90,19 @@ final class AccountService
                 $this->assertCashHasAKeeper($data, $code, $parent, (bool) ($data['is_group'] ?? false));
             }
 
+            /*
+             * ⭐ খোলা জেরের দিক — বাছা দিক খাতের স্বাভাবিক দিকের উল্টো হলে অঙ্কটা ঋণাত্মক হয়ে আজকের পথেই যায়
+             * ([[OpeningBalanceService::forAccount()]] → ইঞ্জিন উল্টো পাশে ধনাত্মক বসায়)। ⓘ খাতা বসানোর নিয়ম অক্ষত; বদল কেবল কে কী বোঝাল।
+             * ([[AnOpeningBalanceSitsOnTheSideChosenTest]]; সমন্বয়ক, ১৩ অক্টোবর ২০২৬)
+             */
+            $nature = $data['nature'] ?? Account::defaultNatureFor($type);
+            $side = $data['opening_side'] ?? null;
+            unset($data['opening_side']);
+
+            if (in_array($side, [Account::DEBIT, Account::CREDIT], true) && $side !== $nature && isset($data['opening_balance'])) {
+                $data['opening_balance'] = bcmul(ltrim((string) $data['opening_balance'], '-') ?: '0', '-1', 4);
+            }
+
             $account = Account::create([
                 ...$data,
                 /*
@@ -101,7 +114,7 @@ final class AccountService
                 'type' => $type,
                 // ⛔ ইনপুট যা-ই পাঠাক, ধরনটা গাছ থেকেই আসে
                 'money_kind' => $this->moneyKindFor($code, $parent),
-                'nature' => $data['nature'] ?? Account::defaultNatureFor($type),
+                'nature' => $nature,
                 'is_group' => (bool) ($data['is_group'] ?? false),
                 'is_active' => $data['is_active'] ?? true,
                 // সিস্টেমের খাত স্ক্রিন থেকে তৈরি হয় না — শুধু প্রমিত ছক
