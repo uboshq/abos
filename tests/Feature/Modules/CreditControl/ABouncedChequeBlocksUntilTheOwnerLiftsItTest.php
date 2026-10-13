@@ -153,15 +153,37 @@ final class ABouncedChequeBlocksUntilTheOwnerLiftsItTest extends TestCase
             ->where('type', 'customer.cheque_bounce_block')->count());
     }
 
+    /**
+     * ⭐ হাতে বসানো আটক তোলেন সীমার সইকারী — `customer.credit_limit` ছকের কোনো ধাপে যিনি আছেন ([[CustomerPolicy::liftCreditBlock()]],
+     * 9999782c4)। ⛔ কেবল `customer.update` যথেষ্ট নয় — নিরাপদ দিক (fe, ১৩ অক্টোবর ২০২৬)। ⓘ আগে এই পরীক্ষা সম্পাদনার চাবিতেই তুলত, আর
+     * পলিসির সাথে লড়ে লাল থাকত; বাউন্স-চেকের আটক কেবল মালিক তোলেন (উপরের পরীক্ষাগুলো)।
+     */
     public function test_a_hand_set_block_still_lifts_with_the_limit_key(): void
     {
         $this->post(route('customer.credit_block.store', $this->dealer), ['reason' => 'হাতে বন্ধ'])->assertSessionHasNoErrors();
 
         $manager = $this->staffWith(['customer.view', 'customer.update']);
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'customer', 'action' => 'credit_limit', 'threshold_amount' => null, 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => \App\Models\ApprovalFlowStep::BY_USER, 'approver_id' => $manager->id]);
+
         $this->actingAs($manager)->delete(route('customer.credit_block.destroy', $this->dealer), ['reason' => 'ঠিক আছে'])
             ->assertSessionHasNoErrors();
 
-        $this->assertFalse($this->dealer->fresh()->isCreditBlocked());
+        $this->assertFalse($this->dealer->fresh()->isCreditBlocked(), '⛔ সীমার সইকারী হাতে বসানো আটক তুলতে পারলেন না');
+    }
+
+    /** ⛔ সম্পাদনার চাবি আছে, সীমার সইকারী নন — হাতে বসানো আটক তোলা যায় না (fe, ১৩ অক্টোবর ২০২৬) */
+    public function test_the_edit_key_alone_cannot_lift_a_hand_set_block(): void
+    {
+        $this->post(route('customer.credit_block.store', $this->dealer), ['reason' => 'হাতে বন্ধ'])->assertSessionHasNoErrors();
+
+        $clerk = $this->staffWith(['customer.view', 'customer.update']);
+
+        $this->actingAs($clerk)->delete(route('customer.credit_block.destroy', $this->dealer), ['reason' => 'ঠিক আছে'])
+            ->assertForbidden();
+
+        $this->assertTrue($this->dealer->fresh()->isCreditBlocked(), '⛔ কেবল সম্পাদনার চাবিতে আটক উঠে গেল');
     }
 
     // ── যন্ত্রপাতি ──
