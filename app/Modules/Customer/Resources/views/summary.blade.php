@@ -13,7 +13,10 @@
 @php
     $money = fn ($value) => \App\Core\Support\Money::format($value);
     $date = fn ($value) => \App\Core\Support\DateFormat::format($value);
-    $limitSet = bccomp((string) $customer->credit_limit, '0', 4) > 0;
+    // ⛔ চলতি সীমা, অস্থায়ীসহ — দেয়াল যা মানে ([[Customer::effectiveCreditLimit()]]); আগে মূল সীমা ০ আর অস্থায়ী ৫০ হাজারে
+    // "সীমা নেই" দেখাত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheTemporaryLimitWasMissingFromThePageTest]])
+    $limitNow = $customer->effectiveCreditLimit();
+    $limitSet = bccomp($limitNow, '0', 4) > 0;
     $available = $customer->availableLimit();
     $ledgerUrl = route('customer.show', $customer).'#transactions';
     $card = 'rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4';
@@ -124,7 +127,7 @@
                 </p>
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('customer::summary.credit_limit') }}:
-                    <span class="num" data-figure="credit-limit">{{ $money($customer->credit_limit) }}</span>
+                    <span class="num" data-figure="credit-limit">{{ $money($limitNow) }}</span>
                 </p>
 
                 @if ($customer->wouldExceedCreditLimit($customer->heldCredit()))
