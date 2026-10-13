@@ -17,6 +17,7 @@ use App\Modules\Sales\Models\RouteVisit;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\SalesTarget;
+use App\Modules\Sales\Reports\LineNetSale;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -252,13 +253,15 @@ final class RouteMetrics
         $achieved = DB::table('sal_invoices as i')
             ->join('sal_invoice_lines as il', 'il.sales_invoice_id', '=', 'i.id')
             ->join('customers as cu', 'cu.id', '=', 'i.customer_id')
+            ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) CompanyContext::id(), $first->toDateString(), $last->toDateString()))
             ->where('i.company_id', CompanyContext::id())
             ->whereNull('i.deleted_at')
             ->whereIn('i.status', DocumentStatus::POSTED)
             ->whereBetween('i.trx_date', [$first->toDateString(), $last->toDateString()])
             ->whereIn('cu.location_id', $routeIds)
             ->groupBy('cu.location_id')
-            ->selectRaw('cu.location_id as route_id, SUM(il.amount - il.tax) as achieved')
+            // ⛔ বিলের ছাড়ের ভাগ বাদ — মানুষের অর্জনের একই সংজ্ঞা ([[LineNetSale]], ১৩ অক্টোবর ২০২৬)
+            ->selectRaw('cu.location_id as route_id, SUM('.LineNetSale::sql().') as achieved')
             ->get();
 
         foreach ($achieved as $row) {
