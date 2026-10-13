@@ -41,8 +41,17 @@ class InsuranceClaimController extends Controller implements HasMiddleware
     {
         return view('finance::insurance.claim', [
             'menu' => $this->menu->forUser($request->user()),
-            'claim' => $claim->load(['policy.institution', 'approvalVoucher', 'closeVoucher']),
-            'receipts' => \App\Modules\Accounts\Models\Voucher::query()
+            /*
+             * ⛔ শাখার দেয়াল ছাড়া — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⓘ৮)। দাবির রসিদ আর অনুমোদন/বন্ধের দাখিলা
+             * দাবির শাখায় বসে; হেডারে অন্য শাখা বাছা মানুষ (মালিক খতিয়ানের লিংক ধরে আসেন) আগে রসিদের তালিকা ফাঁকা দেখতেন,
+             * সইয়ের অপেক্ষার রসিদও। ⓘ পাতাটা নিজেই নাগাল দেখে খোলে ([[OpensOnlyInReach]]), তাই এখানে আর দেয়াল লাগে না।
+             */
+            'claim' => $claim->load([
+                'policy.institution',
+                'approvalVoucher' => fn ($q) => $q->withoutGlobalScope('user-branch'),
+                'closeVoucher' => fn ($q) => $q->withoutGlobalScope('user-branch'),
+            ]),
+            'receipts' => \App\Modules\Accounts\Models\Voucher::acrossBranches()
                 ->where('against_type', InsuranceClaim::drillSourceType())->where('against_id', $claim->id)
                 ->orderBy('trx_date')->orderBy('id')->get(),
             'accounts' => app(VoucherService::class)->moneyAccounts(),
