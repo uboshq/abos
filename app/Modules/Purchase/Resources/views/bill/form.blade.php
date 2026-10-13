@@ -34,7 +34,8 @@
             ->map(fn ($l) => [
                 'product_id' => (string) $l->product_id,
                 'qty' => rtrim(rtrim($l->unbilledQty(), '0'), '.'),
-                'rate' => (string) $l->rate,
+                // ⛔ লেখা দর (ভ্যাটসহ) — চালানের জমা দর ভ্যাট বাদে; বিল নিজে একবারই আলাদা করে (PurchaseReceiptLine::typedRate())
+                'rate' => $l->typedRate(),
                 'discount' => '',
                 'tax' => '',
                 'link' => (string) $l->id,

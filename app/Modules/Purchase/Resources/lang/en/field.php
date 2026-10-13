@@ -28,6 +28,7 @@ return [
     'tax' => 'VAT',
     'total' => 'Total',
     'rate' => 'Rate',
+    'typed_rate' => 'Rate as typed (with VAT)',
     'quantity' => 'Quantity',
     'amount' => 'Amount',
     'document_no' => 'Number',

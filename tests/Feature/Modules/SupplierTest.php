@@ -361,6 +361,49 @@ class SupplierTest extends TestCase
         $this->assertSame($row['payable'], $sum, 'ধাপগুলোর যোগফল মোট প্রদেয়ের সমান হতেই হবে।');
     }
 
+    /**
+     * ⛔ পরিশোধ সবচেয়ে পুরনো বিল আগে মেটায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে প্রতিটা ধাপ ছিল সেই সময়ের নিট: গত সপ্তাহের ১,৫০০ পরিশোধ "০–৩০"-এ বসে ঘরটা −৫০০ করত, আর
+     * চার মাসের পুরনো ২,০০০ পুরোটাই বাকি দেখাত।
+     */
+    public function test_ageing_applies_payments_to_the_oldest_bills_first(): void
+    {
+        $supplier = $this->make();
+
+        $this->entry($supplier, credit: '2000.0000', date: '2026-04-01');   // ১২০+ দিন
+        $this->entry($supplier, credit: '1000.0000', date: '2026-08-01');   // নতুন
+        $this->entry($supplier, debit: '1500.0000', date: '2026-08-05');    // পরিশোধ
+
+        $row = $this->report('supplier.ageing', ['to' => '2026-08-10'])->rows[0];
+
+        $this->assertSame(0, bccomp((string) $row['bucket_90'], '500', 4), '⛔ পরিশোধ পুরনো বিল আগে মেটায়নি।');
+        $this->assertSame(0, bccomp((string) $row['bucket_current'], '1000', 4), '⛔ নতুন বিলের ঘর পরিশোধে কমে গেল।');
+        $this->assertSame(0, bccomp((string) $row['payable'], '1500', 4));
+    }
+
+    /**
+     * ⛔ অগ্রিম ঋণাত্মক বাকি হয়ে মোটে মেশে না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     */
+    public function test_an_advance_is_shown_apart_and_does_not_lower_the_total_payable(): void
+    {
+        $owed = $this->make(['name_en' => 'Owed Mill']);
+        $paidAhead = $this->make(['name_en' => 'Advance Mill']);
+
+        $this->entry($owed, credit: '3000.0000', date: '2026-08-01');
+        $this->entry($paidAhead, credit: '200.0000', date: '2026-08-01');
+        $this->entry($paidAhead, debit: '900.0000', date: '2026-08-02');
+
+        $result = $this->report('supplier.ageing', ['to' => '2026-08-10']);
+        $ahead = collect($result->rows)->firstWhere('party_id', $paidAhead->id);
+
+        $this->assertNotNull($ahead, 'অগ্রিমের সরবরাহকারী তালিকায় নেই — দাবি অন্ধ।');
+        $this->assertSame(0, bccomp((string) $ahead['advance'], '700', 4), '⛔ অগ্রিমটা আলাদা ঘরে নেই।');
+        $this->assertSame(0, bccomp((string) $ahead['payable'], '0', 4), '⛔ অগ্রিম ঋণাত্মক বাকি হয়ে বসল।');
+        $this->assertSame(0, bccomp((string) $result->totals['payable'], '3000', 4),
+            '⛔ মোট দেনা অগ্রিমের সমান কম দেখাল — দুইটা আলাদা জিনিস মিশে গেল।');
+    }
+
     // ── অনুমতি (অলঙ্ঘনীয় শর্ত ৪) ──────────────────────────────────────
 
     public function test_a_user_without_the_permission_cannot_reach_any_screen(): void

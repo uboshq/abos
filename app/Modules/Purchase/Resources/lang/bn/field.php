@@ -28,6 +28,7 @@ return [
     'tax' => 'ভ্যাট',
     'total' => 'সর্বমোট',
     'rate' => 'দর',
+    'typed_rate' => 'লেখা দর (ভ্যাটসহ)',
     'quantity' => 'পরিমাণ',
     'amount' => 'টাকা',
     'document_no' => 'নম্বর',

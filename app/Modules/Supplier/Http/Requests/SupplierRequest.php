@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Supplier\Http\Requests;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Models\UserDataScope;
 use App\Modules\Supplier\Reports\PrincipalCommission;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -72,6 +74,12 @@ class SupplierRequest extends FormRequest
             'branch_id' => [
                 'nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', $this->companyId()),
+                // ⛔ নিজের নাগালের শাখাতেই — অন্য শাখায় সরবরাহকারী বসানো বা সরানো যায় না (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value !== null && $value !== '' && ! app(DataScope::class)->allows($this->user(), UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('validation.branch_out_of_reach'));
+                    }
+                },
             ],
 
             'bin' => ['nullable', 'string', 'max:32'],

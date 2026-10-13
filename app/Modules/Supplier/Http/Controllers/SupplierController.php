@@ -21,6 +21,7 @@ use App\Modules\Supplier\Http\Requests\SupplierRequest;
 use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Contracts\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,6 +37,11 @@ use Illuminate\View\View;
 class SupplierController extends Controller implements HasMiddleware
 {
     use GrandTotals;
+
+    /** খাতার দুই ভাগ ([[show()]]) — দেনা আর বিল-না-আসা মাল */
+    public const PART_PAYABLE = 'payable';
+
+    public const PART_GOODS_NOT_BILLED = 'goods_not_billed';
 
     public function __construct(
         private readonly SupplierService $suppliers,
@@ -221,8 +227,15 @@ class SupplierController extends Controller implements HasMiddleware
          * ছাঁকনিতে; নাহলে শেষ সারির চলমান জের মাথার অঙ্কের সাথে মিলত না। ⛔ সীমার
          * সতর্কতা ([[Supplier::isOverTheirLimit()]]) গোটা কোম্পানিতেই মাপা হয়।
          */
-        $ledger = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
-            ->forParty(Supplier::drillSourceType(), $supplier->id)
+        /*
+         * ⭐ খাতা দুই ভাগে — দেনা আর বিল-না-আসা মাল (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬; মালিক, ১০ অক্টোবর ২০২৬: "দুই ভাগে দেখাও")।
+         * ⛔ আগে সরবরাহকারীর নামের সব সারি এক খাতায়: মাল-গ্রহণের GRNI (২১৬০) সারিও দেনার সাথে যোগ হয়ে "প্রদেয়" দেখাত, তাই
+         * বিল আসার আগেই পুরো টাকাটা শোধযোগ্য মনে হত। ⓘ `?part=goods_not_billed` দ্বিতীয় ভাগ খোলে; বাকি সব সারি প্রথম ভাগে,
+         * যাতে কোনো সারি দুই ভাগের কোথাও হারিয়ে না যায়।
+         */
+        $part = $request->query('part') === self::PART_GOODS_NOT_BILLED ? self::PART_GOODS_NOT_BILLED : self::PART_PAYABLE;
+
+        $ledger = $this->ledgerPart($supplier, $part)
             ->orderBy('trx_date')
             ->orderBy('id');
 
@@ -243,19 +256,38 @@ class SupplierController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'supplier' => $supplier->load(['partyType', 'paymentTerm', 'branch']),
             'payable' => $this->payableInView($supplier),
+            'goodsNotBilled' => $this->netOf($this->ledgerPart($supplier, self::PART_GOODS_NOT_BILLED)),
+            'part' => $part,
             /* ⓘ এক শাখা বাছা থাকলে সব শাখা মিলিয়ে প্রদেয়ও — সীমা ওটা দিয়েই মাপা হয় */
             'payableAll' => ViewedBranch::one() !== null ? $supplier->payable() : null,
             'entries' => $entries,
         ]);
     }
 
-    /** মাথার প্রদেয় — খাতার সারির ঠিক সেই ছাঁকনিতে ([[show()]])। */
+    /** মাথার প্রদেয় — খাতার প্রথম ভাগের ঠিক সেই ছাঁকনিতে ([[show()]])। */
     private function payableInView(Supplier $supplier): string
     {
-        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+        return $this->netOf($this->ledgerPart($supplier, self::PART_PAYABLE));
+    }
+
+    /**
+     * খাতার এক ভাগ — হেডারে বাছা শাখায়। ⓘ বিল-না-আসা মাল = GRNI-র খাত-পরিবার ([[Supplier::goodsNotBilledAccountIds()]]);
+     * দেনা = বাকি সব সারি।
+     */
+    private function ledgerPart(Supplier $supplier, string $part): EloquentBuilder
+    {
+        return ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->forParty(Supplier::drillSourceType(), $supplier->id)
-            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as net')
-            ->value('net') ?? 0;
+            ->when(
+                $part === self::PART_GOODS_NOT_BILLED,
+                fn (EloquentBuilder $q) => $q->whereIn('ledger_entries.account_id', Supplier::goodsNotBilledAccountIds()),
+                fn (EloquentBuilder $q) => $q->whereNotIn('ledger_entries.account_id', Supplier::goodsNotBilledAccountIds()),
+            );
+    }
+
+    private function netOf(EloquentBuilder $rows): string
+    {
+        $net = $rows->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as net')->value('net') ?? 0;
 
         return bcadd((string) $net, '0', 4);
     }

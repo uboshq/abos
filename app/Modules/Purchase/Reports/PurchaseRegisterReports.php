@@ -13,6 +13,7 @@ use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReturn;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -65,7 +66,11 @@ final class PurchaseRegisterReports
                 ],
                 ['key' => 'supplier_name', 'label' => 'purchase::field.supplier'],
                 ['key' => 'status_label', 'label' => 'purchase::register.status', 'width' => '7rem'],
-                ['key' => 'total', 'label' => 'purchase::field.total', 'type' => ReportColumn::MONEY],
+                /*
+                 * ⛔ মোটের সারিতে যোগ নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ খাতায় আদেশ, মাল-গ্রহণ, বিল আর ফেরত
+                 * পাশাপাশি — একই কেনা তিন কাগজে তিনবার আসে, আর খসড়া ও বাতিলও থাকে; যোগফলটা কোনো কিছুরই অঙ্ক নয়।
+                 */
+                ['key' => 'total', 'label' => 'purchase::field.total', 'type' => ReportColumn::MONEY, 'total' => false],
                 ['key' => 'age_days', 'label' => 'purchase::register.age_days', 'width' => '6rem'],
                 ['key' => 'received_pct', 'label' => 'purchase::register.received_pct', 'type' => ReportColumn::PERCENT],
                 ['key' => 'billed_pct', 'label' => 'purchase::register.billed_pct', 'type' => ReportColumn::PERCENT],
@@ -76,7 +81,8 @@ final class PurchaseRegisterReports
     /** আদেশ — এসেছে % আর বিল % লাইন ধরে */
     private static function orders(array $f): Builder
     {
-        $cancelled = DocumentStatus::CANCELLED;
+        // ⛔ কেবল পাকা কাগজ "এসেছে"/"বিল হয়েছে" — খসড়া বিল বা চালান গুনলে কাজটা হয়ে গেছে দেখাত, অথচ খাতায় কিছুই নেই (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+        $posted = "'".implode("','", DocumentStatus::POSTED)."'";
 
         $ordered = '(select COALESCE(SUM(ol.ordered_qty), 0) from pur_order_lines ol where ol.purchase_order_id = o.id)';
 
@@ -84,12 +90,12 @@ final class PurchaseRegisterReports
                 from pur_receipt_lines rl
                 join pur_receipts r on r.id = rl.purchase_receipt_id
                 join pur_order_lines ol on ol.id = rl.purchase_order_line_id
-                where ol.purchase_order_id = o.id and r.status <> '{$cancelled}')
+                where ol.purchase_order_id = o.id and r.status in ({$posted}) and r.deleted_at is null)
             + (select COALESCE(SUM(bl.qty), 0)
                 from pur_bill_lines bl
                 join pur_bills b on b.id = bl.purchase_bill_id
                 join pur_order_lines ol on ol.id = bl.purchase_order_line_id
-                where ol.purchase_order_id = o.id and b.status <> '{$cancelled}'))";
+                where ol.purchase_order_id = o.id and b.status in ({$posted}) and b.deleted_at is null))";
 
         // ⓘ বিল হয়েছে — আদেশ থেকে সরাসরি, অথবা আদেশের মাল-গ্রহণ থেকে
         $billed = "(select COALESCE(SUM(bl.qty), 0)
@@ -98,7 +104,7 @@ final class PurchaseRegisterReports
                 left join pur_receipt_lines rl on rl.id = bl.purchase_receipt_line_id
                 left join pur_order_lines olr on olr.id = rl.purchase_order_line_id
                 left join pur_order_lines old on old.id = bl.purchase_order_line_id
-                where (olr.purchase_order_id = o.id or old.purchase_order_id = o.id) and b.status <> '{$cancelled}')";
+                where (olr.purchase_order_id = o.id or old.purchase_order_id = o.id) and b.status in ({$posted}) and b.deleted_at is null)";
 
         return self::paper($f, 'pur_orders as o', 'o', 1, 'order', PurchaseOrder::drillSourceType())
             ->selectRaw("CASE WHEN {$ordered} > 0 THEN ROUND({$received} * 100 / {$ordered}, 0) END as received_pct")
@@ -108,13 +114,14 @@ final class PurchaseRegisterReports
     /** মাল-গ্রহণ — বিল % */
     private static function receipts(array $f): Builder
     {
-        $cancelled = DocumentStatus::CANCELLED;
+        // ⛔ কেবল পাকা কাগজ "এসেছে"/"বিল হয়েছে" — খসড়া বিল বা চালান গুনলে কাজটা হয়ে গেছে দেখাত, অথচ খাতায় কিছুই নেই (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+        $posted = "'".implode("','", DocumentStatus::POSTED)."'";
         $got = '(select COALESCE(SUM(rl.received_qty), 0) from pur_receipt_lines rl where rl.purchase_receipt_id = r.id)';
         $billed = "(select COALESCE(SUM(bl.qty), 0)
                 from pur_bill_lines bl
                 join pur_bills b on b.id = bl.purchase_bill_id
                 join pur_receipt_lines rl on rl.id = bl.purchase_receipt_line_id
-                where rl.purchase_receipt_id = r.id and b.status <> '{$cancelled}')";
+                where rl.purchase_receipt_id = r.id and b.status in ({$posted}) and b.deleted_at is null)";
 
         return self::paper($f, 'pur_receipts as r', 'r', 2, 'receipt', PurchaseReceipt::drillSourceType())
             ->selectRaw('NULL as received_pct')
@@ -163,6 +170,6 @@ final class PurchaseRegisterReports
             ->selectRaw("CASE {$a}.status {$statuses} ELSE {$a}.status END as status_label")
             ->selectRaw("{$a}.total")
             // ⓘ "আজ" অ্যাপের ঘড়ি থেকে, ডেটাবেসের নয় — UTC ডেটাবেসে রাত ১২টা থেকে ভোর ৬টা বয়স এক দিন কম দেখাত (৬ অক্টোবর ২০২৬)
-            ->selectRaw("CASE WHEN {$a}.status IN ('{$open}') THEN DATEDIFF(?, {$a}.trx_date) END as age_days", [\Illuminate\Support\Carbon::today()->toDateString()]);
+            ->selectRaw("CASE WHEN {$a}.status IN ('{$open}') THEN DATEDIFF(?, {$a}.trx_date) END as age_days", [Carbon::today()->toDateString()]);
     }
 }
