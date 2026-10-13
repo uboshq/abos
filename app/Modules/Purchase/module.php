@@ -836,5 +836,7 @@ return [
         GoodsReceived::class => [OpenInspectionsForGoodsThatNeedThem::class],
         // ⭐ বিল, পেমেন্ট, মাল গ্রহণ, ফেরত, আদেশ — শেষ সইয়ে নিজে পাকা (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
         \App\Core\Events\ApprovalDecided::class => [\App\Modules\Purchase\Listeners\ConfirmThePurchasePaperOnTheLastSignature::class],
+        // ⛔ সরবরাহকারীর চেক ফেরত — পরিশোধও ফেরত, বিল আবার বাকি (fe, ১৩ অক্টোবর ২০২৬)
+        \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\Purchase\Listeners\UndoThePaymentOfABouncedCheque::class],
     ],
 ];
