@@ -22,7 +22,12 @@ trait ReadsTheRowUnderLock
 {
     protected function lockFresh(Model $model): void
     {
-        $fresh = $model->newQuery()->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
+        /*
+         * ⛔ দেখার শাখার দেয়াল ছাড়া — কোম্পানির দেয়াল থাকে (fe, ১৩ অক্টোবর ২০২৬; [[ARowInHandIsLockedAcrossBranchesTest]])। ⚠️ কাগজটা
+         * আগেই দেয়াল পেরিয়ে হাতে এসেছে; `newQuery()` আবার দেয়াল বসাত, আর অন্য শাখা দেখানো মানুষের হাতে "No query results" —
+         * পাকা, সম্পাদনা মাঝপথে থামত। ⓘ দেয়াল না থাকা মডেলে নামটা কিছুই করে না।
+         */
+        $fresh = $model->newQuery()->withoutGlobalScope('user-branch')->whereKey($model->getKey())->lockForUpdate()->firstOrFail();
 
         $model->setRawAttributes($fresh->getAttributes(), true);
     }
