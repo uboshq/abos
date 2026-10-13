@@ -485,7 +485,8 @@ final class SalesInvoiceService
 
             $invoice->update([
                 'trx_date' => $trxDate->toDateString(),
-                'due_on' => $this->dueOn($data, $trxDate, (int) ($data['customer_id'] ?? $invoice->customer_id)),
+                // ⛔ বিলের নিজের গ্রাহক — সম্পাদনায় গ্রাহক বদলায় না, তাই অন্য গ্রাহকের বাকির দিন নয় (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+                'due_on' => $this->dueOn($data, $trxDate, (int) $invoice->customer_id),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
 
