@@ -444,21 +444,35 @@ final class PayrollService
      * ── কেন হাজিরা না বসালে ভাগটা ১ ────────────────────────────────
      * খালি খাতাকে অনুপস্থিতি ধরলে সুইচ চালু করার প্রথম মাসেই সবার
      * বেতন শূন্য হত।
+     *
+     * ── ⛔ চাকরির দিনগুলোই, মাসের বাকিটা নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ─────────
+     * যোগদানের আগের আর ছাড়ার পরের দিন বাদ — হাজিরার সুইচ বন্ধ থাকলেও। ⓘ আগে মাসের যেকোনো দিন চাকরিতে থাকলেই পুরো মাস:
+     * ২৫ অক্টোবর যোগ দিলে মূল ৩০,০০০ + বাড়িভাড়া ৫০% = ৪৫,০০০, অথচ পাওনা ৭ দিনের ১০,১৬১.২৯। একই মাসের দিনের ভাগ, তাই
+     * অনুপস্থিতির কাটার সাথে মেলে।
      */
     private function attendanceFactor(Employee $employee, Carbon $monthEnd): string
     {
-        if (! $this->settings->get('hr.attendance_affects_salary')) {
-            return '1';
-        }
-
-        $unpaid = $this->attendance->unpaidDays($employee, $monthEnd);
-
-        if (bccomp($unpaid, '0', 1) <= 0) {
-            return '1';
-        }
-
         $daysInMonth = (string) $monthEnd->daysInMonth;
-        $paid = bcsub($daysInMonth, $unpaid, 1);
+        $from = $monthEnd->copy()->startOfMonth()->startOfDay();
+        $to = $monthEnd->copy()->startOfDay();
+
+        if ($employee->joining_date !== null && $employee->joining_date->copy()->startOfDay()->gt($from)) {
+            $from = $employee->joining_date->copy()->startOfDay();
+        }
+
+        if ($employee->leaving_date !== null && $employee->leaving_date->copy()->startOfDay()->lt($to)) {
+            $to = $employee->leaving_date->copy()->startOfDay();
+        }
+
+        $employed = $from->gt($to) ? '0' : (string) ((int) $from->diffInDays($to) + 1);
+        $unpaid = $this->settings->get('hr.attendance_affects_salary')
+            ? $this->attendance->unpaidDays($employee, $monthEnd) : '0';
+
+        if (bccomp($employed, $daysInMonth, 1) >= 0 && bccomp($unpaid, '0', 1) <= 0) {
+            return '1';
+        }
+
+        $paid = bcsub($employed, $unpaid, 1);
 
         // পুরো মাস অনুপস্থিত থাকলে ভাগটা শূন্য, ঋণাত্মক নয়
         if (bccomp($paid, '0', 1) <= 0) {
