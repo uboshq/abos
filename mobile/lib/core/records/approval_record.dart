@@ -71,6 +71,8 @@ class ApprovalRecord {
         'Note' => 'নোট',
         'MoneyTransfer' => 'টাকা স্থানান্তর',
         'Promotion' => 'অফার',
+        // ⭐ বাকির সীমা বাড়ানোর অনুরোধ — মালিকের সইয়ে (বাকি নিয়ন্ত্রণ, ১৩ অক্টোবর ২০২৬)
+        'CustomerCreditRequest' => 'বাকির সীমা বাড়ানোর অনুরোধ',
         _ => documentType.isEmpty ? 'নথি' : documentType,
       };
 
