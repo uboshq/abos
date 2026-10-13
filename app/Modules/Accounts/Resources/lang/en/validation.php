@@ -32,6 +32,7 @@ return [
     'till_code_taken' => 'Another cash counter already uses code :code.',
     'till_has_money' => 'This counter still holds :amount. Deposit or transfer it first, then close.',
     'till_has_money_on_the_way' => 'Transfer :no of this box is still on its way or waiting for its signature - finish or cancel it before closing the box.',
+    'till_opening_awaits_signature' => 'The box opening balance is awaiting a signature — its holder and branch cannot change before the decision.',
     'till_holder_needs_handover' => 'The box holds :amount - change its holder from the box page with a handover, counting the cash.',
     'handover_closed_till' => 'A closed box cannot be handed over.',
     'handover_same_holder' => 'The box is already with this person - pick someone else.',

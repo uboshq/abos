@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Listeners;
 
+use App\Core\Engines\Approval\SignedPaperFinisher;
 use App\Core\Events\ApprovalDecided;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
@@ -129,6 +130,18 @@ final class FinishTheAccountsPaperOnTheLastSignature
 
         // ⓘ খোলা জের একবারই ওঠে — আগে উঠে থাকলে [[OpeningBalanceService::forAccount()]] নিজেই কিছু করে না
         if ($paper instanceof CashTill && $paper->account !== null) {
+            /*
+             * ⛔ সই যে বাক্স আর যে অঙ্ক দেখে দেওয়া, খাতায় কেবল সেটাই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+             * ([[ATillOpeningIsPostedOnlyAsSignedTest]])। ⓘ অঙ্কটা থাকে খাতের `opening_balance`-এ, বাক্সের ছাপের বাইরে; আগে শেষ সই
+             * খাতের **এখনকার** অঙ্ক পোস্ট করত। ⓘ মালিক বা শাখা অপেক্ষার মাঝে আর বদলায় না ([[CashTillService::update()]]); বাক্সের
+             * বাকি ঘর (নাম, প্রধান কি না) খোলার জেরের কথা নয়, তাই এখানে কেবল অঙ্ক মেলানো হয়।
+             */
+            if (bccomp((string) $paper->account->opening_balance, (string) $approval->amount, 4) !== 0) {
+                app(SignedPaperFinisher::class)->refuseChanged($paper, $event->actorId, route('accounts.till.show', $paper));
+
+                return;
+            }
+
             app(OpeningBalanceService::class)->forAccount($paper->account);
 
             return;
