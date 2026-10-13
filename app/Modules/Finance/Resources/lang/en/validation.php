@@ -49,6 +49,7 @@ return [
     'capital_held_for_signature' => ':no is profit taken into capital and waits for its signature — it cannot be edited or deleted; the signer can refuse it, or its voucher can be cancelled.',
     'capital_rows_changed' => 'The capital rows behind this voucher no longer match it — nothing was posted.',
     'withdrawal_only_cash_posts' => ':no was taken as an asset or goods — only a cash withdrawal leaves a money account; book the asset or stock leaving through its own journal.',
+    'kind_shape_in_use' => 'Deposits were opened under :name, so its shape, issuer and "personal only" cannot change — only its name and order. Add a new kind instead.',
     'facility_needs' => 'A :kind facility cannot be worked out without this field.',
     'facility_already_closed' => 'Facility :no is already closed.',
     'facility_still_owed' => 'Facility :no still owes :owed in the books — post the repayment (or the bank\'s waiver) first, then close it.',
