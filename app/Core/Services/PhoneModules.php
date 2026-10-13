@@ -153,6 +153,14 @@ final class PhoneModules
             return false;
         }
 
+        /*
+         * ⛔ এই শাখায় বন্ধ হলে ফোনেও বন্ধ — ওয়েবের একই নিয়ম ([[RefuseSwitchedOffScreens]]); আগে ফোন কেবল কোম্পানির সুইচ দেখত,
+         * তাই বিক্রি বন্ধ শাখার বিক্রয়কর্মী ফোন থেকে অর্ডার পাঠাতেন (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ASwitchedOffModuleStillSyncedTest]])।
+         */
+        if (in_array($code, \App\Models\BranchModule::switchedOffIn(\App\Core\Support\CompanyContext::branchId()), true)) {
+            return false;
+        }
+
         return (bool) $this->settings->get(self::key($code), false);
     }
 
