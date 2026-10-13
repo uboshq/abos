@@ -442,7 +442,8 @@ final class DepositService
      */
     public function standing(?string $issuer = null): array
     {
-        $rows = Deposit::query()->open()
+        // ⛔ হেডারে বাছা শাখা — নিচের তালিকার একই সারি; আগে মোট সব শাখার, তালিকা এক শাখার (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $rows = Deposit::query()->inViewedBranch()->open()
             ->when($issuer !== null, fn ($q) => $q->issuedBy($issuer))
             ->with('kind')->get();
 

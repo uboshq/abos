@@ -108,6 +108,21 @@ final class TheDepositMovedInTheHeadersBranchTest extends TestCase
         $this->assertSame('0', $this->net(StandardChart::INTEREST_INCOME, $ids), '⛔ যে জমা কখনো ছিল না তার মুনাফা আয়ে রয়ে গেল');
     }
 
+    /** ⛔ জমার পাতার উপরের মোট সব শাখার গুনত, অথচ নিচের তালিকা হেডারের শাখার (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
+    public function test_the_summary_above_the_list_counts_the_header_branch_only(): void
+    {
+        $this->openIn('NTK');
+        $this->choose('MMS');
+
+        $listed = Deposit::query()->inViewedBranch()->open()->get();
+        $standing = app(DepositService::class)->standing();
+
+        $this->assertSame($listed->count(), $standing['count'], '⛔ মোটে অন্য শাখার জমা গোনা হল');
+        $this->assertSame(0, bccomp(
+            $listed->filter(fn (Deposit $d) => $d->isBusinessAsset())->reduce(fn (string $s, Deposit $d) => bcadd($s, (string) $d->principal, 4), '0'),
+            $standing['business'], 4), '⛔ ব্যবসার জমার মোট তালিকার সাথে মেলে না');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function openIn(string $branch): Deposit
