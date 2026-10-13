@@ -118,7 +118,7 @@ final class DocumentApproval
         $hash = app(DocumentFingerprint::class)->of($document);
 
         if ($latest?->status === Approval::APPROVED) {
-            if ($latest->stillCovers($amount, $hash)) {
+            if ($latest->stillCovers($amount, $hash) && $this->signedTheSame($latest, $payload)) {
                 return null;
             }
 
@@ -356,6 +356,59 @@ final class DocumentApproval
         }
 
         return $changed->greaterThan($approval->decided_at);
+    }
+
+    /**
+     * ⭐ সই যে তথ্যে চাওয়া হয়েছিল, কাজটা এখনো সেই তথ্যেই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+     * ([[ASignatureCoversTheValuesItWasAskedWithTest]])।
+     *
+     * ⓘ কিছু কাজের আসল কথা কাগজের ঘরে নয়, অনুরোধের তথ্যে (`$payload`): সম্পদ বিদায়ের টাকা কোন খাতে, কোন তারিখে, বিক্রি না
+     * হারানো; ঋণের কিস্তি কোন খাত থেকে। শেষ সই ঠিক এগুলো দিয়েই কাজটা শেষ করে ([[FinishTheAccountsPaperOnTheLastSignature]])।
+     * ⛔ কিন্তু শেষ করা আটকালে (মাস বন্ধ, খাত বন্ধ) হাতে আবার চাপলে আগে কেবল কাগজের ছাপ আর অঙ্ক মেলানো হত — অন্য খাত,
+     * অন্য তারিখ, "বিক্রি"-র বদলে "হারানো" দিয়ে পুরনো সইয়েই পার হত।
+     *
+     * ⓘ পুরনো সারি (এই তথ্য রাখার আগের) — একটাও চাবি না থাকলে আগের মতোই খাটে। খালি (`null`) মান সারিতে রাখা হয় না, তাই
+     * "নেই" আর "খালি" এক।
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function signedTheSame(Approval $approval, array $payload): bool
+    {
+        if ($payload === []) {
+            return true;
+        }
+
+        $signed = (array) ($approval->payload ?? []);
+
+        if (array_intersect_key($payload, $signed) === []) {
+            return true;
+        }
+
+        foreach ($payload as $key => $value) {
+            if (json_encode(self::plain($signed[$key] ?? null)) !== json_encode(self::plain($value))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** তুলনার জন্য এক রূপ — সংখ্যা চার ঘরে (৫০০ = ৫০০.০০০০), হ্যাঁ/না = ১/০, তালিকা ভিতরে একই নিয়মে */
+    private static function plain(mixed $value): mixed
+    {
+        if (is_object($value)) {
+            // ⓘ সারিতে যা জমা থাকে তা JSON — বস্তুও সেই রূপে মেলানো হয়
+            $value = json_decode((string) json_encode($value), true);
+        }
+
+        return match (true) {
+            $value === null || $value === '' => null,
+            is_array($value) => array_map(self::plain(...), $value),
+            is_bool($value) => $value ? '1' : '0',
+            (is_int($value) || is_float($value) || is_string($value)) && preg_match('/^-?\d+(\.\d+)?$/', (string) $value) === 1
+                => bcadd((string) $value, '0', 4),
+            default => (string) $value,
+        };
     }
 
     /**
