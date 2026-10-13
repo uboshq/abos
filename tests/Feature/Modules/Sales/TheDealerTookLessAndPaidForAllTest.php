@@ -73,6 +73,32 @@ final class TheDealerTookLessAndPaidForAllTest extends TestCase
             '⛔ না-নেওয়া মাল গুদামে ফেরেনি।');
     }
 
+    /**
+     * ⛔ বন্ধ করা কারণ নিজের ফেরতে বসে না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে তালিকার প্রথম কারণটাই নেওয়া হত,
+     * বন্ধ হলেও; ফেরতের নিজের পাহারা তখন থামাত, আর চালকের "আংশিক পৌঁছেছে" লেখাই যেত না।
+     */
+    public function test_a_switched_off_reason_is_not_used_for_the_return(): void
+    {
+        $codes = \App\Modules\MasterData\Models\ReasonCode::query()->inContext(\App\Modules\MasterData\Models\ReasonCode::SALES_RETURN);
+        $first = (clone $codes)->orderByDesc('returns_to_stock')->orderBy('id')->firstOrFail();
+        $this->assertGreaterThan(1, (clone $codes)->where('is_active', true)->count(), 'দৃশ্যটাই ভুল — চালু কারণ একটাই।');
+        DB::table('mdm_reason_codes')->where('id', $first->id)->update(['is_active' => false]);
+
+        $challan = $this->dispatched();
+        [$biscuit, $tea] = $challan->lines()->orderBy('line_no')->get()->all();
+
+        app(DeliveryStageService::class)->move($challan, DeliveryStage::PARTIALLY_DELIVERED, [
+            'receiver_name' => 'রহিম',
+            'lines' => [$biscuit->id => '2', $tea->id => '3'],
+        ]);
+
+        $return = SalesReturn::query()->where('sale_no', $challan->fresh()->sale_no)->first();
+
+        $this->assertNotNull($return, '⛔ আংশিক পৌঁছানোর ফেরত জন্মায়নি।');
+        $this->assertNotSame((int) $first->id, (int) $return->reason_code_id, '⛔ বন্ধ করা কারণ ফেরতে বসেছে।');
+        $this->assertSame(DocumentStatus::CONFIRMED, $return->status);
+    }
+
     /** ⛔ পাল্টা-দাবি: পুরো পৌঁছালে কোনো ফেরত নয় */
     public function test_a_full_delivery_makes_no_return(): void
     {
