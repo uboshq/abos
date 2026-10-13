@@ -167,7 +167,7 @@ final class PurchaseReturnService
              * ইঞ্জিনের কাঁচা ত্রুটিতে। ⭐ তাই সারিটা তালা দিয়ে ডাটাবেজ থেকেই
              * অবস্থাটা পড়া হয়।
              */
-            $current = PurchaseReturn::query()->whereKey($return->id)->lockForUpdate()->value('status');
+            $current = PurchaseReturn::acrossBranches()->whereKey($return->id)->lockForUpdate()->value('status');
 
             if ($current !== DocumentStatus::DRAFT) {
                 throw ValidationException::withMessages([
@@ -306,7 +306,7 @@ final class PurchaseReturnService
 
         return DB::transaction(function () use ($return, $reason, $date) {
             // ⛔ confirm()-এর মতোই — পুরনো কপি দিয়ে দ্বিতীয় বাতিল মাল আবার ফেরাত। ২৯ সেপ্টেম্বর ২০২৬।
-            $current = PurchaseReturn::query()->whereKey($return->id)->lockForUpdate()->value('status');
+            $current = PurchaseReturn::acrossBranches()->whereKey($return->id)->lockForUpdate()->value('status');
 
             if ($current === DocumentStatus::CANCELLED) {
                 throw ValidationException::withMessages([
