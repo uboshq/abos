@@ -260,7 +260,7 @@ class CapitalController extends Controller implements HasMiddleware
              */
             'paper' => ['nullable', 'file'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'share_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'narration' => ['nullable', 'string', 'max:500'],
         ];
@@ -383,7 +383,12 @@ orm]]): *"সম্পাদনা
 
     private function assertStillADraft(CapitalEntry $entry): void
     {
-        if ($entry->status !== CapitalEntry::DRAFT) {
+        /*
+         * ⛔ ভাউচারে বাঁধা বা লাভ/খোলা জের থেকে আসা খসড়া হাতে বদলায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ লাভ মূলধনে নেওয়া
+         * সইয়ের অপেক্ষায় থাকলে তার সারি মুছলে শেষ সই তবু গোটা ভাউচার বসাত, অথচ পাওনা থেকে আর কাটা হত না — একই লাভ দুবার দেওয়া যেত।
+         */
+        if ($entry->status !== CapitalEntry::DRAFT || $entry->voucher_id !== null
+            || in_array($entry->in_kind, [CapitalEntry::PROFIT, CapitalEntry::OPENING], true)) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.capital_already_posted', [
                     'no' => $entry->document_no,

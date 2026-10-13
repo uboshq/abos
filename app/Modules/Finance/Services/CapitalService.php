@@ -240,7 +240,12 @@ final class CapitalService
      */
     private function assertStillADraft(CapitalEntry $entry): void
     {
-        if ($entry->status !== CapitalEntry::DRAFT) {
+        /*
+         * ⛔ ভাউচারে বাঁধা বা লাভ/খোলা জের থেকে আসা খসড়া হাতে বদলায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ লাভ মূলধনে নেওয়া
+         * সইয়ের অপেক্ষায় থাকলে তার সারি মুছলে শেষ সই তবু গোটা ভাউচার বসাত, অথচ পাওনা থেকে আর কাটা হত না — একই লাভ দুবার দেওয়া যেত।
+         */
+        if ($entry->status !== CapitalEntry::DRAFT || $entry->voucher_id !== null
+            || in_array($entry->in_kind, [CapitalEntry::PROFIT, CapitalEntry::OPENING], true)) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.capital_already_posted', [
                     'no' => $entry->document_no,
@@ -399,7 +404,7 @@ final class CapitalService
             ->posted()
             ->inViewedBranch()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED))) // ⛔ দেয়াল ছাড়া — কেবল বাতিল কি না ([[positions()]]-এর একই নিয়ম; Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
             ->groupBy('branch_id')
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as total')
             ->pluck('total', 'branch_id');
@@ -591,7 +596,7 @@ final class CapitalService
             ->posted()
             ->whereIn('person_id', $personIds)
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED))) // ⛔ দেয়াল ছাড়া — কেবল বাতিল কি না ([[positions()]]-এর একই নিয়ম; Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
             ->get(['person_id', 'contributor_type', 'share_percent']);

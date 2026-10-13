@@ -87,7 +87,7 @@ final class OwnerCapital
             ->where('company_id', CompanyContext::id())
             ->posted()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED))) // ⛔ দেয়াল ছাড়া — কেবল বাতিল কি না ([[positions()]]-এর একই নিয়ম; Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
             ->groupBy('branch_id')
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as n')
             ->pluck('n', 'branch_id');

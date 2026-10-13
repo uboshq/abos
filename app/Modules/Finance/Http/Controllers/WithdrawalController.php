@@ -178,7 +178,7 @@ class WithdrawalController extends Controller implements HasMiddleware
             'person_relationship' => ['nullable', 'string', 'max:60'],
             'person_address' => ['nullable', 'string', 'max:191'],
             'person_nid_tin' => ['nullable', 'string', 'max:40'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             /*
              * ⭐ উত্তোলনের ধরন — ১৮ সেপ্টেম্বর ২০২৬।
@@ -264,7 +264,7 @@ class WithdrawalController extends Controller implements HasMiddleware
                 Rule::exists('mdm_people', 'id')->where('company_id', $companyId)],
             'person_new' => ['nullable', 'string', 'max:120', 'required_without:person_id'],
             'person_mobile' => ['nullable', 'string', 'max:32'],
-            'monthly_cap' => ['nullable', 'numeric', 'min:0'],
+            'monthly_cap' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
         ]);
 
         /*
