@@ -21,6 +21,7 @@ return [
         .'groups take no entries of their own, and the existing ones would stop being counted.',
     'has_children_must_stay_group' => 'This account holds other accounts, so it must stay a group.',
     'has_entries_cannot_renature' => 'This account has entries — its Dr/Cr nature can no longer change; every past balance would show with the wrong sign.',
+    'money_kind_cannot_flip' => 'This account has entries — it cannot move between money accounts (cash, bank, mobile money) and ordinary accounts.',
     'has_entries_cannot_retype' => 'This account has transactions, so its type cannot change — '
         .'the existing entries would move to a different report.',
     'system_account_locked' => '":name" is a system account. Sales, purchases and other modules '
