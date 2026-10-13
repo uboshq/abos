@@ -183,14 +183,26 @@ final class PurchaseOrderService
             ]);
         }
 
-        $order->update([
-            'status' => DocumentStatus::CANCELLED,
-            'cancelled_by' => auth()->id(),
-            'cancelled_at' => now(),
-            'cancel_reason' => $reason,
-        ]);
+        return DB::transaction(function () use ($order, $reason) {
+            $order->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
 
-        return $order->fresh(['lines']);
+            /*
+             * ⛔ যে চাহিদা থেকে আদেশটা হয়েছিল, সেটা আবার খোলা — fe, ১৩ অক্টোবর ২০২৬ ([[ACancelledOrderLeftItsRequisitionStuckTest]])।
+             * ⚠️ আগে চাহিদা "সম্পন্ন" আর আদেশের দিকে দেখানো অবস্থায় আটকে থাকত: আবার আদেশও হত না, বাতিলও না, অথচ খরচকেন্দ্রের মাসিক
+             * বাজেটে গোনা হত — কেনাই হয়নি এমন মালে বাজেট খরচ। ⓘ এখন অনুমোদিত অবস্থায় ফেরে: নতুন আদেশ বানানো যায়, বা বাতিল করে বাজেট ফেরানো।
+             */
+            \App\Modules\Purchase\Models\PurchaseRequisition::acrossBranches()
+                ->where('purchase_order_id', $order->id)
+                ->where('status', DocumentStatus::CLOSED)
+                ->update(['status' => DocumentStatus::CONFIRMED, 'purchase_order_id' => null]);
+
+            return $order->fresh(['lines']);
+        });
     }
 
     /**

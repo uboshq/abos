@@ -300,6 +300,28 @@ final class ThePersonWhoNeededItHadNoWayToAskTest extends TestCase
             ->where('narration', 'like', '%'.$requisition->document_no.'%')->count(), '⛔ একই চাহিদা থেকে দুটো আদেশ।');
     }
 
+    /**
+     * ⛔ আদেশ বাতিল হলে তার চাহিদা আবার খোলা — নতুন আদেশ বা বাতিল (fe, ১৩ অক্টোবর ২০২৬; [[PurchaseOrderService::cancel()]])।
+     * ⚠️ আগে চাহিদা "সম্পন্ন" অবস্থায় আটকে: আবার আদেশ হত না, বাতিলও না, অথচ বাজেটে গোনা হত।
+     */
+    public function test_a_cancelled_order_frees_its_requisition(): void
+    {
+        $requisition = $this->aRequisition(qty: '10', rate: '25');
+        $this->service()->approve($requisition);
+        $done = $this->service()->toOrder($requisition->fresh(), $this->orderData());
+
+        app(\App\Modules\Purchase\Services\PurchaseOrderService::class)->cancel(
+            \App\Modules\Purchase\Models\PurchaseOrder::query()->findOrFail($done->purchase_order_id), 'সরবরাহকারী দিতে পারবেন না');
+
+        $freed = $requisition->fresh();
+        $this->assertNull($freed->purchase_order_id, '⛔ বাতিল আদেশের পরেও চাহিদা তার দিকে দেখায়।');
+        $this->assertTrue($freed->canBecomeAnOrder(), '⛔ বাতিল আদেশের চাহিদা থেকে নতুন আদেশ হয় না।');
+
+        // ⓘ চাইলে বাতিল করে বাজেট ফেরানো যায়
+        $this->service()->cancel($freed, 'আর লাগবে না');
+        $this->assertSame(DocumentStatus::CANCELLED, $requisition->fresh()->status);
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function service(): PurchaseRequisitionService
