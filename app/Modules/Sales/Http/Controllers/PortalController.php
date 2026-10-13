@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -370,8 +371,7 @@ class PortalController extends Controller
         return view('sales::portal.claim', [
             'customer' => $customer,
             // ⛔ কেবল ব্যাংক — MFS নয়; `ofMoneyKind()` নিজেই দল ছাঁকে
-            'banks' => Account::query()
-                ->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
+            'banks' => $this->banks(),
             // ⭐ নিজের খোলা বিল — "কোন বিলের বিপরীতে" (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬)
             'openBills' => $this->claims->openBills($customer),
         ]);
@@ -386,7 +386,11 @@ class PortalController extends Controller
             'amount' => ['required', 'numeric', 'gt:0'],
             'method' => ['required', 'in:bank,mfs,cash'],
             'reference' => ['nullable', 'string', 'max:64'],
-            'bank_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
+            /*
+             * ⛔ কেবল এই কোম্পানির চালু ব্যাংক খাত — পর্দার তালিকাটাই ([[banks()]]); ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা।
+             * ⓘ আগে `exists:accounts,id` — যেকোনো কোম্পানির যেকোনো খাত চলত; কর্মীর দরজা আগে থেকেই `Rule::in` ([[DepositRequestController]])।
+             */
+            'bank_account_id' => ['nullable', 'integer', Rule::in($this->banks()->modelKeys())],
             'note' => ['nullable', 'string', 'max:500'],
             // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF, ৫ MB)
             'slip' => ['nullable', 'file', 'max:'.intdiv(AttachmentEngine::SLIP_MAX_BYTES, 1024)],
@@ -403,6 +407,18 @@ class PortalController extends Controller
         return redirect()
             ->route('sales.portal.home')
             ->with('status', __('sales::portal.claim_raised'));
+    }
+
+    /**
+     * দাবির ব্যাংক তালিকা — পর্দা আর যাচাই একই তালিকা পড়ে।
+     *
+     * ⓘ আমাদের নিজের খাত, কারো কাগজ নয়; টেন্যান্ট ছাঁকনি বহাল ([[EveryPortalScreenAsksTheNarrowPathTest]]-এর ঘোষিত একটাই ডাক)।
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Account>
+     */
+    private function banks(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get();
     }
 
     /**
