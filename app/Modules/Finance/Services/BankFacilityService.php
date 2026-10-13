@@ -8,6 +8,7 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Voucher;
@@ -317,10 +318,21 @@ class BankFacilityService
             return true;
         }
 
+        /*
+         * ⛔ মঞ্জুরির মাস বন্ধ থাকলে আজকের তারিখে — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️২)।
+         * ⓘ আগে বন্ধ মাসে পুরো জমাটাই থামত, আর বছর আগের ঋণ কোনোদিন তোলা যেত না। খোলা মাসে আগের মতোই মঞ্জুরির দিন —
+         * সব সময় আজকের তারিখে (খোলা ব্যালেন্সের নিয়ম) বসানো হবে কি না, সেটা মালিকের সিদ্ধান্তের অপেক্ষায়।
+         */
+        $on = $facility->sanctioned_on->toDateString();
+
+        if (app(OpenPeriod::class)->lockOn($on) !== null) {
+            $on = now()->toDateString();
+        }
+
         $this->posting->post(
             sourceType: self::OPENING_SOURCE,
             sourceId: (int) $facility->id,
-            trxDate: $facility->sanctioned_on->toDateString(),
+            trxDate: $on,
             lines: [
                 ['account_id' => (int) $equity->id, 'debit' => $outstanding],
                 ['account_id' => (int) $facility->liability_account_id, 'credit' => $outstanding],
