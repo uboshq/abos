@@ -46,6 +46,24 @@ final class PartyReports
 
     private const COLLECTED = "SUM(CASE WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.debit ELSE ledger_entries.credit END)";
 
+    /**
+     * ⛔ বয়সের হিসাবে উল্টানো দাখিলা জোড়া ধরে বাদ — তারিখ পর্যন্ত যে দাখিলার উল্টো সারি বসেছে, মূল আর উল্টো দুটোই
+     * (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ACancelledBillAgedTheOldDueTest]])।
+     *
+     * ⚠️ আগে উল্টো সারির ক্রেডিট "আদায়" হয়ে সবচেয়ে পুরনো বকেয়া থেকে কাটত আর মূল বিলটা নতুন বালতিতে থেকে যেত: ১২০ দিনের
+     * ১ লাখ বকেয়ার পাশে কাল ৫০ হাজারের বিল আজ বাতিল হলে ৯০+ = ৫০ হাজার, ০–৩০ = ৫০ হাজার — সবচেয়ে ঝুঁকির বকেয়াটাই লুকাত।
+     * ⓘ উল্টো সারি মূলের হুবহু আয়না ([[PostingEngine::reverse()]]), তাই মোট বকেয়া বদলায় না; সম্পাদনার নতুন দাখিলা থাকে।
+     */
+    private static function withoutUndonePostings(\Illuminate\Database\Query\Builder $q, string $to): void
+    {
+        $q->where('ledger_entries.source_type', 'not like', '%:reversal')
+            ->whereNotExists(fn ($undo) => $undo->selectRaw('1')->from('ledger_entries as undo')
+                ->whereColumn('undo.company_id', 'ledger_entries.company_id')
+                ->whereColumn('undo.source_id', 'ledger_entries.source_id')
+                ->whereRaw("undo.source_type = CONCAT(ledger_entries.source_type, ':reversal')")
+                ->whereColumn('undo.id', '>', 'ledger_entries.id')
+                ->where('undo.trx_date', '<=', $to));
+    }
 
     public static function registerAll(ReportEngine $engine): void
     {
@@ -318,6 +336,7 @@ final class PartyReports
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('customers.party_type_id', $type))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
+                    ->tap(fn ($q) => self::withoutUndonePostings($q, (string) $f['to']))
                     ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                     ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) <> 0')
                     ->orderByRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) DESC')
