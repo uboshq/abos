@@ -104,6 +104,49 @@ final class TheKeptDraftWasCountedTwiceTest extends TestCase
             'খসড়াটা খুলে পাকা করার সময় সে নিজেকেই আটকে রাখছে — বিলটা দুবার গোনা হচ্ছে।');
     }
 
+    /**
+     * ⭐ বাড়তি টাকা আগের বকেয়া শোধ করে — মালিক, ১৩ অক্টোবর ২০২৬ (DRF-0120, M/S. Saiful Store: বিল ৩১,৯৭৭.০৬, নেওয়া
+     * ৩২,২৫০, আগের বকেয়া ১০৮.২৮, সীমা ০ — পর্দা "জমা ১৬৪.৬৬" বলে, অথচ সারাংশ "সীমা পার ১০৮.২৮ — নিশ্চিত হবে না")।
+     *
+     * ⛔ সারাংশ "এই বিলে বাকি" শূন্যে কেটে দিত, তাই বিলের বাড়তি টাকাটা হারাত আর কেবল আগের বকেয়াটা সীমা ছাড়াত। দরজা
+     * ([[CreditExposure::assertRoom()]]) চিহ্নসহ গোনে (বিল − নেওয়া), তাই বিল আসলে হত — সারাংশ মিথ্যা "না" বলত।
+     * দাবি — একই খসড়া: বাড়তি টাকায় পুরনো বকেয়া ঢাকলে থামে না; একই বিল আগের বকেয়ার চেয়ে কম বাড়তি দিলে থামে।
+     */
+    public function test_extra_money_on_the_bill_settles_the_old_due_in_the_summary_too(): void
+    {
+        // ⓘ আগের বকেয়া ১০০ — জাবেদায় পাওনা Dr (গ্রাহকের নামে) / বিক্রি Cr
+        $this->journal('100');
+        $due = bcadd($this->customer->outstanding(), '0', 4);
+        $this->assertSame(1, bccomp($due, '0', 4), 'প্রস্তুতিটাই ভুল — আগের বকেয়া নেই।');
+        $this->customer->forceFill(['credit_limit' => '0'])->save();
+
+        $this->post(route('sales.direct.store'), [...$this->form(), 'save_as_draft' => '1'])->assertSessionHasNoErrors();
+        $draft = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        // বিল ১,০০০ (১০ × ১০০); নেওয়া = বিল + পুরো আগের বকেয়া + ৫০ → খাতায় ৫০ জমা থাকে
+        $this->post(route('sales.direct.overview'), [...$this->form(), 'resume_invoice_id' => $draft->id,
+            'deposit' => bcadd(bcadd('1000', $due, 4), '50', 4)])->assertOk()
+            ->assertSee('data-overview-blocks="0"', false);
+
+        // ⭐ বাড়তি আগের বকেয়ার চেয়ে কম — তখন সত্যিই সীমা পার, থামে
+        $this->post(route('sales.direct.overview'), [...$this->form(), 'resume_invoice_id' => $draft->id,
+            'deposit' => bcadd('1000', bcsub($due, '10', 4), 4)])->assertOk()
+            ->assertSee('data-overview-blocks="1"', false);
+    }
+
+    private function journal(string $amount): void
+    {
+        $vouchers = app(\App\Modules\Accounts\Services\VoucherService::class);
+        $vouchers->post($vouchers->create([
+            'type' => \App\Modules\Accounts\Models\Voucher::JOURNAL, 'trx_date' => now()->toDateString(),
+            'narration' => 'old due', 'instrument_no' => 'TST-OD-'.random_int(1, 999999),
+        ], [
+            ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => $amount, 'credit' => '0',
+                'party_type' => Customer::drillSourceType(), 'party_id' => $this->customer->id],
+            ['account_id' => StandardChart::find(StandardChart::SALES)->id, 'debit' => '0', 'credit' => $amount],
+        ]));
+    }
+
     /** @return array<string, mixed> */
     private function form(): array
     {

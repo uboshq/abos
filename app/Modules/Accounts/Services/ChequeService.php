@@ -387,8 +387,15 @@ final class ChequeService
      * সাথে সম্পর্কের প্রশ্ন, দ্বিতীয়টা কেবল একটা ভুল। ছয় মাস পরে
      * কোনটা ঘটেছিল সেটা কেবল এখানেই লেখা থাকে।
      */
-    public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null): Cheque
+    /**
+     * @param  bool  $cancelling  ⛔ বাতিলের পথ ([[cancel()]]) — শেষ অবস্থা "বাতিল", "ফেরত" নয়: ফেরতের ঘটনা ছোড়ে না, তাই গ্রাহক
+     *                            "চেক ফেরত"-এ আটকান না; আর সইয়ের অনুরোধ বলে রাখে এটা বাতিল, যাতে শেষ সইয়ে বাতিলই হয়
+     *                            ([[AChequeCancelWaitsForItsSignatureTest]]; Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+     */
+    public function bounce(Cheque $cheque, string $reason, Carbon|string|null $onDate = null, bool $cancelling = false): Cheque
     {
+        $final = $cancelling ? Cheque::CANCELLED : Cheque::BOUNCED;
+
         /*
          * ⚠️ আদায়ের কাগজ যে চেকের টাকা পোস্ট করেছে, তার ফেরত এখানে নয়।
          *
@@ -424,12 +431,12 @@ final class ChequeService
          * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ ফেরতের কারণটাই সইয়ের অনুরোধের কারণ; শেষ সই পড়লে
          * [[FinishTheAccountsPaperOnTheLastSignature]] ঐ কারণ নিয়েই এই মেথড আবার ডাকে।
          */
-        if (app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason)) {
+        if (app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason, $cancelling ? ['cancel' => true] : [])) {
             return $cheque->fresh();
         }
 
         if ($cheque->direction === Cheque::RECEIVED && ! $this->receivedIntoTheBooks($cheque)) {
-            return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
+            return DB::transaction(function () use ($cheque, $reason, $date, $amount, $final) {
                 // ⛔ তালা দিয়ে অবস্থা আবার — একই মুহূর্তে "পাশ" হলে এখানে তা দেখা যায়, আর পাশের টাকাও ফেরে (অডিট ম১০)
                 $this->lockedFresh($cheque, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]);
 
@@ -447,7 +454,7 @@ final class ChequeService
                     ]);
                 }
 
-                return $this->markAs($cheque, Cheque::BOUNCED, $reason);
+                return $this->markAs($cheque, $final, $reason);
             });
         }
 
@@ -456,7 +463,7 @@ final class ChequeService
          * নিচের পুরনো পথ ১১০৪ থেকে ডিলারে ফেরায়। নিট ফল নতুন চেকের মতোই:
          * Dr ডিলার / Cr ব্যাংক।
          */
-        return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
+        return DB::transaction(function () use ($cheque, $reason, $date, $amount, $final) {
             $this->lockedFresh($cheque, $cheque->direction === Cheque::RECEIVED
                 ? [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]
                 : [Cheque::PENDING, Cheque::DEPOSITED]);
@@ -481,7 +488,7 @@ final class ChequeService
                         $date instanceof Carbon ? $date->toDateString() : (string) $date);
                 }
 
-                return $this->markAs($cheque, Cheque::BOUNCED, $reason);
+                return $this->markAs($cheque, $final, $reason);
             }
 
             $this->post($cheque, Cheque::STOCK_SOURCE.':bounced', $date,
@@ -495,7 +502,7 @@ final class ChequeService
                         $this->partyLine($cheque, credit: $amount, narration: $reason),
                     ]);
 
-            return $this->markAs($cheque, Cheque::BOUNCED, $reason);
+            return $this->markAs($cheque, $final, $reason);
         });
     }
 
@@ -517,11 +524,12 @@ final class ChequeService
             ]);
         }
 
-        $cancelled = $this->bounce($cheque, $reason, $onDate);
-
-        $cancelled->update(['status' => Cheque::CANCELLED]);
-
-        return $cancelled->fresh();
+        /*
+         * ⛔ বাতিল নিজের অবস্থায়, ফেরতের পথ ধরে — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AChequeCancelWaitsForItsSignatureTest]])।
+         * ⓘ আগে ফেরত করে তারপর "বাতিল" বসানো হত: সইয়ের ছক ফেরত আটকালে কিছুই উল্টাত না, অথচ চেক "বাতিল" দেখাত (দেনা পরিশোধিতই
+         * থাকত, ২১১৫-এ ভূতের দায়); আর ফেরতের ঘটনা ছুটত, ফলে ছেঁড়া চেকেও গ্রাহক "চেক ফেরত"-এ আটকাতেন।
+         */
+        return $this->bounce($cheque, $reason, $onDate, cancelling: true);
     }
 
     /**

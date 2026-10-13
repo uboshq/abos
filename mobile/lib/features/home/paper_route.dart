@@ -9,7 +9,11 @@ import '../books/purchase_screens.dart';
 import '../claims/claims_screens.dart';
 import '../delivery_orders/delivery_order_screens.dart';
 import '../quotations/quotation_screens.dart';
+import '../sales_papers/sales_paper_screens.dart';
 import '../vouchers/voucher_screens.dart';
+import '../documents/document_screens.dart';
+import '../finance/finance_screens.dart';
+import '../self_service/self_service_screens.dart';
 
 /// ⭐ `/home/paper/<kind>/<id>` — a paper reopened from "সাম্প্রতিক" (মালিক, ১২ অক্টোবর ২০২৬)।
 ///
@@ -37,6 +41,15 @@ class PaperRoute extends StatelessWidget {
       'purchase' => PurchaseScreen(kind: extra ?? '', id: id),
       'voucher' => VoucherScreen(id: id),
       'claim' => ClaimScreen(id: id),
+      // ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (১৩ অক্টোবর ২০২৬)
+      'deposit' => DepositScreen(id: id),
+      'bank-loan' => LoanScreen(id: id),
+      'rent' => RentScreen(side: extra == 'let' ? 'let' : 'pay', id: id),
+      'hand-loan' => HandLoanScreen(id: id),
+      'document' => DocumentScreen(id: id),
+      'payslip' => PayslipScreen(id: id),
+      'invoice' => SalesPaperScreen(kind: SalesPaperKind.invoice, id: id),
+      'challan' => SalesPaperScreen(kind: SalesPaperKind.challan, id: id),
       _ => null,
     };
     if (list == null || screen == null) {

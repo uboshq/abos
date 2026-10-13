@@ -379,6 +379,45 @@ class MenuRepository {
             icon: Icons.request_quote_outlined,
             routeName: 'claims',
           ),
+        // ⭐ বিক্রয় বিল আর চালান — ওয়েবের তালিকার দেখার চাবি (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na")
+        if (user.can('sales.invoice.view'))
+          const MenuItem(
+            key: 'sales.invoice.index',
+            label: 'বিক্রয় বিল',
+            icon: Icons.receipt_long_outlined,
+            routeName: 'invoices',
+          ),
+        if (user.can('sales.challan.view'))
+          const MenuItem(
+            key: 'sales.challan.index',
+            label: 'চালান',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'challans',
+          ),
+        // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+        // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতার চাবি; কোম্পানির ফোন-সুইচ [[ModuleGate]]-এ
+        if (user.can('executive.view'))
+          const MenuItem(
+            key: 'executive.today',
+            label: 'আজ — গোটা গ্রুপ',
+            icon: Icons.speed_outlined,
+            routeName: 'owner-centre',
+          ),
+        // বাকি নিয়ন্ত্রণ — ওয়েবের বাকির ড্যাশবোর্ডের চাবি (মেনু-সারি নয়: ওর রুট `module.dashboard`, সব মডিউলের এক নাম)
+        if (user.can('credit_control.view'))
+          const MenuItem(
+            key: 'credit_control.dashboard',
+            label: 'বাকির হিসাব',
+            icon: Icons.credit_score_outlined,
+            routeName: 'credit',
+          ),
+        // নোটিশ বোর্ড — সবার; কে কোনটা পাবেন সার্ভার বলে ([[NoticeAudience]]), চাবি নেই ওয়েবের মতোই
+        const MenuItem(
+          key: 'notices',
+          label: 'নোটিশ বোর্ড',
+          icon: Icons.campaign_outlined,
+          routeName: 'notices',
+        ),
         // What this device has and has not sent is a fact about the phone,
         // not a business permission — every signed-in role can open it, live
         // menu or fallback alike.
@@ -388,5 +427,39 @@ class MenuRepository {
           icon: Icons.sync_outlined,
           routeName: 'sync-status',
         ),
+        ..._moreModuleTiles(user),
+      ];
+
+  /// ⭐ বাকি মডিউল, দ্বিতীয় ভাগ — অর্থ, ডকুমেন্টস, প্রমোশন, নিজের ছুটি ও স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
+  ///
+  /// <p>প্রতিটা টাইল ওয়েবের পর্দার একই চাবিতে, আর সার্ভারের দরজাও ঠিক সেই চাবি চায় — চাবি নেই তো টাইলও নেই, তাই কোনো টাইল
+  /// ৪০৩-এর দরজায় নিয়ে যায় না। ফোনে মডিউল বন্ধ থাকলে [ModuleGate] লুকায়।
+  List<MenuItem> _moreModuleTiles(AuthUser user) => [
+        if (user.can('finance.deposit.view'))
+          const MenuItem(
+              key: 'finance.deposits', label: 'জমা ও সঞ্চয়', icon: Icons.savings_outlined, routeName: 'deposits'),
+        if (user.can('finance.bank_facility.view'))
+          const MenuItem(
+              key: 'finance.bank_loans',
+              label: 'ব্যাংক ঋণ ও কিস্তি',
+              icon: Icons.account_balance_outlined,
+              routeName: 'bank-loans'),
+        if (user.can('finance.rental.view'))
+          const MenuItem(key: 'finance.rents', label: 'ভাড়া', icon: Icons.home_work_outlined, routeName: 'rents'),
+        if (user.can('finance.hand_loan.view'))
+          const MenuItem(
+              key: 'finance.hand_loans', label: 'হাতধার', icon: Icons.handshake_outlined, routeName: 'hand-loans'),
+        if (user.can('documents.view'))
+          const MenuItem(
+              key: 'documents.library', label: 'ডকুমেন্টস', icon: Icons.folder_open_outlined, routeName: 'documents'),
+        if (user.can('promotion.view'))
+          const MenuItem(
+              key: 'promotion.offers', label: 'চলতি অফার', icon: Icons.local_offer_outlined, routeName: 'offers'),
+        if (user.can('hr.leave.self'))
+          const MenuItem(
+              key: 'hr.leave.self', label: 'আমার ছুটি', icon: Icons.event_available_outlined, routeName: 'leave'),
+        if (user.can('hr.payslip.self'))
+          const MenuItem(
+              key: 'hr.payslip.self', label: 'বেতনের স্লিপ', icon: Icons.receipt_long_outlined, routeName: 'payslips'),
       ];
 }

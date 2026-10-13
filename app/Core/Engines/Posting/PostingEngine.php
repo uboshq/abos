@@ -47,7 +47,7 @@ final class PostingEngine
         ?int $userId = null,
     ): array {
         if ($lines === []) {
-            throw new PostingException('Nothing to post — a document with no ledger lines has no effect on the books.');
+            throw PostingException::said('Nothing to post — a document with no ledger lines has no effect on the books.', 'core.posting.nothing_to_post');
         }
 
         $trxDate = $trxDate instanceof Carbon ? $trxDate : Carbon::parse($trxDate);
@@ -115,15 +115,19 @@ final class PostingEngine
                 // একই লাইনে ডেবিট ও ক্রেডিট দুটোই থাকলে সেটা আসলে দুইটা লাইন।
                 // মিলিয়ে লিখলে লেজারে ওই খাতের প্রকৃত চলাচল আর দেখা যায় না।
                 if (bccomp($debit, '0', 4) > 0 && bccomp($credit, '0', 4) > 0) {
-                    throw new PostingException(
+                    throw PostingException::said(
                         "Line {$index} of {$sourceType}#{$sourceId} carries both a debit and a credit. "
-                        .'Split it into two lines so the account movement stays readable.'
+                        .'Split it into two lines so the account movement stays readable.',
+                        'core.posting.both_sides',
+                        ['line' => $index + 1],
                     );
                 }
 
                 if (bccomp($debit, '0', 4) === 0 && bccomp($credit, '0', 4) === 0) {
-                    throw new PostingException(
-                        "Line {$index} of {$sourceType}#{$sourceId} is zero on both sides."
+                    throw PostingException::said(
+                        "Line {$index} of {$sourceType}#{$sourceId} is zero on both sides.",
+                        'core.posting.zero_line',
+                        ['line' => $index + 1],
                     );
                 }
 
@@ -211,14 +215,18 @@ final class PostingEngine
 
         // সব দাখিলা আগেই উল্টানো — দ্বিতীয় বাতিল। বার্তাটা আগের মতোই।
         if ($original->isEmpty() && $lastReversal !== null) {
-            throw new PostingException(
-                "{$reversalType}#{$sourceId} is already in the ledger. Reverse it before posting again."
+            throw PostingException::said(
+                "{$reversalType}#{$sourceId} is already in the ledger. Reverse it before posting again.",
+                'core.posting.already_posted',
+                [],
             );
         }
 
         if ($original->isEmpty()) {
-            throw new PostingException(
-                "Nothing to reverse — {$sourceType}#{$sourceId} has no ledger entries."
+            throw PostingException::said(
+                "Nothing to reverse — {$sourceType}#{$sourceId} has no ledger entries.",
+                'core.posting.nothing_to_reverse',
+                [],
             );
         }
 
@@ -308,9 +316,11 @@ final class PostingEngine
         if (bccomp($debit, $credit, 4) !== 0) {
             $difference = bcsub($debit, $credit, 4);
 
-            throw new PostingException(
+            throw PostingException::said(
                 "{$sourceType}#{$sourceId} does not balance: debit {$debit} against credit {$credit}, "
-                ."a difference of {$difference}. Nothing was written."
+                ."a difference of {$difference}. Nothing was written.",
+                'core.posting.unbalanced_amounts',
+                ['debit' => \App\Core\Support\Money::format($debit), 'credit' => \App\Core\Support\Money::format($credit), 'difference' => \App\Core\Support\Money::format($difference)],
             );
         }
     }
@@ -386,9 +396,11 @@ final class PostingEngine
             $account = $found->get($id);
 
             if ($account === null) {
-                throw new PostingException(
+                throw PostingException::said(
                     "Line {$index} of {$sourceType}#{$sourceId} points at account {$id}, which does not "
-                    .'exist in this company. Nothing was written.'
+                    .'exist in this company. Nothing was written.',
+                    'core.posting.unknown_account',
+                    ['line' => $index + 1],
                 );
             }
 
@@ -404,20 +416,24 @@ final class PostingEngine
                 $holds = json_decode((string) ($account->party_types ?? '[]'), true) ?: [];
 
                 if (! in_array($partyType, $holds, true)) {
-                    throw new PostingException(
+                    throw PostingException::said(
                         "Line {$index} of {$sourceType}#{$sourceId} names a {$partyType} on account {$account->code}, which "
                         .($holds === [] ? 'holds no party' : 'holds only '.implode(', ', $holds)).'. A party sits only on the '
-                        .'control account that keeps its balance — otherwise its dues change while the account does not. Nothing was written.'
+                        .'control account that keeps its balance — otherwise its dues change while the account does not. Nothing was written.',
+                        'core.posting.wrong_party',
+                        ['line' => $index + 1, 'code' => $account->code],
                     );
                 }
             }
 
             if ($account->is_group) {
-                throw new PostingException(
+                throw PostingException::said(
                     "Line {$index} of {$sourceType}#{$sourceId} posts to {$account->code}, which is a group. "
                     .'A group holds no entries of its own — its balance is the sum of its children — so the '
                     .'money would sit in the ledger and appear in no report at all. Post to one of its '
-                    .'children instead. Nothing was written.'
+                    .'children instead. Nothing was written.',
+                    'core.posting.group_account',
+                    ['line' => $index + 1, 'code' => $account->code],
                 );
             }
 
@@ -427,9 +443,11 @@ final class PostingEngine
              * সমাপনী প্রতিটা আয়-ব্যয় খাতের জের শূন্য করে, নিষ্ক্রিয়টারও — নাহলে বছর বন্ধই হত না।
              */
             if (! $account->is_active && $sourceType !== self::YEAR_CLOSE) {
-                throw new PostingException(
+                throw PostingException::said(
                     "Line {$index} of {$sourceType}#{$sourceId} posts to {$account->code}, which is inactive. "
-                    .'An inactive account takes no new entries — activate it or pick another. Nothing was written.'
+                    .'An inactive account takes no new entries — activate it or pick another. Nothing was written.',
+                    'core.posting.inactive_account',
+                    ['line' => $index + 1, 'code' => $account->code],
                 );
             }
         }
@@ -472,8 +490,10 @@ final class PostingEngine
         } catch (UniqueConstraintViolationException) {
             $type = Str::before($sourceType, '@');
 
-            throw new PostingException(
-                "{$type}#{$sourceId} is already in the ledger. Reverse it before posting again."
+            throw PostingException::said(
+                "{$type}#{$sourceId} is already in the ledger. Reverse it before posting again.",
+                'core.posting.already_posted',
+                [],
             );
         }
     }
@@ -509,8 +529,10 @@ final class PostingEngine
             ->exists();
 
         if ($open) {
-            throw new PostingException(
-                "{$sourceType}#{$sourceId} is already in the ledger. Reverse it before posting again."
+            throw PostingException::said(
+                "{$sourceType}#{$sourceId} is already in the ledger. Reverse it before posting again.",
+                'core.posting.already_posted',
+                [],
             );
         }
 
@@ -533,14 +555,18 @@ final class PostingEngine
         $year = FinancialYear::forDate($date);
 
         if ($year === null) {
-            throw new PostingException(
-                "No financial year covers {$date->toDateString()}. Create one before posting to that date."
+            throw PostingException::said(
+                "No financial year covers {$date->toDateString()}. Create one before posting to that date.",
+                'core.posting.no_year',
+                ['date' => $date->toDateString()],
             );
         }
 
         if ($year->is_closed) {
-            throw new PostingException(
-                "Financial year {$year->name} is closed. Reopening it is an approved action, not a side effect of posting."
+            throw PostingException::said(
+                "Financial year {$year->name} is closed. Reopening it is an approved action, not a side effect of posting.",
+                'core.posting.year_closed',
+                ['name' => $year->name],
             );
         }
 
@@ -558,8 +584,10 @@ final class PostingEngine
         $closed = FinancialYear::query()->whereKey($year->getKey())->sharedLock()->value('is_closed');
 
         if ((bool) $closed) {
-            throw new PostingException(
-                "Financial year {$year->name} is closed. Reopening it is an approved action, not a side effect of posting."
+            throw PostingException::said(
+                "Financial year {$year->name} is closed. Reopening it is an approved action, not a side effect of posting.",
+                'core.posting.year_closed',
+                ['name' => $year->name],
             );
         }
     }

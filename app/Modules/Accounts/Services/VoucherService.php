@@ -317,7 +317,17 @@ final class VoucherService
             ]);
         }
 
-        return DB::transaction(fn () => $this->writeHeaderAndLines($voucher, $data, $lines));
+        return DB::transaction(function () use ($voucher, $data, $lines) {
+            /*
+             * ⛔ তালা দিয়ে অবস্থা আবার — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[APostedVoucherKeepsItsLinesTest]])। ⓘ উপরের দেখা
+             * হাতের কপিতে: একই মুহূর্তে অন্যজন পাকা করলে এই সম্পাদনা পাকা ভাউচারের সারি বদলে দিত, খাতা আগের অঙ্কেই — কাগজ আর খাতা দুই কথা।
+             * ⓘ [[post()]] আর [[cancel()]]-এর একই ধাঁচ ([[lockedStatus()]])।
+             */
+            $voucher->setAttribute('status', $this->lockedStatus($voucher));
+            $this->assertEditable($voucher);
+
+            return $this->writeHeaderAndLines($voucher, $data, $lines);
+        });
     }
 
     /**
@@ -1731,6 +1741,9 @@ final class VoucherService
      * পাকা করেন অন্য কেউ। ⓘ মালিক (সুপার অ্যাডমিন) একা করলে আটকায় না, নিরীক্ষায় "নিজের লেখা নিজে পাকা" দাগ পড়ে।
      * সুইচ বন্ধে আজকের আচরণ অবিকল।
      */
+    /** ⓘ হাতের সম্পাদনার নিরীক্ষা-চিহ্ন — লেখক ≠ পাকাকারী এটাও গোনে ([[writerMayNotPost()]]) */
+    public const EDITED_BY_HAND = 'lines_edited';
+
     public function writerMayNotPost(Voucher $voucher): bool
     {
         if (! (bool) app(SettingsService::class)->get(self::MAKER_CHECKER, true)) {
@@ -1739,7 +1752,23 @@ final class VoucherService
 
         $actor = (int) (Actor::userId() ?? 0);
 
-        return $actor !== 0 && $actor === (int) ($voucher->created_by ?? 0) && ! $this->actorIsOwner();
+        if ($actor === 0 || $this->actorIsOwner()) {
+            return false;
+        }
+
+        /*
+         * ⛔ লেখক মানে যিনি সারি লিখেছেন — বানানো বা পরে বদলানো — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+         * ([[WhoeverRewroteAVoucherDoesNotPostItTest]])। ⓘ আগে কেবল `created_by` দেখা হত: অন্যের খসড়া খুলে ১,০০০ থেকে ৯০,০০০ করে
+         * নিজেই পাকা করা যেত — একজন মানুষই শেষ কথা লিখলেন আর পাকা করলেন। হাতের প্রতিটা সম্পাদনা নিরীক্ষায় "lines_edited" রাখে
+         * ([[VoucherWriter::update()]])।
+         */
+        return $actor === (int) ($voucher->created_by ?? 0)
+            || \App\Models\AuditTrail::query()
+                ->where('auditable_type', Voucher::class)
+                ->where('auditable_id', $voucher->getKey())
+                ->where('user_id', $actor)
+                ->where('action', self::EDITED_BY_HAND)
+                ->exists();
     }
 
     private function assertAnotherHandPosts(Voucher $voucher): void
