@@ -132,10 +132,24 @@ class RentalContract extends Model implements Drillable
      */
     public function rentFor(Carbon $month): string
     {
-        $term = $this->terms()->where('effective_from', '<=', $month->copy()->startOfMonth()->toDateString())
-            ->reorder('effective_from', 'desc')->first();
+        return (string) ($this->termOn($month)?->monthly_rent ?? $this->monthly_rent);
+    }
 
-        return (string) ($term?->monthly_rent ?? $this->monthly_rent);
+    /**
+     * ⭐ একটা মাসে জামানত থেকে কত কাটার কথা — সেই মাসে খাটা শর্ত, না থাকলে চুক্তির এখনকার অঙ্ক ([[rentFor()]]-এর একই নিয়ম)।
+     *
+     * ⛔ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬: খালি ঘরে মাস দিলে আজকের অঙ্ক কাটত, সেই মাসের নয়।
+     */
+    public function adjustmentFor(Carbon $month): string
+    {
+        return (string) ($this->termOn($month)?->monthly_adjustment ?? $this->monthly_adjustment);
+    }
+
+    /** মাসটায় খাটা শর্তের দফা — সর্বশেষ যেটা মাসটা বা আগে থেকে */
+    private function termOn(Carbon $month): ?RentalTerm
+    {
+        return $this->terms()->where('effective_from', '<=', $month->copy()->startOfMonth()->toDateString())
+            ->reorder('effective_from', 'desc')->first();
     }
 
     /**

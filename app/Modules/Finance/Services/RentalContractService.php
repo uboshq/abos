@@ -198,8 +198,13 @@ class RentalContractService
 
         $this->assertCanPay($contract, $month);
 
-        $rent = (string) ($data['rent'] ?? $contract->monthly_rent);
-        $fromDeposit = (string) ($data['from_deposit'] ?? $contract->monthly_adjustment);
+        /*
+         * ⛔ খালি ঘরে সেই মাসের ভাড়া, আজকের দর নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে সেপ্টেম্বর ৩০,০০০-এ বসার
+         * পর অক্টোবর থেকে ৩৫,০০০ হলে, খালি ঘরে সেপ্টেম্বর দিলে ৩৫,০০০ যেত — বাড়িওয়ালা ৫,০০০ বেশি পেতেন, তফাতটা খরচে।
+         * এখন: মাসটা বসে থাকলে বসানো অঙ্ক ([[RentalAccrualService::settles()]]), নাহলে সেই মাসে খাটা শর্ত; জামানতের কাটাও সেই মাসের শর্তে।
+         */
+        $rent = (string) ($data['rent'] ?? RentalAccrualService::settles($contract, $month) ?? $contract->rentFor($month));
+        $fromDeposit = (string) ($data['from_deposit'] ?? $contract->adjustmentFor($month));
         $cash = bcsub($rent, $fromDeposit, 4);
 
         if (bccomp($cash, '0', 4) < 0) {
