@@ -198,6 +198,21 @@ final class AccountService
             $type = $this->resolveType($data + ['type' => $account->type], $parent);
 
             /*
+             * ⛔ প্রকৃতি (Dr/Cr) বদলায় না সিস্টেমের খাতে, বা যে খাতে (বা নিচে) লেনদেন আছে — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+             * ([[AnAccountsNatureStaysOnceItHasEntriesTest]])। ⓘ জের প্রকৃতি ধরে চিহ্ন পায় ([[Account::balanceOn()]]): ব্যাংকের খাত Cr করে দিলে
+             * তার জের ঋণাত্মক দেখাত, আর ব্যাংক-মিলকরণের "আমাদের খাতা" উল্টো চিহ্নে আর কখনো মিলত না।
+             */
+            if (array_key_exists('nature', $data) && filled($data['nature']) && $data['nature'] !== $account->nature) {
+                $this->assertNotSystem($account, 'nature');
+
+                if (\App\Models\LedgerEntry::query()->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))->exists()) {
+                    throw ValidationException::withMessages([
+                        'nature' => __('accounts::validation.has_entries_cannot_renature'),
+                    ]);
+                }
+            }
+
+            /*
              * ⛔ বাবা বদলে ধরন বদলালেও একই নিষেধ — অডিট ম২০, ১০ অক্টোবর ২০২৬ ([[AnInactiveAccountTakesNoNewMoneyTest]])। ⓘ উপরের পাহারা
              * কেবল সরাসরি পাঠানো `type` দেখত, অথচ ধরন আসে বাবার থেকে ([[resolveType()]]): লেনদেনসহ খরচের খাত সম্পদের নিচে সরালে
              * সে চুপচাপ সম্পদ হয়ে যেত, আর আগের সব খরচ লাভ-ক্ষতি থেকে স্থিতিপত্রে সরে যেত।
