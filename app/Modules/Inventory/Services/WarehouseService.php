@@ -99,6 +99,19 @@ final class WarehouseService
             ]);
         }
 
+        /*
+         * ⛔ প্রধান গুদাম শাখা বদলায় না — নিষ্ক্রিয় করার একই নিয়ম (১৩ অক্টোবর ২০২৬)। ⓘ সরালে নতুন শাখায় দুইটা প্রধান
+         * (কোনটা নেবে আন্দাজ), আর পুরনো শাখায় একটাও না — সেই শাখার কাউন্টার গুদাম না পেয়ে খালি লট দেখাত (৬ অক্টোবরের
+         * লাইভের ত্রুটি)। আগে পুরনো শাখায় অন্য একটাকে প্রধান করতে হয়।
+         */
+        if (array_key_exists('branch_id', $data)
+            && (int) ($data['branch_id'] ?? 0) !== (int) ($warehouse->branch_id ?? 0)
+            && $warehouse->is_default) {
+            throw ValidationException::withMessages([
+                'branch_id' => __('inventory::validation.main_warehouse_stays_in_branch', ['warehouse' => $warehouse->name()]),
+            ]);
+        }
+
         $makeDefault = (bool) ($data['is_default'] ?? false);
         unset($data['is_default']);
 
