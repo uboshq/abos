@@ -629,6 +629,6 @@ final class DocumentLibrary
      */
     private function lock(Document $document): Document
     {
-        return Document::query()->whereKey($document->getKey())->lockForUpdate()->firstOrFail();
+        return Document::acrossBranches()->whereKey($document->getKey())->lockForUpdate()->firstOrFail();
     }
 }

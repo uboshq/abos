@@ -30,7 +30,7 @@ class PurchaseOrderRequest extends FormRequest
             'expected_on' => ['nullable', 'date', 'after_or_equal:trx_date'],
             'narration' => ['nullable', 'string', 'max:500'],
 
-            'lines' => ['required', 'array', 'min:1'],
+            'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.ordered_qty' => ['required', 'numeric', 'gt:0'],

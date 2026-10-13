@@ -174,7 +174,7 @@ final class DirectPurchaseRules
             'deposits.*.charge_amount' => ['nullable', 'numeric', 'min:0', 'lt:deposits.*.amount'],
             'deposits.*.charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
 
-            'lines' => ['required', 'array', 'min:1'],
+            'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],

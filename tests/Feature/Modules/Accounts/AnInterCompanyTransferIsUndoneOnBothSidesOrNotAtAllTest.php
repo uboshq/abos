@@ -87,6 +87,33 @@ final class AnInterCompanyTransferIsUndoneOnBothSidesOrNotAtAllTest extends Test
         $this->assertSame((int) $this->alpha->id, (int) CompanyContext::id(), '⛔ উল্টানোর পরে কোম্পানির প্রসঙ্গ ফেরেনি।');
     }
 
+    /**
+     * ⛔ হেডারে একটা শাখা বাছা থাকলেও দুই দিকই উল্টায় — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (AnInterCompanyReverseUndoesBothBooksTest)।
+     *
+     * ⓘ পাওয়ার দিকের ভাউচার শাখাহীন; শাখার দেয়াল তাকে লুকাত, খোঁজা `null`, চুপচাপ ফেরা — অন্য কোম্পানির খাতায় টাকা থেকে যেত,
+     * অথচ কাগজ "বাতিল"।
+     */
+    public function test_a_branch_picked_in_the_header_still_undoes_both_books(): void
+    {
+        $transfer = $this->record();
+
+        $branch = $this->alpha->defaultBranch();
+        $this->owner->forceFill(['view_all_branches' => false, 'current_branch_id' => $branch?->id])->save();
+        CompanyContext::set((int) $this->alpha->id, $branch?->id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($this->owner->fresh());
+
+        app(InterCompanyService::class)->reverse($this->owner->fresh(), $transfer, 'শাখা বাছা অবস্থায়');
+
+        $this->owner->forceFill(['view_all_branches' => true])->save();
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($this->owner->fresh());
+
+        $this->assertSame(DocumentStatus::CANCELLED, $transfer->fresh()->status);
+        $this->assertTrue($this->cancelled($this->beta, (int) $transfer->in_voucher_id), '⛔ শাখা বাছা থাকায় পাওয়ার কোম্পানির দিক উল্টায়নি — অথচ কাগজ "বাতিল"।');
+        $this->assertSame(0, bccomp($this->control($this->beta), '0', 4), '⛔ ওদের চলতি হিসাব শূন্যে ফেরেনি।');
+    }
+
     public function test_a_reason_is_needed_and_a_second_reversal_is_refused(): void
     {
         $transfer = $this->record();

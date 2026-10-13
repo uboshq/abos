@@ -1047,7 +1047,7 @@ final class FixedAssetService
         }
 
         return DB::transaction(function () use ($asset, $status) {
-            $locked = FixedAsset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            $locked = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
 
             if (! $locked->isInService()) {
                 throw ValidationException::withMessages(['status' => __('accounts::asset.not_active')]);

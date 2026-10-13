@@ -174,7 +174,7 @@ final class ShipmentService
              * ⭐ ট্রাক রওনা — ভাড়াও খাতায়, একই লেনদেনে (সিদ্ধান্ত ঘ; [[FarePayment::bookTrip()]])। ⓘ সারি তালা দিয়ে আসল
              * অবস্থা — দুই চাপে দুইবার রওনা আর দুইবার ভাড়া নয়; খসড়ার পরে কোনো চালানে ভাড়া বসে থাকলে এখানে আবার ধরা পড়ে।
              */
-            $locked = Shipment::query()->lockForUpdate()->findOrFail($shipment->id);
+            $locked = Shipment::acrossBranches()->lockForUpdate()->findOrFail($shipment->id);
 
             if ($locked->status !== DocumentStatus::DRAFT) {
                 throw ValidationException::withMessages([
@@ -345,7 +345,7 @@ final class ShipmentService
          * তাই সারি তালা দিয়ে আসল অবস্থা আবার দেখা — দুই চাপে ভাড়া দুইবার উল্টায় না ([[EveryMoneyActionLocksItsRowTest]])।
          */
         return DB::transaction(function () use ($shipment, $reason) {
-            $locked = Shipment::query()->lockForUpdate()->findOrFail($shipment->id);
+            $locked = Shipment::acrossBranches()->lockForUpdate()->findOrFail($shipment->id);
 
             if (in_array($locked->status, [DocumentStatus::CANCELLED, DocumentStatus::CLOSED], true)) {
                 throw ValidationException::withMessages([
