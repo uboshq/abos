@@ -814,7 +814,20 @@ class RentalContractService
     private function depositHead(array $data): Account
     {
         if (filled($data['account_id'] ?? null)) {
-            return Account::query()->postable()->findOrFail($data['account_id']);
+            /*
+             * ⛔ সম্পদের খাতই, টাকার খাত নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে যেকোনো পোস্টযোগ্য খাত চলত: নগদ বাছলে
+             * জামানত Dr নগদ / Cr নগদ হত আর মাসের কাটা নগদে ক্রেডিট; খরচ বা ২১৪১ বাছলেও তাই। না পেলে ৪০৪-এর ভাঙা পাতা।
+             * খরচের খাতের একই পাহারা ([[expenseHead()]])।
+             */
+            $account = Account::query()->postable()->where('type', Account::ASSET)->whereNull('money_kind')->find($data['account_id']);
+
+            if ($account === null) {
+                throw ValidationException::withMessages([
+                    'account_id' => __('finance::validation.rental_account_unknown'),
+                ]);
+            }
+
+            return $account;
         }
 
         $whole = bcmul(
