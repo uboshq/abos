@@ -132,6 +132,14 @@ final class StandardChart implements ProvisionsCompany
      */
     public const CHEQUES_ISSUED = '2115';
 
+    /**
+     * ⭐ ব্যাংক ওভারড্রাফট — দায়, ব্যাংকের খাতের ভিতরে নয় (মালিক, ১৩ অক্টোবর ২০২৬: "int standrad onuzayi koro"; IAS 32/IAS 7)।
+     *
+     * ⓘ দল; প্রতিটা ব্যাংকের নিজের উপ-খাত "ওভারড্রাফট — <ব্যাংক>" (কোড `2105-<ব্যাংকের id>`), যাতে কোন ব্যাংকের ঋণ তা পড়া যায়
+     * ([[AccountService::overdraftFor()]])। ⛔ ব্যাংকের খাত কখনো Cr খোলা জের নেয় না — সেটা এখানে আসে ([[OpeningBalanceService::forAccount()]])।
+     */
+    public const BANK_OVERDRAFT = '2105';
+
     public const RECEIVABLE = '1110';
 
     public const INVENTORY = '1120';
@@ -1002,6 +1010,8 @@ final class StandardChart implements ProvisionsCompany
             // ── দায় ──────────────────────────────────────────────────
             ['2000', 'Liabilities', 'দায়', $L, null, true, []],
             ['2100', 'Current Liabilities', 'চলতি দায়', $L, '2000', true, []],
+            // ⭐ ব্যাংক ওভারড্রাফট — প্রতিটা ব্যাংকের উপ-খাত এর নিচে, প্রথম Cr খোলা জেরে নিজে তৈরি ([[self::BANK_OVERDRAFT]])
+            ['2105', 'Bank Overdrafts', 'ব্যাংক ওভারড্রাফট', $L, '2100', true, []],
             /*
              * প্রদেয় — একটা দল, চারটা ঘর।
              *

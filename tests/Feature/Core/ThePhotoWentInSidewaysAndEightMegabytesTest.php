@@ -222,7 +222,9 @@ class ThePhotoWentInSidewaysAndEightMegabytesTest extends TestCase
          * গিয়ে **পুরো suite মেরে ফেলত** — ব্যতিক্রম নয়, fatal।
          */
         $was = (string) ini_get('memory_limit');
-        ini_set('memory_limit', '256M');
+        // ⓘ সীমা = এখনকার ব্যবহার + ২৫৬ MB — লম্বা একসাথে-রানে ব্যবহার আগেই ২৫৬ ছাড়ায়, তখন ini_set ব্যর্থ হয়ে পরীক্ষাটা
+        // মিথ্যা লাল হত (১৩ অক্টোবর ২০২৬); ৩.৬ GB-র চেয়ে অনেক কম থাকে বলে পাহারার মাপ বদলায় না
+        ini_set('memory_limit', (string) (memory_get_usage(true) + 256 * 1024 * 1024));
 
         try {
             $this->expectException(AttachmentException::class);

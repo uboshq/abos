@@ -104,6 +104,8 @@ return [
     'is_cash' => 'নগদ খাত',
     'is_bank' => 'ব্যাংক বা MFS খাত',
     'opening_balance' => 'খোলা ব্যালেন্স',
+    'opening_side' => 'খোলা জেরের পাশ',
+    'opening_side_normal' => 'খাতের স্বাভাবিক দিক',
     'opening_date' => 'খোলার তারিখ',
     'account_number' => 'হিসাব নম্বর',
     'bank_name' => 'ব্যাংকের নাম',

@@ -282,6 +282,12 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             'account' => $account,
             'entries' => $entries,
             'balance' => $account->balanceOn(null, $branch),
+            // ⓘ খোলা জের খাতায় যে পাশে বসেছে — নিট Dr ধনাত্মক, পাতায় "(Dr)/(Cr)" ([[AnOpeningBalanceSitsOnTheSideChosenTest]])
+            'opening' => (string) (LedgerEntry::query()
+                ->where('account_id', $account->id)
+                ->where('source_type', \App\Modules\Accounts\Services\OpeningBalanceService::ACCOUNT_SOURCE.\App\Modules\Accounts\Services\OpeningBalanceService::SOURCE_SUFFIX)
+                ->selectRaw('COALESCE(SUM(debit - credit), 0) as n')
+                ->value('n') ?? '0'),
             // আগে থেকে আনা সন্তানগুলোই — `children()->get()` লিখলে নতুন
             // মডেল আসত, আর তাদের জের গুনতে গিয়ে আবার নিচে নামা শুরু হত
             'children' => $account->is_group ? $account->children : new Collection,

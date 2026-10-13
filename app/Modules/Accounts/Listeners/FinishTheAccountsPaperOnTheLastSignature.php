@@ -203,7 +203,10 @@ final class FinishTheAccountsPaperOnTheLastSignature
         if ($paper instanceof Cheque && in_array($paper->status, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED], true)) {
             match ($approval->action) {
                 AccountsSignature::CHEQUE_CLEAR => $paper->status !== Cheque::CLEARED ? app(ChequeService::class)->clear($paper) : null,
-                AccountsSignature::CHEQUE_BOUNCE => app(ChequeService::class)->bounce($paper, (string) $approval->requested_reason),
+                // ⓘ বাতিলের অনুরোধ হলে বাতিলই — ফেরত নয় ([[ChequeService::cancel()]])
+                AccountsSignature::CHEQUE_BOUNCE => ($approval->payload['cancel'] ?? false)
+                    ? app(ChequeService::class)->cancel($paper, (string) $approval->requested_reason)
+                    : app(ChequeService::class)->bounce($paper, (string) $approval->requested_reason),
                 default => null,
             };
         }
