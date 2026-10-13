@@ -230,8 +230,10 @@ final class DocumentApproval
         ?string $amount = null,
         ?string $reason = null,
         array $fields = [],
+        // ⓘ সই যে তথ্যে চাওয়া — [[signedTheSame()]] (১৩ অক্টোবর ২০২৬)
+        array $payload = [],
     ): void {
-        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields);
+        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields, $payload);
 
         if ($stopping === null) {
             return;

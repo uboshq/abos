@@ -1197,6 +1197,27 @@ final class PurchaseBillService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
+    /**
+     * প্রস্তাবিত বদলের ছাপ — মাথার ঘর আর সারি, চাবি সাজিয়ে, প্রতিটা মান লেখা হিসেবে (একই ফর্ম আবার পাঠালে একই ছাপ)।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private static function proposalPrint(array $data, array $lines): string
+    {
+        $plain = function (mixed $value) use (&$plain): mixed {
+            if (is_array($value)) {
+                ksort($value);
+
+                return array_map($plain, $value);
+            }
+
+            return $value === null ? null : (is_bool($value) ? ($value ? '1' : '0') : (string) $value);
+        };
+
+        return hash('sha256', (string) json_encode($plain(['head' => $data, 'lines' => array_values($lines)])));
+    }
+
     private function updatePosted(PurchaseBill $bill, array $data, array $lines): PurchaseBill
     {
         if ($lines === []) {
@@ -1223,6 +1244,12 @@ final class PurchaseBillService
                 field: 'status',
                 amount: $newTotal,
                 reason: $bill->narration,
+                /*
+                 * ⭐ সই এই বদলেরই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[APostedBillEditIsSignedForItsLinesTest]])। ⓘ ছাপটা নেওয়া হয়
+                 * বিল এখন যেমন (বদলের আগে); প্রস্তাবিত সারিগুলো কোথাও জমা নেই। ⛔ তাই "৫ লাখে বদল"-এর সই পেয়ে যেকোনো সারি দিয়ে
+                 * ৫ লাখ বানালেই পার হত। এখন প্রস্তাবটার ছাপও সইয়ের তথ্যে — অন্য সারি, অন্য সরবরাহকারী মানে নতুন সই।
+                 */
+                payload: ['proposed_edit' => self::proposalPrint($data, $lines)],
             );
         }
 
