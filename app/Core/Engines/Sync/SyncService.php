@@ -184,7 +184,9 @@ final class SyncService
          * unique key সামলায় **একই মুহূর্তের** দুইটা অনুরোধ, যেখানে
          * দুইজনেই "নেই" দেখে ফেলেছে। ওটা নিচে ধরা হয়।
          */
-        $existing = SyncChange::query()
+        // ⛔ কোম্পানির দেয়াল ছাড়া — unique key গোটা ব্যবস্থার (যন্ত্র + বদল); দেয়ালসহ খুঁজলে কোম্পানি বদলের পরে আগের কোম্পানিতে বসা
+        // বদল "নতুন" দেখাত আর আবার চলত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AChangeWasAppliedAgainAfterACompanySwitchTest]])
+        $existing = SyncChange::query()->withoutGlobalScopes()
             ->where('device_id', $deviceId)
             ->where('change_id', $change->changeId)
             ->first();
@@ -287,7 +289,7 @@ final class SyncService
             });
         } catch (UniqueConstraintViolationException $clash) {
             // ⓘ ভাগের তালায় পড়া — অন্যজনের সদ্য-পাকা সারিটা দেখা চাই, পুরনো ছবি নয়
-            $first = SyncChange::query()
+            $first = SyncChange::query()->withoutGlobalScopes()
                 ->where('device_id', $deviceId)
                 ->where('change_id', $change->changeId)
                 ->sharedLock()
