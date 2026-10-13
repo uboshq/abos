@@ -838,5 +838,7 @@ return [
         \App\Core\Events\ApprovalDecided::class => [\App\Modules\Purchase\Listeners\ConfirmThePurchasePaperOnTheLastSignature::class],
         // ⛔ সরবরাহকারীর চেক ফেরত — পরিশোধও ফেরত, বিল আবার বাকি (fe, ১৩ অক্টোবর ২০২৬)
         \App\Modules\Accounts\Events\ChequeBounced::class => [\App\Modules\Purchase\Listeners\UndoThePaymentOfABouncedCheque::class],
+        // ⛔ সইয়ের পরে পোস্ট হওয়া সরাসরি কেনার চেক-পরিশোধ রেজিস্টারে ওঠে (fe, ১৩ অক্টোবর ২০২৬)
+        \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Purchase\Listeners\RecordTheChequeOfASignedPurchasePayment::class],
     ],
 ];
