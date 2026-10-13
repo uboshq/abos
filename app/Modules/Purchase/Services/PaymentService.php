@@ -149,6 +149,17 @@ final class PaymentService
     {
         $this->assertEditable($payment);
 
+        // ⛔ সম্পাদনাতেও একই স্লিপ দুইবার নয় — নিজেকে বাদ রেখে (মালিকের নিয়ম, ৫ সেপ্টেম্বর ২০২৬; Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+        // [[ASlipUsedTwiceThroughAnEditTest]])। ⚠️ আগে কেবল তৈরিতে দেখা হত: খালি স্লিপে লিখে পরে TT-55 বসালে ধরা পড়ত না।
+        $this->slips->check(
+            table: 'pur_payments',
+            slipNo: $data['instrument_no'] ?? null,
+            partyId: (int) $payment->supplier_id,
+            party: 'supplier_id',
+            message: __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
+            exceptId: (int) $payment->id,
+        );
+
         return DB::transaction(function () use ($payment, $data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? $payment->trx_date);
 
