@@ -80,6 +80,11 @@ final class SignedButNotPosted
                 continue;
             }
 
+            // ⓘ সইয়ের পরে যার পোস্ট নেই (দলিল) সে এখানে নয় — নাহলে চিরকাল তালিকায় ([[NothingToPostAfterSigning]], ১৩ অক্টোবর ২০২৬)
+            if (is_subclass_of($class, \App\Core\Contracts\NothingToPostAfterSigning::class)) {
+                continue;
+            }
+
             try {
                 $table = (new $class)->getTable();
 
