@@ -260,6 +260,9 @@ final class TheAppCouldNotOpenTheWebScreensTest extends TestCase
         $path = $this->menuPath($access, 'accounts.coa.index');
         SyncDevice::query()->withoutGlobalScopes()->where('device_id', self::PHONE)->update(['second_step_at' => null]);
 
+        // ⓘ তালা গোনে শেষ সফল ঢোকার **পরের** ভুল — একই সেকেন্ডের নয়
+        $this->travel(2)->seconds();
+
         for ($i = 0; $i < 8; $i++) {
             $this->key($access, $path, '000000')->assertStatus(409);
         }
@@ -315,14 +318,21 @@ final class TheAppCouldNotOpenTheWebScreensTest extends TestCase
 
         $this->assertSame([], array_filter($rows, fn (array $r) => str_starts_with($r['route'], 'system_admin.')));
 
-        $direct = array_values(array_filter($rows, fn (array $r) => $r['route'] === 'sales.direct.create'));
-        $this->assertNotSame([], $direct, 'প্রস্তুতিটাই ভুল — বিক্রয়কর্মীর মেনুতে কাউন্টার নেই।');
-        $this->assertNull($direct[0]['web'], '⛔ মজুদ-দেখানো কাউন্টার SR-এর অ্যাপের ভিতরে খুলছে।');
+        $inside = app(WebInsideApp::class);
+        $salesman = $this->user('sales@abos.test');
+
+        foreach ($rows as $row) {
+            if ($inside->hidesFrom($salesman, $row['route'])) {
+                $this->assertNull($row['web'], "⛔ মজুদ-দেখানো পর্দা {$row['route']} SR-এর অ্যাপের ভিতরে খুলছে।");
+            }
+        }
 
         $invoices = array_values(array_filter($rows, fn (array $r) => $r['route'] === 'sales.invoice.index' && $r['web'] !== null));
         $this->assertNotSame([], $invoices, 'বিক্রয়কর্মী নিজের বিলের তালিকাও অ্যাপের ভিতরে পাননি।');
 
+        // ⓘ ঠিকানা আন্দাজ করেও নয় — কাউন্টার মজুদ দেখায়, বিলের তালিকা দেখায় না
         $this->key($access, route('sales.direct.create', [], false))->assertStatus(422);
+        $this->key($access, (string) $invoices[0]['web'])->assertOk();
     }
 
     public function test_the_owner_who_sees_stock_keeps_the_stock_screens(): void
