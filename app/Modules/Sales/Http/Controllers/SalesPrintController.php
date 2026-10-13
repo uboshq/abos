@@ -2017,6 +2017,17 @@ class SalesPrintController extends Controller implements HasMiddleware
             $rows['sales::print.bill_discount'] = $this->money($billDiscount);
         }
 
+        /*
+         * ⛔ ভাড়ার সারি — ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা ([[TheFreightHasItsOwnRowOnPaperTest]])। ⓘ মোটে ভাড়া ধরা
+         * ([[vatSplit()]], [[classicFacts()]] দুইটাই গোনে), অথচ চলতি বিল, খসড়া, বাতিল আর টাকাসহ চালানে সারিটা ছিল না — সারির যোগ
+         * মোটের সাথে মিলত না। নামটা নকশার বিলেরই ("ভাড়া"); শূন্য হলে সারি নেই, বাকি সারির মতো।
+         */
+        $freight = (string) ($document->freight_charge ?? '0');
+
+        if (bccomp($freight, '0', 4) > 0) {
+            $rows['sales::print.classic.freight'] = $this->money($freight);
+        }
+
         $rounding = (string) ($document->rounding_amount ?? '0');
 
         if (bccomp($rounding, '0', 4) !== 0) {
