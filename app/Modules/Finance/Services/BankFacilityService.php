@@ -10,6 +10,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -1009,10 +1010,34 @@ class BankFacilityService
      */
     public function close(BankFacility $facility, ?string $note = null): void
     {
-        $facility->forceFill([
-            'status' => DocumentStatus::CLOSED,
-            'closed_on' => now()->toDateString(),
-            'note' => $note ?: $facility->note,
-        ])->save();
+        /*
+         * ⛔ সারিতে তালা, তারপর দুইটা পাহারা — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬:
+         *   · আগেই বন্ধ হলে আবার নয় — দুই ট্যাবের দ্বিতীয় চাপ বন্ধের দিনটা নীরবে বদলে দিত
+         *   · খাতায় বকেয়া থাকলে নয় — বন্ধ ঋণ সুদ জমা, কিস্তির ঘণ্টা আর সীমার তালিকা থেকে সরে যায়, অথচ দায়টা খাতায়
+         *     থেকে যেত কারো চোখের বাইরে; আগে শোধ (বা ব্যাংকের মওকুফ) খাতায় বসাতে হয়
+         */
+        DB::transaction(function () use ($facility, $note): void {
+            $this->lockFresh($facility);
+
+            if ($facility->status === DocumentStatus::CLOSED) {
+                throw ValidationException::withMessages([
+                    'note' => __('finance::validation.facility_already_closed', ['no' => $facility->document_no]),
+                ]);
+            }
+
+            $owed = $this->standing(collect([$facility]))[(int) $facility->id]['used'] ?? '0';
+
+            if (bccomp($owed, '0', 4) > 0) {
+                throw ValidationException::withMessages([
+                    'note' => __('finance::validation.facility_still_owed', ['no' => $facility->document_no, 'owed' => Money::format($owed)]),
+                ]);
+            }
+
+            $facility->forceFill([
+                'status' => DocumentStatus::CLOSED,
+                'closed_on' => now()->toDateString(),
+                'note' => $note ?: $facility->note,
+            ])->save();
+        });
     }
 }

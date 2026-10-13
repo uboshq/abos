@@ -47,6 +47,8 @@ return [
     'person_pick_or_type' => 'Either pick from the list or type a new name, not both.',
     'capital_needs_a_name' => 'Pick who is contributing, or type a new name.',
     'facility_needs' => 'A :kind facility cannot be worked out without this field.',
+    'facility_already_closed' => 'Facility :no is already closed.',
+    'facility_still_owed' => 'Facility :no still owes :owed in the books — post the repayment (or the bank\'s waiver) first, then close it.',
 
     'kind_in_use' => 'Deposits were opened under :name, so it cannot be removed — deactivate it instead and the old papers stay whole.',
 
