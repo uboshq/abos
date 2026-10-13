@@ -159,6 +159,8 @@ final class ThePhoneRunsTheCreditDeskTest extends TestCase
             ->assertOk();
         $this->assertFalse($this->late->fresh()->isCreditBlocked(), '⛔ মালিক খুলতে পারলেন না।');
 
+        // ⓘ নতুন করে পড়া — স্মৃতির পুরনো মডেলে একই মান "বদল নয়" বলে save কিছুই লিখত না
+        $this->late = $this->late->fresh();
         $this->late->forceFill([
             'credit_blocked_at' => now(), 'credit_blocked_by' => $this->owner->id,
             'credit_block_reason' => 'হাতে বন্ধ', 'credit_block_kind' => null,
