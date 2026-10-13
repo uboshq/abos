@@ -467,6 +467,12 @@ final class LoanService
         Carbon|string|null $date,
         ?int $counterAccountId,
     ): LoanMovement {
+        /*
+         * ⛔ গোনার আগে ঋণের সারিতে তালা — a6-র নিরীক্ষা, fe মারফত ১৩ অক্টোবর ২০২৬ ([[TwoRepaymentsReachedForOneNumberTest]])। ⚠️ আগে
+         * দুইজন একসাথে গুনে একই নম্বর পেতেন, আর অনন্য-চাবিতে পরেরজনের শোধ "Duplicate entry"-তে ভাঙত। ⓘ ডাকারা সবাই লেনদেনের ভিতরে;
+         * তোলা আগেই এই সারি ধরে ([[drawDown()]]), তখন এটা একই তালা আবার — খরচ নেই।
+         */
+        Loan::acrossBranches()->whereKey($loan->id)->lockForUpdate()->first();
         $next = LoanMovement::query()->where('loan_id', $loan->id)->count() + 1;
 
         return LoanMovement::create([
