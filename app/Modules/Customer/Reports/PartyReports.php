@@ -296,16 +296,20 @@ final class PartyReports
                  * জমা রাখা গ্রাহক ঋণাত্মক বকেয়া হয়ে মোটে মিশত, অন্যদের বকেয়া কম দেখাত। এখন বালতিতে কেবল ডেবিট, মোট ক্রেডিট পুরনো
                  * বালতি থেকে কেটে নিচে নামে; বকেয়া শূন্যের নিচে নামে না, বাড়তিটা "অগ্রিম" ঘরে।
                  */
+                /*
+                 * ⛔ বয়স (from, to] — "০–৩০" মানে ৩০ দিন পর্যন্ত, "৯০+" মানে ৯০ পেরোনো (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                 * [[AThirtyDayBillAgedAsThirtyOneTest]])। ⓘ আগে [from, to) ছিল: ঠিক ৩০ দিনের বিল — সাধারণ বাকির মেয়াদ — "৩১–৬০"-এ।
+                 */
                 $bucket = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
                     if ($to !== null) {
-                        $conditions[] = 'ledger_entries.trx_date > '
+                        $conditions[] = 'ledger_entries.trx_date >= '
                             .DB::getPdo()->quote($asOf->copy()->subDays($to)->toDateString());
                     }
 
                     if ($from !== null) {
-                        $conditions[] = 'ledger_entries.trx_date <= '
+                        $conditions[] = 'ledger_entries.trx_date < '
                             .DB::getPdo()->quote($asOf->copy()->subDays($from)->toDateString());
                     }
 
