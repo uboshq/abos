@@ -501,7 +501,27 @@ final class SyncService
             sort($ids);
         }
 
-        return CompanyContext::id().':'.($ids === null ? '*' : implode(',', $ids)).($scope->viewsOneBranch($user) ? '' : '+');
+        return CompanyContext::id().':'.($ids === null ? '*' : implode(',', $ids)).($scope->viewsOneBranch($user) ? '' : '+')
+            .$this->dealerKey($user);
+    }
+
+    /**
+     * ⛔ দেয়ালের ভিতরের বিক্রয়কর্মীর আজকের ডিলারের ছাপ — বাঁধন, হাতবদল বা শেষ হওয়ায় ডিলারের সারি বদলায় না, তাই জলচিহ্নের
+     * টানায় নতুন ডিলার আসত না আর পুরনোরা ক্যাশে থেকে যেত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[AHandoverNeverReachedThePhoneTest]])। ⓘ ছাপ বদলালে দেখা বদলেছে — যন্ত্র গোড়া থেকে, ক্যাশ মুছে ([[sawAnotherView()]])।
+     * ⓘ দেয়ালের বাইরে (সব ডিলার) কিছুই যোগ হয় না। ⓘ ঘর ১৯১ — শাখার তালিকার পরে ৪৩ অক্ষর।
+     */
+    private function dealerKey(User $user): string
+    {
+        $dealers = app(\App\Core\Services\DealerScope::class);
+
+        if (! $dealers->walled($user)) {
+            return '';
+        }
+
+        $ids = $dealers->dealerIds($user)->distinct()->orderBy('dealer_bindings.customer_id')->pluck('customer_id')->implode(',');
+
+        return '|d:'.sha1($ids);
     }
 
     /**
