@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Services;
 
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Support\PaidMonth;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +49,12 @@ final class AttendanceService
                 'work_date' => __('hr::validation.not_employed_then'),
             ]);
         }
+
+        /*
+         * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা বদলায় না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]])।
+         * ⓘ বেতনশিট এই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে; পরে "কামাই"-কে "উপস্থিত" করলে পাতা আর বেতনশিট আলাদা কথা বলত।
+         */
+        PaidMonth::assertOpen($day, $day, 'work_date', 'hr::validation.attendance_month_paid');
 
         $values = [
             'status' => $status,

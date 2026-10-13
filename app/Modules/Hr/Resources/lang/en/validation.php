@@ -43,4 +43,6 @@ return [
     // ⓘ ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
     'basic_cannot_be_unset' => 'The basic salary head cannot stop being basic — the percentage allowances stand on it. To make another head basic, tick basic on that head.',
     'head_in_use_keeps_its_shape' => 'The salary structures of employees use this head — changing its kind (earning/deduction) or calculation (fixed/percent) would turn the next payslips upside down. Create a new head and put it in the structures instead.',
+    'leave_month_paid_approve' => 'The :month payroll (:no) is already confirmed, so leave in that month cannot be approved now: the payslip has already counted those days. Cancel the payroll run of that month first.',
+    'attendance_month_paid' => 'The :month payroll (:no) is already confirmed, so the attendance of that month cannot be changed: the payslip was worked out from it. Cancel the payroll run of that month first.',
 ];

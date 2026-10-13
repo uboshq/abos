@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Hr;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\LeaveService;
@@ -102,6 +105,45 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
 
         $this->assertSame('2.0', app(AttendanceService::class)->unpaidDays($this->employee, Carbon::parse('2026-08-01')),
             '⛔ আধা দিনের ছুটি পুরো দিন কাটল');
+    }
+
+    /**
+     * ⛔ বেতন হয়ে যাওয়া মাসে ছুটি মঞ্জুর বা হাজিরা বদল নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]])।
+     * ⓘ সেপ্টেম্বরের বেতন নিশ্চিত হওয়ার পর ২০–২১ সেপ্টেম্বরের ছুটি মঞ্জুর হত, আর দিনের পাতাও সে মাসে যা খুশি লিখত।
+     */
+    public function test_a_paid_month_takes_no_new_leave_and_no_attendance_change(): void
+    {
+        $run = PayrollRun::acrossBranches()->create([
+            'company_id' => $this->company->id, 'branch_id' => $this->company->defaultBranch()?->id, 'document_no' => 'PAY-LV-09',
+            'month' => '2026-09-01', 'trx_date' => '2026-09-30',
+        ]);
+        $run->forceFill(['status' => DocumentStatus::CONFIRMED])->save();
+
+        $application = app(LeaveService::class)->apply($this->employee, $this->type('SICK'), '2026-09-20', '2026-09-21', '2');
+
+        try {
+            app(LeaveService::class)->approve($application, $this->owner);
+            $this->fail('⛔ বেতন হয়ে যাওয়া মাসের ছুটি মঞ্জুর হল');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('PAY-LV-09', $e->errors()['status'][0]);
+        }
+
+        $this->assertSame(LeaveApplication::PENDING, $application->fresh()->status);
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count(), '⛔ বেতন হয়ে যাওয়া মাসে ছুটির সারি বসল');
+
+        $this->post(route('hr.attendance.store'), [
+            'work_date' => '2026-09-20',
+            'rows' => [$this->employee->id => ['status' => Attendance::PRESENT]],
+        ])->assertSessionHasErrors('work_date');
+
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count(), '⛔ বেতন হয়ে যাওয়া মাসের হাজিরা বদলাল');
+
+        // ⓘ পরের মাস খোলা — আগের মতোই চলে
+        $this->post(route('hr.attendance.store'), [
+            'work_date' => '2026-10-05',
+            'rows' => [$this->employee->id => ['status' => Attendance::PRESENT]],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(1, Attendance::query()->where('employee_id', $this->employee->id)->count());
     }
 
     private function type(string $code): LeaveType
