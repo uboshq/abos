@@ -94,6 +94,30 @@ final class SignedPaperFinisher
         return $approval !== null && app(ApprovalBundles::class)->bundleFor($approval) !== null;
     }
 
+    /**
+     * ⭐ সইটা এখনো ঠিক এই কাগজকে ঢাকে কি না — সইয়ের ছাপ বনাম কাগজের এখনকার ছাপ ([[DocumentFingerprint::forApproval()]])।
+     *
+     * ⓘ যে শেষকারী কাগজটা নিজের সেবার পাহারা ([[DocumentApproval::stopping()]]) ছাড়াই পোস্ট করে (অর্থের কাগজ — হাতে ঋণ,
+     * আমানত, ভাড়া, বীমা, মুনাফা), সে পোস্টের আগে এটা জিজ্ঞেস করে (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ছাপ ছাড়া পুরনো সই
+     * আগের মতোই "ঢাকে" ([[Approval::stillCovers()]]-এর একই নিয়ম)।
+     */
+    public static function stillSigned(Approval $approval, Model $paper): bool
+    {
+        return $approval->state_hash === null
+            || hash_equals((string) $approval->state_hash, app(DocumentFingerprint::class)->forApproval($approval, $paper));
+    }
+
+    /**
+     * ⛔ সইয়ের পরে বদলে যাওয়া কাগজ পোস্ট না করে থামা — চুপচাপ নয়: লগ, আর লেখক ও সইকারীর কাছে কারণসহ খবর ([[stuck()]])।
+     */
+    public function refuseChanged(Model $paper, ?int $signerId, string $url): void
+    {
+        $no = (string) ($paper->getAttribute('document_no') ?? '#'.$paper->getKey());
+
+        $this->stuck($paper, $signerId === null ? null : User::query()->find($signerId), $url,
+            (string) __('core.approval.changed_after_signing', ['no' => $no]));
+    }
+
     private function makerOf(Model $paper): ?User
     {
         $maker = User::query()->find((int) $paper->getAttribute('created_by'));

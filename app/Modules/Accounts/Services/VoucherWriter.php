@@ -106,6 +106,8 @@ final class VoucherWriter
     public function update(Voucher $voucher, array $data, array $lines, bool $asDraft, ?UploadedFile $attachment = null): bool|string
     {
         return DB::transaction(function () use ($voucher, $data, $lines, $asDraft, $attachment): bool|string {
+            // ⛔ অন্য কাগজের সইয়ে বাঁধা খসড়া এখান থেকে বদলায় না — সই যা দেখেছে খাতায় তাই ([[VoucherService::assertNotSignedElsewhere()]])
+            $this->vouchers->assertNotSignedElsewhere($voucher);
             $this->vouchers->update($voucher, $data, $lines, byHand: true);
             // ⓘ সম্পাদনাতেও একই — নাহলে টিক তুলে নিলে সারিটা থেকে যেত, আর ঐ মালের দামে একটা খরচ বসে থাকত যেটা কেউ আর চায় না
             $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
@@ -147,6 +149,9 @@ final class VoucherWriter
          */
         return DB::transaction(function () use ($voucher, $instrumentNo): ?Approval {
             $this->lockFresh($voucher);
+
+            // ⛔ অন্য কাগজের সইয়ে বাঁধা খসড়া এখান থেকে পাকা হয় না — সেই কাগজের নিজের সই এড়ানো যেত ([[VoucherService::assertNotSignedElsewhere()]])
+            $this->vouchers->assertNotSignedElsewhere($voucher, posting: true);
 
             if ($voucher->isDraft() && filled($instrumentNo)) {
                 $voucher->forceFill(['instrument_no' => trim((string) $instrumentNo)])->save();
