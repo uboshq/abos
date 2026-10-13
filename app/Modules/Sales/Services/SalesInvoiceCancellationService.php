@@ -146,8 +146,8 @@ final class SalesInvoiceCancellationService
          * সম্পাদনা হয় না, তাই সংশোধনের পথ নয়)। ⛔ দুই চাপের মাঝে গেট পাস, ফেরত, মাসের তালা — এখানেই থামে।
          */
         DB::transaction(function () use ($cancellation, $invoice, $by, $reason): void {
-            $locked = SalesInvoice::query()->lockForUpdate()->findOrFail($invoice->id);
-            $paper = SalesInvoiceCancellation::query()->lockForUpdate()->findOrFail($cancellation->id);
+            $locked = SalesInvoice::acrossBranches()->lockForUpdate()->findOrFail($invoice->id);
+            $paper = SalesInvoiceCancellation::acrossBranches()->lockForUpdate()->findOrFail($cancellation->id);
 
             if ($paper->status === DocumentStatus::CONFIRMED) {
                 return;
@@ -172,7 +172,7 @@ final class SalesInvoiceCancellationService
 
             foreach ($challans as $challan) {
                 $this->challans->reverseForCancellation(
-                    DeliveryChallan::query()->lockForUpdate()->findOrFail($challan->id), $date, $reason, $paper->document_no, $by->id,
+                    DeliveryChallan::acrossBranches()->lockForUpdate()->findOrFail($challan->id), $date, $reason, $paper->document_no, $by->id,
                 );
             }
 
