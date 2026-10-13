@@ -776,15 +776,35 @@ final class VoucherService
     {
         /*
          * ⓘ টেবিলের তালিকা একবার, ক্যাশে — শেষ মাইগ্রেশনের নাম চাবিতে, তাই নতুন মাইগ্রেশন এলে নিজে থেকে নতুন তালিকা (fe, ১৪ অক্টোবর ২০২৬)।
-         * ⓘ খোঁজা চলে কেবল হাতের পাকা/সম্পাদনা আর সংশোধনের প্রশ্নে, ইঞ্জিনের প্রতিটা দাখিলায় নয়। ⓘ MariaDB/MySQL দুটোতেই
-         * `information_schema.COLUMNS`, চলতি ডাটাবেস (`DATABASE()`) ধরে ছাঁকা; টেবিলের নাম ছোট হাতে, তাই অক্ষরের নিয়মে আটকায় না।
+         * ⓘ খোঁজা চলে কেবল হাতের পাকা/সম্পাদনা আর সংশোধনের প্রশ্নে, ইঞ্জিনের প্রতিটা দাখিলায় নয়। ⓘ কাঠামো পড়া হয় Laravel-এর Schema দিয়ে (চলতি ডাটাবেস, MariaDB/MySQL দুটোতেই),
+         * কাঁচা SQL নয়; টেবিলের নাম ছোট হাতে, আর কেবল `company_id`-ওয়ালা টেবিল — খোঁজা সবসময় কোম্পানি ধরে।
          */
         $version = (string) DB::table('migrations')->max('migration');
-        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), fn () => collect(DB::select(
-            "SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME LIKE '%voucher\_id'"
-        ))->map(fn ($r) => ['t' => strtolower((string) $r->t), 'c' => (string) $r->c])
-            ->reject(fn (array $r) => in_array($r['t'], ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true))
-            ->values()->all());
+        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), function (): array {
+            $found = [];
+
+            foreach (\Illuminate\Support\Facades\Schema::getTables() as $table) {
+                $name = strtolower((string) $table['name']);
+
+                if (in_array($name, ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true)) {
+                    continue;
+                }
+
+                $listing = \Illuminate\Support\Facades\Schema::getColumnListing($name);
+
+                if (! in_array('company_id', $listing, true)) {
+                    continue;
+                }
+
+                foreach ($listing as $column) {
+                    if (str_ends_with((string) $column, 'voucher_id')) {
+                        $found[] = ['t' => $name, 'c' => (string) $column];
+                    }
+                }
+            }
+
+            return $found;
+        });
 
         foreach ($columns as $row) {
             $table = $row['t'];
