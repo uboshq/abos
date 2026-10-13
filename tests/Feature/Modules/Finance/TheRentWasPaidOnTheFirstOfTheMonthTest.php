@@ -68,6 +68,8 @@ final class TheRentWasPaidOnTheFirstOfTheMonthTest extends TestCase
 
         $voucher = Voucher::acrossBranches()->findOrFail($paid->voucher_id);
         $this->assertSame('2026-10-13', $voucher->trx_date->toDateString(), '⛔ ১৩ অক্টোবরে দেওয়া ভাড়া ১ সেপ্টেম্বরে বসল — নগদের খাতা ভুল');
+        $this->assertSame('30000', bcadd((string) RentalAdjustment::query()->findOrFail($paid->id)->rent, '0', 0),
+            '⛔ সেপ্টেম্বরের ভাড়া অক্টোবরের নতুন দরে গেল — বাড়িওয়ালা ৩,০০০ বেশি পেলেন');
     }
 
     private function cash(): Account

@@ -198,8 +198,12 @@ class RentalContractService
 
         $this->assertCanPay($contract, $month);
 
-        $rent = (string) ($data['rent'] ?? $contract->monthly_rent);
-        $fromDeposit = (string) ($data['from_deposit'] ?? $contract->monthly_adjustment);
+        /*
+         * ⛔ ঘর খালি হলে সেই মাসের শর্তের দর — আজকের নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬; মালিকের সিদ্ধান্ত প্র১)। ⓘ আগে
+         * অক্টোবরে ভাড়া বাড়ার পরে সেপ্টেম্বরের বাকি ভাড়া খালি ঘরে দিলে নতুন দরে যেত — বাড়িওয়ালা নীরবে বেশি পেতেন।
+         */
+        $rent = (string) (($data['rent'] ?? '') !== '' ? $data['rent'] : $contract->rentFor($month));
+        $fromDeposit = (string) (($data['from_deposit'] ?? '') !== '' ? $data['from_deposit'] : $contract->adjustmentFor($month));
         $cash = bcsub($rent, $fromDeposit, 4);
 
         if (bccomp($cash, '0', 4) < 0) {
