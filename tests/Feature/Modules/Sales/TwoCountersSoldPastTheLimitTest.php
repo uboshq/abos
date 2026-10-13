@@ -281,6 +281,36 @@ final class TwoCountersSoldPastTheLimitTest extends TestCase
         $this->assertWithinTheLimit();
     }
 
+    /**
+     * ⛔ "খসড়া রাখুন" আর সইয়ের পথও গ্রাহকের সারিতে তালা দেয় — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে কেবল সরাসরি
+     * বিক্রিতে তালা ছিল: দুই ক্লিক দুইজনেই "খোলা খসড়া নেই" দেখে দুইটা খসড়া বানাত। ⓘ চালানের সারি লেখার মুহূর্তে দ্বিতীয়
+     * কাউন্টার গ্রাহকের সারিতে হাত দেয় — তালা থাকলে অপেক্ষার সময় পার হয়ে থামে।
+     */
+    public function test_a_draft_hold_locks_the_customer_like_a_sale(): void
+    {
+        $seen = null;
+
+        DB::listen(function ($query) use (&$seen): void {
+            if ($seen !== null || ! str_starts_with(strtolower(ltrim($query->sql)), 'insert into `sal_challans`')) {
+                return;
+            }
+
+            $seen = 'pending';
+
+            try {
+                $this->grabTheCustomerFromTheSecondCounter();
+                $seen = 'free';
+            } catch (QueryException $e) {
+                $seen = (int) ($e->errorInfo[1] ?? 0) === 1205 ? 'locked' : $e->getMessage();
+            }
+        });
+
+        $held = $this->sell(2, ['save_as_draft' => '1']);
+
+        $this->assertSame(DocumentStatus::DRAFT, $held['invoice']->status, 'দৃশ্যটাই বানানো যায়নি — খসড়া রাখা হয়নি।');
+        $this->assertSame('locked', $seen, '⛔ খসড়া রাখার সময় গ্রাহকের সারিতে তালা নেই — দুই ক্লিক দুইটা খসড়া বানাত।');
+    }
+
     // ── প্রস্তুতি ────────────────────────────────────────────────────────
 
     /**

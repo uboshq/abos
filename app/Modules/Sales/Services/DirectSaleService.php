@@ -594,6 +594,13 @@ final class DirectSaleService
     private function hold(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse, bool $asDraft): array
     {
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse, $asDraft) {
+            /*
+             * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের প্রথম কাজ, [[sellNow()]]-এর মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⚠️ আগে খসড়া/সইয়ের পথে তালা ছিল না: দুই ক্লিক দুইজনেই "খোলা খসড়া নেই" দেখে দুইটা খসড়া বানাত, আর নিচের সীমার
+             * দেয়াল দুইজনেই পুরনো বকেয়া দেখে পার হত।
+             */
+            $this->credit->lockCustomer($customer);
+
             $trxDate = $data['trx_date'] ?? now()->toDateString();
 
             $parked = $this->parkedFor($data, $customer);
