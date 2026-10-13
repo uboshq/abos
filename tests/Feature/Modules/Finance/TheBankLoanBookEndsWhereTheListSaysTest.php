@@ -127,6 +127,30 @@ final class TheBankLoanBookEndsWhereTheListSaysTest extends TestCase
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @param  array<string, mixed>  $extra */
+    /**
+     * ⛔ এক শাখায় সীমিত মানুষ অন্য শাখার ঋণের খাতা চাইলে খাতা-সারি থামত, অথচ খাতার বাইরের পুরনো তোলা (ঋণের নিজের লেখা অঙ্ক) দেখাত
+     * (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function test_a_clerk_of_another_branch_does_not_see_the_loans_old_draw(): void
+    {
+        $old = $this->loan('Old Bank', 12);
+        $old->forceFill(['opening_drawn' => '80000'])->save();
+
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
+            ->whereKeyNot((int) $old->branch_id)->orderBy('id')->firstOrFail();
+        $clerk = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id, 'current_branch_id' => $other->id]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->give($clerk, 'finance.bank_facility.view');
+        \App\Models\UserDataScope::query()->create([
+            'company_id' => $this->company->id, 'user_id' => $clerk->id, 'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $other->id,
+        ]);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($clerk->fresh());
+
+        $this->assertSame('0', $this->book($old, ReportEngine::ALL_TIME, now()->toDateString())['closing'],
+            '⛔ অন্য শাখার ঋণের পুরনো তোলা সীমিত মানুষের খাতায় দেখা গেল');
+    }
+
     private function loan(string $bank, int $instalments, array $extra = []): BankFacility
     {
         return $this->service->open([
