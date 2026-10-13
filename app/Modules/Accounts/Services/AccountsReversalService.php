@@ -45,7 +45,7 @@ final class AccountsReversalService
         $reason = $this->reason($reason);
 
         return DB::transaction(function () use ($voucher, $by, $reason) {
-            $locked = Voucher::query()->lockForUpdate()->findOrFail($voucher->id);
+            $locked = Voucher::acrossBranches()->lockForUpdate()->findOrFail($voucher->id);
 
             if (! $locked->isPosted() || $locked->isCancelled()) {
                 throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.not_posted', ['no' => $locked->document_no])]);
@@ -69,7 +69,7 @@ final class AccountsReversalService
         $reason = $this->reason($reason);
 
         return DB::transaction(function () use ($note, $by, $reason) {
-            $locked = Note::query()->lockForUpdate()->findOrFail($note->id);
+            $locked = Note::acrossBranches()->lockForUpdate()->findOrFail($note->id);
 
             if (! $locked->isConfirmed()) {
                 throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.not_posted', ['no' => $locked->document_no])]);
