@@ -137,6 +137,17 @@ final class SupplierService
             throw ValidationException::withMessages(['is_active' => __('supplier::validation.active_needs_delete_key')]);
         }
 
+        /*
+         * ⛔ শাখায় সীমিত মানুষ শাখা মুছে সরবরাহকারীকে কোম্পানি-স্তরে তোলেন না — শাখার নিয়ম খালি মানে চলে না, আর শাখাহীন
+         * সারি সবার নাগালে (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABranchClerkMadeASupplierCompanyWideTest]])।
+         * ⓘ গ্রাহকের জোড়া: [[CustomerService::assertStaysInReach()]]।
+         */
+        if (array_key_exists('branch_id', $data) && $data['branch_id'] === null && $supplier->branch_id !== null
+            && auth()->user() !== null
+            && app(\App\Core\Services\DataScope::class)->isLimited(auth()->user(), \App\Models\UserDataScope::BRANCH)) {
+            throw ValidationException::withMessages(['branch_id' => __('validation.branch_out_of_reach')]);
+        }
+
         // ⛔ মুছে দেওয়া কোড মানে "যেমন ছিল" — খালি ঘর null হয়ে `NOT NULL` কোডে ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
         // [[ABlankBoxBrokeTheSupplierFormTest]])
         if (array_key_exists('code', $data) && trim((string) $data['code']) === '') {
