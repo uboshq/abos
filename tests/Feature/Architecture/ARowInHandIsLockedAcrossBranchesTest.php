@@ -33,7 +33,6 @@ final class ARowInHandIsLockedAcrossBranchesTest extends TestCase
         'app/Modules/Documents/Services/DocumentLibrary.php' => 1,
         'app/Modules/Documents/Services/DocumentSignatures.php' => 1,
         'app/Modules/Documents/Services/DocumentWorkflow.php' => 1,
-        'app/Modules/Inventory/Services/StockCountService.php' => 1,
         'app/Modules/Inventory/Services/StockTransferService.php' => 1,
         'app/Modules/Purchase/Services/PaymentService.php' => 1,
         'app/Modules/Purchase/Services/PurchaseBillService.php' => 1,
