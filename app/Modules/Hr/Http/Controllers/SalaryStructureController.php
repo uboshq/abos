@@ -104,6 +104,14 @@ class SalaryStructureController extends Controller implements HasMiddleware
     {
         $on = $request->query('on');
 
-        return filled($on) ? Carbon::parse((string) $on) : now();
+        /*
+         * ⛔ কেবল Y-m-d, আর সত্যিকারের দিন — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[TheSalaryScreenTakesOnlyADateTest]])।
+         * ⓘ আগে `?on=abc` সোজা Carbon::parse-এ যেত আর পাতা ৫০০ দিত। এখন অন্য যেকোনো লেখায় আজকের ছবি — ঠিকানায় তারিখ না দিলে যা হয়।
+         */
+        if (! is_string($on) || preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $on, $m) !== 1 || ! checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return now();
+        }
+
+        return Carbon::parse($on);
     }
 }
