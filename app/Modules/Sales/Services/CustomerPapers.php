@@ -115,6 +115,8 @@ final class CustomerPapers
     public function invoices(int $limit = 20): Collection
     {
         return $this->mine(SalesInvoice::query())
+            // ⛔ কেবল পাকা বিল — খসড়া আর বাতিল বিল জীবন্ত বিলের মতো বসত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePortalHomeReadEveryBillAsZeroTest]])
+            ->posted()
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit($limit)
             ->get();

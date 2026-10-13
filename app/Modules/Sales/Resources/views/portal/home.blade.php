@@ -95,7 +95,8 @@
                         </span>
                     </span>
                     <span class="num font-medium">
-                        {{ \App\Core\Support\Money::format($invoice->grand_total) }}
+                        {{-- ⛔ বিলের ঘর `total` — `grand_total` নামে কোনো ঘর নেই, তাই প্রতিটা বিল ০.০০ পড়ত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬) --}}
+                        {{ \App\Core\Support\Money::format($invoice->total) }}
                     </span>
                 </li>
             @endforeach
