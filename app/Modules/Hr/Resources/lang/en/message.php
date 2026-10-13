@@ -44,4 +44,7 @@ return [
     'no_leave_types' => 'No leave types yet.',
     'empty_leave_types' => 'Nobody can apply for leave until there are leave types.',
     'no_employees_for_day' => 'Nobody was employed on that day.',
+
+    // ⭐ Own leave from the phone — with no employee record there is nobody to apply for (13 Oct 2026)
+    'leave_no_employee' => 'There is no employee record in your name, so leave cannot be applied for. Ask HR.',
 ];

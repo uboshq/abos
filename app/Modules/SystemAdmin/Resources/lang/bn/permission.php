@@ -155,6 +155,8 @@ return [
         'finance.insurance' => 'বীমা',
         'governance.sync' => 'ফোনের সিঙ্কের গোলমাল',
         'hr.claim' => 'খরচের দাবি ও অগ্রিম',
+        // ⭐ নিজের বেতনের স্লিপ, ফোনে (১৩ অক্টোবর ২০২৬)
+        'hr.payslip' => 'বেতনের স্লিপ',
         'promotion' => 'পুরো অফার মডিউল',
         'system_admin.notice' => 'নোটিশ',
     ],
