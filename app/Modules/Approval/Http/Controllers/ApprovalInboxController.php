@@ -513,10 +513,12 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * ভুলটা মানুষকে **তাকাতে** বলে, আর উল্টো ভুলটা তাঁকে না
              * জানিয়ে সই করায়।
              */
+            /*
+             * ⭐ ছাপ থাকলে ছাপ মিলিয়ে (১৩ অক্টোবর ২০২৬) — ⛔ `updated_at` সারির বদল (খাত, অঙ্ক) দেখত না, সইকারী "বদলায়নি" ভেবে সই
+             * দিতেন। ছাপ না থাকলে বা মেলানো না গেলে উপরের ঘড়ির নিয়মই ([[DocumentFingerprint::changedSinceAsked()]])।
+             */
             'changedSinceAsked' => $document !== null
-                && $entry->requested_at !== null
-                && $document->getAttribute('updated_at') !== null
-                && $document->getAttribute('updated_at')->greaterThan($entry->requested_at),
+                && app(\App\Core\Engines\Approval\DocumentFingerprint::class)->changedSinceAsked($entry, $document),
             'labels' => $this->flows->labels(),
             'document' => $document,
 

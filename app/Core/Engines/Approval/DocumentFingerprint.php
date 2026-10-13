@@ -92,6 +92,31 @@ final class DocumentFingerprint
      *
      * ⓘ "সই হয়েছে, পোস্ট হয়নি" ([[SignedButNotPosted]]) আর নিরীক্ষার পর্দা জানে না কোন সই কোন ছাপ নেয়; সারিটা নিজেই বলে।
      */
+    /**
+     * ⓘ সারি থেকে আবার তুলে কি ছাপটা মেলানো যায় — যে কাগজের ছাপে না-সংরক্ষিত প্রস্তাব থাকে (বাকির সীমা বাড়ানো, [[asStored()]]),
+     * তার নয়: ডাটাবেজের সারিতে প্রস্তাবটা নেই, তাই ছাপ কখনো মিলত না আর পর্দা প্রতিটা অনুরোধে "বদলেছে" বলত।
+     * কাগজ নিজে বলে (`fingerprintCarriesAProposal()`); তখন পর্দাগুলো আগের ঘড়ির নিয়মে।
+     */
+    public function canRecheck(Model $document): bool
+    {
+        return ! (method_exists($document, 'fingerprintCarriesAProposal') && $document->fingerprintCarriesAProposal());
+    }
+
+    /**
+     * ⭐ সই চাওয়ার পরে কাগজটা বদলেছে কি — ছাপ থাকলে ছাপ মিলিয়ে (সারির বদলও ধরা পড়ে), নাহলে মাথার `updated_at` বনাম চাওয়ার সময়
+     * (সইকারীর পাতা, [[ApprovalInboxController::show()]]; হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function changedSinceAsked(\App\Models\Approval $approval, Model $document): bool
+    {
+        if ($approval->state_hash !== null && $this->canRecheck($document)) {
+            return ! hash_equals((string) $approval->state_hash, $this->forApproval($approval, $document));
+        }
+
+        $touched = $document->getAttribute('updated_at');
+
+        return $approval->requested_at !== null && $touched !== null && $touched->greaterThan($approval->requested_at);
+    }
+
     public function forApproval(\App\Models\Approval $approval, Model $document): string
     {
         $skips = (array) (($approval->payload ?? [])[self::SKIPPED] ?? []);
