@@ -186,7 +186,12 @@ final class WarehouseService
 
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void
     {
+        /*
+         * ⛔ দেখার দেয়াল ছাড়া — কোড অনন্য গোটা কোম্পানিতে (`unique(company_id, code)`), শাখায় নয়। ⓘ আগে হেডারে এক শাখা
+         * বাছা থাকলে অন্য শাখার একই কোড চোখে পড়ত না, যাচাই পার হত, আর ডাটাবেজের সূচকে ধাক্কা খেয়ে ৫০০ (১৩ অক্টোবর ২০২৬)।
+         */
         $taken = Warehouse::query()
+            ->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH])
             ->where('code', $code)
             ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
             ->withTrashed()
