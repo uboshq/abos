@@ -315,7 +315,12 @@ class RentalContractService
                     'type' => Voucher::PAYMENT,
                     // ⛔ চুক্তির শাখায় — চলতি শাখায় নয় (অডিট ৬ অক্টোবর ⛔৫): অন্য শাখা থেকে দিলে ২১৪১ বা জামানত শাখা ধরে কখনো মিলত না
                     'branch_id' => $contract->branch_id,
-                    'trx_date' => (string) ($data['paid_on'] ?? $month->toDateString()),
+                    /*
+                     * ⛔ টাকা যেদিন গেল, সেদিন — যে মাসের ভাড়া সেই মাসের প্রথম দিন নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে
+                     * ফর্মে দিনের ঘর ছিল না, তাই সেপ্টেম্বরের ভাড়া ১৩ অক্টোবরে দিলে নগদ ১ সেপ্টেম্বরে কমত (বন্ধ মাসে আটকাত), আর
+                     * মার্চের অগ্রিম জানুয়ারিতে দিলে নগদ মার্চ পর্যন্ত হাতে দেখাত।
+                     */
+                    'trx_date' => (string) (($data['paid_on'] ?? '') ?: now()->toDateString()),
                     'narration' => __('finance::message.rental_month_narration', [
                         'who' => $contract->counterparty,
                         'month' => $month->translatedFormat('F Y'),

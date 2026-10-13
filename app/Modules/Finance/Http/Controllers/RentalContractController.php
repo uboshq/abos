@@ -371,7 +371,8 @@ class RentalContractController extends Controller implements HasMiddleware
     {
         $this->contracts->adjustMonth($contract, $request->validate([
             'for_month' => ['required', 'date'],
-            'paid_on' => ['nullable', 'date'],
+            // ⛔ টাকা যাওয়ার দিন — আগামী দিনে নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'paid_on' => ['nullable', 'date', 'before_or_equal:today'],
             'rent' => ['nullable', 'numeric', 'min:0'],
             'from_deposit' => ['nullable', 'numeric', 'min:0'],
             'money_account_id' => ['nullable', 'integer'],
