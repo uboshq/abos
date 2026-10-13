@@ -203,7 +203,7 @@ final class PaymentService
              * ⓘ তাই পরিশোধের সারি আর যে বিলগুলো সে শোধ করে সেগুলোয় তালা,
              * তারপর খাতা থেকে নতুন করে পড়া অবস্থা আর বাকি।
              */
-            $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->first();
+            $locked = Payment::acrossBranches()->whereKey($payment->id)->lockForUpdate()->first();
 
             if ($locked === null || $locked->status !== DocumentStatus::DRAFT) {
                 throw ValidationException::withMessages([
