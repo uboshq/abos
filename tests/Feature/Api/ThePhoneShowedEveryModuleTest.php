@@ -240,10 +240,11 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
 
     public function test_every_change_is_written_down_who_when_old_and_new(): void
     {
-        $this->flip(['hr' => true]);
-        $this->flip(['hr' => false]);
+        // ⓘ ডিফল্টে বন্ধ একটা মডিউল — HR এখন ডিফল্টে চালু, "চালু করা" তাই কোনো বদল নয় (মালিক, ১৩ অক্টোবর ২০২৬)
+        $this->flip(['master_data' => true]);
+        $this->flip(['master_data' => false]);
 
-        $row = Setting::query()->withoutGlobalScopes()->where('key', 'mobile.modules.hr')->firstOrFail();
+        $row = Setting::query()->withoutGlobalScopes()->where('key', 'mobile.modules.master_data')->firstOrFail();
 
         $trail = AuditTrail::query()->withoutGlobalScopes()
             ->forRecord(Setting::class, $row->id)
