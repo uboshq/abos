@@ -958,10 +958,11 @@ class RentalContractService
         $ahead = '0';
         $aheadMonths = [];
 
+        // ⛔ শাখা-দেয়াল ছাড়া — হেডারে অন্য শাখা বাছা থাকলে আগাম মাসগুলো চোখ এড়াত, আর ১১৩৭ কোনোদিন ফেরত বসত না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
         $rows = $contract->adjustments()
             ->whereNotIn('for_month', RentalAccrual::query()->where('rental_contract_id', $contract->id)->select('for_month'))
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED))
-            ->with('voucher.lines')
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::CONFIRMED))
+            ->with(['voucher' => fn ($v) => $v->withoutGlobalScope('user-branch'), 'voucher.lines'])
             ->orderBy('for_month')
             ->get();
 
