@@ -267,6 +267,17 @@ final class WeLetSpaceOutTooTest extends TestCase
         $this->assertSame(Tenancy::ACTIVE, $tenancy->fresh()->status);
     }
 
+    /** ⛔ বন্ধ চুক্তির শর্ত সরাসরি অনুরোধে বদলাত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
+    public function test_a_closed_tenancys_terms_do_not_change(): void
+    {
+        $tenancy = $this->open($this->person('Closed Terms Tenant'), '10000', starts: $this->month(-2));
+        app(TenancyService::class)->close($tenancy, []);
+
+        $this->assertRefused(fn () => app(TenancyService::class)->revise($tenancy->fresh(), ['monthly_rent' => '99999']),
+            'status', '⛔ বন্ধ চুক্তির ভাড়া বদলে গেল');
+        $this->assertSame('10000', bcadd((string) $tenancy->fresh()->monthly_rent, '0', 0));
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function month(int $offset): Carbon

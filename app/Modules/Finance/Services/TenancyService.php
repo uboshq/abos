@@ -190,15 +190,24 @@ class TenancyService
             throw ValidationException::withMessages(['monthly_rent' => __('finance::tenancy.terms_bad')]);
         }
 
-        $tenancy->update(array_filter([
-            'monthly_rent' => $rent,
-            'rent_day' => $data['rent_day'] ?? null,
-            'tenant_phone' => $data['tenant_phone'] ?? null,
-            'premises' => $data['premises'] ?? null,
-            'note' => $data['note'] ?? null,
-        ], fn ($v) => $v !== null && $v !== ''));
+        // ⛔ সারিতে তালা, আর কেবল চালু চুক্তি — বন্ধ বা জামানতের অপেক্ষার চুক্তির শর্ত সরাসরি অনুরোধে বদলাত (১৩ অক্টোবর ২০২৬)
+        return DB::transaction(function () use ($tenancy, $data, $rent) {
+            $this->lockFresh($tenancy);
 
-        return $tenancy->fresh();
+            if (! $tenancy->isActive()) {
+                throw ValidationException::withMessages(['status' => __('finance::tenancy.not_active')]);
+            }
+
+            $tenancy->update(array_filter([
+                'monthly_rent' => $rent,
+                'rent_day' => $data['rent_day'] ?? null,
+                'tenant_phone' => $data['tenant_phone'] ?? null,
+                'premises' => $data['premises'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], fn ($v) => $v !== null && $v !== ''));
+
+            return $tenancy->fresh();
+        });
     }
 
     /**
