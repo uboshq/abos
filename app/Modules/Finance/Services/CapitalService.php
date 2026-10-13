@@ -487,7 +487,7 @@ final class CapitalService
                 continue;
             }
 
-            $taken = $this->withdrawnBy((int) $row->person_id);
+            $taken = $this->withdrawnBy((int) $row->person_id, $wholeCompany);
             $terms = $latest[(int) $row->person_id] ?? ['type' => '', 'share' => null];
 
             $out[] = [
@@ -743,11 +743,13 @@ final class CapitalService
      * আবার বিবরণ-খোঁজা ফিরিয়ে না আনেন:
      * [[Tests\Feature\Modules\Finance\TheCapWasSetOnANameAndTheNameChangedTest]]।
      */
-    private function withdrawnBy(int $personId): string
+    private function withdrawnBy(int $personId, bool $wholeCompany = true): string
     {
         $sum = Withdrawal::query()
             ->where('person_id', $personId)
             ->posted()
+            // ⛔ মূলধনের একই শাখা — হেডারে এক শাখা বাছা থাকলে মূলধন সেই শাখার, অথচ তোলা গোটা কোম্পানির গোনা হত: "অতিরিক্ত তোলা" ভুয়া (১৩ অক্টোবর ২০২৬)
+            ->when(! $wholeCompany, fn ($q) => $q->inViewedBranch())
 
             /*
              * ⛔ কেবল মূলধন তোলা — অডিট ম২৬, ৪ অক্টোবর ২০২৬। ⓘ বেতন একটা খরচ, আর লাভের ভাগ তোলা ঘোষিত দায়
