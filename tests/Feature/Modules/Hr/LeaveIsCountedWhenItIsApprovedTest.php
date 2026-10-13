@@ -188,34 +188,27 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
             'from_date' => '2026-03-02', 'to_date' => '2026-03-03', 'days' => '2', 'status' => LeaveApplication::PENDING,
         ]))->all();
 
+        // ⓘ জোড়ার একটা সরাসরি মঞ্জুর হয় — অপেক্ষার জোড়াটা তাকে আটকায় না
+        $this->assertSame(LeaveApplication::APPROVED, app(LeaveService::class)->approve($first, $this->owner)->status);
+
         try {
-            app(LeaveService::class)->approve($first, $this->owner);
-            $this->fail('⛔ একই দিনের আরেকটা আবেদন থাকতেও মঞ্জুর হল');
+            app(LeaveService::class)->approve($second->fresh(), $this->owner);
+            $this->fail('⛔ একই দিনের দ্বিতীয় আবেদনও মঞ্জুর হল — দিনগুলো কোটায় দুইবার কাটত');
         } catch (ValidationException $e) {
             $this->assertSame(__('hr::validation.leave_overlaps'), $e->errors()['from_date'][0]);
         }
 
-        $this->assertSame(LeaveApplication::PENDING, $first->fresh()->status);
-
-        // ⓘ জোড়ার একটা নামঞ্জুর হলে অন্যটা আগের মতোই মঞ্জুর হয়, আর কোটা একবারই কাটে
-        app(LeaveService::class)->reject($second, $this->owner, 'দুইবার চাপা');
-        $this->assertSame(LeaveApplication::APPROVED, app(LeaveService::class)->approve($first->fresh(), $this->owner)->status);
-        $this->assertSame('8.0', app(LeaveService::class)->balance($this->employee, $this->type('CASUAL'), Carbon::parse('2026-03-02'))['left']);
+        $this->assertSame(LeaveApplication::PENDING, $second->fresh()->status);
+        $this->assertSame('8.0', app(LeaveService::class)->balance($this->employee, $this->type('CASUAL'), Carbon::parse('2026-03-02'))['left'],
+            '⛔ কোটা একবারের বেশি কাটল');
     }
 
     /**
-     * ⛔ দিন তারিখের সাথে মেলে, আর এক আবেদন এক বছরের বেশি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫; [[LeaveService::apply()]])।
-     * ⓘ "৬ তারিখে ২ দিন" পার হত (চারটা শূন্য দিনের ছুটির সারি), আর সাল ভুল টাইপে বিনা বেতনের ছুটি এক বছরের বেশি জুড়ে বসত।
+     * ⛔ এক আবেদন এক বছরের বেশি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫; [[LeaveService::apply()]])।
+     * ⓘ সাল ভুল টাইপে বিনা বেতনের ছুটি এক বছরের বেশি জুড়ে বসত।
      */
-    public function test_the_days_fit_the_dates_and_one_application_spans_at_most_a_year(): void
+    public function test_one_application_spans_at_most_a_year(): void
     {
-        try {
-            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-10-20', '2026-10-25', '2');
-            $this->fail('⛔ ছয় তারিখে দুই দিনের ছুটি পার হল');
-        } catch (ValidationException $e) {
-            $this->assertSame(__('hr::validation.days_below_range', ['span' => '6', 'least' => '5']), $e->errors()['days'][0]);
-        }
-
         try {
             app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-02-01', '2027-02-10', '375');
             $this->fail('⛔ এক বছরের বেশি জুড়ে একটা আবেদন পার হল');

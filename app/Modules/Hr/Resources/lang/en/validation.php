@@ -51,7 +51,6 @@ return [
     'leave_month_paid_approve' => 'The :month payroll (:no) is already confirmed, so leave in that month cannot be approved now: the payslip has already counted those days. Cancel the payroll run of that month first.',
     'attendance_month_paid' => 'The :month payroll (:no) is already confirmed, so the attendance of that month cannot be changed: the payslip was worked out from it. Cancel the payroll run of that month first.',
     'leave_range_too_long' => 'One application can cover at most :max days. Check the year in the dates, or split a longer leave into two applications.',
-    'days_below_range' => 'Those dates span :span days, so more than :least days must be asked for (only the last day can be a part day). For fewer days, shorten the dates to the days actually taken.',
     'leave_own_withdrawal' => 'You cannot withdraw your own approved leave. Ask another manager or the owner.',
     'days_format' => 'Write the days as a plain number with at most one decimal place, such as 2 or 1.5.',
     'leave_type_closed' => 'That leave type cannot be chosen: it is switched off, deleted or not of this company. Choose an active leave type.',

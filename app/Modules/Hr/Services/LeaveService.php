@@ -107,7 +107,8 @@ final class LeaveService
              * ⓘ একই দিনের দুইটা আবেদন (আগের দুইবার চাপা) দুটোই মঞ্জুর হত: দিনগুলো কোটায় দুইবার কাটত, হাজিরার সারি দ্বিতীয়টার নামে
              * সরে যেত, আর সেটা প্রত্যাহার করলে প্রথমটা "মঞ্জুর" থেকেও হাজিরায় কিছু থাকত না। কর্মীর তালার নিচে, এই আবেদন বাদে।
              */
-            $this->assertNoOverlap($employee, $application->from_date->copy(), $application->to_date->copy(), $application->id);
+            // ⓘ কেবল মঞ্জুর হওয়াগুলোর সাথে — আগে থেকে থাকা দুইটা একই-দিনের অপেক্ষার আবেদনের একটা সরাসরি মঞ্জুর করা যায়, অন্যটা তখন থামে
+            $this->assertNoOverlap($employee, $application->from_date->copy(), $application->to_date->copy(), $application->id, [LeaveApplication::APPROVED]);
 
             $application->forceFill([
                 'status' => LeaveApplication::APPROVED,
@@ -336,17 +337,10 @@ final class LeaveService
         }
 
         /*
-         * ⛔ দিন তারিখের চেয়ে এক দিনের বেশি কম নয় — একই নিরীক্ষা (⚠️৫)। ⓘ হাজিরায় দিনগুলো প্রথম তারিখ থেকে ভরে
-         * ([[Attendance::shareOf()]]), তাই "৬ তারিখে ২ দিন" লিখলে প্রথম দুইটা পুরো আর বাকি চারটা শূন্য দিনের "ছুটি" হত — বিনা
-         * বেতনের ছুটি ভুল মাসে কাটত, আর সাপ্তাহিক ছুটির সারি চাপা পড়ত। কেবল শেষ তারিখটাই আধা দিন হতে পারে ("২ তারিখে ১.৫ দিন")।
+         * ⓘ তারিখের চেয়ে কম দিন এখনো চলে — মালিকের সিদ্ধান্তের অপেক্ষায় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⚠️ হাজিরায়
+         * দিনগুলো প্রথম তারিখ থেকে ভরে ([[Attendance::shareOf()]]), তাই "৬ তারিখে ২ দিন"-এ প্রথম দুইটা পুরো আর বাকিগুলো শূন্য দিনের
+         * "ছুটি" — অথচ আজ লোকে এভাবেই ছুটির মধ্যের শুক্রবার বাদ দেন। শুক্রবার আর ছুটির দিন গোনা হবে কি না, সেই উত্তরের পরে।
          */
-        $least = (string) ($spanDays - 1);
-
-        if (bccomp($days, $least, 1) <= 0) {
-            throw ValidationException::withMessages([
-                'days' => __('hr::validation.days_below_range', ['span' => $span, 'least' => $least]),
-            ]);
-        }
     }
 
     private function assertEmployedThroughout(Employee $employee, Carbon $from, Carbon $to): void
@@ -364,12 +358,14 @@ final class LeaveService
      * থাকতে দিলে একই দিন দুইবার কোটা থেকে কাটত, আর হাজিরার সারিটা
      * শেষে যেটা বসত সেটাই টিকত — কোনটা, তা নির্ধারিত থাকত না।
      */
-    private function assertNoOverlap(Employee $employee, Carbon $from, Carbon $to, ?int $except = null): void
+    /** @param  list<string>  $statuses */
+    private function assertNoOverlap(Employee $employee, Carbon $from, Carbon $to, ?int $except = null,
+        array $statuses = [LeaveApplication::PENDING, LeaveApplication::APPROVED]): void
     {
         $clash = LeaveApplication::query()
             ->where('employee_id', $employee->id)
             ->when($except !== null, fn ($q) => $q->whereKeyNot($except))
-            ->whereIn('status', [LeaveApplication::PENDING, LeaveApplication::APPROVED])
+            ->whereIn('status', $statuses)
             ->whereDate('from_date', '<=', $to->toDateString())
             ->whereDate('to_date', '>=', $from->toDateString())
             ->exists();
