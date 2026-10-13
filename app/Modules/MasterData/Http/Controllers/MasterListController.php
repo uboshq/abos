@@ -139,7 +139,8 @@ class MasterListController extends Controller implements HasMiddleware
             'title' => 'master_data::menu.taxes',
             'fields' => [
                 'rate' => ['type' => 'number', 'label' => 'master_data::field.rate', 'step' => '0.0001'],
-                'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'tax_kinds', 'labels' => 'kind'],
+                // ⛔ বাধ্যতামূলক — কলাম NOT NULL; "—" রাখলে আগে ৫০০ আসত, বার্তা নয় (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'tax_kinds', 'labels' => 'kind', 'rules' => ['required']],
                 'is_inclusive' => ['type' => 'switch', 'label' => 'master_data::field.is_inclusive'],
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.account', 'options' => 'accounts'],
             ],
@@ -233,7 +234,8 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'party_type',
             'title' => 'master_data::menu.party_types',
             'fields' => [
-                'applies_to' => ['type' => 'select', 'label' => 'master_data::field.applies_to', 'options' => 'applies', 'labels' => 'applies'],
+                // ⛔ বাধ্যতামূলক — কলাম NOT NULL; "—" রাখলে আগে ৫০০ আসত (১৪ অক্টোবর ২০২৬)
+                'applies_to' => ['type' => 'select', 'label' => 'master_data::field.applies_to', 'options' => 'applies', 'labels' => 'applies', 'rules' => ['required']],
             ],
             'columns' => ['applies_to'],
         ],
