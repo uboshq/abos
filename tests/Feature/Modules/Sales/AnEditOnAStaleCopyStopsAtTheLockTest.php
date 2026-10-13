@@ -92,8 +92,9 @@ final class AnEditOnAStaleCopyStopsAtTheLockTest extends TestCase
         $line = [['product_id' => $this->product()->id, 'qty' => '1', 'rate' => '10']];
         $first = $bills->create($this->paper(), $line);
         $second = $bills->create($this->paper(), $line);
-        DB::table('sal_invoices')->where('id', $first->id)->update(['sale_no' => 'S-FIRST']);
-        DB::table('sal_invoices')->where('id', $second->id)->update(['sale_no' => 'S-SECOND']);
+        // ⓘ ফেরত কেবল পাকা বিলে — দুইটাই পাকা ধরা (এই দাবি নম্বর মাপে, মাল নয়)
+        DB::table('sal_invoices')->where('id', $first->id)->update(['sale_no' => 'S-FIRST', 'status' => DocumentStatus::CONFIRMED]);
+        DB::table('sal_invoices')->where('id', $second->id)->update(['sale_no' => 'S-SECOND', 'status' => DocumentStatus::CONFIRMED]);
 
         $service = app(SalesReturnService::class);
         $paper = $this->paper() + ['reason_code_id' => ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->value('id')];
