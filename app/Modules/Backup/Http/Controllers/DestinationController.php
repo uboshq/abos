@@ -6,6 +6,7 @@ namespace App\Modules\Backup\Http\Controllers;
 
 use App\Core\Engines\Backup\DestinationFactory;
 use App\Core\Engines\Backup\DriveScanner;
+use App\Core\Security\WholeDatabaseAccess;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -84,6 +85,8 @@ class DestinationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->assertWholeDatabase($request);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'driver' => ['required', Rule::in(DestinationFactory::AVAILABLE)],
@@ -133,6 +136,8 @@ class DestinationController extends Controller
      */
     public function test(Request $request, BackupDestination $destination): RedirectResponse
     {
+        $this->assertWholeDatabase($request);
+
         try {
             $health = $this->factory
                 ->make($destination->driver, $destination->config ?? [])
@@ -159,6 +164,24 @@ class DestinationController extends Controller
             : back()->withErrors([
                 'destination' => __($health->reason ?? 'backup::health.unknown'),
             ]);
+    }
+
+    /**
+     * ⛔ গন্তব্য বসানো আর পরীক্ষা করা কেবল পুরো ডাটাবেজের মালিকের — নামানোর একই নিয়ম ([[WholeDatabaseAccess]];
+     * ব্যাকআপ লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ব্যাকআপে সব কোম্পানির পুরো ডাটাবেজ, তাই "নামান" বোতাম কেবল তাঁর। ⛔ কিন্তু গন্তব্য মানেও "নামানো": আগে
+     * `backup.configure` চাবিওয়ালা যে কেউ — অন্য কোম্পানির সুপার অ্যাডমিন বা Backup Operator — নিজের পেনড্রাইভ বা
+     * সার্ভারের যেকোনো লেখা-যায় ফোল্ডার গন্তব্য বসিয়ে "এখনই ব্যাকআপ" চাপতেন, আর সব কোম্পানির ডাম্প সেখানে কপি হত।
+     * "পরীক্ষা" বাইরের ফোল্ডারে ফাইলও লেখে, তাই সেটাও।
+     */
+    private function assertWholeDatabase(Request $request): void
+    {
+        if (! app(WholeDatabaseAccess::class)->allows($request->user())) {
+            throw ValidationException::withMessages([
+                'destination' => __('backup::validation.destination_owner_only'),
+            ]);
+        }
     }
 
     /**
