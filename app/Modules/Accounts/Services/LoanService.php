@@ -228,6 +228,8 @@ final class LoanService
             trxDate: $movement->trx_date->toDateString(),
             lines: $this->linesFor($movement),
             documentNo: $movement->document_no,
+            // ⛔ ঋণের নিজের শাখায় — ক্লিককারীর হেডারের নয় (a6-র নিরীক্ষা, ১৩ অক্টোবর ২০২৬); শাখাহীন ঋণে আগের মতো
+            branchId: $this->branchOf((int) $movement->loan_id),
         );
 
         if ($movement->status !== LoanMovement::POSTED) {
@@ -377,6 +379,8 @@ final class LoanService
                     ['account_id' => $fromAccountId, 'credit' => $paid],
                 ], fn (array $l) => bccomp((string) ($l['debit'] ?? $l['credit']), '0', 4) > 0)),
                 documentNo: $loan->document_no.'/'.$instalment->no,
+                // ⛔ ঋণের নিজের শাখায় — [[postMovement()]]-এর একই কারণে
+                branchId: $loan->branch_id === null ? null : (int) $loan->branch_id,
             );
 
             $instalment->forceFill([
@@ -449,7 +453,8 @@ final class LoanService
 
         return LoanMovement::create([
             'company_id' => CompanyContext::id(),
-            'branch_id' => CompanyContext::branchId(),
+            // ⛔ ঋণের শাখায় — ক্লিককারীর হেডারের নয় (a6-র নিরীক্ষা, ১৩ অক্টোবর ২০২৬); শাখাহীন ঋণে আগের মতো
+            'branch_id' => $this->branchOf((int) $loan->id) ?? CompanyContext::branchId(),
             'loan_id' => $loan->id,
             'kind' => $kind,
             'document_no' => $loan->document_no.'/M'.$next,
@@ -458,6 +463,14 @@ final class LoanService
             'counter_account_id' => $counterAccountId,
             'created_by' => auth()->id(),
         ]);
+    }
+
+    /** ঋণের নিজের শাখা — শাখাহীন (কোম্পানি-স্তরের) ঋণে null, তখন ইঞ্জিন আগের মতো হেডারের শাখা নেয় */
+    private function branchOf(int $loanId): ?int
+    {
+        $branch = Loan::acrossBranches()->whereKey($loanId)->value('branch_id');
+
+        return $branch === null ? null : (int) $branch;
     }
 
     /** সূচিটা একবারই বসে, ঋণ তৈরির সময়। */

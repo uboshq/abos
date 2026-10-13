@@ -75,6 +75,32 @@ final class TheLoanPapersFollowTheirLoanTest extends TestCase
             '⛔ শাখাহীন ঋণ, এক শাখা দেখা সইকারী — শেষ সইয়ের পরেও কিস্তি পরিশোধ হয়নি।');
     }
 
+    /**
+     * ⛔ ঋণের দাখিলা ঋণের শাখায় — যিনি চাপলেন তাঁর হেডারে যে শাখাই থাকুক। ⚠️ আগে জমা, সুদ আর কিস্তির খাতার সারি বসত ক্লিককারীর
+     * শাখায়: ঋণ এক শাখায়, তার শোধ আরেক শাখায় — শাখা ধরে দায় কোনোদিন মিলত না।
+     */
+    public function test_a_repayment_and_an_instalment_post_in_the_loans_own_branch(): void
+    {
+        $home = (int) $this->company->defaultBranch()->id;
+        $cc = $this->cc();
+        $term = $this->term();
+        $this->assertSame($home, (int) $cc->branch_id, 'দৃশ্যটাই বানানো যায়নি — ঋণ প্রধান শাখার নয়');
+        app(LoanService::class)->drawDown($cc, '50000', $this->money()->id);
+
+        $this->lookAtOneBranch($this->owner);
+        $repay = app(LoanService::class)->repay(Loan::acrossBranches()->findOrFail($cc->id), '10000', $this->money()->id);
+        $due = $term->instalments()->orderBy('no')->firstOrFail();
+        app(LoanService::class)->payInstalment($due, $this->money()->id);
+
+        $branches = fn (string $type, int $id) => \App\Models\LedgerEntry::query()->withoutGlobalScopes()
+            ->where('source_type', $type)->where('source_id', $id)->distinct()->pluck('branch_id')->map(fn ($b) => (int) $b)->all();
+        $this->assertSame([$home], $branches(\App\Modules\Accounts\Models\LoanMovement::drillSourceType(), (int) $repay->id),
+            '⛔ ঋণের শোধ ক্লিককারীর হেডারের শাখায় বসল।');
+        $this->assertSame([$home], $branches(LoanInstalment::drillSourceType(), (int) $due->id),
+            '⛔ কিস্তির দাখিলা ক্লিককারীর হেডারের শাখায় বসল।');
+        $this->assertSame($home, (int) $repay->fresh()->branch_id, '⛔ শোধের সারিটাই অন্য শাখার।');
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function lookAtOneBranch(User $user, ?Branch $branch = null): void
@@ -99,6 +125,15 @@ final class TheLoanPapersFollowTheirLoanTest extends TestCase
             'approver_id' => $this->signer->id, 'requires_all' => false,
         ]);
         $this->app->forgetInstance(ApprovalEngine::class);
+    }
+
+    private function cc(): Loan
+    {
+        return app(LoanService::class)->create(data: [
+            'lender' => 'City Bank', 'kind' => Loan::CC, 'sanctioned' => '500000', 'interest_rate' => '13.5', 'start_date' => '2026-07-01',
+            'principal_account_id' => Account::query()->where('code', '2210')->value('id'),
+            'interest_account_id' => Account::query()->where('type', Account::EXPENSE)->postable()->orderBy('code')->value('id'),
+        ]);
     }
 
     private function term(): Loan
