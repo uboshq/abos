@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\InsurancePolicy;
 use App\Modules\Finance\Models\InsurancePremium;
@@ -69,7 +71,18 @@ final class InsuranceService
             $term = InsurancePremium::query()->where('policy_id', $policy->id)
                 ->whereBetween('period_from', [$wasFrom, $wasTo]);
 
-            if (! (clone $term)->where('status', '!=', InsurancePremium::DRAFT)->exists()
+            /*
+             * ⛔ সইয়ের অপেক্ষার পরিশোধ ভাউচারও "দেওয়া" — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ কিস্তির `voucher_id` বসে কেবল পোস্টে;
+             * আগে খসড়া ভাউচার কিস্তিটা ধরে থাকলেও পলিসি সম্পাদনায় কিস্তি মুছে নতুন বসত, আর শেষ সইয়ে ভাউচার "অজানা কাগজ"-এ আটকাত।
+             */
+            $paying = Voucher::acrossBranches()
+                ->where('against_type', InsurancePremium::drillSourceType())
+                ->whereIn('against_id', (clone $term)->select('id'))
+                ->where('status', '!=', DocumentStatus::CANCELLED)
+                ->exists();
+
+            if (! $paying
+                && ! (clone $term)->where('status', '!=', InsurancePremium::DRAFT)->exists()
                 && ! (clone $term)->whereNotNull('voucher_id')->exists()
                 && (clone $term)->exists()) {
                 (clone $term)->delete();
