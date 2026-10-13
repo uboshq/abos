@@ -66,10 +66,12 @@ final class ARunningLoanCouldNotBeEnteredWhenItsSanctionMonthWasClosedTest exten
 
     public function test_an_open_sanction_month_keeps_the_sanction_day(): void
     {
-        $this->post(route('finance.bank_facility.store'), $this->running('2024-05-01'))->assertSessionHasNoErrors();
+        // ⓘ চলতি মাসের প্রথম দিন — খোলা অর্থবছরের ভিতরে, আর আজকের দিন নয় (২০২৪-এর কোনো অর্থবছর নেই, ইঞ্জিন থামাত)
+        $on = now()->startOfMonth()->toDateString();
+        $this->post(route('finance.bank_facility.store'), $this->running($on))->assertSessionHasNoErrors();
 
         $facility = BankFacility::query()->latest('id')->firstOrFail();
-        $this->assertSame(['2024-05-01'], $this->openingDates($facility), '⛔ খোলা মাসেও তারিখ বদলে গেল।');
+        $this->assertSame([$on], $this->openingDates($facility), '⛔ খোলা মাসেও তারিখ বদলে গেল।');
     }
 
     /** @return list<string> */

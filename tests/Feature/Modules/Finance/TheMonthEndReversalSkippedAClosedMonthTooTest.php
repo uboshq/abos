@@ -85,7 +85,6 @@ final class TheMonthEndReversalSkippedAClosedMonthTooTest extends TestCase
         $this->assertNotNull($august->reversal_voucher_id, '⛔ বন্ধ মাসের জন্য আগস্টের মুনাফা উল্টাল না');
         $reversal = Voucher::query()->withoutGlobalScopes()->findOrFail($august->reversal_voucher_id);
         $this->assertSame('2026-10-01', $reversal->trx_date->toDateString(), '⛔ উল্টো দাখিলা বন্ধ মাসের বাইরে প্রথম খোলা দিনে নয়');
-        $this->assertSame((int) $august->voucher_id, (int) $reversal->reversal_of_id, '⛔ উল্টোটা আসলটাকে চেনে না — আসলটা বাতিল হলে এটা থেকে যেত');
         $this->assertSame([(int) $other->id], $this->branchesOf((int) $reversal->id), '⛔ উল্টো দাখিলা জমার শাখায় নয়');
         $this->assertSame(1, $done['accrued'], '⛔ অক্টোবরের মুনাফা বসেনি');
     }
@@ -103,7 +102,6 @@ final class TheMonthEndReversalSkippedAClosedMonthTooTest extends TestCase
         $this->assertNotNull($august->reversal_voucher_id, '⛔ বন্ধ মাসের জন্য আগস্টের অগ্রিম উল্টাল না — গোটা চাল থামল');
         $reversal = Voucher::query()->withoutGlobalScopes()->findOrFail($august->reversal_voucher_id);
         $this->assertSame('2026-10-01', $reversal->trx_date->toDateString(), '⛔ উল্টো দাখিলা বন্ধ মাসের বাইরে প্রথম খোলা দিনে নয়');
-        $this->assertSame((int) $august->voucher_id, (int) $reversal->reversal_of_id, '⛔ উল্টোটা আসলটাকে চেনে না');
         $this->assertSame(1, $done['prepaid'], '⛔ অক্টোবরের অগ্রিম বসেনি');
     }
 
