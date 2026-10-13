@@ -7,7 +7,6 @@ namespace App\Modules\MasterData\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
-use App\Core\Support\CodeFromName;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
@@ -795,12 +794,11 @@ class MasterListController extends Controller implements HasMiddleware
          * হয়: নইলে কোড না বদলে সেভ করলেই নিজের কোডটাকে "নেওয়া হয়ে গেছে"
          * ধরে CAR2 বসিয়ে দিত।
          */
-        if (($data['code'] ?? '') === '' && $id !== null) {
-            $data['code'] = CodeFromName::forQuery(
-                (string) $data['name_en'],
-                $spec['model']::query()->whereKeyNot($id),
-            );
-        }
+        /*
+         * ⛔ সম্পাদনায় খালি কোড আর নাম থেকে বানানো হয় না — খালি মানে "হাত দিও না", আর সেবা ঠিক তাই করে
+         * ([[MasterListService::update()]]; মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে এখানে নাম থেকে নতুন কোড বসত: ঘর
+         * খালি করে নাম বদলালেই `DISTRIB`-এর মতো কোড নীরবে অন্য কিছু হয়ে যেত।
+         */
 
         return $data;
     }

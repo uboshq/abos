@@ -53,8 +53,6 @@ class ACodeMadeFromANameCanComeOutEmptyTest extends TestCase
 
         'app/Modules/SystemAdmin/Services/FirstRun.php' => 'খালি হলে LogicException; পর্দার যাচাইও ইংরেজি অক্ষর বাধ্যতামূলক করে',
 
-        'app/Modules/MasterData/Http/Controllers/MasterListController.php' => 'ফলটা MasterListService-এ যায়, আর assertCodeIsFree() খালি কোড ফেরায়',
-
         'app/Core/Engines/Coding/CodeSuggester.php' => 'খালি হলে fallbackPrefix থেকে কোড বানায় (Location · Scheme · MasterList সবাই প্রিফিক্স দেয়)',
     ];
 
