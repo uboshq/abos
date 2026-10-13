@@ -8,6 +8,8 @@ return [
         'process' => 'Where the papers stand',
     ],
 
+    'inactive_with_balance' => 'inactive · has a balance',
+
     'status' => [
         'draft' => 'Draft',
         'confirmed' => 'Confirmed',
