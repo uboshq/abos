@@ -40,4 +40,7 @@ return [
     'new_owner' => 'New owner',
     'transfer_now' => 'Transfer ownership',
     'confirm_old_code' => 'Type to confirm: :code',
+    // Changing your own password: 14 Oct 2026
+    'current_password' => 'Your current password',
+    'current_password_hint' => 'Needed only when you change your own password. Leave blank otherwise.',
 ];

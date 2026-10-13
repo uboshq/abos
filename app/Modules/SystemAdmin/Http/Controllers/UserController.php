@@ -312,6 +312,19 @@ class UserController extends Controller implements HasMiddleware
         $this->assertSupremeRoleStays($user, $data);
         $this->assertOwnershipRules($user, $data);
 
+        /*
+         * ⛔ নিজের পাসওয়ার্ড এই পর্দায় বদলাতে চলতি পাসওয়ার্ড লাগে — প্রোফাইলের পাতা আর মালিকানা হস্তান্তরের একই নিয়ম
+         * (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে লাগত না: খোলা পড়ে থাকা বা চুরি যাওয়া একটা সেশন
+         * নিজের ফর্মে নতুন পাসওয়ার্ড বসাত, এই সেশনটা থেকে যেত আর বাকি সব কেটে যেত — অ্যাকাউন্ট চিরতরে দখল। অন্যের
+         * পাসওয়ার্ড বসানো আগের মতো চলে (প্রশাসকের কাজ, নিচে সব সেশন কাটে)।
+         */
+        if (($data['password'] ?? '') !== '' && $request->user()?->is($user)
+            && ! \Illuminate\Support\Facades\Hash::check((string) $request->input('current_password', ''), (string) $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => __('core.profile.password_wrong'),
+            ]);
+        }
+
         DB::transaction(function () use ($user, $data, $reach) {
             $user->update([
                 'name' => $data['name'],
