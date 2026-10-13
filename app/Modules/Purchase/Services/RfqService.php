@@ -162,6 +162,26 @@ final class RfqService
             ]);
         }
 
+        /*
+         * ⛔ দরপত্রের দর কেবল আমন্ত্রিতের, আর কেবল দরপত্রের পণ্যে — fe, ১৩ অক্টোবর ২০২৬ ([[TheCheapestQuoteWasNotForTheWholeListTest]])।
+         * ⚠️ আগে যে কোনো সরবরাহকারীর দর বসত, যে কোনো পণ্যে — তুলনায় অনিমন্ত্রিত বা অন্য মালের দরও "সবচেয়ে কম" হতে পারত।
+         */
+        if ($rfqId !== null) {
+            $rfq = Rfq::acrossBranches()->with(['lines', 'suppliers'])->find((int) $rfqId);
+
+            if ($rfq !== null && $rfq->suppliers->isNotEmpty() && ! $rfq->suppliers->contains('id', (int) $supplierId)) {
+                throw ValidationException::withMessages(['supplier_id' => __('purchase::validation.quotation_not_invited')]);
+            }
+
+            $asked = $rfq?->lines->pluck('product_id')->map(fn ($id) => (int) $id)->all() ?? [];
+
+            foreach ($clean as $line) {
+                if ($asked !== [] && ! in_array((int) $line['product_id'], $asked, true)) {
+                    throw ValidationException::withMessages(['lines' => __('purchase::validation.quotation_product_not_asked')]);
+                }
+            }
+        }
+
         return DB::transaction(function () use ($data, $clean, $rfqId, $supplierId) {
             /*
              * ⛔ দরপত্রের সারিতে তালা, তারপর "আগেই দর দিয়েছেন?" আবার — Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TwoQuotesFromOneSupplierTest]])।
@@ -228,7 +248,7 @@ final class RfqService
      */
     public function compare(Rfq $rfq): array
     {
-        $rfq->loadMissing(['quotations.lines', 'quotations.supplier']);
+        $rfq->loadMissing(['lines', 'quotations.lines', 'quotations.supplier']);
 
         $rows = $rfq->quotations
             ->map(fn (Quotation $quotation) => [
@@ -247,6 +267,13 @@ final class RfqService
                  * আর মেয়াদ পেরোনো একটা দরও দরাদরির ভিত্তি হতে পারে।
                  */
                 'expired' => ! $quotation->isStillGood(),
+
+                /*
+                 * ⛔ দরপত্রের সব পণ্যে দর দিয়েছেন কি না — fe, ১৩ অক্টোবর ২০২৬ ([[TheCheapestQuoteWasNotForTheWholeListTest]])। ⚠️ দশ পণ্যের
+                 * দরপত্রে একটা সস্তা লাইন দিলে মোট সবচেয়ে কম দেখাত, আর তিনিই "সেরা" দাগ পেতেন। ⓘ অসম্পূর্ণ দর তালিকায় থাকে, দাগ পায় না।
+                 */
+                'complete' => $rfq->lines->pluck('product_id')->map(fn ($id) => (int) $id)->unique()
+                    ->diff($quotation->lines->pluck('product_id')->map(fn ($id) => (int) $id))->isEmpty(),
             ])
             /*
              * ⛔ `(float)` নয় — ২৫ সেপ্টেম্বর ২০২৬।
@@ -273,7 +300,7 @@ final class RfqService
         $cheapest = null;
 
         foreach ($rows as $i => $row) {
-            if ($row['expired']) {
+            if ($row['expired'] || ! $row['complete']) {
                 continue;
             }
 
@@ -408,11 +435,24 @@ final class RfqService
                 ]);
             }
 
+            /*
+             * ⛔ ছাড় ঋণাত্মক নয়, আর লাইনের মোটের বেশি নয় — fe, ১৩ অক্টোবর ২০২৬ ([[TheCheapestQuoteWasNotForTheWholeListTest]])। ⚠️ আগে
+             * ১ × ১০০-তে ৫০০ ছাড় বসত, নিট −৪০০, আর ঐ দরই "সবচেয়ে কম"।
+             */
+            $discount = (string) ($line['discount'] ?? '0');
+            $discount = $discount === '' ? '0' : $discount;
+
+            if (! is_numeric($discount) || bccomp($discount, '0', 4) < 0 || bccomp($discount, bcmul($qty, $rate, 4), 4) > 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.quotation_discount_beyond_line'),
+                ]);
+            }
+
             $out[] = [
                 'product_id' => $productId,
                 'qty' => $qty,
                 'rate' => $rate,
-                'discount' => $line['discount'] ?? '0',
+                'discount' => $discount,
                 'tax' => $line['tax'] ?? '0',
                 'narration' => $line['narration'] ?? null,
             ];
