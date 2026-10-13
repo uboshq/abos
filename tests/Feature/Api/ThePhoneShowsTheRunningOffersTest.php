@@ -151,10 +151,12 @@ final class ThePhoneShowsTheRunningOffersTest extends TestCase
         $this->phone($stranger)->assertForbidden();
 
         // ⓘ এই শাখায় প্রচার বন্ধ — চালানের একই সুইচ ([[PromotionSalesOffers::enabled()]]); অফার নেই, কারণসহ
+        // ⓘ শাখাটা কোম্পানির নিজের — আগের ফোন-ডাক প্রসঙ্গটা অপরিচিতের (শাখাহীন) করে রেখে গেছে
+        $branch = (int) $this->company->defaultBranch()?->id;
         $owner = $this->owner->fresh();
-        $owner->forceFill(['current_branch_id' => CompanyContext::branchId()])->save();
+        $owner->forceFill(['current_branch_id' => $branch])->save();
         BranchModule::query()->create([
-            'company_id' => $this->company->id, 'branch_id' => CompanyContext::branchId(), 'module' => 'promotion', 'is_enabled' => false,
+            'company_id' => $this->company->id, 'branch_id' => $branch, 'module' => 'promotion', 'is_enabled' => false,
         ]);
         $this->phone($owner)->assertOk()->assertJsonPath('enabled', false)->assertJsonPath('rows', []);
 
