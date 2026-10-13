@@ -307,7 +307,12 @@ final class MasterListService implements ProvisionsCompany
             ]);
         }
 
-        if ($this->referencesTo($record) !== null) {
+        /*
+         * ⛔ "ব্যবহৃত" মানে [[inUse()]] — ডাটাবেজের সম্পর্ক, আর পরিশোধ-পদ্ধতির বেলায় কাগজে লেখা কোডও (মাস্টার লাইন-ধরে নিরীক্ষা,
+         * ১৪ অক্টোবর ২০২৬)। ⓘ আগে কেবল সম্পর্ক দেখা হত, আর পরিশোধ-পদ্ধতির দিকে কোনো সম্পর্কই নেই — শত ভাউচারে লেখা `BKASH`
+         * চিরতরে মুছে যেত, কোডটা খালি হত, আর একই কোডে নতুন "নগদ" বানালে সব পুরনো কাগজ নগদ পড়ত।
+         */
+        if ($this->inUse($record)) {
             $this->deactivate($record);
 
             return false;
