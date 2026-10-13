@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Services;
 
 use App\Core\Services\PermissionSyncer;
-use App\Core\Support\DocumentStatus;
 use App\Models\User;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
-use App\Modules\Hr\Models\PayrollRun;
+use App\Modules\Hr\Support\PaidMonth;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -27,6 +26,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class LeaveService
 {
+    /** এক আবেদনের তারিখ সবচেয়ে বেশি কত দিন জুড়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫) */
+    public const MAX_SPAN_DAYS = 366;
+
     /**
      * আবেদন জমা।
      *
@@ -45,19 +47,29 @@ final class LeaveService
 
         $this->assertDatesMakeSense($from, $to, $days);
         $this->assertEmployedThroughout($employee, $from, $to);
-        $this->assertNoOverlap($employee, $from, $to);
-        $this->assertWithinYearlyLimit($employee, $type, $from, $days);
 
-        return LeaveApplication::create([
-            'employee_id' => $employee->id,
-            'leave_type_id' => $type->id,
-            'from_date' => $from->toDateString(),
-            'to_date' => $to->toDateString(),
-            'days' => $days,
-            'reason' => $reason,
-            'status' => LeaveApplication::PENDING,
-            'created_by' => auth()->id(),
-        ])->fresh();
+        return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason) {
+            /*
+             * ⛔ কর্মীর সারিতে তালা, তারপর মেলা আর কোটা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪)।
+             * ⓘ লেনদেন বা তালা ছিল না: দুইবার চাপলে বা ফোন আবার পাঠালে দুইটা অনুরোধই "মেলে না" দেখে একই দিনের দুইটা আবেদন বসাত।
+             * তালাটা আগে, যাতে লেনদেনের প্রথম পড়াটাই তালার পরে হয় আর আগের অনুরোধের বসানো আবেদন চোখে পড়ে।
+             */
+            Employee::query()->withoutGlobalScopes()->whereKey($employee->id)->lockForUpdate()->first();
+
+            $this->assertNoOverlap($employee, $from, $to);
+            $this->assertWithinYearlyLimit($employee, $type, $from, $days);
+
+            return LeaveApplication::create([
+                'employee_id' => $employee->id,
+                'leave_type_id' => $type->id,
+                'from_date' => $from->toDateString(),
+                'to_date' => $to->toDateString(),
+                'days' => $days,
+                'reason' => $reason,
+                'status' => LeaveApplication::PENDING,
+                'created_by' => auth()->id(),
+            ])->fresh();
+        });
     }
 
     /**
@@ -83,9 +95,19 @@ final class LeaveService
             $application->setRawAttributes($fresh->getAttributes(), true);
             $this->assertPending($application);
 
+            // ⛔ বেতন হয়ে যাওয়া মাসে মঞ্জুরি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]], [[LeaveIsCountedWhenItIsApprovedTest]])
+            PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid_approve');
+
             $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
             $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
             $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
+
+            /*
+             * ⛔ মঞ্জুরের মুহূর্তে আবার মেলানো — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ একই দিনের দুইটা আবেদন (আগের দুইবার চাপা) দুটোই মঞ্জুর হত: দিনগুলো কোটায় দুইবার কাটত, হাজিরার সারি দ্বিতীয়টার নামে
+             * সরে যেত, আর সেটা প্রত্যাহার করলে প্রথমটা "মঞ্জুর" থেকেও হাজিরায় কিছু থাকত না। কর্মীর তালার নিচে, এই আবেদন বাদে।
+             */
+            $this->assertNoOverlap($employee, $application->from_date->copy(), $application->to_date->copy(), $application->id);
 
             $application->forceFill([
                 'status' => LeaveApplication::APPROVED,
@@ -104,14 +126,25 @@ final class LeaveService
     {
         $this->assertPending($application);
 
-        $application->forceFill([
-            'status' => LeaveApplication::REJECTED,
-            'decided_by' => $decider->id,
-            'decided_at' => now(),
-            'decision_remarks' => $remarks,
-        ])->save();
+        return DB::transaction(function () use ($application, $decider, $remarks) {
+            /*
+             * ⛔ তালা দিয়ে তাজা অবস্থা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ অবস্থা দেখা হত তালার আগের কপি থেকে: একই সেকেন্ডে একজন মঞ্জুর আর আরেকজন নামঞ্জুর চাপলে মঞ্জুরিটা বসে হাজিরায় ছুটির
+             * সারি লিখত, তারপর নামঞ্জুর পুরনো কপি দেখে "অপেক্ষমাণ" ভেবে অবস্থা "নামঞ্জুর" করে দিত — কোটায় গোনা নেই, অথচ সারিগুলো রয়ে
+             * গেল। [[approve()]]-এর একই নিয়ম: সারিতে তালা, তারপর আবার দেখা।
+             */
+            $this->lockFresh($application);
+            $this->assertPending($application);
 
-        return $application->fresh();
+            $application->forceFill([
+                'status' => LeaveApplication::REJECTED,
+                'decided_by' => $decider->id,
+                'decided_at' => now(),
+                'decision_remarks' => $remarks,
+            ])->save();
+
+            return $application->fresh();
+        });
     }
 
     /**
@@ -119,38 +152,50 @@ final class LeaveService
      *
      * সারিগুলো রেখে দিলে লোকটা কাজে ফিরেও খাতায় ছুটিতে থাকতেন।
      */
-    public function cancel(LeaveApplication $application): LeaveApplication
+    public function cancel(LeaveApplication $application, ?User $by = null): LeaveApplication
     {
-        if ($application->status === LeaveApplication::CANCELLED) {
-            throw ValidationException::withMessages([
-                'status' => __('hr::validation.leave_already_cancelled'),
-            ]);
-        }
+        $by ??= auth()->user();
 
-        /*
-         * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা মোছা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ১০; [[ALeaveInAPaidMonthStaysTest]])।
-         * ⓘ প্রত্যাহারে ছুটির দিনগুলোর হাজিরা মুছে যেত, অথচ সেই মাসের বেতন ওই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে — বেতনশিট আর
-         * হাজিরার পাতা আলাদা কথা বলত, আর বিনা বেতনের ছুটি হলে কাটা টাকার কোনো কারণ আর খুঁজে পাওয়া যেত না। আগে সে মাসের রান বাতিল।
-         */
-        $paid = PayrollRun::acrossBranches()
-            ->where('status', DocumentStatus::CONFIRMED)
-            ->whereDate('month', '>=', $application->from_date->copy()->startOfMonth()->toDateString())
-            ->whereDate('month', '<=', $application->to_date->copy()->startOfMonth()->toDateString())
-            ->orderBy('month')
-            ->first();
+        return DB::transaction(function () use ($application, $by) {
+            /*
+             * ⛔ তালা দিয়ে তাজা অবস্থা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩)। ⓘ হাতের পুরনো কপি দেখে প্রত্যাহার হত: একই
+             * সময়ে মঞ্জুরি চললে প্রত্যাহারটা তার আগের অবস্থা দেখত, আর বাতিল আবেদনের নামে ছুটির সারি থেকে যেতে পারত। কর্মীর সারিতে
+             * আগে তালা — [[approve()]]-এর একই ক্রম, তাই দুইটা একে অন্যের জন্য আটকে থাকে না।
+             */
+            Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->lockForUpdate()->first();
+            $this->lockFresh($application);
 
-        if ($paid !== null) {
-            throw ValidationException::withMessages([
-                'status' => __('hr::validation.leave_month_paid', [
-                    'month' => $paid->month->locale(app()->getLocale())->translatedFormat('F Y'),
-                    'no' => $paid->document_no,
-                ]),
-            ]);
-        }
+            if ($application->status === LeaveApplication::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('hr::validation.leave_already_cancelled'),
+                ]);
+            }
 
-        return DB::transaction(function () use ($application) {
+            /*
+             * ⛔ নিজের মঞ্জুর হওয়া ছুটি নিজে প্রত্যাহার নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৭; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ নিজের ছুটি নিজে মঞ্জুর আটকানো ছিল, কিন্তু কেবল `hr.leave.manage`-ওয়ালা কর্মী বিনা বেতনের ছুটি কাটিয়ে বেতনের আগে নিজেই
+             * সেটা প্রত্যাহার করতে পারতেন — ছুটির সারি মুছে যেত, খালি দিন কাটে না, আর কোটাও ফিরত। মঞ্জুরির একই নিয়ম ([[assertNotOwn()]]):
+             * কেবল মালিক (সুপার অ্যাডমিন) নিজেরটা পারেন। অপেক্ষমাণ আবেদন নিজে তুলে নেওয়া আগের মতোই চলে।
+             */
+            if ($by instanceof User && $application->isApproved()) {
+                $this->assertNotOwn($application, $by, 'hr::validation.leave_own_withdrawal');
+            }
+
+            /*
+             * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা মোছা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ১০; [[ALeaveInAPaidMonthStaysTest]])।
+             * ⓘ প্রত্যাহারে ছুটির দিনগুলোর হাজিরা মুছে যেত, অথচ সেই মাসের বেতন ওই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে — বেতনশিট আর
+             * হাজিরার পাতা আলাদা কথা বলত, আর বিনা বেতনের ছুটি হলে কাটা টাকার কোনো কারণ আর খুঁজে পাওয়া যেত না। আগে সে মাসের রান বাতিল।
+             */
+            PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
+
+            /*
+             * ⛔ কেবল যে সারি এখনো "ছুটি" — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৮; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ ছুটির মাঝে কর্মী কাজে এলে অফিস সেদিনের সারি "উপস্থিত" করে, কিন্তু আবেদনের দাগটা সারিতে থেকে যায়; প্রত্যাহারে দাগ ধরে
+             * মোছায় অফিসের সেই সংশোধনও মুছে যেত, আর দিনটা খালি হত — কাজে আসার খবরই হারাত।
+             */
             Attendance::query()
                 ->where('leave_application_id', $application->id)
+                ->where('status', Attendance::LEAVE)
                 ->delete();
 
             $application->forceFill(['status' => LeaveApplication::CANCELLED])->save();
@@ -208,18 +253,13 @@ final class LeaveService
              */
             $share = Attendance::shareOf($application, $day);
 
-            Attendance::query()->updateOrCreate(
-                [
-                    'employee_id' => $application->employee_id,
-                    'work_date' => $day->toDateString(),
-                ],
-                [
-                    'status' => Attendance::LEAVE,
-                    'leave_application_id' => $application->id,
-                    'remarks' => bccomp($share, '1', 1) < 0 ? __('hr::message.leave_part_day', ['share' => $share]) : null,
-                    'created_by' => auth()->id(),
-                ],
-            );
+            // ⓘ কর্মীর সারিতে তালা [[approve()]]-এ আগেই; একসাথে অফিসের পাতা বা ফোন একই দিন লিখলে ৫০০ নয় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬, ⓘ১২)
+            Attendance::writeDay((int) $application->employee_id, $day->toDateString(), [
+                'status' => Attendance::LEAVE,
+                'leave_application_id' => $application->id,
+                'remarks' => bccomp($share, '1', 1) < 0 ? __('hr::message.leave_part_day', ['share' => $share]) : null,
+                'created_by' => auth()->id(),
+            ]);
 
             $day->addDay();
         }
@@ -229,15 +269,22 @@ final class LeaveService
      * ⛔ নিজের ছুটি নিজে মঞ্জুর নয় — একই পুনঃঅডিট (HR ৮)। ⓘ ছুটি মঞ্জুরের চাবি থাকলে ব্যবস্থাপক নিজের আবেদনও মঞ্জুর করতে
      * পারতেন। সইয়ের ইঞ্জিনের নিয়মেই ([[ApprovalEngine::canDecide()]]) কেবল মালিক (সুপার অ্যাডমিন) নিজের কাগজে সই দিতে পারেন।
      */
-    private function assertNotOwn(LeaveApplication $application, User $decider): void
+    private function assertNotOwn(LeaveApplication $application, User $decider, string $messageKey = 'hr::validation.leave_own_approval'): void
     {
         $own = Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->value('user_id');
 
         if ($own !== null && (int) $own === (int) $decider->id && ! $decider->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
             throw ValidationException::withMessages([
-                'status' => __('hr::validation.leave_own_approval'),
+                'status' => __($messageKey),
             ]);
         }
+    }
+
+    /** আবেদনের সারিতে তালা, আর হাতের কপিতে তালার নিচের তাজা অবস্থা — লেনদেনের ভিতরেই ডাকতে হয় */
+    private function lockFresh(LeaveApplication $application): void
+    {
+        $fresh = LeaveApplication::query()->whereKey($application->id)->lockForUpdate()->firstOrFail();
+        $application->setRawAttributes($fresh->getAttributes(), true);
     }
 
     private function assertPending(LeaveApplication $application): void
@@ -269,11 +316,35 @@ final class LeaveService
          * এক দিনের ছুটিতে "পাঁচ দিন" লিখলে বেতন থেকে পাঁচ দিন কাটত,
          * অথচ কাগজে একটাই দিন — আর মিলটা কেউ মেলাত না।
          */
-        $span = (string) ($from->diffInDays($to) + 1);
+        $spanDays = (int) $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1;
+        $span = (string) $spanDays;
+
+        /*
+         * ⛔ এক আবেদনে এক বছরের বেশি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫; [[LeaveIsCountedWhenItIsApprovedTest]])।
+         * ⓘ সাল ভুল টাইপ করলে (২০২৬-এর বদলে ২০৬২) "২ দিন" চাওয়াও পার হত, আর মঞ্জুরিতে হাজার হাজার "ছুটি"-র সারি বসত।
+         */
+        if ($spanDays > self::MAX_SPAN_DAYS) {
+            throw ValidationException::withMessages([
+                'to_date' => __('hr::validation.leave_range_too_long', ['max' => self::MAX_SPAN_DAYS]),
+            ]);
+        }
 
         if (bccomp($days, $span, 1) > 0) {
             throw ValidationException::withMessages([
                 'days' => __('hr::validation.days_exceed_range', ['span' => $span]),
+            ]);
+        }
+
+        /*
+         * ⛔ দিন তারিখের চেয়ে এক দিনের বেশি কম নয় — একই নিরীক্ষা (⚠️৫)। ⓘ হাজিরায় দিনগুলো প্রথম তারিখ থেকে ভরে
+         * ([[Attendance::shareOf()]]), তাই "৬ তারিখে ২ দিন" লিখলে প্রথম দুইটা পুরো আর বাকি চারটা শূন্য দিনের "ছুটি" হত — বিনা
+         * বেতনের ছুটি ভুল মাসে কাটত, আর সাপ্তাহিক ছুটির সারি চাপা পড়ত। কেবল শেষ তারিখটাই আধা দিন হতে পারে ("২ তারিখে ১.৫ দিন")।
+         */
+        $least = (string) ($spanDays - 1);
+
+        if (bccomp($days, $least, 1) <= 0) {
+            throw ValidationException::withMessages([
+                'days' => __('hr::validation.days_below_range', ['span' => $span, 'least' => $least]),
             ]);
         }
     }
@@ -293,10 +364,11 @@ final class LeaveService
      * থাকতে দিলে একই দিন দুইবার কোটা থেকে কাটত, আর হাজিরার সারিটা
      * শেষে যেটা বসত সেটাই টিকত — কোনটা, তা নির্ধারিত থাকত না।
      */
-    private function assertNoOverlap(Employee $employee, Carbon $from, Carbon $to): void
+    private function assertNoOverlap(Employee $employee, Carbon $from, Carbon $to, ?int $except = null): void
     {
         $clash = LeaveApplication::query()
             ->where('employee_id', $employee->id)
+            ->when($except !== null, fn ($q) => $q->whereKeyNot($except))
             ->whereIn('status', [LeaveApplication::PENDING, LeaveApplication::APPROVED])
             ->whereDate('from_date', '<=', $to->toDateString())
             ->whereDate('to_date', '>=', $from->toDateString())

@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Hr;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\LeaveService;
@@ -102,6 +105,199 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
 
         $this->assertSame('2.0', app(AttendanceService::class)->unpaidDays($this->employee, Carbon::parse('2026-08-01')),
             '⛔ আধা দিনের ছুটি পুরো দিন কাটল');
+    }
+
+    /**
+     * ⛔ বেতন হয়ে যাওয়া মাসে ছুটি মঞ্জুর বা হাজিরা বদল নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]])।
+     * ⓘ সেপ্টেম্বরের বেতন নিশ্চিত হওয়ার পর ২০–২১ সেপ্টেম্বরের ছুটি মঞ্জুর হত, আর দিনের পাতাও সে মাসে যা খুশি লিখত।
+     */
+    public function test_a_paid_month_takes_no_new_leave_and_no_attendance_change(): void
+    {
+        $run = PayrollRun::acrossBranches()->create([
+            'company_id' => $this->company->id, 'branch_id' => $this->company->defaultBranch()?->id, 'document_no' => 'PAY-LV-09',
+            'month' => '2026-09-01', 'trx_date' => '2026-09-30',
+        ]);
+        $run->forceFill(['status' => DocumentStatus::CONFIRMED])->save();
+
+        $application = app(LeaveService::class)->apply($this->employee, $this->type('SICK'), '2026-09-20', '2026-09-21', '2');
+
+        try {
+            app(LeaveService::class)->approve($application, $this->owner);
+            $this->fail('⛔ বেতন হয়ে যাওয়া মাসের ছুটি মঞ্জুর হল');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('PAY-LV-09', $e->errors()['status'][0]);
+        }
+
+        $this->assertSame(LeaveApplication::PENDING, $application->fresh()->status);
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count(), '⛔ বেতন হয়ে যাওয়া মাসে ছুটির সারি বসল');
+
+        $this->post(route('hr.attendance.store'), [
+            'work_date' => '2026-09-20',
+            'rows' => [$this->employee->id => ['status' => Attendance::PRESENT]],
+        ])->assertSessionHasErrors('work_date');
+
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count(), '⛔ বেতন হয়ে যাওয়া মাসের হাজিরা বদলাল');
+
+        // ⓘ পরের মাস খোলা — আগের মতোই চলে
+        $this->post(route('hr.attendance.store'), [
+            'work_date' => '2026-10-05',
+            'rows' => [$this->employee->id => ['status' => Attendance::PRESENT]],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(1, Attendance::query()->where('employee_id', $this->employee->id)->count());
+    }
+
+    /**
+     * ⛔ নামঞ্জুর আর প্রত্যাহার তালার নিচের অবস্থা দেখে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৩; [[LeaveService::reject()]])।
+     * ⓘ দুই ট্যাবের দৌড়টা এখানে পুরনো কপি দিয়ে: মঞ্জুরি বসে যাওয়ার পর পুরনো "অপেক্ষমাণ" কপি দিয়ে নামঞ্জুর চাপলে আগে সেটা পার হত।
+     */
+    public function test_a_stale_copy_cannot_reject_an_approved_leave_or_withdraw_it_twice(): void
+    {
+        $stale = app(LeaveService::class)->apply($this->employee, $this->type('CASUAL'), '2026-03-02', '2026-03-03', '2');
+        app(LeaveService::class)->approve($stale->fresh(), $this->owner);
+
+        try {
+            app(LeaveService::class)->reject($stale, $this->owner, 'পরে চাপা');
+            $this->fail('⛔ মঞ্জুর হয়ে যাওয়া ছুটি পুরনো কপি দিয়ে নামঞ্জুর হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.leave_already_decided'), $e->errors()['status'][0]);
+        }
+
+        $this->assertSame(LeaveApplication::APPROVED, $stale->fresh()->status);
+        $this->assertSame(2, Attendance::query()->where('leave_application_id', $stale->id)->count());
+
+        // ⓘ প্রত্যাহার: একটা কপি দিয়ে হয়ে গেছে, তারপর আরেকটা পুরনো "মঞ্জুর" কপি দিয়ে আবার
+        $approved = $stale->fresh();
+        app(LeaveService::class)->cancel($approved->fresh());
+
+        try {
+            app(LeaveService::class)->cancel($approved);
+            $this->fail('⛔ প্রত্যাহার হয়ে যাওয়া ছুটি পুরনো কপি দিয়ে আবার প্রত্যাহার হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.leave_already_cancelled'), $e->errors()['status'][0]);
+        }
+    }
+
+    /**
+     * ⛔ একই দিনের দুইটা আবেদন দুটোই মঞ্জুর নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪; [[LeaveService::approve()]])।
+     * ⓘ দুইবার চাপায় বসে যাওয়া জোড়াটা এখানে সরাসরি বসানো; আগে মঞ্জুরি আর মেলাত না, তাই দুটোই পার হত আর দিনগুলো দুইবার কাটত।
+     */
+    public function test_two_applications_for_the_same_days_cannot_both_be_approved(): void
+    {
+        [$first, $second] = collect([1, 2])->map(fn () => LeaveApplication::query()->create([
+            'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('CASUAL')->id,
+            'from_date' => '2026-03-02', 'to_date' => '2026-03-03', 'days' => '2', 'status' => LeaveApplication::PENDING,
+        ]))->all();
+
+        try {
+            app(LeaveService::class)->approve($first, $this->owner);
+            $this->fail('⛔ একই দিনের আরেকটা আবেদন থাকতেও মঞ্জুর হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.leave_overlaps'), $e->errors()['from_date'][0]);
+        }
+
+        $this->assertSame(LeaveApplication::PENDING, $first->fresh()->status);
+
+        // ⓘ জোড়ার একটা নামঞ্জুর হলে অন্যটা আগের মতোই মঞ্জুর হয়, আর কোটা একবারই কাটে
+        app(LeaveService::class)->reject($second, $this->owner, 'দুইবার চাপা');
+        $this->assertSame(LeaveApplication::APPROVED, app(LeaveService::class)->approve($first->fresh(), $this->owner)->status);
+        $this->assertSame('8.0', app(LeaveService::class)->balance($this->employee, $this->type('CASUAL'), Carbon::parse('2026-03-02'))['left']);
+    }
+
+    /**
+     * ⛔ দিন তারিখের সাথে মেলে, আর এক আবেদন এক বছরের বেশি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫; [[LeaveService::apply()]])।
+     * ⓘ "৬ তারিখে ২ দিন" পার হত (চারটা শূন্য দিনের ছুটির সারি), আর সাল ভুল টাইপে বিনা বেতনের ছুটি এক বছরের বেশি জুড়ে বসত।
+     */
+    public function test_the_days_fit_the_dates_and_one_application_spans_at_most_a_year(): void
+    {
+        try {
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-10-20', '2026-10-25', '2');
+            $this->fail('⛔ ছয় তারিখে দুই দিনের ছুটি পার হল');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('hr::validation.days_below_range', ['span' => '6', 'least' => '5']), $e->errors()['days'][0]);
+        }
+
+        try {
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-02-01', '2027-02-10', '375');
+            $this->fail('⛔ এক বছরের বেশি জুড়ে একটা আবেদন পার হল');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('to_date', $e->errors());
+        }
+
+        $this->assertSame(0, LeaveApplication::query()->where('employee_id', $this->employee->id)->count());
+
+        // ⓘ শেষ দিনটা আধা দিন — আগের মতোই চলে
+        $this->assertSame(LeaveApplication::PENDING,
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-10-20', '2026-10-21', '1.5')->status);
+    }
+
+    /**
+     * ⛔ নিজের মঞ্জুর হওয়া ছুটি নিজে প্রত্যাহার নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৭; [[LeaveService::cancel()]])।
+     * ⓘ কেবল `hr.leave.manage`-ওয়ালা কর্মী নিজের মঞ্জুর হওয়া বিনা বেতনের ছুটি বেতনের আগে তুলে নিতে পারতেন — মঞ্জুরিটাই উল্টে যেত।
+     */
+    public function test_a_clerk_cannot_withdraw_their_own_approved_leave(): void
+    {
+        $clerk = User::factory()->create(['email' => 'clerk@leave.test', 'current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->company->id, fn () => $clerk->givePermissionTo(
+            array_map(fn (string $key) => Permission::findOrCreate($key, 'web'), ['hr.leave.view', 'hr.leave.manage'])));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->employee->forceFill(['user_id' => $clerk->id])->save();
+
+        $leave = app(LeaveService::class)->approve(
+            app(LeaveService::class)->apply($this->employee, $this->type('UNPAID'), '2026-03-02', '2026-03-04', '3'), $this->owner);
+
+        $this->actingAs($clerk)->post(route('hr.leave.cancel', $leave->id))->assertSessionHasErrors('status');
+
+        $this->assertSame(LeaveApplication::APPROVED, $leave->fresh()->status, '⛔ কর্মী নিজের মঞ্জুর হওয়া ছুটি নিজেই প্রত্যাহার করলেন');
+        $this->assertSame(3, Attendance::query()->where('leave_application_id', $leave->id)->count());
+
+        // ⓘ আরেকজন (মালিক) প্রত্যাহার করতে পারেন
+        $this->actingAs($this->owner)->post(route('hr.leave.cancel', $leave->id))->assertSessionHasNoErrors();
+        $this->assertSame(LeaveApplication::CANCELLED, $leave->fresh()->status);
+    }
+
+    /**
+     * ⛔ ছুটি প্রত্যাহারে অফিসের সংশোধন থাকে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৮; [[LeaveService::cancel()]])।
+     * ⓘ ছুটির শেষ দিনে কর্মী এলেন, অফিস "উপস্থিত" বসাল; পরে ছুটি প্রত্যাহার করলে সেই "উপস্থিত" সারিটাও মুছে যেত।
+     */
+    public function test_withdrawing_a_leave_keeps_the_day_the_office_marked_present(): void
+    {
+        $leave = app(LeaveService::class)->approve(
+            app(LeaveService::class)->apply($this->employee, $this->type('CASUAL'), '2026-10-05', '2026-10-07', '3'), $this->owner);
+
+        $this->post(route('hr.attendance.store'), [
+            'work_date' => '2026-10-07',
+            'rows' => [$this->employee->id => ['status' => Attendance::PRESENT]],
+        ])->assertSessionHasNoErrors();
+
+        app(LeaveService::class)->cancel($leave->fresh());
+
+        $rows = Attendance::query()->where('employee_id', $this->employee->id)->get();
+        $this->assertSame(['2026-10-07' => Attendance::PRESENT], $rows->mapWithKeys(fn (Attendance $a) => [$a->work_date->toDateString() => $a->status])->all(),
+            '⛔ ছুটি প্রত্যাহারে অফিসের বসানো "উপস্থিত" দিনটাও মুছে গেল (বা ছুটির সারি রয়ে গেল)');
+    }
+
+    /**
+     * ⛔ দিনের ঘরে কেবল সাধারণ সংখ্যা, দশমিকের পরে এক ঘর — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯; [[LeaveController::store()]])।
+     * ⓘ "1e1" `numeric` পার হয়ে bcmath-এ ৫০০ দিত; "1.55" এক ঘরে মাপা হয়ে ১.৫ বাকিতেও পার হত, আর খাতায় ১.৬ বসত।
+     */
+    public function test_the_days_box_takes_a_plain_number_with_one_decimal_place(): void
+    {
+        // ⓘ প্রতিটার তারিখ এমন যে দিনের সংখ্যাটা তারিখের সাথে মেলে — কেবল গড়নটাই ভুল
+        foreach ([['1e1', '2026-03-11'], ['1.55', '2026-03-03']] as [$days, $to]) {
+            $this->post(route('hr.leave.store'), [
+                'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('UNPAID')->id,
+                'from_date' => '2026-03-02', 'to_date' => $to, 'days' => $days,
+            ])->assertSessionHasErrors('days');
+        }
+
+        $this->assertSame(0, LeaveApplication::query()->where('employee_id', $this->employee->id)->count(), '⛔ ভুল গড়নের দিন নিয়ে আবেদন বসল');
+
+        $this->post(route('hr.leave.store'), [
+            'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('UNPAID')->id,
+            'from_date' => '2026-03-02', 'to_date' => '2026-03-11', 'days' => '9.5',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('9.5', (string) LeaveApplication::query()->where('employee_id', $this->employee->id)->value('days'));
     }
 
     private function type(string $code): LeaveType
