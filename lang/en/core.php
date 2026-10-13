@@ -124,6 +124,7 @@ return [
         'inactive_account' => 'Line :line: account :code is inactive — activate it or pick another.',
         'no_year' => 'No financial year covers :date — open that year first.',
         'year_closed' => 'Financial year :name is closed — reopening it is an approved action, not a side effect of posting.',
+        'party_on_money' => 'Line :line: :code is a money account — cash, bank and mobile money hold no party dues; put the party on its receivable or payable.',
     ],
 
     /*

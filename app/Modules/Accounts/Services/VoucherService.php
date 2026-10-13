@@ -1530,8 +1530,16 @@ final class VoucherService
      * "নিষ্ক্রিয় খাতে নতুন এন্ট্রি নয়" — এগুলো হিসাবের ছকের নিয়ম, আর
      * সেগুলো এই মডিউলের দায়িত্ব।
      */
+    /** @return list<int> হাতধারের খাত আর নিচের সব ([[StandardChart::HAND_LOAN]]) */
+    private function handLoanIds(): array
+    {
+        return array_map('intval', StandardChart::find(StandardChart::HAND_LOAN)?->selfAndDescendants()->pluck('id')->all() ?? []);
+    }
+
     private function assertLinesArePostable(Voucher $voucher): void
     {
+        $handLoans = null;
+
         foreach ($voucher->lines as $line) {
             $account = $line->account;
 
@@ -1550,6 +1558,19 @@ final class VoucherService
             if (! $account->is_active) {
                 throw ValidationException::withMessages([
                     'lines' => __('accounts::validation.inactive_account', ['name' => $account->label()]),
+                ]);
+            }
+
+            /*
+             * ⛔ হাতধারে মানুষের নাম বাধ্য — লাইভের রাতের যাচাই, ১৩ অক্টোবর ২০২৬ (AVA RCV-0001: টাকা-গ্রহণের ভাউচারে ১১৭০ বেছে নাম
+             * ছাড়া ৯,০০০; [[AHandLoanLineNamesItsPersonTest]])। ⓘ নাম ছাড়া হাতধার কার কাছে পাওনা কেউ বলতে পারে না, আর হাতধার খাতের জের
+             * মানুষদের যোগের সাথে আর মেলে না। নাম সারিতে, নয়তো মাথার পক্ষ "ব্যক্তি" হলে সেটা।
+             */
+            if (in_array((int) $account->id, $handLoans ??= $this->handLoanIds(), true)
+                && blank($line->party_id)
+                && ! ($voucher->party_type === 'person' && filled($voucher->party_id))) {
+                throw ValidationException::withMessages([
+                    'lines' => __('accounts::validation.hand_loan_needs_person', ['name' => $account->label()]),
                 ]);
             }
         }

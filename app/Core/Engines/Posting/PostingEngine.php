@@ -388,7 +388,7 @@ final class PostingEngine
         $found = DB::table('accounts')
             ->whereIn('id', $wanted)
             ->where('company_id', CompanyContext::id())
-            ->get(['id', 'code', 'is_group', 'is_active', 'party_types'])
+            ->get(['id', 'code', 'is_group', 'is_active', 'money_kind', 'party_types'])
             ->keyBy('id');
 
         foreach ($lines as $index => $line) {
@@ -411,6 +411,20 @@ final class PostingEngine
              * উল্টো দাখিলা পুরনো সারি হুবহু নকল করে ([[reverse()]]), তাই আগের কাগজ আগের মতোই ফেরানো যায়।
              */
             $partyType = $line['party_type'] ?? null;
+
+            /*
+             * ⛔ টাকার খাতে কোনো পক্ষ নয় — লাইভের রাতের যাচাই, ১৩ অক্টোবর ২০২৬ (UB-র দুই টিলে JRN-0110/0111 গ্রাহক আর সরবরাহকারী
+             * বসিয়েছিল; [[NoPartySitsOnAMoneyAccountTest]])। ⓘ নগদ, ব্যাংক বা মোবাইল-ব্যাংকিং কারও পাওনা-দেনা রাখে না: সেখানে পক্ষের
+             * নাম বসালে পক্ষের খাতা বদলায়, অথচ পাওনা বা দেনার খাত নয়। খাতের সেটিং যা-ই বলুক, এখানে থামে।
+             */
+            if ($partyType !== null && $partyType !== '' && $account->money_kind !== null) {
+                throw PostingException::said(
+                    "Line {$index} of {$sourceType}#{$sourceId} names a {$partyType} on money account {$account->code}. "
+                    .'Cash, bank and mobile money hold no party dues — put the party on its receivable or payable instead. Nothing was written.',
+                    'core.posting.party_on_money',
+                    ['line' => $index + 1, 'code' => $account->code],
+                );
+            }
 
             if ($partyType !== null && $partyType !== '') {
                 $holds = json_decode((string) ($account->party_types ?? '[]'), true) ?: [];
