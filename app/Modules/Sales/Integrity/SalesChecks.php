@@ -38,11 +38,15 @@ final class SalesChecks implements ChecksItsOwnBooks
     }
 
     /**
-     * বিলের মোট = লাইনগুলোর `amount`-এর যোগফল।
+     * বিলের মোট = লাইনগুলোর `amount`-এর যোগফল + রাউন্ডিং − বিলের ছাড় + বিলে যোগ করা ভাড়া।
      *
      * লাইনের `amount` নিজেই (পরিমাণ × দর) − ছাড় + ভ্যাট, আর বিলের
      * `total` তাদের যোগফল ধরে বসানো হয়। এই দুইটা আলাদা হলে কাগজে এক
      * অঙ্ক আর খাতায় আরেক অঙ্ক।
+     *
+     * ⛔ সূত্রটা সেবার হুবহু ([[SalesInvoiceService]]-এর মোট: লাইনের যোগ + rounding_amount − bill_discount + freight_charge;
+     * ছাড়ের পরের ভ্যাট লাইনেই কাটা হয়) — লাইভের রাতের যাচাই, ১২–১৩ অক্টোবর ২০২৬ ([[AnInvoiceTotalIsItsLinesAndItsOwnFiguresTest]])।
+     * ⓘ আগে কেবল লাইনের যোগ দেখা হত, তাই রাউন্ডিং, বিলের ছাড় বা ভাড়া থাকা প্রতিটা ঠিক বিলই "ভাঙা" দেখাত — UB-র ৩৩৩১টা বিল।
      */
     public static function invoiceMatchesItsLines(): IntegrityCheck
     {
@@ -62,9 +66,10 @@ final class SalesChecks implements ChecksItsOwnBooks
                     ->where('i.company_id', CompanyContext::id())
                     ->whereNull('i.deleted_at')
                     ->where('i.status', '<>', DocumentStatus::CANCELLED)
-                    ->whereRaw('ABS(i.total - l.line_total) > 0.0001')
+                    ->whereRaw('ABS(i.total - (l.line_total + COALESCE(i.rounding_amount, 0) - COALESCE(i.bill_discount, 0) + COALESCE(i.freight_charge, 0))) > 0.0001')
                     ->limit(100)
-                    ->select(['i.id', 'i.document_no', 'i.total', 'l.line_total'])
+                    ->select(['i.id', 'i.document_no', 'i.total'])
+                    ->selectRaw('l.line_total + COALESCE(i.rounding_amount, 0) - COALESCE(i.bill_discount, 0) + COALESCE(i.freight_charge, 0) as line_total')
                     ->get();
 
                 $out = [];
