@@ -126,7 +126,7 @@ final class AssetVerificationService
     {
         // ⓘ সারিতে তালা দিয়ে আবার দেখা — দুইজন একসাথে বন্ধ চাপলে দ্বিতীয়জন পরিষ্কার কথা পান
         return DB::transaction(function () use ($campaign) {
-            $locked = AssetVerification::query()->whereKey($campaign->id)->lockForUpdate()->firstOrFail();
+            $locked = AssetVerification::acrossBranches()->whereKey($campaign->id)->lockForUpdate()->firstOrFail();
 
             if (! $locked->isOpen()) {
                 throw ValidationException::withMessages(['status' => __('accounts::asset.verify_closed')]);

@@ -31,7 +31,7 @@ class PaymentRequest extends FormRequest
             'instrument_date' => ['nullable', 'date'],
             'narration' => ['nullable', 'string', 'max:500'],
 
-            'lines' => ['nullable', 'array'],
+            'lines' => ['nullable', 'array', 'max:500'],
             'lines.*.purchase_bill_id' => ['nullable', 'integer',
                 Rule::exists('pur_bills', 'id')->where('company_id', $companyId)],
             'lines.*.amount' => ['nullable', 'numeric', 'min:0'],

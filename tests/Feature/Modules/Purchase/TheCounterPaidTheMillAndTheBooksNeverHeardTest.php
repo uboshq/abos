@@ -184,6 +184,37 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
     }
 
     /**
+     * ⛔ সইয়ের অপেক্ষায় থাকা চেক-পরিশোধ শেষ সইয়ে রেজিস্টারে ওঠে (fe, ১৩ অক্টোবর ২০২৬; [[RecordTheChequeOfASignedPurchasePayment]])।
+     * ⚠️ আগে খসড়ায় থামলে রেজিস্টারের ধাপ আসতই না, আর সইয়ের পরেও না: ২১১৫ চিরকাল ক্রেডিট, চেক পাশ-ফেরত-বাতিল কিছুই করা যেত না।
+     */
+    public function test_a_cheque_held_for_its_signature_reaches_the_register_when_signed(): void
+    {
+        $this->flow(VoucherApproval::COUNTER_PAYMENT);
+        $method = PaymentMethod::query()->where('code', 'CHQ')->firstOrFail();
+
+        $this->buy(['deposits' => [[
+            'payment_method_id' => $method->id,
+            'amount' => '600',
+            'reference' => 'PAY-CHQ-HELD',
+            'ref_date' => now()->toDateString(),
+            'bank_name' => 'City Bank',
+        ]]]);
+
+        $voucher = Voucher::query()->where('origin', Voucher::ORIGIN_COUNTER)->latest('id')->firstOrFail();
+        $this->assertFalse($voucher->isPosted(), 'দৃশ্যটাই বানানো যায়নি — চেক-পরিশোধ সইয়ের অপেক্ষায় নেই');
+        $this->assertFalse(Cheque::query()->where('cheque_no', 'PAY-CHQ-HELD')->exists(), 'সইয়ের আগেই চেক রেজিস্টারে উঠল।');
+
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_id', $voucher->id)->firstOrFail(), $this->user);
+
+        $this->assertTrue($voucher->fresh()->isPosted());
+        $cheque = Cheque::query()->where('cheque_no', 'PAY-CHQ-HELD')->first();
+        $this->assertNotNull($cheque, '⛔ শেষ সইয়ের পরেও চেকটা রেজিস্টারে ওঠেনি — ২১১৫ চিরকাল ক্রেডিট।');
+        $this->assertSame(Cheque::ISSUED, $cheque->direction);
+        $this->assertSame((int) $voucher->id, (int) $cheque->voucher_id);
+        $this->assertSame(1, Cheque::query()->where('voucher_id', $voucher->id)->count(), '⛔ একই পরিশোধের চেক দুবার।');
+    }
+
+    /**
      * @param  array<string, mixed>  $extra
      * @return array{bill: PurchaseBill, payments: list<Voucher>}
      */

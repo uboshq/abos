@@ -58,6 +58,12 @@ class TheRateWasInSomebodysHeadTest extends TestCase
 
         // ⓘ সীমা না থাকলে বাকি নেই (মালিক, ১ অক্টোবর ২০২৬) — বিলগুলো ১–৫.৫ লাখ, আর এই দাবি কমিশন মাপে, সীমা নয়
         Customer::query()->whereKey(Customer::query()->value('id'))->update(['credit_limit' => '10000000']);
+
+        /*
+         * ⓘ মেয়াদ পেরোনো বাকির দেয়ালও বন্ধ — একই কারণে (১৩ অক্টোবর ২০২৬)। বিলগুলো ২০২৬-০৮-১০-এর, আর আজ তাদের মেয়াদ
+         * পেরিয়ে গেছে: দ্বিতীয় বিল "মেয়াদ পেরোনো বাকি আছে — নতুন বাকি বন্ধ"-এ থামত, কমিশনের হিসাব পর্যন্ত পৌঁছাতই না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('customer.overdue_stop', false);
     }
 
     private function engine(): CommissionEngine

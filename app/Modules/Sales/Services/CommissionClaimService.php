@@ -78,7 +78,7 @@ final class CommissionClaimService
             // ⛔ বিলের সারিতে তালা দিয়ে আবার — দুইজন একসাথে একই বিলে দাবি লিখলে দুইজনেই "নেই" দেখতেন
             if ($invoice !== null) {
                 // ⓘ তালার পরের তাজা বিল আবার মাপা — মাঝে বাতিল হলে দাবি থামে (রিভিউ, ১০ অক্টোবর ২০২৬)
-                $this->assertTheBillIsTheirs(SalesInvoice::query()->whereKey($invoice->id)->lockForUpdate()->first(), $customer);
+                $this->assertTheBillIsTheirs(SalesInvoice::acrossBranches()->whereKey($invoice->id)->lockForUpdate()->first(), $customer);
                 $this->assertNoClaimOnTheBill($invoice);
             }
 

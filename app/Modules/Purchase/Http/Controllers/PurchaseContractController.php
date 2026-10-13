@@ -89,7 +89,7 @@ class PurchaseContractController extends Controller implements HasMiddleware
             'terms' => ['nullable', 'string', 'max:2000'],
             'narration' => ['nullable', 'string', 'max:2000'],
 
-            'lines' => ['required', 'array', 'min:1'],
+            'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['nullable', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.agreed_rate' => ['nullable', 'numeric', 'min:0'],

@@ -92,6 +92,9 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         // ⓘ +১১ ডিলারের দেয়ালের ছাড় (⛔১৬): বাঁধনটা নিজে, লিড ও সুযোগ (নিজেরটা নিজে দেখা), প্রমোশনের চারটা
         //   যাচাইয়ের সারি, আর চালান-ধরা পাঁচটা লাইন/ঘটনা যা দেয়ালঘেরা কাগজের ভিতর দিয়েই পৌঁছায়
         'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
+        // ⓘ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — রেস্টুরেন্ট পরে (মালিক, ২১ অক্টোবরের পরে; ১৩ অক্টোবর ২০২৬)
+        'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
+        // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
     ];
@@ -389,7 +392,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       সারি, আর মালিকের শর্ত "কাউন্টার ধীর নয় — একটাই INSERT"; অডিট বসালে প্রতি বিক্রিতে আরেকটা। সারি নিজেই সাক্ষ্য,
      *       বদলানো আর মোছা মডেলেই বন্ধ। ⓘ সীমা বদলের ইতিহাস (`CustomerCreditChange`) ছাড় নেয়নি — সে অডিটে।
      */
-    private const CEILING = 368;
+    /*
+     * ── ⚠️ ৩৬৮ → ৩৯৩, ১৩ অক্টোবর ২০২৬ (তালার আবার-পড়া সব শাখা জুড়ে — fe) ──────────────────────────────────────────────────
+     *   +১  ARowInHandIsLockedAcrossBranchesTest::EXCUSED — রেস্টুরেন্টের উৎপাদন: মালিক বলেছেন ২১ অক্টোবরের পরে
+     *   +২৪ ARowInHandIsLockedAcrossBranchesTest::NOT_YET — অস্থায়ী: প্রতিটা সেবার সারাই নিজের সারি তোলে আর ছাদ ততটা কমায়
+     */
+    private const CEILING = 369;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

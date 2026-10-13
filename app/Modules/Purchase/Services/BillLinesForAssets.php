@@ -67,10 +67,21 @@ final class BillLinesForAssets implements CapitalisesABillLine
         $line = $this->query(walled: false)->whereKey($lineId)->first();
         $account = Account::query()->postable()->whereKey($assetAccountId)->first();
         $inventory = StandardChart::find(StandardChart::INVENTORY);
-        $warehouse = $line?->bill?->warehouse;
-
-        if ($line === null || $account === null || $inventory === null || $warehouse === null || $line->product === null) {
+        if ($line === null || $account === null || $inventory === null || $line->product === null) {
             throw ValidationException::withMessages(['purchase_bill_line_id' => __('accounts::asset.bill_line_missing')]);
+        }
+
+        /*
+         * ⛔ মাল যে গুদামে সত্যিই ঢুকেছিল — fe, ১৩ অক্টোবর ২০২৬ ([[ABillLineWithNoWarehouseCouldNotBecomeAnAssetTest]])। ⚠️ আগে কেবল বিলের
+         * গুদাম দেখা হত; বিলের পর্দা গুদাম পাঠায় না, তাই সেই বিলের কোনো লাইনই সম্পদ হত না — বার্তাও ভুল ("লাইন পাওয়া যায়নি")।
+         * ⓘ ক্রম: রসিদের লাইন হলে রসিদের গুদাম → বিলের গুদাম → বিল যে গুদামে মাল তুলেছিল ([[PurchaseBillService::warehouseFor()]])।
+         */
+        $warehouse = $line->receiptLine?->receipt?->warehouse
+            ?? $line->bill?->warehouse
+            ?? ($line->bill === null ? null : rescue(fn () => app(PurchaseBillService::class)->warehouseFor($line->bill), null, false));
+
+        if ($warehouse === null) {
+            throw ValidationException::withMessages(['purchase_bill_line_id' => __('purchase::validation.asset_line_no_warehouse')]);
         }
 
         // ⛔ তাকে যা নেই তা সম্পদ হয় না — বিক্রি হয়ে গেলে তোলার কিছু নেই

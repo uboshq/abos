@@ -142,6 +142,30 @@ final class AnAssetHadNoClassAndNoPaperTrailTest extends TestCase
         ]);
     }
 
+    /**
+     * ⛔ গুদাম ছাড়া বিলের লাইনও সম্পদ হয় — বিলের পর্দা গুদাম পাঠায় না, মাল যায় মূল গুদামে (fe, ১৩ অক্টোবর ২০২৬;
+     * [[BillLinesForAssets::capitalise()]])। ⚠️ আগে কেবল বিলের গুদাম দেখা হত, তাই এমন বিলের কোনো লাইনই সম্পদ হত না।
+     */
+    public function test_a_line_of_a_bill_with_no_warehouse_still_becomes_an_asset(): void
+    {
+        $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
+        $product = Product::query()->firstOrFail();
+        $bill = app(PurchaseBillService::class)->confirm(app(PurchaseBillService::class)->create(
+            ['supplier_id' => Supplier::query()->firstOrFail()->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'qty' => '10', 'rate' => '100']],
+        ))->fresh();
+        $this->assertNull($bill->warehouse_id, 'দৃশ্যটাই বানানো যায়নি — বিলে গুদাম বসে গেছে');
+        $stock = app(StockService::class)->floorQty($product, $warehouse);
+
+        $asset = app(FixedAssetService::class)->register([
+            'category_id' => $this->category()->id, 'name' => 'Counter fridge', 'acquired_on' => now()->toDateString(),
+            'funded_by' => FixedAssetService::FUNDED_BILL, 'purchase_bill_line_id' => $bill->lines()->firstOrFail()->id, 'capitalised_qty' => '1',
+        ]);
+
+        $this->assertTrue($asset->isActive(), '⛔ গুদাম ছাড়া বিলের লাইন সম্পদ হলো না।');
+        $this->assertSame(0, bccomp(bcsub($stock, app(StockService::class)->floorQty($product, $warehouse), 4), '1', 4), '⛔ মূল গুদাম থেকে মাল কমেনি।');
+    }
+
     public function test_cost_parts_add_up_and_a_component_hangs_on_its_parent(): void
     {
         $category = $this->category();

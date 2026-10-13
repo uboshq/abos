@@ -1,4 +1,6 @@
 {{-- একটা ক্রয় ফেরত। --}}
+{{-- ⛔ ক্রয়মূল্য কেবল খরচ দেখার চাবিতে — ছাপার একই নিয়ম ([[PurchasePrintController::showsPurchasePrice()]]); fe, ১৩ অক্টোবর ২০২৬ --}}
+@php($showsPrice = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\Product::class, 'purchase_price'))
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $return->document_no }}</x-slot:title>
 
@@ -82,7 +84,7 @@
             <x-ui.table
                 :empty="__('purchase::validation.no_lines')"
                 :rows="$return->lines"
-                :columns="[
+                :columns="array_values(array_filter([
                     ['key' => 'line_no', 'label' => __('purchase::field.line_no'), 'width' => '4rem'],
                     ['key' => 'product', 'label' => __('purchase::field.product'),
                      'render' => fn ($l) => $l->product?->name()],
@@ -94,8 +96,9 @@
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->tax)],
                     ['key' => 'amount', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->amount)],
-                ]" />
+                ], fn ($c) => $showsPrice || ! in_array($c['key'], ['rate', 'amount', 'discount', 'tax', 'typed_rate'], true)))" />
 
+            @if ($showsPrice)
             <div class="flex border-t border-(--color-border) p-4">
                 <x-purchase::totals :rows="[
                     'purchase::field.subtotal' => $return->subtotal,
@@ -103,6 +106,7 @@
                     'purchase::field.total' => $return->total,
                 ]" />
             </div>
+            @endif
         </section>
 
         @can('delete', $return)

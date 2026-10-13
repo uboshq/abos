@@ -128,7 +128,7 @@ final class FarePayment
              * দুবার"*। ⓘ দুই চাপ একসাথে এলে দুটোই "ভাড়া লেখা নেই" দেখত আর দুটো EV বসাত; এখন দ্বিতীয়টা প্রথমটার পরে
              * সারিটা পায়, আর "আগেই লেখা" দেখে থামে ([[EveryMoneyActionLocksItsRowTest]])।
              */
-            $challan = DeliveryChallan::query()->lockForUpdate()->findOrFail($challan->id);
+            $challan = DeliveryChallan::acrossBranches()->lockForUpdate()->findOrFail($challan->id);
 
             if ($challan->status !== DocumentStatus::CONFIRMED) {
                 throw ValidationException::withMessages(['fare' => __('sales::fare.only_confirmed')]);
