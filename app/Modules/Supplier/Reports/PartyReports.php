@@ -305,6 +305,19 @@ final class PartyReports
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
                     // ⛔ কেবল দেনার খাত — বিল-না-আসা মাল দেনা নয় ([[GoodsNotYetBilledReadAsOwedTest]])
                     ->whereIn('ledger_entries.account_id', Supplier::payableAccountIds())
+                    /*
+                     * ⛔ তারিখ পর্যন্ত উল্টানো দাখিলা জোড়া ধরে বাদ, মূল আর উল্টো দুটোই (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                     * [[ACancelledSupplierBillAgedTheOldDebtTest]])। ⚠️ আগে বাতিল বিলের উল্টো ডেবিট "পরিশোধ" হয়ে সবচেয়ে পুরনো দেনা
+                     * কাটত আর মূল বিলটা নতুন বালতিতে থাকত; বাতিল পরিশোধের উল্টো ক্রেডিট নতুন বিল হয়ে বসত। ⓘ উল্টো সারি মূলের আয়না,
+                     * তাই মোট দেনা বদলায় না।
+                     */
+                    ->where('ledger_entries.source_type', 'not like', '%:reversal')
+                    ->whereNotExists(fn ($undo) => $undo->selectRaw('1')->from('ledger_entries as undo')
+                        ->whereColumn('undo.company_id', 'ledger_entries.company_id')
+                        ->whereColumn('undo.source_id', 'ledger_entries.source_id')
+                        ->whereRaw("undo.source_type = CONCAT(ledger_entries.source_type, ':reversal')")
+                        ->whereColumn('undo.id', '>', 'ledger_entries.id')
+                        ->where('undo.trx_date', '<=', $f['to']))
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
                     ->select([
