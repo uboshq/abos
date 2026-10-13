@@ -10,8 +10,10 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
+use Illuminate\Validation\ValidationException;
 
 /**
  * কুপনের কাগজ — বিক্রয়ের পাকা বিল আর আদেশ, সারি ধরে ([[CouponPapers]], গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬)।
@@ -45,10 +47,16 @@ final class SalesCouponPapers implements CouponPapers
             return;
         }
 
-        // ⓘ দরজা আগেই কাগজ যাচাই করে ([[line()]]); পাকা বিল না থাকলে খাতায় বসানোর কিছু নেই
-        $invoice = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->find($sourceId);
+        /*
+         * ⛔ দেয়াল ছাড়া পড়া — cloud/people-fixes-এর রিভিউ, ১০ অক্টোবর ২০২৬। ⓘ আগে শাখা আর ডিলারের দেয়াল দিয়ে
+         * পড়া হত: দেয়ালের আড়ালে বিল "নেই", কিছু না বসিয়ে ফিরত — অথচ ডাকা পক্ষ ([[CouponDesk::carryToBill()]]) কুপনটা
+         * "বহন করা" লিখত, আর গ্রাহক ছাড়টা হারাতেন। কোম্পানির দেয়াল থাকে। ⓘ বিল আছে অথচ এখনো পাকা নয় — বসানোর কিছু নেই, আগের মতো।
+         */
+        $invoice = self::unwalled(SalesInvoice::class)->find($sourceId);
 
-        if ($invoice === null) {
+        // ⓘ দেয়াল ছাড়া পড়ার পরেও না পেলে — দরজা ([[line()]]) আর [[CouponDesk::carryToBill()]] সবসময় আসল বিল দেয়, তাই এটা কেবল
+        // সার্ভিস-স্তরের টেস্টের বানানো আইডি; আগের মতো কিছু না বসিয়ে ফেরা (রিভিউয়ের মেশানো রান, ১১ অক্টোবর ২০২৬)
+        if ($invoice === null || ! in_array($invoice->status, DocumentStatus::POSTED, true)) {
             return;
         }
         $discount = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
@@ -65,7 +73,8 @@ final class SalesCouponPapers implements CouponPapers
                 'party_kind' => Note::KIND_CUSTOMER,
                 'party_id' => (int) $invoice->customer_id,
                 'other_account_id' => $discount?->id,
-                'trx_date' => now()->toDateString(),
+                // ⓘ বিলের দিনে — আজকের দিনে নয় (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬); শাখা উপরের মোড়ক থেকে
+                'trx_date' => $invoice->trx_date?->toDateString() ?? now()->toDateString(),
                 'amount' => bcadd($worth, '0', 4),
                 'tax_amount' => '0',
                 'reason' => 'agreed_discount',
@@ -75,6 +84,61 @@ final class SalesCouponPapers implements CouponPapers
 
             $notes->confirm($note);
         });
+    }
+
+    /**
+     * ⛔ হাতে বদলানো অফার — খসড়া চালানের সারিতে নতুন অঙ্ক, পাকা কাগজে নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, প্রমোশন ২০;
+     * [[AnOverrideReachesTheDraftAndOnlyTheDraftTest]])।
+     *
+     * ⓘ বদল কেবল অফারের সারিতে লেখা হত: চালানের সারির `promotion_discount` আগের অঙ্কেই থাকত, তাই বিলে আগের ছাড় যেত — বদলটা
+     * কাগজে পৌঁছাতই না। আর পাকা বিল বা চালানের অফারও বদলানো যেত, অথচ খাতা তখন বসে গেছে।
+     */
+    public function offerChanged(string $sourceType, int $sourceId, ?int $sourceLineId): void
+    {
+        /*
+         * ⛔ দেয়াল ছাড়া পড়া, আর না পেলে থামা — cloud/people-fixes-এর রিভিউ ⛔, ১০ অক্টোবর ২০২৬। ⓘ আগে শাখা আর ডিলারের দেয়াল দিয়ে
+         * পড়া হত আর না পেলে চুপচাপ ছেড়ে দিত: হেডারে MMS বাছা অবস্থায় NTK-র পাকা চালানের অফার বদলে যেত। কোম্পানির দেয়াল থাকে।
+         */
+        if ($sourceType === DeliveryChallan::drillSourceType()) {
+            $challan = self::unwalled(DeliveryChallan::class)->find($sourceId);
+
+            if ($challan === null) {
+                throw ValidationException::withMessages(['worth' => __('sales::offers.paper_missing')]);
+            }
+
+            $offers = app(ChallanOffers::class);
+
+            if (! $offers->editable($challan)) {
+                throw ValidationException::withMessages(['worth' => __('sales::offers.only_draft', ['no' => $challan->document_no])]);
+            }
+
+            if ($sourceLineId !== null) {
+                $offers->refreshLine($challan, $sourceLineId);
+            }
+
+            return;
+        }
+
+        $paper = match ($sourceType) {
+            'sales_invoice' => self::unwalled(SalesInvoice::class)->find($sourceId),
+            'sales_order' => self::unwalled(SalesOrder::class)->find($sourceId),
+            default => false,
+        };
+
+        // ⓘ পাকা বিলের ছাড় খাতায় বসে গেছে; আদেশ বিল হওয়া শুরু হলে কুপনের ছাড়ও বিলে যেতে শুরু করেছে ([[CouponDesk::carryToBill()]])
+        if ($paper instanceof SalesInvoice && in_array($paper->status, DocumentStatus::POSTED, true)) {
+            throw ValidationException::withMessages(['worth' => __('sales::offers.only_draft', ['no' => $paper->document_no])]);
+        }
+    }
+
+    /**
+     * কাগজ পড়া শাখা আর ডিলারের দেয়াল ছাড়া — কোম্পানির দেয়াল থাকে (টাকার সিদ্ধান্তে হেডারের শাখা নয়)।
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $class
+     */
+    private static function unwalled(string $class): \Illuminate\Database\Eloquent\Builder
+    {
+        return $class::query()->withoutGlobalScopes(['user-branch', \App\Modules\Customer\Models\Customer::DEALER_WALL]);
     }
 
     /** @return array{customer_id: ?int, branch_id: ?int, warehouse_id: ?int, product_id: int, qty: string, value: string}|null */

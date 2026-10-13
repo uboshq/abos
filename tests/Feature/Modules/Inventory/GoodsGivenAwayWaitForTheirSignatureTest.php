@@ -206,6 +206,36 @@ final class GoodsGivenAwayWaitForTheirSignatureTest extends TestCase
         $this->assertSame(0, StockCount::query()->where('kind', StockCount::KIND_ISSUE)->count(), 'বাতিল চেষ্টায় কাগজ রয়ে গেছে।');
     }
 
+    /**
+     * ⛔ সইকারীর হেডারে অন্য শাখা — তবু শেষ সইয়ে মাল বেরোয় (fe, ১৩ অক্টোবর ২০২৬; [[FinishTheIssueOnTheLastSignature]])। ⚠️ আগে শ্রোতা
+     * কাগজ খুঁজত `$approval->approvable` দিয়ে — মাল-গোনার কাগজে শাখার দেয়াল, তাই অন্য শাখা দেখানো সইকারীর হাতে কাগজটা "নেই",
+     * মাল তাকেই আর কাগজ চিরকাল খসড়া, কোনো খবর ছাড়া।
+     */
+    public function test_the_last_signature_gives_the_goods_out_while_the_signers_header_shows_another_branch(): void
+    {
+        $this->issueFlow();
+        $product = $this->stocked('40');
+        [$paper] = app(StockCountService::class)->issue($product, $this->warehouse, '5', $this->issueReason());
+        $this->assertSame(DocumentStatus::DRAFT, $paper->fresh()->status, 'দৃশ্যটাই বানানো যায়নি — কাগজ সইয়ের অপেক্ষায় নেই');
+
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+            ->whereKeyNot((int) $paper->branch_id)->orderBy('id')->firstOrFail();
+        $this->signer->forceFill(['view_all_branches' => false, 'current_branch_id' => $other->id])->save();
+        CompanyContext::set(CompanyContext::id(), $other->id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($this->signer->fresh());
+
+        app(ApprovalEngine::class)->approve($this->approvalOf($paper), $this->signer->fresh());
+
+        $this->assertSame(DocumentStatus::CONFIRMED, StockCount::acrossBranches()->findOrFail($paper->id)->status,
+            '⛔ অন্য শাখার হেডারে শেষ সই — মাল দেওয়ার কাগজ খসড়াই রইল।');
+
+        // ⓘ তাক গোনা কাগজের শাখার চোখে — সইকারীর বাছা শাখার দেয়াল মজুদের সারিও লুকায়
+        CompanyContext::set(CompanyContext::id(), (int) $paper->branch_id);
+        $this->actingAs($this->owner);
+        $this->assertOnHand($product, '35', '⛔ শেষ সইয়ের পরে মাল বেরোয়নি।');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function issueFlow(): void

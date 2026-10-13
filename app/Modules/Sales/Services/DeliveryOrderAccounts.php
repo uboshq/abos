@@ -52,7 +52,8 @@ final class DeliveryOrderAccounts
         return DB::transaction(function () use ($order): ?string {
             $customer = $this->credit->lockCustomer((int) $order->customer_id);
 
-            $order = DeliveryOrder::query()->whereKey($order->id)->lockForUpdate()->first();
+            // ⓘ হাতে থাকা DO-টাই, তালাসহ — দেখার শাখার দেয়াল ছাড়া ([[DeliveryOrderStock::lockOrder()]]-এর একই কারণে)
+            $order = DeliveryOrder::acrossBranches()->whereKey($order->id)->lockForUpdate()->first();
 
             if ($order === null || ! in_array($order->status, self::CHECKABLE, true)) {
                 return null;

@@ -44,4 +44,9 @@ final class NoSalesOffers implements SalesOffers
     {
         // ⓘ কিছুই বসানো নেই — উল্টানোরও কিছু নেই
     }
+
+    public function carryOrderCoupons(array $orderIds, int $invoiceId, string $room): void
+    {
+        // ⓘ অফার বন্ধ — কোনো কুপন কাটা হয়নি
+    }
 }

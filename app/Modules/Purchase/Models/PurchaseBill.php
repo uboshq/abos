@@ -10,6 +10,8 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\SettlementTerms;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
@@ -29,7 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নিজে থেকেই মেলে: প্রদেয়ের সংখ্যাটা কোথাও জমা থাকে না, খতিয়ান থেকে গোনা
  * হয়। জমা রাখলে বিল বাতিল হলে দুই জায়গায় বদলাতে হত, আর একটা বাদ পড়ত।
  */
-class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\SettlementTerms
+class PurchaseBill extends Model implements Drillable, SettlementTerms
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -386,7 +388,7 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
         $returned = PurchaseReturn::acrossBranches()
             ->selectRaw('COALESCE(SUM(total), 0)')
             ->whereColumn('pur_returns.purchase_bill_id', 'pur_bills.id')
-            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED);
+            ->whereIn('status', DocumentStatus::POSTED);
 
         return [$paid, $byVoucher, $returned];
     }
@@ -438,7 +440,7 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
 
         // ⛔ শাখার দেয়াল ছাড়া — ক্রয় ⚠️৯ ([[paidAmount()]])
         return bcadd((string) ($preloaded ?? PurchaseReturn::acrossBranches()->where('purchase_bill_id', $this->id)
-            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)->sum('total')), '0', 4);
+            ->whereIn('status', DocumentStatus::POSTED)->sum('total')), '0', 4);
     }
 
     public function dueAmount(): string
@@ -537,7 +539,7 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
             'party_type' => 'supplier',
             'party_id' => (int) $this->supplier_id,
             'party_required' => true,
-            'open' => $this->status === \App\Core\Support\DocumentStatus::CONFIRMED && bccomp($this->dueAmount(), '0', 4) > 0,
+            'open' => $this->status === DocumentStatus::CONFIRMED && bccomp($this->dueAmount(), '0', 4) > 0,
         ];
     }
 }

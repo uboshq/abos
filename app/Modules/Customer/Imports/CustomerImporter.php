@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Imports;
 
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\ImportNeedsKeys;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
 use App\Modules\MasterData\Models\PartyType;
-use App\Modules\MasterData\Models\PaymentTerm;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -22,7 +22,7 @@ use Illuminate\Validation\ValidationException;
  * নিজে কিছু সেভ করে না — CustomerService ডাকে, তাই বাংলা নামের নিয়ম,
  * কোডের অনন্যতা ও খোলা ব্যালেন্সের দাখিলা হাতে বসানোর মতোই খাটে।
  */
-final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
+final class CustomerImporter implements Importer, ImportNeedsKeys
 {
     /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
     public static function requiredPermissions(): array
@@ -71,11 +71,12 @@ final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
             $errors[] = __('customer::validation.code_taken', ['code' => $row['code']]);
         }
 
-        if (filled($row['opening_balance']) && ! is_numeric($row['opening_balance'])) {
+        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric`-এ পার হয়ে পরে bccomp-এ ভাঙত বা ১,০০,০০০ হয়ে বসত (রিভিউ ১০ অক্টোবর ২০২৬)
+        if (filled($row['opening_balance']) && ! self::plainDecimal((string) $row['opening_balance'])) {
             $errors[] = __('core.import.not_a_number', ['column' => 'opening_balance']);
         }
 
-        if (filled($row['credit_limit']) && ! is_numeric($row['credit_limit'])) {
+        if (filled($row['credit_limit']) && ! self::plainDecimal((string) $row['credit_limit'])) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
         }
 
@@ -97,11 +98,13 @@ final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
             ]);
         }
 
-        if (filled($row['payment_term']) && $this->paymentTerm($row['payment_term']) === null) {
-            $errors[] = __('core.import.unknown_value', [
-                'column' => 'payment_term',
-                'value' => $row['payment_term'],
-            ]);
+        /*
+         * ⛔ পরিশোধের শর্ত গ্রাহকের খাতায় বসে না — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৭; [[TheCustomerImportSaysWhatItCannotKeepTest]])।
+         * ⓘ গ্রাহকের সারিতে শর্তের কোনো ঘর নেই; আগে শর্ত মিলিয়ে `payment_term_id` পাঠানো হত আর মডেল সেটা নীরবে ফেলে দিত — যাচাইয়ের
+         * পর্দা সবুজ, অথচ শর্তটা কোথাও নেই। এখন ভরা থাকলে সারিটা কারণসহ থামে: বাকির দিন "বাকির দিন" ঘরে লিখুন।
+         */
+        if (filled($row['payment_term'])) {
+            $errors[] = __('customer::import.payment_term_not_kept', ['value' => $row['payment_term']]);
         }
 
         // সার্ভিসের নিজের নিয়মগুলো (বাংলা নাম, BIN) — সেটিংস অনুযায়ী।
@@ -149,7 +152,6 @@ final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
             // গ্রাহক ধরনহীন বসত, আর ধরন ধরে রিপোর্ট তাঁদের কখনো গুনত না
             'party_type_id' => $this->partyType($row['party_type'])?->id
                 ?? PartyType::query()->for(PartyType::CUSTOMER)->where('is_default', true)->value('id'),
-            'payment_term_id' => $this->paymentTerm($row['payment_term'])?->id,
             'credit_limit' => $row['credit_limit'] !== '' ? $row['credit_limit'] : 0,
             'credit_days' => $row['credit_days'] !== '' ? (int) $row['credit_days'] : 0,
             'opening_balance' => $row['opening_balance'] !== '' ? $row['opening_balance'] : 0,
@@ -165,19 +167,6 @@ final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
 
         return PartyType::query()
             ->for(PartyType::CUSTOMER)
-            ->where(fn ($q) => $q->where('code', $value)
-                ->orWhere('name_en', $value)
-                ->orWhere('name_bn', $value))
-            ->first();
-    }
-
-    private function paymentTerm(string $value): ?PaymentTerm
-    {
-        if ($value === '') {
-            return null;
-        }
-
-        return PaymentTerm::query()
             ->where(fn ($q) => $q->where('code', $value)
                 ->orWhere('name_en', $value)
                 ->orWhere('name_bn', $value))
@@ -214,5 +203,11 @@ final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
         }
 
         return null;
+    }
+
+    /** সাধারণ দশমিক — ঐচ্ছিক চিহ্ন, অঙ্ক, ঐচ্ছিক দশমিক ভাগ; "1e5", "0x1A", ফাঁকা নয় */
+    private static function plainDecimal(string $value): bool
+    {
+        return preg_match('/^[+-]?\d+(\.\d+)?$/', trim($value)) === 1;
     }
 }

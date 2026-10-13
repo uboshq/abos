@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
+use App\Core\Dashboard\HomeFilter;
+use App\Core\Dashboard\MasterHealth;
 use App\Core\Dashboard\Widget;
 use App\Core\Services\SettingsService;
 use App\Core\Support\Money;
@@ -85,8 +87,13 @@ final class CustomerWidgets implements DashboardWidgets
      */
     private static function receivableAbove(string $ceiling): Widget
     {
-        $total = (string) (Customer::query()->inViewedBranch()->active()->withOutstanding()->get()
-            ->reduce(fn (string $sum, Customer $customer) => bcadd($sum, $customer->outstanding(), 4), '0'));
+        /*
+         * ⛔ এক কোয়েরি, এক দেয়াল — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৪; [[TheDuesAboveWidgetReadsOneWallTest]])।
+         * ⓘ আগে গ্রাহক বাছা হত গ্রাহকের নিজের শাখা ধরে, অথচ প্রত্যেকের বকেয়া গোটা কোম্পানির খাতা থেকে — দুই দেয়াল মিশত; আর
+         * প্রতিটা গ্রাহক মেমরিতে তুলে একে একে আরেকটা কোয়েরি। এখন হোমের "বাজারে বকেয়া"-র একই উৎস ([[CustomerMetrics::dues()]]):
+         * খাতার সারি দেখার শাখায়, প্রতি দোকানের ধনাত্মক জের — ঠিক যে বকেয়া-তালিকায় ঘরটা নিয়ে যায়।
+         */
+        $total = app(CustomerMetrics::class)->dues(auth()->user(), now()->toDateString())['amount'];
 
         $over = bccomp($total, $ceiling, 4) > 0;
 
@@ -115,7 +122,7 @@ final class CustomerWidgets implements DashboardWidgets
         $dues = app(CustomerMetrics::class)->dues(
             auth()->user(),
             now()->toDateString(),
-            \App\Core\Dashboard\HomeFilter::current()?->dueCustomers(),
+            HomeFilter::current()?->dueCustomers(),
         );
 
         return new Widget(
@@ -140,7 +147,7 @@ final class CustomerWidgets implements DashboardWidgets
      */
     public static function health(): array
     {
-        return [\App\Core\Dashboard\MasterHealth::widget(
+        return [MasterHealth::widget(
             label: __('customer::menu.customers'),
             href: route('customer.index'),
             permission: 'customer.view',

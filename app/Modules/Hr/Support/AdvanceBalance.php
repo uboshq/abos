@@ -41,6 +41,29 @@ final class AdvanceBalance
             ->value('n'), '0', 2);
     }
 
+    /**
+     * ⛔ কর্মীর সারিতে তালা — অগ্রিমের জের পড়ে তার উপর কিছু বসানোর আগে (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ জেরটা খাতার যোগফল, তাতে তালা দেওয়ার মতো একটা সারি নেই; তাই কর্মীর সারিটাই তালা। বেতন নিশ্চিত করা আর দাবি মেটানো দুই
+     * জায়গাই এটা ডাকে, তাই একজনের জের দুইজন একসাথে পড়ে দুইজনেই কাটতে পারেন না। লেনদেনের ভিতরে ডাকুন; id-র ক্রমে, যাতে দুই
+     * কাজ উল্টো ক্রমে তালা চেয়ে আটকে না যায়।
+     *
+     * @param  list<int>  $employeeIds
+     */
+    public function lock(array $employeeIds): void
+    {
+        if ($employeeIds === []) {
+            return;
+        }
+
+        Employee::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->whereIn('id', $employeeIds)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->pluck('id');
+    }
+
     /** @return list<int> */
     private function accounts(): array
     {

@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -187,7 +188,7 @@ class PaymentController extends Controller implements HasMiddleware
      * ⓘ পরিশোধের প্রস্তাবও এটাই নেয় ([[PaymentScheduleController::propose()]]) — এক তালিকা, এক জায়গায়।
      * ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন।
      */
-    public static function moneyAccounts(): \Illuminate\Support\Collection
+    public static function moneyAccounts(): Collection
     {
         $moneyCodes = StandardChart::MONEY_PARENTS;
 

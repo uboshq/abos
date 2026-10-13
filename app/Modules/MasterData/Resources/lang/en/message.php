@@ -43,4 +43,7 @@ return [
     'base_unit_hint' => 'The unit this one is measured in — a dozen is measured in pieces.',
     'factor_hint' => 'How many base units are in one of these: 1 dozen = 12 pieces, so 12. The carton size for a particular product is set on that product, not here.',
     'allows_fraction_hint' => 'Whether half and quarter amounts are allowed — yes for kg, no for pieces.',
+
+    // ⓘ দরকারি ঘর খালি — তালিকায় লাল চিপ (পাতা-ঝাড়ু ধাপ ০-এর ৮)
+    'required_not_set' => 'Not set — set it',
 ];

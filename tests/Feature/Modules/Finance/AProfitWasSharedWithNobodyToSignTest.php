@@ -94,6 +94,28 @@ final class AProfitWasSharedWithNobodyToSignTest extends TestCase
         $this->assertRetained($this->left(), '⛔ শেষ সই-এর পরে ঘোষণা খাতায় বসেনি।');
     }
 
+    /**
+     * ⛔ সইকারীর হেডারে অন্য শাখা — তবু শেষ সইয়ে ঘোষণা বসে (fe, ১৩ অক্টোবর ২০২৬; [[PostTheProfitOnTheLastSignature]])। ⚠️ আগে শ্রোতা
+     * ভাউচার খুঁজত সইকারীর শাখার দেয়াল দিয়ে — লাভের ভাউচার প্রধান শাখায়, তাই অন্য শাখা দেখানো সইকারীর হাতে "নেই", ঘোষণা চিরকাল খসড়া।
+     */
+    public function test_the_last_signature_posts_the_declaration_while_the_signers_header_shows_another_branch(): void
+    {
+        $this->aProfitFlow();
+        $this->declare($this->share());
+
+        $head = (int) Company::query()->where('code', 'TDEPOT')->firstOrFail()->defaultBranch()->id;
+        $other = Branch::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())->whereKeyNot($head)->orderBy('id')->firstOrFail();
+        $this->signer->forceFill(['view_all_branches' => false, 'current_branch_id' => $other->id])->save();
+        CompanyContext::set(CompanyContext::id(), $other->id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($this->signer->fresh());
+
+        app(ApprovalEngine::class)->approve($this->pending(), $this->signer->fresh());
+
+        $this->assertSame(0, ProfitShare::query()->withoutGlobalScopes()->where('status', ProfitShare::DRAFT)->count(),
+            '⛔ অন্য শাখার হেডারে শেষ সই — ঘোষণা খসড়াই রইল।');
+    }
+
     /** ⛔ অপেক্ষার ঘোষণাও সীমা থেকে কাটা — দুইটা খসড়া মিলে আয়ের বেশি নয়। */
     public function test_a_declaration_still_waiting_is_counted_against_the_profit(): void
     {

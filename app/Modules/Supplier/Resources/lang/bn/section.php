@@ -10,4 +10,5 @@ return [
     'credit' => 'শর্ত ও ক্রেডিট',
     'opening' => 'খোলা ব্যালেন্স',
     'transactions' => 'লেনদেন',
+    'ledger_parts' => 'খাতার দুই ভাগ',
 ];

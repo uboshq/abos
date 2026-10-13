@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\Route;
  */
 final class MapEngine
 {
-    /** @var array<string, true>|null মডিউলের মেনুতে ঘোষিত প্রতিটা "রুট:প্যারামিটার" */
+    /** @var array<string, true|string>|null মডিউলের মেনুতে ঘোষিত প্রতিটা "রুট:প্যারামিটার" — মান মেনু-সারির চাবি, না থাকলে `true` */
     private ?array $declared = null;
 
     public function __construct(private readonly ModuleRegistry $modules) {}
@@ -111,11 +111,11 @@ final class MapEngine
                 }
 
                 $visible = $line['done']
-                    ? ($line['vouched'] || $this->mayOpen($user, (string) $line['route']))
+                    ? ($line['vouched'] || ($this->mayOpen($user, (string) $line['route']) && $this->menuAllows($user, $line['address'])))
                     : $seesPending;
 
                 if ($visible) {
-                    unset($line['route'], $line['vouched']);
+                    unset($line['route'], $line['vouched'], $line['address']);
                     $items[] = $line;
                 }
             }
@@ -150,7 +150,7 @@ final class MapEngine
         /* ⓘ ডাকার জন নিজেই লিংকটা এনেছেন, আগেই ছেঁকে — মেনুর সারি */
         if (isset($node['url']) && is_string($node['url']) && $node['url'] !== '') {
             return ['label' => (string) $node['label'], 'url' => $node['url'], 'note' => $node['note'] ?? null,
-                'done' => true, 'route' => null, 'vouched' => true];
+                'done' => true, 'route' => null, 'vouched' => true, 'address' => null];
         }
 
         $address = isset($node['route']) && is_string($node['route']) ? $node['route'] : null;
@@ -163,7 +163,22 @@ final class MapEngine
             'done' => $url !== null,
             'route' => $address === null ? null : ScreenAddress::split($address)[0],
             'vouched' => false,
+            'address' => $address,
         ];
+    }
+
+    /**
+     * ⭐ মেনুর সারি যে চাবি চায়, মানচিত্রও সেটাই চায় — অ্যাকাউন্টস অডিট ম১৩/ম১৮ (১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একটা রুট অনেক পর্দা (রিপোর্টের `accounts.report.show:<slug>`), আর কয়েকটা slug-এর চাবি আলাদা — সেটা মডিউলের মেনু-সারি
+     * বলে (`permission`)। ⛔ কেবল রুটের `can:` দেখলে রেওয়ামিলের লিংক চাবি ছাড়াও দেখাত আর চাপলে ৪০৩। মেনুতে না থাকা ঠিকানায় কিছু
+     * বদলায় না।
+     */
+    private function menuAllows(?User $user, ?string $address): bool
+    {
+        $needs = $address === null ? null : ($this->declared()[$address] ?? null);
+
+        return ! is_string($needs) || $needs === '' || ($user !== null && $user->can($needs));
     }
 
     /**
@@ -202,7 +217,7 @@ final class MapEngine
         return true;
     }
 
-    /** @return array<string, true> */
+    /** @return array<string, true|string> */
     private function declared(): array
     {
         if ($this->declared !== null) {
@@ -216,7 +231,8 @@ final class MapEngine
                 foreach ($items as $item) {
                     foreach ((array) ($item['route_params'] ?? []) as $value) {
                         if (is_scalar($value) && isset($item['route'])) {
-                            $out[$item['route'].ScreenAddress::SEPARATOR.$value] = true;
+                            // ⓘ মেনু-সারির চাবি থাকলে সেটাই, নইলে `true` — [[menuAllows()]] পড়ে
+                            $out[$item['route'].ScreenAddress::SEPARATOR.$value] = is_string($item['permission'] ?? null) ? $item['permission'] : true;
                         }
                     }
                 }

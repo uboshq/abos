@@ -108,7 +108,16 @@
 
             @include('accounts::report.partials.sheet-side', [
                 'groups' => $sheet['equity'],
-                'extra' => [
+                'extras' => array_values(array_filter([
+                    /*
+                     * ⛔ আগের বছরের বন্ধ-না-হওয়া লাভ নিজের নামে — নাহলে "চলতি বছরের লাভ" লাভ-ক্ষতির পাতার সাথে মিলত না
+                     * (ধাপ ০, ১২ অক্টোবর ২০২৬; [[TheSheetsProfitThisYearIsTheProfitAndLossTest]])। শূন্য হলে সারিটা থাকে না।
+                     */
+                    bccomp($sheet['profit_earlier'], '0', 4) !== 0 ? [
+                        'label' => __('accounts::field.profit_earlier_years'),
+                        'amount' => $sheet['profit_earlier'],
+                    ] : null,
+                    [
                     /*
                      * চলতি বছরের ফলটা মূলধনের শেষ সারি।
                      *
@@ -118,8 +127,9 @@
                      * দুইবার গোনা হত।
                      */
                     'label' => __('accounts::field.profit_this_year'),
-                    'amount' => $sheet['profit'],
-                ],
+                    'amount' => $sheet['profit_this_year'],
+                    ],
+                ])),
             ])
         </section>
     </div>

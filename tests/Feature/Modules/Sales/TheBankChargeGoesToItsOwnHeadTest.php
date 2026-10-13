@@ -1,0 +1,141 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Modules\Sales;
+
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
+use App\Models\LedgerEntry;
+use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Models\DepositClaim;
+use App\Modules\Sales\Services\CollectionService;
+use App\Modules\Sales\Services\DepositClaimService;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
+use Tests\TestCase;
+
+/**
+ * ⭐ ব্যাংক চার্জ নিজের খাতে, ডিলারের পাওনা কমে পুরো অঙ্কে — টাকার পরিকল্পনা ৫ (মালিক, ৭ অক্টোবর ২০২৬)।
+ *
+ * ⓘ ডিলার ৫০,০০০ পাঠালেন, ব্যাংকে এল ৪৯,৯৫০। আগে গ্রহণে অঙ্ক ৪৯,৯৫০ করলে পাওনাও ৪৯,৯৫০ কমত — ৫০ টাকা তাঁর নামে বকেয়া
+ * থেকে যেত, অথচ তিনি পুরোটাই পাঠিয়েছেন; আর চার্জটা কোনো খরচের খাতে আসত না। এখন খাতায়:
+ * ব্যাংক ৪৯,৯৫০ Dr · ব্যাংক চার্জ ৫০ Dr · ডিলারের পাওনা ৫০,০০০ Cr।
+ */
+final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Company $company;
+
+    private User $decider;
+
+    private Account $bank;
+
+    private Customer $dealer;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        app(StandardChart::class)->install();
+
+        $this->decider = User::factory()->create(['current_company_id' => $this->company->id]);
+        $this->decider->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->decider->givePermissionTo('sales.claim.decide');
+
+        $this->bank = Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1102-CHARGE', 'name_en' => 'Charge bank', 'name_bn' => 'চার্জের ব্যাংক',
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'money_kind' => Account::BANK,
+        ]);
+
+        $this->dealer = Customer::query()->firstOrFail();
+    }
+
+    public function test_the_dealer_is_credited_in_full_and_the_charge_lands_on_its_own_head(): void
+    {
+        $claim = $this->claim('50000');
+        $dueBefore = $this->dealer->outstanding();
+
+        $this->actingAs($this->decider->fresh())
+            ->post(route('sales.claim.accept', $claim), ['account_id' => $this->bank->id, 'amount' => '49950', 'bank_charge' => '50'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
+        $this->assertSame(0, bccomp((string) $collection->amount, '50000', 4), '⛔ আদায়টা পুরো পাঠানো অঙ্কের নয়');
+        $this->assertSame(0, bccomp((string) $collection->bank_charge, '50', 4));
+
+        $this->assertSame(bcsub($dueBefore, '50000', 4), $this->dealer->fresh()->outstanding(),
+            '⛔ ডিলারের পাওনা পুরো ৫০,০০০ কমেনি — চার্জের ৫০ তাঁর নামে বকেয়া থেকে গেল');
+
+        $this->assertSame(0, bccomp($this->net($this->bank->id, $collection), '49950', 4), '⛔ ব্যাংকে যা সত্যিই এসেছে, খাতায় তা নয়');
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $collection), '50', 4),
+            '⛔ ব্যাংক চার্জ নিজের খাতে বসেনি');
+
+        // ⓘ বাতিল করলে চার্জও ফেরে — উল্টো দাখিলা হুবহু
+        $this->actingAs($this->decider->fresh());
+        app(CollectionService::class)->cancel($collection->fresh(), 'ভুল ব্যাংকে মঞ্জুর');
+        $charges = LedgerEntry::query()->where('account_id', StandardChart::find(StandardChart::BANK_CHARGES)->id)
+            ->where('source_id', $collection->id)->selectRaw('COALESCE(SUM(debit - credit), 0) as n')->value('n');
+        $this->assertSame(0, bccomp((string) $charges, '0', 4), '⛔ বাতিলের পরেও চার্জ খাতে থেকে গেল');
+    }
+
+    public function test_without_a_charge_nothing_changes(): void
+    {
+        $claim = $this->claim('30000');
+
+        $this->actingAs($this->decider->fresh())
+            ->post(route('sales.claim.accept', $claim), ['account_id' => $this->bank->id])
+            ->assertSessionHasNoErrors();
+
+        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
+        $this->assertSame(0, bccomp($this->net($this->bank->id, $collection), '30000', 4));
+        $this->assertSame(0, LedgerEntry::query()->where('account_id', StandardChart::find(StandardChart::BANK_CHARGES)->id)
+            ->where('source_id', $collection->id)->count(), 'চার্জ ছাড়া চার্জের সারি বসেছে');
+    }
+
+    public function test_a_charge_that_eats_the_whole_amount_is_refused(): void
+    {
+        $this->actingAs($this->decider->fresh());
+
+        try {
+            app(CollectionService::class)->create([
+                'customer_id' => $this->dealer->id, 'trx_date' => now()->toDateString(), 'amount' => '100',
+                'bank_charge' => '100', 'account_id' => $this->bank->id,
+            ], []);
+            $this->fail('⛔ পুরো অঙ্ক চার্জ — টাকার খাতে কিছুই আসত না, তবু আদায় তৈরি হল');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('bank_charge', $e->errors());
+        }
+    }
+
+    private function claim(string $amount): DepositClaim
+    {
+        return app(DepositClaimService::class)->raise($this->dealer, [
+            'claimed_on' => now()->subDay()->toDateString(),
+            'amount' => $amount,
+            'method' => DepositClaim::CASH,
+            'reference' => null,
+            'bank_account_id' => $this->bank->id,
+        ]);
+    }
+
+    /** এই আদায়ের নামে একটা খাতের নিট ডেবিট */
+    private function net(int $accountId, Collection $collection): string
+    {
+        return (string) LedgerEntry::query()
+            ->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)
+            ->where('account_id', $accountId)
+            ->selectRaw('COALESCE(SUM(debit - credit), 0) as n')->value('n');
+    }
+}

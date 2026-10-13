@@ -9,7 +9,7 @@
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$run->month->format('F Y')"
+            :title="$run->month->locale(app()->getLocale())->translatedFormat('F Y')"
             :subtitle="$run->document_no . ' · ' . __('core.status.' . $run->status)">
             <x-slot:actions>
                 @can('hr.payroll.view')

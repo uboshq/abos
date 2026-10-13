@@ -40,6 +40,10 @@ import '../../features/books/purchase_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
+import '../../features/executive/executive_screen.dart';
+import '../../features/credit_control/credit_screens.dart';
+import '../../features/notices/notice_board_screen.dart';
+import '../../features/sales_papers/sales_paper_screens.dart';
 import '../auth/auth_state.dart';
 import '../../features/documents/document_screens.dart';
 import '../../features/finance/finance_screens.dart';
@@ -153,6 +157,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   path: 'customers',
                   child: CustomerDetailScreen(
                     customerId: state.pathParameters['id'] ?? '',
+                    // ⭐ "বাকির অবস্থা" — বাকি নিয়ন্ত্রণের চাবি আর ফোন-সুইচে (১৩ অক্টোবর ২০২৬)
+                    showCredit: _mayOpenCredit(context),
                   ),
                 ),
                 routes: [
@@ -321,6 +327,44 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
           ),
+          // ⭐ বিক্রয় বিল আর চালান — তালিকা; একটা কাগজ খোলে `paper/invoice|challan/:id`-এ (মালিক, ১৩ অক্টোবর ২০২৬)
+          _framed(
+            path: 'invoices',
+            builder: (context, state) => const ModuleGateView(
+                path: 'invoices', child: SalesPaperListScreen(kind: SalesPaperKind.invoice)),
+          ),
+          _framed(
+            path: 'challans',
+            builder: (context, state) => const ModuleGateView(
+                path: 'challans', child: SalesPaperListScreen(kind: SalesPaperKind.challan)),
+          ),
+          // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+          // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতা, কেবল পড়া
+          _framed(
+            path: 'owner-centre',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'owner-centre', child: ExecutiveScreen()),
+          ),
+          // বাকি নিয়ন্ত্রণ — ড্যাশবোর্ড ও তালিকা; গ্রাহকের বাকির পাতা public_id-তে
+          _framed(
+            path: 'credit',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'credit', child: CreditDeskScreen()),
+            routes: [
+              _framed(
+                path: ':id',
+                builder: (context, state) => ModuleGateView(
+                  path: 'credit',
+                  child: CustomerCreditScreen(customerId: state.pathParameters['id'] ?? ''),
+                ),
+              ),
+            ],
+          ),
+          // নোটিশ বোর্ড — সবার, সুইচের বাইরে (সার্ভারেও নোটিশ কোনো মডিউলের সুইচে নেই)
+          _framed(
+            path: 'notices',
+            builder: (context, state) => const NoticeBoardScreen(),
+          ),
           // ⭐ "সাম্প্রতিক" থেকে খোলা কাগজ — DO, আদেশ, উদ্ধৃতি, আদায়, ক্রয়, ভাউচার, দাবি (মালিক, ১২ অক্টোবর ২০২৬);
           // সুইচ কাগজের নিজের তালিকার ([[PaperRoute]])
           _framed(
@@ -384,3 +428,11 @@ GoRoute _framed({
       builder: (context, state) =>
           ScreenFrame(location: state.uri.path, child: builder(context, state)),
     );
+
+/// ⭐ গ্রাহকের পাতার "বাকির অবস্থা" — বাকি নিয়ন্ত্রণের দেখার চাবি আর কোম্পানির ফোন-সুইচ (১৩ অক্টোবর ২০২৬)। ⓘ পাতা খোলার
+/// মুহূর্তের উত্তর; দরজাটা তবু নিজে [ModuleGateView] আর সার্ভারের চাবিতে আটকায়।
+bool _mayOpenCredit(BuildContext context) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  return (container.read(authStateProvider).user?.can('credit_control.view') ?? false) &&
+      ModuleGate.allows(container.read(phoneModulesProvider), 'credit');
+}

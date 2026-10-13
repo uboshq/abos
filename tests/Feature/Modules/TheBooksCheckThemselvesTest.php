@@ -166,6 +166,29 @@ class TheBooksCheckThemselvesTest extends TestCase
     }
 
     /**
+     * ⛔ রাউন্ডিং, বিলের ছাড় আর ভাড়া থাকা ঠিক বিল "ভাঙা" নয় — লাইভের রাতের যাচাই, ১২–১৩ অক্টোবর ২০২৬ (UB-র ৩৩৩১টা বিল)।
+     *
+     * ⓘ সেবার মোট = লাইনের যোগ + রাউন্ডিং − বিলের ছাড় + ভাড়া ([[SalesInvoiceService]]); যাচাই আগে কেবল লাইনের যোগ দেখত।
+     */
+    public function test_rounding_bill_discount_and_freight_are_part_of_the_total(): void
+    {
+        $invoice = $this->sell();
+
+        DB::table('sal_invoices')->where('id', $invoice->id)->update([
+            'rounding_amount' => '0.40',
+            'bill_discount' => '25',
+            'freight_charge' => '100',
+            'total' => DB::raw('total + 0.40 - 25 + 100'),
+        ]);
+
+        $this->assertSame([], SalesChecks::invoiceMatchesItsLines()->run(), '⛔ রাউন্ডিং, ছাড় আর ভাড়াসহ ঠিক বিলটা "ভাঙা" দেখাল');
+
+        // ⓘ আর আসল গরমিল তবু ধরা পড়ে
+        DB::table('sal_invoices')->where('id', $invoice->id)->update(['total' => DB::raw('total + 1')]);
+        $this->assertCount(1, SalesChecks::invoiceMatchesItsLines()->run());
+    }
+
+    /**
      * দাখিলাহীন নিশ্চিত বিল ধরা পড়ে।
      *
      * মাল বেরিয়ে গেছে, কাগজ ছাপা হয়েছে, অথচ আয় ও প্রাপ্য কোথাও বসেনি।

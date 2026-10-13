@@ -85,7 +85,15 @@
                  যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে (নিয়ম ১) --}}
             <p class="mt-1 text-2xl font-semibold">
                 {{-- ⭐ (Cr) = আমরা দেব, (Dr) = আগাম দেওয়া — মালিক, ৩ অক্টোবর ২০২৬; লেজারের ছকের একই দিক --}}
-                <a href="#transactions" @click="open = false" class="num" data-balance-drcr>{{ \App\Core\Support\Money::drCr(bcmul((string) $payable, '-1', 4)) }}</a>
+                <a href="{{ $part === 'payable' ? '' : request()->fullUrlWithQuery(['part' => 'payable', 'page' => null]) }}#transactions" @click="open = false" class="num" data-balance-drcr>{{ \App\Core\Support\Money::drCr(bcmul((string) $payable, '-1', 4)) }}</a>
+            </p>
+
+            {{-- ⭐ বিল-না-আসা মাল — দেনার পাশে আলাদা ভাগ (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬; মালিক: "দুই ভাগে দেখাও")।
+                 ⓘ মাল এসেছে, সরবরাহকারীর বিল আসেনি — বিল না আসা পর্যন্ত শোধযোগ্য নয়; অঙ্কটা খাতার দ্বিতীয় ভাগ খোলে।
+                 ⓘ যে ভাগ খোলা, তার অঙ্ক কেবল `#transactions` — পাতা আবার না এনে ছকে নামে (নিয়ম ১, [[FigureLinksTest]])। --}}
+            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-goods-not-billed>
+                {{ __('supplier::field.goods_not_billed') }}:
+                <a href="{{ $part === 'goods_not_billed' ? '' : request()->fullUrlWithQuery(['part' => 'goods_not_billed', 'page' => null]) }}#transactions" @click="open = false" class="num">{{ \App\Core\Support\Money::drCr(bcmul((string) $goodsNotBilled, '-1', 4)) }}</a>
             </p>
 
             {{-- ⭐ এক শাখা বাছা থাকলে ওপরের অঙ্কটা কেবল সেই শাখার (৩০ সেপ্টেম্বর ২০২৬);
@@ -208,12 +216,23 @@
                           {{-- ℹ এই দুইটা ছাঁকনি নয়, দৃশ্যের অবস্থা — না বললে টুলবার
                                "asc" আর "1" লেখা দুইটা কাঁচা চিপ তুলত, আর সরাতে গেলে
                                কাগজের ক্রমটাই হারাত। --}}
-                          :quiet="['ledger', 'print']"
+                          :quiet="['ledger', 'print', 'part']"
                           :print-href="request()->fullUrlWithQuery(['ledger' => 'asc', 'print' => 1])">
                 {{-- ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬; কন্ট্রোলার পড়ে [[PartyLedger::filter()]], জের খাতার সব লেনদেন থেকে --}}
                 <x-ui.party-ledger-filters party="supplier" />
             </x-ui.toolbar>
         </form>
+
+        {{-- ⭐ খাতার দুই ভাগ — দেনা (২১১০) আর বিল-না-আসা মাল (GRNI ২১৬০); মালিক, ১০ অক্টোবর ২০২৬: "দুই ভাগে দেখাও"।
+             ⓘ প্রতিটা ভাগের জের নিজের সারি থেকে; দুই ভাগের যোগ = সরবরাহকারীর নামের সব সারি। --}}
+        <x-ui.list-tabs class="px-4 pt-2" :label="__('supplier::section.ledger_parts')" :tabs="[
+            ['key' => 'payable', 'label' => __('supplier::field.payable'), 'active' => $part === 'payable',
+             'url' => request()->fullUrlWithQuery(['part' => 'payable', 'page' => null]),
+             'count' => \App\Core\Support\Money::drCr(bcmul((string) $payable, '-1', 4))],
+            ['key' => 'goods_not_billed', 'label' => __('supplier::field.goods_not_billed'), 'active' => $part === 'goods_not_billed',
+             'url' => request()->fullUrlWithQuery(['part' => 'goods_not_billed', 'page' => null]),
+             'count' => \App\Core\Support\Money::drCr(bcmul((string) $goodsNotBilled, '-1', 4))],
+        ]" />
 
         <x-ui.table
             :empty="\App\Core\Support\PartyLedger::filtered(request()) ? __('core.empty.no_results') : __('supplier::message.no_transactions')"

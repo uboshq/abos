@@ -64,6 +64,8 @@ class AppColors {
     'executive': Color(0xFFA16207),
     // ⭐ প্রমোশন — ওয়েবের রেলের গোলাপি (tokens.css `--color-module-promotion`; ১৩ অক্টোবর ২০২৬)
     'promotion': Color(0xFFDB2777),
+    'credit_control': Color(0xFF9F1239),
+    'notification': Color(0xFF155E75),
   };
 
   static Color moduleColor(String code) => module[code] ?? primary;

@@ -54,4 +54,5 @@ return [
     /* Import template columns — see lang/bn/field.php. */
     'party_type' => 'Party type',
     'payment_term' => 'Payment term',
+    'advance_held' => 'Advance held',
 ];

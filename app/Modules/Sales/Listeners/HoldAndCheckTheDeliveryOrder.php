@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Listeners;
 
+use App\Core\Support\CompanyContext;
 use App\Modules\Sales\Events\DeliveryOrderSupervisorApproved;
 use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Services\DeliveryOrderAccounts;
@@ -25,13 +26,19 @@ final class HoldAndCheckTheDeliveryOrder
 
     public function handle(DeliveryOrderSupervisorApproved $event): void
     {
-        $order = DeliveryOrder::query()->find((int) ($event->payload['delivery_order_id'] ?? 0));
+        /*
+         * ⛔ খোঁজা সব শাখা জুড়ে, কাজ DO-র নিজের শাখায় (fe, ১৩ অক্টোবর ২০২৬; [[ADealerWritesTheDeliveryOrderAndTheSupervisorSignsItTest]])।
+         * ⚠️ আগে সুপারভাইজারের হেডারে অন্য শাখা থাকলে DO "নেই" — মাল ধরা হত না, হিসাবের যাচাইও না, আর কোনো খবরও না।
+         */
+        $order = DeliveryOrder::acrossBranches()->find((int) ($event->payload['delivery_order_id'] ?? 0));
 
         if ($order === null) {
             return;
         }
 
-        $this->stock->holdForSupervisor($order);
-        $this->accounts->check($order);
+        CompanyContext::inBranch($order->branch_id === null ? null : (int) $order->branch_id, function () use ($order): void {
+            $this->stock->holdForSupervisor($order);
+            $this->accounts->check($order);
+        });
     }
 }

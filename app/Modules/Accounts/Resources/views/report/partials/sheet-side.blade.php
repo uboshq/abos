@@ -17,7 +17,8 @@
 --}}
 @php
     $money = fn ($v) => \App\Core\Support\Money::format($v);
-    $extra = $extra ?? null;
+    // ⓘ এক বা একাধিক হিসাব করা সারি — আগের বন্ধ-না-হওয়া লাভ আর চলতি বছরের লাভ আলাদা (ধাপ ০, ১২ অক্টোবর ২০২৬)
+    $extras = $extras ?? (isset($extra) ? [$extra] : []);
 @endphp
 
 @foreach ($groups as $group)
@@ -40,7 +41,7 @@
     </div>
 @endforeach
 
-@if ($extra !== null)
+@foreach ($extras as $extra)
     {{-- হিসাব করা সারি — খাত নয়, তাই লিংকও নেই। পর্দায় সেটা স্পষ্ট
          থাকা দরকার, নাহলে কেউ ছকে ওটা খুঁজতে গিয়ে পেত না। --}}
     <div class="flex items-baseline justify-between border-t border-(--color-border)
@@ -51,4 +52,4 @@
             {{ $money($extra['amount']) }}
         </span>
     </div>
-@endif
+@endforeach

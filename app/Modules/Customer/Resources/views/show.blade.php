@@ -70,7 +70,9 @@
                     · <span data-block-kind="bounced_cheque">{{ __('customer::credit_block.kind_bounced_cheque') }}</span>
                 @endif
             </div>
-            @if (auth()->user()?->can('update', $customer)
+            {{-- ⓘ দুই নিয়ম একসাথে (মিশ্রণ, ১২ অক্টোবর ২০২৬): কে বন্ধ তুলতে পারেন — [[CustomerPolicy::liftCreditBlock()]] —
+                 আর চেক ফেরতের বন্ধ কেবল মালিক ([[CustomerService::clearCreditBlock()]]-এর একই পাহারা) --}}
+            @if (auth()->user()?->can('liftCreditBlock', $customer)
                 && ($customer->credit_block_kind !== \App\Modules\Customer\Models\Customer::BLOCK_BOUNCED_CHEQUE
                     || \App\Modules\Customer\Services\CustomerService::isSuperAdmin(auth()->user())))
                 <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2">

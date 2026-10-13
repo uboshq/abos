@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Imports;
 
 use App\Core\Contracts\Importer;
+use App\Core\Contracts\ImportNeedsKeys;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
 
@@ -15,7 +16,7 @@ use App\Modules\Customer\Services\CustomerService;
  * নিয়ম সম্পাদনারই ([[CustomerService::proposeLimit()]]): কমানো সাথে সাথে; বাড়ানো ঠিক সেই অঙ্কে সইয়ের অনুরোধ, আর
  * অনুমোদন কেন্দ্রে সই পড়লে নিজে বসে ([[ApplyTheLimitOnTheLastSignature]])। ⛔ কোনো পথে সই এড়ানো যায় না।
  */
-final class CustomerLimitImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
+final class CustomerLimitImporter implements Importer, ImportNeedsKeys
 {
     /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
     public static function requiredPermissions(): array
@@ -91,9 +92,14 @@ final class CustomerLimitImporter implements \App\Core\Contracts\ImportNeedsKeys
     private function limit(array $row): ?string
     {
         $raw = trim((string) ($row['credit_limit'] ?? ''));
-        $clean = (string) preg_replace('/[^0-9.\-]/u', '', $raw);
 
-        if ($raw === '' || $clean === '' || ! is_numeric($clean)) {
+        /*
+         * ⛔ কেবল কমা, ফাঁকা আর টাকার চিহ্ন বাদ — বাকি সব অক্ষর থাকলে অঙ্কটা অচেনা (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৭)।
+         * ⓘ আগে সংখ্যা ছাড়া সব ছেঁটে ফেলা হত: "1e5" হয়ে যেত ১৫, "৫০ হাজার" হয়ে যেত ৫০ — যাচাইয়ের পর্দা সবুজ, আর ভুল সীমা বসত।
+         */
+        $clean = (string) preg_replace('/[,\s]|৳|tk\.?|taka|টাকা/iu', '', $raw);
+
+        if ($raw === '' || preg_match('/^-?\d{1,14}(\.\d{1,4})?$/', $clean) !== 1) {
             return null;
         }
 

@@ -10,4 +10,5 @@ return [
     'credit' => 'Terms & credit',
     'opening' => 'Opening balance',
     'transactions' => 'Transactions',
+    'ledger_parts' => 'Ledger parts',
 ];

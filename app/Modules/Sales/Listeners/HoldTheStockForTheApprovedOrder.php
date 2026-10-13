@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Listeners;
 
+use App\Core\Support\CompanyContext;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\SalesOrderApproved;
@@ -34,15 +35,24 @@ final class HoldTheStockForTheApprovedOrder
     public function handle(SalesOrderApproved $event): void
     {
         $id = (int) ($event->payload['sales_order_id'] ?? 0);
-        $order = SalesOrder::query()->find($id);
+        /*
+         * ⛔ খোঁজা সব শাখা জুড়ে, কাজ আদেশের নিজের শাখায় (fe, ১২–১৩ অক্টোবর ২০২৬; [[AHeldSaleFinishesInItsOwnBranchTest]])। ⚠️ আগে
+         * সইকারীর হেডারে অন্য শাখা থাকলে আদেশটা "নেই" — শ্রোতা নীরবে ফিরত, আদেশ "অনুমোদিত"-তেই আটকে, মালও ধরা হত না।
+         */
+        $order = SalesOrder::acrossBranches()->find($id);
 
         if ($order === null || $order->status !== SalesOrderStatus::APPROVED) {
             return;
         }
 
+        CompanyContext::inBranch($order->branch_id === null ? null : (int) $order->branch_id, fn () => $this->hold($order));
+    }
+
+    private function hold(SalesOrder $order): void
+    {
         DB::transaction(function () use ($order): void {
             Customer::query()->whereKey($order->customer_id)->lockForUpdate()->first();
-            $locked = SalesOrder::query()->with(['lines.product', 'warehouse'])->whereKey($order->id)->lockForUpdate()->first();
+            $locked = SalesOrder::acrossBranches()->with(['lines.product', 'warehouse'])->whereKey($order->id)->lockForUpdate()->first();
 
             // ⓘ দ্বিতীয়বার ঘটনা এলে, বা মাঝে কেউ বাতিল করলে — কিছুই নয়
             if ($locked === null || $locked->status !== SalesOrderStatus::APPROVED) {

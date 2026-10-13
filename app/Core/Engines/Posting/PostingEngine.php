@@ -81,6 +81,8 @@ final class PostingEngine
         $userId = $userId ?? \App\Core\Support\Actor::userId();
 
         return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear, $claimKey) {
+            $this->assertYearStillOpen($financialYear);
+
             /*
              * উপরের `assertNotAlreadyPosted()` ভদ্রতা; আসল পাহারা এটা।
              *
@@ -253,6 +255,8 @@ final class PostingEngine
             : $reversalType.'@'.$original->last()->id;
 
         return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId, $claimKey, $documentNo) {
+            $this->assertYearStillOpen($financialYear);
+
             $this->claim($claimKey, $sourceId, $userId);
 
             $created = [];
@@ -374,7 +378,7 @@ final class PostingEngine
         $found = DB::table('accounts')
             ->whereIn('id', $wanted)
             ->where('company_id', CompanyContext::id())
-            ->get(['id', 'code', 'is_group', 'party_types'])
+            ->get(['id', 'code', 'is_group', 'is_active', 'party_types'])
             ->keyBy('id');
 
         foreach ($lines as $index => $line) {
@@ -414,6 +418,18 @@ final class PostingEngine
                     .'A group holds no entries of its own — its balance is the sum of its children — so the '
                     .'money would sit in the ledger and appear in no report at all. Post to one of its '
                     .'children instead. Nothing was written.'
+                );
+            }
+
+            /*
+             * ⛔ নিষ্ক্রিয় খাতে নতুন সারি নয় — অডিট ম২০, ১০ অক্টোবর ২০২৬ ([[AnInactiveAccountTakesNoNewMoneyTest]])। ⓘ খাত বন্ধ করা
+             * মানে "আর লেনদেন নয়", অথচ ইঞ্জিন দেখত না — পুরনো ফর্ম বা সেটিংসে বসে থাকা খাতে টাকা চুপচাপ বসত। ⓘ বছর বন্ধ বাদ:
+             * সমাপনী প্রতিটা আয়-ব্যয় খাতের জের শূন্য করে, নিষ্ক্রিয়টারও — নাহলে বছর বন্ধই হত না।
+             */
+            if (! $account->is_active && $sourceType !== self::YEAR_CLOSE) {
+                throw new PostingException(
+                    "Line {$index} of {$sourceType}#{$sourceId} posts to {$account->code}, which is inactive. "
+                    .'An inactive account takes no new entries — activate it or pick another. Nothing was written.'
                 );
             }
         }
@@ -529,6 +545,23 @@ final class PostingEngine
         }
 
         return $year;
+    }
+
+    /**
+     * ⛔ বছরটা লেনদেনের ভিতরে, ভাগের তালায় আবার পড়া — অডিট ম১৭/স১২/ছ৮, ১০ অক্টোবর ২০২৬ ([[TheYearWaitsForEveryOpenPaperTest]])।
+     *
+     * ⓘ [[resolveFinancialYear()]] লেনদেনের বাইরে পড়ে: ঠিক তখন কেউ বছর বন্ধ করলে এই দাখিলা বন্ধ বছরে বসে যেত, সমাপনীর বাইরে।
+     * ভাগের তালায় [[YearEndService::close()]]-এর একক তালা অপেক্ষা করে, আর বন্ধ শেষ হলে এখানে টাটকা `is_closed` দেখা যায়।
+     */
+    private function assertYearStillOpen(FinancialYear $year): void
+    {
+        $closed = FinancialYear::query()->whereKey($year->getKey())->sharedLock()->value('is_closed');
+
+        if ((bool) $closed) {
+            throw new PostingException(
+                "Financial year {$year->name} is closed. Reopening it is an approved action, not a side effect of posting."
+            );
+        }
     }
 
     /**

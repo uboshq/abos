@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Services;
 
+use App\Core\Contracts\CouponPapers;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Modules\Customer\Models\Customer;
@@ -257,8 +258,8 @@ final class CouponDesk
             ]);
 
             // ⭐ খাতায় — কাগজের মালিক বসায়, একই লেনদেনে (পুরো ERP অডিট ⛔১০, ৬ অক্টোবর ২০২৬; [[\App\Core\Contracts\CouponPapers::redeemed()]])
-            if (app()->bound(\App\Core\Contracts\CouponPapers::class)) {
-                app(\App\Core\Contracts\CouponPapers::class)->redeemed(
+            if (app()->bound(CouponPapers::class)) {
+                app(CouponPapers::class)->redeemed(
                     $sourceType,
                     $sourceId,
                     (string) ($applied->benefit_kind?->value ?? $applied->benefit_kind),
@@ -269,6 +270,54 @@ final class CouponDesk
 
             return $applied;
         });
+    }
+
+    /**
+     * ⭐ আদেশে কাটা টাকার কুপন — আদেশের বিল পাকা হলে সেই বিলের ক্রেডিট নোটে (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, প্রমোশন ১৮;
+     * [[TheOrderCouponReachesTheBillTest]])।
+     *
+     * ⓘ আদেশে কুপন কাটার সময় আয় খাতায় নেই, তাই [[CouponPapers::redeemed()]] কিছু বসায় না; আগে আদেশ বিল হওয়ার পরেও কিছু বসত না।
+     * এখন বিল পাকা হওয়ার একই লেনদেনে: প্রতিটা জীবিত ব্যবহারের যা এখনো বিলে যায়নি, বিলের অঙ্কের সীমায় — বাকিটা পরের বিলে।
+     * তালা দিয়ে পড়া, যাতে একই আদেশের দুইটা বিল একসাথে পাকা হলে একই ছাড় দুইবার না যায়।
+     *
+     * @param  list<int>  $orderIds
+     */
+    public function carryToBill(array $orderIds, int $invoiceId, string $room): void
+    {
+        if ($orderIds === [] || ! app()->bound(CouponPapers::class)) {
+            return;
+        }
+
+        $redemptions = PromotionCouponRedemption::query()
+            ->with(['coupon', 'application'])
+            ->where('source_type', 'sales_order')
+            ->whereIn('source_id', array_values(array_unique($orderIds)))
+            ->whereNull('reversed_at')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($redemptions as $redemption) {
+            $application = $redemption->application;
+            $kind = (string) ($application?->benefit_kind?->value ?? $application?->benefit_kind ?? '');
+
+            // ⓘ কেবল টাকার ছাড় — মাল বা পয়েন্টের কুপনে খাতায় বসানোর টাকা নেই
+            if (! in_array($kind, ['percent', 'amount', 'credit'], true)) {
+                continue;
+            }
+
+            $left = bcsub((string) ($application->worth ?? '0'), (string) $redemption->carried_amount, 4);
+            $take = bccomp($left, $room, 4) > 0 ? $room : $left;
+
+            if (bccomp($take, '0', 4) <= 0) {
+                continue;
+            }
+
+            app(CouponPapers::class)->redeemed('sales_invoice', $invoiceId, $kind, $take, (string) $redemption->coupon?->code);
+
+            $redemption->forceFill(['carried_amount' => bcadd((string) $redemption->carried_amount, $take, 4)])->save();
+            $room = bcsub($room, $take, 4);
+        }
     }
 
     /**

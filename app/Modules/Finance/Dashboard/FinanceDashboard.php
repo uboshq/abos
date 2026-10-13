@@ -130,7 +130,8 @@ final class FinanceDashboard implements ProvidesDashboard
                  */
                 new Tile(label: __('finance::dashboard.expense_heads'),
                     href: route('accounts.report.show', ['slug' => 'expense-by-head']),
-                    permission: 'accounts.report', icon: 'reports'),
+                    // ⛔ খাত-ধরে খরচ এখন চূড়ান্ত হিসাবের চাবিতে — চাবি না থাকলে টাইলই নেই, ৪০৩ নয় (অডিট ম১৩/ম১৮, ১০ অক্টোবর ২০২৬)
+                    permission: 'accounts.report.final', icon: 'reports'),
 
                 /*
                  * ⚠️ পণ্যের খরচ **অনুমতির পিছনে** — `inventory.cost.view`।

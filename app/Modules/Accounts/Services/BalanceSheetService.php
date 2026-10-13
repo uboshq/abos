@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\ViewedBranch;
+use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -116,6 +117,17 @@ final class BalanceSheetService
          */
         $profit = $this->profitSoFar($asOf, $branchId);
 
+        /*
+         * ⛔ চলতি বছরের লাভ লাভ-ক্ষতির পাতার সাথে মেলে — a5-এর পাতা-সাজানোর পরিকল্পনা, ধাপ ০ (সমন্বয়ক, ১২ অক্টোবর ২০২৬;
+         * [[TheSheetsProfitThisYearIsTheProfitAndLossTest]])। ⓘ সারির নাম "চলতি বছরের লাভ", অথচ অঙ্ক ছিল খাতার শুরু থেকে: আগের
+         * বছর বন্ধ না হলে তার লাভও এখানে, আর লাভ-ক্ষতি (বছরের শুরু থেকে) অন্য অঙ্ক বলত। এখন দুই ভাগ — বছরের শুরু থেকে, আর
+         * তার আগের বন্ধ-না-হওয়া অংশ নিজের নামে। যোগ আগের মতোই `profit`, তাই স্থিতিপত্র আগের মতোই মেলে।
+         */
+        $yearStart = FinancialYear::forDate($asOf)?->starts_on;
+        $thisYear = $yearStart === null
+            ? $profit
+            : bcsub($profit, $this->profitSoFar(Carbon::parse($yearStart)->subDay()->toDateString(), $branchId), 4);
+
         $totalAssets = $this->sum($assets);
         $totalLiabilities = $this->sum($liabilities);
         $totalEquity = bcadd($this->sum($equity), $profit, 4);
@@ -134,6 +146,8 @@ final class BalanceSheetService
                 'funding' => $funding,
             ],
             'profit' => $profit,
+            'profit_this_year' => $thisYear,
+            'profit_earlier' => bcsub($profit, $thisYear, 4),
             'agrees' => bccomp($difference, '0', 4) === 0,
             'difference' => $difference,
             'as_of' => $asOf,

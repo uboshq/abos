@@ -19,6 +19,7 @@ use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -118,7 +119,7 @@ class FreeGoodsCarryLotsTest extends TestCase
     /**
      * @param  list<array<string, mixed>>  $gifts
      */
-    private function sell(string $qty = '5', string $free = '2', array $gifts = []): object
+    private function sell(string $qty = '5', string $free = '2', array $gifts = [], ?Batch $lot = null): object
     {
         return (object) app(DirectSaleService::class)->complete(
             [
@@ -127,6 +128,8 @@ class FreeGoodsCarryLotsTest extends TestCase
             ],
             [[
                 'product_id' => $this->medicine->id,
+                // ⓘ লট-ধরা পণ্যে সারি নিজের লট বলে (মালিক, ৪ অক্টোবর ২০২৬: এক সারি এক লট, পর্দা নিজে ভাগ করে না)
+                'batch_id' => $lot?->id,
                 'qty' => $qty,
                 'rate' => '30',
                 'free_qty' => $free,
@@ -163,12 +166,17 @@ class FreeGoodsCarryLotsTest extends TestCase
 
     // ── বেরোনো ───────────────────────────────────────────────────
 
-    /** ফ্রি মাল লট ধরে বেরোয় — চলাচলের সারিতে লটটা লেখা থাকে। */
+    /**
+     * ফ্রি মাল লট ধরে বেরোয় — চলাচলের সারিতে লটটা লেখা থাকে।
+     *
+     * ⓘ লট-অনুপাতের ভেতরে (মালিক, ২৭ সেপ্টেম্বর ও ৪ অক্টোবর ২০২৬; সুইচ চালু): ১০০ কেনায় ১০ ফ্রি, তাই ৩০ বেচলে ৩। ⚠️ আগে এখানে ৫
+     * বেচে ৩ ফ্রি চাওয়া হতো — অনুপাতে ০.৫, বস্তা ভাঙা যায় না বলে ০; দেয়াল ঠিকই থামাত, দাবিটা পুরনো ছিল (cb, ১২ অক্টোবর ২০২৬)।
+     */
     public function test_free_goods_leave_with_their_lot(): void
     {
         $batch = $this->buy('AB-3', now()->addYear()->toDateString());
 
-        $this->sell(free: '3');
+        $this->sell(qty: '30', free: '3', lot: $batch);
 
         $this->assertSame(0, bccomp($batch->freeBalance($this->warehouse), '7', 4));
     }
@@ -178,29 +186,48 @@ class FreeGoodsCarryLotsTest extends TestCase
      *
      * এটাই ছিল আসল বিপদ: বিক্রির লাইনে মেয়াদ আটকাত, ফ্রি-র লাইনে
      * আটকাত না — অথচ প্যাকেটটা একই তারিখে পচে।
+     *
+     * ⚠️ আগের রূপ লট না বলে ০.০০০১ বস্তা বেচে ১ ফ্রি চাইত — লট-অনুপাত, ভগ্নাংশ আর "লট বাছতে হবে"-র দেয়ালেই থামত, মেয়াদের কাছে
+     * পৌঁছাতই না; সবুজ ছিল ভুল কারণে। ⭐ এখন মেয়াদি লটটাই বাছা, অনুপাতের ভেতরে (৩০ বেচে ১ ফ্রি) — থামানোর কারণ মেয়াদ, বার্তাও
+     * মেয়াদের; লটের ফ্রি ১০-ই থাকে (cb, ১২ অক্টোবর ২০২৬)।
      */
     public function test_an_expired_lot_cannot_be_given_away_free(): void
     {
-        $batch = $this->buy('AB-4', now()->addYear()->toDateString());
+        $expired = $this->buy('AB-4', now()->addYear()->toDateString());
 
         // লটটা মেয়াদ পার করানো হলো
-        $batch->forceFill(['expiry_date' => now()->subDay()->toDateString()])->save();
+        $expired->forceFill(['expiry_date' => now()->subDay()->toDateString()])->save();
 
-        $this->expectException(ValidationException::class);
+        try {
+            $this->sell(qty: '30', free: '1', lot: $expired);
+            $this->fail('⛔ মেয়াদ পেরোনো লট থেকে ফ্রি দেওয়া গেল।');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString(
+                __('sales::validation.lot_expired_for', ['product' => $this->medicine->name(), 'lot' => 'AB-4']),
+                implode(' ', $e->validator->errors()->all()),
+                '⛔ থামল, কিন্তু মেয়াদের জন্য নয়।',
+            );
+        }
 
-        $this->sell(qty: '0.0001', free: '1');
+        $this->assertSame(0, bccomp($expired->refresh()->freeBalance($this->warehouse), '10', 4), '⛔ মেয়াদি লটের ফ্রি কমে গেল।');
     }
 
-    /** আগে-মেয়াদ-শেষ লট থেকে ফ্রি আগে বেরোয়। */
-    public function test_the_soonest_to_expire_lot_gives_first(): void
+    /**
+     * ফ্রি বেরোয় সারির নিজের লট থেকে — আরেক লটের মেয়াদ আগে শেষ হলেও।
+     *
+     * ⚠️ আগে এই দাবি ছিল "আগে-মেয়াদি লট থেকে ফ্রি আগে" (FEFO, লট না বলে)। মালিকের ৪ অক্টোবরের নিয়মে কাউন্টারে প্রতিটা সারি
+     * নিজের লট বলে, আর পর্দা নিজে ভাগ করে না; ফ্রিও সেই লটের ভাণ্ডার থেকে ([[DirectSaleService::giveAway()]] `chosen`)। ⛔ অন্য লট
+     * থেকে ফ্রি গেলে রিকলের সুতো ভুল লটে বাঁধা পড়ত। অনুপাতের ভেতরে: পরের লট ১০০+৯, ৩০ বেচলে ২ (cb, ১২ অক্টোবর ২০২৬)।
+     */
+    public function test_free_leaves_the_lot_the_line_names_even_when_another_expires_sooner(): void
     {
         $soon = $this->buy('AB-5', now()->addMonth()->toDateString(), free: '4');
         $later = $this->buy('AB-6', now()->addYear()->toDateString(), free: '9');
 
-        $this->sell(free: '6');
+        $this->sell(qty: '30', free: '2', lot: $later);
 
-        $this->assertSame(0, bccomp($soon->freeBalance($this->warehouse), '0', 4), 'আগেরটা পুরো খালি হয়নি');
-        $this->assertSame(0, bccomp($later->freeBalance($this->warehouse), '7', 4), 'বাকিটা পরেরটা থেকে যায়নি');
+        $this->assertSame(0, bccomp($later->freeBalance($this->warehouse), '7', 4), '⛔ বাছা লট থেকে ফ্রি বেরোয়নি।');
+        $this->assertSame(0, bccomp($soon->freeBalance($this->warehouse), '4', 4), '⛔ ফ্রি বাছা লটের বাইরে থেকে গেল।');
     }
 
     // ── রিকল ─────────────────────────────────────────────────────
@@ -215,8 +242,15 @@ class FreeGoodsCarryLotsTest extends TestCase
     {
         $batch = $this->buy('AB-7', now()->addYear()->toDateString());
 
-        // বিক্রি শূন্যের কাছাকাছি, ফ্রি-টাই আসল
-        $this->sell(qty: '0.0001', free: '5');
+        /*
+         * ⓘ লট-অনুপাতের ভেতরে: ৫০ বেচে ৫ ফ্রি। ⚠️ আগে ০.০০০১ বস্তা বেচে ৫ ফ্রি চাইত — ভগ্নাংশ আর অনুপাত দুই দেয়ালেই থামত (cb,
+         * ১২ অক্টোবর ২০২৬)। ⭐ "কেবল ফ্রি পেয়েছেন" এখন খাতার স্তরে: বিক্রির বেরোনো সারি তুলে দিলে লটে তাঁর কেবল ফ্রি-র সারি থাকে —
+         * রিকল তবু তাঁকে ধরে কি না, সেটাই দাবি।
+         */
+        $this->sell(qty: '50', free: '5', lot: $batch);
+        DB::table('inv_stock_movements')->where('batch_id', $batch->id)->where('floor_change', '<', 0)->delete();
+        $this->assertTrue(DB::table('inv_stock_movements')->where('batch_id', $batch->id)->where('free_change', '<', 0)->exists(),
+            'দাবির ভিত্তি: লটে ফ্রি-র বেরোনো সারি নেই।');
 
         $recipients = app(BatchTrace::class)->recipients($batch);
 

@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;
@@ -154,35 +155,36 @@ final class PartyReports
             filters: ['date_range', 'branch', 'party_type'],
             query: function (array $f) {
                 /*
-                 * বিলপ্রতি শোধ — আলাদা সাব-কোয়েরিতে, যাতে সংখ্যাটা
-                 * ছাঁকনি ও কলাম **দুই জায়গাতেই** একই উৎস থেকে আসে।
+                 * ⛔ বিলের বাকি — বিলের নিজের সংজ্ঞায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+                 *
+                 * ⚠️ আগে কেবল পরিশোধের সারি বাদ যেত: বিলের বিপরীতে ভাউচারে দেওয়া টাকা আর পাকা ফেরত সূচিতে বাকি
+                 * থেকে যেত, অথচ সরবরাহকারীর খাতায় সেগুলো দেনা কমিয়েছে — সূচি আর খাতা দুই কথা বলত, আর সূচি
+                 * দেখে টাকা দিলে দ্বিতীয়বার দেওয়া হত। ⓘ সংজ্ঞা একটাই, পরিশোধের পর্দা যা দেখে তাই।
                  */
-                $paid = DB::table('pur_payment_lines as pl')
-                    ->join('pur_payments as p', 'p.id', '=', 'pl.payment_id')
-
-                    /*
-                     * ⚠️ কোম্পানির ছাঁকনি এখানেও, যদিও বাইরের কোয়েরি
-                     * বিলগুলোকে এই কোম্পানিতেই আটকে রেখেছে।
-                     *
-                     * ⓘ join-এর উপর ভরসা করে বিচ্ছিন্নতা ছেড়ে দেওয়া
-                     * ভঙ্গুর: কেউ একদিন join-টা বদলালে ছাঁকনিটা নীরবে
-                     * চলে যেত। **বহু-টেন্যান্টে বিচ্ছিন্নতা সুবিধা নয়,
-                     * আইনি বাধ্যবাধকতা** — তাই প্রতিটা কাঁচা কোয়েরি
-                     * নিজেই বলে সে কোন কোম্পানির।
-                     */
-                    ->where('pl.company_id', $f['company_id'])
-                    ->where('p.company_id', $f['company_id'])
-                    ->whereIn('p.status', DocumentStatus::POSTED)
-                    ->whereNull('p.deleted_at')
-                    ->groupBy('pl.purchase_bill_id')
-                    ->selectRaw('pl.purchase_bill_id, COALESCE(SUM(pl.amount), 0) as paid');
+                /*
+                 * ⓘ কাঁচা SQL — সরবরাহকারী মডিউল ক্রয়কে চেনে না (ক্রয়ই সরবরাহকারীকে চেনে; উল্টো ঘোষণা চক্র হত)।
+                 * শর্তগুলো [[PurchaseBill::scopeWithPaid()]]-এর হুবহু: পাকা পরিশোধ, বিলের বিপরীতে নিশ্চিত পরিশোধের ভাউচার,
+                 * পাকা ফেরত — গোটা কোম্পানি ধরে, মোছাগুলো বাদ।
+                 */
+                $posted = "'".implode("','", DocumentStatus::POSTED)."'";
+                $company = (int) $f['company_id'];
+                $settled = "((select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
+                        join pur_payments p on p.id = pl.payment_id
+                        where pl.purchase_bill_id = pur_bills.id and p.company_id = {$company}
+                          and p.status in ({$posted}) and p.deleted_at is null)
+                    + (select COALESCE(SUM(v.amount), 0) from vouchers v
+                        where v.company_id = {$company} and v.type = '".Voucher::PAYMENT."'
+                          and v.against_type = 'purchase_bill' and v.against_id = pur_bills.id
+                          and v.status = '".DocumentStatus::CONFIRMED."' and v.deleted_at is null)
+                    + (select COALESCE(SUM(t.total), 0) from pur_returns t
+                        where t.purchase_bill_id = pur_bills.id and t.company_id = {$company}
+                          and t.status in ({$posted}) and t.deleted_at is null))";
 
                 // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
-                $due = 'GREATEST(pur_bills.total - COALESCE(paid.paid, 0), 0)';
+                $due = 'GREATEST(pur_bills.total - '.$settled.', 0)';
 
                 return DB::table('pur_bills')
                     ->join('suppliers', 'suppliers.id', '=', 'pur_bills.supplier_id')
-                    ->leftJoinSub($paid, 'paid', 'paid.purchase_bill_id', '=', 'pur_bills.id')
                     ->where('pur_bills.company_id', $f['company_id'])
                     ->where('pur_bills.status', DocumentStatus::CONFIRMED)
                     ->whereNull('pur_bills.deleted_at')
@@ -242,6 +244,18 @@ final class PartyReports
         );
     }
 
+    /**
+     * বাকির বয়স — ⭐ FIFO-তে, আর অগ্রিম আলাদা ঘরে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)।
+     *
+     * ── ⛔ কী ভুল ছিল ────────────────────────────────────────────────
+     * ⚠️ প্রতিটা ধাপ ছিল সেই সময়ের **নিট** (জমা − খরচ): গত সপ্তাহের পরিশোধ "০–৩০ দিন" ঘর থেকে বাদ যেত, অথচ
+     * টাকাটা শোধ করেছিল চার মাস পুরনো বিল। ফল — পুরনো বাকি বড় দেখাত, নতুন ঘর ঋণাত্মক। ⚠️ আর যাঁকে অগ্রিম
+     * দেওয়া, তিনি ঋণাত্মক বাকি হয়ে মোটে মিশে যেতেন — মোট দেনা অগ্রিমের সমান কম দেখাত।
+     *
+     * ⭐ এখন: প্রতিটা ধাপে কেবল **জমা** (বিল), আর সব খরচ (পরিশোধ, ফেরত) সবচেয়ে পুরনো জমা থেকে মেটে।
+     * জমার চেয়ে খরচ বেশি হলে বাকিটা "অগ্রিম" — ধাপ আর মোট দেনার বাইরে। ⓘ চারটা ধাপের যোগফল এখনো
+     * "প্রদেয়"-র সমান।
+     */
     public static function ageing(): ReportDefinition
     {
         return new ReportDefinition(
@@ -254,7 +268,8 @@ final class PartyReports
             query: function (array $f) {
                 $asOf = Carbon::parse($f['to']);
 
-                $bucket = function (?int $from, ?int $to) use ($asOf) {
+                // ⓘ এই সময়ের **জমা** — খরচ এখানে নয়, সেটা নিচে FIFO-তে মেটে
+                $credits = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
                     if ($to !== null) {
@@ -269,12 +284,12 @@ final class PartyReports
 
                     $where = $conditions === [] ? '1=1' : implode(' AND ', $conditions);
 
-                    return "SUM(CASE WHEN {$where} THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END)";
+                    return "COALESCE(SUM(CASE WHEN {$where} THEN ledger_entries.credit ELSE 0 END), 0)";
                 };
 
                 [$b1, $b2, $b3] = self::BUCKETS;
 
-                return DB::table('ledger_entries')
+                $sums = DB::table('ledger_entries')
                     ->join('suppliers', 'suppliers.id', '=', 'ledger_entries.party_id')
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Supplier::drillSourceType())
@@ -287,16 +302,42 @@ final class PartyReports
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
-                    ->orderByRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) DESC')
                     ->select([
                         'ledger_entries.party_id',
                         self::supplierName(),
+                        DB::raw($credits($b3, null).' as c90'),
+                        DB::raw($credits($b2, $b3).' as c60'),
+                        DB::raw($credits($b1, $b2).' as c30'),
+                        DB::raw($credits(null, $b1).' as c0'),
+                        DB::raw('COALESCE(SUM(ledger_entries.debit), 0) as paid'),
+                    ]);
+
+                /*
+                 * ⭐ FIFO: খরচ আগে সবচেয়ে পুরনো ধাপ মেটায়, বাকিটা পরের ধাপে গড়ায়।
+                 * ধাপ k-তে যা থাকে = max(0, জমা_k − max(0, খরচ − তার আগের সব ধাপের জমা))।
+                 */
+                $left = fn (string $credit, string $before) => "GREATEST({$credit} - GREATEST(a.paid - ({$before}), 0), 0)";
+                $c90 = $left('a.c90', '0');
+                $c60 = $left('a.c60', 'a.c90');
+                $c30 = $left('a.c30', 'a.c90 + a.c60');
+                $c0 = $left('a.c0', 'a.c90 + a.c60 + a.c30');
+                $payable = "({$c90} + {$c60} + {$c30} + {$c0})";
+
+                return DB::query()
+                    ->fromSub($sums, 'a')
+                    ->orderByRaw($payable.' DESC')
+                    ->orderBy('a.party_id')
+                    ->select([
+                        'a.party_id',
+                        'a.supplier_name',
                         DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
-                        DB::raw($bucket(null, $b1).' as bucket_current'),
-                        DB::raw($bucket($b1, $b2).' as bucket_30'),
-                        DB::raw($bucket($b2, $b3).' as bucket_60'),
-                        DB::raw($bucket($b3, null).' as bucket_90'),
-                        DB::raw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) as payable'),
+                        DB::raw($c0.' as bucket_current'),
+                        DB::raw($c30.' as bucket_30'),
+                        DB::raw($c60.' as bucket_60'),
+                        DB::raw($c90.' as bucket_90'),
+                        DB::raw($payable.' as payable'),
+                        // ⓘ জমার চেয়ে বেশি দেওয়া — অগ্রিম, দেনার মোটে মেশে না
+                        DB::raw('GREATEST(a.paid - (a.c90 + a.c60 + a.c30 + a.c0), 0) as advance'),
                     ]);
             },
             columns: [
@@ -312,6 +353,7 @@ final class PartyReports
                 ['key' => 'bucket_60', 'label' => 'supplier::field.bucket_60', 'type' => ReportColumn::MONEY],
                 ['key' => 'bucket_90', 'label' => 'supplier::field.bucket_90', 'type' => ReportColumn::MONEY],
                 ['key' => 'payable', 'label' => 'supplier::field.payable', 'type' => ReportColumn::MONEY],
+                ['key' => 'advance', 'label' => 'supplier::field.advance_given', 'type' => ReportColumn::MONEY],
             ],
         );
     }

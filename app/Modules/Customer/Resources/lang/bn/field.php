@@ -74,4 +74,5 @@ return [
      */
     'party_type' => 'পক্ষের ধরন',
     'payment_term' => 'পরিশোধের শর্ত',
+    'advance_held' => 'অগ্রিম জমা',
 ];

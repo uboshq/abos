@@ -91,8 +91,9 @@ final class TheLedgersAgreeWithTheirControlAndBranchesSettleTest extends TestCas
         $after = collect($this->rows('accounts.branch_dues'))->keyBy('branch_name');
         $net = fn ($rows, Branch $b) => (string) ($rows[$b->name()]['net'] ?? $rows[$b->name_en]['net'] ?? '0');
 
-        $this->assertSame(0, bccomp(bcsub($net($after, $home), $net($before, $home), 4), '100', 4), '⛔ এই শাখার +১০০ দেখায়নি।');
-        $this->assertSame(0, bccomp(bcsub($net($after, $other), $net($before, $other), 4), '-100', 4), '⛔ অন্য শাখার −১০০ দেখায়নি।');
+        // ⓘ এই শাখায় নগদ ১০০ ঢুকল, অন্য শাখা থেকে বেরোল — এই শাখা দেবে (−১০০), অন্যটা পাবে (+১০০)। আগে উল্টো দাবি করা হত (অডিট ম১৪, ১০ অক্টোবর ২০২৬)
+        $this->assertSame(0, bccomp(bcsub($net($after, $home), $net($before, $home), 4), '-100', 4), '⛔ টাকা পাওয়া শাখা "− দেবে" দেখায়নি।');
+        $this->assertSame(0, bccomp(bcsub($net($after, $other), $net($before, $other), 4), '100', 4), '⛔ টাকা দেওয়া শাখা "+ পাবে" দেখায়নি।');
         $this->assertSame(0, bccomp((string) $after->sum(fn ($r) => (float) $r['net']), '0', 2), '⛔ কোম্পানির যোগ শূন্য নয় — খাতাটাই ভাঙা।');
     }
 

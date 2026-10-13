@@ -141,6 +141,79 @@ final class PostingBacklog
             ->all();
     }
 
+    /**
+     * এই তারিখগুলোর ভিতরে সইয়ের অপেক্ষায় থাকা কাগজ — ভাউচারসহ, সব মডিউলের, সব শাখার।
+     *
+     * ⓘ বছর বন্ধের পাহারার জন্য ([[YearEndService::assertCanClose()]])। কাগজের তারিখ ধরা হয় তার নিজের `trx_date` থেকে;
+     * যে কাগজের তারিখ নেই সে কোনো বছরে পড়ে না, তাই আটকায়ও না।
+     */
+    public function awaitingSignatureBetween(string $from, string $to): int
+    {
+        $total = 0;
+
+        $pending = Approval::query()->pending()->get(['approvable_type', 'approvable_id'])->groupBy('approvable_type');
+
+        foreach ($pending as $type => $rows) {
+            if (! is_string($type) || ! class_exists($type) || ! is_subclass_of($type, Model::class)) {
+                continue;
+            }
+
+            $table = (new $type)->getTable();
+
+            if (! \Illuminate\Support\Facades\Schema::hasColumn($table, 'trx_date') || ! \Illuminate\Support\Facades\Schema::hasColumn($table, 'company_id')) {
+                continue;
+            }
+
+            $query = DB::table($table)
+                ->where('company_id', CompanyContext::id())
+                ->whereIn('id', $rows->pluck('approvable_id')->all())
+                ->whereBetween('trx_date', [$from, $to]);
+
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+
+            $total += $query->count();
+        }
+
+        return $total;
+    }
+
+    /**
+     * এই তারিখগুলোর ভিতরে নিশ্চিত হয়েও খাতায় না-ওঠা কাগজ — পোস্টিং মনিটরের "খাতায় নেই" তালিকার একই প্রশ্ন।
+     *
+     * ⚠️ পেছনের সীমা ([[self::LOOK_BACK_DAYS]]) এখানেও খাটে: পুরনো আমদানি করা কাগজ কখনো খাতায় ওঠেনি আর উঠবেও না — ওগুলো
+     * গুনলে বছর কোনোদিন বন্ধ হত না, আর মনিটরে দেখাও যেত না কোনটা আটকাচ্ছে।
+     */
+    public function countBetween(string $from, string $to): int
+    {
+        $since = max($from, CarbonImmutable::today()->subDays(self::LOOK_BACK_DAYS)->toDateString());
+        $total = 0;
+
+        if ($since > $to) {
+            return 0;
+        }
+
+        foreach ($this->mustReachTheBooks() as $source => $class) {
+            $model = new $class;
+
+            $total += DB::table($model->getTable())
+                ->where('company_id', CompanyContext::id())
+                ->whereNull('deleted_at')
+                ->where('status', DocumentStatus::CONFIRMED)
+                ->whereBetween('trx_date', [$since, $to])
+                ->whereNotExists(function ($query) use ($source, $model): void {
+                    $query->selectRaw('1')
+                        ->from('ledger_entries')
+                        ->where('ledger_entries.source_type', $source)
+                        ->whereColumn('ledger_entries.source_id', $model->getTable().'.id');
+                })
+                ->count();
+        }
+
+        return $total;
+    }
+
     /** ড্যাশবোর্ডের কার্ডের জন্য — কেবল সংখ্যা, সস্তা প্রশ্ন। */
     public function count(): int
     {

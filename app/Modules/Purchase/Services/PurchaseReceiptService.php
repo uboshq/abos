@@ -51,11 +51,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseReceiptService
 {
-    use ReadsTheRowUnderLock;
-
     use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
+    use ReadsTheRowUnderLock;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -492,6 +491,22 @@ final class PurchaseReceiptService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($receipt, $reason, $date) {
+            /*
+             * ⛔ তালা, তারপর আবার দেখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             * ⚠️ উপরের দুইটা যাচাই হাতের কপি দেখে, তালা ছাড়া: দুই ট্যাব থেকে একই চালান বাতিল করলে দ্বিতীয়টাও
+             * "নিশ্চিত" দেখে মাল আর খাতা আবার উল্টাতে যেত, আর মাঝে বিল বসলে বিল-হওয়া চালানও বাতিল হত।
+             * ⓘ বিলের সারিতে যেমন ([[PurchaseBillService::cancel()]]), এখানেও সারিটা তালায় তাজা পড়া হয়।
+             */
+            $this->lockFresh($receipt);
+
+            if ($receipt->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.already_cancelled', ['no' => $receipt->document_no]),
+                ]);
+            }
+
+            $this->assertNotBilled($receipt);
+
             if ($receipt->status === DocumentStatus::CONFIRMED) {
                 /*
                  * দামটা আগে তোলা হয়, মাল সরানোর আগে — ইচ্ছাকৃতভাবে।
@@ -640,7 +655,23 @@ final class PurchaseReceiptService
 
             $orderLine = $this->resolveOrderLine($receipt, $line['purchase_order_line_id'] ?? null, $productId, $qty);
 
+            /*
+             * ⛔ দামের ভেতরের ভ্যাট মালের দামে নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             *
+             * ⚠️ পণ্যের ভ্যাট "দামের ভিতরে" হলে ১১৫ দরের চালান মজুদে ১১৫ বসাত, অথচ বিল একই মালের মজুদ-মূল্য ধরে
+             * ১০০ আর ভ্যাট ১৫ ([[CalculatesLineTotals::lineFigures()]]) — বিলে তখন ১৫ টাকার মিথ্যা "দর-পার্থক্য",
+             * আর গুদামের মাল ভ্যাটসহ দামি। ⭐ এখন চালানের দর আর মূল্য ভ্যাট বাদে, বিলের হুবহু নিয়মে; বিল
+             * চালানের দর ধরেই ২১৬০ সরায়, তাই দুইটা মেলে। ⓘ ভ্যাট বন্ধ বা দামের বাইরে হলে কিছুই বদলায় না।
+             */
             $amount = bcmul($qty, $rate, 4);
+            $tax = '0';
+
+            if ((bool) $product->tax?->is_inclusive) {
+                $figures = $this->lineFigures($qty, $rate, '0', null, $product->tax);
+                $tax = $figures['tax'];
+                $amount = bcsub($figures['amount'], $tax, 4);
+                $rate = bcdiv($amount, $qty, 4);
+            }
 
             // ফ্রি পরিমাণ একই সারির একই এককে — "১০ বাক্স, ১ বাক্স ফ্রি"
             $free = $this->packed(
@@ -695,6 +726,8 @@ final class PurchaseReceiptService
                     : $this->packed($product, '1', $pack['entered_unit_id'], $this->money($line['sales_price']))['rate'],
 
                 'amount' => $amount,
+                // ⭐ দামের ভেতরের ভ্যাট আলাদা ঘরে — কাগজ বিলের মতো: দর ভ্যাট বাদে, ভ্যাট আলাদা, মোট ভ্যাটসহ (মালিক, ১০ অক্টোবর ২০২৬)
+                'tax' => $tax,
                 'line_no' => ++$lineNo,
                 'narration' => $line['narration'] ?? null,
             ]);

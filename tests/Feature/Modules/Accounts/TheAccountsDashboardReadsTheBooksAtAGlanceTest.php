@@ -46,8 +46,13 @@ final class TheAccountsDashboardReadsTheBooksAtAGlanceTest extends TestCase
             $this->assertNull($this->panel($key), "⛔ accounts.view ছাড়াই '{$key}'।");
         }
 
+        /*
+         * ⓘ ১০ অক্টোবর ২০২৬ থেকে রেওয়ামিল আর আয়-ব্যয়ের প্যানেল চূড়ান্ত হিসাবের চাবিও চায় (অডিট ম১৩/ম১৮,
+         * [[TheProfitFiguresNeedTheFinalAccountsKeyTest]]); এই দাবির প্রশ্ন প্যানেলগুলো খাতা ঠিক পড়ে কি না, তাই দুটো চাবিই দেওয়া।
+         */
         Permission::findOrCreate('accounts.view', 'web');
-        CompanyContext::forCompany($this->company->id, fn () => $clerk->givePermissionTo('accounts.view'));
+        Permission::findOrCreate('accounts.report.final', 'web');
+        CompanyContext::forCompany($this->company->id, fn () => $clerk->givePermissionTo(['accounts.view', 'accounts.report.final']));
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         $this->actingAs($clerk->fresh());
 

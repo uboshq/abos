@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
@@ -58,15 +59,33 @@ final class CommissionClaimService
             ? SalesInvoice::query()->find((int) $data['sales_invoice_id'])
             : null;
 
+        /*
+         * ⛔ বিলের আইডি দেওয়া অথচ পড়া গেল না (অন্য শাখার বা দেয়ালের আড়ালের) — থামা, বিল ছাড়া দাবি নয় (cloud/people-fixes রিভিউ,
+         * ১০ অক্টোবর ২০২৬)। ⓘ আগে `null` এলে বিলের যাচাই বাদ পড়ত, আর দাবি বসত লেখা ভিত্তি-অঙ্কে — বারবার।
+         */
+        if (filled($data['sales_invoice_id'] ?? null) && $invoice === null) {
+            throw ValidationException::withMessages(['sales_invoice_id' => __('sales::validation.commission_bill_not_theirs', ['no' => '#'.(int) $data['sales_invoice_id']])]);
+        }
+
+        $this->assertTheBillIsTheirs($invoice, $customer);
+
         $base = $this->baseFor($data, $invoice);
         $amount = $this->amountFor($data, $base);
 
         $this->assertWithinLimits($amount, $base);
 
         return DB::transaction(function () use ($data, $customer, $supplier, $invoice, $base, $amount) {
+            // ⛔ বিলের সারিতে তালা দিয়ে আবার — দুইজন একসাথে একই বিলে দাবি লিখলে দুইজনেই "নেই" দেখতেন
+            if ($invoice !== null) {
+                // ⓘ তালার পরের তাজা বিল আবার মাপা — মাঝে বাতিল হলে দাবি থামে (রিভিউ, ১০ অক্টোবর ২০২৬)
+                $this->assertTheBillIsTheirs(SalesInvoice::query()->whereKey($invoice->id)->lockForUpdate()->first(), $customer);
+                $this->assertNoClaimOnTheBill($invoice);
+            }
+
             $claim = CommissionClaim::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
+                // ⓘ বিলের দাবি বিলের শাখায় — শাখার দেয়াল এখন এই ঘর দেখে (7cd22874); বিল ছাড়া দাবি হেডারের শাখায়
+                'branch_id' => $invoice?->branch_id ?? CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('CMC'),
                 'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                 'customer_id' => $customer->id,
@@ -217,6 +236,41 @@ final class CommissionClaimService
 
             return $claim->fresh();
         });
+    }
+
+    /**
+     * ⛔ বিলটা এই ডিলারেরই, পাকা, আর তাতে আগে কোনো দাবি নেই — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (প্রমোশন ১৯;
+     * [[ACommissionIsClaimedOnceOnTheRightBillTest]])।
+     *
+     * ⓘ বিল খোঁজা হত কেবল নম্বরে: অন্য গ্রাহকের বিল দেখিয়ে এই ডিলারের কমিশন লেখা যেত (ভিত্তি অঙ্কও সেই বিলের), আর একই বিলে বারবার
+     * দাবি — প্রতিবার ডিলারের পাওনা কমত আর কোম্পানির কাছে আরেকটা দাবি জন্মাত। দাবি বিল ধরে, সারি ধরে নয়; তাই এক বিলে একটাই।
+     * নামঞ্জুর দাবিও গোনা হয় — খরচ একবার বসে গেছে, একই বিলে আবার দাবি মানে আবার খরচ।
+     */
+    private function assertTheBillIsTheirs(?SalesInvoice $invoice, Customer $customer): void
+    {
+        if ($invoice === null) {
+            return;
+        }
+
+        if ((int) $invoice->customer_id !== (int) $customer->id || ! in_array($invoice->status, DocumentStatus::POSTED, true)) {
+            throw ValidationException::withMessages([
+                'sales_invoice_id' => __('sales::validation.commission_bill_not_theirs', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        $this->assertNoClaimOnTheBill($invoice);
+    }
+
+    private function assertNoClaimOnTheBill(SalesInvoice $invoice): void
+    {
+        // ⓘ দেয়াল ছাড়া — অন্য শাখার কেউ এই বিলে দাবি লিখে থাকলেও সেটা আছে
+        $taken = CommissionClaim::query()->withoutGlobalScopes(['user-branch'])->where('sales_invoice_id', $invoice->id)->value('document_no');
+
+        if ($taken !== null) {
+            throw ValidationException::withMessages([
+                'sales_invoice_id' => __('sales::validation.commission_bill_claimed', ['no' => $invoice->document_no, 'claim' => $taken]),
+            ]);
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Listeners;
 
 use App\Core\Events\ApprovalDecided;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Modules\Sales\Models\SalesReturn;
@@ -33,7 +34,11 @@ final class FinishTheReturnOnTheLastSignature
             return;
         }
 
-        $return = SalesReturn::query()->find((int) $approval->approvable_id);
+        /*
+         * ⛔ কাগজ খোঁজা সব শাখা জুড়ে, কাজ তার নিজের শাখায় (fe, ১২–১৩ অক্টোবর ২০২৬; [[AHeldSaleFinishesInItsOwnBranchTest]])। ⚠️ আগে
+         * খোঁজা চলত সইকারীর হেডারের শাখায় — অন্য শাখা বাছা থাকলে ফেরতটা "নেই", শ্রোতা নীরবে ফিরত, আর ফেরত চিরকাল খসড়া।
+         */
+        $return = SalesReturn::acrossBranches()->find((int) $approval->approvable_id);
 
         // ⓘ ইতিমধ্যে নিশ্চিত বা বাতিল — দ্বিতীয় ডাক কিছুই করে না
         if ($return === null || $return->status !== DocumentStatus::DRAFT) {
@@ -42,14 +47,16 @@ final class FinishTheReturnOnTheLastSignature
 
         $status = $event->payload['status'] ?? null;
 
-        if ($status === Approval::REJECTED) {
-            $this->returns->cancel($return, __('sales::message.return_rejected'));
+        CompanyContext::inBranch($return->branch_id === null ? null : (int) $return->branch_id, function () use ($return, $status): void {
+            if ($status === Approval::REJECTED) {
+                $this->returns->cancel($return, __('sales::message.return_rejected'));
 
-            return;
-        }
+                return;
+            }
 
-        if ($status === Approval::APPROVED) {
-            $this->returns->confirm($return);
-        }
+            if ($status === Approval::APPROVED) {
+                $this->returns->confirm($return);
+            }
+        });
     }
 }

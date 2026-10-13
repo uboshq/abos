@@ -110,6 +110,35 @@ final class ALoanMovesMoneyOnlyOnceSignedTest extends TestCase
         $this->assertTrue($due->fresh()->isPaid(), '⛔ শেষ সইয়ের পরেও কিস্তি পরিশোধ হয়নি।');
     }
 
+    /**
+     * ⛔ সইকারীর হেডারে অন্য শাখা — তবু শেষ সইয়ে তোলা খাতায় ওঠে (fe, ১৩ অক্টোবর ২০২৬; [[FinishTheAccountsPaperOnTheLastSignature]])।
+     * ⚠️ শ্রোতা কাগজ ঠিকই খুঁজত, কিন্তু কাজ চলত সইকারীর শাখায় — ভেতরে ঋণের তালা ([[LoanService::finishSigned()]]) ঋণটাকে শাখার দেয়াল
+     * দিয়ে খুঁজত, তাই অন্য শাখা দেখানো সইকারীর হাতে "No query results for model Loan", তোলা চিরকাল সইয়ের অপেক্ষায়।
+     */
+    public function test_a_signed_draw_posts_while_the_signers_header_shows_another_branch(): void
+    {
+        $this->flow(AccountsSignature::LOAN_DRAW);
+        $loan = $this->cc();
+        $draw = app(LoanService::class)->drawDown($loan, '50000', $this->money()->id);
+        $this->assertSame(LoanMovement::AWAITING, $draw->fresh()->status, 'দৃশ্যটাই বানানো যায়নি — তোলা সইয়ের অপেক্ষায় নেই');
+
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
+            ->whereKeyNot((int) $loan->branch_id)->orderBy('id')->firstOrFail();
+        $this->signer->forceFill(['view_all_branches' => false, 'current_branch_id' => $other->id])->save();
+        CompanyContext::set($this->company->id, $other->id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->actingAs($this->signer->fresh());
+
+        try {
+            app(ApprovalEngine::class)->approve($this->approvalOf($draw), $this->signer->fresh(), 'ঠিক আছে');
+        } catch (\Throwable $e) {
+            $this->fail('⛔ অন্য শাখার হেডারে সই দিতেই থামল: '.$e->getMessage());
+        }
+
+        $this->assertSame(LoanMovement::POSTED, LoanMovement::query()->withoutGlobalScopes()->findOrFail($draw->id)->status,
+            '⛔ অন্য শাখার হেডারে শেষ সই — তোলা খাতায় ওঠেনি।');
+    }
+
     public function test_with_no_flow_the_money_moves_at_once_as_today(): void
     {
         ApprovalFlow::query()->where('module', AccountsSignature::MODULE)->update(['is_active' => false]);

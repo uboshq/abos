@@ -123,6 +123,7 @@ return [
     'over_allocated' => ':no has :due due — no more than that can be put against it.',
     'allocation_over_amount' => ':allocated has been allocated but the collection is :amount.',
     'collection_must_be_positive' => 'A collection must be more than zero.',
+    'bank_charge_out_of_range' => 'The bank charge must be zero or more and less than :amount — otherwise nothing reaches the money account.',
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
     'cheque_not_from_receipt' => 'This cheque was not taken on a receipt — its bounce is handled differently.',
@@ -188,5 +189,7 @@ return [
     'qty_first' => 'Enter a quantity — nothing goes to the cart at 0 or blank.',
     'discount_over_line_cap' => 'The discount on :product is :given%, above the line limit of :cap%. Lower the discount.',
     'discount_over_bill_cap' => 'The discount on the whole bill is :given%, above the bill limit of :cap%. Lower the discount.',
+    'commission_bill_not_theirs' => ':no is not a posted bill of this dealer — commission only on the dealer\'s own posted bill.',
+    'commission_bill_claimed' => ':no already has a commission claim (:claim) — one claim per bill.',
     'posted_not_a_draft_print' => ':no is posted — it cannot be printed as a draft; use the normal bill print.',
 ];

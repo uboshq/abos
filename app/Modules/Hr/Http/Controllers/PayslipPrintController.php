@@ -124,7 +124,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
                 __('hr::field.name') => (string) $employee?->name(),
                 __('hr::field.designation') => (string) $employee?->designation?->name(),
                 __('hr::field.department') => (string) $employee?->department?->name(),
-                __('hr::field.month') => $run->month->format('F Y'),
+                __('hr::field.month') => $run->month->locale(app()->getLocale())->translatedFormat('F Y'),
                 __('hr::field.payment_method') => __('hr::kind.'.$slip->payment_method),
                 // ⛔ পরিচয়ের চাবি ছাড়া ঢাকা (অডিট HR ⛔৩) — কর্মীর পাতার একই নিয়ম ([[FieldSecurity::show()]])
                 // ⓘ নম্বর না থাকলে ঘরটাই নেই — ফাঁকা ঘরে "••••" দেখালে নগদের কর্মীরও একটা নম্বর আছে মনে হত

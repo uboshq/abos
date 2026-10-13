@@ -39,10 +39,8 @@ class EveryExistsRuleNamesItsCompanyTest extends TestCase
      */
     private const NOT_YET = [
         'app/Modules/Approval/Http/Controllers/ApprovalDelegationController.php' => 1,
-        'app/Modules/Hr/Http/Controllers/EmployeeController.php' => 1,
         'app/Modules/Inventory/Http/Controllers/StockCountController.php' => 1,
         'app/Modules/Inventory/Http/Controllers/StorageLocationController.php' => 1,
-        'app/Modules/MasterData/Http/Controllers/LocationController.php' => 1,
         'app/Modules/Promotion/Http/Controllers/PromotionSuggestController.php' => 1,
         'app/Modules/Sales/Http/Controllers/DepositClaimController.php' => 1,
         'app/Modules/Sales/Http/Controllers/PortalController.php' => 1,

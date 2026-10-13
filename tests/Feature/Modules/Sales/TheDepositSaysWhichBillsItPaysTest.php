@@ -115,7 +115,9 @@ final class TheDepositSaysWhichBillsItPaysTest extends TestCase
         $plain = $service->raise($this->dealer, ['claimed_on' => now()->toDateString(), 'amount' => '300', 'method' => DepositClaim::BANK]);
         $this->assertNull($plain->bills);
         $service->accept($plain, $this->bank->id);
-        $this->assertSame([], $this->linesOf($plain), '⛔ বিল না বাছা আদায় কোনো বিলে বসল।');
+        // ⭐ বিল না বাছা আদায় সবচেয়ে পুরনো খোলা বিলে — টাকার পরিকল্পনা ৬ (মালিক, ৭ অক্টোবর ২০২৬; [[AnUnpointedCollectionPaysTheOldestBillFirstTest]])।
+        // ⓘ আগে খালি বসত; খসড়া আর অন্যের বিল বাদ, তাই কেবল নিজের পাকা INV-D-1
+        $this->assertSame(['INV-D-1' => '300.0000'], $this->linesOf($plain), '⛔ বিল না বাছা আদায় পুরনো বিলে বসেনি, বা ভুল বিলে বসল।');
 
         $this->phone(['sales.collection.create']);
         foreach ([

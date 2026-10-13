@@ -62,6 +62,12 @@ class ModuleGate {
     'offers': 'promotion',
     'leave': 'hr',
     'payslips': 'hr',
+    // ── ⭐ ১৩ অক্টোবর ২০২৬ — নোটিশ বোর্ড কোনো মডিউলের নয় (কোরের, সবার), তাই এখানে নেই ──
+    'owner-centre': 'executive',
+    // ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬)
+    'invoices': 'sales',
+    'challans': 'sales',
+    'credit': 'credit_control',
   };
 
   /// The message a switched-off screen shows — the owner's own words.
