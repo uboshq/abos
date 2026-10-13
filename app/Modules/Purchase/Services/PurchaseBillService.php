@@ -339,6 +339,11 @@ final class PurchaseBillService
         }
 
         return DB::transaction(function () use ($bill, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা বিলের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ পুরনো
+            // লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($bill);
+            $this->assertEditable($bill);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $bill->trx_date);
 
             $billNo = $data['supplier_bill_no'] ?? null;

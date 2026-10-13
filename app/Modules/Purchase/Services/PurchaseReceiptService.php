@@ -199,6 +199,11 @@ final class PurchaseReceiptService
         }
 
         return DB::transaction(function () use ($receipt, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($receipt);
+            $this->assertEditable($receipt);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $receipt->trx_date);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $receipt->warehouse_id);
 

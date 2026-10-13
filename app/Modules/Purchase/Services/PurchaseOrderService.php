@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
@@ -28,6 +29,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseOrderService
 {
+    use ReadsTheRowUnderLock;
+
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
 
@@ -90,6 +93,11 @@ final class PurchaseOrderService
         $this->assertHasLines($lines);
 
         return DB::transaction(function () use ($order, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($order);
+            $this->assertEditable($order);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $order->trx_date);
 
             $order->update([

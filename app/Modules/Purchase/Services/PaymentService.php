@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -44,6 +45,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PaymentService
 {
+    use ReadsTheRowUnderLock;
+
     /**
      * "চেক" — উপায়ের নাম, আর এটাই একমাত্র উপায় যেটা অন্য পথে যায়।
      *
@@ -161,6 +164,11 @@ final class PaymentService
         );
 
         return DB::transaction(function () use ($payment, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($payment);
+            $this->assertEditable($payment);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $payment->trx_date);
 
             $payment->update([
