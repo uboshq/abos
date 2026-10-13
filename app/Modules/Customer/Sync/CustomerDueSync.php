@@ -141,7 +141,9 @@ final class CustomerDueSync implements SyncsToDevices
                      * ⭐ দেখার শাখার বকেয়া — বকেয়া তালিকা এটা দেখায়, ওয়েবের তালিকার হুবহু (মালিক, ৬ অক্টোবর ২০২৬: "অন্য
                      * ব্রাঞ্চের ব্যালেন্সও হিসাবে ঢুকেছে")। ⛔ সীমার যাচাই `outstanding`-এই — সীমা পরম, গোটা কোম্পানির।
                      */
-                    'outstandingInView' => bcadd((string) ($customer->getAttribute('outstanding_in_view') ?? '0'), '0', 2),
+                    // ⛔ পয়সায় গোল করা, ছাঁটা নয় — `bcadd(…, 2)` ১০.০০৫-কে ১০.০০ করত, ওয়েব দেখাত ১০.০১ (Customer নিরীক্ষা,
+                    // ১৩ অক্টোবর ২০২৬; [[ThePhoneDueWasAPaisaShortTest]])
+                    'outstandingInView' => \App\Core\Support\Money::round((string) ($customer->getAttribute('outstanding_in_view') ?? '0')),
                     'creditLimit' => $customer->effectiveCreditLimit(),
                     'creditDays' => (int) $customer->credit_days,
 
