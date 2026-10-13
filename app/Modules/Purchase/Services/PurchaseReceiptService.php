@@ -868,6 +868,19 @@ final class PurchaseReceiptService
                 throw ValidationException::withMessages(['lines' => __('purchase::validation.line_not_in_order')]);
             }
 
+            /*
+             * ⛔ আদেশ এখনো খোলা — খসড়া লেখার দিন খোলা ছিল, মাঝে বাতিল হয়ে থাকতে পারে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[AReceiptCameInAgainstACancelledOrderTest]])। ⚠️ আগে বাতিল আদেশের বিপরীতে খসড়া রসিদ পাকা হত: মাল ঢুকত, দেনা বসত,
+             * নিজে-বিলও হত — অথচ আদেশটা সরবরাহকারীর কাছে "বাতিল"।
+             */
+            $order = PurchaseOrder::acrossBranches()->find($orderLine->purchase_order_id);
+
+            if ($order === null || $order->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'purchase_order_id' => __('purchase::validation.order_not_open', ['no' => $order?->document_no ?? '']),
+                ]);
+            }
+
             $this->assertCeiling($orderLine, $receipt, $qty);
         }
     }
