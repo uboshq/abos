@@ -459,7 +459,9 @@ final class CustomerService
 
         $latest = app(ApprovalEngine::class)->latestFor($customer, 'credit_limit');
 
-        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash)) {
+        // ⛔ একটা সই একবারই — যে সই একবার সীমা বসিয়েছে, কমিয়ে আবার একই অঙ্কে তুললে ছাপ হুবহু মেলে, তবু সেটা নতুন
+        // বাড়ানো (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneLimitSignatureWasSpentTwiceTest]])
+        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash) && ! $this->limitSignatureSpent($latest)) {
             return;
         }
 
@@ -505,6 +507,17 @@ final class CustomerService
         throw ValidationException::withMessages([
             'credit_limit' => __('core.approval.awaiting'),
         ]);
+    }
+
+    /** এই সই কি আগেই একবার সীমা বসিয়েছে — ইতিহাসে তার সূত্রসহ সারি আছে কি না ([[CustomerCreditChange]]) */
+    private function limitSignatureSpent(Approval $approval): bool
+    {
+        return CustomerCreditChange::query()->withoutGlobalScopes()
+            ->where('company_id', $approval->company_id)
+            ->where('customer_id', $approval->approvable_id)
+            ->where('field', 'credit_limit')
+            ->where('approval_id', $approval->id)
+            ->exists();
     }
 
     /** বাড়ানো হলে যে সই সেটা ঢাকে, তার সারি — ইতিহাসের সূত্রের জন্য; কমানো বা সমান হলে null */
