@@ -6,6 +6,7 @@ import 'me_api.dart';
 import 'menu_item.dart';
 import 'menu_module.dart';
 import 'route_registry.dart';
+import '../web_inside/web_inside.dart';
 
 /// Where the signed-in person's home menu comes from: `GET /me`, filtered
 /// twice before a row becomes a tile —
@@ -109,9 +110,11 @@ class MenuRepository {
           if (tile != null) items.add(tile);
         }
       }
+      final native = ordered(items, response.user,
+          ordersReplaceDo: response.profile.ordersReplaceDo);
       return HomeMenu(
-        items: ordered(items, response.user,
-            ordersReplaceDo: response.profile.ordersReplaceDo),
+        // ⭐ ফোন-পর্দা আগে, তারপর বাকি সব ওয়েবের পর্দা — অ্যাপের ভিতরে খোলে ([webTiles], ১৩ অক্টোবর ২০২৬)
+        items: [...native, ...webTiles(response.menu, native)],
         profile: response.profile,
         me: response.user,
       );
@@ -168,6 +171,51 @@ class MenuRepository {
       routeName: appPath,
     );
   }
+
+  /// ⭐ বাকি সব মডিউল, অ্যাপের ভিতরে — মালিক, ১৩ অক্টোবর ২০২৬: *"web e na dhuke jar jar kaj 100% app ei korte pare"*।
+  ///
+  /// <p>Every `/me` row the server gave a `web` path (it does so only where this person may open that web screen inside
+  /// the app — their own keys, their company's switch, no stock screens for somebody who may not see stock) and this
+  /// build has no native screen for becomes a tile that opens the real web screen in the in-app window
+  /// ([WebPaths.navPathFor]).
+  ///
+  /// <p>⚠️ A native screen wins: a row whose route [RouteRegistry] maps, or whose route is the key of one of this app's
+  /// own tiles in [native], is not offered twice — but only its *first* row: the web's second and third rows on one
+  /// route (cancelled invoices beside invoices) are different screens and stay. The same web path twice is one tile.
+  @visibleForTesting
+  List<MenuItem> webTiles(List<MenuModule> menu, List<MenuItem> native) {
+    final nativeKeys = {for (final item in native) item.key, ..._nativeTwins};
+    final coveredOnce = <String>{};
+    final seen = <String>{};
+    final out = <MenuItem>[];
+    for (final module in menu) {
+      module.groups.forEach((group, entries) {
+        for (final entry in entries) {
+          final web = entry.web;
+          if (entry.planned || web == null) continue;
+          if (RouteRegistry.appPathFor(entry.route) != null || nativeKeys.contains(entry.route)) {
+            if (coveredOnce.add(entry.route)) continue;
+          }
+          if (!seen.add(web)) continue;
+          WebPaths.rememberTitle(WebPaths.navPathFor(web), entry.label);
+          out.add(MenuItem(
+            key: 'web:$web',
+            label: entry.label,
+            icon: Icons.language_outlined,
+            routeName: WebPaths.navPathFor(web),
+            module: module.code,
+            moduleLabel: module.label,
+            group: group,
+            webPath: web,
+          ));
+        }
+      });
+    }
+    return out;
+  }
+
+  /// Server routes this app answers natively under another key — the same screen, so not a second web row.
+  static const Set<String> _nativeTwins = {'sales.tracking.index'};
 
   List<MenuItem> _localFallback(AuthUser user) {
     final items = <MenuItem>[];
