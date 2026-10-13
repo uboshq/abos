@@ -178,15 +178,17 @@ class Batch extends Model implements Drillable
      */
     public function floorBalance(?Warehouse $warehouse = null): string
     {
+        // ⓘ গুদাম বললে পুরো গুদাম, দেয়াল ছাড়া — যাচাইয়ের প্রশ্ন; না বললে দেখার যোগফল, দেয়ালসহ (১৩ অক্টোবর ২০২৬)
         return (string) $this->movements()
-            ->when($warehouse !== null, fn ($q) => $q->where('warehouse_id', $warehouse->id))
+            ->when($warehouse !== null, fn ($q) => $q->withoutGlobalScopes(\App\Modules\Inventory\Services\StockService::VIEW_WALLS)->where('warehouse_id', $warehouse->id))
             ->sum('floor_change');
     }
 
     public function freeBalance(?Warehouse $warehouse = null): string
     {
+        // ⓘ গুদাম বললে পুরো গুদাম, দেয়াল ছাড়া — যাচাইয়ের প্রশ্ন; না বললে দেখার যোগফল, দেয়ালসহ (১৩ অক্টোবর ২০২৬)
         return (string) $this->movements()
-            ->when($warehouse !== null, fn ($q) => $q->where('warehouse_id', $warehouse->id))
+            ->when($warehouse !== null, fn ($q) => $q->withoutGlobalScopes(\App\Modules\Inventory\Services\StockService::VIEW_WALLS)->where('warehouse_id', $warehouse->id))
             ->sum('free_change');
     }
 

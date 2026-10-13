@@ -164,7 +164,7 @@ final class QualityInspectionService
         $target = (string) $inspection->inspected_qty;
 
         if (filled($inspection->source_type) && (int) $inspection->source_id > 0) {
-            $shelved = (string) StockMovement::query()
+            $shelved = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
                 ->forProduct((int) $inspection->product_id)
                 ->inWarehouse((int) $inspection->warehouse_id)
                 ->where('source_type', $inspection->source_type)
@@ -187,7 +187,7 @@ final class QualityInspectionService
         if ($inspection->batch !== null) {
             $more = $this->lesser($more, bcsub(
                 $inspection->batch->floorBalance($inspection->warehouse),
-                (string) StockMovement::query()->where('batch_id', $inspection->batch_id)
+                (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('batch_id', $inspection->batch_id)
                     ->inWarehouse((int) $inspection->warehouse_id)->sum('hold_change'),
                 4,
             ));
@@ -214,7 +214,7 @@ final class QualityInspectionService
     /** এই কাগজের রায়ের অপেক্ষার আটকানো, এখন কতটা — তালাসহ। */
     private function waitingHeld(QualityInspection $inspection): string
     {
-        return (string) StockMovement::query()
+        return (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('source_type', self::WAITING_SOURCE)
             ->where('source_id', $inspection->id)
             ->lockForUpdate()
