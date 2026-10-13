@@ -119,6 +119,7 @@ return [
     'against_closed' => 'The paper this voucher is written against is no longer open — already settled, cancelled, or awaiting its signature.',
     'against_wrong_type' => 'This paper is not settled by this kind of voucher — money coming in takes a receipt, money going out a payment.',
     'against_wrong_amount' => 'The amount does not match — :amount on the voucher, :expected on the paper.',
+    'against_wrong_account' => 'The account does not match — the whole amount must land in the account the signature was for.',
     'against_wrong_party' => 'The party does not match — the money must belong to the party on the paper.',
 
     // মাস বন্ধ ও খোলা

@@ -522,6 +522,22 @@ final class VoucherService
             ])]);
         }
 
+        /*
+         * ⛔ সই-হওয়া কাগজের টাকা সই-হওয়া খাতেই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AClaimIsPaidIntoItsSignedHeadTest]])।
+         * ⓘ কর্মীর খরচের দাবির ভাউচার নিজের সই নেয় না (সই কাগজে, [[VoucherApproval::actionFor()]]); আগে খাত মেলানো হত না, তাই
+         * খসড়ায় অগ্রিমের ডেবিট খরচের খাতে (বেতন থেকে আর কাটা যেত না) বা খরচ অন্য খাতে বসিয়ে পাকা করা যেত — সই ছাড়াই।
+         */
+        if (isset($terms['debit_accounts'])) {
+            $allowed = array_map('intval', (array) $terms['debit_accounts']);
+            $landing = $voucher->lines
+                ->filter(fn (VoucherLine $line) => in_array((int) $line->account_id, $allowed, true))
+                ->reduce(fn (string $sum, VoucherLine $line) => bcadd($sum, (string) $line->debit, 4), '0');
+
+            if (bccomp($landing, $paid, 4) !== 0) {
+                throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_wrong_account')]);
+            }
+        }
+
         $partyType = $terms['party_type'] ?? null;
 
         if ($partyType === null) {
