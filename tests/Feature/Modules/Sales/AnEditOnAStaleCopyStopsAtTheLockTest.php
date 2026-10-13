@@ -85,6 +85,26 @@ final class AnEditOnAStaleCopyStopsAtTheLockTest extends TestCase
             [['product_id' => $this->product()->id, 'qty' => '50', 'rate' => '10']]));
     }
 
+    /** ⛔ ফেরতের বিল বদলালে বিক্রির নম্বরও বদলায় — আগে পুরনো বিলের নম্বর থেকে যেত (১৩ অক্টোবর ২০২৬) */
+    public function test_a_return_moved_to_another_bill_takes_that_bills_sale_number(): void
+    {
+        $bills = app(\App\Modules\Sales\Services\SalesInvoiceService::class);
+        $line = [['product_id' => $this->product()->id, 'qty' => '1', 'rate' => '10']];
+        $first = $bills->create($this->paper(), $line);
+        $second = $bills->create($this->paper(), $line);
+        DB::table('sal_invoices')->where('id', $first->id)->update(['sale_no' => 'S-FIRST']);
+        DB::table('sal_invoices')->where('id', $second->id)->update(['sale_no' => 'S-SECOND']);
+
+        $service = app(SalesReturnService::class);
+        $paper = $this->paper() + ['reason_code_id' => ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->value('id')];
+        $return = $service->create($paper + ['sales_invoice_id' => $first->id], $line);
+        $this->assertSame('S-FIRST', $return->fresh()->sale_no, 'দৃশ্যটাই ভুল — ফেরতে প্রথম বিলের নম্বর বসেনি।');
+
+        $service->update($return->fresh(), $paper + ['sales_invoice_id' => $second->id], $line);
+
+        $this->assertSame('S-SECOND', $return->fresh()->sale_no, '⛔ ফেরত দ্বিতীয় বিলে গেল, অথচ বিক্রির নম্বর পুরনো বিলের।');
+    }
+
     public function test_a_quotation_edit_submit_and_cancel(): void
     {
         $service = app(SalesQuotationService::class);
