@@ -272,16 +272,18 @@ final class PartyReports
                 $asOf = Carbon::parse($f['to']);
 
                 // ⓘ এই সময়ের **জমা** — খরচ এখানে নয়, সেটা নিচে FIFO-তে মেটে
+                // ⛔ বয়স (from, to] — ঘরের নামের মতো: ঠিক ৩০ দিনের বিল "০–৩০"-এ, ৯০-এরটা "৬১–৯০"-এ (Supplier নিরীক্ষা,
+                // ১৩ অক্টোবর ২০২৬; [[AThirtyDaySupplierBillAgedAsThirtyOneTest]])
                 $credits = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
                     if ($to !== null) {
-                        $conditions[] = 'ledger_entries.trx_date > '
+                        $conditions[] = 'ledger_entries.trx_date >= '
                             .DB::getPdo()->quote($asOf->copy()->subDays($to)->toDateString());
                     }
 
                     if ($from !== null) {
-                        $conditions[] = 'ledger_entries.trx_date <= '
+                        $conditions[] = 'ledger_entries.trx_date < '
                             .DB::getPdo()->quote($asOf->copy()->subDays($from)->toDateString());
                     }
 
