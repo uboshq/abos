@@ -45,4 +45,5 @@ return [
     'head_in_use_keeps_its_shape' => 'The salary structures of employees use this head — changing its kind (earning/deduction) or calculation (fixed/percent) would turn the next payslips upside down. Create a new head and put it in the structures instead.',
     'payroll_month_in_future' => 'Salary for a future month cannot be run in advance — choose the current month or an earlier one.',
     'payroll_date_before_month' => 'The payroll date cannot be before the first day of :month — this month\'s salary would land in an earlier month\'s books.',
+    'salary_amount_shape' => 'Write the salary amount as a plain number — such as 20000 or 12.5, with at most four decimal places; forms like "1e5" or very large amounts are not accepted.',
 ];

@@ -61,10 +61,18 @@ class SalaryStructureController extends Controller implements HasMiddleware
     {
         $this->authorize('manageSalary', $employee);
 
+        /*
+         * ⛔ decimal:0,4 — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[ASalaryAmountOfOneE5IsAReasonNotACrashTest]])। ⓘ `numeric` "1e5"
+         * মেনে নিত, আর [[SalaryStructureService]]-এর bcmath সেটা পড়তে না পেরে পাতা ৫০০ দিত; খুব বড় অঙ্ক ঘরের (১৮,৪) বাইরেও যেত।
+         * চার ঘর — ঘরের দশমিক আর ফর্মের step দুটোই চার; খরচের দাবির নিয়মের ([[ExpenseClaimController]]) একই গড়ন।
+         */
         $data = $request->validate([
             'effective_from' => ['required', 'date'],
             'amounts' => ['required', 'array', 'min:1'],
-            'amounts.*' => ['nullable', 'numeric', 'min:0'],
+            'amounts.*' => ['nullable', 'decimal:0,4', 'min:0', 'max:99999999999999'],
+        ], [
+            'amounts.*.decimal' => __('hr::validation.salary_amount_shape'),
+            'amounts.*.max' => __('hr::validation.salary_amount_shape'),
         ]);
 
         $heads = SalaryHead::query()->active()->get()->keyBy('id');
