@@ -724,9 +724,6 @@ final class SalesQuotationService
         return $days > 0 ? $days : self::DEFAULT_VALID_DAYS;
     }
 
-    /**
-     * @param  list<string>  $allowed
-     */
     /** ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — সম্পাদনা, জমা আর বাতিল হাতের কপিতে নয় (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬) */
     private function lockAndReread(SalesQuotation $quotation): void
     {
@@ -735,6 +732,9 @@ final class SalesQuotationService
         $quotation->setRawAttributes($fresh->getAttributes(), true);
     }
 
+    /**
+     * @param  list<string>  $allowed
+     */
     private function assertIn(SalesQuotation $quotation, array $allowed, string $message): void
     {
         // ⛔ পুরনো সংস্করণ কেবল পড়ার জন্য — বার্তাটা বলে কেন, আর কাজ কোন কাগজে চলবে
