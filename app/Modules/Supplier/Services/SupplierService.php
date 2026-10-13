@@ -126,6 +126,17 @@ final class SupplierService
         $this->assertBinIfRequired($data, $supplier);
         $this->assertNotADuplicate($data, $supplier->id);
 
+        /*
+         * ⛔ চালু/বন্ধ সম্পাদনার পথে নয় — বন্ধ করার চাবি (`supplier.delete`) ছাড়া `is_active=0` পাঠিয়ে সরবরাহকারী বন্ধ বা
+         * আবার চালু করা যেত, বোতাম আর তার অনুমতি দুটোই এড়িয়ে (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+         * [[ASupplierSwitchedOffThroughTheEditFormTest]])। গ্রাহকের দিকের জোড়া: [[CustomerService::assertMayChangeActive()]]।
+         */
+        if (array_key_exists('is_active', $data) && $data['is_active'] !== null
+            && (bool) $data['is_active'] !== (bool) $supplier->is_active
+            && auth()->user() !== null && ! auth()->user()->can('supplier.delete')) {
+            throw ValidationException::withMessages(['is_active' => __('supplier::validation.active_needs_delete_key')]);
+        }
+
         // ⛔ মুছে দেওয়া কোড মানে "যেমন ছিল" — খালি ঘর null হয়ে `NOT NULL` কোডে ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
         // [[ABlankBoxBrokeTheSupplierFormTest]])
         if (array_key_exists('code', $data) && trim((string) $data['code']) === '') {
