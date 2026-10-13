@@ -426,6 +426,8 @@ final class DeliveryChallanService
             foreach ($challan->lines->sortBy('line_no') as $line) {
                 $qty = (string) $line->delivered_qty;
 
+                $this->assertLotNotExpired($line);
+
                 /*
                  * অর্ডারে যতটুকু ধরা ছিল ঠিক ততটুকুই ছাড়া হয়, বেশি নয়।
                  *
@@ -531,6 +533,8 @@ final class DeliveryChallanService
         foreach ($challan->lines->sortBy('line_no') as $line) {
             $qty = (string) $line->delivered_qty;
 
+            $this->assertLotNotExpired($line);
+
             $movements = $this->stock->issue(
                 product: $line->product,
                 warehouse: $challan->warehouse,
@@ -544,6 +548,28 @@ final class DeliveryChallanService
             );
 
             $this->assertWithinPrintedPrice($line, $movements);
+        }
+    }
+
+    /**
+     * ⛔ মেয়াদ পেরোনো বাছা লট চালান বা গেট পাস দিয়ে বেরোয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (a4-এর মজুদ নিরীক্ষা, fe)।
+     *
+     * ⚠️ কাউন্টারে পাহারা ছিল ([[DirectSaleService]] `lot_expired_for`), কিন্তু চালান আর গেট পাস বাছা লট সরাসরি
+     * [[StockService::issue()]]-এ দিত — সেখানে কেবল পরিমাণ দেখা হয়। তাই আটকে রাখা চালানের লট গেট পাসের দিন মেয়াদ পেরোলেও মাল
+     * বেরিয়ে যেত। ⓘ পাহারা বিক্রয়ের পথে, মজুদের সেবায় নয় — বিনাশ আর ফেরত মেয়াদি লট থেকেই হয়। ⓘ লট না বাছলে FEFO নিজেই
+     * মেয়াদি লট বাদ দেয়।
+     */
+    private function assertLotNotExpired(DeliveryChallanLine $line): void
+    {
+        $lot = $line->batch;
+
+        if ($lot !== null && $lot->hasExpired(now())) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.lot_expired_for', [
+                    'product' => $line->product?->name() ?? '',
+                    'lot' => $lot->batch_no,
+                ]),
+            ]);
         }
     }
 
