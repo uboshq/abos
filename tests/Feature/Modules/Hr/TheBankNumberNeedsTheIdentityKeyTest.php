@@ -100,7 +100,9 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $form = ['name_en' => 'Bank Paid', 'joining_date' => '2026-01-15', 'payment_method' => 'bank'];
         $query = ['bank_account_no' => '9999999999999', 'national_id' => '1999999999', 'mfs_number' => '01999999999'];
 
-        $this->as($clerk)->put(route('hr.employee.update', ['employee' => $employee->id, ...$query]), $form)->assertSessionHasNoErrors();
+        // ⓘ কর্মীর তথ্য ছবি ছাড়া সংরক্ষণ হয় না — প্রথম হালনাগাদে একটা ছোট ছবি
+        $this->as($clerk)->put(route('hr.employee.update', ['employee' => $employee->id, ...$query]), [...$form, 'photo' => $this->png()])
+            ->assertSessionHasNoErrors();
 
         $fresh = $employee->fresh();
         $this->assertSame(self::ACCOUNT, (string) $fresh->bank_account_no, '⛔ চাবি ছাড়া ঠিকানার query দিয়ে ব্যাংকের নম্বর বদলাল — পরের ব্যাংক-ফাইল অন্য হিসাবে বেতন পাঠাত');
@@ -140,6 +142,17 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $method = new \ReflectionMethod(PayslipPrintController::class, 'documentFor');
 
         return $method->invoke(app(PayslipPrintController::class), $slip)->meta[__('hr::field.bank_account_no')] ?? null;
+    }
+
+    private function png(): \Illuminate\Http\UploadedFile
+    {
+        $image = imagecreatetruecolor(40, 40);
+        imagefill($image, 0, 0, imagecolorallocate($image, 20, 120, 200));
+        $path = tempnam(sys_get_temp_dir(), 'pic');
+        imagepng($image, $path);
+        imagedestroy($image);
+
+        return new \Illuminate\Http\UploadedFile($path, 'face.png', 'image/png', null, true);
     }
 
     private function give(User $user, string $key): void
