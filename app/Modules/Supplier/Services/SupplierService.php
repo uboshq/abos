@@ -33,6 +33,22 @@ final class SupplierService
         private readonly OpeningBalanceService $openings,
     ) {}
 
+    /**
+     * ⛔ শুরুর দেনা কোন ঘরে — পরিবহনকারী ২১১৬, হাম্মালি ঠিকাদার ২১১৭, বাকিরা ২১১১ (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ATransportersOpeningLandedInTradePayablesTest]])। ⓘ ভাড়া আর মজুরির পরের দাখিলা ওই ঘরেই বসে ([[CarrierAndLabourLedger]]);
+     * শুরুর দেনা ২১১১-এ গেলে পরিবহনের খতিয়ানে শুরুর বাকি শূন্য দেখাত আর মালের দেনায় ভাড়ার টাকা মিশত।
+     */
+    public static function openingAccountFor(int|string|null $partyTypeId): string
+    {
+        $code = $partyTypeId === null || $partyTypeId === '' ? null : PartyType::query()->whereKey($partyTypeId)->value('code');
+
+        return match ($code) {
+            'TRANSPORT' => \App\Modules\Accounts\Services\StandardChart::TRANSPORT_PAYABLE,
+            'LABOUR' => \App\Modules\Accounts\Services\StandardChart::LABOUR_PAYABLE,
+            default => \App\Modules\Accounts\Services\StandardChart::PAYABLE,
+        };
+    }
+
     /** নম্বরের সিরিজ — সেবাদাতা SPD, পণ্যের সরবরাহকারী SUP (মালিক, ২ অক্টোবর ২০২৬) */
     public static function seriesFor(int|string|null $partyTypeId): string
     {
@@ -121,6 +137,7 @@ final class SupplierService
                 $supplier->opening_date,
                 // ⭐ সরবরাহকারীর নিজের শাখায়, ঢোকানো মানুষের শাখায় নয় (অডিট ⓘ১৭)
                 branchId: $supplier->branch_id === null ? null : (int) $supplier->branch_id,
+                account: self::openingAccountFor($supplier->party_type_id),
             );
 
             return $supplier;

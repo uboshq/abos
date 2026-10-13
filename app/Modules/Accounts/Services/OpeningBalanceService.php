@@ -92,10 +92,12 @@ final class OpeningBalanceService
         string $amount,
         Carbon|string|null $date = null,
         ?int $branchId = null,
+        // ⓘ কোন দেনার ঘরে — পরিবহনকারী ২১১৬, হাম্মালি ঠিকাদার ২১১৭; বাকিরা ২১১১ ([[SupplierService::openingAccountFor()]])
+        string $account = StandardChart::PAYABLE,
     ): array {
         return $this->post(
             $partyType, $partyId, $documentNo, $amount, $date,
-            partyAccount: StandardChart::PAYABLE,
+            partyAccount: $account,
             partyIsDebit: false,
             branchId: $branchId,
         );
