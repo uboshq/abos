@@ -81,7 +81,13 @@ final class CustomerLimitImporter implements Importer, ImportNeedsKeys
     {
         $code = trim((string) ($row['code'] ?? ''));
 
-        return $code === '' ? null : Customer::query()->where('code', $code)->first();
+        $customer = $code === '' ? null : Customer::query()->where('code', $code)->first();
+
+        // ⛔ পর্দার একই দেয়াল — শাখায় সীমিত মানুষ ফাইলে অন্য শাখার কোড লিখে তাদের সীমা কমাতেন বা বাড়ানোর অনুরোধ বসাতেন
+        // (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ALimitFileReachedAnotherBranchTest]])। ⓘ "এমন গ্রাহক নেই" — অন্য শাখার কে আছে, বলা হয় না
+        $user = auth()->user();
+
+        return $customer !== null && $user !== null && ! $user->can('update', $customer) ? null : $customer;
     }
 
     /**
