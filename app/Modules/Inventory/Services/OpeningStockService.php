@@ -288,7 +288,8 @@ final class OpeningStockService
      */
     public function exists(Product $product, Warehouse $warehouse, ?Batch $batch = null): bool
     {
-        return StockMovement::query()
+        // ⛔ দেখার দেয়াল ছাড়া — এই যাচাইগুলো মানুষের দেখার নয়, খাতার সত্যির (stillOpen, editable, প্রথম চলাচল একই; মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        return StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             ->where('source_type', self::SOURCE_TYPE)
@@ -449,7 +450,7 @@ final class OpeningStockService
         $movement = StockMovement::query()->whereKey($movement->id)->lockForUpdate()->firstOrFail();
 
         if ($movement->source_type !== self::SOURCE_TYPE || bccomp((string) $movement->floor_change, '0', 4) <= 0
-            || StockMovement::query()->where('source_type', self::CORRECTED)->where('source_id', $movement->id)->exists()) {
+            || StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('source_type', self::CORRECTED)->where('source_id', $movement->id)->exists()) {
             throw ValidationException::withMessages(['movement' => __('inventory::message.opening_not_editable')]);
         }
 
@@ -529,7 +530,7 @@ final class OpeningStockService
      */
     public function stillOpen(Product $product, Warehouse $warehouse, Carbon|string|null $date = null): bool
     {
-        $moves = StockMovement::query()
+        $moves = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             // ⓘ অন্য লটের খোলা মজুদ লেনদেন নয় — চালুর দিন সব লট একই সারিতে বসে (ম২৪); তার সংশোধনও নয় (৬ অক্টোবর ২০২৬)
@@ -689,7 +690,7 @@ final class OpeningStockService
 
         if (! $this->stillOpen($product, $warehouse, $date)) {
             // ⓘ কিছুই বের না হয়ে থাকলে পথটা বলে দেওয়া — খোলার তারিখ প্রথম চলাচলের দিন বা তার আগে
-            $first = StockMovement::query()->where('product_id', $product->id)->where('warehouse_id', $warehouse->id)
+            $first = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('product_id', $product->id)->where('warehouse_id', $warehouse->id)
                 ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])->min('trx_date');
             $onlyLater = $first !== null && $this->stillOpen($product, $warehouse, $first);
 
