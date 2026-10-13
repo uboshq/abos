@@ -769,7 +769,14 @@ final class PurchaseReturnService
         $blank = $entered === null || trim((string) $entered) === '';
         $tax = $this->money($blank ? '0' : $entered);
 
-        if (! (bool) app(SettingsService::class)->get('purchase.vat_enabled', false)) {
+        /*
+         * ⛔ ভ্যাট বন্ধের নিয়ম কেবল ভ্যাটহীন বিলের ফেরতে — fe, ১৩ অক্টোবর ২০২৬ ([[AReturnLostItsBillsVatTest]])। ⚠️ আগে সুইচ বন্ধ হলেই
+         * ফেরতের ভ্যাট ০: ১১৫-র (১০০ + ১৫) বিলের ফেরতে দেনা কমত ১০০, অথচ দর থেকে ভ্যাট আগেই বাদ — ১৫ উপকরণ-ভ্যাট আর কখনো উল্টাত না।
+         * ⓘ বিলের লাইনে ভ্যাট থাকলে ফেরত বিলের নিজের ভাগটাই নেয়, সুইচ যা-ই বলুক — সেটা সেদিনের কাগজের সত্য।
+         */
+        $billCarriedVat = $billLine !== null && bccomp((string) ($billLine->tax ?? '0'), '0', 4) > 0;
+
+        if (! $billCarriedVat && ! (bool) app(SettingsService::class)->get('purchase.vat_enabled', false)) {
             if (bccomp($tax, '0', 4) !== 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.vat_is_off'),
