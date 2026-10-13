@@ -55,6 +55,7 @@ return [
     'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
+    'money_opens_on_dr_only' => '":name" holds cash or mobile money — its opening balance can only be Dr; money in hand is never negative.',
     // Bank money cannot be reconciled without a reference, and the same
     // reference twice means the same money twice
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',

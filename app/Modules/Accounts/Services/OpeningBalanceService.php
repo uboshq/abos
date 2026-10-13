@@ -265,6 +265,30 @@ final class OpeningBalanceService
          */
         $accountIsDebit = $account->nature !== Account::CREDIT;
 
+        /*
+         * ⛔ টাকার খাত কখনো Cr খোলা জের নেয় না — মালিক, ১৩ অক্টোবর ২০২৬ ("int standrad onuzayi koro"; IAS 32/IAS 7;
+         * [[AnOpeningBalanceSitsOnTheSideChosenTest]])। ⓘ নগদ বা মোবাইল-ব্যাংকিং Cr হয় না — থামে। ব্যাংকের Cr মানে ওভারড্রাফট, একটা
+         * দায়: সেটা সেই ব্যাংকের ওভারড্রাফটের খাতে বসে ([[AccountService::overdraftFor()]]), ব্যাংকের খাত শূন্যে খোলে।
+         */
+        $postsCredit = $accountIsDebit === (bccomp($amount, '0', 4) < 0);
+
+        if ($account->money_kind !== null && $postsCredit) {
+            if (! $account->isBank()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'opening_side' => __('accounts::validation.money_opens_on_dr_only', ['name' => $account->name()]),
+                ]);
+            }
+
+            $overdraft = app(AccountService::class)->overdraftFor($account);
+            $account->forceFill(['opening_balance' => 0])->save();
+            $overdraft->forceFill([
+                'opening_balance' => ltrim($amount, '-'),
+                'opening_date' => $account->opening_date,
+            ])->save();
+
+            return $this->forAccount($overdraft);
+        }
+
         // ⓘ খাতের কোড বিবরণে — খাতার নম্বর এখন OB সিরিজের ([[SERIES]])
         $narration = $this->narration().' · '.$account->code;
 

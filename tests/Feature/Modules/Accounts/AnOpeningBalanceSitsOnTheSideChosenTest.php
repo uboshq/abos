@@ -21,7 +21,8 @@ use Tests\TestCase;
  *
  * ⓘ আগে খাতের ফর্মে কেবল একটা সংখ্যা: ধনাত্মক = খাতের স্বাভাবিক দিক, ঋণাত্মক = উল্টো। নিয়মটা কোথাও লেখা ছিল না — দায়ের
  * খাতে "Cr ৫০০০" ভেবে −৫০০০ লিখলে সেটা Dr হয়ে বসত। এখন ট্রায়াল ব্যালেন্সের মতো অঙ্ক আর পাশ; না বাছলে স্বাভাবিক দিক।
- * উল্টো দিক বৈধ — যেমন ব্যাংকের ওভারড্রাফট, এখনকার মতো ব্যাংকের খাতেই Cr (মালিকের উত্তরের অপেক্ষা)।
+ * ⭐ ব্যাংকের Cr খোলা জের (ওভারড্রাফট) ব্যাংকের খাতে নয়, সেই ব্যাংকের ওভারড্রাফটের দায়-খাতে (মালিক, ১৩ অক্টোবর ২০২৬:
+ * "int standrad onuzayi koro"; IAS 32/IAS 7); নগদ আর মোবাইল-ব্যাংকিং Cr খোলা জের নেয়ই না।
  */
 final class AnOpeningBalanceSitsOnTheSideChosenTest extends TestCase
 {
@@ -52,10 +53,25 @@ final class AnOpeningBalanceSitsOnTheSideChosenTest extends TestCase
             ->assertSee('(Cr) 5,000.00', false);
     }
 
-    public function test_a_bank_can_open_overdrawn_on_cr_and_a_negative_amount_is_refused(): void
+    public function test_a_bank_opened_on_cr_lands_on_its_own_overdraft_liability_and_cash_refuses_cr(): void
     {
-        $this->assertSame(0, bccomp($this->open('1102-OD', 'credit', StandardChart::find(StandardChart::BANK)->id), '-5000', 4),
-            '⛔ ব্যাংকের ওভারড্রাফট Cr-এ বসেনি');
+        $this->assertSame(0, bccomp($this->open('1102-OD', 'credit', StandardChart::find(StandardChart::BANK)->id), '0', 4),
+            '⛔ ব্যাংকের খাত Cr খোলা জের নিল — ওভারড্রাফট দায়, ব্যাংকের ভিতরে নয়');
+
+        $bank = Account::query()->where('code', '1102-OD')->firstOrFail();
+        $overdraft = Account::query()->where('code', StandardChart::BANK_OVERDRAFT.'-'.$bank->id)->first();
+        $this->assertNotNull($overdraft, '⛔ এই ব্যাংকের ওভারড্রাফটের খাত তৈরি হয়নি');
+        $this->assertSame(Account::LIABILITY, $overdraft->type);
+        $this->assertSame((int) StandardChart::find(StandardChart::BANK_OVERDRAFT)->id, (int) $overdraft->parent_id);
+        $this->assertSame(0, bccomp($this->openingOf($overdraft), '-5000', 4), '⛔ ওভারড্রাফটের খাতে Cr ৫০০০ বসেনি');
+        $this->assertStringContainsString((string) $bank->name_bn, (string) $overdraft->name_bn, 'কোন ব্যাংকের ওভারড্রাফট, নামে নেই');
+
+        // ⓘ নগদের খাতে Cr — থামে
+        $this->from(route('accounts.coa.create'))->post(route('accounts.coa.store'), [
+            'code' => '1105-CR', 'name_en' => 'Wallet', 'name_bn' => 'ওয়ালেট', 'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id,
+            'opening_balance' => '5000', 'opening_side' => 'credit', 'opening_date' => now()->toDateString(),
+        ])->assertSessionHasErrors('opening_side');
+        $this->assertNull(Account::query()->where('code', '1105-CR')->first(), '⛔ মোবাইল-ব্যাংকিংয়ের খাত Cr খোলা জেরে তৈরি হল');
 
         $this->from(route('accounts.coa.create'))->post(route('accounts.coa.store'), [
             'code' => '2393', 'name_en' => 'Negative', 'name_bn' => 'ঋণাত্মক', 'parent_id' => $this->liabilityParent(),
@@ -79,7 +95,10 @@ final class AnOpeningBalanceSitsOnTheSideChosenTest extends TestCase
         $this->assertSame([], $importer->check($row));
         $importer->import($row);
 
-        $this->assertSame(0, bccomp($this->openingOf($bank), '-700', 4), '⛔ আমদানিতে Cr বলা জের Cr-এ বসেনি');
+        // ⓘ ব্যাংকে Cr — ওভারড্রাফটের খাতে, ব্যাংক শূন্যে
+        $this->assertSame(0, bccomp($this->openingOf($bank), '0', 4), '⛔ আমদানিতে ব্যাংকের খাত Cr খোলা জের নিল');
+        $overdraft = Account::query()->where('code', StandardChart::BANK_OVERDRAFT.'-'.$bank->id)->firstOrFail();
+        $this->assertSame(0, bccomp($this->openingOf($overdraft), '-700', 4), '⛔ আমদানিতে Cr বলা জের ওভারড্রাফটে বসেনি');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────

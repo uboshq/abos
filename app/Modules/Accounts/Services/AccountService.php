@@ -53,6 +53,37 @@ final class AccountService
      * "পাহারা বন্ধ করো", সেটা একদিন এমন জায়গায় বসে যেখানে পাহারাটা
      * সত্যিই দরকার ছিল।
      */
+    /**
+     * এই ব্যাংকের ওভারড্রাফটের খাত — না থাকলে তৈরি, ব্যাংক ওভারড্রাফটের দলের নিচে ([[StandardChart::BANK_OVERDRAFT]])।
+     *
+     * ⓘ কোড `2105-<ব্যাংকের id>` — নির্দিষ্ট, তাই একই ব্যাংকের দ্বিতীয়বারও একই খাত; নাম ব্যাংকের নামে, যাতে স্থিতিপত্রে কোন ব্যাংকের ঋণ
+     * তা পড়া যায় (মালিক, ১৩ অক্টোবর ২০২৬; [[AnOpeningBalanceSitsOnTheSideChosenTest]])। ⓘ দলটা না থাকলে (পুরনো কোম্পানি) ছক আগে বসে।
+     */
+    public function overdraftFor(Account $bank): Account
+    {
+        $code = StandardChart::BANK_OVERDRAFT.'-'.$bank->id;
+
+        $existing = Account::query()->where('code', $code)->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $group = StandardChart::find(StandardChart::BANK_OVERDRAFT);
+
+        if ($group === null) {
+            app(StandardChart::class)->install();
+            $group = StandardChart::find(StandardChart::BANK_OVERDRAFT);
+        }
+
+        return $this->create([
+            'code' => $code,
+            'name_en' => 'Overdraft — '.($bank->name_en ?: $bank->code),
+            'name_bn' => 'ওভারড্রাফট — '.($bank->name_bn ?: $bank->name_en ?: $bank->code),
+            'parent_id' => $group?->id,
+        ]);
+    }
+
     public function create(array $data, bool $withAKeeper = false): Account
     {
         return DB::transaction(function () use ($data, $withAKeeper) {
