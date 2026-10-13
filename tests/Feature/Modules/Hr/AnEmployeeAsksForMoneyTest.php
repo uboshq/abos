@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Hr;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\PhoneModules;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -224,6 +225,105 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $none = $this->member('none@claims.test', []);
         $this->actingAs($none);
         $this->get(route('hr.claim.create'))->assertForbidden();
+    }
+
+    /**
+     * ⛔ সইয়ের চাবি থাকলেই সহকর্মীর দাবি নয় — কেবল যে দাবিতে তিনি সইকারী (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     * ⓘ আগে `approval.decide` থাকলেই নাগালের যেকোনো দাবি, কারণ আর রসিদ খোলা যেত।
+     */
+    public function test_a_signer_of_other_papers_cannot_read_a_colleagues_claim_but_the_claims_own_signer_can(): void
+    {
+        $own = $this->member('own-signer@claims.test', ['approval.decide']);
+        $bystander = $this->member('bystander@claims.test', ['approval.decide']);
+        $flow = ApprovalFlow::query()->create(['module' => 'hr', 'action' => 'expense_claim', 'is_active' => true]);
+        ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $own->id]);
+        $this->app->forgetInstance(ApprovalEngine::class);
+
+        $claim = $this->submit(ExpenseClaim::EXPENSE, '650');
+        $this->assertSame(ExpenseClaim::SUBMITTED, $claim->status);
+
+        $this->actingAs($bystander);
+        $this->get(route('hr.claim.show', $claim))->assertForbidden();
+
+        $this->actingAs($own);
+        $this->get(route('hr.claim.show', $claim))->assertOk();
+
+        // ⓘ সই দেওয়ার পরেও নিজের সিদ্ধান্তের দাবিটা খোলে; অন্যজন তখনো নয়
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_id', $claim->id)
+            ->where('approvable_type', $claim->getMorphClass())->where('status', Approval::PENDING)->sole(), $own);
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->fresh()->status);
+        $this->get(route('hr.claim.show', $claim))->assertOk();
+
+        $this->actingAs($bystander);
+        $this->get(route('hr.claim.show', $claim))->assertForbidden();
+    }
+
+    /**
+     * ⛔ ক্যাশিয়ারের খসড়া বা পাকা ভাউচার বাতিল হলেও দাবি দেওয়া যায় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে দাবি "অনুমোদিত" হয়ে বাতিল ভাউচারে জোড়া থাকত, নতুন খসড়ার কোনো পথ ছিল না।
+     */
+    public function test_a_cancelled_payment_voucher_leaves_a_fresh_draft_so_the_claim_can_still_be_paid(): void
+    {
+        $claim = $this->signed($this->submit(ExpenseClaim::EXPENSE, '1200'));
+        $first = $claim->paymentVoucher;
+
+        $this->actingAs($this->cashier);
+        app(VoucherService::class)->cancel($first->fresh(), 'wrong till');
+
+        $claim->refresh();
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->status);
+        $this->assertNotSame((int) $first->id, (int) $claim->payment_voucher_id, '⛔ বাতিল খসড়ার পরে নতুন খসড়া হয়নি — দাবি আটকে');
+        $second = $claim->paymentVoucher;
+        $this->assertTrue($second->isDraft());
+        $this->assertMoney('1200', $second->lines()->where('account_id', $this->expense->id)->sum('debit'), 'নতুন খসড়ায় একই অঙ্ক');
+
+        app(VoucherService::class)->post($second->fresh());
+        $this->assertSame(ExpenseClaim::PAID, $claim->fresh()->status, '⛔ নতুন খসড়া পাকা হলেও দাবি দেওয়া হয়নি');
+
+        // ⓘ পাকা ভাউচার বাতিল — দাবি আবার অনুমোদিত, আর আবার একটা খসড়া; দুইটা খোলা খসড়া নয়
+        app(VoucherService::class)->cancel($second->fresh(), 'paid by mistake');
+        $claim->refresh();
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->status);
+        $this->assertTrue($claim->paymentVoucher->isDraft(), '⛔ পাকা ভাউচার বাতিলের পরে দেওয়ার খসড়া নেই');
+        $this->assertSame(1, Voucher::acrossBranches()->where('against_type', ExpenseClaim::drillSourceType())
+            ->where('against_id', $claim->id)->where('status', DocumentStatus::DRAFT)->count(), '⛔ একই দাবির দুইটা খোলা খসড়া');
+    }
+
+    /**
+     * ⛔ এক লগইন এক কর্মীতে — ফর্মের যাচাই এড়িয়েও (দুইটা সেভ একসাথে) — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে কেবল ফর্মের `unique` ছিল, লেনদেনের বাইরে; দুই ট্যাবে একসাথে সেভ করলে একই লগইন দুই কর্মীতে বসত।
+     */
+    public function test_one_login_cannot_be_tied_to_a_second_employee_even_past_the_form(): void
+    {
+        $service = app(EmployeeService::class);
+
+        $this->assertRefused(fn () => $service->create(['code' => 'EMP-TWIN', 'name_en' => 'Twin', 'joining_date' => '2026-02-01',
+            'payment_method' => 'cash', 'user_id' => $this->worker->id]), 'user_id', '⛔ একই লগইনে দ্বিতীয় কর্মী খোলা গেল');
+
+        $other = $service->create(['code' => 'EMP-OTHER', 'name_en' => 'Other', 'joining_date' => '2026-02-01', 'payment_method' => 'cash']);
+        $this->assertRefused(fn () => $service->update($other, ['user_id' => $this->worker->id]), 'user_id', '⛔ সম্পাদনায় একই লগইন দ্বিতীয় কর্মীতে বসল');
+        $this->assertNull($other->fresh()->user_id);
+
+        // ⓘ নিজের জোড়া আবার সেভ করা আটকায় না
+        $service->update($this->employee->fresh(), ['user_id' => $this->worker->id, 'mobile' => '01700000001']);
+        $this->assertSame((int) $this->worker->id, (int) $this->employee->fresh()->user_id);
+    }
+
+    /**
+     * ⓘ ওয়েবের দাবির ফর্মে দুইবার চাপ — একটাই দাবি (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। নিরীক্ষা ভেবেছিল ওয়েবে পাহারা নেই;
+     * আসলে `@csrf` একবারের টোকেন বসায় আর [[OneSubmitPerForm]] সব ওয়েব জমায় খাটে। এই পরীক্ষা পাহারাটা দাবির ফর্মে বেঁধে রাখে।
+     */
+    public function test_a_double_click_on_the_web_claim_form_makes_one_claim(): void
+    {
+        $this->actingAs($this->worker);
+        $this->get(route('hr.claim.create'))->assertOk()->assertSee('name="'.FormIsNotSubmittedTwice::FIELD.'"', false);
+
+        $token = app(FormIsNotSubmittedTwice::class)->newToken();
+        $form = [FormIsNotSubmittedTwice::FIELD => $token] + $this->data(ExpenseClaim::EXPENSE, '300');
+        $this->post(route('hr.claim.store'), $form)->assertSessionHasNoErrors()->assertRedirect();
+        $this->post(route('hr.claim.store'), $form)->assertRedirect();
+
+        $this->assertSame(1, ExpenseClaim::query()->count(), '⛔ দাবির ফর্মে দুইবার চাপে দুইটা দাবি');
     }
 
     public function test_the_roles_that_mark_their_own_attendance_are_given_the_claim_key(): void

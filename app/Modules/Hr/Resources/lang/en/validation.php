@@ -37,6 +37,8 @@ return [
     'leave_own_approval' => 'You cannot approve your own leave — ask another manager or the owner.',
     'head_account_earning' => 'An earning head can only point at an active, postable expense account — not cash, bank or any other kind.',
     'head_account_deduction' => 'A deduction head can only point at an active, postable liability account or the employee advance account — not cash, bank or income.',
+    'user_taken' => 'This user is already tied to another employee — one login belongs to one employee only.',
+    'branch_required' => 'Pick a branch — your reach is limited to some branches, so an employee cannot be left without one.',
     'user_not_in_company' => 'This user is not in this company — only a user of this company can be tied to an employee.',
     'manager_out_of_reach' => 'This manager is outside your branch reach — you cannot place someone under them.',
     'leave_month_paid' => 'The :month payroll (:no) is already confirmed, so this leave cannot be withdrawn. Cancel that month\'s payroll run first.',

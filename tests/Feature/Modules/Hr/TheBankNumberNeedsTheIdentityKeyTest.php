@@ -111,6 +111,28 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $this->assertSame('5555555555555', (string) $employee->fresh()->bank_account_no, 'চাবি থাকলে বদলায়, আগের মতো');
     }
 
+    /**
+     * ⛔ চাবি ছাড়া পুরো NID লিখে খুঁজলে কর্মী মেলে না — নাহলে "এই NID অমুকের" জানা যেত (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+     * [[Employee::scopeSearch()]])। চাবি থাকলে মেলে, আগের মতো।
+     */
+    public function test_a_clerk_without_the_key_cannot_find_an_employee_by_the_full_id_card_number(): void
+    {
+        $nid = '19901234567890';
+        $employee = \App\Modules\Hr\Models\Employee::query()->where('code', 'EMP-BANK')->firstOrFail();
+        app(EmployeeService::class)->update($employee, ['national_id' => $nid]);
+
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->give($clerk, 'hr.employee.view');
+
+        $this->as($clerk);
+        $this->assertSame([], \App\Modules\Hr\Models\Employee::query()->search($nid)->pluck('code')->all(), '⛔ পরিচয়ের চাবি ছাড়া NID দিয়ে কর্মী মিলল');
+
+        $this->give($clerk, 'hr.identity.view');
+        $this->as($clerk);
+        $this->assertSame(['EMP-BANK'], \App\Modules\Hr\Models\Employee::query()->search($nid)->pluck('code')->all(), 'চাবি থাকলে NID দিয়ে মেলে');
+    }
+
     /** স্লিপের ছাপা কাগজের ব্যাংক-নম্বরের ঘর — PDF যে নথি থেকে আঁকা হয়, সেখান থেকেই */
     private function printedAccount(Payslip $slip): ?string
     {

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Hr;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -23,6 +25,7 @@ use App\Modules\Hr\Support\AdvanceBalance;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Concerns\PutsMoneyInTheTill;
@@ -118,6 +121,37 @@ final class AnUnspentAdvanceComesBackInCashTest extends TestCase
         $this->actingAs($this->cashier);
         $this->post(route('hr.claim.take_back', $expense), ['amount' => '100'])
             ->assertSessionHasErrors(['amount' => __('hr::claim.return_only_paid_advance')]);
+    }
+
+    /**
+     * ⛔ অপেক্ষার খসড়া হেডারের শাখা বদলালেও চোখে পড়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে খোঁজাটা হেডারের শাখা মানত: দাবির শাখায় একটা খসড়া, হেডারে অন্য শাখা বাছলে দ্বিতীয়টা বসত; দুইটা পাকা হলে অগ্রিম ঋণাত্মক।
+     */
+    public function test_a_second_return_draft_is_refused_even_with_another_branch_in_the_header(): void
+    {
+        $advance = $this->paidAdvance('3000');
+        $company = Company::query()->whereKey(CompanyContext::id())->firstOrFail();
+
+        $this->actingAs($this->cashier);
+        $first = app(ExpenseClaimService::class)->takeBackAdvance($advance, '3000');
+        $this->assertTrue($first->isDraft());
+
+        $other = Branch::query()->withoutGlobalScopes()->where('company_id', $company->id)
+            ->whereKeyNot((int) $first->branch_id)->orderBy('id')->firstOrFail();
+        $this->cashier->forceFill(['view_all_branches' => false, 'current_branch_id' => $other->id])->save();
+        CompanyContext::set($company->id, $other->id);
+        app(DataScope::class)->forget();
+        $this->actingAs($this->cashier->fresh());
+        $this->assertNull(Voucher::query()->find($first->id), 'দৃশ্যটাই বানানো যায়নি — প্রথম খসড়া হেডারের শাখায় দেখা যাচ্ছে');
+
+        try {
+            app(ExpenseClaimService::class)->takeBackAdvance($advance->fresh(), '3000');
+            $this->fail('⛔ অন্য শাখা হেডারে থাকায় একই অগ্রিমের দ্বিতীয় ফেরতের খসড়া বসল');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('amount', $e->errors());
+        }
+
+        $this->assertSame(1, Voucher::acrossBranches()->where('type', Voucher::RECEIPT)->where('status', 'draft')->count(), '⛔ ফেরতের খসড়া দুইটা');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
