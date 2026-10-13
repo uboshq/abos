@@ -50,6 +50,8 @@ import '../../features/finance/finance_screens.dart';
 import '../../features/promotion/offers_screen.dart';
 import '../../features/self_service/self_service_screens.dart';
 import '../menu/module_gate.dart';
+import '../web_inside/web_inside.dart';
+import '../../features/web_inside/web_inside_screen.dart';
 
 /// Turns `ref.listen(authStateProvider, ...)` into the [Listenable] go_router
 /// wants for [GoRouter.refreshListenable] — go_router has no native awareness
@@ -403,6 +405,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           _framed(
             path: 'leave',
             builder: (context, state) => const ModuleGateView(path: 'leave', child: LeaveScreen()),
+          ),
+          // ── ⭐ ওয়েবের বাকি সব পর্দা, অ্যাপের ভিতরে (মালিক, ১৩ অক্টোবর ২০২৬: "web e na dhuke jar jar kaj 100% app ei korte pare") ──
+          // ⓘ সুইচ সার্ভারে: মেনু-সারির `web` পথ আর একবারের চাবি দুটোই কোম্পানির সুইচ, মানুষের চাবি আর ফোনের মডিউল-সুইচ মানে
+          _framed(
+            path: '${WebPaths.segment}/:code',
+            builder: (context, state) {
+              final code = state.pathParameters['code'] ?? '';
+              return WebInsideScreen(
+                webPath: WebPaths.webPathOf(code),
+                title: WebPaths.titleOf('${WebPaths.segment}/$code'),
+              );
+            },
           ),
           _framed(
             path: 'payslips',

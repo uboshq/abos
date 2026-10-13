@@ -4,6 +4,7 @@ import '../../core/navigation/nav_catalog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import 'nav_search.dart' show webRowNote;
 
 /// What a row or tile can tell about itself beyond its name — the counts the
 /// app already knows (nothing here asks the server anything).
@@ -229,7 +230,9 @@ class ModuleMenuPage extends StatelessWidget {
                 _MenuRow(
                   row: group.rows[i],
                   count: counts.byPath[group.rows[i].path] ?? 0,
-                  quiet: counts.quietByPath[group.rows[i].path],
+                  // ⭐ ওয়েবের পর্দা — নামের নিচে ছোট ধূসর লেখা (১৩ অক্টোবর ২০২৬)
+                  quiet: counts.quietByPath[group.rows[i].path] ??
+                      (group.rows[i].web ? webRowNote : null),
                   favourite: favourites.contains(group.rows[i].path),
                   onTap: () => onRow(group.rows[i]),
                   onLongPress: group.rows[i].path == null

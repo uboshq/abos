@@ -306,6 +306,11 @@ final class VoucherService
      */
     public function update(Voucher $voucher, array $data, array $lines, bool $byHand = false): Voucher
     {
+        // ⛔ অন্য কাগজের ভাউচার এখান থেকে বদলায় না ([[ownerOf()]]; [[AnotherPapersVoucherIsNotTouchedHereTest]])
+        if ($byHand && ($owner = $this->ownerOf($voucher)) !== null) {
+            throw ValidationException::withMessages(['status' => __('accounts::revision.owned_elsewhere', ['no' => $voucher->document_no, 'module' => $owner])]);
+        }
+
         $this->assertEditable($voucher);
 
         $this->assertNoChequeReceived($voucher->type,
@@ -345,6 +350,11 @@ final class VoucherService
      */
     public function post(Voucher $voucher, bool $byHand = false): Voucher
     {
+        // ⛔ অন্য কাগজের ভাউচার হাতে পাকা নয় — নিজের পথে, নিজের সইয়ে ([[ownerOf()]]; [[AnotherPapersVoucherIsNotTouchedHereTest]])
+        if ($byHand && ($owner = $this->ownerOf($voucher)) !== null) {
+            throw ValidationException::withMessages(['status' => __('accounts::revision.owned_elsewhere', ['no' => $voucher->document_no, 'module' => $owner])]);
+        }
+
         if ($voucher->isPosted()) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::validation.already_posted', ['no' => $voucher->document_no]),
@@ -501,6 +511,14 @@ final class VoucherService
 
         if ($document === null) {
             throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_unknown')]);
+        }
+
+        /*
+         * ⛔ বন্ধ কাগজ আর ভাউচার নেয় না — অর্থের নিরীক্ষা (fe, ১৪ অক্টোবর ২০২৬; [[AClosedFacilityTakesNoVoucherTest]])। ⓘ বন্ধ ব্যাংক
+         * সুবিধার বিপরীতে Accounts-এর ভাউচারে টাকা তোলা যেত; সুবিধার খাত সব ঋণের ভাগের, তাই খাত নয় — কাগজটাকেই প্রশ্ন ([[AcceptsVouchers]])।
+         */
+        if ($document instanceof \App\Core\Contracts\AcceptsVouchers && ! $document->acceptsVouchers()) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_closed')]);
         }
 
         if (! $document instanceof SettlementTerms) {
@@ -803,10 +821,54 @@ final class VoucherService
      *  · আন্তঃকোম্পানির এক পাশ — দুই পাশ একসাথে না বদলালে দুই কোম্পানি আর মেলে না
      *  · ব্যাংকে মেলানো — মেলানোটা পুরনো অঙ্কে দাঁড়িয়ে
      */
+    /**
+     * ⛔ এই ভাউচার অন্য কোনো কাগজের কি না — আর হলে কোন মডিউলের (অর্থের নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnotherPapersVoucherIsNotTouchedHereTest]])।
+     *
+     * ⓘ জমা, ঋণ, ভাড়া, মূলধন, বীমা, খরচের দাবি, গাড়িভাড়া — প্রত্যেকে নিজের ভাউচার বানিয়ে নিজের সারিতে `…voucher_id` রাখে। Accounts-এর
+     * পর্দা থেকে সেই ভাউচার বদলালে বা আলাদা পাকা করলে মূল কাগজ জানত না, আর তার সই এড়ানো যেত। ⓘ Accounts কোনো মডিউলের নাম জানে না
+     * (নির্ভরতা নেই), তাই উত্তর ডাটাবেসের নিজের তালিকা থেকে: যে টেবিলে `…voucher_id` ঘর আছে (ভাউচারের নিজের সন্তান বাদ), সেখানে এই
+     * ভাউচারের সারি থাকলেই সে অন্য কাগজের। মডিউলের নাম টেবিলের আগাম অংশ থেকে, না চিনলে "অন্য মডিউল"।
+     */
+    private function ownerOf(Voucher $voucher): ?string
+    {
+        /*
+         * ⓘ টেবিলের তালিকা একবার, ক্যাশে — শেষ মাইগ্রেশনের নাম চাবিতে, তাই নতুন মাইগ্রেশন এলে নিজে থেকে নতুন তালিকা (fe, ১৪ অক্টোবর ২০২৬)।
+         * ⓘ খোঁজা চলে কেবল হাতের পাকা/সম্পাদনা আর সংশোধনের প্রশ্নে, ইঞ্জিনের প্রতিটা দাখিলায় নয়। ⓘ MariaDB/MySQL দুটোতেই
+         * `information_schema.COLUMNS`, চলতি ডাটাবেস (`DATABASE()`) ধরে ছাঁকা; টেবিলের নাম ছোট হাতে, তাই অক্ষরের নিয়মে আটকায় না।
+         */
+        $version = (string) DB::table('migrations')->max('migration');
+        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), fn () => collect(DB::select(
+            "SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME LIKE '%voucher\_id'"
+        ))->map(fn ($r) => ['t' => strtolower((string) $r->t), 'c' => (string) $r->c])
+            ->reject(fn (array $r) => in_array($r['t'], ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true))
+            ->values()->all());
+
+        foreach ($columns as $row) {
+            $table = $row['t'];
+            $held = DB::table($table)
+                ->where('company_id', $voucher->company_id)
+                ->where($row['c'], $voucher->getKey())
+                ->exists();
+
+            if ($held) {
+                $prefix = strtok($table, '_');
+                $key = 'accounts::revision.module_'.$prefix;
+
+                return __($key) !== $key ? __($key) : __('accounts::revision.module_other');
+            }
+        }
+
+        return null;
+    }
+
     public function whyNotRevisable(Voucher $voucher): ?string
     {
         if ($voucher->origin === Voucher::ORIGIN_COUNTER) {
             return __('accounts::revision.from_counter', ['no' => $voucher->document_no]);
+        }
+
+        if (($owner = $this->ownerOf($voucher)) !== null) {
+            return __('accounts::revision.owned_elsewhere', ['no' => $voucher->document_no, 'module' => $owner]);
         }
 
         if (filled($voucher->against_type) && (int) $voucher->against_id > 0) {
@@ -1587,8 +1649,16 @@ final class VoucherService
      * "নিষ্ক্রিয় খাতে নতুন এন্ট্রি নয়" — এগুলো হিসাবের ছকের নিয়ম, আর
      * সেগুলো এই মডিউলের দায়িত্ব।
      */
+    /** @return list<int> হাতধারের খাত আর নিচের সব ([[StandardChart::HAND_LOAN]]) */
+    private function handLoanIds(): array
+    {
+        return array_map('intval', StandardChart::find(StandardChart::HAND_LOAN)?->selfAndDescendants()->pluck('id')->all() ?? []);
+    }
+
     private function assertLinesArePostable(Voucher $voucher): void
     {
+        $handLoans = null;
+
         foreach ($voucher->lines as $line) {
             $account = $line->account;
 
@@ -1607,6 +1677,19 @@ final class VoucherService
             if (! $account->is_active) {
                 throw ValidationException::withMessages([
                     'lines' => __('accounts::validation.inactive_account', ['name' => $account->label()]),
+                ]);
+            }
+
+            /*
+             * ⛔ হাতধারে মানুষের নাম বাধ্য — লাইভের রাতের যাচাই, ১৩ অক্টোবর ২০২৬ (AVA RCV-0001: টাকা-গ্রহণের ভাউচারে ১১৭০ বেছে নাম
+             * ছাড়া ৯,০০০; [[AHandLoanLineNamesItsPersonTest]])। ⓘ নাম ছাড়া হাতধার কার কাছে পাওনা কেউ বলতে পারে না, আর হাতধার খাতের জের
+             * মানুষদের যোগের সাথে আর মেলে না। নাম সারিতে, নয়তো মাথার পক্ষ "ব্যক্তি" হলে সেটা।
+             */
+            if (in_array((int) $account->id, $handLoans ??= $this->handLoanIds(), true)
+                && blank($line->party_id)
+                && ! ($voucher->party_type === 'person' && filled($voucher->party_id))) {
+                throw ValidationException::withMessages([
+                    'lines' => __('accounts::validation.hand_loan_needs_person', ['name' => $account->label()]),
                 ]);
             }
         }

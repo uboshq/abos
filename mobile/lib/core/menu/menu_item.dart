@@ -11,6 +11,10 @@ class MenuItem {
     required this.icon,
     required this.routeName,
     this.planned = false,
+    this.module,
+    this.moduleLabel,
+    this.group,
+    this.webPath,
   });
 
   final String key;
@@ -29,4 +33,13 @@ class MenuItem {
   /// and unclickable rather than omitted, matching the web side's own
   /// convention (see the `/me` briefing's point ৪).
   final bool planned;
+
+  /// ⭐ A web screen opened inside the app (owner, 13 Oct 2026) — the server's module code and name, the menu group
+  /// it stands under on the web (`transactions`, `master`, …) and its web path. Null for every native tile.
+  final String? module;
+  final String? moduleLabel;
+  final String? group;
+  final String? webPath;
+
+  bool get isWeb => webPath != null;
 }

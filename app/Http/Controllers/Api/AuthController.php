@@ -198,12 +198,20 @@ class AuthController extends Controller
             return response()->json(['message' => __('auth.two_step_set_up_on_web_first')], 403);
         }
 
-        $this->sync->register(
+        $device = $this->sync->register(
             $user,
             $data['deviceId'],
             $data['appVersion'] ?? null,
             $data['platform'] ?? null,
         );
+
+        /*
+         * ⭐ দুই ধাপ চালু থাকলে এই লগইন কোডটা পেরিয়েছে ([[CredentialCheck::verify()]]) — হ্যান্ডসেটে দাগ, যাতে অ্যাপের ভিতরের
+         * ওয়েব আবার কোড না চায় ([[WebInsideApp::secondStepFresh()]], ১৩ অক্টোবর ২০২৬)।
+         */
+        if ($this->mfa->isOn($user)) {
+            SyncDevice::query()->withoutGlobalScopes()->whereKey($device->getKey())->update(['second_step_at' => now()]);
+        }
 
         // ⛔ নতুন লগইনে ফোনের ক্যাশ খালি — তাই জলচিহ্নও গোড়ায় ([[SyncService::startOver()]])
         $this->sync->startOver($data['deviceId']);

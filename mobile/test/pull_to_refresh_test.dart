@@ -80,6 +80,9 @@ void main() {
     // search box reporting no match, where a pull would fetch nothing the
     // typing did not already decide.
     'new_order_screen.dart',
+    // ⭐ অ্যাপের ভিতরের ওয়েব-জানালা (১৩ অক্টোবর ২০২৬) — ভুলের পর্দায় নিজের "আবার চেষ্টা করুন" বোতাম, কারণ
+    // সেখানে টান দিয়ে চাওয়ার মতো কোনো তালিকা নেই, আছে একবারের চাবি; আর খোলা পাতার টান পাতার ভিতরেই ([WebFiles]).
+    'web_inside_screen.dart',
   };
 
   test('every screen that can draw an EmptyState has been considered', () {

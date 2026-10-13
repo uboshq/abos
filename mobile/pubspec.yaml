@@ -120,6 +120,13 @@ dependencies:
   firebase_messaging: ^16.7.0
   local_auth: ^3.0.2
   local_auth_android: ^2.2.0
+  # ⭐ অ্যাপের ভিতরে ওয়েবের পর্দা (মালিক, ১৩ অক্টোবর ২০২৬: "web e na dhuke jar jar kaj 100% app ei korte pare")।
+  # Flutter দলের নিজের প্যাকেজ, BSD-3; Android-এর সিস্টেম WebView। lib/core/web_inside/ দেখুন।
+  webview_flutter: ^4.14.0
+  # ফাইল বাছাই, ক্যামেরা আর ডাউনলোডের নেটিভ ডাক (Android) — webview_flutter-এর নিজের Android অংশ, একই সংস্করণ।
+  webview_flutter_android: ^4.14.0
+  # ওয়েবের ফর্মে নথি জোড়া (PDF/ছবি/এক্সেল) — Flutter দলের প্যাকেজ, BSD-3।
+  file_selector: ^1.0.3
 
 
 dev_dependencies:
