@@ -79,7 +79,7 @@ final class GatePassService
         }
 
         return DB::transaction(function () use ($pass, $reason) {
-            $pass = GatePass::query()->lockForUpdate()->findOrFail($pass->id);
+            $pass = GatePass::acrossBranches()->lockForUpdate()->findOrFail($pass->id);
 
             if ($pass->isCancelled()) {
                 throw ValidationException::withMessages([

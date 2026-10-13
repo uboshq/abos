@@ -53,7 +53,7 @@ final class DocumentSignatures
     public function request(Document $document, ?string $note): Approval
     {
         $approval = DB::transaction(function () use ($document, $note) {
-            $locked = Document::query()->whereKey($document->getKey())->lockForUpdate()->firstOrFail();
+            $locked = Document::acrossBranches()->whereKey($document->getKey())->lockForUpdate()->firstOrFail();
             $version = $locked->currentVersion;
 
             if ($version === null || $locked->isArchived()) {

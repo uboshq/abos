@@ -110,9 +110,9 @@ final class SaleEditor
         }
 
         return DB::transaction(function () use ($invoice, $data, $lines, $gifts) {
-            $invoice = SalesInvoice::query()->lockForUpdate()->findOrFail($invoice->id);
+            $invoice = SalesInvoice::acrossBranches()->lockForUpdate()->findOrFail($invoice->id);
             $challan = $this->assertEditable($invoice);
-            $challan = DeliveryChallan::query()->lockForUpdate()->findOrFail($challan->id);
+            $challan = DeliveryChallan::acrossBranches()->lockForUpdate()->findOrFail($challan->id);
 
             $numbers = [$invoice->document_no, $challan->document_no, $invoice->sale_no];
             $before = (string) $invoice->total;

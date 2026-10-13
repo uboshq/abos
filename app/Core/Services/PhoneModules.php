@@ -67,7 +67,12 @@ final class PhoneModules
      * ⭐ মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ — সমন্বয়কের সিদ্ধান্ত, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu")। ⓘ দরজা
      * এমনিতেই চাবিতে (`executive.view`, `credit_control.view`) — কেবল মালিক আর যাঁকে তিনি দেন; সুইচটা কোম্পানি ধরে বন্ধ করা যায়।
      */
-    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control'];
+    /*
+     * ⭐ অর্থ, ডকুমেন্টস, প্রমোশন আর HR-ও ডিফল্টে চালু — মালিক, ১৩ অক্টোবর ২০২৬: *"ok tai koro"*। ⓘ চালু মানে কেবল "দেখানো যায়":
+     * প্রতিটা টাইল আর দরজা ওয়েবের নিজের চাবিতে, চাবি ছাড়া মেনুতে কিছু নেই আর দরজায় ৪০৩ (TheRestOfTheModulesAreOnThePhoneByDefaultTest)।
+     */
+    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control',
+        'finance', 'documents', 'promotion', 'hr'];
 
     /**
      * ⭐ যে মডিউলের ফোনের পর্দা কেবল নিজের দরজা ডাকে — মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ (১৩ অক্টোবর ২০২৬)।
@@ -76,7 +81,12 @@ final class PhoneModules
      * থাকলেও নির্ভরতা ধরে বিক্রয়/অনুমোদন/মজুদের দরজা খোলা থাকে না — নইলে নিজে থেকে চালু এই দুইটার জন্য কোম্পানির বিক্রয় বা
      * অনুমোদনের সুইচ বন্ধ করা আর কিছুই বন্ধ করত না (ThePhoneShowedEveryModuleTest ধরেছে)।
      */
-    public const OWN_DOORS_ONLY = ['executive', 'credit_control'];
+    /*
+     * ⭐ অর্থ, ডকুমেন্টস, প্রমোশন, HR-এর ফোনের পর্দাও কেবল নিজের দরজা ডাকে (`/finance`, `/documents/library`, `/promotion`, `/hr`, আর
+     * HR-এর হাজিরার সিঙ্ক) — ডিফল্টে চালু হওয়ায় এদের নির্ভরতা (হিসাব, মজুদ, গ্রাহক) ধরে কোম্পানির বন্ধ রাখা দরজা আবার খুলত।
+     * ⓘ ডকুমেন্টের সই অনুমোদনের দরজায় যায় — সেটা অনুমোদনের নিজের সুইচে, এখানে খোলে না।
+     */
+    public const OWN_DOORS_ONLY = ['executive', 'credit_control', 'finance', 'documents', 'promotion', 'hr'];
 
     public function __construct(
         private readonly ModuleRegistry $registry,

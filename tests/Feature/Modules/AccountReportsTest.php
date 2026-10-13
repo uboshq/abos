@@ -329,8 +329,9 @@ class AccountReportsTest extends TestCase
     {
         $result = $this->report('accounts.inflow');
 
-        $this->assertSame(2, $result->totalRows, 'ঢোকা টাকার সারি দুইটা হওয়ার কথা');
-        $this->assertSame('25000.00', $result->totals['debit']);
+        // ⭐ কেবল বাইরে থেকে আসা — নগদ থেকে ব্যাংকে ৫,০০০ আদায় নয় (Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheInflowListIsMoneyFromOutsideTest]])
+        $this->assertSame(1, $result->totalRows, 'ঢোকা টাকার সারি একটা হওয়ার কথা — কেবল রসিদ');
+        $this->assertSame('20000.00', $result->totals['debit']);
     }
 
     /**
@@ -346,9 +347,10 @@ class AccountReportsTest extends TestCase
 
         $amounts = array_map(fn ($r) => (string) $r['debit'], $rows);
 
+        // ⛔ কন্ট্রা আদায়ই নয় — ব্যাংকের দিকটাও না (Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬); মাসিক নগদের পাতার একই নিয়ম
         $this->assertContains('20000.0000', $amounts);
-        $this->assertContains('5000.0000', $amounts);
-        $this->assertCount(2, $amounts);
+        $this->assertNotContains('5000.0000', $amounts, '⛔ নিজের দুই খাতের স্থানান্তর আদায় হিসেবে গোনা হল');
+        $this->assertCount(1, $amounts);
     }
 
     public function test_the_profit_and_loss_holds_only_income_and_expense(): void

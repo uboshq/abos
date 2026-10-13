@@ -112,11 +112,11 @@ class RfqController extends Controller implements HasMiddleware
             'terms' => ['nullable', 'string', 'max:2000'],
             'narration' => ['nullable', 'string', 'max:2000'],
 
-            'suppliers' => ['required', 'array', 'min:1'],
+            'suppliers' => ['required', 'array', 'min:1', 'max:100'],
             'suppliers.*' => ['integer',
                 Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
 
-            'lines' => ['required', 'array', 'min:1'],
+            'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['nullable', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['nullable', 'numeric', 'gt:0'],
@@ -202,7 +202,7 @@ class RfqController extends Controller implements HasMiddleware
             'other_charges' => ['nullable', 'numeric', 'min:0'],
             'narration' => ['nullable', 'string', 'max:2000'],
 
-            'lines' => ['required', 'array', 'min:1'],
+            'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['nullable', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['nullable', 'numeric', 'gt:0'],

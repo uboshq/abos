@@ -906,7 +906,7 @@ final class DirectSaleService
     public function withdrawHeld(SalesInvoice $invoice, User $user): void
     {
         DB::transaction(function () use ($invoice, $user) {
-            $invoice = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
+            $invoice = SalesInvoice::acrossBranches()->lockForUpdate()->find($invoice->getKey());
 
             if ($invoice === null
                 || $invoice->counter_screen === null
@@ -1106,7 +1106,7 @@ final class DirectSaleService
     public function discardParked(SalesInvoice $invoice, string $reason): void
     {
         DB::transaction(function () use ($invoice, $reason) {
-            $invoice = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
+            $invoice = SalesInvoice::acrossBranches()->lockForUpdate()->find($invoice->getKey());
 
             /* ⓘ কাউন্টারের যেকোনো খোলা খসড়া — চিহ্ন থাকুক বা না থাকুক (তালিকার "মুছুন");
                ⛔ সইয়ের অপেক্ষায় থাকলে নয় — ওটা অনুমোদনের পাতায় প্রত্যাহার হয় */

@@ -77,6 +77,8 @@ return [
     'is_cash' => 'Cash account',
     'is_bank' => 'Bank or MFS account',
     'opening_balance' => 'Opening balance',
+    'opening_side' => 'Opening side',
+    'opening_side_normal' => "The account's normal side",
     'opening_date' => 'Opening date',
     'account_number' => 'Account number',
     'bank_name' => 'Bank name',

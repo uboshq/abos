@@ -417,8 +417,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * দামি ভুল হয়ে এসেছে ([[ErrorJournal]]-র উপরের কারণটা দেখুন)।
          */
         $exceptions->render(function (PostingException $e, Request $request) {
+            // ⛔ মানুষের ভাষায় — ইংরেজি কারণ কেবল লগে ([[PostingException::forPeople()]]; [[APostingRefusalSpeaksBanglaTest]])
             if ($request->expectsJson()) {
-                return response()->json(['message' => $e->getMessage()], 422);
+                return response()->json(['message' => $e->forPeople()], 422);
             }
 
             /*
@@ -428,7 +429,7 @@ return Application::configure(basePath: dirname(__DIR__))
              */
             return back()
                 ->withInput()
-                ->withErrors(['posting' => $e->getMessage()]);
+                ->withErrors(['posting' => $e->forPeople()]);
         });
 
         /*

@@ -120,8 +120,9 @@
                 </p>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <x-ui.field name="opening_balance" type="number" step="0.01" inputmode="decimal"
-                                :label="__('accounts::field.opening_balance')"
+                    {{-- ⓘ নগদ কেবল Dr — হাতের নগদ ঋণাত্মক হয় না, তাই বাছাই নেই ([[AnOpeningBalanceSitsOnTheSideChosenTest]]) --}}
+                    <x-ui.field name="opening_balance" type="number" step="0.01" min="0" inputmode="decimal"
+                                :label="__('accounts::field.opening_balance').' (Dr)'"
                                 :value="old('opening_balance', 0)" numeric />
                     <x-ui.field name="opening_date" type="date"
                                 :label="__('accounts::field.opening_date')"
