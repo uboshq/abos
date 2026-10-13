@@ -20,6 +20,7 @@ return [
     'has_entries_cannot_group' => 'This account has transactions, so it cannot become a group — '
         .'groups take no entries of their own, and the existing ones would stop being counted.',
     'has_children_must_stay_group' => 'This account holds other accounts, so it must stay a group.',
+    'money_kind_cannot_flip' => 'This account has entries — it cannot move between money accounts (cash, bank, mobile money) and ordinary accounts.',
     'has_entries_cannot_retype' => 'This account has transactions, so its type cannot change — '
         .'the existing entries would move to a different report.',
     'system_account_locked' => '":name" is a system account. Sales, purchases and other modules '

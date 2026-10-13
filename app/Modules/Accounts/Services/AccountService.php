@@ -164,6 +164,22 @@ final class AccountService
             }
 
             /*
+             * ⛔ টাকার খাত টাকা-নয় হয় না, টাকা-নয় খাত টাকার হয় না — লেনদেন থাকলে (Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[AMoneyAccountStaysMoneyOnceItHasEntriesTest]])। ⓘ টাকার ধরন আসে বাবা থেকে: নগদের খাত সাধারণ সম্পদের নিচে সরালে "হাতের
+             * নগদ শূন্যের নিচে নয়" আর "টাকার খাতে পক্ষ নয়" পাহারা চুপচাপ উঠে যেত; উল্টোটায় পক্ষসহ পুরনো সারির খাত রক্ষকহীন নগদ
+             * হত। ব্যাংক ↔ মোবাইল-ব্যাংকিং আগের মতোই চলে ([[cascadeMoneyKind()]])।
+             */
+            $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $account->code;
+            $newKind = $this->moneyKindFor($code, $parent);
+
+            if (($account->money_kind === null) !== ($newKind === null)
+                && \App\Models\LedgerEntry::query()->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))->exists()) {
+                throw ValidationException::withMessages([
+                    'parent_id' => __('accounts::validation.money_kind_cannot_flip'),
+                ]);
+            }
+
+            /*
              * গ্রুপ ↔ সাধারণ বদলানোর দুইটা নিষেধ।
              *
              * এন্ট্রি আছে এমন খাত গ্রুপ বানানো যায় না: গ্রুপে সরাসরি এন্ট্রি
