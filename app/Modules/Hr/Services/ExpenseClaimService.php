@@ -223,7 +223,7 @@ final class ExpenseClaimService
              */
             if ($this->gone($employee)) {
                 $claim->forceFill(['status' => ExpenseClaim::REJECTED, 'decided_at' => now()])->save();
-                app(AuditEngine::class)->recordAction($claim, 'employee_gone_at_signature', __('hr::claim.rejected_employee_gone', ['no' => $claim->document_no]));
+                app(AuditEngine::class)->recordAction($claim, 'claim_gone_rejected' /* ⓘ অডিটের ঘর ২৪ অক্ষরের */, __('hr::claim.rejected_employee_gone', ['no' => $claim->document_no]));
 
                 return;
             }
