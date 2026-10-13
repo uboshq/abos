@@ -20,7 +20,7 @@ use Tests\TestCase;
 /**
  * ⛔ বকেয়ার বয়সে বাতিল বিল পুরনো বকেয়া "শোধ" করত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[PartyReports::ageing()]])।
  *
- * ⚠️ ১২০ দিনের ১ লাখ বকেয়া; কাল ৫০ হাজারের বিল, আজ বাতিল। উল্টো সারির ক্রেডিট আদায় হয়ে ৯০+ থেকে কাটত, আর মূল বিলটা
+ * ⚠️ ৯৫ দিনের ১ লাখ বকেয়া; কাল ৫০ হাজারের বিল, আজ বাতিল। উল্টো সারির ক্রেডিট আদায় হয়ে ৯০+ থেকে কাটত, আর মূল বিলটা
  * ০–৩০-এ থাকত: ৯০+ = ৫০ হাজার, ০–৩০ = ৫০ হাজার। সত্যি: ৯০+ = ১ লাখ, চলতি কিছু নেই। ⭐ এখন মূল আর উল্টো জোড়া ধরে বাদ।
  */
 final class ACancelledBillAgedTheOldDueTest extends TestCase
@@ -44,7 +44,7 @@ final class ACancelledBillAgedTheOldDueTest extends TestCase
             trxDate: now()->subDays($daysAgo)->toDateString(),
             lines: [['account_id' => $receivable, 'debit' => $amount] + $party, ['account_id' => $income, 'credit' => $amount]]);
 
-        $bill(92001, '100000', 120);
+        $bill(92001, '100000', 95); // ⓘ চলতি অর্থবছরের ভেতরে — ১২০ দিন আগে কোনো বছর খোলা থাকে না
         $bill(92002, '50000', 1);
         app(PostingEngine::class)->reverse('journal_voucher', 92002, now()->toDateString(), 'ভুল বিল');
 
