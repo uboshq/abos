@@ -70,6 +70,16 @@ final class SupplierService
              */
             $data['code'] = $givenCode ? trim((string) $data['code']) : $this->numbers->next(self::seriesFor($data['party_type_id'] ?? null));
 
+            /*
+             * ⛔ সিরিজের নম্বর হাতে লেখা কোনো কোডে আগেই বসে থাকলে পরেরটা — আগে "কোড দখলে" বলে পুরো লেনদেন ফিরত, তার সাথে
+             * সিরিজের গুনতিও; পরের বার আবার একই নম্বর, আবার ব্যর্থ — হাতে সিরিজ না বদলানো পর্যন্ত কোনো সরবরাহকারীই বানানো
+             * যেত না (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ATypedCodeBlockedEveryNewSupplierTest]])। ⓘ পার হওয়া নম্বর খরচ হয়ে
+             * থাকে — নম্বর-রেজিস্টারে উৎসহীন, যেমন ব্যর্থ কাগজের নম্বর থাকে।
+             */
+            for ($tries = 0; ! $givenCode && $tries < 1000 && $this->codeTaken($data['code']); $tries++) {
+                $data['code'] = $this->numbers->next(self::seriesFor($data['party_type_id'] ?? null));
+            }
+
             $this->assertCodeIsFree($data['code']);
 
             $supplier = Supplier::create([
@@ -325,17 +335,20 @@ final class SupplierService
         }
     }
 
-    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    private function codeTaken(string $code, ?int $exceptId = null): bool
     {
-        $taken = Supplier::query()
+        return Supplier::query()
             ->where('code', $code)
             ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
             // মুছে ফেলা সরবরাহকারীর কোডও ধরা হয়: soft delete মানে সারিটা
             // আছে, আর unique ইনডেক্সও সেটা দেখে
             ->withTrashed()
             ->exists();
+    }
 
-        if ($taken) {
+    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    {
+        if ($this->codeTaken($code, $exceptId)) {
             throw ValidationException::withMessages([
                 'code' => __('supplier::validation.code_taken', ['code' => $code]),
             ]);
