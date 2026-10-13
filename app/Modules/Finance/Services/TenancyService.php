@@ -156,9 +156,24 @@ class TenancyService
                 throw ValidationException::withMessages(['status' => __('finance::tenancy.not_active')]);
             }
 
+            /*
+             * ⛔ শেষের দিন চুক্তির শুরু থেকে আজ পর্যন্ত — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (ভাড়ার চুক্তির
+             * [[RentalContractService::assertClosingDay()]]-এর একই নিয়ম)। ⓘ আগে আগামী বছর বা শুরুর আগের দিনেও শেষ করা যেত।
+             */
+            $on = rescue(fn () => Carbon::parse((string) (($data['closed_on'] ?? null) ?: now()->toDateString()))->startOfDay(), null, false);
+
+            if ($on === null || $on->lt($tenancy->starts_on->copy()->startOfDay()) || $on->gt(Carbon::today())) {
+                throw ValidationException::withMessages([
+                    'closed_on' => __('finance::validation.rental_close_day_out_of_range', [
+                        'from' => \App\Core\Support\DateFormat::format($tenancy->starts_on),
+                        'to' => \App\Core\Support\DateFormat::format(Carbon::today()),
+                    ]),
+                ]);
+            }
+
             $tenancy->update([
                 'status' => Tenancy::CLOSED,
-                'closed_on' => Carbon::parse((string) ($data['closed_on'] ?? now()->toDateString()))->toDateString(),
+                'closed_on' => $on->toDateString(),
             ]);
 
             return $tenancy->fresh();
@@ -178,15 +193,27 @@ class TenancyService
             throw ValidationException::withMessages(['monthly_rent' => __('finance::tenancy.terms_bad')]);
         }
 
-        $tenancy->update(array_filter([
-            'monthly_rent' => $rent,
-            'rent_day' => $data['rent_day'] ?? null,
-            'tenant_phone' => $data['tenant_phone'] ?? null,
-            'premises' => $data['premises'] ?? null,
-            'note' => $data['note'] ?? null,
-        ], fn ($v) => $v !== null && $v !== ''));
+        /*
+         * ⛔ সারিতে তালা দিয়ে, আর কেবল চালু চুক্তিতে — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ আগে শেষ হওয়া চুক্তির দরও
+         * বদলানো যেত, আর মাসের দাবি চলার মাঝে দর বদলালে সেই চাল কোন দর পড়বে তা ঠিক থাকত না।
+         */
+        return DB::transaction(function () use ($tenancy, $data, $rent) {
+            $this->lockFresh($tenancy);
 
-        return $tenancy->fresh();
+            if (! $tenancy->isActive()) {
+                throw ValidationException::withMessages(['status' => __('finance::tenancy.not_active')]);
+            }
+
+            $tenancy->update(array_filter([
+                'monthly_rent' => $rent,
+                'rent_day' => $data['rent_day'] ?? null,
+                'tenant_phone' => $data['tenant_phone'] ?? null,
+                'premises' => $data['premises'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], fn ($v) => $v !== null && $v !== ''));
+
+            return $tenancy->fresh();
+        });
     }
 
     /**
