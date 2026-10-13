@@ -232,9 +232,12 @@ class ExpenseController extends Controller implements HasMiddleware
      */
     private function range(Request $request): array
     {
+        // ⛔ কেবল Y-m-d — "?from=abc" আগে Carbon::parse-এ ৫০০ দিত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৭)
+        $day = fn (mixed $v): ?string => is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) === 1 ? $v : null;
+
         return [
-            (string) $request->query('from', now()->startOfMonth()->toDateString()),
-            (string) $request->query('to', now()->endOfMonth()->toDateString()),
+            $day($request->query('from')) ?? now()->startOfMonth()->toDateString(),
+            $day($request->query('to')) ?? now()->endOfMonth()->toDateString(),
         ];
     }
 

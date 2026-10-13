@@ -219,6 +219,15 @@ final class TheMonthsPlanNowMeetsTheBooksTest extends TestCase
     }
 
     /**
+     * ⛔ খরচ আর আয়ের পাতায় ভুল তারিখ — চলতি মাস দেখায়, ৫০০ নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৭)।
+     */
+    public function test_a_bad_date_on_the_expense_and_income_pages_is_not_a_crash(): void
+    {
+        $this->get(route('finance.expense.index', ['from' => 'abc', 'to' => '2026-13-xx']))->assertOk();
+        $this->get(route('finance.income.index', ['from' => 'abc', 'to' => 'zzz']))->assertOk();
+    }
+
+    /**
      * ⛔ অনুমতি: বাজেট দেখার চাবি ছাড়া পাতাটা খোলে না, আর লেখার চাবি ছাড়া
      * জমা হয় না।
      */
