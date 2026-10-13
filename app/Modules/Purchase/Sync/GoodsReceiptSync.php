@@ -92,6 +92,21 @@ final class GoodsReceiptSync implements SyncsToDevices
         $payload = $change->payload();
 
         /*
+         * ⛔ ওয়েবের একই নিয়ম — তারিখ আজকের পরে নয় (PurchaseReceiptRequest), চালান নম্বর ৬৪ অক্ষর, পরিমাণ সাধারণ দশমিক
+         * (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ThePhoneReceiptTookAnyDateAndAnyNumberTest]])। ⚠️ আগে "+1 year" ভবিষ্যতের রসিদ
+         * বসাত, "abc" আর "1e3" অপ্রত্যাশিত ভাঙনে উত্তরহীন থেকে চিরকাল আবার যেত। ⓘ এখন কারণসহ ফেরত ([[SyncService::applyOne()]])।
+         */
+        \Illuminate\Support\Facades\Validator::make($payload, [
+            'orderId' => ['required', 'string', 'max:64'],
+            'receivedOn' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'challanNo' => ['nullable', 'string', 'max:64'],
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*' => ['array'],
+            'lines.*.productId' => ['required', 'string', 'max:64'],
+            'lines.*.receivedQty' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+        ])->validate();
+
+        /*
          * ⓘ বাইরের কী ধরে আদেশটা — ফোন কখনো ভেতরের ক্রমিক `id` দেখে না।
          */
         $order = PurchaseOrder::query()

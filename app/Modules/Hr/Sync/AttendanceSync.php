@@ -214,7 +214,8 @@ final class AttendanceSync implements SyncsToDevices
             'in_time' => $status === Attendance::PRESENT ? now()->format('H:i:s') : null,
             'out_time' => null,
             'is_late' => false,
-            'remarks' => $this->clockStampedRemark($payload['remarks'] ?? null, $date),
+            // ⛔ মন্তব্য কেবল লেখা, ৫০০ অক্ষরে — অ্যারে এলে TypeError-এ উত্তরহীন হয়ে চিরকাল আবার যেত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            'remarks' => $this->clockStampedRemark(is_string($payload['remarks'] ?? null) ? mb_substr($payload['remarks'], 0, 500) : null, $date),
         ]);
 
         return (string) $attendance->public_id;
