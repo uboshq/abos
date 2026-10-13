@@ -1058,6 +1058,19 @@ class BankFacilityService
                 ]);
             }
 
+            /*
+             * ⛔ খোলা বকেয়া সইয়ের অপেক্ষায় থাকলে বন্ধ নয় (ec, ১৪ অক্টোবর ২০২৬; [[TheRefusedOpeningWasStillOwedTest]])। ⓘ অপেক্ষার খোলা বকেয়া
+             * [[standing()]]-এ শূন্য গোনা হয় ([[signedPath()]]), তাই নিচের "বকেয়া আছে" পাহারা এটা দেখত না — বন্ধ হয়ে যেত, আর পরে
+             * শেষ সই পড়লে [[finishSigned()]] বন্ধ সুবিধায় দায় বসাত, সুদ জমা আর কিস্তির ঘণ্টার চোখের বাইরে।
+             */
+            if (Approval::query()->where('approvable_type', BankFacility::class)->where('approvable_id', (int) $facility->id)
+                ->where('module', FinanceSignature::MODULE)->where('action', FinanceSignature::BANK_FACILITY)
+                ->where('status', Approval::PENDING)->exists()) {
+                throw ValidationException::withMessages([
+                    'note' => __('finance::validation.awaits_signature_first'),
+                ]);
+            }
+
             $owed = $this->standing(collect([$facility]))[(int) $facility->id]['used'] ?? '0';
 
             if (bccomp($owed, '0', 4) > 0) {

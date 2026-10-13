@@ -83,6 +83,37 @@ final class TheRefusedOpeningWasStillOwedTest extends TestCase
         $this->assertSame(0, InterestAccrual::query()->where('bank_facility_id', $loan->id)->count(), '⛔ না-নেওয়া ঋণে সুদ খরচ বসল');
     }
 
+    /**
+     * ⛔ খোলা বকেয়া সইয়ের অপেক্ষায় — সুবিধা বন্ধ হয় না (ec, ১৪ অক্টোবর ২০২৬); অপেক্ষার বকেয়া শূন্য গোনা হয়, তাই "বকেয়া আছে"
+     * পাহারা এটা দেখত না, আর পরের শেষ সই বন্ধ সুবিধায় ২৫ লাখ দায় বসাত। "না" পড়ার পরে বন্ধ হয়।
+     */
+    public function test_a_facility_whose_opening_awaits_its_signature_does_not_close(): void
+    {
+        $this->flow();
+        $service = app(BankFacilityService::class);
+        $loan = $service->open([
+            'kind' => BankFacility::TERM, 'bank' => 'Janata Bank', 'sanctioned_on' => '2026-07-01', 'limit_amount' => '3000000',
+            'interest_rate' => '12', 'instalments' => 36, 'opening_drawn' => '2500000', 'already_running' => true,
+            'liability_account_id' => $this->liability()->id,
+        ]);
+        $this->assertTrue($service->openingFor($loan, '2500000'), 'দৃশ্যটাই বানানো যায়নি — খোলা বকেয়া সইয়ে আটকায়নি');
+
+        try {
+            $service->close($loan->fresh(), 'শোধ');
+            $this->fail('⛔ খোলা বকেয়া সইয়ের অপেক্ষায়, অথচ সুবিধা বন্ধ হলো — শেষ সই বন্ধ সুবিধায় দায় বসাত');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('finance::validation.awaits_signature_first'), $e->errors()['note'][0] ?? null, 'অন্য কারণে থামল');
+        }
+        $this->assertSame(DocumentStatus::CONFIRMED, $loan->fresh()->status);
+
+        app(ApprovalEngine::class)->reject(
+            Approval::query()->where('status', Approval::PENDING)->where('action', 'bank_facility')->latest('id')->firstOrFail(),
+            $this->signer, 'এখন নয়');
+
+        $service->close($loan->fresh(), 'নেওয়া হয়নি');
+        $this->assertSame(DocumentStatus::CLOSED, $loan->fresh()->status, '"না" পড়ার পরে বন্ধ হয়');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function liability(): Account
