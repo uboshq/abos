@@ -121,6 +121,19 @@ final class AnEditOnAStaleCopyStopsAtTheLockTest extends TestCase
         $this->assertStopped($stale, SalesQuotation::CONVERTED, fn () => $service->cancel($stale, 'ভুল'));
     }
 
+    /** ⛔ DO — ফোন আর ওয়েব দুইজনেই খসড়া দেখে জমা দিত (১৩ অক্টোবর ২০২৬) */
+    public function test_a_delivery_order_edit_and_submit(): void
+    {
+        $service = app(\App\Modules\Sales\Services\DeliveryOrderService::class);
+        $by = auth()->user();
+        $stale = $service->create(['customer_id' => $this->customer()->id], [['product_id' => $this->product()->id, 'qty' => '1']], $by);
+
+        $this->assertStopped($stale, \App\Modules\Sales\Support\DeliveryOrderStatus::SUBMITTED,
+            fn () => $service->update($stale, [], [['product_id' => $this->product()->id, 'qty' => '50']], $by));
+
+        $this->assertStopped($stale, \App\Modules\Sales\Support\DeliveryOrderStatus::SUBMITTED, fn () => $service->submit($stale, $by));
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     /** অন্য অনুরোধ সারিটা বদলে গেছে; হাতের কপি এখনো পুরনো — কাজটা থামবে আর সারির অবস্থা আর লাইন অক্ষত থাকবে */

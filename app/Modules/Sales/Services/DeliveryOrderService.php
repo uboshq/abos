@@ -111,7 +111,11 @@ final class DeliveryOrderService
     {
         $this->assertWriterMayEdit($order, $by);
 
-        return DB::transaction(function () use ($order, $data, $lines) {
+        return DB::transaction(function () use ($order, $data, $lines, $by) {
+            // ⛔ পুরনো কপি নয় — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($order);
+            $this->assertWriterMayEdit($order, $by);
+
             $order->fill(array_intersect_key($data, array_flip(['warehouse_id', 'trx_date', 'deliver_on', 'narration'])))->save();
             $order->lines()->delete();
             $this->writeLines($order, $lines);
@@ -129,7 +133,11 @@ final class DeliveryOrderService
             throw ValidationException::withMessages(['lines' => __('sales::delivery_order.no_lines')]);
         }
 
-        return DB::transaction(function () use ($order) {
+        return DB::transaction(function () use ($order, $by) {
+            // ⛔ দুই ক্লিক বা দুই ট্যাব — তালার ভিতরে অবস্থা আবার; নইলে দুইবার জমা, দুইবার অনুমোদিত আর মাল দুইবার ধরার সংকেত
+            $this->lockAndReread($order);
+            $this->assertWriterMayEdit($order, $by);
+
             $order->forceFill(['status' => DeliveryOrderStatus::SUBMITTED, 'submitted_at' => now()])->save();
 
             $approval = $this->approvals->request(
@@ -268,6 +276,17 @@ final class DeliveryOrderService
         }
 
         $order->recalculate();
+    }
+
+    /**
+     * ⛔ সম্পাদনা আর জমা তালার ভিতরে নতুন করে পড়া সারি ধরে — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে "খসড়া কি না"
+     * দেখা হত হাতের পুরনো কপিতে, লেনদেনের বাইরে: ফোন আর ওয়েব (বা দুই ক্লিক) দুইজনেই খসড়া দেখে জমা দিত।
+     */
+    private function lockAndReread(DeliveryOrder $order): void
+    {
+        $fresh = DeliveryOrder::query()->withoutGlobalScopes()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+
+        $order->setRawAttributes($fresh->getAttributes(), true);
     }
 
     private function assertWriterMayEdit(DeliveryOrder $order, User|Customer $by): void
