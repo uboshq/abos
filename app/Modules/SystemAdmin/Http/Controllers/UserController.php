@@ -464,6 +464,25 @@ class UserController extends Controller implements HasMiddleware
 
         $gone = array_values(array_diff($reach, array_keys($companies)));
 
+        /*
+         * ⛔ যে কোম্পানিতে মানুষটা মালিক (super admin), সেখান থেকে টিক তুলে বের করা যায় না — সিস্টেম-অ্যাডমিন লাইন-ধরে
+         * নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ মালিকের নিয়মগুলো ([[assertOwnershipRules()]], [[assertSupremeRoleStays()]]) কেবল
+         * **চলতি** কোম্পানি দেখে; মালিক নিজের ফর্মে কেবল একটা কোম্পানিতে টিক রাখলে বাকি সব কোম্পানির সদস্যপদ আর মালিকানা
+         * মুছে যেত — সেসব কোম্পানি মালিকহীন, আর অ্যাপের ভেতর থেকে ফেরানোর কোনো পথ নেই। কোম্পানি ছাড়ার পথ মালিকানা হস্তান্তর।
+         * ⓘ লেনদেনের ভেতরে, তাই থামলে উপরের সব লেখাও ফেরে।
+         */
+        if ($gone !== [] && DB::table('model_has_roles as mhr')
+            ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+            ->where('mhr.model_type', $user->getMorphClass())
+            ->where('mhr.model_id', $user->getKey())
+            ->where('r.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->whereIn('mhr.company_id', $gone)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'companies' => __('system_admin::validation.owner_stays_in_company'),
+            ]);
+        }
+
         if ($gone !== []) {
             $user->companies()->detach($gone);
         }
