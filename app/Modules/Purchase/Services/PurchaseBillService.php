@@ -1240,6 +1240,26 @@ final class PurchaseBillService
                 ]);
             }
 
+            /*
+             * ⛔ যে বিলের লাইনে ফেরত বা স্থায়ী সম্পদ ঝুলে আছে, সেটা সম্পাদনা নয় (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[ABillEditedUnderItsReturnLostTheLinkTest]])। ⚠️ সম্পাদনা লাইনগুলো মুছে নতুন বানায় ([[replaceLines()]]) — ফেরতের সারির
+             * সংযোগ শূন্য হয়ে যেত (nullOnDelete), আর "বিলের বেশি ফেরত নয়" যাচাই আগের ফেরত আর দেখত না: একই ১০ বস্তা আবার ফেরত, দেনা
+             * আবার কমত; সম্পদও একই লাইন থেকে আবার উঠত। ⓘ আগে ফেরত/সম্পদ বাতিল করুন, তারপর বিল সম্পাদনা।
+             */
+            $lineIds = $bill->lines()->pluck('id')->all();
+            $held = $lineIds === [] ? false : (
+                DB::table('pur_return_lines as l')->join('pur_returns as r', 'r.id', '=', 'l.purchase_return_id')
+                    ->where('r.company_id', $bill->company_id)->whereIn('l.purchase_bill_line_id', $lineIds)
+                    ->where('r.status', '<>', DocumentStatus::CANCELLED)->exists()
+                || DB::table('acc_fixed_assets')->where('company_id', $bill->company_id)->whereIn('purchase_bill_line_id', $lineIds)->exists()
+            );
+
+            if ($held) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.edit_bill_with_returns', ['no' => $bill->document_no]),
+                ]);
+            }
+
             $date = now();
 
             $this->takeBackDirectLines($bill, $date, $reason);

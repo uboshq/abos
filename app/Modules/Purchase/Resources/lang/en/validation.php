@@ -11,6 +11,7 @@ return [
     'already_cancelled' => ':no was already cancelled.',
     'cancel_paid_bill' => ':no carries :paid in payments. Cancel the payments first, then the bill.',
     'cancel_returned_bill' => ':no carries :returned in returns. Cancel the returns first, then the bill.',
+    'edit_bill_with_returns' => 'Lines of :no carry returns or fixed assets. Cancel those first, then edit the bill.',
     'edit_below_settled' => ':no already has :settled paid and returned, so the new total :total cannot be lower. Cancel a payment or return first.',
     'proposal_empty' => 'Pick at least one bill and give its amount.',
     'proposal_bill_not_open' => ':no is not an open posted bill and cannot be proposed.',
