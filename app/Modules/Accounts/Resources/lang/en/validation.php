@@ -21,6 +21,7 @@ return [
         .'groups take no entries of their own, and the existing ones would stop being counted.',
     'has_children_must_stay_group' => 'This account holds other accounts, so it must stay a group.',
     'has_entries_cannot_renature' => 'This account has entries — its Dr/Cr nature can no longer change; every past balance would show with the wrong sign.',
+    'money_kind_cannot_flip' => 'This account has entries — it cannot move between money accounts (cash, bank, mobile money) and ordinary accounts.',
     'has_entries_cannot_retype' => 'This account has transactions, so its type cannot change — '
         .'the existing entries would move to a different report.',
     'system_account_locked' => '":name" is a system account. Sales, purchases and other modules '
@@ -58,6 +59,7 @@ return [
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
     'money_opens_on_dr_only' => '":name" holds cash or mobile money — its opening balance can only be Dr; money in hand is never negative.',
+    'inter_company_side_missing' => 'One side of this inter-company transfer could not be found — nothing was reversed; tell the accountant.',
     // Bank money cannot be reconciled without a reference, and the same
     // reference twice means the same money twice
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',
@@ -106,6 +108,7 @@ return [
     'loan_amount_positive' => 'The amount must be more than zero.',
     'loan_over_limit' => 'Only :available is left on the limit — no more than that can be drawn.',
     'instalment_below_interest' => 'An instalment cannot be less than this month\'s interest (:interest).',
+    'instalment_beyond_principal' => 'The principal in this instalment (:principal) is more than the loan has left (:left) — paying more would turn the loan around. Pay up to what is left.',
     'instalment_already_paid' => 'This instalment has already been paid.',
 
     // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য

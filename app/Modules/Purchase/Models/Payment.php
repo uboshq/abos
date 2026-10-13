@@ -36,6 +36,12 @@ class Payment extends Model implements Drillable
     use ScopedToUserBranch;
     use SoftDeletes;
 
+    /**
+     * চেক ফেরত — চেকে দেওয়া পরিশোধের চেক ব্যাংক থেকে ফেরত এসেছে (fe, ১৩ অক্টোবর ২০২৬; [[UndoThePaymentOfABouncedCheque]])।
+     * ⓘ পাকা নয় (`DocumentStatus::POSTED`-এ নেই), তাই বিলের পরিশোধে গোনা হয় না; খাতার উল্টো দাখিলা চেকের নিজের।
+     */
+    public const BOUNCED = 'bounced';
+
     protected $table = 'pur_payments';
 
     protected $fillable = [

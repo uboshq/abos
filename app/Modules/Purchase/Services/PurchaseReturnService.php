@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -48,6 +49,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseReturnService
 {
+    use ReadsTheRowUnderLock;
+
     use ReadsPackedQuantities;
 
     public function __construct(
@@ -115,6 +118,11 @@ final class PurchaseReturnService
         $this->assertEditable($return);
 
         return DB::transaction(function () use ($return, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($return);
+            $this->assertEditable($return);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $return->trx_date);
 
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $return->warehouse_id);
@@ -167,7 +175,7 @@ final class PurchaseReturnService
              * ইঞ্জিনের কাঁচা ত্রুটিতে। ⭐ তাই সারিটা তালা দিয়ে ডাটাবেজ থেকেই
              * অবস্থাটা পড়া হয়।
              */
-            $current = PurchaseReturn::query()->whereKey($return->id)->lockForUpdate()->value('status');
+            $current = PurchaseReturn::acrossBranches()->whereKey($return->id)->lockForUpdate()->value('status');
 
             if ($current !== DocumentStatus::DRAFT) {
                 throw ValidationException::withMessages([
@@ -177,6 +185,21 @@ final class PurchaseReturnService
 
             // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
             $this->approvals->assertUnchangedSince($return, $print, 'status');
+
+            /*
+             * ⛔ বিলের লাইনে তালা, তারপর "বিলের বেশি নয়" আবার — দুই ফেরত একসাথে পাকা হলে দুটোই বাইরের যাচাইয়ে "০ ফেরত হয়েছে"
+             * দেখত, আর ১০-এর লাইনে ১৬ যেত (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneBillLineWasReturnedTwiceTest]])। ⓘ দ্বিতীয়জন
+             * তালায় অপেক্ষা করেন, তারপর প্রথমজনের ফেরত গুনে থামেন।
+             */
+            $billLineIds = $return->lines->pluck('purchase_bill_line_id')->filter()->unique()->values()->all();
+
+            if ($billLineIds !== []) {
+                \App\Modules\Purchase\Models\PurchaseBillLine::query()->whereKey($billLineIds)->orderBy('id')->lockForUpdate()->get();
+
+                foreach ($return->lines as $line) {
+                    $this->assertWithinBilled($line);
+                }
+            }
 
             foreach ($return->lines as $line) {
                 /*
@@ -309,7 +332,7 @@ final class PurchaseReturnService
 
         return DB::transaction(function () use ($return, $reason, $date) {
             // ⛔ confirm()-এর মতোই — পুরনো কপি দিয়ে দ্বিতীয় বাতিল মাল আবার ফেরাত। ২৯ সেপ্টেম্বর ২০২৬।
-            $current = PurchaseReturn::query()->whereKey($return->id)->lockForUpdate()->value('status');
+            $current = PurchaseReturn::acrossBranches()->whereKey($return->id)->lockForUpdate()->value('status');
 
             if ($current === DocumentStatus::CANCELLED) {
                 throw ValidationException::withMessages([
@@ -749,7 +772,14 @@ final class PurchaseReturnService
         $blank = $entered === null || trim((string) $entered) === '';
         $tax = $this->money($blank ? '0' : $entered);
 
-        if (! (bool) app(SettingsService::class)->get('purchase.vat_enabled', false)) {
+        /*
+         * ⛔ ভ্যাট বন্ধের নিয়ম কেবল ভ্যাটহীন বিলের ফেরতে — fe, ১৩ অক্টোবর ২০২৬ ([[AReturnLostItsBillsVatTest]])। ⚠️ আগে সুইচ বন্ধ হলেই
+         * ফেরতের ভ্যাট ০: ১১৫-র (১০০ + ১৫) বিলের ফেরতে দেনা কমত ১০০, অথচ দর থেকে ভ্যাট আগেই বাদ — ১৫ উপকরণ-ভ্যাট আর কখনো উল্টাত না।
+         * ⓘ বিলের লাইনে ভ্যাট থাকলে ফেরত বিলের নিজের ভাগটাই নেয়, সুইচ যা-ই বলুক — সেটা সেদিনের কাগজের সত্য।
+         */
+        $billCarriedVat = $billLine !== null && bccomp((string) ($billLine->tax ?? '0'), '0', 4) > 0;
+
+        if (! $billCarriedVat && ! (bool) app(SettingsService::class)->get('purchase.vat_enabled', false)) {
             if (bccomp($tax, '0', 4) !== 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.vat_is_off'),
@@ -796,13 +826,25 @@ final class PurchaseReturnService
             return;
         }
 
+        /*
+         * ⛔ তিনটা ফাঁক বন্ধ (Purchase লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneBillLineWasReturnedTwiceTest]]):
+         *   · আগের ফেরত সব শাখা জুড়ে — ফেরতের শাখা তার গুদামের, বিলের শাখা আলাদা হতে পারে; দেয়াল দিয়ে গুনলে অন্য শাখার ফেরত বাদ যেত
+         *   · একই ফেরতের অন্য সারিও — একই বিলের লাইন দুই সারিতে ৮ + ৮ ভাগ করলে প্রতিটা আলাদা করে ১০-এর ভেতরে পড়ত, ফেরত যেত ১৬
+         *   · পাকা করার সময় তালার ভিতরে আবার ([[confirm()]]) — দুই ফেরত একসাথে পাকা হলে দুটোই "০ ফেরত হয়েছে" দেখত
+         */
         $alreadyReturned = PurchaseReturnLine::query()
             ->where('purchase_bill_line_id', $billLine->id)
             ->whereKeyNot($line->id)
-            ->whereHas('return', fn ($q) => $q->posted())
+            ->whereHas('return', fn ($q) => $q->withoutGlobalScope('user-branch')->posted())
             ->sum('qty');
 
-        $room = bcsub((string) $billLine->qty, (string) ($alreadyReturned ?: '0'), 4);
+        $sameReturn = PurchaseReturnLine::query()
+            ->where('purchase_return_id', $line->purchase_return_id)
+            ->where('purchase_bill_line_id', $billLine->id)
+            ->whereKeyNot($line->id)
+            ->sum('qty');
+
+        $room = bcsub(bcsub((string) $billLine->qty, (string) ($alreadyReturned ?: '0'), 4), (string) ($sameReturn ?: '0'), 4);
 
         if (bccomp((string) $line->qty, $room, 4) > 0) {
             throw ValidationException::withMessages([

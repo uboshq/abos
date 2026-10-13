@@ -731,7 +731,7 @@ final class StockCountService
     /** কাগজের অবস্থা, সারি আটকে — [[approve()]]-এর দ্বিতীয় ক্লিক (⛔১৩) */
     private function lockedStatus(StockCount $count): string
     {
-        return (string) StockCount::query()
+        return (string) StockCount::acrossBranches()
             ->whereKey($count->id)
             ->lockForUpdate()
             ->value('status');

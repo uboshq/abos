@@ -355,7 +355,9 @@ class Account extends Model implements Drillable
         }
 
         if ($this->is_group) {
-            return $this->children()->get()->reduce(fn (string $sum, self $child) => bcadd($sum, $child->balanceInView(), 4), '0');
+            // ⛔ সন্তানের জের নিজের প্রকৃতিতে — কাঁচা Dr−Cr-এ ফিরিয়ে যোগ, তারপর দলের প্রকৃতিতে ([[groupSigned()]])
+            return $this->groupSigned($this->children()->get()->reduce(
+                fn (string $sum, self $child) => bcadd($sum, $child->rawFrom($child->balanceInView()), 4), '0'));
         }
 
         $row = $scope->inView(LedgerEntry::query()->forAccount($this->id), 'ledger_entries.branch_id')
@@ -447,10 +449,29 @@ class Account extends Model implements Drillable
             $branchId,
         );
 
-        return $leaves->reduce(
-            fn (string $carry, self $leaf) => bcadd($carry, $leaf->balanceOn($upto, $branchId), 4),
+        return $this->groupSigned($leaves->reduce(
+            fn (string $carry, self $leaf) => bcadd($carry, $leaf->rawFrom($leaf->balanceOn($upto, $branchId)), 4),
             '0',
-        );
+        ));
+    }
+
+    /**
+     * নিজের প্রকৃতিতে দেওয়া জের থেকে কাঁচা Dr−Cr।
+     *
+     * ⛔ বিপরীত খাত দলে বাদ যায়, যোগ নয় — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AContraAccountReducesItsGroupTest]])।
+     * ⓘ আগে দল প্রতিটা পাতার জের নিজের প্রকৃতিতেই যোগ করত: ১২৯০ সঞ্চিত অবচয় (Cr প্রকৃতি) ধনাত্মক হয়ে ১২০০-তে **যোগ** হত —
+     * ১০ লাখের সম্পদ আর ৩ লাখের অবচয়ে স্থায়ী সম্পদ ১৩ লাখ, অথচ ৭ লাখ হওয়ার কথা; ড্যাশবোর্ডের "নিট সম্পদ" ৬ লাখ বেশি।
+     * ৩২০০ উত্তোলনও মূলধনে যোগ হত। এখন সব পাতা কাঁচা Dr−Cr-এ মিলে, তারপর দলের নিজের প্রকৃতিতে চিহ্ন।
+     */
+    private function rawFrom(string $balance): string
+    {
+        return $this->nature === self::CREDIT ? bcmul($balance, '-1', 4) : $balance;
+    }
+
+    /** কাঁচা Dr−Cr থেকে দলের নিজের প্রকৃতিতে */
+    private function groupSigned(string $raw): string
+    {
+        return $this->nature === self::CREDIT ? bcmul($raw, '-1', 4) : $raw;
     }
 
     /**

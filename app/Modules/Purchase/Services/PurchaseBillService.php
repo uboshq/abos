@@ -339,6 +339,11 @@ final class PurchaseBillService
         }
 
         return DB::transaction(function () use ($bill, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা বিলের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ পুরনো
+            // লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($bill);
+            $this->assertEditable($bill);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $bill->trx_date);
 
             $billNo = $data['supplier_bill_no'] ?? null;
@@ -1273,6 +1278,26 @@ final class PurchaseBillService
                 ]);
             }
 
+            /*
+             * ⛔ যে বিলের লাইনে ফেরত বা স্থায়ী সম্পদ ঝুলে আছে, সেটা সম্পাদনা নয় (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[ABillEditedUnderItsReturnLostTheLinkTest]])। ⚠️ সম্পাদনা লাইনগুলো মুছে নতুন বানায় ([[replaceLines()]]) — ফেরতের সারির
+             * সংযোগ শূন্য হয়ে যেত (nullOnDelete), আর "বিলের বেশি ফেরত নয়" যাচাই আগের ফেরত আর দেখত না: একই ১০ বস্তা আবার ফেরত, দেনা
+             * আবার কমত; সম্পদও একই লাইন থেকে আবার উঠত। ⓘ আগে ফেরত/সম্পদ বাতিল করুন, তারপর বিল সম্পাদনা।
+             */
+            $lineIds = $bill->lines()->pluck('id')->all();
+            $held = $lineIds === [] ? false : (
+                DB::table('pur_return_lines as l')->join('pur_returns as r', 'r.id', '=', 'l.purchase_return_id')
+                    ->where('r.company_id', $bill->company_id)->whereIn('l.purchase_bill_line_id', $lineIds)
+                    ->where('r.status', '<>', DocumentStatus::CANCELLED)->exists()
+                || DB::table('acc_fixed_assets')->where('company_id', $bill->company_id)->whereIn('purchase_bill_line_id', $lineIds)->exists()
+            );
+
+            if ($held) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.edit_bill_with_returns', ['no' => $bill->document_no]),
+                ]);
+            }
+
             $date = now();
 
             $this->takeBackDirectLines($bill, $date, $reason);
@@ -1388,7 +1413,11 @@ final class PurchaseBillService
              * ⛔ আগে পরিশোধ বসা বিলও বাতিল হত — পরিশোধগুলো বাতিল বিলে ঝুলে ব্যাখ্যাহীন অগ্রিম হত; আর দুই ট্যাবে একসাথে
              * চাপলে দুবার উল্টাত। ⓘ আগে পরিশোধ বাতিল করুন, তারপর বিল।
              */
-            $locked = PurchaseBill::query()->whereKey($bill->id)->lockForUpdate()->firstOrFail();
+            $locked = PurchaseBill::acrossBranches()->whereKey($bill->id)->lockForUpdate()->firstOrFail();
+
+            // ⛔ সিদ্ধান্ত তালার কপিতে — হাতের কপি পুরনো হতে পারে (খসড়া দেখে খোলা, মাঝে আরেক ট্যাবে পাকা): তখন উল্টানো বাদ পড়ত,
+            // বিল "বাতিল" অথচ খাতা আর মজুদ চালু (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABillCancelledFromAnOldCopyUndidNothingTest]])
+            $bill->setRawAttributes($locked->getAttributes(), true);
 
             if ($locked->status === DocumentStatus::CANCELLED) {
                 throw ValidationException::withMessages([
@@ -1401,6 +1430,20 @@ final class PurchaseBillService
                     'status' => __('purchase::validation.cancel_paid_bill', [
                         'no' => $bill->document_no,
                         'paid' => Money::format($locked->paidAmount()),
+                    ]),
+                ]);
+            }
+
+            /*
+             * ⛔ ফেরত বসা বিলও বাতিল নয় — পরিশোধের একই নিয়ম (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABillCancelledFromAnOldCopyUndidNothingTest]])।
+             * ⚠️ আগে বিলের পুরো দেনা উল্টাত, অথচ ফেরতের ডেবিট থেকে যেত: সরবরাহকারীর খাতায় ব্যাখ্যাহীন ডেবিট, আর চালানের বিলে ২১৬০ ফেরত
+             * যাওয়া মালের জন্যও আবার খুলত। ⓘ আগে ফেরত বাতিল করুন, তারপর বিল।
+             */
+            if (bccomp($locked->returnedAmount(), '0', 4) > 0) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.cancel_returned_bill', [
+                        'no' => $bill->document_no,
+                        'returned' => Money::format($locked->returnedAmount()),
                     ]),
                 ]);
             }
@@ -1969,9 +2012,15 @@ final class PurchaseBillService
             return null;
         }
 
+        /*
+         * ⛔ রসিদের সারিতে তালা — Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[OneReceiptWasBilledTwiceTest]])। ⚠️ আগে তালা ছাড়া পড়া: "বিল তৈরি"
+         * দুবার চাপলে (বা সইয়ের শ্রোতা আর হাতের চাপ একসাথে) দুজনেই "১০ বাকি" দেখতেন — দুটো বিল, ২১৬০ দুবার কাটা, দেনা দ্বিগুণ।
+         * ⓘ বিল লেখা নিজের লেনদেনের ভিতরে; দ্বিতীয়জন প্রথমজনের কমিট পর্যন্ত অপেক্ষা করেন, তারপর তাঁর বিলটাও গোনেন।
+         */
         $receiptLine = PurchaseReceiptLine::query()
             ->with('receipt')
             ->whereKey((int) $receiptLineId)
+            ->lockForUpdate()
             ->first();
 
         if ($receiptLine === null || $receiptLine->receipt === null) {
@@ -2007,9 +2056,11 @@ final class PurchaseBillService
          * বসায়নি, অথচ সরানো হয়েছে। আর সরবরাহকারীকে একই মালের দাম দুইবার
          * দেওয়া হত।
          */
+        // ⛔ আগের বিল সব শাখা জুড়ে — বিলের শাখা গুদামের; দেখার দেয়াল দিয়ে গুনলে অন্য শাখার বিল বাদ যেত আর একই মাল আবার বিল হত
+        // (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneReceiptWasBilledTwiceTest]])
         $alreadyBilled = $receiptLine->billLines()
             ->where('purchase_bill_id', '<>', $bill->id)
-            ->whereHas('bill', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->whereHas('bill', fn ($q) => $q->withoutGlobalScope('user-branch')->where('status', '<>', DocumentStatus::CANCELLED))
             ->sum('qty');
 
         $wouldBe = bcadd((string) ($alreadyBilled ?: '0'), $qty, 4);

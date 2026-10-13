@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -44,6 +45,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PaymentService
 {
+    use ReadsTheRowUnderLock;
+
     /**
      * "চেক" — উপায়ের নাম, আর এটাই একমাত্র উপায় যেটা অন্য পথে যায়।
      *
@@ -149,7 +152,23 @@ final class PaymentService
     {
         $this->assertEditable($payment);
 
+        // ⛔ সম্পাদনাতেও একই স্লিপ দুইবার নয় — নিজেকে বাদ রেখে (মালিকের নিয়ম, ৫ সেপ্টেম্বর ২০২৬; Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+        // [[ASlipUsedTwiceThroughAnEditTest]])। ⚠️ আগে কেবল তৈরিতে দেখা হত: খালি স্লিপে লিখে পরে TT-55 বসালে ধরা পড়ত না।
+        $this->slips->check(
+            table: 'pur_payments',
+            slipNo: $data['instrument_no'] ?? null,
+            partyId: (int) $payment->supplier_id,
+            party: 'supplier_id',
+            message: __('purchase::validation.slip_used_twice', ['no' => trim((string) ($data['instrument_no'] ?? ''))]),
+            exceptId: (int) $payment->id,
+        );
+
         return DB::transaction(function () use ($payment, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($payment);
+            $this->assertEditable($payment);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $payment->trx_date);
 
             $payment->update([
@@ -203,7 +222,7 @@ final class PaymentService
              * ⓘ তাই পরিশোধের সারি আর যে বিলগুলো সে শোধ করে সেগুলোয় তালা,
              * তারপর খাতা থেকে নতুন করে পড়া অবস্থা আর বাকি।
              */
-            $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->first();
+            $locked = Payment::acrossBranches()->whereKey($payment->id)->lockForUpdate()->first();
 
             if ($locked === null || $locked->status !== DocumentStatus::DRAFT) {
                 throw ValidationException::withMessages([
@@ -214,7 +233,9 @@ final class PaymentService
             // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
             $this->approvals->assertUnchangedSince($payment, $print, 'status');
 
-            PurchaseBill::query()
+            // ⛔ সব শাখা জুড়ে — বিলগুলো খসড়া লেখার সময়ই দেয়াল পেরিয়ে যাচাই হয়েছে; পাকা যিনি করছেন তাঁর দেখা শাখার বাইরের বিলে
+            // তালাও পড়ত না, বাকির যাচাইও নয় (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OnePaymentPaidOneBillTwiceTest]])
+            PurchaseBill::acrossBranches()
                 ->whereKey($payment->lines()->pluck('purchase_bill_id')->filter()->unique()->all())
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -375,7 +396,8 @@ final class PaymentService
                 $cheque = $payment->cheque;
 
                 if ($cheque !== null && $cheque->status !== Cheque::CANCELLED) {
-                    $this->cheques->cancel($cheque, $reason, $date);
+                    // ⛔ পরিশোধ এখনই বাতিল, তাই চেকের উল্টোও এখনই — ফেরতের সইয়ে অপেক্ষা নয় ([[ACancelledChequeUndidNothingTest]])
+                    $this->cheques->cancel($cheque, $reason, $date, asksItsSignature: false);
                 }
             } elseif ($payment->status === DocumentStatus::CONFIRMED) {
                 /*
@@ -475,10 +497,23 @@ final class PaymentService
      */
     private function assertStillFits(Payment $payment): void
     {
-        $payment->loadMissing('lines.bill');
+        /*
+         * ⛔ বিলপ্রতি যোগ, সব শাখা জুড়ে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OnePaymentPaidOneBillTwiceTest]])। ⚠️ আগে লাইন ধরে
+         * আলাদা করে মেলানো হত — একই বিল দুই লাইনে ১,০০০ + ১,০০০ দিলে প্রতিটা ১,০০০-এর বাকির ভেতরে পড়ত, বিলে বসত ২,০০০;
+         * আর সম্পর্কটা দেয়াল দিয়ে পড়ত, অন্য শাখা দেখানো অবস্থায় বিল "নেই" হয়ে যাচাই বাদ পড়ত।
+         */
+        $byBill = [];
 
-        foreach ($payment->lines as $line) {
-            $bill = $line->bill;
+        foreach ($payment->lines()->get() as $line) {
+            $id = (int) $line->purchase_bill_id;
+
+            if ($id > 0) {
+                $byBill[$id] = bcadd($byBill[$id] ?? '0', (string) $line->amount, 4);
+            }
+        }
+
+        foreach ($byBill as $billId => $amount) {
+            $bill = PurchaseBill::acrossBranches()->find($billId);
 
             if ($bill === null) {
                 continue;
@@ -487,7 +522,7 @@ final class PaymentService
             // এই পরিশোধটা এখনো খসড়া, তাই নিজের ভাগটা বাকির হিসাবে নেই
             $due = $bill->dueAmount();
 
-            if (bccomp((string) $line->amount, $due, 4) > 0) {
+            if (bccomp($amount, $due, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.over_allocated', [
                         'no' => $bill->document_no,
@@ -509,6 +544,8 @@ final class PaymentService
 
         $allocated = '0';
         $lineNo = 0;
+        // ⓘ এই পরিশোধেই একই বিলে আগের লাইনে যা বসল — বাকি থেকে সেটাও বাদ ([[assertStillFits()]]-এর একই কারণ)
+        $usedByBill = [];
 
         foreach ($lines as $line) {
             $billId = (int) ($line['purchase_bill_id'] ?? 0);
@@ -544,16 +581,18 @@ final class PaymentService
              * এই পরিশোধের নিজের লাইনগুলো আগেই মুছে ফেলা হয়েছে, তাই
              * সম্পাদনার সময় নিজের পুরনো ভাগটা দুইবার গোনা হয় না।
              */
-            $due = $bill->dueAmount();
+            $due = bcsub($bill->dueAmount(), $usedByBill[$bill->id] ?? '0', 4);
 
             if (bccomp($amount, $due, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.over_allocated', [
                         'no' => $bill->document_no,
-                        'due' => Money::format($due),
+                        'due' => Money::format(bccomp($due, '0', 4) > 0 ? $due : '0'),
                     ]),
                 ]);
             }
+
+            $usedByBill[$bill->id] = bcadd($usedByBill[$bill->id] ?? '0', $amount, 4);
 
             PaymentLine::create([
                 'company_id' => $payment->company_id,
@@ -653,6 +692,19 @@ final class PaymentService
         if (! $isMoney) {
             throw ValidationException::withMessages([
                 'account_id' => __('purchase::validation.not_a_money_account', ['name' => $account->name()]),
+            ]);
+        }
+
+        /*
+         * ⛔ নগদ কেবল নিজের বাক্স থেকে — ভাউচারের একই নিয়ম ([[VoucherService::assertCashLandsInOwnTill()]]; মালিক ২১/২৮ সেপ্টেম্বর
+         * ২০২৬; Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ASupplierWasPaidFromSomeoneElsesTillTest]])। ⚠️ পর্দা কেবল অন্য শাখার বাক্স লুকাত,
+         * সার্ভার কিছুই দেখত না: সহকর্মীর বাক্সের খাত পাঠালে তাঁর সই ছাড়াই তাঁর বাক্স খালি হত। ⓘ ব্যাংক খাতে এই নিয়ম নেই।
+         */
+        if ($account->isCash() && ! \App\Modules\Accounts\Models\CashTill::mayUse(auth()->id(), (int) $account->id)) {
+            throw ValidationException::withMessages([
+                'account_id' => \App\Modules\Accounts\Models\CashTill::heldByAnyone()
+                    ? __('accounts::validation.cash_not_your_till', ['account' => $account->label()])
+                    : __('accounts::validation.no_till_of_your_own'),
             ]);
         }
 

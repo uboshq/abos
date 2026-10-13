@@ -151,7 +151,7 @@ final class HeldCounterSaleFinisher
     {
         // ⛔ বিলের নিজের শাখায় — শেষ করার একই কারণে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১)
         CompanyContext::inBranch($invoice->branch_id === null ? null : (int) $invoice->branch_id, fn () => DB::transaction(function () use ($invoice, $user): void {
-            $locked = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
+            $locked = SalesInvoice::acrossBranches()->lockForUpdate()->find($invoice->getKey());
 
             if ($locked === null || ! self::signedNotFinished()->whereKey($locked->id)->exists()) {
                 throw ValidationException::withMessages(['invoice' => __('sales::auto_finish.not_stuck')]);

@@ -199,6 +199,11 @@ final class PurchaseReceiptService
         }
 
         return DB::transaction(function () use ($receipt, $data, $lines) {
+            // ⛔ তালা, তারপর "এখনো খসড়া?" আবার — পাশের ট্যাবে পাকা হয়ে গেলে পাকা কাগজের লাইন মুছে নতুন লেখা হত, খাতা আর মজুদ
+            // পুরনো লাইনে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnEditLandedOnAConfirmedPaperTest]])
+            $this->lockFresh($receipt);
+            $this->assertEditable($receipt);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $receipt->trx_date);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $receipt->warehouse_id);
 
@@ -263,6 +268,12 @@ final class PurchaseReceiptService
              * ⓘ `$line->rate` ইতিমধ্যেই মূল এককে নামানো ([[ReadsPackedQuantities::packed()]]),
              * তাই কার্টনের দাম পিসের ঘরে বসার ভয় নেই।
              */
+            // ⓘ আগের দাম সারিতে রাখা — বাতিলে ফেরানোর জন্য ([[restorePrices()]]; fe, ১৩ অক্টোবর ২০২৬)
+            $line->forceFill([
+                'prior_purchase_price' => $line->product->purchase_price,
+                'prior_sale_price' => $line->sales_price === null ? null : $line->product->sale_price,
+            ])->save();
+
             $line->product->update(['purchase_price' => (string) $line->rate]);
 
             if ($line->sales_price === null) {
@@ -564,6 +575,8 @@ final class PurchaseReceiptService
                 );
             }
 
+            $this->restorePrices($receipt);
+
             $receipt->update([
                 'status' => DocumentStatus::CANCELLED,
                 'cancelled_by' => auth()->id(),
@@ -573,6 +586,38 @@ final class PurchaseReceiptService
 
             return $receipt->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⛔ বাতিল রসিদের দাম পণ্য থেকে সরে, আগের দামে ফেরে — fe, ১৩ অক্টোবর ২০২৬ ([[ACancelledReceiptLeftItsPricesTest]])।
+     *
+     * ⚠️ আগে বাতিলের পরেও পণ্যের ক্রয়মূল্য (আর বলা থাকলে বিক্রয়মূল্য) বাতিল রসিদের দরেই থাকত — পরের কেনাবেচা ভুল দরে শুরু।
+     * ⓘ ফেরে কেবল যদি পণ্যে এখনো এই রসিদেরই দাম থাকে: পরে আরেকটা কাগজ দাম বদলে থাকলে সেটাই সাম্প্রতিক, ছোঁয়া হয় না।
+     */
+    private function restorePrices(PurchaseReceipt $receipt): void
+    {
+        foreach ($receipt->lines()->with('product')->get() as $line) {
+            $product = $line->product;
+
+            if ($product === null) {
+                continue;
+            }
+
+            $back = [];
+
+            if ($line->prior_purchase_price !== null && bccomp((string) $product->purchase_price, (string) $line->rate, 4) === 0) {
+                $back['purchase_price'] = (string) $line->prior_purchase_price;
+            }
+
+            if ($line->prior_sale_price !== null && $line->sales_price !== null
+                && bccomp((string) $product->sale_price, (string) $line->sales_price, 4) === 0) {
+                $back['sale_price'] = (string) $line->prior_sale_price;
+            }
+
+            if ($back !== []) {
+                $product->update($back);
+            }
+        }
     }
 
     /**
@@ -671,9 +716,16 @@ final class PurchaseReceiptService
 
             if ((bool) $product->tax?->is_inclusive) {
                 $figures = $this->lineFigures($qty, $rate, '0', null, $product->tax);
-                $tax = $figures['tax'];
-                $amount = bcsub($figures['amount'], $tax, 4);
-                $rate = bcdiv($amount, $qty, 4);
+                $rate = bcdiv(bcsub($figures['amount'], $figures['tax'], 4), $qty, 4);
+
+                /*
+                 * ⛔ মূল্য দর থেকেই — স্তর আর খাতা একই সংখ্যা (fe, ১৩ অক্টোবর ২০২৬; [[TheShelfAndTheBooksDriftedByAPaisaTest]])। ⚠️ দর চার
+                 * ঘরে কাটা পড়ে (৬০৮.৬৯৫৭ ÷ ৭ = ৮৬.৯৫৬৫), আর খরচের স্তর বসে পরিমাণ × দরে (৬০৮.৬৯৫৫), অথচ মজুদের খাতা বসত পুরো মূল্যে
+                 * (৬০৮.৬৯৫৭) — প্রতি সারিতে খাতা স্তরের চেয়ে একটু বেশি, পরিমাণের সাথে বাড়ে। ⓘ ভ্যাট বাকিটা নেয়, তাই সারির মোট (লেখা দাম)
+                 * হুবহু থাকে।
+                 */
+                $amount = bcmul($qty, $rate, 4);
+                $tax = bcsub($figures['amount'], $amount, 4);
             }
 
             // ফ্রি পরিমাণ একই সারির একই এককে — "১০ বাক্স, ১ বাক্স ফ্রি"
@@ -869,6 +921,19 @@ final class PurchaseReceiptService
             // ⛔ আদেশের সারি হারালে চুপচাপ পাশ নয় — সীমা দেখারই উপায় নেই
             if ($orderLine === null) {
                 throw ValidationException::withMessages(['lines' => __('purchase::validation.line_not_in_order')]);
+            }
+
+            /*
+             * ⛔ আদেশ এখনো খোলা — খসড়া লেখার দিন খোলা ছিল, মাঝে বাতিল হয়ে থাকতে পারে (Purchase নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[AReceiptCameInAgainstACancelledOrderTest]])। ⚠️ আগে বাতিল আদেশের বিপরীতে খসড়া রসিদ পাকা হত: মাল ঢুকত, দেনা বসত,
+             * নিজে-বিলও হত — অথচ আদেশটা সরবরাহকারীর কাছে "বাতিল"।
+             */
+            $order = PurchaseOrder::acrossBranches()->find($orderLine->purchase_order_id);
+
+            if ($order === null || $order->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'purchase_order_id' => __('purchase::validation.order_not_open', ['no' => $order?->document_no ?? '']),
+                ]);
             }
 
             $this->assertCeiling($orderLine, $receipt, $qty);

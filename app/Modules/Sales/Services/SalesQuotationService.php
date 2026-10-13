@@ -261,7 +261,7 @@ final class SalesQuotationService
     {
         return DB::transaction(function () use ($quotation) {
             /** @var SalesQuotation $locked */
-            $locked = SalesQuotation::query()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
+            $locked = SalesQuotation::acrossBranches()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
 
             $this->assertIn($locked, [
                 SalesQuotation::SUBMITTED, SalesQuotation::APPROVED,
@@ -395,7 +395,7 @@ final class SalesQuotationService
 
         return DB::transaction(function () use ($quotation) {
             /** @var SalesQuotation $locked */
-            $locked = SalesQuotation::query()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
+            $locked = SalesQuotation::acrossBranches()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
 
             if ($locked->status === SalesQuotation::CONVERTED || $locked->sales_order_id !== null) {
                 throw ValidationException::withMessages([
