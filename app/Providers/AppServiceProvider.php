@@ -317,6 +317,19 @@ class AppServiceProvider extends ServiceProvider
          */
         RateLimiter::for('app', fn ($request) => Limit::perMinute(300)->by('app|'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
+        /*
+         * ⛔ নবায়ন প্রতি টোকেনে (হেডার বা শরীরের) — ৩০/মিনিট; আর IP-তে ৩০০, যাতে ভুয়া টোকেন ঘুরিয়ে চাপ দেওয়া না যায়
+         * (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে কেবল IP ধরে ৩০ — একই NAT-এর সব ফোন একটা থলেতে।
+         */
+        RateLimiter::for('refresh', function ($request) {
+            $token = $request->bearerToken() ?: (is_string($request->input('refreshToken')) ? $request->input('refreshToken') : '');
+
+            return [
+                Limit::perMinute(30)->by('refresh|'.($token !== '' ? sha1($token) : $request->ip())),
+                Limit::perMinute(300)->by('refresh-ip|'.$request->ip()),
+            ];
+        });
+
         RateLimiter::for('login', fn ($request) => [
             // ⛔ তালার একই রূপ — নম্বর অন্যভাবে লিখে নতুন থলে নয় ([[LoginLock::canonical()]], ১৪ অক্টোবর ২০২৬)
             Limit::perMinute(10)->by('name|'.$request->ip().'|'.\App\Core\Security\LoginLock::canonical((string) $request->input('identifier'))),

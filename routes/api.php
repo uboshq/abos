@@ -92,7 +92,9 @@ Route::prefix('v1/auth')
              * একই চার পাহারা: আছে, মেয়াদ আছে, ক্ষমতা `refresh`, কর্মী ([[AuthController::refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
              * ⚠️ `auth:sanctum` এখানে নয়: Laravel সেটা অগ্রাধিকারে সবার আগে চালায়, তাই body-র টোকেন দেখার সুযোগই থাকত না।
              */
-            ->middleware(['throttle:30,1,api-token'])
+            // ⛔ প্রতি নবায়ন-টোকেনে, IP-তে নয় — এক অফিসের বা এক অপারেটরের NAT-এর সব ফোন মিনিটে মোট ৩০ পেত, সকালের ভিড়ে
+            // কেউ কেউ ৪২৯ পেয়ে "সেশন শেষ" দেখতেন (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ARefreshWasCountedPerOfficeNotPerPhoneTest]])
+            ->middleware(['throttle:refresh'])
             ->name('refresh');
 
         Route::post('/logout', [AuthController::class, 'logout'])
