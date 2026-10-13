@@ -126,6 +126,12 @@ final class SupplierService
         $this->assertBinIfRequired($data, $supplier);
         $this->assertNotADuplicate($data, $supplier->id);
 
+        // ⛔ মুছে দেওয়া কোড মানে "যেমন ছিল" — খালি ঘর null হয়ে `NOT NULL` কোডে ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+        // [[ABlankBoxBrokeTheSupplierFormTest]])
+        if (array_key_exists('code', $data) && trim((string) $data['code']) === '') {
+            unset($data['code']);
+        }
+
         if (isset($data['code']) && trim((string) $data['code']) !== $supplier->code) {
             $this->assertCodeIsFree(trim((string) $data['code']), $supplier->id);
         }

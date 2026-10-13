@@ -27,6 +27,20 @@ class SupplierRequest extends FormRequest
         return true;
     }
 
+    /**
+     * ⛔ খালি সংখ্যার ঘর মানে ০ — ব্রাউজারের "" Laravel-এ null হয়, আর `credit_limit`, `credit_days`, `opening_balance` তিনটাই
+     * `NOT NULL default 0`; সীমা বা মেয়াদ খালি রেখে সংরক্ষণ ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ABlankBoxBrokeTheSupplierFormTest]])। ⓘ যে ঘর আসেইনি, সেটা ছোঁয়া হয় না।
+     */
+    protected function prepareForValidation(): void
+    {
+        foreach (['credit_limit', 'credit_days', 'opening_balance'] as $key) {
+            if ($this->has($key) && trim((string) $this->input($key)) === '') {
+                $this->merge([$key => '0']);
+            }
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
