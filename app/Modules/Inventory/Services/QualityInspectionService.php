@@ -345,7 +345,12 @@ final class QualityInspectionService
                     warehouse: $inspection->warehouse,
                     qty: $held,
                     reason: $this->reasonFor($result),
-                    date: $inspection->inspected_on,
+                    /*
+                     * ⓘ রায়ের দিন, পরিদর্শনের দিন নয় — উপরের অপেক্ষার ছাড়াও আজকের (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর
+                     * ২০২৬)। ⛔ আগে ৩০ সেপ্টেম্বরের পরিদর্শনে ২ অক্টোবরে রায়, আর মাঝে সেপ্টেম্বর বন্ধ: প্রতিটা চেষ্টা বন্ধ মাসে
+                     * আটকাত, কাগজ চিরকাল অপেক্ষমাণ, অপেক্ষার আটকানোও চিরকাল।
+                     */
+                    date: now(),
                     narration: $remarks ?? $inspection->remarks,
                     batch: $inspection->batch,
                     documentNo: $inspection->document_no,
