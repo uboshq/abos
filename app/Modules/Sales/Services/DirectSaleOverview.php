@@ -113,9 +113,13 @@ final class DirectSaleOverview
         $left = bcsub($net, $paying, 4);
         $o->money(__('sales::overview_confirm.left_on_bill'), Money::format(bccomp($left, '0', 4) > 0 ? $left : '0'));
 
-        $s = $this->standing->for($customer, bccomp($left, '0', 4) > 0 ? $left : '0');
-        $s = $this->withoutTheBillBeingEdited($s, $customer, $data, bccomp($left, '0', 4) > 0 ? $left : '0');
-        $s = $this->withoutTheDraftBeingFinished($s, $customer, $data, bccomp($left, '0', 4) > 0 ? $left : '0');
+        /*
+         * ⭐ সীমার মাপে চিহ্নসহ — দরজার হুবহু ([[CreditExposure::assertRoom()]]: বিল − নেওয়া)। মালিক, ১৩ অক্টোবর ২০২৬
+         * (DRF-0120): বিলের বাড়তি টাকা আগের বকেয়া শোধ করে; শূন্যে কাটলে সারাংশ "সীমা পার" বলত অথচ বিল হত।
+         */
+        $s = $this->standing->for($customer, $left);
+        $s = $this->withoutTheBillBeingEdited($s, $customer, $data, $left);
+        $s = $this->withoutTheDraftBeingFinished($s, $customer, $data, $left);
         $o->money(__('sales::overview_confirm.old_due'), Money::format($s['due']));
         if (bccomp($s['advance'], '0', 4) > 0) {
             $o->money(__('sales::overview_confirm.advance'), Money::format($s['advance']), 'good');

@@ -353,9 +353,19 @@
                 </p>
 
                 <div class="grid gap-3 sm:grid-cols-2">
-                    <x-ui.field name="opening_balance" type="number" step="0.01" inputmode="decimal"
+                    <x-ui.field name="opening_balance" type="number" step="0.01" min="0" inputmode="decimal"
                                        :label="__('accounts::field.opening_balance')"
                                        :value="old('opening_balance', 0)" numeric />
+                    {{-- ⭐ কোন পাশে — না বাছলে খাতের স্বাভাবিক দিক (সম্পদ/খরচে Dr, দায়/মূলধন/আয়ে Cr); উল্টো দিক বৈধ, যেমন ব্যাংকের ওভারড্রাফট (Cr) --}}
+                    <label class="flex flex-col gap-1 text-sm">
+                        <span class="font-medium">{{ __('accounts::field.opening_side') }}</span>
+                        <select name="opening_side" data-opening-side
+                                class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2">
+                            <option value="" @selected(old('opening_side') === null || old('opening_side') === '')>{{ __('accounts::field.opening_side_normal') }}</option>
+                            <option value="{{ \App\Modules\Accounts\Models\Account::DEBIT }}" @selected(old('opening_side') === \App\Modules\Accounts\Models\Account::DEBIT)>Dr</option>
+                            <option value="{{ \App\Modules\Accounts\Models\Account::CREDIT }}" @selected(old('opening_side') === \App\Modules\Accounts\Models\Account::CREDIT)>Cr</option>
+                        </select>
+                    </label>
                     <x-ui.field name="opening_date" type="date"
                                        :label="__('accounts::field.opening_date')"
                                        :value="old('opening_date')" />

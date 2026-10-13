@@ -60,6 +60,10 @@ final class NoticeApiController extends Controller
             'expires_at' => $notice->expires_at?->toIso8601String(),
             'ack_required' => (bool) $notice->ack_required,
             'standing' => $standing->standingOf($notice, $user)->value,
+            // ⭐ ফোনের নোটিশ বোর্ড (মালিক, ১৩ অক্টোবর ২০২৬) — ওয়েবের নোটিশ পাতার একই ঘর: কে লিখলেন, কবে থেকে, সইয়ের শেষ দিন
+            'author' => $notice->author?->name,
+            'starts_on' => $notice->starts_on?->toDateString(),
+            'ack_deadline' => $notice->ack_deadline?->toIso8601String(),
         ])->values();
 
         return response()->json([
@@ -75,6 +79,8 @@ final class NoticeApiController extends Controller
                 'page' => $page->currentPage(),
                 'pages' => $page->lastPage(),
                 'total' => $page->total(),
+                // ⓘ না-পড়া কয়টা — ওয়েবের নোটিশ পাতার একই গোনা ([[NoticeBoard::unreadCount()]])
+                'unread' => app(NoticeBoard::class)->unreadCount($user),
             ],
         ]);
     }

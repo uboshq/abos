@@ -109,13 +109,14 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
             ->assertJsonPath('module', $code);
     }
 
-    /** ⭐ গ্রাহক সপ্তম — মালিক, ২ অক্টোবর ২০২৬: *"ha calu thakbe"* */
+    /** ⭐ গ্রাহক সপ্তম — মালিক, ২ অক্টোবর ২০২৬: *"ha calu thakbe"*; মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ — ১৩ অক্টোবর ২০২৬ */
     public function test_a_new_company_starts_with_the_owners_seven(): void
     {
         $body = $this->phone('GET', '/api/v1/me')->assertOk()->json();
 
         $this->assertEqualsCanonicalizing(
-            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'],
+            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control',
+                'finance', 'documents', 'promotion', 'hr'],
             $body['phoneModules'],
         );
 
@@ -123,13 +124,16 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
             $this->assertContains($code, $body['phoneModules'], "the menu carries {$code}, which is off");
         }
 
-        $this->assertNotContains('hr', array_column($body['menu'], 'code'));
-        $this->assertNotContains('finance', array_column($body['menu'], 'code'));
+        // ⭐ অর্থ, ডকুমেন্টস, প্রমোশন, HR — মালিক, ১৩ অক্টোবর ২০২৬: *"ok tai koro"*
+        $this->assertContains('hr', array_column($body['menu'], 'code'));
+        $this->assertContains('finance', array_column($body['menu'], 'code'));
     }
 
     public function test_the_menu_follows_the_switch_for_the_same_token(): void
     {
-        $this->assertNotContains('hr', $this->menuCodes(), 'hr is off by default');
+        $this->assertContains('hr', $this->menuCodes(), 'hr is on by default (owner, 13 Oct 2026)');
+        $this->flip(['hr' => false])->assertRedirect();
+        $this->assertNotContains('hr', $this->menuCodes());
 
         $this->flip(['hr' => true])->assertRedirect();
         $this->assertContains('hr', $this->menuCodes());
@@ -236,10 +240,11 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
 
     public function test_every_change_is_written_down_who_when_old_and_new(): void
     {
-        $this->flip(['hr' => true]);
-        $this->flip(['hr' => false]);
+        // ⓘ ডিফল্টে বন্ধ একটা মডিউল — HR এখন ডিফল্টে চালু, "চালু করা" তাই কোনো বদল নয় (মালিক, ১৩ অক্টোবর ২০২৬)
+        $this->flip(['master_data' => true]);
+        $this->flip(['master_data' => false]);
 
-        $row = Setting::query()->withoutGlobalScopes()->where('key', 'mobile.modules.hr')->firstOrFail();
+        $row = Setting::query()->withoutGlobalScopes()->where('key', 'mobile.modules.master_data')->firstOrFail();
 
         $trail = AuditTrail::query()->withoutGlobalScopes()
             ->forRecord(Setting::class, $row->id)
@@ -258,9 +263,10 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
     {
         $sales = User::query()->where('email', 'sales@abos.test')->firstOrFail();
 
-        $this->flip(['hr' => true], $sales)->assertForbidden();
+        // ⓘ HR এখন ডিফল্টে চালু — অ্যাডমিনের চাবি ছাড়া কেউ বন্ধও করতে পারেন না
+        $this->flip(['hr' => false], $sales)->assertForbidden();
 
-        $this->assertNotContains('hr', $this->menuCodes());
+        $this->assertContains('hr', $this->menuCodes());
         $this->assertFalse(Setting::query()->withoutGlobalScopes()->where('key', 'mobile.modules.hr')->exists());
     }
 

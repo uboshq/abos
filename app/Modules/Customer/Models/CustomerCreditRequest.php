@@ -8,6 +8,9 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserDealers;
+use App\Core\Contracts\ShowsItselfForSigning;
+use App\Core\Support\DateFormat;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -21,7 +24,7 @@ use Illuminate\Support\Carbon;
  * না ([[Customer::effectiveCreditLimit()]] কেবল গ্রাহকের সারি পড়ে)। সই পড়লে বসায় [[CreditLimitRequests::applySigned()]]।
  * ⛔ মোছে না — না হওয়া, ফিরিয়ে নেওয়া বা মেয়াদ পেরোনো অনুরোধও থাকে।
  */
-class CustomerCreditRequest extends Model
+class CustomerCreditRequest extends Model implements ShowsItselfForSigning
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -91,6 +94,29 @@ class CustomerCreditRequest extends Model
         }
 
         return self::PENDING;
+    }
+
+    /**
+     * ⭐ সইয়ের পাতায় অনুরোধটা নিজে কী বলে — কার, কী চাই, আগে → চাওয়া, কবে পর্যন্ত, কেন, কে চাইলেন (ফোনের অনুমোদনের বাক্স,
+     * মালিক, ১৩ অক্টোবর ২০২৬)। ⓘ আগে বাক্সে কেবল "CustomerCreditRequest" আর এক লাইনের কথা দেখাত; মালিক সই দেন এখান থেকেই।
+     * ⛔ কোনো হিসাব নেই — সারির নিজের ঘর, লেখা হয়ে।
+     */
+    public function signingSheet(): array
+    {
+        $facts = [
+            ['label' => __('customer::credit_request.customer'), 'value' => trim(($this->customer?->name() ?? '').' '.($this->customer?->code === null ? '' : '('.$this->customer->code.')'))],
+            ['label' => __('customer::credit_request.kind'), 'value' => __('customer::credit_request.kind_'.$this->kind)],
+            ['label' => __('customer::credit_request.from_to'), 'value' => Money::format((string) $this->current_limit).' → '.Money::format((string) $this->requested_limit)],
+            ['label' => __('customer::credit_request.temp_until'), 'value' => $this->temp_until === null ? '' : DateFormat::format($this->temp_until)],
+            ['label' => __('customer::credit_request.reason'), 'value' => (string) $this->reason],
+            ['label' => __('customer::credit_request.asked_by'), 'value' => (string) ($this->requester?->name ?? '')],
+        ];
+
+        return [
+            'facts' => array_values(array_filter($facts, fn (array $f) => trim((string) $f['value']) !== '')),
+            'columns' => [],
+            'rows' => [],
+        ];
     }
 
     public function customer(): BelongsTo
