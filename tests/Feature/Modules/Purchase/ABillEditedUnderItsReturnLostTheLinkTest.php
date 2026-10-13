@@ -38,13 +38,22 @@ final class ABillEditedUnderItsReturnLostTheLinkTest extends TestCase
         app(StandardChart::class)->install();
 
         $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
-        $product = Product::query()->where('track_batch', false)->where('track_serial', false)->orderBy('id')->firstOrFail();
+        $product = Product::query()->whereNull('tax_id')->where('track_batch', false)->where('track_serial', false)
+            ->where('qc_required', false)->orderBy('id')->firstOrFail();
         $supplier = Supplier::query()->orderBy('id')->firstOrFail();
         $bills = app(PurchaseBillService::class);
-        $head = ['supplier_id' => $supplier->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString(), 'supplier_bill_no' => 'LINK-1'];
-        $lines = [['product_id' => $product->id, 'qty' => '10', 'rate' => '50']];
-        $bill = $bills->confirm($bills->create($head, $lines));
+
+        // ⓘ রসিদের বিল — বিল মাল ছোঁয় না, তাই "মাল বেরিয়ে গেছে" দেয়াল খাটে না; লাইন নতুন হলে ফেরতের সংযোগই একমাত্র পাহারা
+        $receipts = app(\App\Modules\Purchase\Services\PurchaseReceiptService::class);
+        $receipt = $receipts->confirm($receipts->create(
+            ['supplier_id' => $supplier->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'received_qty' => '10', 'rate' => '50']],
+        ));
+        $bill = $bills->fromReceipt(\App\Modules\Purchase\Models\PurchaseReceipt::query()->with('lines.product.tax')->findOrFail($receipt->id));
+        $bill = $bill->status === \App\Core\Support\DocumentStatus::DRAFT ? $bills->confirm($bill) : $bill;
         $billLine = $bill->lines()->firstOrFail();
+        $head = ['supplier_id' => $supplier->id, 'trx_date' => now()->toDateString(), 'supplier_bill_no' => $bill->supplier_bill_no];
+        $lines = [['product_id' => $product->id, 'qty' => '10', 'rate' => '50', 'purchase_receipt_line_id' => $billLine->purchase_receipt_line_id]];
 
         $returns = app(PurchaseReturnService::class);
         $return = $returns->confirm($returns->create(
