@@ -125,8 +125,8 @@ final class ThePhoneAsksForLeaveAndShowsThePayslipTest extends TestCase
         // ⓘ রানটা অন্য শাখার — নিজের স্লিপে শাখার দেয়াল খাটে না
         $other = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
             ->where('id', '!=', CompanyContext::branchId())->orderBy('id')->firstOrFail();
-        $posted = $this->run('PAY-PH-09', '2026-09-01', DocumentStatus::CONFIRMED, $other);
-        $draft = $this->run('PAY-PH-10', '2026-10-01', DocumentStatus::DRAFT, $other);
+        $posted = $this->payrollRun('PAY-PH-09', '2026-09-01', DocumentStatus::CONFIRMED, $other);
+        $draft = $this->payrollRun('PAY-PH-10', '2026-10-01', DocumentStatus::DRAFT, $other);
 
         $slip = $this->slip($posted, $this->mine, '30000', '2000');
         $this->slip($draft, $this->mine, '31000', '2000');
@@ -197,7 +197,7 @@ final class ThePhoneAsksForLeaveAndShowsThePayslipTest extends TestCase
         return $employee;
     }
 
-    private function run(string $no, string $month, string $status, Branch $branch): PayrollRun
+    private function payrollRun(string $no, string $month, string $status, Branch $branch): PayrollRun
     {
         $run = PayrollRun::acrossBranches()->create([
             'company_id' => $this->company->id, 'branch_id' => $branch->id, 'document_no' => $no,
