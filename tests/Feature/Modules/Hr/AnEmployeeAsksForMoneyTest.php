@@ -257,6 +257,37 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $this->get(route('hr.claim.show', $claim))->assertForbidden();
     }
 
+    /**
+     * ⛔ ক্যাশিয়ারের খসড়া বা পাকা ভাউচার বাতিল হলেও দাবি দেওয়া যায় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে দাবি "অনুমোদিত" হয়ে বাতিল ভাউচারে জোড়া থাকত, নতুন খসড়ার কোনো পথ ছিল না।
+     */
+    public function test_a_cancelled_payment_voucher_leaves_a_fresh_draft_so_the_claim_can_still_be_paid(): void
+    {
+        $claim = $this->signed($this->submit(ExpenseClaim::EXPENSE, '1200'));
+        $first = $claim->paymentVoucher;
+
+        $this->actingAs($this->cashier);
+        app(VoucherService::class)->cancel($first->fresh(), 'wrong till');
+
+        $claim->refresh();
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->status);
+        $this->assertNotSame((int) $first->id, (int) $claim->payment_voucher_id, '⛔ বাতিল খসড়ার পরে নতুন খসড়া হয়নি — দাবি আটকে');
+        $second = $claim->paymentVoucher;
+        $this->assertTrue($second->isDraft());
+        $this->assertMoney('1200', $second->lines()->where('account_id', $this->expense->id)->sum('debit'), 'নতুন খসড়ায় একই অঙ্ক');
+
+        app(VoucherService::class)->post($second->fresh());
+        $this->assertSame(ExpenseClaim::PAID, $claim->fresh()->status, '⛔ নতুন খসড়া পাকা হলেও দাবি দেওয়া হয়নি');
+
+        // ⓘ পাকা ভাউচার বাতিল — দাবি আবার অনুমোদিত, আর আবার একটা খসড়া; দুইটা খোলা খসড়া নয়
+        app(VoucherService::class)->cancel($second->fresh(), 'paid by mistake');
+        $claim->refresh();
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->status);
+        $this->assertTrue($claim->paymentVoucher->isDraft(), '⛔ পাকা ভাউচার বাতিলের পরে দেওয়ার খসড়া নেই');
+        $this->assertSame(1, Voucher::acrossBranches()->where('against_type', ExpenseClaim::drillSourceType())
+            ->where('against_id', $claim->id)->where('status', DocumentStatus::DRAFT)->count(), '⛔ একই দাবির দুইটা খোলা খসড়া');
+    }
+
     public function test_the_roles_that_mark_their_own_attendance_are_given_the_claim_key(): void
     {
         $role = Role::query()->whereHas('permissions', fn ($q) => $q->where('name', 'hr.attendance.self'))->firstOrFail();

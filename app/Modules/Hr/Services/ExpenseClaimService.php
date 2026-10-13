@@ -334,6 +334,53 @@ final class ExpenseClaimService
         });
     }
 
+    /**
+     * ⭐ ক্যাশিয়ারের খসড়া বাতিল হলে নতুন খসড়া — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AnEmployeeAsksForMoneyTest]])।
+     *
+     * ⓘ দাবির টাকার ভাউচার (খসড়া বা পাকা) বাতিল হলে দাবি আবার "অনুমোদিত" ([[ExpenseClaim::unsettle()]]), কিন্তু খসড়া বানাত কেবল
+     * [[approve()]], যা অনুমোদিত দাবিতে আর চলে না — দাবি চিরকাল "ক্যাশিয়ার দেবেন" বলে বসে থাকত, দেওয়ার পথ ছিল না। এখন বাতিলের
+     * একই লেনদেনে একই অঙ্কের, একই খাতের নতুন খসড়া; দাবির জোড়া নতুনটায়। ⛔ কেবল অনুমোদিত দাবিতে, আর জোড়া ভাউচারটা বাতিল বা
+     * হারানো হলে — চালু খসড়া থাকলে দ্বিতীয়টা নয়।
+     */
+    public function draftAgain(ExpenseClaim $claim): void
+    {
+        DB::transaction(function () use ($claim): void {
+            $this->lockFresh($claim);
+
+            if ($claim->status !== ExpenseClaim::APPROVED) {
+                return;
+            }
+
+            $linked = $claim->payment_voucher_id === null ? null
+                : Voucher::acrossBranches()->withTrashed()->find($claim->payment_voucher_id);
+
+            if ($linked !== null && ! $linked->isCancelled()) {
+                return;
+            }
+
+            $cash = $claim->cashPart();
+
+            if (bccomp($cash, '0', 2) <= 0) {
+                return;
+            }
+
+            // ⓘ দাবির বিপরীতে আরেকটা খসড়া আগে থেকেই আছে (হাতে লেখা ভাউচার জোড়া বদলে দিয়েছিল) — নতুন নয়, জোড়া সেটায়
+            $open = Voucher::acrossBranches()
+                ->where('against_type', ExpenseClaim::drillSourceType())->where('against_id', $claim->id)
+                ->where('status', DocumentStatus::DRAFT)->orderBy('id')->value('id');
+
+            if ($open !== null) {
+                $claim->forceFill(['payment_voucher_id' => (int) $open])->save();
+
+                return;
+            }
+
+            $claim->kind === ExpenseClaim::ADVANCE
+                ? $this->cashVoucher($claim, $this->head(StandardChart::EMPLOYEE_ADVANCE)->id, $cash, true)
+                : $this->cashVoucher($claim, (int) $claim->expense_account_id, $cash, false);
+        });
+    }
+
     /** কর্মীর খোলা অগ্রিম — পর্দা আর ফোনের জন্য */
     public function openAdvance(Employee $employee): string
     {
