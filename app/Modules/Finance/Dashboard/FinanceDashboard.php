@@ -650,7 +650,7 @@ final class FinanceDashboard implements ProvidesDashboard
      * প্রতিটা কোয়েরিতে কোম্পানির নাম হাতে (`company_id`) — `DB::table` গ্লোবাল স্কোপ মানে না।
      *
      * ── ⛔ বাকির সংজ্ঞা দ্বিতীয়বার লেখা নয়, হুবহু নকল ──────────────────────
-     * বাকি = বিলের মোট − পোস্ট হওয়া পরিশোধের সারি − বিলের বিপরীতে পোস্ট হওয়া পরিশোধ ভাউচার, অর্থাৎ
+     * বাকি = বিলের মোট − পোস্ট হওয়া পরিশোধের সারি − বিলের বিপরীতে পোস্ট হওয়া পরিশোধ ভাউচার − পাকা ক্রয়-ফেরত, অর্থাৎ
      * [[PurchaseBill::scopeWithPaid()]] আর [[PurchaseBill::dueAmount()]]-এর একই তিন ভাগ, [[CashForecast]] যেভাবে পড়ে।
      * ⚠️ ওখানে শর্ত বদলালে এখানেও বদলাতে হবে — দাবিটা ([[TheFinanceDashboardShowsTheWholeSpecTest]]) পরিশোধ বসিয়ে মাপে।
      * ⓘ মেয়াদ-না-লেখা বিল কোনো ঘরেই নয় — কবে দিতে হবে তা জানা নেই। দেখার শাখা মানে, বিলের তালিকার মতো।
@@ -681,6 +681,19 @@ final class FinanceDashboard implements ProvidesDashboard
             ->whereNull('vouchers.deleted_at')
             ->selectRaw('COALESCE(SUM(vouchers.amount), 0)');
 
+        /*
+         * ⛔ পাকা ক্রয়-ফেরতও — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+         * [[PurchaseBill::owedParts()]]-এর তৃতীয় ভাগ ([[PurchaseBill::returnedAmount()]]), [[CashForecast]]-ও বাদ দেয়। আগে
+         * এখানে ছিল না: পুরো ফেরত দেওয়া বিল সরবরাহকারীর খাতায় শূন্য, অথচ এই ঘরে পুরো অঙ্কে "মেয়াদোত্তীর্ণ"।
+         * ⓘ শাখার দেয়াল ছাড়া, ওখানকার মতোই — বিলের কোম্পানি ধরে।
+         */
+        $returned = DB::table('pur_returns')
+            ->whereColumn('pur_returns.purchase_bill_id', 'pur_bills.id')
+            ->whereColumn('pur_returns.company_id', 'pur_bills.company_id')
+            ->whereIn('pur_returns.status', DocumentStatus::POSTED)
+            ->whereNull('pur_returns.deleted_at')
+            ->selectRaw('COALESCE(SUM(pur_returns.total), 0)');
+
         $bills = app(DataScope::class)->inView(DB::table('pur_bills')
             ->where('pur_bills.company_id', $company)
             ->whereIn('pur_bills.status', DocumentStatus::POSTED)
@@ -689,9 +702,10 @@ final class FinanceDashboard implements ProvidesDashboard
             ->where('pur_bills.due_on', '<=', $weekEnd), 'pur_bills.branch_id')
             ->select(['pur_bills.due_on', 'pur_bills.total'])
             ->selectSub($paidByLines, 'paid_lines')
-            ->selectSub($paidByVouchers, 'paid_vouchers');
+            ->selectSub($paidByVouchers, 'paid_vouchers')
+            ->selectSub($returned, 'returned');
 
-        $left = 'b.total - b.paid_lines - b.paid_vouchers';
+        $left = 'b.total - b.paid_lines - b.paid_vouchers - b.returned';
 
         $row = DB::query()->fromSub($bills, 'b')
             ->whereRaw("{$left} > 0")
