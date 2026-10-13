@@ -42,6 +42,7 @@ final class ABillFromAChallanStaysOnItsChallanWhenEditedTest extends TestCase
 
         $challan = app(DeliveryChallanService::class)->create($paper + ['own_transport' => true, 'vehicle_no' => 'DHA-GA-11-2233'],
             [['product_id' => $product->id, 'delivered_qty' => '5', 'rate' => '10']]);
+        app(DeliveryChallanService::class)->confirm($challan);
         $challanLine = $challan->lines()->firstOrFail();
 
         $bill = app(SalesInvoiceService::class)->create($paper, [['product_id' => $product->id, 'qty' => '5', 'rate' => '10']]);

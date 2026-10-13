@@ -70,7 +70,9 @@ final class ACommissionClaimPostsInItsOwnBranchTest extends TestCase
     {
         return app(DirectSaleService::class)->complete(
             ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'),
-                'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'own_transport' => '1'],
+                'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'own_transport' => '1',
+                // ⓘ একই কার্ট দুইবার — জেনেশুনে
+                DirectSaleService::REPEAT_FIELD => '1'],
             [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'), 'qty' => '10', 'rate' => '100', 'free_qty' => '0']],
         )['invoice'];
     }
