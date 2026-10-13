@@ -11,6 +11,7 @@ declare(strict_types=1);
 return [
     'order_edit_needs_network' => 'An order cannot be corrected offline — somebody at the office may have changed it in the meantime. Come back into coverage and correct it there.',
     'unknown_customer' => 'That shop was not found on the server. Sync the list and try again.',
+    'customer_inactive' => 'This shop has been switched off at the office — no new order is taken for it. Sync the list.',
     'unknown_product' => 'One of the products on the order was not found on the server. Sync the list and try again.',
     'order_line_has_no_price' => ':product has no sale price yet. Ask the office to set one, then send again.',
     'order_has_no_lines' => 'The order has no products on it.',
