@@ -65,6 +65,16 @@ final class PayrollService
         $monthEnd = $monthStart->copy()->endOfMonth();
         $trx = $trxDate === null ? $monthEnd->copy() : Carbon::parse($trxDate);
 
+        /*
+         * ⛔ বেতনের দিন মাসের আগে নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[APayrollMonthAndDateStayInsideTheirLimitsTest]])।
+         * ⓘ আগে অক্টোবরের রান ১ সেপ্টেম্বর তারিখে নেওয়া হত — অক্টোবরের বেতন-খরচ সেপ্টেম্বরের খাতায়, বন্ধ হয়ে যাওয়া তুলনার মাসে।
+         */
+        if ($trx->copy()->startOfDay()->lt($monthStart)) {
+            throw ValidationException::withMessages([
+                'trx_date' => __('hr::validation.payroll_date_before_month', ['month' => $monthStart->format('M Y')]),
+            ]);
+        }
+
         $this->assertNoLiveRun($monthStart);
 
         /*
