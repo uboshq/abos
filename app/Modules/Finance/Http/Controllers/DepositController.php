@@ -445,7 +445,7 @@ class DepositController extends Controller implements HasMiddleware
             'paper' => ['nullable', 'file'],
 
             'return_word' => ['required', 'string', 'in:interest,profit'],
-            'opened_on' => ['required', 'date'],
+            'opened_on' => ['required', 'date', 'before_or_equal:today'],
             'matures_on' => ['nullable', 'date', 'after:opened_on'],
             'instalment_amount' => ['nullable', 'numeric', 'gt:0'],
             'instalment_day' => ['nullable', 'integer', 'min:1', 'max:28'],
@@ -530,7 +530,8 @@ class DepositController extends Controller implements HasMiddleware
             // ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর আর আবগারি শুল্ক (প্র২, ৬ অক্টোবর ২০২৬; [[DepositService::deductionLines()]])
             'source_tax' => ['nullable', 'numeric', 'min:0'],
             'excise_duty' => ['nullable', 'numeric', 'min:0'],
-            'moved_on' => ['required', 'date'],
+            // ⛔ জমা খোলার আগে নয়, আগামী দিনেও নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'moved_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$deposit->opened_on->toDateString()],
             'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
@@ -556,7 +557,8 @@ class DepositController extends Controller implements HasMiddleware
             'source_tax' => ['nullable', 'numeric', 'min:0'],
             'excise_duty' => ['nullable', 'numeric', 'min:0'],
             'penalty' => ['nullable', 'numeric', 'min:0'],
-            'moved_on' => ['required', 'date'],
+            // ⛔ জমা খোলার আগে নয়, আগামী দিনেও নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'moved_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$deposit->opened_on->toDateString()],
             'money_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]
@@ -662,7 +664,8 @@ class DepositController extends Controller implements HasMiddleware
             'source_tax' => ['nullable', 'numeric', 'min:0'],
             'excise_duty' => ['nullable', 'numeric', 'min:0'],
             'penalty' => ['nullable', 'numeric', 'min:0'],
-            'moved_on' => ['required', 'date'],
+            // ⛔ জমা খোলার আগে নয়, আগামী দিনেও নয় (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'moved_on' => ['required', 'date', 'before_or_equal:today', 'after_or_equal:'.$deposit->opened_on->toDateString()],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
