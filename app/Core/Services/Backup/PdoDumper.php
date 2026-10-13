@@ -56,6 +56,20 @@ final class PdoDumper
             throw new RuntimeException("ডাম্প ফাইলটা লেখা গেল না: {$target}");
         }
 
+        /*
+         * ⛔ এক মুহূর্তের ছবি — ব্যাকআপ লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ আগে প্রতিটা টেবিল আলাদা মুহূর্তে পড়া হত: ডাম্প চলার
+         * মাঝে একটা বিল বসলে ভাউচার আর তার খাতার সারি দুই অবস্থায় আসত, আর ফেরত আনা ডাটাবেজে হিসাব মিলত না — অথচ লোড কোনো ত্রুটি
+         * ছাড়াই হত। লাইভে শেল নেই, তাই রাতের, ডিপ্লয়ের আর ফেরানোর আগের সব ব্যাকআপ এই পথেই। ⓘ mysqldump-এর `--single-transaction`-এর
+         * সমান: InnoDB সব টেবিল একই ছবি থেকে দেয়, কাউকে তালা না দিয়ে। ⚠️ সংযোগটা অ্যাপের, তাই আগে থেকে লেনদেনে থাকলে নতুন লেনদেন খোলা
+         * হয় না (MySQL তাহলে আগেরটা নীরবে কমিট করত) — তখন চলতি লেনদেনের ছবিই ছবি।
+         */
+        $snapshot = DB::transactionLevel() === 0;
+
+        if ($snapshot) {
+            $pdo->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+            $pdo->exec('START TRANSACTION WITH CONSISTENT SNAPSHOT');
+        }
+
         try {
             $this->writeHeader($out, $database);
 
@@ -69,6 +83,10 @@ final class PdoDumper
 
             return count($tables);
         } finally {
+            if ($snapshot) {
+                $pdo->exec('ROLLBACK');
+            }
+
             fclose($out);
         }
     }
@@ -191,11 +209,16 @@ final class PdoDumper
          * বড় টেবিলেও হাজারের ঘরে) এটা এখানে সমস্যা নয়। লক্ষ ছাড়ালে
          * প্রাথমিক কী ধরে পড়া লাগবে — তখন এই মন্তব্যটা পড়বেন।
          */
+        /*
+         * ⛔ প্রাথমিক কী-র ক্রমে — `ORDER BY` ছাড়া `LIMIT/OFFSET`-এর ক্রম MySQL কথা দেয় না: দুই দফার মাঝে ক্রম বদলালে একটা সারি দুইবার
+         * আসত আর আরেকটা বাদ পড়ত (নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। কী না থাকলে আগের মতো।
+         */
+        $order = $this->primaryKeyOrder($pdo, $table);
         $offset = 0;
 
         while (true) {
             $rows = $pdo
-                ->query("SELECT * FROM {$quoted} LIMIT ".self::CHUNK.' OFFSET '.$offset)
+                ->query("SELECT * FROM {$quoted}{$order} LIMIT ".self::CHUNK.' OFFSET '.$offset)
                 ->fetchAll(PDO::FETCH_ASSOC);
 
             if ($rows === []) {
@@ -218,6 +241,17 @@ final class PdoDumper
 
             $offset += self::CHUNK;
         }
+    }
+
+    /** ⓘ ` ORDER BY` প্রাথমিক কী-র কলামে — কী না থাকলে খালি */
+    private function primaryKeyOrder(PDO $pdo, string $table): string
+    {
+        $columns = array_map(
+            fn (array $row) => '`'.str_replace('`', '``', (string) $row['Column_name']).'`',
+            $pdo->query("SHOW KEYS FROM `".str_replace('`', '``', $table)."` WHERE Key_name = 'PRIMARY'")->fetchAll(PDO::FETCH_ASSOC),
+        );
+
+        return $columns === [] ? '' : ' ORDER BY '.implode(', ', $columns);
     }
 
     /**
