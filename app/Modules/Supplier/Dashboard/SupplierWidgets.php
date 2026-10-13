@@ -75,8 +75,6 @@ final class SupplierWidgets implements DashboardWidgets
             ->where('party_type', Supplier::drillSourceType())
             // ⭐ কেবল মূল কোম্পানি (পণ্যের সরবরাহকারী) — প্রদেয় তালিকার একই নিয়মে, সেবাদাতা বাদ (মালিক, ২ অক্টোবর ২০২৬)
             ->whereIn('party_id', Supplier::onlySuppliersIds())
-            // ⛔ কেবল দেনার খাত — বিল-না-আসা মাল দেনা নয় (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[GoodsNotYetBilledReadAsOwedTest]])
-            ->whereIn('account_id', Supplier::payableAccountIds())
             ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as owed')
             ->value('owed') ?? '0');
 

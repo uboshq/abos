@@ -300,8 +300,6 @@ final class SettlementReport
             ->where('company_id', $company)
             ->where('party_type', Supplier::drillSourceType())
             ->where('trx_date', '<=', $to)
-            // ⛔ কেবল দেনার খাত — বিল-না-আসা মাল (২১৬০) দেনা নয় (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[GoodsNotYetBilledReadAsOwedTest]])
-            ->whereIn('account_id', Supplier::payableAccountIds())
             ->groupBy('party_id')
             ->select(['party_id', DB::raw('SUM(credit) - SUM(debit) as still_owed')]);
     }
