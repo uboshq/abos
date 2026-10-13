@@ -295,6 +295,25 @@ final class PaymentService
      * = এখন যিনি নিশ্চিত করছেন। ⛔ সুইচ চালু থাকলে টাকাদাতা প্রস্তাবক বা সইদাতা নন, আর সইদাতা প্রস্তাবক নন। ⓘ মালিক (সুপার
      * অ্যাডমিন) একা করলে আটকায় না — নিরীক্ষায় "একই মানুষ" দাগ পড়ে। সুইচ বন্ধে আজকের আচরণ অবিকল।
      */
+    /**
+     * ⭐ শেষ সইয়ে পরিশোধ নিজে পাকা হবে কি না — তিন হাতের নিয়মে না (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ASignedPaymentWaitsForTheThirdHandTest]])।
+     *
+     * ⓘ শেষ সইয়ের শ্রোতা কাগজ পাকা করে লেখকের (প্রস্তাবকের) নামে ([[SignedPaperFinisher]]); নিয়ম চালু থাকলে প্রস্তাবক নিজে টাকা
+     * দিতে পারেন না ([[assertThreeHands()]]), তাই চেষ্টাটা প্রতিবারই "আটকে গেছে" হত। ⓘ এখন চেষ্টাই হয় না — পরিশোধ "সই হয়েছে,
+     * পোস্ট হয়নি" তালিকায় তৃতীয় হাতের (ক্যাশিয়ারের) অপেক্ষায়। মালিক নিজে প্রস্তাবক হলে আগের মতো নিজে পাকা (দাগসহ)।
+     */
+    public function waitsForAThirdHand(Payment $payment): bool
+    {
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true)) {
+            return false;
+        }
+
+        $maker = \App\Models\User::query()->find((int) ($payment->created_by ?? 0));
+
+        return ! ($maker instanceof \App\Models\User && $maker->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE));
+    }
+
     private function assertThreeHands(Payment $payment): void
     {
         if (! (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true)) {
