@@ -37,6 +37,16 @@ final class PartyReports
      */
     public const BUCKETS = [30, 60, 90];
 
+    /*
+     * ⛔ বাতিল বা সম্পাদনার উল্টো দাখিলা (`…:reversal`) নিজের ঘর থেকে **বিয়োগ** — ৫০ হাজারের বিল একই মাসে বাতিল হলে আগে
+     * "বিল ৫০ হাজার, আদায় ৫০ হাজার" দেখাত, আর প্রতিটা সম্পাদনা দুই ঘরই ফোলাত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ACancelledBillReadAsMoneyCollectedTest]])। ⓘ উল্টো সারির ক্রেডিট বিল কমায়, ডেবিট আদায় কমায় — নিট বদল আগের মতোই।
+     */
+    private const BILLED = "SUM(CASE WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.credit ELSE ledger_entries.debit END)";
+
+    private const COLLECTED = "SUM(CASE WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.debit ELSE ledger_entries.credit END)";
+
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::dueList());
@@ -89,13 +99,13 @@ final class PartyReports
                 ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                 // যে গ্রাহকের এই সময়ে কিছুই হয়নি তাঁর সারি শুধু ভিড় বাড়ায়
                 ->havingRaw('SUM(ledger_entries.credit) > 0 OR SUM(ledger_entries.debit) > 0')
-                ->orderByRaw('SUM(ledger_entries.credit) DESC')
+                ->orderByRaw(self::COLLECTED.' DESC')
                 ->select([
                     'ledger_entries.party_id',
                     ...self::identity(),
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
-                    DB::raw('SUM(ledger_entries.debit) as billed'),
-                    DB::raw('SUM(ledger_entries.credit) as collected'),
+                    DB::raw(self::BILLED.' as billed'),
+                    DB::raw(self::COLLECTED.' as collected'),
                     DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as movement'),
                 ]),
             columns: [
