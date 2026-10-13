@@ -1355,7 +1355,7 @@ final class PurchaseBillService
              * ⛔ আগে পরিশোধ বসা বিলও বাতিল হত — পরিশোধগুলো বাতিল বিলে ঝুলে ব্যাখ্যাহীন অগ্রিম হত; আর দুই ট্যাবে একসাথে
              * চাপলে দুবার উল্টাত। ⓘ আগে পরিশোধ বাতিল করুন, তারপর বিল।
              */
-            $locked = PurchaseBill::query()->whereKey($bill->id)->lockForUpdate()->firstOrFail();
+            $locked = PurchaseBill::acrossBranches()->whereKey($bill->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === DocumentStatus::CANCELLED) {
                 throw ValidationException::withMessages([
