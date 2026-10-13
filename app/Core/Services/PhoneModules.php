@@ -63,7 +63,11 @@ final class PhoneModules
     /** ⭐ হোম-স্ক্রিনের উইজেটে টাকার অঙ্ক — ডিফল্ট বন্ধ ("•••"); অ্যাপ না খুলেই হাতের নগদ চোখে পড়ত (একই অডিট) */
     public const WIDGET_AMOUNTS = 'mobile.widget_amounts';
 
-    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'];
+    /*
+     * ⭐ মালিকের কেন্দ্র আর বাকি নিয়ন্ত্রণ — সমন্বয়কের সিদ্ধান্ত, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu")। ⓘ দরজা
+     * এমনিতেই চাবিতে (`executive.view`, `credit_control.view`) — কেবল মালিক আর যাঁকে তিনি দেন; সুইচটা কোম্পানি ধরে বন্ধ করা যায়।
+     */
+    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control'];
 
     public function __construct(
         private readonly ModuleRegistry $registry,
