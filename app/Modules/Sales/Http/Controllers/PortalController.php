@@ -359,9 +359,26 @@ class PortalController extends Controller
          * ([[CustomerPapers::firstDay()]]), তাই পর্দায় ১৯৭০ নেই আর সব সারিই আসে। ছোট সময় দেখতে ছাঁকনি আছে।
          */
         return [
-            (string) $request->query('from', $this->papers->firstDay()),
-            (string) $request->query('to', now()->toDateString()),
+            $this->day($request->query('from')) ?? $this->papers->firstDay(),
+            $this->day($request->query('to')) ?? now()->toDateString(),
         ];
+    }
+
+    /**
+     * ঠিকানার একটা তারিখ — কেবল সত্যিকারের `Y-m-d`, নাহলে `null` (ডিফল্ট বসে)।
+     *
+     * ⛔ ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা: আগে মানটা সরাসরি `(string)` — `from[]=x` দিলে অ্যারে থেকে লেখা বানাতে
+     * গিয়ে ৫০০, আর `from=abc` কোয়েরিতে চলে গিয়ে অর্থহীন খতিয়ান দেখাত।
+     */
+    private function day(mixed $raw): ?string
+    {
+        if (! is_string($raw) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) !== 1) {
+            return null;
+        }
+
+        [$y, $m, $d] = array_map('intval', explode('-', $raw));
+
+        return checkdate($m, $d, $y) ? $raw : null;
     }
 
     public function showClaim(): View
