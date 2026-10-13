@@ -11,6 +11,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
@@ -1007,10 +1008,36 @@ class BankFacilityService
      */
     public function close(BankFacility $facility, ?string $note = null): void
     {
-        $facility->forceFill([
-            'status' => DocumentStatus::CLOSED,
-            'closed_on' => now()->toDateString(),
-            'note' => $note ?: $facility->note,
-        ])->save();
+        /*
+         * ⛔ সারিতে তালা, চালু না হলে নয়, আর দেনা থাকলে নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (⚠️৩)।
+         * ⓘ আগে বন্ধ সুবিধা আবার "বন্ধ" করলে দিন আর নোট বদলে যেত; আর বকেয়া আসলসহ ঋণ বন্ধ হলে সুদ জমা, প্রতিষ্ঠানের
+         * পাতা আর কিস্তির তালিকা থেকে ঋণটা হারাত — অথচ দায়টা ২২১১-এ থেকেই যেত। ⚠️ সইয়ের অপেক্ষায় থাকা খোলা বকেয়াও
+         * দেনা ([[standing()]] তখন লেখা অঙ্কটাই গোনে), তাই সেটাও থামে।
+         */
+        DB::transaction(function () use ($facility, $note): void {
+            $this->lockFresh($facility);
+
+            if ((string) $facility->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'facility' => __('finance::validation.facility_close_not_live'),
+                ]);
+            }
+
+            if ($facility->isBalanceSheetDebt()) {
+                $owed = $this->standing(collect([$facility]))[(int) $facility->id]['used'] ?? '0';
+
+                if (bccomp($owed, '0', 4) > 0) {
+                    throw ValidationException::withMessages([
+                        'facility' => __('finance::validation.facility_close_still_owed', ['amount' => Money::format($owed)]),
+                    ]);
+                }
+            }
+
+            $facility->forceFill([
+                'status' => DocumentStatus::CLOSED,
+                'closed_on' => now()->toDateString(),
+                'note' => $note ?: $facility->note,
+            ])->save();
+        });
     }
 }

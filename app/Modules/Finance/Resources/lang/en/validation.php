@@ -74,4 +74,6 @@ return [
 
     // Finance line review, 13 Oct 2026 — bank facilities
     'cc_opening_drawn_lives_in_the_bank' => 'A cash credit\'s drawn money lives in its bank account\'s balance — entering it here would count it twice and double the interest. Leave this at zero and put today\'s drawn amount in the bank account\'s opening balance.',
+    'facility_close_not_live' => 'This facility is not live — a closed facility cannot be closed again.',
+    'facility_close_still_owed' => ':amount is still owed on this loan (or its opening is waiting for a signature) — repay it first, then close. A closed loan accrues no interest and its debt would drop off the screens.',
 ];
