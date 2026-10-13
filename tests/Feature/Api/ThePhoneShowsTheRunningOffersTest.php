@@ -9,6 +9,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Branch;
+use App\Models\BranchModule;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
@@ -39,7 +40,7 @@ use Tests\TestCase;
  *  - কেবল চলতি — খসড়া, মেয়াদ পেরোনো আর কুপনের অফার আসে না; নিয়মটা কাঠামোয় (কত কিনলে, কী, কোন পণ্যে, কবে পর্যন্ত)।
  *  - অন্য শাখায় বাঁধা অফার এই শাখার চোখে নেই।
  *  - ⛔ নির্দিষ্ট দোকানের অফার বিক্রয়কর্মী পান কেবল নিজের দোকানের হলে, আর নাম কেবল নিজের দোকানের।
- *  - চাবি ছাড়া ৪০৩; ফোনে প্রচার বন্ধ ৪০৩ `module_off`; কোম্পানিতে প্রচার বন্ধ হলে খালি।
+ *  - চাবি ছাড়া ৪০৩; ফোনে বা কোম্পানিতে প্রচার বন্ধ ৪০৩ `module_off`; এই শাখায় বন্ধ হলে খালি, কারণসহ।
  */
 final class ThePhoneShowsTheRunningOffersTest extends TestCase
 {
@@ -149,8 +150,18 @@ final class ThePhoneShowsTheRunningOffersTest extends TestCase
         $stranger->companies()->attach($this->company, ['is_active' => true]);
         $this->phone($stranger)->assertForbidden();
 
+        // ⓘ এই শাখায় প্রচার বন্ধ — চালানের একই সুইচ ([[PromotionSalesOffers::enabled()]]); অফার নেই, কারণসহ
+        $owner = $this->owner->fresh();
+        $owner->forceFill(['current_branch_id' => CompanyContext::branchId()])->save();
+        BranchModule::query()->create([
+            'company_id' => $this->company->id, 'branch_id' => CompanyContext::branchId(), 'module' => 'promotion', 'is_enabled' => false,
+        ]);
+        $this->phone($owner)->assertOk()->assertJsonPath('enabled', false)->assertJsonPath('rows', []);
+
+        // ⓘ কোম্পানিতে প্রচার বন্ধ হলে ফোনের দরজাই বন্ধ — মডিউলের সুইচ ([[PhoneModules::isOn()]])
         app(SettingsService::class)->set('promotion.enabled', false);
-        $this->phone($this->owner)->assertOk()->assertJsonPath('enabled', false)->assertJsonPath('rows', []);
+        $this->phone($owner)->assertForbidden()->assertJsonPath('reason', PhoneModules::REASON);
+        app(SettingsService::class)->set('promotion.enabled', true);
 
         app(SettingsService::class)->set(PhoneModules::key('promotion'), false);
         $this->phone($this->owner)->assertForbidden()->assertJsonPath('reason', PhoneModules::REASON);
