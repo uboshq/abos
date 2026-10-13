@@ -42,9 +42,14 @@ final class PartyReports
      * "বিল ৫০ হাজার, আদায় ৫০ হাজার" দেখাত, আর প্রতিটা সম্পাদনা দুই ঘরই ফোলাত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
      * [[ACancelledBillReadAsMoneyCollectedTest]])। ⓘ উল্টো সারির ক্রেডিট বিল কমায়, ডেবিট আদায় কমায় — নিট বদল আগের মতোই।
      */
-    private const BILLED = "SUM(CASE WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.credit ELSE ledger_entries.debit END)";
+    /*
+     * ⛔ বিক্রয় ফেরত আদায় নয় — বিল কমায় (ঋণাত্মক বিক্রি); আগে ১০ হাজারের বিলে ৩ হাজারের মাল ফেরত এলে "আদায় ৩ হাজার" বসত, একটা
+     * পয়সাও না এলেও (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AReturnReadAsMoneyCollectedTest]])। ⓘ বাতিল ফেরতের উল্টো সারিও
+     * (`sales_return:reversal`) একই ঘরে ফিরে বিল বাড়ায় — নিট বদল আগের মতোই।
+     */
+    private const BILLED = "SUM(CASE WHEN ledger_entries.source_type LIKE 'sales_return%' THEN ledger_entries.debit - ledger_entries.credit WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.credit ELSE ledger_entries.debit END)";
 
-    private const COLLECTED = "SUM(CASE WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.debit ELSE ledger_entries.credit END)";
+    private const COLLECTED = "SUM(CASE WHEN ledger_entries.source_type LIKE 'sales_return%' THEN 0 WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.debit ELSE ledger_entries.credit END)";
 
     /**
      * ⛔ বয়সের হিসাবে উল্টানো দাখিলা জোড়া ধরে বাদ — তারিখ পর্যন্ত যে দাখিলার উল্টো সারি বসেছে, মূল আর উল্টো দুটোই
