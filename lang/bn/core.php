@@ -574,6 +574,7 @@ return [
         ],
         'no_branch' => 'প্রধান অফিস / কোনো শাখা নয়',
         'branch_total' => 'শাখার মোট',
+        'section_total' => 'উপ-মোট',
         'more_in_branch' => 'এই শাখায় আরও :count সারি আছে — শাখাটা বেছে নিলে পুরোটা পাতা ধরে দেখা যাবে।',
         'grand_total' => 'সর্বমোট',
         'contribution' => 'অবদান %',

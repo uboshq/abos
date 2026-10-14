@@ -187,6 +187,12 @@ return [
             ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
 
+            // ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬ (রিপোর্টটা Sales-এর, দরজা এখানেও)
+            ['label' => 'accounts::menu.party_target', 'icon' => 'wallet', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'party-target'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.party_target_areas', 'icon' => 'globe', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'party-target-areas'], 'permission' => 'accounts.report'],
+
             // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল, সবচেয়ে বড় খরচ কত (রিপোর্ট সেন্টার ধাপ ৪)
             ['label' => 'accounts::expense.title', 'icon' => 'reports', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'expense-analysis'], 'permission' => 'accounts.report'],
