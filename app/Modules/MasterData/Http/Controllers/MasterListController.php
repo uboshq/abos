@@ -37,6 +37,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -799,6 +800,16 @@ class MasterListController extends Controller implements HasMiddleware
          * ([[MasterListService::update()]]; মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে এখানে নাম থেকে নতুন কোড বসত: ঘর
          * খালি করে নাম বদলালেই `DISTRIB`-এর মতো কোড নীরবে অন্য কিছু হয়ে যেত।
          */
+
+        /*
+         * ⛔ গাছটা দুই স্তরের — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ মায়ের তালিকায় সম্পাদনার সারিটা নিজেও থাকত, তাই
+         * শ্রেণিটা নিজেই নিজের মা হতে পারত; আর যার Sub Category আছে সে অন্যের Sub হলে গাছ তিন স্তরে — নিচের সারিগুলো পর্দার
+         * কোনো ড্রপডাউনে উঠত না ([[options()]]-এর `money_categories`-এর মন্তব্য)।
+         */
+        if (isset($spec['fields']['parent_id']) && $id !== null && ($data['parent_id'] ?? null) !== null
+            && ((string) $data['parent_id'] === (string) $id || $spec['model']::query()->where('parent_id', $id)->exists())) {
+            throw ValidationException::withMessages(['parent_id' => __('master_data::validation.parent_two_levels')]);
+        }
 
         return $data;
     }

@@ -44,5 +44,7 @@ return [
     'user_not_in_company' => 'This user is not in this company — an area can only be given to someone in this company.',
     'used_field_frozen' => '":name" is already used on papers — changing this field would change the figures or meaning of old papers. You can rename it; for a different value, add a new one and deactivate this one.',
     // Codes that rules depend on: 14 Oct 2026
+    // Money categories are a two-level tree (master line-by-line audit, 14 October 2026)
+    'parent_two_levels' => 'A category cannot be its own parent, and one that already has sub-categories cannot become a sub-category.',
     'code_is_fixed' => 'The code «:code» cannot change because the rules of the software read it. The name can change.',
 ];
