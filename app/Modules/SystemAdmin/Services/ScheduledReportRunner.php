@@ -265,7 +265,15 @@ final class ScheduledReportRunner
          * আর logout মালিকের (আর প্রতিটা দেয়ালের প্রাপকের) remember_token বদলে দিত: প্রতিদিন সকালের রানের পর "মনে রাখুন"
          * দিয়ে খোলা ব্রাউজার আবার লগইন চাইত। `setUser()` সেশন বা টোকেন ছোঁয় না, লগইনের ঘটনাও ছোড়ে না।
          */
-        Auth::setUser($owner);
+        /*
+         * ⛔ ফাইল হেডারের শেষ বাছা শাখায় নয়, গোটা নাগালে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৮, ১৪ অক্টোবর ২০২৬)। ⓘ দেখার শাখা পড়ে
+         * `view_all_branches` থেকে ([[DataScope::viewsOneBranch()]]) — মালিক কাল সন্ধ্যায় হেডারে নেত্রকোনা বেছে বাড়ি গেলে সকালের
+         * "গোটা কোম্পানি" ফাইলে কেবল একটা শাখা, প্রধান অফিসের সারিও নয়, আর কোথাও লেখা নেই। এখন একটা নকলে "সব শাখা" — কেবল
+         * স্মৃতিতে, সংরক্ষণ নয়; শাখায় সীমিত মানুষের নিজের ফাইল তবু তাঁর নাগালেই (`branch_ids`)।
+         */
+        $viewer = clone $owner;
+        $viewer->view_all_branches = true;
+        Auth::setUser($viewer);
 
         try {
             return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
