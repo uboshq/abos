@@ -162,6 +162,8 @@ return [
     'check_passed' => 'Clear',
     'check_failed' => '{1} 1 row does not match|[2,*] :count rows do not match',
     'what_does_not_match' => 'What does not match',
+    'check_did_not_run' => 'The check did not run',
+    'check_did_not_run_hint' => 'The check stopped on an error, so its result is unknown. Do not take the books as clear. The reason is in the log.',
 
     // মাস বন্ধ ও খোলা
     'period_note' => 'Once the month’s reports have gone out, close it — then its figures can no longer change.',
