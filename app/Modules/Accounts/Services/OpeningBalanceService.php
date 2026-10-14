@@ -238,6 +238,18 @@ final class OpeningBalanceService
      *
      * @return list<LedgerEntry>
      */
+    /** পক্ষ-রাখা খাত, মালিকের মূলধনের বংশ বাদে — খোলা জের কেবল পক্ষের নামে ([[forAccount()]], আমদানির যাচাইও এটাই ডাকে) */
+    public static function needsAParty(Account $account): bool
+    {
+        if (! $account->holdsParty()) {
+            return false;
+        }
+
+        $capital = StandardChart::find(StandardChart::OWNER_CAPITAL);
+
+        return $capital === null || ! $capital->selfAndDescendants()->pluck('id')->contains($account->id);
+    }
+
     public function forAccount(Account $account): array
     {
         $amount = (string) $account->opening_balance;
@@ -248,6 +260,18 @@ final class OpeningBalanceService
 
         if ($this->exists(self::ACCOUNT_SOURCE, $account->id)) {
             return [];
+        }
+
+        /*
+         * ⛔ পক্ষ-রাখা খাতে খাতের নিজের খোলা জের নয় — কেবল পক্ষের নামে (cb-র নিরীক্ষা, fe, ১৪ অক্টোবর ২০২৬;
+         * [[AControlAccountOpensOnlyThroughItsPartiesTest]])। ⓘ পাওনা, দেনা বা হাতধারের খাতে নাম ছাড়া খোলা জের বসালে খাতের জের আর
+         * পক্ষদের যোগ চিরকাল আলাদা — রাতের books-check রোজ "ভাঙা" বলত, আর কার পাওনা কেউ বলতে পারত না। গ্রাহক বা সরবরাহকারীর নিজের
+         * খোলা জেরের পথ আছে ([[forReceivable()]], [[forPayable()]])। ⓘ মালিকের মূলধন (৩১০০) বাদ: সেখানে নাম বসাতে পারে, বাধ্য নয়।
+         */
+        if (self::needsAParty($account)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'opening_balance' => __('accounts::validation.opening_needs_party', ['name' => $account->name()]),
+            ]);
         }
 
         $equity = $this->openingEquity();
@@ -329,6 +353,13 @@ final class OpeningBalanceService
      */
     public function loadFor(Account $account, string $amount, Carbon|string|null $date = null): array
     {
+        // ⛔ ঘরে লেখার আগেই — নইলে থামলেও খাতের ঘরে ভুল অঙ্ক থেকে যেত ([[needsAParty()]])
+        if (self::needsAParty($account)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'opening_balance' => __('accounts::validation.opening_needs_party', ['name' => $account->name()]),
+            ]);
+        }
+
         if ($this->exists(self::ACCOUNT_SOURCE, $account->id)) {
             return [];
         }
