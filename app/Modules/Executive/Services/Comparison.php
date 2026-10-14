@@ -60,16 +60,29 @@ final class Comparison
         $mode = $mode === self::BRANCHES ? self::BRANCHES : self::COMPANIES;
         $companyId = in_array($companyId, $ids, true) ? $companyId : ($mode === self::BRANCHES ? ($ids[0] ?? null) : null);
 
+        /*
+         * ⛔ হেডারের শাখা চলতি কোম্পানিকে ঐ শাখায় নামায় — আজ, বিশ্লেষণ আর সতর্কতার পাতার একই নিয়ম ([[Board::build()]])।
+         * আগে তুলনা সবসময় সব শাখা দেখাত: হেডারে বগুড়া বাছা, আজ পাতায় বিক্রি ৫০,০০০, তুলনায় একই মাসে ৪,০০,০০০
+         * (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheOwnerComparesAndIsWarnedTest]])।
+         */
+        $header = $this->lens->headerBranch($user);
+        $current = (int) ($user->current_company_id ?? 0);
+
         $places = [];
 
         if ($mode === self::COMPANIES) {
             foreach ($companies as $company) {
                 if ($companyId === null || $company['id'] === $companyId) {
-                    $places[] = ['id' => $company['id'], 'name' => $company['name'], 'company_id' => $company['id'], 'branch_id' => null];
+                    $places[] = ['id' => $company['id'], 'name' => $company['name'], 'company_id' => $company['id'],
+                        'branch_id' => $company['id'] === $current ? $header : null];
                 }
             }
         } elseif ($companyId !== null) {
             foreach ($this->lens->branches($user, $companyId) as $branch) {
+                if ($companyId === $current && $header !== null && $branch['id'] !== $header) {
+                    continue;
+                }
+
                 $places[] = ['id' => $branch['id'], 'name' => $branch['name'], 'company_id' => $companyId, 'branch_id' => $branch['id']];
             }
         }

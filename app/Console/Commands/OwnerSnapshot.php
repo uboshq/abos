@@ -31,6 +31,17 @@ class OwnerSnapshot extends Command
             $this->warn('super_admin নেই, তাই বাদ: '.implode(', ', $taken['skipped']));
         }
 
-        return self::SUCCESS;
+        /*
+         * ⛔ কোনো কোম্পানির হিসাব ভুলে থামলে আদেশটাও ব্যর্থ — নইলে নির্ধারিত কাজের onFailure কখনো চলে না, আর
+         * নীরবতা সাফল্যের মতো দেখায়। ⓘ বাকি কোম্পানি আর পুরনো সারি সরানো তার আগেই হয়ে গেছে।
+         * ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+         */
+        if ($taken['failed'] !== []) {
+            $this->error('ভুলে থেমেছে, এই রাতের হিসাব লেখা হয়নি: '.implode(', ', $taken['failed']));
+        }
+
+        // ⛔ super_admin না থাকায় বাদ পড়া কোম্পানিও ব্যর্থতা — আগে কেবল একটা সতর্কবার্তা ছাপা হতো, যা নির্ধারিত
+        // কাজে কেউ দেখে না, আর SUCCESS-এ onFailure চলত না (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        return $taken['failed'] === [] && $taken['skipped'] === [] ? self::SUCCESS : self::FAILURE;
     }
 }

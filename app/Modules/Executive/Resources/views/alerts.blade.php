@@ -47,7 +47,7 @@
                                             <span class="text-2xs text-(--color-ink-muted)">{{ __('executive::alert.no_key') }}</span>
                                         @else
                                             <button type="submit" form="executive-open" name="go"
-                                                    value="{{ Go::to($part['id'], null, $part['route'], $part['params']) }}"
+                                                    value="{{ Go::to($part['id'], $part['only'] ?? null, $part['route'], $part['params']) }}"
                                                     @class(['tabular hover:underline', 'font-semibold text-(--color-badge-danger-ink)' => $part['count'] > 0, 'text-(--color-ink-muted)' => $part['count'] === 0])>{{ $part['count'] }}</button>
                                         @endif
                                     </td>
@@ -66,7 +66,7 @@
                     @forelse ($waiting as $paper)
                         <li class="border-t border-(--color-border) px-4 py-1.5">
                             <button type="submit" form="executive-open" name="go"
-                                    value="{{ Go::to($paper['company_id'], null, $paper['route'], $paper['params']) }}"
+                                    value="{{ Go::to($paper['company_id'], $paper['company_only'] ?? null, $paper['route'], $paper['params']) }}"
                                     class="flex w-full items-center justify-between gap-2 text-left hover:underline">
                                 <span class="min-w-0 truncate">{{ $paper['label'] }}
                                     <span class="text-2xs text-(--color-ink-muted)">· {{ $paper['company_name'] }}</span></span>

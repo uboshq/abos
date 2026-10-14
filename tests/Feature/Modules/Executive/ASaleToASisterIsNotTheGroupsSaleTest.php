@@ -17,6 +17,7 @@ use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -137,6 +138,33 @@ final class ASaleToASisterIsNotTheGroupsSaleTest extends TestCase
         $link = SisterLink::acrossAllCompanies()->firstOrFail();
         $this->delete(route('executive.links.destroy', ['link' => $link->id]))->assertRedirect();
         $this->assertSame(0, SisterLink::acrossAllCompanies()->count());
+    }
+
+    /**
+     * ⛔ যে কোম্পানিতে জোড়া দেওয়ার চাবি নেই, সেখানকার পক্ষের তালিকা খোলে না — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * আগে রুটের পাহারা কেবল চলতি কোম্পানির চাবি দেখত, আর `?company=` দিয়ে অন্য কোম্পানির সব ক্রেতার কোড-নাম পড়া যেত।
+     */
+    public function test_the_party_list_opens_only_where_one_may_link(): void
+    {
+        $keeper = User::factory()->create(['current_company_id' => $this->beta->id, 'current_branch_id' => null, 'is_active' => true]);
+
+        foreach ([[$this->beta, ['executive.view', 'executive.links.manage']], [$this->alpha, ['executive.view']]] as [$company, $keys]) {
+            $keeper->companies()->attach($company->id, ['is_active' => true]);
+            CompanyContext::forCompany((int) $company->id, function () use ($keeper, $keys): void {
+                foreach ($keys as $key) {
+                    $keeper->givePermissionTo(Permission::findOrCreate($key, 'web'));
+                }
+            });
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $rahim = (int) CompanyContext::forCompany((int) $this->alpha->id, fn () => Customer::acrossDealers()->where('name_en', 'Rahim Traders')->value('id'));
+
+        $page = $this->actingAs($keeper->fresh())->get(route('executive.links', ['company' => $this->alpha->id]))->assertOk();
+
+        $this->assertSame((int) $this->beta->id, $page->viewData('chosen'), '⛔ চাবি ছাড়া কোম্পানির পক্ষের তালিকা বাছা গেল।');
+        $this->assertNotContains($rahim, array_column($page->viewData('parties')[SisterLink::CUSTOMER] ?? [], 'id'),
+            '⛔ কেবল executive.view থাকা কোম্পানির ক্রেতা জোড়ার তালিকায় খোলা।');
     }
 
     private function link(): void

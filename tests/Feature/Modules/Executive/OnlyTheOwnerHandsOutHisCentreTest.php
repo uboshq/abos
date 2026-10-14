@@ -75,6 +75,41 @@ final class OnlyTheOwnerHandsOutHisCentreTest extends TestCase
         ])->assertSessionHasNoErrors();
     }
 
+    /**
+     * ⛔ চাবি-ধরা রোলটা মানুষকে দেওয়াও কেবল মালিকের — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ আগে কেবল রোলে চাবি বসানো বন্ধ ছিল: চাবি আর মানুষ সামলানোর চাবি যাঁর, তিনি নিজের রোলটাই যে কাউকে দিতে পারতেন,
+     * আর সে মানুষ তখন সব কোম্পানির টাকা দেখতেন।
+     */
+    public function test_a_keeper_holding_the_key_cannot_hand_his_role_to_someone_else(): void
+    {
+        $director = $this->keeperWith(['system_admin.user.manage', 'executive.view']);
+        $role = CompanyContext::forCompany($this->company->id, fn () => Role::query()->with('permissions')->where('name', 'role-keeper')->firstOrFail());
+
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+
+        $this->assertFalse($director->can('grantRole', [$clerk, $role]), '⛔ মালিক ছাড়া আরেকজন মালিকের কেন্দ্রের রোল দিতে পারছেন।');
+        $this->assertTrue($this->owner->can('grantRole', [$clerk, $role]), 'মালিকের নিজের হাতও বাঁধা পড়েছে।');
+
+        $this->actingAs($director)
+            ->put(route('system_admin.user.update', $clerk), [
+                'name' => $clerk->name,
+                'email' => $clerk->email,
+                'locale' => 'bn',
+                'is_active' => '1',
+                'roles' => ['role-keeper'],
+                'companies' => [$this->company->id],
+                'default_branch' => [$this->company->id => $this->company->defaultBranch()?->id],
+            ])
+            ->assertSessionHasErrors('roles');
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        CompanyContext::forCompany($this->company->id, function () use ($clerk): void {
+            $this->assertFalse($clerk->fresh()->hasRole('role-keeper'), '⛔ কেরানি মালিকের কেন্দ্রের চাবিসহ রোল পেয়ে গেলেন।');
+        });
+    }
+
     /** ⭐ সকালের মেইল — গতকালের রাতের হিসাব, বাংলায়, `.env`-এর ঠিকানায়। */
     public function test_the_morning_mail_carries_yesterdays_figures_to_the_owners_address(): void
     {

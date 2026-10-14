@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Sales\Reports\LineNetSale;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 
@@ -56,6 +57,9 @@ final class ExecutiveReports
                 // ⓘ খাতায় বসা বিল — খসড়ার খরচ এখনো টানাই হয়নি
                 $sold = DB::table('sal_invoice_lines as il')
                     ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                    // ⛔ বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগ সারিতে ([[LineNetSale]]) — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+                    // ([[ProfitByCustomerCountsTheBillDiscountTest]])
+                    ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
                     ->where('i.company_id', $f['company_id'])
                     ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
                     ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
@@ -65,8 +69,12 @@ final class ExecutiveReports
                     ->groupBy('i.customer_id')
                     ->select('i.customer_id')
                     ->selectRaw('COUNT(DISTINCT i.id) as bills')
-                    // ⓘ বিক্রয় = `amount − tax` — মার্জিন রিপোর্টের হুবহু সংজ্ঞা: ভ্যাট সরকারের টাকা
-                    ->selectRaw('SUM(il.amount - il.tax) as revenue')
+                    /*
+                     * ⓘ বিক্রয় = সারির নিট বিক্রি — `amount − tax`, তার উপর বিলের ছাড় আর রাউন্ডিংয়ের ভাগ; বিক্রয়ের পণ্য ধরে আর
+                     * মার্জিন রিপোর্টের হুবহু সংজ্ঞা ([[LineNetSale::sql()]])। ⛔ আগে কেবল `amount − tax` — ৫০০ ছাড়ের ১০,০০০ টাকার বিল
+                     * ১০,০০০ বিক্রি দেখাত, খাতায় ৯,৫০০; লোকসানি ক্রেতা লাভে দেখাত (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+                     */
+                    ->selectRaw('SUM('.LineNetSale::sql().') as revenue')
                     ->selectRaw('SUM(il.qty * il.unit_cost) as cost');
 
                 $returned = DB::table('sal_returns as r')

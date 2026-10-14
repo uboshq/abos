@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Routing\Exceptions\UrlGenerationException;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 
@@ -78,11 +79,21 @@ final class OpenController extends Controller implements HasMiddleware
             throw ValidationException::withMessages(['route' => __('executive::today.not_yours')]);
         }
 
+        /*
+         * ⛔ ঠিকানা আগে বানানো, কোম্পানি বদলানো পরে — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬: আগে বদলের পরে বানানো
+         * হতো, তাই দরকারি অংশ না থাকলে (খালি অংশ [[Go::to()]] ফেলে দেয়) পাতা ৫০০ দিত আর হেডার ততক্ষণে অন্য কোম্পানিতে।
+         */
+        try {
+            $url = route((string) $data['route'], $data['params'] ?? []);
+        } catch (UrlGenerationException) {
+            throw ValidationException::withMessages(['route' => __('executive::today.not_yours')]);
+        }
+
         $user->switchCompany($company, $branch);
 
         // ⭐ শাখা বাছা মানে দেখাও সেই শাখায়; না বাছলে সব শাখা — হেডারের "সব শাখা"-র একই কাজ
         $user->forceFill(['view_all_branches' => $branch === null])->save();
 
-        return redirect()->route((string) $data['route'], $data['params'] ?? []);
+        return redirect()->to($url);
     }
 }
