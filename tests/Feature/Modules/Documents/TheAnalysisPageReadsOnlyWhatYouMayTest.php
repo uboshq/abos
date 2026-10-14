@@ -29,7 +29,7 @@ final class TheAnalysisPageReadsOnlyWhatYouMayTest extends TestCase
 
     public function test_a_viewer_without_the_download_key_does_not_read_a_text_file_on_the_analysis_page(): void
     {
-        $text = $this->upload('Salary sheet', DocumentCatalog::INTERNAL, UploadedFile::fake()->createWithContent('pay.txt', "SECRET-SALARY-LINE 85000\n"));
+        $text = $this->upload('Salary sheet', DocumentCatalog::INTERNAL, UploadedFile::fake()->createWithContent('pay.txt', "SECRET-SALARY-LINE Rahim was paid 85000 taka this month\n"));
 
         $viewer = $this->person('viewer@abos.test', ['documents.view']);
         $this->actingAs($viewer)->get(route('documents.preview', $text))->assertForbidden();
