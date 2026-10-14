@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Executive\Services;
 
+use App\Core\Security\FieldSecurity;
 use App\Core\Services\DataScope;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -26,6 +28,10 @@ use Illuminate\Support\Str;
  * লেখা হয় গোটা কোম্পানির, কিন্তু পড়েন একজন মানুষ। তিনি কেবল নিজের কোম্পানি আর নিজের শাখার সারি
  * পান ([[CompanyLens]])। ⚠️ শাখায় বাঁধা কারও জন্য গোটা কোম্পানির সারি দেখানো হয় না — ওতে অন্য
  * শাখার যোগফল আছে।
+ *
+ * ⛔ চাবিও ফেরে ([[readable()]]) — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬: সারিটা super_admin-এর চোখে
+ * লেখা, তাই প্রতিটা ঘর ভরা। আগে পড়ার সময় কেবল কোম্পানি আর শাখা ছাঁকা হতো, সংখ্যার চাবি নয় — "আজ" পাতায়
+ * যাঁর তহবিল, মজুদের দাম, লাভ ঢাকা (••••), ইতিহাসে তিনি ঐ তিনটাই প্রতিটা আগের দিনের পুরোটা দেখতেন।
  */
 final class Snapshots
 {
@@ -142,16 +148,18 @@ final class Snapshots
                 ->get()
                 ->keyBy('place');
 
+            $readable = $this->readable($user, $company['id']);
+
             foreach ($branches as $branch) {
                 if (isset($rows[$branch['id']])) {
                     $out[] = ['company_id' => $company['id'], 'company_name' => $company['name'], 'branch_id' => $branch['id'],
-                        'name' => $branch['name'], 'values' => $this->values($rows[$branch['id']])];
+                        'name' => $branch['name'], 'values' => $this->values($rows[$branch['id']], $readable)];
                 }
             }
 
             if ($this->seesWholeCompany($user, $company) && isset($rows[self::WHOLE])) {
                 $out[] = ['company_id' => $company['id'], 'company_name' => $company['name'], 'branch_id' => null,
-                    'name' => __('executive::today.company_total', ['company' => $company['name']]), 'values' => $this->values($rows[self::WHOLE])];
+                    'name' => __('executive::today.company_total', ['company' => $company['name']]), 'values' => $this->values($rows[self::WHOLE], $readable)];
             }
         }
 
@@ -171,7 +179,8 @@ final class Snapshots
         foreach ($companies as $company) {
             $place = ($company['only'] ?? null) ?? ($this->seesWholeCompany($user, $company) ? self::WHOLE : null);
 
-            if ($place === null) {
+            // ⛔ সংখ্যাটা যাঁর চোখে ঢাকা, ধারায় ঐ কোম্পানির কোনো বিন্দু নেই — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+            if ($place === null || ! $this->readable($user, $company['id'])[$key]) {
                 continue;
             }
 
@@ -198,6 +207,11 @@ final class Snapshots
     public function valueOn(User $user, int $companyId, ?int $branchId, string $key, string $date): ?string
     {
         if ($branchId === null && ! $this->seesWholeCompany($user, ['id' => $companyId])) {
+            return null;
+        }
+
+        // ⛔ চাবি ছাড়া "তখন"-ও নয় — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+        if (! ($this->readable($user, $companyId)[$key] ?? false)) {
             return null;
         }
 
@@ -240,14 +254,46 @@ final class Snapshots
     }
 
     /**
-     * @return array<string, ?string>
+     * ⛔ এই মানুষটা ঐ কোম্পানিতে কোন কোন সংখ্যা পড়তে পারেন — "আজ" পাতার একই নিয়মে।
+     *
+     * - [[Figures::visible()]]: ড্যাশবোর্ডের চাবি আর সংখ্যার নিজের চাবি
+     * - মজুদ: খরচের ঘরের পাহারাও ([[StockFacts::value()]]-এর একই প্রশ্ন) — নইলে ক্রয়মূল্য ঢাকা, অথচ গুদামের দাম খোলা
+     * - সইয়ের অপেক্ষায়: লেখা সংখ্যাটা গোটা কোম্পানির; পাতায় গোটা কোম্পানি কেবল রিপোর্টের চাবিতে
+     *   ([[ApprovalDashboard::pendingSeen()]]), বাকিরা কেবল নিজেরটা — তাই রিপোর্টের চাবি ছাড়া ঢাকা
+     *
+     * ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * @return array<string, bool>
      */
-    private function values(object $row): array
+    private function readable(User $user, int $companyId): array
+    {
+        return $this->lens->within($user, $companyId, null, function () use ($user): array {
+            $out = [];
+
+            foreach (Figures::KEYS as $key) {
+                $out[$key] = $this->figures->visible($user, $key)
+                    && ($key !== Figures::STOCK || FieldSecurity::visible(StockMovement::class, 'unit_cost'))
+                    && ($key !== Figures::SIGNATURES || $user->can('approval.report'));
+            }
+
+            return $out;
+        });
+    }
+
+    /**
+     * @param  array<string, bool>  $readable
+     * @return array<string, ?string> ঢাকা ঘর = [[Figures::HIDDEN]]
+     */
+    private function values(object $row, array $readable): array
     {
         $out = [];
 
         foreach (Figures::KEYS as $key) {
-            $out[$key] = $row->{$key} === null ? null : bcadd((string) $row->{$key}, '0', 4);
+            $out[$key] = match (true) {
+                ! $readable[$key] => Figures::HIDDEN,
+                $row->{$key} === null => null,
+                default => bcadd((string) $row->{$key}, '0', 4),
+            };
         }
 
         return $out;

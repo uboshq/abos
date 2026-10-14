@@ -8,8 +8,10 @@
     use App\Core\Support\Money;
     use App\Modules\Executive\Services\Figures;
 
+    // ⛔ ঢাকা ঘর "আজ" পাতার মতোই •••• ([[Snapshots::readable()]]) — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
     $show = fn (?string $v, string $key) => match (true) {
         $v === null => '—',
+        $v === Figures::HIDDEN => Figures::HIDDEN,
         Figures::definition($key)['money'] => Money::format($v, 0),
         default => (string) (int) $v,
     };
