@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Listeners;
 
+use App\Core\Engines\Approval\SignedPaperFinisher;
 use App\Core\Events\ApprovalDecided;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
@@ -36,6 +37,13 @@ final class PostTheProfitOnTheLastSignature
         $voucher = $approval?->approvable()->withoutGlobalScope('user-branch')->first();
 
         if (! $voucher instanceof Voucher) {
+            return;
+        }
+
+        // ⛔ সই যে মুনাফার ভাগ দেখে দেওয়া, খাতায় কেবল সেটাই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[SignedPaperFinisher::refuseChanged()]])
+        if ($approval->status === Approval::APPROVED && ! SignedPaperFinisher::stillSigned($approval, $voucher)) {
+            app(SignedPaperFinisher::class)->refuseChanged($voucher, $event->actorId, route('accounts.voucher.show', $voucher));
+
             return;
         }
 

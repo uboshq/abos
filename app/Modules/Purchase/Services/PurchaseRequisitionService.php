@@ -102,6 +102,8 @@ final class PurchaseRequisitionService
          * চাহিদা একসাথে অনুমোদনে দুটোই "বাজেটে জায়গা আছে" দেখত আর দুটোই পার হত, আর একই চাহিদা দুই ক্লিকে দুবার।
          * ⓘ আগে চাহিদার সারি, তারপর খরচ-কেন্দ্রের সারি — দুটোই তালায় আবার পড়া; দ্বিতীয়জন প্রথমজনের অনুমোদনের পরে গোনে।
          */
+        $this->askForTheSignatureOutsideTheTransaction($requisition);
+
         return DB::transaction(function () use ($requisition) {
             $requisition = PurchaseRequisition::query()->withoutGlobalScope('user-branch')->whereKey($requisition->id)->lockForUpdate()->firstOrFail();
 
@@ -112,6 +114,32 @@ final class PurchaseRequisitionService
 
             return $this->approveLocked($requisition);
         });
+    }
+
+    /**
+     * ⭐ সই চাওয়া লেনদেনের বাইরে — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[ARequisitionsSignatureRequestSurvivesTest]])।
+     *
+     * ⛔ আগে সই দেখা হত কেবল নিচের তালাবদ্ধ লেনদেনে ([[approveLocked()]]): অনুরোধ লিখে [[HeldForApproval]] ছুঁড়তেই লেনদেন
+     * ফিরে যেত আর অনুরোধটাও মুছত — ছক বসানো থাকলে চাহিদাপত্র কখনো সইকারীর কাছে পৌঁছাত না। ⓘ এখন আগে বাইরে একবার (অনুরোধ
+     * টিকে থাকে, বাকি সেবাগুলোর মতোই); সই হয়ে থাকলে চুপচাপ এগোয়, আর ভিতরের যাচাই তালার পরে আবার একই প্রশ্ন করে।
+     * ⓘ যে চাপ এমনিতেই থামত (খসড়া নয়, সারি নেই, নিজের চাহিদা নিজে) তাতে অনুরোধ লেখা হয় না — কারণটা ভিতরেই বলা হয়।
+     */
+    private function askForTheSignatureOutsideTheTransaction(PurchaseRequisition $requisition): void
+    {
+        $fresh = PurchaseRequisition::query()->withoutGlobalScope('user-branch')->with('lines')->find($requisition->id);
+
+        if ($fresh === null || $fresh->status !== DocumentStatus::DRAFT || $fresh->lines->isEmpty() || $this->requesterMayNotApprove($fresh)) {
+            return;
+        }
+
+        $this->approvals->assertClear(
+            document: $fresh,
+            module: 'purchase',
+            action: 'requisition',
+            field: 'status',
+            amount: $fresh->estimatedTotal(),
+            reason: $fresh->purpose,
+        );
     }
 
     private function approveLocked(PurchaseRequisition $requisition): PurchaseRequisition

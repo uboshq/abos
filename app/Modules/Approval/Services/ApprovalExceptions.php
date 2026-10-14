@@ -138,13 +138,15 @@ final class ApprovalExceptions
             ->filter(function (Approval $a) {
                 $document = $a->approvable;
 
-                if ($document === null) {
+                // ⓘ ছাপে প্রস্তাব থাকা কাগজ (বাকির সীমা) সারি থেকে মেলানো যায় না — নাহলে প্রতিটাই "বদলেছে" ([[DocumentFingerprint::canRecheck()]])
+                if ($document === null || ! app(DocumentFingerprint::class)->canRecheck($document)) {
                     return false;
                 }
 
+                // ⓘ সই যে ছাপে বসেছিল সেই ছাপ — ছাড়ের সই গোটা বিলের নয় ([[DocumentFingerprint::forApproval()]])
                 return ! hash_equals(
                     (string) $a->state_hash,
-                    app(DocumentFingerprint::class)->of($document),
+                    app(DocumentFingerprint::class)->forApproval($a, $document),
                 );
             })
             ->map(fn (Approval $a) => [

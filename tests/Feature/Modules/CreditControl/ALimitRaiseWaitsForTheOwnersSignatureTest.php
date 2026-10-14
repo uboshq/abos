@@ -188,6 +188,33 @@ final class ALimitRaiseWaitsForTheOwnersSignatureTest extends TestCase
             ->assertSee('data-request-status="pending"', false);
     }
 
+    /** ⛔ `1e5` ফর্মের ভুল-বার্তা, ৫০০ নয় — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ওয়েব আর ফোন) */
+    public function test_an_exponent_amount_is_a_field_error_not_a_crash(): void
+    {
+        $this->ownerFlow();
+
+        $this->ask(['kind' => 'limit', 'amount' => '1e5', 'reason' => 'চাই'])->assertSessionHasErrors('amount');
+        $this->assertSame(0, CustomerCreditRequest::query()->count());
+    }
+
+    /**
+     * ⛔ পুরনো অনুরোধের সই সীমা নামায় না — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⚠️ আগে ৫০,০০০-এর অপেক্ষার মাঝে
+     * সীমা ১,০০,০০০ হলে, সইয়ে সেটা নীরবে ৫০,০০০-এ নেমে যেত।
+     */
+    public function test_a_waiting_request_does_not_lower_a_limit_raised_meanwhile(): void
+    {
+        $this->ownerFlow();
+        $this->ask(['kind' => 'limit', 'amount' => '50000', 'reason' => 'ঈদ'])->assertSessionHasNoErrors();
+        $request = CustomerCreditRequest::query()->sole();
+
+        \Illuminate\Support\Facades\DB::table('customers')->where('id', $this->shop->id)->update(['credit_limit' => 100000]);
+
+        app(ApprovalEngine::class)->approve(Approval::query()->findOrFail($request->approval_id), $this->owner);
+
+        $this->assertSame(0, bccomp((string) $this->shop->fresh()->credit_limit, '100000', 4), '⛔ পুরনো অনুরোধের সইয়ে সীমা নেমে গেল।');
+        $this->assertSame(CustomerCreditRequest::VOID, $request->fresh()->status);
+    }
+
     // ── যন্ত্রপাতি ──
 
     /** @param  array<string, string>  $data */

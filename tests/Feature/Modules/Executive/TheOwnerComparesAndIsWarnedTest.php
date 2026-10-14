@@ -78,6 +78,37 @@ final class TheOwnerComparesAndIsWarnedTest extends TestCase
         $this->assertSame(CompanyContext::id(), (int) $this->alpha->id, '⛔ তুলনার পর প্রসঙ্গটা ফেরেনি।');
     }
 
+    /**
+     * ⛔ হেডারের শাখা তুলনার পাতাও মানে — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ আগে তুলনা সবসময় সব শাখা দেখাত,
+     * অথচ আজ পাতা হেডারের শাখায় নামত: একই কোম্পানি, একই মাস, দুই সংখ্যা।
+     */
+    public function test_the_compare_page_follows_the_header_branch_like_the_today_page(): void
+    {
+        // ⓘ বিক্রি মোমেনশাহীতে, হেডারে নেত্রকোনা
+        $this->sell('3', '1500');
+        $ntk = Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'NTK')->firstOrFail();
+
+        $this->owner->switchCompany((int) $this->alpha->id, (int) $ntk->id);
+        $this->owner->forceFill(['view_all_branches' => false])->save();
+        $owner = $this->owner->fresh();
+        app(DataScope::class)->forget();
+        $this->actingAs($owner);
+
+        $compare = app(Comparison::class)->build($owner, Comparison::COMPANIES, null, Trend::PREVIOUS_MONTH);
+        $board = app(Board::class)->build($owner, Figures::MONTH);
+
+        $row = collect($compare['rows'])->firstWhere('id', (int) $this->alpha->id);
+        $company = collect($board['companies'])->firstWhere('id', (int) $this->alpha->id);
+        $this->assertNotNull($row);
+
+        $this->assertSame($company['values'][Figures::SALES], $row['now'][Figures::SALES],
+            '⛔ হেডারে নেত্রকোনা বাছা, অথচ তুলনার পাতা কোম্পানির সব শাখার বিক্রি দেখাচ্ছে।');
+
+        // ⓘ শাখা বনাম শাখাও কেবল হেডারের শাখা
+        $branches = app(Comparison::class)->build($owner, Comparison::BRANCHES, (int) $this->alpha->id, Trend::PREVIOUS_MONTH);
+        $this->assertSame([(int) $ntk->id], array_column($branches['rows'], 'id'));
+    }
+
     public function test_then_is_the_same_days_of_the_previous_month_and_change_is_honest(): void
     {
         Carbon::setTestNow('2026-10-09 10:00:00');

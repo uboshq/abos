@@ -540,6 +540,131 @@ final class ApprovalEngine
         );
     }
 
+    /**
+     * ⭐ কাগজ বদলে যাওয়ায় অপেক্ষার অনুরোধটা আর এই কাগজের নয় — তুলে নেওয়া (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সইকারী যা দেখে সই দেবেন সেটাই যেন কাগজের এখনকার রূপ: কাউন্টারে রাখা বিল আবার খুলে কার্ট বদলালে পুরনো অনুরোধে সই দিলে
+     * সেই সই পুরনো কার্টের — ছাপ মিলত না আর বিল আবার আটকাত। ⓘ সারিটা মোছা হয় না, "বাতিল" হয়ে থাকে (`payload.stale`);
+     * ডাকার জায়গা তারপর নতুন অনুরোধ লেখে।
+     */
+    public function withdrawStale(Approval $approval): void
+    {
+        DB::transaction(function () use ($approval): void {
+            $locked = Approval::query()->whereKey($approval->getKey())->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== Approval::PENDING) {
+                return;
+            }
+
+            $locked->update([
+                'status' => Approval::CANCELLED,
+                'decided_at' => now(),
+                'payload' => [...(array) ($locked->payload ?? []), 'stale' => true],
+            ]);
+        });
+    }
+
+    /**
+     * ⭐ "সংশোধনে ফেরত" দেওয়া যায় কি না — অপেক্ষার অনুরোধ, আর কাগজটা এখনো খসড়া (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ যে কাগজ নিজের অবস্থায় অপেক্ষা করে (আদেশ "অনুমোদনের অপেক্ষায়", বাতিলের কাগজ "অপেক্ষায়") তাকে ফেরত দিলে সে আটকে থাকত —
+     * সেখানে "না"-ই পথ। ⓘ কাগজ নিজেও "না" বলতে পারে (`canBeSentBack()`): অন্য কাগজের সইয়ে বাঁধা ভাউচার লেখক বদলাতেই পারেন না।
+     */
+    public function canSendBack(Approval $approval): bool
+    {
+        if (! $approval->isPending()) {
+            return false;
+        }
+
+        $paper = $approval->approvable()->withoutGlobalScopes()->first();
+
+        if (! $paper instanceof Model || (string) $paper->getAttribute('status') !== \App\Core\Support\DocumentStatus::DRAFT) {
+            return false;
+        }
+
+        return ! method_exists($paper, 'canBeSentBack') || $paper->canBeSentBack($approval);
+    }
+
+    /**
+     * ⭐ সংশোধনে ফেরত — নোট বাধ্যতামূলক; অনুরোধ "ফেরত-সংশোধন" অবস্থায়, কাগজ খসড়া, লেখক নোটসহ খবর পান (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬;
+     * [[ASignerSendsBackOrCorrectsOnlyTheTextTest]])।
+     *
+     * ⓘ "না" ([[reject()]]) একটা সিদ্ধান্ত, এটা একটা প্রশ্ন: কাগজটা ঠিক করে আনুন। ⛔ তাই মডিউলকে "না" জানানো হয় না
+     * (`ApprovalDecided` নয়) — অর্থের কাগজের "না" ভাউচার ফেলে দেয়, এখানে কিছু ফেলার নেই। লেখক বদলে আবার পাঠালে
+     * [[DocumentApproval::stopping()]] নতুন অনুরোধ বসায়, আর নতুনটা এটার কথা বলে।
+     */
+    public function sendBack(Approval $approval, User $user, string $note): Approval
+    {
+        if (trim($note) === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages(['remarks' => __('approval::validation.send_back_needs_a_note')]);
+        }
+
+        if (! $this->canSendBack($approval)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['remarks' => __('approval::validation.cannot_send_back')]);
+        }
+
+        return DB::transaction(function () use ($approval, $user, $note) {
+            $approval = $this->lockPending($approval);
+            $this->assertCanDecide($approval, $user);
+
+            ApprovalDecision::create([
+                'approval_id' => $approval->id,
+                'level' => $approval->current_level,
+                'user_id' => $user->id,
+                'on_behalf_of' => $this->delegatorAt($approval, $user),
+                'decision' => ApprovalDecision::RETURNED,
+                'reason_code' => 'document',
+                'remarks' => $note,
+                'decided_at' => now(),
+            ]);
+
+            $approval->update(['status' => Approval::RETURNED, 'decided_at' => now()]);
+
+            $this->tell($approval, 'returned', $note);
+
+            return $approval->fresh();
+        });
+    }
+
+    /**
+     * ⭐ সইকারী নিজে কাগজ বদলালেন, আর অনুরোধটা থাকল — সইয়ের ছাপ আর অঙ্ক বদলানো কাগজের (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল দুই পথে ডাকা হয়: মালিক বদলে সই দেবেন, বা অন্য সইকারী কেবল বিবরণ ঠিক করলেন ([[VoucherWriter::update()]]); বাকি
+     * সব বদলে পুরনো অনুরোধ তুলে নতুন করে চাওয়া হয় ([[withdrawStale()]])। লেখক খবর পান কে কী বদলালেন।
+     */
+    public function adoptSignerEdit(Approval $approval, User $by, string $hash, ?string $amount, string $what): void
+    {
+        DB::transaction(function () use ($approval, $by, $hash, $amount): void {
+            $locked = Approval::query()->whereKey($approval->getKey())->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== Approval::PENDING) {
+                return;
+            }
+
+            $locked->update([
+                'state_hash' => $hash,
+                'amount' => $amount,
+                'payload' => [...(array) ($locked->payload ?? []), 'edited_by_signer' => (int) $by->id, 'edited_at' => now()->toDateTimeString()],
+            ]);
+        });
+
+        $maker = $approval->requested_by;
+
+        if ($maker === null || (int) $maker === (int) $by->id) {
+            return;
+        }
+
+        app(NotificationService::class)->send(
+            $maker,
+            'approval.edited_by_signer',
+            __('core.notify.approval_edited_by_signer', ['document' => $this->noticeLabel($approval), 'name' => $by->name]),
+            $what,
+            Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
+            key: 'approval:'.$approval->id.':edited:'.now()->timestamp,
+            about: $approval->approvable instanceof Model ? $approval->approvable : null,
+        );
+    }
+
     /** অনুরোধকারী নিজে প্রত্যাহার করলে। */
     public function cancel(Approval $approval, User $user): Approval
     {

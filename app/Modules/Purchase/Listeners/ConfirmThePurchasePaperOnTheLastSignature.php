@@ -73,6 +73,11 @@ final class ConfirmThePurchasePaperOnTheLastSignature
             return;
         }
 
+        // ⓘ তিন হাতের নিয়মে টাকা দেন তৃতীয় কেউ — লেখকের নামে নিজে-পাকা প্রতিবার "আটকে গেছে" হত ([[PaymentService::waitsForAThirdHand()]])
+        if ($paper instanceof Payment && app(PaymentService::class)->waitsForAThirdHand($paper)) {
+            return;
+        }
+
         $signer = $event->actorId === null ? null : User::query()->find($event->actorId);
 
         $this->finisher->finish(

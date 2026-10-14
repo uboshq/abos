@@ -195,7 +195,14 @@ final class CustomerService
         }
 
         // ⭐ সীমা বদলের ইতিহাসে কোন সইয়ে — বাড়ানো হলে যে সই এইমাত্র মিলল (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
-        CustomerCreditChange::because(null, $this->signedRaise($customer, $before, $after), fn () => $customer->update($data));
+        $signed = $this->signedRaise($customer, $before, $after);
+
+        CustomerCreditChange::because(null, $signed, fn () => $customer->update($data));
+
+        // ⛔ সই একবারই খাটে — সীমা নামিয়ে আবার একই অঙ্কে তুললে নতুন সই ([[Approval::markUsed()]])
+        if ($signed !== null) {
+            Approval::query()->find($signed)?->markUsed();
+        }
 
         return $customer->fresh();
     }
@@ -241,11 +248,18 @@ final class CustomerService
             }
         }
 
+        $signed = $this->signedRaise($customer, $before, $after);
+
         CustomerCreditChange::because(
             __('customer::credit_history.by_import'),
-            $this->signedRaise($customer, $before, $after),
+            $signed,
             fn () => $customer->forceFill(['credit_limit' => $after])->save(),
         );
+
+        // ⛔ সই একবারই খাটে ([[Approval::markUsed()]])
+        if ($signed !== null) {
+            Approval::query()->find($signed)?->markUsed();
+        }
 
         return 'applied';
     }

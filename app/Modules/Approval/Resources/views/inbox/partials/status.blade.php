@@ -3,6 +3,7 @@
         \App\Models\Approval::APPROVED => 'success',
         \App\Models\Approval::REJECTED => 'danger',
         \App\Models\Approval::CANCELLED => 'draft',
+        \App\Models\Approval::RETURNED => 'info',
         default => 'pending',
     };
 @endphp

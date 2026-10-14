@@ -14,6 +14,8 @@ use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Executive\Services\Board;
+use App\Modules\Executive\Notifications\MorningSummary;
+use App\Modules\Executive\Services\CompanyLens;
 use App\Modules\Executive\Services\Comparison;
 use App\Modules\Executive\Services\Figures;
 use App\Modules\Executive\Services\Snapshots;
@@ -23,6 +25,7 @@ use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -131,7 +134,11 @@ final class TheNightKeepsWhatTheScreenSaidTest extends TestCase
         $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains((string) $e->command, 'abos:owner-snapshot'));
 
         $this->assertNotNull($event, '⛔ রাতের হিসাবের আদেশটা নির্ধারিত কাজের তালিকায় নেই — কেউ চালাবে না।');
-        $this->assertSame('55 23 * * *', $event->expression);
+        // ⛔ এক মিনিট ফসকালে রাতটা চিরকালের জন্য হারায় — ২৩:৫৫ থেকে ২৩:৫৯ প্রতি মিনিটে, তালা আধা ঘণ্টার
+        // (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        $this->assertSame('55-59 23 * * *', $event->expression, '⛔ রাতের হিসাব এক মিনিটেই চলে — সেই মিনিট ফসকালে দিনটা হারায়।');
+        $this->assertTrue($event->withoutOverlapping, 'দুইটা দৌড় একসাথে চলতে পারে।');
+        $this->assertLessThanOrEqual(60, $event->expiresAt, '⛔ মরা দৌড়ের তালা পরের রাত পর্যন্ত থাকতে পারে।');
     }
 
     public function test_the_history_page_shows_last_month_and_receivable_then_reaches_compare(): void
@@ -180,6 +187,64 @@ final class TheNightKeepsWhatTheScreenSaidTest extends TestCase
             ->assertDontSee('data-history-row="'.$this->alpha->id.'-0"', false)
             ->assertDontSee($this->beta->name_bn)
             ->assertDontSee(Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'NTK')->firstOrFail()->name());
+    }
+
+    /** ⛔ সইয়ের অপেক্ষা মেইলে গোটা সংখ্যায়, "5.0000" নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+    public function test_the_signatures_count_reads_as_a_whole_number_in_the_morning_mail(): void
+    {
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+
+        $rows = array_values(array_filter(
+            app(Snapshots::class)->on($this->owner, app(CompanyLens::class)->companies($this->owner), Carbon::today()->toDateString()),
+            fn (array $row): bool => $row['branch_id'] === null,
+        ));
+        $this->assertNotSame([], $rows, 'প্রস্তুতিটাই ভুল — গোটা কোম্পানির সারি নেই।');
+
+        foreach ($rows as $row) {
+            $this->assertMatchesRegularExpression('/^\d+$/', (string) $row['values'][Figures::SIGNATURES], '⛔ সইয়ের অপেক্ষা দশমিকে এসেছে।');
+        }
+
+        $mail = (new MorningSummary(Carbon::today()->toDateString(), $rows))->toMail(new AnonymousNotifiable);
+        $label = __('executive::figure.'.Figures::SIGNATURES, [], 'bn');
+
+        $found = 0;
+
+        foreach ($mail->introLines as $line) {
+            if (str_starts_with((string) $line, $label.': ')) {
+                $found++;
+                $this->assertStringNotContainsString('.', (string) $line, "⛔ মেইলে সইয়ের অপেক্ষা দশমিকে: {$line}");
+            }
+        }
+
+        $this->assertSame(count($rows), $found, 'প্রস্তুতিটাই ভুল — মেইলে সইয়ের অপেক্ষার লাইন নেই।');
+    }
+
+    /** ⛔ গত মাসের ঐ দিনের রাতের হিসাব না থাকলে ধারায় ফাঁক, ৳০-এর বিন্দু নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+    public function test_a_day_with_no_night_record_is_a_gap_in_the_trend_not_a_zero(): void
+    {
+        // ⓘ কেবল আজকের রাতের হিসাব — গত মাসের একই দিনে কিছু নেই
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+        $this->assertFalse(DB::table('executive_snapshots')->where('taken_on', '<', Carbon::today()->toDateString())->exists(), 'প্রস্তুতিটাই ভুল — আগের দিনের হিসাব আছে।');
+
+        $page = $this->actingAs($this->owner)->get(route('executive.history', ['date' => Carbon::today()->toDateString()]))->assertOk();
+
+        $this->assertCount(1, $page->viewData('series'), 'প্রস্তুতিটাই ভুল — ধারায় আজকের একটা বিন্দু নেই।');
+        $this->assertSame(1, substr_count((string) $page->getContent(), 'r="3" stroke-width="1.5"'),
+            '⛔ গত মাসের যে দিনের হিসাব নেই, সেটা ধারায় ৳০ বিন্দু হয়ে আঁকা হলো।');
+    }
+
+    /** ⛔ হেডারের শাখা সব কিছু ছাঁকে — ইতিহাসের ছকেও (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+    public function test_a_header_branch_shows_that_branch_only_not_the_company_total(): void
+    {
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+
+        $mms = Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'MMS')->firstOrFail();
+        $this->owner->forceFill(['current_company_id' => $this->alpha->id, 'current_branch_id' => $mms->id, 'view_all_branches' => false])->save();
+        app(DataScope::class)->forget();
+
+        $this->actingAs($this->owner->fresh())->get(route('executive.history', ['date' => Carbon::today()->toDateString()]))->assertOk()
+            ->assertSee('data-history-row="'.$this->alpha->id.'-'.$mms->id.'"', false)
+            ->assertDontSee('data-history-row="'.$this->alpha->id.'-0"', false);
     }
 
     private function sell(string $qty, string $rate): void

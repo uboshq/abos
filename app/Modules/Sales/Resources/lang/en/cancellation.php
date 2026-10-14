@@ -22,6 +22,7 @@ return [
     'reason_required' => 'Write why the invoice is cancelled — no cancellation invoice without a reason.',
     'already' => ':no already has a cancellation invoice — :cxl.',
     'awaiting_signature' => ':cxl has not been signed by the owner yet.',
+    'bill_changed' => ':no changed after :cxl was asked for — the signature was for the earlier bill, not this one. Ask for the cancellation again.',
     'not_confirmed' => ':no is not a confirmed invoice — a draft is simply cancelled.',
     'after_gate_pass' => 'The goods of :no left through the gate pass — make a return (SRT), not a cancellation invoice.',
     'after_return' => ':no has a return or a credit note — reverse those first.',

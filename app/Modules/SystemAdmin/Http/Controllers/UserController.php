@@ -618,11 +618,20 @@ class UserController extends Controller implements HasMiddleware
                 continue;
             }
 
+            /*
+             * ⛔ সুপার অ্যাডমিন ছাড়া কেউ নকল করলে মালিকের কেন্দ্রের চাবি নকলে যায় না — ec, Executive লাইন-নিরীক্ষা,
+             * ১৪ অক্টোবর ২০২৬। ⓘ আজ সাধারণ প্রশাসকের নাগাল কেবল চলতি কোম্পানি ([[companiesWithinReach()]]), তাই নকল
+             * তাঁর হাতে ঘটেই না; নাগাল কখনো বাড়লেও চাবিটা যেন অন্য কোম্পানিতে না ছড়ায়।
+             */
+            $permissions = auth()->user()?->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)
+                ? $elsewhere->permissions
+                : $elsewhere->permissions->reject(fn ($p) => in_array($p->name, PermissionSyncer::SUPER_ADMIN_GRANTS, true));
+
             Role::query()->create([
                 'name' => $name,
                 'guard_name' => $elsewhere->guard_name,
                 'company_id' => $companyId,
-            ])->syncPermissions($elsewhere->permissions);
+            ])->syncPermissions($permissions);
         }
     }
 

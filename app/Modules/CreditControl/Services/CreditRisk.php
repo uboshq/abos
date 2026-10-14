@@ -101,7 +101,9 @@ final class CreditRisk
                 $reasons[] = __('credit_control::risk.reason_overdue_share', ['amount' => Money::format($amount), 'limit' => Money::format($limit)]);
             }
 
-            $terms = max(7, (int) ($customer->credit_days ?? 0));
+            // ⛔ নিজের শর্ত; ৭ দিন কেবল শর্ত ০ হলে — উপরের নিয়ম ৩ (আগে `max(7, …)` ১–৬ দিনের শর্তকেও ৭ ধরত; ১৪ অক্টোবর ২০২৬)
+            $days = (int) ($customer->credit_days ?? 0);
+            $terms = $days > 0 ? $days : 7;
             if ($oldest > $terms && $points['credit_control.risk_points_late_beyond_terms'] > 0) {
                 $score += $points['credit_control.risk_points_late_beyond_terms'];
                 $reasons[] = __('credit_control::risk.reason_late_beyond_terms', ['days' => $oldest, 'terms' => $terms]);

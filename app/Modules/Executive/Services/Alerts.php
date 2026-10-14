@@ -76,7 +76,10 @@ final class Alerts
                 $count = $this->count($user, $company, $kind);
                 [$route, $params] = self::target($kind);
 
-                $parts[] = ['id' => $company['id'], 'name' => $company['name'], 'count' => $count, 'route' => $route, 'params' => $params];
+                // ⛔ যে শাখায় গোনা, সেই শাখাতেই খোলে — আগে শাখা বাদ যেত, খুলত সব শাখার তালিকা আর হেডারের বাছাই হারাত
+                // (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheOwnerSeesTheWholeGroupOnOneScreenTest]])
+                $parts[] = ['id' => $company['id'], 'name' => $company['name'], 'only' => $company['only'] ?? null,
+                    'count' => $count, 'route' => $route, 'params' => $params];
                 $total += $count ?? 0;
             }
 
@@ -119,7 +122,7 @@ final class Alerts
             });
 
             foreach ($part as $row) {
-                $rows[] = [...$row, 'company_id' => $company['id'], 'company_name' => $company['name']];
+                $rows[] = [...$row, 'company_id' => $company['id'], 'company_name' => $company['name'], 'company_only' => $company['only'] ?? null];
             }
         }
 

@@ -44,7 +44,15 @@ final class LinksController extends Controller implements HasMiddleware
     {
         $user = $request->user();
         $companies = collect($this->lens->companies($user))->keyBy('id');
-        $chosen = $companies->has($request->integer('company')) ? $request->integer('company') : $companies->keys()->first();
+
+        /*
+         * ⛔ পক্ষের তালিকা কেবল সেই কোম্পানির, যেখানে মানুষটার জোড়া দেওয়ার চাবি আছে — ঐ কোম্পানিতে বসে জিজ্ঞেস
+         * করা, [[store()]]-এর একই প্রশ্ন। ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬: রুটের পাহারা কেবল চলতি
+         * কোম্পানির চাবি দেখে, তাই `?company=` দিয়ে যে কোম্পানিতে কেবল `executive.view` আছে, সেখানকার সব
+         * ক্রেতা আর সরবরাহকারীর কোড-নাম খুলে যেত। ⓘ "আসলে আমাদের কোন কোম্পানি" তালিকা আগের মতোই সবগুলো।
+         */
+        $owning = $companies->filter(fn (array $c) => $user->canInCompany($c['id'], self::KEY));
+        $chosen = $owning->has($request->integer('company')) ? $request->integer('company') : $owning->keys()->first();
 
         $parties = $chosen === null ? [] : $this->lens->within($user, (int) $chosen, null, fn () => [
             SisterLink::CUSTOMER => Customer::acrossDealers()->inViewedBranch()->orderBy('code')->get()->map(fn (Customer $c) => ['id' => (int) $c->id, 'name' => trim($c->code.' — '.$c->name())])->all(),
@@ -71,6 +79,7 @@ final class LinksController extends Controller implements HasMiddleware
         return view('executive::links', [
             'menu' => $this->menu->forUser($user),
             'companies' => $companies->values()->all(),
+            'owning' => $owning->values()->all(),
             'chosen' => $chosen,
             'parties' => $parties,
             'links' => $links,

@@ -159,6 +159,7 @@ final class ScheduledReportRunner
             fn (): Collection => $recipients
                 ->filter(fn (User $user): bool => app(DealerScope::class)->walled($user->fresh())
                     || self::hasBranchLimit($user->fresh(), (int) $schedule->company_id)
+                    || self::hasWarehouseLimit($user->fresh())
                     || self::readsPerPerson((string) $schedule->report_key))
                 ->values(),
         );
@@ -219,6 +220,18 @@ final class ScheduledReportRunner
         $every = DB::table('branches')->where('company_id', $companyId)->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         return $every === [] || array_diff($every, $allowed) !== [];
+    }
+
+    /**
+     * ⛔ গুদামে সীমিত প্রাপকও দেয়ালের ভিতরে (ec, রিপোর্ট লাইন-নিরীক্ষা ⛔২, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ভাগের ফাইল মালিকের চোখে বানানো, আর মালিকের গুদামের সীমা নেই — তাই এক গুদামের ভাণ্ডারী রোজ সব গুদামের লট, চলাচল
+     * আর মূল্য পেতেন, যা পর্দা তাঁকে দেয় না। এখন তিনিও নিজের পরিচয়ে নিজের ফাইল পান; রিপোর্ট-ইঞ্জিনের একই প্রশ্ন
+     * ([[ReportEngine::normaliseFilters()]]-এর `warehouse_ids`) — সীমা থাকলেই সীমিত।
+     */
+    private static function hasWarehouseLimit(User $user): bool
+    {
+        return app(DataScope::class)->idsFor($user, UserDataScope::WAREHOUSE) !== null;
     }
 
     private function recipientsWhoMaySee(ReportSchedule $schedule, ReportDefinition $definition): Collection

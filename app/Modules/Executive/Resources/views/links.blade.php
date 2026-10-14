@@ -15,7 +15,8 @@
             <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>
                 <select id="ln-company" name="company" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    @foreach ($companies as $company)
+                    {{-- ⛔ কেবল যেখানে জোড়া দেওয়ার চাবি আছে (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) --}}
+                    @foreach ($owning as $company)
                         <option value="{{ $company['id'] }}" @selected($chosen === $company['id'])>{{ $company['name'] }}</option>
                     @endforeach
                 </select>

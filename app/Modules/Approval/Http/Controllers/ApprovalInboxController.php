@@ -103,7 +103,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
              * কোনো না কোনো চাবি ছিল।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward', 'bulkApprove', 'confirmAll']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'confirmAll']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
@@ -513,10 +513,12 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * ভুলটা মানুষকে **তাকাতে** বলে, আর উল্টো ভুলটা তাঁকে না
              * জানিয়ে সই করায়।
              */
+            /*
+             * ⭐ ছাপ থাকলে ছাপ মিলিয়ে (১৩ অক্টোবর ২০২৬) — ⛔ `updated_at` সারির বদল (খাত, অঙ্ক) দেখত না, সইকারী "বদলায়নি" ভেবে সই
+             * দিতেন। ছাপ না থাকলে বা মেলানো না গেলে উপরের ঘড়ির নিয়মই ([[DocumentFingerprint::changedSinceAsked()]])।
+             */
             'changedSinceAsked' => $document !== null
-                && $entry->requested_at !== null
-                && $document->getAttribute('updated_at') !== null
-                && $document->getAttribute('updated_at')->greaterThan($entry->requested_at),
+                && app(\App\Core\Engines\Approval\DocumentFingerprint::class)->changedSinceAsked($entry, $document),
             'labels' => $this->flows->labels(),
             'document' => $document,
 
@@ -528,6 +530,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             'documentHidden' => ! $mayReadDocument,
 
             'canDecide' => $canDecide,
+            // ⭐ "সংশোধনে ফেরত" আলাদা অবস্থায় যায় কি না — না গেলে পুরনো পথ ("না", কারণ: কাগজের ভুল)
+            'canSendBack' => $canDecide && $this->engine->canSendBack($entry),
 
             /*
              * ⭐ কার কাছে পাঠানো যায় — কেবল ছকে নাম থাকা সইকারীরা।
@@ -1005,6 +1009,20 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         return redirect()
             ->route('approval.inbox.index')
             ->with('saved', __('approval::message.rejected'));
+    }
+
+    /**
+     * ⭐ সংশোধনে ফেরত — নোট বাধ্যতামূলক (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)। ⓘ নিয়ম ইঞ্জিনে ([[ApprovalEngine::sendBack()]]) — ফোনও একই পথে।
+     */
+    public function sendBack(Request $request, int $approval): RedirectResponse
+    {
+        $validated = $request->validate(['remarks' => ['required', 'string', 'max:500']]);
+
+        $this->engine->sendBack(Approval::query()->findOrFail($approval), $request->user(), $validated['remarks']);
+
+        return redirect()
+            ->route('approval.inbox.index')
+            ->with('saved', __('approval::message.sent_back'));
     }
 
     /** অনুরোধকারী নিজে প্রত্যাহার করলে। */
