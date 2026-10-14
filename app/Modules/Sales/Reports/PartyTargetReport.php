@@ -104,6 +104,40 @@ final class PartyTargetReport
                 .'COALESCE(a.achieved, 0) as inflow, COALESCE(t.target, 0) as target');
     }
 
+    /**
+     * ⭐ Sales ড্যাশবোর্ডের জন্য এ মাস — মোট আদায়, মোট লক্ষ্য, % আর সবচেয়ে পিছিয়ে থাকা পাঁচজন (মালিক, ১৪ অক্টোবর ২০২৬:
+     * *"eta sales er dashboard eo daw"*)।
+     *
+     * ⓘ রিপোর্টের একই সারি ([[base()]]) আর চাবি না দিলে রিপোর্ট যে সময় নেয় সেটাই — মাসের ১ তারিখ থেকে আজ; তাই ঘরের অঙ্ক আর
+     * রিপোর্টের সর্বমোট হুবহু এক। দেয়াল গ্রাহকের নিজের: কোম্পানি, হেডারের শাখা আর নাগাল, বিক্রয়কর্মী কেবল নিজের ডিলার।
+     *
+     * @return array{inflow: string, target: string, percent: ?string, lagging: \Illuminate\Support\Collection<int, object>}
+     */
+    public static function thisMonth(): array
+    {
+        $today = Carbon::today();
+        $rows = DB::query()->fromSub(self::base(
+            (int) \App\Core\Support\CompanyContext::id(),
+            $today->copy()->startOfMonth()->toDateString(),
+            $today->toDateString(),
+            fn (Builder $q) => $q->whereIn('cu.id', \App\Modules\Customer\Models\Customer::query()->inViewedBranch()->select('customers.id')),
+        ), 'r');
+
+        $sum = (clone $rows)->selectRaw('COALESCE(SUM(r.inflow), 0) as inflow, COALESCE(SUM(r.target), 0) as target')->first();
+        $inflow = bcadd((string) ($sum->inflow ?? '0'), '0', 4);
+        $target = bcadd((string) ($sum->target ?? '0'), '0', 4);
+
+        // ⓘ পিছিয়ে — যাঁদের লক্ষ্য আছে, সবচেয়ে কম % আগে; সমান হলে বড় লক্ষ্যটা আগে
+        $lagging = (clone $rows)->where('r.target', '>', 0)
+            ->orderByRaw('r.inflow / r.target')
+            ->orderByDesc('r.target')
+            ->orderBy('r.source_id')
+            ->limit(5)
+            ->get(['r.source_id', 'r.customer', 'r.point', 'r.inflow', 'r.target']);
+
+        return ['inflow' => $inflow, 'target' => $target, 'percent' => self::percent($inflow, $target), 'lagging' => $lagging];
+    }
+
     /** অর্জন % — লক্ষ্য না থাকলে `null` */
     public static function percent(string $inflow, string $target): ?string
     {

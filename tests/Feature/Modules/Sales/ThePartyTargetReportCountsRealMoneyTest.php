@@ -177,6 +177,33 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
         $this->assertSame(__('sales::party_target.behind'), $areas['North Area']['remark']);
     }
 
+    /**
+     * ⭐ Sales ড্যাশবোর্ডেও — মালিক, ১৪ অক্টোবর ২০২৬: "eta sales er dashboard eo daw"। দাবি: ঘরের মোট আদায়, মোট লক্ষ্য আর % রিপোর্টের
+     * চলতি মাসের সর্বমোটের হুবহু; পিছিয়ে থাকা তালিকার প্রথমজন সবচেয়ে কম %; পাতা খোলে।
+     */
+    public function test_the_dashboard_tile_is_the_reports_own_month_and_the_lagging_list_starts_lowest(): void
+    {
+        $low = $this->dealer('PT-L', 'Lowest Dealer');
+        $mid = $this->dealer('PT-M', 'Middle Dealer');
+        $this->target($low, '500000');
+        $this->target($mid, '100000');
+        $this->credit($low, 'collection', '1000');
+        $this->credit($mid, 'collection', '60000');
+
+        $tile = PartyTargetReport::thisMonth();
+        $report = app(ReportEngine::class)->run(PartyTargetReport::KEY, ['from' => '2026-10-01', 'to' => '2026-10-14'], perPage: 1000);
+
+        $this->assertMoney($report->totals['inflow'], $tile['inflow'], '⛔ ড্যাশবোর্ডের আদায় রিপোর্টের সর্বমোট নয়');
+        $this->assertMoney($report->totals['target'], $tile['target'], '⛔ ড্যাশবোর্ডের লক্ষ্য রিপোর্টের সর্বমোট নয়');
+
+        $lowest = collect($report->rows)->map(fn ($r) => (array) $r)->filter(fn (array $r) => bccomp((string) $r['target'], '0', 4) > 0)
+            ->sortBy(fn (array $r) => (float) $r['inflow'] / (float) $r['target'])->first();
+        $this->assertSame((int) $lowest['source_id'], (int) $tile['lagging']->first()->source_id, '⛔ সবচেয়ে পিছিয়ে থাকা জন তালিকার মাথায় নেই');
+        $this->assertLessThanOrEqual(5, $tile['lagging']->count());
+
+        $this->get(route('module.dashboard', ['module' => 'sales']))->assertOk()->assertSee(__('sales::party_target.tile'))->assertSee(__('sales::party_target.lagging'));
+    }
+
     public function test_both_doors_open_the_report_for_their_own_key(): void
     {
         $this->target($this->dealer('PT-X', 'Door Dealer'), '1000');
