@@ -70,6 +70,21 @@ final class OneMenuGroupClosedTheWholeModuleTest extends TestCase
         $this->get(route('inventory.stock.movement'))->assertOk();
     }
 
+    /**
+     * ⛔ গোড়ার উপসর্গ একজনই দাবি করলে তারই — সমন্বয়কের পর্যালোচনা, ১৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ গ্রাহকের `customer.` কেবল "মাস্টার" গ্রুপ দাবি করে। গোড়াটা পুরো বাদ দিলে
+     * গ্রুপ বন্ধের পরেও নতুন গ্রাহকের ফর্ম আর তার POST ঠিকানা দিয়ে খুলত।
+     */
+    public function test_switching_off_the_customer_master_group_closes_its_off_menu_screens(): void
+    {
+        $this->switchOff(app(MenuSwitches::class)->forGroup('customer', 'master'));
+
+        $this->get(route('customer.index'))->assertNotFound();
+        $this->get(route('customer.create'))->assertNotFound();
+        $this->post(route('customer.store'), [])->assertNotFound();
+    }
+
     public function test_switching_off_the_custody_row_closes_its_door(): void
     {
         $this->switchOff('menu.accounts.custody');

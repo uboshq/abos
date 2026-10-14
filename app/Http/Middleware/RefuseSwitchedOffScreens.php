@@ -443,8 +443,7 @@ final class RefuseSwitchedOffScreens
                     }
 
                     foreach ($claims as $prefix) {
-                        if ($this->deeperThanAModule($prefix)
-                            && str_starts_with($prefix, $module->code.'.')) {
+                        if (str_starts_with($prefix, $module->code.'.')) {
                             $groupClaims[$prefix][$groupKey] = true;
                         }
                     }
@@ -463,9 +462,7 @@ final class RefuseSwitchedOffScreens
                     $this->plain[$item['route']][] = ['setting' => $setting, 'group' => $groupKey];
 
                     foreach ($claims as $prefix) {
-                        if ($this->deeperThanAModule($prefix)) {
-                            $itemClaims[$prefix][$setting] = true;
-                        }
+                        $itemClaims[$prefix][$setting] = true;
                     }
                 }
             }
@@ -480,22 +477,16 @@ final class RefuseSwitchedOffScreens
          * নিজের রুটগুলো উপরে হুবহু মেলে; এই মানচিত্র কেবল মেনুর বাইরের
          * রুটের (`...store`) জন্য, আর সেখানে ভুল মালিকের চেয়ে মালিক না
          * থাকা ভালো।
+         *
+         * ⭐ মডিউলের গোড়ার উপসর্গও (`customer.`) এই নিয়মেই — একজনই দাবি
+         * করলে তারই, দুইজন করলে কারো নয়। ⛔ গোড়াটা পুরো বাদ দিলে গ্রাহকের
+         * "মাস্টার" গ্রুপ বন্ধ করার পরেও `customer.create` আর `customer.store`
+         * ঠিকানা দিয়ে খুলত — সেই পুরনো "আড়াল, বাধা নয়" (সমন্বয়কের পর্যালোচনা,
+         * ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। `accounts.`-এর মতো যে
+         * গোড়া কয়েকটা গ্রুপ ভাগ করে, সেটা আগের মতোই কারো নয়।
          */
         $this->groupOf = $this->onlyOneClaimer($groupClaims);
         $this->prefixes = $this->onlyOneClaimer($itemClaims);
-    }
-
-    /**
-     * উপসর্গটা `<code>.`-এর চেয়ে গভীর কি না।
-     *
-     * ⛔ `accounts.settings`-এর মা-উপসর্গ `accounts.` — গোটা মডিউল। ওটা
-     * কোনো এক গ্রুপ বা সারির হতে পারে না; গোটা মডিউলের সুইচ আলাদা
-     * (`<code>.enabled`)। মডিউলের কোডে বিন্দু নেই, তাই দুইটা বিন্দু মানে
-     * অন্তত এক ধাপ গভীর (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
-     */
-    private function deeperThanAModule(string $prefix): bool
-    {
-        return substr_count($prefix, '.') >= 2;
     }
 
     /**
