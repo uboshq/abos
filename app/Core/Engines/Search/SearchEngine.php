@@ -6,6 +6,7 @@ namespace App\Core\Engines\Search;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Module\ModuleRegistry;
+use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -99,6 +100,7 @@ final class SearchEngine
         }
 
         $hits = [];
+        $switches = app(RefuseSwitchedOffScreens::class);
 
         foreach ($this->sources() as $class => $source) {
             if (count($hits) >= $limit) {
@@ -133,6 +135,17 @@ final class SearchEngine
                  * ⓘ খরচ নেই: পলিসি মেমরিতে চলে, ডাটাবেজে যায় না।
                  */
                 if ($source['ability'] !== null && ! $user->can($source['ability'], $record)) {
+                    continue;
+                }
+
+                /*
+                 * ⛔ পর্দা বা মডিউল এই কোম্পানি/শাখায় বন্ধ — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+                 * ⓘ খালি বাক্সের সাম্প্রতিক তালিকা ([[StartingPoints::recent()]]) এটা মানত, খোঁজা মানত না: বন্ধ আদেশের পর্দার
+                 * কাগজের নম্বর আর গ্রাহকের নাম Ctrl+K-এ আসত, চাপলে ৪০৪। ⭐ একই প্রশ্ন, একই উত্তরদাতা।
+                 */
+                [$name, $params] = $record->drillRoute() + [1 => []];
+
+                if ($switches->refuses((string) $name, (array) $params)) {
                     continue;
                 }
 
