@@ -131,7 +131,11 @@ final class TheNightKeepsWhatTheScreenSaidTest extends TestCase
         $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains((string) $e->command, 'abos:owner-snapshot'));
 
         $this->assertNotNull($event, '⛔ রাতের হিসাবের আদেশটা নির্ধারিত কাজের তালিকায় নেই — কেউ চালাবে না।');
-        $this->assertSame('55 23 * * *', $event->expression);
+        // ⛔ এক মিনিট ফসকালে রাতটা চিরকালের জন্য হারায় — ২৩:৫৫ থেকে ২৩:৫৯ প্রতি মিনিটে, তালা আধা ঘণ্টার
+        // (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        $this->assertSame('55-59 23 * * *', $event->expression, '⛔ রাতের হিসাব এক মিনিটেই চলে — সেই মিনিট ফসকালে দিনটা হারায়।');
+        $this->assertTrue($event->withoutOverlapping, 'দুইটা দৌড় একসাথে চলতে পারে।');
+        $this->assertLessThanOrEqual(60, $event->expiresAt, '⛔ মরা দৌড়ের তালা পরের রাত পর্যন্ত থাকতে পারে।');
     }
 
     public function test_the_history_page_shows_last_month_and_receivable_then_reaches_compare(): void
