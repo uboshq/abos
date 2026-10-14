@@ -69,7 +69,8 @@ class ApprovalLimit extends Model
     {
         return ($this->branch_id === null ? 0 : 2)
             + ($this->action === null ? 0 : 1)
-            + ($this->module === null ? 0 : 1);
+            // ⓘ কাজ নিজের মডিউল বোঝায় (`sales.discount` মানে `sales`) — মডিউল ফাঁকা রেখে কাজ বাছা সারিও মডিউলের ওজন পায়
+            + ($this->module === null && $this->action === null ? 0 : 1);
     }
 
     /** এই সারিটা কি এই কাজে ও এই শাখায় খাটে? */

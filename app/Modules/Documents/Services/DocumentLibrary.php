@@ -124,6 +124,7 @@ final class DocumentLibrary
     {
         $made = DB::transaction(function () use ($document, $file, $major, $comment) {
             $locked = $this->lock($document);
+            $this->assertTakesAVersion($locked);
             [$nextMajor, $nextMinor] = $this->nextNumber($locked, $major);
 
             $version = $this->addVersionRow($locked, $this->store($file, $locked), $nextMajor, $nextMinor, $comment);
@@ -149,6 +150,7 @@ final class DocumentLibrary
     {
         return DB::transaction(function () use ($document, $from, $comment) {
             $locked = $this->lock($document);
+            $this->assertTakesAVersion($locked);
             [$nextMajor, $nextMinor] = $this->nextNumber($locked, false);
 
             $version = $this->addVersionRow(
@@ -627,6 +629,23 @@ final class DocumentLibrary
      * ⛔ দুইজন একসাথে নতুন ভার্সন তুললে দুইজনই v1.1 পেতেন — কাগজের সারি তালায় পড়ে,
      * দ্বিতীয়জন প্রথমজনের পরে v1.2 পান। ⓘ টেবিলের অনন্য চাবি পেছনের পাহারা।
      */
+    /**
+     * ⛔ তালার ভিতরে আবার — নতুন ভার্সন কেবল খসড়ায় বা অনুমোদিত কাগজে, আর্কাইভে নয়, সই চলার মাঝে নয় (Documents লাইন-ধরে নিরীক্ষা,
+     * ১৪ অক্টোবর ২০২৬; [[AVersionCannotSlipInAfterTheRequestTest]])।
+     *
+     * ⓘ পলিসি ([[DocumentPolicy::addVersion()]]) দেখে তালার আগে। ঠিক তখনই অন্য কেউ জমা দিলে বা সই চাইলে, তালা পেয়ে এই ভার্সন বসে যেত —
+     * সইকারী আর অনুমোদনকারী যে বাইট দেখেননি তার মাথায় তাঁদের সিদ্ধান্ত।
+     */
+    private function assertTakesAVersion(Document $locked): void
+    {
+        $open = ! $locked->isArchived() && ($locked->isEditableInPlace() || $locked->isApproved())
+            && app(DocumentSignatures::class)->state($locked) !== DocumentSignatures::PENDING;
+
+        if (! $open) {
+            throw ValidationException::withMessages(['file' => __('documents::message.version_closed')]);
+        }
+    }
+
     private function lock(Document $document): Document
     {
         return Document::acrossBranches()->whereKey($document->getKey())->lockForUpdate()->firstOrFail();

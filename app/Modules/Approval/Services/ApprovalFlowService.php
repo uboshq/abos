@@ -102,6 +102,7 @@ class ApprovalFlowService
         $this->assertKnownAction((string) $data['module'], (string) $data['action']);
         $this->assertSteps($steps);
         $this->assertNotDuplicated($data, $flow);
+        $this->assertKeepsWaitingPapers($flow, $data, $steps);
 
         return DB::transaction(function () use ($flow, $data, $steps, $conditions) {
             $flow->update([
@@ -160,6 +161,34 @@ class ApprovalFlowService
         }
 
         $flow->delete();
+    }
+
+    /**
+     * ⛔ চলমান কাগজ যে স্তরে বসে, সেই স্তর বদলে উধাও নয় — Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[EditingAFlowKeepsItsWaitingPapersTest]])।
+     *
+     * ⓘ মোছার পাহারা ছিল ([[delete()]]), বদলের নয়: স্তর ৩-এ অপেক্ষার কাগজ রেখে ছক দুই স্তরে নামালে, কাজ বা মডিউল বদলালে, বা বন্ধ
+     * করলে কাগজটার আর কোনো সইকারী থাকত না — চিরকাল "অপেক্ষায়"। অপেক্ষার স্তরগুলো রেখে বাকি বদল চলে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $steps
+     */
+    private function assertKeepsWaitingPapers(ApprovalFlow $flow, array $data, array $steps): void
+    {
+        $waiting = Approval::query()->where('module', $flow->module)->where('action', $flow->action)->pending()->pluck('current_level')
+            ->map(fn ($level) => (int) $level);
+
+        if ($waiting->isEmpty()) {
+            return;
+        }
+
+        $levels = array_map(fn (array $step): int => (int) $step['level'], $steps);
+        $moved = (string) $data['module'] !== (string) $flow->module || (string) $data['action'] !== (string) $flow->action
+            || ! (bool) ($data['is_active'] ?? true)
+            || $waiting->contains(fn (int $level) => ! in_array($level, $levels, true));
+
+        if ($moved) {
+            throw ValidationException::withMessages(['flow' => __('approval::validation.flow_change_strands', ['count' => $waiting->count()])]);
+        }
     }
 
     /** @param list<array<string, mixed>> $steps */
