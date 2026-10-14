@@ -358,7 +358,8 @@ class MasterListController extends Controller implements HasMiddleware
                  * ⓘ মোবাইল ঐচ্ছিক, কিন্তু দিলে সেটাই নকল ধরার শক্ত সূত্র —
                  * নামে পাহারা নরম (দুইজন "মোঃ রহিম" থাকতে পারেন), নম্বরে কঠিন।
                  */
-                'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile'],
+                // ⛔ কলাম ৩২ — ১৯১-এর সাধারণ সীমায় লম্বা লেখা ৫০০ দিত (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile', 'rules' => ['nullable', 'string', 'max:32']],
                 // ⭐ ধরন — কর্মী, আত্মীয়, ব্যবসায়ী, অন্যান্য (অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬; IAS 24-এর আত্মীয় আলাদা চেনা)
                 'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'person_kinds', 'labels' => 'person_kind'],
                 /*
@@ -447,8 +448,9 @@ class MasterListController extends Controller implements HasMiddleware
                     'rules' => ['nullable', 'min:0', 'max:99999999999999']],
                 'owner_type' => ['type' => 'select', 'label' => 'master_data::field.owner_type', 'options' => 'owner_types', 'labels' => 'kind',
                     'rules' => ['required']],
-                'driver_name' => ['type' => 'text', 'label' => 'master_data::field.driver_name'],
-                'driver_phone' => ['type' => 'text', 'label' => 'master_data::field.driver_phone'],
+                // ⛔ কলাম ১২০ আর ৩২ — সাধারণ ১৯১-এর সীমায় ৫০০ দিত (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'driver_name' => ['type' => 'text', 'label' => 'master_data::field.driver_name', 'rules' => ['nullable', 'string', 'max:120']],
+                'driver_phone' => ['type' => 'text', 'label' => 'master_data::field.driver_phone', 'rules' => ['nullable', 'string', 'max:32']],
             ],
             'columns' => ['registration_no', 'vehicle_type_id', 'owner_type'],
             'setting' => 'master_data.vehicle_enabled',
