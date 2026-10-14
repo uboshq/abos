@@ -64,7 +64,7 @@ final class TheSignerSignsTheAmountTheySawTest extends TestCase
         $approval = Approval::query()->where('approvable_type', Voucher::class)->where('approvable_id', $voucher->id)->pending()->firstOrFail();
 
         // ⓘ কার্ড ১০০ দেখিয়েছিল; তারপর খসড়ার অঙ্ক বদলাল
-        $this->phone($signer)->getJson('/api/v1/approvals')->assertOk()->assertJsonFragment(['amount' => '100.0000']);
+        $this->phone($signer)->getJson('/api/v1/approvals/pending')->assertOk()->assertJsonFragment(['amount' => '100.0000']);
         DB::table('vouchers')->where('id', $voucher->id)->update(['amount' => '250.0000']);
 
         $this->phone($signer)->postJson('/api/v1/approvals/'.$approval->public_id.'/approve', ['seenAmount' => '100.0000'])
