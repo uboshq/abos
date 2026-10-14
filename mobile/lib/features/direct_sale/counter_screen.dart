@@ -864,6 +864,11 @@ class _CounterScreenState extends State<CounterScreen> {
     try {
       final draft = await widget.api.openDraft(picked.id);
       if (!mounted) return;
+      if (draft.hasFractions) {
+        await _popup('খসড়াটা ফোনে খোলা যাবে না',
+            'এই খসড়ায় ভগ্নাংশের পরিমাণ আছে (যেমন ২.৫) — ফোনের কার্ট পূর্ণ সংখ্যা নেয়, খুললে পরিমাণ বদলে যেত। ওয়েবে খুলুন।');
+        return;
+      }
       setState(() {
         _startOver();
         _customer =

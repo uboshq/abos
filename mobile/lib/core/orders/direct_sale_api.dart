@@ -372,7 +372,8 @@ class CounterDraft {
       required this.no,
       required this.customerId,
       required this.customerName,
-      required this.lines});
+      required this.lines,
+      this.hasFractions = false});
 
   final String id;
   final String no;
@@ -380,11 +381,23 @@ class CounterDraft {
   final String customerName;
   final List<CounterLine> lines;
 
+  /// ⛔ ভগ্নাংশের পরিমাণ (২.৫ কেজি) — ফোনের কার্ট পূর্ণ সংখ্যা নেয়; খুললে ৩ হয়ে যেত আর ৩ কেজি বিক্রি হত, ০.৪ হত ০
+  /// (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। পর্দা এমন খসড়া খোলে না, ওয়েবে পাঠায়।
+  final bool hasFractions;
+
+  static bool _fractional(Object? raw) {
+    final v = double.tryParse(raw?.toString() ?? '') ?? 0;
+    return v != v.roundToDouble();
+  }
+
   factory CounterDraft.fromJson(Map<String, dynamic> json) => CounterDraft(
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
         customerId: json['customer']?.toString() ?? '',
         customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint']),
+        hasFractions: ((json['lines'] as List?) ?? const [])
+            .whereType<Map>()
+            .any((l) => _fractional(l['qty']) || _fractional(l['freeQty'])),
         lines: [
           for (final l in (json['lines'] as List?) ?? const [])
             if (l is Map)
