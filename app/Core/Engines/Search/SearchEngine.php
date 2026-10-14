@@ -122,7 +122,9 @@ final class SearchEngine
                 continue;
             }
 
-            foreach ($this->matchesIn($class, $source['columns'], $term) as $record) {
+            $taken = 0;
+
+            foreach ($this->matchesIn($class, $source['columns'], $term, $source['ability'] !== null) as $record) {
                 /*
                  * ⛔ পলিসি-ধাঁচের উৎসে যাচাইটা **সারি ধরে**, আর সেটাই
                  * সবচেয়ে সৎ উত্তর: প্রশ্নটা তো "ইনি কি এই সারিটা দেখতে
@@ -136,7 +138,7 @@ final class SearchEngine
 
                 $hits[] = $this->hitFrom($record);
 
-                if (count($hits) >= $limit) {
+                if (count($hits) >= $limit || ++$taken >= self::PER_SOURCE) {
                     break;
                 }
             }
@@ -456,7 +458,7 @@ final class SearchEngine
      * @param  list<string>  $columns
      * @return iterable<Model>
      */
-    private function matchesIn(string $class, array $columns, string $term): iterable
+    private function matchesIn(string $class, array $columns, string $term, bool $rowChecked = false): iterable
     {
         /*
          * ⚠️ `%` আর `_` — LIKE-এর নিজের জাদুকরী অক্ষর।
@@ -487,7 +489,14 @@ final class SearchEngine
                     $query->orWhere($column, 'like', $like);
                 }
             })
-            ->limit(self::PER_SOURCE)
+            /*
+             * ⛔ সারি-যাচাইয়ের উৎসে বেশি সারি, আর স্থির ক্রম — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+             * ⓘ আগে LIMIT ৫ বসত পলিসির **আগে**, ক্রম ছাড়া: শাখা-খ-এর কর্মী "Store" লিখলে ডাটাবেজের প্রথম ৫টা অন্য শাখার
+             * হলে সব বাদ, ফল শূন্য — অথচ নিজের শাখায় ১০টা। আজ পেতেন, কাল পেতেন না। ⭐ এখন নতুনটা আগে, আর পলিসির উৎসে
+             * PER_SOURCE × ৮ পর্যন্ত এনে ছাঁকা ([[search()]] প্রতি উৎসে ৫টা ভরলে থামে) — সীমা বাঁধা, তাই খরচও বাঁধা।
+             */
+            ->orderByDesc((new $class)->getQualifiedKeyName())
+            ->limit($rowChecked ? self::PER_SOURCE * 8 : self::PER_SOURCE)
             ->get();
     }
 
