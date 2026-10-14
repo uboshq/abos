@@ -1472,6 +1472,13 @@ class UserController extends Controller implements HasMiddleware
 
         $wanted = (bool) $data['required'];
 
+        /*
+         * ⛔ যাঁর খাতা বদলাতে পারি না, তাঁর তালাও খুলি না — প্রতিটা কোম্পানিতে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)।
+         * ⓘ আর চাপাইও না — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬: পাহারাটা আগে কেবল বন্ধের পথে ছিল, তাই
+         * এক কোম্পানির ইউজার-অ্যাডমিন মালিকের ওপরও দুই ধাপ চাপাতে পারতেন — পরের অনুরোধেই তিনি বসানোর পর্দায় আটকাতেন।
+         */
+        $this->authorize('update', $user);
+
         if ($wanted) {
             $user->forceFill(['two_step_required' => true])->save();
 
@@ -1479,9 +1486,6 @@ class UserController extends Controller implements HasMiddleware
         }
 
         // ── ⛔ এখান থেকে নিচে সবটাই তালা খোলার পথ ──────────────────────
-
-        // ⛔ যাঁর খাতা বদলাতে পারি না, তাঁর তালাও খুলি না — প্রতিটা কোম্পানিতে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)
-        $this->authorize('update', $user);
 
         /*
          * ⛔ সুপার অ্যাডমিনের তালা খোলে কেবল আরেকজন সুপার অ্যাডমিন — চূড়ান্ত অডিট (⛔২)। ⚠️ আগে "User Admin" চাবিই
