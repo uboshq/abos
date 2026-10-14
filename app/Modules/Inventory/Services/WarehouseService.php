@@ -73,8 +73,17 @@ final class WarehouseService
      */
     public function update(Warehouse $warehouse, array $data): Warehouse
     {
-        if (trim((string) $data['code']) !== $warehouse->code) {
-            $this->assertCodeIsFree(trim((string) $data['code']), $warehouse->id);
+        /*
+         * ⓘ খালি কোড মানে পুরনোটাই থাকে — পণ্যের একই নিয়ম ([[ProductService::update()]], ছ১৫)। ⛔ আগে ঘর খালি করে রাখলে
+         * NULL বসাতে গিয়ে ৫০০ (কলাম NOT NULL), আর ঘরটা না এলে "undefined key" (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+         */
+        $code = trim((string) ($data['code'] ?? ''));
+
+        if ($code === '') {
+            unset($data['code']);
+        } elseif ($code !== $warehouse->code) {
+            $this->assertCodeIsFree($code, $warehouse->id);
+            $data['code'] = $code;
         }
 
         /*
@@ -87,6 +96,19 @@ final class WarehouseService
             && $this->hasHistory($warehouse)) {
             throw ValidationException::withMessages([
                 'branch_id' => __('inventory::validation.warehouse_branch_has_history', ['warehouse' => $warehouse->name()]),
+            ]);
+        }
+
+        /*
+         * ⛔ প্রধান গুদাম শাখা বদলায় না — নিষ্ক্রিয় করার একই নিয়ম (১৩ অক্টোবর ২০২৬)। ⓘ সরালে নতুন শাখায় দুইটা প্রধান
+         * (কোনটা নেবে আন্দাজ), আর পুরনো শাখায় একটাও না — সেই শাখার কাউন্টার গুদাম না পেয়ে খালি লট দেখাত (৬ অক্টোবরের
+         * লাইভের ত্রুটি)। আগে পুরনো শাখায় অন্য একটাকে প্রধান করতে হয়।
+         */
+        if (array_key_exists('branch_id', $data)
+            && (int) ($data['branch_id'] ?? 0) !== (int) ($warehouse->branch_id ?? 0)
+            && $warehouse->is_default) {
+            throw ValidationException::withMessages([
+                'branch_id' => __('inventory::validation.main_warehouse_stays_in_branch', ['warehouse' => $warehouse->name()]),
             ]);
         }
 
@@ -177,7 +199,12 @@ final class WarehouseService
 
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void
     {
+        /*
+         * ⛔ দেখার দেয়াল ছাড়া — কোড অনন্য গোটা কোম্পানিতে (`unique(company_id, code)`), শাখায় নয়। ⓘ আগে হেডারে এক শাখা
+         * বাছা থাকলে অন্য শাখার একই কোড চোখে পড়ত না, যাচাই পার হত, আর ডাটাবেজের সূচকে ধাক্কা খেয়ে ৫০০ (১৩ অক্টোবর ২০২৬)।
+         */
         $taken = Warehouse::query()
+            ->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH])
             ->where('code', $code)
             ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
             ->withTrashed()

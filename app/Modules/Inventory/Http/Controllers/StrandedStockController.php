@@ -89,7 +89,8 @@ class StrandedStockController extends Controller implements HasMiddleware
          * (কোম্পানি · পণ্য · লট নম্বর), আর ব্যবহারকারী একটা ডাটাবেজ
          * ত্রুটি দেখতেন যার মানে তাঁর কাছে কিছুই নয়।
          */
-        $batch = Batch::query()->firstOrCreate(
+        // ⛔ দেয়াল ছাড়া — অন্য শাখার একই লট আড়ালে থাকলে নতুন সারি বসাতে গিয়ে অনন্য-সূচকে ৫০০ হত (১৩ অক্টোবর ২০২৬)
+        $batch = Batch::acrossWarehouses()->firstOrCreate(
             ['product_id' => $product->id, 'batch_no' => $validated['batch_no']],
             [
                 'expiry_date' => $validated['expiry_date'] ?? null,

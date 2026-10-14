@@ -154,7 +154,9 @@ class StockCountController extends Controller implements HasMiddleware
     public function approve(Request $request, StockCount $count): RedirectResponse
     {
         $reasonId = $request->validate([
-            'reason_code_id' => ['required', 'integer', 'exists:mdm_reason_codes,id'],
+            // ⛔ কেবল এই কোম্পানির, না-মোছা কারণ — অন্য কোম্পানির বা মোছা নম্বর আগে যাচাই পার হয়ে খালি ৪০৪ দিত, বাংলা বার্তা নয় (১৩ অক্টোবর ২০২৬)
+            'reason_code_id' => ['required', 'integer', \Illuminate\Validation\Rule::exists('mdm_reason_codes', 'id')
+                ->where('company_id', \App\Core\Support\CompanyContext::id())->whereNull('deleted_at')],
         ])['reason_code_id'];
 
         $this->counts->approve($count, ReasonCode::query()->findOrFail($reasonId));
