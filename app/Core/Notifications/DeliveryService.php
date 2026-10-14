@@ -69,6 +69,15 @@ final class DeliveryService
                 $this->suppress($bell, $key, $reason);
             }
 
+            // ⛔ বন্ধ করা মানুষ বা কোম্পানি থেকে সরানো মানুষের কাছে বাইরের মাধ্যমে কিছু নয় ([[stillWorksHere()]])
+            if (! $this->stillWorksHere($user, (int) $bell->company_id)) {
+                foreach ($plan['channels'] as $key) {
+                    $this->suppress($bell, $key, 'inactive');
+                }
+
+                return;
+            }
+
             [$after, $quiet, $frequency] = $this->timing($bell, $user);
 
             // ⭐ একজনের কাছে দিনে সর্বোচ্চ কয়টা খবর বাইরের মাধ্যমে (স্পেক §১৪ "Frequency/Max Limit") — ⛔ জরুরি কখনো আটকায় না;
@@ -153,6 +162,23 @@ final class DeliveryService
     }
 
     /** কোনো মাধ্যমে আটকানো বা পিছানো — কেন, লেখা থাকে (স্পেক §১৭ "Preference & Suppression") */
+    /**
+     * ⛔ মানুষটা এখনো এই কোম্পানিতে কাজ করেন কি না — Notification লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AnInactivePersonGetsNoMailTest]])।
+     *
+     * ⓘ নিয়মের প্রাপকেরা আগেই বাছা হয় ([[RecipientResolver]]), কিন্তু সরাসরি পাঠানো খবর (যেমন সইয়ের ফল যিনি চেয়েছিলেন তাঁকে) বন্ধ করা
+     * কর্মীর ইমেইল, SMS আর ফোনে যেত — কাগজের নাম আর মন্তব্যসহ। ⓘ কোম্পানির সারি না থাকলে বাধা নয় (মালিক, পুরনো সারি); কেবল
+     * স্পষ্ট বন্ধ সারি থামায়।
+     */
+    private function stillWorksHere(User $user, int $companyId): bool
+    {
+        if (! $user->is_active) {
+            return false;
+        }
+
+        return ! \Illuminate\Support\Facades\DB::table('company_user')
+            ->where('user_id', $user->getKey())->where('company_id', $companyId)->where('is_active', false)->exists();
+    }
+
     private function suppress(Notification $bell, string $channel, string $reason): void
     {
         NotificationSuppression::query()->withoutGlobalScopes()->create([
@@ -206,6 +232,8 @@ final class DeliveryService
             $result = match (true) {
                 $channel === null => DeliveryResult::permanent('unknown channel'),
                 $bell === null || $user === null => DeliveryResult::permanent('the notification or its recipient is gone'),
+                // ⛔ সারিতে থাকার মাঝে বন্ধ হলেও — পাঠানোর মুহূর্তে আবার দেখা
+                ! $this->stillWorksHere($user, (int) $job->company_id) => DeliveryResult::permanent('the recipient is no longer active'),
                 default => $channel->send($bell, $user, $config),
             };
         } catch (Throwable $e) {
