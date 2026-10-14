@@ -73,6 +73,10 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     {
         $shop = Customer::query()->firstOrFail();
 
+        // ⓘ ডেমোর সারিগুলো এক মিনিটের পুরনো হোক — ওয়াটারমার্ক এখন পালার শুরু থেকে ([[SyncService::recordSuccessfulPull()]],
+        // ১৫ অক্টোবর ২০২৬), তাই পালার ঠিক আগে বানানো সারি ওভারল্যাপে আবার আসত
+        $this->travel(2)->minutes();
+
         // প্রথম সিঙ্ক — সব বকেয়া নেমে গেল, ওয়াটারমার্ক এগোল
         $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
 
@@ -114,6 +118,28 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     }
 
     /**
+     * ⛔ লম্বা পালার মাঝে বদলানো সারি পরের পালায় আসে — ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬
+     * ([[SyncService::recordSuccessfulPull()]])।
+     *
+     * ⓘ গ্রাহকের পাতা পালার শুরুতেই শেষ; তার পরে সীমা বদলাল, আর পালা শেষ হলো দুই মিনিট পরে। ওয়াটারমার্ক "এখন" বসলে পরের টানা
+     * শুরু হত শেষ−৬০ সেকেন্ড থেকে — বদলটা কোনোদিন আসত না, ফোনে সীমা চিরকাল পুরনো।
+     */
+    public function test_a_row_changed_during_a_long_pass_comes_with_the_next_pass(): void
+    {
+        $shop = Customer::query()->firstOrFail();
+
+        $this->travel(2)->minutes();
+        $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
+        $this->travel(30)->seconds();
+        $shop->forceFill(['credit_limit' => '77777.0000'])->save();
+        $this->travel(2)->minutes();
+        $this->sync()->recordSuccessfulPull('phone-a', 'customer');
+
+        $this->assertContains((string) $shop->public_id, array_column($this->dueRecords(), 'entityId'),
+            '⛔ পালার মাঝে বদলানো সীমা পরের পালায় এল না — ফোনে চিরকাল পুরনো');
+    }
+
+    /**
      * ক্রেডিট সীমা বদলালেও যেতে হবে — ওটা গ্রাহকের সারিতে, খতিয়ানে নয়।
      *
      * কেবল খতিয়ান দেখলে সীমা বাড়ানোর খবরটা ফোনে কোনোদিন পৌঁছাত না,
@@ -123,6 +149,7 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     {
         $shop = Customer::query()->firstOrFail();
 
+        $this->travel(2)->minutes();
         $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
         $this->travel(2)->minutes();
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');

@@ -401,6 +401,10 @@ final class SyncService
         $handlers = $this->registry->forModule($module);
 
         $positions = $this->decodeCursor($paged ? $cursor : $this->storedPageCursor($deviceId, $module));
+        // ⓘ পালার প্রথম পাতা — শুরুর সময় মনে রাখা, ওয়াটারমার্ক সেখান থেকে ([[recordSuccessfulPull()]])
+        if ($positions === []) {
+            \Illuminate\Support\Facades\Cache::put($this->passKey($deviceId, $module), now()->toIso8601String(), 86400);
+        }
         $next = [];
 
         $records = [];
@@ -615,6 +619,11 @@ final class SyncService
         }
     }
 
+    private function passKey(string $deviceId, string $module): string
+    {
+        return 'sync-pass:'.CompanyContext::id().':'.$deviceId.':'.$module;
+    }
+
     /**
      * ফোন বলল "পুরোটা পেয়েছি" — ওয়াটারমার্ক এগোয়।
      *
@@ -629,10 +638,18 @@ final class SyncService
      */
     public function recordSuccessfulPull(string $deviceId, string $module, ?User $user = null): void
     {
+        /*
+         * ⛔ ওয়াটারমার্ক পালার শুরু থেকে, শেষ থেকে নয় — ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬ ([[ARowChangedDuringAPullComesNextTimeTest]])।
+         * ⓘ লম্বা পালায় (১০০ পাতা পর্যন্ত) একটা ধরনের পাতা আগেই শেষ; তার পরে সেই ধরনের সারি বদলালে আর পালা শেষে "এখন" বসলে,
+         * পরের টানা শুরু হত এখন−৬০ সেকেন্ড থেকে — বদলটা কোনোদিন আসত না: দোকানের বকেয়া বা মজুদ ফোনে চিরকাল পুরনো।
+         */
+        $started = \Illuminate\Support\Facades\Cache::pull($this->passKey($deviceId, $module));
+        $mark = is_string($started) ? Carbon::parse($started)->min(now()) : now();
+
         SyncState::query()->updateOrCreate(
             ['device_id' => $deviceId, 'module' => $module],
             // ⓘ পালা শেষ — কার্সরও শেষ ([[pull()]], গ১৮); ⭐ কোন দেখায় পাওয়া, তা-ও ([[sawAnotherView()]])
-            ['company_id' => CompanyContext::id(), 'last_synced_at' => now(), 'page_cursor' => null,
+            ['company_id' => CompanyContext::id(), 'last_synced_at' => $mark, 'page_cursor' => null,
                 'view_key' => $user === null ? null : $this->viewKey($user)],
         );
     }
