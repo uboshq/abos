@@ -308,6 +308,18 @@ final class ReportDefinition
         return true;
     }
 
+    /**
+     * ⛔ ফাইলে নিতে পারেন কি না — দেখার চাবি আর (থাকলে) ফাইলের আলাদা চাবি (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১০, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নির্ধারিত রিপোর্ট একটা ফাইল, তাই সূচি বানানো, প্রাপক বাছা আর নামানো — তিনটাই এটা দেখে, ফোনের রপ্তানির দরজার মতো।
+     * আগে কেবল [[allows()]] দেখা হত: `notification.reports.export` ছাড়া মানুষও রোজ প্রাপকের নাম আর প্রদানকারীর রেফারেন্সের CSV পেতেন।
+     */
+    public function allowsFile(?User $user): bool
+    {
+        return $this->allows($user)
+            && ($this->exportPermission === null || $user->can($this->exportPermission));
+    }
+
     public function isAsOfDate(): bool
     {
         return $this->asOfDate;

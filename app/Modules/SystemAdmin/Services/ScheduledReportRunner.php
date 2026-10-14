@@ -113,7 +113,8 @@ final class ScheduledReportRunner
          */
         $allowed = CompanyContext::forCompany(
             (int) $schedule->company_id,
-            fn (): bool => $definition->allows($owner->fresh()),
+            // ⓘ ফাইলের চাবিসহ (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১০, ১৪ অক্টোবর ২০২৬)
+            fn (): bool => $definition->allowsFile($owner->fresh()),
         );
 
         if (! $allowed) {
@@ -247,7 +248,7 @@ final class ScheduledReportRunner
         return CompanyContext::forCompany(
             (int) $schedule->company_id,
             fn (): Collection => $schedule->recipientUsers()
-                ->filter(fn (User $user): bool => $user->is_active !== false && $definition->allows($user->fresh()))
+                ->filter(fn (User $user): bool => $user->is_active !== false && $definition->allowsFile($user->fresh()))
                 ->values(),
         );
     }
