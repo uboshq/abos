@@ -37,6 +37,9 @@ class ApprovalRecord {
   /// number and a wrong key yields null, and null draws nothing — see [Money].
   double? get amount => Money.value(payload['amount']);
 
+  /// কার্ডে যে অঙ্ক দেখানো — হুবহু সার্ভারের লেখা; সইয়ের সাথে ফেরত যায় ([[ApprovalsApi.approve]])
+  String? get rawAmount => Money.raw(payload['amount']);
+
   int get currentLevel => (payload['currentLevel'] as num?)?.toInt() ?? 0;
 
   DateTime? get requestedAt {

@@ -96,4 +96,5 @@ return [
     'bundle_nothing' => 'Nothing in this sale is still waiting to be confirmed.',
     'bundle_remark' => 'Confirmed together on one page',
     'escalation_fallback' => 'With no target: Manager → super admin',
+    'amount_changed_since_seen' => 'The amount of the paper changed after you opened the card — the list was reloaded; sign after seeing the new amount.',
 ];

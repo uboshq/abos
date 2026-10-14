@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -116,7 +118,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       if (approved) {
         await (widget.approve ??
             (String id, String? note) =>
-                ApprovalsApi.approve(id, remarks: note))(approval.id, remarks);
+                ApprovalsApi.approve(id, remarks: note, seenAmount: approval.rawAmount))(approval.id, remarks);
       } else {
         await (widget.reject ??
             (String id, String note) =>
@@ -135,6 +137,10 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
           _say('এটি ইতিমধ্যে নিষ্পত্তি হয়ে গেছে।');
         case ApprovalFailure.notYours:
           _say('এই সিদ্ধান্তটি আপনার নয়।');
+        case ApprovalFailure.amountChanged:
+          // ⛔ কার্ড খোলার পরে অঙ্ক বদলেছে — সই পড়েনি; তালিকা আবার, নতুন অঙ্ক দেখে আবার সই
+          _say('কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।');
+          unawaited(_load());
         case ApprovalFailure.network:
           _say('সংযোগ নেই। অনুমোদনের জন্য ইন্টারনেট লাগবে।');
         case ApprovalFailure.other:
@@ -180,9 +186,11 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     await _decide(approval, approved: false, remarks: remarks);
   }
 
+  // ⓘ সইয়ের প্রশ্নে অঙ্কও — কোন অঙ্কে সই, তা দেখে
   String _describe(ApprovalRecord approval) => [
         approval.documentTypeLabel,
         if (approval.documentNo != null) approval.documentNo!,
+        if (approval.rawAmount != null) Money.taka(approval.rawAmount),
       ].join(' · ');
 
   @override

@@ -210,9 +210,30 @@ final class ApprovalApiController extends Controller
     /** `POST /approvals/{approval}/approve` — মন্তব্য ঐচ্ছিক, ওয়েবের মতো। */
     public function approve(Request $request, string $approval): JsonResponse
     {
-        $validated = $request->validate(['remarks' => ['nullable', 'string', 'max:500']]);
+        $validated = $request->validate([
+            'remarks' => ['nullable', 'string', 'max:500'],
+            // ⓘ ফোনের কার্ডে যে অঙ্ক দেখানো হয়েছিল — নতুন অ্যাপ পাঠায়; পুরনো অ্যাপ না পাঠালে আগের মতোই
+            'seenAmount' => ['nullable', 'string', 'regex:/^-?\d{1,14}(\.\d{1,4})?$/'],
+        ]);
 
         $entry = $this->decidable($request, $approval);
+
+        /*
+         * ⛔ যে অঙ্ক দেখে সই, সেই অঙ্কেই — ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬ ([[TheSignerSignsTheAmountTheySawTest]])।
+         * ⓘ তালিকা খোলার পরে খসড়ার অঙ্ক বদলালে (RCV-0090: ৩৯,৯৯০ → ২৪,৯১৩) পুরনো কার্ডের বোতাম নতুন অঙ্কে সই দিত। কার্ডের
+         * অঙ্ক ([[index()]]-এর `amount`) আর এখনকার অঙ্ক না মিললে ৪১২ — ফোন তালিকা আবার আনে।
+         */
+        if (filled($validated['seenAmount'] ?? null)) {
+            $class = (string) $entry->approvable_type;
+            $document = class_exists($class) && is_subclass_of($class, Model::class)
+                ? $class::query()->withoutGlobalScopes(ApprovalFacts::VIEW_WALLS)->find($entry->approvable_id)
+                : null;
+            $now = self::paperAmountNow($document) ?? ($entry->amount === null ? null : (string) $entry->amount);
+
+            if ($now !== null && bccomp((string) $validated['seenAmount'], $now, 4) !== 0) {
+                return response()->json(['message' => __('approval::message.amount_changed_since_seen'), 'amount' => $now], 412);
+            }
+        }
 
         $decided = $this->settle($entry, fn () => app(ApprovalEngine::class)->approve(
             $entry,

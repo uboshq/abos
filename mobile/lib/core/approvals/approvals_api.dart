@@ -57,12 +57,15 @@ class ApprovalsApi {
     return ApprovalSheet.fromJson(response.data ?? const {});
   }
 
-  static Future<void> approve(String id, {String? remarks}) async {
+  /// ⛔ [seenAmount]: কার্ডে যে অঙ্ক দেখে সই — কাগজের অঙ্ক এর মধ্যে বদলালে সার্ভার ৪১২ দেয় ([[ApprovalFailure.amountChanged]];
+  /// ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+  static Future<void> approve(String id, {String? remarks, String? seenAmount}) async {
     await ApiClient.dio.post<Map<String, dynamic>>(
       '/approvals/$id/approve',
       data: {
         if (remarks != null && remarks.trim().isNotEmpty)
           'remarks': remarks.trim(),
+        if (seenAmount != null) 'seenAmount': seenAmount,
       },
     );
   }
@@ -150,7 +153,7 @@ class ApprovalPage {
 /// at the same inbox, and the second to tap is not seeing an error — they are
 /// seeing that their colleague got there first. docs/Contract §৫ rule খ: that
 /// row leaves the list quietly, it does not turn red.
-enum ApprovalFailure { notYours, alreadyDecided, network, other }
+enum ApprovalFailure { notYours, alreadyDecided, amountChanged, network, other }
 
 ApprovalFailure approvalFailureOf(Object error) {
   if (error is! DioException) return ApprovalFailure.other;
@@ -158,6 +161,7 @@ ApprovalFailure approvalFailureOf(Object error) {
   return switch (error.response?.statusCode) {
     403 => ApprovalFailure.notYours,
     404 || 409 => ApprovalFailure.alreadyDecided,
+    412 => ApprovalFailure.amountChanged,
     _ => error.type == DioExceptionType.connectionError ||
             error.type == DioExceptionType.connectionTimeout ||
             error.type == DioExceptionType.sendTimeout ||

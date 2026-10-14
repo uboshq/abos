@@ -182,6 +182,34 @@ void main() {
     expect(find.textContaining('ইতিমধ্যে নিষ্পত্তি'), findsOneWidget);
   });
 
+  testWidgets('an amount changed since the card loaded is not signed: the list reloads and says why (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    var loads = 0;
+    await tester.pumpWidget(screen(
+      load: () async {
+        loads++;
+        return const ApprovalPage(rows: [ApprovalRecord(row)]);
+      },
+      approve: (_, __) async {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/approvals/x/approve'),
+          response: Response(requestOptions: RequestOptions(path: '/approvals/x/approve'), statusCode: 412),
+        );
+      },
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'অনুমোদন'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('৳125,000', findRichText: true), findsWidgets, reason: 'সইয়ের প্রশ্নে অঙ্ক নেই');
+    await tester.tap(inDialog('অনুমোদন'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('অঙ্ক বদলেছে'), findsOneWidget, reason: '⛔ বদলানো অঙ্কের ফেরত "নিষ্পত্তি" বা কিছুই না বলে চুপ');
+    expect(loads, 2, reason: '⛔ তালিকা আবার আনা হলো না — পুরনো অঙ্কের কার্ড রয়ে গেল');
+    expect(find.text('PB-2609-0007'), findsOneWidget);
+  });
+
   group('salary never reaches a phone', () {
     test('a payroll row is recognised so it can be dropped', () {
       expect(
