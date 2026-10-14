@@ -64,6 +64,12 @@ final class DocumentSignatures
                 throw ValidationException::withMessages(['signature' => __('documents::message.already_signed')]);
             }
 
+            // ⛔ চলমান অনুরোধে আবার নয় — আগে প্রতিটা চাপে নতুন অডিট সারি আর সব সইকারীর কাছে আবার খবর যেত
+            // (Documents লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AnOpenSignatureRequestIsNotAskedTwiceTest]])
+            if ($this->state($locked) === self::PENDING) {
+                throw ValidationException::withMessages(['signature' => __('documents::message.signature_already_asked')]);
+            }
+
             $approval = $this->approvals->stopping(
                 document: $locked,
                 module: DocumentWorkflow::MODULE,
