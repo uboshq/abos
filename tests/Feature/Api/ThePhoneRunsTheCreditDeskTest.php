@@ -121,6 +121,11 @@ final class ThePhoneRunsTheCreditDeskTest extends TestCase
             ['kind' => 'limit', 'amount' => '40000', 'reason' => 'ঈদ'])->assertForbidden();
 
         $accountant = $this->staffWith(['credit_control.view', 'credit_control.request_limit', 'customer.view']);
+
+        // ⛔ `1e5` ভুল-বার্তা, ৫০০ নয় (বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        $this->phone($accountant, 'POST', '/api/v1/credit-control/customers/'.$this->late->public_id.'/limit-requests',
+            ['kind' => 'limit', 'amount' => '1e5', 'reason' => 'ঈদ'])->assertStatus(422)->assertJsonValidationErrors('amount');
+
         $this->phone($accountant, 'POST', '/api/v1/credit-control/customers/'.$this->late->public_id.'/limit-requests',
             ['kind' => 'limit', 'amount' => '40000', 'reason' => 'ঈদের মৌসুম'])->assertCreated()->assertJsonPath('waiting_signature', true);
 

@@ -203,7 +203,7 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
 
         $data = $request->validate([
             'kind' => ['required', Rule::in([CustomerCreditRequest::LIMIT, CustomerCreditRequest::TEMPORARY])],
-            'amount' => ['required', 'numeric', 'min:0', 'max:999999999999'],
+            'amount' => ['required', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0', 'max:999999999999'],
             'temp_until' => ['nullable', 'required_if:kind,'.CustomerCreditRequest::TEMPORARY, 'date'],
             'reason' => ['required', 'string', 'max:500'],
         ]);

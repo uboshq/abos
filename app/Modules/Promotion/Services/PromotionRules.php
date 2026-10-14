@@ -90,6 +90,9 @@ final class PromotionRules
         }
 
         return DB::transaction(function () use ($offer, $data, $benefitKind, $giftProduct, $from, $to) {
+            /* ⛔ আবার, তালার ভিতরে — উপরেরটা কেবল দ্রুত না বলার জন্য ([[assertStillADraft()]]) */
+            $this->assertStillADraft($offer);
+
             $condition = PromotionCondition::query()->create([
                 'promotion_id' => $offer->id,
                 'kind' => ConditionKind::from((string) ($data['condition_kind'] ?? 'quantity')),
@@ -114,44 +117,59 @@ final class PromotionRules
 
     public function removeStep(Promotion $offer, PromotionCondition $step): void
     {
-        $this->assertStillADraft($offer);
+        DB::transaction(function () use ($offer, $step) {
+            $this->assertStillADraft($offer);
 
-        /* ⛔ অন্য অফারের ধাপ — ঠিকানা ধরে ধরে পরের অফার ভাঙা যেত */
-        if ((int) $step->promotion_id !== (int) $offer->id) {
-            abort(404);
-        }
+            /* ⛔ অন্য অফারের ধাপ — ঠিকানা ধরে ধরে পরের অফার ভাঙা যেত */
+            if ((int) $step->promotion_id !== (int) $offer->id) {
+                abort(404);
+            }
 
-        $step->delete();
+            $step->delete();
+        });
     }
 
     /** ⓘ একটা সুযোগের সারি — *"কেবল এই ক্রেতা"*, *"কেবল এই পণ্য"*। */
     public function addScope(Promotion $offer, ScopeKind $kind, int $targetId): PromotionScope
     {
-        $this->assertStillADraft($offer);
+        return DB::transaction(function () use ($offer, $kind, $targetId) {
+            $this->assertStillADraft($offer);
 
-        return PromotionScope::query()->firstOrCreate([
-            'promotion_id' => $offer->id,
-            'kind' => $kind,
-            'target_id' => $targetId,
-        ]);
+            return PromotionScope::query()->firstOrCreate([
+                'promotion_id' => $offer->id,
+                'kind' => $kind,
+                'target_id' => $targetId,
+            ]);
+        });
     }
 
     public function removeScope(Promotion $offer, PromotionScope $scope): void
     {
-        $this->assertStillADraft($offer);
+        DB::transaction(function () use ($offer, $scope) {
+            $this->assertStillADraft($offer);
 
-        if ((int) $scope->promotion_id !== (int) $offer->id) {
-            abort(404);
-        }
+            if ((int) $scope->promotion_id !== (int) $offer->id) {
+                abort(404);
+            }
 
-        $scope->delete();
+            $scope->delete();
+        });
     }
 
+    /**
+     * ⛔ খসড়া কি না — হাতের কপি নয়, তালা-দেওয়া সারি বলে (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ দুই ট্যাব: একটায় অফারটা জমা হলো (বা সই পেল), অন্যটার হাতে তখনো খসড়ার কপি। ⚠️ সেখান থেকে
+     * ধাপ বসালে অনুমোদনকারী যা দেখেছিলেন আর যা চলছে — দুইটা আলাদা হত। ⭐ [[PromotionLifecycle::moveTo()]]
+     * একই সারিতে তালা দেয়, তাই জমা আর ধাপ বসানো একে অপরকে দেখে।
+     */
     private function assertStillADraft(Promotion $offer): void
     {
-        if ($offer->status !== PromotionStatus::DRAFT) {
+        $status = Promotion::query()->whereKey($offer->getKey())->lockForUpdate()->firstOrFail()->status;
+
+        if ($status !== PromotionStatus::DRAFT) {
             throw ValidationException::withMessages([
-                'status' => __('promotion::validation.rules_frozen', ['status' => $offer->status->label()]),
+                'status' => __('promotion::validation.rules_frozen', ['status' => $status->label()]),
             ]);
         }
     }

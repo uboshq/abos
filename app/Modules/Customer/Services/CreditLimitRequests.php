@@ -48,6 +48,15 @@ final class CreditLimitRequests
      */
     public function raise(Customer $customer, string $kind, string $amount, ?string $until, string $reason, ?UploadedFile $file, User $by): CustomerCreditRequest
     {
+        /*
+         * ⛔ কেবল সাধারণ দশমিক — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⚠️ `1e5` `numeric` পার হত আর bcmath-এ ভেঙে
+         * ৫০০ দিত — ওয়েব আর ফোন দুই দরজাতেই; দরজার নিয়ম ছাড়া অন্য পথেও এখানে থামে।
+         */
+        // ⓘ নিয়মটা Sales-এর PlainNumber-এর হুবহু, এখানে লেখা — Customer Sales-এর উপর নির্ভর করে না ([[BoundariesTest]])
+        if (preg_match('/^[+-]?(\d+(\.\d*)?|\.\d+)$/', $amount) !== 1) {
+            throw ValidationException::withMessages(['amount' => __('validation.numeric', ['attribute' => 'amount'])]);
+        }
+
         $amount = bcadd($amount, '0', 4);
         $reason = trim($reason);
         $base = bcadd((string) ($customer->credit_limit ?? '0') ?: '0', '0', 4);
@@ -185,6 +194,19 @@ final class CreditLimitRequests
                 ->whereKey($request->customer_id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            /*
+             * ⛔ সই "বাড়ানো"-র, কমানোর নয় — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⚠️ অপেক্ষার মাঝে সীমা অন্য পথে
+             * (গ্রাহকের ফর্মে মালিক) চাওয়ার চেয়েও বেশি উঠে গেলে পুরনো অনুরোধের সই সেটা নীরবে নামিয়ে দিত। ⓘ তখন অনুরোধ বাতিল,
+             * কারণ লেখা, সীমা যেমন আছে।
+             */
+            if ($request->kind === CustomerCreditRequest::LIMIT
+                && bccomp((string) $request->requested_limit, bcadd((string) ($customer->credit_limit ?? '0') ?: '0', '0', 4), 4) <= 0) {
+                $request->forceFill(['status' => CustomerCreditRequest::VOID, 'decided_at' => now(),
+                    'note' => __('customer::credit_request.already_higher')])->save();
+
+                return;
+            }
 
             /*
              * ⛔ অনুরোধের পরে সীমা অন্য পথে বদলে থাকলে কাগজটা পুরনো — মালিক পড়েছেন "১ লাখ থেকে দেড় লাখ", অথচ মাঝে ঝুঁকিতে
