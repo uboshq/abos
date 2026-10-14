@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'network_errors.dart';
+import 'package:dio/dio.dart';
 
 /// ⭐ একটা লেখা একবারই — `Idempotency-Key` (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১২: নেট ধীর হলে বা দুবার চাপলে জমার
 /// বিজ্ঞপ্তি, আদেশ, DO, ফেরত, লিড, কোটেশন আর খরচের দাবি দুবার বসত; সার্ভার [RemembersAPhoneWrite] 2914831d)।
@@ -32,8 +32,11 @@ class OnceKey {
     }
   }
 
-  /// নেট না থাকলে চাবি থাকে; বাকি সব ভুলে (সার্ভার ফেরাল) নতুন চাবি
+  /// ⛔ নতুন চাবি কেবল সার্ভার সত্যিই ফেরালে (৪xx)। নেট না থাকলে, ৫xx-এ (প্রক্সির 502/504, লেনদেনের পরে 500) বা উত্তর পড়তে
+  /// না পারলে লেখাটা হয়তো বসে গেছে — একই চাবিতে আবার চাপলে সার্ভার আগের উত্তর ফেরায়; নতুন চাবিতে দুবার বসত
+  /// (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
   void settle(Object error) {
-    if (!isNetworkError(error)) _key = null;
+    final status = error is DioException ? error.response?.statusCode : null;
+    if (status != null && status >= 400 && status < 500) _key = null;
   }
 }

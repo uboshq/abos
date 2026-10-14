@@ -51,6 +51,16 @@ void main() {
     expect(server.keys.toSet(), hasLength(3), reason: '⛔ বসে যাওয়া বা ফেরানো কাজের চাবি আবার');
   });
 
+  test('a 5xx keeps the key: the write may have landed, so the retry is the same action (phone line audit, 15 Oct 2026)', () async {
+    final once = OnceKey();
+    server.broken = true;
+    await expectLater(once.send(() => ApiClient.dio.post<void>('/sales/leads', data: const {})), throwsA(isA<DioException>()));
+    server.broken = false;
+    await once.send(() => ApiClient.dio.post<void>('/sales/leads', data: const {}));
+
+    expect(server.keys[1], server.keys[0], reason: '⛔ প্রক্সির 502-এর পরে নতুন চাবি — লেখাটা বসে থাকলে দুবার বসত');
+  });
+
   test('outside the key, and on a read, nothing is added', () async {
     await ApiClient.dio.post<void>('/sales/leads', data: const {});
     await OnceKey().send(() => ApiClient.dio.get<void>('/sales/leads'));
@@ -69,6 +79,7 @@ void main() {
 class _Server implements HttpClientAdapter {
   bool offline = false;
   bool refuse = false;
+  bool broken = false;
   final List<String?> keys = [];
   final List<String> paths = [];
 
@@ -77,6 +88,7 @@ class _Server implements HttpClientAdapter {
     keys.add(options.headers['Idempotency-Key'] as String?);
     paths.add(options.path);
     if (offline) throw DioException(requestOptions: options, type: DioExceptionType.connectionError);
+    if (broken) return ResponseBody.fromString('Bad Gateway', 502);
     return ResponseBody.fromString(
       jsonEncode(refuse ? {'message': 'ফেরানো'} : {'id': 'x', 'status': 'pending', 'amount': '500.00'}),
       refuse ? 422 : 201,
