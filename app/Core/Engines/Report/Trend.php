@@ -140,9 +140,16 @@ final class Trend
                 'to' => $end->copy()->subYear()->toDateString(),
             ],
             // ⚠️ মাসের শেষ পেরোয় না: ৩১ মার্চ → ২৮/২৯ ফেব্রুয়ারি, ১ মার্চ নয়
+            /*
+             * ⛔ গোটা মাস হলে আগের মাসের আসল শেষ দিন পর্যন্ত (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১২, ১৪ অক্টোবর ২০২৬)। ⓘ আগে ৩০ সেপ্টেম্বর
+             * থেকে এক মাস পিছিয়ে ৩০ আগস্ট — ৩১ আগস্টের বিক্রি বাদ, আর পতনটা বড় দেখাত; ফেব্রুয়ারি বনাম জানুয়ারিতে ২৯–৩১ বাদ।
+             * ⓘ মাসের মাঝখানের পরিসর আগের মতোই আগের মাসের একই দিনগুলো।
+             */
             self::PREVIOUS_MONTH => [
                 'from' => $start->copy()->subMonthNoOverflow()->toDateString(),
-                'to' => $end->copy()->subMonthNoOverflow()->toDateString(),
+                'to' => $start->day === 1 && $end->isLastOfMonth()
+                    ? $end->copy()->startOfMonth()->subMonthNoOverflow()->endOfMonth()->toDateString()
+                    : $end->copy()->subMonthNoOverflow()->toDateString(),
             ],
             default => null,
         };
