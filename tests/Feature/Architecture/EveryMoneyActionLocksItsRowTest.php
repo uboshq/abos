@@ -35,7 +35,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Accounts/Services/BankReconciliationService.php::reopen',
         'Accounts/Services/ChequeService.php::cancel',
         'Accounts/Services/YearEndService.php::reopen',
-        'Hr/Services/LeaveService.php::cancel',
         'Inventory/Services/StockService.php::reverse',
         'Purchase/Services/PaymentService.php::cancel',
         'Purchase/Services/PurchaseOrderService.php::confirm',

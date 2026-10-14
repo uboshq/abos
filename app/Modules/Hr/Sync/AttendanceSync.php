@@ -143,6 +143,24 @@ final class AttendanceSync implements SyncsToDevices
         }
 
         /*
+         * ⛔ চলে যাওয়া বা নিষ্ক্রিয় কর্মীর হাজিরা নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AttendanceSyncTest]])। ⓘ লগইন খোলা
+         * থাকলে ছাড়ার পরেও ফোন থেকে "উপস্থিত" বসত; দাবির একই নিয়ম ([[ExpenseClaimService::submit()]]): ছাড়ার দিন পর্যন্ত চলে।
+         */
+        if (! $employee->is_active || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()))) {
+            throw new SyncRejection(__('hr::sync.employee_gone'));
+        }
+
+        /*
+         * ⛔ মন্তব্য কেবল লেখা — একই নিরীক্ষা। ⓘ ফাইলটা `strict_types`, আর মন্তব্যের ঘর `?string`; ফোন সংখ্যা বা তালিকা পাঠালে
+         * TypeError-এ পুরো সিঙ্ক ৫০০ দিত, বাকি সারিগুলোও আটকাত।
+         */
+        $remarks = $payload['remarks'] ?? null;
+
+        if ($remarks !== null && ! is_string($remarks)) {
+            throw new SyncRejection(__('hr::sync.attendance_remarks_text'));
+        }
+
+        /*
          * ⛔ কেবল নিজেরটা — চাবিটা (`hr.attendance.self`) ঠিক এটাই বলে।
          *
          * ফোন যদি অন্য কারো employee পাঠায়, চুপচাপ নিজেরটা বসিয়ে দেওয়া
@@ -214,7 +232,7 @@ final class AttendanceSync implements SyncsToDevices
             'in_time' => $status === Attendance::PRESENT ? now()->format('H:i:s') : null,
             'out_time' => null,
             'is_late' => false,
-            'remarks' => $this->clockStampedRemark($payload['remarks'] ?? null, $date),
+            'remarks' => $this->clockStampedRemark($remarks, $date),
         ]);
 
         return (string) $attendance->public_id;
