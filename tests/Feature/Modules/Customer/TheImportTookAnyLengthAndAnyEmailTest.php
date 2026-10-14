@@ -32,6 +32,8 @@ final class TheImportTookAnyLengthAndAnyEmailTest extends TestCase
 
         foreach ([CustomerImporter::class, SupplierImporter::class] as $class) {
             $row = ['name_en' => 'Measured Shop'] + array_fill_keys(array_keys($class::columns()), '');
+            // ⓘ গ্রাহকের ডিফল্ট ধরন পরিবেশক, আর পরিবেশকের পয়েন্ট লাগে — এই দাবি কেবল ঘরের মাপ দেখে
+            $row = $class === CustomerImporter::class ? ['party_type' => 'RETAIL'] + $row : $row;
             $importer = app($class);
 
             $this->assertNotSame([], $importer->check(['phone' => str_repeat('9', 40)] + $row), "⛔ {$class}: ৪০ অক্ষরের ফোন সবুজ");

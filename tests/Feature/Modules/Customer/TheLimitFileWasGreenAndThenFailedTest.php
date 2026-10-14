@@ -50,6 +50,8 @@ final class TheLimitFileWasGreenAndThenFailedTest extends TestCase
         $this->app->forgetInstance(ApprovalEngine::class);
 
         // ⓘ ৭৫ হাজারের অনুরোধ অপেক্ষায় — ৭৫ হাজার সবুজ, ৯০ হাজার লাল
+        // ⓘ ছক বসার পরে নতুন করে — আগের আমদানিকারী ছকহীন সেবা ধরে রাখে
+        $importer = app(CustomerLimitImporter::class);
         $importer->import(['code' => $b->code, 'credit_limit' => '75000']);
         $this->assertSame([], $importer->check(['code' => $b->code, 'credit_limit' => '75000']), 'একই অঙ্কের অপেক্ষা থেমে গেল');
         $this->assertContains(__('customer::import.limit_other_request_waiting'), $importer->check(['code' => $b->code, 'credit_limit' => '90000']),
