@@ -762,7 +762,8 @@ class MasterListController extends Controller implements HasMiddleware
              * ভাঙত, তাই নিয়মটা ঘরের সাথেই ঘোষিত।
              */
             if ($field['rules'] ?? false) {
-                $rules[$name] = array_values(array_diff($rules[$name], ['nullable']));
+                // ⓘ `array_diff` নয় — সংখ্যার ঘরে একটা Closure-নিয়ম আছে, আর array_diff সেটাকে স্ট্রিং বানাতে গিয়ে ভাঙে
+                $rules[$name] = array_values(array_filter($rules[$name], fn ($rule) => $rule !== 'nullable'));
                 $rules[$name] = [...$rules[$name], ...$field['rules']];
             }
 
