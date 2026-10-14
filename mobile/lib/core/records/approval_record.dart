@@ -37,6 +37,14 @@ class ApprovalRecord {
   /// number and a wrong key yields null, and null draws nothing — see [Money].
   double? get amount => Money.value(payload['amount']);
 
+  /// ⛔ অঙ্কটা কী মাপে — ছাড়ের সইয়ে অঙ্কটা ছাড়, বিলের মোট নয় (৪৮,০০০-এর বিলে ৫০০ ছাড় কার্ডে "৳৫০০" পড়ত, যেন ৫০০-র বিল;
+  /// ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। ওয়েবের ইনবক্সে কাজের ঘর আছে, ফোনে ছিল না।
+  String? get amountText {
+    if (amount == null) return null;
+    final taka = Money.taka(amount);
+    return action == 'discount' ? 'ছাড় $taka' : taka;
+  }
+
   /// কার্ডে যে অঙ্ক দেখানো — হুবহু সার্ভারের লেখা; সইয়ের সাথে ফেরত যায় ([[ApprovalsApi.approve]])
   String? get rawAmount => Money.raw(payload['amount']);
 

@@ -210,6 +210,12 @@ void main() {
     expect(find.text('PB-2609-0007'), findsOneWidget);
   });
 
+  testWidgets('a discount request says the figure is the discount, not the bill (phone line audit, 15 Oct 2026)', (tester) async {
+    await tester.pumpWidget(screen(load: () async => ApprovalPage(rows: [ApprovalRecord(<String, dynamic>{...row, 'documentType': 'SalesInvoice', 'action': 'discount', 'amount': '500.0000'})])));
+    await tester.pumpAndSettle();
+    expect(find.text('ছাড় ৳500'), findsOneWidget, reason: '⛔ ছাড়ের অঙ্ক বিলের মোটের মতো দেখাল');
+  });
+
   group('salary never reaches a phone', () {
     test('a payroll row is recognised so it can be dropped', () {
       expect(

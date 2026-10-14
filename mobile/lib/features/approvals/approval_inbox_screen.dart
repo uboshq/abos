@@ -7,7 +7,6 @@ import '../printing/document_actions_sheet.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
-import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -190,7 +189,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
   String _describe(ApprovalRecord approval) => [
         approval.documentTypeLabel,
         if (approval.documentNo != null) approval.documentNo!,
-        if (approval.rawAmount != null) Money.taka(approval.rawAmount),
+        if (approval.amountText != null) approval.amountText!,
       ].join(' · ');
 
   @override
@@ -289,7 +288,7 @@ class _ApprovalCard extends StatelessWidget {
                 // Absent rather than zero when the server sent no amount —
                 // not every approvable document is about money.
                 if (approval.amount != null)
-                  Text(Money.taka(approval.amount),
+                  Text(approval.amountText!,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 16)),
               ],
@@ -477,7 +476,7 @@ class _ApprovalDetails extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                  if (approval.amount != null) Text(Money.taka(approval.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (approval.amount != null) Text(approval.amountText!, style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: AppSpacing.sm),
                   for (final (label, value) in s.facts) Text('$label: $value'),
                   if (s.rows.isNotEmpty) ...[
