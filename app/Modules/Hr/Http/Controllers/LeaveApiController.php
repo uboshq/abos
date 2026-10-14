@@ -82,13 +82,26 @@ final class LeaveApiController extends Controller implements HasMiddleware
             throw ValidationException::withMessages(['employee' => __('hr::message.leave_no_employee')]);
         }
 
+        /*
+         * ⛔ মুছে ফেলা বা নিষ্ক্রিয় কর্মী ছুটি চান না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ১৬; [[AGoneEmployeeOrAClosedLeaveTypeTakesNoLeaveTest]])।
+         * ⓘ খাতা খোঁজা হয় সব ছাঁকনি সরিয়ে ([[ExpenseClaimService::employeeOf()]]), তাই মুছে ফেলা খাতাও উঠত; ছাড়ার তারিখ না থাকলে আর
+         * লগইন খোলা থাকলে তিনি ছুটির আবেদন করতে পারতেন। খরচের দাবির একই পাহারা; ছাড়ার তারিখ [[LeaveService::apply()]] দেখে।
+         */
+        if ($employee->trashed() || ! $employee->is_active) {
+            throw ValidationException::withMessages(['employee' => __('hr::message.leave_employee_gone')]);
+        }
+
         $data = $request->validate([
             'leave_type' => ['required', 'uuid',
                 Rule::exists('hr_leave_types', 'public_id')->where('company_id', CompanyContext::id())->where('is_active', true)],
             'from_date' => ['required', 'date'],
             'to_date' => ['required', 'date'],
-            'days' => ['required', 'numeric', 'gt:0'],
+            // ⛔ ওয়েবের একই নিয়ম — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯); ⓘ ফোনের JSON সংখ্যা 1e-7 লেখায় "1.0E-7" হয়ে ৫০০ দিত
+            'days' => ['required', 'decimal:0,1', 'regex:/^\d+(\.\d)?$/', 'gt:0', 'max:'.LeaveService::MAX_SPAN_DAYS],
             'reason' => ['nullable', 'string', 'max:500'],
+        ], [
+            'days.decimal' => __('hr::validation.days_format'),
+            'days.regex' => __('hr::validation.days_format'),
         ]);
 
         $application = $this->leave->apply(

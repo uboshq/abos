@@ -258,6 +258,7 @@ return [
     'disposal_in_future' => 'The disposal date cannot be after today.',
     'disposal_before_depreciation' => 'Depreciation for :month is already posted, so the disposal cannot be dated before that month.',
     'branch_out_of_reach' => 'This branch is outside your reach.',
+    'opening_needs_import_key' => 'Only someone with the asset import key may enter opening depreciation — leave it at zero here, or bring the asset in through the import.',
     'tag_ascii' => 'The tag number takes English letters, digits and signs only; the label barcode cannot read Bengali.',
     'event_cancelled' => 'Signature refused, cancelled',
     'event_pending' => 'Another event on this asset is awaiting its signature — let it finish first.',

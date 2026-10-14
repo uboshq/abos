@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Services;
 
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Support\PaidMonth;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -49,20 +50,40 @@ final class AttendanceService
             ]);
         }
 
-        return Attendance::query()->updateOrCreate(
-            [
-                'employee_id' => $employee->id,
-                'work_date' => $day->toDateString(),
-            ],
-            [
-                'status' => $status,
-                'is_late' => (bool) ($extra['is_late'] ?? false),
-                'in_time' => $extra['in_time'] ?? null,
-                'out_time' => $extra['out_time'] ?? null,
-                'remarks' => $extra['remarks'] ?? null,
-                'created_by' => auth()->id(),
-            ],
-        )->fresh();
+        /*
+         * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা বদলায় না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]])।
+         * ⓘ বেতনশিট এই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে; পরে "কামাই"-কে "উপস্থিত" করলে পাতা আর বেতনশিট আলাদা কথা বলত।
+         */
+        PaidMonth::assertOpen($day, $day, 'work_date', 'hr::validation.attendance_month_paid');
+
+        $values = [
+            'status' => $status,
+            'is_late' => (bool) ($extra['is_late'] ?? false),
+            'remarks' => $extra['remarks'] ?? null,
+            'created_by' => auth()->id(),
+        ];
+
+        /*
+         * ⛔ ঢোকা-বেরোনোর সময় কেবল পাঠানো হলে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️১; [[AttendanceAndLeaveStayInsideTheBranchTest]])।
+         * ⓘ অফিসের দিনের পাতায় সময়ের ঘর নেই, তবু প্রতিটা সংরক্ষণ সময় দুইটা ফাঁকা করে লিখত — সকালে ফোনে ৯:১২-এ ঢোকা সবার সময়
+         * বিকেলে দুইজনের কামাই বসাতেই মুছে যেত। এখন ঘরটা পাঠানো হলে তবেই লেখা হয়; না পাঠালে আগের সময় থাকে।
+         */
+        foreach (['in_time', 'out_time'] as $clock) {
+            if (array_key_exists($clock, $extra)) {
+                $values[$clock] = $extra[$clock];
+            }
+        }
+
+        /*
+         * ⛔ কর্মীর সারিতে তালা, তারপর দিনের সারি — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ১২; [[Attendance::writeDay()]])।
+         * ⓘ একই দিন দুইজন একসাথে সংরক্ষণ করলে দ্বিতীয়জন এক-দিনে-এক-সারির চাবিতে ঠেকে ৫০০ পেতেন; এখন একই কর্মীর লেখা
+         * একটার পর একটা, আর দ্বিতীয়টা আগেরটার উপর বদল হয়ে বসে। ছুটির মঞ্জুরি আর প্রত্যাহারও আগে এই সারিতেই তালা দেয়।
+         */
+        return DB::transaction(function () use ($employee, $day, $values) {
+            Employee::query()->withoutGlobalScopes()->whereKey($employee->id)->lockForUpdate()->first();
+
+            return Attendance::writeDay($employee->id, $day->toDateString(), $values)->fresh();
+        });
     }
 
     /**
@@ -77,6 +98,9 @@ final class AttendanceService
             $marked = 0;
 
             $employees = Employee::query()->whereKey(array_keys($rows))->get()->keyBy('id');
+
+            // ⓘ কর্মীর তালা সবসময় id-র ক্রমে — দুইটা পাতা উল্টো ক্রমে পাঠালেও একে অন্যকে আটকে না রাখে (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            ksort($rows);
 
             foreach ($rows as $employeeId => $row) {
                 $employee = $employees->get((int) $employeeId);

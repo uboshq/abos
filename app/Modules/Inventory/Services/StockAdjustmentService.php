@@ -483,7 +483,8 @@ final class StockAdjustmentService
      */
     public function lotFloor(Batch $batch, Warehouse $warehouse): string
     {
-        return bcadd((string) StockMovement::query()
+        // ⛔ দেয়াল ছাড়া — অনুমোদনের যাচাই, দেখা নয়; অন্য গুদামে সীমিত অনুমোদকের কাছে লট "কম" দেখাত (১৩ অক্টোবর ২০২৬)
+        return bcadd((string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('batch_id', $batch->id)
             ->where('warehouse_id', $warehouse->id)
             ->lockForUpdate()

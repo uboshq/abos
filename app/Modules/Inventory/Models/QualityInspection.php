@@ -136,6 +136,12 @@ class QualityInspection extends Model
         return $this->status === self::PENDING;
     }
 
+    /** ⓘ "অনুমোদিত" রায়, কিন্তু কিছু অংশ বাতিল — সেই অংশ আটকানো, বিনাশের অপেক্ষায় (১৩ অক্টোবর ২০২৬) */
+    public function holdsRejects(): bool
+    {
+        return $this->status === self::APPROVED && bccomp((string) ($this->rejected_qty ?? '0'), '0', 4) > 0;
+    }
+
     /**
      * ⚠️ যে পরিমাণটা এখনো কোনো দিকে যায়নি।
      *

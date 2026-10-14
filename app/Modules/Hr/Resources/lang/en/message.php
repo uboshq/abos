@@ -27,6 +27,8 @@ return [
     'payroll_search' => 'Search by run number or note…',
     'no_runs' => 'No payroll has been run yet.',
     'draft_payslip' => 'DRAFT — this salary has not been confirmed',
+    // ⓘ ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+    'cancelled_payslip' => 'CANCELLED — this payroll run was cancelled; no money may be paid or received on this slip',
     'ledger_narration' => 'Salary for :month (:no)',
     'confirm_note' => 'Confirming puts the earnings into expense and the net into Salary Payable. No money has moved yet — that happens on a voucher.',
     'bank_file_note' => ':count salaries go through the bank. Cash and mobile-banking rows are not in the file.',
@@ -48,4 +50,6 @@ return [
     // ⭐ Own leave from the phone — with no employee record there is nobody to apply for (13 Oct 2026)
     'leave_no_employee' => 'There is no employee record in your name, so leave cannot be applied for. Ask HR.',
     'leave_part_day' => ':share day leave',
+    // ⓘ ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+    'leave_employee_gone' => 'Your employee record is closed (inactive or deleted), so leave cannot be applied for. If this is wrong, tell HR or the owner.',
 ];

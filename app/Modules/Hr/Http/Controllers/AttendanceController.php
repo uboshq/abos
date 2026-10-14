@@ -165,20 +165,30 @@ class AttendanceController extends Controller implements HasMiddleware
         ]);
     }
 
+    /*
+     * ⛔ ঠিকানার তারিখ কেবল Y-m-d, মাস কেবল Y-m — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ১১; [[AttendanceAndLeaveStayInsideTheBranchTest]])।
+     * ⓘ `?date=abc` বা `?month=2026-13` সরাসরি `Carbon::parse`-এ যেত আর পাতাটা ৫০০ দিত; এখন অচেনা হলে আজকের দিন বা এ মাস।
+     */
     private function chosenDate(Request $request): Carbon
     {
         $date = $request->query('date');
 
-        return filled($date) ? Carbon::parse((string) $date) : now();
+        if (is_string($date) && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) === 1 && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return Carbon::parse($date);
+        }
+
+        return now();
     }
 
     private function chosenMonth(Request $request): Carbon
     {
         $month = $request->query('month');
 
-        return filled($month)
-            ? Carbon::parse((string) $month.'-01')
-            : now()->startOfMonth();
+        if (is_string($month) && preg_match('/^(\d{4})-(\d{2})$/', $month, $m) === 1 && checkdate((int) $m[2], 1, (int) $m[1])) {
+            return Carbon::parse($month.'-01');
+        }
+
+        return now()->startOfMonth();
     }
 
     private function reach(): BranchReach

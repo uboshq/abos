@@ -145,7 +145,8 @@ final class StrandedStock
      */
     private function untracked(Product $product, Warehouse $warehouse, string $column): string
     {
-        $sum = (string) StockMovement::query()
+        // ⛔ দেয়াল ছাড়া — এটা বসানোর সীমা, দেখা নয়; আড়ালের লটহীন বের-হওয়া বাদ পড়লে সীমা বড় দেখাত (১৩ অক্টোবর ২০২৬)
+        $sum = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->whereNull('batch_id')

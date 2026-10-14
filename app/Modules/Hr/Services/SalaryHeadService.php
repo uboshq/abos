@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\SalaryHead;
+use App\Modules\Hr\Models\SalaryStructure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -61,6 +62,22 @@ final class SalaryHeadService
             }
 
             $this->assertBasicIsAnEarning([...$head->attributesToArray(), ...$data]);
+
+            /*
+             * ⛔ ব্যবহারে থাকা খাতের আকার বদলায় না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ আগে নির্দিষ্ট ১,৫০০ চিকিৎসা ভাতাকে
+             * "মূলের শতাংশ" করলে পরের বেতনশিটে ১,৫০০% × ৩০,০০০ = ৪,৫০,০০০ বসত, আর আয়কে কর্তন করলে বেতন উল্টো দিকে সরত।
+             * আর মূল খাতের "মূল" টিক তুললে শতাংশের প্রতিটা ভাতা চুপচাপ শূন্য হত ([[deactivate()]]-এর একই কারণ)। নাম, খাতা আর ক্রম বদলায়।
+             */
+            if ($head->is_basic && array_key_exists('is_basic', $data) && ! $data['is_basic']) {
+                throw ValidationException::withMessages(['is_basic' => __('hr::validation.basic_cannot_be_unset')]);
+            }
+
+            $reshaped = (array_key_exists('kind', $data) && (string) $data['kind'] !== (string) $head->kind)
+                || (array_key_exists('calculation', $data) && (string) $data['calculation'] !== (string) $head->calculation);
+
+            if ($reshaped && SalaryStructure::query()->where('salary_head_id', $head->id)->exists()) {
+                throw ValidationException::withMessages(['calculation' => __('hr::validation.head_in_use_keeps_its_shape')]);
+            }
 
             $head->update([...$data, 'code' => $code]);
 
