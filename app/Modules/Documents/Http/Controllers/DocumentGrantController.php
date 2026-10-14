@@ -48,6 +48,16 @@ final class DocumentGrantController extends Controller
             throw \Illuminate\Validation\ValidationException::withMessages(['grantee_id' => __('documents::message.not_to_yourself')]);
         }
 
+        /*
+         * ⛔ নিজের ভূমিকাকেও নয় (Documents লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[NoGrantToYourOwnRoleTest]])। ⓘ ভূমিকার অধিকার ঐ ভূমিকার
+         * সবার — নিজেও তার একজন। তাই নিজের ভূমিকায় নামানো বা বদলের অধিকার দেওয়া মানে নিজেকেই দেওয়া, আর উপরের পাহারা ঘুরপথে এড়ানো।
+         */
+        if ($data['grantee_type'] === DocumentGrant::ROLE && \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->where('model_id', $request->user()?->getKey())->where('model_type', $request->user()?->getMorphClass())
+            ->where('company_id', (int) $document->company_id)->where('role_id', (int) $data['grantee_id'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['grantee_id' => __('documents::message.not_to_your_role')]);
+        }
+
         $this->grants->grant($document, $data['grantee_type'], (int) $data['grantee_id'], array_values($data['abilities'] ?? []));
 
         return redirect()->to(route('documents.show', $document).'#access')

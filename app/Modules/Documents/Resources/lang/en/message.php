@@ -167,5 +167,6 @@ Blank line = new paragraph
 
     // ⛔ শেয়ার আর অধিকার — নিজেকে নয়, নিজের নেই এমন কিছু নয় (documents রিভিউ ⚠️৪, ⚠️১০)
     'not_to_yourself' => 'Not to yourself — choose someone else.',
+    'not_to_your_role' => 'You cannot grant access to a role you hold yourself — that is granting it to yourself. Someone else can.',
     'cannot_give_download' => 'You cannot give download in a share without the right to download it yourself.',
 ];
