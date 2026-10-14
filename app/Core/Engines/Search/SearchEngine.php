@@ -65,6 +65,14 @@ final class SearchEngine
      */
     public const MIN_TERM = 2;
 
+    /**
+     * ⚠️ এর বেশি লেখা কেটে নেওয়া হয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ প্রতিটা খোঁজা ~৭০টা টেবিলে পূর্ণ `LIKE '%…%'`; সীমা ছিল না, তাই হাজার অক্ষরের লেখাও প্রতিটা টেবিলে যেত। কোনো
+     * নাম, কোড বা ফোন নম্বর ১০০ অক্ষরের বেশি নয়। দরজায় গতিসীমাও বসল (`routes/web.php`, `throttle:…,search`)।
+     */
+    public const MAX_TERM = 100;
+
     /** এক উৎস থেকে সর্বোচ্চ কয়টা — নাহলে একটা বড় টেবিল বাকিদের ঢেকে দিত। */
     private const PER_SOURCE = 5;
 
@@ -93,7 +101,7 @@ final class SearchEngine
      */
     public function search(string $term, ?User $user, int $limit = 20): array
     {
-        $term = trim($term);
+        $term = trim(mb_substr(trim($term), 0, self::MAX_TERM));
 
         if (mb_strlen($term) < self::MIN_TERM) {
             return [];

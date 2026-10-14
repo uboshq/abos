@@ -49,8 +49,12 @@ Route::middleware('auth')->group(function () {
      * ⓘ `data-no-prefetch` লাগে না — এটা কোনো লিংক নয়, JavaScript
      * নিজে ডাকে। ⚠️ কিন্তু লেআউটের speculation rules `/*` ধরে prefetch
      * করে, আর এই ঠিকানায় `?q=` ছাড়া কেউ আসে না, তাই ওটা নিরীহ।
+     *
+     * ⚠️ গতিসীমা — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬: প্রতিটা খোঁজা ~৭০টা টেবিলে পূর্ণ `LIKE`, আর দরজায় সীমা ছিল না।
+     * ⓘ মিনিটে ১২০ — টাইপের সাথে খোঁজা ২০০ মি.সে. থামে ([[shell.js]]), তাই মানুষের হাতে এর কাছেও যায় না; লেখার দৈর্ঘ্যও
+     * বাঁধা ([[SearchEngine::MAX_TERM]])।
      */
-    Route::get('/search', SearchController::class)->name('search');
+    Route::get('/search', SearchController::class)->middleware('throttle:120,1,search')->name('search');
 
     /*
      * মডিউলের নিজস্ব ড্যাশবোর্ড — মালিকের নির্দেশ, ২ সেপ্টেম্বর ২০২৬।
