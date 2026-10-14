@@ -81,11 +81,11 @@ final class ApprovalSla
      */
     public function dueFor(?ApprovalFlowStep $step, ?Carbon $from = null): ?Carbon
     {
-        if ($step?->sla_hours === null) {
+        if ($step?->clockHours() === null) {
             return null;
         }
 
-        return ($from ?? now())->copy()->addHours((int) $step->sla_hours);
+        return ($from ?? now())->copy()->addHours((int) $step->clockHours());
     }
 
     /**

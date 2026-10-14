@@ -87,4 +87,15 @@ class ApprovalFlowStep extends Model
 
         return $user->roles()->whereKey($this->approver_id)->exists();
     }
+
+    /**
+     * ⭐ ধাপের ঘড়ি, ঘণ্টায় — SLA, আর SLA না থাকলে "উপরে পাঠাও"-এর ঘণ্টা (fe-র সিদ্ধান্ত খ, ১৪ অক্টোবর ২০২৬; [[AnEscalationClockAloneStillEscalatesTest]])।
+     *
+     * ⓘ আগে "উপরে পাঠাও (ঘণ্টা)" কোথাও খাটত না — কেবল SLA-র ঘণ্টায় কাগজ দেরি হত আর উপরে যেত, তাই শুধু এই ঘরটা ভরা ধাপ কোনোদিন উপরে
+     * যেত না। দুটোই থাকলে SLA-ই খাটে (পর্দায় লেখা)। ⭐ এক জায়গায়: [[ApprovalSla::dueFor()]] বসায়, [[Approval::warnAt()]] উল্টো পড়ে।
+     */
+    public function clockHours(): ?int
+    {
+        return $this->sla_hours ?? $this->escalate_hours;
+    }
 }

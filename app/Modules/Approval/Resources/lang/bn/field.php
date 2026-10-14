@@ -59,6 +59,7 @@ return [
     'sla_hours' => 'সময়সীমা (ঘণ্টা)',
     'warn_hours' => 'সতর্ক (ঘণ্টা)',
     'escalate_hours' => 'উপরে পাঠাও (ঘণ্টা)',
+    'escalate_hours_hint' => 'SLA খালি থাকলে এই ঘণ্টায় দেরি ধরে উপরে যায়; দুটোই থাকলে SLA-র ঘণ্টাই খাটে।',
     'escalate_to' => 'দেরি হলে কার কাছে',
     'conditions' => 'শর্ত',
     'condition_field' => 'কাগজের ঘর',

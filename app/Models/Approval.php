@@ -195,8 +195,8 @@ class Approval extends Model implements Drillable
          * `due_at` বসায়। ⭐ একটাই নিয়ম, উল্টো দিকে পড়া — তাই
          * দুইটা কখনো আলাদা হতে পারে না।
          */
-        $start = $step?->sla_hours !== null
-            ? $this->due_at->copy()->subHours((int) $step->sla_hours)
+        $start = $step?->clockHours() !== null
+            ? $this->due_at->copy()->subHours((int) $step->clockHours())
             : $this->requested_at;
 
         if ($step?->warn_hours !== null) {
