@@ -58,6 +58,31 @@ class AccountsSettingsController extends Controller implements HasMiddleware
         $submitted = (array) $request->input('settings', []);
         $ownerOnly = [];
 
+        /*
+         * ⛔ সংখ্যার ঘর আগে যাচাই, কিছু বসানোর আগেই — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ এই পাতায় `number` ধরনের শাখাই ছিল না, তাই সম্পদের সীমায় ("৳১০,০০০-এর নিচে খরচ") যা লেখা হত তাই বসত —
+         * "50,000", "1e5" বা "abc"। ⛔ [[FixedAssetService]] ঐ লেখা `bccomp()`-এ দিত আর ভেঙে পড়ত, অর্থাৎ নিজের সীমা নেই এমন
+         * শ্রেণির **প্রতিটা** সম্পদ নিবন্ধন ৫০০। ⭐ এখন কন্ট্রোল প্যানেলের একই নিয়ম ([[PlainNumber]]): কমা আর বাংলা অঙ্ক চলে,
+         * সংখ্যা না হলে কিছুই বসে না আর পাতায় ঘরের নাম আসে।
+         */
+        $notNumbers = [];
+
+        foreach ($this->definitions() as $key => $definition) {
+            $raw = $submitted[$key] ?? null;
+
+            if (($definition['type'] ?? null) === 'number'
+                && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::from($raw) === null) {
+                $notNumbers[] = __($definition['label']);
+            }
+        }
+
+        if ($notNumbers !== []) {
+            return back()->withInput()->withErrors(['settings' => __('system_admin::validation.setting_not_a_number', [
+                'settings' => implode('; ', $notNumbers),
+            ])]);
+        }
+
         foreach ($this->definitions() as $key => $definition) {
             /*
              * চেকবক্স না দেখালে ব্রাউজার কিছুই পাঠায় না, তাই boolean
@@ -74,6 +99,8 @@ class AccountsSettingsController extends Controller implements HasMiddleware
                  * প্যানেলের একই নিয়ম ([[PlainNumber::wholeFrom()]]); পূর্ণসংখ্যা না হলে "যা ছিল তাই থাক"। লেখার ঘরে তালিকা এলেও তাই।
                  */
                 'integer' => $raw === null || $raw === '' ? null : PlainNumber::wholeFrom($raw),
+                // ⭐ "৫০,০০০" → "50000"; খালি মানে "যা ছিল তাই থাক" (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+                'number' => PlainNumber::from($raw),
                 default => is_scalar($raw) || $definition['type'] === 'json' ? $raw : null,
             };
 
