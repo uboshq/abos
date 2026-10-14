@@ -21,8 +21,11 @@ use Illuminate\Support\Facades\Cache;
  */
 final class Rankings
 {
-    /** একটা রিপোর্ট থেকে সর্বোচ্চ কয়টা সারি টানা হয় — সব কোম্পানি মিলিয়ে বাছার আগে */
+    /** একটা রিপোর্ট থেকে প্রথম টানে কয়টা সারি — রিপোর্টে এর বেশি থাকলে পুরোটা ([[MOST_ROWS]] পর্যন্ত) */
     private const PULL = 200;
+
+    /** ⓘ একটা রিপোর্ট থেকে সর্বোচ্চ সারি — [[Alerts::MOST_ROWS]]-এর একই সীমা */
+    private const MOST_ROWS = 5000;
 
     public function __construct(
         private readonly CompanyLens $lens,
@@ -44,16 +47,30 @@ final class Rankings
         $refused = [];
 
         foreach ($companies as $company) {
-            $key = implode(':', ['executive-rank', 'u'.$user->id, 'c'.$company['id'], 'b'.($company['only'] ?? 'all'), $report, md5(serialize($filters)), app()->getLocale(), Board::version($user)]);
+            // ⓘ মাপ, দিক আর সংখ্যাও চাবিতে — কোম্পানির ভাগ এখন বাছাই করে কাটা, তাই একই রিপোর্টের দুই তালিকা আলাদা
+            $key = implode(':', ['executive-rank', 'u'.$user->id, 'c'.$company['id'], 'b'.($company['only'] ?? 'all'), $report, md5(serialize($filters)),
+                $measure, $ascending ? 'asc' : 'desc', $limit, app()->getLocale(), Board::version($user)]);
 
-            $part = Cache::remember($key, Board::CACHE_SECONDS, fn () => $this->lens->within($user, $company['id'], $company['only'] ?? null, function () use ($user, $report, $filters): ?array {
+            $part = Cache::remember($key, Board::CACHE_SECONDS, fn () => $this->lens->within($user, $company['id'], $company['only'] ?? null, function () use ($user, $report, $filters, $measure, $limit, $ascending): ?array {
                 $definition = $this->reports->get($report);
 
                 if (! $definition->allows($user)) {
                     return null;
                 }
 
-                return $this->reports->run($report, $filters, 1, self::PULL)->rows;
+                /*
+                 * ⛔ রিপোর্টের নিজের ক্রমে প্রথম ২০০ সারি কেটে তারপর অন্য মাপে সাজালে সারি হারায় — ec, Executive লাইন-নিরীক্ষা,
+                 * ১৪ অক্টোবর ২০২৬ ([[TheRankingsSortEveryRowTest]])। ⓘ পণ্য ধরে বিক্রি সাজায় লাভে, অথচ "কম মার্জিন" চায়
+                 * শতাংশের নিচ থেকে: ৩৫০ পণ্যের ৩৪০ নম্বরটা −৮% হলেও তালিকায় আসত না। এখন রিপোর্টে বেশি সারি থাকলে পুরোটা
+                 * টানা ([[MOST_ROWS]] পর্যন্ত), সাজিয়ে কেবল প্রথম `$limit`টা রাখা।
+                 */
+                $result = $this->reports->run($report, $filters, 1, self::PULL);
+
+                if ($result->totalRows > self::PULL) {
+                    $result = $this->reports->run($report, $filters, 1, min($result->totalRows, self::MOST_ROWS));
+                }
+
+                return array_slice($this->sorted($result->rows, $measure, $ascending), 0, $limit);
             }));
 
             if ($part === null) {
@@ -63,15 +80,25 @@ final class Rankings
             }
 
             foreach ($part as $row) {
-                $rows[] = [...$row, 'company_id' => $company['id'], 'company_name' => $company['name']];
+                // ⓘ যে শাখায় গোনা — সারিতে চাপলে সেখানেই খোলে (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                $rows[] = [...$row, 'company_id' => $company['id'], 'company_name' => $company['name'], 'company_only' => $company['only'] ?? null];
             }
         }
 
+        return ['rows' => array_slice($this->sorted($rows, $measure, $ascending), 0, $limit), 'refused' => $refused];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function sorted(array $rows, string $measure, bool $ascending): array
+    {
         usort($rows, fn (array $a, array $b) => $ascending
             ? bccomp((string) ($a[$measure] ?? '0'), (string) ($b[$measure] ?? '0'), 4)
             : bccomp((string) ($b[$measure] ?? '0'), (string) ($a[$measure] ?? '0'), 4));
 
-        return ['rows' => array_slice($rows, 0, $limit), 'refused' => $refused];
+        return $rows;
     }
 
     /**

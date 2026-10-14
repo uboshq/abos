@@ -57,14 +57,22 @@ final class ExecutiveApiController extends Controller implements HasMiddleware
 
         $credit = app(CreditHeadlines::class)->for($user, $companies);
 
+        /*
+         * ⛔ কোনো কোম্পানিই নেই — "অনুমতি নেই" (••••) নয়, পর্দার নিজের "কোনো কোম্পানি নেই" কথা; ঘরগুলো খালি (null)।
+         * আগে খালি যোগফল ঢাকা ঘর হয়ে `"hidden"` যেত (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[ThePhoneSaysNoCompanyNotNoPermissionTest]])।
+         */
+        $none = $board['companies'] === [];
+
         return response()->json([
+            'message' => $none ? __('executive::today.no_company') : null,
             'period' => $board['period'],
             'from' => $board['from'],
             'to' => $board['to'],
             'figures' => array_map(fn (string $key) => [
                 'key' => $key,
                 'label' => __('executive::figure.'.$key),
-                'value' => $this->cell($board['total'][$key]),
+                'value' => $none ? null : $this->cell($board['total'][$key]),
                 'money' => Figures::definition($key)['money'],
                 // ⓘ কোনো কোম্পানিতে ঘরটা ঢাকা — যোগটা অসম্পূর্ণ, পর্দা পাশে লেখে
                 'partial' => (bool) ($board['partial'][$key] ?? false),
