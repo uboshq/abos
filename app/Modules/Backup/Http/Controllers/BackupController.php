@@ -87,7 +87,9 @@ class BackupController extends Controller
                         ? Carbon::createFromTimestamp(filemtime($path), config('app.timezone'))
                         : null,
                 ])
-                ->sortByDesc('name')
+                // ⛔ নতুনটা আগে সময় ধরে, নাম ধরে নয় — `abos-BEFORE-WIPE-…`-এর মতো নাম "সবচেয়ে নতুন" হয়ে বসত, আর পুরনো-ব্যাকআপের সতর্কতা ও
+                // ফেরানোর কমান্ড সেই পুরনো ফাইলের দিকে যেত ([[BackupService::all()]] এই কারণেই সময় ধরে সাজায়; ১৪ অক্টোবর ২০২৬)
+                ->sortByDesc(fn (array $f) => sprintf('%012d|%s', $f['at']?->timestamp ?? 0, $f['name']))
                 ->values(),
 
             'runs' => BackupRun::query()
