@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * একটা মুদ্রা — টাকা, ডলার, ইউরো।
@@ -34,7 +35,9 @@ class Currency extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
-    use IsMasterRecord;
+    use IsMasterRecord {
+        makeDefault as private makeDefaultOfTheList;
+    }
     use SoftDeletes;
 
     protected $table = 'mdm_currencies';
@@ -52,6 +55,22 @@ class Currency extends Model implements Drillable
             'is_default' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * ⛔ ভিত্তি মুদ্রা হার লেখার পর বদলায় না — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ এই তালিকায় "ডিফল্ট" মানে ভিত্তি মুদ্রা। আগে তালিকার "ডিফল্ট করুন" বোতামে এক ক্লিকেই ডলার ভিত্তি হয়ে যেত — অথচ
+     * লেখা প্রতিটা হার টাকার সাপেক্ষে, তাই সব হার আর রূপান্তরের মানে নীরবে উল্টে যেত। ⭐ নতুন কোম্পানিতে (একটাও হার নেই) আগের
+     * মতোই বদলানো যায়।
+     */
+    public function makeDefault(): static
+    {
+        if (! $this->is_default && ExchangeRate::query()->exists()) {
+            throw ValidationException::withMessages(['is_default' => __('master_data::validation.base_currency_fixed')]);
+        }
+
+        return $this->makeDefaultOfTheList();
     }
 
     public function creator(): BelongsTo

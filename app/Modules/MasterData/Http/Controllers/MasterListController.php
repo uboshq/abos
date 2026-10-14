@@ -663,6 +663,9 @@ class MasterListController extends Controller implements HasMiddleware
     {
         $spec = $this->spec($kind);
 
+        // ⛔ যে তালিকায় ডিফল্ট নেই, সেখানে ঠিকানাটাও নেই — আগে সরাসরি পাঠালে অজানা কলামে ৫০০ (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        abort_unless($spec['model']::supportsDefault(), 404);
+
         $record = $spec['model']::query()->findOrFail($id);
         $record->makeDefault();
 
