@@ -411,7 +411,11 @@ class SyncEngine {
         ],
       );
     } catch (error) {
-      if (isNetworkError(error)) throw const NoNetworkForThis();
+      if (isNetworkError(error)) {
+        throw NoNetworkForThis(
+            mayHaveLanded: error is DioException &&
+                (error.type == DioExceptionType.receiveTimeout || error.type == DioExceptionType.sendTimeout));
+      }
       rethrow;
     }
 
@@ -669,8 +673,13 @@ class PushOutcome {
 }
 
 /// নেট নেই — যে কাজ কেবল নেট থাকলে হয় ([[SyncEngine.pushNow]]), তার জন্য।
+///
+/// <p>⛔ [mayHaveLanded]: পাঠানো শেষ, উত্তর আসেনি (সময় পেরিয়েছে) — সার্ভারে হয়তো বসে গেছে। আগে পর্দা বলত "ফোনে কিছু জমা
+/// থাকেনি", মানুষ নতুন করে লিখত, আর নতুন চাবিতে একই আদায় দুবার বসত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
 class NoNetworkForThis implements Exception {
-  const NoNetworkForThis();
+  const NoNetworkForThis({this.mayHaveLanded = false});
+
+  final bool mayHaveLanded;
 }
 
 String? reasonIfRejected(Map<String, dynamic>? outcome) {
