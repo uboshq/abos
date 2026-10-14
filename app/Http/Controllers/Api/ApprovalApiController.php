@@ -111,6 +111,9 @@ final class ApprovalApiController extends Controller
         $rows = $approvals->map(function (Approval $approval) use ($facts, $documents): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $fact = $facts[(int) $approval->id] ?? [];
+            $now = self::paperAmountNow($document);
+            $asked = $approval->amount === null ? null : (string) $approval->amount;
+            $changed = $now !== null && $asked !== null && bccomp($now, $asked, 4) !== 0;
 
             return [
                 // ⛔ ক্রমিক `id` কখনো নয় — চুক্তি §৩ ক
@@ -131,11 +134,19 @@ final class ApprovalApiController extends Controller
                  * ⓘ অঙ্ক না জানা থাকলে `null`, `"0.0000"` নয়: "শূন্য
                  * টাকা" আর "অঙ্ক নেই" দুই কথা।
                  */
-                'amount' => $approval->amount === null ? null : (string) $approval->amount,
+                /*
+                 * ⭐ কাগজের **এখনকার** অঙ্ক — মালিক, ১৪ অক্টোবর ২০২৬ (RCV-0090: সই চাওয়া ৩৯,৯৯০-এ, পরে খসড়া ২৪,৯১৩-এ বদলানো;
+                 * কার্ডে অঙ্ক পুরনো আর বিবরণ নতুন — "এক কাগজের বিবরণ আরেকটায়")। ⓘ যেখানে সইয়ের অঙ্ক হুবহু কাগজের অঙ্ক
+                 * ([[PAPER_AMOUNT]]) সেখানেই; বাকিতে আগের মতো সইয়ের অঙ্ক। চাওয়ার অঙ্ক আলাদা ঘরে, বদলালে চিহ্ন।
+                 */
+                'amount' => $now ?? $asked,
+                'requestedAmount' => $asked,
+                'amountChanged' => $changed,
                 'currentLevel' => (int) $approval->current_level,
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'requesterName' => $approval->requesterName(),
-                'summary' => $this->summaryOf($approval, $fact),
+                'summary' => ($changed ? __('approval::field.changed_after_request', ['amount' => \App\Core\Support\Money::format($asked)]).' · ' : '')
+                    .$this->summaryOf($approval, $fact),
             ];
         })->values();
 
@@ -318,6 +329,29 @@ final class ApprovalApiController extends Controller
      *
      * @param  array{party?: ?string, about?: ?string, where?: ?string}  $fact
      */
+    /**
+     * যে কাগজের সই-অঙ্ক হুবহু তার `amount` ঘর ([[VoucherApproval]], [[MoneyTransferService]], [[PaymentService]],
+     * [[CollectionService]]) — কেবল এগুলোতে কার্ড কাগজের এখনকার অঙ্ক পড়ে। ⛔ অন্য কাগজে সইয়ের অঙ্ক অন্য কিছু মাপে (যেমন ছাড়),
+     * তুলনা করলে মিথ্যা "বদলেছে" দেখাত।
+     */
+    private const PAPER_AMOUNT = [
+        \App\Modules\Accounts\Models\Voucher::class,
+        \App\Modules\Accounts\Models\MoneyTransfer::class,
+        \App\Modules\Purchase\Models\Payment::class,
+        \App\Modules\Sales\Models\Collection::class,
+    ];
+
+    private static function paperAmountNow(?Model $document): ?string
+    {
+        if ($document === null || ! in_array($document::class, self::PAPER_AMOUNT, true)) {
+            return null;
+        }
+
+        $amount = $document->getAttribute('amount');
+
+        return $amount === null ? null : bcadd((string) $amount, '0', 4);
+    }
+
     private function summaryOf(Approval $approval, array $fact): ?string
     {
         $about = $fact['about'] ?? null;

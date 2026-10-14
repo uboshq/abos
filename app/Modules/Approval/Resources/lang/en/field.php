@@ -40,6 +40,7 @@ return [
     'where_money' => 'Where',
     'deposited_to' => 'Into: :place',
     'in_branch' => 'Branch: :branch',
+    'changed_after_request' => '⚠️ Amount changed after the signature was asked — asked for :amount',
 
     // Only people named in an active flow — the owner's rule, 22 September 2026.
     'forward_to' => 'Pass it to',
