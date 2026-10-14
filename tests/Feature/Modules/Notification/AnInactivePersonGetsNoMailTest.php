@@ -47,12 +47,15 @@ final class AnInactivePersonGetsNoMailTest extends TestCase
             return $user->fresh();
         };
 
-        // ⓘ সক্রিয় — আগের মতোই চিঠি যায়
+        // ⓘ তিনজনই আগে বসে — বন্ধ সদস্যদের তালিকা কোম্পানি ধরে এক মিনিট মনে রাখা হয়
         $active = $person(true, true);
+        $leavers = ['বন্ধ করা' => $person(false, true), 'কোম্পানি থেকে সরানো' => $person(true, false)];
+
+        // ⓘ সক্রিয় — আগের মতোই চিঠি যায়
         app(NotificationService::class)->send($active, 'approval.rejected', 'সক্রিয়ের খবর');
         $this->assertSame(1, $mail->calls, 'দৃশ্যটাই বানানো যায়নি — সক্রিয় মানুষও চিঠি পাননি');
 
-        foreach (['বন্ধ করা' => $person(false, true), 'কোম্পানি থেকে সরানো' => $person(true, false)] as $who => $gone) {
+        foreach ($leavers as $who => $gone) {
             app(NotificationService::class)->send($gone, 'approval.rejected', 'চলে যাওয়া মানুষের খবর');
 
             $this->assertSame(1, $mail->calls, "⛔ {$who} মানুষের কাছে ইমেইল গেল");

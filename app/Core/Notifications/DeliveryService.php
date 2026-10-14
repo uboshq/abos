@@ -175,8 +175,14 @@ final class DeliveryService
             return false;
         }
 
-        return ! \Illuminate\Support\Facades\DB::table('company_user')
-            ->where('user_id', $user->getKey())->where('company_id', $companyId)->where('is_active', false)->exists();
+        /*
+         * ⓘ কোম্পানির বন্ধ সদস্যদের তালিকা একবার, এক মিনিটের জন্য, প্রক্রিয়ার নিজের স্মৃতিতে — ৩০০ জনের খবরে ৩০০টা কোয়েরি নয়
+         * ([[TheBellHoldsUnderStrainAndKeepsItsSecretsTest]]-এর সীমা)। ⓘ সরানো মানুষ বড়জোর এক মিনিট পরে ধরা পড়েন।
+         */
+        $off = \Illuminate\Support\Facades\Cache::store('array')->remember('notify.inactive_members.'.$companyId, 60, fn (): array => \Illuminate\Support\Facades\DB::table('company_user')
+            ->where('company_id', $companyId)->where('is_active', false)->pluck('user_id')->map(fn ($id) => (int) $id)->all());
+
+        return ! in_array((int) $user->getKey(), $off, true);
     }
 
     private function suppress(Notification $bell, string $channel, string $reason): void
