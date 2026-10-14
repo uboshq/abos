@@ -92,61 +92,61 @@ class DocumentPolicy
 
     public function archive(User $user, Document $document): bool
     {
-        return $user->can('documents.archive') && $this->view($user, $document) && ! $document->isArchived();
+        return $user->can('documents.archive') && $this->reaches($user, $document) && ! $document->isArchived();
     }
 
     public function unarchive(User $user, Document $document): bool
     {
-        return $user->can('documents.restore') && $this->view($user, $document) && $document->isArchived();
+        return $user->can('documents.restore') && $this->reaches($user, $document) && $document->isArchived();
     }
 
     public function delete(User $user, Document $document): bool
     {
-        return $user->can('documents.delete') && $this->view($user, $document) && ! $document->trashed();
+        return $user->can('documents.delete') && $this->reaches($user, $document) && ! $document->trashed();
     }
 
     /** রিসাইকেল বিন থেকে ফেরানো (§১৯) */
     public function restore(User $user, Document $document): bool
     {
-        return $user->can('documents.restore') && $this->view($user, $document) && $document->trashed();
+        return $user->can('documents.restore') && $this->reaches($user, $document) && $document->trashed();
     }
 
     /** ⛔ চিরতরে মোছা — কেবল বিনের কাগজ, আর নিজের আলাদা চাবিতে (§১৯ "permission অনুযায়ী") */
     public function forceDelete(User $user, Document $document): bool
     {
-        return $user->can('documents.purge') && $this->view($user, $document) && $document->trashed();
+        return $user->can('documents.purge') && $this->reaches($user, $document) && $document->trashed();
     }
 
     /** কাগজ-ধরে অধিকার দেওয়া বা সরানো (§১৩) */
     public function grant(User $user, Document $document): bool
     {
-        return $user->can('documents.permissions') && $this->view($user, $document);
+        return $user->can('documents.permissions') && $this->reaches($user, $document);
     }
 
     /** অনুমোদনে পাঠানো আর ফেরত নেওয়া (§১০) — কাগজ দেখতে পারতে হবে */
     public function submit(User $user, Document $document): bool
     {
-        return $user->can('documents.submit') && $this->view($user, $document) && ! $document->isArchived();
+        return $user->can('documents.submit') && $this->reaches($user, $document) && ! $document->isArchived();
     }
 
     /** প্রকাশ — কেবল অনুমোদিত কাগজ */
     public function publish(User $user, Document $document): bool
     {
-        return $user->can('documents.publish') && $this->view($user, $document)
+        return $user->can('documents.publish') && $this->reaches($user, $document)
             && $document->status === DocumentCatalog::APPROVED;
     }
 
     /** শেয়ার (§১৪) — শেয়ারের চাবি, বা এই কাগজে "শেয়ার" অধিকার */
     public function share(User $user, Document $document): bool
     {
-        return $this->view($user, $document) && ! $document->isArchived()
+        return $this->reaches($user, $document) && ! $document->isArchived()
             && ($user->can('documents.share') || $this->access->granted($user, $document, 'share'));
     }
 
     /** সই চাওয়া (§১১) — কাগজে অন্তত একটা ভার্সন থাকতে হবে */
     public function requestSignature(User $user, Document $document): bool
     {
-        return $user->can('documents.signature_request') && $this->view($user, $document)
+        return $user->can('documents.signature_request') && $this->reaches($user, $document)
             && ! $document->isArchived() && $document->current_version_id !== null;
     }
 
@@ -164,7 +164,19 @@ class DocumentPolicy
 
     private function mayEdit(User $user, Document $document): bool
     {
-        return $this->view($user, $document)
+        return $this->reaches($user, $document)
             && ($user->can('documents.edit') || $this->access->granted($user, $document, 'edit'));
+    }
+
+    /**
+     * ⛔ দেখা, সইকারীর ছাড় ছাড়া — Documents লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[ASignerOnlyReadsTheDocumentTest]])।
+     *
+     * ⓘ সইকারী শাখা আর গোপনীয়তার দেয়াল পেরিয়ে কাগজ পড়েন ([[view()]]) — কিন্তু বাকি সব কাজ `view`-এর উপর দাঁড়িয়ে ছিল, তাই সই চলার মাঝে
+     * তিনি গোপন কাগজের ধাপ নামাতে, শাখা বদলাতে, নিজেকে শেয়ার দিতে, অধিকার বিলাতে বা বিনে ফেলতে পারতেন। ⭐ পড়া, নামানো, ছাপা ছাড়া
+     * প্রতিটা কাজ সাধারণ দেয়ালে।
+     */
+    private function reaches(User $user, Document $document): bool
+    {
+        return $user->can('documents.view') && $this->access->canSee($user, $document, asSigner: false);
     }
 }

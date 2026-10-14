@@ -380,7 +380,17 @@ class VoucherRequest extends FormRequest
              * ঠিক ওই অঙ্কটা কম দেখাত, কারণ ছাড়াই।
              */
             'branch_id' => ['nullable', 'integer',
-                Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+                Rule::exists('branches', 'id')->where('company_id', CompanyContext::id()),
+                /*
+                 * ⛔ আর নিজের নাগালের শাখা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AVoucherStaysInTheBranchesYouReachTest]])।
+                 * ⓘ শাখা-সীমিত মানুষ অন্য শাখার নামে খরচ বসাতে পারতেন: টাকা ঐ শাখার খাতায়, অথচ তিনি নিজে আর দেখতে পেতেন না।
+                 * স্থায়ী সম্পদের পর্দার একই পাহারা ([[FixedAssetController]])।
+                 */
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (filled($value) && ! app(\App\Core\Services\DataScope::class)->allows($this->user(), \App\Models\UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('accounts::asset.branch_out_of_reach'));
+                    }
+                }],
 
             /*
              * ⓘ ঘর দুইটা নিয়মে আছে যাতে ভুল হলে বার্তা দেখানো যায়।
