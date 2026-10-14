@@ -97,6 +97,17 @@ void main() {
     expect(SyncEngine.instance.rejectedCount, 0, reason: '⛔ অন্যের ব্যর্থ চেষ্টায় রহিমের অর্ডার "ফেরত" হলো');
     expect(SyncEngine.instance.pendingCount, 1);
   });
+
+  test('a rejected order rewritten by the rep is never sent again (phone line audit, 15 Oct 2026)', () async {
+    await anOrderBy('rahim');
+    final key = Hive.box<Map>('abos_sync_queue').keys.single;
+    final row = Hive.box<Map>('abos_sync_queue').get(key)!;
+    await Hive.box<Map>('abos_sync_queue').put(key, {...row.cast<String, dynamic>(), 'status': 'REJECTED', 'reason': 'ফেরত'});
+    await SyncEngine.instance.markResolved(key);
+
+    await SyncEngine.instance.flushAll();
+    expect(server.pushes, isEmpty, reason: '⛔ নতুন করে লেখা অর্ডারের পুরনোটা আবার গেল — দোকানে দুটো অর্ডার');
+  });
 }
 
 class _Server implements HttpClientAdapter {

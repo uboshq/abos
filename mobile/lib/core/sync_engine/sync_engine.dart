@@ -528,7 +528,9 @@ class SyncEngine {
               return row != null &&
                   row['module'] == module &&
                   _isMine(row) &&
-                  row['status'] != _statusRejected;
+                  row['status'] != _statusRejected &&
+                  // ⛔ নতুন করে লেখা অর্ডারের পুরনোটাও নয় — আগে আবার যেত, আর দোকানে দুটো অর্ডার (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+                  row['status'] != _statusResolved;
             })
             .take(AppConfig.syncBatchSize)
             .toList(growable: false);
