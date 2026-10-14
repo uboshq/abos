@@ -89,6 +89,9 @@ class SyncEngine {
     if (_queue == null) {
       try {
         _queue = await HiveEncryptionKey.openBox<Map>(_queueBoxName);
+      } on HiveKeyUnavailable catch (error) {
+        // ⛔ চাবি পড়া যায়নি — বাক্স ভাঙা নয়, তাই মোছা নয়; এই চালানে সিঙ্ক বন্ধ, পরের চালানে আবার (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        debugPrint('ABOS sync: queue key unavailable ($error) — queue kept, sync off this run');
       } catch (error) {
         debugPrint('ABOS sync: queue box failed to open ($error) — resetting it');
         try {
