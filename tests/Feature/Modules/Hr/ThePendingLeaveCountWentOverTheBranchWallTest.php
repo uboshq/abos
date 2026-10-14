@@ -90,4 +90,48 @@ final class ThePendingLeaveCountWentOverTheBranchWallTest extends TestCase
         $widget = collect(HrWidgets::widgets())->firstWhere('label', __('hr::dashboard.leave_awaiting'));
         $this->assertSame('1', $widget->value, '⛔ হোমের "ছুটির অপেক্ষায়" ঘরে অন্য শাখার ছুটি গোনা হলো।');
     }
+
+    /**
+     * ⛔ ছুটির চাবি ছাড়া অপেক্ষমাণ ছুটি নেই — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০; [[HrDashboard::dashboard()]])।
+     * ⓘ কর্মী দেখার চাবিওয়ালা কেউ ছুটির চাবি ছাড়াই অপেক্ষমাণ ছুটির নাম, তারিখ আর দিন দেখতেন; ঘরটা ঢাকা থাকত না।
+     */
+    public function test_without_the_leave_key_the_pending_leave_is_hidden(): void
+    {
+        $company = Company::create(['code' => 'HRK', 'name_en' => 'Leave Key Co']);
+        CompanyContext::set($company->id);
+
+        foreach (['hr.view', 'hr.employee.view', 'hr.leave.view'] as $name) {
+            Permission::findOrCreate($name, 'web');
+        }
+
+        $clerk = User::factory()->create(['current_company_id' => $company->id, 'current_branch_id' => null]);
+        $clerk->companies()->attach($company->id);
+        $clerk->givePermissionTo(['hr.view', 'hr.employee.view']);
+
+        $casual = LeaveType::query()->create([
+            'company_id' => $company->id, 'code' => 'CL', 'name_en' => 'Casual', 'name_bn' => 'নৈমিত্তিক',
+            'days_per_year' => '10', 'is_paid' => true, 'is_active' => true,
+        ]);
+        $employee = Employee::query()->create([
+            'company_id' => $company->id, 'code' => 'E-1', 'name_en' => 'Waiting Person', 'joining_date' => '2026-01-01',
+        ]);
+        LeaveApplication::query()->create([
+            'company_id' => $company->id, 'employee_id' => $employee->id, 'leave_type_id' => $casual->id,
+            'from_date' => '2026-10-20', 'to_date' => '2026-10-20', 'days' => '1', 'status' => LeaveApplication::PENDING,
+        ]);
+
+        $this->actingAs($clerk->fresh());
+        $dashboard = HrDashboard::dashboard();
+
+        $this->assertNull(collect($dashboard->listings)->firstWhere('label', __('hr::dashboard.pending_leave')),
+            '⛔ ছুটির চাবি ছাড়াই অপেক্ষমাণ ছুটির তালিকা (নামসহ) এল।');
+        $stat = collect($dashboard->stats)->firstWhere('label', __('hr::dashboard.pending_leave'));
+        $this->assertSame('hr.leave.view', $stat?->permission, '⛔ অপেক্ষমাণ ছুটির ঘর ছুটির চাবি চায় না — ঢাকা পড়ে না।');
+
+        // ⓘ একই মানুষ, এবার ছুটির চাবিসহ — তালিকা ফিরে আসে
+        $clerk->givePermissionTo('hr.leave.view');
+        $this->actingAs($clerk->fresh());
+        $listing = collect(HrDashboard::dashboard()->listings)->firstWhere('label', __('hr::dashboard.pending_leave'));
+        $this->assertSame(['Waiting Person'], $listing?->rows->map(fn (LeaveApplication $l) => $l->employee?->name_en)->all());
+    }
 }

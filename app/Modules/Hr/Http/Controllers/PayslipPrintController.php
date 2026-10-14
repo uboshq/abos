@@ -65,7 +65,12 @@ class PayslipPrintController extends Controller implements HasMiddleware
         // ⓘ পাতাটা যায় তার রানের শাখা ধরে — [[PayslipPolicy]]
         $this->authorize('view', $payslip);
 
-        $payslip->load(['employee.department', 'employee.designation', 'lines', 'run']);
+        /*
+         * ⛔ রানটা শাখার দেয়ালের ওপারেও — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[APayrollRunHidInAnotherBranchTest]])। ⓘ অনুমতি উপরে
+         * কর্মীর শাখা ধরে মিলে গেছে; অথচ রানটা পড়া হত বাছা শাখার দেয়ালে, তাই অন্য শাখায় বানানো রান খালি এসে পাতা ৫০০ দিত।
+         * ফোনের দরজার ([[PayslipApiController]]) একই নিয়ম।
+         */
+        $payslip->load(['employee.department', 'employee.designation', 'lines', 'run' => fn ($q) => $q->withoutGlobalScope('user-branch')]);
 
         return $this->pdf(
             $request,
@@ -147,7 +152,9 @@ class PayslipPrintController extends Controller implements HasMiddleware
             lines: $lines,
 
             // খসড়া রানের শিটে বড় করে লেখা — নাহলে কেউ ওটা নিয়ে টাকা চাইতে পারে
-            notice: $run->isDraft() ? __('hr::message.draft_payslip') : null,
+            // ⛔ বাতিল রানের শিটেও — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[ACancelledRunsPayslipSaysSoTest]]); ⓘ আগে খাতায় উল্টানো বেতনের শিট পরিষ্কার, সইয়ের ঘরসহ ছাপা হত
+            notice: $run->isDraft() ? __('hr::message.draft_payslip')
+                : ($run->isCancelled() ? __('hr::message.cancelled_payslip') : null),
         );
     }
 

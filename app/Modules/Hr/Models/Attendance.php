@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 
 /**
@@ -90,6 +91,40 @@ class Attendance extends Model
         return $this->status === self::LEAVE && $this->leaveApplication !== null
             ? self::shareOf($this->leaveApplication, $this->work_date)
             : '1';
+    }
+
+    /**
+     * ⛔ একজনের এক দিনের সারি — থাকলে তালা দিয়ে বদলায়, না থাকলে বসায় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+     * (ⓘ১২; [[AttendanceAndLeaveStayInsideTheBranchTest]])।
+     *
+     * ⓘ `updateOrCreate` আগে দেখত, তারপর বসাত: দুইজন একই দিন একসাথে সংরক্ষণ করলে (বা ফোনের সিঙ্ক আর অফিস, বা মঞ্জুরি) দুজনেই
+     * "নেই" দেখে বসাতে যেত, আর দ্বিতীয়জন `hr_attendance_unique`-এ ঠেকে ৫০০ পেত — লেনদেনের পুরনো ছবিতে আগেরটা দেখাই যেত না।
+     * এখন বসাতে গিয়ে ঠেকলে তালা দিয়ে তাজা সারিটা পড়ে বদলায়; না-থাকা সারিতে তালা আগে দেওয়া হয় না (ফাঁকের তালায় দুইজন
+     * একে অন্যকে আটকায়)। ⚠️ ডাকার আগে কর্মীর সারিতে তালা চাই — তাতে একই কর্মীর দুইটা লেখা একটার পর একটা হয়।
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public static function writeDay(int $employeeId, string $date, array $values): self
+    {
+        $key = ['employee_id' => $employeeId, 'work_date' => $date];
+        $row = null;
+
+        if (static::query()->where($key)->exists()) {
+            $row = static::query()->where($key)->lockForUpdate()->first();
+        }
+
+        if ($row === null) {
+            try {
+                return static::query()->withSavepointIfNeeded(fn () => static::query()->create($key + $values));
+            } catch (UniqueConstraintViolationException) {
+                // ⓘ এর মধ্যে আরেকজন বসিয়ে ফেলেছেন — তাঁর সারিটাই তালা দিয়ে পড়ে বদলানো
+                $row = static::query()->where($key)->lockForUpdate()->firstOrFail();
+            }
+        }
+
+        $row->fill($values)->save();
+
+        return $row;
     }
 
     public function scopeForMonth(Builder $query, string $monthStart, string $monthEnd): Builder

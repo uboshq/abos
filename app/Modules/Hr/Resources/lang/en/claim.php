@@ -58,6 +58,7 @@ return [
     'reason_required' => 'Write the reason.',
     'head_bad' => 'Pick an expense head — a postable, active expense account.',
     'spent_in_future' => 'The spending date cannot be after today.',
+    'rejected_employee_gone' => ':no — the employee had left (or is inactive or deleted) before the last signature, so the claim was rejected and no money was drafted.',
     'own_claim_signed' => ':no — signed by the same person who sent it.',
     'take_back_title' => 'Take back an unspent advance in cash',
     'take_back_note' => 'Open advance :open. A draft receipt voucher is made — the cashier takes the cash and posts it into their own till. Salary deduction is separate, in the payroll run.',
