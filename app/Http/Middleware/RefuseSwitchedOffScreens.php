@@ -55,13 +55,16 @@ final class RefuseSwitchedOffScreens
      */
     private const CORE_MODULE_DASHBOARD = 'module.dashboard';
 
-    /** @var array<string, string>|null উপসর্গ => সুইচের কী */
+    /** @var array<string, string>|null উপসর্গ => সুইচের কী — কেবল যে উপসর্গ একটাই সারি দাবি করে */
     private ?array $prefixes = null;
 
-    /** @var list<array{route: string, params: array<string, mixed>, setting: string}>|null */
+    /** @var list<array{route: string, params: array<string, mixed>, setting: string, group: string}>|null */
     private ?array $exact = null;
 
-    /** @var array<string, string> উপসর্গ => গ্রুপের সুইচের কী */
+    /** @var array<string, list<array{setting: string, group: string}>> হুবহু রুটের নাম => যে সারিগুলো ঐ নামেই (প্যারামিটার ছাড়া) */
+    private array $plain = [];
+
+    /** @var array<string, string> উপসর্গ => গ্রুপের সুইচের কী — কেবল যে উপসর্গ একটাই গ্রুপ দাবি করে */
     private array $groupOf = [];
 
     public function __construct(
@@ -246,38 +249,100 @@ final class RefuseSwitchedOffScreens
         }
 
         /*
-         * তারপর গ্রুপ (সাবমডিউল) — সারির নিজের সুইচের **আগে**।
+         * ⭐ তারপর হুবহু রুটটা — মেনুর সারি নিজে, তার নিজের গ্রুপ আর নিজের সুইচ নিয়ে।
          *
-         * ── কেন আগে ────────────────────────────────────────────────
+         * ── ⛔ কী ভেঙেছিল (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬) ──
+         * গ্রুপ আর সারি দুইটাই কেবল **উপসর্গ** ধরে দেখা হত, আর একই উপসর্গ
+         * দুইটা গ্রুপ বা দুইটা সারি দাবি করলে **শেষজন জিতত**।
+         * `accounts.settings`-এর উপসর্গ `accounts.` — অর্থাৎ গোটা মডিউল:
+         * হিসাবের "সেটিংস" গ্রুপ বন্ধ করলে ভাউচার, লেজার, সব রিপোর্ট ৪০৪।
+         * উল্টো দিকে `inventory.stock.` "রিপোর্ট" গ্রুপের নামে বসত, তাই
+         * "লেনদেন" বন্ধ করলেও মজুদ সমন্বয় ঠিকানা দিয়ে খুলত; আর "জিম্মা"
+         * সারি বন্ধ করলে দরজা দেখত `accounts.settings`-এর সুইচ।
+         *
+         * ⓘ এখন মেনুর রুটটা আগে হুবহু মেলানো হয়। একই রুট একাধিক সারিতে
+         * থাকলে কোনো একটা চালু থাকলেই দরজা খোলা — মেনু তখন ওটা দেখায়,
+         * আর দেখানো সারির ক্লিকে ৪০৪ হওয়া চলবে না। প্যারামিটারওয়ালা সারি
+         * মিললে কেবল সেগুলোই, কারণ ওরা বেশি নির্দিষ্ট।
+         */
+        $matched = array_values(array_filter(
+            $this->exact,
+            fn (array $entry): bool => $entry['route'] === $name && $this->matches($entry['params'], $params),
+        ));
+
+        if ($matched === []) {
+            $matched = $this->plain[$name] ?? [];
+        }
+
+        if ($matched !== []) {
+            return $this->offKeyUnlessOneIsOn($matched);
+        }
+
+        /*
+         * মেনুতে নেই এমন রুট (`...store`, `...preview`) — তার উপসর্গ ধরে।
+         *
+         * ── গ্রুপ আগে, সারির নিজের সুইচের **আগে** ──────────────────
          * স্তরগুলোর ক্রম মেনু আঁকার সময় যা ([[MenuSwitches::itemIsOn()]]),
          * এখানেও ঠিক তা-ই হতে হবে। উল্টো হলে গ্রুপ বন্ধ অথচ সারির নিজের
          * সুইচ চালু — এমন হলে পর্দাটা মেনু থেকে উধাও, কিন্তু ঠিকানা
          * দিলে দিব্যি খুলত। ওটাই "আড়াল, বাধা নয়" ভুলটা।
-         */
-        foreach ($this->groupOf as $prefix => $groupKey) {
-            if (str_starts_with($scoped, $prefix) && ! $this->settings->get($groupKey, true)) {
-                return $groupKey;
-            }
-        }
-
-        foreach ($this->exact as $entry) {
-            if ($entry['route'] === $name && $this->matches($entry['params'], $params)) {
-                return $entry['setting'];
-            }
-        }
-
-        /*
-         * সবচেয়ে লম্বা মিল জেতে।
          *
-         * একটা মডিউলে `sales.order.` আর `sales.` দুইটাই থাকলে ছোটটা
-         * আগে মিলে গিয়ে ভুল সুইচ ফেরত দিত।
+         * সবচেয়ে লম্বা মিল জেতে: একটা মডিউলে `sales.order.` আর
+         * `sales.order.line.` দুইটাই থাকলে ছোটটা আগে মিলে গিয়ে ভুল সুইচ
+         * ফেরত দিত। ⓘ মানচিত্রে কেবল সেই উপসর্গ আছে যা একজনই দাবি করে
+         * ([[build()]]), তাই "শেষজন জেতে" আর হয় না।
          */
+        $groupKey = $this->longest($this->groupOf, $scoped);
+
+        if ($groupKey !== null && ! $this->settings->get($groupKey, true)) {
+            return $groupKey;
+        }
+
+        return $this->longest($this->prefixes, $scoped);
+    }
+
+    /**
+     * সারিগুলোর একটাও পুরো চালু থাকলে null; নাহলে প্রথমটার বন্ধ সুইচের কী।
+     *
+     * "পুরো চালু" = তার গ্রুপ চালু **এবং** সারির নিজের সুইচ চালু —
+     * [[MenuSwitches::itemIsOn()]]-এর ক্রমেই (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+     *
+     * @param  list<array{setting: string, group: string}>  $entries
+     */
+    private function offKeyUnlessOneIsOn(array $entries): ?string
+    {
+        $first = null;
+
+        foreach ($entries as $entry) {
+            $off = match (true) {
+                ! $this->settings->get($entry['group'], true) => $entry['group'],
+                ! $this->settings->get($entry['setting'], true) => $entry['setting'],
+                default => null,
+            };
+
+            if ($off === null) {
+                return null;
+            }
+
+            $first ??= $off;
+        }
+
+        return $first;
+    }
+
+    /**
+     * নামটা যে উপসর্গগুলোয় শুরু, তাদের সবচেয়ে লম্বাটার কী — না মিললে null।
+     *
+     * @param  array<string, string>  $map
+     */
+    private function longest(array $map, string $name): ?string
+    {
         $best = null;
 
-        foreach ($this->prefixes as $prefix => $setting) {
-            if (str_starts_with($scoped, $prefix)
+        foreach ($map as $prefix => $key) {
+            if (str_starts_with($name, $prefix)
                 && ($best === null || strlen($prefix) > strlen($best[0]))) {
-                $best = [$prefix, $setting];
+                $best = [$prefix, $key];
             }
         }
 
@@ -309,8 +374,14 @@ final class RefuseSwitchedOffScreens
             return;
         }
 
-        $this->prefixes = [];
         $this->exact = [];
+        $this->plain = [];
+
+        /** @var array<string, array<string, true>> উপসর্গ => যে গ্রুপগুলো দাবি করে */
+        $groupClaims = [];
+
+        /** @var array<string, array<string, true>> উপসর্গ => যে সারির সুইচগুলো দাবি করে */
+        $itemClaims = [];
 
         foreach ($this->registry->all() as $module) {
             foreach ($module->menu as $group => $items) {
@@ -331,6 +402,7 @@ final class RefuseSwitchedOffScreens
                      * ১৩ আগস্ট ধরা পড়েছিল।
                      */
                     $setting = $this->switches->forItem($item);
+                    $groupKey = $this->switches->forGroup($module->code, (string) $group);
                     $params = $item['route_params'] ?? [];
 
                     /*
@@ -357,12 +429,23 @@ final class RefuseSwitchedOffScreens
                      * নয়: যে উপসর্গ মডিউলের নিজের নামে শুরু হয় না,
                      * সেটা তার গ্রুপের চাবি হতে পারে না।
                      */
-                    if ($dot !== false) {
-                        $prefix = substr($item['route'], 0, $dot + 1);
+                    /*
+                     * ⭐ দুইটা উপসর্গ দাবি করা হয় — মা (`inventory.stock.`)
+                     * আর নিজের (`inventory.stock.adjust.`, যেখানে বসে
+                     * `...adjust.store`)। ⚠️ নিজেরটা না থাকলে মা-উপসর্গ
+                     * কয়েকজন ভাগ করলে POST-টা কারো সুইচেই পড়ত না
+                     * (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+                     */
+                    $claims = [$item['route'].'.'];
 
-                        if (str_starts_with($prefix, $module->code.'.')) {
-                            $this->groupOf[$prefix]
-                                = $this->switches->forGroup($module->code, (string) $group);
+                    if ($dot !== false) {
+                        $claims[] = substr($item['route'], 0, $dot + 1);
+                    }
+
+                    foreach ($claims as $prefix) {
+                        if ($this->deeperThanAModule($prefix)
+                            && str_starts_with($prefix, $module->code.'.')) {
+                            $groupClaims[$prefix][$groupKey] = true;
                         }
                     }
 
@@ -371,18 +454,64 @@ final class RefuseSwitchedOffScreens
                             'route' => $item['route'],
                             'params' => $params,
                             'setting' => $setting,
+                            'group' => $groupKey,
                         ];
 
                         continue;
                     }
 
-                    if ($dot === false) {
-                        continue;
-                    }
+                    $this->plain[$item['route']][] = ['setting' => $setting, 'group' => $groupKey];
 
-                    $this->prefixes[substr($item['route'], 0, $dot + 1)] = $setting;
+                    foreach ($claims as $prefix) {
+                        if ($this->deeperThanAModule($prefix)) {
+                            $itemClaims[$prefix][$setting] = true;
+                        }
+                    }
                 }
             }
         }
+
+        /*
+         * ⛔ যে উপসর্গ দুইজন দাবি করে, সেটা কারো নয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ আগে এখানে "শেষজন জেতে" ছিল: `inventory.stock.` রিপোর্ট গ্রুপের
+         * নামে বসত (লেনদেন বন্ধ করলেও সমন্বয় খুলত), আর `accounts.` বসত
+         * সেটিংস গ্রুপের নামে (সেটিংস বন্ধ করলে গোটা হিসাব ৪০৪)। মেনুর
+         * নিজের রুটগুলো উপরে হুবহু মেলে; এই মানচিত্র কেবল মেনুর বাইরের
+         * রুটের (`...store`) জন্য, আর সেখানে ভুল মালিকের চেয়ে মালিক না
+         * থাকা ভালো।
+         */
+        $this->groupOf = $this->onlyOneClaimer($groupClaims);
+        $this->prefixes = $this->onlyOneClaimer($itemClaims);
+    }
+
+    /**
+     * উপসর্গটা `<code>.`-এর চেয়ে গভীর কি না।
+     *
+     * ⛔ `accounts.settings`-এর মা-উপসর্গ `accounts.` — গোটা মডিউল। ওটা
+     * কোনো এক গ্রুপ বা সারির হতে পারে না; গোটা মডিউলের সুইচ আলাদা
+     * (`<code>.enabled`)। মডিউলের কোডে বিন্দু নেই, তাই দুইটা বিন্দু মানে
+     * অন্তত এক ধাপ গভীর (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+     */
+    private function deeperThanAModule(string $prefix): bool
+    {
+        return substr_count($prefix, '.') >= 2;
+    }
+
+    /**
+     * @param  array<string, array<string, true>>  $claims
+     * @return array<string, string>
+     */
+    private function onlyOneClaimer(array $claims): array
+    {
+        $out = [];
+
+        foreach ($claims as $prefix => $keys) {
+            if (count($keys) === 1) {
+                $out[$prefix] = (string) array_key_first($keys);
+            }
+        }
+
+        return $out;
     }
 }
