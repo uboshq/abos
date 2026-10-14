@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/records/money.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
@@ -94,9 +95,14 @@ class _ReturnScreenState extends State<ReturnScreen> {
   Future<void> _go() async {
     final bill = _bill;
     final reason = _reasonId;
+    // ⛔ লেখা আছে অথচ পড়া যায় না (অক্ষর, দুই দশমিক) — বাংলা অঙ্ক আর হাজারের কমা পড়া যায়; আগে লাইনটা ফেরত থেকে চুপচাপ বাদ পড়ত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+    if (_qty.values.any((c) => Money.typed(c.text) == null)) {
+      setState(() => _error = 'ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।');
+      return;
+    }
     final lines = {
       for (final e in _qty.entries)
-        e.key: double.tryParse(e.value.text.trim()) ?? 0
+        e.key: Money.typed(e.value.text) ?? 0
     }..removeWhere((_, v) => v <= 0);
     if (bill == null || reason == null || lines.isEmpty) {
       setState(() => _error =

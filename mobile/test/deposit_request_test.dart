@@ -189,6 +189,16 @@ void main() {
       expect(find.textContaining('বিলের ভাগ জমার চেয়ে বেশি'), findsOneWidget);
     });
 
+    testWidgets('a share of 1,000 or ১০০ is read, and an unreadable share stops the advice (phone line audit, 15 Oct 2026)', (tester) async {
+      final api = await open(tester, bills: bills);
+      await send(tester, '1,000', {'b1': 'abc'});
+      expect(api.sent, isEmpty, reason: '⛔ পড়া যায় না এমন ভাগ চুপচাপ বাদ দিয়ে বিজ্ঞপ্তি গেল');
+      expect(find.textContaining('INV-1-এর ভাগ পড়া গেল না'), findsOneWidget);
+
+      await send(tester, '1,000', {'b1': '৫০০', 'b2': '300'});
+      expect(api.sent.single['bills'], ['b1=500', 'b2=300'], reason: '⛔ বাংলা অঙ্কের ভাগ বাদ পড়ল');
+    });
+
     testWidgets('no bill picked sends none; an old server without the door shows no bill lines and still sends', (tester) async {
       final api = await open(tester, bills: null);
       expect(find.text('কোন বিলের বিপরীতে (ঐচ্ছিক)'), findsNothing);
