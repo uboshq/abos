@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../push/push_service.dart';
 import '../privacy/phone_privacy.dart';
 import '../api_client/api_client.dart';
 import '../config/app_config.dart';
@@ -161,6 +162,7 @@ class AuthController extends StateNotifier<AuthState> {
     // ⛔ পর্দা আবার আড়াল — আগের কোম্পানি আড়াল বন্ধ রাখলে পরের জন `/me` আসা পর্যন্ত স্ক্রিনশট-যোগ্য পর্দায় থাকতেন
     // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬); অ্যাপ শুরুর মতোই আড়ালের দিকে
     unawaited(PhonePrivacy.secure(true));
+    unawaited(PushService.instance.forget());
     state = const AuthState.signedOut();
   }
 }

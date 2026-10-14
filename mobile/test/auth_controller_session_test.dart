@@ -6,6 +6,7 @@ import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/auth/token_storage.dart';
 import 'package:abos_mobile/core/privacy/phone_privacy.dart';
+import 'package:abos_mobile/core/push/push_service.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 
 import 'support/fake_secure_storage.dart';
@@ -150,5 +151,19 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(calls.last, isTrue, reason: '⛔ বেরোনোর পরেও পর্দা আড়াল বন্ধ — পরের জনের পর্দা স্ক্রিনশট-যোগ্য');
+  });
+
+  test('signing out with no signal still drops the push token of this phone (phone line audit, 15 Oct 2026)', () async {
+    var deleted = 0;
+    PushService.tokenDeleter = () async => deleted++;
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    await SessionRepository.instance.saveUser(savedUser);
+    final controller = AuthController();
+    await controller.restoreSession();
+
+    await controller.logout(); // ⓘ /auth/logout এই পরীক্ষায় কোথাও পৌঁছায় না — নেট নেই-এর মতোই
+    await Future<void>.delayed(Duration.zero);
+
+    expect(deleted, 1, reason: '⛔ বেরোনোর পরেও এই ফোনে আগের জনের বার্তা আসবে');
   });
 }
