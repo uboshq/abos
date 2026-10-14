@@ -80,7 +80,8 @@ final class Rankings
             }
 
             foreach ($part as $row) {
-                $rows[] = [...$row, 'company_id' => $company['id'], 'company_name' => $company['name']];
+                // ⓘ যে শাখায় গোনা — সারিতে চাপলে সেখানেই খোলে (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                $rows[] = [...$row, 'company_id' => $company['id'], 'company_name' => $company['name'], 'company_only' => $company['only'] ?? null];
             }
         }
 

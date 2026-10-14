@@ -253,7 +253,7 @@
                                         @foreach ($alert['companies'] as $part)
                                             @if (($part['count'] ?? 0) > 0)
                                                 <button type="submit" form="executive-open" name="go"
-                                                        value="{{ $go($part['id'], null, $part['route'], $part['params']) }}"
+                                                        value="{{ $go($part['id'], $part['only'] ?? null, $part['route'], $part['params']) }}"
                                                         class="text-(--color-brand-700) hover:underline">{{ $part['name'] }}: {{ $part['count'] }}</button>
                                             @endif
                                         @endforeach
@@ -270,7 +270,7 @@
                         @forelse ($waiting as $paper)
                             <li class="border-t border-(--color-border) px-4 py-1.5">
                                 <button type="submit" form="executive-open" name="go"
-                                        value="{{ $go($paper['company_id'], null, $paper['route'], $paper['params']) }}"
+                                        value="{{ $go($paper['company_id'], $paper['company_only'] ?? null, $paper['route'], $paper['params']) }}"
                                         class="flex w-full items-center justify-between gap-2 text-left hover:underline">
                                     <span class="min-w-0 truncate text-(--color-ink)">{{ $paper['label'] }}
                                         <span class="text-2xs text-(--color-ink-muted)">· {{ $paper['company_name'] }}</span></span>
@@ -308,7 +308,7 @@
                             @endphp
                             <li class="border-t border-(--color-border) px-4 py-1.5">
                                 <button type="submit" form="executive-open" name="go"
-                                        value="{{ $go($row['company_id'], null, $route, $params) }}"
+                                        value="{{ $go($row['company_id'], $row['company_only'] ?? null, $route, $params) }}"
                                         class="flex w-full items-center justify-between gap-2 text-left hover:underline">
                                     <span class="min-w-0 truncate">{{ $row[$labelKey] ?? '—' }}
                                         @if (count($board['companies']) > 1)
