@@ -326,8 +326,16 @@ final class ApprovalApiController extends Controller
             $about = (string) $approval->requested_reason;
         }
 
+        /*
+         * ⭐ টাকা কোথায় আর কোন শাখায় — কার্ডেই (মালিক, ১৪ অক্টোবর ২০২৬, ফোনের সই-বাক্সের ছবি: *"kon branch e joma tar
+         * ullekh nai"*)। ⓘ আগে কার্ডে কেবল পক্ষ আর বিবরণ; খাত আর শাখা দেখতে প্রতিটা কাগজের "বিস্তারিত" খুলতে হত — আর
+         * বিবরণে লেখা ব্যাংকের সাথে আসল খাত মেলে কি না, কার্ড দেখে বলা যেত না।
+         */
+        $where = trim((string) ($fact['where'] ?? '')) === '' ? null : __('approval::field.deposited_to', ['place' => $fact['where']]);
+        $branch = trim((string) ($fact['branch'] ?? '')) === '' ? null : __('approval::field.in_branch', ['branch' => $fact['branch']]);
+
         $parts = array_values(array_filter(
-            [$fact['party'] ?? null, $about],
+            [$fact['party'] ?? null, $about, $where, $branch],
             fn (?string $part): bool => $part !== null && trim($part) !== '',
         ));
 

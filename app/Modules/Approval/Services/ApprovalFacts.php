@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Services;
 
 use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
+use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -56,7 +58,7 @@ final class ApprovalFacts
 
     /**
      * @param  iterable<Approval>  $approvals
-     * @return array<int, array{party: ?string, about: ?string, where: ?string}>
+     * @return array<int, array{party: ?string, about: ?string, where: ?string, branch: ?string}>
      */
     public function of(iterable $approvals, bool $pastWalls = false): array
     {
@@ -64,7 +66,7 @@ final class ApprovalFacts
         $rows = [];
 
         foreach ($approvals as $approval) {
-            $rows[(int) $approval->id] = ['no' => null, 'party' => null, 'about' => null, 'where' => null];
+            $rows[(int) $approval->id] = ['no' => null, 'party' => null, 'about' => null, 'where' => null, 'branch' => null];
 
             if (is_string($approval->approvable_type) && class_exists($approval->approvable_type)) {
                 $idsByType[$approval->approvable_type][(int) $approval->id] = (int) $approval->approvable_id;
@@ -97,6 +99,7 @@ final class ApprovalFacts
 
             $partyLabels = $this->partyLabels($documents);
             $accountNames = $this->accountNames($documents);
+            $branchNames = $this->branchNames($documents);
 
             foreach ($ids as $approvalId => $documentId) {
                 $document = $documents->get($documentId);
@@ -108,6 +111,8 @@ final class ApprovalFacts
                         'party' => $this->party($document, $partyLabels),
                         'about' => $this->about($document),
                         'where' => $this->where($document, $accountNames),
+                        // ⭐ কোন শাখার কাগজ — মালিক, ১৪ অক্টোবর ২০২৬: *"kon branch e joma tar ullekh nai"*
+                        'branch' => $branchNames[(int) ($document->getAttribute('branch_id') ?? 0)] ?? null,
                     ];
                 }
             }
@@ -277,6 +282,28 @@ final class ApprovalFacts
         }
 
         return null;
+    }
+
+    /**
+     * শাখার নামগুলো একবারে — কাগজের নিজের `branch_id` ধরে, কোম্পানির ভিতরে (দেখার দেয়াল ছাড়া: সইকারী কাগজটা দেখেনই)।
+     *
+     * @param  Collection<int, Model>  $documents
+     * @return array<int, string>
+     */
+    private function branchNames($documents): array
+    {
+        $ids = $documents->map(fn (Model $d) => (int) ($d->getAttribute('branch_id') ?? 0))->filter()->unique()->values()->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return Branch::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->whereKey($ids)
+            ->get()
+            ->mapWithKeys(fn (Branch $b) => [(int) $b->getKey() => $b->name()])
+            ->all();
     }
 
     /** @param list<string> $fields */

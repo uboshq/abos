@@ -281,6 +281,9 @@ class TheOwnerCouldNotSignFromThePhoneTest extends TestCase
         $this->assertSame(1, $row['currentLevel']);
         $this->assertSame('কেরানি', $row['requesterName']);
         $this->assertStringContainsString('Cement for the Netrakona depot', (string) $row['summary']);
+        // ⭐ কোন শাখার কাগজ — কার্ডেই (মালিক, ১৪ অক্টোবর ২০২৬: "kon branch e joma tar ullekh nai")
+        $this->assertStringContainsString(__('approval::field.in_branch', ['branch' => $this->depot->defaultBranch()?->name()]), (string) $row['summary'],
+            '⛔ সই-বাক্সের কার্ডে শাখার নাম নেই।');
         $this->assertNotFalse(\DateTimeImmutable::createFromFormat(\DATE_ATOM, $row['requestedAt']));
     }
 
