@@ -84,6 +84,13 @@ class ABackupOnOneDiskIsNotABackupTest extends TestCase
             ->health();
 
         $this->assertFalse($health->reachable);
+
+        /*
+         * ⛔ আপেক্ষিক পথও — ব্যাকআপ লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ Linux/Mac-এ উপরের `Q:/…`-ও আপেক্ষিক, আর খোঁজা `.`-এ
+         * (চলতি ফোল্ডার) থেমে "পৌঁছানো যায়" বলত — লাইভ সার্ভারে কপি অ্যাপের চলতি ফোল্ডারে বসত।
+         */
+        $this->assertFalse(app(DestinationFactory::class)->make('local', ['path' => 'abos-relative-backups'])->health()->reachable,
+            'আপেক্ষিক পথ "পৌঁছানো যায়" দেখাল — কপি অ্যাপের চলতি ফোল্ডারে বসত।');
     }
 
     /**
