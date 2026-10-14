@@ -58,6 +58,7 @@ return [
     'sla_hours' => 'Time limit (hours)',
     'warn_hours' => 'Warn after (hours)',
     'escalate_hours' => 'Escalate after (hours)',
+    'escalate_hours_hint' => 'Used when SLA is empty: the request is late and escalates after these hours. When both are set, the SLA hours apply.',
     'escalate_to' => 'If late, pass it to',
     'conditions' => 'Conditions',
     'condition_field' => 'Document field',

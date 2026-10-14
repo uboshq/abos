@@ -348,7 +348,8 @@ class NoticeController extends Controller
              * ⚠️ বাধ্যতামূলক করলে পুরনো ফর্ম থেকে আসা প্রতিটা অনুরোধ
              * ফিরে যেত — ⛔ আর ভুলটা দেখা যেত ডিপ্লয়ের পরে।
              */
-            'priority' => ['nullable', 'string', 'max:16'],
+            // ⛔ কেবল চেনা অগ্রাধিকার — অচেনা মান সম্পাদনায় enum-এ ভেঙে ৫০০ দিত ([[ABadPriorityIsAFormErrorTest]])
+            'priority' => ['nullable', 'string', Rule::enum(\App\Core\Support\NoticePriority::class)],
             'notice_category_id' => ['nullable', 'integer',
                 Rule::exists('notice_categories', 'id')->where('company_id', CompanyContext::id())],
             'summary' => ['nullable', 'string', 'max:300'],
