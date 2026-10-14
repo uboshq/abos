@@ -54,7 +54,13 @@ final class AuthorityService
         $best = null;
 
         foreach ($rows->groupBy('role_id') as $forRole) {
-            $row = $forRole->sortByDesc(fn (ApprovalLimit $l) => $l->weight())->first();
+            /*
+             * ⛔ সমান নির্দিষ্ট দুই সারিতে কড়াটা জেতে — Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[TheNarrowerLimitWinsATieTest]])।
+             * ⓘ আগে ডাটাবেসের ক্রম জিতত: আগে বানানো "বিক্রয়ে ৫ লাখ" পরে বসানো "ছাড়ে ১০ হাজার"-কে হারাত, আর সরু সীমাটা কোনোদিন খাটত না।
+             */
+            $top = $forRole->max(fn (ApprovalLimit $l) => $l->weight());
+            $tied = $forRole->filter(fn (ApprovalLimit $l) => $l->weight() === $top);
+            $row = $tied->whereNotNull('max_amount')->sort(fn (ApprovalLimit $a, ApprovalLimit $b) => bccomp((string) $a->max_amount, (string) $b->max_amount, 4))->first() ?? $tied->first();
 
             if ($row->max_amount === null) {
                 return null;   // ⓘ এই রোলে সীমা নেই — সবচেয়ে উদার উত্তর

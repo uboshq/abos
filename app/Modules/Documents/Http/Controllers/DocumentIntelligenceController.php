@@ -58,9 +58,16 @@ final class DocumentIntelligenceController extends Controller
         $versions = collect();
 
         if ($document !== null && $enabled) {
-            $text = $this->abe->textOf($document->currentVersion);
+            /*
+             * ⛔ লেখা কেবল যিনি ফাইলটা পড়তে পারেন তাঁকে — নামানোর অধিকার, নয়তো পাতায় খোলা ফাইল (ছবি, PDF)। txt/csv পাতায় খোলে না,
+             * তাই প্রিভিউ ৪০৩ ([[DocumentLibrary::serve()]]); অথচ এখানে তুলনা, প্রশ্ন আর সারাংশ পুরো লেখা দেখাত (Documents লাইন-ধরে
+             * নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheAnalysisPageReadsOnlyWhatYouMayTest]])।
+             */
+            $library = app(\App\Modules\Documents\Services\DocumentLibrary::class);
+            $mayRead = fn (?DocumentVersion $v): bool => $user->can('download', $document) || $library->opensInline($v);
+            $text = $mayRead($document->currentVersion) ? $this->abe->textOf($document->currentVersion) : null;
             $versions = $document->versions()->with('author')->orderByDesc('major')->orderByDesc('minor')->get();
-            $result = $this->run($tool, $document, $text, $versions, $request);
+            $result = $this->run($tool, $document, $text, $versions, $request, $mayRead);
             $document->auditAction('document_abe_used', $tool);
         }
 
@@ -110,13 +117,13 @@ final class DocumentIntelligenceController extends Controller
     /**
      * @param  Collection<int, DocumentVersion>  $versions
      */
-    private function run(string $tool, Document $document, ?string $text, $versions, Request $request): mixed
+    private function run(string $tool, Document $document, ?string $text, $versions, Request $request, \Closure $mayRead): mixed
     {
         if ($tool === 'compare') {
             $old = $versions->firstWhere('id', (int) $request->query('from')) ?? $versions->get(1);
             $new = $versions->firstWhere('id', (int) $request->query('to')) ?? $versions->first();
 
-            return ($old !== null && $new !== null && $old->id !== $new->id) ? $this->abe->compare($old, $new) : null;
+            return ($old !== null && $new !== null && $old->id !== $new->id && $mayRead($old) && $mayRead($new)) ? $this->abe->compare($old, $new) : null;
         }
 
         if ($text === null) {
