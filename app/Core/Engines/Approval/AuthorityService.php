@@ -94,7 +94,7 @@ final class AuthorityService
          * কোম্পানির, কাগজটা শাখার। ⓘ তাই প্রশ্নটা কাগজকেই
          * করা হয়, আর যে কাগজে শাখা নেই তার জন্য সাধারণ নিয়মটাই খাটে।
          */
-        $branchId = $branchId ?? ($approval->approvable->branch_id ?? null);
+        $branchId = $branchId ?? $this->branchOfThePaper($approval);
 
         $limit = $this->limitFor($user, $approval->module, $approval->action, $branchId === null ? null : (int) $branchId);
 
@@ -103,5 +103,25 @@ final class AuthorityService
         }
 
         return bccomp((string) $approval->amount, $limit, 4) <= 0;
+    }
+
+    /**
+     * ⛔ কাগজের শাখা — সইকারীর হেডারের শাখার দেয়াল ছাড়া (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ABranchLimitHoldsWhateverTheHeaderShowsTest]])।
+     *
+     * ⓘ `$approval->approvable` সইকারীর দেখার দেয়ালে পড়া হত: হেডারে অন্য শাখা বাছা থাকলে কাগজটা "নেই", শাখা null, আর শাখার
+     * কড়া সীমার বদলে সাধারণ উদার সীমা খাটত — একই ক্লিক "সব শাখা"-তে থামত, ঢাকা বাছলে পেরোত। সইয়ের পাতাও দেয়াল তোলে।
+     */
+    private function branchOfThePaper(Approval $approval): ?int
+    {
+        $class = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel((string) $approval->approvable_type) ?? (string) $approval->approvable_type;
+
+        if (! class_exists($class)) {
+            return null;
+        }
+
+        $paper = $class::query()->withoutGlobalScopes(['user-branch', 'user-warehouse', 'viewed-branch-warehouse'])->find($approval->approvable_id);
+        $branch = $paper?->getAttribute('branch_id');
+
+        return $branch === null ? null : (int) $branch;
     }
 }

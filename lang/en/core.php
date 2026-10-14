@@ -911,6 +911,7 @@ return [
         'creator_cannot_approve' => 'You wrote :no, so you cannot sign it — a critical notice needs a second pair of eyes.',
         'no_signature_wanted' => 'This notice does not ask for a signature.',
         'not_yours_to_sign' => 'This notice is not aimed at you.',
+        'not_live_to_sign' => 'This notice is not published right now — only a published notice can be signed.',
         'signed' => 'Signed — who signed and when is on the record.',
         'analytics_title' => 'Notice figures',
         'waiting_on_signatures' => 'Still waiting on signatures',

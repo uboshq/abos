@@ -93,13 +93,15 @@ class NoticeController extends Controller
          */
         $canManage = $user->can('system_admin.notice.manage');
 
-        abort_unless(
-            $canManage || $this->board->forUser($user)->contains('id', $entry->id),
-            404
-        );
+        $forMe = $this->board->forUser($user)->contains('id', $entry->id);
 
-        // ⓘ খুলেছেন মানে পড়েছেন — দাগটা এখানেই পড়ে।
-        $this->board->markRead($entry, $user);
+        abort_unless($canManage || $forMe, 404);
+
+        // ⓘ খুলেছেন মানে পড়েছেন — দাগটা এখানেই পড়ে। ⛔ কেবল যাঁর জন্য নোটিশ: লক্ষ্যের বাইরের প্রশাসক খুললে "পড়েছেন" গোনা হত, অথচ সই
+        // দিতে পারেন না — সবাই সই দিলেও নোটিশ চিরকাল "সইয়ের অপেক্ষায়", আর তাঁর নামে তাগাদা ([[AManagerOpeningANoticeIsNotItsReaderTest]])
+        if ($forMe) {
+            $this->board->markRead($entry, $user);
+        }
 
         return view('system_admin::notice.show', [
             'menu' => $this->menu->forUser($user),
