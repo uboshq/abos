@@ -67,11 +67,22 @@ class Warehouse extends Model implements Drillable
         $limited = $user instanceof \App\Models\User
             && app(\App\Core\Services\DataScope::class)->idsFor($user, \App\Models\UserDataScope::WAREHOUSE) !== null;
 
-        if (ViewedBranch::one() === null && ! $limited) {
+        /*
+         * ⭐ শাখা-সীমিত মানুষ "সব শাখা"-তে — কেবল তাঁর নাগালের শাখার গুদাম (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+         * ⛔ আগে `null` ("সব গুদাম") ফিরত, কারণ উপরের দেয়াল কেবল এক শাখা বাছা থাকলে কামড়ায়: তিন শাখার দুটোর মানুষ
+         * বয়সের পাতা, কম-মজুদ, ধীর-চলা আর শেষ-মজুদের তালিকায় তৃতীয় শাখার মালও দেখতেন। ⓘ [[StockFacts::value()]] এই
+         * ঘটনাটা আগে থেকেই আলাদা ধরে ([[DataScope::viewBranchIds()]]); এখন কাঁচা পথগুলোও একই নাগাল মানে।
+         */
+        $reach = $user instanceof \App\Models\User ? app(\App\Core\Services\DataScope::class)->viewBranchIds($user) : null;
+        $allBranches = ViewedBranch::one() === null;
+
+        if ($allBranches && ! $limited && $reach === null) {
             return null;
         }
 
-        return static::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        return static::query()
+            ->when($allBranches && $reach !== null, fn ($q) => $q->where(fn ($w) => $w->whereIn('branch_id', $reach === [] ? [0] : $reach)->orWhereNull('branch_id')))
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
     }
 
     /**

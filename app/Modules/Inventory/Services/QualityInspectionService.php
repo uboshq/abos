@@ -164,7 +164,7 @@ final class QualityInspectionService
         $target = (string) $inspection->inspected_qty;
 
         if (filled($inspection->source_type) && (int) $inspection->source_id > 0) {
-            $shelved = (string) StockMovement::query()
+            $shelved = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
                 ->forProduct((int) $inspection->product_id)
                 ->inWarehouse((int) $inspection->warehouse_id)
                 ->where('source_type', $inspection->source_type)
@@ -187,7 +187,7 @@ final class QualityInspectionService
         if ($inspection->batch !== null) {
             $more = $this->lesser($more, bcsub(
                 $inspection->batch->floorBalance($inspection->warehouse),
-                (string) StockMovement::query()->where('batch_id', $inspection->batch_id)
+                (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('batch_id', $inspection->batch_id)
                     ->inWarehouse((int) $inspection->warehouse_id)->sum('hold_change'),
                 4,
             ));
@@ -214,7 +214,7 @@ final class QualityInspectionService
     /** এই কাগজের রায়ের অপেক্ষার আটকানো, এখন কতটা — তালাসহ। */
     private function waitingHeld(QualityInspection $inspection): string
     {
-        return (string) StockMovement::query()
+        return (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('source_type', self::WAITING_SOURCE)
             ->where('source_id', $inspection->id)
             ->lockForUpdate()
@@ -345,7 +345,12 @@ final class QualityInspectionService
                     warehouse: $inspection->warehouse,
                     qty: $held,
                     reason: $this->reasonFor($result),
-                    date: $inspection->inspected_on,
+                    /*
+                     * ⓘ রায়ের দিন, পরিদর্শনের দিন নয় — উপরের অপেক্ষার ছাড়াও আজকের (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর
+                     * ২০২৬)। ⛔ আগে ৩০ সেপ্টেম্বরের পরিদর্শনে ২ অক্টোবরে রায়, আর মাঝে সেপ্টেম্বর বন্ধ: প্রতিটা চেষ্টা বন্ধ মাসে
+                     * আটকাত, কাগজ চিরকাল অপেক্ষমাণ, অপেক্ষার আটকানোও চিরকাল।
+                     */
+                    date: now(),
                     narration: $remarks ?? $inspection->remarks,
                     batch: $inspection->batch,
                     documentNo: $inspection->document_no,
@@ -426,9 +431,11 @@ final class QualityInspectionService
          * ⚠️ অপেক্ষমাণ কাগজে বিনাশ করতে দিলে পরিদর্শক দেখার আগেই মাল
          * চলে যেত, আর পরিদর্শনটার কোনো মানেই থাকত না।
          */
+        // ⓘ "অনুমোদিত" রায়ও — তার বাতিল অংশ আটকানো থাকে, আর সেটা বিনাশের পথ চায় (১৩ অক্টোবর ২০২৬; সীমা নিচে `heldBy()`)
         if (! in_array($inspection->status, [
             QualityInspection::REJECTED,
             QualityInspection::QUARANTINE,
+            QualityInspection::APPROVED,
         ], true)) {
             throw ValidationException::withMessages([
                 'status' => __('inventory::validation.qc_dispose_needs_verdict'),
@@ -538,7 +545,12 @@ final class QualityInspectionService
 
     private function reasonFor(string $result): ReasonCode
     {
-        $code = $result === QualityInspection::REJECTED ? 'HOLD-REJ' : 'HOLD-RET';
+        /*
+         * ⛔ কোয়ারেন্টাইন ছাড়া যেকোনো রায়ের আটকানো মানে বাতিল মাল — "অনুমোদিত" রায়ের বাতিল অংশও (মজুদ লাইন-ধরে নিরীক্ষা,
+         * ১৩ অক্টোবর ২০২৬)। ⓘ আগে অনুমোদিতের বাতিল অংশ `HOLD-RET`-এ আটকাত — ফেরার কারণ, তাই সাধারণ ছাড়ার পর্দা থেকে
+         * ছেড়ে কাউন্টারে বেচা যেত, অথচ বিনাশ করা যেত না। উপরের নিয়মটাই ("বাতিলের মাল ফেরে না") তখন মিথ্যা।
+         */
+        $code = $result === QualityInspection::QUARANTINE ? 'HOLD-RET' : 'HOLD-REJ';
 
         $reason = ReasonCode::query()->where('code', $code)->first();
 

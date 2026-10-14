@@ -123,6 +123,15 @@ final class SerialNumberService
                  */
                 $piece = SerialNumber::query()->numbered($serial)->lockForUpdate()->first();
 
+                /*
+                 * ⛔ নাগালের বাইরের গুদামের পিস "নেই" — [[backToStock()]]-এর একই দেয়াল (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+                 * ⓘ সিরিয়ালে কেবল কোম্পানির দেয়াল, তাই আগে এক শাখার কাউন্টার নম্বর টাইপ করে অন্য শাখার পিস "বিক্রি" করে দিতে পারতেন —
+                 * অন্য শাখার তাকে টিভিটা রইল, খাতায় বেরিয়ে গেল।
+                 */
+                if ($piece !== null && ! $this->inReach($piece)) {
+                    $piece = null;
+                }
+
                 if ($piece === null) {
                     throw ValidationException::withMessages([
                         'serials' => __('inventory::validation.serial_unknown', ['no' => $serial]),
@@ -175,6 +184,23 @@ final class SerialNumberService
 
             return $out;
         });
+    }
+
+    /**
+     * ⓘ পিসটা এই মানুষের নাগালের গুদামে কি না — গুদাম-সীমা আর হেডারের শাখা গুদামের দেয়ালে, আর শাখা-সীমা আলাদা করে
+     * ("সব শাখা"-তেও)। গুদামহীন পিস (পুরনো সারি) সবার নাগালে, আগের মতো।
+     */
+    private function inReach(SerialNumber $piece): bool
+    {
+        if ($piece->warehouse_id === null) {
+            return true;
+        }
+
+        $warehouse = Warehouse::query()->find($piece->warehouse_id);
+        $branches = app(DataScope::class)->idsFor(auth()->user(), UserDataScope::BRANCH);
+
+        return $warehouse !== null
+            && ($branches === null || $warehouse->branch_id === null || in_array((int) $warehouse->branch_id, $branches, true));
     }
 
     /**

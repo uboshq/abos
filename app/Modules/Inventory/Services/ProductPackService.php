@@ -204,7 +204,8 @@ final class ProductPackService
                 continue;
             }
 
-            if (! is_numeric($qty) || bccomp($qty, '0', 6) <= 0) {
+            // ⛔ কেবল সাধারণ দশমিক — `1e3` is_numeric পার হয়, কিন্তু bcmath-এ ValueError, অর্থাৎ ৫০০ (১৩ অক্টোবর ২০২৬)
+            if (preg_match('/^\d+(\.\d+)?$/', trim((string) $qty)) !== 1 || bccomp(trim((string) $qty), '0', 6) <= 0) {
                 $errors["{$at}.per_qty"] = __('inventory::validation.pack_qty_positive', ['unit' => $name]);
 
                 continue;

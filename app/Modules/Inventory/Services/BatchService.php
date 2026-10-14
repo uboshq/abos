@@ -72,7 +72,12 @@ final class BatchService
             ]);
         }
 
-        return DB::transaction(fn () => Batch::query()->firstOrCreate(
+        /*
+         * ⛔ দেখার দেয়াল ছাড়া খোঁজা — লট নম্বর অনন্য গোটা কোম্পানিতে (কোম্পানি · পণ্য · লট), গুদামে নয় (মজুদ লাইন-ধরে
+         * নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে যে লটের সব চলাচল অন্য গুদাম বা অন্য শাখায়, সেটা দেয়ালের আড়ালে পড়ত; খোঁজা
+         * কিছু পেত না, নতুন সারি বসাতে গিয়ে অনন্য-সূচকে ধাক্কা — ক্রয়, খোলা মজুদ, গণনা সবখানে ৫০০।
+         */
+        return DB::transaction(fn () => Batch::acrossWarehouses()->firstOrCreate(
             [
                 'product_id' => $product->id,
                 'batch_no' => $batchNo,

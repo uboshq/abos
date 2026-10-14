@@ -72,9 +72,10 @@ class QualityInspectionPolicy
      */
     public function dispose(User $user, QualityInspection $document): bool
     {
-        return $user->can('inventory.qc.decide') && in_array($document->status, [
+        // ⓘ "অনুমোদিত" রায়ের বাতিল অংশও আটকানো থাকে — তারও বিনাশের পথ লাগে (১৩ অক্টোবর ২০২৬)
+        return $user->can('inventory.qc.decide') && ($document->holdsRejects() || in_array($document->status, [
             QualityInspection::REJECTED,
             QualityInspection::QUARANTINE,
-        ], true);
+        ], true));
     }
 }

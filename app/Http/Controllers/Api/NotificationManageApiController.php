@@ -228,6 +228,8 @@ class NotificationManageApiController extends Controller
         ]);
 
         $page = NotificationJob::query()->with(['user:id,name', 'notification:id,title'])
+            // ⛔ শাখার দেয়াল — ওয়েবের পাঠানোর পর্দার মতোই ([[NotificationDeliveryController]]; [[ThePhoneDeliveriesStayInsideTheBranchWallTest]])
+            ->whereHas('notification', fn ($q) => \App\Core\Support\ViewedBranch::narrow($q, 'notifications.branch_id'))
             ->when($f['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->when($f['channel'] ?? null, fn ($q, $c) => $q->where('channel', $c))
             ->orderByDesc('id')->paginate($this->perPage($request));
@@ -252,6 +254,10 @@ class NotificationManageApiController extends Controller
     public function retryDelivery(Request $request, string $job): JsonResponse
     {
         $row = NotificationJob::query()->wherePublicId($job)->firstOrFail();
+
+        // ⛔ অন্য শাখার খবরের পাঠানো ফোন থেকেও আবার চালানো নয় — নাগালের বাইরে ৪০৪, ওয়েবের মতো
+        $branch = $row->notification?->branch_id;
+        abort_unless(app(\App\Core\Services\DataScope::class)->allows($request->user(), \App\Models\UserDataScope::BRANCH, $branch === null ? null : (int) $branch), 404);
 
         if (! app(DeliveryService::class)->retryByHand($row)) {
             return response()->json(['message' => __('core.notify.not_retryable')], 422);
