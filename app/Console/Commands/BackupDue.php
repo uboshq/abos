@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Core\Services\BackupService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * আজকের ব্যাকআপটা কি হয়েছে? না হলে এখনই নাও।
@@ -85,11 +86,28 @@ class BackupDue extends Command
         $stamp = $day->format('Y-m-d');
 
         foreach ($backups->all() as $file) {
-            if (str_contains(basename($file), $stamp)) {
+            if (str_contains(basename($file), $stamp) && ! $this->failedItsRestore(basename($file))) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * ⛔ যাচাইয়ে ফেরানো যায়নি এমন ডাম্প "আজকের ব্যাকআপ" নয় — ব্যাকআপ লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ যাচাই ভাঙলেও ফাইলটা ফোল্ডারে থাকে (খাতায় লাল সারি), আর আগে নামটা দেখেই ঘণ্টার প্রশ্ন বলত "নেওয়া হয়েছে" —
+     * তাই সারাদিন আর চেষ্টাই হত না, অথচ ফেরানোর মতো কোনো ব্যাকআপ নেই। কেবল খাতার "যাচাই ব্যর্থ" দাগই ফাইলটাকে বাদ দেয়;
+     * খাতায় না-থাকা ফাইল (ফেরানোর আগের নিরাপত্তা-কপি) আগের মতোই গোনে।
+     */
+    private function failedItsRestore(string $name): bool
+    {
+        return DB::table('bak_runs')
+            ->join('bak_verifications', 'bak_verifications.run_id', '=', 'bak_runs.id')
+            ->where('bak_runs.file', $name)
+            ->where('bak_verifications.kind', 'test_restore')
+            ->where('bak_verifications.status', 'failed')
+            ->exists();
     }
 }
