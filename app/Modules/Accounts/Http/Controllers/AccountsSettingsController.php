@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,8 +68,12 @@ class AccountsSettingsController extends Controller implements HasMiddleware
 
             $value = match ($definition['type']) {
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
-                'integer' => $raw === null || $raw === '' ? null : (int) $raw,
-                default => $raw,
+                /*
+                 * ⛔ সেটিং লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬: `(int) "10,000"` = 10, আর তালিকা এলে `(int) array` = 1 — কন্ট্রোল
+                 * প্যানেলের একই নিয়ম ([[PlainNumber::wholeFrom()]]); পূর্ণসংখ্যা না হলে "যা ছিল তাই থাক"। লেখার ঘরে তালিকা এলেও তাই।
+                 */
+                'integer' => $raw === null || $raw === '' ? null : PlainNumber::wholeFrom($raw),
+                default => is_scalar($raw) || $definition['type'] === 'json' ? $raw : null,
             };
 
             /*

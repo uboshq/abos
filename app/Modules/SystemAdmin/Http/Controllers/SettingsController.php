@@ -168,7 +168,8 @@ class SettingsController extends Controller implements HasMiddleware
                  */
                 'choice' => SettingOptions::allows($definition, $raw) ? $raw : null,
 
-                default => $raw,
+                // ⛔ লেখার ঘরে তালিকা এলে "যা ছিল তাই থাক" — আগে `(string) array`-এ ৫০০ (সেটিং লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                default => is_scalar($raw) || $definition['type'] === 'json' ? $raw : null,
             };
 
             if ($value === null) {
