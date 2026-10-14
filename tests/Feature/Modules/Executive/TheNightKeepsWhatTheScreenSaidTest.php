@@ -186,6 +186,20 @@ final class TheNightKeepsWhatTheScreenSaidTest extends TestCase
             ->assertDontSee(Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'NTK')->firstOrFail()->name());
     }
 
+    /** ⛔ হেডারের শাখা সব কিছু ছাঁকে — ইতিহাসের ছকেও (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+    public function test_a_header_branch_shows_that_branch_only_not_the_company_total(): void
+    {
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+
+        $mms = Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'MMS')->firstOrFail();
+        $this->owner->forceFill(['current_company_id' => $this->alpha->id, 'current_branch_id' => $mms->id, 'view_all_branches' => false])->save();
+        app(DataScope::class)->forget();
+
+        $this->actingAs($this->owner->fresh())->get(route('executive.history', ['date' => Carbon::today()->toDateString()]))->assertOk()
+            ->assertSee('data-history-row="'.$this->alpha->id.'-'.$mms->id.'"', false)
+            ->assertDontSee('data-history-row="'.$this->alpha->id.'-0"', false);
+    }
+
     private function sell(string $qty, string $rate): void
     {
         CompanyContext::forCompany((int) $this->alpha->id, function () use ($qty, $rate) {

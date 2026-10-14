@@ -183,7 +183,9 @@ final class Snapshots
                 }
             }
 
-            if ($this->seesWholeCompany($user, $company) && isset($rows[self::WHOLE])) {
+            // ⛔ হেডারে এক শাখা বাছা থাকলে গোটা কোম্পানির সারি নয় — "আজ" পাতা আর নিচের ধারার মতোই কেবল ঐ শাখা
+            // (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            if (($company['only'] ?? null) === null && $this->seesWholeCompany($user, $company) && isset($rows[self::WHOLE])) {
                 $out[] = ['company_id' => $company['id'], 'company_name' => $company['name'], 'branch_id' => null,
                     'name' => __('executive::today.company_total', ['company' => $company['name']]), 'values' => $this->values($rows[self::WHOLE], $readable)];
             }
