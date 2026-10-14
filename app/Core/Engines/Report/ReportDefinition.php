@@ -176,6 +176,13 @@ final class ReportDefinition
          * তাই ওয়েবে রপ্তানি `notification.reports.export` চায় — ফোনের রপ্তানির দরজাও এখন এটাই দেখে।
          */
         public readonly ?string $exportPermission = null,
+
+        /*
+         * ⭐ শাখার বদলে নিজের ভাগ — `fn (array $filters): list<array{id: ?int, name: string, filters: array}>` (মালিক, ১৪ অক্টোবর
+         * ২০২৬: লক্ষ্য বনাম আদায় "area wise jug thakbe")। ⓘ দেওয়া থাকলে পর্দা, ছাপা আর ফাইল শাখার জায়গায় এই ভাগে সাজায়;
+         * প্রতিটা ভাগের যোগ তার নিজের কোয়েরিতে, তাই Σ ভাগ = সর্বমোট — শাখার ভাগের একই নিয়ম। `null` (সব রিপোর্ট) = আগের মতো শাখা।
+         */
+        public readonly ?Closure $sections = null,
     ) {
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");

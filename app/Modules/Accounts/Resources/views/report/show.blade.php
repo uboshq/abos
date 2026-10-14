@@ -482,7 +482,7 @@
                                     @foreach ($columns as $index => $column)
                                         <td @class(['num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true)])>
                                             @if ($index === 0)
-                                                {{ __('core.report.branch_total') }} — {{ $section->branchName }}
+                                                {{ __($result->report->sections === null ? 'core.report.branch_total' : 'core.report.section_total') }} — {{ $section->branchName }}
                                             @elseif ($column->total && isset($section->totals[$column->key]))
                                                 {{-- ⓘ পরিমাণের মোটও দশমিক ছাড়া ([[ReportResult::number()]]) --}}
                                                 {{ \App\Core\Engines\Report\ReportResult::number($section->totals[$column->key], $column) }}
