@@ -140,7 +140,21 @@ class ReportController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:accounts.report')];
+        /*
+         * ⓘ দরজার চাবি `accounts.report` — কেবল যে রিপোর্ট নিজে "যেকোনো একটা চাবি" বলে ([[ReportDefinition::$anyKey]]), তাতে
+         * রিপোর্টের নিজের উত্তর (লক্ষ্য বনাম আদায়: হিসাব বা বিক্রয়ের চাবি, মালিক, ১৪ অক্টোবর ২০২৬)।
+         */
+        return [new Middleware(function (Request $request, \Closure $next) {
+            $key = self::SLUGS[(string) $request->route('slug')] ?? null;
+            $engine = app(ReportEngine::class);
+            $definition = is_string($key) && in_array($key, $engine->keys(), true) ? $engine->get($key) : null;
+
+            abort_unless($definition !== null && $definition->anyKey
+                ? $definition->allows($request->user())
+                : (bool) $request->user()?->can('accounts.report'), 403);
+
+            return $next($request);
+        })];
     }
 
     public function show(Request $request, string $slug): View
