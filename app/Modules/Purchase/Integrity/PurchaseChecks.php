@@ -46,14 +46,19 @@ final class PurchaseChecks implements ChecksItsOwnBooks
                     ->selectRaw('purchase_bill_id, COALESCE(SUM(amount), 0) as line_total')
                     ->groupBy('purchase_bill_id');
 
+                /*
+                 * ⛔ লাইনহীন বিলও ধরা পড়ে — বাঁ-জোড়, লাইন না থাকলে যোগ ০ (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+                 * ⓘ আগে ভিতরের জোড় ছিল: মোট আছে অথচ একটাও লাইন নেই এমন বিল ফলেই আসত না, যাচাই চিরকাল সবুজ।
+                 */
                 $rows = DB::table('pur_bills as b')
-                    ->joinSub($lines, 'l', 'l.purchase_bill_id', '=', 'b.id')
+                    ->leftJoinSub($lines, 'l', 'l.purchase_bill_id', '=', 'b.id')
                     ->where('b.company_id', CompanyContext::id())
                     ->whereNull('b.deleted_at')
                     ->where('b.status', '<>', DocumentStatus::CANCELLED)
-                    ->whereRaw('ABS(b.total - l.line_total) > 0.0001')
+                    ->whereRaw('ABS(b.total - COALESCE(l.line_total, 0)) > 0.0001')
                     ->limit(100)
-                    ->select(['b.id', 'b.document_no', 'b.total', 'l.line_total'])
+                    ->select(['b.id', 'b.document_no', 'b.total'])
+                    ->selectRaw('COALESCE(l.line_total, 0) as line_total')
                     ->get();
 
                 $out = [];
