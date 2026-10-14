@@ -15,6 +15,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * রাতের হিসাব — লেখা, তিন বছর রাখা, আর পড়া।
@@ -53,7 +54,12 @@ final class Snapshots
      *
      * ⓘ দুইবার চালালে দ্বিতীয়বার একই সারিগুলো নতুন করে লেখে, নতুন সারি বসায় না।
      *
-     * @return array{rows: int, skipped: list<string>}
+     * ⛔ এক কোম্পানির ভুল বাকিদের থামায় না — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬: আগে দ্বিতীয়
+     * কোম্পানিতে একটা ভুল (মডিউল বন্ধ, খরচের স্তর নেই, ডেডলক) হলে তার পরের সব কোম্পানির ঐ রাতের হিসাব আর
+     * পুরনো সারি সরানো — কিছুই হতো না, আর ঐ রাত পরে আর লেখা যায় না। ⭐ এখন ভুলটা লগে যায়
+     * ([[report()]]), কোম্পানির কোড `failed`-এ, আর পরের কোম্পানি চলে।
+     *
+     * @return array{rows: int, skipped: list<string>, failed: list<string>}
      */
     public function take(): array
     {
@@ -61,50 +67,70 @@ final class Snapshots
         $monthStart = Carbon::today()->startOfMonth()->toDateString();
         $rows = 0;
         $skipped = [];
+        $failed = [];
 
         foreach (Company::query()->where('is_active', true)->orderBy('id')->get() as $company) {
-            $viewer = $this->viewerFor((int) $company->id);
-
-            if ($viewer === null) {
-                $skipped[] = (string) $company->code;
-
-                continue;
-            }
-
-            $places = [null, ...array_column($this->lens->branches($viewer, (int) $company->id), 'id')];
-
-            foreach ($places as $branchId) {
-                $values = $this->lens->within($viewer, (int) $company->id, $branchId, fn () => [
-                    Figures::SALES => $this->figures->value($viewer, Figures::SALES, $day, $day),
-                    Figures::COLLECTIONS => $this->figures->value($viewer, Figures::COLLECTIONS, $day, $day),
-                    Figures::RECEIVABLE => $this->figures->value($viewer, Figures::RECEIVABLE, $day, $day),
-                    Figures::PAYABLE => $this->figures->value($viewer, Figures::PAYABLE, $day, $day),
-                    Figures::FUND => $this->figures->value($viewer, Figures::FUND, $day, $day),
-                    Figures::STOCK => $this->figures->value($viewer, Figures::STOCK, $day, $day),
-                    Figures::PROFIT => $this->figures->value($viewer, Figures::PROFIT, $monthStart, $day),
-                    // ⓘ অনুমোদনের সারিতে শাখা নেই — কেবল গোটা কোম্পানির সারিতে
-                    Figures::SIGNATURES => $branchId === null ? $this->figures->value($viewer, Figures::SIGNATURES, $day, $day) : null,
-                ]);
-
-                // ⓘ বাইরের কী কেবল প্রথম লেখায় বসে — দ্বিতীয়বার চালালে বদলায় না (হালনাগাদের তালিকায় নেই)
-                DB::table(self::TABLE)->upsert([[
-                    'public_id' => (string) Str::uuid7(),
-                    'company_id' => (int) $company->id,
-                    'branch_id' => $branchId,
-                    'place' => $branchId ?? self::WHOLE,
-                    'taken_on' => $day,
-                    ...$values,
-                    Figures::SIGNATURES => $values[Figures::SIGNATURES] === null ? null : (int) $values[Figures::SIGNATURES],
-                    'taken_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]], ['company_id', 'place', 'taken_on'], [...Figures::KEYS, 'branch_id', 'taken_at', 'updated_at']);
-
-                $rows++;
+            try {
+                $rows += $this->takeCompany($company, $day, $monthStart, $skipped);
+            } catch (Throwable $e) {
+                report($e);
+                $failed[] = (string) $company->code;
             }
         }
 
-        return ['rows' => $rows, 'skipped' => $skipped];
+        return ['rows' => $rows, 'skipped' => $skipped, 'failed' => $failed];
+    }
+
+    /**
+     * এক কোম্পানির আজ রাতের সারিগুলো — কয়টা লেখা হলো।
+     *
+     * @param  list<string>  $skipped
+     */
+    private function takeCompany(Company $company, string $day, string $monthStart, array &$skipped): int
+    {
+        $rows = 0;
+
+        $viewer = $this->viewerFor((int) $company->id);
+
+        if ($viewer === null) {
+            $skipped[] = (string) $company->code;
+
+            return 0;
+        }
+
+        $places = [null, ...array_column($this->lens->branches($viewer, (int) $company->id), 'id')];
+
+        foreach ($places as $branchId) {
+            $values = $this->lens->within($viewer, (int) $company->id, $branchId, fn () => [
+                Figures::SALES => $this->figures->value($viewer, Figures::SALES, $day, $day),
+                Figures::COLLECTIONS => $this->figures->value($viewer, Figures::COLLECTIONS, $day, $day),
+                Figures::RECEIVABLE => $this->figures->value($viewer, Figures::RECEIVABLE, $day, $day),
+                Figures::PAYABLE => $this->figures->value($viewer, Figures::PAYABLE, $day, $day),
+                Figures::FUND => $this->figures->value($viewer, Figures::FUND, $day, $day),
+                Figures::STOCK => $this->figures->value($viewer, Figures::STOCK, $day, $day),
+                Figures::PROFIT => $this->figures->value($viewer, Figures::PROFIT, $monthStart, $day),
+                // ⓘ অনুমোদনের সারিতে শাখা নেই — কেবল গোটা কোম্পানির সারিতে
+                Figures::SIGNATURES => $branchId === null ? $this->figures->value($viewer, Figures::SIGNATURES, $day, $day) : null,
+            ]);
+
+            // ⓘ বাইরের কী কেবল প্রথম লেখায় বসে — দ্বিতীয়বার চালালে বদলায় না (হালনাগাদের তালিকায় নেই)
+            DB::table(self::TABLE)->upsert([[
+                'public_id' => (string) Str::uuid7(),
+                'company_id' => (int) $company->id,
+                'branch_id' => $branchId,
+                'place' => $branchId ?? self::WHOLE,
+                'taken_on' => $day,
+                ...$values,
+                Figures::SIGNATURES => $values[Figures::SIGNATURES] === null ? null : (int) $values[Figures::SIGNATURES],
+                'taken_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]], ['company_id', 'place', 'taken_on'], [...Figures::KEYS, 'branch_id', 'taken_at', 'updated_at']);
+
+            $rows++;
+        }
+
+        return $rows;
     }
 
     /**
