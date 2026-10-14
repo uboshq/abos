@@ -75,7 +75,9 @@ final class TheNightsRecordHidesWhatTheReadersKeysHideTest extends TestCase
             ->assertSee('data-cell="fund">'.Figures::HIDDEN.'</td>', false)
             ->assertSee('data-cell="signatures">'.Figures::HIDDEN.'</td>', false);
 
-        $this->assertNotSame([], $page->viewData('series'), 'প্রস্তুতিটাই ভুল — খোলা সংখ্যার ধারাও খালি।');
+        // ⓘ ধারা না বললে পাওনার ধারা — পাঠকের পাওনার চাবি নেই, তাই খোলা সংখ্যা বিক্রি দিয়ে প্রস্তুতি যাচাই
+        $open = $this->actingAs($reader)->get(route('executive.history', ['date' => $today, 'figure' => Figures::SALES]))->assertOk();
+        $this->assertNotSame([], $open->viewData('series'), 'প্রস্তুতিটাই ভুল — খোলা সংখ্যার ধারাও খালি।');
 
         foreach ([Figures::STOCK, Figures::FUND, Figures::SIGNATURES] as $key) {
             $trend = $this->actingAs($reader)->get(route('executive.history', ['date' => $today, 'figure' => $key]))->assertOk();
