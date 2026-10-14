@@ -1547,7 +1547,8 @@ final class ApprovalEngine
         foreach (app(DelegationService::class)->actingFor($user, $approval->module, $approval->action) as $fromId) {
             $from = User::find($fromId);
 
-            if ($from !== null && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
+            // ⛔ বন্ধ করা মানুষের ভার আর খাটে না — চাকরি গেলে তাঁর হয়ে সইও যায় ([[AStandInMustBeOneOfUsTest]])
+            if ($from !== null && $from->is_active && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
                 return $fromId;
             }
         }
