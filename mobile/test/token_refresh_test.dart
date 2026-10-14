@@ -37,6 +37,21 @@ class _Stub implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// নবায়নের দরজা ব্যস্ত (৫০৩) — সার্ভার "না" বলেনি
+class _Busy implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    ResponseBody json(Object body, int status) => ResponseBody.fromString(jsonEncode(body), status, headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        });
+    if (options.path.endsWith('/auth/refresh')) return json({'message': 'Service Unavailable'}, 503);
+    return json({'message': 'expired'}, 401);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 void main() {
   late HttpClientAdapter real;
 
@@ -85,6 +100,18 @@ void main() {
     await expectLater(ApiClient.dio.get<Map<String, dynamic>>('/me'), throwsA(isA<DioException>()));
     expect(expired, isTrue);
     expect(await TokenStorage.instance.refreshToken(), isNull);
+  });
+
+  test('a refresh that fails on a busy server keeps the session: no sign-out, tokens kept (phone line audit, 15 Oct 2026)', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'A1', refreshToken: 'R1');
+    ApiClient.dio.httpClientAdapter = _Busy();
+    var expired = false;
+    ApiClient.onSessionExpired = () => expired = true;
+
+    await expectLater(ApiClient.dio.get<Map<String, dynamic>>('/me'), throwsA(isA<DioException>()));
+
+    expect(expired, isFalse, reason: '⛔ সার্ভার ব্যস্ত বলেই মানুষ বের হয়ে গেলেন — অফলাইন তালিকাও মুছত');
+    expect(await TokenStorage.instance.refreshToken(), 'R1', reason: '⛔ ব্যস্ত সার্ভারে টোকেন মুছে গেল');
   });
 }
 
