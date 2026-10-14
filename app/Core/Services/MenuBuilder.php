@@ -597,10 +597,7 @@ final class MenuBuilder
      */
     private function moduleEnabled(ModuleDefinition $module, array $switchedOff): bool
     {
-        if (! (bool) $this->settings->get($module->code.'.enabled', true)) {
-            return false;
-        }
-
-        return ! in_array($module->code, $switchedOff, true);
+        // ⓘ নিয়মটা এখন এক জায়গায় — হোমের ঘরগুলোও একই উত্তর নেয় (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        return $this->switches->moduleIsOn($this->settings, $module, $switchedOff);
     }
 }

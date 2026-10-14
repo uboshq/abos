@@ -6,6 +6,8 @@ namespace App\Core\Services;
 
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 
 /**
  * প্রতিটা মডিউল, প্রতিটা গ্রুপ, প্রতিটা মেনু সারির নিজের সুইচ।
@@ -171,6 +173,28 @@ final class MenuSwitches
         }
 
         return $out;
+    }
+
+    /**
+     * মডিউলটা এই কোম্পানিতে আর এই শাখায় চালু কি না — কোম্পানির সুইচ আগে, তারপর শাখার সারি।
+     *
+     * ── ⛔ কেন এখানে, এক জায়গায় (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬) ──
+     * নিয়মটা ছিল কেবল [[MenuBuilder]]-এর ভিতরে। হোমের ঘর আর "সাম্প্রতিক
+     * ঘটনা" ([[DashboardRegistry]], [[ActivityRegistry]]) মডিউলের সুইচ
+     * দেখতই না: HR বন্ধ করা কোম্পানির হোমে "আজ উপস্থিত ০ / ৫", আর ক্লিকে
+     * ৪০৪। একই প্রশ্নের দুই উত্তর হলে একদিন আবার আলাদা হত, তাই উত্তরটা এখানে।
+     *
+     * @param  list<string>|null  $switchedOff  এই শাখায় বন্ধ মডিউলগুলো — null হলে এখনই পড়া হয়
+     */
+    public function moduleIsOn(SettingsService $settings, ModuleDefinition $module, ?array $switchedOff = null): bool
+    {
+        if (! (bool) $settings->get($this->forModule($module->code), true)) {
+            return false;
+        }
+
+        $switchedOff ??= BranchModule::switchedOffIn(CompanyContext::branchId());
+
+        return ! in_array($module->code, $switchedOff, true);
     }
 
     /**
