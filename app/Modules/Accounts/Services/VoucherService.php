@@ -822,6 +822,20 @@ final class VoucherService
      *  · ব্যাংকে মেলানো — মেলানোটা পুরনো অঙ্কে দাঁড়িয়ে
      */
     /**
+     * ⛔ যে কাগজ নিজের খসড়া ভাউচার এই পর্দায় (বা ভাউচারের শেষ সইয়ে, [[VoucherWriter::post()]]) পাকা হতে পাঠায় — তার নিজের পাকা
+     * করার পথ নেই, তাই [[ownerOf()]] এদের ধরে না; ধরলে কাজটা চিরকাল আটকে থাকত (fe, ১৪ অক্টোবর ২০২৬;
+     * [[ADraftHandedToTheVoucherScreenIsPostedThereTest]])। অর্থের (`fin_*`) কাগজ নিজের সইয়ে নিজে পাকা করে, তাই পাহারায় থাকে।
+     *
+     * ⓘ কর্মীর খরচের দাবি/অগ্রিম — শেষ সইয়ে খসড়া, ক্যাশিয়ার নিজের টিল থেকে ভাউচারের পর্দায় পাকা করেন।
+     * ⓘ চালান আর ট্রিপের ভাড়া — হাতে লেখা ভাউচারের পথে; সই লাগলে শেষ সইয়ে, লেখক নিজে হলে অন্য কেউ ভাউচারের পর্দা থেকে।
+     */
+    private const HANDED_TO_THE_VOUCHER_SCREEN = [
+        'hr_expense_claims.payment_voucher_id',
+        'sal_challans.fare_voucher_id',
+        'sal_shipments.fare_voucher_id',
+    ];
+
+    /**
      * ⛔ এই ভাউচার অন্য কোনো কাগজের কি না — আর হলে কোন মডিউলের (অর্থের নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnotherPapersVoucherIsNotTouchedHereTest]])।
      *
      * ⓘ জমা, ঋণ, ভাড়া, মূলধন, বীমা, খরচের দাবি, গাড়িভাড়া — প্রত্যেকে নিজের ভাউচার বানিয়ে নিজের সারিতে `…voucher_id` রাখে। Accounts-এর
@@ -833,20 +847,44 @@ final class VoucherService
     {
         /*
          * ⓘ টেবিলের তালিকা একবার, ক্যাশে — শেষ মাইগ্রেশনের নাম চাবিতে, তাই নতুন মাইগ্রেশন এলে নিজে থেকে নতুন তালিকা (fe, ১৪ অক্টোবর ২০২৬)।
-         * ⓘ খোঁজা চলে কেবল হাতের পাকা/সম্পাদনা আর সংশোধনের প্রশ্নে, ইঞ্জিনের প্রতিটা দাখিলায় নয়। ⓘ MariaDB/MySQL দুটোতেই
-         * `information_schema.COLUMNS`, চলতি ডাটাবেস (`DATABASE()`) ধরে ছাঁকা; টেবিলের নাম ছোট হাতে, তাই অক্ষরের নিয়মে আটকায় না।
+         * ⓘ খোঁজা চলে কেবল হাতের পাকা/সম্পাদনা আর সংশোধনের প্রশ্নে, ইঞ্জিনের প্রতিটা দাখিলায় নয়। ⓘ কাঠামো পড়া হয় Laravel-এর Schema দিয়ে (চলতি ডাটাবেস, MariaDB/MySQL দুটোতেই),
+         * কাঁচা SQL নয়; টেবিলের নাম ছোট হাতে, আর কেবল `company_id`-ওয়ালা টেবিল — খোঁজা সবসময় কোম্পানি ধরে।
          */
         $version = (string) DB::table('migrations')->max('migration');
-        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), fn () => DB::table('information_schema.COLUMNS')
-            ->whereRaw('TABLE_SCHEMA = DATABASE()')
-            ->where('COLUMN_NAME', 'like', '%voucher\_id')
-            ->get(['TABLE_NAME as t', 'COLUMN_NAME as c'])
-            ->map(fn ($r) => ['t' => strtolower((string) $r->t), 'c' => (string) $r->c])
-            ->reject(fn (array $r) => in_array($r['t'], ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true))
-            ->values()->all());
+        $columns = \Illuminate\Support\Facades\Cache::rememberForever('accounts.voucher_owners.'.md5($version), function (): array {
+            $found = [];
+
+            foreach (\Illuminate\Support\Facades\Schema::getTables() as $table) {
+                $name = strtolower((string) $table['name']);
+
+                if (in_array($name, ['voucher_lines', 'acc_voucher_bill_shares', 'acc_inter_company'], true)) {
+                    continue;
+                }
+
+                $listing = \Illuminate\Support\Facades\Schema::getColumnListing($name);
+
+                if (! in_array('company_id', $listing, true)) {
+                    continue;
+                }
+
+                foreach ($listing as $column) {
+                    if (str_ends_with((string) $column, 'voucher_id')) {
+                        $found[] = ['t' => $name, 'c' => (string) $column];
+                    }
+                }
+            }
+
+            return $found;
+        });
 
         foreach ($columns as $row) {
             $table = $row['t'];
+
+            // ⓘ নিজের খসড়া ভাউচারের পর্দায় পাকা হতে পাঠানো কাগজ — পাহারা খাটে না ([[HANDED_TO_THE_VOUCHER_SCREEN]])
+            if (in_array($table.'.'.$row['c'], self::HANDED_TO_THE_VOUCHER_SCREEN, true)) {
+                continue;
+            }
+
             $held = DB::table($table)
                 ->where('company_id', $voucher->company_id)
                 ->where($row['c'], $voucher->getKey())

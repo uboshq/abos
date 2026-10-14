@@ -56,6 +56,9 @@ final class NoticeBoard
     {
         $query = Notice::query()
             ->liveOn($day ?? Carbon::today())
+            // ⛔ কেবল প্রকাশিত ([[NoticeStatus::isLive()]]) — খসড়া, ফেরানো, স্থগিত, বাতিল কর্মীর তালিকায়, গোনায় আর ফোনে নয়
+            // (Notice লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[OnlyAPublishedNoticeReachesStaffTest]])। খসড়াও `is_active` জন্মায়, তাই সুইচ যথেষ্ট নয়।
+            ->where('status', \App\Core\Support\NoticeStatus::PUBLISHED->value)
             ->with(['author', 'targets']);
 
         /*
