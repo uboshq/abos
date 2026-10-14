@@ -6,6 +6,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Services\ExchangeRateService;
@@ -74,14 +75,25 @@ class ExchangeRateController extends Controller implements HasMiddleware
 
         $data = $request->validate([
             'effective_from' => ['required', 'date'],
-            'rate' => ['required', 'numeric', 'gt:0'],
+            /*
+             * ⛔ সাদা সংখ্যা — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ `numeric` `1e3` ছেড়ে দিত, আর সেবার
+             * `bccomp()` ওগুলোয় ValueError-এ ৫০০ দিত; ১২ অঙ্কের বেশি হলে কলাম (decimal 18,6) উপচে আবার ৫০০। ⭐ এখন "১১৭.৫০",
+             * "1,17" নয় — কমা ও বাংলা অঙ্ক পড়া হয় [[PlainNumber::from()]] দিয়ে, কন্ট্রোল প্যানেলের একই নিয়মে।
+             */
+            'rate' => ['required', function (string $attribute, mixed $value, \Closure $fail): void {
+                $plain = PlainNumber::from($value);
+
+                if ($plain === null || bccomp($plain, '0', 6) <= 0 || strlen(ltrim(explode('.', $plain)[0], '-')) > 12) {
+                    $fail(__('master_data::validation.rate_plain_number'));
+                }
+            }],
             'source' => ['nullable', 'string', 'max:120'],
         ]);
 
         $this->rates->record(
             $currency,
             $data['effective_from'],
-            (string) $data['rate'],
+            (string) PlainNumber::from($data['rate']),
             $data['source'] ?? null,
         );
 
