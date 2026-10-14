@@ -185,10 +185,10 @@
              থেকেই আছে। --}}
         {{-- ⭐ বিনাশের নিজের নিয়ম (অডিট গ৪, ৪ অক্টোবর ২০২৬) — ⛔ `decide` কেবল অপেক্ষমাণ কাগজে খোলে, তাই ফর্মটা কখনো দেখা যেত না --}}
         @can('dispose', $inspection)
-            @if (in_array($inspection->status, [
+            @if (($inspection->holdsRejects() || in_array($inspection->status, [
                 \App\Modules\Inventory\Models\QualityInspection::REJECTED,
                 \App\Modules\Inventory\Models\QualityInspection::QUARANTINE,
-            ], true) && $writeOffReasons->isNotEmpty())
+            ], true)) && $writeOffReasons->isNotEmpty())
                 <form method="POST" action="{{ route('inventory.qc.dispose', $inspection) }}"
                       data-boxed
                       class="rounded-(--radius-card) border border-(--color-border)

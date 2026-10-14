@@ -85,10 +85,12 @@ final class OpeningStockService
         // ⭐ মালটা কোন সরবরাহকারী/প্রিন্সিপালের — ঐচ্ছিক; স্তরে বসে, "আসল" কমিশন সেখান থেকে পড়ে (মালিক, ৬ অক্টোবর ২০২৬)
         ?int $supplierId = null,
     ): StockMovement {
-        $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
-        $this->assertWhole($product, $qty);
-
         return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch, $supplierId) {
+            // ⛔ যাচাই তালার পরে, লেনদেনের ভেতরে — দুইবার চাপা বা দুই ট্যাবে দুইজনই "এখনো বসেনি" দেখে মজুদ, স্তর আর খাতা দুইবার বসাত
+            $this->lockProduct($product);
+            $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
+            $this->assertWhole($product, $qty);
+
             $movement = $this->stock->move(
                 product: $product,
                 warehouse: $warehouse,
@@ -157,6 +159,20 @@ final class OpeningStockService
         }
 
         return DB::transaction(function () use ($warehouse, $rows, $date, $narration) {
+            /*
+             * ⛔ কার্টের সব পণ্যে তালা — লেনদেনের একেবারে প্রথম কাজ, id-র ক্রমে (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⚠️ MySQL-এর REPEATABLE READ-এ লেনদেনের প্রথম সাধারণ পড়াতেই ছবি তোলা হয়ে যায়। নিচের সারি-প্রতি
+             * [[lockProduct()]]-এর আগে `Product::find()` আর লটের খোঁজ চলে — তাই দ্বিতীয় চাপ তালার জন্য অপেক্ষা শেষ করেও
+             * পুরনো ছবিতে "এখনো বসেনি" দেখত, আর খোলা মজুদ দুইবার বসত। ⓘ তালা-পড়া (FOR UPDATE) ছবি তোলে না, সর্বশেষ কমিট
+             * পড়ে; তালাগুলো আগে পড়লে পরের সব সাধারণ পড়া প্রথম চাপের কমিটের পরের ছবি দেখে। ⓘ id-র ক্রমে — দুই কার্ট উল্টো
+             * ক্রমে একই পণ্য ধরলে আটকাআটকি (deadlock) হত না।
+             */
+            $ids = collect($rows)->map(fn ($row) => (int) ($row['product_id'] ?? 0))->filter()->unique()->sort()->values()->all();
+
+            if ($ids !== []) {
+                Product::query()->withoutGlobalScopes()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->pluck('id');
+            }
+
             $errors = [];
             $movements = [];
             $total = '0';
@@ -230,6 +246,7 @@ final class OpeningStockService
             $batch = app(BatchService::class)->receive(product: $product, batchNo: $no, expiry: ($row['expiry_date'] ?? null) ?: null);
         }
 
+        $this->lockProduct($product);
         $this->assertSane($product, $warehouse, $qty, $cost, $batch, $topUp ?? false, $date ?? now());
 
         // ⭐ ফ্রি — খরচ ছাড়া, একই লটে (ক্রয়ের মতো); খরচের স্তরে বসে না
@@ -288,7 +305,8 @@ final class OpeningStockService
      */
     public function exists(Product $product, Warehouse $warehouse, ?Batch $batch = null): bool
     {
-        return StockMovement::query()
+        // ⛔ দেখার দেয়াল ছাড়া — এই যাচাইগুলো মানুষের দেখার নয়, খাতার সত্যির (stillOpen, editable, প্রথম চলাচল একই; মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        return StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             ->where('source_type', self::SOURCE_TYPE)
@@ -449,7 +467,7 @@ final class OpeningStockService
         $movement = StockMovement::acrossBranches()->whereKey($movement->id)->lockForUpdate()->firstOrFail();
 
         if ($movement->source_type !== self::SOURCE_TYPE || bccomp((string) $movement->floor_change, '0', 4) <= 0
-            || StockMovement::query()->where('source_type', self::CORRECTED)->where('source_id', $movement->id)->exists()) {
+            || StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('source_type', self::CORRECTED)->where('source_id', $movement->id)->exists()) {
             throw ValidationException::withMessages(['movement' => __('inventory::message.opening_not_editable')]);
         }
 
@@ -529,7 +547,7 @@ final class OpeningStockService
      */
     public function stillOpen(Product $product, Warehouse $warehouse, Carbon|string|null $date = null): bool
     {
-        $moves = StockMovement::query()
+        $moves = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             // ⓘ অন্য লটের খোলা মজুদ লেনদেন নয় — চালুর দিন সব লট একই সারিতে বসে (ম২৪); তার সংশোধনও নয় (৬ অক্টোবর ২০২৬)
@@ -620,6 +638,18 @@ final class OpeningStockService
         }
     }
 
+    /**
+     * ⛔ পণ্যের সারিতে তালা — "আগেই বসেছে কি না" দেখার আগে (মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে যাচাই চলত তালা ছাড়া, আর একক পথে লেনদেনের বাইরেও: দুইবার চাপা বা দুই ট্যাবে দুইজনই "বসেনি" দেখতেন, আর মজুদ,
+     * খরচের স্তর আর Dr মজুদ / Cr শুরুর মূলধন দুইবার বসত। ⓘ তালা পড়ার পরের সাধারণ পড়া সর্বশেষ কমিট দেখে, তাই দ্বিতীয়জন
+     * অপেক্ষা শেষে প্রথমজনের সারি দেখেন আর থামেন। ⚠️ "Opening" লটে যোগ (`$topUp`) ইচ্ছা করেই বারবার চলে — মালিকের নিয়ম।
+     */
+    private function lockProduct(Product $product): void
+    {
+        Product::query()->withoutGlobalScopes()->whereKey($product->id)->lockForUpdate()->first();
+    }
+
     private function assertSane(
         Product $product,
         Warehouse $warehouse,
@@ -689,7 +719,7 @@ final class OpeningStockService
 
         if (! $this->stillOpen($product, $warehouse, $date)) {
             // ⓘ কিছুই বের না হয়ে থাকলে পথটা বলে দেওয়া — খোলার তারিখ প্রথম চলাচলের দিন বা তার আগে
-            $first = StockMovement::query()->where('product_id', $product->id)->where('warehouse_id', $warehouse->id)
+            $first = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)->where('product_id', $product->id)->where('warehouse_id', $warehouse->id)
                 ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])->min('trx_date');
             $onlyLater = $first !== null && $this->stillOpen($product, $warehouse, $first);
 
