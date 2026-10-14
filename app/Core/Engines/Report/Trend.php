@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Support\Money;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 
@@ -159,7 +160,8 @@ final class Trend
             return null;
         }
 
-        return bcdiv(bcmul(bcsub($now, $was, 4), '100', 6), self::abs($was), 2);
+        // ⛔ গোল করা, কাটা নয় — ২/৩ বেড়েছে মানে ৬৬.৬৭%, ৬৬.৬৬% নয় (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        return Money::round(bcdiv(bcmul(bcsub($now, $was, 4), '100', 6), self::abs($was), 4), 2);
     }
 
     private static function abs(string $value): string

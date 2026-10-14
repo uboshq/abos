@@ -388,9 +388,9 @@ final class ReportEngine
             $now = (string) ($row[$rank] ?? '0');
 
             // আগের সময়ে কিছুই ছিল না — শতাংশে সেটা অসীম, তাই খালি
-            $row['change_percent'] = ($was === null || bccomp($was, '0', 4) === 0)
-                ? null
-                : bcdiv(bcmul(bcsub($now, $was, 4), '100', 6), $was, 2);
+            // ⛔ ভাগ আগের মানের পরম মানে, মালিকের কেন্দ্রের একই নিয়মে ([[Trend::change()]]) — আগে চিহ্নসহ ভাগ হত, তাই −১,০০০ থেকে
+            // +৫০০ দেখাত "−১৫০%", যেন কমেছে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১১, ১৪ অক্টোবর ২০২৬)
+            $row['change_percent'] = $was === null ? null : Trend::change($now, $was);
 
             return $row;
         });
