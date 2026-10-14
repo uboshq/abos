@@ -258,6 +258,7 @@
                                    aria-label="{{ __('approval::field.escalate_hours') }}"
                                    class="rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-app) px-2 py-1.5 text-sm">
+                            <span class="text-2xs text-(--color-ink-muted)" data-escalate-hint>{{ __('approval::field.escalate_hours_hint') }}</span>
                         </label>
 
                         {{-- ⓘ গন্তব্যও একটাই ঘরে, সইকারীর মতোই — কারণটা

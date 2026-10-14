@@ -327,6 +327,12 @@ class ControlPanelController extends Controller implements HasMiddleware
                 && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::from($raw) === null) {
                 $notNumbers[] = __($definition['label']);
             }
+
+            // ⛔ পূর্ণসংখ্যার ঘরেও — ভগ্নাংশ, ঋণাত্মক, লেখা বা তালিকা এলে পুরো ফর্ম ফেরে (১৪ অক্টোবর ২০২৬)
+            if (isset($scope[$key]) && ($definition['type'] ?? null) === 'integer'
+                && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::wholeFrom($raw) === null) {
+                $notNumbers[] = __($definition['label']);
+            }
         }
 
         if ($notNumbers !== []) {
@@ -359,7 +365,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                 // চেকবক্স না দেখালে ব্রাউজার কিছুই পাঠায় না, তাই
                 // অনুপস্থিতিই "বন্ধ"
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
-                'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+                // ⛔ ভুল লেখা উপরে থেমেছে; এখানে কেবল শুদ্ধ পূর্ণসংখ্যা ([[PlainNumber::wholeFrom()]])
+                'integer' => $raw === null || $raw === '' ? null : PlainNumber::wholeFrom($raw),
                 // ⭐ "১০,০০০" → "10000"; খালি মানে "যা ছিল তাই থাক" ([[SettingsController]]-এর মতো)
                 'number' => PlainNumber::from($raw),
 
@@ -375,7 +382,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                  * অচেনা মান এলে "যা ছিল তাই থাক", ঠিক [[SettingsController]]-এর মতো।
                  */
                 'choice' => SettingOptions::allows($definition, $raw) ? $raw : null,
-                default => $raw,
+                // ⛔ লেখার ঘরে তালিকা এলে "যা ছিল তাই থাক" — আগে `(string) array`-এ ৫০০ (সেটিং লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                default => is_scalar($raw) || $definition['type'] === 'json' ? $raw : null,
             };
 
             if ($value === null) {

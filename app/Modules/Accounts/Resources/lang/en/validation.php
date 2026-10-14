@@ -151,6 +151,7 @@ return [
     'not_enough_money_in' => ':account holds :held — :amount cannot go out of it. A cash or bKash balance never goes below zero.',
     'cheque_not_from_collection' => 'Cheque :no was not taken on a receipt — return it with the Bounce button on the cheque register.',
     'cleared_cheque_not_cancelled' => 'Cheque :no has cleared and cannot be cancelled. If the bank took the money back, mark it bounced.',
+    'opening_in_future' => 'An opening balance cannot sit on a future date — give today or an earlier day.',
     'cheque_needs_bank' => 'Say which bank account the money lands in.',
     'cheque_already_decided' => 'Cheque :no has already been decided.',
     'cheque_needs_no' => 'A cheque needs its number and date.',

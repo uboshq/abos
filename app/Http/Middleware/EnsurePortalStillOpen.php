@@ -42,7 +42,8 @@ class EnsurePortalStillOpen
          */
         // ⛔ নিষ্ক্রিয় বা মুছে ফেলা গ্রাহকও — দরজা বন্ধের একই মানে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৫)
         if ($customer !== null && (! $customer->portal_enabled || ! $customer->is_active
-            || (method_exists($customer, 'trashed') && $customer->trashed()))) {
+            || (method_exists($customer, 'trashed') && $customer->trashed())
+            || $this->passwordChangedSince($request, $customer))) {
             Auth::guard('portal')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -53,5 +54,52 @@ class EnsurePortalStillOpen
         }
 
         return $next($request);
+    }
+
+    /** সেশনে এই গ্রাহকের পাসওয়ার্ডের ছাপ — কর্মীদের দরজার জোড়া ([[RefuseInactiveAccounts::FINGERPRINT]]) */
+    public const FINGERPRINT = 'portal.password_fingerprint';
+
+    /** ঢোকার মুহূর্তে বসানো — [[PortalController::login()]] */
+    public static function remember(Request $request, \Illuminate\Contracts\Auth\Authenticatable $customer): void
+    {
+        $request->session()->put(self::FINGERPRINT, self::fingerprintOf($customer));
+    }
+
+    /**
+     * ⛔ সেশন খোলার পরে পাসওয়ার্ড বদলেছে কি না (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ANewPortalPasswordLeftTheOldSessionInTest]])।
+     *
+     * ⚠️ পাসওয়ার্ড ফাঁস হলে মালিক নতুন পাসওয়ার্ড বসান, পর্দা বলে "পুরনোটা আর চলবে না" — অথচ যিনি পুরনোটা দিয়ে আগেই ঢুকে
+     * আছেন তিনি সেশন শেষ না হওয়া পর্যন্ত খাতা, বকেয়া দেখতেন আর আদেশ দিতেন। ⓘ সেশন ড্রাইভার `file`, তাই অন্যের সেশন মোছা
+     * যায় না — প্রতিটা সেশন নিজের মধ্যে পাসওয়ার্ড-হ্যাশের HMAC রাখে, পরের অনুরোধে মেলায়। ⓘ ছাপ না থাকা পুরনো সেশন প্রথমবার ছাপ
+     * পায় (সবাইকে একসাথে বের করে না)।
+     */
+    private function passwordChangedSince(Request $request, \Illuminate\Contracts\Auth\Authenticatable $customer): bool
+    {
+        if (! $request->hasSession()) {
+            return false;
+        }
+
+        $seen = $request->session()->get(self::FINGERPRINT);
+
+        /*
+         * ⓘ ছাপ কার, সেটাও রাখা — অন্য গ্রাহকের ছাপ মানে এই সেশনে নতুন জন ঢুকেছেন (ঢোকার পথ নিজেই ছাপ বসায়), পাসওয়ার্ড
+         * বদল নয়; তখন নতুন ছাপ, বের করা নয়। ⚠️ আগে কেবল হ্যাশ রাখায় এক সেশনে গ্রাহক বদলালে ভুলে বের করে দিত।
+         */
+        if (! is_array($seen) || (string) ($seen['id'] ?? '') !== (string) $customer->getAuthIdentifier()) {
+            self::remember($request, $customer);
+
+            return false;
+        }
+
+        return ! hash_equals((string) ($seen['hash'] ?? ''), self::fingerprintOf($customer)['hash']);
+    }
+
+    /** @return array{id: string, hash: string} */
+    private static function fingerprintOf(\Illuminate\Contracts\Auth\Authenticatable $customer): array
+    {
+        return [
+            'id' => (string) $customer->getAuthIdentifier(),
+            'hash' => hash_hmac('sha256', $customer->getAuthIdentifier().'|'.$customer->getAuthPassword(), (string) config('app.key')),
+        ];
     }
 }

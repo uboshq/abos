@@ -58,9 +58,42 @@ final class CustomerLimitImporter implements Importer, ImportNeedsKeys
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
         } elseif (bccomp($limit, '0', 4) < 0) {
             $errors[] = __('customer::import.limit_not_negative');
+        } elseif (($customer = $this->customer($row)) !== null) {
+            $errors = [...$errors, ...$this->raiseWouldStop($customer, $limit)];
         }
 
         return $errors;
+    }
+
+    /**
+     * ⛔ বাড়ানো সারি যাচাইয়েই থামে, যেখানে বসাতে গিয়ে থামত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[TheLimitFileWasGreenAndThenFailedTest]])। ⓘ [[CustomerService::proposeLimit()]]-এর দুই থামার জায়গা: সীমার সইয়ের ছক
+     * নেই, অথবা এই গ্রাহকের অন্য অঙ্কের একটা অনুরোধ আগেই সইয়ের অপেক্ষায়। আগে পর্দা সবুজ দেখাত, তারপর সারিগুলো একে একে পড়ত।
+     *
+     * @return list<string>
+     */
+    private function raiseWouldStop(Customer $customer, string $limit): array
+    {
+        if (bccomp($limit, bcadd((string) ($customer->credit_limit ?? '0') ?: '0', '0', 4), 4) <= 0) {
+            return [];
+        }
+
+        if (! app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires('customer', 'credit_limit', null, class_basename(Customer::class))) {
+            return [__('customer::validation.limit_needs_a_flow')];
+        }
+
+        $waiting = \App\Models\Approval::query()
+            ->where('approvable_type', $customer->getMorphClass())
+            ->where('approvable_id', $customer->getKey())
+            ->where('action', 'credit_limit')
+            ->where('status', \App\Models\Approval::PENDING)
+            ->pluck('amount');
+
+        $other = $waiting->first(fn ($amount) => $amount === null || bccomp((string) $amount, $limit, 4) !== 0);
+
+        return $other !== null && ! $waiting->contains(fn ($amount) => $amount !== null && bccomp((string) $amount, $limit, 4) === 0)
+            ? [__('customer::import.limit_other_request_waiting')]
+            : [];
     }
 
     /** @param  array<string, string>  $row */
@@ -81,7 +114,13 @@ final class CustomerLimitImporter implements Importer, ImportNeedsKeys
     {
         $code = trim((string) ($row['code'] ?? ''));
 
-        return $code === '' ? null : Customer::query()->where('code', $code)->first();
+        $customer = $code === '' ? null : Customer::query()->where('code', $code)->first();
+
+        // ⛔ পর্দার একই দেয়াল — শাখায় সীমিত মানুষ ফাইলে অন্য শাখার কোড লিখে তাদের সীমা কমাতেন বা বাড়ানোর অনুরোধ বসাতেন
+        // (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ALimitFileReachedAnotherBranchTest]])। ⓘ "এমন গ্রাহক নেই" — অন্য শাখার কে আছে, বলা হয় না
+        $user = auth()->user();
+
+        return $customer !== null && $user !== null && ! $user->can('update', $customer) ? null : $customer;
     }
 
     /**

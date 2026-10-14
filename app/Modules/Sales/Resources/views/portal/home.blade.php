@@ -10,7 +10,8 @@
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
             {{ __('sales::portal.due') }}
         </p>
-        <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::format($due) }}</p>
+        {{-- ⛔ (Dr)/(Cr), খালি বিয়োগ নয় — অগ্রিম "-৫,০০০" দেখাত, খাতার পাতা "(Cr) ৫,০০০" (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePortalHomeReadEveryBillAsZeroTest]]) --}}
+        <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::drCr($due) }}</p>
     </div>
 
     <a href="{{ route('sales.portal.claim.create') }}"
@@ -95,7 +96,8 @@
                         </span>
                     </span>
                     <span class="num font-medium">
-                        {{ \App\Core\Support\Money::format($invoice->grand_total) }}
+                        {{-- ⛔ বিলের ঘর `total` — `grand_total` নামে কোনো ঘর নেই, তাই প্রতিটা বিল ০.০০ পড়ত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬) --}}
+                        {{ \App\Core\Support\Money::format($invoice->total) }}
                     </span>
                 </li>
             @endforeach

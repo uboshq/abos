@@ -208,6 +208,18 @@ final class CreditLimitRequests
                 return;
             }
 
+            /*
+             * ⛔ অনুরোধের পরে সীমা অন্য পথে বদলে থাকলে কাগজটা পুরনো — মালিক পড়েছেন "১ লাখ থেকে দেড় লাখ", অথচ মাঝে ঝুঁকিতে
+             * সীমা ০ করা হয়েছিল; আগে সইয়ে দেড় লাখ বসে কমানোটা নীরবে মুছত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[ASignedRequestUndidALaterCutTest]])। ⓘ বসে না, কারণসহ `void`; দরকার হলে নতুন অনুরোধ, নতুন অঙ্কে।
+             */
+            if (bccomp((string) ($customer->credit_limit ?? '0'), (string) $request->current_limit, 4) !== 0) {
+                $request->forceFill(['status' => CustomerCreditRequest::VOID, 'decided_at' => now(),
+                    'note' => __('customer::credit_request.limit_moved')])->save();
+
+                return;
+            }
+
             $this->apply($request, $customer, (int) $approval->id);
         });
     }
@@ -251,9 +263,17 @@ final class CreditLimitRequests
             ->with('steps')
             ->get();
 
-        return $flows->contains(fn (ApprovalFlow $flow) => $flow->steps->contains(
+        /*
+         * ⛔ ইঞ্জিন যে ছক চালাবে, কেবল সেটাই — অনুরোধের নিজের ধরনের ছক থাকলে সেটা, নইলে সাধারণটা ([[ApprovalEngine::flowFor()]])।
+         * আগে যেকোনো একটায় মালিক থাকলেই "পারেন" বলত: সাধারণ ছকে মালিক, অথচ অনুরোধের ছকে কেবল ম্যানেজার — অনুরোধ উঠত, ম্যানেজার
+         * সই দিতেন, আর প্রতিবার `void` (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheOwnerWasOnAFlowThatNeverRanTest]])।
+         */
+        $flow = $flows->first(fn (ApprovalFlow $f) => $f->document_type === class_basename(CustomerCreditRequest::class))
+            ?? $flows->first(fn (ApprovalFlow $f) => (string) $f->document_type === '');
+
+        return $flow !== null && $flow->steps->contains(
             fn ($step) => $owners->contains(fn (User $owner) => $step->allows($owner)),
-        ));
+        );
     }
 
     /** ⓘ যিনি চাইলেন তিনি নিজে মালিক হলে নিজের খবর পান না (তিনি নিজেই জানেন) */

@@ -7,7 +7,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
-use App\Core\Support\CodeFromName;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
@@ -38,6 +38,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -125,8 +126,10 @@ class MasterListController extends Controller implements HasMiddleware
             'fields' => [
                 'base_unit_id' => ['type' => 'select', 'label' => 'master_data::field.base_unit',
                     'options' => 'units', 'hint' => 'master_data::message.base_unit_hint'],
+                // ⛔ শূন্যের বেশি, আর কলামের (decimal 18,6) মধ্যে — ০ গুণক মানে প্রতিটা রূপান্তর শূন্য (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
                 'factor' => ['type' => 'number', 'label' => 'master_data::field.factor',
-                    'step' => '0.000001', 'hint' => 'master_data::message.factor_hint'],
+                    'step' => '0.000001', 'hint' => 'master_data::message.factor_hint',
+                    'rules' => ['nullable', 'gt:0', 'max:999999999999']],
                 'allows_fraction' => ['type' => 'switch', 'label' => 'master_data::field.allows_fraction',
                     'hint' => 'master_data::message.allows_fraction_hint'],
             ],
@@ -138,8 +141,11 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'tax',
             'title' => 'master_data::menu.taxes',
             'fields' => [
-                'rate' => ['type' => 'number', 'label' => 'master_data::field.rate', 'step' => '0.0001'],
-                'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'tax_kinds', 'labels' => 'kind'],
+                // ⛔ ০–১০০ শতাংশ (কলাম decimal 8,4; ঋণাত্মক কর মানে উল্টো হিসাব) — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+                'rate' => ['type' => 'number', 'label' => 'master_data::field.rate', 'step' => '0.0001',
+                    'rules' => ['nullable', 'min:0', 'max:100']],
+                // ⛔ বাধ্যতামূলক — কলাম NOT NULL; "—" রাখলে আগে ৫০০ আসত, বার্তা নয় (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'tax_kinds', 'labels' => 'kind', 'rules' => ['required']],
                 'is_inclusive' => ['type' => 'switch', 'label' => 'master_data::field.is_inclusive'],
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.account', 'options' => 'accounts'],
             ],
@@ -184,7 +190,8 @@ class MasterListController extends Controller implements HasMiddleware
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.money_account',
                     'options' => 'money_accounts', 'rules' => ['required']],
                 'needs_reference' => ['type' => 'switch', 'label' => 'master_data::field.needs_reference'],
-                'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001'],
+                'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001',
+                    'rules' => ['nullable', 'min:0', 'max:100']],
             ],
             'columns' => ['kind', 'account_id', 'needs_reference', 'fee_percent'],
         ],
@@ -211,9 +218,13 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'term',
             'title' => 'master_data::menu.payment_terms',
             'fields' => [
-                'days' => ['type' => 'number', 'label' => 'master_data::field.days', 'step' => '1'],
-                'early_discount_percent' => ['type' => 'number', 'label' => 'master_data::field.early_discount_percent', 'step' => '0.01'],
-                'early_discount_days' => ['type' => 'number', 'label' => 'master_data::field.early_discount_days', 'step' => '1'],
+                // ⛔ দিন পূর্ণসংখ্যা, ০–৬৫৫৩৫ (কলাম unsigned smallint) — আগে −১০ বা ৭০০০০-এ ৫০০ (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'days' => ['type' => 'number', 'label' => 'master_data::field.days', 'step' => '1',
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:65535']],
+                'early_discount_percent' => ['type' => 'number', 'label' => 'master_data::field.early_discount_percent', 'step' => '0.01',
+                    'rules' => ['nullable', 'min:0', 'max:100']],
+                'early_discount_days' => ['type' => 'number', 'label' => 'master_data::field.early_discount_days', 'step' => '1',
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:65535']],
             ],
             'columns' => ['days', 'early_discount_percent'],
         ],
@@ -233,7 +244,8 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'party_type',
             'title' => 'master_data::menu.party_types',
             'fields' => [
-                'applies_to' => ['type' => 'select', 'label' => 'master_data::field.applies_to', 'options' => 'applies', 'labels' => 'applies'],
+                // ⛔ বাধ্যতামূলক — কলাম NOT NULL; "—" রাখলে আগে ৫০০ আসত (১৪ অক্টোবর ২০২৬)
+                'applies_to' => ['type' => 'select', 'label' => 'master_data::field.applies_to', 'options' => 'applies', 'labels' => 'applies', 'rules' => ['required']],
             ],
             'columns' => ['applies_to'],
         ],
@@ -346,7 +358,8 @@ class MasterListController extends Controller implements HasMiddleware
                  * ⓘ মোবাইল ঐচ্ছিক, কিন্তু দিলে সেটাই নকল ধরার শক্ত সূত্র —
                  * নামে পাহারা নরম (দুইজন "মোঃ রহিম" থাকতে পারেন), নম্বরে কঠিন।
                  */
-                'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile'],
+                // ⛔ কলাম ৩২ — ১৯১-এর সাধারণ সীমায় লম্বা লেখা ৫০০ দিত (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile', 'rules' => ['nullable', 'string', 'max:32']],
                 // ⭐ ধরন — কর্মী, আত্মীয়, ব্যবসায়ী, অন্যান্য (অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬; IAS 24-এর আত্মীয় আলাদা চেনা)
                 'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'person_kinds', 'labels' => 'person_kind'],
                 /*
@@ -431,11 +444,13 @@ class MasterListController extends Controller implements HasMiddleware
                 'registration_no' => ['type' => 'text', 'label' => 'master_data::field.registration_no',
                     'rules' => ['required', 'string', 'max:64']],
                 'vehicle_type_id' => ['type' => 'select', 'label' => 'master_data::field.vehicle_type', 'options' => 'vehicle_types'],
-                'capacity_kg' => ['type' => 'number', 'label' => 'master_data::field.capacity_kg', 'step' => '0.001'],
+                'capacity_kg' => ['type' => 'number', 'label' => 'master_data::field.capacity_kg', 'step' => '0.001',
+                    'rules' => ['nullable', 'min:0', 'max:99999999999999']],
                 'owner_type' => ['type' => 'select', 'label' => 'master_data::field.owner_type', 'options' => 'owner_types', 'labels' => 'kind',
                     'rules' => ['required']],
-                'driver_name' => ['type' => 'text', 'label' => 'master_data::field.driver_name'],
-                'driver_phone' => ['type' => 'text', 'label' => 'master_data::field.driver_phone'],
+                // ⛔ কলাম ১২০ আর ৩২ — সাধারণ ১৯১-এর সীমায় ৫০০ দিত (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'driver_name' => ['type' => 'text', 'label' => 'master_data::field.driver_name', 'rules' => ['nullable', 'string', 'max:120']],
+                'driver_phone' => ['type' => 'text', 'label' => 'master_data::field.driver_phone', 'rules' => ['nullable', 'string', 'max:32']],
             ],
             'columns' => ['registration_no', 'vehicle_type_id', 'owner_type'],
             'setting' => 'master_data.vehicle_enabled',
@@ -577,13 +592,14 @@ class MasterListController extends Controller implements HasMiddleware
     public function edit(Request $request, int|string $id, string $kind): View
     {
         $spec = $this->spec($kind);
+        $record = $spec['model']::query()->findOrFail($id);
 
         return view('master_data::list.form', [
             'menu' => $this->menu->forUser($request->user()),
             'kind' => $kind,
             'spec' => $spec,
-            'record' => $spec['model']::query()->findOrFail($id),
-            'options' => $this->options(),
+            'record' => $record,
+            'options' => $this->keepingWhatIsSet($this->options(), $spec, $record),
         ]);
     }
 
@@ -648,6 +664,9 @@ class MasterListController extends Controller implements HasMiddleware
     public function makeDefault(int|string $id, string $kind): RedirectResponse
     {
         $spec = $this->spec($kind);
+
+        // ⛔ যে তালিকায় ডিফল্ট নেই, সেখানে ঠিকানাটাও নেই — আগে সরাসরি পাঠালে অজানা কলামে ৫০০ (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        abort_unless($spec['model']::supportsDefault(), 404);
 
         $record = $spec['model']::query()->findOrFail($id);
         $record->makeDefault();
@@ -715,11 +734,20 @@ class MasterListController extends Controller implements HasMiddleware
         ];
 
         $switches = [];
-        $options = $this->options();
+        $options = $id === null ? $this->options()
+            : $this->keepingWhatIsSet($this->options(), $spec, $spec['model']::query()->find($id));
 
         foreach ($spec['fields'] as $name => $field) {
             $rules[$name] = match ($field['type']) {
-                'number' => ['nullable', 'numeric'],
+                /*
+                 * ⛔ সাদা সংখ্যা — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ `numeric` `1e3` আর `0x1F`-এর মতো লেখা ছাড়ত, আর
+                 * সম্পাদনায় [[MasterListService::sameValue()]]-এর `bccomp()` ওগুলোয় ValueError-এ ৫০০ দিত। সীমা ঘরের নিজের `rules`-এ।
+                 */
+                'number' => ['nullable', 'numeric', function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value !== null && $value !== '' && PlainNumber::from($value) === null) {
+                        $fail('validation.numeric')->translate();
+                    }
+                }],
                 'switch' => ['nullable', 'boolean'],
                 'select' => ['nullable', Rule::in($this->choices($options, $field['options']))],
                 default => ['nullable', 'string', 'max:191'],
@@ -734,7 +762,8 @@ class MasterListController extends Controller implements HasMiddleware
              * ভাঙত, তাই নিয়মটা ঘরের সাথেই ঘোষিত।
              */
             if ($field['rules'] ?? false) {
-                $rules[$name] = array_values(array_diff($rules[$name], ['nullable']));
+                // ⓘ `array_diff` নয় — সংখ্যার ঘরে একটা Closure-নিয়ম আছে, আর array_diff সেটাকে স্ট্রিং বানাতে গিয়ে ভাঙে
+                $rules[$name] = array_values(array_filter($rules[$name], fn ($rule) => $rule !== 'nullable'));
                 $rules[$name] = [...$rules[$name], ...$field['rules']];
             }
 
@@ -793,11 +822,20 @@ class MasterListController extends Controller implements HasMiddleware
          * হয়: নইলে কোড না বদলে সেভ করলেই নিজের কোডটাকে "নেওয়া হয়ে গেছে"
          * ধরে CAR2 বসিয়ে দিত।
          */
-        if (($data['code'] ?? '') === '' && $id !== null) {
-            $data['code'] = CodeFromName::forQuery(
-                (string) $data['name_en'],
-                $spec['model']::query()->whereKeyNot($id),
-            );
+        /*
+         * ⛔ সম্পাদনায় খালি কোড আর নাম থেকে বানানো হয় না — খালি মানে "হাত দিও না", আর সেবা ঠিক তাই করে
+         * ([[MasterListService::update()]]; মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে এখানে নাম থেকে নতুন কোড বসত: ঘর
+         * খালি করে নাম বদলালেই `DISTRIB`-এর মতো কোড নীরবে অন্য কিছু হয়ে যেত।
+         */
+
+        /*
+         * ⛔ গাছটা দুই স্তরের — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ মায়ের তালিকায় সম্পাদনার সারিটা নিজেও থাকত, তাই
+         * শ্রেণিটা নিজেই নিজের মা হতে পারত; আর যার Sub Category আছে সে অন্যের Sub হলে গাছ তিন স্তরে — নিচের সারিগুলো পর্দার
+         * কোনো ড্রপডাউনে উঠত না ([[options()]]-এর `money_categories`-এর মন্তব্য)।
+         */
+        if (isset($spec['fields']['parent_id']) && $id !== null && ($data['parent_id'] ?? null) !== null
+            && ((string) $data['parent_id'] === (string) $id || $spec['model']::query()->where('parent_id', $id)->exists())) {
+            throw ValidationException::withMessages(['parent_id' => __('master_data::validation.parent_two_levels')]);
         }
 
         return $data;
@@ -817,6 +855,38 @@ class MasterListController extends Controller implements HasMiddleware
      * @param  array<string, mixed>  $options
      * @return list<string|int>
      */
+    /**
+     * ⛔ সারিটা যা দেখায় তা নিষ্ক্রিয় হলেও তালিকায় থাকে — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ ড্রপডাউনগুলো কেবল সক্রিয় সারি দেখায়। তাই করের খাতটা পরে নিষ্ক্রিয় হলে সম্পাদনার ফর্মে ঘরটা "—" দেখাত, আর নাম
+     * বদলে সংরক্ষণ করলেই খাতটা **নীরবে মুছে** যেত (যাচাইও ওটা চিনত না)। ⭐ এখন ঐ সারির নিজের মানটা তালিকায় জোড়া থাকে —
+     * রাখা যায়, বদলানোও যায়; নতুন কোনো নিষ্ক্রিয় সারি বাছা যায় না।
+     *
+     * @param  array<string, mixed>  $options
+     * @param  array<string, mixed>  $spec
+     * @return array<string, mixed>
+     */
+    private function keepingWhatIsSet(array $options, array $spec, ?\Illuminate\Database\Eloquent\Model $record): array
+    {
+        foreach ($spec['fields'] as $name => $field) {
+            $list = $options[$field['options'] ?? ''] ?? null;
+            $value = $record?->getAttribute($name);
+
+            if ($field['type'] !== 'select' || ! $list instanceof \Illuminate\Database\Eloquent\Collection
+                || $value === null || $value === '' || $list->contains('id', $value) || $list->isEmpty()) {
+                continue;
+            }
+
+            $current = $list->getQueueableClass()::query()->find($value);
+
+            if ($current !== null) {
+                $options[$field['options']] = $list->concat([$current]);
+            }
+        }
+
+        return $options;
+    }
+
     private function choices(array $options, string $key): array
     {
         $list = $options[$key] ?? [];

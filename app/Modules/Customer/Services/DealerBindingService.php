@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Services;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\DealerBinding;
 use App\Modules\Customer\Models\StaffSupervisor;
@@ -48,7 +50,9 @@ final class DealerBindingService
         }
 
         // ⓘ দেয়াল ছাড়া, কিন্তু কোম্পানির ভিতরে — অন্য কোম্পানির আইডি এখানে বাদ পড়ে
-        $found = Customer::acrossDealers()->whereIn('id', $ids)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        // ⛔ আর বাঁধছেন যিনি তাঁর শাখার নাগালে — শাখায় সীমিত মানুষ আইডি লিখে অন্য শাখার ডিলার নিজের বিক্রয়কর্মীকে দিতেন
+        // (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABranchManagerBoundAnotherBranchsDealerTest]]; গ্রাহকের নীতির একই নিয়ম)
+        $found = $this->inReach(Customer::acrossDealers()->whereIn('id', $ids));
 
         if (count($found) !== count($ids)) {
             throw ValidationException::withMessages(['customer_ids' => __('customer::binding.unknown_dealer')]);
@@ -96,12 +100,10 @@ final class DealerBindingService
             throw ValidationException::withMessages(['location_id' => __('customer::binding.unknown_area')]);
         }
 
-        $ids = Customer::acrossDealers()
+        // ⓘ এলাকার ডিলারের মধ্যে কেবল বাঁধছেন যিনি তাঁর শাখার নাগালের ([[inReach()]])
+        $ids = $this->inReach(Customer::acrossDealers()
             ->whereIn('location_id', $location->selfAndDescendants()->pluck('id'))
-            ->where('is_active', true)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+            ->where('is_active', true));
 
         if ($ids === []) {
             throw ValidationException::withMessages(['location_id' => __('customer::binding.area_empty')]);
@@ -117,6 +119,15 @@ final class DealerBindingService
 
         if ($end->lt($binding->starts_on)) {
             throw ValidationException::withMessages(['ends_on' => __('customer::binding.end_before_start')]);
+        }
+
+        /*
+         * ⛔ শেষ হওয়া বাঁধন আবার খোলে না — কেবল আগে টানা যায়। আগে হাতবদলে শেষ হওয়া বাঁধনে পরের কোনো দিন "শেষ" বসালে পুরনো
+         * বিক্রয়কর্মী ঐ দিন পর্যন্ত ডিলারকে আবার দেখতেন, নতুনজনের পাশাপাশি (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+         * [[AnEndedBindingWasOpenedAgainTest]])। ⓘ আবার দিতে হলে নতুন বাঁধন — ইতিহাসে আলাদা সারি।
+         */
+        if ($binding->ends_on !== null && $end->gt($binding->ends_on)) {
+            throw ValidationException::withMessages(['ends_on' => __('customer::binding.already_ended')]);
         }
 
         $binding->forceFill(['ends_on' => $end, 'ended_by' => auth()->id()])->save();
@@ -161,9 +172,12 @@ final class DealerBindingService
                  * ⓘ শেষ দিন = হাতবদলের আগের দিন — সবসময়। বাঁধনটা ঐ দিনেই বা পরে শুরু হলে শেষ দিন শুরুর
                  * আগে পড়ে, অর্থাৎ বাঁধনটা কোনোদিন চালুই হয়নি (মোছা নয় — ইতিহাসে থাকে)। ⛔ শুরুর দিনে
                  * আটকালে পুরনো জন হাতবদলের দিনটাও দেখতেন।
+                 * ⛔ আগে থেকে বসানো শেষ দিন পরে সরে না — কেবল আগে ([[end()]]-এর নিয়ম; [[AHandoverPushedAnEndingBindingLaterTest]])।
                  */
+                $endsOn = $on->copy()->subDay();
+
                 $row->forceFill([
-                    'ends_on' => $on->copy()->subDay(),
+                    'ends_on' => $row->ends_on !== null && $row->ends_on->lt($endsOn) ? $row->ends_on : $endsOn,
                     'ended_by' => auth()->id(),
                 ])->save();
             }
@@ -245,6 +259,20 @@ final class DealerBindingService
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * যিনি বাঁধছেন তাঁর শাখার নাগালের গ্রাহক — শাখাহীন গ্রাহক সবার নাগালে, [[CustomerPolicy]]-র একই নিয়মে।
+     *
+     * @return list<int>
+     */
+    private function inReach(Builder $customers): array
+    {
+        $reach = app(DataScope::class);
+
+        return $customers->get(['id', 'branch_id'])
+            ->filter(fn (Customer $c) => $reach->allows(auth()->user(), UserDataScope::BRANCH, $c->branch_id === null ? null : (int) $c->branch_id))
+            ->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
     }
 
     private function assertStaff(int $userId): void

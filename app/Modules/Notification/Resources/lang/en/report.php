@@ -103,6 +103,7 @@ return [
         'muted' => 'Category muted',
         'expired' => 'Expired',
         'digest' => 'Held for a digest',
+        'inactive' => 'The person is switched off or removed from the company',
     ],
     'filters' => [
         'channel' => 'Channel',

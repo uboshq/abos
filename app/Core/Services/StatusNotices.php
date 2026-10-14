@@ -69,7 +69,7 @@ final class StatusNotices
          * সিদ্ধান্তের অধিকার নেই তিনিও দেখে ফেলতেন কিছু ঝুলে আছে।
          */
         return Cache::remember(
-            "abos.notice.{$companyId}.".(\App\Core\Support\Actor::userId() ?? 0),
+            self::cacheKey((int) $companyId, \App\Core\Support\Actor::userId()),
             self::TTL,
             fn () => array_values(array_filter([
                 /*
@@ -137,6 +137,23 @@ final class StatusNotices
      *
      * @return array{text: string, url: ?string, tone: string}|null
      */
+    /**
+     * ⭐ ক্যাশের চাবি — কোম্পানি, মানুষ, আর হেডারের শাখা (Notice লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheBarFollowsTheBranchAndTheDismissTest]])।
+     *
+     * ⓘ বারের নোটিশ হেডারের শাখা ধরে বদলায় ([[NoticeAudience]]), কিন্তু চাবিতে শাখা ছিল না — শাখা বদলালে এক মিনিট আগের শাখার
+     * নোটিশ বারে থাকত। আর সরিয়ে দেওয়া নোটিশও এক মিনিট থাকত, তাই [[forget()]]।
+     */
+    public static function cacheKey(int $companyId, ?int $userId): string
+    {
+        return "abos.notice.{$companyId}.".($userId ?? 0).'.'.(CompanyContext::branchId() ?? 0);
+    }
+
+    /** ⓘ এই মানুষের বার আবার নতুন করে — নোটিশ সরালে ([[NoticeBoard::pushAside()]]) */
+    public static function forget(int $companyId, int $userId): void
+    {
+        Cache::forget(self::cacheKey($companyId, $userId));
+    }
+
     public function current(): ?array
     {
         return $this->all()[0] ?? null;

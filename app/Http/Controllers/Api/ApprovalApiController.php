@@ -114,6 +114,9 @@ final class ApprovalApiController extends Controller
         $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $fact = $facts[(int) $approval->id] ?? [];
+            $now = self::paperAmountNow($document);
+            $asked = $approval->amount === null ? null : (string) $approval->amount;
+            $changed = $now !== null && $asked !== null && bccomp($now, $asked, 4) !== 0;
 
             return [
                 // ⛔ ক্রমিক `id` কখনো নয় — চুক্তি §৩ ক
@@ -134,11 +137,19 @@ final class ApprovalApiController extends Controller
                  * ⓘ অঙ্ক না জানা থাকলে `null`, `"0.0000"` নয়: "শূন্য
                  * টাকা" আর "অঙ্ক নেই" দুই কথা।
                  */
-                'amount' => $approval->amount === null ? null : (string) $approval->amount,
+                /*
+                 * ⭐ কাগজের **এখনকার** অঙ্ক — মালিক, ১৪ অক্টোবর ২০২৬ (RCV-0090: সই চাওয়া ৩৯,৯৯০-এ, পরে খসড়া ২৪,৯১৩-এ বদলানো;
+                 * কার্ডে অঙ্ক পুরনো আর বিবরণ নতুন — "এক কাগজের বিবরণ আরেকটায়")। ⓘ যেখানে সইয়ের অঙ্ক হুবহু কাগজের অঙ্ক
+                 * ([[PAPER_AMOUNT]]) সেখানেই; বাকিতে আগের মতো সইয়ের অঙ্ক। চাওয়ার অঙ্ক আলাদা ঘরে, বদলালে চিহ্ন।
+                 */
+                'amount' => $now ?? $asked,
+                'requestedAmount' => $asked,
+                'amountChanged' => $changed,
                 'currentLevel' => (int) $approval->current_level,
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'requesterName' => $approval->requesterName(),
-                'summary' => $this->summaryOf($approval, $fact),
+                'summary' => ($changed ? __('approval::field.changed_after_request', ['amount' => \App\Core\Support\Money::format($asked)]).' · ' : '')
+                    .$this->summaryOf($approval, $fact),
 
                 /*
                  * ⭐ কোন বোতাম দেখাবে — মালিকের আদেশ, ১৪ অক্টোবর ২০২৬। ⓘ "সংশোধনে ফেরত" খসড়া কাগজে; "বদলে সই" কেবল মালিক
@@ -341,6 +352,29 @@ final class ApprovalApiController extends Controller
      *
      * @param  array{party?: ?string, about?: ?string, where?: ?string}  $fact
      */
+    /**
+     * যে কাগজের সই-অঙ্ক হুবহু তার `amount` ঘর ([[VoucherApproval]], [[MoneyTransferService]], [[PaymentService]],
+     * [[CollectionService]]) — কেবল এগুলোতে কার্ড কাগজের এখনকার অঙ্ক পড়ে। ⛔ অন্য কাগজে সইয়ের অঙ্ক অন্য কিছু মাপে (যেমন ছাড়),
+     * তুলনা করলে মিথ্যা "বদলেছে" দেখাত।
+     */
+    private const PAPER_AMOUNT = [
+        \App\Modules\Accounts\Models\Voucher::class,
+        \App\Modules\Accounts\Models\MoneyTransfer::class,
+        \App\Modules\Purchase\Models\Payment::class,
+        \App\Modules\Sales\Models\Collection::class,
+    ];
+
+    private static function paperAmountNow(?Model $document): ?string
+    {
+        if ($document === null || ! in_array($document::class, self::PAPER_AMOUNT, true)) {
+            return null;
+        }
+
+        $amount = $document->getAttribute('amount');
+
+        return $amount === null ? null : bcadd((string) $amount, '0', 4);
+    }
+
     private function summaryOf(Approval $approval, array $fact): ?string
     {
         $about = $fact['about'] ?? null;
@@ -349,8 +383,16 @@ final class ApprovalApiController extends Controller
             $about = (string) $approval->requested_reason;
         }
 
+        /*
+         * ⭐ টাকা কোথায় আর কোন শাখায় — কার্ডেই (মালিক, ১৪ অক্টোবর ২০২৬, ফোনের সই-বাক্সের ছবি: *"kon branch e joma tar
+         * ullekh nai"*)। ⓘ আগে কার্ডে কেবল পক্ষ আর বিবরণ; খাত আর শাখা দেখতে প্রতিটা কাগজের "বিস্তারিত" খুলতে হত — আর
+         * বিবরণে লেখা ব্যাংকের সাথে আসল খাত মেলে কি না, কার্ড দেখে বলা যেত না।
+         */
+        $where = trim((string) ($fact['where'] ?? '')) === '' ? null : __('approval::field.deposited_to', ['place' => $fact['where']]);
+        $branch = trim((string) ($fact['branch'] ?? '')) === '' ? null : __('approval::field.in_branch', ['branch' => $fact['branch']]);
+
         $parts = array_values(array_filter(
-            [$fact['party'] ?? null, $about],
+            [$fact['party'] ?? null, $about, $where, $branch],
             fn (?string $part): bool => $part !== null && trim($part) !== '',
         ));
 

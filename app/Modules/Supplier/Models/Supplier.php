@@ -40,6 +40,9 @@ class Supplier extends Model implements Drillable
     use IsAudited;
     use SoftDeletes;
 
+    // ⭐ পরিশোধ আর ভাউচারের বাছাইয়ে জের-থাকা নিষ্ক্রিয় সরবরাহকারীও ([[PickableWhileOwing]])
+    use \App\Core\Concerns\PickableWhileOwing;
+
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
         // ⭐ সংক্ষিপ্ত নাম — ড্যাশবোর্ড ও রিপোর্টে পুরো নামের বদলে (মালিক, ৬ অক্টোবর ২০২৬)

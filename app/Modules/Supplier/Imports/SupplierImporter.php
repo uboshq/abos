@@ -75,15 +75,19 @@ final class SupplierImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
             $errors[] = __('supplier::validation.code_taken', ['code' => $row['code']]);
         }
 
-        if (filled($row['opening_balance']) && ! is_numeric($row['opening_balance'])) {
+        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric`-এ পার হয়ে bccomp-এ ভাঙত, যাচাই সবুজ অথচ ইমপোর্টে সারি পড়ত
+        // (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneEFiveBrokeTheSupplierFormTest]])
+        if (filled($row['opening_balance']) && preg_match('/^-?\d{1,12}(\.\d{1,4})?$/', trim((string) $row['opening_balance'])) !== 1) {
             $errors[] = __('core.import.not_a_number', ['column' => 'opening_balance']);
         }
 
-        if (filled($row['credit_limit']) && ! is_numeric($row['credit_limit'])) {
+        if (filled($row['credit_limit']) && preg_match('/^\d{1,14}(\.\d{1,4})?$/', trim((string) $row['credit_limit'])) !== 1) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
         }
 
-        if (filled($row['credit_days']) && ! is_numeric($row['credit_days'])) {
+        // ⛔ ফর্মের মতোই ০–৩৬৫ পূর্ণসংখ্যা — `is_numeric`-এ "-5" পার হয়ে SQL-এ ভাঙত, "30.5" চুপচাপ ৩০, "1e2" ১০০, "400" বসে পরে ফর্ম আটকাত
+        // (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheSupplierImportTookAnyCreditDaysTest]])
+        if (filled($row['credit_days']) && (preg_match('/^\d{1,3}$/', trim((string) $row['credit_days'])) !== 1 || (int) trim((string) $row['credit_days']) > 365)) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_days']);
         }
 
@@ -111,6 +115,22 @@ final class SupplierImporter implements \App\Core\Contracts\ImportNeedsKeys, Imp
                 'value' => $row['payment_term'],
             ]);
         }
+
+        /*
+         * ⛔ লেখার ঘর ফর্মের মাপে, ইমেইল ইমেইলের রূপে (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheImportTookAnyLengthAndAnyEmailTest]])।
+         * ⓘ আগে লম্বা ফোন বা নাম যাচাইয়ে সবুজ, তারপর ডাটাবেসে ভাঙত; "abc" ইমেইল হয়ে বসত।
+         */
+        $errors = [...$errors, ...\Illuminate\Support\Facades\Validator::make($row, [
+            'code' => ['nullable', 'string', 'max:32'],
+            'name_en' => ['nullable', 'string', 'max:191'],
+            'name_bn' => ['nullable', 'string', 'max:191'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'email' => ['nullable', 'email', 'max:191'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'contact_person' => ['nullable', 'string', 'max:120'],
+            'bin' => ['nullable', 'string', 'max:32'],
+            'tin' => ['nullable', 'string', 'max:32'],
+        ])->errors()->all()];
 
         // সার্ভিসের নিজের নিয়মগুলো (বাংলা নাম, BIN) — সেটিংস অনুযায়ী।
         // এখানে না দেখলে সেগুলো ভাঙত বসানোর সময়, অর্থাৎ যাচাইয়ের পর্দায়

@@ -104,11 +104,7 @@ final class DocumentExpiry
                  * "মেয়াদোত্তীর্ণ" বসিয়ে দিত, অথচ অনুমোদন ইনবক্সে ঝুলে থাকত; শেষ সইয়ের পর [[DocumentWorkflow::decided()]] মেয়াদোত্তীর্ণ
                  * কাগজকে ছুঁত না — অনুমোদন বলত "অনুমোদিত", কাগজ বলত "মেয়াদোত্তীর্ণ"। খবর আগের মতোই যায়।
                  */
-                $reviewing = in_array($document->status, [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW], true);
-
-                if ($threshold === 0 && $document->status !== DocumentCatalog::EXPIRED && ! $reviewing) {
-                    $document->forceFill(['status' => DocumentCatalog::EXPIRED])->saveQuietly();
-                    $document->auditAction('document_expired', $document->expiry_date->toDateString());
+                if ($threshold === 0 && $this->expireIfFree($document)) {
                     $out['expired']++;
                 }
 
@@ -118,7 +114,43 @@ final class DocumentExpiry
             });
         }
 
+        /*
+         * ⛔ পর্যালোচনার মাঝে মেয়াদ পেরোনো কাগজ — খবরটা তখনই গেছে (ধাপ ০), তাই উপরের তালিকায় আর আসে না; সিদ্ধান্তের পরে এখানে
+         * "মেয়াদোত্তীর্ণ" হয় (Documents লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ADocumentThatExpiredInReviewExpiresAfterwardsTest]])।
+         * ⓘ আগে চিরকাল "অনুমোদিত" থেকে যেত — নবায়নের পথ (কেবল মেয়াদোত্তীর্ণ কাগজে) কোনোদিন খুলত না।
+         */
+        $late = $this->papers($companyId)
+            ->whereNotNull('expiry_date')
+            ->whereDate('expiry_date', '<', $today->toDateString())
+            ->whereNotIn('status', [DocumentCatalog::EXPIRED, DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW])
+            ->orderBy('id')
+            ->get();
+
+        foreach ($late as $document) {
+            if (DB::transaction(fn (): bool => $this->expireIfFree($document))) {
+                $out['expired']++;
+            }
+        }
+
         return $out;
+    }
+
+    /**
+     * ⛔ মেয়াদোত্তীর্ণ বসানো — তালায় আবার পড়ে: এর মাঝে জমা পড়লে (বা আগেই মেয়াদোত্তীর্ণ হলে) কিছু নয় (Documents লাইন-ধরে নিরীক্ষা,
+     * ১৪ অক্টোবর ২০২৬)। ⓘ আগে আগের পড়া সারিতেই লিখত — পড়া আর লেখার মাঝে জমা পড়লে সেটা মুছে যেত।
+     */
+    private function expireIfFree(Document $document): bool
+    {
+        $fresh = Document::query()->withoutGlobalScopes()->whereKey($document->getKey())->lockForUpdate()->first();
+
+        if ($fresh === null || in_array($fresh->status, [DocumentCatalog::EXPIRED, DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW], true)) {
+            return false;
+        }
+
+        $fresh->forceFill(['status' => DocumentCatalog::EXPIRED])->saveQuietly();
+        $fresh->auditAction('document_expired', $fresh->expiry_date->toDateString());
+
+        return true;
     }
 
     /** কোন ধাপের খবর — পেরোলে ০; ৯০ দিনের বেশি বাকি থাকলে কিছুই না */

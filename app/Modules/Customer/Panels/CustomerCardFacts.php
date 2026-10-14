@@ -54,7 +54,8 @@ final class CustomerCardFacts implements ContributesFacts
              */
             new Fact(label: 'customer::field.point', value: $customer->location?->name(), sort: 15),
             new Fact(label: 'customer::field.address', value: $customer->address(app()->getLocale()), sort: 20),
-            new Fact(label: 'customer::field.outstanding', value: Money::format($customer->outstanding()), sort: 30),
+            // ⛔ (Dr)/(Cr) — সইয়ের পাতায় অগ্রিম "-৭০০.০০" পড়ত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnAdvanceReadAsABareMinusTest]])
+            new Fact(label: 'customer::field.outstanding', value: Money::drCr($customer->outstanding()), sort: 30),
             new Fact(label: 'customer::field.credit_limit', value: $hasLimit ? Money::format($limit) : null, sort: 40),
             new Fact(label: 'customer::field.available_limit',
                 value: $hasLimit && $available !== null ? Money::format($available) : null, sort: 50),

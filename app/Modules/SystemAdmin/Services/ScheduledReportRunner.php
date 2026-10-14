@@ -312,10 +312,10 @@ final class ScheduledReportRunner
             });
         } finally {
             // ⚠️ পরের সূচি যেন এঁর পরিচয়ে না চলে
-            Auth::forgetUser();
-
             if ($previous !== null) {
                 Auth::setUser($previous);
+            } else {
+                Auth::forgetUser();
             }
 
             CompanyContext::clear();

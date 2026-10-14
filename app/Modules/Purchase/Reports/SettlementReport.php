@@ -300,6 +300,9 @@ final class SettlementReport
             ->where('company_id', $company)
             ->where('party_type', Supplier::drillSourceType())
             ->where('trx_date', '<=', $to)
+            // ⛔ কেবল বিল হওয়া দেনা — বিল-না-আসা মাল জমে থাকা দায়, সেটলমেন্টে নয় (মালিক, ১৩ অক্টোবর ২০২৬: "int standard onuzayi koro";
+            // fe; [[GoodsNotYetBilledAreAnAccrualNotATradePayableTest]])
+            ->whereNotIn('account_id', Supplier::goodsNotBilledAccountIds())
             ->groupBy('party_id')
             ->select(['party_id', DB::raw('SUM(credit) - SUM(debit) as still_owed')]);
     }

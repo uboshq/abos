@@ -83,7 +83,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
             ...($type === Voucher::JOURNAL
                 ? ['accounts' => $this->accounts($o['allAccounts'])]
                 : ['from' => $side($o['sides']['from']), 'to' => $side($o['sides']['to'])]),
-            'parties' => collect($this->parties->forPicker())->map(fn (array $g) => [
+            // ⭐ ওয়েবের ফর্মের মতো — জের-থাকা নিষ্ক্রিয় পক্ষও, চিহ্নসহ ([[PickableWhileOwing]])
+            'parties' => collect($this->parties->forPicker(evenInactiveWithABalance: true))->map(fn (array $g) => [
                 'type' => $g['type'],
                 'label' => $g['label'],
                 'options' => collect($g['options'])->map(fn (array $p) => [

@@ -70,6 +70,24 @@ final class CreditPositionReports
     }
 
     /**
+     * ⛔ সক্রিয় গ্রাহক, আর নিষ্ক্রিয় হলেও যাঁর খাতায় এখনো জের আছে (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[AnInactiveDebtorLeftTheCreditReportsTest]])।
+     *
+     * ⚠️ বকেয়া রেখে নিষ্ক্রিয় করা গ্রাহক — ঠিক যাঁর টাকা আদায় সবচেয়ে জরুরি — মেয়াদোত্তীর্ণ, ঝুঁকি আর ড্যাশবোর্ডের মোট থেকে
+     * নীরবে পড়ে যেতেন। ⓘ জের শূন্য হলে আর আসেন না।
+     */
+    public static function activeOrStillOwing(\Illuminate\Database\Eloquent\Builder $query, int $companyId): void
+    {
+        $query->where(fn ($q) => $q->where('customers.is_active', true)
+            ->orWhereIn('customers.id', \Illuminate\Support\Facades\DB::table('ledger_entries')
+                ->select('party_id')
+                ->where('company_id', $companyId)
+                ->where('party_type', Customer::drillSourceType())
+                ->groupBy('party_id')
+                ->havingRaw('SUM(debit) - SUM(credit) <> 0')));
+    }
+
+    /**
      * দেয়ালের ভিতরের সক্রিয় গ্রাহক, বকেয়াসহ — তালিকা আর ড্যাশবোর্ড একই দরজা দিয়ে ঢোকে।
      *
      * @param  array<string, mixed>  $f
@@ -79,7 +97,7 @@ final class CreditPositionReports
     {
         return Customer::query()
             ->where('customers.company_id', $f['company_id'])
-            ->where('customers.is_active', true)
+            ->tap(fn ($q) => self::activeOrStillOwing($q, (int) $f['company_id']))
             ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
             ->tap(ReportEngine::dealerWall($f, 'customers.id')) // ⛔১৬ — বিক্রয়কর্মী কেবল নিজের ডিলার
             ->when(! empty($f['salesman_id']), fn ($q) => $q->whereIn('customers.id', DealerBinding::query()

@@ -81,6 +81,19 @@
                 {{-- ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"passworad vew howar icon nai … passwoard 2 bar like confam
                      korlei valo vul hoyna"* — চোখের বোতাম, আর দ্বিতীয়বার লেখার ঘর; সার্ভার `confirmed` দিয়ে মেলায়।
                      ⓘ একই ধাঁচ পাসওয়ার্ড বদলের পাতার ([[auth.reset]]) — CSP-Alpine-এ চলে। দুই ঘর এক `show` মানে। --}}
+                {{-- ⛔ নিজের পাসওয়ার্ড বদলাতে চলতি পাসওয়ার্ড — খোলা সেশন একাই অ্যাকাউন্ট দখল করতে না পারে (১৪ অক্টোবর ২০২৬) --}}
+                @if (! $isNew && auth()->user()?->is($user))
+                    <div>
+                        <label for="current_password" class="mb-1 block text-sm font-medium">{{ __('system_admin::field.current_password') }}</label>
+                        <input id="current_password" name="current_password" type="password" maxlength="191" autocomplete="current-password"
+                               class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3">
+                        <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('system_admin::field.current_password_hint') }}</p>
+                        @error('current_password')
+                            <p class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @endif
+
                 <div x-data="{ show: false }" class="contents">
                     @foreach (['password', 'password_confirmation'] as $pw)
                         @php $bad = $errors->has($pw); @endphp

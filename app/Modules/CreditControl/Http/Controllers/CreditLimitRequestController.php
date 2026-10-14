@@ -27,6 +27,7 @@ class CreditLimitRequestController extends Controller
 
         $data = $request->validate([
             'kind' => ['required', Rule::in([CustomerCreditRequest::LIMIT, CustomerCreditRequest::TEMPORARY])],
+            // ⛔ "1e5" `numeric` পেরিয়ে সেবার bcadd-এ ৫০০ দিত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneEFiveBrokeTheLimitRequestTest]])
             'amount' => ['required', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0', 'max:999999999999'],
             'temp_until' => ['nullable', 'required_if:kind,'.CustomerCreditRequest::TEMPORARY, 'date'],
             'reason' => ['required', 'string', 'max:500'],

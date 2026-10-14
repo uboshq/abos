@@ -6,6 +6,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\CustomField;
 use Illuminate\Http\RedirectResponse;
@@ -64,7 +65,10 @@ class CustomFieldController extends Controller implements HasMiddleware
              * বা বাংলা অক্ষর থাকলে ব্রাউজারভেদে আলাদা আচরণ করত। লেবেলটা
              * যেকোনো ভাষায় হতে পারে — মানুষ ওটাই দেখে।
              */
-            'key' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/'],
+            // ⛔ একই জিনিসে একই চাবি দুবার — আগে টেবিলের অনন্য-চাবিতে ৫০০ (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            'key' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/',
+                Rule::unique('custom_fields', 'key')->where('company_id', CompanyContext::id())
+                    ->where('entity', is_string($request->input('entity')) ? $request->input('entity') : '')],
             'label_en' => ['required', 'string', 'max:120'],
             'label_bn' => ['required', 'string', 'max:120'],
             'type' => ['required', Rule::in(CustomFieldService::TYPES)],

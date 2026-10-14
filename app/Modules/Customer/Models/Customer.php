@@ -70,6 +70,9 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     use \App\Core\Concerns\ScopedToUserDealers;
     use SoftDeletes;
 
+    // ⭐ আদায় আর ভাউচারের বাছাইয়ে জের-থাকা নিষ্ক্রিয় গ্রাহকও ([[PickableWhileOwing]])
+    use \App\Core\Concerns\PickableWhileOwing;
+
     protected $fillable = [
         'company_id', 'branch_id', 'location_id', 'code', 'name_en', 'name_bn', 'owner_name',
         'phone', 'email', 'address_en', 'address_bn', 'customer_type', 'party_type_id', 'channel_id',

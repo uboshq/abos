@@ -37,6 +37,39 @@ final class PartyReports
      */
     public const BUCKETS = [30, 60, 90];
 
+    /*
+     * ⛔ বাতিল বা সম্পাদনার উল্টো দাখিলা (`…:reversal`) নিজের ঘর থেকে **বিয়োগ** — ৫০ হাজারের বিল একই মাসে বাতিল হলে আগে
+     * "বিল ৫০ হাজার, আদায় ৫০ হাজার" দেখাত, আর প্রতিটা সম্পাদনা দুই ঘরই ফোলাত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ACancelledBillReadAsMoneyCollectedTest]])। ⓘ উল্টো সারির ক্রেডিট বিল কমায়, ডেবিট আদায় কমায় — নিট বদল আগের মতোই।
+     */
+    /*
+     * ⛔ বিক্রয় ফেরত আদায় নয় — বিল কমায় (ঋণাত্মক বিক্রি); আগে ১০ হাজারের বিলে ৩ হাজারের মাল ফেরত এলে "আদায় ৩ হাজার" বসত, একটা
+     * পয়সাও না এলেও (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AReturnReadAsMoneyCollectedTest]])। ⓘ বাতিল ফেরতের উল্টো সারিও
+     * (`sales_return:reversal`) একই ঘরে ফিরে বিল বাড়ায় — নিট বদল আগের মতোই।
+     */
+    private const BILLED = "SUM(CASE WHEN ledger_entries.source_type LIKE 'sales_return%' THEN ledger_entries.debit - ledger_entries.credit WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.credit ELSE ledger_entries.debit END)";
+
+    private const COLLECTED = "SUM(CASE WHEN ledger_entries.source_type LIKE 'sales_return%' THEN 0 WHEN ledger_entries.source_type LIKE '%:reversal' THEN -ledger_entries.debit ELSE ledger_entries.credit END)";
+
+    /**
+     * ⛔ বয়সের হিসাবে উল্টানো দাখিলা জোড়া ধরে বাদ — তারিখ পর্যন্ত যে দাখিলার উল্টো সারি বসেছে, মূল আর উল্টো দুটোই
+     * (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ACancelledBillAgedTheOldDueTest]])।
+     *
+     * ⚠️ আগে উল্টো সারির ক্রেডিট "আদায়" হয়ে সবচেয়ে পুরনো বকেয়া থেকে কাটত আর মূল বিলটা নতুন বালতিতে থেকে যেত: ১২০ দিনের
+     * ১ লাখ বকেয়ার পাশে কাল ৫০ হাজারের বিল আজ বাতিল হলে ৯০+ = ৫০ হাজার, ০–৩০ = ৫০ হাজার — সবচেয়ে ঝুঁকির বকেয়াটাই লুকাত।
+     * ⓘ উল্টো সারি মূলের হুবহু আয়না ([[PostingEngine::reverse()]]), তাই মোট বকেয়া বদলায় না; সম্পাদনার নতুন দাখিলা থাকে।
+     */
+    private static function withoutUndonePostings(\Illuminate\Database\Query\Builder $q, string $to): void
+    {
+        $q->where('ledger_entries.source_type', 'not like', '%:reversal')
+            ->whereNotExists(fn ($undo) => $undo->selectRaw('1')->from('ledger_entries as undo')
+                ->whereColumn('undo.company_id', 'ledger_entries.company_id')
+                ->whereColumn('undo.source_id', 'ledger_entries.source_id')
+                ->whereRaw("undo.source_type = CONCAT(ledger_entries.source_type, ':reversal')")
+                ->whereColumn('undo.id', '>', 'ledger_entries.id')
+                ->where('undo.trx_date', '<=', $to));
+    }
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::dueList());
@@ -89,13 +122,13 @@ final class PartyReports
                 ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                 // যে গ্রাহকের এই সময়ে কিছুই হয়নি তাঁর সারি শুধু ভিড় বাড়ায়
                 ->havingRaw('SUM(ledger_entries.credit) > 0 OR SUM(ledger_entries.debit) > 0')
-                ->orderByRaw('SUM(ledger_entries.credit) DESC')
+                ->orderByRaw(self::COLLECTED.' DESC')
                 ->select([
                     'ledger_entries.party_id',
                     ...self::identity(),
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
-                    DB::raw('SUM(ledger_entries.debit) as billed'),
-                    DB::raw('SUM(ledger_entries.credit) as collected'),
+                    DB::raw(self::BILLED.' as billed'),
+                    DB::raw(self::COLLECTED.' as collected'),
                     DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as movement'),
                 ]),
             columns: [
@@ -167,6 +200,13 @@ final class PartyReports
 
                 ->where(fn ($q) => $q->whereNull('customers.credit_limit')
                     ->orWhere('customers.credit_limit', '<=', 0))
+                // ⛔ চলতি অস্থায়ী সীমা থাকলে "সীমা নেই" নয় — দেয়াল সেটা মানে (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                // [[ATemporaryLimitReadAsNoLimitTest]])
+                // ⚠️ NULL-এর পাহারা আগে — নইলে NOT(NULL) পুরো সারিটাই ফেলে দিত ([[a-null-column-falls-out-of-not-equal]])
+                ->whereNot(fn ($q) => $q->whereNotNull('customers.temp_credit_limit')
+                    ->whereNotNull('customers.temp_credit_limit_until')
+                    ->where('customers.temp_credit_limit', '>', 0)
+                    ->where('customers.temp_credit_limit_until', '>=', Carbon::today()->toDateString()))
 
                 // যাঁর কাছে সবচেয়ে বেশি টাকা আটকে, তাঁর সারি আগে
                 ->orderByRaw('COALESCE(l.due, 0) DESC')
@@ -228,12 +268,19 @@ final class PartyReports
                     // তাই ধ্রুবক হিসেবেই select করা। engine সারিগুলোকে
                     // সাধারণ অ্যারে হিসেবে দেখে, তাই কলামটা থাকতেই হবে।
                     DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
-                    DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding'),
+                    /*
+                     * ⛔ বকেয়া আর অগ্রিম আলাদা ঘরে — বয়সের তালিকার একই নিয়ম (৯ অক্টোবর)। আগে আগাম রাখা গ্রাহক ঋণাত্মক বকেয়া হয়ে
+                     * মোটে মিশত: ঘরের "গ্রাহকের কাছে পাওনা" ১,০০০, তাতে চাপলে খোলা এই তালিকার মোট ৩০০ (Customer নিরীক্ষা,
+                     * ১৩ অক্টোবর ২০২৬; [[TheDueListNettedTheAdvancesTest]])।
+                     */
+                    DB::raw('GREATEST(SUM(ledger_entries.debit) - SUM(ledger_entries.credit), 0) as outstanding'),
+                    DB::raw('GREATEST(SUM(ledger_entries.credit) - SUM(ledger_entries.debit), 0) as advance'),
                 ]),
             // ⭐ গ্রাহক তালিকার কলামগুলোই, একই ক্রমে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬
             columns: [
                 ...self::identityColumns('party_id', address: true, owner: true, mobile: true),
                 ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
+                ['key' => 'advance', 'label' => 'customer::field.advance_held', 'type' => ReportColumn::MONEY],
             ],
         );
     }
@@ -268,16 +315,20 @@ final class PartyReports
                  * জমা রাখা গ্রাহক ঋণাত্মক বকেয়া হয়ে মোটে মিশত, অন্যদের বকেয়া কম দেখাত। এখন বালতিতে কেবল ডেবিট, মোট ক্রেডিট পুরনো
                  * বালতি থেকে কেটে নিচে নামে; বকেয়া শূন্যের নিচে নামে না, বাড়তিটা "অগ্রিম" ঘরে।
                  */
+                /*
+                 * ⛔ বয়স (from, to] — "০–৩০" মানে ৩০ দিন পর্যন্ত, "৯০+" মানে ৯০ পেরোনো (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                 * [[AThirtyDayBillAgedAsThirtyOneTest]])। ⓘ আগে [from, to) ছিল: ঠিক ৩০ দিনের বিল — সাধারণ বাকির মেয়াদ — "৩১–৬০"-এ।
+                 */
                 $bucket = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
                     if ($to !== null) {
-                        $conditions[] = 'ledger_entries.trx_date > '
+                        $conditions[] = 'ledger_entries.trx_date >= '
                             .DB::getPdo()->quote($asOf->copy()->subDays($to)->toDateString());
                     }
 
                     if ($from !== null) {
-                        $conditions[] = 'ledger_entries.trx_date <= '
+                        $conditions[] = 'ledger_entries.trx_date < '
                             .DB::getPdo()->quote($asOf->copy()->subDays($from)->toDateString());
                     }
 
@@ -308,6 +359,7 @@ final class PartyReports
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('customers.party_type_id', $type))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
+                    ->tap(fn ($q) => self::withoutUndonePostings($q, (string) $f['to']))
                     ->groupBy('ledger_entries.party_id', 'customers.id', 'l0.id', 'l1.id', 'l2.id')
                     ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) <> 0')
                     ->orderByRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) DESC')

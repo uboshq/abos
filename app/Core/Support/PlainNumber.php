@@ -32,4 +32,15 @@ final class PlainNumber
 
         return preg_match('/^-?\d+(\.\d+)?$/', $text) === 1 ? $text : null;
     }
+
+    /**
+     * ⓘ পূর্ণসংখ্যার সেটিং — "১০,০০০" → 10000; ভগ্নাংশ, ঋণাত্মক বা লেখা হলে `null` (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা,
+     * ১৪ অক্টোবর ২০২৬)। ⛔ আগে `(int)` কেটে নিত: "10,000" হত ১০, "1e3" হত ১০০০, "abc" হত ০, আর ঋণাত্মক মানও বসত।
+     */
+    public static function wholeFrom(mixed $raw): ?int
+    {
+        $text = self::from($raw);
+
+        return $text !== null && preg_match('/^\d+$/', $text) === 1 ? (int) $text : null;
+    }
 }
