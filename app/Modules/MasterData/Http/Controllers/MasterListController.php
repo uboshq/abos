@@ -590,13 +590,14 @@ class MasterListController extends Controller implements HasMiddleware
     public function edit(Request $request, int|string $id, string $kind): View
     {
         $spec = $this->spec($kind);
+        $record = $spec['model']::query()->findOrFail($id);
 
         return view('master_data::list.form', [
             'menu' => $this->menu->forUser($request->user()),
             'kind' => $kind,
             'spec' => $spec,
-            'record' => $spec['model']::query()->findOrFail($id),
-            'options' => $this->options(),
+            'record' => $record,
+            'options' => $this->keepingWhatIsSet($this->options(), $spec, $record),
         ]);
     }
 
@@ -728,7 +729,8 @@ class MasterListController extends Controller implements HasMiddleware
         ];
 
         $switches = [];
-        $options = $this->options();
+        $options = $id === null ? $this->options()
+            : $this->keepingWhatIsSet($this->options(), $spec, $spec['model']::query()->find($id));
 
         foreach ($spec['fields'] as $name => $field) {
             $rules[$name] = match ($field['type']) {
@@ -847,6 +849,38 @@ class MasterListController extends Controller implements HasMiddleware
      * @param  array<string, mixed>  $options
      * @return list<string|int>
      */
+    /**
+     * ⛔ সারিটা যা দেখায় তা নিষ্ক্রিয় হলেও তালিকায় থাকে — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ ড্রপডাউনগুলো কেবল সক্রিয় সারি দেখায়। তাই করের খাতটা পরে নিষ্ক্রিয় হলে সম্পাদনার ফর্মে ঘরটা "—" দেখাত, আর নাম
+     * বদলে সংরক্ষণ করলেই খাতটা **নীরবে মুছে** যেত (যাচাইও ওটা চিনত না)। ⭐ এখন ঐ সারির নিজের মানটা তালিকায় জোড়া থাকে —
+     * রাখা যায়, বদলানোও যায়; নতুন কোনো নিষ্ক্রিয় সারি বাছা যায় না।
+     *
+     * @param  array<string, mixed>  $options
+     * @param  array<string, mixed>  $spec
+     * @return array<string, mixed>
+     */
+    private function keepingWhatIsSet(array $options, array $spec, ?\Illuminate\Database\Eloquent\Model $record): array
+    {
+        foreach ($spec['fields'] as $name => $field) {
+            $list = $options[$field['options'] ?? ''] ?? null;
+            $value = $record?->getAttribute($name);
+
+            if ($field['type'] !== 'select' || ! $list instanceof \Illuminate\Database\Eloquent\Collection
+                || $value === null || $value === '' || $list->contains('id', $value) || $list->isEmpty()) {
+                continue;
+            }
+
+            $current = $list->getQueueableClass()::query()->find($value);
+
+            if ($current !== null) {
+                $options[$field['options']] = $list->concat([$current]);
+            }
+        }
+
+        return $options;
+    }
+
     private function choices(array $options, string $key): array
     {
         $list = $options[$key] ?? [];
