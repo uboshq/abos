@@ -7,6 +7,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/direct_sale_api.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/records/customer_record.dart';
+import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -436,6 +437,7 @@ class _CounterScreenState extends State<CounterScreen> {
     String? account = method?.accountId ?? setup.moneyAccounts.firstOrNull?.id;
     final amount = _moneyAmount..clear();
     final reference = _moneyReference..clear();
+    String? moneyError;
     final saved = await showModalBottomSheet<List<CounterDeposit>>(
       context: context,
       isScrollControlled: true,
@@ -502,7 +504,7 @@ class _CounterScreenState extends State<CounterScreen> {
                 controller: amount,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'টাকা'),
+                decoration: InputDecoration(labelText: 'টাকা', errorText: moneyError),
               ),
               if (method?.needsReference ?? false)
                 TextField(
@@ -513,8 +515,13 @@ class _CounterScreenState extends State<CounterScreen> {
               OutlinedButton(
                 key: const ValueKey('counter-money-add'),
                 onPressed: () {
-                  final value = double.tryParse(amount.text.trim()) ?? 0;
+                  final value = Money.typed(amount.text);
+                  if (value == null || (amount.text.trim().isNotEmpty && value <= 0)) {
+                    setSheet(() => moneyError = _unreadableAmount);
+                    return;
+                  }
                   if (value <= 0 || account == null) return;
+                  moneyError = null;
                   setSheet(() {
                     rows.add(CounterDeposit(
                         accountId: account!,
@@ -532,7 +539,12 @@ class _CounterScreenState extends State<CounterScreen> {
               FilledButton(
                 key: const ValueKey('counter-money-save'),
                 onPressed: () {
-                  final value = double.tryParse(amount.text.trim()) ?? 0;
+                  final value = Money.typed(amount.text);
+                  // ⛔ লেখা আছে অথচ পড়া যায় না — শিট খোলা থাকে, বার্তাসহ; আগে চুপচাপ বাদ পড়ত আর বিল পুরো বাকিতে যেত
+                  if (value == null || (amount.text.trim().isNotEmpty && value <= 0)) {
+                    setSheet(() => moneyError = _unreadableAmount);
+                    return;
+                  }
                   if (value > 0 && account != null) {
                     rows.add(CounterDeposit(
                         accountId: account!,
@@ -551,6 +563,8 @@ class _CounterScreenState extends State<CounterScreen> {
     );
     if (saved != null && mounted) setState(() => _deposits = saved);
   }
+
+  static const _unreadableAmount = 'অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।';
 
   /// বাছা খাত নগদ নয় (ব্যাংক বা MFS) — তখন TrxID আর "কে দিলেন" লাগে
   static bool _isNonCash(CounterSetup? setup, String? accountId) {

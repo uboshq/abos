@@ -427,6 +427,35 @@ void main() {
   });
 
   testWidgets(
+      'take money: 1,250 and ১২৫০ are read, and an unreadable amount keeps the sheet open (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    final api = _FakeApi();
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+
+    await tester.tap(find.byKey(const ValueKey('counter-money')));
+    await tester.pumpAndSettle();
+    // ⛔ পড়া যায় না — শিট খোলা থাকে, বার্তাসহ
+    await tester.enterText(find.byKey(const ValueKey('counter-money-amount')), 'abc');
+    await tester.tap(find.byKey(const ValueKey('counter-money-save')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('counter-money-sheet')), findsOneWidget, reason: '⛔ পড়া যায় না এমন অঙ্কে শিট চুপচাপ বন্ধ হলো');
+    expect(find.textContaining('অঙ্কটা পড়া গেল না'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('counter-money-amount')), '1,250');
+    await tester.tap(find.byKey(const ValueKey('counter-money-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('counter-money-amount')), '১০০');
+    await tester.tap(find.byKey(const ValueKey('counter-money-save')));
+    await tester.pumpAndSettle();
+    await _confirm(tester);
+
+    expect(api.sentExtras!.deposits.map((d) => d.amount), [1250, 100], reason: '⛔ কমা বা বাংলা অঙ্কের টাকা চুপচাপ বাদ — বিল বাকিতে গেল');
+  });
+
+  testWidgets(
       'delivery and vehicle: the chosen mode, owner, fare and who pays reach the server',
       (tester) async {
     final api = _FakeApi();
