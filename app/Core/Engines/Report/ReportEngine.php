@@ -648,10 +648,10 @@ final class ReportEngine
                 $filters[$edge] = $this->dateOrRefuse($edge, $filters[$edge]);
             }
 
+            // ⛔ উল্টো পরিসর ৪২২, ৫০০ নয় — আগে সাধারণ RuntimeException, আর ওয়েবের প্রতিটা রিপোর্ট পর্দা "কিছু ভেঙেছে" দেখাত
+            // (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৪, ১৪ অক্টোবর ২০২৬)
             if (Carbon::parse($filters['from'])->gt(Carbon::parse($filters['to']))) {
-                throw new RuntimeException(
-                    'The start date is after the end date — that range holds nothing.'
-                );
+                throw ValidationException::withMessages(['from' => __('validation.report_bad_range')]);
             }
         }
 
