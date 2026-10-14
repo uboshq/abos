@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\MasterData\Models\Currency;
+use App\Modules\MasterData\Services\MasterListService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -31,6 +32,8 @@ final class ARateWrittenAsOneE3GaveAServerErrorTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
         app(SettingsService::class)->set('master_data.multi_currency_enabled', true);
+        tap(app(SettingsService::class))->flush();
+        app(MasterListService::class)->installDefaults();
 
         $usd = Currency::query()->where('code', 'USD')->firstOrFail();
         $save = fn (string $rate) => $this->post(route('master_data.currency.rates.store', ['id' => $usd->id]), [
