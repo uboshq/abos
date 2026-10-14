@@ -260,7 +260,12 @@ final class ScheduledReportRunner
     private function generate(ReportSchedule $schedule, User $owner, Collection $recipients): ReportRun
     {
         $previous = Auth::user();
-        Auth::login($owner);
+        /*
+         * ⛔ পরিচয় কেবল বসানো, লগইন নয় (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৯, ১৪ অক্টোবর ২০২৬)। ⓘ আগে `Auth::login()`/`logout()` —
+         * আর logout মালিকের (আর প্রতিটা দেয়ালের প্রাপকের) remember_token বদলে দিত: প্রতিদিন সকালের রানের পর "মনে রাখুন"
+         * দিয়ে খোলা ব্রাউজার আবার লগইন চাইত। `setUser()` সেশন বা টোকেন ছোঁয় না, লগইনের ঘটনাও ছোড়ে না।
+         */
+        Auth::setUser($owner);
 
         try {
             return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
@@ -293,10 +298,10 @@ final class ScheduledReportRunner
             });
         } finally {
             // ⚠️ পরের সূচি যেন এঁর পরিচয়ে না চলে
-            Auth::logout();
+            Auth::forgetUser();
 
             if ($previous !== null) {
-                Auth::login($previous);
+                Auth::setUser($previous);
             }
 
             CompanyContext::clear();
