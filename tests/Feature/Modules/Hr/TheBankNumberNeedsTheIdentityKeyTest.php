@@ -85,6 +85,56 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
             ->assertSee(route('hr.payroll.bank_file', $this->run->id), false);
     }
 
+    /**
+     * ⛔ চাবি ছাড়া ঠিকানার query দিয়েও নম্বর বদলায় না — `validate()` query-ও পড়ে, ছাঁকনি সরাত কেবল ফর্মের ঘর
+     * (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[EmployeeController::validated()]])। চাবি থাকলে বদলায়।
+     */
+    public function test_a_clerk_without_the_key_cannot_change_the_bank_number_through_the_address(): void
+    {
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->give($clerk, 'hr.employee.manage');
+        $this->give($clerk, 'hr.employee.view');
+
+        $employee = \App\Modules\Hr\Models\Employee::query()->where('code', 'EMP-BANK')->firstOrFail();
+        $form = ['name_en' => 'Bank Paid', 'joining_date' => '2026-01-15', 'payment_method' => 'bank'];
+        $query = ['bank_account_no' => '9999999999999', 'national_id' => '1999999999', 'mfs_number' => '01999999999'];
+
+        // ⓘ কর্মীর তথ্য ছবি ছাড়া সংরক্ষণ হয় না — প্রথম হালনাগাদে একটা ছোট ছবি
+        $this->as($clerk)->put(route('hr.employee.update', ['employee' => $employee->id, ...$query]), [...$form, 'photo' => $this->png()])
+            ->assertSessionHasNoErrors();
+
+        $fresh = $employee->fresh();
+        $this->assertSame(self::ACCOUNT, (string) $fresh->bank_account_no, '⛔ চাবি ছাড়া ঠিকানার query দিয়ে ব্যাংকের নম্বর বদলাল — পরের ব্যাংক-ফাইল অন্য হিসাবে বেতন পাঠাত');
+        $this->assertNull($fresh->mfs_number, '⛔ চাবি ছাড়া MFS নম্বর বসল');
+
+        $this->give($clerk, 'hr.identity.view');
+        $this->as($clerk)->put(route('hr.employee.update', $employee->id), [...$form, 'bank_account_no' => '5555555555555'])->assertSessionHasNoErrors();
+        $this->assertSame('5555555555555', (string) $employee->fresh()->bank_account_no, 'চাবি থাকলে বদলায়, আগের মতো');
+    }
+
+    /**
+     * ⛔ চাবি ছাড়া পুরো NID লিখে খুঁজলে কর্মী মেলে না — নাহলে "এই NID অমুকের" জানা যেত (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+     * [[Employee::scopeSearch()]])। চাবি থাকলে মেলে, আগের মতো।
+     */
+    public function test_a_clerk_without_the_key_cannot_find_an_employee_by_the_full_id_card_number(): void
+    {
+        $nid = '19901234567890';
+        $employee = \App\Modules\Hr\Models\Employee::query()->where('code', 'EMP-BANK')->firstOrFail();
+        app(EmployeeService::class)->update($employee, ['national_id' => $nid]);
+
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->give($clerk, 'hr.employee.view');
+
+        $this->as($clerk);
+        $this->assertSame([], \App\Modules\Hr\Models\Employee::query()->search($nid)->pluck('code')->all(), '⛔ পরিচয়ের চাবি ছাড়া NID দিয়ে কর্মী মিলল');
+
+        $this->give($clerk, 'hr.identity.view');
+        $this->as($clerk);
+        $this->assertSame(['EMP-BANK'], \App\Modules\Hr\Models\Employee::query()->search($nid)->pluck('code')->all(), 'চাবি থাকলে NID দিয়ে মেলে');
+    }
+
     /** স্লিপের ছাপা কাগজের ব্যাংক-নম্বরের ঘর — PDF যে নথি থেকে আঁকা হয়, সেখান থেকেই */
     private function printedAccount(Payslip $slip): ?string
     {
@@ -92,6 +142,17 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $method = new \ReflectionMethod(PayslipPrintController::class, 'documentFor');
 
         return $method->invoke(app(PayslipPrintController::class), $slip)->meta[__('hr::field.bank_account_no')] ?? null;
+    }
+
+    private function png(): \Illuminate\Http\UploadedFile
+    {
+        $image = imagecreatetruecolor(40, 40);
+        imagefill($image, 0, 0, imagecolorallocate($image, 20, 120, 200));
+        $path = tempnam(sys_get_temp_dir(), 'pic');
+        imagepng($image, $path);
+        imagedestroy($image);
+
+        return new \Illuminate\Http\UploadedFile($path, 'face.png', 'image/png', null, true);
     }
 
     private function give(User $user, string $key): void

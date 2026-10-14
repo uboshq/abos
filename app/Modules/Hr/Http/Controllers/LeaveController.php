@@ -105,12 +105,19 @@ class LeaveController extends Controller implements HasMiddleware
         $data = $request->validate([
             'employee_id' => ['required', 'integer',
                 Rule::exists('hr_employees', 'id')->where('company_id', $companyId)],
+            // ⛔ কেবল চালু ধরন — ফোনের একই নিয়ম (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬, ⓘ১৭); ⓘ বানানো POST বন্ধ করা ধরনেও আবেদন বসাত
             'leave_type_id' => ['required', 'integer',
-                Rule::exists('hr_leave_types', 'id')->where('company_id', $companyId)],
+                Rule::exists('hr_leave_types', 'id')->where('company_id', $companyId)->where('is_active', true)->whereNull('deleted_at')],
             'from_date' => ['required', 'date'],
             'to_date' => ['required', 'date'],
-            'days' => ['required', 'numeric', 'gt:0'],
+            // ⛔ সাধারণ সংখ্যা, দশমিকের পরে বড়জোর এক ঘর — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯; [[LeaveIsCountedWhenItIsApprovedTest]]);
+            // ⓘ "1e1" পরের হিসাবে (bcmath) ৫০০ দিত, আর "1.55" এক ঘরে মাপা হয়ে কোটা পার হত অথচ খাতায় 1.6 বসত
+            'days' => ['required', 'decimal:0,1', 'regex:/^\d+(\.\d)?$/', 'gt:0', 'max:'.LeaveService::MAX_SPAN_DAYS],
             'reason' => ['nullable', 'string', 'max:500'],
+        ], [
+            'days.decimal' => __('hr::validation.days_format'),
+            'days.regex' => __('hr::validation.days_format'),
+            'leave_type_id.exists' => __('hr::validation.leave_type_closed'),
         ]);
 
         $employee = Employee::query()->findOrFail($data['employee_id']);
@@ -157,7 +164,7 @@ class LeaveController extends Controller implements HasMiddleware
 
     public function cancel(Request $request, int $application): RedirectResponse
     {
-        $this->leave->cancel($this->reachable($request, $application));
+        $this->leave->cancel($this->reachable($request, $application), $request->user());
 
         return back()->with('saved', __('hr::message.leave_cancelled'));
     }

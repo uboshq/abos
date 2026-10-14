@@ -65,6 +65,16 @@ final class PayrollService
         $monthEnd = $monthStart->copy()->endOfMonth();
         $trx = $trxDate === null ? $monthEnd->copy() : Carbon::parse($trxDate);
 
+        /*
+         * ⛔ বেতনের দিন মাসের আগে নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[APayrollMonthAndDateStayInsideTheirLimitsTest]])।
+         * ⓘ আগে অক্টোবরের রান ১ সেপ্টেম্বর তারিখে নেওয়া হত — অক্টোবরের বেতন-খরচ সেপ্টেম্বরের খাতায়, বন্ধ হয়ে যাওয়া তুলনার মাসে।
+         */
+        if ($trx->copy()->startOfDay()->lt($monthStart)) {
+            throw ValidationException::withMessages([
+                'trx_date' => __('hr::validation.payroll_date_before_month', ['month' => $monthStart->format('M Y')]),
+            ]);
+        }
+
         $this->assertNoLiveRun($monthStart);
 
         /*
@@ -140,7 +150,13 @@ final class PayrollService
 
             $monthEnd = $run->month->copy()->endOfMonth();
 
-            $run->payslips()->each(function (Payslip $slip) {
+            /*
+             * ⛔ id ধরে পাতা, অফসেটে নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[ARebuildClearsEveryOldPayslipTest]])।
+             * ⓘ `each()` হাজারে হাজারে অফসেট ধরে পড়ে, অথচ পড়তে পড়তেই মোছে: প্রথম হাজার মোছার পর দ্বিতীয় পাতা বাকিগুলোর ১,০০০
+             * নম্বর থেকে খোঁজে আর কিছু পায় না। হাজারের বেশি কর্মী থাকলে পুরনো শিট টিকে থাকত, নতুনগুলোর পাশে — মোট, খাতা আর ব্যাংকে
+             * তাঁদের বেতন দুইবার। `lazyById()` শেষ পড়া id-র পর থেকে খোঁজে, তাই মুছলেও কিছু বাদ পড়ে না।
+             */
+            $run->payslips()->lazyById(500)->each(function (Payslip $slip) {
                 $slip->lines()->delete();
                 $slip->forceDelete();
             });
@@ -190,27 +206,37 @@ final class PayrollService
          * সীমাটা মানুষ ওই সংখ্যাটা ধরেই ভাবেন ("দুই লাখের উপরে হলে
          * আমাকে জিজ্ঞেস কোরো"), আর কর্তনের আগের সংখ্যাটা সবসময় বড় বলে
          * সীমাটা নীরবে কড়া হয়ে যেত।
+         *
+         * ⛔ সই যে অঙ্কে দেখা হল, তুলনাও সেই অঙ্কে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+         * ([[TheSignatureCoversTheNetThatIsPostedTest]])। ⓘ আগে তুলনার অঙ্কটা পড়া হত তালার পরে, তাজা সারি থেকে: সই দেখা হল
+         * ১,৯৯,০০০-এ, এর মধ্যে আরেক ট্যাবে "আবার বানান" net তুলল ২,০৫,০০০-এ, আর তালার পরে সেটাই "সই হওয়া" অঙ্ক ধরে সই
+         * ছাড়া খাতায় বসত। এখন সই-দেখা অঙ্কটাই ধরে রাখা হয় — তাজা net তার বেশি হলে নিচের যাচাই থামায়, আর নতুন অঙ্কে আবার সই দেখা হয়।
          */
+        $signedNet = (string) $run->net_total;
+
         $print = $this->approvals->assertClear(
             document: $run,
             module: 'hr',
             action: 'payroll',
             field: 'status',
-            amount: (string) $run->net_total,
+            amount: $signedNet,
             reason: $run->narration,
         );
 
-        $posted = DB::transaction(function () use ($run, $print) {
+        $posted = DB::transaction(function () use ($run, $signedNet, $print) {
             /*
              * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
              * ⓘ পুরনো কপি থেকে "নিশ্চিত" চাপলে বাতিল হয়ে যাওয়া রানও খাতায় বসত।
              */
             $this->lockFresh($run);
             $this->assertDraft($run);
-            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
-            $this->approvals->assertUnchangedSince($run, $print, 'status');
-
-            $signedNet = (string) $run->net_total;
+            /*
+             * ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে (শিট বা সারি — net একই থাকলেও) কিছুই খাতায় নয় ([[DocumentApproval::isUnchangedSince()]],
+             * ১৩ অক্টোবর ২০২৬); ec-এর net-এর নিয়মের মতোই নতুন কাগজে শুরু থেকে আবার — সই লাগলে নিচের আবার-ডাকা অনুরোধ বসিয়ে থামে।
+             */
+            if (! $this->approvals->isUnchangedSince($run, $print)) {
+                return null;
+            }
 
             $this->capAdvancesNow($run);
 
@@ -266,10 +292,15 @@ final class PayrollService
             if ($run->status === DocumentStatus::CONFIRMED) {
                 $this->assertSalaryNotPaidOut($run);
 
+                /*
+                 * ⛔ উল্টো দাখিলা আসলটার আগে নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AReversalNeverLandsBeforeThePayrollTest]])।
+                 * ⓘ অক্টোবরের রান ৩১ অক্টোবর তারিখে, নিশ্চিত ১৪ তারিখে, বাতিল ১৫ তারিখে — উল্টোটা বসত ১৫ অক্টোবর, আর ১৫ থেকে ৩০
+                 * অক্টোবর খাতায় বেতন-খরচ ঋণাত্মক দেখাত। রানের দিন সামনে হলে উল্টোটাও সেদিনই; নাহলে আগের মতো আজ।
+                 */
                 $this->posting->reverse(
                     sourceType: PayrollRun::SOURCE_TYPE,
                     sourceId: $run->id,
-                    reversalDate: now(),
+                    reversalDate: $run->trx_date->greaterThan(Carbon::today()) ? $run->trx_date->copy() : now(),
                     reason: $reason,
                 );
             }
@@ -446,21 +477,35 @@ final class PayrollService
      * ── কেন হাজিরা না বসালে ভাগটা ১ ────────────────────────────────
      * খালি খাতাকে অনুপস্থিতি ধরলে সুইচ চালু করার প্রথম মাসেই সবার
      * বেতন শূন্য হত।
+     *
+     * ── ⛔ চাকরির দিনগুলোই, মাসের বাকিটা নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ─────────
+     * যোগদানের আগের আর ছাড়ার পরের দিন বাদ — হাজিরার সুইচ বন্ধ থাকলেও। ⓘ আগে মাসের যেকোনো দিন চাকরিতে থাকলেই পুরো মাস:
+     * ২৫ অক্টোবর যোগ দিলে মূল ৩০,০০০ + বাড়িভাড়া ৫০% = ৪৫,০০০, অথচ পাওনা ৭ দিনের ১০,১৬১.২৯। একই মাসের দিনের ভাগ, তাই
+     * অনুপস্থিতির কাটার সাথে মেলে।
      */
     private function attendanceFactor(Employee $employee, Carbon $monthEnd): string
     {
-        if (! $this->settings->get('hr.attendance_affects_salary')) {
-            return '1';
-        }
-
-        $unpaid = $this->attendance->unpaidDays($employee, $monthEnd);
-
-        if (bccomp($unpaid, '0', 1) <= 0) {
-            return '1';
-        }
-
         $daysInMonth = (string) $monthEnd->daysInMonth;
-        $paid = bcsub($daysInMonth, $unpaid, 1);
+        $from = $monthEnd->copy()->startOfMonth()->startOfDay();
+        $to = $monthEnd->copy()->startOfDay();
+
+        if ($employee->joining_date !== null && $employee->joining_date->copy()->startOfDay()->gt($from)) {
+            $from = $employee->joining_date->copy()->startOfDay();
+        }
+
+        if ($employee->leaving_date !== null && $employee->leaving_date->copy()->startOfDay()->lt($to)) {
+            $to = $employee->leaving_date->copy()->startOfDay();
+        }
+
+        $employed = $from->gt($to) ? '0' : (string) ((int) $from->diffInDays($to) + 1);
+        $unpaid = $this->settings->get('hr.attendance_affects_salary')
+            ? $this->attendance->unpaidDays($employee, $monthEnd) : '0';
+
+        if (bccomp($employed, $daysInMonth, 1) >= 0 && bccomp($unpaid, '0', 1) <= 0) {
+            return '1';
+        }
+
+        $paid = bcsub($employed, $unpaid, 1);
 
         // পুরো মাস অনুপস্থিত থাকলে ভাগটা শূন্য, ঋণাত্মক নয়
         if (bccomp($paid, '0', 1) <= 0) {
@@ -834,6 +879,15 @@ final class PayrollService
     /** CSV-র একটা ঘর — কমা বা উদ্ধৃতি থাকলে মুড়ে দেওয়া। */
     private function csvField(string $value): string
     {
+        /*
+         * ⛔ সূত্রের মতো শুরু হলে আগে একটা ' — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[TheBankFileCarriesNoFormulaTest]])।
+         * ⓘ হিসাবের নাম "=HYPERLINK(...)" লেখা থাকলে ফাইলটা এক্সেলে খোলামাত্র সূত্র চলত। = + - @ আর ট্যাব/CR দিয়ে শুরু হওয়া ঘর
+         * এখন লেখা হিসেবেই পড়ে। অঙ্কের ঘর এতে পড়ে না — নিট শূন্যের বেশি না হলে সারিটাই বাদ।
+         */
+        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            $value = "'".$value;
+        }
+
         if (str_contains($value, ',') || str_contains($value, '"') || str_contains($value, "\n")) {
             return '"'.str_replace('"', '""', $value).'"';
         }

@@ -95,9 +95,16 @@ class PayrollController extends Controller implements HasMiddleware
 
     public function store(Request $request): RedirectResponse
     {
+        /*
+         * ⛔ সামনের মাস নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[APayrollMonthAndDateStayInsideTheirLimitsTest]])।
+         * ⓘ আগে ২০২৭-০৩-এর মতো মাসও নেওয়া হত, আর নিশ্চিত করলে না-খাটা মাসের বেতন আগাম খরচে বসত (IAS 19: কাজ হলে তবে খরচ)।
+         * দিনটা মাসের আগে হতে পারে না — সেটা [[PayrollService::build()]]-এ, সব দরজার জন্য।
+         */
         $data = $request->validate([
-            'month' => ['required', 'date_format:Y-m'],
+            'month' => ['required', 'date_format:Y-m', 'before_or_equal:'.now()->format('Y-m')],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+        ], [
+            'month.before_or_equal' => __('hr::validation.payroll_month_in_future'),
         ]);
 
         $run = $this->payroll->build($data['month'].'-01', $data['trx_date'] ?? null);

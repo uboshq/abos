@@ -269,9 +269,14 @@ final class DocumentApproval
      * ছাপ আবার মেলানো হয় ([[StockTransferService]]-এর পুরনো ছাঁচ); না মিললে কিছুই খাতায় যায় না, মানুষ আবার চাপেন — তখন
      * নতুন কাগজে নতুন যাচাই।
      */
+    public function isUnchangedSince(Model $document, string $print): bool
+    {
+        return hash_equals($print, app(DocumentFingerprint::class)->of($document));
+    }
+
     public function assertUnchangedSince(Model $document, string $print, string $field): void
     {
-        if (! hash_equals($print, app(DocumentFingerprint::class)->of($document))) {
+        if (! $this->isUnchangedSince($document, $print)) {
             throw ValidationException::withMessages([$field => __('core.approval.changed_while_posting')]);
         }
     }
