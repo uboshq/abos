@@ -1,3 +1,4 @@
+import '../records/money.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
@@ -439,9 +440,11 @@ class CounterLine {
         'product': productId,
         if (lotId != null) 'lot': lotId,
         'qty': qty,
-        'rate': rate.toStringAsFixed(2),
+        // ⛔ চার ঘর — সার্ভারের দাম আর ছাড় `decimal:4`; দুই ঘরে গোল করলে ৪১.৬৬৬৭-এর ১২টা ৫০০.০৪ হত, ওয়েবে ৫০০.০০
+        // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        'rate': Money.rate(rate),
         if (discountPercent > 0)
-          'discount_percent': discountPercent.toStringAsFixed(2),
+          'discount_percent': Money.rate(discountPercent),
         if (freeQty > 0) 'free_qty': freeQty,
       };
 }

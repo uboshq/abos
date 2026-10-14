@@ -205,7 +205,7 @@ class _CounterScreenState extends State<CounterScreen> {
         return;
       }
       setState(() {
-        _rate.text = rate.toStringAsFixed(2);
+        _rate.text = Money.rate(rate);
         _rateNote = price.priceLabel.isEmpty ? null : price.priceLabel;
       });
     } catch (_) {
@@ -280,7 +280,7 @@ class _CounterScreenState extends State<CounterScreen> {
       _product = _products.where((p) => p.id == line.productId).firstOrNull;
       _lot = _lotsOfProduct.where((l) => l.id == line.lotId).firstOrNull;
       _qty.text = '${line.qty}';
-      _rate.text = line.rate.toStringAsFixed(2);
+      _rate.text = Money.rate(line.rate);
       _discount.text =
           line.discountPercent > 0 ? line.discountPercent.toString() : '';
       _free.text = line.freeQty > 0 ? '${line.freeQty}' : '';
@@ -945,7 +945,7 @@ class _CounterScreenState extends State<CounterScreen> {
         _product = picked;
         _lot = _lotsOfProduct.firstOrNull;
         final rate = double.tryParse(price.rate) ?? 0;
-        _rate.text = rate > 0 ? rate.toStringAsFixed(2) : '';
+        _rate.text = rate > 0 ? Money.rate(rate) : '';
       });
       _askFree();
     }
@@ -1244,7 +1244,7 @@ class _CounterScreenState extends State<CounterScreen> {
                         _lot = _lotsOfProduct
                             .firstOrNull; // ⓘ FEFO-র প্রথমটা আগে থেকে — বদলানো যায়
                         _rate.text = (picked.salePrice ?? 0) > 0
-                            ? picked.salePrice!.toStringAsFixed(2)
+                            ? Money.rate(picked.salePrice!)
                             : '';
                         _rateNote = null;
                         _rateTyped = false;

@@ -265,6 +265,12 @@ Future<void> _confirm(WidgetTester tester) async {
 }
 
 void main() {
+  test('a rate and a discount go with four places, as the server keeps them (phone line audit, 15 Oct 2026)', () {
+    final json = const CounterLine(productId: 'p', productName: 'x', qty: 12, rate: 41.6667, discountPercent: 7.1429).toJson();
+    expect(json['rate'], '41.6667', reason: '⛔ দর দুই ঘরে গোল — ১২টায় ৫০০.০৪, ওয়েবে ৫০০.০০');
+    expect(json['discount_percent'], '7.1429');
+  });
+
   test('a lot without its stock (no stock key) says nothing about how much, never "0"', () {
     // ⛔ সার্ভার মজুদের চাবি ছাড়া পরিমাণ পাঠায় না (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
     expect(CounterLot.fromJson(const {'id': 'l1', 'no': 'LOT-1', 'expiry': '2027-01-01', 'qty': null}).qty, '');

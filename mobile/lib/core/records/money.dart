@@ -60,6 +60,15 @@ class Money {
   /// `1234.5000` → `৳1,234.5`.
   static String taka(dynamic value) => '৳${plain(value)}';
 
+  /// দর বা হার — অন্তত দুই ঘর, দরকারে চার (`40` → `40.00`, `41.6667` থাকে) — সার্ভারের `decimal:4` না কেটে
+  /// (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+  static String rate(double value) {
+    final four = value.toStringAsFixed(4);
+    if (four.endsWith('00')) return value.toStringAsFixed(2);
+    if (four.endsWith('0')) return value.toStringAsFixed(3);
+    return four;
+  }
+
   /// ⭐ মানুষের লেখা অঙ্ক — বাংলা অঙ্ক (১,২৫০) আর কমা (1,250) সহ (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
   ///
   /// <p>খালি ঘর `0` (কিছু লেখা হয়নি), আর লেখা আছে অথচ পড়া যায় না হলে `null` — ⛔ আগে `double.tryParse("1,250")` চুপচাপ
