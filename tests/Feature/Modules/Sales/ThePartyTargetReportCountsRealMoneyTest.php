@@ -68,10 +68,14 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
 
         $this->credit($met, 'collection', '60000');
         $this->credit($met, 'receipt_voucher', '40000');
-        // ⛔ টাকা নয় — ফেরত মাল আর জাবেদা খাতা কমায়, আদায় নয়
+        // ⛔ টাকা নয় — ফেরত মাল, ছাড়ের ক্রেডিট নোট আর সমন্বয়ের জাবেদা খাতা কমায়, আদায় নয়
         $this->credit($behind, 'sales_return', '90000');
+        $this->credit($behind, 'note', '20000');
         $this->credit($behind, 'journal_voucher', '50000');
         $this->credit($behind, 'receipt_voucher', '30000');
+        // ⛔ ফেরত চেক — হাতে আসার দিন গোনা টাকা আবার বাদ
+        $this->credit($behind, 'cheque', '25000');
+        $this->bounce($behind, '25000');
         $this->credit($near, 'collection', '85000');
         $this->credit($none, 'collection', '5000');
 
@@ -79,7 +83,7 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
 
         $this->assertSame(['PT-A', 'PT-B', 'PT-C', 'PT-D'], $rows->keys()->sort()->values()->all());
         $this->assertMoney('100000', $rows['PT-A']['inflow'], '⛔ আদায় আর রসিদ দুইটাই গোনা হয়নি');
-        $this->assertMoney('30000', $rows['PT-B']['inflow'], '⛔ ফেরত মাল বা জাবেদা আদায় হিসেবে গোনা হল');
+        $this->assertMoney('30000', $rows['PT-B']['inflow'], '⛔ ফেরত মাল, ছাড়, জাবেদা বা ফেরত চেক আদায় হিসেবে গোনা হল');
         $this->assertMoney(app(CustomerTargetService::class)->achievedFor([(int) $behind->id], Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31'))[(int) $behind->id],
             $rows['PT-B']['inflow'], '⛔ রিপোর্ট লক্ষ্যের পাতার চেয়ে আলাদা অঙ্ক বলে');
 
@@ -256,6 +260,18 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
             sourceType: $source, sourceId: random_int(1, 9_999_999), trxDate: now()->toDateString(), lines: [
                 ['account_id' => $cash, 'debit' => $amount],
                 ['account_id' => (int) StandardChart::find(StandardChart::RECEIVABLE)->id, 'credit' => $amount, 'party_type' => 'customer', 'party_id' => $dealer->id],
+            ],
+            branchId: $this->company->defaultBranch()?->id,
+        );
+    }
+
+    /** চেক ফেরত — খাতায় গ্রাহকের ডেবিট, `cheque:bounced` নামে */
+    private function bounce(Customer $dealer, string $amount): void
+    {
+        app(PostingEngine::class)->post(
+            sourceType: 'cheque:bounced', sourceId: random_int(1, 9_999_999), trxDate: now()->toDateString(), lines: [
+                ['account_id' => (int) StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => $amount, 'party_type' => 'customer', 'party_id' => $dealer->id],
+                ['account_id' => (int) StandardChart::find(StandardChart::CHEQUES_IN_HAND)->id, 'credit' => $amount],
             ],
             branchId: $this->company->defaultBranch()?->id,
         );
