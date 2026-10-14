@@ -68,6 +68,12 @@ final class LedgerCheckReports
         // ⓘ সরবরাহকারী ধরে — ভেতরে যোগ, বাইরে নাম (ONLY_FULL_GROUP_BY)
         $byParty = $entries()
             ->where('le.party_type', $type)
+            /*
+             * ⛔ বিল-না-আসা মাল (২১৬০) সরবরাহকারীর নিজের দ্বিতীয় খাত — "অমিল" নয় (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[GoodsNotYetBilledReadAsADifferenceTest]])। ⓘ ১০ অক্টোবর থেকে দেনা আর বিল-না-আসা আলাদা ([[Supplier::payable()]]),
+             * কিন্তু এখানে সবই যোগ হত — প্রতিটা বিলের অপেক্ষার রসিদ "ভুল খাতে টাকা" হয়ে পার্থক্যে বসত, আর আসল ভুল তার ভিড়ে হারাত।
+             */
+            ->whereNotIn('le.account_id', Supplier::goodsNotBilledAccountIds())
             ->groupBy('le.party_id')
             ->selectRaw('le.party_id')
             ->selectRaw('SUM(le.credit - le.debit) as party_total')

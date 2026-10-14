@@ -143,7 +143,8 @@ final class DepositFormOptions
              * "গ্রাহক" বা "সরবরাহকারী" কথাটা লেখা নেই — নতুন কোনো
              * পক্ষ যোগ হলে এখানে হাত পড়বে না (সেকশন ১৯.৭)।
              */
-            'parties' => app(PartyRegistry::class)->forPicker(),
+            // ⭐ টাকার কাগজ — জের-থাকা নিষ্ক্রিয় পক্ষও, চিহ্নসহ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
+            'parties' => app(PartyRegistry::class)->forPicker(evenInactiveWithABalance: true),
 
             /*
              * খরচের কেন্দ্রগুলো — কোনোটা না থাকলে কলামটাই আসে না।

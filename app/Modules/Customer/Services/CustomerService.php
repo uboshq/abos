@@ -64,6 +64,12 @@ final class CustomerService
 
             $data['code'] = $givenCode ? trim($data['code']) : $this->numbers->next('CUS');
 
+            // ⛔ সিরিজের নম্বর হাতে লেখা কোডে আগেই বসে থাকলে পরেরটা — আগে লেনদেন ফিরত সিরিজের গুনতিসহ, আর পরের বার আবার
+            // একই নম্বর: কোনো গ্রাহকই বানানো যেত না (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ATypedCodeBlockedEveryNewCustomerTest]])
+            for ($tries = 0; ! $givenCode && $tries < 1000 && $this->codeTaken($data['code']); $tries++) {
+                $data['code'] = $this->numbers->next('CUS');
+            }
+
             $this->assertCodeIsFree($data['code']);
 
             $customer = Customer::create([
@@ -121,6 +127,7 @@ final class CustomerService
     public function update(Customer $customer, array $data): Customer
     {
         $this->assertMayChangeActive($customer, $data);
+        $this->assertStaysInReach($customer, $data);
         $this->assertBanglaNameIfRequired($data, $customer);
         $this->assertNotADuplicate($data, $customer->id, $customer->branch_id, $customer);
         $this->assertOnlyOneDistributorPerPoint($data, $customer);
@@ -473,7 +480,9 @@ final class CustomerService
 
         $latest = app(ApprovalEngine::class)->latestFor($customer, 'credit_limit');
 
-        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash)) {
+        // ⛔ একটা সই একবারই — যে সই একবার সীমা বসিয়েছে, কমিয়ে আবার একই অঙ্কে তুললে ছাপ হুবহু মেলে, তবু সেটা নতুন
+        // বাড়ানো (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneLimitSignatureWasSpentTwiceTest]])
+        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash) && ! $this->limitSignatureSpent($latest)) {
             return;
         }
 
@@ -502,7 +511,8 @@ final class CustomerService
             && $held->amount === null
             && $held->state_hash !== null
             && hash_equals((string) $held->state_hash, $hash)) {
-            $held->update(['amount' => $after]);
+            // ⓘ কোন সীমা থেকে উঠছে, তাও সাথে — সইয়ের দিন সীমা অন্য পথে বদলে থাকলে কাগজটা পুরনো ([[ApplyTheLimitOnTheLastSignature]])
+            $held->update(['amount' => $after, 'payload' => [...($held->payload ?? []), 'limit_before' => bcadd($before, '0', 4)]]);
         }
 
         // ⓘ বার্তাটা (অপেক্ষায় · প্রত্যাখ্যাত) ইঞ্জিনের নিজের — একই অনুরোধটাই ফেরে
@@ -519,6 +529,17 @@ final class CustomerService
         throw ValidationException::withMessages([
             'credit_limit' => __('core.approval.awaiting'),
         ]);
+    }
+
+    /** এই সই কি আগেই একবার সীমা বসিয়েছে — ইতিহাসে তার সূত্রসহ সারি আছে কি না ([[CustomerCreditChange]]) */
+    private function limitSignatureSpent(Approval $approval): bool
+    {
+        return CustomerCreditChange::query()->withoutGlobalScopes()
+            ->where('company_id', $approval->company_id)
+            ->where('customer_id', $approval->approvable_id)
+            ->where('field', 'credit_limit')
+            ->where('approval_id', $approval->id)
+            ->exists();
     }
 
     /** বাড়ানো হলে যে সই সেটা ঢাকে, তার সারি — ইতিহাসের সূত্রের জন্য; কমানো বা সমান হলে null */
@@ -582,6 +603,30 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * ⛔ শাখায় সীমিত মানুষ শাখা মুছে গ্রাহককে কোম্পানি-স্তরে তোলেন না (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ABranchClerkMadeACustomerCompanyWideTest]])।
+     *
+     * ⚠️ অনুরোধের শাখা-নিয়ম খালি মানে চলে না (`nullable`), আর শাখাহীন সারি সবার নাগালে — তাই ময়মনসিংহের কর্মী "—" বেছে
+     * নিজের গ্রাহককে নেত্রকোনারও দেখার, বদলানোর আর বিল করার মতো করে দিতেন। ⓘ যাঁর নাগাল গোটা কোম্পানি, তাঁর আগের মতোই।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertStaysInReach(Customer $customer, array $data): void
+    {
+        if (! array_key_exists('branch_id', $data) || $data['branch_id'] !== null || $customer->branch_id === null) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user === null || ! app(\App\Core\Services\DataScope::class)->isLimited($user, \App\Models\UserDataScope::BRANCH)) {
+            return;
+        }
+
+        throw ValidationException::withMessages(['branch_id' => __('customer::validation.branch_out_of_reach')]);
+    }
+
     private function assertMayChangeActive(Customer $customer, array $data): void
     {
         if (! array_key_exists('is_active', $data) || $data['is_active'] === null
@@ -867,10 +912,10 @@ final class CustomerService
         }
     }
 
-    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    private function codeTaken(string $code, ?int $exceptId = null): bool
     {
         // ⛔ দেয়াল ছাড়া — অন্যের ডিলারের সংকেত না দেখলে "খালি" বলত, আর unique নিয়ম ৫০০ দিত (⛔১৬, §গ৫)
-        $taken = Customer::acrossDealers()
+        return Customer::acrossDealers()
             ->where('code', $code)
             ->when($exceptId, fn ($q) => $q->whereKeyNot($exceptId))
             // মুছে ফেলা গ্রাহকের কোডও দখলে থাকে: সফট ডিলিট মানে রেকর্ডটা
@@ -878,8 +923,11 @@ final class CustomerService
             // কোনটায় যাবে বলা যেত না।
             ->withTrashed()
             ->exists();
+    }
 
-        if ($taken) {
+    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    {
+        if ($this->codeTaken($code, $exceptId)) {
             throw ValidationException::withMessages([
                 'code' => __('customer::validation.code_taken', ['code' => $code]),
             ]);

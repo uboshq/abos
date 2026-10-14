@@ -13,6 +13,9 @@ return [
         'process' => 'কাগজ কোন ধাপে',
     ],
 
+    // ⓘ টাকার কাগজের বাছাইয়ে বন্ধ পক্ষের পাশে ([[PickableWhileOwing]])
+    'inactive_with_balance' => 'নিষ্ক্রিয় · জের আছে',
+
     'status' => [
         'draft' => 'খসড়া',
         'confirmed' => 'নিশ্চিত',

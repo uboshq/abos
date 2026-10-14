@@ -49,7 +49,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <x-ui.select name="supplier_id" :label="__('purchase::field.supplier')"
-                             :options="$suppliers->mapWithKeys(fn ($s) => [$s->id => $s->name()])"
+                             :options="$suppliers->mapWithKeys(fn ($s) => [$s->id => $s->pickerName()])"
                              :selected="$bill?->supplier_id ?? $payment->supplier_id"
                              placeholder="-" required />
 

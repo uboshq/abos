@@ -34,6 +34,12 @@ final class PartyReports
      */
     public const BUCKETS = [30, 60, 90];
 
+    /** বিল-না-আসা মালের খাতগুলো (২১৬০ পরিবার), SQL-এর `IN`-এর জন্য — ⓘ খাত না থাকলে "0" */
+    private static function notBilledIn(): string
+    {
+        return implode(',', array_map('intval', Supplier::goodsNotBilledAccountIds()));
+    }
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::payableList());
@@ -79,7 +85,9 @@ final class PartyReports
                 // পরিসরের নয় — "কত দিন থেকে বাকি" প্রশ্নটা ageing-এর
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
                 ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
-                ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
+                // ⛔ সারি থাকে কোনো একটা ঘর শূন্য না হলে — অগ্রিম আর বিল-না-আসা মাল সমান হলে দুটোই হারাত ([[ThePayableListNettedTheAdvancesTest]])
+                ->havingRaw('SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN 0 ELSE ledger_entries.credit - ledger_entries.debit END) <> 0'
+                    .' OR SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) <> 0')
                 ->orderByRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) DESC')
                 ->select([
                     'ledger_entries.party_id',
@@ -88,7 +96,18 @@ final class PartyReports
                     // তাই ধ্রুবক হিসেবেই select করা। engine সারিগুলোকে
                     // সাধারণ অ্যারে হিসেবে দেখে, তাই কলামটা থাকতেই হবে।
                     DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
-                    DB::raw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) as payable'),
+                    /*
+                     * ⭐ বিল হওয়া দেনা আর বিল-না-আসা মাল আলাদা ঘরে, দুইয়ের যোগ ঘরের "কোম্পানিকে দিতে হবে" (মালিক, ১৩ অক্টোবর ২০২৬:
+                     * "int standard onuzayi koro" — GRNI জমে থাকা দায়, ট্রেড-প্রদেয় নয়; fe-র সিদ্ধান্ত;
+                     * [[GoodsNotYetBilledAreAnAccrualNotATradePayableTest]])। ⓘ সারি থাকে দুইয়ের যোগ শূন্য না হলে।
+                     */
+                    /*
+                     * ⛔ দেনা আর অগ্রিম আলাদা ঘরে (IAS 1 ¶৩২) — আগে অগ্রিম দেওয়া সরবরাহকারী ঋণাত্মক দেনা হয়ে মোটে মিশত: ১,০০০ দেনা আর
+                     * ৬০০ অগ্রিমে তালিকার মোট ৪০০ (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePayableListNettedTheAdvancesTest]]; গ্রাহকের তালিকার একই নিয়ম)।
+                     */
+                    DB::raw('GREATEST(SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN 0 ELSE ledger_entries.credit - ledger_entries.debit END), 0) as payable'),
+                    DB::raw('GREATEST(SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN 0 ELSE ledger_entries.debit - ledger_entries.credit END), 0) as advance'),
+                    DB::raw('SUM(CASE WHEN ledger_entries.account_id IN ('.self::notBilledIn().') THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as not_billed'),
                 ]),
             columns: [
                 [
@@ -100,6 +119,8 @@ final class PartyReports
                     'source_id' => 'party_id',
                 ],
                 ['key' => 'payable', 'label' => 'supplier::field.payable', 'type' => ReportColumn::MONEY],
+                ['key' => 'not_billed', 'label' => 'supplier::field.goods_not_billed', 'type' => ReportColumn::MONEY],
+                ['key' => 'advance', 'label' => 'supplier::field.advance_given', 'type' => ReportColumn::MONEY],
             ],
         );
     }
@@ -168,17 +189,22 @@ final class PartyReports
                  */
                 $posted = "'".implode("','", DocumentStatus::POSTED)."'";
                 $company = (int) $f['company_id'];
+                /*
+                 * ⛔ শোধও তারিখ পর্যন্ত — বিল "to" পর্যন্ত ধরা হত, অথচ পরের পরিশোধ, ভাউচার আর ফেরতও বাকি কমাত: ৩০ সেপ্টেম্বরের
+                 * সূচিতে ৫ অক্টোবরের পরিশোধে বিল "শোধ" দেখাত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePaymentScheduleCountedLaterPaymentsTest]])।
+                 */
+                $asOf = DB::getPdo()->quote((string) $f['to']);
                 $settled = "((select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
                         join pur_payments p on p.id = pl.payment_id
                         where pl.purchase_bill_id = pur_bills.id and p.company_id = {$company}
-                          and p.status in ({$posted}) and p.deleted_at is null)
+                          and p.status in ({$posted}) and p.deleted_at is null and p.trx_date <= {$asOf})
                     + (select COALESCE(SUM(v.amount), 0) from vouchers v
                         where v.company_id = {$company} and v.type = '".Voucher::PAYMENT."'
                           and v.against_type = 'purchase_bill' and v.against_id = pur_bills.id
-                          and v.status = '".DocumentStatus::CONFIRMED."' and v.deleted_at is null)
+                          and v.status = '".DocumentStatus::CONFIRMED."' and v.deleted_at is null and v.trx_date <= {$asOf})
                     + (select COALESCE(SUM(t.total), 0) from pur_returns t
                         where t.purchase_bill_id = pur_bills.id and t.company_id = {$company}
-                          and t.status in ({$posted}) and t.deleted_at is null))";
+                          and t.status in ({$posted}) and t.deleted_at is null and t.trx_date <= {$asOf}))";
 
                 // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
                 $due = 'GREATEST(pur_bills.total - '.$settled.', 0)';
@@ -269,16 +295,18 @@ final class PartyReports
                 $asOf = Carbon::parse($f['to']);
 
                 // ⓘ এই সময়ের **জমা** — খরচ এখানে নয়, সেটা নিচে FIFO-তে মেটে
+                // ⛔ বয়স (from, to] — ঘরের নামের মতো: ঠিক ৩০ দিনের বিল "০–৩০"-এ, ৯০-এরটা "৬১–৯০"-এ (Supplier নিরীক্ষা,
+                // ১৩ অক্টোবর ২০২৬; [[AThirtyDaySupplierBillAgedAsThirtyOneTest]])
                 $credits = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
                     if ($to !== null) {
-                        $conditions[] = 'ledger_entries.trx_date > '
+                        $conditions[] = 'ledger_entries.trx_date >= '
                             .DB::getPdo()->quote($asOf->copy()->subDays($to)->toDateString());
                     }
 
                     if ($from !== null) {
-                        $conditions[] = 'ledger_entries.trx_date <= '
+                        $conditions[] = 'ledger_entries.trx_date < '
                             .DB::getPdo()->quote($asOf->copy()->subDays($from)->toDateString());
                     }
 
@@ -300,6 +328,22 @@ final class PartyReports
                         fn ($q, $type) => $q->where('suppliers.party_type_id', $type),
                         fn ($q) => $q->whereIn('suppliers.id', Supplier::onlySuppliersIds()))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
+                    // ⛔ কেবল বিল হওয়া দেনা — বিল-না-আসা মাল জমে থাকা দায়, তার কোনো মেয়াদ নেই যা বয়স মাপে (মালিক, ১৩ অক্টোবর ২০২৬:
+                    // "int standard onuzayi koro"; fe; [[GoodsNotYetBilledAreAnAccrualNotATradePayableTest]])
+                    ->whereNotIn('ledger_entries.account_id', Supplier::goodsNotBilledAccountIds())
+                    /*
+                     * ⛔ তারিখ পর্যন্ত উল্টানো দাখিলা জোড়া ধরে বাদ, মূল আর উল্টো দুটোই (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+                     * [[ACancelledSupplierBillAgedTheOldDebtTest]])। ⚠️ আগে বাতিল বিলের উল্টো ডেবিট "পরিশোধ" হয়ে সবচেয়ে পুরনো দেনা
+                     * কাটত আর মূল বিলটা নতুন বালতিতে থাকত; বাতিল পরিশোধের উল্টো ক্রেডিট নতুন বিল হয়ে বসত। ⓘ উল্টো সারি মূলের আয়না,
+                     * তাই মোট দেনা বদলায় না।
+                     */
+                    ->where('ledger_entries.source_type', 'not like', '%:reversal')
+                    ->whereNotExists(fn ($undo) => $undo->selectRaw('1')->from('ledger_entries as undo')
+                        ->whereColumn('undo.company_id', 'ledger_entries.company_id')
+                        ->whereColumn('undo.source_id', 'ledger_entries.source_id')
+                        ->whereRaw("undo.source_type = CONCAT(ledger_entries.source_type, ':reversal')")
+                        ->whereColumn('undo.id', '>', 'ledger_entries.id')
+                        ->where('undo.trx_date', '<=', $f['to']))
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
                     ->select([

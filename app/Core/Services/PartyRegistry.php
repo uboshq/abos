@@ -116,7 +116,12 @@ final class PartyRegistry
      *
      * @return list<array{type: string, label: string, options: list<array{id: int, label: string}>}>
      */
-    public function forPicker(): array
+    /**
+     * @param  bool  $evenInactiveWithABalance  ⭐ টাকার কাগজের (ভাউচার) বাছাইয়ে জের-থাকা নিষ্ক্রিয় পক্ষও, চিহ্নসহ — বকেয়া রেখে বন্ধ
+     *                                          পক্ষের টাকা মেটানোর পথ ([[PickableWhileOwing]]; fe, ১৩ অক্টোবর ২০২৬)। ⓘ অন্য সব পিকারে
+     *                                          (চেক, সম্পদ, ভাড়া …) আগের মতো কেবল সক্রিয়।
+     */
+    public function forPicker(bool $evenInactiveWithABalance = false): array
     {
         $groups = [];
 
@@ -127,9 +132,12 @@ final class PartyRegistry
                 continue;
             }
 
+            $owing = $evenInactiveWithABalance && method_exists($model, 'scopeActiveOrOwing');
+
             $rows = $model::query()
+                ->when($owing, fn ($q) => $q->activeOrOwing())
                 ->when(
-                    in_array('is_active', $model->getFillable(), true),
+                    ! $owing && in_array('is_active', $model->getFillable(), true),
                     fn ($q) => $q->where('is_active', true),
                 )
                 /*
@@ -163,6 +171,8 @@ final class PartyRegistry
                 'options' => $rows
                     ->map(function (Model $row) use ($notes) {
                         $label = method_exists($row, 'drillLabel') ? $row->drillLabel() : (string) $row->getKey();
+                        // ⓘ নিষ্ক্রিয় হলে চিহ্নসহ — কেবল জের-থাকা পক্ষই এখানে পৌঁছায় ([[PickableWhileOwing::pickerName()]])
+                        $label = isset($row->is_active) && ! $row->is_active ? $label.' — '.__('core.inactive_with_balance') : $label;
                         $note = $notes[(int) $row->getKey()] ?? null;
 
                         $hint = $this->pickerHint($row);

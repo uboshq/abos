@@ -78,7 +78,7 @@
                      যায় — নাহলে আগের গ্রাহকের বিলটা বাছা অবস্থায় থেকে
                      যেত আর সেভের সময় ফেরত আসত। --}}
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->pickerName()])"
                              :selected="$invoice?->customer_id ?? $collection->customer_id"
                              placeholder="-" required
                              {{-- নিজের `x-data` লাগে: Alpine কেবল `x-data`-র

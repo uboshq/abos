@@ -37,8 +37,10 @@
             <span class="text-sm text-(--color-ink-muted)">{{ __('sales::portal.credit_limit') }}</span>
 
             <span class="num text-sm font-medium">
-                @if (bccomp((string) $customer->credit_limit, '0', 4) > 0)
-                    {{ \App\Core\Support\Money::format($customer->credit_limit) }}
+                {{-- ⛔ চলতি সীমা, অস্থায়ীসহ — দেয়াল যা ধার দেয় ([[Customer::effectiveCreditLimit()]]); আগে ০ মূল সীমায় "নগদ" বলত অথচ কাউন্টার
+                     ৫০,০০০ পর্যন্ত দিত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ThePortalHomeReadEveryBillAsZeroTest]]) --}}
+                @if (bccomp($customer->effectiveCreditLimit(), '0', 4) > 0)
+                    {{ \App\Core\Support\Money::format($customer->effectiveCreditLimit()) }}
                 @else
                     {{ __('sales::portal.cash_only') }}
                 @endif

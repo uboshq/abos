@@ -501,7 +501,55 @@ final class SyncService
             sort($ids);
         }
 
-        return CompanyContext::id().':'.($ids === null ? '*' : implode(',', $ids)).($scope->viewsOneBranch($user) ? '' : '+');
+        return CompanyContext::id().':'.($ids === null ? '*' : implode(',', $ids)).($scope->viewsOneBranch($user) ? '' : '+')
+            .$this->dealerKey($user)
+            .($ids === null ? '' : $this->movedKey());
+    }
+
+    /**
+     * ⛔ গ্রাহকের শাখা-বদলের শেষ দাগ — শাখায় ছাঁকা দেখায় (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; fe-র সিদ্ধান্ত;
+     * [[AShopMovedBranchAndStayedOnThePhoneTest]])।
+     *
+     * ⚠️ গ্রাহক অন্য শাখায় গেলে ফোনের এই শাখার টানায় সে আর আসে না — জলচিহ্নের টানা "বদল" পাঠায়, "চলে যাওয়া" নয়, তাই ফোনের
+     * ক্যাশে দোকান আর তার বকেয়া থেকে যেত। ⓘ তারে মোছার আলাদা সংকেত নেই (পুরনো APK চেনে না); তাই শাখা-বদল দেখার চাবি
+     * বদলায় — যন্ত্র ক্যাশ মুছে গোড়া থেকে টানে ([[sawAnotherView()]])। দাগটা নিরীক্ষার খাতা থেকে (`branch_id`-এর শেষ
+     * বদলের সারি), নতুন কোনো ঘর নয়; শাখা-বদল বিরল, তাই পুরো টানাও বিরল। ⓘ "সব শাখা"-র কোম্পানি-জোড়া দেখায় কিছু লুকায় না, যোগও হয় না।
+     */
+    private function movedKey(): string
+    {
+        $class = app(\App\Core\Engines\Drill\DrillResolver::class)->map()['customer'] ?? null;
+
+        if ($class === null) {
+            return '';
+        }
+
+        $last = DB::table('audit_field_changes as f')
+            ->join('audit_trails as t', 't.id', '=', 'f.audit_trail_id')
+            ->where('f.company_id', CompanyContext::id())
+            ->where('f.field', 'branch_id')
+            ->where('t.auditable_type', $class)
+            ->max('f.id');
+
+        return $last === null ? '' : '|m:'.$last;
+    }
+
+    /**
+     * ⛔ দেয়ালের ভিতরের বিক্রয়কর্মীর আজকের ডিলারের ছাপ — বাঁধন, হাতবদল বা শেষ হওয়ায় ডিলারের সারি বদলায় না, তাই জলচিহ্নের
+     * টানায় নতুন ডিলার আসত না আর পুরনোরা ক্যাশে থেকে যেত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[AHandoverNeverReachedThePhoneTest]])। ⓘ ছাপ বদলালে দেখা বদলেছে — যন্ত্র গোড়া থেকে, ক্যাশ মুছে ([[sawAnotherView()]])।
+     * ⓘ দেয়ালের বাইরে (সব ডিলার) কিছুই যোগ হয় না। ⓘ ঘর ১৯১ — শাখার তালিকার পরে ৪৩ অক্ষর।
+     */
+    private function dealerKey(User $user): string
+    {
+        $dealers = app(\App\Core\Services\DealerScope::class);
+
+        if (! $dealers->walled($user)) {
+            return '';
+        }
+
+        $ids = $dealers->dealerIds($user)->distinct()->orderBy('dealer_bindings.customer_id')->pluck('customer_id')->implode(',');
+
+        return '|d:'.sha1($ids);
     }
 
     /**

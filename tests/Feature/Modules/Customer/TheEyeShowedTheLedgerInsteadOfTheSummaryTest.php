@@ -122,7 +122,8 @@ final class TheEyeShowedTheLedgerInsteadOfTheSummaryTest extends TestCase
             'month-amount' => '14,200.00',
             'lifetime-count' => __('customer::summary.invoice_count', ['count' => 3]),
             'lifetime-amount' => '56,800.00',
-            'outstanding' => '34,700.00',
+            // ⓘ বকেয়া (Dr)/(Cr)-এ — মালিকের ৩ অক্টোবরের নিয়ম, সারাংশে ১৩ অক্টোবর থেকে (7cbd41f37)
+            'outstanding' => '(Dr) 34,700.00',
             'pending-count' => '2',
             'pending-items' => '2',
             'last-purchase-date' => $today,
@@ -210,7 +211,7 @@ final class TheEyeShowedTheLedgerInsteadOfTheSummaryTest extends TestCase
         $user = $user->fresh();
 
         $html = $this->actingAs($user)->get(route('customer.summary', $this->dealer))->assertOk()->getContent();
-        $this->assertSame('34,700.00', $this->figureOn($html, 'outstanding'));
+        $this->assertSame('(Dr) 34,700.00', $this->figureOn($html, 'outstanding'));
     }
 
     /** ⛔ অন্য কোম্পানির গ্রাহক — আছে কি না তাও বলা হয় না। */

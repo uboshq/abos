@@ -220,6 +220,8 @@ class PortalController extends Controller
         Auth::guard('portal')->login($customer);
         $customer->forceFill(['portal_last_login_at' => now()])->saveQuietly();
         $request->session()->regenerate();
+        // ⛔ এই সেশন কোন পাসওয়ার্ডে খুলল — পরে বদলালে দরজা নিজে বন্ধ হয় ([[EnsurePortalStillOpen::passwordChangedSince()]])
+        \App\Http\Middleware\EnsurePortalStillOpen::remember($request, $customer);
 
         /*
          * ⭐ সফল ঢোকাটা খাতায় — তালার গোনা এখান থেকেই শূন্যে ফেরে।

@@ -236,6 +236,9 @@ final class ReturnOnCapitalReport
             ->where('company_id', $company)
             ->where('party_type', Supplier::drillSourceType())
             ->where('trx_date', '<=', $to)
+            // ⛔ অগ্রিম কেবল দেনার খাতে — বিল-না-আসা মালের জমে থাকা দায় অগ্রিমকে খেয়ে ফেলত (মালিক, ১৩ অক্টোবর ২০২৬:
+            // "int standard onuzayi koro"; fe; [[GoodsNotYetBilledAreAnAccrualNotATradePayableTest]])
+            ->whereNotIn('account_id', Supplier::goodsNotBilledAccountIds())
             ->groupBy('party_id')
             ->select(['party_id', DB::raw('SUM(debit) - SUM(credit) as advance')]);
     }

@@ -101,7 +101,8 @@
             @if ($payableAll !== null)
                 <p class="mt-1 text-2xs text-(--color-ink-muted)" data-payable-all-branches>
                     {{ __('supplier::field.payable_all_branches') }}:
-                    <span class="num">{{ \App\Core\Support\Money::format($payableAll) }}</span>
+                    {{-- ⛔ (Cr) = আমরা দেব, (Dr) = আগাম — ওপরের অঙ্কের একই ভাষা, খালি বিয়োগ নয় ([[AnAdvanceReadAsABareMinusTest]]) --}}
+                    <span class="num">{{ \App\Core\Support\Money::drCr(bcmul((string) $payableAll, '-1', 4)) }}</span>
                 </p>
             @endif
 

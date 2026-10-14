@@ -251,7 +251,8 @@ class CollectionController extends Controller implements HasMiddleware
     private function formData(): array
     {
         return [
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            // ⭐ জের-থাকা নিষ্ক্রিয় গ্রাহকও — বকেয়া রেখে বন্ধ দোকানের টাকা আদায়ের পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
+            'customers' => Customer::query()->inViewedBranch()->activeOrOwing()->orderBy('name_en')->get(),
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
             'accounts' => Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()

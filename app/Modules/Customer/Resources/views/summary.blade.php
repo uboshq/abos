@@ -13,7 +13,10 @@
 @php
     $money = fn ($value) => \App\Core\Support\Money::format($value);
     $date = fn ($value) => \App\Core\Support\DateFormat::format($value);
-    $limitSet = bccomp((string) $customer->credit_limit, '0', 4) > 0;
+    // ⛔ চলতি সীমা, অস্থায়ীসহ — দেয়াল যা মানে ([[Customer::effectiveCreditLimit()]]); আগে মূল সীমা ০ আর অস্থায়ী ৫০ হাজারে
+    // "সীমা নেই" দেখাত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheTemporaryLimitWasMissingFromThePageTest]])
+    $limitNow = $customer->effectiveCreditLimit();
+    $limitSet = bccomp($limitNow, '0', 4) > 0;
     $available = $customer->availableLimit();
     $ledgerUrl = route('customer.show', $customer).'#transactions';
     $card = 'rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4';
@@ -40,7 +43,7 @@
             <p class="mt-1 text-2xl font-semibold">
                 <a href="{{ $ledgerUrl }}" data-figure="outstanding"
                    title="{{ __('customer::summary.open_ledger') }}"
-                   class="num {{ $link }} {{ bccomp($outstanding, '0', 4) < 0 ? 'text-(--color-danger)' : '' }}">{{ $money($outstanding) }}</a>
+                   class="num {{ $link }}">{{-- ⛔ (Dr)/(Cr), খালি বিয়োগ নয়, আর অগ্রিম বিপদ নয় — লাল ছিল (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnAdvanceReadAsABareMinusTest]]) --}}{{ \App\Core\Support\Money::drCr($outstanding) }}</a>
             </p>
 
             @if ($trade !== null)
@@ -124,7 +127,7 @@
                 </p>
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('customer::summary.credit_limit') }}:
-                    <span class="num" data-figure="credit-limit">{{ $money($customer->credit_limit) }}</span>
+                    <span class="num" data-figure="credit-limit">{{ $money($limitNow) }}</span>
                 </p>
 
                 @if ($customer->wouldExceedCreditLimit($customer->heldCredit()))

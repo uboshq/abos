@@ -33,6 +33,22 @@ final class SupplierService
         private readonly OpeningBalanceService $openings,
     ) {}
 
+    /**
+     * ⛔ শুরুর দেনা কোন ঘরে — পরিবহনকারী ২১১৬, হাম্মালি ঠিকাদার ২১১৭, বাকিরা ২১১১ (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[ATransportersOpeningLandedInTradePayablesTest]])। ⓘ ভাড়া আর মজুরির পরের দাখিলা ওই ঘরেই বসে ([[CarrierAndLabourLedger]]);
+     * শুরুর দেনা ২১১১-এ গেলে পরিবহনের খতিয়ানে শুরুর বাকি শূন্য দেখাত আর মালের দেনায় ভাড়ার টাকা মিশত।
+     */
+    public static function openingAccountFor(int|string|null $partyTypeId): string
+    {
+        $code = $partyTypeId === null || $partyTypeId === '' ? null : PartyType::query()->whereKey($partyTypeId)->value('code');
+
+        return match ($code) {
+            'TRANSPORT' => \App\Modules\Accounts\Services\StandardChart::TRANSPORT_PAYABLE,
+            'LABOUR' => \App\Modules\Accounts\Services\StandardChart::LABOUR_PAYABLE,
+            default => \App\Modules\Accounts\Services\StandardChart::PAYABLE,
+        };
+    }
+
     /** নম্বরের সিরিজ — সেবাদাতা SPD, পণ্যের সরবরাহকারী SUP (মালিক, ২ অক্টোবর ২০২৬) */
     public static function seriesFor(int|string|null $partyTypeId): string
     {
@@ -69,6 +85,16 @@ final class SupplierService
              * সরবরাহকারী (VENDOR) নয় → সেবাদাতা; ধরন ফাঁকা হলে সরবরাহকারী।
              */
             $data['code'] = $givenCode ? trim((string) $data['code']) : $this->numbers->next(self::seriesFor($data['party_type_id'] ?? null));
+
+            /*
+             * ⛔ সিরিজের নম্বর হাতে লেখা কোনো কোডে আগেই বসে থাকলে পরেরটা — আগে "কোড দখলে" বলে পুরো লেনদেন ফিরত, তার সাথে
+             * সিরিজের গুনতিও; পরের বার আবার একই নম্বর, আবার ব্যর্থ — হাতে সিরিজ না বদলানো পর্যন্ত কোনো সরবরাহকারীই বানানো
+             * যেত না (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ATypedCodeBlockedEveryNewSupplierTest]])। ⓘ পার হওয়া নম্বর খরচ হয়ে
+             * থাকে — নম্বর-রেজিস্টারে উৎসহীন, যেমন ব্যর্থ কাগজের নম্বর থাকে।
+             */
+            for ($tries = 0; ! $givenCode && $tries < 1000 && $this->codeTaken($data['code']); $tries++) {
+                $data['code'] = $this->numbers->next(self::seriesFor($data['party_type_id'] ?? null));
+            }
 
             $this->assertCodeIsFree($data['code']);
 
@@ -111,6 +137,7 @@ final class SupplierService
                 $supplier->opening_date,
                 // ⭐ সরবরাহকারীর নিজের শাখায়, ঢোকানো মানুষের শাখায় নয় (অডিট ⓘ১৭)
                 branchId: $supplier->branch_id === null ? null : (int) $supplier->branch_id,
+                account: self::openingAccountFor($supplier->party_type_id),
             );
 
             return $supplier;
@@ -125,6 +152,34 @@ final class SupplierService
         $this->assertBanglaNameIfRequired($data, $supplier);
         $this->assertBinIfRequired($data, $supplier);
         $this->assertNotADuplicate($data, $supplier->id);
+
+        /*
+         * ⛔ চালু/বন্ধ সম্পাদনার পথে নয় — বন্ধ করার চাবি (`supplier.delete`) ছাড়া `is_active=0` পাঠিয়ে সরবরাহকারী বন্ধ বা
+         * আবার চালু করা যেত, বোতাম আর তার অনুমতি দুটোই এড়িয়ে (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+         * [[ASupplierSwitchedOffThroughTheEditFormTest]])। গ্রাহকের দিকের জোড়া: [[CustomerService::assertMayChangeActive()]]।
+         */
+        if (array_key_exists('is_active', $data) && $data['is_active'] !== null
+            && (bool) $data['is_active'] !== (bool) $supplier->is_active
+            && auth()->user() !== null && ! auth()->user()->can('supplier.delete')) {
+            throw ValidationException::withMessages(['is_active' => __('supplier::validation.active_needs_delete_key')]);
+        }
+
+        /*
+         * ⛔ শাখায় সীমিত মানুষ শাখা মুছে সরবরাহকারীকে কোম্পানি-স্তরে তোলেন না — শাখার নিয়ম খালি মানে চলে না, আর শাখাহীন
+         * সারি সবার নাগালে (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[ABranchClerkMadeASupplierCompanyWideTest]])।
+         * ⓘ গ্রাহকের জোড়া: [[CustomerService::assertStaysInReach()]]।
+         */
+        if (array_key_exists('branch_id', $data) && $data['branch_id'] === null && $supplier->branch_id !== null
+            && auth()->user() !== null
+            && app(\App\Core\Services\DataScope::class)->isLimited(auth()->user(), \App\Models\UserDataScope::BRANCH)) {
+            throw ValidationException::withMessages(['branch_id' => __('validation.branch_out_of_reach')]);
+        }
+
+        // ⛔ মুছে দেওয়া কোড মানে "যেমন ছিল" — খালি ঘর null হয়ে `NOT NULL` কোডে ৫০০ দিত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+        // [[ABlankBoxBrokeTheSupplierFormTest]])
+        if (array_key_exists('code', $data) && trim((string) $data['code']) === '') {
+            unset($data['code']);
+        }
 
         if (isset($data['code']) && trim((string) $data['code']) !== $supplier->code) {
             $this->assertCodeIsFree(trim((string) $data['code']), $supplier->id);
@@ -297,17 +352,20 @@ final class SupplierService
         }
     }
 
-    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    private function codeTaken(string $code, ?int $exceptId = null): bool
     {
-        $taken = Supplier::query()
+        return Supplier::query()
             ->where('code', $code)
             ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
             // মুছে ফেলা সরবরাহকারীর কোডও ধরা হয়: soft delete মানে সারিটা
             // আছে, আর unique ইনডেক্সও সেটা দেখে
             ->withTrashed()
             ->exists();
+    }
 
-        if ($taken) {
+    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    {
+        if ($this->codeTaken($code, $exceptId)) {
             throw ValidationException::withMessages([
                 'code' => __('supplier::validation.code_taken', ['code' => $code]),
             ]);

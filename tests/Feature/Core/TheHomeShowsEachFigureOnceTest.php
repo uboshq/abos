@@ -91,9 +91,14 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         $this->assertSame(Money::format(app(CustomerMetrics::class)->dues(auth()->user(), $today)['amount']),
             $kpis[__('customer::dashboard.kpi_owed')], '⛔ বাজারে বকেয়া গ্রাহকের খতিয়ানের বকেয়ার যোগ নয়।');
 
-        $owed = (string) (DB::table('ledger_entries')->where('company_id', $company->id)->where('party_type', Supplier::drillSourceType())
+        // ⓘ ১৩ অক্টোবর ২০২৬ থেকে দেনাও মোট, নিট নয় — প্রতি প্রিন্সিপালের বিল হওয়া ধনাত্মক জের আর বিল-না-আসা মাল; প্রদেয়ের তালিকার দুই ঘরের
+        // যোগ ([[ThePayableListNettedTheAdvancesTest]])
+        $owed = (string) (DB::query()->fromSub(DB::table('ledger_entries')->where('company_id', $company->id)->where('party_type', Supplier::drillSourceType())
             ->whereIn('party_id', Supplier::onlySuppliersIds())
-            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as n')->value('n') ?? '0');
+            ->groupBy('party_id')
+            ->selectRaw('SUM(CASE WHEN account_id IN ('.implode(',', Supplier::goodsNotBilledAccountIds()).') THEN 0 ELSE credit - debit END) as billed')
+            ->selectRaw('SUM(CASE WHEN account_id IN ('.implode(',', Supplier::goodsNotBilledAccountIds()).') THEN credit - debit ELSE 0 END) as waiting'), 's')
+            ->selectRaw('COALESCE(SUM(GREATEST(s.billed, 0)), 0) + COALESCE(SUM(s.waiting), 0) as n')->value('n') ?? '0');
         $this->assertSame(Money::format($owed), $kpis[__('supplier::widget.owed_to_principals')], '⛔ কোম্পানির দেনা সরবরাহকারীর খতিয়ানের সাথে মেলে না।');
 
         $this->assertSame(Money::format(app(StockFacts::class)->value()), $kpis[__('inventory::overview.stock_value')],
