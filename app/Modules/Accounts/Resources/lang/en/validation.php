@@ -173,6 +173,7 @@ return [
     'cheque_already_registered' => 'Cheque :no is already registered (:doc) — the same cheque cannot be entered twice.',
     // ⭐ গ১২ — আন্তঃকোম্পানির দুই পাশ একসাথে (৪ অক্টোবর ২০২৬)
     'inter_company_one_side' => 'One side (:no) of an inter-company transfer cannot be cancelled or reversed alone — reverse both sides together from the inter-company page.',
+    'signer_may_only_correct_text' => 'On a paper waiting for your signature you may correct only the narration or the reference — not the amount, account, party, date or lines. To change those, send it back for correction.',
     'signed_elsewhere' => ':no is bound to the signature of another paper — it reaches the books exactly as it was signed. It cannot be changed or posted from the voucher page; use the page of that paper.',
     'inter_company_not_reversible' => 'This inter-company transfer can no longer be reversed — it already was.',
     'maker_checker' => ':no was written by you. You cannot post your own voucher; someone else must post it.',
