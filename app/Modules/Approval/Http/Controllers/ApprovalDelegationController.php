@@ -97,7 +97,8 @@ final class ApprovalDelegationController extends Controller implements HasMiddle
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'to_user_id' => ['required', 'integer', 'exists:users,id'],
+            // ⛔ এই কোম্পানির চালু সদস্যকেই — তালিকা ছাঁকা থাকলেও হাতে বানানো অনুরোধে বাইরের কেউ ([[AStandInMustBeOneOfUsTest]])
+            'to_user_id' => ['required', 'integer', \Illuminate\Validation\Rule::exists('company_user', 'user_id')->where('company_id', \App\Core\Support\CompanyContext::id())->where('is_active', true)],
 
             /*
              * ⛔ শুরুর তারিখ পিছনে যেতে পারে না।
