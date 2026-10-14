@@ -110,9 +110,10 @@ final class ReportEngine
          * ⓘ এক জায়গায়, তাই রিপোর্টের প্রতিটা পর্দা (১৩টা কন্ট্রোলার) একসাথে সারে। কেবল পর্দার মাপের ডাকে
          * (`SCREEN_ROWS`) — ড্যাশবোর্ডের গোনা (`perPage: 1`) আর ফোনের নিজের মাপ যেমন ছিল।
          */
-        if ($perPage === self::SCREEN_ROWS && self::wholeDocumentWanted()) {
-            $page = 1;
-            $perPage = self::WHOLE_DOCUMENT_ROWS;
+        $whole = $perPage === self::SCREEN_ROWS && self::wholeDocumentWanted();
+
+        if ($whole) {
+            $perPage = self::wholeDocumentRows();
         }
 
         $query = $this->queryFor($report, $filters);
@@ -131,6 +132,15 @@ final class ReportEngine
         // ভুল উত্তর দেয় এবং সেটা ভুল বলে চেনাও যায় না।
         $totals = $this->totalsFor($report, clone $query);
         $count = $this->countFor($report, clone $query);
+
+        /*
+         * ⛔ গোটা-দলিলের পাতা মানা হয়, প্রতিবার ১ নয় (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১৩, ১৪ অক্টোবর ২০২৬)। ⓘ ছাদের বেশি সারিতে
+         * [[ExportListing]] পাতা ২, ৩… চায়; আগে এখানে পাতা সবসময় ১ হত, তাই ফাইলে প্রথম এক লাখ সারি বারবার, তার পরের একটাও নয়।
+         * ⚠️ চাওয়া পাতা গোটা-দলিলের শেষ পাতা পেরোলে (পর্দার তৃতীয় পাতা থেকে ছাপা বা প্রথম রপ্তানি) — পাতা ১, খালি ফাইল নয়।
+         */
+        if ($whole) {
+            $page = max(1, $page) > max(1, (int) ceil($count / $perPage)) ? 1 : max(1, $page);
+        }
 
         /*
          * "শুধু উপরের দশটা" — চাওয়া হলে।
@@ -1058,6 +1068,15 @@ final class ReportEngine
 
             return $row;
         });
+    }
+
+    /**
+     * ছাপা, ফাইল আর নির্ধারিত রিপোর্টের ছাদ — [[WHOLE_DOCUMENT_ROWS]]। ⓘ `abos.report_whole_document_rows` কেবল পরীক্ষায় ছোট
+     * করার জন্য (এক লাখ সারি না বানিয়ে পাতা আর ছাদ মাপা); কনফিগে বসানো নেই, তাই চলমান ব্যবস্থায় ছাদ বদলায় না।
+     */
+    public static function wholeDocumentRows(): int
+    {
+        return max(1, (int) config('abos.report_whole_document_rows', self::WHOLE_DOCUMENT_ROWS));
     }
 
     /**

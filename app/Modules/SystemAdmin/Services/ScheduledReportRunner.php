@@ -41,9 +41,6 @@ use Throwable;
  */
 final class ScheduledReportRunner
 {
-    /** এক ফাইলে সর্বোচ্চ সারি — এখন এক পাতায় টানা হয়। */
-    private const MAX_ROWS = 100000;
-
     public function __construct(
         private readonly ReportEngine $reports,
         private readonly ScheduleService $schedules,
@@ -280,7 +277,15 @@ final class ScheduledReportRunner
             return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
                 CompanyContext::set($schedule->company_id, $this->ownerBranch($owner, $schedule->company_id));
 
-                $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, self::MAX_ROWS);
+                $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, ReportEngine::wholeDocumentRows());
+
+                /*
+                 * ⛔ ছাদের বেশি সারি — ফাইল নয়, অবস্থায় স্পষ্ট লেখা (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১৩, ১৪ অক্টোবর ২০২৬)। ⓘ আগে ফাইল চুপচাপ
+                 * এক লাখে কাটা হত, অথচ নিচের মোট গোটা ফলের — দুইটা মিলত না, আর কেউ জানত না। ফোনের রপ্তানিও এখানে ফেরায় (৪২২)।
+                 */
+                if ($result->totalRows > ReportEngine::wholeDocumentRows()) {
+                    return $this->store($schedule, null, 0, [(int) $owner->id], 'too_many_rows');
+                }
 
                 $export = new ListExport;
                 $columns = $this->mutuallyVisibleColumns($result, $owner, $recipients);
@@ -342,9 +347,9 @@ final class ScheduledReportRunner
     /**
      * @param  list<int>  $recipients  কারা নামাতে পারবেন — রেন্ডারের ছবি
      */
-    private function store(ReportSchedule $schedule, ?string $bytes, int $rowCount, array $recipients): ReportRun
+    private function store(ReportSchedule $schedule, ?string $bytes, int $rowCount, array $recipients, ?string $status = null): ReportRun
     {
-        $status = $bytes === null ? 'error' : ($rowCount === 0 ? 'empty' : 'ok');
+        $status ??= $bytes === null ? 'error' : ($rowCount === 0 ? 'empty' : 'ok');
 
         $run = ReportRun::create([
             'company_id' => $schedule->company_id,
