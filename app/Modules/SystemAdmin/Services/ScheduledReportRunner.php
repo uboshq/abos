@@ -176,6 +176,14 @@ final class ScheduledReportRunner
                 $this->notifyReady($schedule, $own, $person, collect());
             } catch (AuthorizationException) {
                 // ⓘ রিপোর্টটা ডিলারের দেয়াল বসায় না — তাঁর জন্য কোনো ফাইলই নয়, ফাঁস নয়
+            } catch (Throwable $e) {
+                /*
+                 * ⛔ একজনের ব্যর্থতা বাকিদের থামায় না (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৭, ১৪ অক্টোবর ২০২৬)। ⓘ আগে সূচির শাখা তাঁর নাগালের
+                 * বাইরে হলে (ValidationException) বা অন্য কোনো ভুলে লুপটাই ভাঙত: পরের প্রাপকেরা ফাইল পেতেন না, আর ভাগের রানের "ok"
+                 * মুছে সূচি "error" লিখত। এখন লগে যায়, আর ব্যর্থতাটা কেবল তাঁর নামে একটা ফাইলহীন "error" রান — সূচির অবস্থা ভাগের রানেরই।
+                 */
+                report($e);
+                CompanyContext::forCompany((int) $schedule->company_id, fn () => $this->store($schedule, null, 0, [(int) $person->id]));
             }
         }
 
