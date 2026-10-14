@@ -7,6 +7,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
@@ -125,8 +126,10 @@ class MasterListController extends Controller implements HasMiddleware
             'fields' => [
                 'base_unit_id' => ['type' => 'select', 'label' => 'master_data::field.base_unit',
                     'options' => 'units', 'hint' => 'master_data::message.base_unit_hint'],
+                // ⛔ শূন্যের বেশি, আর কলামের (decimal 18,6) মধ্যে — ০ গুণক মানে প্রতিটা রূপান্তর শূন্য (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
                 'factor' => ['type' => 'number', 'label' => 'master_data::field.factor',
-                    'step' => '0.000001', 'hint' => 'master_data::message.factor_hint'],
+                    'step' => '0.000001', 'hint' => 'master_data::message.factor_hint',
+                    'rules' => ['nullable', 'gt:0', 'max:999999999999']],
                 'allows_fraction' => ['type' => 'switch', 'label' => 'master_data::field.allows_fraction',
                     'hint' => 'master_data::message.allows_fraction_hint'],
             ],
@@ -138,7 +141,9 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'tax',
             'title' => 'master_data::menu.taxes',
             'fields' => [
-                'rate' => ['type' => 'number', 'label' => 'master_data::field.rate', 'step' => '0.0001'],
+                // ⛔ ০–১০০ শতাংশ (কলাম decimal 8,4; ঋণাত্মক কর মানে উল্টো হিসাব) — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+                'rate' => ['type' => 'number', 'label' => 'master_data::field.rate', 'step' => '0.0001',
+                    'rules' => ['nullable', 'min:0', 'max:100']],
                 // ⛔ বাধ্যতামূলক — কলাম NOT NULL; "—" রাখলে আগে ৫০০ আসত, বার্তা নয় (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
                 'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'tax_kinds', 'labels' => 'kind', 'rules' => ['required']],
                 'is_inclusive' => ['type' => 'switch', 'label' => 'master_data::field.is_inclusive'],
@@ -185,7 +190,8 @@ class MasterListController extends Controller implements HasMiddleware
                 'account_id' => ['type' => 'select', 'label' => 'master_data::field.money_account',
                     'options' => 'money_accounts', 'rules' => ['required']],
                 'needs_reference' => ['type' => 'switch', 'label' => 'master_data::field.needs_reference'],
-                'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001'],
+                'fee_percent' => ['type' => 'number', 'label' => 'master_data::field.fee_percent', 'step' => '0.0001',
+                    'rules' => ['nullable', 'min:0', 'max:100']],
             ],
             'columns' => ['kind', 'account_id', 'needs_reference', 'fee_percent'],
         ],
@@ -212,9 +218,13 @@ class MasterListController extends Controller implements HasMiddleware
             'route' => 'term',
             'title' => 'master_data::menu.payment_terms',
             'fields' => [
-                'days' => ['type' => 'number', 'label' => 'master_data::field.days', 'step' => '1'],
-                'early_discount_percent' => ['type' => 'number', 'label' => 'master_data::field.early_discount_percent', 'step' => '0.01'],
-                'early_discount_days' => ['type' => 'number', 'label' => 'master_data::field.early_discount_days', 'step' => '1'],
+                // ⛔ দিন পূর্ণসংখ্যা, ০–৬৫৫৩৫ (কলাম unsigned smallint) — আগে −১০ বা ৭০০০০-এ ৫০০ (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                'days' => ['type' => 'number', 'label' => 'master_data::field.days', 'step' => '1',
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:65535']],
+                'early_discount_percent' => ['type' => 'number', 'label' => 'master_data::field.early_discount_percent', 'step' => '0.01',
+                    'rules' => ['nullable', 'min:0', 'max:100']],
+                'early_discount_days' => ['type' => 'number', 'label' => 'master_data::field.early_discount_days', 'step' => '1',
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:65535']],
             ],
             'columns' => ['days', 'early_discount_percent'],
         ],
@@ -433,7 +443,8 @@ class MasterListController extends Controller implements HasMiddleware
                 'registration_no' => ['type' => 'text', 'label' => 'master_data::field.registration_no',
                     'rules' => ['required', 'string', 'max:64']],
                 'vehicle_type_id' => ['type' => 'select', 'label' => 'master_data::field.vehicle_type', 'options' => 'vehicle_types'],
-                'capacity_kg' => ['type' => 'number', 'label' => 'master_data::field.capacity_kg', 'step' => '0.001'],
+                'capacity_kg' => ['type' => 'number', 'label' => 'master_data::field.capacity_kg', 'step' => '0.001',
+                    'rules' => ['nullable', 'min:0', 'max:99999999999999']],
                 'owner_type' => ['type' => 'select', 'label' => 'master_data::field.owner_type', 'options' => 'owner_types', 'labels' => 'kind',
                     'rules' => ['required']],
                 'driver_name' => ['type' => 'text', 'label' => 'master_data::field.driver_name'],
@@ -721,7 +732,15 @@ class MasterListController extends Controller implements HasMiddleware
 
         foreach ($spec['fields'] as $name => $field) {
             $rules[$name] = match ($field['type']) {
-                'number' => ['nullable', 'numeric'],
+                /*
+                 * ⛔ সাদা সংখ্যা — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ `numeric` `1e3` আর `0x1F`-এর মতো লেখা ছাড়ত, আর
+                 * সম্পাদনায় [[MasterListService::sameValue()]]-এর `bccomp()` ওগুলোয় ValueError-এ ৫০০ দিত। সীমা ঘরের নিজের `rules`-এ।
+                 */
+                'number' => ['nullable', 'numeric', function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value !== null && $value !== '' && PlainNumber::from($value) === null) {
+                        $fail('validation.numeric')->translate();
+                    }
+                }],
                 'switch' => ['nullable', 'boolean'],
                 'select' => ['nullable', Rule::in($this->choices($options, $field['options']))],
                 default => ['nullable', 'string', 'max:191'],
