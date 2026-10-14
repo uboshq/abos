@@ -6,6 +6,8 @@ namespace App\Core\Services;
 
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
@@ -140,8 +142,12 @@ final class PhoneModules
         return $out;
     }
 
-    /** এই কোম্পানির ফোনের মেনুতে মডিউলটা আছে কি না — ওয়েবে বন্ধ হলে ফোনেও বন্ধ। */
-    public function isOn(string $code): bool
+    /**
+     * এই কোম্পানির ফোনের মেনুতে মডিউলটা আছে কি না — ওয়েবে বন্ধ হলে ফোনেও বন্ধ।
+     *
+     * @param  list<string>|null  $switchedOff  এই শাখায় বন্ধ মডিউলগুলো — null হলে এখনই পড়া হয়
+     */
+    public function isOn(string $code, ?array $switchedOff = null): bool
     {
         $module = $this->registry->get($code);
 
@@ -153,15 +159,32 @@ final class PhoneModules
             return false;
         }
 
+        /*
+         * ⛔ শাখার সুইচও — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ ওয়েবের দরজা ([[RefuseSwitchedOffScreens::refuses()]]) আর মেনু শাখার
+         * সারি ([[BranchModule]]) পড়ে, ফোন পড়ত না: "ডিপো ২"-তে বিক্রয় বন্ধ, অথচ
+         * সেখানকার SR ফোন থেকে অর্ডার আর আদায় পাঠাতে পারতেন, ওয়েবে যা ৪০৪।
+         * অপরিহার্য মডিউল শাখাতেও বন্ধ হয় না — দরজার নিয়মটাই।
+         */
+        $switchedOff ??= BranchModule::switchedOffIn(CompanyContext::branchId());
+
+        if (! $module->essential && in_array($code, $switchedOff, true)) {
+            return false;
+        }
+
         return (bool) $this->settings->get(self::key($code), false);
     }
 
     /** @return list<string> চালু মডিউলের কোড, রেজিস্ট্রির ক্রমে */
     public function onCodes(): array
     {
+        // ⓘ শাখার বন্ধ তালিকা একবারই পড়া হয়, প্রতিটা মডিউলে নয়
+        $switchedOff = BranchModule::switchedOffIn(CompanyContext::branchId());
+
         return array_values(array_filter(
             array_keys($this->registry->all()),
-            fn (string $code) => $this->isOn($code),
+            fn (string $code) => $this->isOn($code, $switchedOff),
         ));
     }
 
