@@ -154,14 +154,10 @@ final class ScheduleService
     }
 
     /**
-     * পরের চালানোর সময় — সূচির timezone-এ গোনা, অ্যাপের ঘড়িতে ফেরত।
+     * পরের চালানোর সময় — সূচির timezone-এ গোনা, UTC-তে ফেরত।
      *
-     * "সকাল ৮টা" সূচির ঘড়িতে; জমা হয় অ্যাপের ঘড়িতে (`config('app.timezone')`), কারণ ক্রন `now()`-এর সাথে তুলনা করে
-     * ([[ReportSchedule::scopeDue()]]) আর Eloquent সময়টা অঞ্চল না বদলে দেয়ালের ঘড়ি হিসেবেই লেখে। কড়া-ভবিষ্যৎ: এখন বা
-     * অতীত হলে পরের পর্বে ঠেলা হয়।
-     *
-     * ⛔ আগে UTC-তে ফেরত দিত — ঢাকার সকাল ৮টা জমা হত "02:00" হয়ে, আবার পড়া হত ঢাকার রাত ২টা: প্রতিটা সূচি ছয় ঘণ্টা আগে
-     * চলত, আর তালিকায় পরের সময় "02:00" দেখাত (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+     * "সকাল ৮টা" সূচির ঘড়িতে; জমা হয় UTC-তে, কারণ ক্রন UTC-তেই তুলনা
+     * করে। কড়া-ভবিষ্যৎ: এখন বা অতীত হলে পরের পর্বে ঠেলা হয়।
      */
     public function nextRunFor(ReportSchedule $schedule, ?Carbon $from = null): Carbon
     {
@@ -176,7 +172,7 @@ final class ScheduleService
             default => $this->nextDaily($now, $hour, $minute),
         };
 
-        return $candidate->setTimezone(config('app.timezone'));
+        return $candidate->setTimezone('UTC');
     }
 
     private function nextDaily(Carbon $now, int $hour, int $minute): Carbon

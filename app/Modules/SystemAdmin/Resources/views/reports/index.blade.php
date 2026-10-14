@@ -58,8 +58,7 @@
                                 <span class="num">{{ $s->at_time ? \Illuminate\Support\Carbon::createFromFormat('H:i', substr((string) $s->at_time, 0, 5))->format(\App\Core\Support\DateFormat::time()) : '—' }}</span>
                             </td>
                             <td class="num text-(--color-ink-muted)">
-                                {{-- ⛔ পরের সময় সূচির নিজের অঞ্চলে — পাশের "কখন" ঘরটাও ঐ অঞ্চলের (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) --}}
-                                {{ $s->next_run_at ? \App\Core\Support\DateFormat::formatWithTime($s->next_run_at->copy()->setTimezone($s->timezone ?: config('app.timezone'))) : '—' }}
+                                {{ $s->next_run_at ? \App\Core\Support\DateFormat::formatWithTime($s->next_run_at) : '—' }}
                             </td>
                             <td >
                                 <x-ui.badge :tone="$s->is_active ? 'success' : 'draft'">
