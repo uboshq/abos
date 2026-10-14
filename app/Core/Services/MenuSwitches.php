@@ -188,6 +188,16 @@ final class MenuSwitches
      */
     public function moduleIsOn(SettingsService $settings, ModuleDefinition $module, ?array $switchedOff = null): bool
     {
+        /*
+         * ⭐ অপরিহার্য মডিউল সবসময় চালু — দরজার নিয়মটাই ([[RefuseSwitchedOffScreens]]), ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⛔ আগে মেনু কোম্পানির সুইচ আর শাখার সারি দুইটাই পড়ত, দরজা কোনোটাই নয়: ডাটাবেসে বসে থাকা একটা পুরনো
+         * `system_admin.enabled = 0` গোটা প্রশাসনের মেনু লুকিয়ে দিত, অথচ দরজা খোলা — আর কন্ট্রোল প্যানেলে ফেরার পথ মেনুতে নেই।
+         */
+        if ($module->essential) {
+            return true;
+        }
+
         if (! (bool) $settings->get($this->forModule($module->code), true)) {
             return false;
         }
@@ -209,7 +219,8 @@ final class MenuSwitches
      */
     public function itemIsOn(SettingsService $settings, ModuleDefinition $module, string $group, array $item): bool
     {
-        if (! $settings->get($this->forModule($module->code), true)) {
+        // ⓘ অপরিহার্য মডিউলের সুইচ পড়াই হয় না — দরজার নিয়মটাই ([[moduleIsOn()]]; ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        if (! $module->essential && ! $settings->get($this->forModule($module->code), true)) {
             return false;
         }
 
