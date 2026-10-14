@@ -4,6 +4,7 @@ import 'package:abos_mobile/core/records/product_record.dart';
 import 'package:abos_mobile/core/widgets/confirm_overview_sheet.dart';
 import 'package:abos_mobile/features/direct_sale/counter_screen.dart';
 import 'package:dio/dio.dart';
+import 'package:abos_mobile/core/api_client/once_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,6 +30,8 @@ class _FakeApi implements DirectSaleApi {
   // ⭐ 0.4.15 — দুবার-বিল, ক্রেতার দাম, গুদাম নেই
   bool duplicateOnce = false;
   int sells = 0;
+  bool slowOnce = false;
+  final List<String?> keys = [];
   String? priceCustomer;
   // ⓘ পুরনো পরীক্ষাগুলোর দর বদলায় না — নিজের পরীক্ষা নিজের দর বসায়
   String customerRate = '40.00';
@@ -116,6 +119,11 @@ class _FakeApi implements DirectSaleApi {
     required bool draft,
     CounterExtras extras = const CounterExtras(),
   }) async {
+    keys.add(OnceKey.current);
+    if (slowOnce) {
+      slowOnce = false;
+      throw DioException(requestOptions: RequestOptions(path: '/sales/direct'), type: DioExceptionType.receiveTimeout);
+    }
     if (failWith != null) throw failWith!;
     sells++;
     // ⓘ সার্ভারের দেয়াল — একই বিল আগে হয়েছে, জেনেশুনে না পাঠালে ৪২২
@@ -453,6 +461,24 @@ void main() {
     await _confirm(tester);
 
     expect(api.sentExtras!.deposits.map((d) => d.amount), [1250, 100], reason: '⛔ কমা বা বাংলা অঙ্কের টাকা চুপচাপ বাদ — বিল বাকিতে গেল');
+  });
+
+  testWidgets(
+      'a sale that timed out is sent again under the same key, so it cannot become a second bill (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    final api = _FakeApi()..slowOnce = true;
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await _confirm(tester);
+    await tester.tap(find.text('ঠিক আছে').last);
+    await tester.pumpAndSettle();
+    await _confirm(tester);
+
+    expect(api.keys, hasLength(2));
+    expect(api.keys.first, isNotNull, reason: '⛔ বিক্রি চাবি ছাড়াই গেল');
+    expect(api.keys[1], api.keys[0], reason: '⛔ সময় পেরোনোর পরে নতুন চাবি — দ্বিতীয় বিল হতে পারত');
   });
 
   testWidgets(
