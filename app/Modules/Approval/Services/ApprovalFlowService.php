@@ -308,6 +308,16 @@ class ApprovalFlowService
             ]);
         }
 
+        /*
+         * ⛔ প্রথম স্তর ১ — অনুরোধ সবসময় স্তর ১-এ শুরু হয় ([[ApprovalEngine::request()]]), পরের ফাঁক নিজে পেরোয়। ১ না থাকলে প্রতিটা
+         * কাগজ এমন স্তরে বসত যেখানে কেউ নেই — চিরকাল ঝুলে (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AFlowStartsAtTheFirstLevelTest]])।
+         */
+        if (min(array_map(fn (array $step): int => (int) $step['level'], $steps)) !== 1) {
+            throw ValidationException::withMessages([
+                'steps' => __('approval::validation.first_level_missing'),
+            ]);
+        }
+
         $seen = [];
 
         foreach ($steps as $step) {
