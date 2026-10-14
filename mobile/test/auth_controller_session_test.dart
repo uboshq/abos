@@ -5,6 +5,7 @@ import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/auth/token_storage.dart';
+import 'package:abos_mobile/core/privacy/phone_privacy.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 
 import 'support/fake_secure_storage.dart';
@@ -134,5 +135,20 @@ void main() {
         reason: '⛔ সেশন শেষ, অথচ আগের জনের গ্রাহক পরের জনের জন্য রয়ে গেল');
     expect(await SessionRepository.instance.readUser(), isNull,
         reason: '⛔ আগের জনের প্রোফাইল রয়ে গেল');
+  });
+
+  test('signing out hides the screens again, whatever the last company chose (phone line audit, 15 Oct 2026)', () async {
+    final calls = <bool>[];
+    PhonePrivacy.secureSetter = (on) async => calls.add(on);
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    await SessionRepository.instance.saveUser(savedUser);
+    final controller = AuthController();
+    await controller.restoreSession();
+    await PhonePrivacy.follow(secureScreens: false, widgetAmounts: false, redrawWidgets: () async {});
+
+    await controller.logout();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(calls.last, isTrue, reason: '⛔ বেরোনোর পরেও পর্দা আড়াল বন্ধ — পরের জনের পর্দা স্ক্রিনশট-যোগ্য');
   });
 }

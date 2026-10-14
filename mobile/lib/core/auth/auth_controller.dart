@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../privacy/phone_privacy.dart';
 import '../api_client/api_client.dart';
 import '../config/app_config.dart';
 import '../api_client/network_errors.dart';
@@ -157,6 +158,9 @@ class AuthController extends StateNotifier<AuthState> {
     unawaited(LauncherWidgetRefresh.clear());
     // ⭐ অ্যাপের ভিতরের ওয়েব-জানালার সেশনও — পরের জন আগের জনের ওয়েবে নয় ([WebInsideSession])
     unawaited(WebInsideSession.clear());
+    // ⛔ পর্দা আবার আড়াল — আগের কোম্পানি আড়াল বন্ধ রাখলে পরের জন `/me` আসা পর্যন্ত স্ক্রিনশট-যোগ্য পর্দায় থাকতেন
+    // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬); অ্যাপ শুরুর মতোই আড়ালের দিকে
+    unawaited(PhonePrivacy.secure(true));
     state = const AuthState.signedOut();
   }
 }
