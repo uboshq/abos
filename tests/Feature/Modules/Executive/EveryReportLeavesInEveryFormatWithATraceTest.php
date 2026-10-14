@@ -76,7 +76,10 @@ final class EveryReportLeavesInEveryFormatWithATraceTest extends TestCase
         foreach (['রহিম', 'আলম'] as $who) {
             $this->assertStringContainsString($who, $names, "প্রস্তুতিটাই ভুল — {$who}-এর সারি ফাইলে নেই।");
         }
-        $this->assertSame($body, array_slice($xlsx, 1, count($json['rows'])), '⛔ Excel-এর সারি CSV-র সারি নয়।');
+        // ⓘ Excel-এ টাকা আর পরিমাণ এখন সংখ্যার ঘর (৪ দশমিকে তুলনা) — CSV-তে একই অঙ্ক দুই দশমিকে লেখা
+        $same = fn (array $rows): array => array_map(fn (array $r) => array_map(
+            fn (string $v) => is_numeric($v) ? bcadd($v, '0', 4) : $v, $r), $rows);
+        $this->assertSame($same($body), $same(array_slice($xlsx, 1, count($json['rows']))), '⛔ Excel-এর সারি CSV-র সারি নয়।');
         $this->assertSame($body, array_map(fn (array $r) => array_values(array_map('strval', $r)), $json['rows']), '⛔ JSON-এর সারি CSV-র সারি নয়।');
 
         // ⭐ তিনটা নামানো, তিনটা রপ্তানির খাতার সারি — এই রিপোর্টের নামে
@@ -173,7 +176,8 @@ final class EveryReportLeavesInEveryFormatWithATraceTest extends TestCase
         foreach ($xml->sheetData->row as $row) {
             $cells = [];
             foreach ($row->c as $c) {
-                $cells[] = (string) $c->is->t;
+                // ⓘ লেখার ঘর `<is><t>`, সংখ্যার ঘর `<v>` (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                $cells[] = isset($c->v) ? (string) $c->v : (string) $c->is->t;
             }
             $rows[] = $cells;
         }

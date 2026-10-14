@@ -56,7 +56,8 @@ final class ANegativeAmountBecameTextInTheFileTest extends TestCase
         $zip->close();
         @unlink($path);
 
-        $this->assertStringNotContainsString("'-500.00", $sheet, '⛔ ঋণাত্মক টাকা xlsx-এ লেখা হয়ে গেল।');
-        $this->assertStringContainsString("'-2+3", $sheet);
+        // ⓘ xlsx-এর XML-এ "'" লেখা হয় `&apos;` — খোঁজাও সেভাবে, নইলে দুইটা যাচাইই অন্ধ
+        $this->assertStringNotContainsString('&apos;-500.00', $sheet, '⛔ ঋণাত্মক টাকা xlsx-এ লেখা হয়ে গেল।');
+        $this->assertStringContainsString('&apos;-2+3', $sheet, '⛔ "-" এর পরে সূত্র xlsx-এ আর আটকায় না।');
     }
 }
