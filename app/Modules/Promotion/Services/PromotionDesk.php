@@ -105,7 +105,19 @@ final class PromotionDesk
          * চলে যেত।
          */
         return DB::transaction(function () use ($offer, $line, $sourceType, $sourceId, $sourceLineId, $at, $benefit, $fit) {
-            Promotion::query()->whereKey($offer->id)->lockForUpdate()->first();
+            $locked = Promotion::query()->whereKey($offer->id)->lockForUpdate()->first();
+
+            /*
+             * ⛔ তালার পরে আবার — অফারটা এখনো চলছে কি না (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+             *
+             * ⓘ ইঞ্জিন উপরে তালার **আগে** পড়েছিল। ⚠️ ঠিক তখন অন্য ট্যাবে অফারটা থামানো বা বাতিল হলে
+             * ইঞ্জিনের "খাটে" উত্তরটা পুরনো — আর থামানো অফারের ছাড় বিলে বসত। ⭐ তালা-দেওয়া সারি শেষ কথা।
+             */
+            if ($locked === null || ! $locked->isLiveOn($at ?? Carbon::now())) {
+                throw ValidationException::withMessages([
+                    'promotion' => __('promotion::validation.not_eligible', ['code' => $offer->code]),
+                ]);
+            }
 
             /*
              * ⛔ একই সারিতে একই অফার দুইবার নয়।
