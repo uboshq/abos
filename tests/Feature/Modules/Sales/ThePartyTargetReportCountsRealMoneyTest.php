@@ -219,8 +219,8 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
 
         $this->actingAs($accountant->fresh())->get(route('accounts.report.show', ['slug' => 'party-target']))
             ->assertOk()->assertSee('Door Dealer');
-        $this->actingAs($this->owner)->get(route('sales.report.show', ['slug' => 'party-target']))
-            ->assertOk()->assertSee('Door Dealer');
+        $this->actingAs($this->owner)->get(route('accounts.report.show', ['slug' => 'party-target-areas']))
+            ->assertOk();
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────

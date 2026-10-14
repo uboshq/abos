@@ -379,11 +379,6 @@ return [
             /* ⭐ আদায়ের লক্ষ্য বনাম অর্জন — ডিলার ধরে, পরিকল্পনা সংস্করণ ২ §৯ ঙ ([[CollectionTargetReports]]) */
             ['label' => 'sales::collection_target.title', 'icon' => 'wallet', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'collection-target'], 'permission' => 'sales.report'],
-            /* ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬ ([[PartyTargetReport]]) */
-            ['label' => 'sales::party_target.title', 'icon' => 'wallet', 'route' => 'sales.report.show',
-                'route_params' => ['slug' => 'party-target'], 'permission' => 'sales.report'],
-            ['label' => 'sales::party_target.areas_title', 'icon' => 'globe', 'route' => 'sales.report.show',
-                'route_params' => ['slug' => 'party-target-areas'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।

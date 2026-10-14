@@ -31,7 +31,9 @@ use Illuminate\Support\Facades\DB;
  *   · আদায় — [[CustomerTargetService::achievedQuery()]], লক্ষ্যের পাতা, বিলের বাক্স আর পুরনো লক্ষ্যের রিপোর্টের একই নিয়ম: আদায়ের
  *     কাগজ, রসিদ ভাউচার, পাশ হওয়া চেক; ফেরত চেক, বাতিল আদায়, পাশ না হওয়া চেক বাদ; বিক্রয় ফেরত, ছাড়, জাবেদা কখনো নয়।
  *
- * ⓘ ঘর Sales-এ, কারণ লক্ষ্য Sales-এর; দরজা দুইটা — Accounts-এর রিপোর্ট (`accounts.report`) আর Sales-এর রিপোর্ট (`sales.report`)।
+ * ⓘ ঘর Sales-এ, কারণ লক্ষ্য Sales-এর; দরজা একটাই — Accounts → রিপোর্ট (`accounts.report`), মালিক যেমন বলেছেন। ⛔ দুই মেনুতে একই নাম
+ * দুই পাতায় যায় না ([[OneNameInTwoMenusAndNobodyKnowsWhichDoorTest]]), আর রিপোর্টের চাবি দরজার চাবির হুবহু
+ * ([[EveryReportNamesTheKeyItsWebDoorAsksForTest]]) — তাই Sales-এর দরজা নেই।
  * ⓘ শাখা: গ্রাহকের নিজের শাখা (হেডারের বাছা মানে); বিক্রয়কর্মী কেবল নিজের ডিলার; এলাকা/পয়েন্ট ছাঁকনি পাঁচ ধাপ উপরে মেলে।
  */
 final class PartyTargetReport
@@ -74,6 +76,7 @@ final class PartyTargetReport
         $named = fn (string $t) => $bn ? "COALESCE(NULLIF({$t}.name_bn, ''), {$t}.name_en)" : "COALESCE(NULLIF({$t}.name_en, ''), {$t}.name_bn)";
 
         $query = DB::table('customers as cu')
+            ->where('cu.company_id', $company)
             ->leftJoinSub($targets, 't', 't.customer_id', '=', 'cu.id')
             ->leftJoinSub(CustomerTargetService::achievedQuery($company, $from, $to), 'a', 'a.customer_id', '=', 'cu.id')
             ->leftJoin('mdm_locations as l1', 'l1.id', '=', 'cu.location_id');
@@ -93,7 +96,6 @@ final class PartyTargetReport
         };
 
         return $query
-            ->where('cu.company_id', $company)
             ->whereNull('cu.deleted_at')
             ->where(fn ($q) => $q->where('t.target', '>', 0)->orWhere('a.achieved', '>', 0))
             ->tap($walls)
@@ -195,7 +197,7 @@ final class PartyTargetReport
     {
         return new ReportDefinition(
             key: self::KEY,
-            permission: ['accounts.report', 'sales.report'],
+            permission: 'accounts.report',
             title: 'sales::party_target.title',
             filters: ['date_range', 'branch', 'location_id', 'salesman_id'],
             // ⓘ শাখা গ্রাহকের নিজের — নিজেই ছাঁকে; ভাগ এলাকা ধরে ([[sectionsFor()]])
@@ -232,7 +234,7 @@ final class PartyTargetReport
     {
         return new ReportDefinition(
             key: self::AREAS,
-            permission: ['accounts.report', 'sales.report'],
+            permission: 'accounts.report',
             title: 'sales::party_target.areas_title',
             filters: ['date_range', 'branch', 'location_id', 'salesman_id'],
             splitByBranch: false,
