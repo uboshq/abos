@@ -169,14 +169,20 @@ class _CounterScreenState extends State<CounterScreen> {
   Future<void> _askFree() async {
     final product = _product;
     final qty = int.tryParse(_qty.text.trim()) ?? 0;
+    // ⓘ পরিমাণ মুছলে আগের ফ্রিও যায় — পুরনো অঙ্ক বসে থাকত
+    if (product != null && qty <= 0 && _editingKey == null) setState(() => _free.clear());
     if (product == null || qty <= 0) return;
+    final lot = _lot?.id;
     try {
       final allowed = await widget.api.freeAllowed(
           productId: product.id,
           warehouseId: _warehouseId,
           qty: qty,
-          lotId: _lot?.id);
+          lotId: lot);
       if (!mounted) return;
+      // ⛔ উত্তর আসতে আসতে পণ্য, লট বা পরিমাণ বদলেছে — পুরনো প্রশ্নের উত্তর ফেলে দেওয়া; আগে ১০০-র (১০ ফ্রি) উত্তর শেষে এসে
+      // ১০-এর বিক্রিতে ১০ ফ্রি বসাত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+      if (_product?.id != product.id || _lot?.id != lot || (int.tryParse(_qty.text.trim()) ?? 0) != qty) return;
       setState(() {
         _freeAllowed = allowed;
         // ⓘ স্কিমের ফ্রি নিজে বসে (মালিক, ১ অক্টোবর: "free qty own auto box")

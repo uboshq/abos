@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:abos_mobile/core/orders/direct_sale_api.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/records/product_record.dart';
@@ -31,6 +33,7 @@ class _FakeApi implements DirectSaleApi {
   bool duplicateOnce = false;
   int sells = 0;
   bool slowOnce = false;
+  Map<int, Completer<int?>>? freeAnswers;
   final List<String?> keys = [];
   String? priceCustomer;
   // ⓘ পুরনো পরীক্ষাগুলোর দর বদলায় না — নিজের পরীক্ষা নিজের দর বসায়
@@ -107,8 +110,11 @@ class _FakeApi implements DirectSaleApi {
           {required String productId,
           String? warehouseId,
           required int qty,
-          String? lotId}) async =>
-      qty >= 10 ? 1 : 0;
+          String? lotId}) async {
+    final held = freeAnswers?[qty];
+    if (held != null) return held.future;
+    return qty >= 10 ? 1 : 0;
+  }
 
   @override
   Future<CounterResult> sell({
@@ -485,6 +491,25 @@ void main() {
     expect(api.keys, hasLength(2));
     expect(api.keys.first, isNotNull, reason: '⛔ বিক্রি চাবি ছাড়াই গেল');
     expect(api.keys[1], api.keys[0], reason: '⛔ সময় পেরোনোর পরে নতুন চাবি — দ্বিতীয় বিল হতে পারত');
+  });
+
+  testWidgets('a late free-goods answer for an older quantity is dropped (phone line audit, 15 Oct 2026)', (tester) async {
+    final first = Completer<int?>();
+    final second = Completer<int?>();
+    final api = _FakeApi()..freeAnswers = {100: first, 10: second};
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+
+    await tester.enterText(find.byKey(const ValueKey('counter-qty')), '100');
+    await tester.enterText(find.byKey(const ValueKey('counter-qty')), '10');
+    second.complete(1);
+    await tester.pumpAndSettle();
+    first.complete(10);
+    await tester.pumpAndSettle();
+
+    final free = tester.widget<TextField>(find.byKey(const ValueKey('counter-free'))).controller!.text;
+    expect(free, '1', reason: '⛔ ১০০-র দেরিতে আসা উত্তর ১০-এর বিক্রিতে ১০ ফ্রি বসাল');
   });
 
   testWidgets(
