@@ -50,6 +50,13 @@ final class NoticeAcknowledgement
             ]);
         }
 
+        // ⛔ কেবল প্রকাশিত নোটিশে সই — খসড়া বা ফেরানো নোটিশে সই হিসাব ঘোলা করে ([[OnlyAPublishedNoticeReachesStaffTest]])
+        if (! $notice->status?->isLive()) {
+            throw ValidationException::withMessages([
+                'notice' => __('core.notice.not_live_to_sign'),
+            ]);
+        }
+
         /*
          * ⓘ সই দেওয়া মানে পড়াও হয়েছে — উল্টোটা নয়।
          *

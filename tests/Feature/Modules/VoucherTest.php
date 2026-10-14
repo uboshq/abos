@@ -449,6 +449,11 @@ class VoucherTest extends TestCase
     /** খোলা ব্যালেন্স বসানো — চিহ্ন দেখে বিভ্রান্তি এড়াতে। */
     private function seedOpening(int $accountId, string $amount): void
     {
+        // ⓘ পক্ষ-রাখা খাতের (পাওনা) নিজের খোলা জের এখন নিষেধ (১৪ অক্টোবর ২০২৬) — এখানে কেবল পার্থক্য মাপা হয়, তাই জের ছাড়াই চলে
+        if (OpeningBalanceService::needsAParty(Account::query()->findOrFail($accountId))) {
+            return;
+        }
+
         Account::query()->whereKey($accountId)->update([
             'opening_balance' => $amount,
             'opening_date' => '2026-07-01',

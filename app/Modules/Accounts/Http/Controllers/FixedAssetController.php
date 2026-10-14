@@ -233,7 +233,17 @@ class FixedAssetController extends Controller implements HasMiddleware
              * ⚠️ কেনার দামের বেশি হতে পারে না: হলে খাতায় জিনিসটার
              * দাম ঋণাত্মক হয়ে যেত।
              */
-            'opening_accumulated' => ['nullable', 'numeric', 'min:0', 'lte:cost'],
+            /*
+             * ⛔ খোলা অবচয় কেবল আগের-সম্পদ আনার চাবিতে — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[OpeningDepreciationNeedsTheImportKeyTest]])।
+             * ⓘ খোলা অবচয় সই ছাড়াই ধরে রাখা মুনাফা থেকে কাটে ([[FixedAssetService::register()]]); মডিউল বলে ওটা `accounts.asset.import`
+             * চাবির কাজ, অথচ সাধারণ "সম্পদ যোগ"-এর পর্দা কেবল `manage` চাবিতে ৫ লাখের সম্পদে ৫ লাখ খোলা অবচয় বসাতে দিত।
+             */
+            'opening_accumulated' => ['nullable', 'numeric', 'min:0', 'lte:cost',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if (bccomp((string) ($value ?: '0'), '0', 4) > 0 && ! $request->user()?->can('accounts.asset.import')) {
+                        $fail(__('accounts::asset.opening_needs_import_key'));
+                    }
+                }],
             'method' => ['nullable', 'required_without:category_id', Rule::in(FixedAsset::METHODS)],
             'life_months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],

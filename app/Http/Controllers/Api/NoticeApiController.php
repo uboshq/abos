@@ -136,6 +136,8 @@ final class NoticeApiController extends Controller
         $notice = Notice::query()->wherePublicId($publicId)->firstOrFail();
 
         abort_unless(app(NoticeAudience::class)->reaches($notice, $request->user()), 404);
+        // ⛔ কেবল প্রকাশিত — খসড়া, ফেরানো বা আগামীর নোটিশ ফোনেও "নেই" ([[OnlyAPublishedNoticeReachesStaffTest]])
+        abort_unless(app(NoticeBoard::class)->queryFor($request->user())->whereKey($notice->getKey())->exists(), 404);
 
         return $notice;
     }

@@ -86,10 +86,11 @@ final class DocumentAccess
     }
 
     /** এই মানুষ এই কাগজটা দেখতে পান কি না — নিজের, অধিকার, নয়তো ধাপ আর বিভাগ। */
-    public function canSee(User $user, Document $document): bool
+    public function canSee(User $user, Document $document, bool $asSigner = true): bool
     {
-        // ⭐ সইকারী শাখার দেয়ালের বাইরেও পড়েন — ABOS-এর সইয়ের নিয়ম ([[ApprovalFacts::VIEW_WALLS]])
-        if ($this->isSigner($user, $document)) {
+        // ⭐ সইকারী শাখার দেয়ালের বাইরেও পড়েন — ABOS-এর সইয়ের নিয়ম ([[ApprovalFacts::VIEW_WALLS]])। ⛔ কেবল পড়তে: বদল, শেয়ার, মোছা
+        // `$asSigner = false`-এ আসে ([[DocumentPolicy::reaches()]]; [[ASignerOnlyReadsTheDocumentTest]])
+        if ($asSigner && $this->isSigner($user, $document)) {
             return true;
         }
 
