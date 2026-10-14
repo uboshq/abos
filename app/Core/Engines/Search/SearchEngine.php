@@ -9,6 +9,7 @@ use App\Core\Module\ModuleRegistry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -297,10 +298,28 @@ final class SearchEngine
             return null;
         }
 
+        $guard = $this->permissionFor($route);
+
+        /*
+         * ⛔ সাধারণ চাবির রুটেও সারির পলিসি — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ `can:hr.employee.view` বলে "কর্মী দেখতে পারেন", কোন কর্মী তা বলে না; শাখার দেয়াল ছিল কেবল কন্ট্রোলারের
+         * `authorize('view')`-এ ([[EmployeePolicy]])। ⛔ তাই শাখায় সীমিত HR কর্মী Ctrl+K-এ অন্য শাখার কর্মীর নাম, কোড আর
+         * মোবাইল পেতেন, আর কাগজ-জোড়ার তালিকাতেও ([[DocumentLinks]]) — পাতা খুললে ৪০৩। ⭐ মডেলের পলিসিতে `view` থাকলে
+         * প্রতিটা সারি সেটা দিয়েও যাচাই হয়; চাবির দরজা আগের মতোই কোয়েরির আগে।
+         */
+        if ($guard['ability'] === null && $guard['permission'] !== null) {
+            $policy = Gate::getPolicyFor($class);
+
+            if ($policy !== null && method_exists($policy, 'view')) {
+                $guard['ability'] = 'view';
+            }
+        }
+
         return [
             'route' => $route,
             'columns' => $columns,
-            ...$this->permissionFor($route),
+            ...$guard,
         ];
     }
 
