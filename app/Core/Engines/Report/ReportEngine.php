@@ -208,6 +208,11 @@ final class ReportEngine
      */
     private function branchPlan(ReportDefinition $report, array $filters, ?int $top, ?array $comparison): array
     {
+        // ⭐ রিপোর্টের নিজের ভাগ (যেমন এলাকা) — শাখার জায়গায়; Top-N আর তুলনায় ভাগ নয়, শাখার মতোই
+        if ($report->sections !== null) {
+            return $top !== null || $comparison !== null ? [] : array_values(($report->sections)($filters));
+        }
+
         if (! $report->splitByBranch || $report->branchless !== null || $report->runningBalance
             || $top !== null || $comparison !== null || ! empty($filters['branch_id'])
             || app(DataScope::class)->viewsOneBranch(auth()->user())) {
@@ -933,24 +938,41 @@ final class ReportEngine
             return [];
         }
 
+        // ⓘ অনুপাতের ঘর যোগ হয় না — নিচে দুই ঘরের মোট থেকে গোনা ([[ReportColumn::$ratio]])
+        $sums = array_values(array_filter($columns, fn (ReportColumn $c) => $c->ratio === null));
+
         $selects = array_map(
             fn (ReportColumn $c) => "SUM(t.{$c->key}) as total_{$c->key}",
-            $columns,
+            $sums,
         );
 
-        $row = DB::query()
+        $row = $selects === [] ? [] : DB::query()
             ->fromSub($query->reorder(), 't')
             ->selectRaw(implode(', ', $selects))
             ->first();
 
         $totals = [];
 
-        foreach ($columns as $column) {
+        foreach ($sums as $column) {
             $value = data_get((array) $row, 'total_'.$column->key, 0);
 
             // bcadd দিয়ে স্বাভাবিক করা — SUM() null ফেরত দিতে পারে (ফাঁকা
             // ফল), আর তখন "0.00"-ই সঠিক উত্তর, ফাঁকা ঘর নয়।
             $totals[$column->key] = bcadd((string) ($value ?? 0), '0', $column->decimals());
+        }
+
+        foreach ($columns as $column) {
+            if ($column->ratio === null) {
+                continue;
+            }
+
+            [$top, $bottom] = $column->ratio;
+            $den = $totals[$bottom] ?? '0';
+
+            // ⓘ হর শূন্য — অনুপাত নেই; ঘরটা খালি থাকে, ০% নয়
+            if (bccomp($den, '0', 4) > 0) {
+                $totals[$column->key] = bcdiv(bcmul($totals[$top] ?? '0', '100', 6), $den, $column->decimals());
+            }
         }
 
         return $totals;
