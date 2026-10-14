@@ -14,6 +14,8 @@ use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Executive\Services\Board;
+use App\Modules\Executive\Notifications\MorningSummary;
+use App\Modules\Executive\Services\CompanyLens;
 use App\Modules\Executive\Services\Comparison;
 use App\Modules\Executive\Services\Figures;
 use App\Modules\Executive\Services\Snapshots;
@@ -23,6 +25,7 @@ use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -184,6 +187,36 @@ final class TheNightKeepsWhatTheScreenSaidTest extends TestCase
             ->assertDontSee('data-history-row="'.$this->alpha->id.'-0"', false)
             ->assertDontSee($this->beta->name_bn)
             ->assertDontSee(Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'NTK')->firstOrFail()->name());
+    }
+
+    /** ⛔ সইয়ের অপেক্ষা মেইলে গোটা সংখ্যায়, "5.0000" নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+    public function test_the_signatures_count_reads_as_a_whole_number_in_the_morning_mail(): void
+    {
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+
+        $rows = array_values(array_filter(
+            app(Snapshots::class)->on($this->owner, app(CompanyLens::class)->companies($this->owner), Carbon::today()->toDateString()),
+            fn (array $row): bool => $row['branch_id'] === null,
+        ));
+        $this->assertNotSame([], $rows, 'প্রস্তুতিটাই ভুল — গোটা কোম্পানির সারি নেই।');
+
+        foreach ($rows as $row) {
+            $this->assertMatchesRegularExpression('/^\d+$/', (string) $row['values'][Figures::SIGNATURES], '⛔ সইয়ের অপেক্ষা দশমিকে এসেছে।');
+        }
+
+        $mail = (new MorningSummary(Carbon::today()->toDateString(), $rows))->toMail(new AnonymousNotifiable);
+        $label = __('executive::figure.'.Figures::SIGNATURES, [], 'bn');
+
+        $found = 0;
+
+        foreach ($mail->introLines as $line) {
+            if (str_starts_with((string) $line, $label.': ')) {
+                $found++;
+                $this->assertStringNotContainsString('.', (string) $line, "⛔ মেইলে সইয়ের অপেক্ষা দশমিকে: {$line}");
+            }
+        }
+
+        $this->assertSame(count($rows), $found, 'প্রস্তুতিটাই ভুল — মেইলে সইয়ের অপেক্ষার লাইন নেই।');
     }
 
     /** ⛔ গত মাসের ঐ দিনের রাতের হিসাব না থাকলে ধারায় ফাঁক, ৳০-এর বিন্দু নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */

@@ -326,6 +326,8 @@ final class Snapshots
             $out[$key] = match (true) {
                 ! $readable[$key] => Figures::HIDDEN,
                 $row->{$key} === null => null,
+                // ⓘ সইয়ের অপেক্ষা গোনা সংখ্যা, টাকা নয় — আগে মেইলে "5.0000" যেত (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                $key === Figures::SIGNATURES => bcadd((string) $row->{$key}, '0', 0),
                 default => bcadd((string) $row->{$key}, '0', 4),
             };
         }
