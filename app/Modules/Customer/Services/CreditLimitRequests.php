@@ -52,7 +52,8 @@ final class CreditLimitRequests
          * ⛔ কেবল সাধারণ দশমিক — বাকি নিয়ন্ত্রণের লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⚠️ `1e5` `numeric` পার হত আর bcmath-এ ভেঙে
          * ৫০০ দিত — ওয়েব আর ফোন দুই দরজাতেই; দরজার নিয়ম ছাড়া অন্য পথেও এখানে থামে।
          */
-        if (! \App\Modules\Sales\Http\Requests\PlainNumber::is($amount)) {
+        // ⓘ নিয়মটা Sales-এর PlainNumber-এর হুবহু, এখানে লেখা — Customer Sales-এর উপর নির্ভর করে না ([[BoundariesTest]])
+        if (preg_match('/^[+-]?(\d+(\.\d*)?|\.\d+)$/', $amount) !== 1) {
             throw ValidationException::withMessages(['amount' => __('validation.numeric', ['attribute' => 'amount'])]);
         }
 
