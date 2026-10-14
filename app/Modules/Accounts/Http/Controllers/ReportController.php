@@ -149,6 +149,14 @@ class ReportController extends Controller implements HasMiddleware
      */
     private function authorizeReport(Request $request, string $slug): void
     {
+        // ⓘ লাভ-ক্ষতি আর নগদ প্রবাহের নিজের দরজা ([[FinalAccountsReportController]], `accounts.report.final`) চাবি দেখে তবে এখানে
+        // পাঠায়; ঠিকানাটা আগে ঐ রুটেই মেলে — আবার `accounts.report` চাইলে কেবল চূড়ান্ত হিসাবের চাবিওয়ালা আটকাতেন
+        if (in_array($slug, FinalAccountsReportController::SLUGS, true)) {
+            abort_unless((bool) $request->user()?->can('accounts.report.final'), 403);
+
+            return;
+        }
+
         $key = self::SLUGS[$slug] ?? null;
         $definition = is_string($key) && in_array($key, $this->reports->keys(), true) ? $this->reports->get($key) : null;
 
