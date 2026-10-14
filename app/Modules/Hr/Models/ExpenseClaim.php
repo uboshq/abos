@@ -132,6 +132,10 @@ class ExpenseClaim extends Model implements Drillable, SettledByAVoucher, Settle
             'party_type' => Employee::drillSourceType(),
             'party_id' => (int) $this->employee_id,
             'party_required' => true,
+            // ⭐ সই যে খাতে — অগ্রিম কর্মীর অগ্রিম খাতে, খরচ দাবির খরচের খাতে (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'debit_accounts' => array_values(array_filter([$this->kind === self::ADVANCE
+                ? (int) \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::EMPLOYEE_ADVANCE)?->id
+                : (int) $this->expense_account_id])),
             // ⓘ কেবল অনুমোদিত আর এখনো না-দেওয়া — সইয়ের আগে বা দুবার নয়
             'open' => $this->status === self::APPROVED,
         ];

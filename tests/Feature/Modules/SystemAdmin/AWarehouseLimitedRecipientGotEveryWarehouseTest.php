@@ -53,7 +53,7 @@ final class AWarehouseLimitedRecipientGotEveryWarehouseTest extends TestCase
         app(ReportEngine::class)->register(new ReportDefinition(
             key: 'ec_warehouse_probe',
             title: 'Warehouse probe',
-            query: fn (array $f) => DB::table('warehouses')->where('company_id', $f['company_id'])
+            query: fn (array $f) => DB::table('inv_warehouses')->where('company_id', $f['company_id'])
                 ->select('code')->orderBy('code')->tap(ReportEngine::warehouseWall($f, 'id')),
             columns: [['key' => 'code', 'label' => 'Code', 'type' => ReportColumn::TEXT]],
             filters: [],

@@ -48,6 +48,13 @@
         foreach ($approvals as $row) {
             $last = $row->decisions->last();
 
+            // ⭐ সংশোধনে ফেরত — সইকারীর নোটটাই কারণ (১৪ অক্টোবর ২০২৬)
+            if ($last?->decision === \App\Models\ApprovalDecision::RETURNED) {
+                $why[$row->id] = trim((string) $last->remarks).' · '.__('approval::message.fix_and_resend');
+
+                continue;
+            }
+
             if ($last?->decision !== \App\Models\ApprovalDecision::REJECTED) {
                 continue;
             }

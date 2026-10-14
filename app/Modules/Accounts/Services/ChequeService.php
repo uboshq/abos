@@ -433,9 +433,11 @@ final class ChequeService
         /*
          * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ ফেরতের কারণটাই সইয়ের অনুরোধের কারণ; শেষ সই পড়লে
          * [[FinishTheAccountsPaperOnTheLastSignature]] ঐ কারণ নিয়েই এই মেথড আবার ডাকে।
+         * ⓘ "বাতিল" না "ফেরত" — দুই দিকেই সইয়ের তথ্যে লেখা (১৩ অক্টোবর ২০২৬): ফেরতের সই বাতিল পার করে না, বাতিলের সই ফেরত নয়
+         * ([[DocumentApproval::signedTheSame()]])।
          */
         if ($asksItsSignature
-            && app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason, $cancelling ? ['cancel' => true] : [])) {
+            && app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason, ['cancel' => $cancelling])) {
             return $cheque->fresh();
         }
 

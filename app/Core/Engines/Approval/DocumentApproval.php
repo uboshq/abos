@@ -7,6 +7,7 @@ namespace App\Core\Engines\Approval;
 use App\Core\Support\Money;
 use App\Models\Approval;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 /**
  * একটা কাগজ নিশ্চিত করার আগে অনুমোদন লাগে কি না।
@@ -118,7 +119,7 @@ final class DocumentApproval
         $hash = app(DocumentFingerprint::class)->of($document);
 
         if ($latest?->status === Approval::APPROVED) {
-            if ($latest->stillCovers($amount, $hash)) {
+            if ($latest->stillCovers($amount, $hash) && $this->signedTheSame($latest, $payload)) {
                 return null;
             }
 
@@ -145,6 +146,22 @@ final class DocumentApproval
          * যিনি "না" শুনলেন তিনি আবার বোতামটা চেপে আবার পাঠাতেন। আবার
          * চাওয়ার পথ একটাই — কাগজটা বদলানো, অর্থাৎ "না"-র কারণটা মেটানো।
          */
+        /*
+         * ⭐ অপেক্ষার অনুরোধ আগের কাগজের হলে তুলে নিয়ে নতুন করে — লাইভ, ADI RCV-0090 (১৩–১৪ অক্টোবর ২০২৬; [[AnEditedWaitingPaperIsAskedAgainTest]])।
+         * ⛔ আগে অপেক্ষার অনুরোধটাই ফিরত: ৩৯,৯৯০-এ চাওয়া সই, অথচ খসড়া তখন ২৪,৯১৩ নতুন বিবরণে — সইকারী পুরনো অঙ্ক দেখে নতুন কাগজে সই
+         * দিতেন। ⓘ এখন পুরনোটা "বাতিল" ([[ApprovalEngine::withdrawStale()]]), নতুনটা নতুন অঙ্কে আর পুরনোটার কথা বলে; পুরনোয় সই আর পড়ে না।
+         */
+        if ($latest?->status === Approval::PENDING
+            && (($latest->state_hash !== null && ! hash_equals((string) $latest->state_hash, $hash)) || ! $this->signedTheSame($latest, $payload))) {
+            $this->approvals->withdrawStale($latest);
+            $superseded = $latest;
+        }
+
+        // ⓘ সংশোধনে ফেরত — লেখক আবার পাঠালেন: নতুন অনুরোধ, আর সে বলে কোনটার জায়গা নিল ([[ApprovalEngine::sendBack()]])
+        if ($latest?->status === Approval::RETURNED) {
+            $superseded = $latest;
+        }
+
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($document, $latest)) {
             return $latest;
         }
@@ -230,11 +247,16 @@ final class DocumentApproval
         ?string $amount = null,
         ?string $reason = null,
         array $fields = [],
-    ): void {
-        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields);
+        // ⓘ সই যে তথ্যে চাওয়া — [[signedTheSame()]] (১৩ অক্টোবর ২০২৬)
+        array $payload = [],
+    ): string {
+        // ⓘ যাচাইয়ের মুহূর্তের ছাপ — ফেরত যায়, তালার পরে আবার মেলানোর জন্য ([[assertUnchangedSince()]])
+        $print = app(DocumentFingerprint::class)->of($document);
+
+        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields, $payload);
 
         if ($stopping === null) {
-            return;
+            return $print;
         }
 
         /*
@@ -252,6 +274,27 @@ final class DocumentApproval
                 ])
                 : $this->awaitingWord($stopping, $module, $action),
         );
+    }
+
+    /**
+     * ⛔ সই যাচাই আর তালার মাঝখানে কাগজটা বদলায়নি তো — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+     * ([[APaperChangedBetweenTheCheckAndTheLockIsNotPostedTest]])।
+     *
+     * ⓘ বেশিরভাগ সেবা সই দেখে লেনদেনের **বাইরে** ([[assertClear()]] — অনুরোধটা টিকে থাকার জন্য), তারপর লেনদেনে সারিতে তালা দেয়।
+     * ⛔ ঐ ফাঁকে আরেক জানালা থেকে খসড়া বদলালে বদলানোটাই খাতায় উঠত — সই দেখা হয়েছিল আগের কাগজে। ⓘ তালার পরে এটা ডেকে
+     * ছাপ আবার মেলানো হয় ([[StockTransferService]]-এর পুরনো ছাঁচ); না মিললে কিছুই খাতায় যায় না, মানুষ আবার চাপেন — তখন
+     * নতুন কাগজে নতুন যাচাই।
+     */
+    public function isUnchangedSince(Model $document, string $print): bool
+    {
+        return hash_equals($print, app(DocumentFingerprint::class)->of($document));
+    }
+
+    public function assertUnchangedSince(Model $document, string $print, string $field): void
+    {
+        if (! $this->isUnchangedSince($document, $print)) {
+            throw ValidationException::withMessages([$field => __('core.approval.changed_while_posting')]);
+        }
     }
 
     /**
@@ -356,6 +399,59 @@ final class DocumentApproval
         }
 
         return $changed->greaterThan($approval->decided_at);
+    }
+
+    /**
+     * ⭐ সই যে তথ্যে চাওয়া হয়েছিল, কাজটা এখনো সেই তথ্যেই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+     * ([[ASignatureCoversTheValuesItWasAskedWithTest]])।
+     *
+     * ⓘ কিছু কাজের আসল কথা কাগজের ঘরে নয়, অনুরোধের তথ্যে (`$payload`): সম্পদ বিদায়ের টাকা কোন খাতে, কোন তারিখে, বিক্রি না
+     * হারানো; ঋণের কিস্তি কোন খাত থেকে। শেষ সই ঠিক এগুলো দিয়েই কাজটা শেষ করে ([[FinishTheAccountsPaperOnTheLastSignature]])।
+     * ⛔ কিন্তু শেষ করা আটকালে (মাস বন্ধ, খাত বন্ধ) হাতে আবার চাপলে আগে কেবল কাগজের ছাপ আর অঙ্ক মেলানো হত — অন্য খাত,
+     * অন্য তারিখ, "বিক্রি"-র বদলে "হারানো" দিয়ে পুরনো সইয়েই পার হত।
+     *
+     * ⓘ পুরনো সারি (এই তথ্য রাখার আগের) — একটাও চাবি না থাকলে আগের মতোই খাটে। খালি (`null`) মান সারিতে রাখা হয় না, তাই
+     * "নেই" আর "খালি" এক।
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function signedTheSame(Approval $approval, array $payload): bool
+    {
+        if ($payload === []) {
+            return true;
+        }
+
+        $signed = (array) ($approval->payload ?? []);
+
+        if (array_intersect_key($payload, $signed) === []) {
+            return true;
+        }
+
+        foreach ($payload as $key => $value) {
+            if (json_encode(self::plain($signed[$key] ?? null)) !== json_encode(self::plain($value))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** তুলনার জন্য এক রূপ — সংখ্যা চার ঘরে (৫০০ = ৫০০.০০০০), হ্যাঁ/না = ১/০, তালিকা ভিতরে একই নিয়মে */
+    private static function plain(mixed $value): mixed
+    {
+        if (is_object($value)) {
+            // ⓘ সারিতে যা জমা থাকে তা JSON — বস্তুও সেই রূপে মেলানো হয়
+            $value = json_decode((string) json_encode($value), true);
+        }
+
+        return match (true) {
+            $value === null || $value === '' => null,
+            is_array($value) => array_map(self::plain(...), $value),
+            is_bool($value) => $value ? '1' : '0',
+            (is_int($value) || is_float($value) || is_string($value)) && preg_match('/^-?\d+(\.\d+)?$/', (string) $value) === 1
+                => bcadd((string) $value, '0', 4),
+            default => (string) $value,
+        };
     }
 
     /**

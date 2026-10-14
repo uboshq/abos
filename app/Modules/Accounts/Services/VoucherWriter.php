@@ -106,6 +106,20 @@ final class VoucherWriter
     public function update(Voucher $voucher, array $data, array $lines, bool $asDraft, ?UploadedFile $attachment = null): bool|string
     {
         return DB::transaction(function () use ($voucher, $data, $lines, $asDraft, $attachment): bool|string {
+            // ⛔ অন্য কাগজের সইয়ে বাঁধা খসড়া এখান থেকে বদলায় না — সই যা দেখেছে খাতায় তাই ([[VoucherService::assertNotSignedElsewhere()]])
+            $this->vouchers->assertNotSignedElsewhere($voucher);
+
+            /*
+             * ⭐ যিনি বদলাচ্ছেন তিনি নিজেই এই ভাউচারের অপেক্ষার সইয়ের সইকারী — মালিকের আদেশ, ১৪ অক্টোবর ২০২৬ (কাজের ভাগ)।
+             * ⓘ মালিক বদলে সই দিতে পারেন; অন্য সইকারী কেবল বিবরণ ঠিক করতে পারেন। দুই পথেই অনুরোধটা থাকে, ছাপ বদলানো কাগজের,
+             * প্রতিটা বদল নিরীক্ষায় আর লেখক খবর পান ([[signerEdits()]])। লেখকের নিজের বদলে আগের মতো পুরনো অনুরোধ উঠে নতুন করে চাওয়া হয়।
+             */
+            $signing = $this->signersOwnRequest($voucher);
+
+            if ($signing !== null) {
+                return $this->signerEdits($voucher, $signing, $data, $lines, $asDraft, $attachment);
+            }
+
             $this->vouchers->update($voucher, $data, $lines, byHand: true);
             // ⛔ যিনি সারি বদলালেন তিনিও লেখক — নিজে পাকা নন ([[VoucherService::writerMayNotPost()]]; [[WhoeverRewroteAVoucherDoesNotPostItTest]])
             app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($voucher, VoucherService::EDITED_BY_HAND);
@@ -117,6 +131,19 @@ final class VoucherWriter
             }
 
             if ($asDraft) {
+                /*
+                 * ⓘ খসড়া হিসেবে রাখা হলেও — সইয়ের অপেক্ষা চলছিল তো নতুন কাগজে নতুন করে চাওয়া, পুরনো অনুরোধ তুলে
+                 * ([[VoucherApproval::stopping()]]; লাইভ RCV-0090, ১৪ অক্টোবর ২০২৬)। অপেক্ষা না থাকলে আগের মতো কিছুই চাওয়া হয় না।
+                 */
+                $fresh = $voucher->fresh();
+                $action = $this->approvals->actionFor($fresh);
+                $waiting = $action !== null && \App\Models\Approval::query()->where('approvable_type', Voucher::class)
+                    ->where('approvable_id', $fresh->id)->where('action', $action)->where('status', \App\Models\Approval::PENDING)->exists();
+
+                if ($waiting) {
+                    $this->approvals->stopping($fresh);
+                }
+
                 return false;
             }
 
@@ -136,6 +163,119 @@ final class VoucherWriter
         });
     }
 
+    /** এই ভাউচারের অপেক্ষার সই, যদি যিনি বদলাচ্ছেন তিনিই তার সইকারী */
+    private function signersOwnRequest(Voucher $voucher): ?Approval
+    {
+        $user = auth()->user();
+        $action = $this->approvals->actionFor($voucher);
+
+        if (! $user instanceof \App\Models\User || $action === null) {
+            return null;
+        }
+
+        $pending = Approval::query()->where('approvable_type', Voucher::class)->where('approvable_id', $voucher->id)
+            ->where('action', $action)->where('status', Approval::PENDING)->latest('id')->first();
+
+        return $pending !== null && app(\App\Core\Engines\Approval\ApprovalEngine::class)->canDecide($pending, $user) ? $pending : null;
+    }
+
+    /**
+     * ⭐ সইকারীর নিজের বদল — মালিক যেকোনো ঘর; অন্য সইকারী কেবল বিবরণ (মাথার আর সারির) আর লেনদেন নম্বর
+     * ([[ASignerSendsBackOrCorrectsOnlyTheTextTest]])।
+     *
+     * ⛔ অঙ্ক, খাত, পক্ষ, তারিখ, সারি — যে বদলালে খাতার মানে বদলায় — মালিক ছাড়া কেউ সইয়ের হাতে বদলাতে পারেন না: সইকারী নিজে
+     * কাগজ বানিয়ে নিজে সই দিলে কাজের ভাগ থাকে না। তিনি "সংশোধনে ফেরত" পাঠান ([[ApprovalEngine::sendBack()]])।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function signerEdits(Voucher $voucher, Approval $signing, array $data, array $lines, bool $asDraft, ?UploadedFile $attachment): bool
+    {
+        $user = auth()->user();
+        $owner = app(\App\Core\Services\Ownership::class)->isOwnerIn($user, (int) $voucher->company_id);
+
+        $before = $this->picture(Voucher::query()->withoutGlobalScope('user-branch')->with('lines')->findOrFail($voucher->id));
+
+        $this->vouchers->update($voucher, $data, $lines, byHand: true);
+        $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
+
+        if ($attachment !== null) {
+            app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::class, $voucher->id);
+        }
+
+        $fresh = Voucher::query()->withoutGlobalScope('user-branch')->with('lines')->findOrFail($voucher->id);
+        $after = $this->picture($fresh);
+
+        if (! $owner && $before['material'] !== $after['material']) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['status' => __('accounts::validation.signer_may_only_correct_text')]);
+        }
+
+        $changes = [];
+
+        foreach (array_unique([...array_keys($before['all']), ...array_keys($after['all'])]) as $field) {
+            $old = $before['all'][$field] ?? null;
+            $new = $after['all'][$field] ?? null;
+
+            if ($old !== $new) {
+                $changes[$field] = [$old, $new];
+            }
+        }
+
+        if ($changes === []) {
+            return ! $asDraft;
+        }
+
+        app(\App\Core\Engines\Audit\AuditEngine::class)->record($fresh, $owner ? 'edited_by_signer' : 'corrected_by_signer', $changes,
+            __('approval::message.signer_changed', ['name' => $user->name, 'fields' => implode(', ', array_keys($changes))]));
+
+        app(\App\Core\Engines\Approval\ApprovalEngine::class)->adoptSignerEdit(
+            $signing, $user, app(\App\Core\Engines\Approval\DocumentFingerprint::class)->of($fresh), (string) $fresh->amount,
+            __('approval::message.signer_changed', ['name' => $user->name, 'fields' => implode(', ', array_keys($changes))]),
+        );
+
+        // ⓘ সইয়ের অপেক্ষা চলছে — সইকারী নিজে সই দেবেন
+        return ! $asDraft;
+    }
+
+    /**
+     * ভাউচারের ছবি: `material` — যা বদলালে খাতার মানে বদলায় (বিবরণ আর লেনদেন নম্বর বাদে, সারির id ছাড়া); `all` — নিরীক্ষার জন্য সব।
+     *
+     * @return array{material: array<string, mixed>, all: array<string, string|null>}
+     */
+    private function picture(Voucher $voucher): array
+    {
+        $text = ['narration', 'instrument_no'];
+        $skip = ['id', 'updated_at', 'created_at', 'status', 'public_id', 'row_hash', 'prev_hash'];
+
+        $head = [];
+
+        foreach ($voucher->getAttributes() as $key => $value) {
+            if (! in_array($key, $skip, true)) {
+                $head[$key] = $value === null ? null : (string) $value;
+            }
+        }
+
+        $lines = $voucher->lines->map(fn ($l) => [
+            'account_id' => (int) $l->account_id,
+            'debit' => bcadd((string) $l->debit, '0', 4),
+            'credit' => bcadd((string) $l->credit, '0', 4),
+            'party_type' => $l->party_type,
+            'party_id' => $l->party_id === null ? null : (int) $l->party_id,
+            'cost_center_id' => $l->cost_center_id === null ? null : (int) $l->cost_center_id,
+        ])->sortBy(fn (array $l) => json_encode($l))->values()->all();
+
+        $notes = $voucher->lines->map(fn ($l) => (string) ($l->narration ?? ''))->sort()->values()->all();
+
+        $material = array_diff_key($head, array_flip($text));
+        $material['~lines'] = $lines;
+
+        $all = $head;
+        $all['lines'] = json_encode($lines, JSON_UNESCAPED_UNICODE);
+        $all['line_narrations'] = json_encode($notes, JSON_UNESCAPED_UNICODE);
+
+        return ['material' => $material, 'all' => $all];
+    }
+
     /**
      * খসড়া পাকা করা — লেনদেন নম্বর কেবল খসড়ায়, তারপর সই, তারপর সেবা।
      *
@@ -149,6 +289,9 @@ final class VoucherWriter
          */
         return DB::transaction(function () use ($voucher, $instrumentNo): ?Approval {
             $this->lockFresh($voucher);
+
+            // ⛔ অন্য কাগজের সইয়ে বাঁধা খসড়া এখান থেকে পাকা হয় না — সেই কাগজের নিজের সই এড়ানো যেত ([[VoucherService::assertNotSignedElsewhere()]])
+            $this->vouchers->assertNotSignedElsewhere($voucher, posting: true);
 
             if ($voucher->isDraft() && filled($instrumentNo)) {
                 $voucher->forceFill(['instrument_no' => trim((string) $instrumentNo)])->save();

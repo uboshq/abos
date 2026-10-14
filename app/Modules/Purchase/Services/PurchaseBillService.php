@@ -388,7 +388,7 @@ final class PurchaseBillService
 
         // ছক বসানো থাকলে সই আগে, খতিয়ান পরে — লেনদেনের বাইরে, কারণ
         // অপেক্ষা করা মানে কিছুই না বসা, আধা-বসা নয়।
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $bill,
             module: 'purchase',
             action: 'bill',
@@ -397,7 +397,7 @@ final class PurchaseBillService
             reason: $bill->narration,
         );
 
-        return DB::transaction(function () use ($bill) {
+        return DB::transaction(function () use ($bill, $print) {
             /*
              * ⛔ বিলের সারিতে তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
              * ([[ThePurchaseBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
@@ -411,11 +411,17 @@ final class PurchaseBillService
                 ]);
             }
 
+            // ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে কিছুই খাতায় নয় ([[DocumentApproval::assertUnchangedSince()]], ১৩ অক্টোবর ২০২৬)
+            $this->approvals->assertUnchangedSince($bill, $print, 'status');
+
             $this->bringInDirectLines($bill);
             $this->postToLedger($bill);
             $this->applySalesPrices($bill);
 
             $bill->update(['status' => DocumentStatus::CONFIRMED]);
+
+            // ⭐ সইয়ের জন্য থামা সরাসরি ক্রয়ের বাকিটা — উপহার, ক্রয়দর, পর্দায় দেওয়া টাকা (১৩ অক্টোবর ২০২৬; [[DirectPurchaseService::finishAfterTheSignature()]])
+            app(DirectPurchaseService::class)->finishAfterTheSignature($bill);
 
             return $bill->fresh(['lines']);
         });
@@ -1202,6 +1208,27 @@ final class PurchaseBillService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
+    /**
+     * প্রস্তাবিত বদলের ছাপ — মাথার ঘর আর সারি, চাবি সাজিয়ে, প্রতিটা মান লেখা হিসেবে (একই ফর্ম আবার পাঠালে একই ছাপ)।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private static function proposalPrint(array $data, array $lines): string
+    {
+        $plain = function (mixed $value) use (&$plain): mixed {
+            if (is_array($value)) {
+                ksort($value);
+
+                return array_map($plain, $value);
+            }
+
+            return $value === null ? null : (is_bool($value) ? ($value ? '1' : '0') : (string) $value);
+        };
+
+        return hash('sha256', (string) json_encode($plain(['head' => $data, 'lines' => array_values($lines)])));
+    }
+
     private function updatePosted(PurchaseBill $bill, array $data, array $lines): PurchaseBill
     {
         if ($lines === []) {
@@ -1228,6 +1255,12 @@ final class PurchaseBillService
                 field: 'status',
                 amount: $newTotal,
                 reason: $bill->narration,
+                /*
+                 * ⭐ সই এই বদলেরই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[APostedBillEditIsSignedForItsLinesTest]])। ⓘ ছাপটা নেওয়া হয়
+                 * বিল এখন যেমন (বদলের আগে); প্রস্তাবিত সারিগুলো কোথাও জমা নেই। ⛔ তাই "৫ লাখে বদল"-এর সই পেয়ে যেকোনো সারি দিয়ে
+                 * ৫ লাখ বানালেই পার হত। এখন প্রস্তাবটার ছাপও সইয়ের তথ্যে — অন্য সারি, অন্য সরবরাহকারী মানে নতুন সই।
+                 */
+                payload: ['proposed_edit' => self::proposalPrint($data, $lines)],
             );
         }
 

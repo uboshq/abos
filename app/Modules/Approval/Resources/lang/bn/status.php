@@ -6,6 +6,7 @@ return [
     'pending' => 'অপেক্ষমাণ',
     'approved' => 'অনুমোদিত',
     'rejected' => 'ফেরত',
+    'returned' => 'সংশোধনে ফেরত',
     'cancelled' => 'প্রত্যাহৃত',
     'forwarded' => 'অন্যের কাছে পাঠানো',
 ];

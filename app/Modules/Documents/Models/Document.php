@@ -36,7 +36,7 @@ use Illuminate\Support\Carbon;
  * অডিট আর ড্যাশবোর্ডের গোনা ধাপ না দেখেও কাগজ চেনে; তাই সেটা দুই জায়গায়:
  * তালিকার [[scopeVisibleTo()]] আর ঠিকানা থেকে কাগজ তোলার [[resolveRouteBinding()]]।
  */
-class Document extends Model implements ShowsItselfForSigning
+class Document extends Model implements \App\Core\Contracts\NothingToPostAfterSigning, ShowsItselfForSigning
 {
     use BelongsToCompany;
     use HasPublicId;
