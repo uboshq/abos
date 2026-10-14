@@ -9,6 +9,7 @@ use App\Modules\Accounts\Models\Note;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesInvoiceCancellation;
 use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -87,6 +88,19 @@ final class SaleEditor
 
         if ($returned || $noted) {
             throw ValidationException::withMessages(['edit' => __('sales::validation.edit_after_return', $no)]);
+        }
+
+        /*
+         * ⛔ বাতিলের অনুরোধ খোলা থাকলে সম্পাদনা নয় — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[ACancellationSignatureCoversTheBillItSawTest]])।
+         * ⓘ মালিক যে বিল বাতিলে সই দেন, ঠিক সেটাই উল্টায়: আগে অনুরোধের পরে বিলটা বদলে দেওয়া যেত, আর সই পড়ত অন্য একটা বিলে।
+         */
+        $cancelling = SalesInvoiceCancellation::query()
+            ->where('sales_invoice_id', $invoice->id)
+            ->whereIn('status', [DocumentStatus::DRAFT, SalesInvoiceCancellation::AWAITING])
+            ->value('document_no');
+
+        if ($cancelling !== null) {
+            throw ValidationException::withMessages(['edit' => __('sales::validation.edit_while_cancelling', [...$no, 'cxl' => $cancelling])]);
         }
 
         return $challan;

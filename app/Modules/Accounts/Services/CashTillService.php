@@ -214,6 +214,20 @@ final class CashTillService implements ProvisionsCompany
                 ]);
             }
 
+            /*
+             * ⛔ খোলার জের সইয়ের অপেক্ষায় থাকলে বাক্সের মালিক বা শাখা বদলায় না — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+             * ([[ATillOpeningIsPostedOnlyAsSignedTest]])। ⓘ সই "করিমের বাক্সে ৫০,০০০"-এর; অপেক্ষার মাঝে বাক্সটা রহিমের হলে টাকা উঠত
+             * রহিমের নামে। জের শূন্য (খোলাটা এখনো খাতায় নেই), তাই উপরের হস্তান্তরের পাহারা এটা ধরত না।
+             */
+            $moving = (array_key_exists('holder_id', $data) && (int) $data['holder_id'] !== (int) $till->holder_id)
+                || (array_key_exists('branch_id', $data) && (int) $data['branch_id'] !== (int) $till->branch_id);
+
+            if ($moving && app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($till, AccountsSignature::TILL_OPENING)?->isPending()) {
+                throw ValidationException::withMessages([
+                    'holder_id' => __('accounts::validation.till_opening_awaits_signature'),
+                ]);
+            }
+
             $closing = array_key_exists('is_active', $data) && ! (bool) $data['is_active'] && $till->is_active;
             unset($data['is_active']);
 

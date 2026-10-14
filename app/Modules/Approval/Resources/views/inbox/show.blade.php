@@ -26,6 +26,7 @@
                     \App\Models\Approval::APPROVED => 'success',
                     \App\Models\Approval::REJECTED => 'danger',
                     \App\Models\Approval::CANCELLED => 'draft',
+                    \App\Models\Approval::RETURNED => 'info',
                     default => 'pending',
                 }">
                     {{ __('approval::status.'.$approval->status) }}
@@ -390,7 +391,8 @@
                      ⛔ নতুন একটা অবস্থা বসালে ইঞ্জিন, ছয়টা পর্দা, চারটা
                      রিপোর্ট আর bulk — সবগুলোর `match` শাখা বাড়াতে হত, আর
                      যেখানে বাড়ানো হত না সেখানে কাগজটা **নীরবে অদৃশ্য** হত। --}}
-                <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}"
+                {{-- ⭐ খসড়া কাগজে "সংশোধনে ফেরত" আলাদা অবস্থায় যায় (১৪ অক্টোবর ২০২৬, [[ApprovalEngine::sendBack()]]); বাকিতে আগের পথ --}}
+                <form method="POST" action="{{ ($canSendBack ?? false) ? route('approval.inbox.send_back', $approval->id) : route('approval.inbox.reject', $approval->id) }}"
                       x-show="act === 'fix'" x-cloak>
                     @csrf
 

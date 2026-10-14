@@ -9,6 +9,7 @@ use App\Modules\Promotion\Models\ComboItem;
 use App\Modules\Promotion\Models\Promotion;
 use App\Modules\Promotion\Support\PromotionStatus;
 use App\Modules\Promotion\Support\ScopeKind;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -53,22 +54,29 @@ final class ComboRules
             ]);
         }
 
-        return ComboItem::query()->updateOrCreate(
-            ['promotion_id' => $offer->id, 'product_id' => $product->id],
-            ['min_qty' => $minQty],
-        );
+        return DB::transaction(function () use ($offer, $product, $minQty) {
+            /* ⛔ আবার, তালার ভিতরে — [[assertComboDraft()]] */
+            $this->assertComboDraft($offer);
+
+            return ComboItem::query()->updateOrCreate(
+                ['promotion_id' => $offer->id, 'product_id' => $product->id],
+                ['min_qty' => $minQty],
+            );
+        });
     }
 
     public function removeItem(Promotion $offer, ComboItem $item): void
     {
-        $this->assertComboDraft($offer);
+        DB::transaction(function () use ($offer, $item) {
+            $this->assertComboDraft($offer);
 
-        /* ⛔ অন্য অফারের উপাদান — ঠিকানা ধরে ধরে পরের কম্বো ভাঙা যেত */
-        if ((int) $item->promotion_id !== (int) $offer->id) {
-            abort(404);
-        }
+            /* ⛔ অন্য অফারের উপাদান — ঠিকানা ধরে ধরে পরের কম্বো ভাঙা যেত */
+            if ((int) $item->promotion_id !== (int) $offer->id) {
+                abort(404);
+            }
 
-        $item->delete();
+            $item->delete();
+        });
     }
 
     /**
@@ -116,9 +124,12 @@ final class ComboRules
             ]);
         }
 
-        if ($offer->status !== PromotionStatus::DRAFT) {
+        /* ⛔ হাতের কপি নয়, তালা-দেওয়া সারি — [[PromotionRules::assertStillADraft()]] (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+        $status = Promotion::query()->whereKey($offer->getKey())->lockForUpdate()->firstOrFail()->status;
+
+        if ($status !== PromotionStatus::DRAFT) {
             throw ValidationException::withMessages([
-                'status' => __('promotion::validation.rules_frozen', ['status' => $offer->status->label()]),
+                'status' => __('promotion::validation.rules_frozen', ['status' => $status->label()]),
             ]);
         }
     }

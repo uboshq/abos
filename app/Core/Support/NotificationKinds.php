@@ -30,6 +30,9 @@ final class NotificationKinds
         return [
             'approval.approved' => 'core.notify.kind.approval_approved',
             'approval.rejected' => 'core.notify.kind.approval_rejected',
+            // ⭐ সংশোধনে ফেরত আর সইকারীর নিজের বদল — মালিকের আদেশ, ১৪ অক্টোবর ২০২৬ ([[ApprovalEngine::sendBack()]], [[ApprovalEngine::adoptSignerEdit()]])
+            'approval.returned' => 'core.notify.kind.approval_returned',
+            'approval.edited_by_signer' => 'core.notify.kind.approval_edited_by_signer',
             // ⓘ সময় ফুরিয়ে আসা আর ওপরে যাওয়া — ভাষার সারি আগে থেকেই ছিল, তালিকায় ছিল না, তাই বন্ধ করা যেত না (ধাপ ১)
             'approval.reminder' => 'core.notify.kind.approval_reminder',
             'approval.escalated' => 'core.notify.kind.approval_escalated',
@@ -209,6 +212,7 @@ final class NotificationKinds
 
         /* কাগজটা তাঁর টেবিলে ফেরত — তিনি না ধরলে কিছুই এগোয় না */
         'approval.rejected',
+        'approval.returned',
 
         /* ⓘ একই কারণ: সই হয়ে গেছে, তবু চালান তাঁর টেবিলে আটকে — তিনি না ধরলে মাল নড়ে না */
         'sales.signed_challan_stuck',

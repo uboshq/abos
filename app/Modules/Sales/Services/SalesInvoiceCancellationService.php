@@ -181,6 +181,16 @@ final class SalesInvoiceCancellationService
                 throw ValidationException::withMessages(['reason' => __('sales::cancellation.awaiting_signature', ['cxl' => $paper->document_no])]);
             }
 
+            /*
+             * ⛔ সই যে বিলের, উল্টানো হয় কেবল সেই বিল — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[ACancellationSignatureCoversTheBillItSawTest]])।
+             * ⓘ বাতিল-কাগজ চাওয়ার মুহূর্তের গ্রাহক আর মোট নিজের ঘরে রাখে; বিলটা তারপর বদলালে (সম্পাদনা) সই আর সেই বিলের নয়।
+             */
+            if ((int) $paper->customer_id !== (int) $locked->customer_id || bccomp((string) $paper->total, (string) $locked->total, 4) !== 0) {
+                throw ValidationException::withMessages(['reason' => __('sales::cancellation.bill_changed', [
+                    'no' => $locked->document_no, 'cxl' => $paper->document_no,
+                ])]);
+            }
+
             // ⛔ বিলের মাস বন্ধ — ছাপা হয়ে যাওয়া হিসাব; আগে অনুমতিপ্রাপ্ত কেউ কারণসহ মাস খুলুন
             if (app(OpenPeriod::class)->lockOn($locked->trx_date->format('Y-m-d')) !== null) {
                 throw ValidationException::withMessages(['reason' => __('sales::cancellation.month_closed', [

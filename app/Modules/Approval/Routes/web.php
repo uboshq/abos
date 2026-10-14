@@ -81,6 +81,9 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
         ->whereNumber('approval')->name('inbox.confirm_all');
     Route::post('/{approval}/reject', [ApprovalInboxController::class, 'reject'])
         ->whereNumber('approval')->name('inbox.reject');
+    // ⭐ সংশোধনে ফেরত — নোটসহ, আলাদা অবস্থা (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬; [[ApprovalEngine::sendBack()]])
+    Route::post('/{approval}/send-back', [ApprovalInboxController::class, 'sendBack'])
+        ->whereNumber('approval')->name('inbox.send_back');
     Route::post('/{approval}/withdraw', [ApprovalInboxController::class, 'withdraw'])
         ->whereNumber('approval')->name('inbox.withdraw');
 

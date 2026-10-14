@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Http\Controllers;
 
+use App\Core\Services\DataScope;
 use App\Http\Controllers\Controller;
+use App\Models\UserDataScope;
 use App\Modules\Promotion\Models\PromotionApplication;
 use App\Modules\Promotion\Services\PromotionDesk;
 use App\Modules\Promotion\Support\Decimal;
@@ -32,6 +34,14 @@ final class PromotionOverrideController extends Controller implements HasMiddlew
 
     public function __invoke(Request $request, PromotionApplication $application): RedirectResponse
     {
+        /*
+         * ⛔ নাগালের বাইরের শাখার কাগজের অফার বদলানো নয় — ঠিকানায় অন্য শাখার সারির নম্বর বসিয়েও না (Promotion লাইন-ধরা
+         * নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AnOverrideStaysInsideMyBranchTest]])। ⓘ উপহারের দরজার একই পাহারা
+         * ([[PromotionGiftController::store()]]); আগে এখানে ছিল না, তাই ময়মনসিংহে সীমিত মানুষ নেত্রকোনার বিলের ছাড় বদলাতে পারতেন।
+         */
+        abort_unless(app(DataScope::class)->allows($request->user(), UserDataScope::BRANCH,
+            $application->branch_id === null ? null : (int) $application->branch_id), 403);
+
         $data = $request->validate([
             'worth' => ['required', 'numeric', Decimal::RULE, 'gte:0'],
 

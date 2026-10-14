@@ -50,6 +50,15 @@ use Illuminate\Support\Collection;
  */
 class Customer extends Model implements AuthenticatableContract, Drillable
 {
+    /**
+     * ⓘ বাকির সীমার সইয়ের ছাপে না-সংরক্ষিত প্রস্তাব থাকে ([[CustomerService::withProposedLimit()]]) — সারি থেকে আবার মেলানো যায় না
+     * ([[DocumentFingerprint::canRecheck()]], ১৩ অক্টোবর ২০২৬)।
+     */
+    public function fingerprintCarriesAProposal(): bool
+    {
+        return true;
+    }
+
     use Authenticatable;
     use BelongsToCompany;
     use HasActiveState;

@@ -25,6 +25,7 @@ interface SettlementTerms
      *     party_type?: string|null,
      *     party_id?: int|null,
      *     party_required?: bool,
+     *     debit_accounts?: list<int>,
      *     open: bool,
      * }
      *
@@ -32,6 +33,9 @@ interface SettlementTerms
      * amount — কাগজের অঙ্ক; `up_to` সত্য হলে এটা সর্বোচ্চ (বিলের বাকি — আংশিক আদায় চলে), নাহলে হুবহু।
      * party_type / party_id — কার টাকা; null মানে কাগজে পক্ষ নেই, তাই মেলানোর কিছু নেই;
      *   ভাউচারে পক্ষ থাকলে মিলতেই হবে, আর `party_required` সত্য হলে ভাউচারে পক্ষ থাকতেই হবে।
+     * debit_accounts — টাকাটা কোন খাতে নামবে (চার্জ বাদে পুরো ডেবিট এগুলোতেই); না দিলে খাত মেলানো হয় না। ⓘ যে কাগজের সইয়ের
+     *   জোরে ভাউচার নিজের সই এড়ায় ([[SignedBeforeItIsPaid]]), সে এটা বলে — নাহলে সই-হওয়া খরচের টাকা অন্য খাতে বসত
+     *   (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
      * open — এখনো মেটানো যায় কি না: খসড়া, বাতিল নয়, সইয়ের অপেক্ষায় নয়, আগে মেটানো নয়।
      */
     public function settlementTerms(): array;

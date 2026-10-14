@@ -120,7 +120,8 @@ final class BillPromotionEngine
                     'benefit' => $row['benefit'],
                     'worth' => $row['worth'],
                     'fits' => null,
-                    'gift_qty' => $row['benefit']->kind->movesStock() ? (string) $row['benefit']->amount : null,
+                    /* ⛔ ইঞ্জিনের পরিমাণ — প্রতি বিলের সীমা মানার পরে; ধাপের কাঁচা অঙ্ক নয় (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+                    'gift_qty' => $row['benefit']->kind->movesStock() ? (string) $row['qty'] : null,
                     'line_ids' => [$id],
                     'spread' => [$id => $row['worth']],
                 ]);

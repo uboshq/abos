@@ -56,6 +56,9 @@ final class ApplyTheLimitOnTheLastSignature
                 (int) $approval->id,
                 fn () => $customer->forceFill(['credit_limit' => (string) $approval->amount])->save(),
             );
+
+            // ⛔ সই একবারই খাটে — সীমা নামিয়ে আবার একই অঙ্কে তুললে নতুন সই ([[Approval::markUsed()]])
+            $approval->markUsed();
         });
     }
 }

@@ -346,6 +346,16 @@ final class YearEndService
 
             $newYear->forceFill(['is_current' => true])->save();
 
+            /*
+             * ⛔ বছর বন্ধের সই একবারই খাটে — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[ASignatureIsSpentOnceTest]])। ⓘ আবার খোলায়
+             * ([[reopen()]]) বছরের সব ঘর আগের মতো হয়, তাই ছাপও আগের মতো: পুরনো সইয়েই দ্বিতীয় বন্ধ — অন্য লাভ-ক্ষতি নিয়ে — পার হত।
+             */
+            $signed = app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($year, 'year_end');
+
+            if ($signed?->status === \App\Models\Approval::APPROVED) {
+                $signed->markUsed();
+            }
+
             return $newYear->fresh();
         });
     }

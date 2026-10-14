@@ -1177,6 +1177,13 @@ final class DirectSaleService
             'driver_name' => $data['driver_name'] ?? null,
             'driver_phone' => $data['driver_phone'] ?? null,
             'narration' => $data['narration'] ?? null,
+            /*
+             * ⭐ গেট পাসে বেরোনো কি না — চালান লেখার দিনেই, পরে নয় (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+             * ⛔ আগে চালান কোম্পানির সুইচ থেকে জন্মাত, আর "এখনই নিয়ে যাবেন" হলে [[finishHeldAtCounter()]] সইয়ের **পরে** ঘরটা
+             * বদলাত — চালানের ছাপ বদলে সই আর ঢাকত না, নতুন অনুরোধ লেনদেনের ভিতরে জন্মে গড়িয়ে মুছত, আর সই-হওয়া বিক্রি চিরকাল
+             * "অপেক্ষায়" থাকত। ⓘ এখন সইয়ের আগেই ঠিক মানটা বসে, শেষ করার সময়ের লেখা কিছুই বদলায় না।
+             */
+            'issue_at_gate' => $this->issuesAtGate($data),
         ];
 
         if ($parked === null) {
@@ -1204,7 +1211,14 @@ final class DirectSaleService
 
         $challan->giftLines()->delete();
 
-        return $this->challans->update($challan, $header, $this->challanLines($lines));
+        $challan = $this->challans->update($challan, $header, $this->challanLines($lines));
+
+        // ⓘ সম্পাদনার পথ ঘরটা লেখে না ([[DeliveryChallanService::update()]]) — রাখা খসড়া আবার খুললেও সইয়ের আগে ঠিক মান
+        if ((bool) $challan->issue_at_gate !== $header['issue_at_gate']) {
+            $challan->update(['issue_at_gate' => $header['issue_at_gate']]);
+        }
+
+        return $challan;
     }
 
     /**

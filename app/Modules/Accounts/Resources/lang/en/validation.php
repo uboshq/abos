@@ -34,6 +34,7 @@ return [
     'till_code_taken' => 'Another cash counter already uses code :code.',
     'till_has_money' => 'This counter still holds :amount. Deposit or transfer it first, then close.',
     'till_has_money_on_the_way' => 'Transfer :no of this box is still on its way or waiting for its signature - finish or cancel it before closing the box.',
+    'till_opening_awaits_signature' => 'The box opening balance is awaiting a signature — its holder and branch cannot change before the decision.',
     'till_holder_needs_handover' => 'The box holds :amount - change its holder from the box page with a handover, counting the cash.',
     'handover_closed_till' => 'A closed box cannot be handed over.',
     'handover_same_holder' => 'The box is already with this person - pick someone else.',
@@ -126,6 +127,7 @@ return [
     'against_closed' => 'The paper this voucher is written against is no longer open — already settled, cancelled, or awaiting its signature.',
     'against_wrong_type' => 'This paper is not settled by this kind of voucher — money coming in takes a receipt, money going out a payment.',
     'against_wrong_amount' => 'The amount does not match — :amount on the voucher, :expected on the paper.',
+    'against_wrong_account' => 'The account does not match — the whole amount must land in the account the signature was for.',
     'against_wrong_party' => 'The party does not match — the money must belong to the party on the paper.',
 
     // মাস বন্ধ ও খোলা
@@ -172,6 +174,8 @@ return [
     'cheque_already_registered' => 'Cheque :no is already registered (:doc) — the same cheque cannot be entered twice.',
     // ⭐ গ১২ — আন্তঃকোম্পানির দুই পাশ একসাথে (৪ অক্টোবর ২০২৬)
     'inter_company_one_side' => 'One side (:no) of an inter-company transfer cannot be cancelled or reversed alone — reverse both sides together from the inter-company page.',
+    'signer_may_only_correct_text' => 'On a paper waiting for your signature you may correct only the narration or the reference — not the amount, account, party, date or lines. To change those, send it back for correction.',
+    'signed_elsewhere' => ':no is bound to the signature of another paper — it reaches the books exactly as it was signed. It cannot be changed or posted from the voucher page; use the page of that paper.',
     'inter_company_not_reversible' => 'This inter-company transfer can no longer be reversed — it already was.',
     'maker_checker' => ':no was written by you. You cannot post your own voucher; someone else must post it.',
 ];
