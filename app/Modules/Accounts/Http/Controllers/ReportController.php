@@ -19,7 +19,6 @@ use App\Modules\Accounts\Reports\MonthlyCashReport;
 use App\Modules\Accounts\Reports\PartyLedgerReports;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -140,25 +139,28 @@ class ReportController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        /*
-         * ⓘ দরজার চাবি `accounts.report` — কেবল যে রিপোর্ট নিজে "যেকোনো একটা চাবি" বলে ([[ReportDefinition::$anyKey]]), তাতে
-         * রিপোর্টের নিজের উত্তর (লক্ষ্য বনাম আদায়: হিসাব বা বিক্রয়ের চাবি, মালিক, ১৪ অক্টোবর ২০২৬)।
-         */
-        return [new Middleware(function (Request $request, \Closure $next) {
-            $key = self::SLUGS[(string) $request->route('slug')] ?? null;
-            $engine = app(ReportEngine::class);
-            $definition = is_string($key) && in_array($key, $engine->keys(), true) ? $engine->get($key) : null;
+        // ⓘ চাবির প্রশ্ন পদ্ধতির ভিতরে ([[authorizeReport()]]) — রিপোর্ট ভেদে উত্তর আলাদা
+        return [];
+    }
 
-            abort_unless($definition !== null && $definition->anyKey
-                ? $definition->allows($request->user())
-                : (bool) $request->user()?->can('accounts.report'), 403);
+    /**
+     * দরজার চাবি `accounts.report` — কেবল যে রিপোর্ট নিজে "যেকোনো একটা চাবি" বলে ([[ReportDefinition::$anyKey]]), তাতে রিপোর্টের
+     * নিজের উত্তর (লক্ষ্য বনাম আদায়: হিসাব বা বিক্রয়ের চাবি, মালিক, ১৪ অক্টোবর ২০২৬)। ⛔ সবার আগে — বন্ধ রিপোর্টও ৪০৩, ৪০৪-এর আগে।
+     */
+    private function authorizeReport(Request $request, string $slug): void
+    {
+        $key = self::SLUGS[$slug] ?? null;
+        $definition = is_string($key) && in_array($key, $this->reports->keys(), true) ? $this->reports->get($key) : null;
 
-            return $next($request);
-        })];
+        abort_unless($definition !== null && $definition->anyKey
+            ? $definition->allows($request->user())
+            : (bool) $request->user()?->can('accounts.report'), 403);
     }
 
     public function show(Request $request, string $slug): View
     {
+        $this->authorizeReport($request, $slug);
+
         abort_unless(isset(self::SLUGS[$slug]), 404);
 
         /*
