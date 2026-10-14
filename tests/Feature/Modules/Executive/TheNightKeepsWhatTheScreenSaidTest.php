@@ -186,6 +186,20 @@ final class TheNightKeepsWhatTheScreenSaidTest extends TestCase
             ->assertDontSee(Branch::acrossAllCompanies()->where('company_id', $this->alpha->id)->where('code', 'NTK')->firstOrFail()->name());
     }
 
+    /** ⛔ গত মাসের ঐ দিনের রাতের হিসাব না থাকলে ধারায় ফাঁক, ৳০-এর বিন্দু নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
+    public function test_a_day_with_no_night_record_is_a_gap_in_the_trend_not_a_zero(): void
+    {
+        // ⓘ কেবল আজকের রাতের হিসাব — গত মাসের একই দিনে কিছু নেই
+        $this->artisan('abos:owner-snapshot')->assertSuccessful();
+        $this->assertFalse(DB::table('executive_snapshots')->where('taken_on', '<', Carbon::today()->toDateString())->exists(), 'প্রস্তুতিটাই ভুল — আগের দিনের হিসাব আছে।');
+
+        $page = $this->actingAs($this->owner)->get(route('executive.history', ['date' => Carbon::today()->toDateString()]))->assertOk();
+
+        $this->assertCount(1, $page->viewData('series'), 'প্রস্তুতিটাই ভুল — ধারায় আজকের একটা বিন্দু নেই।');
+        $this->assertSame(1, substr_count((string) $page->getContent(), 'r="3" stroke-width="1.5"'),
+            '⛔ গত মাসের যে দিনের হিসাব নেই, সেটা ধারায় ৳০ বিন্দু হয়ে আঁকা হলো।');
+    }
+
     /** ⛔ হেডারের শাখা সব কিছু ছাঁকে — ইতিহাসের ছকেও (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬) */
     public function test_a_header_branch_shows_that_branch_only_not_the_company_total(): void
     {

@@ -19,7 +19,8 @@
     $points = [];
     foreach ($series as $day => $value) {
         $points[] = ['label' => \Illuminate\Support\Carbon::parse($day)->translatedFormat('j M'), 'first' => $value,
-            'second' => $monthBefore[\Illuminate\Support\Carbon::parse($day)->subMonthNoOverflow()->toDateString()] ?? '0'];
+            // ⛔ ঐ দিনের রাতের হিসাব নেই = ফাঁক, ৳০ নয় (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            'second' => $monthBefore[\Illuminate\Support\Carbon::parse($day)->subMonthNoOverflow()->toDateString()] ?? null];
     }
     $chart = $points === [] ? null : new \App\Core\Engines\Dashboard\Series(
         label: __('executive::history.trend', ['figure' => __('executive::figure.'.$figure)]),
