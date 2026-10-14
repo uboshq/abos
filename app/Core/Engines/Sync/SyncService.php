@@ -184,7 +184,10 @@ final class SyncService
          * unique key সামলায় **একই মুহূর্তের** দুইটা অনুরোধ, যেখানে
          * দুইজনেই "নেই" দেখে ফেলেছে। ওটা নিচে ধরা হয়।
          */
-        $existing = SyncChange::query()
+        // ⛔ কোম্পানি ছাড়া — অনন্য চাবি (যন্ত্র + changeId) কোম্পানি মানে না; কোম্পানি বদলের পরে আগের কোম্পানিতে বসা বদল আবার
+        // এলে আগে এই পড়া দেখত না, বসাতে গিয়ে চাবিতে ধাক্কা আর উত্তর ছাড়া — ফোনে সারিটা চিরকাল "অপেক্ষায়", কোম্পানি বদলও আটকে
+        // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬; [[AChangeFromTheLastCompanyIsAnsweredTest]])
+        $existing = SyncChange::query()->withoutGlobalScope('company')
             ->where('device_id', $deviceId)
             ->where('change_id', $change->changeId)
             ->first();
@@ -287,7 +290,7 @@ final class SyncService
             });
         } catch (UniqueConstraintViolationException $clash) {
             // ⓘ ভাগের তালায় পড়া — অন্যজনের সদ্য-পাকা সারিটা দেখা চাই, পুরনো ছবি নয়
-            $first = SyncChange::query()
+            $first = SyncChange::query()->withoutGlobalScope('company')
                 ->where('device_id', $deviceId)
                 ->where('change_id', $change->changeId)
                 ->sharedLock()
