@@ -7,6 +7,7 @@ namespace App\Modules\Promotion\Services;
 use App\Modules\Promotion\Models\Promotion;
 use App\Modules\Promotion\Support\PromotionStatus;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * মেয়াদ পেরোনো অফারের অবস্থা বদলানো — স্পেক §১৮।
@@ -62,21 +63,47 @@ final class PromotionExpiry
                     ->where('ends_at', '<', $clock)))
             ->get();
 
-        foreach ($lapsed as $offer) {
+        $changed = 0;
+
+        foreach ($lapsed as $listed) {
+            /*
+             * ⛔ তালিকার কপি নয়, তালা-দেওয়া সারি — Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+             *
+             * ⓘ তালিকা পড়া আর লেখার মাঝে কেউ মেয়াদ বাড়াতে পারেন ([[PromotionLifecycle::reschedule()]])।
+             * ⚠️ পুরনো কপি থেকে `EXPIRED` লিখলে সদ্য বাড়ানো অফারটা থেমে যেত। ⭐ তাই তালার পরে আবার মাপা।
+             */
+            $changed += DB::transaction(function () use ($listed, $today, $clock): int {
+                $offer = Promotion::query()->whereKey($listed->getKey())->lockForUpdate()->first();
+
+                if ($offer === null
+                    || ! in_array($offer->status, [PromotionStatus::ACTIVE, PromotionStatus::PAUSED], true)) {
+                    return 0;
+                }
+
+                $ends = $offer->ends_on->toDateString();
+                $endsAt = $offer->ends_at !== null ? (string) $offer->ends_at : null;
+
+                if (! ($ends < $today || ($ends === $today && $endsAt !== null && $endsAt < $clock))) {
+                    return 0;
+                }
+
             /*
              * ⓘ `canBecome()` দিয়ে — অবস্থার মানচিত্রের বাইরে কোনো পথ নয়,
              * এমনকি নির্ধারিত কাজের জন্যও। ⚠️ দুইটা অবস্থাই মানচিত্রে
              * `EXPIRED`-এ যেতে পারে, তাই এটা কখনো আটকায় না — কিন্তু কাল
              * কেউ মানচিত্র বদলালে এখানে নীরবে ভুল অবস্থা বসত না।
              */
-            if (! $offer->status->canBecome(PromotionStatus::EXPIRED)) {
-                continue;
-            }
+                if (! $offer->status->canBecome(PromotionStatus::EXPIRED)) {
+                    return 0;
+                }
 
-            $offer->status = PromotionStatus::EXPIRED;
-            $offer->save();
+                $offer->status = PromotionStatus::EXPIRED;
+                $offer->save();
+
+                return 1;
+            });
         }
 
-        return $lapsed->count();
+        return $changed;
     }
 }
