@@ -39,6 +39,15 @@ class Restore extends Command
             return self::FAILURE;
         }
 
+        /*
+         * ⛔ খালি নাম মানে ব্যাকআপ ফোল্ডারের ফাইল — ব্যাকআপ লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ দুই পর্দা হুবহু
+         * `php artisan abos:restore <নাম>` দেখায়, কিন্তু নামটা খোঁজা হত চলতি ফোল্ডারে — দেখানো কমান্ডটাই "ফাইলটা নেই" বলত।
+         */
+        if (! is_file($file) && basename($file) === $file) {
+            $inFolder = rtrim((string) config('abos.backup.path'), '/\\').DIRECTORY_SEPARATOR.$file;
+            $file = is_file($inFolder) ? $inFolder : $file;
+        }
+
         if (! is_file($file)) {
             $this->error("ফাইলটা নেই: {$file}");
 
