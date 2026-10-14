@@ -38,10 +38,10 @@ class OwnerSnapshot extends Command
          */
         if ($taken['failed'] !== []) {
             $this->error('ভুলে থেমেছে, এই রাতের হিসাব লেখা হয়নি: '.implode(', ', $taken['failed']));
-
-            return self::FAILURE;
         }
 
-        return self::SUCCESS;
+        // ⛔ super_admin না থাকায় বাদ পড়া কোম্পানিও ব্যর্থতা — আগে কেবল একটা সতর্কবার্তা ছাপা হতো, যা নির্ধারিত
+        // কাজে কেউ দেখে না, আর SUCCESS-এ onFailure চলত না (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        return $taken['failed'] === [] && $taken['skipped'] === [] ? self::SUCCESS : self::FAILURE;
     }
 }

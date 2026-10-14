@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Executive;
 
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Modules\Inventory\Services\StockFacts;
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -64,5 +66,28 @@ final class ANightThatCannotBeKeptSaysSoTest extends TestCase
 
         $this->assertFalse(DB::table('executive_snapshots')->where('taken_on', $old)->exists(),
             '⛔ এক কোম্পানির ভুলে পুরনো সারি সরানোও থেমে গেছে।');
+    }
+
+    public function test_a_company_skipped_for_want_of_a_super_admin_fails_the_run_and_is_named(): void
+    {
+        $alpha = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
+
+        // ⓘ ফ্যামিলি মার্টে কোনো super_admin নেই
+        DB::table('model_has_roles')
+            ->where('company_id', $beta->id)
+            ->whereIn('role_id', DB::table('roles')->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->pluck('id'))
+            ->delete();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->artisan('abos:owner-snapshot')
+            ->expectsOutputToContain($beta->code)
+            ->assertFailed();
+
+        $today = Carbon::today()->toDateString();
+        $this->assertTrue(DB::table('executive_snapshots')->where('company_id', $alpha->id)->where('place', 0)->where('taken_on', $today)->exists(),
+            'প্রস্তুতিটাই ভুল — ট্রেড ডিপোর হিসাবও লেখা হয়নি।');
+        $this->assertFalse(DB::table('executive_snapshots')->where('company_id', $beta->id)->where('taken_on', $today)->exists(),
+            'প্রস্তুতিটাই ভুল — super_admin ছাড়াই ফ্যামিলি মার্টের হিসাব লেখা হলো।');
     }
 }
