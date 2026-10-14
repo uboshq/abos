@@ -108,6 +108,21 @@ void main() {
     await SyncEngine.instance.flushAll();
     expect(server.pushes, isEmpty, reason: '⛔ নতুন করে লেখা অর্ডারের পুরনোটা আবার গেল — দোকানে দুটো অর্ডার');
   });
+
+  test('no signal is not a failed try: an offline order is never turned away by the phone (phone line audit, 15 Oct 2026)', () async {
+    await anOrderBy('rahim');
+
+    server.down = true;
+    for (var i = 0; i < 8; i++) {
+      await SyncEngine.instance.flushAll();
+    }
+    server.down = false;
+
+    expect(SyncEngine.instance.rejectedCount, 0, reason: '⛔ সংকেত ছিল না বলেই অর্ডার "ফেরত" — সার্ভার কখনো দেখেনি');
+    expect(SyncEngine.instance.pendingCount, 1);
+    await SyncEngine.instance.flushAll();
+    expect(server.pushes, hasLength(1), reason: 'নেট ফিরলে অর্ডারটা যায়');
+  });
 }
 
 class _Server implements HttpClientAdapter {

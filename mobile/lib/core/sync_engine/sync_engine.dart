@@ -613,9 +613,15 @@ class SyncEngine {
     debugPrint('ABOS sync: $module push failed ($error) — kept in queue');
     _lastFailureByModule[module] = SyncAttemptFailure.from(error);
 
+    // ⛔ নেট না থাকা চেষ্টা নয় — আগে ১০ মিনিটের টাইমার আর অ্যাপ খোলায় সংকেতহীন ফোনের অর্ডার পাঁচবারেই চিরকালের জন্য "ফেরত" হত,
+    // সার্ভার কখনো না দেখা সত্ত্বেও (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। গোনা কেবল সার্ভার কিছু বললে।
+    if (isNetworkError(error)) return;
+
     for (final key in _box.keys.toList(growable: false)) {
       final row = _box.get(key);
       if (row == null || row['module'] != module || !_isMine(row)) continue;
+      // ⓘ শেষ হওয়া সারি (ফেরত, সমাধান) আর গোনা হয় না — সার্ভারের আসল কারণ মুছে দিত
+      if (row['status'] == _statusRejected || row['status'] == _statusResolved) continue;
 
       final attempts = ((row['attempts'] as int?) ?? 0) + 1;
       if (attempts >= AppConfig.syncMaxAttempts) {
