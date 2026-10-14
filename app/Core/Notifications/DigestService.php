@@ -71,10 +71,16 @@ final class DigestService
 
         $local = $now->setTimezone($pref->timezone ?: $this->prefs->zone($companyId));
         $hour = (int) $pref->digest_hour;
+        /*
+         * ⛔ সপ্তাহের দিন ISO-তে (সোম ১ … রবি ৭) — সপ্তাহের চাবি `o-W`-ও ISO, সোমবারে শুরু (Notification লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[ASundayDigestGoesOnSundayTest]])। ঘরে রবিবার ০; আগে সোমবার (১) "রবিবারের পরে" গোনা হত, তাই রবিবারের সারসংক্ষেপ সোমবার রাত ১২টায় যেত,
+         * আর রবিবার এলে সপ্তাহটা আগেই "পাঠানো"।
+         */
+        $weekday = (int) $pref->digest_day === 0 ? 7 : (int) $pref->digest_day;
 
         $due = $pref->frequency === 'daily'
             ? $local->hour >= $hour
-            : ($local->dayOfWeek > (int) $pref->digest_day || ($local->dayOfWeek === (int) $pref->digest_day && $local->hour >= $hour));
+            : ($local->dayOfWeekIso > $weekday || ($local->dayOfWeekIso === $weekday && $local->hour >= $hour));
 
         if (! $due) {
             return 'waiting';
