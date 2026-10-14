@@ -96,7 +96,11 @@ dependencies:
   # ফেরত দেয়, আর esc_pos যে ধরনটা চায়, দুইটাই এই প্যাকেজের। MIT।
   image: ^4.2.0
 
-  esc_pos_utils_plus: ^2.0.4
+  # ESC/POS-এর বাইটগুলো (ESC @, GS v 0, ESC d, GS V) এখন হাতে লেখা —
+  # lib/core/printing/escpos_raster.dart, প্রতিটা বাইট পরীক্ষায় দেখা যায়
+  # (১৪ অক্টোবর ২০২৬)। তাই esc_pos_utils_plus আর লাগে না।
+  # Bluetooth classic (SPP)-এ বাইট পাঠানো, আর Android 12+-এ "আশেপাশের
+  # ডিভাইস" অনুমতি চাওয়া। BSD-3।
   print_bluetooth_thermal: ^1.1.0
   # The two home-screen widgets. The launcher draws them in its own process;
   # this carries strings across and tells the launcher to redraw. See

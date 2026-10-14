@@ -81,6 +81,7 @@ class DocumentsApi {
 /// unfamiliar one is shown as it came rather than dropped.
 String paperLabel(String paper) => switch (paper) {
       'a4' => 'A4 কাগজ',
+      'a5' => 'A5 কাগজ',
       '80mm' => 'রসিদ ৮০mm',
       '58mm' => 'রসিদ ৫৮mm',
       _ => paper,
@@ -91,3 +92,6 @@ String paperLabel(String paper) => switch (paper) {
 bool isThermalPaper(String paper) => paper == '80mm' || paper == '58mm';
 
 int thermalWidthMm(String paper) => paper == '80mm' ? 80 : 58;
+
+/// A sheet for the normal road — A4 or A5.
+bool isSheetPaper(String paper) => paper == 'a4' || paper == 'a5';

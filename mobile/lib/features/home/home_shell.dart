@@ -30,6 +30,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
+import '../printing/printer_settings_screen.dart';
 import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
@@ -762,6 +763,19 @@ class _MoreTab extends ConsumerWidget {
             subtitle: const Text('কী গেছে, কী যায়নি, কী ফেরত এসেছে'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => onOpen('sync-status', 'সিঙ্কের অবস্থা'),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // ⭐ প্রিন্টার — থার্মাল (ব্লুটুথ) আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
+        Card(
+          child: ListTile(
+            key: const ValueKey('me-printer'),
+            leading: const Icon(Icons.print_outlined),
+            title: const Text('প্রিন্টার'),
+            subtitle: const Text('ব্লুটুথ রসিদ প্রিন্টার, রোলের মাপ, পরীক্ষামূলক ছাপা'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const PrinterSettingsScreen())),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),

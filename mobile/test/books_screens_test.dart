@@ -252,6 +252,8 @@ void main() {
     await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));
     expect(find.textContaining('দর'), findsNothing,
         reason: '⛔ খরচের চাবি ছাড়া কেনা দর');
+    // ⭐ ছাপার বোতাম — নরমাল বা থার্মাল (১৪ অক্টোবর ২০২৬)
+    expect(find.byKey(const ValueKey('purchase-print')), findsOneWidget);
 
     api.withCost = true;
     await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));
