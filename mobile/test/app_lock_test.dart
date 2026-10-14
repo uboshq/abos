@@ -80,4 +80,12 @@ void main() {
     expect(find.byKey(const ValueKey('app-lock')), findsNothing);
     expect(find.text('APP'), findsOneWidget);
   });
+
+  test('a sign-out opens the lock, so a fresh password sign-in is not asked for the phone PIN (phone line audit, 15 Oct 2026)', () {
+    final lock = AppLock(startLocked: true, authenticate: () async => false, deviceSupported: () async => true);
+    expect(lock.locked, isTrue);
+    lock.signedIn = false;
+    lock.signedIn = true;
+    expect(lock.locked, isFalse, reason: '⛔ নতুন জন পাসওয়ার্ড দিয়ে ঢুকেই আগের জনের তালায় পড়লেন');
+  });
 }
