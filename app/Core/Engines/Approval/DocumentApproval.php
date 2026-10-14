@@ -146,6 +146,17 @@ final class DocumentApproval
          * যিনি "না" শুনলেন তিনি আবার বোতামটা চেপে আবার পাঠাতেন। আবার
          * চাওয়ার পথ একটাই — কাগজটা বদলানো, অর্থাৎ "না"-র কারণটা মেটানো।
          */
+        /*
+         * ⭐ অপেক্ষার অনুরোধ আগের কাগজের হলে তুলে নিয়ে নতুন করে — লাইভ, ADI RCV-0090 (১৩–১৪ অক্টোবর ২০২৬; [[AnEditedWaitingPaperIsAskedAgainTest]])।
+         * ⛔ আগে অপেক্ষার অনুরোধটাই ফিরত: ৩৯,৯৯০-এ চাওয়া সই, অথচ খসড়া তখন ২৪,৯১৩ নতুন বিবরণে — সইকারী পুরনো অঙ্ক দেখে নতুন কাগজে সই
+         * দিতেন। ⓘ এখন পুরনোটা "বাতিল" ([[ApprovalEngine::withdrawStale()]]), নতুনটা নতুন অঙ্কে আর পুরনোটার কথা বলে; পুরনোয় সই আর পড়ে না।
+         */
+        if ($latest?->status === Approval::PENDING
+            && (($latest->state_hash !== null && ! hash_equals((string) $latest->state_hash, $hash)) || ! $this->signedTheSame($latest, $payload))) {
+            $this->approvals->withdrawStale($latest);
+            $superseded = $latest;
+        }
+
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($document, $latest)) {
             return $latest;
         }

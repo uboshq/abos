@@ -165,6 +165,16 @@ final class VoucherApproval
          * সম্পাদনার পর (`updated_at` সিদ্ধান্তের পরে) নিচের
          * `request()` স্বাভাবিকভাবেই নতুন একটা অনুরোধ বানায়।
          */
+        /*
+         * ⭐ অপেক্ষার অনুরোধ আগের কাগজের হলে তুলে নিয়ে নতুন করে — লাইভ, ADI RCV-0090 (১৩–১৪ অক্টোবর ২০২৬; [[AnEditedWaitingPaperIsAskedAgainTest]])।
+         * ⛔ আগে অপেক্ষার অনুরোধটাই ফিরত: ৩৯,৯৯০-এ চাওয়া সই, অথচ খসড়া তখন ২৪,৯১৩ নতুন বিবরণে — সইকারী পুরনো অঙ্ক দেখে নতুন কাগজে সই
+         * দিতেন। ⓘ এখন পুরনোটা "বাতিল" ([[ApprovalEngine::withdrawStale()]]), নতুনটা নতুন অঙ্কে আর পুরনোটার কথা বলে; পুরনোয় সই আর পড়ে না।
+         */
+        if ($latest?->status === Approval::PENDING && $latest->state_hash !== null && ! hash_equals((string) $latest->state_hash, $hash)) {
+            $this->approvals->withdrawStale($latest);
+            $superseded = $latest;
+        }
+
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest)) {
             return $latest;
         }

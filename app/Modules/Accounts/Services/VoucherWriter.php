@@ -119,6 +119,19 @@ final class VoucherWriter
             }
 
             if ($asDraft) {
+                /*
+                 * ⓘ খসড়া হিসেবে রাখা হলেও — সইয়ের অপেক্ষা চলছিল তো নতুন কাগজে নতুন করে চাওয়া, পুরনো অনুরোধ তুলে
+                 * ([[VoucherApproval::stopping()]]; লাইভ RCV-0090, ১৪ অক্টোবর ২০২৬)। অপেক্ষা না থাকলে আগের মতো কিছুই চাওয়া হয় না।
+                 */
+                $fresh = $voucher->fresh();
+                $action = $this->approvals->actionFor($fresh);
+                $waiting = $action !== null && \App\Models\Approval::query()->where('approvable_type', Voucher::class)
+                    ->where('approvable_id', $fresh->id)->where('action', $action)->where('status', \App\Models\Approval::PENDING)->exists();
+
+                if ($waiting) {
+                    $this->approvals->stopping($fresh);
+                }
+
                 return false;
             }
 
