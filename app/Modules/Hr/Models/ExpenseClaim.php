@@ -16,6 +16,7 @@ use App\Core\Contracts\SignedBeforeItIsPaid;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Hr\Services\ExpenseClaimService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -143,9 +144,16 @@ class ExpenseClaim extends Model implements Drillable, SettledByAVoucher, Settle
 
     public function unsettle(int $voucherId): void
     {
-        if ((int) $this->payment_voucher_id === $voucherId && $this->status === self::PAID) {
+        if ((int) $this->payment_voucher_id !== $voucherId) {
+            return;
+        }
+
+        if ($this->status === self::PAID) {
             $this->forceFill(['status' => self::APPROVED, 'paid_at' => null])->save();
         }
+
+        // ⛔ বাতিলের পরে দেওয়ার পথ খোলা — নতুন খসড়া (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ExpenseClaimService::draftAgain()]])
+        app(ExpenseClaimService::class)->draftAgain($this);
     }
 
     /** ⓘ শেষ সই কাগজেই পড়েছে — ক্যাশিয়ারের ভাউচার আবার সই চায় না ([[VoucherApproval::actionFor()]]) */

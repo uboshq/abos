@@ -198,4 +198,29 @@ class AttendanceSyncTest extends TestCase
         $this->assertSame(SyncChange::APPLIED, $out[0]['status'], 'অনুমোদিত ছুটির দিনে "ছুটি" বসার কথা');
         $this->assertNull(Attendance::query()->where('employee_id', $this->employee->id)->firstOrFail()->in_time, '⛔ ফোনের সময় বসল');
     }
+
+    /**
+     * ⛔ লেখা ছাড়া মন্তব্য ৫০০ নয়, প্রত্যাখ্যান; আর চলে যাওয়া কর্মী ফোন থেকে হাজিরা দেন না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     * ⓘ আগে সংখ্যার মন্তব্যে TypeError, আর ছাড়ার পরেও লগইন খোলা থাকলে "উপস্থিত" বসত।
+     */
+    public function test_a_note_that_is_not_text_is_refused_and_a_departed_employee_cannot_mark(): void
+    {
+        $today = now()->toDateString();
+
+        foreach (['r-1' => 5, 'r-2' => ['late']] as $id => $remarks) {
+            $out = $this->sync()->push($this->salesman, 'phone-a', 'hr', [
+                $this->change($id, ['workDate' => $today, 'status' => 'present', 'remarks' => $remarks]),
+            ]);
+            $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ লেখা ছাড়া মন্তব্যের হাজিরা বসল');
+        }
+
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count());
+
+        $this->employee->forceFill(['leaving_date' => now()->subDay()->toDateString(), 'is_active' => false])->save();
+        $out = $this->sync()->push($this->salesman, 'phone-a', 'hr', [
+            $this->change('g-1', ['workDate' => $today, 'status' => 'present', 'remarks' => 'on the road']),
+        ]);
+        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ চলে যাওয়া কর্মী ফোন থেকে হাজিরা দিলেন');
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count());
+    }
 }

@@ -70,6 +70,28 @@ final class APayrollRunHidInAnotherBranchTest extends TestCase
         $this->assertSame(1, PayrollRun::acrossBranches()->count(), '⛔ একই মাসের দ্বিতীয় রান বসল');
     }
 
+    /**
+     * ⛔ অন্য শাখায় বানানো রানের বেতনশিট ছাপা — ৫০০ নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৩; [[PayslipPrintController::one()]])।
+     * ⓘ শিটের অনুমতি কর্মীর শাখা ধরে মিলত, কিন্তু রানটা পড়া হত শাখার দেয়ালের পিছনে: MMS বাছা অবস্থায় NTK-র রান অদৃশ্য, `run` খালি, পাতা ভাঙত।
+     */
+    public function test_a_payslip_of_a_run_made_in_another_branch_still_prints(): void
+    {
+        $employee = \App\Modules\Hr\Models\Employee::query()->withoutGlobalScopes()->where('code', 'EMP-HB')->firstOrFail();
+        $employee->forceFill(['branch_id' => $this->branch('MMS')->id])->save();
+
+        $this->choose($this->branch('NTK')->id);
+        $run = app(PayrollService::class)->build(self::MONTH);
+        $slip = $run->payslips()->where('employee_id', $employee->id)->firstOrFail();
+
+        $this->choose($this->branch('MMS')->id);
+        $this->assertSame(0, PayrollRun::query()->count(), 'দৃশ্যটাই বানানো যায়নি — MMS বাছা অবস্থায় NTK-র রান দেখা যায়');
+
+        $response = $this->get(route('hr.payslip.print', $slip));
+
+        $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', (string) $response->getContent(), '⛔ অন্য শাখার রানের শিট ছাপা হল না');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function choose(int|string $branch): void

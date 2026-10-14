@@ -65,8 +65,10 @@ final class ExpenseClaimService
     /** ব্যবহারকারীর নিজের কর্মীর খাতা — না থাকলে টাকা চাওয়া যায় না */
     public function employeeOf(?User $user): ?Employee
     {
+        // ⓘ একই লগইনে পুরনো মুছে ফেলা খাতা থাকলেও চালুটা আগে, তারপর পুরনো id আগে — সবসময় একই সারি (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
         return $user === null ? null : Employee::query()->withoutGlobalScopes()
-            ->where('company_id', CompanyContext::id())->where('user_id', $user->id)->first();
+            ->where('company_id', CompanyContext::id())->where('user_id', $user->id)
+            ->orderByRaw('deleted_at IS NULL DESC')->orderBy('id')->first();
     }
 
     /**
@@ -87,7 +89,7 @@ final class ExpenseClaimService
          * ⓘ খাতা খোঁজা হয় সব ছাঁকনি সরিয়ে ([[employeeOf()]] — কোম্পানি-ভাগের সুইচের জন্য), তাতে মুছে ফেলা খাতাও উঠত; আর নিষ্ক্রিয়
          * বা ছাড়ার তারিখ পেরোনো কর্মীর লগইন খোলা থাকলে তিনি অগ্রিম চাইতে পারতেন, যা আর বেতন থেকে কাটার উপায় নেই।
          */
-        if ($employee->trashed() || ! $employee->is_active || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()))) {
+        if ($this->gone($employee)) {
             throw ValidationException::withMessages(['employee' => __('hr::claim.employee_gone')]);
         }
 
@@ -212,6 +214,20 @@ final class ExpenseClaimService
             }
 
             $employee = $claim->employee;
+
+            /*
+             * ⛔ সই পড়ার আগেই কর্মী চলে গেলে দাবি ফেরানো — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AGoneEmployeeCannotAskForMoneyTest]])।
+             * ⓘ চাওয়ার সময় ([[submit()]]) চলে যাওয়া কর্মী আটকাতেন, কিন্তু সই পরে পড়লে আর দেখা হত না: ৯ তারিখে অগ্রিম চেয়ে ১০ তারিখে
+             * চলে যাওয়া কর্মীর নামে ১২ তারিখের সইয়ে নগদের খসড়া বসত, যা আর কোনো বেতন থেকে কাটা যায় না। সই ঘটে যাওয়ার পরে খবর
+             * আসে, তাই ছুঁড়ে দিলে সই ফেরে না — দাবি "ফেরানো", আর কারণটা নিরীক্ষার খাতায়।
+             */
+            if ($this->gone($employee)) {
+                $claim->forceFill(['status' => ExpenseClaim::REJECTED, 'decided_at' => now()])->save();
+                app(AuditEngine::class)->recordAction($claim, 'claim_gone_rejected' /* ⓘ অডিটের ঘর ২৪ অক্ষরের */, __('hr::claim.rejected_employee_gone', ['no' => $claim->document_no]));
+
+                return;
+            }
+
             $claim->forceFill(['status' => ExpenseClaim::APPROVED, 'decided_at' => now()])->save();
 
             if ($claim->kind === ExpenseClaim::ADVANCE) {
@@ -291,36 +307,94 @@ final class ExpenseClaimService
 
         $employee = $claim->employee;
         $advance = $this->head(StandardChart::EMPLOYEE_ADVANCE);
+        $till = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
 
-        $waiting = Voucher::query()
-            ->where('status', DocumentStatus::DRAFT)
-            ->where('type', Voucher::RECEIPT)
-            ->whereHas('lines', fn ($q) => $q->where('account_id', $advance->id)
-                ->where('party_type', Employee::drillSourceType())->where('party_id', $employee->id))
-            ->value('document_no');
+        /*
+         * ⛔ অপেক্ষার খসড়া খোঁজা শাখার দেয়াল পেরিয়ে, কর্মীর সারিতে তালা দিয়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+         * ([[AnUnspentAdvanceComesBackInCashTest]])।
+         * ⓘ আগে খোঁজাটা হেডারের শাখা মানত: খসড়া দাবির শাখায়, আর হেডারে অন্য শাখা বাছলে সেটা চোখে পড়ত না, দ্বিতীয় খসড়া বসত। তালা
+         * বা লেনদেনও ছিল না — দুইবার চাপলে দুইজনেই "খসড়া নেই" পড়তেন। দুইটা পাকা হলে কর্মী দুইবার ফেরত দিতেন, অগ্রিম ঋণাত্মক।
+         */
+        return DB::transaction(function () use ($claim, $employee, $advance, $till, $amount): Voucher {
+            $this->advances->lock([(int) $employee->id]);
 
-        if ($waiting !== null) {
-            throw ValidationException::withMessages(['amount' => __('hr::claim.return_waiting', ['no' => $waiting])]);
-        }
+            $waiting = Voucher::acrossBranches()
+                ->where('status', DocumentStatus::DRAFT)
+                ->where('type', Voucher::RECEIPT)
+                ->whereHas('lines', fn ($q) => $q->where('account_id', $advance->id)
+                    ->where('party_type', Employee::drillSourceType())->where('party_id', $employee->id))
+                ->value('document_no');
 
-        $open = $this->advances->open($employee, Carbon::today());
+            if ($waiting !== null) {
+                throw ValidationException::withMessages(['amount' => __('hr::claim.return_waiting', ['no' => $waiting])]);
+            }
 
-        if (bccomp($amount, $open, 2) > 0) {
-            throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => Money::format($open)])]);
-        }
+            $open = $this->advances->open($employee, Carbon::today());
 
-        $party = ['party_type' => Employee::drillSourceType(), 'party_id' => (int) $employee->id];
+            if (bccomp($amount, $open, 2) > 0) {
+                throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => Money::format($open)])]);
+            }
 
-        return $this->vouchers->create([
-            'type' => Voucher::RECEIPT,
-            'branch_id' => $claim->branch_id,
-            'trx_date' => Carbon::today()->toDateString(),
-            'narration' => __('hr::claim.narration_return', ['no' => $claim->document_no, 'who' => $employee->name()]),
-            ...$party,
-        ], [
-            ['account_id' => (int) app(CashTillService::class)->ensurePrimaryTill()->account_id, 'debit' => $amount, 'credit' => '0'],
-            ['account_id' => (int) $advance->id, 'debit' => '0', 'credit' => $amount, ...$party],
-        ]);
+            $party = ['party_type' => Employee::drillSourceType(), 'party_id' => (int) $employee->id];
+
+            return $this->vouchers->create([
+                'type' => Voucher::RECEIPT,
+                'branch_id' => $claim->branch_id,
+                'trx_date' => Carbon::today()->toDateString(),
+                'narration' => __('hr::claim.narration_return', ['no' => $claim->document_no, 'who' => $employee->name()]),
+                ...$party,
+            ], [
+                ['account_id' => $till, 'debit' => $amount, 'credit' => '0'],
+                ['account_id' => (int) $advance->id, 'debit' => '0', 'credit' => $amount, ...$party],
+            ]);
+        });
+    }
+
+    /**
+     * ⭐ ক্যাশিয়ারের খসড়া বাতিল হলে নতুন খসড়া — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[AnEmployeeAsksForMoneyTest]])।
+     *
+     * ⓘ দাবির টাকার ভাউচার (খসড়া বা পাকা) বাতিল হলে দাবি আবার "অনুমোদিত" ([[ExpenseClaim::unsettle()]]), কিন্তু খসড়া বানাত কেবল
+     * [[approve()]], যা অনুমোদিত দাবিতে আর চলে না — দাবি চিরকাল "ক্যাশিয়ার দেবেন" বলে বসে থাকত, দেওয়ার পথ ছিল না। এখন বাতিলের
+     * একই লেনদেনে একই অঙ্কের, একই খাতের নতুন খসড়া; দাবির জোড়া নতুনটায়। ⛔ কেবল অনুমোদিত দাবিতে, আর জোড়া ভাউচারটা বাতিল বা
+     * হারানো হলে — চালু খসড়া থাকলে দ্বিতীয়টা নয়।
+     */
+    public function draftAgain(ExpenseClaim $claim): void
+    {
+        DB::transaction(function () use ($claim): void {
+            $this->lockFresh($claim);
+
+            if ($claim->status !== ExpenseClaim::APPROVED) {
+                return;
+            }
+
+            $linked = $claim->payment_voucher_id === null ? null
+                : Voucher::acrossBranches()->withTrashed()->find($claim->payment_voucher_id);
+
+            if ($linked !== null && ! $linked->isCancelled()) {
+                return;
+            }
+
+            $cash = $claim->cashPart();
+
+            if (bccomp($cash, '0', 2) <= 0) {
+                return;
+            }
+
+            // ⓘ দাবির বিপরীতে আরেকটা খসড়া আগে থেকেই আছে (হাতে লেখা ভাউচার জোড়া বদলে দিয়েছিল) — নতুন নয়, জোড়া সেটায়
+            $open = Voucher::acrossBranches()
+                ->where('against_type', ExpenseClaim::drillSourceType())->where('against_id', $claim->id)
+                ->where('status', DocumentStatus::DRAFT)->orderBy('id')->value('id');
+
+            if ($open !== null) {
+                $claim->forceFill(['payment_voucher_id' => (int) $open])->save();
+
+                return;
+            }
+
+            $claim->kind === ExpenseClaim::ADVANCE
+                ? $this->cashVoucher($claim, $this->head(StandardChart::EMPLOYEE_ADVANCE)->id, $cash, true)
+                : $this->cashVoucher($claim, (int) $claim->expense_account_id, $cash, false);
+        });
     }
 
     /** কর্মীর খোলা অগ্রিম — পর্দা আর ফোনের জন্য */
@@ -351,6 +425,13 @@ final class ExpenseClaimService
         ]);
 
         $claim->forceFill(['payment_voucher_id' => $voucher->id])->save();
+    }
+
+    /** চলে গেছেন, নিষ্ক্রিয়, বা মুছে ফেলা — চাওয়া আর সই দুই জায়গার একই নিয়ম */
+    private function gone(?Employee $employee): bool
+    {
+        return $employee === null || $employee->trashed() || ! $employee->is_active
+            || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()));
     }
 
     private function head(string $code): Account
