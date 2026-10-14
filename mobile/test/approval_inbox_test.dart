@@ -216,6 +216,21 @@ void main() {
     expect(find.text('ছাড় ৳500'), findsOneWidget, reason: '⛔ ছাড়ের অঙ্ক বিলের মোটের মতো দেখাল');
   });
 
+  testWidgets('a long inbox loads its next page on request (phone line audit, 15 Oct 2026)', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: ApprovalInboxScreen(
+      loadPending: () async => const ApprovalPage(rows: [ApprovalRecord(row)], nextCursor: 'c2'),
+      loadMore: (cursor) async => ApprovalPage(rows: [ApprovalRecord(<String, dynamic>{...row, 'id': 'second-page', 'documentNo': 'PB-2609-0099'})]),
+      approve: (_, __) async {},
+      reject: (_, __) async {},
+    )));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('approvals-more')), 200);
+    await tester.tap(find.byKey(const ValueKey('approvals-more')));
+    await tester.pumpAndSettle();
+    expect(find.text('PB-2609-0099', skipOffstage: false), findsOneWidget, reason: '⛔ ৫০টার পরের কাগজ ফোনে কোনোদিন আসে না');
+    expect(find.byKey(const ValueKey('approvals-more')), findsNothing, reason: 'শেষ পাতার পরে আর বোতাম নয়');
+  });
+
   group('salary never reaches a phone', () {
     test('a payroll row is recognised so it can be dropped', () {
       expect(

@@ -30,6 +30,7 @@ class ApprovalInboxScreen extends StatefulWidget {
     this.approve,
     this.reject,
     this.loadSheet,
+    this.loadMore,
   });
 
   /// Seams, so this screen can be driven in a test without a server.
@@ -44,12 +45,18 @@ class ApprovalInboxScreen extends StatefulWidget {
   /// সইয়ের আগে বিস্তারিত — না দিলে সার্ভার ([[ApprovalsApi.sheet]])
   final Future<ApprovalSheet> Function(String id)? loadSheet;
 
+  /// পরের পাতা — না দিলে সার্ভার ([[ApprovalsApi.pending]] `cursor`)
+  final Future<ApprovalPage> Function(String cursor)? loadMore;
+
   @override
   State<ApprovalInboxScreen> createState() => _ApprovalInboxScreenState();
 }
 
 class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
   List<ApprovalRecord>? _rows;
+  // ⛔ পরের পাতার চাবি — আগে কখনো পড়া হত না, তাই ৫০টার পরের কাগজ (সার্ভার পুরনোটা আগে দেয়: সবচেয়ে নতুনগুলোই) ফোনে
+  // কোনোদিন আসত না (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+  String? _next;
   String? _error;
   bool _busy = false;
 
@@ -70,7 +77,10 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     try {
       final page = await _fetch();
       if (!mounted) return;
-      setState(() => _rows = page.rows);
+      setState(() {
+        _rows = page.rows;
+        _next = page.nextCursor;
+      });
     } catch (error) {
       if (!mounted) return;
       // An empty inbox and an unreachable server are opposite facts, and a
@@ -145,6 +155,25 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
         case ApprovalFailure.other:
           _say(errorMessageFor(error, fallback: 'কাজটি সম্পন্ন হয়নি।'));
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _more() async {
+    final cursor = _next;
+    if (cursor == null) return;
+    setState(() => _busy = true);
+    try {
+      final page = await (widget.loadMore ?? (String c) => ApprovalsApi.pending(cursor: c))(cursor);
+      if (!mounted) return;
+      setState(() {
+        final seen = {for (final r in _rows ?? const <ApprovalRecord>[]) r.id};
+        _rows = [...?_rows, ...page.rows.where((r) => !seen.contains(r.id))];
+        _next = page.nextCursor;
+      });
+    } catch (error) {
+      if (mounted) _say(errorMessageFor(error, fallback: 'আরও আনা গেল না।'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -236,6 +265,12 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                           onReject:
                               _busy ? null : () => _confirmReject(approval),
                         )),
+                  if (_error == null && rows != null && _next != null)
+                    OutlinedButton(
+                      key: const ValueKey('approvals-more'),
+                      onPressed: _busy ? null : _more,
+                      child: const Text('আরও দেখুন'),
+                    ),
                 ],
               ),
             ),
