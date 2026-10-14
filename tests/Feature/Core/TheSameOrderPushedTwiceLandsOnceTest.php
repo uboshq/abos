@@ -188,6 +188,8 @@ class TheSameOrderPushedTwiceLandsOnceTest extends TestCase
      */
     public function test_the_watermark_moves_only_when_the_phone_says_so(): void
     {
+        // ⓘ ওয়াটারমার্ক পালার শুরু থেকে (১৫ অক্টোবর ২০২৬) — এইমাত্র বানানো সারি ওভারল্যাপে আবার আসত, তাই এক মিনিট আগে
+        $this->travel(2)->minutes();
         $first = $this->sync()->pull($this->salesman, 'phone-a', 'customer', 100);
         $this->assertNotEmpty($first['records']);
 
