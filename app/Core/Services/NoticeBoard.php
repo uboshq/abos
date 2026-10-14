@@ -168,6 +168,9 @@ final class NoticeBoard
             ['company_id' => $notice->company_id, 'dismissed_at' => now()],
         );
 
+        // ⓘ সরানো নোটিশ বার থেকে সাথে সাথে — এক মিনিটের ক্যাশে নয়
+        StatusNotices::forget((int) $notice->company_id, (int) $user->id);
+
         return true;
     }
 

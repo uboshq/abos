@@ -372,6 +372,9 @@ final class NotificationService
     {
         return Notification::query()->withoutGlobalScopes()
             ->where('user_id', $userId)
+            // ⛔ নিজের কোম্পানির খবরই — নইলে এক কোম্পানির ঘণ্টা অন্য কোম্পানির নিয়মের সময়ের মধ্যে খবর চেপে দিত
+            // (Notification লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ACooldownStaysInItsCompanyTest]])
+            ->where('company_id', $event->company_id)
             ->where('type', $event->type)
             ->where('event_id', '!=', $event->id)
             ->where(fn ($q) => $event->subject_type === null

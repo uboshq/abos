@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Shell;
 
 use App\Core\Services\NoticeLifecycle;
+use App\Core\Services\StatusNotices;
 use App\Core\Support\NoticePriority;
 use App\Core\Support\CompanyContext;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
@@ -207,11 +209,12 @@ class TheNoticeRunsTest extends TestCase
          */
         Cache::flush();
 
-        Cache::put(
-            'abos.notice.'.$this->owner->current_company_id.'.'.$this->owner->id,
-            [],
-            60,
-        );
+        // ⓘ চাবিতে হেডারের শাখাও (১৪ অক্টোবর ২০২৬, [[StatusNotices::cacheKey()]]) — কোম্পানির প্রতিটা শাখা আর "শাখা নেই", সবগুলোয় খালি
+        $company = (int) $this->owner->current_company_id;
+        foreach ([null, ...Branch::query()->withoutGlobalScopes()->where('company_id', $company)->pluck('id')->all()] as $branch) {
+            CompanyContext::set($company, $branch === null ? null : (int) $branch);
+            Cache::put(StatusNotices::cacheKey($company, (int) $this->owner->id), [], 60);
+        }
 
         $html = $this->page();
 
