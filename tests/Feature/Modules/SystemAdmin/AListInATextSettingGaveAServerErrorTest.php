@@ -37,11 +37,11 @@ final class AListInATextSettingGaveAServerErrorTest extends TestCase
             ->assertRedirect();
         $this->assertSame($before, $now($key), 'লেখার ঘরে তালিকা এসে কিছু একটা বসে গেল।');
 
-        $this->put(route('accounts.settings.update'), ['settings' => ['accounts.print.note_footnote' => ['x']]])
-            ->assertRedirect();
-
-        $this->put(route('accounts.settings.update'), ['settings' => ['accounts.backdate_days' => '১০,০০০']])
-            ->assertRedirect();
+        // ⓘ একটাই পাঠানো: এই পাতায় মেনুর সুইচও থাকে, আর না-পাঠানো সুইচ মানে "বন্ধ" — দ্বিতীয় আংশিক পাঠানো পাতাটাকেই বন্ধ পেত
+        $this->put(route('accounts.settings.update'), ['settings' => [
+            'accounts.print.note_footnote' => ['x'],
+            'accounts.backdate_days' => '১০,০০০',
+        ]])->assertRedirect();
         $this->assertSame(10000, (int) $now('accounts.backdate_days'), '"১০,০০০" হিসাবের সেটিংসে অন্য সংখ্যা হয়ে বসল।');
     }
 }

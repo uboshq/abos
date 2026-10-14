@@ -30,26 +30,26 @@ final class AnUntouchedOwnerSwitchSaidRefusedTest extends TestCase
         $this->seed(DemoSeeder::class);
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
-        app(SettingsService::class)->set('accounts.voucher_maker_checker', true);
+        app(SettingsService::class)->set('customer.credit_limit_enabled', true);
 
         $admin = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
         CompanyContext::forCompany($company->id,
             fn () => $admin->givePermissionTo(Permission::findOrCreate('system_admin.settings.manage', 'web')));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
-        $this->assertFalse(app(SettingsService::class)->mayChange('accounts.voucher_maker_checker', $admin->fresh()),
+        $this->assertFalse(app(SettingsService::class)->mayChange('customer.credit_limit_enabled', $admin->fresh()),
             'প্রশাসক নিজেই মালিক — দাবিটা কিছু মাপছে না।');
 
-        $page = $this->actingAs($admin->fresh())->get(route('system_admin.control-panel'))->assertOk();
-        $page->assertDontSee('name="scope[]" value="accounts.voucher_maker_checker"', false);
-        $page->assertSee('name="scope[]" value="accounts.require_narration"', false);
+        $page = $this->actingAs($admin->fresh())->get(route('system_admin.control-panel', ['tab' => 'customer']))->assertOk();
+        $page->assertDontSee('name="scope[]" value="customer.credit_limit_enabled"', false);
+        $page->assertSee('name="scope[]" value="customer.zero_limit_blocks"', false);
 
         // ⓘ ব্রাউজার যা পাঠাত: খোলা ঘর তার মান নিয়ে, বন্ধ ঘর কিছুই না
         $this->put(route('system_admin.control-panel.update'), [
-            'scope' => ['accounts.require_narration'],
-            'settings' => ['accounts.require_narration' => '1'],
+            'scope' => ['customer.zero_limit_blocks'],
+            'settings' => ['customer.zero_limit_blocks' => '1'],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
-        $this->assertTrue((bool) tap(app(SettingsService::class))->flush()->get('accounts.voucher_maker_checker'),
+        $this->assertTrue((bool) tap(app(SettingsService::class))->flush()->get('customer.credit_limit_enabled'),
             'বন্ধ ঘরটা বদলে গেল।');
     }
 }

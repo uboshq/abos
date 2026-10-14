@@ -35,7 +35,7 @@ final class AUsedPaymentMethodWasDeletedForGoodTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
-        $method = PaymentMethod::query()->where('is_default', false)->firstOrFail();
+        $method = PaymentMethod::query()->where('code', '!=', 'CASH')->orderBy('id')->firstOrFail();
 
         app(StandardChart::class)->install();
         $cash = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;

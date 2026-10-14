@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
+use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
+use App\Models\NumberSeries;
 use App\Models\User;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
 use Database\Seeders\DemoSeeder;
@@ -31,10 +33,15 @@ final class TheCodeWasJudgedByTheWrongCompanysRoleTest extends TestCase
         $here = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($here->id, $here->defaultBranch()?->id);
 
-        $there = Company::query()->whereKeyNot($here->id)->get()->first(fn (Company $c) => ! $c->canChangeCode());
-        if ($there === null) {
-            $this->markTestSkipped('ডেমোতে কাগজ-বেরোনো দ্বিতীয় কোম্পানি নেই।');
-        }
+        // ⓘ ডেমোর ভরসায় নয় — অন্য কোম্পানিটা এখানেই বানানো, মালিক তার সুপার অ্যাডমিন, আর একটা নম্বর বেরিয়ে গেছে
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $provisioner = app(CompanyProvisioner::class);
+        $there = $provisioner->create(['code' => 'TCODE', 'name_en' => 'Code Test Co'],
+            ['code' => 'TCD', 'name_en' => 'Code Test Branch', 'is_default' => true], CompanyProvisioner::currentBangladeshiYear());
+        $provisioner->grantAccess($there, $owner);
+        CompanyContext::forCompany((int) $there->id,
+            fn () => NumberSeries::query()->orderBy('id')->firstOrFail()->forceFill(['next_number' => 5])->save());
+        $this->assertFalse($there->fresh()->canChangeCode(), 'অন্য কোম্পানিটায় কাগজ বেরোয়নি — দাবিটা কিছু মাপছে না।');
 
         $local = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
         CompanyContext::forCompany((int) $here->id, fn () => $local->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE));

@@ -34,8 +34,8 @@ final class AClosedAccountVanishedFromTheTaxTest extends TestCase
         [$kept, $other] = Account::query()->postable()->active()->orderBy('code')->take(2)->get()->all();
         $tax = Tax::query()->create(['code' => 'TKEEP', 'name_en' => 'Kept tax', 'rate' => 5, 'kind' => 'vat',
             'account_id' => $kept->id, 'is_active' => true]);
-        DB::table($kept->getTable())->whereKey($kept->id)->update(['is_active' => false]);
-        DB::table($other->getTable())->whereKey($other->id)->update(['is_active' => false]);
+        DB::table($kept->getTable())->where('id', $kept->id)->update(['is_active' => false]);
+        DB::table($other->getTable())->where('id', $other->id)->update(['is_active' => false]);
 
         $this->get('/master-data/taxes/'.$tax->id.'/edit')->assertOk()
             ->assertSee('value="'.$kept->id.'" selected', false);

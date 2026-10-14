@@ -39,7 +39,7 @@ final class ABranchLimitedAdminRenamedAnotherBranchTest extends TestCase
             ?? Branch::query()->create(['company_id' => $company->id, 'code' => 'BRX', 'name_en' => 'Other branch', 'is_active' => true]);
 
         $admin = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
-        CompanyContext::forCompany((int) $company->id, fn () => $admin->givePermissionTo('company.manage'));
+        CompanyContext::forCompany((int) $company->id, fn () => $admin->givePermissionTo('system_admin.company.manage'));
         UserDataScope::query()->create(['company_id' => $company->id, 'user_id' => $admin->id, 'scope_type' => UserDataScope::BRANCH, 'scope_id' => $home->id]);
         app(DataScope::class)->forget();
 
