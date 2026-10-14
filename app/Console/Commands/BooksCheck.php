@@ -102,7 +102,22 @@ class BooksCheck extends Command
          * **কেউ অ্যাপের বাইরে দিয়ে খতিয়ান বদলেছে**। আর তখন কোন
          * সারিতে ভেঙেছে সেটাই সবচেয়ে দামি তথ্য: তার আগেরগুলো অক্ষত।
          */
-        $chain = LedgerChain::verify($company->id);
+        /*
+         * ⛔ একটা যাচাই ভুলে থামলে বাকি সব থামত — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ আগে এখানে কোনো `catch` ছিল না: একটা কোম্পানির একটা যাচাই SQL
+         * ভুলে থামলে ঐ কোম্পানির বাকি যাচাই **আর পরের সব কোম্পানি** সে
+         * রাতে দেখাই হত না, আর লগে কেবল সাধারণ একটা লাইন। এখন ভুলটা
+         * নিজেই একটা ভাঙা যাচাই — কোম্পানি ও যাচাইয়ের নাম ধরে লেখা —
+         * আর কাজ চলতে থাকে ([[RentAccrue]], [[CreditDue]] যেভাবে করে)।
+         */
+        try {
+            $chain = LedgerChain::verify($company->id);
+        } catch (\Throwable $e) {
+            $broken++;
+            $this->didNotRun($company, 'ledger_chain', $e);
+            $chain = ['ok' => true];
+        }
 
         if (! $chain['ok']) {
             $broken++;
@@ -153,7 +168,14 @@ class BooksCheck extends Command
 
         try {
             foreach ($registry->all() as $check) {
-                $findings = $check->run();
+                try {
+                    $findings = $check->run();
+                } catch (\Throwable $e) {
+                    $broken++;
+                    $this->didNotRun($company, $check->key, $e);
+
+                    continue;
+                }
 
                 if ($findings === []) {
                     continue;
@@ -186,5 +208,27 @@ class BooksCheck extends Command
         }
 
         return $broken;
+    }
+
+    /**
+     * একটা যাচাই ভুলে থেমেছে — ভাঙা গোনা হয়, কোম্পানি ও যাচাইয়ের নাম ধরে চিৎকার।
+     *
+     * ⓘ "মিলেছে" নয়: ফল জানা নেই মানে মিলেছে নয় (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+     */
+    private function didNotRun(Company $company, string $check, \Throwable $e): void
+    {
+        $message = sprintf(
+            'বইয়ের যাচাই চলেনি — %s · %s · %s',
+            $company->code,
+            $check,
+            $e->getMessage(),
+        );
+
+        $this->error($message);
+        logger()->critical($message, [
+            'company' => $company->code,
+            'check' => $check,
+            'error' => $e->getMessage(),
+        ]);
     }
 }

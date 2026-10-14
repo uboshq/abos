@@ -75,12 +75,19 @@
                         ])>
                             {{ $ok
                                 ? __('accounts::message.check_passed')
-                                : trans_choice('accounts::message.check_failed', count($result['findings']),
-                                    ['count' => count($result['findings'])]) }}
+                                : (($result['failed'] ?? false)
+                                    ? __('accounts::message.check_did_not_run')
+                                    : trans_choice('accounts::message.check_failed', count($result['findings']),
+                                        ['count' => count($result['findings'])])) }}
                         </span>
                     </header>
 
-                    @unless ($ok)
+                    @if ($result['failed'] ?? false)
+                        {{-- যাচাইটা নিজেই ভুলে থেমেছে — ফল জানা নেই, তাই লাল (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬) --}}
+                        <p class="bg-(--color-badge-danger-bg) px-4 py-2 text-2xs text-(--color-badge-danger-ink)">
+                            {{ __('accounts::message.check_did_not_run_hint') }}
+                        </p>
+                    @elseif (! $ok)
                         {{-- ভাঙলে কী হয় — কেবল লাল সারিতে, কারণ সবুজ সারিতে
                              এটা পড়ার কেউ নেই আর পর্দাটা লম্বা হত --}}
                         <p class="border-b border-(--color-border) bg-(--color-badge-danger-bg) px-4 py-2 text-2xs
@@ -91,7 +98,7 @@
                         <x-ui.table :rows="$result['findings']"
                                     :columns="$findingColumns" />
 
-                    @endunless
+                    @endif
                 </section>
             @endforeach
         </div>
