@@ -270,6 +270,12 @@ final class Snapshots
             ->join('company_user', fn ($j) => $j->on('company_user.user_id', '=', 'model_has_roles.model_id')
                 ->where('company_user.company_id', '=', $companyId)
                 ->where('company_user.is_active', '=', true))
+            // ⛔ চালু আর না-মোছা মানুষ বাছার আগেই — আগে সবচেয়ে ছোট id নেওয়া হতো, তারপর চালু কি না দেখা হতো; বন্ধ
+            // পুরনো একজন super_admin থাকলে আসল মালিক থাকা সত্ত্বেও কোম্পানিটা প্রতিরাতে বাদ পড়ত
+            // ([[OwnerMorningMail]]-এর একই ছাঁকনি; ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            ->join('users', 'users.id', '=', 'model_has_roles.model_id')
+            ->where('users.is_active', true)
+            ->whereNull('users.deleted_at')
             ->where('model_has_roles.company_id', $companyId)
             ->where('model_has_roles.model_type', (new User)->getMorphClass())
             ->where('roles.name', PermissionSyncer::SUPER_ADMIN_ROLE)
