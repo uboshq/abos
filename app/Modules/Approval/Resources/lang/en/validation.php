@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'send_back_needs_a_note' => 'Write what needs fixing — a paper cannot be sent back without a note.',
+    'cannot_send_back' => 'This paper cannot be sent back for correction — it is no longer a draft or belongs to another paper; turn it down instead if needed.',
     'no_steps' => 'A rule needs at least one level — with nobody in it, every request would wait forever.',
     'duplicate_step' => 'The same approver cannot sit twice on the same level.',
     'duplicate_flow' => 'A rule for this action already exists — a second one would sit there doing nothing while the first kept firing. Edit the existing one.',

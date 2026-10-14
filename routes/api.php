@@ -281,6 +281,10 @@ Route::prefix('v1')
         Route::post('/approvals/{approval}/reject', [ApprovalApiController::class, 'reject'])
             ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.reject');
+        // ⭐ সংশোধনে ফেরত — ওয়েবের একই নিয়ম ([[ApprovalEngine::sendBack()]], ১৪ অক্টোবর ২০২৬)
+        Route::post('/approvals/{approval}/send-back', [ApprovalApiController::class, 'sendBack'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->name('approvals.send_back');
 
         /*
          * রিপোর্ট — চুক্তি §৯। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা রিপোর্টের

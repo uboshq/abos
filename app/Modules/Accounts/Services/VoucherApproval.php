@@ -175,6 +175,11 @@ final class VoucherApproval
             $superseded = $latest;
         }
 
+        // ⓘ সংশোধনে ফেরত — লেখক আবার পাঠালেন: নতুন অনুরোধ, পুরনোটার কথাসহ ([[ApprovalEngine::sendBack()]])
+        if ($latest?->status === Approval::RETURNED) {
+            $superseded = $latest;
+        }
+
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest)) {
             return $latest;
         }

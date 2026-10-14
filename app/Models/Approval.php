@@ -33,6 +33,12 @@ class Approval extends Model implements Drillable
 
     public const CANCELLED = 'cancelled';
 
+    /**
+     * ⭐ সংশোধনে ফেরত — "না" নয় (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)। ⓘ কাগজ খসড়া থাকে, লেখক নোটসহ খবর পান, বদলে আবার পাঠালে
+     * নতুন অনুরোধ নতুন কাগজে ([[ApprovalEngine::sendBack()]])। ⛔ "না"-র মতো মডিউলকে জানানো হয় না — কাগজটা ফেলে দেওয়ার কিছু নেই।
+     */
+    public const RETURNED = 'returned';
+
     protected $fillable = [
         'company_id', 'approvable_type', 'approvable_id', 'module', 'action',
         'amount', 'status', 'current_level', 'assigned_to', 'payload', 'state_hash',

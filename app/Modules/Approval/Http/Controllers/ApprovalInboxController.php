@@ -530,6 +530,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             'documentHidden' => ! $mayReadDocument,
 
             'canDecide' => $canDecide,
+            // ⭐ "সংশোধনে ফেরত" আলাদা অবস্থায় যায় কি না — না গেলে পুরনো পথ ("না", কারণ: কাগজের ভুল)
+            'canSendBack' => $canDecide && $this->engine->canSendBack($entry),
 
             /*
              * ⭐ কার কাছে পাঠানো যায় — কেবল ছকে নাম থাকা সইকারীরা।
@@ -1007,6 +1009,20 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         return redirect()
             ->route('approval.inbox.index')
             ->with('saved', __('approval::message.rejected'));
+    }
+
+    /**
+     * ⭐ সংশোধনে ফেরত — নোট বাধ্যতামূলক (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)। ⓘ নিয়ম ইঞ্জিনে ([[ApprovalEngine::sendBack()]]) — ফোনও একই পথে।
+     */
+    public function sendBack(Request $request, int $approval): RedirectResponse
+    {
+        $validated = $request->validate(['remarks' => ['required', 'string', 'max:500']]);
+
+        $this->engine->sendBack(Approval::query()->findOrFail($approval), $request->user(), $validated['remarks']);
+
+        return redirect()
+            ->route('approval.inbox.index')
+            ->with('saved', __('approval::message.sent_back'));
     }
 
     /** অনুরোধকারী নিজে প্রত্যাহার করলে। */

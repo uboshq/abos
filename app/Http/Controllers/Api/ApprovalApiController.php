@@ -108,7 +108,10 @@ final class ApprovalApiController extends Controller
         $facts = app(ApprovalFacts::class)->of($approvals, true); // ⓘ নিজের অপেক্ষার সারি — সইকারী নিজেই
         $documents = $this->documentsOf($approvals);
 
-        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents): array {
+        $engine = app(ApprovalEngine::class);
+        $owner = app(\App\Core\Services\Ownership::class)->isOwnerIn($user, (int) \App\Core\Support\CompanyContext::id());
+
+        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $fact = $facts[(int) $approval->id] ?? [];
 
@@ -136,6 +139,14 @@ final class ApprovalApiController extends Controller
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'requesterName' => $approval->requesterName(),
                 'summary' => $this->summaryOf($approval, $fact),
+
+                /*
+                 * ⭐ কোন বোতাম দেখাবে — মালিকের আদেশ, ১৪ অক্টোবর ২০২৬। ⓘ "সংশোধনে ফেরত" খসড়া কাগজে; "বদলে সই" কেবল মালিক
+                 * (বদল হয় কাগজের নিজের পর্দায়); অন্য সইকারী কেবল বিবরণ ঠিক করতে পারেন। ⚠️ পুরনো অ্যাপ ঘরগুলো উপেক্ষা করে।
+                 */
+                'canSendBack' => $engine->canSendBack($approval),
+                'canEditAndSign' => $owner,
+                'canCorrectText' => ! $owner,
             ];
         })->values();
 
@@ -245,6 +256,18 @@ final class ApprovalApiController extends Controller
      * @param  Builder<TModel>  $query
      * @return Builder<TModel>
      */
+    /** `POST /approvals/{id}/send-back` {remarks} — সংশোধনে ফেরত, নোট বাধ্যতামূলক ([[ApprovalEngine::sendBack()]]) */
+    public function sendBack(Request $request, string $approval): JsonResponse
+    {
+        $validated = $request->validate(['remarks' => ['required', 'string', 'max:500']]);
+
+        $entry = $this->decidable($request, $approval);
+
+        $decided = $this->settle($entry, fn () => app(ApprovalEngine::class)->sendBack($entry, $request->user(), $validated['remarks']));
+
+        return $this->outcome($decided);
+    }
+
     public static function forThePhone(Builder $query): Builder
     {
         return $query

@@ -157,6 +157,11 @@ final class DocumentApproval
             $superseded = $latest;
         }
 
+        // ⓘ সংশোধনে ফেরত — লেখক আবার পাঠালেন: নতুন অনুরোধ, আর সে বলে কোনটার জায়গা নিল ([[ApprovalEngine::sendBack()]])
+        if ($latest?->status === Approval::RETURNED) {
+            $superseded = $latest;
+        }
+
         if ($latest?->status === Approval::REJECTED && ! $this->changedSince($document, $latest)) {
             return $latest;
         }
