@@ -91,15 +91,24 @@ final class AGiftReachesTheBooksAtItsCostTest extends TestCase
         $this->assertSame(0, bccomp(app(CostLayerService::class)->qtyOnHand($this->gift), '100', 4), '⛔ স্তরে মাল ফেরেনি।');
     }
 
-    public function test_shelf_stock_without_layers_still_gives_at_purchase_price_and_returns_alike(): void
+    /**
+     * ⛔ স্তর ছাড়া তাকের মাল — উপহার থামে, স্পষ্ট বাংলা বার্তায় (fe-র সিদ্ধান্ত (গ), ১৩ অক্টোবর ২০২৬; মজুদ লাইন-ধরে নিরীক্ষা)।
+     *
+     * ⓘ আগে (৬ অক্টোবর থেকে) কেনা দামে খরচ বসত আর মজুদের খাত (১১২০) থেকে কাটত, স্তর না ছুঁয়ে — খাত আর স্তর আলাদা কথা বলত।
+     * ⭐ মালিকের নিয়ম: মজুদ শূন্যের নিচে নামে না; তাই থামে, আর খাতায় এক পয়সাও বসে না, কোনো উপহারের সারিও থাকে না।
+     */
+    public function test_shelf_stock_without_layers_stops_the_gift_and_books_nothing(): void
     {
-        $this->give(8201, '5');
+        try {
+            $this->give(8201, '5');
+            $this->fail('⛔ স্তর ছাড়া মালে উপহার বেরোল — কেনা দামে খরচ বসত, খাত আর স্তর আলাদা হত।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('product_id', $e->errors());
+        }
 
-        $this->assertSame('150.0000', $this->net(StandardChart::PROMOTION_EXPENSE), '⛔ স্তর ছাড়া মালে কেনা দামে খরচ ওঠেনি।');
-
-        app(PromotionReversal::class)->forSource('sales_invoice', 8201);
-
-        $this->assertSame('0.0000', $this->net(StandardChart::PROMOTION_EXPENSE), '⛔ ফেরতে কেনা দামের খরচ উল্টায়নি।');
+        $this->assertSame('0.0000', $this->net(StandardChart::PROMOTION_EXPENSE), '⛔ থামা উপহারেও খরচ বসেছে।');
+        $this->assertSame('0.0000', $this->net(StandardChart::INVENTORY), '⛔ থামা উপহারেও মজুদের খাত কমেছে।');
+        $this->assertSame(0, \App\Modules\Promotion\Models\PromotionGiftIssue::query()->count(), '⛔ থামা উপহারের সারি রয়ে গেছে।');
     }
 
     /** ⓘ ৪ অক্টোবরের আগের উপহার — খাতায় খরচ ওঠেনি; ফেরতে উল্টো দাখিলাও নয় (নইলে খরচ ঋণাত্মক হত) */

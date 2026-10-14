@@ -147,6 +147,23 @@ class StockTransferController extends Controller implements HasMiddleware
 
     public function receive(StockTransfer $transfer): RedirectResponse
     {
+        /*
+         * ⛔ গ্রহণ করেন গন্তব্যের মানুষ — মজুদ লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+         *
+         * ⓘ আগে কেবল চাবি আর "দুইজন" সুইচ দেখা হত, আর বদলি দেখা হয় শাখা ধরে — একই শাখার গুদাম X-এ সীমিত কেরানি গুদাম Y-এর
+         * জন্য পাঠানো মাল "পৌঁছেছে" লিখে দিতে পারতেন, যা তিনি চোখেই দেখেননি; "দুই গুদামের দুইজন" নিয়মটা ফাঁকা হত।
+         * ⓘ গুদাম-সীমা আর শাখা-নাগাল দেখা হয়, হেডারের বাছা শাখা নয় — নইলে শাখা-পেরোনো বদলির গ্রহণ হেডার বদলানো ছাড়া আটকাত।
+         */
+        $destination = Warehouse::query()->withoutGlobalScope(Warehouse::VIEWED_BRANCH)->find($transfer->to_warehouse_id);
+        $branches = app(\App\Core\Services\DataScope::class)->idsFor(auth()->user(), \App\Models\UserDataScope::BRANCH);
+
+        if ($destination === null
+            || ($branches !== null && $destination->branch_id !== null && ! in_array((int) $destination->branch_id, $branches, true))) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => __('inventory::validation.transfer_receiver_not_at_destination'),
+            ]);
+        }
+
         $this->transfers->receive($transfer);
 
         return redirect()

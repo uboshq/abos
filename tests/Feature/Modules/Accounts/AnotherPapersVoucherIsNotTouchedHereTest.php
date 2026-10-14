@@ -14,7 +14,6 @@ use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -44,14 +43,15 @@ final class AnotherPapersVoucherIsNotTouchedHereTest extends TestCase
 
         $owned = $vouchers->create(['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'হাতধারের ভাউচার'], $lines);
 
-        // ⓘ অর্থ মডিউলের হাতধার-চলাচল এই ভাউচারকে নিজের বলে ধরে
-        $account = DB::table('fin_hand_loan_accounts')->insertGetId(['company_id' => $company->id, 'person_name' => 'রহিম',
-            'status' => 'active', 'public_id' => (string) Str::uuid(), 'created_at' => now(), 'updated_at' => now()]);
-        DB::table('fin_hand_loan_movements')->insert(['company_id' => $company->id, 'account_id' => $account, 'direction' => 'out',
-            'amount' => '500', 'moved_on' => now()->toDateString(), 'voucher_id' => $owned->id,
-            'public_id' => (string) Str::uuid(), 'created_at' => now(), 'updated_at' => now()]);
+        // ⓘ অন্য একটা কাগজ (এখানে চেকের রেজিস্টার) এই ভাউচারকে নিজের বলে ধরে — অর্থের জমা, হাতধার, ভাড়া একইভাবে `voucher_id` রাখে
+        $cheque = app(\App\Modules\Accounts\Services\ChequeService::class)->create([
+            'direction' => \App\Modules\Accounts\Models\Cheque::RECEIVED, 'cheque_no' => 'OWN'.random_int(100000, 999999), 'bank_name' => 'Sonali Bank',
+            'cheque_date' => now()->toDateString(), 'amount' => '500',
+            'party_type' => 'customer', 'party_id' => \App\Modules\Customer\Models\Customer::query()->orderBy('id')->firstOrFail()->id,
+        ]);
+        DB::table('acc_cheques')->where('id', $cheque->id)->update(['voucher_id' => $owned->id]);
 
-        $message = __('accounts::revision.owned_elsewhere', ['no' => $owned->document_no, 'module' => __('accounts::revision.module_fin')]);
+        $message = __('accounts::revision.owned_elsewhere', ['no' => $owned->document_no, 'module' => __('accounts::revision.module_acc')]);
 
         foreach ([
             'হাতে পাকা' => fn () => $vouchers->post($owned->fresh(), byHand: true),
@@ -59,7 +59,7 @@ final class AnotherPapersVoucherIsNotTouchedHereTest extends TestCase
         ] as $what => $act) {
             try {
                 $act();
-                $this->fail("⛔ অর্থ মডিউলের ভাউচার Accounts থেকে {$what} হল — মূল কাগজ আর তার সই এড়িয়ে");
+                $this->fail("⛔ অন্য কাগজের ভাউচার Accounts-এর পর্দা থেকে {$what} হল — মূল কাগজ আর তার সই এড়িয়ে");
             } catch (ValidationException $e) {
                 $this->assertSame($message, $e->errors()['status'][0] ?? null);
             }
