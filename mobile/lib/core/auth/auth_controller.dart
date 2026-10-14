@@ -46,8 +46,10 @@ class AuthController extends StateNotifier<AuthState> {
       SyncEngine.instance.actAs(savedUser.id);
       state = AuthState.signedIn(savedUser);
     } else {
-      SyncEngine.instance.actAs(null);
-      state = const AuthState.signedOut();
+      // ⛔ সেশন "সাইন আউট" ছাড়াই শেষ হলে (পটভূমির রিফ্রেশ ব্যর্থ, ৩০ দিনের মেয়াদ, বন্ধ করা মানুষ) কেবল টোকেন মুছত — আগের জনের
+      // গ্রাহক, পাওনা, দাম, প্রোফাইল আর ওয়েবের কুকি থেকে যেত, আর পরের জন সেগুলো দেখতেন। সাইন আউটের একই সাফাই এখানেও
+      // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+      await _clearLocalSession();
     }
   }
 

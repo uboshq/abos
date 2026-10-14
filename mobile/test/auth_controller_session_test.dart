@@ -113,4 +113,26 @@ void main() {
     expect(await SessionRepository.instance.readUser(), isNull);
     expect(ReferenceCache.instance.countOf('Customer'), 0);
   });
+
+  test(
+      'a session that ended without sign-out leaves nothing of the last person '
+      'for the next one (phone line audit, 15 Oct 2026)', () async {
+    // ⓘ আগের জনের সেশন পটভূমিতে শেষ — টোকেন মুছেছে, বাকি সব রয়ে গেছে
+    await SessionRepository.instance.saveUser(savedUser);
+    await ReferenceCache.instance.put(
+      entityType: 'Customer',
+      entityId: '01a0-customer',
+      payload: {'name': 'আগের জনের গ্রাহক'},
+      updatedAt: DateTime.now(),
+    );
+
+    final controller = AuthController();
+    await controller.restoreSession();
+
+    expect(controller.state.status, AuthStatus.signedOut);
+    expect(ReferenceCache.instance.countOf('Customer'), 0,
+        reason: '⛔ সেশন শেষ, অথচ আগের জনের গ্রাহক পরের জনের জন্য রয়ে গেল');
+    expect(await SessionRepository.instance.readUser(), isNull,
+        reason: '⛔ আগের জনের প্রোফাইল রয়ে গেল');
+  });
 }
