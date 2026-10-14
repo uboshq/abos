@@ -143,7 +143,9 @@ class _AppLockGateState extends State<AppLockGate> {
     }
     return Stack(
       children: [
-        widget.child,
+        // ⛔ তালার নিচের পর্দা স্ক্রিন-রিডারের কাছেও বন্ধ — আগে TalkBack চালু করে তালার নিচের "অনুমোদন" বোতামে পৌঁছে
+        // দুইবার ছুঁয়ে সই দেওয়া যেত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        ExcludeSemantics(excluding: lock.locked, child: widget.child),
         if (lock.locked)
           Positioned.fill(
             child: Material(
