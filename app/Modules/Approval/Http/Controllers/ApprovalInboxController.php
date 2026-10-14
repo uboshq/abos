@@ -103,7 +103,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
              * কোনো না কোনো চাবি ছিল।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward', 'bulkApprove', 'confirmAll']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'confirmAll']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
