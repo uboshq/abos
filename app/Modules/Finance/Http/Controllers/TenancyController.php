@@ -97,8 +97,9 @@ class TenancyController extends Controller implements HasMiddleware
             'tenant' => ['nullable', 'string', 'max:191'],
             'tenant_phone' => ['nullable', 'string', 'max:40'],
             'premises' => ['nullable', 'string', 'max:191'],
-            'monthly_rent' => ['required', 'numeric', 'gt:0'],
-            'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ `numeric` "1e5"-ও নেয়, আর bcmath তাতে ValueError ছুড়ে ৫০০ দিত — টাকার ঘর কেবল দশমিক অঙ্ক, চার ঘর পর্যন্ত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'monthly_rent' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
+            'deposit_amount' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'min:0'],
             'rent_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'starts_on' => ['required', 'date'],
             'term_months' => ['required', 'integer', 'min:1', 'max:600'],
@@ -147,7 +148,7 @@ class TenancyController extends Controller implements HasMiddleware
     public function fromDeposit(Request $request, Tenancy $tenancy): RedirectResponse
     {
         $this->tenancies->fromDeposit($tenancy, $request->validate([
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'moved_on' => ['nullable', 'date'],
             'note' => ['nullable', 'string', 'max:500'],
         ]));
@@ -172,7 +173,7 @@ class TenancyController extends Controller implements HasMiddleware
     public function revise(Request $request, Tenancy $tenancy): RedirectResponse
     {
         $this->tenancies->revise($tenancy, $request->validate([
-            'monthly_rent' => ['nullable', 'numeric', 'gt:0'],
+            'monthly_rent' => ['nullable', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'rent_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'tenant_phone' => ['nullable', 'string', 'max:40'],
             'premises' => ['nullable', 'string', 'max:191'],
@@ -188,8 +189,11 @@ class TenancyController extends Controller implements HasMiddleware
         $data = $request->validate(['month' => ['required', 'date_format:Y-m']]);
 
         $done = $this->tenancies->charge(Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
+        $saved = back()->with('saved', __('finance::tenancy.charge_done', ['charged' => $done['charged'], 'held' => $done['held']]));
 
-        return back()->with('saved', __('finance::tenancy.charge_done', $done));
+        // ⓘ যে ভাড়াটেদের দাবি বসেনি — নাম আর কারণসহ, বাকিরা বসেছে (প্রদেয় ভাড়ার একই ধরন)
+        return $done['failed'] === [] ? $saved
+            : $saved->withErrors(['month' => __('finance::tenancy.charge_some_failed', ['list' => implode(' · ', $done['failed'])])]);
     }
 
     public function report(Request $request, string $slug): View
@@ -221,7 +225,7 @@ class TenancyController extends Controller implements HasMiddleware
     private function money(Request $request): array
     {
         return $request->validate([
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,4})?$/', 'gt:0'],
             'money_account_id' => ['required', 'integer'],
             'moved_on' => ['nullable', 'date'],
             'instrument_no' => ['nullable', 'string', 'max:64'],

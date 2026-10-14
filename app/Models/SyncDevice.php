@@ -43,6 +43,8 @@ class SyncDevice extends Model
     {
         return [
             'last_seen_at' => 'datetime',
+            // ⭐ এই হ্যান্ডসেট শেষ কবে দুই ধাপের কোড পেরিয়েছে — অ্যাপের ভিতরের ওয়েবের চাবি এটা দেখে ([[WebInsideApp]])
+            'second_step_at' => 'datetime',
         ];
     }
 

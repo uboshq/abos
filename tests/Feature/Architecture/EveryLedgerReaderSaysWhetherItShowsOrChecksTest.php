@@ -69,6 +69,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
         'app/Core/Concerns/PickableWhileOwing.php' => 'টাকার কাগজের বাছাইয়ে নিষ্ক্রিয় পক্ষের এখনো জের আছে কি না — গোটা কোম্পানি ধরে; জের শাখায় ভাগ হয় না (Customer/Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
+        'app/Modules/Accounts/Services/AccountService.php' => 'খাতের দিক বা মা বদলের আগে নিচে দাখিলা আছে কি না — গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে বদল ভুল করে চলত (a6, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Database/Migrations/2027_02_18_100000_an_account_says_which_parties_it_holds.php' => 'কোন খাতে আজ পক্ষসহ সারি আছে — খাত কোন পক্ষ রাখে তা আজকের খাতা থেকে; গোটা কোম্পানি, শাখা নয় (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬)',
         'app/Modules/Hr/Services/PayrollService.php' => '⛔ বাতিলের আগে বেতন-দেনা কতটা পরিশোধ হয়েছে — রান যত বসিয়েছিল আর খাতায় যত বাকি; গোটা কোম্পানি ধরে, কারণ দেনা এক খাতে আর রান গোটা কোম্পানির (অডিট HR ⚠️৬, ৬ অক্টোবর ২০২৬)',
         'app/Modules/Hr/Support/AdvanceBalance.php' => '⛔ কর্মীর খোলা অগ্রিম — বেতন থেকে কাটার সীমা আর খরচের দাবি মেটানো; কর্মীর নামে, গোটা কোম্পানি ধরে; অগ্রিম মানুষের, শাখার নয় (অডিট HR ⛔৪, ৬ অক্টোবর; মালিকের আদেশ ৭ অক্টোবর ২০২৬)',
@@ -98,6 +99,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Customer/Models/Customer.php' => 'মূল উপকরণ — বকেয়া (বাকির সীমা এখান থেকে পড়ে)',
         'app/Modules/Finance/Services/BankFacilityService.php' => 'ব্যাংক সুবিধার সীমা',
         'app/Modules/Finance/Services/ProfitDistribution.php' => 'লাভ বণ্টন — পোস্টিং',
+        'app/Modules/Finance/Listeners/UndoThePaperOfACancelledVoucher.php' => 'বাতিল ভাউচার খাতায় বসেছিল কি না — একটা ভাউচারের নিজের সারি, শাখা নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Customer/Sync/CustomerDueSync.php' => '⛔ ফোনের বকেয়া বাকির সীমার পাশে বসে — বিক্রয়কর্মী সীমা মেনে অর্ডার নেন; হেডারের শাখা ওয়েবের ধারণা, আর জলচিহ্ন শাখা বদলালে ভাঙত (৩০ সেপ্টেম্বর)',
         'app/Modules/Sales/Services/CustomerPapers.php' => '⛔ গ্রাহক-পোর্টাল: দেখছেন গ্রাহক নিজে, কর্মী নয় — পুরো পক্ষের খাতাই নিরাপত্তার নকশা; হেডারের শাখা এখানে নেই (৩০ সেপ্টেম্বর)',
         'app/Modules/Promotion/Services/PromotionReversal.php' => 'উপহার ফেরতে — উপহারের খরচ খাতায় উঠেছিল কি না, তবেই উল্টানো (৪ অক্টোবর ২০২৬); একটা কাগজের নিজের সারি, শাখা নয়',

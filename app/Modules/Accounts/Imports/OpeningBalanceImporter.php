@@ -62,7 +62,22 @@ final class OpeningBalanceImporter implements \App\Core\Contracts\ImportNeedsKey
             'opening_balance' => ['label' => 'accounts::field.opening_balance', 'required' => true],
             // ফাঁকা রাখলে চলতি অর্থবছরের প্রথম দিন (loadFor→dateFor)
             'opening_date' => ['label' => 'accounts::field.opening_date', 'required' => false],
+            // ⭐ ঐচ্ছিক পাশ — Dr বা Cr; ফাঁকা হলে আগের মতো চিহ্ন ধরে (ধনাত্মক = স্বাভাবিক দিক) ([[AnOpeningBalanceSitsOnTheSideChosenTest]])
+            'side' => ['label' => 'accounts::field.opening_side', 'required' => false],
         ];
+    }
+
+    /** "Dr"/"Cr" (বা debit/credit) → খাতের প্রকৃতির নাম; ফাঁকা হলে null, অচেনা হলে false */
+    private static function side(?string $raw): string|false|null
+    {
+        $raw = strtolower(trim((string) $raw));
+
+        return match ($raw) {
+            '' => null,
+            'dr', 'debit' => Account::DEBIT,
+            'cr', 'credit' => Account::CREDIT,
+            default => false,
+        };
     }
 
     /**
@@ -94,6 +109,10 @@ final class OpeningBalanceImporter implements \App\Core\Contracts\ImportNeedsKey
             $errors[] = __('core.import.not_a_number', ['column' => 'opening_balance']);
         }
 
+        if (self::side($row['side'] ?? null) === false) {
+            $errors[] = __('core.import.unknown_value', ['column' => 'side', 'value' => $row['side'] ?? '']);
+        }
+
         if (filled($row['opening_date'] ?? '') && $this->date($row['opening_date']) === null) {
             $errors[] = __('core.import.not_a_date', ['column' => 'opening_date']);
         }
@@ -114,9 +133,18 @@ final class OpeningBalanceImporter implements \App\Core\Contracts\ImportNeedsKey
             return;
         }
 
+        $amount = (string) ($row['opening_balance'] ?? '0');
+        $side = self::side($row['side'] ?? null);
+
+        // ⓘ পাশ বলা থাকলে অঙ্কটা সেই পাশে — স্বাভাবিক দিকের উল্টো হলে ঋণাত্মক হয়ে আজকের পথেই যায়
+        if (is_string($side)) {
+            $amount = ltrim($amount, '-') ?: '0';
+            $amount = $side === $account->nature ? $amount : bcmul($amount, '-1', 4);
+        }
+
         $this->openings->loadFor(
             $account,
-            (string) ($row['opening_balance'] ?? '0'),
+            $amount,
             filled($row['opening_date'] ?? '') ? $this->date($row['opening_date']) : null,
         );
     }

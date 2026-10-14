@@ -88,6 +88,25 @@ final class CoreReports
                 ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->where('ledger_entries.debit', '>', 0)
+                /*
+                 * ⛔ আদায় মানে বাইরে থেকে টাকা আসা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TheInflowListIsMoneyFromOutsideTest]])।
+                 * ⓘ আগে টাকার খাতের প্রতিটা ডেবিট আসত: টিল থেকে ব্যাংকে জমা পুরো অঙ্কে "আদায়", বাতিল পরিশোধের উল্টো সারিও "আদায়", আর
+                 * বাতিল হওয়া রসিদ তবু তালিকায়। মাসিক নগদের পাতা ([[MonthlyCashReport]]) এগুলো বাদ দেয়, তাই দুই পাতার "আসা টাকা" আলাদা ছিল।
+                 * এখন: উল্টো দাখিলা বাদ, পরে উল্টানো কাগজ বাদ, আর একই কাগজে টাকা-নয় (পথের টাকা নয়) খাতে ক্রেডিট থাকতে হয়।
+                 */
+                ->where('ledger_entries.source_type', 'not like', '%:reversal%')
+                ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
+                    ->whereColumn('rv.company_id', 'ledger_entries.company_id')
+                    ->whereColumn('rv.source_id', 'ledger_entries.source_id')
+                    ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
+                ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
+                    ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
+                    ->whereColumn('o.company_id', 'ledger_entries.company_id')
+                    ->whereColumn('o.source_type', 'ledger_entries.source_type')
+                    ->whereColumn('o.source_id', 'ledger_entries.source_id')
+                    ->where('o.credit', '>', 0)
+                    ->whereNull('oa.money_kind')
+                    ->where('oa.code', '<>', StandardChart::CASH_IN_TRANSIT))
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
                 ->select([
@@ -873,12 +892,14 @@ final class CoreReports
             groupBy: 'account_id',
             query: function (array $f) {
                 $sections = self::cashFlowSections((int) $f['company_id']);
+                $overdrafts = self::overdraftIds((int) $f['company_id']);
 
                 return DB::table('ledger_entries')
                     ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                     ->where('ledger_entries.company_id', $f['company_id'])
-                    // ⓘ টাকার খাতের বাইরের সারি…
+                    // ⓘ টাকার খাতের বাইরের সারি… (⛔ ওভারড্রাফটও নগদ-সমতুল্য, IAS 7.8 — সারি নয়, টাকার পাশ)
                     ->whereNull('accounts.money_kind')
+                    ->whereNotIn('ledger_entries.account_id', $overdrafts ?: [0])
                     ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                     ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                     // …যে কাগজে টাকার খাতের অন্তত একটা সারি আছে — টাকা নড়ার উল্টো দিক
@@ -887,7 +908,7 @@ final class CoreReports
                         ->whereColumn('m.company_id', 'ledger_entries.company_id')
                         ->whereColumn('m.source_type', 'ledger_entries.source_type')
                         ->whereColumn('m.source_id', 'ledger_entries.source_id')
-                        ->whereNotNull('ma.money_kind'))
+                        ->where(fn ($w) => $w->whereNotNull('ma.money_kind')->orWhereIn('ma.id', $overdrafts ?: [0])))
                     ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_en', 'accounts.name_bn', 'accounts.type')
                     ->orderByRaw($sections['rank'])
                     ->orderBy('accounts.code')
@@ -908,7 +929,59 @@ final class CoreReports
                 ['key' => 'money_out', 'label' => 'accounts::field.money_out', 'type' => ReportColumn::MONEY],
                 ['key' => 'net', 'label' => 'accounts::field.net_change', 'type' => ReportColumn::MONEY],
             ],
+            /*
+             * ⭐ শুরুর আর শেষের নগদ ও নগদ-সমতুল্য — ব্যাংক ওভারড্রাফট বিয়োগ করে (IAS 7.8; মালিক, ১৩ অক্টোবর ২০২৬: "int standrad
+             * onuzayi koro"; [[OverdraftIsCashNotFinancingTest]])। ⓘ চাহিবামাত্র শোধযোগ্য ওভারড্রাফট নগদ ব্যবস্থাপনার অংশ: ওখান থেকে
+             * টানা টাকা "অর্থায়নে আসা" নয়, আর শুরু-শেষের নগদে সেটা বিয়োগ হয়ে থাকে। ছাঁকনি না পেলে (পুরনো ডাক) কেবল মোট।
+             */
+            summary: function (array $totals, array $f = []): array {
+                $net = bcsub((string) ($totals['money_in'] ?? '0') ?: '0', (string) ($totals['money_out'] ?? '0') ?: '0', 4);
+                $good = bccomp($net, '0', 4) >= 0;
+
+                return [
+                    'lines' => isset($f['from'], $f['to'], $f['company_id']) ? [
+                        ['label' => __('accounts::message.cf_opening_cash'), 'value' => self::cashAt($f, (string) $f['from'], false)],
+                        ['label' => __('accounts::message.cf_closing_cash'), 'value' => self::cashAt($f, (string) $f['to'], true)],
+                    ] : [],
+                    'label' => __('accounts::message.cf_net_change'),
+                    'value' => $good ? $net : bcmul($net, '-1', 4),
+                    'good' => $good,
+                ];
+            },
         );
+    }
+
+    /**
+     * ব্যাংক ওভারড্রাফটের খাতগুলো (২১০৫ ও নিচের) — নগদ-সমতুল্যের বিয়োগের অংশ (IAS 7.8)।
+     *
+     * ⓘ এদের `money_kind` দেওয়া হয় না — দিলে আদায় বা পরিশোধে "টাকার খাত" হিসেবে বাছা যেত; নগদ প্রবাহ নিজেই এদের নগদের পাশে ধরে।
+     *
+     * @return list<int>
+     */
+    private static function overdraftIds(int $companyId): array
+    {
+        return self::subtreeIds($companyId, [StandardChart::BANK_OVERDRAFT]);
+    }
+
+    /**
+     * একটা তারিখে নগদ ও নগদ-সমতুল্য — টাকার খাতের জের, ওভারড্রাফট বিয়োগ করে (নিট Dr)।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function cashAt(array $f, string $date, bool $inclusive): string
+    {
+        $overdrafts = self::overdraftIds((int) $f['company_id']);
+
+        $net = DB::table('ledger_entries')
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            ->where(fn ($w) => $w->whereNotNull('accounts.money_kind')->orWhereIn('ledger_entries.account_id', $overdrafts ?: [0]))
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->where('ledger_entries.trx_date', $inclusive ? '<=' : '<', $date)
+            ->selectRaw('COALESCE(SUM(ledger_entries.debit - ledger_entries.credit), 0) as n')
+            ->value('n');
+
+        return bcadd((string) $net, '0', 4);
     }
 
     /**

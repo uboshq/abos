@@ -64,7 +64,7 @@ class SalesTargetController extends Controller implements HasMiddleware
         $data = $request->validate([
             'month' => ['required', 'date'],
             'amount' => ['nullable', 'array'],
-            'amount.*' => ['nullable', 'numeric', 'min:0'],
+            'amount.*' => ['nullable', 'numeric', \App\Modules\Sales\Http\Requests\PlainNumber::RULE, 'min:0'],
         ]);
 
         $month = $this->targets->readMonth($data['month']);

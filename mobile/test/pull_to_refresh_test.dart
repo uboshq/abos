@@ -53,6 +53,14 @@ void main() {
     'lead_screens.dart',
     'quotation_screens.dart',
     'sync_status_screen.dart',
+    // ⭐ নিজের ছুটি আর বেতনের স্লিপ — ধরা পড়ে test/more_modules_pullable_test.dart-এ (১৩ অক্টোবর ২০২৬)
+    'self_service_screens.dart',
+    // ⭐ ১৩ অক্টোবর ২০২৬ — মালিকের কেন্দ্র, বাকি নিয়ন্ত্রণ, নোটিশ বোর্ড; প্রত্যেকটার টান নিজের টেস্টে দেখা
+    'executive_screen.dart',
+    'credit_screens.dart',
+    'notice_board_screen.dart',
+    // ⭐ বিক্রয় বিল আর চালান (১৩ অক্টোবর ২০২৬) — টান নিজের টেস্টে দেখা
+    'sales_paper_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
@@ -72,6 +80,9 @@ void main() {
     // search box reporting no match, where a pull would fetch nothing the
     // typing did not already decide.
     'new_order_screen.dart',
+    // ⭐ অ্যাপের ভিতরের ওয়েব-জানালা (১৩ অক্টোবর ২০২৬) — ভুলের পর্দায় নিজের "আবার চেষ্টা করুন" বোতাম, কারণ
+    // সেখানে টান দিয়ে চাওয়ার মতো কোনো তালিকা নেই, আছে একবারের চাবি; আর খোলা পাতার টান পাতার ভিতরেই ([WebFiles]).
+    'web_inside_screen.dart',
   };
 
   test('every screen that can draw an EmptyState has been considered', () {

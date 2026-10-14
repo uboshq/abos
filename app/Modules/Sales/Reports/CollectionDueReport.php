@@ -96,6 +96,8 @@ final class CollectionDueReport
 
         $heldSql = $cases === '' ? '0' : "(CASE i.customer_id{$cases} ELSE 0 END)";
         $used = "(COALESCE(l.due, 0) + {$heldSql})";
+        // ⛔ চলতি সীমা — অস্থায়ী সীমাসহ, দেয়ালের মতো (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা; [[TheCreditReportsJudgeLikeTheWallTest]])
+        $limit = CreditControlReports::limitSql('cu');
         $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(cu.name_bn, ''), cu.name_en)" : 'cu.name_en';
 
         return DB::query()
@@ -110,7 +112,7 @@ final class CollectionDueReport
                 'l', 'l.party_id', '=', 'i.customer_id',
             )
             ->whereRaw("{$due} > 0.0001")
-            ->groupBy('i.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn', 'cu.credit_limit', 'l.due')
+            ->groupBy('i.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn', 'cu.credit_limit', 'cu.temp_credit_limit', 'cu.temp_credit_limit_until', 'l.due')
             ->orderByRaw("SUM(CASE WHEN {$on} < {$now} THEN {$due} ELSE 0 END) DESC")
             ->orderByRaw("SUM({$due}) DESC")
             ->select([
@@ -122,8 +124,8 @@ final class CollectionDueReport
                 DB::raw("SUM(CASE WHEN {$on} > {$now} AND {$on} <= {$week} THEN {$due} ELSE 0 END) as due_week"),
                 DB::raw("SUM(CASE WHEN {$on} > {$week} AND {$on} <= {$monthEnd} THEN {$due} ELSE 0 END) as due_month"),
                 DB::raw("SUM({$due}) as total_due"),
-                'cu.credit_limit',
-                DB::raw("CASE WHEN COALESCE(cu.credit_limit, 0) > 0 THEN ROUND({$used} * 100 / cu.credit_limit, 1) END as limit_used"),
+                DB::raw("{$limit} as credit_limit"),
+                DB::raw("CASE WHEN {$limit} > 0 THEN ROUND({$used} * 100 / {$limit}, 1) END as limit_used"),
             ]);
     }
 }

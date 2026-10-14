@@ -58,6 +58,7 @@ return [
     'accrual_note' => 'Booked on the last day of the month and reversed by itself on the first day of the next; once per month.',
     'accrual_done' => 'Profit booked on :accrued deposits, :reversed earlier accruals reversed, :held awaiting signature.',
     'accrual_month_not_over' => 'The month is not over yet — only a finished month can be booked.',
+    'accrual_month_closed' => ':month is closed — accrued profit is not booked in a closed month. Nothing was posted.',
     'accrual_narration' => 'Accrued profit for :month — :deposit (:institution)',
     'accrual_reversal_narration' => 'Accrued profit for :month reversed — :deposit',
 

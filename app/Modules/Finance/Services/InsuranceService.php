@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\InsurancePolicy;
 use App\Modules\Finance\Models\InsurancePremium;
@@ -69,15 +71,34 @@ final class InsuranceService
             $term = InsurancePremium::query()->where('policy_id', $policy->id)
                 ->whereBetween('period_from', [$wasFrom, $wasTo]);
 
-            if (! (clone $term)->where('status', '!=', InsurancePremium::DRAFT)->exists()
+            /*
+             * ⛔ সইয়ের অপেক্ষার পরিশোধ ভাউচারও "দেওয়া" — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ কিস্তির `voucher_id` বসে কেবল পোস্টে;
+             * আগে খসড়া ভাউচার কিস্তিটা ধরে থাকলেও পলিসি সম্পাদনায় কিস্তি মুছে নতুন বসত, আর শেষ সইয়ে ভাউচার "অজানা কাগজ"-এ আটকাত।
+             */
+            $paying = Voucher::acrossBranches()
+                ->where('against_type', InsurancePremium::drillSourceType())
+                ->whereIn('against_id', (clone $term)->select('id'))
+                ->where('status', '!=', DocumentStatus::CANCELLED)
+                ->exists();
+
+            if (! $paying
+                && ! (clone $term)->where('status', '!=', InsurancePremium::DRAFT)->exists()
                 && ! (clone $term)->whereNotNull('voucher_id')->exists()
                 && (clone $term)->exists()) {
                 (clone $term)->delete();
                 $this->addPremium($policy, $policy->starts_on, $policy->ends_on, (string) $policy->premium);
             }
 
-            // ⓘ শূন্য প্রিমিয়ামে বসানো পলিসিতে পরে অঙ্ক বসলে — তখনই প্রথম সারি
-            if (! InsurancePremium::query()->where('policy_id', $policy->id)->exists()) {
+            /*
+             * ⓘ শূন্য প্রিমিয়ামে বসানো মেয়াদে পরে অঙ্ক বসলে — তখনই সেই মেয়াদের প্রথম সারি।
+             * ⛔ Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⚠️৫): আগে শর্তটা ছিল "পলিসিতে একটাও সারি নেই" — শূন্যে নবায়ন করা
+             * মেয়াদে পরে ৫,০০০ বসালে আগের মেয়াদের সারি থাকায় কিছুই বসত না: "দেওয়া বাকি"-তে নেই, দেওয়ার পথও নেই। এখন দেখা হয়
+             * চলতি মেয়াদ (আগের আর নতুন দুই দিনের সীমাই) — দিন সরালে আগের মেয়াদের দেওয়া সারিটা আবার দ্বিতীয়বার বসে না।
+             */
+            if (! InsurancePremium::query()->where('policy_id', $policy->id)
+                ->where(fn ($q) => $q->whereBetween('period_from', [$wasFrom, $wasTo])
+                    ->orWhereBetween('period_from', [$policy->starts_on->toDateString(), $policy->ends_on->toDateString()]))
+                ->exists()) {
                 $this->addPremium($policy, $policy->starts_on, $policy->ends_on, (string) $policy->premium);
             }
 
@@ -154,8 +175,12 @@ final class InsuranceService
         $step = InsurancePolicy::FREQUENCIES[$policy->frequency ?? InsurancePolicy::YEARLY] ?? 12;
         $parts = [];
 
-        for ($at = $start; $at->lte($end); $at = $at->addMonthsNoOverflow($step)) {
-            $next = $at->addMonthsNoOverflow($step)->subDay();
+        /*
+         * ⛔ প্রতিটা কিস্তির দিন শুরুর দিন থেকে গোনা, আগের কিস্তি থেকে নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (বীমা ⓘ৮)।
+         * ⓘ আগে ধাপে ধাপে যোগ হত: ৩১ জানুয়ারির শুরু ফেব্রুয়ারিতে ২৮ হয়ে বাকি সব কিস্তি ২৮ তারিখে সরে যেত।
+         */
+        for ($i = 0, $at = $start; $at->lte($end); $i++, $at = $start->addMonthsNoOverflow($step * $i)) {
+            $next = $start->addMonthsNoOverflow($step * ($i + 1))->subDay();
             $parts[] = [$at, ($step === 12 || $next->gt($end)) ? $end : $next];
 
             if ($step === 12) {

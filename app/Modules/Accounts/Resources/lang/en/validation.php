@@ -20,6 +20,8 @@ return [
     'has_entries_cannot_group' => 'This account has transactions, so it cannot become a group — '
         .'groups take no entries of their own, and the existing ones would stop being counted.',
     'has_children_must_stay_group' => 'This account holds other accounts, so it must stay a group.',
+    'has_entries_cannot_renature' => 'This account has entries — its Dr/Cr nature can no longer change; every past balance would show with the wrong sign.',
+    'money_kind_cannot_flip' => 'This account has entries — it cannot move between money accounts (cash, bank, mobile money) and ordinary accounts.',
     'has_entries_cannot_retype' => 'This account has transactions, so its type cannot change — '
         .'the existing entries would move to a different report.',
     'system_account_locked' => '":name" is a system account. Sales, purchases and other modules '
@@ -55,6 +57,10 @@ return [
     'same_account_both_sides' => 'The same account cannot be on both sides — the money would go nowhere.',
     'account_missing' => 'One of the lines has no account.',
     'inactive_account' => '":name" is inactive, so it takes no new transactions.',
+    'money_opens_on_dr_only' => '":name" holds cash or mobile money — its opening balance can only be Dr; money in hand is never negative.',
+    'inter_company_side_missing' => 'One side of this inter-company transfer could not be found — nothing was reversed; tell the accountant.',
+    'hand_loan_needs_person' => '":name" is a hand-loan account — name the person whose loan it is.',
+    'money_holds_no_party' => 'A money account (cash, bank, mobile money) holds no party — parties sit on their receivable or payable.',
     // Bank money cannot be reconciled without a reference, and the same
     // reference twice means the same money twice
     'bank_reference_required' => 'Money moving through :account needs its bank or MFS transaction number — without it there is no way to reconcile later.',
@@ -123,7 +129,9 @@ return [
 
     // মাস বন্ধ ও খোলা
     'earlier_month_open' => ':earlier is still open. Close it first, then :month. Anything posted later into an open earlier month changes the opening balances of the closed one.',
+    'later_month_locked' => ':later is still locked — reopen it first, then :month. Posting into an earlier month while a later one stays locked changes the opening balance of the locked month.',
     'cannot_close_future_month' => 'A month that has not come yet cannot be closed.',
+    'month_has_unposted' => 'This month has :count confirmed paper(s) that never reached the books — post or cancel them from the posting monitor, then close.',
     'month_has_open_papers' => 'This month still has :drafts draft(s) and :awaiting voucher(s) awaiting signature — post or cancel them first, or they could never reach the books.',
     'party_types_owner_only' => 'Only the owner can change which parties an account holds.',
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',

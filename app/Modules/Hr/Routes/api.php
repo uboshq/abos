@@ -28,4 +28,10 @@ Route::prefix('v1/hr')
         Route::get('/claims', [ExpenseClaimController::class, 'apiIndex'])->name('claim.index');
         Route::post('/claims', [ExpenseClaimController::class, 'apiStore'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('claim.store');
         Route::get('/claims/{claim:public_id}', [ExpenseClaimController::class, 'apiShow'])->middleware('can:view,claim')->name('claim.show');
+
+        // ⭐ নিজের ছুটি আর নিজের বেতনের স্লিপ — ফোনে (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬; [[LeaveApiController]], [[PayslipApiController]])
+        Route::get('/leave', [\App\Modules\Hr\Http\Controllers\LeaveApiController::class, 'mine'])->name('leave.mine');
+        Route::post('/leave', [\App\Modules\Hr\Http\Controllers\LeaveApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('leave.store');
+        Route::get('/payslips', [\App\Modules\Hr\Http\Controllers\PayslipApiController::class, 'mine'])->name('payslip.mine');
+        Route::get('/payslips/{id}', [\App\Modules\Hr\Http\Controllers\PayslipApiController::class, 'show'])->whereUuid('id')->name('payslip.show');
     });

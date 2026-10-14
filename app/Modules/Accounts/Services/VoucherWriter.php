@@ -107,6 +107,8 @@ final class VoucherWriter
     {
         return DB::transaction(function () use ($voucher, $data, $lines, $asDraft, $attachment): bool|string {
             $this->vouchers->update($voucher, $data, $lines, byHand: true);
+            // ⛔ যিনি সারি বদলালেন তিনিও লেখক — নিজে পাকা নন ([[VoucherService::writerMayNotPost()]]; [[WhoeverRewroteAVoucherDoesNotPostItTest]])
+            app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($voucher, VoucherService::EDITED_BY_HAND);
             // ⓘ সম্পাদনাতেও একই — নাহলে টিক তুলে নিলে সারিটা থেকে যেত, আর ঐ মালের দামে একটা খরচ বসে থাকত যেটা কেউ আর চায় না
             $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
 

@@ -179,6 +179,8 @@ final class CapitalService
     public function revise(CapitalEntry $entry, array $data): CapitalEntry
     {
         return DB::transaction(function () use ($entry, $data) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — পুরনো পাতা থেকে বদলালে মাঝে রসিদে পাকা হওয়া সারির অঙ্ক বদলে যেত (১৩ অক্টোবর ২০২৬)
+            $this->lockFresh($entry);
             $this->assertStillADraft($entry);
             $this->assertKnown($data);
 
@@ -222,6 +224,7 @@ final class CapitalService
     public function discard(CapitalEntry $entry): void
     {
         DB::transaction(function () use ($entry) {
+            $this->lockFresh($entry);
             $this->assertStillADraft($entry);
 
             $entry->delete();
@@ -240,11 +243,27 @@ final class CapitalService
      */
     private function assertStillADraft(CapitalEntry $entry): void
     {
-        if ($entry->status !== CapitalEntry::DRAFT) {
+        /*
+         * ⛔ ভাউচারে বাঁধা বা লাভ/খোলা জের থেকে আসা খসড়া হাতে বদলায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ লাভ মূলধনে নেওয়া
+         * সইয়ের অপেক্ষায় থাকলে তার সারি মুছলে শেষ সই তবু গোটা ভাউচার বসাত, অথচ পাওনা থেকে আর কাটা হত না — একই লাভ দুবার দেওয়া যেত।
+         */
+        if ($entry->status !== CapitalEntry::DRAFT || $entry->voucher_id !== null
+            || in_array($entry->in_kind, [CapitalEntry::PROFIT, CapitalEntry::OPENING], true)) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.capital_already_posted', [
                     'no' => $entry->document_no,
                 ]),
+            ]);
+        }
+
+        /*
+         * ⛔ লাভকে মূলধনে নেওয়ার খসড়া সইয়ের ভাউচারে বাঁধা — বদলানো বা মোছা যায় না (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে
+         * মুছলে বা নগদে বদলালে শেষ সইয়ে ভাউচারটা তবু খাতায় বসত (২১৯০ → ৩১০০), অথচ পাওনা থেকে আর কাটা হত না — একই লাভ নগদেও
+         * তোলা যেত। ফেরাতে হলে সইকারী "না" বলবেন, বা ভাউচারটা বাতিল।
+         */
+        if ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
             ]);
         }
     }
@@ -399,7 +418,7 @@ final class CapitalService
             ->posted()
             ->inViewedBranch()
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
             ->groupBy('branch_id')
             ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as total')
             ->pluck('total', 'branch_id');
@@ -476,7 +495,7 @@ final class CapitalService
                 continue;
             }
 
-            $taken = $this->withdrawnBy((int) $row->person_id);
+            $taken = $this->withdrawnBy((int) $row->person_id, $wholeCompany);
             $terms = $latest[(int) $row->person_id] ?? ['type' => '', 'share' => null];
 
             $out[] = [
@@ -591,7 +610,7 @@ final class CapitalService
             ->posted()
             ->whereIn('person_id', $personIds)
             ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', DocumentStatus::CANCELLED)))
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
             ->get(['person_id', 'contributor_type', 'share_percent']);
@@ -732,11 +751,13 @@ final class CapitalService
      * আবার বিবরণ-খোঁজা ফিরিয়ে না আনেন:
      * [[Tests\Feature\Modules\Finance\TheCapWasSetOnANameAndTheNameChangedTest]]।
      */
-    private function withdrawnBy(int $personId): string
+    private function withdrawnBy(int $personId, bool $wholeCompany = true): string
     {
         $sum = Withdrawal::query()
             ->where('person_id', $personId)
             ->posted()
+            // ⛔ মূলধনের একই শাখা — হেডারে এক শাখা বাছা থাকলে মূলধন সেই শাখার, অথচ তোলা গোটা কোম্পানির গোনা হত: "অতিরিক্ত তোলা" ভুয়া (১৩ অক্টোবর ২০২৬)
+            ->when(! $wholeCompany, fn ($q) => $q->inViewedBranch())
 
             /*
              * ⛔ কেবল মূলধন তোলা — অডিট ম২৬, ৪ অক্টোবর ২০২৬। ⓘ বেতন একটা খরচ, আর লাভের ভাগ তোলা ঘোষিত দায়

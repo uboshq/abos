@@ -258,5 +258,9 @@ class FreeGoodsCarryLotsTest extends TestCase
             $recipients->contains(fn ($row) => (int) $row->customer_id === $this->customer->id),
             'ফ্রি পাওয়া ক্রেতা রিকলের তালিকায় নেই',
         );
+
+        // ⛔ পরিমাণও — আগে ফ্রি-র সারি ০ দেখাত, রিকলে "কত ফেরাতে হবে" ভুল (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $this->assertSame(0, bccomp('5', (string) $recipients->sum(fn ($row) => (float) $row->qty), 4),
+            '⛔ ফ্রি পাওয়া ক্রেতার পরিমাণ রিকলের তালিকায় ভুল।');
     }
 }

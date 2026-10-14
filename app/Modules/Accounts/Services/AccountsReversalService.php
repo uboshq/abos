@@ -45,6 +45,7 @@ final class AccountsReversalService
         $reason = $this->reason($reason);
 
         return DB::transaction(function () use ($voucher, $by, $reason) {
+            // ⓘ শাখার দেয়াল ছাড়া — ডাকার জায়গা ভাউচারটা আগেই হাতে পেয়েছে; আন্তঃকোম্পানির শাখাহীন দিক দেয়ালে লুকাত ([[AnInterCompanyTransferIsUndoneOnBothSidesOrNotAtAllTest]])
             $locked = Voucher::acrossBranches()->lockForUpdate()->findOrFail($voucher->id);
 
             if (! $locked->isPosted() || $locked->isCancelled()) {

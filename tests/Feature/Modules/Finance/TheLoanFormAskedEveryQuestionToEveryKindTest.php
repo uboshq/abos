@@ -121,6 +121,36 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
     }
 
     /**
+     * ⛔ দায় আর টাকার ঘর কেবল ড্রপডাউনের খাত নেয় — বানানো জমায় নগদ বা আয়ের খাত নয় (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️৫)।
+     */
+    public function test_the_liability_and_money_heads_take_only_what_the_form_offers(): void
+    {
+        $cash = Account::query()->money()->postable()->firstOrFail();
+        $income = Account::query()->postable()->where('type', Account::INCOME)->firstOrFail();
+        $before = BankFacility::query()->count();
+
+        $this->post(route('finance.bank_facility.store'), $this->terms(['liability_account_id' => $cash->id]))
+            ->assertSessionHasErrors('liability_account_id');
+        $this->post(route('finance.bank_facility.store'), $this->terms(['money_account_id' => $income->id]))
+            ->assertSessionHasErrors('money_account_id');
+
+        $this->assertSame($before, BankFacility::query()->count(), '⛔ ভুল খাতে ঋণ বসল');
+    }
+
+    /**
+     * ⛔ "1e5" বকেয়া কারণ বলে থামে, ৫০০ নয়; শতাংশের চার্জ ১০০-এর বেশি নয়, থোক চার্জ পারে (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⓘ৮–৯)।
+     */
+    public function test_an_exponent_amount_and_a_charge_past_a_hundred_percent_are_refused(): void
+    {
+        $this->post(route('finance.bank_facility.store'), $this->terms(['already_running' => '1', 'opening_drawn' => '1e5', 'instalments_paid' => 2]))
+            ->assertSessionHasErrors('opening_drawn');
+        $this->post(route('finance.bank_facility.store'), $this->terms(['early_charge_kind' => BankFacility::CHARGE_PERCENT, 'early_charge' => '150']))
+            ->assertSessionHasErrors('early_charge');
+        $this->post(route('finance.bank_facility.store'), $this->terms(['early_charge_kind' => BankFacility::CHARGE_FLAT, 'early_charge' => '150']))
+            ->assertSessionHasNoErrors();
+    }
+
+    /**
      * ⛔ নতুন ঋণে কোনো খোলা দাখিলা বসে না — টাকা আসে রসিদ ভাউচারে।
      */
     public function test_a_new_loan_posts_no_opening_at_all(): void
@@ -313,6 +343,25 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
             ->sum(DB::raw('ledger_entries.debit - ledger_entries.credit'));
     }
 
+    /**
+     * ⛔ মঞ্জুরির আগের নবায়নের দিন আর ১০০%-এর বেশি আগাম শোধের চার্জ নেওয়া হত — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+     */
+    public function test_a_renewal_before_the_sanction_and_a_charge_over_a_hundred_percent_are_refused(): void
+    {
+        $this->post(route('finance.bank_facility.store'), $this->terms([
+            'sanctioned_on' => '2026-10-01', 'renews_on' => '2025-10-01',
+        ]))->assertSessionHasErrors('renews_on');
+
+        $this->post(route('finance.bank_facility.store'), $this->terms([
+            'early_charge' => '500', 'early_charge_kind' => BankFacility::CHARGE_PERCENT, 'early_charge_basis' => BankFacility::ON_PRINCIPAL,
+        ]))->assertSessionHasErrors('early_charge');
+
+        // ⓘ থোক অঙ্কে ১০০-এর বেশি চলে
+        $this->post(route('finance.bank_facility.store'), $this->terms([
+            'early_charge' => '500', 'early_charge_kind' => BankFacility::CHARGE_FLAT,
+        ]))->assertSessionDoesntHaveErrors('early_charge');
+    }
+
     /** আগে থেকেই চলা একটা মেয়াদি ঋণ — ছয় লাখ বকেয়া, দুইটা কিস্তি দেওয়া। */
     private function openRunningLoan(array $with = []): BankFacility
     {
@@ -333,9 +382,8 @@ final class TheLoanFormAskedEveryQuestionToEveryKindTest extends TestCase
      */
     private function terms(array $with = []): array
     {
-        $liability = Account::query()->postable()
-            ->where('code', StandardChart::PAYABLE)->first()
-            ?? Account::query()->postable()->where('nature', Account::CREDIT)->firstOrFail();
+        // ⓘ মেয়াদি ঋণের দায়ের খাত ২২১১ — ফর্ম এখন ঋণের তিনটা খাতের বাইরে কিছু নেয় না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬, ⚠️৫)
+        $liability = Account::query()->postable()->where('code', '2211')->firstOrFail();
 
         return array_merge([
             'kind' => BankFacility::TERM,

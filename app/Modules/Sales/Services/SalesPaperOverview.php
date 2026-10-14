@@ -286,7 +286,8 @@ final class SalesPaperOverview
             return;
         }
 
-        $o->money(__('sales::overview_confirm.limit'), Money::format((string) $customer->credit_limit));
+        // ⛔ চলতি সীমা — দেয়াল যা মাপে, অস্থায়ী সীমাসহ (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
+        $o->money(__('sales::overview_confirm.limit'), Money::format($customer->effectiveCreditLimit()));
 
         if ($wall === null) {
             return;

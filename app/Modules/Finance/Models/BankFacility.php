@@ -41,7 +41,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * যেত — নকশার নমুনায় ঠিক সেটাই ঘটেছিল, আর গ্যারান্টির হিসাব দাঁড়িয়েছিল
  * ৩ লক্ষ ৬০ হাজার কোটি টাকা।
  */
-class BankFacility extends Model implements Drillable
+class BankFacility extends Model implements Drillable, \App\Core\Contracts\AcceptsVouchers
 {
     use BelongsToCompany;
     use HasFactory;
@@ -72,6 +72,15 @@ class BankFacility extends Model implements Drillable
 
     /** @var list<string> */
     public const KINDS = [self::CC, self::TERM, self::LTR, self::LEASE, self::GUARANTEE];
+
+    /**
+     * ⛔ চালু সুবিধাই ভাউচার নেয় — খসড়া বা বন্ধ সুবিধার বিপরীতে টাকা তোলা বা জমা নয় (fe, ১৪ অক্টোবর ২০২৬; [[AClosedFacilityTakesNoVoucherTest]])।
+     * ⓘ সুবিধার খাত সব ঋণের ভাগের, তাই খাত বন্ধ করা যায় না; Accounts প্রশ্নটা চুক্তি দিয়ে করে ([[\App\Core\Contracts\AcceptsVouchers]])।
+     */
+    public function acceptsVouchers(): bool
+    {
+        return $this->status === DocumentStatus::CONFIRMED;
+    }
 
     /**
      * মাঝপথে শোধ করলে ব্যাংক যা নেয় — শতাংশ, নাকি থোক।

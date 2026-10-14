@@ -18,6 +18,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Http\Requests\SalesInvoiceRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\ChallanBills;
 use App\Modules\Sales\Services\DirectSaleService;
@@ -54,39 +55,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = SalesInvoice::query()
-            ->search($request->query('q'))
-            /*
-             * ⭐ কাউন্টারের রাখা খসড়া এখানে নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
-             * *"খসড়া challan r Invoice list e zabena, sekhane sudu pure challan guloi"*।
-             * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
-             * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
-             */
-            // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
-            ->whereNotIn('sal_invoices.id', DirectSaleService::openCounterDrafts()->select('sal_invoices.id'))
-            ->with(['customer.location'])
-            /*
-             * এক গ্রাহকের চালানগুলো।
-             *
-             * ── কেন খোঁজার ঘর দিয়ে নয় ───────────────────────────────
-             * গ্রাহকের পাতা থেকে "৭টা চালান" ঘরে ক্লিক করলে এখানে আসা
-             * হয়। ওই লিংকটা `?q=<গ্রাহকের নাম>` দিয়ে বানানো যেত, আর
-             * তাতে কাজও হত — যতক্ষণ না দুইজন গ্রাহকের নামে একই শব্দ
-             * থাকে। তখন সংখ্যাটা বলত সাত, তালিকা দেখাত নয়, আর কেউ
-             * বুঝতেন না কোনটা ভুল।
-             *
-             * আইডি ধরে ছাঁকলে সংখ্যা আর তালিকা সবসময় একই কথা বলে।
-             *
-             * ── কেন `whereKey` নয় ────────────────────────────────────
-             * মানটা কোয়েরি-স্ট্রিং থেকে আসে, তাই যেকোনো কিছু হতে পারে।
-             * `(int)` করার পর অসংখ্যা মান ০ হয়, আর ০ কোনো গ্রাহক নয় —
-             * তখন ছাঁকনিটা বসেই না, ফলে পর্দা ভাঙে না।
-             */
-            ->when((int) $request->query('customer') > 0,
-                fn ($q) => $q->where('customer_id', (int) $request->query('customer')))
-            // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
-            ->when(! $request->boolean('cancelled'),
-                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
+        $query = self::listed($request);
 
         /*
          * ধাপের পটির কোয়েরিটা **অবস্থার ছাঁকনি বসানোর আগে**।
@@ -205,6 +174,49 @@ class SalesInvoiceController extends Controller implements HasMiddleware
     }
 
     /**
+     * ⭐ তালিকার কোয়েরি — ওয়েবের তালিকা আর ফোনের তালিকা ([[SalesPaperApiController]]) একই দরজা দিয়ে ঢোকে (১৩ অক্টোবর ২০২৬)।
+     * ⓘ দেয়াল মডেলের নিজের স্কোপে (কোম্পানি, দেখার শাখা, বিক্রয়কর্মীর ডিলার)।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function listed(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        return SalesInvoice::query()
+            ->search($request->query('q'))
+            /*
+             * ⭐ কাউন্টারের রাখা খসড়া এখানে নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+             * *"খসড়া challan r Invoice list e zabena, sekhane sudu pure challan guloi"*।
+             * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
+             * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
+             */
+            // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
+            ->whereNotIn('sal_invoices.id', DirectSaleService::openCounterDrafts()->select('sal_invoices.id'))
+            ->with(['customer.location'])
+            /*
+             * এক গ্রাহকের চালানগুলো।
+             *
+             * ── কেন খোঁজার ঘর দিয়ে নয় ───────────────────────────────
+             * গ্রাহকের পাতা থেকে "৭টা চালান" ঘরে ক্লিক করলে এখানে আসা
+             * হয়। ওই লিংকটা `?q=<গ্রাহকের নাম>` দিয়ে বানানো যেত, আর
+             * তাতে কাজও হত — যতক্ষণ না দুইজন গ্রাহকের নামে একই শব্দ
+             * থাকে। তখন সংখ্যাটা বলত সাত, তালিকা দেখাত নয়, আর কেউ
+             * বুঝতেন না কোনটা ভুল।
+             *
+             * আইডি ধরে ছাঁকলে সংখ্যা আর তালিকা সবসময় একই কথা বলে।
+             *
+             * ── কেন `whereKey` নয় ────────────────────────────────────
+             * মানটা কোয়েরি-স্ট্রিং থেকে আসে, তাই যেকোনো কিছু হতে পারে।
+             * `(int)` করার পর অসংখ্যা মান ০ হয়, আর ০ কোনো গ্রাহক নয় —
+             * তখন ছাঁকনিটা বসেই না, ফলে পর্দা ভাঙে না।
+             */
+            ->when((int) $request->query('customer') > 0,
+                fn ($q) => $q->where('customer_id', (int) $request->query('customer')))
+            // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
+            ->when(! $request->boolean('cancelled'),
+                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
+    }
+
+    /**
      * বিল কেবল একটা কাগজের উপর বসে — শূন্য থেকে নয়।
      *
      * ── ⛔ মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────
@@ -299,10 +311,22 @@ class SalesInvoiceController extends Controller implements HasMiddleware
     {
         $invoice->load(['lines.product', 'lines.challanLine']);
 
+        /*
+         * ⛔ চালান থেকে আসা খসড়ার সম্পাদনায় চালানের সারিগুলোও — দরজা PUT-এ প্রতিটা সারি বিলের চালানের সারি চায়
+         * ([[SalesInvoiceRequest::after()]]; Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে ফর্মে চালানের ঘরই আসত না:
+         * সংরক্ষণে সারির চালান-যোগ মুছে যেত (চালান আবার "বিল বাকি" দেখাত), আর দরজার পাহারার পরে প্রতিটা সম্পাদনা আটকাত।
+         */
+        $challanIds = $invoice->lines->pluck('challanLine.delivery_challan_id')->filter()->unique()->values();
+
         return view('sales::invoice.form', [
             'menu' => $this->menu->forUser($request->user()),
             'invoice' => $invoice,
             'challan' => null,
+            'challanLineOptions' => $challanIds->isEmpty() ? null : DeliveryChallanLine::query()
+                ->with('product')
+                ->whereIn('delivery_challan_id', $challanIds)
+                ->orderBy('delivery_challan_id')->orderBy('id')
+                ->get(),
             ...$this->formData(),
         ]);
     }

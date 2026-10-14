@@ -282,7 +282,7 @@ class EmployeeController extends Controller implements HasMiddleware
             }
         }
 
-        return $request->validate([
+        $data = $request->validate([
             // খালি রাখলে সিরিজ থেকে বসে — EmployeeService::create() দেখুন
             'code' => ['nullable', 'string', 'max:32'],
             'name_en' => ['required', 'string', 'max:120'],
@@ -336,7 +336,16 @@ class EmployeeController extends Controller implements HasMiddleware
                     }
                 }],
 
-            'branch_id' => ['nullable', 'integer',
+            /*
+             * ⛔ সীমিত নাগালের মানুষ কর্মীকে "কোনো শাখা নয়"-তে সরাতে পারেন না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+             * ([[TheSmallHrWallsHoldTest]])। ⓘ ঘরটা `nullable`, আর খালি মানে নিচের নাগালের পাহারা চলেই না; শাখাহীন কর্মী সব শাখার
+             * নাগালে ([[BranchReach]]), তাই এক শাখার HR খালি পাঠিয়ে নিজের কর্মীকে সবার চোখে খুলে দিতেন। আগে থেকেই শাখাহীন (প্রধান
+             * অফিসের) কর্মী শাখাহীন রেখে সেভ করা আটকায় না — সেটা সরানো নয়।
+             */
+            'branch_id' => [
+                Rule::requiredIf(fn (): bool => app(BranchReach::class)->branches($request->user()) !== null
+                    && ! ($employee !== null && $employee->branch_id === null)),
+                'nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', $companyId),
                 // ⓘ নিজের নাগালের বাইরের শাখায় কর্মী বসানো যায় না — নাহলে
                 // বসিয়েই তিনি আর তাঁকে দেখতে পেতেন না
@@ -384,7 +393,22 @@ class EmployeeController extends Controller implements HasMiddleware
             'bank_account_no' => ['nullable', 'string', 'max:64'],
             'bank_routing_no' => ['nullable', 'string', 'max:32'],
             'mfs_number' => ['nullable', 'string', 'max:32'],
+        ], [
+            'branch_id.required' => __('hr::validation.branch_required'),
         ]);
+
+        /*
+         * ⛔ যাচাইয়ের পরেও আবার — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ উপরের ছাঁকনি কেবল ফর্মের ঘর সরায়, অথচ `validate()`
+         * ঠিকানার query-ও পড়ে: `PUT /hr/employees/12?bank_account_no=…` পাঠালে পরিচয়ের চাবি ছাড়াই ব্যাংকের নম্বর বদলাত, আর পরের
+         * ব্যাংক-ফাইল বেতন সেই হিসাবে পাঠাত — যিনি বদলালেন তিনি আগের নম্বরটা কখনো দেখেননি।
+         */
+        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+            if (! FieldSecurity::visible(Employee::class, $guarded)) {
+                unset($data[$guarded]);
+            }
+        }
+
+        return $data;
     }
 
     /**

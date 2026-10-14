@@ -144,7 +144,9 @@ final class SettingsService
          */
         return $this->definitions = $definitions
             + $this->menuSwitches($definitions)
-            + PhoneModules::definitionsFor($this->registry);
+            + PhoneModules::definitionsFor($this->registry)
+            // ⭐ অ্যাপের ভিতরে ওয়েবের পর্দা — কোম্পানির সুইচ, চালু থাকে ([[WebInsideApp]], ১৩ অক্টোবর ২০২৬)
+            + WebInsideApp::definitions();
     }
 
     /**

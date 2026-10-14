@@ -78,6 +78,7 @@ return [
     'prepaid_note' => 'The part of a paid premium whose term has not come yet moves from expense to prepaid insurance (1136); it reverses itself on the 1st of the next month.',
     'prepaid_done' => 'Prepaid insurance booked: :prepaid parts; :reversed from earlier months reversed.',
     'prepaid_month_not_over' => 'The month is not over yet — only a finished month can be booked.',
+    'prepaid_month_closed' => ':month is closed — prepaid insurance is not set aside in a closed month. Nothing was posted.',
     'prepaid_narration' => 'Prepaid insurance — :month · policy :policy · :left of :total days of the term left',
     'prepaid_reversal_narration' => 'Prepaid insurance reversed — :month · policy :policy',
     'prepaid_days' => 'Days left',

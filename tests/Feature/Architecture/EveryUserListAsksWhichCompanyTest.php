@@ -96,6 +96,9 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
     private const EXEMPT = [
         'app/Http/Controllers/Auth/LoginController.php' => 'লগইনের মুহূর্তে কোনো কোম্পানি বাছাই হয়নি — ছাঁকনির প্রসঙ্গই নেই',
 
+        'app/Http/Controllers/Auth/WebHandoffController.php' => 'অ্যাপের ভিতরের ওয়েবের চাবি খরচ — লগইনের আগের মুহূর্ত, কোনো কোম্পানির প্রসঙ্গ নেই; '
+            .'একটাই `find()`, চাবির সারিতে বাঁধা মানুষটার, আর তার পরেই `switchCompany()` সদস্যপদ যাচাই করে',
+
         'app/Http/Controllers/WorkspaceController.php' => 'কোম্পানি সুইচার — ব্যবহারকারীর **নিজের** কোম্পানিগুলো দেখায়, '
             .'আর `switchCompany()` নিজে অধিকার যাচাই করে',
 

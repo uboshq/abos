@@ -27,6 +27,7 @@ return [
     'why_needs_code' => 'Two-step code not given',
     'why_wrong_code' => 'Two-step code wrong',
     'why_locked' => 'Locked after repeated failures',
+    'why_handoff_refused' => 'In-app web key refused',
     'error_why' => 'What the system wrote down for itself when something failed. The same fault appearing again adds to its count rather than making a new row.',
     'broke_on_page' => 'Failed on this page: :page',
     'broke_in_background' => 'Failed in a background job (not a page)',

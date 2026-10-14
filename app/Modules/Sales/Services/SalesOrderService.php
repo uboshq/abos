@@ -128,6 +128,14 @@ final class SalesOrderService
         $this->assertHasLines($lines);
 
         return DB::transaction(function () use ($order, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে "খসড়া কি না"
+             * দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত আর আরেক ট্যাবে সম্পাদনা একসাথে হলে সম্পাদনা পাকা কাগজের সারি আর অঙ্ক
+             * বদলে দিত — খাতা এক কথা, কাগজ আরেক।
+             */
+            $this->lockAndReread($order);
+            $this->assertEditable($order);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $order->trx_date);
 
             $order->update([
@@ -262,6 +270,8 @@ final class SalesOrderService
             ]);
         }
 
+        $this->assertNotRejected($order);
+
         $order->loadMissing(['lines.product', 'warehouse']);
 
         return DB::transaction(function () use ($order, $reason) {
@@ -276,6 +286,7 @@ final class SalesOrderService
 
             // ⛔ বন্ধ আদেশের ধরা মাল বন্ধেই ছাড়া হয়েছে — বাতিলে আবার ছাড়লে Reserved ঋণাত্মক হত
             $this->assertNotClosed($order);
+            $this->assertNotRejected($order);
 
             // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
             app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesOrder::drillSourceType(), (int) $order->id);
@@ -412,14 +423,21 @@ final class SalesOrderService
     {
         $moved = 0;
 
-        $held = SalesOrder::query()
+        /*
+         * ⛔ গ্রাহকের সব শাখার আটকে থাকা কাগজ — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⚠️ আগে খোঁজা হত টাকা যিনি তুললেন
+         * তাঁর হেডারের শাখার দেয়ালে: শাখা ক-তে টাকা এলে শাখা খ-এর আটকে থাকা কাগজ আটকেই থাকত, অথচ বাকির সীমা গ্রাহকের গোটা।
+         * ⓘ প্রতিটা কাগজের যাচাই তার নিজের শাখায়।
+         */
+        $held = SalesOrder::acrossBranches()->withoutGlobalScope(SalesOrder::DEALER_WALL)
             ->where('customer_id', $customerId)
             ->where('status', SalesOrderStatus::CREDIT_HELD)
             ->orderBy('credit_held_at')->orderBy('id')
             ->get();
 
         foreach ($held as $order) {
-            if ($this->recheckCredit($order) !== SalesOrderStatus::CREDIT_HELD) {
+            $branchId = $order->branch_id === null ? null : (int) $order->branch_id;
+
+            if (CompanyContext::inBranch($branchId, fn () => $this->recheckCredit($order)) !== SalesOrderStatus::CREDIT_HELD) {
                 $moved++;
             }
         }
@@ -548,6 +566,12 @@ final class SalesOrderService
         if (in_array($order->status, SalesOrderStatus::FINISHED, true)) {
             return $order;
         }
+
+        /*
+         * ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে ফেরানো আদেশে
+         * কুপন খরচ আর পয়েন্ট কাটা থেকেই যেত; একমাত্র পথ ছিল ফেরানো আদেশ আবার "বাতিল" করা। ⓘ দ্বিতীয়বার ডাকলে কিছুই হয় না।
+         */
+        app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesOrder::drillSourceType(), (int) $order->id);
 
         $order->forceFill([
             'status' => SalesOrderStatus::REJECTED,
@@ -1035,6 +1059,19 @@ final class SalesOrderService
         }
 
         return $year;
+    }
+
+    /**
+     * ⛔ ফেরানো আদেশ আর বাতিল হয় না — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ ফেরানোতেই হোল্ড ছাড়া আর অফার ফেরে
+     * ([[reject()]]); আবার বাতিলে "ফেরানো"-র ছাপ মুছে যেত আর ছাড়ার সংকেত দ্বিতীয়বার যেত।
+     */
+    private function assertNotRejected(SalesOrder $order): void
+    {
+        if ($order->status === SalesOrderStatus::REJECTED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::order_status.rejected_cannot_cancel', ['no' => $order->document_no]),
+            ]);
+        }
     }
 
     /**

@@ -113,6 +113,20 @@ return [
     'posting' => [
         'reversal_of' => 'Reversal of :document',
         'unbalanced' => 'Debit and credit do not match',
+        'refused' => 'Could not post to the books — :reason',
+        'nothing_to_post' => 'There are no lines to post.',
+        'both_sides' => 'Line :line carries both a debit and a credit — split it into two lines.',
+        'zero_line' => 'Line :line is zero on both sides.',
+        'already_posted' => 'This paper is already in the books — reverse it before posting again.',
+        'nothing_to_reverse' => 'Nothing to reverse — this paper never reached the books.',
+        'unbalanced_amounts' => 'Debit :debit and credit :credit do not match (difference :difference) — nothing was written.',
+        'unknown_account' => 'Line :line points at an account that is not in this company — nothing was written.',
+        'wrong_party' => 'Line :line: account :code does not hold this party — a party sits only on the account that keeps its balance.',
+        'group_account' => 'Line :line: :code is a group — a group takes no entries of its own; pick one beneath it.',
+        'inactive_account' => 'Line :line: account :code is inactive — activate it or pick another.',
+        'no_year' => 'No financial year covers :date — open that year first.',
+        'year_closed' => 'Financial year :name is closed — reopening it is an approved action, not a side effect of posting.',
+        'party_on_money' => 'Line :line: :code is a money account — cash, bank and mobile money hold no party dues; put the party on its receivable or payable.',
     ],
 
     /*

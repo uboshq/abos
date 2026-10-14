@@ -15,6 +15,9 @@ class CustomerHit {
   final String? detail;
 }
 
+/// ⭐ The grey line under a web screen's name — it opens inside the app, but it is the web's own screen.
+const String webRowNote = 'ওয়েবের পর্দা';
+
 /// What a search result opens: `/home/<path>`, remembered as [label].
 class NavPick {
   const NavPick(this.path, this.label);
@@ -162,7 +165,9 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
             key: ValueKey('hit-${row.path}'),
             leading: _Dot(color: AppColors.moduleColor(row.module), icon: row.icon),
             title: Text(row.label),
-            subtitle: Text(NavCatalog.moduleDef(row.module)?.label ?? 'আমি',
+            // ⓘ ওয়েবের পর্দা হলে বলে দেয় — খোলে অ্যাপের ভিতরেই
+            subtitle: Text(
+                [tree.moduleLabel(row.module) ?? 'আমি', if (row.web) webRowNote].join(' · '),
                 style: const TextStyle(fontSize: 12)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => close(context, NavPick(row.path!, row.label)),

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\DataScope;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Reports\DepositReports;
@@ -128,6 +130,7 @@ final class DueNotices
                 ]),
                 quietDays: null,
                 data: $this->facts($deposit->document_no, null, $deposit->matures_on),
+                branchId: $deposit->branch_id,
             );
         }
 
@@ -160,6 +163,7 @@ final class DueNotices
                     ? __('finance::deposit_report.notice_matured_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => -$days])
                     : __('finance::message.notice_maturing_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => $days]),
                 data: $this->facts($deposit->document_no, null, $deposit->matures_on),
+                branchId: $deposit->branch_id,
             );
         }
 
@@ -202,6 +206,7 @@ final class DueNotices
                     'amount' => Money::format($owed[$deposit->id]['amount']),
                 ]),
                 data: $this->facts($deposit->document_no, $owed[$deposit->id]['amount'], null),
+                branchId: $deposit->branch_id,
             );
         }
 
@@ -258,6 +263,7 @@ final class DueNotices
                     'days' => $this->daysLeft($due),
                 ]),
                 data: $this->facts(null, $this->balanceOf($account), $due, $account->person?->name()),
+                branchId: $account->branch_id,
             );
         }
 
@@ -293,6 +299,7 @@ final class DueNotices
                     'no' => $due['month'],
                 ]),
                 data: $this->facts($facility->document_no, (string) $due['amount'], Carbon::parse($due['due_on']), $facility->bank),
+                branchId: $facility->branch_id,
             );
         }
 
@@ -314,6 +321,7 @@ final class DueNotices
                 __('finance::bank_loan_report.notice_renewal', ['facility' => trim($facility->bank.' · '.$facility->document_no, ' ·')]),
                 __('finance::bank_loan_report.notice_renewal_body', ['date' => $facility->renews_on->translatedFormat('j M Y')]),
                 data: $this->facts($facility->document_no, null, $facility->renews_on, $facility->bank),
+                branchId: $facility->branch_id,
             );
         }
 
@@ -335,6 +343,7 @@ final class DueNotices
                 __('finance::insurance_alert.notice_renewal', ['policy' => $policy->policy_no, 'insurer' => $policy->institution?->name() ?? '']),
                 __('finance::insurance_alert.notice_renewal_body', ['date' => $policy->ends_on->translatedFormat('j M Y'), 'days' => $policy->daysLeft()]),
                 data: $this->facts($policy->policy_no, null, $policy->ends_on, $policy->institution?->name()),
+                branchId: $policy->branch_id,
             );
         }
 
@@ -359,6 +368,7 @@ final class DueNotices
                     'date' => $premium->period_from->translatedFormat('j M Y'),
                 ]),
                 data: $this->facts($premium->policy?->policy_no, (string) $premium->amount, $premium->period_from),
+                branchId: $premium->policy?->branch_id,
             );
         }
 
@@ -385,13 +395,23 @@ final class DueNotices
      * যাঁদের পর্দাটা দেখার অধিকার আছে, তাঁদের বলা — আর যাঁকে এই সপ্তাহে
      * এই কাগজের খবর দেওয়া হয়েছে তাঁকে আবার নয়।
      *
+     * ⛔ কাগজের শাখা যাঁর নাগালে নেই, তাঁকে নয় — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। জমা, হাতধার, ব্যাংক ঋণ আর বীমার
+     * পাতা নাগালের বাইরের সারি খোলে না ([[OpensOnlyInReach]]), অথচ খবরটা কাগজের নম্বর, প্রতিষ্ঠান, পক্ষের নাম আর অঙ্ক নিয়ে
+     * আগে সবার কাছেই যেত — এক শাখায় আটকানো মানুষ অন্য শাখার "করিম, ৮০,০০০" পড়তেন, আর লিংকে ৪০৪। ⓘ শাখাহীন কাগজ
+     * সবার নাগালে, [[DataScope::allows()]]-এর নিয়মে।
+     *
      * @return int কয়জনের কাছে সত্যিই গেল
      */
-    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS, array $data = []): int
+    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS, array $data = [], int|string|null $branchId = null): int
     {
         $sent = 0;
+        $scope = app(DataScope::class);
 
         foreach ($this->whoCan($permission) as $user) {
+            if (! $scope->allows($user, UserDataScope::BRANCH, $branchId === null ? null : (int) $branchId)) {
+                continue;
+            }
+
             if ($this->toldRecently($user->id, $type, $url, $quietDays)) {
                 continue;
             }

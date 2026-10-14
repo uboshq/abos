@@ -140,11 +140,23 @@ final class SalesReturnService
         $lines = $this->bills->bind(['customer_id' => $return->customer_id] + $data, $lines, $return->id);
 
         return DB::transaction(function () use ($return, $data, $lines) {
+            /*
+             * ⛔ তালার ভিতরে অবস্থা আবার — নিশ্চিত/বাতিলের মতোই (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⚠️ আগে "খসড়া কি না"
+             * দেখা হত হাতের কপি থেকে: এক ট্যাবে নিশ্চিত আর আরেক ট্যাবে সম্পাদনা একসাথে হলে সম্পাদনা পাকা কাগজের সারি আর অঙ্ক
+             * বদলে দিত — খাতা এক কথা, কাগজ আরেক।
+             */
+            $this->lockAndReread($return);
+            $this->assertEditable($return);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $return->trx_date);
 
             $return->update([
                 'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? $return->warehouse_id)->id,
                 'sales_invoice_id' => $data['sales_invoice_id'] ?? null,
+                // ⛔ বিল বদলালে বিক্রির নম্বরও — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬ (আগে পুরনো বিলের নম্বর থেকে যেত, সূত্র ভুল বিলে)
+                'sale_no' => isset($data['sales_invoice_id'])
+                    ? SalesInvoice::query()->whereKey($data['sales_invoice_id'])->value('sale_no')
+                    : null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
                 'reason_note' => $data['reason_note'] ?? null,
                 'trx_date' => $trxDate->toDateString(),

@@ -374,7 +374,8 @@ final class PaymentService
                 $cheque = $payment->cheque;
 
                 if ($cheque !== null && $cheque->status !== Cheque::CANCELLED) {
-                    $this->cheques->cancel($cheque, $reason, $date);
+                    // ⛔ পরিশোধ এখনই বাতিল, তাই চেকের উল্টোও এখনই — ফেরতের সইয়ে অপেক্ষা নয় ([[ACancelledChequeUndidNothingTest]])
+                    $this->cheques->cancel($cheque, $reason, $date, asksItsSignature: false);
                 }
             } elseif ($payment->status === DocumentStatus::CONFIRMED) {
                 /*

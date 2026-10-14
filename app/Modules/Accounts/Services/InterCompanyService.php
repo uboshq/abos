@@ -249,7 +249,16 @@ final class InterCompanyService
 
             $draft = $locked->status === DocumentStatus::DRAFT;
             $undo = function (?int $voucherId) use ($user, $reason, $draft): void {
-                $voucher = $voucherId === null ? null : Voucher::query()->find($voucherId);
+                /*
+                 * ⛔ শাখার দেয়াল ছাড়া খোঁজা, আর না পেলে থামা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+                 * ([[AnInterCompanyReverseUndoesBothBooksTest]])। ⓘ পাওয়ার দিকের ভাউচার শাখাহীন, আর হেডারে একটা শাখা বাছা থাকলে
+                 * শাখার দেয়াল তাকে লুকাত: খোঁজা `null`, চুপচাপ ফেরা — এক কোম্পানির দিক উল্টাত, অন্যটা খাতায় থেকে যেত, অথচ কাগজ "বাতিল"।
+                 */
+                $voucher = $voucherId === null ? null : Voucher::acrossBranches()->find($voucherId);
+
+                if ($voucherId !== null && $voucher === null) {
+                    throw ValidationException::withMessages(['status' => __('accounts::validation.inter_company_side_missing')]);
+                }
 
                 if ($voucher === null || $voucher->isCancelled()) {
                     return;
@@ -279,10 +288,11 @@ final class InterCompanyService
      */
     private function postBothSides(InterCompanyTransfer $transfer, Company $counter): InterCompanyTransfer
     {
-        $this->vouchers->post(Voucher::query()->findOrFail($transfer->out_voucher_id));
+        // ⓘ শাখার দেয়াল ছাড়া — উল্টানোর একই কারণ ([[AnInterCompanyReverseUndoesBothBooksTest]])
+        $this->vouchers->post(Voucher::acrossBranches()->findOrFail($transfer->out_voucher_id));
 
         $this->inTheirBooks($counter, fn () => CompanyContext::forCompany((int) $counter->id,
-            fn () => $this->vouchers->post(Voucher::query()->findOrFail($transfer->in_voucher_id))));
+            fn () => $this->vouchers->post(Voucher::acrossBranches()->findOrFail($transfer->in_voucher_id))));
 
         $transfer->status = DocumentStatus::CONFIRMED;
         $transfer->save();

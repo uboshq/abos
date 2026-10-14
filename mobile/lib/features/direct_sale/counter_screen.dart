@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/direct_sale_api.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/records/customer_record.dart';
@@ -310,13 +312,16 @@ class _CounterScreenState extends State<CounterScreen> {
       if (!mounted) return;
       setState(() => _busy =
           false); // ⓘ পপ-আপের আগেই — নইলে "চলছে" দাগ পপ-আপের পেছনে ঘুরতেই থাকে
-      await _popup(
+      // ⭐ পাকা বিক্রির পরে "বিলটা দেখুন" — বিলের পাতায় (মালিক, ১৩ অক্টোবর ২০২৬: বিক্রির পরে বিলটা ফোনে কোথাও ছিল না)
+      final billId = result.status == 'done' ? result.invoiceId : null;
+      final open = await _popup(
         switch (result.status) {
           'done' => 'বিক্রি হলো',
           'parked' => 'খসড়া রাখা হলো',
           _ => 'সইয়ের অপেক্ষায়',
         },
         result.notice,
+        action: billId == null ? null : 'বিলটা দেখুন',
       );
       if (mounted) {
         setState(() {
@@ -326,6 +331,9 @@ class _CounterScreenState extends State<CounterScreen> {
           }
           _startOver();
         });
+      }
+      if (open == true && billId != null && mounted) {
+        await context.push('/home/${RecentPapers.path('invoice', billId)}');
       }
     } catch (e) {
       // ⓘ সার্ভারের দেয়াল (ঋণসীমা, লট, দর …) — পপ-আপে, মালিকের নিয়ম
@@ -1074,7 +1082,8 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
-  Future<void> _popup(String title, String text) => showDialog<void>(
+  /// সার্ভারের কথা পপ-আপে; [action] দিলে দ্বিতীয় বোতাম — চাপলে true
+  Future<bool?> _popup(String title, String text, {String? action}) => showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           key: const ValueKey('counter-popup'),
@@ -1083,7 +1092,12 @@ class _CounterScreenState extends State<CounterScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('ঠিক আছে'))
+                child: const Text('ঠিক আছে')),
+            if (action != null)
+              FilledButton(
+                  key: const ValueKey('counter-open-bill'),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: Text(action)),
           ],
         ),
       );

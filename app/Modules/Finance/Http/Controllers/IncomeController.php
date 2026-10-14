@@ -58,8 +58,9 @@ class IncomeController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
-        $from = (string) $request->query('from', now()->startOfMonth()->toDateString());
-        $to = (string) $request->query('to', now()->endOfMonth()->toDateString());
+        // ⛔ কেবল সত্যিকারের তারিখ — আগে "from=abc" সরাসরি খাতার প্রশ্নে যেত, আর পাতা ৫০০ দিত (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $from = ExpenseController::day($request->query('from')) ?? now()->startOfMonth()->toDateString();
+        $to = ExpenseController::day($request->query('to')) ?? now()->endOfMonth()->toDateString();
 
         $rows = $this->heads->forParent(
             StandardChart::INCOME,

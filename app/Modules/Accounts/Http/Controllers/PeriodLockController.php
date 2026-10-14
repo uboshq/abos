@@ -161,8 +161,22 @@ class PeriodLockController extends Controller implements HasMiddleware
         $drafts = (int) ($rows['drafts']['count'] ?? 0);
         $awaiting = (int) ($rows['awaiting']['count'] ?? 0);
 
+        /*
+         * ⛔ অন্য মডিউলের কাগজও — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AMonthWaitsForEveryModulesPapersTest]])। ⓘ মাস-শেষের তালিকা
+         * কেবল ভাউচার গোনে; ২৮ আগস্টের আদায়, সরবরাহকারীর পরিশোধ বা স্থানান্তর সইয়ের অপেক্ষায় থাকতে আগস্ট বন্ধ হত, আর শেষ সইয়ে
+         * পোস্ট "মাস বন্ধ" বলে থামত — কাগজ চিরকাল আটকে, বছর বন্ধও আর হত না। বছর বন্ধের একই দুই প্রশ্ন ([[PostingBacklog]]): সইয়ের
+         * অপেক্ষা (সব মডিউল, ভাউচারসহ) আর নিশ্চিত হয়েও খাতায় না-ওঠা।
+         */
+        $backlog = app(\App\Modules\Accounts\Services\PostingBacklog::class);
+        $awaiting = max($awaiting, $backlog->awaitingSignatureBetween($month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString()));
+        $unposted = $backlog->countBetween($month->startOfMonth()->toDateString(), $month->endOfMonth()->toDateString());
+
         if ($drafts + $awaiting > 0) {
             return back()->withErrors(['month' => __('accounts::validation.month_has_open_papers', ['drafts' => $drafts, 'awaiting' => $awaiting])]);
+        }
+
+        if ($unposted > 0) {
+            return back()->withErrors(['month' => __('accounts::validation.month_has_unposted', ['count' => $unposted])]);
         }
 
         $lock = PeriodLock::query()->firstOrCreate(
@@ -211,6 +225,25 @@ class PeriodLockController extends Controller implements HasMiddleware
         ]);
 
         $label = $lock->label();
+
+        /*
+         * ⛔ পরের মাস তালাবন্ধ থাকলে আগেরটা খোলে না — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AnEarlierMonthStaysShutWhileALaterOneIsTest]])।
+         * ⓘ বন্ধের দিকে নিয়মটা আছে ([[earliestOpenMonthBefore()]]): আগের মাস খোলা রেখে পরেরটা বন্ধ নয়, কারণ আগের মাসে পরে বসা হিসাব
+         * পরের মাসের ছাপা শুরুর জের বদলায়। খোলার দিকে ছিল না — আগস্ট খুলে বসালে সেপ্টেম্বর "বন্ধ" দেখাত, অথচ তার শুরুর জের বদলে গেছে।
+         * ক্রম উল্টো: আগে পরের মাস খুলুন।
+         */
+        $later = PeriodLock::query()
+            ->where(fn ($q) => $q->where('year', '>', $lock->year)
+                ->orWhere(fn ($w) => $w->where('year', $lock->year)->where('month', '>', $lock->month)))
+            ->orderByDesc('year')->orderByDesc('month')
+            ->first();
+
+        if ($later !== null) {
+            return back()->withErrors(['reason' => __('accounts::validation.later_month_locked', [
+                'later' => $later->label(),
+                'month' => $label,
+            ])]);
+        }
 
         $this->audit->recordAction($lock, 'reopened', $data['reason']);
 

@@ -72,4 +72,33 @@ final class APartysBalanceNeverMetItsControlAccountTest extends TestCase
         // ⓘ পর্দায় নামসহ
         $this->get(route('accounts.integrity'))->assertOk()->assertSee(__('accounts::integrity.party_control'))->assertSee($receivable->code);
     }
+
+    /**
+     * ⛔ মালিকের মূলধনে নাম ছাড়া সারি "ভাঙা" নয় — লাইভের রাতের যাচাই, ১২–১৩ অক্টোবর ২০২৬।
+     *
+     * ⓘ খোলা জেরের প্রতিপক্ষ ৩১০০, নাম ছাড়া; মালিক একক মালিক। "person" বসাতে পারে, বাধ্য নয় — তাই এটা পক্ষ-নিয়ন্ত্রণ খাত নয়।
+     */
+    public function test_the_owners_capital_is_not_a_party_control_account(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+
+        $capital = StandardChart::find(StandardChart::OWNER_CAPITAL);
+        $capital->forceFill(['party_types' => ['person']])->save();
+        $cash = app(CashTillService::class)->ensurePrimaryTill()->account_id;
+
+        // ⓘ খোলা জেরের মতো — মূলধনে নাম ছাড়া
+        app(PostingEngine::class)->post(sourceType: 'test:capital', sourceId: 1, trxDate: now(), lines: [
+            ['account_id' => $cash, 'debit' => '700'],
+            ['account_id' => $capital->id, 'credit' => '700'],
+        ]);
+
+        $flagged = array_filter(AccountsChecks::partiesAddUpToTheirControlAccount()->run(),
+            fn (IntegrityFinding $f) => str_starts_with($f->what, $capital->code.' '));
+
+        $this->assertSame([], array_values($flagged), '⛔ মালিকের মূলধনের নামহীন অংশ রোজ রাতে "ভাঙা" দেখাচ্ছে');
+    }
 }

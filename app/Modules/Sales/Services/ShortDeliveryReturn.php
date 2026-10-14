@@ -134,7 +134,9 @@ final class ShortDeliveryReturn
      */
     private function reason(DeliveryEvent $event): ?ReasonCode
     {
-        $codes = ReasonCode::query()->inContext(ReasonCode::SALES_RETURN);
+        // ⛔ কেবল চালু কারণ — ফেরতের নিজের পাহারা বন্ধ কারণ ফেরায় ([[SalesReturnReasonGuard]]), তখন চালকের আংশিক পৌঁছানোই লেখা যেত না
+        // (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+        $codes = ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->active();
 
         if ($event->reason_code_id !== null) {
             $same = (clone $codes)->whereKey($event->reason_code_id)->first();
@@ -150,7 +152,7 @@ final class ShortDeliveryReturn
     /** ভাঙা মালের কারণ — ফেরতের তালিকার "ক্ষতিগ্রস্ত পণ্য" (`DAMAGE`); না থাকলে null, তখন আংশিকের কারণটাই */
     private function damageReason(): ?ReasonCode
     {
-        return ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->first();
+        return ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->active()->where('code', 'DAMAGE')->first();
     }
 
     /**

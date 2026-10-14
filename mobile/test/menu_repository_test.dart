@@ -82,7 +82,8 @@ void main() {
     );
 
     final items = await repository.menuFor(noPermissions);
-    expect(items.map((item) => item.key), ['sync_status']);
+    // ⓘ নোটিশ বোর্ড সবার — ওয়েবেও নোটিশ পাতায় চাবি নেই, কে কোনটা পাবেন সার্ভার বলে (১৩ অক্টোবর ২০২৬)
+    expect(items.map((item) => item.key), ['notices', 'sync_status']);
   });
 
 

@@ -304,6 +304,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // ⭐ লেখার পরে ঐ কোম্পানির ফোনে নীরব ডাক — রিয়েল-টাইম সিঙ্ক (মালিক, ১০ অক্টোবর ২০২৬)
             NudgePhonesAfterWrite::class,
+
+            // ⛔ অ্যাপের ভিতরে খোলা ওয়েবে SR মজুদ দেখেন না (মালিক, ১ ও ১৩ অক্টোবর ২০২৬) — ব্রাউজারে কিছু বদলায় না
+            \App\Http\Middleware\InAppHidesStock::class,
         ]);
 
         /*
@@ -414,8 +417,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * দামি ভুল হয়ে এসেছে ([[ErrorJournal]]-র উপরের কারণটা দেখুন)।
          */
         $exceptions->render(function (PostingException $e, Request $request) {
+            // ⛔ মানুষের ভাষায় — ইংরেজি কারণ কেবল লগে ([[PostingException::forPeople()]]; [[APostingRefusalSpeaksBanglaTest]])
             if ($request->expectsJson()) {
-                return response()->json(['message' => $e->getMessage()], 422);
+                return response()->json(['message' => $e->forPeople()], 422);
             }
 
             /*
@@ -425,7 +429,7 @@ return Application::configure(basePath: dirname(__DIR__))
              */
             return back()
                 ->withInput()
-                ->withErrors(['posting' => $e->getMessage()]);
+                ->withErrors(['posting' => $e->forPeople()]);
         });
 
         /*

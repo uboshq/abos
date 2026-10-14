@@ -60,6 +60,10 @@
                      থেকে যাচ্ছে: জিজ্ঞেস না করা আর না দেখানো এক কথা নয়।
                      হিসাবরক্ষক জানতে চান সংখ্যাটা কোন দিকের। --}}
                 {{ __('accounts::nature.' . $account->nature) }} · {{ __('accounts::type.' . $account->type) }}
+                {{-- ⓘ খোলা জের পাশসহ — "(Cr) 5,000.00" ([[Money::drCr()]]; মালিকের পক্ষ-খতিয়ানের নিয়ম) --}}
+                @if (bccomp($opening ?? '0', '0', 4) !== 0)
+                    · <span data-opening-balance>{{ __('accounts::field.opening_balance') }}: {{ \App\Core\Support\Money::drCr($opening) }}</span>
+                @endif
             </p>
         </section>
 

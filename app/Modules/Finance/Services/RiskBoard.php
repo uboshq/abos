@@ -224,7 +224,12 @@ final class RiskBoard
         $rows = Deposit::query()->open()
             ->with('kind')
             ->whereNotNull('matures_on')
-            ->whereBetween('matures_on', [$today->toDateString(), $today->copy()->addDays(self::HORIZON_DAYS)->toDateString()])
+            /*
+             * ⛔ মেয়াদ পেরিয়েও খোলা জমাও — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+             * আগে নিচের সীমা ছিল আজ, তাই গতকাল মেয়াদ শেষ হওয়া অথচ এখনো ACTIVE জমাটা এই বোর্ডে আসত না —
+             * অথচ মেয়াদের ঘণ্টা ([[DueNotices]]) ঠিক ওটার জন্যই প্রতি সপ্তাহে মনে করায়।
+             */
+            ->where('matures_on', '<=', $today->copy()->addDays(self::HORIZON_DAYS)->toDateString())
             ->get();
 
         if ($rows->isEmpty()) {
@@ -266,7 +271,12 @@ final class RiskBoard
             ->where('status', LoanInstalment::DUE)
             ->whereHas('loan', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)
                 ->where('direction', Loan::TAKEN))
-            ->whereBetween('due_date', [$today->toDateString(), $today->copy()->addDays(self::HORIZON_DAYS)->toDateString()])
+            /*
+             * ⛔ দিন পেরোনো না-দেওয়া কিস্তিও — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+             * আগে নিচের সীমা ছিল আজ, তাই পেরোনো কিস্তি ছাঁকনিতেই বাদ পড়ত আর নিচের `isOverdue()` কখনো সত্যি হত না —
+             * সবচেয়ে বড় ঝুঁকিটাই ('bad') বোর্ডে উঠত না।
+             */
+            ->where('due_date', '<=', $today->copy()->addDays(self::HORIZON_DAYS)->toDateString())
             ->get();
 
         if ($rows->isEmpty()) {

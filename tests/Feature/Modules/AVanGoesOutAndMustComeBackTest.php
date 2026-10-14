@@ -223,6 +223,40 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
         app(ShipmentService::class)->close($trip);
     }
 
+    /**
+     * ⛔ হাতের পুরনো কপি তালায় থামে — Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ অন্য অনুরোধ সারির অবস্থা বদলেছে (এখানে সরাসরি
+     * সারিতে), হাতের কপি এখনো পুরনো: রওনা হওয়া ট্রিপের চালান বদলায় না, বন্ধ ট্রিপের সারি "ফেরত" হয় না, বাতিল ট্রিপ "বন্ধ" হয় না।
+     */
+    public function test_a_stale_copy_of_a_trip_stops_at_the_lock(): void
+    {
+        $service = app(ShipmentService::class);
+        $refused = function (callable $act, string $what): void {
+            try {
+                $act();
+                $this->fail("⛔ পুরনো কপির কাজ তালার পরেও চলে গেল: {$what}");
+            } catch (ValidationException) {
+            }
+        };
+
+        $draft = $this->trip([$this->challan()]);
+        \Illuminate\Support\Facades\DB::table('sal_shipments')->where('id', $draft->id)->update(['status' => DocumentStatus::CONFIRMED]);
+        $refused(fn () => $service->update($draft, [], [$this->challan()->id]), 'রওনা হওয়া ট্রিপের সম্পাদনা');
+
+        $trip = $service->dispatch($this->trip([$this->challan()]));
+        $line = $trip->lines()->firstOrFail();
+        $line->shipment;
+        \Illuminate\Support\Facades\DB::table('sal_shipments')->where('id', $trip->id)->update(['status' => DocumentStatus::CLOSED]);
+        $refused(fn () => $service->settle($line, ShipmentLine::RETURNED, 'দোকান বন্ধ'), 'বন্ধ ট্রিপের সারি');
+        $this->assertNull($line->fresh()->settled_at, '⛔ বন্ধ ট্রিপের সারি বদলে গেল।');
+
+        $other = $service->dispatch($this->trip([$this->challan()]));
+        $this->settleAll($other, ShipmentLine::DELIVERED);
+        $stale = $other->fresh();
+        \Illuminate\Support\Facades\DB::table('sal_shipments')->where('id', $other->id)->update(['status' => DocumentStatus::CANCELLED]);
+        $refused(fn () => $service->close($stale), 'বাতিল ট্রিপের বন্ধ');
+        $this->assertSame(DocumentStatus::CANCELLED, \Illuminate\Support\Facades\DB::table('sal_shipments')->where('id', $other->id)->value('status'));
+    }
+
     /** সবগুলো দিয়ে আসা হলে ট্রিপ শেষ হয়। */
     public function test_a_delivered_trip_closes(): void
     {

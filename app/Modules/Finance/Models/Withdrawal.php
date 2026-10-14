@@ -261,7 +261,8 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher, Settleme
             'amount' => (string) $this->amount,
             'party_type' => $this->person_id === null ? null : 'person',
             'party_id' => $this->person_id === null ? null : (int) $this->person_id,
-            'open' => $this->status === DocumentStatus::DRAFT && $this->voucher_id === null && $signed,
+            // ⛔ লাভের ভাগ কেবল নিজের পথে ([[WithdrawalService::post()]]) — হাতে লেখা ভাউচার ঘোষিত লাভ আর ২১৯০ এড়াত (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            'open' => $this->status === DocumentStatus::DRAFT && $this->voucher_id === null && $signed && $this->kind !== self::PROFIT_SHARE,
         ];
     }
 }

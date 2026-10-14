@@ -236,6 +236,15 @@ Route::prefix('v1')
         Route::post('/workspace', WorkspaceApiController::class)->name('workspace');
 
         /*
+         * ⭐ অ্যাপের ভিতরে ওয়েবের পর্দা — একবারের চাবি (মালিক, ১৩ অক্টোবর ২০২৬: "web e na dhuke jar jar kaj 100% app ei korte pare")।
+         * ⓘ `can:` নেই: চাবি মানুষটাকে ওয়েবে তাঁর নিজের চেয়ে বেশি কিছু দেয় না — প্রতিটা ওয়েব-পর্দা নিজের পাহারা দেখে।
+         * ⛔ পাহারা নিয়ামকে ([[WebHandoffApiController]]): কোম্পানির সুইচ, হ্যান্ডসেট, গন্তব্য, দুই ধাপ; জনপ্রতি মিনিটে ৩০।
+         */
+        Route::post('/web-handoff', \App\Http\Controllers\Api\WebHandoffApiController::class)
+            ->middleware('throttle:30,1,web-handoff')
+            ->name('web-handoff');
+
+        /*
          * "আজ কেমন গেল" — চুক্তি §৮। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা ঘর
          * নিজের চাবি দেখে, আর চাবি না থাকলে ঘরটাই যায় না
          * ([[DashboardTodayController]])।

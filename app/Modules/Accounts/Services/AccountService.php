@@ -53,6 +53,37 @@ final class AccountService
      * "পাহারা বন্ধ করো", সেটা একদিন এমন জায়গায় বসে যেখানে পাহারাটা
      * সত্যিই দরকার ছিল।
      */
+    /**
+     * এই ব্যাংকের ওভারড্রাফটের খাত — না থাকলে তৈরি, ব্যাংক ওভারড্রাফটের দলের নিচে ([[StandardChart::BANK_OVERDRAFT]])।
+     *
+     * ⓘ কোড `2105-<ব্যাংকের id>` — নির্দিষ্ট, তাই একই ব্যাংকের দ্বিতীয়বারও একই খাত; নাম ব্যাংকের নামে, যাতে স্থিতিপত্রে কোন ব্যাংকের ঋণ
+     * তা পড়া যায় (মালিক, ১৩ অক্টোবর ২০২৬; [[AnOpeningBalanceSitsOnTheSideChosenTest]])। ⓘ দলটা না থাকলে (পুরনো কোম্পানি) ছক আগে বসে।
+     */
+    public function overdraftFor(Account $bank): Account
+    {
+        $code = StandardChart::BANK_OVERDRAFT.'-'.$bank->id;
+
+        $existing = Account::query()->where('code', $code)->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $group = StandardChart::find(StandardChart::BANK_OVERDRAFT);
+
+        if ($group === null) {
+            app(StandardChart::class)->install();
+            $group = StandardChart::find(StandardChart::BANK_OVERDRAFT);
+        }
+
+        return $this->create([
+            'code' => $code,
+            'name_en' => 'Overdraft — '.($bank->name_en ?: $bank->code),
+            'name_bn' => 'ওভারড্রাফট — '.($bank->name_bn ?: $bank->name_en ?: $bank->code),
+            'parent_id' => $group?->id,
+        ]);
+    }
+
     public function create(array $data, bool $withAKeeper = false): Account
     {
         return DB::transaction(function () use ($data, $withAKeeper) {
@@ -90,6 +121,19 @@ final class AccountService
                 $this->assertCashHasAKeeper($data, $code, $parent, (bool) ($data['is_group'] ?? false));
             }
 
+            /*
+             * ⭐ খোলা জেরের দিক — বাছা দিক খাতের স্বাভাবিক দিকের উল্টো হলে অঙ্কটা ঋণাত্মক হয়ে আজকের পথেই যায়
+             * ([[OpeningBalanceService::forAccount()]] → ইঞ্জিন উল্টো পাশে ধনাত্মক বসায়)। ⓘ খাতা বসানোর নিয়ম অক্ষত; বদল কেবল কে কী বোঝাল।
+             * ([[AnOpeningBalanceSitsOnTheSideChosenTest]]; সমন্বয়ক, ১৩ অক্টোবর ২০২৬)
+             */
+            $nature = $data['nature'] ?? Account::defaultNatureFor($type);
+            $side = $data['opening_side'] ?? null;
+            unset($data['opening_side']);
+
+            if (in_array($side, [Account::DEBIT, Account::CREDIT], true) && $side !== $nature && isset($data['opening_balance'])) {
+                $data['opening_balance'] = bcmul(ltrim((string) $data['opening_balance'], '-') ?: '0', '-1', 4);
+            }
+
             $account = Account::create([
                 ...$data,
                 /*
@@ -101,7 +145,7 @@ final class AccountService
                 'type' => $type,
                 // ⛔ ইনপুট যা-ই পাঠাক, ধরনটা গাছ থেকেই আসে
                 'money_kind' => $this->moneyKindFor($code, $parent),
-                'nature' => $data['nature'] ?? Account::defaultNatureFor($type),
+                'nature' => $nature,
                 'is_group' => (bool) ($data['is_group'] ?? false),
                 'is_active' => $data['is_active'] ?? true,
                 // সিস্টেমের খাত স্ক্রিন থেকে তৈরি হয় না — শুধু প্রমিত ছক
@@ -154,6 +198,21 @@ final class AccountService
             $type = $this->resolveType($data + ['type' => $account->type], $parent);
 
             /*
+             * ⛔ প্রকৃতি (Dr/Cr) বদলায় না সিস্টেমের খাতে, বা যে খাতে (বা নিচে) লেনদেন আছে — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+             * ([[AnAccountsNatureStaysOnceItHasEntriesTest]])। ⓘ জের প্রকৃতি ধরে চিহ্ন পায় ([[Account::balanceOn()]]): ব্যাংকের খাত Cr করে দিলে
+             * তার জের ঋণাত্মক দেখাত, আর ব্যাংক-মিলকরণের "আমাদের খাতা" উল্টো চিহ্নে আর কখনো মিলত না।
+             */
+            if (array_key_exists('nature', $data) && filled($data['nature']) && $data['nature'] !== $account->nature) {
+                $this->assertNotSystem($account, 'nature');
+
+                if (\App\Models\LedgerEntry::query()->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))->exists()) {
+                    throw ValidationException::withMessages([
+                        'nature' => __('accounts::validation.has_entries_cannot_renature'),
+                    ]);
+                }
+            }
+
+            /*
              * ⛔ বাবা বদলে ধরন বদলালেও একই নিষেধ — অডিট ম২০, ১০ অক্টোবর ২০২৬ ([[AnInactiveAccountTakesNoNewMoneyTest]])। ⓘ উপরের পাহারা
              * কেবল সরাসরি পাঠানো `type` দেখত, অথচ ধরন আসে বাবার থেকে ([[resolveType()]]): লেনদেনসহ খরচের খাত সম্পদের নিচে সরালে
              * সে চুপচাপ সম্পদ হয়ে যেত, আর আগের সব খরচ লাভ-ক্ষতি থেকে স্থিতিপত্রে সরে যেত।
@@ -161,6 +220,22 @@ final class AccountService
             if ($type !== $account->type) {
                 $this->assertNotSystem($account, 'parent_id');
                 $this->assertTypeCanChange($account);
+            }
+
+            /*
+             * ⛔ টাকার খাত টাকা-নয় হয় না, টাকা-নয় খাত টাকার হয় না — লেনদেন থাকলে (Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+             * [[AMoneyAccountStaysMoneyOnceItHasEntriesTest]])। ⓘ টাকার ধরন আসে বাবা থেকে: নগদের খাত সাধারণ সম্পদের নিচে সরালে "হাতের
+             * নগদ শূন্যের নিচে নয়" আর "টাকার খাতে পক্ষ নয়" পাহারা চুপচাপ উঠে যেত; উল্টোটায় পক্ষসহ পুরনো সারির খাত রক্ষকহীন নগদ
+             * হত। ব্যাংক ↔ মোবাইল-ব্যাংকিং আগের মতোই চলে ([[cascadeMoneyKind()]])।
+             */
+            $code = trim((string) ($data['code'] ?? '')) !== '' ? trim((string) $data['code']) : $account->code;
+            $newKind = $this->moneyKindFor($code, $parent);
+
+            if (($account->money_kind === null) !== ($newKind === null)
+                && \App\Models\LedgerEntry::query()->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))->exists()) {
+                throw ValidationException::withMessages([
+                    'parent_id' => __('accounts::validation.money_kind_cannot_flip'),
+                ]);
             }
 
             /*
@@ -201,6 +276,13 @@ final class AccountService
             if (array_key_exists('party_types', $data)) {
                 $wanted = array_values(array_unique(array_map('strval', (array) ($data['party_types'] ?? []))));
                 sort($wanted);
+
+                // ⛔ টাকার খাত কোনো পক্ষ রাখে না — লাইভের রাতের যাচাই, ১৩ অক্টোবর ২০২৬ ([[NoPartySitsOnAMoneyAccountTest]])
+                if ($wanted !== [] && $account->money_kind !== null) {
+                    throw ValidationException::withMessages([
+                        'party_types' => __('accounts::validation.money_holds_no_party'),
+                    ]);
+                }
 
                 if ($wanted !== ($account->party_types ?? [])
                     && ! (bool) auth()->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
@@ -478,7 +560,16 @@ final class AccountService
 
     private function assertTypeCanChange(Account $account): void
     {
-        if ($account->hasEntries()) {
+        /*
+         * ⛔ নিজে আর নিচের সব — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[MovingAGroupDoesNotRetypeItsEntriesTest]])। ⓘ দলের নিজের
+         * কোনো সারি থাকে না, তাই আগে "লেনদেন নেই" বলে পার হত; তারপর [[cascadeType()]] নিচের লেনদেনসহ খাতগুলোর ধরন বদলাত —
+         * "অফিস খরচ" দল চলতি সম্পদের নিচে সরালে গোটা বছরের ভাড়া লাভ-ক্ষতি ছেড়ে স্থিতিপত্রে উঠত।
+         */
+        $hasEntries = \App\Models\LedgerEntry::query()
+            ->whereIn('account_id', $account->selfAndDescendants()->pluck('id'))
+            ->exists();
+
+        if ($hasEntries) {
             throw ValidationException::withMessages([
                 'type' => __('accounts::validation.has_entries_cannot_retype'),
             ]);

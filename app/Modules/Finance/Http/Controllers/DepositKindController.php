@@ -110,7 +110,24 @@ class DepositKindController extends Controller implements HasMiddleware
 
     public function update(Request $request, DepositKind $depositKind): RedirectResponse
     {
-        $depositKind->update($this->validated($request, $depositKind));
+        $data = $this->validated($request, $depositKind);
+
+        /*
+         * ⛔ যে ধরনে জমা খোলা হয়েছে, তার আকার, প্রতিষ্ঠান আর "কেবল ব্যক্তির নামে" বদলায় না — লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
+         * ⓘ আগে পাঁচটা চালু FDR-এর ধরন কিস্তির আকারে বদলালে সেগুলো হঠাৎ কিস্তি নিত আর DPS-এর সূচিতে "০ বাকি" দেখাত; "কেবল
+         * ব্যক্তি" চালু করলে ব্যবসার নামের পুরনো জমা আইনের বাইরে পড়ত। নাম আর ক্রম বদলানো চলে।
+         */
+        $changed = $data['shape'] !== $depositKind->shape
+            || $data['issuer'] !== $depositKind->issuer
+            || (array_key_exists('personal_only', $data) && (bool) $data['personal_only'] !== (bool) $depositKind->personal_only);
+
+        if ($changed && Deposit::query()->where('kind_id', $depositKind->id)->exists()) {
+            throw ValidationException::withMessages([
+                'shape' => __('finance::validation.kind_shape_in_use', ['name' => $depositKind->name_en]),
+            ]);
+        }
+
+        $depositKind->update($data);
 
         return redirect()
             ->route('finance.deposit_kind.index')

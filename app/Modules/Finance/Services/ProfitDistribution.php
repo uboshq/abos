@@ -372,6 +372,9 @@ final class ProfitDistribution
     {
         $waiting = (string) (ProfitShare::query()
             ->where('status', ProfitShare::DRAFT)
+            // ⛔ বাতিল খসড়া ঘোষণা আর আটকে রাখে না (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', \App\Core\Support\DocumentStatus::CANCELLED)))
             ->when($exceptVoucherId !== null, fn ($q) => $q->where('voucher_id', '!=', $exceptVoucherId))
             ->sum('amount') ?: '0');
 
@@ -506,6 +509,9 @@ final class ProfitDistribution
             ->where(fn ($q) => $q->where('status', CapitalEntry::POSTED)
                 ->orWhere(fn ($d) => $d->where('status', CapitalEntry::DRAFT)->whereNotNull('voucher_id')
                     ->when($exceptVoucherId !== null, fn ($e) => $e->where('voucher_id', '!=', $exceptVoucherId))))
+            // ⛔ বাতিল ভাউচারের মূলধনে-নেওয়া আর গোনা নয় — লাভটা আবার পাওনা (Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', '!=', \App\Core\Support\DocumentStatus::CANCELLED)))
             ->sum('amount') ?: '0');
 
         return bcsub(bcsub($declared, $taken, 4), $capitalised, 4);
@@ -719,6 +725,15 @@ final class ProfitDistribution
                 ->where('in_kind', CapitalEntry::PROFIT)
                 ->lockForUpdate()
                 ->get();
+
+            // ⛔ সারিগুলো আর ভাউচারের অঙ্ক না মিললে খাতায় নয় — নইলে পাওনা থেকে না কেটেই ২১৯০ → ৩১০০ বসত (১৩ অক্টোবর ২০২৬)
+            $rows = array_reduce($entries->all(), fn (string $sum, CapitalEntry $e) => bcadd($sum, (string) $e->amount, 4), '0');
+
+            if ($entries->isEmpty() || bccomp($rows, (string) $voucher->totals()['debit'], 4) !== 0) {
+                $this->dropCapitalised($voucher, __('finance::validation.capital_rows_changed'));
+
+                return;
+            }
 
             foreach ($entries as $entry) {
                 $left = $this->outstandingFor((int) $entry->person_id, (int) $voucher->id);

@@ -84,6 +84,7 @@ class NavRow {
     this.children = const [],
     this.planned = false,
     this.aliases = const [],
+    this.web = false,
   });
 
   /// The path for a screen, `group:<id>` for a parent, the server route for a
@@ -98,6 +99,9 @@ class NavRow {
   final List<NavRow> children;
   final bool planned;
   final List<String> aliases;
+
+  /// ⭐ The web's own screen, opened inside the app ([WebPaths]) — the row says so under its name.
+  final bool web;
 
   bool get isParent => children.isNotEmpty;
 }
@@ -163,6 +167,14 @@ class NavCatalog {
         ['documents', 'ডকুমেন্ট']),
     NavModuleDef('executive', 'মালিকের কেন্দ্র', Icons.speed_outlined,
         ['executive', 'command']),
+    // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
+    NavModuleDef('promotion', 'প্রমোশন', Icons.local_offer_outlined,
+        ['promotion', 'offer', 'অফার']),
+    // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+    NavModuleDef('credit_control', 'বাকি নিয়ন্ত্রণ', Icons.credit_score_outlined,
+        ['credit', 'বাকি', 'সীমা', 'limit']),
+    NavModuleDef('notification', 'নোটিশ', Icons.campaign_outlined,
+        ['notice', 'নোটিশ', 'বিজ্ঞপ্তি']),
   ];
 
   /// The order the headings stand in, inside any module.
@@ -174,6 +186,9 @@ class NavCatalog {
     'রিপোর্ট',
     'ড্যাশবোর্ড',
     'অন্যান্য',
+    // ── ⭐ ওয়েবের দলগুলো, অ্যাপের ভিতরে (১৩ অক্টোবর ২০২৬) — [webGroupTitle] ──
+    'অনুমোদন',
+    'সেটিংস',
     plannedGroup,
   ];
 
@@ -379,6 +394,100 @@ class NavCatalog {
         label: 'ব্যবসার ড্যাশবোর্ড',
         icon: Icons.insights_outlined,
         aliases: ['dashboard', 'ড্যাশবোর্ড']),
+    // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ — অর্থ, ডকুমেন্টস, প্রমোশন, নিজের ছুটি ও স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
+    NavScreenDef(
+        path: 'deposits',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'জমা ও সঞ্চয়',
+        icon: Icons.savings_outlined,
+        aliases: ['deposit', 'fdr', 'dps', 'আমানত', 'সঞ্চয়পত্র', 'মেয়াদ']),
+    NavScreenDef(
+        path: 'bank-loans',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'ব্যাংক ঋণ ও কিস্তি',
+        icon: Icons.account_balance_outlined,
+        aliases: ['loan', 'ঋণ', 'কিস্তি', 'cc', 'bank', 'instalment']),
+    NavScreenDef(
+        path: 'rents',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'ভাড়া',
+        icon: Icons.home_work_outlined,
+        aliases: ['rent', 'ভাড়া', 'গুদাম', 'tenant', 'ভাড়াটে']),
+    NavScreenDef(
+        path: 'hand-loans',
+        module: 'finance',
+        group: 'তালিকা',
+        label: 'হাতধার',
+        icon: Icons.handshake_outlined,
+        aliases: ['hand loan', 'ধার', 'হাওলাত', 'loan']),
+    NavScreenDef(
+        path: 'documents',
+        module: 'documents',
+        group: 'তালিকা',
+        label: 'ডকুমেন্টস',
+        icon: Icons.folder_open_outlined,
+        aliases: ['document', 'নথি', 'কাগজ', 'সই', 'signature', 'file']),
+    NavScreenDef(
+        path: 'offers',
+        module: 'promotion',
+        group: 'তালিকা',
+        label: 'চলতি অফার',
+        icon: Icons.local_offer_outlined,
+        aliases: ['offer', 'অফার', 'ছাড়', 'ফ্রি', 'discount', 'free', 'প্রমোশন']),
+    NavScreenDef(
+        path: 'leave',
+        module: 'hr',
+        group: 'নিজের কাজ',
+        label: 'আমার ছুটি',
+        icon: Icons.event_available_outlined,
+        aliases: ['leave', 'ছুটি', 'অবকাশ']),
+    NavScreenDef(
+        path: 'payslips',
+        module: 'hr',
+        group: 'নিজের কাজ',
+        label: 'বেতনের স্লিপ',
+        icon: Icons.receipt_long_outlined,
+        aliases: ['payslip', 'salary', 'বেতন', 'স্লিপ']),
+    // ── ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na") ──
+    NavScreenDef(
+        path: 'invoices',
+        module: 'sales',
+        group: 'লেনদেন',
+        label: 'বিক্রয় বিল',
+        icon: Icons.receipt_long_outlined,
+        aliases: ['invoice', 'বিল', 'ইনভয়েস', 'বিক্রি', 'inv']),
+    NavScreenDef(
+        path: 'challans',
+        module: 'sales',
+        group: 'লেনদেন',
+        label: 'চালান',
+        icon: Icons.local_shipping_outlined,
+        aliases: ['challan', 'চালান', 'gate pass', 'cha']),
+    // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
+    NavScreenDef(
+        path: 'owner-centre',
+        module: 'executive',
+        group: 'ড্যাশবোর্ড',
+        label: 'আজ — গোটা গ্রুপ',
+        icon: Icons.speed_outlined,
+        aliases: ['owner', 'মালিক', 'আজ', 'গ্রুপ', 'কোম্পানি', 'executive']),
+    NavScreenDef(
+        path: 'credit',
+        module: 'credit_control',
+        group: 'ড্যাশবোর্ড',
+        label: 'বাকির হিসাব',
+        icon: Icons.credit_score_outlined,
+        aliases: ['credit', 'বাকি', 'সীমা', 'ঝুঁকি', 'মেয়াদ', 'overdue', 'risk']),
+    NavScreenDef(
+        path: 'notices',
+        module: 'notification',
+        group: 'তালিকা',
+        label: 'নোটিশ বোর্ড',
+        icon: Icons.campaign_outlined,
+        aliases: ['notice', 'নোটিশ', 'সই', 'বিজ্ঞপ্তি']),
   ];
 
   /// Screens that hang on no module: the bottom bar and the "আমি" page reach
@@ -416,6 +525,36 @@ class NavCatalog {
     }
     return null;
   }
+
+  /// ⭐ The heading a web menu group stands under — the web's six fixed groups in the phone's words
+  /// (`ModuleDefinition::MENU_GROUPS`).
+  static String webGroupTitle(String? group) => switch (group) {
+        'dashboard' => 'ড্যাশবোর্ড',
+        'master' => 'তালিকা',
+        'transactions' => 'লেনদেন',
+        'approval' => 'অনুমোদন',
+        'reports' => 'রিপোর্ট',
+        'settings' => 'সেটিংস',
+        _ => 'অন্যান্য',
+      };
+
+  /// ⭐ A tile for a server module this catalogue has no place for (system admin, master data, governance, …) — the
+  /// server's own name, a plain icon; it stands after the catalogue's own tiles, in the server's order.
+  static NavModuleDef serverModule(String code, String label) => NavModuleDef(
+      code,
+      label.trim().isEmpty ? code : label.trim(),
+      switch (code) {
+        'system_admin' => Icons.settings_outlined,
+        'master_data' => Icons.dataset_outlined,
+        'governance' => Icons.policy_outlined,
+        'backup' => Icons.backup_outlined,
+        'restaurant' => Icons.restaurant_outlined,
+        'payroll' => Icons.payments_outlined,
+        'pos' => Icons.point_of_sale_outlined,
+        'asset' || 'fixed_asset' || 'fixed_assets' => Icons.domain_outlined,
+        _ => Icons.apps_outlined,
+      },
+      [code.replaceAll('_', ' ')]);
 
   /// The module a server route name belongs to — its first segment, with the
   /// web's few plural/alias spellings folded in.
@@ -458,7 +597,7 @@ class NavTree {
 
     final live = <({String path, String? label})>[
       for (final item in items)
-        if (!item.planned && item.routeName.isNotEmpty)
+        if (!item.planned && item.routeName.isNotEmpty && !item.isWeb)
           (path: item.routeName, label: item.label),
       for (final path in always) (path: path, label: null),
     ];
@@ -530,12 +669,40 @@ class NavTree {
                 ));
     }
 
+    // ⭐ ওয়েবের পর্দা, অ্যাপের ভিতরে — নিজের মডিউলে, ওয়েবের দলের নামে ([MenuRepository.webTiles], ১৩ অক্টোবর ২০২৬)।
+    // A module the catalogue does not know gets its own tile, named by the server.
+    final serverModules = <String, NavModuleDef>{};
+    for (final item in items.where((i) => i.isWeb && !i.planned)) {
+      if (!seen.add(item.routeName)) continue;
+      final code = (item.module ?? '').trim();
+      if (code.isEmpty) continue;
+      if (NavCatalog.moduleDef(code) == null) {
+        serverModules.putIfAbsent(code, () => NavCatalog.serverModule(code, item.moduleLabel ?? code));
+      }
+      place(
+          code,
+          NavCatalog.webGroupTitle(item.group),
+          NavRow(
+            id: item.routeName,
+            label: item.label,
+            icon: item.icon,
+            module: code,
+            path: item.routeName,
+            aliases: [
+              if (item.moduleLabel != null) item.moduleLabel!,
+              NavCatalog.webGroupTitle(item.group),
+            ],
+            web: true,
+          ));
+    }
+
     // "শীঘ্রই আসছে" — dimmed rows at the bottom of their module. ⭐ A module
     // with nothing live still gets its tile, greyed, whose menu is only these
     // rows (owner, 12 Oct 2026): hiding it would let a person conclude the
     // module is never coming.
     for (final item in items.where((i) => i.planned)) {
-      final module = NavCatalog.moduleOfRoute(item.key);
+      final module = NavCatalog.moduleOfRoute(item.key) ??
+          (serverModules.containsKey(item.key.split('.').first) ? item.key.split('.').first : null);
       if (module == null) continue;
       place(
           module,
@@ -551,7 +718,7 @@ class NavTree {
 
     final modules = <NavModule>[];
     final comingSoon = <NavModule>[];
-    for (final def in NavCatalog.modules) {
+    for (final def in [...NavCatalog.modules, ...serverModules.values]) {
       final groups = rowsByModule[def.code];
       if (groups == null) continue;
       final ordered = groups.keys.toList()
@@ -571,6 +738,9 @@ class NavTree {
     }
     return NavTree._([...modules, ...comingSoon], extra);
   }
+
+  /// The name a module tile carries — the catalogue's, or the server's for a module only the web knew.
+  String? moduleLabel(String code) => module(code)?.label ?? NavCatalog.moduleDef(code)?.label;
 
   NavModule? module(String code) {
     for (final m in modules) {
@@ -614,7 +784,7 @@ class NavTree {
     final hits = <(int, int, NavRow)>[];
     var order = 0;
     for (final row in screens) {
-      final moduleDef = NavCatalog.moduleDef(row.module);
+      final moduleDef = NavCatalog.moduleDef(row.module) ?? module(row.module)?.def;
       final hay = _norm([
         row.label,
         ...row.aliases,
