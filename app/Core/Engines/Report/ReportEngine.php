@@ -8,6 +8,7 @@ use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
 use App\Core\Services\ListExport;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Core\Support\RunningBalance;
 use App\Models\Branch;
 use App\Models\UserDataScope;
@@ -948,9 +949,17 @@ final class ReportEngine
         foreach ($columns as $column) {
             $value = data_get((array) $row, 'total_'.$column->key, 0);
 
-            // bcadd দিয়ে স্বাভাবিক করা — SUM() null ফেরত দিতে পারে (ফাঁকা
+            // স্বাভাবিক করা — SUM() null ফেরত দিতে পারে (ফাঁকা
             // ফল), আর তখন "0.00"-ই সঠিক উত্তর, ফাঁকা ঘর নয়।
-            $totals[$column->key] = bcadd((string) ($value ?? 0), '0', $column->decimals());
+            /*
+             * ⛔ গোল করা, কাটা নয় — সারির একই নিয়মে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৩, ১৪ অক্টোবর ২০২৬)। আগে `bcadd(…, '0', 2)`
+             * কেটে দিত: সারিতে ১,২৩৪.৫৭ ([[Money::round()]], অর্ধেক হলে উপরে), নিচের মোটে ১,২৩৪.৫৬। পরিমাণের সারি চার ঘর দেখায়
+             * ([[Money::quantity()]]), অথচ মোট কাটা হত তিন ঘরে — ১২.৩৪৫৬-র মোট ১২.৩৪৫। ⓘ তাই পরিমাণ চার ঘরে, বাকি সব কলামের নিজের ঘরে।
+             */
+            $totals[$column->key] = Money::round(
+                (string) ($value ?? 0),
+                $column->type === ReportColumn::QUANTITY ? Money::SCALE : $column->decimals(),
+            );
         }
 
         return $totals;
