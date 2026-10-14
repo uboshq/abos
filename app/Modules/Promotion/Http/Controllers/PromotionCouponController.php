@@ -123,8 +123,9 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
         $data = $request->validate([
             'code' => ['nullable', 'string', 'max:40'],
             'count' => ['nullable', 'integer', 'min:1', 'max:'.CouponDesk::MAX_BATCH],
-            'max_uses' => ['required', 'integer', 'min:1'],
-            'max_uses_per_customer' => ['nullable', 'integer', 'min:1'],
+            // ⓘ ছাদ কলামের সীমা (`unsignedInteger`) — বেশি লিখলে ইনসার্ট ৫০০ দিত, ভুলের বার্তা নয় (Promotion লাইন-ধরা নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            'max_uses' => ['required', 'integer', 'min:1', 'max:4294967295'],
+            'max_uses_per_customer' => ['nullable', 'integer', 'min:1', 'max:4294967295'],
             'customer_id' => ['nullable', 'integer'],
             'valid_from' => ['nullable', 'date'],
             'valid_to' => ['nullable', 'date'],
