@@ -25,6 +25,8 @@
         </div>
     @endif
 
+    <x-ui.errors />
+
     <form method="POST" action="{{ route('accounts.settings.update') }}" class="max-w-screen-2xl space-y-4">
         @csrf
         @method('PUT')

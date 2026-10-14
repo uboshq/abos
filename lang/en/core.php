@@ -1504,6 +1504,9 @@ return [
     // Offers switched off — [[NoSalesOffers]], 29 September 2026
     'offers_off' => 'Offers (the promotion module) are not switched on for this company.',
 
+    // A paper dated outside every financial year — [[NumberSeriesEngine]], 14 October 2026
+    'date_outside_every_financial_year' => 'The paper’s date falls in no financial year. Correct the date, or ask an administrator to open that year.',
+
     // One backup, check or restore at a time — [[BackupLock]], 30 September 2026
     'backup_busy' => 'Another backup, check or restore is running right now. Try again when it has finished.',
     // The restore trail — [[RestoreRecord]]

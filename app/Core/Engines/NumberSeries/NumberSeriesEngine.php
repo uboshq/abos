@@ -12,6 +12,7 @@ use App\Models\IssuedNumber;
 use App\Models\NumberSeries;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 /**
@@ -275,6 +276,15 @@ final class NumberSeriesEngine
                 // সদ্য তৈরি সারিটা লক করে ফেরত — নইলে দুইটা অনুরোধ একই
                 // নম্বর পেত
                 return NumberSeries::query()->whereKey($series->id)->lockForUpdate()->firstOrFail();
+            }
+
+            /*
+             * ⛔ ঘোষিত ধরন, তবু সিরিজ নেই — কারণ তারিখটা কোনো অর্থবছরে পড়ে না (মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+             * ⓘ নিজে-বসানো সিরিজ চলতি বছরে বসে, বছরহীন সারিতে নয় — তাই আগে নিচের ইংরেজি ব্যতিক্রমে পর্দায় ৫০০ আসত। এটা মানুষের
+             * ভুল (তারিখ, বা বছর খোলা হয়নি), তাই কারণসহ বাংলা বার্তা।
+             */
+            if ($financialYearId === null) {
+                throw ValidationException::withMessages(['date' => __('core.date_outside_every_financial_year')]);
             }
         }
 

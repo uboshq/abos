@@ -154,10 +154,14 @@ final class ScheduleService
     }
 
     /**
-     * পরের চালানোর সময় — সূচির timezone-এ গোনা, UTC-তে ফেরত।
+     * পরের চালানোর সময় — সূচির timezone-এ গোনা, অ্যাপের ঘড়িতে ফেরত।
      *
-     * "সকাল ৮টা" সূচির ঘড়িতে; জমা হয় UTC-তে, কারণ ক্রন UTC-তেই তুলনা
-     * করে। কড়া-ভবিষ্যৎ: এখন বা অতীত হলে পরের পর্বে ঠেলা হয়।
+     * "সকাল ৮টা" সূচির ঘড়িতে; জমা হয় অ্যাপের ঘড়িতে (`app.timezone`, ঢাকা), কারণ [[ReportSchedule::scopeDue()]] তুলনা
+     * করে `now()`-এর সাথে — সেও অ্যাপের ঘড়ি। কড়া-ভবিষ্যৎ: এখন বা অতীত হলে পরের পর্বে ঠেলা হয়।
+     *
+     * ⛔ আগে UTC-তে ফেরত দিত ("ক্রন UTC-তে তুলনা করে" — ভুল কথা)। Laravel তারিখ জমা করে তার নিজের ঘড়ির লেখা, রূপান্তর ছাড়া:
+     * সকাল ৮টা জমা হত "০২:০০" হয়ে, আর রিপোর্ট যেত রাত ২টায়; রাত ১১টার "আজকের বিক্রি" যেত বিকেল ৫টায়, সন্ধ্যার বিক্রি
+     * ছাড়াই (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
      */
     public function nextRunFor(ReportSchedule $schedule, ?Carbon $from = null): Carbon
     {
@@ -172,7 +176,7 @@ final class ScheduleService
             default => $this->nextDaily($now, $hour, $minute),
         };
 
-        return $candidate->setTimezone('UTC');
+        return $candidate->setTimezone(config('app.timezone'));
     }
 
     private function nextDaily(Carbon $now, int $hour, int $minute): Carbon

@@ -40,4 +40,6 @@ return [
     'place_of_another_company' => 'This branch, warehouse or scope does not belong to that company, or that company is outside what you manage here.',
     // ⛔ পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔৩)
     'scope_beyond_your_own' => 'You cannot give anyone a view wider than your own — leaving it empty means "no limit", which is wider too. Pick within your own branches or warehouses, or ask the owner.',
+    // The owner cannot untick himself out of a company: 14 Oct 2026
+    'owner_stays_in_company' => 'This person owns (is super admin of) one of the companies being unticked and cannot be removed from it this way. Transfer the ownership first.',
 ];

@@ -252,7 +252,13 @@ final class ScheduledReportRunner
     private function generate(ReportSchedule $schedule, User $owner, Collection $recipients): ReportRun
     {
         $previous = Auth::user();
-        Auth::login($owner);
+
+        /*
+         * ⛔ পরিচয় কেবল বসানো, লগইন নয় — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ আগে সত্যিকারের `Auth::login()`
+         * আর `Auth::logout()`: Laravel-এর লগআউট মানুষটার "মনে রাখুন" চিহ্ন বদলে দেয়, তাই প্রতিটা নির্ধারিত রিপোর্ট মালিককে সব
+         * যন্ত্র থেকে নীরবে বের করে দিত, আর লগইন সেশনের পরিচয়ও ঘোরাত।
+         */
+        Auth::setUser($owner);
 
         try {
             return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
@@ -285,10 +291,10 @@ final class ScheduledReportRunner
             });
         } finally {
             // ⚠️ পরের সূচি যেন এঁর পরিচয়ে না চলে
-            Auth::logout();
-
             if ($previous !== null) {
-                Auth::login($previous);
+                Auth::setUser($previous);
+            } else {
+                Auth::forgetUser();
             }
 
             CompanyContext::clear();

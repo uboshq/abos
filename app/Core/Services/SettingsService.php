@@ -341,6 +341,16 @@ final class SettingsService
      */
     public function mayChange(string $key, ?User $user): bool
     {
+        /*
+         * ⛔ গোটা ব্যবস্থার সুইচ (`scope => product`) কেবল সব কোম্পানির মালিকের — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর
+         * ২০২৬ ([[WholeDatabaseAccess]], কোম্পানি বানানো আর ব্যাকআপ নামানোর একই নিয়ম)। ⓘ ভূমিকা কোম্পানি ধরে বসে, তাই আগে
+         * কেবল TCL-এর সুপার অ্যাডমিনও `hr.shared_across_companies` চালু করে সব কোম্পানির HR-এর দেয়াল তুলে দিতে পারতেন —
+         * ঠিক সেই ফাঁস যা উপরে [[get()]]-এর মন্তব্য বলে DEM কখনো মানেনি।
+         */
+        if ($this->isProductWide($key)) {
+            return app(\App\Core\Security\WholeDatabaseAccess::class)->allows($user);
+        }
+
         if (! ($this->definitions()[$key]['super_admin_only'] ?? false)) {
             return true;
         }

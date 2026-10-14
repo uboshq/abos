@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,7 @@ class AccountsSettingsController extends Controller implements HasMiddleware
          * @var array<string, mixed> $submitted
          */
         $submitted = (array) $request->input('settings', []);
+        $ownerOnly = [];
 
         foreach ($this->definitions() as $key => $definition) {
             /*
@@ -67,8 +69,12 @@ class AccountsSettingsController extends Controller implements HasMiddleware
 
             $value = match ($definition['type']) {
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
-                'integer' => $raw === null || $raw === '' ? null : (int) $raw,
-                default => $raw,
+                /*
+                 * ⛔ সেটিং লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬: `(int) "10,000"` = 10, আর তালিকা এলে `(int) array` = 1 — কন্ট্রোল
+                 * প্যানেলের একই নিয়ম ([[PlainNumber::wholeFrom()]]); পূর্ণসংখ্যা না হলে "যা ছিল তাই থাক"। লেখার ঘরে তালিকা এলেও তাই।
+                 */
+                'integer' => $raw === null || $raw === '' ? null : PlainNumber::wholeFrom($raw),
+                default => is_scalar($raw) || $definition['type'] === 'json' ? $raw : null,
             };
 
             /*
@@ -77,12 +83,41 @@ class AccountsSettingsController extends Controller implements HasMiddleware
              * (`"0"`) বসে মালিকের ছাপার নকশা নীরবে বন্ধ হয়েছিল। ভুল মান এলে "যা ছিল তাই থাক" —
              * না ছাঁকলে [[SettingsService::set()]]-এর পাহারা ব্যতিক্রম ছুঁড়ত।
              */
-            if ($value !== null && SettingOptions::allows($definition, $value)) {
-                $this->settings->set($key, $value);
+            if ($value === null || ! SettingOptions::allows($definition, $value)) {
+                continue;
             }
+
+            /*
+             * ⛔ কেবল-মালিকের সুইচ এই দরজাতেও — সেটিং লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ কন্ট্রোল প্যানেল আর সেটিংস
+             * [[SettingsService::mayChange()]] দেখত, এই পাতা দেখত না — `accounts.manage` চাবিতেই ভাউচারের দ্বিতীয় যাচাই, পেছনের
+             * তারিখের দিন, নগদের সীমা আর সম্পদের চারটা নিয়ম বদলানো যেত। ⓘ না-বদলানো মান কিছু বলে না (পুরো ফর্মই আসে)।
+             */
+            if (! $this->settings->mayChange($key, $request->user())) {
+                if ($this->asStored($this->settings->get($key)) !== $this->asStored($value)) {
+                    $ownerOnly[] = __($definition['label']);
+                }
+
+                continue;
+            }
+
+            $this->settings->set($key, $value);
         }
 
-        return back()->with('saved', __('accounts::message.settings_saved'));
+        $back = back()->with('saved', __('accounts::message.settings_saved'));
+
+        return $ownerOnly === [] ? $back : $back->withErrors(['settings' => __('system_admin::validation.super_admin_only_switch', [
+            'switches' => implode('; ', $ownerOnly),
+        ])]);
+    }
+
+    /** ⓘ টেক্সট কলামে যেভাবে বসত — তুলনার জন্য ([[ControlPanelController]]-এর একই নিয়ম) */
+    private function asStored(mixed $value): string
+    {
+        return match (true) {
+            is_bool($value) => $value ? '1' : '0',
+            is_array($value), is_object($value) => (string) json_encode($value),
+            default => (string) $value,
+        };
     }
 
     /**
