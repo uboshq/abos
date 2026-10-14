@@ -9,12 +9,14 @@ use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NumberSeriesProvisioner;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\FinancialYear;
 use App\Models\NumberSeries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -50,6 +52,9 @@ class NumberSeriesController extends Controller implements HasMiddleware
         '{BRANCH}' => 'core.company.branch',
         '{SEQ}' => 'master_data::field.sequence',
     ];
+
+    /** ⓘ কাগজের সবচেয়ে সরু নম্বর-কলাম (৩২) — [[update()]]-এর মন্তব্য */
+    private const LONGEST_NUMBER = 32;
 
     public function __construct(
         private readonly MenuBuilder $menu,
@@ -219,6 +224,27 @@ class NumberSeriesController extends Controller implements HasMiddleware
          * ঐচ্ছিকই। খালি স্ট্রিং-ই এখানে "কিছু নেই"।
          */
         $validated['suffix'] = (string) ($validated['suffix'] ?? '');
+
+        /*
+         * ⛔ নম্বরটা কাগজের ঘরে ধরতে হবে — মাস্টার লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ ছক ৬৪ অক্ষরের মধ্যে থাকলেও
+         * `{PREFIX}` চারবার দিলে নম্বর ৭০ ছাড়াত, আর কিছু কাগজের নম্বর-কলাম মোটে ৩২ — তখন ঐ ধরনের **প্রতিটা** কাগজ বানাতে ৫০০,
+         * অর্থাৎ বিক্রি বা ভাউচার পুরো থেমে যেত। ⓘ মাপা হয় সবচেয়ে লম্বা রূপে: আসল উপসর্গ/অনুসর্গ, কোম্পানির সবচেয়ে লম্বা শাখা-কোড
+         * আর অর্থবছরের নাম, আর ক্রম অন্তত ৬ অঙ্ক।
+         */
+        $longest = strtr($validated['format'], [
+            '{PREFIX}' => $validated['prefix'],
+            '{SUFFIX}' => $validated['suffix'],
+            '{BRANCH}' => str_repeat('X', (int) Branch::query()->max(DB::raw('CHAR_LENGTH(code)'))),
+            '{FY}' => str_repeat('X', max(9, (int) FinancialYear::query()->max(DB::raw('CHAR_LENGTH(name)')))),
+            '{YYYY}' => '2026', '{YY}' => '26', '{MM}' => '10', '{DD}' => '14',
+            '{SEQ}' => str_repeat('9', max(6, (int) $validated['padding'])),
+        ]);
+
+        if (mb_strlen($longest) > self::LONGEST_NUMBER) {
+            return back()->withInput()->withErrors(['format' => __('master_data::validation.number_too_long', [
+                'length' => mb_strlen($longest), 'max' => self::LONGEST_NUMBER,
+            ])]);
+        }
 
         // next_number ইচ্ছাকৃতভাবে বাদ — উপরের মন্তব্য দেখুন
         $series->update($validated);

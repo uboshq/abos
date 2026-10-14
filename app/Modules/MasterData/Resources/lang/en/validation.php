@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    // A number must fit the paper's column (master line-by-line audit, 14 October 2026)
+    'number_too_long' => 'With this format a number can reach :length characters; papers hold :max. Shorten the prefix or the format.',
     'format_needs_sequence' => 'The number format must contain {SEQ} — without it every document would get the same number.',
     'code_required' => 'A code is required.',
     'code_taken' => 'Another record already uses code :code.',
