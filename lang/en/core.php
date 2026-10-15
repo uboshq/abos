@@ -43,6 +43,7 @@ return [
     ],
 
     'source' => [
+        'voucher' => 'Voucher',
         'sales_invoice' => 'Sales Invoice',
         'purchase_invoice' => 'Purchase Invoice',
         'receipt_voucher' => 'Receipt Voucher',
