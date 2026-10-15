@@ -86,6 +86,30 @@ final class EveryReportNamesTheKeyItsWebDoorAsksForTest extends TestCase
             $url = route($route, ['slug' => $slug]);
             $keys = $engine->get($key)->permissions();
 
+            /*
+             * ⓘ "যেকোনো একটা চাবি" ঘোষণা করা রিপোর্ট ([[ReportDefinition::$anyKey]]) — মাপ উল্টো: প্রতিটা চাবি **একা** হাতে দরজা খোলে,
+             * আর কোনো চাবি ছাড়া ৪০৩ (মালিক, ১৪ অক্টোবর ২০২৬: লক্ষ্য বনাম আদায় হিসাব আর বিক্রয় দুইজনেরই)। ⛔ "সব চাবি লাগে"-র মাপ
+             * এখানে খাটে না — একটা কাড়লে অন্যটায় খোলাই ঠিক।
+             */
+            if ($engine->get($key)->anyKey) {
+                foreach ($keys as $permission) {
+                    $user = $this->member();
+                    $this->give($user, $permission);
+                    $status = $this->open($user, $url);
+
+                    if ($status !== 200) {
+                        $wrong[] = "{$key}: যেকোনো-চাবির রিপোর্ট, অথচ কেবল '{$permission}' হাতে দরজা {$status} দিল";
+                    }
+                }
+
+                $status = $this->open($this->member(), $url);
+                if ($status !== 403) {
+                    $wrong[] = "{$key}: কোনো চাবি ছাড়াই দরজা {$status} দিল";
+                }
+
+                continue;
+            }
+
             $user = $this->member();
             foreach ($keys as $permission) {
                 $this->give($user, $permission);

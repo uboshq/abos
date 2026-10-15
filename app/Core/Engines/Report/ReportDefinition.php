@@ -183,6 +183,13 @@ final class ReportDefinition
          * প্রতিটা ভাগের যোগ তার নিজের কোয়েরিতে, তাই Σ ভাগ = সর্বমোট — শাখার ভাগের একই নিয়ম। `null` (সব রিপোর্ট) = আগের মতো শাখা।
          */
         public readonly ?Closure $sections = null,
+
+        /*
+         * ⭐ চাবিগুলোর যেকোনো একটাই যথেষ্ট — `true` হলে (মালিক, ১৪ অক্টোবর ২০২৬: লক্ষ্য বনাম আদায় হিসাবের লোক আর বিক্রয়ের লোক
+         * দুইজনেরই, একটা দরজায়)। ⓘ ডিফল্ট `false` — প্রতিটা ঘোষিত চাবি লাগে, আগের মতো; [[allows()]] সূচি, নামানো, ফোন আর
+         * দরজা সবার একই উত্তর।
+         */
+        public readonly bool $anyKey = false,
     ) {
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");
@@ -304,6 +311,16 @@ final class ReportDefinition
 
         if ($keys === []) {
             return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
+        }
+
+        if ($this->anyKey) {
+            foreach ($keys as $key) {
+                if ($user->can($key)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         foreach ($keys as $key) {

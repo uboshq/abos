@@ -70,7 +70,10 @@ final class SalesDashboard implements ProvidesDashboard
         $collectedMonth = SalesMetrics::collectedThisMonth();
 
         // ⭐ লক্ষ্য বনাম আদায় — রিপোর্টের একই হিসাব (মালিক, ১৪ অক্টোবর ২০২৬; [[PartyTargetReport::thisMonth()]])
-        $versus = \App\Modules\Sales\Reports\PartyTargetReport::thisMonth();
+        // ⓘ কেবল যাঁর কাছে রিপোর্টটা খোলে (হিসাব বা বিক্রয়ের চাবি, যেকোনো একটা) — ঘর আর তালিকা দুইটাই তাঁর
+        $versus = app(\App\Core\Engines\Report\ReportEngine::class)->get(\App\Modules\Sales\Reports\PartyTargetReport::KEY)->allows(auth()->user())
+            ? \App\Modules\Sales\Reports\PartyTargetReport::thisMonth()
+            : null;
 
         return new DashboardDefinition(
             title: __('sales::dashboard.title'),
@@ -143,14 +146,10 @@ final class SalesDashboard implements ProvidesDashboard
                 ),
 
                 /*
-                 * ⚠️ বকেয়া বাড়া খারাপ খবর, তাই `BAD` — আর সেটাই তীরের
-                 * রংও ঠিক করে। দিক দেখে রং দিলে "বকেয়া ▲২১%" সবুজ হত।
-                 */
-                /*
                  * ⭐ এ মাসের লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬: *"eta sales er dashboard eo daw"*। রঙ: ১০০% বা বেশি সবুজ,
                  * ৮০–৯৯ হলুদ, নিচে লাল; লক্ষ্য না থাকলে নিরপেক্ষ। চাপলে পুরো রিপোর্ট।
                  */
-                new Stat(
+                ...($versus === null ? [] : [new Stat(
                     label: __('sales::party_target.tile'),
                     value: $versus['percent'] === null ? '—' : $versus['percent'].'%',
                     hint: __('sales::party_target.tile_hint', ['inflow' => Money::format($versus['inflow']), 'target' => Money::format($versus['target'])]),
@@ -161,10 +160,12 @@ final class SalesDashboard implements ProvidesDashboard
                         bccomp($versus['percent'], \App\Modules\Sales\Reports\PartyTargetReport::NEAR_AT, 1) >= 0 => Stat::WARN,
                         default => Stat::BAD,
                     },
-                    // ⓘ রিপোর্টের দরজার একই চাবি — যিনি ঘর দেখেন তিনি চাপলে রিপোর্টও খোলে
-                    permission: 'accounts.report',
-                ),
+                )]),
 
+                /*
+                 * ⚠️ বকেয়া বাড়া খারাপ খবর, তাই `BAD` — আর সেটাই তীরের
+                 * রংও ঠিক করে। দিক দেখে রং দিলে "বকেয়া ▲২১%" সবুজ হত।
+                 */
                 new Stat(
                     label: __('sales::dashboard.outstanding'),
                     value: Money::format(self::outstanding()),
@@ -216,7 +217,7 @@ final class SalesDashboard implements ProvidesDashboard
                     href: route('sales.invoice.index', ['view' => 'due']),
                 ),
                 // ⭐ সবচেয়ে পিছিয়ে থাকা পাঁচ গ্রাহক — এ মাসের লক্ষ্য বনাম আদায় (মালিক, ১৪ অক্টোবর ২০২৬)
-                new Listing(
+                ...($versus === null ? [] : [new Listing(
                     label: __('sales::party_target.lagging'),
                     columns: [
                         ['key' => 'customer', 'label' => __('sales::party_target.customer'), 'render' => fn ($r) => (string) $r->customer],
@@ -229,7 +230,7 @@ final class SalesDashboard implements ProvidesDashboard
                     rows: $versus['lagging'],
                     empty: __('sales::party_target.nobody_lagging'),
                     href: route('accounts.report.show', ['slug' => 'party-target']),
-                ),
+                )]),
             ],
         );
     }

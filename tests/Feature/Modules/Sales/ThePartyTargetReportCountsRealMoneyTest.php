@@ -208,19 +208,44 @@ final class ThePartyTargetReportCountsRealMoneyTest extends TestCase
         $this->get(route('module.dashboard', ['module' => 'sales']))->assertOk()->assertSee(__('sales::party_target.tile'))->assertSee(__('sales::party_target.lagging'));
     }
 
-    public function test_both_doors_open_the_report_for_their_own_key(): void
+    /**
+     * ⭐ একটা দরজা, দুই চাবি — হিসাব (`accounts.report`) বা বিক্রয় (`sales.report`), যেকোনো একটা (fe, মালিক: "sales er dashboard eo
+     * daw")। দাবি: প্রত্যেকে একা চাবিতে রিপোর্ট খোলেন আর ড্যাশবোর্ডে ঘর দেখেন; চাবি ছাড়া ৪০৩, ঘরও নেই।
+     */
+    public function test_either_key_opens_the_one_door_and_shows_the_dashboard_tile(): void
     {
         $this->target($this->dealer('PT-X', 'Door Dealer'), '1000');
 
-        $accountant = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
-        $accountant->companies()->attach($this->company->id, ['is_active' => true]);
-        CompanyContext::forCompany((int) $this->company->id, fn () => $accountant->givePermissionTo(Permission::findOrCreate('accounts.report', 'web')));
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        foreach (['accounts.report', 'sales.report'] as $key) {
+            $person = $this->person([$key, 'sales.invoice.view']);
 
-        $this->actingAs($accountant->fresh())->get(route('accounts.report.show', ['slug' => 'party-target']))
-            ->assertOk()->assertSee('Door Dealer');
-        $this->actingAs($this->owner)->get(route('accounts.report.show', ['slug' => 'party-target-areas']))
-            ->assertOk();
+            $this->actingAs($person)->get(route('accounts.report.show', ['slug' => 'party-target']))
+                ->assertOk()->assertSee('Door Dealer');
+            $this->actingAs($person)->get(route('accounts.report.show', ['slug' => 'party-target-areas']))->assertOk();
+            $this->actingAs($person)->get(route('module.dashboard', ['module' => 'sales']))
+                ->assertOk()->assertSee(__('sales::party_target.tile'));
+        }
+
+        $neither = $this->person(['sales.invoice.view']);
+        $this->actingAs($neither)->get(route('accounts.report.show', ['slug' => 'party-target']))->assertForbidden();
+        $this->actingAs($neither)->get(route('module.dashboard', ['module' => 'sales']))
+            ->assertOk()->assertDontSee(__('sales::party_target.tile'));
+
+        // ⓘ অন্য রিপোর্টের দরজা আগের মতোই কেবল হিসাবের চাবি চায়
+        $this->actingAs($this->person(['sales.report']))->get(route('accounts.report.show', ['slug' => 'day-book']))->assertForbidden();
+    }
+
+    /** একজন নতুন মানুষ, কেবল এই চাবিগুলো হাতে */
+    private function person(array $keys): User
+    {
+        $user = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $user->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany((int) $this->company->id, fn () => $user->givePermissionTo(
+            array_map(fn (string $k) => Permission::findOrCreate($k, 'web'), $keys)));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app['auth']->forgetGuards();
+
+        return $user->fresh();
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
