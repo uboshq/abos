@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Core\Dashboard;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuSwitches;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 use App\Models\User;
 
 /**
@@ -15,7 +19,30 @@ use App\Models\User;
  */
 class DashboardRegistry
 {
-    public function __construct(private readonly ModuleRegistry $modules) {}
+    public function __construct(
+        private readonly ModuleRegistry $modules,
+        private readonly MenuSwitches $switches,
+        private readonly SettingsService $settings,
+    ) {}
+
+    /**
+     * এই কোম্পানি ও শাখায় চালু মডিউলগুলো — বন্ধ মডিউলের ঘর হোমে আসে না।
+     *
+     * ⛔ আগে কেবল অনুমতি দেখা হত: HR বন্ধ করা কোম্পানির হোমে "আজ উপস্থিত
+     * ০ / ৫" আর ছুটির অপেক্ষা, আর ক্লিকে ৪০৪। মেনুর নিয়মটাই এখানে
+     * ([[MenuSwitches::moduleIsOn()]]) — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     *
+     * @return list<\App\Core\Module\ModuleDefinition>
+     */
+    private function modulesSwitchedOn(): array
+    {
+        $switchedOff = BranchModule::switchedOffIn(CompanyContext::branchId());
+
+        return array_values(array_filter(
+            $this->modules->all(),
+            fn ($module): bool => $this->switches->moduleIsOn($this->settings, $module, $switchedOff),
+        ));
+    }
 
     /**
      * এই ব্যবহারকারী যা দেখতে পারেন — দল ধরে সাজানো।
@@ -31,7 +58,7 @@ class DashboardRegistry
     {
         $grouped = array_fill_keys(Widget::GROUPS, []);
 
-        foreach ($this->modules->all() as $module) {
+        foreach ($this->modulesSwitchedOn() as $module) {
             foreach ($module->widgets as $provider) {
                 /*
                  * সরবরাহকারী ব্যতিক্রম ছুঁড়লে পাতাটা ভাঙবে — চাপা দেওয়া
@@ -71,7 +98,7 @@ class DashboardRegistry
     {
         $out = [];
 
-        foreach ($this->modules->all() as $module) {
+        foreach ($this->modulesSwitchedOn() as $module) {
             foreach ($module->widgets as $provider) {
                 if (! method_exists($provider, 'health')) {
                     continue;

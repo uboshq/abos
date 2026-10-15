@@ -48,6 +48,8 @@ return [
     ],
 
     'source' => [
+        // ⓘ ভাউচারের নিজের নাম — ধরন জানা না থাকলে খোঁজায় এটাই (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        'voucher' => 'ভাউচার',
         'sales_invoice' => 'বিক্রয় চালান',
         'purchase_invoice' => 'ক্রয় চালান',
         'receipt_voucher' => 'আদায় ভাউচার',
@@ -119,6 +121,45 @@ return [
         'vehicle' => 'বহরের গাড়ি',
         'vehicle_type' => 'গাড়ির ধরন',
         'warehouse' => 'গুদাম',
+        /*
+         * ⚠️ বাকি ৩৪টা উৎসের নাম — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         * ⓘ ১৩ সেপ্টেম্বরের পরে আসা উৎসগুলোর (উদ্ধৃতি, স্থায়ী সম্পদ, অর্থের কাগজ, লট…) নাম ছিল না, তাই খোঁজার ফলে
+         * কাঁচা ইংরেজি স্লাগ (`sales_quotation · SQ-0012`) আর "নতুন …" কাজগুলো চুপচাপ বাদ। শব্দ মডিউলের নিজের lang থেকে।
+         */
+        'sales_quotation' => 'উদ্ধৃতি',
+        'fixed_asset' => 'স্থায়ী সম্পদ',
+        'asset_event' => 'সম্পদের ঘটনা',
+        'asset_transfer' => 'সম্পদ স্থানান্তর',
+        'asset_capitalise' => 'সম্পদ মূলধনে তোলা',
+        'asset_disposal' => 'সম্পদ বিদায়',
+        'asset_verification_line' => 'সম্পদ গোনার সারি',
+        'depreciation' => 'অবচয়',
+        'depreciation_run' => 'মাসের অবচয়',
+        'note' => 'ডেবিট বা ক্রেডিট নোট',
+        'money_category' => 'টাকার শ্রেণি',
+        'cost_center' => 'খরচের কেন্দ্র',
+        'year_close' => 'বছর বন্ধ',
+        'withdrawal' => 'উত্তোলন',
+        'deposit' => 'জমা',
+        'deposit_movement' => 'জমার লেনদেন',
+        'capital_entry' => 'মূলধন',
+        'bank_facility' => 'ব্যাংক সুবিধা',
+        'hand_loan' => 'হাতধার',
+        'hand_loan_movement' => 'হাতধারের লেনদেন',
+        'insurance_premium' => 'বীমার প্রিমিয়াম',
+        'insurance_prepayment' => 'অগ্রিম বীমা',
+        'insurance_claim' => 'বীমা দাবি',
+        'rental_contract' => 'ভাড়ার চুক্তি',
+        'rental_adjustment' => 'ভাড়ার সমন্বয়',
+        'tenancy' => 'ভাড়াটের চুক্তি',
+        'expense_claim' => 'খরচের দাবি',
+        'sales_channel' => 'বিক্রির মাধ্যম',
+        'sales_invoice_cancellation' => 'বিল বাতিল',
+        'credit_profile' => 'বাকির পাতা',
+        'batch' => 'লট',
+        'brand' => 'ব্র্যান্ড',
+        'product_category' => 'পণ্যের শ্রেণি',
+        'payment_method' => 'টাকা নেওয়ার উপায়',
     ],
 
     'posting' => [

@@ -281,7 +281,8 @@ final class ScheduleService
          * আর কোনো রিপোর্টই চাবি ঘোষণা করত না, তাই কেবল সূচির চাবি হাতে
          * লাভ-ক্ষতি পাওয়া যেত। উত্তর এখন [[ReportDefinition::allows()]]-এ।
          */
-        if (! $definition->allows(auth()->user())) {
+        // ⓘ ফাইলের চাবিসহ — [[ReportDefinition::allowsFile()]] (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১০, ১৪ অক্টোবর ২০২৬)
+        if (! $definition->allowsFile(auth()->user())) {
             throw ValidationException::withMessages([
                 'report_key' => __('system_admin::schedule.you_cannot_see_this'),
             ]);
@@ -290,7 +291,7 @@ final class ScheduleService
         foreach ($others as $id) {
             $user = User::query()->find($id);
 
-            if ($user === null || ! $definition->allows($user)) {
+            if ($user === null || ! $definition->allowsFile($user)) {
                 throw ValidationException::withMessages([
                     'recipients' => __('system_admin::schedule.recipient_cannot_see', [
                         'name' => $user?->name ?? (string) $id,

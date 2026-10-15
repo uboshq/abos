@@ -197,7 +197,9 @@ final class PartyTargetReport
     {
         return new ReportDefinition(
             key: self::KEY,
-            permission: 'accounts.report',
+            // ⭐ হিসাব বা বিক্রয়ের রিপোর্টের চাবি — যেকোনো একটা (fe, মালিক: "sales er dashboard eo daw"); বিক্রয়কর্মী কেবল নিজের ডিলার
+            permission: ['accounts.report', 'sales.report'],
+            anyKey: true,
             title: 'sales::party_target.title',
             filters: ['date_range', 'branch', 'location_id', 'salesman_id'],
             // ⓘ শাখা গ্রাহকের নিজের — নিজেই ছাঁকে; ভাগ এলাকা ধরে ([[sectionsFor()]])
@@ -234,7 +236,9 @@ final class PartyTargetReport
     {
         return new ReportDefinition(
             key: self::AREAS,
-            permission: 'accounts.report',
+            // ⭐ হিসাব বা বিক্রয়ের রিপোর্টের চাবি — যেকোনো একটা (fe, মালিক: "sales er dashboard eo daw"); বিক্রয়কর্মী কেবল নিজের ডিলার
+            permission: ['accounts.report', 'sales.report'],
+            anyKey: true,
             title: 'sales::party_target.areas_title',
             filters: ['date_range', 'branch', 'location_id', 'salesman_id'],
             splitByBranch: false,

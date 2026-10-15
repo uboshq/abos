@@ -61,6 +61,7 @@ return [
         'owner_gone' => 'Creator gone',
         'owner_no_permission' => 'Creator lost access',
         'unknown_report' => 'Report removed',
+        'too_many_rows' => 'Over 1,00,000 rows, so no file was made. Narrow the filters.',
     ],
 
     'weekday' => [

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Requests;
 
+use App\Modules\Sales\Http\Requests\PlainNumber;
 use Illuminate\Validation\Rule;
 
 /**
@@ -13,6 +14,10 @@ use Illuminate\Validation\Rule;
  * ([[DirectPurchaseOverviewController]]) একই নিয়ম চায়। ⛔ দুই তালিকা হলে একদিন একটায় নতুন ঘর বসত আর আরেকটায় না,
  * আর সারাংশ এমন বিল দেখাত যা জমায় আটকে যায়। ⭐ তাই একটাই তালিকা — বিক্রির দিকে [[DirectSaleRules]]-এর মতো।
  * ⓘ তালিকাটা নিয়ামক থেকে হুবহু কেটে আনা (হাতে লেখা নয়); কেবল `$request->input(…)` → `$input[…]`।
+ *
+ * ⛔ টাকা ও পরিমাণের প্রতিটা ঘরে [[PlainNumber]] — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬। ⓘ `numeric` "1e2" পাশ করাত,
+ * আর পরে bcmath ValueError ছুড়ত: সারাংশ আর জমা দুটোই ৫০০, কোনো বার্তা নয়। এখন ঘরের পাশে যাচাইয়ের কথা — বিক্রির
+ * কাউন্টারের ([[DirectSaleRules]]) একই নিয়ম। `moreThanZero()`-ও একই প্রশ্ন করে, কারণ সে যাচাইয়ের ভিতরেই চলে।
  */
 final class DirectPurchaseRules
 {
@@ -93,7 +98,7 @@ final class DirectPurchaseRules
              * টাকা দিলে কোন খাত থেকে গেল সেটা বলতেই হবে; নইলে পরিশোধটা
              * কোথা থেকে এল তা খাতায় লেখা থাকত না।
              */
-            'paid_now' => ['nullable', 'numeric', 'min:0'],
+            'paid_now' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'paid_from_account_id' => ['nullable', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId),
                 Rule::requiredIf(fn () => self::moreThanZero($input['paid_now'] ?? null))],
@@ -131,14 +136,14 @@ final class DirectPurchaseRules
                 Rule::requiredIf(fn () => self::moreThanZero($input['transport_cost'] ?? null)
                     && blank($input['carrier_name'] ?? null))],
             'carrier_name' => ['nullable', 'string', 'max:120'],
-            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+            'transport_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             /*
              * গোটা বিলের ছাড় — টাকায় বা শতাংশে (মালিকের ছবি, সিদ্ধান্ত ক)।
              * ⓘ ভাগটা হয় [[DirectPurchaseService::spreadBillDiscount()]]-এ;
              * মোটের চেয়ে বড় ছাড়ও সেখানেই থামে, কারণ মোটটা সারি থেকে কষতে হয়।
              */
-            'bill_discount' => ['nullable', 'numeric', 'min:0',
+            'bill_discount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0',
                 Rule::when(($input['bill_discount_mode'] ?? null) === 'percent', ['max:100'])],
             'bill_discount_mode' => ['nullable', Rule::in(['amount', 'percent'])],
 
@@ -146,7 +151,7 @@ final class DirectPurchaseRules
             'driver_name' => ['nullable', 'string', 'max:120'],
 
             'deposits' => ['nullable', 'array', 'max:20'],
-            'deposits.*.amount' => ['required', 'numeric', 'gt:0'],
+            'deposits.*.amount' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'deposits.*.payment_method_id' => ['required', 'integer',
                 Rule::exists('mdm_payment_methods', 'id')->where('company_id', $companyId)],
             'deposits.*.account_id' => ['required', 'integer',
@@ -171,14 +176,14 @@ final class DirectPurchaseRules
              * থামায়: চার্জ অঙ্কের সমান বা বেশি হলে ভুলটা ফর্মের ঘরেই দেখা
              * যায়, বিল-মাল-খাতার কাজ শুরু হওয়ার আগে।
              */
-            'deposits.*.charge_amount' => ['nullable', 'numeric', 'min:0', 'lt:deposits.*.amount'],
+            'deposits.*.charge_amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0', 'lt:deposits.*.amount'],
             'deposits.*.charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
 
             'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
-            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
-            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.free_qty' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             /*
              * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
              *
@@ -189,11 +194,11 @@ final class DirectPurchaseRules
              * ⛔ চারটা দরজাতেই এক নিয়ম — একটা খোলা রাখলে মাল ওদিক দিয়েই
              * ঢুকত, আর পাহারাটা থাকত নামমাত্র।
              */
-            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
-            'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rate' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
+            'lines.*.discount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.tax' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             // ⛔ বিক্রয়দর ছাড়া নয় — মালিক, ৩ অক্টোবর ২০২৬: *"বিক্রয়দর … na dile cart e add hobe na"* ([[DirectPurchaseService::assertPriced()]])
-            'lines.*.sales_price' => ['required', 'numeric', 'gt:0'],
+            'lines.*.sales_price' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
 
             /*
              * দামের নীতি — মুক্ত লেখা নয়, তিনটার একটা।
@@ -202,7 +207,7 @@ final class DirectPurchaseRules
              * বাছার সময় পর্দা সেটা নোঙর ধরে **কিছুই করত না** — নীরবে।
              */
             'lines.*.pricing_anchor' => ['nullable', 'string', Rule::in(['markup', 'margin', 'sales_price'])],
-            'lines.*.pricing_pct' => ['nullable', 'numeric'],
+            'lines.*.pricing_pct' => ['nullable', 'numeric', PlainNumber::RULE],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
 
             /*
@@ -223,7 +228,7 @@ final class DirectPurchaseRules
              */
             'lines.*.batch_no' => ['nullable', 'string', 'max:60'],
             'lines.*.expiry_date' => ['nullable', 'date'],
-            'lines.*.mrp' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.mrp' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'lines.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
 
@@ -255,7 +260,7 @@ final class DirectPurchaseRules
             'gifts' => ['nullable', 'array'],
             'gifts.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
-            'gifts.*.qty' => ['required', 'numeric', 'gt:0'],
+            'gifts.*.qty' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
             'gifts.*.unit_id' => ['nullable', 'integer',
                 Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
             'gifts.*.against_product_id' => ['nullable', 'integer',
@@ -272,7 +277,7 @@ final class DirectPurchaseRules
     {
         $value = trim((string) ($value ?? ''));
 
-        return is_numeric($value) && bccomp($value, '0', 4) > 0;
+        return PlainNumber::is($value) && bccomp($value, '0', 4) > 0;
     }
 
     /** @return array<string, string> */

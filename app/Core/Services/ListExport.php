@@ -72,6 +72,21 @@ class ListExport
     /** এই পাতার আঁকায় টেবিল ইতিমধ্যে নেওয়া হয়েছে কি না — পাতাপিছু প্রথমটাই */
     private bool $takenThisPage = false;
 
+    /**
+     * ⭐ সংখ্যার কলাম (চাবি) — CSV আর xlsx-এ এগুলো খালি সংখ্যা, লাখের কমা ছাড়া; xlsx-এ সংখ্যার ঘর (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৬,
+     * ১৪ অক্টোবর ২০২৬)। ⓘ আগে প্রতিটা ঘর লেখা (inlineStr) আর টাকায় "1,23,456.00" — হিসাবরক্ষকের Excel-এ SUM শূন্য দিত।
+     * ⓘ কেবল রিপোর্ট বলে ([[ReportExport::into()]]); ধরা-টেবিল, JSON আর PDF পর্দার রূপই রাখে।
+     *
+     * @var list<string>
+     */
+    private array $numeric = [];
+
+    /** @param  list<string>  $keys  যে কলামগুলো সংখ্যা */
+    public function numeric(array $keys): void
+    {
+        $this->numeric = array_values($keys);
+    }
+
     /** এই পর্দায় রপ্তানি নেই — বোতামেও নয়, ঠিকানাতেও নয়। */
     public function refuse(): void
     {
@@ -194,6 +209,7 @@ class ListExport
         $this->takenThisPage = false;
         $this->table = null;
         $this->footer = null;
+        $this->numeric = [];
 
         // অস্বীকারটাও প্রতি অনুরোধে নতুন — নাহলে একটা রপ্তানি-বিহীন
         // পর্দা দেখার পর পরের পর্দার রপ্তানিও নীরবে বন্ধ থাকত
@@ -285,11 +301,11 @@ class ListExport
         $csv .= $this->line(array_column($this->table['columns'], 'label'));
 
         foreach ($this->table['values'] as $row) {
-            $csv .= $this->line($row);
+            $csv .= $this->line($this->plainRow($row));
         }
 
         if ($this->footer !== null) {
-            $csv .= $this->line($this->footer);
+            $csv .= $this->line($this->plainRow($this->footer));
         }
 
         return $csv;
@@ -411,11 +427,11 @@ class ListExport
         $r = 2;
 
         foreach ($this->table['values'] as $value) {
-            $rows .= $this->xlsxRow($r++, $value);
+            $rows .= $this->xlsxRow($r++, $value, true);
         }
 
         if ($this->footer !== null) {
-            $rows .= $this->xlsxRow($r, $this->footer);
+            $rows .= $this->xlsxRow($r, $this->footer, true);
         }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -427,17 +443,56 @@ class ListExport
      *
      * @param  list<string>  $values
      */
-    private function xlsxRow(int $r, array $values): string
+    private function xlsxRow(int $r, array $values, bool $body = false): string
     {
         $cells = '';
 
         foreach (array_values($values) as $i => $value) {
             $ref = $this->columnLetter($i).$r;
+            $number = $body ? $this->plain($i, $value) : null;
+
+            // ⓘ সংখ্যার কলামের খালি সংখ্যা — Excel-এর সংখ্যার ঘর, যোগ হয় ([[numeric()]])
+            if ($number !== null) {
+                $cells .= '<c r="'.$ref.'" t="n"><v>'.$number.'</v></c>';
+
+                continue;
+            }
+
             $text = $this->xmlText($this->formulaGuard($value));
             $cells .= '<c r="'.$ref.'" t="inlineStr"><is><t xml:space="preserve">'.$text.'</t></is></c>';
         }
 
         return '<row r="'.$r.'">'.$cells.'</row>';
+    }
+
+    /**
+     * সংখ্যার কলামের ঘর হলে খালি সংখ্যা (কমা ছাড়া), নইলে null — শাখার মাথা বা "(Dr) …"-এর মতো লেখা লেখাই থাকে।
+     */
+    private function plain(int $index, string $value): ?string
+    {
+        $key = $this->table['columns'][$index]['key'] ?? null;
+
+        if ($key === null || ! in_array($key, $this->numeric, true)
+            || preg_match('/^-?[0-9][0-9,]*(\.[0-9]+)?\z/', $value) !== 1) {
+            return null;
+        }
+
+        return str_replace(',', '', $value);
+    }
+
+    /**
+     * @param  list<string>  $values
+     * @return list<string>
+     */
+    private function plainRow(array $values): array
+    {
+        $out = [];
+
+        foreach (array_values($values) as $i => $value) {
+            $out[] = $this->plain($i, $value) ?? $value;
+        }
+
+        return $out;
     }
 
     /** 0→A, 25→Z, 26→AA — কলামের অক্ষর, ২৬-ভিত্তিতে। */
@@ -526,6 +581,15 @@ class ListExport
      */
     private function formulaGuard(string $value): string
     {
+        /*
+         * ⛔ খালি একটা সংখ্যা সূত্র নয় — ঋণাত্মক টাকা ছোঁয়া হয় না (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৫, ১৪ অক্টোবর ২০২৬)।
+         * ⓘ আগে প্রতিটা "-500.00" হয়ে যেত "'-500.00" — Excel-এ লেখা, যোগ হত না, আর CSV-তে উদ্ধৃতিটা চোখে পড়ত।
+         * ⚠️ কেবল ঐচ্ছিক বিয়োগ, অঙ্ক (লাখের কমাসহ), দশমিক আর শেষে ঐচ্ছিক % — "-" এর পরে অন্য যা-কিছু, আর = + @ TAB CR আগের মতোই আটকায়।
+         */
+        if (preg_match('/^-[0-9][0-9,]*(\.[0-9]+)?%?\z/', $value) === 1) {
+            return $value;
+        }
+
         if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
             return "'".$value;
         }

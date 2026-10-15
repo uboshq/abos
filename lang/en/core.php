@@ -43,6 +43,7 @@ return [
     ],
 
     'source' => [
+        'voucher' => 'Voucher',
         'sales_invoice' => 'Sales Invoice',
         'purchase_invoice' => 'Purchase Invoice',
         'receipt_voucher' => 'Receipt Voucher',
@@ -108,6 +109,45 @@ return [
         'vehicle' => 'Vehicle',
         'vehicle_type' => 'Vehicle Type',
         'warehouse' => 'Warehouse',
+        /*
+         * ⚠️ বাকি ৩৪টা উৎসের নাম — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         * ⓘ ১৩ সেপ্টেম্বরের পরে আসা উৎসগুলোর (উদ্ধৃতি, স্থায়ী সম্পদ, অর্থের কাগজ, লট…) নাম ছিল না, তাই খোঁজার ফলে
+         * কাঁচা ইংরেজি স্লাগ (`sales_quotation · SQ-0012`) আর "নতুন …" কাজগুলো চুপচাপ বাদ। শব্দ মডিউলের নিজের lang থেকে।
+         */
+        'sales_quotation' => 'Sales quotation',
+        'fixed_asset' => 'Fixed asset',
+        'asset_event' => 'Asset event',
+        'asset_transfer' => 'Asset transfer',
+        'asset_capitalise' => 'Asset capitalisation',
+        'asset_disposal' => 'Asset disposal',
+        'asset_verification_line' => 'Asset count line',
+        'depreciation' => 'Depreciation',
+        'depreciation_run' => 'Depreciation run',
+        'note' => 'Debit or credit note',
+        'money_category' => 'Money category',
+        'cost_center' => 'Cost centre',
+        'year_close' => 'Year close',
+        'withdrawal' => 'Withdrawal',
+        'deposit' => 'Deposit',
+        'deposit_movement' => 'Deposit movement',
+        'capital_entry' => 'Capital entry',
+        'bank_facility' => 'Bank facility',
+        'hand_loan' => 'Hand loan',
+        'hand_loan_movement' => 'Hand loan movement',
+        'insurance_premium' => 'Insurance premium',
+        'insurance_prepayment' => 'Insurance prepayment',
+        'insurance_claim' => 'Insurance claim',
+        'rental_contract' => 'Rental contract',
+        'rental_adjustment' => 'Rental adjustment',
+        'tenancy' => 'Tenancy',
+        'expense_claim' => 'Expense claim',
+        'sales_channel' => 'Sales channel',
+        'sales_invoice_cancellation' => 'Invoice cancellation',
+        'credit_profile' => 'Credit profile',
+        'batch' => 'Lot',
+        'brand' => 'Brand',
+        'product_category' => 'Product category',
+        'payment_method' => 'Payment method',
     ],
 
     'posting' => [

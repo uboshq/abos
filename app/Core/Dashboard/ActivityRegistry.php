@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Core\Dashboard;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuSwitches;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 use App\Models\User;
 
 /**
@@ -25,7 +29,11 @@ class ActivityRegistry
      */
     public const SHOWN = 4;
 
-    public function __construct(private readonly ModuleRegistry $modules) {}
+    public function __construct(
+        private readonly ModuleRegistry $modules,
+        private readonly MenuSwitches $switches,
+        private readonly SettingsService $settings,
+    ) {}
 
     /**
      * এই ব্যবহারকারী যা দেখতে পারেন — সাম্প্রতিকতমটা আগে।
@@ -41,7 +49,19 @@ class ActivityRegistry
     {
         $rows = [];
 
+        /*
+         * ⛔ বন্ধ মডিউলের ঘটনা আসে না — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ শাখায় বিক্রয় বন্ধ, অথচ হোমে সর্বশেষ বিলগুলো ভাসত আর ক্লিকে ৪০৪।
+         * মেনুর নিয়মটাই এখানে ([[MenuSwitches::moduleIsOn()]])।
+         */
+        $switchedOff = BranchModule::switchedOffIn(CompanyContext::branchId());
+
         foreach ($this->modules->all() as $module) {
+            if (! $this->switches->moduleIsOn($this->settings, $module, $switchedOff)) {
+                continue;
+            }
+
             foreach ($module->activity as $provider) {
                 /*
                  * প্রতিটা মডিউলের কাছে দরকারের চেয়ে বেশি চাওয়া হয়।

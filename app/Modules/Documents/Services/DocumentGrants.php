@@ -35,6 +35,10 @@ final class DocumentGrants
     public function grant(Document $document, string $type, int $granteeId, array $abilities): DocumentGrant
     {
         $made = DB::transaction(function () use ($document, $type, $granteeId, $abilities) {
+            // ⛔ কাগজের সারিতে তালা আগে — একই মানুষকে দুই ক্লিকে একসাথে দিলে দুজনেই "নেই" দেখে দুইটা সারি বসাতে যেত, আর অনন্য চাবিতে
+            // ৫০০ (Documents লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AGrantWaitsForTheDocumentsLockTest]])
+            Document::query()->withoutGlobalScopes()->whereKey($document->getKey())->lockForUpdate()->first();
+
             $flags = [];
 
             foreach (DocumentGrant::ABILITIES as $ability => $column) {
@@ -83,6 +87,10 @@ final class DocumentGrants
     public function share(Document $document, string $type, int $granteeId, bool $download, ?Carbon $expiresAt): DocumentGrant
     {
         $made = DB::transaction(function () use ($document, $type, $granteeId, $download, $expiresAt) {
+            // ⛔ কাগজের সারিতে তালা আগে — একই মানুষকে দুই ক্লিকে একসাথে দিলে দুজনেই "নেই" দেখে দুইটা সারি বসাতে যেত, আর অনন্য চাবিতে
+            // ৫০০ (Documents লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AGrantWaitsForTheDocumentsLockTest]])
+            Document::query()->withoutGlobalScopes()->whereKey($document->getKey())->lockForUpdate()->first();
+
             $grant = DocumentGrant::query()->firstOrNew([
                 'document_id' => $document->getKey(),
                 'grantee_type' => $type,

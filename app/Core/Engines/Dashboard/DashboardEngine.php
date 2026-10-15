@@ -101,7 +101,11 @@ final class DashboardEngine
              */
             $gate = $this->permissionFor($module->code);
 
-            if ($gate !== null && ! $user?->can($gate)) {
+            /*
+             * ⛔ সারি নেই (null) মানে বন্ধ — [[permissionFor()]]-এর নিজের কথা, আর মডিউলের পাতাও তাই করে।
+             * ⓘ আগে `null`-এ টাইলটা সবার জন্য খোলা থাকত — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+             */
+            if ($gate === null || ! $user?->can($gate)) {
                 continue;
             }
 

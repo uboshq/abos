@@ -61,12 +61,30 @@ class BooksIntegrityController extends Controller implements HasMiddleware
         $results = [];
 
         foreach ($checks as $check) {
-            $findings = $check->run();
+            /*
+             * ⛔ একটা যাচাই ভুলে থামলে গোটা পর্দা ৫০০ দিত — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+             *
+             * ⓘ বাকি যাচাইগুলোর ফলও তখন হারাত। এখন ঐ সারিটা লাল, লেখা
+             * "যাচাইটা চলেনি" — সবুজ নয়, কারণ ফল জানা নেই মানে মিলেছে নয়।
+             */
+            try {
+                $findings = $check->run();
+                $failed = false;
+            } catch (\Throwable $e) {
+                logger()->critical('বইয়ের যাচাই চলেনি — '.$check->key, [
+                    'check' => $check->key,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $findings = [];
+                $failed = true;
+            }
 
             $results[] = [
                 'check' => $check,
                 'findings' => $findings,
-                'ok' => $findings === [],
+                'failed' => $failed,
+                'ok' => ! $failed && $findings === [],
             ];
         }
 

@@ -59,9 +59,13 @@ final class VoucherWriter
              * আর সেটা এখানে ধরা হয় **না**: লেনদেনটা তখন ফিরে যায়, আর
              * ব্যবহারকারী কারণটা দেখেন। ⚠️ চুপচাপ গিলে ফেললে ভাউচারটা
              * সেভ হত, ছবিটা হত না, আর কেউ জানত না।
+             *
+             * ⛔ ধরনের নাম `'voucher'` ([[Voucher::drillSourceType()]]), ক্লাসের নাম নয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর
+             * ২০২৬। ⓘ কাগজের তালিকা, সইয়ের পাতা আর নামানোর দরজা সবাই `'voucher'` খোঁজে; ক্লাসের নামে রাখা বিল কোথাও দেখা যেত
+             * না, আর নামাতে গেলে ৪০৪। (আগের সারিগুলো ক্লাসের নামেই রইল — ওগুলো সরানো মালিকের প্রশ্ন।)
              */
             if ($attachment !== null) {
-                app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::class, $voucher->id);
+                app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::drillSourceType(), $voucher->id);
             }
 
             if ($asDraft) {
@@ -127,7 +131,7 @@ final class VoucherWriter
             $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
 
             if ($attachment !== null) {
-                app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::class, $voucher->id);
+                app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::drillSourceType(), $voucher->id); // ⛔ 'voucher', ক্লাসের নাম নয় (উপরে store()-এ কারণ)
             }
 
             if ($asDraft) {
@@ -200,7 +204,7 @@ final class VoucherWriter
         $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
 
         if ($attachment !== null) {
-            app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::class, $voucher->id);
+            app(AttachmentEngine::class)->store($attachment, 'accounts', Voucher::drillSourceType(), $voucher->id); // ⛔ 'voucher', ক্লাসের নাম নয় (উপরে store()-এ কারণ)
         }
 
         $fresh = Voucher::query()->withoutGlobalScope('user-branch')->with('lines')->findOrFail($voucher->id);

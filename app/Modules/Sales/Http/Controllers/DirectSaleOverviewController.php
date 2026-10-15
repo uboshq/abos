@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -38,16 +39,33 @@ class DirectSaleOverviewController extends Controller implements HasMiddleware
         // ⚠️ `validate()` নয় — পপ-আপের অনুরোধ JSON চায় না, তাই ছুঁড়লে উত্তর হত পেছনে ফেরা, আর পপ-আপে ঢুকত পুরো
         // কাউন্টার-পাতা। ভুলগুলো তাই সারাংশেই — "থামবে" সুরে, পপ-আপের "নিশ্চিত" বন্ধ
         if ($check->fails()) {
-            $sheet = ConfirmOverview::titled(__('overview.not_ready'));
-            foreach (array_unique($check->errors()->all()) as $message) {
-                $sheet->note($message, 'stop');
-            }
-
-            return view('ui.confirm-overview-body', ['overview' => $sheet->toArray()]);
+            return $this->notReady($check->errors()->all());
         }
 
         $data = $check->validated();
 
-        return view('ui.confirm-overview-body', ['overview' => $overview->build($data, $data['lines'])->toArray()]);
+        /*
+         * ⛔ সেবার নিজের "না"-ও সারাংশে — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬; ক্রয়ের সারাংশের একই ধাঁচ
+         * ([[DirectPurchaseOverviewController]])। ⓘ সারির হিসাব (`lineFigures()`-এর ছাড়/ভ্যাটের দেয়াল) ছুঁড়লে আগে উত্তর হত
+         * পেছনে ফেরা (৩০২), আর পপ-আপে বসত পুরো কাউন্টার-পাতা — ঠিক যা উপরের কথাটা এড়াতে চায়।
+         */
+        try {
+            $sheet = $overview->build($data, $data['lines']);
+        } catch (ValidationException $e) {
+            return $this->notReady($e->validator->errors()->all());
+        }
+
+        return view('ui.confirm-overview-body', ['overview' => $sheet->toArray()]);
+    }
+
+    /** @param  list<string>  $messages */
+    private function notReady(array $messages): View
+    {
+        $sheet = ConfirmOverview::titled(__('overview.not_ready'));
+        foreach (array_unique($messages) as $message) {
+            $sheet->note($message, 'stop');
+        }
+
+        return view('ui.confirm-overview-body', ['overview' => $sheet->toArray()]);
     }
 }

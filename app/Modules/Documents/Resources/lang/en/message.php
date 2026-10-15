@@ -82,6 +82,7 @@ return [
     'already_signed' => 'The current version is already signed.',
     'no_signature_flow' => 'This company has no signature flow for documents — create a "Document signature" flow on the approval flow screen (who signs, in which order).',
     'signature_asked' => 'Signatures were asked for — the signers have been told.',
+    'signature_already_asked' => 'Signatures are already asked for — the signers have been told. The request is waiting in their inbox.',
     'verify_ok' => 'The signature checks out — the file is exactly the bytes that were signed.',
     'verify_old_version' => 'The signature is genuine but for an older version — the current version needs signing again.',
     'verify_broken' => 'It does not match — the file changed after signing, or is missing. Look into it now.',

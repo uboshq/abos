@@ -61,15 +61,19 @@ final class SalesChecks implements ChecksItsOwnBooks
                     ->selectRaw('sales_invoice_id, COALESCE(SUM(amount), 0) as line_total')
                     ->groupBy('sales_invoice_id');
 
+                /*
+                 * ⛔ লাইনহীন বিলও ধরা পড়ে — বাঁ-জোড়, লাইন না থাকলে যোগ ০ (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+                 * ⓘ আগে ভিতরের জোড় ছিল: মোট ৫,০০০ অথচ একটাও লাইন নেই এমন বিল ফলেই আসত না, যাচাই চিরকাল সবুজ।
+                 */
                 $rows = DB::table('sal_invoices as i')
-                    ->joinSub($lines, 'l', 'l.sales_invoice_id', '=', 'i.id')
+                    ->leftJoinSub($lines, 'l', 'l.sales_invoice_id', '=', 'i.id')
                     ->where('i.company_id', CompanyContext::id())
                     ->whereNull('i.deleted_at')
                     ->where('i.status', '<>', DocumentStatus::CANCELLED)
-                    ->whereRaw('ABS(i.total - (l.line_total + COALESCE(i.rounding_amount, 0) - COALESCE(i.bill_discount, 0) + COALESCE(i.freight_charge, 0))) > 0.0001')
+                    ->whereRaw('ABS(i.total - (COALESCE(l.line_total, 0) + COALESCE(i.rounding_amount, 0) - COALESCE(i.bill_discount, 0) + COALESCE(i.freight_charge, 0))) > 0.0001')
                     ->limit(100)
                     ->select(['i.id', 'i.document_no', 'i.total'])
-                    ->selectRaw('l.line_total + COALESCE(i.rounding_amount, 0) - COALESCE(i.bill_discount, 0) + COALESCE(i.freight_charge, 0) as line_total')
+                    ->selectRaw('COALESCE(l.line_total, 0) + COALESCE(i.rounding_amount, 0) - COALESCE(i.bill_discount, 0) + COALESCE(i.freight_charge, 0) as line_total')
                     ->get();
 
                 $out = [];

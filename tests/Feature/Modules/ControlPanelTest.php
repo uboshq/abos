@@ -90,6 +90,14 @@ class ControlPanelTest extends TestCase
                 continue;
             }
 
+            /*
+             * ⓘ ছাপার পর্দার তালিকা-ঘর (`json`) — নকশা বাছা হয় ছাপার পর্দায়, এখানে লেখার বাক্সে নয়; এখানে দিলে তালিকা লেখার
+             * ঘরে ঢুকে পাতাটা ৫০০ দিত (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬; [[ASavedPrintLayoutBrokeTheSystemTabTest]])।
+             */
+            if (($definition['type'] ?? null) === 'json') {
+                continue;
+            }
+
             $this->assertStringContainsString("settings[{$key}]", $everything,
                 "ঘোষিত সুইচ {$key} কোনো ট্যাবেই নেই।");
 
