@@ -91,4 +91,16 @@ final class OneMenuGroupClosedTheWholeModuleTest extends TestCase
 
         $this->get(route('accounts.custody'))->assertNotFound();
     }
+
+    /**
+     * ⭐ একই রুটের কয়েকটা সারি — কেবল নিজের প্যারামিটারের দরজা বন্ধ (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। ⓘ "পরিশোধ" আর "আদায়"
+     * দুইটাই `accounts.voucher.index`, কেবল `type` আলাদা; পরিশোধের সারি বন্ধ করলে আদায় খোলা থাকে, পরিশোধ ৪০৪।
+     */
+    public function test_switching_off_one_voucher_row_closes_only_that_type(): void
+    {
+        $this->switchOff(app(MenuSwitches::class)->forItem(['route' => 'accounts.voucher.index', 'route_params' => ['type' => 'payment']]));
+
+        $this->get(route('accounts.voucher.index', ['type' => 'payment']))->assertNotFound();
+        $this->get(route('accounts.voucher.index', ['type' => 'receipt']))->assertOk();
+    }
 }
