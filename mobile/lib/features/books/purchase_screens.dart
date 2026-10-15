@@ -6,6 +6,7 @@ import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 
 /// ⭐ ক্রয়ের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
@@ -245,7 +246,21 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     return Scaffold(
       appBar: AppBar(
           title: Text(d?.row.no ??
-              (widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ'))),
+              (widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ')),
+          actions: [
+            // ⭐ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬); দাম ঢাকা-না-ঢাকা সার্ভারের কাগজই ঠিক করে
+            if (d != null)
+              IconButton(
+                key: const ValueKey('purchase-print'),
+                tooltip: 'ছাপুন / পাঠান',
+                icon: const Icon(Icons.print_outlined),
+                onPressed: () => DocumentActionsSheet.show(context,
+                    type: widget.kind == 'bill' ? 'PurchaseBill' : 'PurchaseReceipt',
+                    id: widget.id,
+                    title: '${widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ'} · ${d.row.no}',
+                    fileStem: d.row.no),
+              ),
+          ]),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

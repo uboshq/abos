@@ -9,6 +9,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../printing/document_actions_sheet.dart';
 
 /// ডেলিভারি অর্ডার (DO) — তালিকা, নতুন DO, আর একটা DO-র পাতা (0.4.8, মালিকের বিক্রয়-ধারা §২ক-খ)।
 ///
@@ -382,7 +383,18 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   Widget build(BuildContext context) {
     final order = _order;
     return Scaffold(
-      appBar: AppBar(title: Text(order?.no ?? _title(widget.api))),
+      appBar: AppBar(title: Text(order?.no ?? _title(widget.api)), actions: [
+        // ⭐ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)। ⓘ কেবল বিক্রয় আদেশ: সার্ভারের ছাপার দরজায় আলাদা
+        // DO মডেলের কাগজ নেই (`sales_delivery_order` অর্ডারের মডেলই বাঁধে)।
+        if (order != null && widget.api.forOrders)
+          IconButton(
+            key: const ValueKey('order-print'),
+            tooltip: 'ছাপুন / পাঠান',
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () => DocumentActionsSheet.show(context,
+                type: 'SalesOrder', id: widget.id, title: 'বিক্রয় আদেশ · ${order.no}', fileStem: order.no),
+          ),
+      ]),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

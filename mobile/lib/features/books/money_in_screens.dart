@@ -5,6 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_spacing.dart';
+import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 import 'collect_screen.dart';
 
@@ -221,7 +222,17 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
   Widget build(BuildContext context) {
     final d = _detail;
     return Scaffold(
-      appBar: AppBar(title: Text(d?.row.no ?? 'আদায়')),
+      appBar: AppBar(title: Text(d?.row.no ?? 'আদায়'), actions: [
+        // ⭐ টাকার রসিদ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)
+        if (d != null)
+          IconButton(
+            key: const ValueKey('money-in-print'),
+            tooltip: 'ছাপুন / পাঠান',
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () => DocumentActionsSheet.show(context,
+                type: 'Collection', id: widget.id, title: 'টাকার রসিদ · ${d.row.no}', fileStem: d.row.no),
+          ),
+      ]),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

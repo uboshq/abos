@@ -5,20 +5,30 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/printing/document_delivery.dart';
 import '../../core/printing/documents_api.dart';
+import '../../core/printing/printer_settings.dart';
+import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import 'pdf_view_page.dart';
+import 'printer_settings_screen.dart';
+import 'thermal_flow.dart';
 
-/// "প্রিন্ট / শেয়ার" for one document, from anywhere in the app.
+/// "ছাপুন / পাঠান" for one paper, from anywhere in the app.
 ///
-/// <p>One sheet rather than a print button on each screen: every document in
-/// ABOS is printed the same four ways, and a second implementation is a
-/// second thing to keep in step.
+/// <p>⭐ Two printers (owner, 14 Oct 2026: "mobile app theke thermal & normal
+/// print zate dewa zay"):
+/// <ul>
+/// <li><b>নরমাল প্রিন্টার (A4/A5)</b> — the server's A4/A5 PDF, the same paper
+///   the web prints, into Android's own print dialog (Wi-Fi, USB, network,
+///   Save as PDF).</li>
+/// <li><b>থার্মাল প্রিন্টার (৫৮/৮০ মিমি)</b> — the server's 58/80 mm PDF,
+///   turned into a picture on the phone and sent over Bluetooth, because the
+///   printer's own fonts have no Bengali.</li>
+/// </ul>
 ///
-/// <p><b>The paper comes first, and the list is the server's.</b> Not every
-/// template has a thermal version, so the choices are fetched rather than
-/// hardcoded — a phone offering "রসিদ ৫৮mm" for a ledger would produce a
-/// metre of unreadable paper and look like a bug in the printer.
+/// <p>The papers offered are the server's list for this paper, never a list
+/// written on the phone. The road and the sheet size last used for this kind
+/// of paper are remembered on this phone.
 class DocumentActionsSheet extends StatefulWidget {
   const DocumentActionsSheet({
     super.key,
@@ -29,28 +39,29 @@ class DocumentActionsSheet extends StatefulWidget {
     this.loadPapers,
     this.loadPdf,
     this.delivery = const DocumentDeliveryPorts(),
+    this.thermal,
+    this.settingsStore,
   });
 
-  /// `sales.invoice`, `purchase.bill`, `accounts.voucher` … the server's own
-  /// naming.
+  /// `SalesInvoice`, `Voucher` … the server's own naming.
   final String type;
   final String id;
 
   /// What the person is looking at — "ক্রয় বিল · PB-2609-0007".
   final String title;
 
-  /// The file's name without extension. A document shared as `document.pdf`
-  /// tells nobody anything; a shopkeeper sent three of those cannot tell
-  /// which bill is which.
+  /// The file's name without extension (the paper's number).
   final String? fileStem;
 
   final Future<List<String>> Function()? loadPapers;
   final Future<Uint8List> Function(String paper)? loadPdf;
 
-  /// The four ways out, injectable so this sheet can be driven in a test —
-  /// printing and Bluetooth both need platform channels that have no native
-  /// side under `flutter test`.
+  /// View, system print, share, save — injectable for tests.
   final DocumentDeliveryPorts delivery;
+
+  /// The Bluetooth road — injectable for tests.
+  final ThermalPrinting? thermal;
+  final PrinterSettingsStore? settingsStore;
 
   static Future<void> show(
     BuildContext context, {
@@ -76,168 +87,230 @@ class DocumentActionsSheet extends StatefulWidget {
 
 class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
   List<String>? _papers;
-  String? _paper;
+  PrinterSettings _settings = const PrinterSettings();
+  PrintRoad _road = PrintRoad.normal;
+  String? _sheet;
   String? _error;
+
+  /// The last outcome, said inside the sheet — a SnackBar would sit behind
+  /// the sheet itself and be missed.
+  String? _note;
+  bool _noteIsError = false;
   bool _busy = false;
+
+  late final PrinterSettingsStore _store =
+      widget.settingsStore ?? PrinterSettingsStore.instance;
+  late final ThermalPrinting _thermal = widget.thermal ?? ThermalPrinting();
 
   @override
   void initState() {
     super.initState();
-    _loadPapers();
+    _load();
   }
 
   String get _fileName => '${widget.fileStem ?? widget.id}.pdf';
 
-  Future<void> _loadPapers() async {
+  List<String> get _sheets =>
+      (_papers ?? const []).where(isSheetPaper).toList();
+  List<String> get _rolls =>
+      (_papers ?? const []).where(isThermalPaper).toList();
+
+  /// The roll to ask the server for: the printer's own width if this paper
+  /// has it, otherwise the one it has.
+  String? get _roll {
+    final rolls = _rolls;
+    if (rolls.isEmpty) return null;
+    return rolls.contains(_settings.thermalPaper)
+        ? _settings.thermalPaper
+        : rolls.first;
+  }
+
+  Future<void> _load() async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
+      final settings = await _store.read();
       final papers = await (widget.loadPapers ??
           () => DocumentsApi.papersFor(type: widget.type, id: widget.id))();
       if (!mounted) return;
       setState(() {
+        _settings = settings;
         _papers = papers;
-        // A4 unless the template has none — the ordinary case is a sheet, and
-        // a receipt roll chosen by default would surprise someone at a desk.
-        _paper = papers.contains('a4')
-            ? 'a4'
-            : (papers.isEmpty ? null : papers.first);
+        final sheets = _sheets;
+        final remembered = settings.normalPapers[widget.type];
+        _sheet = sheets.contains(remembered)
+            ? remembered
+            : (sheets.contains('a4')
+                ? 'a4'
+                : (sheets.isEmpty ? null : sheets.first));
+        final road = settings.roads[widget.type] ?? PrintRoad.normal;
+        _road = (road == PrintRoad.thermal && _rolls.isNotEmpty) ||
+                (_sheets.isEmpty && _rolls.isNotEmpty)
+            ? PrintRoad.thermal
+            : PrintRoad.normal;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = errorMessageFor(error,
-          fallback: 'কাগজের মাপ আনা গেল না।'));
+          fallback: 'এই কাগজের ছাপার মাপ আনা গেল না। আবার চেষ্টা করুন।'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<Uint8List> _pdf(String paper) =>
-      (widget.loadPdf ??
-          (String p) =>
-              DocumentsApi.pdf(type: widget.type, id: widget.id, paper: p))(
-        paper,
-      );
+  void _say(String message, {bool error = false}) {
+    if (!mounted) return;
+    setState(() {
+      _note = message;
+      _noteIsError = error;
+    });
+  }
 
-  /// Every action shares this: fetch, then hand off, then say what happened.
-  /// A failure anywhere is shown as a sentence rather than leaving the sheet
-  /// looking like it worked.
-  Future<void> _run(Future<String?> Function(Uint8List pdf) action) async {
-    final paper = _paper;
-    if (paper == null) return;
+  Future<Uint8List> _pdf(String paper) async {
+    final bytes = await (widget.loadPdf ??
+        (String p) =>
+            DocumentsApi.pdf(type: widget.type, id: widget.id, paper: p))(paper);
+    if (bytes.isEmpty) throw const _EmptyPdf();
+    return bytes;
+  }
 
-    setState(() => _busy = true);
+  /// Remember the road (and sheet size) for this kind of paper.
+  Future<void> _remember() async {
+    final s = await _store.read();
+    final next = s.copyWith(
+      roads: {...s.roads, widget.type: _road},
+      normalPapers: _sheet == null
+          ? s.normalPapers
+          : {...s.normalPapers, widget.type: _sheet!},
+    );
+    await _store.write(next);
+    _settings = next;
+  }
+
+  /// Fetch, hand off, say what happened. Every failure is a Bengali sentence.
+  Future<void> _run(
+      String? paper, Future<String?> Function(Uint8List pdf) action) async {
+    if (paper == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _note = null;
+    });
+    Uint8List pdf;
     try {
-      final pdf = await _pdf(paper);
+      pdf = await _pdf(paper);
+    } catch (error) {
+      _say(
+          errorMessageFor(error,
+              fallback: 'কাগজটা সার্ভার থেকে আনা গেল না — ছাপা হয়নি। '
+                  'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।'),
+          error: true);
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+    try {
       final note = await action(pdf);
-      if (!mounted) return;
       if (note != null) _say(note);
     } on BluetoothPrintingUnavailable catch (error) {
-      if (mounted) _say(error.message);
+      _say(error.message, error: true);
     } catch (error) {
-      if (mounted) {
-        _say(errorMessageFor(error, fallback: 'কাজটি সম্পন্ন হয়নি।'));
-      }
+      _say(errorMessageFor(error, fallback: 'কাজটি সম্পন্ন হয়নি।'),
+          error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _say(String message) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(message)));
+  String? get _currentPaper => _road == PrintRoad.thermal ? _roll : _sheet;
 
-  /// ⭐ পর্দায় দেখা — সইয়ের আগে বা যেকোনো সময় ([[PdfViewPage]]; মালিক, ৭ অক্টোবর ২০২৬)
-  Future<void> _view() => _run((pdf) async {
+  Future<void> _view() => _run(_currentPaper, (pdf) async {
         if (!mounted) return null;
         await widget.delivery.view(context, pdf: pdf, title: widget.title);
         return null;
       });
 
-  Future<void> _printToSystem() => _run((pdf) async {
-        // False means the person closed the dialog. Not an error, and saying
-        // "প্রিন্ট হয়নি" for a deliberate cancel teaches people to distrust
-        // the message that matters.
+  Future<void> _printNormal() => _run(_sheet, (pdf) async {
+        await _remember();
+        // False = the person closed the dialog on purpose; not an error.
         await widget.delivery.system(pdf: pdf, documentName: widget.title);
         return null;
       });
 
-  Future<void> _share() => _run((pdf) async {
-        await widget.delivery.share(
-          pdf: pdf,
-          fileName: _fileName,
-          subject: widget.title,
-        );
+  Future<void> _share() => _run(_currentPaper, (pdf) async {
+        await widget.delivery
+            .share(pdf: pdf, fileName: _fileName, subject: widget.title);
         return null;
       });
 
-  Future<void> _save() => _run((pdf) async {
+  Future<void> _save() => _run(_currentPaper, (pdf) async {
         final path = await widget.delivery.save(pdf: pdf, fileName: _fileName);
         return 'সেভ হয়েছে: $path';
       });
 
-  Future<void> _printToBluetooth() async {
-    final paper = _paper;
-    if (paper == null) return;
-
-    setState(() => _busy = true);
+  /// Chooses (and remembers) a printer when none is set yet.
+  Future<bool> _ensurePrinter() async {
+    if (_settings.hasPrinter) return true;
+    setState(() {
+      _busy = true;
+      _note = null;
+    });
     List<BluetoothPrinter> printers;
     try {
-      printers = await widget.delivery.paired();
+      printers = await ThermalFlow.list(_thermal);
     } on BluetoothPrintingUnavailable catch (error) {
-      if (mounted) _say(error.message);
-      if (mounted) setState(() => _busy = false);
-      return;
+      _say(error.message, error: true);
+      return false;
     } finally {
+      // Not busy while the list is open: the person is the one deciding.
       if (mounted) setState(() => _busy = false);
     }
+    if (!mounted) return false;
+    final printer = await ThermalFlow.choose(context, printers);
+    if (printer == null) return false;
+    final next = (await _store.read())
+        .copyWith(printerAddress: printer.address, printerName: printer.name);
+    await _store.write(next);
+    if (mounted) setState(() => _settings = next);
+    return true;
+  }
 
-    if (!mounted) return;
-    if (printers.isEmpty) {
-      // Pairing lives in Android's own settings on purpose — see
-      // DocumentDelivery.pairedPrinters. Saying where to go is more use than
-      // a scan screen that duplicates it.
-      _say('কোনো ব্লুটুথ প্রিন্টার জোড়া দেওয়া নেই। ফোনের সেটিংস থেকে '
-          'প্রিন্টারটি একবার জোড়া দিন।');
-      return;
-    }
-
-    final printer = printers.length == 1
-        ? printers.single
-        : await showDialog<BluetoothPrinter>(
-            context: context,
-            builder: (context) => SimpleDialog(
-              title: const Text('প্রিন্টার বাছুন'),
-              children: [
-                for (final p in printers)
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.of(context).pop(p),
-                    child: Text(p.name.isEmpty ? p.address : p.name),
-                  ),
-              ],
-            ),
-          );
-
-    if (printer == null || !mounted) return;
-
-    await _run((pdf) async {
-      await widget.delivery.bluetooth(
+  Future<void> _printThermal() async {
+    if (_busy) return;
+    if (!await ThermalFlow.explainOnce(context, _store)) return;
+    if (!mounted || !await _ensurePrinter()) return;
+    final roll = _roll;
+    await _run(roll, (pdf) async {
+      await _remember();
+      await _thermal.printPdf(
         pdf: pdf,
-        printer: printer,
-        paperWidthMm: thermalWidthMm(paper),
+        address: _settings.printerAddress!,
+        paperWidthMm: thermalWidthMm(roll!),
       );
-      return 'প্রিন্টারে পাঠানো হয়েছে।';
+      return '${_settings.printerLabel}-এ পাঠানো হয়েছে।';
     });
+  }
+
+  Future<void> _setWidth(int mm) async {
+    final next = (await _store.read()).copyWith(widthMm: mm);
+    await _store.write(next);
+    if (mounted) setState(() => _settings = next);
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => PrinterSettingsScreen(store: _store, thermal: _thermal),
+    ));
+    final s = await _store.read();
+    if (mounted) setState(() => _settings = s);
   }
 
   @override
   Widget build(BuildContext context) {
     final papers = _papers;
-    final paper = _paper;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -250,54 +323,77 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
             if (_error != null) ...[
               Text(_error!, style: const TextStyle(color: AppColors.danger)),
               const SizedBox(height: AppSpacing.sm),
-              TextButton(
-                  onPressed: _loadPapers, child: const Text('আবার চেষ্টা')),
+              TextButton(onPressed: _load, child: const Text('আবার চেষ্টা')),
             ] else if (papers != null) ...[
-              Wrap(
-                spacing: AppSpacing.sm,
-                children: [
-                  for (final option in papers)
-                    ChoiceChip(
-                      label: Text(paperLabel(option)),
-                      selected: option == paper,
-                      onSelected: _busy
-                          ? null
-                          : (_) => setState(() => _paper = option),
-                    ),
-                ],
-              ),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: _RoadCard(
+                    key: const Key('road-normal'),
+                    icon: Icons.print_outlined,
+                    title: 'নরমাল প্রিন্টার',
+                    subtitle: _sheets.isEmpty
+                        ? 'এই কাগজের A4/A5 নকশা নেই'
+                        : 'A4/A5 · ওয়াইফাই, USB, PDF',
+                    selected: _road == PrintRoad.normal,
+                    enabled: _sheets.isNotEmpty,
+                    onTap: () => setState(() {
+                      _road = PrintRoad.normal;
+                      _note = null;
+                    }),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _RoadCard(
+                    key: const Key('road-thermal'),
+                    icon: Icons.receipt_long_outlined,
+                    title: 'থার্মাল প্রিন্টার',
+                    subtitle: _rolls.isEmpty
+                        ? 'এই কাগজের রসিদ নকশা নেই'
+                        : '৫৮/৮০ মিমি · ব্লুটুথ',
+                    selected: _road == PrintRoad.thermal,
+                    enabled: _rolls.isNotEmpty,
+                    onTap: () => setState(() {
+                      _road = PrintRoad.thermal;
+                      _note = null;
+                    }),
+                  ),
+                ),
+              ]),
               const SizedBox(height: AppSpacing.md),
+              if (_road == PrintRoad.normal)
+                ..._normalPart()
+              else
+                ..._thermalPart(),
+              if (_note != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  _note!,
+                  key: const Key('print-note'),
+                  style: TextStyle(
+                      color:
+                          _noteIsError ? AppColors.danger : AppColors.success),
+                ),
+              ],
+              const Divider(),
               ListTile(
                 key: const Key('document-view'),
                 leading: const Icon(Icons.visibility_outlined),
                 title: const Text('পর্দায় দেখুন'),
-                onTap: _busy || paper == null ? null : _view,
+                onTap: _busy || _currentPaper == null ? null : _view,
               ),
               ListTile(
-                leading: const Icon(Icons.print_outlined),
-                title: const Text('প্রিন্ট করুন'),
-                subtitle: const Text('ওয়াইফাই, USB, বা ফোনের প্রিন্ট তালিকা'),
-                onTap: _busy || paper == null ? null : _printToSystem,
-              ),
-              // Only for a receipt roll. Offering a Bluetooth receipt printer
-              // for an A4 invoice would hand somebody a metre of paper.
-              if (paper != null && isThermalPaper(paper))
-                ListTile(
-                  leading: const Icon(Icons.bluetooth),
-                  title: const Text('ব্লুটুথ রসিদ প্রিন্টার'),
-                  subtitle: const Text('দোকানের থার্মাল প্রিন্টার'),
-                  onTap: _busy ? null : _printToBluetooth,
-                ),
-              ListTile(
+                key: const Key('document-share'),
                 leading: const Icon(Icons.share_outlined),
                 title: const Text('শেয়ার করুন'),
                 subtitle: const Text('হোয়াটসঅ্যাপ, ইমেইল, ড্রাইভ'),
-                onTap: _busy || paper == null ? null : _share,
+                onTap: _busy || _currentPaper == null ? null : _share,
               ),
               ListTile(
+                key: const Key('document-save'),
                 leading: const Icon(Icons.download_outlined),
                 title: const Text('ফোনে সেভ করুন'),
-                onTap: _busy || paper == null ? null : _save,
+                onTap: _busy || _currentPaper == null ? null : _save,
               ),
             ],
           ],
@@ -305,38 +401,146 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
       ),
     );
   }
+
+  List<Widget> _normalPart() => [
+        Wrap(spacing: AppSpacing.sm, children: [
+          for (final option in _sheets)
+            ChoiceChip(
+              label: Text(paperLabel(option)),
+              selected: option == _sheet,
+              onSelected:
+                  _busy ? null : (_) => setState(() => _sheet = option),
+            ),
+        ]),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            key: const Key('print-normal'),
+            onPressed: _busy || _sheet == null ? null : _printNormal,
+            icon: const Icon(Icons.print),
+            label: const Text('ছাপুন'),
+          ),
+        ),
+      ];
+
+  List<Widget> _thermalPart() => [
+        ListTile(
+          key: const Key('thermal-printer'),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.bluetooth),
+          title: Text(_settings.hasPrinter
+              ? _settings.printerLabel
+              : 'প্রিন্টার বাছা হয়নি'),
+          subtitle: Text(_settings.hasPrinter
+              ? 'ছাপার সময় যুক্ত হবে'
+              : 'প্রথমবার ছাপার সময় জোড়া দেওয়া প্রিন্টার থেকে বাছবেন'),
+          trailing: TextButton(
+            key: const Key('thermal-settings'),
+            onPressed: _busy ? null : _openSettings,
+            child: const Text('সেটিং'),
+          ),
+        ),
+        Wrap(spacing: AppSpacing.sm, children: [
+          for (final option in _rolls)
+            ChoiceChip(
+              label: Text(paperLabel(option)),
+              selected: option == _roll,
+              onSelected:
+                  _busy ? null : (_) => _setWidth(thermalWidthMm(option)),
+            ),
+        ]),
+        const SizedBox(height: AppSpacing.sm),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            key: const Key('print-thermal'),
+            onPressed: _busy || _roll == null ? null : _printThermal,
+            icon: const Icon(Icons.print),
+            label: const Text('থার্মালে ছাপুন'),
+          ),
+        ),
+      ];
 }
 
-/// The four ways a document leaves the phone, behind one object so a test can
-/// stand in for all of them — every one of them is a platform channel with no
-/// native side under `flutter test`.
+class _EmptyPdf implements Exception {
+  const _EmptyPdf();
+}
+
+class _RoadCard extends StatelessWidget {
+  const _RoadCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.primary : AppColors.onSurfaceMuted;
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: enabled ? onTap : null,
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color, width: selected ? 2 : 1),
+          ),
+          child: Column(children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 4),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// The ways a document leaves the phone other than Bluetooth, behind one
+/// object so a test can stand in for all of them.
 class DocumentDeliveryPorts {
   const DocumentDeliveryPorts({
     this.systemPrint,
     this.sharePdf,
     this.savePdf,
-    this.pairedPrinters,
-    this.bluetoothPrint,
     this.viewPdf,
   });
 
   /// পর্দায় দেখা — পরীক্ষায় নকল; না দিলে [PdfViewPage]
-  final Future<void> Function(BuildContext context, {required Uint8List pdf, required String title})? viewPdf;
+  final Future<void> Function(BuildContext context,
+      {required Uint8List pdf, required String title})? viewPdf;
 
-  Future<void> view(BuildContext context, {required Uint8List pdf, required String title}) =>
+  Future<void> view(BuildContext context,
+          {required Uint8List pdf, required String title}) =>
       (viewPdf ?? PdfViewPage.open)(context, pdf: pdf, title: title);
 
-  final Future<bool> Function({required Uint8List pdf, required String documentName})?
-      systemPrint;
-  final Future<void> Function(
-      {required Uint8List pdf, required String fileName, String? subject})? sharePdf;
-  final Future<String> Function({required Uint8List pdf, required String fileName})?
-      savePdf;
-  final Future<List<BluetoothPrinter>> Function()? pairedPrinters;
+  final Future<bool> Function(
+      {required Uint8List pdf, required String documentName})? systemPrint;
   final Future<void> Function(
       {required Uint8List pdf,
-      required BluetoothPrinter printer,
-      int paperWidthMm})? bluetoothPrint;
+      required String fileName,
+      String? subject})? sharePdf;
+  final Future<String> Function(
+      {required Uint8List pdf, required String fileName})? savePdf;
 
   Future<bool> system({required Uint8List pdf, required String documentName}) =>
       (systemPrint ?? DocumentDelivery.toSystemPrinter)(
@@ -349,15 +553,4 @@ class DocumentDeliveryPorts {
 
   Future<String> save({required Uint8List pdf, required String fileName}) =>
       (savePdf ?? DocumentDelivery.save)(pdf: pdf, fileName: fileName);
-
-  Future<List<BluetoothPrinter>> paired() =>
-      (pairedPrinters ?? DocumentDelivery.pairedPrinters)();
-
-  Future<void> bluetooth({
-    required Uint8List pdf,
-    required BluetoothPrinter printer,
-    int paperWidthMm = 58,
-  }) =>
-      (bluetoothPrint ?? DocumentDelivery.toBluetoothPrinter)(
-          pdf: pdf, printer: printer, paperWidthMm: paperWidthMm);
 }

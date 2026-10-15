@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart' as escpos;
-import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
-import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+
+export 'thermal_printer.dart' show BluetoothPrinter, BluetoothPrintingUnavailable;
 
 /// Gets a finished document out of the phone and onto paper, or to a person.
 ///
@@ -28,7 +27,8 @@ import 'package:share_plus/share_plus.dart';
 ///
 /// <p>A cheap Bluetooth receipt printer cannot: it speaks ESC/POS over a
 /// serial link and has no print service at all. ⭐ So the same 58/80mm PDF the
-/// server rendered is rasterised on the phone and sent as a bitmap. That
+/// server rendered is rasterised on the phone and sent as a bitmap
+/// (thermal_printer.dart, escpos_raster.dart). That
 /// keeps one layout for both roads. The alternative — rebuilding the receipt
 /// from data in ESC/POS text commands — is a second layout that would drift
 /// from the first.
@@ -76,104 +76,10 @@ class DocumentDelivery {
     return file.path;
   }
 
-  /// Every Bluetooth printer already paired with this phone.
-  ///
-  /// <p>Pairing itself stays in Android's own settings — deliberately. A
-  /// shop's printer is paired once, by whoever set the counter up, and an
-  /// app that runs its own scan-and-pair flow is a second place for that to
-  /// go wrong for no gain.
-  static Future<List<BluetoothPrinter>> pairedPrinters() async {
-    if (!await PrintBluetoothThermal.bluetoothEnabled) {
-      throw const BluetoothPrintingUnavailable(
-        'ব্লুটুথ বন্ধ আছে। চালু করে আবার চেষ্টা করুন।',
-      );
-    }
-
-    final paired = await PrintBluetoothThermal.pairedBluetooths;
-    return paired
-        .map((device) =>
-            BluetoothPrinter(name: device.name, address: device.macAdress))
-        .toList();
-  }
-
-  /// Sends the server's own thermal PDF to a Bluetooth receipt printer.
-  ///
-  /// <p>[paperWidthMm] must match the paper the server rendered — ask for a
-  /// 58mm document and print it 58mm. Rendering A4 to a receipt printer
-  /// produces a metre of unreadable paper, so the caller is expected to have
-  /// fetched the right one rather than this file rescaling something that
-  /// was never meant for it.
-  static Future<void> toBluetoothPrinter({
-    required Uint8List pdf,
-    required BluetoothPrinter printer,
-    int paperWidthMm = 58,
-  }) async {
-    final connected =
-        await PrintBluetoothThermal.connect(macPrinterAddress: printer.address);
-    if (!connected) {
-      throw const BluetoothPrintingUnavailable(
-        'প্রিন্টারে সংযোগ হয়নি। যন্ত্রটি চালু আছে কিনা দেখুন।',
-      );
-    }
-
-    try {
-      final profile = await escpos.CapabilityProfile.load();
-      final size = paperWidthMm >= 80
-          ? escpos.PaperSize.mm80
-          : escpos.PaperSize.mm58;
-      final generator = escpos.Generator(size, profile);
-
-      final bytes = <int>[];
-      // 203 dpi is what these printers actually are; rasterising finer only
-      // makes a larger bitmap for the same dots on paper, over a slow link.
-      await for (final page in Printing.raster(pdf, dpi: 203)) {
-        final image = page.asImage();
-        bytes.addAll(generator.image(_toPrinterWidth(image, size)));
-      }
-      bytes.addAll(generator.cut());
-
-      await PrintBluetoothThermal.writeBytes(bytes);
-    } finally {
-      // Left disconnected on every path. A held connection is a printer the
-      // next person's phone cannot reach, and in a shop that reads as broken.
-      await PrintBluetoothThermal.disconnect;
-    }
-  }
-
-  /// ESC/POS raster width is fixed by the head: 384 dots on 58mm, 576 on
-  /// 80mm. A wider bitmap is silently truncated by the printer — the right
-  /// edge of every line simply missing — so it is scaled here instead.
-  static img.Image _toPrinterWidth(img.Image image, escpos.PaperSize size) {
-    final dots = size == escpos.PaperSize.mm80 ? 576 : 384;
-    if (image.width == dots) return image;
-    return img.copyResize(image, width: dots);
-  }
-
   static Future<File> _writeToCache(Uint8List bytes, String fileName) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/$fileName');
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
-}
-
-class BluetoothPrinter {
-  const BluetoothPrinter({required this.name, required this.address});
-
-  final String name;
-
-  /// The MAC address — how the printer is reached, and stable across
-  /// renames, so it is what a remembered "default printer" should be keyed on.
-  final String address;
-}
-
-/// Bluetooth is off, or the printer did not answer — something the person can
-/// act on, told apart from a programming fault so a screen can say which.
-class BluetoothPrintingUnavailable implements Exception {
-  const BluetoothPrintingUnavailable(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
 }

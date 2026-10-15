@@ -130,6 +130,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('do-approve')), findsNothing, reason: 'লেখকের পাতায় সইয়ের বোতাম');
+    expect(find.byKey(const ValueKey('order-print')), findsNothing,
+        reason: 'ⓘ DO-র নিজের কাগজ সার্ভারের ছাপার দরজায় নেই — বোতাম দেখালে চাপলে ৪০৪');
     await tester.tap(find.byKey(const ValueKey('do-send')));
     await tester.pumpAndSettle();
     expect(api.calls, ['submit']);
@@ -168,6 +170,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DeliveryOrderScreen(id: 'so-1', api: api)));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('do-credit-short')), findsOneWidget);
+    // ⭐ আদেশের কাগজ ছাপা যায় — নরমাল বা থার্মাল (১৪ অক্টোবর ২০২৬)
+    expect(find.byKey(const ValueKey('order-print')), findsOneWidget);
     expect(find.text('বাকির সীমায় আটকে — কম ৳ 150'), findsOneWidget);
   });
 

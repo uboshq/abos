@@ -134,6 +134,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
+    await _scrollToLogout(tester);
     expect(find.text('বেরিয়ে যান'), findsOneWidget,
         reason: 'the photo opens the profile');
   });
@@ -252,8 +253,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
-    expect(find.text('বেরিয়ে যান'), findsOneWidget);
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
+    // ⭐ প্রিন্টার — থার্মাল আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
+    expect(find.byKey(const ValueKey('me-printer')), findsOneWidget);
+    await _scrollToLogout(tester);
+    expect(find.text('বেরিয়ে যান'), findsOneWidget);
     // ⭐ হাতে হালনাগাদ যাচাই — মালিক, ৭ অক্টোবর ২০২৬
     expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
   });
@@ -276,6 +280,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nav-me')));
     await tester.pumpAndSettle();
+    await _scrollToLogout(tester);
     await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));
     await tester.pumpAndSettle();
 
@@ -284,4 +289,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
   });
+}
+
+/// "আমি" grew a printer row (14 Oct 2026); on the test's 800×600 screen the
+/// way out now sits below the fold, as it does on a short phone.
+Future<void> _scrollToLogout(WidgetTester tester) async {
+  await tester.dragUntilVisible(find.text('বেরিয়ে যান'),
+      find.byKey(const ValueKey('me-sync-status')), const Offset(0, -150));
+  await tester.pumpAndSettle();
 }
