@@ -34,7 +34,17 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   DateTime? _leftAt;
 
   /// কেউ ঢুকে আছেন কি না — বেরোনো অবস্থায় তালার কিছু নেই
-  bool signedIn = true;
+  ///
+  /// <p>⛔ বেরোলে তালাও খোলে — নইলে তালা-পর্দা থেকে বেরিয়ে (বা তালা থাকা অবস্থায় সেশন শেষ হলে) পরের জন পাসওয়ার্ড দিয়ে
+  /// ঢুকেই আগের জনের ফোনের PIN চাওয়া পর্দায় পড়তেন, অথচ নিয়ম "এইমাত্র পাসওয়ার্ড দিলে তালা নয়" (ফোন লাইন-ধরে নিরীক্ষা,
+  /// ১৫ অক্টোবর ২০২৬)।
+  bool get signedIn => _signedIn;
+  set signedIn(bool value) {
+    if (!value) _locked = false;
+    _signedIn = value;
+  }
+
+  bool _signedIn = true;
 
   bool get locked => _locked && signedIn;
   bool get busy => _busy;
@@ -133,7 +143,9 @@ class _AppLockGateState extends State<AppLockGate> {
     }
     return Stack(
       children: [
-        widget.child,
+        // ⛔ তালার নিচের পর্দা স্ক্রিন-রিডারের কাছেও বন্ধ — আগে TalkBack চালু করে তালার নিচের "অনুমোদন" বোতামে পৌঁছে
+        // দুইবার ছুঁয়ে সই দেওয়া যেত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        ExcludeSemantics(excluding: lock.locked, child: widget.child),
         if (lock.locked)
           Positioned.fill(
             child: Material(

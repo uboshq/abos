@@ -184,12 +184,25 @@ final class SyncService
          * unique key সামলায় **একই মুহূর্তের** দুইটা অনুরোধ, যেখানে
          * দুইজনেই "নেই" দেখে ফেলেছে। ওটা নিচে ধরা হয়।
          */
-        $existing = SyncChange::query()
+        // ⛔ কোম্পানি ছাড়া — অনন্য চাবি (যন্ত্র + changeId) কোম্পানি মানে না; কোম্পানি বদলের পরে আগের কোম্পানিতে বসা বদল আবার
+        // এলে আগে এই পড়া দেখত না, বসাতে গিয়ে চাবিতে ধাক্কা আর উত্তর ছাড়া — ফোনে সারিটা চিরকাল "অপেক্ষায়", কোম্পানি বদলও আটকে
+        // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬; [[AChangeFromTheLastCompanyIsAnsweredTest]])
+        $existing = SyncChange::query()->withoutGlobalScope('company')
             ->where('device_id', $deviceId)
             ->where('change_id', $change->changeId)
             ->first();
 
         if ($existing !== null) {
+            /*
+             * ⛔ একই চাবি, অন্য লেখা — উত্তর না আসার পরে মানুষ অঙ্ক বদলে আবার পাঠালেন। আগে আগের ফলটাই "হয়ে গেছে" বলে ফিরত, আর
+             * পর্দা নতুন অঙ্কের সাফল্য ভাবত, অথচ বসেছে আগেরটা (ফোন লাইন-ধরে নিরীক্ষা §৭, ১৫ অক্টোবর ২০২৬;
+             * [[AChangedResendIsNotTakenForTheFirstTest]])। এখন স্পষ্ট ফেরানো: আগেরটা বসে আছে, তালিকা দেখে নিন।
+             */
+            if ($existing->isSettled() && json_decode((string) $existing->payload_json, true) != json_decode($change->payloadJson, true)) {
+                return ['changeId' => $change->changeId, 'status' => SyncChange::CONFLICT,
+                    'message' => __('sync.same_key_other_content'), 'entityId' => $existing->applied_entity_id];
+            }
+
             return array_filter([
                 'changeId' => $change->changeId,
                 'status' => $existing->isSettled() ? SyncChange::DUPLICATE : $existing->status,
@@ -287,7 +300,7 @@ final class SyncService
             });
         } catch (UniqueConstraintViolationException $clash) {
             // ⓘ ভাগের তালায় পড়া — অন্যজনের সদ্য-পাকা সারিটা দেখা চাই, পুরনো ছবি নয়
-            $first = SyncChange::query()
+            $first = SyncChange::query()->withoutGlobalScope('company')
                 ->where('device_id', $deviceId)
                 ->where('change_id', $change->changeId)
                 ->sharedLock()
@@ -401,6 +414,10 @@ final class SyncService
         $handlers = $this->registry->forModule($module);
 
         $positions = $this->decodeCursor($paged ? $cursor : $this->storedPageCursor($deviceId, $module));
+        // ⓘ পালার প্রথম পাতা — শুরুর সময় মনে রাখা, ওয়াটারমার্ক সেখান থেকে ([[recordSuccessfulPull()]])
+        if ($positions === []) {
+            \Illuminate\Support\Facades\Cache::put($this->passKey($deviceId, $module), now()->toIso8601String(), 86400);
+        }
         $next = [];
 
         $records = [];
@@ -615,6 +632,11 @@ final class SyncService
         }
     }
 
+    private function passKey(string $deviceId, string $module): string
+    {
+        return 'sync-pass:'.CompanyContext::id().':'.$deviceId.':'.$module;
+    }
+
     /**
      * ফোন বলল "পুরোটা পেয়েছি" — ওয়াটারমার্ক এগোয়।
      *
@@ -629,10 +651,18 @@ final class SyncService
      */
     public function recordSuccessfulPull(string $deviceId, string $module, ?User $user = null): void
     {
+        /*
+         * ⛔ ওয়াটারমার্ক পালার শুরু থেকে, শেষ থেকে নয় — ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬ ([[ARowChangedDuringAPullComesNextTimeTest]])।
+         * ⓘ লম্বা পালায় (১০০ পাতা পর্যন্ত) একটা ধরনের পাতা আগেই শেষ; তার পরে সেই ধরনের সারি বদলালে আর পালা শেষে "এখন" বসলে,
+         * পরের টানা শুরু হত এখন−৬০ সেকেন্ড থেকে — বদলটা কোনোদিন আসত না: দোকানের বকেয়া বা মজুদ ফোনে চিরকাল পুরনো।
+         */
+        $started = \Illuminate\Support\Facades\Cache::pull($this->passKey($deviceId, $module));
+        $mark = is_string($started) ? Carbon::parse($started)->min(now()) : now();
+
         SyncState::query()->updateOrCreate(
             ['device_id' => $deviceId, 'module' => $module],
             // ⓘ পালা শেষ — কার্সরও শেষ ([[pull()]], গ১৮); ⭐ কোন দেখায় পাওয়া, তা-ও ([[sawAnotherView()]])
-            ['company_id' => CompanyContext::id(), 'last_synced_at' => now(), 'page_cursor' => null,
+            ['company_id' => CompanyContext::id(), 'last_synced_at' => $mark, 'page_cursor' => null,
                 'view_key' => $user === null ? null : $this->viewKey($user)],
         );
     }

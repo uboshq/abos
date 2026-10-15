@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:abos_mobile/core/orders/direct_sale_api.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/records/product_record.dart';
 import 'package:abos_mobile/core/widgets/confirm_overview_sheet.dart';
 import 'package:abos_mobile/features/direct_sale/counter_screen.dart';
 import 'package:dio/dio.dart';
+import 'package:abos_mobile/core/api_client/once_key.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,6 +32,9 @@ class _FakeApi implements DirectSaleApi {
   // ⭐ 0.4.15 — দুবার-বিল, ক্রেতার দাম, গুদাম নেই
   bool duplicateOnce = false;
   int sells = 0;
+  bool slowOnce = false;
+  Map<int, Completer<int?>>? freeAnswers;
+  final List<String?> keys = [];
   String? priceCustomer;
   // ⓘ পুরনো পরীক্ষাগুলোর দর বদলায় না — নিজের পরীক্ষা নিজের দর বসায়
   String customerRate = '40.00';
@@ -104,8 +110,11 @@ class _FakeApi implements DirectSaleApi {
           {required String productId,
           String? warehouseId,
           required int qty,
-          String? lotId}) async =>
-      qty >= 10 ? 1 : 0;
+          String? lotId}) async {
+    final held = freeAnswers?[qty];
+    if (held != null) return held.future;
+    return qty >= 10 ? 1 : 0;
+  }
 
   @override
   Future<CounterResult> sell({
@@ -116,6 +125,11 @@ class _FakeApi implements DirectSaleApi {
     required bool draft,
     CounterExtras extras = const CounterExtras(),
   }) async {
+    keys.add(OnceKey.current);
+    if (slowOnce) {
+      slowOnce = false;
+      throw DioException(requestOptions: RequestOptions(path: '/sales/direct'), type: DioExceptionType.receiveTimeout);
+    }
     if (failWith != null) throw failWith!;
     sells++;
     // ⓘ সার্ভারের দেয়াল — একই বিল আগে হয়েছে, জেনেশুনে না পাঠালে ৪২২
@@ -257,6 +271,12 @@ Future<void> _confirm(WidgetTester tester) async {
 }
 
 void main() {
+  test('a rate and a discount go with four places, as the server keeps them (phone line audit, 15 Oct 2026)', () {
+    final json = const CounterLine(productId: 'p', productName: 'x', qty: 12, rate: 41.6667, discountPercent: 7.1429).toJson();
+    expect(json['rate'], '41.6667', reason: '⛔ দর দুই ঘরে গোল — ১২টায় ৫০০.০৪, ওয়েবে ৫০০.০০');
+    expect(json['discount_percent'], '7.1429');
+  });
+
   test('a lot without its stock (no stock key) says nothing about how much, never "0"', () {
     // ⛔ সার্ভার মজুদের চাবি ছাড়া পরিমাণ পাঠায় না (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
     expect(CounterLot.fromJson(const {'id': 'l1', 'no': 'LOT-1', 'expiry': '2027-01-01', 'qty': null}).qty, '');
@@ -424,6 +444,72 @@ void main() {
     expect(deposits.map((d) => d.amount), [300, 100]);
     expect(deposits.first.toJson(),
         {'account': 'ac-1', 'amount': '300.00', 'method': 'm-cash'});
+  });
+
+  testWidgets(
+      'take money: 1,250 and ১২৫০ are read, and an unreadable amount keeps the sheet open (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    final api = _FakeApi();
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+
+    await tester.tap(find.byKey(const ValueKey('counter-money')));
+    await tester.pumpAndSettle();
+    // ⛔ পড়া যায় না — শিট খোলা থাকে, বার্তাসহ
+    await tester.enterText(find.byKey(const ValueKey('counter-money-amount')), 'abc');
+    await tester.tap(find.byKey(const ValueKey('counter-money-save')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('counter-money-sheet')), findsOneWidget, reason: '⛔ পড়া যায় না এমন অঙ্কে শিট চুপচাপ বন্ধ হলো');
+    expect(find.textContaining('অঙ্কটা পড়া গেল না'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('counter-money-amount')), '1,250');
+    await tester.tap(find.byKey(const ValueKey('counter-money-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('counter-money-amount')), '১০০');
+    await tester.tap(find.byKey(const ValueKey('counter-money-save')));
+    await tester.pumpAndSettle();
+    await _confirm(tester);
+
+    expect(api.sentExtras!.deposits.map((d) => d.amount), [1250, 100], reason: '⛔ কমা বা বাংলা অঙ্কের টাকা চুপচাপ বাদ — বিল বাকিতে গেল');
+  });
+
+  testWidgets(
+      'a sale that timed out is sent again under the same key, so it cannot become a second bill (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    final api = _FakeApi()..slowOnce = true;
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await _confirm(tester);
+    await tester.tap(find.text('ঠিক আছে').last);
+    await tester.pumpAndSettle();
+    await _confirm(tester);
+
+    expect(api.keys, hasLength(2));
+    expect(api.keys.first, isNotNull, reason: '⛔ বিক্রি চাবি ছাড়াই গেল');
+    expect(api.keys[1], api.keys[0], reason: '⛔ সময় পেরোনোর পরে নতুন চাবি — দ্বিতীয় বিল হতে পারত');
+  });
+
+  testWidgets('a late free-goods answer for an older quantity is dropped (phone line audit, 15 Oct 2026)', (tester) async {
+    final first = Completer<int?>();
+    final second = Completer<int?>();
+    final api = _FakeApi()..freeAnswers = {100: first, 10: second};
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+
+    await tester.enterText(find.byKey(const ValueKey('counter-qty')), '100');
+    await tester.enterText(find.byKey(const ValueKey('counter-qty')), '10');
+    second.complete(1);
+    await tester.pumpAndSettle();
+    first.complete(10);
+    await tester.pumpAndSettle();
+
+    final free = tester.widget<TextField>(find.byKey(const ValueKey('counter-free'))).controller!.text;
+    expect(free, '1', reason: '⛔ ১০০-র দেরিতে আসা উত্তর ১০-এর বিক্রিতে ১০ ফ্রি বসাল');
   });
 
   testWidgets(

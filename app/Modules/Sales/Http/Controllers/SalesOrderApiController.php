@@ -91,6 +91,9 @@ class SalesOrderApiController extends Controller implements HasMiddleware
         }
 
         $customer = $this->customer($data['customer']);
+        // ⛔ বানানো আর জমা এক লেনদেনে — জমা ফিরলে খসড়াও থাকে না; আগে অনাথ খসড়া থেকে যেত, ফোন বলত "রাখা গেল না" আর চাবি
+        // মুছত, আবার চাপায় দ্বিতীয় খসড়া (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬; [[ARefusedSubmitLeavesNoDraftTest]])
+        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $data, $customer) {
         $order = $this->orders->create([
             'customer_id' => $customer->id,
             'deliver_on' => $data['deliver_on'] ?? null,
@@ -101,6 +104,9 @@ class SalesOrderApiController extends Controller implements HasMiddleware
         if ($request->boolean('submit')) {
             $order = $this->orders->submit($order);
         }
+
+        return $order;
+        });
 
         return response()->json($this->facts($order->fresh(), true), 201);
     }

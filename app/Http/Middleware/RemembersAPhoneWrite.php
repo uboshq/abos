@@ -38,13 +38,13 @@ final class RemembersAPhoneWrite
         $slot = 'phone-write:'.sha1(implode('|', [CompanyContext::id(), $request->user()?->getAuthIdentifier(), $request->path(), $key]));
 
         if (($seen = Cache::get($slot)) !== null) {
-            return $this->replay($seen);
+            return $this->replay($seen, $request);
         }
 
         return Cache::lock($slot.':lock', 30)->block(15, function () use ($slot, $request, $next): Response {
             // ⓘ তালার অপেক্ষায় থাকতে অন্যজন শেষ করে থাকলে — তার উত্তর
             if (($seen = Cache::get($slot)) !== null) {
-                return $this->replay($seen);
+                return $this->replay($seen, $request);
             }
 
             $response = $next($request);
@@ -54,6 +54,7 @@ final class RemembersAPhoneWrite
                     'status' => $response->getStatusCode(),
                     'body' => (string) $response->getContent(),
                     'type' => (string) $response->headers->get('Content-Type', 'application/json'),
+                    'sent' => self::fingerprint($request),
                 ], self::TTL_SECONDS);
             }
 
@@ -61,9 +62,21 @@ final class RemembersAPhoneWrite
         });
     }
 
-    /** @param  array{status: int, body: string, type: string}  $seen */
-    private function replay(array $seen): Response
+    /** ঘরগুলোর ছাপ — ফাইল বাদে, ক্রম না মেনে; multipart-এর সীমানা প্রতিবার আলাদা, তাই কাঁচা লেখা নয় */
+    private static function fingerprint(Request $request): string
     {
+        return sha1(json_encode(\Illuminate\Support\Arr::sortRecursive($request->except(array_keys($request->allFiles())))) ?: '');
+    }
+
+    /** @param  array{status: int, body: string, type: string, sent?: string}  $seen */
+    private function replay(array $seen, Request $request): Response
+    {
+        // ⛔ একই চাবি, অন্য লেখা — আগেরটাই বসে আছে; পুরনো উত্তর নতুন লেখার সাফল্য বলে দেখানো নয় (ফোন লাইন-ধরে নিরীক্ষা §৭,
+        // ১৫ অক্টোবর ২০২৬; [[AChangedResendIsNotTakenForTheFirstTest]])। পুরনো সারিতে হ্যাশ না থাকলে আগের মতো।
+        if (isset($seen['sent']) && $seen['sent'] !== self::fingerprint($request)) {
+            return response()->json(['message' => __('sync.same_key_other_content')], 409);
+        }
+
         return response($seen['body'], $seen['status'], [
             'Content-Type' => $seen['type'],
             'Idempotent-Replay' => 'true',

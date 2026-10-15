@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/direct_sale_api.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/records/customer_record.dart';
+import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -44,6 +46,8 @@ class CounterScreen extends StatefulWidget {
 }
 
 class _CounterScreenState extends State<CounterScreen> {
+  /// ⛔ এই বিক্রির চাবি — সময় পেরোনোর পরে আবার চাপলে একই বিক্রি, দ্বিতীয় বিল নয় ([[OnceKey]]; ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+  final _once = OnceKey();
   CounterSetup? _setup;
   String? _warehouseId;
   String _term = 'cash';
@@ -165,14 +169,20 @@ class _CounterScreenState extends State<CounterScreen> {
   Future<void> _askFree() async {
     final product = _product;
     final qty = int.tryParse(_qty.text.trim()) ?? 0;
+    // ⓘ পরিমাণ মুছলে আগের ফ্রিও যায় — পুরনো অঙ্ক বসে থাকত
+    if (product != null && qty <= 0 && _editingKey == null) setState(() => _free.clear());
     if (product == null || qty <= 0) return;
+    final lot = _lot?.id;
     try {
       final allowed = await widget.api.freeAllowed(
           productId: product.id,
           warehouseId: _warehouseId,
           qty: qty,
-          lotId: _lot?.id);
+          lotId: lot);
       if (!mounted) return;
+      // ⛔ উত্তর আসতে আসতে পণ্য, লট বা পরিমাণ বদলেছে — পুরনো প্রশ্নের উত্তর ফেলে দেওয়া; আগে ১০০-র (১০ ফ্রি) উত্তর শেষে এসে
+      // ১০-এর বিক্রিতে ১০ ফ্রি বসাত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+      if (_product?.id != product.id || _lot?.id != lot || (int.tryParse(_qty.text.trim()) ?? 0) != qty) return;
       setState(() {
         _freeAllowed = allowed;
         // ⓘ স্কিমের ফ্রি নিজে বসে (মালিক, ১ অক্টোবর: "free qty own auto box")
@@ -201,7 +211,7 @@ class _CounterScreenState extends State<CounterScreen> {
         return;
       }
       setState(() {
-        _rate.text = rate.toStringAsFixed(2);
+        _rate.text = Money.rate(rate);
         _rateNote = price.priceLabel.isEmpty ? null : price.priceLabel;
       });
     } catch (_) {
@@ -276,7 +286,7 @@ class _CounterScreenState extends State<CounterScreen> {
       _product = _products.where((p) => p.id == line.productId).firstOrNull;
       _lot = _lotsOfProduct.where((l) => l.id == line.lotId).firstOrNull;
       _qty.text = '${line.qty}';
-      _rate.text = line.rate.toStringAsFixed(2);
+      _rate.text = Money.rate(line.rate);
       _discount.text =
           line.discountPercent > 0 ? line.discountPercent.toString() : '';
       _free.text = line.freeQty > 0 ? '${line.freeQty}' : '';
@@ -301,14 +311,14 @@ class _CounterScreenState extends State<CounterScreen> {
       _error = null;
     });
     try {
-      final result = await widget.api.sell(
+      final result = await _once.send(() => widget.api.sell(
         customerId: customer.id,
         warehouseId: _warehouseId,
         paymentTerm: _term,
         lines: List.of(_cart),
         draft: draft,
         extras: repeat ? _extras.repeating() : _extras,
-      );
+      ));
       if (!mounted) return;
       setState(() => _busy =
           false); // ⓘ পপ-আপের আগেই — নইলে "চলছে" দাগ পপ-আপের পেছনে ঘুরতেই থাকে
@@ -436,6 +446,7 @@ class _CounterScreenState extends State<CounterScreen> {
     String? account = method?.accountId ?? setup.moneyAccounts.firstOrNull?.id;
     final amount = _moneyAmount..clear();
     final reference = _moneyReference..clear();
+    String? moneyError;
     final saved = await showModalBottomSheet<List<CounterDeposit>>(
       context: context,
       isScrollControlled: true,
@@ -502,7 +513,7 @@ class _CounterScreenState extends State<CounterScreen> {
                 controller: amount,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'টাকা'),
+                decoration: InputDecoration(labelText: 'টাকা', errorText: moneyError),
               ),
               if (method?.needsReference ?? false)
                 TextField(
@@ -513,8 +524,13 @@ class _CounterScreenState extends State<CounterScreen> {
               OutlinedButton(
                 key: const ValueKey('counter-money-add'),
                 onPressed: () {
-                  final value = double.tryParse(amount.text.trim()) ?? 0;
+                  final value = Money.typed(amount.text);
+                  if (value == null || (amount.text.trim().isNotEmpty && value <= 0)) {
+                    setSheet(() => moneyError = _unreadableAmount);
+                    return;
+                  }
                   if (value <= 0 || account == null) return;
+                  moneyError = null;
                   setSheet(() {
                     rows.add(CounterDeposit(
                         accountId: account!,
@@ -532,7 +548,12 @@ class _CounterScreenState extends State<CounterScreen> {
               FilledButton(
                 key: const ValueKey('counter-money-save'),
                 onPressed: () {
-                  final value = double.tryParse(amount.text.trim()) ?? 0;
+                  final value = Money.typed(amount.text);
+                  // ⛔ লেখা আছে অথচ পড়া যায় না — শিট খোলা থাকে, বার্তাসহ; আগে চুপচাপ বাদ পড়ত আর বিল পুরো বাকিতে যেত
+                  if (value == null || (amount.text.trim().isNotEmpty && value <= 0)) {
+                    setSheet(() => moneyError = _unreadableAmount);
+                    return;
+                  }
                   if (value > 0 && account != null) {
                     rows.add(CounterDeposit(
                         accountId: account!,
@@ -551,6 +572,8 @@ class _CounterScreenState extends State<CounterScreen> {
     );
     if (saved != null && mounted) setState(() => _deposits = saved);
   }
+
+  static const _unreadableAmount = 'অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।';
 
   /// বাছা খাত নগদ নয় (ব্যাংক বা MFS) — তখন TrxID আর "কে দিলেন" লাগে
   static bool _isNonCash(CounterSetup? setup, String? accountId) {
@@ -847,6 +870,11 @@ class _CounterScreenState extends State<CounterScreen> {
     try {
       final draft = await widget.api.openDraft(picked.id);
       if (!mounted) return;
+      if (draft.hasFractions) {
+        await _popup('খসড়াটা ফোনে খোলা যাবে না',
+            'এই খসড়ায় ভগ্নাংশের পরিমাণ আছে (যেমন ২.৫) — ফোনের কার্ট পূর্ণ সংখ্যা নেয়, খুললে পরিমাণ বদলে যেত। ওয়েবে খুলুন।');
+        return;
+      }
       setState(() {
         _startOver();
         _customer =
@@ -928,7 +956,7 @@ class _CounterScreenState extends State<CounterScreen> {
         _product = picked;
         _lot = _lotsOfProduct.firstOrNull;
         final rate = double.tryParse(price.rate) ?? 0;
-        _rate.text = rate > 0 ? rate.toStringAsFixed(2) : '';
+        _rate.text = rate > 0 ? Money.rate(rate) : '';
       });
       _askFree();
     }
@@ -1227,7 +1255,7 @@ class _CounterScreenState extends State<CounterScreen> {
                         _lot = _lotsOfProduct
                             .firstOrNull; // ⓘ FEFO-র প্রথমটা আগে থেকে — বদলানো যায়
                         _rate.text = (picked.salePrice ?? 0) > 0
-                            ? picked.salePrice!.toStringAsFixed(2)
+                            ? Money.rate(picked.salePrice!)
                             : '';
                         _rateNote = null;
                         _rateTyped = false;

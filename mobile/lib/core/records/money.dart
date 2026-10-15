@@ -59,4 +59,38 @@ class Money {
 
   /// `1234.5000` → `৳1,234.5`.
   static String taka(dynamic value) => '৳${plain(value)}';
+
+  /// দর বা হার — অন্তত দুই ঘর, দরকারে চার (`40` → `40.00`, `41.6667` থাকে) — সার্ভারের `decimal:4` না কেটে
+  /// (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+  static String rate(double value) {
+    final four = value.toStringAsFixed(4);
+    if (four.endsWith('00')) return value.toStringAsFixed(2);
+    if (four.endsWith('0')) return value.toStringAsFixed(3);
+    return four;
+  }
+
+  /// ⭐ মানুষের লেখা অঙ্ক — বাংলা অঙ্ক (১,২৫০) আর কমা (1,250) সহ (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+  ///
+  /// <p>খালি ঘর `0` (কিছু লেখা হয়নি), আর লেখা আছে অথচ পড়া যায় না হলে `null` — ⛔ আগে `double.tryParse("1,250")` চুপচাপ
+  /// শূন্য হত, আর টাকার সারিটা কোনো বার্তা ছাড়াই বাদ পড়ত: নগদ নেওয়া বিল পুরো বাকিতে যেত।
+  static double? typed(String text) {
+    final clean = typedText(text);
+    if (clean.isEmpty) return 0;
+    return double.tryParse(clean);
+  }
+
+  /// একই লেখা পাঠানোর রূপে — বাংলা অঙ্ক ইংরেজিতে, কমা আর ফাঁকা বাদ
+  static String typedText(String text) {
+    const bangla = '০১২৩৪৫৬৭৮৯';
+    final out = StringBuffer();
+    for (final ch in text.trim().split('')) {
+      final i = bangla.indexOf(ch);
+      if (i >= 0) {
+        out.write(i);
+      } else if (ch != ',' && ch != ' ') {
+        out.write(ch);
+      }
+    }
+    return out.toString();
+  }
 }

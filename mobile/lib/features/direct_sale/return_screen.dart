@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/records/money.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
@@ -30,6 +31,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
   final _note = TextEditingController();
   /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
   final _once = OnceKey();
+  String? _draftId;
   bool _busy = false;
   String? _error;
 
@@ -94,9 +96,14 @@ class _ReturnScreenState extends State<ReturnScreen> {
   Future<void> _go() async {
     final bill = _bill;
     final reason = _reasonId;
+    // ⛔ লেখা আছে অথচ পড়া যায় না (অক্ষর, দুই দশমিক) — বাংলা অঙ্ক আর হাজারের কমা পড়া যায়; আগে লাইনটা ফেরত থেকে চুপচাপ বাদ পড়ত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+    if (_qty.values.any((c) => Money.typed(c.text) == null)) {
+      setState(() => _error = 'ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।');
+      return;
+    }
     final lines = {
       for (final e in _qty.entries)
-        e.key: double.tryParse(e.value.text.trim()) ?? 0
+        e.key: Money.typed(e.value.text) ?? 0
     }..removeWhere((_, v) => v <= 0);
     if (bill == null || reason == null || lines.isEmpty) {
       setState(() => _error =
@@ -108,8 +115,11 @@ class _ReturnScreenState extends State<ReturnScreen> {
       _error = null;
     });
     try {
-      final id = await _once.send(() => widget.api.draft(
+      // ⛔ খসড়া একবারই — পরের ধাপ (সারাংশ) নেটে ব্যর্থ হলে আবার চাপায় আগের খসড়াই চলে; আগে চাবি মুছে যেত আর দ্বিতীয়
+      // খসড়া বসত, প্রথমটা পড়ে থাকত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+      final String id = _draftId ?? await _once.send(() => widget.api.draft(
           invoiceId: bill.id, reasonId: reason, lines: lines, note: _note.text));
+      _draftId = id;
       final overview = await widget.api.overview(id);
       if (!mounted) return;
       setState(() => _busy = false);
