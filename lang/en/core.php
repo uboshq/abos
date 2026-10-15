@@ -233,6 +233,11 @@ return [
 
     'settings_group' => [
         'entry' => 'Entry rules',
+        'risk' => 'Risk points',
+        'bell' => 'Bell',
+        'delivery' => 'Delivery',
+        'quiet' => 'Quiet hours',
+        'retention' => 'Retention',
         'print' => 'Printing',
         'report' => 'Reports',
         'limits' => 'Limits',
