@@ -52,7 +52,10 @@ final class AnotherPapersVoucherAskedForASignatureFirstTest extends TestCase
         ];
         $owned = app(VoucherService::class)->create(['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'হাতধারের ভাউচার'], $lines);
 
-        $account = DB::table('fin_hand_loan_accounts')->insertGetId(['company_id' => $company->id, 'person_name' => 'রহিম',
+        // ⓘ হাতধারের পক্ষ মানুষের তালিকা থেকে — `person_name` ঘর আর নেই (Finance-এর person_id)
+        $person = DB::table('mdm_people')->insertGetId(['company_id' => $company->id, 'code' => 'ZQR', 'name_en' => 'Rahim',
+            'public_id' => (string) Str::uuid()]);
+        $account = DB::table('fin_hand_loan_accounts')->insertGetId(['company_id' => $company->id, 'person_id' => $person,
             'status' => 'active', 'public_id' => (string) Str::uuid(), 'created_at' => now(), 'updated_at' => now()]);
         DB::table('fin_hand_loan_movements')->insert(['company_id' => $company->id, 'account_id' => $account, 'direction' => 'out',
             'amount' => '500', 'moved_on' => now()->toDateString(), 'voucher_id' => $owned->id,

@@ -73,21 +73,19 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     {
         $shop = Customer::query()->firstOrFail();
 
-        // প্রথম সিঙ্ক — সব বকেয়া নেমে গেল, ওয়াটারমার্ক এগোল
-        $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
-
         /*
-         * ⚠️ ঘড়ি এগোয় `pull-complete`-এর **আগে**, পরে নয়।
+         * ⚠️ ঘড়ি এগোয় প্রথম টানার **আগে**, পরে নয়।
          *
-         * ওয়াটারমার্ক বসে "এখন"-এ, আর কার্সার তার এক মিনিট আগে থেকে পড়ে
-         * ([[SyncService::cursorFor]])। ডেমোর সারিগুলো এইমাত্র তৈরি, তাই
-         * ওয়াটারমার্ক এখনই বসালে ওগুলো ওভারল্যাপের ভেতরেই থেকে যেত আর
-         * প্রতিবার ফিরে আসত।
+         * ওয়াটারমার্ক বসে পালার শুরুতে (প্রথম পাতা পড়ার মুহূর্ত; 02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬), আর কার্সার
+         * তার এক মিনিট আগে থেকে পড়ে ([[SyncService::cursorFor]])। ডেমোর সারিগুলো এইমাত্র তৈরি, তাই পালা এখনই শুরু হলে
+         * ওগুলো ওভারল্যাপের ভেতরেই থেকে যেত আর প্রতিবার ফিরে আসত।
          *
-         * পরে এগোলে লাভ নেই — ওয়াটারমার্ক অতীতে বসা থাকে, ঘড়ি এগোলেও
-         * সে নড়ে না। প্রথমবার এটাই ভুল লিখেছিলাম।
+         * পরে এগোলে লাভ নেই — ওয়াটারমার্ক অতীতে বসা থাকে, ঘড়ি এগোলেও সে নড়ে না।
          */
         $this->travel(2)->minutes();
+
+        // প্রথম সিঙ্ক — সব বকেয়া নেমে গেল, ওয়াটারমার্ক এগোল
+        $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');
 
         $quiet = $this->dueRecords();
@@ -123,8 +121,8 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     {
         $shop = Customer::query()->firstOrFail();
 
+        $this->travel(2)->minutes(); // ⓘ জলচিহ্ন এখন পালার শুরু (02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬), তাই ঘড়ি এগোয় প্রথম টানার আগে
         $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
-        $this->travel(2)->minutes();
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');
 
         $this->assertSame([], $this->dueRecords());

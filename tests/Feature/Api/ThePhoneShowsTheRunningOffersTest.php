@@ -150,7 +150,8 @@ final class ThePhoneShowsTheRunningOffersTest extends TestCase
         $stranger->companies()->attach($this->company, ['is_active' => true]);
         $this->phone($stranger)->assertForbidden();
 
-        // ⓘ এই শাখায় প্রচার বন্ধ — চালানের একই সুইচ ([[PromotionSalesOffers::enabled()]]); অফার নেই, কারণসহ
+        // ⓘ এই শাখায় প্রচার বন্ধ — চালানের একই সুইচ ([[PromotionSalesOffers::enabled()]]); ⭐ ফোনে মডিউলটাই বন্ধ, কোম্পানির
+        // সুইচের মতো ৪০৩ কারণসহ (ওয়েবের শাখা-সুইচের নিয়ম; [[PhoneModules::isOn()]], Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
         // ⓘ শাখাটা কোম্পানির নিজের — আগের ফোন-ডাক প্রসঙ্গটা অপরিচিতের (শাখাহীন) করে রেখে গেছে
         $branch = (int) $this->company->defaultBranch()?->id;
         $owner = $this->owner->fresh();
@@ -158,7 +159,9 @@ final class ThePhoneShowsTheRunningOffersTest extends TestCase
         BranchModule::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $branch, 'module' => 'promotion', 'is_enabled' => false,
         ]);
-        $this->phone($owner)->assertOk()->assertJsonPath('enabled', false)->assertJsonPath('rows', []);
+        $this->phone($owner)->assertForbidden()->assertJsonPath('reason', PhoneModules::REASON);
+        BranchModule::query()->where('branch_id', $branch)->where('module', 'promotion')->delete();
+        $this->phone($owner)->assertOk();
 
         // ⓘ কোম্পানিতে প্রচার বন্ধ হলে ফোনের দরজাই বন্ধ — মডিউলের সুইচ ([[PhoneModules::isOn()]])
         app(SettingsService::class)->set('promotion.enabled', false);

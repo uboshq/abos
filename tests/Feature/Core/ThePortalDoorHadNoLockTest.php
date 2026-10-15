@@ -190,8 +190,9 @@ final class ThePortalDoorHadNoLockTest extends TestCase
         $this->assertSame([
             // ⛔ অচেনা কোড ঢাকা ছাপে — ভুলে লেখা পাসওয়ার্ড খাতায় কাঁচা বসে না ([[LoginJournal::unknownKey()]], ১০ অক্টোবর ২০২৬)
             [LoginJournal::unknownKey('portal:NOBODY-9'), false, LoginAttempt::UNKNOWN, null, '10.5.0.1', null],
-            ['portal:LOCK-1', false, LoginAttempt::WRONG_PASSWORD, null, '10.5.0.2', null],
-            ['portal:LOCK-1', true, null, $this->company->id, '10.5.0.3', null],
+            // ⓘ খাতায় তালার একই রূপ, ছোট হাতে — তালা খাতা থেকেই গোনে ([[LoginLock::canonical()]], Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+            ['portal:lock-1', false, LoginAttempt::WRONG_PASSWORD, null, '10.5.0.2', null],
+            ['portal:lock-1', true, null, $this->company->id, '10.5.0.3', null],
         ], $rows->map(fn (LoginAttempt $r) => [
             $r->identifier, $r->succeeded, $r->reason, $r->company_id, $r->ip_address, $r->user_id,
         ])->all());

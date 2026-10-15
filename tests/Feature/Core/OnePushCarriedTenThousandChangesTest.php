@@ -32,7 +32,7 @@ final class OnePushCarriedTenThousandChangesTest extends TestCase
 
         $rows = array_fill(0, SyncController::MAX_CHANGES_PER_PUSH + 1, ['changeId' => 'x']);
 
-        $this->withToken($token)->postJson('/api/v1/sync/sales/push', $rows)
+        $this->withToken($token)->postJson('/api/v1/sync/sales/push?deviceId=cap-device-0001', $rows)
             ->assertStatus(422)
             ->assertJsonPath('message', __('sync.too_many_changes', ['max' => SyncController::MAX_CHANGES_PER_PUSH]));
     }

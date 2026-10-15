@@ -73,8 +73,8 @@ final class ThePhoneShowsTheShopsPointTest extends TestCase
         $onRoute->forceFill(['location_id' => $route->id])->save();
 
         $sync = app(SyncService::class);
+        $this->travel(2)->minutes(); // ⓘ জলচিহ্ন এখন পালার শুরু (02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬), তাই ঘড়ি এগোয় প্রথম টানার আগে
         $sync->pull($this->owner, 'phone-rn', 'customer', 500);
-        $this->travel(2)->minutes();
         $sync->recordSuccessfulPull('phone-rn', 'customer');
         $this->travel(5)->minutes();
 

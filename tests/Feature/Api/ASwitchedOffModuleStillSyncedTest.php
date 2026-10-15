@@ -30,6 +30,12 @@ final class ASwitchedOffModuleStillSyncedTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         app(SettingsService::class)->set(PhoneModules::key('sales'), true);
+        /*
+         * ⓘ বিক্রয়কর্মী এক শাখায় বসা — শাখার সুইচ পড়া হয় তাঁর বসা শাখা থেকে (`current_branch_id`; ওয়েবেও তাই,
+         * [[RefuseSwitchedOffScreens]])। ডেমোতে তিনি "সব শাখা"-য় (null), তখন কোনো এক শাখার সুইচ খাটে না।
+         */
+        $branchId = (int) $company->defaultBranch()?->id;
+        User::query()->where('email', 'sales@abos.test')->update(['current_company_id' => $company->id, 'current_branch_id' => $branchId]);
 
         $this->app['auth']->forgetGuards();
         $token = (string) $this->postJson('/api/v1/auth/login', [
@@ -39,7 +45,6 @@ final class ASwitchedOffModuleStillSyncedTest extends TestCase
         $this->assertNotSame('', $token, 'লগইনই হয়নি');
         $this->app['auth']->forgetGuards();
 
-        $branchId = (int) User::query()->where('email', 'sales@abos.test')->value('current_branch_id') ?: (int) $company->defaultBranch()?->id;
         BranchModule::query()->create(['company_id' => $company->id, 'branch_id' => $branchId, 'module' => 'sales', 'is_enabled' => false]);
 
         $this->withToken($token)->postJson('/api/v1/sync/sales/push?deviceId=branch-off-device', [])
