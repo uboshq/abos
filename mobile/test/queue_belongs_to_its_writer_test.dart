@@ -123,10 +123,21 @@ void main() {
     await SyncEngine.instance.flushAll();
     expect(server.pushes, hasLength(1), reason: 'নেট ফিরলে অর্ডারটা যায়');
   });
+
+  test('a change the server never answers is counted and finally shown as refused, not pending forever (phone line audit section 7, 15 Oct 2026)', () async {
+    await anOrderBy('rahim');
+    server.silent = true;
+    for (var i = 0; i < 5; i++) {
+      await SyncEngine.instance.flushAll();
+    }
+    expect(SyncEngine.instance.rejectedCount, 1, reason: '⛔ উত্তরহীন বদল চিরকাল "অপেক্ষায়" — কারণ ছাড়া');
+    expect(SyncEngine.instance.rejectedItems.single.reason, contains('উত্তর দেয়নি'));
+  });
 }
 
 class _Server implements HttpClientAdapter {
   bool down = false;
+  bool silent = false;
   final List<String> pushes = [];
 
   @override
@@ -134,6 +145,11 @@ class _Server implements HttpClientAdapter {
     if (down) throw DioException(requestOptions: options, type: DioExceptionType.connectionError);
     pushes.add(options.path);
     final rows = (options.data is String ? jsonDecode(options.data as String) : options.data) as List;
+    if (silent) {
+      return ResponseBody.fromString(jsonEncode({'outcomes': []}), 200, headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      });
+    }
     return ResponseBody.fromString(
       jsonEncode({
         'outcomes': [

@@ -592,6 +592,17 @@ class SyncEngine {
           } else if (outcome != null) {
             // APPLIED or DUPLICATE — genuinely done.
             toDelete.add(key);
+          } else {
+            // ⛔ সার্ভার এই বদলের কোনো উত্তর দেয়নি (তার দিকে ভাঙন) — আবার চেষ্টা চলে, কিন্তু চেষ্টাটা গোনা হয়; আগে চিরকাল
+            // "অপেক্ষায়" থাকত, কোনো কারণ ছাড়া, আর কোম্পানি বদলও আটকে রাখত (ফোন লাইন-ধরে নিরীক্ষা §৭, ১৫ অক্টোবর ২০২৬)।
+            final attempts = ((row['attempts'] as int?) ?? 0) + 1;
+            await _box.put(key, <String, dynamic>{
+              ...row.cast<String, dynamic>(),
+              'attempts': attempts,
+              if (attempts >= AppConfig.syncMaxAttempts) 'status': _statusRejected,
+              if (attempts >= AppConfig.syncMaxAttempts)
+                'reason': 'সার্ভার এই বদলের উত্তর দেয়নি ($attempts বার) — তালিকা দেখে নিজে থেকে আবার লিখুন।',
+            });
           }
           // No outcome for this changeId at all (should not happen, but a
           // response is not something to trust blindly) — left exactly as it
