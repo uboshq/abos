@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'created' => 'তৈরি',
     'updated' => 'সম্পাদনা',
+    'edited' => 'বদলে সই',
+    'revised' => 'নতুন করে চাওয়া',
     'deleted' => 'মোছা',
     'restored' => 'ফেরানো',
     'confirmed' => 'নিশ্চিত',
