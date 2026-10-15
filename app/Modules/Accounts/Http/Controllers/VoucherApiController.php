@@ -94,7 +94,13 @@ final class VoucherApiController extends Controller implements HasMiddleware
         ]);
     }
 
-    /** `GET /vouchers?type=&status=&from=&to=&q=&awaiting=&page=` */
+    /**
+     * `GET /vouchers?type=&money=&branch_id=&status=&from=&to=&q=&awaiting=&page=`
+     *
+     * ⭐ `money` — টাকা কোন খাতে (মালিক, ১৫ অক্টোবর ২০২৬, অ্যাপ ০.৪.৩৪: "নগদ রসিদ" আলাদা): `cash` নগদ বা ক্যাশ-বাক্স, `bank` ব্যাংক,
+     * `mfs` মোবাইল ব্যাংকিং। ⓘ ভাউচারের নিজের টাকার খাত, না বসে থাকলে সারির টাকার খাত ([[moneySide()]]-এর একই নিয়ম)।
+     * ⭐ `total` — ছাঁকা তালিকার মোট টাকা, সার্ভারে গোনা (পাতা নয়, পুরো ফল)। শাখা আর দেখার নিয়ম আগের মতো ([[visible()]]).
+     */
     public function index(Request $request): JsonResponse
     {
         $user = $this->writer($request);
@@ -105,27 +111,38 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'to' => ['nullable', 'date_format:Y-m-d'],
             'q' => ['nullable', 'string', 'max:100'],
             'awaiting' => ['nullable', 'boolean'],
+            'money' => ['nullable', Rule::in(Account::MONEY_KINDS)],
+            'branch_id' => ['nullable', 'integer'],
         ]);
 
-        $page = $this->visible($user)
+        $query = $this->visible($user)
             ->when($data['type'] ?? null, fn (Builder $q, string $t) => $q->ofType($t))
+            ->when($data['money'] ?? null, fn (Builder $q, string $kind) => $this->paidInto($q, $kind))
+            // ⓘ শাখা — মডেলের নিজের দেয়ালের ভিতরে; নাগালের বাইরের শাখা চাইলে খালি তালিকা, অন্যের কাগজ নয়
+            ->when($data['branch_id'] ?? null, fn (Builder $q, int $b) => $q->where('branch_id', $b))
             ->search($data['q'] ?? null)
             ->when($data['from'] ?? null, fn (Builder $q, string $d) => $q->where('trx_date', '>=', $d))
             ->when($data['to'] ?? null, fn (Builder $q, string $d) => $q->where('trx_date', '<=', $d))
             ->when($data['status'] ?? null, fn (Builder $q, string $s) => $q->where('status', $s))
-            ->when((bool) ($data['awaiting'] ?? false), fn (Builder $q) => $q->whereIn('id', $this->awaitingIds()))
+            ->when((bool) ($data['awaiting'] ?? false), fn (Builder $q) => $q->whereIn('id', $this->awaitingIds()));
+
+        // ⓘ মোট — পুরো ছাঁকা ফলের, বাতিল বাদ (বাতিল কাগজে টাকা আসেনি)
+        $total = bcadd((string) ((clone $query)->where('status', '<>', \App\Core\Support\DocumentStatus::CANCELLED)->sum('amount') ?? '0'), '0', 2);
+
+        $page = $query
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->paginate(self::PER_PAGE);
 
         $rows = $page->getCollection();
         // ⓘ সারির পক্ষও লাগে (নিচে [[partyOf()]]) — পাতায় একবারে
-        $rows->load('lines:id,voucher_id,party_type,party_id');
+        $rows->load(['lines:id,voucher_id,party_type,party_id', 'creator:id,name']);
         $names = $this->partyNames($rows);
         $awaiting = $this->awaitingIds($rows->modelKeys());
 
         return response()->json([
             'rows' => $rows->map(fn (Voucher $v) => $this->row($v, $names, $awaiting))->values(),
             'count' => $page->total(),
+            'total' => $total,
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
@@ -310,7 +327,22 @@ final class VoucherApiController extends Controller implements HasMiddleware
                 default => 'any',
             }),
             'narration' => (string) ($v->narration ?? ''),
+            // ⭐ কে তুলেছেন — তালিকাতেই (মালিক, ১৫ অক্টোবর ২০২৬)
+            'written_by' => (string) ($v->creator?->name ?? ''),
         ];
+    }
+
+    /**
+     * টাকা এই ধরনের খাতে — ভাউচারের নিজের টাকার খাত, না বসে থাকলে (পোস্টের আগে) সারির টাকার খাত ([[moneySide()]])।
+     */
+    private function paidInto(Builder $q, string $kind): void
+    {
+        $accounts = Account::query()->where('money_kind', $kind)->select('id');
+
+        $q->where(fn (Builder $w) => $w
+            ->whereIn('money_account_id', $accounts)
+            ->orWhere(fn (Builder $n) => $n->whereNull('money_account_id')
+                ->whereHas('lines', fn (Builder $l) => $l->whereIn('account_id', Account::query()->where('money_kind', $kind)->select('id')))));
     }
 
     /** @return array<string, mixed> */
