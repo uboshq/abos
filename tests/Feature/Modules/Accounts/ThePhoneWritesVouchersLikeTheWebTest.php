@@ -323,7 +323,10 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $this->assertSame('300.00', $onlyBank['total']);
 
         $other = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'VCR2', 'name_en' => 'Receipt Branch', 'is_active' => true]);
-        $this->assertSame([], $list('money=cash&branch_id='.$other->id)['rows'], '⛔ অন্য শাখার ছাঁকনিতে এই শাখার রসিদ।');
+        $this->assertSame([], $list('money=cash&branch='.$other->public_id)['rows'], '⛔ অন্য শাখার ছাঁকনিতে এই শাখার রসিদ।');
+        $home = $this->company->defaultBranch();
+        $this->assertContains($cash->public_id, collect($list('money=cash&branch='.$home?->public_id)['rows'])->pluck('id')->all(),
+            '⛔ নিজের শাখার ছাঁকনিতে নিজের রসিদ নেই।');
 
         $this->phone($reader)->getJson('/api/v1/accounts/vouchers?money=gold')->assertStatus(422);
     }

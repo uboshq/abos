@@ -95,7 +95,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
     }
 
     /**
-     * `GET /vouchers?type=&money=&branch_id=&status=&from=&to=&q=&awaiting=&page=`
+     * `GET /vouchers?type=&money=&branch=&status=&from=&to=&q=&awaiting=&page=`
      *
      * ⭐ `money` — টাকা কোন খাতে (মালিক, ১৫ অক্টোবর ২০২৬, অ্যাপ ০.৪.৩৪: "নগদ রসিদ" আলাদা): `cash` নগদ বা ক্যাশ-বাক্স, `bank` ব্যাংক,
      * `mfs` মোবাইল ব্যাংকিং। ⓘ ভাউচারের নিজের টাকার খাত, না বসে থাকলে সারির টাকার খাত ([[moneySide()]]-এর একই নিয়ম)।
@@ -112,14 +112,16 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'q' => ['nullable', 'string', 'max:100'],
             'awaiting' => ['nullable', 'boolean'],
             'money' => ['nullable', Rule::in(Account::MONEY_KINDS)],
-            'branch_id' => ['nullable', 'integer'],
+            // ⓘ শাখার public_id — ফোন ক্রমিক id পাঠায় না (চুক্তি §৩ ক)
+            'branch' => ['nullable', 'string', 'max:64'],
         ]);
 
         $query = $this->visible($user)
             ->when($data['type'] ?? null, fn (Builder $q, string $t) => $q->ofType($t))
             ->when($data['money'] ?? null, fn (Builder $q, string $kind) => $this->paidInto($q, $kind))
-            // ⓘ শাখা — মডেলের নিজের দেয়ালের ভিতরে; নাগালের বাইরের শাখা চাইলে খালি তালিকা, অন্যের কাগজ নয়
-            ->when($data['branch_id'] ?? null, fn (Builder $q, int $b) => $q->where('branch_id', $b))
+            // ⓘ শাখা — মডেলের নিজের দেয়ালের ভিতরে; নাগালের বাইরের বা অচেনা শাখা চাইলে খালি তালিকা, অন্যের কাগজ নয়
+            ->when($data['branch'] ?? null, fn (Builder $q, string $b) => $q->whereIn('branch_id',
+                \App\Models\Branch::query()->where('company_id', \App\Core\Support\CompanyContext::id())->where('public_id', $b)->select('id')))
             ->search($data['q'] ?? null)
             ->when($data['from'] ?? null, fn (Builder $q, string $d) => $q->where('trx_date', '>=', $d))
             ->when($data['to'] ?? null, fn (Builder $q, string $d) => $q->where('trx_date', '<=', $d))
