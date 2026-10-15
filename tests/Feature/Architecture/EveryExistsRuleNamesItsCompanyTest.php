@@ -38,7 +38,6 @@ class EveryExistsRuleNamesItsCompanyTest extends TestCase
      * ⓘ চূড়ান্ত অডিটের পরের ধাপ — Accounts আগে (টাকার ফর্ম), বাকিগুলো একে একে।
      */
     private const NOT_YET = [
-        'app/Modules/Approval/Http/Controllers/ApprovalDelegationController.php' => 1,
         'app/Modules/Inventory/Http/Controllers/StorageLocationController.php' => 1,
         'app/Modules/Promotion/Http/Controllers/PromotionSuggestController.php' => 1,
         'app/Modules/Sales/Http/Controllers/DepositClaimController.php' => 1,

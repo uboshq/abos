@@ -271,9 +271,13 @@ final class ApprovalEngine
             $needed = self::signaturesNeededAt($atLevel);
 
             if ($needed > 1) {
+                // ⓘ মানুষ গোনা, সারি নয় — ভারপ্রাপ্তের সই যাঁর হয়ে, তাঁর নামে
                 $given = $approval->decisions()
                     ->where('level', $approval->current_level)
                     ->where('decision', 'approved')
+                    ->get(['user_id', 'on_behalf_of'])
+                    ->map(fn (ApprovalDecision $d) => (int) ($d->on_behalf_of ?? $d->user_id))
+                    ->unique()
                     ->count();
 
                 if ($given < $needed) {
@@ -1174,6 +1178,7 @@ final class ApprovalEngine
 
     public function canDecide(Approval $approval, User $user): bool
     {
+        $for = null;   // ⓘ ভারের পথে এলে যাঁর হয়ে — নিচের তিন পাহারায় তিনিও
         /*
          * ছক আছে, ওই স্তরে ধাপ আছে, আর ধাপটা ইনাকে অনুমতি দেয় —
          * তিনটাই একসাথে এখানে। ⚠️ `pendingFor()` ঠিক এই দুইটা মেথডই
@@ -1217,7 +1222,8 @@ final class ApprovalEngine
                  * ⭐ এখন দুই পথ কেবল *"ইনি কি এই স্তরে সইকারী"* প্রশ্নের
                  * উত্তর বদলায়; বাকি পাহারা সবার জন্য একই।
                  */
-                $standsIn = $this->delegatorAt($approval, $user) !== null;
+                $for = $this->delegatorAt($approval, $user);
+                $standsIn = $for !== null;
 
                 /*
                  * ⭐ কাগজটা উপরে পাঠানো হয়েছে, আর গন্তব্য ইনি।
@@ -1287,16 +1293,40 @@ final class ApprovalEngine
         }
 
         /*
+         * ⛔ ভার ক্ষমতা সরায়, বাড়ায় না — যাঁর হয়ে সই, তাঁর নিয়মও খাটে (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[AStandInSignsAsTheOneTheyStandForTest]])।
+         *  · তাঁর সীমা: সীমাহীন ভারপ্রাপ্ত এক লাখের মানুষের হয়ে দশ লাখে সই দিতেন।
+         *  · তাঁর নিজের অনুরোধ নয়: অনুরোধকারী নিজেই স্তরের একমাত্র সইকারী হলে, বন্ধুকে ভার দিয়ে নিজের কাগজ পাশ করাতেন।
+         */
+        if ($for !== null) {
+            $from = User::find($for);
+
+            if ($from === null || ! app(AuthorityService::class)->allows($from, $approval, $approval->branch_id ?? null)) {
+                return false;
+            }
+
+            if ((int) $approval->requested_by === (int) $for && ! $this->withinSelfLimit($approval) && ! $this->isSuperAdmin($from)) {
+                return false;
+            }
+        }
+
+        /*
          * ⓘ ইনি এই স্তরে আগেই সিদ্ধান্ত দিয়েছেন কি না।
          *
          * ⚠️ ফরওয়ার্ড **সিদ্ধান্ত নয়** — "হ্যাঁ"-ও নয়, "না"-ও নয়। ⛔
          * ওটাকেও গুনলে যিনি কাগজটা পাঠিয়েছিলেন, ফেরত এলে তিনি আর সই
          * দিতে পারতেন না, আর কাগজটা চিরকাল আটকে থাকত।
          */
+        /*
+         * ⛔ একজন মানুষ একটা স্তরে একবারই — নিজে, বা তাঁর হয়ে কেউ (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে কেবল চাপ
+         * দেওয়া মানুষের নিজের সারি দেখা হত: A সই দিয়ে C-কে ভার দিলে C-র সইটা দ্বিতীয় মানুষ গোনা হত, আর "দুজনেরই লাগবে" স্তর B ছাড়াই পেরোত।
+         */
+        $ids = array_values(array_filter([(int) $user->id, $this->delegatorAt($approval, $user)]));
+
         return ! $approval->decisions()
             ->where('level', $approval->current_level)
-            ->where('user_id', $user->id)
             ->where('decision', '!=', ApprovalDecision::FORWARDED)
+            ->where(fn ($q) => $q->whereIn('user_id', $ids)->orWhereIn('on_behalf_of', $ids))
             ->exists();
     }
 
@@ -1517,7 +1547,8 @@ final class ApprovalEngine
         foreach (app(DelegationService::class)->actingFor($user, $approval->module, $approval->action) as $fromId) {
             $from = User::find($fromId);
 
-            if ($from !== null && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
+            // ⛔ বন্ধ করা মানুষের ভার আর খাটে না — চাকরি গেলে তাঁর হয়ে সইও যায় ([[AStandInMustBeOneOfUsTest]])
+            if ($from !== null && $from->is_active && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
                 return $fromId;
             }
         }
