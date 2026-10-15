@@ -69,7 +69,7 @@ class _FakeVouchers implements VoucherApi {
   final List<String?> askedTypes = [];
 
   @override
-  Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1}) async {
+  Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1, String? money, String? from, String? to, String? branch}) async {
     askedTypes.add(type);
     return VoucherListPage(rows: [
       for (final t in const ['receipt', 'payment', 'expense', 'journal', 'contra'])

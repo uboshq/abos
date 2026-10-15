@@ -149,12 +149,16 @@ class VoucherRow {
     this.party,
     this.partyLabel = '',
     this.narration = '',
+    this.writtenBy = '',
   });
 
   final String id;
   final String no;
   final String type;
   final String typeLabel;
+
+  /// ⭐ কে তুলেছেন — তালিকাতেই (মালিক, ১৫ অক্টোবর ২০২৬, ০.৪.৩৪); পুরনো সার্ভারে খালি
+  final String writtenBy;
 
   /// draft · awaiting · posted · cancelled
   final String state;
@@ -188,6 +192,7 @@ class VoucherRow {
         party: j['party']?.toString(),
         partyLabel: j['party_label']?.toString() ?? '',
         narration: j['narration']?.toString() ?? '',
+        writtenBy: j['written_by']?.toString() ?? '',
       );
 
   String get kindLabel => typeLabel.isNotEmpty ? typeLabel : VoucherTypes.label(type);
@@ -265,11 +270,32 @@ class VoucherPage {
 }
 
 class VoucherListPage {
-  const VoucherListPage({required this.rows, this.count = 0, this.nextPage});
+  const VoucherListPage({required this.rows, this.count = 0, this.nextPage, this.total});
 
   final List<VoucherRow> rows;
   final int count;
   final int? nextPage;
+
+  /// ⭐ ছাঁকা তালিকার মোট টাকা — সার্ভার গোনে, পুরো ফলের (পাতার নয়), বাতিল বাদ; পুরনো সার্ভারে `null`
+  final double? total;
+}
+
+/// ⭐ তালিকার উপরের বোতাম — মালিক, ১৫ অক্টোবর ২০২৬ (০.৪.৩৪): সব · নগদ রসিদ · ব্যাংক রসিদ · পেমেন্ট।
+/// নগদ রসিদ = টাকা নগদ বা ক্যাশ-বাক্সে জমা (`money=cash`), ব্যাংক রসিদ = টাকা ব্যাংকে (`money=bank`)।
+class VoucherView {
+  const VoucherView(this.key, this.label, {this.type, this.money});
+
+  final String key;
+  final String label;
+  final String? type;
+  final String? money;
+
+  static const all = VoucherView('all', 'সব');
+  static const cashReceipts = VoucherView('cash-receipt', 'নগদ রসিদ', type: 'receipt', money: 'cash');
+  static const bankReceipts = VoucherView('bank-receipt', 'ব্যাংক রসিদ', type: 'receipt', money: 'bank');
+  static const payments = VoucherView('payment', 'পেমেন্ট', type: 'payment');
+
+  static const top = [all, cashReceipts, bankReceipts, payments];
 }
 
 /// পাকা করার উত্তর — হলো কি না, আর সার্ভারের কথা
@@ -333,7 +359,15 @@ class VoucherDraft {
 abstract class VoucherApi {
   Future<VoucherSetup> setup(String type);
 
-  Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1});
+  Future<VoucherListPage> list({
+    String? type,
+    bool awaiting = false,
+    int page = 1,
+    String? money,
+    String? from,
+    String? to,
+    String? branch,
+  });
 
   Future<VoucherPage> one(String id);
 
@@ -353,10 +387,22 @@ class ServerVoucherApi implements VoucherApi {
   }
 
   @override
-  Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1}) async {
+  Future<VoucherListPage> list({
+    String? type,
+    bool awaiting = false,
+    int page = 1,
+    String? money,
+    String? from,
+    String? to,
+    String? branch,
+  }) async {
     final r = await ApiClient.dio.get<Map<String, dynamic>>('/accounts/vouchers', queryParameters: {
       if (type != null) 'type': type,
       if (awaiting) 'awaiting': 1,
+      if (money != null) 'money': money,
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+      if (branch != null) 'branch': branch,
       'page': page,
     });
     final body = r.data ?? const <String, dynamic>{};
@@ -367,6 +413,7 @@ class ServerVoucherApi implements VoucherApi {
       ],
       count: (body['count'] as num?)?.toInt() ?? 0,
       nextPage: (body['next_page'] as num?)?.toInt(),
+      total: body['total'] == null ? null : Money.valueOrZero(body['total']),
     );
   }
 

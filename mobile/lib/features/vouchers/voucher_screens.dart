@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/accounts/voucher_api.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/auth/session_profile.dart';
+import '../../core/menu/me_api.dart';
 import '../../core/records/money.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
@@ -20,20 +22,50 @@ Color voucherStateColour(String state) => switch (state) {
     };
 
 class VoucherListScreen extends StatefulWidget {
-  const VoucherListScreen({super.key, this.api = const ServerVoucherApi(), this.newChangeId = _engineChangeId});
+  const VoucherListScreen({
+    super.key,
+    this.api = const ServerVoucherApi(),
+    this.newChangeId = _engineChangeId,
+    this.branches = _myBranches,
+    this.today,
+  });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
 
+  /// ⓘ নাগালের শাখা — `/me` থেকে; না পেলে শাখার ছাঁকনিই দেখায় না
+  static Future<List<OrgRef>> _myBranches() async {
+    try {
+      return (await MeApi.fetch()).profile.branches;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   final VoucherApi api;
   final String Function() newChangeId;
+  final Future<List<OrgRef>> Function() branches;
+
+  /// পরীক্ষার জন্য — না দিলে আজ
+  final DateTime? today;
 
   @override
   State<VoucherListScreen> createState() => _VoucherListScreenState();
 }
 
 class _VoucherListScreenState extends State<VoucherListScreen> {
-  String? _type;
+  /// ⭐ উপরের বোতাম — সব · নগদ রসিদ · ব্যাংক রসিদ · পেমেন্ট (মালিক, ১৫ অক্টোবর ২০২৬, ০.৪.৩৪), তারপর বাকি ধরন আগের মতো
+  static final List<VoucherView> _views = [
+    ...VoucherView.top,
+    for (final t in VoucherTypes.all)
+      if (t != 'receipt' && t != 'payment') VoucherView(t, VoucherTypes.label(t).replaceAll(' ভাউচার', ''), type: t),
+  ];
+
+  VoucherView _view = VoucherView.all;
   bool _awaiting = false;
+  late DateTime _from;
+  late DateTime _to;
+  List<OrgRef> _branches = const [];
+  OrgRef? _branch;
   final List<VoucherRow> _rows = [];
   VoucherListPage? _page;
   bool _busy = false;
@@ -42,7 +74,13 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
   @override
   void initState() {
     super.initState();
+    final now = widget.today ?? DateTime.now();
+    _to = DateTime(now.year, now.month, now.day);
+    _from = DateTime(now.year, now.month);
     _load();
+    widget.branches().then((list) {
+      if (mounted) setState(() => _branches = list);
+    });
   }
 
   Future<void> _load({bool more = false}) async {
@@ -51,7 +89,15 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       _error = null;
     });
     try {
-      final page = await widget.api.list(type: _type, awaiting: _awaiting, page: more ? (_page?.nextPage ?? 1) : 1);
+      final page = await widget.api.list(
+        type: _view.type,
+        money: _view.money,
+        awaiting: _awaiting,
+        from: isoOf(_from),
+        to: isoOf(_to),
+        branch: _branch?.publicId,
+        page: more ? (_page?.nextPage ?? 1) : 1,
+      );
       if (!mounted) return;
       setState(() {
         if (!more) _rows.clear();
@@ -95,6 +141,8 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final total = _page?.total;
+
     return Scaffold(
       appBar: AppBar(title: const Text('ভাউচার')),
       floatingActionButton: FloatingActionButton.extended(
@@ -109,20 +157,13 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
-              ChoiceChip(
-                  label: const Text('সব'),
-                  selected: _type == null,
-                  onSelected: (_) {
-                    setState(() => _type = null);
-                    _load();
-                  }),
-              for (final t in VoucherTypes.all)
+              for (final v in _views)
                 ChoiceChip(
-                    key: ValueKey('voucher-filter-$t'),
-                    label: Text(VoucherTypes.label(t).replaceAll(' ভাউচার', '')),
-                    selected: _type == t,
+                    key: ValueKey('voucher-view-${v.key}'),
+                    label: Text(v.label),
+                    selected: _view.key == v.key,
                     onSelected: (_) {
-                      setState(() => _type = t);
+                      setState(() => _view = v);
                       _load();
                     }),
               FilterChip(
@@ -134,6 +175,43 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     _load();
                   }),
             ]),
+            const SizedBox(height: AppSpacing.xs),
+            DateRangeBar(
+              from: _from,
+              to: _to,
+              today: widget.today,
+              onChanged: (from, to) {
+                setState(() {
+                  _from = from;
+                  _to = to;
+                });
+                _load();
+              },
+            ),
+            // ⓘ শাখা — নাগালে একাধিক থাকলে তবেই
+            if (_branches.length > 1)
+              Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
+                ChoiceChip(
+                    key: const ValueKey('voucher-branch-all'),
+                    label: const Text('সব শাখা'),
+                    selected: _branch == null,
+                    onSelected: (_) {
+                      setState(() => _branch = null);
+                      _load();
+                    }),
+                for (final b in _branches)
+                  ChoiceChip(
+                      key: ValueKey('voucher-branch-${b.publicId}'),
+                      label: Text(b.name),
+                      selected: _branch?.publicId == b.publicId,
+                      onSelected: (_) {
+                        setState(() => _branch = b);
+                        _load();
+                      }),
+              ]),
+            // ⭐ ছাঁকা তালিকার মোট — সার্ভারের গোনা, পুরো ফলের (পাতার নয়)
+            if (total != null)
+              TotalStrip(label: 'মোট · ${_view.label}', value: Money.taka(total), count: _page?.count),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_page != null && _rows.isEmpty && !_busy)
@@ -147,6 +225,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     Text(Money.taka(v.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
                     Text(v.stateWords, style: TextStyle(color: voucherStateColour(v.state))),
                     if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
+                    if (v.writtenBy.isNotEmpty) Text('তুলেছেন: ${v.writtenBy}'),
                     if (v.date != null) Text(dayOf(v.date)),
                   ]),
                   onTap: () async {

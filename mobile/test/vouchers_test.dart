@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
 import 'package:abos_mobile/core/api_client/api_client.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
+import 'package:abos_mobile/core/auth/session_profile.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
@@ -32,6 +33,7 @@ class _FakeVouchers implements VoucherApi {
   VoucherDraft? sent;
   final List<String> keys = [];
   final List<bool> awaitingAsked = [];
+  final List<Map<String, String?>> asked = [];
   String? postedWith;
   PostAnswer postAnswer = const PostAnswer(posted: true, message: 'JV-1 পাকা হয়েছে — খাতায় উঠেছে।');
 
@@ -47,12 +49,13 @@ class _FakeVouchers implements VoucherApi {
       );
 
   @override
-  Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1}) async {
+  Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1, String? money, String? from, String? to, String? branch}) async {
     awaitingAsked.add(awaiting);
+    asked.add({'type': type, 'money': money, 'from': from, 'to': to, 'branch': branch});
     return const VoucherListPage(rows: [
-      VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'awaiting', amount: 500, stateLabel: 'সইয়ের অপেক্ষায়'),
+      VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'awaiting', amount: 500, stateLabel: 'সইয়ের অপেক্ষায়', writtenBy: 'আবু কাওসার'),
       VoucherRow(id: 'v2', no: 'JV-0002', type: 'journal', state: 'posted', amount: 100, stateLabel: 'পাকা'),
-    ], count: 2);
+    ], count: 2, total: 600);
   }
 
   @override
@@ -348,7 +351,7 @@ void main() {
 
   testWidgets('the list shows each state, and "সইয়ের অপেক্ষায়" asks the server for those only', (tester) async {
     final api = _FakeVouchers();
-    await _pump(tester, VoucherListScreen(api: api, newChangeId: _key));
+    await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const []));
     expect(find.text('RV-0001 · আদায় ভাউচার'), findsOneWidget);
     expect(find.text('সইয়ের অপেক্ষায়'), findsWidgets);
     expect(find.text('পাকা'), findsOneWidget);
@@ -356,6 +359,53 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('voucher-awaiting')));
     await tester.pumpAndSettle();
     expect(api.awaitingAsked.last, isTrue);
+  });
+
+  /// ⭐ নগদ রসিদ আলাদা — মালিক, ১৫ অক্টোবর ২০২৬ (০.৪.৩৪; সার্ভার: ThePhoneWritesVouchersLikeTheWebTest::…cash_and_bank_receipts…)।
+  testWidgets('the four buttons ask for cash or bank receipts or payments, the total and the writer show, a branch goes by public id',
+      (tester) async {
+    final api = _FakeVouchers();
+    await _pump(
+        tester,
+        VoucherListScreen(
+          api: api,
+          newChangeId: _key,
+          today: DateTime(2026, 10, 15),
+          branches: () async => const [
+            OrgRef(publicId: 'br-mym', code: 'MYM', name: 'ময়মনসিংহ'),
+            OrgRef(publicId: 'br-ntk', code: 'NTK', name: 'নেত্রকোনা'),
+          ],
+        ));
+
+    // ⓘ প্রথম ডাক — সব, এ মাস
+    expect(api.asked.first, {'type': null, 'money': null, 'from': '2026-10-01', 'to': '2026-10-15', 'branch': null});
+    for (final label in ['সব', 'নগদ রসিদ', 'ব্যাংক রসিদ', 'পেমেন্ট']) {
+      expect(find.widgetWithText(ChoiceChip, label), findsOneWidget, reason: 'বোতাম "$label" নেই');
+    }
+
+    await tester.tap(find.byKey(const ValueKey('voucher-view-cash-receipt')));
+    await tester.pumpAndSettle();
+    expect([api.asked.last['type'], api.asked.last['money']], ['receipt', 'cash'], reason: '⛔ নগদ রসিদ সার্ভারকে নগদ বলেনি');
+
+    await tester.tap(find.byKey(const ValueKey('voucher-view-bank-receipt')));
+    await tester.pumpAndSettle();
+    expect([api.asked.last['type'], api.asked.last['money']], ['receipt', 'bank']);
+
+    await tester.tap(find.byKey(const ValueKey('voucher-view-payment')));
+    await tester.pumpAndSettle();
+    expect([api.asked.last['type'], api.asked.last['money']], ['payment', null]);
+
+    // ⭐ মোট সার্ভারের, আর কে তুলেছেন
+    expect(find.byKey(const ValueKey('books-total')), findsOneWidget);
+    expect(find.text('তুলেছেন: আবু কাওসার'), findsOneWidget);
+
+    // ⓘ শাখা — public_id যায়
+    await tester.tap(find.byKey(const ValueKey('voucher-branch-br-ntk')));
+    await tester.pumpAndSettle();
+    expect(api.asked.last['branch'], 'br-ntk');
+    await tester.tap(find.byKey(const ValueKey('voucher-branch-all')));
+    await tester.pumpAndSettle();
+    expect(api.asked.last['branch'], isNull);
   });
 
   test('the tile comes with the web\'s write key and the phone\'s accounts switch closes it', () async {
