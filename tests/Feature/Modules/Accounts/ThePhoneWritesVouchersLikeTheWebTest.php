@@ -292,7 +292,10 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         app(SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
         $reader = $this->person(['accounts.voucher.create', 'accounts.report']);
         $till = Account::query()->postable()->active()->where('money_kind', Account::CASH)->orderBy('code')->firstOrFail();
-        $bank = Account::query()->postable()->active()->where('money_kind', Account::BANK)->orderBy('code')->firstOrFail();
+        // ⓘ এই কোম্পানিতে চালু ব্যাংক খাত নেই — টাকার খাতহীন একটা খাতকে ব্যাংক বানানো (এই দাবি খাতের ধরন মাপে)
+        $bank = Account::query()->postable()->active()->where('money_kind', Account::BANK)->orderBy('code')->first()
+            ?? tap(Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '1%')->orderBy('code')->firstOrFail(),
+                fn (Account $a) => $a->forceFill(['money_kind' => Account::BANK])->save());
 
         $receipt = function (string $id, Account $money, string $amount) use ($reader): Voucher {
             $out = $this->push($reader, [$this->change($id, [...$this->journal(), 'save_as_draft' => true])]);
