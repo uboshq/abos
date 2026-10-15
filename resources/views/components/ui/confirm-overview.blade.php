@@ -9,6 +9,7 @@
 <dialog data-confirm-overview-dialog
         data-loading="{{ __('overview.loading') }}"
         data-failed="{{ __('overview.failed') }}"
+        data-refused="{{ __('overview.refused') }}"
         class="w-full max-w-lg rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-0">
     <div class="grid gap-3 p-4">
         <div data-confirm-overview-body class="grid gap-2 text-sm"></div>

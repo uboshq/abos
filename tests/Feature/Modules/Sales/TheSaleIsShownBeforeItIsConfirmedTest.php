@@ -160,6 +160,33 @@ final class TheSaleIsShownBeforeItIsConfirmedTest extends TestCase
         $this->assertStringNotContainsString('<html', $response->getContent(), '⛔ পপ-আপে পুরো পাতা ঢুকল।');
     }
 
+    /**
+     * ⛔ সেবার হিসাব "না" বললেও পপ-আপে ভুলের কথা, পুরো পাতা নয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬
+     * ([[DirectSaleOverviewController]])। ⓘ আজকের ঘরের নিয়মে সারির দেয়ালে পৌঁছানো যায় না, তাই "না"-টা পণ্য পড়ার মুহূর্তে
+     * বসানো — সেবা যেকোনো দিন যা ছুঁড়তে পারে, তারই প্রতিনিধি। আগে উত্তর হত ৩০২ (পেছনে ফেরা)।
+     */
+    public function test_a_refusal_from_the_figures_shows_in_the_popup_not_a_redirect(): void
+    {
+        $this->grant('sales.challan.create');
+        $form = [
+            'customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'own_transport' => '1',
+            'lines' => [['product_id' => $this->product->id, 'batch_id' => $this->lot->id, 'qty' => '10', 'rate' => '100']],
+        ];
+
+        Product::retrieved(function (): void {
+            throw \Illuminate\Validation\ValidationException::withMessages(['lines' => __('sales::validation.vat_is_off')]);
+        });
+
+        $response = $this->actingAs($this->seller->fresh())
+            ->post(route('sales.direct.overview'), $form, ['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'text/html'])
+            ->assertOk()
+            ->assertSee('data-overview-blocks="1"', false)
+            ->assertSee(__('overview.not_ready'))
+            ->assertSee(__('sales::validation.vat_is_off'));
+
+        $this->assertStringNotContainsString('<html', $response->getContent(), '⛔ পপ-আপে পুরো পাতা ঢুকল।');
+    }
+
     /** ⭐ কাউন্টার-পাতায় পপ-আপ বসানো — ফর্ম সারাংশের ঠিকানা জানে, পাতায় পপ-আপের খোলস আছে */
     public function test_the_counter_page_carries_the_popup_and_the_overview_address(): void
     {

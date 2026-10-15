@@ -28,6 +28,16 @@
      * অথচ সরবরাহকারীর আসল বিল হাতে আসে পোস্ট করার পরে।
      */
     $canAttach = auth()->user()?->can('create', $document::class) ?? false;
+
+    /*
+     * ⛔ "সরান" কেবল তাঁর, যাঁকে সার্ভার সরাতে দেবে — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ বোতামটা আগে `create` দেখে বসত, অথচ সার্ভার ছাড়ে কেবল আপলোডকারীকে (সই শুরুর আগে) বা কাগজ সম্পাদনার চাবিধারীকে
+     * ([[AttachmentController::authorizeRemoving()]]) — বাকিরা টিপে ৪০৩ পেতেন। এখন একই প্রশ্ন, একই জায়গা থেকে।
+     */
+    $mayUpdateDocument = auth()->user()?->can('update', $document) ?? false;
+    $attachmentEngine = app(\App\Core\Engines\Attachment\AttachmentEngine::class);
+    $viewer = auth()->user() instanceof \App\Models\User ? auth()->user() : null;
 @endphp
 
 {{-- ⭐ `x-data` এখানে লাগে, ১৫ সেপ্টেম্বর ২০২৬ ────────────────────────────
@@ -72,7 +82,7 @@
                         {{ $paper->uploader?->name }} · {{ \App\Core\Support\DateFormat::format($paper->created_at) }}
                     </span>
 
-                    @if ($canAttach)
+                    @if ($mayUpdateDocument || $attachmentEngine->uploaderMayRemove($paper, $document, $viewer))
                         <form method="POST" action="{{ route('attachment.destroy', $paper) }}">
                             @csrf
                             @method('DELETE')

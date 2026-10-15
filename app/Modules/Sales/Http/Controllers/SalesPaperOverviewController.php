@@ -19,9 +19,13 @@ use Illuminate\View\View;
  * ⭐ রাখা চালান আর বিলের "নিশ্চিত করুন"-এর আগের সারাংশ — পপ-আপের ভিতরে যা আঁকা হয় (মালিক, ৪ অক্টোবর ২০২৬;
  * [[confirm-overview.js]], [[SalesPaperOverview]])। কিছুই লেখে না।
  *
- * ⓘ চাবি নিশ্চিতের দরজারই — চালানে `sales.challan.create`, বিলে `sales.invoice.create`, আদায়ে `sales.collection.create`, ফেরতে `sales.return.create`, আদেশে `sales.order.create` ([[DeliveryChallanController]],
+ * ⓘ চাবি নিশ্চিতের দরজারই — চালানে `sales.challan.create`, বিলে `sales.invoice.create`, আদায়ে `sales.collection.create`, ফেরতে `sales.return.create`, আদেশে `sales.order.update` ([[DeliveryChallanController]],
  * [[SalesInvoiceController]]-এর `confirm`); আর কাগজটা দেখার অধিকার (`view` নীতি — শাখা, নিজের ক্রেতা), যাতে
  * অন্য শাখার চালানের সারাংশ ঠিকানা বদলে খোলা না যায়।
+ *
+ * ⛔ আদেশ — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬: সারাংশ চাইত `sales.order.create`, অথচ নিশ্চিতের দরজা
+ * ([[SalesOrderController]]-এর `confirm`) চায় `sales.order.update`। ম্যানেজার (নিশ্চিত করেন, তৈরি নয়) "নিশ্চিত" চাপলে ৪০৩
+ * পেতেন, আর মাঠের বিক্রয়কর্মী সারাংশ দেখে তবে নিশ্চিতে ৪০৩। এখন দুই দরজার চাবি এক।
  */
 class SalesPaperOverviewController extends Controller implements HasMiddleware
 {
@@ -32,7 +36,7 @@ class SalesPaperOverviewController extends Controller implements HasMiddleware
             new Middleware('can:sales.invoice.create', only: ['invoice']),
             new Middleware('can:sales.collection.create', only: ['collection']),
             new Middleware('can:sales.return.create', only: ['salesReturn']),
-            new Middleware('can:sales.order.create', only: ['order']),
+            new Middleware('can:sales.order.update', only: ['order']),
         ];
     }
 

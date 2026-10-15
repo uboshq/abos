@@ -6,6 +6,7 @@ declare(strict_types=1);
 return [
     'loading' => 'Loading the overview…',
     'failed' => 'Could not load the overview. Check the network and try again.',
+    'refused' => 'This overview could not be opened (no permission, or something on the form is wrong), so it cannot be confirmed from here.',
     'confirm' => 'Confirm',
     'draft' => 'Keep as draft',
     'back' => 'Go back',

@@ -6,9 +6,15 @@ namespace App\Core\Engines\Attachment;
 
 use App\Core\Engines\Image\ImageEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
+use App\Models\ApprovalDecision;
 use App\Models\Attachment;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -204,6 +210,54 @@ final class AttachmentEngine
     public function delete(Attachment $attachment): void
     {
         $attachment->delete();
+    }
+
+    /**
+     * ⛔ আপলোডকারী নিজের ফাইল সরাতে পারেন কি না — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ নিয়ম আগের মতোই: নিজের ভুল ছবি নিজে সরানো যায়, কিন্তু কাগজে সই শুরু হওয়ার **আগে**। ⛔ আগে "সই হয়েছে" মানে ছিল কেবল
+     * পুরো অনুমোদন `approved` — তাই দুই স্তরের ছকে প্রথম স্তর সই দেওয়ার পরেও (অনুমোদন তখনো `pending`) আপলোডকারী স্লিপটা
+     * সরাতে পারতেন, আর অনুমোদন বন্ধ এমন কোম্পানিতে (কোনো অনুমোদনের সারিই নেই) পোস্ট হওয়া রসিদের স্লিপ যেকোনো দিন সরানো
+     * যেত। ⭐ এখন সই শুরু = কোনো স্তরে একটা "হ্যাঁ", অথবা কাগজটা আর খসড়া নয় (পোস্ট বা বাতিল)। আর কাগজটা আপনার দেখার
+     * মধ্যে থাকতে হবে — শাখার অধিকার হারানো আপলোডকারী আর সরাতে পারেন না।
+     *
+     * ⓘ এর বাইরে কেবল কাগজ সম্পাদনার চাবিধারী (তদারকি) — সেটা ডাকার জায়গায় (`update`)।
+     */
+    public function uploaderMayRemove(Attachment $attachment, Model $document, ?User $user): bool
+    {
+        if ($user === null || (int) $attachment->uploaded_by !== (int) $user->getKey()) {
+            return false;
+        }
+
+        if (! Gate::forUser($user)->allows('view', $document)) {
+            return false;
+        }
+
+        return ! $this->signingStarted($document);
+    }
+
+    /** কাগজটায় সই শুরু হয়েছে কি না — পুরো অনুমোদন, কোনো স্তরের "হ্যাঁ", বা খসড়া পেরোনো অবস্থা। */
+    private function signingStarted(Model $document): bool
+    {
+        $approvals = Approval::query()
+            ->where('approvable_type', $document::class)
+            ->where('approvable_id', $document->getKey());
+
+        if ((clone $approvals)->where('status', Approval::APPROVED)->exists()) {
+            return true;
+        }
+
+        if (ApprovalDecision::query()
+            ->whereIn('approval_id', (clone $approvals)->select('id'))
+            ->where('decision', ApprovalDecision::APPROVED)
+            ->exists()) {
+            return true;
+        }
+
+        // ⓘ কেবল যে কাগজ খসড়া → নিশ্চিত → বন্ধ ধারায় চলে; গ্রাহক বা পণ্যের মতো তালিকার "active" অবস্থা এখানে কিছু বলে না
+        $status = $document->getAttribute('status');
+
+        return is_string($status) && $status !== DocumentStatus::DRAFT && in_array($status, DocumentStatus::ALL, true);
     }
 
     /**

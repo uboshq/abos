@@ -206,6 +206,35 @@ final class TheChallanAndTheBillAreShownBeforeTheyAreConfirmedTest extends TestC
             ->assertSee('data-overview-trigger', false);
     }
 
+    /**
+     * ⛔ আদেশের সারাংশের চাবি = নিশ্চিতের চাবি (`sales.order.update`) — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     * ⓘ আগে সারাংশ চাইত `sales.order.create`: ম্যানেজার (নিশ্চিত করেন) ৪০৩ পেতেন, আর মাঠের কর্মী সারাংশ দেখে নিশ্চিতে ৪০৩।
+     */
+    public function test_the_order_overview_asks_the_same_key_as_the_confirm(): void
+    {
+        app(\App\Modules\Sales\Services\SalesOrderService::class)->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'ordered_qty' => '1', 'rate' => '10']],
+        );
+        $order = \App\Modules\Sales\Models\SalesOrder::query()->latest('id')->firstOrFail();
+
+        $manager = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $manager->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->grant($manager, 'sales.order.view');
+        $this->grant($manager, 'sales.order.update');
+
+        $field = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $field->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->grant($field, 'sales.order.view');
+        $this->grant($field, 'sales.order.create');
+
+        $this->actingAs($manager->fresh())->post(route('sales.order.overview', $order))->assertOk()
+            ->assertSee($order->document_no);
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+
+        $this->actingAs($field->fresh())->post(route('sales.order.overview', $order))->assertForbidden();
+    }
+
     private function challan(): DeliveryChallan
     {
         return app(DeliveryChallanService::class)->create(

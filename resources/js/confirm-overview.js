@@ -53,6 +53,9 @@ export function guardConfirmOverview (root = document, fetcher = (...args) => fe
         body.textContent = dialog.dataset.loading ?? ''
         openDialog(dialog)
 
+        // ⛔ ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬: উত্তরের অবস্থা দেখা হত না — ৪০৩/৪২২/৫০০-এর পুরো পাতা পপ-আপে বসত, আর
+        // তাতে "থামবে" চিহ্ন নেই বলে "নিশ্চিত" খোলা থাকত (সারাংশ না দেখেই নিশ্চিত)। এখন ছোট কথা, আর "নিশ্চিত" বন্ধ
+        let failed = false
         try {
             const response = await fetcher(form.dataset.confirmOverview, {
                 method: 'POST',
@@ -60,12 +63,18 @@ export function guardConfirmOverview (root = document, fetcher = (...args) => fe
                 headers: { 'X-CSRF-TOKEN': token, Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
             })
-            body.innerHTML = await response.text()
+            if (response.ok) {
+                body.innerHTML = await response.text()
+            } else {
+                failed = true
+                body.textContent = dialog.dataset.refused ?? dialog.dataset.failed ?? ''
+            }
         } catch (e) {
+            failed = true
             body.textContent = dialog.dataset.failed ?? ''
         }
 
-        const blocks = body.querySelector('[data-overview-blocks="1"]') !== null
+        const blocks = failed || body.querySelector('[data-overview-blocks="1"]') !== null
         const confirm = dialog.querySelector('[data-overview-confirm]')
         if (confirm) {
             confirm.disabled = blocks
