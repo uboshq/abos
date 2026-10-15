@@ -193,6 +193,16 @@ final class SyncService
             ->first();
 
         if ($existing !== null) {
+            /*
+             * ⛔ একই চাবি, অন্য লেখা — উত্তর না আসার পরে মানুষ অঙ্ক বদলে আবার পাঠালেন। আগে আগের ফলটাই "হয়ে গেছে" বলে ফিরত, আর
+             * পর্দা নতুন অঙ্কের সাফল্য ভাবত, অথচ বসেছে আগেরটা (ফোন লাইন-ধরে নিরীক্ষা §৭, ১৫ অক্টোবর ২০২৬;
+             * [[AChangedResendIsNotTakenForTheFirstTest]])। এখন স্পষ্ট ফেরানো: আগেরটা বসে আছে, তালিকা দেখে নিন।
+             */
+            if ($existing->isSettled() && json_decode((string) $existing->payload_json, true) != json_decode($change->payloadJson, true)) {
+                return ['changeId' => $change->changeId, 'status' => SyncChange::CONFLICT,
+                    'message' => __('sync.same_key_other_content'), 'entityId' => $existing->applied_entity_id];
+            }
+
             return array_filter([
                 'changeId' => $change->changeId,
                 'status' => $existing->isSettled() ? SyncChange::DUPLICATE : $existing->status,
