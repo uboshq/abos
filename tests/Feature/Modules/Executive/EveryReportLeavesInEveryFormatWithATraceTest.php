@@ -76,8 +76,15 @@ final class EveryReportLeavesInEveryFormatWithATraceTest extends TestCase
         foreach (['রহিম', 'আলম'] as $who) {
             $this->assertStringContainsString($who, $names, "প্রস্তুতিটাই ভুল — {$who}-এর সারি ফাইলে নেই।");
         }
-        $this->assertSame($body, array_slice($xlsx, 1, count($json['rows'])), '⛔ Excel-এর সারি CSV-র সারি নয়।');
-        $this->assertSame($body, array_map(fn (array $r) => array_values(array_map('strval', $r)), $json['rows']), '⛔ JSON-এর সারি CSV-র সারি নয়।');
+        // ⓘ একই অঙ্ক, তিন রকম লেখা: Excel-এ সংখ্যার ঘর, CSV-তে কমা ছাড়া, JSON-এ (ফোনের পর্দার জন্য) কমাসহ — তাই
+        // কমা সরিয়ে চার দশমিকে তুলনা; লেখা ঘর হুবহু (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        $same = fn (array $rows): array => array_map(fn (array $r) => array_map(function (string $v): string {
+            $plain = str_replace(',', '', $v);
+
+            return is_numeric($plain) ? bcadd($plain, '0', 4) : $v;
+        }, array_values($r)), $rows);
+        $this->assertSame($same($body), $same(array_slice($xlsx, 1, count($json['rows']))), '⛔ Excel-এর সারি CSV-র সারি নয়।');
+        $this->assertSame($same($body), $same(array_map(fn (array $r) => array_values(array_map('strval', $r)), $json['rows'])), '⛔ JSON-এর সারি CSV-র সারি নয়।');
 
         // ⭐ তিনটা নামানো, তিনটা রপ্তানির খাতার সারি — এই রিপোর্টের নামে
         $journal = ExportLog::query()->withoutGlobalScopes()->orderBy('id')->get()->slice($logged)->values();
@@ -173,7 +180,8 @@ final class EveryReportLeavesInEveryFormatWithATraceTest extends TestCase
         foreach ($xml->sheetData->row as $row) {
             $cells = [];
             foreach ($row->c as $c) {
-                $cells[] = (string) $c->is->t;
+                // ⓘ লেখার ঘর `<is><t>`, সংখ্যার ঘর `<v>` (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                $cells[] = isset($c->v) ? (string) $c->v : (string) $c->is->t;
             }
             $rows[] = $cells;
         }

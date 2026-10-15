@@ -84,7 +84,9 @@ final class TheTotalsAddedUpRatesAndTheFileHadNoTotalTest extends TestCase
         $this->assertSame('6,000.00', $footer[array_search('debit', $columns, true)], 'ফাইলের মোট পর্দার মোটের সমান নয়।');
         $this->assertSame('', $footer[array_search('balance', $columns, true)], '⛔ চলমান জেরের ঘর মোটে যোগ হলো।');
 
-        $this->assertStringEndsWith(implode(',', array_map(fn ($v) => str_contains($v, ',') ? '"'.$v.'"' : $v, $footer))."\r\n",
+        // ⓘ CSV-তে টাকা খালি সংখ্যা, লাখের কমা ছাড়া (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৬, ১৪ অক্টোবর ২০২৬); পর্দার রূপটা উপরে footerRow()-এ
+        $plain = array_map(fn ($v) => preg_match('/^-?[0-9][0-9,]*(\.[0-9]+)?$/', $v) === 1 ? str_replace(',', '', $v) : $v, $footer);
+        $this->assertStringEndsWith(implode(',', array_map(fn ($v) => str_contains($v, ',') ? '"'.$v.'"' : $v, $plain))."\r\n",
             (string) $export->csv(), 'CSV-র শেষ লাইনটা মোটের সারি নয়।');
     }
 }

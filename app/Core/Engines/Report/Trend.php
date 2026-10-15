@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Support\Money;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 
@@ -139,9 +140,16 @@ final class Trend
                 'to' => $end->copy()->subYear()->toDateString(),
             ],
             // ⚠️ মাসের শেষ পেরোয় না: ৩১ মার্চ → ২৮/২৯ ফেব্রুয়ারি, ১ মার্চ নয়
+            /*
+             * ⛔ গোটা মাস হলে আগের মাসের আসল শেষ দিন পর্যন্ত (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১২, ১৪ অক্টোবর ২০২৬)। ⓘ আগে ৩০ সেপ্টেম্বর
+             * থেকে এক মাস পিছিয়ে ৩০ আগস্ট — ৩১ আগস্টের বিক্রি বাদ, আর পতনটা বড় দেখাত; ফেব্রুয়ারি বনাম জানুয়ারিতে ২৯–৩১ বাদ।
+             * ⓘ মাসের মাঝখানের পরিসর আগের মতোই আগের মাসের একই দিনগুলো।
+             */
             self::PREVIOUS_MONTH => [
                 'from' => $start->copy()->subMonthNoOverflow()->toDateString(),
-                'to' => $end->copy()->subMonthNoOverflow()->toDateString(),
+                'to' => $start->day === 1 && $end->isLastOfMonth()
+                    ? $end->copy()->startOfMonth()->subMonthNoOverflow()->endOfMonth()->toDateString()
+                    : $end->copy()->subMonthNoOverflow()->toDateString(),
             ],
             default => null,
         };
@@ -159,7 +167,8 @@ final class Trend
             return null;
         }
 
-        return bcdiv(bcmul(bcsub($now, $was, 4), '100', 6), self::abs($was), 2);
+        // ⛔ গোল করা, কাটা নয় — ২/৩ বেড়েছে মানে ৬৬.৬৭%, ৬৬.৬৬% নয় (ec, রিপোর্ট লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+        return Money::round(bcdiv(bcmul(bcsub($now, $was, 4), '100', 6), self::abs($was), 4), 2);
     }
 
     private static function abs(string $value): string

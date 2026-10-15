@@ -13,6 +13,7 @@ use App\Models\FinancialYear;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Tests\RealAccounts;
 use Tests\TestCase;
@@ -348,10 +349,13 @@ class ReportEngineTest extends TestCase
 
     public function test_a_backwards_date_range_is_refused(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/start date is after the end date/');
-
-        $this->reports->run('accounts.day_book', ['from' => '2026-08-31', 'to' => '2026-08-01']);
+        // ⓘ ৪২২-এর ভুল, ৫০০ নয় — শুরুর ঘরের নামে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৪, ১৪ অক্টোবর ২০২৬)
+        try {
+            $this->reports->run('accounts.day_book', ['from' => '2026-08-31', 'to' => '2026-08-01']);
+            $this->fail('A backwards range ran.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('from', $e->errors());
+        }
     }
 
     public function test_an_empty_report_still_reports_zero_rather_than_nothing(): void

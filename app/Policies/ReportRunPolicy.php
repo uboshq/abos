@@ -45,6 +45,7 @@ final class ReportRunPolicy
         }
 
         /* ⛔ null মানে "সবাই" নয় — উত্তর কেবল [[ReportDefinition::allows()]]-এ, ২৭ সেপ্টেম্বর ২০২৬ */
-        return $reports->get($key)->allows($user);
+        // ⓘ ফাইলের আলাদা চাবিও — [[ReportDefinition::allowsFile()]] (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১০, ১৪ অক্টোবর ২০২৬)
+        return $reports->get($key)->allowsFile($user);
     }
 }
