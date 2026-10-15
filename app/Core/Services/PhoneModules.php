@@ -140,8 +140,17 @@ final class PhoneModules
         return $out;
     }
 
+    /**
+     * ⭐ যে দরজা শাখার সুইচ নিজেই বলে — ২০০ আর `enabled: false`, ৪০৩ নয়। ফোনের offers_api.dart (0.4.32, 0.4.33) `enabled`
+     * পড়ে শান্ত "এই শাখায় প্রচার বন্ধ" দেখায়, ৪০৩-এ ভুলের পর্দা (fe, ১৫ অক্টোবর ২০২৬; [[ThePhoneShowsTheRunningOffersTest]])।
+     * ⓘ কোম্পানির সুইচ বন্ধ হলে এদেরও ৪০৩ module_off।
+     *
+     * @var list<string>
+     */
+    public const SAYS_ITS_BRANCH_SWITCH_ITSELF = ['promotion'];
+
     /** এই কোম্পানির ফোনের মেনুতে মডিউলটা আছে কি না — ওয়েবে বন্ধ হলে ফোনেও বন্ধ। */
-    public function isOn(string $code): bool
+    public function isOn(string $code, bool $branchToo = true): bool
     {
         $module = $this->registry->get($code);
 
@@ -157,7 +166,7 @@ final class PhoneModules
          * ⛔ এই শাখায় বন্ধ হলে ফোনেও বন্ধ — ওয়েবের একই নিয়ম ([[RefuseSwitchedOffScreens]]); আগে ফোন কেবল কোম্পানির সুইচ দেখত,
          * তাই বিক্রি বন্ধ শাখার বিক্রয়কর্মী ফোন থেকে অর্ডার পাঠাতেন (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ASwitchedOffModuleStillSyncedTest]])।
          */
-        if (in_array($code, \App\Models\BranchModule::switchedOffIn(\App\Core\Support\CompanyContext::branchId()), true)) {
+        if ($branchToo && in_array($code, \App\Models\BranchModule::switchedOffIn(\App\Core\Support\CompanyContext::branchId()), true)) {
             return false;
         }
 
@@ -165,11 +174,11 @@ final class PhoneModules
     }
 
     /** @return list<string> চালু মডিউলের কোড, রেজিস্ট্রির ক্রমে */
-    public function onCodes(): array
+    public function onCodes(bool $branchToo = true): array
     {
         return array_values(array_filter(
             array_keys($this->registry->all()),
-            fn (string $code) => $this->isOn($code),
+            fn (string $code) => $this->isOn($code, $branchToo),
         ));
     }
 
@@ -178,10 +187,10 @@ final class PhoneModules
      *
      * @return list<string>
      */
-    public function reachableCodes(): array
+    public function reachableCodes(bool $branchToo = true): array
     {
         $reach = [];
-        $queue = $this->onCodes();
+        $queue = $this->onCodes($branchToo);
 
         while ($queue !== []) {
             $code = array_shift($queue);
@@ -208,9 +217,9 @@ final class PhoneModules
         ));
     }
 
-    public function isReachable(?string $code): bool
+    public function isReachable(?string $code, bool $branchToo = true): bool
     {
-        return $code !== null && in_array($code, $this->reachableCodes(), true);
+        return $code !== null && in_array($code, $this->reachableCodes($branchToo), true);
     }
 
     /** একটা ক্লাস কোন মডিউলের — নামস্থান ধরে (`App\Modules\Sales\…` → sales)। */
@@ -234,7 +243,8 @@ final class PhoneModules
     public function refuseUnlessReachable(?string $code): void
     {
         /* ⓘ অচেনা কোড এখানে থামে না — দরজার নিজের ৪০৪ ("এমন মডিউল নেই") বলুক */
-        if ($code === null || ! $this->registry->has($code) || $this->isReachable($code)) {
+        if ($code === null || ! $this->registry->has($code)
+            || $this->isReachable($code, ! in_array($code, self::SAYS_ITS_BRANCH_SWITCH_ITSELF, true))) {
             return;
         }
 
