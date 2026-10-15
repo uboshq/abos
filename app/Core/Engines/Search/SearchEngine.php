@@ -109,6 +109,12 @@ final class SearchEngine
 
         $hits = [];
         $switches = app(RefuseSwitchedOffScreens::class);
+        /*
+         * ⓘ একই রুটের "বন্ধ কি" উত্তর এই একটা খোঁজার ভেতরেই মনে রাখা — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬। ⚠️ মিডলওয়্যারের
+         * ভেতরে মনে রাখা নিষেধ ([[RefuseSwitchedOffScreens::switchedOffInThisBranch()]]-এর কারণ), তাই এখানে, খোঁজা শেষ হলে ফেলে দেওয়া।
+         * আগে প্রতিটা ফলাফলে শাখার সুইচের একটা কোয়েরি যেত, আর এক খোঁজায় ৮০-র সীমা পেরোত ([[EveryStaffDoorIsShutInSearchTest]])।
+         */
+        $refused = [];
 
         foreach ($this->sources() as $class => $source) {
             if (count($hits) >= $limit) {
@@ -153,7 +159,10 @@ final class SearchEngine
                  */
                 [$name, $params] = $record->drillRoute() + [1 => []];
 
-                if ($switches->refuses((string) $name, (array) $params)) {
+                // ⓘ চাবিতে কাগজের id নয় — সুইচ মেলে রুটের নাম আর লেখা মান ধরে (`type`, `module`), সংখ্যা ধরে নয়
+                $door = (string) $name.'|'.json_encode(array_filter((array) $params, fn ($v) => is_string($v) && ! is_numeric($v)));
+
+                if ($refused[$door] ??= $switches->refuses((string) $name, (array) $params)) {
                     continue;
                 }
 
