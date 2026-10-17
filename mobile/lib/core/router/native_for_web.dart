@@ -13,6 +13,7 @@ import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
+import '../../features/stock_writes/stock_write_screens.dart';
 import '../../features/vouchers/voucher_screens.dart';
 import '../../features/web_inside/web_inside_screen.dart';
 import '../accounts/voucher_api.dart';
@@ -61,6 +62,16 @@ class NativeForWeb {
     '/sales/transport': 'sales_transport',
     '/sales/loading-sheets': 'sales_loading_sheet',
     '/inventory/transfers': 'inventory_transfer',
+  };
+
+  /// ⭐ মজুদের পাঁচ লেখা আর মেনে নেওয়ার অপেক্ষার গণনা — ওয়েবের পথ → ফোনের ফর্ম ([StockDoor]; মালিক, ১৭ অক্টোবর ২০২৬)
+  static const Map<String, String> stockDoors = {
+    '/inventory/stock/placement': 'place',
+    '/inventory/stock/adjust': 'adjust',
+    '/inventory/stock/issue': 'issue',
+    '/inventory/stock/opening': 'opening',
+    '/inventory/stock/lot': 'lot',
+    '/inventory/counts': 'counts',
   };
 
   /// দর তালিকার চার রকম — ওয়েবের `/sales/price-lists?target=`
@@ -116,6 +127,11 @@ class NativeForWeb {
     // ⓘ ওয়েবের "planned" — এখনো তৈরি হয়নি এমন পর্দা; ফোনে স্পষ্ট "শীঘ্রই আসছে", ওয়েব-জানালা নয় (fe)
     if (path.startsWith('/sales/planned/')) {
       return ComingSoonScreen(title: title);
+    }
+
+    final stock = stockDoors[path];
+    if (stock != null) {
+      return ModuleGateView(path: 'stock', child: StockDoor(key: ValueKey('stock-web-$stock'), open: stock));
     }
 
     final target = Uri.parse(webPath).queryParameters['target'];
@@ -174,6 +190,7 @@ class NativeForWeb {
     if (path == '/inventory/stock') return Icons.warehouse_outlined;
     // ⓘ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর — ফোনের নিজের তালিকা ([papers])
     if (papers.containsKey(path) || path == '/sales/price-lists') return Icons.description_outlined;
+    if (stockDoors.containsKey(path)) return Icons.inventory_outlined;
     return null;
   }
 

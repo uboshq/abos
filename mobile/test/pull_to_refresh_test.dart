@@ -69,6 +69,8 @@ void main() {
     'sales_desk_screens.dart',
     // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর (১৭ অক্টোবর ২০২৬) — টান test/papers_test.dart-এ দেখা
     'paper_screens.dart',
+    // ⭐ মজুদের পাঁচ লেখা (১৭ অক্টোবর ২০২৬) — টান test/stock_writes_test.dart-এ দেখা
+    'stock_write_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
