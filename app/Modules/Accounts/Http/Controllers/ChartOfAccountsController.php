@@ -17,6 +17,7 @@ use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
 use App\Modules\Accounts\Http\Requests\AccountRequest;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\AccountLedger;
 use App\Modules\Accounts\Services\AccountService;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Http\JsonResponse;
@@ -190,62 +191,12 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
          */
         $branch = ViewedBranch::one();
 
-        $entries = LedgerEntry::query()
-            ->forAccount($account->id)
-            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
-            ->orderBy('trx_date')
-            ->orderBy('id')
-            ->paginate(50)
-            ->withQueryString();
-
-        $page = max(1, (int) $request->query('page', 1));
-
         /*
-         * চলমান জের শূন্য থেকে শুরু।
-         *
-         * খোলার জের এখন খতিয়ানের প্রথম সারিটাই ([[OpeningBalanceService]]),
-         * তাই এখানে আবার শুরুর মান হিসেবে বসালে প্রতিটা সারিতে সংখ্যাটা
-         * দ্বিগুণ হত। HP-র অভিযোগটাই ছিল উল্টোটা: তালিকায় জেরের কোনো
-         * লাইন নেই অথচ চলমান জের সরাসরি লাফ দেয় — এখন লাইনটাই আছে।
+         * ⭐ সারি, চলমান জের আর সব পাতার সর্বমোট — ফোনের দরজার একই সেবা ([[AccountLedger::page()]], ১৭ অক্টোবর ২০২৬)।
          */
-        $opening = '0';
-
-        /*
-         * ⛔ পাতার আগের সারিগুলোর জের — ডেটাবেসেই এক যোগফলে (পুরো-ERP অডিট হিসাব ⚠️১৫-এর একই ফাঁক, ৭ অক্টোবর ২০২৬;
-         * [[TheAccountPageSumsItsPastInTheDatabaseTest]])। ⓘ আগে সেই সব সারি PHP-তে তুলে যোগ হত — ব্যস্ত খাতের দশম পাতায় ৪৫০টা
-         * সারি মেমরিতে, কেবল একটা সংখ্যার জন্য। বাক্সের পাতা ([[CashTillController::show()]]) একই উপায়ে সারানো।
-         */
-        if ($page > 1) {
-            $opening = bcadd((string) LedgerEntry::query()->withoutGlobalScopes()
-                ->fromSub(
-                    LedgerEntry::query()
-                        ->forAccount($account->id)
-                        ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
-                        ->orderBy('trx_date')
-                        ->orderBy('id')
-                        ->forPage(1, ($page - 1) * 50)
-                        ->select(['debit', 'credit']),
-                    'before_page',
-                )
-                ->selectRaw('COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as n')
-                ->value('n'), '0', 4);
-        }
-
-        $account->withRunningBalance($entries->getCollection(), $opening);
-
-        /*
-         * ⭐ খাতার সর্বমোট — সব পাতার ডেবিট, ক্রেডিট আর শেষ জের, একই শাখায় এক যোগফলে (মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায়
-         * summary/grand total")। ⓘ শেষ জের = ডেবিট − ক্রেডিট, শেষ পাতার শেষ সারির চলমান জেরের একই সংখ্যা ([[RunningBalance]])।
-         */
-        $sums = LedgerEntry::query()
-            ->forAccount($account->id)
-            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
-            ->selectRaw('COALESCE(SUM(debit), 0) as debit, COALESCE(SUM(credit), 0) as credit')
-            ->first();
-        $grand = [
-            'debit' => (string) ($sums->debit ?? '0'),
-            'credit' => (string) ($sums->credit ?? '0'),
-        ];
+        $ledger = app(AccountLedger::class)->page($account, $branch, (int) $request->query('page', 1));
+        $entries = $ledger['entries']->withQueryString();
+        $grand = $ledger['grand'];
 
         /*
          * গ্রুপ খাতের নিচের ধাপগুলো আগে থেকে আনা।
@@ -296,7 +247,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             'account' => $account,
             'entries' => $entries,
             'grand' => $grand,
-            'closing' => bcsub($grand['debit'], $grand['credit'], 4),
+            'closing' => $ledger['closing'],
             'balance' => $account->balanceOn(null, $branch),
             // ⓘ খোলা জের খাতায় যে পাশে বসেছে — নিট Dr ধনাত্মক, পাতায় "(Dr)/(Cr)" ([[AnOpeningBalanceSitsOnTheSideChosenTest]])
             'opening' => (string) (LedgerEntry::query()
@@ -411,50 +362,8 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
      */
     private function balancesFor(Collection $accounts): array
     {
-        if ($accounts->isEmpty()) {
-            return [];
-        }
-
-        // ⭐ ছকের জের-কলামও হেডারের শাখায় — খাতের পাতার সাথে এক নিয়মে ([[show()]])
-        $branch = ViewedBranch::one();
-
-        $sums = LedgerEntry::query()
-            ->whereIn('account_id', $accounts->pluck('id'))
-            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
-            ->groupBy('account_id')
-            ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
-            ->get()
-            ->keyBy('account_id');
-
-        $own = [];
-
-        foreach ($accounts as $account) {
-            $row = $sums[$account->id] ?? null;
-
-            $signed = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
-
-            /* খোলার জের খতিয়ানেই আছে — এখানে আবার যোগ করলে দ্বিগুণ */
-            $own[$account->id] = $signed;
-        }
-
-        // সন্তানের যোগফল বাবার ঘরে — নিচ থেকে উপরে, তাই কোড অনুসারে
-        // উল্টো দিক থেকে ঘোরা হয় (সন্তানের কোড বাবার চেয়ে বড়)।
-        foreach ($accounts->sortByDesc('code') as $account) {
-            if ($account->parent_id !== null && isset($own[$account->parent_id])) {
-                $own[$account->parent_id] = bcadd($own[$account->parent_id], $own[$account->id], 4);
-            }
-        }
-
-        // শেষে স্বাভাবিক দিকে ধনাত্মক করে ফেরানো
-        $out = [];
-
-        foreach ($accounts as $account) {
-            $out[$account->id] = $account->nature === Account::CREDIT
-                ? bcmul($own[$account->id], '-1', 4)
-                : $own[$account->id];
-        }
-
-        return $out;
+        // ⭐ ছকের জের-কলামও হেডারের শাখায় — খাতের পাতার সাথে এক নিয়মে ([[show()]]); হিসাব ফোনের দরজার একই সেবায়
+        return app(AccountLedger::class)->balances($accounts, ViewedBranch::one());
     }
 
     /**
