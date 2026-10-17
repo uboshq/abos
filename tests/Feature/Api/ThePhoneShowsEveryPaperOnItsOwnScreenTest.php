@@ -300,6 +300,23 @@ final class ThePhoneShowsEveryPaperOnItsOwnScreenTest extends TestCase
             '⛔ বাতিল আদেশ ফোনে দেখা গেল — ওয়েব লুকায়।');
     }
 
+    /**
+     * ⛔ ওয়েবে পর্দা বন্ধ (কন্ট্রোল প্যানেলের সুইচ) — ফোনের কাগজের দরজাও ৪০৪, মডিউল চালু থাকলেও; সুইচ ফেরালে খোলে
+     * ([[RefuseSwitchedOffScreens::refuses()]]; মিউট্যান্ট screen-switch বেঁচে গিয়েছিল, ১৮ অক্টোবর ২০২৬)।
+     */
+    public function test_a_screen_switched_off_on_the_web_is_not_found_on_the_phone(): void
+    {
+        $switch = fn (bool $on) => CompanyContext::forCompany((int) $this->company->id,
+            fn () => app(\App\Core\Services\SettingsService::class)->set('sales.screen_shipments', $on));
+
+        $switch(false);
+        $this->phone($this->owner, '/api/v1/papers/sales_shipment')->assertNotFound();
+        $this->phone($this->owner, '/api/v1/papers/sales_return')->assertOk();
+
+        $switch(true);
+        $this->phone($this->owner, '/api/v1/papers/sales_shipment')->assertOk();
+    }
+
     private function order(string $no, Branch $branch, string $total): PurchaseOrder
     {
         $order = PurchaseOrder::query()->create([
