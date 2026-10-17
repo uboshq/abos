@@ -102,6 +102,17 @@ Route::prefix('v1/sales')
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[SalesOrderService::setApprovedQuantities()]])
         Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('order.approved_quantities');
 
+        // ⭐ বিক্রয়ের হালচাল, ফোনের নিজের পর্দায় — ওয়েবের একই সেবা ও চাবি (মালিক, ১৭ অক্টোবর ২০২৬; [[SalesOverviewApiController]])
+        Route::get('/overview', \App\Modules\Sales\Http\Controllers\SalesOverviewApiController::class)->name('overview');
+
+        // ⭐ বিক্রয়ের ডেস্ক-পাতা ফোনের নিজের পর্দায় — ডিপোর যাচাই, না ছাপা কাগজ, ডেলিভারির কাজ, পাইপলাইন (মালিক, ১৭ অক্টোবর ২০২৬;
+        // [[SalesDeskApiController]]; চাবি কন্ট্রোলারে, ওয়েবের হুবহু)
+        Route::get('/depot-check', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'depotCheck'])->name('desk.depot_check');
+        Route::get('/print-queue', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'printQueue'])->name('desk.print_queue');
+        Route::post('/print-queue/{id}/settle', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'settlePrint'])->whereUuid('id')->name('desk.print_settle');
+        Route::get('/delivery-performance', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'deliveryPerformance'])->name('desk.delivery_performance');
+        Route::get('/opportunities/pipeline', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'pipeline'])->name('desk.pipeline');
+
         // ⭐ আমার আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান, রুট-পাতার একই অঙ্কে ([[MyRouteApiController]], ৫ অক্টোবর ২০২৬)
         Route::get('/my-route', [\App\Modules\Sales\Http\Controllers\MyRouteApiController::class, 'index'])->name('my_route.index');
 
