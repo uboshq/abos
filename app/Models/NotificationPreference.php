@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class NotificationPreference extends Model
 {
     use BelongsToCompany;
     use HasPublicId;
+    use IsAudited;
 
     /** @var list<string> */
     public const FREQUENCIES = ['instant', 'daily', 'weekly'];
