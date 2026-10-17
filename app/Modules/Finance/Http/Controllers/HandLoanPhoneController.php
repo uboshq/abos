@@ -43,7 +43,10 @@ final class HandLoanPhoneController extends Controller implements HasMiddleware
     public function move(Request $request, HandLoanService $loans, string $id): JsonResponse
     {
         abort_unless(\Illuminate\Support\Str::isUuid($id), 404);
-        $loan = HandLoanAccount::query()->where('public_id', $id)->firstOrFail();
+        // ⛔ শাখার দেয়াল — পড়ার দরজার একই ([[FinanceApiController::open()]]): দেখার শাখা আর কাজের নাগাল; বাইরের হলে ৪০৪
+        // (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬: আগে কেবল কোম্পানি দেখত — অন্য শাখার হাতধারে টাকা দেওয়া-নেওয়া যেত)
+        $loan = HandLoanAccount::query()->inViewedBranch()->where('public_id', $id)->firstOrFail();
+        abort_unless(\App\Modules\Finance\Support\ActingBranches::allows($loan->getAttribute('branch_id')), 404);
 
         $data = $request->validate([
             'direction' => ['required', 'string', 'in:'.implode(',', HandLoanMovement::DIRECTIONS)],

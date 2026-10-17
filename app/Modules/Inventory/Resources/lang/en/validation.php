@@ -173,4 +173,6 @@ return [
     'free_short_beyond_spare' => 'The free goods of :product cannot go down by more than this - :spare is left beside what orders hold. Release the order first.',
     'too_many_labels' => 'At most :max labels in one print - choose fewer products or copies and print in parts.',
     'phone_unknown_reference' => 'This could not be found any more - fetch the list again. It may belong to another branch, or it has changed meanwhile.',
+    'count_needs_another_approver' => 'You cannot approve your own count - someone else approves it.',
+    'qc_needs_another_decider' => 'You cannot decide on your own inspection - someone else decides.',
 ];

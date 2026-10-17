@@ -69,25 +69,40 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
 
     public function test_a_transfer_goes_through_transit_once_and_only_the_receiver_takes_it(): void
     {
+        // ⓘ পাঠান সাধারণ কর্মী — super admin-এর ছাড় সেবার নিয়ম, তাকে নিয়ে আলাদা দাবি নিচে (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬)
+        $sender = $this->staff(['accounts.transfer.create', 'accounts.transfer.confirm']);
+        $this->till->forceFill(['holder_id' => $sender->id])->save();
         $receiver = $this->staff(['accounts.transfer.confirm', 'accounts.transfer.create']);
         $safe = app(CashTillService::class)->create(['name_en' => 'Phone safe', 'holder_id' => $receiver->id]);
         $body = ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id,
             'destination' => 'till:'.$safe->public_id, 'amount' => '4000', 'narration' => 'দিনের নগদ'];
 
-        $sent = $this->phonePost($this->owner, '/api/v1/accounts/transfers', $body, 'mt-key-0001')->assertCreated()->json();
-        $this->phonePost($this->owner, '/api/v1/accounts/transfers', $body, 'mt-key-0001')->assertCreated();
+        $sent = $this->phonePost($sender, '/api/v1/accounts/transfers', $body, 'mt-key-0001')->assertCreated()->json();
+        $this->phonePost($sender, '/api/v1/accounts/transfers', $body, 'mt-key-0001')->assertCreated();
         $this->assertSame(1, MoneyTransfer::query()->where('to_till_id', $safe->id)->count(), '⛔ একই চাবিতে দুটো হস্তান্তর।');
 
         $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '4000', 4), '⛔ পাঠানো টাকা পথের খাতে বসেনি।');
         $this->assertSame(0, bccomp($this->balance($this->till->account_id), '6000', 4), '⛔ টিল থেকে টাকা কমেনি।');
 
-        // ⛔ পাঠানো মানুষ নিজে নেন না — প্রাপক টিলের দায়িত্বে অন্যজন
-        $this->phonePost($this->owner, '/api/v1/accounts/transfers/'.$sent['id'].'/confirm', [], 'mt-key-0002')->assertStatus(422);
+        // ⛔ পাঠানো মানুষ নিজে নেন না — প্রাপক টিলের দায়িত্বে অন্যজন; সেবার নিজের কারণে (ঘরসহ), অন্য কোনো ৪২২ নয়
+        $this->assertSame(422, $this->phonePost($sender, '/api/v1/accounts/transfers/'.$sent['id'].'/confirm', [], 'mt-key-0002')->status());
+        $this->assertSame('draft', MoneyTransfer::query()->where('public_id', $sent['id'])->value('status'), '⛔ পাঠানো মানুষ নিজেই নিলেন।');
         $this->phonePost($receiver, '/api/v1/accounts/transfers/'.$sent['id'].'/confirm', [], 'mt-key-0003')->assertCreated();
 
         $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '0', 4), '⛔ নেওয়ার পরে পথের খাত শূন্য হয়নি — দুই খাতা মেলে না।');
         $this->assertSame(0, bccomp($this->balance($safe->account_id), '4000', 4), '⛔ প্রাপকের টিলে টাকা ওঠেনি।');
         $this->assertTrue(AuditTrail::query()->where('auditable_type', (new MoneyTransfer)->getMorphClass())->exists(), '⛔ হস্তান্তর নিরীক্ষায় নেই।');
+    }
+
+    /** ⓘ সেবার নিয়মের ছাড়, স্পষ্ট করে: super admin (মালিক) নিজের পাঠানো নিজে নিতে পারেন ([[MoneyTransferService::assertMayReceive()]]) */
+    public function test_the_super_admin_may_receive_what_he_sent_as_the_service_allows(): void
+    {
+        $safe = app(CashTillService::class)->create(['name_en' => 'Owner safe', 'holder_id' => $this->owner->id]);
+        $sent = $this->phonePost($this->owner, '/api/v1/accounts/transfers', ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id,
+            'destination' => 'till:'.$safe->public_id, 'amount' => '300'], 'mt-key-0201')->assertCreated()->json();
+
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers/'.$sent['id'].'/confirm', [], 'mt-key-0202')->assertCreated();
+        $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '0', 4));
     }
 
     public function test_with_a_flow_the_transfer_waits_for_its_signature_and_the_books_do_not_move(): void
@@ -140,6 +155,27 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
         $this->phonePost($this->owner, '/api/v1/finance/hand-loans/'.$loan->public_id.'/move', ['amount' => '200'] + $body, 'hl-key-0002')
             ->assertStatus(202)->assertJsonPath('status', 'held');
         $this->assertSame(0, bccomp($this->net(StandardChart::HAND_LOAN), '700', 4), '⛔ সইয়ের আগেই হাতধার খাতায় উঠল।');
+    }
+
+    /** ⛔ অন্য শাখার হাতধার — পড়ার দরজার একই দেয়াল; ৪০৪, খাতায় কিছু বসে না (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬) */
+    public function test_a_hand_loan_of_another_branch_is_not_found_and_nothing_reaches_the_books(): void
+    {
+        $here = (int) $this->company->defaultBranch()?->id;
+        $there = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('id', '<>', $here)->orderBy('id')->firstOrFail();
+
+        CompanyContext::set((int) $this->company->id, (int) $there->id);
+        $person = Person::query()->create(['code' => 'P-PH2', 'name_en' => 'Karim', 'name_bn' => 'করিম', 'is_active' => true]);
+        $loan = app(HandLoanService::class)->open(['person_id' => $person->id]);
+        CompanyContext::set((int) $this->company->id, $here);
+        $this->assertSame((int) $there->id, (int) $loan->fresh()->branch_id, 'প্রস্তুতিটাই ভুল — হাতধার এই শাখারই।');
+
+        $cash = Account::query()->whereKey($this->till->account_id)->firstOrFail();
+        $before = $this->net(StandardChart::HAND_LOAN);
+        $this->phonePost($this->owner, '/api/v1/finance/hand-loans/'.$loan->public_id.'/move', ['direction' => HandLoanMovement::OUT,
+            'amount' => '400', 'moved_on' => now()->toDateString(), 'money_account' => $cash->public_id], 'hl-key-0301')->assertNotFound();
+
+        $this->assertSame(0, HandLoanMovement::query()->where('account_id', $loan->id)->count(), '⛔ অন্য শাখার হাতধারে টাকা বসল।');
+        $this->assertSame(0, bccomp($this->net(StandardChart::HAND_LOAN), $before, 4), '⛔ অন্য শাখার হাতধারে খাতা নড়ল।');
     }
 
     public function test_every_money_door_asks_the_webs_key_and_the_finance_pages_open(): void
