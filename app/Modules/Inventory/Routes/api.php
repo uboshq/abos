@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Middleware\RefuseModulesOffOnThePhone;
 use App\Http\Middleware\RemembersAPhoneWrite;
 use App\Http\Middleware\ResolveCompanyContext;
+use App\Modules\Inventory\Http\Controllers\QualityPhoneController;
+use App\Modules\Inventory\Http\Controllers\SerialPhoneController;
 use App\Modules\Inventory\Http\Controllers\StockPhoneController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,4 +37,16 @@ Route::prefix('v1/inventory')
         Route::post('/issue', [StockPhoneController::class, 'issue'])->middleware(RemembersAPhoneWrite::class)->name('stock.issue');
         Route::post('/opening', [StockPhoneController::class, 'opening'])->middleware(RemembersAPhoneWrite::class)->name('stock.opening');
         Route::post('/lot', [StockPhoneController::class, 'lot'])->middleware(RemembersAPhoneWrite::class)->name('stock.lot');
+
+        // ⭐ মান যাচাই আর সিরিয়াল নম্বর (মালিক, ১৭ অক্টোবর ২০২৬; [[QualityPhoneController]], [[SerialPhoneController]])
+        Route::get('/quality', [QualityPhoneController::class, 'index'])->name('quality.index');
+        Route::post('/quality', [QualityPhoneController::class, 'store'])->middleware(RemembersAPhoneWrite::class)->name('quality.store');
+        Route::get('/quality/{id}', [QualityPhoneController::class, 'show'])->whereUuid('id')->name('quality.show');
+        Route::post('/quality/{id}/decide', [QualityPhoneController::class, 'decide'])->whereUuid('id')
+            ->middleware(RemembersAPhoneWrite::class)->name('quality.decide');
+        Route::post('/quality/{id}/dispose', [QualityPhoneController::class, 'dispose'])->whereUuid('id')
+            ->middleware(RemembersAPhoneWrite::class)->name('quality.dispose');
+        Route::get('/serials', [SerialPhoneController::class, 'index'])->name('serial.index');
+        Route::post('/serials', [SerialPhoneController::class, 'store'])->middleware(RemembersAPhoneWrite::class)->name('serial.store');
+        Route::post('/serials/issue', [SerialPhoneController::class, 'issue'])->middleware(RemembersAPhoneWrite::class)->name('serial.issue');
     });

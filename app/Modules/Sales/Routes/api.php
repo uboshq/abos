@@ -113,6 +113,9 @@ Route::prefix('v1/sales')
         Route::put('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'update'])->whereUuid('id')->name('lead.update');
 
         // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর; ওয়েবের একই সেবা ও যাচাই ([[SalesQuotationApiController]])
+        // ⭐ তুলনা আর সংস্করণ — `{id}`-এর আগে (মালিক, ১৭ অক্টোবর ২০২৬; [[QuotationCompareApiController]])
+        Route::get('/quotations/compare', [\App\Modules\Sales\Http\Controllers\QuotationCompareApiController::class, 'compare'])->name('quotation.compare');
+        Route::get('/quotations/revisions', [\App\Modules\Sales\Http\Controllers\QuotationCompareApiController::class, 'revisions'])->name('quotation.revisions');
         Route::get('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'index'])->name('quotation.index');
         Route::post('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('quotation.store');
         Route::get('/quotations/{id}', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'show'])->whereUuid('id')->name('quotation.show');
