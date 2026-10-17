@@ -93,7 +93,8 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         return view('sales::delivery_order.index', [
             'menu' => $this->menu->forUser($request->user()),
             'newStopped' => $this->orders->newOnesStopped(),
-            'grand' => $this->grandTotals($query, ['total' => 't.total']),
+            // ⭐ ফেরত আর বাতিল মোটে নয় — ফোনের দরজার একই নিয়ম (fe, ১৭ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals((clone $query)->whereNotIn($query->getModel()->qualifyColumn('status'), DeliveryOrderStatus::UNCOUNTED), ['total' => 't.total']),
             'orders' => $query->paginate(50)->withQueryString(),
             'tab' => $tab,
             'counts' => collect(self::TABS)->map(fn ($s, string $key) => $this->tab(DeliveryOrder::query(), $key)->count())->all(),

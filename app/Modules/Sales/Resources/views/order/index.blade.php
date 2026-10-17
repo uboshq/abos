@@ -118,6 +118,7 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$orders" />
-        <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns" />
+        <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns"
+                           :totals="[['value' => __('sales::message.total_leaves_out_order')]]" />
     </div>
 </x-layouts.app>

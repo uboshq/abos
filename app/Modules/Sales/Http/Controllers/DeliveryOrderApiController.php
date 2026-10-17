@@ -62,7 +62,7 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
          * ⭐ ছাঁকা তালিকার মোট আর গোনা — পুরো ফলের, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total")।
          * ⓘ ফেরত আর বাতিল আদেশ সারিতে থাকে, মোটে নয় — ভাউচারের তালিকার একই নিয়ম।
          */
-        $total = bcadd((string) ((clone $query)->whereNotIn('status', [DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED])
+        $total = bcadd((string) ((clone $query)->whereNotIn('status', DeliveryOrderStatus::UNCOUNTED)
             ->sum('total') ?? '0'), '0', 2);
 
         $rows = $query->latest('trx_date')->latest('id')->paginate(50);

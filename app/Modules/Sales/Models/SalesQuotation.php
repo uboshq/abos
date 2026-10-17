@@ -93,6 +93,13 @@ class SalesQuotation extends Model implements Drillable
     public const EXPIRABLE = [self::DRAFT, self::SUBMITTED, self::APPROVED, self::SENT, self::ACCEPTED];
 
     /** @var list<string> পর্দার ছাঁকনির ক্রম */
+    /**
+     * ⭐ তালিকার মোটে যে অবস্থা গোনা হয় না — ফেরত, বাতিল আর পুরনো সংস্করণ (R1-এর জায়গায় R2 এলে R1 `revised` — নইলে একই দরপত্র দুবার): কোনো লেনদেন হয়নি, তাই অঙ্কে ঢোকে না। ওয়েবের তালিকা আর ফোনের দরজা
+     * দুটোই এটা পড়ে, যাতে দুই পর্দায় এক অঙ্ক (fe, ১৭ অক্টোবর ২০২৬; [[TheListTotalLeavesOutWhatNeverHappenedTest]])।
+     * ⓘ সারিতে থাকে, মোটে নয়।
+     */
+    public const UNCOUNTED = [self::CANCELLED, self::REJECTED, self::REVISED];
+
     public const STATES = [
         self::DRAFT, self::SUBMITTED, self::APPROVED, self::SENT, self::ACCEPTED,
         self::REJECTED, self::EXPIRED, self::CANCELLED, self::CONVERTED, self::REVISED,

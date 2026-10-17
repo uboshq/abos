@@ -73,6 +73,13 @@ final class SalesOrderStatus
      */
     public const FINISHED = [self::CLOSED, self::REJECTED, self::CANCELLED];
 
+    /**
+     * ⭐ তালিকার মোটে যে অবস্থা গোনা হয় না — ফেরত আর বাতিল: কোনো লেনদেন হয়নি, তাই অঙ্কে ঢোকে না। ওয়েবের তালিকা আর ফোনের দরজা
+     * দুটোই এটা পড়ে, যাতে দুই পর্দায় এক অঙ্ক (fe, ১৭ অক্টোবর ২০২৬; [[TheListTotalLeavesOutWhatNeverHappenedTest]])।
+     * ⓘ সারিতে থাকে, মোটে নয়।
+     */
+    public const UNCOUNTED = [self::REJECTED, self::CANCELLED];
+
     // ── অগ্রগতি (মাথায় আর লাইনে) ────────────────────────────────────────
 
     public const NONE = 'none';

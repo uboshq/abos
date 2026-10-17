@@ -49,6 +49,13 @@ final class DeliveryOrderStatus
     /** শেষ — আর কিছু ঘটে না */
     public const CLOSED = [self::INVOICED, self::REJECTED, self::CANCELLED];
 
+    /**
+     * ⭐ তালিকার মোটে যে অবস্থা গোনা হয় না — ফেরত আর বাতিল: কোনো লেনদেন হয়নি, তাই অঙ্কে ঢোকে না। ওয়েবের তালিকা আর ফোনের দরজা
+     * দুটোই এটা পড়ে, যাতে দুই পর্দায় এক অঙ্ক (fe, ১৭ অক্টোবর ২০২৬; [[TheListTotalLeavesOutWhatNeverHappenedTest]])।
+     * ⓘ সারিতে থাকে, মোটে নয়।
+     */
+    public const UNCOUNTED = [self::REJECTED, self::CANCELLED];
+
     public static function label(string $status): string
     {
         return __('sales::delivery_order.status.'.$status);

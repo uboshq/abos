@@ -313,4 +313,8 @@ return [
     'draft_paused' => 'Draft :no deactivated.',
     'draft_resumed' => 'Draft :no is active again.',
     'discount_cap_hint' => 'Discount limit — :line% per line, :bill% per bill (0 = no limit)',
+    // ⭐ তালিকার মোটে কী নেই — ওয়েব আর ফোন এক নিয়মে (১৭ অক্টোবর ২০২৬)
+    'total_leaves_out_quotation' => 'Total leaves out rejected, cancelled and superseded',
+    'total_leaves_out_delivery_order' => 'Total leaves out rejected and cancelled',
+    'total_leaves_out_order' => 'Total leaves out rejected and cancelled',
 ];

@@ -94,6 +94,7 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$quotations" />
-        <x-ui.list-totals :rows="$quotations" :grand="$grand ?? []" :columns="$columns" />
+        <x-ui.list-totals :rows="$quotations" :grand="$grand ?? []" :columns="$columns"
+                           :totals="[['value' => __('sales::message.total_leaves_out_quotation')]]" />
     </div>
 </x-layouts.app>

@@ -99,7 +99,8 @@ class SalesQuotationController extends Controller implements HasMiddleware
 
         return view('sales::quotation.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'grand' => $this->grandTotals($query, ['total' => 't.total']),
+            // ⭐ ফেরত, বাতিল আর পুরনো সংস্করণ মোটে নয় — ফোনের দরজার একই নিয়ম (fe, ১৭ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals((clone $query)->whereNotIn($query->getModel()->qualifyColumn('status'), SalesQuotation::UNCOUNTED), ['total' => 't.total']),
             'quotations' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,

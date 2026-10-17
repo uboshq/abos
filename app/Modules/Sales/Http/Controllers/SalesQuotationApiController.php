@@ -59,7 +59,7 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
          * ⓘ বাতিল, ফেরত আর পুরনো সংস্করণ (R1-এর জায়গায় R2 এলে R1 `revised`) সারিতে থাকে, মোটে নয় — নাহলে একই দরপত্র দুবার গোনা হত।
          */
         $total = bcadd((string) ((clone $query)
-            ->whereNotIn('status', [SalesQuotation::CANCELLED, SalesQuotation::REJECTED, SalesQuotation::REVISED])
+            ->whereNotIn('status', SalesQuotation::UNCOUNTED)
             ->sum('total') ?? '0'), '0', 2);
 
         $rows = $query->latest('trx_date')->latest('id')->paginate(50);
