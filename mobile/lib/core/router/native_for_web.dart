@@ -6,6 +6,7 @@ import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/claims/claims_screens.dart';
 import '../../features/documents/document_screens.dart';
+import '../../features/documents/document_upload_screen.dart';
 import '../../features/hr_registers/hr_register_screens.dart';
 import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
@@ -79,6 +80,13 @@ class NativeForWeb {
     }
     if (path == '/documents/templates') {
       return const TemplateListScreen();
+    }
+    // ⭐ কাগজ তোলা (গ্যালারি) আর ক্যামেরায় স্ক্যান — ওয়েবের তোলার একই নিয়ম (মালিক, ১৭ অক্টোবর ২০২৬)
+    if (path == '/documents/upload') {
+      return const ModuleGateView(path: 'documents', child: DocumentUploadScreen());
+    }
+    if (path == '/documents/scan') {
+      return const ModuleGateView(path: 'documents', child: DocumentUploadScreen(scan: true));
     }
     // ⭐ দলিলের আটটা তালিকা — একই ফোন-পর্দা, মেনুর ঘর বাছা অবস্থায় (মালিক, ১৭ অক্টোবর ২০২৬)
     final library = RegExp(r'^/documents/(center|mine|shared|recent|expiry|archive|recycle|search)$').firstMatch(path)?.group(1);
