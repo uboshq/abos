@@ -220,6 +220,42 @@ final class ThePhoneWritesTheStockTheWebWayTest extends TestCase
         $this->assertOnHand($product, '8', '⛔ লট দিতে গিয়ে মোট মাল বদলাল।');
     }
 
+    /** ⛔ গণনাকারী মেনে নেওয়ার চাবি পেলেও নিজের গণনা নিজে মানেন না — ফোনেও অন্য হাত (maker-checker; a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬) */
+    public function test_the_counter_with_the_approve_key_still_waits_for_another_hand(): void
+    {
+        $product = $this->stocked('20');
+        $counter = $this->staff(['inventory.stock.adjust', 'inventory.count.approve']);
+        $approver = $this->staff(['inventory.count.approve']);
+
+        $waiting = $this->phonePost($counter, '/api/v1/inventory/adjust', $this->adjustBody($product, '18'), 'self-key-0001')->assertStatus(202);
+        $this->assertSame('waiting', $waiting->json('status'), '⛔ চাবি থাকায় নিজের গণনা নিজেই মেনে নেওয়া হলো।');
+        $this->phonePost($counter, '/api/v1/inventory/counts/'.$waiting->json('id').'/approve', ['reason' => $this->adjustmentReason()->public_id], 'self-key-0002')
+            ->assertForbidden();
+        $this->assertOnHand($product, '20', '⛔ যিনি গুনলেন তাঁর মেনে নেওয়ায় মাল কমল।');
+
+        $this->phonePost($approver, '/api/v1/inventory/counts/'.$waiting->json('id').'/approve', ['reason' => $this->adjustmentReason()->public_id], 'self-key-0003')
+            ->assertCreated();
+        $this->assertOnHand($product, '18', '⛔ অন্যজন মানার পরেও মাল গোনার সমান হয়নি।');
+    }
+
+    /** ⛔ "1e3" পরিমাণে ৪২২, ৫০০ নয়; চাবি ছাড়া নতুন লেখা ৪২৮ — মাল নড়ে না */
+    public function test_a_scientific_quantity_and_a_keyless_write_are_refused_and_nothing_moves(): void
+    {
+        $product = $this->stocked('10');
+
+        $this->phonePost($this->owner, '/api/v1/inventory/issue', $this->issueBody($product, '1e0'), 'sci-key-0101')
+            ->assertStatus(422)->assertJsonValidationErrors('qty');
+        $this->phonePost($this->owner, '/api/v1/inventory/adjust', $this->adjustBody($product, '9e0'), 'sci-key-0102')
+            ->assertStatus(422)->assertJsonValidationErrors('counted');
+
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
+        $this->flushHeaders();
+        $this->postJson('/api/v1/inventory/issue', $this->issueBody($product, '1'))->assertStatus(428);
+
+        $this->assertOnHand($product, '10', '⛔ "1e0" বা চাবি ছাড়া মাল নড়ল।');
+    }
+
     // ── যন্ত্রপাতি ──
 
     private function issueBody(Product $product, string $qty): array

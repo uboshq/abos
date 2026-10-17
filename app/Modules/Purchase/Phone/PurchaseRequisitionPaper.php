@@ -21,6 +21,12 @@ final class PurchaseRequisitionPaper extends PurchasePhonePaper
         return 'purchase_requisition';
     }
 
+    /** ⓘ ওয়েবের তালিকা ([[PurchaseRequisitionController::index()]]) বাতিলও দেখায় */
+    protected function hidesCancelled(): bool
+    {
+        return false;
+    }
+
     public function permission(): string
     {
         return 'purchase.requisition.view';

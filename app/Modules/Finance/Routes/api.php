@@ -35,7 +35,7 @@ Route::prefix('v1/finance')
         Route::get('/hand-loans/money-accounts', [\App\Modules\Finance\Http\Controllers\HandLoanPhoneController::class, 'moneyAccounts'])
             ->name('phone.hand_loan.money_accounts');
         Route::post('/hand-loans/{id}/move', [\App\Modules\Finance\Http\Controllers\HandLoanPhoneController::class, 'move'])->whereUuid('id')
-            ->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('phone.hand_loan.move');
+            ->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class.':required')->name('phone.hand_loan.move');
         Route::get('/hand-loans', [FinanceApiController::class, 'handLoans'])->name('phone.hand_loans');
         Route::get('/hand-loans/{id}', [FinanceApiController::class, 'handLoan'])->whereUuid('id')->name('phone.hand_loan');
 

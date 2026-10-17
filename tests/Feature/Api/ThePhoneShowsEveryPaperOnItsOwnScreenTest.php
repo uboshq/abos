@@ -241,6 +241,65 @@ final class ThePhoneShowsEveryPaperOnItsOwnScreenTest extends TestCase
             '⛔ গ্রাহকের দর তালিকা "সবার" ধরনে এল।');
     }
 
+    /**
+     * ⛔ দর তালিকার দর পাতায় ভাগ — আগে ৫০০-তে চুপচাপ কাটত; আর তালিকার "কার জন্য" সারিপ্রতি কোয়েরি নয়, রকমপ্রতি একটা
+     * (a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬; [[PriceListPaper::prepare()]])।
+     */
+    public function test_a_price_list_pages_its_prices_and_the_list_asks_once_for_whom(): void
+    {
+        $product = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
+        $customers = Customer::query()->inViewedBranch()->orderBy('id')->limit(4)->get();
+        $this->assertCount(4, $customers, 'প্রস্তুতিটাই ভুল — চারজন গ্রাহক নেই।');
+
+        $list = PriceList::query()->create(['code' => 'PL-PG-0', 'name_en' => 'Paged list', 'customer_id' => $customers[0]->id, 'is_active' => true]);
+        $per = \App\Modules\Sales\Phone\PriceListPaper::ITEMS_PER_PAGE;
+        PriceListItem::query()->insert(array_map(fn (int $i) => ['public_id' => (string) \Illuminate\Support\Str::uuid(), 'company_id' => $this->company->id, 'price_list_id' => $list->id,
+            'product_id' => $product->id, 'price' => '38', 'valid_from' => now()->subDays($i)->toDateString(),
+            'valid_to' => now()->subDays($i)->toDateString(), 'created_at' => now(), 'updated_at' => now()], range(1, $per + 1)));
+
+        $first = $this->phone($this->owner, '/api/v1/papers/sales_price_list_customer/'.$list->public_id)->assertOk()->json();
+        $this->assertCount($per, $first['rows'], '⛔ দরের প্রথম পাতা পুরো নয়।');
+        $this->assertSame($per + 1, $first['rows_count']);
+        $this->assertSame(2, $first['rows_next_page'], '⛔ আরও দর আছে, ফোনকে বলা হলো না — চুপচাপ কাটা।');
+        $second = $this->phone($this->owner, '/api/v1/papers/sales_price_list_customer/'.$list->public_id.'?page=2')->assertOk()->json();
+        $this->assertCount(1, $second['rows']);
+        $this->assertNull($second['rows_next_page']);
+        $this->phone($this->owner, '/api/v1/papers/sales_price_list_customer/'.$list->public_id.'?page[]=x')->assertStatus(422);
+
+        // ⓘ এক তালিকা বনাম চার তালিকা — কোয়েরির সংখ্যা একই
+        $count = function (): int {
+            \Illuminate\Support\Facades\DB::flushQueryLog();
+            \Illuminate\Support\Facades\DB::enableQueryLog();
+            $this->phone($this->owner, '/api/v1/papers/sales_price_list_customer')->assertOk();
+
+            return count(\Illuminate\Support\Facades\DB::getQueryLog());
+        };
+        $one = $count();
+        foreach ($customers->slice(1) as $i => $customer) {
+            PriceList::query()->create(['code' => 'PL-PG-'.$i, 'name_en' => 'More '.$i, 'customer_id' => $customer->id, 'is_active' => true]);
+        }
+        $this->assertSame($one, $count(), '⛔ তালিকা বাড়লে কোয়েরিও বাড়ে — সারিপ্রতি "কার জন্য" খোঁজা (N+1)।');
+        $rows = $this->phone($this->owner, '/api/v1/papers/sales_price_list_customer')->json('rows');
+        $this->assertStringContainsString((string) \App\Core\Phone\PhonePaper::nameOf($customers[1]),
+            (string) collect($rows)->firstWhere('no', 'PL-PG-1')['note'], '⛔ একসাথে খোঁজায় "কার জন্য" ভুল গ্রাহক।');
+    }
+
+    /** ⓘ চাহিদাপত্র, RFQ আর চুক্তির ওয়েব-তালিকা বাতিলও দেখায় — ফোনেও, অবস্থা না বাছলে; আদেশ আগের মতো লুকায় (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬) */
+    public function test_a_cancelled_requisition_shows_like_the_web_and_a_cancelled_order_stays_hidden(): void
+    {
+        $product = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
+        $requisition = PurchaseRequisition::query()->create(['company_id' => $this->company->id, 'branch_id' => $this->mms->id,
+            'document_no' => 'PR-CX-1', 'trx_date' => now()->toDateString(), 'status' => 'cancelled', 'requested_by' => $this->owner->id]);
+        $requisition->lines()->create(['company_id' => $this->company->id, 'line_no' => 1, 'product_id' => $product->id, 'qty' => '1']);
+        $order = $this->order('PO-CX-1', $this->mms, '100');
+        $order->forceFill(['status' => 'cancelled'])->save();
+
+        $this->assertContains($requisition->public_id, array_column($this->phone($this->owner, '/api/v1/papers/purchase_requisition')->assertOk()->json('rows'), 'id'),
+            '⛔ বাতিল চাহিদাপত্র ফোনে লুকানো, ওয়েবে দেখা যায়।');
+        $this->assertNotContains($order->public_id, array_column($this->phone($this->owner, '/api/v1/papers/purchase_order')->assertOk()->json('rows'), 'id'),
+            '⛔ বাতিল আদেশ ফোনে দেখা গেল — ওয়েব লুকায়।');
+    }
+
     private function order(string $no, Branch $branch, string $total): PurchaseOrder
     {
         $order = PurchaseOrder::query()->create([

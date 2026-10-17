@@ -44,7 +44,7 @@ final class SerialPhoneController extends Controller implements HasMiddleware
     {
         $data = $request->validate(['serial' => ['nullable', 'string', 'max:100'], 'page' => ['nullable', 'integer', 'min:1']]);
 
-        $query = SerialNumber::query()->with(['product', 'warehouse', 'batch'])->orderByDesc('id');
+        $query = SerialNumber::query()->inReach()->with(['product', 'warehouse', 'batch'])->orderByDesc('id');
         $serial = trim((string) ($data['serial'] ?? ''));
 
         if ($serial !== '') {

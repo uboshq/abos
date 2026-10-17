@@ -144,6 +144,75 @@ final class ThePhoneComparesQuotationsAndRunsQualityAndSerialsTest extends TestC
         $this->phonePost($this->staff(['inventory.serial.view']), '/api/v1/inventory/serials', $body, 'sn-key-0004')->assertForbidden();
     }
 
+    /** ⛔ যিনি যাচাই করলেন, রায়ের চাবি থাকলেও নিজে রায় দেন না — অন্যজন দেন (maker-checker; a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬) */
+    public function test_the_inspector_with_the_decide_key_still_waits_for_another_hand(): void
+    {
+        $product = $this->stocked('20');
+        $inspector = $this->staff(['inventory.qc.view', 'inventory.qc.create', 'inventory.qc.decide']);
+        $decider = $this->staff(['inventory.qc.view', 'inventory.qc.decide']);
+
+        $made = $this->phonePost($inspector, '/api/v1/inventory/quality', ['product' => $product->public_id, 'warehouse' => $this->warehouse->public_id,
+            'inspected_on' => now()->toDateString(), 'inspected_qty' => '5'], 'qc-self-0001')->assertCreated()->json();
+        $this->phoneGet($inspector, '/api/v1/inventory/quality/'.$made['id'])->assertOk()->assertJsonPath('can_decide', false);
+
+        $verdict = ['result' => QualityInspection::APPROVED, 'accepted_qty' => '5', 'rejected_qty' => '0'];
+        $this->phonePost($inspector, '/api/v1/inventory/quality/'.$made['id'].'/decide', $verdict, 'qc-self-0002')->assertForbidden();
+        $this->assertSame(QualityInspection::PENDING, QualityInspection::query()->where('public_id', $made['id'])->value('status'),
+            '⛔ যিনি যাচাই করলেন তিনিই রায় দিলেন।');
+
+        $this->phonePost($decider, '/api/v1/inventory/quality/'.$made['id'].'/decide', $verdict, 'qc-self-0003')->assertCreated();
+        $this->assertSame(QualityInspection::APPROVED, QualityInspection::query()->where('public_id', $made['id'])->value('status'));
+    }
+
+    /** ⛔ "1e3" পরিমাণে ৪২২, ৫০০ নয়; চাবি ছাড়া নতুন লেখা ৪২৮ — কিছুই বসে না */
+    public function test_a_scientific_quantity_and_a_keyless_write_are_refused_and_nothing_is_written(): void
+    {
+        $product = $this->stocked('20');
+        $body = ['product' => $product->public_id, 'warehouse' => $this->warehouse->public_id, 'inspected_on' => now()->toDateString(), 'inspected_qty' => '1e1'];
+
+        $this->phonePost($this->owner, '/api/v1/inventory/quality', $body, 'qc-sci-0001')->assertStatus(422)->assertJsonValidationErrors('inspected_qty');
+
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
+        $this->flushHeaders();
+        $this->postJson('/api/v1/inventory/quality', ['inspected_qty' => '5'] + $body)->assertStatus(428);
+
+        $this->assertSame(0, QualityInspection::query()->where('product_id', $product->id)->count(), '⛔ "1e1" বা চাবি ছাড়া যাচাই বসল।');
+    }
+
+    /** ⛔ অন্য শাখার গুদামের পিস তালিকায় নেই — নম্বর জানলেও না (গুদামের দেয়াল; a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬) */
+    public function test_a_serial_in_another_branchs_warehouse_is_not_listed(): void
+    {
+        $product = $this->product('SW');
+        $there = Warehouse::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'WH-NTK')->firstOrFail();
+        $this->assertNotSame((int) $this->warehouse->branch_id, (int) $there->branch_id, 'প্রস্তুতিটাই ভুল — দুই গুদাম এক শাখার।');
+
+        foreach (['SN-WALL-HERE' => $this->warehouse, 'SN-WALL-THERE' => $there] as $no => $warehouse) {
+            SerialNumber::query()->create(['company_id' => $this->company->id, 'product_id' => $product->id, 'warehouse_id' => $warehouse->id,
+                'serial_no' => $no, 'received_on' => now()->toDateString(), 'status' => SerialNumber::IN_STOCK, 'sold_to' => 'গোপন গ্রাহক']);
+        }
+
+        $listed = array_column($this->phoneGet($this->owner, '/api/v1/inventory/serials?serial=SN-WALL')->assertOk()->json('rows'), 'serial_no');
+        $this->assertContains('SN-WALL-HERE', $listed);
+        $this->assertNotContains('SN-WALL-THERE', $listed, '⛔ অন্য শাখার গুদামের পিস ফোনে দেখা গেল।');
+        $this->assertSame([], $this->phoneGet($this->owner, '/api/v1/inventory/serials?serial=SN-WALL-THERE')->assertOk()->json('rows'));
+    }
+
+    /** ⛔ পরিবারের একটা সংস্করণ দেয়ালের বাইরে — পুরো তুলনা ৪০৪, চুপচাপ আধা পরিবার নয় (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬) */
+    public function test_a_family_with_a_revision_outside_the_wall_is_not_found(): void
+    {
+        $service = app(SalesQuotationService::class);
+        $original = $service->markSent($service->submit($this->quotation('4')));
+        $revision = $service->revise($original->fresh());
+        $this->phoneGet($this->owner, '/api/v1/sales/quotations/compare?family='.$original->public_id)->assertOk();
+
+        $there = Warehouse::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'WH-NTK')->value('branch_id');
+        $this->assertNotSame((int) $this->warehouse->branch_id, (int) $there, 'প্রস্তুতিটাই ভুল — দুই গুদাম এক শাখার।');
+        SalesQuotation::query()->withoutGlobalScopes()->whereKey($revision->id)->update(['branch_id' => $there]);
+
+        $this->phoneGet($this->owner, '/api/v1/sales/quotations/compare?family='.$original->public_id)->assertNotFound();
+    }
+
     // ── যন্ত্রপাতি ──
 
     private function quotation(string $qty): SalesQuotation

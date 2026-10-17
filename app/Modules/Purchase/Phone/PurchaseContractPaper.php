@@ -21,6 +21,12 @@ final class PurchaseContractPaper extends PurchasePhonePaper
         return 'purchase_contract';
     }
 
+    /** ⓘ ওয়েবের তালিকা ([[PurchaseContractController::index()]]) বাতিলও দেখায় */
+    protected function hidesCancelled(): bool
+    {
+        return false;
+    }
+
     public function permission(): string
     {
         return 'purchase.contract.view';

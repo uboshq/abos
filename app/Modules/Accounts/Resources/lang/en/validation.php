@@ -180,4 +180,5 @@ return [
     'inter_company_not_reversible' => 'This inter-company transfer can no longer be reversed — it already was.',
     'maker_checker' => ':no was written by you. You cannot post your own voucher; someone else must post it.',
     'phone_unknown_reference' => 'This could not be found any more - fetch the list again. It may belong to another branch, or it has changed meanwhile.',
+    'transfer_cancel_only_sender' => 'Before it is received, a transfer can be cancelled only by its sender or by someone with the transfer-manage key.',
 ];

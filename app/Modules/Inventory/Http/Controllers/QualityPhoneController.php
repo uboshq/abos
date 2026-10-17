@@ -109,7 +109,7 @@ final class QualityPhoneController extends Controller implements HasMiddleware
             'product' => ['required', 'string', 'max:64'],
             'warehouse' => ['nullable', 'string', 'max:64'],
             'inspected_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'inspected_qty' => ['required', 'numeric', 'gt:0'],
+            'inspected_qty' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gt:0'],
             'batch_no' => ['nullable', 'string', 'max:60'],
             'expiry_date' => ['nullable', 'date_format:Y-m-d'],
             'criteria' => ['nullable', 'string', 'max:2000'],
@@ -148,8 +148,8 @@ final class QualityPhoneController extends Controller implements HasMiddleware
 
         $data = $request->validate([
             'result' => ['required', 'string', Rule::in(QualityInspection::RESULTS)],
-            'accepted_qty' => ['required', 'numeric', 'min:0'],
-            'rejected_qty' => ['required', 'numeric', 'min:0'],
+            'accepted_qty' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'min:0'],
+            'rejected_qty' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'min:0'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -171,7 +171,7 @@ final class QualityPhoneController extends Controller implements HasMiddleware
         $this->authorize('dispose', $inspection);
 
         $data = $request->validate([
-            'qty' => ['required', 'numeric', 'gt:0'],
+            'qty' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gt:0'],
             'reason' => ['required', 'string', 'max:64'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);

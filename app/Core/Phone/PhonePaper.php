@@ -7,6 +7,7 @@ namespace App\Core\Phone;
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -75,7 +76,7 @@ abstract class PhonePaper
     }
 
     /**
-     * অবস্থার ছাঁকনি — না বাছলে বাতিল লুকানো, ওয়েবের তালিকার মতো।
+     * অবস্থার ছাঁকনি — না বাছলে বাতিল লুকানো, যদি ওয়েবের তালিকাও লুকায় ([[hidesCancelled()]])।
      *
      * @param  Builder<Model>  $query
      */
@@ -83,9 +84,20 @@ abstract class PhonePaper
     {
         $column = $query->getModel()->getTable().'.status';
 
-        $status === null
-            ? $query->where($column, '<>', DocumentStatus::CANCELLED)
-            : $query->where($column, $status);
+        if ($status !== null) {
+            $query->where($column, $status);
+        } elseif ($this->hidesCancelled()) {
+            $query->where($column, '<>', DocumentStatus::CANCELLED);
+        }
+    }
+
+    /**
+     * না বাছলে বাতিল লুকায় কি না — ওয়েবের তালিকার একই উত্তর। ⓘ চাহিদাপত্র, RFQ আর চুক্তির ওয়েব-তালিকা বাতিলও দেখায়, তাই
+     * ওদের কাগজ `false` বলে (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬: ফোনে লুকানো ছিল, ওয়েবে দেখা যেত)।
+     */
+    protected function hidesCancelled(): bool
+    {
+        return true;
     }
 
     /** @param  Builder<Model>  $query */
@@ -123,6 +135,13 @@ abstract class PhonePaper
     {
         return [];
     }
+
+    /**
+     * তালিকার এক পাতার (বা খোলা একটা) কাগজ সারির আগে একসাথে — যা [[with()]]-এ সম্পর্ক হিসেবে আসে না (দেয়ালসহ নাম, পথ)।
+     *
+     * @param  Collection<int, Model>  $papers
+     */
+    public function prepare(Collection $papers): void {}
 
     /** ছাপার ধরন ([[DocumentApiController]]-এর `{type}`), বা `null` — ওয়েবে ছাপা নেই */
     public function printType(): ?string

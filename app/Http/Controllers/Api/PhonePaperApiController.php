@@ -101,6 +101,8 @@ final class PhonePaperApiController extends Controller
             ->orderByDesc($table.'.id')
             ->paginate(self::PER_PAGE);
 
+        // ⓘ পাতার কাগজগুলো একসাথে — সারিপ্রতি কোয়েরি নয় (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬: দর তালিকার "কার জন্য")
+        $paper->prepare($page->getCollection());
         $rows = $page->getCollection()->map(fn (Model $m) => $this->rowOf($paper, $m, $user))->values();
         $pageSum = $sum === null ? null
             : $rows->reduce(fn (string $carry, array $r) => bcadd($carry, (string) ($r['total'] ?? '0'), 2), '0');
@@ -119,7 +121,8 @@ final class PhonePaperApiController extends Controller
             'count' => $page->total(),
             // ⓘ টাকা না থাকলে (বা দেখার চাবি না থাকলে) দুটোই null — ফোন যোগফলের পট্টি আঁকে না
             'page_sum' => $pageSum,
-            'sum' => $sum === null ? null : bcadd($sum, '0', 2),
+            // ⓘ গোল করা, কাটা নয় ([[Money::round()]]) — bcadd(…, 2) ১০.৯৯৯-কে ১০.৯৯ বলত, ওয়েবের পাতা ১১.০০
+            'sum' => $sum === null ? null : Money::round($sum),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
@@ -133,6 +136,9 @@ final class PhonePaperApiController extends Controller
         $user = $request->user();
         $table = $paper->query()->getModel()->getTable();
         $model = $paper->query()->where($table.'.public_id', $id)->firstOrFail();
+        // ⓘ কাগজের ভেতরের সারির পাতা (দর তালিকার দর) — অ্যারে বা লেখা এলে ৪২২, ৫০০ নয়
+        $request->validate(['page' => ['nullable', 'integer', 'min:1']]);
+        $paper->prepare(new \Illuminate\Database\Eloquent\Collection([$model]));
 
         return response()->json($this->rowOf($paper, $model, $user) + $paper->detail($model, $user) + [
             'signatures' => $this->signaturesOf($model, $user),
@@ -175,7 +181,7 @@ final class PhonePaperApiController extends Controller
             'branch' => $paper->branchColumn() === null ? null : PhonePaper::nameOf($model->getRelationValue('branch')),
             'party' => $own['party'] ?? null,
             'note' => $own['note'] ?? null,
-            'total' => isset($own['total']) ? bcadd((string) $own['total'], '0', 2) : null,
+            'total' => isset($own['total']) ? Money::round((string) $own['total']) : null,
             'total_label' => isset($own['total']) ? Money::format((string) $own['total']) : null,
         ];
     }

@@ -198,6 +198,98 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
         $this->assertContains($this->till->public_id, array_column($this->phoneGet($this->owner, '/api/v1/accounts/money/setup')->json('tills'), 'id'));
     }
 
+    /** ⛔ "1e3" `numeric` পার হয় — দরজা ৪২২ দেয়, ৫০০ নয়, আর কিছু লেখা হয় না (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬; [[PhoneInput::DECIMAL]]) */
+    public function test_a_number_written_like_1e3_is_refused_and_nothing_is_written(): void
+    {
+        $safe = app(CashTillService::class)->create(['name_en' => 'Sci safe', 'holder_id' => $this->owner->id]);
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers', ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id,
+            'destination' => 'till:'.$safe->public_id, 'amount' => '1e3'], 'sci-key-0001')->assertStatus(422)->assertJsonValidationErrors('amount');
+        $this->assertSame(0, MoneyTransfer::query()->where('to_till_id', $safe->id)->count(), '⛔ "1e3" দিয়ে হস্তান্তর লেখা হলো।');
+
+        $person = Person::query()->create(['code' => 'P-PH3', 'name_en' => 'Sci', 'name_bn' => 'সাই', 'is_active' => true]);
+        $loan = app(HandLoanService::class)->open(['person_id' => $person->id]);
+        $this->phonePost($this->owner, '/api/v1/finance/hand-loans/'.$loan->public_id.'/move', ['direction' => HandLoanMovement::OUT,
+            'amount' => '1e3', 'moved_on' => now()->toDateString(), 'money_account' => Account::query()->whereKey($this->till->account_id)->value('public_id')],
+            'sci-key-0002')->assertStatus(422)->assertJsonValidationErrors('amount');
+        $this->assertSame(0, HandLoanMovement::query()->where('account_id', $loan->id)->count());
+    }
+
+    /** ⛔ নতুন টাকার দরজা চাবি ছাড়া ৪২৮ — দুবার চাপলে দুবার বসত; একই চাবিতে অন্য লেখা ৪০৯, আগেরটাই বসে থাকে */
+    public function test_a_money_write_without_a_key_is_refused_and_a_changed_resend_is_a_conflict(): void
+    {
+        $safe = app(CashTillService::class)->create(['name_en' => 'Key safe', 'holder_id' => $this->owner->id]);
+        $body = ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id, 'destination' => 'till:'.$safe->public_id, 'amount' => '250'];
+
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($this->owner->fresh(), [AuthController::APP]);
+        $this->flushHeaders();
+        $this->postJson('/api/v1/accounts/transfers', $body)->assertStatus(428);
+        $this->assertSame(0, MoneyTransfer::query()->where('to_till_id', $safe->id)->count(), '⛔ চাবি ছাড়া হস্তান্তর লেখা হলো।');
+
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers', $body, 'chg-key-0001')->assertCreated();
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers', ['amount' => '900'] + $body, 'chg-key-0001')->assertStatus(409);
+        $this->assertSame(['250.0000'], MoneyTransfer::query()->where('to_till_id', $safe->id)->pluck('amount')
+            ->map(fn ($a) => bcadd((string) $a, '0', 4))->all(), '⛔ একই চাবিতে অন্য অঙ্ক — দ্বিতীয়টা বসল বা প্রথমটা বদলাল।');
+    }
+
+    /**
+     * ⛔ না-নেওয়া হস্তান্তর বাতিল কেবল পাঠানো মানুষ বা `accounts.transfer.manage` চাবি — অন্য কর্মী ৪২২, খাতা নড়ে না;
+     * বাতিল হলে দুই পা ফেরে: ১১০৩ শূন্য, টিল আগের মতো (a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬)।
+     */
+    public function test_only_the_sender_or_a_manager_takes_back_an_unconfirmed_transfer_and_both_legs_return(): void
+    {
+        $sender = $this->staff(['accounts.transfer.create']);
+        $this->till->forceFill(['holder_id' => $sender->id])->save();
+        $other = $this->staff(['accounts.transfer.create']);
+        $manager = $this->staff(['accounts.transfer.create', 'accounts.transfer.manage']);
+        $safe = app(CashTillService::class)->create(['name_en' => 'Cancel safe', 'holder_id' => $this->owner->id]);
+        $body = ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id, 'destination' => 'till:'.$safe->public_id, 'amount' => '1500'];
+
+        $first = $this->phonePost($sender, '/api/v1/accounts/transfers', $body, 'cn-key-0001')->assertCreated()->json('id');
+        $this->phonePost($other, '/api/v1/accounts/transfers/'.$first.'/cancel', ['cancel_reason' => 'ভুল খাত'], 'cn-key-0002')
+            ->assertStatus(422)->assertJsonValidationErrors('status');
+        $this->assertSame('draft', MoneyTransfer::query()->where('public_id', $first)->value('status'), '⛔ অন্য কর্মী অন্যের পাঠানো টাকা ফেরাল।');
+        $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '1500', 4));
+
+        $this->phonePost($sender, '/api/v1/accounts/transfers/'.$first.'/cancel', ['cancel_reason' => 'ভুল খাত'], 'cn-key-0003')->assertCreated();
+        $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '0', 4), '⛔ বাতিলের পরে পথের খাত শূন্য নয় — এক পা ফেরেনি।');
+        $this->assertSame(0, bccomp($this->balance($this->till->account_id), '10000', 4), '⛔ বাতিলের পরে টিলে টাকা ফেরেনি।');
+
+        $second = $this->phonePost($sender, '/api/v1/accounts/transfers', ['amount' => '600'] + $body, 'cn-key-0004')->assertCreated()->json('id');
+        $this->phonePost($manager, '/api/v1/accounts/transfers/'.$second.'/cancel', ['cancel_reason' => 'ম্যানেজার ফেরাল'], 'cn-key-0005')->assertCreated();
+        $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '0', 4), '⛔ ম্যানেজারের বাতিলে পথের খাত শূন্য নয়।');
+    }
+
+    /** হাতধার ফেরত: Dr টাকার খাত / Cr ১১৭০ — নেওয়ার দিকও ওয়েবের একই সেবা */
+    public function test_a_hand_loan_coming_back_lowers_its_head_and_fills_the_money_account(): void
+    {
+        $person = Person::query()->create(['code' => 'P-PH4', 'name_en' => 'Jamal', 'name_bn' => 'জামাল', 'is_active' => true]);
+        $loan = app(HandLoanService::class)->open(['person_id' => $person->id]);
+        $cash = Account::query()->whereKey($this->till->account_id)->firstOrFail();
+        $body = ['amount' => '800', 'moved_on' => now()->toDateString(), 'money_account' => $cash->public_id];
+
+        $this->phonePost($this->owner, '/api/v1/finance/hand-loans/'.$loan->public_id.'/move', ['direction' => HandLoanMovement::OUT] + $body, 'in-key-0001')->assertCreated();
+        $this->phonePost($this->owner, '/api/v1/finance/hand-loans/'.$loan->public_id.'/move', ['direction' => HandLoanMovement::IN, 'amount' => '300'] + $body, 'in-key-0002')->assertCreated();
+
+        $this->assertSame(0, bccomp($this->net(StandardChart::HAND_LOAN), '500', 4), '⛔ ফেরত হাতধার ১১৭০ থেকে কমেনি।');
+        $this->assertSame(0, bccomp($this->balance($cash->id), '9500', 4), '⛔ ফেরত টাকা খাতে ওঠেনি — দুই খাতা মেলে না।');
+    }
+
+    /** গোনায় বেশি — অন্যজন মানলে Dr টিল / Cr ৪৩০০ অন্যান্য আয় */
+    public function test_a_cash_count_over_the_books_goes_to_other_income_once_someone_else_settles_it(): void
+    {
+        $counter = $this->staff(['accounts.count.create']);
+        $approver = $this->staff(['accounts.count.approve']);
+
+        $made = $this->phonePost($counter, '/api/v1/accounts/cash-counts', ['till' => $this->till->public_id, 'trx_date' => now()->toDateString(),
+            'counts' => ['1000' => 10, '500' => 1]], 'sp-key-0001')->assertCreated()->json();
+        $incomeBefore = $this->net('4300');
+        $this->phonePost($approver, '/api/v1/accounts/cash-counts/'.$made['id'].'/approve', [], 'sp-key-0002')->assertCreated();
+
+        $this->assertSame(0, bccomp($this->balance($this->till->account_id), '10500', 4), '⛔ মেনে নেওয়ার পরে টিল গোনার সমান নয়।');
+        $this->assertSame(0, bccomp(bcsub($incomeBefore, $this->net('4300'), 4), '500', 4), '⛔ ৫০০ বেশি অন্যান্য আয়ে বসেনি।');
+    }
+
     // ── যন্ত্রপাতি ──
 
     private function fund(int $accountId, string $amount): void

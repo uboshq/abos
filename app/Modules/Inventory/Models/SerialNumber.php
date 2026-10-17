@@ -104,6 +104,17 @@ class SerialNumber extends Model
     }
 
     /**
+     * ⛔ নাগালের গুদামের পিস — গুদামের দেয়াল ([[Warehouse]]-এর নিজের স্কোপ: দেখার শাখা আর মানুষের গুদাম) মেনে; গুদামহীন পিস
+     * (গ্রহণে গুদাম না বলা) সবার। ⓘ বের করা আর ফেরানো আগে থেকেই এই দেয়াল মানত ([[SerialNumberService::issue()]]); তালিকা মানত না
+     * — অন্য শাখার পিস আর গ্রাহকের নাম চোখে পড়ত (a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬)।
+     */
+    public function scopeInReach(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->whereNull('inv_serial_numbers.warehouse_id')
+            ->orWhereIn('inv_serial_numbers.warehouse_id', Warehouse::query()->select('inv_warehouses.id')));
+    }
+
+    /**
      * নম্বর ধরে খোঁজা — ⚠️ বড়-ছোট হরফ ও ফাঁকা জায়গা বাদ দিয়ে।
      *
      * ⓘ সিরিয়াল নম্বর মানুষ কাগজ দেখে টাইপ করেন, আর কাগজে ওটা প্রায়ই

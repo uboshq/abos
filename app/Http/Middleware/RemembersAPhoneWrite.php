@@ -25,9 +25,18 @@ final class RemembersAPhoneWrite
 {
     private const TTL_SECONDS = 86400;
 
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * @param  string|null  $mode  `required` — চাবি ছাড়া লেখা ফেরে (৪২৮): নতুন ফোন-দরজায় (মজুদ, টাকা, মান যাচাই, সিরিয়াল; fe-র
+     *                             সিদ্ধান্ত, ১৭ অক্টোবর ২০২৬ — a5-এর পর্যালোচনা: চাবি ছাড়া আবার পাঠালে দুবার বসত)। ⓘ পুরনো দরজা
+     *                             আগের মতো ঐচ্ছিক — পুরনো অ্যাপ যেন না ভাঙে।
+     */
+    public function handle(Request $request, Closure $next, ?string $mode = null): Response
     {
         $key = (string) $request->header('Idempotency-Key', '');
+
+        if ($mode === 'required' && $request->isMethod('POST') && $key === '') {
+            return response()->json(['message' => __('sync.idempotency_key_required')], 428);
+        }
 
         if (! $request->isMethod('POST') || $key === '') {
             return $next($request);

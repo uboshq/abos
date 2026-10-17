@@ -43,6 +43,12 @@ final class QuotationCompareApiController extends Controller implements HasMiddl
         if (filled($data['family'] ?? null)) {
             $anchor = SalesQuotation::query()->where('public_id', $data['family'])->firstOrFail();
             $quotations = $anchor->family()->with(['lines.product', 'lines.enteredUnit', 'customer', 'paymentTerm'])->get();
+
+            // ⛔ পরিবারের কোনো সংস্করণ দেয়ালের বাইরে হলে পুরোটা ৪০৪ — চুপচাপ বাদ দিয়ে আধা তুলনা নয়, `ids`-এর একই নিয়ম
+            // (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬); কোম্পানি নামে বলা, মোছাগুলো বাদ
+            $whole = SalesQuotation::query()->withoutGlobalScopes()->where('company_id', $anchor->company_id)->whereNull('deleted_at')
+                ->where(fn ($q) => $q->whereKey($anchor->rootId())->orWhere('root_quotation_id', $anchor->rootId()))->count();
+            abort_if($quotations->count() !== $whole, 404);
         } else {
             $ids = collect($data['ids'] ?? [])->unique()->values();
             $quotations = SalesQuotation::query()->whereIn('public_id', $ids)

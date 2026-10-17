@@ -60,7 +60,7 @@ class SerialNumberController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = SerialNumber::query()->with(['product', 'warehouse', 'batch']);
+        $query = SerialNumber::query()->inReach()->with(['product', 'warehouse', 'batch']);
 
         /*
          * ⭐ নম্বর ধরে খোঁজা — ⚠️ বড়-ছোট হরফ ও ফাঁকা জায়গা বাদ দিয়ে

@@ -32,4 +32,5 @@ return [
 
     'conflict_already_resolved' => 'This conflict was already settled; the first decision stands.',
     'same_key_other_content' => 'The earlier entry was already saved, and this one differs. Check the list for the earlier entry and, if needed, cancel it and write the new one.',
+    'idempotency_key_required' => 'This write needs its once-only key (Idempotency-Key) - update the app.',
 ];

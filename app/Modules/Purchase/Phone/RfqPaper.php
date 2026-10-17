@@ -19,6 +19,12 @@ final class RfqPaper extends PurchasePhonePaper
         return 'purchase_rfq';
     }
 
+    /** ⓘ ওয়েবের তালিকা ([[RfqController::index()]]) বাতিলও দেখায় */
+    protected function hidesCancelled(): bool
+    {
+        return false;
+    }
+
     public function permission(): string
     {
         return 'purchase.rfq.view';

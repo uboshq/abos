@@ -134,8 +134,8 @@ final class StockPhoneController extends Controller implements HasMiddleware
         $data = $request->validate([
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.ref' => ['required', 'string', 'max:64'],
-            'lines.*.qty' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.qty' => ['nullable', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'min:0'],
+            'lines.*.free_qty' => ['nullable', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'min:0'],
             'lines.*.place' => ['nullable', 'string', 'max:64'],
         ]);
 
@@ -284,8 +284,8 @@ final class StockPhoneController extends Controller implements HasMiddleware
         $data = $request->validate([
             'product' => ['required', 'string', 'max:64'],
             'warehouse' => ['required', 'string', 'max:64'],
-            'qty' => ['required', 'numeric', 'gt:0'],
-            'unit_cost' => ['required', 'numeric', 'gt:0'],
+            'qty' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gt:0'],
+            'unit_cost' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gt:0'],
             'trx_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
             'batch_no' => ['nullable', 'string', 'max:60'],
@@ -323,8 +323,8 @@ final class StockPhoneController extends Controller implements HasMiddleware
             'batch_no' => ['required', 'string', 'max:60'],
             'expiry_date' => ['nullable', 'date_format:Y-m-d'],
             'manufactured_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'qty' => ['required', 'numeric', 'gte:0'],
-            'free_qty' => ['nullable', 'numeric', 'gte:0'],
+            'qty' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gte:0'],
+            'free_qty' => ['nullable', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gte:0'],
             'trx_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
@@ -364,10 +364,10 @@ final class StockPhoneController extends Controller implements HasMiddleware
             'product' => ['required', 'string', 'max:64'],
             'warehouse' => ['required', 'string', 'max:64'],
             'reason' => ['required', 'string', 'max:64'],
-            $qtyField => ['required', 'numeric'],
+            $qtyField => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL],
             'trx_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
-            'unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'unit_cost' => ['nullable', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'min:0'],
             'batch_no' => ['nullable', 'string', 'max:60'],
             'expiry_date' => ['nullable', 'date_format:Y-m-d'],
         ]);

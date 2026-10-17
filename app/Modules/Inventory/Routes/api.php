@@ -29,24 +29,24 @@ Route::prefix('v1/inventory')
     ->group(function (): void {
         Route::get('/setup', [StockPhoneController::class, 'setup'])->name('stock.setup');
         Route::get('/placement', [StockPhoneController::class, 'placement'])->name('stock.placement');
-        Route::post('/placement', [StockPhoneController::class, 'place'])->middleware(RemembersAPhoneWrite::class)->name('stock.place');
-        Route::post('/adjust', [StockPhoneController::class, 'adjust'])->middleware(RemembersAPhoneWrite::class)->name('stock.adjust');
+        Route::post('/placement', [StockPhoneController::class, 'place'])->middleware(RemembersAPhoneWrite::class.':required')->name('stock.place');
+        Route::post('/adjust', [StockPhoneController::class, 'adjust'])->middleware(RemembersAPhoneWrite::class.':required')->name('stock.adjust');
         Route::get('/counts', [StockPhoneController::class, 'counts'])->name('stock.counts');
         Route::post('/counts/{id}/approve', [StockPhoneController::class, 'approveCount'])->whereUuid('id')
-            ->middleware(RemembersAPhoneWrite::class)->name('stock.count.approve');
-        Route::post('/issue', [StockPhoneController::class, 'issue'])->middleware(RemembersAPhoneWrite::class)->name('stock.issue');
-        Route::post('/opening', [StockPhoneController::class, 'opening'])->middleware(RemembersAPhoneWrite::class)->name('stock.opening');
-        Route::post('/lot', [StockPhoneController::class, 'lot'])->middleware(RemembersAPhoneWrite::class)->name('stock.lot');
+            ->middleware(RemembersAPhoneWrite::class.':required')->name('stock.count.approve');
+        Route::post('/issue', [StockPhoneController::class, 'issue'])->middleware(RemembersAPhoneWrite::class.':required')->name('stock.issue');
+        Route::post('/opening', [StockPhoneController::class, 'opening'])->middleware(RemembersAPhoneWrite::class.':required')->name('stock.opening');
+        Route::post('/lot', [StockPhoneController::class, 'lot'])->middleware(RemembersAPhoneWrite::class.':required')->name('stock.lot');
 
         // ⭐ মান যাচাই আর সিরিয়াল নম্বর (মালিক, ১৭ অক্টোবর ২০২৬; [[QualityPhoneController]], [[SerialPhoneController]])
         Route::get('/quality', [QualityPhoneController::class, 'index'])->name('quality.index');
-        Route::post('/quality', [QualityPhoneController::class, 'store'])->middleware(RemembersAPhoneWrite::class)->name('quality.store');
+        Route::post('/quality', [QualityPhoneController::class, 'store'])->middleware(RemembersAPhoneWrite::class.':required')->name('quality.store');
         Route::get('/quality/{id}', [QualityPhoneController::class, 'show'])->whereUuid('id')->name('quality.show');
         Route::post('/quality/{id}/decide', [QualityPhoneController::class, 'decide'])->whereUuid('id')
-            ->middleware(RemembersAPhoneWrite::class)->name('quality.decide');
+            ->middleware(RemembersAPhoneWrite::class.':required')->name('quality.decide');
         Route::post('/quality/{id}/dispose', [QualityPhoneController::class, 'dispose'])->whereUuid('id')
-            ->middleware(RemembersAPhoneWrite::class)->name('quality.dispose');
+            ->middleware(RemembersAPhoneWrite::class.':required')->name('quality.dispose');
         Route::get('/serials', [SerialPhoneController::class, 'index'])->name('serial.index');
-        Route::post('/serials', [SerialPhoneController::class, 'store'])->middleware(RemembersAPhoneWrite::class)->name('serial.store');
-        Route::post('/serials/issue', [SerialPhoneController::class, 'issue'])->middleware(RemembersAPhoneWrite::class)->name('serial.issue');
+        Route::post('/serials', [SerialPhoneController::class, 'store'])->middleware(RemembersAPhoneWrite::class.':required')->name('serial.store');
+        Route::post('/serials/issue', [SerialPhoneController::class, 'issue'])->middleware(RemembersAPhoneWrite::class.':required')->name('serial.issue');
     });

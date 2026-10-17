@@ -172,7 +172,7 @@ final class MoneyPhoneController extends Controller implements HasMiddleware
             'destination' => ['required', 'string', 'regex:/^(till|account):[0-9a-fA-F-]{36}$/'],
             'given_by' => ['nullable', 'string', 'max:64'],
             'received_by' => ['nullable', 'string', 'max:64'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', \App\Core\Support\PhoneInput::DECIMAL, 'gt:0'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
 

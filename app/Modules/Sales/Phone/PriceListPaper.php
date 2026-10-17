@@ -14,6 +14,7 @@ use App\Modules\Sales\Models\PriceListItem;
 use App\Modules\Sales\Services\PriceBookService;
 use App\Modules\Sales\Services\SalesPrice;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -27,6 +28,12 @@ abstract class PriceListPaper extends SalesPhonePaper
     private const ACTIVE = 'active';
 
     private const INACTIVE = 'inactive';
+
+    /** কাগজের পাতায় এক পাতায় কত দর — বাকিটা `?page=` দিয়ে (আগে ৫০০-তে কেটে যেত, কোনো খবর ছাড়া) */
+    public const ITEMS_PER_PAGE = 200;
+
+    /** @var array<int, string> তালিকার id → "কার জন্য", [[prepare()]]-এ একবারে */
+    private array $aims = [];
 
     /** কোন রকম — [[SalesPrice]]-এর চার লক্ষ্যের একটা */
     abstract protected function target(): string;
@@ -116,13 +123,44 @@ abstract class PriceListPaper extends SalesPhonePaper
         ];
     }
 
+    public function prepare(Collection $papers): void
+    {
+        $column = match ($this->target()) {
+            SalesPrice::CUSTOMER => 'customer_id',
+            SalesPrice::TIER => 'party_type_id',
+            SalesPrice::TERRITORY => 'location_id',
+            default => null,
+        };
+        $ids = $column === null ? [] : $papers->pluck($column)->filter()->unique()->values()->all();
+
+        // ⓘ রকমপ্রতি এক কোয়েরি — আগে সারিপ্রতি একটা (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬); গ্রাহকের দেয়াল আগের মতোই দেখার শাখা
+        $names = match ($this->target()) {
+            SalesPrice::CUSTOMER => Customer::query()->inViewedBranch()->whereIn('id', $ids)->get()->mapWithKeys(fn (Customer $c) => [$c->id => self::nameOf($c)]),
+            SalesPrice::TIER => PartyType::query()->whereIn('id', $ids)->get()->mapWithKeys(fn (PartyType $t) => [$t->id => self::nameOf($t)]),
+            SalesPrice::TERRITORY => Location::query()->whereIn('id', $ids)->get()->mapWithKeys(fn (Location $l) => [$l->id => $l->path()]),
+            default => collect(),
+        };
+
+        $this->aims = [];
+
+        foreach ($papers as $list) {
+            $this->aims[(int) $list->getKey()] = $column === null
+                ? __('sales::price_book.everyone')
+                : (string) ($names[$list->getAttribute($column)] ?? '—');
+        }
+    }
+
     public function detail(Model $paper, User $user): array
     {
         /** @var PriceList $paper */
+        // ⓘ পাতা ভাগ, কাটা নয় — `rows_count` আর `rows_next_page` ফোনকে বলে আরও আছে কি না
         $items = PriceListItem::query()->where('price_list_id', $paper->id)->with(['product.unit', 'unit'])
-            ->orderBy('product_id')->orderByDesc('valid_from')->limit(500)->get();
+            ->orderBy('product_id')->orderByDesc('valid_from')->orderBy('id')->paginate(self::ITEMS_PER_PAGE);
 
-        return PaperSheet::make(
+        return [
+            'rows_count' => $items->total(),
+            'rows_next_page' => $items->hasMorePages() ? $items->currentPage() + 1 : null,
+        ] + PaperSheet::make(
             facts: [
                 __('sales::price_book.code') => $paper->code,
                 __('sales::price_book.for') => $this->aimOf($paper),
@@ -143,14 +181,13 @@ abstract class PriceListPaper extends SalesPhonePaper
         );
     }
 
-    /** কার জন্য — ওয়েবের তালিকার "কার জন্য" ঘরের একই উত্তর ([[PriceBookController]]-এর aims) */
+    /** কার জন্য — ওয়েবের তালিকার "কার জন্য" ঘরের একই উত্তর ([[PriceBookController]]-এর aims), [[prepare()]] থেকে */
     private function aimOf(PriceList $list): string
     {
-        return match (SalesPrice::targetOf($list)) {
-            SalesPrice::CUSTOMER => self::nameOf(Customer::query()->inViewedBranch()->find($list->customer_id)) ?? '—',
-            SalesPrice::TIER => self::nameOf(PartyType::query()->find($list->party_type_id)) ?? '—',
-            SalesPrice::TERRITORY => Location::query()->find($list->location_id)?->path() ?? '—',
-            default => __('sales::price_book.everyone'),
-        };
+        if (! array_key_exists((int) $list->getKey(), $this->aims)) {
+            $this->prepare(new Collection([$list]));
+        }
+
+        return $this->aims[(int) $list->getKey()];
     }
 }
