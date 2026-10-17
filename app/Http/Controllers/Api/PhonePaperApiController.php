@@ -41,8 +41,8 @@ use Illuminate\Validation\Rule;
  * ⛔ দেয়াল এখানে লেখা নয় — [[PhonePaper::query()]] মডেলের নিজের কোয়েরি। শাখার ছাঁকনি সেই দেয়ালের **ভিতরে** সরু করে,
  * ভাউচারের ফোন-তালিকার মতো (শাখার public_id; নাগালের বাইরের শাখা = খালি তালিকা)।
  *
- * ⓘ লেখা বাংলায়: ফোনের অ্যাপ কেবল বাংলার (চুক্তি §১), অথচ মালিকের নিজের খাতা ইংরেজিতে — ঘরের নাম ইংরেজিতে এলে একই পর্দায় দুই
- * ভাষা দেখাত। ⓘ অনলাইন-only — কাগজ সেই মুহূর্তের অবস্থা।
+ * ⓘ লেখা ব্যবহারকারীর নিজের ভাষায়, বাকি ফোন-দরজার মতো ([[ResolveCompanyContext]]) — প্রতিটা ঘরের নাম মডিউলের lang/bn আর lang/en
+ * থেকে; হাতে বাঁধা ভাষা নেই (fe, ১৭ অক্টোবর ২০২৬)। ⓘ অনলাইন-only — কাগজ সেই মুহূর্তের অবস্থা।
  */
 final class PhonePaperApiController extends Controller
 {
@@ -143,8 +143,6 @@ final class PhonePaperApiController extends Controller
     /** দরজার চার পাহারা, ক্রমে — উপরের তালিকা দেখুন */
     private function open(Request $request, string $key): PhonePaper
     {
-        app()->setLocale('bn');
-
         $paper = $this->papers->find($key);
         abort_if($paper === null, 404);
 

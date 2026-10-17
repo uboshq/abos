@@ -125,7 +125,8 @@ final class ThePhoneShowsEveryPaperOnItsOwnScreenTest extends TestCase
         $this->assertContains(self::nameOf($order->supplier), array_column($page['facts'], 'value'));
         $this->assertCount(1, $page['signatures'], '⛔ অপেক্ষার সই পাতায় নেই।');
         $this->assertSame(Approval::PENDING, $page['signatures'][0]['status']);
-        $this->assertSame('অপেক্ষমাণ', $page['signatures'][0]['status_label'], '⛔ সইয়ের অবস্থা বাংলায় নয়।');
+        $this->assertSame(__('approval::status.pending', [], $this->owner->locale ?: config('app.locale')), $page['signatures'][0]['status_label'],
+            '⛔ সইয়ের অবস্থা দেখার মানুষের ভাষায় নয়।');
     }
 
     public function test_the_branch_filter_narrows_inside_the_wall(): void
@@ -231,7 +232,8 @@ final class ThePhoneShowsEveryPaperOnItsOwnScreenTest extends TestCase
             $this->assertNotEmpty($page['facts'], "⛔ {$key}-এর পাতায় কোনো ঘর নেই।");
         }
 
-        $this->assertSame('রাস্তায়', $this->phone($this->owner, '/api/v1/papers/inventory_transfer/'.$transfer->public_id)->json('status_label'));
+        $this->assertSame(__('inventory::status.on_the_way', [], $this->owner->locale ?: config('app.locale')),
+            $this->phone($this->owner, '/api/v1/papers/inventory_transfer/'.$transfer->public_id)->json('status_label'));
         $this->assertCount(1, $this->phone($this->owner, '/api/v1/papers/purchase_requisition/'.$requisition->public_id)->json('rows'));
         $this->assertNotContains($list->public_id, array_column($this->phone($this->owner, '/api/v1/papers/sales_price_list_all')->json('rows'), 'id'),
             '⛔ গ্রাহকের দর তালিকা "সবার" ধরনে এল।');
