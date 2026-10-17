@@ -192,10 +192,18 @@ final class PhoneModules
         $reach = [];
         $queue = $this->onCodes($branchToo);
 
+        /*
+         * ⛔ এই শাখায় বন্ধ মডিউল নির্ভরতা ধরেও পৌঁছায় না — Api/Sync নিরীক্ষার শেষ লাল (a4, ১৭ অক্টোবর ২০২৬)। ⓘ ক্রয় ফোনে ডিফল্টে
+         * চালু আর বিক্রয়ের উপর দাঁড়ায়, তাই শাখায় বিক্রি বন্ধ থাকলেও ক্রয়ের ভরসায় বিক্রি "পৌঁছায়" — সিঙ্ক-পুশ ২০০, আর
+         * [[ASwitchedOffModuleStillSyncedTest]] লাল। ⭐ শাখার সুইচ কোম্পানির সুইচের চেয়ে কড়া (মালিক: প্রতিটা শাখা পুরোপুরি আলাদা);
+         * কোম্পানিতে বন্ধ মডিউলের তথ্য নির্ভরতা ধরে আগের মতোই খোলে।
+         */
+        $offHere = $branchToo ? \App\Models\BranchModule::switchedOffIn(\App\Core\Support\CompanyContext::branchId()) : [];
+
         while ($queue !== []) {
             $code = array_shift($queue);
 
-            if (isset($reach[$code])) {
+            if (isset($reach[$code]) || in_array($code, $offHere, true)) {
                 continue;
             }
 
