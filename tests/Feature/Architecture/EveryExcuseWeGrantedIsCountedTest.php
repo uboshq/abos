@@ -397,7 +397,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  ARowInHandIsLockedAcrossBranchesTest::EXCUSED — রেস্টুরেন্টের উৎপাদন: মালিক বলেছেন ২১ অক্টোবরের পরে
      *   +২৪ ARowInHandIsLockedAcrossBranchesTest::NOT_YET — অস্থায়ী: প্রতিটা সেবার সারাই নিজের সারি তোলে আর ছাদ ততটা কমায়
      */
-    private const CEILING = 369;
+    /*
+     * ── ⚠️ ৩৬৯ → ৩৭১, ১৭ অক্টোবর ২০২৬ (ফোনের নিজের পর্দায় লেনদেন — মালিক; cb) ──────────────────────────────────────────────
+     *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.papers.index / show: দরজা একটা, ধরন সতেরো, প্রতিটার চাবি ওয়েবের তালিকার
+     *       নিজের — `documents.pdf`-এর মতোই পদ্ধতির ভেতরে; একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)
+     */
+    private const CEILING = 371;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

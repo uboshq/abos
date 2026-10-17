@@ -576,6 +576,17 @@ return [
 
     'dashboard' => PurchaseDashboard::class,
 
+    // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
+    'phone_papers' => [
+        \App\Modules\Purchase\Phone\PurchaseOrderPaper::class,
+        \App\Modules\Purchase\Phone\PurchaseBillPaper::class,
+        \App\Modules\Purchase\Phone\PurchaseReceiptPaper::class,
+        \App\Modules\Purchase\Phone\PurchaseReturnPaper::class,
+        \App\Modules\Purchase\Phone\PurchaseRequisitionPaper::class,
+        \App\Modules\Purchase\Phone\RfqPaper::class,
+        \App\Modules\Purchase\Phone\PurchaseContractPaper::class,
+    ],
+
     'widgets' => [
         PurchaseWidgets::class,
     ],

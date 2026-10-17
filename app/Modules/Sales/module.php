@@ -936,6 +936,19 @@ return [
     // হোম পর্দার সংখ্যাগুলো — কোর জিজ্ঞেস করে, মডিউল উত্তর দেয়
     'dashboard' => SalesDashboard::class,
 
+    // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
+    'phone_papers' => [
+        \App\Modules\Sales\Phone\SalesReturnPaper::class,
+        \App\Modules\Sales\Phone\GatePassPaper::class,
+        \App\Modules\Sales\Phone\ShipmentPaper::class,
+        \App\Modules\Sales\Phone\LoadingSheetPaper::class,
+        \App\Modules\Sales\Phone\TransportPaper::class,
+        \App\Modules\Sales\Phone\PriceListCustomerPaper::class,
+        \App\Modules\Sales\Phone\PriceListTierPaper::class,
+        \App\Modules\Sales\Phone\PriceListTerritoryPaper::class,
+        \App\Modules\Sales\Phone\PriceListAllPaper::class,
+    ],
+
     'widgets' => [
         SalesWidgets::class,
     ],
