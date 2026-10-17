@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/executive/executive_screen.dart';
 import '../menu/module_gate.dart';
@@ -35,6 +36,10 @@ class NativeForWeb {
     }
     if (path == '/sales/overview') {
       return const SalesOverviewScreen();
+    }
+    // ⭐ হিসাবের ছক আর তার খাতা — ওয়েবের একই সেবা ([AccountLedgerApi]; মালিক, ১৭ অক্টোবর ২০২৬)
+    if (path == '/accounts/chart-of-accounts') {
+      return const ChartOfAccountsScreen();
     }
 
     final dashboard = RegExp(r'^/dashboard/([a-z_]+)$').firstMatch(path)?.group(1);
