@@ -48,7 +48,7 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
      */
     public function index(Request $request): JsonResponse
     {
-        $rows = DeliveryOrder::query()
+        $query = DeliveryOrder::query()
             // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
             ->with('customer.location.parent')
             ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
@@ -56,14 +56,24 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
                 ->whereIn('id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
                     ->where('approvable_type', (new DeliveryOrder)->getMorphClass())->select('approvable_id')))
             ->when(in_array($request->query('status'), [...DeliveryOrderStatus::FLOW, DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED], true),
-                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
-            ->latest('trx_date')->latest('id')->paginate(50);
+                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')));
+
+        /*
+         * ⭐ ছাঁকা তালিকার মোট আর গোনা — পুরো ফলের, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total")।
+         * ⓘ ফেরত আর বাতিল আদেশ সারিতে থাকে, মোটে নয় — ভাউচারের তালিকার একই নিয়ম।
+         */
+        $total = bcadd((string) ((clone $query)->whereNotIn('status', [DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED])
+            ->sum('total') ?? '0'), '0', 2);
+
+        $rows = $query->latest('trx_date')->latest('id')->paginate(50);
 
         $latest = LatestApprovals::of($rows->items(), DeliveryOrder::class, DeliveryOrderStatus::SUPERVISOR_PENDING, DeliveryOrderService::APPROVAL_ACTION);
 
         return response()->json([
             'orders' => collect($rows->items())->map(fn (DeliveryOrder $o) => $this->facts($o, false, $latest))->values(),
             'next_page' => $rows->hasMorePages() ? $rows->currentPage() + 1 : null,
+            'total' => $total,
+            'count' => $rows->total(),
         ]);
     }
 

@@ -47,18 +47,28 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
     /** `GET /quotations?status=&customer=&page=` — নতুনটা আগে, পাতায় ৫০ */
     public function index(Request $request): JsonResponse
     {
-        $rows = SalesQuotation::query()
+        $query = SalesQuotation::query()
             // ⓘ ক্রেতা আর আদেশ পাতায় একবার — আগে প্রতিটা দরপত্রে আদেশের আলাদা ডাক (অডিট ফোন ⚠️১৭)
             ->with(['customer.location.parent', 'order'])
             ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when(in_array($request->query('status'), SalesQuotation::STATES, true),
-                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
-            ->latest('trx_date')->latest('id')
-            ->paginate(50);
+                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')));
+
+        /*
+         * ⭐ ছাঁকা তালিকার মোট আর গোনা — পুরো ফলের, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total")।
+         * ⓘ বাতিল, ফেরত আর পুরনো সংস্করণ (R1-এর জায়গায় R2 এলে R1 `revised`) সারিতে থাকে, মোটে নয় — নাহলে একই দরপত্র দুবার গোনা হত।
+         */
+        $total = bcadd((string) ((clone $query)
+            ->whereNotIn('status', [SalesQuotation::CANCELLED, SalesQuotation::REJECTED, SalesQuotation::REVISED])
+            ->sum('total') ?? '0'), '0', 2);
+
+        $rows = $query->latest('trx_date')->latest('id')->paginate(50);
 
         return response()->json([
             'quotations' => collect($rows->items())->map(fn (SalesQuotation $q) => $this->facts($q, false))->values(),
             'next_page' => $rows->hasMorePages() ? $rows->currentPage() + 1 : null,
+            'total' => $total,
+            'count' => $rows->total(),
         ]);
     }
 
