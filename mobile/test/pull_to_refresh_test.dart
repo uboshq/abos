@@ -71,6 +71,9 @@ void main() {
     'paper_screens.dart',
     // ⭐ মজুদের পাঁচ লেখা (১৭ অক্টোবর ২০২৬) — টান test/stock_writes_test.dart-এ দেখা
     'stock_write_screens.dart',
+    // ⭐ উদ্ধৃতির তুলনা ও সংস্করণ, মান যাচাই আর সিরিয়াল (১৭ অক্টোবর ২০২৬) — টান test/more_screens_test.dart-এ দেখা
+    'quotation_compare_screens.dart',
+    'quality_serial_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each

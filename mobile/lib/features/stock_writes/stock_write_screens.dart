@@ -381,7 +381,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
     final picked = await showModalBottomSheet<ProductRecord>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _ProductSheet(products: all),
+      builder: (_) => ProductPickSheet(products: all),
     );
     if (picked != null && mounted) setState(() => _product = picked);
   }
@@ -537,16 +537,16 @@ class _StockFormScreenState extends State<StockFormScreen> {
   }
 }
 
-class _ProductSheet extends StatefulWidget {
-  const _ProductSheet({required this.products});
+class ProductPickSheet extends StatefulWidget {
+  const ProductPickSheet({super.key, required this.products});
 
   final List<ProductRecord> products;
 
   @override
-  State<_ProductSheet> createState() => _ProductSheetState();
+  State<ProductPickSheet> createState() => _ProductPickSheetState();
 }
 
-class _ProductSheetState extends State<_ProductSheet> {
+class _ProductPickSheetState extends State<ProductPickSheet> {
   String _q = '';
 
   @override

@@ -5,14 +5,20 @@ import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/approval_rows/approval_rows_screens.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/dashboards/dashboards_screen.dart';
+import '../../features/deliveries/deliveries_screen.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/executive/executive_screen.dart';
+import '../../features/orders/new_order_screen.dart';
+import '../../features/orders/order_list_screen.dart';
 import '../../features/papers/paper_screens.dart';
+import '../../features/quotations/quotation_compare_screens.dart';
+import '../../features/quotations/quotation_screens.dart';
 import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
+import '../../features/stock_writes/quality_serial_screens.dart';
 import '../../features/stock_writes/stock_write_screens.dart';
 import '../../features/vouchers/voucher_screens.dart';
 import '../../features/web_inside/web_inside_screen.dart';
@@ -74,6 +80,37 @@ class NativeForWeb {
     '/inventory/counts': 'counts',
   };
 
+  /// ⭐ উদ্ধৃতি, আদেশ, ডেলিভারি নিশ্চিত, মান যাচাই আর সিরিয়াল — ওয়েবের পথ → ফোনের পর্দা (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
+  ///
+  /// <p>ⓘ উদ্ধৃতি, আদেশ আর ডেলিভারির পর্দা ফোনে আগে থেকেই ছিল (রাউটারের `quotations`, `orders`, `new-order`, `deliveries`) — এখানে
+  /// কেবল ওয়েবের মেনু-সারি তাদের দিকে, একই মডিউল-সুইচের পেছনে। ⚠️ ওয়েবের "ডেলিভারি নিশ্চিত" ধাপের বোর্ড; ফোনের পর্দা পথের
+  /// চালান বুঝিয়ে দেওয়া — নিশ্চিত করার কাজটা ওখানেই, বোর্ডের হাতে ধাপ বদল ওয়েবে।
+  static const Set<String> desks = {
+    '/sales/quotations', '/sales/quotations/create', '/sales/quotations/compare', '/sales/quotations/revisions',
+    '/sales/orders', '/sales/orders/create', '/sales/deliveries', '/inventory/quality', '/inventory/serials',
+  };
+
+  static Widget? _desk(String path) {
+    bool can(WidgetRef ref, String key) => ref.watch(authStateProvider).user?.can(key) ?? false;
+
+    return switch (path) {
+      '/sales/quotations' => ModuleGateView(
+          path: 'quotations',
+          child: Consumer(builder: (context, ref, _) => QuotationListScreen(canWrite: can(ref, 'sales.quotation.create')))),
+      '/sales/quotations/create' => const ModuleGateView(path: 'quotations', child: NewQuotationScreen()),
+      '/sales/quotations/compare' => const ModuleGateView(path: 'quotations', child: QuotationCompareScreen()),
+      '/sales/quotations/revisions' => const ModuleGateView(path: 'quotations', child: QuotationRevisionsScreen()),
+      '/sales/orders' => const ModuleGateView(path: 'orders', child: OrderListScreen()),
+      '/sales/orders/create' => const ModuleGateView(path: 'new-order', child: NewOrderScreen()),
+      '/sales/deliveries' => const ModuleGateView(path: 'deliveries', child: DeliveriesScreen()),
+      '/inventory/quality' => ModuleGateView(
+          path: 'stock', child: Consumer(builder: (context, ref, _) => QualityListScreen(canCreate: can(ref, 'inventory.qc.create')))),
+      '/inventory/serials' => ModuleGateView(
+          path: 'stock', child: Consumer(builder: (context, ref, _) => SerialScreen(canManage: can(ref, 'inventory.serial.manage')))),
+      _ => null,
+    };
+  }
+
   /// দর তালিকার চার রকম — ওয়েবের `/sales/price-lists?target=`
   static const Set<String> priceLists = {'customer', 'tier', 'territory', 'all'};
 
@@ -128,6 +165,9 @@ class NativeForWeb {
     if (path.startsWith('/sales/planned/')) {
       return ComingSoonScreen(title: title);
     }
+
+    final desk = _desk(path);
+    if (desk != null) return desk;
 
     final stock = stockDoors[path];
     if (stock != null) {
@@ -191,6 +231,7 @@ class NativeForWeb {
     // ⓘ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর — ফোনের নিজের তালিকা ([papers])
     if (papers.containsKey(path) || path == '/sales/price-lists') return Icons.description_outlined;
     if (stockDoors.containsKey(path)) return Icons.inventory_outlined;
+    if (desks.contains(path)) return Icons.assignment_outlined;
     return null;
   }
 
