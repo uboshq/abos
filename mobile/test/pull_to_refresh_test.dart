@@ -65,6 +65,8 @@ void main() {
     'chart_screens.dart',
     // ⭐ সইয়ের ভার, দলিলের অনুমোদনের সারি, সই কেন্দ্র (১৭ অক্টোবর ২০২৬) — টান test/approval_rows_test.dart-এ দেখা
     'approval_rows_screens.dart',
+    // ⭐ বিক্রয়ের ডেস্ক-পাতা আর দলিলের ছাঁচ (১৭ অক্টোবর ২০২৬) — টান test/sales_desk_test.dart-এ দেখা
+    'sales_desk_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
@@ -87,6 +89,8 @@ void main() {
     // ⭐ অ্যাপের ভিতরের ওয়েব-জানালা (১৩ অক্টোবর ২০২৬) — ভুলের পর্দায় নিজের "আবার চেষ্টা করুন" বোতাম, কারণ
     // সেখানে টান দিয়ে চাওয়ার মতো কোনো তালিকা নেই, আছে একবারের চাবি; আর খোলা পাতার টান পাতার ভিতরেই ([WebFiles]).
     'web_inside_screen.dart',
+    // ⭐ "শীঘ্রই আসছে" (১৭ অক্টোবর ২০২৬) — এখনো তৈরি হয়নি এমন পর্দা; টেনে আনার মতো কিছুই নেই, কথাটা কেবল জানানো।
+    'coming_soon_screen.dart',
   };
 
   test('every screen that can draw an EmptyState has been considered', () {

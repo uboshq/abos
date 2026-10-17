@@ -3,6 +3,9 @@ import 'package:flutter/widgets.dart';
 import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/approval_rows/approval_rows_screens.dart';
 import '../../features/dashboards/dashboards_screen.dart';
+import '../../features/direct_sale/counter_screen.dart';
+import '../../features/sales_desk/coming_soon_screen.dart';
+import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/executive/executive_screen.dart';
 import '../menu/module_gate.dart';
 
@@ -51,6 +54,32 @@ class NativeForWeb {
     }
     if (path == '/documents/signatures') {
       return const PaperQueueScreen(kind: PaperQueueKind.signatures);
+    }
+    // ⭐ কাউন্টার আর বিক্রয়ের ডেস্ক-পাতা, দলিলের ছাঁচ (মালিক, ১৭ অক্টোবর ২০২৬; fe-র পাঠানো /me-এর পথ হুবহু)
+    if (path == '/sales/direct') {
+      return const ModuleGateView(path: 'counter', child: CounterScreen());
+    }
+    if (path == '/sales/direct/drafts') {
+      return const ModuleGateView(path: 'counter', child: CounterScreen(openDrafts: true));
+    }
+    if (path == '/sales/direct/depot-check') {
+      return const DepotCheckScreen();
+    }
+    if (path == '/sales/print-queue') {
+      return const PrintQueueScreen();
+    }
+    if (path == '/sales/delivery-performance') {
+      return const DeliveryPerformanceScreen();
+    }
+    if (path == '/sales/opportunities/pipeline') {
+      return const PipelineScreen();
+    }
+    if (path == '/documents/templates') {
+      return const TemplateListScreen();
+    }
+    // ⓘ ওয়েবের "planned" — এখনো তৈরি হয়নি এমন পর্দা; ফোনে স্পষ্ট "শীঘ্রই আসছে", ওয়েব-জানালা নয় (fe)
+    if (path.startsWith('/sales/planned/')) {
+      return ComingSoonScreen(title: title);
     }
 
     final dashboard = RegExp(r'^/dashboard/([a-z_]+)$').firstMatch(path)?.group(1);

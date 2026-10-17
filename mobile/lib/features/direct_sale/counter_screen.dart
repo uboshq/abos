@@ -30,9 +30,13 @@ class CounterScreen extends StatefulWidget {
       this.api = const ServerDirectSaleApi(),
       this.returnApi = const ServerSalesReturnApi(),
       this.customers,
-      this.products});
+      this.products,
+      this.openDrafts = false});
 
   final DirectSaleApi api;
+
+  /// ⭐ মেনুর "খসড়ার তালিকা" (`/sales/direct/drafts`) — কাউন্টার খুলেই রাখা খসড়ার তালিকা (মালিক, ১৭ অক্টোবর ২০২৬)
+  final bool openDrafts;
 
   /// ⭐ "ফেরত" বোতামের পর্দা — ওয়েবের ফেরতের একই সেবা ([[ReturnScreen]])
   final SalesReturnApi returnApi;
@@ -101,7 +105,9 @@ class _CounterScreenState extends State<CounterScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSetup();
+    _loadSetup().then((_) {
+      if (mounted && widget.openDrafts) _openDraft();
+    });
   }
 
   @override
