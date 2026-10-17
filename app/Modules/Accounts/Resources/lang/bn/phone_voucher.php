@@ -19,4 +19,7 @@ return [
     'party_any' => 'পক্ষ',
     'money_into' => 'কোথায় জমা হলো',
     'money_out_of' => 'কোথা থেকে গেল',
+    // ⭐ কনট্রার দুই দিক — মালিক, ১৭ অক্টোবর ২০২৬ ("recived into, pay From")
+    'contra_from' => 'কোথা থেকে',
+    'contra_to' => 'কোথায় গেল',
 ];
