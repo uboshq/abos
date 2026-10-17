@@ -12,8 +12,10 @@ use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\DeliveryOrder;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +24,7 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * ⭐ ফোনের DO আর দরপত্রের তালিকা পুরো ছাঁকনির মোট আর গোনা পাঠায়, পাতার নয় — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"।
+ * ⭐ ফোনের আদেশ, DO আর দরপত্রের তালিকা পুরো ছাঁকনির মোট আর গোনা পাঠায়, পাতার নয় — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"।
  *
  * ⓘ সার্ভার পাতায় ৫০টা পাঠায়; ফোন নিজে যোগ করলে ৫১তম সারি মোটের বাইরে থাকত। ⛔ বাতিল, ফেরত আর পুরনো সংস্করণ সারিতে থাকে, মোটে নয়।
  */
@@ -63,6 +65,19 @@ final class ThePhoneListsCarryTheirWholeTotalTest extends TestCase
         $this->assertSame('5000.00', $answer->json('total'), '⛔ মোটে পাতার বাইরের সারি নেই, বা বাতিল/ফেরত ঢুকেছে (৫০ × ১০০)।');
     }
 
+    public function test_the_sales_order_list_totals_every_page_and_leaves_out_cancelled_and_rejected(): void
+    {
+        $this->paper('/api/v1/sales/orders', SalesOrder::class, 52, [
+            SalesOrderStatus::CANCELLED, SalesOrderStatus::REJECTED,
+        ]);
+
+        $answer = $this->getJson('/api/v1/sales/orders')->assertOk();
+
+        $this->assertCount(50, $answer->json('orders'), 'পরীক্ষার ছকটাই ভুল: প্রথম পাতায় ৫০টা আসার কথা।');
+        $this->assertSame(52, $answer->json('count'), '⛔ গোনা পাতার, পুরো তালিকার নয়।');
+        $this->assertSame('5000.00', $answer->json('total'), '⛔ মোটে পাতার বাইরের সারি নেই, বা বাতিল/ফেরত ঢুকেছে (৫০ × ১০০)।');
+    }
+
     public function test_the_quotation_list_totals_every_page_and_leaves_out_cancelled_rejected_and_revised(): void
     {
         $this->paper('/api/v1/sales/quotations', SalesQuotation::class, 53, [
@@ -89,7 +104,7 @@ final class ThePhoneListsCarryTheirWholeTotalTest extends TestCase
     /**
      * একটা কাগজ ফোন দিয়ে লেখা, তারপর একই সারি টেবিলে কপি — মোট $count টা, প্রতিটা ১০০ টাকা; শেষের কয়টা $closed অবস্থায়।
      *
-     * @param  class-string<DeliveryOrder|SalesQuotation>  $model
+     * @param  class-string<DeliveryOrder|SalesOrder|SalesQuotation>  $model
      * @param  list<string>  $closed
      */
     private function paper(string $url, string $model, int $count, array $closed): void
