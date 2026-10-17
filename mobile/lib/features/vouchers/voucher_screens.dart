@@ -28,6 +28,7 @@ class VoucherListScreen extends StatefulWidget {
     this.newChangeId = _engineChangeId,
     this.branches = _myBranches,
     this.today,
+    this.view,
   });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
@@ -48,19 +49,28 @@ class VoucherListScreen extends StatefulWidget {
   /// পরীক্ষার জন্য — না দিলে আজ
   final DateTime? today;
 
+  /// ⭐ মেনুর আলাদা ঘর থেকে খোলা ধরন ([VoucherView.key], `/home/vouchers/<key>`) — মালিক, ১৭ অক্টোবর ২০২৬।
+  /// null বা অচেনা হলে "সব", আগের মতো।
+  final String? view;
+
   @override
   State<VoucherListScreen> createState() => _VoucherListScreenState();
 }
 
 class _VoucherListScreenState extends State<VoucherListScreen> {
-  /// ⭐ উপরের বোতাম — সব · নগদ রসিদ · ব্যাংক রসিদ · পেমেন্ট (মালিক, ১৫ অক্টোবর ২০২৬, ০.৪.৩৪), তারপর বাকি ধরন আগের মতো
+  /// ⭐ উপরের বোতাম — সব · নগদ রসিদ · MFS রসিদ · ব্যাংক রসিদ · পেমেন্ট · কন্ট্রা · জার্নাল · খরচ (মালিক, ১৫ ও ১৭ অক্টোবর
+  /// ২০২৬); তারপর এমন কোনো ধরন থাকলে যার বোতাম এখনো নেই
   static final List<VoucherView> _views = [
-    ...VoucherView.top,
+    ...VoucherView.kinds,
     for (final t in VoucherTypes.all)
-      if (t != 'receipt' && t != 'payment') VoucherView(t, VoucherTypes.label(t).replaceAll(' ভাউচার', ''), type: t),
+      if (!VoucherView.kinds.any((v) => v.type == t))
+        VoucherView(t, VoucherTypes.label(t).replaceAll(' ভাউচার', ''), type: t),
   ];
 
-  VoucherView _view = VoucherView.all;
+  late VoucherView _view = VoucherView.byKey(widget.view) ?? VoucherView.all;
+
+  /// মেনুর আলাদা ঘর থেকে একটা ধরন নিয়ে খোলা
+  bool get _preset => VoucherView.byKey(widget.view) != null && widget.view != VoucherView.all.key;
   bool _awaiting = false;
   late DateTime _from;
   late DateTime _to;
@@ -116,7 +126,9 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
   }
 
   Future<void> _new() async {
-    final type = await showModalBottomSheet<String>(
+    // ⭐ ধরন নিয়ে খোলা হলে সরাসরি সেই ধরনের ফর্ম; "সব"-এ আগের মতো ধরন বাছাই
+    final preset = _preset ? _view.type : null;
+    final type = preset ?? await showModalBottomSheet<String>(
       context: context,
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -144,7 +156,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     final total = _page?.total;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ভাউচার')),
+      appBar: AppBar(title: Text(!_preset ? 'ভাউচার' : _view.type == null ? 'সব ভাউচার' : _view.label)),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('voucher-new'),
         onPressed: _new,

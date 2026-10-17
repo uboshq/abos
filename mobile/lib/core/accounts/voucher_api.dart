@@ -280,7 +280,8 @@ class VoucherListPage {
   final double? total;
 }
 
-/// ⭐ তালিকার উপরের বোতাম — মালিক, ১৫ অক্টোবর ২০২৬ (০.৪.৩৪): সব · নগদ রসিদ · ব্যাংক রসিদ · পেমেন্ট।
+/// ⭐ তালিকার উপরের বোতাম — মালিক, ১৫ অক্টোবর ২০২৬ (০.৪.৩৪): সব · নগদ রসিদ · ব্যাংক রসিদ · পেমেন্ট; ১৭ অক্টোবর ২০২৬:
+/// নগদ রসিদের পরে MFS রসিদ, তারপর কন্ট্রা · জার্নাল · খরচ ([others])।
 /// নগদ রসিদ = টাকা নগদ বা ক্যাশ-বাক্সে জমা (`money=cash`), ব্যাংক রসিদ = টাকা ব্যাংকে (`money=bank`)।
 class VoucherView {
   const VoucherView(this.key, this.label, {this.type, this.money});
@@ -295,7 +296,28 @@ class VoucherView {
   static const bankReceipts = VoucherView('bank-receipt', 'ব্যাংক রসিদ', type: 'receipt', money: 'bank');
   static const payments = VoucherView('payment', 'পেমেন্ট', type: 'payment');
 
-  static const top = [all, cashReceipts, bankReceipts, payments];
+  static const top = [all, cashReceipts, mfsReceipts, bankReceipts, payments];
+
+  // ── ⭐ প্রতিটা ধরন আলাদা — মালিক, ১৭ অক্টোবর ২০২৬: "receipt app e cash, mfs, bank, payment, contra, journal, expense
+  // egulo alada alada asena eta tik korobe"। MFS রসিদ = টাকা বিকাশ/নগদ-এর মতো MFS খাতে (`money=mfs`)। ──
+  static const mfsReceipts = VoucherView('mfs-receipt', 'MFS রসিদ', type: 'receipt', money: 'mfs');
+  static const contras = VoucherView('contra', 'কন্ট্রা', type: 'contra');
+  static const journals = VoucherView('journal', 'জার্নাল', type: 'journal');
+  static const expenses = VoucherView('expense', 'খরচ', type: 'expense');
+
+  /// বাকি ধরন, উপরের বোতামগুলোর পরে
+  static const others = [contras, journals, expenses];
+
+  /// সব বোতাম, পর্দার ক্রমে — মেনুর আলাদা আলাদা ঘরও এগুলোই (`/home/vouchers/<key>`)
+  static const kinds = [...top, ...others];
+
+  /// মেনু বা পুরনো লিংকের চাবি থেকে — অচেনা বা খালি হলে null (তখন "সব")
+  static VoucherView? byKey(String? key) {
+    for (final v in kinds) {
+      if (v.key == key) return v;
+    }
+    return null;
+  }
 }
 
 /// পাকা করার উত্তর — হলো কি না, আর সার্ভারের কথা

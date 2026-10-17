@@ -214,6 +214,17 @@ class MenuRepository {
     return out;
   }
 
+  /// ⭐ ভাউচারের আলাদা ঘর, পর্দার বোতামের ক্রমে — চাবিগুলো [VoucherView.kinds]-এর (মালিক, ১৭ অক্টোবর ২০২৬)
+  static const List<(String, String, IconData)> _voucherKinds = [
+    ('cash-receipt', 'নগদ রসিদ', Icons.payments_outlined),
+    ('mfs-receipt', 'MFS রসিদ', Icons.phone_android_outlined),
+    ('bank-receipt', 'ব্যাংক রসিদ', Icons.account_balance_outlined),
+    ('payment', 'পেমেন্ট', Icons.outbox_outlined),
+    ('contra', 'কন্ট্রা', Icons.swap_horiz_outlined),
+    ('journal', 'জার্নাল', Icons.menu_book_outlined),
+    ('expense', 'খরচ', Icons.shopping_bag_outlined),
+  ];
+
   /// Server routes this app answers natively under another key — the same screen, so not a second web row.
   static const Set<String> _nativeTwins = {'sales.tracking.index'};
 
@@ -415,10 +426,20 @@ class MenuRepository {
         if (user.can('accounts.voucher.create'))
           const MenuItem(
             key: 'accounts.voucher.create',
-            label: 'ভাউচার',
+            label: 'সব ভাউচার',
             icon: Icons.receipt_long_outlined,
             routeName: 'vouchers',
           ),
+        // ⭐ প্রতিটা ভাউচার-ধরন আলাদা ঘরে, একই চাবিতে (মালিক, ১৭ অক্টোবর ২০২৬: "receipt app e cash, mfs, bank, payment,
+        // contra, journal, expense egulo alada alada asena") — `/home/vouchers/<ধরন>`, পর্দা সেই ধরনেই খোলে
+        if (user.can('accounts.voucher.create'))
+          for (final (kind, label, icon) in _voucherKinds)
+            MenuItem(
+              key: 'accounts.voucher.$kind',
+              label: label,
+              icon: icon,
+              routeName: 'vouchers/$kind',
+            ),
         // ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; ওয়েবের একই চাবি)
         if (user.can('hr.claim.self'))
           const MenuItem(
