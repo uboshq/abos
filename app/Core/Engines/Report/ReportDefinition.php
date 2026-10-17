@@ -35,6 +35,12 @@ final class ReportDefinition
     /** @var list<ReportColumn> */
     public readonly array $columns;
 
+    /** শুরু না দিলে "শেষ" তারিখের মাসের ১ তারিখ */
+    public const PERIOD_MONTH = 'month';
+
+    /** শুরু না দিলে "শেষ" তারিখের অর্থবছরের শুরু */
+    public const PERIOD_FISCAL_YEAR = 'fiscal_year';
+
     /**
      * @param  Closure(array<string, mixed>): (QueryBuilder|EloquentBuilder)  $query
      * @param  list<array<string, mixed>>  $columns
@@ -191,6 +197,14 @@ final class ReportDefinition
          */
         public readonly bool $anyKey = false,
 
+        /**
+         * ⭐ শুরুর তারিখ না দিলে কোন সময়কাল — "এই মাস" (ডিফল্ট) না চলতি অর্থবছর ([[FiscalYearStart]])।
+         *
+         * ⛔ ঘোষণা রিপোর্টের, দরজার নয় — আগে বিক্রয়ের মাসওয়ারি আর লাভ-ক্ষতির ওয়েব-পাতা নিজে বছরের শুরু বসাত, অথচ ফোনের দরজা
+         * ইঞ্জিনের "এই মাস" নিত: ফোনে ১ সারি, ওয়েবে ১২ (a5-এর খোঁজ, ১৭ অক্টোবর ২০২৬; [[TheTwoDoorsOpenAReportOnTheSamePeriodTest]])।
+         */
+        public readonly string $defaultPeriod = self::PERIOD_MONTH,
+
         /*
          * ⭐ নিজের মানের ছাঁকনির বাছাই — `['status' => ['slow' => 'inventory::control.state_slow', …]]` (১৭ অক্টোবর ২০২৬)।
          * ⓘ যে ছাঁকনি কোনো তালিকা থেকে নয়, নিজের কয়েকটা সংকেত থেকে নেয় (অবস্থা, কী ধরে, সময়ের ভাগ) — ইঞ্জিন সংকেতটাই পায়।
@@ -201,6 +215,10 @@ final class ReportDefinition
          */
         public readonly array $choices = [],
     ) {
+        if (! in_array($defaultPeriod, [self::PERIOD_MONTH, self::PERIOD_FISCAL_YEAR], true)) {
+            throw new \InvalidArgumentException("Report '{$key}' declares an unknown default period '{$defaultPeriod}'.");
+        }
+
         foreach ($choices as $filter => $values) {
             if (! in_array($filter, $filters, true) || ! is_array($values) || $values === []) {
                 throw new \InvalidArgumentException("Report '{$key}' declares choices for '{$filter}', which is not one of its filters.");

@@ -189,9 +189,7 @@ class ReportController extends Controller implements HasMiddleware
          * ⭐ লাভ-ক্ষতিও চলতি অর্থবছর থেকে — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬)। ⛔ আগে এই মাসের শুরু থেকে: স্থিতিপত্রে
          * "চলতি বছরের লাভ ৩৬৫" অথচ লাভ-ক্ষতিতে নিট ০ — দুটো পাতা দুই সময় দেখত। ⓘ স্থিতিপত্রের একই বছর ([[MonthlyCashReport::yearStart()]])।
          */
-        if (in_array($key, [MonthlyCashReport::KEY, 'accounts.profit_loss'], true) && ! $request->filled('from')) {
-            $request->merge(['from' => MonthlyCashReport::yearStart()]);
-        }
+        // ⓘ শুরু না দিলে কোন সময়কাল — রিপোর্টের নিজের ঘোষণা, ইঞ্জিন পড়ে ([[ReportDefinition::$defaultPeriod]]; ফোনের দরজাও একই)
 
         $result = $this->reports->run(
             $key,
