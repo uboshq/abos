@@ -275,7 +275,10 @@ final class StockPhoneController extends Controller implements HasMiddleware
             ])], 201);
     }
 
-    /** খোলা মজুদ — ওয়েবের [[OpeningStockController::store()]]; পণ্য এই শাখার বিক্রির তালিকায় থাকতে হবে */
+    /**
+     * খোলা মজুদ — ওয়েবের [[OpeningStockController::store()]]; পণ্য এই শাখার বিক্রির তালিকায় থাকতে হবে।
+     * ⏳ মালিক সই চেয়েছেন (১৭ অক্টোবর ২০২৬): ২১ অক্টোবরের পরে এটা ec-র খোলা মজুদের কাগজ আর সইয়ের পথে যাবে; আজ ওয়েবের আজকের নিয়মে।
+     */
     public function opening(Request $request, OpeningStockService $opening): JsonResponse
     {
         $data = $request->validate([
