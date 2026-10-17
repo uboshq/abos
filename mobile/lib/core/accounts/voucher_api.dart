@@ -150,6 +150,13 @@ class VoucherRow {
     this.partyLabel = '',
     this.narration = '',
     this.writtenBy = '',
+    this.moneyRole,
+    this.moneyAccount,
+    this.moneyLabel,
+    this.fromAccount,
+    this.fromLabel,
+    this.toAccount,
+    this.toLabel,
   });
 
   final String id;
@@ -172,6 +179,72 @@ class VoucherRow {
   final String partyLabel;
   final String narration;
 
+  /// ⭐ টাকা কোন খাতে — তালিকাতেই (মালিক, ১৭ অক্টোবর ২০২৬: "Mobile app Voucher e kon account e recived hoto ta dekhayna,
+  /// recived into, pay From")। আদায়ে যে খাতে জমা, পরিশোধ আর খরচে যে খাত থেকে; কনট্রায় দুই দিক ([[fromAccount]] →
+  /// [[toAccount]])। `moneyRole` — `into` · `out_of` · `contra`। ⓘ পুরনো সার্ভার তালিকায় কিছুই পাঠায় না — তখন সব null, ফোন
+  /// কিছুই দেখায় না (আন্দাজ নয়)।
+  final String? moneyRole;
+  final String? moneyAccount;
+  final String? moneyLabel;
+  final String? fromAccount;
+  final String? fromLabel;
+  final String? toAccount;
+  final String? toLabel;
+
+  /// টাকার দিক — সার্ভারের `money_role`, না এলে ধরন দেখে
+  String get _role => moneyRole ??
+      switch (type) {
+        'receipt' => 'into',
+        'payment' || 'expense' => 'out_of',
+        'contra' => 'contra',
+        _ => '',
+      };
+
+  /// ⭐ তালিকার কার্ডের এক লাইন: "জমা: <খাত>" · "থেকে: <খাত>" · "<যেখান থেকে> → <যেখানে>"; কিছু না এলে null
+  String? get moneyLine {
+    if (_role == 'contra') {
+      final from = _filled(fromAccount);
+      final to = _filled(toAccount);
+      if (from != null && to != null) return '$from → $to';
+      if (from != null) return 'থেকে: $from';
+      if (to != null) return 'জমা: $to';
+      return null;
+    }
+    final money = _filled(moneyAccount);
+    if (money == null) return null;
+    return switch (_role) {
+      'into' => 'জমা: $money',
+      'out_of' => 'থেকে: $money',
+      _ => null,
+    };
+  }
+
+  /// ⭐ পাতার টাকার খাতের সারিগুলো (নাম, খাত) — সার্ভারের নাম আগে; না এলে আদায়ে "জমা হয়েছে", পরিশোধ আর খরচে "যেখান থেকে
+  /// দেওয়া", কনট্রায় "কোথা থেকে" আর "কোথায় গেল"
+  List<(String, String)> get moneyFacts {
+    if (_role == 'contra') {
+      return [
+        if (_filled(fromAccount) case final from?) (_filled(fromLabel) ?? 'কোথা থেকে', from),
+        if (_filled(toAccount) case final to?) (_filled(toLabel) ?? 'কোথায় গেল', to),
+      ];
+    }
+    final money = _filled(moneyAccount);
+    if (money == null) return const [];
+    return [
+      (
+        _filled(moneyLabel) ??
+            switch (_role) {
+              'into' => 'জমা হয়েছে',
+              'out_of' => 'যেখান থেকে দেওয়া',
+              _ => 'টাকার খাত',
+            },
+        money,
+      ),
+    ];
+  }
+
+  static String? _filled(String? s) => (s == null || s.trim().isEmpty) ? null : s;
+
   String get partyWords => partyLabel.isNotEmpty
       ? partyLabel
       : switch (type) {
@@ -193,6 +266,13 @@ class VoucherRow {
         partyLabel: j['party_label']?.toString() ?? '',
         narration: j['narration']?.toString() ?? '',
         writtenBy: j['written_by']?.toString() ?? '',
+        moneyRole: _filled(j['money_role']?.toString()),
+        moneyAccount: _filled(j['money_account']?.toString()),
+        moneyLabel: _filled(j['money_label']?.toString()),
+        fromAccount: _filled(j['from_account']?.toString()),
+        fromLabel: _filled(j['from_label']?.toString()),
+        toAccount: _filled(j['to_account']?.toString()),
+        toLabel: _filled(j['to_label']?.toString()),
       );
 
   String get kindLabel => typeLabel.isNotEmpty ? typeLabel : VoucherTypes.label(type);
@@ -245,6 +325,21 @@ class VoucherPage {
   final String writtenBy;
   final bool canPost;
   final bool awaitsAnotherHand;
+
+  /// ⭐ পাতার টাকার খাতের সারি — আদায়ে "জমা হয়েছে", পরিশোধ আর খরচে "যেখান থেকে দেওয়া", কনট্রায় দুই দিক
+  /// (মালিক, ১৭ অক্টোবর ২০২৬)। পাতার নিজের [[moneyAccount]] আগে (০.৪.৩৪-এর আগের সার্ভারও পাতায় এটা পাঠাত), নইলে সারির।
+  List<(String, String)> get moneyFacts {
+    final own = moneyAccount == null || moneyAccount!.trim().isEmpty ? null : moneyAccount;
+    if (own == null || row.type == 'contra') return row.moneyFacts;
+    final fromRow = row.moneyFacts;
+    return [(moneyLabel?.trim().isNotEmpty == true ? moneyLabel! : (fromRow.isNotEmpty ? fromRow.first.$1 : _wordsFor(row.type)), own)];
+  }
+
+  static String _wordsFor(String type) => switch (type) {
+        'receipt' => 'জমা হয়েছে',
+        'payment' || 'expense' => 'যেখান থেকে দেওয়া',
+        _ => 'টাকার খাত',
+      };
 
   factory VoucherPage.fromJson(Map<String, dynamic> j) => VoucherPage(
         row: VoucherRow.fromJson(j),
