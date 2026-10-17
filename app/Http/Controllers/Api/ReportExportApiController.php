@@ -90,8 +90,9 @@ final class ReportExportApiController extends Controller
 
         $result = $this->reports->run(
             $slug,
-            // ⭐ §৯-এর ছাঁকনি, হুবহু একই নামে (চুক্তি §১০)
-            $request->only($definition->requestKeys()),
+            // ⭐ §৯-এর ছাঁকনি, হুবহু একই নামে (চুক্তি §১০); ফোনের শাখা public_id ধরে — পর্দার সমান, নইলে পর্দায় এক শাখা আর
+            // ছাপায় গোটা কোম্পানি (১৭ অক্টোবর ২০২৬)
+            $this->gate->phoneFilters($request, $user, $definition),
             page: 1,
             perPage: self::MAX_ROWS,
         );

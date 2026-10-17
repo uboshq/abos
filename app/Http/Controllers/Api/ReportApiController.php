@@ -152,8 +152,8 @@ final class ReportApiController extends Controller
 
         $result = $this->reports->run(
             $key,
-            // ⭐ ঘরগুলো ঘোষণা থেকেই — ওয়েবের পর্দা ঠিক এটাই পাঠায়; ফোনের শাখা public_id ধরে ([[branchFrom()]])
-            $this->branchFrom($request, $user, $definition, $request->only($definition->requestKeys())),
+            // ⭐ ঘরগুলো ঘোষণা থেকেই — ওয়েবের পর্দা ঠিক এটাই পাঠায়; ফোনের শাখা public_id ধরে ([[phoneFilters()]])
+            $this->phoneFilters($request, $user, $definition),
             page: max(1, (int) $request->query('page', 1)),
             perPage: $perPage,
         );
@@ -266,11 +266,13 @@ final class ReportApiController extends Controller
      * ⭐ ফোনের শাখা `branch=<public_id>` → ইঞ্জিনের `branch_id`। ⛔ নাগালের বাইরের বা অচেনা শাখা ৪২২, চুপ করে "সব শাখা" নয়
      * — নাহলে একজন একটা শাখা বেছে গোটা কোম্পানির অঙ্ক নিজের শাখার বলে পড়তেন।
      *
-     * @param  array<string, mixed>  $input
+     * ⓘ রপ্তানিও এটাই ডাকে ([[ReportExportApiController]]) — পর্দা আর ছাপা একই ছাঁকনিতে।
+     *
      * @return array<string, mixed>
      */
-    private function branchFrom(Request $request, User $user, ReportDefinition $definition, array $input): array
+    public function phoneFilters(Request $request, User $user, ReportDefinition $definition): array
     {
+        $input = $request->only($definition->requestKeys());
         $wanted = $request->query('branch');
 
         if (! $definition->hasFilter('branch') || $wanted === null || $wanted === '') {

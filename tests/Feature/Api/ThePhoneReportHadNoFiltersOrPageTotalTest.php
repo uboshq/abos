@@ -100,6 +100,15 @@ final class ThePhoneReportHadNoFiltersOrPageTotalTest extends TestCase
         $elsewhere = Branch::query()->where('company_id', '<>', $this->company->id)->firstOrFail();
         $this->phone('/api/v1/reports/inventory.stock_summary?branch='.$elsewhere->public_id)
             ->assertStatus(422);
+
+        // ⛔ ছাপাও একই ছাঁকনিতে — নইলে পর্দায় এক শাখা আর PDF-এ গোটা কোম্পানি। ⓘ খালি একটা শাখা: পর্দায় শূন্য সারি,
+        // রপ্তানিতেও শূন্য — ছাঁকনি ফেলে দিলে রপ্তানি সব শাখার মাল দেখাত।
+        $empty = Branch::query()->create(['company_id' => $this->company->id, 'code' => 'EMPTY', 'name_en' => 'Empty branch', 'is_active' => true]);
+        $everything = json_decode((string) $this->phone('/api/v1/reports/inventory.stock_summary/export?format=json')->assertOk()->getContent(), true);
+        $this->assertNotEmpty($everything['rows'], 'ছক ভুল: রপ্তানিতে কোনো সারি নেই');
+        $this->assertSame(0, $this->phone('/api/v1/reports/inventory.stock_summary?branch='.$empty->public_id)->assertOk()->json('totalRows'));
+        $exported = json_decode((string) $this->phone('/api/v1/reports/inventory.stock_summary/export?format=json&branch='.$empty->public_id)->assertOk()->getContent(), true);
+        $this->assertSame([], $exported['rows'], '⛔ রপ্তানি ফোনের শাখা মানেনি — গোটা কোম্পানির সারি ছেপেছে');
     }
 
     public function test_the_page_total_is_the_servers_sum_of_the_rows_on_the_page(): void
