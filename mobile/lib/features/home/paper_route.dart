@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/menu/module_gate.dart';
+import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/widgets/empty_state.dart';
@@ -13,6 +14,7 @@ import '../sales_papers/sales_paper_screens.dart';
 import '../vouchers/voucher_screens.dart';
 import '../documents/document_screens.dart';
 import '../finance/finance_screens.dart';
+import '../papers/paper_screens.dart';
 import '../self_service/self_service_screens.dart';
 
 /// ⭐ `/home/paper/<kind>/<id>` — a paper reopened from "সাম্প্রতিক" (মালিক, ১২ অক্টোবর ২০২৬)।
@@ -50,6 +52,8 @@ class PaperRoute extends StatelessWidget {
       'payslip' => PayslipScreen(id: id),
       'invoice' => SalesPaperScreen(kind: SalesPaperKind.invoice, id: id),
       'challan' => SalesPaperScreen(kind: SalesPaperKind.challan, id: id),
+      // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর (মালিক, ১৭ অক্টোবর ২০২৬)
+      _ when PaperKinds.all.containsKey(kind) => PaperScreen(paperKey: kind, id: id),
       _ => null,
     };
     if (list == null || screen == null) {

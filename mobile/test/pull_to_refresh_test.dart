@@ -61,6 +61,8 @@ void main() {
     'notice_board_screen.dart',
     // ⭐ বিক্রয় বিল আর চালান (১৩ অক্টোবর ২০২৬) — টান নিজের টেস্টে দেখা
     'sales_paper_screens.dart',
+    // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর (১৭ অক্টোবর ২০২৬) — টান test/papers_test.dart-এ দেখা
+    'paper_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
