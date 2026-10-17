@@ -172,4 +172,5 @@ return [
     'place_source_unknown' => 'Goods from this paper do not wait to be placed.',
     'free_short_beyond_spare' => 'The free goods of :product cannot go down by more than this - :spare is left beside what orders hold. Release the order first.',
     'too_many_labels' => 'At most :max labels in one print - choose fewer products or copies and print in parts.',
+    'phone_unknown_reference' => 'This could not be found any more - fetch the list again. It may belong to another branch, or it has changed meanwhile.',
 ];

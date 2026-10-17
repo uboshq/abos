@@ -255,7 +255,8 @@ class StockPlacementController extends Controller implements HasMiddleware
      *
      * @return array<string, array{document_no: ?string, source_type: string, source_id: int, lines: list<array<string, mixed>>}>
      */
-    private function waiting(): array
+    /** ⓘ খোলা — ফোনের মাল-বসানোর দরজাও ঠিক এই তালিকা পড়ে ([[StockPhoneController::placement()]]) */
+    public function waiting(): array
     {
         $rows = DB::table('inv_stock_movements as m')
             ->join('inv_products as p', 'p.id', '=', 'm.product_id')
@@ -577,6 +578,21 @@ class StockPlacementController extends Controller implements HasMiddleware
          * সারি লেখা হত এমন কাগজের নামে যার মাল কোনোদিন অপেক্ষায় ছিল না — ড্রিল-ডাউন মিথ্যা, আর সেই কাগজের
          * উল্টানোর হিসাবও ভুল। ⭐ বাকি পাহারা (এই কাগজ·লটের অপেক্ষার বেশি নয়, তালাসহ) [[StockService::place()]]-এ।
          */
+        $placed = $this->placeLines($data['lines']);
+
+        return back()->with('saved', __('inventory::message.placed', ['count' => $placed]));
+    }
+
+    /**
+     * সারিগুলো জায়গায় বসানো — ওয়েবের পর্দা আর ফোনের দরজা একই পথে ([[StockPhoneController::place()]])।
+     *
+     * @param  array<int|string, array<string, mixed>>  $lines  যাচাই-করা সারি ([[store()]]-এর আকার)
+     * @return int কয়টা সারি বসল
+     */
+    public function placeLines(array $lines): int
+    {
+        $data = ['lines' => $lines];
+
         foreach ($data['lines'] as $line) {
             foreach (array_filter([$line['source_type'] ?? null, $line['free_source_type'] ?? null]) as $source) {
                 if (! preg_match(self::PLACEABLE_SOURCES, (string) $source)) {
@@ -637,7 +653,7 @@ class StockPlacementController extends Controller implements HasMiddleware
             }
         });
 
-        return back()->with('saved', __('inventory::message.placed', ['count' => $placed]));
+        return $placed;
     }
 
     /** নাম ব্যবহারকারীর ভাষায় — বাংলা থাকলে বাংলা, না থাকলে ইংরেজি ([[StockReports]]-এর একই নিয়ম; মজুদ ছ১৮) */
