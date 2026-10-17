@@ -31,9 +31,16 @@ final class AChangeWasAppliedAgainAfterACompanySwitchTest extends TestCase
         $first = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
+        /*
+         * ⓘ একই লেখা, দুবার — ফোন উত্তর হারিয়ে হুবহু একই বদল আবার পাঠায়। ⚠️ আগে এখানে বসা সারির লেখা ছিল `'{}'`, আর পাঠানোটা অন্য:
+         * a6-এর "একই চাবি, অন্য লেখা = CONFLICT" নিয়মে (ফোন লাইন-ধরে নিরীক্ষা §৭, ১৫ অক্টোবর ২০২৬; [[AChangedResendIsNotTakenForTheFirstTest]])
+         * সেটা ঠিকই CONFLICT, তাই দাবিটা ভুল কারণে লাল হত (মেলানোর পরে, a4, ১৭ অক্টোবর ২০২৬)। প্রশ্নটা কোম্পানি বদল, লেখা বদল নয়।
+         */
+        $payload = json_encode(['customerId' => 'gone', 'lines' => [['productId' => 'gone', 'qty' => '1']]]);
+
         SyncChange::query()->withoutGlobalScopes()->create([
             'company_id' => $first->id, 'device_id' => 'switch-device-01', 'change_id' => 'change-0001', 'module' => 'sales',
-            'entity_type' => 'SalesOrder', 'entity_id' => 'order-local-1', 'operation' => 'CREATE', 'payload_json' => '{}',
+            'entity_type' => 'SalesOrder', 'entity_id' => 'order-local-1', 'operation' => 'CREATE', 'payload_json' => $payload,
             'status' => SyncChange::APPLIED, 'applied_entity_id' => 'order-server-1', 'user_id' => $owner->id, 'received_at' => now(),
         ]);
 
@@ -44,7 +51,7 @@ final class AChangeWasAppliedAgainAfterACompanySwitchTest extends TestCase
 
         $outcomes = app(SyncService::class)->push($owner, 'switch-device-01', 'sales', [[
             'changeId' => 'change-0001', 'entityType' => 'SalesOrder', 'operation' => 'CREATE', 'entityId' => 'order-local-1',
-            'payloadJson' => json_encode(['customerId' => 'gone', 'lines' => [['productId' => 'gone', 'qty' => '1']]]),
+            'payloadJson' => $payload,
         ]]);
 
         $this->assertSame(SyncChange::DUPLICATE, $outcomes[0]['status'] ?? null, '⛔ আগে বসা বদল কোম্পানি বদলের পরে আবার চলল');
