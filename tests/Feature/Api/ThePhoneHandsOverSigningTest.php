@@ -119,6 +119,8 @@ final class ThePhoneHandsOverSigningTest extends TestCase
             $flow = ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'sales', 'action' => $action, 'is_active' => true]);
             ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1,
                 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $signer->id]);
+            /* ⓘ ইঞ্জিন ছকগুলো মনে রাখে ($flowCache) — নতুন ছক দেখাতে নতুন ইঞ্জিন, লাইভে পরের অনুরোধের মতো */
+            $this->app->forgetInstance(ApprovalEngine::class);
 
             return app(ApprovalEngine::class)->request(\App\Models\Branch::query()->create(['code' => 'D'.uniqid(), 'name_en' => 'Paper '.$action]),
                 'sales', $action, '5000', null, 'test', $clerk->id);

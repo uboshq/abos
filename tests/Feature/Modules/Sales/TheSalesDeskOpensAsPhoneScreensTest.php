@@ -68,8 +68,9 @@ final class TheSalesDeskOpensAsPhoneScreensTest extends TestCase
 
     public function test_the_print_queue_lists_what_is_unprinted_and_a_hand_print_takes_it_off(): void
     {
+        // ⓘ একটা কাগজের এক মাপের একটাই কাজ (uq_sal_print_job_document) — তাই প্রতিটা আলাদা কাগজ
         $job = fn (string $no, string $status) => PrintJob::query()->create(['company_id' => $this->company->id,
-            'branch_id' => $this->company->defaultBranch()?->id, 'document_type' => 'invoice', 'document_id' => 1,
+            'branch_id' => $this->company->defaultBranch()?->id, 'document_type' => 'invoice', 'document_id' => (int) substr($no, -1),
             'document_no' => $no, 'paper' => 'a4', 'status' => $status, 'failure' => $status === PrintJob::FAILED ? 'কাগজ ফুরিয়েছে' : null]);
         $waiting = $job('INV-P-1', PrintJob::WAITING);
         $failed = $job('INV-P-2', PrintJob::FAILED);

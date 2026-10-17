@@ -63,6 +63,8 @@ final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
             $slugs = (new ReflectionClassConstant($controller, 'SLUGS'))->getValue();
 
             foreach ($slugs as $slug => $key) {
+                // ⓘ কাগজের রিপোর্ট চাবির সাথে অনুমতিও রাখে — ['key' => …, 'permission' => …]
+                $key = is_array($key) ? (string) $key['key'] : (string) $key;
                 $where = class_basename($controller).' · '.$slug.' ('.$key.')';
 
                 $this->app['auth']->forgetGuards();

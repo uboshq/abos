@@ -91,8 +91,10 @@ final class TheAccountLedgerOpensAsAPhoneScreenTest extends TestCase
         $this->assertSame('(Dr) 4,250.00', $all['1985']['balance']);
         $this->assertFalse($all['1985']['is_group']);
 
-        $found = $this->getJson('/api/v1/accounts/chart?q=ফোনের')->assertOk()->json('accounts');
-        $this->assertSame(['1985'], array_column($found, 'code'));
+        $found = $this->getJson('/api/v1/accounts/chart?'.http_build_query(['q' => 'ফোনের']))->assertOk()->json('accounts');
+        $this->assertSame(['1985'], array_column($found, 'code'), '⛔ বাংলা নামে খোঁজা খাত পায় না।');
+        $byCode = $this->getJson('/api/v1/accounts/chart?'.http_build_query(['q' => '1985']))->assertOk()->json('accounts');
+        $this->assertSame(['1985'], array_column($byCode, 'code'), '⛔ খাতের কোডে খোঁজা খাত পায় না।');
     }
 
     public function test_someone_without_the_chart_key_is_refused_both_doors(): void
