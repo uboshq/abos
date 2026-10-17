@@ -111,7 +111,7 @@ final class ThePhoneHandsOverSigningTest extends TestCase
         $clerk->companies()->attach($this->company->id, ['is_active' => true]);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $this->post($this->owner, ['to' => (string) $this->colleague->public_id, 'starts_on' => now()->toDateString(),
+        $this->grant($this->owner, ['to' => (string) $this->colleague->public_id, 'starts_on' => now()->toDateString(),
             'ends_on' => now()->addDays(3)->toDateString()])->assertCreated();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
@@ -138,9 +138,9 @@ final class ThePhoneHandsOverSigningTest extends TestCase
         $outsider = User::query()->create(['name' => 'Outsider', 'email' => 'deleg-outsider@elsewhere.test', 'password' => 'x']);
         $base = ['starts_on' => now()->toDateString(), 'ends_on' => now()->addDays(2)->toDateString()];
 
-        $this->post($this->owner, ['to' => (string) $outsider->public_id] + $base)->assertUnprocessable()->assertJsonValidationErrors('to');
-        $this->post($this->owner, ['to' => (string) $this->owner->public_id] + $base)->assertUnprocessable()->assertJsonValidationErrors('to');
-        $this->post($this->owner, ['to' => (string) $this->colleague->public_id, 'starts_on' => now()->subDay()->toDateString(),
+        $this->grant($this->owner, ['to' => (string) $outsider->public_id] + $base)->assertUnprocessable()->assertJsonValidationErrors('to');
+        $this->grant($this->owner, ['to' => (string) $this->owner->public_id] + $base)->assertUnprocessable()->assertJsonValidationErrors('to');
+        $this->grant($this->owner, ['to' => (string) $this->colleague->public_id, 'starts_on' => now()->subDay()->toDateString(),
             'ends_on' => now()->addDay()->toDateString()])->assertUnprocessable()->assertJsonValidationErrors('starts_on');
 
         $this->assertSame(0, ApprovalDelegation::query()->count(), '⛔ বাতিল অনুরোধেও ভার বসেছে।');
@@ -152,7 +152,7 @@ final class ThePhoneHandsOverSigningTest extends TestCase
     }
 
     /** @param  array<string, mixed>  $body */
-    private function post(User $user, array $body): TestResponse
+    private function grant(User $user, array $body): TestResponse
     {
         return $this->phone($user)->withHeader('Idempotency-Key', (string) Str::uuid())->postJson('/api/v1/approvals/delegations', $body);
     }
