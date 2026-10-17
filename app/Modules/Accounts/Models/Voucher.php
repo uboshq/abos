@@ -526,6 +526,15 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         return ['lines'];
     }
 
+    /**
+     * ⓘ "সংশোধনে ফেরত" কেবল হিসাবের নিজের সইয়ে — অন্য কাগজের সইয়ে বাঁধা ভাউচার (অর্থের কাগজ) লেখক ভাউচারের পাতা থেকে বদলাতেই
+     * পারেন না ([[VoucherService::assertNotSignedElsewhere()]]); ফেরত গেলে আটকে থাকত, সেখানে "না"-ই পথ (১৪ অক্টোবর ২০২৬)।
+     */
+    public function canBeSentBack(\App\Models\Approval $approval): bool
+    {
+        return $approval->module === \App\Modules\Accounts\Services\VoucherApproval::MODULE;
+    }
+
     public function isCancelled(): bool
     {
         return $this->status === DocumentStatus::CANCELLED;

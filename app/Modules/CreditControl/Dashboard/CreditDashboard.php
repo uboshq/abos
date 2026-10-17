@@ -82,7 +82,10 @@ final class CreditDashboard implements ProvidesDashboard
     {
         $credit = app(CreditExposure::class);
 
-        $customers = Customer::query()->inViewedBranch()->where('customers.is_active', true)->withOutstanding()->get()
+        // ⛔ নিষ্ক্রিয় হলেও জের থাকলে গোনা — তালিকার একই দরজা ([[CreditPositionReports::activeOrStillOwing()]])
+        $customers = Customer::query()->inViewedBranch()
+            ->tap(fn ($q) => CreditPositionReports::activeOrStillOwing($q, (int) \App\Core\Support\CompanyContext::id()))
+            ->withOutstanding()->get()
             ->keyBy(fn (Customer $c) => (int) $c->id)->all();
         $positions = $credit->positionsFor($customers);
 

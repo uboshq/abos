@@ -1,3 +1,4 @@
+import 'network_errors.dart';
 import 'once_key.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -94,6 +95,11 @@ class ApiClient {
           }
 
           final String? token = await _refreshAccessToken();
+          if (token == null && _lastRefreshWasTransient) {
+            // ⛔ নেট নেই, সার্ভার ব্যস্ত (৫xx, ৪২৯) — সেশন শেষ নয়; টোকেন থাকে, মানুষ বের হন না, অফলাইন তালিকাও মোছে না
+            // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। পরের ডাকে আবার নবায়ন।
+            return handler.next(error);
+          }
           if (token == null) {
             // Refresh token missing, expired or rejected — the session is over.
             await TokenStorage.instance.clear();
@@ -127,7 +133,15 @@ class ApiClient {
   /// শেষ নবায়নে যে refresh টোকেন পাঠানো হয়েছিল — ব্যর্থ হলে মিলিয়ে দেখার জন্য ([[_someoneElseRefreshed]])
   static String? _sentRefresh;
 
+  /// নবায়ন হারলে অন্য isolate-এর নতুন জোড়ার জন্য কতক্ষণ অপেক্ষা ([[_someoneElseRefreshed]])
+  @visibleForTesting
+  static Duration raceWait = const Duration(milliseconds: 1500);
+
+  /// শেষ নবায়ন ব্যর্থ হয়েছে নেট বা সার্ভারের সাময়িক কারণে (সার্ভার "না" বলেনি) — তখন সেশন শেষ ধরা হয় না
+  static bool _lastRefreshWasTransient = false;
+
   static Future<String?> _refreshAccessToken() async {
+    _lastRefreshWasTransient = false;
     final existing = _inFlightRefresh;
     if (existing != null) {
       try {
@@ -143,6 +157,11 @@ class ApiClient {
       return await started;
     } catch (error, stackTrace) {
       debugPrint('ABOS token refresh failed: $error');
+      final status = error is DioException ? error.response?.statusCode : null;
+      if (error is DioException && (isNetworkError(error) || (status != null && (status >= 500 || status == 429)))) {
+        _lastRefreshWasTransient = true;
+        return null;
+      }
       assert(() {
         debugPrintStack(stackTrace: stackTrace);
         return true;
@@ -161,7 +180,13 @@ class ApiClient {
   /// নিয়ে আবার চেষ্টা; একই থাকলে সত্যিই শেষ (null)।
   static Future<String?> _someoneElseRefreshed() async {
     final sent = _sentRefresh;
-    final stored = await TokenStorage.instance.refreshToken();
+    var stored = await TokenStorage.instance.refreshToken();
+    // ⛔ জেতা isolate দুইটা মান লেখে (access, তারপর refresh) — হারা পক্ষ ঠিক তার আগের মুহূর্তে পড়লে পুরনোটা দেখে মানুষকে বের
+    // করে দিত, এমনকি জেতা জোড়াটাও মুছত। একটু অপেক্ষা করে আবার পড়া (ফোন লাইন-ধরে নিরীক্ষা §৭, ১৫ অক্টোবর ২০২৬)।
+    if (sent != null && (stored == null || stored.isEmpty || stored == sent)) {
+      await Future<void>.delayed(raceWait);
+      stored = await TokenStorage.instance.refreshToken();
+    }
     if (sent == null || stored == null || stored.isEmpty || stored == sent) return null;
     final access = await TokenStorage.instance.reloadAccessToken();
     return (access == null || access.isEmpty) ? null : access;

@@ -20,4 +20,6 @@ return [
     'notify_failed_body' => 'Reason: :reason — until this is put right, every day of work is going unbacked.',
     'notify_failed_no_reason' => 'no reason was recorded',
     'failed_detail_hidden' => 'the backup was not made — only a super admin sees the details',
+    // Verification failed: 14 Oct 2026
+    'verification_failed' => 'The backup was taken but could not be restored in the check. Nothing can be restored from this copy. Take it again and look at the reason.',
 ];

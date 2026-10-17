@@ -41,9 +41,6 @@ use Throwable;
  */
 final class ScheduledReportRunner
 {
-    /** এক ফাইলে সর্বোচ্চ সারি — এখন এক পাতায় টানা হয়। */
-    private const MAX_ROWS = 100000;
-
     public function __construct(
         private readonly ReportEngine $reports,
         private readonly ScheduleService $schedules,
@@ -113,7 +110,8 @@ final class ScheduledReportRunner
          */
         $allowed = CompanyContext::forCompany(
             (int) $schedule->company_id,
-            fn (): bool => $definition->allows($owner->fresh()),
+            // ⓘ ফাইলের চাবিসহ (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১০, ১৪ অক্টোবর ২০২৬)
+            fn (): bool => $definition->allowsFile($owner->fresh()),
         );
 
         if (! $allowed) {
@@ -159,6 +157,7 @@ final class ScheduledReportRunner
             fn (): Collection => $recipients
                 ->filter(fn (User $user): bool => app(DealerScope::class)->walled($user->fresh())
                     || self::hasBranchLimit($user->fresh(), (int) $schedule->company_id)
+                    || self::hasWarehouseLimit($user->fresh())
                     || self::readsPerPerson((string) $schedule->report_key))
                 ->values(),
         );
@@ -175,6 +174,14 @@ final class ScheduledReportRunner
                 $this->notifyReady($schedule, $own, $person, collect());
             } catch (AuthorizationException) {
                 // ⓘ রিপোর্টটা ডিলারের দেয়াল বসায় না — তাঁর জন্য কোনো ফাইলই নয়, ফাঁস নয়
+            } catch (Throwable $e) {
+                /*
+                 * ⛔ একজনের ব্যর্থতা বাকিদের থামায় না (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৭, ১৪ অক্টোবর ২০২৬)। ⓘ আগে সূচির শাখা তাঁর নাগালের
+                 * বাইরে হলে (ValidationException) বা অন্য কোনো ভুলে লুপটাই ভাঙত: পরের প্রাপকেরা ফাইল পেতেন না, আর ভাগের রানের "ok"
+                 * মুছে সূচি "error" লিখত। এখন লগে যায়, আর ব্যর্থতাটা কেবল তাঁর নামে একটা ফাইলহীন "error" রান — সূচির অবস্থা ভাগের রানেরই।
+                 */
+                report($e);
+                CompanyContext::forCompany((int) $schedule->company_id, fn () => $this->store($schedule, null, 0, [(int) $person->id]));
             }
         }
 
@@ -221,12 +228,24 @@ final class ScheduledReportRunner
         return $every === [] || array_diff($every, $allowed) !== [];
     }
 
+    /**
+     * ⛔ গুদামে সীমিত প্রাপকও দেয়ালের ভিতরে (ec, রিপোর্ট লাইন-নিরীক্ষা ⛔২, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ভাগের ফাইল মালিকের চোখে বানানো, আর মালিকের গুদামের সীমা নেই — তাই এক গুদামের ভাণ্ডারী রোজ সব গুদামের লট, চলাচল
+     * আর মূল্য পেতেন, যা পর্দা তাঁকে দেয় না। এখন তিনিও নিজের পরিচয়ে নিজের ফাইল পান; রিপোর্ট-ইঞ্জিনের একই প্রশ্ন
+     * ([[ReportEngine::normaliseFilters()]]-এর `warehouse_ids`) — সীমা থাকলেই সীমিত।
+     */
+    private static function hasWarehouseLimit(User $user): bool
+    {
+        return app(DataScope::class)->idsFor($user, UserDataScope::WAREHOUSE) !== null;
+    }
+
     private function recipientsWhoMaySee(ReportSchedule $schedule, ReportDefinition $definition): Collection
     {
         return CompanyContext::forCompany(
             (int) $schedule->company_id,
             fn (): Collection => $schedule->recipientUsers()
-                ->filter(fn (User $user): bool => $user->is_active !== false && $definition->allows($user->fresh()))
+                ->filter(fn (User $user): bool => $user->is_active !== false && $definition->allowsFile($user->fresh()))
                 ->values(),
         );
     }
@@ -239,13 +258,34 @@ final class ScheduledReportRunner
     private function generate(ReportSchedule $schedule, User $owner, Collection $recipients): ReportRun
     {
         $previous = Auth::user();
-        Auth::login($owner);
+        /*
+         * ⛔ পরিচয় কেবল বসানো, লগইন নয় (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৯, ১৪ অক্টোবর ২০২৬)। ⓘ আগে `Auth::login()`/`logout()` —
+         * আর logout মালিকের (আর প্রতিটা দেয়ালের প্রাপকের) remember_token বদলে দিত: প্রতিদিন সকালের রানের পর "মনে রাখুন"
+         * দিয়ে খোলা ব্রাউজার আবার লগইন চাইত। `setUser()` সেশন বা টোকেন ছোঁয় না, লগইনের ঘটনাও ছোড়ে না।
+         */
+        /*
+         * ⛔ ফাইল হেডারের শেষ বাছা শাখায় নয়, গোটা নাগালে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৮, ১৪ অক্টোবর ২০২৬)। ⓘ দেখার শাখা পড়ে
+         * `view_all_branches` থেকে ([[DataScope::viewsOneBranch()]]) — মালিক কাল সন্ধ্যায় হেডারে নেত্রকোনা বেছে বাড়ি গেলে সকালের
+         * "গোটা কোম্পানি" ফাইলে কেবল একটা শাখা, প্রধান অফিসের সারিও নয়, আর কোথাও লেখা নেই। এখন একটা নকলে "সব শাখা" — কেবল
+         * স্মৃতিতে, সংরক্ষণ নয়; শাখায় সীমিত মানুষের নিজের ফাইল তবু তাঁর নাগালেই (`branch_ids`)।
+         */
+        $viewer = clone $owner;
+        $viewer->view_all_branches = true;
+        Auth::setUser($viewer);
 
         try {
             return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
                 CompanyContext::set($schedule->company_id, $this->ownerBranch($owner, $schedule->company_id));
 
-                $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, self::MAX_ROWS);
+                $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, ReportEngine::wholeDocumentRows());
+
+                /*
+                 * ⛔ ছাদের বেশি সারি — ফাইল নয়, অবস্থায় স্পষ্ট লেখা (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১৩, ১৪ অক্টোবর ২০২৬)। ⓘ আগে ফাইল চুপচাপ
+                 * এক লাখে কাটা হত, অথচ নিচের মোট গোটা ফলের — দুইটা মিলত না, আর কেউ জানত না। ফোনের রপ্তানিও এখানে ফেরায় (৪২২)।
+                 */
+                if ($result->totalRows > ReportEngine::wholeDocumentRows()) {
+                    return $this->store($schedule, null, 0, [(int) $owner->id], 'too_many_rows');
+                }
 
                 $export = new ListExport;
                 $columns = $this->mutuallyVisibleColumns($result, $owner, $recipients);
@@ -272,10 +312,10 @@ final class ScheduledReportRunner
             });
         } finally {
             // ⚠️ পরের সূচি যেন এঁর পরিচয়ে না চলে
-            Auth::logout();
-
             if ($previous !== null) {
-                Auth::login($previous);
+                Auth::setUser($previous);
+            } else {
+                Auth::forgetUser();
             }
 
             CompanyContext::clear();
@@ -307,9 +347,9 @@ final class ScheduledReportRunner
     /**
      * @param  list<int>  $recipients  কারা নামাতে পারবেন — রেন্ডারের ছবি
      */
-    private function store(ReportSchedule $schedule, ?string $bytes, int $rowCount, array $recipients): ReportRun
+    private function store(ReportSchedule $schedule, ?string $bytes, int $rowCount, array $recipients, ?string $status = null): ReportRun
     {
-        $status = $bytes === null ? 'error' : ($rowCount === 0 ? 'empty' : 'ok');
+        $status ??= $bytes === null ? 'error' : ($rowCount === 0 ? 'empty' : 'ok');
 
         $run = ReportRun::create([
             'company_id' => $schedule->company_id,

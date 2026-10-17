@@ -89,6 +89,9 @@ class SyncEngine {
     if (_queue == null) {
       try {
         _queue = await HiveEncryptionKey.openBox<Map>(_queueBoxName);
+      } on HiveKeyUnavailable catch (error) {
+        // ⛔ চাবি পড়া যায়নি — বাক্স ভাঙা নয়, তাই মোছা নয়; এই চালানে সিঙ্ক বন্ধ, পরের চালানে আবার (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        debugPrint('ABOS sync: queue key unavailable ($error) — queue kept, sync off this run');
       } catch (error) {
         debugPrint('ABOS sync: queue box failed to open ($error) — resetting it');
         try {
@@ -411,7 +414,11 @@ class SyncEngine {
         ],
       );
     } catch (error) {
-      if (isNetworkError(error)) throw const NoNetworkForThis();
+      if (isNetworkError(error)) {
+        throw NoNetworkForThis(
+            mayHaveLanded: error is DioException &&
+                (error.type == DioExceptionType.receiveTimeout || error.type == DioExceptionType.sendTimeout));
+      }
       rethrow;
     }
 
@@ -528,7 +535,9 @@ class SyncEngine {
               return row != null &&
                   row['module'] == module &&
                   _isMine(row) &&
-                  row['status'] != _statusRejected;
+                  row['status'] != _statusRejected &&
+                  // ⛔ নতুন করে লেখা অর্ডারের পুরনোটাও নয় — আগে আবার যেত, আর দোকানে দুটো অর্ডার (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+                  row['status'] != _statusResolved;
             })
             .take(AppConfig.syncBatchSize)
             .toList(growable: false);
@@ -583,6 +592,17 @@ class SyncEngine {
           } else if (outcome != null) {
             // APPLIED or DUPLICATE — genuinely done.
             toDelete.add(key);
+          } else {
+            // ⛔ সার্ভার এই বদলের কোনো উত্তর দেয়নি (তার দিকে ভাঙন) — আবার চেষ্টা চলে, কিন্তু চেষ্টাটা গোনা হয়; আগে চিরকাল
+            // "অপেক্ষায়" থাকত, কোনো কারণ ছাড়া, আর কোম্পানি বদলও আটকে রাখত (ফোন লাইন-ধরে নিরীক্ষা §৭, ১৫ অক্টোবর ২০২৬)।
+            final attempts = ((row['attempts'] as int?) ?? 0) + 1;
+            await _box.put(key, <String, dynamic>{
+              ...row.cast<String, dynamic>(),
+              'attempts': attempts,
+              if (attempts >= AppConfig.syncMaxAttempts) 'status': _statusRejected,
+              if (attempts >= AppConfig.syncMaxAttempts)
+                'reason': 'সার্ভার এই বদলের উত্তর দেয়নি ($attempts বার) — তালিকা দেখে নিজে থেকে আবার লিখুন।',
+            });
           }
           // No outcome for this changeId at all (should not happen, but a
           // response is not something to trust blindly) — left exactly as it
@@ -611,9 +631,15 @@ class SyncEngine {
     debugPrint('ABOS sync: $module push failed ($error) — kept in queue');
     _lastFailureByModule[module] = SyncAttemptFailure.from(error);
 
+    // ⛔ নেট না থাকা চেষ্টা নয় — আগে ১০ মিনিটের টাইমার আর অ্যাপ খোলায় সংকেতহীন ফোনের অর্ডার পাঁচবারেই চিরকালের জন্য "ফেরত" হত,
+    // সার্ভার কখনো না দেখা সত্ত্বেও (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। গোনা কেবল সার্ভার কিছু বললে।
+    if (isNetworkError(error)) return;
+
     for (final key in _box.keys.toList(growable: false)) {
       final row = _box.get(key);
       if (row == null || row['module'] != module || !_isMine(row)) continue;
+      // ⓘ শেষ হওয়া সারি (ফেরত, সমাধান) আর গোনা হয় না — সার্ভারের আসল কারণ মুছে দিত
+      if (row['status'] == _statusRejected || row['status'] == _statusResolved) continue;
 
       final attempts = ((row['attempts'] as int?) ?? 0) + 1;
       if (attempts >= AppConfig.syncMaxAttempts) {
@@ -661,8 +687,13 @@ class PushOutcome {
 }
 
 /// নেট নেই — যে কাজ কেবল নেট থাকলে হয় ([[SyncEngine.pushNow]]), তার জন্য।
+///
+/// <p>⛔ [mayHaveLanded]: পাঠানো শেষ, উত্তর আসেনি (সময় পেরিয়েছে) — সার্ভারে হয়তো বসে গেছে। আগে পর্দা বলত "ফোনে কিছু জমা
+/// থাকেনি", মানুষ নতুন করে লিখত, আর নতুন চাবিতে একই আদায় দুবার বসত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
 class NoNetworkForThis implements Exception {
-  const NoNetworkForThis();
+  const NoNetworkForThis({this.mayHaveLanded = false});
+
+  final bool mayHaveLanded;
 }
 
 String? reasonIfRejected(Map<String, dynamic>? outcome) {

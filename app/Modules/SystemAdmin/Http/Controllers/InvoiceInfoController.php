@@ -139,6 +139,16 @@ class InvoiceInfoController extends Controller implements HasMiddleware
         $errors = [];
 
         foreach ($definitions as $key => $definition) {
+            /*
+             * ⛔ প্রতিটা ঘর একটা লেখা, তালিকা নয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬। ⓘ হাতে বানানো `settings[key][]=x`
+             * নিচের `(string)`-এ "Array to string conversion" হয়ে ৫০০ দিত; এখন ঘরের নাম ধরে সাধারণ ভুলের লেখা।
+             */
+            if (isset($sent[$key]) && ! is_scalar($sent[$key])) {
+                $errors["settings.{$key}"] = __('validation.string', ['attribute' => $this->label($definition)]);
+
+                continue;
+            }
+
             if ($definition['type'] === 'string' && mb_strlen(trim((string) ($sent[$key] ?? ''))) > self::MAX_TEXT) {
                 $errors["settings.{$key}"] = __('validation.max.string', [
                     'attribute' => $this->label($definition),

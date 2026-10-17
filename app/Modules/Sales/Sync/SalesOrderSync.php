@@ -196,6 +196,12 @@ final class SalesOrderSync implements SyncsToDevices
             throw new SyncRejection(__('sales::sync.unknown_customer'));
         }
 
+        // ⛔ নিষ্ক্রিয় গ্রাহকের নতুন অর্ডার নয় — ফোনের অফলাইন সারিতে আগে লেখা অর্ডারও (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+        // [[ThePhoneTookAnOrderForAClosedShopTest]])। ⓘ ফোন `isActive` পায়, কিন্তু বন্ধ করার আগেই লেখা অর্ডার পরে পৌঁছায়
+        if (! $customer->is_active) {
+            throw new SyncRejection(__('sales::sync.customer_inactive'));
+        }
+
         $lines = [];
         $trxDate = (string) ($payload['trxDate'] ?? '') !== '' ? (string) $payload['trxDate'] : now()->toDateString();
 

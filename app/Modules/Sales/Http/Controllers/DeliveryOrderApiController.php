@@ -76,6 +76,8 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
     public function store(Request $request): JsonResponse
     {
         $data = $this->validated($request);
+        // ⛔ বানানো আর জমা এক লেনদেনে — জমা ফিরলে খসড়াও থাকে না (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬; [[ARefusedSubmitLeavesNoDraftTest]])
+        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $data) {
         $order = $this->orders->create([
             'customer_id' => $this->customer($data['customer'])->id,
             'sales_order_id' => isset($data['sales_order']) ? $this->salesOrderId($data['sales_order']) : null,
@@ -86,6 +88,9 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
         if ($request->boolean('submit')) {
             $order = $this->orders->submit($order, $request->user());
         }
+
+        return $order;
+        });
 
         return response()->json($this->facts($order->fresh(), true), 201);
     }

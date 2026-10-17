@@ -157,14 +157,19 @@
                                              এই লাইনটা ছাড়া হিসাব ট্যাব সংরক্ষণ করলেই অন্য ছয়
                                              মডিউলের ৩৪টা সেটিং নীরবে বন্ধ হয়ে যেত — ৩০ আগস্ট
                                              ব্রাউজারে সত্যিই একবার হয়েছিল। --}}
-                                        <input type="hidden" name="scope[]" value="{{ $setting['key'] }}">
+                                        {{-- ⛔ বন্ধ (disabled) চেকবক্স ব্রাউজার পাঠায় না, তাই "অনুপস্থিত = বন্ধ" নিয়মে সার্ভার ভাবত বন্ধ করতে চাওয়া
+                                             হয়েছে — মালিক নন এমন প্রশাসক প্রতিবার সংরক্ষণে "কেবল সুপার অ্যাডমিন বদলাতে পারেন, তাই বদলানো হয়নি"
+                                             পেতেন, অথচ ঘরটা ছোঁয়াই হয়নি। ⓘ তাই বন্ধ ঘরটা এই পাঠানো বহন করে না (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। --}}
+                                        @php($locked = $setting['type'] === 'boolean' && ! $settingsGate->mayChange($setting['key'], auth()->user()))
+                                        @unless ($locked)
+                                            <input type="hidden" name="scope[]" value="{{ $setting['key'] }}">
+                                        @endunless
 
                                         @if ($setting['type'] === 'boolean')
                                             <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
                                                 {{-- ⛔ কেবল সুপার অ্যাডমিনের সুইচ — ২৬ সেপ্টেম্বর ২০২৬।
                                                      ⓘ আসল পাহারা সার্ভারে ([[SettingsService::mayChange()]]);
                                                      এখানে কেবল দেখানো, যাতে কেউ টিপে ভাবেন না বদলেছে। --}}
-                                                @php($locked = ! $settingsGate->mayChange($setting['key'], auth()->user()))
                                                 <input type="checkbox" name="settings[{{ $setting['key'] }}]"
                                                        value="1" @checked($setting['value']) @disabled($locked)
                                                        data-was="{{ $setting['value'] ? '1' : '' }}"

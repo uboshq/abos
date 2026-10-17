@@ -458,8 +458,12 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
         _error = outcome.refusal ?? 'ভাউচারটা বসেনি। আবার চেষ্টা করুন।';
         _changeId = null;
       });
-    } on NoNetworkForThis {
-      if (mounted) setState(() => _error = 'ভাউচার লিখতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
+    } on NoNetworkForThis catch (e) {
+      if (mounted) {
+        setState(() => _error = e.mayHaveLanded
+            ? 'ভাউচারের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।'
+            : 'ভাউচার লিখতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
+      }
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'পাঠানো গেল না। আবার চেষ্টা করুন।'));
     } finally {

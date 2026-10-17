@@ -60,17 +60,47 @@
         $n = count($panel->points);
         $x = fn (int $i) => $n === 1 ? $w / 2 : $left + $i * ($w - $left - $right) / ($n - 1);
         $y = fn ($v) => $top + ($h - $top - $bottom) * (1 - (float) $v / $peak);
-        $line = fn (string $side) => implode(' ', array_map(fn ($i) => round($x($i), 1).','.round($y($panel->points[$i][$side]), 1), range(0, $n - 1)));
+        $line = fn (string $side, array $run) => implode(' ', array_map(fn ($i) => round($x($i), 1).','.round($y($panel->points[$i][$side]), 1), $run));
+        /*
+         * ⛔ `null` মান = ঐ দিনের হিসাব নেই — শূন্য নয়, তাই দাগ ওখানে ভাঙে, মাটিতে নামে না (ec, Executive লাইন-নিরীক্ষা,
+         * ১৪ অক্টোবর ২০২৬: মালিকের ইতিহাসে রাতের হিসাব না থাকা দিন ৳০ আঁকা হতো)। ⓘ বাকি সব চার্টে মান সবসময় লেখা, তাই একটাই দৌড়।
+         */
+        $runs = function (string $side) use ($panel): array {
+            $out = [];
+            $run = [];
+            foreach ($panel->points as $i => $point) {
+                if ($point[$side] !== null) {
+                    $run[] = $i;
+
+                    continue;
+                }
+
+                if ($run !== []) {
+                    $out[] = $run;
+                }
+
+                $run = [];
+            }
+
+            if ($run !== []) {
+                $out[] = $run;
+            }
+
+            return $out;
+        };
     @endphp
     <svg viewBox="0 0 {{ $w }} {{ $h }}" class="block w-full px-2 pt-2" role="img" aria-label="{{ $panel->label }}">
         <line x1="{{ $left }}" x2="{{ $w - $right }}" y1="{{ $h - $bottom }}" y2="{{ $h - $bottom }}" style="stroke: var(--color-border)" stroke-width="1" />
         @foreach ([['second', $palette[1], $panel->secondLabel, 13], ['first', $palette[0], $panel->firstLabel, -7]] as [$side, $stroke, $name, $dy])
-            @if ($kind === 'area')
-                <polygon points="{{ round($x(0), 1) }},{{ $h - $bottom }} {{ $line($side) }} {{ round($x($n - 1), 1) }},{{ $h - $bottom }}"
-                         style="fill: {{ $stroke }}; fill-opacity: 0.14" />
-            @endif
-            <polyline points="{{ $line($side) }}" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="stroke: {{ $stroke }}" />
+            @foreach ($runs($side) as $run)
+                @if ($kind === 'area')
+                    <polygon points="{{ round($x($run[0]), 1) }},{{ $h - $bottom }} {{ $line($side, $run) }} {{ round($x($run[count($run) - 1]), 1) }},{{ $h - $bottom }}"
+                             style="fill: {{ $stroke }}; fill-opacity: 0.14" />
+                @endif
+                <polyline points="{{ $line($side, $run) }}" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" style="stroke: {{ $stroke }}" />
+            @endforeach
             @foreach ($panel->points as $i => $point)
+                @continue($point[$side] === null)
                 <circle cx="{{ round($x($i), 1) }}" cy="{{ round($y($point[$side]), 1) }}" r="3" stroke-width="1.5"
                         style="fill: {{ $stroke }}; stroke: var(--color-surface-card)">
                     <title>{{ $point['label'] }} · {{ $name }}: {{ $point[$side.'Title'] ?? $point[$side] }}</title>

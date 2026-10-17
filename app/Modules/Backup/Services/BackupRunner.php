@@ -178,7 +178,7 @@ final class BackupRunner
          * "শেষ কবে সত্যিকারের restore পরীক্ষা হয়েছিল" প্রশ্নের উত্তর
          * কারও কাছে ছিল না। এখন থাকে।
          */
-        $this->recordVerification($run, $file);
+        $verified = $this->recordVerification($run, $file);
 
         [$ok, $failed] = $this->copyEverywhere($file);
 
@@ -206,17 +206,12 @@ final class BackupRunner
              * `local_only` তাই ব্যর্থতা নয়, একটা **সতর্কতা**: কপিটা
              * আছে, কিন্তু ওই মেশিনেই — ৩-২-১-এর একটা শর্তও পূরণ হয়নি।
              */
-            'status' => match (true) {
-                $failed === [] && $ok !== [] => 'success',
-                /*
-                 * ⛔ কোনো গন্তব্যেই যায়নি অথচ গন্তব্য ছিল — এটাও `partial`, `local_only` নয়
-                 * (১ অক্টোবর ২০২৬)। ⓘ `local_only` মানে "গন্তব্যই বসানো নেই", একটা স্থায়ী
-                 * সতর্কতা; আর একমাত্র গন্তব্যটা রোজ ব্যর্থ হলে আগে কাউকে কিছু বলা হত না।
-                 */
-                $failed !== [] => 'partial',
-                default => 'local_only',
-            },
+            'status' => $this->statusFor($verified, $ok, $failed),
         ]);
+
+        if (! $verified) {
+            $this->tellSomeone($run->fresh(), __('backup::message.verification_failed'));
+        }
 
         return $run->fresh();
     }
@@ -423,6 +418,32 @@ final class BackupRunner
     }
 
     /**
+     * রানের শেষ অবস্থা — যাচাই আর গন্তব্য দেখে (উপরের চার অবস্থার ব্যাখ্যা [[runNow()]]-এ)।
+     *
+     * @param  list<mixed>  $ok
+     * @param  list<mixed>  $failed
+     */
+    private function statusFor(bool $verified, array $ok, array $failed): string
+    {
+        return match (true) {
+            /*
+             * ⛔ ফেরত আনা যায় না এমন ডাম্প "সফল" নয় — ব্যাকআপ লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ আগে যাচাইয়ের ব্যর্থতা
+             * কেবল নিজের সারিতে লেখা হত, রান বলত `success` বা `local_only`, পর্দা বলত "নেওয়া হয়েছে", আর কাউকে জানানো হত না —
+             * ঠিক সেই নীরব ব্যর্থতা যার বিরুদ্ধে এই ক্লাস লেখা। দিনশেষে এমন কপি বিপদের দিনে ফাঁকা।
+             */
+            ! $verified => 'failed',
+            $failed === [] && $ok !== [] => 'success',
+            /*
+             * ⛔ কোনো গন্তব্যেই যায়নি অথচ গন্তব্য ছিল — এটাও `partial`, `local_only` নয়
+             * (১ অক্টোবর ২০২৬)। ⓘ `local_only` মানে "গন্তব্যই বসানো নেই", একটা স্থায়ী
+             * সতর্কতা; আর একমাত্র গন্তব্যটা রোজ ব্যর্থ হলে আগে কাউকে কিছু বলা হত না।
+             */
+            $failed !== [] => 'partial',
+            default => 'local_only',
+        };
+    }
+
+    /**
      * যাচাইয়ের ফল লিখে রাখা।
      *
      * ⚠️ **"সফল" লেখা একটা সারি প্রমাণ নয়; সংখ্যাটাই প্রমাণ।**
@@ -433,21 +454,25 @@ final class BackupRunner
      * সংখ্যাটাও লেখা হয়, আর [[BackupVerification::sawSomething()]]
      * সেটাই দেখে — কাঁচা `status` নয়।
      */
-    private function recordVerification(BackupRun $run, string $file): void
+    private function recordVerification(BackupRun $run, string $file): bool
     {
         $started = microtime(true);
 
         try {
             $result = $this->backups->verify($file);
 
+            $passed = ($result['tables'] ?? 0) > 0;
+
             BackupVerification::create([
                 'run_id' => $run->id,
                 'kind' => 'test_restore',
-                'status' => ($result['tables'] ?? 0) > 0 ? 'passed' : 'failed',
+                'status' => $passed ? 'passed' : 'failed',
                 'detail' => $result,
                 'duration_ms' => (int) ((microtime(true) - $started) * 1000),
                 'verified_at' => Carbon::now(),
             ]);
+
+            return $passed;
         } catch (Throwable $e) {
             BackupVerification::create([
                 'run_id' => $run->id,
@@ -457,6 +482,8 @@ final class BackupRunner
                 'duration_ms' => (int) ((microtime(true) - $started) * 1000),
                 'verified_at' => Carbon::now(),
             ]);
+
+            return false;
         }
     }
 }

@@ -182,6 +182,55 @@ void main() {
     expect(find.textContaining('ইতিমধ্যে নিষ্পত্তি'), findsOneWidget);
   });
 
+  testWidgets('an amount changed since the card loaded is not signed: the list reloads and says why (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    var loads = 0;
+    await tester.pumpWidget(screen(
+      load: () async {
+        loads++;
+        return const ApprovalPage(rows: [ApprovalRecord(row)]);
+      },
+      approve: (_, __) async {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/approvals/x/approve'),
+          response: Response(requestOptions: RequestOptions(path: '/approvals/x/approve'), statusCode: 412),
+        );
+      },
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'অনুমোদন'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('৳125,000', findRichText: true), findsWidgets, reason: 'সইয়ের প্রশ্নে অঙ্ক নেই');
+    await tester.tap(inDialog('অনুমোদন'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('অঙ্ক বদলেছে'), findsOneWidget, reason: '⛔ বদলানো অঙ্কের ফেরত "নিষ্পত্তি" বা কিছুই না বলে চুপ');
+    expect(loads, 2, reason: '⛔ তালিকা আবার আনা হলো না — পুরনো অঙ্কের কার্ড রয়ে গেল');
+    expect(find.text('PB-2609-0007'), findsOneWidget);
+  });
+
+  testWidgets('a discount request says the figure is the discount, not the bill (phone line audit, 15 Oct 2026)', (tester) async {
+    await tester.pumpWidget(screen(load: () async => ApprovalPage(rows: [ApprovalRecord(<String, dynamic>{...row, 'documentType': 'SalesInvoice', 'action': 'discount', 'amount': '500.0000'})])));
+    await tester.pumpAndSettle();
+    expect(find.text('ছাড় ৳500'), findsOneWidget, reason: '⛔ ছাড়ের অঙ্ক বিলের মোটের মতো দেখাল');
+  });
+
+  testWidgets('a long inbox loads its next page on request (phone line audit, 15 Oct 2026)', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: ApprovalInboxScreen(
+      loadPending: () async => const ApprovalPage(rows: [ApprovalRecord(row)], nextCursor: 'c2'),
+      loadMore: (cursor) async => ApprovalPage(rows: [ApprovalRecord(<String, dynamic>{...row, 'id': 'second-page', 'documentNo': 'PB-2609-0099'})]),
+      approve: (_, __) async {},
+      reject: (_, __) async {},
+    )));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('approvals-more')), 200);
+    await tester.tap(find.byKey(const ValueKey('approvals-more')));
+    await tester.pumpAndSettle();
+    expect(find.text('PB-2609-0099', skipOffstage: false), findsOneWidget, reason: '⛔ ৫০টার পরের কাগজ ফোনে কোনোদিন আসে না');
+    expect(find.byKey(const ValueKey('approvals-more')), findsNothing, reason: 'শেষ পাতার পরে আর বোতাম নয়');
+  });
+
   group('salary never reaches a phone', () {
     test('a payroll row is recognised so it can be dropped', () {
       expect(

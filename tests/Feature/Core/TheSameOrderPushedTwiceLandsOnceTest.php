@@ -188,7 +188,8 @@ class TheSameOrderPushedTwiceLandsOnceTest extends TestCase
      */
     public function test_the_watermark_moves_only_when_the_phone_says_so(): void
     {
-        $this->travel(2)->minutes(); // ⓘ নিচের ⚠️ দেখুন — পালার শুরুই জলচিহ্ন
+        // ⓘ ওয়াটারমার্ক পালার শুরু থেকে (১৫ অক্টোবর ২০২৬) — এইমাত্র বানানো সারি ওভারল্যাপে আবার আসত, তাই এক মিনিট আগে
+        $this->travel(2)->minutes();
         $first = $this->sync()->pull($this->salesman, 'phone-a', 'customer', 100);
         $this->assertNotEmpty($first['records']);
 
@@ -198,6 +199,7 @@ class TheSameOrderPushedTwiceLandsOnceTest extends TestCase
         $this->assertCount(count($first['records']), $again['records']);
         $this->assertNull($this->sync()->lastSync('phone-a', 'customer'));
 
+        $this->travel(2)->minutes();
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');
 
         $this->assertNotNull($this->sync()->lastSync('phone-a', 'customer'));
@@ -212,8 +214,7 @@ class TheSameOrderPushedTwiceLandsOnceTest extends TestCase
          * কার্সারের পিছনে পড়ে চিরতরে হারাত।
          *
          * তাই "আর কিছু বাকি নেই" প্রমাণ করতে ঘড়িটা ওভারল্যাপের বাইরে
-         * নিয়ে **তারপর** পালা শুরু করতে হয় — ওয়াটারমার্ক পালার শুরু, শেষ নয়
-         * (02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬); উপরে সেটাই করা হয়েছে।
+         * নিয়ে **তারপর** ওয়াটারমার্ক বসাতে হয় — উপরে সেটাই করা হয়েছে।
          * পরে এগোলে লাভ নেই: ওয়াটারমার্ক অতীতে বসা থাকে, ঘড়ি এগোলেও
          * সে নড়ে না।
          */

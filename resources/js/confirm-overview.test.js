@@ -11,6 +11,7 @@ import { guardConfirmOverview } from './confirm-overview.js'
 let root
 let calls
 let html
+let status
 
 function page () {
     root = document.createElement('div')
@@ -22,7 +23,7 @@ function page () {
             <button type="submit" data-overview-trigger>নিশ্চিত করুন</button>
             <button type="submit" data-draft-direct>খসড়া রাখুন</button>
         </form>
-        <dialog data-confirm-overview-dialog data-loading="…" data-failed="ব্যর্থ">
+        <dialog data-confirm-overview-dialog data-loading="…" data-failed="ব্যর্থ" data-refused="নিষেধ">
             <div data-confirm-overview-body></div>
             <button type="button" data-overview-confirm>নিশ্চিত</button>
             <button type="button" data-overview-draft>খসড়া</button>
@@ -32,7 +33,7 @@ function page () {
     calls = []
     guardConfirmOverview(root, async (url, init) => {
         calls.push({ url, init })
-        return { text: async () => html }
+        return { ok: status >= 200 && status < 300, status, text: async () => html }
     })
     const form = root.querySelector('form')
     form.submitted = []
@@ -51,7 +52,8 @@ const tick = () => new Promise(r => setTimeout(r, 0))
 
 beforeEach(() => {
     document.body.innerHTML = ''
-    html = '<div data-overview-blocks="0"><h2>বিক্রির সারাংশ</h2><div>নিট বিল: ৳ 1,000.00</div></div>'
+    status = 200
+    html ='<div data-overview-blocks="0"><h2>বিক্রির সারাংশ</h2><div>নিট বিল: ৳ 1,000.00</div></div>'
 })
 
 describe('নিশ্চিতের আগে সারাংশ', () => {
@@ -118,6 +120,23 @@ describe('নিশ্চিতের আগে সারাংশ', () => {
         await tick()
 
         expect(root.querySelector('[data-overview-confirm]').disabled).toBe(true)
+    })
+
+    /* ⛔ ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬: ৪০৩-এর পুরো পাতা পপ-আপে বসত, আর "নিশ্চিত" খোলা থাকত */
+    it('⛔ সার্ভার ৪০৩/৪২২ দিলে পাতাটা পপ-আপে বসে না — ছোট কথা, আর "নিশ্চিত" বন্ধ', async () => {
+        for (const code of [403, 422]) {
+            status = code
+            html = '<html><body><h1>Forbidden</h1><form><button>Log in</button></form></body></html>'
+            document.body.innerHTML = ''
+            const form = page()
+            submitWith(form, form.querySelector('[data-overview-trigger]'))
+            await tick()
+
+            const body = root.querySelector('[data-confirm-overview-body]')
+            expect(body.textContent).toBe('নিষেধ')
+            expect(body.querySelector('h1')).toBeNull()
+            expect(root.querySelector('[data-overview-confirm]').disabled).toBe(true)
+        }
     })
 
     it('কাউন্টারের আকার — খসড়া এক জমা-বোতাম: পপ-আপের "খসড়া" ঐ বোতাম দিয়েই জমা দেয়, "নিশ্চিত" নিশ্চিতের বোতাম দিয়ে', async () => {

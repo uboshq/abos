@@ -131,6 +131,14 @@ class CustomerRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // ⛔ খালি ঘর মানে ০ — "" null হয়ে `NOT NULL` ঘরে ৫০০ দিত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+        // [[ABlankNumberBrokeTheCustomerFormTest]])। ⓘ যে ঘর আসেইনি (সুইচ বন্ধ), সেটা ছোঁয়া হয় না
+        foreach (['credit_limit', 'credit_days', 'opening_balance'] as $key) {
+            if ($this->has($key) && trim((string) $this->input($key)) === '') {
+                $this->merge([$key => '0']);
+            }
+        }
+
         $side = $this->input('opening_side');
         $amount = trim((string) $this->input('opening_balance', ''));
 

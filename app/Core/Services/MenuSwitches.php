@@ -6,6 +6,8 @@ namespace App\Core\Services;
 
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Support\CompanyContext;
+use App\Models\BranchModule;
 
 /**
  * প্রতিটা মডিউল, প্রতিটা গ্রুপ, প্রতিটা মেনু সারির নিজের সুইচ।
@@ -174,6 +176,38 @@ final class MenuSwitches
     }
 
     /**
+     * মডিউলটা এই কোম্পানিতে আর এই শাখায় চালু কি না — কোম্পানির সুইচ আগে, তারপর শাখার সারি।
+     *
+     * ── ⛔ কেন এখানে, এক জায়গায় (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬) ──
+     * নিয়মটা ছিল কেবল [[MenuBuilder]]-এর ভিতরে। হোমের ঘর আর "সাম্প্রতিক
+     * ঘটনা" ([[DashboardRegistry]], [[ActivityRegistry]]) মডিউলের সুইচ
+     * দেখতই না: HR বন্ধ করা কোম্পানির হোমে "আজ উপস্থিত ০ / ৫", আর ক্লিকে
+     * ৪০৪। একই প্রশ্নের দুই উত্তর হলে একদিন আবার আলাদা হত, তাই উত্তরটা এখানে।
+     *
+     * @param  list<string>|null  $switchedOff  এই শাখায় বন্ধ মডিউলগুলো — null হলে এখনই পড়া হয়
+     */
+    public function moduleIsOn(SettingsService $settings, ModuleDefinition $module, ?array $switchedOff = null): bool
+    {
+        /*
+         * ⭐ অপরিহার্য মডিউল সবসময় চালু — দরজার নিয়মটাই ([[RefuseSwitchedOffScreens]]), ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⛔ আগে মেনু কোম্পানির সুইচ আর শাখার সারি দুইটাই পড়ত, দরজা কোনোটাই নয়: ডাটাবেসে বসে থাকা একটা পুরনো
+         * `system_admin.enabled = 0` গোটা প্রশাসনের মেনু লুকিয়ে দিত, অথচ দরজা খোলা — আর কন্ট্রোল প্যানেলে ফেরার পথ মেনুতে নেই।
+         */
+        if ($module->essential) {
+            return true;
+        }
+
+        if (! (bool) $settings->get($this->forModule($module->code), true)) {
+            return false;
+        }
+
+        $switchedOff ??= BranchModule::switchedOffIn(CompanyContext::branchId());
+
+        return ! in_array($module->code, $switchedOff, true);
+    }
+
+    /**
      * এই মডিউলের এই সারিটা কি চালু — তিনটা স্তরই দেখে।
      *
      * ── কেন উপরের স্তর নিচেরটাকে হারায় ──────────────────────────────
@@ -185,7 +219,8 @@ final class MenuSwitches
      */
     public function itemIsOn(SettingsService $settings, ModuleDefinition $module, string $group, array $item): bool
     {
-        if (! $settings->get($this->forModule($module->code), true)) {
+        // ⓘ অপরিহার্য মডিউলের সুইচ পড়াই হয় না — দরজার নিয়মটাই ([[moduleIsOn()]]; ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        if (! $module->essential && ! $settings->get($this->forModule($module->code), true)) {
             return false;
         }
 

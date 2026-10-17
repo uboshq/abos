@@ -5,6 +5,8 @@ import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/auth/token_storage.dart';
+import 'package:abos_mobile/core/privacy/phone_privacy.dart';
+import 'package:abos_mobile/core/push/push_service.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 
 import 'support/fake_secure_storage.dart';
@@ -112,5 +114,56 @@ void main() {
     expect(await TokenStorage.instance.refreshToken(), isNull);
     expect(await SessionRepository.instance.readUser(), isNull);
     expect(ReferenceCache.instance.countOf('Customer'), 0);
+  });
+
+  test(
+      'a session that ended without sign-out leaves nothing of the last person '
+      'for the next one (phone line audit, 15 Oct 2026)', () async {
+    // ⓘ আগের জনের সেশন পটভূমিতে শেষ — টোকেন মুছেছে, বাকি সব রয়ে গেছে
+    await SessionRepository.instance.saveUser(savedUser);
+    await ReferenceCache.instance.put(
+      entityType: 'Customer',
+      entityId: '01a0-customer',
+      payload: {'name': 'আগের জনের গ্রাহক'},
+      updatedAt: DateTime.now(),
+    );
+
+    final controller = AuthController();
+    await controller.restoreSession();
+
+    expect(controller.state.status, AuthStatus.signedOut);
+    expect(ReferenceCache.instance.countOf('Customer'), 0,
+        reason: '⛔ সেশন শেষ, অথচ আগের জনের গ্রাহক পরের জনের জন্য রয়ে গেল');
+    expect(await SessionRepository.instance.readUser(), isNull,
+        reason: '⛔ আগের জনের প্রোফাইল রয়ে গেল');
+  });
+
+  test('signing out hides the screens again, whatever the last company chose (phone line audit, 15 Oct 2026)', () async {
+    final calls = <bool>[];
+    PhonePrivacy.secureSetter = (on) async => calls.add(on);
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    await SessionRepository.instance.saveUser(savedUser);
+    final controller = AuthController();
+    await controller.restoreSession();
+    await PhonePrivacy.follow(secureScreens: false, widgetAmounts: false, redrawWidgets: () async {});
+
+    await controller.logout();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(calls.last, isTrue, reason: '⛔ বেরোনোর পরেও পর্দা আড়াল বন্ধ — পরের জনের পর্দা স্ক্রিনশট-যোগ্য');
+  });
+
+  test('signing out with no signal still drops the push token of this phone (phone line audit, 15 Oct 2026)', () async {
+    var deleted = 0;
+    PushService.tokenDeleter = () async => deleted++;
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    await SessionRepository.instance.saveUser(savedUser);
+    final controller = AuthController();
+    await controller.restoreSession();
+
+    await controller.logout(); // ⓘ /auth/logout এই পরীক্ষায় কোথাও পৌঁছায় না — নেট নেই-এর মতোই
+    await Future<void>.delayed(Duration.zero);
+
+    expect(deleted, 1, reason: '⛔ বেরোনোর পরেও এই ফোনে আগের জনের বার্তা আসবে');
   });
 }

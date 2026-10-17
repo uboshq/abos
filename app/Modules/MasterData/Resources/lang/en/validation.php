@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    // A number must fit the paper's column (master line-by-line audit, 14 October 2026)
+    'number_too_long' => 'With this format a number can reach :length characters; papers hold :max. Shorten the prefix or the format.',
+    // The base currency stays once rates exist (master line-by-line audit, 14 October 2026)
+    'base_currency_fixed' => 'The base currency cannot change: every exchange rate on record is against the current one.',
     'format_needs_sequence' => 'The number format must contain {SEQ} — without it every document would get the same number.',
     'code_required' => 'A code is required.',
     'code_taken' => 'Another record already uses code :code.',
@@ -21,6 +25,8 @@ return [
     'top_level_has_no_parent' => ':level is the top level — nothing sits above it.',
     'base_currency_has_no_rate' => 'The base currency has no rate — against itself it is always 1.',
     'rate_must_be_positive' => 'The rate must be greater than zero.',
+    // Master line-by-line audit, 14 October 2026: no 1e3, no spaces, at most 12 digits before the point
+    'rate_plain_number' => 'Write the rate as a plain number (for example 117.50): above zero, with at most 12 digits before the point.',
     'in_use_cannot_delete' => 'Used in :where, so it cannot be deleted.',
     'default_cannot_delete' => 'This is the default, so it cannot be deleted. Make another one the default first.',
     /* WarehouseService asked for this one and it had never been written,
@@ -41,4 +47,8 @@ return [
     'method_does_not_fit_account' => 'The method ":method" is :kind, but the money would go to :account — the method and the account are not the same kind. Choose a :kind account.',
     'user_not_in_company' => 'This user is not in this company — an area can only be given to someone in this company.',
     'used_field_frozen' => '":name" is already used on papers — changing this field would change the figures or meaning of old papers. You can rename it; for a different value, add a new one and deactivate this one.',
+    // Codes that rules depend on: 14 Oct 2026
+    // Money categories are a two-level tree (master line-by-line audit, 14 October 2026)
+    'parent_two_levels' => 'A category cannot be its own parent, and one that already has sub-categories cannot become a sub-category.',
+    'code_is_fixed' => 'The code «:code» cannot change because the rules of the software read it. The name can change.',
 ];

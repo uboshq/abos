@@ -50,6 +50,15 @@ final class PermissionSyncer
      */
     public const SUPER_ADMIN_ROLE = 'super_admin';
 
+    /**
+     * ⛔ যে চাবি কেবল সুপার অ্যাডমিন হাতছাড়া করেন — রোলে বসানো ([[RoleController::grantable()]]) আর রোলসহ মানুষকে দেওয়া
+     * ([[UserPolicy::grantRole()]]) দুই পথেই। মালিকের উত্তর ৬, ১০ অক্টোবর ২০২৬: "অনলি আমি দেখব আর আমার একটা সেকেন্ড রোলেও".
+     * ⓘ এক জায়গায় রাখা — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * @var list<string>
+     */
+    public const SUPER_ADMIN_GRANTS = ['executive.view', 'executive.links.manage'];
+
     public function __construct(
         private readonly ModuleRegistry $registry,
         private readonly RoleTemplateRegistry $templates,

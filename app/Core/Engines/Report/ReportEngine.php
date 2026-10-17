@@ -8,6 +8,7 @@ use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
 use App\Core\Services\ListExport;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Core\Support\RunningBalance;
 use App\Models\Branch;
 use App\Models\UserDataScope;
@@ -109,9 +110,10 @@ final class ReportEngine
          * ⓘ এক জায়গায়, তাই রিপোর্টের প্রতিটা পর্দা (১৩টা কন্ট্রোলার) একসাথে সারে। কেবল পর্দার মাপের ডাকে
          * (`SCREEN_ROWS`) — ড্যাশবোর্ডের গোনা (`perPage: 1`) আর ফোনের নিজের মাপ যেমন ছিল।
          */
-        if ($perPage === self::SCREEN_ROWS && self::wholeDocumentWanted()) {
-            $page = 1;
-            $perPage = self::WHOLE_DOCUMENT_ROWS;
+        $whole = $perPage === self::SCREEN_ROWS && self::wholeDocumentWanted();
+
+        if ($whole) {
+            $perPage = self::wholeDocumentRows();
         }
 
         $query = $this->queryFor($report, $filters);
@@ -130,6 +132,15 @@ final class ReportEngine
         // ভুল উত্তর দেয় এবং সেটা ভুল বলে চেনাও যায় না।
         $totals = $this->totalsFor($report, clone $query);
         $count = $this->countFor($report, clone $query);
+
+        /*
+         * ⛔ গোটা-দলিলের পাতা মানা হয়, প্রতিবার ১ নয় (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১৩, ১৪ অক্টোবর ২০২৬)। ⓘ ছাদের বেশি সারিতে
+         * [[ExportListing]] পাতা ২, ৩… চায়; আগে এখানে পাতা সবসময় ১ হত, তাই ফাইলে প্রথম এক লাখ সারি বারবার, তার পরের একটাও নয়।
+         * ⚠️ চাওয়া পাতা গোটা-দলিলের শেষ পাতা পেরোলে (পর্দার তৃতীয় পাতা থেকে ছাপা বা প্রথম রপ্তানি) — পাতা ১, খালি ফাইল নয়।
+         */
+        if ($whole) {
+            $page = max(1, $page) > max(1, (int) ceil($count / $perPage)) ? 1 : max(1, $page);
+        }
 
         /*
          * "শুধু উপরের দশটা" — চাওয়া হলে।
@@ -208,6 +219,11 @@ final class ReportEngine
      */
     private function branchPlan(ReportDefinition $report, array $filters, ?int $top, ?array $comparison): array
     {
+        // ⭐ রিপোর্টের নিজের ভাগ (যেমন এলাকা) — শাখার জায়গায়; Top-N আর তুলনায় ভাগ নয়, শাখার মতোই
+        if ($report->sections !== null) {
+            return $top !== null || $comparison !== null ? [] : array_values(($report->sections)($filters));
+        }
+
         if (! $report->splitByBranch || $report->branchless !== null || $report->runningBalance
             || $top !== null || $comparison !== null || ! empty($filters['branch_id'])
             || app(DataScope::class)->viewsOneBranch(auth()->user())) {
@@ -387,9 +403,9 @@ final class ReportEngine
             $now = (string) ($row[$rank] ?? '0');
 
             // আগের সময়ে কিছুই ছিল না — শতাংশে সেটা অসীম, তাই খালি
-            $row['change_percent'] = ($was === null || bccomp($was, '0', 4) === 0)
-                ? null
-                : bcdiv(bcmul(bcsub($now, $was, 4), '100', 6), $was, 2);
+            // ⛔ ভাগ আগের মানের পরম মানে, মালিকের কেন্দ্রের একই নিয়মে ([[Trend::change()]]) — আগে চিহ্নসহ ভাগ হত, তাই −১,০০০ থেকে
+            // +৫০০ দেখাত "−১৫০%", যেন কমেছে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১১, ১৪ অক্টোবর ২০২৬)
+            $row['change_percent'] = $was === null ? null : Trend::change($now, $was);
 
             return $row;
         });
@@ -647,10 +663,10 @@ final class ReportEngine
                 $filters[$edge] = $this->dateOrRefuse($edge, $filters[$edge]);
             }
 
+            // ⛔ উল্টো পরিসর ৪২২, ৫০০ নয় — আগে সাধারণ RuntimeException, আর ওয়েবের প্রতিটা রিপোর্ট পর্দা "কিছু ভেঙেছে" দেখাত
+            // (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৪, ১৪ অক্টোবর ২০২৬)
             if (Carbon::parse($filters['from'])->gt(Carbon::parse($filters['to']))) {
-                throw new RuntimeException(
-                    'The start date is after the end date — that range holds nothing.'
-                );
+                throw ValidationException::withMessages(['from' => __('validation.report_bad_range')]);
             }
         }
 
@@ -933,24 +949,49 @@ final class ReportEngine
             return [];
         }
 
+        // ⓘ অনুপাতের ঘর যোগ হয় না — নিচে দুই ঘরের মোট থেকে গোনা ([[ReportColumn::$ratio]])
+        $sums = array_values(array_filter($columns, fn (ReportColumn $c) => $c->ratio === null));
+
         $selects = array_map(
             fn (ReportColumn $c) => "SUM(t.{$c->key}) as total_{$c->key}",
-            $columns,
+            $sums,
         );
 
-        $row = DB::query()
+        $row = $selects === [] ? [] : DB::query()
             ->fromSub($query->reorder(), 't')
             ->selectRaw(implode(', ', $selects))
             ->first();
 
         $totals = [];
 
-        foreach ($columns as $column) {
+        foreach ($sums as $column) {
             $value = data_get((array) $row, 'total_'.$column->key, 0);
 
-            // bcadd দিয়ে স্বাভাবিক করা — SUM() null ফেরত দিতে পারে (ফাঁকা
+            // স্বাভাবিক করা — SUM() null ফেরত দিতে পারে (ফাঁকা
             // ফল), আর তখন "0.00"-ই সঠিক উত্তর, ফাঁকা ঘর নয়।
-            $totals[$column->key] = bcadd((string) ($value ?? 0), '0', $column->decimals());
+            /*
+             * ⛔ গোল করা, কাটা নয় — সারির একই নিয়মে (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৩, ১৪ অক্টোবর ২০২৬)। আগে `bcadd(…, '0', 2)`
+             * কেটে দিত: সারিতে ১,২৩৪.৫৭ ([[Money::round()]], অর্ধেক হলে উপরে), নিচের মোটে ১,২৩৪.৫৬। পরিমাণের সারি চার ঘর দেখায়
+             * ([[Money::quantity()]]), অথচ মোট কাটা হত তিন ঘরে — ১২.৩৪৫৬-র মোট ১২.৩৪৫। ⓘ তাই পরিমাণ চার ঘরে, বাকি সব কলামের নিজের ঘরে।
+             */
+            $totals[$column->key] = Money::round(
+                (string) ($value ?? 0),
+                $column->type === ReportColumn::QUANTITY ? Money::SCALE : $column->decimals(),
+            );
+        }
+
+        foreach ($columns as $column) {
+            if ($column->ratio === null) {
+                continue;
+            }
+
+            [$top, $bottom] = $column->ratio;
+            $den = $totals[$bottom] ?? '0';
+
+            // ⓘ হর শূন্য — অনুপাত নেই; ঘরটা খালি থাকে, ০% নয়
+            if (bccomp($den, '0', 4) > 0) {
+                $totals[$column->key] = bcdiv(bcmul($totals[$top] ?? '0', '100', 6), $den, $column->decimals());
+            }
         }
 
         return $totals;
@@ -1049,6 +1090,15 @@ final class ReportEngine
 
             return $row;
         });
+    }
+
+    /**
+     * ছাপা, ফাইল আর নির্ধারিত রিপোর্টের ছাদ — [[WHOLE_DOCUMENT_ROWS]]। ⓘ `abos.report_whole_document_rows` কেবল পরীক্ষায় ছোট
+     * করার জন্য (এক লাখ সারি না বানিয়ে পাতা আর ছাদ মাপা); কনফিগে বসানো নেই, তাই চলমান ব্যবস্থায় ছাদ বদলায় না।
+     */
+    public static function wholeDocumentRows(): int
+    {
+        return max(1, (int) config('abos.report_whole_document_rows', self::WHOLE_DOCUMENT_ROWS));
     }
 
     /**

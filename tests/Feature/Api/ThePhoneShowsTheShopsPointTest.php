@@ -73,8 +73,10 @@ final class ThePhoneShowsTheShopsPointTest extends TestCase
         $onRoute->forceFill(['location_id' => $route->id])->save();
 
         $sync = app(SyncService::class);
-        $this->travel(2)->minutes(); // ⓘ জলচিহ্ন এখন পালার শুরু (02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬), তাই ঘড়ি এগোয় প্রথম টানার আগে
+        // ⓘ ওয়াটারমার্ক পালার শুরু থেকে (১৫ অক্টোবর ২০২৬) — এইমাত্র বানানো সারি ওভারল্যাপে আবার আসত, তাই এক মিনিট আগে
+        $this->travel(2)->minutes();
         $sync->pull($this->owner, 'phone-rn', 'customer', 500);
+        $this->travel(2)->minutes();
         $sync->recordSuccessfulPull('phone-rn', 'customer');
         $this->travel(5)->minutes();
 

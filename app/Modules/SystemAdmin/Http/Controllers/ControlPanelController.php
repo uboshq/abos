@@ -244,6 +244,11 @@ class ControlPanelController extends Controller implements HasMiddleware
                     continue;
                 }
 
+                // ⛔ ছাপার পর্দার ঘর এখানে নয় ([[ownedByThePrintScreen()]]) — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬
+                if (self::ownedByThePrintScreen($definition)) {
+                    continue;
+                }
+
                 $items[] = [...$definition, 'key' => $key, 'value' => $this->settings->get($key)];
             }
 
@@ -327,6 +332,12 @@ class ControlPanelController extends Controller implements HasMiddleware
                 && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::from($raw) === null) {
                 $notNumbers[] = __($definition['label']);
             }
+
+            // ⛔ পূর্ণসংখ্যার ঘরেও — ভগ্নাংশ, ঋণাত্মক, লেখা বা তালিকা এলে পুরো ফর্ম ফেরে (১৪ অক্টোবর ২০২৬)
+            if (isset($scope[$key]) && ($definition['type'] ?? null) === 'integer'
+                && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::wholeFrom($raw) === null) {
+                $notNumbers[] = __($definition['label']);
+            }
         }
 
         if ($notNumbers !== []) {
@@ -353,13 +364,23 @@ class ControlPanelController extends Controller implements HasMiddleware
                 continue;
             }
 
+            /*
+             * ⛔ ছাপার নকশার তালিকা (json) এই ফর্ম থেকে বসে না — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+             * ⓘ হাতে বানানো `scope[]`-এ চাবিটা এলে লেখার ঘরের টেক্সট json-এর জায়গায় বসত, আর ছাপার কোড তালিকা
+             * চেয়ে টেক্সট পেয়ে ভাঙত। ঘরগুলো কেবল ছাপার পর্দার ([[PrintControlController]])।
+             */
+            if (self::ownedByThePrintScreen($definition)) {
+                continue;
+            }
+
             $raw = $submitted[$key] ?? null;
 
             $value = match ($definition['type']) {
                 // চেকবক্স না দেখালে ব্রাউজার কিছুই পাঠায় না, তাই
                 // অনুপস্থিতিই "বন্ধ"
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
-                'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+                // ⛔ ভুল লেখা উপরে থেমেছে; এখানে কেবল শুদ্ধ পূর্ণসংখ্যা ([[PlainNumber::wholeFrom()]])
+                'integer' => $raw === null || $raw === '' ? null : PlainNumber::wholeFrom($raw),
                 // ⭐ "১০,০০০" → "10000"; খালি মানে "যা ছিল তাই থাক" ([[SettingsController]]-এর মতো)
                 'number' => PlainNumber::from($raw),
 
@@ -375,7 +396,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                  * অচেনা মান এলে "যা ছিল তাই থাক", ঠিক [[SettingsController]]-এর মতো।
                  */
                 'choice' => SettingOptions::allows($definition, $raw) ? $raw : null,
-                default => $raw,
+                // ⛔ লেখার ঘরে তালিকা এলে "যা ছিল তাই থাক" — আগে `(string) array`-এ ৫০০ (সেটিং লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
+                default => is_scalar($raw) || $definition['type'] === 'json' ? $raw : null,
             };
 
             if ($value === null) {
@@ -628,6 +650,11 @@ class ControlPanelController extends Controller implements HasMiddleware
                     continue;
                 }
 
+                // ⛔ ছাপার পর্দার ঘর এখানে নয় ([[ownedByThePrintScreen()]]) — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬
+                if (self::ownedByThePrintScreen($definition)) {
+                    continue;
+                }
+
                 $group = $definition['group'] ?? 'general';
 
                 $groups[$group][] = [
@@ -651,5 +678,22 @@ class ControlPanelController extends Controller implements HasMiddleware
         }
 
         return $modules;
+    }
+
+    /**
+     * ⛔ ছাপার পর্দার ঘর — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ ছাপার পর্দা কাগজের অংশ আর কলাম **তালিকা** হিসেবে বসায় (`print.*.parts|columns`, ধরন `json`)। ⛔ এই পাতা
+     * ওগুলো লেখার ঘরে আঁকত, আর `value="{{ তালিকা }}"`-এ `htmlspecialchars()` ভেঙে "সিস্টেম প্রশাসন" ট্যাবটাই ৫০০ দিত —
+     * মালিক একবার ছাপার নকশা সংরক্ষণ করলেই।
+     *
+     * ⚠️ কেবল `json` ধরন, গোটা `print_paper` দল নয়: ঐ দলের নকশা আর কাগজের **বাছাইয়ের** ঘরগুলো (`sales.print.design.*`,
+     * `accounts.print.design.*`) এই পাতার বিক্রয়/হিসাব ট্যাবেও বাছা যায়, আর সেগুলো এক টুকরো লেখা — আঁকতে ভাঙে না।
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    private static function ownedByThePrintScreen(array $definition): bool
+    {
+        return ($definition['type'] ?? null) === 'json';
     }
 }

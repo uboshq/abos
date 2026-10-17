@@ -65,6 +65,7 @@ return [
     'area_empty' => '⛔ That area has no active dealer today.',
     'unknown_staff' => '⛔ This staff member is not in this company.',
     'end_before_start' => '⛔ The end day cannot be before the start day.',
+    'already_ended' => '⛔ This binding has already ended; its end day can only move earlier. Bind again to give the dealer back.',
     'same_person' => '⛔ A handover needs two different people.',
     'nothing_to_hand_over' => '⛔ This staff member has no running binding.',
     'supervisor_loop' => '⛔ Nobody can report to himself or to someone under him.',

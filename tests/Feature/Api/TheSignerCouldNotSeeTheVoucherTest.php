@@ -124,6 +124,54 @@ final class TheSignerCouldNotSeeTheVoucherTest extends TestCase
     }
 
     /**
+     * ⛔ সই চাওয়ার পরে খসড়ার অঙ্ক বদলালে কার্ড এখনকার অঙ্ক দেখায় আর চিহ্ন দেয় — মালিক, ১৪ অক্টোবর ২০২৬ (RCV-0090: সই চাওয়া
+     * ৩৯,৯৯০-এ, পরে ২৪,৯১৩-এ বদলানো; কার্ডে অঙ্ক পুরনো, বিবরণ নতুন — "এক কাগজের বিবরণ আরেকটায়")। কার্ডে জমার খাত আর শাখাও।
+     */
+    public function test_the_card_shows_the_papers_amount_now_and_says_it_changed_after_the_ask(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+        app(SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
+
+        $signer = $this->person(['approval.decide']);
+        $writer = $this->person(['accounts.voucher.create']);
+        $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'journal', 'is_active' => true]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $signer->id]);
+
+        [$a, $b] = Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '5%')->orderBy('code')->take(2)->get()->all();
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($writer);
+        $out = app(SyncService::class)->push($writer, 'phone-c', 'accounts', [[
+            'changeId' => 'card-1', 'entityType' => 'Voucher', 'operation' => 'CREATE',
+            'payloadJson' => json_encode(['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => '৪৫৫০০ থেকে বাকিটা',
+                'lines' => [['account_id' => $a->id, 'debit' => '39990', 'credit' => '0'], ['account_id' => $b->id, 'debit' => '0', 'credit' => '39990']]]),
+        ]]);
+        $voucher = Voucher::query()->where('public_id', $out[0]['entityId'])->firstOrFail();
+        $approval = Approval::query()->where('approvable_type', Voucher::class)->where('approvable_id', $voucher->id)->pending()->firstOrFail();
+
+        $row = fn () => collect($this->phone($signer)->getJson('/api/v1/approvals/pending')->assertOk()->json('rows'))
+            ->firstWhere('id', $approval->public_id);
+
+        $before = $row();
+        $this->assertSame('39990.0000', $before['amount']);
+        $this->assertFalse($before['amountChanged']);
+        $this->assertStringContainsString(__('approval::field.in_branch', ['branch' => $this->company->defaultBranch()?->name()]), (string) $before['summary'],
+            '⛔ কার্ডে শাখা নেই।');
+
+        // ⓘ খসড়া বদলালো — সইয়ের অনুরোধ আগের অঙ্কেই থেকে গেল (লাইভের RCV-0090)
+        \Illuminate\Support\Facades\DB::table('vouchers')->where('id', $voucher->id)->update(['amount' => 24913]);
+
+        $after = $row();
+        $this->assertSame('24913.0000', $after['amount'], '⛔ কার্ড কাগজের এখনকার অঙ্ক নয়, পুরনো সই-অঙ্ক দেখাল।');
+        $this->assertSame('39990.0000', $after['requestedAmount']);
+        $this->assertTrue($after['amountChanged']);
+        $this->assertStringStartsWith('⚠️', (string) $after['summary'], '⛔ বদলের চিহ্ন কার্ডে নেই।');
+    }
+
+    /**
      * ⛔ যে কাগজ নিজে সইয়ের পাতা দেয় না (ডেলিভারি অর্ডার), তার বিস্তারিতও আসে — মালিক, ৮ অক্টোবর ২০২৬: *"approval a
      * bistarito vew dile anagelona dekhay"*। খালি যোগফল JSON-এ `[]` হয়ে যেত, আর ফোন বস্তু চাইত — তাই "আনা গেল না"।
      * এখন যোগফল সবসময় বস্তু (`{}`), আর সারির নিজের তথ্য (পক্ষ · পয়েন্ট, কী বাবদ) ঘর হয়ে আসে।

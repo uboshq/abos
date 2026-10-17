@@ -97,10 +97,47 @@ void main() {
     expect(SyncEngine.instance.rejectedCount, 0, reason: '⛔ অন্যের ব্যর্থ চেষ্টায় রহিমের অর্ডার "ফেরত" হলো');
     expect(SyncEngine.instance.pendingCount, 1);
   });
+
+  test('a rejected order rewritten by the rep is never sent again (phone line audit, 15 Oct 2026)', () async {
+    await anOrderBy('rahim');
+    final key = Hive.box<Map>('abos_sync_queue').keys.single;
+    final row = Hive.box<Map>('abos_sync_queue').get(key)!;
+    await Hive.box<Map>('abos_sync_queue').put(key, {...row.cast<String, dynamic>(), 'status': 'REJECTED', 'reason': 'ফেরত'});
+    await SyncEngine.instance.markResolved(key);
+
+    await SyncEngine.instance.flushAll();
+    expect(server.pushes, isEmpty, reason: '⛔ নতুন করে লেখা অর্ডারের পুরনোটা আবার গেল — দোকানে দুটো অর্ডার');
+  });
+
+  test('no signal is not a failed try: an offline order is never turned away by the phone (phone line audit, 15 Oct 2026)', () async {
+    await anOrderBy('rahim');
+
+    server.down = true;
+    for (var i = 0; i < 8; i++) {
+      await SyncEngine.instance.flushAll();
+    }
+    server.down = false;
+
+    expect(SyncEngine.instance.rejectedCount, 0, reason: '⛔ সংকেত ছিল না বলেই অর্ডার "ফেরত" — সার্ভার কখনো দেখেনি');
+    expect(SyncEngine.instance.pendingCount, 1);
+    await SyncEngine.instance.flushAll();
+    expect(server.pushes, hasLength(1), reason: 'নেট ফিরলে অর্ডারটা যায়');
+  });
+
+  test('a change the server never answers is counted and finally shown as refused, not pending forever (phone line audit section 7, 15 Oct 2026)', () async {
+    await anOrderBy('rahim');
+    server.silent = true;
+    for (var i = 0; i < 5; i++) {
+      await SyncEngine.instance.flushAll();
+    }
+    expect(SyncEngine.instance.rejectedCount, 1, reason: '⛔ উত্তরহীন বদল চিরকাল "অপেক্ষায়" — কারণ ছাড়া');
+    expect(SyncEngine.instance.rejectedItems.single.reason, contains('উত্তর দেয়নি'));
+  });
 }
 
 class _Server implements HttpClientAdapter {
   bool down = false;
+  bool silent = false;
   final List<String> pushes = [];
 
   @override
@@ -108,6 +145,11 @@ class _Server implements HttpClientAdapter {
     if (down) throw DioException(requestOptions: options, type: DioExceptionType.connectionError);
     pushes.add(options.path);
     final rows = (options.data is String ? jsonDecode(options.data as String) : options.data) as List;
+    if (silent) {
+      return ResponseBody.fromString(jsonEncode({'outcomes': []}), 200, headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      });
+    }
     return ResponseBody.fromString(
       jsonEncode({
         'outcomes': [

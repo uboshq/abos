@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -31,6 +32,21 @@ class _Stub implements HttpClientAdapter {
       return meCalls == 1 ? json({'message': 'expired'}, 401) : json({'ok': true}, 200);
     }
     return json({}, 404);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// নবায়নের দরজা ব্যস্ত (৫০৩) — সার্ভার "না" বলেনি
+class _Busy implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    ResponseBody json(Object body, int status) => ResponseBody.fromString(jsonEncode(body), status, headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        });
+    if (options.path.endsWith('/auth/refresh')) return json({'message': 'Service Unavailable'}, 503);
+    return json({'message': 'expired'}, 401);
   }
 
   @override
@@ -86,6 +102,32 @@ void main() {
     expect(expired, isTrue);
     expect(await TokenStorage.instance.refreshToken(), isNull);
   });
+
+  test('a refresh that fails on a busy server keeps the session: no sign-out, tokens kept (phone line audit, 15 Oct 2026)', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'A1', refreshToken: 'R1');
+    ApiClient.dio.httpClientAdapter = _Busy();
+    var expired = false;
+    ApiClient.onSessionExpired = () => expired = true;
+
+    await expectLater(ApiClient.dio.get<Map<String, dynamic>>('/me'), throwsA(isA<DioException>()));
+
+    expect(expired, isFalse, reason: '⛔ সার্ভার ব্যস্ত বলেই মানুষ বের হয়ে গেলেন — অফলাইন তালিকাও মুছত');
+    expect(await TokenStorage.instance.refreshToken(), 'R1', reason: '⛔ ব্যস্ত সার্ভারে টোকেন মুছে গেল');
+  });
+
+  test('a winner that saves its pair just after the 401 of the loser is still taken (phone line audit section 7, 15 Oct 2026)', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'A1', refreshToken: 'R1');
+    final stub = _LateWinner();
+    ApiClient.dio.httpClientAdapter = stub;
+    var expired = false;
+    ApiClient.onSessionExpired = () => expired = true;
+
+    final response = await ApiClient.dio.get<Map<String, dynamic>>('/me');
+
+    expect(response.statusCode, 200);
+    expect(expired, isFalse, reason: '⛔ জেতা জোড়া এক মুহূর্ত পরে লেখা — তবু মানুষ বের হয়ে গেলেন');
+    expect(stub.replayedWith, 'Bearer A4');
+  });
 }
 
 ResponseBody _json(Object body, int status) => ResponseBody.fromString(jsonEncode(body), status, headers: {
@@ -93,6 +135,30 @@ ResponseBody _json(Object body, int status) => ResponseBody.fromString(jsonEncod
     });
 
 /// নবায়নে হারে: সার্ভারের ৪০১-এর আগে আরেক isolate নতুন জোড়া (A3/R3) রেখে গেছে
+/// জেতা isolate জোড়াটা লেখে হারা পক্ষের ৪০১-এর একটু পরে
+class _LateWinner implements HttpClientAdapter {
+  String? replayedWith;
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    if (options.path.endsWith('/auth/refresh')) {
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 100), () => TokenStorage.instance.saveTokens(accessToken: 'A4', refreshToken: 'R4')));
+      return _json({'message': 'Unauthenticated.'}, 401);
+    }
+    if (options.path.endsWith('/me')) {
+      if (options.headers['Authorization'] == 'Bearer A4') {
+        replayedWith = 'Bearer A4';
+        return _json({'ok': true}, 200);
+      }
+      return _json({'message': 'expired'}, 401);
+    }
+    return _json({}, 404);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 class _Lost implements HttpClientAdapter {
   String? replayedWith;
 

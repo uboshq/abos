@@ -49,15 +49,12 @@ class SyncState extends Model
         'page_cursor',
         // ⭐ কোন দেখায় (কোম্পানি:শাখা) এই জলচিহ্ন — [[SyncService::sawAnotherView()]], ৬ অক্টোবর ২০২৬
         'view_key',
-        // ⭐ এই পালার প্রথম পাতা কখন পড়া — জলচিহ্ন এটাই ([[SyncService::recordSuccessfulPull()]], ১৪ অক্টোবর ২০২৬)
-        'pass_started_at',
     ];
 
     protected function casts(): array
     {
         return [
             'last_synced_at' => 'datetime',
-            'pass_started_at' => 'datetime',
         ];
     }
 }

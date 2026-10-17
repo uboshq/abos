@@ -214,7 +214,10 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
     /**
      * এখনো কত দিতে বাকি — খতিয়ান থেকেই।
      *
-     * চালানে মাল এলে GRNI দায় জন্মায়, তাই ১,৭২৫.৪০ ওদের পাওনা।
+     * ⭐ বদল — মালিক, ১৩ অক্টোবর ২০২৬: *"int standard onuzayi koro"* (fe-র সিদ্ধান্ত)। চালানে মাল এলে GRNI দায় জন্মায় ঠিকই,
+     * কিন্তু IFRS-মতো সেটা **জমে থাকা দায়** (accrued liability), ট্রেড-প্রদেয় নয় — তাই সেটলমেন্টের "এখনো দিতে বাকি" কেবল বিল
+     * হওয়া দেনা। ⓘ আগে এই পরীক্ষা ১,৭২৫.৪০ চাইত (বিল-না-আসা মালসহ)। ঘরের "কোম্পানিকে দিতে হবে" মোটে দুটোই, আলাদা নামে
+     * ([[test_the_widget_says_what_is_owed]])।
      */
     public function test_what_is_still_owed_comes_from_the_ledger(): void
     {
@@ -225,8 +228,8 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
         $row = $this->settlement()[$this->alin->id] ?? null;
 
         $this->assertNotNull($row);
-        $this->assertSame(0, bccomp((string) $row->still_owed, '1725.40', 2),
-            'এখনো দিতে বাকি অঙ্কটা খতিয়ানের সাথে মেলে না।');
+        $this->assertSame(0, bccomp((string) $row->still_owed, '0', 2),
+            'বিল আসেনি এমন মাল সেটলমেন্টের দেনায় ঢুকল — ওটা জমে থাকা দায়, ট্রেড-প্রদেয় নয়।');
     }
 
     /**
@@ -278,6 +281,8 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
 
         $this->assertNotNull($owed, 'কোম্পানিকে দিতে হবে — উইজেটটাই নেই।');
         $this->assertStringContainsString('1,725', $owed->value);
+        // ⭐ মোটে বিল-না-আসা মালও, কিন্তু আলাদা নামে (মালিক, ১৩ অক্টোবর ২০২৬: "int standard onuzayi koro")
+        $this->assertStringContainsString('1,725', (string) $owed->hint, 'বিল-না-আসা মাল উইজেটে আলাদা নামে নেই।');
     }
 
     /**

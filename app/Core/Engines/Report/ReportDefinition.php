@@ -176,6 +176,20 @@ final class ReportDefinition
          * তাই ওয়েবে রপ্তানি `notification.reports.export` চায় — ফোনের রপ্তানির দরজাও এখন এটাই দেখে।
          */
         public readonly ?string $exportPermission = null,
+
+        /*
+         * ⭐ শাখার বদলে নিজের ভাগ — `fn (array $filters): list<array{id: ?int, name: string, filters: array}>` (মালিক, ১৪ অক্টোবর
+         * ২০২৬: লক্ষ্য বনাম আদায় "area wise jug thakbe")। ⓘ দেওয়া থাকলে পর্দা, ছাপা আর ফাইল শাখার জায়গায় এই ভাগে সাজায়;
+         * প্রতিটা ভাগের যোগ তার নিজের কোয়েরিতে, তাই Σ ভাগ = সর্বমোট — শাখার ভাগের একই নিয়ম। `null` (সব রিপোর্ট) = আগের মতো শাখা।
+         */
+        public readonly ?Closure $sections = null,
+
+        /*
+         * ⭐ চাবিগুলোর যেকোনো একটাই যথেষ্ট — `true` হলে (মালিক, ১৪ অক্টোবর ২০২৬: লক্ষ্য বনাম আদায় হিসাবের লোক আর বিক্রয়ের লোক
+         * দুইজনেরই, একটা দরজায়)। ⓘ ডিফল্ট `false` — প্রতিটা ঘোষিত চাবি লাগে, আগের মতো; [[allows()]] সূচি, নামানো, ফোন আর
+         * দরজা সবার একই উত্তর।
+         */
+        public readonly bool $anyKey = false,
     ) {
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");
@@ -299,6 +313,16 @@ final class ReportDefinition
             return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
         }
 
+        if ($this->anyKey) {
+            foreach ($keys as $key) {
+                if ($user->can($key)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         foreach ($keys as $key) {
             if (! $user->can($key)) {
                 return false;
@@ -306,6 +330,18 @@ final class ReportDefinition
         }
 
         return true;
+    }
+
+    /**
+     * ⛔ ফাইলে নিতে পারেন কি না — দেখার চাবি আর (থাকলে) ফাইলের আলাদা চাবি (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১০, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নির্ধারিত রিপোর্ট একটা ফাইল, তাই সূচি বানানো, প্রাপক বাছা আর নামানো — তিনটাই এটা দেখে, ফোনের রপ্তানির দরজার মতো।
+     * আগে কেবল [[allows()]] দেখা হত: `notification.reports.export` ছাড়া মানুষও রোজ প্রাপকের নাম আর প্রদানকারীর রেফারেন্সের CSV পেতেন।
+     */
+    public function allowsFile(?User $user): bool
+    {
+        return $this->allows($user)
+            && ($this->exportPermission === null || $user->can($this->exportPermission));
     }
 
     public function isAsOfDate(): bool

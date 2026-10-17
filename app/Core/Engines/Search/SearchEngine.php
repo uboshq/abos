@@ -6,9 +6,11 @@ namespace App\Core\Engines\Search;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Module\ModuleRegistry;
+use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -63,6 +65,14 @@ final class SearchEngine
      */
     public const MIN_TERM = 2;
 
+    /**
+     * ⚠️ এর বেশি লেখা কেটে নেওয়া হয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ প্রতিটা খোঁজা ~৭০টা টেবিলে পূর্ণ `LIKE '%…%'`; সীমা ছিল না, তাই হাজার অক্ষরের লেখাও প্রতিটা টেবিলে যেত। কোনো
+     * নাম, কোড বা ফোন নম্বর ১০০ অক্ষরের বেশি নয়। দরজায় গতিসীমাও বসল (`routes/web.php`, `throttle:…,search`)।
+     */
+    public const MAX_TERM = 100;
+
     /** এক উৎস থেকে সর্বোচ্চ কয়টা — নাহলে একটা বড় টেবিল বাকিদের ঢেকে দিত। */
     private const PER_SOURCE = 5;
 
@@ -91,13 +101,20 @@ final class SearchEngine
      */
     public function search(string $term, ?User $user, int $limit = 20): array
     {
-        $term = trim($term);
+        $term = trim(mb_substr(trim($term), 0, self::MAX_TERM));
 
         if (mb_strlen($term) < self::MIN_TERM) {
             return [];
         }
 
         $hits = [];
+        $switches = app(RefuseSwitchedOffScreens::class);
+        /*
+         * ⓘ একই রুটের "বন্ধ কি" উত্তর এই একটা খোঁজার ভেতরেই মনে রাখা — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬। ⚠️ মিডলওয়্যারের
+         * ভেতরে মনে রাখা নিষেধ ([[RefuseSwitchedOffScreens::switchedOffInThisBranch()]]-এর কারণ), তাই এখানে, খোঁজা শেষ হলে ফেলে দেওয়া।
+         * আগে প্রতিটা ফলাফলে শাখার সুইচের একটা কোয়েরি যেত, আর এক খোঁজায় ৮০-র সীমা পেরোত ([[EveryStaffDoorIsShutInSearchTest]])।
+         */
+        $refused = [];
 
         foreach ($this->sources() as $class => $source) {
             if (count($hits) >= $limit) {
@@ -121,7 +138,9 @@ final class SearchEngine
                 continue;
             }
 
-            foreach ($this->matchesIn($class, $source['columns'], $term) as $record) {
+            $taken = 0;
+
+            foreach ($this->matchesIn($class, $source['columns'], $term, $source['ability'] !== null) as $record) {
                 /*
                  * ⛔ পলিসি-ধাঁচের উৎসে যাচাইটা **সারি ধরে**, আর সেটাই
                  * সবচেয়ে সৎ উত্তর: প্রশ্নটা তো "ইনি কি এই সারিটা দেখতে
@@ -133,9 +152,23 @@ final class SearchEngine
                     continue;
                 }
 
+                /*
+                 * ⛔ পর্দা বা মডিউল এই কোম্পানি/শাখায় বন্ধ — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+                 * ⓘ খালি বাক্সের সাম্প্রতিক তালিকা ([[StartingPoints::recent()]]) এটা মানত, খোঁজা মানত না: বন্ধ আদেশের পর্দার
+                 * কাগজের নম্বর আর গ্রাহকের নাম Ctrl+K-এ আসত, চাপলে ৪০৪। ⭐ একই প্রশ্ন, একই উত্তরদাতা।
+                 */
+                [$name, $params] = $record->drillRoute() + [1 => []];
+
+                // ⓘ চাবিতে কাগজের id নয় — সুইচ মেলে রুটের নাম আর লেখা মান ধরে (`type`, `module`), সংখ্যা ধরে নয়
+                $door = (string) $name.'|'.json_encode(array_filter((array) $params, fn ($v) => is_string($v) && ! is_numeric($v)));
+
+                if ($refused[$door] ??= $switches->refuses((string) $name, (array) $params)) {
+                    continue;
+                }
+
                 $hits[] = $this->hitFrom($record);
 
-                if (count($hits) >= $limit) {
+                if (count($hits) >= $limit || ++$taken >= self::PER_SOURCE) {
                     break;
                 }
             }
@@ -297,10 +330,28 @@ final class SearchEngine
             return null;
         }
 
+        $guard = $this->permissionFor($route);
+
+        /*
+         * ⛔ সাধারণ চাবির রুটেও সারির পলিসি — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ `can:hr.employee.view` বলে "কর্মী দেখতে পারেন", কোন কর্মী তা বলে না; শাখার দেয়াল ছিল কেবল কন্ট্রোলারের
+         * `authorize('view')`-এ ([[EmployeePolicy]])। ⛔ তাই শাখায় সীমিত HR কর্মী Ctrl+K-এ অন্য শাখার কর্মীর নাম, কোড আর
+         * মোবাইল পেতেন, আর কাগজ-জোড়ার তালিকাতেও ([[DocumentLinks]]) — পাতা খুললে ৪০৩। ⭐ মডেলের পলিসিতে `view` থাকলে
+         * প্রতিটা সারি সেটা দিয়েও যাচাই হয়; চাবির দরজা আগের মতোই কোয়েরির আগে।
+         */
+        if ($guard['ability'] === null && $guard['permission'] !== null) {
+            $policy = Gate::getPolicyFor($class);
+
+            if ($policy !== null && method_exists($policy, 'view')) {
+                $guard['ability'] = 'view';
+            }
+        }
+
         return [
             'route' => $route,
             'columns' => $columns,
-            ...$this->permissionFor($route),
+            ...$guard,
         ];
     }
 
@@ -437,7 +488,7 @@ final class SearchEngine
      * @param  list<string>  $columns
      * @return iterable<Model>
      */
-    private function matchesIn(string $class, array $columns, string $term): iterable
+    private function matchesIn(string $class, array $columns, string $term, bool $rowChecked = false): iterable
     {
         /*
          * ⚠️ `%` আর `_` — LIKE-এর নিজের জাদুকরী অক্ষর।
@@ -446,7 +497,12 @@ final class SearchEngine
          * `_` যেকোনো এক অক্ষরে মিলত। ⛔ ফাঁস নয়, কিন্তু অর্থহীন ফল আর
          * সর্বোচ্চ খরচ। [[AuditController]]-এ হুবহু এই পালানোটাই আছে।
          */
-        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
+        /*
+         * ⓘ `\` নিজেও — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬। MySQL-এর LIKE-এ ওটাই পালানোর অক্ষর, তাই না পালালে
+         * "Back\Slash" খুঁজলে `\S` হয়ে যেত সাধারণ "S" (মিলত না), আর শেষে `\` লিখলে শেষের `%` আক্ষরিক হত।
+         * ⭐ [[DocumentLinks::candidates()]]-এর একই পালানো।
+         */
+        $like = '%'.addcslashes($term, '\\%_').'%';
 
         return $class::query()
             /*
@@ -468,7 +524,14 @@ final class SearchEngine
                     $query->orWhere($column, 'like', $like);
                 }
             })
-            ->limit(self::PER_SOURCE)
+            /*
+             * ⛔ সারি-যাচাইয়ের উৎসে বেশি সারি, আর স্থির ক্রম — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+             * ⓘ আগে LIMIT ৫ বসত পলিসির **আগে**, ক্রম ছাড়া: শাখা-খ-এর কর্মী "Store" লিখলে ডাটাবেজের প্রথম ৫টা অন্য শাখার
+             * হলে সব বাদ, ফল শূন্য — অথচ নিজের শাখায় ১০টা। আজ পেতেন, কাল পেতেন না। ⭐ এখন নতুনটা আগে, আর পলিসির উৎসে
+             * PER_SOURCE × ৮ পর্যন্ত এনে ছাঁকা ([[search()]] প্রতি উৎসে ৫টা ভরলে থামে) — সীমা বাঁধা, তাই খরচও বাঁধা।
+             */
+            ->orderByDesc((new $class)->getQualifiedKeyName())
+            ->limit($rowChecked ? self::PER_SOURCE * 8 : self::PER_SOURCE)
             ->get();
     }
 
@@ -486,7 +549,8 @@ final class SearchEngine
          * "customer · CUS-0001 · রহিম ট্রেডার্স"।
          *
          * ⭐ নামগুলো `core.source.*`-এ আছে, দুই ভাষায় — ৪৮টার ৪৮টাই
-         * (৩৩টা এই কাজেই বসানো হয়েছে, কারণ আগে ছিল মাত্র ১৫টা)।
+         * (৩৩টা এই কাজেই বসানো হয়েছে, কারণ আগে ছিল মাত্র ১৫টা)। ⚠️ পরে আসা ৩৪টা উৎসের নাম ছিল না — বসানো হলো
+         * ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬ ([[EverySearchResultSaysItsKindInBothLanguagesTest]] এখন গুনে দেখে)।
          *
          * ⓘ `Lang::has()` দিয়ে দেখা হয়, কারণ `__()` অনুবাদ না পেলে
          * **চাবিটাই** ফেরত দেয় — আর তখন পর্দায় `core.source.xyz` বসত,

@@ -80,4 +80,21 @@ void main() {
     expect(find.byKey(const ValueKey('app-lock')), findsNothing);
     expect(find.text('APP'), findsOneWidget);
   });
+
+  test('a sign-out opens the lock, so a fresh password sign-in is not asked for the phone PIN (phone line audit, 15 Oct 2026)', () {
+    final lock = AppLock(startLocked: true, authenticate: () async => false, deviceSupported: () async => true);
+    expect(lock.locked, isTrue);
+    lock.signedIn = false;
+    lock.signedIn = true;
+    expect(lock.locked, isFalse, reason: '⛔ নতুন জন পাসওয়ার্ড দিয়ে ঢুকেই আগের জনের তালায় পড়লেন');
+  });
+
+  testWidgets('a screen reader cannot reach the buttons under the lock (phone line audit, 15 Oct 2026)', (tester) async {
+    final handle = tester.ensureSemantics();
+    final l = AppLock(startLocked: true, authenticate: () async => false, deviceSupported: () async => true);
+    await tester.pumpWidget(MaterialApp(home: AppLockGate(lock: l, child: Scaffold(body: ElevatedButton(onPressed: () {}, child: const Text('অনুমোদন'))))));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('অনুমোদন'), findsNothing, reason: '⛔ তালার নিচের অনুমোদন বোতাম TalkBack-এ পৌঁছানো যায়');
+    handle.dispose();
+  });
 }

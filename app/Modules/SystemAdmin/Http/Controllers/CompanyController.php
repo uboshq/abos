@@ -209,7 +209,13 @@ class CompanyController extends Controller implements HasMiddleware
         $this->assertCodeExists($companyCode, 'code', $data['name_en']);
         $this->assertCodeExists($branchCode, 'branch_code', $data['branch_name_en']);
 
-        $company = $provisioner->create(
+        /*
+         * ⛔ তৈরি আর মালিকের অধিকার এক লেনদেনে — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[FirstRun::open()]]-এর একই
+         * নিয়ম)। ⓘ আগে কোম্পানি নিজের লেনদেনে কমিট হত, আর অধিকার দেওয়া চলত তার বাইরে: সেটা ভাঙলে কোম্পানি থাকত শাখা, বছর আর
+         * নম্বর-সিরিজসহ, কিন্তু কোনো সদস্য বা সুপার অ্যাডমিন ছাড়া — আর [[WholeDatabaseAccess]] সব কোম্পানি গোনে বলে মালিক সাথে
+         * সাথে কোম্পানি বানানো আর পুরো ব্যাকআপ হারাতেন, অ্যাপের ভেতর থেকে ফেরানোর পথ ছাড়া।
+         */
+        $company = \Illuminate\Support\Facades\DB::transaction(fn () => tap($provisioner->create(
             data: [
                 'code' => $companyCode,
                 'name_en' => $data['name_en'],
@@ -233,15 +239,13 @@ class CompanyController extends Controller implements HasMiddleware
                 'starts_on' => $data['year_starts_on'],
                 'ends_on' => $data['year_ends_on'],
             ],
-        );
-
         /*
          * যিনি বানালেন, তিনি ঢুকতে পারবেন।
          *
          * এটা না করলে নতুন কোম্পানিটা তালিকায় দেখা যেত কিন্তু সুইচারে
          * আসত না — আর কেন আসছে না তার কোনো ব্যাখ্যাও পর্দায় থাকত না।
          */
-        $provisioner->grantAccess($company, $request->user());
+        ), fn (Company $created) => $provisioner->grantAccess($created, $request->user())));
 
         return redirect()
             ->route('system_admin.company.index')
@@ -596,6 +600,19 @@ class CompanyController extends Controller implements HasMiddleware
             return true;
         }
 
-        return $request->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE) ?? false;
+        /*
+         * ⛔ সুপার অ্যাডমিন **এই** কোম্পানির — হেডারের চলতি কোম্পানির নয় (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)।
+         * ⓘ `roles` ভূমিকা পড়ে চলতি কোম্পানির দল থেকে; ক-তে সুপার অ্যাডমিন আর খ-তে কেবল ম্যানেজার মানুষটা খ-এর ছাপা-হয়ে-যাওয়া
+         * কোড বদলে দিতে পারতেন, আর খ-এর আসল মালিক ক-তে দাঁড়িয়ে থাকলে আটকাতেন।
+         */
+        $user = $request->user();
+
+        return $user !== null && \Illuminate\Support\Facades\DB::table('model_has_roles as mhr')
+            ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+            ->where('mhr.model_type', $user->getMorphClass())
+            ->where('mhr.model_id', $user->getKey())
+            ->where('mhr.company_id', $company->id)
+            ->where('r.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->exists();
     }
 }

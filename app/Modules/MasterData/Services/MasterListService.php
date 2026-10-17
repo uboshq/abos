@@ -189,6 +189,17 @@ final class MasterListService implements ProvisionsCompany
                 ? trim((string) $data['code'])
                 : $record->code;
 
+            /*
+             * ⛔ পক্ষের ধরন আর বিক্রির চ্যানেলের কোড একবার বসলে আর বদলায় না — কোডটাই তাদের চেনার নাম (মাস্টার লাইন-ধরে
+             * নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ কোড পড়ে চলে নিয়ম: `DISTRIB` বদলালে [[PartyType::isDistributor()]] মিথ্যা হত আর "এক
+             * পয়েন্টে একজন পরিবেশক" নীরবে বন্ধ; `VENDOR` বদলালে প্রিন্সিপালের তালিকা ভাঙত; চ্যানেলের কোডে ডিফল্টের সিঙ্ক চলে।
+             */
+            if ($code !== $record->code && ($record instanceof PartyType || $record instanceof \App\Modules\MasterData\Models\SalesChannel)) {
+                throw ValidationException::withMessages([
+                    'code' => __('master_data::validation.code_is_fixed', ['code' => $record->code]),
+                ]);
+            }
+
             if ($code !== $record->code) {
                 $this->assertCodeIsFree($record::class, $code, $record->getKey());
             }
@@ -307,7 +318,12 @@ final class MasterListService implements ProvisionsCompany
             ]);
         }
 
-        if ($this->referencesTo($record) !== null) {
+        /*
+         * ⛔ "ব্যবহৃত" মানে [[inUse()]] — ডাটাবেজের সম্পর্ক, আর পরিশোধ-পদ্ধতির বেলায় কাগজে লেখা কোডও (মাস্টার লাইন-ধরে নিরীক্ষা,
+         * ১৪ অক্টোবর ২০২৬)। ⓘ আগে কেবল সম্পর্ক দেখা হত, আর পরিশোধ-পদ্ধতির দিকে কোনো সম্পর্কই নেই — শত ভাউচারে লেখা `BKASH`
+         * চিরতরে মুছে যেত, কোডটা খালি হত, আর একই কোডে নতুন "নগদ" বানালে সব পুরনো কাগজ নগদ পড়ত।
+         */
+        if ($this->inUse($record)) {
             $this->deactivate($record);
 
             return false;

@@ -66,6 +66,12 @@ final class ReportExport
             return;
         }
 
+        // ⭐ টাকা, পরিমাণ আর শতাংশ ফাইলে খালি সংখ্যা — CSV-তে কমা ছাড়া, xlsx-এ সংখ্যার ঘর (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৬, ১৪ অক্টোবর ২০২৬)
+        $export->numeric(array_values(array_map(
+            fn (ReportColumn $column): string => $column->key,
+            array_filter($columns, fn (ReportColumn $column): bool => $column->isNumeric()),
+        )));
+
         $export->capture(
             array_map(
                 fn (ReportColumn $column): array => [

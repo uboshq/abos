@@ -70,6 +70,61 @@ final class DocumentFingerprint
     }
 
     /**
+     * ⭐ একটা নির্দিষ্ট সইয়ের ছাপ — কাগজের মাথার কিছু ঘর বাদে (১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কিছু সই গোটা কাগজের নয়, কাগজের একটা অংশের: বিলের ছাড়ের সই ([[SalesInvoiceService::assertDiscountApproved()]])
+     * গ্রাহক, পণ্য, পরিমাণ, দর আর ছাড় ঢাকে — কিন্তু কাউন্টারের পর্দার ছবি বা গেট পাসের দিনে যন্ত্রের বসানো তারিখ নয়।
+     * ⛔ ঐ ঘরগুলো [[NOT_THE_PAPER]]-এ বা কাগজের `fingerprintIgnores()`-এ বসালে **অন্য সইগুলোর** (মার্জিন) ছাপও বদলাত, আর
+     * লাইভে সইয়ের অপেক্ষায় থাকা কাগজগুলো ডিপ্লয়ের দিন নতুন সই চাইত। ⓘ তাই আলাদা দরজা, কেবল যে সই চায় তার জন্য।
+     *
+     * @param  list<string>  $alsoIgnore  কেবল মাথার ঘর — সারির ঘর সবসময় পুরোটা
+     */
+    public function without(Model $document, array $alsoIgnore): string
+    {
+        return hash('sha256', json_encode($this->shapeOf($this->asStored($document), $alsoIgnore), JSON_THROW_ON_ERROR));
+    }
+
+    /** অনুরোধের সারিতে কোন ঘরগুলো বাদ দিয়ে ছাপ নেওয়া হয়েছিল — [[without()]]; পর্দা আর তালিকা একই ছাপ মেলায় */
+    public const SKIPPED = 'fingerprint_skips';
+
+    /**
+     * ⭐ একটা সই যে ছাপে বসেছিল, কাগজের এখনকার সেই একই ছাপ — গোটা কাগজের, বা [[without()]]-এর হলে সেটার।
+     *
+     * ⓘ "সই হয়েছে, পোস্ট হয়নি" ([[SignedButNotPosted]]) আর নিরীক্ষার পর্দা জানে না কোন সই কোন ছাপ নেয়; সারিটা নিজেই বলে।
+     */
+    /**
+     * ⓘ সারি থেকে আবার তুলে কি ছাপটা মেলানো যায় — যে কাগজের ছাপে না-সংরক্ষিত প্রস্তাব থাকে (বাকির সীমা বাড়ানো, [[asStored()]]),
+     * তার নয়: ডাটাবেজের সারিতে প্রস্তাবটা নেই, তাই ছাপ কখনো মিলত না আর পর্দা প্রতিটা অনুরোধে "বদলেছে" বলত।
+     * কাগজ নিজে বলে (`fingerprintCarriesAProposal()`); তখন পর্দাগুলো আগের ঘড়ির নিয়মে।
+     */
+    public function canRecheck(Model $document): bool
+    {
+        return ! (method_exists($document, 'fingerprintCarriesAProposal') && $document->fingerprintCarriesAProposal());
+    }
+
+    /**
+     * ⭐ সই চাওয়ার পরে কাগজটা বদলেছে কি — ছাপ থাকলে ছাপ মিলিয়ে (সারির বদলও ধরা পড়ে), নাহলে মাথার `updated_at` বনাম চাওয়ার সময়
+     * (সইকারীর পাতা, [[ApprovalInboxController::show()]]; হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     */
+    public function changedSinceAsked(\App\Models\Approval $approval, Model $document): bool
+    {
+        if ($approval->state_hash !== null && $this->canRecheck($document)) {
+            return ! hash_equals((string) $approval->state_hash, $this->forApproval($approval, $document));
+        }
+
+        $touched = $document->getAttribute('updated_at');
+
+        return $approval->requested_at !== null && $touched !== null && $touched->greaterThan($approval->requested_at);
+    }
+
+    public function forApproval(\App\Models\Approval $approval, Model $document): string
+    {
+        $skips = (array) (($approval->payload ?? [])[self::SKIPPED] ?? []);
+
+        return $skips === [] ? $this->of($document) : $this->without($document, array_values(array_map('strval', $skips)));
+    }
+
+    /**
      * ⛔ কাগজটা **যেমন ডাটাবেজে আছে** — হাতের কপিটা যেমন, তেমন নয়।
      *
      * ── ⚠️ যা ধরা পড়ল, ২৪ সেপ্টেম্বর ২০২৬ ──────────────────
@@ -98,7 +153,12 @@ final class DocumentFingerprint
             return $document;
         }
 
-        $stored = $document->newQuery()->find($document->getKey());
+        /*
+         * ⓘ দেখার শাখার ছাঁকনি ছাড়া (১৩ অক্টোবর ২০২৬) — ছাপ কাগজের, যিনি দেখছেন তাঁর নয়। ⛔ হেডারে অন্য শাখা বাছা
+         * সইকারীর কাছে সারিটা "নেই" হত, তখন হাতের কপি (সারি ছাড়া) ছাপে যেত আর বদলহীন কাগজও "বদলেছে" দেখাত।
+         * কোম্পানির দেয়াল থাকে।
+         */
+        $stored = $document->newQuery()->withoutGlobalScope('user-branch')->find($document->getKey());
 
         if ($stored === null) {
             /*
@@ -170,7 +230,7 @@ final class DocumentFingerprint
     /**
      * @return array<string, mixed>
      */
-    private function shapeOf(Model $document): array
+    private function shapeOf(Model $document, array $alsoIgnore = []): array
     {
         $out = [];
 
@@ -184,8 +244,8 @@ final class DocumentFingerprint
          * সব কাগজেই ঘরটা ছাপের বাইরে চলে যেত।
          */
         $skip = method_exists($document, 'fingerprintIgnores')
-            ? [...self::NOT_THE_PAPER, ...$document->fingerprintIgnores()]
-            : self::NOT_THE_PAPER;
+            ? [...self::NOT_THE_PAPER, ...$document->fingerprintIgnores(), ...$alsoIgnore]
+            : [...self::NOT_THE_PAPER, ...$alsoIgnore];
 
         foreach ($document->getAttributes() as $key => $value) {
             if (in_array($key, $skip, true)) {

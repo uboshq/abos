@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Services\ExportJournal;
 use App\Http\Controllers\Controller;
 use App\Models\ReportRun;
 use Illuminate\Support\Facades\Gate;
@@ -28,6 +29,9 @@ final class ReportDownloadController extends Controller
             $run->hasFile() && Storage::disk('local')->exists((string) $run->file_path),
             404,
         );
+
+        // ⓘ রপ্তানির খাতায় — কে কোন নির্ধারিত ফাইল নামালেন, অন্য সব রপ্তানির মতো (ec, রিপোর্ট লাইন-নিরীক্ষা ⓘ১৪, ১৪ অক্টোবর ২০২৬)
+        app(ExportJournal::class)->wrote((int) $run->row_count);
 
         $mime = match ($run->format) {
             'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

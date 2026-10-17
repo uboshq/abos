@@ -283,6 +283,57 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $this->assertSame([null, $shop->drillLabel().' · কারওয়ান বাজার'], array_column($page['lines'], 'party'));
     }
 
+    /**
+     * ⭐ নগদ রসিদ আলাদা — মালিক, ১৫ অক্টোবর ২০২৬ (অ্যাপ ০.৪.৩৪): টাকা কোন খাতে জমা (`money`), শাখা, ছাঁকা ফলের মোট আর কে
+     * তুলেছেন। দাবি: নগদে কেবল ক্যাশের রসিদ, ব্যাংকে কেবল ব্যাংকের; মোট পুরো ফলের, বাতিল বাদ; অন্য শাখায় খালি।
+     */
+    public function test_cash_and_bank_receipts_list_apart_with_their_own_total_and_who_wrote_them(): void
+    {
+        app(SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
+        $reader = $this->person(['accounts.voucher.create', 'accounts.report']);
+        $till = Account::query()->postable()->active()->where('money_kind', Account::CASH)->orderBy('code')->firstOrFail();
+        // ⓘ এই কোম্পানিতে চালু ব্যাংক খাত নেই — টাকার খাতহীন একটা খাতকে ব্যাংক বানানো (এই দাবি খাতের ধরন মাপে)
+        $bank = Account::query()->postable()->active()->where('money_kind', Account::BANK)->orderBy('code')->first()
+            ?? tap(Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '1%')->orderBy('code')->firstOrFail(),
+                fn (Account $a) => $a->forceFill(['money_kind' => Account::BANK])->save());
+
+        $receipt = function (string $id, Account $money, string $amount) use ($reader): Voucher {
+            $out = $this->push($reader, [$this->change($id, [...$this->journal(), 'save_as_draft' => true])]);
+            $v = Voucher::query()->where('public_id', $out[0]['entityId'])->with('lines')->firstOrFail();
+            $v->lines[0]->forceFill(['account_id' => $money->id, 'debit' => $amount])->save();
+            $v->lines[1]->forceFill(['credit' => $amount])->save();
+            $v->forceFill(['type' => Voucher::RECEIPT, 'amount' => $amount, 'money_account_id' => null])->save();
+
+            return $v;
+        };
+
+        $cash = $receipt('r-cash', $till, '700');
+        $banked = $receipt('r-bank', $bank, '300');
+        $gone = $receipt('r-gone', $till, '50');
+        $gone->forceFill(['status' => \App\Core\Support\DocumentStatus::CANCELLED])->save();
+
+        $list = fn (string $q) => $this->phone($reader)->getJson('/api/v1/accounts/vouchers?type=receipt&'.$q)->assertOk()->json();
+
+        $onlyCash = $list('money=cash');
+        $ids = collect($onlyCash['rows'])->pluck('id');
+        $this->assertTrue($ids->contains($cash->public_id));
+        $this->assertFalse($ids->contains($banked->public_id), '⛔ ব্যাংকের রসিদ নগদের তালিকায়।');
+        $this->assertSame('700.00', $onlyCash['total'], '⛔ নগদ রসিদের মোট ভুল (বাতিলটা গোনা হলো?)');
+        $this->assertSame($reader->name, collect($onlyCash['rows'])->firstWhere('id', $cash->public_id)['written_by'], '⛔ কে তুলেছেন, তালিকায় নেই।');
+
+        $onlyBank = $list('money=bank');
+        $this->assertSame([$banked->public_id], collect($onlyBank['rows'])->pluck('id')->all(), '⛔ ব্যাংক রসিদের তালিকা ভুল।');
+        $this->assertSame('300.00', $onlyBank['total']);
+
+        $other = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'VCR2', 'name_en' => 'Receipt Branch', 'is_active' => true]);
+        $this->assertSame([], $list('money=cash&branch='.$other->public_id)['rows'], '⛔ অন্য শাখার ছাঁকনিতে এই শাখার রসিদ।');
+        $home = $this->company->defaultBranch();
+        $this->assertContains($cash->public_id, collect($list('money=cash&branch='.$home?->public_id)['rows'])->pluck('id')->all(),
+            '⛔ নিজের শাখার ছাঁকনিতে নিজের রসিদ নেই।');
+
+        $this->phone($reader)->getJson('/api/v1/accounts/vouchers?money=gold')->assertStatus(422);
+    }
+
     /** @param  list<string>  $keys */
     private function person(array $keys): User
     {

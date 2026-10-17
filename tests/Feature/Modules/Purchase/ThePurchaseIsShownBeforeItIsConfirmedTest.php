@@ -116,6 +116,31 @@ final class ThePurchaseIsShownBeforeItIsConfirmedTest extends TestCase
             ->assertSee(__('overview.not_ready'));
     }
 
+    /**
+     * ⛔ বৈজ্ঞানিক লেখা ("1e2") — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬ ([[DirectPurchaseRules]])।
+     * ⓘ `numeric` পাশ করাত, তারপর bcmath ValueError: সারাংশ আর জমা দুটোই ৫০০। এখন দুই দরজাই ঘরের কথা বলে।
+     */
+    public function test_a_scientific_figure_is_answered_with_a_message_not_a_500(): void
+    {
+        $before = PurchaseBill::query()->count();
+
+        foreach ([
+            ['lines' => [['product_id' => $this->first->id, 'qty' => '1e2', 'rate' => '10', 'sales_price' => '12']]],
+            ['bill_discount' => '1e1'],
+            ['transport_cost' => '1e3'],
+        ] as $overrides) {
+            $this->post(route('purchase.direct.overview'), $this->form($overrides))->assertOk()
+                ->assertSee('data-overview-blocks="1"', false)
+                ->assertSee(__('overview.not_ready'));
+            CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+
+            $this->post(route('purchase.direct.store'), $this->form($overrides))->assertRedirect()->assertSessionHasErrors();
+            CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        }
+
+        $this->assertSame($before, PurchaseBill::query()->count(), '⛔ "1e2" লেখা বিল বসে গেল।');
+    }
+
     public function test_the_signature_is_mentioned_only_when_a_flow_asks_for_it(): void
     {
         ApprovalFlow::query()->where('module', 'purchase')->where('action', 'bill')->delete();

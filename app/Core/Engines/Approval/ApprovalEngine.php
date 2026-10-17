@@ -271,9 +271,13 @@ final class ApprovalEngine
             $needed = self::signaturesNeededAt($atLevel);
 
             if ($needed > 1) {
+                // ⓘ মানুষ গোনা, সারি নয় — ভারপ্রাপ্তের সই যাঁর হয়ে, তাঁর নামে
                 $given = $approval->decisions()
                     ->where('level', $approval->current_level)
                     ->where('decision', 'approved')
+                    ->get(['user_id', 'on_behalf_of'])
+                    ->map(fn (ApprovalDecision $d) => (int) ($d->on_behalf_of ?? $d->user_id))
+                    ->unique()
                     ->count();
 
                 if ($given < $needed) {
@@ -537,6 +541,131 @@ final class ApprovalEngine
             about: $approval->approvable instanceof Model ? $approval->approvable : null,
             // ⭐ নিয়মের শর্ত আর টেমপ্লেটের মান — টাকা, কাগজ, পক্ষ, স্তর, ফল
             data: $this->noticeData($approval, $outcome),
+        );
+    }
+
+    /**
+     * ⭐ কাগজ বদলে যাওয়ায় অপেক্ষার অনুরোধটা আর এই কাগজের নয় — তুলে নেওয়া (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সইকারী যা দেখে সই দেবেন সেটাই যেন কাগজের এখনকার রূপ: কাউন্টারে রাখা বিল আবার খুলে কার্ট বদলালে পুরনো অনুরোধে সই দিলে
+     * সেই সই পুরনো কার্টের — ছাপ মিলত না আর বিল আবার আটকাত। ⓘ সারিটা মোছা হয় না, "বাতিল" হয়ে থাকে (`payload.stale`);
+     * ডাকার জায়গা তারপর নতুন অনুরোধ লেখে।
+     */
+    public function withdrawStale(Approval $approval): void
+    {
+        DB::transaction(function () use ($approval): void {
+            $locked = Approval::query()->whereKey($approval->getKey())->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== Approval::PENDING) {
+                return;
+            }
+
+            $locked->update([
+                'status' => Approval::CANCELLED,
+                'decided_at' => now(),
+                'payload' => [...(array) ($locked->payload ?? []), 'stale' => true],
+            ]);
+        });
+    }
+
+    /**
+     * ⭐ "সংশোধনে ফেরত" দেওয়া যায় কি না — অপেক্ষার অনুরোধ, আর কাগজটা এখনো খসড়া (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ যে কাগজ নিজের অবস্থায় অপেক্ষা করে (আদেশ "অনুমোদনের অপেক্ষায়", বাতিলের কাগজ "অপেক্ষায়") তাকে ফেরত দিলে সে আটকে থাকত —
+     * সেখানে "না"-ই পথ। ⓘ কাগজ নিজেও "না" বলতে পারে (`canBeSentBack()`): অন্য কাগজের সইয়ে বাঁধা ভাউচার লেখক বদলাতেই পারেন না।
+     */
+    public function canSendBack(Approval $approval): bool
+    {
+        if (! $approval->isPending()) {
+            return false;
+        }
+
+        $paper = $approval->approvable()->withoutGlobalScopes()->first();
+
+        if (! $paper instanceof Model || (string) $paper->getAttribute('status') !== \App\Core\Support\DocumentStatus::DRAFT) {
+            return false;
+        }
+
+        return ! method_exists($paper, 'canBeSentBack') || $paper->canBeSentBack($approval);
+    }
+
+    /**
+     * ⭐ সংশোধনে ফেরত — নোট বাধ্যতামূলক; অনুরোধ "ফেরত-সংশোধন" অবস্থায়, কাগজ খসড়া, লেখক নোটসহ খবর পান (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬;
+     * [[ASignerSendsBackOrCorrectsOnlyTheTextTest]])।
+     *
+     * ⓘ "না" ([[reject()]]) একটা সিদ্ধান্ত, এটা একটা প্রশ্ন: কাগজটা ঠিক করে আনুন। ⛔ তাই মডিউলকে "না" জানানো হয় না
+     * (`ApprovalDecided` নয়) — অর্থের কাগজের "না" ভাউচার ফেলে দেয়, এখানে কিছু ফেলার নেই। লেখক বদলে আবার পাঠালে
+     * [[DocumentApproval::stopping()]] নতুন অনুরোধ বসায়, আর নতুনটা এটার কথা বলে।
+     */
+    public function sendBack(Approval $approval, User $user, string $note): Approval
+    {
+        if (trim($note) === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages(['remarks' => __('approval::validation.send_back_needs_a_note')]);
+        }
+
+        if (! $this->canSendBack($approval)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['remarks' => __('approval::validation.cannot_send_back')]);
+        }
+
+        return DB::transaction(function () use ($approval, $user, $note) {
+            $approval = $this->lockPending($approval);
+            $this->assertCanDecide($approval, $user);
+
+            ApprovalDecision::create([
+                'approval_id' => $approval->id,
+                'level' => $approval->current_level,
+                'user_id' => $user->id,
+                'on_behalf_of' => $this->delegatorAt($approval, $user),
+                'decision' => ApprovalDecision::RETURNED,
+                'reason_code' => 'document',
+                'remarks' => $note,
+                'decided_at' => now(),
+            ]);
+
+            $approval->update(['status' => Approval::RETURNED, 'decided_at' => now()]);
+
+            $this->tell($approval, 'returned', $note);
+
+            return $approval->fresh();
+        });
+    }
+
+    /**
+     * ⭐ সইকারী নিজে কাগজ বদলালেন, আর অনুরোধটা থাকল — সইয়ের ছাপ আর অঙ্ক বদলানো কাগজের (মালিকের আদেশ, ১৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল দুই পথে ডাকা হয়: মালিক বদলে সই দেবেন, বা অন্য সইকারী কেবল বিবরণ ঠিক করলেন ([[VoucherWriter::update()]]); বাকি
+     * সব বদলে পুরনো অনুরোধ তুলে নতুন করে চাওয়া হয় ([[withdrawStale()]])। লেখক খবর পান কে কী বদলালেন।
+     */
+    public function adoptSignerEdit(Approval $approval, User $by, string $hash, ?string $amount, string $what): void
+    {
+        DB::transaction(function () use ($approval, $by, $hash, $amount): void {
+            $locked = Approval::query()->whereKey($approval->getKey())->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== Approval::PENDING) {
+                return;
+            }
+
+            $locked->update([
+                'state_hash' => $hash,
+                'amount' => $amount,
+                'payload' => [...(array) ($locked->payload ?? []), 'edited_by_signer' => (int) $by->id, 'edited_at' => now()->toDateTimeString()],
+            ]);
+        });
+
+        $maker = $approval->requested_by;
+
+        if ($maker === null || (int) $maker === (int) $by->id) {
+            return;
+        }
+
+        app(NotificationService::class)->send(
+            $maker,
+            'approval.edited_by_signer',
+            __('core.notify.approval_edited_by_signer', ['document' => $this->noticeLabel($approval), 'name' => $by->name]),
+            $what,
+            Route::has('approval.inbox.show') ? route('approval.inbox.show', $approval->id) : null,
+            key: 'approval:'.$approval->id.':edited:'.now()->timestamp,
+            about: $approval->approvable instanceof Model ? $approval->approvable : null,
         );
     }
 
@@ -1049,6 +1178,7 @@ final class ApprovalEngine
 
     public function canDecide(Approval $approval, User $user): bool
     {
+        $for = null;   // ⓘ ভারের পথে এলে যাঁর হয়ে — নিচের তিন পাহারায় তিনিও
         /*
          * ছক আছে, ওই স্তরে ধাপ আছে, আর ধাপটা ইনাকে অনুমতি দেয় —
          * তিনটাই একসাথে এখানে। ⚠️ `pendingFor()` ঠিক এই দুইটা মেথডই
@@ -1092,7 +1222,8 @@ final class ApprovalEngine
                  * ⭐ এখন দুই পথ কেবল *"ইনি কি এই স্তরে সইকারী"* প্রশ্নের
                  * উত্তর বদলায়; বাকি পাহারা সবার জন্য একই।
                  */
-                $standsIn = $this->delegatorAt($approval, $user) !== null;
+                $for = $this->delegatorAt($approval, $user);
+                $standsIn = $for !== null;
 
                 /*
                  * ⭐ কাগজটা উপরে পাঠানো হয়েছে, আর গন্তব্য ইনি।
@@ -1162,16 +1293,40 @@ final class ApprovalEngine
         }
 
         /*
+         * ⛔ ভার ক্ষমতা সরায়, বাড়ায় না — যাঁর হয়ে সই, তাঁর নিয়মও খাটে (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[AStandInSignsAsTheOneTheyStandForTest]])।
+         *  · তাঁর সীমা: সীমাহীন ভারপ্রাপ্ত এক লাখের মানুষের হয়ে দশ লাখে সই দিতেন।
+         *  · তাঁর নিজের অনুরোধ নয়: অনুরোধকারী নিজেই স্তরের একমাত্র সইকারী হলে, বন্ধুকে ভার দিয়ে নিজের কাগজ পাশ করাতেন।
+         */
+        if ($for !== null) {
+            $from = User::find($for);
+
+            if ($from === null || ! app(AuthorityService::class)->allows($from, $approval, $approval->branch_id ?? null)) {
+                return false;
+            }
+
+            if ((int) $approval->requested_by === (int) $for && ! $this->withinSelfLimit($approval) && ! $this->isSuperAdmin($from)) {
+                return false;
+            }
+        }
+
+        /*
          * ⓘ ইনি এই স্তরে আগেই সিদ্ধান্ত দিয়েছেন কি না।
          *
          * ⚠️ ফরওয়ার্ড **সিদ্ধান্ত নয়** — "হ্যাঁ"-ও নয়, "না"-ও নয়। ⛔
          * ওটাকেও গুনলে যিনি কাগজটা পাঠিয়েছিলেন, ফেরত এলে তিনি আর সই
          * দিতে পারতেন না, আর কাগজটা চিরকাল আটকে থাকত।
          */
+        /*
+         * ⛔ একজন মানুষ একটা স্তরে একবারই — নিজে, বা তাঁর হয়ে কেউ (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে কেবল চাপ
+         * দেওয়া মানুষের নিজের সারি দেখা হত: A সই দিয়ে C-কে ভার দিলে C-র সইটা দ্বিতীয় মানুষ গোনা হত, আর "দুজনেরই লাগবে" স্তর B ছাড়াই পেরোত।
+         */
+        $ids = array_values(array_filter([(int) $user->id, $this->delegatorAt($approval, $user)]));
+
         return ! $approval->decisions()
             ->where('level', $approval->current_level)
-            ->where('user_id', $user->id)
             ->where('decision', '!=', ApprovalDecision::FORWARDED)
+            ->where(fn ($q) => $q->whereIn('user_id', $ids)->orWhereIn('on_behalf_of', $ids))
             ->exists();
     }
 
@@ -1392,7 +1547,8 @@ final class ApprovalEngine
         foreach (app(DelegationService::class)->actingFor($user, $approval->module, $approval->action) as $fromId) {
             $from = User::find($fromId);
 
-            if ($from !== null && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
+            // ⛔ বন্ধ করা মানুষের ভার আর খাটে না — চাকরি গেলে তাঁর হয়ে সইও যায় ([[AStandInMustBeOneOfUsTest]])
+            if ($from !== null && $from->is_active && in_array((int) $approval->current_level, $this->levelsIn($flow, $from), true)) {
                 return $fromId;
             }
         }

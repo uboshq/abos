@@ -82,6 +82,7 @@ return [
     'already_signed' => 'The current version is already signed.',
     'no_signature_flow' => 'This company has no signature flow for documents — create a "Document signature" flow on the approval flow screen (who signs, in which order).',
     'signature_asked' => 'Signatures were asked for — the signers have been told.',
+    'signature_already_asked' => 'Signatures are already asked for — the signers have been told. The request is waiting in their inbox.',
     'verify_ok' => 'The signature checks out — the file is exactly the bytes that were signed.',
     'verify_old_version' => 'The signature is genuine but for an older version — the current version needs signing again.',
     'verify_broken' => 'It does not match — the file changed after signing, or is missing. Look into it now.',
@@ -167,6 +168,7 @@ Blank line = new paragraph
 
     // ⛔ শেয়ার আর অধিকার — নিজেকে নয়, নিজের নেই এমন কিছু নয় (documents রিভিউ ⚠️৪, ⚠️১০)
     'not_to_yourself' => 'Not to yourself — choose someone else.',
+    'version_closed' => 'The paper is under review or awaiting signatures right now — no new version until that is decided.',
     'not_to_your_role' => 'You cannot grant access to a role you hold yourself — that is granting it to yourself. Someone else can.',
     'cannot_give_download' => 'You cannot give download in a share without the right to download it yourself.',
 ];

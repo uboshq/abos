@@ -50,6 +50,15 @@ use Illuminate\Support\Collection;
  */
 class Customer extends Model implements AuthenticatableContract, Drillable
 {
+    /**
+     * ⓘ বাকির সীমার সইয়ের ছাপে না-সংরক্ষিত প্রস্তাব থাকে ([[CustomerService::withProposedLimit()]]) — সারি থেকে আবার মেলানো যায় না
+     * ([[DocumentFingerprint::canRecheck()]], ১৩ অক্টোবর ২০২৬)।
+     */
+    public function fingerprintCarriesAProposal(): bool
+    {
+        return true;
+    }
+
     use Authenticatable;
     use BelongsToCompany;
     use HasActiveState;
@@ -60,6 +69,9 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
     use \App\Core\Concerns\ScopedToUserDealers;
     use SoftDeletes;
+
+    // ⭐ আদায় আর ভাউচারের বাছাইয়ে জের-থাকা নিষ্ক্রিয় গ্রাহকও ([[PickableWhileOwing]])
+    use \App\Core\Concerns\PickableWhileOwing;
 
     protected $fillable = [
         'company_id', 'branch_id', 'location_id', 'code', 'name_en', 'name_bn', 'owner_name',

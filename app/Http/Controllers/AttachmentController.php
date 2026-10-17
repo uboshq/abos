@@ -185,21 +185,18 @@ class AttachmentController extends Controller
          * নিরাপত্তা-অডিট খোঁজ ১০)। ব্যাংক স্লিপ দেখে সই হয়; সইয়ের পরে আপলোডকারী
          * স্লিপটা সরালে প্রমাণটাই থাকত না। তখন কেবল সম্পাদনার চাবিধারী (তদারকি)।
          */
-        if ((int) $attachment->uploaded_by === (int) auth()->id() && ! $this->signed($document)) {
+        /*
+         * ⛔ "সই হয়ে গেছে" এখন "সই শুরু হয়েছে" — কোনো স্তরের "হ্যাঁ" বা পোস্ট হওয়া কাগজ; আর আপলোডকারীরও কাগজটা দেখার
+         * অধিকার লাগে (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। নিয়মটা এক জায়গায় ([[AttachmentEngine::uploaderMayRemove()]]),
+         * যাতে পর্দাও একই প্রশ্ন করতে পারে।
+         */
+        $user = auth()->user();
+
+        if ($this->attachments->uploaderMayRemove($attachment, $document, $user instanceof User ? $user : null)) {
             return;
         }
 
         $this->authorize('update', $document);
-    }
-
-    /** কাগজটার কোনো অনুমোদনে সই হয়ে গেছে কি না। */
-    private function signed(Model $document): bool
-    {
-        return Approval::query()
-            ->where('approvable_type', $document::class)
-            ->where('approvable_id', $document->getKey())
-            ->where('status', Approval::APPROVED)
-            ->exists();
     }
 
     /** কাগজটার অপেক্ষমাণ কোনো অনুমোদনে এই মানুষটা অনুরোধকারী বা সিদ্ধান্তদাতা কি না। */

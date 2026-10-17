@@ -67,4 +67,13 @@ void main() {
         isNull);
     expect(duplicateWarning(Exception('no')), isNull);
   });
+
+  test('a draft with a fractional quantity is marked, never rounded into the cart unnoticed (phone line audit, 15 Oct 2026)', () {
+    final draft = CounterDraft.fromJson(const {
+      'id': 'd1', 'no': 'S-1', 'customer': 'c1', 'customerName': 'রহিম',
+      'lines': [{'product': 'p1', 'name': 'চিনি', 'qty': '2.5000', 'rate': '120.0000'}],
+    });
+    expect(draft.hasFractions, isTrue, reason: '⛔ ২.৫ কেজির খসড়া চুপচাপ ৩ হয়ে কার্টে বসত');
+    expect(CounterDraft.fromJson(const {'lines': [{'qty': '3.0000', 'freeQty': '1.0000'}]}).hasFractions, isFalse);
+  });
 }

@@ -9,6 +9,8 @@ return [
     'coverage_count' => ':on / :all',
     'coverage_note' => 'Where approval can be required, and where it is set up in this company. With no rule, nothing is stopped — and no screen says so.',
     'approved' => 'Approved.',
+    'sent_back' => 'The paper went back to its writer with your note.',
+    'signer_changed' => ':name changed: :fields',
     'rejected' => 'Sent back.',
     'withdrawn' => 'The request was withdrawn.',
     'flow_saved' => 'The rule was saved.',
@@ -94,4 +96,5 @@ return [
     'bundle_nothing' => 'Nothing in this sale is still waiting to be confirmed.',
     'bundle_remark' => 'Confirmed together on one page',
     'escalation_fallback' => 'With no target: Manager → super admin',
+    'amount_changed_since_seen' => 'The amount of the paper changed after you opened the card — the list was reloaded; sign after seeing the new amount.',
 ];

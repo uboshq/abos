@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -5,7 +7,6 @@ import '../printing/document_actions_sheet.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
-import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -29,6 +30,7 @@ class ApprovalInboxScreen extends StatefulWidget {
     this.approve,
     this.reject,
     this.loadSheet,
+    this.loadMore,
   });
 
   /// Seams, so this screen can be driven in a test without a server.
@@ -43,12 +45,18 @@ class ApprovalInboxScreen extends StatefulWidget {
   /// সইয়ের আগে বিস্তারিত — না দিলে সার্ভার ([[ApprovalsApi.sheet]])
   final Future<ApprovalSheet> Function(String id)? loadSheet;
 
+  /// পরের পাতা — না দিলে সার্ভার ([[ApprovalsApi.pending]] `cursor`)
+  final Future<ApprovalPage> Function(String cursor)? loadMore;
+
   @override
   State<ApprovalInboxScreen> createState() => _ApprovalInboxScreenState();
 }
 
 class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
   List<ApprovalRecord>? _rows;
+  // ⛔ পরের পাতার চাবি — আগে কখনো পড়া হত না, তাই ৫০টার পরের কাগজ (সার্ভার পুরনোটা আগে দেয়: সবচেয়ে নতুনগুলোই) ফোনে
+  // কোনোদিন আসত না (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+  String? _next;
   String? _error;
   bool _busy = false;
 
@@ -69,7 +77,10 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     try {
       final page = await _fetch();
       if (!mounted) return;
-      setState(() => _rows = page.rows);
+      setState(() {
+        _rows = page.rows;
+        _next = page.nextCursor;
+      });
     } catch (error) {
       if (!mounted) return;
       // An empty inbox and an unreachable server are opposite facts, and a
@@ -116,7 +127,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       if (approved) {
         await (widget.approve ??
             (String id, String? note) =>
-                ApprovalsApi.approve(id, remarks: note))(approval.id, remarks);
+                ApprovalsApi.approve(id, remarks: note, seenAmount: approval.rawAmount))(approval.id, remarks);
       } else {
         await (widget.reject ??
             (String id, String note) =>
@@ -135,11 +146,34 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
           _say('এটি ইতিমধ্যে নিষ্পত্তি হয়ে গেছে।');
         case ApprovalFailure.notYours:
           _say('এই সিদ্ধান্তটি আপনার নয়।');
+        case ApprovalFailure.amountChanged:
+          // ⛔ কার্ড খোলার পরে অঙ্ক বদলেছে — সই পড়েনি; তালিকা আবার, নতুন অঙ্ক দেখে আবার সই
+          _say('কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।');
+          unawaited(_load());
         case ApprovalFailure.network:
           _say('সংযোগ নেই। অনুমোদনের জন্য ইন্টারনেট লাগবে।');
         case ApprovalFailure.other:
           _say(errorMessageFor(error, fallback: 'কাজটি সম্পন্ন হয়নি।'));
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _more() async {
+    final cursor = _next;
+    if (cursor == null) return;
+    setState(() => _busy = true);
+    try {
+      final page = await (widget.loadMore ?? (String c) => ApprovalsApi.pending(cursor: c))(cursor);
+      if (!mounted) return;
+      setState(() {
+        final seen = {for (final r in _rows ?? const <ApprovalRecord>[]) r.id};
+        _rows = [...?_rows, ...page.rows.where((r) => !seen.contains(r.id))];
+        _next = page.nextCursor;
+      });
+    } catch (error) {
+      if (mounted) _say(errorMessageFor(error, fallback: 'আরও আনা গেল না।'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -180,9 +214,11 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     await _decide(approval, approved: false, remarks: remarks);
   }
 
+  // ⓘ সইয়ের প্রশ্নে অঙ্কও — কোন অঙ্কে সই, তা দেখে
   String _describe(ApprovalRecord approval) => [
         approval.documentTypeLabel,
         if (approval.documentNo != null) approval.documentNo!,
+        if (approval.amountText != null) approval.amountText!,
       ].join(' · ');
 
   @override
@@ -229,6 +265,12 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                           onReject:
                               _busy ? null : () => _confirmReject(approval),
                         )),
+                  if (_error == null && rows != null && _next != null)
+                    OutlinedButton(
+                      key: const ValueKey('approvals-more'),
+                      onPressed: _busy ? null : _more,
+                      child: const Text('আরও দেখুন'),
+                    ),
                 ],
               ),
             ),
@@ -281,7 +323,7 @@ class _ApprovalCard extends StatelessWidget {
                 // Absent rather than zero when the server sent no amount —
                 // not every approvable document is about money.
                 if (approval.amount != null)
-                  Text(Money.taka(approval.amount),
+                  Text(approval.amountText!,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 16)),
               ],
@@ -469,7 +511,7 @@ class _ApprovalDetails extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                  if (approval.amount != null) Text(Money.taka(approval.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (approval.amount != null) Text(approval.amountText!, style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: AppSpacing.sm),
                   for (final (label, value) in s.facts) Text('$label: $value'),
                   if (s.rows.isNotEmpty) ...[

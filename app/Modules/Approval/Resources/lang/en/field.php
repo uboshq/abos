@@ -38,6 +38,9 @@ return [
     'party' => 'Party',
     'what_for' => 'What for',
     'where_money' => 'Where',
+    'deposited_to' => 'Into: :place',
+    'in_branch' => 'Branch: :branch',
+    'changed_after_request' => '⚠️ Amount changed after the signature was asked — asked for :amount',
 
     // Only people named in an active flow — the owner's rule, 22 September 2026.
     'forward_to' => 'Pass it to',
@@ -58,6 +61,7 @@ return [
     'sla_hours' => 'Time limit (hours)',
     'warn_hours' => 'Warn after (hours)',
     'escalate_hours' => 'Escalate after (hours)',
+    'escalate_hours_hint' => 'Used when SLA is empty: the request is late and escalates after these hours. When both are set, the SLA hours apply.',
     'escalate_to' => 'If late, pass it to',
     'conditions' => 'Conditions',
     'condition_field' => 'Document field',

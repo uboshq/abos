@@ -167,10 +167,12 @@ class _CollectScreenState extends State<CollectScreen> {
         _error = outcome.refusal ?? 'আদায়টা বসেনি। আবার চেষ্টা করুন।';
         _changeId = null;
       });
-    } on NoNetworkForThis {
+    } on NoNetworkForThis catch (e) {
       // ⓘ চাবি থাকে — নেট এলে আবার চাপলে একই কাজ, দুবার নয়
       if (mounted) {
-        setState(() => _error = 'আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
+        setState(() => _error = e.mayHaveLanded
+            ? 'আদায়ের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।'
+            : 'আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
       }
     } catch (e) {
       if (mounted) {

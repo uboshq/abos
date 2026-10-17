@@ -46,7 +46,13 @@ final class MorningSummary extends Notification
 
             foreach (Figures::KEYS as $key) {
                 $value = $company['values'][$key] ?? null;
-                $shown = $value === null ? '—' : ($key === Figures::SIGNATURES ? $value : '৳ '.Money::format($value));
+                // ⛔ ঢাকা ঘর ঢাকাই থাকে ([[Snapshots::readable()]]) — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
+                $shown = match (true) {
+                    $value === null => '—',
+                    $value === Figures::HIDDEN => Figures::HIDDEN,
+                    $key === Figures::SIGNATURES => $value,
+                    default => '৳ '.Money::format($value),
+                };
                 $mail->line(__('executive::figure.'.$key, [], 'bn').': '.$shown);
             }
         }

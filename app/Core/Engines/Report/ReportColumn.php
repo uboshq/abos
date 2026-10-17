@@ -68,6 +68,14 @@ final class ReportColumn
          * @var array{0: string, 1: string}|null
          */
         public readonly ?array $words = null,
+
+        /*
+         * ⭐ অনুপাতের ঘর — `[লব, হর]` দুই ঘরের চাবি (মালিক, ১৪ অক্টোবর ২০২৬: লক্ষ্য বনাম আদায়ের "মোট % = আদায়/লক্ষ্য, গড় নয়")।
+         * ⓘ মোট আর উপ-মোটে ঘরটা যোগ হয় না: দুই ঘরের নিজের মোট থেকে আবার গোনা হয় — লব × ১০০ ÷ হর; হর শূন্য হলে খালি।
+         *
+         * @var array{0: string, 1: string}|null
+         */
+        public readonly ?array $ratio = null,
     ) {}
 
     /** @param array<string, mixed> $definition */
@@ -97,12 +105,13 @@ final class ReportColumn
             // টাকা ও পরিমাণ ডিফল্টে যোগ হয়; তারিখ বা লেখা নয়। একটা রিপোর্টে
             // "মোট" সারিতে তারিখের যোগফল দেখানোর কোনো মানে হয় না।
             // ⛔ হার, দাম, দিন আর স্তরও নয় — [[self::isNotASum()]]
-            total: $definition['total'] ?? (in_array($type, [self::MONEY, self::QUANTITY], true) && ! self::isNotASum((string) $definition['key'])),
+            total: isset($definition['ratio']) || ($definition['total'] ?? (in_array($type, [self::MONEY, self::QUANTITY], true) && ! self::isNotASum((string) $definition['key']))),
             width: $definition['width'] ?? null,
             sourceTypeKey: $definition['source_type'] ?? null,
             sourceIdKey: $definition['source_id'] ?? null,
             permission: $definition['permission'] ?? null,
             words: isset($definition['words']) ? [(string) $definition['words'][0], (string) $definition['words'][1]] : null,
+            ratio: isset($definition['ratio']) ? [(string) $definition['ratio'][0], (string) $definition['ratio'][1]] : null,
         );
     }
 

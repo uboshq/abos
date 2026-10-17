@@ -113,7 +113,9 @@ final class SupplierDashboard implements ProvidesDashboard
             return [];
         }
 
-        $rows = app(AccountsFacts::class)->topDue('supplier', StandardChart::PAYABLE, 5);
+        // ⛔ ছাঁকার আগে বড় তালিকা, ছাঁকার পরে পাঁচ — আগে শীর্ষ পাঁচের পরে ছাঁকা হত, তাই অন্য শাখার বা সেবাদাতার বড় দেনা ঢুকে
+        // চার্টে দুইজন থাকত আর ষষ্ঠ-অষ্টম প্রিন্সিপাল হারাত (Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheMostOwedChartLostPrincipalsTest]])
+        $rows = app(AccountsFacts::class)->topDue('supplier', StandardChart::PAYABLE, 500);
 
         if ($rows === []) {
             return [];
@@ -121,7 +123,7 @@ final class SupplierDashboard implements ProvidesDashboard
 
         // ⓘ হেডারে বাছা শাখার সরবরাহকারী — তালিকার বাকি ঘরগুলোর মতোই ([[EveryPartyListFollowsTheViewedBranchTest]])
         $names = Supplier::query()->inViewedBranch()->onlySuppliers()->whereIn('id', array_column($rows, 'party_id'))->get()->keyBy('id');
-        $rows = array_values(array_filter($rows, fn (array $row) => $names->has($row['party_id'])));
+        $rows = array_slice(array_values(array_filter($rows, fn (array $row) => $names->has($row['party_id']))), 0, 5);
 
         if ($rows === []) {
             return [];

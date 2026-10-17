@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
+use App\Models\UserDataScope;
 use App\Modules\SystemAdmin\Services\BranchDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -154,6 +157,16 @@ final class BranchController extends Controller implements HasMiddleware
          * আগে A-র চাবিতে B-র শাখা বদলানো যেত ([[User::canInCompany()]])।
          */
         abort_unless($request->user()?->canInCompany((int) $branch->company_id, self::KEY), 404);
+
+        /*
+         * ⛔ আর শাখাটা মানুষটার শাখা-নাগালে — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ চাবিটা কোম্পানির, তাই আগে
+         * শাখা X-এ সীমিত প্রশাসক শাখা Y-এর নাম বদলাতে, বন্ধ করতে বা মুছতে পারতেন — মালিকের "প্রতিটা শাখা পুরোপুরি আলাদা"
+         * (১ অক্টোবর ২০২৬) ঠিক এখানে ফাঁকা। নাগাল পড়া হয় ঐ শাখার কোম্পানিতে দাঁড়িয়ে; সীমাহীন মানুষ আগের মতোই।
+         */
+        $reach = CompanyContext::forCompany((int) $branch->company_id,
+            fn () => app(DataScope::class)->idsFor($request->user(), UserDataScope::BRANCH));
+
+        abort_if($reach !== null && ! in_array((int) $branch->id, $reach, true), 404);
 
         return $branch;
     }

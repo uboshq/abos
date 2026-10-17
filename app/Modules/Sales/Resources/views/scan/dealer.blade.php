@@ -27,7 +27,7 @@
 
     <div data-boxed class="mb-5 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 py-4">
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">{{ __('sales::scan.your_due') }}</p>
-        <p class="num text-3xl font-semibold" data-due>{{ \App\Core\Support\Money::format($due) }}</p>
+        <p class="num text-3xl font-semibold" data-due>{{ \App\Core\Support\Money::drCr($due) }}</p>
         <a href="{{ route('sales.portal.ledger') }}" class="mt-2 inline-block text-sm underline">
             {{ __('sales::scan.open_ledger') }}
         </a>

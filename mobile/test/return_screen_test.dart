@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 class FakeReturnApi implements SalesReturnApi {
   String? askedCustomer;
   Map<String, double>? sentLines;
+  int drafts = 0;
+  bool overviewFailsOnce = false;
   String? sentReason;
   int confirms = 0;
 
@@ -49,13 +51,18 @@ class FakeReturnApi implements SalesReturnApi {
       required Map<String, double> lines,
       String? note}) async {
     sentLines = lines;
+    drafts++;
     sentReason = reasonId;
     return 'ret-1';
   }
 
   @override
-  Future<ConfirmOverviewData> overview(String returnId) async =>
-      ConfirmOverviewData.fromJson(const {
+  Future<ConfirmOverviewData> overview(String returnId) async {
+    if (overviewFailsOnce) {
+      overviewFailsOnce = false;
+      throw Exception('no signal');
+    }
+    return ConfirmOverviewData.fromJson(const {
         'title': 'বিক্রি ফেরত RET-0001 — সারাংশ',
         'head': [],
         'lines': [
@@ -72,6 +79,7 @@ class FakeReturnApi implements SalesReturnApi {
         'notes': [],
         'blocks': false,
       });
+  }
 
   @override
   Future<(String, String)> confirm(String returnId) async {
@@ -151,5 +159,22 @@ void main() {
 
     expect(api.confirms, 0, reason: '⛔ "ফিরে যান" চাপতেই ফেরত পাকা হলো');
     expect(find.text('খসড়া ফেরত রাখা হলো'), findsOneWidget);
+  });
+
+  testWidgets('a retry after the summary failed uses the same draft, not a second one (phone line audit, 15 Oct 2026)', (tester) async {
+    final api = FakeReturnApi()..overviewFailsOnce = true;
+    await _open(tester, api);
+    await tester.tap(find.byKey(const ValueKey('return-bill-inv-1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('return-qty-line-1')), '1');
+    await tester.tap(find.byKey(const ValueKey('return-go')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ঠিক আছে'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('return-go')));
+    await tester.pumpAndSettle();
+
+    expect(api.drafts, 1, reason: '⛔ সারাংশ ব্যর্থ হওয়ার পরে আবার চাপায় দ্বিতীয় খসড়া — প্রথমটা পড়ে রইল');
+    expect(find.byKey(const ValueKey('overview-sheet')), findsOneWidget);
   });
 }

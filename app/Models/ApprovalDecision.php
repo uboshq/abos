@@ -37,6 +37,9 @@ class ApprovalDecision extends Model
 
     public const REJECTED = 'rejected';
 
+    /** ⭐ সংশোধনে ফেরত — নোটসহ ([[ApprovalEngine::sendBack()]], ১৪ অক্টোবর ২০২৬) */
+    public const RETURNED = 'returned';
+
     /**
      * ⓘ "হ্যাঁ"-ও নয়, "না"-ও নয় — কাগজটা অন্যের হাতে গেল।
      *

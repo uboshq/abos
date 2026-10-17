@@ -286,6 +286,39 @@ final class TheOwnerSeesTheWholeGroupOnOneScreenTest extends TestCase
             ->assertSessionHasErrors('route');
     }
 
+    /**
+     * ⛔ যে শাখায় গোনা, চাপলে সেই শাখাতেই খোলে, হেডারের বাছাই থাকে — ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ আগে সেরা তালিকা, সতর্কতা আর সইয়ের অপেক্ষার বোতাম শাখা ছাড়া পাঠাত: হেডারে নেত্রকোনা, তালিকা নেত্রকোনার, অথচ চাপলে
+     * খুলত সব শাখা আর হেডার নিজেই "সব শাখা"-য় ফিরত।
+     */
+    public function test_a_list_row_opens_in_the_branch_it_was_counted_for_and_keeps_the_header(): void
+    {
+        $ntk = $this->branch('NTK');
+        $this->owner->switchCompany((int) $this->alpha->id, (int) $ntk->id);
+        $this->owner->forceFill(['view_all_branches' => false])->save();
+        $owner = $this->owner->fresh();
+        app(DataScope::class)->forget();
+
+        $page = $this->actingAs($owner)->get(route('executive.today', ['period' => 'month']))->assertOk();
+        $row = $page->viewData('topCustomers')['rows'][0] ?? null;
+        $this->assertNotNull($row, 'প্রস্তুতিটাই ভুল — নেত্রকোনার সেরা ক্রেতা নেই।');
+
+        $go = \App\Modules\Executive\Support\Go::to((int) $this->alpha->id, (int) $ntk->id, 'accounts.report.show',
+            ['slug' => 'customer-ledger', 'customer_id' => $row['customer_id']]);
+        $page->assertSee($go);
+
+        $this->actingAs($owner)->post(route('executive.open'), ['go' => $go]);
+
+        $this->assertSame((int) $ntk->id, (int) $owner->fresh()->current_branch_id, '⛔ খোলার পর হেডারের শাখা বদলেছে।');
+        $this->assertFalse((bool) $owner->fresh()->view_all_branches, '⛔ খোলার পর হেডার "সব শাখা"-য় ফিরেছে।');
+
+        $analysis = $this->actingAs($owner->fresh())->get(route('executive.analysis'))->assertOk();
+        $first = $analysis->viewData('lists')['customers']['rows'][0] ?? null;
+        $this->assertNotNull($first);
+        $this->assertSame((int) $ntk->id, $first['company_only'], '⛔ বিশ্লেষণের সারি কোন শাখায় গোনা, তা হারিয়েছে।');
+    }
+
     public function test_the_page_opens_and_every_cell_is_clickable(): void
     {
         $page = $this->actingAs($this->owner)->get(route('executive.today', ['period' => 'month']));

@@ -92,10 +92,12 @@ final class OpeningBalanceService
         string $amount,
         Carbon|string|null $date = null,
         ?int $branchId = null,
+        // ⓘ কোন দেনার ঘরে — পরিবহনকারী ২১১৬, হাম্মালি ঠিকাদার ২১১৭; বাকিরা ২১১১ ([[SupplierService::openingAccountFor()]])
+        string $account = StandardChart::PAYABLE,
     ): array {
         return $this->post(
             $partyType, $partyId, $documentNo, $amount, $date,
-            partyAccount: StandardChart::PAYABLE,
+            partyAccount: $account,
             partyIsDebit: false,
             branchId: $branchId,
         );
@@ -546,6 +548,15 @@ final class OpeningBalanceService
         }
 
         $given = $date instanceof Carbon ? $date : Carbon::parse($date);
+
+        /*
+         * ⛔ ভবিষ্যতের তারিখে নয় — ফর্ম আর আমদানি দুটোই তারিখ নিত, আর শুরুর জের পরের মাসে বসে আজকের বকেয়া, সীমার যাচাই আর
+         * রেওয়ামিল থেকে লুকাত (Customer/Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnOpeningBalanceDatedNextMonthTest]])।
+         * ⓘ সব পথ এখান দিয়ে যায় — গ্রাহক, সরবরাহকারী, খাত।
+         */
+        if ($given->copy()->startOfDay()->gt(Carbon::today())) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['opening_date' => __('accounts::validation.opening_in_future')]);
+        }
 
         /*
          * অর্থবছরের আগের তারিখ হলে বছরের প্রথম দিনে বসে।

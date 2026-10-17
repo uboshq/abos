@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive/hive.dart';
 
@@ -18,6 +19,16 @@ import 'package:hive/hive.dart';
 /// Same generate-once-then-persist shape as TokenStorage.deviceId(): a random
 /// key exists the first time anything asks, is written to the keystore, and
 /// every later ask reads the same one back.
+/// চাবিটা এই মুহূর্তে পড়া গেল না — বাক্স মোছার কারণ নয় ([[HiveEncryptionKey]])
+class HiveKeyUnavailable implements Exception {
+  const HiveKeyUnavailable(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'HiveKeyUnavailable($cause)';
+}
+
 class HiveEncryptionKey {
   const HiveEncryptionKey._();
 
@@ -40,10 +51,14 @@ class HiveEncryptionKey {
     String? existing;
     try {
       existing = await _storage.read(key: _storageKey);
-    } catch (_) {
+    } on MissingPluginException {
       // No secure-storage platform available at all -- treated the same as
       // "never written", below.
       existing = null;
+    } catch (error) {
+      // ⛔ পড়া ব্যর্থ (কিস্টোর সাময়িক বন্ধ, পটভূমির isolate) মানে "চাবি নেই" নয় — আগে নতুন চাবি বানিয়ে পুরনোটা মুছে দিত, আর
+      // অফলাইন সারির বাক্স আর খোলা যেত না, মুছে যেত: না-পাঠানো সব অর্ডার, কোনো বার্তা ছাড়া (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
+      throw HiveKeyUnavailable(error);
     }
 
     if (existing != null && existing.isNotEmpty) {

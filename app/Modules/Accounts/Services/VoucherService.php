@@ -19,6 +19,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Approval;
 use App\Models\DocumentRevision;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
@@ -549,6 +550,22 @@ final class VoucherService
             ])]);
         }
 
+        /*
+         * ⛔ সই-হওয়া কাগজের টাকা সই-হওয়া খাতেই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[AClaimIsPaidIntoItsSignedHeadTest]])।
+         * ⓘ কর্মীর খরচের দাবির ভাউচার নিজের সই নেয় না (সই কাগজে, [[VoucherApproval::actionFor()]]); আগে খাত মেলানো হত না, তাই
+         * খসড়ায় অগ্রিমের ডেবিট খরচের খাতে (বেতন থেকে আর কাটা যেত না) বা খরচ অন্য খাতে বসিয়ে পাকা করা যেত — সই ছাড়াই।
+         */
+        if (isset($terms['debit_accounts'])) {
+            $allowed = array_map('intval', (array) $terms['debit_accounts']);
+            $landing = $voucher->lines
+                ->filter(fn (VoucherLine $line) => in_array((int) $line->account_id, $allowed, true))
+                ->reduce(fn (string $sum, VoucherLine $line) => bcadd($sum, (string) $line->debit, 4), '0');
+
+            if (bccomp($landing, $paid, 4) !== 0) {
+                throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_wrong_account')]);
+            }
+        }
+
         $partyType = $terms['party_type'] ?? null;
 
         if ($partyType === null) {
@@ -624,6 +641,46 @@ final class VoucherService
      * ⓘ সারিটা অন্য কোম্পানির হতে পারে (পাওয়ার পাশ), তাই কোম্পানির ছাঁকনি তুলে খোঁজা — আর মেলানো হয় ভাউচারটা ঐ
      * পাশের কোম্পানিরই কি না।
      */
+    /**
+     * ⛔ অন্য কাগজের সইয়ে বাঁধা খসড়া ভাউচার ভাউচারের পাতা থেকে বদলায় না, পাকাও হয় না — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+     * ([[AVoucherSignedForAnotherPaperStaysAsSignedTest]])।
+     *
+     * ⓘ অর্থের কাগজ (হাতে ঋণ, আমানত, ভাড়া, বীমা, মুনাফা…) নিজের সই নেয় ভাউচারের উপরেই, `finance` ছকে ([[FinanceSignature]]);
+     * আন্তঃকোম্পানির দুই পাশের সই নেয় লেনদেনের কাগজ ([[InterCompanyService]])। ⛔ আগে সাধারণ ভাউচারের পাতা কেবল খসড়া
+     * কি না দেখত: সইয়ের অপেক্ষায় বা সইয়ের পরে খাত-অঙ্ক বদলে দেওয়া যেত (শেষ সই পোস্ট করত বদলানোটা), বা সেখান থেকেই
+     * পাকা করে কাগজের নিজের সইটাই এড়ানো যেত। ⓘ নিজের (`accounts`) ছকের সই এখানে বাধা নয় — সেটা এই পাতারই সই।
+     */
+    public function assertNotSignedElsewhere(Voucher $voucher, bool $posting = false): void
+    {
+        /*
+         * ⓘ বদলানো — অপেক্ষায় বা সইয়ের পরে, কোনোটাতেই নয়। পাকা করা — অপেক্ষায় নয় (সই এড়ানো); সইয়ের পরে কেবল যদি
+         * সইটা এখনো ঠিক এই ভাউচারকে ঢাকে ([[DocumentFingerprint::forApproval()]]) — শেষ সইয়ের নিজে-পোস্ট আটকে গেলে
+         * (মাস বন্ধ…) সই-হওয়া জিনিসটাই হাতে পাকা করার পথ খোলা থাকে।
+         */
+        $signedElsewhere = $voucher->isDraft() && Approval::query()
+            ->where('approvable_type', $voucher::class)
+            ->where('approvable_id', $voucher->id)
+            ->where('module', '<>', VoucherApproval::MODULE)
+            ->whereIn('status', [Approval::PENDING, Approval::APPROVED])
+            ->get()
+            ->contains(fn (Approval $a) => ! $posting
+                || $a->status === Approval::PENDING
+                || ($a->state_hash !== null && ! hash_equals((string) $a->state_hash,
+                    app(\App\Core\Engines\Approval\DocumentFingerprint::class)->forApproval($a, $voucher))));
+
+        $interCompany = $voucher->isDraft() && InterCompanyTransfer::query()->withoutGlobalScopes()
+            ->where(fn ($q) => $q->where('out_voucher_id', $voucher->id)->orWhere('in_voucher_id', $voucher->id))
+            ->get()
+            ->contains(fn (InterCompanyTransfer $t) => ((int) $t->out_voucher_id === (int) $voucher->id && (int) $t->company_id === (int) $voucher->company_id)
+                || ((int) $t->in_voucher_id === (int) $voucher->id && (int) $t->counter_company_id === (int) $voucher->company_id));
+
+        if ($signedElsewhere || $interCompany) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.signed_elsewhere', ['no' => $voucher->document_no]),
+            ]);
+        }
+    }
+
     private function assertNotOneSideOfInterCompany(Voucher $voucher): void
     {
         if (self::$bothSides > 0) {

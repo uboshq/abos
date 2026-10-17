@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Listeners;
 
+use App\Core\Engines\Approval\SignedPaperFinisher;
 use App\Core\Events\ApprovalDecided;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
@@ -61,6 +62,18 @@ final class FinishTheFinancePaperOnTheLastSignature
         $paper = $approval->approvable()->withoutGlobalScope('user-branch')->first();
         $why = __('finance::validation.signature_refused');
         $branchId = $paper?->getAttribute('branch_id');
+
+        /*
+         * ⛔ সই যে ভাউচার দেখে দেওয়া, খাতায় কেবল সেটাই — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬
+         * ([[AVoucherSignedForAnotherPaperStaysAsSignedTest]])। ⓘ সইয়ের অপেক্ষায় ভাউচারটা বদলালে (আজ ভাউচারের পাতা বন্ধ,
+         * [[VoucherService::assertNotSignedElsewhere()]]; তার আগের বদল বা নতুন কোনো দরজা) শেষ সই আগে পোস্ট করত বদলানোটা।
+         * এখন পোস্ট হয় না, লেখক আর সইকারী কারণসহ খবর পান ([[SignedPaperFinisher::refuseChanged()]])।
+         */
+        if ($yes && $paper instanceof Voucher && ! SignedPaperFinisher::stillSigned($approval, $paper)) {
+            app(SignedPaperFinisher::class)->refuseChanged($paper, $event->actorId, route('accounts.voucher.show', $paper));
+
+            return;
+        }
 
         CompanyContext::inBranch($branchId === null ? null : (int) $branchId, fn () => match (true) {
             $paper instanceof Withdrawal => $yes ? null : app(WithdrawalService::class)->dropRefused($paper),

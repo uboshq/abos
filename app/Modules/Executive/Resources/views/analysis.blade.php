@@ -71,7 +71,7 @@
                             @php [$route, $params] = $target($row); @endphp
                             <li class="border-t border-(--color-border) px-4 py-1">
                                 <button type="submit" form="executive-open" name="go"
-                                        value="{{ Go::to($row['company_id'], null, $route, $params) }}"
+                                        value="{{ Go::to($row['company_id'], $row['company_only'] ?? null, $route, $params) }}"
                                         class="flex w-full items-center justify-between gap-2 text-left hover:underline">
                                     <span class="min-w-0 truncate">{{ $row[$labelKey] ?? '—' }}
                                         @if ($many)

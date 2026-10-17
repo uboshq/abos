@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'created' => 'Created',
     'updated' => 'Edited',
+    'edited' => 'Edited before signing',
+    'revised' => 'Asked again',
     'deleted' => 'Deleted',
     'restored' => 'Restored',
     'confirmed' => 'Confirmed',

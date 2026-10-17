@@ -8,6 +8,8 @@ return [
         'process' => 'Where the papers stand',
     ],
 
+    'inactive_with_balance' => 'inactive · has a balance',
+
     'status' => [
         'draft' => 'Draft',
         'confirmed' => 'Confirmed',
@@ -41,6 +43,7 @@ return [
     ],
 
     'source' => [
+        'voucher' => 'Voucher',
         'sales_invoice' => 'Sales Invoice',
         'purchase_invoice' => 'Purchase Invoice',
         'receipt_voucher' => 'Receipt Voucher',
@@ -106,6 +109,45 @@ return [
         'vehicle' => 'Vehicle',
         'vehicle_type' => 'Vehicle Type',
         'warehouse' => 'Warehouse',
+        /*
+         * ⚠️ বাকি ৩৪টা উৎসের নাম — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         * ⓘ ১৩ সেপ্টেম্বরের পরে আসা উৎসগুলোর (উদ্ধৃতি, স্থায়ী সম্পদ, অর্থের কাগজ, লট…) নাম ছিল না, তাই খোঁজার ফলে
+         * কাঁচা ইংরেজি স্লাগ (`sales_quotation · SQ-0012`) আর "নতুন …" কাজগুলো চুপচাপ বাদ। শব্দ মডিউলের নিজের lang থেকে।
+         */
+        'sales_quotation' => 'Sales quotation',
+        'fixed_asset' => 'Fixed asset',
+        'asset_event' => 'Asset event',
+        'asset_transfer' => 'Asset transfer',
+        'asset_capitalise' => 'Asset capitalisation',
+        'asset_disposal' => 'Asset disposal',
+        'asset_verification_line' => 'Asset count line',
+        'depreciation' => 'Depreciation',
+        'depreciation_run' => 'Depreciation run',
+        'note' => 'Debit or credit note',
+        'money_category' => 'Money category',
+        'cost_center' => 'Cost centre',
+        'year_close' => 'Year close',
+        'withdrawal' => 'Withdrawal',
+        'deposit' => 'Deposit',
+        'deposit_movement' => 'Deposit movement',
+        'capital_entry' => 'Capital entry',
+        'bank_facility' => 'Bank facility',
+        'hand_loan' => 'Hand loan',
+        'hand_loan_movement' => 'Hand loan movement',
+        'insurance_premium' => 'Insurance premium',
+        'insurance_prepayment' => 'Insurance prepayment',
+        'insurance_claim' => 'Insurance claim',
+        'rental_contract' => 'Rental contract',
+        'rental_adjustment' => 'Rental adjustment',
+        'tenancy' => 'Tenancy',
+        'expense_claim' => 'Expense claim',
+        'sales_channel' => 'Sales channel',
+        'sales_invoice_cancellation' => 'Invoice cancellation',
+        'credit_profile' => 'Credit profile',
+        'batch' => 'Lot',
+        'brand' => 'Brand',
+        'product_category' => 'Product category',
+        'payment_method' => 'Payment method',
     ],
 
     'posting' => [
@@ -191,6 +233,11 @@ return [
 
     'settings_group' => [
         'entry' => 'Entry rules',
+        'risk' => 'Risk points',
+        'bell' => 'Bell',
+        'delivery' => 'Delivery',
+        'quiet' => 'Quiet hours',
+        'retention' => 'Retention',
         'print' => 'Printing',
         'report' => 'Reports',
         'limits' => 'Limits',
@@ -493,6 +540,7 @@ return [
         ],
         'no_branch' => 'Head office / no branch',
         'branch_total' => 'Branch total',
+        'section_total' => 'Subtotal',
         'more_in_branch' => 'This branch has :count more rows — choose the branch to see them all, page by page.',
         'grand_total' => 'Grand total',
         'contribution' => 'Share %',
@@ -1259,6 +1307,8 @@ return [
     'approval' => [
         'signed_paper_stuck_title' => ':no is signed but was not posted',
         'signed_paper_stuck_body' => 'Reason: :reason. Fix it, open the paper and press "Post".',
+        'changed_while_posting' => 'The paper changed elsewhere while it was being confirmed — nothing was posted. Open it again, check it and confirm.',
+        'changed_after_signing' => ':no changed after the signature was asked for — the signature is for the earlier paper, not this one. Nothing was posted; ask for a new signature.',
         'delegate_not_self' => 'You cannot delegate to yourself — that would open a path to approving your own request.',
         'delegate_bad_dates' => 'The end date cannot fall before the start date.',
         'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
@@ -1349,6 +1399,8 @@ return [
         'sort' => ['newest' => 'Newest first', 'oldest' => 'Oldest first', 'priority' => 'Most urgent first'],
         'action' => ['open' => 'Open', 'read' => 'Mark read', 'unread' => 'Mark unread', 'archive' => 'Archive', 'restore' => 'Restore'],
         'approval_approved' => 'Approved: :document',
+        'approval_returned' => 'Sent back for correction: :document',
+        'approval_edited_by_signer' => ':name changed your paper: :document',
         'approval_rejected' => 'Turned down: :document',
         'approval_reminder' => 'Approval is running out of time: :document',
         'approval_escalated' => 'Past its time, now with you: :document',
@@ -1395,6 +1447,10 @@ return [
             'approval_approved' => 'When my paper is approved',
             'approval_approved_note' => 'A paper you sent for approval has been signed.',
             'approval_rejected' => 'When my paper comes back',
+            'approval_returned' => 'When my paper is sent back for correction',
+            'approval_returned_note' => 'With the signer\'s note on what to fix. ⚠️ Off means a returned paper sits there unnoticed.',
+            'approval_edited_by_signer' => 'When a signer changes my paper',
+            'approval_edited_by_signer_note' => 'Who changed which fields — the signature will cover the changed paper.',
             'approval_rejected_note' => 'With the reason it was sent back. ⚠️ Off means a returned paper sits there unnoticed.',
             'approval_reminder' => 'When a signature of mine is running late',
             'approval_reminder_note' => 'Once, before the time on a request of yours runs out.',
@@ -1493,6 +1549,9 @@ return [
 
     // Offers switched off — [[NoSalesOffers]], 29 September 2026
     'offers_off' => 'Offers (the promotion module) are not switched on for this company.',
+
+    // A paper dated outside every financial year — [[NumberSeriesEngine]], 14 October 2026
+    'date_outside_every_financial_year' => 'The paper’s date falls in no financial year. Correct the date, or ask an administrator to open that year.',
 
     // One backup, check or restore at a time — [[BackupLock]], 30 September 2026
     'backup_busy' => 'Another backup, check or restore is running right now. Try again when it has finished.',

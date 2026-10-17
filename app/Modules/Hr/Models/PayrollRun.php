@@ -70,6 +70,22 @@ class PayrollRun extends Model implements Drillable
         return $this->hasMany(Payslip::class);
     }
 
+    /**
+     * ⭐ বেতনের সই প্রতিটা বেতনশিট আর তার সারির — কেবল মোটের নয় (হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬;
+     * [[APayrollSignatureCoversEverySlipTest]])।
+     *
+     * ⛔ আগে কাগজের ছাপ নিত কেবল রানের মাথা (মোট, নিট, লোকসংখ্যা) — `lines()` নেই, তাই সারিহীন। সইয়ের পরে বেতনের কাঠামো
+     * বদলে "আবার বানান" চাপলে একজনের ১০,০০০ বাড়িয়ে আরেকজনের ১০,০০০ কমানো যেত: মোট এক, ছাপ এক, পুরনো সইয়েই খাতায় আর
+     * ব্যাংকের ফাইলে নতুন মাথাপিছু টাকা। ⓘ এখন শিট আর তার আয়-কাটার সারি ছাপে; "আবার বানান" নতুন শিট লেখে, তাই নতুন সই।
+     * ⚠️ ডিপ্লয়ের মুহূর্তে সইয়ের অপেক্ষায় বা সই-হওয়া-অথচ-অনিশ্চিত রান একবার নতুন সই চাইবে — নিরাপদ দিকে।
+     *
+     * @return list<string>
+     */
+    public function fingerprintRelations(): array
+    {
+        return ['payslips.lines'];
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

@@ -81,11 +81,11 @@ final class ApprovalSla
      */
     public function dueFor(?ApprovalFlowStep $step, ?Carbon $from = null): ?Carbon
     {
-        if ($step?->sla_hours === null) {
+        if ($step?->clockHours() === null) {
             return null;
         }
 
-        return ($from ?? now())->copy()->addHours((int) $step->sla_hours);
+        return ($from ?? now())->copy()->addHours((int) $step->clockHours());
     }
 
     /**
@@ -129,7 +129,12 @@ final class ApprovalSla
         $companyId = (int) $approval->company_id;
 
         return CompanyContext::forCompany($companyId, function () use ($approval, $companyId): array {
-            $paper = $approval->approvable;
+            // ⛔ কাগজ সইকারীর হেডারের শাখার দেয়াল ছাড়া পড়া — নইলে অন্য শাখা বাছা থাকলে শাখা null, আর সব শাখার ব্যবস্থাপক দেরির কাগজে
+            // সই পেতেন (Approval লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ALateFallbackStaysInThePapersBranchTest]]; [[AuthorityService]]-এর একই ভুল)
+            $class = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel((string) $approval->approvable_type) ?? (string) $approval->approvable_type;
+            $paper = class_exists($class)
+                ? $class::query()->withoutGlobalScopes(['user-branch', 'user-warehouse', 'viewed-branch-warehouse'])->find($approval->approvable_id)
+                : null;
             $branch = $paper !== null && $paper->getAttribute('branch_id') !== null ? (int) $paper->getAttribute('branch_id') : null;
 
             $managers = $this->holdersOf(self::FALLBACK_ROLE, $companyId)

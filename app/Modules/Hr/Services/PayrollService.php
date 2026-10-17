@@ -214,7 +214,7 @@ final class PayrollService
          */
         $signedNet = (string) $run->net_total;
 
-        $this->approvals->assertClear(
+        $print = $this->approvals->assertClear(
             document: $run,
             module: 'hr',
             action: 'payroll',
@@ -223,13 +223,20 @@ final class PayrollService
             reason: $run->narration,
         );
 
-        $posted = DB::transaction(function () use ($run, $signedNet) {
+        $posted = DB::transaction(function () use ($run, $signedNet, $print) {
             /*
              * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
              * ⓘ পুরনো কপি থেকে "নিশ্চিত" চাপলে বাতিল হয়ে যাওয়া রানও খাতায় বসত।
              */
             $this->lockFresh($run);
             $this->assertDraft($run);
+            /*
+             * ⛔ যাচাই আর তালার মাঝে কাগজ বদলালে (শিট বা সারি — net একই থাকলেও) কিছুই খাতায় নয় ([[DocumentApproval::isUnchangedSince()]],
+             * ১৩ অক্টোবর ২০২৬); ec-এর net-এর নিয়মের মতোই নতুন কাগজে শুরু থেকে আবার — সই লাগলে নিচের আবার-ডাকা অনুরোধ বসিয়ে থামে।
+             */
+            if (! $this->approvals->isUnchangedSince($run, $print)) {
+                return null;
+            }
 
             $this->capAdvancesNow($run);
 

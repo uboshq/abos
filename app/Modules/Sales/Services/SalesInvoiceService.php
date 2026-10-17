@@ -8,6 +8,7 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Contracts\SalesOffers;
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -191,7 +192,15 @@ final class SalesInvoiceService
          * ⛔ সই যত টাকার, ছাড় তার বেশি হলে আবার সই — a4-এর অডিট, ৬ অক্টোবর ২০২৬: ১০০ টাকায় সই নিয়ে খসড়া বদলে ৫,০০০ ছাড়ে
          * নিশ্চিত করা যেত। ⓘ অঙ্ক হুবহু মিললে সেই সই-ই চলে; না মিললে (বেশি বা কম — [[Approval::covers()]]-এর কারণ দেখো) নিচে নতুন অনুরোধ, বিল খসড়ায়।
          */
-        if ($decided?->status === Approval::APPROVED && $decided->covers($discount)) {
+        /*
+         * ⭐ সই কেবল সেই বিলের — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[ADiscountSignatureCoversOnlyItsBillTest]])।
+         * ⛔ আগে কেবল অঙ্ক মেলানো হত: ১০০ বস্তার বিলে ১,০০০ টাকা ছাড়ের সই নিয়ে খসড়াটা ২ বস্তা, অন্য পণ্য বা অন্য গ্রাহক করে
+         * একই ১,০০০ ছাড়ে নিশ্চিত করা যেত। ⓘ এখন গ্রাহক, গুদাম, সারি (পণ্য, পরিমাণ, দর, ছাড়) আর মোটের ছাপও মেলে
+         * ([[discountFingerprint()]]); ছাপ ছাড়া পুরনো সই আগের মতো কেবল অঙ্কে ([[Approval::stillCovers()]])।
+         */
+        $hash = $this->discountFingerprint($invoice);
+
+        if ($decided?->status === Approval::APPROVED && $decided->stillCovers($discount, $hash)) {
             return;
         }
 
@@ -200,6 +209,14 @@ final class SalesInvoiceService
          * ⓘ আগে যেকোনো প্রত্যাখ্যাত সই বিলটা চিরকাল আটকাত: সইকারী "এত ছাড় নয়" বলার পর ছাড় কমিয়েও আর নতুন সই চাওয়া যেত না।
          * এখন একই অঙ্ক আবার এলে আগের মতো "নামঞ্জুর"; অঙ্ক বদলালে নিচে নতুন অনুরোধ — সইকারী আবার দেখেন।
          */
+        /*
+         * ⓘ অপেক্ষার অনুরোধটা আগের কার্টের হলে (রাখা বিল খুলে কার্ট বদলানো) সেটা তুলে নতুন অনুরোধ — নাহলে কাউন্টারে ম্যানেজার
+         * সই দিতেন পুরনো কার্টে, আর ছাপ না মেলায় বিল আবার আটকাত ([[ApprovalEngine::withdrawStale()]], ১৩ অক্টোবর ২০২৬)।
+         */
+        if ($decided?->status === Approval::PENDING && $decided->state_hash !== null && ! hash_equals((string) $decided->state_hash, $hash)) {
+            $this->approvals->withdrawStale($decided);
+        }
+
         if ($decided?->status === Approval::REJECTED && $decided->covers($discount)) {
             throw ValidationException::withMessages([
                 'discount' => __('sales::validation.discount_rejected'),
@@ -211,6 +228,15 @@ final class SalesInvoiceService
             module: 'sales',
             action: 'discount',
             amount: $discount,
+            // ⓘ কোন সইয়ের জায়গা নিল — সইকারী একই বিল দ্বিতীয়বার দেখে কারণ পড়েন ([[DocumentApproval::stopping()]]-এর একই নিয়ম)
+            payload: array_filter([
+                DocumentFingerprint::SKIPPED => self::NOT_THE_DISCOUNT,
+                'supersedes' => $decided?->status === Approval::APPROVED ? (int) $decided->id : null,
+                'was_amount' => $decided?->status === Approval::APPROVED && $decided->amount !== null ? (string) $decided->amount : null,
+            ], fn ($v) => $v !== null),
+            stateHash: $hash,
+            // ⓘ শর্ত মাপার ঘর আগের মতোই ফাঁকা — নাহলে উপরের `payload` দিয়ে ছকের শর্ত মাপা হত ([[ApprovalEngine::request()]])
+            matchOn: [],
             reason: $invoice->narration,
         );
 
@@ -231,6 +257,23 @@ final class SalesInvoiceService
          * পর্দা বলত "অনুরোধ পাঠানো হয়েছে"।
          */
         throw HeldForApproval::on($invoice, 'discount', __('sales::validation.discount_awaiting'));
+    }
+
+    /**
+     * বিলের যে ঘরগুলো ছাড়ের সইয়ের অংশ নয় — যন্ত্র বা পর্দা বসায়, মানুষের সিদ্ধান্ত নয় (১৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কাউন্টারের পর্দার ছবি (`counter_draft`, `counter_screen`) রাখা-ফেরানোয় বদলায়; `parked_at`, `idempotency_key` POS-এর
+     * নিজের; তারিখ আর বছর গেট পাসের দিনে যন্ত্র বসায় ([[GoodsIssue::issue()]]); `cost_of_goods` নিশ্চিতের সময় গোনা।
+     * ⛔ এগুলো ধরলে সই-হওয়া বিক্রি গেট পাসে বা শেষ সইয়ের পরে আবার সই চাইত, আর লেনদেনের ভিতরে চাওয়া অনুরোধ গড়িয়ে মুছত।
+     *
+     * @var list<string>
+     */
+    private const NOT_THE_DISCOUNT = ['counter_draft', 'counter_screen', 'parked_at', 'idempotency_key', 'trx_date', 'financial_year_id', 'cost_of_goods'];
+
+    /** ছাড়ের সইয়ের ছাপ — গ্রাহক, গুদাম, শাখা, ছাড়, মোট আর প্রতিটা সারি; [[NOT_THE_DISCOUNT]] বাদে */
+    public function discountFingerprint(SalesInvoice $invoice): string
+    {
+        return app(DocumentFingerprint::class)->without($invoice, self::NOT_THE_DISCOUNT);
     }
 
     /**

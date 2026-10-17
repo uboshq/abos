@@ -123,14 +123,16 @@
             @if ($outstandingAll !== null)
                 <p class="mt-1 text-2xs text-(--color-ink-muted)" data-due-all-branches>
                     {{ __('customer::field.outstanding_all_branches') }}:
-                    <span class="num">{{ \App\Core\Support\Money::format($outstandingAll) }}</span>
+                    {{-- ⛔ (Dr)/(Cr) — ওপরের অঙ্কের একই ভাষা ([[AnAdvanceReadAsABareMinusTest]]) --}}
+                    <span class="num">{{ \App\Core\Support\Money::drCr($outstandingAll) }}</span>
                 </p>
             @endif
 
-            @if ($creditLimitOn && bccomp((string) $customer->credit_limit, '0', 4) > 0)
+            {{-- ⛔ চলতি সীমা, অস্থায়ীসহ — দেয়াল যা মানে (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[TheTemporaryLimitWasMissingFromThePageTest]]) --}}
+            @if ($creditLimitOn && bccomp($customer->effectiveCreditLimit(), '0', 4) > 0)
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('customer::field.credit_limit') }}:
-                    <span class="num">{{ \App\Core\Support\Money::format($customer->credit_limit) }}</span>
+                    <span class="num" data-figure="credit-limit">{{ \App\Core\Support\Money::format($customer->effectiveCreditLimit()) }}</span>
                     @if ($customer->credit_days > 0)
                         · {{ $customer->credit_days }} {{ __('customer::field.credit_days') }}
                     @endif

@@ -312,6 +312,19 @@ class UserController extends Controller implements HasMiddleware
         $this->assertSupremeRoleStays($user, $data);
         $this->assertOwnershipRules($user, $data);
 
+        /*
+         * ⛔ নিজের পাসওয়ার্ড এই পর্দায় বদলাতে চলতি পাসওয়ার্ড লাগে — প্রোফাইলের পাতা আর মালিকানা হস্তান্তরের একই নিয়ম
+         * (সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে লাগত না: খোলা পড়ে থাকা বা চুরি যাওয়া একটা সেশন
+         * নিজের ফর্মে নতুন পাসওয়ার্ড বসাত, এই সেশনটা থেকে যেত আর বাকি সব কেটে যেত — অ্যাকাউন্ট চিরতরে দখল। অন্যের
+         * পাসওয়ার্ড বসানো আগের মতো চলে (প্রশাসকের কাজ, নিচে সব সেশন কাটে)।
+         */
+        if (($data['password'] ?? '') !== '' && $request->user()?->is($user)
+            && ! \Illuminate\Support\Facades\Hash::check((string) $request->input('current_password', ''), (string) $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => __('core.profile.password_wrong'),
+            ]);
+        }
+
         DB::transaction(function () use ($user, $data, $reach) {
             $user->update([
                 'name' => $data['name'],
@@ -464,6 +477,25 @@ class UserController extends Controller implements HasMiddleware
 
         $gone = array_values(array_diff($reach, array_keys($companies)));
 
+        /*
+         * ⛔ যে কোম্পানিতে মানুষটা মালিক (super admin), সেখান থেকে টিক তুলে বের করা যায় না — সিস্টেম-অ্যাডমিন লাইন-ধরে
+         * নিরীক্ষা, ১৪ অক্টোবর ২০২৬। ⓘ মালিকের নিয়মগুলো ([[assertOwnershipRules()]], [[assertSupremeRoleStays()]]) কেবল
+         * **চলতি** কোম্পানি দেখে; মালিক নিজের ফর্মে কেবল একটা কোম্পানিতে টিক রাখলে বাকি সব কোম্পানির সদস্যপদ আর মালিকানা
+         * মুছে যেত — সেসব কোম্পানি মালিকহীন, আর অ্যাপের ভেতর থেকে ফেরানোর কোনো পথ নেই। কোম্পানি ছাড়ার পথ মালিকানা হস্তান্তর।
+         * ⓘ লেনদেনের ভেতরে, তাই থামলে উপরের সব লেখাও ফেরে।
+         */
+        if ($gone !== [] && DB::table('model_has_roles as mhr')
+            ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+            ->where('mhr.model_type', $user->getMorphClass())
+            ->where('mhr.model_id', $user->getKey())
+            ->where('r.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->whereIn('mhr.company_id', $gone)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'companies' => __('system_admin::validation.owner_stays_in_company'),
+            ]);
+        }
+
         if ($gone !== []) {
             $user->companies()->detach($gone);
         }
@@ -586,11 +618,20 @@ class UserController extends Controller implements HasMiddleware
                 continue;
             }
 
+            /*
+             * ⛔ সুপার অ্যাডমিন ছাড়া কেউ নকল করলে মালিকের কেন্দ্রের চাবি নকলে যায় না — ec, Executive লাইন-নিরীক্ষা,
+             * ১৪ অক্টোবর ২০২৬। ⓘ আজ সাধারণ প্রশাসকের নাগাল কেবল চলতি কোম্পানি ([[companiesWithinReach()]]), তাই নকল
+             * তাঁর হাতে ঘটেই না; নাগাল কখনো বাড়লেও চাবিটা যেন অন্য কোম্পানিতে না ছড়ায়।
+             */
+            $permissions = auth()->user()?->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)
+                ? $elsewhere->permissions
+                : $elsewhere->permissions->reject(fn ($p) => in_array($p->name, PermissionSyncer::SUPER_ADMIN_GRANTS, true));
+
             Role::query()->create([
                 'name' => $name,
                 'guard_name' => $elsewhere->guard_name,
                 'company_id' => $companyId,
-            ])->syncPermissions($elsewhere->permissions);
+            ])->syncPermissions($permissions);
         }
     }
 
@@ -1440,6 +1481,13 @@ class UserController extends Controller implements HasMiddleware
 
         $wanted = (bool) $data['required'];
 
+        /*
+         * ⛔ যাঁর খাতা বদলাতে পারি না, তাঁর তালাও খুলি না — প্রতিটা কোম্পানিতে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)।
+         * ⓘ আর চাপাইও না — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬: পাহারাটা আগে কেবল বন্ধের পথে ছিল, তাই
+         * এক কোম্পানির ইউজার-অ্যাডমিন মালিকের ওপরও দুই ধাপ চাপাতে পারতেন — পরের অনুরোধেই তিনি বসানোর পর্দায় আটকাতেন।
+         */
+        $this->authorize('update', $user);
+
         if ($wanted) {
             $user->forceFill(['two_step_required' => true])->save();
 
@@ -1447,9 +1495,6 @@ class UserController extends Controller implements HasMiddleware
         }
 
         // ── ⛔ এখান থেকে নিচে সবটাই তালা খোলার পথ ──────────────────────
-
-        // ⛔ যাঁর খাতা বদলাতে পারি না, তাঁর তালাও খুলি না — প্রতিটা কোম্পানিতে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)
-        $this->authorize('update', $user);
 
         /*
          * ⛔ সুপার অ্যাডমিনের তালা খোলে কেবল আরেকজন সুপার অ্যাডমিন — চূড়ান্ত অডিট (⛔২)। ⚠️ আগে "User Admin" চাবিই

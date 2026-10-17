@@ -77,7 +77,11 @@ final class AnalysisController extends Controller implements HasMiddleware
                 // ⓘ লোকসান আগে — রিপোর্টের নিজের ক্রম; খরচের চাবি না থাকলে লাভের ঘর আসেই না
                 'losing' => $this->rankings->top($user, $companies, ExecutiveReports::PROFIT_BY_CUSTOMER, 'gross_profit', 10, $range, ascending: true),
                 'thin' => $this->rankings->top($user, $companies, 'sales.by_product', 'margin_percent', 10, $range, ascending: true),
-                'dead' => $this->rankings->top($user, $companies, 'inventory.slow_dead', 'value', 10),
+                /*
+                 * ⛔ কেবল অচল — কার্ডে চাপলে `status=dead`-এর তালিকা খোলে; আগে অবস্থা না বাছায় ধীর মালও আসত
+                 * (ec, Executive লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[TheDeadStockCardShowsOnlyDeadStockTest]])
+                 */
+                'dead' => $this->rankings->top($user, $companies, 'inventory.slow_dead', 'value', 10, ['status' => 'dead']),
             ],
             'ageing' => $this->rankings->totals($user, $companies, 'customer.ageing',
                 ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90', 'outstanding'], ['to' => $range['to']]),

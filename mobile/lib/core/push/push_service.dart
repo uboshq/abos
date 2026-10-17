@@ -13,7 +13,7 @@ import '../auth/token_storage.dart';
 /// (`POST /devices/push-token`, নিজের deviceId-তে), আর বার্তায় চাপলে কোথায় যাবে তা বলা ([destinationOf])।
 ///
 /// <p>⛔ কিছুই অ্যাপ থামায় না: Firebase না উঠলে (google-services নেই, Play Services নেই) সব চুপচাপ বাদ —
-/// বার্তা আসবে না, কিন্তু অ্যাপ আগের মতোই চলবে। লগআউটে সার্ভার নিজেই টোকেন মোছে।
+/// বার্তা আসবে না, কিন্তু অ্যাপ আগের মতোই চলবে। লগআউটে সার্ভার নিজেই টোকেন মোছে, আর ফোনও ([[forget]])।
 class PushService {
   PushService._();
 
@@ -46,6 +46,28 @@ class PushService {
       _refresh = messaging.onTokenRefresh.listen((t) => unawaited(_send(t)));
     } catch (e) {
       debugPrint('ABOS push: register failed ($e)');
+    }
+  }
+
+  /// পরীক্ষার পথ — আসলটা এই ফোনের Firebase টোকেন বাতিল করা
+  @visibleForTesting
+  static Future<void> Function() tokenDeleter = _deleteToken;
+
+  static Future<void> _deleteToken() async {
+    if (Firebase.apps.isEmpty) return;
+    await FirebaseMessaging.instance.deleteToken();
+  }
+
+  /// ⛔ বেরোলে এই ফোনের বার্তার টোকেন বাতিল — সার্ভার নিজে মোছে কেবল লগআউট সার্ভারে পৌঁছালে; নেট ছাড়া বেরোলে বা সেশন নিজে শেষ
+  /// হলে আগের জনের সইয়ের ফল, কাগজের নাম আর মন্তব্য এই ফোনে আসতেই থাকত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। নতুন
+  /// টোকেন পরের লগইনে [register] নিজে আনে; সার্ভার বাতিল টোকেনের সারি নিজে ফেলে দেয়।
+  Future<void> forget() async {
+    await _refresh?.cancel();
+    _refresh = null;
+    try {
+      await tokenDeleter();
+    } catch (e) {
+      debugPrint('ABOS push: token not deleted ($e)');
     }
   }
 

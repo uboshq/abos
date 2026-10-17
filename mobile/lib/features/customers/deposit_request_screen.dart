@@ -105,8 +105,9 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   }
 
   Future<void> _send() async {
-    final amount = _amount.text.trim();
-    if ((double.tryParse(amount) ?? 0) <= 0) {
+    // ⓘ ১,২৫০ বা 1,250 — পাঠানো হয় পরিষ্কার রূপে ([[Money.typedText]])
+    final amount = Money.typedText(_amount.text);
+    if ((Money.typed(amount) ?? 0) <= 0) {
       setState(() => _error = 'টাকার অঙ্ক লিখুন।');
       return;
     }
@@ -117,8 +118,13 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     final shares = <BillShare>[];
     var shared = 0.0;
     for (final b in _bills) {
-      final text = _shares[b.id]?.text.trim() ?? '';
-      final value = double.tryParse(text) ?? 0;
+      final text = Money.typedText(_shares[b.id]?.text ?? '');
+      final value = Money.typed(text);
+      // ⛔ লেখা আছে অথচ পড়া যায় না — আগে চুপচাপ বাদ পড়ত, আর বিজ্ঞপ্তি ঐ বিলের ভাগ ছাড়াই যেত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+      if (value == null || (text.isNotEmpty && value <= 0)) {
+        setState(() => _error = 'বিল ${b.no}-এর ভাগ পড়া গেল না — কেবল সংখ্যা লিখুন।');
+        return;
+      }
       if (value <= 0) continue;
       if (value > b.due + 0.001) {
         setState(() => _error = 'বিল ${b.no}-এর বকেয়া ${Money.taka(b.due)} — তার বেশি এই বিলে দেখানো যায় না।');
@@ -127,8 +133,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       shares.add(BillShare(b.id, text));
       shared += value;
     }
-    if (shared > (double.tryParse(amount) ?? 0) + 0.001) {
-      setState(() => _error = 'বিলগুলোতে মোট ${Money.taka(shared)}, অথচ জমা ${Money.taka(double.tryParse(amount) ?? 0)} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।');
+    if (shared > (Money.typed(amount) ?? 0) + 0.001) {
+      setState(() => _error = 'বিলগুলোতে মোট ${Money.taka(shared)}, অথচ জমা ${Money.taka(Money.typed(amount) ?? 0)} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।');
       return;
     }
     setState(() {

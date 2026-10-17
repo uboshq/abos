@@ -73,19 +73,25 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     {
         $shop = Customer::query()->firstOrFail();
 
-        /*
-         * ⚠️ ঘড়ি এগোয় প্রথম টানার **আগে**, পরে নয়।
-         *
-         * ওয়াটারমার্ক বসে পালার শুরুতে (প্রথম পাতা পড়ার মুহূর্ত; 02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬), আর কার্সার
-         * তার এক মিনিট আগে থেকে পড়ে ([[SyncService::cursorFor]])। ডেমোর সারিগুলো এইমাত্র তৈরি, তাই পালা এখনই শুরু হলে
-         * ওগুলো ওভারল্যাপের ভেতরেই থেকে যেত আর প্রতিবার ফিরে আসত।
-         *
-         * পরে এগোলে লাভ নেই — ওয়াটারমার্ক অতীতে বসা থাকে, ঘড়ি এগোলেও সে নড়ে না।
-         */
+        // ⓘ ডেমোর সারিগুলো এক মিনিটের পুরনো হোক — ওয়াটারমার্ক এখন পালার শুরু থেকে ([[SyncService::recordSuccessfulPull()]],
+        // ১৫ অক্টোবর ২০২৬), তাই পালার ঠিক আগে বানানো সারি ওভারল্যাপে আবার আসত
         $this->travel(2)->minutes();
 
         // প্রথম সিঙ্ক — সব বকেয়া নেমে গেল, ওয়াটারমার্ক এগোল
         $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
+
+        /*
+         * ⚠️ ঘড়ি এগোয় `pull-complete`-এর **আগে**, পরে নয়।
+         *
+         * ওয়াটারমার্ক বসে "এখন"-এ, আর কার্সার তার এক মিনিট আগে থেকে পড়ে
+         * ([[SyncService::cursorFor]])। ডেমোর সারিগুলো এইমাত্র তৈরি, তাই
+         * ওয়াটারমার্ক এখনই বসালে ওগুলো ওভারল্যাপের ভেতরেই থেকে যেত আর
+         * প্রতিবার ফিরে আসত।
+         *
+         * পরে এগোলে লাভ নেই — ওয়াটারমার্ক অতীতে বসা থাকে, ঘড়ি এগোলেও
+         * সে নড়ে না। প্রথমবার এটাই ভুল লিখেছিলাম।
+         */
+        $this->travel(2)->minutes();
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');
 
         $quiet = $this->dueRecords();
@@ -112,6 +118,28 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     }
 
     /**
+     * ⛔ লম্বা পালার মাঝে বদলানো সারি পরের পালায় আসে — ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬
+     * ([[SyncService::recordSuccessfulPull()]])।
+     *
+     * ⓘ গ্রাহকের পাতা পালার শুরুতেই শেষ; তার পরে সীমা বদলাল, আর পালা শেষ হলো দুই মিনিট পরে। ওয়াটারমার্ক "এখন" বসলে পরের টানা
+     * শুরু হত শেষ−৬০ সেকেন্ড থেকে — বদলটা কোনোদিন আসত না, ফোনে সীমা চিরকাল পুরনো।
+     */
+    public function test_a_row_changed_during_a_long_pass_comes_with_the_next_pass(): void
+    {
+        $shop = Customer::query()->firstOrFail();
+
+        $this->travel(2)->minutes();
+        $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
+        $this->travel(30)->seconds();
+        $shop->forceFill(['credit_limit' => '77777.0000'])->save();
+        $this->travel(2)->minutes();
+        $this->sync()->recordSuccessfulPull('phone-a', 'customer');
+
+        $this->assertContains((string) $shop->public_id, array_column($this->dueRecords(), 'entityId'),
+            '⛔ পালার মাঝে বদলানো সীমা পরের পালায় এল না — ফোনে চিরকাল পুরনো');
+    }
+
+    /**
      * ক্রেডিট সীমা বদলালেও যেতে হবে — ওটা গ্রাহকের সারিতে, খতিয়ানে নয়।
      *
      * কেবল খতিয়ান দেখলে সীমা বাড়ানোর খবরটা ফোনে কোনোদিন পৌঁছাত না,
@@ -121,8 +149,9 @@ class TheFigureOnThePhoneWouldHaveGoneStaleTest extends TestCase
     {
         $shop = Customer::query()->firstOrFail();
 
-        $this->travel(2)->minutes(); // ⓘ জলচিহ্ন এখন পালার শুরু (02ddf3fa9, Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬), তাই ঘড়ি এগোয় প্রথম টানার আগে
+        $this->travel(2)->minutes();
         $this->sync()->pull($this->salesman, 'phone-a', 'customer', 500);
+        $this->travel(2)->minutes();
         $this->sync()->recordSuccessfulPull('phone-a', 'customer');
 
         $this->assertSame([], $this->dueRecords());

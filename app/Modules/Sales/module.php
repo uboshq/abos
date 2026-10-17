@@ -831,6 +831,8 @@ return [
         \App\Modules\Sales\Reports\SalespersonReports::class,
         // ⭐ আদায়ের লক্ষ্য বনাম অর্জন (পরিকল্পনা সংস্করণ ২ §৯ ঙ)
         \App\Modules\Sales\Reports\CollectionTargetReports::class,
+        // ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬ ([[PartyTargetReport]])
+        \App\Modules\Sales\Reports\PartyTargetReport::class,
     ],
 
     /*

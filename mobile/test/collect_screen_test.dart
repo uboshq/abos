@@ -19,11 +19,12 @@ final _shop = CustomerRecord(
 
 /// ⓘ পর্দার পরীক্ষা — তারে কী যায় তার পরীক্ষা আসল পথে: collection_goes_online_test
 class _FakeEntry implements CollectionEntryApi {
-  _FakeEntry({this.lands, this.refuses, this.offlineTimes = 0});
+  _FakeEntry({this.lands, this.refuses, this.offlineTimes = 0, this.slow = false});
 
   final String? lands;
   final String? refuses;
   int offlineTimes;
+  bool slow;
   CollectionDraft? sent;
   final List<String> keys = [];
 
@@ -36,6 +37,10 @@ class _FakeEntry implements CollectionEntryApi {
     if (offlineTimes > 0) {
       offlineTimes--;
       throw const NoNetworkForThis();
+    }
+    if (slow) {
+      slow = false;
+      throw const NoNetworkForThis(mayHaveLanded: true);
     }
     sent = draft;
     return PushOutcome(landedId: lands, refusal: refuses);
@@ -203,5 +208,23 @@ void main() {
         .toPayload();
     expect(payload.containsKey('instrument'), isFalse);
     expect(payload['confirm'], true);
+  });
+
+  testWidgets('a timed-out collection does not say nothing was saved, and the retry is the same action (phone line audit, 15 Oct 2026)',
+      (tester) async {
+    final api = _FakeEntry(lands: 'col-1', slow: true);
+    await _pump(tester, CollectScreen(api: api, books: _FakeBooks(), customers: [_shop], newChangeId: _key));
+    await _pickTheShop(tester);
+    await tester.enterText(find.byKey(const ValueKey('collect-amount')), '500');
+    await tester.tap(find.byKey(const ValueKey('collect-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('ফোনে কিছু জমা থাকেনি'), findsNothing, reason: '⛔ সময় পেরোনো আদায়েও "কিছু জমা থাকেনি" — মানুষ নতুন করে লিখত');
+    expect(find.textContaining('হয়তো পৌঁছেছে'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('collect-send')));
+    await tester.pumpAndSettle();
+    expect(api.keys, hasLength(2));
+    expect(api.keys[1], api.keys[0], reason: '⛔ আবার চাপায় নতুন চাবি — দুবার বসত');
   });
 }
