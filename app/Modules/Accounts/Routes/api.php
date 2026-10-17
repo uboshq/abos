@@ -28,4 +28,18 @@ Route::prefix('v1/accounts')
         Route::get('/vouchers', [VoucherApiController::class, 'index'])->name('voucher.index');
         Route::get('/vouchers/{id}', [VoucherApiController::class, 'show'])->whereUuid('id')->name('voucher.show');
         Route::post('/vouchers/{id}/post', [VoucherApiController::class, 'post'])->whereUuid('id')->name('voucher.post');
+
+        // ⭐ টাকার হাতবদল আর নগদ গোনা (মালিক, ১৭ অক্টোবর ২০২৬; [[MoneyPhoneController]])
+        Route::get('/custody', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'custody'])->name('money.custody');
+        Route::get('/money/setup', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'setup'])->name('money.setup');
+        Route::get('/transfers', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'transfers'])->name('money.transfers');
+        Route::post('/transfers', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'sendTransfer'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('money.transfer.send');
+        Route::get('/transfers/{id}', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'transfer'])->whereUuid('id')->name('money.transfer');
+        Route::post('/transfers/{id}/confirm', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'confirmTransfer'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('money.transfer.confirm');
+        Route::post('/transfers/{id}/cancel', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'cancelTransfer'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('money.transfer.cancel');
+        Route::get('/cash-counts/setup', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'countSetup'])->name('money.count.setup');
+        Route::get('/cash-counts', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'counts'])->name('money.counts');
+        Route::post('/cash-counts', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'recordCount'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('money.count.record');
+        Route::get('/cash-counts/{id}', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'count'])->whereUuid('id')->name('money.count');
+        Route::post('/cash-counts/{id}/approve', [\App\Modules\Accounts\Http\Controllers\MoneyPhoneController::class, 'approveCount'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('money.count.approve');
     });

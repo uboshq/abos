@@ -179,4 +179,5 @@ return [
     'signed_elsewhere' => ':no is bound to the signature of another paper — it reaches the books exactly as it was signed. It cannot be changed or posted from the voucher page; use the page of that paper.',
     'inter_company_not_reversible' => 'This inter-company transfer can no longer be reversed — it already was.',
     'maker_checker' => ':no was written by you. You cannot post your own voucher; someone else must post it.',
+    'phone_unknown_reference' => 'This could not be found any more - fetch the list again. It may belong to another branch, or it has changed meanwhile.',
 ];

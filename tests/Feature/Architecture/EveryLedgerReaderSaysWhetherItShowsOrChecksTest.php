@@ -41,6 +41,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Http/Controllers/ChartOfAccountsController.php' => 'খাতের তালিকার জের',
         'app/Modules/Accounts/Http/Controllers/FinanceControlController.php' => 'অর্থ-নিয়ন্ত্রণের পর্দা',
         'app/Modules/Accounts/Http/Controllers/MoneyCustodyController.php' => 'টাকা কার হাতে — পর্দা',
+        // ⭐ ফোনের একই পর্দা — ওয়েবের পাতার একই সারি, দেখার শাখায় (১৭ অক্টোবর ২০২৬)
+        'app/Modules/Accounts/Http/Controllers/MoneyPhoneController.php' => 'টাকা কার হাতে — ফোনের পর্দা, ওয়েবের পাতার একই হিসাব',
         'app/Modules/Accounts/Http/Controllers/VoucherListController.php' => 'ভাউচারের তালিকার অঙ্ক',
         'app/Modules/Accounts/Resources/views/coa/show.blade.php' => 'একটা খাতের পাতা',
         'app/Modules/Accounts/Services/AccountsFacts.php' => 'হিসাবের পর্দার তথ্য',

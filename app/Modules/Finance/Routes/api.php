@@ -31,6 +31,17 @@ Route::prefix('v1/finance')
         Route::get('/rents', [FinanceApiController::class, 'rents'])->name('phone.rents');
         Route::get('/rents/{side}/{id}', [FinanceApiController::class, 'rent'])
             ->where('side', 'pay|let')->whereUuid('id')->name('phone.rent');
+        // ⭐ হাতধারের টাকার খাত আর দেওয়া-নেওয়া — `{id}`-এর আগে (মালিক, ১৭ অক্টোবর ২০২৬; [[HandLoanPhoneController]])
+        Route::get('/hand-loans/money-accounts', [\App\Modules\Finance\Http\Controllers\HandLoanPhoneController::class, 'moneyAccounts'])
+            ->name('phone.hand_loan.money_accounts');
+        Route::post('/hand-loans/{id}/move', [\App\Modules\Finance\Http\Controllers\HandLoanPhoneController::class, 'move'])->whereUuid('id')
+            ->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('phone.hand_loan.move');
         Route::get('/hand-loans', [FinanceApiController::class, 'handLoans'])->name('phone.hand_loans');
         Route::get('/hand-loans/{id}', [FinanceApiController::class, 'handLoan'])->whereUuid('id')->name('phone.hand_loan');
+
+        // ⭐ CFO, নগদের পূর্বাভাস, আয়, বাজেটের মাস — ওয়েবের একই সেবা ([[FinanceFiguresApiController]])
+        Route::get('/cfo', [\App\Modules\Finance\Http\Controllers\FinanceFiguresApiController::class, 'cfo'])->name('phone.cfo');
+        Route::get('/cash-forecast', [\App\Modules\Finance\Http\Controllers\FinanceFiguresApiController::class, 'forecast'])->name('phone.cash_forecast');
+        Route::get('/income', [\App\Modules\Finance\Http\Controllers\FinanceFiguresApiController::class, 'income'])->name('phone.income');
+        Route::get('/budget', [\App\Modules\Finance\Http\Controllers\FinanceFiguresApiController::class, 'budget'])->name('phone.budget');
     });
