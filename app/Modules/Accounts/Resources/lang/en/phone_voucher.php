@@ -18,4 +18,7 @@ return [
     'party_any' => 'Party',
     'money_into' => 'Paid into',
     'money_out_of' => 'Paid from',
+    // ⭐ কনট্রার দুই দিক — মালিক, ১৭ অক্টোবর ২০২৬ ("recived into, pay From")
+    'contra_from' => 'Moved from',
+    'contra_to' => 'Moved to',
 ];
