@@ -62,7 +62,8 @@ final class ThePhoneWritesTheStockTheWebWayTest extends TestCase
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
         // ⓘ মালিক গুদামের শাখায় বসা — অন্য শাখার গুদাম তখন দেয়ালের বাইরে
-        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $this->warehouse->branch_id])->save();
+        // ⓘ মালিক হেডারে এক শাখা বাছা (`view_all_branches` = false) — নইলে "সব শাখা", আর দেয়ালের দাবির ভিত্তি থাকে না ([[DataScope::viewedBranch()]])
+        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $this->warehouse->branch_id, 'view_all_branches' => false])->save();
         CompanyContext::set((int) $this->company->id, (int) $this->warehouse->branch_id);
         $this->actingAs($this->owner);
     }

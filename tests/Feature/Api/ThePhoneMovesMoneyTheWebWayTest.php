@@ -59,7 +59,8 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $branch = (int) $this->company->defaultBranch()?->id;
-        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $branch])->save();
+        // ⓘ মালিক হেডারে এক শাখা বাছা (`view_all_branches` = false) — নইলে "সব শাখা", আর দেয়ালের দাবির ভিত্তি থাকে না ([[DataScope::viewedBranch()]])
+        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $branch, 'view_all_branches' => false])->save();
         CompanyContext::set((int) $this->company->id, $branch);
         $this->actingAs($this->owner);
 
@@ -71,10 +72,10 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
     {
         // ⓘ পাঠান সাধারণ কর্মী — super admin-এর ছাড় সেবার নিয়ম, তাকে নিয়ে আলাদা দাবি নিচে (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬)
         $sender = $this->staff(['accounts.transfer.create', 'accounts.transfer.confirm']);
-        $this->till->forceFill(['holder_id' => $sender->id])->save();
+        $from = $this->tillOf($sender);
         $receiver = $this->staff(['accounts.transfer.confirm', 'accounts.transfer.create']);
         $safe = app(CashTillService::class)->create(['name_en' => 'Phone safe', 'holder_id' => $receiver->id]);
-        $body = ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id,
+        $body = ['trx_date' => now()->toDateString(), 'from_till' => $from->public_id,
             'destination' => 'till:'.$safe->public_id, 'amount' => '4000', 'narration' => 'দিনের নগদ'];
 
         $sent = $this->phonePost($sender, '/api/v1/accounts/transfers', $body, 'mt-key-0001')->assertCreated()->json();
@@ -82,7 +83,7 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
         $this->assertSame(1, MoneyTransfer::query()->where('to_till_id', $safe->id)->count(), '⛔ একই চাবিতে দুটো হস্তান্তর।');
 
         $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '4000', 4), '⛔ পাঠানো টাকা পথের খাতে বসেনি।');
-        $this->assertSame(0, bccomp($this->balance($this->till->account_id), '6000', 4), '⛔ টিল থেকে টাকা কমেনি।');
+        $this->assertSame(0, bccomp($this->balance($from->account_id), '6000', 4), '⛔ টিল থেকে টাকা কমেনি।');
 
         // ⛔ পাঠানো মানুষ নিজে নেন না — প্রাপক টিলের দায়িত্বে অন্যজন; সেবার নিজের কারণে (ঘরসহ), অন্য কোনো ৪২২ নয়
         $this->assertSame(422, $this->phonePost($sender, '/api/v1/accounts/transfers/'.$sent['id'].'/confirm', [], 'mt-key-0002')->status());
@@ -239,11 +240,11 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
     public function test_only_the_sender_or_a_manager_takes_back_an_unconfirmed_transfer_and_both_legs_return(): void
     {
         $sender = $this->staff(['accounts.transfer.create']);
-        $this->till->forceFill(['holder_id' => $sender->id])->save();
+        $from = $this->tillOf($sender);
         $other = $this->staff(['accounts.transfer.create']);
         $manager = $this->staff(['accounts.transfer.create', 'accounts.transfer.manage']);
         $safe = app(CashTillService::class)->create(['name_en' => 'Cancel safe', 'holder_id' => $this->owner->id]);
-        $body = ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id, 'destination' => 'till:'.$safe->public_id, 'amount' => '1500'];
+        $body = ['trx_date' => now()->toDateString(), 'from_till' => $from->public_id, 'destination' => 'till:'.$safe->public_id, 'amount' => '1500'];
 
         $first = $this->phonePost($sender, '/api/v1/accounts/transfers', $body, 'cn-key-0001')->assertCreated()->json('id');
         $this->phonePost($other, '/api/v1/accounts/transfers/'.$first.'/cancel', ['cancel_reason' => 'ভুল খাত'], 'cn-key-0002')
@@ -253,7 +254,7 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
 
         $this->phonePost($sender, '/api/v1/accounts/transfers/'.$first.'/cancel', ['cancel_reason' => 'ভুল খাত'], 'cn-key-0003')->assertCreated();
         $this->assertSame(0, bccomp($this->net(StandardChart::CASH_IN_TRANSIT), '0', 4), '⛔ বাতিলের পরে পথের খাত শূন্য নয় — এক পা ফেরেনি।');
-        $this->assertSame(0, bccomp($this->balance($this->till->account_id), '10000', 4), '⛔ বাতিলের পরে টিলে টাকা ফেরেনি।');
+        $this->assertSame(0, bccomp($this->balance($from->account_id), '10000', 4), '⛔ বাতিলের পরে টিলে টাকা ফেরেনি।');
 
         $second = $this->phonePost($sender, '/api/v1/accounts/transfers', ['amount' => '600'] + $body, 'cn-key-0004')->assertCreated()->json('id');
         $this->phonePost($manager, '/api/v1/accounts/transfers/'.$second.'/cancel', ['cancel_reason' => 'ম্যানেজার ফেরাল'], 'cn-key-0005')->assertCreated();
@@ -303,6 +304,15 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
         );
     }
 
+    /** কর্মীর নিজের বাক্স, ১০,০০০ নগদসহ — টাকা থাকা বাক্সের দায়িত্ব বদলায় না, তাই নতুন বাক্স */
+    private function tillOf(User $holder): CashTill
+    {
+        $till = app(CashTillService::class)->create(['name_en' => 'Till of '.$holder->id, 'holder_id' => $holder->id]);
+        $this->fund($till->account_id, '10000');
+
+        return $till;
+    }
+
     private function flow(string $module, string $action): void
     {
         app(ApprovalFlowService::class)->create(
@@ -310,6 +320,8 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
             [['level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER,
                 'approver_id' => User::query()->where('email', 'accounts@abos.test')->value('id'), 'requires_all' => false]],
         );
+        // ⓘ ইঞ্জিন পরীক্ষার পুরো সময় একই — আগের অনুরোধে "ছক নেই" মনে রাখলে নতুন ছক দেখত না ([[FinanceMoneyMovedWithNobodyToSignTest]]-এর একই)
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
     }
 
     private function balance(int $accountId): string

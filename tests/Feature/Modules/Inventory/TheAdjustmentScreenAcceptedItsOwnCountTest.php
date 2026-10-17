@@ -105,7 +105,7 @@ final class TheAdjustmentScreenAcceptedItsOwnCountTest extends TestCase
             ->post(route('inventory.count.approve', $paper), ['reason_code_id' => $this->reason()->id])
             ->assertSessionHasNoErrors();
         $this->assertOnHand($product, '31', '⛔ অন্যজন মেনে নেওয়ার পরেও খাতা বদলায়নি।');
-        $this->assertSame($rows + 1, $this->adjustmentRows());
+        $this->assertSame($rows + 2, $this->adjustmentRows(), '⛔ ঘাটতির দুই সারি (ক্ষতি আর মজুদ) খাতায় ওঠেনি।');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────

@@ -54,7 +54,8 @@ final class ThePhoneComparesQuotationsAndRunsQualityAndSerialsTest extends TestC
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         $this->warehouse = Warehouse::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'WH-MMS')->firstOrFail();
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $this->warehouse->branch_id])->save();
+        // ⓘ মালিক হেডারে এক শাখা বাছা (`view_all_branches` = false) — নইলে "সব শাখা", আর দেয়ালের দাবির ভিত্তি থাকে না ([[DataScope::viewedBranch()]])
+        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => $this->warehouse->branch_id, 'view_all_branches' => false])->save();
         CompanyContext::set((int) $this->company->id, (int) $this->warehouse->branch_id);
         $this->actingAs($this->owner);
     }
@@ -192,7 +193,8 @@ final class ThePhoneComparesQuotationsAndRunsQualityAndSerialsTest extends TestC
                 'serial_no' => $no, 'received_on' => now()->toDateString(), 'status' => SerialNumber::IN_STOCK, 'sold_to' => 'গোপন গ্রাহক']);
         }
 
-        $listed = array_column($this->phoneGet($this->owner, '/api/v1/inventory/serials?serial=SN-WALL')->assertOk()->json('rows'), 'serial_no');
+        // ⓘ নম্বরের খোঁজ পুরো নম্বর মেলায়, শুরুটুকু নয় — তাই ছাঁকনি ছাড়া পুরো তালিকা
+        $listed = array_column($this->phoneGet($this->owner, '/api/v1/inventory/serials')->assertOk()->json('rows'), 'serial_no');
         $this->assertContains('SN-WALL-HERE', $listed);
         $this->assertNotContains('SN-WALL-THERE', $listed, '⛔ অন্য শাখার গুদামের পিস ফোনে দেখা গেল।');
         $this->assertSame([], $this->phoneGet($this->owner, '/api/v1/inventory/serials?serial=SN-WALL-THERE')->assertOk()->json('rows'));

@@ -75,7 +75,7 @@ final class ThePhoneShowsEveryPaperOnItsOwnScreenTest extends TestCase
         $this->ntk = Branch::query()->where('company_id', $this->company->id)->where('code', 'NTK')->firstOrFail();
 
         // ⓘ মালিক "সব শাখা"-য় — শাখার ছাঁকনি তখন কেবল ফোনের বাছাই
-        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => null])->save();
+        $this->owner->forceFill(['current_company_id' => $this->company->id, 'current_branch_id' => null, 'view_all_branches' => true])->save();
         $this->actingAs($this->owner);
         CompanyContext::set((int) $this->company->id, null);
     }
@@ -144,7 +144,7 @@ final class ThePhoneShowsEveryPaperOnItsOwnScreenTest extends TestCase
         $this->assertSame([], $ids('00000000-0000-0000-0000-000000000000'), '⛔ অচেনা শাখায় কাগজ এল।');
 
         // ⓘ মালিক নিজে এক শাখায় বসলে অন্য শাখার কাগজ ছাঁকনি ছাড়াও আসে না — দেয়াল মডেলের নিজের
-        $this->owner->forceFill(['current_branch_id' => $this->mms->id])->save();
+        $this->owner->forceFill(['current_branch_id' => $this->mms->id, 'view_all_branches' => false])->save();
         $this->assertNotContains($there->public_id, array_column($this->phone($this->owner, '/api/v1/papers/purchase_order')->json('rows'), 'id'),
             '⛔ এক শাখায় বসা মানুষ অন্য শাখার ক্রয়াদেশ দেখলেন।');
         $this->phone($this->owner, '/api/v1/papers/purchase_order/'.$there->public_id)->assertNotFound();
