@@ -28,3 +28,36 @@ Route::prefix('v1/documents/library')
         Route::get('/{id}', [DocumentLibraryApiController::class, 'show'])->whereUuid('id')->name('library.show');
         Route::get('/{id}/file', [DocumentLibraryApiController::class, 'file'])->whereUuid('id')->name('library.file');
     });
+
+/*
+ * ⭐ দলিলের অনুমোদনের সারি আর সই কেন্দ্র, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬ ([[DocumentQueueApiController]])।
+ * ⓘ লাইব্রেরির একই পাহারা; চাবি `documents.view` কন্ট্রোলারে। ⛔ সই/ফেরত এখানে নয় — ফোনের অনুমোদন-দরজায়, একই ইঞ্জিনে।
+ */
+Route::prefix('v1/documents')
+    ->middleware([
+        'auth:sanctum',
+        'throttle:app',
+        'abilities:'.AuthController::APP,
+        ResolveCompanyContext::class,
+        RefuseModulesOffOnThePhone::class.':documents',
+    ])
+    ->group(function (): void {
+        Route::get('/approvals', [\App\Modules\Documents\Http\Controllers\DocumentQueueApiController::class, 'queue'])->name('approvals.queue');
+        Route::get('/signatures', [\App\Modules\Documents\Http\Controllers\DocumentQueueApiController::class, 'signatures'])->name('signatures.center');
+    });
+
+/*
+ * ⭐ দলিলের ছাঁচ ফোনে — কেবল তালিকা আর পড়া (মালিক, ১৭ অক্টোবর ২০২৬; [[DocumentTemplateApiController]])। লেখা ও বদল ওয়েবে।
+ */
+Route::prefix('v1/documents/templates')
+    ->middleware([
+        'auth:sanctum',
+        'throttle:app',
+        'abilities:'.AuthController::APP,
+        ResolveCompanyContext::class,
+        RefuseModulesOffOnThePhone::class.':documents',
+    ])
+    ->group(function (): void {
+        Route::get('/', [\App\Modules\Documents\Http\Controllers\DocumentTemplateApiController::class, 'index'])->name('templates.list');
+        Route::get('/{id}', [\App\Modules\Documents\Http\Controllers\DocumentTemplateApiController::class, 'show'])->whereUuid('id')->name('templates.read');
+    });
