@@ -687,6 +687,15 @@ return [
     ],
 
     // ⭐ হাতধার আর ব্যাংক ঋণের খাতা — মালিক, ৫ অক্টোবর ২০২৬ ([[LoanLedgerReports]])
+    /*
+     * ⭐ রিপোর্টের তালিকা-ছাঁকনি — ব্যাংক ঋণ আর ভাড়ার চুক্তি (ফোনের রিপোর্ট-পর্দার বাছাই, ১৭ অক্টোবর ২০২৬)। ⓘ ওয়েবের পাতা নিজের
+     * "পক্ষ" ঘরেই এগুলো আঁকে (`partyFilter`); সাধারণ ছাঁকনির সারি ঐ ঘর আর দ্বিতীয়বার আঁকে না।
+     */
+    'report_filters' => [
+        'facility_id' => \App\Modules\Finance\Reports\Filters\BankFacilityFilter::class,
+        'rental_contract_id' => \App\Modules\Finance\Reports\Filters\RentalContractFilter::class,
+    ],
+
     'reports' => [
         LoanLedgerReports::class,
         // ⭐ হাতধারের রিপোর্ট ৩–৭ — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬

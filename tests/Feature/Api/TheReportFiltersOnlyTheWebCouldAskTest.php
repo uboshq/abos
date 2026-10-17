@@ -115,12 +115,44 @@ final class TheReportFiltersOnlyTheWebCouldAskTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('status');
     }
 
-    public function test_no_declared_filter_of_these_reports_is_left_to_the_web(): void
+    public function test_people_loans_contracts_lots_states_and_the_month_are_asked_too(): void
     {
-        foreach (['accounts.ledger', 'accounts.project_ledger', 'accounts.cheque_register', 'customer.due_list',
-            'inventory.slow_dead', 'inventory.stock_alerts', 'inventory.stock_position', 'purchase.analysis'] as $key) {
-            $web = collect($this->choices($key))->where('kind', 'web')->keys()->all();
-            $this->assertSame([], $web, "⛔ {$key}: এখনো কেবল ওয়েবে — ".implode(', ', $web));
+        foreach ([
+            'accounts.person_ledger' => 'person_id', 'finance.hand_loan_ledger' => 'person_id', 'finance.capital_ledger' => 'person_id',
+            'finance.bank_loan_ledger' => 'facility_id', 'finance.rental_deposit_book' => 'rental_contract_id',
+            'inventory.lot_trace' => 'batch_id',
+        ] as $report => $filter) {
+            $this->assertSame('list', $this->choices($report)[$filter]['kind'] ?? null, "⛔ {$report}: {$filter} ফোনে নেই");
         }
+
+        $this->assertSame(['overdue', 'today', 'upcoming', 'undated'],
+            collect($this->choices('finance.hand_loan_schedule')['state']['options'])->pluck('value')->all());
+        $this->assertContains('settled', collect($this->choices('finance.insurance_claims')['state']['options'])->pluck('value')->all());
+        $this->assertSame('month', $this->choices('supplier.principal_commission')['month']['kind'] ?? null);
+
+        $this->phone('/api/v1/reports/finance.hand_loan_schedule?state=undated')->assertOk();
+        $this->phone('/api/v1/reports/finance.hand_loan_schedule?state=sometime')
+            ->assertStatus(422)->assertJsonValidationErrors('state');
+        $this->phone('/api/v1/reports/accounts.person_ledger?'.http_build_query(['person_id' => 'কেউ নন']))
+            ->assertStatus(422)->assertJsonValidationErrors('person_id');
+    }
+
+    /**
+     * ⭐ পাহারা — মালিক অ্যাপে ১০০% চেয়েছেন: তালিকার কোনো রিপোর্টের কোনো ছাঁকনি আর "কেবল ওয়েবে" নয়। ⓘ নতুন রিপোর্ট নতুন
+     * ধরনের ছাঁকনি নিয়ে এলে এখানে লাল — উৎস, সংকেত বা নতুন ধরন বসাতে হবে।
+     */
+    public function test_no_report_on_the_list_leaves_a_filter_to_the_web(): void
+    {
+        $left = [];
+
+        foreach ($this->phone('/api/v1/reports')->assertOk()->json() as $report) {
+            foreach ($this->choices($report['key']) as $filter) {
+                if ($filter['kind'] === 'web') {
+                    $left[] = $report['key'].' · '.$filter['key'];
+                }
+            }
+        }
+
+        $this->assertSame([], $left, '⛔ এখনো কেবল ওয়েবে: '.implode(', ', $left));
     }
 }

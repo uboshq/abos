@@ -217,6 +217,13 @@ final class ReportApiController extends Controller
                 continue;
             }
 
+            /* ⭐ মাস — "বছর-মাস" (`2026-10`); ফোন মাস বাছার ঘর আঁকে, ইঞ্জিন নিজে ধরন যাচাই করে (মূল কোম্পানির কমিশন) */
+            if ($filter === 'month') {
+                $out[] = ['key' => 'month', 'kind' => 'month', 'label' => 'মাস', 'options' => []];
+
+                continue;
+            }
+
             /* ⭐ নিজের সংকেতের ছাঁকনি — সংজ্ঞায় ঘোষিত ([[ReportDefinition::$choices]]); মান সংকেতটাই, নাম অনুবাদে */
             if (isset($definition->choices[$filter])) {
                 $out[] = ['key' => $filter, 'kind' => 'list', 'label' => $this->choiceLabel($filter),
@@ -361,6 +368,7 @@ final class ReportApiController extends Controller
             'direction' => 'দিক',
             'group_by' => 'কী ধরে',
             'period' => 'সময়ের ভাগ',
+            'state' => 'অবস্থা',
             default => $filter,
         };
     }
