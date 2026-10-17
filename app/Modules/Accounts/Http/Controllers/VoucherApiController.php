@@ -136,13 +136,21 @@ final class VoucherApiController extends Controller implements HasMiddleware
             ->paginate(self::PER_PAGE);
 
         $rows = $page->getCollection();
-        // ⓘ সারির পক্ষও লাগে (নিচে [[partyOf()]]) — পাতায় একবারে
-        $rows->load(['lines:id,voucher_id,party_type,party_id', 'creator:id,name']);
+        /*
+         * ⓘ সারির পক্ষ ([[partyOf()]]) আর টাকার খাত ([[moneySide()]]) — পাতায় একবারে, সারি ধরে নয়: সারির খাত এক ডাকে,
+         * মাথার টাকার খাত এক ডাকে ([[moneyAccountsOf()]])।
+         */
+        $rows->load(['lines:id,voucher_id,account_id,debit,credit,party_type,party_id,sort_order', 'lines.account', 'creator:id,name']);
         $names = $this->partyNames($rows);
         $awaiting = $this->awaitingIds($rows->modelKeys());
+        $moneyAccounts = $this->moneyAccountsOf($rows);
 
         return response()->json([
-            'rows' => $rows->map(fn (Voucher $v) => $this->row($v, $names, $awaiting))->values(),
+            'rows' => $rows->map(fn (Voucher $v) => [
+                ...$this->row($v, $names, $awaiting),
+                // ⭐ টাকা কোথায় জমা / কোথা থেকে — তালিকাতেই (মালিক, ১৭ অক্টোবর ২০২৬: "kon account e recived hoto ta dekhayna")
+                ...$this->moneySide($v, $moneyAccounts),
+            ])->values(),
             'count' => $page->total(),
             'total' => $total,
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
@@ -224,27 +232,80 @@ final class VoucherApiController extends Controller implements HasMiddleware
             ->pluck('approvable_id')->map(fn ($id) => (int) $id)->all();
     }
 
-    /** @return array{money_account: ?string, money_label: ?string} */
-    private function moneySide(Voucher $v): array
+    /**
+     * ভাউচারগুলোর মাথার টাকার খাত (`money_account_id`) — এক ডাকে, সারি ধরে নয়।
+     *
+     * ⓘ `whereKey` — তালিকা থেকে বাছাই নয় ([[MoneyNeverLandsOnAGroupAccountTest]]); মডেলের নিজের দেয়াল আগের মতোই খাটে।
+     *
+     * @param  Collection<int, Voucher>  $vouchers
+     * @return array<int, Account>
+     */
+    private function moneyAccountsOf(Collection $vouchers): array
     {
+        $ids = $vouchers->pluck('money_account_id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        return $ids === [] ? [] : Account::query()->whereKey($ids)->get()->keyBy('id')->all();
+    }
+
+    /**
+     * ⭐ টাকার খাত — পক্ষের উল্টো দিক।
+     *
+     * - আদায়: "কোথায় জমা হলো"; পরিশোধ আর খরচ: "কোথা থেকে গেল" (`money_account` + `money_label`, ৭ অক্টোবর থেকে)।
+     * - ⭐ কনট্রা: দুই দিকই — `from_account` (টাকার খাতের ক্রেডিট সারি) আর `to_account` (টাকার খাতের ডেবিট সারি), মালিক,
+     *   ১৭ অক্টোবর ২০২৬। ⓘ কনট্রার মাথার `money_account_id` পোস্টে প্রথম ব্যাংক-সারিটা নেয় ([[VoucherService::assertBankReferenceIsFree()]])
+     *   — সেটা যেকোনো দিক হতে পারে, তাই কনট্রায় দিক সারি থেকেই; চার্জের সারি টাকার খাত নয়, তাই বাদ পড়ে।
+     * - `money_role` (`into` | `out_of` | `contra` | null) — ফোনের তালিকার ছোট লেখা ("জমা:", "থেকে:") এটা দেখে।
+     *
+     * ⚠️ পুরনো চাবিগুলো (`money_account`, `money_label`) আগের মতোই — কনট্রা আর জাবেদায় null; পুরনো ফোন ভাঙে না, কেবল চাবি যোগ।
+     *
+     * @param  array<int, Account>|null  $moneyAccounts  মাথার টাকার খাত, আগে এক ডাকে আনা ([[moneyAccountsOf()]]); null হলে এখানেই খোঁজা
+     * @return array{money_role: ?string, money_account: ?string, money_label: ?string, from_account: ?string, from_label: ?string, to_account: ?string, to_label: ?string}
+     */
+    private function moneySide(Voucher $v, ?array $moneyAccounts = null): array
+    {
+        $none = [
+            'money_role' => null, 'money_account' => null, 'money_label' => null,
+            'from_account' => null, 'from_label' => null, 'to_account' => null, 'to_label' => null,
+        ];
+
+        if ($v->type === Voucher::CONTRA) {
+            $side = fn (string $column) => $v->lines
+                ->first(fn (VoucherLine $l) => $l->account?->isMoney() === true && bccomp((string) $l->{$column}, '0', 4) > 0)
+                ?->account;
+            $from = $side('credit');
+            $to = $side('debit');
+
+            return [
+                ...$none,
+                'money_role' => $from === null && $to === null ? null : 'contra',
+                'from_account' => $from?->label(),
+                'from_label' => $from === null ? null : (string) __('accounts::phone_voucher.contra_from'),
+                'to_account' => $to?->label(),
+                'to_label' => $to === null ? null : (string) __('accounts::phone_voucher.contra_to'),
+            ];
+        }
+
         $role = match ($v->type) {
             Voucher::RECEIPT => 'into',
             Voucher::PAYMENT, Voucher::EXPENSE => 'out_of',
             default => null,
         };
         if ($role === null) {
-            return ['money_account' => null, 'money_label' => null];
+            return $none;
         }
 
-        // ⓘ খাতটা আগেই বাছা (ভাউচারের নিজের ঘর) — `whereKey`, তালিকা থেকে বাছাই নয় ([[MoneyNeverLandsOnAGroupAccountTest]])
+        // ⓘ খাতটা আগেই বাছা (ভাউচারের নিজের ঘর); পোস্টের আগে বসে না, তখন সারির টাকার খাত — সইয়ের পাতার একই নিয়ম
         if ($v->money_account_id !== null) {
-            $money = Account::query()->whereKey($v->money_account_id)->first();
+            $moneyAccounts ??= $this->moneyAccountsOf(collect([$v]));
+            $money = $moneyAccounts[(int) $v->money_account_id] ?? null;
         } else {
             $money = $v->lines->map(fn (VoucherLine $l) => $l->account)
                 ->first(fn (?Account $a) => $a !== null && ($a->isBank() || $a->isMfs() || $a->isCash()));
         }
 
         return [
+            ...$none,
+            'money_role' => $money === null ? null : $role,
             'money_account' => $money?->label(),
             'money_label' => $money === null ? null : (string) __('accounts::phone_voucher.money_'.$role),
         ];
