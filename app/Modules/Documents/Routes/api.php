@@ -45,3 +45,19 @@ Route::prefix('v1/documents')
         Route::get('/approvals', [\App\Modules\Documents\Http\Controllers\DocumentQueueApiController::class, 'queue'])->name('approvals.queue');
         Route::get('/signatures', [\App\Modules\Documents\Http\Controllers\DocumentQueueApiController::class, 'signatures'])->name('signatures.center');
     });
+
+/*
+ * ⭐ দলিলের ছাঁচ ফোনে — কেবল তালিকা আর পড়া (মালিক, ১৭ অক্টোবর ২০২৬; [[DocumentTemplateApiController]])। লেখা ও বদল ওয়েবে।
+ */
+Route::prefix('v1/documents/templates')
+    ->middleware([
+        'auth:sanctum',
+        'throttle:app',
+        'abilities:'.AuthController::APP,
+        ResolveCompanyContext::class,
+        RefuseModulesOffOnThePhone::class.':documents',
+    ])
+    ->group(function (): void {
+        Route::get('/', [\App\Modules\Documents\Http\Controllers\DocumentTemplateApiController::class, 'index'])->name('templates.list');
+        Route::get('/{id}', [\App\Modules\Documents\Http\Controllers\DocumentTemplateApiController::class, 'show'])->whereUuid('id')->name('templates.read');
+    });
