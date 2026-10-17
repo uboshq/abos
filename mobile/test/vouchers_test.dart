@@ -26,8 +26,10 @@ const _income = VoucherAccount(id: 41, code: '4101', name: 'অন্যান�
 const _rent = VoucherAccount(id: 51, code: '5101', name: 'ভাড়া');
 
 class _FakeVouchers implements VoucherApi {
-  _FakeVouchers({this.lands, this.refuses, this.offlineTimes = 0, this.page});
+  _FakeVouchers({this.lands, this.refuses, this.offlineTimes = 0, this.page, this.rows});
 
+  /// তালিকার সারি — না দিলে আগের দুটো
+  final List<VoucherRow>? rows;
   final String? lands;
   final String? refuses;
   int offlineTimes;
@@ -54,6 +56,7 @@ class _FakeVouchers implements VoucherApi {
   Future<VoucherListPage> list({String? type, bool awaiting = false, int page = 1, String? money, String? from, String? to, String? branch}) async {
     awaitingAsked.add(awaiting);
     asked.add({'type': type, 'money': money, 'from': from, 'to': to, 'branch': branch});
+    if (rows case final own?) return VoucherListPage(rows: own, count: own.length);
     return const VoucherListPage(rows: [
       VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'awaiting', amount: 500, stateLabel: 'সইয়ের অপেক্ষায়', writtenBy: 'আবু কাওসার'),
       VoucherRow(id: 'v2', no: 'JV-0002', type: 'journal', state: 'posted', amount: 100, stateLabel: 'পাকা'),
@@ -532,6 +535,107 @@ void main() {
       final router = File('lib/core/router/app_router.dart').readAsStringSync();
       expect(RegExp(r"path: 'vouchers/:view',\s*builder: \(context, state\) => ModuleGateView\(\s*path: 'vouchers'").hasMatch(router),
           isTrue);
+    });
+  });
+
+  // ── ⭐ টাকা কোন খাতে — মালিক, ১৭ অক্টোবর ২০২৬: "Mobile app Voucher e kon account e recived hoto ta dekhayna, recived into,
+  // pay From" (সার্ভার: ThePhoneWritesVouchersLikeTheWebTest::test_the_list_and_the_page_say_which_account_the_money_went_into_or_came_from) ──
+  group('which account the money went into or came from (owner, 17 Oct 2026)', () {
+    Map<String, dynamic> json(String id, String no, String type, Map<String, dynamic> money) =>
+        {'id': id, 'no': no, 'type': type, 'state': 'posted', 'state_label': 'পাকা', 'amount': '500.00', ...money};
+
+    final receipt = json('r', 'RV-0009', 'receipt',
+        {'money_role': 'into', 'money_account': '1102-01 — DBBL চলতি', 'money_label': 'কোথায় জমা হলো'});
+    final payment = json('p', 'PV-0009', 'payment',
+        {'money_role': 'out_of', 'money_account': '1101-01 — প্রধান নগদ', 'money_label': 'কোথা থেকে গেল'});
+    final expense = json('e', 'EV-0009', 'expense', {'money_role': 'out_of', 'money_account': '1101-01 — প্রধান নগদ'});
+    final contra = json('c', 'CV-0009', 'contra', {
+      'money_role': 'contra', 'money_account': null, 'money_label': null,
+      'from_account': '1101-01 — প্রধান নগদ', 'from_label': 'কোথা থেকে',
+      'to_account': '1102-01 — DBBL চলতি', 'to_label': 'কোথায় গেল',
+    });
+    final journal = json('j', 'JV-0009', 'journal', {'money_role': null, 'money_account': null, 'from_account': null});
+    // ⓘ পুরনো সার্ভার — তালিকায় টাকার কোনো চাবিই নেই
+    final old = json('o', 'RV-0008', 'receipt', {});
+
+    test('the list line: জমা for a receipt, থেকে for a payment or expense, from → to for a contra, nothing otherwise', () {
+      String? line(Map<String, dynamic> j) => VoucherRow.fromJson(j).moneyLine;
+      expect(line(receipt), 'জমা: 1102-01 — DBBL চলতি');
+      expect(line(payment), 'থেকে: 1101-01 — প্রধান নগদ');
+      expect(line(expense), 'থেকে: 1101-01 — প্রধান নগদ');
+      expect(line(contra), '1101-01 — প্রধান নগদ → 1102-01 — DBBL চলতি');
+      expect(line(journal), isNull);
+      expect(line(old), isNull, reason: '⛔ পুরনো সার্ভার কিছু পাঠায়নি, তবু ফোন খাত বানাল');
+      // ⓘ কনট্রার এক দিক কেবল — যা এসেছে তাই, আন্দাজ নয়
+      expect(line({...contra, 'to_account': null}), 'থেকে: 1101-01 — প্রধান নগদ');
+      expect(line({...contra, 'from_account': ' '}), 'জমা: 1102-01 — DBBL চলতি');
+      // ⓘ `money_role` না এলেও ধরন দেখে
+      expect(line({...receipt}..remove('money_role')), 'জমা: 1102-01 — DBBL চলতি');
+    });
+
+    testWidgets("each card shows its line; the journal and the old server's card show none", (tester) async {
+      final api = _FakeVouchers(rows: [for (final j in [receipt, payment, contra, journal, old]) VoucherRow.fromJson(j)]);
+      await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const []));
+
+      expect(find.text('জমা: 1102-01 — DBBL চলতি'), findsOneWidget);
+      expect(find.text('থেকে: 1101-01 — প্রধান নগদ'), findsOneWidget);
+      expect(find.text('1101-01 — প্রধান নগদ → 1102-01 — DBBL চলতি'), findsOneWidget);
+      for (final id in ['r', 'p', 'c']) {
+        expect(find.descendant(of: find.byKey(ValueKey('voucher-$id')), matching: find.byKey(ValueKey('voucher-money-$id'))),
+            findsOneWidget, reason: 'কার্ড $id-তে টাকার খাত নেই');
+      }
+      expect(find.byKey(const ValueKey('voucher-money-j')), findsNothing);
+      expect(find.byKey(const ValueKey('voucher-money-o')), findsNothing);
+    });
+
+    Future<void> open(WidgetTester tester, Map<String, dynamic> j) =>
+        _pump(tester, VoucherScreen(id: j['id'] as String, api: _FakeVouchers(page: VoucherPage.fromJson({...j, 'lines': const []}))));
+
+    testWidgets("the page: the server's words first — a receipt's bank, a payment's cash", (tester) async {
+      await open(tester, receipt);
+      expect(find.text('কোথায় জমা হলো'), findsOneWidget);
+      expect(find.text('1102-01 — DBBL চলতি'), findsOneWidget);
+
+      await open(tester, payment);
+      expect(find.text('কোথা থেকে গেল'), findsOneWidget);
+      expect(find.text('1101-01 — প্রধান নগদ'), findsOneWidget);
+    });
+
+    testWidgets("the page without the server's word: জমা হয়েছে for a receipt, যেখান থেকে দেওয়া for a payment or expense",
+        (tester) async {
+      await open(tester, {...receipt, 'money_label': null});
+      expect(find.text('জমা হয়েছে'), findsOneWidget);
+      expect(find.text('1102-01 — DBBL চলতি'), findsOneWidget);
+
+      await open(tester, {...payment, 'money_label': ''});
+      expect(find.text('যেখান থেকে দেওয়া'), findsOneWidget);
+
+      await open(tester, expense);
+      expect(find.text('যেখান থেকে দেওয়া'), findsOneWidget);
+      expect(find.text('1101-01 — প্রধান নগদ'), findsOneWidget);
+    });
+
+    testWidgets("a contra's page shows both sides, in order; without labels its own words", (tester) async {
+      await open(tester, contra);
+      expect(find.text('কোথা থেকে'), findsOneWidget);
+      expect(find.text('কোথায় গেল'), findsOneWidget);
+      final from = tester.getTopLeft(find.text('1101-01 — প্রধান নগদ'));
+      final to = tester.getTopLeft(find.text('1102-01 — DBBL চলতি'));
+      expect(from.dy < to.dy, isTrue, reason: '"কোথা থেকে" আগে, "কোথায় গেল" পরে');
+
+      await open(tester, {...contra, 'from_label': null, 'to_label': null});
+      expect(find.text('কোথা থেকে'), findsOneWidget);
+      expect(find.text('কোথায় গেল'), findsOneWidget);
+    });
+
+    testWidgets("a journal's page and an old server's contra show no money row", (tester) async {
+      await open(tester, journal);
+      expect(find.text('টাকার খাত'), findsNothing);
+      expect(find.text('কোথা থেকে'), findsNothing);
+
+      await open(tester, json('c2', 'CV-0001', 'contra', {}));
+      expect(find.text('কোথা থেকে'), findsNothing);
+      expect(find.text('কোথায় গেল'), findsNothing);
     });
   });
 }

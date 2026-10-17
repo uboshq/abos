@@ -237,6 +237,8 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     Text(Money.taka(v.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
                     Text(v.stateWords, style: TextStyle(color: voucherStateColour(v.state))),
                     if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
+                    // ⭐ টাকা কোন খাতে — জমা/থেকে/দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬); পুরনো সার্ভারে কিছুই নয়
+                    if (v.moneyLine case final money?) Text(money, key: ValueKey('voucher-money-${v.id}')),
                     if (v.writtenBy.isNotEmpty) Text('তুলেছেন: ${v.writtenBy}'),
                     if (v.date != null) Text(dayOf(v.date)),
                   ]),
@@ -356,7 +358,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
             FactRow('টাকা', Money.taka(p.row.amount)),
             if (p.row.date != null) FactRow('তারিখ', dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),
-            if (p.moneyAccount != null) FactRow(p.moneyLabel ?? 'টাকার খাত', p.moneyAccount!),
+            // ⭐ টাকা কোন খাতে — আদায়ে "জমা হয়েছে", পরিশোধে "যেখান থেকে দেওয়া", কনট্রায় দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬)
+            for (final (label, account) in p.moneyFacts) FactRow(label, account),
             if ((p.instrumentNo ?? '').isNotEmpty) FactRow('লেনদেন নম্বর', p.instrumentNo!),
             if (p.row.narration.isNotEmpty) FactRow('বিবরণ', p.row.narration),
             if (p.writtenBy.isNotEmpty) FactRow('লেখক', p.writtenBy),
