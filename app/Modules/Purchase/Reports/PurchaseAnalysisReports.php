@@ -44,6 +44,10 @@ final class PurchaseAnalysisReports
             permission: 'purchase.report',
             title: 'purchase::analysis.title',
             filters: ['date_range', 'branch', 'supplier_id', 'product_id', 'brand_id', 'category_id', 'warehouse_id', 'group_by', 'period'],
+            choices: [
+                'group_by' => array_combine(self::DIMENSIONS, array_map(fn (string $d) => 'purchase::analysis.by_'.$d, self::DIMENSIONS)),
+                'period' => array_combine(self::PERIODS, array_map(fn (string $p) => 'purchase::analysis.period_'.$p, self::PERIODS)),
+            ],
             groupBy: 'dim_key',
             rankBy: 'net_value',
             query: function (array $f) {

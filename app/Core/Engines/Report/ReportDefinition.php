@@ -190,7 +190,23 @@ final class ReportDefinition
          * দরজা সবার একই উত্তর।
          */
         public readonly bool $anyKey = false,
+
+        /*
+         * ⭐ নিজের মানের ছাঁকনির বাছাই — `['status' => ['slow' => 'inventory::control.state_slow', …]]` (১৭ অক্টোবর ২০২৬)।
+         * ⓘ যে ছাঁকনি কোনো তালিকা থেকে নয়, নিজের কয়েকটা সংকেত থেকে নেয় (অবস্থা, কী ধরে, সময়ের ভাগ) — ইঞ্জিন সংকেতটাই পায়।
+         * ⛔ ঘোষণা ছাড়া এগুলো কোথাও আঁকা যেত না: ফোন জানত না কী পাঠাবে, আর ভুল সংকেত ইঞ্জিন চুপচাপ উপেক্ষা করত।
+         * ঘোষিত ছাঁকনিরই, নইলে রিপোর্ট দাঁড়ায় না।
+         *
+         * @var array<string, array<string, string>>
+         */
+        public readonly array $choices = [],
     ) {
+        foreach ($choices as $filter => $values) {
+            if (! in_array($filter, $filters, true) || ! is_array($values) || $values === []) {
+                throw new \InvalidArgumentException("Report '{$key}' declares choices for '{$filter}', which is not one of its filters.");
+            }
+        }
+
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");
         }
@@ -200,6 +216,16 @@ final class ReportDefinition
             $columns,
             array_keys($columns),
         );
+    }
+
+    /**
+     * একটা ঘোষিত ছাঁকনি ঠিকানায় কোন নাম(গুলো)তে আসে — `account` → `account_id`; বাকিরা নিজের নামেই।
+     *
+     * @return list<string>
+     */
+    public function askedAs(string $filter): array
+    {
+        return self::ASKED_AS[$filter] ?? [$filter];
     }
 
     /** @return list<ReportColumn> */

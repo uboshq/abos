@@ -217,9 +217,23 @@ final class ReportApiController extends Controller
                 continue;
             }
 
-            $source = $sources->for($filter);
+            /* ⭐ নিজের সংকেতের ছাঁকনি — সংজ্ঞায় ঘোষিত ([[ReportDefinition::$choices]]); মান সংকেতটাই, নাম অনুবাদে */
+            if (isset($definition->choices[$filter])) {
+                $out[] = ['key' => $filter, 'kind' => 'list', 'label' => $this->choiceLabel($filter),
+                    'options' => array_map(fn (string $code, string $label): array => ['value' => $code, 'label' => __($label)],
+                        array_keys($definition->choices[$filter]), $definition->choices[$filter])];
+
+                continue;
+            }
+
+            /*
+             * ⓘ তালিকার ছাঁকনি — উৎস নিজের নামে (`warehouse_id`), নয়তো ইঞ্জিন যে নামে পড়ে (`account` → `account_id`)।
+             * ⚠️ চাবি তখন ইঞ্জিনের নাম, যাতে ফোন ঐ নামেই পাঠায় ([[phoneFilters()]] লেখাটা নম্বরে বদলায়)।
+             */
+            $wire = $sources->for($filter) !== null ? $filter : ($definition->askedAs($filter)[0] ?? $filter);
+            $source = $sources->for($wire);
             if ($source !== null) {
-                $out[] = ['key' => $filter, 'kind' => 'list', 'label' => __($source->label()),
+                $out[] = ['key' => $wire, 'kind' => 'list', 'label' => __($source->label()),
                     'options' => array_values(array_map(fn (string $label): array => ['value' => $label, 'label' => $label],
                         $source->options()))];
 
@@ -272,7 +286,7 @@ final class ReportApiController extends Controller
      */
     public function phoneFilters(Request $request, User $user, ReportDefinition $definition): array
     {
-        $input = $request->only($definition->requestKeys());
+        $input = $this->resolvedChoices($definition, $request->only($definition->requestKeys()));
         $wanted = $request->query('branch');
 
         if (! $definition->hasFilter('branch') || $wanted === null || $wanted === '') {
@@ -290,6 +304,65 @@ final class ReportApiController extends Controller
         }
 
         return [...$input, 'branch_id' => (int) $branch->id];
+    }
+
+    /**
+     * ⭐ ফোনের বাছাই ইঞ্জিনের ভাষায় — ১৭ অক্টোবর ২০২৬।
+     *
+     * ⓘ ইঞ্জিনের নামে আসা তালিকার ছাঁকনি (`account_id`, `party_type_id`, `cost_center_id`) "কোড · নাম" লেখা হলে উৎস দিয়ে
+     * নম্বরে — দেয়ালের ভিতরের তালিকা থেকেই; ঘোষিত সংকেতের ছাঁকনি তালিকায় থাকলেই। ⛔ বাইরের কিছু ৪২২ — চুপ করে ছাঁকনি
+     * ফেলে দিয়ে গোটা রিপোর্ট দেখানো নয়।
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function resolvedChoices(ReportDefinition $definition, array $input): array
+    {
+        $sources = app(ReportFilters::class);
+
+        foreach ($definition->filters as $filter) {
+            $raw = $input[$filter] ?? null;
+            if (isset($definition->choices[$filter]) && $raw !== null && $raw !== '') {
+                if (! is_string($raw) || ! array_key_exists($raw, $definition->choices[$filter])) {
+                    throw ValidationException::withMessages([
+                        $filter => __('core.report.filter_not_allowed', ['filter' => $this->choiceLabel($filter)]),
+                    ]);
+                }
+
+                continue;
+            }
+
+            foreach ($definition->askedAs($filter) as $asked) {
+                $source = $asked === $filter ? null : $sources->for($asked);
+                $value = $input[$asked] ?? null;
+                if ($source === null || $value === null || $value === '') {
+                    continue;
+                }
+
+                $id = is_scalar($value) ? $source->resolve((string) $value) : null;
+                if ($id === null) {
+                    throw ValidationException::withMessages([
+                        $asked => __('core.report.filter_not_allowed', ['filter' => __($source->label())]),
+                    ]);
+                }
+
+                $input[$asked] = $id;
+            }
+        }
+
+        return $input;
+    }
+
+    /** নিজের সংকেতের ছাঁকনির নাম — ফোনের বোতামে */
+    private function choiceLabel(string $filter): string
+    {
+        return match ($filter) {
+            'status' => 'অবস্থা',
+            'direction' => 'দিক',
+            'group_by' => 'কী ধরে',
+            'period' => 'সময়ের ভাগ',
+            default => $filter,
+        };
     }
 
     /**

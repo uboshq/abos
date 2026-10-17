@@ -173,6 +173,7 @@ final class InventoryAnalysisReports
             permission: 'inventory.report',
             title: 'inventory::stockview.position',
             filters: ['branch', 'warehouse_id', 'product_id', 'brand_id', 'category_id', 'group_by'],
+            choices: ['group_by' => array_combine(self::GROUPS, array_map(fn (string $g) => 'inventory::analysis.group_'.$g, self::GROUPS))],
             groupBy: 'group_key',
             query: function (array $f) {
                 $group = in_array($f['group_by'] ?? null, self::GROUPS, true) ? $f['group_by'] : 'product';
