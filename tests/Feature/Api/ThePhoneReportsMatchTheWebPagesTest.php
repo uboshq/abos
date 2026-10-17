@@ -18,10 +18,11 @@ use Tests\TestCase;
 
 /**
  * ⭐ ফোনের রিপোর্ট ওয়েবের পাতার সাথে মেলে — a5-এর ভাগের নয়টা মডিউল (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage app e bujajayna";
- * a6-এর যাচাইয়ের তালিকা গ আর চ)।
+ * a6-এর যাচাইয়ের তালিকা গ, চ আর ঙ)।
  *
  * ⓘ প্রতিটা ওয়েব-কন্ট্রোলারের নিজের `SLUGS` মানচিত্র ধরে — slug → রিপোর্টের চাবি। একই মানুষ, একই তারিখ: ওয়েবের পাতা (`result`) আর
- * ফোনের দরজা (`/api/v1/reports/{key}`) — সারির গোনা, প্রতিটা যোগের কলামের মোট আর দেখানো কলামের তালিকা এক হতে হবে।
+ * ফোনের দরজা (`/api/v1/reports/{key}`) — সারির গোনা, প্রতিটা যোগের কলামের মোট আর দেখানো কলামের তালিকা এক হতে হবে; আর ফোনের PDF
+ * (`/reports/{key}/export?format=pdf`) একই তারিখে তৈরি হতে হবে।
  * ⓘ সব অমিল একসাথে বলা হয় (মডিউল · slug · কী ভুল), একটায় থেমে নয় — যাচাইয়ের তালিকাটাই এই দাবির ফল।
  */
 final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
@@ -101,6 +102,15 @@ final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
                 $phoneColumns = array_column($phone->json('columns'), 'key');
                 if ($webColumns !== $phoneColumns) {
                     $problems[] = "{$where}: কলাম মেলে না — ওয়েব [".implode(',', $webColumns).'], ফোন ['.implode(',', $phoneColumns).']';
+                }
+
+                // ⭐ ঙ — ফোনের PDF একই তারিখে তৈরি হয় (দেখা, ছাপা, পাঠানো)
+                $this->app['auth']->forgetGuards();
+                Sanctum::actingAs($owner->fresh(), [AuthController::APP]);
+                $pdf = $this->get('/api/v1/reports/'.$key.'/export?'.http_build_query($dates + ['format' => 'pdf']));
+                CompanyContext::set($company->id, $company->defaultBranch()?->id);
+                if ($pdf->status() !== 200 || ! str_starts_with((string) $pdf->headers->get('Content-Type'), 'application/pdf')) {
+                    $problems[] = "{$where}: PDF হয়নি ({$pdf->status()}, ".$pdf->headers->get('Content-Type').')';
                 }
 
                 foreach ((array) $phone->json('totals') as $column => $value) {
