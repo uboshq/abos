@@ -42,6 +42,13 @@ class _FakeUpload implements DocumentUploadApi {
 
 /// ⭐ মালিক, ১৭ অক্টোবর ২০২৬ — ফোন থেকে কাগজ তোলা আর ক্যামেরায় স্ক্যান; Intelligence এখনো ওয়েবে।
 void main() {
+  testWidgets('the scan form has only the camera, no file button', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: DocumentUploadScreen(scan: true, api: _FakeUpload())));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('upload-pick')), findsOneWidget);
+    expect(find.byKey(const ValueKey('upload-pick-file')), findsNothing);
+  });
+
   test('upload and scan open the phone form; intelligence stays on the web for now', () {
     expect(NativeForWeb.screenFor('/documents/upload').toString(), contains('ModuleGateView'));
     expect(NativeForWeb.screenFor('/documents/scan').toString(), contains('ModuleGateView'));
@@ -54,24 +61,26 @@ void main() {
     addTearDown(tester.view.reset);
     final api = _FakeUpload();
     await tester.pumpWidget(MaterialApp(
-      home: DocumentUploadScreen(api: api, picker: () async => ['/tmp/a.jpg', '/tmp/b.jpg']),
+      home: DocumentUploadScreen(api: api, picker: () async => ['/tmp/a.jpg'], filePicker: () async => ['/tmp/b.pdf']),
     ));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('upload-save')));
     await tester.pumpAndSettle();
-    expect(find.text('আগে অন্তত একটা ছবি বাছুন।'), findsOneWidget);
+    expect(find.text('আগে অন্তত একটা ছবি বা ফাইল বাছুন।'), findsOneWidget);
     expect(api.sent, isEmpty);
 
     await tester.tap(find.byKey(const ValueKey('upload-pick')));
     await tester.pumpAndSettle();
-    expect(find.text('2 টি ছবি — প্রতিটা আলাদা কাগজ হবে'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('upload-pick-file')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 টি ফাইল — প্রতিটা আলাদা কাগজ হবে'), findsOneWidget, reason: 'ছবি আর PDF একসাথে');
     await tester.enterText(find.byKey(const ValueKey('upload-name')), 'দোকানের ছবি');
     await tester.tap(find.byKey(const ValueKey('upload-save')));
     await tester.pumpAndSettle();
 
     final d = api.sent.single;
-    expect(d.paths, ['/tmp/a.jpg', '/tmp/b.jpg']);
+    expect(d.paths, ['/tmp/a.jpg', '/tmp/b.pdf']);
     expect([d.name, d.folder, d.type, d.level, d.branch], ['দোকানের ছবি', 'contracts', 'contract', 'internal', 'b-main'],
         reason: 'ডিফল্ট: প্রথম ফোল্ডার ও ধরন, "ভিতরের" গোপনীয়তা, নিজের শাখা');
   });

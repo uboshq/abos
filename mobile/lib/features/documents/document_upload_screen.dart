@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -11,10 +12,12 @@ import '../../core/widgets/empty_state.dart';
 /// ⭐ কাগজ তোলা — গ্যালারি থেকে এক বা একাধিক ছবি, বা ক্যামেরায় স্ক্যান; নাম, ফোল্ডার, ধরন, গোপনীয়তা, শাখা (মালিক, ১৭ অক্টোবর
 /// ২০২৬: *"direct webpage app e bujajayna"*)।
 ///
-/// <p>⛔ সব যাচাই সার্ভারের — ওয়েবের তোলার একই নিয়ম। ⓘ ফোনে কেবল ছবি (ক্যামেরা/গ্যালারি); PDF বা অন্য ফাইল তোলা ওয়েবে।
+/// <p>⛔ সব যাচাই সার্ভারের — ওয়েবের তোলার একই নিয়ম (ফাইলের ধরন ও মাপ)। ⭐ ছবি (ক্যামেরা/গ্যালারি) আর ফোনের যেকোনো ফাইল — PDF,
+/// Word, Excel … (fe, ১৭ অক্টোবর ২০২৬: file_picker); ধরন বাছাই সার্ভারের, ফোন আগে থেকে কিছু আটকায় না।
 /// ⓘ লেখা পড়া (OCR) ওয়েবের স্ক্যানের পাতায় — ফোনের স্ক্যান ছবিটাই কাগজ হিসেবে রাখে।
 class DocumentUploadScreen extends StatefulWidget {
-  const DocumentUploadScreen({super.key, this.scan = false, this.api = const ServerDocumentUploadApi(), this.picker});
+  const DocumentUploadScreen(
+      {super.key, this.scan = false, this.api = const ServerDocumentUploadApi(), this.picker, this.filePicker});
 
   /// ক্যামেরায় স্ক্যান (`/documents/scan`) — না হলে গ্যালারি (`/documents/upload`)
   final bool scan;
@@ -22,6 +25,9 @@ class DocumentUploadScreen extends StatefulWidget {
 
   /// পরীক্ষার জন্য — ছবির পথ ফেরায়
   final Future<List<String>> Function()? picker;
+
+  /// পরীক্ষার জন্য — ফাইলের পথ ফেরায় (PDF ইত্যাদি)
+  final Future<List<String>> Function()? filePicker;
 
   @override
   State<DocumentUploadScreen> createState() => _DocumentUploadScreenState();
@@ -75,9 +81,16 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     }
   }
 
-  Future<void> _pick() async {
+  Future<void> _pick({bool files = false}) async {
     final List<String> got;
-    if (widget.picker != null) {
+    if (files) {
+      got = widget.filePicker != null
+          ? await widget.filePicker!()
+          : [
+              for (final f in (await FilePicker.pickFiles(allowMultiple: true))?.files ?? const <PlatformFile>[])
+                if (f.path != null) f.path!,
+            ];
+    } else if (widget.picker != null) {
       got = await widget.picker!();
     } else if (widget.scan) {
       final shot = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 2400);
@@ -95,7 +108,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
   Future<void> _save() async {
     if (_paths.isEmpty) {
-      setState(() => _error = widget.scan ? 'আগে কাগজটার ছবি তুলুন।' : 'আগে অন্তত একটা ছবি বাছুন।');
+      setState(() => _error = widget.scan ? 'আগে কাগজটার ছবি তুলুন।' : 'আগে অন্তত একটা ছবি বা ফাইল বাছুন।');
       return;
     }
     if (_folder == null || _type == null || _level == null) {
@@ -160,19 +173,28 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
             else if (s == null)
               const Padding(padding: EdgeInsets.all(AppSpacing.xl), child: Center(child: CircularProgressIndicator()))
             else ...[
-              OutlinedButton.icon(
-                key: const ValueKey('upload-pick'),
-                icon: Icon(widget.scan ? Icons.photo_camera_outlined : Icons.photo_library_outlined),
-                label: Text(widget.scan ? 'ছবি তুলুন' : 'ছবি বাছুন'),
-                onPressed: _busy ? null : _pick,
-              ),
+              Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.xs, children: [
+                OutlinedButton.icon(
+                  key: const ValueKey('upload-pick'),
+                  icon: Icon(widget.scan ? Icons.photo_camera_outlined : Icons.photo_library_outlined),
+                  label: Text(widget.scan ? 'ছবি তুলুন' : 'ছবি বাছুন'),
+                  onPressed: _busy ? null : _pick,
+                ),
+                if (!widget.scan)
+                  OutlinedButton.icon(
+                    key: const ValueKey('upload-pick-file'),
+                    icon: const Icon(Icons.attach_file),
+                    label: const Text('ফাইল বাছুন (PDF ইত্যাদি)'),
+                    onPressed: _busy ? null : () => _pick(files: true),
+                  ),
+              ]),
               if (_paths.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  child: Text('${_paths.length} টি ছবি — প্রতিটা আলাদা কাগজ হবে',
+                  child: Text('${_paths.length} টি ফাইল — প্রতিটা আলাদা কাগজ হবে',
                       key: const ValueKey('upload-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
-              const Text('ⓘ PDF বা অন্য ফাইল, আর লেখা পড়া (OCR) ওয়েবে।',
+              const Text('ⓘ কোন ধরনের ফাইল চলে আর কত বড়, সার্ভার ওয়েবের নিয়মেই দেখে। লেখা পড়া (OCR) ওয়েবে।',
                   style: TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
               const SizedBox(height: AppSpacing.sm),
               TextField(
