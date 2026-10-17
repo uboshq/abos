@@ -46,6 +46,16 @@ class ApprovalsApi {
     );
   }
 
+  /// ⭐ আমার পাঠানো অনুরোধ — `GET /approvals/mine` (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage app e bujajayna")।
+  /// নতুন আগে; অবস্থা আর শেষ কথা সার্ভারের লেখা, ফোন কেবল আঁকে।
+  static Future<MyRequestsPage> mine({int limit = 50, String? cursor}) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+      '/approvals/mine',
+      queryParameters: {'limit': limit, if (cursor != null) 'cursor': cursor},
+    );
+    return MyRequestsPage.fromJson(response.data ?? const <String, dynamic>{});
+  }
+
   /// Remarks are optional here and required on [reject] — that asymmetry is
   /// the server's (`ApprovalEngine::approve(..., ?string $remarks)` against
   /// `reject(..., string $remarks)`), kept rather than smoothed over: saying
@@ -136,6 +146,73 @@ class ApprovalSheet {
     ];
     return parts.isEmpty ? null : 'মোট — ${parts.join(' · ')}';
   }
+}
+
+/// আমার পাঠানো একটা অনুরোধ — কোন কাগজ, কত, কোথায় দাঁড়িয়ে, আর শেষ কথা
+class MyRequest {
+  const MyRequest({
+    required this.id,
+    required this.documentNo,
+    required this.documentType,
+    required this.amount,
+    required this.status,
+    required this.statusLabel,
+    required this.requestedAt,
+    required this.summary,
+    this.lastBy,
+    this.lastLabel,
+    this.lastRemarks,
+  });
+
+  final String id;
+  final String? documentNo;
+  final String documentType;
+  final String? amount;
+  final String status;
+  final String statusLabel;
+  final String? requestedAt;
+  final String? summary;
+  final String? lastBy;
+  final String? lastLabel;
+  final String? lastRemarks;
+
+  factory MyRequest.fromJson(Map<String, dynamic> j) {
+    final last = j['lastDecision'] is Map ? (j['lastDecision'] as Map).cast<String, dynamic>() : null;
+    return MyRequest(
+      id: j['id']?.toString() ?? '',
+      documentNo: j['documentNo']?.toString(),
+      documentType: j['documentType']?.toString() ?? '',
+      amount: j['amount']?.toString(),
+      status: j['status']?.toString() ?? '',
+      statusLabel: j['statusLabel']?.toString() ?? '',
+      requestedAt: j['requestedAt']?.toString(),
+      summary: j['summary']?.toString(),
+      lastBy: last?['by']?.toString(),
+      lastLabel: last?['label']?.toString(),
+      lastRemarks: last?['remarks']?.toString(),
+    );
+  }
+}
+
+class MyRequestsPage {
+  const MyRequestsPage({required this.rows, this.nextCursor, this.count, this.pendingCount});
+
+  final List<MyRequest> rows;
+  final String? nextCursor;
+
+  /// পুরো তালিকার গোনা আর এখনো অপেক্ষমাণের গোনা — পাতার নয় (পুরনো সার্ভারে null)
+  final int? count;
+  final int? pendingCount;
+
+  factory MyRequestsPage.fromJson(Map<String, dynamic> body) => MyRequestsPage(
+        rows: [
+          for (final r in (body['rows'] as List?) ?? const [])
+            if (r is Map) MyRequest.fromJson(r.cast<String, dynamic>()),
+        ],
+        nextCursor: body['nextCursor'] as String?,
+        count: (body['count'] as num?)?.toInt(),
+        pendingCount: (body['pendingCount'] as num?)?.toInt(),
+      );
 }
 
 class ApprovalPage {
