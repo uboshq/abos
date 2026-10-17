@@ -760,6 +760,11 @@ return [
      */
     'dashboard' => InventoryDashboard::class,
 
+    // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
+    'phone_papers' => [
+        \App\Modules\Inventory\Phone\StockTransferPaper::class,
+    ],
+
     'widgets' => [
         InventoryWidgets::class,
     ],

@@ -51,6 +51,12 @@ class HowManyPlatesCanWeStillSellTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs($this->user);
 
+        /*
+         * ⓘ রান্নাঘরের সুইচ খোলা — ২২ সেপ্টেম্বর থেকে (3ad894e2) `restaurant.enabled` ডিফল্টে বন্ধ, আর বন্ধ থাকলে পর্দাগুলো ৪০৪।
+         * এই ফাইলটা তখন বাদ পড়েছিল, তাই প্রতিটা দৌড়ে ৪০৪-এ লাল থাকত — দৌড়ের ক্রমের দোষ নয় (a6, ১৭ অক্টোবর ২০২৬)।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('restaurant.enabled', true);
+
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
     }
 

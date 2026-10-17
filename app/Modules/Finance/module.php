@@ -103,6 +103,12 @@ return [
 
     'dashboard' => FinanceDashboard::class,
 
+    // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
+    'phone_papers' => [
+        \App\Modules\Finance\Phone\CapitalPaper::class,
+        \App\Modules\Finance\Phone\InsurancePaper::class,
+    ],
+
     'menu' => [
         'dashboard' => [
             ['label' => 'finance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',

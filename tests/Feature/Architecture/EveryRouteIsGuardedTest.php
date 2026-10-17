@@ -317,6 +317,8 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.documents.pdf' => 'কাগজের চাবি ওয়েবের ছাপার রুটের নিজের can: (PaperTrail::abilitiesFor) — কন্ট্রোলারে; চাবি নেই তো ৪০৩, খালি তালিকাতেও ৪০৩',
         'api.documents.papers' => 'pdf-এর একই পাহারা, একই পথে (DocumentApiController::through) — যে কাগজ ছাপা যায় না তার মাপও নয়',
         'api.reports.export' => '§৯-এর দরজাই (ReportApiController::show, ReportDefinition::allows) — চাবি নেই তো ৪০৩; ঢাকা কলাম ফাইলেও নেই',
+        'api.papers.index' => 'ধরন সতেরো রকম, প্রতিটার চাবি ওয়েবের তালিকার নিজের (PhonePaper::permission) — কন্ট্রোলারে; চাবি নেই তো ৪০৩ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)',
+        'api.papers.show' => 'তালিকার একই পাহারা, একই পথে (PhonePaperApiController::open); কাগজ মডেলের নিজের দেয়ালে, বাইরের হলে ৪০৪',
     ];
 
     /**

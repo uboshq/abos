@@ -114,7 +114,8 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\NotificationSubscription' => 'ব্যক্তির নিজের ব্রাউজার — চালু আর বন্ধ notification_audit_logs-এ',
         'App\Models\NotificationTemplateVersion' => 'টেমপ্লেটের একবার-লেখা সংস্করণ, কখনো বদলায় না; সংরক্ষণ, প্রকাশ আর ফেরা notification_audit_logs-এ',
         'App\Models\NotificationRuleVersion' => 'নিয়মের সংস্করণের একবার-লেখা ছবি — নিজেই নিয়মের ইতিহাস',
-        'App\Models\NotificationPreference' => 'ব্যক্তির নিজের পছন্দ, NotificationChoice-এর একই যুক্তি',
+        // ⓘ NotificationPreference এখানে নেই — ১৭ অক্টোবর ২০২৬ থেকে অডিটেড: ছুটির দায়িত্ব
+        // (delegate_user_id) একজনের সব খবরের কপি আরেকজনের কাছে পাঠায়, তাই "কে কাকে দিল" নিরীক্ষার প্রশ্ন।
         'App\Models\NotificationDigest' => 'যন্ত্রের লেখা সারসংক্ষেপের খাতা',
         'App\Models\NotificationSuppression' => 'যন্ত্রের একবার-লেখা সারি — কোন খবর কেন আটকানো হলো',
         'App\Models\NotificationProviderEvent' => 'প্রোভাইডারের ফেরত-খবরের একবার-লেখা সারি — স্বাক্ষর যাচাই করে যন্ত্র লেখে',

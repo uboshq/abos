@@ -60,7 +60,9 @@ class StockCountPolicy
         return $user->can('inventory.count.approve')
             && $document->status === DocumentStatus::DRAFT
             // ⓘ বের করার কাগজ গণনার পথে নয় — শেষ হয় নিজের সইয়ে (গ৫, [[StockCountService::finishIssue()]])
-            && ! $document->isIssue();
+            && ! $document->isIssue()
+            // ⛔ যিনি গুনেছেন তিনি নিজে মানেন না — maker-checker (মালিক, ১৪ অক্টোবর ২০২৬; ছাড় super admin, [[MakerChecker]])
+            && \App\Core\Support\MakerChecker::isAnotherHand($user, $document->counted_by ?? $document->created_by);
     }
 
     /**
