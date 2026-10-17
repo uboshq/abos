@@ -24,6 +24,10 @@ class PaperKinds {
     'sales_price_list_territory': ('invoices', 'এলাকাভিত্তিক দাম'),
     'sales_price_list_all': ('invoices', 'বিশেষ দাম — সবার জন্য'),
     'inventory_transfer': ('stock', 'মাল স্থানান্তর'),
+    // ⭐ হিসাব আর অর্থ (১৭ অক্টোবর ২০২৬)
+    'accounts_inter_company': ('vouchers', 'আন্তঃকোম্পানি লেনদেন'),
+    'finance_capital': ('deposits', 'মূলধন'),
+    'finance_insurance': ('deposits', 'বীমা পলিসি'),
   };
 
   static String titleOf(String key) => all[key]?.$2 ?? 'কাগজ';

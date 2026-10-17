@@ -210,7 +210,8 @@ void main() {
   });
 
   test('every paper kind reopens from recents behind its module\'s switch', () {
-    expect(PaperKinds.all, hasLength(17));
+    // ⓘ ১৭টা ক্রয়-বিক্রয়-মজুদের, তিনটা হিসাব আর অর্থের (১৭ অক্টোবর ২০২৬)
+    expect(PaperKinds.all, hasLength(20));
     for (final key in PaperKinds.all.keys) {
       expect(RecentPapers.kinds[key], PaperKinds.all[key], reason: key);
       expect(ModuleGate.moduleOfPath.containsKey(PaperKinds.all[key]!.$1), isTrue, reason: key);

@@ -403,7 +403,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           _framed(
             path: 'hand-loans',
-            builder: (context, state) => const ModuleGateView(path: 'hand-loans', child: HandLoanListScreen()),
+            builder: (context, state) => ModuleGateView(
+                path: 'hand-loans',
+                child: Consumer(
+                    builder: (context, ref, _) =>
+                        HandLoanListScreen(canMove: ref.watch(authStateProvider).user?.can('finance.hand_loan.move') ?? false))),
           ),
           _framed(
             path: 'documents',
