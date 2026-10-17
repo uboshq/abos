@@ -102,6 +102,9 @@ Route::prefix('v1/sales')
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[SalesOrderService::setApprovedQuantities()]])
         Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('order.approved_quantities');
 
+        // ⭐ বিক্রয়ের হালচাল, ফোনের নিজের পর্দায় — ওয়েবের একই সেবা ও চাবি (মালিক, ১৭ অক্টোবর ২০২৬; [[SalesOverviewApiController]])
+        Route::get('/overview', \App\Modules\Sales\Http\Controllers\SalesOverviewApiController::class)->name('overview');
+
         // ⭐ আমার আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান, রুট-পাতার একই অঙ্কে ([[MyRouteApiController]], ৫ অক্টোবর ২০২৬)
         Route::get('/my-route', [\App\Modules\Sales\Http\Controllers\MyRouteApiController::class, 'index'])->name('my_route.index');
 
