@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/records/customer_record.dart';
 import '../../core/records/list_queries.dart';
+import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../books/books_widgets.dart';
 
 /// Every customer this device has pulled, each with what the shop owes.
 ///
@@ -56,6 +58,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     final all = CustomerRecord.all();
     final filtered = CustomerListQuery.apply(all,
         query: _query, sort: _sort, filters: _filters);
+    // ⭐ দেখানো দোকানগুলোর মোট বকেয়া — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। বকেয়ার তালিকার একই নিয়ম:
+    // কেবল যাঁর কাছে পাওনা (অগ্রিম মোট থেকে কাটে না), দেখার শাখার অঙ্কে ([[CustomerDueRecord.outstandingInView]])।
+    final owed = filtered.fold<double>(0, (sum, customer) {
+      final due = CustomerDueRecord.forCustomer(customer.id)?.outstandingInView ?? 0;
+      return due > 0 ? sum + due : sum;
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('গ্রাহক')),
@@ -79,6 +87,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             filters: _filters,
             onFilters: (value) => setState(() => _filters = value),
           ),
+          if (filtered.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: TotalStrip(label: 'মোট বকেয়া', value: Money.taka(owed), count: filtered.length),
+            ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
             // Always a RefreshIndicator, never a bare EmptyState — a

@@ -19,7 +19,8 @@ class _FakeApi implements QuotationApi {
       );
 
   @override
-  Future<(List<Quotation>, int?)> list({String? status, int page = 1}) async => ([current], null);
+  Future<(List<Quotation>, int?, PaperTotal?)> list({String? status, int page = 1}) async =>
+      ([current], null, const PaperTotal(sum: 1250, count: 7));
 
   @override
   Future<Quotation> show(String id) async => current;
@@ -45,6 +46,17 @@ class _FakeApi implements QuotationApi {
 }
 
 void main() {
+  testWidgets("the list carries the server's total and count of the whole filter", (tester) async {
+    await tester.pumpWidget(MaterialApp(home: QuotationListScreen(api: _FakeApi())));
+    await tester.pumpAndSettle();
+
+    // ⭐ মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total" — সার্ভারের সব পাতার মোট, ফোনে যোগ নয়
+    final total = find.byKey(const ValueKey('books-total'));
+    expect(find.descendant(of: total, matching: find.text('মোট উদ্ধৃতি')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('৳1,250')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('· 7 টি')), findsOneWidget);
+  });
+
   testWidgets('each step shows only its own button, and a refusal needs its reason', (tester) async {
     tester.view.physicalSize = const Size(800, 2400);
     tester.view.devicePixelRatio = 1;

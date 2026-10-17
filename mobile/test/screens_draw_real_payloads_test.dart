@@ -219,7 +219,34 @@ void main() {
 
     expect(find.textContaining('রহিম স্টোর'), findsOneWidget);
     expect(find.textContaining('নিশ্চিত'), findsOneWidget);
-    expect(find.text('৳1,275'), findsOneWidget);
+    // ⓘ সারির নিজের অঙ্ক — নিচের মোটের পট্টিতেও একই সংখ্যা বসে (এক আদেশ), তাই সারির ভেতরে খোঁজা
+    expect(find.descendant(of: find.byType(ListTile), matching: find.text('৳1,275')), findsOneWidget);
+  });
+
+  // ⭐ মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total" — দেখানো সারির মোট আর গোনা
+  testWidgets('the customer, order and stock lists carry their total, and the product list its count', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: CustomerListScreen()));
+    await tester.pump();
+    final customers = find.byKey(const ValueKey('books-total'));
+    expect(find.descendant(of: customers, matching: find.text('মোট বকেয়া')), findsOneWidget);
+    expect(find.descendant(of: customers, matching: find.text('৳8,125.5')), findsOneWidget);
+    expect(find.descendant(of: customers, matching: find.text('· 1 টি')), findsOneWidget);
+
+    await tester.pumpWidget(const MaterialApp(home: OrderListScreen()));
+    await tester.pump();
+    final orders = find.byKey(const ValueKey('books-total'));
+    expect(find.descendant(of: orders, matching: find.text('মোট অর্ডার')), findsOneWidget);
+    expect(find.descendant(of: orders, matching: find.text('৳1,275')), findsOneWidget);
+
+    await tester.pumpWidget(const MaterialApp(home: StockListScreen()));
+    await tester.pump();
+    final stock = find.byKey(const ValueKey('books-total'));
+    expect(find.descendant(of: stock, matching: find.text('মোট বিক্রয়যোগ্য')), findsOneWidget);
+    expect(find.descendant(of: stock, matching: find.text('40')), findsOneWidget);
+
+    await tester.pumpWidget(const MaterialApp(home: ProductListScreen()));
+    await tester.pump();
+    expect(find.text('মোট 1 টি পণ্য'), findsOneWidget);
   });
 
   testWidgets('the order screen picks a named shop and names it in the header',

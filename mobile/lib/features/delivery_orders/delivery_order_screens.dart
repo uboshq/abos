@@ -9,6 +9,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
 
 /// ডেলিভারি অর্ডার (DO) — তালিকা, নতুন DO, আর একটা DO-র পাতা (0.4.8, মালিকের বিক্রয়-ধারা §২ক-খ)।
@@ -39,6 +40,7 @@ class DeliveryOrderListScreen extends StatefulWidget {
 class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
   bool _awaitingMe = false;
   List<DeliveryOrder>? _rows;
+  PaperTotal? _total;
   bool _busy = false;
   String? _error;
 
@@ -54,8 +56,13 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       _error = null;
     });
     try {
-      final rows = await widget.api.list(awaitingMe: _awaitingMe);
-      if (mounted) setState(() => _rows = rows);
+      final (rows, total) = await widget.api.list(awaitingMe: _awaitingMe);
+      if (mounted) {
+        setState(() {
+          _rows = rows;
+          _total = total;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
@@ -121,6 +128,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
               ),
             ]),
             const SizedBox(height: AppSpacing.sm),
+            // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; ফেরত আর বাতিল বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
+            if (_total != null && rows.isNotEmpty)
+              TotalStrip(label: 'মোট ${_paper(widget.api)}', value: '৳ ${_taka.format(_total!.sum)}', count: _total!.count),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) _ErrorCard(_error!),
             if (_rows != null && rows.isEmpty && !_busy)

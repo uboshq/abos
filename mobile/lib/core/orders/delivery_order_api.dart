@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api_client/api_client.dart';
 import '../approvals/approvals_api.dart';
 import '../records/money.dart';
+import 'paper_total.dart';
 import '../records/customer_record.dart';
+
+export 'paper_total.dart';
 
 /// ডেলিভারি অর্ডার (DO) — `/sales/delivery-orders` (0.4.8, মালিকের বিক্রয়-ধারা §২ক-খ)।
 ///
@@ -165,7 +168,8 @@ abstract class DeliveryOrderApi {
   bool get forOrders;
 
   /// `awaitingMe` সত্যি হলে কেবল যেগুলো এখন আমার সইয়ের অপেক্ষায়।
-  Future<List<DeliveryOrder>> list({bool awaitingMe = false});
+  /// সারি, আর ছাঁকা তালিকার পুরো মোট ([[PaperTotal]]; পুরনো সার্ভারে `null`)
+  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false});
 
   Future<DeliveryOrder> show(String id);
 
@@ -193,14 +197,18 @@ class ServerDeliveryOrderApi implements DeliveryOrderApi {
   bool get forOrders => orders;
 
   @override
-  Future<List<DeliveryOrder>> list({bool awaitingMe = false}) async {
+  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(_base, queryParameters: {
       if (awaitingMe) 'scope': 'awaiting_me',
     });
-    return [
-      for (final row in (response.data?['orders'] as List?) ?? const [])
-        if (row is Map) DeliveryOrder.fromJson(Map<String, dynamic>.from(row)),
-    ];
+    final data = response.data ?? const <String, dynamic>{};
+    return (
+      [
+        for (final row in (data['orders'] as List?) ?? const [])
+          if (row is Map) DeliveryOrder.fromJson(Map<String, dynamic>.from(row)),
+      ],
+      PaperTotal.fromJson(data),
+    );
   }
 
   @override

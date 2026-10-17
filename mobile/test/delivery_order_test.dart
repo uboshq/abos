@@ -29,9 +29,9 @@ class _FakeApi implements DeliveryOrderApi {
       );
 
   @override
-  Future<List<DeliveryOrder>> list({bool awaitingMe = false}) async {
+  Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async {
     askedAwaiting = awaitingMe;
-    return [current];
+    return ([current], const PaperTotal(sum: 4800, count: 12));
   }
 
   @override
@@ -76,6 +76,11 @@ void main() {
 
     expect(find.text('DO-0001'), findsOneWidget);
     expect(api.askedAwaiting, isFalse);
+    // ⭐ সার্ভারের পুরো তালিকার মোট আর গোনা, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬)
+    final total = find.byKey(const ValueKey('books-total'));
+    expect(find.descendant(of: total, matching: find.text('মোট DO')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('৳ 4,800')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('· 12 টি')), findsOneWidget);
     expect(find.byKey(const ValueKey('do-new')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('do-awaiting-me')));

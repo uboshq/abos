@@ -1,6 +1,9 @@
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import 'paper_total.dart';
 import '../records/customer_record.dart';
+
+export 'paper_total.dart';
 
 /// ⭐ উদ্ধৃতি (কোটেশন) — `/sales/quotations` (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)।
 ///
@@ -86,7 +89,7 @@ class QuotedLine {
 }
 
 abstract class QuotationApi {
-  Future<(List<Quotation>, int?)> list({String? status, int page = 1});
+  Future<(List<Quotation>, int?, PaperTotal?)> list({String? status, int page = 1});
   Future<Quotation> show(String id);
   Future<Quotation> create({required String customerId, required List<QuotedLine> lines, required bool submit, String? note});
 
@@ -100,18 +103,19 @@ class ServerQuotationApi implements QuotationApi {
   static const _base = '/sales/quotations';
 
   @override
-  Future<(List<Quotation>, int?)> list({String? status, int page = 1}) async {
+  Future<(List<Quotation>, int?, PaperTotal?)> list({String? status, int page = 1}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(_base, queryParameters: {
       if (status != null) 'status': status,
       if (page > 1) 'page': page,
     });
-    final data = response.data ?? const {};
+    final data = response.data ?? const <String, dynamic>{};
     return (
       [
         for (final row in (data['quotations'] as List?) ?? const [])
           if (row is Map) Quotation.fromJson(Map<String, dynamic>.from(row)),
       ],
       (data['next_page'] as num?)?.toInt(),
+      PaperTotal.fromJson(data),
     );
   }
 

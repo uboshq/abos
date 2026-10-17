@@ -10,6 +10,7 @@ import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../books/books_widgets.dart';
 
 /// ⭐ উদ্ধৃতি (কোটেশন) — তালিকা, নতুন উদ্ধৃতি, আর একটা উদ্ধৃতির পাতা: জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর
 /// (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)। এক লাইনে এক তথ্য (মালিকের নিয়ম); কোন বোতাম দেখাবে সার্ভার বলে।
@@ -38,6 +39,7 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
   String? _status;
   final List<Quotation> _rows = [];
   int? _next;
+  PaperTotal? _total;
   bool _busy = false;
   bool _loaded = false;
   String? _error;
@@ -54,12 +56,13 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
       _error = null;
     });
     try {
-      final (rows, next) = await widget.api.list(status: _status, page: more ? (_next ?? 1) : 1);
+      final (rows, next, total) = await widget.api.list(status: _status, page: more ? (_next ?? 1) : 1);
       if (!mounted) return;
       setState(() {
         if (!more) _rows.clear();
         _rows.addAll(rows);
         _next = next;
+        _total = total;
         _loaded = true;
       });
     } catch (e) {
@@ -113,6 +116,9 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
                 ),
             ]),
             const SizedBox(height: AppSpacing.sm),
+            // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; বাতিল, ফেরত আর পুরনো সংস্করণ বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
+            if (_total != null && _rows.isNotEmpty)
+              TotalStrip(label: 'মোট উদ্ধৃতি', value: Money.taka(_total!.sum), count: _total!.count),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
             if (_loaded && _rows.isEmpty && _error == null)

@@ -11,6 +11,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../books/books_widgets.dart';
 import 'rejected_order_card.dart';
 
 /// Three states an order taken on this phone can be in, all in one list
@@ -55,6 +56,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
     final synced = SalesOrderRecord.all();
     final shown =
         OrderListQuery.apply(synced, sort: _sort, filters: _filters);
+    // ⭐ দেখানো আদেশের মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। ⓘ বাতিল আদেশ সারিতে থাকে, মোটে নয়
+    // (ওয়েবের ভাউচার আর আদেশের তালিকার একই নিয়ম)।
+    final shownTotal = shown.fold<double>(
+        0, (sum, order) => order.status == 'cancelled' ? sum : sum + (order.total ?? 0));
 
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
@@ -139,6 +144,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       filters: _filters,
                       onFilters: (value) => setState(() => _filters = value),
                     ),
+                    if (shown.isNotEmpty)
+                      TotalStrip(label: 'মোট অর্ডার', value: Money.taka(shownTotal), count: shown.length),
                     if (shown.isEmpty)
                       const Padding(
                         padding: EdgeInsets.all(AppSpacing.md),

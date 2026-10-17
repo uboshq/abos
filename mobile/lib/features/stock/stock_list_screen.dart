@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
 
 /// Hand-on-shelf quantities — reachable only from a menu tile gated on
@@ -57,6 +58,9 @@ class _StockListScreenState extends State<StockListScreen> {
     // typed query — StockListQuery.apply keeps that rule.
     final filtered = StockListQuery.apply(all,
         query: _query, sort: _sort, filters: _filters);
+    // ⭐ দেখানো পণ্যের মোট বিক্রয়যোগ্য পরিমাণ — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"; ওয়েবের মজুদ-তালিকার
+    // পট্টির একই সংখ্যা ("বিক্রয়যোগ্য")। ⓘ টাকার মূল্য এখানে নয় — খরচ দেখার চাবির পেছনে, "মূল্যসহ তালিকা"-য়।
+    final available = filtered.fold<double>(0, (sum, row) => sum + row.available);
 
     return Scaffold(
       appBar: AppBar(title: const Text('হাতে থাকা মজুদ')),
@@ -118,6 +122,11 @@ class _StockListScreenState extends State<StockListScreen> {
             filters: _filters,
             onFilters: (value) => setState(() => _filters = value),
           ),
+          if (filtered.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: TotalStrip(label: 'মোট বিক্রয়যোগ্য', value: Money.plain(available), count: filtered.length),
+            ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
             // Always a RefreshIndicator, never a bare EmptyState — see

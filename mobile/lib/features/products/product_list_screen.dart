@@ -79,6 +79,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
             filters: _filters,
             onFilters: (value) => setState(() => _filters = value),
           ),
+          // ⭐ কয়টা পণ্য — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary"; ⓘ দামের যোগফল অর্থহীন, তাই কেবল গোনা
+          if (filtered.isNotEmpty)
+            Padding(
+              key: const ValueKey('product-count'),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.xs),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('মোট ${filtered.length} টি পণ্য',
+                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.onSurfaceMuted)),
+              ),
+            ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
             // Always a RefreshIndicator, never a bare EmptyState — see
