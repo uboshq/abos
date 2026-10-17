@@ -6,6 +6,7 @@ import 'me_api.dart';
 import 'menu_item.dart';
 import 'menu_module.dart';
 import 'route_registry.dart';
+import '../router/native_for_web.dart';
 import '../web_inside/web_inside.dart';
 
 /// Where the signed-in person's home menu comes from: `GET /me`, filtered
@@ -196,12 +197,16 @@ class MenuRepository {
           if (RouteRegistry.appPathFor(entry.route) != null || nativeKeys.contains(entry.route)) {
             if (coveredOnce.add(entry.route)) continue;
           }
+          // ⭐ ফোনের একই ঘর আগে থেকেই আছে (ওয়েবের "পরিশোধ" = ফোনের "পেমেন্ট") — দুইবার নয় ([NativeForWeb.twinOf])
+          final twin = NativeForWeb.twinOf(web);
+          if (twin != null && native.any((item) => item.routeName == twin)) continue;
           if (!seen.add(web)) continue;
           WebPaths.rememberTitle(WebPaths.navPathFor(web), entry.label);
           out.add(MenuItem(
             key: 'web:$web',
             label: entry.label,
-            icon: Icons.language_outlined,
+            // ⭐ ফোনের নিজের পর্দা খুললে ওয়েবের গ্লোব নয় (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage app e bujajayna")
+            icon: NativeForWeb.iconFor(web) ?? Icons.language_outlined,
             routeName: WebPaths.navPathFor(web),
             module: module.code,
             moduleLabel: module.label,

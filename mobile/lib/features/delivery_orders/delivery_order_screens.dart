@@ -26,12 +26,15 @@ String _paper(DeliveryOrderApi api) => api.forOrders ? 'আদেশ' : 'DO';
 String _title(DeliveryOrderApi api) => api.forOrders ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার';
 
 class DeliveryOrderListScreen extends StatefulWidget {
-  const DeliveryOrderListScreen({super.key, this.api = const ServerDeliveryOrderApi(), this.canWrite = true});
+  const DeliveryOrderListScreen({super.key, this.api = const ServerDeliveryOrderApi(), this.canWrite = true, this.title});
 
   final DeliveryOrderApi api;
 
   /// `sales.do.create` (আদেশে `sales.order.create`) — না থাকলে "নতুন" বোতাম নেই।
   final bool canWrite;
+
+  /// মেনুর নিজের নাম (যেমন "অপেক্ষমাণ অর্ডার") — না দিলে "ডেলিভারি অর্ডার"/"বিক্রয় আদেশ"
+  final String? title;
 
   @override
   State<DeliveryOrderListScreen> createState() => _DeliveryOrderListScreenState();
@@ -94,7 +97,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
   Widget build(BuildContext context) {
     final rows = _rows ?? const <DeliveryOrder>[];
     return Scaffold(
-      appBar: AppBar(title: Text(_title(widget.api))),
+      appBar: AppBar(title: Text(widget.title ?? _title(widget.api))),
       floatingActionButton: widget.canWrite
           ? FloatingActionButton.extended(
               key: const ValueKey('do-new'),

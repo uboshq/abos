@@ -29,13 +29,16 @@ extension on SalesPaperKind {
 }
 
 class SalesPaperListScreen extends StatefulWidget {
-  const SalesPaperListScreen({super.key, required this.kind, this.api = const ServerSalesPaperApi(), this.today});
+  const SalesPaperListScreen({super.key, required this.kind, this.api = const ServerSalesPaperApi(), this.today, this.title});
 
   final SalesPaperKind kind;
   final SalesPaperApi api;
 
   /// পরীক্ষার জন্য — না দিলে আজ
   final DateTime? today;
+
+  /// মেনুর নিজের নাম (যেমন "বাতিল-ইনভয়েস (CXL)") — না দিলে "বিক্রয় বিল"/"চালান"
+  final String? title;
 
   @override
   State<SalesPaperListScreen> createState() => _SalesPaperListScreenState();
@@ -96,7 +99,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
     final invoice = widget.kind == SalesPaperKind.invoice;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.kind.title)),
+      appBar: AppBar(title: Text(widget.title ?? widget.kind.title)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -528,13 +531,23 @@ abstract class SalesPaperApi {
 }
 
 class ServerSalesPaperApi implements SalesPaperApi {
-  const ServerSalesPaperApi();
+  const ServerSalesPaperApi({this.cancelled = false});
+
+  /// ⭐ কেবল বাতিল বিল — মেনুর "বাতিল-ইনভয়েস (CXL)" সারি (মালিক, ১৭ অক্টোবর ২০২৬); সার্ভার ওয়েবের একই ছাঁকনি নেয়
+  /// (`cancelled=1` বাতিলগুলো লুকায় না, `status=cancelled` কেবল সেগুলো — [[SalesInvoiceController::listed()]])
+  final bool cancelled;
 
   @override
   Future<SalesPaperPage> list(SalesPaperKind kind,
       {required String from, required String to, String q = '', int page = 1}) async {
     final r = await ApiClient.dio.get<Map<String, dynamic>>('/sales/${kind.path}',
-        queryParameters: {'from': from, 'to': to, if (q.isNotEmpty) 'q': q, 'page': page});
+        queryParameters: {
+          'from': from,
+          'to': to,
+          if (q.isNotEmpty) 'q': q,
+          'page': page,
+          if (cancelled && kind == SalesPaperKind.invoice) ...{'cancelled': 1, 'status': 'cancelled'},
+        });
     final body = r.data ?? const <String, dynamic>{};
     return SalesPaperPage(
       rows: [
