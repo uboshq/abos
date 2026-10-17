@@ -29,7 +29,8 @@ final class RemembersAPhoneWrite
     {
         $key = (string) $request->header('Idempotency-Key', '');
 
-        if (! $request->isMethod('POST') || $key === '') {
+        // ⓘ POST আর DELETE — ফেরানো/মোছাও একবারের কাজ; আবার পাঠালে প্রথম উত্তর (fe, ১৭ অক্টোবর ২০২৬: ভার ফেরানো)
+        if (! in_array($request->method(), ['POST', 'DELETE'], true) || $key === '') {
             return $next($request);
         }
 

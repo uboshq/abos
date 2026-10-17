@@ -80,8 +80,13 @@ final class TheSalesDeskOpensAsPhoneScreensTest extends TestCase
         $this->assertSame('কাগজ ফুরিয়েছে', $rows['INV-P-2']['failure']);
         $this->assertTrue($rows['INV-P-2']['failed']);
 
-        $this->phone($this->owner)->postJson('/api/v1/sales/print-queue/'.$failed->public_id.'/settle')->assertOk();
+        $key = (string) \Illuminate\Support\Str::uuid();
+        $first = $this->phone($this->owner)->withHeader('Idempotency-Key', $key)
+            ->postJson('/api/v1/sales/print-queue/'.$failed->public_id.'/settle')->assertOk();
         $this->assertSame(PrintJob::PRINTED, $failed->fresh()->status);
+        // ⭐ আবার পাঠানো — একই চাবিতে প্রথম উত্তর (a6-এর পর্যালোচনা)
+        $this->phone($this->owner)->withHeader('Idempotency-Key', $key)
+            ->postJson('/api/v1/sales/print-queue/'.$failed->public_id.'/settle')->assertOk()->assertExactJson($first->json());
         $this->assertSame([(string) $waiting->public_id],
             array_column($this->phone($this->owner)->getJson('/api/v1/sales/print-queue')->json('jobs'), 'id'));
     }

@@ -109,7 +109,7 @@ Route::prefix('v1/sales')
         // [[SalesDeskApiController]]; চাবি কন্ট্রোলারে, ওয়েবের হুবহু)
         Route::get('/depot-check', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'depotCheck'])->name('desk.depot_check');
         Route::get('/print-queue', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'printQueue'])->name('desk.print_queue');
-        Route::post('/print-queue/{id}/settle', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'settlePrint'])->whereUuid('id')->name('desk.print_settle');
+        Route::post('/print-queue/{id}/settle', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'settlePrint'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('desk.print_settle');
         Route::get('/delivery-performance', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'deliveryPerformance'])->name('desk.delivery_performance');
         Route::get('/opportunities/pipeline', [\App\Modules\Sales\Http\Controllers\SalesDeskApiController::class, 'pipeline'])->name('desk.pipeline');
 

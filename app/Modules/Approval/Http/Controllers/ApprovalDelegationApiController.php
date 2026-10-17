@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ⭐ সইয়ের ভার দেওয়া, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage app e bujajayna"*।
@@ -91,14 +92,25 @@ final class ApprovalDelegationApiController extends Controller implements HasMid
                 'errors' => ['to' => [__('validation.exists', ['attribute' => __('approval::field.delegate_to')])]]], 422);
         }
 
-        $delegation = $this->delegations->grant(
-            from: $request->user(),
-            to: $to,
-            startsOn: (string) $data['starts_on'],
-            endsOn: (string) $data['ends_on'],
-            modules: array_values($data['modules'] ?? []),
-            reason: $data['reason'] ?? null,
-        );
+        try {
+            $delegation = $this->delegations->grant(
+                from: $request->user(),
+                to: $to,
+                startsOn: (string) $data['starts_on'],
+                endsOn: (string) $data['ends_on'],
+                modules: array_values($data['modules'] ?? []),
+                reason: $data['reason'] ?? null,
+            );
+        } catch (ValidationException $e) {
+            // ⓘ সেবা ওয়েবের ঘরের নামে বলে (`to_user_id`) — ফোনের ঘর `to`, যাতে বার্তা ঠিক ঘরের নিচে বসে (a6-এর পর্যালোচনা)
+            $errors = $e->errors();
+            if (isset($errors['to_user_id'])) {
+                $errors['to'] = $errors['to_user_id'];
+                unset($errors['to_user_id']);
+            }
+
+            throw ValidationException::withMessages($errors);
+        }
 
         return response()->json([
             'message' => __('approval::message.delegation_saved'),
@@ -113,7 +125,10 @@ final class ApprovalDelegationApiController extends Controller implements HasMid
 
         abort_unless((int) $delegation->from_user_id === (int) $request->user()->id, 403);
 
-        $this->delegations->revoke($delegation);
+        // ⓘ আগেই ফেরানো — কিছুই বদলায় না; নিরীক্ষার "কবে ফেরানো" প্রথম বারেরটাই থাকে (a6-এর পর্যালোচনা)
+        if ($delegation->revoked_at === null) {
+            $this->delegations->revoke($delegation);
+        }
 
         return response()->json(['message' => __('approval::message.delegation_revoked')]);
     }

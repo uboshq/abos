@@ -114,8 +114,13 @@ final class ThePhoneShowsTheHrRegistersTest extends TestCase
         $this->assertSame(LeaveApplication::PENDING, $outside->fresh()->status);
 
         $this->phone()->postJson('/api/v1/hr/leave/register/'.$theirs->public_id.'/reject')->assertUnprocessable()->assertJsonValidationErrors('remarks');
-        $this->phone()->postJson('/api/v1/hr/leave/register/'.$theirs->public_id.'/approve')->assertOk();
+        $key = (string) \Illuminate\Support\Str::uuid();
+        $first = $this->phone()->withHeader('Idempotency-Key', $key)->postJson('/api/v1/hr/leave/register/'.$theirs->public_id.'/approve')->assertOk();
         $this->assertSame(LeaveApplication::APPROVED, $theirs->fresh()->status);
+
+        // ⭐ নেট কেটে আবার পাঠানো — একই চাবিতে প্রথম উত্তর, "আগেই হয়েছে" ৪২২ নয় (a6-এর পর্যালোচনা)
+        $this->phone()->withHeader('Idempotency-Key', $key)->postJson('/api/v1/hr/leave/register/'.$theirs->public_id.'/approve')
+            ->assertOk()->assertExactJson($first->json());
     }
 
     public function test_without_the_keys_the_registers_are_shut(): void

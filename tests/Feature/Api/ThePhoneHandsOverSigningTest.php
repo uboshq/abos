@@ -78,8 +78,20 @@ final class ThePhoneHandsOverSigningTest extends TestCase
 
         // ⛔ অন্যের দেওয়া ভার ফেরানো যায় না
         $this->phone($this->colleague)->deleteJson('/api/v1/approvals/delegations/'.$made->json('delegation.id'))->assertForbidden();
+        $revokeKey = (string) Str::uuid();
+        $first = $this->phone($this->owner)->withHeader('Idempotency-Key', $revokeKey)
+            ->deleteJson('/api/v1/approvals/delegations/'.$made->json('delegation.id'))->assertOk();
+        $revokedAt = ApprovalDelegation::query()->where('public_id', $made->json('delegation.id'))->value('revoked_at');
+        $this->assertNotNull($revokedAt);
+
+        // ⭐ আবার পাঠানো — একই চাবিতে প্রথম উত্তর, চাবি ছাড়াও; ফেরানোর সময় সরে না (a6-এর পর্যালোচনা, fe ১৭ অক্টোবর ২০২৬)
+        $this->travel(5)->minutes();
+        $this->phone($this->owner)->withHeader('Idempotency-Key', $revokeKey)
+            ->deleteJson('/api/v1/approvals/delegations/'.$made->json('delegation.id'))->assertOk()->assertExactJson($first->json());
         $this->phone($this->owner)->deleteJson('/api/v1/approvals/delegations/'.$made->json('delegation.id'))->assertOk();
-        $this->assertNotNull(ApprovalDelegation::query()->where('public_id', $made->json('delegation.id'))->value('revoked_at'));
+        $this->assertSame((string) $revokedAt,
+            (string) ApprovalDelegation::query()->where('public_id', $made->json('delegation.id'))->value('revoked_at'),
+            '⛔ আবার ফেরানোয় ফেরানোর সময় বদলে গেল — নিরীক্ষার সময় সরল।');
 
         // ⭐ অডিট — দেওয়া আর ফেরানো, দুটোই মালিকের নামে
         $row = ApprovalDelegation::query()->where('public_id', $made->json('delegation.id'))->firstOrFail();
@@ -127,7 +139,7 @@ final class ThePhoneHandsOverSigningTest extends TestCase
         $base = ['starts_on' => now()->toDateString(), 'ends_on' => now()->addDays(2)->toDateString()];
 
         $this->post($this->owner, ['to' => (string) $outsider->public_id] + $base)->assertUnprocessable()->assertJsonValidationErrors('to');
-        $this->post($this->owner, ['to' => (string) $this->owner->public_id] + $base)->assertUnprocessable();
+        $this->post($this->owner, ['to' => (string) $this->owner->public_id] + $base)->assertUnprocessable()->assertJsonValidationErrors('to');
         $this->post($this->owner, ['to' => (string) $this->colleague->public_id, 'starts_on' => now()->subDay()->toDateString(),
             'ends_on' => now()->addDay()->toDateString()])->assertUnprocessable()->assertJsonValidationErrors('starts_on');
 

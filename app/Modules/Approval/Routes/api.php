@@ -27,5 +27,6 @@ Route::prefix('v1/approvals')
         Route::get('/delegations', [ApprovalDelegationApiController::class, 'index'])->name('delegation.index');
         Route::post('/delegations', [ApprovalDelegationApiController::class, 'store'])
             ->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delegation.store');
-        Route::delete('/delegations/{id}', [ApprovalDelegationApiController::class, 'destroy'])->whereUuid('id')->name('delegation.destroy');
+        Route::delete('/delegations/{id}', [ApprovalDelegationApiController::class, 'destroy'])->whereUuid('id')
+            ->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delegation.destroy');
     });

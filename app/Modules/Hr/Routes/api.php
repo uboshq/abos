@@ -38,6 +38,6 @@ Route::prefix('v1/hr')
         // ⭐ হাজিরা আর ছুটির রেজিস্টার — নাগালের সব কর্মীর, ওয়েবের একই দেয়াল আর চাবি (মালিক, ১৭ অক্টোবর ২০২৬; [[HrRegisterApiController]])
         Route::get('/attendance', [\App\Modules\Hr\Http\Controllers\HrRegisterApiController::class, 'attendance'])->name('register.attendance');
         Route::get('/leave/register', [\App\Modules\Hr\Http\Controllers\HrRegisterApiController::class, 'leaves'])->name('register.leave');
-        Route::post('/leave/register/{id}/approve', [\App\Modules\Hr\Http\Controllers\HrRegisterApiController::class, 'approve'])->whereUuid('id')->name('register.leave_approve');
-        Route::post('/leave/register/{id}/reject', [\App\Modules\Hr\Http\Controllers\HrRegisterApiController::class, 'reject'])->whereUuid('id')->name('register.leave_reject');
+        Route::post('/leave/register/{id}/approve', [\App\Modules\Hr\Http\Controllers\HrRegisterApiController::class, 'approve'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('register.leave_approve');
+        Route::post('/leave/register/{id}/reject', [\App\Modules\Hr\Http\Controllers\HrRegisterApiController::class, 'reject'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('register.leave_reject');
     });
