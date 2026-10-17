@@ -4,6 +4,7 @@ import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/approval_rows/approval_rows_screens.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/direct_sale/counter_screen.dart';
+import '../../features/documents/document_screens.dart';
 import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/executive/executive_screen.dart';
@@ -76,6 +77,11 @@ class NativeForWeb {
     }
     if (path == '/documents/templates') {
       return const TemplateListScreen();
+    }
+    // ⭐ দলিলের আটটা তালিকা — একই ফোন-পর্দা, মেনুর ঘর বাছা অবস্থায় (মালিক, ১৭ অক্টোবর ২০২৬)
+    final library = RegExp(r'^/documents/(center|mine|shared|recent|expiry|archive|recycle|search)$').firstMatch(path)?.group(1);
+    if (library != null) {
+      return ModuleGateView(path: 'documents', child: DocumentListScreen(initialView: library));
     }
     // ⓘ ওয়েবের "planned" — এখনো তৈরি হয়নি এমন পর্দা; ফোনে স্পষ্ট "শীঘ্রই আসছে", ওয়েব-জানালা নয় (fe)
     if (path.startsWith('/sales/planned/')) {

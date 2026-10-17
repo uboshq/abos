@@ -55,22 +55,41 @@ Color _levelColour(String level) => switch (level) {
     };
 
 class DocumentListScreen extends StatefulWidget {
-  const DocumentListScreen({super.key, this.api = const ServerDocumentLibraryApi()});
+  const DocumentListScreen({super.key, this.api = const ServerDocumentLibraryApi(), this.initialView = 'center'});
 
   final DocumentLibraryApi api;
+
+  /// ⭐ মেনুর কোন সারি থেকে খোলা — কেন্দ্র, আমার, শেয়ার, মেয়াদ, সাম্প্রতিক, আর্কাইভ, বিন, খোঁজ (মালিক, ১৭ অক্টোবর ২০২৬)
+  final String initialView;
+
+  /// ওয়েবের আটটা তালিকা, মেনুর ক্রমে
+  static const Map<String, String> views = {
+    'center': 'সব',
+    'mine': 'আমার',
+    'shared': 'আমার সাথে শেয়ার',
+    'recent': 'সাম্প্রতিক',
+    'expiry': 'মেয়াদ',
+    'archive': 'আর্কাইভ',
+    'recycle': 'রিসাইকেল বিন',
+    'search': 'খোঁজ (আর্কাইভসহ)',
+  };
 
   @override
   State<DocumentListScreen> createState() => _DocumentListScreenState();
 }
 
 class _DocumentListScreenState extends State<DocumentListScreen> {
-  String _view = 'center';
+  late String _view = DocumentListScreen.views.containsKey(widget.initialView) ? widget.initialView : 'center';
   String _q = '';
   final _search = TextEditingController();
+
+  /// ⭐ গোটা তালিকার গোনা — সার্ভারের, পাতার নয়
+  final _count = ValueNotifier<int?>(null);
 
   @override
   void dispose() {
     _search.dispose();
+    _count.dispose();
     super.dispose();
   }
 
@@ -81,6 +100,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
           reloadKey: '$_view/$_q',
           load: (page) async {
             final p = await widget.api.list(view: _view, q: _q, page: page);
+            if (page == 1) _count.value = p.count;
             return (p.rows, p.nextPage);
           },
           failed: 'কাগজের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
@@ -97,9 +117,19 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             TabChips(
-              tabs: const {'center': 'সব', 'mine': 'আমার', 'shared': 'আমার সাথে শেয়ার', 'expiry': 'মেয়াদ'},
+              tabs: DocumentListScreen.views,
               selected: _view,
               onSelected: (v) => setState(() => _view = v),
+            ),
+            ValueListenableBuilder<int?>(
+              valueListenable: _count,
+              builder: (context, count, _) => count == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text('মোট $count টি কাগজ',
+                          key: const ValueKey('doc-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ),
             ),
           ],
           item: (context, d) => Card(
@@ -117,10 +147,15 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
                     [levelWords(d.level), if (d.expiryDate != null) 'মেয়াদ ${dayOf(d.expiryDate)}'].join(' · '),
                     style: TextStyle(color: _levelColour(d.level)),
                   ),
+                  if (d.deleted)
+                    const Text('মোছা — ফেরানো ওয়েবে', style: TextStyle(color: AppColors.danger)),
                 ],
               ),
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute<void>(builder: (_) => DocumentScreen(id: d.id, api: widget.api))),
+              // ⓘ বিনের কাগজ খোলা যায় না — সার্ভারের দরজা ৪০৪ দিত
+              onTap: d.deleted
+                  ? null
+                  : () => Navigator.of(context)
+                      .push(MaterialPageRoute<void>(builder: (_) => DocumentScreen(id: d.id, api: widget.api))),
             ),
           ),
         ),
