@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'nav_prefs.dart';
+import 'paper_kinds.dart';
 
 /// ⭐ খোলা কাগজ "সাম্প্রতিক"-এ — DO, আদেশ, উদ্ধৃতি, আদায়, ক্রয়, ভাউচার, দাবি (মালিক, ১২ অক্টোবর ২০২৬)।
 ///
@@ -38,6 +39,8 @@ class RecentPapers {
     // ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬)
     'invoice': ('invoices', 'বিক্রয় বিল'),
     'challan': ('challans', 'চালান'),
+    // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর — ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; [PaperKinds])
+    ...PaperKinds.all,
   };
 
   /// `paper/<kind>/<id>`, with the purchase's own kind (`bill`, `receipt` …)

@@ -8,6 +8,7 @@ import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/executive/executive_screen.dart';
+import '../../features/papers/paper_screens.dart';
 import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
@@ -17,6 +18,7 @@ import '../../features/web_inside/web_inside_screen.dart';
 import '../accounts/voucher_api.dart';
 import '../auth/auth_state.dart';
 import '../menu/module_gate.dart';
+import '../navigation/paper_kinds.dart';
 import '../orders/delivery_order_api.dart';
 
 /// ⭐ মেনুর ওয়েব-সারি, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta mobile app style e zate bujazay sei vabe koro,
@@ -39,6 +41,30 @@ class NativeForWeb {
     'accounts', 'finance', 'purchase', 'inventory', 'customer', 'credit_control', 'sales',
     'promotion', 'approval', 'system_admin', 'documents',
   };
+
+  /// ⭐ লেনদেনের তালিকা — ওয়েবের পথ → কাগজের চাবি ([PaperListScreen], মালিক, ১৭ অক্টোবর ২০২৬; fe-র ধাপ ৪)।
+  ///
+  /// <p>ⓘ সরাসরি ক্রয় (`/purchase/direct`) ওয়েবে কেবল লেখার ফর্ম, তার ফল বিল — তাই ফোনে বিলের তালিকা। দর তালিকার চার রকম
+  /// একই পথে, `?target=`-এ ([priceLists])।
+  static const Map<String, String> papers = {
+    '/purchase/orders': 'purchase_order',
+    '/purchase/bills': 'purchase_bill',
+    '/purchase/direct': 'purchase_bill',
+    '/purchase/receipts': 'purchase_receipt',
+    '/purchase/returns': 'purchase_return',
+    '/purchase/requisitions': 'purchase_requisition',
+    '/purchase/rfqs': 'purchase_rfq',
+    '/purchase/contracts': 'purchase_contract',
+    '/sales/returns': 'sales_return',
+    '/sales/gate-passes': 'sales_gate_pass',
+    '/sales/shipments': 'sales_shipment',
+    '/sales/transport': 'sales_transport',
+    '/sales/loading-sheets': 'sales_loading_sheet',
+    '/inventory/transfers': 'inventory_transfer',
+  };
+
+  /// দর তালিকার চার রকম — ওয়েবের `/sales/price-lists?target=`
+  static const Set<String> priceLists = {'customer', 'tier', 'territory', 'all'};
 
   /// এই ওয়েব-পথের ফোন-পর্দা, বা null — তখন ওয়েব-জানালা। [title] মেনুর নিজের নাম।
   static Widget? screenFor(String? webPath, {String title = ''}) {
@@ -92,6 +118,13 @@ class NativeForWeb {
       return ComingSoonScreen(title: title);
     }
 
+    final target = Uri.parse(webPath).queryParameters['target'];
+    final paper = papers[path] ??
+        (path == '/sales/price-lists' && priceLists.contains(target) ? 'sales_price_list_$target' : null);
+    if (paper != null) {
+      return ModuleGateView(path: PaperKinds.all[paper]!.$1, child: PaperListScreen(paperKey: paper, title: title));
+    }
+
     final dashboard = RegExp(r'^/dashboard/([a-z_]+)$').firstMatch(path)?.group(1);
     if (dashboard != null && dashboards.contains(dashboard)) {
       return ModuleDashboardScreen(module: dashboard, name: title);
@@ -139,6 +172,8 @@ class NativeForWeb {
     if (path == '/sales/delivery-orders') return Icons.local_shipping_outlined;
     if (path == '/customers') return Icons.people_alt_outlined;
     if (path == '/inventory/stock') return Icons.warehouse_outlined;
+    // ⓘ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর — ফোনের নিজের তালিকা ([papers])
+    if (papers.containsKey(path) || path == '/sales/price-lists') return Icons.description_outlined;
     return null;
   }
 

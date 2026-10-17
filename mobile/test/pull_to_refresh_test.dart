@@ -67,6 +67,8 @@ void main() {
     'approval_rows_screens.dart',
     // ⭐ বিক্রয়ের ডেস্ক-পাতা আর দলিলের ছাঁচ (১৭ অক্টোবর ২০২৬) — টান test/sales_desk_test.dart-এ দেখা
     'sales_desk_screens.dart',
+    // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর (১৭ অক্টোবর ২০২৬) — টান test/papers_test.dart-এ দেখা
+    'paper_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
