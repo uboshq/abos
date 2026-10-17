@@ -59,7 +59,53 @@ final class DocumentLibraryApiController extends Controller implements HasMiddle
     public static function middleware(): array
     {
         // ⓘ ওয়েবের গোটা ডকুমেন্টস-গ্রুপের চাবি ([[Documents/Routes/web.php]]); কাগজ ধরে নীতি পদ্ধতিতে
-        return [new Middleware('can:documents.view')];
+        return [
+            new Middleware('can:documents.view'),
+            // ⭐ ফোন থেকে তোলা — ওয়েবের `/documents/upload`-এর একই চাবি (মালিক, ১৭ অক্টোবর ২০২৬)
+            new Middleware('can:documents.upload', only: ['uploadSetup', 'upload']),
+        ];
+    }
+
+    /**
+     * `GET /documents/library/upload/setup` — তোলার ফর্মের পছন্দ, ওয়েবের পাতার একই তালিকা: ফোল্ডার, ধরন, এই মানুষের গোপনীয়তার ধাপ,
+     * নাগালের শাখা (public_id), গোটা কোম্পানিতে রাখা যায় কি না, আর ফাইলের সীমা।
+     */
+    public function uploadSetup(Request $request): JsonResponse
+    {
+        $user = $this->user($request);
+        $default = $this->choices->defaultBranch($user);
+        $branches = $this->choices->branches($user);
+        $publicIds = \App\Models\Branch::query()->whereIn('id', array_keys($branches))->pluck('public_id', 'id');
+
+        $pairs = fn (array $map) => collect($map)->map(fn ($label, $code) => ['code' => (string) $code, 'label' => (string) $label])->values();
+
+        return response()->json([
+            'folders' => $pairs($this->choices->folders()),
+            'types' => $pairs($this->choices->types()),
+            'levels' => $pairs($this->choices->levels($user)),
+            'branches' => collect($branches)->map(fn ($label, $id) => [
+                'id' => (string) ($publicIds[$id] ?? ''), 'label' => (string) $label, 'default' => (int) $id === (int) $default,
+            ])->values(),
+            'company_wide' => $this->choices->companyWideAllowed($user),
+            'max_files' => \App\Modules\Documents\Services\DocumentFiles::MAX_FILES,
+            'max_mb' => \App\Modules\Documents\Services\DocumentFiles::maxMb(),
+        ]);
+    }
+
+    /**
+     * `POST /documents/library` (multipart) — ওয়েবের তোলার একই নিয়ম আর সেবা ([[DocumentLibrary::upload()]]): ফাইলের ধরন ও মাপ,
+     * নাগালের শাখা, নিজের বিভাগ, নিজের ধাপের গোপনীয়তা; প্রতিটা ফাইলে একটা কাগজ, ভার্সন আর অডিটসহ।
+     */
+    public function upload(\App\Modules\Documents\Http\Requests\PhoneDocumentUploadRequest $request): JsonResponse
+    {
+        $made = $this->library->upload(array_values((array) $request->file('files', [])), $request->validated());
+
+        return response()->json([
+            'message' => count($made) === 1
+                ? __('documents::message.uploaded_one', ['no' => $made[0]->document_no])
+                : trans_choice('documents::message.uploaded_many', count($made), ['count' => count($made)]),
+            'rows' => collect($made)->map(fn (Document $d) => $this->facts($d))->values(),
+        ], 201);
     }
 
     public function documents(Request $request): JsonResponse

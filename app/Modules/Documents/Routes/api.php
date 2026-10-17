@@ -25,6 +25,10 @@ Route::prefix('v1/documents/library')
     ])
     ->group(function (): void {
         Route::get('/', [DocumentLibraryApiController::class, 'documents'])->name('library.list');
+        // ⭐ ফোন থেকে তোলা আর ক্যামেরায় স্ক্যান — ওয়েবের তোলার একই নিয়ম ও সেবা (মালিক, ১৭ অক্টোবর ২০২৬)
+        Route::get('/upload/setup', [DocumentLibraryApiController::class, 'uploadSetup'])->name('library.upload_setup');
+        Route::post('/', [DocumentLibraryApiController::class, 'upload'])
+            ->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('library.upload');
         Route::get('/{id}', [DocumentLibraryApiController::class, 'show'])->whereUuid('id')->name('library.show');
         Route::get('/{id}/file', [DocumentLibraryApiController::class, 'file'])->whereUuid('id')->name('library.file');
     });
