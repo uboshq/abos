@@ -97,7 +97,7 @@ final class ThePhoneReportHadNoFiltersOrPageTotalTest extends TestCase
         $this->phone('/api/v1/reports/inventory.stock_summary?branch=not-a-branch')
             ->assertStatus(422)->assertJsonValidationErrors('branch');
 
-        $elsewhere = Branch::query()->where('company_id', '<>', $this->company->id)->firstOrFail();
+        $elsewhere = Branch::query()->withoutGlobalScopes()->where('company_id', '<>', $this->company->id)->firstOrFail();
         $this->phone('/api/v1/reports/inventory.stock_summary?branch='.$elsewhere->public_id)
             ->assertStatus(422);
 
