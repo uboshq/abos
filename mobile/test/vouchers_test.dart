@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
@@ -7,6 +8,7 @@ import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/auth/session_profile.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
+import 'package:abos_mobile/core/navigation/nav_catalog.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
 import 'package:dio/dio.dart';
@@ -416,6 +418,121 @@ void main() {
     expect((await repository.menuFor(sr)).map((i) => i.key), isNot(contains('accounts.voucher.create')));
     expect(ModuleGate.allows({'sales'}, 'vouchers'), isFalse);
     expect(ModuleGate.allows({'accounts'}, 'vouchers'), isTrue);
+  });
+
+  // ── ⭐ প্রতিটা ধরন আলাদা — মালিক, ১৭ অক্টোবর ২০২৬: "receipt app e cash, mfs, bank, payment, contra, journal, expense
+  // egulo alada alada asena eta tik korobe" ──
+  group('each kind on its own (owner, 17 Oct 2026)', () {
+    testWidgets('the buttons read সব · নগদ · MFS · ব্যাংক রসিদ · পেমেন্ট · কন্ট্রা · জার্নাল · খরচ; MFS asks receipt+mfs',
+        (tester) async {
+      final api = _FakeVouchers();
+      await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const []));
+
+      const labels = ['সব', 'নগদ রসিদ', 'MFS রসিদ', 'ব্যাংক রসিদ', 'পেমেন্ট', 'কন্ট্রা', 'জার্নাল', 'খরচ'];
+      for (final label in labels) {
+        expect(find.widgetWithText(ChoiceChip, label), findsOneWidget, reason: 'বোতাম "$label" নেই');
+      }
+      final xs = [for (final l in labels) tester.getTopLeft(find.widgetWithText(ChoiceChip, l))];
+      for (var i = 1; i < xs.length; i++) {
+        final before = xs[i - 1], here = xs[i];
+        expect(here.dy > before.dy || (here.dy == before.dy && here.dx > before.dx), isTrue,
+            reason: '"${labels[i]}" দাঁড়ায়নি "${labels[i - 1]}"-এর পরে');
+      }
+      final kindChips = find.byWidgetPredicate(
+          (w) => w is ChoiceChip && w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('voucher-view-'));
+      expect(kindChips, findsNWidgets(labels.length), reason: 'একই ধরন দুবার');
+
+      await tester.tap(find.byKey(const ValueKey('voucher-view-mfs-receipt')));
+      await tester.pumpAndSettle();
+      expect([api.asked.last['type'], api.asked.last['money']], ['receipt', 'mfs'], reason: '⛔ MFS রসিদ সার্ভারকে MFS বলেনি');
+
+      for (final (key, type) in [('contra', 'contra'), ('journal', 'journal'), ('expense', 'expense')]) {
+        await tester.tap(find.byKey(ValueKey('voucher-view-$key')));
+        await tester.pumpAndSettle();
+        expect([api.asked.last['type'], api.asked.last['money']], [type, null]);
+      }
+    });
+
+    for (final (view, title, type, money) in [
+      ('cash-receipt', 'নগদ রসিদ', 'receipt', 'cash'),
+      ('mfs-receipt', 'MFS রসিদ', 'receipt', 'mfs'),
+      ('bank-receipt', 'ব্যাংক রসিদ', 'receipt', 'bank'),
+      ('payment', 'পেমেন্ট', 'payment', null),
+      ('contra', 'কন্ট্রা', 'contra', null),
+      ('journal', 'জার্নাল', 'journal', null),
+      ('expense', 'খরচ', 'expense', null),
+    ]) {
+      testWidgets('opened as "$title": asks $type/$money first, says so on top, and "নতুন ভাউচার" goes straight to its form',
+          (tester) async {
+        final api = _FakeVouchers();
+        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view));
+
+        expect(api.asked, hasLength(1), reason: 'আগে "সব" চেয়ে তারপর ধরন — দুবার ডাকা হয়েছে');
+        expect([api.asked.single['type'], api.asked.single['money']], [type, money]);
+        expect(find.descendant(of: find.byType(AppBar), matching: find.text(title)), findsOneWidget);
+        final chip = tester.widget<ChoiceChip>(find.byKey(ValueKey('voucher-view-$view')));
+        expect(chip.selected, isTrue);
+
+        await tester.tap(find.byKey(const ValueKey('voucher-new')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('voucher-type-receipt')), findsNothing, reason: 'ধরন বাছাই আর দেখানোর কথা নয়');
+        expect(find.byType(VoucherFormScreen), findsOneWidget);
+        expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, type);
+      });
+    }
+
+    testWidgets('opened plain (old favourites, recents) or with an unknown kind: "ভাউচার", all, and the type picker',
+        (tester) async {
+      for (final view in [null, 'no-such-kind']) {
+        final api = _FakeVouchers();
+        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view));
+
+        expect([api.asked.single['type'], api.asked.single['money']], [null, null]);
+        expect(find.descendant(of: find.byType(AppBar), matching: find.text('ভাউচার')), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('voucher-new')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('voucher-type-receipt')), findsOneWidget);
+        expect(find.byKey(const ValueKey('voucher-type-expense')), findsOneWidget);
+        expect(find.byType(VoucherFormScreen), findsNothing);
+      }
+    });
+
+    test('the menu has one tile per kind beside "সব ভাউচার", for the same key, behind the same accounts switch', () async {
+      const repository = MenuRepository();
+      const clerk = AuthUser(id: '1', name: 'C', email: 'c@abos.test', roles: ['accountant'], permissions: ['accounts.voucher.create']);
+      const sr = AuthUser(id: '2', name: 'S', email: 's@abos.test', roles: ['salesman'], permissions: ['sales.order.create']);
+
+      final tiles = {for (final i in await repository.menuFor(clerk)) i.routeName: i.label};
+      expect(tiles, containsPair('vouchers', 'সব ভাউচার'));
+      const kinds = {
+        'vouchers/cash-receipt': 'নগদ রসিদ',
+        'vouchers/mfs-receipt': 'MFS রসিদ',
+        'vouchers/bank-receipt': 'ব্যাংক রসিদ',
+        'vouchers/payment': 'পেমেন্ট',
+        'vouchers/contra': 'কন্ট্রা',
+        'vouchers/journal': 'জার্নাল',
+        'vouchers/expense': 'খরচ',
+      };
+      kinds.forEach((path, label) {
+        expect(tiles, containsPair(path, label));
+        // ⓘ ঘরের চাবি পর্দার বোতামের চাবিই — অচেনা হলে পর্দা "সব"-এ খুলত
+        expect(VoucherView.byKey(path.split('/').last)?.label, label);
+        // ⓘ মডিউলের মেনুতে হিসাবের নিচে, লেনদেনে
+        expect(NavCatalog.screenDef(path)?.module, 'accounts');
+        expect(NavCatalog.screenDef(path)?.group, 'লেনদেন');
+        expect(ModuleGate.allows({'sales'}, path), isFalse, reason: '$path হিসাব-সুইচ বন্ধেও খোলে');
+        expect(ModuleGate.allows({'accounts'}, path), isTrue);
+      });
+
+      final srPaths = (await repository.menuFor(sr)).map((i) => i.routeName);
+      expect(srPaths.where((p) => p.startsWith('vouchers')), isEmpty);
+
+      // ⓘ পথটা রাউটারে আছে, হিসাব-সুইচের পিছনে
+      final router = File('lib/core/router/app_router.dart').readAsStringSync();
+      expect(RegExp(r"path: 'vouchers/:view',\s*builder: \(context, state\) => ModuleGateView\(\s*path: 'vouchers'").hasMatch(router),
+          isTrue);
+    });
   });
 }
 

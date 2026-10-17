@@ -341,6 +341,57 @@ class NavCatalog {
         label: 'ভাউচার',
         icon: Icons.receipt_outlined,
         aliases: ['voucher', 'খরচ', 'হিসাব']),
+    // ── ⭐ প্রতিটা ভাউচার-ধরন আলাদা (মালিক, ১৭ অক্টোবর ২০২৬: "cash, mfs, bank, payment, contra, journal, expense egulo
+    // alada alada asena") — একই হিসাব মডিউল, একই দলে; `/home/vouchers/<ধরন>` ([VoucherView.kinds]) ──
+    NavScreenDef(
+        path: 'vouchers/cash-receipt',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'নগদ রসিদ',
+        icon: Icons.payments_outlined,
+        aliases: ['cash', 'receipt', 'রসিদ', 'আদায়', 'নগদ']),
+    NavScreenDef(
+        path: 'vouchers/mfs-receipt',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'MFS রসিদ',
+        icon: Icons.phone_android_outlined,
+        aliases: ['mfs', 'bkash', 'nagad', 'বিকাশ', 'রসিদ', 'আদায়']),
+    NavScreenDef(
+        path: 'vouchers/bank-receipt',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'ব্যাংক রসিদ',
+        icon: Icons.account_balance_outlined,
+        aliases: ['bank', 'receipt', 'ব্যাংক', 'রসিদ', 'আদায়']),
+    NavScreenDef(
+        path: 'vouchers/payment',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'পেমেন্ট',
+        icon: Icons.outbox_outlined,
+        aliases: ['payment', 'পরিশোধ', 'পেমেন্ট']),
+    NavScreenDef(
+        path: 'vouchers/contra',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'কন্ট্রা',
+        icon: Icons.swap_horiz_outlined,
+        aliases: ['contra', 'কন্ট্রা', 'স্থানান্তর']),
+    NavScreenDef(
+        path: 'vouchers/journal',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'জার্নাল',
+        icon: Icons.menu_book_outlined,
+        aliases: ['journal', 'জাবেদা', 'জার্নাল']),
+    NavScreenDef(
+        path: 'vouchers/expense',
+        module: 'accounts',
+        group: 'লেনদেন',
+        label: 'খরচ',
+        icon: Icons.shopping_bag_outlined,
+        aliases: ['expense', 'খরচ', 'ব্যয়']),
     // ── গ্রাহক ──
     NavScreenDef(
         path: 'customers',

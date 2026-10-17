@@ -120,6 +120,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ModuleGateView(
                 path: 'vouchers', child: VoucherListScreen()),
           ),
+          // ⭐ প্রতিটা ভাউচার-ধরন আলাদা ঘরে — নগদ/MFS/ব্যাংক রসিদ, পেমেন্ট, কন্ট্রা, জার্নাল, খরচ (মালিক, ১৭ অক্টোবর ২০২৬);
+          // একই হিসাব-সুইচের পিছনে, অচেনা ধরন হলে "সব"
+          _framed(
+            path: 'vouchers/:view',
+            builder: (context, state) => ModuleGateView(
+                path: 'vouchers',
+                child: VoucherListScreen(
+                    key: ValueKey('vouchers-${state.pathParameters['view']}'),
+                    view: state.pathParameters['view'])),
+          ),
           _framed(
             path: 'claims',
             // ⭐ খরচের দাবি ও অগ্রিম (৭ অক্টোবর ২০২৬) — ফোনের HR সুইচের পিছনে
