@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
+import '../money/money_screens.dart';
 
 /// ⭐ অর্থ, ফোনে — জমা, ব্যাংকের ঋণ, ভাড়া, হাতধার; কেবল পড়া (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
 ///
@@ -443,9 +444,12 @@ String monthWords(String? iso) {
 // ───────────────────────────── হাতধার ─────────────────────────────
 
 class HandLoanListScreen extends StatefulWidget {
-  const HandLoanListScreen({super.key, this.api = const ServerFinanceApi()});
+  const HandLoanListScreen({super.key, this.api = const ServerFinanceApi(), this.canMove = false});
 
   final FinanceApi api;
+
+  /// `finance.hand_loan.move` — পাতায় দেওয়া-নেওয়ার বোতাম
+  final bool canMove;
 
   @override
   State<HandLoanListScreen> createState() => _HandLoanListScreenState();
@@ -481,7 +485,7 @@ class _HandLoanListScreenState extends State<HandLoanListScreen> {
             amountColour: h.balance > 0.004 ? AppColors.success : h.balance < -0.004 ? AppColors.danger : null,
             foot: handLoanSide(h.balance),
             onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute<void>(builder: (_) => HandLoanScreen(id: h.id, api: widget.api))),
+                .push(MaterialPageRoute<void>(builder: (_) => HandLoanScreen(id: h.id, api: widget.api, canMove: widget.canMove))),
           ),
         ),
       );
@@ -495,10 +499,13 @@ String handLoanSide(double balance) => balance > 0.004
         : 'মিটে গেছে';
 
 class HandLoanScreen extends StatelessWidget {
-  const HandLoanScreen({super.key, required this.id, this.api = const ServerFinanceApi()});
+  const HandLoanScreen({super.key, required this.id, this.api = const ServerFinanceApi(), this.canMove = false});
 
   final String id;
   final FinanceApi api;
+
+  /// `finance.hand_loan.move` — না থাকলে দেওয়া-নেওয়ার বোতাম নেই
+  final bool canMove;
 
   @override
   Widget build(BuildContext context) => PaperPage<HandLoan>(
@@ -518,6 +525,17 @@ class HandLoanScreen extends StatelessWidget {
                 colour: _dayColour(_daysUntil(h.dueOn))),
           FactRow('অবস্থা', h.status == 'settled' ? 'চুকে গেছে' : 'চালু'),
           if (h.note.isNotEmpty) FactRow('নোট', h.note),
+          // ⭐ টাকা দেওয়া-নেওয়া — হাতধারের লেখার চাবিতে (১৭ অক্টোবর ২০২৬; [[HandLoanMoveScreen]])
+          if (canMove && h.status != 'settled')
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: FilledButton.icon(
+                key: const ValueKey('handloan-move'),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HandLoanMoveScreen(id: id, name: h.name))),
+                icon: const Icon(Icons.swap_vert),
+                label: const Text('টাকা দেওয়া / ফেরত'),
+              ),
+            ),
           if (h.movements.isNotEmpty) const SectionTitle('লেনদেন'),
           for (final m in h.movements)
             _Row(

@@ -9,6 +9,8 @@ import '../../features/deliveries/deliveries_screen.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/executive/executive_screen.dart';
+import '../../features/finance/finance_screens.dart';
+import '../../features/money/money_screens.dart';
 import '../../features/orders/new_order_screen.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/papers/paper_screens.dart';
@@ -68,6 +70,9 @@ class NativeForWeb {
     '/sales/transport': 'sales_transport',
     '/sales/loading-sheets': 'sales_loading_sheet',
     '/inventory/transfers': 'inventory_transfer',
+    '/accounts/inter-company': 'accounts_inter_company',
+    '/finance/capital': 'finance_capital',
+    '/finance/insurance': 'finance_insurance',
   };
 
   /// ⭐ মজুদের পাঁচ লেখা আর মেনে নেওয়ার অপেক্ষার গণনা — ওয়েবের পথ → ফোনের ফর্ম ([StockDoor]; মালিক, ১৭ অক্টোবর ২০২৬)
@@ -89,6 +94,37 @@ class NativeForWeb {
     '/sales/quotations', '/sales/quotations/create', '/sales/quotations/compare', '/sales/quotations/revisions',
     '/sales/orders', '/sales/orders/create', '/sales/deliveries', '/inventory/quality', '/inventory/serials',
   };
+
+  /// ⭐ টাকার হাতবদল, নগদ গোনা আর অর্থের পাতা — ওয়েবের পথ → ফোনের পর্দা (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
+  ///
+  /// <p>ⓘ জমা, ব্যাংক ঋণ, হাতধার আর ভাড়ার পর্দা ফোনে আগে থেকেই ছিল — এখানে কেবল ওয়েবের মেনু-সারি তাদের দিকে। ⚠️ লাভ ভাগ আর
+  /// প্রতিষ্ঠানের তালিকা আপাতত ওয়েব-জানালায় (লাভ ঘোষণা দুই খাতে বড় অঙ্ক, ফর্ম ওয়েবেই)।
+  static const Set<String> moneyDesks = {
+    '/accounts/money-custody', '/accounts/money-transfers', '/accounts/cash-counts',
+    '/finance/cfo', '/finance/cash-forecast', '/finance/income', '/finance/budget',
+    '/finance/bank-facilities', '/finance/hand-loans', '/finance/deposits/bank', '/finance/rentals', '/finance/tenancies',
+  };
+
+  static Widget? _money(String path) {
+    bool can(WidgetRef ref, String key) => ref.watch(authStateProvider).user?.can(key) ?? false;
+
+    return switch (path) {
+      '/accounts/money-custody' => const ModuleGateView(path: 'vouchers', child: CustodyScreen()),
+      '/accounts/money-transfers' => const ModuleGateView(path: 'vouchers', child: TransferListScreen()),
+      '/accounts/cash-counts' => const ModuleGateView(path: 'vouchers', child: CashCountListScreen()),
+      '/finance/cfo' => const ModuleGateView(path: 'deposits', child: CfoScreen()),
+      '/finance/cash-forecast' => const ModuleGateView(path: 'deposits', child: CashForecastScreen()),
+      '/finance/income' => const ModuleGateView(path: 'deposits', child: IncomeScreen()),
+      '/finance/budget' => const ModuleGateView(path: 'deposits', child: BudgetScreen()),
+      '/finance/bank-facilities' => const ModuleGateView(path: 'bank-loans', child: LoanListScreen()),
+      '/finance/hand-loans' => ModuleGateView(
+          path: 'hand-loans',
+          child: Consumer(builder: (context, ref, _) => HandLoanListScreen(canMove: can(ref, 'finance.hand_loan.move')))),
+      '/finance/deposits/bank' => const ModuleGateView(path: 'deposits', child: DepositListScreen()),
+      '/finance/rentals' || '/finance/tenancies' => const ModuleGateView(path: 'rents', child: RentListScreen()),
+      _ => null,
+    };
+  }
 
   static Widget? _desk(String path) {
     bool can(WidgetRef ref, String key) => ref.watch(authStateProvider).user?.can(key) ?? false;
@@ -169,6 +205,9 @@ class NativeForWeb {
     final desk = _desk(path);
     if (desk != null) return desk;
 
+    final money = _money(path);
+    if (money != null) return money;
+
     final stock = stockDoors[path];
     if (stock != null) {
       return ModuleGateView(path: 'stock', child: StockDoor(key: ValueKey('stock-web-$stock'), open: stock));
@@ -232,6 +271,7 @@ class NativeForWeb {
     if (papers.containsKey(path) || path == '/sales/price-lists') return Icons.description_outlined;
     if (stockDoors.containsKey(path)) return Icons.inventory_outlined;
     if (desks.contains(path)) return Icons.assignment_outlined;
+    if (moneyDesks.contains(path)) return Icons.account_balance_wallet_outlined;
     return null;
   }
 

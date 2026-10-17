@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_state.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
@@ -47,7 +49,8 @@ class PaperRoute extends StatelessWidget {
       'deposit' => DepositScreen(id: id),
       'bank-loan' => LoanScreen(id: id),
       'rent' => RentScreen(side: extra == 'let' ? 'let' : 'pay', id: id),
-      'hand-loan' => HandLoanScreen(id: id),
+      'hand-loan' => Consumer(
+          builder: (context, ref, _) => HandLoanScreen(id: id, canMove: ref.watch(authStateProvider).user?.can('finance.hand_loan.move') ?? false)),
       'document' => DocumentScreen(id: id),
       'payslip' => PayslipScreen(id: id),
       'invoice' => SalesPaperScreen(kind: SalesPaperKind.invoice, id: id),
