@@ -48,19 +48,8 @@ final class DepotCheckController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $q = trim((string) $request->query('q', ''));
-        $model = self::DELIVERY_ORDER;
-        $ready = class_exists($model) && class_exists(self::STATUS);
-
-        $query = $ready
-            ? $model::query()
-                ->whereIn('status', [constant(self::STATUS.'::ACCOUNTS_APPROVED'), constant(self::STATUS.'::DEPOT_CHECK')])
-                ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w
-                    ->where('document_no', 'like', '%'.$q.'%')
-                    ->orWhereHas('customer', fn ($c) => $c->where(fn ($n) => $n
-                        ->where('name_en', 'like', '%'.$q.'%')
-                        ->orWhere('name_bn', 'like', '%'.$q.'%')
-                        ->orWhere('code', 'like', '%'.$q.'%')))))
-            : null;
+        $ready = class_exists(self::DELIVERY_ORDER) && class_exists(self::STATUS);
+        $query = self::deliveryOrders($q);
 
         return view('sales::depot_check.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -75,16 +64,47 @@ final class DepotCheckController extends Controller implements HasMiddleware
              * ⭐ বিক্রয় আদেশও — নতুন ধারার সংরক্ষিত আদেশ, যার চালান এখনো পুরো হয়নি (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬)।
              * ⓘ খোলা DO নিজের নম্বরে শেষ হয়, তাই দুই তালিকা পাশাপাশি; আংশিক চালানের পরে আদেশ আবার এখানে আসে।
              */
-            'salesOrders' => SalesOrder::query()
-                ->where('status', SalesOrderStatus::CONFIRMED)
-                ->where('hold_mode', SalesOrderStatus::HOLD_HOLDS)
-                ->where('delivery_status', '<>', SalesOrderStatus::FULL)
-                ->when($q !== '', fn ($query) => $query->search($q))
-                ->with(['customer', 'lines'])
-                ->orderBy('id')
+            'salesOrders' => self::heldOrders($q)
                 ->paginate(50, pageName: 'orders_page')
                 ->withQueryString(),
         ]);
+    }
+
+    /**
+     * ডিপোর যাচাইয়ের অপেক্ষায় DO — হিসাবের অনুমোদন পেয়েছে বা যাচাই চলছে; নম্বর বা দোকানের নাম/কোডে খোঁজা।
+     * ⓘ ওয়েবের পাতা আর ফোনের দরজা ([[SalesDeskApiController::depotCheck()]]) এক প্রশ্নেই পড়ে। DO মডিউল না থাকলে `null`।
+     */
+    public static function deliveryOrders(string $q): ?\Illuminate\Database\Eloquent\Builder
+    {
+        $model = self::DELIVERY_ORDER;
+
+        if (! class_exists($model) || ! class_exists(self::STATUS)) {
+            return null;
+        }
+
+        return $model::query()
+            ->whereIn('status', [constant(self::STATUS.'::ACCOUNTS_APPROVED'), constant(self::STATUS.'::DEPOT_CHECK')])
+            ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w
+                ->where('document_no', 'like', '%'.$q.'%')
+                ->orWhereHas('customer', fn ($c) => $c->where(fn ($n) => $n
+                    ->where('name_en', 'like', '%'.$q.'%')
+                    ->orWhere('name_bn', 'like', '%'.$q.'%')
+                    ->orWhere('code', 'like', '%'.$q.'%')))));
+    }
+
+    /**
+     * ⭐ বিক্রয় আদেশও — নতুন ধারার সংরক্ষিত আদেশ, যার চালান এখনো পুরো হয়নি (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬)।
+     * ⓘ খোলা DO নিজের নম্বরে শেষ হয়, তাই দুই তালিকা পাশাপাশি; আংশিক চালানের পরে আদেশ আবার এখানে আসে।
+     */
+    public static function heldOrders(string $q): \Illuminate\Database\Eloquent\Builder
+    {
+        return SalesOrder::query()
+            ->where('status', SalesOrderStatus::CONFIRMED)
+            ->where('hold_mode', SalesOrderStatus::HOLD_HOLDS)
+            ->where('delivery_status', '<>', SalesOrderStatus::FULL)
+            ->when($q !== '', fn ($query) => $query->search($q))
+            ->with(['customer', 'lines'])
+            ->orderBy('id');
     }
 
     /**
