@@ -240,7 +240,10 @@ final class TheReportFiltersHeldUnderReviewTest extends TestCase
     public function test_another_companys_values_and_list_shaped_input_are_refused_not_crashed(): void
     {
         $mart = Company::query()->where('code', 'FMART')->firstOrFail();
-        $foreignWarehouse = Warehouse::query()->withoutGlobalScopes()->where('company_id', $mart->id)->firstOrFail();
+        // ⓘ অন্য কোম্পানির গুদাম নিজেরা বসানো — ডেমোর উপর ছেড়ে দেওয়া নয়
+        DB::table('inv_warehouses')->insert(['public_id' => (string) Str::uuid7(), 'company_id' => $mart->id, 'code' => 'WH-MART',
+            'name_en' => 'Mart store', 'is_default' => false, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $foreignWarehouse = Warehouse::query()->withoutGlobalScopes()->where('company_id', $mart->id)->where('code', 'WH-MART')->firstOrFail();
         $foreignAccount = DB::table('accounts')->where('company_id', $mart->id)->first();
 
         $this->phone('/api/v1/reports/inventory.stock_ledger?warehouse_id='.$foreignWarehouse->public_id)
