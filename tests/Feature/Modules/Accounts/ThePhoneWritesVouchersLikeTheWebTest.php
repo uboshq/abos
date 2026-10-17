@@ -19,6 +19,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -332,6 +333,96 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
             '⛔ নিজের শাখার ছাঁকনিতে নিজের রসিদ নেই।');
 
         $this->phone($reader)->getJson('/api/v1/accounts/vouchers?money=gold')->assertStatus(422);
+    }
+
+    /**
+     * ⭐ টাকা কোন খাতে — তালিকাতেও, পাতাতেও। মালিক, ১৭ অক্টোবর ২০২৬: *"Mobile app Voucher e kon account e recived hoto ta
+     * dekhayna, recived into, pay From"*। দাবি: ব্যাংকে জমা রসিদে তালিকা আর পাতা দুটোতেই সেই ব্যাংক ("কোথায় জমা হলো");
+     * নগদ থেকে পরিশোধে নগদ ("কোথা থেকে গেল"); কনট্রায় দুই দিক ("কোথা থেকে" → "কোথায় গেল") — মাথার টাকার খাত যেদিকেই বসুক;
+     * জাবেদায় কিছু নয়; পুরনো চাবি আগের মতো; লেখার চাবিওয়ালা ক্যাশিয়ার কেবল নিজের লেখা দেখেন; সারি বাড়লে ডাক বাড়ে না।
+     */
+    public function test_the_list_and_the_page_say_which_account_the_money_went_into_or_came_from(): void
+    {
+        app(SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
+        $reader = $this->person(['accounts.voucher.create', 'accounts.report']);
+        $cashier = $this->person(['accounts.voucher.create']);
+        $till = Account::query()->postable()->active()->where('money_kind', Account::CASH)->orderBy('code')->firstOrFail();
+        // ⓘ এই কোম্পানিতে চালু ব্যাংক খাত না থাকলে টাকার খাতহীন একটা খাতকে ব্যাংক বানানো (নগদ রসিদের দাবির একই পথ)
+        $bank = Account::query()->postable()->active()->where('money_kind', Account::BANK)->orderBy('code')->first()
+            ?? tap(Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '1%')->orderBy('code')->firstOrFail(),
+                fn (Account $a) => $a->forceFill(['money_kind' => Account::BANK])->save());
+        [$other] = $this->twoAccounts();
+
+        // ⓘ খসড়া জাবেদা লিখে আকার বদলানো: সারি ০ ডেবিট, সারি ১ ক্রেডিট; মাথার টাকার খাত ইচ্ছামতো
+        $shape = function (User $by, string $id, string $type, Account $debit, Account $credit, ?Account $head): Voucher {
+            $out = $this->push($by, [$this->change($id, [...$this->journal(), 'save_as_draft' => true])]);
+            $this->assertSame(SyncChange::APPLIED, $out[0]['status'], json_encode($out, JSON_UNESCAPED_UNICODE));
+            $v = Voucher::query()->where('public_id', $out[0]['entityId'])->with('lines')->firstOrFail();
+            $v->lines[0]->forceFill(['account_id' => $debit->id])->save();
+            $v->lines[1]->forceFill(['account_id' => $credit->id])->save();
+            $v->forceFill(['type' => $type, 'money_account_id' => $head?->id])->save();
+
+            return $v;
+        };
+
+        // ⓘ ব্যাংকে জমা, মাথায় খাত বসা (পোস্টের পরের আকার); নগদ থেকে পরিশোধ, মাথা খালি (পোস্টের আগের আকার)
+        $receipt = $shape($reader, 'm-rcv', Voucher::RECEIPT, $bank, $other, $bank);
+        $payment = $shape($reader, 'm-pay', Voucher::PAYMENT, $other, $till, null);
+        // ⓘ নগদ থেকে ব্যাংকে — মাথায় ব্যাংক (পোস্ট প্রথম ব্যাংক-সারি বসায়), তবু "কোথা থেকে" নগদ
+        $contra = $shape($reader, 'm-ctr', Voucher::CONTRA, $bank, $till, $bank);
+        $journal = $shape($reader, 'm-jv', Voucher::JOURNAL, $other, $other, null);
+
+        $rows = collect($this->phone($reader)->getJson('/api/v1/accounts/vouchers')->assertOk()->json('rows'))->keyBy('id');
+        $keys = ['money_role', 'money_account', 'money_label', 'from_account', 'from_label', 'to_account', 'to_label'];
+        $pick = fn (array $r) => array_map(fn (string $k) => array_key_exists($k, $r) ? $r[$k] : '⛔ চাবি নেই', array_combine($keys, $keys));
+        $nothing = array_fill_keys($keys, null);
+
+        $expect = [
+            $receipt->public_id => [...$nothing, 'money_role' => 'into', 'money_account' => $bank->label(), 'money_label' => 'কোথায় জমা হলো'],
+            $payment->public_id => [...$nothing, 'money_role' => 'out_of', 'money_account' => $till->label(), 'money_label' => 'কোথা থেকে গেল'],
+            $contra->public_id => [...$nothing, 'money_role' => 'contra',
+                'from_account' => $till->label(), 'from_label' => 'কোথা থেকে', 'to_account' => $bank->label(), 'to_label' => 'কোথায় গেল'],
+            $journal->public_id => $nothing,
+        ];
+
+        foreach ($expect as $id => $want) {
+            $this->assertTrue($rows->has($id), '⛔ ভাউচার তালিকায় নেই।');
+            $this->assertSame($want, $pick($rows[$id]), '⛔ তালিকায় টাকার খাত ভুল বা নেই — '.$id);
+            $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$id)->assertOk()->json();
+            $this->assertSame($want, $pick($page), '⛔ পাতায় টাকার খাত ভুল বা নেই — '.$id);
+        }
+
+        // ⓘ বাকি চাবি আগের মতো — পুরনো ফোন যা পড়ে
+        foreach (['id', 'no', 'type', 'type_label', 'date', 'amount', 'state', 'state_label', 'party', 'party_label', 'narration', 'written_by'] as $key) {
+            $this->assertArrayHasKey($key, $rows[$receipt->public_id], '⛔ পুরনো চাবি হারাল: '.$key);
+        }
+
+        // ⓘ ক্যাশিয়ার (লেখার চাবি, রিপোর্টের নয়): নিজের লেখার টাকার খাত দেখেন; অন্যের ভাউচার তালিকাতেও না, পাতাতেও না
+        $own = $shape($cashier, 'm-own', Voucher::RECEIPT, $till, $other, null);
+        $mine = collect($this->phone($cashier)->getJson('/api/v1/accounts/vouchers')->assertOk()->json('rows'));
+        $this->assertSame([$own->public_id], $mine->pluck('id')->all(), '⛔ ক্যাশিয়ার অন্যের ভাউচার দেখলেন।');
+        $this->assertSame([$till->label(), 'কোথায় জমা হলো'], [$mine[0]['money_account'], $mine[0]['money_label']]);
+        $this->phone($cashier)->getJson('/api/v1/accounts/vouchers/'.$receipt->public_id)->assertNotFound();
+        $this->phone($cashier)->getJson('/api/v1/accounts/vouchers/'.$contra->public_id)->assertNotFound();
+
+        // ⓘ সারি ধরে ডাক নয় — তিনটা ভাউচার বেশি হলেও তালিকার ডাকের সংখ্যা এক (আগে একবার গরম করে নেওয়া)
+        $queries = function () use ($reader): int {
+            $this->phone($reader);
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $this->getJson('/api/v1/accounts/vouchers')->assertOk();
+            $n = count(DB::getQueryLog());
+            DB::disableQueryLog();
+
+            return $n;
+        };
+        $queries();
+        $before = $queries();
+        $shape($reader, 'm-rcv2', Voucher::RECEIPT, $bank, $other, $bank);
+        $shape($reader, 'm-pay2', Voucher::PAYMENT, $other, $bank, null);
+        $shape($reader, 'm-ctr2', Voucher::CONTRA, $till, $bank, $bank);
+        $queries();
+        $this->assertSame($before, $queries(), '⛔ তালিকার প্রতিটা সারির জন্য আলাদা ডাক (N+1)।');
     }
 
     /** @param  list<string>  $keys */
