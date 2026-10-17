@@ -22,7 +22,8 @@ use Tests\TestCase;
  *
  * ⓘ প্রতিটা ওয়েব-কন্ট্রোলারের নিজের `SLUGS` মানচিত্র ধরে — slug → রিপোর্টের চাবি। একই মানুষ, একই তারিখ: ওয়েবের পাতা (`result`) আর
  * ফোনের দরজা (`/api/v1/reports/{key}`) — সারির গোনা, প্রতিটা যোগের কলামের মোট আর দেখানো কলামের তালিকা এক হতে হবে; আর ফোনের PDF
- * (`/reports/{key}/export?format=pdf`) একই তারিখে তৈরি হতে হবে।
+ * (`/reports/{key}/export?format=pdf`) তৈরি হতে হবে, আর একই দরজার রপ্তানি একই তারিখ ও শাখার সারি দেবে; মোট দুই দিক থেকে মেলানো
+ * (ফোন কোনো যোগের কলাম বাদ দিলেও ধরা পড়ে — a6-এর পর্যালোচনা)।
  * ⓘ সব অমিল একসাথে বলা হয় (মডিউল · slug · কী ভুল), একটায় থেমে নয় — যাচাইয়ের তালিকাটাই এই দাবির ফল।
  */
 final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
@@ -104,7 +105,7 @@ final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
                     $problems[] = "{$where}: কলাম মেলে না — ওয়েব [".implode(',', $webColumns).'], ফোন ['.implode(',', $phoneColumns).']';
                 }
 
-                // ⭐ ঙ — ফোনের PDF একই তারিখে তৈরি হয় (দেখা, ছাপা, পাঠানো)
+                // ⭐ ঙ — ফোনের PDF তৈরি হয় (দেখা, ছাপা, পাঠানো)
                 $this->app['auth']->forgetGuards();
                 Sanctum::actingAs($owner->fresh(), [AuthController::APP]);
                 $pdf = $this->get('/api/v1/reports/'.$key.'/export?'.http_build_query($dates + ['format' => 'pdf']));
@@ -113,10 +114,35 @@ final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
                     $problems[] = "{$where}: PDF হয়নি ({$pdf->status()}, ".$pdf->headers->get('Content-Type').')';
                 }
 
-                foreach ((array) $phone->json('totals') as $column => $value) {
+                /*
+                 * ⭐ ঙ — রপ্তানি একই তারিখ আর শাখা মানে: PDF যে দরজার যে হিসাবে আঁকা, তার JSON রূপের সারির গোনা = ওয়েবের পাতার গোনা,
+                 * একই তারিখে আর (রিপোর্টে শাখার ছাঁকনি থাকলে) একটা শাখা বেছে। ⓘ PDF-এর ভিতরের লেখা পড়া হয় না — উৎস একই `run()`।
+                 */
+                $narrow = $dates + ($result->report->hasFilter('branch') ? ['branch_id' => $company->defaultBranch()?->id] : []);
+                $this->app['auth']->forgetGuards();
+                Sanctum::actingAs($owner->fresh(), [AuthController::APP]);
+                $file = $this->get('/api/v1/reports/'.$key.'/export?'.http_build_query($narrow + ['format' => 'json']));
+                CompanyContext::set($company->id, $company->defaultBranch()?->id);
+                $this->app['auth']->forgetGuards();
+                $narrowWeb = $this->actingAs($owner)->get(route($route, ['slug' => $slug] + $narrow))->viewData('result');
+                CompanyContext::set($company->id, $company->defaultBranch()?->id);
+                $fileRows = $file->status() === 200 ? count((array) (json_decode((string) $file->getContent(), true)['rows'] ?? [])) : -1;
+                $webRows = $narrowWeb instanceof \App\Core\Engines\Report\ReportResult ? $narrowWeb->totalRows : -2;
+                if ($fileRows !== min($webRows, 100000)) {
+                    $problems[] = "{$where}: রপ্তানির সারি {$fileRows}, ওয়েবে একই তারিখ".(isset($narrow['branch_id']) ? '-শাখায়' : '')." {$webRows}";
+                }
+
+                // ⭐ গ — মোট দুই দিক থেকে: ফোনের প্রতিটা মোট ওয়েবের সাথে, আর ওয়েবের প্রতিটা দেখানো যোগের কলাম ফোনেও
+                $phoneTotals = (array) $phone->json('totals');
+                foreach ($phoneTotals as $column => $value) {
                     $want = $result->totals[$column] ?? null;
                     if ($want === null || $value === null || bccomp((string) $want, (string) $value, 2) !== 0) {
                         $problems[] = "{$where}: '{$column}'-এর মোট ওয়েবে ".var_export($want, true).', ফোনে '.var_export($value, true);
+                    }
+                }
+                foreach ($result->columnsFor($owner) as $column) {
+                    if ($column->total && array_key_exists($column->key, $result->totals) && ! array_key_exists($column->key, $phoneTotals)) {
+                        $problems[] = "{$where}: ওয়েবে '{$column->key}'-এর মোট আছে, ফোনে নেই";
                     }
                 }
             }
