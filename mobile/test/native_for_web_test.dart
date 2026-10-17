@@ -13,7 +13,7 @@ void main() {
   test('the dashboards, the sales overview and the owner centre open as phone screens; anything else stays a web window', () {
     for (final module in [
       'accounts', 'finance', 'purchase', 'inventory', 'customer', 'credit_control', 'sales',
-      'promotion', 'approval', 'system_admin', 'documents',
+      'promotion', 'approval', 'system_admin', 'documents', 'hr',
     ]) {
       final screen = NativeForWeb.screenFor('/dashboard/$module', title: 'নাম');
       expect(screen, isA<ModuleDashboardScreen>(), reason: '/dashboard/$module এখনো ওয়েব-জানালায়');
@@ -27,8 +27,7 @@ void main() {
     expect((NativeForWeb.screenFor('/documents/approval')! as PaperQueueScreen).kind, PaperQueueKind.documents);
     expect((NativeForWeb.screenFor('/documents/signatures')! as PaperQueueScreen).kind, PaperQueueKind.signatures);
 
-    // ⛔ HR-এর ড্যাশবোর্ড বেতন দেখায় — সার্ভার ফোনে পাঠায় না, তাই ওয়েব-জানালাতেই থাকে
-    expect(NativeForWeb.screenFor('/dashboard/hr'), isNull);
+    // ⭐ HR-এর ড্যাশবোর্ডও ফোনের পর্দায় — বেতন সার্ভারেই বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
     expect(NativeForWeb.screenFor('/dashboard/ghost'), isNull, reason: 'অজানা মডিউল আন্দাজে খোলা নয়');
     expect(NativeForWeb.screenFor('/accounts/chart'), isNull);
     expect(NativeForWeb.screenFor(null), isNull);
