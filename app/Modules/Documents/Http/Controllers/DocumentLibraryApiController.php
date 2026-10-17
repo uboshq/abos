@@ -41,7 +41,12 @@ final class DocumentLibraryApiController extends Controller implements HasMiddle
     private const PER_PAGE = 30;
 
     /** ফোনের তালিকার দৃশ্য — ওয়েবের সেন্টারের চারটা; বিন, আর্কাইভ আর বিস্তারিত খোঁজ ওয়েবে */
-    private const VIEWS = [DocumentFinder::CENTER, DocumentFinder::MINE, DocumentFinder::SHARED, DocumentFinder::EXPIRY];
+    /**
+     * ⭐ ওয়েবের আটটা তালিকা-ঘরই — সাম্প্রতিক, আর্কাইভ, রিসাইকেল বিন আর বিস্তারিত খোঁজও (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage app e
+     * bujajayna")। ⓘ প্রতিটার দেয়াল আর শর্ত ওয়েবের পাতার একই [[DocumentFinder::query()]]-এ।
+     */
+    private const VIEWS = [DocumentFinder::CENTER, DocumentFinder::MINE, DocumentFinder::SHARED, DocumentFinder::EXPIRY,
+        DocumentFinder::RECENT, DocumentFinder::ARCHIVE, DocumentFinder::BIN, DocumentFinder::SEARCH];
 
     public function __construct(
         private readonly DocumentFinder $finder,
@@ -72,7 +77,10 @@ final class DocumentLibraryApiController extends Controller implements HasMiddle
         $page = $query->paginate(self::PER_PAGE);
 
         return response()->json([
+            'view' => $view,
             'rows' => collect($page->items())->map(fn (Document $d) => $this->facts($d))->values(),
+            // ⭐ গোটা ছাঁকনির গোনা, পাতার নয় — "সব পর্দায় মোট"
+            'count' => $page->total(),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
@@ -146,6 +154,8 @@ final class DocumentLibraryApiController extends Controller implements HasMiddle
             'document_date' => $d->document_date?->toDateString(),
             'expiry_date' => $d->expiry_date?->toDateString(),
             'version' => $d->currentVersion?->label(),
+            // ⓘ রিসাইকেল বিনের কাগজ — খোলা যায় না (দরজা ৪০৪), ফেরানো ওয়েবে `documents.restore`-এ
+            'deleted' => $d->trashed(),
         ];
     }
 
