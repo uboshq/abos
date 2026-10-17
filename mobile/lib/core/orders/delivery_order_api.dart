@@ -186,10 +186,14 @@ abstract class DeliveryOrderApi {
 }
 
 class ServerDeliveryOrderApi implements DeliveryOrderApi {
-  const ServerDeliveryOrderApi({this.orders = false});
+  const ServerDeliveryOrderApi({this.orders = false, this.tab});
 
   /// ⭐ বিক্রয় আদেশের দরজা (`/sales/orders`) — একই আকারের JSON, কেবল `kind: so` যোগ; সার্ভারের ধাপ ১০।
   final bool orders;
+
+  /// ⭐ ওয়েবের ডেস্কের ট্যাব — `pending`, `partial`, `back`, `history` … (মেনুর ট্যাব-সারি, মালিক, ১৭ অক্টোবর ২০২৬)।
+  /// ⓘ কেবল DO-র দরজায়; সার্ভার একই ছাঁকনি দেয় ([[DeliveryOrderDeskController::tab()]]), পুরনো সার্ভার না চিনলে সব।
+  final String? tab;
 
   String get _base => orders ? '/sales/orders' : '/sales/delivery-orders';
 
@@ -200,6 +204,7 @@ class ServerDeliveryOrderApi implements DeliveryOrderApi {
   Future<(List<DeliveryOrder>, PaperTotal?)> list({bool awaitingMe = false}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(_base, queryParameters: {
       if (awaitingMe) 'scope': 'awaiting_me',
+      if (tab != null && !orders) 'tab': tab,
     });
     final data = response.data ?? const <String, dynamic>{};
     return (

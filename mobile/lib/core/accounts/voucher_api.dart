@@ -311,9 +311,13 @@ class VoucherView {
   /// সব বোতাম, পর্দার ক্রমে — মেনুর আলাদা আলাদা ঘরও এগুলোই (`/home/vouchers/<key>`)
   static const kinds = [...top, ...others];
 
+  /// ⭐ সব রসিদ একসাথে — ওয়েবের মেনুর "আদায়" সারি (`/accounts/vouchers/receipt`, মালিক, ১৭ অক্টোবর ২০২৬)। ⓘ পর্দার
+  /// বোতামে নেই (নগদ/MFS/ব্যাংক আলাদা বোতাম আছে), কেবল ঐ সারি থেকে খোলে।
+  static const receipts = VoucherView('receipt', 'সব রসিদ', type: 'receipt');
+
   /// মেনু বা পুরনো লিংকের চাবি থেকে — অচেনা বা খালি হলে null (তখন "সব")
   static VoucherView? byKey(String? key) {
-    for (final v in kinds) {
+    for (final v in [...kinds, receipts]) {
       if (v.key == key) return v;
     }
     return null;
