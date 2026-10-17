@@ -19,7 +19,8 @@ use Tests\TestCase;
  * ⛔ ফোনের ড্যাশবোর্ড সুইচ ভুলে যেত — পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১০।
  *
  * আজকের পাতা মডিউলের ফোন-সুইচ দেখত না (হিসাব বন্ধেও হাতের নগদ আর দেনা যেত); আর HR-এর ড্যাশবোর্ড ফোনে HR চালু থাকলে মাসের
- * বেতন-খরচ দিত — চুক্তি §৪-এ HR ডেস্কের। এখন আজকের পাতার প্রতিটা ভাগ নিজের সুইচ মানে, আর HR-এর ড্যাশবোর্ড ফোনে কখনো নয়।
+ * বেতন-খরচ দিত — চুক্তি §৪-এ HR ডেস্কের। এখন আজকের পাতার প্রতিটা ভাগ নিজের সুইচ মানে; HR-এর ড্যাশবোর্ড ফোনে আসে কেবল বেতন
+ * বাদ দিয়ে (মালিক, ১৭ অক্টোবর ২০২৬)।
  */
 final class TheDashboardForgotThePhonesSwitchesTest extends TestCase
 {
@@ -53,14 +54,20 @@ final class TheDashboardForgotThePhonesSwitchesTest extends TestCase
         $this->assertArrayHasKey('cashInHand', $this->phone()->getJson('/api/v1/dashboard/today')->json());
     }
 
-    public function test_the_hr_dashboard_never_reaches_the_phone_even_with_hr_on(): void
+    /**
+     * ⓘ ১৭ অক্টোবর ২০২৬, মালিক ("ক"): HR-এর ড্যাশবোর্ড ফোনে আসে, বেতনের অঙ্ক সার্ভারেই বাদ — অঙ্কের দাবি
+     * [[TheHrDashboardReachesThePhoneWithoutPayTest]]-এ। এখানে কেবল সুইচ: ফোনে HR বন্ধ থাকলে ড্যাশবোর্ডও বন্ধ।
+     */
+    public function test_the_hr_dashboard_follows_the_phones_hr_switch(): void
     {
-        $this->switch('hr', true);
-
+        $this->switch('hr', false);
         $this->phone()->getJson('/api/v1/dashboard/hr')->assertForbidden();
         $modules = collect($this->phone()->getJson('/api/v1/dashboard')->assertOk()->json('modules'))->pluck('module');
-        $this->assertNotContains('hr', $modules, '⛔ HR-এর ড্যাশবোর্ড ফোনের তালিকায়।');
+        $this->assertNotContains('hr', $modules, '⛔ ফোনে HR বন্ধ, তবু ড্যাশবোর্ড তালিকায়।');
         $this->assertNotEmpty($modules, 'প্রস্তুতিটাই ভুল — তালিকা খালি।');
+
+        $this->switch('hr', true);
+        $this->phone()->getJson('/api/v1/dashboard/hr')->assertOk();
     }
 
     private function switch(string $module, bool $on): void

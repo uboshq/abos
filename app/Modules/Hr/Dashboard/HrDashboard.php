@@ -15,6 +15,7 @@ use App\Core\Engines\Dashboard\Tile;
 use App\Core\Services\DataScope;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Core\Support\PhoneAnswer;
 use App\Models\Branch;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
@@ -94,12 +95,13 @@ final class HrDashboard implements ProvidesDashboard
                     // ⛔ ছুটির চাবি ছাড়া ঢাকা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০; [[ThePendingLeaveCountWentOverTheBranchWallTest]])
                     permission: 'hr.leave.view',
                 ),
-                new Stat(
+                // ⛔ বেতনের রানের গোনাও বেতনের খবর — ফোনের উত্তরে নয় (মালিক, ১৭ অক্টোবর ২০২৬; [[PhoneAnswer]])
+                ...(PhoneAnswer::active() ? [] : [new Stat(
                     label: __('hr::dashboard.payroll_runs'),
                     value: (string) PayrollRun::query()->count(),
                     hint: __('hr::dashboard.payroll_hint'),
                     href: route('hr.payroll.index'),
-                ),
+                )]),
             ],
 
             panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::byBranch(), ...self::byDesignation(), ...self::leaveThisMonth(),
@@ -297,6 +299,16 @@ final class HrDashboard implements ProvidesDashboard
     }
 
     /**
+     * বেতনের অঙ্ক দেখানো যায় কি না — বেতনের চাবি চাই, আর ফোনের উত্তরে কখনো নয়।
+     *
+     * ⛔ মালিক, ১৭ অক্টোবর ২০২৬: HR-এর ড্যাশবোর্ড ফোনে, বেতনের অঙ্ক সার্ভারেই বাদ ([[PhoneAnswer]], চুক্তি §৪) — চাবি থাকলেও।
+     */
+    private static function showsPay(): bool
+    {
+        return (bool) auth()->user()?->can('hr.payroll.view') && ! PhoneAnswer::active();
+    }
+
+    /**
      * ⭐ বেতন খরচ — গত ছয় মাস, মোট আয় বনাম হাতে পাওয়া (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
      *
      * ⓘ নিশ্চিত বেতনশিটের `gross_total` আর `net_total` — বেতনশিটের পর্দা যা বলে, এখানেও তাই; দুইটার ফাঁক = কর্তন।
@@ -307,7 +319,7 @@ final class HrDashboard implements ProvidesDashboard
      */
     private static function salaryCost(): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.payroll.view')) {
+        if (! config('abos.dashboards_v2') || ! self::showsPay()) {
             return [];
         }
 
@@ -467,7 +479,7 @@ final class HrDashboard implements ProvidesDashboard
      */
     private static function allowancesAndDeductions(): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.payroll.view')) {
+        if (! config('abos.dashboards_v2') || ! self::showsPay()) {
             return [];
         }
 
@@ -535,7 +547,7 @@ final class HrDashboard implements ProvidesDashboard
      */
     private static function costByDepartment(): array
     {
-        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.payroll.view')) {
+        if (! config('abos.dashboards_v2') || ! self::showsPay()) {
             return [];
         }
 
