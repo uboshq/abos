@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/approval_rows/approval_rows_screens.dart';
+import '../../features/approvals/my_requests_screen.dart';
 import '../../features/claims/claims_screens.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/dashboards/dashboards_screen.dart';
@@ -298,6 +299,7 @@ class NativeForWeb {
     if (stockDoors.containsKey(path)) return Icons.inventory_outlined;
     if (desks.contains(path)) return Icons.assignment_outlined;
     if (moneyDesks.contains(path)) return Icons.account_balance_wallet_outlined;
+    if (path == '/approvals/mine') return Icons.outbox_outlined;
     return null;
   }
 
@@ -343,6 +345,10 @@ class NativeForWeb {
     }
     if (path == '/inventory/stock') {
       return const ModuleGateView(path: 'stock', child: StockListScreen());
+    }
+    // ⭐ আমার পাঠানো অনুরোধ — সার্ভারের `GET /approvals/mine` (a6/app-native-server)
+    if (path == '/approvals/mine') {
+      return ModuleGateView(path: 'approvals', child: MyRequestsScreen(title: named));
     }
 
     return null;

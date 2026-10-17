@@ -80,6 +80,8 @@ void main() {
     'quality_serial_screens.dart',
     // ⭐ টাকার হাতবদল, নগদ গোনা, অর্থের পাতা (১৭ অক্টোবর ২০২৬) — টান test/money_screens_test.dart-এ দেখা
     'money_screens.dart',
+    // ⭐ আমার অনুরোধ (১৭ অক্টোবর ২০২৬) — টান test/my_requests_test.dart-এ দেখা
+    'my_requests_screen.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
