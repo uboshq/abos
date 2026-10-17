@@ -16,7 +16,8 @@ use Illuminate\Routing\Controllers\Middleware;
  * ⭐ দলিলের ছাঁচ ফোনে — তালিকা আর একটা ছাঁচ পড়া (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage app e bujajayna"*; fe: লেখা ও বদল
  * ডেস্কের কাজ, ওয়েবেই)।
  *
- * ⓘ ওয়েবের পাতার ([[DocumentTemplateController::index()]]) একই সারি, একই চাবি `documents.view` (দলিলের পাতার দল-চাবি)। ⓘ ছাঁচ চেনা
+ * ⓘ ওয়েবের পাতার ([[DocumentTemplateController::index()]]) একই সারি, একই চাবি `documents.view`; ⛔ একটা ছাঁচের লেখা `documents.templates`
+ * (ওয়েবের সম্পাদকের চাবি) — নিয়োগপত্রের মতো লেখা তালিকা-দেখা সবার নয়। ⓘ ছাঁচ চেনা
  * যায় public_id-তে। ⛔ কেবল পড়া — বানানো, বদল আর কাগজ তৈরি ওয়েবে।
  */
 final class DocumentTemplateApiController extends Controller implements HasMiddleware
@@ -25,7 +26,12 @@ final class DocumentTemplateApiController extends Controller implements HasMiddl
 
     public static function middleware(): array
     {
-        return [new Middleware('can:documents.view')];
+        return [
+            new Middleware('can:documents.view'),
+            // ⛔ ছাঁচের পুরো লেখা কেবল ছাঁচের চাবিতে — ওয়েবে লেখা দেখা যায় কেবল সম্পাদকে (`can:documents.templates`,
+            //    Documents/Routes/web.php:83); তালিকা documents.view-এ (fe, ১৭ অক্টোবর ২০২৬, a6-এর পর্যালোচনা)
+            new Middleware('can:documents.templates', only: ['show']),
+        ];
     }
 
     /** `GET /documents/templates?page=` */
