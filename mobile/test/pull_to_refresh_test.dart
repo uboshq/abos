@@ -69,6 +69,10 @@ void main() {
     'sales_desk_screens.dart',
     // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর (১৭ অক্টোবর ২০২৬) — টান test/papers_test.dart-এ দেখা
     'paper_screens.dart',
+    // ⭐ হাজিরা আর ছুটির রেজিস্টার (১৭ অক্টোবর ২০২৬) — টান test/hr_register_test.dart-এ দেখা
+    'hr_register_screens.dart',
+    // ⭐ কাগজ তোলা আর স্ক্যান (১৭ অক্টোবর ২০২৬) — ফর্ম আনা না গেলে টানলে আবার; দেখা test/document_upload_test.dart-এ
+    'document_upload_screen.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each

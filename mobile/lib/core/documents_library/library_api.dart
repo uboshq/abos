@@ -33,6 +33,7 @@ class LibraryDocument {
     this.owner = '',
     this.file,
     this.signature,
+    this.deleted = false,
   });
 
   final String id;
@@ -55,6 +56,9 @@ class LibraryDocument {
   final LibraryFile? file;
   final SignatureState? signature;
 
+  /// রিসাইকেল বিনের কাগজ — খোলা যায় না, ফেরানো ওয়েবে
+  final bool deleted;
+
   factory LibraryDocument.fromJson(Map<String, dynamic> j) {
     final file = j['file'];
     final sig = j['signature'];
@@ -73,6 +77,7 @@ class LibraryDocument {
       version: _sn(j['version']),
       description: _s(j['description']),
       tags: [if (j['tags'] is List) for (final t in j['tags'] as List) t.toString()],
+      deleted: j['deleted'] == true,
       owner: _s(j['owner']),
       file: file is Map
           ? LibraryFile(
@@ -136,10 +141,13 @@ class SignatureState {
 }
 
 class LibraryPage {
-  const LibraryPage(this.rows, {this.nextPage});
+  const LibraryPage(this.rows, {this.nextPage, this.count});
 
   final List<LibraryDocument> rows;
   final int? nextPage;
+
+  /// গোটা ছাঁকনির গোনা — পুরনো সার্ভারে null
+  final int? count;
 }
 
 abstract class DocumentLibraryApi {
@@ -169,6 +177,7 @@ class ServerDocumentLibraryApi implements DocumentLibraryApi {
             if (r is Map) LibraryDocument.fromJson(Map<String, dynamic>.from(r)),
       ],
       nextPage: (body['next_page'] as num?)?.toInt(),
+      count: (body['count'] as num?)?.toInt(),
     );
   }
 
