@@ -240,10 +240,10 @@ class ReportController extends Controller implements HasMiddleware
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
             'accounts' => $definition->hasFilter('account')
-                ? Account::query()->postable()->active()
-                    // ⓘ টাকার হিসাবে কেবল টাকার খাত বাছার মানে আছে
-                    ->when($key === MonthlyCashReport::KEY, fn ($q) => $q->money())
-                    ->orderBy('code')->get()
+                // ⓘ টাকার হিসাবে কেবল টাকার খাত — ফোনের একই তালিকা থেকে ([[MoneyAccountFilter]])
+                ? ($key === MonthlyCashReport::KEY
+                    ? \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::accounts()->get()
+                    : Account::query()->postable()->active()->orderBy('code')->get())
                 : collect(),
 
             /*

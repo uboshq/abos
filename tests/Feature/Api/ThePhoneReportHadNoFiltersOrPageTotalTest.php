@@ -124,10 +124,12 @@ final class ThePhoneReportHadNoFiltersOrPageTotalTest extends TestCase
         }
 
         $one = $this->phone('/api/v1/reports/inventory.stock_summary?perPage=1')->assertOk();
+        // ⓘ গোল করা সর্বমোটের নিয়মে (দুই ঘর), তাই আধা পয়সার ফারাক চলে
         foreach (array_keys($totals) as $column) {
-            $this->assertSame(
-                bcadd((string) ($one->json('rows.0.'.$column) ?? '0'), '0', 4),
-                $one->json('pageTotals.'.$column),
+            $this->assertEqualsWithDelta(
+                (float) ($one->json('rows.0.'.$column) ?? 0),
+                (float) $one->json('pageTotals.'.$column),
+                0.005,
                 "⛔ {$column}: এক সারির পাতার মোট সেই সারির মান নয়");
         }
         $this->assertEquals($totals, $one->json('totals'), 'সর্বমোট পাতার উপর নির্ভর করে না');

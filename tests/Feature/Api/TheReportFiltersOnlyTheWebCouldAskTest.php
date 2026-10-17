@@ -72,8 +72,12 @@ final class TheReportFiltersOnlyTheWebCouldAskTest extends TestCase
         }
 
         $cash = StandardChart::find(StandardChart::RECEIVABLE);
-        $label = collect($filters['account_id']['options'])->pluck('value')->first(fn (string $v) => str_starts_with($v, $cash->code.' · '));
-        $this->assertNotNull($label, 'ছক ভুল: প্রাপ্যের খাত তালিকায় নেই');
+        $option = collect($filters['account_id']['options'])->first(fn (array $o) => str_starts_with($o['label'], $cash->code.' · '));
+        $this->assertNotNull($option, 'ছক ভুল: প্রাপ্যের খাত তালিকায় নেই');
+        // ⓘ মান public_id (দুই একই লেখার সারি কখনো এক নয়); ওয়েবের বাছাই-ঘরের লেখাও চলে
+        $this->assertSame((string) $cash->public_id, $option['value']);
+        $label = $option['label'];
+        $this->phone('/api/v1/reports/accounts.ledger?account_id='.$option['value'])->assertOk();
 
         $byLabel = $this->phone('/api/v1/reports/accounts.ledger?'.http_build_query(['account_id' => $label]))->assertOk();
         $byId = $this->phone('/api/v1/reports/accounts.ledger?account_id='.$cash->id)->assertOk();

@@ -255,6 +255,26 @@ final class ScheduledReportRunner
      *
      * @param  Collection<int, User>  $recipients  যাঁরা এই রানে পাবেন
      */
+    /**
+     * ⭐ সূচির ছাঁকনি, সংরক্ষিত সময়কালসহ — শুরু না থাকলে সূচিতে লেখা সময়কালের শুরু, রিপোর্টের আজকের ডিফল্ট নয় (১৭ অক্টোবর ২০২৬)।
+     * ⓘ লুকানো চাবিটা ইঞ্জিনে যায় না।
+     *
+     * @return array<string, mixed>
+     */
+    public static function filtersOf(ReportSchedule $schedule): array
+    {
+        $filters = (array) ($schedule->filters ?? []);
+        $period = $filters[\App\Core\Engines\Report\ReportDefinition::SCHEDULE_PERIOD] ?? null;
+        unset($filters[\App\Core\Engines\Report\ReportDefinition::SCHEDULE_PERIOD]);
+
+        if (is_string($period) && ($filters['from'] ?? '') === '') {
+            $to = (string) ($filters['to'] ?? \Illuminate\Support\Carbon::today()->toDateString());
+            $filters['from'] = \App\Core\Engines\Report\ReportDefinition::periodStart($period, $to);
+        }
+
+        return $filters;
+    }
+
     private function generate(ReportSchedule $schedule, User $owner, Collection $recipients): ReportRun
     {
         $previous = Auth::user();
@@ -277,7 +297,7 @@ final class ScheduledReportRunner
             return CompanyContext::forCompany($schedule->company_id, function () use ($schedule, $owner, $recipients): ReportRun {
                 CompanyContext::set($schedule->company_id, $this->ownerBranch($owner, $schedule->company_id));
 
-                $result = $this->reports->run($schedule->report_key, $schedule->filters ?? [], 1, ReportEngine::wholeDocumentRows());
+                $result = $this->reports->run($schedule->report_key, self::filtersOf($schedule), 1, ReportEngine::wholeDocumentRows());
 
                 /*
                  * ⛔ ছাদের বেশি সারি — ফাইল নয়, অবস্থায় স্পষ্ট লেখা (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️১৩, ১৪ অক্টোবর ২০২৬)। ⓘ আগে ফাইল চুপচাপ

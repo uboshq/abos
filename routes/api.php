@@ -299,6 +299,7 @@ Route::prefix('v1')
         Route::get('/reports/{key}', [ReportApiController::class, 'show'])->name('reports.show');
         // ⭐ ছাঁকনির বাছাই-তালিকা — ফোনের সাধারণ রিপোর্ট-পর্দার মাথা (১৭ অক্টোবর ২০২৬)
         Route::get('/reports/{key}/choices', [ReportApiController::class, 'choices'])->name('reports.choices');
+        Route::get('/reports/{key}/choices/{filter}', [ReportApiController::class, 'search'])->where('filter', '[a-z_]+')->name('reports.choices.search');
 
         /*
          * নথি ও রপ্তানি — চুক্তি §১০। ⚠️ `can:` নেই, ইচ্ছা করে: কাগজ এগারো

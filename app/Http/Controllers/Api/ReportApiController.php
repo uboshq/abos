@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Engines\Report\ModelFilterSource;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
@@ -176,7 +177,7 @@ final class ReportApiController extends Controller
              * ⭐ এই পাতার মোট — সর্বমোটের (`totals`) পাশে, সার্ভারের কষা (মালিক, ১৭ অক্টোবর ২০২৬: "প্রতিটা পর্দায় মোট আর
              * সর্বমোট")। ⛔ ফোন যোগ করে না; ঢাকা কলামের পাতা-মোটও ঢাকা, যোগফলের একই নিয়মে।
              */
-            'pageTotals' => (object) $this->pageTotals($result, $columns),
+            'pageTotals' => (object) $this->pageTotals($definition, $result, $columns),
             'page' => $result->page,
             'perPage' => $result->perPage,
             'totalRows' => $result->totalRows,
@@ -237,12 +238,14 @@ final class ReportApiController extends Controller
              * ⓘ তালিকার ছাঁকনি — উৎস নিজের নামে (`warehouse_id`), নয়তো ইঞ্জিন যে নামে পড়ে (`account` → `account_id`)।
              * ⚠️ চাবি তখন ইঞ্জিনের নাম, যাতে ফোন ঐ নামেই পাঠায় ([[phoneFilters()]] লেখাটা নম্বরে বদলায়)।
              */
-            $wire = $sources->for($filter) !== null ? $filter : ($definition->askedAs($filter)[0] ?? $filter);
-            $source = $sources->for($wire);
+            [$wire, $source] = $this->sourceFor($definition, $filter);
             if ($source !== null) {
-                $out[] = ['key' => $wire, 'kind' => 'list', 'label' => __($source->label()),
-                    'options' => array_values(array_map(fn (string $label): array => ['value' => $label, 'label' => $label],
-                        $source->options()))];
+                /* ⭐ মডেলের উৎসে মান public_id, লেখা কেবল দেখানোর; ছাদ ছাড়ালে `capped` — পর্দা তখন সার্ভারে খোঁজে ([[search()]]) */
+                [$options, $capped] = $source instanceof ModelFilterSource
+                    ? $source->phoneChoices()
+                    : [array_values(array_map(fn (string $label): array => ['value' => $label, 'label' => $label], $source->options())), false];
+
+                $out[] = ['key' => $wire, 'kind' => 'list', 'label' => __($source->label()), 'options' => $options, 'capped' => $capped];
 
                 continue;
             }
@@ -251,6 +254,43 @@ final class ReportApiController extends Controller
         }
 
         return response()->json(['key' => $key, 'filters' => $out]);
+    }
+
+    /**
+     * `GET /reports/{key}/choices/{filter}?q=` — বড় তালিকায় দেয়ালের ভিতরে খোঁজা, ৫০টা পর্যন্ত (১৭ অক্টোবর ২০২৬)।
+     * ⓘ বাছাই-তালিকার ছাদ (২০০০) ছাড়ালে ফোন এখানে খোঁজে — ছাদের বাইরের সারিও পাওয়া যায়।
+     */
+    public function search(Request $request, string $key, string $filter): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $definition = $this->opened($user, $key);
+        $declared = collect($definition->filters)->first(fn (string $f) => $f === $filter || in_array($filter, $definition->askedAs($f), true));
+        abort_if($declared === null, 404);
+
+        [, $source] = $this->sourceFor($definition, $declared);
+        abort_unless($source instanceof ModelFilterSource, 404);
+
+        return response()->json(['options' => $source->search(\App\Core\Support\PhoneInput::text($request, 'q'))]);
+    }
+
+    /**
+     * একটা ঘোষিত ছাঁকনির উৎস আর তারের নাম — উৎস নিজের নামে (`warehouse_id`), নয়তো ইঞ্জিন যে নামে পড়ে (`account` → `account_id`)।
+     *
+     * @return array{0: string, 1: ?\App\Core\Contracts\ReportFilterSource}
+     */
+    private function sourceFor(ReportDefinition $definition, string $filter): array
+    {
+        $sources = app(ReportFilters::class);
+        $wire = $sources->for($filter) !== null ? $filter : ($definition->askedAs($filter)[0] ?? $filter);
+
+        // ⓘ রিপোর্টের নিজের উৎস আগে ([[ReportDefinition::$sources]])
+        if (isset($definition->sources[$filter])) {
+            return [$wire, app($definition->sources[$filter])];
+        }
+
+        return [$wire, $sources->for($wire)];
     }
 
     /**
@@ -340,7 +380,7 @@ final class ReportApiController extends Controller
             }
 
             foreach ($definition->askedAs($filter) as $asked) {
-                $source = $asked === $filter ? null : $sources->for($asked);
+                $source = $asked === $filter ? null : $this->sourceFor($definition, $filter)[1];
                 $value = $input[$asked] ?? null;
                 if ($source === null || $value === null || $value === '') {
                     continue;
@@ -374,17 +414,21 @@ final class ReportApiController extends Controller
     }
 
     /**
-     * এই পাতার সারির যোগ — কেবল দেখা যায় এমন যোগ-কলামের।
+     * এই পাতার সারির মোট — সর্বমোটের ঠিক একই নিয়মে ([[ReportEngine::totalsFor()]]), কেবল সারিগুলো এই পাতার।
+     *
+     * ⛔ অনুপাতের ঘর (অর্জন %) যোগ হয় না — পাতার লবের যোগ ÷ হরের যোগ (a5-এর পর্যালোচনা, ১৭ অক্টোবর ২০২৬: তিনটা ৫০%-এর
+     * সারির মোট "১৫০%" আসত)। ⓘ গোল করা সর্বমোটের মতোই ([[Money::round()]]), কাটা নয় — নইলে এক পাতায় দুই অঙ্ক আলাদা হত।
+     * ⓘ লব-হর ঢাকা কলাম হলেও ভাগ হয় (সর্বমোটও তাই করে), কিন্তু উত্তরে যায় কেবল দেখা কলাম।
      *
      * @param  list<ReportColumn>  $columns
      * @return array<string, string|null>
      */
-    private function pageTotals(ReportResult $result, array $columns): array
+    private function pageTotals(ReportDefinition $definition, ReportResult $result, array $columns): array
     {
-        $out = [];
+        $sums = [];
 
-        foreach ($columns as $column) {
-            if (! $column->total || ! array_key_exists($column->key, $result->totals)) {
+        foreach ($definition->totalledColumns() as $column) {
+            if ($column->ratio !== null) {
                 continue;
             }
 
@@ -392,11 +436,36 @@ final class ReportApiController extends Controller
             foreach ($result->rows as $row) {
                 $value = $row[$column->key] ?? null;
                 if (is_numeric($value)) {
-                    $sum = bcadd($sum, (string) $value, 4);
+                    $sum = bcadd($sum, (string) $value, 6);
                 }
             }
 
-            $out[$column->key] = $this->value($sum, $column);
+            $sums[$column->key] = \App\Core\Support\Money::round(
+                $sum,
+                $column->type === ReportColumn::QUANTITY ? \App\Core\Support\Money::SCALE : $column->decimals(),
+            );
+        }
+
+        foreach ($definition->totalledColumns() as $column) {
+            if ($column->ratio === null) {
+                continue;
+            }
+
+            [$top, $bottom] = $column->ratio;
+            $den = $sums[$bottom] ?? '0';
+
+            // ⓘ হর শূন্য — অনুপাত নেই; ঘরটা খালি, ০% নয় (সর্বমোটের একই নিয়ম)
+            $sums[$column->key] = bccomp($den, '0', 4) > 0
+                ? bcdiv(bcmul($sums[$top] ?? '0', '100', 6), $den, $column->decimals())
+                : null;
+        }
+
+        $out = [];
+
+        foreach ($columns as $column) {
+            if ($column->total && array_key_exists($column->key, $result->totals) && array_key_exists($column->key, $sums)) {
+                $out[$column->key] = $this->value($sums[$column->key], $column);
+            }
         }
 
         return $out;

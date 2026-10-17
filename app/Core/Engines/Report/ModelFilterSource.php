@@ -52,8 +52,7 @@ abstract class ModelFilterSource implements ReportFilterSource
         $out = [];
 
         foreach ($this->query()->limit(self::LIMIT)->get() as $model) {
-            $code = trim($this->codeOf($model));
-            $out[(int) $model->getKey()] = $code === '' ? $this->nameOf($model) : $code.' · '.$this->nameOf($model);
+            $out[(int) $model->getKey()] = $this->labelOf($model);
         }
 
         asort($out);
@@ -61,33 +60,126 @@ abstract class ModelFilterSource implements ReportFilterSource
         return $this->cache = $out;
     }
 
+    /**
+     * ⭐ ফোনের বাছাই — মান public_id (মডেলে থাকলে), লেখা কেবল দেখানোর (fe, ১৭ অক্টোবর ২০২৬)।
+     *
+     * ⛔ লেখা মান হলে একই লেখার দুইটা সারি (নম্বরহীন দুইটা ঋণ, একই ব্যাংক) এক হয়ে যেত, আর খুলত ভুলটার খাতা — ভুলের
+     * কথা ছাড়াই। ⓘ দেখানোর ছাদ [[LIMIT]]; তার বেশি হলে `capped`, আর পর্দা সার্ভারে খোঁজে ([[search()]])।
+     *
+     * @return array{0: list<array{value: string, label: string}>, 1: bool}
+     */
+    public function phoneChoices(): array
+    {
+        $rows = $this->query()->limit(self::LIMIT + 1)->get();
+        $capped = $rows->count() > self::LIMIT;
+
+        $out = $rows->take(self::LIMIT)->map(fn (Model $m): array => ['value' => $this->valueOf($m), 'label' => $this->labelOf($m)])
+            ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+
+        return [$out, $capped];
+    }
+
+    /**
+     * ⭐ দেয়ালের ভিতরে খোঁজা — ছাদের বাইরের সারিও (লেখার যেকোনো অংশ, বড়-ছোট হাতের অক্ষর নির্বিশেষে)।
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    public function search(string $q, int $limit = 50): array
+    {
+        $q = mb_strtolower(trim($q));
+        $out = [];
+
+        if ($q === '') {
+            return $out;
+        }
+
+        foreach ($this->walk() as $model) {
+            $label = $this->labelOf($model);
+            if (str_contains(mb_strtolower($label), $q)) {
+                $out[] = ['value' => $this->valueOf($model), 'label' => $label];
+                if (count($out) >= $limit) {
+                    break;
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * ঠিকানার মান থেকে নম্বর — public_id, নম্বর, বা বাছাই-ঘরের "কোড · নাম" (নয়তো কেবল কোড)।
+     *
+     * ⛔ দেখানোর তালিকার ছাদে নয়, দেয়াল-সহ কোয়েরিতেই খোঁজা (fe, ১৭ অক্টোবর ২০২৬): আগে ২০০০-তম সারির পরের লট বা মানুষ
+     * দুই দরজাতেই ফেরত যেত, দেয়ালের ভিতরে থেকেও। ⛔ একই লেখার দুইটা সারি হলে `null` — রিপোর্ট ফেরে, অনুমানে একটা খোলে না।
+     * ⛔ নাম দিয়ে নয় (এক নামে দুইজন থাকতে পারেন)।
+     */
     public function resolve(string $raw): ?int
     {
         $raw = trim($raw);
-        $options = $this->options();
 
         if ($raw === '') {
             return null;
         }
 
-        // ⓘ নম্বর — কেবল তালিকায় থাকলে
+        $probe = $this->query()->getModel();
+
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $raw) === 1 && $this->hasPublicId($probe)) {
+            $id = $this->query()->where($probe->qualifyColumn('public_id'), $raw)->value($probe->getQualifiedKeyName());
+
+            return $id === null ? null : (int) $id;
+        }
+
+        // ⓘ নম্বর — কেবল দেয়ালের ভিতরে থাকলে
         if (ctype_digit($raw)) {
-            return isset($options[(int) $raw]) ? (int) $raw : null;
+            return $this->query()->whereKey((int) $raw)->exists() ? (int) $raw : null;
         }
 
-        // ⓘ বাছাই-ঘরের লেখা — হুবহু "কোড · নাম", নয়তো কেবল কোড; ⛔ নাম দিয়ে নয় (এক নামে দুইজন থাকতে পারেন)
-        $found = array_search($raw, $options, true);
+        $exact = [];
+        $byCode = [];
 
-        if ($found !== false) {
-            return (int) $found;
-        }
-
-        foreach ($options as $id => $label) {
-            if (str_starts_with($label, $raw.' · ')) {
-                return (int) $id;
+        foreach ($this->walk() as $model) {
+            $label = $this->labelOf($model);
+            if ($label === $raw) {
+                $exact[] = (int) $model->getKey();
+            } elseif (str_starts_with($label, $raw.' · ')) {
+                $byCode[] = (int) $model->getKey();
             }
         }
 
-        return null;
+        $found = $exact !== [] ? $exact : $byCode;
+
+        return count($found) === 1 ? $found[0] : null;
+    }
+
+    /**
+     * দেয়াল-সহ সব সারি, টুকরো টুকরো — ⚠️ প্রাথমিক চাবি শেষ ক্রমে, নইলে একই নামের সারি দুই টুকরোর সীমানায় হারাত বা দুবার আসত
+     *
+     * @return \Illuminate\Support\LazyCollection<int, Model>
+     */
+    private function walk(): \Illuminate\Support\LazyCollection
+    {
+        $query = $this->query();
+
+        return $query->orderBy($query->getModel()->getQualifiedKeyName())->lazy(500);
+    }
+
+    /** "কোড · নাম", কোড না থাকলে কেবল নাম — দেখানোর তালিকার একই লেখা */
+    protected function labelOf(Model $model): string
+    {
+        $code = trim($this->codeOf($model));
+
+        return $code === '' ? $this->nameOf($model) : $code.' · '.$this->nameOf($model);
+    }
+
+    private function valueOf(Model $model): string
+    {
+        return $this->hasPublicId($model) && filled($model->getAttribute('public_id'))
+            ? (string) $model->getAttribute('public_id')
+            : $this->labelOf($model);
+    }
+
+    private function hasPublicId(Model $model): bool
+    {
+        return in_array(\App\Core\Concerns\HasPublicId::class, class_uses_recursive($model), true);
     }
 }

@@ -214,6 +214,14 @@ final class ReportDefinition
          * @var array<string, array<string, string>>
          */
         public readonly array $choices = [],
+
+        /*
+         * ⭐ এই রিপোর্টের নিজের তালিকা-উৎস — ঘোষিত ছাঁকনি => উৎসের ক্লাস (১৭ অক্টোবর ২০২৬)। ⓘ মডিউলের সাধারণ উৎসের বদলে, যেখানে
+         * রিপোর্ট সরু তালিকা চায় (মাসওয়ারি নগদ কেবল টাকার খাত); ওয়েবের পাতা আর ফোন দুইটাই এখান থেকে পড়ে।
+         *
+         * @var array<string, class-string<\App\Core\Contracts\ReportFilterSource>>
+         */
+        public readonly array $sources = [],
     ) {
         if (! in_array($defaultPeriod, [self::PERIOD_MONTH, self::PERIOD_FISCAL_YEAR], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown default period '{$defaultPeriod}'.");
@@ -234,6 +242,24 @@ final class ReportDefinition
             $columns,
             array_keys($columns),
         );
+    }
+
+    /**
+     * ⭐ সূচির নিজের সময়কাল — ফিল্টারে লুকানো চাবি (১৭ অক্টোবর ২০২৬; [[ScheduledReportRunner]])।
+     *
+     * ⛔ শুরুর তারিখ ছাড়া সংরক্ষিত সূচি এতদিন রিপোর্টের ডিফল্ট নিত, আর ডিফল্ট বদলালে (মাস → অর্থবছর) মেইলে যাওয়া ফাইল
+     * নীরবে বদলে যেত। ⓘ এখন সংরক্ষণের মুহূর্তের সময়কাল সূচিতেই লেখা থাকে, আর রানার সেটাই নেয়।
+     */
+    public const SCHEDULE_PERIOD = '_period';
+
+    /**
+     * "শেষ" তারিখ থেকে একটা সময়কালের শুরু — মাস বা অর্থবছর; ইঞ্জিনের ডিফল্ট আর সূচির সংরক্ষিত সময়কাল একই হিসাবে।
+     */
+    public static function periodStart(string $period, string $to): string
+    {
+        return $period === self::PERIOD_FISCAL_YEAR
+            ? \App\Core\Support\FiscalYearStart::on($to)
+            : \Illuminate\Support\Carbon::parse($to)->startOfMonth()->toDateString();
     }
 
     /**

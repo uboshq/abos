@@ -67,6 +67,8 @@ final class MonthlyCashReport
             permission: 'accounts.report',
             title: 'accounts::menu.monthly_cash',
             filters: ['date_range', 'branch', 'account'],
+            // ⓘ কেবল টাকার খাত — ওয়েবের পাতা আর ফোন একই তালিকা থেকে
+            sources: ['account' => \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::class],
             summary: fn (array $totals): array => [
                 'label' => __('accounts::message.monthly_cash_net'),
                 'value' => bcadd((string) ($totals['net'] ?? '0'), '0', 2),
