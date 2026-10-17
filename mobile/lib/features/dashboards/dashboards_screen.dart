@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/dashboard/dashboard_api.dart';
@@ -186,6 +187,115 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
                   )),
                 ),
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ⭐ "বিক্রয়ের হালচাল" — ওয়েবের পাতার কার্ড, চার্ট আর তালিকা, ফোনের নিজের ঢঙে, তারিখ বেছে (মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta
+/// mobile app style e zate bujazay"*)। ⓘ শুরু আজ থেকে — ওয়েবের পাতার মতোই।
+class SalesOverviewScreen extends StatefulWidget {
+  const SalesOverviewScreen({super.key, this.open, this.today});
+
+  final Future<ModuleDashboard> Function(String from, String to)? open;
+
+  /// পরীক্ষার জন্য — না দিলে আজ
+  final DateTime? today;
+
+  @override
+  State<SalesOverviewScreen> createState() => _SalesOverviewScreenState();
+}
+
+class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
+  late DateTime _from;
+  late DateTime _to;
+  ModuleDashboard? _dashboard;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = widget.today ?? DateTime.now();
+    _from = _to = DateTime(now.year, now.month, now.day);
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final from = isoOf(_from), to = isoOf(_to);
+      final dashboard = await (widget.open ??
+          (f, t) => DashboardApi.salesOverview(from: f, to: t))(from, to);
+      if (mounted) setState(() => _dashboard = dashboard);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error =
+            errorMessageFor(error, fallback: 'বিক্রয়ের হালচাল আনা গেল না।'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = _dashboard;
+
+    return Scaffold(
+      appBar: AppBar(
+          title: Text(d?.title.isNotEmpty == true ? d!.title : 'বিক্রয়ের হালচাল')),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            DateRangeBar(
+              from: _from,
+              to: _to,
+              today: widget.today,
+              onChanged: (from, to) {
+                setState(() {
+                  _from = from;
+                  _to = to;
+                });
+                _load();
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (_busy) const LinearProgressIndicator(),
+            if (_error != null)
+              EmptyState(
+                  icon: Icons.cloud_off_outlined,
+                  title: 'আনা গেল না',
+                  message: _error)
+            else if (d != null) ...[
+              if (d.periodRefused != null)
+                Padding(
+                  key: const Key('overview-refused'),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(d.periodRefused!,
+                      style: const TextStyle(color: AppColors.warning)),
+                ),
+              if (d.subtitle.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(d.subtitle,
+                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                ),
+              if (d.stats.isEmpty && d.panels.isEmpty && d.listings.isEmpty)
+                const EmptyState(
+                    icon: Icons.lock_outline,
+                    title: 'এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।'),
+              for (final stat in d.stats) _StatCard(stat: stat),
+              for (final panel in d.panels) _PanelCard(panel: panel),
+              for (final listing in d.listings) _ListingCard(listing: listing),
             ],
           ],
         ),

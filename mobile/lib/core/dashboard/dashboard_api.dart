@@ -24,6 +24,16 @@ class DashboardApi {
         await ApiClient.dio.get<Map<String, dynamic>>('/dashboard/$code');
     return ModuleDashboard(response.data ?? const {});
   }
+
+  /// ⭐ "বিক্রয়ের হালচাল" — ওয়েবের পাতার একই সেবা, মডিউলের ড্যাশবোর্ডের আকারে (`GET /sales/overview`; মালিক, ১৭ অক্টোবর ২০২৬:
+  /// *"direct webpage app e bujajayna"*)। তারিখ `yyyy-MM-dd`, দুই দিকেই সহ।
+  static Future<ModuleDashboard> salesOverview(
+      {required String from, required String to}) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+        '/sales/overview',
+        queryParameters: {'period': 'custom', 'from': from, 'to': to});
+    return ModuleDashboard(response.data ?? const {});
+  }
 }
 
 class DashboardEntry {
@@ -65,6 +75,11 @@ class ModuleDashboard {
 
   String get title => (payload['title'] ?? '').toString();
   String get subtitle => (payload['subtitle'] ?? '').toString();
+
+  /// সার্ভার চাওয়া পরিসর মানেনি (শেষ তারিখ শুরুর আগে, বা এক বছরের বেশি) আর এই মাস দেখাচ্ছে — তার কারণ, বাংলায়; নাহলে null
+  String? get periodRefused => (payload['period'] is Map)
+      ? (payload['period'] as Map)['refused']?.toString()
+      : null;
 
   List<DashboardStat> get stats =>
       _maps('stats').map(DashboardStat.new).toList();

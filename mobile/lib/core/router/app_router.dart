@@ -50,6 +50,7 @@ import '../../features/finance/finance_screens.dart';
 import '../../features/promotion/offers_screen.dart';
 import '../../features/self_service/self_service_screens.dart';
 import '../menu/module_gate.dart';
+import 'native_for_web.dart';
 import '../web_inside/web_inside.dart';
 import '../../features/web_inside/web_inside_screen.dart';
 
@@ -422,10 +423,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '${WebPaths.segment}/:code',
             builder: (context, state) {
               final code = state.pathParameters['code'] ?? '';
-              return WebInsideScreen(
-                webPath: WebPaths.webPathOf(code),
-                title: WebPaths.titleOf('${WebPaths.segment}/$code'),
-              );
+              final webPath = WebPaths.webPathOf(code);
+              final title = WebPaths.titleOf('${WebPaths.segment}/$code');
+              // ⭐ ফোনের নিজের পর্দা থাকলে সেটাই, ওয়েব-জানালা নয় (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage app e bujajayna")
+              return NativeForWeb.screenFor(webPath, title: title) ??
+                  WebInsideScreen(webPath: webPath, title: title);
             },
           ),
           _framed(
