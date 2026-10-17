@@ -4,7 +4,9 @@ import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/approval_rows/approval_rows_screens.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/direct_sale/counter_screen.dart';
+import '../../features/claims/claims_screens.dart';
 import '../../features/documents/document_screens.dart';
+import '../../features/hr_registers/hr_register_screens.dart';
 import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/executive/executive_screen.dart';
@@ -82,6 +84,16 @@ class NativeForWeb {
     final library = RegExp(r'^/documents/(center|mine|shared|recent|expiry|archive|recycle|search)$').firstMatch(path)?.group(1);
     if (library != null) {
       return ModuleGateView(path: 'documents', child: DocumentListScreen(initialView: library));
+    }
+    // ⭐ HR — হাজিরা আর ছুটির রেজিস্টার (নাগালের সব কর্মী), নিজের খরচের দাবি; ⛔ বেতন (`/hr/payroll`) ওয়েবেই (fe, ১৭ অক্টোবর ২০২৬)
+    if (path == '/hr/attendance') {
+      return const AttendanceRegisterScreen();
+    }
+    if (path == '/hr/leave') {
+      return const LeaveRegisterScreen();
+    }
+    if (path == '/hr/claims') {
+      return const ModuleGateView(path: 'claims', child: ClaimListScreen());
     }
     // ⓘ ওয়েবের "planned" — এখনো তৈরি হয়নি এমন পর্দা; ফোনে স্পষ্ট "শীঘ্রই আসছে", ওয়েব-জানালা নয় (fe)
     if (path.startsWith('/sales/planned/')) {

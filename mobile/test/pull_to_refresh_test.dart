@@ -67,6 +67,8 @@ void main() {
     'approval_rows_screens.dart',
     // ⭐ বিক্রয়ের ডেস্ক-পাতা আর দলিলের ছাঁচ (১৭ অক্টোবর ২০২৬) — টান test/sales_desk_test.dart-এ দেখা
     'sales_desk_screens.dart',
+    // ⭐ হাজিরা আর ছুটির রেজিস্টার (১৭ অক্টোবর ২০২৬) — টান test/hr_register_test.dart-এ দেখা
+    'hr_register_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
