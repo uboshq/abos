@@ -305,6 +305,15 @@ Route::prefix('v1')
         Route::get('/documents/{type}/{id}/pdf', [DocumentApiController::class, 'pdf'])->name('documents.pdf');
         Route::get('/documents/{type}/{id}/papers', [DocumentApiController::class, 'papers'])->name('documents.papers');
         Route::get('/reports/{slug}/export', ReportExportApiController::class)->name('reports.export');
+
+        /*
+         * ⭐ লেনদেনের তালিকা আর পাতা, ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperApiController]])। ⚠️ `can:` নেই,
+         * ইচ্ছা করে: ধরন সতেরো রকম, প্রতিটার চাবি ওয়েবের তালিকার নিজের ([[PhonePaper::permission()]]), দরজা একটাই।
+         */
+        Route::get('/papers/{key}', [\App\Http\Controllers\Api\PhonePaperApiController::class, 'index'])
+            ->where('key', '[a-z_]+')->name('papers.index');
+        Route::get('/papers/{key}/{id}', [\App\Http\Controllers\Api\PhonePaperApiController::class, 'show'])
+            ->where('key', '[a-z_]+')->name('papers.show');
     });
 
 Route::prefix('v1')
