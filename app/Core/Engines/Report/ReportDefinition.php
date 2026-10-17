@@ -35,6 +35,12 @@ final class ReportDefinition
     /** @var list<ReportColumn> */
     public readonly array $columns;
 
+    /** শুরু না দিলে "শেষ" তারিখের মাসের ১ তারিখ */
+    public const PERIOD_MONTH = 'month';
+
+    /** শুরু না দিলে "শেষ" তারিখের অর্থবছরের শুরু */
+    public const PERIOD_FISCAL_YEAR = 'fiscal_year';
+
     /**
      * @param  Closure(array<string, mixed>): (QueryBuilder|EloquentBuilder)  $query
      * @param  list<array<string, mixed>>  $columns
@@ -190,7 +196,19 @@ final class ReportDefinition
          * দরজা সবার একই উত্তর।
          */
         public readonly bool $anyKey = false,
+
+        /**
+         * ⭐ শুরুর তারিখ না দিলে কোন সময়কাল — "এই মাস" (ডিফল্ট) না চলতি অর্থবছর ([[FiscalYearStart]])।
+         *
+         * ⛔ ঘোষণা রিপোর্টের, দরজার নয় — আগে বিক্রয়ের মাসওয়ারি আর লাভ-ক্ষতির ওয়েব-পাতা নিজে বছরের শুরু বসাত, অথচ ফোনের দরজা
+         * ইঞ্জিনের "এই মাস" নিত: ফোনে ১ সারি, ওয়েবে ১২ (a5-এর খোঁজ, ১৭ অক্টোবর ২০২৬; [[TheTwoDoorsOpenAReportOnTheSamePeriodTest]])।
+         */
+        public readonly string $defaultPeriod = self::PERIOD_MONTH,
     ) {
+        if (! in_array($defaultPeriod, [self::PERIOD_MONTH, self::PERIOD_FISCAL_YEAR], true)) {
+            throw new \InvalidArgumentException("Report '{$key}' declares an unknown default period '{$defaultPeriod}'.");
+        }
+
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");
         }

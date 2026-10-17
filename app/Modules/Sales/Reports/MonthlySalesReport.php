@@ -49,6 +49,8 @@ final class MonthlySalesReport
     {
         return new ReportDefinition(
             key: 'sales.monthly',
+            // ⭐ মাসওয়ারি হিসাব এক মাসে অর্থহীন — শুরু না দিলে চলতি অর্থবছর, দুই দরজায় একই ([[ReportDefinition::$defaultPeriod]])
+            defaultPeriod: ReportDefinition::PERIOD_FISCAL_YEAR,
             permission: 'sales.report',
             title: 'sales::monthly.title',
             filters: ['date_range', 'branch', 'customer_id', 'salesman_id', 'location_id', 'product_id', 'brand_id', 'category_id'],
