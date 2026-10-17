@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../features/accounts_chart/chart_screens.dart';
+import '../../features/approval_rows/approval_rows_screens.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/executive/executive_screen.dart';
 import '../menu/module_gate.dart';
@@ -40,6 +41,16 @@ class NativeForWeb {
     // ⭐ হিসাবের ছক আর তার খাতা — ওয়েবের একই সেবা ([AccountLedgerApi]; মালিক, ১৭ অক্টোবর ২০২৬)
     if (path == '/accounts/chart-of-accounts') {
       return const ChartOfAccountsScreen();
+    }
+    // ⭐ অনুমোদন-ভাগের তিন সারি — সইয়ের ভার, দলিলের অনুমোদনের সারি, সই কেন্দ্র (মালিক, ১৭ অক্টোবর ২০২৬)
+    if (path == '/approvals/delegations') {
+      return const DelegationScreen();
+    }
+    if (path == '/documents/approval') {
+      return const PaperQueueScreen(kind: PaperQueueKind.documents);
+    }
+    if (path == '/documents/signatures') {
+      return const PaperQueueScreen(kind: PaperQueueKind.signatures);
     }
 
     final dashboard = RegExp(r'^/dashboard/([a-z_]+)$').firstMatch(path)?.group(1);

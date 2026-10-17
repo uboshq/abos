@@ -63,6 +63,8 @@ void main() {
     'sales_paper_screens.dart',
     // ⭐ হিসাবের ছক আর খাতার খাতা (১৭ অক্টোবর ২০২৬) — টান test/account_ledger_test.dart-এ দেখা
     'chart_screens.dart',
+    // ⭐ সইয়ের ভার, দলিলের অনুমোদনের সারি, সই কেন্দ্র (১৭ অক্টোবর ২০২৬) — টান test/approval_rows_test.dart-এ দেখা
+    'approval_rows_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each

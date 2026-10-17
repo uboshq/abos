@@ -1,6 +1,7 @@
 import 'package:abos_mobile/core/dashboard/dashboard_api.dart';
 import 'package:abos_mobile/core/router/native_for_web.dart';
 import 'package:abos_mobile/features/accounts_chart/chart_screens.dart';
+import 'package:abos_mobile/features/approval_rows/approval_rows_screens.dart';
 import 'package:abos_mobile/features/dashboards/dashboards_screen.dart';
 import 'package:abos_mobile/features/executive/executive_screen.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,9 @@ void main() {
     expect(NativeForWeb.screenFor('/sales/overview?period=month'), isA<SalesOverviewScreen>());
     expect(NativeForWeb.screenFor('/owner').toString(), contains('ModuleGateView'));
     expect(NativeForWeb.screenFor('/accounts/chart-of-accounts'), isA<ChartOfAccountsScreen>());
+    expect(NativeForWeb.screenFor('/approvals/delegations'), isA<DelegationScreen>());
+    expect((NativeForWeb.screenFor('/documents/approval')! as PaperQueueScreen).kind, PaperQueueKind.documents);
+    expect((NativeForWeb.screenFor('/documents/signatures')! as PaperQueueScreen).kind, PaperQueueKind.signatures);
 
     // ⛔ HR-এর ড্যাশবোর্ড বেতন দেখায় — সার্ভার ফোনে পাঠায় না, তাই ওয়েব-জানালাতেই থাকে
     expect(NativeForWeb.screenFor('/dashboard/hr'), isNull);
