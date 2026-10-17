@@ -234,6 +234,20 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
         $account->withRunningBalance($entries->getCollection(), $opening);
 
         /*
+         * ⭐ খাতার সর্বমোট — সব পাতার ডেবিট, ক্রেডিট আর শেষ জের, একই শাখায় এক যোগফলে (মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায়
+         * summary/grand total")। ⓘ শেষ জের = ডেবিট − ক্রেডিট, শেষ পাতার শেষ সারির চলমান জেরের একই সংখ্যা ([[RunningBalance]])।
+         */
+        $sums = LedgerEntry::query()
+            ->forAccount($account->id)
+            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
+            ->selectRaw('COALESCE(SUM(debit), 0) as debit, COALESCE(SUM(credit), 0) as credit')
+            ->first();
+        $grand = [
+            'debit' => (string) ($sums->debit ?? '0'),
+            'credit' => (string) ($sums->credit ?? '0'),
+        ];
+
+        /*
          * গ্রুপ খাতের নিচের ধাপগুলো আগে থেকে আনা।
          *
          * ── কেন ────────────────────────────────────────────────────
@@ -281,6 +295,8 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'account' => $account,
             'entries' => $entries,
+            'grand' => $grand,
+            'closing' => bcsub($grand['debit'], $grand['credit'], 4),
             'balance' => $account->balanceOn(null, $branch),
             // ⓘ খোলা জের খাতায় যে পাশে বসেছে — নিট Dr ধনাত্মক, পাতায় "(Dr)/(Cr)" ([[AnOpeningBalanceSitsOnTheSideChosenTest]])
             'opening' => (string) (LedgerEntry::query()

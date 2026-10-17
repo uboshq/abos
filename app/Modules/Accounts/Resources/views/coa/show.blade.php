@@ -170,22 +170,28 @@
             <x-ui.table
                 :empty="__('accounts::message.no_entries')"
                 :rows="$entries"
+                :grand="$grand ?? []"
                 :columns="[
                     ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
                      'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
                     ['key' => 'document_no', 'label' => __('core.table.document'),
                      'render' => fn ($e) => view('accounts::coa.partials.entry-source', ['entry' => $e])],
                     ['key' => 'narration', 'label' => __('core.table.narration')],
-                    ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
+                    ['key' => 'debit', 'total' => 'money', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],
-                    ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
+                    ['key' => 'credit', 'total' => 'money', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
                     ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '10rem',
                      'render' => fn ($e) => \App\Core\Support\Money::drCr($e->running_balance)],
                 ]" />
 
             <x-ui.pager :rows="$entries" />
-            <x-ui.list-totals :rows="$entries" />
+            {{-- ⭐ সব পাতার ডেবিট, ক্রেডিট আর শেষ জের — নিচের পট্টিতেও, টেবিলের সর্বমোটের একই সংখ্যা (মালিক, ১৭ অক্টোবর ২০২৬) --}}
+            <x-ui.list-totals :rows="$entries" :totals="isset($grand) ? [
+                ['label' => __('core.table.debit'), 'value' => \App\Core\Support\Money::format($grand['debit'])],
+                ['label' => __('core.table.credit'), 'value' => \App\Core\Support\Money::format($grand['credit'])],
+                ['label' => __('accounts::party_ledger.closing'), 'value' => \App\Core\Support\Money::drCr($closing)],
+            ] : []" />
         </section>
     @endif
 </x-layouts.app>
