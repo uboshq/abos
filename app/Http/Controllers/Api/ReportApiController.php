@@ -7,18 +7,23 @@ namespace App\Http\Controllers\Api;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Engines\Report\ReportFilters;
 use App\Core\Engines\Report\ReportResult;
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\DataScope;
 use App\Core\Services\PhoneModules;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\BranchModule;
 use App\Models\User;
+use App\Models\UserDataScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * তেত্রিশটা রিপোর্ট, দুইটা দরজা — চুক্তি §৯।
@@ -122,20 +127,7 @@ final class ReportApiController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless(in_array($key, $this->reports->keys(), true), 404);
-
-        $definition = $this->reports->get($key);
-
-        abort_if($this->switchedOff($this->moduleOfEachReport()[$key] ?? null), 404);
-
-        /*
-         * ⛔ ফোনে বন্ধ মডিউল — ৪০৩ `module_off` ([[PhoneModules]])। ⓘ রপ্তানিও এই
-         * দরজা দিয়েই যায় ([[ReportExportApiController]]), তাই একটা দেয়ালেই দুইটা।
-         */
-        app(PhoneModules::class)
-            ->refuseUnlessReachable(($this->moduleOfEachReport()[$key] ?? null)?->code);
-
-        abort_unless($this->mayRun($user, $definition), 403);
+        $definition = $this->opened($user, $key);
 
         /*
          * ⚠️ তারিখ এখানে যাচাই হয়, ইঞ্জিনে নয়।
@@ -160,8 +152,8 @@ final class ReportApiController extends Controller
 
         $result = $this->reports->run(
             $key,
-            // ⭐ ঘরগুলো ঘোষণা থেকেই — ওয়েবের পর্দা ঠিক এটাই পাঠায়
-            $request->only($definition->requestKeys()),
+            // ⭐ ঘরগুলো ঘোষণা থেকেই — ওয়েবের পর্দা ঠিক এটাই পাঠায়; ফোনের শাখা public_id ধরে ([[branchFrom()]])
+            $this->branchFrom($request, $user, $definition, $request->only($definition->requestKeys())),
             page: max(1, (int) $request->query('page', 1)),
             perPage: $perPage,
         );
@@ -180,12 +172,151 @@ final class ReportApiController extends Controller
             // ⓘ `(object)` — খালি হলেও JSON-এ `{}`, `[]` নয়; ফোন ঘরটাকে মানচিত্র হিসেবেই পড়ে
             'rows' => array_map(fn (array $row): object => (object) $this->row($row, $columns), $result->rows),
             'totals' => (object) $this->totals($result, $columns),
+            /*
+             * ⭐ এই পাতার মোট — সর্বমোটের (`totals`) পাশে, সার্ভারের কষা (মালিক, ১৭ অক্টোবর ২০২৬: "প্রতিটা পর্দায় মোট আর
+             * সর্বমোট")। ⛔ ফোন যোগ করে না; ঢাকা কলামের পাতা-মোটও ঢাকা, যোগফলের একই নিয়মে।
+             */
+            'pageTotals' => (object) $this->pageTotals($result, $columns),
             'page' => $result->page,
             'perPage' => $result->perPage,
             'totalRows' => $result->totalRows,
             'lastPage' => $result->lastPage(),
             'filters' => (object) $this->filtersEcho($definition, $result),
         ]);
+    }
+
+    /**
+     * `GET /reports/{key}/choices` — এই রিপোর্টের ছাঁকনির বাছাই-তালিকা, ফোনের পর্দার মাথার জন্য (১৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ওয়েবের পাতা যে উৎস থেকে বাছাই-ঘর আঁকে ([[ReportFilters]]) সেখান থেকেই; দেয়ালও সেটাই (কোম্পানি, শাখা, পরিধি)।
+     * ⛔ ভিতরের আইডি তারে যায় না (§৩ ক): শাখা যায় public_id-তে, বাকি বাছাই "কোড · নাম" লেখায় — ইঞ্জিন ঐ লেখাই
+     * চেনে ([[ReportFilterSource::resolve()]])। ⓘ যে ছাঁকনি ফোন এখনো জিজ্ঞেস করতে পারে না সেটাও তালিকায় থাকে
+     * (`kind: web`), যাতে পর্দা চুপ করে না থেকে বলতে পারে "এই ছাঁকনি ওয়েবে"।
+     */
+    public function choices(Request $request, string $key): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $definition = $this->opened($user, $key);
+        $sources = app(ReportFilters::class);
+        $out = [];
+
+        foreach ($definition->filters as $filter) {
+            if ($filter === 'date_range') {
+                $out[] = ['key' => 'date_range', 'kind' => 'date_range', 'label' => 'তারিখ', 'options' => []];
+
+                continue;
+            }
+
+            if ($filter === 'branch') {
+                $out[] = ['key' => 'branch', 'kind' => 'branch', 'label' => 'শাখা',
+                    'options' => array_map(fn (Branch $b): array => ['value' => (string) $b->public_id, 'label' => $b->name()],
+                        $this->reachableBranches($user))];
+
+                continue;
+            }
+
+            $source = $sources->for($filter);
+            if ($source !== null) {
+                $out[] = ['key' => $filter, 'kind' => 'list', 'label' => __($source->label()),
+                    'options' => array_values(array_map(fn (string $label): array => ['value' => $label, 'label' => $label],
+                        $source->options()))];
+
+                continue;
+            }
+
+            $out[] = ['key' => $filter, 'kind' => 'web', 'label' => $filter, 'options' => []];
+        }
+
+        return response()->json(['key' => $key, 'filters' => $out]);
+    }
+
+    /**
+     * দরজার ক্রম ওয়েবের মতোই: অচেনা কী → ৪০৪, বন্ধ মডিউল → ৪০৪, ফোনে বন্ধ → ৪০৩ `module_off`, চাবি নেই → ৪০৩।
+     * ⓘ রপ্তানিও [[show()]]-এর দরজা দিয়ে যায় ([[ReportExportApiController]]), তাই একটা দেয়ালেই সব।
+     */
+    private function opened(User $user, string $key): ReportDefinition
+    {
+        abort_unless(in_array($key, $this->reports->keys(), true), 404);
+
+        $definition = $this->reports->get($key);
+
+        abort_if($this->switchedOff($this->moduleOfEachReport()[$key] ?? null), 404);
+
+        app(PhoneModules::class)
+            ->refuseUnlessReachable(($this->moduleOfEachReport()[$key] ?? null)?->code);
+
+        abort_unless($this->mayRun($user, $definition), 403);
+
+        return $definition;
+    }
+
+    /** @return list<Branch> এই মানুষের নাগালের সক্রিয় শাখা — `/me`-র একই তালিকা */
+    private function reachableBranches(User $user): array
+    {
+        $allowed = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
+
+        return Branch::query()->active()
+            ->when($allowed !== null, fn ($q) => $q->whereIn('id', $allowed))
+            ->ordered()->get()->all();
+    }
+
+    /**
+     * ⭐ ফোনের শাখা `branch=<public_id>` → ইঞ্জিনের `branch_id`। ⛔ নাগালের বাইরের বা অচেনা শাখা ৪২২, চুপ করে "সব শাখা" নয়
+     * — নাহলে একজন একটা শাখা বেছে গোটা কোম্পানির অঙ্ক নিজের শাখার বলে পড়তেন।
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function branchFrom(Request $request, User $user, ReportDefinition $definition, array $input): array
+    {
+        $wanted = $request->query('branch');
+
+        if (! $definition->hasFilter('branch') || $wanted === null || $wanted === '') {
+            return $input;
+        }
+
+        $branch = is_string($wanted)
+            ? collect($this->reachableBranches($user))->first(fn (Branch $b) => (string) $b->public_id === $wanted)
+            : null;
+
+        if ($branch === null) {
+            throw ValidationException::withMessages([
+                'branch' => __('core.report.filter_not_allowed', ['filter' => 'শাখা']),
+            ]);
+        }
+
+        return [...$input, 'branch_id' => (int) $branch->id];
+    }
+
+    /**
+     * এই পাতার সারির যোগ — কেবল দেখা যায় এমন যোগ-কলামের।
+     *
+     * @param  list<ReportColumn>  $columns
+     * @return array<string, string|null>
+     */
+    private function pageTotals(ReportResult $result, array $columns): array
+    {
+        $out = [];
+
+        foreach ($columns as $column) {
+            if (! $column->total || ! array_key_exists($column->key, $result->totals)) {
+                continue;
+            }
+
+            $sum = '0';
+            foreach ($result->rows as $row) {
+                $value = $row[$column->key] ?? null;
+                if (is_numeric($value)) {
+                    $sum = bcadd($sum, (string) $value, 4);
+                }
+            }
+
+            $out[$column->key] = $this->value($sum, $column);
+        }
+
+        return $out;
     }
 
     /**
