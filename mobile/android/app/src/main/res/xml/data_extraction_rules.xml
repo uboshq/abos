@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⛔ কিছুই ব্যাকআপে বা নতুন ফোনে যায় না (পূর্ণ নিরীক্ষা §৯ ⚠️১১, ১৮ অক্টোবর ২০২৬; OWASP MASVS-STORAGE)।
+  Hive-এর তালাবদ্ধ বাক্স আর EncryptedSharedPreferences-এর চাবি থাকে ফোনের keystore-এ, যা ব্যাকআপে যায় না —
+  নতুন ফোনে ফেরালে বাক্স খুলত না, আর secure-storage ভাঙত। ⓘ নতুন ফোনে আবার লগইন, সার্ভার থেকে সব ফেরে।
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

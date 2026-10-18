@@ -97,6 +97,22 @@ android {
     }
 }
 
+/*
+ * ⛔ release-এর চাবি না থাকলে release প্যাকেজ বানানো থামে (পূর্ণ নিরীক্ষা §৯ ⚠️১৪, ১৮ অক্টোবর ২০২৬)। ⓘ কেবল প্যাকেজের কাজে —
+ * কনফিগারেশনে ছুড়লে debug বিল্ড আর পরীক্ষাও ভাঙত। আগে কেবল সতর্কবার্তা দিয়ে debug চাবিতে সই হত, আর এমন APK কোনো ফোনে
+ * আপডেট হয়ে বসত না।
+ */
+if (!hasReleaseKey) {
+    tasks.matching { it.name == "packageRelease" || it.name == "bundleRelease" || it.name == "assembleRelease" }.configureEach {
+        doFirst {
+            throw GradleException(
+                "ABOS: android/key.properties নেই — release বিল্ড থামল। debug চাবিতে সই করা APK কোনো ফোনে আপডেট হয় না। " +
+                "docs/মোবাইল অ্যাপ রিলিজ করার নিয়ম.md দেখুন।"
+            )
+        }
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

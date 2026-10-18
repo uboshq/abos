@@ -48,10 +48,19 @@ class WebPaths {
   /// The one host the window may stay on — the server this app talks to ([AppConfig.apiBaseUrl]).
   static String get allowedHost => Uri.parse(AppConfig.apiBaseUrl).host;
 
+  /// অ্যাপ যে সার্ভারে বাঁধা তার স্কিম — লাইভে https
+  static String get allowedScheme => Uri.parse(AppConfig.apiBaseUrl).scheme;
+
   /// ⛔ ABOS-এর ঠিকানাতেই থাকে — অন্য যেকোনো ঠিকানা (বাইরের লিংক, মানচিত্র, ইমেইল) ফোনের নিজের অ্যাপে খোলে।
-  static bool staysInside(Uri uri, {String? host}) {
+  static bool staysInside(Uri uri, {String? host, String? scheme}) {
     if (uri.scheme == 'about' || uri.scheme == 'data' || uri.scheme == 'blob') return true;
-    if (uri.scheme != 'https' && uri.scheme != 'http') return false;
+    /*
+     * ⛔ কেবল https — একই হোস্টে http ঠিকানাও ভিতরে খুলত, আর পথের মাঝের কেউ সেশনের পাতা পড়তে বা বদলাতে পারত (পূর্ণ নিরীক্ষা
+     * §৯ ⓘ১৭, ১৮ অক্টোবর ২০২৬; MASVS-NETWORK)। ⓘ ব্যতিক্রম কেবল যখন অ্যাপ নিজেই http সার্ভারে বাঁধা (ডেভেলপারের যন্ত্রে
+     * `ABOS_API_BASE_URL=http://…`) — লাইভ বিল্ড https, তাই সেখানে http কখনো নয়।
+     */
+    final allowed = uri.scheme == 'https' || (uri.scheme == 'http' && (scheme ?? allowedScheme) == 'http');
+    if (!allowed) return false;
     return uri.host.toLowerCase() == (host ?? allowedHost).toLowerCase();
   }
 }

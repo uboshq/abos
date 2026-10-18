@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
@@ -93,15 +94,18 @@ class SyncEngine {
   /// Local, monotonic within one app run — combined with the wall-clock
   /// microsecond below, enough to keep two changes enqueued in the same
   /// microsecond from colliding, which the microsecond alone cannot promise.
-  int _changeSeq = 0;
 
   /// Generated once, here, and stored on the row: the same changeId must go
   /// out on every retry of that same change, because that id is the whole
   /// basis of the server's "have I already applied this?" check. A push that
   /// invented a fresh id per attempt would post the same sale twice the first
   /// time a response was dropped on a bad connection.
-  String _newChangeId() =>
-      'local-${DateTime.now().microsecondsSinceEpoch}-${_changeSeq++}';
+  /// ⭐ UUID v4, `Random.secure()` থেকে — ১২২ বিট এলোমেলো (পূর্ণ নিরীক্ষা §৯ ⓘ১৬, ১৮ অক্টোবর ২০২৬)।
+  /// ⛔ আগে `local-<মাইক্রোসেকেন্ড>-<ক্রম>`, আর ক্রম প্রতিবার অ্যাপ চালু হলে শূন্য থেকে — ঘড়ি পিছোলে দুইটা বদলের চাবি এক হতে পারত,
+  /// আর সার্ভার দ্বিতীয়টাকে "আগেই বসেছে" ভেবে চুপচাপ ফেলে দিত।
+  String _newChangeId() => uuidV4(_random);
+
+  static final Random _random = Random.secure();
 
   /// Must be awaited before any screen records changes.
   ///
@@ -895,4 +899,13 @@ enum SyncDirection {
   /// The catalogue coming down. A failure leaves a screen empty, and there is
   /// nothing queued that will fix it later by itself.
   pull,
+}
+
+/// ⭐ RFC 4122 সংস্করণ ৪ — `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`
+String uuidV4(Random random) {
+  final b = List<int>.generate(16, (_) => random.nextInt(256));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+  return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
