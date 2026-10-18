@@ -1,11 +1,12 @@
-import '../api_client/once_key.dart';
-import '../printing/paper_files.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api_client/once_key.dart';
+import '../printing/paper_files.dart';
+import '../privacy/app_pin.dart';
 import '../push/push_service.dart';
 import '../privacy/phone_privacy.dart';
 import '../api_client/api_client.dart';
@@ -169,6 +170,12 @@ class AuthController extends StateNotifier<AuthState> {
     unawaited(PaperFiles.wipe());
     // ⛔ একবারের চাবিও — পরের জনের কাজ আগের জনের চাবিতে নয় ([[OnceKey.forgetAll]])
     OnceKey.forgetAll();
+    // ⛔ অ্যাপের PIN-ও — পরের জন নিজেরটা বসান (পূর্ণ নিরীক্ষা §৯ ⚠️১২, [[AppPin]]); অপেক্ষা করে, যাতে নতুন ঢোকা আগেরটা না দেখে
+    try {
+      await AppPin().clear();
+    } catch (_) {
+      // ⓘ নিরাপদ ভাণ্ডার নেই (পরীক্ষা) — মোছার কিছু নেই
+    }
     state = const AuthState.signedOut();
   }
 }

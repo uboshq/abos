@@ -1,4 +1,5 @@
 import 'package:abos_mobile/core/privacy/app_lock.dart';
+import 'package:abos_mobile/core/privacy/app_pin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -56,11 +57,19 @@ void main() {
     expect(l.locked, isFalse);
   });
 
-  test('a phone with no lock of its own is not shut out, and says so', () async {
-    final l = lock(hasLock: false);
+  test('a phone with no lock of its own stays shut and asks for a password again when no app PIN is set (full audit §9 ⚠️12)', () async {
+    final store = <String, String>{};
+    final l = AppLock(
+      startLocked: true,
+      authenticate: () async => true,
+      deviceSupported: () async => false,
+      clock: () => now,
+      pin: AppPin(read: (k) async => store[k], write: (k, v) async => v == null ? store.remove(k) : store[k] = v),
+    );
     await l.unlock();
-    expect(l.locked, isFalse);
+    expect(l.locked, isTrue, reason: '⛔ ফোনে তালা নেই বলে অ্যাপ সোজা খুলল');
     expect(l.noDeviceLock, isTrue);
+    expect(l.mustSignInAgain, isTrue);
     expect(asked, 0);
   });
 
