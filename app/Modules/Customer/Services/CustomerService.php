@@ -201,14 +201,29 @@ final class CustomerService
             $this->assertRaiseIsSigned($customer, $before, $after);
         }
 
+        /*
+         * ⛔ বাকির দিন বাড়ানোও সীমা বাড়ানোর মতো — মালিকের সইয়ে (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)। ⓘ আগে ফর্মে ৩০ থেকে ৯০
+         * করে দিলেই বসত: একই সীমায় টাকা তিনগুণ সময় বাইরে, আর মেয়াদ-পেরোনোর দেয়াল দুই মাস পরে জাগত। কমানোয় সই লাগে না।
+         */
+        $daysBefore = (int) ($customer->credit_days ?? 0);
+        $daysAfter = array_key_exists('credit_days', $data) && $data['credit_days'] !== null ? (int) $data['credit_days'] : $daysBefore;
+        $daysSigned = null;
+
+        if ($daysAfter > $daysBefore) {
+            $daysSigned = $this->assertDaysRaiseIsSigned($customer, $daysBefore, $daysAfter);
+        }
+
         // ⭐ সীমা বদলের ইতিহাসে কোন সইয়ে — বাড়ানো হলে যে সই এইমাত্র মিলল (বাকি নিয়ন্ত্রণ ধাপ ১.৪)
-        $signed = $this->signedRaise($customer, $before, $after);
+        $signed = $this->signedRaise($customer, $before, $after) ?? $daysSigned;
 
         CustomerCreditChange::because(null, $signed, fn () => $customer->update($data));
 
         // ⛔ সই একবারই খাটে — সীমা নামিয়ে আবার একই অঙ্কে তুললে নতুন সই ([[Approval::markUsed()]])
         if ($signed !== null) {
             Approval::query()->find($signed)?->markUsed();
+        }
+        if ($daysSigned !== null && $daysSigned !== $signed) {
+            Approval::query()->find($daysSigned)?->markUsed();
         }
 
         return $customer->fresh();
@@ -531,6 +546,50 @@ final class CustomerService
         throw ValidationException::withMessages([
             'credit_limit' => __('core.approval.awaiting'),
         ]);
+    }
+
+    /**
+     * ⭐ বাকির দিন বাড়ানোর সই — [[assertRaiseIsSigned()]]-এর একই পথ, নিজের ছক `credit_days` (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কাগজের ছাপে প্রস্তাবিত দিন; সইয়ের অঙ্ক = নতুন দিন, তাই ৬০-এর সই ৯০ ঢাকে না। মালিক থাকতে হবে
+     * ([[CreditLimitRequests::ownerSigned()]]), সই একবারই খাটে ([[Approval::markUsed()]])। ছক না থাকলে থামে, বার্তা বলে কোথায়
+     * বসাতে হবে — সীমার নিয়মই।
+     *
+     * @return int মিলে যাওয়া সইয়ের সারি
+     */
+    private function assertDaysRaiseIsSigned(Customer $customer, int $before, int $after): int
+    {
+        $paper = $customer->withoutRelations();
+        $proposal = new Customer;
+        $proposal->setRawAttributes(['credit_days' => $after]);
+        $paper->setRelation('proposed_credit_days', $proposal);
+        $hash = app(DocumentFingerprint::class)->of($paper);
+
+        $latest = app(ApprovalEngine::class)->latestFor($customer, 'credit_days');
+
+        if ($latest?->status === Approval::APPROVED && $latest->stillCovers((string) $after, $hash)
+            && CreditLimitRequests::ownerSigned($latest)) {
+            return (int) $latest->id;
+        }
+
+        $reason = __('customer::approval.days_raised', ['from' => $before, 'to' => $after]);
+
+        // ⓘ ছকের অঙ্কের সীমা দিন বাছাই করে না (সীমার নিয়মই) — যেকোনো বাড়ানোয় সই; অঙ্কটা পরে অনুরোধে বসে
+        $held = $this->approvals->stopping(document: $paper, module: 'customer', action: 'credit_days', amount: null, reason: $reason);
+
+        if ($held === null) {
+            throw ValidationException::withMessages(['credit_days' => __('customer::validation.days_need_a_flow')]);
+        }
+
+        if ($held->status === Approval::PENDING && $held->amount === null && $held->state_hash !== null
+            && hash_equals((string) $held->state_hash, $hash)) {
+            $held->update(['amount' => (string) $after, 'payload' => [...($held->payload ?? []), 'days_before' => $before]]);
+        }
+
+        $this->approvals->assertClear(document: $paper, module: 'customer', action: 'credit_days', field: 'credit_days', amount: null, reason: $reason);
+
+        // ⛔ এখানে পৌঁছানো মানে কিছু একটা থামায়নি — তবু মালিকের সই ছাড়া দিন বাড়বে না
+        throw ValidationException::withMessages(['credit_days' => __('core.approval.awaiting')]);
     }
 
     /** এই সই কি আগেই একবার সীমা বসিয়েছে — ইতিহাসে তার সূত্রসহ সারি আছে কি না ([[CustomerCreditChange]]) */
