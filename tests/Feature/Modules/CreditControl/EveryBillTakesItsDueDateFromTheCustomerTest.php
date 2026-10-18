@@ -166,6 +166,18 @@ final class EveryBillTakesItsDueDateFromTheCustomerTest extends TestCase
             $this->assertArrayHasKey('due_on', $e->errors());
         }
         $this->assertSame($before, SalesInvoice::query()->withoutGlobalScopes()->count(), '⛔ থামার আগেই বিল বসে গেল।');
+
+        // ⭐ বাকির দিন ০ = বিলের দিনেই শোধ (মালিকের নিয়ম, ১৮ অক্টোবর ২০২৬) — পরদিনও ফেরে, বিলের দিন চলে
+        $this->customer->forceFill(['credit_days' => 0])->save();
+        $this->assertSame(now()->toDateString(),
+            $this->officeBill(['due_on' => now()->toDateString()])->due_on?->toDateString(), 'বিলের দিনেই শোধ আটকাল।');
+        try {
+            $this->officeBill(['due_on' => now()->addDay()->toDateString()]);
+            $this->fail('⛔ ০ দিনের গ্রাহকের বিলে পরদিনের মেয়াদ বসল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // ⓘ বার্তা বলে অনুমতি কত দিন আর চাওয়াটা কত দূরে
+            $this->assertStringContainsString(now()->addDay()->toDateString(), $e->errors()['due_on'][0]);
+        }
     }
 
     /** ⓘ সম্পাদনায় বিলের নিজের আগের তারিখ থাকে — পরে গ্রাহকের দিন কমলেও; নতুন তারিখ নতুন দিনেই মাপা */

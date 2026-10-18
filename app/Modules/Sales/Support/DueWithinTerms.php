@@ -15,14 +15,15 @@ use Illuminate\Validation\ValidationException;
  * আর মেয়াদ-পেরোনোর দেয়াল ঐ বিলে দুই মাস দেরিতে জাগত।
  *
  * ⭐ শোধের তারিখ ≤ বিলের দিন + গ্রাহকের বাকির দিন; আগে হলে ঠিক আছে (তাড়াতাড়ি চাওয়া ঝুঁকি কমায়)।
- * ⓘ বাকির দিন ০ = গ্রাহকের দিন বসানো নেই — এখানে কিছু আটকায় না, আগের মতোই (মালিকের প্রশ্ন: ০ মানে "বাকি নয়" কি না)।
+ * ⭐ বাকির দিন ০ = বিলের দিনেই শোধ (মালিকের নিয়ম, fe-র মাধ্যমে ১৮ অক্টোবর ২০২৬; নিরীক্ষার D10) — পরের যেকোনো তারিখ ফেরে।
+ * ⓘ বাকির দিন পরম, সীমার মতো: "মাসের শেষে" যদি দিনের বাইরে পড়ে, সেটাও ফেরে — বার্তা বলে কত দিনের অনুমতি আর চাওয়াটা কত দূরে।
  * ⓘ সম্পাদনায় বিলের নিজের আগের তারিখ রাখা যায় — পরে গ্রাহকের দিন কমলেও পুরনো বিল খোলা আটকায় না; বদলালে তবেই মাপা।
  */
 final class DueWithinTerms
 {
     public static function check(?string $due, Carbon $billDate, int $creditDays, ?string $kept = null): void
     {
-        if ($due === null || $due === '' || $creditDays <= 0) {
+        if ($due === null || $due === '') {
             return;
         }
 
@@ -31,11 +32,17 @@ final class DueWithinTerms
             return;
         }
 
-        $latest = $billDate->copy()->startOfDay()->addDays($creditDays);
+        $from = $billDate->copy()->startOfDay();
+        $latest = $from->copy()->addDays(max(0, $creditDays));
 
         if ($on->greaterThan($latest)) {
             throw ValidationException::withMessages([
-                'due_on' => __('sales::due.beyond_terms', ['days' => $creditDays, 'latest' => $latest->toDateString()]),
+                'due_on' => __('sales::due.beyond_terms', [
+                    'days' => max(0, $creditDays),
+                    'asked' => (int) $from->diffInDays($on),
+                    'due' => $on->toDateString(),
+                    'latest' => $latest->toDateString(),
+                ]),
             ]);
         }
     }
