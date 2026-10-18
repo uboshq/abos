@@ -28,6 +28,45 @@ class AppVersionController extends Controller
 {
     public function __invoke(): JsonResponse
     {
+        $body = self::release();
+
+        if ($body === null) {
+            return response()->json(['configured' => false], 503);
+        }
+
+        $android = (array) config('mobile.android');
+
+        /*
+         * ⚠️ নোট দুই ভাষাতেই, নাহলে নেই (চুক্তির নিয়ম ঘ) — এক ভাষার নোট
+         * অন্য ভাষার ফোনে অপঠিত লেখা হয়ে বসত।
+         */
+        $bn = trim((string) ($android['note']['bn'] ?? ''));
+        $en = trim((string) ($android['note']['en'] ?? ''));
+
+        if ($bn !== '' && $en !== '') {
+            $body['note'] = ['bn' => $bn, 'en' => $en];
+        }
+
+        return response()->json($body);
+    }
+
+    /**
+     * ⭐ সার্ভার যে সর্বনিম্ন বিল্ড মানে — কেবল পুরো বসানো থাকলে, নইলে null ([[RefuseRetiredAppBuilds]], পূর্ণ নিরীক্ষা §৯ ⚠️৯,
+     * ১৮ অক্টোবর ২০২৬)। ⛔ ফোনের দেয়াল যে মানে ওঠে, সার্ভারের ৪২৬-ও ঠিক সেই মানে: অর্ধেক-বসানো .env-এ দুটোই ঘুমায়, নইলে
+     * মাঠের প্রতিটা ফোনের লেখা বন্ধ হতো অথচ ফোন জানত না নতুনটা কোথায়।
+     */
+    public static function enforcedMinimum(): ?int
+    {
+        return self::release()['minimumCode'] ?? null;
+    }
+
+    /**
+     * পুরো বসানো রিলিজ, নইলে null
+     *
+     * @return array{versionCode: int, versionName: string, url: string, apkSha256: string, sizeBytes: int, minimumCode: int}|null
+     */
+    private static function release(): ?array
+    {
         $android = (array) config('mobile.android');
 
         $code = self::whole($android['version_code'] ?? null);
@@ -44,10 +83,10 @@ class AppVersionController extends Controller
             || ! str_starts_with($url, 'https://')
             || preg_match('/^[0-9a-f]{64}$/', $sha) !== 1
             || $size === null) {
-            return response()->json(['configured' => false], 503);
+            return null;
         }
 
-        $body = [
+        return [
             'versionCode' => $code,
             'versionName' => (string) ($android['version_name'] ?? ''),
             'url' => $url,
@@ -55,19 +94,6 @@ class AppVersionController extends Controller
             'sizeBytes' => $size,
             'minimumCode' => $minimum,
         ];
-
-        /*
-         * ⚠️ নোট দুই ভাষাতেই, নাহলে নেই (চুক্তির নিয়ম ঘ) — এক ভাষার নোট
-         * অন্য ভাষার ফোনে অপঠিত লেখা হয়ে বসত।
-         */
-        $bn = trim((string) ($android['note']['bn'] ?? ''));
-        $en = trim((string) ($android['note']['en'] ?? ''));
-
-        if ($bn !== '' && $en !== '') {
-            $body['note'] = ['bn' => $bn, 'en' => $en];
-        }
-
-        return response()->json($body);
     }
 
     /** একটা ধনাত্মক পূর্ণসংখ্যা, নাহলে null — "3a" বা "" মানে বসানো নেই। */

@@ -319,6 +319,8 @@ return Application::configure(basePath: dirname(__DIR__))
             RefuseWorkWithoutALicence::class,
             // ⭐ ফোন থেকে লেখাও বাকি ফোনগুলোকে ডাকে ([[SyncNudge]])
             NudgePhonesAfterWrite::class,
+            // ⛔ বন্ধ করা বিল্ডের লেখা ৪২৬ — ফোন তখন আপডেটের দেয়াল তোলে (পূর্ণ নিরীক্ষা §৯ ⚠️৯, ১৮ অক্টোবর ২০২৬)
+            \App\Http\Middleware\RefuseRetiredAppBuilds::class,
         ]);
 
         /*
