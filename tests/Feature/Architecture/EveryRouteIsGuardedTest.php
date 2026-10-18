@@ -314,6 +314,9 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.dashboard.module' => 'চাবি মডিউলের নিজের মেনু-সারি থেকে, পদ্ধতিতে $this->authorize() — ওয়েবের ModuleDashboardController-এর হুবহু',
         'api.reports.index' => 'তালিকা প্রতিটা রিপোর্টের নিজের চাবি (ReportDefinition::permission) ধরে ছাঁকা; চাবিহীন রিপোর্ট আসেই না',
         'api.reports.show' => 'প্রতিটা রিপোর্টের নিজের চাবি কন্ট্রোলারে দেখা হয় — চাবি নেই তো ৪০৩; ঢাকা কলাম উত্তরেই নেই',
+        // ⭐ ছাঁকনির বাছাই আর খোঁজা — show-এর একই দরজা (ReportApiController::opened): অচেনা ৪০৪, চাবি নেই তো ৪০৩ (১৭ অক্টোবর ২০২৬)
+        'api.reports.choices' => 'show-এর একই দরজা (ReportApiController::opened, ReportDefinition::allows) — চাবি নেই তো ৪০৩; তালিকা দেয়ালের ভিতরের',
+        'api.reports.choices.search' => 'show-এর একই দরজা (ReportApiController::opened) — চাবি নেই তো ৪০৩; খোঁজা দেয়ালের ভিতরে',
         'api.documents.pdf' => 'কাগজের চাবি ওয়েবের ছাপার রুটের নিজের can: (PaperTrail::abilitiesFor) — কন্ট্রোলারে; চাবি নেই তো ৪০৩, খালি তালিকাতেও ৪০৩',
         'api.documents.papers' => 'pdf-এর একই পাহারা, একই পথে (DocumentApiController::through) — যে কাগজ ছাপা যায় না তার মাপও নয়',
         'api.reports.export' => '§৯-এর দরজাই (ReportApiController::show, ReportDefinition::allows) — চাবি নেই তো ৪০৩; ঢাকা কলাম ফাইলেও নেই',

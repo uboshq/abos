@@ -147,8 +147,16 @@ final class TheBankLoanBookEndsWhereTheListSaysTest extends TestCase
         app(\App\Core\Services\DataScope::class)->forget();
         $this->actingAs($clerk->fresh());
 
-        $this->assertSame('0', $this->book($old, ReportEngine::ALL_TIME, now()->toDateString())['closing'],
-            '⛔ অন্য শাখার ঋণের পুরনো তোলা সীমিত মানুষের খাতায় দেখা গেল');
+        /*
+         * ⓘ ১৭ অক্টোবর ২০২৬ থেকে ঋণের ছাঁকনি দেয়ালের উৎস দিয়ে যাচাই হয় ([[BankFacilityFilter]]): নাগালের বাইরের ঋণ চাইলে
+         * খাতা শূন্য দেখানো নয়, সরাসরি ফেরত — "অন্যের কিছু চুপচাপ বাদ" নয়, "স্পষ্ট না"। পুরনো তোলা তাই দেখা যায়ই না।
+         */
+        try {
+            $closing = $this->book($old, ReportEngine::ALL_TIME, now()->toDateString())['closing'];
+            $this->fail('⛔ অন্য শাখার ঋণের খাতা সীমিত মানুষের জন্য খুলল (শেষ জের '.$closing.')');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('facility_id', $e->errors(), 'ফেরত, কিন্তু ঋণের ঘরের নামে নয়');
+        }
     }
 
     private function loan(string $bank, int $instalments, array $extra = []): BankFacility
