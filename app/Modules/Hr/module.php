@@ -12,6 +12,8 @@ use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Models\PayslipLine;
+use App\Modules\Hr\Models\SalaryStructure;
 use App\Modules\Hr\Panels\EmployeeFacts;
 use App\Modules\Hr\Services\UserEmployee;
 
@@ -462,6 +464,36 @@ return [
             'bank_account_no' => 'hr.identity.view',
             'bank_routing_no' => 'hr.identity.view',
             'mfs_number' => 'hr.identity.view',
+        ],
+    ],
+
+    /*
+     * ⛔ বেতনের অঙ্ক অডিটের পর্দায় খোলা ছিল — Governance অডিট, ১৮ অক্টোবর ২০২৬।
+     *
+     * ⓘ উপরের টীকা ঠিকই বলেছিল "API লেখার দিন আলাদা করে ভাবতে হবে" — কিন্তু অডিটের তালিকা, একটা সারি, সময়যন্ত্র আর
+     * তালিকার CSV-ও `@can` জানে না: ওরা যেকোনো মডেলের ঘর ধরে পুরনো ও নতুন মান ছাপে। নিরীক্ষকের (`governance.audit.view`)
+     * হাতে `hr.salary.view` নেই, অথচ প্রতিটা বেতন-বদল "২০০০০ → ২৫০০০" হয়ে তাঁর চোখে পড়ত।
+     *
+     * ⓘ এখানে, `sensitive_fields`-এ নয়: নামগুলো সাধারণ বলে ব্লেডের খোঁজা ([[NoSensitiveFieldIsPrintedInTheOpenTest]]) এদের
+     * দেখে না, কিন্তু [[FieldSecurity]] দেখে — অর্থাৎ HR-এর নিজের পর্দায় অংশের `@can`, সাধারণ পর্দায় ঘরের ঢাকনা।
+     * ⓘ পরিচয়ের ঘরগুলো (ব্যাংক, MFS) উপরে থেকেই যায়; এখানে কেবল টাকার অঙ্ক।
+     */
+    'section_guarded_fields' => [
+        SalaryStructure::class => [
+            'amount' => 'hr.salary.view',
+        ],
+        Payslip::class => [
+            'gross' => 'hr.salary.view',
+            'deductions' => 'hr.salary.view',
+            'net' => 'hr.salary.view',
+        ],
+        PayslipLine::class => [
+            'amount' => 'hr.salary.view',
+        ],
+        PayrollRun::class => [
+            'gross_total' => 'hr.salary.view',
+            'deduction_total' => 'hr.salary.view',
+            'net_total' => 'hr.salary.view',
         ],
     ],
 

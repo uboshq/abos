@@ -496,6 +496,19 @@ final class ModuleDefinition
          * @var list<class-string<\App\Core\Phone\PhonePaper>>
          */
         public readonly array $phonePapers = [],
+
+        /**
+         * যে ঘর মডিউলের নিজের পর্দায় গোটা অংশের `@can`-এ ঢাকা, কিন্তু সাধারণ পর্দায় (অডিট, সময়যন্ত্র, তাদের CSV) ঘর ধরে ঢাকতে হয়।
+         *
+         * ⛔ বেতনের অঙ্ক (`amount`, `gross`, `net`) অডিটের পর্দায় `hr.salary.view` ছাড়াই খোলা ছিল — নিরীক্ষকের হাতে কেবল
+         * `governance.audit.view` (Governance অডিট, ১৮ অক্টোবর ২০২৬)। ⓘ `sensitive_fields`-এ নয়, কারণ ঐ নামগুলো এত সাধারণ যে
+         * [[NoSensitiveFieldIsPrintedInTheOpenTest]] প্রতিটা বিলের পর্দায় ওদের "পেত"; [[FieldSecurity::permissionFor()]] দুইটাই পড়ে।
+         *
+         * ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<class-string, array<string, string>>
+         */
+        public readonly array $sectionGuardedFields = [],
     ) {}
 
     /**
@@ -701,6 +714,12 @@ final class ModuleDefinition
             essential: (bool) ($raw['essential'] ?? false),
             reportFilters: self::validateReportFilters($raw['report_filters'] ?? [], $path),
             phonePapers: self::validatePhonePapers($raw['phone_papers'] ?? [], $path),
+            // ⓘ একই যাচাই — অচেনা ক্লাস বা এই মডিউলের নয় এমন চাবি বুটেই ভাঙে
+            sectionGuardedFields: self::validateSensitiveFields(
+                $raw['section_guarded_fields'] ?? [],
+                $raw['permissions'] ?? [],
+                $path,
+            ),
         );
     }
 
