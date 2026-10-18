@@ -15,4 +15,6 @@ return [
     'total' => 'Total due',
     'limit' => 'Credit limit',
     'used' => 'Limit used %',
+    // ⛔ the due date stays within the customer's credit days ([[DueWithinTerms]])
+    'beyond_terms' => 'This customer has :days credit days, so the due date cannot be after :latest. To give more days, raise the customer credit days (needs the owner signature).',
 ];

@@ -26,6 +26,7 @@ use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Services\MethodFitsAccount;
+use App\Modules\Sales\Support\DueWithinTerms;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -2587,7 +2588,19 @@ final class DirectSaleService
      *
      * @param  array<string, mixed>  $data
      */
-    private function dueOn(array $data, Customer $customer): ?string
+    /**
+     * ⛔ যে পথেই আসুক (লেখা তারিখ, দিনের সংখ্যা, মাসের শেষ) — ফল গ্রাহকের বাকির দিনের ভিতরে (পূর্ণ নিরীক্ষা §৫, [[DueWithinTerms]])।
+     * ⓘ সম্পাদনায় খসড়ার আগের তারিখ রাখা যায় ($kept)।
+     */
+    private function dueOn(array $data, Customer $customer, ?string $kept = null): ?string
+    {
+        $due = $this->dueOnAsAsked($data, $customer);
+        DueWithinTerms::check($due, Carbon::parse($data['trx_date'] ?? now()), (int) ($customer->credit_days ?? 0), $kept);
+
+        return $due;
+    }
+
+    private function dueOnAsAsked(array $data, Customer $customer): ?string
     {
         /*
          * নির্দিষ্ট তারিখ লেখা থাকলে সেটাই — দিনের সংখ্যা নয়।

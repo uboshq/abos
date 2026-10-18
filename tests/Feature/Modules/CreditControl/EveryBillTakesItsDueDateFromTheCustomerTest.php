@@ -149,6 +149,84 @@ final class EveryBillTakesItsDueDateFromTheCustomerTest extends TestCase
         $this->assertSame(now()->addDays(21)->toDateString(), $phone->due_on?->toDateString(), '⛔ ফোনের বিলে মেয়াদ বসেনি।');
     }
 
+    /**
+     * ⛔ শোধের তারিখ গ্রাহকের বাকির দিনের বাইরে নয় — পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬ ([[DueWithinTerms]])।
+     * ⓘ আগে অফিসের বিলে লেখা তারিখ যা খুশি বসত — ২১ দিনের গ্রাহককে ৯০ দিন।
+     */
+    public function test_an_office_bill_cannot_be_given_more_days_than_the_customer_has(): void
+    {
+        $this->assertSame(now()->addDays(21)->toDateString(),
+            $this->officeBill(['due_on' => now()->addDays(21)->toDateString()])->due_on?->toDateString(), 'ঠিক ২১ দিন চলে।');
+
+        $before = SalesInvoice::query()->withoutGlobalScopes()->count();
+        try {
+            $this->officeBill(['due_on' => now()->addDays(22)->toDateString()]);
+            $this->fail('⛔ ২১ দিনের গ্রাহকের বিলে ২২ দিনের মেয়াদ বসল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('due_on', $e->errors());
+        }
+        $this->assertSame($before, SalesInvoice::query()->withoutGlobalScopes()->count(), '⛔ থামার আগেই বিল বসে গেল।');
+    }
+
+    /** ⓘ সম্পাদনায় বিলের নিজের আগের তারিখ থাকে — পরে গ্রাহকের দিন কমলেও; নতুন তারিখ নতুন দিনেই মাপা */
+    public function test_an_edit_keeps_the_bills_own_date_but_a_new_date_follows_todays_terms(): void
+    {
+        $bill = $this->officeBill(['due_on' => now()->addDays(20)->toDateString()]);
+        $this->customer->forceFill(['credit_days' => 7])->save();
+        $line = [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '10']];
+        $head = ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString()];
+
+        $kept = app(SalesInvoiceService::class)->update($bill->fresh(), [...$head, 'due_on' => now()->addDays(20)->toDateString()], $line);
+        $this->assertSame(now()->addDays(20)->toDateString(), $kept->fresh()->due_on?->toDateString(), 'নিজের আগের তারিখে সম্পাদনা আটকাল।');
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(SalesInvoiceService::class)->update($bill->fresh(), [...$head, 'due_on' => now()->addDays(15)->toDateString()], $line);
+    }
+
+    /** ⓘ কাউন্টার আর ফোন — "কত দিন", "কোন তারিখে" আর "মাসের শেষে", তিন পথেই */
+    public function test_the_counter_and_the_phone_cannot_stretch_the_customers_days(): void
+    {
+        $lot = $this->lot();
+        $seller = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $seller->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->company->id,
+            fn () => $seller->givePermissionTo(Permission::findOrCreate('sales.challan.create', 'web')));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->actingAs($seller->fresh());
+
+        $sale = fn (array $terms, string $qty) => $this->post(route('sales.direct.store'), [
+            'customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString(),
+            'vehicle_owner' => 'hired', 'vehicle_no' => 'ঢাকা-ম ১৪', 'driver_name' => 'করিম', 'transport_cost' => '100', 'fare_paid_by' => 'customer',
+            'lines' => [['product_id' => $this->product->id, 'batch_id' => $lot->id, 'qty' => $qty, 'rate' => '100', 'free_qty' => '0']],
+            ...$terms,
+        ]);
+        $bills = fn () => SalesInvoice::query()->withoutGlobalScopes()->where('customer_id', $this->customer->id)->count();
+        $before = $bills();
+
+        $sale(['payment_term' => 'credit', 'credit_period_days' => '60'], '2')->assertSessionHasErrors('due_on');
+        $sale(['payment_term' => 'fixed', 'due_on' => now()->addDays(45)->toDateString()], '3')->assertSessionHasErrors('due_on');
+        $this->assertSame($before, $bills(), '⛔ কাউন্টারে গ্রাহকের দিনের বাইরে মেয়াদের বিল বসল।');
+
+        // ⓘ মাসের শেষ — গ্রাহকের ১ দিনে, মাসের শেষ এক দিনের বেশি দূরে হলে থামে
+        $this->customer->forceFill(['credit_days' => 1])->save();
+        if (now()->startOfDay()->diffInDays(now()->endOfMonth()->startOfDay()) > 1) {
+            $sale(['payment_term' => 'month_end'], '4')->assertSessionHasErrors('due_on');
+        }
+        $this->customer->forceFill(['credit_days' => 21])->save();
+
+        $sale(['payment_term' => 'credit', 'credit_period_days' => '21'], '5')->assertSessionHasNoErrors();
+        $this->assertSame($before + 1, $bills(), 'নিজের দিনের ভিতরে কাউন্টারের বিক্রি আটকাল।');
+
+        Sanctum::actingAs($seller->fresh(), [AuthController::APP]);
+        $this->postJson('/api/v1/sales/direct', [
+            'customer' => (string) $this->customer->public_id, 'warehouse' => (string) $this->warehouse->public_id,
+            'payment_term' => 'fixed', 'due_on' => now()->addDays(60)->toDateString(),
+            'vehicle_owner' => 'hired', 'vehicle_no' => 'ঢাকা-ম ১৫', 'driver_name' => 'রহিম', 'transport_cost' => '100', 'fare_paid_by' => 'customer',
+            'lines' => [['product' => (string) $this->product->public_id, 'lot' => (string) $lot->public_id, 'qty' => '6', 'rate' => '100']],
+        ])->assertStatus(422)->assertJsonValidationErrors('due_on');
+        $this->assertSame($before + 1, $bills(), '⛔ ফোনে গ্রাহকের দিনের বাইরে মেয়াদের বিল বসল।');
+    }
+
     // ── যন্ত্রপাতি ──
 
     /** @param  array<string, mixed>  $extra */
