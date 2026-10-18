@@ -283,6 +283,17 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Queue\Queue::createPayloadUsing(fn () => ['abos_company' => \App\Core\Support\CompanyContext::id()]);
 
         /*
+         * ⭐ `database` সেশনের `user_id` কেবল কর্মীর — পোর্টালের গ্রাহকের id নয় ([[StaffSessionHandler]],
+         * মালিকের সিদ্ধান্ত ১৬, ১৭ অক্টোবর ২০২৬)। ⓘ বাকিটা ফ্রেমওয়ার্কের নিজের `createDatabaseDriver()`-এর মতোই।
+         */
+        \Illuminate\Support\Facades\Session::extend('database', fn ($app) => new \App\Core\Security\StaffSessionHandler(
+            $app['db']->connection($app['config']->get('session.connection')),
+            $app['config']->get('session.table'),
+            $app['config']->get('session.lifetime'),
+            $app,
+        ));
+
+        /*
          * ⭐ কোন মাপে ছাপা হলো — `X-Print-Scale: 85; auto` ([[PrintScale]], ১ অক্টোবর ২০২৬)।
          * ⓘ এক জায়গায়, তাই কোনো ছাপার কন্ট্রোলার ছুঁতে হয়নি; কাগজে কিছু লেখা হয় না (মালিক: কাগজ পরিষ্কার)।
          */
