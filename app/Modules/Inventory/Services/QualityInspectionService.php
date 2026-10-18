@@ -252,6 +252,11 @@ final class QualityInspectionService
         string $rejectedQty,
         ?string $remarks = null,
     ): QualityInspection {
+        // ⛔ যিনি যাচাই করেছেন তিনি নিজে রায় দেন না — নীতির পেছনে সেবাতেও ([[MakerChecker]])
+        if (! \App\Core\Support\MakerChecker::isAnotherHand(auth()->user(), $inspection->inspected_by ?? $inspection->created_by)) {
+            throw ValidationException::withMessages(['result' => __('inventory::validation.qc_needs_another_decider')]);
+        }
+
         if (! $inspection->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('inventory::validation.qc_already_decided'),

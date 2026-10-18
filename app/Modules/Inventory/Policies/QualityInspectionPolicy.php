@@ -57,7 +57,9 @@ class QualityInspectionPolicy
      */
     public function decide(User $user, QualityInspection $document): bool
     {
-        return $user->can('inventory.qc.decide') && $document->isPending();
+        return $user->can('inventory.qc.decide') && $document->isPending()
+            // ⛔ যিনি যাচাই করেছেন তিনি নিজে রায় দেন না — maker-checker (মালিক, ১৪ অক্টোবর ২০২৬; ছাড় super admin, [[MakerChecker]])
+            && \App\Core\Support\MakerChecker::isAnotherHand($user, $document->inspected_by ?? $document->created_by);
     }
 
     /**

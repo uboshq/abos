@@ -232,7 +232,8 @@ final class AttendanceSync implements SyncsToDevices
             'in_time' => $status === Attendance::PRESENT ? now()->format('H:i:s') : null,
             'out_time' => null,
             'is_late' => false,
-            'remarks' => $this->clockStampedRemark($remarks, $date),
+            // ⓘ ৫০০ অক্ষরে — ঘরের মাপ (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬); অ্যারে উপরে কারণসহ ফেরে
+            'remarks' => $this->clockStampedRemark($remarks === null ? null : mb_substr($remarks, 0, 500), $date),
         ]);
 
         return (string) $attendance->public_id;

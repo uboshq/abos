@@ -99,6 +99,11 @@ return [
 
     'dashboard' => AccountsDashboard::class,
 
+    // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
+    'phone_papers' => [
+        \App\Modules\Accounts\Phone\InterCompanyPaper::class,
+    ],
+
     'menu' => [
         'dashboard' => [
             ['label' => 'accounts::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
@@ -440,6 +445,8 @@ return [
         'accounts.till.manage',
         'accounts.transfer.create',
         'accounts.transfer.confirm',
+        // ⭐ অন্যের পাঠানো, এখনো না-নেওয়া হস্তান্তর বাতিল (১৭ অক্টোবর ২০২৬; [[MoneyTransferService::assertMayCancel()]])
+        'accounts.transfer.manage',
         'accounts.count.create',
         'accounts.count.approve',
     ],

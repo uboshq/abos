@@ -534,9 +534,17 @@ final class SyncService
      */
     private function movedKey(): string
     {
-        $class = app(\App\Core\Engines\Drill\DrillResolver::class)->map()['customer'] ?? null;
+        /*
+         * ⓘ পক্ষের ধরন মডিউলের ঘোষণা থেকে ([[PartyRegistry]]), কোরে হাতে লেখা নয় (§১৯.৭; ১৭ অক্টোবর ২০২৬,
+         * [[TheDealerPaidTheCompanyNotMeTest]])। ⓘ সব পক্ষ — সরবরাহকারীও শাখা বদলালে ফোনের ক্যাশে একই ফাঁক থাকত।
+         */
+        $map = app(\App\Core\Engines\Drill\DrillResolver::class)->map();
+        $classes = array_values(array_filter(array_map(
+            fn (string $type) => $map[$type] ?? null,
+            app(\App\Core\Services\PartyRegistry::class)->types(),
+        )));
 
-        if ($class === null) {
+        if ($classes === []) {
             return '';
         }
 
@@ -544,7 +552,7 @@ final class SyncService
             ->join('audit_trails as t', 't.id', '=', 'f.audit_trail_id')
             ->where('f.company_id', CompanyContext::id())
             ->where('f.field', 'branch_id')
-            ->where('t.auditable_type', $class)
+            ->whereIn('t.auditable_type', $classes)
             ->max('f.id');
 
         return $last === null ? '' : '|m:'.$last;

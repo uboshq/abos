@@ -235,6 +235,11 @@ final class StockCountService
      */
     public function approve(StockCount $count, ReasonCode $reason): StockCount
     {
+        // ⛔ যিনি গুনেছেন তিনি নিজে মানেন না — নীতির পেছনে সেবাতেও, যাতে কোনো দরজা এড়াতে না পারে ([[MakerChecker]])
+        if (! \App\Core\Support\MakerChecker::isAnotherHand(auth()->user(), $count->counted_by ?? $count->created_by)) {
+            throw ValidationException::withMessages(['status' => __('inventory::validation.count_needs_another_approver')]);
+        }
+
         if ($count->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('inventory::validation.count_not_draft'),

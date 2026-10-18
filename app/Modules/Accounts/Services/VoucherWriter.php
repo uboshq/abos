@@ -315,6 +315,9 @@ final class VoucherWriter
              * ⚠️ নিচের `post()` আর তার ক্রম অস্পৃশ্য — এটা কেবল একটা শর্ত
              * তার আগে, যা `null` হলে সবকিছু আজকের মতোই চলে।
              */
+            // ⛔ অন্য কাগজের ভাউচার — সইয়ের অনুরোধের আগেই থামে, অকারণ সই চাওয়া নয় ([[VoucherService::refuseIfOwnedElsewhere()]])
+            $this->vouchers->refuseIfOwnedElsewhere($voucher);
+
             $stopping = $this->approvals->stopping($voucher);
 
             if ($stopping !== null) {

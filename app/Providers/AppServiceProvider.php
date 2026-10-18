@@ -283,6 +283,17 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Queue\Queue::createPayloadUsing(fn () => ['abos_company' => \App\Core\Support\CompanyContext::id()]);
 
         /*
+         * ⭐ `database` সেশনের `user_id` কেবল কর্মীর — পোর্টালের গ্রাহকের id নয় ([[StaffSessionHandler]],
+         * মালিকের সিদ্ধান্ত ১৬, ১৭ অক্টোবর ২০২৬)। ⓘ বাকিটা ফ্রেমওয়ার্কের নিজের `createDatabaseDriver()`-এর মতোই।
+         */
+        \Illuminate\Support\Facades\Session::extend('database', fn ($app) => new \App\Core\Security\StaffSessionHandler(
+            $app['db']->connection($app['config']->get('session.connection')),
+            $app['config']->get('session.table'),
+            $app['config']->get('session.lifetime'),
+            $app,
+        ));
+
+        /*
          * ⭐ কোন মাপে ছাপা হলো — `X-Print-Scale: 85; auto` ([[PrintScale]], ১ অক্টোবর ২০২৬)।
          * ⓘ এক জায়গায়, তাই কোনো ছাপার কন্ট্রোলার ছুঁতে হয়নি; কাগজে কিছু লেখা হয় না (মালিক: কাগজ পরিষ্কার)।
          */
@@ -317,8 +328,22 @@ class AppServiceProvider extends ServiceProvider
          */
         RateLimiter::for('app', fn ($request) => Limit::perMinute(300)->by('app|'.($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
+        /*
+         * ⛔ নবায়ন প্রতি টোকেনে (হেডার বা শরীরের) — ৩০/মিনিট; আর IP-তে ৩০০, যাতে ভুয়া টোকেন ঘুরিয়ে চাপ দেওয়া না যায়
+         * (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⓘ আগে কেবল IP ধরে ৩০ — একই NAT-এর সব ফোন একটা থলেতে।
+         */
+        RateLimiter::for('refresh', function ($request) {
+            $token = $request->bearerToken() ?: (is_string($request->input('refreshToken')) ? $request->input('refreshToken') : '');
+
+            return [
+                Limit::perMinute(30)->by('refresh|'.($token !== '' ? sha1($token) : $request->ip())),
+                Limit::perMinute(300)->by('refresh-ip|'.$request->ip()),
+            ];
+        });
+
         RateLimiter::for('login', fn ($request) => [
-            Limit::perMinute(10)->by('name|'.$request->ip().'|'.mb_strtolower(trim((string) $request->input('identifier')))),
+            // ⛔ তালার একই রূপ — নম্বর অন্যভাবে লিখে নতুন থলে নয় ([[LoginLock::canonical()]], ১৪ অক্টোবর ২০২৬)
+            Limit::perMinute(10)->by('name|'.$request->ip().'|'.\App\Core\Security\LoginLock::canonical((string) $request->input('identifier'))),
             Limit::perMinute(120)->by('address|'.$request->ip()),
         ]);
 

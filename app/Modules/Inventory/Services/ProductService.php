@@ -157,6 +157,15 @@ final class ProductService
                 $this->packs->sync($product, $packs, $defaults, $wasBase);
             }
 
+            /*
+             * ⛔ প্যাক বা শাখা বদলালে পণ্যের সারিও "বদলেছে" — ফোনের টানা `products.updated_at` দেখে, অথচ কেবল প্যাক (কার্টন ১২
+             * থেকে ২৪) বা শাখা বদলালে সারিটা অপরিবর্তিত থাকত, আর ফোন পুরনো প্যাক দিয়ে অর্ডারের পরিমাণ গুনত — অর্ধেক মাল
+             * (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[APackChangeNeverReachedThePhoneTest]])। ⓘ নীরবে — নিরীক্ষায় ফাঁকা "বদল" নয়।
+             */
+            if ($packs !== null || $branches !== null) {
+                $product->touchQuietly();
+            }
+
             return $product->fresh();
         });
     }

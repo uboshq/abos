@@ -170,9 +170,21 @@ final class ThePhoneRunsTheCreditDeskTest extends TestCase
             'credit_blocked_at' => now(), 'credit_blocked_by' => $this->owner->id,
             'credit_block_reason' => 'হাতে বন্ধ', 'credit_block_kind' => null,
         ])->save();
+        /*
+         * ⛔ হাতে বসানো বন্ধ খোলেন সীমার সইকারী, কেবল সম্পাদনার চাবি নয় — ওয়েবের একই নীতি ([[CustomerPolicy::liftCreditBlock()]];
+         * fe-র সিদ্ধান্ত, Api/Sync নিরীক্ষা ১৪ অক্টোবর ২০২৬)। ⓘ আগে এখানে চাবিওয়ালাই খুলতেন — ওয়েব যাঁকে ফেরায়, ফোনে তিনি।
+         */
+        $this->assertFalse($this->phone($keeper, 'GET', '/api/v1/credit-control/customers/'.$this->late->public_id)->json('may_lift'));
+        $this->phone($keeper, 'POST', '/api/v1/credit-control/customers/'.$this->late->public_id.'/lift-block', ['reason' => 'ঠিক আছে'])
+            ->assertForbidden();
+        $this->assertTrue($this->late->fresh()->isCreditBlocked(), '⛔ কেবল সম্পাদনার চাবিতে ফোন থেকে বন্ধ খুলল।');
+
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'customer', 'action' => 'credit_limit', 'threshold_amount' => null, 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => \App\Models\ApprovalFlowStep::BY_USER, 'approver_id' => $keeper->id]);
         $this->phone($keeper, 'POST', '/api/v1/credit-control/customers/'.$this->late->public_id.'/lift-block', ['reason' => 'ঠিক আছে'])
             ->assertOk();
-        $this->assertFalse($this->late->fresh()->isCreditBlocked(), '⛔ হাতে বসানো বন্ধ চাবিওয়ালা খুলতে পারলেন না।');
+        $this->assertFalse($this->late->fresh()->isCreditBlocked(), '⛔ সীমার সইকারী হাতে বসানো বন্ধ খুলতে পারলেন না।');
     }
 
     public function test_a_plain_number_is_no_address_and_a_switched_off_phone_is_told_so(): void

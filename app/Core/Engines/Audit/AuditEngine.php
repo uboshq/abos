@@ -8,10 +8,27 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
+use App\Models\DocumentDelivery;
 use App\Models\ExportLog;
 use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
+use App\Models\NoticeAck;
+use App\Models\NoticeDismissal;
+use App\Models\NoticeReminder;
+use App\Models\NoticeTarget;
+use App\Models\NoticeVersion;
 use App\Models\Notification;
+use App\Models\NotificationAuditLog;
+use App\Models\NotificationDeliveryAttempt;
+use App\Models\NotificationDigest;
+use App\Models\NotificationEvent;
+use App\Models\NotificationJob;
+use App\Models\NotificationProviderEvent;
+use App\Models\NotificationRuleVersion;
+use App\Models\NotificationSubscription;
+use App\Models\NotificationSuppression;
+use App\Models\NotificationTemplateVersion;
+use App\Models\RecentPaper;
 use App\Models\SavedView;
 use App\Models\SyncChange;
 use App\Models\SyncConflict;
@@ -115,6 +132,52 @@ final class AuditEngine
          * "কে কখন খবরটা পড়েছেন" নিরীক্ষার প্রশ্ন নয়।
          */
         Notification::class => 'an echo of an event that is already audited where it happened',
+        NotificationEvent::class => 'the shared body of that same echo — the event behind it is audited where it happened',
+
+        /*
+         * বিজ্ঞপ্তির যন্ত্রের খাতা — ১৭ অক্টোবর ২০২৬।
+         *
+         * ⓘ প্রতিটা নিজেই একটা লগ: একবার লেখা, বা কেবল যন্ত্র বদলায়
+         * (কিউয়ের অবস্থা, চেষ্টা, প্রোভাইডারের ফিরতি খবর, আটকানোর কারণ,
+         * সারসংক্ষেপ চিঠি)। ⛔ অডিট বসালে প্রতিটা খবরে কয়েকটা বাড়তি সারি
+         * জমত, আর আসল বদলগুলো চাপা পড়ত — SyncDevice-এর একই যুক্তি।
+         *
+         * ⭐ মানুষের যে কাজগুলো এখানে ঘটে — হাতে আবার পাঠানো, বাতিল,
+         * টেমপ্লেট প্রকাশ, পুশ চালু-বন্ধ — সেগুলো notification_audit_logs-এ
+         * লেখা হয় (NotificationAudit), আর টেমপ্লেট, নিয়ম, মাধ্যম নিজেরা অডিটেড।
+         *
+         * ⓘ NotificationPreference বাদ পড়েনি, অডিট পেয়েছে: ছুটির দায়িত্ব
+         * (delegate_user_id) একজনের সব খবরের কপি আরেকজনের কাছে পাঠায়,
+         * তাই "কে কবে কাকে দিল" নিরীক্ষার প্রশ্ন।
+         *
+         * ⓘ তালিকাটা EveryChangeableRowRemembersWhoChangedItTest-এর
+         * EXEMPT-এর সাথে মেলে — দুইটা তালিকা, একই সিদ্ধান্ত।
+         */
+        NotificationAuditLog::class => 'the notification audit journal itself — auditing it would write every row twice',
+        NotificationJob::class => 'the delivery queue: a machine state that moves on every attempt; human retries and cancels are in notification_audit_logs',
+        NotificationDeliveryAttempt::class => 'a delivery log, written once and never edited',
+        NotificationProviderEvent::class => 'a provider callback log, written once and never edited',
+        NotificationSuppression::class => 'a machine log of why a message was held back, written once',
+        NotificationDigest::class => 'a machine-written summary letter; its items are already their own notifications',
+        NotificationRuleVersion::class => 'a frozen snapshot of an audited rule — it is the history, never edited',
+        NotificationTemplateVersion::class => 'a frozen snapshot of an audited template — a change is a new version, never an edit',
+        NotificationSubscription::class => 'one person\'s own browser push handle; subscribe and unsubscribe are written to notification_audit_logs',
+
+        /*
+         * নোটিশের ঘটনা-সারি — বসে, নয় বসে না; কেউ সম্পাদনা করে না।
+         * ⓘ নোটিশ নিজে (Notice) অডিটেড।
+         */
+        NoticeAck::class => 'the signature row itself, with IP and device — written once, never edited',
+        NoticeTarget::class => 'a target key, replaced whole on save, never edited; the notice itself is audited',
+        NoticeVersion::class => 'a frozen copy of a notice as published — the history itself, never edited',
+        NoticeReminder::class => 'a machine count of reminders sent, not a human decision',
+        NoticeDismissal::class => 'one person hiding a notice from their own view — a convenience, not business data',
+
+        /*
+         * কাগজ বেরোনোর খাতা আর শেষ খোলা কাগজ।
+         */
+        DocumentDelivery::class => 'a journal of its own: each row is one print, download, share or open, never edited',
+        RecentPaper::class => 'a private convenience like SavedView — it only remembers which paper a person last opened',
 
         /*
          * খতিয়ান ও স্টকের চলাচল — দুইটাই append-only, কখনো সম্পাদনা

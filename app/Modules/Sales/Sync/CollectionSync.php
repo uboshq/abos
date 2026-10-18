@@ -200,12 +200,21 @@ final class CollectionSync implements SyncsToDevices
             'narration' => $payload['narration'] ?? null,
         ];
 
-        $check = Validator::make($data, [
+        $check = Validator::make([...$data, 'allocations' => $payload['allocations'] ?? []], [
             'trx_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'amount' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
             'instrument' => ['nullable', 'string', 'max:32'],
             'instrument_no' => ['nullable', 'string', 'max:64'],
             'narration' => ['nullable', 'string', 'max:500'],
+            /*
+             * ⛔ বণ্টনের অঙ্কও একই সাধারণ দশমিক — "1e3" `is_numeric` পেরিয়ে সেবার bccomp-এ ভাঙত, আর অ্যারে "Array to string"-এ;
+             * দুটোই অপ্রত্যাশিত ভাঙন, তাই উত্তরহীন হয়ে চিরকাল আবার যেত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+             * [[ThePhoneReceiptTookAnyDateAndAnyNumberTest]])। ⓘ ওয়েবের নিয়মও সাধারণ দশমিক।
+             */
+            'allocations' => ['nullable', 'array', 'max:200'],
+            'allocations.*' => ['array'],
+            'allocations.*.invoiceId' => ['required', 'string', 'max:64'],
+            'allocations.*.amount' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
         ]);
 
         if ($check->fails()) {

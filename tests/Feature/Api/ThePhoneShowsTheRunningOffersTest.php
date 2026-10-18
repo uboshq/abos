@@ -143,16 +143,15 @@ final class ThePhoneShowsTheRunningOffersTest extends TestCase
             '⛔ অন্যের দোকানের নাম বিক্রয়কর্মীর ফোনে।');
     }
 
-    public function test_without_the_key_or_with_promotion_off_it_says_so(): void
+    public function test_without_the_key_it_refuses_off_in_the_branch_it_says_so_off_in_the_company_it_refuses(): void
     {
         $this->offer('ANY');
         $stranger = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
         $stranger->companies()->attach($this->company, ['is_active' => true]);
         $this->phone($stranger)->assertForbidden();
 
-        // ⓘ এই শাখায় প্রচার বন্ধ — অফার নেই, কারণসহ
-        // ⭐ এখন ফোনের দরজাই বন্ধ (৪০৩ module_off), ওয়েবের মতো — আগে দরজা খুলে কেবল "enabled: false" বলত, কারণ ফোন শাখার
-        // সুইচ পড়ত না ([[PhoneModules::isOn()]]; ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        // ⓘ এই শাখায় প্রচার বন্ধ — চালানের একই সুইচ ([[PromotionSalesOffers::enabled()]]); অফার নেই, কারণসহ
+        // ⭐ ২০০ আর enabled:false, ৪০৩ নয় — ফোন এটা পড়ে শান্ত বার্তা দেখায় ([[PhoneModules::SAYS_ITS_BRANCH_SWITCH_ITSELF]]; fe, ১৫ অক্টোবর ২০২৬)
         // ⓘ শাখাটা কোম্পানির নিজের — আগের ফোন-ডাক প্রসঙ্গটা অপরিচিতের (শাখাহীন) করে রেখে গেছে
         $branch = (int) $this->company->defaultBranch()?->id;
         $owner = $this->owner->fresh();
@@ -160,7 +159,7 @@ final class ThePhoneShowsTheRunningOffersTest extends TestCase
         BranchModule::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $branch, 'module' => 'promotion', 'is_enabled' => false,
         ]);
-        $this->phone($owner)->assertForbidden()->assertJsonPath('reason', PhoneModules::REASON);
+        $this->phone($owner)->assertOk()->assertJsonPath('enabled', false)->assertJsonPath('rows', []);
 
         // ⓘ কোম্পানিতে প্রচার বন্ধ হলে ফোনের দরজাই বন্ধ — মডিউলের সুইচ ([[PhoneModules::isOn()]])
         app(SettingsService::class)->set('promotion.enabled', false);

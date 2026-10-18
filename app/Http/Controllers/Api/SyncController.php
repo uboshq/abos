@@ -29,6 +29,9 @@ use Illuminate\Http\Request;
  */
 class SyncController extends Controller
 {
+    /** একবারের পুশে সর্বোচ্চ বদল — আজকের ফোনের ৫০-এর চারগুণ ([[push()]]) */
+    public const MAX_CHANGES_PER_PUSH = 200;
+
     public function __construct(
         private readonly SyncService $sync,
         private readonly SyncRegistry $registry,
@@ -79,6 +82,10 @@ class SyncController extends Controller
             ], 404);
         }
 
+        // ⛔ বন্ধ মডিউলের সিঙ্কও বন্ধ — কোম্পানির বা এই শাখার সুইচে; আগে মেনু লুকাত, অথচ পুশ-পুল চলত (Api/Sync নিরীক্ষা,
+        // ১৪ অক্টোবর ২০২৬; [[ASwitchedOffModuleStillSyncedTest]])
+        app(PhoneModules::class)->refuseUnlessReachable($module);
+
         $this->sync->register($user, $deviceId, $request->header('X-App-Version'), $request->header('X-Platform'));
 
         /*
@@ -112,6 +119,17 @@ class SyncController extends Controller
             ], 422);
         }
 
+        /*
+         * ⛔ একবারের পুশে সীমা — প্রতিটা সারি একটা খোঁজা, এক-দুটো লেখা আর একটা লেনদেন; সীমা ছাড়া একটা টোকেন একবারে
+         * হাজারো সারি পাঠিয়ে PHP আর ডাটাবেজ আটকে রাখতে পারত, থ্রটল গোনে অনুরোধ, সারি নয় (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+         * [[OnePushCarriedTenThousandChangesTest]])। ⓘ আজকের ফোন ৫০টা করে পাঠায় (`AppConfig.syncBatchSize`)।
+         */
+        if (count($rows) > self::MAX_CHANGES_PER_PUSH) {
+            return response()->json([
+                'message' => __('sync.too_many_changes', ['max' => self::MAX_CHANGES_PER_PUSH]),
+            ], 422);
+        }
+
         return response()->json([
             'outcomes' => $this->sync->push($user, $deviceId, $module, $rows),
         ]);
@@ -136,6 +154,10 @@ class SyncController extends Controller
                 'message' => __('sync.module_unknown', ['module' => $module]),
             ], 404);
         }
+
+        // ⛔ বন্ধ মডিউলের সিঙ্কও বন্ধ — কোম্পানির বা এই শাখার সুইচে; আগে মেনু লুকাত, অথচ পুশ-পুল চলত (Api/Sync নিরীক্ষা,
+        // ১৪ অক্টোবর ২০২৬; [[ASwitchedOffModuleStillSyncedTest]])
+        app(PhoneModules::class)->refuseUnlessReachable($module);
 
         $this->sync->register($user, $deviceId, $request->header('X-App-Version'), $request->header('X-Platform'));
 
@@ -178,6 +200,10 @@ class SyncController extends Controller
                 'message' => __('sync.module_unknown', ['module' => $module]),
             ], 404);
         }
+
+        // ⛔ বন্ধ মডিউলের সিঙ্কও বন্ধ — কোম্পানির বা এই শাখার সুইচে; আগে মেনু লুকাত, অথচ পুশ-পুল চলত (Api/Sync নিরীক্ষা,
+        // ১৪ অক্টোবর ২০২৬; [[ASwitchedOffModuleStillSyncedTest]])
+        app(PhoneModules::class)->refuseUnlessReachable($module);
 
         $this->sync->recordSuccessfulPull($deviceId, $module, $user);
 

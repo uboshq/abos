@@ -85,4 +85,5 @@ return [
     'profit_share_already_used' => 'Part of this profit has already been withdrawn or capitalised: undo that first, then cancel the declaration.',
     // Finance line review, 13 Oct 2026 — bank facilities
     'cc_opening_drawn_lives_in_the_bank' => 'A cash credit\'s drawn money lives in its bank account\'s balance — entering it here would count it twice and double the interest. Leave this at zero and put today\'s drawn amount in the bank account\'s opening balance.',
+    'phone_unknown_reference' => 'This could not be found any more - fetch the list again. It may belong to another branch, or it has changed meanwhile.',
 ];

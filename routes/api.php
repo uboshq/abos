@@ -92,7 +92,9 @@ Route::prefix('v1/auth')
              * একই চার পাহারা: আছে, মেয়াদ আছে, ক্ষমতা `refresh`, কর্মী ([[AuthController::refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
              * ⚠️ `auth:sanctum` এখানে নয়: Laravel সেটা অগ্রাধিকারে সবার আগে চালায়, তাই body-র টোকেন দেখার সুযোগই থাকত না।
              */
-            ->middleware(['throttle:30,1,api-token'])
+            // ⛔ প্রতি নবায়ন-টোকেনে, IP-তে নয় — এক অফিসের বা এক অপারেটরের NAT-এর সব ফোন মিনিটে মোট ৩০ পেত, সকালের ভিড়ে
+            // কেউ কেউ ৪২৯ পেয়ে "সেশন শেষ" দেখতেন (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ARefreshWasCountedPerOfficeNotPerPhoneTest]])
+            ->middleware(['throttle:refresh'])
             ->name('refresh');
 
         Route::post('/logout', [AuthController::class, 'logout'])
@@ -305,6 +307,15 @@ Route::prefix('v1')
         Route::get('/documents/{type}/{id}/pdf', [DocumentApiController::class, 'pdf'])->name('documents.pdf');
         Route::get('/documents/{type}/{id}/papers', [DocumentApiController::class, 'papers'])->name('documents.papers');
         Route::get('/reports/{slug}/export', ReportExportApiController::class)->name('reports.export');
+
+        /*
+         * ⭐ লেনদেনের তালিকা আর পাতা, ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperApiController]])। ⚠️ `can:` নেই,
+         * ইচ্ছা করে: ধরন সতেরো রকম, প্রতিটার চাবি ওয়েবের তালিকার নিজের ([[PhonePaper::permission()]]), দরজা একটাই।
+         */
+        Route::get('/papers/{key}', [\App\Http\Controllers\Api\PhonePaperApiController::class, 'index'])
+            ->where('key', '[a-z_]+')->name('papers.index');
+        Route::get('/papers/{key}/{id}', [\App\Http\Controllers\Api\PhonePaperApiController::class, 'show'])
+            ->where('key', '[a-z_]+')->name('papers.show');
     });
 
 Route::prefix('v1')

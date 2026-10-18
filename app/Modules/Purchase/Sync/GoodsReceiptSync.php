@@ -92,6 +92,21 @@ final class GoodsReceiptSync implements SyncsToDevices
         $payload = $change->payload();
 
         /*
+         * ⛔ ওয়েবের একই নিয়ম — তারিখ আজকের পরে নয় (PurchaseReceiptRequest), চালান নম্বর ৬৪ অক্ষর, পরিমাণ সাধারণ দশমিক
+         * (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[ThePhoneReceiptTookAnyDateAndAnyNumberTest]])। ⚠️ আগে "+1 year" ভবিষ্যতের রসিদ
+         * বসাত, "abc" আর "1e3" অপ্রত্যাশিত ভাঙনে উত্তরহীন থেকে চিরকাল আবার যেত। ⓘ এখন কারণসহ ফেরত ([[SyncService::applyOne()]])।
+         */
+        \Illuminate\Support\Facades\Validator::make($payload, [
+            'orderId' => ['required', 'string', 'max:64'],
+            'receivedOn' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'challanNo' => ['nullable', 'string', 'max:64'],
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*' => ['array'],
+            'lines.*.productId' => ['required', 'string', 'max:64'],
+            'lines.*.receivedQty' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+        ])->validate();
+
+        /*
          * ⓘ বাইরের কী ধরে আদেশটা — ফোন কখনো ভেতরের ক্রমিক `id` দেখে না।
          */
         $order = PurchaseOrder::query()
@@ -135,16 +150,25 @@ final class GoodsReceiptSync implements SyncsToDevices
              * বদলে দেওয়া ঠেলা ক্রয়মূল্য বদলে দিতে পারত, আর ঐ সংখ্যাটা
              * সরাসরি মজুদের স্তরে বসে।
              */
-            $onOrder = $order->lines->firstWhere('product_id', $product->id);
-
-            if ($onOrder === null) {
-                throw new SyncRejection(__('purchase::sync.product_not_on_order'));
-            }
-
             $qty = (string) ($row['receivedQty'] ?? '0');
 
             if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
                 throw new SyncRejection(__('purchase::sync.receipt_needs_qty'));
+            }
+
+            /*
+             * ⛔ একই পণ্য আদেশের দুই সারিতে থাকলে যে সারিতে এখনো জায়গা আছে — আগে সবসময় প্রথম সারি, তাই সেটা ভরে গেলে ফোন থেকে
+             * দ্বিতীয় সারির মাল কোনোদিন নেওয়া যেত না, "আদেশের বেশি" বলে থামত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬;
+             * [[ThePhoneCouldNotReceiveTheSecondLineTest]])। ⓘ পুরোটা ধরে এমন সারি আগে, নইলে জায়গা থাকা প্রথমটা, নইলে প্রথমটাই
+             * (সীমার পাহারা তখন কারণসহ থামায়)।
+             */
+            $candidates = $order->lines->where('product_id', $product->id)->values();
+            $onOrder = $candidates->first(fn ($l) => bccomp($l->pendingQty(), $qty, 4) >= 0)
+                ?? $candidates->first(fn ($l) => bccomp($l->pendingQty(), '0', 4) > 0)
+                ?? $candidates->first();
+
+            if ($onOrder === null) {
+                throw new SyncRejection(__('purchase::sync.product_not_on_order'));
             }
 
             $lines[] = [

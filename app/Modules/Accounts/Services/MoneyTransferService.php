@@ -602,11 +602,24 @@ final class MoneyTransferService
 
     private function assertMayCancel(MoneyTransfer $transfer): void
     {
-        if (! $transfer->isConfirmed()) {
-            return;
-        }
-
         $user = auth()->user();
+
+        /*
+         * ⛔ নেওয়ার আগে বাতিল কেবল পাঠানো মানুষ (যিনি লিখলেন বা দিলেন), বা `accounts.transfer.manage` চাবি — maker-checker
+         * (মালিক, ১৪ অক্টোবর ২০২৬; a5-এর পর্যালোচনা, fe, ১৭ অক্টোবর ২০২৬)। ⚠️ আগে নিশ্চিত না হওয়া যেকোনো হস্তান্তর যে কেউ বাতিল
+         * করতে পারতেন — অন্যের পাঠানো টাকা পথ থেকে ফিরিয়ে আনা। ⓘ super admin-এর ছাড় আগের মতো।
+         */
+        if (! $transfer->isConfirmed()) {
+            if ($user === null || ($user instanceof User && $this->isSuperAdmin($user))
+                || in_array((int) $user->id, array_map('intval', array_filter([$transfer->created_by, $transfer->given_by])), true)
+                || $user->can('accounts.transfer.manage')) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_cancel_only_sender'),
+            ]);
+        }
 
         if ($user instanceof User && $this->isSuperAdmin($user)) {
             return;

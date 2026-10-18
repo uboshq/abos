@@ -84,7 +84,7 @@ class CreditProfileController extends Controller
                 ->with(['requester', 'approval'])->latest('id')->limit(10)->get(),
             'canRequest' => (bool) $request->user()?->can('credit_control.request_limit'),
             // ⓘ চেক ফেরতের বন্ধ খোলার ঘর কেবল মালিকের পর্দায়; পাহারা সার্ভারে ([[CustomerService::clearCreditBlock()]])
-            'mayLift' => $customer->isCreditBlocked() && (bool) $request->user()?->can('update', $customer)
+            'mayLift' => $customer->isCreditBlocked() && (bool) $request->user()?->can('liftCreditBlock', $customer)
                 && ($customer->credit_block_kind !== Customer::BLOCK_BOUNCED_CHEQUE || CustomerService::isSuperAdmin($request->user())),
         ]);
     }

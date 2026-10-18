@@ -55,8 +55,14 @@ class AuditController extends Controller implements HasMiddleware
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '>=', $d))
             ->when($this->readDate($request->query('to')),
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '<=', $d))
+            /*
+             * ⚠️ MariaDB/MySQL-এ LIKE-এর পালানোর অক্ষর `\` — ec, Governance লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+             * আগে `App\Modules\Sales\%` বসত: `\M`→`M`, আর `\%` হয়ে যেত আক্ষরিক `%`, তাই কোনো সারিই মিলত না।
+             * ⓘ এখন প্রতিটা `\` দ্বিগুণ, আর শেষের `%` সত্যিই "বাকি যা-ই হোক"।
+             */
             ->when($request->query('module'), fn (Builder $q, $code) => $q->where(
-                'auditable_type', 'like', 'App\\Modules\\'.str_replace('_', '', ucwords((string) $code, '_')).'\\%'))
+                'auditable_type', 'like',
+                str_replace('\\', '\\\\', 'App\\Modules\\'.str_replace('_', '', ucwords((string) $code, '_')).'\\').'%'))
             ->when($request->query('q'), function (Builder $q, $term) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $term)).'%';
 

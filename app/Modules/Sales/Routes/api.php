@@ -60,7 +60,8 @@ Route::prefix('v1/sales')
         Route::get('/direct/setup', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'setup'])->name('direct.setup');
         Route::get('/direct/free-allowed', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'freeAllowed'])->name('direct.free_allowed');
         Route::post('/direct/overview', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'overview'])->name('direct.overview');
-        // ⛔ একই বিক্রি একবারই — ফোনের চাবিতে ([[RemembersAPhoneWrite]]; ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
+        // ⛔ একই বিক্রি একবারই — ফোনের চাবিতে ([[RemembersAPhoneWrite]]; ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬; Api/Sync নিরীক্ষার
+        // [[TheMainCounterNoLongerPaysAFareOnANewSaleTest::test_the_same_key_sells_once_at_the_phone_counter]] একই কথা মাপে)
         Route::post('/direct', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('direct.store');
         // ⭐ কাউন্টারের বাকি বোতাম — খসড়া খোলা আর কারণসহ বাতিল, ওয়েবের একই সেবা (মালিক, ৪ অক্টোবর ২০২৬)
         Route::get('/direct/drafts', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'drafts'])->name('direct.drafts');
@@ -124,6 +125,9 @@ Route::prefix('v1/sales')
         Route::put('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'update'])->whereUuid('id')->name('lead.update');
 
         // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর; ওয়েবের একই সেবা ও যাচাই ([[SalesQuotationApiController]])
+        // ⭐ তুলনা আর সংস্করণ — `{id}`-এর আগে (মালিক, ১৭ অক্টোবর ২০২৬; [[QuotationCompareApiController]])
+        Route::get('/quotations/compare', [\App\Modules\Sales\Http\Controllers\QuotationCompareApiController::class, 'compare'])->name('quotation.compare');
+        Route::get('/quotations/revisions', [\App\Modules\Sales\Http\Controllers\QuotationCompareApiController::class, 'revisions'])->name('quotation.revisions');
         Route::get('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'index'])->name('quotation.index');
         Route::post('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('quotation.store');
         Route::get('/quotations/{id}', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'show'])->whereUuid('id')->name('quotation.show');

@@ -75,27 +75,37 @@ final class TheAdjustmentScreenAcceptedItsOwnCountTest extends TestCase
         $this->assertSame($rows + 2, $this->adjustmentRows());
     }
 
-    /** ⓘ একই মানুষ, চাবি পেলে — আজকের মতোই সাথে সাথে (ছক বন্ধে) */
-    public function test_the_same_storekeeper_given_the_key_settles_at_once_as_today(): void
+    /**
+     * ⛔ একই মানুষ, মেনে নেওয়ার চাবি পেলেও — নিজের গোনা নিজে মানেন না; কাগজ খসড়ায় থাকে, অন্যজন মানলে খাতা বদলায়
+     * (মালিকের maker-checker নিয়ম, ১৪ অক্টোবর ২০২৬; fe, ১৭ অক্টোবর ২০২৬; [[MakerChecker]])। ⓘ আগে এখানে "সাথে সাথে বসে" দাবি ছিল।
+     */
+    public function test_the_same_storekeeper_given_the_key_still_waits_for_another_hand(): void
     {
         $storekeeper = $this->storekeeper();
-        $first = $this->stocked('40');
-
-        $this->actingAs($storekeeper)->post(route('inventory.stock.adjust.store'), $this->adjustment($first, '31'));
-        $this->assertOnHand($first, '40', 'প্রস্তুতি: চাবি ছাড়া অপেক্ষা করে।');
-
         $storekeeper->givePermissionTo('inventory.count.approve');
-        $second = $this->stocked('40');
+        $product = $this->stocked('40');
         $rows = $this->adjustmentRows();
 
         $this->actingAs($storekeeper->fresh())
             ->from(route('inventory.stock.adjust'))
-            ->post(route('inventory.stock.adjust.store'), $this->adjustment($second, '31'))
+            ->post(route('inventory.stock.adjust.store'), $this->adjustment($product, '31'))
             ->assertSessionHasNoErrors();
 
-        $this->assertOnHand($second, '31', '⛔ মেনে নেওয়ার চাবি থাকলেও সমন্বয় সাথে সাথে হলো না।');
-        $this->assertSame($rows + 2, $this->adjustmentRows());
-        $this->assertSame(DocumentStatus::CONFIRMED, StockCount::query()->latest('id')->firstOrFail()->status);
+        $paper = StockCount::query()->latest('id')->firstOrFail();
+        $this->assertSame(DocumentStatus::DRAFT, $paper->status, '⛔ চাবিওয়ালা গুদামের লোক নিজের গোনা নিজেই মেনে নিলেন।');
+        $this->assertOnHand($product, '40', '⛔ নিজের গোনায় খাতা নড়ল।');
+        $this->assertFalse($storekeeper->fresh()->can('approve', $paper), '⛔ নিজের গোনায় "মেনে নিন" খোলা।');
+
+        $this->actingAs($storekeeper->fresh())
+            ->post(route('inventory.count.approve', $paper), ['reason_code_id' => $this->reason()->id])
+            ->assertForbidden();
+
+        // ⓘ অন্যজন (মালিক) মানলে তবেই
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail())
+            ->post(route('inventory.count.approve', $paper), ['reason_code_id' => $this->reason()->id])
+            ->assertSessionHasNoErrors();
+        $this->assertOnHand($product, '31', '⛔ অন্যজন মেনে নেওয়ার পরেও খাতা বদলায়নি।');
+        $this->assertSame($rows + 2, $this->adjustmentRows(), '⛔ ঘাটতির দুই সারি (ক্ষতি আর মজুদ) খাতায় ওঠেনি।');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────

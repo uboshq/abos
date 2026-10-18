@@ -110,6 +110,24 @@ final class TheFieldQuotesAPriceOnThePhoneTest extends TestCase
     }
 
     /** @return array<string, mixed> */
+    /**
+     * ⛔ লেখার চাবিতেই "লিখে সাথে সাথে জমা" হত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[SalesQuotationApiController::store()]])।
+     *
+     * ⚠️ জমার নিজের দরজা `sales.quotation.update` চায় (ওয়েবেও), কিন্তু তৈরির সাথে `submit:true` কেবল লেখার চাবি দেখত — আর ছক
+     * না থাকলে সেবা নিজে অনুমোদিত বসাত। ⭐ এখন জমার চাবি ছাড়া ৪০৩, কিছুই বসে না; চাবি থাকলে আগের মতো।
+     */
+    public function test_creating_and_submitting_at_once_needs_the_submit_key(): void
+    {
+        $writer = $this->staff(['sales.quotation.view', 'sales.quotation.create']);
+        Sanctum::actingAs($writer, [AuthController::APP]);
+        $before = SalesQuotation::query()->count();
+
+        $this->postJson('/api/v1/sales/quotations', $this->body(submit: true))->assertForbidden();
+        $this->assertSame($before, SalesQuotation::query()->count(), '⛔ জমার চাবি ছাড়া দরপত্র বসল');
+
+        $this->postJson('/api/v1/sales/quotations', $this->body())->assertCreated();
+    }
+
     private function body(?string $rate = null, bool $submit = false): array
     {
         return [

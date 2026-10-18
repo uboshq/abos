@@ -487,6 +487,28 @@ final class ModuleDefinition
          * @var array<string, class-string<ReportFilterSource>>
          */
         public readonly array $reportFilters = [],
+
+        /**
+         * ফোনের নিজের পর্দার লেনদেন-তালিকা — প্রতিটা একটা [[PhonePaper]] (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])।
+         *
+         * ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var list<class-string<\App\Core\Phone\PhonePaper>>
+         */
+        public readonly array $phonePapers = [],
+
+        /**
+         * যে ঘর মডিউলের নিজের পর্দায় গোটা অংশের `@can`-এ ঢাকা, কিন্তু সাধারণ পর্দায় (অডিট, সময়যন্ত্র, তাদের CSV) ঘর ধরে ঢাকতে হয়।
+         *
+         * ⛔ বেতনের অঙ্ক (`amount`, `gross`, `net`) অডিটের পর্দায় `hr.salary.view` ছাড়াই খোলা ছিল — নিরীক্ষকের হাতে কেবল
+         * `governance.audit.view` (Governance অডিট, ১৮ অক্টোবর ২০২৬)। ⓘ `sensitive_fields`-এ নয়, কারণ ঐ নামগুলো এত সাধারণ যে
+         * [[NoSensitiveFieldIsPrintedInTheOpenTest]] প্রতিটা বিলের পর্দায় ওদের "পেত"; [[FieldSecurity::permissionFor()]] দুইটাই পড়ে।
+         *
+         * ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<class-string, array<string, string>>
+         */
+        public readonly array $sectionGuardedFields = [],
     ) {}
 
     /**
@@ -691,7 +713,33 @@ final class ModuleDefinition
              */
             essential: (bool) ($raw['essential'] ?? false),
             reportFilters: self::validateReportFilters($raw['report_filters'] ?? [], $path),
+            phonePapers: self::validatePhonePapers($raw['phone_papers'] ?? [], $path),
+            // ⓘ একই যাচাই — অচেনা ক্লাস বা এই মডিউলের নয় এমন চাবি বুটেই ভাঙে
+            sectionGuardedFields: self::validateSensitiveFields(
+                $raw['section_guarded_fields'] ?? [],
+                $raw['permissions'] ?? [],
+                $path,
+            ),
         );
+    }
+
+    /**
+     * ফোনের লেনদেন-তালিকার ধরনগুলো সত্যিই আছে কি না — বুট-টাইমে, পথসহ; নইলে ফোনে একটা ধরন নীরবে ৪০৪ দিত।
+     *
+     * @param  array<int, mixed>  $papers
+     * @return list<class-string<\App\Core\Phone\PhonePaper>>
+     */
+    private static function validatePhonePapers(array $papers, string $path): array
+    {
+        foreach ($papers as $class) {
+            if (! is_string($class) || ! class_exists($class) || ! is_subclass_of($class, \App\Core\Phone\PhonePaper::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: phone paper '".(is_string($class) ? $class : gettype($class))."' must be a class extending PhonePaper."
+                );
+            }
+        }
+
+        return array_values($papers);
     }
 
     /**

@@ -57,6 +57,9 @@ final class ReportExportApiController extends Controller
      */
     public const MAX_ROWS = 100000;
 
+    /** PDF-এর সীমা — স্মৃতিতে বানানো পাতা ([[__invoke()]]) */
+    public const MAX_PDF_ROWS = 3000;
+
     public function __construct(
         private readonly ReportEngine $reports,
         private readonly ReportApiController $gate,
@@ -80,6 +83,17 @@ final class ReportExportApiController extends Controller
         if ((int) ($page['totalRows'] ?? 0) > self::MAX_ROWS) {
             throw ValidationException::withMessages([
                 'from' => __('validation.max.numeric', ['attribute' => 'rows', 'max' => self::MAX_ROWS]),
+            ]);
+        }
+
+        /*
+         * ⛔ PDF আলাদা, ছোট সীমায় — mPDF পুরো পাতা স্মৃতিতে বানায়; এক লাখ সারির PDF একটা অনুরোধেই PHP-র স্মৃতি আর কর্মী আটকাত,
+         * আর থ্রটল মিনিটে তিনশো দিত (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬; [[AHundredThousandRowPdfFromThePhoneTest]])। ⓘ বড় হলে
+         * তারিখ ছোট করুন, বা xlsx/csv — ওগুলো আগের মতো এক লাখ।
+         */
+        if ($format === 'pdf' && (int) ($page['totalRows'] ?? 0) > self::MAX_PDF_ROWS) {
+            throw ValidationException::withMessages([
+                'from' => __('validation.max.numeric', ['attribute' => 'rows', 'max' => self::MAX_PDF_ROWS]),
             ]);
         }
 

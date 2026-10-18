@@ -143,11 +143,24 @@ final class PhoneModules
     }
 
     /**
+     * ⭐ যে দরজা শাখার সুইচ নিজেই বলে — ২০০ আর `enabled: false`, ৪০৩ নয়। ফোনের offers_api.dart (0.4.32, 0.4.33) `enabled`
+     * পড়ে শান্ত "এই শাখায় প্রচার বন্ধ" দেখায়, ৪০৩-এ ভুলের পর্দা (fe, ১৫ অক্টোবর ২০২৬; [[ThePhoneShowsTheRunningOffersTest]])।
+     * ⓘ কোম্পানির সুইচ বন্ধ হলে এদেরও ৪০৩ module_off।
+     *
+     * ⛔ fe-র রায়, ১৭ অক্টোবর ২০২৬ (মেলানোর সময় দুই রায়ের প্রশ্নে): ২০০ আর `enabled: false` থাকে। সব ফোনের অ্যাপ (0.4.32–0.4.35)
+     * `enabled != false` পড়ে শান্ত বার্তা দেখায়, ৪০৩ পেলে ভুলের পর্দা — তাই লাইভের (main a99104b0) ৪০৩ একটা বাগ, এখানেই সারানো।
+     *
+     * @var list<string>
+     */
+    public const SAYS_ITS_BRANCH_SWITCH_ITSELF = ['promotion'];
+
+    /**
      * এই কোম্পানির ফোনের মেনুতে মডিউলটা আছে কি না — ওয়েবে বন্ধ হলে ফোনেও বন্ধ।
      *
+     * @param  bool  $branchToo  এই শাখার সুইচও গোনা হবে কি না ([[SAYS_ITS_BRANCH_SWITCH_ITSELF]] বাদে সবসময়)
      * @param  list<string>|null  $switchedOff  এই শাখায় বন্ধ মডিউলগুলো — null হলে এখনই পড়া হয়
      */
-    public function isOn(string $code, ?array $switchedOff = null): bool
+    public function isOn(string $code, bool $branchToo = true, ?array $switchedOff = null): bool
     {
         $module = $this->registry->get($code);
 
@@ -160,16 +173,14 @@ final class PhoneModules
         }
 
         /*
-         * ⛔ শাখার সুইচও — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
+         * ⛔ এই শাখায় বন্ধ হলে ফোনেও বন্ধ — ওয়েবের একই নিয়ম ([[RefuseSwitchedOffScreens::refuses()]], [[BranchModule]])।
          *
-         * ⓘ ওয়েবের দরজা ([[RefuseSwitchedOffScreens::refuses()]]) আর মেনু শাখার
-         * সারি ([[BranchModule]]) পড়ে, ফোন পড়ত না: "ডিপো ২"-তে বিক্রয় বন্ধ, অথচ
-         * সেখানকার SR ফোন থেকে অর্ডার আর আদায় পাঠাতে পারতেন, ওয়েবে যা ৪০৪।
-         * অপরিহার্য মডিউল শাখাতেও বন্ধ হয় না — দরজার নিয়মটাই।
+         * ⓘ দুই নিরীক্ষা একই ফাঁক আলাদাভাবে ধরেছিল (Api/Sync, ১৪ অক্টোবর; ec-র Core, ১৫ অক্টোবর ২০২৬): ফোন কেবল কোম্পানির
+         * সুইচ দেখত, তাই বিক্রি বন্ধ শাখার বিক্রয়কর্মী ফোন থেকে অর্ডার আর আদায় পাঠাতেন, ওয়েবে যা ৪০৪। অপরিহার্য মডিউল শাখাতেও
+         * বন্ধ হয় না — দরজার নিয়মটাই। ⓘ মেলানো: a4, ১৭ অক্টোবর ২০২৬।
          */
-        $switchedOff ??= BranchModule::switchedOffIn(CompanyContext::branchId());
-
-        if (! $module->essential && in_array($code, $switchedOff, true)) {
+        if ($branchToo && ! $module->essential
+            && in_array($code, $switchedOff ?? BranchModule::switchedOffIn(CompanyContext::branchId()), true)) {
             return false;
         }
 
@@ -177,14 +188,14 @@ final class PhoneModules
     }
 
     /** @return list<string> চালু মডিউলের কোড, রেজিস্ট্রির ক্রমে */
-    public function onCodes(): array
+    public function onCodes(bool $branchToo = true): array
     {
         // ⓘ শাখার বন্ধ তালিকা একবারই পড়া হয়, প্রতিটা মডিউলে নয়
-        $switchedOff = BranchModule::switchedOffIn(CompanyContext::branchId());
+        $switchedOff = $branchToo ? BranchModule::switchedOffIn(CompanyContext::branchId()) : [];
 
         return array_values(array_filter(
             array_keys($this->registry->all()),
-            fn (string $code) => $this->isOn($code, $switchedOff),
+            fn (string $code) => $this->isOn($code, $branchToo, $switchedOff),
         ));
     }
 
@@ -193,15 +204,24 @@ final class PhoneModules
      *
      * @return list<string>
      */
-    public function reachableCodes(): array
+    public function reachableCodes(bool $branchToo = true): array
     {
         $reach = [];
-        $queue = $this->onCodes();
+        $queue = $this->onCodes($branchToo);
+
+        /*
+         * ⛔ এই শাখায় বন্ধ মডিউল নির্ভরতা ধরেও পৌঁছায় না — Api/Sync নিরীক্ষার শেষ লাল (a4, ১৭ অক্টোবর ২০২৬)। ⓘ ক্রয় ফোনে ডিফল্টে
+         * চালু আর বিক্রয়ের উপর দাঁড়ায়, তাই শাখায় বিক্রি বন্ধ থাকলেও ক্রয়ের ভরসায় বিক্রি "পৌঁছায়" — সিঙ্ক-পুশ ২০০, আর
+         * [[ASwitchedOffModuleStillSyncedTest]] লাল। ⭐ শাখার সুইচ কোম্পানির সুইচের চেয়ে কড়া (মালিক: প্রতিটা শাখা পুরোপুরি আলাদা);
+         * কোম্পানিতে বন্ধ মডিউলের তথ্য নির্ভরতা ধরে আগের মতোই খোলে।
+         */
+        $offHere = $branchToo ? BranchModule::switchedOffIn(CompanyContext::branchId()) : [];
 
         while ($queue !== []) {
             $code = array_shift($queue);
 
-            if (isset($reach[$code])) {
+            // ⓘ অপরিহার্য মডিউল শাখাতেও বন্ধ হয় না — [[isOn()]]-এর একই নিয়ম
+            if (isset($reach[$code]) || (in_array($code, $offHere, true) && ! $this->registry->get($code)?->essential)) {
                 continue;
             }
 
@@ -223,9 +243,9 @@ final class PhoneModules
         ));
     }
 
-    public function isReachable(?string $code): bool
+    public function isReachable(?string $code, bool $branchToo = true): bool
     {
-        return $code !== null && in_array($code, $this->reachableCodes(), true);
+        return $code !== null && in_array($code, $this->reachableCodes($branchToo), true);
     }
 
     /** একটা ক্লাস কোন মডিউলের — নামস্থান ধরে (`App\Modules\Sales\…` → sales)। */
@@ -249,7 +269,8 @@ final class PhoneModules
     public function refuseUnlessReachable(?string $code): void
     {
         /* ⓘ অচেনা কোড এখানে থামে না — দরজার নিজের ৪০৪ ("এমন মডিউল নেই") বলুক */
-        if ($code === null || ! $this->registry->has($code) || $this->isReachable($code)) {
+        if ($code === null || ! $this->registry->has($code)
+            || $this->isReachable($code, ! in_array($code, self::SAYS_ITS_BRANCH_SWITCH_ITSELF, true))) {
             return;
         }
 
