@@ -81,7 +81,7 @@ final class ProductSync implements SyncsToDevices
         $query = Product::query()
             // ⭐ দেখার শাখার — ওয়েবের তালিকার একই নিয়ম (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে অন্য ব্রাঞ্চের … হিসাবে ঢুকেছে"); এই শাখায় বিক্রি হয় এমন পণ্যই ([[Product::scopeSoldInViewedBranch()]])
             ->soldInViewedBranch()
-            ->with(['unit:id,code,name_en,name_bn', 'packs.unit:id,code,name_en,name_bn'])
+            ->with(['unit:id,code,name_en,name_bn,allows_fraction', 'packs.unit:id,code,name_en,name_bn'])
             ->orderBy('updated_at')
             ->orderBy('id')
             ->limit($limit);
@@ -115,6 +115,9 @@ final class ProductSync implements SyncsToDevices
                 'barcode' => $product->barcode,
                 'unitCode' => $product->unit?->code,
                 'unitNameBn' => $product->unit?->name_bn,
+                // ⭐ কেজি-লিটারে দশমিক — ফোনের কাউন্টার এটা দেখে ২.৫ নেয়, নইলে পূর্ণ সংখ্যা (পূর্ণ নিরীক্ষা §৯ ⚠️১০, ১৮ অক্টোবর
+                // ২০২৬)। ⓘ না নিলে ঘরটাই নেই (array_filter) — ফোন তখন পূর্ণ সংখ্যা ধরে, পুরনো সার্ভারের মতো
+                'unitAllowsFraction' => (bool) $product->unit?->allows_fraction,
 
                 /*
                  * বিক্রয়মূল্য — অফলাইনে অর্ডার লেখার সময় এটাই দর হিসেবে
