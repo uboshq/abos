@@ -96,11 +96,12 @@ final class EveryLimitChangeKeepsItsHistoryTest extends TestCase
 
     public function test_a_lowering_and_a_change_of_days_are_written(): void
     {
-        app(CustomerService::class)->update($this->customer->fresh(), ['credit_limit' => '50000', 'credit_days' => 30]);
+        // ⓘ দিন কমানো — বাড়াতে এখন মালিকের সই লাগে (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬); এই দাবির বিষয় ইতিহাসের সারি
+        app(CustomerService::class)->update($this->customer->fresh(), ['credit_limit' => '50000', 'credit_days' => 7]);
 
         $rows = $this->history()->orderBy('field')->get()->keyBy('field');
         $this->assertSame(['credit_days', 'credit_limit'], $rows->keys()->all());
-        $this->assertSame(['15', '30'], [$rows['credit_days']->old_value, $rows['credit_days']->new_value]);
+        $this->assertSame(['15', '7'], [$rows['credit_days']->old_value, $rows['credit_days']->new_value]);
         $this->assertSame(0, bccomp((string) $rows['credit_limit']->new_value, '50000', 4));
         $this->assertNull($rows['credit_limit']->approval_id, 'কমাতে সই লাগে না — সূত্রও নেই।');
         $this->assertSame($this->clerk->id, (int) $rows['credit_limit']->changed_by);
@@ -115,7 +116,7 @@ final class EveryLimitChangeKeepsItsHistoryTest extends TestCase
 
     public function test_a_history_row_cannot_be_changed(): void
     {
-        app(CustomerService::class)->update($this->customer->fresh(), ['credit_days' => 20]);
+        app(CustomerService::class)->update($this->customer->fresh(), ['credit_days' => 10]);
 
         $this->expectException(\RuntimeException::class);
         $this->history()->sole()->update(['new_value' => '99']);

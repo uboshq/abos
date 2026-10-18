@@ -182,6 +182,10 @@ final class TheCreditWallUnderTheFullAuditTest extends TestCase
 
         // ⭐ মালিকের সইয়ে বসে
         $step->forceFill(['approver_id' => $this->owner->id])->save();
+        // ⓘ ইঞ্জিনগুলো ছক মনে রাখে — সইকারী বদলের পরে নতুন করে বানানো (Mac-এর পালা, ১৮ অক্টোবর ২০২৬)
+        app()->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        app()->forgetInstance(\App\Core\Engines\Approval\DocumentApproval::class);
+        app()->forgetInstance(\App\Modules\Customer\Services\CustomerService::class);
         app(ApprovalEngine::class)->approve($ask('300000'), $this->owner);
         $this->assertSame(0, bccomp('300000', (string) $c->fresh()->credit_limit, 4), '⛔ মালিকের সইয়েও সীমা বসল না');
     }

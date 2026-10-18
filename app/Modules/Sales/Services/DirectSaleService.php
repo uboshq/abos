@@ -429,7 +429,11 @@ final class DirectSaleService
              */
             // ⓘ গেট পাসের চালানে বিল এখন খসড়াই — পাকা হয় মাল বেরোলে, একই নম্বরে ([[GoodsIssue::issue()]])
             if (! $atGate) {
-                $invoice = $this->invoices->confirm($invoice, $deposit);
+                // ⛔ D1: বিল পাকা করার দেয়ালেও উৎসের DO নিজেকে গোনে না — DO "বিল হয়েছে" দাগ পায় এর পরে ([[settleSource()]])
+                $invoice = CreditExposure::forSourceDeliveryOrder(
+                    $source instanceof \App\Modules\Sales\Models\DeliveryOrder ? (int) $source->getKey() : null,
+                    fn () => $this->invoices->confirm($invoice, $deposit),
+                );
             }
 
             /* ⭐ ধাপ চ — ইনভয়েস আর চালান একসাথে, আর একই লেনদেনে উৎস "বিল হয়েছে" ([[settleSource()]]) */
@@ -692,12 +696,18 @@ final class DirectSaleService
              * সইয়ের সারিতে দাঁড়াত। মাপ বাঁধা খসড়া বিলের মোট (ছাড়ের পরে), গোনা টাকাসহ; খসড়া নিজেকে গোনে না।
              * ⓘ "খসড়া রাখুন" উপরেই ফিরে গেছে — ওখানে দেয়াল নেই (মালিকের ধারা §৫: টাকা আসতে দেরি হলে খসড়া)।
              */
-            $this->credit->assertRoom(
-                customer: $customer,
-                adding: (string) $invoice->fresh()->total,
-                payingNow: $this->depositTotal($data),
-                exceptInvoiceId: (int) $invoice->id,
-                paper: CreditPaper::of('counter', $invoice),
+            // ⛔ D1 এখানেও: উৎসের DO নিজেকে গোনে না, আর আদেশের যে অংশ এই চালানে, তা "গেছে" (`exceptChallanId`) — নইলে সইয়ের পথে
+            // যাওয়া বিক্রিতে একই টাকা দুবার (Mac-এর পালা, ১৮ অক্টোবর ২০২৬: অবশিষ্ট ৪০ হাজার, কাগজ ৬০ হাজার)
+            CreditExposure::forSourceDeliveryOrder(
+                $source instanceof \App\Modules\Sales\Models\DeliveryOrder ? (int) $source->getKey() : null,
+                fn () => $this->credit->assertRoom(
+                    customer: $customer,
+                    adding: (string) $invoice->fresh()->total,
+                    payingNow: $this->depositTotal($data),
+                    exceptInvoiceId: (int) $invoice->id,
+                    exceptChallanId: (int) $challan->id,
+                    paper: CreditPaper::of('counter', $invoice),
+                ),
             );
 
             /* ⓘ সইয়ের পথে গেলে আর খসড়া নয় — শেষ হয় শেষ সইয়ের পরে। ⭐ পর্দার ছবিটা
@@ -1672,7 +1682,11 @@ final class DirectSaleService
 
             if (! $atGate) {
                 $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
-                $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
+                // ⛔ D1: বিল পাকা করার দেয়ালেও উৎসের DO নিজেকে গোনে না
+                $invoice = CreditExposure::forSourceDeliveryOrder(
+                    $source instanceof \App\Modules\Sales\Models\DeliveryOrder ? (int) $source->getKey() : null,
+                    fn () => $this->invoices->confirm($invoice->fresh(['lines']), $deposit),
+                );
             }
 
             // ⭐ ধাপ চ — সইয়ের পরে পাকা হলেও উৎস একই লেনদেনে "বিল হয়েছে" ([[settleSource()]])
