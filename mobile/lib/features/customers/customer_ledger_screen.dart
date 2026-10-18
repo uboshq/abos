@@ -147,8 +147,39 @@ class _DueHeader extends StatelessWidget {
               Text('কোড ${head.code}',
                   style: const TextStyle(
                       fontSize: 12, color: AppColors.onSurfaceMuted)),
+            // ⭐ হিসাব-বিবরণী — প্রারম্ভিক + মাল − টাকা = সমাপনী (পূর্ণ নিরীক্ষা §৯ ⚠️৭); পুরনো সার্ভার পাঠায় না, তখন নেই
+            if (head.statement case final st?) ...[
+              const Divider(height: AppSpacing.lg),
+              _StatementLine('শুরুর জের', _balanceWords(st.opening), key: const ValueKey('ledger-opening')),
+              _StatementLine('মোট মাল নিয়েছেন', Money.taka(st.debit), key: const ValueKey('ledger-debit')),
+              _StatementLine('মোট টাকা দিয়েছেন', Money.taka(st.credit), key: const ValueKey('ledger-credit')),
+              _StatementLine('শেষের জের', _balanceWords(st.closing), key: const ValueKey('ledger-closing'), bold: true),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// বিবরণীর একটা সারি — বাঁয়ে কথা, ডানে অঙ্ক
+class _StatementLine extends StatelessWidget {
+  const _StatementLine(this.label, this.value, {super.key, this.bold = false});
+
+  final String label;
+  final String value;
+  final bool bold;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w400);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: style)),
+          Text(value, style: style),
+        ],
       ),
     );
   }
@@ -201,6 +232,9 @@ class _Row extends StatelessWidget {
   }
 }
 
+/// বিবরণীর জের — শূন্য হলে "৳০", নইলে "বাকি …" বা "জমা …"
+String _balanceWords(double balance) => balance.abs() < 0.005 ? Money.taka(0) : dueWords(balance);
+
 /// সারির পরে কত দাঁড়াল — "বাকি ৳…" বা "জমা ৳…"
 String dueWords(double balance) {
   if (balance.abs() < 0.005) return 'মিলে গেছে';
@@ -242,6 +276,25 @@ class CustomerLedgerRow {
   final double balance;
 }
 
+/// হিসাব-বিবরণীর চার অঙ্ক — জের ধনাত্মক = বাকি (Dr), ঋণাত্মক = জমা (Cr)
+class LedgerStatement {
+  const LedgerStatement({required this.opening, required this.debit, required this.credit, required this.closing});
+
+  final double opening;
+  final double debit;
+  final double credit;
+  final double closing;
+
+  static LedgerStatement? from(Object? raw) => raw is Map
+      ? LedgerStatement(
+          opening: Money.valueOrZero(raw['opening']),
+          debit: Money.valueOrZero(raw['debit']),
+          credit: Money.valueOrZero(raw['credit']),
+          closing: Money.valueOrZero(raw['closing']),
+        )
+      : null;
+}
+
 class CustomerLedger {
   const CustomerLedger({
     required this.name,
@@ -249,6 +302,7 @@ class CustomerLedger {
     required this.due,
     required this.rows,
     this.nextPage,
+    this.statement,
   });
 
   final String name;
@@ -256,6 +310,7 @@ class CustomerLedger {
   final double due;
   final List<CustomerLedgerRow> rows;
   final int? nextPage;
+  final LedgerStatement? statement;
 }
 
 abstract class CustomerLedgerApi {
@@ -291,6 +346,7 @@ class ServerCustomerLedgerApi implements CustomerLedgerApi {
               ),
       ],
       nextPage: (body['next_page'] as num?)?.toInt(),
+      statement: LedgerStatement.from(body['statement']),
     );
   }
 }
