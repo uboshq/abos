@@ -33,7 +33,7 @@ final class AccountLedgerApiController extends Controller
 
         // ⚠️ গ্রুপের জের সন্তানদের যোগ — তাই জের গোনা হয় পুরো ছকে, ছাঁকা হয় তারপরে
         $accounts = Account::query()->active()->orderBy('code')->get();
-        $balances = $this->ledger->balances($accounts, ViewedBranch::one());
+        $balances = $this->ledger->balances($accounts);
         $byId = $accounts->keyBy('id');
 
         $term = mb_strtolower(trim((string) $request->query('q', '')));
@@ -64,7 +64,7 @@ final class AccountLedgerApiController extends Controller
         $this->authorize('view', $account);
 
         $branch = ViewedBranch::one();
-        $page = $this->ledger->page($account, $branch, (int) $request->query('page', 1));
+        $page = $this->ledger->page($account, (int) $request->query('page', 1));
         $entries = $page['entries'];
 
         return response()->json([

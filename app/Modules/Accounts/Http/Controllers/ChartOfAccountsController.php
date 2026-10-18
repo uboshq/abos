@@ -194,7 +194,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
         /*
          * ⭐ সারি, চলমান জের আর সব পাতার সর্বমোট — ফোনের দরজার একই সেবা ([[AccountLedger::page()]], ১৭ অক্টোবর ২০২৬)।
          */
-        $ledger = app(AccountLedger::class)->page($account, $branch, (int) $request->query('page', 1));
+        $ledger = app(AccountLedger::class)->page($account, (int) $request->query('page', 1));
         $entries = $ledger['entries']->withQueryString();
         $grand = $ledger['grand'];
 
@@ -363,7 +363,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
     private function balancesFor(Collection $accounts): array
     {
         // ⭐ ছকের জের-কলামও হেডারের শাখায় — খাতের পাতার সাথে এক নিয়মে ([[show()]]); হিসাব ফোনের দরজার একই সেবায়
-        return app(AccountLedger::class)->balances($accounts, ViewedBranch::one());
+        return app(AccountLedger::class)->balances($accounts);
     }
 
     /**

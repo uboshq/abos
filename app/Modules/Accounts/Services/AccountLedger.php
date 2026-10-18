@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -24,12 +25,14 @@ final class AccountLedger
     /**
      * এক পাতার সারি (চলমান জেরসহ), আর সব পাতার ডেবিট, ক্রেডিট ও শেষ জের — একই শাখায়।
      *
-     * ⓘ "সব শাখা"-তে `$branch` null = গোটা কোম্পানি ([[ViewedBranch::one()]])।
+     * ⭐ শাখা হেডারে বাছা শাখাই — সেবা নিজে পড়ে, ডাকা জায়গা ভুলতে পারে না (ওয়েব আর ফোন দুটোই; [[EveryLedgerReaderSaysWhetherItShowsOrChecksTest]])।
+     * ⓘ "সব শাখা"-তে null = গোটা কোম্পানি ([[ViewedBranch::one()]])।
      *
      * @return array{entries: LengthAwarePaginator, grand: array{debit: string, credit: string}, closing: string}
      */
-    public function page(Account $account, ?int $branch, int $page): array
+    public function page(Account $account, int $page): array
     {
+        $branch = ViewedBranch::one();
         $page = max(1, $page);
 
         $entries = LedgerEntry::query()
@@ -101,8 +104,9 @@ final class AccountLedger
      * @param  Collection<int, Account>  $accounts
      * @return array<int, string> খাতের id → স্বাভাবিক দিকে ধনাত্মক জের
      */
-    public function balances(Collection $accounts, ?int $branch): array
+    public function balances(Collection $accounts): array
     {
+        $branch = ViewedBranch::one();
         if ($accounts->isEmpty()) {
             return [];
         }
