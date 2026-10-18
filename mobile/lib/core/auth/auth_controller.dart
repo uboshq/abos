@@ -1,3 +1,4 @@
+import '../api_client/once_key.dart';
 import '../printing/paper_files.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -166,6 +167,8 @@ class AuthController extends StateNotifier<AuthState> {
     unawaited(PushService.instance.forget());
     // ⛔ নামানো কাগজ — আগের জনের বিল-চালান পরের জনের ফোনে থাকে না (পূর্ণ নিরীক্ষা §৯ ⚠️১৩, [[PaperFiles]])
     unawaited(PaperFiles.wipe());
+    // ⛔ একবারের চাবিও — পরের জনের কাজ আগের জনের চাবিতে নয় ([[OnceKey.forgetAll]])
+    OnceKey.forgetAll();
     state = const AuthState.signedOut();
   }
 }

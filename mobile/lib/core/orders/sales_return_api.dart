@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
 import '../widgets/confirm_overview_sheet.dart';
 import '../records/customer_record.dart';
@@ -165,8 +166,8 @@ class ServerSalesReturnApi implements SalesReturnApi {
 
   @override
   Future<(String, String)> confirm(String returnId) async {
-    final response = await ApiClient.dio
-        .post<Map<String, dynamic>>('/sales/returns/$returnId/confirm');
+    final response = await OnceKey.of('return-confirm:$returnId').send(() => ApiClient.dio
+        .post<Map<String, dynamic>>('/sales/returns/$returnId/confirm'));
     return (
       response.data?['status']?.toString() ?? '',
       response.data?['notice']?.toString() ?? ''

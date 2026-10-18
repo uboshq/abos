@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client/api_client.dart';
@@ -235,15 +236,15 @@ class ServerDeliveryOrderApi implements DeliveryOrderApi {
 
   @override
   Future<DeliveryOrder> submit(String id) async {
-    final response = await ApiClient.dio.post<Map<String, dynamic>>('$_base/$id/submit');
+    final response = await OnceKey.of('do-submit:$_base:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>('$_base/$id/submit'));
     return DeliveryOrder.fromJson(response.data ?? const {});
   }
 
   @override
   Future<DeliveryOrder> setQuantities(String id, Map<int, int> qtyByLine) async {
-    final response = await ApiClient.dio.post<Map<String, dynamic>>('$_base/$id/approved-quantities', data: {
+    final response = await OnceKey.of('do-quantities:$_base:$id:$qtyByLine').send(() => ApiClient.dio.post<Map<String, dynamic>>('$_base/$id/approved-quantities', data: {
       'lines': {for (final e in qtyByLine.entries) '${e.key}': e.value},
-    });
+    }));
     return DeliveryOrder.fromJson(response.data ?? const {});
   }
 

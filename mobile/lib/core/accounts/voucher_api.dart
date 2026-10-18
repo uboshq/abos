@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
 import '../records/money.dart';
 import '../sync_engine/sync_engine.dart';
@@ -546,8 +547,8 @@ class ServerVoucherApi implements VoucherApi {
 
   @override
   Future<PostAnswer> post(String id, {String? instrumentNo}) async {
-    final r = await ApiClient.dio.post<Map<String, dynamic>>('/accounts/vouchers/$id/post',
-        data: {if ((instrumentNo ?? '').trim().isNotEmpty) 'instrument_no': instrumentNo!.trim()});
+    final r = await OnceKey.of('voucher-post:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>('/accounts/vouchers/$id/post',
+        data: {if ((instrumentNo ?? '').trim().isNotEmpty) 'instrument_no': instrumentNo!.trim()}));
     final body = r.data ?? const <String, dynamic>{};
     final page = body['voucher'];
     return PostAnswer(

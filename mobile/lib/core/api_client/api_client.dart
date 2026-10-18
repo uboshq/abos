@@ -78,7 +78,8 @@ class ApiClient {
           }
           // ⭐ একটা কাজ একবারই — পর্দা [OnceKey.send] দিয়ে পাঠালে এই জোনের প্রতিটা লেখায় চাবি (অডিট ফোন ⚠️১২)
           final once = OnceKey.current;
-          if (once != null && options.method.toUpperCase() == 'POST') {
+          // ⭐ সব লেখায় — POST, PUT, PATCH, DELETE (পূর্ণ নিরীক্ষা §৯ ⚠️৮, ১৮ অক্টোবর ২০২৬); আগে কেবল POST
+          if (once != null && const {'POST', 'PUT', 'PATCH', 'DELETE'}.contains(options.method.toUpperCase())) {
             options.headers['Idempotency-Key'] = once;
           }
           handler.next(options);

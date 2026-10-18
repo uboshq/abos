@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
 
 /// ⭐ বিক্রয়ের ডেস্ক-পাতা আর দলিলের ছাঁচ, ফোনের নিজের পর্দায় — ডিপোর যাচাই, না ছাপা কাগজ, ডেলিভারির কাজ, পাইপলাইন, ছাঁচ (মালিক,
@@ -47,7 +48,7 @@ class ServerSalesDeskApi implements SalesDeskApi {
 
   @override
   Future<void> settlePrint(String id) async {
-    await ApiClient.dio.post<Map<String, dynamic>>('/sales/print-queue/$id/settle');
+    await OnceKey.of('print-settle:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>('/sales/print-queue/$id/settle'));
   }
 
   @override

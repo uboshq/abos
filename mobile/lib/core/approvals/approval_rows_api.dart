@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
 
 /// ⭐ অনুমোদন-ভাগের তিনটা সারি, ফোনের নিজের পর্দায় — সইয়ের ভার, দলিলের অনুমোদনের সারি আর সই কেন্দ্র (মালিক, ১৭ অক্টোবর
@@ -112,19 +113,19 @@ class ServerApprovalRowsApi implements ApprovalRowsApi {
   @override
   Future<Delegation> grant(
       {required String to, required String startsOn, required String endsOn, List<String> modules = const [], String? reason}) async {
-    final response = await ApiClient.dio.post<Map<String, dynamic>>('/approvals/delegations', data: {
+    final response = await OnceKey.of('delegation-grant:$to:$startsOn:$endsOn:${modules.join(',')}').send(() => ApiClient.dio.post<Map<String, dynamic>>('/approvals/delegations', data: {
       'to': to,
       'starts_on': startsOn,
       'ends_on': endsOn,
       'modules': modules,
       if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
-    });
+    }));
     return Delegation(((response.data?['delegation'] as Map?) ?? const {}).cast<String, dynamic>());
   }
 
   @override
   Future<void> revoke(String id) async {
-    await ApiClient.dio.delete<Map<String, dynamic>>('/approvals/delegations/$id');
+    await OnceKey.of('delegation-revoke:$id').send(() => ApiClient.dio.delete<Map<String, dynamic>>('/approvals/delegations/$id'));
   }
 
   @override

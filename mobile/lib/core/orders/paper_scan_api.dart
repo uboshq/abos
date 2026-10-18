@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
 import '../records/money.dart';
 
@@ -172,8 +173,8 @@ class ServerPaperScanApi implements PaperScanApi {
 
   @override
   Future<ScannedPaper> gateOut(String token) async {
-    final response = await ApiClient.dio
-        .post<Map<String, dynamic>>('/sales/scan/$token/gate-out');
+    final response = await OnceKey.of('gate-out:$token').send(() => ApiClient.dio
+        .post<Map<String, dynamic>>('/sales/scan/$token/gate-out'));
     return ScannedPaper.fromJson(response.data ?? const {});
   }
 
@@ -184,7 +185,7 @@ class ServerPaperScanApi implements PaperScanApi {
       List<ScannedLine> lines = const [],
       Map<int, double> taken = const {},
       Map<int, double> damaged = const {}}) async {
-    final response = await ApiClient.dio.post<Map<String, dynamic>>(
+    final response = await OnceKey.of('deliver:$token').send(() => ApiClient.dio.post<Map<String, dynamic>>(
       '/sales/scan/$token/deliver',
       data: deliveryPayload(
           receiver: receiver,
@@ -192,7 +193,7 @@ class ServerPaperScanApi implements PaperScanApi {
           lines: lines,
           taken: taken,
           damaged: damaged),
-    );
+    ));
     return ScannedPaper.fromJson(response.data ?? const {});
   }
 }

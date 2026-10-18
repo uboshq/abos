@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
@@ -198,8 +199,8 @@ class ServerLoadingApi implements LoadingApi {
 
   @override
   Future<(int, String)> packed(String id) async {
-    final response = await ApiClient.dio
-        .post<Map<String, dynamic>>('/sales/loading/$id/packed');
+    final response = await OnceKey.of('loading-packed:$id').send(() => ApiClient.dio
+        .post<Map<String, dynamic>>('/sales/loading/$id/packed'));
     return (
       (response.data?['packed'] as num?)?.toInt() ?? 0,
       response.data?['message']?.toString() ?? '',

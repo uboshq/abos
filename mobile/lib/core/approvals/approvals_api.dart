@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
@@ -70,14 +71,14 @@ class ApprovalsApi {
   /// ⛔ [seenAmount]: কার্ডে যে অঙ্ক দেখে সই — কাগজের অঙ্ক এর মধ্যে বদলালে সার্ভার ৪১২ দেয় ([[ApprovalFailure.amountChanged]];
   /// ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)।
   static Future<void> approve(String id, {String? remarks, String? seenAmount}) async {
-    await ApiClient.dio.post<Map<String, dynamic>>(
+    await OnceKey.of('approval-approve:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>(
       '/approvals/$id/approve',
       data: {
         if (remarks != null && remarks.trim().isNotEmpty)
           'remarks': remarks.trim(),
         if (seenAmount != null) 'seenAmount': seenAmount,
       },
-    );
+    ));
   }
 
   static Future<void> reject(String id, {required String remarks}) async {
@@ -89,10 +90,10 @@ class ApprovalsApi {
       throw ArgumentError('প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক');
     }
 
-    await ApiClient.dio.post<Map<String, dynamic>>(
+    await OnceKey.of('approval-reject:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>(
       '/approvals/$id/reject',
       data: {'remarks': reason},
-    );
+    ));
   }
 }
 

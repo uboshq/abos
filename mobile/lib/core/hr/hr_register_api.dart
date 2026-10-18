@@ -1,3 +1,4 @@
+import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
 import '../orders/sales_desk_api.dart';
 
@@ -31,12 +32,12 @@ class ServerHrRegisterApi implements HrRegisterApi {
 
   @override
   Future<void> approve(String id, {String? remarks}) async {
-    await ApiClient.dio.post<Map<String, dynamic>>('/hr/leave/register/$id/approve',
-        data: {if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim()});
+    await OnceKey.of('leave-approve:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>('/hr/leave/register/$id/approve',
+        data: {if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim()}));
   }
 
   @override
   Future<void> reject(String id, {required String remarks}) async {
-    await ApiClient.dio.post<Map<String, dynamic>>('/hr/leave/register/$id/reject', data: {'remarks': remarks.trim()});
+    await OnceKey.of('leave-reject:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>('/hr/leave/register/$id/reject', data: {'remarks': remarks.trim()}));
   }
 }

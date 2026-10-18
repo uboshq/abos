@@ -17,6 +17,16 @@ class OnceKey {
 
   String get key => _key ??= List.generate(32, (_) => _random.nextInt(16).toRadixString(16)).join();
 
+  static final Map<String, OnceKey> _byAction = {};
+
+  /// ⭐ একটা কাজের চাবি — একই কাজ (একই কাগজে "সই", একই টোকেনে "গেট-আউট") আবার পাঠালে একই চাবি, যতক্ষণ না সার্ভার "হলো" বা
+  /// "না" বলে ([[send]], [[settle]]) (পূর্ণ নিরীক্ষা §৯ ⚠️৮, ১৮ অক্টোবর ২০২৬)। ⓘ পর্দা ধরে রাখতে হয় না — দুবার চাপা বা উত্তর
+  /// হারানো যেখান থেকেই আসুক, সার্ভারে একটাই বসে।
+  static OnceKey of(String action) => _byAction.putIfAbsent(action, OnceKey.new);
+
+  /// ⛔ বেরোলে সব চাবি ভুলে যাওয়া — পরের জনের একই কাগজের কাজ আগের জনের চাবিতে গেলে সার্ভার আগের জনের উত্তর ফেরাত
+  static void forgetAll() => _byAction.clear();
+
   /// এই জোনের চাবি — ইন্টারসেপ্টর পড়ে; জোনের বাইরে null
   static String? get current => Zone.current[_zoneKey] as String?;
 
