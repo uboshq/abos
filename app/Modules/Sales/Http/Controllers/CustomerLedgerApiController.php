@@ -61,6 +61,11 @@ final class CustomerLedgerApiController extends Controller implements HasMiddlew
             'name' => (string) $customer->name(),
             // ⓘ ধনাত্মক = গ্রাহকের কাছে পাওনা (Dr), ঋণাত্মক = গ্রাহকের জমা (Cr) — খাতার নিয়ম ([[Money::drCr()]])
             'due' => Money::round($due, 4),
+            /*
+             * ⭐ হিসাব-বিবরণী — প্রারম্ভিক, মোট ডেবিট, মোট ক্রেডিট, সমাপনী (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬; [[PartyLedger::statement()]])।
+             * ⛔ আগে ফোনে কেবল একটা বকেয়া আর সারি — কত নিল কত দিল জানতে পঞ্চাশ সারি যোগ করতে হতো।
+             */
+            'statement' => PartyLedger::statement(clone $ledger, $request),
             'entries' => collect($entries?->items() ?? [])->reverse()->values()->map(fn (LedgerEntry $e) => [
                 'date' => $e->trx_date?->toDateString(),
                 'no' => (string) ($e->document_no ?? ''),
