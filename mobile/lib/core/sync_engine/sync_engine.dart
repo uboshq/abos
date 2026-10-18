@@ -5,12 +5,16 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../api_client/api_client.dart';
 import '../api_client/network_errors.dart';
 import '../auth/token_storage.dart';
 import '../config/app_config.dart';
-import '../storage/hive_encryption.dart';
+import 'queue_lock.dart';
+import 'queue_opening.dart';
+
+export 'queue_opening.dart' show QueueTrouble;
 
 /// Offline-first sync client — the push (upload) half.
 ///
@@ -60,6 +64,28 @@ class SyncEngine {
   Box<Map>? _queue;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
+  /// ⛔ বাক্সের মালিক একজনই — খোলা অ্যাপ বা পেছনের সিঙ্ক ([[QueueLock]], মোবাইল অ্যাপ নিরীক্ষা, ১৮ অক্টোবর ২০২৬)
+  final QueueLock _lock = QueueLock();
+
+  /// বাক্স খোলার সমস্যা, থাকলে — সিঙ্কের পর্দা বলে ([[SyncStatusScreen]]); null মানে সব ঠিক
+  final ValueNotifier<QueueTrouble?> trouble = ValueNotifier<QueueTrouble?>(null);
+
+  /// ভাঙা বাক্স আলাদা করে রাখা হলে তার পথ — উদ্ধারের জন্য
+  String? keptAt;
+
+  /// অন্যজন বাক্স ধরে থাকলে খোলা অ্যাপ একটু পরপর আবার চেষ্টা করে — main() আটকায় না
+  Timer? _retry;
+
+  /// Hive-এর ফাইল কোথায় — `Hive.initFlutter()`-এর একই ফোল্ডার; পরীক্ষায় নিজের ফোল্ডার
+  @visibleForTesting
+  Future<String?> Function() hiveDirectory = () async {
+    try {
+      return (await getApplicationDocumentsDirectory()).path;
+    } catch (_) {
+      return null;
+    }
+  };
+
   /// Guards against two flushes running at once (a connectivity event landing
   /// on top of a manual flush), which would push the same record twice.
   bool _flushing = false;
@@ -85,23 +111,12 @@ class SyncEngine {
   /// half-written by a killed process, or a connectivity plugin some OEM
   /// Android build never wires up, must degrade to "sync is off this run",
   /// never to "the app is off this run".
-  Future<void> init() async {
+  ///
+  /// [background] — the workmanager task: it never waits for the box and never
+  /// retries; if the open app holds the queue, that app is the one flushing.
+  Future<void> init({bool background = false}) async {
     if (_queue == null) {
-      try {
-        _queue = await HiveEncryptionKey.openBox<Map>(_queueBoxName);
-      } on HiveKeyUnavailable catch (error) {
-        // ⛔ চাবি পড়া যায়নি — বাক্স ভাঙা নয়, তাই মোছা নয়; এই চালানে সিঙ্ক বন্ধ, পরের চালানে আবার (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
-        debugPrint('ABOS sync: queue key unavailable ($error) — queue kept, sync off this run');
-      } catch (error) {
-        debugPrint('ABOS sync: queue box failed to open ($error) — resetting it');
-        try {
-          await Hive.deleteBoxFromDisk(_queueBoxName);
-          _queue = await HiveEncryptionKey.openBox<Map>(_queueBoxName);
-        } catch (error2) {
-          debugPrint(
-              'ABOS sync: queue box unusable even after reset ($error2) — sync stays off this run');
-        }
-      }
+      await _openQueue(retry: !background);
     }
 
     if (_connectivitySubscription == null) {
@@ -146,6 +161,61 @@ class SyncEngine {
   Future<void> dispose() async {
     await _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
+  }
+
+  /// ⛔ বাক্স খোলা — কখনো মুছে নয় ([[QueueOpening]], মোবাইল অ্যাপ নিরীক্ষা, fe, ১৮ অক্টোবর ২০২৬)।
+  ///
+  /// <p>⚠️ আগে খুলতে না পারলেই `Hive.deleteBoxFromDisk` — অথচ সবচেয়ে সাধারণ কারণ ছিল পেছনের সিঙ্ক ঠিক তখন বাক্সটা ধরে আছে।
+  /// না পাঠানো অর্ডার চুপচাপ মুছত। এখন: অন্যজন ধরে থাকলে [QueueTrouble.busy] আর একটু পরে আবার (খোলা অ্যাপে); সত্যিই ভাঙা হলে
+  /// ফাইলটা আলাদা নামে রাখা, তারপর নতুন বাক্স।
+  Future<void> _openQueue({required bool retry}) async {
+    final opened = await QueueOpening(
+      boxName: _queueBoxName,
+      lock: _lock,
+      directory: hiveDirectory,
+    ).run();
+
+    _queue = opened.box;
+    keptAt = opened.keptAt ?? keptAt;
+    trouble.value = opened.trouble;
+
+    if (opened.trouble != null) {
+      debugPrint('ABOS sync: queue ${opened.trouble!.name}${opened.keptAt == null ? '' : ' (kept at ${opened.keptAt})'} — nothing deleted');
+    }
+
+    if (opened.trouble == QueueTrouble.busy && retry && _retry == null) {
+      var tries = 0;
+      _retry = Timer.periodic(const Duration(seconds: 3), (timer) async {
+        // ⓘ পাঁচ মিনিট — পেছনের সিঙ্ক কয়েক সেকেন্ডে শেষ হয়; তার পরেও বন্ধ থাকলে পর্দায় "busy" থাকে
+        if (_queue != null || ++tries > 100) {
+          timer.cancel();
+          _retry = null;
+          return;
+        }
+        final again = await QueueOpening(boxName: _queueBoxName, lock: _lock, directory: hiveDirectory).run();
+        if (again.box == null) return;
+        timer.cancel();
+        _retry = null;
+        _queue = again.box;
+        keptAt = again.keptAt ?? keptAt;
+        trouble.value = again.trouble;
+        await _purgeOldResolved();
+        unawaited(flushAll());
+      });
+    }
+  }
+
+  /// পেছনের সিঙ্কের শেষে — বাক্স বন্ধ আর তালা ছাড়া, যাতে খোলা অ্যাপ নিতে পারে
+  Future<void> closeQueue() async {
+    _retry?.cancel();
+    _retry = null;
+    final box = _queue;
+    _queue = null;
+    try {
+      await box?.close();
+    } finally {
+      _lock.release();
+    }
   }
 
   Box<Map> get _box {

@@ -96,6 +96,22 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
+                  // ⛔ সারির বাক্স খোলেনি — চুপ নয়, মানুষকে বলা ([[QueueOpening]], মোবাইল অ্যাপ নিরীক্ষা, ১৮ অক্টোবর ২০২৬)
+                  ValueListenableBuilder<QueueTrouble?>(
+                    valueListenable: SyncEngine.instance.trouble,
+                    builder: (context, trouble, _) => trouble == null
+                        ? const SizedBox.shrink()
+                        : Card(
+                            key: const Key('queue-trouble'),
+                            child: ListTile(
+                              leading: AppStatusPill(
+                                label: '!',
+                                kind: trouble == QueueTrouble.busy ? AppStatusKind.pending : AppStatusKind.danger,
+                              ),
+                              title: Text(queueTroubleText(trouble)),
+                            ),
+                          ),
+                  ),
                   const _SectionHeader('অপেক্ষমাণ'),
                   Card(
                     child: ListTile(
@@ -213,3 +229,11 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
+/// সারির বাক্সের সমস্যা, মানুষের ভাষায় — প্রতিটায় বলা "কিছুই মোছা হয়নি", কারণ ঠিক সেটাই আগে হত।
+String queueTroubleText(QueueTrouble trouble) => switch (trouble) {
+      QueueTrouble.busy => 'পেছনের সিঙ্ক এখন সারিটা পাঠাচ্ছে — একটু পরে এখানেও খুলবে। কিছুই মোছা হয়নি।',
+      QueueTrouble.keyUnavailable => 'ফোনের নিরাপদ ভাণ্ডার এখন খোলেনি — অপেক্ষমাণ অর্ডার ফোনেই রাখা আছে। অ্যাপ বন্ধ করে আবার খুলুন।',
+      QueueTrouble.quarantined => 'অপেক্ষমাণ সারির ফাইল খোলেনি — ফাইলটা আলাদা করে রাখা আছে, মোছা হয়নি। নতুন অর্ডার যাচ্ছে; আগেরগুলোর জন্য অফিসকে জানান।',
+      QueueTrouble.broken => 'অপেক্ষমাণ সারির ফাইল খোলেনি — ফাইল মোছা হয়নি, সিঙ্ক বন্ধ। অফিসকে জানান।',
+    };

@@ -71,7 +71,8 @@ void callbackDispatcher() {
       final refreshToken = await TokenStorage.instance.refreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return true;
 
-      await SyncEngine.instance.init();
+      // ⛔ খোলা অ্যাপ বাক্স ধরে থাকলে পেছনে কিছুই খোলা হয় না, কিছুই মোছা হয় না — অ্যাপ নিজেই পাঠায় ([[QueueLock]])
+      await SyncEngine.instance.init(background: true);
       // ⛔ পেছনেও কেবল এখনকার মানুষের সারি — সংরক্ষিত প্রোফাইল থেকে; পড়া না গেলে কিছুই যায় না ([[SyncEngine.actAs]])
       try {
         SyncEngine.instance.actAs((await SessionRepository.instance.readUser())?.id);
@@ -86,11 +87,17 @@ void callbackDispatcher() {
       // include the orders that just went up.
       await LauncherWidgetRefresh.refresh();
     } catch (error) {
+      // ⓘ নিচে finally — ব্যর্থ হলেও তালা ছাড়া হয়
       // flush()/flushAll() already catch their own network and server failures
       // and leave the queue for the next attempt — this is the backstop for
       // everything else (Hive failing to open, say), so one bad background run
       // cannot mark the whole task permanently broken.
       debugPrint('ABOS background sync: task failed ($error)');
+    } finally {
+      // ⛔ বাক্স বন্ধ আর তালা ছাড়া — নইলে পরে খোলা অ্যাপ "busy" দেখত, যতক্ষণ এই isolate বেঁচে
+      try {
+        await SyncEngine.instance.closeQueue();
+      } catch (_) {}
     }
     return true;
   });
