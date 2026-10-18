@@ -30,6 +30,10 @@ class ProductRecord {
   /// the office files it under.
   String? get unit => _text('unitNameBn') ?? _text('unitCode');
 
+  /// ⭐ এককটা ভগ্নাংশ নেয় কি না (কেজি, লিটার) — সার্ভারের `units.allows_fraction` (পূর্ণ নিরীক্ষা §৯ ⚠️১০, ১৮ অক্টোবর ২০২৬)।
+  /// ⓘ পুরনো সার্ভার ঘরটা পাঠায় না — তখন পূর্ণ সংখ্যা, আগের মতো।
+  bool get allowsFraction => payload['unitAllowsFraction'] == true;
+
   /// The characters the server sent, for the rate on a queued order line.
   /// Never the rendered form — see [Money] for why that distinction is not
   /// fussiness.

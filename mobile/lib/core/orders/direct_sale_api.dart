@@ -410,13 +410,12 @@ class CounterDraft {
                 lotNo: (l['lotNo']?.toString().isEmpty ?? true)
                     ? null
                     : l['lotNo'].toString(),
-                qty: (double.tryParse(l['qty']?.toString() ?? '') ?? 0).round(),
+                qty: double.tryParse(l['qty']?.toString() ?? '') ?? 0,
                 rate: double.tryParse(l['rate']?.toString() ?? '') ?? 0,
                 discountPercent:
                     double.tryParse(l['discountPercent']?.toString() ?? '') ??
                         0,
-                freeQty: (double.tryParse(l['freeQty']?.toString() ?? '') ?? 0)
-                    .round(),
+                freeQty: double.tryParse(l['freeQty']?.toString() ?? '') ?? 0,
               ),
         ],
       );
@@ -439,10 +438,21 @@ class CounterLine {
   final String productName;
   final String? lotId;
   final String? lotNo;
-  final int qty;
+  /// ⭐ দশমিক — কেজি-লিটারে ২.৫ (পূর্ণ নিরীক্ষা §৯ ⚠️১০); তিন ঘর পর্যন্ত, পর্দা যাচাই করে
+  final double qty;
   final double rate;
   final double discountPercent;
-  final int freeQty;
+  final double freeQty;
+
+  /// পরিমাণ তারে — পূর্ণ হলে পূর্ণ ("12"), নইলে তিন ঘর পর্যন্ত ("2.5", "0.125")
+  static String wire(double v) {
+    if (v == v.roundToDouble()) return v.toInt().toString();
+    var t = v.toStringAsFixed(3);
+    while (t.endsWith('0')) {
+      t = t.substring(0, t.length - 1);
+    }
+    return t;
+  }
 
   double get total => qty * rate * (1 - discountPercent / 100);
 
@@ -452,13 +462,13 @@ class CounterLine {
   Map<String, dynamic> toJson() => {
         'product': productId,
         if (lotId != null) 'lot': lotId,
-        'qty': qty,
+        'qty': wire(qty),
         // ⛔ চার ঘর — সার্ভারের দাম আর ছাড় `decimal:4`; দুই ঘরে গোল করলে ৪১.৬৬৬৭-এর ১২টা ৫০০.০৪ হত, ওয়েবে ৫০০.০০
         // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
         'rate': Money.rate(rate),
         if (discountPercent > 0)
           'discount_percent': Money.rate(discountPercent),
-        if (freeQty > 0) 'free_qty': freeQty,
+        if (freeQty > 0) 'free_qty': wire(freeQty),
       };
 }
 
@@ -498,7 +508,7 @@ abstract class DirectSaleApi {
   Future<int?> freeAllowed(
       {required String productId,
       String? warehouseId,
-      required int qty,
+      required num qty,
       String? lotId});
 
   Future<CounterResult> sell({
@@ -553,7 +563,7 @@ class ServerDirectSaleApi implements DirectSaleApi {
   Future<int?> freeAllowed(
       {required String productId,
       String? warehouseId,
-      required int qty,
+      required num qty,
       String? lotId}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(
         '/sales/direct/free-allowed',

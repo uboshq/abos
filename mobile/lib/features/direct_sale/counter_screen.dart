@@ -172,7 +172,7 @@ class _CounterScreenState extends State<CounterScreen> {
 
   Future<void> _askFree() async {
     final product = _product;
-    final qty = int.tryParse(_qty.text.trim()) ?? 0;
+    final qty = _typedQty(_qty.text);
     // ⓘ পরিমাণ মুছলে আগের ফ্রিও যায় — পুরনো অঙ্ক বসে থাকত
     if (product != null && qty <= 0 && _editingKey == null) setState(() => _free.clear());
     if (product == null || qty <= 0) return;
@@ -186,7 +186,7 @@ class _CounterScreenState extends State<CounterScreen> {
       if (!mounted) return;
       // ⛔ উত্তর আসতে আসতে পণ্য, লট বা পরিমাণ বদলেছে — পুরনো প্রশ্নের উত্তর ফেলে দেওয়া; আগে ১০০-র (১০ ফ্রি) উত্তর শেষে এসে
       // ১০-এর বিক্রিতে ১০ ফ্রি বসাত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
-      if (_product?.id != product.id || _lot?.id != lot || (int.tryParse(_qty.text.trim()) ?? 0) != qty) return;
+      if (_product?.id != product.id || _lot?.id != lot || _typedQty(_qty.text) != qty) return;
       setState(() {
         _freeAllowed = allowed;
         // ⓘ স্কিমের ফ্রি নিজে বসে (মালিক, ১ অক্টোবর: "free qty own auto box")
@@ -235,12 +235,27 @@ class _CounterScreenState extends State<CounterScreen> {
     }
   }
 
+  /// মানুষের লেখা পরিমাণ — বাংলা অঙ্ক আর কমাসহ ([[Money.typed]]); খালি ০, পড়া না গেলে −১ (তখন "পরিমাণ দিন")
+  double _typedQty(String text) => Money.typed(text) ?? -1;
+
+  /// ⛔ এককটা ভগ্নাংশ না নিলে পূর্ণ সংখ্যা, নিলে তিন দশমিক পর্যন্ত (পূর্ণ নিরীক্ষা §৯ ⚠️১০) — বাধা থাকলে কারণ, নইলে null
+  String? _fractionRefused(ProductRecord? product, double qty) {
+    if (qty <= 0 || qty == qty.roundToDouble()) return null;
+    if (product == null || !product.allowsFraction) {
+      return '${product?.unit ?? 'এই একক'} ভগ্নাংশে বিক্রি হয় না — পূর্ণ সংখ্যা লিখুন।';
+    }
+    if ((qty * 1000 - (qty * 1000).roundToDouble()).abs() > 1e-6) {
+      return 'পরিমাণ তিন দশমিকের বেশি নয় (যেমন ২.৫ বা ০.১২৫)।';
+    }
+    return null;
+  }
+
   void _addOrUpdate() {
     final product = _product;
-    final qty = int.tryParse(_qty.text.trim()) ?? 0;
+    final qty = _typedQty(_qty.text);
     final rate = double.tryParse(_rate.text.trim()) ?? 0;
     final discount = double.tryParse(_discount.text.trim()) ?? 0;
-    final free = int.tryParse(_free.text.trim()) ?? 0;
+    final free = _typedQty(_free.text);
 
     String? why;
     if (_noWarehouse) {
@@ -251,6 +266,8 @@ class _CounterScreenState extends State<CounterScreen> {
       why = 'লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।';
     } else if (qty <= 0) {
       why = 'পরিমাণ দিন।';
+    } else if (_fractionRefused(product, qty) ?? _fractionRefused(product, free) case final refused?) {
+      why = refused;
     } else if (rate <= 0) {
       why = 'দর ছাড়া বিক্রি হয় না।'; // ⓘ শূন্য দর কার্টে ঢোকে না (মালিক)
     } else if (discount < 0 || discount > 100) {
@@ -289,11 +306,11 @@ class _CounterScreenState extends State<CounterScreen> {
     setState(() {
       _product = _products.where((p) => p.id == line.productId).firstOrNull;
       _lot = _lotsOfProduct.where((l) => l.id == line.lotId).firstOrNull;
-      _qty.text = '${line.qty}';
+      _qty.text = CounterLine.wire(line.qty);
       _rate.text = Money.rate(line.rate);
       _discount.text =
           line.discountPercent > 0 ? line.discountPercent.toString() : '';
-      _free.text = line.freeQty > 0 ? '${line.freeQty}' : '';
+      _free.text = line.freeQty > 0 ? CounterLine.wire(line.freeQty) : '';
       _editingKey = line.key;
     });
   }
@@ -874,11 +891,7 @@ class _CounterScreenState extends State<CounterScreen> {
     try {
       final draft = await widget.api.openDraft(picked.id);
       if (!mounted) return;
-      if (draft.hasFractions) {
-        await _popup('খসড়াটা ফোনে খোলা যাবে না',
-            'এই খসড়ায় ভগ্নাংশের পরিমাণ আছে (যেমন ২.৫) — ফোনের কার্ট পূর্ণ সংখ্যা নেয়, খুললে পরিমাণ বদলে যেত। ওয়েবে খুলুন।');
-        return;
-      }
+      // ⭐ ভগ্নাংশের খসড়াও ফোনেই খোলে — কার্ট এখন দশমিক নেয় (পূর্ণ নিরীক্ষা §৯ ⚠️১০); আগে "ওয়েবে খুলুন" বলে ফিরিয়ে দিত
       setState(() {
         _startOver();
         _customer =
@@ -1289,7 +1302,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   TextField(
                     key: const ValueKey('counter-qty'),
                     controller: _qty,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(labelText: 'পরিমাণ'),
                     onChanged: (_) => _askFree(),
                   ),
@@ -1317,7 +1330,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   TextField(
                     key: const ValueKey('counter-free'),
                     controller: _free,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: _freeAllowed == null
                           ? 'ফ্রি'
@@ -1346,10 +1359,10 @@ class _CounterScreenState extends State<CounterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (line.lotNo != null) Text('লট: ${line.lotNo}'),
-                    Text('${line.qty} × ${Money.taka(line.rate)}'),
+                    Text('${CounterLine.wire(line.qty)} × ${Money.taka(line.rate)}'),
                     if (line.discountPercent > 0)
                       Text('ছাড়: ${line.discountPercent}%'),
-                    if (line.freeQty > 0) Text('ফ্রি: ${line.freeQty}'),
+                    if (line.freeQty > 0) Text('ফ্রি: ${CounterLine.wire(line.freeQty)}'),
                     Text(Money.taka(line.total)),
                   ],
                 ),

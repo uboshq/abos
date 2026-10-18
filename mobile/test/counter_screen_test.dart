@@ -109,7 +109,7 @@ class _FakeApi implements DirectSaleApi {
   Future<int?> freeAllowed(
           {required String productId,
           String? warehouseId,
-          required int qty,
+          required num qty,
           String? lotId}) async {
     final held = freeAnswers?[qty];
     if (held != null) return held.future;
@@ -271,6 +271,56 @@ Future<void> _confirm(WidgetTester tester) async {
 }
 
 void main() {
+  // ── ⭐ কেজি-লিটারে ভগ্নাংশ (পূর্ণ নিরীক্ষা §৯ ⚠️১০, ১৮ অক্টোবর ২০২৬) ─────────────────────────────────
+  // ⛔ আগে কার্ট কেবল পূর্ণ সংখ্যা নিত (`int.tryParse`): "২.৫" লিখলে কিছুই ঢুকত না, আর ভগ্নাংশের খসড়া ফোন খুলতই না।
+  const rice = ProductRecord({'id': 'prd-rice', 'nameBn': 'মিনিকেট চাল', 'salePrice': '60', 'unitNameBn': 'কেজি', 'unitAllowsFraction': true});
+  const soap = ProductRecord({'id': 'prd-soap', 'nameBn': 'লাক্স সাবান', 'salePrice': '20', 'unitNameBn': 'পিস'});
+
+  Future<void> pumpWith(WidgetTester tester, _FakeApi api) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+        home: CounterScreen(api: api, returnApi: FakeReturnApi(), customers: const [_dealer], products: const [rice, soap])));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a kilo unit sells 2.5 and sends "2.5"; a piece refuses a fraction with the reason', (tester) async {
+    final api = _FakeApi();
+    await pumpWith(tester, api);
+    await _pickDealer(tester);
+
+    await _pickProduct(tester, 'মিনিকেট চাল');
+    await _add(tester, qty: '২.৫');
+    expect(find.byKey(const ValueKey('counter-error')), findsNothing, reason: '⛔ কেজির ভগ্নাংশ কার্টে ঢুকল না');
+    expect(find.textContaining('2.5 × '), findsOneWidget, reason: '⛔ কার্টের সারিতে ২.৫ নেই');
+
+    await _pickProduct(tester, 'লাক্স সাবান');
+    await _add(tester, qty: '1.5');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('counter-error'))).data, contains('ভগ্নাংশে বিক্রি হয় না'),
+        reason: '⛔ পিসে দেড়টা সাবান কার্টে ঢুকল');
+
+    await _add(tester, qty: '0.1255');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('counter-error'))).data, contains('ভগ্নাংশে বিক্রি হয় না'));
+  });
+
+  test('a line sends its quantity as written, up to three places, and a draft keeps its fraction', () {
+    expect(const CounterLine(productId: 'p', productName: 'x', qty: 2.5, rate: 60, discountPercent: 0).toJson()['qty'], '2.5');
+    expect(const CounterLine(productId: 'p', productName: 'x', qty: 0.125, rate: 60, discountPercent: 0).toJson()['qty'], '0.125');
+    expect(const CounterLine(productId: 'p', productName: 'x', qty: 12, rate: 60, discountPercent: 0).toJson()['qty'], '12');
+
+    final draft = CounterDraft.fromJson(const {
+      'id': 'd1', 'no': 'DS-1', 'customer': 'cus-1', 'customerName': 'রহিম স্টোর',
+      'lines': [
+        {'product': 'prd-rice', 'name': 'চাল', 'qty': '2.5000', 'rate': '60', 'freeQty': '0.5000'},
+      ],
+    });
+    expect(draft.lines.single.qty, 2.5, reason: '⛔ খসড়ার ২.৫ কেজি ৩ হয়ে গেল');
+    expect(draft.lines.single.freeQty, 0.5);
+    expect(rice.allowsFraction, isTrue);
+    expect(soap.allowsFraction, isFalse, reason: 'পুরনো সার্ভার ঘরটা না পাঠালে পূর্ণ সংখ্যা');
+  });
+
   test('a rate and a discount go with four places, as the server keeps them (phone line audit, 15 Oct 2026)', () {
     final json = const CounterLine(productId: 'p', productName: 'x', qty: 12, rate: 41.6667, discountPercent: 7.1429).toJson();
     expect(json['rate'], '41.6667', reason: '⛔ দর দুই ঘরে গোল — ১২টায় ৫০০.০৪, ওয়েবে ৫০০.০০');
@@ -840,9 +890,9 @@ void main() {
     expect(api.sent!.single.toJson(), {
       'product': 'prd-lot',
       'lot': 'lot-a',
-      'qty': 10,
+      'qty': '10',
       'rate': '40.00',
-      'free_qty': 1
+      'free_qty': '1'
     });
     expect(find.byKey(const ValueKey('counter-popup')), findsOneWidget);
     expect(find.text('চালান S-0007 আর বিল S-0007 হলো।'), findsOneWidget);
