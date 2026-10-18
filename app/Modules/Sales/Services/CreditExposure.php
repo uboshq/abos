@@ -130,19 +130,18 @@ final class CreditExposure implements CreditHolds
      */
     private function stopDetails(iterable $customers): array
     {
-        if (! $this->isOn()) {
-            return [];
-        }
-
         $out = [];
-        $days = $this->overdueDays();
 
         $list = [];
         foreach ($customers as $customer) {
             $list[(int) $customer->id] = $customer;
         }
 
-        // ⭐ হাতে বসানো "বাকি বন্ধ" আগে ([[Customer::isCreditBlocked()]]) — পুরো দায় শোধ ছাড়া দেয়াল ওঠে না
+        /*
+         * ⭐ হাতে বসানো "বাকি বন্ধ" আগে ([[Customer::isCreditBlocked()]]) — পুরো দায় শোধ ছাড়া দেয়াল ওঠে না।
+         * ⛔ সীমার সুইচের **আগে** — D7 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬): বাউন্স চেকের ব্লক মালিকের নিয়ম, সীমার অংশ নয়; আগে সুইচ
+         * বন্ধ করলে ব্লকও উঠে যেত। ⓘ সুইচ বন্ধে কেবল সীমা আর মেয়াদের হিসাব থামে।
+         */
         foreach ($list as $id => $customer) {
             if ($customer->isCreditBlocked()) {
                 $out[$id] = [
@@ -153,6 +152,12 @@ final class CreditExposure implements CreditHolds
                 unset($list[$id]);
             }
         }
+
+        if (! $this->isOn()) {
+            return $out;
+        }
+
+        $days = $this->overdueDays();
 
         // ⭐ মেয়াদ পেরোনোর দেয়াল নিজের সুইচে; দিন কেবল ছাড় — ০ মানে মেয়াদের পরদিন থেকেই (মালিকের উত্তর ১, ১১ অক্টোবর ২০২৬)
         if ($this->overdueStopOn()) {
@@ -266,7 +271,11 @@ final class CreditExposure implements CreditHolds
         $on = 'COALESCE(i.due_on, i.trx_date)';
         $today = Carbon::today();
 
-        $bills = SalesInvoice::query()->posted()->withCollected()->toBase()
+        /*
+         * ⛔ সব শাখার বিল — D2 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬)। ⓘ বাকি গ্রাহকের, শাখার নয়: হেডারে নেত্রকোনা বাছা থাকলে
+         * সাধারণ কোয়েরির শাখা-দেয়াল ঢাকার মেয়াদ পেরোনো বিল লুকাত, আর দেয়াল নতুন বাকি দিয়ে দিত। কোম্পানি স্পষ্ট করে নিচে।
+         */
+        $bills = SalesInvoice::acrossBranches()->posted()->withCollected()->toBase()
             ->where('sal_invoices.company_id', CompanyContext::id())
             ->whereIn('sal_invoices.customer_id', array_keys($customers));
 
@@ -437,6 +446,15 @@ final class CreditExposure implements CreditHolds
     {
         // ⓘ সুইচ বন্ধ — সীমা যাচাই হয় না, DO-র হিসাবের "সীমা" সতর্কতাও চুপ ([[isOn()]])
         if (! $this->isOn()) {
+            // ⛔ D7 — সুইচ বন্ধেও হাতে বসানো "বাকি বন্ধ" DO আটকায় ([[stopDetails()]])
+            $blocked = $customer->isCreditBlocked() ? ($this->stopDetails([$customer])[(int) $customer->id] ?? null) : null;
+
+            if ($blocked !== null && bccomp($adding, '0', 4) > 0) {
+                $this->witness($paper, $customer, CreditDecision::STOP, 'blocked', null, $adding, '0', $blocked['message'], final: true);
+
+                return ['fits' => false, 'short' => bcadd($adding, '0', 4), 'used_percent' => null, 'reason' => $blocked['message']];
+            }
+
             $this->witness($paper, $customer, CreditDecision::PASS, 'switch_off', null, $adding, '0', null, final: true);
 
             return ['fits' => true, 'short' => '0', 'used_percent' => null, 'reason' => null];
@@ -796,6 +814,8 @@ final class CreditExposure implements CreditHolds
         ?CreditPaper $paper = null,
     ): void {
         if (! $this->isOn()) {
+            // ⛔ D7 — সুইচ বন্ধেও হাতে বসানো "বাকি বন্ধ" থামায়, নতুন বাকি জন্মালে ([[stopDetails()]])
+            $this->blockedEvenWhenOff($customer, $adding, $payingNow, $exceptInvoiceId, $paper);
             $this->witness($paper, $customer, CreditDecision::PASS, 'switch_off', null, $adding, $payingNow, null);
 
             return;
@@ -811,6 +831,33 @@ final class CreditExposure implements CreditHolds
 
             throw $e;
         }
+    }
+
+    /**
+     * ⛔ D7 — সীমার সুইচ বন্ধ, তবু হাতে বসানো "বাকি বন্ধ" এই কাগজে নতুন বাকি জন্মাতে দেয় না (পুরো টাকা দিলে চলে)।
+     * ⓘ আগেই গেট পেরোনো মালের বিল আটকায় না — সুইচ চালুর দেয়ালের একই ছাড় ([[billsGoodsAlreadyGone()]])।
+     */
+    private function blockedEvenWhenOff(Customer $customer, string $adding, string $payingNow, ?int $exceptInvoiceId, ?CreditPaper $paper): void
+    {
+        if (! $customer->isCreditBlocked()) {
+            return;
+        }
+
+        $unpaid = bcsub($adding, $payingNow, 4);
+
+        if (bccomp($unpaid, '0', 4) <= 0 || $this->billsGoodsAlreadyGone($exceptInvoiceId)) {
+            return;
+        }
+
+        $stop = $this->stopDetails([$customer])[(int) $customer->id] ?? null;
+
+        if ($stop === null) {
+            return;
+        }
+
+        $this->witness($paper, $customer, CreditDecision::STOP, $stop['kind'], null, $adding, $payingNow, $stop['message']);
+
+        throw ValidationException::withMessages(['customer_id' => $stop['message']]);
     }
 
     /** [[assertRoom()]]-এর ভিতর — সুইচ চালু থাকলে */
