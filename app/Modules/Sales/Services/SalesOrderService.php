@@ -594,8 +594,9 @@ final class SalesOrderService
      */
     private function checkCreditThenAsk(SalesOrder $order, Customer $customer): SalesOrder
     {
+        // ⓘ আদেশটা নিজেকে গোনে না — "জমা" আদেশ এখন সীমা আটকায় ([[CreditExposure::forOrderUnderCheck()]])
         $result = $this->credit->isOn()
-            ? $this->credit->check($customer, (string) $order->total)
+            ? CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($customer, (string) $order->total))
             : ['fits' => true, 'short' => '0.0000'];
 
         if (! $result['fits']) {
@@ -1122,7 +1123,7 @@ final class SalesOrderService
         $short = null;
 
         if ($submits && $order->customer !== null && $this->credit->isOn()) {
-            $result = $this->credit->check($order->customer, (string) $order->total);
+            $result = CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($order->customer, (string) $order->total));
             $short = $result['fits'] ? null : (string) $result['short'];
         }
 

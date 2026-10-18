@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Modules\Customer\Support\ConductType;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\Sales\Services\CreditExposure;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
@@ -506,6 +507,13 @@ class Customer extends Model implements AuthenticatableContract, Drillable
          * একই গ্রাহকের দুই পর্দায় দুই সংখ্যা থাকত।
          */
         $left = bcsub(bcsub($limit, $this->outstanding(), 4), $this->heldCredit(), 4);
+
+        /*
+         * ⭐ ক্লিয়ার না হওয়া চেকও — বাকি-নিয়ন্ত্রণের পাতা আর দেয়ালের একই হিসাব ([[CreditExposure::positionsFor()]];
+         * পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)। ⛔ আগে এই পাতা চেকের টাকা বাদ দিত না, তাই একই গ্রাহকে এখানে বেশি "ব্যবহারযোগ্য"
+         * দেখাত আর কাউন্টারের দেয়াল কম দিত।
+         */
+        $left = bcsub($left, app(CreditExposure::class)->unclearedChequesFor([(int) $this->id])[(int) $this->id] ?? '0', 4);
 
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
     }

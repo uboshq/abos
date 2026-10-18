@@ -82,6 +82,12 @@ final class CreditExposure implements CreditHolds
     private static ?int $sourceDeliveryOrder = null;
 
     /**
+     * ⭐ যে আদেশটা এই মুহূর্তে বাকির যাচাইয়ে — সে নিজেকে গোনে না, তার টাকা `adding`-এ ([[forOrderUnderCheck()]])।
+     * ⓘ জমা দিলে আদেশ আগে "জমা" হয়, তারপর যাচাই — আর "জমা" আদেশ এখন সীমা আটকায় ([[openOrders()]]); নইলে নিজেকে দুবার।
+     */
+    private static ?int $orderUnderCheck = null;
+
+    /**
      * [[CreditHolds]] — গ্রাহকের পাতার জন্য, একই হিসাব।
      *
      * ⚠️ আলাদা যুক্তি নয়, [[pendingFor()]]-ই — নইলে পাতা আর কাউন্টার
@@ -673,7 +679,13 @@ final class CreditExposure implements CreditHolds
             ->where('o.company_id', CompanyContext::id())
             ->whereNull('o.deleted_at')
             ->where('o.hold_mode', SalesOrderStatus::HOLD_HOLDS)
-            ->whereIn('o.status', [SalesOrderStatus::APPROVED, SalesOrderStatus::CONFIRMED])
+            /*
+             * ⭐ সইয়ের অপেক্ষার আদেশও — জমার মুহূর্তে বাকির যাচাই পেরিয়েছে, তাই জায়গাটা তার (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)।
+             * ⛔ আগে কেবল অনুমোদিত/নিশ্চিত গোনা হত: সইয়ের অপেক্ষার মাঝে কাউন্টারে বিক্রি ঐ জায়গা খেয়ে ফেলত, আর সইয়ের পরে
+             * আদেশটা সীমার বাইরে দাঁড়াত — দুটোই "যাচাই পেরোনো"। ⓘ বাকিতে আটকে থাকা (`credit_held`) গোনা হয় না — যাচাই পেরোয়নি।
+             */
+            ->whereIn('o.status', [SalesOrderStatus::SUBMITTED, SalesOrderStatus::AWAITING_APPROVAL, SalesOrderStatus::APPROVED, SalesOrderStatus::CONFIRMED])
+            ->when(self::$orderUnderCheck !== null, fn ($q) => $q->where('o.id', '!=', self::$orderUnderCheck))
             ->where('ol.ordered_qty', '>', 0)
             ->select(['o.customer_id', 'ol.ordered_qty', 'ol.rejected_qty', 'ol.amount'])
             ->selectSub($delivered, 'delivered');
@@ -1110,6 +1122,26 @@ final class CreditExposure implements CreditHolds
 
     /**
      * ⭐ কাউন্টারের কাজ — এর ভিতরের প্রতিটা দেয়াল-সিদ্ধান্ত সাক্ষ্যে "কাউন্টার" হয়ে বসে (ধাপ ১.৫)।
+     *
+     * @template T
+     *
+     * @param  callable(): T  $work
+     * @return T
+     */
+    public static function forOrderUnderCheck(?int $orderId, callable $work): mixed
+    {
+        $before = self::$orderUnderCheck;
+        self::$orderUnderCheck = $orderId;
+
+        try {
+            return $work();
+        } finally {
+            self::$orderUnderCheck = $before;
+        }
+    }
+
+    /**
+     * ⓘ [[forOrderUnderCheck()]]-এর জোড়া — DO থেকে কাউন্টারের বিক্রি।
      *
      * @template T
      *
