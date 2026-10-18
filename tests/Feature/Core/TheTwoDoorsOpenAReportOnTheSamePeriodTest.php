@@ -60,8 +60,12 @@ final class TheTwoDoorsOpenAReportOnTheSamePeriodTest extends TestCase
 
         foreach (self::FISCAL as $key => $web) {
             $this->actingAs($this->owner);
-            $html = (string) $this->get($web)->assertOk()->getContent();
-            $this->assertStringContainsString('value="'.$start.'"', $html, "⛔ ওয়েবের {$key} চলতি অর্থবছর থেকে খুলল না।");
+            // ⓘ পাতার তারিখের ঘর `$result->filters['from']` থেকে আঁকা; তারিখের ঘর Alpine-এ বাঁধা, HTML-এ `value="…"` লেখা থাকে না
+            $this->get($web)->assertOk()->assertViewHas('result', function ($result) use ($start, $key): bool {
+                $this->assertSame($start, $result->filters['from'] ?? null, "⛔ ওয়েবের {$key} চলতি অর্থবছর থেকে খুলল না।");
+
+                return true;
+            });
 
             $phone = $this->phone("/api/v1/reports/{$key}")->assertOk();
             $this->assertSame($start, $phone->json('filters.from'),
@@ -84,7 +88,7 @@ final class TheTwoDoorsOpenAReportOnTheSamePeriodTest extends TestCase
             '⛔ মানুষের দেওয়া শুরুর তারিখ ঘোষণার নিচে চাপা পড়ল।');
 
         $this->expectException(\InvalidArgumentException::class);
-        new ReportDefinition(key: 'x.y', title: 'x', query: fn () => null, defaultPeriod: 'quarter');
+        new ReportDefinition(key: 'x.y', title: 'x', query: fn () => null, columns: [], defaultPeriod: 'quarter');
     }
 
     public function test_without_a_year_row_the_year_begins_on_the_first_of_july(): void
