@@ -2,6 +2,7 @@ import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/books/books_api.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
+import 'package:abos_mobile/core/orders/paper_total.dart';
 import 'package:abos_mobile/features/books/money_in_screens.dart';
 import 'package:abos_mobile/features/books/principal_screens.dart';
 import 'package:abos_mobile/features/books/purchase_screens.dart';
@@ -59,7 +60,7 @@ class _FakeBooks implements BooksApi {
       );
 
   @override
-  Future<(List<PrincipalRow>, int?)> principals(
+  Future<(List<PrincipalRow>, int?, PaperTotal?)> principals(
       {String? q, int page = 1}) async {
     asked.add({'principals': q});
     return (
@@ -71,7 +72,8 @@ class _FakeBooks implements BooksApi {
             lastPurchaseOn: '2026-10-01'),
         PrincipalRow(id: 'p2', name: 'Akij', balance: -2500),
       ],
-      null
+      null,
+      null,
     );
   }
 

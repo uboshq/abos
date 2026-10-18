@@ -119,7 +119,8 @@ class LeadForm {
 
 abstract class LeadApi {
   Future<LeadSetup> setup();
-  Future<(List<Lead>, int?)> list({String? query, String? status, int page = 1});
+  /// শেষেরটা সার্ভারের গোটা ছাঁকনির গোনা (খোঁজ আর অবস্থা মেনে) — পুরনো সার্ভারে `null` (পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+  Future<(List<Lead>, int?, int?)> list({String? query, String? status, int page = 1});
   Future<Lead> show(String id);
   Future<Lead> create(LeadForm form);
   Future<Lead> update(String id, LeadForm form);
@@ -137,7 +138,7 @@ class ServerLeadApi implements LeadApi {
   }
 
   @override
-  Future<(List<Lead>, int?)> list({String? query, String? status, int page = 1}) async {
+  Future<(List<Lead>, int?, int?)> list({String? query, String? status, int page = 1}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(_base, queryParameters: {
       if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       if (status != null) 'status': status,
@@ -150,6 +151,7 @@ class ServerLeadApi implements LeadApi {
           if (row is Map) Lead.fromJson(Map<String, dynamic>.from(row)),
       ],
       (data['next_page'] as num?)?.toInt(),
+      (data['count'] as num?)?.toInt(),
     );
   }
 

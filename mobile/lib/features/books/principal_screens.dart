@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
+import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -24,6 +25,7 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
   final _search = TextEditingController();
   final List<PrincipalRow> _rows = [];
   int? _next;
+  PaperTotal? _total;
   bool _loaded = false;
   bool _busy = false;
   String? _error;
@@ -46,13 +48,14 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
       _error = null;
     });
     try {
-      final (rows, next) = await widget.api
+      final (rows, next, total) = await widget.api
           .principals(q: _search.text.trim(), page: more ? (_next ?? 1) : 1);
       if (!mounted) return;
       setState(() {
         if (!more) _rows.clear();
         _rows.addAll(rows);
         _next = next;
+        _total = total;
         _loaded = true;
       });
     } catch (e) {
@@ -85,6 +88,13 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
                     hintText: 'নাম বা কোড খুঁজুন'),
                 onSubmitted: (_) => _load(),
               ),
+              // ⭐ গোটা ছাঁকনির মোট দেনা — সার্ভারের, সব পাতার, ওয়েবের সরবরাহকারীর তালিকার একই যোগ; ⛔ পুরনো সার্ভারে পট্টি নেই
+              // (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+              if (_total != null && _rows.isNotEmpty)
+                TotalStrip(
+                    label: 'মোট দেনা',
+                    value: Money.taka(_total!.sum),
+                    count: _total!.count),
               if (_busy) const LinearProgressIndicator(),
               if (_error != null) BooksError(_error!),
               if (_loaded && _rows.isEmpty && !_busy)

@@ -23,9 +23,9 @@ class _FakeApi implements LeadApi {
   Future<LeadSetup> setup() async => setupData;
 
   @override
-  Future<(List<Lead>, int?)> list({String? query, String? status, int page = 1}) async {
+  Future<(List<Lead>, int?, int?)> list({String? query, String? status, int page = 1}) async {
     askedStatus = status;
-    return (const [lead], null);
+    return (const [lead], null, null);
   }
 
   @override

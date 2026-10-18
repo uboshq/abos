@@ -1,4 +1,5 @@
 import '../api_client/api_client.dart';
+import '../orders/paper_total.dart';
 import '../records/money.dart';
 import '../records/customer_record.dart';
 
@@ -258,7 +259,8 @@ abstract class BooksApi {
 
   Future<MoneyInDetail> moneyInDetail(String id);
 
-  Future<(List<PrincipalRow>, int?)> principals({String? q, int page = 1});
+  /// শেষেরটা সার্ভারের গোটা ছাঁকনির মোট দেনা আর গোনা — পুরনো সার্ভারে `null` (পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+  Future<(List<PrincipalRow>, int?, PaperTotal?)> principals({String? q, int page = 1});
 
   Future<PrincipalLedger> principal(String id, {int page = 1});
 
@@ -330,12 +332,13 @@ class ServerBooksApi implements BooksApi {
   }
 
   @override
-  Future<(List<PrincipalRow>, int?)> principals(
+  Future<(List<PrincipalRow>, int?, PaperTotal?)> principals(
       {String? q, int page = 1}) async {
     final body = await _get('/purchase/principals', {'q': q, 'page': page});
     return (
       _rows(body['rows']).map(PrincipalRow.fromJson).toList(),
-      _next(body['next_page'])
+      _next(body['next_page']),
+      PaperTotal.fromJson(body),
     );
   }
 

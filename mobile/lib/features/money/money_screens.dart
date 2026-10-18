@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -250,7 +251,10 @@ class TransferListScreen extends StatelessWidget {
               );
           final awaiting = _maps(d['awaiting']).map(TransferRow.fromJson).toList();
           final rows = _maps(d['rows']).map(TransferRow.fromJson).toList();
+          // ⭐ গোটা তালিকার মোট — সার্ভারের, বাতিল বাদ; পুরনো সার্ভার না পাঠালে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+          final total = PaperTotal.fromJson(d);
           return [
+            if (total != null && (rows.isNotEmpty || awaiting.isNotEmpty)) TotalStrip(label: 'মোট হাতবদল', value: Money.taka(total.sum), count: total.count),
             if (awaiting.isNotEmpty) ...[const SectionTitle('আমার নেওয়ার অপেক্ষায়'), for (final t in awaiting) row(t)],
             if (rows.isEmpty && awaiting.isEmpty)
               const EmptyState(icon: Icons.swap_horiz, title: 'কোনো হস্তান্তর নেই', message: 'নিচে টেনে আবার দেখুন।'),
@@ -499,7 +503,10 @@ class CashCountListScreen extends StatelessWidget {
         ),
         build: (context, d, reload) {
           final rows = _maps(d['rows']).map(CountRow.fromJson).toList();
+          // ⭐ কেবল গোনা — গোনা এক মুহূর্তের ছবি, টাকা যোগ হয় না; ⛔ পুরনো সার্ভার না পাঠালে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+          final count = (d['count'] as num?)?.toInt();
           return [
+            if (count != null && rows.isNotEmpty) TotalStrip(label: 'মোট গোনা', value: '$count টি'),
             if (rows.isEmpty) const EmptyState(icon: Icons.calculate_outlined, title: 'কোনো গোনা নেই', message: 'নিচে টেনে আবার দেখুন।'),
             for (final c in rows)
               Card(

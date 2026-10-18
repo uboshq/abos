@@ -6,6 +6,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../books/books_widgets.dart';
 import '../../core/records/customer_record.dart';
 
 /// ⭐ লোডিং শিট — মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৪, ৬ অক্টোবর ২০২৬: "পণ্য ধরে কত তুলতে হবে, চালান ধরে কার জন্য"।
@@ -162,10 +163,13 @@ class LoadingSheet {
 
 /// এক পাতা ট্রিপ — সার্ভার ৫০টা করে দেয়, পরের পাতার নম্বরসহ
 class LoadingTripPage {
-  const LoadingTripPage(this.rows, {this.nextPage});
+  const LoadingTripPage(this.rows, {this.nextPage, this.count});
 
   final List<LoadingTrip> rows;
   final int? nextPage;
+
+  /// ⭐ খোলা সব ট্রিপের গোনা — সার্ভারের, সব পাতার; পুরনো সার্ভারে `null` (পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+  final int? count;
 }
 
 abstract class LoadingApi {
@@ -187,7 +191,9 @@ class ServerLoadingApi implements LoadingApi {
     return LoadingTripPage([
       for (final r in (response.data?['rows'] as List?) ?? const [])
         if (r is Map) LoadingTrip.fromJson(Map<String, dynamic>.from(r)),
-    ], nextPage: (response.data?['next_page'] as num?)?.toInt());
+    ],
+        nextPage: (response.data?['next_page'] as num?)?.toInt(),
+        count: (response.data?['count'] as num?)?.toInt());
   }
 
   @override
@@ -221,6 +227,7 @@ class LoadingListScreen extends StatefulWidget {
 class _LoadingListScreenState extends State<LoadingListScreen> {
   List<LoadingTrip>? _rows;
   int? _next;
+  int? _count;
   bool _busy = false;
   String? _error;
 
@@ -243,6 +250,7 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
         setState(() {
           _rows = more ? [...?_rows, ...got.rows] : got.rows;
           _next = got.nextPage;
+          _count = got.count;
         });
       }
     } catch (e) {
@@ -275,6 +283,9 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) _ErrorCard(_error!),
+            // ⭐ গোটা তালিকার গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (_count != null && rows.isNotEmpty)
+              TotalStrip(label: 'মোট লোডিং শিট', value: '$_count টি'),
             if (_rows != null && rows.isEmpty && !_busy)
               const Padding(
                 padding: EdgeInsets.all(AppSpacing.lg),

@@ -6,6 +6,7 @@ import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../books/books_widgets.dart';
 import '../scan/receive_screen.dart';
 import '../../core/records/customer_record.dart';
 
@@ -63,10 +64,13 @@ class DeliveryRunRow {
 
 /// এক পাতা — সার্ভার ৫০টা করে দেয়, পরের পাতার নম্বরসহ (নেই তো `null`)
 class DeliveryRunPage {
-  const DeliveryRunPage(this.rows, {this.nextPage});
+  const DeliveryRunPage(this.rows, {this.nextPage, this.count});
 
   final List<DeliveryRunRow> rows;
   final int? nextPage;
+
+  /// ⭐ পথে থাকা সব চালানের গোনা — সার্ভারের, সব পাতার; পুরনো সার্ভারে `null` (পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+  final int? count;
 }
 
 abstract class DeliveryRunApi {
@@ -84,7 +88,9 @@ class ServerDeliveryRunApi implements DeliveryRunApi {
     return DeliveryRunPage([
       for (final r in (response.data?['rows'] as List?) ?? const [])
         if (r is Map) DeliveryRunRow.fromJson(Map<String, dynamic>.from(r)),
-    ], nextPage: (response.data?['next_page'] as num?)?.toInt());
+    ],
+        nextPage: (response.data?['next_page'] as num?)?.toInt(),
+        count: (response.data?['count'] as num?)?.toInt());
   }
 }
 
@@ -106,6 +112,7 @@ class DeliveriesScreen extends StatefulWidget {
 class _DeliveriesScreenState extends State<DeliveriesScreen> {
   List<DeliveryRunRow>? _rows;
   int? _next;
+  int? _count;
   bool _busy = false;
   String? _error;
   String? _notice;
@@ -127,6 +134,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
         setState(() {
           _rows = page.rows;
           _next = page.nextPage;
+          _count = page.count;
         });
       }
     } catch (e) {
@@ -152,6 +160,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
         setState(() {
           _rows = [...?_rows, ...page.rows];
           _next = page.nextPage;
+          _count = page.count;
         });
       }
     } catch (e) {
@@ -224,6 +233,9 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                       style: const TextStyle(color: AppColors.danger)),
                 ),
               ),
+            // ⭐ গোটা তালিকার গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (_count != null && rows.isNotEmpty)
+              TotalStrip(label: 'পথে মোট চালান', value: '$_count টি'),
             if (_rows != null && rows.isEmpty && !_busy)
               const Padding(
                 padding: EdgeInsets.all(AppSpacing.lg),

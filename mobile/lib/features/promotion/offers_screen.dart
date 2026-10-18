@@ -26,6 +26,9 @@ class _OffersScreenState extends State<OffersScreen> {
   bool _enabled = true;
   String _q = '';
 
+  /// ফোনে দেখানো অফারের গোনা — সার্ভার গোটা চলতি তালিকা একবারে দেয় (২০০ পর্যন্ত), খোঁজ ফোনেই ছাঁকে
+  int _shown = 0;
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('চলতি অফার')),
@@ -40,6 +43,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 : page.rows
                     .where((o) => '${o.name} ${o.code} ${o.goods}'.toLowerCase().contains(q))
                     .toList();
+            if (mounted && rows.length != _shown) setState(() => _shown = rows.length);
             return (rows, null);
           },
           failed: 'অফারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
@@ -55,6 +59,8 @@ class _OffersScreenState extends State<OffersScreen> {
               onSubmitted: (v) => setState(() => _q = v.trim()),
             ),
             const SizedBox(height: AppSpacing.sm),
+            // ⭐ গোটা তালিকার গোনা — পাতা ভাঙে না, তাই ফোনের দেখানো সারিই সব (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (_shown > 0) TotalStrip(label: 'চলতি অফার', value: '$_shown টি'),
           ],
           item: (context, o) => _OfferCard(offer: o, today: widget.today),
         ),

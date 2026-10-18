@@ -820,6 +820,8 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             if (counts == null && _error == null) const LinearProgressIndicator(),
+            // ⭐ গোটা তালিকার গোনা — সার্ভার পাতা ভাঙে না (১০০টা, পুরোটা), তাই ফোনের হাতের সারিই সব (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (counts != null && counts.isNotEmpty) TotalStrip(label: 'অপেক্ষায় মোট', value: '${counts.length} টি'),
             if (_error != null) BooksError(_error!),
             if (counts != null && counts.isEmpty)
               const EmptyState(icon: Icons.check_circle_outline, title: 'অপেক্ষায় কোনো গণনা নেই', message: 'নিচে টেনে আবার দেখুন।'),

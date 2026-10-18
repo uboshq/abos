@@ -88,11 +88,12 @@ class _FakeQs implements QualitySerialApi {
   int asked = 0;
 
   @override
-  Future<(List<InspectionRow>, List<StockChoice>, int?)> inspections({String? status, int page = 1}) async {
+  Future<(List<InspectionRow>, List<StockChoice>, int?, int?)> inspections({String? status, int page = 1}) async {
     asked++;
     return (
       empty ? const <InspectionRow>[] : [InspectionRow.fromJson({'id': 'qc-1', 'no': 'QC-0003', 'product': 'P-1 - কসমস বিস্কুট', 'qty': '10 পিস', 'status': 'pending', 'status_label': 'রায় বাকি'})],
       const [StockChoice('pending', 'রায় বাকি'), StockChoice('approved', 'গৃহীত')],
+      null,
       null,
     );
   }
@@ -131,11 +132,12 @@ class _FakeQs implements QualitySerialApi {
   Future<String> dispose(String id, Map<String, Object?> body) => _ok('dispose', body);
 
   @override
-  Future<(List<SerialRow>, int?)> serials({String serial = '', int page = 1}) async {
+  Future<(List<SerialRow>, int?, int?)> serials({String serial = '', int page = 1}) async {
     asked++;
     lastBody = {'serial': serial};
     return (
       empty ? const <SerialRow>[] : const [SerialRow(serialNo: 'SN-1', product: 'P-9 - ফ্যান', status: 'sold', statusLabel: 'গ্রাহকের কাছে', soldTo: 'রহিম')],
+      null,
       null,
     );
   }

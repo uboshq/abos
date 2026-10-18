@@ -6,6 +6,7 @@ import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../books/books_widgets.dart';
 
 /// ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ: তালিকা, নতুন লিড, আর একটা লিডের পাতায় অবস্থা বদল
 /// (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)। এক লাইনে এক তথ্য (মালিকের নিয়ম); নিয়ম সব সার্ভারের।
@@ -24,6 +25,7 @@ class _LeadListScreenState extends State<LeadListScreen> {
   String? _status;
   final List<Lead> _rows = [];
   int? _next;
+  int? _count;
   bool _busy = false;
   bool _loaded = false;
   String? _error;
@@ -49,12 +51,13 @@ class _LeadListScreenState extends State<LeadListScreen> {
       _error = null;
     });
     try {
-      final (rows, next) = await widget.api.list(query: _search.text, status: _status, page: more ? (_next ?? 1) : 1);
+      final (rows, next, count) = await widget.api.list(query: _search.text, status: _status, page: more ? (_next ?? 1) : 1);
       if (!mounted) return;
       setState(() {
         if (!more) _rows.clear();
         _rows.addAll(rows);
         _next = next;
+        _count = count;
         _loaded = true;
       });
     } catch (e) {
@@ -121,6 +124,8 @@ class _LeadListScreenState extends State<LeadListScreen> {
                 ),
             ]),
             const SizedBox(height: AppSpacing.sm),
+            // ⭐ গোটা ছাঁকনির গোনা — সার্ভারের, সব পাতার, খোঁজ আর অবস্থা মেনে; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (_count != null && _rows.isNotEmpty) TotalStrip(label: 'মোট লিড', value: '$_count টি'),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
             if (_loaded && _rows.isEmpty && _error == null)

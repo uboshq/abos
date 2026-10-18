@@ -110,12 +110,14 @@ class SerialRow {
 }
 
 abstract class QualitySerialApi {
-  Future<(List<InspectionRow>, List<StockChoice>, int?)> inspections({String? status, int page = 1});
+  /// শেষেরটা সার্ভারের গোটা ছাঁকনির গোনা — পুরনো সার্ভারে `null` (পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+  Future<(List<InspectionRow>, List<StockChoice>, int?, int?)> inspections({String? status, int page = 1});
   Future<Inspection> inspection(String id);
   Future<String> openInspection(Map<String, Object?> body);
   Future<String> decide(String id, Map<String, Object?> body);
   Future<String> dispose(String id, Map<String, Object?> body);
-  Future<(List<SerialRow>, int?)> serials({String serial = '', int page = 1});
+  /// শেষেরটা সার্ভারের গোটা খোঁজের গোনা — পুরনো সার্ভারে `null` (পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+  Future<(List<SerialRow>, int?, int?)> serials({String serial = '', int page = 1});
   Future<String> receiveSerials(Map<String, Object?> body);
   Future<String> issueSerials(Map<String, Object?> body);
 }
@@ -127,7 +129,7 @@ class ServerQualitySerialApi implements QualitySerialApi {
       (await ApiClient.dio.post<Map<String, dynamic>>('/inventory/$path', data: body)).data?['notice']?.toString() ?? '';
 
   @override
-  Future<(List<InspectionRow>, List<StockChoice>, int?)> inspections({String? status, int page = 1}) async {
+  Future<(List<InspectionRow>, List<StockChoice>, int?, int?)> inspections({String? status, int page = 1}) async {
     final body = (await ApiClient.dio.get<Map<String, dynamic>>('/inventory/quality',
             queryParameters: {if (status != null) 'status': status, 'page': page}))
         .data ?? const {};
@@ -138,6 +140,7 @@ class ServerQualitySerialApi implements QualitySerialApi {
           StockChoice(s['code']?.toString() ?? '', s['label']?.toString() ?? ''),
       ],
       (body['next_page'] as num?)?.toInt(),
+      (body['count'] as num?)?.toInt(),
     );
   }
 
@@ -155,7 +158,7 @@ class ServerQualitySerialApi implements QualitySerialApi {
   Future<String> dispose(String id, Map<String, Object?> body) => _post('quality/${Uri.encodeComponent(id)}/dispose', body);
 
   @override
-  Future<(List<SerialRow>, int?)> serials({String serial = '', int page = 1}) async {
+  Future<(List<SerialRow>, int?, int?)> serials({String serial = '', int page = 1}) async {
     final body = (await ApiClient.dio.get<Map<String, dynamic>>('/inventory/serials',
             queryParameters: {if (serial.isNotEmpty) 'serial': serial, 'page': page}))
         .data ?? const {};
@@ -173,6 +176,7 @@ class ServerQualitySerialApi implements QualitySerialApi {
           ),
       ],
       (body['next_page'] as num?)?.toInt(),
+      (body['count'] as num?)?.toInt(),
     );
   }
 
@@ -203,6 +207,7 @@ class _QualityListScreenState extends State<QualityListScreen> {
   List<StockChoice> _statuses = const [];
   String? _status;
   int? _next;
+  int? _count;
   bool _loaded = false;
   bool _busy = false;
   String? _error;
@@ -219,13 +224,14 @@ class _QualityListScreenState extends State<QualityListScreen> {
       _error = null;
     });
     try {
-      final (rows, statuses, next) = await widget.api.inspections(status: _status, page: more ? (_next ?? 1) : 1);
+      final (rows, statuses, next, count) = await widget.api.inspections(status: _status, page: more ? (_next ?? 1) : 1);
       if (!mounted) return;
       setState(() {
         if (!more) _rows.clear();
         _rows.addAll(rows);
         _statuses = statuses;
         _next = next;
+        _count = count;
         _loaded = true;
       });
     } catch (e) {
@@ -281,6 +287,8 @@ class _QualityListScreenState extends State<QualityListScreen> {
                         _load();
                       }),
               ]),
+            // ⭐ গোটা ছাঁকনির গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (_count != null && _rows.isNotEmpty) TotalStrip(label: 'মোট যাচাই', value: '$_count টি'),
             if (_busy && !_loaded) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_loaded && _rows.isEmpty)
@@ -591,6 +599,7 @@ class _SerialScreenState extends State<SerialScreen> {
   final _search = TextEditingController();
   final List<SerialRow> _rows = [];
   int? _next;
+  int? _count;
   bool _loaded = false;
   bool _busy = false;
   String? _error;
@@ -613,12 +622,13 @@ class _SerialScreenState extends State<SerialScreen> {
       _error = null;
     });
     try {
-      final (rows, next) = await widget.api.serials(serial: _search.text.trim(), page: more ? (_next ?? 1) : 1);
+      final (rows, next, count) = await widget.api.serials(serial: _search.text.trim(), page: more ? (_next ?? 1) : 1);
       if (!mounted) return;
       setState(() {
         if (!more) _rows.clear();
         _rows.addAll(rows);
         _next = next;
+        _count = count;
         _loaded = true;
       });
     } catch (e) {
@@ -661,6 +671,8 @@ class _SerialScreenState extends State<SerialScreen> {
               onSubmitted: (_) => _load(),
             ),
             const SizedBox(height: AppSpacing.sm),
+            // ⭐ গোটা খোঁজের গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            if (_count != null && _rows.isNotEmpty) TotalStrip(label: 'মোট সিরিয়াল', value: '$_count টি'),
             if (_busy && !_loaded) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_loaded && _rows.isEmpty) const EmptyState(icon: Icons.qr_code_2, title: 'কোনো সিরিয়াল মেলেনি', message: 'নিচে টেনে আবার দেখুন।'),
