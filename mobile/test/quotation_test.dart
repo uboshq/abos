@@ -53,7 +53,7 @@ void main() {
     // ⭐ মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total" — সার্ভারের সব পাতার মোট, ফোনে যোগ নয়
     final total = find.byKey(const ValueKey('books-total'));
     expect(find.descendant(of: total, matching: find.text('মোট উদ্ধৃতি')), findsOneWidget);
-    expect(find.descendant(of: total, matching: find.text('৳1,250')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('৳1,250.00')), findsOneWidget);
     expect(find.descendant(of: total, matching: find.text('· 7 টি')), findsOneWidget);
   });
 

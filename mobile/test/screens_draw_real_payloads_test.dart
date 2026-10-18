@@ -152,7 +152,7 @@ void main() {
     expect(find.textContaining('মিরপুর ১০'), findsOneWidget);
 
     // The due — pulled onto the device all along and read by nothing.
-    expect(find.text('বকেয়া ৳8,125.5'), findsOneWidget);
+    expect(find.text('বকেয়া ৳8,125.50'), findsOneWidget);
     expect(find.text('15 দিন'), findsOneWidget);
   });
 
@@ -175,7 +175,7 @@ void main() {
     expect(find.text('লাইফবয় সাবান ১০০গ্রাম'), findsOneWidget);
     // The line that never drew at all: the screen read `salesPrice`, the
     // server sends `salePrice`, so the catalogue showed no price whatsoever.
-    expect(find.text('৳42.5'), findsOneWidget);
+    expect(find.text('৳42.50'), findsOneWidget);
     expect(find.textContaining('পিস'), findsWidgets);
     // Sellable stock, joined from the StockOnHand record by product id.
     expect(find.text('বিক্রয়যোগ্য 40 পিস'), findsOneWidget);
@@ -220,7 +220,7 @@ void main() {
     expect(find.textContaining('রহিম স্টোর'), findsOneWidget);
     expect(find.textContaining('নিশ্চিত'), findsOneWidget);
     // ⓘ সারির নিজের অঙ্ক — নিচের মোটের পট্টিতেও একই সংখ্যা বসে (এক আদেশ), তাই সারির ভেতরে খোঁজা
-    expect(find.descendant(of: find.byType(ListTile), matching: find.text('৳1,275')), findsOneWidget);
+    expect(find.descendant(of: find.byType(ListTile), matching: find.text('৳1,275.00')), findsOneWidget);
   });
 
   // ⭐ মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total" — দেখানো সারির মোট আর গোনা
@@ -229,14 +229,14 @@ void main() {
     await tester.pump();
     final customers = find.byKey(const ValueKey('books-total'));
     expect(find.descendant(of: customers, matching: find.text('মোট বকেয়া')), findsOneWidget);
-    expect(find.descendant(of: customers, matching: find.text('৳8,125.5')), findsOneWidget);
+    expect(find.descendant(of: customers, matching: find.text('৳8,125.50')), findsOneWidget);
     expect(find.descendant(of: customers, matching: find.text('· 1 টি')), findsOneWidget);
 
     await tester.pumpWidget(const MaterialApp(home: OrderListScreen()));
     await tester.pump();
     final orders = find.byKey(const ValueKey('books-total'));
     expect(find.descendant(of: orders, matching: find.text('মোট অর্ডার')), findsOneWidget);
-    expect(find.descendant(of: orders, matching: find.text('৳1,275')), findsOneWidget);
+    expect(find.descendant(of: orders, matching: find.text('৳1,275.00')), findsOneWidget);
 
     await tester.pumpWidget(const MaterialApp(home: StockListScreen()));
     await tester.pump();
@@ -262,7 +262,7 @@ void main() {
     // choosing, on the screen where an order is written. The due is on the
     // row: which shop to sell to on credit is decided here.
     expect(find.text('রহিম স্টোর'), findsOneWidget);
-    expect(find.text('বকেয়া ৳8,125.5'), findsOneWidget);
+    expect(find.text('বকেয়া ৳8,125.50'), findsOneWidget);
 
     await tester.tap(find.text('রহিম স্টোর'));
     await tester.pumpAndSettle();
@@ -281,8 +281,8 @@ void main() {
 
     // One piece at 42.5, and the total that follows from it. A cart whose
     // prices are null adds up to zero and says so out loud.
-    expect(find.text('✓ ঝুড়িতে আছে · ৳৪২.৫'), findsOneWidget);
-    expect(find.text('৳৪২.৫'), findsWidgets);
+    expect(find.text('✓ ঝুড়িতে আছে · ৳৪২.৫০'), findsOneWidget);
+    expect(find.text('৳৪২.৫০'), findsWidgets);
 
     // ⛔ The owner's rule: the SR's phone shows no stock on this screen,
     // although a StockOnHand row (40 sellable) is in the cache.

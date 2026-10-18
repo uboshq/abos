@@ -67,7 +67,7 @@ class _FakeApi implements DirectSaleApi {
       ],
       'money': const [],
       'notes': [
-        if (overLimit) {'text': 'সীমা পার — ৳ 300.00', 'tone': 'stop'},
+        if (overLimit) {'text': 'সীমা পার — ৳300.00', 'tone': 'stop'},
       ],
       'blocks': overLimit,
     });
@@ -436,7 +436,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('counter-money-save')));
     await tester.pumpAndSettle();
 
-    expect(find.text('নেওয়া টাকা: ৳ 400'), findsOneWidget);
+    expect(find.text('নেওয়া টাকা: ৳400.00'), findsOneWidget);
     await _confirm(tester);
 
     final deposits = api.sentExtras!.deposits;
@@ -707,7 +707,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('কসমস বিস্কুট').last);
     await tester.pumpAndSettle();
-    expect(find.text('বিক্রয় দর: ৳ 40.00 / পিস'), findsOneWidget);
+    expect(find.text('বিক্রয় দর: ৳40.00 / পিস'), findsOneWidget);
     expect(find.text('বিক্রয়যোগ্য মজুদ: 42 পিস'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('counter-price-to-bill')));
     await tester.pumpAndSettle();
@@ -780,7 +780,7 @@ void main() {
     await _add(tester, qty: '12');
     expect(find.text('লট: LOT-A'), findsOneWidget,
         reason: '⛔ একই পণ্য দুই সারিতে');
-    expect(find.text('12 × ৳ 40'), findsOneWidget);
+    expect(find.text('12 × ৳40.00'), findsOneWidget);
   });
 
   testWidgets('a zero price never enters the cart', (tester) async {
@@ -806,7 +806,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('হালনাগাদ করুন'), findsOneWidget);
     await _add(tester, qty: '20');
-    expect(find.text('20 × ৳ 40'), findsOneWidget);
+    expect(find.text('20 × ৳40.00'), findsOneWidget);
     expect(find.text('কার্টে যোগ করুন'), findsOneWidget);
   });
 
@@ -828,7 +828,7 @@ void main() {
 
     // ⭐ আগে সারাংশ — তখনো বিক্রি নয়
     expect(find.byKey(const ValueKey('overview-sheet')), findsOneWidget);
-    expect(find.text('নিট বিল: ৳ 400.00'), findsOneWidget);
+    expect(find.text('নিট বিল: ৳400.00'), findsOneWidget);
     expect(api.sentDraft, isNull,
         reason: '⛔ সারাংশ দেখানোর আগেই বিক্রি হয়ে গেল');
     await tester.tap(find.byKey(const ValueKey('overview-confirm')));
@@ -893,7 +893,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('counter-confirm')));
     await tester.pumpAndSettle();
-    expect(find.text('সীমা পার — ৳ 300.00'), findsOneWidget);
+    expect(find.text('সীমা পার — ৳300.00'), findsOneWidget);
     final confirm = tester
         .widget<FilledButton>(find.byKey(const ValueKey('overview-confirm')));
     expect(confirm.onPressed, isNull,

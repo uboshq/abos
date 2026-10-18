@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../core/records/money.dart';
 
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
@@ -16,7 +16,6 @@ import '../printing/document_actions_sheet.dart';
 ///
 /// <p>ⓘ মালিকের নিয়ম: এক লাইনে এক জিনিস, টেবিল নয়। দাম পণ্যের — ফোনে দামের ঘর নেই। সুপারভাইজার এই পাতাতেই
 /// পরিমাণ কমিয়ে সই দেন; সইটা অনুমোদন-বাক্সের একই দরজায় যায়।
-final _taka = NumberFormat.decimalPattern('en_IN');
 
 String _qty(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
@@ -133,7 +132,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
             const SizedBox(height: AppSpacing.sm),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; ফেরত আর বাতিল বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
             if (_total != null && rows.isNotEmpty)
-              TotalStrip(label: 'মোট ${_paper(widget.api)}', value: '৳ ${_taka.format(_total!.sum)}', count: _total!.count),
+              TotalStrip(label: 'মোট ${_paper(widget.api)}', value: Money.taka(_total!.sum), count: _total!.count),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) _ErrorCard(_error!),
             if (_rows != null && rows.isEmpty && !_busy)
@@ -152,7 +151,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
                       if (order.customer != null) Text(order.customer!),
                       // ⭐ ওয়েবের চিপ — ব্যাক অর্ডার, সীমায় আটকে, চালান আর বিল (সমন্বয়ক, ৬ অক্টোবর ২০২৬)
                       if (order.chips.isEmpty) Text(order.statusLabel) else OrderChips(order.chips),
-                      Text('৳ ${_taka.format(order.total)}'),
+                      Text(Money.taka(order.total)),
                     ],
                   ),
                   trailing: order.awaitingMe ? const Icon(Icons.draw_outlined, color: AppColors.warning) : null,
@@ -423,10 +422,10 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             Text('অবস্থা: ${order.statusLabel}', key: const ValueKey('do-status')),
             if (order.customer != null) Text('ডিলার: ${order.customer}'),
             if (order.date != null) Text('তারিখ: ${order.date}'),
-            Text('মোট: ৳ ${_taka.format(order.total)}'),
+            Text('মোট: ${Money.taka(order.total)}'),
             // ⓘ বিক্রয় আদেশ বাকির সীমায় আটকে — লেখক দেখেন কেন থেমে আছে; টাকা এলে সার্ভার নিজেই আবার দেখে
             if (order.creditShort != null)
-              Text('বাকির সীমায় আটকে — কম ৳ ${_taka.format(order.creditShort)}',
+              Text('বাকির সীমায় আটকে — কম ${Money.taka(order.creditShort)}',
                   key: const ValueKey('do-credit-short'), style: const TextStyle(color: AppColors.danger)),
             if (order.chips.isNotEmpty) OrderChips(order.chips),
             // ⭐ মজুদ এখন — ধরা হয়নি: আছে, চাই, কম (ওয়েবের আদেশের পাতার একই উৎস)
@@ -450,7 +449,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                         )
                       else if (line.approvedQty != null)
                         Text('অনুমোদিত: ${_qty(line.approvedQty!)}'),
-                      Text('৳ ${_taka.format(line.lineTotal)}'),
+                      Text(Money.taka(line.lineTotal)),
                     ],
                   ),
                 ),

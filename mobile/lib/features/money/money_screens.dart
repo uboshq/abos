@@ -195,7 +195,7 @@ class CustodyScreen extends StatelessWidget {
         title: 'টাকা কার হাতে',
         load: () => api.get('/accounts/custody'),
         build: (context, d, _) => [
-          TotalStrip(label: 'পথের টাকা', value: d['on_the_road']?.toString() ?? '0'),
+          TotalStrip(label: 'পথের টাকা', value: Money.taka(d['on_the_road'] ?? '0')),
           if (_maps(d['rows']).isEmpty) const EmptyState(icon: Icons.account_balance_wallet_outlined, title: 'কোনো টাকার খাত নেই', message: ''),
           for (final r in _maps(d['rows']))
             Card(
@@ -813,7 +813,7 @@ class CfoScreen extends StatelessWidget {
           final liquidity = d['liquidity'] is Map ? d['liquidity'] as Map : const {};
           final budget = d['budget'] is Map ? d['budget'] as Map : null;
           return [
-            TotalStrip(label: '৩০ দিন পরে হাতে', value: d['in_30_days']?.toString() ?? ''),
+            TotalStrip(label: '৩০ দিন পরে হাতে', value: Money.taka(d['in_30_days'])),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
@@ -853,7 +853,7 @@ class CashForecastScreen extends StatelessWidget {
         title: 'নগদের পূর্বাভাস',
         load: () => api.get('/finance/cash-forecast'),
         build: (context, d, _) => [
-          TotalStrip(label: 'আজ হাতে', value: d['opening']?.toString() ?? ''),
+          TotalStrip(label: 'আজ হাতে', value: Money.taka(d['opening'])),
           for (final r in _maps(d['rows']))
             Card(
               margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -885,7 +885,7 @@ class IncomeScreen extends StatelessWidget {
         title: 'আয়',
         load: () => api.get('/finance/income'),
         build: (context, d, _) => [
-          TotalStrip(label: 'মোট আয় · এই মাস', value: d['total']?.toString() ?? ''),
+          TotalStrip(label: 'মোট আয় · এই মাস', value: Money.taka(d['total'])),
           FactRow('বিক্রি', d['sales']?.toString() ?? ''),
           FactRow('অন্যান্য আয়', d['other']?.toString() ?? ''),
           const SectionTitle('খাত ধরে'),
@@ -912,7 +912,7 @@ class BudgetScreen extends StatelessWidget {
           final s = d['status'] is Map ? d['status'] as Map : null;
           if (s == null) return const [EmptyState(icon: Icons.pie_chart_outline, title: 'এই মাসের কোনো বাজেট নেই', message: 'বাজেট ওয়েবে বসান।')];
           return [
-            TotalStrip(label: 'এই মাসের বাজেট', value: s['budget'].toString()),
+            TotalStrip(label: 'এই মাসের বাজেট', value: Money.taka(s['budget'])),
             FactRow('খরচ হয়েছে', s['actual'].toString()),
             if (s['used_pct'] != null) FactRow('ব্যবহার', '${s['used_pct']}%'),
           ];

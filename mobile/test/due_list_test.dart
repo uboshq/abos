@@ -77,7 +77,7 @@ void main() {
     await tester.pump();
 
     // 8125.5 + 3000 + 1200
-    expect(find.text('৳12,325.5'), findsOneWidget);
+    expect(find.text('৳12,325.50'), findsOneWidget);
     expect(find.text('3 টি দোকান'), findsOneWidget);
 
     // Sorted by what is owed, not by name: a list of eighty shops in
@@ -109,9 +109,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('পয়েন্ট: কারওয়ান বাজার'), findsOneWidget);
-    expect(find.text('বকেয়া: ৳5,000'), findsOneWidget);
+    expect(find.text('বকেয়া: ৳5,000.00'), findsOneWidget);
     // ⓘ A shop on no point keeps its due line, with nothing made up beside it
-    expect(find.text('বকেয়া: ৳3,000'), findsOneWidget);
+    expect(find.text('বকেয়া: ৳3,000.00'), findsOneWidget);
     expect(find.textContaining('পয়েন্ট: '), findsOneWidget);
     expect(find.textContaining('01711000001'), findsNothing,
         reason: 'the mobile is on the shop page, not the row');
@@ -149,9 +149,9 @@ void main() {
     await tester.pump();
 
     // ⓘ Two lines only (owner, 6 Oct 2026) — the shop's page carries them.
-    expect(find.textContaining('সীমা ৳50,000'), findsNothing);
+    expect(find.textContaining('সীমা ৳50,000.00'), findsNothing);
     expect(find.textContaining('15 দিনের শর্ত'), findsNothing);
-    expect(find.text('বকেয়া: ৳60,000'), findsOneWidget);
+    expect(find.text('বকেয়া: ৳60,000.00'), findsOneWidget);
     // ⛔ Over the limit, and the screen still draws no verdict. Whether a
     // limit blocks anything is a company switch the phone is deliberately not
     // sent — CustomerDueSync says so — and a phone deciding on its own cached
@@ -173,7 +173,7 @@ void main() {
     await tester.pump();
 
     // Not the same as owing nothing: the two entity types have separate
-    // watermarks, so one can lag the other by a sync. Showing it as ৳0 would
+    // watermarks, so one can lag the other by a sync. Showing it as ৳0.00 would
     // be the one sentence that costs money.
     expect(find.text('কারো কাছে বকেয়া নেই'), findsOneWidget);
     expect(find.textContaining('একলা দোকান'), findsNothing);
@@ -197,6 +197,6 @@ void main() {
     expect(find.textContaining('করিম'), findsNothing);
     // The headline stays the whole round's debt — a filtered total would read
     // as "this is what I am owed" while showing a fraction of it.
-    expect(find.text('৳10,000'), findsOneWidget);
+    expect(find.text('৳10,000.00'), findsOneWidget);
   });
 }

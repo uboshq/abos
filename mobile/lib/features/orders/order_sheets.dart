@@ -41,7 +41,7 @@ String bn(Object value) {
 String bnQty(num value) => bn(Money.plain(value));
 
 /// Taka in Bangla digits: ৳২,৮২০.
-String bnTaka(num value) => '৳${bnQty(value)}';
+String bnTaka(num value) => '৳${bn(Money.amount(value))}';
 
 /// The offer sentence the server sends, in a green chip.
 class OfferChip extends StatelessWidget {

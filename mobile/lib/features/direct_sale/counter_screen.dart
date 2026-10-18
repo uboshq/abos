@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
@@ -22,7 +21,6 @@ import 'return_screen.dart';
 /// কার্টের সারি কেবল পড়ার — বদলাতে "সম্পাদনা" চাপলে সারিটা উপরের ঘরে ফেরে, বোতাম "হালনাগাদ করুন";
 /// এক পণ্য-লট একবারই; শূন্য দর কার্টে ঢোকে না; অনুমোদন ও ঋণসীমার বার্তা পপ-আপে; "খসড়া রাখুন" ধূসর।
 /// <p>⛔ সব দেয়াল সার্ভারের (ওয়েবের একই দরজা) — ফোন কেবল জিজ্ঞেস করে আর উত্তরটা সত্যি করে দেখায়।
-final _taka = NumberFormat.decimalPattern('en_IN');
 
 class CounterScreen extends StatefulWidget {
   const CounterScreen(
@@ -471,7 +469,7 @@ class _CounterScreenState extends State<CounterScreen> {
               for (final d in rows)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('৳ ${_taka.format(d.amount)}'),
+                  title: Text(Money.taka(d.amount)),
                   subtitle: Text([
                     setup.moneyAccounts
                             .where((a) => a.id == d.accountId)
@@ -550,7 +548,7 @@ class _CounterScreenState extends State<CounterScreen> {
                 child: const Text('আরেকটা টাকা যোগ করুন'),
               ),
               Text(
-                  'মোট নেওয়া: ৳ ${_taka.format(rows.fold<double>(0, (s, d) => s + d.amount))}'),
+                  'মোট নেওয়া: ${Money.taka(rows.fold<double>(0, (s, d) => s + d.amount))}'),
               FilledButton(
                 key: const ValueKey('counter-money-save'),
                 onPressed: () {
@@ -930,7 +928,7 @@ class _CounterScreenState extends State<CounterScreen> {
                     ? price.name
                     : '${price.name} · ${price.code}',
                 style: Theme.of(sheet).textTheme.titleMedium),
-            Text('বিক্রয় দর: ৳ ${price.rate} / ${price.unit}'),
+            Text('বিক্রয় দর: ${Money.taka(price.rate)} / ${price.unit}'),
             Text(price.available == null
                 ? 'বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই'
                 : 'বিক্রয়যোগ্য মজুদ: ${price.available} ${price.unit}'),
@@ -1348,11 +1346,11 @@ class _CounterScreenState extends State<CounterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (line.lotNo != null) Text('লট: ${line.lotNo}'),
-                    Text('${line.qty} × ৳ ${_taka.format(line.rate)}'),
+                    Text('${line.qty} × ${Money.taka(line.rate)}'),
                     if (line.discountPercent > 0)
                       Text('ছাড়: ${line.discountPercent}%'),
                     if (line.freeQty > 0) Text('ফ্রি: ${line.freeQty}'),
-                    Text('৳ ${_taka.format(line.total)}'),
+                    Text(Money.taka(line.total)),
                   ],
                 ),
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1373,7 +1371,7 @@ class _CounterScreenState extends State<CounterScreen> {
           if (_cart.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Text('চলতি মোট: ৳ ${_taka.format(_total)}',
+              child: Text('চলতি মোট: ${Money.taka(_total)}',
                   key: const ValueKey('counter-total'),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
@@ -1381,7 +1379,7 @@ class _CounterScreenState extends State<CounterScreen> {
           // ⓘ কী কী বাছা আছে — এক লাইনে একটা (মালিক, ১ অক্টোবর: ডান দিক কেটে যায়)
           if (_deposits.isNotEmpty)
             Text(
-                'নেওয়া টাকা: ৳ ${_taka.format(_deposits.fold<double>(0, (s, d) => s + d.amount))}',
+                'নেওয়া টাকা: ${Money.taka(_deposits.fold<double>(0, (s, d) => s + d.amount))}',
                 key: const ValueKey('counter-money-summary')),
           if (_delivery.mode != null)
             Text('ডেলিভারি: ${switch (_delivery.mode) {
@@ -1391,7 +1389,7 @@ class _CounterScreenState extends State<CounterScreen> {
               _ => 'এখনই নিয়ে যাবেন',
             }}'),
           if (_delivery.fare > 0)
-            Text('ভাড়া: ৳ ${_taka.format(_delivery.fare)}'),
+            Text('ভাড়া: ${Money.taka(_delivery.fare)}'),
           TextField(
               controller: _note,
               decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)')),

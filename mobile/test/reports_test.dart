@@ -49,7 +49,7 @@ void main() {
       final cols = page.columns;
       expect(cols[0].format('2026-09-16'), '16/09/2026');
       expect(cols[1].format('SI-2609-0031'), 'SI-2609-0031');
-      expect(cols[2].format('1275.0000'), '৳1,275');
+      expect(cols[2].format('1275.0000'), '৳1,275.00');
     });
 
     test('an unfamiliar type is printed raw, not hidden', () {
@@ -159,10 +159,10 @@ void main() {
 
       expect(find.text('SI-2609-0031'), findsOneWidget);
       expect(find.text('16/09/2026'), findsWidgets);
-      expect(find.text('৳1,275'), findsOneWidget);
+      expect(find.text('৳1,275.00'), findsOneWidget);
       // The server's total, and the sentence that stops one page being read
       // as the whole report.
-      expect(find.text('৳45,200'), findsOneWidget);
+      expect(find.text('৳45,200.00'), findsOneWidget);
       expect(find.text('412 টির মধ্যে 1–2'), findsOneWidget);
       expect(find.text('পাতা 1 / 5'), findsOneWidget);
     });

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/records/money.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -98,14 +99,14 @@ class ConfirmOverviewSheet extends StatelessWidget {
             for (final line in data.lines) ...[
               Text(line.title, style: const TextStyle(fontWeight: FontWeight.w600)),
               for (final d in line.details) Text(d),
-              if (line.amount != null) Text('৳ ${line.amount}'),
+              if (line.amount != null) Text(Money.taka(line.amount)),
               const SizedBox(height: AppSpacing.sm),
             ],
             const Divider(),
             for (final t in data.totals)
-              Text('${t.label}: ৳ ${t.amount}', style: t.strong ? text.titleMedium : null),
+              Text('${t.label}: ${Money.taka(t.amount)}', style: t.strong ? text.titleMedium : null),
             const Divider(),
-            for (final m in data.money) Text('${m.label}: ৳ ${m.amount}', style: TextStyle(color: _tone(m.tone))),
+            for (final m in data.money) Text('${m.label}: ${Money.taka(m.amount)}', style: TextStyle(color: _tone(m.tone))),
             for (final n in data.notes)
               Card(
                 color: n.tone == 'stop' ? AppColors.dangerSurface : null,

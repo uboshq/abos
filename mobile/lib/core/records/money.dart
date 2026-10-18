@@ -24,7 +24,12 @@ import 'package:intl/intl.dart';
 class Money {
   const Money._();
 
-  static final NumberFormat _format = NumberFormat('#,##0.##', 'en');
+  /// ⭐ পরিমাণ — লাখ-কোটির ভাগে (১২,৩৪,৫৬৭), দশমিক যতটা আছে (চার ঘর পর্যন্ত; ০.১২৫ কেজি থাকে ০.১২৫)
+  static final NumberFormat _quantity = NumberFormat('#,##,##0.####', 'en_IN');
+
+  /// ⭐ টাকা — লাখ-কোটির ভাগে আর সবসময় দুই দশমিক (১২,৩৪,৫৬৭.৫০) — বাংলাদেশের হিসাবের ধারা (পূর্ণ নিরীক্ষা §৯ ⚠️৬,
+  /// ১৮ অক্টোবর ২০২৬)। ⛔ আগে `#,##0.##`: ১২,৩৪,৫৬৭ দেখাত ১,২৩৪,৫৬৭ আর ১,২৫০.৫০ দেখাত ১,২৫০.৫।
+  static final NumberFormat _money = NumberFormat('#,##,##0.00', 'en_IN');
 
   /// The value exactly as it arrived, or null when the key is absent.
   ///
@@ -49,16 +54,23 @@ class Money {
   /// "you may not see this" (a cost price).
   static double valueOrZero(dynamic value) => Money.value(value) ?? 0;
 
-  /// `1234.5000` → `1,234.5`. The four decimal places are the ledger's own
-  /// precision, not a figure anybody reads aloud in a shop.
+  /// পরিমাণ — `1234567.5000` → `12,34,567.5`. ⓘ দশমিক যতটা আছে (চার ঘর পর্যন্ত), কারণ কেজি-লিটারের ভগ্নাংশ কাটা চলে না।
+  /// টাকার জন্য [amount]/[taka]।
   static String plain(dynamic value) {
     final parsed = Money.value(value);
     if (parsed == null) return raw(value) ?? '—';
-    return _format.format(parsed);
+    return _quantity.format(parsed);
   }
 
-  /// `1234.5000` → `৳1,234.5`.
-  static String taka(dynamic value) => '৳${plain(value)}';
+  /// টাকা — `1234567.5` → `12,34,567.50`; লেখা পড়া না গেলে যেমন এসেছে
+  static String amount(dynamic value) {
+    final parsed = Money.value(value);
+    if (parsed == null) return raw(value) ?? '—';
+    return _money.format(parsed);
+  }
+
+  /// `1234567.5000` → `৳12,34,567.50` — ⛔ প্রতিটা মোটের পট্টি এটাই নেয়, সার্ভারের কাঁচা লেখা নয়
+  static String taka(dynamic value) => '৳${amount(value)}';
 
   /// দর বা হার — অন্তত দুই ঘর, দরকারে চার (`40` → `40.00`, `41.6667` থাকে) — সার্ভারের `decimal:4` না কেটে
   /// (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)

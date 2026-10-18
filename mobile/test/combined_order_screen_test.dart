@@ -199,7 +199,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('keypad-2')));
       await tester.pump();
       expect(find.text('১,৫০০'), findsOneWidget);
-      expect(find.textContaining('এই লাইনে ৳৫২,৫০০'), findsOneWidget);
+      expect(find.textContaining('এই লাইনে ৳৫২,৫০০.০০'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('keypad-add')));
       await tester.pumpAndSettle();
@@ -279,10 +279,10 @@ void main() {
     final free = find.byKey(const ValueKey('order-free-$_soap'));
     expect(find.descendant(of: free, matching: find.text('২')), findsOneWidget);
     expect(find.text('ফ্রি · নিজে বসেছে'), findsOneWidget);
-    expect(find.text('✓ ঝুড়িতে আছে · ৳৩৫'), findsOneWidget);
-    expect(find.text('বিক্রি · ৳৮৪০'), findsOneWidget);
+    expect(find.text('✓ ঝুড়িতে আছে · ৳৩৫.০০'), findsOneWidget);
+    expect(find.text('বিক্রি · ৳৮৪০.০০'), findsOneWidget);
     expect(find.text('বিক্রি ২৪ পিস · ফ্রি ২'), findsOneWidget);
-    expect(find.text('৳৮৪০'), findsWidgets);
+    expect(find.text('৳৮৪০.০০'), findsWidgets);
     expect(api.offerCalls.last.single.qty, 24);
   });
 
@@ -299,10 +299,10 @@ void main() {
     expect(find.text('জমা আছে'), findsOneWidget);
     expect(find.text('অনুমোদনের অপেক্ষায়'), findsOneWidget);
     expect(find.text('দিতে হবে'), findsOneWidget);
-    expect(find.text('৳১,৫০০'), findsOneWidget);
-    expect(find.text('৳৩,০২০'), findsOneWidget);
+    expect(find.text('৳১,৫০০.০০'), findsOneWidget);
+    expect(find.text('৳৩,০২০.০০'), findsOneWidget);
     expect(
-      find.text('বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু ৳৩,০২০ জমা না হলে ডেলিভারি হবে না। '
+      find.text('বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু ৳৩,০২০.০০ জমা না হলে ডেলিভারি হবে না। '
           'এই সীমা কেউ পার করাতে পারেন না, মালিকও না।'),
       findsOneWidget,
     );
@@ -321,7 +321,7 @@ void main() {
     await tester.tap(find.text('ফিরে যান'));
     await tester.pumpAndSettle();
     expect(find.text('পাঠানোর আগে দেখে নিন'), findsNothing);
-    expect(find.text('✓ ঝুড়িতে আছে · ৳৯০'), findsOneWidget, reason: 'going back keeps the basket');
+    expect(find.text('✓ ঝুড়িতে আছে · ৳৯০.০০'), findsOneWidget, reason: 'going back keeps the basket');
   });
 
   testWidgets('no net: the order still goes, the sheet says the figures come later', (tester) async {

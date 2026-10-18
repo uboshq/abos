@@ -168,7 +168,7 @@ void main() {
 
     expect(api.asked.first, containsPair('from', '2026-10-01'));
     expect(api.asked.first, containsPair('to', '2026-10-06'));
-    expect(find.text('৳4,000'), findsOneWidget,
+    expect(find.text('৳4,000.00'), findsOneWidget,
         reason: 'মোট সার্ভারের গোটা ছাঁকনির');
     expect(find.text('· 2 টি'), findsOneWidget);
     expect(find.textContaining('RCV-0001 · 05/10/2026 · চেক'), findsOneWidget);
@@ -196,7 +196,7 @@ void main() {
 
     expect(find.text('CHQ-7781'), findsOneWidget);
     expect(find.text('S-0041'), findsOneWidget);
-    expect(find.text('৳2,000'), findsOneWidget);
+    expect(find.text('৳2,000.00'), findsOneWidget);
   });
 
   testWidgets(
@@ -204,8 +204,8 @@ void main() {
       (tester) async {
     await _pump(tester, PrincipalListScreen(api: _FakeBooks()));
 
-    expect(find.text('দিতে হবে: ৳1,156,172.16'), findsOneWidget);
-    expect(find.text('পাব: ৳2,500'), findsOneWidget,
+    expect(find.text('দিতে হবে: ৳11,56,172.16'), findsOneWidget);
+    expect(find.text('পাব: ৳2,500.00'), findsOneWidget,
         reason: '⛔ ঋণাত্মক জের খালি বিয়োগে');
     expect(find.text('শেষ ক্রয়: 01/10/2026'), findsOneWidget);
     expect(find.text('এখনো কোনো ক্রয় নেই'), findsOneWidget);
@@ -214,7 +214,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Star Line Food Products'), findsOneWidget);
     expect(find.text('01/10/2026 · PB-0009'), findsOneWidget);
-    expect(find.text('+৳50,000'), findsOneWidget);
+    expect(find.text('+৳50,000.00'), findsOneWidget);
   });
 
   testWidgets(
@@ -224,7 +224,7 @@ void main() {
     await _pump(tester, PurchaseListScreen(api: api, today: _today));
 
     expect(
-        find.textContaining('পরিশোধিত ৳20,000 · বাকি ৳30,000'), findsOneWidget);
+        find.textContaining('পরিশোধিত ৳20,000.00 · বাকি ৳30,000.00'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('purchase-principal')));
     await tester.pumpAndSettle();
@@ -257,10 +257,10 @@ void main() {
 
     api.withCost = true;
     await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));
-    expect(find.textContaining('দর ৳500'), findsOneWidget);
+    expect(find.textContaining('দর ৳500.00'), findsOneWidget);
   });
 
-  test('a purchase row the server sent without its money reads as no money, not ৳0', () {
+  test('a purchase row the server sent without its money reads as no money, not ৳0.00', () {
     final row = PurchaseRow.fromJson(const {'kind': 'bill', 'id': 'b1', 'no': 'PB-0009', 'principal': 'Star Line'});
     expect(row.total, isNull);
     expect(row.paid, isNull);
@@ -273,7 +273,7 @@ void main() {
     final api = _FakeBooks()..withMoney = false;
     await _pump(tester, PurchaseListScreen(api: api, today: _today));
     expect(find.textContaining('৳'), findsNothing,
-        reason: '⛔ চাবি ছাড়া অঙ্ক দেখাল — নাকি ৳০?');
+        reason: '⛔ চাবি ছাড়া অঙ্ক দেখাল — নাকি ৳০.০০?');
     expect(find.text('—'), findsOneWidget);
 
     await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));

@@ -306,7 +306,7 @@ void main() {
       await _pump(tester, VoucherScreen(id: 'v1', api: _FakeVouchers(page: page(another: true))));
       expect(find.byKey(const ValueKey('voucher-another-hand')), findsOneWidget);
       expect(find.byKey(const ValueKey('voucher-post')), findsNothing);
-      expect(find.text('ডেবিট ৳500'), findsOneWidget);
+      expect(find.text('ডেবিট ৳500.00'), findsOneWidget);
     });
 
     testWidgets('another hand posts, giving the TrxID a bank voucher lacks; a held signature reads as a warning',

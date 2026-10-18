@@ -79,7 +79,7 @@ void main() {
     // ⭐ সার্ভারের পুরো তালিকার মোট আর গোনা, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬)
     final total = find.byKey(const ValueKey('books-total'));
     expect(find.descendant(of: total, matching: find.text('মোট DO')), findsOneWidget);
-    expect(find.descendant(of: total, matching: find.text('৳ 4,800')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('৳4,800.00')), findsOneWidget);
     expect(find.descendant(of: total, matching: find.text('· 12 টি')), findsOneWidget);
     expect(find.byKey(const ValueKey('do-new')), findsOneWidget);
 
@@ -177,7 +177,7 @@ void main() {
     expect(find.byKey(const ValueKey('do-credit-short')), findsOneWidget);
     // ⭐ আদেশের কাগজ ছাপা যায় — নরমাল বা থার্মাল (১৪ অক্টোবর ২০২৬)
     expect(find.byKey(const ValueKey('order-print')), findsOneWidget);
-    expect(find.text('বাকির সীমায় আটকে — কম ৳ 150'), findsOneWidget);
+    expect(find.text('বাকির সীমায় আটকে — কম ৳150.00'), findsOneWidget);
   });
 
   test('the order door reads the same JSON, and the paper says which door it is', () {

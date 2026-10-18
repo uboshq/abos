@@ -156,7 +156,7 @@ void main() {
   testWidgets('the CFO page draws the server figures, and an empty list pulls again', (tester) async {
     await tester.pumpWidget(MaterialApp(home: CfoScreen(api: _FakeMoney())));
     await tester.pumpAndSettle();
-    expect(find.text('45,000.00'), findsOneWidget);
+    expect(find.text('৳45,000.00'), findsOneWidget);
     expect(find.text('50,000.00'), findsOneWidget);
 
     final empty = _FakeMoney(empty: true);

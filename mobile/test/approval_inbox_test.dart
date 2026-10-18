@@ -59,7 +59,7 @@ void main() {
         reason: 'the model name is English on the wire and Bangla on screen');
     expect(find.text('PB-2609-0007'), findsOneWidget);
     // decimal:4 on the wire, readable here — the salePrice lesson.
-    expect(find.text('৳125,000'), findsOneWidget);
+    expect(find.text('৳1,25,000.00'), findsOneWidget);
     expect(find.textContaining('করিম'), findsOneWidget);
     expect(find.textContaining('ধাপ 2'), findsOneWidget);
     expect(find.text('মেসার্স রহমান ট্রেডার্স'), findsOneWidget);
@@ -201,7 +201,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'অনুমোদন'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('৳125,000', findRichText: true), findsWidgets, reason: 'সইয়ের প্রশ্নে অঙ্ক নেই');
+    expect(find.textContaining('৳1,25,000.00', findRichText: true), findsWidgets, reason: 'সইয়ের প্রশ্নে অঙ্ক নেই');
     await tester.tap(inDialog('অনুমোদন'));
     await tester.pumpAndSettle();
 
@@ -213,7 +213,7 @@ void main() {
   testWidgets('a discount request says the figure is the discount, not the bill (phone line audit, 15 Oct 2026)', (tester) async {
     await tester.pumpWidget(screen(load: () async => ApprovalPage(rows: [ApprovalRecord(<String, dynamic>{...row, 'documentType': 'SalesInvoice', 'action': 'discount', 'amount': '500.0000'})])));
     await tester.pumpAndSettle();
-    expect(find.text('ছাড় ৳500'), findsOneWidget, reason: '⛔ ছাড়ের অঙ্ক বিলের মোটের মতো দেখাল');
+    expect(find.text('ছাড় ৳500.00'), findsOneWidget, reason: '⛔ ছাড়ের অঙ্ক বিলের মোটের মতো দেখাল');
   });
 
   testWidgets('a long inbox loads its next page on request (phone line audit, 15 Oct 2026)', (tester) async {

@@ -1,3 +1,4 @@
+import '../records/money.dart';
 import '../api_client/api_client.dart';
 
 /// ⭐ চলতি অফার, ফোনে — SR দোকানে দাঁড়িয়ে দেখেন কোন পণ্যে কী ছাড়, কী ফ্রি, কবে পর্যন্ত (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬;
@@ -32,13 +33,13 @@ class OfferBenefit {
     final a = amount ?? '';
     final base = switch (kind) {
       'percent' => '$a% ছাড়',
-      'amount' => '৳$a ছাড়',
+      'amount' => '${Money.taka(a)} ছাড়',
       'goods' => gift == null ? '$aটা ফ্রি' : '$aটা $gift ফ্রি',
-      'credit' => '৳$a ফেরত (পরের কেনায়)',
+      'credit' => '${Money.taka(a)} ফেরত (পরের কেনায়)',
       'points' => '$a পয়েন্ট',
       _ => a,
     };
-    return cap == null ? base : '$base (এক বিলে সর্বোচ্চ ৳$cap)';
+    return cap == null ? base : '$base (এক বিলে সর্বোচ্চ ${Money.taka(cap)})';
   }
 }
 
@@ -76,7 +77,8 @@ class OfferStep {
   String get condition {
     // ⓘ "১০টা বা বেশি", "১০–২৪টা", "২৪টা পর্যন্ত" — এককটা সংখ্যার গায়ে
     String range(String unit, {bool before = false}) {
-      String n(String v) => before ? '$unit$v' : '$v$unit';
+      // ⓘ টাকার শর্ত টাকার ধরনে (লাখের ভাগ, দুই দশমিক — [[Money.taka]]); পরিমাণ নিজের এককে
+      String n(String v) => before ? Money.taka(v) : '$v$unit';
       return switch ((from, to)) {
         (final f?, final t?) => '${n(f)}–${n(t)}',
         (final f?, null) => '${n(f)} বা বেশি',

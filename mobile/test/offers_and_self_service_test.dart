@@ -119,8 +119,8 @@ void main() {
 
   test('a rule reads as a sentence, the unit on the number', () {
     expect(const OfferStep(kind: 'quantity', from: '10', to: '24').condition, '10টা–24টা কিনলে');
-    expect(const OfferStep(kind: 'value', from: '5000').condition, '৳5000 বা বেশি কিনলে');
-    expect(const OfferBenefit(kind: 'amount', amount: '50', cap: '500').words, '৳50 ছাড় (এক বিলে সর্বোচ্চ ৳500)');
+    expect(const OfferStep(kind: 'value', from: '5000').condition, '৳5,000.00 বা বেশি কিনলে');
+    expect(const OfferBenefit(kind: 'amount', amount: '50', cap: '500').words, '৳50.00 ছাড় (এক বিলে সর্বোচ্চ ৳500.00)');
   });
 
   group('leave', () {

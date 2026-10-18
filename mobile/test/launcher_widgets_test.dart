@@ -75,7 +75,7 @@ void main() {
 
       PhonePrivacy.amountsReader = () async => true;
       await TodayLauncherWidget.publish(today);
-      expect(written[TodayLauncherWidget.provider]!['widget_cash'], '৳18,500');
+      expect(written[TodayLauncherWidget.provider]!['widget_cash'], '৳18,500.00');
     });
 
     test('following /me: the screen setting always, the widget redrawn only when its choice changes', () async {
@@ -101,10 +101,10 @@ void main() {
     test('the four figures the contract sends are written as figures', () {
       final values = TodayLauncherWidget.valuesFor(today);
 
-      expect(values['widget_sales_today'], '৳45,200');
-      expect(values['widget_inflow_today'], '৳31,000');
-      expect(values['widget_cash'], '৳18,500');
-      expect(values['widget_receivable'], '৳8,125.5');
+      expect(values['widget_sales_today'], '৳45,200.00');
+      expect(values['widget_inflow_today'], '৳31,000.00');
+      expect(values['widget_cash'], '৳18,500.00');
+      expect(values['widget_receivable'], '৳8,125.50');
     });
 
     test('every cell the contract does not answer is a dash, not a zero', () {
@@ -118,10 +118,10 @@ void main() {
       ]) {
         expect(values[key], '—', reason: key);
       }
-      expect(values.values.where((v) => v.contains('৳0')), isEmpty);
+      expect(values.values.where((v) => v.contains('৳0.00')), isEmpty);
     });
 
-    test('a figure this account may not see is a dash, never ৳0', () {
+    test('a figure this account may not see is a dash, never ৳0.00', () {
       // Absent, not zero: docs/Contract §৮ rule ক. A manager without
       // accounts.till.view gets no cashInHand key at all.
       const withoutCash = TodayRecord({
@@ -134,7 +134,7 @@ void main() {
 
       expect(values['widget_cash'], '—');
       // A real zero the server did send is a figure, and is drawn as one.
-      expect(values['widget_sales_today'], '৳0');
+      expect(values['widget_sales_today'], '৳0.00');
     });
 
     test('it says whose figures these are, and the hour the server gave', () {
@@ -195,8 +195,8 @@ void main() {
       ]);
 
       expect(values['approvals_count'], '2');
-      expect(values['approvals_row_1'], 'ক্রয় বিল · PBL-0001 · ৳2,600');
-      expect(values['approvals_row_2'], 'ক্রয় বিল · PBL-0003 · ৳400');
+      expect(values['approvals_row_1'], 'ক্রয় বিল · PBL-0001 · ৳2,600.00');
+      expect(values['approvals_row_2'], 'ক্রয় বিল · PBL-0003 · ৳400.00');
       expect(values['approvals_row_3'], isEmpty);
       expect(values['approvals_empty'], isEmpty);
     });
@@ -266,7 +266,7 @@ void main() {
       );
 
       expect(written[TodayLauncherWidget.provider]!['widget_sales_today'],
-          '৳45,200');
+          '৳45,200.00');
       expect(written[ApprovalsLauncherWidget.provider]!['approvals_count'],
           '1');
     });

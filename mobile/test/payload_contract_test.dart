@@ -126,7 +126,7 @@ void main() {
     test('a zero credit limit is not read as a limit at all', () {
       // CustomerDueSync says it plainly: zero means cash/advance, and whether
       // that blocks a sale is a company switch the phone is not sent. So the
-      // screen must have a way to draw no limit rather than "সীমা ৳0".
+      // screen must have a way to draw no limit rather than "সীমা ৳0.00".
       const due = CustomerDueRecord({
         'outstanding': '0.0000',
         'creditLimit': '0.0000',

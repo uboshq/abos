@@ -12,7 +12,7 @@ void main() {
         NotificationRecord({
           'id': 'n-1',
           'title': 'ব্যাংক ঋণের কিস্তি — Sonali',
-          'body': 'আজ কিস্তি ৳10,000',
+          'body': 'আজ কিস্তি ৳10,000.00',
           'read': firstRead,
           'at': '2026-10-06T09:00:00+06:00',
         }),
@@ -51,7 +51,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(marked, ['n-1']);
-    expect(find.text('আজ কিস্তি ৳10,000'), findsWidgets,
+    expect(find.text('আজ কিস্তি ৳10,000.00'), findsWidgets,
         reason: 'the message opens');
   });
 

@@ -102,7 +102,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final total = find.byKey(const ValueKey('books-total'));
-    expect(find.descendant(of: total, matching: find.text('৳ 1,500.00')), findsOneWidget);
+    expect(find.descendant(of: total, matching: find.text('৳1,500.00')), findsOneWidget);
     expect(find.descendant(of: total, matching: find.text('· 1 টি')), findsOneWidget);
     expect(find.text('DO-0009 · রহিম স্টোর'), findsOneWidget);
     expect(find.text('⚠ সীমার কাছে'), findsOneWidget);
@@ -140,7 +140,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: PipelineScreen(api: _FakeApi())));
     await tester.pumpAndSettle();
     expect(find.text('প্রস্তাব · 1 টি'), findsOneWidget);
-    expect(find.text('মোট ৳ 20,000.00 · ওজন-করা ৳ 10,000.00'), findsOneWidget);
+    expect(find.text('মোট ৳20,000.00 · ওজন-করা ৳10,000.00'), findsOneWidget);
     expect(find.text('পাইকারি চুক্তি'), findsOneWidget);
 
     await tester.pumpWidget(MaterialApp(home: TemplateListScreen(api: _FakeApi())));

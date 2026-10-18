@@ -67,8 +67,8 @@ void main() {
     expect(find.text('রহিম স্টোর'), findsWidgets);
     expect(find.text('CUS-0001'), findsOneWidget);
     expect(find.text('আব্দুর রহিম'), findsOneWidget);
-    expect(find.text('বকেয়া ৳8,125.5'), findsOneWidget);
-    expect(find.textContaining('সীমা ৳50,000'), findsOneWidget);
+    expect(find.text('বকেয়া ৳8,125.50'), findsOneWidget);
+    expect(find.textContaining('সীমা ৳50,000.00'), findsOneWidget);
     // How old the figure is, because this is the number somebody is about to
     // promise goods against and a stale one looks exactly like a fresh one.
     expect(find.textContaining('সিঙ্ক 16/09/2026'), findsOneWidget);

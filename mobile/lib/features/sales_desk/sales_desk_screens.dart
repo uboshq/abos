@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/records/money.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/sales_desk_api.dart';
@@ -150,7 +151,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
           const SizedBox(height: AppSpacing.sm),
         ],
         body: (context, p, reload) => [
-          TotalStrip(label: 'যাচাইয়ের অপেক্ষায় DO', value: '৳ ${p.text('orders_total')}', count: p.number('orders_count')),
+          TotalStrip(label: 'যাচাইয়ের অপেক্ষায় DO', value: Money.taka(p.text('orders_total')), count: p.number('orders_count')),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Text('ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।', key: ValueKey('depot-web-note'), style: _muted),
@@ -159,7 +160,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
             _card(key: ValueKey('depot-${o.text('id')}'), children: [
               Row(children: [
                 Expanded(child: Text('${o.text('document_no')} · ${o.text('customer')}', style: _bold)),
-                Text('৳ ${o.text('total')}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
               ]),
               Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted),
               for (final w in o.list('warnings')) Text('⚠ $w', style: const TextStyle(fontSize: 13, color: AppColors.warning)),
@@ -173,7 +174,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
               _card(children: [
                 Row(children: [
                   Expanded(child: Text('${o.text('document_no')} · ${o.text('customer')}', style: _bold)),
-                  Text('৳ ${o.text('total')}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
                 ]),
                 Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted),
               ]),
@@ -312,7 +313,7 @@ class PipelineScreen extends StatelessWidget {
         isEmpty: (p) => p.rows('stages').every((s) => s.number('count') == 0),
         emptyTitle: 'কোনো সম্ভাবনা নেই',
         body: (context, p, reload) => [
-          TotalStrip(label: 'চলমান সম্ভাবনা (ওজন-করা)', value: '৳ ${p.text('open_weighted')}'),
+          TotalStrip(label: 'চলমান সম্ভাবনা (ওজন-করা)', value: Money.taka(p.text('open_weighted'))),
           for (final s in p.rows('stages'))
             Card(
               key: ValueKey('stage-${s.text('name')}'),
@@ -320,7 +321,7 @@ class PipelineScreen extends StatelessWidget {
               child: ExpansionTile(
                 initiallyExpanded: s.number('count') > 0,
                 title: Text('${s.text('name')} · ${s.number('count')} টি', style: _bold),
-                subtitle: Text('মোট ৳ ${s.text('total')} · ওজন-করা ৳ ${s.text('weighted')}', style: _muted),
+                subtitle: Text('মোট ${Money.taka(s.text('total'))} · ওজন-করা ${Money.taka(s.text('weighted'))}', style: _muted),
                 children: [
                   for (final o in s.rows('rows'))
                     ListTile(
@@ -328,7 +329,7 @@ class PipelineScreen extends StatelessWidget {
                       title: Text(o.text('title')),
                       subtitle: Text([
                         o.text('party'),
-                        '৳ ${o.text('value')}',
+                        Money.taka(o.text('value')),
                         '${o.number('probability')}%',
                         if (o.text('close_on').isNotEmpty) 'শেষ ${o.text('close_on')}',
                         if (o.text('salesperson').isNotEmpty) o.text('salesperson'),

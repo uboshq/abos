@@ -41,10 +41,10 @@ void main() {
     await tester.pumpWidget(screen());
     await tester.pumpAndSettle();
 
-    expect(find.text('৳45,200'), findsOneWidget); // বিক্রি
-    expect(find.text('৳31,000'), findsOneWidget); // আদায়
-    expect(find.text('৳18,500'), findsOneWidget); // নগদ
-    expect(find.text('৳812,500'), findsOneWidget);
+    expect(find.text('৳45,200.00'), findsOneWidget); // বিক্রি
+    expect(find.text('৳31,000.00'), findsOneWidget); // আদায়
+    expect(find.text('৳18,500.00'), findsOneWidget); // নগদ
+    expect(find.text('৳8,12,500.00'), findsOneWidget);
     expect(find.textContaining('12 টি বিক্রয়'), findsOneWidget);
     expect(find.textContaining('41 টি দোকান'), findsOneWidget);
     expect(find.textContaining('3 টি নথি'), findsOneWidget);
@@ -83,7 +83,7 @@ void main() {
 
     expect(find.text('আজকের বিক্রি'), findsOneWidget);
     expect(find.text('হাতে নগদ'), findsNothing);
-    expect(find.text('৳0'), findsNothing);
+    expect(find.text('৳0.00'), findsNothing);
   });
 
   // ⭐ The owner's home, 6 Oct 2026, drawn on a screenshot: sale | money in;
@@ -133,15 +133,15 @@ void main() {
 
     expect(find.text('আজকের বিক্রি'), findsOneWidget);
     expect(find.text('আজকের ইনফ্লো/আদায়'), findsOneWidget);
-    expect(find.text('৳9,400'), findsOneWidget);
-    expect(find.textContaining('আদায় ৳1,500'), findsOneWidget);
+    expect(find.text('৳9,400.00'), findsOneWidget);
+    expect(find.textContaining('আদায় ৳1,500.00'), findsOneWidget);
 
     expect(find.text('পাওনা (Recoverable)'), findsOneWidget);
-    expect(find.text('৳609,011.23'), findsOneWidget);
+    expect(find.text('৳6,09,011.23'), findsOneWidget);
     expect(find.textContaining('32 টি দোকান'), findsOneWidget);
     expect(find.text('দেনা (Payable)'), findsOneWidget);
-    expect(find.text('৳125,000'), findsOneWidget);
-    expect(find.textContaining('হাতধার ৳5,000 সহ'), findsOneWidget);
+    expect(find.text('৳1,25,000.00'), findsOneWidget);
+    expect(find.textContaining('হাতধার ৳5,000.00 সহ'), findsOneWidget);
 
     // ⓘ the old cards are not drawn as well — one figure, one place
     expect(find.text('আদায় ও বকেয়া'), findsNothing);
@@ -155,12 +155,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('হাতে ও ব্যাংকে মোট'), findsOneWidget);
-    expect(find.text('৳48,000'), findsOneWidget);
+    expect(find.text('৳48,000.00'), findsOneWidget);
     for (final label in ['নগদ', 'MFS', 'ব্যাংক', 'পথে']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.text('৳40,000'), findsOneWidget);
-    expect(find.text('৳700'), findsOneWidget);
+    expect(find.text('৳40,000.00'), findsOneWidget);
+    expect(find.text('৳700.00'), findsOneWidget);
   });
 
   testWidgets(
@@ -174,13 +174,13 @@ void main() {
     // inflow still held · remark with the period
     expect(find.text('S-001 — Star Line'), findsOneWidget);
     expect(find.text('মোট ইনফ্লো'), findsOneWidget);
-    expect(find.text('৳100,000'), findsOneWidget);
+    expect(find.text('৳1,00,000.00'), findsOneWidget);
     expect(find.text('কমিশন (Margin 3.85%)'), findsOneWidget);
-    expect(find.text('৳3,850'), findsOneWidget);
+    expect(find.text('৳3,850.00'), findsOneWidget);
     expect(find.text('প্রিন্সিপালকে পাঠানো'), findsOneWidget);
-    expect(find.text('৳90,000'), findsOneWidget);
+    expect(find.text('৳90,000.00'), findsOneWidget);
     expect(find.text('বাকি ইনফ্লো'), findsOneWidget);
-    expect(find.text('দিতে হবে: ৳6,150'), findsOneWidget,
+    expect(find.text('দিতে হবে: ৳6,150.00'), findsOneWidget,
         reason: 'the inflow still held, said in words');
     expect(find.text('সময়কাল: 02/09/2026 – আজ পর্যন্ত'), findsOneWidget);
     expect(find.textContaining('মন্তব্য'), findsNothing,
@@ -239,12 +239,12 @@ void main() {
         const PrincipalLine(
                 name: 'X', period: 'p', basisRate: 'আসল', commission: -2500)
             .commissionText,
-        'লোকসান ৳2,500 — কেনা দামের নিচে বিক্রি');
+        'লোকসান ৳2,500.00 — কেনা দামের নিচে বিক্রি');
     expect(
         const PrincipalLine(
                 name: 'X', period: 'p', basisRate: 'b', commission: 3850)
             .commissionText,
-        '৳3,850');
+        '৳3,850.00');
   });
 
   test('an older server without periodSoFar shows the plain period', () {
@@ -255,7 +255,7 @@ void main() {
         const PrincipalLine(
                 name: 'X', period: 'p', basisRate: 'b', balance: -10)
             .balanceLabel,
-        'কোম্পানির কাছে পাব: ৳10');
+        'কোম্পানির কাছে পাব: ৳10.00');
   });
 
   testWidgets('an older server without the new blocks still gets the old cards',
@@ -282,7 +282,7 @@ void main() {
     // Better than an empty screen — provided it admits what it is. An owner
     // reading the morning's cash at nine at night is reading a number that
     // stopped being true hours ago.
-    expect(find.text('৳18,500'), findsOneWidget);
+    expect(find.text('৳18,500.00'), findsOneWidget);
     expect(find.textContaining('এই ফোনে রাখা ছিল'), findsOneWidget);
     expect(find.textContaining('সংযোগ নেই'), findsOneWidget);
   });

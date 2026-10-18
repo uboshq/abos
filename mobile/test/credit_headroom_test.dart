@@ -9,8 +9,8 @@ import 'support/hive_test_harness.dart';
 
 /// The subtraction nobody can do standing in a shop.
 ///
-/// <p>The order screen already showed *বকেয়া ৳45,000 · সীমা ৳50,000*. A rep
-/// with ৳12,000 in the cart then has to hold three numbers and subtract
+/// <p>The order screen already showed *বকেয়া ৳45,000.00 · সীমা ৳50,000.00*. A rep
+/// with ৳12,000.00 in the cart then has to hold three numbers and subtract
 /// correctly to know they are about to write an order the office will refuse
 /// — and the refusal reaches them hours later, after the goods were promised
 /// and often after they were handed over.
@@ -80,7 +80,7 @@ void main() {
 
     await pump(tester, 3000);
 
-    expect(find.textContaining('বাকি ৳5,000'), findsOneWidget);
+    expect(find.textContaining('বাকি ৳5,000.00'), findsOneWidget);
     expect(find.textContaining('ছাড়িয়ে যাবে'), findsNothing);
   });
 
@@ -89,10 +89,10 @@ void main() {
     await tester.runAsync(
         () => seed(outstanding: '45000.0000', creditLimit: '50000.0000'));
 
-    // ৳5,000 of room, ৳12,000 in the cart.
+    // ৳5,000.00 of room, ৳12,000.00 in the cart.
     await pump(tester, 12000);
 
-    expect(find.text('এই অর্ডারে সীমা ৳7,000 ছাড়িয়ে যাবে।'), findsOneWidget);
+    expect(find.text('এই অর্ডারে সীমা ৳7,000.00 ছাড়িয়ে যাবে।'), findsOneWidget);
   });
 
   testWidgets('a shop already over the limit is not blamed on the cart',
@@ -102,11 +102,11 @@ void main() {
 
     await pump(tester, 3000);
 
-    // ⛔ "সীমা ৳15,000 ছাড়িয়ে যাবে" would read as though this ৳3,000 order
+    // ⛔ "সীমা ৳15,000.00 ছাড়িয়ে যাবে" would read as though this ৳3,000.00 order
     // caused it, and the rep would try a smaller order to get under. Nothing
-    // in the cart can — they were ৳12,000 over before it was opened.
+    // in the cart can — they were ৳12,000.00 over before it was opened.
     expect(find.textContaining('সীমা আগেই পেরিয়ে আছে'), findsOneWidget);
-    expect(find.textContaining('৳3,000 যোগ হবে'), findsOneWidget);
+    expect(find.textContaining('৳3,000.00 যোগ হবে'), findsOneWidget);
   });
 
   testWidgets('an empty cart concludes nothing', (tester) async {
@@ -124,7 +124,7 @@ void main() {
 
   testWidgets('no credit limit set means no conclusion drawn', (tester) async {
     // A zero limit is cash or advance, not "no sale". Treating it as a limit
-    // of ৳0 would flag every order this shop ever places as over the limit.
+    // of ৳0.00 would flag every order this shop ever places as over the limit.
     await tester.runAsync(
         () => seed(outstanding: '45000.0000', creditLimit: '0.0000'));
 
