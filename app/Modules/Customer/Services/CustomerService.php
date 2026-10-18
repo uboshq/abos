@@ -482,7 +482,9 @@ final class CustomerService
 
         // ⛔ একটা সই একবারই — যে সই একবার সীমা বসিয়েছে, কমিয়ে আবার একই অঙ্কে তুললে ছাপ হুবহু মেলে, তবু সেটা নতুন
         // বাড়ানো (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[OneLimitSignatureWasSpentTwiceTest]])
-        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash) && ! $this->limitSignatureSpent($latest)) {
+        // ⛔ D5 — সেই সইয়ে মালিক থাকতে হবে ([[CreditLimitRequests::ownerSigned()]]); অন্য সইকারীর "হ্যাঁ" সীমা বাড়ায় না
+        if ($latest?->status === Approval::APPROVED && $latest->stillCovers($after, $hash) && ! $this->limitSignatureSpent($latest)
+            && CreditLimitRequests::ownerSigned($latest)) {
             return;
         }
 
