@@ -18,6 +18,8 @@ use App\Modules\Customer\Models\CustomerCreditChange;
 use App\Modules\Customer\Services\CustomerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use App\Core\Services\PermissionSyncer;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -49,6 +51,16 @@ final class EveryLimitChangeKeepsItsHistoryTest extends TestCase
 
         $this->clerk = User::create(['name' => 'Clerk', 'email' => 'clerk@hist.test', 'password' => 'x']);
         $this->manager = User::create(['name' => 'Manager', 'email' => 'manager@hist.test', 'password' => 'x']);
+
+        /*
+         * ⓘ সইকারী এই কোম্পানির মালিক — D5 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬) থেকে বাকির সীমা বাড়ে কেবল মালিকের সইয়ে
+         * ([[CreditLimitRequests::ownerSigned()]])। এই দাবির বিষয় সইয়ের অঙ্ক/একবার-খাটা, সইকারী কে তা নয়; মালিক নন এমন
+         * সইকারীর দাবি [[TheCreditWallUnderTheFullAuditTest]]-এ। চাওয়া হয় তবু কেরানির হাতে — বদল কেবল সইকারীর।
+         */
+        $this->manager->companies()->attach($company->id, ['is_active' => true]);
+        CompanyContext::forCompany((int) $company->id, fn () => $this->manager->assignRole(
+            Role::findOrCreate(PermissionSyncer::SUPER_ADMIN_ROLE, 'web')));
+        $this->manager->unsetRelation('roles');
         $this->actingAs($this->clerk);
 
         $this->customer = Customer::create([
