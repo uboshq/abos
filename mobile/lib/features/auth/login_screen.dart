@@ -316,6 +316,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Icons.lock_outline,
                   suffix: IconButton(
                     key: const ValueKey('login-password-eye'),
+                    tooltip: _passwordVisible ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন',
                     icon: Icon(
                       _passwordVisible
                           ? Icons.visibility_off_outlined

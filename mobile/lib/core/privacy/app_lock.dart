@@ -195,6 +195,7 @@ class _AppLockGateState extends State<AppLockGate> {
                   title: const Text('এই ফোনে তালা দেওয়া নেই — ফোনের সেটিংসে PIN বা আঙুলের ছাপ চালু করুন, তবেই অ্যাপ-তালা কাজ করবে।',
                       style: TextStyle(fontSize: 12.5, color: AppColors.warning)),
                   trailing: IconButton(
+                    tooltip: 'সতর্কবার্তা বন্ধ করুন',
                     icon: const Icon(Icons.close, size: 18),
                     onPressed: () => setState(() => _noteDismissed = true),
                   ),

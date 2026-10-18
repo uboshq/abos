@@ -92,7 +92,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 hintText: 'বিক্রয় নম্বর, ডিও বা দোকান',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
-                    icon: const Icon(Icons.arrow_forward), onPressed: _load),
+                    tooltip: 'খুঁজুন', icon: const Icon(Icons.arrow_forward), onPressed: _load),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),

@@ -601,7 +601,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
           title: Text(value?.label ?? 'পক্ষ (ঐচ্ছিক — বাকিতে খরচে লাগবে)'),
           trailing: value == null
               ? const Icon(Icons.search)
-              : IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() => set(null))),
+              : IconButton(tooltip: 'মুছুন', icon: const Icon(Icons.close), onPressed: () => setState(() => set(null))),
           onTap: _busy
               ? null
               : () async {
