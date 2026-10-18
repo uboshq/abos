@@ -80,6 +80,7 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
      */
     private const GROUPS_BELONG_HERE = [
         'ChartOfAccountsController.php' => 'ছকের পর্দা — দল দেখানোই তার কাজ, আর বাবা বাছতে দলই লাগে',
+        'AccountLedgerApiController.php' => 'ফোনের ছকের পর্দা — ওয়েবের ছকের মতো দলও দেখায় (জের সন্তানদের যোগ); কেবল পড়া, কোনো খাত বাছে না, টাকা বসায় না',
         // ⓘ ৬ অক্টোবর ২০২৬ (ec, পাহারার মিথ্যা লাল) — দুটোই কোনো খাত বাছে না, টাকা বসায় না:
         'ChartOfAccountsImporter.php' => 'একই নামের খাত দুইবার না ঢোকানোর খোঁজ — একই নামের দলও যমজ, তাই দলও দেখতে হয়',
         'LedgerCheckReports.php' => 'পাওনা/দেনার নিয়ন্ত্রণ-খাত আর তার নিচের গাছ পড়া — খাতা মেলানোর রিপোর্ট, কোনো বাছাই নয়',
