@@ -1,5 +1,6 @@
 import 'network_errors.dart';
 import 'once_key.dart';
+import 'retired_build.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -65,6 +66,8 @@ class ApiClient {
           // device from these two headers on each pull and push; without them
           // the registry holds a row that cannot say what it is a row about.
           options.headers['X-App-Version'] = AppConfig.appVersion;
+          // ⭐ বিল্ডের ছোট কোড — সার্ভার এর সাথে সর্বনিম্ন মেলায়, কম হলে লেখায় ৪২৬ (পূর্ণ নিরীক্ষা §৯ ⚠️৯, [[RetiredBuild]])
+          options.headers['X-App-Code'] = '${AppConfig.appVersionCode}';
           options.headers['X-Platform'] = defaultTargetPlatform == TargetPlatform.iOS
               ? 'ios'
               : 'android';
@@ -86,6 +89,11 @@ class ApiClient {
         },
         onError: (DioException error, handler) async {
           final options = error.requestOptions;
+
+          // ⛔ এই বিল্ড বন্ধ — আপডেটের দেয়াল তোলা ([[RetiredBuild]])
+          if (error.response?.statusCode == 426) {
+            RetiredBuild.noteRefusal();
+          }
 
           final canRetry = error.response?.statusCode == 401 &&
               options.extra[_skipAuthRefreshKey] != true &&

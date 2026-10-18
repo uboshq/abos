@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api_client/retired_build.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -21,12 +22,15 @@ import 'update_download_button.dart';
 /// a wall that rises when the network drops would lock every phone that lost
 /// signal, in an app built to work without one.
 class UpdateGate extends StatefulWidget {
-  const UpdateGate({super.key, required this.child, this.check});
+  const UpdateGate({super.key, required this.child, this.check, this.fetch});
 
   final Widget child;
 
   /// Seam for tests — the real check needs a server.
   final Future<UpdateStatus> Function()? check;
+
+  /// Seam for tests — where the newest build is, once the server refused this one.
+  final Future<AppRelease> Function()? fetch;
 
   @override
   State<UpdateGate> createState() => _UpdateGateState();
@@ -39,7 +43,27 @@ class _UpdateGateState extends State<UpdateGate> {
   @override
   void initState() {
     super.initState();
+    RetiredBuild.refusals.addListener(_refused);
     _check();
+  }
+
+  @override
+  void dispose() {
+    RetiredBuild.refusals.removeListener(_refused);
+    super.dispose();
+  }
+
+  /// ⛔ সার্ভার ৪২৬ দিল — নিজের হিসাব যা-ই বলুক, দেয়াল (পূর্ণ নিরীক্ষা §৯ ⚠️৯)। ⓘ নতুনটা কোথায় জানা না গেলে কিছুই নয়, পরের
+  /// ৪২৬-এ আবার চেষ্টা — দেয়ালে নামানোর বোতাম লাগে।
+  Future<void> _refused() async {
+    if (_status.verdict == UpdateVerdict.blocked) return;
+    final AppRelease release;
+    try {
+      release = await (widget.fetch ?? AppVersionApi.latest)();
+    } catch (_) {
+      return;
+    }
+    if (mounted) setState(() => _status = UpdateStatus(verdict: UpdateVerdict.blocked, release: release));
   }
 
   Future<void> _check() async {
