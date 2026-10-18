@@ -74,6 +74,14 @@ final class CreditExposure implements CreditHolds
     private static int $counterDepth = 0;
 
     /**
+     * ⭐ যে DO থেকে এই মুহূর্তের বিক্রিটা হচ্ছে — দেয়ালে ঐ DO-র টাকা আর গোনা হয় না ([[forSourceDeliveryOrder()]])
+     *
+     * ⛔ D1 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬): কাউন্টারে DO থেকে বিক্রিতে চালান নিশ্চিত হয় DO "বিল হয়েছে" দাগানোর আগে, আর দেয়াল
+     * চালানের টাকা (`adding`) **আর** খোলা DO-র টাকা দুইটাই গুনত — একই মাল, একই টাকা দুবার। সীমা ১ লাখ, DO ৬০ হাজার, তবু "না"।
+     */
+    private static ?int $sourceDeliveryOrder = null;
+
+    /**
      * [[CreditHolds]] — গ্রাহকের পাতার জন্য, একই হিসাব।
      *
      * ⚠️ আলাদা যুক্তি নয়, [[pendingFor()]]-ই — নইলে পাতা আর কাউন্টার
@@ -591,6 +599,9 @@ final class CreditExposure implements CreditHolds
      */
     public function pending(Customer $customer, ?int $exceptInvoiceId = null, ?int $exceptChallanId = null, ?int $exceptDeliveryOrderId = null): string
     {
+        // ⓘ এই বিক্রির নিজের উৎস-DO — তার টাকা এখন এই কাগজেই (`adding`), দ্বিতীয়বার নয় ([[forSourceDeliveryOrder()]])
+        $exceptDeliveryOrderId ??= self::$sourceDeliveryOrder;
+
         return bcadd(
             bcadd(
                 $this->unbilledChallans($customer),
@@ -599,7 +610,7 @@ final class CreditExposure implements CreditHolds
             ),
             bcadd(
                 $this->approvedDeliveryOrders([(int) $customer->id], $exceptDeliveryOrderId)[(int) $customer->id] ?? '0',
-                $this->openOrders([(int) $customer->id])[(int) $customer->id] ?? '0',
+                $this->openOrders([(int) $customer->id], $exceptChallanId)[(int) $customer->id] ?? '0',
                 4,
             ),
             4,
@@ -619,18 +630,23 @@ final class CreditExposure implements CreditHolds
      * @param  list<int>  $customerIds
      * @return array<int, string>  ক্রেতা → এখনো না-যাওয়া আদেশের দাম
      */
-    private function openOrders(array $customerIds): array
+    private function openOrders(array $customerIds, ?int $exceptChallanId = null): array
     {
         if ($customerIds === []) {
             return [];
         }
 
+        /*
+         * ⛔ যে চালানটা এখন যাচাই হচ্ছে, তার সারিও "গেছে" ধরা — D1 (১৮ অক্টোবর ২০২৬)। ⓘ নিশ্চিত হওয়ার মুহূর্তে চালানটা এখনো
+         * খসড়া, তাই আদেশের ঐ অংশ খোলা দেখাত, আর চালানের টাকাও `adding`-এ: একই মাল দুবার।
+         */
         $delivered = DB::table('sal_challan_lines as cl')
             ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
             ->whereColumn('cl.sales_order_line_id', 'ol.id')
             ->where('c.company_id', CompanyContext::id())
             ->whereNull('c.deleted_at')
-            ->whereIn('c.status', DocumentStatus::POSTED)
+            ->where(fn ($q) => $q->whereIn('c.status', DocumentStatus::POSTED)
+                ->when($exceptChallanId !== null, fn ($w) => $w->orWhere('c.id', $exceptChallanId)))
             ->selectRaw('COALESCE(SUM(cl.delivered_qty), 0)');
 
         $query = DB::table('sal_order_lines as ol')
@@ -1053,6 +1069,18 @@ final class CreditExposure implements CreditHolds
      * @param  callable(): T  $work
      * @return T
      */
+    public static function forSourceDeliveryOrder(?int $deliveryOrderId, callable $work): mixed
+    {
+        $before = self::$sourceDeliveryOrder;
+        self::$sourceDeliveryOrder = $deliveryOrderId;
+
+        try {
+            return $work();
+        } finally {
+            self::$sourceDeliveryOrder = $before;
+        }
+    }
+
     public static function atCounter(callable $work): mixed
     {
         self::$counterDepth++;

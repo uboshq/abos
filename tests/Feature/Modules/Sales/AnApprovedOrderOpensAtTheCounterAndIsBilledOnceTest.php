@@ -80,8 +80,14 @@ final class AnApprovedOrderOpensAtTheCounterAndIsBilledOnceTest extends TestCase
         $this->product = Product::query()->orderBy('id')->firstOrFail();
         $this->otherProduct = Product::query()->whereKeyNot($this->product->id)->orderBy('id')->firstOrFail();
 
-        /* ⓘ সীমা এখানে বিষয় নয় — সে যেন ভুল কারণে থামাতে না পারে */
-        app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+        /*
+         * ⓘ সীমা চালু, আর গ্রাহকের যথেষ্ট জায়গা — D1 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬; fe): আগে সীমা বন্ধ রেখে চলত, তাই
+         * কাউন্টারের দেয়াল এই পথে কখনো দেখা হত না। ⓘ নকল উৎস দেয়ালে গোনা হয় না; আসল DO-র দুবার-গোনার দাবি
+         * [[TheCounterCountedTheDeliveryOrderTwiceTest]]-এ।
+         */
+        app(SettingsService::class)->set('customer.credit_limit_enabled', true);
+        $this->customer->forceFill(['credit_limit' => bcadd($this->customer->outstanding(), '10000000', 4)])->save();
+        $this->customer = $this->customer->fresh();
 
         FakeCounterSource::$lines = [];
         FakeCounterSource::$marked = [];

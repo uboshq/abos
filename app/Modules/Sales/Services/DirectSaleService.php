@@ -394,7 +394,11 @@ final class DirectSaleService
             // ⓘ দুই দিকেই লেখা — চালান এখন সুইচ থেকে নিজে চালু হয়ে আসে, তাই "এখনই নিয়ে যাবেন" হলে বন্ধ করতে হয়
             $challan->update(['issue_at_gate' => $atGate]);
 
-            $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
+            // ⛔ D1: উৎসের DO-র টাকা দেয়ালে আর গোনা নয় — এই চালানই এখন সেই টাকা ([[CreditExposure::forSourceDeliveryOrder()]])
+            $challan = CreditExposure::forSourceDeliveryOrder(
+                $source instanceof \App\Modules\Sales\Models\DeliveryOrder ? (int) $source->getKey() : null,
+                fn () => $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)), // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
+            );
 
             // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে (গেট পাসের চালানে গেট পাসে — [[issueFreeAtGate()]])
             if (! $atGate) {
@@ -1659,7 +1663,11 @@ final class DirectSaleService
             // ⓘ দুই দিকেই — উপরের একই কারণে
             $challan->update(['issue_at_gate' => $atGate]);
 
-            $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
+            // ⛔ D1: উৎসের DO-র টাকা দেয়ালে আর গোনা নয় — এই চালানই এখন সেই টাকা ([[CreditExposure::forSourceDeliveryOrder()]])
+            $challan = CreditExposure::forSourceDeliveryOrder(
+                $source instanceof \App\Modules\Sales\Models\DeliveryOrder ? (int) $source->getKey() : null,
+                fn () => $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)), // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
+            );
 
             if (! $atGate) {
                 $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
