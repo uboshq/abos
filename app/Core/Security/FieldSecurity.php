@@ -42,6 +42,9 @@ final class FieldSecurity
     /** এক অনুরোধে একবারই সব মডিউল পড়া হয়। */
     private static ?array $map = null;
 
+    /** অংশ ধরে ঢাকা ঘরগুলো ([[sectionGuarded()]]) — একই রকম একবার পড়া। */
+    private static ?array $sectionMap = null;
+
     /**
      * সব মডিউলের ঘোষণা এক জায়গায়।
      *
@@ -73,7 +76,30 @@ final class FieldSecurity
     {
         $class = $model instanceof Model ? $model::class : $model;
 
-        return self::all()[$class][$field] ?? null;
+        return self::all()[$class][$field] ?? self::sectionGuarded()[$class][$field] ?? null;
+    }
+
+    /**
+     * অংশ ধরে ঢাকা ঘর — মডিউলের নিজের পর্দায় গোটা অংশের `@can`, তাই ব্লেডের খোঁজায় ([[all()]]) নেই; কিন্তু অডিট আর
+     * সময়যন্ত্রের মতো সাধারণ পর্দায় ঘর ধরেই ঢাকা (বেতনের অঙ্ক, Governance অডিট ১৮ অক্টোবর ২০২৬)।
+     *
+     * @return array<class-string, array<string, string>>
+     */
+    public static function sectionGuarded(): array
+    {
+        if (self::$sectionMap !== null) {
+            return self::$sectionMap;
+        }
+
+        $map = [];
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            foreach ($module->sectionGuardedFields as $class => $fields) {
+                $map[$class] = array_merge($map[$class] ?? [], $fields);
+            }
+        }
+
+        return self::$sectionMap = $map;
     }
 
     /**
@@ -135,5 +161,6 @@ final class FieldSecurity
     public static function forget(): void
     {
         self::$map = null;
+        self::$sectionMap = null;
     }
 }
