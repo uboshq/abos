@@ -51,6 +51,8 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
             ->paginate(self::PER_PAGE);
 
         return response()->json([
+            // ⭐ পথে থাকা চালান কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            'count' => $challans->total(),
             'next_page' => $challans->hasMorePages() ? $challans->currentPage() + 1 : null,
             'rows' => collect($challans->items())->map(function (DeliveryChallan $c): array {
                 $t = $c->transportFacts();

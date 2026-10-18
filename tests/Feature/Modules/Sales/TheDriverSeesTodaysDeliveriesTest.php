@@ -58,6 +58,8 @@ final class TheDriverSeesTodaysDeliveriesTest extends TestCase
         $answer = $this->getJson('/api/v1/sales/deliveries')->assertOk();
         $this->assertNull($answer->json('next_page'), 'দুইটা চালানে পরের পাতা থাকার কথা নয়।');
         $rows = collect($answer->json('rows'));
+        // ⭐ পথে কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+        $this->assertSame($rows->count(), $answer->json('count'), '⛔ আজকের ডেলিভারির তালিকায় কয়টা নেই।');
         $this->assertContains($onTheWay->document_no, $rows->pluck('document_no')->all(), '⛔ পথে থাকা চালান তালিকায় নেই।');
         $this->assertNotContains($done->document_no, $rows->pluck('document_no')->all(), '⛔ পৌঁছে যাওয়া চালান এখনো তালিকায়।');
 

@@ -45,6 +45,8 @@ class LoadingApiController extends Controller implements HasMiddleware
             ->paginate(self::PER_PAGE);
 
         return response()->json([
+            // ⭐ লোডিং শিট কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            'count' => $trips->total(),
             'next_page' => $trips->hasMorePages() ? $trips->currentPage() + 1 : null,
             'rows' => collect($trips->items())->map(fn (Shipment $t): array => [
                 ...$this->head($t),

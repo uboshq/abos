@@ -58,6 +58,8 @@ class LeadApiController extends Controller implements HasMiddleware
 
         return response()->json([
             'leads' => collect($rows->items())->map(fn (Lead $l) => $this->facts($l))->values(),
+            // ⭐ খোঁজা আর অবস্থার ছাঁকনিতে কয়টা লিড — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+            'count' => $rows->total(),
             'next_page' => $rows->hasMorePages() ? $rows->currentPage() + 1 : null,
         ]);
     }

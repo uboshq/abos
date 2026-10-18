@@ -54,7 +54,10 @@ final class TheFieldWritesALeadOnThePhoneTest extends TestCase
         $this->assertNotSame('', $made['no'], 'নম্বর সার্ভারের সিরিজ থেকে');
         $lead = Lead::query()->where('public_id', $made['id'])->firstOrFail();
         $this->assertSame((int) $sr->id, (int) $lead->owner_user_id, 'মালিক লেখক নিজে।');
-        $this->assertSame([$made['id']], array_column($this->getJson('/api/v1/sales/leads?'.http_build_query(['q' => 'মুদি']))->assertOk()->json('leads'), 'id'));
+        $found = $this->getJson('/api/v1/sales/leads?'.http_build_query(['q' => 'মুদি']))->assertOk();
+        $this->assertSame([$made['id']], array_column($found->json('leads'), 'id'));
+        // ⭐ খোঁজার ছাঁকনিতে কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+        $this->assertSame(1, $found->json('count'), '⛔ লিডের তালিকায় কয়টা নেই, বা ছাঁকনির বাইরেরও গোনা।');
 
         $other = $this->staff(['sales.lead.view']);
         Sanctum::actingAs($other, [AuthController::APP]);
