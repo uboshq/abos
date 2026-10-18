@@ -93,6 +93,12 @@ final class CreditExposure implements CreditHolds
      * ⚠️ আলাদা যুক্তি নয়, [[pendingFor()]]-ই — নইলে পাতা আর কাউন্টার
      * একদিন দুই রকম গুনত।
      */
+    /** [[CreditHolds::unclearedChequesOf()]] — [[unclearedChequesFor()]]-এর একই হিসাব */
+    public function unclearedChequesOf(int $customerId): string
+    {
+        return $this->unclearedChequesFor([$customerId])[$customerId] ?? '0';
+    }
+
     public function heldFor(int $customerId): string
     {
         return $this->pendingFor([$customerId])[$customerId] ?? '0';

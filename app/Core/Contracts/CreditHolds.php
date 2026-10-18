@@ -25,4 +25,10 @@ interface CreditHolds
 {
     /** খাতার বাইরে আটকে থাকা টাকা — না থাকলে `'0'`। */
     public function heldFor(int $customerId): string;
+
+    /**
+     * হাতে এসে জমায় বসা অথচ এখনো ক্লিয়ার না হওয়া চেক — খাতা ওটা জমা ধরেছে, দেয়াল ধরে না; না থাকলে `'0'`।
+     * ⓘ গ্রাহকের পাতার "ব্যবহারযোগ্য বাকি" দেয়ালের হুবহু হতে (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)।
+     */
+    public function unclearedChequesOf(int $customerId): string;
 }

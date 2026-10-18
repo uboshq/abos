@@ -19,4 +19,9 @@ final class NoCreditHolds implements CreditHolds
     {
         return '0';
     }
+
+    public function unclearedChequesOf(int $customerId): string
+    {
+        return '0';
+    }
 }
