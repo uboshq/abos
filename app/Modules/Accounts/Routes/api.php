@@ -27,7 +27,7 @@ Route::prefix('v1/accounts')
         Route::get('/vouchers/setup', [VoucherApiController::class, 'setup'])->name('voucher.setup');
         Route::get('/vouchers', [VoucherApiController::class, 'index'])->name('voucher.index');
         Route::get('/vouchers/{id}', [VoucherApiController::class, 'show'])->whereUuid('id')->name('voucher.show');
-        Route::post('/vouchers/{id}/post', [VoucherApiController::class, 'post'])->whereUuid('id')->name('voucher.post');
+        Route::post('/vouchers/{id}/post', [VoucherApiController::class, 'post'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('voucher.post');
 
         // ⭐ হিসাবের ছক আর খাতের খাতা, ফোনের নিজের পর্দায় — ওয়েবের একই সেবা ও চাবি (মালিক, ১৭ অক্টোবর ২০২৬; [[AccountLedgerApiController]])
         Route::get('/chart', [\App\Modules\Accounts\Http\Controllers\AccountLedgerApiController::class, 'chart'])->name('chart.index');

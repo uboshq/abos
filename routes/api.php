@@ -278,14 +278,14 @@ Route::prefix('v1')
             ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.sheet');
         Route::post('/approvals/{approval}/approve', [ApprovalApiController::class, 'approve'])
-            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval', \App\Http\Middleware\RemembersAPhoneWrite::class])
             ->name('approvals.approve');
         Route::post('/approvals/{approval}/reject', [ApprovalApiController::class, 'reject'])
-            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval', \App\Http\Middleware\RemembersAPhoneWrite::class])
             ->name('approvals.reject');
         // ⭐ সংশোধনে ফেরত — ওয়েবের একই নিয়ম ([[ApprovalEngine::sendBack()]], ১৪ অক্টোবর ২০২৬)
         Route::post('/approvals/{approval}/send-back', [ApprovalApiController::class, 'sendBack'])
-            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval', \App\Http\Middleware\RemembersAPhoneWrite::class])
             ->name('approvals.send_back');
 
         /*
