@@ -101,9 +101,10 @@ final class TheCreditDaysRoseWithoutASignatureTest extends TestCase
         app()->forgetInstance(\App\Core\Engines\Approval\DocumentApproval::class);
         app()->forgetInstance(\App\Modules\Customer\Services\CustomerService::class);
         app(ApprovalEngine::class)->approve($this->ask(75), $this->owner);
-        $this->assertRefused(90, '⛔ ৭৫ দিনের সইয়ে ৯০ দিন বসল।');
         $this->update(['credit_days' => 75]);
         $this->assertSame(75, $this->days(), 'মালিকের সইয়ের পরেও দিন বাড়ল না — বাড়ানোর পথই নেই।');
+        // ⓘ ৭৫-এর সই বসার পরে — ৯০ নতুন বাড়ানো, নতুন সই (আগে চাইলে নতুন অনুরোধটা সই-করা ৭৫-কে ঢেকে দিত: Mac-এর পালা, ১৯ অক্টোবর)
+        $this->assertRefused(90, '⛔ ৭৫ দিনের সইয়ে ৯০ দিন বসল।');
 
         // ⛔ একবার খাটা সই — কমিয়ে আবার ৭৫-এ তুললে নতুন সই
         $this->update(['credit_days' => 30]);
