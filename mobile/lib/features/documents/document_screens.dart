@@ -1,8 +1,8 @@
+import '../../core/printing/paper_files.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api_client/network_errors.dart';
@@ -370,8 +370,8 @@ Future<void> _defaultOpener(BuildContext context, LibraryFile file, Uint8List by
     ));
     return;
   }
-  final dir = await getTemporaryDirectory();
-  final name = file.name.isEmpty ? 'document' : file.name.replaceAll(RegExp(r'[\\/]'), '_');
+  final dir = await PaperFiles.cache();
+  final name = PaperFiles.safeName(file.name);
   final path = '${dir.path}/$name';
   await File(path).writeAsBytes(bytes, flush: true);
   await Share.shareXFiles([XFile(path, mimeType: file.mime.isEmpty ? null : file.mime, name: name)]);

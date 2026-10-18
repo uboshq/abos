@@ -1,3 +1,4 @@
+import '../printing/paper_files.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 
@@ -163,6 +164,8 @@ class AuthController extends StateNotifier<AuthState> {
     // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬); অ্যাপ শুরুর মতোই আড়ালের দিকে
     unawaited(PhonePrivacy.secure(true));
     unawaited(PushService.instance.forget());
+    // ⛔ নামানো কাগজ — আগের জনের বিল-চালান পরের জনের ফোনে থাকে না (পূর্ণ নিরীক্ষা §৯ ⚠️১৩, [[PaperFiles]])
+    unawaited(PaperFiles.wipe());
     state = const AuthState.signedOut();
   }
 }

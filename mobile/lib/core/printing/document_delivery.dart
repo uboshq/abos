@@ -1,7 +1,7 @@
+import 'paper_files.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -70,15 +70,15 @@ class DocumentDelivery {
     required Uint8List pdf,
     required String fileName,
   }) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$fileName');
+    final dir = await PaperFiles.kept();
+    final file = File('${dir.path}/${PaperFiles.safeName(fileName)}');
     await file.writeAsBytes(pdf, flush: true);
     return file.path;
   }
 
   static Future<File> _writeToCache(Uint8List bytes, String fileName) async {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$fileName');
+    final dir = await PaperFiles.cache();
+    final file = File('${dir.path}/${PaperFiles.safeName(fileName)}');
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }

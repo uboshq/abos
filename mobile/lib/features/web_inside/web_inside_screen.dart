@@ -1,3 +1,4 @@
+import '../../core/printing/paper_files.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -5,7 +6,6 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -217,8 +217,8 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
       return;
     }
     try {
-      final dir = await getTemporaryDirectory();
-      final saved = File('${dir.path}/${file.name}');
+      final dir = await PaperFiles.cache();
+      final saved = File('${dir.path}/${PaperFiles.safeName(file.name)}');
       await saved.writeAsBytes(file.bytes, flush: true);
       if (!mounted) return;
       await _offerFile(saved, file.mime);
