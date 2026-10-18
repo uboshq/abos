@@ -87,6 +87,10 @@ final class ThePhoneRunsTheCreditDeskTest extends TestCase
         $this->assertSame($risk['reasons'], $body['risk']['reasons'], '⛔ ঝুঁকির কারণ ফোনে নেই।');
         $this->assertContains($body['risk']['level'], [CreditRisk::HIGH, CreditRisk::CRITICAL], 'দাবির ভিত্তি নেই — গ্রাহকটা ঝুঁকিতে নেই।');
         $this->assertSame('PH-INV-1', $body['bills'][0]['no']);
+        // ⭐ খোলা বিলের মোট বাকি — সারিগুলোর যোগ (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)
+        $sum = array_reduce($body['bills'], fn (string $s, array $b) => bcadd($s, (string) $b['unpaid'], 4), '0');
+        $this->assertArrayHasKey('bills_total', $body, '⛔ ফোনের খোলা বিলে মোট নেই।');
+        $this->assertSame(0, bccomp((string) $body['bills_total'], $sum, 4));
         $this->assertTrue($body['can_request']);
     }
 

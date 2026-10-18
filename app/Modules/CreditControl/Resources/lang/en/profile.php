@@ -21,6 +21,7 @@ return [
     'available' => 'Available',
     'open_bills' => 'Open bills',
     'no_open_bills' => 'No open bills',
+    'open_bills_total' => 'Total unpaid (:count bills)',
     'history' => 'Change history',
     'no_history' => 'No change to the limit, credit days or block yet',
     'when' => 'When',

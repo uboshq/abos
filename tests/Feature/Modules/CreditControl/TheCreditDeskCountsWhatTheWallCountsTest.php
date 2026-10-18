@@ -149,9 +149,14 @@ final class TheCreditDeskCountsWhatTheWallCountsTest extends TestCase
         app(SettingsService::class)->set('customer.overdue_stop', false);
         $c = $this->customer('CD-PROF', '10000');
         $this->bill($c, 'INV-CD-PROF', '2500', daysPastDue: 3);
+        $this->bill($c, 'INV-CD-PROF2', '1250.50', daysPastDue: 0);
         app(CustomerService::class)->update($c->fresh(), ['credit_limit' => '8000']);
 
-        $this->get(route('credit_control.customer.show', $c->id))->assertOk()
+        $page = $this->get(route('credit_control.customer.show', $c->id))->assertOk();
+        // ⭐ খোলা বিলের নিচে মোট বাকি — দুটো বিলের যোগ (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)
+        $this->assertMatchesRegularExpression('/data-open-bills-total[^>]*>.*?'.preg_quote(\App\Core\Support\Money::format('3750.50'), '/').'/s',
+            $page->getContent(), '⛔ খোলা বিলে মোট নেই, বা ভুল।');
+        $page
             ->assertSee('INV-CD-PROF')
             ->assertSee('data-credit-state="active"', false)
             ->assertSee(__('customer::credit_history.credit_limit'));

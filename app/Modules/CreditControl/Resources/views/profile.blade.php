@@ -120,6 +120,15 @@
                                 <tr><td colspan="4" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
                             @endforelse
                         </tbody>
+                        {{-- ⭐ মোট বাকি — সব খোলা বিল মিলে (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬) --}}
+                        @if ($bills !== [])
+                            <tfoot>
+                                <tr class="border-t-2 border-(--color-border) font-semibold" data-open-bills-total>
+                                    <td colspan="3">{{ __('credit_control::profile.open_bills_total', ['count' => count($bills)]) }}</td>
+                                    <td class="tabular text-right">{{ Money::format($billsTotal) }}</td>
+                                </tr>
+                            </tfoot>
+                        @endif
                     </table>
                 </div>
             </section>

@@ -141,6 +141,8 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
         $risk = app(CreditRisk::class)->rate($customer);
         $user = $request->user();
 
+        $bills = $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [];
+
         return response()->json([
             'id' => (string) $customer->public_id,
             'code' => (string) $customer->code,
@@ -176,7 +178,9 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
                 'unpaid' => (string) $b['unpaid'],
                 'due_on' => (string) $b['due_on'],
                 'days_overdue' => (int) $b['days_overdue'],
-            ], $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? []),
+            ], $bills),
+            // ⭐ খোলা বিলের মোট বাকি — ওয়েবের পাতার একই যোগ (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)
+            'bills_total' => array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, (string) $b['unpaid'], 4), '0'),
             'requests' => CustomerCreditRequest::query()->where('customer_id', $customer->id)
                 ->with(['requester', 'approval'])->latest('id')->limit(10)->get()
                 ->map(fn (CustomerCreditRequest $r) => [

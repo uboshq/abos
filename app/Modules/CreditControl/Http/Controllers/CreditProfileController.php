@@ -69,13 +69,17 @@ class CreditProfileController extends Controller
                 'approval' => null,
             ]);
 
+        $bills = $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [];
+
         return view('credit_control::profile', [
             'menu' => $this->menu->forUser($request->user()),
             'customer' => $customer,
             'position' => $this->credit->positionOf($customer),
             // ⭐ ঝুঁকির মাত্রা আর তার কারণ — কেবল জানায় (ধাপ ৩.১)
             'risk' => app(CreditRisk::class)->rate($customer),
-            'bills' => $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [],
+            'bills' => $bills,
+            // ⭐ খোলা বিলের মোট বাকি — পূর্ণ নিরীক্ষা §৫ (১৮ অক্টোবর ২০২৬); আগে সারিই ছিল, যোগ নেই
+            'billsTotal' => array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, (string) $b['unpaid'], 4), '0'),
             'history' => $history->concat($blocks)->sortByDesc('at')->values(),
             'decisions' => CreditDecision::query()->where('customer_id', $customer->id)->latest('id')->limit(10)->get(),
 
