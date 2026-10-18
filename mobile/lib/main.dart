@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:home_widget/home_widget.dart';
 
 import 'core/auth/auth_controller.dart';
+import 'core/locale/app_locale.dart';
 import 'core/auth/auth_state.dart';
 import 'core/crash/crash_reporter.dart';
 import 'core/privacy/app_lock.dart';
@@ -195,6 +196,13 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       title: 'ABOS',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      /*
+       * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
+       * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
+       */
+      locale: AppLocale.locale,
+      supportedLocales: AppLocale.supported,
+      localizationsDelegates: AppLocale.delegates,
       routerConfig: router,
       builder: (context, child) => AppLockGate(
         lock: _lock,

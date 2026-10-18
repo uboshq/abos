@@ -18,6 +18,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # ⭐ Material-এর নিজের লেখা (তারিখ বাছাই, OK/CANCEL, কপি-পেস্ট, মাসের নাম) বাংলায় — পূর্ণ নিরীক্ষা §৯ ⚠️৫ (১৮ অক্টোবর ২০২৬)
+  flutter_localizations:
+    sdk: flutter
 
   # HTTP, with an interceptor chain -- the access-token attach and the
   # single-flight refresh in core/api_client both need one.
@@ -58,7 +61,7 @@ dependencies:
 
   # Date formatting for the sync-status screen's "last synced" times —
   # free/BSD, the official Dart team package.
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # ── ছাপা ও পাঠানো ─────────────────────────────────────────────────────
   # কাগজটা সার্ভার বানায় (app/Core/Engines/Print — mPDF, আর A4/৮০mm/৫৮mm
