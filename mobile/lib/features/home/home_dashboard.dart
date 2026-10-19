@@ -210,7 +210,9 @@ class _FavouriteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colour = AppColors.moduleColor(row.module);
+    // ⓘ হালকা পটে আইকন সেই রঙের গাঢ় সুরে, অন্তত ৩:১ ([[AppColors.moduleInk]])
+    final tint = AppColors.moduleTint(row.module);
+    final colour = AppColors.moduleInk(row.module);
     return Card(
       key: ValueKey('favourite-${row.path}'),
       child: InkWell(
@@ -226,7 +228,7 @@ class _FavouriteTile extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: colour.withValues(alpha: 0.14),
+                  color: tint,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(row.icon, color: colour, size: 22),

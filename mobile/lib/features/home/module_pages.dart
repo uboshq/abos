@@ -125,7 +125,8 @@ class _ModuleTile extends StatelessWidget {
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: live ? module.color : AppColors.border,
+                    // ⓘ সাদা আইকনের সাথে অন্তত ৩:১ — মডিউলের রঙের গাঢ় সুর ([[AppColors.moduleSolid]])
+                    color: live ? AppColors.moduleSolid(module.code) : AppColors.border,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(module.def.icon, color: Colors.white, size: 28),
