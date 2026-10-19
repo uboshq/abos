@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Accounts;
 
+use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Engines\Posting\PostingException;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\Company;
@@ -109,6 +111,45 @@ final class APartysMoneyStaysInThePartysBranchTest extends TestCase
         $voucher = $this->service()->create($this->data(), $this->lines(), byHand: true);
 
         $this->assertSame((int) $this->home->id, (int) $voucher->branch_id);
+    }
+
+    public function test_no_path_into_the_books_writes_a_partys_row_in_another_branch(): void
+    {
+        // ⓘ মালিক: "kono vabei" — বিক্রি, POS, ফোন, অর্থ, সবাই এই এক দরজা দিয়ে খাতায় যায়
+        try {
+            app(PostingEngine::class)->post('pb_test', 1, now(), $this->postingLines(), 'PB-1', $this->home->id);
+            $this->fail('⛔ সিস্টেমের পথে অন্য শাখার গ্রাহকের সারি খাতায় বসল');
+        } catch (PostingException $e) {
+            $this->assertSame(__('core.posting.party_in_other_branch', ['branch' => $this->other->name(), 'here' => $this->home->name()]), $e->forPeople());
+        }
+
+        $this->assertSame(0, LedgerEntry::query()->withoutGlobalScopes()->where('source_type', 'pb_test')->count());
+
+        // ⓘ নিজের শাখায় আগের মতোই
+        app(PostingEngine::class)->post('pb_test', 2, now(), $this->postingLines(), 'PB-2', $this->other->id);
+        $this->assertSame(2, LedgerEntry::query()->withoutGlobalScopes()->where('source_type', 'pb_test')->where('source_id', 2)->count());
+    }
+
+    public function test_an_old_wrong_branch_row_can_still_be_reversed(): void
+    {
+        // ⓘ নিয়মের আগে ভুল শাখায় বসা সারি (লাইভের RCV-0143) — উল্টানো মূলের শাখাতেই বসে, তাই আটকায় না
+        $this->customer->forceFill(['branch_id' => $this->home->id])->save();
+        app(PostingEngine::class)->post('pb_old', 7, now(), $this->postingLines(), 'PB-7', $this->home->id);
+        $this->customer->forceFill(['branch_id' => $this->other->id])->save();
+
+        $reversed = app(PostingEngine::class)->reverse('pb_old', 7, now());
+
+        $this->assertCount(2, $reversed);
+        $this->assertSame([(int) $this->home->id], collect($reversed)->pluck('branch_id')->map(fn ($b) => (int) $b)->unique()->values()->all());
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function postingLines(): array
+    {
+        return [
+            ['account_id' => $this->expense->id, 'debit' => '100', 'credit' => '0'],
+            ['account_id' => $this->receivable->id, 'debit' => '0', 'credit' => '100', 'party_type' => 'customer', 'party_id' => $this->customer->id],
+        ];
     }
 
     private function service(): VoucherService

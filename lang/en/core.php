@@ -155,6 +155,7 @@ return [
         'unbalanced' => 'Debit and credit do not match',
         'refused' => 'Could not post to the books — :reason',
         'nothing_to_post' => 'There are no lines to post.',
+        'party_in_other_branch' => 'This party belongs to the ":branch" branch — its transactions cannot be written in ":here".',
         'both_sides' => 'Line :line carries both a debit and a credit — split it into two lines.',
         'zero_line' => 'Line :line is zero on both sides.',
         'already_posted' => 'This paper is already in the books — reverse it before posting again.',
