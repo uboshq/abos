@@ -85,6 +85,21 @@ Future<void> _pickTheShop(WidgetTester tester) async {
 }
 
 void main() {
+  // ⭐ অঙ্ক লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a collection with an amount typed asks before going back, an empty one does not', (tester) async {
+    await _pump(tester,
+        CollectScreen(api: _FakeEntry(), books: _FakeBooks(), customers: [_shop], newChangeId: _key));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const ValueKey('collect-amount')), '500');
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ অঙ্ক লেখা, তবু "পিছনে" কিছু না বলে আদায় ফেলে দিল');
+  });
+
   testWidgets('nothing is sent without a customer or with a malformed amount',
       (tester) async {
     final api = _FakeEntry();

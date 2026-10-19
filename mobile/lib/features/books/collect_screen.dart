@@ -9,6 +9,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import 'money_in_screens.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ টাকা আদায় নিন — অফিসের লোকের ফোনে (মালিক, ৭ অক্টোবর ২০২৬: "এখন অ্যাপে পেমেন্ট অপশন চালু করো … এটা কেবল
 /// অফিসের লোকদের জন্য")।
@@ -71,6 +72,10 @@ class _CollectScreenState extends State<CollectScreen> {
   void initState() {
     super.initState();
     _date = _today;
+    // ⓘ লেখার সঙ্গে পর্দা আবার আঁকে — "পিছনে"-র পাহারা লেখা দেখতে পায় ([[UnsavedGuard]])
+    for (final c in [_amount, _instrumentNo, _narration]) {
+      c.addListener(() => setState(() {}));
+    }
     _loadAccounts();
   }
 
@@ -184,8 +189,11 @@ class _CollectScreenState extends State<CollectScreen> {
     }
   }
 
+  // ⭐ গ্রাহক বা অঙ্ক বা মন্তব্য লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা আদায় এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: !_busy && (_customer != null || _amount.text.trim().isNotEmpty || _instrumentNo.text.trim().isNotEmpty || _narration.text.trim().isNotEmpty), child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final due =
         _customer == null ? null : CustomerDueRecord.forCustomer(_customer!.id);
     return Scaffold(
