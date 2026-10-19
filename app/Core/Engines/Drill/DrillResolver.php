@@ -144,8 +144,14 @@ final class DrillResolver
             return $this->seen[$key];
         }
 
+        /*
+         * ⭐ নাগাল ধরে খোলে এমন কাগজ ([[OpensInReach]]) — একই নিয়মে খোঁজা, মাথার শাখা ধরে নয়; নইলে সইয়ের পাতার স্লিপ আর
+         * অন্য শাখার রিপোর্টের "দলিল" ঘর খুঁজে পেত না, যদিও কাগজের পাতা খোলে (fe, ১৯ অক্টোবর ২০২৬)
+         */
         /** @var Model|null $model */
-        $model = $modelClass::query()->find($sourceId);
+        $model = method_exists($modelClass, 'findInReach')
+            ? $modelClass::findInReach($sourceId)
+            : $modelClass::query()->find($sourceId);
 
         if ($model === null) {
             /* ⓘ "নেই"-ও মনে রাখা হয়, নাহলে বাতিল কাগজের প্রতিটা সারি
