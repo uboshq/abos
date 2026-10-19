@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import 'stock_write_screens.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ মান যাচাই (QC) আর সিরিয়াল নম্বর — ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
 ///
@@ -510,6 +511,20 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    for (final c in [_qty, _batch, _criteria]) {
+      c.addListener(_typed);
+    }
+  }
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _written => _product != null || [_qty, _batch, _criteria].any((c) => c.text.trim().isNotEmpty);
+
+  @override
   void dispose() {
     for (final c in [_qty, _batch, _criteria]) {
       c.dispose();
@@ -550,8 +565,11 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
     }
   }
 
+  // ⭐ পণ্য বা পরিমাণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — নতুন যাচাইয়ের লেখা এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _written && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
       appBar: AppBar(title: const Text('নতুন মান যাচাই')),
