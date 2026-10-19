@@ -14,6 +14,12 @@ class AppTheme {
   /// খালি হলে তবেই এটা [ThemeMode.system] হবে, আগে নয়।
   static const ThemeMode mode = ThemeMode.light;
 
+  /// ⭐ predictive back — পেছনে টানলে আগের পাতা উঁকি দেয়, ছাড়লে ফেরে (Android 14+; মোবাইলের নকশা ৩)। ম্যানিফেস্টে
+  /// `enableOnBackInvokedCallback`। ⓘ না-রাখা ফর্মের পাহারা ([UnsavedGuard], PopScope) এতেও আগের মতো থামায়।
+  static const PageTransitionsTheme pageTransitions = PageTransitionsTheme(builders: {
+    TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+  });
+
   /// অন্ধকারের থিম — একই বীজ রং, Material 3-এর অন্ধকার রং-পরিবার; পট, কার্ড আর লেখা সব `colorScheme` থেকে
   static ThemeData dark() {
     final colorScheme = ColorScheme.fromSeed(
@@ -74,6 +80,7 @@ class AppTheme {
             )),
       ),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      pageTransitionsTheme: pageTransitions,
     );
   }
 
@@ -160,6 +167,7 @@ class AppTheme {
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),
+      pageTransitionsTheme: pageTransitions,
     );
   }
 }

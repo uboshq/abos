@@ -65,6 +65,7 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <!-- ⛔ ব্যাকআপ বন্ধ — তালাবদ্ধ বাক্সের চাবি keystore-এ, ব্যাকআপে যায় না (পূর্ণ নিরীক্ষা §৯ ⚠️১১) -->
     <application
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
