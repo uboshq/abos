@@ -757,6 +757,8 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
   @override
   void initState() {
     super.initState();
+    _amount.addListener(_typed);
+    _note.addListener(_typed);
     widget.api.get('/finance/hand-loans/money-accounts').then((d) {
       if (mounted) setState(() => _accounts = [for (final a in _maps(d['rows'])) MoneyChoice(a['id'].toString(), a['name'].toString())]);
     }).catchError((Object e) {
@@ -798,8 +800,18 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
     }
   }
 
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে: খাত, অঙ্ক বা নোট
+  bool get _loanDirty => !_busy && (_account != null || _amount.text.trim().isNotEmpty || _note.text.trim().isNotEmpty);
+
+  // ⭐ খাত বা অঙ্ক লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা হাতধার এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _loanDirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
       appBar: AppBar(title: Text('হাতধার · ${widget.name}')),

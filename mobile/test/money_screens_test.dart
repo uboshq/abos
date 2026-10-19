@@ -165,6 +165,21 @@ void main() {
     expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ নোট গোনা লেখা, তবু "পিছনে" কিছু না বলে গোনা ফেলে দিল');
   });
 
+  // ⭐ অঙ্ক লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি হাতধারে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a hand loan with an amount typed asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: HandLoanMoveScreen(id: 'hl-1', name: 'রহিম', api: _FakeMoney())));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি হাতধারে প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const ValueKey('handloan-amount')), '700');
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ অঙ্ক লেখা, তবু "পিছনে" কিছু না বলে হাতধার ফেলে দিল');
+  });
+
   testWidgets('a hand loan given out sends its direction, account and amount', (tester) async {
     final api = _FakeMoney();
     await tester.pumpWidget(MaterialApp(home: HandLoanMoveScreen(id: 'hl-1', name: 'রহিম', api: api)));
