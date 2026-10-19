@@ -31,6 +31,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
+import '../../core/privacy/device_integrity.dart';
 import '../../core/privacy/lock_delay.dart';
 import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
@@ -213,6 +214,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _loadPending();
     _loadPrefs();
     RecentPapers.changes.addListener(_loadPrefs);
+    // ⭐ root করা বা ছদ্ম-ফোন — একবার বলা, আটকানো নয় ([[DeviceIntegrity]])
+    WidgetsBinding.instance.addPostFrameCallback((_) => _warnIfUnsafe());
+  }
+
+  Future<void> _warnIfUnsafe() async {
+    final warning = await DeviceIntegrity.warnOnce();
+    if (warning == null || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        key: const ValueKey('device-integrity-warning'),
+        icon: Icon(Icons.gpp_maybe_outlined, color: Theme.of(dialog).colorScheme.error),
+        title: const Text('ফোনটা নিরাপদ নয়'),
+        content: Text(warning),
+        actions: [TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('বুঝেছি'))],
+      ),
+    );
   }
 
   @override

@@ -89,10 +89,43 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // ⭐ root করা বা ছদ্ম-ফোন — সতর্ক করার জন্য, আটকানোর জন্য নয় (app security, OWASP MASVS-RESILIENCE-1,
+        // 19 Oct 2026). lib/core/privacy/device_integrity.dart shows the warning once a run.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INTEGRITY_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "check" -> result.success(mapOf("rooted" to isRooted(), "emulator" to isEmulator()))
+                    else -> result.notImplemented()
+                }
+            }
     }
+
+    /** su-এর ফাইল, test-keys-এ সই করা বিল্ড, বা Magisk-এর চিহ্ন — কোনো একটা থাকলেই */
+    private fun isRooted(): Boolean {
+        if (Build.TAGS?.contains("test-keys") == true) return true
+        val paths = listOf(
+            "/system/bin/su", "/system/xbin/su", "/sbin/su", "/system/su", "/system/bin/.ext/su",
+            "/system/usr/we-need-root/su", "/data/local/su", "/data/local/bin/su", "/data/local/xbin/su",
+            "/su/bin/su", "/system/app/Superuser.apk", "/sbin/.magisk", "/data/adb/magisk",
+        )
+        return paths.any { runCatching { java.io.File(it).exists() }.getOrDefault(false) }
+    }
+
+    /** Android-এর নিজের emulator বা পরিচিত ছদ্ম-ফোনের চিহ্ন */
+    private fun isEmulator(): Boolean =
+        Build.FINGERPRINT.startsWith("generic") || Build.FINGERPRINT.startsWith("unknown") ||
+            Build.FINGERPRINT.contains("emulator") ||
+            Build.MODEL.contains("google_sdk") || Build.MODEL.contains("Emulator") ||
+            Build.MODEL.contains("Android SDK built for") ||
+            Build.MANUFACTURER.contains("Genymotion") ||
+            Build.HARDWARE.contains("goldfish") || Build.HARDWARE.contains("ranchu") ||
+            Build.PRODUCT.contains("sdk") || Build.PRODUCT.contains("emulator") ||
+            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
 
     companion object {
         private const val SECURE_CHANNEL = "com.abos.abos_mobile/secure"
+        private const val INTEGRITY_CHANNEL = "com.abos.abos_mobile/integrity"
         private const val INSTALL_CHANNEL = "com.abos.abos_mobile/install"
         private const val STORAGE_CHANNEL = "com.abos.abos_mobile/storage"
     }
