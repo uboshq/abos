@@ -80,7 +80,7 @@ final class PostingEngine
         $branchId = $branchId ?? CompanyContext::branchId();
         $userId = $userId ?? \App\Core\Support\Actor::userId();
 
-        $this->assertPartiesInTheirBranch($lines, $branchId, $sourceType, $sourceId);
+        $lines = $this->placePartiesInTheirBranch($lines, $branchId, $sourceType, $sourceId);
 
         return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear, $claimKey) {
             $this->assertYearStillOpen($financialYear);
@@ -183,9 +183,14 @@ final class PostingEngine
      * থাকলে (বা পক্ষের ধরনে শাখাই নেই — ব্যক্তি) কিছু বলার নেই; কর্মীর শাখা আছে, তাই বেতন/দাবির সারিও কর্মীর শাখায় (বেতন তাই করে)। ⓘ উল্টো দাখিলা ([[reverse()]]) মূল সারির শাখাতেই বসে, তাই
      * নিয়মের আগের ভুল সারিও উল্টানো যায়। দেখা (রিপোর্ট) সব শাখা জুড়ে আগের মতোই।
      *
+     * ⭐ শাখাহীন কাগজ (কোম্পানি-স্তরের স্থায়ী সম্পদ, শাখা ছাড়া প্রসঙ্গ) — পক্ষের সারি নিজের শাখায় বসে, থামে না: কাগজ কোনো শাখার
+     * কথা বলেনি, তাই "অন্য শাখা" নেই; পক্ষের সারি পক্ষের শাখায় — মালিকের নিয়মের সাথেই মেলে ([[ANoteNamedAPartyFromAnotherCompanyTest]]-এর
+     * বাকিতে কেনা সম্পদ)। থামে কেবল যখন কাগজ বা সারি স্পষ্ট **অন্য** শাখা বলে।
+     *
      * @param  list<array<string, mixed>>  $lines
+     * @return list<array<string, mixed>>
      */
-    private function assertPartiesInTheirBranch(array $lines, ?int $branchId, string $sourceType, int $sourceId): void
+    private function placePartiesInTheirBranch(array $lines, ?int $branchId, string $sourceType, int $sourceId): array
     {
         $pairs = [];
 
@@ -196,12 +201,12 @@ final class PostingEngine
         }
 
         if ($pairs === []) {
-            return;
+            return $lines;
         }
 
         $theirs = app(\App\Core\Services\PartyRegistry::class)->branchesOf($pairs);
 
-        foreach ($lines as $line) {
+        foreach ($lines as $index => $line) {
             $key = ($line['party_type'] ?? '').':'.(int) ($line['party_id'] ?? 0);
 
             if (! isset($theirs[$key])) {
@@ -210,17 +215,25 @@ final class PostingEngine
 
             $rowBranch = array_key_exists('branch_id', $line) ? $line['branch_id'] : $branchId;
 
-            if ($rowBranch === null || (int) $rowBranch !== $theirs[$key]) {
+            if ($rowBranch === null) {
+                $lines[$index]['branch_id'] = $theirs[$key];
+
+                continue;
+            }
+
+            if ((int) $rowBranch !== $theirs[$key]) {
                 $name = fn (?int $id): string => $id === null ? '—'
                     : (\App\Models\Branch::query()->withoutGlobalScopes()->find($id)?->name() ?? '#'.$id);
 
                 throw PostingException::said(
                     "{$sourceType}#{$sourceId}: party {$key} belongs to branch #{$theirs[$key]}, not #".($rowBranch ?? 'none').'.',
                     'core.posting.party_in_other_branch',
-                    ['branch' => $name($theirs[$key]), 'here' => $name($rowBranch === null ? null : (int) $rowBranch)],
+                    ['branch' => $name($theirs[$key]), 'here' => $name((int) $rowBranch)],
                 );
             }
         }
+
+        return $lines;
     }
 
     /**
