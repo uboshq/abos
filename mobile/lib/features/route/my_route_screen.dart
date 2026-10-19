@@ -7,6 +7,7 @@ import '../../core/orders/my_route_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 
 /// ⭐ আজকের রুট — ছকে আজ যে রুট, তার দোকান এক লাইনে এক তথ্য (মালিকের নিয়ম); দোকানে চাপলে দোকানের পাতা,
@@ -124,7 +125,7 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
                   child: ListTile(
                     key: Key('route-shop-${shop.id}'),
                     onTap: () => _open(shop),
-                    title: Text(shop.name),
+                    title: CustomerLine(shop.label),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

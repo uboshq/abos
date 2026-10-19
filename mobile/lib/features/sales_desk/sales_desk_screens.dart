@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 
 import '../../core/api_client/network_errors.dart';
@@ -6,6 +7,7 @@ import '../../core/orders/sales_desk_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/number_with_party.dart';
 import '../books/books_widgets.dart';
 
 /// ⭐ বিক্রয়ের ডেস্ক-পাতা আর দলিলের ছাঁচ, ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage app e bujajayna"*)।
@@ -159,7 +161,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
           for (final o in p.rows('orders'))
             _card(key: ValueKey('depot-${o.text('id')}'), children: [
               Row(children: [
-                Expanded(child: Text('${o.text('document_no')} · ${o.text('customer')}', style: _bold)),
+                Expanded(child: NumberWithParty(number: o.text('document_no'), party: _customerOf(o), style: _bold)),
                 Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
               ]),
               Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted),
@@ -173,7 +175,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
             for (final o in p.rows('held'))
               _card(children: [
                 Row(children: [
-                  Expanded(child: Text('${o.text('document_no')} · ${o.text('customer')}', style: _bold)),
+                  Expanded(child: NumberWithParty(number: o.text('document_no'), party: _customerOf(o), style: _bold)),
                   Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
                 ]),
                 Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted),
@@ -290,7 +292,7 @@ class _DeliveryPerformanceScreenState extends State<DeliveryPerformanceScreen> {
           for (final d in p.rows('late'))
             _card(key: ValueKey('late-${d.text('id')}'), children: [
               Row(children: [
-                Expanded(child: Text('${d.text('document_no')} · ${d.text('customer')}', style: _bold)),
+                Expanded(child: NumberWithParty(number: d.text('document_no'), party: _customerOf(d), style: _bold)),
                 Text('${d.number('days_late')} দিন দেরি', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
               ]),
               Text('কথা ছিল ${d.text('promised_on')} · পৌঁছেছে ${d.text('arrived_on')}', style: _muted),
@@ -399,3 +401,7 @@ class TemplateScreen extends StatelessWidget {
         ],
       );
 }
+
+/// ⭐ নম্বরের পাশে "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম: *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব
+/// জায়গায়, আর শাখার নামও দিতে হবে"*)। ⓘ পুরনো সার্ভার পয়েন্ট-শাখা পাঠায় না — তখন নামটাই, আগের মতো।
+String _customerOf(DeskRow r) => withPoint(r.text('customer'), r.payload['customer_point'], r.payload['customer_branch']);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/quotation_api.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -28,7 +29,8 @@ class CompareHead {
         id: j['id']?.toString() ?? '',
         no: j['no']?.toString() ?? '',
         revisionNo: (j['revision_no'] as num?)?.toInt() ?? 0,
-        customer: j['customer']?.toString(),
+        // ⭐ নাম · পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পুরনো সার্ভারে নামটাই
+        customer: withPointOrNull(j['customer']?.toString(), j['customer_point'], j['customer_branch']),
         statusLabel: j['status_label']?.toString() ?? '',
         total: j['total']?.toString() ?? '0',
       );

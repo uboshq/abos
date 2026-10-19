@@ -6,6 +6,7 @@ import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import 'books_widgets.dart';
 
 /// ⭐ প্রিন্সিপালের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
@@ -106,7 +107,7 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
                 Card(
                   child: ListTile(
                     key: ValueKey('principal-${p.id}'),
-                    title: Text(p.name,
+                    title: CustomerLine(p.label,
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(p.lastPurchaseOn == null
                         ? 'এখনো কোনো ক্রয় নেই'

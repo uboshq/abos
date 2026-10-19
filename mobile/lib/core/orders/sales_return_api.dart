@@ -47,7 +47,7 @@ class ReturnSetup {
               ReturnInvoice(
                 id: i['id'].toString(),
                 no: i['no']?.toString() ?? '',
-                customer: withPoint(i['customer']?.toString() ?? '', i['customer_point']),
+                customer: withPoint(i['customer']?.toString() ?? '', i['customer_point'], i['customer_branch']),
                 total: i['total']?.toString() ?? '0',
                 date: i['date']?.toString(),
               ),
@@ -86,7 +86,7 @@ class ReturnBill {
   factory ReturnBill.fromJson(Map<String, dynamic> json) => ReturnBill(
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
-        customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint']),
+        customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint'], json['customerBranch']),
         lines: [
           for (final l in (json['lines'] as List?) ?? const [])
             if (l is Map)

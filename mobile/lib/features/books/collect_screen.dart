@@ -8,6 +8,7 @@ import '../../core/records/money.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import 'money_in_screens.dart';
 
 /// ⭐ টাকা আদায় নিন — অফিসের লোকের ফোনে (মালিক, ৭ অক্টোবর ২০২৬: "এখন অ্যাপে পেমেন্ট অপশন চালু করো … এটা কেবল
@@ -207,13 +208,9 @@ class _CollectScreenState extends State<CollectScreen> {
           Card(
             child: ListTile(
               key: const ValueKey('collect-customer'),
-              title: Text(_customer?.name ?? 'গ্রাহক বাছুন'),
-              subtitle: _customer == null
-                  ? null
-                  : Text([
-                      if (_customer!.pointName != null) _customer!.pointName!,
-                      if (due != null) due.outstandingLabel,
-                    ].join(' · ')),
+              // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+              title: CustomerLine(_customer?.label ?? 'গ্রাহক বাছুন'),
+              subtitle: _customer == null || due == null ? null : Text(due.outstandingLabel),
               trailing: const Icon(Icons.search),
               onTap: _busy ? null : _pickCustomer,
             ),
@@ -321,7 +318,8 @@ class _CustomerSheetState extends State<_CustomerSheet> {
             c.name.toLowerCase().contains(q) ||
             (c.code ?? '').toLowerCase().contains(q) ||
             (c.phone ?? '').contains(q) ||
-            (c.pointName ?? '').toLowerCase().contains(q))
+            (c.pointName ?? '').toLowerCase().contains(q) ||
+            (c.branchName ?? '').toLowerCase().contains(q))
         .take(100)
         .toList();
     return SafeArea(
@@ -351,13 +349,10 @@ class _CustomerSheetState extends State<_CustomerSheet> {
                           for (final c in rows)
                             ListTile(
                               key: ValueKey('collect-pick-${c.id}'),
-                              title: Text(c.name),
-                              subtitle: Text([
-                                if (c.pointName != null) c.pointName!,
-                                CustomerDueRecord.forCustomer(c.id)
-                                        ?.outstandingLabel ??
-                                    '',
-                              ].where((t) => t.isNotEmpty).join(' · ')),
+                              title: CustomerLine(c.label),
+                              subtitle: Text(CustomerDueRecord.forCustomer(c.id)
+                                      ?.outstandingLabel ??
+                                  ''),
                               onTap: () => Navigator.of(context).pop(c),
                             ),
                         ],

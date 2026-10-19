@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
+import 'package:abos_mobile/core/widgets/customer_line.dart';
 import 'package:abos_mobile/features/customers/due_list_screen.dart';
 
 import 'support/fake_secure_storage.dart';
@@ -21,6 +22,7 @@ void main() {
     required String nameBn,
     String? phone,
     String? pointName,
+    String? branchName,
     required String outstanding,
     String creditLimit = '0.0000',
     int creditDays = 0,
@@ -34,6 +36,7 @@ void main() {
         'nameBn': nameBn,
         if (phone != null) 'phone': phone,
         if (pointName != null) 'pointName': pointName,
+        if (branchName != null) 'branchName': branchName,
       },
     );
     await ReferenceCache.instance.put(
@@ -83,7 +86,7 @@ void main() {
     // Sorted by what is owed, not by name: a list of eighty shops in
     // alphabetical order is a list nobody reads to the end.
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
-    final names = tiles.map((t) => (t.title! as Text).data).toList();
+    final names = tiles.map((t) => (t.title! as CustomerLine).text).toList();
     expect(names, ['রহিম স্টোর', 'মাঝারি দোকান', 'ছোট দোকান']);
   });
 
@@ -108,11 +111,13 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DueListScreen()));
     await tester.pump();
 
-    expect(find.text('পয়েন্ট: কারওয়ান বাজার'), findsOneWidget);
+    // ⭐ 19 Oct 2026 (owner's standing rule): the point now sits beside the name — "নাম · পয়েন্ট · শাখা" — not twice
+    expect(find.text('রহিম স্টোর · কারওয়ান বাজার'), findsOneWidget);
     expect(find.text('বকেয়া: ৳5,000.00'), findsOneWidget);
     // ⓘ A shop on no point keeps its due line, with nothing made up beside it
+    expect(find.text('করিম স্টোর'), findsOneWidget);
     expect(find.text('বকেয়া: ৳3,000.00'), findsOneWidget);
-    expect(find.textContaining('পয়েন্ট: '), findsOneWidget);
+    expect(find.textContaining('কারওয়ান বাজার'), findsOneWidget);
     expect(find.textContaining('01711000001'), findsNothing,
         reason: 'the mobile is on the shop page, not the row');
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
@@ -199,4 +204,22 @@ void main() {
     // as "this is what I am owed" while showing a fraction of it.
     expect(find.text('৳10,000.00'), findsOneWidget);
   });
+
+  // ⭐ মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে।"
+  testWidgets('the name line carries point and branch on one line, cut with "…", whole on a long press', (tester) async {
+    await tester.runAsync(() async {
+      await seed(id: 'b1', nameBn: 'রহিম স্টোর', pointName: 'কারওয়ান বাজার', branchName: 'Super', outstanding: '5000.0000');
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: DueListScreen()));
+    await tester.pump();
+
+    const line = 'রহিম স্টোর · কারওয়ান বাজার · Super';
+    expect(find.text(line), findsOneWidget);
+    final text = tester.widget<Text>(find.text(line));
+    expect(text.maxLines, 1);
+    expect(text.overflow, TextOverflow.ellipsis);
+    expect(find.byWidgetPredicate((w) => w is Tooltip && w.message == line), findsOneWidget, reason: 'পুরোটা ছুঁয়ে ধরে রাখলে');
+  });
 }
+

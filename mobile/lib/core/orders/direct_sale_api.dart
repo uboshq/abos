@@ -358,7 +358,7 @@ class CounterDraftSummary {
       CounterDraftSummary(
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
-        customer: withPoint(json['customer']?.toString() ?? '', json['customer_point']),
+        customer: withPoint(json['customer']?.toString() ?? '', json['customer_point'], json['customer_branch']),
         total: json['total']?.toString() ?? '0',
         date: json['date']?.toString(),
         lines: (json['lines'] as num?)?.toInt() ?? 0,
@@ -394,7 +394,7 @@ class CounterDraft {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
         customerId: json['customer']?.toString() ?? '',
-        customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint']),
+        customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint'], json['customerBranch']),
         hasFractions: ((json['lines'] as List?) ?? const [])
             .whereType<Map>()
             .any((l) => _fractional(l['qty']) || _fractional(l['freeQty'])),

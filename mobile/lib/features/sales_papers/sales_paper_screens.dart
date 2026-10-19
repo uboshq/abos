@@ -152,7 +152,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(
                     [
-                      [r.customer, if (r.point != null && r.point!.isNotEmpty) r.point!].join(' · '),
+                      withPoint(r.customer, r.point, r.branch),
                       [dayOf(r.date), r.statusLabel].where((s) => s.isNotEmpty).join(' · '),
                     ].join('\n'),
                   ),
@@ -220,7 +220,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
       });
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ
       RecentPapers.note(
-          kind: widget.kind.recentKind, id: widget.id, number: paper.no, party: withPoint(paper.customer, paper.point));
+          kind: widget.kind.recentKind, id: widget.id, number: paper.no, party: withPoint(paper.customer, paper.point, paper.branch));
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: '${widget.kind.title}টা আনা গেল না।'));
     }
@@ -261,8 +261,9 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(p.customer, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                      if (p.point != null && p.point!.isNotEmpty)
-                        Text(p.point!, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      // ⭐ পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ ("শাখার নামও দিতে হবে"); পুরনো সার্ভারে শাখা নেই, তখন পয়েন্টটাই
+                      if (placeOf(p.point, p.branch) != null)
+                        Text(placeOf(p.point, p.branch)!, style: const TextStyle(color: AppColors.onSurfaceMuted)),
                       const SizedBox(height: AppSpacing.xs),
                       _pair('তারিখ', dayOf(p.date)),
                       if (p.saleNo != null && p.saleNo!.isNotEmpty) _pair('বিক্রির নম্বর', p.saleNo!),
@@ -359,6 +360,7 @@ class SalesPaperRow {
     this.date,
     this.customer = '',
     this.point,
+    this.branch,
     this.status = '',
     this.statusLabel = '',
     required this.total,
@@ -371,6 +373,9 @@ class SalesPaperRow {
   final String? date;
   final String customer;
   final String? point;
+
+  /// ⭐ গ্রাহকের শাখা (মালিক, ১৯ অক্টোবর ২০২৬) — পুরনো সার্ভারে null
+  final String? branch;
   final String status;
   final String statusLabel;
   final String total;
@@ -385,6 +390,7 @@ class SalesPaperRow {
         date: j['date']?.toString(),
         customer: j['customer']?.toString() ?? '',
         point: j['point']?.toString(),
+        branch: j['customer_branch']?.toString(),
         status: j['status']?.toString() ?? '',
         statusLabel: _status(j['status']?.toString(), j['status_label']?.toString()),
         total: j['total']?.toString() ?? '0',
@@ -450,6 +456,7 @@ class SalesPaperDetail {
     this.statusLabel = '',
     this.customer = '',
     this.point,
+    this.branch,
     this.warehouse,
     this.vehicleNo,
     this.createdBy,
@@ -471,6 +478,9 @@ class SalesPaperDetail {
   final String statusLabel;
   final String customer;
   final String? point;
+
+  /// ⭐ গ্রাহকের শাখা (মালিক, ১৯ অক্টোবর ২০২৬) — পুরনো সার্ভারে null
+  final String? branch;
   final String? warehouse;
   final String? vehicleNo;
   final String? createdBy;
@@ -496,6 +506,7 @@ class SalesPaperDetail {
       statusLabel: _status(j['status']?.toString(), j['status_label']?.toString()),
       customer: j['customer']?.toString() ?? '',
       point: j['point']?.toString(),
+      branch: j['customer_branch']?.toString(),
       warehouse: j['warehouse']?.toString(),
       vehicleNo: j['vehicle_no']?.toString(),
       createdBy: j['created_by']?.toString(),

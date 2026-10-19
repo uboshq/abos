@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -232,9 +233,10 @@ Widget _card({Key? key, required List<Widget> children, VoidCallback? onTap}) =>
       ),
     );
 
-/// নাম · পয়েন্ট — মালিকের নিয়ম, গ্রাহকের পাশে সবসময় পয়েন্ট (৭ অক্টোবর ২০২৬)
+/// নাম · পয়েন্ট · শাখা — মালিকের নিয়ম, গ্রাহকের পাশে সবসময় পয়েন্ট (৭ অক্টোবর ২০২৬), আর শাখাও (১৯ অক্টোবর ২০২৬, স্থায়ী)।
+/// ⓘ পুরনো সার্ভার শাখা পাঠায় না — তখন "নাম · পয়েন্ট" ([withPoint])।
 String _withPoint(PlanRow r, [String nameKey = 'name']) =>
-    [r.text(nameKey), if (r.maybe('point') != null) r.text('point')].join(' · ');
+    withPoint(r.text(nameKey), r.maybe('point') ?? r.maybe('customer_point'), r.maybe('branch') ?? r.maybe('customer_branch'));
 
 /// শতাংশের রং — ১০০ ছুঁলে সবুজ, অর্ধেকের নিচে লাল
 Color _percentColour(String? percent) {

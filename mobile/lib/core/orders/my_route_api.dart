@@ -1,4 +1,5 @@
 import '../api_client/api_client.dart';
+import '../records/customer_record.dart';
 import '../records/money.dart';
 
 /// ⭐ আমার আজকের রুট — `GET /sales/my-route` (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)।
@@ -13,6 +14,8 @@ class RouteShop {
     required this.name,
     this.phone,
     this.address,
+    this.point,
+    this.branch,
     required this.sales,
     required this.collections,
     required this.outstanding,
@@ -24,6 +27,10 @@ class RouteShop {
   final String name;
   final String? phone;
   final String? address;
+
+  /// ⭐ দোকানের পয়েন্ট আর শাখা (মালিক, ১৯ অক্টোবর ২০২৬) — পুরনো সার্ভারে null
+  final String? point;
+  final String? branch;
   final double sales;
   final double collections;
   final double outstanding;
@@ -35,10 +42,15 @@ class RouteShop {
         name: json['name']?.toString() ?? '—',
         phone: json['phone']?.toString(),
         address: json['address']?.toString(),
+        point: json['point']?.toString(),
+        branch: json['branch']?.toString(),
         sales: Money.valueOrZero(json['sales']),
         collections: Money.valueOrZero(json['collections']),
         outstanding: Money.valueOrZero(json['outstanding']),
       );
+
+  /// "নাম · পয়েন্ট · শাখা" — দোকানের লাইনে ([withPoint]); পুরনো সার্ভারে নামটাই
+  String get label => withPoint(name, point, branch);
 }
 
 class RouteDay {

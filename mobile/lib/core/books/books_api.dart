@@ -33,7 +33,7 @@ class MoneyInRow {
         id: j['id']?.toString() ?? '',
         no: j['no']?.toString() ?? '',
         date: j['date']?.toString(),
-        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point']),
+        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point'], j['customer_branch']),
         account: j['account']?.toString() ?? '',
         method: j['method']?.toString() ?? 'other',
         amount: Money.valueOrZero(j['amount']),
@@ -103,6 +103,7 @@ class PrincipalRow {
     required this.name,
     this.fullName = '',
     this.phone = '',
+    this.branch,
     required this.balance,
     this.lastPurchaseOn,
   });
@@ -111,6 +112,9 @@ class PrincipalRow {
   final String name;
   final String fullName;
   final String phone;
+
+  /// ⭐ সরবরাহকারীর শাখা (মালিক, ১৯ অক্টোবর ২০২৬: "নাম · শাখা") — পুরনো সার্ভারে null
+  final String? branch;
   final double balance;
   final String? lastPurchaseOn;
 
@@ -119,9 +123,13 @@ class PrincipalRow {
         name: j['name']?.toString() ?? '',
         fullName: j['full_name']?.toString() ?? '',
         phone: j['phone']?.toString() ?? '',
+        branch: j['branch']?.toString(),
         balance: Money.valueOrZero(j['balance']),
         lastPurchaseOn: j['last_purchase_on']?.toString(),
       );
+
+  /// "নাম · শাখা" — তালিকার লাইনে; পুরনো সার্ভারে নামটাই
+  String get label => withPoint(name, null, branch);
 
   String get balanceLabel => balanceWords(balance);
 
@@ -193,7 +201,8 @@ class PurchaseRow {
         id: j['id']?.toString() ?? '',
         no: j['no']?.toString() ?? '',
         date: j['date']?.toString(),
-        principal: j['principal']?.toString() ?? '',
+        // ⭐ "নাম · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬; পুরনো সার্ভারে নামটাই
+        principal: withPoint(j['principal']?.toString() ?? '', null, j['principal_branch']),
         statusLabel: j['status_label']?.toString() ?? '',
         total: j.containsKey('total') ? Money.valueOrZero(j['total']) : null,
         paid: j.containsKey('paid') ? Money.valueOrZero(j['paid']) : null,
