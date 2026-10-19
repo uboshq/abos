@@ -163,6 +163,10 @@ return [
     'year_reopen_super_admin' => 'Only a super admin can reopen a closed year.',
     'year_not_closed' => 'That year is not closed.',
     'year_reopen_latest_only' => 'Only the year closed most recently can be reopened — right now that is ":name".',
+    /* A party's money goes to the party's own branch - owner, 19 October 2026. */
+    'party_in_other_branch' => 'This party belongs to the ":branch" branch — its money cannot be written in ":here".',
+    'party_branch_out_of_reach' => 'This party belongs to the ":branch" branch, which is outside your reach — someone of that branch writes it.',
+    'parties_in_two_branches' => 'Parties of two branches in one voucher — write one voucher per branch.',
     /* Cash only into your own till - 21 September 2026. */
     'cash_not_your_till' => ':account is not your till - cash can only go into your own.',
     'transfer_not_your_till' => ':till is not your cash box — cash can only be sent from your own box.',

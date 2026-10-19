@@ -10,7 +10,9 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\DataScope;
 use App\Core\Services\OpenPeriod;
+use App\Core\Services\PartyRegistry;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\RevisionKeeper;
 use App\Core\Services\SettingsService;
@@ -20,10 +22,12 @@ use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\Approval;
+use App\Models\Branch;
 use App\Models\DocumentRevision;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Accounts\Events\VoucherCancelled;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
@@ -72,6 +76,9 @@ final class VoucherService
             // ⓘ ধরনের ছাঁচ কেবল হাতে লেখা ভাউচারে — ব্যবস্থার নিজের পোস্টিং (নগদ গণনার ঘাটতি, আন্তঃকোম্পানি, ভাড়ার জমা…) তার সেবার ছাঁচ মানে
             if ($byHand) {
                 $this->assertTemplate($type, $lines, [$data['party_type'] ?? null, $data['party_id'] ?? null]);
+
+                // ⛔ পক্ষের টাকা পক্ষের শাখায় — উপরের শাখা-বাছাই নয় ([[branchOfTheParty()]])
+                $data['branch_id'] = $this->branchOfTheParty($data, $lines);
             }
 
             $trxDate = Carbon::parse($data['trx_date']);
@@ -412,6 +419,11 @@ final class VoucherService
          * ⛔ শর্তটা তুলে দিলে ঠিক ওই তিন লাইনের ছবিটাই ফিরে আসবে।
          */
         $ownable = $this->accountsThatHoldAParty();
+
+        // ⛔ নিয়মের আগে অন্য শাখায় লেখা খসড়াও এখানে থামে ([[assertPartyInItsBranch()]])
+        if ($byHand) {
+            $this->assertPartyInItsBranch($voucher, $ownable);
+        }
 
         return DB::transaction(function () use ($voucher, $ownable) {
             /*
@@ -974,6 +986,8 @@ final class VoucherService
         $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertBankReferenceIsFree($voucher);
         $this->assertMoneyIsThere($voucher);
+        // ⛔ সংশোধনে অন্য শাখার পক্ষ বসালেও থামে ([[assertPartyInItsBranch()]])
+        $this->assertPartyInItsBranch($voucher, $this->accountsThatHoldAParty());
 
         $this->posting->post(
             Voucher::SOURCE_TYPES[$voucher->type],
@@ -1477,6 +1491,85 @@ final class VoucherService
      * তাঁর জন্য নিয়মটা খাটে: তিনি কোনো নগদ খাতেই বসাতে পারবেন না,
      * কারণ টাকাটা কার হেফাজতে তার উত্তর থাকে না।
      */
+    /**
+     * ⛔ পক্ষের টাকা পক্ষের নিজের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: *"ei party super er tai eta lion e keno zabe eta bag"*।
+     *
+     * ⚠️ হাতে লেখা ভাউচার বসত লেখকের উপরের শাখা-বাছাইয়ে (`CompanyContext::branchId()`)। Lion বেছে রাখা লেখক Super-এর
+     * গ্রাহকের রসিদ লিখলে টাকাটা Lion-এর খাতায় যেত: Super দেখলে গ্রাহক পুরো টাকা বাকি, Lion দেখলে অগ্রিম। লাইভে তিনটা
+     * এমন রসিদ পাওয়া গেছে (ADI RCV-0133, RCV-0143; UB RCV-10230)।
+     *
+     * ⭐ এখন: পক্ষের শাখা থাকলে ভাউচার সেই শাখায় বসে। অন্য শাখা স্পষ্ট বাছলে, দুই শাখার পক্ষ এক ভাউচারে দিলে, বা পক্ষের শাখা
+     * লেখকের নাগালের বাইরে হলে থামে, কারণসহ। পক্ষ নেই বা পক্ষের শাখা নেই → আগের মতো লেখকের বাছাই।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function branchOfTheParty(array $data, array $lines): ?int
+    {
+        $chosen = filled($data['branch_id'] ?? null) ? (int) $data['branch_id'] : null;
+
+        $pairs = [[$data['party_type'] ?? null, $data['party_id'] ?? null]];
+
+        foreach ($lines as $line) {
+            $pairs[] = [$line['party_type'] ?? null, $line['party_id'] ?? null];
+        }
+
+        $branches = array_values(array_unique(app(PartyRegistry::class)->branchesOf($pairs)));
+
+        if ($branches === []) {
+            return $chosen ?? CompanyContext::branchId();
+        }
+
+        if (count($branches) > 1) {
+            throw ValidationException::withMessages(['party_id' => __('accounts::validation.parties_in_two_branches')]);
+        }
+
+        $theirs = $branches[0];
+
+        if ($chosen !== null && $chosen !== $theirs) {
+            throw ValidationException::withMessages(['branch_id' => __('accounts::validation.party_in_other_branch', [
+                'branch' => $this->branchName($theirs),
+                'here' => $this->branchName($chosen),
+            ])]);
+        }
+
+        $user = auth()->user();
+
+        if ($user instanceof User && ! app(DataScope::class)->allows($user, UserDataScope::BRANCH, $theirs)) {
+            throw ValidationException::withMessages(['branch_id' => __('accounts::validation.party_branch_out_of_reach', [
+                'branch' => $this->branchName($theirs),
+            ])]);
+        }
+
+        return $theirs;
+    }
+
+    /**
+     * ⛔ পাকা করার মুহূর্তে আবার — নিয়মের আগে লেখা খসড়া, বা সম্পাদনায় বদলানো পক্ষ ([[branchOfTheParty()]])।
+     *
+     * @param  array<int, list<string>>  $ownable
+     */
+    private function assertPartyInItsBranch(Voucher $voucher, array $ownable): void
+    {
+        $pairs = array_map(fn (array $line): array => [$line['party_type'], $line['party_id']], $this->ledgerLines($voucher, $ownable));
+
+        foreach (app(PartyRegistry::class)->branchesOf($pairs) as $branch) {
+            if ((int) $voucher->branch_id !== $branch) {
+                throw ValidationException::withMessages(['branch_id' => __('accounts::validation.party_in_other_branch', [
+                    'branch' => $this->branchName($branch),
+                    'here' => $this->branchName((int) $voucher->branch_id),
+                ])]);
+            }
+        }
+    }
+
+    private function branchName(int $id): string
+    {
+        $branch = Branch::query()->withoutGlobalScopes()->find($id);
+
+        return $branch !== null ? $branch->name() : '#'.$id;
+    }
+
     private function assertCashLandsInOwnTill(Voucher $voucher): void
     {
         $userId = (int) (auth()->id() ?? 0);
