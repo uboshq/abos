@@ -714,6 +714,8 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
                 for (final s in p.rows('by_status'))
                   if (s.number('count') > 0) ('${s.text('label')} · ${s.number('count')}টি', Money.taka(s.text('amount'))),
               ]),
+              // ⭐ মোটে কী আছে — ওয়েবের পাতার নিচের একই কথা (fe, ১৯ অক্টোবর ২০২৬; সার্ভারের CommissionClaim::UNCOUNTED)
+              _note('ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'),
               _note('ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।'),
             ];
           },

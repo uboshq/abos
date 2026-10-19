@@ -253,6 +253,9 @@ void main() {
     expect(find.textContaining('মানা হয়নি · 0টি'), findsNothing, reason: 'শূন্য অবস্থা মোটে নয়');
     expect(find.text('COM-1 · রহিম ট্রেডার্স · কেন্দুয়া বাজার'), findsOneWidget);
     expect(find.text('ভিত্তি ৳10,000.00 · হার 5%'), findsOneWidget);
+    // ⭐ মোটের নিচে মোটের নিয়ম — ওয়েবের পাতার একই কথা (fe, ১৯ অক্টোবর ২০২৬)
+    expect(find.text('ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'), findsOneWidget,
+        reason: '⛔ কমিশনের মোটের নিচে বাতিল আর ফেরত দেওয়া দাবির কথা নেই');
 
     await tester.tap(find.byKey(const ValueKey('commission-status-settled')));
     await tester.pumpAndSettle();
