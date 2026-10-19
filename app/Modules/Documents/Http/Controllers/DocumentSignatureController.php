@@ -75,6 +75,10 @@ final class DocumentSignatureController extends Controller
             'tab' => $tab,
             'rows' => $rows,
             'documents' => $documents,
+            // ⭐ নম্বরের পাশে পক্ষ — জোড়া রেকর্ড থেকে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]])
+            'parties' => app(DocumentParties::class)->of($tab === 'signed'
+                ? collect($rows->items())->pluck('document_id')
+                : $documents->keys()),
         ]);
     }
 

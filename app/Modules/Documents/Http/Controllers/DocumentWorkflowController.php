@@ -65,6 +65,8 @@ final class DocumentWorkflowController extends Controller
             'menu' => $this->menu->forUser($user),
             'rows' => $rows,
             'documents' => $documents,
+            // ⭐ নম্বরের পাশে পক্ষ — জোড়া রেকর্ড থেকে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]])
+            'parties' => app(DocumentParties::class)->of($documents->keys()),
             'mine' => $mine,
         ]);
     }
