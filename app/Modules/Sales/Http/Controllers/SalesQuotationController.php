@@ -86,7 +86,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
             $counts[$key] = (clone $base)->inTab($key)->count();
         }
 
-        $query = (clone $base)->with(['customer', 'order'])->inTab($tab);
+        $query = (clone $base)->with(['customer.location.parent', 'order'])->inTab($tab);
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),

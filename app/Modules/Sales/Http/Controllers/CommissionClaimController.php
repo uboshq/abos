@@ -53,7 +53,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $query = CommissionClaim::query()
-            ->with(['customer', 'supplier', 'invoice'])
+            ->with(['customer.location.parent', 'supplier', 'invoice'])
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->query('supplier'), fn ($q, $s) => $q->where('supplier_id', $s))
             /*

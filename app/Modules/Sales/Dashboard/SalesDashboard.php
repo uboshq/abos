@@ -209,6 +209,9 @@ final class SalesDashboard implements ProvidesDashboard
                             'render' => fn ($i) => $i->document_no],
                         ['key' => 'party', 'label' => __('sales::field.customer'),
                             'render' => fn ($i) => $i->customer?->name() ?? '—'],
+                        // ⭐ গ্রাহকের পরে পয়েন্ট (মালিক, ২৮ সেপ্টেম্বর ও ১৯ অক্টোবর ২০২৬) — পাশের "পিছিয়ে থাকা" তালিকার একই কলাম
+                        ['key' => 'point', 'label' => __('customer::field.point'),
+                            'render' => fn ($i) => $i->customer?->pointName() ?? '—'],
                         ['key' => 'due', 'label' => __('sales::dashboard.outstanding'), 'width' => '9rem',
                             'render' => fn ($i) => Money::format($i->dueAmount())],
                     ],
@@ -341,7 +344,7 @@ final class SalesDashboard implements ProvidesDashboard
             ->pluck('id')
             ->all();
 
-        return SalesInvoice::query()->withCollected()->with('customer')->whereIn('sal_invoices.id', $ranked ?: [0])->get()
+        return SalesInvoice::query()->withCollected()->with('customer.location.parent')->whereIn('sal_invoices.id', $ranked ?: [0])->get()
             ->sortBy(fn (SalesInvoice $i) => array_search($i->id, $ranked, true))
             ->values();
     }

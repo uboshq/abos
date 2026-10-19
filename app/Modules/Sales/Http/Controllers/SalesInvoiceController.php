@@ -191,7 +191,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
              */
             // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
             ->whereNotIn('sal_invoices.id', DirectSaleService::openCounterDrafts()->select('sal_invoices.id'))
-            ->with(['customer.location'])
+            ->with(['customer.location.parent'])
             /*
              * এক গ্রাহকের চালানগুলো।
              *

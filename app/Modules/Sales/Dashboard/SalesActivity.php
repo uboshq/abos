@@ -23,6 +23,9 @@ use App\Modules\Sales\Models\SalesReturn;
  * ── কেন খসড়া নয় ────────────────────────────────────────────────────
  * খসড়া "হয়েছে" নয়, "শুরু হয়েছে"। ওগুলোর জায়গা করণীয় তালিকায়, আর
  * সেখানে ওরা আছেও।
+ *
+ * ⭐ নম্বরের নিচে গ্রাহক, পয়েন্টসহ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬: "নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম
+ * দিলে সহজে বোঝা যায়"; ২৮ সেপ্টেম্বর: গ্রাহকের পরে সবসময় পয়েন্ট)। ⓘ জায়গা গোটা তালিকার এক প্রশ্নে (`customer.location.parent`)।
  */
 final class SalesActivity implements ContributesActivity
 {
@@ -41,7 +44,7 @@ final class SalesActivity implements ContributesActivity
     {
         return SalesInvoice::query()
             ->posted()
-            ->with('customer')
+            ->with('customer.location.parent')
             ->latest('id')
             ->limit($limit)
             ->get()
@@ -56,7 +59,7 @@ final class SalesActivity implements ContributesActivity
                  */
                 when: $invoice->updated_at ?? $invoice->created_at,
                 title: $invoice->document_no.' · '.Money::format((string) $invoice->total, 2),
-                subtitle: $invoice->customer?->name() ?? '',
+                subtitle: $invoice->customer?->nameWithPoint() ?? '',
                 icon: 'receipt',
                 permission: 'sales.invoice.view',
                 tone: 'money',
@@ -71,7 +74,7 @@ final class SalesActivity implements ContributesActivity
     {
         return Collection::query()
             ->posted()
-            ->with('customer')
+            ->with('customer.location.parent')
             ->latest('id')
             ->limit($limit)
             ->get()
@@ -80,7 +83,7 @@ final class SalesActivity implements ContributesActivity
                 title: $collection->document_no.' · '.__('sales::message.collected_amount', [
                     'amount' => Money::format((string) $collection->amount, 2),
                 ]),
-                subtitle: $collection->customer?->name() ?? '',
+                subtitle: $collection->customer?->nameWithPoint() ?? '',
                 icon: 'inbox',
                 permission: 'sales.collection.view',
 
@@ -103,7 +106,7 @@ final class SalesActivity implements ContributesActivity
     {
         return SalesReturn::query()
             ->posted()
-            ->with('customer')
+            ->with('customer.location.parent')
             ->latest('id')
             ->limit($limit)
             ->get()
@@ -112,7 +115,7 @@ final class SalesActivity implements ContributesActivity
                 title: $return->document_no.' · '.__('sales::message.returned_amount', [
                     'amount' => Money::format((string) $return->total, 2),
                 ]),
-                subtitle: $return->customer?->name() ?? '',
+                subtitle: $return->customer?->nameWithPoint() ?? '',
                 icon: 'swap',
                 permission: 'sales.return.view',
 

@@ -82,7 +82,7 @@ final class TransportAssignmentController extends Controller implements HasMiddl
         }
 
         $query = self::inTab(clone $base, $tab)
-            ->with(['customer.location', 'vehicle'])
+            ->with(['customer.location.parent', 'vehicle'])
             ->orderByDesc('sal_challans.trx_date')
             ->orderByDesc('sal_challans.id');
 

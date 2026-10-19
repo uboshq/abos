@@ -76,7 +76,7 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         $term = trim((string) $request->query('q', ''));
 
         $query = $this->tab(DeliveryOrder::query(), $tab)
-            ->with(['customer.location', 'warehouse'])
+            ->with(['customer.location.parent', 'warehouse'])
             ->when($term !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
                 ->where('document_no', 'like', '%'.$term.'%')
                 ->orWhereHas('customer', fn (Builder $c) => $c->where('name_en', 'like', '%'.$term.'%')->orWhere('name_bn', 'like', '%'.$term.'%'))));

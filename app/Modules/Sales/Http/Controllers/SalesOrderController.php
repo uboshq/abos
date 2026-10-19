@@ -121,7 +121,7 @@ class SalesOrderController extends Controller implements HasMiddleware
 
         // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫) — "সব" ট্যাবে চাইলে দেখা যায়
         $query = $tracking->applyListTab(
-            (clone $base)->with(['customer.location', 'warehouse']),
+            (clone $base)->with(['customer.location.parent', 'warehouse']),
             $tab,
             $request->boolean('cancelled'),
         );

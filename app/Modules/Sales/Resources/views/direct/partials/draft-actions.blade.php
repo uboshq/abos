@@ -55,8 +55,9 @@
                     <p class="text-sm text-(--color-ink-muted)">
                         {{ \App\Core\Support\DateFormat::format($draft->trx_date) }}
                         · {{ $draft->customer?->name() }}
-                        @if ($draft->customer?->location)
-                            · {{ $draft->customer->location->name() }}
+                        {{-- ⭐ পয়েন্ট — রুটে বসা দোকানে মা পয়েন্টের নাম, রুটের নয় ([[Customer::pointName()]]; মালিক, ১৯ অক্টোবর ২০২৬) --}}
+                        @if ($draftPoint = $draft->customer?->pointName())
+                            · {{ $draftPoint }}
                         @endif
                         @if ($draft->customer?->phone)
                             · {{ $draft->customer->phone }}

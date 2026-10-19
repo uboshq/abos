@@ -26,7 +26,7 @@
             'key' => 'point',
             'label' => __('customer::field.point'),
             'width' => '9rem',
-            'render' => fn ($d) => $d->customer?->location?->name() ?? '—',
+            'render' => fn ($d) => $d->customer?->pointName() ?? '—',
         ],
         [
             'key' => 'total',

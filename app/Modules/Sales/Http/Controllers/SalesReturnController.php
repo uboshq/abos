@@ -54,7 +54,7 @@ class SalesReturnController extends Controller implements HasMiddleware
     {
         $query = SalesReturn::query()
             ->search($request->query('q'))
-            ->with(['customer.location', 'warehouse'])
+            ->with(['customer.location.parent', 'warehouse'])
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
 

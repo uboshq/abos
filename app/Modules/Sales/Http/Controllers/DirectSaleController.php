@@ -962,7 +962,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         };
 
         $query = $query
-            ->with(['customer.location', 'lines.challanLine.challan', 'lines.product'])
+            ->with(['customer.location.parent', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id');
 

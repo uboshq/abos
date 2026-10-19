@@ -61,7 +61,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             ? (string) $request->query('tab') : null;
 
         $query = self::listed($request)
-            ->with(['customer.location', 'warehouse'])
+            ->with(['customer.location.parent', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled') && $tab !== 'cancelled',
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
