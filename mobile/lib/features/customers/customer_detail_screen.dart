@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/sales_order_record.dart';
+import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 
@@ -20,13 +21,35 @@ import '../../core/theme/app_spacing.dart';
 /// <p>It also does the two things a web page on the same data cannot: dial
 /// the number and open the address. That is most of why an app is worth
 /// having at all for someone who is standing up.
-class CustomerDetailScreen extends StatelessWidget {
-  const CustomerDetailScreen({super.key, required this.customerId, this.showCredit = false});
+class CustomerDetailScreen extends StatefulWidget {
+  const CustomerDetailScreen({super.key, required this.customerId, this.showCredit = false, this.refresh = ReferenceSync.syncAll});
 
   final String customerId;
 
   /// ⭐ "বাকির অবস্থা" বোতাম — বাকি নিয়ন্ত্রণের দেখার চাবি আর কোম্পানির ফোন-সুইচ থাকলে (রাউটার বলে, ১৩ অক্টোবর ২০২৬)
   final bool showCredit;
+
+  /// ⭐ নিচে টানলে — গ্রাহক-তালিকার একই সিঙ্ক ([[CustomerListScreen]]); টেস্টে বদলানো যায়
+  final Future<Object?> Function() refresh;
+
+  @override
+  State<CustomerDetailScreen> createState() => _CustomerDetailScreenState();
+}
+
+class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
+  String get customerId => widget.customerId;
+  bool get showCredit => widget.showCredit;
+
+  /// ⭐ টেনে নতুন করে — বকেয়া আর অর্ডার এই ফোনের জমা থেকে পড়া, তাই টানলে সিঙ্ক, তারপর নতুন করে আঁকা
+  /// (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; Android Core App Quality: refresh)। ⓘ সিঙ্ক না হলে যা ছিল তাই থাকে।
+  Future<void> _refresh() async {
+    try {
+      await widget.refresh();
+    } catch (_) {
+      // ⓘ গ্রাহক-তালিকার একই উত্তর — পর্দায় যা ছিল তা-ই
+    }
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +80,11 @@ class CustomerDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(customer.name)),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+        key: const ValueKey('customer-detail-list'),
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           _Header(customer: customer),
@@ -103,6 +130,7 @@ class CustomerDetailScreen extends StatelessWidget {
                   ),
                 )),
         ],
+      ),
       ),
     );
   }

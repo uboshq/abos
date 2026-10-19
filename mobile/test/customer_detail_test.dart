@@ -45,6 +45,22 @@ void main() {
   Widget screen() =>
       const MaterialApp(home: CustomerDetailScreen(customerId: id));
 
+  // ⭐ নিচে টানলে সিঙ্ক — বকেয়া আর অর্ডার এই ফোনের জমা থেকে (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; Android Core App Quality: refresh)
+  testWidgets('pulling the page down syncs and draws it again', (tester) async {
+    await tester.runAsync(seedShop);
+    var synced = 0;
+    await tester.pumpWidget(MaterialApp(home: CustomerDetailScreen(customerId: id, refresh: () async {
+      synced++;
+      return null;
+    })));
+    await tester.pump();
+
+    await tester.fling(find.byKey(const ValueKey('customer-detail-list')), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+    expect(synced, 1, reason: '⛔ গ্রাহকের পাতা টেনে নতুন করে আনা যায় না');
+    expect(find.text('রহিম স্টোর'), findsWidgets);
+  });
+
   testWidgets('shows who they are and what they owe', (tester) async {
     await tester.runAsync(() async {
       await seedShop();
