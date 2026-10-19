@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/dashboard/dashboard_api.dart';
+import 'package:abos_mobile/core/theme/app_colors.dart';
 import 'package:abos_mobile/features/dashboards/dashboards_screen.dart';
 
 /// ⭐ The module dashboards on the phone — owner, 4 Oct 2026: *"egulo nadile bujbo kikore kihocche"*.
@@ -110,6 +111,22 @@ void main() {
     await tester.scrollUntilVisible(
         find.byKey(const Key('dashboard-reports')), 200);
     expect(find.text('এই মডিউলের রিপোর্ট'), findsOneWidget);
+  });
+
+  testWidgets('each legend square wears the colour of its own bars', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: ModuleDashboardScreen(module: 'inventory', name: 'মজুদ', open: (_) async => inventory),
+    ));
+    await tester.pumpAndSettle();
+
+    final legend = tester.widget<Text>(find.byKey(const ValueKey('series-legend')));
+    final spans = (legend.textSpan! as TextSpan).children!.cast<TextSpan>();
+    final squares = spans.where((s) => (s.text ?? '').startsWith('■')).toList();
+
+    // ⓘ আগে দুটো ■ লেখার রঙে কালো — কোন স্তম্ভ কোনটা বোঝা যেত না (মোবাইলের নকশার তুলনা, ১৯ অক্টোবর ২০২৬)
+    expect(squares.map((s) => s.style?.color).toList(), [AppColors.primary, AppColors.warning]);
+    expect(legend.textSpan!.toPlainText(), contains('এসেছে'));
+    expect(legend.textSpan!.toPlainText(), contains('গেছে'));
   });
 
   testWidgets('a failed load says so instead of showing an empty dashboard',
