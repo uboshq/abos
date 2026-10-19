@@ -40,6 +40,14 @@ final class Listing
          * মালিক, ৬ অক্টোবর ২০২৬: প্রিন্সিপালের কমিশনের জন্য *"main dashboard-এর মতো একটা same box"*।
          */
         public readonly bool $hero = false,
+        /*
+         * ⭐ নিচে "সর্বমোট"-এর সারি — কলামের চাবি → দেখানোর লেখা, সার্ভারে হিসাব করা (মালিক, ১৯ অক্টোবর ২০২৬: প্রিন্সিপালের
+         * কমিশনের বাক্সে মোট নেই)। ⓘ লেখা, অঙ্ক নয় — যোগফল bcmath-এ আর রূপ (লাখের কমা, "দিতে হবে") তালিকার মালিক ঠিক করে;
+         * পাতা কিছু গোনে না। যে কলামের চাবি নেই সেখানে ফাঁকা।
+         *
+         * @var array<string, string>|null
+         */
+        public readonly ?array $total = null,
     ) {
         if ($columns === []) {
             throw new InvalidArgumentException("Listing '{$label}' has no columns.");

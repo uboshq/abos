@@ -180,6 +180,14 @@ final class SupplierDashboard implements ProvidesDashboard
             ->unique();
         $oneCycle = $periods->count() === 1;
 
+        /*
+         * ⭐ সর্বমোট — মালিক, ১৯ অক্টোবর ২০২৬: চার প্রিন্সিপালের সারি ছিল, নিচে মোট নেই। ⓘ সারিগুলোরই যোগফল, bcmath-এ —
+         * পর্দার সারি আর মোট কখনো দুই কথা বলে না। বাকি ইনফ্লো চিহ্নসহ যোগ হয় (দিতে হবে +, পাব −), তারপর একই কথায়
+         * ([[owed()]]) — দুই দিকের সারি থাকলে নিট দিকটাই বলে। শাখার বাছাই রিপোর্টের, তাই মোটেরও।
+         */
+        $sum = fn (string $key): string => collect($result->rows)
+            ->reduce(fn (string $carry, array $row): string => bcadd($carry, (string) ($row[$key] ?? '0'), 4), '0');
+
         return [new Listing(
             label: __('supplier::principal.dashboard_title'),
             columns: [
@@ -201,6 +209,13 @@ final class SupplierDashboard implements ProvidesDashboard
             href: route('supplier.report.show', ['slug' => 'principal-commission']),
             note: $oneCycle ? __('supplier::principal.dash_period', ['period' => $periods->first()]) : null,
             hero: true,
+            total: [
+                'principal' => (string) __('core.table.grand_total'),
+                'inflow' => Money::format($sum('inflow')),
+                'commission' => self::earned($sum('commission')),
+                'paid' => Money::format($sum('paid')),
+                'balance' => self::owed($sum('balance')),
+            ],
         )];
     }
 
