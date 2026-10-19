@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/navigation/recent_papers.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -218,7 +219,8 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
         _error = null;
       });
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ
-      RecentPapers.note(kind: widget.kind.recentKind, id: widget.id, number: paper.no);
+      RecentPapers.note(
+          kind: widget.kind.recentKind, id: widget.id, number: paper.no, party: withPoint(paper.customer, paper.point));
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: '${widget.kind.title}টা আনা গেল না।'));
     }

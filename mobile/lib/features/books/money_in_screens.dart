@@ -209,7 +209,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
     widget.api.moneyInDetail(widget.id).then((d) {
       if (mounted) setState(() => _detail = d);
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
-      RecentPapers.note(kind: 'money-in', id: widget.id, number: d.row.no);
+      RecentPapers.note(kind: 'money-in', id: widget.id, number: d.row.no, party: d.row.customer);
     }).catchError((Object e) {
       if (mounted) {
         setState(

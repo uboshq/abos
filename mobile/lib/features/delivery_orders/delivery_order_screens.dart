@@ -347,7 +347,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
     _order = order;
     // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ — DO, বা বিক্রয় আদেশ (মালিক, ১২ অক্টোবর ২০২৬)
     RecentPapers.note(
-        kind: widget.api.forOrders ? 'order' : 'do', id: widget.id, number: order.no);
+        kind: widget.api.forOrders ? 'order' : 'do', id: widget.id, number: order.no, party: order.customer);
     for (final line in order.lines) {
       (_boxes[line.id] ??= TextEditingController()).text = _qty(line.finalQty);
     }

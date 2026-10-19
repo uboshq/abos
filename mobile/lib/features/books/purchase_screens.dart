@@ -231,7 +231,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
       if (mounted) setState(() => _detail = d);
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
       RecentPapers.note(
-          kind: 'purchase', id: widget.id, number: d.row.no, extra: widget.kind);
+          kind: 'purchase', id: widget.id, number: d.row.no, extra: widget.kind, party: d.row.principal);
     }).catchError((Object e) {
       if (mounted) {
         setState(
