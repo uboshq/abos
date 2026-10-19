@@ -359,6 +359,22 @@ void main() {
     expect(opened, ['paper/do/d1']);
   });
 
+  // ⭐ নম্বরের পাশে গ্রাহক আর পয়েন্ট (মালিক, ১৯ অক্টোবর ২০২৬)
+  testWidgets('the home\'s সাম্প্রতিক line names the customer and point beside the number', (tester) async {
+    await tester.pumpWidget(shell(
+        items: [..._salesman, _item('delivery-orders', 'ডেলিভারি অর্ডার')]));
+    await tester.pumpAndSettle();
+
+    await tester.runAsync(
+        () => RecentPapers.note(kind: 'do', id: 'd1', number: 'DO-0412', party: 'রহিম স্টোর · মিরপুর'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DO-0412 · রহিম স্টোর · মিরপুর'), findsOneWidget, reason: '⛔ সাম্প্রতিক-এ নম্বরের পাশে গ্রাহক নেই');
+    await tester.tap(find.text('DO-0412 · রহিম স্টোর · মিরপুর'));
+    await tester.pumpAndSettle();
+    expect(opened, ['paper/do/d1']);
+  });
+
   testWidgets('a paper whose list is no longer this person\'s is not shown', (tester) async {
     await NavPrefs(store, 'u1').remember(
         RecentEntry(path: RecentPapers.path('voucher', 'v9'), label: 'JV-0009 · ভাউচার'));

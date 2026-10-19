@@ -345,7 +345,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
           _done = doneText;
         });
         // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
-        RecentPapers.note(kind: 'quotation', id: widget.id, number: q.no);
+        RecentPapers.note(kind: 'quotation', id: widget.id, number: q.no, party: q.customer);
       }
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'কাজটা হলো না। আবার চেষ্টা করুন।'));

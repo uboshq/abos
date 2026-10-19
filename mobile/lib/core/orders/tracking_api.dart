@@ -48,7 +48,7 @@ class TrackedSale {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '—',
         date: json['date']?.toString(),
-        customer: withPointOrNull(json['customer']?.toString(), json['customer_point']),
+        customer: withPointOrNull(json['customer']?.toString(), json['customer_point'], json['customer_branch']),
         total: Money.valueOrZero(json['total']),
         step: json['step']?.toString() ?? '',
         billed: json['billed'] == true,

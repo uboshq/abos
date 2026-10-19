@@ -9,6 +9,7 @@ import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 
 /// One shop, everything the phone already knows about it.
 ///
@@ -79,7 +80,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           (b.trxDate ?? DateTime(0)).compareTo(a.trxDate ?? DateTime(0)));
 
     return Scaffold(
-      appBar: AppBar(title: Text(customer.name)),
+      // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে (মালিক, ১৯ অক্টোবর ২০২৬); নিচের বড় নামটা নামই
+      appBar: AppBar(title: CustomerLine(customer.label)),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
@@ -147,7 +149,8 @@ class _Header extends StatelessWidget {
       if (customer.code != null) customer.code!,
       if (customer.ownerName != null) customer.ownerName!,
       if (customer.phone != null) customer.phone!,
-      if (customer.pointName != null) customer.pointName!,
+      // ⭐ পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পুরনো সার্ভারে শাখা নেই, তখন পয়েন্টটাই
+      if (customer.placeLabel != null) customer.placeLabel!,
       if (customer.address != null) customer.address!,
     ];
 

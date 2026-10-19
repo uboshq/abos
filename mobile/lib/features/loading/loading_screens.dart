@@ -123,7 +123,7 @@ class LoadingChallan {
 
   factory LoadingChallan.fromJson(Map<String, dynamic> j) => LoadingChallan(
         documentNo: j['document_no']?.toString() ?? '',
-        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point']),
+        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point'], j['customer_branch']),
         packed: j['packed'] == true,
         lines: [
           for (final l in (j['lines'] as List?) ?? const [])

@@ -160,6 +160,7 @@ class MyRequest {
     required this.statusLabel,
     required this.requestedAt,
     required this.summary,
+    this.party,
     this.lastBy,
     this.lastLabel,
     this.lastRemarks,
@@ -173,6 +174,9 @@ class MyRequest {
   final String statusLabel;
   final String? requestedAt;
   final String? summary;
+
+  /// ⭐ কার কাগজ — নম্বরের লাইনে (মালিক, ১৯ অক্টোবর ২০২৬); পুরনো সার্ভারে null
+  final String? party;
   final String? lastBy;
   final String? lastLabel;
   final String? lastRemarks;
@@ -188,6 +192,7 @@ class MyRequest {
       statusLabel: j['statusLabel']?.toString() ?? '',
       requestedAt: j['requestedAt']?.toString(),
       summary: j['summary']?.toString(),
+      party: switch (j['party']?.toString().trim()) { final p? when p.isNotEmpty => p, _ => null },
       lastBy: last?['by']?.toString(),
       lastLabel: last?['label']?.toString(),
       lastRemarks: last?['remarks']?.toString(),

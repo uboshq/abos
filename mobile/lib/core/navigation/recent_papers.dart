@@ -57,22 +57,38 @@ class RecentPapers {
     return kinds[kind]?.$1;
   }
 
-  /// "DO-0412 · ডেলিভারি অর্ডার" under "সাম্প্রতিক". Never throws: a list
-  /// that cannot be written costs the line, never the paper's screen.
+  /// "DO-0412 · রহিম স্টোর · মিরপুর" under "সাম্প্রতিক" — the number, then
+  /// the party the screen already holds ([party], the customer with its point
+  /// — "নাম · পয়েন্ট"); without a party, "DO-0412 · ডেলিভারি অর্ডার" as
+  /// before. Never throws: a list that cannot be written costs the line,
+  /// never the paper's screen.
+  ///
+  /// ⭐ নম্বরের পাশে পক্ষ — মালিক, ১৯ অক্টোবর ২০২৬: "নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে সহজে বোঝা যায়।"
+  /// ⓘ লেবেলটা লেখা হয়েই জমা থাকে — পুরনো লাইন ("নম্বর · ধরন") যেমন ছিল তেমনই খোলে; কাগজ আবার খুললে নতুন লেবেলে বসে।
   static Future<void> note({
     required String kind,
     required String id,
     required String number,
     String? extra,
+    String? party,
   }) async {
     final prefs = active;
     final type = kinds[kind]?.$2;
     if (prefs == null || type == null || id.isEmpty) return;
-    final label = number.trim().isEmpty ? type : '${number.trim()} · $type';
+    final label = labelOf(type: type, number: number, party: party);
     try {
       await prefs.remember(
           RecentEntry(path: path(kind, id, extra: extra), label: label));
       changes.value++;
     } catch (_) {}
+  }
+
+  /// The line's words — "নম্বর · পক্ষ", or "নম্বর · ধরন" without a party,
+  /// or the type alone without a number.
+  static String labelOf({required String type, required String number, String? party}) {
+    final no = number.trim();
+    final who = party?.trim() ?? '';
+    if (no.isEmpty) return who.isEmpty ? type : '$type · $who';
+    return '$no · ${who.isEmpty ? type : who}';
   }
 }

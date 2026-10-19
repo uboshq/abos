@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 
@@ -229,7 +231,7 @@ class _ListRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: ListTile(
         key: ValueKey('credit-row-${row.customer}-${row.fields['document_no'] ?? ''}'),
-        title: Text(row.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: CustomerLine(row.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(lines.join('\n'), maxLines: 4, overflow: TextOverflow.ellipsis),
         isThreeLine: lines.length > 1,
         trailing: amount == null
@@ -307,7 +309,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
     final p = d?.position;
 
     return Scaffold(
-      appBar: AppBar(title: Text(d?.name ?? 'বাকির পাতা')),
+      appBar: AppBar(title: CustomerLine(d?.name ?? 'বাকির পাতা')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -788,11 +790,12 @@ class CreditListPage {
           for (final r in (body['rows'] is List ? body['rows'] as List : const []).whereType<Map>())
             CreditListRow(
               customer: r['customer']?.toString() ?? '',
-              name: r['name']?.toString() ?? '',
+              // ⭐ নাম · পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পুরনো সার্ভারে নামটাই
+              name: withPoint(r['name']?.toString() ?? '', r['point'], r['branch']),
               code: r['code']?.toString() ?? '',
               fields: {
                 for (final e in r.entries)
-                  if (!const {'customer', 'name', 'code'}.contains(e.key)) e.key.toString(): e.value?.toString(),
+                  if (!const {'customer', 'name', 'code', 'point', 'branch'}.contains(e.key)) e.key.toString(): e.value?.toString(),
               },
             ),
         ],
@@ -915,7 +918,8 @@ class CustomerCredit {
 
     return CustomerCredit(
       id: body['id']?.toString() ?? '',
-      name: body['name']?.toString() ?? '',
+      // ⭐ নাম · পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পুরনো সার্ভারে নামটাই
+      name: withPoint(body['name']?.toString() ?? '', body['point'], body['branch']),
       code: body['code']?.toString() ?? '',
       creditDays: (body['credit_days'] as num?)?.toInt(),
       position: CreditPosition(

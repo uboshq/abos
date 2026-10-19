@@ -6,6 +6,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/number_with_party.dart';
 import '../books/books_widgets.dart';
 
 /// ⭐ আমার অনুরোধ — যা আমি সইয়ের জন্য পাঠিয়েছি, কোথায় দাঁড়িয়ে আর কে কী বললেন (মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta
@@ -150,13 +151,18 @@ class _RequestCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
+              // ⭐ নম্বরের পাশে পক্ষ, এক লাইনে (মালিক, ১৯ অক্টোবর ২০২৬); পুরনো সার্ভারে কেবল নম্বর
               Expanded(
-                child: Text(r.documentNo ?? r.documentType,
+                child: NumberWithParty(
+                    key: ValueKey('my-request-number-${r.id}'),
+                    number: r.documentNo ?? r.documentType,
+                    party: r.party,
                     style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
               if (r.amount != null) Text(Money.taka(r.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
             ]),
-            if ((r.summary ?? '').isNotEmpty) Text(r.summary!),
+            // ⓘ পক্ষ নম্বরের লাইনে — সারাংশে আর দুইবার নয় ([[summaryAfterParty]])
+            if (summaryAfterParty(r.summary, r.party) case final rest?) Text(rest),
             const SizedBox(height: AppSpacing.xs),
             Text([r.statusLabel, _day(r.requestedAt)].where((s) => s.isNotEmpty).join(' · '),
                 style: TextStyle(color: _tone, fontWeight: FontWeight.w600)),

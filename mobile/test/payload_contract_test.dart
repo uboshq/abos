@@ -44,6 +44,7 @@ void main() {
       'ownerName': 'Abdur Rahim',
       'phone': '01711000000',
       'pointName': 'কারওয়ান বাজার',
+      'branchName': 'Super',
       'addressEn': 'Mirpur 10',
       'addressBn': 'মিরপুর ১০',
       'customerType': 'retail',
@@ -62,12 +63,17 @@ void main() {
       expect(customer.address, 'মিরপুর ১০');
       expect(customer.ownerName, 'Abdur Rahim');
       expect(customer.pointName, 'কারওয়ান বাজার');
+      expect(customer.branchName, 'Super');
+      expect(customer.label, 'রহিম স্টোর · কারওয়ান বাজার · Super');
     });
 
     test('a shop on no point, or from an older server, has no point', () {
       expect(const CustomerRecord({'nameEn': 'X', 'pointName': null}).pointName, isNull);
       expect(const CustomerRecord({'nameEn': 'X'}).pointName, isNull);
       expect(const CustomerRecord({'nameEn': 'X', 'pointName': ' '}).pointName, isNull);
+      // ⓘ পুরনো সার্ভার শাখা পাঠায় না — নাম যেমন ছিল
+      expect(const CustomerRecord({'nameEn': 'X'}).branchName, isNull);
+      expect(const CustomerRecord({'nameEn': 'X'}).label, 'X');
     });
 
     test('the search finds a shop by its point', () {

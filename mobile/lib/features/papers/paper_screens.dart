@@ -297,7 +297,7 @@ class _PaperScreenState extends State<PaperScreen> {
         _error = null;
       });
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ
-      RecentPapers.note(kind: widget.paperKey, id: widget.id, number: paper.row.no);
+      RecentPapers.note(kind: widget.paperKey, id: widget.id, number: paper.row.no, party: paper.row.party);
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: '$_title-টা আনা গেল না।'));
     }
