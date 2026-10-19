@@ -108,6 +108,26 @@ Future<void> _open(WidgetTester tester, FakeReturnApi api) async {
 }
 
 void main() {
+  // ⭐ ফেরতের পরিমাণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a return with a quantity typed asks before going back, an empty one does not', (tester) async {
+    final api = FakeReturnApi();
+    await _open(tester, api);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+    expect(find.text('খুলুন'), findsOneWidget, reason: 'খালি ফর্ম আগের মতোই পিছনে গেল');
+
+    await tester.tap(find.text('খুলুন'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('return-bill-inv-1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('return-qty-line-1')), '2');
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ ফেরতের পরিমাণ লেখা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
+
   testWidgets(
       'bill, quantity, overview, confirm — only the bill\'s own line goes, for this customer',
       (tester) async {

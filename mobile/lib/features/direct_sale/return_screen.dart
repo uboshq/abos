@@ -7,6 +7,7 @@ import '../../core/orders/sales_return_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ বিক্রি ফেরত, ফোনে — কাউন্টারের "ফেরত" বোতাম (মালিক, ৪ অক্টোবর ২০২৬)।
 ///
@@ -160,8 +161,11 @@ class _ReturnScreenState extends State<ReturnScreen> {
         ),
       );
 
+  // ⭐ বিলে ফেরতের পরিমাণ বা বিবরণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা ফেরত এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _bill != null && !_busy && (_qty.values.any((c) => c.text.trim().isNotEmpty) || _note.text.trim().isNotEmpty), child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final setup = _setup;
     final bill = _bill;
 
@@ -215,6 +219,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
                       TextField(
                         key: ValueKey('return-qty-${l.id}'),
                         controller: _qty[l.id],
+                        onChanged: (_) => setState(() {}),
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
                         decoration: const InputDecoration(labelText: 'কত ফেরত'),
@@ -236,6 +241,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
               ),
             TextField(
                 controller: _note,
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)')),
             const SizedBox(height: AppSpacing.md),
             FilledButton(
