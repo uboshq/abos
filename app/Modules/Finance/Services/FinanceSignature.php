@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
+use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
@@ -119,5 +120,30 @@ final class FinanceSignature
         }
 
         return CashTill::branchOfAccounts($moneyAccountIds) ?? CompanyContext::branchId();
+    }
+
+    /**
+     * ⛔ যে পর্দা "কার খাতায় লিখছেন: কোম্পানি — শাখা" দেখায় (মূলধন, উত্তোলন), তার কাগজ সেই শাখাতেই — দেখানো আর বসানো শাখা
+     * কখনো নীরবে আলাদা নয় (ec, ১৯ অক্টোবর ২০২৬; RCV-0143)।
+     *
+     * ⓘ বাছা টাকার খাত অন্য শাখার বাক্সের হলে কাগজটা চুপচাপ ঐ শাখায় সরানো হয় না — পর্দায় লেখা শাখার সাথে মেলে না বলে থামে,
+     * কারণসহ। উপরে কোনো শাখা বাছা না থাকলে (পর্দায় কেবল কোম্পানি) বাক্সের শাখা; বাক্স না বললে উপরের শাখা, আগের মতো।
+     * ⚠️ পর্দা খোলার পরে উপরের শাখা বদলালে সেটা ধরে ফর্মের শাখা-ছাপ (স্তর ২), এখানে নয়।
+     */
+    public function branchShownOnTheForm(mixed $moneyAccountId, string $field): ?int
+    {
+        $here = CompanyContext::branchId();
+        $box = CashTill::branchOfAccounts([$moneyAccountId]);
+
+        if ($box !== null && $here !== null && $box !== (int) $here) {
+            throw ValidationException::withMessages([
+                $field => __('finance::validation.money_box_in_other_branch', [
+                    'branch' => Branch::query()->withoutGlobalScopes()->find($box)?->name() ?? '#'.$box,
+                    'here' => Branch::query()->withoutGlobalScopes()->find($here)?->name() ?? '#'.$here,
+                ]),
+            ]);
+        }
+
+        return $box ?? $here;
     }
 }
