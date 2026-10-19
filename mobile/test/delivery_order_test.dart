@@ -92,6 +92,24 @@ void main() {
     expect(find.byKey(const ValueKey('do-new')), findsNothing, reason: 'লেখার চাবি নেই, তবু "নতুন DO"');
   });
 
+  // ⭐ ডিলার বাছা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a new DO with a dealer picked asks before going back, an empty one does not', (tester) async {
+    const dealer = CustomerRecord({'id': 'cus-uuid', 'nameBn': 'রহিম স্টোর'});
+    await tester.pumpWidget(MaterialApp(
+        home: NewDeliveryOrderScreen(api: _FakeApi(), customers: const [dealer], products: const [])));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.tap(find.byKey(const ValueKey('do-customer')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('রহিম স্টোর').last);
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ ডিলার বাছা, তবু "পিছনে" কিছু না বলে DO ফেলে দিল');
+  });
+
   testWidgets('a new DO sends the dealer and one line per product with no price, and submits when asked', (tester) async {
     final api = _FakeApi();
     const dealer = CustomerRecord({'id': 'cus-uuid', 'nameBn': 'রহিম স্টোর'});

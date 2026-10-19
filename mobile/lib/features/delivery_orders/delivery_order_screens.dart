@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ডেলিভারি অর্ডার (DO) — তালিকা, নতুন DO, আর একটা DO-র পাতা (0.4.8, মালিকের বিক্রয়-ধারা §২ক-খ)।
 ///
@@ -244,8 +245,11 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
     }
   }
 
+  // ⭐ ডিলার বা পণ্য বা মন্তব্য লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা DO এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: !_busy && (_customer != null || _lines.isNotEmpty || _note.text.trim().isNotEmpty), child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('নতুন ${_paper(widget.api)}')),
       body: ListView(
@@ -288,7 +292,10 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
             label: const Text('পণ্য যোগ করুন'),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextField(controller: _note, decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)')),
+          TextField(
+              controller: _note,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)')),
           const SizedBox(height: AppSpacing.md),
           if (_error != null) _ErrorCard(_error!),
           if (_busy) const LinearProgressIndicator(),
