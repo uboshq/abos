@@ -181,6 +181,24 @@ void main() {
     expect(api.lastBody, {'product': 'pr-1', 'warehouse': 'wh-1', 'qty': '5', 'free_qty': '1', 'batch_no': 'L-1'});
   });
 
+  // ⭐ পরিমাণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a count with a quantity written asks before going back, an empty one does not', (tester) async {
+    final api = _FakeStock();
+    await tester.pumpWidget(MaterialApp(
+        home: StockFormScreen(form: StockForm.adjust, api: api, setup: await api.setup(), products: const [_biscuit])));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await _pickBiscuit(tester);
+    await tester.enterText(find.byKey(const ValueKey('stock-qty')), '17');
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ গোনা লেখা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
+
   testWidgets('put-away sends each waiting line by its ref, with the place chosen', (tester) async {
     final api = _FakeStock();
     await tester.pumpWidget(MaterialApp(home: PlacementScreen(api: api, setup: await api.setup())));

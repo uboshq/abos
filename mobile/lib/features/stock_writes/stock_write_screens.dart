@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ মজুদের পাঁচ লেখা, ফোনের নিজের ফর্মে — মাল বসানো, গণনা-সমন্বয়, ইস্যু, খোলা মজুদ, লট (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
 ///
@@ -366,7 +367,18 @@ class _StockFormScreenState extends State<StockFormScreen> {
   void initState() {
     super.initState();
     if (widget.setup.warehouses.length == 1) _warehouse = widget.setup.warehouses.first.id;
+    for (final c in _texts) {
+      c.addListener(_typed);
+    }
   }
+
+  List<TextEditingController> get _texts => [_qty, _free, _cost, _lotNo, _expiry, _note];
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _written => _texts.any((c) => c.text.trim().isNotEmpty);
 
   @override
   void dispose() {
@@ -434,8 +446,11 @@ class _StockFormScreenState extends State<StockFormScreen> {
     }
   }
 
+  // ⭐ পরিমাণ বা কোনো ঘর লেখা থাকলে "পিছনে" জিজ্ঞেস করে — মজুদের লেখা এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _written && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final p = _product;
     InputDecoration box(String label, {String? hint}) => InputDecoration(labelText: label, hintText: hint, isDense: true);
     const gap = SizedBox(height: AppSpacing.sm);
