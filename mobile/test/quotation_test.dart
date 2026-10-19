@@ -85,6 +85,29 @@ void main() {
     expect(api.calls, ['send', 'accept', 'convert']);
   });
 
+  // ⭐ দোকান বাছা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a new quotation with a shop picked asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: NewQuotationScreen(
+        api: _FakeApi(),
+        customers: const [CustomerRecord({'id': 'c1', 'nameBn': 'রহিম স্টোর'})],
+        products: const [],
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.tap(find.byKey(const Key('quotation-customer')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('রহিম স্টোর'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ দোকান বাছা, তবু "পিছনে" কিছু না বলে উদ্ধৃতি ফেলে দিল');
+  });
+
   testWidgets('a new quotation sends the shop, the lines and the rate typed in', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(MaterialApp(

@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ উদ্ধৃতি (কোটেশন) — তালিকা, নতুন উদ্ধৃতি, আর একটা উদ্ধৃতির পাতা: জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর
 /// (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)। এক লাইনে এক তথ্য (মালিকের নিয়ম); কোন বোতাম দেখাবে সার্ভার বলে।
@@ -229,8 +230,11 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
     }
   }
 
+  // ⭐ দোকান বা পণ্য বা মন্তব্য লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা উদ্ধৃতি এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: !_busy && (_customer != null || _lines.isNotEmpty || _note.text.trim().isNotEmpty), child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('নতুন উদ্ধৃতি')),
       body: ListView(
@@ -273,7 +277,10 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
             label: const Text('পণ্য যোগ করুন'),
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextField(controller: _note, decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)')),
+          TextField(
+              controller: _note,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)')),
           const SizedBox(height: AppSpacing.md),
           if (_error != null) _ErrorCard(_error!),
           if (_busy) const LinearProgressIndicator(),
