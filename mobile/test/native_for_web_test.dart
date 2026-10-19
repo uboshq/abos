@@ -4,6 +4,10 @@ import 'package:abos_mobile/features/accounts_chart/chart_screens.dart';
 import 'package:abos_mobile/features/approval_rows/approval_rows_screens.dart';
 import 'package:abos_mobile/features/dashboards/dashboards_screen.dart';
 import 'package:abos_mobile/features/executive/executive_screen.dart';
+import 'package:abos_mobile/core/menu/module_gate.dart';
+import 'package:abos_mobile/features/executive/owner_compare_screen.dart';
+import 'package:abos_mobile/features/executive/sister_links_screen.dart';
+import 'package:abos_mobile/features/sales_plan/sales_plan_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,7 +17,7 @@ void main() {
   test('the dashboards, the sales overview and the owner centre open as phone screens; anything else stays a web window', () {
     for (final module in [
       'accounts', 'finance', 'purchase', 'inventory', 'customer', 'credit_control', 'sales',
-      'promotion', 'approval', 'system_admin', 'documents',
+      'promotion', 'approval', 'system_admin', 'documents', 'hr',
     ]) {
       final screen = NativeForWeb.screenFor('/dashboard/$module', title: 'নাম');
       expect(screen, isA<ModuleDashboardScreen>(), reason: '/dashboard/$module এখনো ওয়েব-জানালায়');
@@ -27,8 +31,7 @@ void main() {
     expect((NativeForWeb.screenFor('/documents/approval')! as PaperQueueScreen).kind, PaperQueueKind.documents);
     expect((NativeForWeb.screenFor('/documents/signatures')! as PaperQueueScreen).kind, PaperQueueKind.signatures);
 
-    // ⛔ HR-এর ড্যাশবোর্ড বেতন দেখায় — সার্ভার ফোনে পাঠায় না, তাই ওয়েব-জানালাতেই থাকে
-    expect(NativeForWeb.screenFor('/dashboard/hr'), isNull);
+    // ⭐ HR-এর ড্যাশবোর্ডও ফোনের পর্দায় — বেতন সার্ভারেই বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
     expect(NativeForWeb.screenFor('/dashboard/ghost'), isNull, reason: 'অজানা মডিউল আন্দাজে খোলা নয়');
     expect(NativeForWeb.screenFor('/accounts/chart'), isNull);
     expect(NativeForWeb.screenFor(null), isNull);
@@ -95,5 +98,24 @@ void main() {
 
     expect(find.byKey(const Key('overview-refused')), findsOneWidget);
     expect(find.text('এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।'), findsOneWidget);
+  });
+  test("a5's share opens as phone screens: the owner centre's six pages behind the module gate, the sales plan's five; a report row is not taken", () {
+    for (final path in ['/owner/compare', '/owner/analysis', '/owner/alerts', '/owner/history', '/owner/reports', '/owner/sister-links']) {
+      final screen = NativeForWeb.screenFor('$path/');
+      expect(screen, isA<ModuleGateView>(), reason: '$path এখনো ওয়েব-জানালায়, বা মডিউলের ফটক ছাড়া');
+      expect(NativeForWeb.iconFor(path), Icons.insights_outlined, reason: '$path-এ গ্লোবের ছবি');
+    }
+    expect((NativeForWeb.screenFor('/owner/compare')! as ModuleGateView).child, isA<OwnerCompareScreen>());
+    expect((NativeForWeb.screenFor('/owner/sister-links')! as ModuleGateView).child, isA<SisterLinksScreen>());
+    expect(NativeForWeb.screenFor('/sales/targets?month=2026-10'), isA<SalesTargetsScreen>());
+    expect(NativeForWeb.screenFor('/sales/dealer-targets'), isA<DealerTargetsScreen>());
+    expect(NativeForWeb.screenFor('/sales/routes'), isA<RouteBookScreen>());
+    expect(NativeForWeb.screenFor('/sales/schemes'), isA<SchemeListScreen>());
+    expect(NativeForWeb.screenFor('/sales/commissions'), isA<CommissionListScreen>());
+    for (final path in ['/sales/targets', '/sales/dealer-targets', '/sales/routes', '/sales/schemes', '/sales/commissions']) {
+      expect(NativeForWeb.iconFor(path), isNotNull, reason: '$path-এ গ্লোবের ছবি');
+    }
+    // ⓘ রিপোর্টের সারি a6-এর ব্লকের — a5-এর ম্যাপ ধরে না
+    expect(NativeForWeb.ownerAndPlan.containsKey('/owner/reports/profit-by-customer'), isFalse);
   });
 }

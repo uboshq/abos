@@ -59,6 +59,10 @@ class ApprovalRecord {
 
   String? get summary => _text('summary');
 
+  /// ⭐ কার কাগজ — গ্রাহক হলে "নাম · পয়েন্ট", নয়তো সরবরাহকারী/কর্মী/ব্যক্তি; নম্বরের লাইনে বসে (মালিক, ১৯ অক্টোবর ২০২৬)।
+  /// ⚠️ পুরনো সার্ভার পাঠায় না — তখন null, আর কার্ড আগের মতো সারাংশেই পক্ষ দেখায়।
+  String? get party => _text('party');
+
   /// The document kind in the language the rest of this app speaks. An
   /// unfamiliar type is shown as it came rather than hidden — a document this
   /// build has not heard of is still a document somebody is waiting on.

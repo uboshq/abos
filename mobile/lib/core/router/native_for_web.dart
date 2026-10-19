@@ -13,6 +13,12 @@ import '../../features/direct_sale/counter_screen.dart';
 import '../../features/documents/document_screens.dart';
 import '../../features/documents/document_upload_screen.dart';
 import '../../features/executive/executive_screen.dart';
+import '../../features/executive/owner_alerts_screen.dart';
+import '../../features/executive/owner_analysis_screen.dart';
+import '../../features/executive/owner_compare_screen.dart';
+import '../../features/executive/owner_history_screen.dart';
+import '../../features/executive/owner_reports_screen.dart';
+import '../../features/executive/sister_links_screen.dart';
 import '../../features/finance/finance_screens.dart';
 import '../../features/hr_registers/hr_register_screens.dart';
 import '../../features/money/money_screens.dart';
@@ -24,6 +30,7 @@ import '../../features/quotations/quotation_screens.dart';
 import '../../features/sales_desk/coming_soon_screen.dart';
 import '../../features/sales_desk/sales_desk_screens.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
+import '../../features/sales_plan/sales_plan_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/stock_writes/quality_serial_screens.dart';
 import '../../features/stock_writes/stock_write_screens.dart';
@@ -49,11 +56,11 @@ class NativeForWeb {
 
   /// ড্যাশবোর্ডের দরজা যে মডিউলগুলো ফোনে খোলে — ওয়েবের `/dashboard/{module}`।
   ///
-  /// <p>⚠️ `hr` নেই, ইচ্ছা করে: HR-এর ড্যাশবোর্ড বেতন-খরচ দেখায়, আর সার্ভার সেটা ফোনে পাঠায় না (চুক্তি §৪;
-  /// [DashboardApiController::DESK_ONLY])। ফোন-পর্দায় খুললে কেবল "বন্ধ" আসত — তাই ওটা আগের মতো ওয়েব-জানালায়।
+  /// <p>⭐ `hr`-ও — মালিক, ১৭ অক্টোবর ২০২৬ ("ক"): HR-এর ড্যাশবোর্ড ফোনে, আর বেতনের প্রতিটা অঙ্ক সার্ভারেই বাদ ([PhoneAnswer],
+  /// চুক্তি §৪)। ফোনে তাই লুকানোর কিছু নেই — যা আসে, তা-ই আঁকা।
   static const Set<String> dashboards = {
     'accounts', 'finance', 'purchase', 'inventory', 'customer', 'credit_control', 'sales',
-    'promotion', 'approval', 'system_admin', 'documents',
+    'promotion', 'approval', 'system_admin', 'documents', 'hr',
   };
 
   /// ⭐ লেনদেনের তালিকা — ওয়েবের পথ → কাগজের চাবি ([PaperListScreen], মালিক, ১৭ অক্টোবর ২০২৬; fe-র ধাপ ৪)।
@@ -152,6 +159,21 @@ class NativeForWeb {
     };
   }
 
+  /// ⭐ a5-এর ভাগ — ওয়েব-পথ → ফোনের নিজের পর্দা; মালিকের কেন্দ্র মডিউলের ফটক মানে, `/owner`-এর মতো
+  static const Map<String, Widget> ownerAndPlan = {
+    '/owner/compare': ModuleGateView(path: 'owner-centre', child: OwnerCompareScreen()),
+    '/owner/analysis': ModuleGateView(path: 'owner-centre', child: OwnerAnalysisScreen()),
+    '/owner/alerts': ModuleGateView(path: 'owner-centre', child: OwnerAlertsScreen()),
+    '/owner/history': ModuleGateView(path: 'owner-centre', child: OwnerHistoryScreen()),
+    '/owner/reports': ModuleGateView(path: 'owner-centre', child: OwnerReportsScreen()),
+    '/owner/sister-links': ModuleGateView(path: 'owner-centre', child: SisterLinksScreen()),
+    '/sales/targets': SalesTargetsScreen(),
+    '/sales/dealer-targets': DealerTargetsScreen(),
+    '/sales/routes': RouteBookScreen(),
+    '/sales/schemes': SchemeListScreen(),
+    '/sales/commissions': CommissionListScreen(),
+  };
+
   /// দর তালিকার চার রকম — ওয়েবের `/sales/price-lists?target=`
   static const Set<String> priceLists = {'customer', 'tier', 'territory', 'all'};
 
@@ -163,6 +185,10 @@ class NativeForWeb {
     if (path == '/owner') {
       return const ModuleGateView(path: 'owner-centre', child: ExecutiveScreen());
     }
+    // ⭐ a5-এর ভাগ — মালিকের কেন্দ্রের ছয় পাতা আর বিক্রয়ের পরিকল্পনার পাঁচ পাতা, শুধু দেখা; ওয়েবের একই সেবা আর চাবি
+    // (মালিক, ১৭ অক্টোবর ২০২৬: "অ্যাপে ১০০%"; fe ১৯ অক্টোবর, a6-এর সাথে ভাগ — রিপোর্টের সারি a6-এর ব্লকে)
+    final a5 = ownerAndPlan[path];
+    if (a5 != null) return a5;
     if (path == '/sales/overview') {
       return const SalesOverviewScreen();
     }
@@ -287,6 +313,8 @@ class NativeForWeb {
     if (webPath == null) return null;
     final path = Uri.parse(webPath).path.replaceAll(RegExp(r'/+$'), '');
     if (path == '/owner' || path == '/sales/overview') return Icons.insights_outlined;
+    if (path.startsWith('/owner/') && ownerAndPlan.containsKey(path)) return Icons.insights_outlined;
+    if (ownerAndPlan.containsKey(path)) return Icons.flag_outlined;
     final dashboard = RegExp(r'^/dashboard/([a-z_]+)$').firstMatch(path)?.group(1);
     if (dashboard != null && dashboards.contains(dashboard)) return Icons.dashboard_outlined;
     if (path.startsWith('/accounts/vouchers/') || path == '/accounts/voucher-list') return Icons.receipt_outlined;

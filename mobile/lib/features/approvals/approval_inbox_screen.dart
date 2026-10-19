@@ -10,6 +10,7 @@ import '../../core/records/approval_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/number_with_party.dart';
 
 /// What is waiting for this person's decision — docs/Contract §৫.
 ///
@@ -297,6 +298,8 @@ class _ApprovalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final requestedAt = approval.requestedAt;
+    final hasPaper =
+        approval.documentId != null && approval.documentType.isNotEmpty;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -314,9 +317,14 @@ class _ApprovalCard extends StatelessWidget {
                     children: [
                       Text(approval.documentTypeLabel,
                           style: const TextStyle(fontWeight: FontWeight.w700)),
-                      if (approval.documentNo != null)
-                        Text(approval.documentNo!,
-                            style: Theme.of(context).textTheme.bodySmall),
+                      // ⭐ নম্বরের পাশে পক্ষ, এক লাইনে (মালিক, ১৯ অক্টোবর ২০২৬); পুরনো সার্ভারে কেবল নম্বর
+                      if (approval.documentNo != null || approval.party != null)
+                        NumberWithParty(
+                          key: Key('approval-number-${approval.id}'),
+                          number: approval.documentNo ?? '—',
+                          party: approval.party,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                     ],
                   ),
                 ),
@@ -338,9 +346,10 @@ class _ApprovalCard extends StatelessWidget {
               ].join(' · '),
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            if (approval.summary != null) ...[
+            // ⓘ পক্ষ নম্বরের লাইনে উঠেছে — সারাংশে আর দুইবার নয় ([[summaryAfterParty]])
+            if (summaryAfterParty(approval.summary, approval.party) case final rest?) ...[
               const SizedBox(height: AppSpacing.xs),
-              Text(approval.summary!),
+              Text(rest),
             ],
             const SizedBox(height: AppSpacing.sm),
             // ⭐ বিস্তারিত — সারি, খাত, বর্ণনা, যোগফল, সই দেওয়ার আগে (মালিক, ৭ অক্টোবর ২০২৬)
@@ -353,13 +362,18 @@ class _ApprovalCard extends StatelessWidget {
                 label: const Text('বিস্তারিত'),
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            // ⛔ সারি নয়, মোড়ানো — ৩৬০ চওড়া ফোনে "কাগজ দেখুন · প্রত্যাখ্যান · অনুমোদন" এক সারিতে ধরত না, ডান দিকে উপচে
+            // সই-বোতাম কেটে যেত (১৯ অক্টোবর ২০২৬)। ⓘ জায়গা থাকলে এক সারি, ডানে; না থাকলে
+            // সিদ্ধান্তের জোড়া নিচের লাইনে, ডানে — অ্যাপের অন্য কার্ডের মোড়ানো বোতামের মতো ([[ApprovalRowsScreens]])।
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: AppSpacing.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: AppSpacing.xs,
               children: [
                 // ⭐ সইয়ের আগে আসল কাগজটা — মালিক, ৪ অক্টোবর ২০২৬: *"sob vautucher cr dr note … print share korazay pdf
                 // e"*। The same sheet as everywhere ([[DocumentActionsSheet]]): the server's own PDF, then print or share.
-                if (approval.documentId != null &&
-                    approval.documentType.isNotEmpty)
+                if (hasPaper)
                   TextButton.icon(
                     key: Key('approval-paper-${approval.id}'),
                     onPressed: () => DocumentActionsSheet.show(
@@ -375,17 +389,23 @@ class _ApprovalCard extends StatelessWidget {
                     icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                     label: const Text('কাগজ দেখুন'),
                   ),
-                const Spacer(),
-                TextButton(
-                  onPressed: onReject,
-                  style:
-                      TextButton.styleFrom(foregroundColor: AppColors.danger),
-                  child: const Text('প্রত্যাখ্যান'),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                FilledButton(
-                  onPressed: onApprove,
-                  child: const Text('অনুমোদন'),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: onReject,
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppColors.danger),
+                      child: const Text('প্রত্যাখ্যান'),
+                    ),
+                    FilledButton(
+                      onPressed: onApprove,
+                      child: const Text('অনুমোদন'),
+                    ),
+                  ],
                 ),
               ],
             ),

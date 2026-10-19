@@ -117,7 +117,7 @@ class DeliveryOrder {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '—',
         date: json['date']?.toString(),
-        customer: json['customer'] is Map ? withPointOrNull(json['customer']['name']?.toString(), json['customer']['point']) : null,
+        customer: json['customer'] is Map ? withPointOrNull(json['customer']['name']?.toString(), json['customer']['point'], json['customer']['branch']) : null,
         status: json['status']?.toString() ?? '',
         statusLabel: json['status_label']?.toString() ?? json['status']?.toString() ?? '',
         total: Money.valueOrZero(json['total']),

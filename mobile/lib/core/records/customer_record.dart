@@ -3,13 +3,34 @@ import 'money.dart';
 
 /// ⭐ গ্রাহকের নামের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: *"app e sob jaygay customer er pase obosoi point dibe nahoy
 /// cina zayna buja zayna"*। সার্ভার প্রতিটা দরজায় পয়েন্ট পাঠায় (`Customer::pointName()`); পয়েন্ট না থাকলে বা পুরনো
-/// সার্ভারে নামটাই থাকে। এক নিয়ম, সব পর্দায়: "নাম · পয়েন্ট"।
-String withPoint(String name, Object? point) {
-  final p = point?.toString().trim() ?? '';
-  return p.isEmpty || name.contains(' · $p') ? name : '$name · $p';
+/// সার্ভারে নামটাই থাকে।
+///
+/// ⭐ শাখাও — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও
+/// দিতে হবে।"* সার্ভার পয়েন্টের পাশে শাখার নাম পাঠায় (`customer_branch` / `branch`, `Customer::branchName()`)। এক নিয়ম, সব
+/// পর্দায়: "নাম · পয়েন্ট · শাখা"; যেটা নেই সেটা বাদ। ⓘ পুরনো সার্ভার শাখা পাঠায় না — তখন "নাম · পয়েন্ট", আগের মতো।
+/// ⓘ যে অংশ লেখায় আগেই আছে (সার্ভারের জোড়া লেখা), সেটা আবার জোড়া নয় — পুরো অংশ মিলিয়ে, আধা শব্দে নয়।
+String withPoint(String name, Object? point, [Object? branch]) {
+  var out = name;
+  for (final part in [point, branch]) {
+    final p = part?.toString().trim() ?? '';
+    if (p.isEmpty || out.split(' · ').skip(1).contains(p)) continue;
+    out = '$out · $p';
+  }
+  return out;
 }
 
-String? withPointOrNull(String? name, Object? point) => name == null ? null : withPoint(name, point);
+String? withPointOrNull(String? name, Object? point, [Object? branch]) =>
+    name == null ? null : withPoint(name, point, branch);
+
+/// কেবল জায়গাটা — "পয়েন্ট · শাখা", যে পর্দা নাম বড় করে আর জায়গা নিচের লাইনে দেখায়; দুটোই না থাকলে null।
+String? placeOf(Object? point, Object? branch) {
+  final place = [point, branch]
+      .map((p) => p?.toString().trim() ?? '')
+      .where((p) => p.isNotEmpty)
+      .toSet()
+      .join(' · ');
+  return place.isEmpty ? null : place;
+}
 
 /// One shop, as `CustomerSync` actually sends it.
 ///
@@ -60,8 +81,15 @@ class CustomerRecord {
   /// same, so nothing is added to the row.
   String? get pointName => _text('pointName');
 
-  /// নাম আর পয়েন্ট একসাথে — যেখানে নাম দেখায় ([withPoint]); খোঁজা আর সাজানো [name]-এ
-  String get label => withPoint(name, pointName);
+  /// ⭐ দোকানের শাখার নাম (মালিক, ১৯ অক্টোবর ২০২৬) — সার্ভার নামে পাঠায় (`CustomerSync`-এর `branchName`); শাখা না থাকলে বা
+  /// পুরনো সার্ভারে null, তখন সারিতে কিছু যোগ হয় না।
+  String? get branchName => _text('branchName');
+
+  /// "পয়েন্ট · শাখা" — নামের নিচের লাইনে যেখানে জায়গাটা আলাদা দেখায়; দুটোই না থাকলে null
+  String? get placeLabel => placeOf(pointName, branchName);
+
+  /// নাম, পয়েন্ট আর শাখা একসাথে — যেখানে নাম দেখায় ([withPoint]); খোঁজা আর সাজানো [name]-এ
+  String get label => withPoint(name, pointName, branchName);
 
   String? get customerType => _text('customerType');
 
@@ -83,6 +111,8 @@ class CustomerRecord {
       phone,
       // A rep often knows a shop by its point ("the one in Kawran Bazar").
       pointName,
+      // ⓘ আর শাখা ধরেও ("Super-এর দোকানগুলো")
+      branchName,
     ].any((field) => field != null && field.toLowerCase().contains(needle));
   }
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -104,7 +106,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(head?.name ?? 'খাতা')),
+      appBar: AppBar(title: CustomerLine(head?.name ?? 'খাতা')),
       body: RefreshIndicator(
         onRefresh: () => _load(),
         child: ListView(
@@ -329,7 +331,8 @@ class ServerCustomerLedgerApi implements CustomerLedgerApi {
     final entries = body['entries'];
 
     return CustomerLedger(
-      name: body['name']?.toString() ?? '',
+      // ⭐ নাম · পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পুরনো সার্ভারে নামটাই
+      name: withPoint(body['name']?.toString() ?? '', body['point'], body['branch']),
       code: body['code']?.toString() ?? '',
       due: Money.valueOrZero(body['due']),
       rows: [

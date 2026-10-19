@@ -43,7 +43,7 @@ class DeliveryRunRow {
   factory DeliveryRunRow.fromJson(Map<String, dynamic> j) => DeliveryRunRow(
         token: j['token']?.toString() ?? '',
         documentNo: j['document_no']?.toString() ?? '',
-        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point']),
+        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point'], j['customer_branch']),
         saleNo: j['sale_no']?.toString(),
         phone: j['phone']?.toString() ?? '',
         address: j['address']?.toString() ?? '',

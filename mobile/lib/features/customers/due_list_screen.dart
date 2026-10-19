@@ -7,6 +7,7 @@ import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 
@@ -217,23 +218,16 @@ class _DueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final point = row.customer.pointName;
-
+    // ⭐ দুই লাইন (মালিক, ৬ অক্টোবর ২০২৬): উপরে "নাম · পয়েন্ট · শাখা" (১৯ অক্টোবর ২০২৬ থেকে, স্থায়ী নিয়ম: "গ্রাহকের নামের পাশে
+    // পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে"), নিচে বকেয়া — পয়েন্ট এখন নামের লাইনে, দুইবার নয়।
     return Card(
       child: ListTile(
         onTap: () => context.push('/home/customers/${row.customer.id}'),
-        title: Text(row.customer.name,
+        title: CustomerLine(row.customer.label,
             style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Row(
           children: [
-            Expanded(
-              child: Text(
-                point == null ? '' : 'পয়েন্ট: $point',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
+            const Spacer(),
             Text(
               'বকেয়া: ${Money.taka(row.due.outstandingInView)}',
               style: const TextStyle(

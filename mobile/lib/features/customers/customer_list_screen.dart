@@ -7,6 +7,7 @@ import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
@@ -160,9 +161,9 @@ class _CustomerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = customer.name;
+    // ⓘ পয়েন্ট আর শাখা নামের লাইনে ([CustomerRecord.label]) — নিচে কেবল ফোন আর ঠিকানা
     final subtitle = [
       if (customer.phone != null) customer.phone!,
-      if (customer.pointName != null) customer.pointName!,
       if (customer.address != null) customer.address!,
     ].join(' · ');
     final due = CustomerDueRecord.forCustomer(customer.id);
@@ -177,7 +178,8 @@ class _CustomerTile extends StatelessWidget {
                 color: AppColors.primary, fontWeight: FontWeight.w700),
           ),
         ),
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); লম্বা হলে "…", পুরোটা ছুঁয়ে ধরে রাখলে
+        title: CustomerLine(customer.label, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: subtitle.isEmpty
             ? null
             : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),

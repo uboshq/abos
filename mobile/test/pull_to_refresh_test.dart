@@ -38,6 +38,11 @@ import 'package:abos_mobile/features/stock/stock_list_screen.dart';
 void main() {
   /// Screens whose empty state must be pull-to-refresh, each verified below.
   const pullable = {
+    // ⭐ a5 — মালিকের কেন্দ্রের পাতা আর বিক্রয়ের পরিকল্পনা (১৯ অক্টোবর ২০২৬); টান পরীক্ষা owner_pages_test আর sales_plan_test-এ
+    'owner_compare_screen.dart',
+    'owner_history_screen.dart',
+    'sister_links_screen.dart',
+    'sales_plan_screens.dart',
     'customer_list_screen.dart',
     'product_list_screen.dart',
     'stock_list_screen.dart',
