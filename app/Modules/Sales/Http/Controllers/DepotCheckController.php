@@ -55,7 +55,7 @@ final class DepotCheckController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'orders' => $query === null
                 ? new LengthAwarePaginator([], 0, 50)
-                : (clone $query)->with(['customer.location.parent', 'lines'])->orderBy('id')->paginate(50)->withQueryString(),
+                : (clone $query)->with(['customer.location.parent', 'customer.branch', 'lines'])->orderBy('id')->paginate(50)->withQueryString(),
             // ⓘ সর্বমোট — গোটা ছাঁকা তালিকার, সব পাতার ([[GrandTotals]])
             'grand' => $query === null ? [] : $this->grandTotals($query, ['total' => 't.total']),
             'ready' => $ready,

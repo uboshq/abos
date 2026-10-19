@@ -17,6 +17,6 @@
 <span {{ $attributes->merge(['class' => 'inline-flex max-w-full min-w-0 items-baseline gap-1.5 whitespace-nowrap']) }}>
     <span class="shrink-0">{{ $slot->isEmpty() ? $no : $slot }}</span>
     @if ($party !== '')
-        <span class="min-w-0 max-w-[24ch] truncate text-(--color-ink-muted)" title="{{ $party }}" data-party data-party-beside>· {{ $party }}</span>
+        <span class="min-w-0 max-w-56 truncate text-(--color-ink-muted)" title="{{ $party }}" data-party data-party-beside>· {{ $party }}</span>
     @endif
 </span>

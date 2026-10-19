@@ -95,7 +95,9 @@ final class EveryDocumentNumberNamesItsPartyTest extends TestCase
             $this->useCompany();
 
             $this->assertNotNull($row, "⛔ {$url}: কাগজটা সারিতে নেই।");
-            $this->assertSame($this->shop->name().' · '.self::POINT, $row['party'] ?? null, "⛔ {$url}: সারিতে আলাদা `party` ঘর নেই।");
+            // ⓘ ১৯ অক্টোবর ২০২৬ থেকে শাখাও — "নাম · পয়েন্ট · শাখা" (মালিকের স্থায়ী নিয়ম; [[PartyRegistry::labelsOf()]])
+            $this->assertSame($this->shop->fresh()->load(Customer::PLACE)->nameWithPoint(), $row['party'] ?? null, "⛔ {$url}: সারিতে আলাদা `party` ঘর নেই।");
+            $this->assertStringStartsWith($this->shop->name().' · '.self::POINT, (string) ($row['party'] ?? ''), "⛔ {$url}: সারির পক্ষে পয়েন্ট নেই।");
         }
     }
 

@@ -98,7 +98,7 @@ class SalesOrderController extends Controller implements HasMiddleware
             'counts' => $tracking->counts($term, $customerId),
             'tracking' => $tracking,
             'stage' => $stage,
-            'customer' => $customerId === null ? null : Customer::query()->find($customerId),
+            'customer' => $customerId === null ? null : Customer::query()->with(Customer::PLACE)->find($customerId),
         ]);
     }
 
@@ -121,7 +121,7 @@ class SalesOrderController extends Controller implements HasMiddleware
 
         // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫) — "সব" ট্যাবে চাইলে দেখা যায়
         $query = $tracking->applyListTab(
-            (clone $base)->with(['customer.location.parent', 'warehouse']),
+            (clone $base)->with(['customer.location.parent', 'customer.branch', 'warehouse']),
             $tab,
             $request->boolean('cancelled'),
         );
@@ -401,7 +401,7 @@ class SalesOrderController extends Controller implements HasMiddleware
          * একটা কোয়েরি। ⓘ ছয়জনের ডেমোতে চোখে পড়ে না, তিন হাজার
          * ক্রেতার ডিপোতে পাতা খোলা মানেই তিন হাজার কোয়েরি।
          */
-        $customers = Customer::query()->inViewedBranch()->active()->withOutstanding()->orderBy('name_en')->get();
+        $customers = Customer::query()->inViewedBranch()->active()->withOutstanding()->with(Customer::PLACE)->orderBy('name_en')->get();
         $products = Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get();
 
         return [

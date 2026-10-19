@@ -76,7 +76,7 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         $term = trim((string) $request->query('q', ''));
 
         $query = $this->tab(DeliveryOrder::query(), $tab)
-            ->with(['customer.location.parent', 'warehouse'])
+            ->with(['customer.location.parent', 'customer.branch', 'warehouse'])
             ->when($term !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
                 ->where('document_no', 'like', '%'.$term.'%')
                 ->orWhereHas('customer', fn (Builder $c) => $c->where('name_en', 'like', '%'.$term.'%')->orWhere('name_bn', 'like', '%'.$term.'%'))));
@@ -119,7 +119,7 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         return view('sales::delivery_order.form', [
             'menu' => $this->menu->forUser($request->user()),
             // ⓘ হেডারে বাছা শাখার গ্রাহকই — মালিক, ১ অক্টোবর ২০২৬: এক শাখার কিছু আরেক শাখায় নয়
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
             'products' => Product::query()->where('is_active', true)->orderBy('name_en')->get(['id', 'name_en', 'name_bn', 'code', 'sale_price']),
         ]);
     }

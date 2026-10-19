@@ -55,8 +55,8 @@
                     <p class="text-sm text-(--color-ink-muted)">
                         {{ \App\Core\Support\DateFormat::format($draft->trx_date) }}
                         · {{ $draft->customer?->name() }}
-                        {{-- ⭐ পয়েন্ট — রুটে বসা দোকানে মা পয়েন্টের নাম, রুটের নয় ([[Customer::pointName()]]; মালিক, ১৯ অক্টোবর ২০২৬) --}}
-                        @if ($draftPoint = $draft->customer?->pointName())
+                        {{-- ⭐ পয়েন্ট · শাখা — রুটে বসা দোকানে মা পয়েন্টের নাম, রুটের নয় ([[Customer::placeName()]]; মালিক, ১৯ অক্টোবর ২০২৬) --}}
+                        @if ($draftPoint = $draft->customer?->placeName())
                             · {{ $draftPoint }}
                         @endif
                         @if ($draft->customer?->phone)

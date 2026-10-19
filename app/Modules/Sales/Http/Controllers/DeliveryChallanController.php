@@ -61,7 +61,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             ? (string) $request->query('tab') : null;
 
         $query = self::listed($request)
-            ->with(['customer.location.parent', 'warehouse'])
+            ->with(['customer.location.parent', 'customer.branch', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled') && $tab !== 'cancelled',
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
@@ -265,7 +265,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
     private function formData(): array
     {
         return [
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
 
@@ -283,7 +283,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             'stock' => app(StockService::class)->statesForAll(
                 Warehouse::query()->where('is_default', true)->first()
             ),
-            'orders' => SalesOrder::query()->open()->with('customer')
+            'orders' => SalesOrder::query()->open()->with(Customer::placeVia('customer'))
                 ->orderByDesc('trx_date')->limit(200)->get(),
 
             /*

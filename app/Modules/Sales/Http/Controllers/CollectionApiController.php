@@ -102,7 +102,7 @@ class CollectionApiController extends Controller implements HasMiddleware
             ->tap(fn (Builder $q) => self::method($q, $data['method'] ?? null));
 
         $total = (string) (clone $query)->sum('sal_collections.amount');
-        $page = (clone $query)->with(['customer.location.parent', 'account'])
+        $page = (clone $query)->with(['customer.location.parent', 'customer.branch', 'account'])
             ->orderByDesc('sal_collections.trx_date')->orderByDesc('sal_collections.id')
             ->paginate(self::PER_PAGE);
 
@@ -120,7 +120,7 @@ class CollectionApiController extends Controller implements HasMiddleware
     public function show(string $id): JsonResponse
     {
         $collection = ViewedBranch::narrow(Collection::query(), 'sal_collections.branch_id')
-            ->where('public_id', $id)->with(['customer.location.parent', 'account', 'lines.invoice', 'creator'])->firstOrFail();
+            ->where('public_id', $id)->with(['customer.location.parent', 'customer.branch', 'account', 'lines.invoice', 'creator'])->firstOrFail();
 
         return response()->json([
             ...$this->row($collection),
@@ -148,6 +148,8 @@ class CollectionApiController extends Controller implements HasMiddleware
             'customer' => (string) ($c->customer?->name() ?? ''),
             // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
             'customer_point' => $c->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customer_branch' => $c->customer?->branchName(),
             'account' => (string) ($c->account?->name() ?? ''),
             'method' => self::methodOf($c),
             'amount' => Money::round((string) $c->amount, 4),

@@ -53,7 +53,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $query = CommissionClaim::query()
-            ->with(['customer.location.parent', 'supplier', 'invoice'])
+            ->with(['customer.location.parent', 'customer.branch', 'supplier', 'invoice'])
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             ->when($request->query('supplier'), fn ($q, $s) => $q->where('supplier_id', $s))
             /*
@@ -107,7 +107,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
     {
         return view('sales::commission.create', [
             'menu' => $this->menu->forUser($request->user()),
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn', 'location_id', 'branch_id', 'is_active']),
             // ⭐ কমিশন দাবি হয় মূল কোম্পানির কাছে — কেবল সরবরাহকারী, সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬)
             'suppliers' => Supplier::query()->inViewedBranch()->active()->onlySuppliers()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
         ]);

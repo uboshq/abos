@@ -191,7 +191,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
              */
             // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
             ->whereNotIn('sal_invoices.id', DirectSaleService::openCounterDrafts()->select('sal_invoices.id'))
-            ->with(['customer.location.parent'])
+            ->with(['customer.location.parent', 'customer.branch'])
             /*
              * এক গ্রাহকের চালানগুলো।
              *
@@ -420,7 +420,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
     private function formData(): array
     {
         return [
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
             'challans' => DeliveryChallan::query()->where('status', DocumentStatus::CONFIRMED)

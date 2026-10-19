@@ -30,7 +30,7 @@
                             <span class="text-(--color-ink-muted)">{{ __('sales::quotation.revisions.base_no') }}:</span>
                             @include('sales::components.doc-link', ['document' => $root, 'route' => 'sales.quotation.show'])
                         </span>
-                        <span class="block">{{ $root->customer?->name() }}</span>
+                        <span class="block">{{ $root->customer?->nameWithPoint() }}</span>
                         <span class="block">
                             <span class="text-(--color-ink-muted)">{{ __('sales::quotation.revisions.count') }}:</span>
                             <span class="num">{{ (int) ($current?->revision_no ?? 0) }}</span>

@@ -61,7 +61,7 @@ class DeliveryStageController extends Controller implements HasMiddleware
         $list = DeliveryState::query()
             ->inTab($tab)
             ->whereHas('challan', fn (Builder $q) => $q->search($term === '' ? null : $term))
-            ->with(['challan.customer.location.parent', 'challan.vehicle'])
+            ->with(['challan.customer.location.parent', 'challan.customer.branch', 'challan.vehicle'])
             ->orderByDesc('stage_at')
             ->orderByDesc('id');
 

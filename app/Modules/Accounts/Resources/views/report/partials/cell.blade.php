@@ -61,7 +61,7 @@
     @default
         {{-- ⭐ পক্ষের ঘর — এক লাইনে, কাটা পড়লে পুরো নাম `title`-এ (মালিক, ১৯ অক্টোবর ২০২৬; [[ReportColumn::$partyKey]]) --}}
         @if ($column->isParty() && filled($value))
-            <span class="block max-w-[24ch] truncate whitespace-nowrap" title="{{ $value }}" data-party>{{ $value }}</span>
+            <span class="block max-w-56 truncate whitespace-nowrap" title="{{ $value }}" data-party>{{ $value }}</span>
         @else
             {{ $value }}
         @endif

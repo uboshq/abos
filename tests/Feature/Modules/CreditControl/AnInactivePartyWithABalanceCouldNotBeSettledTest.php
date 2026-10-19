@@ -37,7 +37,8 @@ final class AnInactivePartyWithABalanceCouldNotBeSettledTest extends TestCase
         $quiet = $this->customer('CLOSED-QUIET', '10000');
         $quiet->forceFill(['is_active' => false])->save();
 
-        $marked = $owing->fresh()->name().' — '.__('core.inactive_with_balance');
+        // ⓘ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ ([[Customer::pickerName()]])
+        $marked = $owing->fresh()->load(Customer::PLACE)->nameWithPoint().' — '.__('core.inactive_with_balance');
 
         // ⓘ ভাউচারের বাছাই
         $options = collect(app(PartyRegistry::class)->forPicker(evenInactiveWithABalance: true))

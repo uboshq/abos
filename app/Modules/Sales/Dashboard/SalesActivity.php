@@ -25,7 +25,7 @@ use App\Modules\Sales\Models\SalesReturn;
  * সেখানে ওরা আছেও।
  *
  * ⭐ নম্বরের নিচে গ্রাহক, পয়েন্টসহ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬: "নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম
- * দিলে সহজে বোঝা যায়"; ২৮ সেপ্টেম্বর: গ্রাহকের পরে সবসময় পয়েন্ট)। ⓘ জায়গা গোটা তালিকার এক প্রশ্নে (`customer.location.parent`)।
+ * দিলে সহজে বোঝা যায়"; ২৮ সেপ্টেম্বর: গ্রাহকের পরে সবসময় পয়েন্ট)। ⓘ জায়গা গোটা তালিকার এক প্রশ্নে (`customer.location.parent`, আর ১৯ অক্টোবর থেকে শাখাও — `customer.branch`)।
  */
 final class SalesActivity implements ContributesActivity
 {
@@ -44,7 +44,7 @@ final class SalesActivity implements ContributesActivity
     {
         return SalesInvoice::query()
             ->posted()
-            ->with('customer.location.parent')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
             ->limit($limit)
             ->get()
@@ -74,7 +74,7 @@ final class SalesActivity implements ContributesActivity
     {
         return Collection::query()
             ->posted()
-            ->with('customer.location.parent')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
             ->limit($limit)
             ->get()
@@ -106,7 +106,7 @@ final class SalesActivity implements ContributesActivity
     {
         return SalesReturn::query()
             ->posted()
-            ->with('customer.location.parent')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->latest('id')
             ->limit($limit)
             ->get()

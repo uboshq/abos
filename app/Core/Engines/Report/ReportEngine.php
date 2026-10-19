@@ -502,6 +502,7 @@ final class ReportEngine
      */
     private function withParties(ReportDefinition $report, Collection $rows): Collection
     {
+        $rows = $this->withPlaces($report, $rows);
         $columns = array_values(array_filter($report->columns, fn (ReportColumn $c) => $c->isParty()));
 
         if ($columns === [] || $rows->isEmpty()) {
@@ -526,6 +527,61 @@ final class ReportEngine
         return $rows->map(function (array $row) use ($columns, $labels): array {
             foreach ($columns as $column) {
                 $row[$column->key] = $labels[(string) ($row[$column->partyKey] ?? '')] ?? '';
+            }
+
+            return $row;
+        });
+    }
+
+    /**
+     * ⭐ নামের পাশে জায়গা — "নাম · পয়েন্ট · শাখা" ([[ReportColumn::$place]]; মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)।
+     *
+     * ⓘ পাতার সব সারির id একবারে [[PartyRegistry::pointAndBranchOf()]]-এ — ধরন প্রতি একটা প্রশ্ন, সারি প্রতি কখনো নয়। পর্দা,
+     * ফোন, ফাইল আর শাখার ভাগ — চারটা দরজাই [[withParties()]] দিয়ে আসে, তাই চারটাতেই এক লেখা। ⚠️ জায়গা না থাকলে ঘরটা
+     * যেমন ছিল তেমন; ঘর খালি হলে কেবল জায়গা।
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function withPlaces(ReportDefinition $report, Collection $rows): Collection
+    {
+        $columns = array_values(array_filter($report->columns, fn (ReportColumn $c) => $c->hasPlace()));
+
+        if ($columns === [] || $rows->isEmpty()) {
+            return $rows;
+        }
+
+        // ⓘ "কেবল শাখা" আর "পয়েন্ট · শাখা" — দুই রকম চাওয়া, প্রতিটার একটা করে ডাক
+        $places = [];
+
+        foreach ([false, true] as $branchOnly) {
+            $pairs = [];
+
+            foreach ($columns as $column) {
+                if ($column->place[2] !== $branchOnly) {
+                    continue;
+                }
+
+                foreach ($rows as $row) {
+                    $id = (int) ($row[$column->place[1]] ?? 0);
+
+                    if ($id > 0) {
+                        $pairs[$column->place[0].':'.$id] = [$column->place[0], $id];
+                    }
+                }
+            }
+
+            $places[(int) $branchOnly] = $pairs === [] ? [] : app(PartyRegistry::class)->pointAndBranchOf(array_values($pairs), $branchOnly);
+        }
+
+        return $rows->map(function (array $row) use ($columns, $places): array {
+            foreach ($columns as $column) {
+                $place = $places[(int) $column->place[2]][$column->place[0].':'.(int) ($row[$column->place[1]] ?? 0)] ?? null;
+
+                if ($place !== null) {
+                    $value = trim((string) ($row[$column->key] ?? ''));
+                    $row[$column->key] = $value === '' ? $place : $value.' · '.$place;
+                }
             }
 
             return $row;

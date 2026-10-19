@@ -161,7 +161,8 @@ final class ApprovalFacts
         foreach (self::PARTY_RELATIONS as $relation) {
             if ($document->relationLoaded($relation) && $document->getRelation($relation) instanceof Model) {
                 $party = $document->getRelation($relation);
-                $point = method_exists($party, 'pointName') ? $party->pointName() : null;
+                // ⭐ "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম) — গ্রাহকের নিজের এক নিয়ম ([[Customer::placeName()]])
+                $point = method_exists($party, 'placeName') ? $party->placeName() : (method_exists($party, 'pointName') ? $party->pointName() : null);
 
                 return $this->nameOf($party).($point === null ? '' : ' · '.$point);
             }
@@ -190,12 +191,13 @@ final class ApprovalFacts
             return;
         }
 
-        $with = array_map(
+        // ⓘ গ্রাহকের পয়েন্ট আর শাখা — একই দলের সাথে, সারি ধরে নয়
+        $with = array_merge(...array_map(
             fn (string $r) => $r === 'customer' && method_exists($unnamed->first()->customer()->getRelated(), 'location')
-                ? 'customer.location.parent'
-                : $r,
+                ? ['customer.location.parent', 'customer.branch']
+                : [$r],
             $relations,
-        );
+        ));
 
         try {
             $unnamed->load($with);

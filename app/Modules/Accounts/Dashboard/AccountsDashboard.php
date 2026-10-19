@@ -104,7 +104,10 @@ final class AccountsDashboard implements ProvidesDashboard
                 return collect();
             }
 
-            return $model::query()->whereIn('id', $ids)->get()->keyBy('id');
+            // ⭐ গ্রাহকের পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); দশ সারির এক প্রশ্নে ([[Customer::nameWithPoint()]])
+            $places = method_exists($model, 'nameWithPoint') ? ['location.parent', 'branch'] : [];
+
+            return $model::query()->whereIn('id', $ids)->with($places)->get()->keyBy('id');
         };
 
         $topDue = $facts->topDue('customer', StandardChart::RECEIVABLE);
@@ -113,7 +116,7 @@ final class AccountsDashboard implements ProvidesDashboard
         $dueRows = collect($topDue)
             ->map(fn (array $row) => (object) [
                 'id' => $row['party_id'],
-                'name' => $names[$row['party_id']]?->drillLabel() ?? '—',
+                'name' => $names[$row['party_id']]?->nameWithPoint() ?? '—',
                 'amount' => $row['amount'],
             ])
             ->values();

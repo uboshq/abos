@@ -173,7 +173,9 @@ final class TheSalesListsNameThePointTest extends TestCase
         foreach ([(string) $bill->document_no => 'বিল', 'COL-NP-1' => 'আদায়'] as $no => $what) {
             $row = $feed->first(fn ($h) => str_starts_with($h->title, $no.' '));
             $this->assertNotNull($row, "দৃশ্যটাই ভুল — হোমের তালিকায় {$what} {$no} নেই।");
-            $this->assertSame($this->shop->name().' · '.self::POINT, $row->subtitle, "⛔ হোমের \"সদ্য যা হলো\"-তে {$what}ের নিচে পয়েন্ট নেই।");
+            // ⓘ ১৯ অক্টোবর ২০২৬ থেকে শাখাও — "নাম · পয়েন্ট · শাখা" (মালিকের স্থায়ী নিয়ম; [[Customer::nameWithPoint()]])
+            $this->assertSame($this->shop->fresh()->load(Customer::PLACE)->nameWithPoint(), $row->subtitle, "⛔ হোমের \"সদ্য যা হলো\"-তে {$what}ের নিচে পয়েন্ট আর শাখা নেই।");
+            $this->assertStringStartsWith($this->shop->name().' · '.self::POINT, $row->subtitle, "⛔ হোমের \"সদ্য যা হলো\"-তে {$what}ের নিচে পয়েন্ট নেই।");
         }
 
         $this->assertPointInRow($this->get(route('module.dashboard', 'sales'))->assertOk()->getContent(), (string) $bill->document_no, 'বিক্রয় ড্যাশবোর্ডের বড় বকেয়া');

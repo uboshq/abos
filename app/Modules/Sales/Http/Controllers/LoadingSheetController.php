@@ -65,7 +65,7 @@ class LoadingSheetController extends Controller implements HasMiddleware
 
     public function show(Request $request, Shipment $shipment): View
     {
-        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
+        $shipment->load(['lines.challan.customer.location.parent', 'lines.challan.customer.branch', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
 
         $stages = DeliveryState::query()
             ->whereIn('delivery_challan_id', $shipment->lines->pluck('delivery_challan_id'))
@@ -120,7 +120,8 @@ class LoadingSheetController extends Controller implements HasMiddleware
                 $totals[$key]['qty'] = bcadd($totals[$key]['qty'], (string) $line->delivered_qty, 4);
                 $totals[$key]['free'] = bcadd($totals[$key]['free'], (string) ($line->free_qty ?? '0'), 4);
 
-                $who = trim(($tripLine->challan?->customer?->name() ?? '').' ('.($tripLine->challan?->document_no ?? '').')');
+                // ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); জায়গা উপরে একবারে তোলা
+                $who = trim(($tripLine->challan?->customer?->nameWithPoint() ?? '').' ('.($tripLine->challan?->document_no ?? '').')');
                 $totals[$key]['for'][$who] = bcadd($totals[$key]['for'][$who] ?? '0',
                     bcadd((string) $line->delivered_qty, (string) ($line->free_qty ?? '0'), 4), 4);
 

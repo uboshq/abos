@@ -47,7 +47,7 @@ final class DealerBindingController extends Controller implements HasMiddleware
         $userId = $request->integer('user_id') ?: null;
 
         $rows = DealerBinding::query()
-            ->with(['user', 'customer'])
+            ->with(['user', ...Customer::placeVia('customer')])
             ->when($userId !== null, fn ($q) => $q->where('user_id', $userId))
             ->when(! $request->boolean('ended'), fn ($q) => $q->open())
             ->orderBy('user_id')
@@ -62,8 +62,8 @@ final class DealerBindingController extends Controller implements HasMiddleware
             'preview' => $this->bindings->preview(),
             'staff' => $this->bindings->staff(),
             // ⓘ বাঁধার ঘর — দেয়াল ছাড়া (অন্য কর্মীর ডিলারও বাঁধা যায়), হেডারের শাখায়
-            'customers' => Customer::acrossDealers()->inViewedBranch()->active()->orderBy('code')
-                ->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::acrossDealers()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('code')
+                ->get(['id', 'code', 'name_en', 'name_bn', 'location_id', 'branch_id']),
             'areas' => Location::query()->inViewedBranch()->orderBy('name_en')->get(['id', 'name_en', 'name_bn', 'level', 'parent_id']),
             'switchOn' => $this->scope->switchOn(),
             'filterUser' => $userId,

@@ -54,7 +54,7 @@ class SalesReturnController extends Controller implements HasMiddleware
     {
         $query = SalesReturn::query()
             ->search($request->query('q'))
-            ->with(['customer.location.parent', 'warehouse'])
+            ->with(['customer.location.parent', 'customer.branch', 'warehouse'])
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
 
@@ -176,7 +176,7 @@ class SalesReturnController extends Controller implements HasMiddleware
     private function formData(): array
     {
         return [
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
 
@@ -213,7 +213,7 @@ class SalesReturnController extends Controller implements HasMiddleware
 
             'invoices' => SalesInvoice::query()
                 ->where('status', DocumentStatus::CONFIRMED)
-                ->with('customer')
+                ->with(Customer::placeVia('customer'))
                 ->orderByDesc('trx_date')
                 ->limit(200)
                 ->get(),

@@ -82,7 +82,7 @@ final class TransportAssignmentController extends Controller implements HasMiddl
         }
 
         $query = self::inTab(clone $base, $tab)
-            ->with(['customer.location.parent', 'vehicle'])
+            ->with(['customer.location.parent', 'customer.branch', 'vehicle'])
             ->orderByDesc('sal_challans.trx_date')
             ->orderByDesc('sal_challans.id');
 
@@ -108,7 +108,7 @@ final class TransportAssignmentController extends Controller implements HasMiddl
             'vehicles' => $this->settings->get('master_data.vehicle_enabled')
                 ? Vehicle::query()->active()->orderBy('code')->get()
                 : collect(),
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn', 'location_id', 'branch_id', 'is_active']),
             'canAssign' => (bool) $request->user()?->can('sales.challan.create'),
         ]);
     }

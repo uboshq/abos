@@ -206,13 +206,13 @@ final class EveryApprovalListNamesThePartyBesideTheNumberTest extends TestCase
         $engine = app(ApprovalEngine::class);
 
         $collection = $this->ask($this->collection('COL-PN-5', $this->shop), 'sales', 'collection', Approval::PENDING);
-        $this->assertStringContainsString($this->shop->name().' · '.self::POINT, $engine->noticeLabel($collection->fresh()),
+        $this->assertStringContainsString($this->shopName(), $engine->noticeLabel($collection->fresh()),
             '⛔ আদায়ের বিজ্ঞপ্তিতে গ্রাহক · পয়েন্ট নেই।');
-        $this->assertSame($this->shop->name().' · '.self::POINT, $engine->noticeData($collection->fresh())['party'] ?? null,
+        $this->assertSame($this->shopName(), $engine->noticeData($collection->fresh())['party'] ?? null,
             '⛔ আদায়ের বিজ্ঞপ্তির মানে `party` নেই।');
 
         $voucher = $this->ask($this->voucher('RCV-PN-1', $this->shop), 'accounts', 'voucher', Approval::PENDING);
-        $this->assertStringContainsString($this->shop->name().' · '.self::POINT, $engine->noticeLabel($voucher->fresh()),
+        $this->assertStringContainsString($this->shopName(), $engine->noticeLabel($voucher->fresh()),
             '⛔ ভাউচারের বিজ্ঞপ্তিতে পক্ষ নেই।');
 
         $order = $this->ask($this->order('PO-PN-2'), 'purchase', 'order', Approval::PENDING);
@@ -232,11 +232,13 @@ final class EveryApprovalListNamesThePartyBesideTheNumberTest extends TestCase
         Sanctum::actingAs($this->owner, [AuthController::APP]);
         $pending = collect($this->getJson('/api/v1/approvals/pending')->assertOk()->json('rows'))->firstWhere('documentNo', 'COL-PN-6');
         $this->assertNotNull($pending, '⛔ সই-বাক্সে আদায়টা নেই।');
-        $this->assertSame($this->shop->name().' · '.self::POINT, $pending['party'] ?? null, '⛔ সই-বাক্সের সারিতে আলাদা `party` ঘর নেই।');
+        $this->assertSame($this->shopName(), $pending['party'] ?? null, '⛔ সই-বাক্সের সারিতে আলাদা `party` ঘর নেই।');
         $this->assertStringStartsWith($this->shop->name(), (string) $pending['summary'], '⛔ সারাংশ বদলে গেছে — পুরনো অ্যাপ পক্ষ হারাত।');
 
         $mine = collect($this->getJson('/api/v1/approvals/mine')->assertOk()->json('rows'))->firstWhere('documentNo', 'PO-PN-3');
-        $this->assertSame($this->supplier->name(), $mine['party'] ?? null, '⛔ "আমার অনুরোধ"-এর ফোনের সারিতে সরবরাহকারী নেই।');
+        // ⓘ সরবরাহকারীর শাখা থাকলে "নাম · শাখা" — পক্ষের এক নিয়ম ([[PartyRegistry::labelsOf()]]; ১৯ অক্টোবর ২০২৬)
+        $this->assertSame(app(PartyRegistry::class)->labelsOf([['supplier', $this->supplier->id]])['supplier:'.$this->supplier->id] ?? null,
+            $mine['party'] ?? null, '⛔ "আমার অনুরোধ"-এর ফোনের সারিতে সরবরাহকারী নেই।');
     }
 
     // ── সাহায্যকারী ──────────────────────────────────────────────────────
@@ -249,7 +251,15 @@ final class EveryApprovalListNamesThePartyBesideTheNumberTest extends TestCase
     /** গ্রাহক · পয়েন্ট, পাতায় যেমন ছাপা — অনুরোধের পরে পড়া, কারণ ভাষা ঠিক করে অনুরোধ */
     private function shopLabel(): string
     {
-        return e($this->shop->name().' · '.self::POINT);
+        return e($this->shopName());
+    }
+
+    /** ⭐ "নাম · পয়েন্ট · শাখা" — শাখাও (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম); দোকানের শাখা না থাকলে কেবল "নাম · পয়েন্ট" */
+    private function shopName(): string
+    {
+        $branch = (string) $this->shop->fresh('branch')->branchName();
+
+        return $this->shop->name().' · '.self::POINT.($branch === '' ? '' : ' · '.$branch);
     }
 
     /** @param array<string, mixed> $extra */

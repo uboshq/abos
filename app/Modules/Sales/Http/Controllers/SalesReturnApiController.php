@@ -53,7 +53,7 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
         $invoices = SalesInvoice::query()
             ->where('status', DocumentStatus::CONFIRMED)
             ->when($customer !== null, fn ($q) => $q->where('customer_id', $customer->id))
-            ->with('customer.location.parent')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit(50)
             ->get()
@@ -69,6 +69,8 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
                 'customer' => (string) ($i->customer?->name() ?? ''),
                 // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
                 'customer_point' => $i->customer?->pointName(),
+                // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'customer_branch' => $i->customer?->branchName(),
                 'total' => (string) $i->total,
             ])->values(),
         ]);
@@ -78,7 +80,7 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
     public function invoice(string $id): JsonResponse
     {
         $invoice = $this->invoiceOf($id);
-        $invoice->loadMissing(['customer', 'lines.product', 'lines.challanLine.batch']);
+        $invoice->loadMissing(['customer.location.parent', 'customer.branch', 'lines.product', 'lines.challanLine.batch']);
 
         return response()->json([
             'id' => (string) $invoice->public_id,
@@ -86,6 +88,8 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
             'customer' => (string) ($invoice->customer?->public_id ?? ''),
             'customerName' => (string) ($invoice->customer?->name() ?? ''),
             'customerPoint' => $invoice->customer?->pointName(),
+            // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+            'customerBranch' => $invoice->customer?->branchName(),
             'lines' => $invoice->lines->sortBy('line_no')->values()->map(fn (SalesInvoiceLine $l) => [
                 'id' => (string) $l->public_id,
                 'product' => (string) ($l->product?->public_id ?? ''),

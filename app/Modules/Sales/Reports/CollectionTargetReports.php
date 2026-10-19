@@ -82,8 +82,9 @@ final class CollectionTargetReports
             },
             columns: [
                 ['key' => 'code', 'label' => 'sales::collection_target.code', 'width' => '6rem'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
                 ['key' => 'dealer', 'label' => 'sales::collection_target.dealer', 'type' => ReportColumn::DOCUMENT,
-                    'source_type' => 'source_type', 'source_id' => 'source_id'],
+                    'source_type' => 'source_type', 'source_id' => 'source_id', 'place' => ['customer', 'source_id']],
                 ['key' => 'salesperson', 'label' => 'sales::collection_target.salesperson'],
                 ['key' => 'target', 'label' => 'sales::collection_target.target', 'type' => ReportColumn::MONEY],
                 ['key' => 'achieved', 'label' => 'sales::collection_target.achieved', 'type' => ReportColumn::MONEY],

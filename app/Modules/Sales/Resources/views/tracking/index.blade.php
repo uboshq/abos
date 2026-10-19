@@ -31,9 +31,10 @@
         [
             // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬; ১৯ অক্টোবর: "নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম" (বিল/আদেশ/চালানের একই কলাম)
             'key' => 'point',
-            'label' => __('customer::field.point'),
+            'label' => __('customer::field.place'),
             'width' => '9rem',
-            'render' => fn ($r) => $r['customer_point'] ?? '—',
+            // ⭐ "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); দুটোই সারিতে আগে থেকে ([[SaleTracking]]), নতুন প্রশ্ন নেই
+            'render' => fn ($r) => view('customer::partials.place', ['place' => implode(' · ', array_filter([$r['customer_point'] ?? null, $r['customer_branch'] ?? null]))]),
         ],
         [
             'key' => 'total',
@@ -113,7 +114,7 @@
                           :search-placeholder="__('sales::tracking.search')" :sort="$sortOptions" :quiet="['step']">
                 <x-ui.date-range :dates="$dates" />
                 <x-ui.select name="customer" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                              :selected="request('customer')" placeholder="—" />
                 <x-ui.select name="branch" :label="__('sales::tracking.branch')"
                              :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"

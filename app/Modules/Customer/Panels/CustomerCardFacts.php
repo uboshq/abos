@@ -35,7 +35,7 @@ final class CustomerCardFacts implements ContributesFacts
             return [];
         }
 
-        $customer = Customer::query()->find($id);
+        $customer = Customer::query()->with(['location.parent', 'branch'])->find($id);
 
         if ($customer === null) {
             return [];
@@ -52,7 +52,12 @@ final class CustomerCardFacts implements ContributesFacts
              * ⓘ "পয়েন্ট" — গ্রাহকের এলাকা বা বাজার, লয়্যালটি পয়েন্ট নয়; সব বিক্রয়
              * তালিকায় গ্রাহকের পরের কলাম (77fae8cf)। সমন্বয়কারীর সংশোধন।
              */
-            new Fact(label: 'customer::field.point', value: $customer->location?->name(), sort: 15),
+            /*
+             * ⭐ "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব
+             * জায়গায়, আর শাখার নামও দিতে হবে"*। ⓘ নিজের স্থানের নাম নয়, পয়েন্টের নাম — সব জায়গার এক নিয়ম ([[Customer::placeName()]]);
+             * রুটে বসা দোকানে আগে রুটের নাম উঠত।
+             */
+            new Fact(label: 'customer::field.place', value: $customer->placeName(), sort: 15),
             new Fact(label: 'customer::field.address', value: $customer->address(app()->getLocale()), sort: 20),
             // ⛔ (Dr)/(Cr) — সইয়ের পাতায় অগ্রিম "-৭০০.০০" পড়ত (Customer নিরীক্ষা, ১৩ অক্টোবর ২০২৬; [[AnAdvanceReadAsABareMinusTest]])
             new Fact(label: 'customer::field.outstanding', value: Money::drCr($customer->outstanding()), sort: 30),

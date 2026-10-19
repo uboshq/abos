@@ -49,7 +49,7 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
     {
         $query = SalesQuotation::query()
             // ⓘ ক্রেতা আর আদেশ পাতায় একবার — আগে প্রতিটা দরপত্রে আদেশের আলাদা ডাক (অডিট ফোন ⚠️১৭)
-            ->with(['customer.location.parent', 'order'])
+            ->with(['customer.location.parent', 'customer.branch', 'order'])
             ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when(in_array($request->query('status'), SalesQuotation::STATES, true),
                 fn ($q) => $q->where('status', PhoneInput::text($request, 'status')));
@@ -200,7 +200,7 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
     /** @return array<string, mixed> */
     private function facts(SalesQuotation $q, bool $withLines): array
     {
-        $q->loadMissing($withLines ? ['customer.location.parent', 'lines.product', 'order'] : ['customer.location.parent', 'order']);
+        $q->loadMissing($withLines ? ['customer.location.parent', 'customer.branch', 'lines.product', 'order'] : ['customer.location.parent', 'customer.branch', 'order']);
         $user = request()->user();
 
         return [
@@ -208,7 +208,7 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
             'no' => (string) $q->document_no,
             'date' => $q->trx_date?->toDateString(),
             'valid_until' => $q->valid_until?->toDateString(),
-            'customer' => ['id' => (string) $q->customer?->public_id, 'name' => $q->customer?->name(), 'point' => $q->customer?->pointName()],
+            'customer' => ['id' => (string) $q->customer?->public_id, 'name' => $q->customer?->name(), 'point' => $q->customer?->pointName(), 'branch' => $q->customer?->branchName()],
             'status' => (string) $q->status,
             'status_label' => __('sales::quotation.status.'.$q->status),
             'total' => bcadd((string) $q->total, '0', 2),
