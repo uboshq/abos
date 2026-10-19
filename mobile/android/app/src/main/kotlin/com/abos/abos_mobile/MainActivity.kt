@@ -1,6 +1,8 @@
 package com.abos.abos_mobile
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.StatFs
@@ -67,6 +69,37 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // ⭐ Whether a runtime permission is already granted, so the app shows its
+        // Bengali reason only when Android is about to ask (lib/core/permissions/
+        // permission_rationale.dart, 20 Oct 2026). Notifications need no grant
+        // before Android 13, so they read as granted there.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PERMISSIONS_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "granted" -> {
+                        val permission = when (call.argument<String>("name")) {
+                            "camera" -> Manifest.permission.CAMERA
+                            "notifications" ->
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                } else {
+                                    null
+                                }
+                            else -> ""
+                        }
+                        when (permission) {
+                            null -> result.success(true)
+                            "" -> result.error("UNKNOWN", "unknown permission", null)
+                            else -> result.success(
+                                checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+                            )
+                        }
+                    }
+
+                    else -> result.notImplemented()
+                }
+            }
+
         // ⭐ Screens out of screenshots and the recent-apps preview — the
         // owner's switch, mobile.secure_screens (coordinator's app audit,
         // 7 Oct 2026). lib/core/privacy/phone_privacy.dart turns it on at
@@ -95,5 +128,6 @@ class MainActivity : FlutterFragmentActivity() {
         private const val SECURE_CHANNEL = "com.abos.abos_mobile/secure"
         private const val INSTALL_CHANNEL = "com.abos.abos_mobile/install"
         private const val STORAGE_CHANNEL = "com.abos.abos_mobile/storage"
+        private const val PERMISSIONS_CHANNEL = "com.abos.abos_mobile/permissions"
     }
 }

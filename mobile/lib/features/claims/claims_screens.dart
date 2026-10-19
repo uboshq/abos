@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
@@ -10,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/permissions/camera_shot.dart';
 
 /// ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; সার্ভার f727b846)।
 ///
@@ -231,7 +231,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
   Future<void> _pickReceipt() async {
     final path = widget.picker != null
         ? await widget.picker!()
-        : (await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 70, maxWidth: 1800))?.path;
+        : (await takeCameraShot(context, imageQuality: 70, maxWidth: 1800))?.path;
     if (path != null && mounted) setState(() => _receipt = path);
   }
 

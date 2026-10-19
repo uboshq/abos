@@ -18,6 +18,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/web_inside/web_files.dart';
 import '../../core/web_inside/web_inside.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/permissions/camera_shot.dart';
 
 /// ⭐ ওয়েবের একটা পর্দা, অ্যাপের ভিতরেই — মালিক, ১৩ অক্টোবর ২০২৬: *"web e na dhuke jar jar kaj 100% app ei korte pare"*।
 ///
@@ -304,7 +305,8 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
       final multiple = params.mode == FileSelectorMode.openMultiple;
       switch (choice) {
         case 'camera':
-          final shot = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
+          if (!mounted) return const [];
+          final shot = await takeCameraShot(context, imageQuality: 85);
           return shot == null ? const [] : [Uri.file(shot.path).toString()];
         case 'gallery':
           if (multiple) {

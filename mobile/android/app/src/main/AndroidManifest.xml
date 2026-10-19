@@ -63,6 +63,23 @@
 
     <!-- ⭐ App lock: fingerprint or the phone's own PIN (local_auth), 7 Oct 2026 -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+
+    <!--
+      Storage and media reading, put in by open_filex (20 Oct 2026, release audit).
+
+      This app opens only files it wrote itself, inside its own cache folder:
+      the downloaded update (core/update/apk_installer.dart) and a paper the
+      web window saved (features/web_inside). open_filex asks for these only
+      for a path OUTSIDE the app's own folders (pathRequiresPermission), so
+      none of the four is ever used, and each one would show on the install
+      screen as "read your photos, videos and music". Photos are chosen
+      through the system photo picker (image_picker), which needs none.
+      test/android_permissions_test.dart holds this list.
+    -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
     <!-- ⛔ ব্যাকআপ বন্ধ — তালাবদ্ধ বাক্সের চাবি keystore-এ, ব্যাকআপে যায় না (পূর্ণ নিরীক্ষা §৯ ⚠️১১) -->
     <application
         android:allowBackup="false"
