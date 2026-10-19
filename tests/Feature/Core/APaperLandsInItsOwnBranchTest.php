@@ -6,6 +6,7 @@ namespace Tests\Feature\Core;
 
 use App\Core\Services\DataScope;
 use App\Core\Services\NumberSeriesProvisioner;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Models\Company;
@@ -14,6 +15,8 @@ use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
 use App\Models\NumberSeries;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
@@ -184,6 +187,53 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
         $this->post(route('sales.return.confirm', $return))->assertSessionHasNoErrors();
         $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesReturn::drillSourceType(), (int) $return->id),
             '⛔ ফেরতের পাওনা আর মজুদের সারি A-র বাইরে');
+    }
+
+    public function test_a_counter_sale_from_a_warehouse_in_a_keeps_its_stock_receivable_and_cash_in_a(): void
+    {
+        $this->seriesInBothBranches('DRF', 'S');
+        app(SettingsService::class)->set('sales.invoice_at_goods_issue', false);
+
+        // ⓘ ব্যাংকের খাত, A-তে টাকাসহ — উপরে তখনো A
+        $bank = Account::query()->ofMoneyKind(Account::BANK)->postable()->active()->orderBy('id')->first();
+
+        if ($bank === null) {
+            $bank = Account::query()->ofMoneyKind(Account::CASH)->postable()->orderBy('id')->firstOrFail()->replicate(['public_id']);
+            $bank->forceFill(['code' => 'BANK-PIN', 'name_en' => 'BANK-PIN', 'name_bn' => 'BANK-PIN', 'money_kind' => Account::BANK])->save();
+        }
+
+        $this->putMoneyIn($bank, '1000');
+
+        $this->headerOn($this->b);
+
+        $this->post(route('sales.direct.store'), [
+            'own_transport' => '1',
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'vehicle_no' => 'DHA-GA-11-2233',
+            'deposits' => [['amount' => '30', 'account_id' => $bank->id, 'reference' => 'TRX-PIN-1']],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '3', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $invoice = SalesInvoice::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame('confirmed', $invoice->status, 'দৃশ্যটাই বানানো যায়নি — কাউন্টারের বিক্রি পাকা হয়নি');
+
+        $challan = DeliveryChallan::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $challan->branch_id);
+        $this->assertSame((int) $this->a->id, (int) $invoice->branch_id, '⛔ A-র মালের কাউন্টার-বিল উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf((string) $challan->sale_no), '⛔ বিক্রির নম্বর B-র সিরিজ থেকে');
+
+        $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesInvoice::drillSourceType(), (int) $invoice->id),
+            '⛔ বিলের পাওনা আর মজুদের সারি A-র বাইরে');
+
+        $vouchers = Voucher::acrossBranches()->where('against_type', SalesInvoice::drillSourceType())->where('against_id', $invoice->id)->get();
+        $this->assertCount(1, $vouchers, 'দৃশ্যটাই বানানো যায়নি — কাউন্টারের রসিদ হয়নি');
+
+        foreach ($vouchers as $voucher) {
+            $this->assertSame((int) $this->a->id, (int) $voucher->branch_id, '⛔ কাউন্টারের রসিদ উপরের B-তে বসল');
+            $this->assertSame([(int) $this->a->id], $this->ledgerBranches(Voucher::SOURCE_TYPES[$voucher->type], (int) $voucher->id),
+                '⛔ রসিদের নগদ আর পাওনা-কমার সারি A-র বাইরে');
+        }
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
