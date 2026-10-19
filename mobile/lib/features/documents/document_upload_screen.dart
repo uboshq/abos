@@ -8,6 +8,7 @@ import '../../core/documents_library/upload_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ কাগজ তোলা — গ্যালারি থেকে এক বা একাধিক ছবি, বা ক্যামেরায় স্ক্যান; নাম, ফোল্ডার, ধরন, গোপনীয়তা, শাখা (মালিক, ১৭ অক্টোবর
 /// ২০২৬: *"direct webpage app e bujajayna"*)।
@@ -157,8 +158,11 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         ),
       );
 
+  // ⭐ ছবি বা ফাইল বাছা থাকলে "পিছনে" জিজ্ঞেস করে — বাছা কাগজগুলো এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _paths.isNotEmpty && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final s = _setup;
 
     return Scaffold(

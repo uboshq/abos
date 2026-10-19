@@ -85,6 +85,21 @@ void main() {
         reason: 'ডিফল্ট: প্রথম ফোল্ডার ও ধরন, "ভিতরের" গোপনীয়তা, নিজের শাখা');
   });
 
+  // ⭐ ছবি বাছা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a form with a photo picked asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: DocumentUploadScreen(api: _FakeUpload(), picker: () async => ['/tmp/a.jpg'])));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.tap(find.byKey(const ValueKey('upload-pick')));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ ছবি বাছা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
+
   testWidgets('a form that could not load can be pulled to refresh', (tester) async {
     await tester.pumpWidget(MaterialApp(home: DocumentUploadScreen(api: _FakeUpload(fail: true))));
     await tester.pumpAndSettle();
