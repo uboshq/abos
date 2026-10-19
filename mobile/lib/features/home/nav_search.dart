@@ -163,7 +163,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
         for (final row in screens)
           ListTile(
             key: ValueKey('hit-${row.path}'),
-            leading: _Dot(color: AppColors.moduleColor(row.module), icon: row.icon),
+            leading: _Dot(color: AppColors.moduleSolid(row.module), icon: row.icon),
             title: Text(row.label),
             // ⓘ ওয়েবের পর্দা হলে বলে দেয় — খোলে অ্যাপের ভিতরেই
             subtitle: Text(
@@ -176,7 +176,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
         for (final c in customers)
           ListTile(
             key: ValueKey('hit-customer-${c.id}'),
-            leading: _Dot(color: AppColors.moduleColor('customer'), icon: Icons.storefront_outlined),
+            leading: _Dot(color: AppColors.moduleSolid('customer'), icon: Icons.storefront_outlined),
             title: Text(c.label),
             subtitle: c.detail == null ? null : Text(c.detail!, style: const TextStyle(fontSize: 12)),
             trailing: const Icon(Icons.chevron_right),

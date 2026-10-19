@@ -69,4 +69,32 @@ class AppColors {
   };
 
   static Color moduleColor(String code) => module[code] ?? primary;
+
+  /// ⭐ সাদা আইকনের নিচে মডিউলের পট — সেই রঙেরই গাঢ় সুর, সাদার সাথে অন্তত ৩:১ (WCAG 2.1 1.4.11, আইকন লেখা নয়)।
+  /// ⚠️ মাপে ধরা (মোবাইলের নকশা-যাচাই, ১৯ অক্টোবর ২০২৬): সাদা আইকন বিক্রির রঙে ২.৫:১, ক্রয়ে ২.২:১, মজুদে ২.৪:১ — চোখে প্রায়
+  /// মিলিয়ে যেত। ⓘ যে রং আগেই পার, সে হুবহু থাকে।
+  static Color moduleSolid(String code) => deepen(moduleColor(code), const Color(0xFFFFFFFF), 3);
+
+  /// ⭐ হালকা পটে মডিউলের আইকন — পট [moduleTint], আইকন সেই রঙের গাঢ় সুর, অন্তত ৩:১ (WCAG 2.1 1.4.11)।
+  static Color moduleInk(String code) => deepen(moduleColor(code), moduleTint(code), 3);
+
+  /// হালকা পট — মডিউলের রং ১৪% সাদার উপরে
+  static Color moduleTint(String code) =>
+      Color.alphaBlend(moduleColor(code).withValues(alpha: 0.14), const Color(0xFFFFFFFF));
+
+  /// WCAG-এর আপেক্ষিক উজ্জ্বলতার অনুপাত — ১ থেকে ২১
+  static double contrast(Color a, Color b) {
+    final la = a.computeLuminance(), lb = b.computeLuminance();
+    final hi = la > lb ? la : lb, lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  /// রঙের আলো একটু একটু কমায়, পটের সাথে [target]:১ না হওয়া পর্যন্ত; রঙের ধরন (hue) একই থাকে
+  static Color deepen(Color c, Color background, double target) {
+    var hsl = HSLColor.fromColor(c);
+    while (contrast(hsl.toColor(), background) < target && hsl.lightness > 0.02) {
+      hsl = hsl.withLightness((hsl.lightness - 0.01).clamp(0.0, 1.0));
+    }
+    return hsl.toColor();
+  }
 }
