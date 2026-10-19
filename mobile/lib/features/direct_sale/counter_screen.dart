@@ -14,6 +14,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../printing/document_actions_sheet.dart';
 import 'return_screen.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// সরাসরি বিক্রয়ের কাউন্টার — ফোনে (0.4.9, মালিক ৪ অক্টোবর ২০২৬: *"direct sales er counter banaw app e"*)।
 ///
@@ -1149,8 +1150,11 @@ class _CounterScreenState extends State<CounterScreen> {
 
   double get _total => _cart.fold(0, (sum, l) => sum + l.total);
 
+  // ⭐ কার্টে মাল থাকলে "পিছনে" জিজ্ঞেস করে — কাউন্টারে লেখা বিল এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _cart.isNotEmpty && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final setup = _setup;
     return Scaffold(
       appBar: AppBar(title: const Text('সরাসরি বিক্রয়')),

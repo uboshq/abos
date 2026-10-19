@@ -285,6 +285,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // ⭐ কার্টে মাল থাকলে "পিছনে" জিজ্ঞেস করে; খালি কার্টে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a cart with goods asks before going back, an empty one does not', (tester) async {
+    await pumpWith(tester, _FakeApi());
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি কার্টে প্রশ্ন নয়');
+
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'মিনিকেট চাল');
+    await _add(tester, qty: '২');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ কার্টে মাল, তবু "পিছনে" কিছু না বলে বিল ফেলে দিল');
+  });
+
   testWidgets('a kilo unit sells 2.5 and sends "2.5"; a piece refuses a fraction with the reason', (tester) async {
     final api = _FakeApi();
     await pumpWith(tester, api);
