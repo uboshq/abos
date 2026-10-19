@@ -206,4 +206,15 @@ return [
         fn (string $email) => mb_strtolower(trim($email)),
         explode(',', (string) env('ABOS_OWNER_EMAILS', '')),
     ))),
+
+    /*
+     * ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — RCV-0143 / মালিক: "কোনোভাবেই অন্য শাখায় নয়" (ec, ১৯ অক্টোবর ২০২৬)।
+     *
+     * `grace_until` — ISO তারিখ-সময় (যেমন `2026-10-21T18:00:00+06:00`)। তার আগ পর্যন্ত `_branch` ছাপ ছাড়া জমা
+     * (ডেপ্লয়ের আগে খোলা পাতা) একবার যায়, সতর্কতা দেখায় আর লগে লেখে; তার পরে ছাপ ছাড়া জমা থামে। ⓘ খালি = কড়া।
+     * ডেপ্লয়ের সময় `.env`-এ `ABOS_BRANCH_PIN_GRACE_UNTIL` = ডেপ্লয় + ২৪ ঘণ্টা, তারপর `config:cache`।
+     */
+    'branch_pin' => [
+        'grace_until' => (string) env('ABOS_BRANCH_PIN_GRACE_UNTIL', ''),
+    ],
 ];
