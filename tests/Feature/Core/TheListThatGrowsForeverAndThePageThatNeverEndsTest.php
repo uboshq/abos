@@ -51,6 +51,10 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Accounts\Http\Controllers\PeriodLockController' => 'হিসাববর্ষের মাসগুলো — বছরে বারোটা।',
         'App\Modules\Accounts\Http\Controllers\YearEndController' => 'কেবল চলতি বছর, একটাই।',
 
+        // ⓘ ১৯ অক্টোবর ২০২৬ (a5) — খাতার পাতা ভাগ এখন [[AccountLedger::page()]]-এ, তাই কন্ট্রোলারে আর `paginate(` নেই
+        'App\Modules\Accounts\Http\Controllers\ChartOfAccountsController' => 'হিসাবের ছক গাছ আকারে — দল আর তার সন্তান একসাথে না দেখালে গাছটাই ভাঙে, আর দলের জের সন্তানদের যোগ; খাত বাড়ে ব্যবসার ধরনে, লেনদেনে নয়। খাতের খাতা নিজে ৫০-এ ভাগ (AccountLedger::page())।',
+        'App\Modules\Approval\Http\Controllers\ApprovalDelegationApiController' => 'বাঁধা — এই মানুষটার দেওয়া সর্বশেষ ১০০টা ভার (limit 100), আর তাঁর হাতে এখন চালু ভারগুলো (মেয়াদ ফুরোলেই সরে, জমে না); সাথে বাছাইয়ের জন্য কোম্পানির কর্মীরা (কর্মীসংখ্যায় বাঁধা)। EveryListScreenPaginatesTest-এর একই ঘোষণা।',
+
         // ⓘ বিজ্ঞপ্তির মাধ্যম কোডে নিবন্ধিত — নতুন মাধ্যম কেবল কোড লিখে আসে (১২ অক্টোবর ২০২৬, বিজ্ঞপ্তি মডিউল)
         'App\Modules\Notification\Http\Controllers\NotificationChannelController' => 'কোডে নিবন্ধিত মাধ্যমগুলো (ইমেইল, এসএমএস, পুশ, অ্যাপ) — সারি নয়, তালিকা কোডের সাথে বাঁধা।',
 
