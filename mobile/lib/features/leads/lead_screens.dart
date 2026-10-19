@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ: তালিকা, নতুন লিড, আর একটা লিডের পাতায় অবস্থা বদল
 /// (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)। এক লাইনে এক তথ্য (মালিকের নিয়ম); নিয়ম সব সার্ভারের।
@@ -188,6 +189,28 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
 
   bool get _readOnly => widget.lead?.converted ?? false;
 
+  List<TextEditingController> get _texts => [_name, _person, _phone, _address, _reason, _notes];
+
+  /// খোলার সময়ের ঘরগুলো — নতুন লিডে ফাঁকা, পুরনোয় যা ছিল; এর থেকে বদলালে তবেই "লেখা আছে"
+  late final String _opened;
+
+  String _snapshot() => [for (final c in _texts) c.text.trim(), _source ?? '', _status ?? ''].join('\u0000');
+
+  bool get _changed => !_readOnly && _snapshot() != _opened;
+
+  @override
+  void initState() {
+    super.initState();
+    _opened = _snapshot();
+    for (final c in _texts) {
+      c.addListener(_typed);
+    }
+  }
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     for (final c in [_name, _person, _phone, _address, _reason, _notes]) {
@@ -225,8 +248,11 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
     }
   }
 
+  // ⭐ নতুন বা পুরনো লিডে কিছু বদলালে "পিছনে" জিজ্ঞেস করে — দোকানের খোঁজ এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _changed && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final lead = widget.lead;
     final statuses = widget.setup.statuses;
     return Scaffold(

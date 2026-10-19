@@ -66,6 +66,27 @@ void main() {
     expect(sent.containsKey('status'), isFalse, reason: 'নতুন লিডের অবস্থা সার্ভার বসায়');
   });
 
+  // ⭐ লিডে কিছু লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি বা না-বদলানো ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a lead with a name written asks before going back, an untouched one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: LeadFormScreen(api: _FakeApi(), setup: _FakeApi.setupData, lead: _FakeApi.lead)));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'না-বদলানো পুরনো লিডে প্রশ্ন নয়');
+
+    await tester.pumpWidget(MaterialApp(home: LeadFormScreen(key: const ValueKey('new-lead'), api: _FakeApi(), setup: _FakeApi.setupData)));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const Key('lead-name')), 'বাজারের দোকান');
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ দোকানের নাম লেখা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
+
   testWidgets('marking a lead lost asks for the reason and sends it', (tester) async {
     final api = _FakeApi();
     // ⓘ লম্বা ফোনের মাপ — সব ঘর এক পর্দায়, নিচের বোতাম তালিকার অলস গঠনে হারায় না
