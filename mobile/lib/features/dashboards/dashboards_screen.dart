@@ -398,9 +398,17 @@ class _PanelCard extends StatelessWidget {
           children: [
             Text((panel['label'] ?? '').toString(),
                 style: const TextStyle(fontWeight: FontWeight.w700)),
+            // ⓘ চিহ্নের রং স্তম্ভের রং — আগে দুটো ■ লেখার রঙে কালো, কোনটা কোন স্তম্ভ বোঝা যেত না (মোবাইলের নকশার তুলনা, ১৯ অক্টোবর ২০২৬)
             if (series)
-              Text('■ ${panel['firstLabel']}   ■ ${panel['secondLabel']}',
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text.rich(
+                key: const ValueKey('series-legend'),
+                TextSpan(style: Theme.of(context).textTheme.bodySmall, children: [
+                  const TextSpan(text: '■ ', style: TextStyle(color: AppColors.primary)),
+                  TextSpan(text: '${panel['firstLabel']}   '),
+                  const TextSpan(text: '■ ', style: TextStyle(color: AppColors.warning)),
+                  TextSpan(text: '${panel['secondLabel']}'),
+                ]),
+              ),
             const SizedBox(height: AppSpacing.sm),
             for (final r in rows) ...[
               Text((r['label'] ?? '').toString(),
