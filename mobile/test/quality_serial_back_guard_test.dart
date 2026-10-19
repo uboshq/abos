@@ -33,4 +33,16 @@ void main() {
     await backAndSettle(tester);
     expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ যাচাই লেখা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
   });
+
+  testWidgets('an issue with serials written asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: SerialFormScreen(receive: false, api: _NoServer(), products: const [_biscuit])));
+    await tester.pumpAndSettle();
+    await backAndSettle(tester);
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const ValueKey('serial-numbers')), 'SN-1');
+    await tester.pump();
+    await backAndSettle(tester);
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ সিরিয়াল লেখা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
 }

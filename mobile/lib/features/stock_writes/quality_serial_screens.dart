@@ -735,6 +735,20 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    for (final c in [_serials, _soldTo, _warranty]) {
+      c.addListener(_typed);
+    }
+  }
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _written => _product != null || [_serials, _soldTo, _warranty].any((c) => c.text.trim().isNotEmpty);
+
+  @override
   void dispose() {
     for (final c in [_serials, _soldTo, _warranty]) {
       c.dispose();
@@ -776,8 +790,11 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
     }
   }
 
+  // ⭐ সিরিয়াল বা পণ্য লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লম্বা সিরিয়ালের তালিকা এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _written && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
       appBar: AppBar(title: Text(widget.receive ? 'পিস ঢোকান' : 'পিস বের করুন')),
