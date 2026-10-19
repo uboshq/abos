@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
@@ -139,11 +140,18 @@ final class MoneyPhoneController extends Controller implements HasMiddleware
         $page = MoneyTransfer::query()->with(['fromTill', 'toTill', 'toAccount', 'giver', 'receiver'])
             ->orderByDesc('trx_date')->orderByDesc('id')->paginate(self::PER_PAGE);
 
+        /*
+         * ⭐ সব পাতা মিলে হাতবদলের মোট টাকা — বাতিল বাদ, যা কখনো হাতবদল হয়নি (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬;
+         * [[TheListTotalLeavesOutWhatNeverHappenedTest]]-এর একই নিয়ম)
+         */
+        $total = bcadd((string) (MoneyTransfer::query()->where('status', '!=', DocumentStatus::CANCELLED)->sum('amount') ?? '0'), '0', 2);
+
         return response()->json([
             // ⭐ আমার নেওয়ার অপেক্ষায় — ওয়েবের তালিকার মাথার একই সারি ([[MoneyTransfer::awaiting()]])
             'awaiting' => MoneyTransfer::query()->awaiting((int) $user->id)->with(['fromTill', 'giver'])->orderBy('trx_date')->get()
                 ->map(fn (MoneyTransfer $t) => $this->transferRow($t, $user))->values(),
             'rows' => $page->getCollection()->map(fn (MoneyTransfer $t) => $this->transferRow($t, $user))->values(),
+            'total' => $total,
             'count' => $page->total(),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);

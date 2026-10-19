@@ -60,7 +60,10 @@ final class TheLoaderPacksTheTripOnThePhoneTest extends TestCase
         $trip = $this->trip([$first->id, $second->id]);
         $this->phone($this->owner);
 
-        $row = collect($this->getJson('/api/v1/sales/loading')->assertOk()->assertJsonPath('next_page', null)->json('rows'))
+        $list = $this->getJson('/api/v1/sales/loading')->assertOk()->assertJsonPath('next_page', null);
+        // ⭐ লোডিং শিট কয়টা — সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
+        $this->assertSame(count($list->json('rows')), $list->json('count'), '⛔ লোডিং শিটের তালিকায় কয়টা নেই।');
+        $row = collect($list->json('rows'))
             ->firstWhere('id', $trip->public_id);
         $this->assertNotNull($row, '⛔ খোলা ট্রিপ ফোনের তালিকায় নেই।');
         $this->assertSame([2, '01811-222333'], [$row['challans'], $row['driver_phone']]);

@@ -95,6 +95,27 @@ final class ThePhoneMovesMoneyTheWebWayTest extends TestCase
         $this->assertTrue(AuditTrail::query()->where('auditable_type', (new MoneyTransfer)->getMorphClass())->exists(), '⛔ হস্তান্তর নিরীক্ষায় নেই।');
     }
 
+    /**
+     * ⭐ হাতবদলের তালিকায় মোট টাকা আর কয়টা — সব পাতা মিলে, বাতিলটা মোটে নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)।
+     * ⓘ বিপজ্জনক উপাত্ত: একটা বাতিল — মোটে ঢুকলে মোট ১০০০ বেশি দেখাত।
+     */
+    public function test_the_transfer_list_totals_every_page_and_leaves_out_a_cancelled_one(): void
+    {
+        $safe = app(CashTillService::class)->create(['name_en' => 'Total safe', 'holder_id' => $this->owner->id]);
+        $body = ['trx_date' => now()->toDateString(), 'from_till' => $this->till->public_id, 'destination' => 'till:'.$safe->public_id];
+
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers', ['amount' => '300'] + $body, 'tt-key-0001')->assertCreated();
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers', ['amount' => '450.50'] + $body, 'tt-key-0002')->assertCreated();
+        $gone = $this->phonePost($this->owner, '/api/v1/accounts/transfers', ['amount' => '1000'] + $body, 'tt-key-0003')->assertCreated()->json('id');
+        $this->phonePost($this->owner, '/api/v1/accounts/transfers/'.$gone.'/cancel', ['cancel_reason' => 'ভুল অঙ্ক'], 'tt-key-0004')->assertCreated();
+
+        $list = $this->phoneGet($this->owner, '/api/v1/accounts/transfers')->assertOk()->json();
+
+        $this->assertArrayHasKey('total', $list, '⛔ তালিকায় মোট নেই।');
+        $this->assertSame(0, bccomp((string) $list['total'], '750.50', 2), '⛔ মোট '.$list['total'].' — বাতিলটা ঢুকেছে, বা পাতার যোগ।');
+        $this->assertSame(3, $list['count'], 'গোনায় তিনটাই — বাতিলও তালিকায় দেখা যায়।');
+    }
+
     /** ⓘ সেবার নিয়মের ছাড়, স্পষ্ট করে: super admin (মালিক) নিজের পাঠানো নিজে নিতে পারেন ([[MoneyTransferService::assertMayReceive()]]) */
     public function test_the_super_admin_may_receive_what_he_sent_as_the_service_allows(): void
     {

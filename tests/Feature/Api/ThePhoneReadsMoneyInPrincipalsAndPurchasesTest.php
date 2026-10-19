@@ -157,6 +157,31 @@ final class ThePhoneReadsMoneyInPrincipalsAndPurchasesTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ প্রিন্সিপালের তালিকায় মোট দেনা আর কয়জন — ওয়েবের সরবরাহকারী-তালিকার একই যোগ, সব পাতা মিলে (পূর্ণ নিরীক্ষা §৯ ⚠️৭,
+     * ১৮ অক্টোবর ২০২৬)। ⓘ খোঁজার ছাঁকনিতেও — মোট কেবল দেখানো প্রিন্সিপালদের।
+     */
+    public function test_the_principal_list_carries_the_whole_payable_and_count(): void
+    {
+        $supplier = Supplier::query()->onlySuppliers()->orderBy('id')->firstOrFail();
+        $supplier->forceFill(['short_name' => 'Star Line'])->save();
+        $this->aBill($supplier);
+
+        $this->actingAs($this->owner);
+        $want = (string) Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()->get()->sum(fn ($s) => (float) $s->payable_in_view);
+        $count = Supplier::query()->inViewedBranch()->onlySuppliers()->count();
+
+        $all = $this->phone($this->owner, '/purchase/principals')->json();
+        $this->assertArrayHasKey('total', $all, '⛔ প্রিন্সিপালের তালিকায় মোট দেনা নেই।');
+        $this->assertSame(0, bccomp((string) $all['total'], number_format((float) $want, 2, '.', ''), 2), '⛔ মোট দেনা '.$all['total'].', চাই '.$want);
+        $this->assertSame($count, $all['count'], '⛔ কয়জন — সব পাতা মিলে নয়।');
+        $this->assertNotSame(0, bccomp((string) $all['total'], '0', 2), 'দাবির ভিত্তি নেই — দেনা শূন্য, যোগ মাপা হয় না।');
+
+        $one = $this->phone($this->owner, '/purchase/principals', ['q' => 'Star Line'])->json();
+        $this->assertSame(1, $one['count']);
+        $this->assertSame(0, bccomp((string) $one['total'], (string) $one['rows'][0]['balance'], 2), '⛔ খোঁজার ছাঁকনি মোটে ধরা হয়নি।');
+    }
+
     // ── ক্রয় ─────────────────────────────────────────────────────────────────
 
     public function test_purchases_filter_by_range_and_principal_and_hide_cost_without_the_key(): void

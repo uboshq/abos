@@ -40,8 +40,8 @@ Route::prefix('v1/sales')
 
         // ⭐ এক কাগজে এক QR — দেখা, "মাল বেরোল", "ডেলিভারি নিশ্চিত" ([[QrScanController]])
         Route::get('/scan/{token}', [QrScanController::class, 'show'])->middleware('can:sales.delivery.view')->name('scan');
-        Route::post('/scan/{token}/gate-out', [QrScanController::class, 'gateOut'])->middleware('can:sales.delivery.update')->name('scan.gate_out');
-        Route::post('/scan/{token}/deliver', [QrScanController::class, 'deliver'])->middleware('can:sales.delivery.update')->name('scan.deliver');
+        Route::post('/scan/{token}/gate-out', [QrScanController::class, 'gateOut'])->middleware('can:sales.delivery.update')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('scan.gate_out');
+        Route::post('/scan/{token}/deliver', [QrScanController::class, 'deliver'])->middleware('can:sales.delivery.update')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('scan.deliver');
 
         // ⭐ স্লিপসহ জমার অনুরোধ — SR দোকানির ব্যাংক স্লিপের ছবি পাঠান ([[DepositRequestController]])
         Route::get('/deposit-requests/accounts', [DepositRequestController::class, 'accounts'])->name('deposit_request.accounts');
@@ -74,7 +74,7 @@ Route::prefix('v1/sales')
         // ⭐ লোডিং শিট — পণ্য ধরে কত, চালান ধরে কার জন্য, আর "প্যাক হয়েছে" ([[LoadingApiController]], ধাপ ৪, ৬ অক্টোবর ২০২৬)
         Route::get('/loading', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'index'])->middleware('can:sales.shipment.view')->name('loading.index');
         Route::get('/loading/{id}', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'show'])->whereUuid('id')->middleware('can:sales.shipment.view')->name('loading.show');
-        Route::post('/loading/{id}/packed', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'packed'])->whereUuid('id')->middleware('can:sales.delivery.update')->name('loading.packed');
+        Route::post('/loading/{id}/packed', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'packed'])->whereUuid('id')->middleware('can:sales.delivery.update')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('loading.packed');
         // ⭐ টাকা আদায় — কেবল পড়া, ওয়েবের আদায়ের চাবিতে ([[CollectionApiController]], মালিক, ৬ অক্টোবর ২০২৬)
         // ⭐ ফোনে আদায় লেখার প্রস্তুতি — টাকার খাত, ওয়েবের ফর্মের একই তালিকা; লেখা নিজে সিঙ্কে ([[CollectionSync]], ৭ অক্টোবর ২০২৬)
         Route::get('/collections/setup', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'setup'])->middleware(['can:sales.collection.create', 'can:accounts.voucher.create'])->name('collection.setup');
@@ -84,24 +84,24 @@ Route::prefix('v1/sales')
         Route::get('/returns/invoice/{id}', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'invoice'])->whereUuid('id')->name('return.invoice');
         Route::post('/returns', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('return.store');
         Route::get('/returns/{id}/overview', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'overview'])->whereUuid('id')->name('return.overview');
-        Route::post('/returns/{id}/confirm', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'confirm'])->whereUuid('id')->name('return.confirm');
+        Route::post('/returns/{id}/confirm', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'confirm'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('return.confirm');
 
         Route::get('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'index'])->name('delivery_order.index');
         Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.store');
         Route::get('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'show'])->whereUuid('id')->name('delivery_order.show');
         Route::put('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'update'])->whereUuid('id')->name('delivery_order.update');
-        Route::post('/delivery-orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'submit'])->whereUuid('id')->name('delivery_order.submit');
+        Route::post('/delivery-orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'submit'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.submit');
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[DeliveryOrderService::setApprovedQuantities()]])
-        Route::post('/delivery-orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('delivery_order.approved_quantities');
+        Route::post('/delivery-orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.approved_quantities');
 
         // ⭐ বিক্রয় আদেশ — DO-র যমজ দরজা, একই আকারের JSON ([[SalesOrderApiController]]; DO বিক্রয় আদেশে মেশানো, ধাপ ১০, ৫ অক্টোবর ২০২৬)
         Route::get('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'index'])->name('order.index');
         Route::post('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.store');
         Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'show'])->whereUuid('id')->name('order.show');
         Route::put('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'update'])->whereUuid('id')->name('order.update');
-        Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'submit'])->whereUuid('id')->name('order.submit');
+        Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'submit'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.submit');
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[SalesOrderService::setApprovedQuantities()]])
-        Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('order.approved_quantities');
+        Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.approved_quantities');
 
         // ⭐ বিক্রয়ের হালচাল, ফোনের নিজের পর্দায় — ওয়েবের একই সেবা ও চাবি (মালিক, ১৭ অক্টোবর ২০২৬; [[SalesOverviewApiController]])
         Route::get('/overview', \App\Modules\Sales\Http\Controllers\SalesOverviewApiController::class)->name('overview');
@@ -131,9 +131,9 @@ Route::prefix('v1/sales')
         Route::get('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'index'])->name('quotation.index');
         Route::post('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('quotation.store');
         Route::get('/quotations/{id}', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'show'])->whereUuid('id')->name('quotation.show');
-        Route::post('/quotations/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'submit'])->whereUuid('id')->name('quotation.submit');
+        Route::post('/quotations/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'submit'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('quotation.submit');
         Route::post('/quotations/{id}/send', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'send'])->whereUuid('id')->name('quotation.send');
         Route::post('/quotations/{id}/accept', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'accept'])->whereUuid('id')->name('quotation.accept');
-        Route::post('/quotations/{id}/reject', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'reject'])->whereUuid('id')->name('quotation.reject');
+        Route::post('/quotations/{id}/reject', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'reject'])->whereUuid('id')->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('quotation.reject');
         Route::post('/quotations/{id}/convert', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'convert'])->whereUuid('id')->name('quotation.convert');
     });

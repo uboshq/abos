@@ -110,6 +110,44 @@ final class PartyLedger
     }
 
     /**
+     * ⭐ হিসাব-বিবরণীর চার অঙ্ক — প্রারম্ভিক জের, সময়ের মোট ডেবিট, মোট ক্রেডিট, সমাপনী জের (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর
+     * ২০২৬; statement of account: opening + Dr − Cr = closing)।
+     *
+     * ⓘ সময় কেবল `from`/`to` — খোঁজা, ধরন আর দিক দেখানো সারি বাছে, বিবরণীর অঙ্ক নয় (নইলে "কেবল আদায়" বাছলে সমাপনী জের মিথ্যা
+     * হতো)। `from` না থাকলে প্রারম্ভিক শূন্য, সব সারি সময়ের ভিতরে; `to` না থাকলে আজ পর্যন্ত সব। সম্পাদনার উল্টো জোড়া বাদ
+     * ([[withoutUndoneEdits()]]) — দেখানো সারির মতোই, জোড়া মিলে শূন্য বলে জের বদলায় না, কেবল মোট ডেবিট-ক্রেডিট ফোলে না।
+     *
+     * @param  Builder<LedgerEntry>  $base  এই পার্টির সব সারি (শাখা আর কোম্পানির দেয়াল আগেই বসানো)
+     * @return array{opening: string, debit: string, credit: string, closing: string}
+     */
+    public static function statement(Builder $base, Request $request): array
+    {
+        $base = self::withoutUndoneEdits(clone $base)->reorder();
+        $from = self::date($request->query('from'));
+        $to = self::date($request->query('to'));
+
+        $opening = $from === null ? '0'
+            : (string) ((clone $base)->where('ledger_entries.trx_date', '<', $from)
+                ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')->value('net') ?? '0');
+
+        $period = (clone $base)
+            ->when($from !== null, fn ($q) => $q->where('ledger_entries.trx_date', '>=', $from))
+            ->when($to !== null, fn ($q) => $q->where('ledger_entries.trx_date', '<=', $to))
+            ->selectRaw('COALESCE(SUM(debit), 0) as dr, COALESCE(SUM(credit), 0) as cr')
+            ->toBase()->first();
+
+        $debit = (string) ($period->dr ?? '0');
+        $credit = (string) ($period->cr ?? '0');
+
+        return [
+            'opening' => Money::round($opening, 4),
+            'debit' => Money::round($debit, 4),
+            'credit' => Money::round($credit, 4),
+            'closing' => Money::round(bcsub(bcadd($opening, $debit, 4), $credit, 4), 4),
+        ];
+    }
+
+    /**
      * @param  Builder<LedgerEntry>  $query
      * @return Builder<LedgerEntry>
      */

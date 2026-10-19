@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Support\Money;
 use App\Core\Support\PartyLedger;
 use App\Core\Support\PhoneInput;
@@ -38,6 +39,8 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class PurchaseApiController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     private const PER_PAGE = 30;
 
     public static function middleware(): array
@@ -55,7 +58,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
         $term = trim(PhoneInput::text($request, 'q', ''));
 
         // ⭐ ওয়েবের সরবরাহকারীর তালিকার একই ছাঁকনি — মাথায় বাছা শাখা ([[Supplier::scopeInViewedBranch()]])
-        $page = Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()
+        $query = Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()
             ->addSelect(['last_purchase_on' => PurchaseBill::query()->selectRaw('MAX(pur_bills.trx_date)')
                 ->whereColumn('pur_bills.supplier_id', 'suppliers.id')
                 ->where('pur_bills.status', '!=', 'cancelled')])
@@ -64,11 +67,16 @@ class PurchaseApiController extends Controller implements HasMiddleware
                 ->orWhere('suppliers.name_en', 'like', "%{$term}%")
                 ->orWhere('suppliers.name_bn', 'like', "%{$term}%")
                 ->orWhere('suppliers.code', 'like', "%{$term}%")))
-            ->orderByRaw("COALESCE(NULLIF(suppliers.short_name, ''), suppliers.name_en)")
-            ->paginate(self::PER_PAGE);
+            ->orderByRaw("COALESCE(NULLIF(suppliers.short_name, ''), suppliers.name_en)");
+
+        // ⭐ ছাঁকা তালিকার মোট দেনা — সব পাতা মিলে, ওয়েবের সরবরাহকারী-তালিকার একই যোগ ([[GrandTotals]]; পূর্ণ নিরীক্ষা §৯ ⚠️৭)
+        $total = $this->grandTotals($query, ['payable' => 't.payable_in_view'])['payable'];
+        $page = $query->paginate(self::PER_PAGE);
 
         return response()->json([
             'rows' => collect($page->items())->map(fn (Supplier $s) => $this->principalRow($s))->values(),
+            'total' => bcadd($total, '0', 2),
+            'count' => $page->total(),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
