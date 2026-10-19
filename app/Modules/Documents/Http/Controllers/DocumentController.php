@@ -19,6 +19,7 @@ use App\Modules\Documents\Services\DocumentFinder;
 use App\Modules\Documents\Services\DocumentGrants;
 use App\Modules\Documents\Services\DocumentLibrary;
 use App\Modules\Documents\Services\DocumentLinks;
+use App\Modules\Documents\Services\DocumentParties;
 use App\Modules\Documents\Services\DocumentScan;
 use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;

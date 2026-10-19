@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Documents\Models\Document;
+use App\Modules\Documents\Services\DocumentParties;
 use App\Modules\Documents\Services\DocumentWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
