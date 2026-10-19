@@ -75,14 +75,18 @@ final class PurchaseReturnService
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
-            $documentNo = $this->numbers->next('PR');
-
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
+
+            // ⛔ কাগজের শাখা মালের গুদামের শাখা — খাতা এক শাখায়, মাল আরেক শাখায় নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬; চালানের একই নিয়ম)
+            $branchId = $warehouse->branch_id ?? $data['branch_id'] ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            // ⛔ নম্বরও সেই শাখার সিরিজে, উপরের শাখার নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
+            $documentNo = $this->numbers->next('PR', $branchId);
 
             $return = PurchaseReturn::create([
                 'company_id' => CompanyContext::id(),
-                // ⛔ কাগজের শাখা মালের গুদামের শাখা — খাতা এক শাখায়, মাল আরেক শাখায় নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬; চালানের একই নিয়ম)
-                'branch_id' => $warehouse->branch_id ?? $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],

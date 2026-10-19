@@ -197,21 +197,25 @@ final class PurchaseBillService
                 ]);
             }
 
+            /*
+             * ⛔ কাগজের শাখা মালের গুদামের শাখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             * ⚠️ আগে শাখা আসত হেডারের বাছাই থেকে, আর মাল ঢুকত বিলের গুদামে — শাখা A বাছা থাকতে শাখা B-র
+             * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
+             * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
+             */
+            $branchId = $this->branchForBill($data['warehouse_id'] ?? null, $lines) ?? $data['branch_id'] ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            // ⛔ নম্বরও বিলের শাখার সিরিজে, উপরের শাখার নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
             $documentNo = match (true) {
-                $given === '' => $this->freeSeriesNumber(),
-                $this->numbers->isNextNumber('PBL', $given) => $this->freeSeriesNumber(),
+                $given === '' => $this->freeSeriesNumber($branchId),
+                $this->numbers->isNextNumber('PBL', $given) => $this->freeSeriesNumber($branchId),
                 default => $given,
             };
 
             $bill = PurchaseBill::create([
                 'company_id' => CompanyContext::id(),
-                /*
-                 * ⛔ কাগজের শাখা মালের গুদামের শাখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
-                 * ⚠️ আগে শাখা আসত হেডারের বাছাই থেকে, আর মাল ঢুকত বিলের গুদামে — শাখা A বাছা থাকতে শাখা B-র
-                 * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
-                 * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
-                 */
-                'branch_id' => $this->branchForBill($data['warehouse_id'] ?? null, $lines) ?? $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $supplierId,
@@ -1094,10 +1098,10 @@ final class PurchaseBillService
      *
      * ⓘ বিক্রয়ের [[SalesInvoiceService]]-এ হুবহু এটাই আছে।
      */
-    private function freeSeriesNumber(): string
+    private function freeSeriesNumber(?int $branchId = null): string
     {
         for ($attempt = 0; $attempt < 50; $attempt++) {
-            $candidate = $this->numbers->next('PBL');
+            $candidate = $this->numbers->next('PBL', $branchId);
 
             // ⭐ শাখার দেয়াল ছাড়া, কোম্পানির দেয়াল রেখে — নম্বর পুরো কোম্পানিতে একটাই (পুরো ERP অডিট, ক্রয় ⚠️৮, ৬ অক্টোবর ২০২৬)
             if (! PurchaseBill::acrossBranches()->where('document_no', $candidate)->exists()) {
@@ -1105,7 +1109,7 @@ final class PurchaseBillService
             }
         }
 
-        return $this->numbers->next('PBL');
+        return $this->numbers->next('PBL', $branchId);
     }
 
     public function warehouseFor(PurchaseBill $bill): Warehouse

@@ -53,9 +53,12 @@ final class SaleNumber
      * ⓘ হাতে লেখা থাকলে সেটাই (যদি অন্য কোনো বিক্রিতে না থাকে), সিরিজ না ছুঁয়ে; সিরিজের
      * আগে থেকে দেখানো নম্বর হাতে-লেখা নয় — সেটা সিরিজেরই।
      *
+     * ⛔ নম্বর কাগজের নিজের শাখার সিরিজ থেকে — উপরের শাখা-বাছাই নয় (RCV-0143; মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য
+     * শাখায় নয়"*)। ⓘ `$branchId` খালি হলে আগের মতো ইঞ্জিনের নিজের নিয়ম ([[NumberSeriesEngine::next()]])।
+     *
      * @param  class-string<Model>  $model  যে কাগজ বিক্রিটা শুরু করছে (সাধারণত চালান)
      */
-    public function begin(string $model, string $given = ''): string
+    public function begin(string $model, string $given = '', ?int $branchId = null): string
     {
         $given = trim($given);
 
@@ -71,7 +74,7 @@ final class SaleNumber
         }
 
         for ($attempt = 0; $attempt < 50; $attempt++) {
-            $candidate = $this->numbers->next(self::DOC_TYPE);
+            $candidate = $this->numbers->next(self::DOC_TYPE, $branchId);
 
             /* ⓘ পুরনো কাগজে S-নম্বরটাই `document_no`; নতুন কাগজে সেটা `sale_no` — দুই জায়গাতেই খালি হতে হয় */
             if (! $this->taken($model, $candidate) && ! $this->saleTaken($model, $candidate)
@@ -80,7 +83,7 @@ final class SaleNumber
             }
         }
 
-        return $this->numbers->next(self::DOC_TYPE);
+        return $this->numbers->next(self::DOC_TYPE, $branchId);
     }
 
     /**
@@ -90,9 +93,9 @@ final class SaleNumber
      * ⓘ খসড়ায় `sale_no` খালি থাকে; নিশ্চিতের লেনদেনের ভিতরে আসল নম্বর বসে, আর লেনদেন উল্টালে নম্বরটাও
      * ফেরে ([[NumberSeriesEngine::next()]])। ⚠️ মোছা খসড়া DRF ক্রমে ফাঁক রাখে — সেটা সরকারি ক্রম নয়।
      */
-    public function draft(): string
+    public function draft(?int $branchId = null): string
     {
-        return $this->numbers->next(self::DRAFT_TYPE);
+        return $this->numbers->next(self::DRAFT_TYPE, $branchId);
     }
 
     /**
