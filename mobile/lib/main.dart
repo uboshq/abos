@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:home_widget/home_widget.dart';
 
+import 'core/sync_engine/live_sync.dart';
+import 'core/sync_engine/sync_status.dart';
 import 'core/auth/auth_controller.dart';
 import 'core/locale/app_locale.dart';
 import 'core/auth/auth_state.dart';
@@ -83,6 +85,7 @@ class _AbosAppState extends ConsumerState<AbosApp> {
 
   /// ⭐ নিজে থেকে সিঙ্ক — অ্যাপ খোলা থাকলে, সামনে ফিরলে আর প্রতি দশ মিনিটে (মালিক, ১০ অক্টোবর ২০২৬; [[AutoSync]])
   late final AutoSync _autoSync;
+  late final LivePoll _livePoll;
 
   /// ⭐ অ্যাপ-তালা — সংরক্ষিত সেশনে খুললে আর অনেকক্ষণ পরে ফিরলে ([[AppLock]]); এইমাত্র পাসওয়ার্ডে ঢুকলে নয়
   late final AppLock _lock;
@@ -102,6 +105,15 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     _autoSync = AutoSync(
       signedIn: () =>
           ref.read(authStateProvider).status == AuthStatus.signedIn,
+    )..start();
+
+    // ⓘ নেট আছে কি না — অফলাইনের পট্টি আর "শেষ সিঙ্ক" পড়ে ([SyncStatus])
+    SyncStatus.instance.watchNetwork();
+
+    // ⭐ সামনে খোলা অ্যাপের "নতুন কিছু আছে?" — ১৫–২০ সেকেন্ডে, নতুন কিছু থাকলে তবেই পুরো গোল ([LivePoll])
+    _livePoll = LivePoll(
+      signedIn: () => ref.read(authStateProvider).status == AuthStatus.signedIn,
+      onChanged: () => _autoSync.runNow(),
     )..start();
 
     _listenForWidgetTaps();
@@ -168,6 +180,7 @@ class _AbosAppState extends ConsumerState<AbosApp> {
   void dispose() {
     _widgetSync.stop();
     _autoSync.stop();
+    _livePoll.stop();
     _widgetTaps?.cancel();
     WidgetsBinding.instance.removeObserver(_lock);
     _lock.dispose();
