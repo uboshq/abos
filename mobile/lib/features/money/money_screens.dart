@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ টাকার হাতবদল, নগদ গোনা, হাতধারের দেওয়া-নেওয়া আর অর্থের চার পাতা — ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
 ///
@@ -624,7 +625,7 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
         _tills = [for (final t in _maps(d['tills'])) MoneyChoice(t['id'].toString(), t['name'].toString(), note: t['balance']?.toString())];
         if (_tills.length == 1) _till = _tills.first.id;
         for (final n in (d['notes'] is List ? d['notes'] as List : const [])) {
-          _notes[(n as num).toInt()] = TextEditingController();
+          _notes[(n as num).toInt()] = TextEditingController()..addListener(_typed);
         }
       });
     }).catchError((Object e) {
@@ -665,8 +666,19 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
     }
   }
 
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে: কোনো নোটের সংখ্যা, বা কয়েকটা টিলের মধ্যে একটা বাছা
+  bool get _countDirty =>
+      !_busy && (_notes.values.any((c) => c.text.trim().isNotEmpty) || (_tills.length > 1 && _till != null));
+
+  // ⭐ নোট গোনা লেখা থাকলে "পিছনে" জিজ্ঞেস করে — গোনা নগদ এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _countDirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('নগদ গুনুন')),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [

@@ -135,6 +135,21 @@ void main() {
     expect(find.text('1000 টাকার নোট'), findsOneWidget);
   });
 
+  // ⭐ নোট গোনা লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি গোনায় নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a cash count with notes typed asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: NewCashCountScreen(api: _FakeMoney())));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি গোনায় প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const ValueKey('count-note-1000')), '9');
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ নোট গোনা লেখা, তবু "পিছনে" কিছু না বলে গোনা ফেলে দিল');
+  });
+
   testWidgets('a hand loan given out sends its direction, account and amount', (tester) async {
     final api = _FakeMoney();
     await tester.pumpWidget(MaterialApp(home: HandLoanMoveScreen(id: 'hl-1', name: 'রহিম', api: api)));
