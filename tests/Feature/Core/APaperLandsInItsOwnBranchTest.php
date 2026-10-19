@@ -21,6 +21,7 @@ use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -276,6 +277,24 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
             $this->assertSame([(int) $this->a->id], $this->ledgerBranches(Voucher::SOURCE_TYPES[$voucher->type], (int) $voucher->id),
                 '⛔ পরিশোধের টাকা আর দেনা-কমার সারি A-র বাইরে');
         }
+    }
+
+    public function test_a_transfer_out_of_a_warehouse_in_a_is_a_paper_of_a(): void
+    {
+        $this->seriesInBothBranches('STF');
+
+        $this->headerOn($this->b);
+
+        $this->post(route('inventory.transfer.store'), [
+            'from_warehouse_id' => $this->inA->id,
+            'to_warehouse_id' => $this->inB->id,
+            'trx_date' => now()->toDateString(),
+            'lines' => [['product_id' => $this->product->id, 'qty' => '2']],
+        ])->assertSessionHasNoErrors();
+
+        $transfer = StockTransfer::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $transfer->branch_id, '⛔ A-র গুদাম থেকে পাঠানোর কাগজ উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($transfer->document_no), '⛔ স্থানান্তরের নম্বর B-র সিরিজ থেকে');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
