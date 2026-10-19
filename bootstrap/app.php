@@ -5,6 +5,7 @@ use App\Core\Services\ErrorJournal;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
+use App\Http\Middleware\KeepsAFormInItsOwnBranch;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\NudgePhonesAfterWrite;
 use App\Http\Middleware\OneSubmitPerForm;
@@ -280,6 +281,14 @@ return Application::configure(basePath: dirname(__DIR__))
              * ⚠️ ABOS-এর চেনা রোগ, আবার: কাজটা হয়েছে, জোড়াটা নয়।
              */
             RefuseWorkWithoutALicence::class,
+
+            /*
+             * ⛔ ফর্ম যে শাখায় খোলা, জমাও সেই শাখায় — RCV-0143 / মালিক: "কোনোভাবেই অন্য শাখায় নয়" (ec, ১৯ অক্টোবর ২০২৬)।
+             *
+             * ⓘ `OneSubmitPerForm`-এর পাশে নয়, প্রসঙ্গ আর পর্দার তালাগুলোর **পরে**: শাখাটা `ResolveCompanyContext` বসায়, আর
+             * বন্ধ পর্দা বা মেয়াদ-শেষের উত্তর আগে। ⚠️ ExportListing-এর আগে, যাতে "খোলার শাখায় জমা" বাকি সবকিছু ঘিরে থাকে।
+             */
+            KeepsAFormInItsOwnBranch::class,
 
             /*
              * ?export=csv থাকলে পর্দার তালিকাটা ফাইল হয়ে নামে।

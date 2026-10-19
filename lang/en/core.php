@@ -1191,6 +1191,25 @@ return [
         'still_saving' => 'Saved — give it a moment and check the list.',
     ],
 
+    /*
+     * A form lands in the branch it was opened in — RCV-0143, owner: "never in another branch" (ec, 19 Oct 2026;
+     * [[KeepsAFormInItsOwnBranch]]). Every message names the branches, never ids.
+     */
+    'branch_pin' => [
+        'moved' => 'The form was opened in :opened, the header now shows :current — stopped before it went to the wrong branch.',
+        'submit_in' => 'Submit in :opened',
+        'or_here' => 'To submit in :current instead, check the form below and save it again.',
+        'files_again' => 'Attached files are not sent again — add them from the document page after it is saved.',
+        'elsewhere' => 'The form was opened in another branch or company, the header now shows :current — stopped before it went to the wrong place. Check the form below and save it again.',
+        'unstamped' => 'This form was opened before the update and was saved in :current. Check that this is the right branch; next time open the page afresh.',
+        'unstamped_refused' => 'This form is from an older page — the branch it was opened in is unknown, so it was stopped. Check the form below and save it again.',
+        'confirm_refused' => 'This button no longer works (already used, expired, or for another form) — nothing was saved. Check the form below and save it again.',
+        'no_reach' => 'The :opened branch is no longer within your reach — nothing was saved there.',
+        'confirm_failed' => 'Nothing was saved in :opened — the reason is below. To work in :opened, pick :opened in the header and submit again.',
+        'saved_elsewhere' => 'Saved in :opened. To see it, pick :opened or All branches in the header.',
+        'no_branch' => 'no branch',
+    ],
+
     'profile' => [
         'title' => 'My profile',
         'subtitle' => 'Your details, your photo and your password',
