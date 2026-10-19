@@ -26,6 +26,117 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
     /** ⭐ ১৯ অক্টোবর মেপে পাওয়া ৯০টা ফর্ম (`action="{{ route('….store'`)। সীমা ৮০ — কয়েকটা পর্দা মুছে যেতে পারে। */
     private const FEWEST_FORMS = 80;
 
+    /**
+     * ⛔ প্যারামিটারহীন POST, নাম `*.store` নয়, আর [[FormBranchPin::CREATE_DOORS]]-এও নয় — কেন পাহারার বাইরে, এক লাইনে।
+     *
+     * ⓘ প্যারামিটারওয়ালা দরজা (`/{invoice}/confirm` …) আগে থেকেই আছে এমন কাগজের উপর কাজ করে, তার নিজের শাখায় — তাই
+     * এই তালিকায় নেই। ⚠️ নতুন প্যারামিটারহীন POST এলে এখানে বা CREATE_DOORS-এ বসাতেই হবে, নইলে দাবি লাল।
+     */
+    private const EXCLUDED = [
+        'accounts.asset.depreciate' => 'monthly run; each asset posts in its own branch',
+        'accounts.asset.tax.run' => 'year-end tax book run over every asset, company level',
+        'accounts.coa.install' => 'installs the standard chart, no paper',
+        'accounts.control.catch_up' => 'number series upkeep, no paper',
+        'accounts.period.close' => 'company period lock, no paper',
+        'appearance.save' => 'personal appearance',
+        'approval.inbox.bulk' => 'signs existing papers in their own branch',
+        'branch.switch' => 'the header switch itself',
+        'company.switch' => 'the header switch itself',
+        'customer.binding.handover' => 'moves dealers between salesmen, no paper',
+        'customer.binding.supervisor' => 'sets a supervisor, no paper',
+        'documents.ocr.fields' => 'reads text from a file, writes nothing',
+        'executive.open' => 'owner centre navigation',
+        'executive.refresh' => 'refreshes owner figures',
+        'finance.bank_facility.accrue' => 'monthly run; each facility posts in its own branch',
+        'finance.capital.owner' => 'a setting',
+        'finance.deposit.accrue' => 'monthly run; each deposit posts in its own branch',
+        'finance.insurance.prepay' => 'monthly run; each policy posts in its own branch',
+        'finance.profit.capitalise' => 'company decision, always the head branch (ProfitDistribution::companyBranch)',
+        'finance.profit.declare' => 'company decision, always the head branch (ProfitDistribution::companyBranch)',
+        'finance.profit.preview' => 'preview, writes nothing',
+        'finance.rental.accrue' => 'monthly run; each contract posts in its own branch',
+        'finance.tenancy.charge' => 'monthly run; each tenancy posts in its own branch',
+        'finance.withdrawal.cap' => 'a setting',
+        'governance.error.acknowledge_all' => 'marks error rows seen',
+        'home.layout' => 'personal home layout',
+        'hr.leave_type.install' => 'installs default leave types, no paper',
+        'hr.salary_head.install' => 'installs default salary heads, no paper',
+        'inventory.stock.hold' => 'hold on a warehouse stock, the branch is the warehouse',
+        'inventory.stock.opening.principal.update' => 'a setting for opening stock',
+        'inventory.stock.release' => 'releases a hold on a warehouse stock, the branch is the warehouse',
+        'locale.switch' => 'personal language',
+        'logout' => 'sign out',
+        'master_data.install' => 'installs default lists, no paper',
+        'master_data.location.install' => 'installs the location list, no paper',
+        'mfa.begin' => 'two-step sign in',
+        'mfa.confirm' => 'two-step sign in',
+        'notification.center.archive' => 'personal notifications',
+        'notification.channels.vapid' => 'push channel keys',
+        'notification.quiet.save' => 'personal quiet hours',
+        'notifications.banner.close' => 'personal notifications',
+        'notifications.bulk' => 'personal notifications',
+        'notifications.push.subscribe' => 'personal push',
+        'notifications.push.unsubscribe' => 'personal push',
+        'notifications.read-all' => 'personal notifications',
+        'paper.share' => 'a share link for an existing paper',
+        'password.email' => 'password reset mail',
+        'profile.avatar' => 'personal profile',
+        'profile.email.request' => 'personal profile',
+        'promotion.coupon.redeem' => 'counts a coupon on the sale in progress; the sale door is guarded',
+        'purchase.direct.overview' => 'summary before confirm, writes nothing',
+        'sales.direct.depot_check.open' => 'moves an existing source paper into depot check, its own branch',
+        'sales.direct.overview' => 'summary before confirm, writes nothing',
+        'sales.direct.void' => 'voids the bill in progress',
+        'sales.order.offers' => 'works out offers, writes nothing',
+        'sales.portal.login.attempt' => 'dealer portal sign in',
+        'sales.portal.logout' => 'dealer portal sign out',
+        'system_admin.import.check' => 'dry run of an import, writes nothing',
+        'system_admin.look.import' => 'appearance import',
+        'system_admin.look.preview.stop' => 'appearance preview',
+        'theme.switch' => 'personal theme',
+    ];
+
+    /**
+     * ⛔ নতুন কাগজের প্রতিটা POST দরজা হয় `*.store`, নয় [[FormBranchPin::CREATE_DOORS]]-এ, নয় উপরের বাদের তালিকায় কারণসহ।
+     *
+     * ⓘ রাউটার থেকে পড়া, ফাইল থেকে নয় — দলের নামের উপসর্গ (`sales.` + `pos.`) রাউটারই জানে।
+     */
+    public function test_every_post_door_without_a_paper_in_hand_is_guarded_or_excused(): void
+    {
+        $unlisted = [];
+        $seen = [];
+
+        foreach (app('router')->getRoutes() as $route) {
+            if (! in_array('POST', $route->methods(), true) || str_starts_with($route->uri(), 'api/')
+                || ! str_starts_with($route->getActionName(), 'App\\') || $route->parameterNames() !== []) {
+                continue;
+            }
+
+            $name = (string) $route->getName();
+            $seen[] = $name;
+
+            if ($name === '' || (! str_ends_with($name, '.store') && ! in_array($name, FormBranchPin::CREATE_DOORS, true)
+                && ! array_key_exists($name, self::EXCLUDED))) {
+                $unlisted[] = $name === '' ? '(নামহীন) '.$route->uri() : $name;
+            }
+        }
+
+        $this->assertGreaterThan(100, count($seen), '⛔ প্যারামিটারহীন POST দরজাই পাওয়া গেল না — খোঁজার ছাঁচ ভেঙেছে।');
+
+        sort($unlisted);
+        $this->assertSame([], $unlisted, implode("\n", array_merge(
+            ['⛔ এই POST দরজাগুলো `*.store` নয়, পাহারার তালিকায়ও নেই, বাদের তালিকায়ও নেই:', ''],
+            $unlisted,
+            ['', 'নতুন কাগজ বানালে বা টাকা নাড়ালে FormBranchPin::CREATE_DOORS-এ, নইলে EXCLUDED-এ কারণসহ।'],
+        )));
+
+        // ⚠️ বাসি নাম নয় — তালিকার প্রতিটা নাম আজও একটা প্যারামিটারহীন POST দরজা
+        $stale = array_values(array_diff([...FormBranchPin::CREATE_DOORS, ...array_keys(self::EXCLUDED)], $seen));
+        $this->assertSame([], $stale, "⛔ তালিকায় আছে, দরজা নেই:\n".implode("\n", $stale));
+        $this->assertSame([], array_values(array_intersect(FormBranchPin::CREATE_DOORS, array_keys(self::EXCLUDED))),
+            '⛔ একই দরজা পাহারাতেও, বাদেও।');
+    }
+
     public function test_the_csrf_directive_stamps_the_branch(): void
     {
         $this->assertStringContainsString(FormBranchPin::class, Blade::compileString('@csrf'),

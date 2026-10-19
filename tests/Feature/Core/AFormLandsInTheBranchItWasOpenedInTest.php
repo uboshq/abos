@@ -191,8 +191,11 @@ final class AFormLandsInTheBranchItWasOpenedInTest extends TestCase
         $this->as($this->clerk, $this->other->id);
 
         config(['abos.branch_pin.grace_until' => now()->addHour()->toIso8601String()]);
+        \Illuminate\Support\Facades\Log::spy();
         $this->from($this->voucherForm())->post(route('accounts.voucher.store', 'journal'), $this->journal('ছাড়ের ভিতরে'))->assertRedirect();
         $this->assertSame((int) $this->other->id, (int) $this->vouchers('ছাড়ের ভিতরে')->sole()->branch_id);
+        // ⓘ পরীক্ষায় লগ নয় (ম্যাকের ডিস্ক), সতর্কতা পাতায় — লাইভে লগও
+        \Illuminate\Support\Facades\Log::shouldNotHaveReceived('warning', ['A form without its branch stamp was let through in the grace window', \Mockery::any()]);
         $this->assertSame(__('core.branch_pin.unstamped', ['current' => $this->other->name()]), session(FormBranchPin::NOTICE), '⛔ ছাপহীন জমায় সতর্কতা নেই।');
 
         config(['abos.branch_pin.grace_until' => now()->subHour()->toIso8601String()]);
@@ -201,6 +204,47 @@ final class AFormLandsInTheBranchItWasOpenedInTest extends TestCase
             ->assertSessionHasInput('narration', 'ছাড়ের পরে');
         $this->assertSame(0, $this->vouchers('ছাড়ের পরে')->count(), '⛔ ছাড়ের জানালার পরে ছাপহীন জমা চলে গেল।');
         $this->assertSame(__('core.branch_pin.unstamped_refused'), session(FormBranchPin::OFFER)['message'] ?? null);
+    }
+
+    /**
+     * ⛔ কাউন্টারের বিক্রির দরজা `*.store` নয় (`sales.pos.checkout`) — তবু একই পাহারা ([[FormBranchPin::CREATE_DOORS]])।
+     * ⓘ টাকার দরজা: বিল, মাল বেরোনো আর টিলে নগদ — ভুল শাখায় গেলে তিনটাই ভুল শাখায়।
+     */
+    public function test_a_counter_sale_opened_in_one_branch_is_stopped_in_another_and_lands_in_its_own_on_the_button(): void
+    {
+        app(\App\Core\Services\SettingsService::class)->set('sales.screen_pos', true);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        // ⓘ ময়মনসিংহের গুদাম; টিলটা কোম্পানির (শাখাহীন) — দুই শাখাতেই দেখা যায়, তাই দাবিটা কেবল ছাপ মাপে
+        $warehouse = \App\Modules\Inventory\Models\Warehouse::query()->withoutGlobalScopes()
+            ->where('company_id', $this->company->id)->where('code', 'WH-MMS')->firstOrFail();
+        $till = app(\App\Modules\Accounts\Services\CashTillService::class)->ensurePrimaryTill();
+        \App\Modules\Accounts\Models\CashTill::query()->withoutGlobalScopes()->whereKey($till->id)->update(['branch_id' => null]);
+        $product = Product::query()->orderBy('id')->firstOrFail();
+        $sale = ['warehouse_id' => $warehouse->id, 'paid' => '300', 'lines' => [['product_id' => $product->id, 'qty' => '2', 'rate' => '150']]];
+        $counter = route('sales.pos.index');
+        $invoices = fn () => \App\Modules\Sales\Models\SalesInvoice::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->count();
+
+        $this->as($owner, $this->opened->id);
+        $stamp = $this->stampOn($counter);
+        $before = $invoices();
+
+        $this->as($owner, $this->other->id);
+        $this->from($counter)->post(route('sales.pos.checkout'), [...$sale, FormBranchPin::FIELD => $stamp])
+            ->assertRedirect($counter)
+            ->assertSessionHasInput('paid', '300');
+        $this->assertSame($before, $invoices(), '⛔ শাখা না মিলেও কাউন্টারের বিল কাটা হলো।');
+        $this->assertSame(
+            __('core.branch_pin.moved', ['opened' => $this->opened->name(), 'current' => $this->other->name()]),
+            session(FormBranchPin::OFFER)['message'] ?? null,
+        );
+
+        [$action, $data] = $this->button($counter);
+        $this->from($counter)->post($action, $data)->assertRedirect();
+
+        $invoice = \App\Modules\Sales\Models\SalesInvoice::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->latest('id')->firstOrFail();
+        $this->assertSame($before + 1, $invoices(), '⛔ বোতাম চেপেও কাউন্টারের বিল হলো না।');
+        $this->assertSame((int) $this->opened->id, (int) $invoice->branch_id, '⛔ কাউন্টারের বিল খোলার শাখায় বসেনি।');
     }
 
     public function test_editing_an_existing_document_is_never_checked(): void

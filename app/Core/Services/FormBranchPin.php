@@ -95,12 +95,29 @@ final class FormBranchPin
      */
     public const BRANCHLESS = ['attachment.store', 'views.store'];
 
-    /** পাহারা কোন অনুরোধে — কেবল নতুন কাগজের POST (`*.store`); সম্পাদনা (PUT/PATCH) কাগজের নিজের শাখায় থাকে। */
+    /**
+     * ⛔ নতুন কাগজ বানায় বা টাকা নাড়ায়, অথচ নাম `*.store` নয় — হাতে দেখা তালিকা, ঢিলা ছাঁচ নয় (ec, ১৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বাকি প্রতিটা প্যারামিটারহীন POST কেন বাদ, তার এক লাইনের কারণ [[EveryNewPaperFormCarriesItsBranchTest::EXCLUDED]]-এ;
+     * নতুন দরজা দুই তালিকার কোনোটায় না থাকলে সেই দাবি লাল হয়।
+     */
+    public const CREATE_DOORS = [
+        'sales.pos.checkout',                 // কাউন্টারের বিক্রি — বিল, মাল বেরোনো, টিলে টাকা
+        'sales.pos.park',                     // কাউন্টারের বিল তুলে রাখা — খসড়া বিল
+        'sales.pos.return',                   // কাউন্টারে ফেরত — ফেরতের কাগজ আর টিল থেকে টাকা
+        'sales.shift.open',                   // ক্যাশিয়ারের পালা খোলা — খোলার নগদ
+        'inventory.stock.opening.cart',       // অনেক পণ্যের প্রারম্ভিক মজুদ — মজুদ আর খাতার সারি
+        'purchase.payment_schedule.propose',  // সরবরাহকারীর পরিশোধের প্রস্তাব — পরিশোধের খসড়া
+    ];
+
+    /** পাহারা কোন অনুরোধে — কেবল নতুন কাগজের POST (`*.store` আর [[CREATE_DOORS]]); সম্পাদনা (PUT/PATCH) কাগজের নিজের শাখায় থাকে। */
     public function guards(Request $request): bool
     {
         $route = (string) $request->route()?->getName();
 
-        return $request->isMethod('POST') && str_ends_with($route, '.store') && ! in_array($route, self::BRANCHLESS, true);
+        return $request->isMethod('POST')
+            && (str_ends_with($route, '.store') || in_array($route, self::CREATE_DOORS, true))
+            && ! in_array($route, self::BRANCHLESS, true);
     }
 
     /**

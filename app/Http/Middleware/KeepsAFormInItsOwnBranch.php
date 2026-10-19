@@ -66,9 +66,12 @@ class KeepsAFormInItsOwnBranch
 
         if (! $present) {
             if ($this->pin->inGrace()) {
-                Log::warning('A form without its branch stamp was let through in the grace window', [
-                    'user_id' => $user->id, 'route' => $route, 'branch_id' => $current,
-                ]);
+                // ⓘ পরীক্ষায় লগ নয় — হাজারটা ছাপহীন POST ম্যাকের ডিস্ক ভরাত; সতর্কতাটা (নিচে) আগের মতোই
+                if (! app()->runningUnitTests()) {
+                    Log::warning('A form without its branch stamp was let through in the grace window', [
+                        'user_id' => $user->id, 'route' => $route, 'branch_id' => $current,
+                    ]);
+                }
 
                 session()->flash(FormBranchPin::NOTICE, __('core.branch_pin.unstamped', ['current' => $this->pin->nameOf($current)]));
 
