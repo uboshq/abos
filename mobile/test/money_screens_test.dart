@@ -118,6 +118,21 @@ void main() {
     expect(api.posted.single.$2['amount'], '4000');
   });
 
+  // ⭐ অঙ্ক লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি হস্তান্তরে নয় — একটাই টিল নিজে বাছা থাকলেও (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a transfer with an amount typed asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: SendTransferScreen(api: _FakeMoney())));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি হস্তান্তরে প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const ValueKey('transfer-amount')), '4000');
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ অঙ্ক লেখা, তবু "পিছনে" কিছু না বলে হস্তান্তর ফেলে দিল');
+  });
+
   testWidgets('a cash count sends the notes per size, and only someone else may settle it', (tester) async {
     final api = _FakeMoney();
     await tester.pumpWidget(MaterialApp(home: NewCashCountScreen(api: api)));

@@ -398,6 +398,8 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
   @override
   void initState() {
     super.initState();
+    _amount.addListener(_typed);
+    _note.addListener(_typed);
     widget.api.get('/accounts/money/setup').then((d) {
       if (!mounted) return;
       setState(() {
@@ -447,8 +449,24 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
     }
   }
 
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে: গন্তব্য, যিনি নেবেন, অঙ্ক, বিবরণ, বা কয়েকটা টিলের মধ্যে একটা বাছা
+  bool get _transferDirty =>
+      !_busy &&
+      (_to != null ||
+          _receiver != null ||
+          _amount.text.trim().isNotEmpty ||
+          _note.text.trim().isNotEmpty ||
+          (_tills.length > 1 && _from != null));
+
+  // ⭐ গন্তব্য বা অঙ্ক লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা হস্তান্তর এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _transferDirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     DropdownButtonFormField<String> pick(String key, String label, String? value, List<MoneyChoice> from, ValueChanged<String?> on) =>
         DropdownButtonFormField<String>(
