@@ -18,6 +18,17 @@ class NotificationRecord {
 
   bool get read => payload['read'] == true;
 
+  /// ⭐ যে কাগজের খবর, তার ওয়েব-পথ — সার্ভারের `url` থেকে, কেবল পথ আর প্রশ্ন (`/accounts/vouchers/12`); না থাকলে null
+  /// (মালিকের বাগ "ফোনের নোটিশে চাপলে কিছু খোলে না", fe, ১৯ অক্টোবর ২০২৬)। ⓘ অন্য সাইটের ঠিকানা ধরা হয় না — পথটা অ্যাপের
+  /// নিজের মেনুর মতোই খোলে ([NativeForWeb], নইলে ভিতরের ওয়েব-জানালা, যা নিজেই অন্য সাইট আটকায়)।
+  String? get webPath {
+    final raw = (payload['url'] ?? '').toString().trim();
+    if (raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null || uri.path.isEmpty || !uri.path.startsWith('/')) return null;
+    return uri.hasQuery ? '${uri.path}?${uri.query}' : uri.path;
+  }
+
   DateTime? get at {
     final raw = payload['at'];
     return raw == null ? null : DateTime.tryParse(raw.toString())?.toLocal();

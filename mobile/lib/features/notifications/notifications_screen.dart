@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/web_inside/web_inside.dart';
 import '../../core/widgets/empty_state.dart';
 
 /// The bell's page — this person's messages, newest first; a tap marks one
 /// read, and "সব পড়া হয়েছে" empties the bell (owner, 6 Oct 2026).
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key, this.fetch, this.markRead, this.markAllRead});
+  const NotificationsScreen({super.key, this.fetch, this.markRead, this.markAllRead, this.openWeb});
 
   /// Seams — the real ones need a server.
   final Future<NotificationPage> Function()? fetch;
   final Future<void> Function(String id)? markRead;
   final Future<void> Function()? markAllRead;
+
+  /// Seam — the real one goes to the menu's own door for that web path (`/home/web/<code>`).
+  final void Function(BuildContext context, String webPath)? openWeb;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -69,6 +74,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.sm),
             Text(item.body),
+            // ⭐ খবরের কাগজটা খোলা — মেনুর একই দরজা: ফোনের পর্দা থাকলে সেটা, নইলে ভিতরের ওয়েব-জানালা (fe, ১৯ অক্টোবর ২০২৬)
+            if (item.webPath case final path?) ...[
+              const SizedBox(height: AppSpacing.md),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  key: const ValueKey('notification-open'),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('খুলুন'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    (widget.openWeb ?? (c, p) => c.go('/home/${WebPaths.navPathFor(p)}'))(this.context, path);
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),
