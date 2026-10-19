@@ -7,6 +7,7 @@ import 'package:local_auth_android/local_auth_android.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'app_pin.dart';
+import 'lock_delay.dart';
 
 /// ⭐ অ্যাপ-তালা — ফোনের নিজের আঙুলের ছাপ বা PIN (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬: খোলা ফোন হারালে বা অন্যের হাতে
 /// গেলে যে কেউ মালিকের অনুমোদন-বাক্সে সই দিতে আর নগদ-ব্যাংকের অঙ্ক দেখতে পারতেন; OWASP MASVS-AUTH)।
@@ -23,13 +24,19 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     Future<bool> Function()? deviceSupported,
     DateTime Function()? clock,
     AppPin? pin,
+    Duration Function()? idleLimitOf,
   })  : _locked = startLocked,
+        _idleLimitOf = idleLimitOf ?? (() => LockDelay.instance.current.value),
         _pin = pin ?? AppPin(),
         _authenticate = authenticate ?? _deviceAuthenticate,
         _deviceSupported = deviceSupported ?? _deviceHasALock,
         _clock = clock ?? DateTime.now;
 
-  static const Duration idleLimit = Duration(minutes: 5);
+  /// ডিফল্ট সময় — মানুষ না বাছলে ([[LockDelay]])
+  static const Duration idleLimit = Duration(minutes: LockDelay.defaultMinutes);
+
+  /// ⭐ এখনকার সময় — "আমি" ট্যাবের বাছাই ([[LockDelay]]); ফেরার মুহূর্তে পড়া, তাই বদলালে সাথে সাথে খাটে
+  final Duration Function() _idleLimitOf;
 
   final Future<bool> Function() _authenticate;
   final Future<bool> Function() _deviceSupported;
@@ -138,11 +145,14 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.paused || AppLifecycleState.hidden:
+        // ⓘ যাচাই চলার সময় ফোনের PIN-পর্দা অ্যাপকে পেছনে পাঠায় — ওটা "বাইরে যাওয়া" নয়; নইলে "সাথে সাথে" বাছলে যাচাই শেষে
+        //   ফিরেই আবার তালা, চিরকাল ঘুরত
+        if (_busy) break;
         _leftAt ??= _clock();
       case AppLifecycleState.resumed:
         final left = _leftAt;
         _leftAt = null;
-        if (signedIn && left != null && _clock().difference(left) >= idleLimit) {
+        if (signedIn && left != null && _clock().difference(left) >= _idleLimitOf()) {
           _locked = true;
           notifyListeners();
         }

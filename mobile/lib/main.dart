@@ -11,6 +11,7 @@ import 'core/locale/app_locale.dart';
 import 'core/auth/auth_state.dart';
 import 'core/crash/crash_reporter.dart';
 import 'core/privacy/app_lock.dart';
+import 'core/privacy/lock_delay.dart';
 import 'core/privacy/phone_privacy.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
@@ -43,6 +44,8 @@ Future<void> main() async {
   await Hive.initFlutter();
   await SyncEngine.instance.init();
   await ReferenceCache.instance.init();
+  // ⭐ অ্যাপ-তালার সময় — মানুষের বাছাই ([[LockDelay]]); পড়া না গেলে ৫ মিনিট, কখনো ছোড়ে না
+  await LockDelay.instance.load();
   await BackgroundSync.initialize();
 
   final authController = AuthController();
