@@ -11,6 +11,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
 import '../finance/finance_screens.dart' show monthWords;
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ নিজের ছুটি আর নিজের বেতনের স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
 ///
@@ -172,7 +173,22 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
     _to = _today;
     _type = widget.types.isEmpty ? null : widget.types.first.id;
     _days.text = '1';
+    _reason.addListener(_typed);
+    _days.addListener(_typed);
   }
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে: কারণ, বদলানো তারিখ, দিন বা ছুটির ধরন — খোলার সময়ের বসানো মান নয়
+  bool get _dirty =>
+      !_busy &&
+      (_reason.text.trim().isNotEmpty ||
+          _from != _today ||
+          _to != _today ||
+          _days.text.trim() != '1' ||
+          _type != (widget.types.isEmpty ? null : widget.types.first.id));
 
   @override
   void dispose() {
@@ -231,8 +247,11 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
     }
   }
 
+  // ⭐ কারণ, তারিখ বা দিন বদলালে "পিছনে" জিজ্ঞেস করে — লেখা ছুটির আবেদন এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('ছুটির আবেদন')),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),

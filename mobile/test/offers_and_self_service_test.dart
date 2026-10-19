@@ -154,6 +154,22 @@ void main() {
       expect(api.sent.single.reason, 'ডাক্তার');
     });
 
+    // ⭐ কারণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে; না-ছোঁয়া আবেদনে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+    testWidgets('a leave application with a reason typed asks before going back, an untouched one does not', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+          home: NewLeaveScreen(api: _FakeSelf(), types: const [LeaveKind(id: 't1', name: 'বার্ষিক', left: '4.0')], today: DateTime(2026, 10, 13))));
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'না-ছোঁয়া আবেদনে প্রশ্ন নয়');
+
+      await tester.enterText(find.byKey(const ValueKey('leave-reason')), 'ডাক্তার');
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ কারণ লেখা, তবু "পিছনে" কিছু না বলে আবেদন ফেলে দিল');
+    });
+
     testWidgets('without an employee record it explains instead of offering a form', (tester) async {
       await tester.pumpWidget(MaterialApp(home: LeaveScreen(api: _FakeSelf(employee: false))));
       await tester.pumpAndSettle();
