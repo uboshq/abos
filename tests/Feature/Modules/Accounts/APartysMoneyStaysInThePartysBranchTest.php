@@ -143,6 +143,24 @@ final class APartysMoneyStaysInThePartysBranchTest extends TestCase
         $this->assertSame([(int) $this->home->id], collect($reversed)->pluck('branch_id')->map(fn ($b) => (int) $b)->unique()->values()->all());
     }
 
+    public function test_a_collection_lands_in_the_customers_branch_not_the_collectors(): void
+    {
+        // ⓘ a4-এর পর্যালোচনা: সব শাখা দেখা SR-এর ফোন অন্য শাখার গ্রাহকের আদায় নিজের শাখায় বসাত — এখন গ্রাহকের শাখায়
+        $collection = app(\App\Modules\Sales\Services\CollectionService::class)->create(
+            ['customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'amount' => '50', 'instrument' => 'cash'], [],
+        );
+
+        $this->assertSame((int) $this->other->id, (int) $collection->branch_id, '⛔ আদায় আদায়কারীর উপরের শাখায় বসল');
+    }
+
+    public function test_a_refusal_from_the_books_is_an_answer_to_the_phone_not_a_silent_retry(): void
+    {
+        // ⓘ খাতার "না" (PostingException) আগে সিঙ্কের Throwable-এ পড়ত — ফোন চিরকাল আবার পাঠাত। এখন REJECTED, বাংলা কারণসহ।
+        $source = file_get_contents(app_path('Core/Engines/Sync/SyncService.php'));
+
+        $this->assertMatchesRegularExpression('/catch \(\\\\App\\\\Core\\\\Engines\\\\Posting\\\\PostingException \$refused\)\s*\{.*?refuse\(.*?forPeople\(\)/s', (string) $source);
+    }
+
     /** @return list<array<string, mixed>> */
     private function postingLines(): array
     {

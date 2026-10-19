@@ -114,7 +114,14 @@ final class CollectionService
 
             $collection = Collection::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                /*
+                 * ⛔ গ্রাহকের টাকা গ্রাহকের শাখায় — মালিক, ১৯ অক্টোবর ২০২৬: *"kono vabei zate ek saka r party r ek sakay na zay"*।
+                 * ⓘ আগে আদায়কারীর উপরের শাখা: সব শাখা দেখা SR-এর ফোনে অন্য শাখার গ্রাহকের আদায় তাঁর নিজের শাখায় বসত — এখন
+                 * খাতার দরজা ([[PostingEngine]]) সেটা থামায়, তাই আদায় শুরু থেকেই গ্রাহকের শাখায়। গ্রাহকের শাখা না থাকলে আগের মতো।
+                 */
+                'branch_id' => $data['branch_id']
+                    ?? (app(\App\Core\Services\PartyRegistry::class)->branchesOf([['customer', (int) $data['customer_id']]])['customer:'.(int) $data['customer_id']] ?? null)
+                    ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'customer_id' => $data['customer_id'],
