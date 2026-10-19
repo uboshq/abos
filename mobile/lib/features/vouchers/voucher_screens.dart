@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ ফোনে অফিসের লোকের ভাউচার — আদায়, পরিশোধ, খরচ (বাকিতেও), জাবেদা, কন্ট্রা (মালিক, ৭ অক্টোবর ২০২৬; সার্ভার 2bd0f620)।
 ///
@@ -449,6 +450,9 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
   void initState() {
     super.initState();
     _date = DateTime.now();
+    for (final c in [_amount, _narration, _trx]) {
+      c.addListener(_typed);
+    }
     widget.api.setup(widget.type).then((s) {
       if (mounted) {
         setState(() {
@@ -611,8 +615,25 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
         ),
       );
 
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে: খাত, পক্ষ, টাকা, বিবরণ, TrxID বা জাবেদার কোনো সারি
+  bool get _dirty =>
+      !_busy &&
+      (_from != null ||
+          _to != null ||
+          _party != null ||
+          [_amount, _narration, _trx].any((c) => c.text.trim().isNotEmpty) ||
+          _lines.any((l) =>
+              l.account != null || l.party != null || l.debit.text.trim().isNotEmpty || l.credit.text.trim().isNotEmpty));
+
+  // ⭐ খাত, টাকা বা বিবরণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা ভাউচার এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final s = _setup;
     return Scaffold(
       appBar: AppBar(title: Text(VoucherTypes.label(widget.type))),

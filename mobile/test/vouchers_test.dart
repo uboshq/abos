@@ -201,6 +201,20 @@ void main() {
       expect(api.sent, isNull, reason: '⛔ ভুল ফর্মেও পাঠাল');
     });
 
+    // ⭐ টাকা লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ভাউচারে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+    testWidgets('a voucher with an amount typed asks before going back, an empty one does not', (tester) async {
+      await _pump(tester, VoucherFormScreen(type: 'receipt', api: _FakeVouchers(lands: 'v-1'), newChangeId: _key));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ভাউচারে প্রশ্ন নয়');
+
+      await tester.enterText(find.byKey(const ValueKey('voucher-amount')), '500');
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ টাকা লেখা, তবু "পিছনে" কিছু না বলে ভাউচার ফেলে দিল');
+    });
+
     testWidgets('a bank receipt asks the TrxID and carries the party; it lands and the form closes with the id',
         (tester) async {
       final api = _FakeVouchers(lands: 'v-1');
