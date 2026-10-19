@@ -11,7 +11,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 flutter test
-flutter build apk --release
+
+# ⭐ কোড ঝাপসা — OWASP MASVS-RESILIENCE-3 (অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬): APK খুলে শ্রেণি আর মেথডের নাম পড়ে ভেতরের
+# নিয়ম (দাম, সীমা, দরজা) বোঝা কঠিন হয়। ⓘ চিহ্নের ফাইল ছাড়া ঝাপসা stack পড়া যায় না — তাই প্রতি সংস্করণের চিহ্ন
+# `symbols/<সংস্করণ>/`-এ থাকে (git-এর বাইরে, .gitignore)। ক্র্যাশের খবর পড়তে:
+#   flutter symbolize -i stack.txt -d symbols/<সংস্করণ>/app.android-arm64.symbols
+VERSION=$(grep -E '^version:' pubspec.yaml | awk '{print $2}')
+flutter build apk --release --obfuscate --split-debug-info="symbols/$VERSION"
+echo "চিহ্নের ফাইল: symbols/$VERSION — এই সংস্করণের ক্র্যাশ পড়তে রেখে দিন, মুছবেন না"
 
 APK=build/app/outputs/flutter-apk/app-release.apk
 SDK="${ANDROID_SDK_ROOT:-/c/Android/Sdk}"

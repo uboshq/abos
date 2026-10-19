@@ -7,6 +7,8 @@
 .flutter-plugins-dependencies
 .packages
 build/
+# ⓘ ঝাপসা বিল্ডের চিহ্নের ফাইল (tool/release.sh) — প্রতি সংস্করণে, ক্র্যাশ পড়তে রাখা, কিন্তু রিপোতে নয়
+symbols/
 *.iml
 
 # Signing. A keystore in the repository is a signing key everybody has, and a
