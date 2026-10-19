@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ সইয়ের ভার — আমি যাঁদের দিয়েছি আর আমার কাছে যাঁদের ভার; নতুন ভার আর ফেরানো (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage
 /// app e bujajayna"*)। ⓘ নিয়ম সব সার্ভারের — নিজেকে নয়, গতকাল থেকে নয়, কেবল এই কোম্পানির মানুষ; পর্দা কেবল উত্তরটা বলে।
@@ -209,7 +210,14 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
     final now = widget.today ?? DateTime.now();
     _from = DateTime(now.year, now.month, now.day);
     _until = _from.add(const Duration(days: 6));
+    _reason.addListener(_typed);
   }
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _written => _to != null || _modules.isNotEmpty || _reason.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -263,8 +271,11 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
     }
   }
 
+  // ⭐ কাকে, কোন কাজ বা কারণ বাছা থাকলে "পিছনে" জিজ্ঞেস করে — নতুন ভারের লেখা এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _written && !_busy, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('নতুন ভার')),
       body: ListView(

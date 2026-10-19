@@ -117,6 +117,28 @@ void main() {
     expect(find.byKey(const ValueKey('delegation-revoke-d1')), findsNothing, reason: 'ফেরানো ভারে আর "ফেরান" নেই');
   });
 
+  // ⭐ নতুন ভারে কাকে বাছা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a new hand-over with a person chosen asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: DelegationScreen(api: _FakeApi(), today: DateTime(2026, 10, 17))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('delegation-new')));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+    expect(find.byKey(const ValueKey('delegation-to')), findsNothing, reason: 'খালি ফর্ম আগের মতো ফিরে যায়');
+
+    await tester.tap(find.byKey(const ValueKey('delegation-new')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('delegation-to')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('করিম').last);
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ কাকে বাছা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
+
   testWidgets('the document queue signs or refuses through the approval door, and "sent by me" has no buttons', (tester) async {
     final api = _FakeApi();
     final signed = <String>[];
