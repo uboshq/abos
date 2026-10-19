@@ -105,6 +105,20 @@ void main() {
     expect(find.text('প্রত্যাখ্যাত'), findsOneWidget);
   });
 
+  // ⭐ টাকা লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি দাবিতে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a claim with an amount typed asks before going back, an empty one does not', (tester) async {
+    await _pump(tester, NewClaimScreen(api: _FakeClaims()));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি দাবিতে প্রশ্ন নয়');
+
+    await tester.enterText(find.byKey(const ValueKey('claim-amount')), '250');
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ টাকা লেখা, তবু "পিছনে" কিছু না বলে দাবি ফেলে দিল');
+  });
+
   testWidgets('nothing is sent without a head, a reason or a proper amount; then it is', (tester) async {
     final api = _FakeClaims();
     await _pump(tester, NewClaimScreen(api: api, picker: () async => '/tmp/r.jpg', today: DateTime(2026, 10, 7)));

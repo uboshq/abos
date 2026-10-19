@@ -9,6 +9,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; সার্ভার f727b846)।
 ///
@@ -211,6 +212,8 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
   void initState() {
     super.initState();
     _spentOn = _today;
+    _amount.addListener(_typed);
+    _reason.addListener(_typed);
     widget.api.heads().then((h) {
       if (mounted) setState(() => _heads = h);
     }, onError: (Object e) {
@@ -277,8 +280,18 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
     }
   }
 
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _dirty =>
+      !_busy && (_amount.text.trim().isNotEmpty || _reason.text.trim().isNotEmpty || _head != null || _receipt != null);
+
+  // ⭐ টাকা, কারণ, খাত বা রসিদ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা দাবি এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final expense = _kind == 'expense';
     return Scaffold(
       appBar: AppBar(title: const Text('নতুন দাবি')),
