@@ -158,6 +158,39 @@ void main() {
     expect(got?.damaged, {1: 1, 2: 0});
   });
 
+  // ⭐ নাম লেখা থাকলে "পিছনে" জিজ্ঞেস করে; না-ছোঁয়া ফর্ম আগের মতো ফেরে (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('the hand-over form with a name typed asks before going back, an untouched one does not',
+      (tester) async {
+    await _pump(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: TextButton(
+              onPressed: () => Navigator.of(context).push<ReceiveResult>(MaterialPageRoute(
+                  builder: (_) => const ReceiveScreen(documentNo: 'CH-0001', lines: _lines))),
+              child: const Text('খুলুন'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('খুলুন'));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'না-ছোঁয়া ফর্মে প্রশ্ন নয়');
+    expect(find.byType(ReceiveScreen), findsNothing, reason: 'না-ছোঁয়া ফর্ম "পিছনে" বন্ধ হলো না');
+
+    await tester.tap(find.text('খুলুন'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('receive-name')), 'রহিম');
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ নাম লেখা, তবু "পিছনে" কিছু না বলে ফর্ম ফেলে দিল');
+  });
+
   testWidgets(
       "today's deliveries: what is on the way, and a hand-over goes to the paper's own door",
       (tester) async {

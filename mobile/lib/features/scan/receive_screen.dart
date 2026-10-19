@@ -4,6 +4,7 @@ import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// ⭐ "বুঝিয়ে দিন" — পৌঁছানোর প্রমাণ, মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৭, ৬ অক্টোবর ২০২৬: *"ডিলার বুঝে নিলেন —
 /// নাম, ফোন … কম বা ভাঙা মাল → ফেরত বা দাবি"*।
@@ -58,6 +59,23 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       double.tryParse(c.text.trim()) ?? -1;
 
   @override
+  void initState() {
+    super.initState();
+    _name.addListener(_typed);
+    _phone.addListener(_typed);
+  }
+
+  void _typed() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে: নাম, ফোন, বা কোনো সারির "নিলেন"/"ভাঙা" খোলার সময়ের মান থেকে বদলেছে
+  bool get _dirty =>
+      _name.text.trim().isNotEmpty ||
+      _phone.text.trim().isNotEmpty ||
+      widget.lines.any((l) => _taken[l.line]!.text.trim() != _plain(l.qty) || _damaged[l.line]!.text.trim() != '0');
+
+  @override
   void dispose() {
     for (final c in [_name, _phone, ..._taken.values, ..._damaged.values]) {
       c.dispose();
@@ -104,8 +122,11 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     );
   }
 
+  // ⭐ নাম, ফোন বা পরিমাণ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা পৌঁছানোর প্রমাণ এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
+
+  Widget _screen(BuildContext context) => Scaffold(
         appBar: AppBar(title: Text('বুঝিয়ে দিন — ${widget.documentNo}')),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
