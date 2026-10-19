@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
-use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Database\Query\Builder;
@@ -62,10 +61,14 @@ final class MonthlyCashReport
     {
         return new ReportDefinition(
             key: self::KEY,
+            // ⭐ শুরু না দিলে চলতি অর্থবছর — ওয়েব আর ফোন দুই দরজার একই ([[ReportDefinition::$defaultPeriod]], ১৭ অক্টোবর ২০২৬)
+            defaultPeriod: ReportDefinition::PERIOD_FISCAL_YEAR,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — আদায়ের তালিকা আর নগদ বইয়ের একই চাবি
             permission: 'accounts.report',
             title: 'accounts::menu.monthly_cash',
             filters: ['date_range', 'branch', 'account'],
+            // ⓘ কেবল টাকার খাত — ওয়েবের পাতা আর ফোন একই তালিকা থেকে
+            sources: ['account' => \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::class],
             summary: fn (array $totals): array => [
                 'label' => __('accounts::message.monthly_cash_net'),
                 'value' => bcadd((string) ($totals['net'] ?? '0'), '0', 2),
@@ -98,21 +101,8 @@ final class MonthlyCashReport
      */
     public static function yearStart(?string $on = null): string
     {
-        $on ??= Carbon::today()->toDateString();
-
-        $start = DB::table('financial_years')
-            ->where('company_id', CompanyContext::id())
-            ->where('starts_on', '<=', $on)
-            ->where('ends_on', '>=', $on)
-            ->value('starts_on');
-
-        if ($start !== null) {
-            return Carbon::parse((string) $start)->toDateString();
-        }
-
-        $date = Carbon::parse($on);
-
-        return Carbon::create($date->month >= 7 ? $date->year : $date->year - 1, 7, 1)->toDateString();
+        // ⓘ এক জায়গার নিয়ম — রিপোর্টের ডিফল্ট সময়কালও এটাই পড়ে ([[FiscalYearStart]])
+        return \App\Core\Support\FiscalYearStart::on($on);
     }
 
     /** @param  array<string, mixed>  $f */

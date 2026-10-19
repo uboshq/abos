@@ -169,6 +169,71 @@ final class ApprovalApiController extends Controller
     }
 
     /**
+     * `GET /approvals/mine?limit=&cursor=` — আমার পাঠানো অনুরোধ, নতুন আগে: কোনটা কোথায় দাঁড়িয়ে, কে কী বললেন।
+     *
+     * ⭐ মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage app e bujajayna"* — মেনুর "আমার অনুরোধ" ফোনে ওয়েব-পাতা হয়ে খুলত।
+     * ⓘ ওয়েবের পাতার একই প্রশ্ন ([[ApprovalInboxController::mine()]]: `requested_by` = আমি), একই চাবি (`approval.view`);
+     * ⛔ বেতন ফোনে আসে না ([[forThePhone]])। ⓘ মোট: সব অনুরোধের গোনা আর এখনো অপেক্ষমাণগুলোর গোনা — পাতার নয়, পুরোটার।
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:'.self::MAX_LIMIT],
+            'cursor' => ['nullable', 'string', 'max:1024'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $query = self::forThePhone(Approval::query()->where('requested_by', $user->id));
+        $count = (clone $query)->count();
+        $waiting = (clone $query)->where('status', Approval::PENDING)->count();
+
+        $page = (clone $query)->with(['decisions.user'])
+            ->orderByDesc('id')
+            ->cursorPaginate((int) ($validated['limit'] ?? self::DEFAULT_LIMIT));
+
+        $approvals = collect($page->items());
+        $facts = app(ApprovalFacts::class)->of($approvals, false);
+        $documents = $this->documentsOf($approvals);
+
+        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents): array {
+            $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
+            $last = $approval->decisions->sortBy('id')->last();
+
+            return [
+                'id' => $approval->public_id,
+                'documentType' => class_basename((string) $approval->approvable_type),
+                'documentNo' => $document?->getAttribute('document_no'),
+                'documentId' => $document?->getAttribute('public_id'),
+                'action' => $approval->action,
+                'amount' => $approval->amount === null ? null : (string) $approval->amount,
+                'status' => (string) $approval->status,
+                'statusLabel' => __('approval::status.'.$approval->status),
+                'currentLevel' => (int) $approval->current_level,
+                'requestedAt' => $approval->requested_at?->toIso8601String(),
+                'decidedAt' => $approval->decided_at?->toIso8601String(),
+                'summary' => $this->summaryOf($approval, $facts[(int) $approval->id] ?? []),
+                // ⓘ শেষ কথা — কে, কী, আর কেন (ফেরত বা সংশোধনের নোট লেখককে জানতেই হয়)
+                'lastDecision' => $last === null ? null : [
+                    'by' => $last->user?->name,
+                    'decision' => (string) $last->decision,
+                    'label' => __('approval::status.'.$last->decision),
+                    'remarks' => $last->remarks,
+                    'at' => $last->decided_at?->toIso8601String(),
+                ],
+            ];
+        })->values();
+
+        return response()->json([
+            'rows' => $rows,
+            'nextCursor' => $page->nextCursor()?->encode(),
+            'count' => $count,
+            'pendingCount' => $waiting,
+        ]);
+    }
+
+    /**
      * `GET /approvals/{approval}/sheet` — সইয়ের আগে কাগজের বিস্তারিত: ঘর আর মান, সারি, যোগফল।
      *
      * ⭐ মালিক, ৭ অক্টোবর ২০২৬: *"app e voucher approvale asle … details dekhayna, approval e kono kichui details dekhay

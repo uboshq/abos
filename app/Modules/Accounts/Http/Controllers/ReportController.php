@@ -189,9 +189,7 @@ class ReportController extends Controller implements HasMiddleware
          * ⭐ লাভ-ক্ষতিও চলতি অর্থবছর থেকে — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬)। ⛔ আগে এই মাসের শুরু থেকে: স্থিতিপত্রে
          * "চলতি বছরের লাভ ৩৬৫" অথচ লাভ-ক্ষতিতে নিট ০ — দুটো পাতা দুই সময় দেখত। ⓘ স্থিতিপত্রের একই বছর ([[MonthlyCashReport::yearStart()]])।
          */
-        if (in_array($key, [MonthlyCashReport::KEY, 'accounts.profit_loss'], true) && ! $request->filled('from')) {
-            $request->merge(['from' => MonthlyCashReport::yearStart()]);
-        }
+        // ⓘ শুরু না দিলে কোন সময়কাল — রিপোর্টের নিজের ঘোষণা, ইঞ্জিন পড়ে ([[ReportDefinition::$defaultPeriod]]; ফোনের দরজাও একই)
 
         $result = $this->reports->run(
             $key,
@@ -242,10 +240,10 @@ class ReportController extends Controller implements HasMiddleware
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
             'accounts' => $definition->hasFilter('account')
-                ? Account::query()->postable()->active()
-                    // ⓘ টাকার হিসাবে কেবল টাকার খাত বাছার মানে আছে
-                    ->when($key === MonthlyCashReport::KEY, fn ($q) => $q->money())
-                    ->orderBy('code')->get()
+                // ⓘ টাকার হিসাবে কেবল টাকার খাত — ফোনের একই তালিকা থেকে ([[MoneyAccountFilter]])
+                ? ($key === MonthlyCashReport::KEY
+                    ? \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::accounts()->get()
+                    : Account::query()->postable()->active()->orderBy('code')->get())
                 : collect(),
 
             /*

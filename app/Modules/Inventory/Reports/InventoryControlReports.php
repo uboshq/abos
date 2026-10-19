@@ -134,6 +134,7 @@ final class InventoryControlReports
             permission: 'inventory.report',
             title: 'inventory::control.slow_dead',
             filters: ['branch', 'warehouse_id', 'brand_id', 'category_id', 'status'],
+            choices: ['status' => ['slow' => 'inventory::control.state_slow', 'dead' => 'inventory::control.state_dead']],
             query: function (array $f) use ($state, $labels, $avgCost) {
                 $today = DB::getPdo()->quote(Carbon::today()->toDateString());
                 $state = $state($today);
@@ -228,6 +229,10 @@ final class InventoryControlReports
             permission: 'inventory.report',
             title: 'inventory::control.stock_alerts',
             filters: ['branch', 'warehouse_id', 'brand_id', 'category_id', 'status'],
+            choices: ['status' => [
+                'negative' => 'inventory::control.alert_negative', 'zero' => 'inventory::control.alert_zero',
+                'below' => 'inventory::control.alert_below', 'over' => 'inventory::control.alert_over',
+            ]],
             query: fn (array $f) => DB::query()
                 ->fromSub(
                     DB::table('inv_stock_movements as m')

@@ -756,6 +756,15 @@ return [
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
+    /*
+     * ⭐ রিপোর্টের তালিকা-ছাঁকনি, ইঞ্জিনের নামে (`account` → `account_id`, `cost_centre` → `cost_center_id`) — ফোনের রিপোর্ট-পর্দার
+     * বাছাই (১৭ অক্টোবর ২০২৬; [[ReportApiController::choices()]])। ⓘ ওয়েবের পাতা নিজের বাছাই-ঘরই আঁকে, এগুলো তাতে কিছু বদলায় না।
+     */
+    'report_filters' => [
+        'account_id' => \App\Modules\Accounts\Reports\Filters\AccountFilter::class,
+        'cost_center_id' => \App\Modules\Accounts\Reports\Filters\CostCentreFilter::class,
+    ],
+
     'reports' => [
         CoreReports::class,
         BranchDuesReports::class,

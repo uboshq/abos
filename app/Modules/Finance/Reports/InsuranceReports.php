@@ -48,6 +48,7 @@ final class InsuranceReports
             permission: self::KEY,
             title: 'finance::insurance_claim.register_title',
             filters: ['date_range', 'branch', 'state'],
+            choices: ['state' => array_combine(InsuranceClaim::STATES, array_map(fn (string $s) => 'finance::insurance_claim.state_'.$s, InsuranceClaim::STATES))],
             query: function (array $f): Builder {
                 $pdo = DB::getPdo();
                 $label = 'CASE c.status';
@@ -95,6 +96,10 @@ final class InsuranceReports
             permission: self::KEY,
             title: 'finance::insurance.premiums_title',
             filters: ['date_range', 'branch', 'state'],
+            choices: ['state' => [
+                'paid' => 'finance::bank_loan_report.state_paid', 'overdue' => 'finance::bank_loan_report.state_overdue',
+                'today' => 'finance::bank_loan_report.state_today', 'upcoming' => 'finance::bank_loan_report.state_upcoming',
+            ]],
             query: function (array $f): Builder {
                 $pdo = DB::getPdo();
                 $today = $pdo->quote(now()->toDateString());

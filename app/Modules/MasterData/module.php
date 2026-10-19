@@ -399,5 +399,8 @@ return [
         'brand_id' => \App\Modules\MasterData\Reports\Filters\BrandFilter::class,
         'category_id' => \App\Modules\MasterData\Reports\Filters\CategoryFilter::class,
         'location_id' => \App\Modules\MasterData\Reports\Filters\LocationFilter::class,
+        // ⭐ পক্ষের ধরন — ইঞ্জিনের নামে (`party_type` → `party_type_id`); ফোনের রিপোর্ট-পর্দার বাছাই (১৭ অক্টোবর ২০২৬)
+        'party_type_id' => \App\Modules\MasterData\Reports\Filters\PartyTypeFilter::class,
+        'person_id' => \App\Modules\MasterData\Reports\Filters\PersonFilter::class,
     ],
 ];

@@ -42,6 +42,16 @@ final class ChequeReports
             permission: 'accounts.report',
             title: 'accounts::menu.cheque_register',
             filters: ['date_range', 'branch', 'direction', 'status'],
+            // ⓘ ওয়েবের চেকের পাতার একই সংকেত আর নাম ([[cheque-filters]])
+            choices: [
+                'direction' => ['received' => 'accounts::cheque.state_received', 'issued' => 'accounts::cheque.state_issued'],
+                'status' => [
+                    'pdc' => 'accounts::cheque.state_pdc', 'due' => 'accounts::cheque.state_due',
+                    'pending' => 'accounts::cheque.state_pending', 'deposited' => 'accounts::cheque.state_deposited',
+                    'cleared' => 'accounts::cheque.state_cleared', 'bounced' => 'accounts::cheque.state_bounced',
+                    'cancelled' => 'accounts::cheque.state_cancelled',
+                ],
+            ],
             query: fn (array $f) => self::query($f),
             columns: [
                 ['key' => 'cheque_date', 'label' => 'accounts::cheque.cheque_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],

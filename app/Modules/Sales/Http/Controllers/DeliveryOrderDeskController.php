@@ -184,8 +184,13 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         return redirect()->route('sales.delivery_order.show', $order)->with('saved', __('sales::delivery_order.quantities_saved'));
     }
 
-    /** @param  Builder<DeliveryOrder>  $query */
-    private function tab(Builder $query, string $tab): Builder
+    /**
+     * @param  Builder<DeliveryOrder>  $query
+     *
+     * ⓘ ফোনের DO-তালিকাও এই একই ছাঁকনি নেয় ([[DeliveryOrderApiController::index()]], ১৭ অক্টোবর ২০২৬) — মেনুর
+     * "অপেক্ষমাণ/আংশিক/ব্যাক/ইতিহাস" সারি ফোনে ওয়েবের সমান উত্তর দেয়, দুই জায়গায় দুই নিয়ম নয়।
+     */
+    public static function tab(Builder $query, string $tab): Builder
     {
         return match ($tab) {
             /*

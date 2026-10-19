@@ -743,6 +743,8 @@ return [
     'report_filters' => [
         'warehouse_id' => \App\Modules\Inventory\Reports\Filters\WarehouseFilter::class,
         'product_id' => \App\Modules\Inventory\Reports\Filters\ProductFilter::class,
+        // ⭐ লট — ফোনের রিপোর্ট-পর্দার বাছাই, ওয়েবের লটের খোঁজেও (১৭ অক্টোবর ২০২৬)
+        'batch_id' => \App\Modules\Inventory\Reports\Filters\BatchFilter::class,
     ],
 
     'reports' => [

@@ -13,7 +13,8 @@
     $filterSources = app(\App\Core\Engines\Report\ReportFilters::class)->sources();
     $sharedFilters = array_values(array_filter(
         $report->filters,
-        fn ($key) => isset($filterSources[$key]) && ! in_array($key, $ownFilters ?? [], true),
+        // ⓘ পাতার নিজের "পক্ষ" ঘর (`partyFilter` — মানুষ, ঋণ, চুক্তি) দ্বিতীয়বার নয় (১৭ অক্টোবর ২০২৬)
+        fn ($key) => isset($filterSources[$key]) && ! in_array($key, [...($ownFilters ?? []), $partyFilter ?? null], true),
     ));
     $anySharedFilter = false;
 @endphp

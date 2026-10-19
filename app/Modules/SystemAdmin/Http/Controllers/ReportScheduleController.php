@@ -171,6 +171,17 @@ final class ReportScheduleController extends Controller implements HasMiddleware
                 array_intersect_key($data['filters'] ?? [], array_flip($keys)),
                 fn ($value) => $value !== null && $value !== '',
             );
+
+            /*
+             * ⭐ শুরুর তারিখ না দিলে সংরক্ষণের মুহূর্তের সময়কাল সূচিতে লেখা (১৭ অক্টোবর ২০২৬) — পরে রিপোর্টের ডিফল্ট বদলালেও
+             * মেইলের ফাইল যেমন ছিল তেমনই থাকে ([[ReportDefinition::SCHEDULE_PERIOD]])।
+             */
+            if (in_array((string) $data['report_key'], $this->reports->keys(), true)
+                && ! isset($data['filters']['from'])
+                && $this->reports->get((string) $data['report_key'])->hasFilter('date_range')) {
+                $data['filters'][\App\Core\Engines\Report\ReportDefinition::SCHEDULE_PERIOD]
+                    = $this->reports->get((string) $data['report_key'])->defaultPeriod;
+            }
         }
 
         return $data;

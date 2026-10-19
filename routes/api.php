@@ -273,6 +273,10 @@ Route::prefix('v1')
         Route::get('/approvals/pending', [ApprovalApiController::class, 'pending'])
             ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.pending');
+        // ⭐ আমার পাঠানো অনুরোধ — ওয়েবের "আমার অনুরোধ"-এর একই চাবি (`approval.view`), ১৭ অক্টোবর ২০২৬
+        Route::get('/approvals/mine', [ApprovalApiController::class, 'mine'])
+            ->middleware(['can:approval.view', RefuseModulesOffOnThePhone::class.':approval'])
+            ->name('approvals.mine');
         // ⭐ সইয়ের আগে কাগজের বিস্তারিত — মালিক, ৭ অক্টোবর ২০২৬ ("approval e kono kichui details dekhay na")
         Route::get('/approvals/{approval}/sheet', [ApprovalApiController::class, 'sheet'])
             ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
@@ -295,6 +299,9 @@ Route::prefix('v1')
          */
         Route::get('/reports', [ReportApiController::class, 'index'])->name('reports.index');
         Route::get('/reports/{key}', [ReportApiController::class, 'show'])->name('reports.show');
+        // ⭐ ছাঁকনির বাছাই-তালিকা — ফোনের সাধারণ রিপোর্ট-পর্দার মাথা (১৭ অক্টোবর ২০২৬)
+        Route::get('/reports/{key}/choices', [ReportApiController::class, 'choices'])->name('reports.choices');
+        Route::get('/reports/{key}/choices/{filter}', [ReportApiController::class, 'search'])->where('filter', '[a-z_]+')->name('reports.choices.search');
 
         /*
          * নথি ও রপ্তানি — চুক্তি §১০। ⚠️ `can:` নেই, ইচ্ছা করে: কাগজ এগারো

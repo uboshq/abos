@@ -369,6 +369,7 @@ final class HandLoanReports
             permission: self::KEY,
             title: 'finance::hand_loan_report.schedule_title',
             filters: ['date_range', 'branch', 'state'],
+            choices: ['state' => array_combine(self::STATES, array_map(fn (string $s) => 'finance::hand_loan_report.state_'.$s, self::STATES))],
             asOfDate: true,
             query: function (array $f): Builder {
                 $pdo = DB::getPdo();

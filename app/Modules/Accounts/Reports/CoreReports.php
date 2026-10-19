@@ -499,6 +499,8 @@ final class CoreReports
             'accounts::menu.profit_loss',
             [Account::INCOME, Account::EXPENSE],
             dateRange: true,
+            // ⭐ চলতি অর্থবছর থেকে — স্থিতিপত্রের "চলতি বছরের লাভ"-এর একই বছর, দুই দরজায় ([[ReportDefinition::$defaultPeriod]])
+            defaultPeriod: ReportDefinition::PERIOD_FISCAL_YEAR,
             /*
              * ⭐ বিক্রয়, বিক্রীত পণ্যের ব্যয়, মোট মুনাফা — তারপর বাকি আয় আর খরচ (IAS 1) — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬
              * (হিসাব, ঠিক ৭)। ⚠️ আগে সব আয়-খরচ কোড ধরে এক তালিকায়: বিক্রয় থেকে মালের দাম বাদে কত থাকল — ব্যবসার প্রথম
@@ -648,9 +650,11 @@ final class CoreReports
         string|array $permission = ['accounts.report', 'accounts.report.final'],
         bool $grossProfit = false,
         bool $advancesApart = false,
+        string $defaultPeriod = ReportDefinition::PERIOD_MONTH,
     ): ReportDefinition {
         return new ReportDefinition(
             key: $key,
+            defaultPeriod: $defaultPeriod,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: $permission,
             title: $title,

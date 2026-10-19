@@ -24,5 +24,10 @@ return [
     'age_days_col' => 'Days held',
     'quantity' => 'Remaining',
     'age_empty' => 'No stock sitting in this age range.',
+    'group_product' => 'By product',
+    'group_warehouse' => 'By warehouse',
+    'group_category' => 'By category',
+    'group_brand' => 'By brand',
+    'group_lot' => 'By lot',
     'age_note' => 'Age is counted from each FIFO layer\'s receipt date; the figure is the money still tied up (remaining × unit cost).',
 ];

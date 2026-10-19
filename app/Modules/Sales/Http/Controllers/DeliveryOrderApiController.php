@@ -56,7 +56,13 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
                 ->whereIn('id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
                     ->where('approvable_type', (new DeliveryOrder)->getMorphClass())->select('approvable_id')))
             ->when(in_array($request->query('status'), [...DeliveryOrderStatus::FLOW, DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED], true),
-                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')));
+                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
+            /*
+             * ⭐ মেনুর ট্যাব-সারি ফোনের নিজের পর্দায় — অপেক্ষমাণ, আংশিক, ব্যাক, ইতিহাস (মালিক, ১৭ অক্টোবর ২০২৬: "direct webpage
+             * app e bujajayna")। ⓘ ওয়েবের ডেস্কের একই ছাঁকনি ([[DeliveryOrderDeskController::tab()]]); অচেনা ট্যাব মানে সব।
+             */
+            ->when(array_key_exists(PhoneInput::text($request, 'tab'), DeliveryOrderDeskController::TABS),
+                fn ($q) => DeliveryOrderDeskController::tab($q, PhoneInput::text($request, 'tab')));
 
         /*
          * ⭐ ছাঁকা তালিকার মোট আর গোনা — পুরো ফলের, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total")।

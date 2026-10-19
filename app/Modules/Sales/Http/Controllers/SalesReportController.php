@@ -8,7 +8,6 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
-use App\Models\FinancialYear;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -77,13 +76,7 @@ class SalesReportController extends Controller implements HasMiddleware
          * ⭐ মাসওয়ারি বিক্রয় খুললেই চলতি অর্থবছর — ইঞ্জিনের ডিফল্ট "এই মাস" এখানে একটাই সারি দিত
          * (মালিক, ১ অক্টোবর ২০২৬)। ⓘ বছরের সারি না থাকলে ইঞ্জিনের ডিফল্টই।
          */
-        if ($slug === 'monthly' && blank($asked['from'] ?? null)) {
-            $from = FinancialYear::forDate(now())?->starts_on?->toDateString();
-
-            if ($from !== null) {
-                $asked['from'] = $from;
-            }
-        }
+        // ⓘ মাসওয়ারির চলতি অর্থবছর এখন রিপোর্টের নিজের ঘোষণা ([[ReportDefinition::$defaultPeriod]]) — ফোনের দরজাও একই সময় পায়
 
         $result = $this->reports->run(
             $key,

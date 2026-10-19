@@ -49,6 +49,10 @@ final class BankLoanReports
             permission: self::KEY,
             title: 'finance::bank_loan_report.instalments_title',
             filters: ['date_range', 'branch', 'state'],
+            choices: ['state' => [
+                'paid' => 'finance::bank_loan_report.state_paid', 'overdue' => 'finance::bank_loan_report.state_overdue',
+                'today' => 'finance::bank_loan_report.state_today', 'upcoming' => 'finance::bank_loan_report.state_upcoming',
+            ]],
             asOfDate: true,
             query: function (array $f): Builder {
                 $rows = [];
