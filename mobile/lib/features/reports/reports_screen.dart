@@ -151,7 +151,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
 /// One report, drawn entirely from what the server said its columns are.
 class ReportViewScreen extends StatefulWidget {
   const ReportViewScreen(
-      {super.key, required this.report, this.open, this.today, this.exportPdf});
+      {super.key,
+      required this.report,
+      this.open,
+      this.today,
+      this.exportPdf,
+      this.loadChoices,
+      this.searchChoices});
 
   final ReportSummary report;
 
@@ -165,6 +171,12 @@ class ReportViewScreen extends StatefulWidget {
   /// The PDF of this report with these filters — injected in tests (the real one is `GET /reports/{key}/export?format=pdf`).
   final Future<Uint8List> Function(String key, Map<String, dynamic> filters)?
       exportPdf;
+
+  /// Injected in tests — the real one is `GET /reports/{key}/choices`.
+  final Future<List<ReportChoice>> Function(String key)? loadChoices;
+
+  /// Injected in tests — the real one is `GET /reports/{key}/choices/{filter}?q=`.
+  final Future<List<(String, String)>> Function(String key, String filter, String q)? searchChoices;
 
   @override
   State<ReportViewScreen> createState() => _ReportViewScreenState();
@@ -181,6 +193,11 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
   /// ⓘ Starts on the first of this month.
   DateTimeRange? _range;
 
+  /// ⭐ তারিখ ছাড়া বাকি ছাঁকনি — হিসাব, গ্রাহক, গুদাম, শাখা, মাস… সার্ভারের ঘোষণা থেকে ([ReportChoice]; fe, ১৯ অক্টোবর ২০২৬)।
+  /// ⛔ আগে ফোন কেবল তারিখ পাঠাত: খতিয়ান, গ্রাহকের খাতা, মজুদের খতিয়ান, লট-খোঁজা হিসাব বা জিনিস ছাড়াই খুলত।
+  List<ReportChoice> _choices = const [];
+  final Map<String, (String, String)> _picked = {};
+
   static final DateFormat _wire = DateFormat('yyyy-MM-dd');
   static final DateFormat _shown = DateFormat('dd/MM/yyyy');
 
@@ -192,14 +209,66 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
       final day = DateTime(now.year, now.month, now.day);
       _range = DateTimeRange(start: DateTime(day.year, day.month, 1), end: day);
     }
+    if (widget.report.filters.any((f) => f != 'date_range')) {
+      _loadChoices();
+    }
+    _load();
+  }
+
+  Future<void> _loadChoices() async {
+    try {
+      final choices = await (widget.loadChoices ?? ReportsApi.choices)(widget.report.key);
+      if (mounted) setState(() => _choices = choices.where((c) => c.drawable).toList());
+    } catch (_) {
+      // ⓘ ছাঁকনি না এলেও রিপোর্ট খোলে — কেবল ছাঁকনি ছাড়া, আগের মতো
+    }
+  }
+
+  /// মাসের ছাঁকনির বাছাই — এই মাস থেকে পেছনে ২৪টা (`2026-10`)
+  List<(String, String)> _months() {
+    final now = (widget.today ?? DateTime.now)();
+    return [
+      for (var i = 0; i < 24; i++)
+        (
+          DateFormat('yyyy-MM').format(DateTime(now.year, now.month - i)),
+          DateFormat('MMMM yyyy').format(DateTime(now.year, now.month - i)),
+        ),
+    ];
+  }
+
+  Future<void> _pick(ReportChoice choice) async {
+    final options = choice.kind == 'month' ? _months() : choice.options;
+    final picked = await showModalBottomSheet<(String, String)?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ChoiceSheet(
+        title: choice.label,
+        options: options,
+        search: choice.capped
+            ? (q) => (widget.searchChoices ?? ReportsApi.search)(widget.report.key, choice.key, q)
+            : null,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      // ⓘ ফাঁকা মান = "সব" — ছাঁকনি তুলে নেওয়া
+      if (picked.$1.isEmpty) {
+        _picked.remove(choice.key);
+      } else {
+        _picked[choice.key] = picked;
+      }
+      _pageNo = 1;
+    });
     _load();
   }
 
   Map<String, dynamic> get _filters {
     final range = _range;
-    return range == null
-        ? const {}
-        : {'from': _wire.format(range.start), 'to': _wire.format(range.end)};
+    return {
+      if (range != null) 'from': _wire.format(range.start),
+      if (range != null) 'to': _wire.format(range.end),
+      for (final e in _picked.entries) e.key: e.value.$1,
+    };
   }
 
   Future<void> _pickRange() async {
@@ -303,6 +372,26 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
                 ),
               ),
             ),
+          if (_choices.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final c in _choices)
+                      ActionChip(
+                        key: ValueKey('report-choice-${c.key}'),
+                        avatar: const Icon(Icons.filter_list, size: 16),
+                        label: Text('${c.label}: ${_picked[c.key]?.$2 ?? 'সব'}'),
+                        onPressed: _busy ? null : () => _pick(c),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           if (page != null)
             Container(
               width: double.infinity,
@@ -370,6 +459,85 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
                   : null,
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// ছাঁকনির বাছাই — "সব" আগে; লিখে খোঁজা (বড় তালিকায় সার্ভারে, নইলে হাতের তালিকায়)
+class _ChoiceSheet extends StatefulWidget {
+  const _ChoiceSheet({required this.title, required this.options, this.search});
+
+  final String title;
+  final List<(String, String)> options;
+  final Future<List<(String, String)>> Function(String q)? search;
+
+  @override
+  State<_ChoiceSheet> createState() => _ChoiceSheetState();
+}
+
+class _ChoiceSheetState extends State<_ChoiceSheet> {
+  String _query = '';
+  List<(String, String)>? _found;
+  bool _busy = false;
+
+  Future<void> _ask(String q) async {
+    setState(() => _query = q);
+    final search = widget.search;
+    if (search == null || q.trim().length < 2) {
+      setState(() => _found = null);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final found = await search(q.trim());
+      if (mounted && _query == q) setState(() => _found = found);
+    } catch (_) {
+      // ⓘ খোঁজা ব্যর্থ — হাতের তালিকাই থাকে
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final shown = _found ??
+        widget.options.where((o) => q.isEmpty || o.$2.toLowerCase().contains(q)).toList();
+
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: TextField(
+                key: const ValueKey('report-choice-search'),
+                decoration: InputDecoration(labelText: '${widget.title} খুঁজুন', prefixIcon: const Icon(Icons.search)),
+                onChanged: _ask,
+              ),
+            ),
+            if (_busy) const LinearProgressIndicator(),
+            Expanded(
+              child: ListView(
+                children: [
+                  ListTile(
+                    key: const ValueKey('report-choice-all'),
+                    title: const Text('সব'),
+                    onTap: () => Navigator.of(context).pop(('', 'সব')),
+                  ),
+                  for (final o in shown)
+                    ListTile(
+                      key: ValueKey('report-choice-option-${o.$1}'),
+                      title: Text(o.$2),
+                      onTap: () => Navigator.of(context).pop(o),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -14,6 +14,7 @@ import 'package:abos_mobile/core/records/notification_record.dart';
 import 'package:abos_mobile/features/notifications/notifications_screen.dart';
 import 'package:abos_mobile/features/orders/order_list_screen.dart';
 import 'package:abos_mobile/features/products/product_list_screen.dart';
+import 'package:abos_mobile/features/reports/report_by_key_screen.dart';
 import 'package:abos_mobile/features/reports/reports_screen.dart';
 import 'package:abos_mobile/features/stock/stock_list_screen.dart';
 
@@ -48,6 +49,8 @@ void main() {
     'approval_inbox_screen.dart',
     'attendance_screen.dart',
     'reports_screen.dart',
+    // ⭐ মেনুর রিপোর্ট-সারি, চাবি ধরে — চাবি না মিললে বা না এলে টেনে আবার (a6, ১৯ অক্টোবর ২০২৬)
+    'report_by_key_screen.dart',
     'dashboards_screen.dart',
     'my_route_screen.dart',
     'lead_screens.dart',
@@ -185,6 +188,10 @@ void main() {
 
   testWidgets('রিপোর্টের তালিকা', (t) async {
     await expectPullable(t, ReportsScreen(loadList: () async => const []));
+  });
+
+  testWidgets('মেনুর রিপোর্ট-সারি, চাবি তালিকায় নেই', (t) async {
+    await expectPullable(t, ReportByKeyScreen(reportKey: 'accounts.trial_balance', loadList: () async => const []));
   });
 
   testWidgets('একটা রিপোর্ট, যেখানে কোনো সারি নেই', (tester) async {
