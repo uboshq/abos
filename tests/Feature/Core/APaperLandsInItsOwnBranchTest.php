@@ -25,10 +25,16 @@ use App\Modules\Inventory\Models\StockTransfer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
+use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\SalesOrderService;
@@ -295,6 +301,58 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
         $transfer = StockTransfer::acrossBranches()->latest('id')->firstOrFail();
         $this->assertSame((int) $this->a->id, (int) $transfer->branch_id, '⛔ A-র গুদাম থেকে পাঠানোর কাগজ উপরের B-তে বসল');
         $this->assertSame((int) $this->a->id, $this->seriesBranchOf($transfer->document_no), '⛔ স্থানান্তরের নম্বর B-র সিরিজ থেকে');
+    }
+
+    public function test_the_papers_of_a_party_of_a_land_in_a_with_their_numbers(): void
+    {
+        $this->seriesInBothBranches('SO', 'QTN', 'DO', 'COL', 'SP', 'PO');
+        $bank = (int) Account::query()->firstOrCreate(['code' => '1102-PIN'], [
+            'company_id' => $this->company->id,
+            'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            'name_en' => 'Pin Bank', 'name_bn' => 'পিন ব্যাংক',
+            'type' => Account::ASSET, 'nature' => Account::DEBIT, 'is_group' => false, 'money_kind' => Account::BANK,
+        ])->id;
+
+        $this->headerOn($this->b);
+
+        $papers = [
+            // ⓘ বিক্রয় আদেশ — গ্রাহকের শাখায়
+            'বিক্রয় আদেশ' => [SalesOrder::class, route('sales.order.store'), [
+                'customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(),
+                'lines' => [['product_id' => $this->product->id, 'ordered_qty' => '1', 'rate' => '10']],
+            ]],
+            // ⓘ উদ্ধৃতি — গ্রাহকের শাখায়
+            'উদ্ধৃতি' => [SalesQuotation::class, route('sales.quotation.store'), [
+                'customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'valid_until' => now()->addDays(10)->toDateString(),
+                'lines' => [['product_id' => $this->product->id, 'qty' => '1', 'rate' => '10']],
+            ]],
+            // ⓘ ডেস্কের DO — আগে উপরের শাখা গ্রাহকের শাখার আগে জিতত
+            'ডেস্কের DO' => [DeliveryOrder::class, route('sales.delivery_order.store'), [
+                'customer_id' => $this->customer->id,
+                'lines' => [['product_id' => $this->product->id, 'qty' => '1']],
+            ]],
+            // ⓘ আদায় — শাখা আগেই গ্রাহকের (fe), এখন নম্বরও
+            'আদায়' => [Collection::class, route('sales.collection.store'), [
+                'customer_id' => $this->customer->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50',
+            ]],
+            // ⓘ সরবরাহকারীকে পরিশোধ — সরবরাহকারীর শাখায়
+            'সরবরাহকারীকে পরিশোধ' => [Payment::class, route('purchase.payment.store'), [
+                'supplier_id' => $this->supplier->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50',
+            ]],
+            // ⓘ ক্রয় আদেশ — মাল যে গুদামে নামবে তার শাখায়
+            'ক্রয় আদেশ' => [PurchaseOrder::class, route('purchase.order.store'), [
+                'supplier_id' => $this->supplier->id, 'warehouse_id' => $this->inA->id, 'trx_date' => now()->toDateString(),
+                'lines' => [['product_id' => $this->product->id, 'ordered_qty' => '2', 'rate' => '8']],
+            ]],
+        ];
+
+        foreach ($papers as $name => [$model, $url, $form]) {
+            $this->post($url, $form)->assertSessionHasNoErrors();
+
+            $paper = $model::acrossBranches()->latest('id')->firstOrFail();
+            $this->assertSame((int) $this->a->id, (int) $paper->branch_id, "⛔ {$name}: A-র পক্ষের কাগজ উপরের B-তে বসল");
+            $this->assertSame((int) $this->a->id, $this->seriesBranchOf((string) $paper->document_no), "⛔ {$name}: নম্বর B-র সিরিজ থেকে");
+        }
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
