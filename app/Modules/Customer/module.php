@@ -243,6 +243,8 @@ return [
      */
     'approvals' => [
         'credit_limit' => 'customer::approval.credit_limit',
+        // ⭐ বাকির দিন বাড়ানো — সীমার মতোই সই (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)
+        'credit_days' => 'customer::approval.credit_days',
     ],
 
     /*

@@ -63,8 +63,13 @@ final class AnOrderOpensAtTheCounterPartByPartTest extends TestCase
         app(StandardChart::class)->install();
         app(CashTillService::class)->ensurePrimaryTill();
 
-        /* ⓘ সীমা এখানে বিষয় নয় — সে যেন ভুল কারণে থামাতে না পারে */
-        app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+        /*
+         * ⭐ সীমা চালু — D1 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬; fe)। ⓘ আগে এখানে সীমা বন্ধ ছিল ("সে যেন ভুল কারণে থামাতে না
+         * পারে") — আর ঠিক সেই ভুল কারণটাই ছিল বাগ: কাউন্টারের চালান আর খোলা আদেশ একই টাকা দুবার গুনত। এখন প্রতিটা
+         * পরীক্ষা আদেশ বসানোর পরে গ্রাহককে ঠিক ততটা জায়গা দেয় যতটা আদেশ আটকে রেখেছে ([[roomForTheOrderOnly()]]);
+         * দুবার গুনলে প্রথম বিক্রিতেই "না"।
+         */
+        app(SettingsService::class)->set('customer.credit_limit_enabled', true);
 
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
@@ -85,6 +90,7 @@ final class AnOrderOpensAtTheCounterPartByPartTest extends TestCase
     {
         $order = $this->reservedOrder('10');
         $line = $order->lines->first();
+        $this->roomForTheOrderOnly();
 
         $list = $this->get(route('sales.direct.depot_check'))->assertOk();
         $this->assertContains($order->id, collect($list->viewData('salesOrders')->items())->pluck('id')->all(),
@@ -126,6 +132,20 @@ final class AnOrderOpensAtTheCounterPartByPartTest extends TestCase
             '⛔ সব চলে যাওয়ার পরেও আদেশ কাউন্টারে খোলে।');
         $this->assertNotContains($order->id, collect($this->get(route('sales.direct.depot_check'))->viewData('salesOrders')->items())->pluck('id')->all(),
             '⛔ পুরো চালানের আদেশ এখনো ডিপোর তালিকায়।');
+    }
+
+    /**
+     * ⭐ গ্রাহকের সীমা = খাতার বকেয়া + এখন আটকে থাকা (আদেশসহ) — এক পয়সাও বেশি নয়। ⓘ আদেশের মাল বেচলে আটকে থাকা টাকা
+     * বিলে সরে যায়, মোট একই থাকে; ⛔ একই টাকা দুবার গুনলে মোট বাড়ত, আর বিক্রি আটকাত।
+     */
+    private function roomForTheOrderOnly(): void
+    {
+        $credit = app(\App\Modules\Sales\Services\CreditExposure::class);
+        $customer = $this->customer->fresh();
+        $held = bcadd($credit->pending($customer), $credit->unclearedCheques($customer), 4);
+
+        $customer->forceFill(['credit_limit' => bcadd($customer->outstanding(), $held, 4)])->save();
+        $this->customer = $customer->fresh();
     }
 
     /**

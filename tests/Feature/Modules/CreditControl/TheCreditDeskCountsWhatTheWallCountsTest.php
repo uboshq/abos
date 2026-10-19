@@ -65,6 +65,23 @@ final class TheCreditDeskCountsWhatTheWallCountsTest extends TestCase
         app(CreditExposure::class)->assertRoom($c->fresh(), bcadd($p['available'], '1', 4));
     }
 
+    /**
+     * ⭐ গ্রাহকের পাতার "ব্যবহারযোগ্য বাকি" = বাকি-নিয়ন্ত্রণের পাতা = দেয়াল — পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬
+     * ([[Customer::availableLimit()]])। ⛔ আগে গ্রাহকের পাতা ক্লিয়ার না হওয়া চেক বাদ দিত না: এখানে ২,২০,০০০, ওখানে ২,০০,০০০।
+     */
+    public function test_the_customer_page_leaves_the_same_room_as_the_credit_page(): void
+    {
+        $c = $this->customer('CD-SAME', '500000');
+        $this->owes($c, '280000');
+        $this->unclearedCheque($c, '20000');
+        $this->owes($c, '20000');
+
+        $desk = app(CreditExposure::class)->positionOf($c->fresh())['available'];
+        $this->assertSame(0, bccomp((string) $c->fresh()->availableLimit(), $desk, 4),
+            '⛔ গ্রাহকের পাতা '.$c->fresh()->availableLimit().', বাকি-নিয়ন্ত্রণের পাতা '.$desk);
+        $this->assertSame(0, bccomp($desk, '200000', 4));
+    }
+
     public function test_each_state_is_the_walls_own_answer(): void
     {
         app(SettingsService::class)->set('customer.overdue_stop', true);
@@ -132,9 +149,14 @@ final class TheCreditDeskCountsWhatTheWallCountsTest extends TestCase
         app(SettingsService::class)->set('customer.overdue_stop', false);
         $c = $this->customer('CD-PROF', '10000');
         $this->bill($c, 'INV-CD-PROF', '2500', daysPastDue: 3);
+        $this->bill($c, 'INV-CD-PROF2', '1250.50', daysPastDue: 0);
         app(CustomerService::class)->update($c->fresh(), ['credit_limit' => '8000']);
 
-        $this->get(route('credit_control.customer.show', $c->id))->assertOk()
+        $page = $this->get(route('credit_control.customer.show', $c->id))->assertOk();
+        // ⭐ খোলা বিলের নিচে মোট বাকি — দুটো বিলের যোগ (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)
+        $this->assertMatchesRegularExpression('/data-open-bills-total[^>]*>.*?'.preg_quote(\App\Core\Support\Money::format('3750.50'), '/').'/s',
+            $page->getContent(), '⛔ খোলা বিলে মোট নেই, বা ভুল।');
+        $page
             ->assertSee('INV-CD-PROF')
             ->assertSee('data-credit-state="active"', false)
             ->assertSee(__('customer::credit_history.credit_limit'));

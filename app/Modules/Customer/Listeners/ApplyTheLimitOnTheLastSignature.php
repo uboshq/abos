@@ -39,6 +39,14 @@ final class ApplyTheLimitOnTheLastSignature
             return;
         }
 
+        /*
+         * ⛔ মালিকের সই ছাড়া সীমা বসে না — D5 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬)। ⓘ অনুরোধের পথ এটা আগে থেকেই দেখত
+         * ([[CreditLimitRequests::ownerSigned()]]); গ্রাহকের ফর্ম আর আমদানির পথে ছকের অন্য কোনো সইকারীর "হ্যাঁ"-তেই বাড়ত।
+         */
+        if (! \App\Modules\Customer\Services\CreditLimitRequests::ownerSigned($approval)) {
+            return;
+        }
+
         DB::transaction(function () use ($approval): void {
             $customer = Customer::query()->withoutGlobalScopes()
                 ->where('company_id', $approval->company_id)

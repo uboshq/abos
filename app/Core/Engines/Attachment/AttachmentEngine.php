@@ -60,6 +60,39 @@ final class AttachmentEngine
         'svg', 'svgz', 'html', 'htm', 'xhtml', 'xht', 'mhtml', 'xml', 'xsl', 'xslt',
     ];
 
+    /**
+     * ⭐ সাধারণ কাগজের দরজার অনুমতি-তালিকা — পূর্ণ নিরীক্ষা §৫ ও §৮ ⚠️৭ (১৮ অক্টোবর ২০২৬; OWASP ASVS 12.2.1)।
+     *
+     * ⛔ আগে কেবল নিষিদ্ধ-তালিকা ([[FORBIDDEN]]): তার বাইরের যা খুশি ঢুকত — `.zip`, `.rar`, `.iso`, `.env`, অচেনা বাইনারি —
+     * আর সইকারী বা হিসাবরক্ষক সেটা নামিয়ে খুলতেন। ⭐ এখন বাইট থেকে পড়া ধরন এই তালিকায় থাকতে হয়, আর নামের লেজ সেই ধরনের
+     * হতে হয়। ⓘ তালিকাটা দলিল-ভাণ্ডারের হুবহু (`DocumentFiles::ALLOWED`) — ব্যবসার কাগজের একটাই মান: PDF, ছবি, অফিসের ফাইল,
+     * লেখা/CSV। ⓘ নিষিদ্ধ-তালিকা আর কোডের-ধরন যাচাই আগের মতোই আগে চলে, বার্তাও আগের।
+     *
+     * @var array<string, list<string>> বাইটের ধরন => যে নাম-লেজ চলে
+     */
+    public const GENERAL = [
+        'application/pdf' => ['pdf'],
+        'image/jpeg' => ['jpg', 'jpeg'],
+        'image/png' => ['png'],
+        'image/webp' => ['webp'],
+        'image/gif' => ['gif'],
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => ['docx'],
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => ['xlsx'],
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => ['pptx'],
+        'application/vnd.oasis.opendocument.text' => ['odt'],
+        'application/vnd.oasis.opendocument.spreadsheet' => ['ods'],
+        // ⓘ অফিসের নতুন ফাইল ভিতরে zip — কোনো যন্ত্রে finfo তাই বলে; কেবল ঐ লেজগুলোর জন্য, `.zip` নিজে নয়
+        'application/zip' => ['docx', 'xlsx', 'pptx', 'odt', 'ods'],
+        'application/msword' => ['doc'],
+        'application/vnd.ms-excel' => ['xls'],
+        'application/vnd.ms-powerpoint' => ['ppt'],
+        'application/vnd.ms-office' => ['doc', 'xls', 'ppt'],
+        'application/cdfv2' => ['doc', 'xls', 'ppt'],
+        'application/x-ole-storage' => ['doc', 'xls', 'ppt'],
+        'text/plain' => ['txt', 'csv'],
+        'text/csv' => ['csv'],
+    ];
+
     private const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 
     /**
@@ -416,6 +449,15 @@ final class AttachmentEngine
 
         if ($guessed !== '' && in_array($guessed, self::FORBIDDEN, true)) {
             throw new AttachmentException('That file type cannot be attached.');
+        }
+
+        // ⭐ অনুমতি-তালিকা — বাইটের ধরন তালিকায়, আর নামের লেজ সেই ধরনের ([[GENERAL]])
+        if (! isset(self::GENERAL[$sniffed]) || ! in_array($extension, self::GENERAL[$sniffed], true)) {
+            throw new AttachmentException(sprintf(
+                'Files of type .%s cannot be attached. Allowed: %s.',
+                $extension === '' ? '?' : $extension,
+                implode(', ', array_values(array_unique(array_merge(...array_values(self::GENERAL))))),
+            ));
         }
     }
 

@@ -65,7 +65,8 @@ class AttachmentEngineTest extends TestCase
 
     public function test_the_stored_name_is_generated_so_a_crafted_filename_cannot_escape(): void
     {
-        $file = UploadedFile::fake()->create('../../.env', 1, 'text/plain');
+        // ⓘ নামটাই আক্রমণ — `../../`; লেজ `.txt`, কারণ `.env`-এর মতো অচেনা লেজ এখন অনুমতি-তালিকাতেই ফেরে ([[AttachmentEngine::GENERAL]])
+        $file = UploadedFile::fake()->create('../../notes.txt', 1, 'text/plain');
 
         $attachment = $this->engine->store($file, 'customer', 'Customer', 1);
 
@@ -142,6 +143,30 @@ class AttachmentEngineTest extends TestCase
             $this->assertStringContainsString('the limit is', $e->getMessage());
             $this->assertStringContainsString('MB', $e->getMessage());
         }
+    }
+
+    /**
+     * ⭐ সাধারণ দরজা অনুমতি-তালিকা দেখে, নিষিদ্ধ-তালিকা নয় — পূর্ণ নিরীক্ষা §৫ ও §৮ ⚠️৭, ১৮ অক্টোবর ২০২৬ ([[AttachmentEngine::GENERAL]])।
+     * ⛔ আগে `.zip`, `.rar`, `.iso`, অচেনা লেজ — নিষিদ্ধ নয় বলে সবই ঢুকত; আর নামের লেজ আর বাইটের ধরন না মিললেও।
+     */
+    public function test_only_listed_business_files_get_in_and_the_name_must_match_the_bytes(): void
+    {
+        foreach ([['bundle.zip', 'application/zip'], ['backup.rar', 'application/vnd.rar'], ['disk.iso', 'application/x-iso9660-image'],
+            ['secrets.env', 'text/plain'], ['photo.jpg', 'application/pdf'], ['sheet.xlsx', 'application/octet-stream']] as [$name, $mime]) {
+            try {
+                $this->engine->store(UploadedFile::fake()->create($name, 1, $mime), 'customer', 'Customer', 1);
+                $this->fail("⛔ {$name} ({$mime}) ঢুকে গেল — অনুমতি-তালিকায় নেই।");
+            } catch (AttachmentException $e) {
+                $this->assertStringContainsString('cannot be attached', $e->getMessage());
+            }
+        }
+        $this->assertSame(0, Attachment::query()->count(), '⛔ ফেরানো ফাইলের সারি বসল।');
+
+        foreach ([['bill.pdf', 'application/pdf'], ['photo.jpg', 'image/jpeg'], ['sheet.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            ['letter.docx', 'application/zip'], ['list.csv', 'text/plain'], ['old.xls', 'application/vnd.ms-excel']] as [$name, $mime]) {
+            $this->engine->store(UploadedFile::fake()->create($name, 1, $mime), 'customer', 'Customer', 1);
+        }
+        $this->assertSame(6, Attachment::query()->count(), 'ব্যবসার সাধারণ কাগজ ফিরল।');
     }
 
     public function test_attachments_are_listed_per_record(): void

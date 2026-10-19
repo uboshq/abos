@@ -150,13 +150,29 @@ final class ACustomerCanBeStoppedFromOwingMoreTest extends TestCase
         $this->assertStringContainsString('চেক ফেরত', (string) ($terms[$this->customer->id]['stop'] ?? ''), '⛔ কাউন্টারের ক্রেতার ঘর বাকি বন্ধ জানে না।');
     }
 
-    public function test_with_the_credit_switch_off_the_flag_stops_nothing(): void
+    /**
+     * ⛔ D7 (পূর্ণ নিরীক্ষা, ১৮ অক্টোবর ২০২৬; fe): সীমার সুইচ বন্ধ করলেও হাতে বসানো "বাকি বন্ধ" (চেক ফেরত) নতুন বাকি থামায় —
+     * ব্লকটা মালিকের নিয়ম, সীমার অংশ নয়। ⓘ আগে এই দাবিটাই উল্টো বলত ("সুইচ বন্ধে পতাকা কিছু থামায় না"), আর ঠিক সেটাই ছিল ফাঁক।
+     * ⓘ পুরো টাকা দিলে চলে — দেয়াল কেবল নতুন বাকি আটকায়।
+     */
+    public function test_with_the_credit_switch_off_the_flag_still_stops_new_credit(): void
     {
         $this->block();
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
 
-        $this->assertTrue(app(CreditExposure::class)->check($this->customer->fresh(), '1000')['fits']);
-        app(CreditExposure::class)->assertRoom($this->customer->fresh(), '1000');
+        $check = app(CreditExposure::class)->check($this->customer->fresh(), '1000');
+        $this->assertFalse($check['fits'], '⛔ সুইচ বন্ধ করতেই চেক-ফেরতের ব্লক উঠে গেল (DO-র যাচাই)');
+        $this->assertStringContainsString('চেক ফেরত', (string) $check['reason']);
+
+        try {
+            app(CreditExposure::class)->assertRoom($this->customer->fresh(), '1000');
+            $this->fail('⛔ সুইচ বন্ধ করতেই চেক-ফেরতের ব্লক উঠে গেল (বিক্রির দেয়াল)');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('customer_id', $e->errors());
+        }
+
+        // ⓘ পুরো টাকা দিলে চলে
+        app(CreditExposure::class)->assertRoom($this->customer->fresh(), '1000', '1000');
     }
 
     private function block(): void

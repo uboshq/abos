@@ -239,7 +239,16 @@ final class CreditLimitRequests
     /** সইয়ের সারিতে কোনো "হ্যাঁ" কি এই কোম্পানির মালিকের */
     private function anOwnerSigned(Approval $approval): bool
     {
-        $owners = $this->owners->activeOwnersIn((int) $approval->company_id)->pluck('id')->all();
+        return self::ownerSigned($approval);
+    }
+
+    /**
+     * ⭐ সীমা বাড়ানোর সইয়ে মালিক আছেন কি না — অনুরোধ, গ্রাহকের ফর্ম আর আমদানি, তিন পথের একই প্রশ্ন (D5, পূর্ণ নিরীক্ষা,
+     * ১৮ অক্টোবর ২০২৬; মালিকের নিয়ম: বাকির সীমা বাড়ে কেবল মালিকের সইয়ে)। ⓘ মালিক নিজে, বা তাঁর হয়ে দায়িত্বপ্রাপ্ত।
+     */
+    public static function ownerSigned(Approval $approval): bool
+    {
+        $owners = app(Ownership::class)->activeOwnersIn((int) $approval->company_id)->pluck('id')->all();
 
         return ApprovalDecision::query()
             ->where('approval_id', $approval->id)

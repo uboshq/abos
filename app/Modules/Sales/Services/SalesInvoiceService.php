@@ -40,6 +40,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Support\CreditPaper;
+use App\Modules\Sales\Support\DueWithinTerms;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -488,17 +489,20 @@ final class SalesInvoiceService
      *
      * @param  array<string, mixed>  $data
      */
-    private function dueOn(array $data, Carbon $trxDate, int $customerId): ?string
+    private function dueOn(array $data, Carbon $trxDate, int $customerId, ?string $kept = null): ?string
     {
-        if (filled($data['due_on'] ?? null)) {
-            return (string) $data['due_on'];
-        }
-
         // ⓘ কেবল দিনের সংখ্যা — দেয়াল (ডিলার, শাখা) এখানে প্রশ্ন নয়, গ্রাহক আগেই কাগজে বসেছেন; কোম্পানি তবু নিজের
         $days = (int) (Customer::query()->withoutGlobalScopes()
             ->where('company_id', CompanyContext::id())
             ->whereKey($customerId)
             ->value('credit_days') ?? 0);
+
+        if (filled($data['due_on'] ?? null)) {
+            // ⛔ লেখা তারিখও গ্রাহকের বাকির দিনের ভিতরে (পূর্ণ নিরীক্ষা §৫, [[DueWithinTerms]])
+            DueWithinTerms::check((string) $data['due_on'], $trxDate, $days, $kept);
+
+            return (string) $data['due_on'];
+        }
 
         return $days > 0 ? $trxDate->copy()->addDays($days)->toDateString() : null;
     }
@@ -529,7 +533,7 @@ final class SalesInvoiceService
             $invoice->update([
                 'trx_date' => $trxDate->toDateString(),
                 // ⛔ বিলের নিজের গ্রাহক — সম্পাদনায় গ্রাহক বদলায় না, তাই অন্য গ্রাহকের বাকির দিন নয় (Sales লাইন-ধরা নিরীক্ষা, ১৩ অক্টোবর ২০২৬)
-                'due_on' => $this->dueOn($data, $trxDate, (int) $invoice->customer_id),
+                'due_on' => $this->dueOn($data, $trxDate, (int) $invoice->customer_id, $invoice->due_on?->toDateString()),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
 

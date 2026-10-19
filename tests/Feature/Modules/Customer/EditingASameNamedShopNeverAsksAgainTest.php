@@ -58,6 +58,8 @@ class EditingASameNamedShopNeverAsksAgainTest extends TestCase
     {
         $this->shop('M/S. Maa Enterprise', '01916085552');
         $second = $this->shop('M/S. Maa Enterprise', '01946072224', allow: true);
+        // ⓘ দিন কমানো — বাড়ানোয় এখন মালিকের সই লাগে (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬); এই দাবির বিষয় নামের নকল-পাহারা
+        $second->forceFill(['credit_days' => 30])->save();
 
         $saved = app(CustomerService::class)->update($second, ['credit_days' => 15, 'name_en' => 'M/S. Maa Enterprise']);
 

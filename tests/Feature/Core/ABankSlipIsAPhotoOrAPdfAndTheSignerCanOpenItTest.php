@@ -158,7 +158,8 @@ final class ABankSlipIsAPhotoOrAPdfAndTheSignerCanOpenItTest extends TestCase
             ->post(route('attachment.store'), [
                 'source_type' => $form['source_type'],
                 'source_id' => $form['source_id'],
-                'file' => $this->text('ledger.xlsx'),
+                // ⓘ সত্যিকারের এক্সেলের ধরন — সাধারণ দরজা এখন নামের লেজ আর বাইটের ধরন মেলায় ([[AttachmentEngine::GENERAL]])
+                'file' => UploadedFile::fake()->create('ledger.xlsx', 4, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
             ])
             ->assertSessionHasNoErrors()
             ->assertRedirect();

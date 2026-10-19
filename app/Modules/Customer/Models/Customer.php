@@ -507,6 +507,13 @@ class Customer extends Model implements AuthenticatableContract, Drillable
          */
         $left = bcsub(bcsub($limit, $this->outstanding(), 4), $this->heldCredit(), 4);
 
+        /*
+         * ⭐ ক্লিয়ার না হওয়া চেকও — বাকি-নিয়ন্ত্রণের পাতা আর দেয়ালের একই হিসাব ([[CreditExposure::positionsFor()]];
+         * পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)। ⛔ আগে এই পাতা চেকের টাকা বাদ দিত না, তাই একই গ্রাহকে এখানে বেশি "ব্যবহারযোগ্য"
+         * দেখাত আর কাউন্টারের দেয়াল কম দিত।
+         */
+        $left = bcsub($left, app(CreditHolds::class)->unclearedChequesOf((int) $this->id), 4);
+
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
     }
 

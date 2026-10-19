@@ -297,6 +297,34 @@ final class AnOrderIsSubmittedCheckedAndSignedTest extends TestCase
         return $urls;
     }
 
+    /**
+     * ⭐ সইয়ের অপেক্ষার আদেশ সীমার জায়গা ধরে রাখে — পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬ ([[CreditExposure::openOrders()]])।
+     * ⛔ আগে যাচাই পেরিয়ে সইয়ের অপেক্ষার আদেশ গোনা হত না: সীমা ১৫ ভাগ, আদেশ ক ১০ ভাগ অপেক্ষায়, আদেশ খ ১০ ভাগ — খ-ও পেরোত,
+     * আর দুটো সই হলে ২০ ভাগ, সীমার বাইরে। ⓘ আদেশ নিজের যাচাইয়ে নিজেকে গোনে না।
+     */
+    public function test_an_order_waiting_for_its_signature_keeps_its_room(): void
+    {
+        $this->replaceDo(true);
+        $this->signerFlow();
+        $orders = app(SalesOrderService::class);
+        $draft = $this->draft('10')->fresh(['lines']);
+        $whole = (string) $draft->total;
+        $half = bcdiv($whole, '2', 4);
+        // ⓘ সীমা দেড় আদেশ — একটা আঁটে, দুটো নয়
+        $this->limit(bcadd($whole, $half, 4));
+
+        $first = $orders->submit($draft);
+        $this->assertNotSame(S::CREDIT_HELD, $first->status, '⛔ আদেশ নিজের যাচাইয়ে নিজেকে দুবার গুনল।');
+        $this->assertNotNull($this->approvalOf($first), 'দাবির ভিত্তি নেই — প্রথম আদেশ সইয়ের অপেক্ষায় যায়নি।');
+
+        $this->assertSame(0, bccomp((string) $this->buyer->fresh()->availableLimit(), $half, 4),
+            '⛔ গ্রাহকের পাতায় সইয়ের অপেক্ষার আদেশ বাদ যায়নি।');
+
+        $second = $orders->submit($this->draft('10')->fresh(['lines']));
+        $this->assertSame(S::CREDIT_HELD, $second->status, '⛔ সইয়ের অপেক্ষার আদেশের জায়গা অন্য আদেশ নিয়ে নিল।');
+        $this->assertSame(0, bccomp($half, (string) $second->credit_short, 4), 'কত কম, ভুল।');
+    }
+
     private function replaceDo(bool $on): void
     {
         app(SettingsService::class)->set(SalesOrderService::REPLACES_DO, $on);
