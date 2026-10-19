@@ -19,6 +19,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherParties;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -134,6 +135,13 @@ final class AccountsDashboard implements ProvidesDashboard
                 'amount' => $row['amount'],
             ])
             ->values();
+
+        /*
+         * ⭐ খসড়ার নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); আটটা সারির নাম একবারে ([[VoucherParties]])।
+         * ⓘ ফোনের ড্যাশবোর্ড একই `render` পড়ে লেখা বানায় ([[DashboardApiController::text()]]), তাই সেখানেও "নম্বর · নাম · পয়েন্ট"।
+         */
+        $drafts = Voucher::query()->draft()->latest('id')->limit(8)->get();
+        $draftParties = app(VoucherParties::class)->of($drafts);
 
         return new DashboardDefinition(
             title: __('accounts::dashboard.title'),
@@ -346,14 +354,17 @@ final class AccountsDashboard implements ProvidesDashboard
                 new Listing(
                     label: __('accounts::dashboard.needs_finishing'),
                     columns: [
-                        ['key' => 'no', 'label' => __('accounts::dashboard.document'), 'width' => '11rem',
-                            'render' => fn ($v) => $v->document_no],
+                        ['key' => 'no', 'label' => __('accounts::dashboard.document'), 'width' => '18rem',
+                            'render' => fn ($v) => view('accounts::partials.number-party', [
+                                'no' => $v->document_no,
+                                'party' => $draftParties[$v->id] ?? null,
+                            ])],
                         ['key' => 'type', 'label' => __('accounts::dashboard.type'), 'width' => '8rem',
                             'render' => fn ($v) => $v->type],
                         ['key' => 'amount', 'label' => __('accounts::dashboard.amount'), 'width' => '10rem',
                             'render' => fn ($v) => Money::format($v->amount)],
                     ],
-                    rows: Voucher::query()->draft()->latest('id')->limit(8)->get(),
+                    rows: $drafts,
                     empty: __('accounts::dashboard.nothing_draft'),
                     /*
                      * ── এখানে "সব দেখুন" লিংক নেই, আর সেটা ইচ্ছাকৃত ──

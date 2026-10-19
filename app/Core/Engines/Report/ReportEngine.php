@@ -7,6 +7,7 @@ namespace App\Core\Engines\Report;
 use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
 use App\Core\Services\ListExport;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Core\Support\RunningBalance;
@@ -163,6 +164,8 @@ final class ReportEngine
             // ⓘ খোঁজের মোড়কের ক্রমিক ঘরটা সারিতে থাকে না ([[applySearch()]])
             ->map(fn ($row) => array_diff_key((array) $row, [self::SEARCH_ORDER => true]));
 
+        $rows = $this->withParties($report, $rows);
+
         if ($report->runningBalance) {
             $rows = $this->addRunningBalance($report, $rows, $filters, $page, $perPage);
         }
@@ -262,8 +265,8 @@ final class ReportEngine
         $totals = $this->totalsFor($report, clone $query);
         $count = $this->countFor($report, clone $query);
 
-        $rows = $query->forPage(1, $perPage)->get()
-            ->map(fn ($row) => array_diff_key((array) $row, [self::SEARCH_ORDER => true]));
+        $rows = $this->withParties($report, $query->forPage(1, $perPage)->get()
+            ->map(fn ($row) => array_diff_key((array) $row, [self::SEARCH_ORDER => true])));
 
         if ($report->rankBy !== null) {
             $rows = $this->addContribution($report, $rows, $totals);
@@ -460,8 +463,8 @@ final class ReportEngine
                 do {
                     $rows = $this->queryFor($report, $part['filters'])->forPage($page, $chunk)->get();
 
-                    foreach ($rows as $row) {
-                        yield (array) $row;
+                    foreach ($this->withParties($report, $rows->map(fn ($row) => (array) $row)) as $row) {
+                        yield $row;
                     }
 
                     $page++;
@@ -480,12 +483,53 @@ final class ReportEngine
         do {
             $rows = $this->queryFor($report, $filters)->forPage($page, $chunk)->get();
 
-            foreach ($rows as $row) {
-                yield (array) $row;
+            foreach ($this->withParties($report, $rows->map(fn ($row) => (array) $row)) as $row) {
+                yield $row;
             }
 
             $page++;
         } while ($rows->count() === $chunk);
+    }
+
+    /**
+     * ⭐ পক্ষের ঘর ভরা — পাতার সারিগুলোর নাম একবারে ([[ReportColumn::$partyKey]]; মালিক, ১৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সারির "ধরন:id" ঘর থেকে [[PartyRegistry::labelsOf()]] — পক্ষের ধরন প্রতি একটা প্রশ্ন, সারি প্রতি কখনো নয়; ফাইলের
+     * স্রোতে প্রতিটা খণ্ডে একবার। ⚠️ নাম না মিললে (পক্ষ নেই, মডিউল বন্ধ) ঘরটা খালি — ভুল নামের চেয়ে খালি ভালো।
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function withParties(ReportDefinition $report, Collection $rows): Collection
+    {
+        $columns = array_values(array_filter($report->columns, fn (ReportColumn $c) => $c->isParty()));
+
+        if ($columns === [] || $rows->isEmpty()) {
+            return $rows;
+        }
+
+        $pairs = [];
+
+        foreach ($rows as $row) {
+            foreach ($columns as $column) {
+                $key = (string) ($row[$column->partyKey] ?? '');
+                $cut = strrpos($key, ':');
+
+                if ($cut !== false && $cut > 0) {
+                    $pairs[$key] = [substr($key, 0, $cut), (int) substr($key, $cut + 1)];
+                }
+            }
+        }
+
+        $labels = $pairs === [] ? [] : app(PartyRegistry::class)->labelsOf(array_values($pairs));
+
+        return $rows->map(function (array $row) use ($columns, $labels): array {
+            foreach ($columns as $column) {
+                $row[$column->key] = $labels[(string) ($row[$column->partyKey] ?? '')] ?? '';
+            }
+
+            return $row;
+        });
     }
 
     /**

@@ -76,7 +76,22 @@ final class ReportColumn
          * @var array{0: string, 1: string}|null
          */
         public readonly ?array $ratio = null,
+
+        /*
+         * ⭐ পক্ষের ঘর — নম্বরের পাশে "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬: *"নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে
+         * সহজে বোঝা যায়"*)। ⓘ লেখার ([[self::TEXT]]) কলাম, তবে মানটা SQL থেকে নয়: সারির এই চাবির ঘরে থাকে "ধরন:id"
+         * (যেমন `customer:12`), আর ইঞ্জিন পাতা তোলার পরে গোটা পাতার নাম একবারে বসায় ([[ReportEngine::withParties()]],
+         * [[PartyRegistry::labelsOf()]])। ⛔ রিপোর্ট নিজে গ্রাহক/সরবরাহকারীর টেবিলে জোড় লাগায় না — হিসাব মডিউল কারও উপর
+         * দাঁড়ায় না। ⚠️ খোঁজার কলাম নয় — SQL-এ এই নামের কোনো ঘর নেই ([[ReportDefinition::searchableColumns()]])।
+         */
+        public readonly ?string $partyKey = null,
     ) {}
+
+    /** এই কলামের মান ইঞ্জিন পাতা তোলার পরে বসায় — পক্ষের নাম ([[self::$partyKey]]) */
+    public function isParty(): bool
+    {
+        return $this->partyKey !== null;
+    }
 
     /** @param array<string, mixed> $definition */
     public static function fromArray(array $definition, int $index): self
@@ -112,7 +127,30 @@ final class ReportColumn
             permission: $definition['permission'] ?? null,
             words: isset($definition['words']) ? [(string) $definition['words'][0], (string) $definition['words'][1]] : null,
             ratio: isset($definition['ratio']) ? [(string) $definition['ratio'][0], (string) $definition['ratio'][1]] : null,
+            partyKey: self::partyKeyOf($definition, $type),
         );
+    }
+
+    /**
+     * ⛔ পক্ষের ঘর কেবল লেখার কলামে, আর নিজের চাবি থেকে আলাদা ঘরে — নাহলে নাম বসাতে গিয়ে "ধরন:id"-টাই মুছে যেত।
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    private static function partyKeyOf(array $definition, string $type): ?string
+    {
+        if (! isset($definition['party'])) {
+            return null;
+        }
+
+        $from = (string) $definition['party'];
+
+        if ($type !== self::TEXT || $from === '' || $from === $definition['key']) {
+            throw new InvalidArgumentException(
+                "Report column '{$definition['key']}' names its party from '{$from}': a party column must be text and read another field."
+            );
+        }
+
+        return $from;
     }
 
     /**

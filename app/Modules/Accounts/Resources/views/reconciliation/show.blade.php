@@ -36,7 +36,11 @@
         [
             'key' => 'document',
             'label' => __('accounts::recon.document'),
-            'render' => fn ($l) => $l->voucher?->document_no,
+            // ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম আনে কন্ট্রোলার, পাতার একবারে
+            'render' => fn ($l) => view('accounts::partials.number-party', [
+                'no' => $l->voucher?->document_no,
+                'party' => $l->voucher ? (($partyNames ?? [])[$l->voucher->id] ?? null) : null,
+            ]),
         ],
         [
             'key' => 'narration',

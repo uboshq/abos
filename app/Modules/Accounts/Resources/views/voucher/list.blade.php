@@ -20,9 +20,11 @@
     $columns = $isDocumentTab ? [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
          'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date)],
-        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
          'render' => fn ($d) => view('accounts::voucher.partials.document-link', [
              'source' => $d->source_type, 'id' => $d->source_id,
+             // ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম আনে কন্ট্রোলার, পাতার একবারে
+             'party' => ($partyNames ?? [])[$d->source_type.':'.$d->source_id] ?? null,
          ])],
         ['key' => 'narration', 'label' => __('core.table.narration')],
         ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
@@ -30,8 +32,12 @@
     ] : [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
          'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
-        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
-         'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '20rem',
+         'render' => fn ($v) => view('accounts::voucher.partials.number', [
+             'voucher' => $v,
+             // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট", নইলে প্রাপকের নাম (মালিক, ১৯ অক্টোবর ২০২৬; [[VoucherParties]])
+             'party' => ($partyNames ?? [])[$v->id] ?? null,
+         ])],
     ];
 
     if (! $isDocumentTab && $tab === \App\Modules\Accounts\Http\Controllers\VoucherListController::OTHERS) {

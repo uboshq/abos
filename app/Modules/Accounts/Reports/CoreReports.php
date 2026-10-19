@@ -117,6 +117,7 @@ final class CoreReports
                     'ledger_entries.debit',
                     'ledger_entries.source_type',
                     'ledger_entries.source_id',
+                    self::partyKey(),
                 ]),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
@@ -128,6 +129,8 @@ final class CoreReports
                     'source_id' => 'source_id',
                     'width' => '12rem',
                 ],
+                // ⭐ কার কাছ থেকে — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); টাকার সারিতে পক্ষ নেই, তাই একই কাগজের পক্ষ ([[partyKey()]])
+                ['key' => 'party', 'label' => 'accounts::field.received_from', 'party' => 'party_key', 'width' => '14rem'],
                 ['key' => 'account_name', 'label' => 'accounts::field.received_into'],
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'accounts::field.received', 'type' => ReportColumn::MONEY],
@@ -136,17 +139,12 @@ final class CoreReports
     }
 
     /*
-     * পক্ষের নাম এখানে নেই, ইচ্ছাকৃতভাবে।
+     * ⭐ পক্ষের নাম এখন আছে — মালিক, ১৯ অক্টোবর ২০২৬: *"নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে সহজে বোঝা যায়।"*
      *
-     * খতিয়ান কেবল party_type ও party_id রাখে, নাম নয়। নাম আনতে হলে
-     * গ্রাহক ও সরবরাহকারীর টেবিলে জোড় লাগাতে হত — অর্থাৎ Accounts-কে
-     * ওই দুইটা মডিউলের টেবিলের নাম জানতে হত, অথচ Accounts কারও উপর
-     * নির্ভর করে না (module.php-তে depends_on ফাঁকা)। সবাই যার উপর
-     * দাঁড়ায় সে কারও উপর দাঁড়ালে সীমানাটাই থাকে না।
-     *
-     * নম্বরটা ক্লিকযোগ্য, আর ওই কাগজে পক্ষের নাম আছে — এক ক্লিকেই
-     * উত্তর। আর "কে কত দিল" প্রশ্নের সরাসরি উত্তর দেয় গ্রাহক মডিউলের
-     * আদায় রিপোর্ট, যেখানে ওই জোড়টা স্বাভাবিক।
+     * ⓘ আগের আপত্তিটা সত্যি ছিল এবং এখনো সত্যি: খতিয়ান কেবল party_type ও party_id রাখে, আর নাম আনতে গ্রাহক-সরবরাহকারীর
+     * টেবিলে জোড় লাগালে Accounts-কে ঐ মডিউলগুলোর টেবিল জানতে হত (depends_on ফাঁকা)। ⭐ তাই জোড় এখনো নেই: SQL কেবল
+     * "ধরন:id" বের করে — খাতার সারি থেকে, সবার সাধারণ টেবিল ([[partyKey()]]) — আর নামটা বসায় কোরের [[PartyRegistry]],
+     * মডিউলগুলোর নিজের ঘোষণা (`parties`) থেকে, পাতা তোলার পরে একবারে ([[ReportEngine::withParties()]])। সীমানা অক্ষত।
      */
 
     /** দৈনিক খতিয়ান — একটা তারিখ পরিসরের সব লেনদেন, ক্রমানুসারে। */
@@ -177,6 +175,7 @@ final class CoreReports
                     self::accountName(), 'ledger_entries.narration',
                     'ledger_entries.debit', 'ledger_entries.credit',
                     'ledger_entries.source_type', 'ledger_entries.source_id',
+                    self::partyKey(),
                 ]),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
@@ -188,6 +187,8 @@ final class CoreReports
                     'source_type' => 'source_type',
                     'source_id' => 'source_id',
                 ],
+                // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); নাম বসায় ইঞ্জিন, পাতার একবারে ([[partyKey()]])
+                ['key' => 'party', 'label' => 'accounts::field.party', 'party' => 'party_key', 'width' => '14rem'],
                 ['key' => 'account_name', 'label' => 'core.print.account'],
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
@@ -222,6 +223,7 @@ final class CoreReports
                 ->select([
                     'trx_date', 'document_no', 'narration',
                     'debit', 'credit', 'source_type', 'source_id',
+                    self::partyKey(),
                 ]),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
@@ -232,6 +234,8 @@ final class CoreReports
                     'source_type' => 'source_type',
                     'source_id' => 'source_id',
                 ],
+                // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); নাম বসায় ইঞ্জিন, পাতার একবারে ([[partyKey()]])
+                ['key' => 'party', 'label' => 'accounts::field.party', 'party' => 'party_key', 'width' => '14rem'],
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
                 ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
@@ -315,6 +319,7 @@ final class CoreReports
                     'ledger_entries.credit',
                     'ledger_entries.source_type',
                     'ledger_entries.source_id',
+                    self::partyKey(),
                 ]),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
@@ -325,6 +330,8 @@ final class CoreReports
                     'source_type' => 'source_type',
                     'source_id' => 'source_id',
                 ],
+                // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); নাম বসায় ইঞ্জিন, পাতার একবারে ([[partyKey()]])
+                ['key' => 'party', 'label' => 'accounts::field.party', 'party' => 'party_key', 'width' => '14rem'],
                 ['key' => 'account_name', 'label' => 'core.print.account', 'type' => ReportColumn::TEXT],
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
@@ -466,6 +473,7 @@ final class CoreReports
                     self::accountName(), 'ledger_entries.narration',
                     'ledger_entries.debit', 'ledger_entries.credit',
                     'ledger_entries.source_type', 'ledger_entries.source_id',
+                    self::partyKey(),
                 ]),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
@@ -476,6 +484,8 @@ final class CoreReports
                     'source_type' => 'source_type',
                     'source_id' => 'source_id',
                 ],
+                // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); নাম বসায় ইঞ্জিন, পাতার একবারে ([[partyKey()]])
+                ['key' => 'party', 'label' => 'accounts::field.party', 'party' => 'party_key', 'width' => '14rem'],
                 ['key' => 'account_name', 'label' => 'core.print.account'],
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'accounts::field.received', 'type' => ReportColumn::MONEY],
@@ -1021,6 +1031,27 @@ final class CoreReports
      * বাংলা নাম খালি হলে ইংরেজিটা — সেকশন ১৮.৩-এর একই নিয়ম, শুধু
      * অন্য জায়গায় লেখা।
      */
+    /**
+     * ⭐ সারির পক্ষ "ধরন:id" — নিজের পক্ষ, না থাকলে একই কাগজের পক্ষ-ওয়ালা সারির (মালিক, ১৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ক্যাশ/ব্যাংকের সারিতে পক্ষ বসে না — গ্রাহকের রসিদে পক্ষ থাকে পাওনার সারিতে, একই `source_type`/`source_id`-এ। তাই
+     * সাব-কোয়েরি একই কাগজের অন্য সারি দেখে (`ledger_source` সূচিতে), কোম্পানির দেয়ালসহ। ⓘ উল্টো দাখিলার (`…:reversal`)
+     * সারিতেও পক্ষ নকল হয়, তাই তারাও নিজের কাগজে নাম পায়। এক কাগজে দুই পক্ষ বিরল — তখন একটাই, স্থির নিয়মে (MIN)।
+     *
+     * ⛔ এখানে কেবল চাবি, নাম নয় — নাম বসায় ইঞ্জিন ([[ReportColumn::$partyKey]]); গ্রাহক/সরবরাহকারীর টেবিলে জোড় নেই।
+     * ⓘ দল বাঁধা নেই এমন কোয়েরির ঘর, আর সাব-কোয়েরির MIN নিজের মধ্যেই সম্পূর্ণ — ONLY_FULL_GROUP_BY অক্ষত।
+     */
+    private static function partyKey(string $table = 'ledger_entries'): Expression
+    {
+        return DB::raw(
+            "COALESCE(CONCAT({$table}.party_type, ':', {$table}.party_id), ("
+            ."SELECT MIN(CONCAT(pk.party_type, ':', pk.party_id)) FROM ledger_entries AS pk"
+            ." WHERE pk.source_type = {$table}.source_type AND pk.source_id = {$table}.source_id"
+            ." AND pk.company_id = {$table}.company_id AND pk.party_type IS NOT NULL AND pk.party_id IS NOT NULL"
+            .')) as party_key'
+        );
+    }
+
     private static function accountName(): Expression
     {
         $name = app()->getLocale() === 'bn'
