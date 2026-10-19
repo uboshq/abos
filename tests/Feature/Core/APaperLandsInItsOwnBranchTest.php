@@ -19,8 +19,12 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
@@ -129,6 +133,57 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
         $receipt = PurchaseReceipt::acrossBranches()->latest('id')->firstOrFail();
         $this->assertSame((int) $this->a->id, (int) $receipt->branch_id);
         $this->assertSame((int) $this->a->id, $this->seriesBranchOf($receipt->document_no), '⛔ A-র গুদামের GRN-এর নম্বর B-র সিরিজ থেকে');
+    }
+
+    public function test_a_bill_and_a_return_from_a_warehouse_in_a_land_in_a_with_their_numbers_and_books(): void
+    {
+        $this->seriesInBothBranches('DRF', 'SR');
+
+        // ⓘ A-র গুদাম থেকে পাকা চালান — উপরে তখনো A
+        $challans = app(DeliveryChallanService::class);
+        $challan = $challans->confirm($challans->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->inA->id, 'trx_date' => now()->toDateString(), 'own_transport' => true],
+            [['product_id' => $this->product->id, 'delivered_qty' => '2', 'rate' => '10']],
+        ));
+
+        $this->headerOn($this->b);
+
+        // ── বিল ──────────────────────────────────────────────────────────
+        $line = $challan->lines()->firstOrFail();
+        $this->post(route('sales.invoice.store'), [
+            'delivery_challan_id' => $challan->id,
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'trx_date' => now()->toDateString(),
+            'lines' => [['product_id' => $line->product_id, 'delivery_challan_line_id' => $line->id, 'qty' => '2', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $invoice = SalesInvoice::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $invoice->branch_id, '⛔ A-র মালের বিল উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($invoice->document_no), '⛔ বিলের খসড়া নম্বর B-র সিরিজ থেকে');
+
+        $this->post(route('sales.invoice.confirm', $invoice))->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', SalesInvoice::acrossBranches()->findOrFail($invoice->id)->status, 'দৃশ্যটাই বানানো যায়নি — বিল পাকা হয়নি');
+        $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesInvoice::drillSourceType(), (int) $invoice->id),
+            '⛔ বিলের পাওনা আর মজুদের সারি A-র বাইরে');
+
+        // ── ফেরত ─────────────────────────────────────────────────────────
+        $this->post(route('sales.return.store'), [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'sales_invoice_id' => $invoice->id,
+            'reason_code_id' => ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->firstOrFail()->id,
+            'trx_date' => now()->toDateString(),
+            'lines' => [['product_id' => $this->product->id, 'sales_invoice_line_id' => $invoice->lines()->value('id'), 'qty' => '1', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $return = SalesReturn::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $return->branch_id, '⛔ A-র গুদামে ফেরা মালের ফেরত উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($return->document_no), '⛔ ফেরতের নম্বর B-র সিরিজ থেকে');
+
+        $this->post(route('sales.return.confirm', $return))->assertSessionHasNoErrors();
+        $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesReturn::drillSourceType(), (int) $return->id),
+            '⛔ ফেরতের পাওনা আর মজুদের সারি A-র বাইরে');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
