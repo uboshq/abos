@@ -105,6 +105,21 @@ void main() {
     expect(find.text('কারণ: জানানো হয়নি'), findsOneWidget, reason: '⛔ প্রত্যাখ্যানে কারণের জায়গা ফাঁকা');
   });
 
+  // ⭐ অঙ্ক লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি ফর্মে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('an advice with an amount typed asks before going back, an empty one does not', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: DepositRequestScreen(customerId: 'c1', api: _FakeApi())));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ফর্মে প্রশ্ন নয়');
+
+    await tester.enterText(find.byType(TextField).first, '4820');
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ অঙ্ক লেখা, তবু "পিছনে" কিছু না বলে বিজ্ঞপ্তি ফেলে দিল');
+  });
+
   testWidgets('a bank deposit is not sent without the slip, and is sent with it', (tester) async {
     final api = _FakeApi();
     await tester.pumpWidget(MaterialApp(

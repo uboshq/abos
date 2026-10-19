@@ -8,6 +8,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// দোকানির জমার বিজ্ঞপ্তি, ব্যাংক স্লিপের ছবিসহ (0.4.3; নাম ৭ অক্টোবর ২০২৬)।
 ///
@@ -59,6 +60,10 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   @override
   void initState() {
     super.initState();
+    // ⓘ লেখার সঙ্গে পর্দা আবার আঁকে — "পিছনে"-র পাহারা লেখা দেখতে পায় ([[UnsavedGuard]])
+    for (final c in [_amount, _reference, _note]) {
+      c.addListener(_redraw);
+    }
     _load();
   }
 
@@ -85,7 +90,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
         _history = history;
         _bills = bills;
         for (final b in bills) {
-          _shares.putIfAbsent(b.id, TextEditingController.new);
+          _shares.putIfAbsent(b.id, () => TextEditingController()..addListener(_redraw));
         }
       });
     } catch (e) {
@@ -183,8 +188,20 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  void _redraw() {
+    if (mounted) setState(() {});
+  }
+
+  /// লেখা আছে যা এখনো পাঠানো হয়নি — অঙ্ক, নম্বর, কথা, বিলের ভাগ বা স্লিপের ছবি
+  bool get _unsent =>
+      _slip != null ||
+      [_amount, _reference, _note, ..._shares.values].any((c) => c.text.trim().isNotEmpty);
+
+  // ⭐ অঙ্ক বা স্লিপ বা বিলের ভাগ লেখা থাকলে "পিছনে" জিজ্ঞেস করে — লেখা বিজ্ঞপ্তি এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => UnsavedGuard(dirty: !_busy && _unsent, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final customer = CustomerRecord.byId(widget.customerId);
     return Scaffold(
       appBar: AppBar(title: const Text('জমার বিজ্ঞপ্তি')),
