@@ -259,6 +259,29 @@ void main() {
     });
   });
 
+  // ⭐ ঝুড়িতে মাল থাকলে "পিছনে" জিজ্ঞেস করে; খালি ঝুড়িতে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
+  testWidgets('a basket with goods asks before going back, an empty one does not', (tester) async {
+    await pumpScreen(tester, _Api(freeFor: (_, __) => 0));
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsNothing, reason: 'খালি ঝুড়িতে প্রশ্ন নয়');
+
+    await tester.tap(find.byKey(const ValueKey('order-qty-$_soap')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('keypad-pieces')));
+    await tester.tap(find.byKey(const ValueKey('keypad-2')));
+    await tester.tap(find.byKey(const ValueKey('keypad-add')));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('লেখা ফেলে চলে যাবেন?'), findsOneWidget, reason: '⛔ ঝুড়িতে মাল, তবু "পিছনে" কিছু না বলে অর্ডার ফেলে দিল');
+    await tester.tap(find.byKey(const ValueKey('unsaved-stay')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('order-qty-$_soap')), findsOneWidget, reason: '"থাকুন"-এর পরে অর্ডার নেই');
+  });
+
   testWidgets('the free box is filled by the server, and the line says ✓ ঝুড়িতে আছে', (tester) async {
     final api = _Api(freeFor: (id, qty) => id == _soap ? (qty ~/ 12).toDouble() : 0);
     await pumpScreen(tester, api);

@@ -15,6 +15,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import 'order_prefill.dart';
 import 'order_sheets.dart';
+import '../../core/widgets/unsaved_guard.dart';
 
 /// The combined order screen — 0.4.3, the owner's approved samples of
 /// 1 October 2026: every product on one list, a quantity on each line, the
@@ -359,8 +360,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   // ── drawing ──────────────────────────────────────────────────────────
 
+  // ⭐ ঝুড়িতে মাল থাকলে "পিছনে" জিজ্ঞেস করে — মাঠে লম্বা অর্ডার এক চাপে হারাত (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      UnsavedGuard(dirty: _qty.isNotEmpty && !_submitting, child: _screen(context));
+
+  Widget _screen(BuildContext context) {
     final noProducts = ReferenceCache.instance.countOf('Product') == 0;
     final customer = _customer;
 
