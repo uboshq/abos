@@ -196,6 +196,8 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       title: 'ABOS',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: AppTheme.mode,
       /*
        * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
        * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।

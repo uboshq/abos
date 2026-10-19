@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api_client/network_errors.dart';
 import '../theme/app_spacing.dart';
 import 'empty_state.dart';
+import 'state_views.dart';
 import '../../features/books/books_widgets.dart';
 
 /// ⭐ এক পাতা করে আনা তালিকা — টেনে নবায়ন, খালি অবস্থা, বাংলায় ভুল, আর "আরও দেখুন"; অর্থ, ডকুমেন্টস আর বেতনের স্লিপের
@@ -88,8 +89,10 @@ class _PagedListState<T> extends State<PagedList<T>> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             ...widget.header,
-            if (_busy) const LinearProgressIndicator(),
-            if (_error != null) BooksError(_error!),
+            // ⭐ তিন অবস্থা (নকশা ৩): প্রথম আনায় খসড়া সারি; আগে আনা থাকলে উপরে সরু দাগ; ভুলে "আবার চেষ্টা করুন"
+            if (_busy && !_loaded) const LoadingSkeleton(),
+            if (_busy && _loaded) const LinearProgressIndicator(),
+            if (_error != null) ErrorState(key: const ValueKey('books-error'), message: _error!, onRetry: _busy ? null : _load),
             if (_loaded && _rows.isEmpty && _error == null)
               EmptyState(icon: widget.emptyIcon, title: widget.emptyTitle, message: widget.emptyMessage),
             for (final row in _rows) widget.item(context, row),
@@ -163,8 +166,8 @@ class _PaperPageState<T> extends State<PaperPage<T>> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            if (_busy && paper == null) const LinearProgressIndicator(),
-            if (_error != null) BooksError(_error!),
+            if (_busy && paper == null) const LoadingSkeleton(),
+            if (_error != null) ErrorState(key: const ValueKey('books-error'), message: _error!, onRetry: _busy ? null : _load),
             if (paper != null) ...widget.body(context, paper),
           ],
         ),

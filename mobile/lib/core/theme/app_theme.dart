@@ -1,11 +1,91 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_palette.dart';
 
 /// The one [ThemeData] the app builds from tokens — screens ask for
 /// `Theme.of(context)` and its extensions, never a literal colour or size.
 class AppTheme {
   const AppTheme._();
+
+  /// ⭐ অন্ধকার মোড কখন চালু — ফোন অন্ধকারে থাকলে অ্যাপও অন্ধকার (মোবাইলের নকশা ৩, পাতা ১১; মালিকের "হ্যাঁ", ১৯ অক্টোবর ২০২৬)।
+  ///
+  /// <p>⛔ এখনো [ThemeMode.light]: বহু পর্দায় সাদা পট বা গাঢ় লেখা বাঁধা (`AppColors.surface`, `Colors.white` …)। অন্ধকারে
+  /// সেখানে থিমের হালকা লেখা সাদা পটে পড়ে মিলিয়ে যেত। `test/dark_mode_ready_test.dart` বাঁধা রঙের ফাইল গোনে — তালিকা
+  /// খালি হলে তবেই এটা [ThemeMode.system] হবে, আগে নয়।
+  static const ThemeMode mode = ThemeMode.light;
+
+  /// ⭐ predictive back — পেছনে টানলে আগের পাতা উঁকি দেয়, ছাড়লে ফেরে (Android 14+; মোবাইলের নকশা ৩)। ম্যানিফেস্টে
+  /// `enableOnBackInvokedCallback`। ⓘ না-রাখা ফর্মের পাহারা ([UnsavedGuard], PopScope) এতেও আগের মতো থামায়।
+  static const PageTransitionsTheme pageTransitions = PageTransitionsTheme(builders: {
+    TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+  });
+
+  /// অন্ধকারের থিম — একই বীজ রং, Material 3-এর অন্ধকার রং-পরিবার; পট, কার্ড আর লেখা সব `colorScheme` থেকে
+  static ThemeData dark() {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      brightness: Brightness.dark,
+      error: const Color(0xFFF2B8B5),
+    );
+    final input = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: colorScheme.outlineVariant),
+    );
+    final palette = AppPalette.darkFrom(colorScheme);
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surfaceContainer,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        centerTitle: false,
+      ),
+      cardTheme: CardThemeData(
+        color: colorScheme.surfaceContainerLow,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        border: input,
+        enabledBorder: input,
+        focusedBorder: input.copyWith(borderSide: BorderSide(color: colorScheme.primary, width: 2)),
+        errorBorder: input.copyWith(borderSide: BorderSide(color: colorScheme.error)),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: colorScheme.surfaceContainer,
+        indicatorColor: colorScheme.secondaryContainer,
+        height: 64,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+              fontSize: 11.5,
+              fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+              color: states.contains(WidgetState.selected) ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            )),
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color: states.contains(WidgetState.selected) ? colorScheme.onSecondaryContainer : colorScheme.onSurfaceVariant,
+            )),
+      ),
+      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      pageTransitionsTheme: pageTransitions,
+      extensions: [palette],
+    );
+  }
 
   static ThemeData light() {
     final colorScheme = ColorScheme.fromSeed(
@@ -18,6 +98,7 @@ class AppTheme {
       error: AppColors.danger,
     );
 
+    const palette = AppPalette.light;
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -90,6 +171,8 @@ class AppTheme {
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),
+      pageTransitionsTheme: pageTransitions,
+      extensions: const [palette],
     );
   }
 }
