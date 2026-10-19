@@ -22,7 +22,9 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -233,6 +235,46 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
             $this->assertSame((int) $this->a->id, (int) $voucher->branch_id, '⛔ কাউন্টারের রসিদ উপরের B-তে বসল');
             $this->assertSame([(int) $this->a->id], $this->ledgerBranches(Voucher::SOURCE_TYPES[$voucher->type], (int) $voucher->id),
                 '⛔ রসিদের নগদ আর পাওনা-কমার সারি A-র বাইরে');
+        }
+    }
+
+    public function test_a_direct_purchase_into_a_pays_from_a(): void
+    {
+        $bank = (int) Account::query()->firstOrCreate(['code' => '1102-PIN'], [
+            'company_id' => $this->company->id,
+            'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            'name_en' => 'Pin Bank', 'name_bn' => 'পিন ব্যাংক',
+            'type' => Account::ASSET, 'nature' => Account::DEBIT, 'is_group' => false, 'money_kind' => Account::BANK,
+        ])->id;
+        $this->putMoneyIn(Account::query()->findOrFail($bank), '1000');
+
+        $this->headerOn($this->b);
+
+        $this->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->inA->id,
+            'trx_date' => now()->toDateString(),
+            'supplier_bill_no' => 'PIN-77',
+            'deposits' => [[
+                'payment_method_id' => (int) PaymentMethod::query()->where('code', 'BANK')->value('id'),
+                'account_id' => $bank,
+                'amount' => '80',
+                'reference' => 'PIN-TRX',
+                'ref_date' => now()->toDateString(),
+            ]],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '8', 'sales_price' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $bill = PurchaseBill::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $bill->branch_id);
+
+        $vouchers = Voucher::acrossBranches()->where('against_type', PurchaseBill::drillSourceType())->where('against_id', $bill->id)->get();
+        $this->assertCount(1, $vouchers, 'দৃশ্যটাই বানানো যায়নি — পরিশোধের ভাউচার হয়নি');
+
+        foreach ($vouchers as $voucher) {
+            $this->assertSame((int) $this->a->id, (int) $voucher->branch_id, '⛔ A-র বিলের পরিশোধ উপরের B-তে বসল');
+            $this->assertSame([(int) $this->a->id], $this->ledgerBranches(Voucher::SOURCE_TYPES[$voucher->type], (int) $voucher->id),
+                '⛔ পরিশোধের টাকা আর দেনা-কমার সারি A-র বাইরে');
         }
     }
 
