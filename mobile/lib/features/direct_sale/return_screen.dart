@@ -4,8 +4,8 @@ import '../../core/records/money.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../../core/widgets/unsaved_guard.dart';
 
@@ -175,6 +175,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (_busy) const LinearProgressIndicator(),
+          // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
           if (_error != null)
             Card(
               color: AppColors.dangerSurface,
@@ -182,7 +183,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(_error!,
                     key: const ValueKey('return-error'),
-                    style: const TextStyle(color: AppColors.danger)),
+                    style: const TextStyle(
+                        color: AppColors.danger)),
               ),
             ),
           if (setup != null && bill == null) ...[
@@ -192,11 +194,14 @@ class _ReturnScreenState extends State<ReturnScreen> {
               const Text('ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।'),
             for (final i in setup.invoices)
               Card(
+                // ⓘ সারি অন্তত ৭২dp; টাকা Money.taka — ইংরেজি অঙ্ক, লাখের কমা, দুই দশমিক (নকশার নিয়ম ০.৪.৩৮ §২, §৩)।
+                // ⛔ আগে সার্ভারের কাঁচা লেখা "৳ 12500.0000" সোজা বসত
                 child: ListTile(
                   key: ValueKey('return-bill-${i.id}'),
+                  minTileHeight: 72,
                   title: Text(i.no),
-                  subtitle:
-                      Text('${i.customer}\n${i.date ?? ''} · ৳ ${i.total}'),
+                  subtitle: Text(
+                      '${i.customer}\n${i.date ?? ''} · ${Money.taka(i.total)}'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _busy ? null : () => _openBill(i),
                 ),
@@ -215,7 +220,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
                       Text(l.name,
                           style: const TextStyle(fontWeight: FontWeight.w700)),
                       if (l.lotNo != null) Text('লট: ${l.lotNo}'),
-                      Text('বেচা: ${l.qty} × ৳ ${l.rate.toStringAsFixed(2)}'),
+                      Text('বেচা: ${l.qty} × ${Money.taka(l.rate)}'),
                       TextField(
                         key: ValueKey('return-qty-${l.id}'),
                         controller: _qty[l.id],

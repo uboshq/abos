@@ -11,6 +11,7 @@ import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_cache.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import 'order_prefill.dart';
@@ -368,12 +369,14 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   Widget _screen(BuildContext context) {
     final noProducts = ReferenceCache.instance.countOf('Product') == 0;
     final customer = _customer;
+    // ⭐ পট, লেখা আর বোতাম থিমের ভূমিকা থেকে — অন্ধকার মোডেও পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+    final o = OrderInk.of(context);
 
     return Scaffold(
-      backgroundColor: OrderPalette.page,
+      backgroundColor: o.page,
       appBar: AppBar(
-        backgroundColor: OrderPalette.page,
-        foregroundColor: OrderPalette.ink,
+        backgroundColor: o.page,
+        foregroundColor: o.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 0,
@@ -393,7 +396,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 15,
-                  color: customer == null ? OrderPalette.brand : OrderPalette.muted,
+                  color: customer == null ? o.brand : o.muted,
                   fontWeight: customer == null ? FontWeight.w700 : FontWeight.w400,
                 ),
               ),
@@ -436,13 +439,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
 
   Widget _searchRow() {
     final active = _filter.activeCount;
+    final o = OrderInk.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       child: Row(
         children: [
+          // ⓘ খোঁজার ঘর অন্তত ৪৮ উঁচু, বাঁধা নয় — বড় অক্ষরে লেখা কাটে না (নকশার নিয়ম ০.৪.৩৮ §২)
           Expanded(
-            child: SizedBox(
-              height: 48,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
               child: TextField(
                 key: const ValueKey('order-search'),
                 controller: _searchController,
@@ -450,10 +455,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 style: const TextStyle(fontSize: 16),
                 decoration: InputDecoration(
                   hintText: 'নাম বা কোড লিখুন',
-                  prefixIcon: const Icon(Icons.search, color: OrderPalette.muted),
+                  prefixIcon: Icon(Icons.search, color: o.muted),
                   filled: true,
-                  fillColor: OrderPalette.field,
-                  contentPadding: EdgeInsets.zero,
+                  fillColor: o.field,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
@@ -464,21 +469,22 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           _iconBox(
             key: const ValueKey('order-barcode'),
             label: 'বারকোড স্ক্যান',
-            fill: OrderPalette.field,
+            fill: o.field,
             onTap: _scan,
-            child: const Icon(Icons.qr_code_scanner, color: OrderPalette.ink),
+            child: Icon(Icons.qr_code_scanner, color: o.ink),
           ),
           const SizedBox(width: 8),
           _iconBox(
             key: const ValueKey('order-filter'),
             label: 'ফিল্টার',
-            fill: OrderPalette.brand,
+            fill: o.brand,
             onTap: _openFilter,
             child: Badge(
               isLabelVisible: active > 0,
-              backgroundColor: OrderPalette.badge,
+              backgroundColor: o.badge,
+              textColor: o.onBadge,
               label: Text(bn(active), key: const ValueKey('order-filter-badge')),
-              child: const Icon(Icons.tune, color: Colors.white),
+              child: Icon(Icons.tune, color: o.onBrand),
             ),
           ),
         ],
@@ -487,23 +493,24 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   }
 
   Widget _chipRow() {
+    final o = OrderInk.of(context);
     Widget chip(String label, OrderFilter without) => Padding(
           padding: const EdgeInsets.only(right: 6),
           child: InputChip(
-            label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: OrderPalette.onPill)),
-            backgroundColor: OrderPalette.pill,
+            label: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: o.onPill)),
+            backgroundColor: o.pill,
             side: BorderSide.none,
             shape: const StadiumBorder(),
-            deleteIconColor: OrderPalette.onPill,
+            deleteIconColor: o.onPill,
             deleteButtonTooltipMessage: 'সরান',
             onDeleted: () => setState(() => _filter = without),
           ),
         );
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+    // ⓘ সারির উচ্চতা বাঁধা নয় (আগে ৪৪ — চিপের ৪৮dp চাপার জায়গা কাটত, বড় অক্ষরে লেখাও); নকশার নিয়ম ০.৪.৩৮ §২
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
         children: [
           if (_filter.offerOnly) chip('অফার আছে', _filter.copyWith(offerOnly: false)),
           if (_filter.boughtBefore) chip('এই দোকান আগে নিয়েছে', _filter.copyWith(boughtBefore: false)),
@@ -532,11 +539,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     final free = _free[product.id] ?? 0;
     final rate = product.salePrice;
     final offer = _offer[product.id];
+    final o = OrderInk.of(context);
 
     return Container(
       key: ValueKey('order-row-${product.id}'),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(color: OrderPalette.row, borderRadius: BorderRadius.circular(22)),
+      decoration: BoxDecoration(color: o.row, borderRadius: BorderRadius.circular(22)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -556,7 +564,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 style: TextStyle(
                   fontSize: qty > 0 ? 13 : 14,
                   fontWeight: qty > 0 ? FontWeight.w700 : FontWeight.w400,
-                  color: qty > 0 ? OrderPalette.inCart : OrderPalette.muted,
+                  color: qty > 0 ? o.inCart : o.muted,
                 ),
               ),
             ],
@@ -575,17 +583,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: OrderPalette.pill, borderRadius: BorderRadius.circular(999)),
+                      decoration: BoxDecoration(color: o.pill, borderRadius: BorderRadius.circular(999)),
                       child: Row(
                         children: [
                           _round('−', 'কমান', () => _setQty(product.id, (_qty[product.id] ?? 0) - 1),
                               key: ValueKey('order-minus-${product.id}')),
+                          // ⓘ অন্তত ৪৮ উঁচু, বাঁধা নয় (আগে ৩৮); নকশার নিয়ম ০.৪.৩৮ §২
                           Expanded(
                             child: InkWell(
                               key: ValueKey('order-qty-${product.id}'),
                               onTap: () => _openKeypad(product),
-                              child: SizedBox(
-                                height: 38,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(minHeight: 48),
                                 child: Center(
                                   child: Text(bnQty(qty),
                                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
@@ -601,7 +610,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                     const SizedBox(height: 2),
                     Text(
                       qty > 0 && rate != null ? 'বিক্রি · ${bnTaka(rate * qty)}' : 'বিক্রি',
-                      style: const TextStyle(fontSize: 11, color: OrderPalette.muted),
+                      style: TextStyle(fontSize: 11, color: o.muted),
                     ),
                   ],
                 ),
@@ -614,27 +623,27 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                     Semantics(
                       label: 'ফ্রি',
                       readOnly: true,
+                      // ⓘ উচ্চতা অন্তত ৫৬ (ঘটির সারির সমান), বাঁধা নয় — বড় অক্ষরে অঙ্ক কাটে না (নকশার নিয়ম ০.৪.৩৮ §২)
                       child: Container(
                         key: ValueKey('order-free-${product.id}'),
-                        height: 46,
+                        constraints: const BoxConstraints(minHeight: 56),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: free > 0 ? OrderPalette.free : Colors.white,
+                          color: free > 0 ? OrderPalette.free : o.blank,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: free > 0 ? OrderPalette.freeBorder : const Color(0xFFD0D5DD), width: 1.5),
+                          border: Border.all(color: free > 0 ? OrderPalette.freeBorder : o.blankBorder, width: 1.5),
                         ),
                         child: Text(bnQty(free),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: free > 0 ? OrderPalette.onFree : const Color(0xFF98A2B3),
+                              color: free > 0 ? OrderPalette.onFree : o.blankInk,
                             )),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(free > 0 ? 'ফ্রি · নিজে বসেছে' : 'ফ্রি',
-                        style: const TextStyle(fontSize: 11, color: OrderPalette.muted)),
+                        style: TextStyle(fontSize: 11, color: o.muted)),
                   ],
                 ),
               ),
@@ -645,70 +654,79 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     );
   }
 
-  Widget _round(String glyph, String label, VoidCallback onTap, {Key? key}) => Semantics(
-        button: true,
-        label: label,
-        child: Material(
-          color: Colors.white,
-          shape: const CircleBorder(),
-          child: InkWell(
-            key: key,
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: 38,
-              height: 38,
-              child: Center(
-                child: Text(glyph, style: const TextStyle(fontSize: 20, color: OrderPalette.onPill)),
-              ),
+  // ⓘ − আর + বোতাম ৪৮×৪৮ (আগে ৩৮) — চাপার জায়গা অন্তত ৪৮dp (নকশার নিয়ম ০.৪.৩৮ §২)
+  Widget _round(String glyph, String label, VoidCallback onTap, {Key? key}) {
+    final o = OrderInk.of(context);
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: o.blank,
+        shape: const CircleBorder(),
+        child: InkWell(
+          key: key,
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: Text(glyph, style: TextStyle(fontSize: 20, color: o.onPill)),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 
-  Widget _bottomBar() => SafeArea(
-        top: false,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
-          decoration: BoxDecoration(color: OrderPalette.ink, borderRadius: BorderRadius.circular(20)),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('বিক্রি ${bnQty(_pieces)} পিস · ফ্রি ${bnQty(_freePieces)}',
-                        key: const ValueKey('order-bar-pieces'),
-                        style: const TextStyle(fontSize: 13, color: Colors.white70)),
-                    Text(bnTaka(_total),
-                        key: const ValueKey('order-bar-total'),
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
-                  ],
-                ),
+  // ⭐ নিচের পট্টি উল্টো রঙে — [OrderInk.bar]: আলোতে মালিকের নমুনার গাঢ় পট্টি হুবহু, অন্ধকারে থিমের inverseSurface
+  // (নকশার নিয়ম ০.৪.৩৮ §১)
+  Widget _bottomBar() {
+    final o = OrderInk.of(context);
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
+        decoration: BoxDecoration(color: o.bar, borderRadius: BorderRadius.circular(20)),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('বিক্রি ${bnQty(_pieces)} পিস · ফ্রি ${bnQty(_freePieces)}',
+                      key: const ValueKey('order-bar-pieces'),
+                      style: TextStyle(fontSize: 13, color: o.onBarSoft)),
+                  Text(bnTaka(_total),
+                      key: const ValueKey('order-bar-total'),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: o.onBar)),
+                ],
               ),
-              SizedBox(
-                height: 52,
-                child: FilledButton.icon(
-                  key: const ValueKey('order-send'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: OrderPalette.brand,
-                    disabledBackgroundColor: const Color(0xFF4A4D55),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-                  ),
-                  onPressed: _qty.isEmpty || _submitting ? null : _send,
-                  icon: _submitting
-                      ? const SizedBox(
-                          width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.send),
-                  label: const Text('পাঠান'),
-                ),
+            ),
+            // ⓘ অন্তত ৫২ উঁচু, বাঁধা নয় (নকশার নিয়ম ০.৪.৩৮ §২)
+            FilledButton.icon(
+              key: const ValueKey('order-send'),
+              style: FilledButton.styleFrom(
+                backgroundColor: o.brand,
+                foregroundColor: o.onBrand,
+                disabledBackgroundColor: o.barDisabled,
+                minimumSize: const Size(48, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
               ),
-            ],
-          ),
+              onPressed: _qty.isEmpty || _submitting ? null : _send,
+              icon: _submitting
+                  ? SizedBox(
+                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: o.onBrand))
+                  : const Icon(Icons.send),
+              label: const Text('পাঠান'),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }
 
 /// The barcode box — owns its controller, so the field outlives the
@@ -801,17 +819,25 @@ class DueNotice extends StatelessWidget {
     // — tolerable while it is only being displayed, not while it is the basis
     // of a sentence telling somebody they are over a limit.
     final syncedAt = CustomerDueRecord.syncedAt(customerId);
+    // ⭐ পট আর লেখা জোড়ায় জোড়ায় — সীমা পার: লাল পটে লাল; বকেয়া: হলুদ পটে নিজের গাঢ় হলুদ; বাকি: context.palette-এর
+    // মলিন পট আর লেখা — কোনো পটে উল্টো মোডের লেখা বসে না (নকশার নিয়ম ০.৪.৩৮ §১)
+    final fill = willCross
+        ? AppColors.dangerSurface
+        : owes
+            ? AppColors.warningSurface
+            : context.palette.surfaceMuted;
+    final ink = willCross
+        ? AppColors.danger
+        : owes
+            ? AppColors.warning
+            : context.palette.onSurfaceMuted;
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: willCross
-              ? AppColors.dangerSurface
-              : owes
-                  ? AppColors.warningSurface
-                  : AppColors.surfaceMuted,
+          color: fill,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -823,11 +849,7 @@ class DueNotice extends StatelessWidget {
                         ? Icons.account_balance_wallet_outlined
                         : Icons.check,
                 size: 18,
-                color: willCross
-                    ? AppColors.danger
-                    : owes
-                        ? AppColors.warning
-                        : AppColors.onSurfaceMuted),
+                color: ink),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -839,8 +861,7 @@ class DueNotice extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color:
-                          owes ? AppColors.warning : AppColors.onSurfaceMuted,
+                      color: ink,
                     ),
                   ),
                   if (due.hasCreditLimit || due.creditDays > 0)
@@ -852,7 +873,7 @@ class DueNotice extends StatelessWidget {
                           'বাকি ${Money.taka(headroom)}',
                         if (due.creditDays > 0) '${due.creditDays} দিন',
                       ].join(' · '),
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: ink),
                     ),
                   if (willCross)
                     Padding(
@@ -867,18 +888,17 @@ class DueNotice extends StatelessWidget {
                                 '${Money.taka(orderTotal)} যোগ হবে।'
                             : 'এই অর্ডারে সীমা ${Money.taka(overBy)} '
                                 'ছাড়িয়ে যাবে।',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.danger,
+                          color: ink,
                         ),
                       ),
                     ),
                   if (willCross && syncedAt != null)
                     Text(
                       'বকেয়ার তথ্য সিঙ্ক ${DateFormat('dd/MM/yyyy hh:mm a').format(syncedAt)}',
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.onSurfaceMuted),
+                      style: TextStyle(fontSize: 11, color: ink),
                     ),
                 ],
               ),
@@ -916,7 +936,10 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
       itemBuilder: (context, index) {
         final customer = filtered[index];
         final due = CustomerDueRecord.forCustomer(customer.id);
+        final cs = Theme.of(context).colorScheme;
+        // ⓘ তালিকার সারি অন্তত ৭২dp, রং থিম থেকে (নকশার নিয়ম ০.৪.৩৮ §১, §২)
         return ListTile(
+          minTileHeight: 72,
           title: Text(customer.label),
           subtitle: customer.phone == null ? null : Text(customer.phone!),
           trailing: due == null
@@ -926,9 +949,7 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: due.outstanding > 0
-                        ? AppColors.danger
-                        : AppColors.onSurfaceMuted,
+                    color: due.outstanding > 0 ? cs.error : context.palette.onSurfaceMuted,
                   ),
                 ),
           onTap: () => Navigator.of(context).pop(customer),

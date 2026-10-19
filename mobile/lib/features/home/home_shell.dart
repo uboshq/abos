@@ -26,8 +26,8 @@ import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
 import '../../core/sync_engine/auto_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
@@ -640,16 +640,20 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final names = _names();
     if (onTap == null) return names;
+    // ⓘ চাপার জায়গা অন্তত ৪৮dp উঁচু (নকশার নিয়ম ০.৪.৩৮ §২)
     return InkWell(
       key: const ValueKey('workspace-header'),
       onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(child: names),
-          const SizedBox(width: AppSpacing.xs),
-          const Icon(Icons.swap_horiz, size: 18),
-        ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: names),
+            const SizedBox(width: AppSpacing.xs),
+            const Icon(Icons.swap_horiz, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -664,10 +668,15 @@ class _Header extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         if (subtitle != null && subtitle!.isNotEmpty)
-          Text(subtitle!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          // ⭐ মাথার নিজের লেখার রং, একটু মলিন — বাঁধা সাদা নয়, তাই মাথার পট বদলালেও পড়া যায়
+          // (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+          Opacity(
+            opacity: 0.7,
+            child: Text(subtitle!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12)),
+          ),
       ],
     );
   }
@@ -685,14 +694,16 @@ class _AvatarAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
+    final cs = Theme.of(context).colorScheme;
     return IconButton(
       key: const ValueKey('header-avatar'),
       tooltip: 'প্রোফাইল',
       onPressed: onTap,
       icon: CircleAvatar(
         radius: 15,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.primary,
+        backgroundColor: context.palette.surface,
+        foregroundColor: cs.primary,
         foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
         child: Text(name.trim().isEmpty ? '?' : name.trim().characters.first,
             style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -721,6 +732,8 @@ class _MoreTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
+    final cs = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
@@ -729,8 +742,8 @@ class _MoreTab extends ConsumerWidget {
             // ⭐ ছবি আর পদবি — মালিক, ২ অক্টোবর ২০২৬: "profile photo dekhay na, role nadekiye designation dekhabe"
             leading: CircleAvatar(
               key: const ValueKey('profile-avatar'),
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onPrimary,
+              backgroundColor: cs.primary,
+              foregroundColor: cs.onPrimary,
               foregroundImage:
                   avatarUrl == null ? null : NetworkImage(avatarUrl!),
               child: Text(user.name.isEmpty ? '?' : user.name.characters.first),
@@ -784,8 +797,8 @@ class _MoreTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.danger,
-            side: const BorderSide(color: AppColors.danger),
+            foregroundColor: cs.error,
+            side: BorderSide(color: cs.error),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           onPressed: () => _confirmLogout(context, ref),

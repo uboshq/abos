@@ -5,7 +5,6 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
@@ -177,24 +176,27 @@ class _TotalStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ পট থিমের primary, লেখা onPrimary — বাঁধা সাদা নয়, তাই অন্ধকার মোডে হালকা পটে গাঢ় লেখা বসে
+    // (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+    final cs = Theme.of(context).colorScheme;
+    final soft = cs.onPrimary.withValues(alpha: 0.7);
     return Container(
       width: double.infinity,
-      color: AppColors.primary,
+      color: cs.primary,
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md, vertical: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('মোট বকেয়া',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+          Text('মোট বকেয়া', style: TextStyle(color: soft, fontSize: 12.5)),
           const SizedBox(height: AppSpacing.xs),
           Text(
             Money.taka(total),
-            style: const TextStyle(
-                color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: cs.onPrimary, fontSize: 26, fontWeight: FontWeight.w700),
           ),
           Text('$shops টি দোকান',
-              style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+              style: TextStyle(color: soft, fontSize: 12.5)),
         ],
       ),
     );
@@ -220,22 +222,24 @@ class _DueTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // ⭐ দুই লাইন (মালিক, ৬ অক্টোবর ২০২৬): উপরে "নাম · পয়েন্ট · শাখা" (১৯ অক্টোবর ২০২৬ থেকে, স্থায়ী নিয়ম: "গ্রাহকের নামের পাশে
     // পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে"), নিচে বকেয়া — পয়েন্ট এখন নামের লাইনে, দুইবার নয়।
+    // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
     return Card(
       child: ListTile(
+        minTileHeight: 72,
         onTap: () => context.push('/home/customers/${row.customer.id}'),
         title: CustomerLine(row.customer.label,
             style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Row(
-          children: [
-            const Spacer(),
-            Text(
-              'বকেয়া: ${Money.taka(row.due.outstandingInView)}',
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: AppColors.danger),
-            ),
-          ],
+        // ⓘ ডানে বসে, কিন্তু Row/Spacer নয় — বড় অক্ষরে (২০০%) লম্বা টাকা Row ছাপিয়ে ভাঙত; এখন মোড়ে
+        subtitle: Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: Text(
+            'বকেয়া: ${Money.taka(row.due.outstandingInView)}',
+            textAlign: TextAlign.end,
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: Theme.of(context).colorScheme.error),
+          ),
         ),
       ),
     );

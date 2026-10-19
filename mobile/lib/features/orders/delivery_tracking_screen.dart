@@ -6,6 +6,7 @@ import '../../core/orders/tracking_api.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/list_controls.dart';
 
@@ -124,13 +125,15 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_busy) const LinearProgressIndicator(),
+            // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
             if (_error != null)
               Card(
                 color: AppColors.dangerSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Text(_error!,
-                      style: const TextStyle(color: AppColors.danger)),
+                      style: const TextStyle(
+                          color: AppColors.danger)),
                 ),
               ),
             if (list != null && list.rows.isEmpty && !_busy)
@@ -142,7 +145,9 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               Card(
                 child: InkWell(
                   onTap: () => _open(sale),
-                  child: Padding(
+                  // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 72),
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,8 +167,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                         if (sale.customer != null) Text(sale.customer!),
                         if (sale.date != null)
                           Text(sale.date!,
-                              style: const TextStyle(
-                                  color: AppColors.onSurfaceMuted)),
+                              style: TextStyle(
+                                  color: context.palette.onSurfaceMuted)),
                         Text(Money.taka(sale.total)),
                         Text(
                           [
@@ -279,7 +284,8 @@ class _StoryScreenState extends State<_StoryScreen> {
                   style: TextStyle(fontWeight: FontWeight.w700)),
             ],
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (_sale == null && _error == null)
               const LinearProgressIndicator(),
             for (final e in _events)
@@ -302,8 +308,9 @@ class _StoryScreenState extends State<_StoryScreen> {
                               if (e.at != null) when.format(e.at!),
                               if (e.by != null) e.by!
                             ].join(' · '),
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.onSurfaceMuted),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.palette.onSurfaceMuted),
                           ),
                         ],
                       ),
@@ -329,6 +336,7 @@ class _MilestoneRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = milestone;
+    // ⭐ ফাঁপা গোল, রেখা আর মলিন লেখা থিম থেকে (নকশার নিয়ম ০.৪.৩৮ §১); ধাপের রং সার্ভারের ৯ রং
     final colour = trackingColours[m.category] ?? const Color(0xFF9CA3AF);
     final filled =
         m.state == 'done' || m.state == 'rejected' || m.state == 'hold';
@@ -348,10 +356,9 @@ class _MilestoneRow extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: filled ? colour : Colors.white,
+                    color: filled ? colour : context.palette.surface,
                     border: Border.all(
-                        color: lit ? colour : const Color(0xFFD1D5DB),
-                        width: 2),
+                        color: lit ? colour : context.palette.border, width: 2),
                   ),
                   child: Text(
                     switch (m.state) {
@@ -360,8 +367,9 @@ class _MilestoneRow extends StatelessWidget {
                       'hold' => '■',
                       _ => ''
                     },
+                    // ⓘ ভরা গোলে ধাপের রঙের উপর সাদা চিহ্ন — দুই মোডেই একই (AppColors.onPrimary)
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.onPrimary, // dark-ok
                         fontSize: 12,
                         fontWeight: FontWeight.w700),
                   ),
@@ -370,8 +378,7 @@ class _MilestoneRow extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 2,
-                      color:
-                          m.state == 'done' ? colour : const Color(0xFFE5E7EB),
+                      color: m.state == 'done' ? colour : context.palette.border,
                     ),
                   ),
               ],
@@ -390,7 +397,7 @@ class _MilestoneRow extends StatelessWidget {
                       fontWeight: lit ? FontWeight.w700 : FontWeight.w400,
                       color: m.state == 'current'
                           ? colour
-                          : (lit ? null : AppColors.onSurfaceMuted),
+                          : (lit ? null : context.palette.onSurfaceMuted),
                     ),
                   ),
                   if (m.at != null || m.by != null)
@@ -399,8 +406,7 @@ class _MilestoneRow extends StatelessWidget {
                         if (m.at != null) when.format(m.at!),
                         if (m.by != null) m.by!
                       ].join(' · '),
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.onSurfaceMuted),
+                      style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),
                     ),
                 ],
               ),

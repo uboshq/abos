@@ -5,6 +5,7 @@ import '../reports/reports_screen.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/dashboard/dashboard_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 
@@ -82,8 +83,10 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
                         ? null
                         : Text(
                             '${entry.stat!.label}: ${entry.stat!.hidden ? 'চাবি নেই' : (entry.stat!.value ?? '—')}'),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: AppColors.onSurfaceMuted),
+                    // ⓘ তালিকার সারি অন্তত ৭২dp, রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১, §২)
+                    minTileHeight: 72,
+                    trailing: Icon(Icons.chevron_right,
+                        color: context.palette.onSurfaceMuted),
                     onTap: () =>
                         Navigator.of(context).push(MaterialPageRoute<void>(
                       builder: (_) => ModuleDashboardScreen(
@@ -165,7 +168,7 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(d.subtitle,
-                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
               for (final stat in d.stats) _StatCard(stat: stat),
               for (final panel in d.panels) _PanelCard(panel: panel),
@@ -287,7 +290,7 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(d.subtitle,
-                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
               if (d.stats.isEmpty && d.panels.isEmpty && d.listings.isEmpty)
                 const EmptyState(
@@ -309,11 +312,13 @@ class _StatCard extends StatelessWidget {
 
   final DashboardStat stat;
 
-  Color get _tone => switch (stat.tone) {
+  // ⭐ সাধারণ লেখা context.palette থেকে (আলোতে হুবহু আগের রং, অন্ধকারে ঠিক — নকশার নিয়ম ০.৪.৩৮ §১, a4 c5e7fbbd6);
+  // ভুল থিমের error (আলোতে AppColors.danger-ই); ভালো/সাবধান অবস্থার রং, আগের মতো
+  Color _tone(BuildContext context) => switch (stat.tone) {
         'good' => AppColors.success,
         'warn' => AppColors.warning,
-        'bad' => AppColors.danger,
-        _ => AppColors.onSurface,
+        'bad' => Theme.of(context).colorScheme.error,
+        _ => context.palette.onSurface,
       };
 
   @override
@@ -325,8 +330,7 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(stat.label,
-                style: const TextStyle(color: AppColors.onSurfaceMuted)),
+            Text(stat.label, style: TextStyle(color: context.palette.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.xs),
             Text(
               stat.hidden
@@ -335,7 +339,7 @@ class _StatCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: stat.hidden ? 14 : 22,
                 fontWeight: FontWeight.w800,
-                color: stat.hidden ? AppColors.onSurfaceMuted : _tone,
+                color: stat.hidden ? context.palette.onSurfaceMuted : _tone(context),
               ),
             ),
             if (stat.previous != null && stat.previousLabel != null)
@@ -373,6 +377,8 @@ class _PanelCard extends StatelessWidget {
             : [barValue(r['value'])]),
     ];
     final max = values.fold<double>(0, (m, v) => v.abs() > m ? v.abs() : m);
+    // ⓘ প্রথম সারির রং থিমের primary — আলো আর অন্ধকারে দুইয়েই চোখে পড়ে (নকশার নিয়ম ০.৪.৩৮ §১)
+    final first = Theme.of(context).colorScheme.primary;
 
     Widget bar(String text, double value, Color color) => Padding(
           padding: const EdgeInsets.only(top: 2),
@@ -403,7 +409,7 @@ class _PanelCard extends StatelessWidget {
               Text.rich(
                 key: const ValueKey('series-legend'),
                 TextSpan(style: Theme.of(context).textTheme.bodySmall, children: [
-                  const TextSpan(text: '■ ', style: TextStyle(color: AppColors.primary)),
+                  TextSpan(text: '■ ', style: TextStyle(color: first)),
                   TextSpan(text: '${panel['firstLabel']}   '),
                   const TextSpan(text: '■ ', style: TextStyle(color: AppColors.warning)),
                   TextSpan(text: '${panel['secondLabel']}'),
@@ -415,12 +421,12 @@ class _PanelCard extends StatelessWidget {
                   style: const TextStyle(fontSize: 12.5)),
               if (series) ...[
                 bar((r['first'] ?? '').toString(), barValue(r['first']),
-                    AppColors.primary),
+                    first),
                 bar((r['second'] ?? '').toString(), barValue(r['second']),
                     AppColors.warning),
               ] else
                 bar((r['value'] ?? '').toString(), barValue(r['value']),
-                    AppColors.primary),
+                    first),
               const SizedBox(height: AppSpacing.xs),
             ],
           ],
@@ -454,15 +460,16 @@ class _ListingCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             if (rows.isEmpty)
               Text((listing['empty'] ?? '').toString(),
-                  style: const TextStyle(color: AppColors.onSurfaceMuted))
+                  style: TextStyle(color: context.palette.onSurfaceMuted))
             else
               for (final row in rows)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  decoration: const BoxDecoration(
-                      border:
-                          Border(bottom: BorderSide(color: AppColors.border))),
+                  decoration: BoxDecoration(
+                      border: Border(
+                          bottom: BorderSide(
+                              color: context.palette.border))),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
