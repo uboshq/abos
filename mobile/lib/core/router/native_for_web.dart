@@ -49,11 +49,11 @@ class NativeForWeb {
 
   /// ড্যাশবোর্ডের দরজা যে মডিউলগুলো ফোনে খোলে — ওয়েবের `/dashboard/{module}`।
   ///
-  /// <p>⚠️ `hr` নেই, ইচ্ছা করে: HR-এর ড্যাশবোর্ড বেতন-খরচ দেখায়, আর সার্ভার সেটা ফোনে পাঠায় না (চুক্তি §৪;
-  /// [DashboardApiController::DESK_ONLY])। ফোন-পর্দায় খুললে কেবল "বন্ধ" আসত — তাই ওটা আগের মতো ওয়েব-জানালায়।
+  /// <p>⭐ `hr`-ও — মালিক, ১৭ অক্টোবর ২০২৬ ("ক"): HR-এর ড্যাশবোর্ড ফোনে, আর বেতনের প্রতিটা অঙ্ক সার্ভারেই বাদ ([PhoneAnswer],
+  /// চুক্তি §৪)। ফোনে তাই লুকানোর কিছু নেই — যা আসে, তা-ই আঁকা।
   static const Set<String> dashboards = {
     'accounts', 'finance', 'purchase', 'inventory', 'customer', 'credit_control', 'sales',
-    'promotion', 'approval', 'system_admin', 'documents',
+    'promotion', 'approval', 'system_admin', 'documents', 'hr',
   };
 
   /// ⭐ লেনদেনের তালিকা — ওয়েবের পথ → কাগজের চাবি ([PaperListScreen], মালিক, ১৭ অক্টোবর ২০২৬; fe-র ধাপ ৪)।
