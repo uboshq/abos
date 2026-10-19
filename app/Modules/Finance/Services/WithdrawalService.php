@@ -105,10 +105,13 @@ final class WithdrawalService
             Person::query()->whereKey($personId)->lockForUpdate()->first();
             $this->assertWithinCap($personId, $amount, $on);
 
+            // ⛔ পর্দায় লেখা শাখায় — বাছা খাতটা অন্য শাখার বাক্সের হলে থামে, নীরবে সরে না; নম্বরও সেই শাখার সিরিজে (ec, ১৯ অক্টোবর ২০২৬)
+            $branchId = $this->finance->branchShownOnTheForm($data['money_account_id'] ?? null, 'money_account_id');
+
             $withdrawal = Withdrawal::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('WDR'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('WDR', $branchId),
                 'person_id' => $personId,
                 'amount' => $amount,
                 'trx_date' => $on,

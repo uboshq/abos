@@ -83,9 +83,12 @@ class TenancyService
         $income = $this->incomeAccount($data['income_account_id'] ?? null);
 
         return DB::transaction(function () use ($data, $type, $id, $rent, $deposit, $term, $starts, $income) {
+            // ⛔ ভাড়াটের নিজের শাখা, নইলে জামানত যে বাক্সে এল তার শাখা — উপরের শাখায় নয় (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            $branchId = $this->signature->branchFor([$data['money_account_id'] ?? null], [[$type, $id]]);
+
             $tenancy = Tenancy::query()->create([
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('TNT'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('TNT', $branchId),
                 'tenant' => filled($data['tenant'] ?? null)
                     ? (string) $data['tenant']
                     : ($this->parties->labelsOf([[$type, $id]])[$type.':'.$id] ?? $type),

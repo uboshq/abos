@@ -167,6 +167,9 @@ return [
     'party_in_other_branch' => 'This party belongs to the ":branch" branch — its money cannot be written in ":here".',
     'party_branch_out_of_reach' => 'This party belongs to the ":branch" branch, which is outside your reach — someone of that branch writes it.',
     'parties_in_two_branches' => 'Parties of two branches in one voucher — write one voucher per branch.',
+    /* Money of a box stays in the branch of that box - owner, 19 October 2026 (ec). */
+    'till_in_other_branch' => 'This money box belongs to the ":branch" branch — its money cannot be written in ":here".',
+    'till_branch_out_of_reach' => 'This money box belongs to the ":branch" branch, which is outside your reach — someone of that branch writes it.',
     /* Cash only into your own till - 21 September 2026. */
     'cash_not_your_till' => ':account is not your till - cash can only go into your own.',
     'transfer_not_your_till' => ':till is not your cash box — cash can only be sent from your own box.',

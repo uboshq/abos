@@ -78,10 +78,13 @@ final class DepositService
             // ⭐ কোথায় রাখা — তালিকা থেকে; পুরনো লেখা ঘরটাও ভরে থাকে
             $institutionId = $this->institutions->resolve($data, Institution::BANK);
 
+            // ⛔ যে বাক্স থেকে টাকা গেল তার শাখায় — উপরের শাখায় নয়; নম্বরও সেই শাখার সিরিজে (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            $branchId = $this->signature->branchFor([$from->id]);
+
             $deposit = Deposit::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('DEP'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('DEP', $branchId),
                 'kind_id' => $kind->id,
                 'institution_id' => $institutionId,
                 'institution' => $this->institutions->nameOf($institutionId)

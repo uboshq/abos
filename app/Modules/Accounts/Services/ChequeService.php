@@ -14,6 +14,7 @@ use App\Models\LedgerEntry;
 use App\Modules\Accounts\Events\ChequeBounced;
 use App\Modules\Accounts\Events\ChequeCleared;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Support\Carbon;
@@ -107,10 +108,12 @@ final class ChequeService
         return DB::transaction(function () use ($data, $direction, $amount) {
             $this->assertNotAlreadyRegistered($direction, $data);
 
+            $branchId = $this->branchFor($data);
+
             $cheque = Cheque::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('CHQ'),
+                'branch_id' => $branchId,
+                'document_no' => $this->numbers->next('CHQ', $branchId),
                 'direction' => $direction,
                 'cheque_date' => $data['cheque_date'],
                 'received_on' => $data['received_on'] ?? now()->toDateString(),
@@ -203,10 +206,12 @@ final class ChequeService
             ]);
         }
 
+        $branchId = $this->branchFor($data);
+
         return DB::transaction(fn (): Cheque => Cheque::query()->create([
             'company_id' => CompanyContext::id(),
-            'branch_id' => CompanyContext::branchId(),
-            'document_no' => $this->numbers->next('CHQ'),
+            'branch_id' => $branchId,
+            'document_no' => $this->numbers->next('CHQ', $branchId),
             'direction' => $direction,
             'cheque_date' => $data['cheque_date'],
             'received_on' => $data['received_on'] ?? now()->toDateString(),
@@ -716,7 +721,39 @@ final class ChequeService
             trxDate: $date,
             documentNo: $cheque->document_no,
             lines: $lines,
+            // ⛔ চেকের নিজের শাখায় — পাশ বা ফেরত যে শাখা থেকেই চাপা হোক (ec, ১৯ অক্টোবর ২০২৬; RCV-0143)
+            branchId: $cheque->branch_id === null ? null : (int) $cheque->branch_id,
         );
+    }
+
+    /**
+     * ⛔ চেক কোন শাখার — মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য শাখায় নয়"* (RCV-0143)।
+     *
+     * ⚠️ আগে চেক বসত জমার মুহূর্তের উপরের শাখায়, আর পরে পাশ বা ফেরতের দাখিলা বসত তখনকার উপরের শাখায়: A-র গ্রাহকের চেক B-তে,
+     * খাতার দরজা ([[PostingEngine::post()]]) তখন পক্ষের সারি থামাত, বা শাখাহীন পক্ষে টাকা ভুল শাখায় বসত। ⓘ এখন ক্রম: যে ভাউচার
+     * টাকাটা পোস্ট করেছে তার শাখা (কাউন্টার), তারপর পক্ষের নিজের শাখা, তারপর ব্যাংক খাতটা কোনো শাখার বাক্সের হলে সেই শাখা,
+     * কিছুই না বললে আগের মতো উপরের শাখা।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function branchFor(array $data): ?int
+    {
+        if (filled($data['voucher_id'] ?? null)) {
+            $branch = Voucher::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+                ->whereKey((int) $data['voucher_id'])->value('branch_id');
+
+            if ($branch !== null) {
+                return (int) $branch;
+            }
+        }
+
+        $theirs = array_values(array_unique(app(PartyRegistry::class)->branchesOf([[$data['party_type'] ?? null, $data['party_id'] ?? null]])));
+
+        if (count($theirs) === 1) {
+            return (int) $theirs[0];
+        }
+
+        return CashTill::branchOfAccounts([$data['bank_account_id'] ?? null]) ?? CompanyContext::branchId();
     }
 
     /**

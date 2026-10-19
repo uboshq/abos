@@ -94,7 +94,8 @@ final class HandLoanService
          */
         return HandLoanAccount::query()->create([
             'company_id' => CompanyContext::id(),
-            'branch_id' => CompanyContext::branchId(),
+            // ⛔ যে বাক্স দিয়ে টাকা নড়বে তার শাখায় — উপরের শাখায় নয় (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            'branch_id' => $this->signature->branchFor([$data['money_account_id'] ?? null], [['person', $personId]]),
             'person_id' => $personId,
             'partner_id' => $data['partner_id'] ?? null,
             'partner_type' => ($data['partner_id'] ?? null) !== null
