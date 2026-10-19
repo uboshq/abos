@@ -62,9 +62,12 @@ class RentalContractService
         $starts = Carbon::parse((string) ($data['starts_on'] ?? now()->toDateString()))->startOfDay();
 
         return DB::transaction(function () use ($data, $deposit, $rent, $adjustment, $term, $starts) {
+            // ⛔ বাড়িওয়ালার শাখা, নইলে জামানত যে বাক্স থেকে গেল তার শাখা — উপরের শাখায় নয় (ec, ১৯ অক্টোবর ২০২৬; [[FinanceSignature::branchFor()]])
+            $branchId = $this->signature->branchFor([$data['money_account_id'] ?? null], [[$data['party_type'] ?? null, $data['party_id'] ?? null]]);
+
             $contract = RentalContract::create([
                 // ⭐ কোন শাখার চুক্তি — না বসালে তালিকার শাখার দেয়াল ওটাকে কোনো শাখায় দেখাত না (১ অক্টোবর ২০২৬)
-                'branch_id' => CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 /*
                  * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো।
                  *
@@ -73,7 +76,7 @@ class RentalContractService
                  * প্রশ্নের উত্তর দেওয়ার মতো কিছুই ছিল না — আইডি কাগজে
                  * লেখা থাকে না।
                  */
-                'document_no' => $this->numbers->next('RNT'),
+                'document_no' => $this->numbers->next('RNT', $branchId),
                 'counterparty' => (string) $data['counterparty'],
                 'counterparty_phone' => $data['counterparty_phone'] ?? null,
                 'subject' => $data['subject'] ?? null,

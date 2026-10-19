@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherService;
 use Illuminate\Validation\ValidationException;
@@ -92,5 +95,29 @@ final class FinanceSignature
         }
 
         return $account;
+    }
+
+    /**
+     * ⛔ অর্থের কাগজ কোন শাখার — যে বাক্স দিয়ে টাকা নড়ল তার শাখা, উপরের শাখা-বাছাই নয় (মালিক, ১৯ অক্টোবর ২০২৬: *"কোনোভাবেই অন্য
+     * শাখায় নয়"*; RCV-0143)।
+     *
+     * ⚠️ আগে জমা, হাতধার, ভাড়া, ভাড়াটে, মূলধন, উত্তোলন, ব্যাংক ঋণ — সব বসত জমা দেওয়ার মুহূর্তের উপরের শাখায়, আর তাদের পরের সব
+     * ভাউচার সেই শাখা ধরত। A-র বাক্স থেকে খোলা জমা, অথচ অন্য ট্যাবে উপরে B → জমা, তার নম্বর আর খাতার সারি B-তে।
+     *
+     * ⓘ ক্রম: পক্ষের নিজের শাখা আগে (খাতার দরজা পক্ষের সারি অন্য শাখায় বসতে দেয় না, [[PostingEngine::post()]]), তারপর টাকার
+     * বাক্সের শাখা ([[CashTill::branchOfAccounts()]]), কিছুই না বললে আগের মতো উপরের শাখা — সেটার পাহারা ফর্মের শাখা-ছাপ।
+     *
+     * @param  iterable<int|string|null>  $moneyAccountIds
+     * @param  list<array{0: string|null, 1: int|string|null}>  $parties
+     */
+    public function branchFor(iterable $moneyAccountIds, array $parties = []): ?int
+    {
+        $theirs = array_values(array_unique(app(PartyRegistry::class)->branchesOf($parties)));
+
+        if (count($theirs) === 1) {
+            return (int) $theirs[0];
+        }
+
+        return CashTill::branchOfAccounts($moneyAccountIds) ?? CompanyContext::branchId();
     }
 }
