@@ -117,6 +117,30 @@ class ReportPage {
   }
 }
 
+/// ⭐ রিপোর্টের একটা ছাঁকনি, সার্ভারের বলা — `GET /reports/{key}/choices` (fe, ১৯ অক্টোবর ২০২৬; ওয়েবের একই ঘোষণা)।
+///
+/// <p>`kind`: `date_range` (তারিখের ঘর, পর্দা আগেই আঁকে) · `branch` · `list` (বাছার তালিকা) · `month` (`2026-10`) · `web`
+/// (ফোনে আঁকা যায় না — দেখানো হয় না)। ⓘ `capped` হলে তালিকা ছাদে ঠেকেছে — বাকিটা সার্ভারে খুঁজে ([ReportsApi.search])।
+class ReportChoice {
+  const ReportChoice(this.payload);
+
+  final Map<String, dynamic> payload;
+
+  String get key => (payload['key'] ?? '').toString();
+  String get kind => (payload['kind'] ?? 'web').toString();
+  String get label => (payload['label'] ?? key).toString();
+  bool get capped => payload['capped'] == true;
+
+  /// (মান, নাম) — মান সার্ভারে যায় (public_id বা সংকেত), নাম কেবল দেখানোর
+  List<(String, String)> get options => ((payload['options'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((o) => ((o['value'] ?? '').toString(), (o['label'] ?? o['value'] ?? '').toString()))
+      .toList();
+
+  /// ফোনে আঁকা যায় এমন ছাঁকনি — তারিখ আলাদা, `web` নয়
+  bool get drawable => kind == 'branch' || kind == 'list' || kind == 'month';
+}
+
 /// docs/Contract §৯. ⚠️ **Neither endpoint exists yet** — this is the app's
 /// half of an agreement written down first, not a guess at one.
 class ReportsApi {
@@ -144,5 +168,26 @@ class ReportsApi {
       queryParameters: {'page': page, ...filters},
     );
     return ReportPage(response.data ?? const {});
+  }
+
+  /// এই রিপোর্টের ছাঁকনি আর তাদের বাছাই — সার্ভারের ঘোষণা থেকেই
+  static Future<List<ReportChoice>> choices(String key) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>('/reports/$key/choices');
+    return ((response.data?['filters'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => ReportChoice(e.cast<String, dynamic>()))
+        .toList();
+  }
+
+  /// বড় তালিকায় সার্ভারে খোঁজা (ছাদের বাইরের সারিও) — ৫০টা পর্যন্ত
+  static Future<List<(String, String)>> search(String key, String filter, String q) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+      '/reports/$key/choices/$filter',
+      queryParameters: {'q': q},
+    );
+    return ((response.data?['options'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((o) => ((o['value'] ?? '').toString(), (o['label'] ?? o['value'] ?? '').toString()))
+        .toList();
   }
 }

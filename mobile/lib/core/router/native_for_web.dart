@@ -41,6 +41,7 @@ import '../auth/auth_state.dart';
 import '../menu/module_gate.dart';
 import '../navigation/paper_kinds.dart';
 import '../orders/delivery_order_api.dart';
+import 'report_paths.dart';
 
 /// ⭐ মেনুর ওয়েব-সারি, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta mobile app style e zate bujazay sei vabe koro,
 /// direct webpage app e bujajayna"*।
@@ -277,6 +278,10 @@ class NativeForWeb {
     if (dashboard != null && dashboards.contains(dashboard)) {
       return ModuleDashboardScreen(module: dashboard, name: title);
     }
+
+    // ⭐ রিপোর্টের সারি — ফোনের রিপোর্ট-পর্দা, চাবি ধরে ([ReportPaths]; a6, ১৯ অক্টোবর ২০২৬)
+    final report = ReportPaths.screenFor(path, title: title);
+    if (report != null) return report;
 
     return _papers(webPath, path, title);
   }
