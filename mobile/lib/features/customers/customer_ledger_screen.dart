@@ -143,6 +143,7 @@ class _DueHeader extends StatelessWidget {
             Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted)),
             Text(Money.taka(due.abs()),
                 key: const ValueKey('ledger-due'),
+                semanticsLabel: Money.spoken(due.abs()),
                 style: TextStyle(
                     fontSize: 26, fontWeight: FontWeight.w800, color: colour)),
             if (head.code.isNotEmpty)
@@ -223,6 +224,7 @@ class _Row extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text('${took ? '+' : '−'}${Money.taka(amount)}',
+                semanticsLabel: '${took ? 'মাল' : 'জমা'} ${Money.spoken(amount)}',
                 style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
             Text(dueWords(row.balance),
                 style: const TextStyle(

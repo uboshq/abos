@@ -170,12 +170,15 @@ class _CustomerTile extends StatelessWidget {
 
     return Card(
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-          child: Text(
-            name.isNotEmpty ? name[0].toUpperCase() : '?',
-            style: const TextStyle(
-                color: AppColors.primary, fontWeight: FontWeight.w700),
+        // ⓘ নামের প্রথম অক্ষরের বৃত্ত সাজ — TalkBack নামটা একবারই পড়ে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+        leading: ExcludeSemantics(
+          child: CircleAvatar(
+            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: const TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.w700),
+            ),
           ),
         ),
         // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); লম্বা হলে "…", পুরোটা ছুঁয়ে ধরে রাখলে
@@ -189,13 +192,24 @@ class _CustomerTile extends StatelessWidget {
         // arrive a sync ahead of the other, and a shop showing "বকেয়া নেই"
         // when the truth is simply unknown is the one wrong thing to say.
         // ⭐ বকেয়ার অঙ্কে চাপলে সোজা খাতা — মালিক, ১২ অক্টোবর ২০২৬
+        // ⓘ TalkBack-এ বকেয়ার অঙ্ক নিজেই একটা বোতাম — "বকেয়া ৳…, খাতা খুলুন", আঙুলের জায়গা অন্তত ৪৮ dp
+        // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এর চাপটা কার্ডের নামহীন ঘরে গিয়ে পড়ত।
         trailing: due == null
             ? null
-            : InkWell(
-                key: ValueKey('ledger-${customer.id}'),
-                onTap: () =>
-                    context.push('/home/customers/${customer.id}/ledger'),
-                child: _DuePill(due: due),
+            : Semantics(
+                container: true,
+                button: true,
+                onTapHint: 'খাতা খুলুন',
+                child: InkWell(
+                  key: ValueKey('ledger-${customer.id}'),
+                  onTap: () =>
+                      context.push('/home/customers/${customer.id}/ledger'),
+                  child: ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(minWidth: 48, minHeight: 48),
+                    child: _DuePill(due: due),
+                  ),
+                ),
               ),
       ),
     );
@@ -220,6 +234,7 @@ class _DuePill extends StatelessWidget {
       children: [
         Text(
           due.outstandingLabel,
+          semanticsLabel: Money.speakable(due.outstandingLabel),
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,

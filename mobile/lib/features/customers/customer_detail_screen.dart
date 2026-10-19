@@ -92,10 +92,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           _Header(customer: customer),
           const SizedBox(height: AppSpacing.md),
           // ⓘ বকেয়ার অঙ্কে চাপলেও খাতা — "এই অঙ্ক কোথা থেকে" প্রশ্নের উত্তর এক চাপে
+          // ⓘ TalkBack-এ কার্ডটা একটাই বোতাম — অঙ্ক পড়ে, তারপর "খাতা খুলুন" (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+          // ⛔ আগে চাপার জায়গাটা ছিল নামহীন: কার্ডের লেখা আলাদা ঘরে পড়ত, বোতাম কেবল "বোতাম"।
           if (due != null)
-            InkWell(
-              onTap: () => context.push('/home/customers/$customerId/ledger'),
-              child: _DueCard(due: due),
+            MergeSemantics(
+              child: Semantics(
+                button: true,
+                onTapHint: 'খাতা খুলুন',
+                child: InkWell(
+                  key: const ValueKey('customer-due-card'),
+                  onTap: () => context.push('/home/customers/$customerId/ledger'),
+                  child: _DueCard(due: due),
+                ),
+              ),
             ),
           const SizedBox(height: AppSpacing.md),
           _Actions(customer: customer, showCredit: showCredit),
@@ -127,6 +136,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     trailing: o.total == null
                         ? null
                         : Text(Money.taka(o.total),
+                            semanticsLabel: Money.spoken(o.total),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                   ),
@@ -192,6 +202,7 @@ class _DueCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(due.outstandingLabel,
+                semanticsLabel: Money.speakable(due.outstandingLabel),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,

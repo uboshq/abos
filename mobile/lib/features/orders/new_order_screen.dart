@@ -573,22 +573,30 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 flex: 3,
                 child: Column(
                   children: [
+                    // ⓘ −, অঙ্ক আর + — প্রতিটা আঙুলের জায়গা ৪৮ dp; সাদা বৃত্ত আগের মতো ৩৮ (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
                     Container(
-                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(color: OrderPalette.pill, borderRadius: BorderRadius.circular(999)),
                       child: Row(
                         children: [
                           _round('−', 'কমান', () => _setQty(product.id, (_qty[product.id] ?? 0) - 1),
                               key: ValueKey('order-minus-${product.id}')),
                           Expanded(
-                            child: InkWell(
-                              key: ValueKey('order-qty-${product.id}'),
-                              onTap: () => _openKeypad(product),
-                              child: SizedBox(
-                                height: 38,
-                                child: Center(
-                                  child: Text(bnQty(qty),
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                            child: Semantics(
+                              button: true,
+                              label: 'পরিমাণ',
+                              value: bnQty(qty),
+                              onTapHint: 'সংখ্যা লিখুন',
+                              child: InkWell(
+                                key: ValueKey('order-qty-${product.id}'),
+                                onTap: () => _openKeypad(product),
+                                child: SizedBox(
+                                  height: 48,
+                                  child: Center(
+                                    child: ExcludeSemantics(
+                                      child: Text(bnQty(qty),
+                                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -645,21 +653,25 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     );
   }
 
+  /// ⓘ আঙুলের জায়গা ৪৮×৪৮, দেখা বৃত্ত ৩৮ — আর TalkBack কেবল "কমান"/"বাড়ান" বলে, চিহ্নটা নয়; চাপটা ওই নামের ঘরেই।
   Widget _round(String glyph, String label, VoidCallback onTap, {Key? key}) => Semantics(
         button: true,
         label: label,
-        child: Material(
-          color: Colors.white,
-          shape: const CircleBorder(),
-          child: InkWell(
-            key: key,
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: 38,
-              height: 38,
-              child: Center(
-                child: Text(glyph, style: const TextStyle(fontSize: 20, color: OrderPalette.onPill)),
+        child: InkWell(
+          key: key,
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: Ink(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: Center(
+                    child: ExcludeSemantics(
+                        child: Text(glyph, style: const TextStyle(fontSize: 20, color: OrderPalette.onPill)))),
               ),
             ),
           ),

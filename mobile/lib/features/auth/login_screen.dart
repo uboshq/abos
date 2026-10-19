@@ -392,24 +392,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 runSpacing: 4,
                 children: [
-                  InkWell(
-                    key: const ValueKey('login-remember'),
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: _submitting ? null : () => setState(() => _remember = !_remember),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          value: _remember,
-                          activeColor: _Palette.ink,
-                          visualDensity: VisualDensity.compact,
-                          onChanged: _submitting
-                              ? null
-                              : (v) => setState(() => _remember = v ?? false),
+                  // ⓘ বাক্স আর লেখা একটাই জিনিস — TalkBack বলে "মনে রাখুন, চেকবক্স", আর আঙুলের জায়গা অন্তত ৪৮ dp
+                  // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে বাক্সটা ছিল নামহীন ৪০×৪০।
+                  MergeSemantics(
+                    child: InkWell(
+                      key: const ValueKey('login-remember'),
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: _submitting ? null : () => setState(() => _remember = !_remember),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Checkbox(
+                              value: _remember,
+                              activeColor: _Palette.ink,
+                              visualDensity: VisualDensity.compact,
+                              onChanged: _submitting
+                                  ? null
+                                  : (v) => setState(() => _remember = v ?? false),
+                            ),
+                            Flexible(
+                              child: Text(w.remember,
+                                  style: const TextStyle(color: _Palette.ink, fontSize: 14)),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                         ),
-                        Text(w.remember,
-                            style: const TextStyle(color: _Palette.ink, fontSize: 14)),
-                      ],
+                      ),
                     ),
                   ),
                   TextButton(
@@ -466,16 +476,26 @@ class _LanguageWord extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-          child: Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                color: selected ? _Palette.ink : _Palette.footer,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-              )),
+  // ⓘ ছোট লেখা, কিন্তু আঙুলের জায়গা ৪৮×৪৮ dp, আর TalkBack বলে কোনটা বাছা (ec, ১৯ অক্টোবর ২০২৬)
+  Widget build(BuildContext context) => Semantics(
+        selected: selected,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+              child: Center(
+                widthFactor: 1,
+                child: Text(label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? _Palette.ink : _Palette.footer,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                    )),
+              ),
+            ),
+          ),
         ),
       );
 }

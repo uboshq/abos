@@ -396,11 +396,15 @@ class _OriginLine extends StatelessWidget {
           )
         else
           const Spacer(),
+        // ⓘ জায়গা না হলে সময়টা দুই লাইনে ভাঙে, ওপারে যায় না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
         if (asOf != null)
-          Text(
-            'হিসাব ${DateFormat('dd/MM/yyyy hh:mm a').format(asOf)} পর্যন্ত',
-            style:
-                const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted),
+          Flexible(
+            child: Text(
+              'হিসাব ${DateFormat('dd/MM/yyyy hh:mm a').format(asOf)} পর্যন্ত',
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.onSurfaceMuted),
+            ),
           ),
       ],
     );
@@ -434,6 +438,7 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             Money.taka(figure.amount),
+            semanticsLabel: Money.spoken(figure.amount),
             style: TextStyle(
                 fontSize: 28, fontWeight: FontWeight.w800, color: colour),
           ),
