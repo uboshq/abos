@@ -52,10 +52,11 @@
                         </tr>
                     @endforeach
                 </tbody>
-                {{-- ⭐ সর্বমোট — সার্ভারের হিসাব ([[Listing::$total]]), পাতা কিছু গোনে না; সারির ঠিক নিচে, মোটা রেখা আর মোটা লেখায় --}}
+                {{-- ⭐ সর্বমোট — সার্ভারের হিসাব ([[Listing::$total]]), পাতা কিছু গোনে না; সারির ঠিক নিচে, মোটা রেখা আর মোটা লেখায়;
+                     ⓘ রেখার রং সারির রেখারই (`white/15`) — লাইভে node নেই, বান্ডিলে যে শ্রেণি আছে কেবল সেটাই চলে --}}
                 @if ($listing->total !== null)
                     <tfoot data-hero-total>
-                        <tr class="border-t-2 border-white/40">
+                        <tr class="border-t-2 border-white/15">
                             @foreach ($listing->columns as $i => $column)
                                 <td @class([
                                     'py-1.5 font-bold',
