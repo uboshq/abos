@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:abos_mobile/core/approvals/approvals_api.dart';
+import 'package:abos_mobile/core/auth/auth_controller.dart';
+import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
+import 'package:abos_mobile/core/navigation/nav_state.dart';
+import 'package:abos_mobile/core/navigation/top_bar/top_bar_context.dart';
 import 'package:abos_mobile/core/books/books_api.dart';
 import 'package:abos_mobile/core/records/approval_record.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
@@ -103,9 +108,41 @@ class SampleBooks implements BooksApi {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
-Widget srCollectBody({List<ShopDue> Function()? dues, BooksApi? api, List<UnsentCollection> Function()? unsent}) =>
+Widget srCollectBody(
+        {List<ShopDue> Function()? dues, BooksApi? api, List<UnsentCollection> Function()? unsent, bool canCollect = false}) =>
     MoneyInListScreen(
-        api: api ?? SampleBooks(), today: DateTime(2026, 10, 20), dues: dues ?? sampleDues, unsent: unsent ?? () => const []);
+        api: api ?? SampleBooks(),
+        today: DateTime(2026, 10, 20),
+        dues: dues ?? sampleDues,
+        unsent: unsent ?? () => const [],
+        canCollect: canCollect);
+
+class _SignedIn extends AuthController {
+  _SignedIn(AuthUser user) {
+    state = AuthState.signedIn(user);
+  }
+}
+
+/// নমুনার বার — "ADI Wholesale · ময়মনসিংহ" (পুরো-পাতার নমুনা, পাতা ২)
+TopBarContext sampleTopBar({String? Function(String path)? moduleOf}) => TopBarContext(
+      company: 'ADI Wholesale',
+      companyCode: 'ADI',
+      branch: 'ময়মনসিংহ',
+      moduleOf: moduleOf,
+      search: (_) async {},
+      openNotifications: (_) async {},
+      openMenu: (_, __) async {},
+    );
+
+/// ঢোকা মানুষ আর হোমের লেখা বার — ভেতরের পর্দার বার ([AbosScreenBar]) তখন আসল নীল বার আঁকে
+Widget inSession(Widget app, {AuthUser user = ownerUser, TopBarContext? top, int unread = 3}) => ProviderScope(
+      overrides: [
+        authStateProvider.overrideWith((ref) => _SignedIn(user)),
+        topBarContextProvider.overrideWith((ref) => top ?? sampleTopBar()),
+        navBadgesProvider.overrideWith((ref) => NavBadges(unread: unread)),
+      ],
+      child: app,
+    );
 
 /// অ্যাপের নিজের থিমে, ঠিক মাপে আর অক্ষরের মাপে
 Widget framed(Widget child, {bool dark = false, double textScale = 1, ThemeData Function(ThemeData)? font}) {
