@@ -48,6 +48,9 @@ void main() {
     'product_list_screen.dart',
     'stock_list_screen.dart',
     'order_list_screen.dart',
+    // ⭐ ডিও/আদেশের তালিকা আর ডেলিভারি ট্র্যাকিং — নকশা ৩-এর খালি অবস্থা (a5, ১৯ অক্টোবর ২০২৬); টান test/a5_orders_do_design3_test.dart-এ দেখা
+    'delivery_order_screens.dart',
+    'delivery_tracking_screen.dart',
     'due_list_screen.dart',
     // ⭐ মাথার ঘণ্টার পাতা — মালিক, ৬ অক্টোবর ২০২৬
     'notifications_screen.dart',
@@ -90,6 +93,8 @@ void main() {
     'money_screens.dart',
     // ⭐ আমার অনুরোধ (১৭ অক্টোবর ২০২৬) — টান test/my_requests_test.dart-এ দেখা
     'my_requests_screen.dart',
+    // ⭐ টাকা আদায়ের খালি তালিকা (নকশা ৩, ২০ অক্টোবর ২০২৬) — টান test/a5_counter_money_dues_design3_test.dart-এ দেখা
+    'money_in_screens.dart',
   };
 
   /// Screens whose empty state is deliberately **not** pull-to-refresh, each
@@ -114,6 +119,11 @@ void main() {
     'web_inside_screen.dart',
     // ⭐ "শীঘ্রই আসছে" (১৭ অক্টোবর ২০২৬) — এখনো তৈরি হয়নি এমন পর্দা; টেনে আনার মতো কিছুই নেই, কথাটা কেবল জানানো।
     'coming_soon_screen.dart',
+    // ⭐ নকশা ৩ (২০ অক্টোবর ২০২৬): কাউন্টারের খসড়ার তালিকা নিচের পাতায় (bottom sheet) — টানলে পাতাটাই বন্ধ হয়, তাই খালিতে
+    // নিজের "নতুন বিল লিখুন" আর ভুলে "আবার চেষ্টা করুন"; ফেরতের পর্দা একটা ফর্ম — বিল না থাকলে নিজের "নতুন করে দেখুন" বোতাম।
+    // দুটোই দেখা test/a5_counter_money_dues_design3_test.dart-এ।
+    'counter_screen.dart',
+    'return_screen.dart',
   };
 
   test('every screen that can draw an EmptyState has been considered', () {

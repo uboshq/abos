@@ -12,7 +12,13 @@ import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
+import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/state_views.dart';
+import '../books/books_widgets.dart' show dayOf;
+import '../books/money_in_screens.dart' show DesignListRow;
 import '../printing/document_actions_sheet.dart';
 import 'return_screen.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -95,6 +101,9 @@ class _CounterScreenState extends State<CounterScreen> {
   bool _busy = false;
   String? _error;
 
+  /// কাউন্টার খোলার (গুদাম, শর্ত, লট) ভুল — আলাদা, যাতে "আবার চেষ্টা করুন" কেবল খোলাটাই আবার চালায় (নকশা ৩, পাতা ৮)
+  String? _setupError;
+
   late final List<CustomerRecord> _customers =
       widget.customers ?? CustomerRecord.all();
   late final List<ProductRecord> _products =
@@ -132,7 +141,10 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   Future<void> _loadSetup([String? warehouseId]) async {
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _setupError = null;
+    });
     try {
       final setup = await widget.api.setup(warehouseId: warehouseId);
       if (!mounted) return;
@@ -146,7 +158,7 @@ class _CounterScreenState extends State<CounterScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e,
+        setState(() => _setupError = errorMessageFor(e,
             fallback:
                 'কাউন্টার খোলা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।',
             whenAbsent: 'সার্ভারে ফোনের কাউন্টার এখনো আসেনি — অফিসে জানান।'));
@@ -165,11 +177,11 @@ class _CounterScreenState extends State<CounterScreen> {
   /// সার্ভার গুদাম ঠিক করতে পারেনি — তখন লটের তালিকা ফাঁকা, আর লট-ধরা পণ্য লট ছাড়াই কার্টে ঢুকে পরে সার্ভারে আটকাত
   bool get _noWarehouse => _setup != null && _warehouseId == null;
 
-  Future<T?> _pick<T>(String title, List<T> items, String Function(T) label) =>
+  Future<T?> _pick<T>(String title, List<T> items, String Function(T) label, {bool customers = false}) =>
       showModalBottomSheet<T>(
         context: context,
         isScrollControlled: true,
-        builder: (_) => _PickSheet<T>(title: title, items: items, label: label),
+        builder: (_) => _PickSheet<T>(title: title, items: items, label: label, customers: customers),
       );
 
   Future<void> _askFree() async {
@@ -869,26 +881,15 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   /// খসড়া খুলুন — রাখা খসড়ার তালিকা; বাছলে ক্রেতা আর সারি কার্টে, পাঠালে এই খসড়াটাই পাকা হয়
+  ///
+  /// <p>⭐ তালিকা নিচের পাতায় নিজেই আনে — খসড়া সারি, ভুলে "আবার চেষ্টা করুন", খালিতে "নতুন বিল লিখুন" (নকশা ৩, পাতা ৮–১০);
+  /// আগে আনা শেষ না হওয়া পর্যন্ত কিছুই দেখাত না, আর ভুল বা খালি হলে কেবল একটা পপ-আপ।
   Future<void> _openDraft() async {
-    List<CounterDraftSummary> list;
-    try {
-      list = await widget.api.drafts();
-    } catch (e) {
-      if (mounted) {
-        await _popup(
-            'খসড়া আনা গেল না',
-            errorMessageFor(e,
-                fallback: 'নেট আছে কি না দেখে আবার চেষ্টা করুন।'));
-      }
-      return;
-    }
-    if (!mounted) return;
-    if (list.isEmpty) {
-      await _popup('খসড়া নেই', 'রাখা কোনো খসড়া নেই।');
-      return;
-    }
-    final picked = await _pick<CounterDraftSummary>('খসড়া খুলুন', list,
-        (d) => '${d.no} · ${d.customer} · ৳ ${d.total} · ${d.lines}টি পণ্য');
+    final picked = await showModalBottomSheet<CounterDraftSummary>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _DraftsSheet(load: widget.api.drafts),
+    );
     if (picked == null || !mounted) return;
     try {
       final draft = await widget.api.openDraft(picked.id);
@@ -1165,7 +1166,14 @@ class _CounterScreenState extends State<CounterScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          if (_busy) const LinearProgressIndicator(),
+          // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): কাউন্টার খোলার সময় খসড়া সারি, পরে উপরে সরু দাগ; খোলা না গেলে "আবার চেষ্টা করুন"
+          if (_busy && setup == null && _setupError == null) const LoadingSkeleton(rows: 3),
+          if (_busy && setup != null) const LinearProgressIndicator(),
+          if (_setupError != null)
+            ErrorState(
+                key: const ValueKey('counter-setup-error'),
+                message: _setupError!,
+                onRetry: _busy ? null : () => _loadSetup(_warehouseId)),
           // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায়; হলুদ পটে নিজের গাঢ় হলুদ লেখা — থিমের লেখা
           // অন্ধকার মোডে হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
           if (_error != null)
@@ -1194,11 +1202,16 @@ class _CounterScreenState extends State<CounterScreen> {
             child: ListTile(
               key: const ValueKey('counter-customer'),
               leading: const Icon(Icons.storefront_outlined),
-              title: Text(_customer?.label ?? 'ক্রেতা বাছুন'),
+              // ⭐ বাছা ক্রেতা "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম) — খালি নাম কখনো নয়
+              title: _customer == null
+                  ? const Text('ক্রেতা বাছুন')
+                  : CustomerLine(_customer!.label,
+                      key: const ValueKey('counter-customer-line'),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final picked = await _pick<CustomerRecord>(
-                    'ক্রেতা বাছুন', _customers, (c) => c.label);
+                    'ক্রেতা বাছুন', _customers, (c) => c.label, customers: true);
                 if (picked == null) return;
                 setState(() => _customer = picked);
                 // ⓘ পণ্য আগে বাছা থাকলে (নতুন সারি) — দরটা এই ক্রেতার তালিকা থেকে
@@ -1478,11 +1491,14 @@ class _CounterScreenState extends State<CounterScreen> {
 
 class _PickSheet<T> extends StatefulWidget {
   const _PickSheet(
-      {required this.title, required this.items, required this.label});
+      {required this.title, required this.items, required this.label, this.customers = false});
 
   final String title;
   final List<T> items;
   final String Function(T) label;
+
+  /// গ্রাহকের তালিকা — সারি [CustomerLine]: "নাম · পয়েন্ট · শাখা" এক লাইনে, লম্বা হলে "…", পুরোটা ছুঁয়ে ধরে রাখলে
+  final bool customers;
 
   @override
   State<_PickSheet<T>> createState() => _PickSheetState<T>();
@@ -1516,12 +1532,103 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
               itemCount: shown.length,
               itemBuilder: (_, i) => ListTile(
                 minTileHeight: 72,
-                title: Text(widget.label(shown[i])),
+                title: widget.customers
+                    ? CustomerLine(widget.label(shown[i]), style: const TextStyle(fontWeight: FontWeight.w600))
+                    : Text(widget.label(shown[i])),
                 onTap: () => Navigator.of(context).pop(shown[i]),
               ),
             ),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+/// ⭐ রাখা খসড়ার তালিকা — নকশা ৩-এর সারি (ক্রেতা "নাম · পয়েন্ট · শাখা", ডানে টাকা, দ্বিতীয় লাইনে খসড়ার নম্বর · তারিখ ·
+/// পণ্যের সংখ্যা, "খসড়া" চিপ) আর তিন অবস্থা: খসড়া সারি · ভুলে "আবার চেষ্টা করুন" · খালিতে "নতুন বিল লিখুন"। বাছলে সেই
+/// খসড়ার সারাংশ ফেরায়, নইলে null।
+class _DraftsSheet extends StatefulWidget {
+  const _DraftsSheet({required this.load});
+
+  final Future<List<CounterDraftSummary>> Function() load;
+
+  @override
+  State<_DraftsSheet> createState() => _DraftsSheetState();
+}
+
+class _DraftsSheetState extends State<_DraftsSheet> {
+  List<CounterDraftSummary>? _list;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final list = await widget.load();
+      if (mounted) setState(() => _list = list);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = errorMessageFor(e,
+            fallback: 'খসড়া আনা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  static String _second(CounterDraftSummary d) =>
+      [d.no, if (d.date != null) dayOf(d.date), '${d.lines}টি পণ্য'].join(' · ');
+
+  @override
+  Widget build(BuildContext context) {
+    final list = _list;
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: ListView(
+          key: const ValueKey('counter-drafts'),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            Text('খসড়া খুলুন', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            if (_busy && list == null) const LoadingSkeleton(rows: 4),
+            if (_error != null)
+              ErrorState(key: const ValueKey('counter-drafts-error'), message: _error!, onRetry: _busy ? null : _load),
+            if (list != null && list.isEmpty && _error == null)
+              EmptyState(
+                key: const ValueKey('counter-drafts-empty'),
+                icon: Icons.edit_note,
+                title: 'রাখা কোনো খসড়া নেই',
+                message: 'কাউন্টারে "খসড়া রাখুন" চাপলে বিল এখানে আসে।',
+                action: FilledButton.icon(
+                    key: const ValueKey('counter-drafts-new'),
+                    style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('নতুন বিল লিখুন')),
+              ),
+            for (final d in list ?? const <CounterDraftSummary>[])
+              DesignListRow(
+                key: ValueKey('counter-draft-${d.id}'),
+                icon: Icons.edit_note,
+                name: d.customer.isEmpty ? '—' : d.customer,
+                second: _second(d),
+                amount: Money.valueOrZero(d.total),
+                pill: const AppStatusPill(label: 'খসড়া', kind: AppStatusKind.neutral),
+                onTap: () => Navigator.of(context).pop(d),
+              ),
+          ],
+        ),
       ),
     );
   }

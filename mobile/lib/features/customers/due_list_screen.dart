@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/records/customer_record.dart';
 import '../../core/records/list_queries.dart';
-import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/state_views.dart';
+import '../../core/widgets/totals_bar.dart';
+import '../books/money_in_screens.dart' show DesignListRow;
 
 /// Who owes what — the whole round's debt on one page.
 ///
@@ -28,7 +30,10 @@ import '../../core/widgets/list_controls.dart';
 /// the four that matter are at the top of this one. That stays the default;
 /// সাজান can change it for this visit only (মালিক, ২ অক্টোবর — DueListQuery).
 class DueListScreen extends StatefulWidget {
-  const DueListScreen({super.key});
+  const DueListScreen({super.key, this.refresh});
+
+  /// নতুন করে আনা — না দিলে সিঙ্ক ইঞ্জিনের পুরো টান ([ReferenceSync.syncAll]); পরীক্ষা নিজের নকল দেয়
+  final Future<void> Function()? refresh;
 
   @override
   State<DueListScreen> createState() => _DueListScreenState();
@@ -44,7 +49,7 @@ class _DueListScreenState extends State<DueListScreen> {
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
     try {
-      await ReferenceSync.syncAll();
+      await (widget.refresh ?? ReferenceSync.syncAll)();
     } catch (_) {
       // See CustomerListScreen's own comment on the same catch.
     } finally {
@@ -66,11 +71,18 @@ class _DueListScreenState extends State<DueListScreen> {
     final total =
         rows.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
 
+    // ⭐ নিচের স্থির পট্টি (নকশা ৩, পাতা ৩): "এই পাতা" = খোঁজ আর ফিল্টারের পরে যা দেখা যাচ্ছে; "সর্বমোট" = পুরো তালিকা —
+    // খোঁজায় কটা দোকান লুকালেও সর্বমোট বদলায় না, কারণ এই সংখ্যাটার জন্যই মালিক পাতাটা খোলেন
+    final shown =
+        filtered.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
+
     return Scaffold(
       appBar: AppBar(title: const Text('বকেয়া তালিকা')),
+      bottomNavigationBar: rows.isEmpty
+          ? null
+          : TotalsBar(pageCount: filtered.length, pageSum: shown, allCount: rows.length, allSum: total),
       body: Column(
         children: [
-          if (rows.isNotEmpty) _TotalStrip(total: total, shops: rows.length),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
@@ -90,31 +102,44 @@ class _DueListScreenState extends State<DueListScreen> {
               filters: _filters,
               onFilters: (value) => setState(() => _filters = value),
             ),
-          if (_refreshing) const LinearProgressIndicator(),
+          if (_refreshing && rows.isNotEmpty) const LinearProgressIndicator(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _refresh,
               child: rows.isEmpty
                   ? ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                       children: [
-                        EmptyState(
-                          icon: trouble == null
-                              ? Icons.check_circle_outline
-                              : Icons.cloud_off_outlined,
-                          // ⛔ The worst one on this list to get wrong. After a
-                          // clean pull, 'কারো কাছে বকেয়া নেই' is good news,
-                          // not an error — the same distinction the approvals
-                          // inbox draws. After a failed pull it is a claim
-                          // about money made on no data, and somebody acts on
-                          // it: no collection round, no call, a credit limit
-                          // read as headroom. An empty list is only news when
-                          // the list actually arrived.
-                          title: trouble == null
-                              ? 'কারো কাছে বকেয়া নেই'
-                              : 'বকেয়ার তালিকা আনা যায়নি',
-                          message:
-                              trouble ?? 'সিঙ্ক হয়নি মনে হলে নিচে টেনে দেখুন।',
-                        ),
+                        // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): আনা চলছে → খসড়া সারি; টান ব্যর্থ → ভুল আর "আবার চেষ্টা করুন";
+                        // টান ঠিক, কেউ বাকি নেই → খালি, সাথে "নতুন করে দেখুন"
+                        if (_refreshing)
+                          const LoadingSkeleton()
+                        else if (trouble != null) ...[
+                          // ⛔ The worst one on this list to get wrong. After a failed pull 'কারো কাছে বকেয়া নেই' is a
+                          // claim about money made on no data, and somebody acts on it: no collection round, no call,
+                          // a credit limit read as headroom. An empty list is only news when the list actually arrived.
+                          ErrorState(
+                              key: const ValueKey('due-error'),
+                              message: 'বকেয়ার তালিকা আনা যায়নি',
+                              onRetry: _refresh),
+                          Text(trouble,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        ] else
+                          // After a clean pull this is good news, not an error — the same distinction the approvals
+                          // inbox draws.
+                          EmptyState(
+                            key: const ValueKey('due-empty'),
+                            icon: Icons.check_circle_outline,
+                            title: 'কারো কাছে বকেয়া নেই',
+                            message: 'সিঙ্ক হয়নি মনে হলে নতুন করে দেখুন।',
+                            action: OutlinedButton.icon(
+                                key: const ValueKey('due-empty-refresh'),
+                                style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+                                onPressed: _refresh,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('নতুন করে দেখুন')),
+                          ),
                       ],
                     )
                   : filtered.isEmpty
@@ -167,52 +192,16 @@ class _DueListScreenState extends State<DueListScreen> {
   }
 }
 
-/// The one number an owner opens this page for.
-class _TotalStrip extends StatelessWidget {
-  const _TotalStrip({required this.total, required this.shops});
-
-  final double total;
-  final int shops;
-
-  @override
-  Widget build(BuildContext context) {
-    // ⭐ পট থিমের primary, লেখা onPrimary — বাঁধা সাদা নয়, তাই অন্ধকার মোডে হালকা পটে গাঢ় লেখা বসে
-    // (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
-    final cs = Theme.of(context).colorScheme;
-    final soft = cs.onPrimary.withValues(alpha: 0.7);
-    return Container(
-      width: double.infinity,
-      color: cs.primary,
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('মোট বকেয়া', style: TextStyle(color: soft, fontSize: 12.5)),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            Money.taka(total),
-            style: TextStyle(
-                color: cs.onPrimary, fontSize: 26, fontWeight: FontWeight.w700),
-          ),
-          Text('$shops টি দোকান',
-              style: TextStyle(color: soft, fontSize: 12.5)),
-        ],
-      ),
-    );
-  }
-}
-
-/// One shop, two lines — the owner's own layout, 6 Oct 2026:
+/// One shop — design 3's row (নকশার নিয়ম ০.৪.৩৮ §৪, ১৯ অক্টোবর ২০২৬):
 ///
-///     M/S. Alif mim International Enterprise
-///     পয়েন্ট: ফুলপুর                      বকেয়া: ৳3,543
+///     [ওয়ালেট]  M/S. Alif mim International Enterprise · ফুলপুর · Super      ৳3,543.00
+///               C-0042 · বকেয়া
 ///
-/// The mobile number, the credit days and the limit are not on the row: they
-/// are on the shop's own page, which a tap opens ("mobile no to click ba
-/// touch kore open korle vitore ache"). A shop on no point keeps the second
-/// line with the due alone. The limit is still never judged here or there —
-/// see the detail page and `CustomerDueSync`.
+/// ⭐ উপরে "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম: "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব
+/// জায়গায়, আর শাখার নামও দিতে হবে"), ডানে বকেয়া; নিচের লাইনে গ্রাহকের নম্বর। The mobile number, the credit days and the
+/// limit are not on the row: they are on the shop's own page, which a tap opens ("mobile no to click ba touch kore open
+/// korle vitore ache", 6 Oct 2026). The limit is still never judged here or there — see the detail page and
+/// `CustomerDueSync`.
 class _DueTile extends StatelessWidget {
   const _DueTile({required this.row});
 
@@ -220,28 +209,16 @@ class _DueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ⭐ দুই লাইন (মালিক, ৬ অক্টোবর ২০২৬): উপরে "নাম · পয়েন্ট · শাখা" (১৯ অক্টোবর ২০২৬ থেকে, স্থায়ী নিয়ম: "গ্রাহকের নামের পাশে
-    // পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে"), নিচে বকেয়া — পয়েন্ট এখন নামের লাইনে, দুইবার নয়।
-    // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
-    return Card(
-      child: ListTile(
-        minTileHeight: 72,
-        onTap: () => context.push('/home/customers/${row.customer.id}'),
-        title: CustomerLine(row.customer.label,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        // ⓘ ডানে বসে, কিন্তু Row/Spacer নয় — বড় অক্ষরে (২০০%) লম্বা টাকা Row ছাপিয়ে ভাঙত; এখন মোড়ে
-        subtitle: Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: Text(
-            'বকেয়া: ${Money.taka(row.due.outstandingInView)}',
-            textAlign: TextAlign.end,
-            style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: Theme.of(context).colorScheme.error),
-          ),
-        ),
-      ),
+    final code = row.customer.code;
+    return DesignListRow(
+      key: ValueKey('due-${row.customer.id}'),
+      icon: Icons.account_balance_wallet_outlined,
+      tone: AppColors.danger,
+      name: row.customer.label,
+      second: code == null ? 'বকেয়া' : '$code · বকেয়া',
+      amount: row.due.outstandingInView,
+      amountColor: Theme.of(context).colorScheme.error,
+      onTap: () => context.push('/home/customers/${row.customer.id}'),
     );
   }
 }
