@@ -301,7 +301,7 @@ class VoucherRow {
       : switch (state) {
           'draft' => 'খসড়া',
           'awaiting' => 'সইয়ের অপেক্ষায়',
-          'posted' => 'পাকা',
+          'posted' => 'পোস্ট হয়েছে',
           'cancelled' => 'বাতিল',
           _ => 'খসড়া',
         };
