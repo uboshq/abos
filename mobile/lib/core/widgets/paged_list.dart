@@ -82,24 +82,34 @@ class _PagedListState<T> extends State<PagedList<T>> {
   }
 
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            ...widget.header,
-            // ⭐ তিন অবস্থা (নকশা ৩): প্রথম আনায় খসড়া সারি; আগে আনা থাকলে উপরে সরু দাগ; ভুলে "আবার চেষ্টা করুন"
-            if (_busy && !_loaded) const LoadingSkeleton(),
-            if (_busy && _loaded) const LinearProgressIndicator(),
-            if (_error != null) ErrorState(key: const ValueKey('books-error'), message: _error!, onRetry: _busy ? null : _load),
-            if (_loaded && _rows.isEmpty && _error == null)
-              EmptyState(icon: widget.emptyIcon, title: widget.emptyTitle, message: widget.emptyMessage),
-            for (final row in _rows) widget.item(context, row),
-            if (_next != null) MoreButton(busy: _busy, onPressed: () => _load(more: true)),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final top = <Widget>[
+      ...widget.header,
+      // ⭐ তিন অবস্থা (নকশা ৩): প্রথম আনায় খসড়া সারি; আগে আনা থাকলে উপরে সরু দাগ; ভুলে "আবার চেষ্টা করুন"
+      if (_busy && !_loaded) const LoadingSkeleton(),
+      if (_busy && _loaded) const LinearProgressIndicator(),
+      if (_error != null) ErrorState(key: const ValueKey('books-error'), message: _error!, onRetry: _busy ? null : _load),
+      if (_loaded && _rows.isEmpty && _error == null)
+        EmptyState(icon: widget.emptyIcon, title: widget.emptyTitle, message: widget.emptyMessage),
+    ];
+    final more = _next != null;
+    // ⭐ সারি বানায় কেবল যতটা পর্দায় আসে (ListView.builder) — "আরও দেখুন" চেপে চেপে হাজার সারি জমলেও টানতে আটকায় না
+    // (Android vitals: ধীর ফ্রেম; ec-র সাথে ভাগ, ২০ অক্টোবর ২০২৬)। ⛔ আগে প্রতিটা সারি একসাথে children-এ তৈরি হত।
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        itemCount: top.length + _rows.length + (more ? 1 : 0),
+        itemBuilder: (context, i) {
+          if (i < top.length) return top[i];
+          final r = i - top.length;
+          if (r < _rows.length) return widget.item(context, _rows[r]);
+          return MoreButton(busy: _busy, onPressed: () => _load(more: true));
+        },
+      ),
+    );
+  }
 }
 
 /// একটা কাগজের পাতা — আনা, টেনে নবায়ন, বাংলায় ভুল; খোলা কাগজ "সাম্প্রতিক"-এ তোলা ডাকে দেয় [onLoaded]

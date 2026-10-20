@@ -723,7 +723,7 @@ class _AvatarAction extends StatelessWidget {
         radius: 15,
         backgroundColor: context.palette.surface,
         foregroundColor: cs.primary,
-        foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+        foregroundImage: avatarImage(avatarUrl),
         child: Text(name.trim().isEmpty ? '?' : name.trim().characters.first,
             style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
@@ -763,8 +763,7 @@ class _MoreTab extends ConsumerWidget {
               key: const ValueKey('profile-avatar'),
               backgroundColor: cs.primary,
               foregroundColor: cs.onPrimary,
-              foregroundImage:
-                  avatarUrl == null ? null : NetworkImage(avatarUrl!),
+              foregroundImage: avatarImage(avatarUrl),
               child: Text(user.name.isEmpty ? '?' : user.name.characters.first),
             ),
             title: Text(user.name,
@@ -901,3 +900,7 @@ class _LockDelayTile extends StatelessWidget {
     );
   }
 }
+
+/// ⭐ মানুষের ছবি — যত ছোট দেখায় তত ছোট করে খোলা (১২০ পিক্সেল, ৪০dp গোলের ৩ গুণ)। ⛔ নইলে ফোনের ৪০০০ পিক্সেলের ছবি
+/// পুরোটা মেমরিতে খুলত (প্রায় ৪৮ MB), কম-RAM ফোনে টানতে আটকাত (Android vitals; পরিকল্পনা ৪, অংশ ২; ২০ অক্টোবর ২০২৬)।
+ImageProvider? avatarImage(String? url) => url == null ? null : ResizeImage(NetworkImage(url), width: 120, policy: ResizeImagePolicy.fit);
