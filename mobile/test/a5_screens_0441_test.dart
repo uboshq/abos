@@ -141,6 +141,13 @@ void main() {
         testWidgets('${s.key}: at 200% text on ${width.toInt()}dp nothing overflows', (tester) async {
           await pump(tester, s.value(), textScale: 2, size: Size(width, 3000));
           expect(tester.takeException(), isNull);
+          if (s.key == 'owner home') {
+            // ⓘ বড় অক্ষরে টাকার ঘর এক কলামে — অঙ্ক মাঝখানে ভাঙে না
+            final cash = tester.getTopLeft(find.byKey(const ValueKey('owner-money-cash')));
+            final bank = tester.getTopLeft(find.byKey(const ValueKey('owner-money-bank')));
+            expect(bank.dx, cash.dx);
+            expect(bank.dy, greaterThan(cash.dy));
+          }
         });
       }
 
