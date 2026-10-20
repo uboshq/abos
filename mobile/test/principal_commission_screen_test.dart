@@ -33,6 +33,7 @@ Map<String, dynamic> pcRow(String id, String name,
         required String commission,
         required String paid,
         required String balance,
+        String rate = '2.5%',
         String? label}) =>
     {
       'supplierId': int.parse(id),
@@ -42,7 +43,7 @@ Map<String, dynamic> pcRow(String id, String name,
       'periodFrom': '2026-09-26',
       'periodTo': '2026-10-25',
       'periodSoFar': '26/09/2026 – আজ পর্যন্ত',
-      'basisRate': 'বিক্রি · 2.5%',
+      'basisRate': 'বিক্রি · $rate',
       'inflow': inflow,
       'commission': commission,
       if (label != null) 'commissionLabel': label,
@@ -55,7 +56,8 @@ Map<String, dynamic> pcSample({Map<String, dynamic>? total}) => {
       // ⓘ মাস না চাইলে সার্ভার `month: null` দেয় (প্রতিটা চক্র আলাদা মাসে শেষ হতে পারে)
       'month': null,
       'rows': [
-        pcRow('1', 'Star Line', inflow: '1204346.0000', commission: '48173.8400', paid: '0.0000', balance: '1156172.1600'),
+        // ⓘ নমুনার হার আর কমিশন মেলে: ১২,০৪,৩৪৬-এর ৪% = ৪৮,১৭৩.৮৪ (ছবিতে মালিক অঙ্ক মিলিয়ে দেখেন)
+        pcRow('1', 'Star Line', rate: '4%', inflow: '1204346.0000', commission: '48173.8400', paid: '0.0000', balance: '1156172.1600'),
         pcRow('2', 'ACI লিমিটেড', inflow: '845210.0000', commission: '21130.2500', paid: '830000.0000', balance: '-5920.2500'),
         pcRow('3', 'Fresh', branch: 'নেত্রকোনা', inflow: '100000.0100', commission: '2500.0000', paid: '97500.0000', balance: '0.0100'),
       ],
@@ -149,7 +151,7 @@ void main() {
     await pump(tester, size: const Size(412, 1600));
     expect(find.text('Star Line · ময়মনসিংহ'), findsOneWidget);
     expect(textOf(tester, const ValueKey('pc-second-1')),
-        'এসেছে ৳12,04,346.00 · কমিশন (বিক্রি · 2.5%) ৳48,173.84 · পাঠানো ৳0.00');
+        'এসেছে ৳12,04,346.00 · কমিশন (বিক্রি · 4%) ৳48,173.84 · পাঠানো ৳0.00');
     expect(textOf(tester, const ValueKey('pc-balance-1')), '৳11,56,172.16');
     expect(textOf(tester, const ValueKey('pc-side-1')), 'দেনা · দিতে হবে');
     expect(textOf(tester, const ValueKey('pc-balance-2')), '৳5,920.25');
