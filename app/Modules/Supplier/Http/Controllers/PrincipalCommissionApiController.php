@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Supplier\Http\Controllers;
 
+use App\Core\Support\UnchangedAnswer;
 use App\Http\Controllers\Controller;
 use App\Modules\Supplier\Reports\PrincipalCommission;
 use App\Modules\Supplier\Services\PrincipalCommissionFigures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * ⭐ ফোনের প্রিন্সিপালের কমিশনের পর্দা — `GET /api/v1/supplier/principal-commission?month=YYYY-MM` (মালিক, fe-র মারফত,
@@ -20,15 +22,12 @@ use Illuminate\Http\Request;
  *
  * ⛔ পাহারা: টোকেন, `abilities:app`, কোম্পানির প্রসঙ্গ, ফোনে ক্রয় বন্ধ হলে ৪০৩ `module_off` (রুট ফাইলে); চাবি
  * `supplier.report` (রুটে `can:`, ওয়েবের রিপোর্টের একই); ওয়েবে পর্দাটা বন্ধ হলে ৪০৪ — ওয়েবের একই উত্তর।
- * ⛔ উত্তরে টাকা — কোনো ক্যাশে নয় (`no-store, private`; উইজেটের নিরাপত্তা-পর্যালোচনা ৮-এর একই নিয়ম)।
+ * ⛔ উত্তরে টাকা — কোনো ক্যাশে নয় (`no-store, private`; উইজেটের নিরাপত্তা-পর্যালোচনা ৮-এর একই নিয়ম); তবু ETag আর ৩০৪ চলে।
  * ⓘ কেবল পড়া; খাতায় কিছু বসে না।
  */
 class PrincipalCommissionApiController extends Controller
 {
-    /** ⓘ উইজেটের দরজার একই মান ([[WidgetSummaryController::NO_STORE]]) */
-    public const NO_STORE = 'no-store, private';
-
-    public function __invoke(Request $request, PrincipalCommissionFigures $figures): JsonResponse
+    public function __invoke(Request $request, PrincipalCommissionFigures $figures): JsonResponse|Response
     {
         abort_if(PrincipalCommissionFigures::screenOff(), 404, __('core.message.screen_switched_off'));
 
@@ -37,12 +36,15 @@ class PrincipalCommissionApiController extends Controller
 
         ['rows' => $rows, 'total' => $total] = $figures->figures($month);
 
-        return response()->json([
+        $body = [
             'month' => $month,
             'rows' => $rows,
             'total' => $total,
             // ⭐ ওয়েবের একই পাতা, একই মাসে — "ওয়েবে খুলুন"
             'web_url' => route('supplier.report.show', array_filter(['slug' => 'principal-commission', 'month' => $month]), false),
-        ])->header('Cache-Control', self::NO_STORE);
+        ];
+
+        // ⭐ ETag আর ৩০৪, তবু `no-store, private` — তিন টাকার দরজার এক সহায়ক ([[UnchangedAnswer]]); উত্তরে সময় নেই, তাই গোটাটাই hash
+        return UnchangedAnswer::json($request, $body, $body);
     }
 }

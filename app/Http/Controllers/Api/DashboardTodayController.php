@@ -8,6 +8,7 @@ use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\DataScope;
 use App\Core\Services\PhoneModules;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\UnchangedAnswer;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
@@ -22,6 +23,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Supplier\Services\PrincipalCommissionFigures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 /**
@@ -64,7 +66,7 @@ class DashboardTodayController extends Controller
         private readonly ApprovalEngine $approvals,
     ) {}
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request): JsonResponse|Response
     {
         /** @var User $user */
         $user = $request->user();
@@ -163,8 +165,11 @@ class DashboardTodayController extends Controller
             )->count()];
         }
 
-        // ⛔ উত্তরে হাতের নগদ, দেনা আর কমিশন — কোনো ক্যাশে নয়, উইজেটের দরজার একই মান (cb, ২০ অক্টোবর ২০২৬)
-        return response()->json($body)->header('Cache-Control', WidgetSummaryController::NO_STORE);
+        /*
+         * ⛔ উত্তরে হাতের নগদ, দেনা আর কমিশন — কোনো ক্যাশে নয়; ⭐ তবু ETag আর ৩০৪, উইজেটের দরজার একই সহায়কে (cb, ২০ অক্টোবর
+         * ২০২৬; [[UnchangedAnswer]])। ⓘ hash-এ `asOf` নেই — সময়ের ছাপ থাকলে কখনো ৩০৪ আসত না।
+         */
+        return UnchangedAnswer::json($request, array_diff_key($body, ['asOf' => true]), $body);
     }
 
     /** সীমা নেই → null; এক বা একাধিক শাখা → নামগুলো ", " দিয়ে। */

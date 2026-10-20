@@ -51,6 +51,7 @@ use Tests\TestCase;
  *  ঘ) এক শাখায় আটকানো মানুষ কেবল নিজের শাখার প্রিন্সিপাল পান — তিন জায়গাতেই
  *  ঙ) `month` সেই মাসে শেষ হওয়া চক্র বাছে
  *  চ) তিন দরজাতেই `Cache-Control: no-store`
+ *  ছ) তবু ফোনের নিজের ETag চলে — মিললে খালি ৩০৪, নতুন আদায়ে নতুন ETag
  */
 final class ThePhoneShowsThePrincipalCommissionTheWebCardShowsTest extends TestCase
 {
@@ -259,6 +260,35 @@ final class ThePhoneShowsThePrincipalCommissionTheWebCardShowsTest extends TestC
         }
     }
 
+    /**
+     * ছ) ⭐ no-store তবু ফোনের নিজের ETag চলে ([[UnchangedAnswer]]): প্রথম ডাকে ২০০ + ETag + no-store; একই ETag ফেরত দিলে ৩০৪,
+     * শরীর খালি, তবু no-store; প্রিন্সিপালের শাখায় নতুন আদায় এলে একই ETag-এ ২০০ আর নতুন ETag — তিন দরজাতেই।
+     */
+    public function test_the_phone_keeps_its_own_etag_a_match_is_an_empty_304_and_a_new_collection_breaks_it(): void
+    {
+        $doors = ['/api/v1/supplier/principal-commission', '/api/v1/dashboard/today', '/api/v1/widgets/summary?keys=principal_commission'];
+        $first = [];
+
+        foreach ($doors as $url) {
+            $answer = $this->phone($this->owner, $url)->assertOk();
+            $first[$url] = (string) $answer->headers->get('ETag');
+            $this->assertNotSame('', $first[$url], "⛔ {$url}: ETag নেই — ফোন প্রতিবার পুরো উত্তর টানে।");
+            $this->assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'), "⛔ {$url}: no-store নেই।");
+
+            $same = $this->phone($this->owner, $url, ['If-None-Match' => $first[$url]])->assertStatus(304);
+            $this->assertSame('', (string) $same->getContent(), "⛔ {$url}: ৩০৪-এ শরীর গেছে।");
+            $this->assertStringContainsString('no-store', (string) $same->headers->get('Cache-Control'), "⛔ {$url}: ৩০৪-এ no-store নেই।");
+        }
+
+        $this->home();
+        $this->receipt('MMS', '1234.56', '2026-10-19');
+
+        foreach ($doors as $url) {
+            $fresh = $this->phone($this->owner, $url, ['If-None-Match' => $first[$url]])->assertOk();
+            $this->assertNotSame($first[$url], (string) $fresh->headers->get('ETag'), "⛔ {$url}: অঙ্ক বদলাল, ETag বদলাল না — ফোন পুরনো কমিশন দেখাত।");
+        }
+    }
+
     /** @return array<string, string> ওয়েবের বাক্সের সর্বমোট ([[SupplierDashboard::principals()]]) */
     private function cardTotal(): array
     {
@@ -288,13 +318,14 @@ final class ThePhoneShowsThePrincipalCommissionTheWebCardShowsTest extends TestC
         return app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, ['branch_id' => ViewedBranch::one(), ...$filters], 1, 50)->rows;
     }
 
-    private function phone(User $user, string $url): TestResponse
+    /** @param array<string, string> $headers */
+    private function phone(User $user, string $url, array $headers = []): TestResponse
     {
         $this->app->forgetScopedInstances();
         $this->app['auth']->forgetGuards();
         Sanctum::actingAs($user->fresh(), [AuthController::APP]);
 
-        return $this->getJson($url);
+        return $this->getJson($url, $headers);
     }
 
     /** @return array<string, mixed>|null */
