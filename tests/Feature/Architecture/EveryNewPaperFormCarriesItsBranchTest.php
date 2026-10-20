@@ -88,7 +88,6 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'master_data.unit.install' => 'installs default master lists, no paper',
         'master_data.vehicle.install' => 'installs default master lists, no paper',
         'master_data.vehicle_type.install' => 'installs default master lists, no paper',
-        'master_data.install' => 'installs default lists, no paper',
         'master_data.location.install' => 'installs the location list, no paper',
         'mfa.begin' => 'two-step sign in',
         'mfa.confirm' => 'two-step sign in',

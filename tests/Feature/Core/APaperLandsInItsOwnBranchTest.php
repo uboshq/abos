@@ -172,7 +172,10 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
 
         $invoice = SalesInvoice::acrossBranches()->latest('id')->firstOrFail();
         $this->assertSame((int) $this->a->id, (int) $invoice->branch_id, '⛔ A-র মালের বিল উপরের B-তে বসল');
-        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($invoice->document_no), '⛔ বিলের খসড়া নম্বর B-র সিরিজ থেকে');
+        // ⓘ পাকা চালানের বিল নতুন নম্বর টানে না — চালানের বিক্রির নম্বরই নেয় (এক বিক্রি এক নম্বর, মালিক ২৯ সেপ্টেম্বর)
+        $saleNo = $challan->fresh()->sale_no;
+        $this->assertNotNull($saleNo, 'দৃশ্যটাই বানানো যায়নি — পাকা চালানের বিক্রির নম্বর নেই');
+        $this->assertSame($saleNo, $invoice->sale_no, '⛔ বিল চালানের বিক্রির নম্বর না নিয়ে নতুন নম্বর টানল');
 
         $this->post(route('sales.invoice.confirm', $invoice))->assertSessionHasNoErrors();
         $this->assertSame('confirmed', SalesInvoice::acrossBranches()->findOrFail($invoice->id)->status, 'দৃশ্যটাই বানানো যায়নি — বিল পাকা হয়নি');
