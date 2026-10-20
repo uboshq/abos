@@ -5,6 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../scan/receive_screen.dart';
@@ -264,16 +265,16 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                           key: ValueKey('delivery-no-${row.documentNo}')),
                       if (row.address.isNotEmpty)
                         Text(row.address,
-                            style: const TextStyle(
-                                color: AppColors.onSurfaceMuted)),
+                            style: TextStyle(
+                                color: context.palette.onSurfaceMuted)),
                       if (row.vehicle != null || row.driver != null)
                         Text(
                             [
                               if (row.vehicle != null) 'গাড়ি ${row.vehicle}',
                               if (row.driver != null) 'চালক ${row.driver}'
                             ].join(' · '),
-                            style: const TextStyle(
-                                color: AppColors.onSurfaceMuted)),
+                            style: TextStyle(
+                                color: context.palette.onSurfaceMuted)),
                       const SizedBox(height: AppSpacing.xs),
                       for (final l in row.lines)
                         Text('• ${l.product} — ${Money.plain(l.qty)}'),

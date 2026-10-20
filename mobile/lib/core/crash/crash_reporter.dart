@@ -7,7 +7,7 @@ import '../config/app_config.dart';
 /// "মাঠের ফোনে অ্যাপ বন্ধ হয়ে গেলে অফিস জানতেই পারে না")।
 ///
 /// <p>⛔ কেবল চারটা জিনিস যায়: সংস্করণ, পর্দা (পথের আইডিগুলো `:id` হয়ে), ভুলের ধরন আর লেখা, আর stack। টোকেন বা
-/// ব্যক্তিগত তথ্য নয়; বাইরে কিছু নয় (Crashlytics নয়)। এক চালুতে একই ভুল একবার, আর সব মিলে [maxPerRun]টা —
+/// ব্যক্তিগত তথ্য নয় — লেখা আর stack ছাঁকনি পেরিয়ে যায় ([scrub]); বাইরে কিছু নয় (Crashlytics নয়)। এক চালুতে একই ভুল একবার, আর সব মিলে [maxPerRun]টা —
 /// ভাঙা পর্দা বারবার আঁকা হলে সার্ভার ভাসবে না। পাঠানো ব্যর্থ হলে চুপ — ক্র্যাশের খবর পাঠাতে গিয়ে আরেক ক্র্যাশ নয়।
 class CrashReporter {
   CrashReporter._();
@@ -63,9 +63,37 @@ class CrashReporter {
         'version': AppConfig.appVersion,
         'screen': _cut(_screen, 191),
         'error': _cut(error.runtimeType.toString(), 191),
-        'message': _cut(error.toString(), 2000),
-        'stack': _cut(stack?.toString() ?? '', 8000),
+        'message': _cut(scrub(error.toString()), 2000),
+        'stack': _cut(scrub(stack?.toString() ?? ''), 8000),
       };
+
+  /// ⛔ গোপন তথ্য বাদ — পাঠানোর আগে (OWASP MASVS-STORAGE-2 / PRIVACY; অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬)।
+  ///
+  /// <p>⚠️ ভুলের লেখা (`error.toString()`) ছাঁকনি ছাড়া যেত: নেটের ভুলে ঠিকানা আর উত্তরের অংশ, যাচাইয়ের ভুলে গ্রাহকের ফোন বা
+  /// ইমেইল, আর কখনো `Bearer …` টোকেন। ভুলের খাতা পড়েন নিরাপত্তা-পাহারার মানুষ — তাঁর কাছেও এগুলো যাওয়ার কথা নয়।
+  /// ⭐ যা বাদ যায়: Bearer/টোকেন, পাসওয়ার্ড-টোকেন-গোপন নামের ঘরের মান, ২৪+ অক্ষরের টোকেনের মতো লেখা, ইমেইল, বাংলাদেশি
+  /// মোবাইল নম্বর। ⓘ ভুলের ধরন আর ফাইল-লাইন থাকে — সারানোর জন্য ওটুকুই লাগে।
+  @visibleForTesting
+  static String scrub(String text) => text
+      .replaceAll(_bearer, 'Bearer ***')
+      .replaceAllMapped(_secretField, (m) => '${m[1]}***')
+      .replaceAll(_email, '***@***')
+      .replaceAll(_phone, '***phone***')
+      .replaceAll(_longToken, '***');
+
+  static final RegExp _bearer = RegExp(r'Bearer\s+[A-Za-z0-9\-._~+/|=]+', caseSensitive: false);
+
+  static final RegExp _secretField = RegExp(
+      r'''((?:password|passwd|pin|token|access_?token|refresh_?token|secret|authorization|api_?key|otp)["']?\s*[:=]\s*["']?)[^"',&\s}\]]+''',
+      caseSensitive: false);
+
+  static final RegExp _email = RegExp(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}');
+
+  /// বাংলাদেশি মোবাইল — +880/880/0 সহ ১০ অঙ্ক, ১৩–১৯-এ শুরু
+  static final RegExp _phone = RegExp(r'(?<!\d)(?:\+?88)?0?1[3-9]\d{8}(?!\d)');
+
+  /// টোকেনের মতো লম্বা অক্ষরমালা — ২৪+ অক্ষর, অক্ষর আর অঙ্ক মেশানো (ফাইলের পথ বা শ্রেণির নাম নয়: ওগুলোয় `/` বা `.` থাকে)
+  static final RegExp _longToken = RegExp(r'(?<![A-Za-z0-9])(?=[A-Za-z0-9_\-]*\d)(?=[A-Za-z0-9_\-]*[A-Za-z])[A-Za-z0-9_\-]{24,}(?![A-Za-z0-9])');
 
   /// পরীক্ষার জন্য — এক চালুর গোনা মোছা
   @visibleForTesting

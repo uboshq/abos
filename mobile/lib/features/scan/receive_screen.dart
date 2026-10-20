@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
 
@@ -146,9 +147,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
               decoration: const InputDecoration(labelText: 'তাঁর ফোন'),
             ),
             const SizedBox(height: AppSpacing.md),
-            const Text(
+            Text(
                 'প্রতিটা পণ্য — কতটা নিলেন, কতটা ভাঙা; বাকিটা কম (ফেরত আসবে)',
-                style: TextStyle(color: AppColors.onSurfaceMuted)),
+                style: TextStyle(color: context.palette.onSurfaceMuted)),
             for (final l in widget.lines)
               Card(
                 child: Padding(

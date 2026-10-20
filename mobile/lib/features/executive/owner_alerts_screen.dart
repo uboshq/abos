@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import 'executive_screen.dart';
@@ -73,13 +74,13 @@ class _AlertCard extends StatelessWidget {
                 ),
                 Text(hot ? Money.plain(alert.total) : 'কিছু নেই',
                     key: ValueKey('alert-total-${alert.kind}'),
-                    style: TextStyle(fontWeight: FontWeight.w800, color: hot ? AppColors.danger : AppColors.onSurfaceMuted)),
+                    style: TextStyle(fontWeight: FontWeight.w800, color: hot ? AppColors.danger : context.palette.onSurfaceMuted)),
               ],
             ),
             if (many) ...[
               for (final p in alert.parts)
                 FactRow(p.name, p.count == null ? 'অনুমতি নেই' : Money.plain(p.count),
-                    colour: (p.count ?? 0) > 0 ? AppColors.danger : AppColors.onSurfaceMuted),
+                    colour: (p.count ?? 0) > 0 ? AppColors.danger : context.palette.onSurfaceMuted),
               FactRow('গ্রুপের মোট', Money.plain(alert.total)),
             ],
           ],

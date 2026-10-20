@@ -60,6 +60,16 @@ class BackgroundSync {
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    await backgroundRound();
+    return true;
+  });
+}
+
+/// ⭐ পেছনের একটা গোল — জমা কাজ পাঠানো আর ঘরের পর্দার উইজেট; WorkManager-এর ১৫ মিনিটের কাজ আর পেছনের নীরব ডাক
+/// ([onBackgroundNudge]) দুইয়েরই একই শরীর।
+/// ⛔ টানা (pull) এখানে নয়: খোলা অ্যাপ পেছনে থাকলে তার Hive বাক্স খোলা — দুই isolate একই বাক্স খুললে বাক্স ভাঙে;
+/// টানা হয় অ্যাপ সামনে এলেই ([NudgeMark], [AutoSync])।
+Future<void> backgroundRound() async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
       await Hive.initFlutter();
@@ -69,7 +79,7 @@ void callbackDispatcher() {
       // every queued row and walk each one's attempt counter toward permanent
       // rejection — for a session that is simply closed, not failing.
       final refreshToken = await TokenStorage.instance.refreshToken();
-      if (refreshToken == null || refreshToken.isEmpty) return true;
+      if (refreshToken == null || refreshToken.isEmpty) return;
 
       // ⛔ খোলা অ্যাপ বাক্স ধরে থাকলে পেছনে কিছুই খোলা হয় না, কিছুই মোছা হয় না — অ্যাপ নিজেই পাঠায় ([[QueueLock]])
       await SyncEngine.instance.init(background: true);
@@ -99,6 +109,4 @@ void callbackDispatcher() {
         await SyncEngine.instance.closeQueue();
       } catch (_) {}
     }
-    return true;
-  });
 }

@@ -6,6 +6,7 @@ import '../../core/records/product_record.dart';
 import '../../core/records/stock_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
@@ -87,7 +88,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('মোট ${filtered.length} টি পণ্য',
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: context.palette.onSurfaceMuted)),
               ),
             ),
           if (_refreshing) const LinearProgressIndicator(),

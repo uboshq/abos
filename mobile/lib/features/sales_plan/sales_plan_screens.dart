@@ -4,6 +4,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
@@ -18,7 +19,7 @@ import 'sales_plan_api.dart';
 /// নয়), তারপর এক সারি এক কার্ডে, নিচে "আরও দেখুন"। খালি বা ভুলের পর্দাও টানলে আবার আনে।
 /// ⓘ কেবল দেখা — বসানো, ছকে দেওয়া, মেটানো ওয়েবে; পর্দায় তা এক লাইনে লেখা।
 
-const _muted = TextStyle(fontSize: 13, color: AppColors.onSurfaceMuted);
+TextStyle _muted(BuildContext context) => TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted);
 const _bold = TextStyle(fontWeight: FontWeight.w600);
 const _amount = TextStyle(fontWeight: FontWeight.w700);
 const _failed = 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।';
@@ -216,9 +217,9 @@ List<Widget> _totals(String label, String value, int count, List<(String, String
         ),
     ];
 
-Widget _note(String text) => Padding(
+Widget _note(BuildContext context, String text) => Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Text(text, style: _muted),
+      child: Text(text, style: _muted(context)),
     );
 
 Widget _card({Key? key, required List<Widget> children, VoidCallback? onTap}) => Card(
@@ -239,9 +240,9 @@ String _withPoint(PlanRow r, [String nameKey = 'name']) =>
     withPoint(r.text(nameKey), r.maybe('point') ?? r.maybe('customer_point'), r.maybe('branch') ?? r.maybe('customer_branch'));
 
 /// শতাংশের রং — ১০০ ছুঁলে সবুজ, অর্ধেকের নিচে লাল
-Color _percentColour(String? percent) {
+Color _percentColour(BuildContext context, String? percent) {
   final value = double.tryParse(percent ?? '');
-  if (value == null) return AppColors.onSurfaceMuted;
+  if (value == null) return context.palette.onSurfaceMuted;
   if (value >= 100) return AppColors.success;
   if (value < 50) return AppColors.danger;
   return AppColors.warning;
@@ -280,7 +281,7 @@ class _SalesTargetsScreenState extends State<SalesTargetsScreen> {
           emptyTitle: 'এই মাসে কোনো বিক্রয়কর্মী নেই',
           controls: [
             MonthBar(month: _month, onChanged: (m) => setState(() => _month = m)),
-            _note('ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।'),
+            _note(context, 'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।'),
           ],
           summary: (context, p) {
             final t = p.child('totals');
@@ -294,9 +295,9 @@ class _SalesTargetsScreenState extends State<SalesTargetsScreen> {
             Row(children: [
               Expanded(child: Text(r.text('name'), style: _bold)),
               Text(percentOf(r.maybe('percent')),
-                  style: TextStyle(fontWeight: FontWeight.w700, color: _percentColour(r.maybe('percent')))),
+                  style: TextStyle(fontWeight: FontWeight.w700, color: _percentColour(context, r.maybe('percent')))),
             ]),
-            Text('লক্ষ্য ${takaOrDash(r.maybe('target'))} · অর্জন ${Money.taka(r.text('achieved'))}', style: _muted),
+            Text('লক্ষ্য ${takaOrDash(r.maybe('target'))} · অর্জন ${Money.taka(r.text('achieved'))}', style: _muted(context)),
           ]),
         ),
       );
@@ -346,7 +347,7 @@ class _DealerTargetsScreenState extends State<DealerTargetsScreen> {
                 onSelected: (v) => setState(() => _onlySet = v),
               ),
             ]),
-            _note('ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।'),
+            _note(context, 'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।'),
           ],
           summary: (context, p) {
             final t = p.child('totals');
@@ -367,7 +368,7 @@ class _DealerTargetsScreenState extends State<DealerTargetsScreen> {
                 if (r.maybe('remaining') != null) 'বাকি ${Money.taka(r.text('remaining'))}',
                 if (r.maybe('closes_on') != null) 'শেষ ${dayOf(r.maybe('closes_on'))}',
               ].join(' · '),
-              style: _muted,
+              style: _muted(context),
             ),
           ]),
         ),
@@ -440,7 +441,7 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
             children: [
               Row(children: [
                 Expanded(child: Text('${r.text('code')} · ${r.text('name')}', style: _bold)),
-                const Icon(Icons.chevron_right, color: AppColors.onSurfaceMuted),
+                Icon(Icons.chevron_right, color: context.palette.onSurfaceMuted),
               ]),
               Text(
                 [
@@ -448,13 +449,13 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
                   '${r.number('customers')} জন ডিলার',
                   if (r.list('salespeople').isNotEmpty) r.list('salespeople').join(', '),
                 ].join(' · '),
-                style: _muted,
+                style: _muted(context),
               ),
-              Text('বিক্রি ${Money.taka(r.text('sales'))} · আদায় ${Money.taka(r.text('collections'))}', style: _muted),
+              Text('বিক্রি ${Money.taka(r.text('sales'))} · আদায় ${Money.taka(r.text('collections'))}', style: _muted(context)),
               Row(children: [
                 Expanded(child: Text('বাকি ${Money.taka(r.text('outstanding'))}', style: _amount)),
                 Text('লক্ষ্য ${takaOrDash(r.maybe('target'))} · ${percentOf(r.maybe('percent'))}',
-                    style: TextStyle(fontSize: 13, color: _percentColour(r.maybe('percent')))),
+                    style: TextStyle(fontSize: 13, color: _percentColour(context, r.maybe('percent')))),
               ]),
             ],
           ),
@@ -488,7 +489,7 @@ class RouteDetailScreen extends StatelessWidget {
             final f = p.child('figures');
             final t = p.child('target');
             return [
-              Text('${monthLabel(month)} · ${dayOf(p.maybe('from'))} – ${dayOf(p.maybe('to'))}', key: const ValueKey('route-period'), style: _muted),
+              Text('${monthLabel(month)} · ${dayOf(p.maybe('from'))} – ${dayOf(p.maybe('to'))}', key: const ValueKey('route-period'), style: _muted(context)),
               const SizedBox(height: AppSpacing.xs),
               TotalStrip(label: 'শেষ জের (বাকি)', value: Money.taka(f.text('outstanding')), count: p.number('customers_count')),
               Card(
@@ -503,12 +504,12 @@ class RouteDetailScreen extends StatelessWidget {
                     FactRow('অন্যান্য', Money.taka(f.text('other'))),
                     FactRow('লক্ষ্য', takaOrDash(t.maybe('target'))),
                     FactRow('লক্ষ্যের অর্জন', '${Money.taka(t.text('achieved'))} · ${percentOf(t.maybe('percent'))}',
-                        colour: _percentColour(t.maybe('percent'))),
+                        colour: _percentColour(context, t.maybe('percent'))),
                   ]),
                 ),
               ),
               const SectionTitle('সাপ্তাহিক ছক'),
-              if (p.rows('schedule').isEmpty) _note('ছকে কেউ বসানো নেই।'),
+              if (p.rows('schedule').isEmpty) _note(context, 'ছকে কেউ বসানো নেই।'),
               for (final v in p.rows('schedule'))
                 _card(key: ValueKey('visit-${v.text('who')}-${v.number('weekday')}-${v.text('from')}'), children: [
                   Row(children: [
@@ -516,9 +517,9 @@ class RouteDetailScreen extends StatelessWidget {
                     AppStatusPill(
                         label: v.flag('active') ? 'চালু' : 'শেষ', kind: v.flag('active') ? AppStatusKind.success : AppStatusKind.neutral),
                   ]),
-                  Text('${dayOf(v.maybe('from'))} থেকে ${v.maybe('to') == null ? 'চলছে' : dayOf(v.maybe('to'))}', style: _muted),
+                  Text('${dayOf(v.maybe('from'))} থেকে ${v.maybe('to') == null ? 'চলছে' : dayOf(v.maybe('to'))}', style: _muted(context)),
                 ]),
-              _note('ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।'),
+              _note(context, 'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।'),
               const SectionTitle('ডিলার'),
             ];
           },
@@ -527,8 +528,8 @@ class RouteDetailScreen extends StatelessWidget {
               Expanded(child: Text('${c.text('code')} · ${_withPoint(c)}', style: _bold)),
               Text(Money.taka(c.text('outstanding')), style: _amount),
             ]),
-            Text('বিক্রি ${Money.taka(c.text('sales'))} · আদায় ${Money.taka(c.text('collections'))}', style: _muted),
-            if (c.text('phone').isNotEmpty) Text(c.text('phone'), style: _muted),
+            Text('বিক্রি ${Money.taka(c.text('sales'))} · আদায় ${Money.taka(c.text('collections'))}', style: _muted(context)),
+            if (c.text('phone').isNotEmpty) Text(c.text('phone'), style: _muted(context)),
           ]),
         ),
       );
@@ -612,8 +613,8 @@ class _SchemeListScreenState extends State<SchemeListScreen> {
                 Expanded(child: Text('${s.text('code')} · ${s.text('name')}', style: _bold)),
                 AppStatusPill(label: s.text('status_label'), kind: _schemeKind(s.text('status'))),
               ]),
-              Text('${s.text('basis_label')} · ${s.text('applies_to_label')} · ${s.number('rules')}টি ধাপ', style: _muted),
-              Text('${dayOf(s.maybe('valid_from'))} – ${dayOf(s.maybe('valid_to'))}${s.flag('live') ? ' · আজ চলছে' : ''}', style: _muted),
+              Text('${s.text('basis_label')} · ${s.text('applies_to_label')} · ${s.number('rules')}টি ধাপ', style: _muted(context)),
+              Text('${dayOf(s.maybe('valid_from'))} – ${dayOf(s.maybe('valid_to'))}${s.flag('live') ? ' · আজ চলছে' : ''}', style: _muted(context)),
             ],
           ),
         ),
@@ -661,10 +662,10 @@ class SchemeDetailScreen extends StatelessWidget {
                 r.maybe('slab_to') == null
                     ? '${Money.taka(r.text('slab_from'))} থেকে উপরে'
                     : '${Money.taka(r.text('slab_from'))} থেকে ${Money.taka(r.text('slab_to'))}',
-                style: _muted,
+                style: _muted(context),
               ),
             ]),
-          _note('ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।'),
+          _note(context, 'ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।'),
         ],
       );
 }
@@ -717,8 +718,8 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
                   if (s.number('count') > 0) ('${s.text('label')} · ${s.number('count')}টি', Money.taka(s.text('amount'))),
               ]),
               // ⭐ মোটে কী আছে — ওয়েবের পাতার নিচের একই কথা (fe, ১৯ অক্টোবর ২০২৬; সার্ভারের CommissionClaim::UNCOUNTED)
-              _note('ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'),
-              _note('ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।'),
+              _note(context, 'ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'),
+              _note(context, 'ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।'),
             ];
           },
           item: (context, c) => _card(key: ValueKey('commission-${c.text('id')}'), children: [
@@ -732,7 +733,7 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
                 if (c.text('supplier').isNotEmpty) c.text('supplier'),
                 if (c.maybe('invoice_no') != null) 'বিল ${c.text('invoice_no')}',
               ].join(' · '),
-              style: _muted,
+              style: _muted(context),
             ),
             Row(children: [
               Expanded(
@@ -742,13 +743,13 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
                     if (c.maybe('rate') != null) 'হার ${c.text('rate')}',
                     if (c.maybe('rate') == null && c.maybe('rate_amount') != null) 'থোক ${Money.taka(c.text('rate_amount'))}',
                   ].join(' · '),
-                  style: _muted,
+                  style: _muted(context),
                 ),
               ),
               AppStatusPill(label: c.text('status_label'), kind: _claimKind(c.text('status'))),
             ]),
-            if (c.text('decision_reason').isNotEmpty) Text('কারণ: ${c.text('decision_reason')}', style: _muted),
-            if (c.text('narration').isNotEmpty) Text(c.text('narration'), style: _muted),
+            if (c.text('decision_reason').isNotEmpty) Text('কারণ: ${c.text('decision_reason')}', style: _muted(context)),
+            if (c.text('narration').isNotEmpty) Text(c.text('narration'), style: _muted(context)),
           ]),
         ),
       );

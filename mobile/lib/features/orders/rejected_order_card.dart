@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
+import '../../core/widgets/customer_line.dart';
 import 'order_prefill.dart';
 
 /// One rejected `SalesOrder`, named rather than shown as raw JSON — see
@@ -42,16 +44,21 @@ class RejectedOrderCard extends StatelessWidget {
               children: [
                 const AppStatusPill(label: 'ব্যর্থ', kind: AppStatusKind.danger),
                 const SizedBox(width: AppSpacing.sm),
+                // Falls back to the bare entity type if this row is not
+                // a SalesOrder this build's decoder understands — see
+                // RejectedOrderSummary.fromRejected's own doc comment.
+                // ⭐ গ্রাহক "নাম · পয়েন্ট · শাখা" নিজের লাইনে (CustomerLine), পণ্যের গোনা নিচের লাইনে (নকশা ৩)
                 Expanded(
-                  child: Text(
-                    // Falls back to the bare entity type if this row is not
-                    // a SalesOrder this build's decoder understands — see
-                    // RejectedOrderSummary.fromRejected's own doc comment.
-                    summary != null
-                        ? '${summary.customerName} · ${summary.itemCount}টা পণ্য'
-                        : syncEntityLabel(item.entityType),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+                  child: summary != null
+                      ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          CustomerLine(summary.customerName,
+                              key: const ValueKey('rejected-customer'),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          Text('${summary.itemCount}টা পণ্য',
+                              style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
+                        ])
+                      : Text(syncEntityLabel(item.entityType),
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -70,7 +77,7 @@ class RejectedOrderCard extends StatelessWidget {
             Text(
               DateFormat('dd/MM/yyyy hh:mm a').format(item.enqueuedAt),
               style:
-                  const TextStyle(fontSize: 11, color: AppColors.onSurfaceMuted),
+                  TextStyle(fontSize: 11, color: context.palette.onSurfaceMuted),
             ),
             if (summary != null) ...[
               const SizedBox(height: AppSpacing.sm),

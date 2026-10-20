@@ -75,15 +75,17 @@ class _Words {
   String get version => bn ? 'সংস্করণ' : 'Version';
 }
 
+/// ⭐ মালিকের "মুক্তা সাদা" — পট আর কার্ড হুবহু; কেবল তিনটা লেখার রং সেই রঙেরই একটু গাঢ় সুর, যাতে পটে অন্তত ৪.৫:১
+/// (WCAG 2.1 AA; ec-র প্রবেশযোগ্যতার টেস্ট ধরল, সমন্বয়ক, ২০ অক্টোবর ২০২৬)। আগে: মলিন ৪.১, লিংক ৩.৪, নিচের লেখা ২.৪।
 class _Palette {
   static const page = Color(0xFFEEF5F7);
   static const ink = Color(0xFF0B2A31);
-  static const muted = Color(0xFF5B7B83);
+  static const muted = Color(0xFF56747B);
   static const border = Color(0xFFD6E4E8);
   static const cardBorder = Color(0xFFE3EDF0);
-  static const link = Color(0xFF0A8FAE);
+  static const link = Color(0xFF087993);
   static const divider = Color(0xFFBFE3EA);
-  static const footer = Color(0xFF8AA4AA);
+  static const footer = Color(0xFF59747A);
   static const danger = Color(0xFFB42318);
   static const dangerSurface = Color(0xFFFEF3F2);
 }
@@ -194,7 +196,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       prefixIcon: Icon(icon, color: _Palette.muted),
       suffixIcon: suffix,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Colors.white, // dark-ok
       constraints: const BoxConstraints(minHeight: 54),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       enabledBorder: edge(_Palette.border),
@@ -248,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       key: const ValueKey('login-card'),
       padding: const EdgeInsets.fromLTRB(24, 34, 24, 26),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: Colors.white.withValues(alpha: 0.85), // dark-ok
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: _Palette.cardBorder),
         boxShadow: const [
@@ -359,7 +361,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 key: const ValueKey('login-submit'),
                 style: FilledButton.styleFrom(
                   backgroundColor: _Palette.ink,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.white, // dark-ok
                   disabledBackgroundColor: _Palette.ink.withValues(alpha: 0.6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -369,7 +371,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ? const SizedBox(
                         height: 22,
                         width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white), // dark-ok
                       )
                     : Text(_mfaStage ? w.verify : w.signIn),
               ),
@@ -392,24 +394,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 runSpacing: 4,
                 children: [
-                  InkWell(
-                    key: const ValueKey('login-remember'),
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: _submitting ? null : () => setState(() => _remember = !_remember),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          value: _remember,
-                          activeColor: _Palette.ink,
-                          visualDensity: VisualDensity.compact,
-                          onChanged: _submitting
-                              ? null
-                              : (v) => setState(() => _remember = v ?? false),
+                  // ⓘ বাক্স আর লেখা একটাই জিনিস — TalkBack বলে "মনে রাখুন, চেকবক্স", আর আঙুলের জায়গা অন্তত ৪৮ dp
+                  // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে বাক্সটা ছিল নামহীন ৪০×৪০।
+                  MergeSemantics(
+                    child: InkWell(
+                      key: const ValueKey('login-remember'),
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: _submitting ? null : () => setState(() => _remember = !_remember),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Checkbox(
+                              value: _remember,
+                              activeColor: _Palette.ink,
+                              visualDensity: VisualDensity.compact,
+                              onChanged: _submitting
+                                  ? null
+                                  : (v) => setState(() => _remember = v ?? false),
+                            ),
+                            Flexible(
+                              child: Text(w.remember,
+                                  style: const TextStyle(color: _Palette.ink, fontSize: 14)),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                         ),
-                        Text(w.remember,
-                            style: const TextStyle(color: _Palette.ink, fontSize: 14)),
-                      ],
+                      ),
                     ),
                   ),
                   TextButton(
@@ -466,16 +478,26 @@ class _LanguageWord extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-          child: Text(label,
-              style: TextStyle(
-                fontSize: 12,
-                color: selected ? _Palette.ink : _Palette.footer,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-              )),
+  // ⓘ ছোট লেখা, কিন্তু আঙুলের জায়গা ৪৮×৪৮ dp, আর TalkBack বলে কোনটা বাছা (ec, ১৯ অক্টোবর ২০২৬)
+  Widget build(BuildContext context) => Semantics(
+        selected: selected,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+              child: Center(
+                widthFactor: 1,
+                child: Text(label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? _Palette.ink : _Palette.footer,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                    )),
+              ),
+            ),
+          ),
         ),
       );
 }

@@ -216,7 +216,7 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
             child: Text(
               _error ?? 'চালান বা গেট পাসের QR ক্যামেরার সামনে ধরুন।',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
+              style: const TextStyle(color: Colors.white, fontSize: 15), // dark-ok
             ),
           ),
         ),

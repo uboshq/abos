@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import 'nav_search.dart' show webRowNote;
@@ -70,23 +71,30 @@ class AllModulesPage extends StatelessWidget {
               ),
             )
           else
+            // ⭐ তিনটা করে পাশাপাশি, ঘরের উচ্চতা বাঁধা নয় — বড় অক্ষরে (২০০%) মডিউলের নাম ভাঙে না
+            // (নকশার নিয়ম ০.৪.৩৮ §২, a4, ১৯ অক্টোবর ২০২৬)। ⓘ আগে SliverGrid-এর childAspectRatio উচ্চতা বেঁধে রাখত।
             SliverPadding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: AppSpacing.sm + 2,
-                  crossAxisSpacing: AppSpacing.sm + 2,
-                  childAspectRatio: 0.9,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) => _ModuleTile(
-                    module: modules[i],
-                    count: counts.byModule[modules[i].code] ?? 0,
-                    onTap: () => onOpen(modules[i]),
-                  ),
-                  childCount: modules.length,
-                ),
+              sliver: SliverToBoxAdapter(
+                child: LayoutBuilder(builder: (context, box) {
+                  const gap = AppSpacing.sm + 2;
+                  final width = (box.maxWidth - 2 * gap) / 3;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final m in modules)
+                        SizedBox(
+                          width: width,
+                          child: _ModuleTile(
+                            module: m,
+                            count: counts.byModule[m.code] ?? 0,
+                            onTap: () => onOpen(m),
+                          ),
+                        ),
+                    ],
+                  );
+                }),
               ),
             ),
         ],
@@ -106,6 +114,7 @@ class _ModuleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // ⭐ সব সারি "শীঘ্রই আসছে" — টাইল থাকে, ধূসর (মালিক, ১২ অক্টোবর ২০২৬)
     final live = module.live;
+    // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
     return Card(
       key: ValueKey('module-${module.code}'),
       child: InkWell(
@@ -114,6 +123,7 @@ class _ModuleTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: AppSpacing.sm),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Badge(
@@ -126,10 +136,13 @@ class _ModuleTile extends StatelessWidget {
                   height: 54,
                   decoration: BoxDecoration(
                     // ⓘ সাদা আইকনের সাথে অন্তত ৩:১ — মডিউলের রঙের গাঢ় সুর ([[AppColors.moduleSolid]])
-                    color: live ? AppColors.moduleSolid(module.code) : AppColors.border,
+                    color: live ? AppColors.moduleSolid(module.code) : context.palette.border,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(module.def.icon, color: Colors.white, size: 28),
+                  // ⓘ moduleSolid সাদার সাথে ৩:১ মেপে বানানো, তাই আইকন দুই মোডেই সাদা (AppColors.onPrimary);
+                  // ধূসর (শীঘ্রই আসছে) টাইলে থিমের মলিন রং
+                  child: Icon(module.def.icon,
+                      color: live ? AppColors.onPrimary : context.palette.onSurfaceMuted, size: 28), // dark-ok
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -141,11 +154,11 @@ class _ModuleTile extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: live ? AppColors.onSurface : AppColors.onSurfaceMuted),
+                    color: live ? context.palette.onSurface : context.palette.onSurfaceMuted),
               ),
               if (!live)
-                const Text('শীঘ্রই আসছে',
-                    style: TextStyle(fontSize: 10.5, color: AppColors.onSurfaceMuted)),
+                Text('শীঘ্রই আসছে',
+                    style: TextStyle(fontSize: 10.5, color: context.palette.onSurfaceMuted)),
             ],
           ),
         ),
@@ -183,6 +196,8 @@ class ModuleMenuPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
+    final cs = Theme.of(context).colorScheme;
     return ListView(
       key: const ValueKey('module-menu'),
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
@@ -193,7 +208,7 @@ class ModuleMenuPage extends StatelessWidget {
             key: const ValueKey('menu-crumb'),
             onPressed: onCrumb,
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
+              foregroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             ),
             icon: const Icon(Icons.chevron_left, size: 20),
@@ -221,13 +236,13 @@ class ModuleMenuPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.xs, AppSpacing.sm, 0, AppSpacing.xs),
             child: Text(group.title,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.onSurface)),
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: context.palette.onSurface)),
           ),
           Card(
             child: Column(children: [
               for (var i = 0; i < group.rows.length; i++) ...[
-                if (i > 0) const Divider(height: 1, color: AppColors.border),
+                if (i > 0) Divider(height: 1, color: context.palette.border),
                 _MenuRow(
                   row: group.rows[i],
                   count: counts.byPath[group.rows[i].path] ?? 0,
@@ -277,12 +292,12 @@ class _MenuRow extends StatelessWidget {
       title: Text(row.label,
           style: TextStyle(
               fontSize: 14.5,
-              color: muted ? AppColors.onSurfaceMuted : AppColors.onSurface)),
+              color: muted ? context.palette.onSurfaceMuted : context.palette.onSurface)),
       subtitle: muted
           ? const Text('শীঘ্রই আসছে', style: TextStyle(fontSize: 11.5))
           : quiet == null
               ? null
-              : Text(quiet!, style: const TextStyle(fontSize: 11.5, color: AppColors.onSurfaceMuted)),
+              : Text(quiet!, style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
       trailing: muted
           ? null
           : Row(mainAxisSize: MainAxisSize.min, children: [
@@ -300,9 +315,9 @@ class _MenuRow extends StatelessWidget {
                   ),
                   child: Text(count > 99 ? '99+' : '$count',
                       style: const TextStyle(
-                          color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                          color: AppColors.onPrimary, fontSize: 11.5, fontWeight: FontWeight.w700)), // dark-ok
                 ),
-              const Icon(Icons.chevron_right, color: AppColors.onSurfaceMuted),
+              Icon(Icons.chevron_right, color: context.palette.onSurfaceMuted),
             ]),
       onTap: muted ? null : onTap,
       onLongPress: muted ? null : onLongPress,

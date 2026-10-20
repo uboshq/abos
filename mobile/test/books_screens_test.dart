@@ -170,9 +170,10 @@ void main() {
 
     expect(api.asked.first, containsPair('from', '2026-10-01'));
     expect(api.asked.first, containsPair('to', '2026-10-06'));
-    expect(find.text('৳4,000.00'), findsOneWidget,
+    // ⭐ নকশা ৩-এর নিচের পট্টি (১৯ অক্টোবর ২০২৬): "এই পাতা" আর "সর্বমোট" — এখানে দুটোই ৳4,000.00, সর্বমোট সার্ভারের গোটা ছাঁকনির
+    expect(find.text('৳4,000.00'), findsNWidgets(2),
         reason: 'মোট সার্ভারের গোটা ছাঁকনির');
-    expect(find.text('· 2 টি'), findsOneWidget);
+    expect(find.text('সর্বমোট · 2টি'), findsOneWidget);
     expect(find.textContaining('RCV-0001 · 05/10/2026 · চেক'), findsOneWidget);
     expect(find.textContaining('RCV-0002 · 06/10/2026 · নগদ'), findsOneWidget);
 

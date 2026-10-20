@@ -82,9 +82,11 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
     <!-- ⛔ ব্যাকআপ বন্ধ — তালাবদ্ধ বাক্সের চাবি keystore-এ, ব্যাকআপে যায় না (পূর্ণ নিরীক্ষা §৯ ⚠️১১) -->
     <application
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:label="ABOS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

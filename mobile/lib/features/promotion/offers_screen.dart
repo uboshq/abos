@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/promotion/offers_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -98,7 +99,7 @@ class _OfferCard extends StatelessWidget {
             if (offer.summary.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Text(offer.summary, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                child: Text(offer.summary, style: TextStyle(color: context.palette.onSurfaceMuted)),
               ),
             const SizedBox(height: AppSpacing.xs),
             FactRow('কোন মালে', offer.goods),

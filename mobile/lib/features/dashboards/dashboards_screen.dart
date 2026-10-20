@@ -4,9 +4,16 @@ import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/dashboard/dashboard_api.dart';
+import '../../core/navigation/nav_catalog.dart';
+import '../../core/records/customer_record.dart';
+import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/row_icon.dart';
+import '../../core/widgets/state_views.dart';
 
 /// ⭐ "ব্যবসার ড্যাশবোর্ড" — every module dashboard this person may open, each with its first figure, then the whole
 /// dashboard one tap away (owner, 4 Oct 2026: *"egulo nadile bujbo kikore kihocche"*).
@@ -57,33 +64,38 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
+            // ⭐ তিন অবস্থা — ভুলে "আবার চেষ্টা করুন", লোডে ধূসর খসড়া, খালিতে কাজের বোতাম (নকশা ৩, পাতা ৮–১০; a5, ২০ অক্টোবর ২০২৬)
             if (_error != null)
-              EmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'আনা গেল না',
-                  message: _error)
+              ErrorState(message: _error!, onRetry: _load)
             else if (entries == null)
-              const Padding(
-                  padding: EdgeInsets.all(AppSpacing.xl),
-                  child: Center(child: CircularProgressIndicator()))
+              const LoadingSkeleton()
             else if (entries.isEmpty)
-              const EmptyState(
+              EmptyState(
                   icon: Icons.dashboard_outlined,
-                  title: 'আপনার জন্য কোনো ড্যাশবোর্ড নেই')
+                  title: 'আপনার জন্য কোনো ড্যাশবোর্ড নেই',
+                  message: 'কোনো মডিউলের ড্যাশবোর্ড দেখার অনুমতি পেলে এখানে আসবে।',
+                  action: _RefreshButton(onPressed: _load))
             else
               for (final entry in entries)
                 Card(
                   key: Key('dashboard-${entry.module}'),
                   margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: ListTile(
+                    // ⓘ নকশার সারি: বাঁয়ে মডিউলের আইকন ৪০dp, নাম 16 w600, নিচে মলিন 13 (নকশা ৩, পাতা ৩)
+                    leading: RowIcon(moduleIcon(entry.module), module: entry.module),
                     title: Text(entry.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     subtitle: entry.stat == null
                         ? null
                         : Text(
-                            '${entry.stat!.label}: ${entry.stat!.hidden ? 'চাবি নেই' : (entry.stat!.value ?? '—')}'),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: AppColors.onSurfaceMuted),
+                            '${entry.stat!.label}: ${entry.stat!.hidden ? 'চাবি নেই' : (entry.stat!.value ?? '—')}',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    // ⓘ তালিকার সারি অন্তত ৭২dp, রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১, §২)
+                    minTileHeight: 72,
+                    trailing: Icon(Icons.chevron_right,
+                        color: context.palette.onSurfaceMuted),
                     onTap: () =>
                         Navigator.of(context).push(MaterialPageRoute<void>(
                       builder: (_) => ModuleDashboardScreen(
@@ -151,25 +163,28 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
+            // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০)
             if (_error != null)
-              EmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'আনা গেল না',
-                  message: _error)
+              ErrorState(message: _error!, onRetry: _load)
             else if (d == null)
-              const Padding(
-                  padding: EdgeInsets.all(AppSpacing.xl),
-                  child: Center(child: CircularProgressIndicator()))
+              const LoadingSkeleton()
+            else if (d.stats.isEmpty && d.panels.isEmpty && d.listings.isEmpty)
+              EmptyState(
+                  icon: Icons.insights_outlined,
+                  title: 'এই ড্যাশবোর্ডে এখনো কিছু নেই',
+                  message: 'কাজ শুরু হলে বা অনুমতি পেলে সংখ্যাগুলো এখানে আসবে।',
+                  action: _RefreshButton(onPressed: _load))
             else ...[
               if (d.subtitle.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(d.subtitle,
-                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
               for (final stat in d.stats) _StatCard(stat: stat),
               for (final panel in d.panels) _PanelCard(panel: panel),
-              for (final listing in d.listings) _ListingCard(listing: listing),
+              for (final listing in d.listings)
+                _ListingCard(listing: listing, module: widget.module),
               // ⭐ এই মডিউলের রিপোর্ট — তারিখ আর PDF সহ (মালিক, ৪ অক্টোবর ২০২৬: "Sales Account er gulo dorkar")
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
@@ -269,13 +284,13 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
               },
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (_busy) const LinearProgressIndicator(),
+            // ⓘ আগের সংখ্যা থাকলে সেটাই দেখায়, উপরে সরু দাগ — প্রথমবার ধূসর খসড়া (নকশা ৩, পাতা ১০)
+            if (_busy && d != null) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'আনা গেল না',
-                  message: _error)
-            else if (d != null) ...[
+              ErrorState(message: _error!, onRetry: _load)
+            else if (d == null)
+              const LoadingSkeleton()
+            else ...[
               if (d.periodRefused != null)
                 Padding(
                   key: const Key('overview-refused'),
@@ -287,15 +302,17 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(d.subtitle,
-                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
               if (d.stats.isEmpty && d.panels.isEmpty && d.listings.isEmpty)
-                const EmptyState(
+                EmptyState(
                     icon: Icons.lock_outline,
-                    title: 'এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।'),
+                    title: 'এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।',
+                    action: _RefreshButton(onPressed: _load)),
               for (final stat in d.stats) _StatCard(stat: stat),
               for (final panel in d.panels) _PanelCard(panel: panel),
-              for (final listing in d.listings) _ListingCard(listing: listing),
+              for (final listing in d.listings)
+                _ListingCard(listing: listing, module: 'sales'),
             ],
           ],
         ),
@@ -309,11 +326,13 @@ class _StatCard extends StatelessWidget {
 
   final DashboardStat stat;
 
-  Color get _tone => switch (stat.tone) {
+  // ⭐ সাধারণ লেখা context.palette থেকে (আলোতে হুবহু আগের রং, অন্ধকারে ঠিক — নকশার নিয়ম ০.৪.৩৮ §১, a4 c5e7fbbd6);
+  // ভুল থিমের error (আলোতে AppColors.danger-ই); ভালো/সাবধান অবস্থার রং, আগের মতো
+  Color _tone(BuildContext context) => switch (stat.tone) {
         'good' => AppColors.success,
         'warn' => AppColors.warning,
-        'bad' => AppColors.danger,
-        _ => AppColors.onSurface,
+        'bad' => Theme.of(context).colorScheme.error,
+        _ => context.palette.onSurface,
       };
 
   @override
@@ -325,8 +344,7 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(stat.label,
-                style: const TextStyle(color: AppColors.onSurfaceMuted)),
+            Text(stat.label, style: TextStyle(color: context.palette.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.xs),
             Text(
               stat.hidden
@@ -335,7 +353,7 @@ class _StatCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: stat.hidden ? 14 : 22,
                 fontWeight: FontWeight.w800,
-                color: stat.hidden ? AppColors.onSurfaceMuted : _tone,
+                color: stat.hidden ? context.palette.onSurfaceMuted : _tone(context),
               ),
             ),
             if (stat.previous != null && stat.previousLabel != null)
@@ -373,6 +391,8 @@ class _PanelCard extends StatelessWidget {
             : [barValue(r['value'])]),
     ];
     final max = values.fold<double>(0, (m, v) => v.abs() > m ? v.abs() : m);
+    // ⓘ প্রথম সারির রং থিমের primary — আলো আর অন্ধকারে দুইয়েই চোখে পড়ে (নকশার নিয়ম ০.৪.৩৮ §১)
+    final first = Theme.of(context).colorScheme.primary;
 
     Widget bar(String text, double value, Color color) => Padding(
           padding: const EdgeInsets.only(top: 2),
@@ -403,7 +423,7 @@ class _PanelCard extends StatelessWidget {
               Text.rich(
                 key: const ValueKey('series-legend'),
                 TextSpan(style: Theme.of(context).textTheme.bodySmall, children: [
-                  const TextSpan(text: '■ ', style: TextStyle(color: AppColors.primary)),
+                  TextSpan(text: '■ ', style: TextStyle(color: first)),
                   TextSpan(text: '${panel['firstLabel']}   '),
                   const TextSpan(text: '■ ', style: TextStyle(color: AppColors.warning)),
                   TextSpan(text: '${panel['secondLabel']}'),
@@ -415,12 +435,12 @@ class _PanelCard extends StatelessWidget {
                   style: const TextStyle(fontSize: 12.5)),
               if (series) ...[
                 bar((r['first'] ?? '').toString(), barValue(r['first']),
-                    AppColors.primary),
+                    first),
                 bar((r['second'] ?? '').toString(), barValue(r['second']),
                     AppColors.warning),
               ] else
                 bar((r['value'] ?? '').toString(), barValue(r['value']),
-                    AppColors.primary),
+                    first),
               const SizedBox(height: AppSpacing.xs),
             ],
           ],
@@ -430,17 +450,171 @@ class _PanelCard extends StatelessWidget {
   }
 }
 
+/// ⭐ মডিউলের আইকন — সব মডিউলের পাতার একই আইকন ([NavCatalog]); অচেনা মডিউলে ড্যাশবোর্ডের আইকন
+IconData moduleIcon(String code) =>
+    NavCatalog.moduleDef(code)?.icon ?? Icons.insights_outlined;
+
+/// খালি পর্দার কাজের বোতাম — "নতুন করে দেখুন", ৪৮dp (নকশা ৩, পাতা ৯)
+class _RefreshButton extends StatelessWidget {
+  const _RefreshButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+        key: const ValueKey('empty-refresh'),
+        style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+        onPressed: onPressed,
+        icon: const Icon(Icons.refresh),
+        label: const Text('নতুন করে দেখুন'),
+      );
+}
+
+/// সার্ভারের টাকার লেখা — "1,23,456.00" বা "-850.00"; এমন ঘর টাকা, ডানে বসে
+final _moneyCell = RegExp(r'^-?[\d,]+\.\d{2}$');
+
+/// ⓘ সার্ভারের কলামের চাবি (`Listing::columns[].key`) — কোনটা নাম, কোনটা নম্বর, কোনটা পয়েন্ট/শাখা
+const _customerKeys = {'customer', 'party', 'shop', 'dealer'};
+const _supplierKeys = {'supplier', 'principal'};
+const _nameKeys = {..._customerKeys, ..._supplierKeys, 'name', 'product', 'account', 'item'};
+const _numberKeys = {'no', 'document_no', 'number', 'voucher_no', 'invoice_no'};
+const _pointKeys = {'point', 'customer_point'};
+const _branchKeys = {'branch', 'customer_branch'};
+
+/// ⭐ ড্যাশবোর্ডের ছোট তালিকা, নকশার সারিতে (নকশা ৩, পাতা ৩): বাঁয়ে মডিউলের আইকন ৪০dp · নাম 16 w600 (গ্রাহক হলে
+/// "নাম · পয়েন্ট · শাখা", [CustomerLine]) · ডানে টাকা [Money.taka] 15 w700 · নিচে "নম্বর · বাকি ঘর" 13 মলিন।
+///
+/// <p>⚠️ টেবিল নয়, প্রতিটা ঘর এক লাইনে (মালিক, ১ অক্টোবর ২০২৬: তাঁর পর্দায় ডান দিক কাটে)।
+/// ⓘ সার্ভার `total` পাঠালে (কলামের চাবি → লেখা, `Listing::$total`) নিচে "সর্বমোট" সারি — সার্ভারের অঙ্কই, ফোন যোগ করে না।
 class _ListingCard extends StatelessWidget {
-  const _ListingCard({required this.listing});
+  const _ListingCard({required this.listing, required this.module});
 
   final Map<String, dynamic> listing;
+  final String module;
 
   @override
   Widget build(BuildContext context) {
-    final columns =
-        ((listing['columns'] as List?) ?? const []).whereType<Map>().toList();
+    final cs = Theme.of(context).colorScheme;
+    final columns = ((listing['columns'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((c) => (key: (c['key'] ?? '').toString(), label: (c['label'] ?? '').toString()))
+        .toList();
     final rows =
         ((listing['rows'] as List?) ?? const []).whereType<List>().toList();
+    final total = listing['total'] is Map
+        ? (listing['total'] as Map).map((k, v) => MapEntry(k.toString(), (v ?? '').toString()))
+        : null;
+
+    String cell(List row, int i) =>
+        i < 0 || i >= row.length ? '' : (row[i] ?? '').toString().trim();
+    int keyed(Set<String> keys) => columns.indexWhere((c) => keys.contains(c.key));
+
+    // ⓘ টাকার ঘর: যে কলামের প্রতিটা ভরা ঘর টাকার লেখা (শতাংশ নয়)
+    var moneyIdx = -1;
+    for (var i = 0; i < columns.length && rows.isNotEmpty; i++) {
+      if (columns[i].key == 'percent') continue;
+      final filled = rows.map((r) => cell(r, i)).where((v) => v.isNotEmpty && v != '—');
+      if (filled.isNotEmpty && filled.every(_moneyCell.hasMatch)) {
+        moneyIdx = i;
+        break;
+      }
+    }
+    final numberIdx = keyed(_numberKeys);
+    final pointIdx = keyed(_pointKeys);
+    final branchIdx = keyed(_branchKeys);
+    var nameIdx = keyed(_nameKeys);
+    if (nameIdx < 0) {
+      nameIdx = Iterable<int>.generate(columns.length).firstWhere(
+          (i) => i != moneyIdx && i != numberIdx && i != pointIdx && i != branchIdx,
+          orElse: () => -1);
+    }
+    final nameKey = nameIdx < 0 ? '' : columns[nameIdx].key;
+    final merged = {
+      nameIdx, moneyIdx, numberIdx,
+      // ⓘ পয়েন্ট আর শাখা নামের লাইনে জোড়া — গ্রাহক বা সরবরাহকারীর নাম থাকলেই
+      if (_customerKeys.contains(nameKey)) pointIdx,
+      if (_customerKeys.contains(nameKey) || _supplierKeys.contains(nameKey)) branchIdx,
+    };
+
+    Widget nameLine(List row) {
+      final name = cell(row, nameIdx);
+      const style = TextStyle(fontSize: 16, fontWeight: FontWeight.w600);
+      // ⭐ গ্রাহক কখনো খালি নামে নয় — "নাম · পয়েন্ট · শাখা"; সরবরাহকারী "নাম · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+      if (_customerKeys.contains(nameKey)) {
+        return CustomerLine(withPoint(name, cell(row, pointIdx), cell(row, branchIdx)), style: style);
+      }
+      if (_supplierKeys.contains(nameKey)) {
+        return CustomerLine(withPoint(name, null, cell(row, branchIdx)), style: style);
+      }
+      return Text(name, style: style);
+    }
+
+    String secondLine(String Function(int i) value) => [
+          if (numberIdx >= 0 && value(numberIdx).isNotEmpty) value(numberIdx),
+          for (var i = 0; i < columns.length; i++)
+            if (!merged.contains(i) && value(i).isNotEmpty) '${columns[i].label}: ${value(i)}',
+        ].join(' · ');
+
+    Widget money(String text, {Key? key}) => Text(
+          _moneyCell.hasMatch(text) ? Money.taka(barValue(text)) : text,
+          key: key,
+          textAlign: TextAlign.end,
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface),
+        );
+
+    Widget row(List r, int index) {
+      final second = secondLine((i) => cell(r, i));
+      final amount = cell(r, moneyIdx);
+      return Container(
+        key: ValueKey('listing-row-$index'),
+        width: double.infinity,
+        // ⓘ সারি অন্তত ৭২dp, লেখা বড় হলে নিজের মাপে বাড়ে (নকশার নিয়ম §২)
+        constraints: const BoxConstraints(minHeight: 72),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cs.outlineVariant))),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          RowIcon(moduleIcon(module), module: module),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              nameLine(r),
+              if (second.isNotEmpty)
+                Text(second, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+            ]),
+          ),
+          if (moneyIdx >= 0 && amount.isNotEmpty) ...[
+            const SizedBox(width: AppSpacing.sm),
+            money(amount),
+          ],
+        ]),
+      );
+    }
+
+    Widget totalRow(Map<String, String> t) {
+      final moneyKey = moneyIdx < 0 ? null : columns[moneyIdx].key;
+      final rest = [
+        for (final c in columns)
+          if (c.key != moneyKey && (t[c.key] ?? '').isNotEmpty) '${c.label}: ${t[c.key]}',
+      ].join(' · ');
+      return Container(
+        key: const ValueKey('listing-total'),
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.only(top: AppSpacing.sm),
+        decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outline, width: 2))),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('সর্বমোট', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
+              if (rest.isNotEmpty) Text(rest, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+            ]),
+          ),
+          if (moneyKey != null && (t[moneyKey] ?? '').isNotEmpty) ...[
+            const SizedBox(width: AppSpacing.sm),
+            money(t[moneyKey]!, key: const ValueKey('listing-total-money')),
+          ],
+        ]),
+      );
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -454,31 +628,11 @@ class _ListingCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             if (rows.isEmpty)
               Text((listing['empty'] ?? '').toString(),
-                  style: const TextStyle(color: AppColors.onSurfaceMuted))
-            else
-              for (final row in rows)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  decoration: const BoxDecoration(
-                      border:
-                          Border(bottom: BorderSide(color: AppColors.border))),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var i = 0; i < columns.length && i < row.length; i++)
-                        if (row[i].toString().isNotEmpty)
-                          Text(
-                            i == 0
-                                ? row[i].toString()
-                                : '${columns[i]['label']}: ${row[i]}',
-                            style: i == 0
-                                ? const TextStyle(fontWeight: FontWeight.w600)
-                                : const TextStyle(fontSize: 13),
-                          ),
-                    ],
-                  ),
-                ),
+                  style: TextStyle(color: context.palette.onSurfaceMuted))
+            else ...[
+              for (var i = 0; i < rows.length; i++) row(rows[i], i),
+              if (total != null && total.isNotEmpty) totalRow(total),
+            ],
           ],
         ),
       ),

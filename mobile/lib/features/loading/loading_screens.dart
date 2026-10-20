@@ -5,6 +5,7 @@ import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../../core/records/customer_record.dart';
@@ -411,7 +412,7 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
     final allPacked = sheet != null &&
         sheet.challans.isNotEmpty &&
         sheet.challans.every((c) => c.packed);
-    const muted = TextStyle(color: AppColors.onSurfaceMuted);
+    final muted = TextStyle(color: context.palette.onSurfaceMuted);
     return Scaffold(
       appBar: AppBar(title: Text('লোডিং শিট ${trip.documentNo}')),
       body: RefreshIndicator(

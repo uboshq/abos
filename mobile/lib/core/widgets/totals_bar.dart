@@ -27,15 +27,18 @@ class TotalsBar extends StatelessWidget {
     Widget line(String label, num sum, bool grand, Key key) => Padding(
           key: key,
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(children: [
-            Expanded(
-              child: Text(label,
+          // ⓘ পাশাপাশি না ধরলে (২০০% অক্ষর, ছোট ফোন) টাকা নিচের লাইনে ডানে নামে — কাটা পড়ে না, উপচেও পড়ে না
+          child: OverflowBar(
+            alignment: MainAxisAlignment.spaceBetween,
+            overflowAlignment: OverflowBarAlignment.end,
+            children: [
+              Text(label,
                   style: TextStyle(fontSize: grand ? 15 : 13, fontWeight: grand ? FontWeight.w700 : FontWeight.w500,
                       color: grand ? cs.onSurface : cs.onSurfaceVariant)),
-            ),
-            Text(Money.taka(sum),
-                style: TextStyle(fontSize: grand ? 17 : 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
-          ]),
+              Text(Money.taka(sum),
+                  style: TextStyle(fontSize: grand ? 17 : 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
+            ],
+          ),
         );
     return Material(
       key: const ValueKey('totals-bar'),

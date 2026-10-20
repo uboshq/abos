@@ -5,6 +5,7 @@ import '../../core/records/money.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/sales_desk_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
@@ -111,7 +112,7 @@ Widget _card({Key? key, required List<Widget> children}) => Card(
       ),
     );
 
-const _muted = TextStyle(fontSize: 13, color: AppColors.onSurfaceMuted);
+TextStyle _muted(BuildContext context) => TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted);
 const _bold = TextStyle(fontWeight: FontWeight.w600);
 
 /// ⭐ ডিপোর যাচাই — হিসাবের অনুমোদন পাওয়া DO আর ধরে রাখা বিক্রয় আদেশ, উপরে DO-র সর্বমোট।
@@ -154,9 +155,9 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
         ],
         body: (context, p, reload) => [
           TotalStrip(label: 'যাচাইয়ের অপেক্ষায় DO', value: Money.taka(p.text('orders_total')), count: p.number('orders_count')),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
-            child: Text('ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।', key: ValueKey('depot-web-note'), style: _muted),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Text('ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।', key: const ValueKey('depot-web-note'), style: _muted(context)),
           ),
           for (final o in p.rows('orders'))
             _card(key: ValueKey('depot-${o.text('id')}'), children: [
@@ -164,7 +165,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
                 Expanded(child: NumberWithParty(number: o.text('document_no'), party: _customerOf(o), style: _bold)),
                 Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
               ]),
-              Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted),
+              Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted(context)),
               for (final w in o.list('warnings')) Text('⚠ $w', style: const TextStyle(fontSize: 13, color: AppColors.warning)),
             ]),
           if (p.rows('held').isNotEmpty) ...[
@@ -178,7 +179,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
                   Expanded(child: NumberWithParty(number: o.text('document_no'), party: _customerOf(o), style: _bold)),
                   Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
                 ]),
-                Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted),
+                Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted(context)),
               ]),
           ],
         ],
@@ -209,7 +210,7 @@ class PrintQueueScreen extends StatelessWidget {
                 Text(j.text('status_label'),
                     style: TextStyle(color: j.flag('failed') ? AppColors.danger : AppColors.warning, fontWeight: FontWeight.w600)),
               ]),
-              if (j.text('paper').isNotEmpty) Text('কাগজ: ${j.text('paper')}', style: _muted),
+              if (j.text('paper').isNotEmpty) Text('কাগজ: ${j.text('paper')}', style: _muted(context)),
               if (j.text('failure').isNotEmpty) Text('কারণ: ${j.text('failure')}', style: const TextStyle(color: AppColors.danger)),
               Align(
                 alignment: Alignment.centerRight,
@@ -280,7 +281,7 @@ class _DeliveryPerformanceScreenState extends State<DeliveryPerformanceScreen> {
         body: (context, p, reload) => [
           for (final c in p.rows('cards'))
             _card(children: [
-              Text(c.text('label'), style: _muted),
+              Text(c.text('label'), style: _muted(context)),
               Text(c.text('value'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
               if (c.text('hint').isNotEmpty) Text(c.text('hint'), style: const TextStyle(fontSize: 12)),
             ]),
@@ -295,8 +296,8 @@ class _DeliveryPerformanceScreenState extends State<DeliveryPerformanceScreen> {
                 Expanded(child: NumberWithParty(number: d.text('document_no'), party: _customerOf(d), style: _bold)),
                 Text('${d.number('days_late')} দিন দেরি', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
               ]),
-              Text('কথা ছিল ${d.text('promised_on')} · পৌঁছেছে ${d.text('arrived_on')}', style: _muted),
-              Text([if (d.text('order_no').isNotEmpty) 'আদেশ ${d.text('order_no')}', d.text('stage')].join(' · '), style: _muted),
+              Text('কথা ছিল ${d.text('promised_on')} · পৌঁছেছে ${d.text('arrived_on')}', style: _muted(context)),
+              Text([if (d.text('order_no').isNotEmpty) 'আদেশ ${d.text('order_no')}', d.text('stage')].join(' · '), style: _muted(context)),
             ]),
         ],
       );
@@ -323,7 +324,7 @@ class PipelineScreen extends StatelessWidget {
               child: ExpansionTile(
                 initiallyExpanded: s.number('count') > 0,
                 title: Text('${s.text('name')} · ${s.number('count')} টি', style: _bold),
-                subtitle: Text('মোট ${Money.taka(s.text('total'))} · ওজন-করা ${Money.taka(s.text('weighted'))}', style: _muted),
+                subtitle: Text('মোট ${Money.taka(s.text('total'))} · ওজন-করা ${Money.taka(s.text('weighted'))}', style: _muted(context)),
                 children: [
                   for (final o in s.rows('rows'))
                     ListTile(
@@ -359,7 +360,7 @@ class TemplateListScreen extends StatelessWidget {
         body: (context, p, reload) => [
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text('মোট ${p.number('count')} টি ছাঁচ · লেখা ও বদল ওয়েবে', key: const ValueKey('template-count'), style: _muted),
+            child: Text('মোট ${p.number('count')} টি ছাঁচ · লেখা ও বদল ওয়েবে', key: const ValueKey('template-count'), style: _muted(context)),
           ),
           for (final t in p.rows('rows'))
             Card(
@@ -390,7 +391,7 @@ class TemplateScreen extends StatelessWidget {
         title: title,
         load: () => api.template(id),
         body: (context, p, reload) => [
-          Text([p.text('code'), p.text('type'), p.text('folder')].join(' · '), style: _muted),
+          Text([p.text('code'), p.text('type'), p.text('folder')].join(' · '), style: _muted(context)),
           const SizedBox(height: AppSpacing.sm),
           Card(
             child: Padding(

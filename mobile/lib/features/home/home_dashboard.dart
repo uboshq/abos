@@ -6,8 +6,9 @@ import '../../core/menu/menu_item.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/navigation/nav_prefs.dart';
 import '../../core/records/today_record.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/row_icon.dart';
 import '../today/today_panel.dart';
 
 /// The হোম tab: the search box, the day's figures ("আজ"), the person's own
@@ -73,6 +74,9 @@ class HomeDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ রং কেবল থিমের ভূমিকা থেকে — আলো আর অন্ধকার দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+    final cs = Theme.of(context).colorScheme;
+    // ⓘ "আজ"-এর লোড, ভুল আর খালি অবস্থা TodayPanel-এর নিজের (today_panel.dart) — হোম নিজে কিছু আনে না
     return TodayPanel(
       fetch: fetchToday,
       lastKnown: lastKnownToday,
@@ -89,12 +93,14 @@ class HomeDashboard extends StatelessWidget {
         Card(
           key: const Key('home-dashboards'),
           child: ListTile(
-            leading:
-                const Icon(Icons.insights_outlined, color: AppColors.primary),
+            // ⭐ নকশার সারি (নকশা ৩, পাতা ৩): RowIcon ৪০dp · নাম 16 w600 · নিচে মলিন 13 · সারি অন্তত ৭২dp
+            minTileHeight: 72,
+            leading: const RowIcon(Icons.insights_outlined),
             title: const Text('ব্যবসার ড্যাশবোর্ড',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: const Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা'),
-            trailing: const Icon(Icons.chevron_right),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            subtitle: Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা',
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+            trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
             onTap: () => _go(context, 'dashboards', 'ব্যবসার ড্যাশবোর্ড'),
           ),
         ),
@@ -104,30 +110,34 @@ class HomeDashboard extends StatelessWidget {
           const Padding(
             key: ValueKey('favourites-empty'),
             padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text(
-                'কোনো মডিউলের মেনুতে একটা সারি চেপে ধরে রাখুন — এখানে এসে বসবে (ছয়টা পর্যন্ত)।',
-                style:
-                    TextStyle(fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+            child: _Muted(
+                'কোনো মডিউলের মেনুতে একটা সারি চেপে ধরে রাখুন — এখানে এসে বসবে (ছয়টা পর্যন্ত)।'),
           )
         else
-          GridView.count(
+          // ⭐ চারটা করে পাশাপাশি, কিন্তু ঘরের উচ্চতা বাঁধা নয় — বড় অক্ষরে (২০০%) নাম ভাঙে না, ঘর নিজের মাপে বাড়ে
+          // (নকশার নিয়ম ০.৪.৩৮ §২, a4, ১৯ অক্টোবর ২০২৬)। ⓘ আগে GridView-এর childAspectRatio উচ্চতা বেঁধে রাখত।
+          LayoutBuilder(
             key: const ValueKey('favourites'),
-            crossAxisCount: 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.sm,
-            crossAxisSpacing: AppSpacing.sm,
-            childAspectRatio: 0.85,
-            children: [
-              for (final row in favourites)
-                _FavouriteTile(
-                  row: row,
-                  onTap: () => _go(context, row.path!, row.label),
-                  onLongPress: onUnfavourite == null
-                      ? null
-                      : () => onUnfavourite!(row),
-                ),
-            ],
+            builder: (context, box) {
+              final width = (box.maxWidth - 3 * AppSpacing.sm) / 4;
+              return Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final row in favourites)
+                    SizedBox(
+                      width: width,
+                      child: _FavouriteTile(
+                        row: row,
+                        onTap: () => _go(context, row.path!, row.label),
+                        onLongPress: onUnfavourite == null
+                            ? null
+                            : () => onUnfavourite!(row),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         if (recents.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
@@ -136,16 +146,19 @@ class HomeDashboard extends StatelessWidget {
             key: const ValueKey('recents'),
             child: Column(children: [
               for (var i = 0; i < recents.length && i < 5; i++) ...[
-                if (i > 0) const Divider(height: 1, color: AppColors.border),
+                if (i > 0) Divider(height: 1, color: context.palette.border),
+                // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
                 ListTile(
                   key: ValueKey('recent-${recents[i].path}'),
-                  dense: true,
+                  minTileHeight: 72,
+                  // ⓘ পর্দার নিজের মডিউলের আইকন — অচেনা পথে (যেমন একটা গ্রাহক) ইতিহাসের আইকন
+                  leading: _recentIcon(recents[i].path),
                   title: Text(recents[i].label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 14)),
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppColors.onSurfaceMuted),
+                  trailing: Icon(Icons.chevron_right,
+                      color: context.palette.onSurfaceMuted),
                   onTap: () =>
                       _go(context, recents[i].path, recents[i].label),
                 ),
@@ -165,6 +178,13 @@ class HomeDashboard extends StatelessWidget {
         const _SectionTitle('আজ'),
       ],
     );
+  }
+
+  static Widget _recentIcon(String path) {
+    final def = NavCatalog.screenDef(path);
+    return def == null
+        ? const RowIcon(Icons.history)
+        : RowIcon(def.icon, module: def.module);
   }
 
   void _go(BuildContext context, String path, String label) {
@@ -188,16 +208,28 @@ class _SectionTitle extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: AppSpacing.xs),
         child: Row(children: [
           if (icon != null) ...[
-            Icon(icon, size: 18, color: AppColors.primary),
+            Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: AppSpacing.xs),
           ],
           Text(text,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.onSurface)),
+                  color: context.palette.onSurface)),
         ]),
       );
+}
+
+class _Muted extends StatelessWidget {
+  const _Muted(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: TextStyle(
+          fontSize: 12.5,
+          color: context.palette.onSurfaceMuted));
 }
 
 class _FavouriteTile extends StatelessWidget {
@@ -210,9 +242,6 @@ class _FavouriteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ⓘ হালকা পটে আইকন সেই রঙের গাঢ় সুরে, অন্তত ৩:১ ([[AppColors.moduleInk]])
-    final tint = AppColors.moduleTint(row.module);
-    final colour = AppColors.moduleInk(row.module);
     return Card(
       key: ValueKey('favourite-${row.path}'),
       child: InkWell(
@@ -222,17 +251,11 @@ class _FavouriteTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xs),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: tint,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(row.icon, color: colour, size: 22),
-              ),
+              // ⓘ নকশার RowIcon — ৪০dp গোল, হালকা পটে মডিউলের গাঢ় সুর, অন্তত ৩:১ (নকশা ৩, পাতা ২)
+              RowIcon(row.icon, module: row.module),
               const SizedBox(height: AppSpacing.xs),
               Text(row.label,
                   maxLines: 2,

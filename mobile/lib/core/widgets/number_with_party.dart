@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../theme/app_palette.dart';
 
 /// ⭐ কাগজের নম্বর, পাশে পক্ষ — এক লাইনে (মালিক, ১৯ অক্টোবর ২০২৬: *"অনেক জায়গায় তালিকায় শুধু ভাউচার নম্বর দেওয়া। সেখানে নম্বরের
 /// পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে সহজে বোঝা যায়।"*)।
@@ -23,7 +23,7 @@ class NumberWithParty extends StatelessWidget {
       TextSpan(children: [
         TextSpan(text: number),
         if (who.isNotEmpty)
-          TextSpan(text: ' · $who', style: base.copyWith(color: AppColors.onSurfaceMuted, fontWeight: FontWeight.w400)),
+          TextSpan(text: ' · $who', style: base.copyWith(color: context.palette.onSurfaceMuted, fontWeight: FontWeight.w400)),
       ]),
       style: base,
       maxLines: 1,

@@ -6,6 +6,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/documents_library/upload_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -199,8 +200,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   child: Text('${_paths.length} টি ফাইল — প্রতিটা আলাদা কাগজ হবে',
                       key: const ValueKey('upload-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
-              const Text('ⓘ কোন ধরনের ফাইল চলে আর কত বড়, সার্ভার ওয়েবের নিয়মেই দেখে। লেখা পড়া (OCR) ওয়েবে।',
-                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+              Text('ⓘ কোন ধরনের ফাইল চলে আর কত বড়, সার্ভার ওয়েবের নিয়মেই দেখে। লেখা পড়া (OCR) ওয়েবে।',
+                  style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 key: const ValueKey('upload-name'),

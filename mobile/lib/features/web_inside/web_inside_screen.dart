@@ -138,7 +138,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
   WebViewController _buildController() {
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
+      ..setBackgroundColor(Colors.white) // dark-ok
       ..addJavaScriptChannel(WebFiles.fileChannel, onMessageReceived: (m) => _onFile(m.message))
       ..addJavaScriptChannel(WebFiles.pageChannel, onMessageReceived: (m) => _onPage(m.message))
       ..setNavigationDelegate(NavigationDelegate(

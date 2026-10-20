@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 
 /// টাকা আদায়, প্রিন্সিপাল আর ক্রয়ের পাতার একসাথের টুকরো — তারিখের পরিসর, মোটের পট্টি, ভুলের ঘর।
@@ -90,20 +92,27 @@ class TotalStrip extends StatelessWidget {
         color: AppColors.successSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
+          // ⓘ জায়গা না হলে অঙ্ক নামের নিচে নামে — বড় লেখায় বা কোটি টাকায় কেটে যায় না, ঢেকেও যায় না
+          // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এক সারিতে বাঁধা ছিল, ১৩ dp ওপারে চলে যেত।
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
-              Expanded(
-                  child: Text(label,
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800)),
-              if (count != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.sm),
-                  child: Text('· $count টি',
-                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
-                ),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.sm,
+                children: [
+                  Text(value,
+                      semanticsLabel: Money.speakable(value),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w800)),
+                  if (count != null)
+                    Text('· $count টি',
+                        style: TextStyle(color: context.palette.onSurfaceMuted)),
+                ],
+              ),
             ],
           ),
         ),
@@ -142,7 +151,7 @@ class FactRow extends StatelessWidget {
           children: [
             Expanded(
                 child: Text(label,
-                    style: const TextStyle(color: AppColors.onSurfaceMuted))),
+                    style: TextStyle(color: context.palette.onSurfaceMuted))),
             Flexible(
               child: Text(value,
                   textAlign: TextAlign.end,

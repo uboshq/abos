@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import 'owner_page_frame.dart';
@@ -186,13 +187,13 @@ class _Figure extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted))),
+          Expanded(child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted))),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(ownerCell(now), style: TextStyle(fontWeight: FontWeight.w700, color: ownerTone(now))),
               if (now != ownerHidden) ...[
-                Text('তখন ${ownerCell(row.was[column])}', style: const TextStyle(fontSize: 11.5, color: AppColors.onSurfaceMuted)),
+                Text('তখন ${ownerCell(row.was[column])}', style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
                 if (change != null)
                   Text(change, style: TextStyle(fontSize: 11.5, color: up ? AppColors.success : AppColors.danger)),
               ],

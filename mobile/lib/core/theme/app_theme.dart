@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_palette.dart';
 
 /// The one [ThemeData] the app builds from tokens — screens ask for
 /// `Theme.of(context)` and its extensions, never a literal colour or size.
@@ -14,6 +15,12 @@ class AppTheme {
   /// খালি হলে তবেই এটা [ThemeMode.system] হবে, আগে নয়।
   static const ThemeMode mode = ThemeMode.light;
 
+  /// ⭐ predictive back — পেছনে টানলে আগের পাতা উঁকি দেয়, ছাড়লে ফেরে (Android 14+; মোবাইলের নকশা ৩)। ম্যানিফেস্টে
+  /// `enableOnBackInvokedCallback`। ⓘ না-রাখা ফর্মের পাহারা ([UnsavedGuard], PopScope) এতেও আগের মতো থামায়।
+  static const PageTransitionsTheme pageTransitions = PageTransitionsTheme(builders: {
+    TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+  });
+
   /// অন্ধকারের থিম — একই বীজ রং, Material 3-এর অন্ধকার রং-পরিবার; পট, কার্ড আর লেখা সব `colorScheme` থেকে
   static ThemeData dark() {
     final colorScheme = ColorScheme.fromSeed(
@@ -25,6 +32,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide(color: colorScheme.outlineVariant),
     );
+    final palette = AppPalette.darkFrom(colorScheme);
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -74,6 +82,8 @@ class AppTheme {
             )),
       ),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      pageTransitionsTheme: pageTransitions,
+      extensions: [palette],
     );
   }
 
@@ -88,6 +98,7 @@ class AppTheme {
       error: AppColors.danger,
     );
 
+    const palette = AppPalette.light;
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -160,6 +171,8 @@ class AppTheme {
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
       ),
+      pageTransitionsTheme: pageTransitions,
+      extensions: const [palette],
     );
   }
 }

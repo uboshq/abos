@@ -4,6 +4,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
@@ -91,7 +92,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: Text('এখনো সইয়ের অপেক্ষায়: ${page.pendingCount} টি',
                     key: const ValueKey('my-requests-pending'),
-                    style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(color: context.palette.onSurfaceMuted)),
               ),
             if (page != null && _rows.isEmpty)
               const EmptyState(
@@ -122,11 +123,11 @@ class _RequestCard extends StatelessWidget {
   final MyRequest r;
 
   /// অবস্থার রং — অপেক্ষা হলুদ, হ্যাঁ সবুজ, না বা ফেরত লাল
-  Color get _tone => switch (r.status) {
+  Color _tone(BuildContext context) => switch (r.status) {
         'approved' => AppColors.success,
         'rejected' || 'returned' => AppColors.danger,
         'pending' => AppColors.warning,
-        _ => AppColors.onSurfaceMuted,
+        _ => context.palette.onSurfaceMuted,
       };
 
   /// সার্ভারের সময় (ISO, অঞ্চলসহ) → ফোনের নিজের দিনের তারিখ; ⚠️ সরাসরি কাটলে রাতের অনুরোধ আগের দিনে পড়ত
@@ -165,8 +166,8 @@ class _RequestCard extends StatelessWidget {
             if (summaryAfterParty(r.summary, r.party) case final rest?) Text(rest),
             const SizedBox(height: AppSpacing.xs),
             Text([r.statusLabel, _day(r.requestedAt)].where((s) => s.isNotEmpty).join(' · '),
-                style: TextStyle(color: _tone, fontWeight: FontWeight.w600)),
-            if (said.isNotEmpty) Text('শেষ কথা: $said', style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                style: TextStyle(color: _tone(context), fontWeight: FontWeight.w600)),
+            if (said.isNotEmpty) Text('শেষ কথা: $said', style: TextStyle(color: context.palette.onSurfaceMuted)),
             if ((r.lastRemarks ?? '').isNotEmpty)
               Text('কারণ: ${r.lastRemarks}', key: ValueKey('my-request-remarks-${r.id}')),
           ],

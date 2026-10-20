@@ -8,9 +8,15 @@ import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
+import '../../core/widgets/app_status_pill.dart';
+import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/row_icon.dart';
+import '../../core/widgets/state_views.dart';
+import '../../core/widgets/totals_bar.dart';
 import '../../core/widgets/unsaved_guard.dart';
 
 /// ডেলিভারি অর্ডার (DO) — তালিকা, নতুন DO, আর একটা DO-র পাতা (0.4.8, মালিকের বিক্রয়-ধারা §২ক-খ)।
@@ -24,6 +30,104 @@ String _qty(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStr
 String _paper(DeliveryOrderApi api) => api.forOrders ? 'আদেশ' : 'DO';
 
 String _title(DeliveryOrderApi api) => api.forOrders ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার';
+
+/// ⭐ মোটে না পড়া অবস্থা — ফেরত আর বাতিল কাগজ সারিতে থাকে, মোটে নয় (সার্ভারের UNCOUNTED-এর একই নিয়ম; fe, ১৭ অক্টোবর ২০২৬)
+const _uncounted = {'rejected', 'cancelled'};
+
+/// ⭐ অবস্থার রঙের মানে — চিপের একই চার রং ([AppStatusPill]); না চিনলে নীল "চলছে"
+AppStatusKind orderStatusKind(String status) => switch (status) {
+      'draft' => AppStatusKind.neutral,
+      'rejected' || 'cancelled' || 'credit_held' || 'accounts_held' => AppStatusKind.danger,
+      'invoiced' || 'closed' || 'delivered' || 'confirmed' || 'supervisor_approved' || 'accounts_approved' =>
+        AppStatusKind.success,
+      'submitted' || 'supervisor_pending' || 'depot_check' || 'pending' => AppStatusKind.warning,
+      _ => AppStatusKind.pending,
+    };
+
+/// ⭐ নকশা ৩-এর তালিকার সারি (মোবাইলের নকশা ৩, পাতা ৩; a4-এর নিয়ম §৪, ১৯ অক্টোবর ২০২৬) — বাঁয়ে [RowIcon], প্রথম লাইনে
+/// গ্রাহক "নাম · পয়েন্ট · শাখা" ([CustomerLine], 16 w600), দ্বিতীয় লাইনে কাগজের নম্বর · তারিখ/ধরন (13, মলিন), ডানে টাকা
+/// ([Money.taka], 15 w700) আর অবস্থার চিপ। পুরো সারিতে চাপলে খোলে।
+///
+/// <p>ⓘ নম্বর নিজের আলাদা লেখা ([numberKey]) — খোঁজা আর পড়া দুটোই নম্বর ধরে। ⓘ সারি অন্তত ৭২dp, উচ্চতা বাঁধা নয়: ২০০%
+/// অক্ষরে ডানের টাকা আর চিপ নিজের ভাগে ভাঙে, ছাপিয়ে যায় না (নিয়ম §২)।
+class PaperListRow extends StatelessWidget {
+  const PaperListRow({
+    super.key,
+    required this.icon,
+    required this.party,
+    required this.number,
+    this.tone,
+    this.detail,
+    this.amount,
+    this.pill,
+    this.below,
+    this.numberKey,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final Color? tone;
+
+  /// গ্রাহক — সবসময় "নাম · পয়েন্ট · শাখা" ([withPoint] বা `CustomerRecord.label`); ⛔ খালি নাম নয় (মালিকের স্থায়ী নিয়ম)
+  final String party;
+  final String number;
+  final String? detail;
+  final num? amount;
+  final Widget? pill;
+  final Widget? below;
+  final Key? numberKey;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final muted = TextStyle(fontSize: 13, color: cs.onSurfaceVariant);
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            child: Row(children: [
+              RowIcon(icon, tone: tone),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                flex: 3,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  CustomerLine(party,
+                      key: const ValueKey('paper-row-party'),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  const SizedBox(height: 2),
+                  // ⭐ দ্বিতীয় লাইন — কাগজের নম্বর · তারিখ বা ধরন (মালিকের নিয়ম: নম্বর নামের নিচে)
+                  Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    Text(number, key: numberKey, style: muted),
+                    if (detail != null && detail!.isNotEmpty) Text(' · $detail', style: muted),
+                  ]),
+                  if (below != null) below!,
+                ]),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                flex: 2,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+                  if (amount != null)
+                    Text(Money.taka(amount),
+                        key: const ValueKey('paper-row-amount'),
+                        textAlign: TextAlign.end,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                  if (pill != null) ...[const SizedBox(height: AppSpacing.xs), pill!],
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class DeliveryOrderListScreen extends StatefulWidget {
   const DeliveryOrderListScreen({super.key, this.api = const ServerDeliveryOrderApi(), this.canWrite = true, this.title});
@@ -96,6 +200,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
   @override
   Widget build(BuildContext context) {
     final rows = _rows ?? const <DeliveryOrder>[];
+    final total = _total;
+    // ⭐ এই পাতার মোট — হাতে আসা সারির; ফেরত আর বাতিল সারিতে থাকে, মোটে নয় (সার্ভারের একই নিয়ম)
+    final pageSum = rows.fold<double>(0, (sum, o) => _uncounted.contains(o.status) ? sum : sum + o.total);
     return Scaffold(
       appBar: AppBar(title: Text(widget.title ?? _title(widget.api))),
       floatingActionButton: widget.canWrite
@@ -106,9 +213,15 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
               label: Text('নতুন ${_paper(widget.api)}'),
             )
           : null,
+      // ⭐ নিচে স্থির পট্টি — "এই পাতা" হাতে আসা সারির, "সর্বমোট" সার্ভারের পুরো ছাঁকা তালিকার (মালিক, ১৭ অক্টোবর ২০২৬;
+      // নকশা ৩, পাতা ৩)। ⓘ পুরনো সার্ভার মোট না পাঠালে পট্টিই নেই — পাতার যোগফলকে সর্বমোট বলা মিথ্যা হত।
+      bottomNavigationBar: total != null && rows.isNotEmpty
+          ? TotalsBar(pageCount: rows.length, pageSum: pageSum, allCount: total.count, allSum: total.sum)
+          : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
@@ -131,32 +244,42 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
               ),
             ]),
             const SizedBox(height: AppSpacing.sm),
-            // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; ফেরত আর বাতিল বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
-            if (_total != null && rows.isNotEmpty)
-              TotalStrip(label: 'মোট ${_paper(widget.api)}', value: Money.taka(_total!.sum), count: _total!.count),
-            if (_busy) const LinearProgressIndicator(),
-            if (_error != null) _ErrorCard(_error!),
-            if (_rows != null && rows.isEmpty && !_busy)
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Text('কোনো ${_paper(widget.api)} নেই।', textAlign: TextAlign.center),
+            // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): প্রথম আনায় খসড়া সারি, ভুলে "আবার চেষ্টা করুন", খালিতে "নতুন …"
+            if (_busy && _rows == null && _error == null) const LoadingSkeleton(),
+            if (_busy && _rows != null) const LinearProgressIndicator(),
+            if (_error != null) ErrorState(key: const ValueKey('do-error'), message: _error!, onRetry: _busy ? null : _load),
+            if (_rows != null && rows.isEmpty && !_busy && _error == null)
+              EmptyState(
+                icon: Icons.local_shipping_outlined,
+                title: 'কোনো ${_paper(widget.api)} নেই।',
+                message: _awaitingMe ? 'এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।' : null,
+                action: widget.canWrite
+                    ? FilledButton.icon(
+                        key: const ValueKey('do-empty-new'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+                        onPressed: _new,
+                        icon: const Icon(Icons.add),
+                        label: Text('নতুন ${_paper(widget.api)}'),
+                      )
+                    : null,
               ),
             for (final order in rows)
-              Card(
-                child: ListTile(
-                  onTap: () => _open(order),
-                  title: Text(order.no),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (order.customer != null) Text(order.customer!),
-                      // ⭐ ওয়েবের চিপ — ব্যাক অর্ডার, সীমায় আটকে, চালান আর বিল (সমন্বয়ক, ৬ অক্টোবর ২০২৬)
-                      if (order.chips.isEmpty) Text(order.statusLabel) else OrderChips(order.chips),
-                      Text(Money.taka(order.total)),
-                    ],
-                  ),
-                  trailing: order.awaitingMe ? const Icon(Icons.draw_outlined, color: AppColors.warning) : null,
-                ),
+              PaperListRow(
+                key: ValueKey('do-row-${order.id}'),
+                icon: order.awaitingMe
+                    ? Icons.draw_outlined
+                    : (widget.api.forOrders ? Icons.receipt_long_outlined : Icons.local_shipping_outlined),
+                tone: order.awaitingMe ? AppColors.warning : null,
+                party: order.customer ?? 'গ্রাহক নেই',
+                number: order.no,
+                detail: order.date,
+                amount: order.total,
+                // ⭐ ওয়েবের চিপ — ব্যাক অর্ডার, সীমায় আটকে, চালান আর বিল (সমন্বয়ক, ৬ অক্টোবর ২০২৬); না থাকলে অবস্থার চিপ
+                pill: order.chips.isEmpty
+                    ? AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status))
+                    : null,
+                below: order.chips.isEmpty ? null : OrderChips(order.chips),
+                onTap: () => _open(order),
               ),
           ],
         ),
@@ -383,7 +506,10 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       final order = await widget.api.show(widget.id);
       if (mounted) setState(() => _take(order));
@@ -417,23 +543,36 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          if (_busy) const LinearProgressIndicator(),
-          if (_error != null) _ErrorCard(_error!),
+          // ⭐ তিন অবস্থা: প্রথম আনায় খসড়া সারি, আনা না গেলে "আবার চেষ্টা করুন"; কাগজ হাতে থাকলে সরু দাগ আর কাজের ভুল কার্ডে
+          if (_busy && order == null) const LoadingSkeleton(rows: 3),
+          if (_busy && order != null) const LinearProgressIndicator(),
+          if (_error != null && order == null)
+            ErrorState(key: const ValueKey('do-error'), message: _error!, onRetry: _busy ? null : _load),
+          if (_error != null && order != null) _ErrorCard(_error!),
+          // ⓘ সবুজ পটে নিজের গাঢ় সবুজ লেখা — থিমের লেখা অন্ধকার মোডে এই হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১)
           if (_done != null)
             Card(
               color: AppColors.successSurface,
-              child: Padding(padding: const EdgeInsets.all(AppSpacing.md), child: Text(_done!)),
+              child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(_done!, style: const TextStyle(color: AppColors.success))),
             ),
           if (order != null) ...[
-            Text(order.no, style: Theme.of(context).textTheme.titleLarge),
+            // ⭐ মাথায় গ্রাহক "নাম · পয়েন্ট · শাখা", তার নিচে কাগজের নম্বর · তারিখ (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
+            CustomerLine(order.customer ?? 'গ্রাহক নেই',
+                key: const ValueKey('do-customer-line'),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+            Text([order.no, if (order.date != null) order.date!].join(' · '),
+                key: const ValueKey('do-number-line'),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: AppSpacing.xs),
             Text('অবস্থা: ${order.statusLabel}', key: const ValueKey('do-status')),
-            if (order.customer != null) Text('ডিলার: ${order.customer}'),
-            if (order.date != null) Text('তারিখ: ${order.date}'),
             Text('মোট: ${Money.taka(order.total)}'),
             // ⓘ বিক্রয় আদেশ বাকির সীমায় আটকে — লেখক দেখেন কেন থেমে আছে; টাকা এলে সার্ভার নিজেই আবার দেখে
             if (order.creditShort != null)
               Text('বাকির সীমায় আটকে — কম ${Money.taka(order.creditShort)}',
-                  key: const ValueKey('do-credit-short'), style: const TextStyle(color: AppColors.danger)),
+                  key: const ValueKey('do-credit-short'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (order.chips.isNotEmpty) OrderChips(order.chips),
             // ⭐ মজুদ এখন — ধরা হয়নি: আছে, চাই, কম (ওয়েবের আদেশের পাতার একই উৎস)
             if (order.stockNow.isNotEmpty) _StockNowCard(order.stockNow),
@@ -494,7 +633,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
               ),
               OutlinedButton(
                 key: const ValueKey('do-reject'),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                 onPressed: _busy
                     ? null
                     : () {
@@ -592,6 +731,7 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
             child: ListView.builder(
               itemCount: shown.length,
               itemBuilder: (_, i) => ListTile(
+                minTileHeight: 72,
                 title: Text(widget.label(shown[i])),
                 onTap: () => Navigator.of(context).pop(shown[i]),
               ),
@@ -609,12 +749,14 @@ class OrderChips extends StatelessWidget {
 
   final List<OrderChip> chips;
 
-  static (Color, Color) colours(String tone) => switch (tone) {
+  /// ⭐ অবস্থার রং জোড়ায় (পট, লেখা) — রঙিন জোড়া দুই মোডে একই; ধরন না চিনলে থিমের মলিন পট আর লেখা
+  /// (নকশার নিয়ম ০.৪.৩৮ §১; a4, ১৯ অক্টোবর ২০২৬: context.palette — আলোতে হুবহু আগের রং)
+  static (Color, Color) colours(String tone, AppPalette p) => switch (tone) {
         'success' => (AppColors.successSurface, AppColors.success),
         'warning' => (AppColors.warningSurface, AppColors.warning),
         'danger' => (AppColors.dangerSurface, AppColors.danger),
         'info' || 'pending' => (AppColors.pendingSurface, AppColors.pending),
-        _ => (AppColors.surfaceMuted, AppColors.onSurfaceMuted),
+        _ => (p.surfaceMuted, p.onSurfaceMuted),
       };
 
   @override
@@ -629,9 +771,13 @@ class OrderChips extends StatelessWidget {
                 key: ValueKey('order-chip-${c.key}'),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                 decoration: BoxDecoration(
-                    color: colours(c.tone).$1, borderRadius: BorderRadius.circular(12)),
+                    color: colours(c.tone, context.palette).$1,
+                    borderRadius: BorderRadius.circular(12)),
                 child: Text(c.label,
-                    style: TextStyle(fontSize: 12, color: colours(c.tone).$2, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: colours(c.tone, context.palette).$2,
+                        fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -652,15 +798,15 @@ class _StockNowCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('মজুদ এখন — ধরা হয়নি', style: TextStyle(fontWeight: FontWeight.w700)),
-              const Text('মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।',
-                  style: TextStyle(color: AppColors.onSurfaceMuted)),
+              Text('মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।',
+                  style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final r in rows) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(r.product, style: const TextStyle(fontWeight: FontWeight.w600)),
                 Text(r.have != null ? 'আছে ${_qty(r.have!)} · চাই ${_qty(r.want)}' : 'চাই ${_qty(r.want)}'),
                 if (!r.enough)
                   Text(r.short != null ? 'কম ${_qty(r.short!)}' : 'মজুদে কুলোয় না',
-                      style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
               ],
             ],
           ),
@@ -674,6 +820,7 @@ class _ErrorCard extends StatelessWidget {
   final String text;
 
   @override
+  // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১)
   Widget build(BuildContext context) => Card(
         color: AppColors.dangerSurface,
         child: Padding(

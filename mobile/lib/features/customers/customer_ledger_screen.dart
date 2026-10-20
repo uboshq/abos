@@ -6,6 +6,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 
@@ -87,8 +88,8 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
         children.add(Padding(
           padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
           child: Text(m,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
         ));
       }
       children.add(_Row(row: r));
@@ -132,7 +133,7 @@ class _DueHeader extends StatelessWidget {
         ? ('বাকি আছে', AppColors.danger)
         : due < -0.004
             ? ('আগাম জমা আছে', AppColors.success)
-            : ('হিসাব মিলে আছে', AppColors.onSurface);
+            : ('হিসাব মিলে আছে', context.palette.onSurface);
 
     return Card(
       child: Padding(
@@ -140,15 +141,16 @@ class _DueHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+            Text(label, style: TextStyle(color: context.palette.onSurfaceMuted)),
             Text(Money.taka(due.abs()),
                 key: const ValueKey('ledger-due'),
+                semanticsLabel: Money.spoken(due.abs()),
                 style: TextStyle(
                     fontSize: 26, fontWeight: FontWeight.w800, color: colour)),
             if (head.code.isNotEmpty)
               Text('কোড ${head.code}',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.onSurfaceMuted)),
+                  style: TextStyle(
+                      fontSize: 12, color: context.palette.onSurfaceMuted)),
             // ⭐ হিসাব-বিবরণী — প্রারম্ভিক + মাল − টাকা = সমাপনী (পূর্ণ নিরীক্ষা §৯ ⚠️৭); পুরনো সার্ভার পাঠায় না, তখন নেই
             if (head.statement case final st?) ...[
               const Divider(height: AppSpacing.lg),
@@ -223,10 +225,11 @@ class _Row extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text('${took ? '+' : '−'}${Money.taka(amount)}',
+                semanticsLabel: '${took ? 'মাল' : 'জমা'} ${Money.spoken(amount)}',
                 style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
             Text(dueWords(row.balance),
-                style: const TextStyle(
-                    fontSize: 11.5, color: AppColors.onSurfaceMuted)),
+                style: TextStyle(
+                    fontSize: 11.5, color: context.palette.onSurfaceMuted)),
           ],
         ),
       ),

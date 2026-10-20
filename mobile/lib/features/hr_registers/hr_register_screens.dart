@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/hr/hr_register_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -64,7 +65,7 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
         'present' => AppColors.success,
         'absent' => AppColors.danger,
         'leave' || 'holiday' => AppColors.warning,
-        _ => AppColors.onSurfaceMuted,
+        _ => context.palette.onSurfaceMuted,
       };
 
   @override
@@ -277,9 +278,9 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
                     ]),
                     Text('${a.text('type')} · ${a.text('from')} থেকে ${a.text('to')} · ${a.text('days')} দিন'),
                     if (a.text('reason').isNotEmpty)
-                      Text(a.text('reason'), style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceMuted)),
+                      Text(a.text('reason'), style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
                     if (a.text('decider').isNotEmpty)
-                      Text('সিদ্ধান্ত: ${a.text('decider')}', style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceMuted)),
+                      Text('সিদ্ধান্ত: ${a.text('decider')}', style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
                     if (a.flag('can_decide'))
                       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                         TextButton(

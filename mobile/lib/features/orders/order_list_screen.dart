@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/records/list_queries.dart';
-import '../../core/records/money.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -11,7 +11,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
-import '../books/books_widgets.dart';
+import '../../core/widgets/state_views.dart';
+import '../../core/widgets/totals_bar.dart';
+import '../delivery_orders/delivery_order_screens.dart' show PaperListRow, orderStatusKind;
 import 'rejected_order_card.dart';
 
 /// Three states an order taken on this phone can be in, all in one list
@@ -20,7 +22,10 @@ import 'rejected_order_card.dart';
 /// see docs/Contract §০ (owner's decision ২) for why the number only ever
 /// appears in this last group.
 class OrderListScreen extends StatefulWidget {
-  const OrderListScreen({super.key});
+  const OrderListScreen({super.key, this.onNewOrder});
+
+  /// খালি তালিকার "নতুন অর্ডার" — না দিলে অ্যাপের নতুন অর্ডারের পথ (`/home/new-order`); পরীক্ষা নিজেরটা দেয়
+  final VoidCallback? onNewOrder;
 
   @override
   State<OrderListScreen> createState() => _OrderListScreenState();
@@ -58,8 +63,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
         OrderListQuery.apply(synced, sort: _sort, filters: _filters);
     // ⭐ দেখানো আদেশের মোট — মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total"। ⓘ বাতিল আদেশ সারিতে থাকে, মোটে নয়
     // (ওয়েবের ভাউচার আর আদেশের তালিকার একই নিয়ম)।
-    final shownTotal = shown.fold<double>(
-        0, (sum, order) => order.status == 'cancelled' ? sum : sum + (order.total ?? 0));
+    double sumOf(List<SalesOrderRecord> list) =>
+        list.fold<double>(0, (sum, order) => order.status == 'cancelled' ? sum : sum + (order.total ?? 0));
+    final shownTotal = sumOf(shown);
+    // ⭐ সর্বমোট — ফোনে সিঙ্ক হওয়া পুরো তালিকা, ছাঁকনির আগে; "এই পাতা" যা এখন দেখা যাচ্ছে (নকশা ৩, পাতা ৩)
+    final allTotal = sumOf(synced);
 
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
@@ -69,6 +77,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('অর্ডারের অবস্থা')),
+      bottomNavigationBar: synced.isEmpty
+          ? null
+          : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: synced.length, allSum: allTotal),
       // ⛔ Even with nothing to show, the empty state lives inside a
       // RefreshIndicator over a scrollable. A RefreshIndicator only
       // recognises a pull on a scrollable descendant, so a bare EmptyState
@@ -85,17 +96,35 @@ class _OrderListScreenState extends State<OrderListScreen> {
           ? RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
-                  EmptyState(
-                    icon: trouble == null
-                        ? Icons.receipt_long_outlined
-                        : Icons.cloud_off_outlined,
-                    title: trouble == null
-                        ? 'এখনো কোনো অর্ডার নেই'
-                        : 'অর্ডারের তালিকা আনা যায়নি',
+                  // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): টানার সময় খসড়া সারি; শেষ টান ব্যর্থ হলে কারণসহ "আবার চেষ্টা করুন";
+                  // সত্যিই খালি হলে "নতুন অর্ডার"
+                  if (_refreshing)
+                    const LoadingSkeleton()
+                  else if (trouble != null) ...[
+                    ErrorState(
+                        key: const ValueKey('orders-error'),
+                        message: 'অর্ডারের তালিকা আনা যায়নি',
+                        onRetry: _refresh),
                     // See CustomerListScreen's comment on the same line.
-                    message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
-                  ),
+                    Text(trouble,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ] else
+                    EmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'এখনো কোনো অর্ডার নেই',
+                      message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                      action: FilledButton.icon(
+                        key: const ValueKey('orders-empty-new'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+                        onPressed: widget.onNewOrder ?? () => context.push('/home/new-order'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('নতুন অর্ডার'),
+                      ),
+                    ),
                 ],
               ),
             )
@@ -144,8 +173,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       filters: _filters,
                       onFilters: (value) => setState(() => _filters = value),
                     ),
-                    if (shown.isNotEmpty)
-                      TotalStrip(label: 'মোট অর্ডার', value: Money.taka(shownTotal), count: shown.length),
                     if (shown.isEmpty)
                       const Padding(
                         padding: EdgeInsets.all(AppSpacing.md),
@@ -158,23 +185,15 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     // they finally get it. It used to read `orderNumber`,
                     // which the server has never sent, so every confirmed
                     // order here said "নম্বর নেই"; see SalesOrderRecord.
-                    ...shown.map((order) => Card(
-                          child: ListTile(
-                            leading: const AppStatusPill(
-                                label: 'সম্পন্ন', kind: AppStatusKind.success),
-                            title: Text(order.documentNo ?? 'নম্বর নেই'),
-                            subtitle: Text([
-                              order.customerName,
-                              if (order.trxDate != null)
-                                DateFormat('dd/MM/yyyy').format(order.trxDate!),
-                              order.statusLabel,
-                            ].join(' · ')),
-                            trailing: order.total == null
-                                ? null
-                                : Text(Money.taka(order.total),
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700)),
-                          ),
+                    // ⭐ নকশা ৩-এর সারি: গ্রাহক "নাম · পয়েন্ট · শাখা" (CustomerRecord.label), নিচে নম্বর · তারিখ, ডানে টাকা আর অবস্থা
+                    ...shown.map((order) => PaperListRow(
+                          key: ValueKey('order-row-${order.id}'),
+                          icon: Icons.receipt_long_outlined,
+                          party: order.customerName,
+                          number: order.documentNo ?? 'নম্বর নেই',
+                          detail: order.trxDate == null ? null : DateFormat('dd/MM/yyyy').format(order.trxDate!),
+                          amount: order.total,
+                          pill: AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status ?? '')),
                         )),
                   ],
                 ],

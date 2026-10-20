@@ -6,6 +6,7 @@ import '../../core/api_client/once_key.dart';
 import '../../core/hr/claims_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -298,8 +299,8 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          const Text('সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।',
-              style: TextStyle(color: AppColors.onSurfaceMuted)),
+          Text('সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।',
+              style: TextStyle(color: context.palette.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.sm),
           if (_busy) const LinearProgressIndicator(),
           if (_error != null)

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⭐ ফোনের ভেতরের ওয়েব পাতাও (WebView) লাইভের মূলে বাঁধা — অ্যাপের নিরাপত্তা, OWASP MASVS-NETWORK-2, ২০ অক্টোবর ২০২৬
+  (a4-এর পর্যালোচনা)।
+
+  ⛔ অ্যাপের নিজের সংযোগ (Dart, lib/core/api_client/pinned_trust.dart) আগেই পাঁচ মূলে বাঁধা, কিন্তু Dart এই ফাইল পড়ে না,
+  আর ওয়েব পাতা Dart দিয়ে চলে না: সে লাইভের পাতা ফোনের সাধারণ বিশ্বাসে খুলত, একবারের লগইন-লিংকে ওয়েব সেশন পেত। তাই
+  ভুল-সার্টিফিকেটের আক্রমণে ওয়েব সেশন ধরা যেত। Android 7+ এই ফাইল WebView-এও খাটায় (OWASP MASTG-KNOW-0015)।
+
+  ⓘ একই পাঁচ মূল, প্রতিটার SPKI-র SHA-256 (base64) — test/the_live_server_is_pinned_to_its_roots_test.dart মেলায় যে
+  এখানকার ছাপ আর অ্যাপের মূলের ছাপ একই:
+   ISRG Root X1, ISRG Root X2, USERTrust RSA (Sectigo), ISRG Root YR, ISRG Root YE।
+
+  ⚠️ মেয়াদ (expiration) ২০ অক্টোবর ২০২৭: তার পরে pin আর খাটে না, পাতা ফোনের সাধারণ বিশ্বাসে খোলে। ⓘ ইচ্ছে করে —
+  তালিকায় ভুল থাকলে বা সার্ভার অন্য কোম্পানিতে গেলে পুরনো অ্যাপের ওয়েব পাতা চিরকাল আটকে থাকবে না। ⛔ তার আগে নতুন অ্যাপে
+  মেয়াদ বাড়াতে হবে, নইলে pin চুপচাপ বন্ধ হয়ে যায়।
+
+  ⓘ কেবল লাইভের ঠিকানা আর তার www; পরীক্ষার LAN ঠিকানায় কিছু বদলায় না। ব্যবহারকারীর বসানো "মূল" Android 7+ এমনিতেই
+  মানে না, এখানেও নয়।
+-->
+<network-security-config>
+    <domain-config>
+        <domain includeSubdomains="true">erp.adi.com.bd</domain>
+        <pin-set expiration="2027-10-20">
+            <pin digest="SHA-256">C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=</pin>
+            <pin digest="SHA-256">diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=</pin>
+            <pin digest="SHA-256">x4QzPSC810K5/cMjb05Qm4k3Bw5zBn4lTdO/nEW/Td4=</pin>
+            <pin digest="SHA-256">fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=</pin>
+            <pin digest="SHA-256">sCkq5UWXjg+7mKu9lMhhYF5bGLsy7VI/UNW3tccdR7w=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

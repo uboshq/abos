@@ -91,6 +91,53 @@ class Money {
     return double.tryParse(clean);
   }
 
+  /// ⭐ পর্দা-পাঠকের (TalkBack) জন্য টাকা, মুখে বলার মতো: `1234567.5` → "১২ লাখ ৩৪ হাজার ৫৬৭ টাকা ৫০ পয়সা"
+  /// (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+  ///
+  /// <p>⛔ পর্দার "৳12,34,567.50" যন্ত্রের গলায় কমায় কমায় ভেঙে আলাদা সংখ্যা হয়ে যায় ("বারো, চৌত্রিশ, …"), আর "৳" চিহ্নটা
+  /// কেউ পড়ে, কেউ পড়ে না। লাখ-হাজারের ভাগে বললে বাংলাদেশের কানে একটাই অঙ্ক। পড়া না গেলে null।
+  static String? spoken(dynamic value) {
+    final parsed = Money.value(value);
+    if (parsed == null) return null;
+    final paisaTotal = (parsed.abs() * 100).round();
+    var taka = paisaTotal ~/ 100;
+    final paisa = paisaTotal % 100;
+    final parts = <String>[];
+    final crore = taka ~/ 10000000;
+    taka %= 10000000;
+    if (crore > 0) parts.add('${_bnDigits(crore)} কোটি');
+    final lakh = taka ~/ 100000;
+    taka %= 100000;
+    if (lakh > 0) parts.add('${_bnDigits(lakh)} লাখ');
+    final thousand = taka ~/ 1000;
+    taka %= 1000;
+    if (thousand > 0) parts.add('${_bnDigits(thousand)} হাজার');
+    if (taka > 0) parts.add(_bnDigits(taka));
+    final words = [
+      if (parsed < 0 && paisaTotal > 0) 'ঋণাত্মক',
+      parts.isEmpty ? '০' : parts.join(' '),
+      'টাকা',
+      if (paisa > 0) '${_bnDigits(paisa)} পয়সা',
+    ];
+    return words.join(' ');
+  }
+
+  /// লেখার ভিতরের প্রতিটা "৳…" অঙ্ক [spoken] রূপে — "বকেয়া ৳8,125.50" → "বকেয়া ৮ হাজার ১২৫ টাকা ৫০ পয়সা"।
+  /// ⓘ পর্দার লেখা বদলায় না; এটা কেবল `semanticsLabel`-এর জন্য।
+  static String speakable(String text) => text.replaceAllMapped(
+        RegExp(r'([-−]?)৳\s*([-−]?)([0-9০-৯][0-9০-৯,]*(?:\.[0-9০-৯]+)?)'),
+        (m) {
+          final negative = m[1]!.isNotEmpty || m[2]!.isNotEmpty;
+          final said = spoken('${negative ? '-' : ''}${typedText(m[3]!)}');
+          return said ?? m[0]!;
+        },
+      );
+
+  static String _bnDigits(int n) {
+    const bangla = '০১২৩৪৫৬৭৮৯';
+    return n.toString().split('').map((d) => bangla[int.parse(d)]).join();
+  }
+
   /// একই লেখা পাঠানোর রূপে — বাংলা অঙ্ক ইংরেজিতে, কমা আর ফাঁকা বাদ
   static String typedText(String text) {
     const bangla = '০১২৩৪৫৬৭৮৯';

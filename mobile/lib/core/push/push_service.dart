@@ -1,3 +1,5 @@
+import '../sync_engine/live_sync.dart';
+import '../sync_engine/background_sync.dart';
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -32,6 +34,8 @@ class PushService {
     try {
       await Firebase.initializeApp();
       _ready = true;
+      // ⭐ পেছনে বা বন্ধ অবস্থায় নীরব ডাক — নিজের isolate-এ ([onBackgroundNudge]; a4-এর পরিকল্পনা §৪.১ ধাপ ৩)
+      FirebaseMessaging.onBackgroundMessage(onBackgroundNudge);
     } catch (e) {
       debugPrint('ABOS push: Firebase did not start ($e) — pushes off this run');
     }
@@ -170,6 +174,20 @@ class _NotificationAskedFlag {
       await box.put(_key, <String, dynamic>{'v': true});
     } catch (_) {}
   }
+}
+
+/// ⭐ পেছনের নীরব ডাক — অ্যাপ পেছনে বা বন্ধ (মালিক ১০ অক্টোবর "ক"; a4-এর পরিকল্পনা সংস্করণ ২ §৪.১ ধাপ ৩)।
+///
+/// <p>নিজের isolate-এ চলে (FlutterFire-এর নিয়ম), তাই Firebase আবার চালু। জমা কাজ পাঠায় আর উইজেট ভরে ([backgroundRound]),
+/// আর একটা চিহ্ন রাখে — অ্যাপ সামনে এলেই টানে ([NudgeMark])। ⓘ ব্যবহারকারী কিছু দেখেন না; বার্তায় তথ্য নেই।
+@pragma('vm:entry-point')
+Future<void> onBackgroundNudge(RemoteMessage message) async {
+  if (!isSyncNudge(message.data)) return;
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {}
+  await NudgeMark.set();
+  await backgroundRound();
 }
 
 /// সার্ভারের নীরব "সিঙ্ক করো" ডাক — `{abos: sync}` ([[SyncNudge]]); ভেতরে আর কিছু নেই।

@@ -5,6 +5,7 @@ import '../../core/records/attendance_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 
@@ -191,10 +192,10 @@ class _TodayCard extends StatelessWidget {
                 // with no signal this is the honest state, and a person who
                 // believes it already reached the office has no reason to
                 // keep the app open until it does.
-                const Text('সংযোগ পেলে পাঠানো হবে — এখনো এই ফোনেই আছে।',
+                Text('সংযোগ পেলে পাঠানো হবে — এখনো এই ফোনেই আছে।',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+                        fontSize: 12.5, color: context.palette.onSurfaceMuted)),
               ],
             ] else
               SizedBox(
@@ -223,7 +224,7 @@ class _DayTile extends StatelessWidget {
     final colour = switch (row.status) {
       'present' => AppColors.success,
       'absent' => AppColors.danger,
-      _ => AppColors.onSurfaceMuted,
+      _ => context.palette.onSurfaceMuted,
     };
 
     return Card(
