@@ -194,7 +194,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       prefixIcon: Icon(icon, color: _Palette.muted),
       suffixIcon: suffix,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Colors.white, // dark-ok
       constraints: const BoxConstraints(minHeight: 54),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       enabledBorder: edge(_Palette.border),
@@ -248,7 +248,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       key: const ValueKey('login-card'),
       padding: const EdgeInsets.fromLTRB(24, 34, 24, 26),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: Colors.white.withValues(alpha: 0.85), // dark-ok
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: _Palette.cardBorder),
         boxShadow: const [
@@ -359,7 +359,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 key: const ValueKey('login-submit'),
                 style: FilledButton.styleFrom(
                   backgroundColor: _Palette.ink,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.white, // dark-ok
                   disabledBackgroundColor: _Palette.ink.withValues(alpha: 0.6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
@@ -369,7 +369,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ? const SizedBox(
                         height: 22,
                         width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white), // dark-ok
                       )
                     : Text(_mfaStage ? w.verify : w.signIn),
               ),

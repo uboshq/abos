@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_palette.dart';
 import '../theme/app_spacing.dart';
 import 'app_pin.dart';
 
@@ -257,7 +258,7 @@ class _AppLockGateState extends State<AppLockGate> {
   Widget _cover({required Key key, required List<Widget> children}) => Positioned.fill(
         child: Material(
           key: key,
-          color: AppColors.surface,
+          color: context.palette.surface,
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -331,7 +332,7 @@ class _AppLockGateState extends State<AppLockGate> {
           Positioned.fill(
             child: Material(
               key: const ValueKey('app-lock'),
-              color: AppColors.surface,
+              color: context.palette.surface,
               child: SafeArea(
                 child: Center(
                   child: Padding(

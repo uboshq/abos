@@ -9,6 +9,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/documents_library/library_api.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -49,9 +50,9 @@ String signatureWords(String state) => switch (state) {
       _ => 'সই চাওয়া হয়নি',
     };
 
-Color _levelColour(String level) => switch (level) {
+Color _levelColour(BuildContext context, String level) => switch (level) {
       'confidential' || 'highly_confidential' || 'restricted' => AppColors.danger,
-      _ => AppColors.onSurfaceMuted,
+      _ => context.palette.onSurfaceMuted,
     };
 
 class DocumentListScreen extends StatefulWidget {
@@ -145,7 +146,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(
                     [levelWords(d.level), if (d.expiryDate != null) 'মেয়াদ ${dayOf(d.expiryDate)}'].join(' · '),
-                    style: TextStyle(color: _levelColour(d.level)),
+                    style: TextStyle(color: _levelColour(context, d.level)),
                   ),
                   if (d.deleted)
                     const Text('মোছা — ফেরানো ওয়েবে', style: TextStyle(color: AppColors.danger)),
@@ -280,7 +281,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
             FactRow('নম্বর', d.no),
             if (d.typeName.isNotEmpty) FactRow('ধরন', d.typeName),
             if (d.folderName.isNotEmpty) FactRow('ফোল্ডার', d.folderName),
-            FactRow('গোপনীয়তা', levelWords(d.level), colour: _levelColour(d.level)),
+            FactRow('গোপনীয়তা', levelWords(d.level), colour: _levelColour(context, d.level)),
             FactRow('অবস্থা', documentStatusWords(d.status)),
             if (d.documentDate != null) FactRow('তারিখ', dayOf(d.documentDate)),
             if (d.expiryDate != null) FactRow('মেয়াদ', dayOf(d.expiryDate)),
@@ -289,7 +290,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
             if (d.description.isNotEmpty) FactRow('বিবরণ', d.description),
             const SectionTitle('ফাইল'),
             if (file == null)
-              const Text('এই কাগজে এখনো কোনো ফাইল নেই।', style: TextStyle(color: AppColors.onSurfaceMuted))
+              Text('এই কাগজে এখনো কোনো ফাইল নেই।', style: TextStyle(color: context.palette.onSurfaceMuted))
             else ...[
               FactRow('নাম', file.name),
               FactRow('ভার্সন', file.version),
@@ -313,8 +314,8 @@ class _DocumentScreenState extends State<DocumentScreen> {
                 ],
               ),
               if (!file.inline && !file.download)
-                const Text('এই ফাইলটা ফোনে দেখা যায় না, আর নামানোর অধিকার আপনার নেই।',
-                    style: TextStyle(color: AppColors.onSurfaceMuted)),
+                Text('এই ফাইলটা ফোনে দেখা যায় না, আর নামানোর অধিকার আপনার নেই।',
+                    style: TextStyle(color: context.palette.onSurfaceMuted)),
             ],
             if (sig != null) ...[
               const SectionTitle('সই'),

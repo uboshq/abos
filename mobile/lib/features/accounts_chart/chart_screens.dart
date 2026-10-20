@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/accounts/account_ledger_api.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 
@@ -80,7 +81,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                 child: Text('মোট ${rows.length} টি হিসাব',
                     key: const ValueKey('chart-count'),
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: context.palette.onSurfaceMuted)),
               ),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
@@ -94,7 +95,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
                   key: ValueKey('chart-${a.id}'),
                   dense: true,
                   leading: Icon(a.isGroup ? Icons.folder_outlined : Icons.description_outlined,
-                      color: a.isGroup ? AppColors.primary : AppColors.onSurfaceMuted),
+                      color: a.isGroup ? AppColors.primary : context.palette.onSurfaceMuted),
                   title: Text('${a.code} · ${a.name}',
                       style: TextStyle(fontWeight: a.isGroup ? FontWeight.w700 : FontWeight.w500)),
                   trailing: Text(a.balance, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -173,10 +174,10 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
             if (p != null && p.isGroup)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text('এটা দলের হিসাব — এন্ট্রি এর নিচের হিসাবগুলোতে। ছকে ফিরে নিচের হিসাব খুলুন।',
-                    style: TextStyle(color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(color: context.palette.onSurfaceMuted)),
               )
             else if (p != null && _rows.isEmpty && !_busy)
               const EmptyState(icon: Icons.receipt_long_outlined, title: 'এই হিসাবে কোনো এন্ট্রি নেই'),
@@ -203,7 +204,7 @@ class _LedgerTotals extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget cell(String label, String value, {bool strong = false}) => Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+            Text(label, style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
             Text(value, style: TextStyle(fontWeight: strong ? FontWeight.w800 : FontWeight.w700, fontSize: strong ? 15 : 14)),
           ]),
         );
@@ -248,7 +249,7 @@ class _LedgerCard extends StatelessWidget {
             Text(line.balance, style: const TextStyle(fontWeight: FontWeight.w700)),
           ]),
           if (line.narration.isNotEmpty)
-            Text(line.narration, style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceMuted)),
+            Text(line.narration, style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
           Row(children: [
             if (line.debit.isNotEmpty) Text('ডেবিট ${line.debit}', style: const TextStyle(fontSize: 13)),
             if (line.debit.isNotEmpty && line.credit.isNotEmpty) const SizedBox(width: AppSpacing.md),

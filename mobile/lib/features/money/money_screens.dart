@@ -6,6 +6,7 @@ import '../../core/api_client/once_key.dart';
 import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
@@ -722,9 +723,9 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
         if (_error != null) Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: BooksError(_error!)),
         const SizedBox(height: AppSpacing.md),
         FilledButton.icon(key: const ValueKey('count-send'), onPressed: _busy ? null : _send, icon: const Icon(Icons.check), label: const Text('গোনা বসান')),
-        const Padding(
-          padding: EdgeInsets.only(top: AppSpacing.sm),
-          child: Text('গোনা বসলে খাতা নড়ে না — অন্য কেউ মেনে নিলে তবেই পার্থক্য খাতায় যায়।', style: TextStyle(color: AppColors.onSurfaceMuted)),
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
+          child: Text('গোনা বসলে খাতা নড়ে না — অন্য কেউ মেনে নিলে তবেই পার্থক্য খাতায় যায়।', style: TextStyle(color: context.palette.onSurfaceMuted)),
         ),
       ]),
     );
@@ -919,7 +920,7 @@ class CashForecastScreen extends StatelessWidget {
               ),
             ),
           if (d['note'] != null)
-            Padding(padding: const EdgeInsets.all(AppSpacing.sm), child: Text(d['note'].toString(), style: const TextStyle(color: AppColors.onSurfaceMuted))),
+            Padding(padding: const EdgeInsets.all(AppSpacing.sm), child: Text(d['note'].toString(), style: TextStyle(color: context.palette.onSurfaceMuted))),
         ],
       );
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import 'owner_pages_api.dart';
@@ -147,7 +148,7 @@ class OwnerTotal extends StatelessWidget {
               if (tail != null)
                 Padding(
                   padding: const EdgeInsets.only(left: AppSpacing.sm),
-                  child: Text(tail!, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                  child: Text(tail!, style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
             ],
           ),
@@ -164,7 +165,7 @@ class SectionHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+        child: Text(text, style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
       );
 }
 
@@ -178,7 +179,7 @@ class OwnerNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs, horizontal: 4),
-        child: Text(text, style: TextStyle(fontSize: 12, color: colour ?? AppColors.onSurfaceMuted)),
+        child: Text(text, style: TextStyle(fontSize: 12, color: colour ?? context.palette.onSurfaceMuted)),
       );
 }
 

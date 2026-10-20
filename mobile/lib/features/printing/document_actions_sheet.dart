@@ -8,6 +8,7 @@ import '../../core/printing/documents_api.dart';
 import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import 'pdf_view_page.dart';
 import 'printer_settings_screen.dart';
@@ -487,7 +488,7 @@ class _RoadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.onSurfaceMuted;
+    final color = selected ? AppColors.primary : context.palette.onSurfaceMuted;
     return Opacity(
       opacity: enabled ? 1 : 0.45,
       child: InkWell(

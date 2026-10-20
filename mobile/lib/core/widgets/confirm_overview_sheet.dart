@@ -126,7 +126,7 @@ class ConfirmOverviewSheet extends StatelessWidget {
               // ⓘ ধূসর — মালিক, ২৭ সেপ্টেম্বর ২০২৬
               FilledButton(
                 key: const ValueKey('overview-draft'),
-                style: FilledButton.styleFrom(backgroundColor: Colors.grey.shade400, foregroundColor: Colors.black87),
+                style: FilledButton.styleFrom(backgroundColor: Colors.grey.shade400, foregroundColor: Colors.black87), // dark-ok
                 onPressed: () => Navigator.pop(context, OverviewChoice.draft),
                 child: const Text('খসড়া রাখুন'),
               ),

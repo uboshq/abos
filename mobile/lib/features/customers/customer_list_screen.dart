@@ -6,6 +6,7 @@ import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
@@ -223,7 +224,7 @@ class _DuePill extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
-            color: owes ? AppColors.danger : AppColors.onSurfaceMuted,
+            color: owes ? AppColors.danger : context.palette.onSurfaceMuted,
           ),
         ),
         if (due.creditDays > 0)

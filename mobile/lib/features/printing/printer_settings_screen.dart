@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import 'thermal_flow.dart';
 
@@ -174,11 +175,11 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                 const Text('কোন কাগজ কোথায় ছাপা হয়',
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.sm),
-                const Text(
+                Text(
                     'প্রতিটা কাগজ (বিল, চালান, ভাউচার …) শেষবার যে প্রিন্টারে ছাপা হয়েছিল, পরের বার '
                     'সেটাই আগে বাছা থাকে। নরমাল প্রিন্টার মানে ফোনের নিজের প্রিন্ট ব্যবস্থা — '
                     'ওয়াইফাই/USB প্রিন্টার বা PDF সেভ।',
-                    style: TextStyle(color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(color: context.palette.onSurfaceMuted)),
                 if (s.roads.isNotEmpty)
                   TextButton.icon(
                     key: const Key('printer-reset-roads'),

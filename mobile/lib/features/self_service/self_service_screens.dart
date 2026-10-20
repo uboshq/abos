@@ -6,6 +6,7 @@ import '../../core/hr/self_service_api.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
@@ -17,10 +18,10 @@ import '../../core/widgets/unsaved_guard.dart';
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস। আবেদন পাঠানো মানে ছুটি পাওয়া নয় — মঞ্জুরি অফিসের।
 
-Color leaveColour(String status) => switch (status) {
+Color leaveColour(BuildContext context, String status) => switch (status) {
       'approved' => AppColors.success,
       'rejected' => AppColors.danger,
-      'cancelled' => AppColors.onSurfaceMuted,
+      'cancelled' => context.palette.onSurfaceMuted,
       _ => AppColors.pending,
     };
 
@@ -102,7 +103,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
             if (book != null && book.employee) ...[
               const SectionTitle('এ বছর কত বাকি'),
               if (book.types.isEmpty)
-                const Text('এখনো কোনো ছুটির ধরন নেই — HR ঠিক করে দেবেন।', style: TextStyle(color: AppColors.onSurfaceMuted)),
+                Text('এখনো কোনো ছুটির ধরন নেই — HR ঠিক করে দেবেন।', style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final t in book.types)
                 FactRow(t.name, t.left == null ? 'সীমা নেই · নেওয়া ${t.taken} দিন' : '${t.left} দিন বাকি · মোট ${t.allowed}',
                     key: ValueKey('leave-type-${t.id}')),
@@ -124,7 +125,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                       ],
                     ),
                     trailing: Text(a.statusWords,
-                        style: TextStyle(color: leaveColour(a.status), fontWeight: FontWeight.w700)),
+                        style: TextStyle(color: leaveColour(context, a.status), fontWeight: FontWeight.w700)),
                   ),
                 ),
             ],
@@ -256,8 +257,8 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            const Text('আবেদন যায় অফিসে; মঞ্জুর হলে দিনগুলো হাজিরায় "ছুটি" হয়ে বসে।',
-                style: TextStyle(color: AppColors.onSurfaceMuted)),
+            Text('আবেদন যায় অফিসে; মঞ্জুর হলে দিনগুলো হাজিরায় "ছুটি" হয়ে বসে।',
+                style: TextStyle(color: context.palette.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.sm),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)

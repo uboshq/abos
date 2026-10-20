@@ -7,6 +7,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -263,22 +264,22 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                       Text(p.customer, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                       // ⭐ পয়েন্ট · শাখা — মালিক, ১৯ অক্টোবর ২০২৬ ("শাখার নামও দিতে হবে"); পুরনো সার্ভারে শাখা নেই, তখন পয়েন্টটাই
                       if (placeOf(p.point, p.branch) != null)
-                        Text(placeOf(p.point, p.branch)!, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                        Text(placeOf(p.point, p.branch)!, style: TextStyle(color: context.palette.onSurfaceMuted)),
                       const SizedBox(height: AppSpacing.xs),
-                      _pair('তারিখ', dayOf(p.date)),
-                      if (p.saleNo != null && p.saleNo!.isNotEmpty) _pair('বিক্রির নম্বর', p.saleNo!),
-                      _pair('অবস্থা', p.statusLabel),
-                      if (p.dueOn != null) _pair('মেয়াদ', dayOf(p.dueOn)),
-                      if (p.warehouse != null && p.warehouse!.isNotEmpty) _pair('গুদাম', p.warehouse!),
-                      if (p.vehicleNo != null && p.vehicleNo!.isNotEmpty) _pair('গাড়ি', p.vehicleNo!),
-                      if (p.createdBy != null && p.createdBy!.isNotEmpty) _pair('লিখেছেন', p.createdBy!),
+                      _pair(context, 'তারিখ', dayOf(p.date)),
+                      if (p.saleNo != null && p.saleNo!.isNotEmpty) _pair(context, 'বিক্রির নম্বর', p.saleNo!),
+                      _pair(context, 'অবস্থা', p.statusLabel),
+                      if (p.dueOn != null) _pair(context, 'মেয়াদ', dayOf(p.dueOn)),
+                      if (p.warehouse != null && p.warehouse!.isNotEmpty) _pair(context, 'গুদাম', p.warehouse!),
+                      if (p.vehicleNo != null && p.vehicleNo!.isNotEmpty) _pair(context, 'গাড়ি', p.vehicleNo!),
+                      if (p.createdBy != null && p.createdBy!.isNotEmpty) _pair(context, 'লিখেছেন', p.createdBy!),
                     ],
                   ),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                child: Text('পণ্য', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
+                child: Text('পণ্য', style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
               ),
               for (final l in p.lines)
                 Card(
@@ -299,12 +300,12 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     children: [
-                      if (Money.valueOrZero(p.discount) > 0) _pair('ছাড়', Money.taka(p.discount)),
-                      if (Money.valueOrZero(p.tax) > 0) _pair('কর', Money.taka(p.tax)),
-                      _pair('মোট', Money.taka(p.total), bold: true),
-                      if (invoice && p.collected != null) _pair('আদায়', Money.taka(p.collected)),
+                      if (Money.valueOrZero(p.discount) > 0) _pair(context, 'ছাড়', Money.taka(p.discount)),
+                      if (Money.valueOrZero(p.tax) > 0) _pair(context, 'কর', Money.taka(p.tax)),
+                      _pair(context, 'মোট', Money.taka(p.total), bold: true),
+                      if (invoice && p.collected != null) _pair(context, 'আদায়', Money.taka(p.collected)),
                       if (invoice && p.due != null)
-                        _pair('বাকি', Money.taka(p.due), bold: true,
+                        _pair(context, 'বাকি', Money.taka(p.due), bold: true,
                             colour: Money.valueOrZero(p.due) > 0.004 ? AppColors.danger : AppColors.success),
                     ],
                   ),
@@ -314,7 +315,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
                   child: Text(invoice ? 'এই বিলের চালান' : 'এই চালানের বিল',
-                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+                      style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
                 ),
                 for (final link in p.links)
                   Card(
@@ -331,7 +332,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
               if (p.narration.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Text(p.narration, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                  child: Text(p.narration, style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
             ],
           ],
@@ -341,13 +342,13 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
   }
 }
 
-Widget _pair(String label, String value, {bool bold = false, Color? colour}) => Padding(
+Widget _pair(BuildContext context, String label, String value, {bool bold = false, Color? colour}) => Padding(
       padding: const EdgeInsets.only(top: 3),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted))),
+          Expanded(child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted))),
           Text(value,
-              style: TextStyle(fontWeight: bold ? FontWeight.w800 : FontWeight.w600, color: colour ?? AppColors.onSurface)),
+              style: TextStyle(fontWeight: bold ? FontWeight.w800 : FontWeight.w600, color: colour ?? context.palette.onSurface)),
         ],
       ),
     );

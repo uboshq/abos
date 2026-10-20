@@ -6,6 +6,7 @@ import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/sync_engine/sync_history_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
@@ -138,7 +139,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                                 fontSize: 12.5,
                                 color: failures.first.isServerRefusal
                                     ? AppColors.danger
-                                    : AppColors.onSurfaceMuted,
+                                    : context.palette.onSurfaceMuted,
                               ),
                             ),
                     ),
@@ -174,8 +175,8 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                                   ? 'কখনো না'
                                   : DateFormat('dd/MM/yyyy hh:mm a')
                                       .format(status.lastSyncedAt!),
-                              style: const TextStyle(
-                                  color: AppColors.onSurfaceMuted, fontSize: 12),
+                              style: TextStyle(
+                                  color: context.palette.onSurfaceMuted, fontSize: 12),
                             ),
                           ),
                         )),

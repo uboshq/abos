@@ -4,6 +4,7 @@ import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -139,7 +140,7 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
         child: Text(text,
-            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+            style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
       );
 }
 
@@ -171,7 +172,7 @@ class _FigureGrid extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(f.label,
-                                style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+                                style: TextStyle(fontSize: 12.5, color: context.palette.onSurfaceMuted)),
                             const SizedBox(height: 2),
                             Text(cellText(f.value, money: f.money),
                                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
@@ -205,10 +206,10 @@ class _CreditCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('বাকি', style: TextStyle(fontWeight: FontWeight.w700)),
-              _pair('ব্যবহৃত বাকি', Money.taka(credit.exposure)),
-              _pair('মেয়াদ পেরোনো পাওনা', Money.taka(credit.overdue)),
-              _pair('বাকি বন্ধ গ্রাহক', '${credit.blocked} জন'),
-              _pair('সীমা বাড়ানোর অনুরোধ', '${credit.pendingRequests}টা'),
+              _pair(context, 'ব্যবহৃত বাকি', Money.taka(credit.exposure)),
+              _pair(context, 'মেয়াদ পেরোনো পাওনা', Money.taka(credit.overdue)),
+              _pair(context, 'বাকি বন্ধ গ্রাহক', '${credit.blocked} জন'),
+              _pair(context, 'সীমা বাড়ানোর অনুরোধ', '${credit.pendingRequests}টা'),
               if (credit.partial)
                 const Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
                     style: TextStyle(fontSize: 11, color: AppColors.warning)),
@@ -218,11 +219,11 @@ class _CreditCard extends StatelessWidget {
       );
 }
 
-Widget _pair(String label, String value) => Padding(
+Widget _pair(BuildContext context, String label, String value) => Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted))),
+          Expanded(child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted))),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
@@ -275,7 +276,7 @@ class _Values extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: [
           for (final key in ExecutiveToday.keys)
-            _pair(ExecutiveToday.labels[key] ?? key, cellText(values[key], money: key != 'signatures')),
+            _pair(context, ExecutiveToday.labels[key] ?? key, cellText(values[key], money: key != 'signatures')),
         ],
       );
 }
@@ -301,7 +302,7 @@ class _AlertTile extends StatelessWidget {
                 .join(' · '))
             : null,
         trailing: Text(hot ? '${alert.total}' : 'কিছু নেই',
-            style: TextStyle(fontWeight: FontWeight.w700, color: hot ? AppColors.danger : AppColors.onSurfaceMuted)),
+            style: TextStyle(fontWeight: FontWeight.w700, color: hot ? AppColors.danger : context.palette.onSurfaceMuted)),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 
 /// টাকা আদায়, প্রিন্সিপাল আর ক্রয়ের পাতার একসাথের টুকরো — তারিখের পরিসর, মোটের পট্টি, ভুলের ঘর।
@@ -102,7 +103,7 @@ class TotalStrip extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: AppSpacing.sm),
                   child: Text('· $count টি',
-                      style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ),
             ],
           ),
@@ -142,7 +143,7 @@ class FactRow extends StatelessWidget {
           children: [
             Expanded(
                 child: Text(label,
-                    style: const TextStyle(color: AppColors.onSurfaceMuted))),
+                    style: TextStyle(color: context.palette.onSurfaceMuted))),
             Flexible(
               child: Text(value,
                   textAlign: TextAlign.end,

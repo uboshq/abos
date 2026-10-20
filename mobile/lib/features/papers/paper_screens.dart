@@ -9,6 +9,7 @@ import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -222,7 +223,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
             if (page != null && page.sum == null && _rows.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Text('${page.count}টি', style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                child: Text('${page.count}টি', style: TextStyle(color: context.palette.onSurfaceMuted)),
               ),
             if (page != null && _rows.isEmpty)
               EmptyState(
@@ -347,9 +348,9 @@ class _PaperScreenState extends State<PaperScreen> {
                 ),
               ),
               if (p.rows.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                  child: Text('সারি', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
+                  child: Text('সারি', style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
                 ),
                 for (final (i, row) in p.rows.indexed) _line(p, row, i),
               ],
@@ -364,9 +365,9 @@ class _PaperScreenState extends State<PaperScreen> {
                   ),
                 ),
               if (p.signatures.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                  child: Text('সই', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
+                  child: Text('সই', style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
                 ),
                 for (final s in p.signatures) _signature(context, s),
               ],

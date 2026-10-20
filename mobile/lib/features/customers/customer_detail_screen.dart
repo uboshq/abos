@@ -8,6 +8,7 @@ import '../../core/records/money.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 
@@ -104,14 +105,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.sm),
           if (orders.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Text(
                 // Not "this shop has never ordered": only orders that have
                 // synced back are here, and a brand-new phone has none of
                 // them yet.
                 'এই ফোনে এই দোকানের কোনো অর্ডার সিঙ্ক হয়নি।',
-                style: TextStyle(color: AppColors.onSurfaceMuted),
+                style: TextStyle(color: context.palette.onSurfaceMuted),
               ),
             )
           else
@@ -195,7 +196,7 @@ class _DueCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: owes ? AppColors.danger : AppColors.onSurface,
+                  color: owes ? AppColors.danger : context.palette.onSurface,
                 )),
             if (due.hasCreditLimit || due.creditDays > 0)
               Text(
@@ -211,8 +212,8 @@ class _DueCard extends StatelessWidget {
             if (CustomerDueRecord.syncedAt(due.customerId) != null)
               Text(
                 'সিঙ্ক ${DateFormat('dd/MM/yyyy hh:mm a').format(CustomerDueRecord.syncedAt(due.customerId)!)}',
-                style: const TextStyle(
-                    fontSize: 11.5, color: AppColors.onSurfaceMuted),
+                style: TextStyle(
+                    fontSize: 11.5, color: context.palette.onSurfaceMuted),
               ),
           ],
         ),

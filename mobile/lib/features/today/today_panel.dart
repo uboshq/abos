@@ -5,6 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
 import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 
 /// The day's figures as cards, without a Scaffold around them — docs/Contract
@@ -199,7 +200,7 @@ class _TodayPanelState extends State<TodayPanel> {
                       _HeroCard(
                         heading: 'হাতে নগদ',
                         figure: today.cashInHand!,
-                        colour: AppColors.onSurface,
+                        colour: context.palette.onSurface,
                       ),
                   ],
                   if (today.pendingApprovals != null &&
@@ -293,7 +294,7 @@ class _TodayPanelState extends State<TodayPanel> {
         _HeroCard(
           heading: 'হাতে নগদ',
           figure: today.cashInHand!,
-          colour: AppColors.onSurface,
+          colour: context.palette.onSurface,
         ),
       if (today.principals != null && today.principals!.isNotEmpty)
         _PrincipalsCard(lines: today.principals!),
@@ -318,13 +319,13 @@ class _NothingYet extends StatelessWidget {
           Icon(
             error == null ? Icons.hourglass_empty : Icons.cloud_off_outlined,
             size: 48,
-            color: AppColors.onSurfaceMuted,
+            color: context.palette.onSurfaceMuted,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             error ?? 'আনা হচ্ছে…',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.onSurfaceMuted),
+            style: TextStyle(color: context.palette.onSurfaceMuted),
           ),
         ],
       ),
@@ -400,7 +401,7 @@ class _OriginLine extends StatelessWidget {
           Text(
             'হিসাব ${DateFormat('dd/MM/yyyy hh:mm a').format(asOf)} পর্যন্ত',
             style:
-                const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted),
+                TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),
           ),
       ],
     );
@@ -440,8 +441,8 @@ class _HeroCard extends StatelessWidget {
           if (detail != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(detail!,
-                style: const TextStyle(
-                    fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+                style: TextStyle(
+                    fontSize: 12.5, color: context.palette.onSurfaceMuted)),
           ],
         ],
       ),
@@ -523,8 +524,8 @@ class _PairCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(child: right ?? const SizedBox.shrink()),
           if (onTap != null)
-            const Icon(Icons.chevron_right,
-                size: 20, color: AppColors.onSurfaceMuted),
+            Icon(Icons.chevron_right,
+                size: 20, color: context.palette.onSurfaceMuted),
         ],
       ),
     );
@@ -545,8 +546,8 @@ class _MoneyBoxCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.onSurfaceMuted)),
+                  style: TextStyle(
+                      fontSize: 12, color: context.palette.onSurfaceMuted)),
               _OneLine(Text(Money.taka(value),
                   maxLines: 1,
                   style: const TextStyle(
@@ -563,10 +564,10 @@ class _MoneyBoxCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           _OneLine(Text(Money.taka(box.amount),
               maxLines: 1,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.onSurface))),
+                  color: context.palette.onSurface))),
           const SizedBox(height: AppSpacing.sm),
           Row(children: [
             part('নগদ', box.cash),
@@ -601,8 +602,8 @@ class _PrincipalsCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(label,
-                    style: const TextStyle(
-                        fontSize: 13, color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(
+                        fontSize: 13, color: context.palette.onSurfaceMuted)),
               ),
               Flexible(
                 child: _OneLine(Text(value,
@@ -610,7 +611,7 @@ class _PrincipalsCard extends StatelessWidget {
                     style: TextStyle(
                         fontSize: size,
                         fontWeight: FontWeight.w800,
-                        color: colour ?? AppColors.onSurface))),
+                        color: colour ?? context.palette.onSurface))),
               ),
             ],
           ),
@@ -629,8 +630,8 @@ class _PrincipalsCard extends StatelessWidget {
                     const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             Text('সময়কাল: ${line.periodLabel}',
                 key: const ValueKey('principal-period'),
-                style: const TextStyle(
-                    fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+                style: TextStyle(
+                    fontSize: 12.5, color: context.palette.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.xs),
             figure('মোট ইনফ্লো', Money.taka(line.inflow)),
             // ⭐ লোকসান কথায়, লাল — ওয়েবের বাক্সের মতো, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
@@ -696,7 +697,7 @@ class _ApprovalsCard extends StatelessWidget {
             ),
           ),
           if (onTap != null)
-            const Icon(Icons.chevron_right, color: AppColors.onSurfaceMuted),
+            Icon(Icons.chevron_right, color: context.palette.onSurfaceMuted),
         ],
       ),
     );
@@ -737,14 +738,14 @@ class _CardHeading extends StatelessWidget {
       children: [
         Expanded(
           child: Text(text,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.onSurface)),
+                  color: context.palette.onSurface)),
         ),
         if (onTap != null)
-          const Icon(Icons.chevron_right,
-              size: 20, color: AppColors.onSurfaceMuted),
+          Icon(Icons.chevron_right,
+              size: 20, color: context.palette.onSurfaceMuted),
       ],
     );
   }
@@ -769,8 +770,8 @@ class _Stat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+            style: TextStyle(
+                fontSize: 12.5, color: context.palette.onSurfaceMuted)),
         const SizedBox(height: 2),
         // ⭐ অঙ্ক এক লাইনে, যত বড়ই হোক — ছোট হয়ে বসে, ভাঙে না (মালিক, ৬ অক্টোবর ২০২৬: "৳140,255,926.33" দুই লাইনে)
         _OneLine(Text(value,
@@ -779,8 +780,8 @@ class _Stat extends StatelessWidget {
                 fontSize: 20, fontWeight: FontWeight.w700, color: colour))),
         if (detail != null)
           Text(detail!,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.onSurfaceMuted)),
+              style: TextStyle(
+                  fontSize: 12, color: context.palette.onSurfaceMuted)),
       ],
     );
   }
