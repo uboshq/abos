@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/orders/order_api.dart';
 import '../../core/records/customer_record.dart';
@@ -17,6 +16,7 @@ import '../../core/widgets/empty_state.dart';
 import 'order_prefill.dart';
 import 'order_sheets.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/widgets/day_part.dart';
 
 /// The combined order screen — 0.4.3, the owner's approved samples of
 /// 1 October 2026: every product on one list, a quantity on each line, the
@@ -912,7 +912,7 @@ class DueNotice extends StatelessWidget {
                     ),
                   if (willCross && syncedAt != null)
                     Text(
-                      'বকেয়ার তথ্য সিঙ্ক ${DateFormat('dd/MM/yyyy hh:mm a').format(syncedAt)}',
+                      'বকেয়ার তথ্য সিঙ্ক ${banglaStamp(syncedAt)}',
                       style: TextStyle(fontSize: 11, color: ink),
                     ),
                 ],

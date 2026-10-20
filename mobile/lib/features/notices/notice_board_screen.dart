@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
@@ -9,6 +8,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/widgets/day_part.dart';
 
 /// ⭐ নোটিশ বোর্ড, ফোনে — মালিক, ১৩ অক্টোবর ২০২৬: *"app e baki module & menu"*।
 ///
@@ -131,7 +131,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
 String _when(String? iso) {
   final at = iso == null ? null : DateTime.tryParse(iso)?.toLocal();
-  return at == null ? '' : DateFormat('dd/MM/yyyy hh:mm a').format(at);
+  return at == null ? '' : banglaStamp(at);
 }
 
 /// একটা নোটিশ, পুরোটা — সই চাওয়া হলে নিচে "পড়েছি ও মানছি"

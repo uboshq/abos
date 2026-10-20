@@ -10,6 +10,7 @@ import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/day_part.dart';
 
 /// One shop, everything the phone already knows about it.
 ///
@@ -221,7 +222,7 @@ class _DueCard extends StatelessWidget {
             // the number somebody is about to promise goods against.
             if (CustomerDueRecord.syncedAt(due.customerId) != null)
               Text(
-                'সিঙ্ক ${DateFormat('dd/MM/yyyy hh:mm a').format(CustomerDueRecord.syncedAt(due.customerId)!)}',
+                'সিঙ্ক ${banglaStamp(CustomerDueRecord.syncedAt(due.customerId)!)}',
                 style: TextStyle(
                     fontSize: 11.5, color: context.palette.onSurfaceMuted),
               ),

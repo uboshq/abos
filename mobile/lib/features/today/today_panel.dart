@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
@@ -7,6 +6,7 @@ import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/day_part.dart';
 
 /// The day's figures as cards, without a Scaffold around them — docs/Contract
 /// §৮, drawn the same way whether the home tab embeds them under a greeting
@@ -411,7 +411,7 @@ class _OriginLine extends StatelessWidget {
         if (asOf != null)
           Flexible(
             child: Text(
-              'হিসাব ${DateFormat('dd/MM/yyyy hh:mm a').format(asOf)} পর্যন্ত',
+              'হিসাব ${banglaStamp(asOf)} পর্যন্ত',
               textAlign: TextAlign.end,
               style:
                   TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),
