@@ -11,6 +11,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
 import '../../core/widgets/day_part.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// What is waiting for this person's decision — docs/Contract §৫.
 ///
@@ -227,7 +228,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     final rows = _rows;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('অনুমোদন')),
+      appBar: const AbosScreenBar(title: 'অনুমোদন'),
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),

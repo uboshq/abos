@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../scan/receive_screen.dart';
 import '../../core/records/customer_record.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ আজকের ডেলিভারি — মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৭, ৬ অক্টোবর ২০২৬।
 ///
@@ -208,7 +209,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
   Widget build(BuildContext context) {
     final rows = _rows ?? const <DeliveryRunRow>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('আজকের ডেলিভারি')),
+      appBar: const AbosScreenBar(title: 'আজকের ডেলিভারি'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

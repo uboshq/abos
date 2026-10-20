@@ -12,6 +12,7 @@ import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; সার্ভার f727b846)।
 ///
@@ -68,7 +69,7 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
   Widget build(BuildContext context) {
     final page = _page;
     return Scaffold(
-      appBar: AppBar(title: const Text('খরচের দাবি ও অগ্রিম')),
+      appBar: const AbosScreenBar(title: 'খরচের দাবি ও অগ্রিম'),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('claim-new'),
         onPressed: () async {
@@ -162,7 +163,7 @@ class _ClaimScreenState extends State<ClaimScreen> {
   Widget build(BuildContext context) {
     final c = _claim;
     return Scaffold(
-      appBar: AppBar(title: Text(c?.number ?? 'দাবি')),
+      appBar: AbosScreenBar(title: c?.number ?? 'দাবি'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -314,7 +315,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
   Widget _screen(BuildContext context) {
     final expense = _kind == 'expense';
     return Scaffold(
-      appBar: AppBar(title: const Text('নতুন দাবি')),
+      appBar: const AbosScreenBar(title: 'নতুন দাবি'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

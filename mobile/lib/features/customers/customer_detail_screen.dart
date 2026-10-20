@@ -9,8 +9,8 @@ import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/day_part.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// One shop, everything the phone already knows about it.
 ///
@@ -61,9 +61,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       // A shop can drop out of the local catalogue between opening a list and
       // tapping a row — a re-sync, a deactivation. Saying so is better than a
       // screen of blanks that looks like a bug.
-      return Scaffold(
-        appBar: AppBar(title: const Text('গ্রাহক')),
-        body: const Center(
+      return const Scaffold(
+        appBar: AbosScreenBar(title: 'গ্রাহক'),
+        body: Center(
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.lg),
             child: Text('এই গ্রাহক আর এই ফোনে নেই — সিঙ্ক করে দেখুন।',
@@ -82,7 +82,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
     return Scaffold(
       // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে (মালিক, ১৯ অক্টোবর ২০২৬); নিচের বড় নামটা নামই
-      appBar: AppBar(title: CustomerLine(customer.label)),
+      appBar: AbosScreenBar(title: customer.label),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(

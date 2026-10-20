@@ -13,6 +13,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
 import '../printing/pdf_view_page.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ ডকুমেন্টস, ফোনে — তালিকা, একটা কাগজ, তার ফাইল, আর যেখানে সই চাওয়া সেখানে সই (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
 ///
@@ -95,7 +96,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('ডকুমেন্টস')),
+        appBar: const AbosScreenBar(title: 'ডকুমেন্টস'),
         body: PagedList<LibraryDocument>(
           reloadKey: '$_view/$_q',
           load: (page) async {
@@ -364,7 +365,7 @@ Future<void> _defaultOpener(BuildContext context, LibraryFile file, Uint8List by
   if (file.isImage) {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => Scaffold(
-        appBar: AppBar(title: Text(title, overflow: TextOverflow.ellipsis)),
+        appBar: AbosScreenBar(title: title),
         body: InteractiveViewer(child: Center(child: Image.memory(bytes))),
       ),
     ));

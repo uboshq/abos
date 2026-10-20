@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ সইয়ের ভার — আমি যাঁদের দিয়েছি আর আমার কাছে যাঁদের ভার; নতুন ভার আর ফেরানো (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage
 /// app e bujajayna"*)। ⓘ নিয়ম সব সার্ভারের — নিজেকে নয়, গতকাল থেকে নয়, কেবল এই কোম্পানির মানুষ; পর্দা কেবল উত্তরটা বলে।
@@ -96,7 +97,7 @@ class _DelegationScreenState extends State<DelegationScreen> {
     final s = _setup;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('সইয়ের ভার')),
+      appBar: const AbosScreenBar(title: 'সইয়ের ভার'),
       floatingActionButton: s == null
           ? null
           : FloatingActionButton.extended(
@@ -277,7 +278,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('নতুন ভার')),
+      appBar: const AbosScreenBar(title: 'নতুন ভার'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -475,7 +476,7 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
     final signed = _tab == 'signed';
 
     return Scaffold(
-      appBar: AppBar(title: Text(_title)),
+      appBar: AbosScreenBar(title: _title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

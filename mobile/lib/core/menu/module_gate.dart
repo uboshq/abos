@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/empty_state.dart';
 import 'menu_item.dart';
+import '../navigation/top_bar/abos_screen_bar.dart';
 
 /// Which modules this company has switched on for the phone — `GET /me`'s
 /// `phoneModules`, set by the home screen each time `/me` answers (and from
@@ -104,9 +105,9 @@ class ModuleGateView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final on = ref.watch(phoneModulesProvider);
     if (ModuleGate.allows(on, path)) return child;
-    return Scaffold(
-      appBar: AppBar(title: const Text(ModuleGate.offTitle)),
-      body: const EmptyState(
+    return const Scaffold(
+      appBar: AbosScreenBar(title: ModuleGate.offTitle),
+      body: EmptyState(
         icon: Icons.block_outlined,
         title: ModuleGate.offTitle,
         message: ModuleGate.offMessage,

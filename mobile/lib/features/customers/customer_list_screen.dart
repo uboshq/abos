@@ -13,6 +13,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
 import 'customer_detail_screen.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// Every customer this device has pulled, each with what the shop owes.
 ///
@@ -115,7 +116,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   Widget _list(BuildContext context, List<CustomerRecord> all, List<CustomerRecord> filtered, double owed,
       String? trouble, bool twoPane) {
     return Scaffold(
-      appBar: AppBar(title: const Text('গ্রাহক')),
+      appBar: const AbosScreenBar(title: 'গ্রাহক'),
       body: Column(
         children: [
           Padding(

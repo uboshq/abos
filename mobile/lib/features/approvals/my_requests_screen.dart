@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
 import '../books/books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ আমার অনুরোধ — যা আমি সইয়ের জন্য পাঠিয়েছি, কোথায় দাঁড়িয়ে আর কে কী বললেন (মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta
 /// mobile app style e zate bujazay sei vabe koro, direct webpage app e bujajayna"*)।
@@ -71,7 +72,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? 'আমার অনুরোধ')),
+      appBar: AbosScreenBar(title: widget.title ?? 'আমার অনুরোধ'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

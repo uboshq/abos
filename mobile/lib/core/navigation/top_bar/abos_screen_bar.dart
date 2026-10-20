@@ -122,9 +122,11 @@ class _LiveScreenBarState extends ConsumerState<_LiveScreenBar> {
   @override
   Widget build(BuildContext context) {
     final bar = widget.bar;
-    final user = ref.watch(authStateProvider).user;
+    // ⓘ হোম আগে — হোম লেখেনি মানে সেশন নেই; তখন authStateProvider ছোঁয়াই হয় না (টেস্টে সেটা override ছাড়া ছুড়ে মারে)
     final top = ref.watch(topBarContextProvider);
-    if (user == null || top == null) return bar.plain(context);
+    if (top == null) return bar.plain(context);
+    final user = ref.watch(authStateProvider).user;
+    if (user == null) return bar.plain(context);
     final unread = ref.watch(navBadgesProvider).unread;
     final head = AbosScreenBar.routeHead(context);
     final module = bar.module ?? (head == null ? null : top.moduleOf?.call(head));

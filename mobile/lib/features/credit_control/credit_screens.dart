@@ -12,6 +12,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ বাকি নিয়ন্ত্রণ, ফোনে — মালিক, ১৩ অক্টোবর ২০২৬: *"app e baki module & menu"*।
 ///
@@ -93,7 +94,7 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('বাকি নিয়ন্ত্রণ')),
+      appBar: const AbosScreenBar(title: 'বাকি নিয়ন্ত্রণ'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -309,7 +310,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
     final p = d?.position;
 
     return Scaffold(
-      appBar: AppBar(title: CustomerLine(d?.name ?? 'বাকির পাতা')),
+      appBar: AbosScreenBar(title: d?.name ?? 'বাকির পাতা'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
