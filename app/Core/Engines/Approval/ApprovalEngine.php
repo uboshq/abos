@@ -580,7 +580,60 @@ final class ApprovalEngine
             return false;
         }
 
-        $paper = $approval->approvable()->withoutGlobalScopes()->first();
+        return self::sendBackAllowed($approval, $approval->approvable()->withoutGlobalScopes()->first());
+    }
+
+    /**
+     * ⭐ গোটা পাতার "সংশোধনে ফেরত" — অনুরোধ → হ্যাঁ/না, কাগজগুলো ধরন ধরে এক ডাকে (a6, ২০ অক্টোবর ২০২৬; fe-র অনুমতি)।
+     *
+     * ⛔ ফোনের সই-বাক্স সারি ধরে [[canSendBack()]] ডাকত — প্রতিটা সারিতে কাগজটা আলাদা করে পড়া, পঁচিশ সারিতে পঁচিশ কোয়েরি।
+     * ⓘ নিয়ম একটাই ([[sendBackAllowed()]]) — একা আর পাতা ধরে দুই পথ একই কথা বলে, আলাদা হতে পারে না। কাগজ তোলা হয়
+     * [[canSendBack()]]-এর একই ভাবে: সব গ্লোবাল স্কোপ ছাড়া (অনুরোধটা নিজেই কোম্পানির দেয়ালে), প্রাথমিক চাবি ধরে।
+     * ⓘ অপেক্ষায় না থাকা অনুরোধের কাগজ তোলাই হয় না — একার পথেও না।
+     *
+     * @param  iterable<Approval>  $approvals
+     * @return array<int, bool>  অনুরোধের id → ফেরত দেওয়া যায় কি না
+     */
+    public function canSendBackMany(iterable $approvals): array
+    {
+        $approvals = collect($approvals);
+        $papers = [];
+
+        foreach ($approvals->filter(fn (Approval $a) => $a->isPending())->groupBy('approvable_type') as $type => $group) {
+            $class = \Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel((string) $type) ?? (string) $type;
+
+            if (! class_exists($class) || ! is_subclass_of($class, Model::class)) {
+                continue;
+            }
+
+            $papers[(string) $type] = $class::query()->withoutGlobalScopes()
+                ->whereKey($group->pluck('approvable_id')->map(fn ($id) => (int) $id)->unique()->values()->all())
+                ->get()
+                ->keyBy(fn (Model $m) => (int) $m->getKey());
+        }
+
+        $out = [];
+
+        foreach ($approvals as $approval) {
+            $out[(int) $approval->id] = self::sendBackAllowed(
+                $approval,
+                $approval->isPending() ? ($papers[(string) $approval->approvable_type] ?? collect())->get((int) $approval->approvable_id) : null,
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ ফেরত দেওয়ার নিয়ম — একটাই জায়গায় ([[canSendBack()]] আর [[canSendBackMany()]] দুজনেই এটা ডাকে)।
+     *
+     * ⓘ "না" চার কারণে: অনুরোধ অপেক্ষায় নেই; কাগজটা নেই; কাগজ খসড়া নয়; কাগজ নিজে "না" বলে (`canBeSentBack()`)।
+     */
+    private static function sendBackAllowed(Approval $approval, ?Model $paper): bool
+    {
+        if (! $approval->isPending()) {
+            return false;
+        }
 
         if (! $paper instanceof Model || (string) $paper->getAttribute('status') !== \App\Core\Support\DocumentStatus::DRAFT) {
             return false;
@@ -1506,6 +1559,37 @@ final class ApprovalEngine
         return collect($this->flowOf($approval)?->steps ?? [])
             ->sortBy('level')
             ->values();
+    }
+
+    /**
+     * ⭐ অপেক্ষমাণ সইটা কোন ধাপে — "২-এর ১" (a6, ২০ অক্টোবর ২০২৬; ফোনের কাগজের চিপ "সইয়ের অপেক্ষায় · ২-এর ১")।
+     *
+     * ⓘ ধাপ গোনা হয় [[stepsFor()]] থেকে, স্তর ধরে — ওয়েবের যাত্রাপথ ([[ApprovalInboxController::timelineOf()]]) একই
+     * স্তরগুলোকে সারি করে, আর [[approve()]] পরের স্তর খোঁজে একই ছকে (`level > current_level`-এর সবচেয়ে ছোটটা)। ⛔ তাই একই
+     * স্তরে দুইজন (N-of-M) দুই ধাপ নয়, আর ফাঁকা স্তর (১, ৩) "৩-এর ২" নয় — "২-এর ২"।
+     * ⓘ `level` ক্রমিক (১ থেকে): এখনকার স্তর পর্যন্ত কয়টা স্তর। ⛔ ছক আর চালু না থাকলে বা অনুরোধ আর অপেক্ষায় না থাকলে `null` —
+     * অনুমান করা "১-এর ১" মিথ্যা হত। ⓘ ছকগুলো অনুরোধে একবারই তোলা ([[flows()]]), তাই সারি যতই হোক বাড়তি কোয়েরি নেই।
+     *
+     * @return array{level: int, levels: int}|null
+     */
+    public function standingOf(Approval $approval): ?array
+    {
+        if ($approval->status !== Approval::PENDING) {
+            return null;
+        }
+
+        $levels = $this->stepsFor($approval)->map(fn (ApprovalFlowStep $s) => (int) $s->level)->unique()->values();
+
+        if ($levels->isEmpty()) {
+            return null;
+        }
+
+        $current = (int) $approval->current_level;
+
+        return [
+            'level' => max(1, $levels->filter(fn (int $l) => $l <= $current)->count()),
+            'levels' => $levels->count(),
+        ];
     }
 
     public function stepNamesFor(Approval $approval): array

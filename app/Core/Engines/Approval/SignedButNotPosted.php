@@ -118,6 +118,47 @@ final class SignedButNotPosted
     }
 
     /**
+     * ⭐ এই খসড়াগুলোর কোনটা "সই হয়েছে, পোস্ট হয়নি" — কাগজ → তার সই (a6, ২০ অক্টোবর ২০২৬; ফোনের কাগজের চিপ)।
+     *
+     * ⓘ [[papers()]]-এর অবিকল একই সংজ্ঞা — ৯০ দিনের APPROVED সই, কাগজ খসড়া, আর সইটা এখনো কাগজটাকে ঢাকে ([[stillSigned()]])
+     * — কেবল এক ধরনের কয়েকটা কাগজে, পাতা ধরে এক ডাকে (সারি ধরে নয়)। ⓘ কোনটা খসড়া তা ডাকার দরজা জানে (কাগজ তার হাতেই),
+     * তাই এখানে কেবল খসড়ার id আসে — আবার তোলা হয় না।
+     * ⛔ মানুষ ধরে ছাঁকা নেই: কে কোন কাগজ দেখেন, তা ডাকার দরজার নিজের দেয়াল ঠিক করে ([[VoucherApiController::visible()]])।
+     *
+     * @param  class-string<Model>  $class
+     * @param  list<int>  $draftIds  খসড়া কাগজের id
+     * @return array<int, object>  কাগজের id → সইয়ের সারি (`id`, `decided_at`, …)
+     */
+    public function among(string $class, array $draftIds): array
+    {
+        $companyId = CompanyContext::id();
+
+        if ($draftIds === [] || $companyId === null || is_subclass_of($class, \App\Core\Contracts\NothingToPostAfterSigning::class)) {
+            return [];
+        }
+
+        $type = (new $class)->getMorphClass();
+
+        // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
+        $signed = DB::table('approvals')
+            ->where('company_id', $companyId)
+            ->where('status', Approval::APPROVED)
+            ->where('decided_at', '>=', now()->subDays(self::DAYS))
+            ->where('approvable_type', $type)
+            ->whereIn('approvable_id', array_values(array_unique($draftIds)))
+            ->orderBy('id')
+            ->get(['id', 'approvable_type', 'approvable_id', 'action', 'state_hash', 'payload', 'decided_at']);
+
+        $out = [];
+
+        foreach ($this->stillSigned($class, $type, $signed) as $row) {
+            $out[(int) $row->approvable_id] = $row;
+        }
+
+        return $out;
+    }
+
+    /**
      * ⭐ কেবল যে সই এখনো কাগজটাকে ঢাকে — হিসাবের নিরীক্ষা, ১৩ অক্টোবর ২০২৬।
      *
      * ⛔ আগে সই APPROVED আর কাগজ খসড়া হলেই তালিকায়। কিন্তু সইয়ের পরে লেখক কাগজটা বদলালে (খাত, তারিখ, পক্ষ, সারি) পোস্ট
