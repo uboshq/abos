@@ -862,6 +862,9 @@ class CfoScreen extends StatelessWidget {
         build: (context, d, _) {
           final liquidity = d['liquidity'] is Map ? d['liquidity'] as Map : const {};
           final budget = d['budget'] is Map ? d['budget'] as Map : null;
+          final purchase = d['purchase_budget'] is Map ? d['purchase_budget'] as Map : null;
+          // ⓘ নতুন সার্ভার ক্রয়কে আলাদা পাঠায় — তখন "budget" কেবল খরচের; পুরনো সার্ভারে দুটো একসাথে, নাম আগের মতো
+          final expenseOnly = d.containsKey('purchase_budget');
           return [
             TotalStrip(label: '৩০ দিন পরে হাতে', value: Money.taka(d['in_30_days'])),
             Card(
@@ -876,7 +879,7 @@ class CfoScreen extends StatelessWidget {
               ),
             ),
             if (budget != null) ...[
-              const SectionTitle('এই মাসের বাজেট'),
+              SectionTitle(expenseOnly ? 'এই মাসের খরচের বাজেট' : 'এই মাসের বাজেট'),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -888,6 +891,7 @@ class CfoScreen extends StatelessWidget {
                 ),
               ),
             ],
+            if (purchase != null) ...PurchaseBudgetCard.parts(purchase),
           ];
         },
       );
@@ -960,12 +964,41 @@ class BudgetScreen extends StatelessWidget {
         load: () => api.get('/finance/budget'),
         build: (context, d, _) {
           final s = d['status'] is Map ? d['status'] as Map : null;
-          if (s == null) return const [EmptyState(icon: Icons.pie_chart_outline, title: 'এই মাসের কোনো বাজেট নেই', message: 'বাজেট ওয়েবে বসান।')];
+          final purchase = d['purchase'] is Map ? d['purchase'] as Map : null;
+          if (s == null && purchase == null) {
+            return const [EmptyState(icon: Icons.pie_chart_outline, title: 'এই মাসের কোনো বাজেট নেই', message: 'বাজেট ওয়েবে বসান।')];
+          }
           return [
-            TotalStrip(label: 'এই মাসের বাজেট', value: Money.taka(s['budget'])),
-            FactRow('খরচ হয়েছে', s['actual'].toString()),
-            if (s['used_pct'] != null) FactRow('ব্যবহার', '${s['used_pct']}%'),
+            if (s != null) ...[
+              TotalStrip(
+                  label: d.containsKey('purchase') ? 'এই মাসের খরচের বাজেট' : 'এই মাসের বাজেট', value: Money.taka(s['budget'])),
+              FactRow('খরচ হয়েছে', s['actual'].toString()),
+              if (s['used_pct'] != null) FactRow('ব্যবহার', '${s['used_pct']}%'),
+            ],
+            if (purchase != null) ...PurchaseBudgetCard.parts(purchase),
           ];
         },
       );
+}
+
+/// ⭐ ক্রয়ের বাজেট — মজুদ (১১২০) খাতে এই মাসে কেনার বাজেট আর ক্রয়ের কাগজ থেকে কত কেনা হলো (ফেরত বাদ)। খরচ নয়, তাই খরচের
+/// কার্ডে বা নিটে যোগ হয় না — আলাদা কার্ড (cb/fe, ২০ অক্টোবর ২০২৬; সার্ভারের `purchase_budget` / `purchase`:
+/// `{budget, purchased, used_pct}`, অঙ্ক Money::format-এর লেখা)। মজুদের বাজেট না থাকলে সার্ভার null পাঠায় — তখন কার্ড নেই।
+class PurchaseBudgetCard {
+  const PurchaseBudgetCard._();
+
+  static List<Widget> parts(Map p) => [
+        const SectionTitle('ক্রয়ের বাজেট'),
+        Card(
+          key: const ValueKey('purchase-budget'),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(children: [
+              FactRow('বাজেট', p['budget'].toString()),
+              FactRow('কেনা হয়েছে', p['purchased'].toString()),
+              if (p['used_pct'] != null) FactRow('ব্যবহার', '${p['used_pct']}%'),
+            ]),
+          ),
+        ),
+      ];
 }
