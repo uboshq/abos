@@ -26,12 +26,17 @@ void main() {
 
   Directory faces() => Directory('${root.path}${Platform.pathSeparator}${FaceCache.folder}');
   List<File> files() => faces().existsSync() ? faces().listSync(recursive: true).whereType<File>().toList() : <File>[];
+  List<File> faceFiles() => files().where((f) => f.path.endsWith('.face')).toList();
 
   setUp(() async {
     FakeSecureStorage.install();
     FakeSecureStorage.reset();
     root = Directory.systemTemp.createTempSync('abos-cache-');
+    FaceCache.resetForTest();
     FaceCache.root = () async => root;
+    // ⓘ নিজের ঘড়ি — প্রতিটা ব্যবহার এক মিনিট পরে; LRU-র ক্রম ফাইলের সময় হাতে বসিয়ে নয়
+    var tick = DateTime(2026, 1, 1);
+    FaceCache.clock = () => tick = tick.add(const Duration(minutes: 1));
     await FaceCache.instance.wipe();
     real = ApiClient.dio.httpClientAdapter;
     server = _FaceServer();
@@ -40,6 +45,7 @@ void main() {
   });
 
   tearDown(() {
+    FaceCache.resetForTest();
     ApiClient.dio.httpClientAdapter = real;
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
@@ -105,41 +111,42 @@ void main() {
     expect(files(), isEmpty);
   });
 
-  test('past 200 faces the least recently used one goes first', () async {
+  test('the real caps are 200 faces and 10 MB', () {
+    FaceCache.resetForTest();
+    expect(FaceCache.defaultMaxFaces, 200);
+    expect(FaceCache.defaultMaxBytes, 10 * 1024 * 1024);
+    expect(FaceCache.maxFaces, FaceCache.defaultMaxFaces);
+    expect(FaceCache.maxBytes, FaceCache.defaultMaxBytes);
+  });
+
+  test('past the face cap the least recently used one goes first, and put returns only after eviction', () async {
     final cache = FaceCache.instance;
-    final start = DateTime(2026, 1, 1);
-    for (var i = 0; i < FaceCache.maxFaces; i++) {
+    FaceCache.maxFaces = 5;
+    for (var i = 0; i < 5; i++) {
       await cache.put('$url&n=$i', Uint8List.fromList([1, 2, 3]), '"e$i"', startedAt: cache.generation);
     }
-    // ⓘ ব্যবহারের সময় সাজানো: ০ সবচেয়ে পুরনো, ১ তার পরে …
-    for (var i = 0; i < FaceCache.maxFaces; i++) {
-      File('${faces().path}${Platform.pathSeparator}${FaceCache.keyOf('$url&n=$i')}.face')
-          .setLastModifiedSync(start.add(Duration(minutes: i)));
-    }
-    // ⓘ ০ এখন দেখা হলো — সবচেয়ে নতুন
+    // ⓘ ০ সবচেয়ে পুরনো লেখা, কিন্তু এখন দেখা হলো — সবচেয়ে নতুন ব্যবহার
     expect(await cache.get('$url&n=0'), isNotNull);
 
     await cache.put('$url&n=new', Uint8List.fromList([4, 5, 6]), '"new"', startedAt: cache.generation);
-    final kept = files().where((f) => f.path.endsWith('.face')).length;
-    expect(kept, FaceCache.maxFaces, reason: 'সীমার ভেতরে');
+    expect(faceFiles(), hasLength(5), reason: '⛔ put ফিরল অথচ সীমার বাইরে — ছাঁটা হয়নি বা পরে হবে');
     expect(await cache.get('$url&n=1'), isNull, reason: 'সবচেয়ে পুরনো-ব্যবহৃত গেল');
     expect(await cache.get('$url&n=0'), isNotNull, reason: '⛔ সদ্য দেখা মুখ গেল — LRU নয়');
     expect(await cache.get('$url&n=new'), isNotNull);
-    expect(File('${faces().path}${Platform.pathSeparator}${FaceCache.keyOf('$url&n=1')}.etag').existsSync(), isFalse,
-        reason: 'ETag-টাও যায়');
+    expect(files().where((f) => f.path.endsWith('.etag')), hasLength(5), reason: 'ETag-টাও সাথে যায়');
   });
 
-  test('past 10 MB the oldest goes, even with few faces', () async {
+  test('past the byte cap the oldest goes, even with few faces', () async {
     final cache = FaceCache.instance;
-    final big = Uint8List(4 * 1024 * 1024);
-    await cache.put('$url&b=1', big, '"b1"', startedAt: cache.generation);
-    File('${faces().path}${Platform.pathSeparator}${FaceCache.keyOf('$url&b=1')}.face').setLastModifiedSync(DateTime(2026, 1, 1));
-    await cache.put('$url&b=2', big, '"b2"', startedAt: cache.generation);
-    File('${faces().path}${Platform.pathSeparator}${FaceCache.keyOf('$url&b=2')}.face').setLastModifiedSync(DateTime(2026, 1, 2));
-    await cache.put('$url&b=3', big, '"b3"', startedAt: cache.generation);
-    expect(await cache.get('$url&b=1'), isNull, reason: '১২ MB > ১০ MB — সবচেয়ে পুরনো গেল');
+    FaceCache.maxBytes = 1000;
+    final big = Uint8List(400);
+    for (final n in [1, 2, 3]) {
+      await cache.put('$url&b=$n', big, '"b$n"', startedAt: cache.generation);
+    }
+    expect(await cache.get('$url&b=1'), isNull, reason: '১২০০ > ১০০০ বাইট — সবচেয়ে পুরনো গেল');
     expect(await cache.get('$url&b=2'), isNotNull);
     expect(await cache.get('$url&b=3'), isNotNull);
+    expect(faceFiles(), hasLength(2));
   });
 
   group('wiped where the widgets are wiped', () {

@@ -26,8 +26,35 @@ class FaceCache {
   static final FaceCache instance = FaceCache._();
 
   static const String folder = 'abos-faces';
-  static const int maxFaces = 200;
-  static const int maxBytes = 10 * 1024 * 1024;
+  static const int defaultMaxFaces = 200;
+  static const int defaultMaxBytes = 10 * 1024 * 1024;
+
+  /// সীমা — আসলে [defaultMaxFaces] আর [defaultMaxBytes]; পরীক্ষা ছোট সীমা বসায়, যাতে ২০০ ফাইল লিখতে না হয়
+  @visibleForTesting
+  static int maxFaces = defaultMaxFaces;
+  @visibleForTesting
+  static int maxBytes = defaultMaxBytes;
+
+  /// "কখন ব্যবহৃত" — ফাইলের সময় এই ঘড়ি থেকে, LRU এর উপর; পরীক্ষা নিজের ঘড়ি দেয়, ফাইলে হাত দেয় না
+  @visibleForTesting
+  static DateTime Function() clock = DateTime.now;
+
+  @visibleForTesting
+  static void resetForTest() {
+    maxFaces = defaultMaxFaces;
+    maxBytes = defaultMaxBytes;
+    clock = DateTime.now;
+    root = getApplicationCacheDirectory;
+  }
+
+  /// ⓘ লেখা আর ছাঁটা একটার পর একটা — দুই আনা একসাথে শেষ হলে একজনের ছাঁটা অন্যজনের সদ্য লেখা ফাইল খুঁজে না পেয়ে ভাঙত না
+  Future<void> _queue = Future<void>.value();
+
+  Future<T> _serial<T>(Future<T> Function() job) {
+    final run = _queue.then((_) => job());
+    _queue = run.then((_) {}, onError: (_) {});
+    return run;
+  }
 
   /// পরীক্ষার পথ — গোড়ার ফোল্ডার; আসলটা অ্যাপের নিজের ক্যাশ
   @visibleForTesting
@@ -67,17 +94,20 @@ class FaceCache {
     }
   }
 
-  /// সদ্য ব্যবহৃত — ফাইলের সময় এখন
+  /// সদ্য ব্যবহৃত — ফাইলের সময় এখন ([clock])
   Future<void> touch(String url) async {
     try {
       final dir = await _dir();
-      final now = DateTime.now();
-      await _face(dir, keyOf(url)).setLastModified(now);
+      await _face(dir, keyOf(url)).setLastModified(clock());
     } catch (_) {}
   }
 
-  /// নতুন মুখ রাখা (সার্ভারের ২০০) — [startedAt] আনা শুরুর [generation]; এর মধ্যে মোছা হলে কিছুই লেখা হয় না
-  Future<void> put(String url, Uint8List bytes, String etag, {required int startedAt}) async {
+  /// নতুন মুখ রাখা (সার্ভারের ২০০) — [startedAt] আনা শুরুর [generation]; এর মধ্যে মোছা হলে কিছুই লেখা হয় না।
+  /// ⭐ ফেরে কেবল ছাঁটা শেষ হলে — লেখা আর সীমা এক কাজ
+  Future<void> put(String url, Uint8List bytes, String etag, {required int startedAt}) =>
+      _serial(() => _put(url, bytes, etag, startedAt: startedAt));
+
+  Future<void> _put(String url, Uint8List bytes, String etag, {required int startedAt}) async {
     if (bytes.isEmpty || etag.isEmpty || bytes.length > maxBytes) return;
     try {
       if (startedAt != _generation) return;
@@ -85,6 +115,7 @@ class FaceCache {
       final key = keyOf(url);
       await _face(dir, key).writeAsBytes(bytes, flush: true);
       await _etag(dir, key).writeAsString(etag, flush: true);
+      await _face(dir, key).setLastModified(clock());
       if (startedAt != _generation) {
         // ⓘ লেখার মাঝে মোছা শুরু — যা লিখলাম সেটাও যায়
         await wipe();
@@ -100,6 +131,8 @@ class FaceCache {
     await for (final e in dir.list()) {
       if (e is File && e.path.endsWith('.face')) {
         final stat = await e.stat();
+        // ⓘ তালিকা আর পড়ার মাঝে মুছে গেলে (মোছা চলছে) — বাদ
+        if (stat.type == FileSystemEntityType.notFound) continue;
         faces.add((e, stat.modified, stat.size));
       }
     }
