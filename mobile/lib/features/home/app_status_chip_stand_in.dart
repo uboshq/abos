@@ -30,6 +30,7 @@ class AppStatusChip extends StatelessWidget {
       AppStatusTone.negative => (p.dangerSurface, p.danger),
     };
     return Semantics(
+      container: true,
       label: semanticsLabel ?? 'অবস্থা: $label',
       excludeSemantics: true,
       child: Container(

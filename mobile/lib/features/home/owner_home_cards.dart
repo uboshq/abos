@@ -175,10 +175,13 @@ class HomeSectionCard extends StatelessWidget {
               ),
             ),
             if (actionLabel != null && onAction != null)
-              TextButton(
+              TextButton.icon(
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 onPressed: onAction,
-                child: Text('$actionLabel →', style: const TextStyle(fontSize: 12.5)),
+                // ⓘ তীর আইকনে, লেখার পরে — "→" অক্ষর সব ফোনের ফন্টে নেই
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.arrow_forward, size: 16),
+                label: Text(actionLabel!, style: const TextStyle(fontSize: 12.5)),
               )
             else
               const SizedBox(height: 48),
@@ -222,12 +225,17 @@ class AmountLine extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(children: [
-            Expanded(child: labelIsName ? CustomerLine(label, style: style) : Text(label, style: style)),
+            Expanded(flex: 3, child: labelIsName ? CustomerLine(label, style: style) : Text(label, style: style)),
             const SizedBox(width: AppSpacing.sm),
+            // ⓘ টাকা ডানে (নকশার নিয়ম §৩), সারির ৪০%-এর বেশি নেয় না; বড় অক্ষরে মোড়ে, কাটে না
             Flexible(
-              child: Text(figureText(amount),
-                  textAlign: TextAlign.end,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(figureText(amount),
+                    textAlign: TextAlign.end,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
+              ),
             ),
           ]),
         ),
