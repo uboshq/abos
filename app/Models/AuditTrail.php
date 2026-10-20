@@ -164,14 +164,33 @@ class AuditTrail extends Model
         /** @var class-string<Model> $class */
         $class = $this->auditable_type;
 
-        $query = $class::query();
+        /*
+         * ⭐ শাখার স্কোপওয়ালা রেকর্ড — মাথায় বাছা শাখা নয়, মানুষের নাগাল ধরে (fe, ১৯ অক্টোবর ২০২৬)। ⛔ আগে অন্য শাখার জীবিত
+         * ভাউচারকে "রেকর্ড নেই" বলত। ⓘ নাগালের বাইরে আগের মতো null।
+         */
+        $acrossBranches = in_array(\App\Core\Concerns\ScopedToUserBranch::class, class_uses_recursive($class), true);
+        $query = $acrossBranches ? $class::acrossBranches() : $class::query();
 
         // মুছে যাওয়া রেকর্ডও দেখাতে হয় — অডিটের পুরো কাজটাই তো সেটা
         if (in_array(SoftDeletes::class, class_uses_recursive($class), true)) {
             $query->withTrashed();
         }
 
-        return $query->find($this->auditable_id);
+        $row = $query->find($this->auditable_id);
+
+        if ($row !== null && $acrossBranches) {
+            $branch = $row->getAttribute('branch_id');
+            $user = auth()->user();
+            $inReach = app(\App\Core\Services\DataScope::class)->allows(
+                $user instanceof \App\Models\User ? $user : null,
+                \App\Models\UserDataScope::BRANCH,
+                $branch === null ? null : (int) $branch,
+            );
+
+            return $inReach ? $row : null;
+        }
+
+        return $row;
     }
 
     /** পড়ার মতো নাম — নম্বর থাকলে নম্বর, নাহলে নাম। */
