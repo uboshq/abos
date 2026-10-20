@@ -278,7 +278,8 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
             'company_id' => $this->company->id, 'code' => 'PT-VP', 'name_en' => 'Kawran Bazar', 'name_bn' => 'কারওয়ান বাজার',
             'level' => \App\Modules\MasterData\Models\Location::POINT, 'is_active' => true,
         ]);
-        $shop->forceFill(['location_id' => $point->id])->save();
+        // ⓘ শাখাও নিজে বসানো — ডেমোর কিছু দোকান শাখাহীন (সব শাখার), তখন দাবির ভিত্তিই থাকত না
+        $shop->forceFill(['location_id' => $point->id, 'branch_id' => $shop->branch_id ?? $this->company->defaultBranch()?->id])->save();
         $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
         // ⭐ শাখাও — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "নাম · পয়েন্ট · শাখা"
         $branch = $shop->fresh()->branchName();
