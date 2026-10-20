@@ -65,13 +65,20 @@
                  পাঁচটা ড্রপডাউন একসাথে দেখালে চারটা অপ্রাসঙ্গিক ঘর
                  প্রতিবার চোখের সামনে থাকত, আর কোনটা ভরতে হবে তা
                  বোঝা যেত না। --}}
+            {{-- ⛔ আগে পাঁচটা select-এর নামই `target_id`, আর লুকানো (x-show) select-ও জমা পড়ত — PHP শেষেরটা নিত, তাই বাছা
+                 লক্ষ্য হারাত বা অন্য ধরনের একটা নম্বর বসত (ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬)। ⭐ এখন প্রতিটার নিজের নাম
+                 (`targets[ধরন]`), সার্ভার কেবল বাছা ধরনেরটা নেয় ([[SchemeController::validated()]]); আর x-if — লুকানো select
+                 পাতাতেই থাকে না, তাই জমাও পড়ে না। --}}
             @foreach (\App\Modules\Sales\Http\Controllers\SchemeController::targets() as $kind => $options)
-                <div x-cloak x-show="appliesTo === '{{ $kind }}'">
-                    <x-ui.select name="target_id" :id="'target_id_'.$kind" :label="__('sales::applies.' . $kind)"
-                                 :options="$options"
-                                 :placeholder="__('sales::field.choose')"
-                                 :selected="old('target_id')" />
-                </div>
+                <template x-if="appliesTo === '{{ $kind }}'">
+                    <div>
+                        <x-ui.select :name="'targets['.$kind.']'" :id="'target_id_'.$kind" :label="__('sales::applies.' . $kind)"
+                                     error-key="target_id"
+                                     :options="$options"
+                                     :placeholder="__('sales::field.choose')"
+                                     :selected="old('targets.'.$kind, old('target_id'))" />
+                    </div>
+                </template>
             @endforeach
 
             <x-ui.field name="valid_from" type="date" :label="__('sales::field.valid_from')" required
