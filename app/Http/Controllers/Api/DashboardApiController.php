@@ -166,6 +166,11 @@ final class DashboardApiController extends Controller
                 fn (array $c) => $this->text(isset($c['render']) && is_callable($c['render']) ? ($c['render'])($row, $i) : data_get($row, $c['key'])),
                 $columns,
             ))->all(),
+            /*
+             * ⭐ তালিকার সর্বমোট — সার্ভারে হিসাব করা লেখা, কলামের চাবি ধরে ([[Listing::$total]]); ফোন নিজে কিছু যোগ করে না
+             * (মালিক, ১৯ অক্টোবর ২০২৬: অ্যাপ ১০০%, প্রতিটা তালিকায় মোট)। ⓘ না থাকলে চাবিটাই নেই — পুরনো অ্যাপ যেমন ছিল।
+             */
+            ...($listing->total === null ? [] : ['total' => array_map(fn ($v) => $this->text($v), $listing->total)]),
         ];
     }
 
