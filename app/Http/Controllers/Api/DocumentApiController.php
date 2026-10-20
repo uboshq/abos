@@ -132,7 +132,10 @@ final class DocumentApiController extends Controller
          * ⛔ কেবল `public_id` (চুক্তি §৩ ক) — ক্রমিক সংখ্যা এখানে কিছুই খোঁজে না।
          * ⓘ মডেলের নিজের ছাঁকনি (কোম্পানি, শাখা) ওয়েবের রুট-বাঁধনের মতোই চলে।
          */
-        $document = $class::query()->wherePublicId($id)->first() ?? abort(404);
+        // ⭐ নাগাল ধরে খোলে এমন কাগজ — অন্য শাখার ভাউচারের সইকারী ফোনেও কাগজটা দেখেন ([[OpensInReach]]; fe, ১৯ অক্টোবর ২০২৬)
+        $document = (method_exists($class, 'findInReach')
+            ? $class::findInReach($id, 'public_id')
+            : $class::query()->wherePublicId($id)->first()) ?? abort(404);
 
         $routeName = PaperTrail::DOCUMENT_ROUTES[$documentType];
         $route = Route::getRoutes()->getByName($routeName) ?? abort(404);
