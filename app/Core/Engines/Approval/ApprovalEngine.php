@@ -1455,8 +1455,26 @@ final class ApprovalEngine
             return $flows[$module.'|'.$action.'|'.$documentType];
         }
 
-        return $flows[$module.'|'.$action.'|'] ?? null;
+        if (isset($flows[$module.'|'.$action.'|'])) {
+            return $flows[$module.'|'.$action.'|'];
+        }
+
+        // ⓘ নিজের ছক না থাকলে যে কাজের ছকে চলে ([[FALLS_BACK_TO]]) — অনুরোধ নিজের কাজের নামেই থাকে
+        $fallback = self::FALLS_BACK_TO[$module.'|'.$action] ?? null;
+
+        return $fallback === null ? null : $this->flowFor($module, $fallback, $documentType);
     }
+
+    /**
+     * ⭐ নিজের ছক না থাকলে কোন কাজের ছকে সই — fe-র গ্যাপ ২৬, ২০ অক্টোবর ২০২৬ (SAP-এর credit review: সীমা আর দিন একই পর্যালোচনা)।
+     *
+     * ⓘ বাকির দিন বাড়ানো (`customer.credit_days`) নিজের সচল ছক না থাকলে সীমা বাড়ানোর ছকে (`customer.credit_limit`) চলে — একই
+     * সইকারী, একই ইনবক্স। নিজের ছক থাকলে সেটাই জেতে। ⓘ অনুরোধের `action` নিজের থাকে, তাই সীমার অনুরোধের সাথে মেশে না
+     * (একটা আরেকটাকে তুলে নেয় না, সীমার শ্রোতা দিনের অঙ্ক সীমায় বসায় না)। ⛔ কোনো ছক বানানো হয় না; সীমার ছক বন্ধ বা নেই → এটাও নেই।
+     *
+     * @var array<string, string> "module|action" => ফিরে-যাওয়ার action
+     */
+    public const FALLS_BACK_TO = ['customer|credit_days' => 'credit_limit'];
 
     /**
      * একটা অনুরোধের জন্য কোন ছকটা চলবে।

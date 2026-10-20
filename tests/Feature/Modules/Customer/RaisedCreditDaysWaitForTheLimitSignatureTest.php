@@ -111,17 +111,39 @@ final class RaisedCreditDaysWaitForTheLimitSignatureTest extends TestCase
         $this->assertSame(30, $this->days(), '⛔ একই সই দুবার খাটল।');
     }
 
-    public function test_with_the_limit_path_on_and_no_days_flow_a_raise_stops_and_says_where(): void
+    /**
+     * ⭐ ADI-র মতো — কেবল সীমার ছক চালু, দিনের ছক নেই (fe, ২০ অক্টোবর ২০২৬; SAP-এর credit review: সীমা আর দিন একই পর্যালোচনা)।
+     * ⓘ দিন বাড়ানো সীমার ছকেই যায় — একই সইকারী, একই ইনবক্স; ⛔ "ছক বসান" বলে থামে না।
+     */
+    public function test_with_only_the_limit_flow_on_a_raise_goes_to_its_signer_and_lands_on_the_owners_signature(): void
     {
         $this->flows(limit: true, days: false);
+        $this->assertSame(0, ApprovalFlow::query()->where('module', 'customer')->where('action', 'credit_days')->count(), 'ফিক্সচার: দিনের কোনো ছক থাকার কথা নয়।');
         $this->assertFixture(on: true);
 
         $this->actingAs($this->clerk)
             ->put(route('customer.update', $this->customer), $this->form(['credit_days' => '90']))
-            ->assertSessionHasErrors(['credit_days' => __('customer::validation.days_need_a_flow')]);
+            ->assertSessionHasErrors('credit_days');
 
         $this->assertSame(30, $this->days(), '⛔ সীমার সই চালু, দিনের ছক নেই — আর দিন নীরবে বেড়ে গেল।');
-        $this->assertSame(0, $this->daysRequests()->count());
+        $this->assertNotSame([__('customer::validation.days_need_a_flow')], session('errors')?->get('credit_days'),
+            '⛔ সীমার ছক থাকতেও "ছক বসান" বলে থামল।');
+
+        $pending = $this->daysRequests()->where('status', Approval::PENDING)->sole();
+        $this->assertSame(90, (int) $pending->amount);
+        $this->assertSame(30, (int) ($pending->payload['days_before'] ?? -1), 'অনুরোধে আগের দিন নেই।');
+
+        // ⓘ সীমার ছকের সইকারীর হাতে — তাঁর ইনবক্সে খোলে, সিদ্ধান্ত তাঁর
+        $this->assertTrue(app(ApprovalEngine::class)->canDecide($pending->fresh(), $this->owner), 'সীমার ছকের সইকারী দিনের অনুরোধে সই দিতে পারেন না।');
+        $this->actingAs($this->owner)->get(route('approval.inbox.show', $pending->id))->assertOk();
+
+        $this->actingAs($this->owner)->post(route('approval.inbox.approve', $pending->id))->assertRedirect();
+
+        $this->assertSame(Approval::APPROVED, $pending->fresh()->status);
+        $this->assertSame(90, $this->days(), '⛔ মালিকের সই পড়ল, অথচ দিন বসল না।');
+        $row = CustomerCreditChange::query()->where('customer_id', $this->customer->id)->where('field', 'credit_days')->sole();
+        $this->assertSame((int) $pending->id, (int) $row->approval_id, 'ইতিহাসে কোন সইয়ে বদলাল — সূত্র নেই।');
+        $this->assertSame(0, bccomp((string) $this->customer->fresh()->credit_limit, '0', 4), '⛔ দিনের সইয়ে সীমা বদলে গেল।');
     }
 
     // ── (খ) ────────────────────────────────────────────────────────────
