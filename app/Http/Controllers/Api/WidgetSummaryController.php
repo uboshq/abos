@@ -40,7 +40,8 @@ class WidgetSummaryController extends Controller
             if ($asked !== [] && ! in_array($key, $asked, true)) {
                 continue;
             }
-            if (! $phone->isOn($summary->module()) || ! $user->can($summary->permission())) {
+            $permission = $summary->permission();
+            if (! $phone->isOn($summary->module()) || ($permission !== null && ! $user->can($permission))) {
                 continue;
             }
             $widgets[$key] = $summary->data($user);

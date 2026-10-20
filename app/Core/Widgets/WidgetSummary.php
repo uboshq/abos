@@ -29,8 +29,8 @@ interface WidgetSummary
     /** যে ফোন-মডিউলের সুইচ মানে ([[PhoneModules]]) — `sales`, `accounts`, … */
     public function module(): string;
 
-    /** যে চাবি লাগে — ওয়েবের একই তালিকার চাবি (যেমন `sales.invoice.view`) */
-    public function permission(): string;
+    /** যে চাবি লাগে — ওয়েবের একই তালিকার চাবি (যেমন `sales.invoice.view`); null মানে সাইন-ইন করা প্রত্যেক কর্মী (নোটিশ, দ্রুত কাজ) */
+    public function permission(): ?string;
 
     /** সারাংশ — ছোট, কেবল উইজেট যা দেখায়; সারি হলে বড় মাপের জন্য সর্বোচ্চ ৮টা */
     public function data(User $user): array;
