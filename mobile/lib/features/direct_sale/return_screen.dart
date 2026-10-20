@@ -6,8 +6,14 @@ import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
+import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/state_views.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../books/books_widgets.dart' show dayOf;
+import '../../core/widgets/design_list_row.dart';
 
 /// ⭐ বিক্রি ফেরত, ফোনে — কাউন্টারের "ফেরত" বোতাম (মালিক, ৪ অক্টোবর ২০২৬)।
 ///
@@ -36,6 +42,9 @@ class _ReturnScreenState extends State<ReturnScreen> {
   bool _busy = false;
   String? _error;
 
+  /// তালিকা আনার ভুল — আলাদা, যাতে "আবার চেষ্টা করুন" কেবল আনাটাই আবার চালায় (নকশা ৩, পাতা ৮)
+  String? _setupError;
+
   @override
   void initState() {
     super.initState();
@@ -51,7 +60,10 @@ class _ReturnScreenState extends State<ReturnScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _setupError = null;
+    });
     try {
       final setup = await widget.api.setup(customerId: widget.customerId);
       if (mounted) {
@@ -63,7 +75,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     } catch (e) {
       if (mounted) {
         setState(() =>
-            _error = errorMessageFor(e, fallback: 'ফেরতের তালিকা আনা গেল না।'));
+            _setupError = errorMessageFor(e, fallback: 'ফেরতের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -174,7 +186,11 @@ class _ReturnScreenState extends State<ReturnScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          if (_busy) const LinearProgressIndicator(),
+          // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): প্রথম আনায় খসড়া সারি, পরে উপরে সরু দাগ; আনার ভুলে "আবার চেষ্টা করুন"
+          if (_busy && setup == null) const LoadingSkeleton(rows: 4),
+          if (_busy && setup != null) const LinearProgressIndicator(),
+          if (_setupError != null && setup == null)
+            ErrorState(key: const ValueKey('return-load-error'), message: _setupError!, onRetry: _busy ? null : _load),
           // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
           if (_error != null)
             Card(
@@ -191,25 +207,39 @@ class _ReturnScreenState extends State<ReturnScreen> {
             Text('কোন বিলের ফেরত',
                 style: Theme.of(context).textTheme.titleMedium),
             if (setup.invoices.isEmpty)
-              const Text('ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।'),
+              EmptyState(
+                key: const ValueKey('return-empty'),
+                icon: Icons.receipt_long_outlined,
+                title: 'ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।',
+                message: 'বিল পাকা হলে এখানে আসবে।',
+                action: OutlinedButton.icon(
+                    key: const ValueKey('return-empty-refresh'),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+                    onPressed: _busy ? null : _load,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('নতুন করে দেখুন')),
+              ),
+            // ⭐ নকশা ৩-এর সারি: ক্রেতা "নাম · পয়েন্ট · শাখা", ডানে বিলের টাকা; দ্বিতীয় লাইনে বিলের নম্বর · তারিখ।
+            // ⓘ টাকা Money.taka — ইংরেজি অঙ্ক, লাখের কমা (⛔ আগে সার্ভারের কাঁচা লেখা "৳ 12500.0000" সোজা বসত)
             for (final i in setup.invoices)
-              Card(
-                // ⓘ সারি অন্তত ৭২dp; টাকা Money.taka — ইংরেজি অঙ্ক, লাখের কমা, দুই দশমিক (নকশার নিয়ম ০.৪.৩৮ §২, §৩)।
-                // ⛔ আগে সার্ভারের কাঁচা লেখা "৳ 12500.0000" সোজা বসত
-                child: ListTile(
-                  key: ValueKey('return-bill-${i.id}'),
-                  minTileHeight: 72,
-                  title: Text(i.no),
-                  subtitle: Text(
-                      '${i.customer}\n${i.date ?? ''} · ${Money.taka(i.total)}'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _busy ? null : () => _openBill(i),
-                ),
+              DesignListRow(
+                key: ValueKey('return-bill-${i.id}'),
+                icon: Icons.receipt_long_outlined,
+                name: i.customer.isEmpty ? '—' : i.customer,
+                second: '${i.no} · ${dayOf(i.date)}',
+                amount: Money.valueOrZero(i.total),
+                pill: const AppStatusPill(label: 'নিশ্চিত', kind: AppStatusKind.success),
+                onTap: _busy ? null : () => _openBill(i),
               ),
           ],
           if (setup != null && bill != null) ...[
-            Text('বিল ${bill.no} · ${bill.customerName}',
-                style: Theme.of(context).textTheme.titleMedium),
+            // ⭐ ক্রেতা "নাম · পয়েন্ট · শাখা" এক লাইনে, বিলের নম্বর দ্বিতীয় লাইনে (মালিক, ১৯ অক্টোবর ২০২৬)
+            CustomerLine(bill.customerName,
+                key: const ValueKey('return-bill-customer'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text('বিল ${bill.no}',
+                key: const ValueKey('return-bill-no'),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             for (final l in bill.lines)
               Card(
                 child: Padding(

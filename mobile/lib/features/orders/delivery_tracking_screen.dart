@@ -8,7 +8,12 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_status_pill.dart';
+import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/state_views.dart';
+import '../delivery_orders/delivery_order_screens.dart' show PaperListRow;
 
 /// ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি এখন কোথায়, আর চাপলে কে কখন কী করলেন (0.4.6)।
 ///
@@ -64,6 +69,14 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  bool get _filtered => _step != null || _search.text.trim().isNotEmpty;
+
+  void _showAll() {
+    _search.clear();
+    setState(() => _step = null);
+    _load();
   }
 
   void _open(TrackedSale sale) {
@@ -124,66 +137,39 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               onSort: (value) => setState(() => _sort = value),
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (_busy) const LinearProgressIndicator(),
-            // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+            // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): প্রথম আনায় খসড়া সারি, ভুলে "আবার চেষ্টা করুন", খালিতে কাজের বোতাম
+            if (_busy && list == null && _error == null) const LoadingSkeleton(),
+            if (_busy && list != null) const LinearProgressIndicator(),
             if (_error != null)
-              Card(
-                color: AppColors.dangerSurface,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(_error!,
-                      style: const TextStyle(
-                          color: AppColors.danger)),
+              ErrorState(key: const ValueKey('tracking-error'), message: _error!, onRetry: _busy ? null : _load),
+            if (list != null && list.rows.isEmpty && !_busy && _error == null)
+              EmptyState(
+                icon: Icons.local_shipping_outlined,
+                title: 'কোনো বিক্রি নেই।',
+                message: _filtered ? 'এই ছাঁকনিতে কিছু নেই।' : 'গেট পাস হলে বিক্রি এখানে আসে।',
+                action: OutlinedButton.icon(
+                  key: const ValueKey('tracking-empty-action'),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+                  onPressed: _filtered ? _showAll : _load,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(_filtered ? 'সব দেখুন' : 'নতুন করে দেখুন'),
                 ),
               ),
-            if (list != null && list.rows.isEmpty && !_busy)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Text('কোনো বিক্রি নেই।', textAlign: TextAlign.center),
-              ),
+            // ⭐ নকশা ৩-এর সারি — গ্রাহক "নাম · পয়েন্ট · শাখা", নিচে বিক্রির নম্বর (আর কাগজের নম্বর) · তারিখ, ডানে টাকা আর
+            // ধাপের চিপ; বাঁয়ের আইকন সার্ভারের ৯ রঙের ধাপের রঙে
             for (final sale in rows)
-              Card(
-                child: InkWell(
-                  onTap: () => _open(sale),
-                  // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 72),
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ⭐ বিক্রির নম্বর আর কাগজের নিজের নম্বর, দুটোই — খোঁজায় যেকোনোটা চলে
-                        Text(
-                            [
-                              sale.no,
-                              if (sale.documentNo != null &&
-                                  sale.documentNo!.isNotEmpty &&
-                                  sale.documentNo != sale.no)
-                                sale.documentNo!,
-                            ].join(' · '),
-                            key: ValueKey('tracked-no-${sale.id}'),
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w700)),
-                        if (sale.customer != null) Text(sale.customer!),
-                        if (sale.date != null)
-                          Text(sale.date!,
-                              style: TextStyle(
-                                  color: context.palette.onSurfaceMuted)),
-                        Text(Money.taka(sale.total)),
-                        Text(
-                          [
-                            trackingStepLabels[sale.step] ?? sale.step,
-                            if (sale.billed) 'বিল হয়েছে',
-                            if (sale.backOrder) 'বাকি মাল পরে যাবে'
-                          ].join(' · '),
-                          style: TextStyle(
-                              color: _saleColour(sale),
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              PaperListRow(
+                key: ValueKey('tracked-row-${sale.id}'),
+                icon: Icons.local_shipping_outlined,
+                tone: _saleColour(sale),
+                party: sale.customer ?? 'গ্রাহক নেই',
+                // ⭐ বিক্রির নম্বর আর কাগজের নিজের নম্বর, দুটোই — খোঁজায় যেকোনোটা চলে
+                number: _numbers(sale),
+                numberKey: ValueKey('tracked-no-${sale.id}'),
+                detail: sale.date,
+                amount: sale.total,
+                pill: AppStatusPill(label: _stepText(sale), kind: _kind(sale)),
+                onTap: () => _open(sale),
               ),
           ],
         ),
@@ -191,6 +177,26 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     );
   }
 }
+
+/// বিক্রির নম্বর, আর কাগজের নিজের নম্বর আলাদা হলে সেটাও
+String _numbers(TrackedSale sale) => [
+      sale.no,
+      if (sale.documentNo != null && sale.documentNo!.isNotEmpty && sale.documentNo != sale.no) sale.documentNo!,
+    ].join(' · ');
+
+String _stepText(TrackedSale sale) => [
+      trackingStepLabels[sale.step] ?? sale.step,
+      if (sale.billed) 'বিল হয়েছে',
+      if (sale.backOrder) 'বাকি মাল পরে যাবে'
+    ].join(' · ');
+
+/// ধাপের চিপের মানে — পৌঁছানো সবুজ, আটকানো/বাতিল লাল, অপেক্ষা হলুদ, বাকিটা চলছে
+AppStatusKind _kind(TrackedSale sale) => switch (sale.step) {
+      'delivered' || 'billed' => AppStatusKind.success,
+      'cancelled' || 'credit_hold' => AppStatusKind.danger,
+      'approval' || 'draft' => AppStatusKind.warning,
+      _ => AppStatusKind.pending,
+    };
 
 /// সার্ভারের ৯ রং ([trackingColours]); পুরনো সার্ভারে category না এলে ধাপ থেকে আন্দাজ।
 Color _saleColour(TrackedSale sale) =>
@@ -227,6 +233,7 @@ class _StoryScreenState extends State<_StoryScreen> {
   }
 
   Future<void> _load() async {
+    if (_error != null) setState(() => _error = null);
     try {
       final (sale, events, milestones) = await widget.api.story(widget.sale);
       if (mounted) {
@@ -258,19 +265,21 @@ class _StoryScreenState extends State<_StoryScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            if (sale.customer != null)
-              Text(sale.customer!,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-            Text(Money.taka(sale.total)),
-            Text(
-              [
-                trackingStepLabels[sale.step] ?? sale.step,
-                if (sale.billed) 'বিল হয়েছে',
-                if (sale.backOrder) 'বাকি মাল পরে যাবে'
-              ].join(' · '),
-              style: TextStyle(
-                  color: _saleColour(sale), fontWeight: FontWeight.w600),
-            ),
+            // ⭐ মাথায় গ্রাহক "নাম · পয়েন্ট · শাখা", তার নিচে বিক্রির নম্বর · তারিখ (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
+            CustomerLine(sale.customer ?? 'গ্রাহক নেই',
+                key: const ValueKey('story-customer'),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+            Text([_numbers(sale), if (sale.date != null) sale.date!].join(' · '),
+                key: const ValueKey('story-number'),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: AppSpacing.xs),
+            Row(children: [
+              Expanded(
+                child: Text(Money.taka(sale.total),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+              ),
+              Flexible(child: AppStatusPill(label: _stepText(sale), kind: _kind(sale))),
+            ]),
             const Divider(),
             // ⭐ টিকচিহ্নের অগ্রগতি-দাগ — হয়েছে ✓, এখন গোল-দাগ, ফেরত ✕, থামানো ■, সামনে ফাঁপা
             for (var i = 0; i < _milestones.length; i++)
@@ -284,10 +293,8 @@ class _StoryScreenState extends State<_StoryScreen> {
                   style: TextStyle(fontWeight: FontWeight.w700)),
             ],
             if (_error != null)
-              Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            if (_sale == null && _error == null)
-              const LinearProgressIndicator(),
+              ErrorState(key: const ValueKey('story-error'), message: _error!, onRetry: _load),
+            if (_sale == null && _error == null) const LoadingSkeleton(rows: 3),
             for (final e in _events)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),

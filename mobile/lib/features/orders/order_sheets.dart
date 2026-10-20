@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/order_api.dart';
 import '../../core/records/money.dart';
+import '../../core/widgets/customer_line.dart';
 
 /// The order screen's own tinted pairs — the owner-approved samples of 1 October 2026. Each background travels with its
 /// own ink, so the pair reads the same in light and dark.
@@ -590,17 +591,22 @@ Future<ConfirmChoice?> showOrderConfirm(
   required List<ConfirmLine> lines,
   required Future<CustomerStanding> standing,
   TextEditingController? note,
+  String? customer,
 }) =>
     showModalBottomSheet<ConfirmChoice>(
       context: context,
       isScrollControlled: true,
       backgroundColor: OrderInk.of(context).page,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (context) => OrderConfirmSheet(lines: lines, standing: standing, note: note),
+      builder: (context) => OrderConfirmSheet(lines: lines, standing: standing, note: note, customer: customer),
     );
 
 class OrderConfirmSheet extends StatelessWidget {
-  const OrderConfirmSheet({super.key, required this.lines, required this.standing, this.note});
+  const OrderConfirmSheet({super.key, required this.lines, required this.standing, this.note, this.customer});
+
+  /// ⭐ কার অর্ডার — "নাম · পয়েন্ট · শাখা" (`CustomerRecord.label`; মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)। ⓘ নম্বর নেই:
+  /// অর্ডারের নম্বর সার্ভার দেয় সিঙ্কে (docs/Contract §০, সিদ্ধান্ত ২)
+  final String? customer;
 
   final List<ConfirmLine> lines;
   final Future<CustomerStanding> standing;
@@ -697,6 +703,10 @@ class OrderConfirmSheet extends StatelessWidget {
             children: [
               Center(child: _grabber(context)),
               const Text('পাঠানোর আগে দেখে নিন', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              if (customer != null)
+                CustomerLine(customer!,
+                    key: const ValueKey('confirm-customer'),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: o.ink)),
               const SizedBox(height: 8),
               Table(
                 columnWidths: {for (var i = 0; i < _cols.length; i++) i: _cols[i]},

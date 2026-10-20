@@ -822,7 +822,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('counter-return')));
     await tester.pumpAndSettle();
     expect(find.text('বিক্রি ফেরত'), findsOneWidget);
-    expect(find.text('INV-0007'), findsOneWidget,
+    // ⓘ নকশা ৩ (২০ অক্টোবর ২০২৬): বিলের নম্বর সারির দ্বিতীয় লাইনে, তারিখের সাথে
+    expect(find.textContaining('INV-0007'), findsOneWidget,
         reason: 'the bills to return from');
   });
 

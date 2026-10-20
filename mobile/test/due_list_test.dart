@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/widgets/customer_line.dart';
+import 'package:abos_mobile/core/widgets/totals_bar.dart';
+import 'package:abos_mobile/core/widgets/design_list_row.dart';
 import 'package:abos_mobile/features/customers/due_list_screen.dart';
 
 import 'support/fake_secure_storage.dart';
@@ -79,14 +81,14 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DueListScreen()));
     await tester.pump();
 
-    // 8125.5 + 3000 + 1200
-    expect(find.text('৳12,325.50'), findsOneWidget);
-    expect(find.text('3 টি দোকান'), findsOneWidget);
+    // 8125.5 + 3000 + 1200 — ⭐ নকশা ৩-এর নিচের পট্টি: "এই পাতা" আর "সর্বমোট" (১৯ অক্টোবর ২০২৬)
+    final bar = tester.widget<TotalsBar>(find.byType(TotalsBar));
+    expect([bar.allCount, bar.allSum], [3, 12325.5]);
+    expect(find.text('সর্বমোট · 3টি'), findsOneWidget);
 
     // Sorted by what is owed, not by name: a list of eighty shops in
     // alphabetical order is a list nobody reads to the end.
-    final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
-    final names = tiles.map((t) => (t.title! as CustomerLine).text).toList();
+    final names = tester.widgetList<CustomerLine>(find.byType(CustomerLine)).map((t) => t.text).toList();
     expect(names, ['রহিম স্টোর', 'মাঝারি দোকান', 'ছোট দোকান']);
   });
 
@@ -113,14 +115,16 @@ void main() {
 
     // ⭐ 19 Oct 2026 (owner's standing rule): the point now sits beside the name — "নাম · পয়েন্ট · শাখা" — not twice
     expect(find.text('রহিম স্টোর · কারওয়ান বাজার'), findsOneWidget);
-    expect(find.text('বকেয়া: ৳5,000.00'), findsOneWidget);
-    // ⓘ A shop on no point keeps its due line, with nothing made up beside it
+    // ⭐ নকশা ৩ (১৯ অক্টোবর ২০২৬): বকেয়া ডানে, কেবল টাকা
+    expect(find.text('৳5,000.00'), findsWidgets);
+    // ⓘ A shop on no point keeps its due, with nothing made up beside it
     expect(find.text('করিম স্টোর'), findsOneWidget);
-    expect(find.text('বকেয়া: ৳3,000.00'), findsOneWidget);
+    expect(find.text('৳3,000.00'), findsWidgets);
     expect(find.textContaining('কারওয়ান বাজার'), findsOneWidget);
     expect(find.textContaining('01711000001'), findsNothing,
         reason: 'the mobile is on the shop page, not the row');
-    final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
+    final tiles = tester.widgetList<DesignListRow>(find.byType(DesignListRow));
+    expect(tiles.length, 2);
     expect(tiles.every((t) => t.onTap != null), isTrue,
         reason: 'a tap opens the shop, where the mobile is');
   });
@@ -156,7 +160,7 @@ void main() {
     // ⓘ Two lines only (owner, 6 Oct 2026) — the shop's page carries them.
     expect(find.textContaining('সীমা ৳50,000.00'), findsNothing);
     expect(find.textContaining('15 দিনের শর্ত'), findsNothing);
-    expect(find.text('বকেয়া: ৳60,000.00'), findsOneWidget);
+    expect(find.text('৳60,000.00'), findsWidgets);
     // ⛔ Over the limit, and the screen still draws no verdict. Whether a
     // limit blocks anything is a company switch the phone is deliberately not
     // sent — CustomerDueSync says so — and a phone deciding on its own cached
@@ -202,7 +206,8 @@ void main() {
     expect(find.textContaining('করিম'), findsNothing);
     // The headline stays the whole round's debt — a filtered total would read
     // as "this is what I am owed" while showing a fraction of it.
-    expect(find.text('৳10,000.00'), findsOneWidget);
+    final bar = tester.widget<TotalsBar>(find.byType(TotalsBar));
+    expect([bar.pageCount, bar.allCount, bar.allSum], [1, 2, 10000]);
   });
 
   // ⭐ মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে।"

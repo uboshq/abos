@@ -76,11 +76,10 @@ void main() {
 
     expect(find.text('DO-0001'), findsOneWidget);
     expect(api.askedAwaiting, isFalse);
-    // ⭐ সার্ভারের পুরো তালিকার মোট আর গোনা, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬)
-    final total = find.byKey(const ValueKey('books-total'));
-    expect(find.descendant(of: total, matching: find.text('মোট DO')), findsOneWidget);
-    expect(find.descendant(of: total, matching: find.text('৳4,800.00')), findsOneWidget);
-    expect(find.descendant(of: total, matching: find.text('· 12 টি')), findsOneWidget);
+    // ⭐ সার্ভারের পুরো তালিকার মোট আর গোনা, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬) — নকশা ৩-এর নিচের পট্টিতে (a5, ১৯ অক্টোবর ২০২৬)
+    final all = find.byKey(const ValueKey('totals-all'));
+    expect(find.descendant(of: all, matching: find.text('সর্বমোট · 12টি')), findsOneWidget);
+    expect(find.descendant(of: all, matching: find.text('৳4,800.00')), findsOneWidget);
     expect(find.byKey(const ValueKey('do-new')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('do-awaiting-me')));

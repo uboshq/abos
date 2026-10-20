@@ -13,6 +13,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import 'order_prefill.dart';
 import 'order_sheets.dart';
@@ -312,6 +313,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       lines: lines,
       standing: standing,
       note: _noteController,
+      customer: customer.label,
     );
     if (choice == ConfirmChoice.send) await _queue(customer);
   }
@@ -388,18 +390,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('নতুন অর্ডার', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-              Text(
-                customer == null
-                    ? 'গ্রাহক বাছুন'
-                    : [customer.label, if (customer.address != null) customer.address!].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: customer == null ? o.brand : o.muted,
-                  fontWeight: customer == null ? FontWeight.w700 : FontWeight.w400,
+              // ⭐ গ্রাহক "নাম · পয়েন্ট · শাখা" (আর ঠিকানা) — [CustomerLine]: এক লাইন, ছুঁয়ে ধরলে পুরোটা
+              if (customer == null)
+                Text('গ্রাহক বাছুন', style: TextStyle(fontSize: 15, color: o.brand, fontWeight: FontWeight.w700))
+              else
+                CustomerLine(
+                  [customer.label, if (customer.address != null) customer.address!].join(' · '),
+                  key: const ValueKey('order-customer-line'),
+                  style: TextStyle(fontSize: 15, color: o.muted, fontWeight: FontWeight.w400),
                 ),
-              ),
             ],
           ),
         ),
@@ -949,7 +948,8 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
         // ⓘ তালিকার সারি অন্তত ৭২dp, রং থিম থেকে (নকশার নিয়ম ০.৪.৩৮ §১, §২)
         return ListTile(
           minTileHeight: 72,
-          title: Text(customer.label),
+          // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে, লম্বা হলে "…" আর ছুঁয়ে ধরলে পুরোটা ([CustomerLine])
+          title: CustomerLine(customer.label),
           subtitle: customer.phone == null ? null : Text(customer.phone!),
           trailing: due == null
               ? null
