@@ -317,7 +317,8 @@
                                     <div data-home-listing class="px-4 py-2">
                                         @forelse ($homeList->rows->take(4) as $listRow)
                                             <div class="flex min-w-0 items-center justify-between gap-2 border-b border-(--color-border) py-1.5 text-sm last:border-b-0">
-                                                <span class="min-w-0 truncate text-(--color-ink-body)" title="{{ ($firstCol['render'])($listRow) }}">{{ ($firstCol['render'])($listRow) }}</span>
+                                                {{-- ⓘ কাটা নয়, দুই লাইন পর্যন্ত — "নম্বর · নাম · পয়েন্ট · শাখা" পুরোটা পড়া যায় (মালিকের স্থায়ী নিয়ম; fe-র ছবি-যাচাই) --}}
+                                                <span class="line-clamp-2 min-w-0 break-words leading-snug text-(--color-ink-body)" title="{{ ($firstCol['render'])($listRow) }}">{{ ($firstCol['render'])($listRow) }}</span>
                                                 <span class="shrink-0">{{ ($lastCol['render'])($listRow) }}</span>
                                             </div>
                                         @empty

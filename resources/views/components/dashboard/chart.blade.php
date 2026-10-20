@@ -117,6 +117,9 @@
         $x = fn (int $i) => $n === 1 ? $w / 2 : $left + $i * ($w - $left - $right) / ($n - 1);
         $y = fn ($v) => $top + ($h - $top - $bottom) * (1 - (float) $v / $peak);
         $pct = fn (float $v, float $of) => round($v / $of * 100, 2).'%';
+        // ⭐ কিনারার লেখা চার্টের ভেতরে — প্রথমটা নিজের শুরু থেকে, শেষটা নিজের শেষে, বাকিরা মাঝ বরাবর
+        //    (fe-র ছবি-যাচাই, ২০ অক্টোবর ২০২৬: মজুদের "71.4 হাজার" ডান কিনারার বাইরে কাটা পড়ত)
+        $anchor = fn (int $i) => $i === 0 ? '0' : ($i === count($panel->points) - 1 ? '-100%' : '-50%');
         $line = fn (string $side, array $run) => implode(' ', array_map(fn ($i) => round($x($i), 1).','.round($y($panel->points[$i][$side]), 1), $run));
         /*
          * ⛔ `null` মান = ঐ দিনের হিসাব নেই — শূন্য নয়, তাই দাগ ওখানে ভাঙে, মাটিতে নামে না (ec, Executive লাইন-নিরীক্ষা,
@@ -192,7 +195,7 @@
                         $label = $tip($point, $side, $name);
                     @endphp
                     <span data-bar-value @class(['whitespace-nowrap leading-none tabular-nums font-semibold' => $shown, 'sr-only' => ! $shown])
-                          @if ($shown) style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct(min($h - $bottom - 8, max(9, $y($point[$side]) + $dy)), $h) }}; transform: translate(-50%, -50%); font-size: {{ $px }}px; color: {{ $stroke }}" @endif>{{ $zero($point[$side]) ? '' : ($point[$side.'Note'] ?? $short($point[$side])) }}</span>
+                          @if ($shown) style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct(min($h - $bottom - 8, max(9, $y($point[$side]) + $dy)), $h) }}; transform: translate({{ $anchor($i) }}, -50%); font-size: {{ $px }}px; color: {{ $stroke }}" @endif>{{ $zero($point[$side]) ? '' : ($point[$side.'Note'] ?? $short($point[$side])) }}</span>
                     @if ($interactive)
                         <span data-chart-tip tabindex="0" aria-label="{{ $label }}" title="{{ $label }}"
                               style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct($y($point[$side]), $h) }}; width: 1.25rem; height: 1.25rem; transform: translate(-50%, -50%); border-radius: 9999px"><span class="chart-tip" aria-hidden="true">{{ $label }}</span></span>
@@ -203,7 +206,7 @@
             @foreach ($panel->points as $i => $point)
                 @if (($n - 1 - $i) % $step === 0)
                     <span class="whitespace-nowrap leading-none text-(--color-ink-muted)"
-                          style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct($h - 12, $h) }}; transform: translate(-50%, -50%); font-size: {{ $px }}px">{{ $point['label'] }}</span>
+                          style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct($h - 12, $h) }}; transform: translate({{ $anchor($i) }}, -50%); font-size: {{ $px }}px">{{ $point['label'] }}</span>
                 @endif
             @endforeach
         </div>
