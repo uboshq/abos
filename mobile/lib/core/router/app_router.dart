@@ -159,8 +159,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           _framed(
             path: 'customers',
-            builder: (context, state) => const ModuleGateView(
-                path: 'customers', child: CustomerListScreen()),
+            // ⓘ চওড়া পর্দায় ডানের ঘরেও "বাকির অবস্থা"-র একই চাবি (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+            builder: (context, state) => ModuleGateView(
+                path: 'customers',
+                child: CustomerListScreen(
+                    detailBuilder: (context, id) =>
+                        CustomerDetailScreen(customerId: id, showCredit: _mayOpenCredit(context)))),
             routes: [
               _framed(
                 // The public_id in the path, never a sequential one — the

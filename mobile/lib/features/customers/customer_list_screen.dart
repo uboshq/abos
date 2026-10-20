@@ -12,6 +12,7 @@ import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
+import 'customer_detail_screen.dart';
 
 /// Every customer this device has pulled, each with what the shop owes.
 ///
@@ -25,7 +26,14 @@ import '../books/books_widgets.dart';
 /// keep the figure fresh. A rep walking a route decides which shop to call on
 /// from this list; the figure is worth nothing a tap away.
 class CustomerListScreen extends StatefulWidget {
-  const CustomerListScreen({super.key});
+  const CustomerListScreen({super.key, this.detailBuilder});
+
+  /// ⭐ ট্যাবলেটে বা আড়াআড়ি ফোনে ([twoPaneWidth]-এর বেশি চওড়া) ডানের ঘরে যে পাতা বসে — রাউটার দেয় "বাকির অবস্থা"-র
+  /// চাবিসহ; না দিলে সাধারণ [CustomerDetailScreen]।
+  final Widget Function(BuildContext context, String customerId)? detailBuilder;
+
+  /// এর বেশি চওড়া হলে দুই ঘর: বাঁয়ে তালিকা, ডানে বাছা গ্রাহক (Material-এর "medium/expanded" মাপ ৬০০ dp থেকে)।
+  static const twoPaneWidth = 600.0;
 
   @override
   State<CustomerListScreen> createState() => _CustomerListScreenState();
@@ -37,6 +45,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
   String _sort = CustomerListQuery.defaultSort;
   ListFilters _filters = const {};
+
+  /// ⭐ দুই ঘরে বাছা গ্রাহক — এই State-এ থাকে, তাই ফোন ঘোরালে (চওড়া বদলালে) হারায় না: সরু হলে তালিকায় দাগ দেওয়া থাকে,
+  /// আবার চওড়া হলে সেই গ্রাহকই ডানে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+  String? _selectedId;
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -67,6 +79,41 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       return due > 0 ? sum + due : sum;
     });
 
+    // ⭐ চওড়া পর্দায় দুই ঘর — বাঁয়ে তালিকা, ডানে গ্রাহকের পাতা; ফোনে আগের মতো এক ঘর, চাপলে নিজের পাতা
+    // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+    return LayoutBuilder(builder: (context, constraints) {
+      final twoPane = constraints.maxWidth > CustomerListScreen.twoPaneWidth;
+      final list = _list(context, all, filtered, owed, trouble, twoPane);
+      if (!twoPane) return list;
+      final selected = _selectedId == null ? null : CustomerRecord.byId(_selectedId!);
+      return Row(
+        key: const ValueKey('customers-two-pane'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: (constraints.maxWidth * 0.4).clamp(320.0, 420.0), child: list),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: selected == null
+                ? const Scaffold(
+                    key: ValueKey('customers-detail-empty'),
+                    body: EmptyState(
+                      icon: Icons.touch_app_outlined,
+                      title: 'বাঁয়ের তালিকা থেকে একজন গ্রাহক বাছুন',
+                    ),
+                  )
+                : KeyedSubtree(
+                    key: ValueKey('customers-detail-${selected.id}'),
+                    child: widget.detailBuilder?.call(context, selected.id) ??
+                        CustomerDetailScreen(customerId: selected.id),
+                  ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _list(BuildContext context, List<CustomerRecord> all, List<CustomerRecord> filtered, double owed,
+      String? trouble, bool twoPane) {
     return Scaffold(
       appBar: AppBar(title: const Text('গ্রাহক')),
       body: Column(
@@ -143,8 +190,17 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           itemCount: filtered.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: AppSpacing.xs),
-                          itemBuilder: (context, index) =>
-                              _CustomerTile(customer: filtered[index]),
+                          itemBuilder: (context, index) {
+                            final customer = filtered[index];
+                            return _CustomerTile(
+                              customer: customer,
+                              selected: twoPane && customer.id == _selectedId,
+                              // চওড়া পর্দায় ডানের ঘরে খোলে; ফোনে আগের মতো নিজের পাতায়
+                              onOpen: twoPane
+                                  ? () => setState(() => _selectedId = customer.id)
+                                  : () => context.go('/home/customers/${customer.id}'),
+                            );
+                          },
                         ),
             ),
           ),
@@ -155,9 +211,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 }
 
 class _CustomerTile extends StatelessWidget {
-  const _CustomerTile({required this.customer});
+  const _CustomerTile({required this.customer, required this.onOpen, this.selected = false});
 
   final CustomerRecord customer;
+  final VoidCallback onOpen;
+
+  /// দুই ঘরে ডানে যে খোলা — সারিটা রঙে আর TalkBack-এ "বাছা"
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +251,8 @@ class _CustomerTile extends StatelessWidget {
     return Card(
       child: LayoutBuilder(
         builder: (context, constraints) => ListTile(
+        key: ValueKey('customer-row-${customer.id}'),
+        selected: selected,
         // ⓘ নামের প্রথম অক্ষরের বৃত্ত সাজ — TalkBack নামটা একবারই পড়ে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
         leading: ExcludeSemantics(
           child: CircleAvatar(
@@ -215,7 +277,7 @@ class _CustomerTile extends StatelessWidget {
             : subtitle.isEmpty
                 ? null
                 : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-        onTap: () => context.go('/home/customers/${customer.id}'),
+        onTap: onOpen,
         // No due row at all when this shop's CustomerDue has not been pulled
         // yet — the two entity types have separate watermarks, so one can
         // arrive a sync ahead of the other, and a shop showing "বকেয়া নেই"
