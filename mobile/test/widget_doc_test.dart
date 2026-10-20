@@ -28,6 +28,7 @@ void main() {
           ),
         ],
         more: 'আরও ১২টা',
+        corner: hideMoney ? null : WidgetText.money('মোট ${Money.taka(6218400)}'),
       );
 
   test('a document goes to the renderer as plain JSON, with when it was counted and where each row leads', () {
@@ -38,6 +39,7 @@ void main() {
     expect(json['rows'][0]['link'], '/customers/31/ledger');
     expect(json['rows'][0]['second']['c'], 'bad');
     expect(json['more'], 'আরও ১২টা');
+    expect(json['corner'], {'t': 'মোট ৳62,18,400.00', 's': true});
   });
 
   test('the shared rules pass a right document', () {
