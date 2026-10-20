@@ -146,6 +146,7 @@ final class ApprovalApiController extends Controller
                 'requestedAmount' => $asked,
                 'amountChanged' => $changed,
                 'currentLevel' => (int) $approval->current_level,
+                ...self::standing($engine, $approval),
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'requesterName' => $approval->requesterName(),
                 'summary' => ($changed ? __('approval::field.changed_after_request', ['amount' => \App\Core\Support\Money::format($asked)]).' · ' : '')
@@ -196,8 +197,9 @@ final class ApprovalApiController extends Controller
         $approvals = collect($page->items());
         $facts = app(ApprovalFacts::class)->of($approvals, false);
         $documents = $this->documentsOf($approvals);
+        $engine = app(ApprovalEngine::class);
 
-        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents): array {
+        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $last = $approval->decisions->sortBy('id')->last();
 
@@ -211,6 +213,7 @@ final class ApprovalApiController extends Controller
                 'status' => (string) $approval->status,
                 'statusLabel' => __('approval::status.'.$approval->status),
                 'currentLevel' => (int) $approval->current_level,
+                ...self::standing($engine, $approval),
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'decidedAt' => $approval->decided_at?->toIso8601String(),
                 'summary' => $this->summaryOf($approval, $facts[(int) $approval->id] ?? []),
@@ -261,6 +264,7 @@ final class ApprovalApiController extends Controller
         return response()->json([
             'documentType' => class_basename((string) $entry->approvable_type),
             'documentNo' => $document->getAttribute('document_no'),
+            ...self::standing(app(ApprovalEngine::class), $entry),
             'facts' => array_values(array_map(fn (array $f) => ['label' => (string) $f['label'], 'value' => (string) $f['value']], $sheet['facts'] ?? [])),
             'columns' => array_values(array_map(fn (array $c) => ['key' => (string) $c['key'], 'label' => (string) $c['label'], 'numeric' => (bool) ($c['numeric'] ?? false)], $sheet['columns'] ?? [])),
             'rows' => array_values(array_map(fn (array $r) => array_map(fn ($v) => $v === null ? null : (string) $v, $r), $sheet['rows'] ?? [])),
@@ -429,7 +433,27 @@ final class ApprovalApiController extends Controller
             'id' => $approval->public_id,
             'status' => $approval->status,
             'currentLevel' => (int) $approval->current_level,
+            ...self::standing(app(ApprovalEngine::class), $approval),
         ]);
+    }
+
+    /**
+     * ⭐ সইয়ের ধাপ — "২-এর ১" (a6, ২০ অক্টোবর ২০২৬; ফোনের কাগজের চিপ, ভাউচার আর দাবির সারির একই ঘর)।
+     *
+     * ⓘ উৎস ইঞ্জিন ([[ApprovalEngine::standingOf()]]) — ওয়েবের যাত্রাপথের একই স্তর; অপেক্ষায় না থাকলে বা ছক আর চালু না থাকলে
+     * দুটোই null। ⓘ `currentLevel` আগের মতো কাঁচা স্তর (ফাঁকা স্তরে ৩ হতে পারে); `approval_level` ক্রমিক।
+     * ⛔ কোনো কোয়েরি নয়: অনুরোধের সারি পাতায় আগেই তোলা, আর ছকগুলো ইঞ্জিনে অনুরোধ-প্রতি একবার ([[ApprovalEngine::flows()]])।
+     *
+     * @return array{approval_level: int|null, approval_levels: int|null}
+     */
+    private static function standing(ApprovalEngine $engine, Approval $approval): array
+    {
+        $standing = $engine->standingOf($approval);
+
+        return [
+            'approval_level' => $standing['level'] ?? null,
+            'approval_levels' => $standing['levels'] ?? null,
+        ];
     }
 
     /**
