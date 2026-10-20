@@ -14,6 +14,8 @@ const _cash =
 const _bkash =
     CollectionAccount(id: 'acc-bkash', name: 'bKash মার্চেন্ট', kind: 'mfs');
 
+// ⓘ const হলে প্রতিটা [_shop] তালিকাও const চাইত — এক জায়গায় থাক
+// ignore: prefer_const_constructors
 final _shop = CustomerRecord(
     const {'id': 'cus-1', 'nameBn': 'রহিম স্টোর', 'pointName': 'ফুলপুর বাজার'});
 

@@ -7,7 +7,6 @@ import 'package:abos_mobile/core/records/approval_record.dart';
 import 'package:abos_mobile/core/records/notification_record.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
-import 'package:abos_mobile/core/sync_engine/sync_engine.dart' show PushOutcome;
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/approvals/approval_inbox_screen.dart';
 import 'package:abos_mobile/features/customers/due_list_screen.dart';

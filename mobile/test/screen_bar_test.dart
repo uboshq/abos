@@ -120,12 +120,12 @@ void main() {
 
       await _pump(
         tester,
-        MaterialApp(
+        const MaterialApp(
           home: DefaultTabController(
             length: 2,
             child: Scaffold(
-              appBar: const AbosScreenBar(title: 'আদায়', bottom: TabBar(tabs: [Tab(text: 'আজ'), Tab(text: 'মাস')])),
-              body: const SizedBox.expand(key: ValueKey('plain-body')),
+              appBar: AbosScreenBar(title: 'আদায়', bottom: TabBar(tabs: [Tab(text: 'আজ'), Tab(text: 'মাস')])),
+              body: SizedBox.expand(key: ValueKey('plain-body')),
             ),
           ),
         ),
