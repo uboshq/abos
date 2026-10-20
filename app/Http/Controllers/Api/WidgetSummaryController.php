@@ -44,11 +44,19 @@ class WidgetSummaryController extends Controller
 
         $etag = '"'.sha1((string) json_encode($widgets)).'"';
         if ($request->header('If-None-Match') === $etag) {
-            return response('', 304)->header('ETag', $etag);
+            return response('', 304)->header('ETag', $etag)->header('Cache-Control', self::NO_STORE);
         }
 
         return response()
             ->json(['asOf' => now()->toIso8601String(), 'widgets' => (object) $widgets])
-            ->header('ETag', $etag);
+            ->header('ETag', $etag)
+            ->header('Cache-Control', self::NO_STORE);
     }
+
+    /**
+     * ⛔ কোনো ক্যাশে নয় — উইজেটের নিরাপত্তা-পর্যালোচনা ৮ (cb, ২০ অক্টোবর ২০২৬; MASVS-NETWORK/PRIVACY)। ⓘ উত্তরে হাতের নগদ,
+     * ব্যাংকের জের, লাভ আর গ্রাহকের নাম — মাঝের proxy বা ফোনের HTTP ক্যাশে থাকা চলে না। ETag আর ৩০৪ তবু চলে: ফোন নিজে
+     * `If-None-Match` পাঠায়, ক্যাশ লাগে না।
+     */
+    public const NO_STORE = 'no-store, private';
 }
