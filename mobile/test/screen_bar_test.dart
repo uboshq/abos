@@ -112,6 +112,27 @@ void main() {
       expect(find.byTooltip('ছাঁকনি'), findsOneWidget);
       expect(find.byKey(const ValueKey('top-search')), findsNothing);
     });
+    // ⛔ ২০ অক্টোবর ২০২৬: preferredSize নীল বারের ৪৮০dp ছাদ — সাদামাটা বার পুরো ছাদ জুড়ে বসে পর্দার অর্ধেক ঢেকে দিচ্ছিল
+    testWidgets('the plain bar keeps the old AppBar height, with or without tabs, and the body starts right under it', (tester) async {
+      await _pump(tester, MaterialApp(home: _screen(actions: const [], body: const SizedBox.expand(key: ValueKey('plain-body')))));
+      expect(tester.getSize(find.byKey(const ValueKey('screen-bar-plain'))).height, kToolbarHeight);
+      expect(tester.getTopLeft(find.byKey(const ValueKey('plain-body'))).dy, kToolbarHeight);
+
+      await _pump(
+        tester,
+        MaterialApp(
+          home: DefaultTabController(
+            length: 2,
+            child: Scaffold(
+              appBar: const AbosScreenBar(title: 'আদায়', bottom: TabBar(tabs: [Tab(text: 'আজ'), Tab(text: 'মাস')])),
+              body: const SizedBox.expand(key: ValueKey('plain-body')),
+            ),
+          ),
+        ),
+      );
+      expect(tester.getSize(find.byKey(const ValueKey('screen-bar-plain'))).height, kToolbarHeight + kTextTabBarHeight);
+      expect(tester.getTopLeft(find.byKey(const ValueKey('plain-body'))).dy, kToolbarHeight + kTextTabBarHeight);
+    });
     testWidgets('Riverpod but nobody signed in', (tester) async {
       await _pump(tester, _app(_screen(actions: const []), context: _context(_Calls()), signedIn: false));
       expect(find.byKey(const ValueKey('screen-bar-plain')), findsOneWidget);
