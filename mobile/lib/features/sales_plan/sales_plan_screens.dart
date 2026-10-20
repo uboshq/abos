@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -272,7 +273,7 @@ class _SalesTargetsScreenState extends State<SalesTargetsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('লক্ষ্যমাত্রা')),
+        appBar: const AbosScreenBar(title: 'লক্ষ্যমাত্রা'),
         body: _PlanList(
           reloadKey: monthKey(_month),
           load: (page) => widget.api.targets(month: monthKey(_month), page: page),
@@ -329,7 +330,7 @@ class _DealerTargetsScreenState extends State<DealerTargetsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('ডিলারের লক্ষ্য')),
+        appBar: const AbosScreenBar(title: 'ডিলারের লক্ষ্য'),
         body: _PlanList(
           reloadKey: '${monthKey(_month)}|$_q|$_onlySet',
           load: (page) => widget.api.dealerTargets(month: monthKey(_month), q: _q, onlySet: _onlySet, page: page),
@@ -400,7 +401,7 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('রুটের খাতা')),
+        appBar: const AbosScreenBar(title: 'রুটের খাতা'),
         body: _PlanList(
           reloadKey: '${monthKey(_month)}|$_q',
           load: (page) => widget.api.routes(month: monthKey(_month), q: _q, page: page),
@@ -479,7 +480,7 @@ class RouteDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title, overflow: TextOverflow.ellipsis)),
+        appBar: AbosScreenBar(title: title),
         body: _PlanList(
           load: (page) => api.route(id, month: monthKey(month), page: page),
           rowsKey: 'customers',
@@ -582,7 +583,7 @@ class _SchemeListScreenState extends State<SchemeListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('স্কিম')),
+        appBar: const AbosScreenBar(title: 'স্কিম'),
         body: _PlanList(
           reloadKey: '$_q|$_status',
           load: (page) async {
@@ -694,7 +695,7 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('কমিশন')),
+        appBar: const AbosScreenBar(title: 'কমিশন'),
         body: _PlanList(
           reloadKey: '$_q|$_status',
           load: (page) async {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -167,7 +168,7 @@ class _LoadedState extends State<_Loaded> {
   Widget build(BuildContext context) {
     final data = _data;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AbosScreenBar(title: widget.title),
       floatingActionButton: widget.floating?.call(_reload),
       body: RefreshIndicator(
         onRefresh: _reload,
@@ -479,7 +480,7 @@ class _SendTransferScreenState extends State<SendTransferScreen> {
         );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('টাকা পাঠান')),
+      appBar: const AbosScreenBar(title: 'টাকা পাঠান'),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         if (!_loaded && _error == null) const LinearProgressIndicator(),
         pick('transfer-from', 'কোন টিল থেকে', _from, _tills, (v) => setState(() => _from = v)),
@@ -698,7 +699,7 @@ class _NewCashCountScreenState extends State<NewCashCountScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('নগদ গুনুন')),
+      appBar: const AbosScreenBar(title: 'নগদ গুনুন'),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         DropdownButtonFormField<String>(
           key: const ValueKey('count-till'),
@@ -814,7 +815,7 @@ class _HandLoanMoveScreenState extends State<HandLoanMoveScreen> {
   Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
-      appBar: AppBar(title: Text('হাতধার · ${widget.name}')),
+      appBar: AbosScreenBar(title: 'হাতধার · ${widget.name}'),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         SegmentedButton<String>(
           key: const ValueKey('handloan-direction'),

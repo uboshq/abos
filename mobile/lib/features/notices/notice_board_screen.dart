@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -71,7 +72,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('নোটিশ বোর্ড')),
+      appBar: const AbosScreenBar(title: 'নোটিশ বোর্ড'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -174,7 +175,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
     final signed = _standing == 'acknowledged';
 
     return Scaffold(
-      appBar: AppBar(title: Text(n.no.isEmpty ? 'নোটিশ' : n.no)),
+      appBar: AbosScreenBar(title: n.no.isEmpty ? 'নোটিশ' : n.no),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

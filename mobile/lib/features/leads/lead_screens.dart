@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -84,7 +85,7 @@ class _LeadListScreenState extends State<LeadListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('লিড')),
+      appBar: const AbosScreenBar(title: 'লিড'),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('lead-new'),
         onPressed: () => _open(),
@@ -256,7 +257,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
     final lead = widget.lead;
     final statuses = widget.setup.statuses;
     return Scaffold(
-      appBar: AppBar(title: Text(lead?.no ?? 'নতুন লিড')),
+      appBar: AbosScreenBar(title: lead?.no ?? 'নতুন লিড'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

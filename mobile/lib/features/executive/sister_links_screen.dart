@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -64,7 +65,7 @@ class _SisterLinksScreenState extends State<SisterLinksScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('ভাই-কোম্পানির পক্ষ')),
+        appBar: const AbosScreenBar(title: 'ভাই-কোম্পানির পক্ষ'),
         body: RefreshIndicator(
           onRefresh: _load,
           child: ListView(

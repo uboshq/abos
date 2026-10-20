@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
@@ -58,7 +59,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         query: _query, sort: _sort, filters: _filters);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('পণ্যের তালিকা')),
+      appBar: const AbosScreenBar(title: 'পণ্যের তালিকা'),
       body: Column(
         children: [
           Padding(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/finance/finance_api.dart';
 import '../../core/navigation/recent_papers.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -145,7 +146,7 @@ class _DepositListScreenState extends State<DepositListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('জমা ও সঞ্চয়')),
+        appBar: const AbosScreenBar(title: 'জমা ও সঞ্চয়'),
         body: PagedList<Deposit>(
           reloadKey: _tab,
           load: (page) async {
@@ -231,7 +232,7 @@ class _LoanListScreenState extends State<LoanListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('ব্যাংক ঋণ ও কিস্তি')),
+        appBar: const AbosScreenBar(title: 'ব্যাংক ঋণ ও কিস্তি'),
         body: PagedList<BankLoan>(
           reloadKey: _tab,
           load: (page) async {
@@ -335,7 +336,7 @@ class _RentListScreenState extends State<RentListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('ভাড়া')),
+        appBar: const AbosScreenBar(title: 'ভাড়া'),
         body: PagedList<Rent>(
           reloadKey: '$_side/$_tab',
           load: (page) async {
@@ -460,7 +461,7 @@ class _HandLoanListScreenState extends State<HandLoanListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('হাতধার')),
+        appBar: const AbosScreenBar(title: 'হাতধার'),
         body: PagedList<HandLoan>(
           load: (page) async {
             final book = await widget.api.handLoans();

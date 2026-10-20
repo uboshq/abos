@@ -7,6 +7,7 @@ import '../../core/auth/session_profile.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -128,7 +129,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
     final filters = page?.filters;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_title)),
+      appBar: AbosScreenBar(title: _title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -308,8 +309,8 @@ class _PaperScreenState extends State<PaperScreen> {
     final p = _paper;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(p == null ? _title : '$_title · ${p.row.no}'),
+      appBar: AbosScreenBar(
+        title: p == null ? _title : '$_title · ${p.row.no}',
         actions: [
           if (p != null && p.printType != null)
             IconButton(

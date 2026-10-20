@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/hr/hr_register_api.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -72,7 +73,7 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
     final p = _page;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('হাজিরার রেজিস্টার')),
+      appBar: const AbosScreenBar(title: 'হাজিরার রেজিস্টার'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -227,7 +228,7 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ছুটির রেজিস্টার')),
+      appBar: const AbosScreenBar(title: 'ছুটির রেজিস্টার'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
