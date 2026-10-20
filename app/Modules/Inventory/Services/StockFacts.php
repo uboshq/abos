@@ -149,6 +149,25 @@ final class StockFacts
     }
 
     /**
+     * ⭐ ফুরিয়ে আসা পণ্য, সীমার সবচেয়ে কম ভাগ যার আছে সে আগে — ফোনের "মজুদ সতর্কতা" উইজেট (মালিকের নকশা ৫, ২০ অক্টোবর
+     * ২০২৬; [[StockAlertsSummary]])। ⓘ একই সংজ্ঞা ([[belowReorderQuery()]]), তাই সংখ্যা [[belowReorder()]]-এর সাথে মেলে;
+     * কেবল সাজানো আলাদা: ২০০-র ২৪ (১২%) ১২০-র ৮৮-এর (৭৩%) আগে, পরিমাণে বড় হলেও।
+     *
+     * @return Collection<int, Product>
+     */
+    public function lowestShare(int $limit = 3)
+    {
+        return $this->belowReorderQuery()
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->orderByRaw($this->availableSql().' / inv_products.reorder_level asc')
+            ->orderBy('inv_products.id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * একেবারে শূন্য হয়ে যাওয়া পণ্য।
      *
      * "ফুরিয়ে আসছে"-র চেয়ে আলাদা প্রশ্ন: ওটা সতর্কতা, এটা ঘটে যাওয়া
