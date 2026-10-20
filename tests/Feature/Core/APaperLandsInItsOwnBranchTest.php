@@ -400,7 +400,8 @@ final class APaperLandsInItsOwnBranchTest extends TestCase
                     ->exists();
 
                 if (! $exists) {
-                    $copy = $base->replicate(['public_id']);
+                    // ⓘ `branch_key` আর `financial_year_key` ডাটাবেজের হিসাব-করা কলাম — নকলে লেখা যায় না (MySQL 3105)
+                    $copy = $base->replicate(['public_id', 'branch_key', 'financial_year_key']);
                     $copy->forceFill(['branch_id' => $branch->id, 'next_number' => (int) $base->next_number + $from])->save();
                 }
             }
