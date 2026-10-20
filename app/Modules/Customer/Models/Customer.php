@@ -499,20 +499,18 @@ class Customer extends Model implements AuthenticatableContract, Drillable
         }
 
         /*
-         * ⭐ আটকে থাকা টাকাও বাদ — ২৬ সেপ্টেম্বর ২০২৬।
-         *
-         * ⓘ বিল না হওয়া ডিও আর খসড়া বিল সীমা আটকায় (মালিকের নির্দেশ)।
-         * ⚠️ কেবল খাতা দেখলে এই পাতা কাউন্টারের চেয়ে বেশি দেখাত, আর
-         * একই গ্রাহকের দুই পর্দায় দুই সংখ্যা থাকত।
+         * ⭐ বাকির ইঞ্জিনের নিজের অঙ্ক — এক উৎস, দ্বিতীয় যোগ নয় (ফাঁক ৪৮, ২০ অক্টোবর ২০২৬; [[CreditHolds::availableOf()]])।
+         * ⛔ আগে এখানে নিজের যোগ ছিল (সীমা − বকেয়া − আটকে থাকা − চেক): একটা ভাগ ভুলে গেলেই এই পাতা বাকি-নিয়ন্ত্রণের পাতা
+         * আর দেয়ালের চেয়ে বেশি দেখাত — ১৮ অক্টোবরের আগে চেক বাদ পড়ত ঠিক এভাবেই।
          */
-        $left = bcsub(bcsub($limit, $this->outstanding(), 4), $this->heldCredit(), 4);
+        $engine = app(CreditHolds::class)->availableOf((int) $this->id);
 
-        /*
-         * ⭐ ক্লিয়ার না হওয়া চেকও — বাকি-নিয়ন্ত্রণের পাতা আর দেয়ালের একই হিসাব ([[CreditExposure::positionsFor()]];
-         * পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)। ⛔ আগে এই পাতা চেকের টাকা বাদ দিত না, তাই একই গ্রাহকে এখানে বেশি "ব্যবহারযোগ্য"
-         * দেখাত আর কাউন্টারের দেয়াল কম দিত।
-         */
-        $left = bcsub($left, app(CreditHolds::class)->unclearedChequesOf((int) $this->id), 4);
+        if ($engine !== null) {
+            return $engine;
+        }
+
+        // ⓘ বিক্রয় বন্ধ — আটকে থাকা কিছু নেই, কেবল খাতা ([[NoCreditHolds]])
+        $left = bcsub($limit, $this->outstanding(), 4);
 
         return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
     }
