@@ -1,3 +1,5 @@
+import 'live_sync.dart';
+import 'sync_status.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -70,8 +72,27 @@ class AutoSync with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(_quietly());
+    if (state == AppLifecycleState.resumed) unawaited(_onResume());
   }
+
+  /// ⭐ পেছনে নীরব ডাক এসে থাকলে ([NudgeMark]) — দুই মিনিটের ফাঁক না মেনে এখনই টানা; নইলে আগের মতো
+  Future<void> _onResume() async {
+    if (signedIn() && await _nudged()) {
+      try {
+        await runNow();
+      } catch (error) {
+        debugPrint('ABOS auto sync: nudged round failed ($error)');
+      }
+      return;
+    }
+    await _quietly();
+  }
+
+  /// Injected in tests — the real one reads the background mark.
+  @visibleForTesting
+  static Future<bool> Function() nudgedProbe = NudgeMark.take;
+
+  Future<bool> _nudged() => nudgedProbe();
 
   /// The automatic round: skipped when signed out or when one ran a moment
   /// ago, and never throws — nobody is looking at it.
@@ -94,7 +115,8 @@ class AutoSync with WidgetsBindingObserver {
     final running = _running;
     if (running != null) return running;
     _lastRun = _clock();
-    final round = _round().whenComplete(() => _running = null);
+    // ⭐ প্রতিটা গোল সিঙ্কের অবস্থায় — মাথার "শেষ সিঙ্ক" এটাই পড়ে ([SyncStatus])
+    final round = SyncStatus.instance.track(_round).whenComplete(() => _running = null);
     _running = round;
     return round;
   }

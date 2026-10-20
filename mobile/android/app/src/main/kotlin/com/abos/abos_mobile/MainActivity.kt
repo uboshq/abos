@@ -3,6 +3,7 @@ package com.abos.abos_mobile
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.os.StatFs
 import android.provider.Settings
 import android.view.WindowManager
@@ -62,6 +63,19 @@ class MainActivity : FlutterFragmentActivity() {
                     } catch (error: Exception) {
                         result.error("STATFS", error.message, null)
                     }
+
+                    else -> result.notImplemented()
+                }
+            }
+
+        // ⭐ Battery Saver — the live poll asks less often while it is on
+        // (a6, 19 Oct 2026; lib/core/sync_engine/live_sync.dart, PowerSave).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, POWER_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isPowerSaveMode" -> result.success(
+                        (getSystemService(POWER_SERVICE) as? PowerManager)?.isPowerSaveMode ?: false
+                    )
 
                     else -> result.notImplemented()
                 }
@@ -128,5 +142,6 @@ class MainActivity : FlutterFragmentActivity() {
         private const val INTEGRITY_CHANNEL = "com.abos.abos_mobile/integrity"
         private const val INSTALL_CHANNEL = "com.abos.abos_mobile/install"
         private const val STORAGE_CHANNEL = "com.abos.abos_mobile/storage"
+        private const val POWER_CHANNEL = "abos/power"
     }
 }
