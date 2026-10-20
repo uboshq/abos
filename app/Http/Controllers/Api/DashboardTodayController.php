@@ -91,6 +91,12 @@ class DashboardTodayController extends Controller
                 'count' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$today, $today])->count(),
                 'amount' => self::money(SalesMetrics::salesToday()->value()),
             ];
+
+            /*
+             * ⭐ শাখা ধরে আজকের বিক্রি — মালিকের হোমের "আজকের বিক্রি" কার্ড (অ্যাপ ০.৪.৪১, ২০ অক্টোবর ২০২৬)। ⓘ পুরনো অ্যাপ চাবিটা চেনে না।
+             * ⛔ উপরের মোটের একই ভিত ([[SalesMetrics::invoiceTotalByBranch()]]), তাই সারির যোগ = `sales.amount`, পয়সায়।
+             */
+            [$body['salesByBranch'], $body['salesByBranchTotal']] = $this->salesByBranch($user, $today);
         }
 
         if ($on('sales') && $user->can('sales.collection.view')) {
@@ -176,6 +182,49 @@ class DashboardTodayController extends Controller
         }
 
         return response()->json($body);
+    }
+
+    /**
+     * শাখার সারি আর তাদের যোগ।
+     *
+     * ⭐ মানুষটার দেখার শাখার **প্রতিটা** সচল শাখা, আজ বিক্রি না হলেও "0.0000" — ওয়েবের "আজ" ছকের মতো ([[Board]]-এর সারি
+     * = [[CompanyLens::branches()]]), যাতে মালিক সব শাখা দেখেন। ⓘ দেখার শাখা = মোটের দেয়ালের একই শাখা
+     * ([[DataScope::viewBranchIds()]]): হেডারে একটা বাছা থাকলে কেবল সেটা, নইলে নাগাল; সীমা নেই মানে কোম্পানির সব।
+     * ⚠️ বিক্রি হয়েছে এমন বন্ধ শাখা, আর শাখাহীন বিল (কেবল "সব শাখা"-তে মোটে ঢোকে) নিজের সারিতে — নইলে যোগ মোটের সাথে মিলত না।
+     * ক্রম: টাকা বড় থেকে ছোট, সমান হলে নাম।
+     *
+     * @return array{0: list<array{branch_id: ?int, branch: string, amount: string}>, 1: string}
+     */
+    private function salesByBranch(User $user, string $today): array
+    {
+        $sold = SalesMetrics::invoiceTotalByBranch($today, $today);
+        $reach = $this->scope->viewBranchIds($user);
+
+        $branches = Branch::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach ?: [0]))
+            ->where(fn ($q) => $q->where('is_active', true)->orWhereIn('id', array_keys($sold) ?: [0]))
+            ->get();
+
+        $rows = [];
+
+        foreach ($branches as $branch) {
+            $rows[] = ['branch_id' => (int) $branch->id, 'branch' => $branch->name(), 'amount' => self::money($sold[(int) $branch->id] ?? '0')];
+        }
+
+        if (isset($sold[0])) {
+            $rows[] = ['branch_id' => null, 'branch' => __('sales::overview.no_branch'), 'amount' => self::money($sold[0])];
+        }
+
+        usort($rows, fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 4) ?: strcmp($a['branch'], $b['branch']));
+
+        $total = '0.0000';
+
+        foreach ($rows as $row) {
+            $total = bcadd($total, $row['amount'], 4);
+        }
+
+        return [$rows, $total];
     }
 
     /** সীমা নেই → null; এক বা একাধিক শাখা → নামগুলো ", " দিয়ে। */

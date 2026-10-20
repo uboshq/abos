@@ -214,6 +214,38 @@ final class SalesMetrics implements ProvidesMetrics
 
     public static function invoiceTotal(string $from, string $to, ?array $customerIds = null): string
     {
+        return Money::of(self::invoices($from, $to, $customerIds)->sum('total'));
+    }
+
+    /**
+     * ⭐ [[invoiceTotal()]] শাখা ধরে — একই বিল, একই দেয়াল, এক কোয়েরিতে `GROUP BY branch_id` (ফোনের হোমের
+     * "আজকের বিক্রি" কার্ড, অ্যাপ ০.৪.৪১, ২০ অক্টোবর ২০২৬)। ⓘ চাবি শাখার আইডি, শাখাহীন বিল `0`-তে;
+     * কেবল যে শাখায় বিক্রি আছে। ⛔ সারিগুলোর যোগ = [[invoiceTotal()]] হুবহু — দুইটাই নিচের একই ভিত থেকে।
+     *
+     * @return array<int, string>
+     */
+    public static function invoiceTotalByBranch(string $from, string $to): array
+    {
+        $out = [];
+
+        foreach (self::invoices($from, $to)
+            ->selectRaw('sal_invoices.branch_id as branch_id, COALESCE(SUM(sal_invoices.total), 0) as amount')
+            ->groupBy('sal_invoices.branch_id')
+            ->toBase()
+            ->get() as $row) {
+            $out[(int) $row->branch_id] = Money::of((string) $row->amount);
+        }
+
+        return $out;
+    }
+
+    /**
+     * বিক্রয়ের একটাই ভিত — খাতায় বসা বিল, সময়কালে, মডেলের দেয়ালসহ (কোম্পানি, শাখা, বিক্রয়কর্মীর ডিলার) আর হোমের ছাঁকনি।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    private static function invoices(string $from, string $to, ?array $customerIds = null): \Illuminate\Database\Eloquent\Builder
+    {
         $query = SalesInvoice::query()
             ->posted()
             ->whereBetween('trx_date', [$from, $to])
@@ -226,7 +258,7 @@ final class SalesMetrics implements ProvidesMetrics
         // ⭐ হোমের ছাঁকনি (গুদাম/এলাকা/SR) — কেবল হোমের সংখ্যা গোনার সময়টুকু চালু ([[HomeFilter::during()]], ৪ অক্টোবর ২০২৬)
         HomeFilter::current()?->onInvoices($query, 'sal_invoices');
 
-        return Money::of($query->sum('total'));
+        return $query;
     }
 
     /**
