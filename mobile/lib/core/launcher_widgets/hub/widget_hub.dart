@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../../api_client/network_errors.dart';
+import '../../auth/token_storage.dart';
 import '../../privacy/phone_privacy.dart';
 import '../kinds/all_kinds.dart';
+import '../../theme/theme_choice.dart';
+import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'widget_summary_api.dart';
 
@@ -25,6 +30,9 @@ class WidgetHub {
 
   /// গোপন অঙ্কের সুইচ — Kotlin আঁকিয়ে পড়ে: "1" = লুকাও
   static const amountsHiddenKey = 'widget_amounts_hidden';
+
+  /// মানুষের আলো/অন্ধকার বাছাই — উইজেটও একই রঙে ([ThemeChoices]; "phone", "light", "dark")
+  static const themeKey = 'widget_theme';
 
   static String docKey(String key) => 'doc_$key';
 
@@ -58,6 +66,35 @@ class WidgetHub {
   @visibleForTesting
   static DateTime Function() clock = DateTime.now;
 
+  /// সেশন সত্যিই শেষ কি না — ApiClient নবায়নে ব্যর্থ হলে টোকেন মোছে; নেট না থাকায় ব্যর্থ হলে রাখে
+  @visibleForTesting
+  static Future<bool> Function() sessionGone = _sessionGone;
+
+  /// গোপন লেখার জায়গায় — Kotlin আঁকিয়ের `DocWidget.HIDDEN`-এর হুবহু
+  static const hiddenText = '••••';
+
+  /// ⭐ নথি যেমন ফাইলে যায় — মালিকের সুইচ বন্ধ থাকলে প্রতিটা গোপন লেখা ([WidgetText.secret]) "••••", আর গোপন দাগের দৈর্ঘ্য ০
+  /// (উইজেটের নিরাপত্তা-পর্যালোচনা ১, cb, ২০ অক্টোবর ২০২৬; MASVS-STORAGE-2)। ⛔ আগে আসল অঙ্ক ফাইলে থাকত, লুকানো হত কেবল
+  /// আঁকার সময় — রুট-করা ফোন বা ফরেনসিক কপি হাতের নগদ আর লাভ পড়তে পারত। ⓘ সুইচ চালু হলে পরের গোলে আসল অঙ্ক।
+  @visibleForTesting
+  static String encodeFor(WidgetDoc doc, {required bool showAmounts}) =>
+      showAmounts ? doc.encode() : jsonEncode(_masked(doc.toJson()));
+
+  static Object? _masked(Object? node) {
+    if (node is List) return [for (final item in node) _masked(item)];
+    if (node is! Map) return node;
+
+    final out = <String, Object?>{for (final e in node.entries) '${e.key}': _masked(e.value)};
+    if (out['s'] == true && out.containsKey('t')) out['t'] = hiddenText;
+
+    // ⓘ দাগের দৈর্ঘ্যও একটা অঙ্ক — লেখা বা মান গোপন হলে দাগ শূন্য (আঁকিয়েও তা-ই করে)
+    bool secret(Object? text) => text is Map && text['s'] == true;
+    final original = node;
+    if (out.containsKey('fraction') && (secret(original['label']) || secret(original['value']))) out['fraction'] = 0.0;
+
+    return out;
+  }
+
   @visibleForTesting
   static void resetForTest() {
     fetch = WidgetSummaryApi.fetch;
@@ -67,6 +104,7 @@ class WidgetHub {
     setEnabled = _setEnabled;
     refreshAll = _refreshAll;
     clock = DateTime.now;
+    sessionGone = _sessionGone;
     _running = null;
     _clearing = null;
     _generation = 0;
@@ -100,6 +138,16 @@ class WidgetHub {
       try {
         server = await fetch();
       } catch (error) {
+        /*
+         * ⛔ দূর থেকে বের করে দেওয়া — সব নথি মোছা (উইজেটের নিরাপত্তা-পর্যালোচনা ৬খ, cb, ২০ অক্টোবর ২০২৬; MASVS-AUTH-2)।
+         * ⓘ পেছনের গোলে AuthController নেই, তাই সাইন-আউটের [clear] চলে না; আগে ৪০১-কে "নেট নেই" ধরা হত আর পুরনো অঙ্ক থেকে যেত।
+         * ⓘ কেবল যখন সেশন সত্যিই শেষ: ApiClient-এর নবায়নের পরেও ৪০১, আর টোকেন মুছে গেছে ([sessionGone])। নেট না থাকায়
+         * নবায়ন না হলে টোকেন থাকে — তখন মোছা নয়, পুরনো নথি "কখনকার হিসাব" নিয়ে থাকে।
+         */
+        if (error is DioException && error.response?.statusCode == 401 && await sessionGone()) {
+          if (current()) await clear();
+          return;
+        }
         server = _shut(error) ? WidgetSummary.none(clock()) : null;
         if (server == null) debugPrint('ABOS widget hub: summary not fetched ($error)');
       }
@@ -109,10 +157,14 @@ class WidgetHub {
       final show = await PhonePrivacy.widgetAmounts();
       if (!current()) return;
       await _quiet(() => save(amountsHiddenKey, show ? '0' : '1'), 'amounts');
+      // ⓘ পেছনের isolate-এ বাছাই আগে পড়া হয়নি — প্রতিবার ভাণ্ডার থেকে, যাতে ভুল করে "ফোনের মতো" না লেখে
+      await ThemeChoices.instance.load();
+      if (!current()) return;
+      await _quiet(() => save(themeKey, ThemeChoices.instance.current.value.name), 'theme');
 
       for (final kind in kinds()) {
         if (!current()) return;
-        await _one(kind, server, current);
+        await _one(kind, server, current, showAmounts: show);
       }
       if (!current()) return;
       await _quiet(refreshAll, 'refreshAll');
@@ -121,7 +173,8 @@ class WidgetHub {
     }
   }
 
-  static Future<void> _one(LauncherWidgetKind kind, WidgetSummary? server, bool Function() current) async {
+  static Future<void> _one(LauncherWidgetKind kind, WidgetSummary? server, bool Function() current,
+      {required bool showAmounts}) async {
     final key = kind.key;
     try {
       final local = kind.localSummary();
@@ -131,6 +184,8 @@ class WidgetHub {
         summary = local;
         asOf = clock();
       } else {
+        // ⓘ ফোনের-নিজের উইজেট এই মুহূর্তে কিছু জানে না — যেমন ছিল তেমন; সার্ভারে খুঁজে বন্ধ করা নয়
+        if (kind.answersLocally) return;
         // নেট নেই — এই উইজেট যেমন ছিল তেমন
         if (server == null) return;
         summary = server.widgets[key];
@@ -141,7 +196,7 @@ class WidgetHub {
         await _quiet(() => setEnabled(key, false), key);
         return;
       }
-      final doc = kind.build(summary, asOf: asOf).encode();
+      final doc = encodeFor(kind.build(summary, asOf: asOf), showAmounts: showAmounts);
       if (!current()) return;
       await _quiet(() => save(docKey(key), doc), key);
       await _quiet(() => setEnabled(key, true), key);
@@ -178,7 +233,8 @@ class WidgetHub {
     }
   }
 
-  /// দরজা এই মানুষের জন্য বন্ধ — কোনো সার্ভার-উইজেট নয়। ⓘ ৪০১ নয়: সেশন ফুরোলে সাইন-আউটই [clear] ডাকে
+  /// দরজা এই মানুষের জন্য বন্ধ — কোনো সার্ভার-উইজেট নয়। ⓘ ৪০১ এখানে নয়: সেশন সত্যিই শেষ হলে [_round] নিজেই [clear] ডাকে
+  /// (সামনে সাইন-আউটও ডাকে); নেট না থাকায় নবায়ন না হওয়া ৪০১ কিছুই মোছে না
   static bool _shut(Object error) {
     if (isNetworkError(error)) return false;
     if (isRouteAbsent(error)) return true;
@@ -191,6 +247,11 @@ class WidgetHub {
     } catch (error) {
       debugPrint('ABOS widget hub: $what not written ($error)');
     }
+  }
+
+  static Future<bool> _sessionGone() async {
+    final refresh = await TokenStorage.instance.refreshToken();
+    return refresh == null || refresh.isEmpty;
   }
 
   static Future<void> _save(String id, String? value) async {

@@ -69,4 +69,7 @@ object WidgetKeys {
     /** SharedPreferences (home_widget's own store, HomeWidgetPlugin.getData) — what Dart writes. */
     const val DOC_PREFIX = "doc_"
     const val AMOUNTS_HIDDEN = "widget_amounts_hidden"
+
+    /** মানুষের আলো/অন্ধকার বাছাই — "phone" (ফোনের মতো), "light", "dark" (অ্যাপের ThemeChoices) */
+    const val THEME = "widget_theme"
 }

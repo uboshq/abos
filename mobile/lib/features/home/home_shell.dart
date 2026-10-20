@@ -28,6 +28,7 @@ import '../../core/sync_engine/auto_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_palette.dart';
+import '../../core/theme/theme_choice.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
@@ -812,6 +813,8 @@ class _MoreTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ-তালার সময় — কতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN (অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬; [[LockDelay]])
         const _LockDelayTile(),
+        // ⭐ আলো বা অন্ধকার — মানুষের নিজের বাছাই (মালিকের আদেশ, ২০ অক্টোবর ২০২৬; [[ThemeChoices]])
+        const _ThemeTile(),
         const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ হালনাগাদ — হাতে যাচাই (মালিক, ৭ অক্টোবর ২০২৬)
         const AppUpdateTile(),
@@ -856,6 +859,44 @@ class _MoreTab extends ConsumerWidget {
     if (yes == true) {
       await ref.read(authStateProvider.notifier).logout();
     }
+  }
+}
+
+/// আলো বা অন্ধকার — তিন পছন্দ এক সারিতে (SegmentedButton); চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না
+class _ThemeTile extends StatelessWidget {
+  const _ThemeTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeChoice>(
+      valueListenable: ThemeChoices.instance.current,
+      builder: (context, choice, _) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Row(children: [
+              Icon(Icons.contrast),
+              SizedBox(width: AppSpacing.md),
+              Text('আলো বা অন্ধকার', style: TextStyle(fontWeight: FontWeight.w600)),
+            ]),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ThemeChoice>(
+                key: const ValueKey('me-theme'),
+                showSelectedIcon: false,
+                segments: [
+                  for (final c in ThemeChoice.values)
+                    ButtonSegment(value: c, label: Text(c.label, key: ValueKey('theme-${c.name}'))),
+                ],
+                selected: {choice},
+                onSelectionChanged: (picked) => ThemeChoices.instance.choose(picked.single),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
   }
 }
 

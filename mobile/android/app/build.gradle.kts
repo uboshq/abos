@@ -160,4 +160,8 @@ flutter {
 dependencies {
     // ⭐ Glance 1.1 — home_widget 0.7 brings 1.0.0; this lifts the whole app to the 1.1 line (widget kit, 20 Oct 2026)
     implementation("androidx.glance:glance-appwidget:1.1.1")
+    // ⓘ মানুষের আলো/অন্ধকার বাছাই উইজেটে চাপাতে — Material 3-এর স্থির রং-পরিবার (২০ অক্টোবর ২০২৬)
+    implementation("androidx.glance:glance-material3:1.1.1")
+    // ⓘ glance-material3 Material 3-এর রং-পরিবার (lightColorScheme, dynamic…) নিজে আনে না — compileOnly
+    implementation("androidx.compose.material3:material3:1.3.1")
 }

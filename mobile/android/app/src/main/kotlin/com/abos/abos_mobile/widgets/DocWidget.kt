@@ -12,7 +12,15 @@ import androidx.datastore.core.DataStore
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import android.os.Build
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.glance.GlanceTheme
+import androidx.glance.material3.ColorProviders
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -82,8 +90,21 @@ class DocWidget(private val key: String) : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            GlanceTheme {
-                Body(key, currentState())
+            val snapshot = currentState<DocSnapshot>()
+            // ⭐ মানুষের বাছাই — "ফোনের মতো" হলে ফোনের নিজের রং (Material You, দিন/রাত); "আলো" বা "অন্ধকার" হলে সেই
+            // পরিবারই, ফোন যা-ই বলুক (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
+            val forced = snapshot.theme.takeIf { it == "light" || it == "dark" }
+            val colors = when (forced) {
+                "light" -> fixedColors(context, dark = false)
+                "dark" -> fixedColors(context, dark = true)
+                else -> null
+            }
+            CompositionLocalProvider(LocalForcedTheme provides forced) {
+                if (colors == null) {
+                    GlanceTheme { Body(key, snapshot) }
+                } else {
+                    GlanceTheme(colors = colors) { Body(key, snapshot) }
+                }
             }
         }
     }
@@ -114,7 +135,7 @@ class DocWidget(private val key: String) : GlanceAppWidget() {
  * Deliberately no equals(): every read is a new value, so Glance recomposes on
  * every update even when the JSON is the same (the lock may have changed).
  */
-class DocSnapshot(val json: String?, val amountsHidden: Boolean, val locked: Boolean, val now: Long)
+class DocSnapshot(val json: String?, val amountsHidden: Boolean, val locked: Boolean, val now: Long, val theme: String? = null)
 
 /**
  * The snapshot comes straight from home_widget's SharedPreferences on every
@@ -142,6 +163,7 @@ class DocStateDefinition(private val key: String) : GlanceStateDefinition<DocSna
             amountsHidden = prefs.getString(WidgetKeys.AMOUNTS_HIDDEN, null) == "1",
             locked = LockWatch.locked(context),
             now = System.currentTimeMillis(),
+            theme = prefs.getString(WidgetKeys.THEME, null),
         )
     } catch (t: Throwable) {
         DocSnapshot(null, amountsHidden = true, locked = true, now = System.currentTimeMillis())
@@ -177,18 +199,40 @@ private fun openAction(context: Context, key: String, link: String?): Action =
 
 private data class Look(val stale: Boolean, val hide: Boolean, val now: Long = 0L, val wide: Boolean = false)
 
-private val GOOD = ColorProvider(day = Color(0xFF1B6E33), night = Color(0xFF86D99C))
-private val BAD = ColorProvider(day = Color(0xFFB3261E), night = Color(0xFFF2B8B5))
-private val WARN = ColorProvider(day = Color(0xFF835400), night = Color(0xFFFFC56B))
+/** "light" / "dark" যখন মানুষ বেছে নিয়েছেন; null মানে ফোনের মতো */
+private val LocalForcedTheme = staticCompositionLocalOf<String?> { null }
+
+/** একই পরিবার দিনে আর রাতে — বাছাই চাপানোর জন্য; Android 12+-এ ফোনের নিজের রং (Material You) */
+private fun fixedColors(context: android.content.Context, dark: Boolean) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val scheme = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    ColorProviders(light = scheme, dark = scheme)
+} else {
+    val scheme = if (dark) darkColorScheme() else lightColorScheme()
+    ColorProviders(light = scheme, dark = scheme)
+}
+
+private val GOOD_DAY = Color(0xFF1B6E33)
+private val GOOD_NIGHT = Color(0xFF86D99C)
+private val BAD_DAY = Color(0xFFB3261E)
+private val BAD_NIGHT = Color(0xFFF2B8B5)
+private val WARN_DAY = Color(0xFF835400)
+private val WARN_NIGHT = Color(0xFFFFC56B)
+
+@Composable
+private fun pair(day: Color, night: Color): ColorProvider = when (LocalForcedTheme.current) {
+    "light" -> ColorProvider(day)
+    "dark" -> ColorProvider(night)
+    else -> ColorProvider(day = day, night = night)
+}
 
 @Composable
 private fun toneColor(tone: Tone, look: Look): ColorProvider {
     if (look.stale) return GlanceTheme.colors.onSurfaceVariant
     return when (tone) {
         Tone.PLAIN -> GlanceTheme.colors.onSurface
-        Tone.GOOD -> GOOD
-        Tone.BAD -> BAD
-        Tone.WARN -> WARN
+        Tone.GOOD -> pair(GOOD_DAY, GOOD_NIGHT)
+        Tone.BAD -> pair(BAD_DAY, BAD_NIGHT)
+        Tone.WARN -> pair(WARN_DAY, WARN_NIGHT)
         Tone.MUTED -> GlanceTheme.colors.onSurfaceVariant
     }
 }

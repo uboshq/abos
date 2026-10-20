@@ -85,7 +85,8 @@ class OwnerBoardWidget extends LauncherWidgetKind {
         ),
     ];
 
-    int count(String k, String field) => switch (part(k)?[field]) {
+    // ⓘ সারাংশের নিজের গোনা (`count`) আগে — সারি কেবল প্রথম কয়েকটা (মজুদ সর্বোচ্চ ৩, ec-র ধরা); না থাকলে সারি গোনা
+    int count(String k, String field) => switch (part(k)?['count'] ?? part(k)?[field]) {
           final List<dynamic> l => l.length,
           final num v => v.toInt(),
           _ => 0,

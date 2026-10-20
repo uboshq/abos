@@ -25,7 +25,7 @@ void main() {
       'profit': {'month': '2026-10', 'gross': '1825400.00', 'margin': '13.4'},
       'expenses': {'month': '2026-10', 'total': '842600.00', 'rows': []},
       'cheques': {'total': '85000.00', 'rows': [{}, {}], 'link': '/finance/cheques'},
-      'stock_alerts': {'rows': [{}, {}, {}], 'link': '/inventory/stock'},
+      'stock_alerts': {'count': 14, 'rows': [{}, {}, {}], 'link': '/inventory/stock'},
       'challans_today': {'moving': 9, 'link': '/sales/challans'},
       'notices': {'unread': 4},
     },
@@ -47,7 +47,7 @@ void main() {
     expect(doc.bars.single.value!.text, '68%');
     expect(doc.bars.single.label.text, 'অক্টোবর-এর লক্ষ্য · বাকি 12 দিন');
 
-    expect([for (final a in doc.actions) a.label], ['7 সই', '2 চেক', '3 মজুদ কম', '9 চালান পথে', '4 নোটিশ']);
+    expect([for (final a in doc.actions) a.label], ['7 সই', '2 চেক', '14 মজুদ কম', '9 চালান পথে', '4 নোটিশ']);
     expect(doc.actions.first.link, '/home/approvals');
     expect(doc.actions[1].link, '/finance/cheques');
   });

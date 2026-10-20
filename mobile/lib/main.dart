@@ -23,11 +23,13 @@ import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
 import 'core/router/deep_links.dart';
+import 'core/startup/startup.dart';
 import 'core/sync_engine/auto_sync.dart';
 import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
 import 'core/sync_engine/sync_engine.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_choice.dart';
 import 'core/permissions/permission_rationale.dart';
 
 Future<void> main() async {
@@ -38,50 +40,60 @@ Future<void> main() async {
   // ⛔ পর্দা আড়াল দিয়ে শুরু — `/me` এলে তবে মালিকের সুইচ ([[PhonePrivacy]])
   unawaited(PhonePrivacy.secure(true));
 
-  // Order matters, and each step here is a hard dependency of the next:
+  // ⭐ শুরু দুই ভাগে ([[Startup]], ec, ১৯ অক্টোবর ২০২৬) — প্রথম ছবির আগে কেবল যা প্রথম পর্দার লাগে, ক্রমে:
   //  1. Hive's own path setup, before any box anywhere is opened.
   //  2. SyncEngine.init() / ReferenceCache.init() — see SyncEngine.init's own
   //     doc comment: nothing this does may throw, so a corrupt box degrades
   //     to "sync is off this run" rather than a blank screen on every launch
-  //     after.
-  //  3. BackgroundSync — registered unconditionally, signed in or not, same
-  //     reasoning as its own doc comment.
+  //     after. ⓘ The first screens read the reference cache synchronously, so
+  //     it cannot wait; one after the other, never together (one encryption key).
+  //  3. LockDelay — the app lock on the first screen reads it.
   //  4. AuthController.restoreSession() — needs TokenStorage (no init step
-  //     of its own) and SessionRepository (same), so it can run last.
-  await Hive.initFlutter();
-  await SyncEngine.instance.init();
-  await ReferenceCache.instance.init();
-  // ⭐ অ্যাপ-তালার সময় — মানুষের বাছাই ([[LockDelay]]); পড়া না গেলে ৫ মিনিট, কখনো ছোড়ে না
-  await LockDelay.instance.load();
-  await BackgroundSync.initialize();
-
+  //     of its own) and SessionRepository (same), so it can run last. No network.
+  // ⓘ প্রথম ফ্রেমের পরে: পটভূমির সিঙ্ক (WorkManager — আগের মতোই সবার জন্য, ঢুকে থাকুন বা না), Firebase আর বার্তার টোকেন,
+  // হোম-স্ক্রিনের উইজেট, আটকে থাকা ফ্রেমের খোঁজ আর জমা ক্র্যাশ পাঠানো।
   final authController = AuthController();
-  await authController.restoreSession();
-
-  // ⭐ অ্যাপ বন্ধ থাকলেও বার্তা (0.4.7) — Firebase না উঠলেও অ্যাপ চলে ([[PushService.init]])।
-  await PushService.instance.init();
-  if (authController.isSignedIn) {
-    unawaited(PushService.instance.register());
-  }
-
-  // A session that was restored rather than signed into never passed
-  // through login(), so the home-screen widgets are filled here. Not
-  // awaited: the app must not wait on a launcher tile to draw itself.
-  if (authController.isSignedIn) {
-    unawaited(LauncherWidgetRefresh.refresh());
-    // ⭐ নতুন উইজেটগুলো আর তাদের ৩০ মিনিটের কাজ — ফিরিয়ে আনা সেশনেও ([WidgetHub], [WidgetHubTask])
-    unawaited(WidgetHub.refresh());
-    unawaited(WidgetHubTask.start());
-  }
-
-  runApp(
-    ProviderScope(
-      overrides: [
-        authStateProvider.overrideWith((ref) => authController),
-      ],
-      child: const AbosApp(),
-    ),
-  );
+  await Startup(StartupSteps(
+    storage: Hive.initFlutter,
+    queue: SyncEngine.instance.init,
+    referenceCache: ReferenceCache.instance.init,
+    // ⭐ অ্যাপ-তালার সময় — মানুষের বাছাই ([[LockDelay]]); পড়া না গেলে ৫ মিনিট, কখনো ছোড়ে না
+    // ⓘ তালার সময় আর আলো/অন্ধকারের বাছাই — দুটোই কেবল ফোনের ভাণ্ডার, প্রথম ফ্রেমের আগে
+    lockDelay: () async {
+      await LockDelay.instance.load();
+      await ThemeChoices.instance.load();
+      ThemeChoices.onChanged = (_) => WidgetHub.refresh();
+    },
+    restoreSession: () async {
+      await authController.restoreSession();
+      return authController.isSignedIn;
+    },
+    backgroundSync: BackgroundSync.initialize,
+    // ⭐ অ্যাপ বন্ধ থাকলেও বার্তা (0.4.7) — Firebase না উঠলেও অ্যাপ চলে ([[PushService.init]])।
+    push: (signedIn) async {
+      await PushService.instance.init();
+      if (signedIn) unawaited(PushService.instance.register());
+    },
+    // A session that was restored rather than signed into never passed
+    // through login(), so the home-screen widgets are filled here.
+    // ⭐ নতুন উইজেটগুলো আর তাদের ৩০ মিনিটের কাজ — ফিরিয়ে আনা সেশনেও ([WidgetHub], [WidgetHubTask]); অপেক্ষা নয়
+    signedInExtras: () async {
+      await LauncherWidgetRefresh.refresh();
+      unawaited(WidgetHub.refresh());
+      unawaited(WidgetHubTask.start());
+    },
+    // ⭐ আটকে থাকা ফ্রেমের খোঁজ, আর আগের চালুর জমা ক্র্যাশ পাঠানো ([[CrashReporter.flush]])
+    afterFrame: () {
+      CrashReporter.instance.watchStalls();
+      // ⓘ আগের চালুর ANR আর নেটিভ ক্র্যাশ Android-এর খাতা থেকে, তারপর পাঠানো ([[CrashReporter.reportPastExits]])
+      unawaited(CrashReporter.instance.reportPastExits().then((_) => CrashReporter.instance.flush()));
+    },
+  )).boot((_) => ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith((ref) => authController),
+        ],
+        child: const AbosApp(),
+      ));
 }
 
 class AbosApp extends ConsumerStatefulWidget {
@@ -241,24 +253,28 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       _watched?.routerDelegate.removeListener(_noteScreen);
       _watched = router..routerDelegate.addListener(_noteScreen);
     }
-    return MaterialApp.router(
-      title: 'ABOS',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: AppTheme.mode,
-      /*
-       * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
-       * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
-       */
-      locale: AppLocale.locale,
-      supportedLocales: AppLocale.supported,
-      localizationsDelegates: AppLocale.delegates,
-      routerConfig: router,
-      builder: (context, child) => AppLockGate(
-        lock: _lock,
-        onSignOut: () => ref.read(authStateProvider.notifier).logout(),
-        child: child ?? const SizedBox.shrink(),
+    // ⭐ মানুষের আলো/অন্ধকার বাছাই — চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না ([ThemeChoices])
+    return ValueListenableBuilder<ThemeChoice>(
+      valueListenable: ThemeChoices.instance.current,
+      builder: (context, choice, _) => MaterialApp.router(
+        title: 'ABOS',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: choice.mode,
+        /*
+         * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
+         * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
+         */
+        locale: AppLocale.locale,
+        supportedLocales: AppLocale.supported,
+        localizationsDelegates: AppLocale.delegates,
+        routerConfig: router,
+        builder: (context, child) => AppLockGate(
+          lock: _lock,
+          onSignOut: () => ref.read(authStateProvider.notifier).logout(),
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

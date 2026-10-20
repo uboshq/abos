@@ -8,6 +8,7 @@ import 'package:abos_mobile/core/launcher_widgets/kinds/all_kinds.dart';
 import 'package:abos_mobile/core/launcher_widgets/kit/widget_doc.dart';
 import 'package:abos_mobile/core/launcher_widgets/kit/widget_kind.dart';
 import 'package:abos_mobile/core/privacy/phone_privacy.dart';
+import 'package:abos_mobile/core/theme/theme_choice.dart';
 import 'package:abos_mobile/main.dart' show widgetDestination;
 
 /// নকল উইজেট — সার্ভারের সারাংশের `n` শিরোনামে বসায়
@@ -151,6 +152,47 @@ void main() {
     expect(enabled['sales_today'], isFalse);
   });
 
+  /// ⭐ উইজেটও মানুষের আলো/অন্ধকার বাছাই মানে — পেছনের isolate-এও ভাণ্ডার থেকে পড়ে লেখে, "ফোনের মতো" ধরে নয়
+  test("the widgets carry the person's light or dark choice, read from storage even in the background", () async {
+    WidgetHub.kinds = () => const [];
+    WidgetHub.fetch = () async => WidgetSummary(asOf: now, widgets: const {});
+    ThemeChoices.instance = ThemeChoices(read: () async => 'dark', write: (_) async {});
+
+    await WidgetHub.refresh();
+
+    expect(saved['widget_theme'], 'dark');
+  });
+
+  /// ⛔ ফোনের-নিজের উইজেট (সিঙ্কের অবস্থা) পেছনের isolate-এ কিছু না জানলে বন্ধ হয় না — যেমন ছিল তেমন (a6-এর ধরা)
+  test('a phone-only widget that knows nothing yet is left as it was, not switched off', () async {
+    WidgetHub.kinds = () => const [_LocalOnly()];
+    WidgetHub.fetch = () async => WidgetSummary(asOf: now, widgets: const {});
+    saved['doc_sync_state'] = '{"v":1}';
+    enabled['sync_state'] = true;
+
+    await WidgetHub.refresh();
+
+    expect(saved['doc_sync_state'], '{"v":1}', reason: '⛔ ফোনের-নিজের উইজেটের নথি মুছে গেল');
+    expect(enabled['sync_state'], isTrue, reason: '⛔ ফোনের-নিজের উইজেট বন্ধ হয়ে গেল');
+  });
+
+  /// ⛔ সাইন-আউট দুই উইজেটের মাঝখানে এলে পরের উইজেট আর লেখা হয় না — আগের মানুষের অঙ্ক নতুন করে ফেরে না
+  test('a sign-out between two widgets stops the round: the next widget is not written', () async {
+    WidgetHub.kinds = () => const [_FakeKind('sales_today'), _FakeKind('approvals')];
+    WidgetHub.fetch = () async => WidgetSummary(asOf: now, widgets: const {'sales_today': {'n': 1}, 'approvals': {'n': 2}});
+    Future<void>? clearing;
+    WidgetHub.save = (id, value) async {
+      saved[id] = value;
+      if (id == 'doc_sales_today' && value != null) clearing ??= WidgetHub.clear();
+    };
+
+    await WidgetHub.refresh();
+    await clearing;
+
+    expect(saved['doc_approvals'], isNull, reason: '⛔ সাইন-আউটের পরে পরের উইজেটের নথি লেখা হলো');
+    expect(enabled['approvals'], isFalse);
+  });
+
   /// ⛔ মালিকের সুইচ বন্ধ (বা পড়া যায় না) → "1" = লুকাও; চালু → "0"
   test('amounts switch off → widget_amounts_hidden "1"', () async {
     WidgetHub.kinds = () => const [];
@@ -212,4 +254,11 @@ void main() {
     }
     expect(allKinds.map((k) => k.key).toSet().length, allKinds.length, reason: 'এক চাবি দুবার নয়');
   });
+}
+
+class _LocalOnly extends _FakeKind {
+  const _LocalOnly() : super('sync_state');
+
+  @override
+  bool get answersLocally => true;
 }
