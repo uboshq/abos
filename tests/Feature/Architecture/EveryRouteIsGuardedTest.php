@@ -310,6 +310,7 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.web-handoff' => 'নিজের জন্য অ্যাপের ভিতরে ওয়েব খোলার চাবি — ওয়েবে নিজের চেয়ে বেশি কিছু দেয় না (প্রতিটা পর্দা নিজের চাবি দেখে); কোম্পানির সুইচ, হ্যান্ডসেট, গন্তব্য আর দুই ধাপ নিয়ামকে; abilities:app চায় ([[WebHandoffApiController]])',
         'api.workspace' => 'নিজের কোম্পানি/শাখা বদল — ওয়েবের company.switch-এর মতো; সদস্যপদ ও শাখার নাগাল User::switchCompany() দেখে; abilities:app চায়',
         'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',
+        'api.widgets.summary' => 'ফোনের হোম-স্ক্রিন উইজেট — প্রতিটা উইজেট নিজের চাবি আর ফোনের মডিউল-সুইচ দেখে ([[WidgetSummaries::visibleTo()]]); চাবি না থাকলে উইজেটটাই উত্তরে নেই; কেবল পড়া; abilities:app চায় ([[WidgetSummaryController]])',
         'api.dashboard.index' => 'কেবল যে মডিউলের ড্যাশবোর্ড খোলার চাবি আছে আর ফোনে চালু ([[DashboardEngine::overall()]]); রুটে can: নেই',
         'api.dashboard.module' => 'চাবি মডিউলের নিজের মেনু-সারি থেকে, পদ্ধতিতে $this->authorize() — ওয়েবের ModuleDashboardController-এর হুবহু',
         'api.reports.index' => 'তালিকা প্রতিটা রিপোর্টের নিজের চাবি (ReportDefinition::permission) ধরে ছাঁকা; চাবিহীন রিপোর্ট আসেই না',

@@ -252,6 +252,8 @@ Route::prefix('v1')
          * ([[DashboardTodayController]])।
          */
         Route::get('/dashboard/today', DashboardTodayController::class)->name('dashboard.today');
+        // ⭐ ফোনের হোম-স্ক্রিন উইজেট — সব উইজেটের সারাংশ এক ডাকে, অনুমতি আর ফোন-সুইচ ধরে, etag সহ (পরিকল্পনা ৪, অংশ ৯)
+        Route::get('/widgets/summary', \App\Http\Controllers\Api\WidgetSummaryController::class)->name('widgets.summary');
 
         /*
          * ⭐ মডিউলের ড্যাশবোর্ড — মজুদ, বিক্রি, হিসাব … (মালিক, ৪ অক্টোবর ২০২৬; [[DashboardApiController]])। ওয়েবের একই

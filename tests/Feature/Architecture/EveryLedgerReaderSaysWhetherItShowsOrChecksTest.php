@@ -37,6 +37,9 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Services/AccountLedger.php' => 'খাতের খাতা আর ছকের জের — ওয়েব আর ফোনের একই সেবা, দেখার শাখা ধরে (ViewedBranch::one(); মালিক, ১৭ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Http/Controllers/AccountLedgerApiController.php' => 'ফোনের ছক আর খাতের খাতা — জের [[AccountLedger]] থেকে, দেখার শাখা ধরে (ViewedBranch::one())',
         'app/Modules/Accounts/Dashboard/AccountsWidgets.php' => 'ড্যাশবোর্ডের টাকার ঘর',
+        // ⭐ ফোনের উইজেট — ওয়েবের পাতার একই হিসাব, দেখার শাখায় (DataScope::inView; ২০ অক্টোবর ২০২৬)
+        'app/Modules/Accounts/Widgets/ExpensesSummary.php' => 'ফোনের উইজেট: এই মাসের খরচ, খাত ধরে — দেখার শাখায়',
+        'app/Modules/Accounts/Widgets/ProfitSummary.php' => 'ফোনের উইজেট: এই মাসের লাভ — দেখার শাখায়',
         'app/Modules/Customer/Support/CustomerListFilters.php' => 'গ্রাহক তালিকার বকেয়া ও অগ্রিমের ছাঁকনি — দেখার শাখা ধরে',
         'app/Modules/Customer/Http/Controllers/CustomerSummaryController.php' => 'গ্রাহকের সারাংশের বকেয়া — দেখার শাখা ধরে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৩)',
         'app/Modules/Accounts/Http/Controllers/CashTillController.php' => 'টিলের তালিকা আর জের',

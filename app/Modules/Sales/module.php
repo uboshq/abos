@@ -1922,4 +1922,15 @@ return [
         \App\Modules\Sales\Models\CreditDecision::class => 'append-only record of what the credit wall saw and said; never edited',
     ],
 
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — আজকের চালান (নকশা ৬), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    // ⭐ ফোনের হোম-স্ক্রিনে ৮ দ্রুত কাজ আর ৯ লক্ষ্য বনাম অর্জন (a6, ২০ অক্টোবর ২০২৬)
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট ([[WidgetSummaries]]; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
+    'phone_widgets' => [
+        \App\Modules\Sales\Widgets\ChallansTodaySummary::class,
+        \App\Modules\Sales\Widgets\QuickActionsSummary::class,
+        \App\Modules\Sales\Widgets\TargetSummary::class,
+        \App\Modules\Sales\Widgets\SrBoardSummary::class,
+        \App\Modules\Sales\Widgets\SalesTodaySummary::class,
+        \App\Modules\Sales\Widgets\CollectionsTodaySummary::class,
+    ],
 ];

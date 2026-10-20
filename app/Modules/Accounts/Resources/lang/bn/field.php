@@ -353,4 +353,6 @@ return [
     'inter_company_reverse' => 'দুই পাশ উল্টান',
     'inter_company_reverse_reason' => 'কারণ',
     'inter_company_reversed' => 'উল্টানো হয়েছে',
+    // ⭐ ফোনের খরচের উইজেট — বড় চারটার পরের খাতগুলো এক সারিতে
+    'widget_other_heads' => 'বাকি সব',
 ];
