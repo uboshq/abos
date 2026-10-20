@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ কাগজ তোলা — গ্যালারি থেকে এক বা একাধিক ছবি, বা ক্যামেরায় স্ক্যান; নাম, ফোল্ডার, ধরন, গোপনীয়তা, শাখা (মালিক, ১৭ অক্টোবর
 /// ২০২৬: *"direct webpage app e bujajayna"*)।
@@ -167,7 +168,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     final s = _setup;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.scan ? 'ক্যামেরায় স্ক্যান' : 'কাগজ তোলা')),
+      appBar: AbosScreenBar(title: widget.scan ? 'ক্যামেরায় স্ক্যান' : 'কাগজ তোলা'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

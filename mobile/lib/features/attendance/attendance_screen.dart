@@ -7,6 +7,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// Marking your own day present — docs/Contract §৭.
 ///
@@ -115,7 +116,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ..sort((a, b) => (b.workDate ?? '').compareTo(a.workDate ?? ''));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('হাজিরা')),
+      appBar: const AbosScreenBar(title: 'হাজিরা'),
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),

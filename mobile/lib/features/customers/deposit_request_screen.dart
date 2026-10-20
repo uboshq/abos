@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// দোকানির জমার বিজ্ঞপ্তি, ব্যাংক স্লিপের ছবিসহ (0.4.3; নাম ৭ অক্টোবর ২০২৬)।
 ///
@@ -204,7 +205,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   Widget _screen(BuildContext context) {
     final customer = CustomerRecord.byId(widget.customerId);
     return Scaffold(
-      appBar: AppBar(title: const Text('জমার বিজ্ঞপ্তি')),
+      appBar: const AbosScreenBar(title: 'জমার বিজ্ঞপ্তি'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

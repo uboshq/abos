@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ হিসাবের ছক, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta mobile app style e zate bujazay"*।
 ///
@@ -62,7 +63,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
     final searching = _search.text.trim().isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('হিসাবের ছক')),
+      appBar: const AbosScreenBar(title: 'হিসাবের ছক'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -164,7 +165,7 @@ class _AccountLedgerScreenState extends State<AccountLedgerScreen> {
     final p = _page;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.name)),
+      appBar: AbosScreenBar(title: widget.name),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

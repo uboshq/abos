@@ -8,6 +8,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ প্রিন্সিপালের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
 ///
@@ -74,7 +75,7 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('প্রিন্সিপাল')),
+        appBar: const AbosScreenBar(title: 'প্রিন্সিপাল'),
         body: RefreshIndicator(
           onRefresh: _load,
           child: ListView(
@@ -186,7 +187,7 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
   Widget build(BuildContext context) {
     final p = _principal;
     return Scaffold(
-      appBar: AppBar(title: Text(p?.name ?? 'প্রিন্সিপাল')),
+      appBar: AbosScreenBar(title: p?.name ?? 'প্রিন্সিপাল'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

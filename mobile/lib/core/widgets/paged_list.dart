@@ -5,6 +5,7 @@ import '../theme/app_spacing.dart';
 import 'empty_state.dart';
 import 'state_views.dart';
 import '../../features/books/books_widgets.dart';
+import '../navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ এক পাতা করে আনা তালিকা — টেনে নবায়ন, খালি অবস্থা, বাংলায় ভুল, আর "আরও দেখুন"; অর্থ, ডকুমেন্টস আর বেতনের স্লিপের
 /// তালিকা একই ছাঁচে (১৩ অক্টোবর ২০২৬)।
@@ -167,9 +168,8 @@ class _PaperPageState<T> extends State<PaperPage<T>> {
   Widget build(BuildContext context) {
     final paper = _paper;
     return Scaffold(
-      appBar: AppBar(
-          title: Text(paper == null || widget.titleOf == null ? widget.title : widget.titleOf!(paper),
-              overflow: TextOverflow.ellipsis)),
+      appBar: AbosScreenBar(
+          title: paper == null || widget.titleOf == null ? widget.title : widget.titleOf!(paper)),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

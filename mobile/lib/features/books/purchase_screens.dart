@@ -8,6 +8,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ ক্রয়ের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
 ///
@@ -120,7 +121,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
   Widget build(BuildContext context) {
     final page = _page;
     return Scaffold(
-      appBar: AppBar(title: const Text('ক্রয়')),
+      appBar: const AbosScreenBar(title: 'ক্রয়'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -244,9 +245,9 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
   Widget build(BuildContext context) {
     final d = _detail;
     return Scaffold(
-      appBar: AppBar(
-          title: Text(d?.row.no ??
-              (widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ')),
+      appBar: AbosScreenBar(
+          title: d?.row.no ??
+              (widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ'),
           actions: [
             // ⭐ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬); দাম ঢাকা-না-ঢাকা সার্ভারের কাগজই ঠিক করে
             if (d != null)

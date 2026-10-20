@@ -5,10 +5,10 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import 'customer_list_screen.dart' show isLargeText;
-import '../../core/widgets/customer_line.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ দোকানের খাতা, সহজ করে — মালিক, ১২ অক্টোবর ২০২৬: *"app e customer list e Customar ledger zate dekha zay sohoze
 /// bujarmoto mobile vew sohoz kore koro"*।
@@ -107,7 +107,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: CustomerLine(head?.name ?? 'খাতা')),
+      appBar: AbosScreenBar(title: head?.name ?? 'খাতা'),
       body: RefreshIndicator(
         onRefresh: () => _load(),
         child: ListView(
