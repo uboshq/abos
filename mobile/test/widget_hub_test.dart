@@ -151,6 +151,23 @@ void main() {
     expect(enabled['sales_today'], isFalse);
   });
 
+  /// ⛔ সাইন-আউট দুই উইজেটের মাঝখানে এলে পরের উইজেট আর লেখা হয় না — আগের মানুষের অঙ্ক নতুন করে ফেরে না
+  test('a sign-out between two widgets stops the round: the next widget is not written', () async {
+    WidgetHub.kinds = () => const [_FakeKind('sales_today'), _FakeKind('approvals')];
+    WidgetHub.fetch = () async => WidgetSummary(asOf: now, widgets: const {'sales_today': {'n': 1}, 'approvals': {'n': 2}});
+    Future<void>? clearing;
+    WidgetHub.save = (id, value) async {
+      saved[id] = value;
+      if (id == 'doc_sales_today' && value != null) clearing ??= WidgetHub.clear();
+    };
+
+    await WidgetHub.refresh();
+    await clearing;
+
+    expect(saved['doc_approvals'], isNull, reason: '⛔ সাইন-আউটের পরে পরের উইজেটের নথি লেখা হলো');
+    expect(enabled['approvals'], isFalse);
+  });
+
   /// ⛔ মালিকের সুইচ বন্ধ (বা পড়া যায় না) → "1" = লুকাও; চালু → "0"
   test('amounts switch off → widget_amounts_hidden "1"', () async {
     WidgetHub.kinds = () => const [];
