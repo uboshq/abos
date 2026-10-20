@@ -112,9 +112,15 @@ final class TheStockAlertWidgetShowsTheLowestShareFirstTest extends TestCase
         $far = Warehouse::query()->create(['branch_id' => $other->id, 'code' => 'W5-FAR', 'name_en' => 'Far store', 'is_active' => true]);
         $this->probe('W5-Z', 'Far away low', '1000', '1', $far);
 
+        /*
+         * ⓘ পণ্যটা এই শাখাতেও বিক্রি হয়, আর এখানে তার একটাও নেই — তাই এখানেও সীমার নিচে, ০ নিয়ে (ওয়েবের "পুনঃক্রয়ের নিচে"-র
+         * একই প্রশ্ন, [[StockFacts::belowReorder()]])। দেয়াল যা আটকায়: দূরের গুদামের ১টা এই শাখার "আছে"-তে গোনা।
+         */
         $this->narrowTo($this->home);
         $rows = $this->summary($this->owner)->json('widgets.stock_alerts.rows');
-        $this->assertNotContains('Far away low', array_column($rows, 'product'), '⛔ অন্য শাখার গুদামের মাল এই শাখার উইজেটে।');
+        $far = collect($rows)->firstWhere('product', 'Far away low');
+        $this->assertNotNull($far, 'প্রস্তুতিটাই ভুল — এই শাখায় শূন্য, সীমা ১০০০, তবু সারি নেই');
+        $this->assertSame('0', $far['available'], '⛔ অন্য শাখার গুদামের মাল এই শাখার উইজেটে গোনা হলো।');
 
         $this->narrowTo($other);
         $rows = $this->summary($this->owner)->json('widgets.stock_alerts.rows');

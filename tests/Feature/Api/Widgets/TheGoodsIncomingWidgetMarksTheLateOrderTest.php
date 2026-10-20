@@ -95,6 +95,18 @@ final class TheGoodsIncomingWidgetMarksTheLateOrderTest extends TestCase
         $this->assertSame('/purchase/orders/'.$friday->id, $widget['rows'][2]['link']);
     }
 
+    public function test_an_order_due_today_is_this_weeks_and_not_yet_late(): void
+    {
+        $today = Carbon::today()->toDateString();
+        $this->order('PO-TODAY', $today, '1000.00');
+
+        $widget = $this->widget($this->owner);
+        $this->assertSame(['PO-TODAY'], array_column($widget['rows'], 'no'), 'প্রস্তুতিটাই ভুল — আজকের আদেশটা আসেনি');
+        $this->assertSame($today, $widget['rows'][0]['expected']);
+        $this->assertFalse($widget['rows'][0]['late'], '⛔ আজ আসার কথা, দিন শেষ হয়নি — তবু "দেরি" দাগ পড়ল।');
+        $this->assertSame(0, $widget['late'], '⛔ আজকের আদেশ দেরির গোনায়।');
+    }
+
     public function test_the_amount_needs_the_cost_key_and_the_widget_needs_the_order_key(): void
     {
         $this->order('PO-0215', '2026-10-22', '680000.00');
