@@ -52,7 +52,8 @@ final class TheNoticesWidgetShowsOnlyMyNewestNoticesTest extends TestCase
             $this->{$who} = $user;
         }
 
-        WidgetSummaries::$testing = [NoticesSummary::class];
+        // ⓘ নকল তালিকা নয় — দরজা মডিউলের নিজের ঘোষণা (`phone_widgets`) থেকেই পায়
+        WidgetSummaries::$testing = [];
     }
 
     protected function tearDown(): void

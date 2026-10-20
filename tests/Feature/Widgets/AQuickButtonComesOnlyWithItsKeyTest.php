@@ -43,7 +43,8 @@ final class AQuickButtonComesOnlyWithItsKeyTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
-        WidgetSummaries::$testing = [QuickActionsSummary::class];
+        // ⓘ নকল তালিকা নয় — দরজা মডিউলের নিজের ঘোষণা (`phone_widgets`) থেকেই পায়
+        WidgetSummaries::$testing = [];
     }
 
     protected function tearDown(): void

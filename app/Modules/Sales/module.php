@@ -1922,4 +1922,10 @@ return [
         \App\Modules\Sales\Models\CreditDecision::class => 'append-only record of what the credit wall saw and said; never edited',
     ],
 
+    // ⭐ ফোনের হোম-স্ক্রিনে ৮ দ্রুত কাজ আর ৯ লক্ষ্য বনাম অর্জন (a6, ২০ অক্টোবর ২০২৬)
+    'phone_widgets' => [
+        \App\Modules\Sales\Widgets\QuickActionsSummary::class,
+        \App\Modules\Sales\Widgets\TargetSummary::class,
+    ],
+
 ];

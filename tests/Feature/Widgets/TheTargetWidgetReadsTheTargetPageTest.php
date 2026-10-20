@@ -96,7 +96,8 @@ final class TheTargetWidgetReadsTheTargetPageTest extends TestCase
 
         app(SalesTargetService::class)->setForMonth($this->month, [$this->sales->id => '50000', $this->other->id => '90000']);
 
-        WidgetSummaries::$testing = [TargetSummary::class];
+        // ⓘ নকল তালিকা নয় — দরজা মডিউলের নিজের ঘোষণা (`phone_widgets`) থেকেই পায়
+        WidgetSummaries::$testing = [];
     }
 
     protected function tearDown(): void

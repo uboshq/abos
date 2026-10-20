@@ -84,7 +84,8 @@ final class MyAttendanceWidgetShowsOnlyMyOwnDaysTest extends TestCase
         $leave = app(LeaveService::class);
         $leave->approve($leave->apply($this->workerFile, $this->type, '2026-10-05', '2026-10-05', '1'), $this->owner);
 
-        WidgetSummaries::$testing = [AttendanceSummary::class];
+        // ⓘ নকল তালিকা নয় — দরজা মডিউলের নিজের ঘোষণা (`phone_widgets`) থেকেই পায়
+        WidgetSummaries::$testing = [];
     }
 
     protected function tearDown(): void
