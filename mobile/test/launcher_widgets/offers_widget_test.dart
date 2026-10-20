@@ -64,6 +64,13 @@ void main() {
     final none = w.build({'count': 0, 'rows': [], 'link': '/offers'}, asOf: asOf);
     expect(none.empty, isNotNull);
     expect(none.more, isNull);
+    expect(none.corner, isNull);
+  });
+
+  test('the count sits in the head\'s corner ("চালু 5"), and there is no big figure', () {
+    final doc = w.build(full(), asOf: asOf);
+    expect(doc.corner!.text, 'চালু 5');
+    expect(doc.hero, isNull);
   });
 
   test('a missing ends_on or product does not throw and draws nothing for it; unknown fields ignored', () {

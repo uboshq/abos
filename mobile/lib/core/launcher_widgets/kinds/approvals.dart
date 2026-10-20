@@ -6,7 +6,7 @@ import 'summary_reader.dart';
 /// ⛔ সই উইজেটে নয়।
 ///
 /// <p>সারাংশ (`widgets.approvals`): `count`, `rows[]` (`party.label` · `kind_label` · `number` · `amount` · `link`), `link`।
-///  - বড় অঙ্ক: কতটা কাগজ অপেক্ষায় (`count`) — নকশার কোণের "7";
+///  - মাথার কোণে: কতটা কাগজ অপেক্ষায় (`count`) — "7"; বড় অঙ্ক নেই;
 ///  - সারি: পক্ষ (নাম · পয়েন্ট · শাখা, সার্ভারের লেখা), নিচে "বিক্রি ফেরত SR-0212", ডানে টাকা;
 ///  - খালি: "কোনো সই বাকি নেই"; `count` সারির চেয়ে বেশি: "আরও Nটা"।
 class ApprovalsWidget extends LauncherWidgetKind {
@@ -42,7 +42,8 @@ class ApprovalsWidget extends LauncherWidgetKind {
       title: 'আপনার সইয়ের অপেক্ষায়',
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
-      hero: count == null || count == 0 ? null : WidgetHero(WidgetText('$count')),
+      // নকশা: মাথার কোণে কতটা ("7"); বড় অঙ্ক নেই, তালিকা মাথার ঠিক নিচে
+      corner: count == null || count == 0 ? null : WidgetText('$count'),
       rows: rows,
       empty: rows.isEmpty && (count ?? 0) == 0 ? 'কোনো সই বাকি নেই' : null,
       more: SummaryReader.more(count, rows.length),

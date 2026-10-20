@@ -48,10 +48,11 @@ void main() {
     });
   });
 
-  test('the hero is the total as hideable money', () {
-    final hero = w.build(full(), asOf: asOf).hero!;
-    expect(hero.figure.text, '৳62,18,400.00');
-    expect(hero.figure.secret, isTrue);
+  test('the total sits in the head\'s corner as hideable money ("মোট ৳…"), and there is no big figure', () {
+    final doc = w.build(full(), asOf: asOf);
+    expect(doc.corner!.text, 'মোট ৳62,18,400.00');
+    expect(doc.corner!.secret, isTrue);
+    expect(doc.hero, isNull);
   });
 
   test('an overdue row: amount in bad tone and "বাকির ৪৫ দিন পার"; not overdue: plain, no line', () {
@@ -85,7 +86,7 @@ void main() {
   test('nothing owed reads empty; an absent total or balance draws no ৳', () {
     final doc = w.build({'rows': [], 'link': '/dues'}, asOf: asOf);
     expect(doc.empty, 'কারো কাছে বাকি নেই');
-    expect(doc.hero, isNull);
+    expect(doc.corner, isNull);
     final noBalance = w.build({
       'rows': [
         {'customer': customer('A', 'B', 'C')}

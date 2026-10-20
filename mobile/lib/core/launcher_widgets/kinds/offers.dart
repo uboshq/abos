@@ -6,7 +6,7 @@ import 'summary_reader.dart';
 /// মালিকের সই না পাওয়া অফার সার্ভারই পাঠায় না।
 ///
 /// <p>সারাংশ (`widgets.offers`): `count`, `rows[]` (`title` · `product` · `scope` · `ends_on` · `link`), `link`।
-///  - বড় অঙ্ক: কতটা চালু (`count`) — নকশার কোণের "চালু 3";
+///  - মাথার কোণে: "চালু 3" (`count`); বড় অঙ্ক নেই;
 ///  - সারি: অফারের নাম, নিচে "পণ্য · সীমা", পাশে "শেষ: ২ দিন পর" (দুই দিনের মধ্যে, কমলা) বা "শেষ: ৩১ অক্টোবর"।
 class OffersWidget extends LauncherWidgetKind {
   const OffersWidget();
@@ -41,7 +41,8 @@ class OffersWidget extends LauncherWidgetKind {
       title: 'চলতি অফার আর স্কিম',
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
-      hero: count == null || count == 0 ? null : WidgetHero(WidgetText('$count'), caption: const WidgetText('চালু')),
+      // নকশা: মাথার কোণে "চালু 3"; বড় অঙ্ক নেই
+      corner: count == null || count == 0 ? null : WidgetText('চালু $count'),
       rows: rows,
       empty: rows.isEmpty && (count ?? 0) == 0 ? 'এখন কোনো চালু অফার নেই' : null,
       more: SummaryReader.more(count, rows.length),

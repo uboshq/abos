@@ -36,6 +36,11 @@ void main() {
     expect(doc.link, '/sales/invoices?period=today');
   });
 
+  test('the head\'s corner is the counting time on Dhaka\'s clock ("১০:৪২"), not the phone\'s', () {
+    expect(w.build(full(), asOf: asOf).corner!.text, '১০:৪২');
+    expect(w.build(full(), asOf: DateTime.utc(2026, 10, 19, 18, 5)).corner!.text, '০০:০৫');
+  });
+
   test('a rise reads ▲ in good tone, a fall ▼ in bad tone', () {
     final up = w.build(full(), asOf: asOf).hero!.caption!;
     expect(up.text, '▲ গতকালের চেয়ে 12% বেশি');

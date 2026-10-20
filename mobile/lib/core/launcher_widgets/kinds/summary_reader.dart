@@ -96,6 +96,13 @@ class SummaryReader {
     return DateTime.utc(y, mo, d);
   }
 
+  /// সার্ভারের হিসাবের সময়, ঢাকার ঘড়িতে (UTC+6), ২৪ ঘণ্টায় — "১০:৪২" (নকশার কোণ)
+  static String dhakaClock(DateTime asOf) {
+    final t = asOf.toUtc().add(const Duration(hours: 6));
+    String two(int n) => bnDigits(n).padLeft(2, '০');
+    return '${two(t.hour)}:${two(t.minute)}';
+  }
+
   /// সার্ভারের হিসাবের দিন, ঢাকার ঘড়িতে (UTC+6) — ফোনের নিজের সময়-অঞ্চল নয়, তাই খাঁটি
   static DateTime dhakaDay(DateTime asOf) {
     final local = asOf.toUtc().add(const Duration(hours: 6));

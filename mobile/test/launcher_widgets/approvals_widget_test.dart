@@ -53,8 +53,15 @@ void main() {
   test('count above the rows gives "more"; count equal gives none', () {
     final doc = w.build(full(), asOf: asOf);
     expect(doc.more, 'আরও 5টা');
-    expect(doc.hero!.figure.text, '7');
     expect(w.build(full()..['count'] = 2, asOf: asOf).more, isNull);
+  });
+
+  test('the count sits in the head\'s corner ("7"), and there is no big figure', () {
+    final doc = w.build(full(), asOf: asOf);
+    expect(doc.corner!.text, '7');
+    expect(doc.hero, isNull);
+    expect(w.build({'count': 0, 'rows': []}, asOf: asOf).corner, isNull);
+    expect(w.build({'rows': []}, asOf: asOf).corner, isNull);
   });
 
   test('an empty list reads "কোনো সই বাকি নেই"', () {

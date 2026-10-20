@@ -57,8 +57,9 @@ class SrBoardWidget extends LauncherWidgetKind {
     final branch = SummaryReader.text(summary['branch_label']);
 
     return WidgetDoc(
-      // ⓘ ভিত্তিতে মাথার ডান কোণের ঘর নেই — "শাখা: সব" তাই মাথার লেখায়
-      title: 'আজ সবচেয়ে বেশি বিক্রি — বিক্রয়কর্মী${branch == null ? '' : ' · শাখা: $branch'}',
+      title: 'আজ সবচেয়ে বেশি বিক্রি — বিক্রয়কর্মী',
+      // নকশা: মাথার কোণে "শাখা: সব"
+      corner: branch == null ? null : WidgetText('শাখা: $branch'),
       asOf: asOf,
       link: link,
       rows: rows,

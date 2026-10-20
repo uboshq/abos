@@ -31,7 +31,8 @@ void main() {
     expect(doc.rows.first.title.text, '1 Md. Kawser · SL-Super Group');
     expect(doc.rows.first.amount!.text, '৳1,42,500.00');
     expect(doc.rows.first.amount!.secret, isTrue);
-    expect(doc.title, contains('শাখা: সব'));
+    expect(doc.corner!.text, 'শাখা: সব');
+    expect(doc.title, isNot(contains('শাখা')));
     expect(doc.link, '/reports/sales.by_salesman?period=today');
   });
 
@@ -42,6 +43,7 @@ void main() {
     expect(doc.rows.single.title.text, 'আজ আপনি 3 নম্বরে');
     expect(doc.rows.single.amount!.text, '৳96,000.00');
     expect(doc.rows.single.amount!.secret, isTrue);
+    expect(doc.corner, isNull);
   });
 
   test('⛔ with self present, another person\'s figure never shows, even if rows slip in', () {

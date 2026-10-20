@@ -6,7 +6,7 @@ import 'summary_reader.dart';
 /// ⭐ ৪ · সবচেয়ে বড় বকেয়া (৪×২; নকশা ১৯ অক্টোবর ২০২৬) — চাপলে সেই গ্রাহকের খাতা। SR শুধু নিজের ডিলার (সার্ভার ছাঁকে)।
 ///
 /// <p>সারাংশ (`widgets.big_dues`): `total`, `rows[]` (`customer.label` · `balance` · `overdue_days` · `link`), `link`।
-///  - বড় অঙ্ক: মোট বকেয়া;
+///  - মাথার কোণে: "মোট ৳62,18,400.00" (টাকা); বড় অঙ্ক নেই;
 ///  - সারি: গ্রাহক (নাম · পয়েন্ট · শাখা), ডানে বাকি; বাকির দিন পার হলে নিচে "বাকির ৪৫ দিন পার" আর অঙ্ক লাল;
 ///  - ⛔ ঋণাত্মক বাকি = অগ্রিম: "(Cr) ৳68.43", বিয়োগ চিহ্ন ছাড়া, নিচে "অগ্রিম জমা আছে"।
 class BigDuesWidget extends LauncherWidgetKind {
@@ -48,13 +48,14 @@ class BigDuesWidget extends LauncherWidgetKind {
         link: SummaryReader.link(r['link']),
       ));
     }
-    final total = SummaryReader.money(summary['total']);
+    final total = SummaryReader.decimal(summary['total']);
 
     return WidgetDoc(
       title: 'সবচেয়ে বড় বকেয়া',
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
-      hero: total == null ? null : WidgetHero(total, caption: const WidgetText('মোট বকেয়া')),
+      // নকশা: মাথার কোণে "মোট ৳…" (টাকা, গোপন-যোগ্য); বড় অঙ্ক নেই
+      corner: total == null ? null : WidgetText.money('মোট ${Money.taka(total)}'),
       rows: rows,
       empty: rows.isEmpty ? 'কারো কাছে বাকি নেই' : null,
     );
