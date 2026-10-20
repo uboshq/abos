@@ -49,6 +49,7 @@ use Illuminate\Support\Carbon;
  *   approvals    approval.decide
  *   money        accounts.till.view  ⭐ ওয়েবের "হাতে ও ব্যাংকে মোট" — নগদ · MFS · ব্যাংক · পথে (৬ অক্টোবর ২০২৬)
  *   inflow       accounts.view       ⭐ আজ যত টাকা ঢুকল, স্থানান্তর বাদ
+ *   outflow      accounts.view       ⭐ আজ যত টাকা গেল, স্থানান্তর বাদ (২০ অক্টোবর ২০২৬)
  *   payable      accounts.view       ⭐ সব দায় + হাতধারে আমাদের দেনা (হাতধারের ভাগ কেবল finance.hand_loan.view-এ)
  *   principals   supplier.report     ⭐ প্রিন্সিপালের কমিশন — শতাংশ, দেওয়া, বাকি
  *
@@ -119,6 +120,11 @@ class DashboardTodayController extends Controller
                 'mfs' => $mfs,
                 'bank' => $bank,
                 'transit' => self::money(AccountsWidgets::inTransit()),
+                // ⭐ MFS-এ চাপলে প্রতিটা খাত (বিকাশ, নগদ …) আর তার জের — যোগফল ঠিক `mfs` (২০ অক্টোবর ২০২৬)
+                'mfsAccounts' => array_map(
+                    fn (array $row) => ['name' => $row['name'], 'balance' => self::money($row['balance'])],
+                    AccountsWidgets::mfsAccounts(),
+                ),
             ];
         }
 
@@ -126,7 +132,10 @@ class DashboardTodayController extends Controller
             $facts = app(AccountsFacts::class);
 
             // ⭐ আজকের ইনফ্লো — আজ যত টাকা ঢুকল, নগদ-ব্যাংক-MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ৬ অক্টোবর ২০২৬)
-            $body['inflow'] = ['amount' => self::money($facts->moneyFlowBetween($today, $today)['in'])];
+            $flow = $facts->moneyFlowBetween($today, $today);
+            $body['inflow'] = ['amount' => self::money($flow['in'])];
+            // ⭐ আজ যত টাকা গেল — একই খাত, একই নিয়ম, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ২০ অক্টোবর ২০২৬: হোমে "আজ গেছে")
+            $body['outflow'] = ['amount' => self::money($flow['out'])];
 
             /*
              * ⭐ Payable — "যাকেই আমার পেমেন্ট করতে হবে" (মালিক, ৬ অক্টোবর ২০২৬): দায়ের গোটা দল (সরবরাহকারী, ভাড়া, ভ্যাট,
