@@ -103,6 +103,23 @@ android {
             }
         }
     }
+
+    /*
+     * ⭐ x86_64 বাদ — APK ৮৬.৫ MB থেকে প্রায় ৫৬ MB (অ্যাপ রিলিজ নিরীক্ষা, ec, ২০ অক্টোবর ২০২৬)।
+     * universal APK-তে তিনটা ABI ছিল, আর x86_64-এর অংশই ~৩০ MB (libflutter ১৩, libapp ১১.৩, ML Kit-এর barhopper ৫.৯)।
+     * x86_64 কেবল এমুলেটর আর কিছু Chromebook-এ লাগে; দোকানের আর মাঠের সব ফোন ARM (arm64-v8a বা armeabi-v7a)।
+     *
+     * ⛔ abiFilters দিয়ে নয়: Flutter-এর প্লাগইন afterEvaluate-এ ওটা মুছে নিজের তিনটা বসায় (FlutterPlugin.kt,
+     * configureAbiWithoutSplits)। packaging-এর বাদ-তালিকা প্যাকেজ বানানোর সময় খাটে, তাই কেউ মোছে না।
+     * ⛔ --split-per-abi নয়: versionCode-এ ১০০০×ABI যোগ হয়, আর তারপর universal আর বসে না (উপরের versionCode মন্তব্য)।
+     * ⓘ একটাই APK, একটাই versionCode, একটাই SHA-256 — সার্ভার আর আপডেট বোতাম যেমন ছিল তেমন।
+     * test/android_build_config_test.dart এটা ধরে রাখে।
+     */
+    packaging {
+        jniLibs {
+            excludes += setOf("lib/x86_64/**")
+        }
+    }
 }
 
 /*
