@@ -1,5 +1,6 @@
 import '../kit/widget_kind.dart';
 
+import 'attendance.dart';
 import 'bank_reconcile.dart';
 import 'challans_today.dart';
 import 'cheques.dart';
@@ -7,9 +8,13 @@ import 'credit_limits.dart';
 import 'expenses.dart';
 import 'goods_incoming.dart';
 import 'money_in_hand.dart';
+import 'notices.dart';
 import 'owner_board.dart';
 import 'profit.dart';
+import 'quick_actions.dart';
 import 'stock_alerts.dart';
+import 'sync_state.dart';
+import 'target.dart';
 
 /// ⭐ হোম-স্ক্রিনের সব উইজেটের চাবি — এই ক্রমেই (পরিকল্পনা ৪, অংশ ৯; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
 ///
@@ -64,5 +69,10 @@ final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   const StockAlertsWidget(), // stock_alerts (ec)
   const ChallansTodayWidget(), // challans_today (ec)
   const GoodsIncomingWidget(), // goods_incoming (ec)
+  const NoticesWidget(), // notices — a6
+  const QuickActionsWidget(), // quick_actions — a6
+  const TargetWidget(), // target — a6
+  const SyncStateWidget(), // sync_state — a6, ফোনের নিজের সারাংশ
+  const AttendanceWidget(), // attendance — a6
   const OwnerBoardWidget(),
 ];

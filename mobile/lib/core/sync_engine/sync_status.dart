@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
+import 'sync_engine.dart';
+
 /// ⭐ সিঙ্কের সৎ অবস্থা — শেষ সফল সিঙ্ক কখন, এখন চলছে কি না, শেষটা ব্যর্থ কি না, পুরনো কি না, নেট আছে কি না
 /// (মালিক ১০ অক্টোবর "ক", রিয়েল-টাইম সিঙ্ক; a4-এর পরিকল্পনা সংস্করণ ২ §৪.১ ধাপ ৫; Core App Quality: সৎ অবস্থা দেখানো)।
 ///
 /// <p>ⓘ পর্দা নয়, অবস্থা — নামগুলো a4-এর সাথে ঠিক করা (`lastOkAt`, `running`, `failed`, `stale`, `offline`): মাথার
 /// "শেষ সিঙ্ক" ([LastSyncLabel]-কে a4 বসায় আর রং দেয়) আর অফলাইনের পট্টি (a4-এর `OfflineBanner`) এটাই পড়ে।
 class SyncStatus extends ChangeNotifier {
-  SyncStatus({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  SyncStatus({DateTime Function()? clock, int Function()? pending})
+      : _clock = clock ?? DateTime.now,
+        _pending = pending ?? (() => SyncEngine.instance.pendingCount);
 
   static final SyncStatus instance = SyncStatus();
 
@@ -18,10 +22,17 @@ class SyncStatus extends ChangeNotifier {
 
   final DateTime Function() _clock;
 
+  /// জমা কাজ — সার্ভারে না-যাওয়া সারি ([SyncEngine.pendingCount]; বাক্স না খুললে 0)। পরীক্ষায় নিজের গোনা
+  final int Function() _pending;
+
   DateTime? _lastOkAt;
   bool _running = false;
   bool _failed = false;
   bool _offline = false;
+
+  /// এই isolate নিজে সিঙ্ক দেখেছে বা নেট শুনছে — অ্যাপের isolate। ⛔ পেছনের isolate-এ (৩০ মিনিটের WorkManager) নতুন
+  /// [SyncStatus] কিছুই জানে না; তখন "এখনো সিঙ্ক হয়নি" লিখলে সঠিক উইজেটটা মিথ্যায় ঢাকা পড়ত।
+  bool _live = false;
   StreamSubscription<List<ConnectivityResult>>? _net;
 
   /// শেষ সফল সিঙ্ক — null মানে এই চালুতে এখনো হয়নি
@@ -40,8 +51,30 @@ class SyncStatus extends ChangeNotifier {
   /// ফোনে নেট নেই (ফোনের নিজের কথা — সার্ভারে পৌঁছানোর নিশ্চয়তা নয়; সেটা [failed])
   bool get offline => _offline;
 
+  /// ⭐ ঘরের পর্দার "সিঙ্কের অবস্থা" উইজেটের সারাংশ — সার্ভারে নয়, ফোনেরই কথা ([SyncStateWidget.localSummary];
+  /// a6, ২০ অক্টোবর ২০২৬)। ⓘ কেবল পড়া: কিছু বদলায় না, কাউকে ডাকে না।
+  /// ⛔ null — এই isolate কিছু জানে না (পেছনের isolate): উইজেট যেমন আছে তেমন থাকে। জমা কাজ গোনা ভাঙলে 0।
+  Map<String, dynamic>? widgetSummary() {
+    if (!_live) return null;
+    int pending;
+    try {
+      pending = _pending();
+    } catch (_) {
+      pending = 0;
+    }
+    return {
+      'lastOkAt': _lastOkAt?.toUtc().toIso8601String(),
+      'running': _running,
+      'failed': _failed,
+      'stale': stale,
+      'offline': _offline,
+      'pending': pending,
+    };
+  }
+
   /// নেটের খবর শোনা — অ্যাপ শুরুতে একবার
   void watchNetwork({Stream<List<ConnectivityResult>>? changes}) {
+    _live = true;
     if (_net != null) return;
     try {
       _net = (changes ?? Connectivity().onConnectivityChanged).listen((results) {
@@ -58,6 +91,7 @@ class SyncStatus extends ChangeNotifier {
 
   /// একটা গোল ঘিরে — শুরু, তারপর সফল বা ব্যর্থ
   Future<T> track<T>(Future<T> Function() round) async {
+    _live = true;
     _running = true;
     notifyListeners();
     try {
@@ -76,6 +110,7 @@ class SyncStatus extends ChangeNotifier {
 
   @visibleForTesting
   void reset() {
+    _live = false;
     _lastOkAt = null;
     _running = false;
     _failed = false;
@@ -112,15 +147,24 @@ class LastSyncLabel extends StatelessWidget {
     if (s.offline) return 'নেট নেই — কাজ জমা থাকছে';
     final last = s.lastOkAt;
     if (last == null) return s.failed ? 'সিঙ্ক হয়নি — টেনে আবার চেষ্টা করুন' : 'এখনো সিঙ্ক হয়নি';
-    final ago = now.difference(last);
-    final when = ago.inSeconds < 60
+    return 'শেষ সিঙ্ক: ${ago(last, now)}${s.failed ? ' · শেষবার ব্যর্থ' : ''}';
+  }
+
+  /// ⭐ "এইমাত্র" · "২ মিনিট আগে" · "৩ ঘণ্টা আগে" · "৫ দিন আগে" — খাঁটি, [now] দেওয়া হয় (উইজেটের নোটিশ আর সিঙ্কও এটা পড়ে;
+  /// a6, ২০ অক্টোবর ২০২৬)
+  ///
+  /// <p>ⓘ [englishDigits] — হোম-স্ক্রিনের উইজেটে সব সংখ্যা ইংরেজি অঙ্কে ("2 মিনিট আগে"; a4-র সাথে ঠিক করা, ২০ অক্টোবর
+  /// ২০২৬); অ্যাপের নিজের পর্দায় যেমন ছিল তেমন বাংলা অঙ্ক।
+  static String ago(DateTime then, DateTime now, {bool englishDigits = false}) {
+    final d = now.difference(then);
+    String n(int v) => englishDigits ? '$v' : _bn(v);
+    return d.inSeconds < 60
         ? 'এইমাত্র'
-        : ago.inMinutes < 60
-            ? '${_bn(ago.inMinutes)} মিনিট আগে'
-            : ago.inHours < 24
-                ? '${_bn(ago.inHours)} ঘণ্টা আগে'
-                : '${_bn(ago.inDays)} দিন আগে';
-    return 'শেষ সিঙ্ক: $when${s.failed ? ' · শেষবার ব্যর্থ' : ''}';
+        : d.inMinutes < 60
+            ? '${n(d.inMinutes)} মিনিট আগে'
+            : d.inHours < 24
+                ? '${n(d.inHours)} ঘণ্টা আগে'
+                : '${n(d.inDays)} দিন আগে';
   }
 
   static String _bn(int n) => n.toString().split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join();
