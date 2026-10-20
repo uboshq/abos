@@ -22,9 +22,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 /**
  * অনুমোদন — প্ল্যান সেকশন ২.২, তৃতীয় engine।
@@ -47,13 +50,19 @@ final class ApprovalEngine
     private ?array $flowCache = null;
 
     /**
-     * ⛔ ছক বদলের পালা — ছক, ধাপ বা শর্ত বসলে/বদলালে/মুছলে বাড়ে ([[flowsChanged()]]); জমানো ছক পুরনো পালার হলে আবার তোলা হয়।
-     * ⓘ আগে জমানোটা প্রথম প্রশ্নেই আটকে যেত: একই প্রক্রিয়ায় পরে বসানো ছক ইঞ্জিন দেখতই না, আর কাগজ সই ছাড়াই চলে যেত।
-     * গ্রাহক তৈরি এখন দিনের সই চালু কি না জিজ্ঞেস করে (গ্যাপ ২৬), তাই ছক বসানোর আগেই জমানোটা ভরে থাকে (২১ অক্টোবর ২০২৬)।
+     * ⛔ ছক বদলের পালা — অ্যাপের ডিফল্ট ক্যাশে, তাই **প্রতিটা প্রক্রিয়া** একই পালা দেখে (ওয়েব, কিউ-কর্মী, কমান্ড; লাইভে file,
+     * পরীক্ষায় array)। ছক, ধাপ বা শর্ত বসলে/বদলালে/মুছলে নতুন পালা লেখা হয় ([[flowsChanged()]]); প্রতিটা প্রশ্নে একটা ক্যাশ-পড়া,
+     * আর জমানো ছক অন্য পালার হলে আবার তোলা হয়। ⓘ আগে জমানোটা প্রথম প্রশ্নেই আটকে যেত: পরে বসানো ছক ইঞ্জিন দেখতই না, আর
+     * কাগজ সই ছাড়াই চলে যেত — গ্রাহক তৈরি এখন দিনের সই চালু কি না জিজ্ঞেস করে (গ্যাপ ২৬), তাই ছক বসানোর আগেই জমানোটা ভরে
+     * থাকে (২১ অক্টোবর ২০২৬)। ⓘ পালাটা এলোমেলো লেখা, গোনা নয় — database স্টোরে না-থাকা চাবি বাড়ানো যায় না, আর সমান-না-সমান
+     * দেখাই যথেষ্ট (ক্যাশ মুছলেও "অন্য পালা", তাই আবার তোলা)।
      */
-    private static int $flowsVersion = 0;
+    public const FLOWS_VERSION_KEY = 'approval:flows:version';
 
-    private int $flowCacheVersion = -1;
+    private ?string $flowCacheVersion = null;
+
+    /** ⓘ জমানো ছক কোন কোম্পানির — সিডার আর কমান্ড প্রক্রিয়ার মাঝে কোম্পানি বদলায়, অন্যের ছক চলবে না */
+    private ?int $flowCacheCompany = null;
 
     /**
      * ইনার রোলের আইডিগুলো — ব্যবহারকারী ধরে, একবার।
@@ -1418,11 +1427,16 @@ final class ApprovalEngine
      */
     private function flows(): array
     {
-        if ($this->flowCache !== null && $this->flowCacheVersion === self::$flowsVersion) {
+        // ⓘ পালা আগে পড়া, ছক পরে — তোলার মাঝে বদল হলে পরের প্রশ্নে আবার তোলা হয়
+        $version = self::flowsVersion();
+        $company = CompanyContext::id();
+
+        if ($this->flowCache !== null && $this->flowCacheVersion === $version && $this->flowCacheCompany === $company) {
             return $this->flowCache;
         }
 
-        $this->flowCacheVersion = self::$flowsVersion;
+        $this->flowCacheVersion = $version;
+        $this->flowCacheCompany = $company;
 
         $flows = [];
 
@@ -1458,10 +1472,35 @@ final class ApprovalEngine
      * কাজ করত না (MySQL-এ NULL ≠ NULL), আর একই কাজে দুইটা ছক বসে যেত:
      * একটা চলত, অন্যটা নীরবে মরে থাকত (V-মাইগ্রেশন ১১ আগস্ট)।
      */
-    /** ⓘ ছক, ধাপ বা শর্তের মডেল বসলে/মুছলে ডাকে — পরের প্রশ্নে ছকগুলো নতুন করে তোলা হয় ([[flows()]]) */
+    /**
+     * ⓘ ছক, ধাপ বা শর্ত বদলালে — মডেলের ঘটনা নিজে ডাকে; মডেল এড়িয়ে লেখা পথ (কোয়েরি-মোছা, DB::table) লেখার পরে ডাকে।
+     * নতুন পালা এখনই, আর লেনদেন পাকা হলে আবার: পাকা হওয়ার আগে অন্য প্রক্রিয়া পুরনো ছক তুলে নতুন পালায় জমালে সেটাও ফেরে।
+     * ⛔ ক্যাশে লেখা না গেলে জানানো হয় (report) — কাজ থামে না।
+     */
     public static function flowsChanged(): void
     {
-        self::$flowsVersion++;
+        $bump = static function (): void {
+            try {
+                Cache::forever(self::FLOWS_VERSION_KEY, (string) Str::uuid());
+            } catch (Throwable $e) {
+                report($e);
+            }
+        };
+
+        $bump();
+        DB::afterCommit($bump);
+    }
+
+    /** ⓘ ক্যাশ পড়া না গেলে প্রতিবার নতুন পালা — অর্থাৎ প্রতিবার তোলা: ধীর, কিন্তু কখনো পুরনো ছক নয় */
+    private static function flowsVersion(): string
+    {
+        try {
+            return (string) Cache::get(self::FLOWS_VERSION_KEY, '');
+        } catch (Throwable $e) {
+            report($e);
+
+            return (string) Str::uuid();
+        }
     }
 
     private function flowFor(string $module, string $action, ?string $documentType): ?ApprovalFlow
