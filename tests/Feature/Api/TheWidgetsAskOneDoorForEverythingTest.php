@@ -37,7 +37,7 @@ final class TheWidgetsAskOneDoorForEverythingTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        WidgetSummaries::$testing = [ProbeSales::class, ProbeNobody::class];
+        WidgetSummaries::$testing = [ProbeSales::class, ProbeNobody::class, ProbeEveryone::class];
     }
 
     protected function tearDown(): void
@@ -51,6 +51,7 @@ final class TheWidgetsAskOneDoorForEverythingTest extends TestCase
         $widgets = $this->phone()->getJson('/api/v1/widgets/summary')->assertOk()->json('widgets');
         $this->assertSame(['figure' => '125000.00'], $widgets['probe_sales'] ?? null, 'প্রস্তুতিটাই ভুল — মালিক বিক্রি দেখতে পারেন।');
         $this->assertArrayNotHasKey('probe_nobody', $widgets, '⛔ চাবি ছাড়াই উইজেটের তথ্য গেল।');
+        $this->assertSame(['unread' => 2], $widgets['probe_everyone'] ?? null, 'চাবি-ছাড়া উইজেট (null) সাইন-ইন করা সবার');
 
         $this->switch('sales', false);
         $widgets = $this->phone()->getJson('/api/v1/widgets/summary')->assertOk()->json('widgets');
@@ -144,5 +145,28 @@ final class ProbeNobody implements WidgetSummary
     public function data(User $user): array
     {
         return ['secret' => 'x'];
+    }
+}
+
+final class ProbeEveryone implements WidgetSummary
+{
+    public function key(): string
+    {
+        return 'probe_everyone';
+    }
+
+    public function module(): string
+    {
+        return 'sales';
+    }
+
+    public function permission(): ?string
+    {
+        return null;
+    }
+
+    public function data(User $user): array
+    {
+        return ['unread' => 2];
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Core\Services\PhoneModules;
 use App\Core\Widgets\WidgetSummaries;
 use App\Core\Widgets\WidgetSummary;
 use App\Http\Controllers\Controller;
@@ -28,19 +27,16 @@ use Illuminate\Http\Response;
  */
 class WidgetSummaryController extends Controller
 {
-    public function __invoke(Request $request, PhoneModules $phone): JsonResponse|Response
+    public function __invoke(Request $request): JsonResponse|Response
     {
         /** @var User $user */
         $user = $request->user();
 
         $asked = array_filter(array_map('trim', explode(',', (string) $request->query('keys', ''))));
         $widgets = [];
-        foreach (WidgetSummaries::all() as $key => $summary) {
+        foreach (WidgetSummaries::visibleTo($user) as $key => $summary) {
             /** @var WidgetSummary $summary */
             if ($asked !== [] && ! in_array($key, $asked, true)) {
-                continue;
-            }
-            if (! $phone->isOn($summary->module()) || ! $user->can($summary->permission())) {
                 continue;
             }
             $widgets[$key] = $summary->data($user);
