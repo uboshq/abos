@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
+import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
+import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/design_list_row.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
+import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 import 'collect_screen.dart';
@@ -23,13 +27,21 @@ class MoneyInListScreen extends StatefulWidget {
       {super.key,
       this.api = const ServerBooksApi(),
       this.today,
-      this.canCollect = false});
+      this.canCollect = false,
+      this.dues,
+      this.unsent});
 
   final BooksApi api;
   final DateTime? today;
 
   /// ⭐ অফিসের লোক — "নতুন আদায়" বোতাম (`/me`-র `mayCollect`, ৭ অক্টোবর ২০২৬)
   final bool canCollect;
+
+  /// ⭐ দোকানের বকেয়া (০.৪.৪১ নমুনা) — ফোনে রাখা বকেয়া থেকে ([shopDuesInCache]); টেস্ট নিজের সারি দেয়
+  final List<ShopDue> Function()? dues;
+
+  /// ফোনে আটকে থাকা আদায় ([unsentCollections]); টেস্ট নিজের সারি দেয়
+  final List<UnsentCollection> Function()? unsent;
 
   @override
   State<MoneyInListScreen> createState() => _MoneyInListScreenState();
@@ -96,6 +108,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     final page = _page;
     // ⭐ এই পাতা = এ পর্যন্ত আনা সারি; সর্বমোট = সার্ভারের গোটা ছাঁকনির `count` আর `total` (নকশা ৩, পাতা ৩)
     final shownSum = _rows.fold<double>(0, (sum, r) => sum + r.amount);
+    final unsent = (widget.unsent ?? unsentCollections)();
     return Scaffold(
       appBar: AppBar(title: const Text('টাকা আদায়')),
       floatingActionButton: widget.canCollect
@@ -112,7 +125,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          // ⓘ নিচে ৯৬dp ফাঁকা — "＋ নতুন আদায়" বোতাম শেষ সারি ঢাকে না (০.৪.৪১ নমুনা)
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 96),
           children: [
             DateRangeBar(
               from: _from,
@@ -158,6 +172,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                 ),
             ]),
             // ⭐ তিন অবস্থা (নকশা ৩, পাতা ৮–১০): প্রথম আনায় খসড়া সারি, পরে উপরে সরু দাগ; ভুলে "আবার চেষ্টা করুন"; খালিতে কাজের বোতাম
+            const SizedBox(height: AppSpacing.sm),
             if (_busy && page == null) const LoadingSkeleton(),
             if (_busy && page != null) const LinearProgressIndicator(),
             if (_error != null)
@@ -183,29 +198,115 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                         icon: const Icon(Icons.refresh),
                         label: const Text('নতুন করে দেখুন')),
               ),
-            for (final row in _rows)
-              DesignListRow(
-                key: ValueKey('money-in-${row.no}'),
-                icon: Icons.south_west,
-                tone: context.palette.success,
-                name: row.customer.isEmpty ? '—' : row.customer,
-                // ⓘ দ্বিতীয় লাইনে নম্বর · তারিখ · পদ্ধতি — তালিকা কেবল পাকা আদায়ের (সার্ভার POSTED ছাঁকে), তাই আলাদা অবস্থার চিপ নেই
-                second: '${row.no} · ${dayOf(row.date)} · ${MoneyInRow.methodLabel(row.method)}',
-                amount: row.amount,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => MoneyInScreen(id: row.id, api: widget.api))),
+            // ⭐ ০.৪.৪১ নমুনা (a4: বাঁয়ে নম্বর · পক্ষ, ডানে টাকা আর চিপ) — এক কার্ডে; ফোনে আটকে থাকা আদায় আগে, "পাঠানো বাকি"
+            if (_rows.isNotEmpty || unsent.isNotEmpty)
+              HomeSectionCard(
+                key: const ValueKey('money-in-rows'),
+                title: _isToday ? 'আজকের আদায়' : 'আদায়',
+                children: [
+                  for (final (i, u) in unsent.indexed)
+                    PaperRow(
+                      key: ValueKey('money-in-unsent-$i'),
+                      no: '',
+                      party: u.party,
+                      amount: u.amount,
+                      chip: const AppStatusChip.compact(state: PaperState.unsent),
+                    ),
+                  for (final row in _rows)
+                    PaperRow(
+                      key: ValueKey('money-in-${row.no}'),
+                      no: row.no,
+                      party: row.customer.isEmpty ? '—' : row.customer,
+                      detail: _isToday
+                          ? MoneyInRow.methodLabel(row.method)
+                          : '${dayOf(row.date)} · ${MoneyInRow.methodLabel(row.method)}',
+                      amount: row.amount,
+                      // ⓘ তালিকা কেবল পাকা আদায়ের (সার্ভার POSTED ছাঁকে) — তাই "পাকা"
+                      chip: const AppStatusChip.compact(state: PaperState.posted),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                          builder: (_) => MoneyInScreen(id: row.id, api: widget.api))),
+                    ),
+                ],
               ),
             if (page?.nextPage != null)
               MoreButton(busy: _busy, onPressed: () => _load(more: true)),
+            const SizedBox(height: AppSpacing.sm),
+            ShopDuesCard(dues: (widget.dues ?? shopDuesInCache)()),
           ],
         ),
       ),
     );
   }
 
+  bool get _isToday {
+    final now = widget.today ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _from == today && _to == today;
+  }
+
   Future<void> _collect() async {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CollectScreen(books: widget.api)));
     if (mounted) await _load();
+  }
+}
+
+/// ফোনে রাখা, এখনো না-পাঠানো একটা আদায়।
+class UnsentCollection {
+  const UnsentCollection(this.party, this.amount);
+
+  final String party;
+  final double? amount;
+}
+
+/// সিঙ্কের সারিতে আটকে থাকা আদায় — ⓘ আজ আদায় কেবল নেটে যায় ([SyncEngine.pushNow], মালিকের নিয়ম "নেট না থাকলে শুধু
+/// অর্ডার"), তাই এটা সাধারণত খালি; সারিতে কিছু থাকলে সেটা লুকানো হয় না, "পাঠানো বাকি" চিপে দেখায়। সার্ভারের মোটে নেই।
+List<UnsentCollection> unsentCollections() => [
+      for (final p in SyncEngine.instance.pendingPayloadsOf('Collection'))
+        UnsentCollection(CustomerRecord.byId((p['customerId'] ?? '').toString())?.label ?? '—', Money.value(p['amount'])),
+    ];
+
+/// একটা দোকানের বকেয়া — নাম আগেই "নাম · পয়েন্ট · শাখা" ([CustomerRecord.label])।
+class ShopDue {
+  const ShopDue(this.label, this.amount);
+
+  final String label;
+  final double amount;
+}
+
+/// ফোনে রাখা বকেয়া — দেখা শাখার, শূন্যের বেশি, বড়টা আগে (বকেয়া তালিকার একই নিয়ম)। SR-এর ফোনে কেবল তাঁর ডিলার — সার্ভারের দেয়াল।
+List<ShopDue> shopDuesInCache() => [
+      for (final c in CustomerRecord.all())
+        if (CustomerDueRecord.forCustomer(c.id) case final d? when d.outstandingInView > 0) ShopDue(c.label, d.outstandingInView),
+    ]..sort((a, b) => b.amount.compareTo(a.amount));
+
+/// ⭐ দোকানের বকেয়া (০.৪.৪১ নমুনা): প্রথম [shown]টা দোকান, নিচে সব দোকানের মোট। কোনো বকেয়া না থাকলে কার্ড নেই।
+class ShopDuesCard extends StatelessWidget {
+  const ShopDuesCard({super.key, required this.dues, this.shown = 5});
+
+  final List<ShopDue> dues;
+  final int shown;
+
+  @override
+  Widget build(BuildContext context) {
+    if (dues.isEmpty) return const SizedBox.shrink();
+    final rest = dues.length - shown;
+    return HomeSectionCard(
+      key: const ValueKey('shop-dues'),
+      title: 'দোকানের বকেয়া',
+      children: [
+        for (final d in dues.take(shown)) AmountLine(label: d.label, amount: d.amount, labelIsName: true),
+        if (rest > 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text('আরও $restটি দোকান', style: TextStyle(fontSize: 12.5, color: context.palette.onSurfaceMuted)),
+          ),
+        AmountLine(
+            key: const ValueKey('shop-dues-total'),
+            label: 'মোট · ${dues.length}টি দোকান',
+            amount: sumOf(dues.map((d) => d.amount)),
+            total: true),
+      ],
+    );
   }
 }
 

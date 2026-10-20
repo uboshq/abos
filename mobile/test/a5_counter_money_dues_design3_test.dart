@@ -176,6 +176,23 @@ void _expectRow(WidgetTester tester, Key rowKey, String name, String numberStart
   expect(tester.getSize(row).height, greaterThanOrEqualTo(72), reason: 'সারি অন্তত ৭২dp');
 }
 
+/// ০.৪.৪১-এর কাগজের সারি: প্রথম লাইনে "নম্বর · নাম", নিচে বাকি "পয়েন্ট · শাখা", ডানে চিপ; সারি অন্তত ৫৬dp
+void _expectPaperRow(WidgetTester tester, Key rowKey, String label, String no) {
+  final row = find.byKey(rowKey);
+  expect(row, findsOneWidget);
+  final at = label.indexOf(' · ');
+  final line = find.descendant(of: row, matching: find.byType(CustomerLine));
+  expect(tester.widget<CustomerLine>(line).text, '$no · ${at < 0 ? label : label.substring(0, at)}');
+  if (at >= 0) {
+    final place = find.descendant(of: row, matching: find.textContaining(label.substring(at + 3)));
+    expect(place, findsOneWidget, reason: '⛔ পয়েন্ট · শাখা বাদ নয়');
+    expect(tester.getTopLeft(place).dy, greaterThan(tester.getTopLeft(line).dy));
+  }
+  final chip = find.descendant(of: row, matching: find.byType(AppStatusChip));
+  expect(tester.getRect(chip).left, greaterThan(tester.getRect(line).left), reason: 'চিপ ডানে');
+  expect(tester.getSize(row).height, greaterThanOrEqualTo(56));
+}
+
 void main() {
   late HiveTestHarness harness;
 
@@ -206,8 +223,10 @@ void main() {
         wait.complete(_full);
         await tester.pumpAndSettle();
         expect(find.byType(LoadingSkeleton), findsNothing);
-        _expectRow(tester, const ValueKey('money-in-RV-2610-0142'), _label, 'RV-2610-0142');
-        _expectRow(tester, const ValueKey('money-in-RV-2610-0141'), 'করিম স্টোর · ফুলপুর · $_branch', 'RV-2610-0141');
+        // ⭐ ০.৪.৪১ (মালিকের অনুমোদিত পুরো-পাতার নমুনা, ২০ অক্টোবর ২০২৬; a4): আদায়ের সারি এখন বাঁয়ে "নম্বর · নাম", নিচে
+        // "পয়েন্ট · শাখা", ডানে টাকা আর a6-এর চিপ — নকশা ৩-এর "নাম আগে, নম্বর দ্বিতীয় লাইনে" এই পাতায় আর নয়
+        _expectPaperRow(tester, const ValueKey('money-in-RV-2610-0142'), _label, 'RV-2610-0142');
+        _expectPaperRow(tester, const ValueKey('money-in-RV-2610-0141'), 'করিম স্টোর · ফুলপুর · $_branch', 'RV-2610-0141');
         expect(find.text('৳48,500.00'), findsOneWidget, reason: 'টাকা ডানে, Money.taka');
 
         final bar = tester.widget<TotalsBar>(find.byType(TotalsBar));

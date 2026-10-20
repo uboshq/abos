@@ -174,8 +174,11 @@ void main() {
     expect(find.text('৳4,000.00'), findsNWidgets(2),
         reason: 'মোট সার্ভারের গোটা ছাঁকনির');
     expect(find.text('সর্বমোট · 2টি'), findsOneWidget);
-    expect(find.textContaining('RCV-0001 · 05/10/2026 · চেক'), findsOneWidget);
-    expect(find.textContaining('RCV-0002 · 06/10/2026 · নগদ'), findsOneWidget);
+    // ⓘ ০.৪.৪১ নমুনা: প্রথম লাইনে "নম্বর · নাম", নিচে তারিখ · পদ্ধতি
+    expect(find.text('RCV-0001 · করিম ট্রেডার্স'), findsOneWidget);
+    expect(find.textContaining('05/10/2026 · চেক'), findsOneWidget);
+    expect(find.text('RCV-0002 · রহিম স্টোর'), findsOneWidget);
+    expect(find.textContaining('06/10/2026 · নগদ'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('method-cash')));
     await tester.pumpAndSettle();
