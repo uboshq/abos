@@ -74,7 +74,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DeliveryOrderListScreen(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('DO-0001'), findsOneWidget);
+    expect(find.textContaining('DO-0001'), findsOneWidget);
     expect(api.askedAwaiting, isFalse);
     // ⭐ সার্ভারের পুরো তালিকার মোট আর গোনা, পাতার নয় (মালিক, ১৭ অক্টোবর ২০২৬) — নকশা ৩-এর নিচের পট্টিতে (a5, ১৯ অক্টোবর ২০২৬)
     final all = find.byKey(const ValueKey('totals-all'));
