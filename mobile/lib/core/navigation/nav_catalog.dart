@@ -144,8 +144,10 @@ class NavCatalog {
 
   /// The order the tiles stand in — the owner's mockup (skin 1, picture 2).
   static const List<NavModuleDef> modules = [
-    NavModuleDef('sales', 'বিক্রি', Icons.shopping_cart_outlined,
-        ['বিক্রয়', 'sales', 'sale']),
+    // ⓘ ওয়েবের মডিউলের একই নাম ("বিক্রয়", Sales lang/bn/route.php) আর মালিকের অনুমোদিত নমুনার — বারের "› বিক্রয় › …"
+    // আর মডিউলের ঘর এক নামে (a5, ২০ অক্টোবর ২০২৬); "বিক্রি" খোঁজায় থাকে
+    NavModuleDef('sales', 'বিক্রয়', Icons.shopping_cart_outlined,
+        ['বিক্রি', 'sales', 'sale']),
     NavModuleDef('purchase', 'ক্রয়', Icons.archive_outlined,
         ['কেনা', 'purchase']),
     NavModuleDef('inventory', 'মজুদ', Icons.view_in_ar_outlined,
