@@ -68,7 +68,6 @@ final class OffersSummary implements WidgetSummary
         $names = $this->scopeNames(collect($shown)->map(fn (array $row) => $signed[$row['id']])->all());
 
         return [
-            'as_of' => now()->toIso8601String(),
             'count' => count($rows),
             'rows' => array_map(function (array $row) use ($signed, $names): array {
                 $offer = $signed[$row['id']];

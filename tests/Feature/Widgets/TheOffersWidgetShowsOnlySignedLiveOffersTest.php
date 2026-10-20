@@ -79,7 +79,7 @@ final class TheOffersWidgetShowsOnlySignedLiveOffersTest extends TestCase
         $this->assertNull($row['scope']);
         $this->assertSame(Carbon::today()->addWeek()->toDateString(), $row['ends_on']);
         $this->assertSame('/promotions', $widget['link']);
-        $this->assertNotEmpty($widget['as_of']);
+        $this->assertArrayNotHasKey('as_of', $widget, '⛔ সময় উইজেটের ভিতরে — দরজার ETag প্রতিবার বদলায়, 304 কখনো আসে না (দরজার asOf-ই যথেষ্ট)।');
     }
 
     public function test_soonest_end_first_at_most_eight_and_the_count_is_all_of_them(): void
