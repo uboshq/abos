@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Engines\Approval\ApprovalEngine;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,6 +48,13 @@ class ApprovalCondition extends Model
     public const OPERATORS = ['>', '>=', '<', '<=', '=', '!=', 'in'];
 
     protected $fillable = ['company_id', 'approval_flow_id', 'field', 'operator', 'value'];
+
+    /** ⛔ ইঞ্জিনের জমানো ছক পুরনো হয় — যে পথেই সারি বদলাক ([[ApprovalEngine::flowsChanged()]]) */
+    protected static function booted(): void
+    {
+        static::saved(fn () => ApprovalEngine::flowsChanged());
+        static::deleted(fn () => ApprovalEngine::flowsChanged());
+    }
 
     public function flow(): BelongsTo
     {

@@ -47,6 +47,15 @@ final class ApprovalEngine
     private ?array $flowCache = null;
 
     /**
+     * ⛔ ছক বদলের পালা — ছক, ধাপ বা শর্ত বসলে/বদলালে/মুছলে বাড়ে ([[flowsChanged()]]); জমানো ছক পুরনো পালার হলে আবার তোলা হয়।
+     * ⓘ আগে জমানোটা প্রথম প্রশ্নেই আটকে যেত: একই প্রক্রিয়ায় পরে বসানো ছক ইঞ্জিন দেখতই না, আর কাগজ সই ছাড়াই চলে যেত।
+     * গ্রাহক তৈরি এখন দিনের সই চালু কি না জিজ্ঞেস করে (গ্যাপ ২৬), তাই ছক বসানোর আগেই জমানোটা ভরে থাকে (২১ অক্টোবর ২০২৬)।
+     */
+    private static int $flowsVersion = 0;
+
+    private int $flowCacheVersion = -1;
+
+    /**
      * ইনার রোলের আইডিগুলো — ব্যবহারকারী ধরে, একবার।
      *
      * @var array<int, list<int>>
@@ -1409,9 +1418,11 @@ final class ApprovalEngine
      */
     private function flows(): array
     {
-        if ($this->flowCache !== null) {
+        if ($this->flowCache !== null && $this->flowCacheVersion === self::$flowsVersion) {
             return $this->flowCache;
         }
+
+        $this->flowCacheVersion = self::$flowsVersion;
 
         $flows = [];
 
@@ -1447,6 +1458,12 @@ final class ApprovalEngine
      * কাজ করত না (MySQL-এ NULL ≠ NULL), আর একই কাজে দুইটা ছক বসে যেত:
      * একটা চলত, অন্যটা নীরবে মরে থাকত (V-মাইগ্রেশন ১১ আগস্ট)।
      */
+    /** ⓘ ছক, ধাপ বা শর্তের মডেল বসলে/মুছলে ডাকে — পরের প্রশ্নে ছকগুলো নতুন করে তোলা হয় ([[flows()]]) */
+    public static function flowsChanged(): void
+    {
+        self::$flowsVersion++;
+    }
+
     private function flowFor(string $module, string $action, ?string $documentType): ?ApprovalFlow
     {
         $flows = $this->flows();
