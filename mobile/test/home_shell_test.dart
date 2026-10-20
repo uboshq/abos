@@ -27,6 +27,14 @@ class _SignedIn extends AuthController {
   }
 }
 
+const _approver = AuthUser(
+  id: 'u2',
+  name: 'করিম',
+  email: '',
+  roles: ['Manager'],
+  permissions: ['sales.order.view', 'customer.view', 'approval.decide'],
+);
+
 void main() {
   const user = AuthUser(
     id: 'u1',
@@ -84,9 +92,10 @@ void main() {
     Future<List<NoticeBarItem>> Function()? noticeBar,
     Future<ApprovalPage> Function()? pending,
     Future<void> Function()? syncNow,
+    AuthUser? as,
   }) =>
       ProviderScope(
-        overrides: [authStateProvider.overrideWith((ref) => _SignedIn(user))],
+        overrides: [authStateProvider.overrideWith((ref) => _SignedIn(as ?? user))],
         child: MaterialApp(
           home: HomeShell(
             loadHome: loadHome ?? (_) async => menu,
@@ -124,13 +133,14 @@ void main() {
   // at the far right of the header and opens the profile. ⓘ 12 Oct 2026: the
   // bell moved to the bottom bar ("বিজ্ঞপ্তি"), one tap from every screen.
   testWidgets(
-      'no greeting on the home; the photo is in the header, the bell in the bottom bar',
+      'no greeting on the home; the photo is in the header, the bell not in the bottom bar',
       (tester) async {
     await tester.pumpWidget(shell(now: () => DateTime(2026, 9, 27, 20, 15)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('শুভ রাত্রি'), findsNothing);
-    expect(find.byKey(const ValueKey('nav-notifications')), findsOneWidget);
+    // ⓘ বারের নকশা ৩ (২০ অক্টোবর ২০২৬): ঘণ্টা ওপরের বারে (a4), নিচের বারে নয়
+    expect(find.byKey(const ValueKey('nav-notifications')), findsNothing);
     expect(find.byKey(const ValueKey('header-avatar')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
@@ -145,6 +155,7 @@ void main() {
   testWidgets('beside the bell, the approval tab counts what waits for me',
       (tester) async {
     await tester.pumpWidget(shell(
+        as: _approver,
         pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('nav-approvals')), findsOneWidget,
@@ -155,12 +166,14 @@ void main() {
   testWidgets('more pages waiting show as a plus on the approval icon',
       (tester) async {
     await tester.pumpWidget(shell(
+        as: _approver,
         pending: () async =>
             const ApprovalPage(rows: [], nextCursor: 'next-page')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('nav-approvals')), findsOneWidget);
-    expect(find.text('0+'), findsOneWidget,
-        reason: 'more pages wait — the count says so');
+    // ⓘ বারের নকশা ৩: কত জানা নেই — শুধু লাল বিন্দু
+    expect(find.byKey(const ValueKey('nav-approvals-dot')), findsOneWidget,
+        reason: 'more pages wait — a dot, the count is not known');
   });
 
   // ⭐ মালিক, ১০ অক্টোবর ২০২৬: "Sync icon tule daw r upor theke niche tanlei zate sync hoy"
@@ -186,7 +199,7 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('nav-approvals')), findsNothing);
-    expect(find.byKey(const ValueKey('nav-notifications')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav-notifications')), findsNothing);
   });
 
   // ⭐ মালিক, ৬ অক্টোবর ২০২৬: ওয়েবের চলমান নোটিশ ফোনেও — মাথার নিচে, প্রতিটা ট্যাবে; কিছু না থাকলে চুপ
@@ -243,16 +256,21 @@ void main() {
         pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
     await tester.pumpAndSettle();
 
-    for (final label in ['হোম', 'অনুমোদন', 'সব মডিউল', 'বিজ্ঞপ্তি', 'আমি']) {
-      expect(find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
+    // ⓘ বারের নকশা ৩: বিক্রয়কর্মীর (অর্ডার লেখেন) ঘর; আদায়ের চাবি নেই, তাই আদায় নেই; "আমি" মাথার ছবিতে
+    for (final label in ['হোম', 'অর্ডার', 'সব মডিউল']) {
+      expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.text(label)),
           findsOneWidget, reason: label);
+    }
+    for (final label in ['বিজ্ঞপ্তি', 'আমি']) {
+      expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.text(label)),
+          findsNothing, reason: label);
     }
 
     await tester.tap(find.byKey(const ValueKey('nav-modules')));
     await tester.pumpAndSettle();
     expect(find.text('গ্রাহক'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
     // ⭐ প্রিন্টার — থার্মাল আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
@@ -279,7 +297,7 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
     await _scrollToLogout(tester);
     await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));

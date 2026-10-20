@@ -1,0 +1,415 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:ui' show Tristate;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:abos_mobile/core/navigation/nav_state.dart';
+import 'package:abos_mobile/core/web_inside/web_inside.dart';
+import 'package:abos_mobile/core/widgets/state_views.dart';
+import 'package:abos_mobile/features/home/module_pages.dart';
+
+import 'bar_harness.dart';
+
+/// ⭐ নিচের বারের আচরণ — বারের নকশা ৩, অংশ ৪ আর ৭ (মালিকের "হ্যাঁ", ২০ অক্টোবর ২০২৬); প্রতিটা নিয়মের একটা দাবি।
+void main() {
+  Finder tab(String name) => find.byKey(ValueKey('nav-$name'));
+  bool lit(WidgetTester tester, String name) =>
+      tester.getSemantics(tab(name)).flagsCollection.isSelected == Tristate.isTrue;
+
+  Future<GoRouter> pump(WidgetTester tester, String role,
+      {String initial = '/home',
+      NavBadges badges = const NavBadges(),
+      bool mayCollect = false,
+      Size size = const Size(360, 800),
+      double textScale = 1,
+      Set<String> loading = const {}}) async {
+    await setScreen(tester, size);
+    final router = barRouter(initial: initial, loading: loading);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+        barApp(router, role: role, badges: badges, mayCollect: mayCollect, textScale: textScale));
+    await tester.pumpAndSettle();
+    return router;
+  }
+
+  group('four tabs by role, each with an icon and a Bengali label', () {
+    for (final (role, names, labels) in [
+      ('owner', ['home', 'approvals', 'reports', 'modules'], ['হোম', 'অনুমোদন', 'রিপোর্ট', 'সব মডিউল']),
+      ('sr', ['home', 'orders', 'collections', 'modules'], ['হোম', 'অর্ডার', 'আদায়', 'সব মডিউল']),
+      ('depot', ['home', 'challans', 'stock', 'modules'], ['হোম', 'চালান', 'মজুদ', 'সব মডিউল']),
+      ('accounts', ['home', 'approvals', 'vouchers', 'modules'], ['হোম', 'অনুমোদন', 'ভাউচার', 'সব মডিউল']),
+    ]) {
+      testWidgets('$role: ${labels.join(' · ')}', (tester) async {
+        await pump(tester, role);
+        for (var i = 0; i < names.length; i++) {
+          expect(tab(names[i]), findsOneWidget, reason: names[i]);
+          expect(find.descendant(of: tab(names[i]), matching: find.text(labels[i])), findsOneWidget);
+          expect(find.descendant(of: tab(names[i]), matching: find.byType(Icon)), findsOneWidget);
+        }
+        expect(find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(InkWell)),
+            findsNWidgets(4));
+      });
+    }
+
+    testWidgets('notifications and "আমি" are not on the bar, yet their pages still open and draw the bar',
+        (tester) async {
+      final router = await pump(tester, 'owner');
+      expect(tab('notifications'), findsNothing);
+      expect(tab('me'), findsNothing);
+      expect(find.text('বিজ্ঞপ্তি'), findsNothing);
+      expect(find.text('আমি'), findsNothing);
+
+      router.push('/home/notifications');
+      await tester.pumpAndSettle();
+      expect(find.text('NOTIFICATIONS'), findsOneWidget);
+      expect(find.byKey(const ValueKey('nav-bar')), findsOneWidget);
+      expect(lit(tester, 'home'), isTrue, reason: 'opened from home, stays under home');
+    });
+  });
+
+  group('touch targets and TalkBack', () {
+    testWidgets('every tab is at least 48×48dp, on the smallest phone too', (tester) async {
+      await pump(tester, 'owner', size: const Size(320, 640));
+      for (final name in ['home', 'approvals', 'reports', 'modules']) {
+        final s = tester.getSize(tab(name));
+        expect(s.width, greaterThanOrEqualTo(48), reason: name);
+        expect(s.height, greaterThanOrEqualTo(48), reason: name);
+      }
+    });
+
+    testWidgets('TalkBack reads each tab in Bengali, the count with it, as a selectable button', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, 'owner', badges: const NavBadges(pending: 5));
+      expect(tester.getSemantics(tab('approvals')),
+          matchesSemantics(label: 'অনুমোদন, ৫টা অপেক্ষায়', isButton: true, hasTapAction: true,
+              hasSelectedState: true, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(tab('home')),
+          matchesSemantics(label: 'হোম', isButton: true, hasTapAction: true, hasSelectedState: true,
+              isSelected: true, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(tab('reports')).label, 'রিপোর্ট');
+      handle.dispose();
+    });
+
+    testWidgets('the badge shows 99+ above 99, and only a dot when the count is unknown', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, 'accounts', badges: const NavBadges(pending: 250));
+      expect(find.descendant(of: tab('approvals'), matching: find.text('99+')), findsOneWidget);
+      expect(tester.getSemantics(tab('approvals')).label, 'অনুমোদন, ৯৯টার বেশি অপেক্ষায়');
+
+      await pump(tester, 'accounts', badges: const NavBadges(pending: 7));
+      expect(find.descendant(of: tab('approvals'), matching: find.text('7')), findsOneWidget);
+
+      await pump(tester, 'accounts', badges: const NavBadges(pending: 25, pendingMore: true));
+      expect(find.byKey(const ValueKey('nav-approvals-dot')), findsOneWidget);
+      expect(find.descendant(of: tab('approvals'), matching: find.text('25')), findsNothing);
+      expect(tester.getSemantics(tab('approvals')).label, 'অনুমোদন, নতুন অপেক্ষায়');
+
+      await pump(tester, 'accounts', badges: const NavBadges(pending: 0));
+      expect(find.byKey(const ValueKey('nav-approvals-badge')), findsNothing);
+      expect(find.byKey(const ValueKey('nav-approvals-dot')), findsNothing);
+      handle.dispose();
+    });
+  });
+
+  testWidgets('200% text (real fonts): nothing overflows on a 320dp phone, every label stays whole', (tester) async {
+    await tester.runAsync(loadRealFonts);
+    for (final role in rolePermissions.keys) {
+      await setScreen(tester, const Size(320, 640));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(barApp(barRouter(), role: role, textScale: 2,
+          badges: const NavBadges(pending: 120), themed: realFontTheme));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: role);
+      final bar = tester.getRect(find.byKey(const ValueKey('nav-bar')));
+      for (final t in find.descendant(of: find.byKey(const ValueKey('nav-bar')), matching: find.byType(Text)).evaluate()) {
+        final para = t.renderObject! as RenderParagraph;
+        final text = (t.widget as Text).data;
+        expect(para.didExceedMaxLines, isFalse, reason: '$role: $text');
+        // every glyph laid out (no ellipsis, nothing cut), and the text inside the bar
+        expect(para.getPositionForOffset(Offset(para.size.width, para.size.height)).offset, text!.length,
+            reason: '$role: $text');
+        final rect = tester.getRect(find.byWidget(t.widget));
+        expect(bar.contains(rect.topLeft) && bar.contains(rect.bottomRight - const Offset(0.01, 0.01)), isTrue,
+            reason: '$role: $text');
+      }
+      expect(tester.getSize(find.byKey(const ValueKey('nav-bar'))).height, greaterThan(80),
+          reason: 'the bar grows with the text instead of clipping it');
+    }
+  });
+
+  group('back: each tab its own history; a non-home tab goes home first, then the app closes', () {
+    testWidgets('back on a non-home tab goes to Home, then exits', (tester) async {
+      final calls = recordPlatform(tester);
+      await pump(tester, 'sr');
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('ORDERS'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home'), findsOneWidget);
+      expect(lit(tester, 'home'), isTrue);
+      expect(calls.where((c) => c.method == 'SystemNavigator.pop'), isEmpty);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(calls.where((c) => c.method == 'SystemNavigator.pop'), hasLength(1));
+    });
+
+    testWidgets('all modules: back goes to Home, not out of the app', (tester) async {
+      final calls = recordPlatform(tester);
+      await pump(tester, 'depot');
+      await tester.tap(tab('modules'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOME modules'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home'), findsOneWidget);
+      expect(calls.where((c) => c.method == 'SystemNavigator.pop'), isEmpty);
+    });
+
+    testWidgets('each tab keeps its own page history', (tester) async {
+      final router = await pump(tester, 'sr');
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      router.push('/home/paper/order/o1');
+      await tester.pumpAndSettle();
+      expect(find.text('PAPER'), findsOneWidget);
+      expect(lit(tester, 'orders'), isTrue);
+
+      await tester.tap(tab('collections'));
+      await tester.pumpAndSettle();
+      expect(find.text('COLLECTIONS'), findsOneWidget);
+      router.push('/home/customers');
+      await tester.pumpAndSettle();
+      expect(lit(tester, 'collections'), isTrue, reason: 'a page opened inside a tab stays in that tab');
+
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('PAPER'), findsOneWidget, reason: 'the orders tab comes back where it was left');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('ORDERS'), findsOneWidget);
+
+      await tester.tap(tab('collections'));
+      await tester.pumpAndSettle();
+      expect(find.text('CUSTOMERS'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('COLLECTIONS'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home'), findsOneWidget);
+    });
+  });
+
+  group('tapping the current tab again', () {
+    testWidgets('inside the tab: back to its first page', (tester) async {
+      final router = await pump(tester, 'sr');
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      router.push('/home/paper/order/o1');
+      await tester.pumpAndSettle();
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('PAPER'), findsNothing);
+      expect(find.text('ORDERS'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home'), findsOneWidget);
+    });
+
+    testWidgets('on the first page: the list scrolls back to the top', (tester) async {
+      await pump(tester, 'sr');
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byKey(const ValueKey('list-ORDERS')), const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      expect(find.text('ORDERS row 0'), findsNothing);
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('ORDERS row 0'), findsOneWidget);
+    });
+
+    testWidgets('on the home too', (tester) async {
+      await pump(tester, 'owner');
+      await tester.drag(find.byKey(const ValueKey('list-HOME home')), const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home row 0'), findsNothing);
+      await tester.tap(tab('home'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home row 0'), findsOneWidget);
+    });
+
+    testWidgets('a module page inside all modules: back to all modules', (tester) async {
+      await pump(tester, 'owner');
+      await tester.tap(tab('modules'));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(tester.element(find.byType(StubHome)));
+      container.read(homePageProvider.notifier).state = const HomePage.module('sales');
+      await tester.pumpAndSettle();
+      expect(find.text('HOME module'), findsOneWidget);
+      expect(lit(tester, 'modules'), isTrue);
+      await tester.tap(tab('modules'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOME modules'), findsOneWidget);
+    });
+  });
+
+  testWidgets('a light haptic on a tab change, none on a re-tap', (tester) async {
+    final calls = recordPlatform(tester);
+    await pump(tester, 'depot');
+    await tester.tap(tab('stock'));
+    await tester.pumpAndSettle();
+    final haptics = calls.where((c) => c.method == 'HapticFeedback.vibrate').toList();
+    expect(haptics, hasLength(1));
+    expect(haptics.single.arguments, 'HapticFeedbackType.lightImpact');
+    await tester.tap(tab('stock'));
+    await tester.pumpAndSettle();
+    expect(calls.where((c) => c.method == 'HapticFeedback.vibrate'), hasLength(1));
+  });
+
+  group('opening from a notification deep link', () {
+    testWidgets('an approval link lands on the approval tab; back goes home, then out', (tester) async {
+      final calls = recordPlatform(tester);
+      await pump(tester, 'owner', initial: '/home/${WebPaths.navPathFor('/approvals/12')}');
+      expect(find.text('WEB'), findsOneWidget);
+      expect(lit(tester, 'approvals'), isTrue);
+      expect(lit(tester, 'home'), isFalse);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('HOME home'), findsOneWidget);
+      expect(lit(tester, 'home'), isTrue);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(calls.where((c) => c.method == 'SystemNavigator.pop'), hasLength(1));
+    });
+
+    testWidgets('a paper link lands on its tab (an SR\'s order)', (tester) async {
+      await pump(tester, 'sr', initial: '/home/paper/order/o9');
+      expect(find.text('PAPER'), findsOneWidget);
+      expect(lit(tester, 'orders'), isTrue);
+    });
+
+    testWidgets('a link to a tab this role has not keeps Home lit', (tester) async {
+      await pump(tester, 'depot', initial: '/home/${WebPaths.navPathFor('/approvals/12')}');
+      expect(lit(tester, 'home'), isTrue);
+    });
+  });
+
+  testWidgets('the keyboard hides the bottom bar; closing it brings it back', (tester) async {
+    await pump(tester, 'sr');
+    expect(find.byKey(const ValueKey('nav-bar')), findsOneWidget);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('nav-bar')), findsNothing);
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('nav-bar')), findsOneWidget);
+  });
+
+  group('wide windows', () {
+    testWidgets('600dp: a rail on the left, no bottom bar', (tester) async {
+      await pump(tester, 'owner', size: const Size(700, 1000));
+      expect(find.byKey(const ValueKey('nav-rail')), findsOneWidget);
+      expect(find.byKey(const ValueKey('nav-bar')), findsNothing);
+      expect(tester.getTopLeft(find.byKey(const ValueKey('nav-rail'))).dx, 0);
+      expect(tab('approvals'), findsOneWidget);
+    });
+
+    testWidgets('a phone on its side: the rail', (tester) async {
+      await pump(tester, 'sr', size: const Size(780, 360));
+      expect(find.byKey(const ValueKey('nav-rail')), findsOneWidget);
+      expect(find.byKey(const ValueKey('nav-bar')), findsNothing);
+    });
+
+    testWidgets('840dp: the side menu stays open, names beside the icons', (tester) async {
+      await pump(tester, 'accounts', size: const Size(1024, 768));
+      expect(find.byKey(const ValueKey('nav-drawer')), findsOneWidget);
+      expect(find.byKey(const ValueKey('nav-rail')), findsNothing);
+      expect(tester.getSize(find.byKey(const ValueKey('nav-drawer'))).width, greaterThanOrEqualTo(240));
+      final icon = tester.getCenter(find.descendant(of: tab('vouchers'), matching: find.byType(Icon)));
+      final label = tester.getCenter(find.descendant(of: tab('vouchers'), matching: find.text('ভাউচার')));
+      expect(label.dx, greaterThan(icon.dx));
+      expect((label.dy - icon.dy).abs(), lessThan(8));
+    });
+
+    testWidgets('the rail changes tabs and keeps 48dp targets', (tester) async {
+      await pump(tester, 'depot', size: const Size(700, 1000));
+      final s = tester.getSize(tab('stock'));
+      expect(s.width, greaterThanOrEqualTo(48));
+      expect(s.height, greaterThanOrEqualTo(48));
+      await tester.tap(tab('stock'));
+      await tester.pumpAndSettle();
+      expect(find.text('STOCK'), findsOneWidget);
+    });
+  });
+
+  group('＋ নতুন only where something can be created, only with the key', () {
+    testWidgets('the SR\'s orders: ＋ নতুন অর্ডার opens a new order', (tester) async {
+      await pump(tester, 'sr');
+      await tester.tap(tab('orders'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('frame-fab')), findsOneWidget);
+      expect(find.text('নতুন অর্ডার'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('frame-fab')));
+      await tester.pumpAndSettle();
+      expect(find.text('NEW ORDER'), findsOneWidget);
+    });
+
+    testWidgets('orders without the create key: no button', (tester) async {
+      await setScreen(tester, const Size(360, 800));
+      await tester.pumpWidget(barApp(barRouter(initial: '/home/orders'),
+          role: 'sr', permissions: const ['sales.order.view', 'sales.collection.view']));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('frame-fab')), findsNothing);
+    });
+
+    testWidgets('the owner\'s home: ＋ নতুন lists what may be created', (tester) async {
+      await pump(tester, 'owner', mayCollect: true);
+      expect(find.byKey(const ValueKey('frame-fab')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('frame-fab')));
+      await tester.pumpAndSettle();
+      expect(find.text('নতুন খরচ'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('fab-choice-/home/vouchers/expense')));
+      await tester.pumpAndSettle();
+      expect(find.text('VOUCHER KIND'), findsOneWidget);
+    });
+
+    testWidgets('no button where nothing is created, or for a role that creates nothing', (tester) async {
+      final router = await pump(tester, 'owner');
+      for (final path in ['/home/approvals', '/home/reports', '/home/challans', '/home/stock', '/home/customers']) {
+        router.go(path);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('frame-fab')), findsNothing, reason: path);
+      }
+      await tester.tap(tab('modules'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('frame-fab')), findsNothing, reason: 'all modules');
+      await pump(tester, 'depot');
+      expect(find.byKey(const ValueKey('frame-fab')), findsNothing, reason: 'depot home');
+    });
+  });
+
+  testWidgets('a slow network: the bar and its tabs come first, the page shows the grey skeleton', (tester) async {
+    await pump(tester, 'sr', initial: '/home/orders', loading: {'orders'});
+    expect(find.byType(LoadingSkeleton), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav-bar')), findsOneWidget);
+    for (final name in ['home', 'orders', 'collections', 'modules']) {
+      expect(tab(name), findsOneWidget);
+    }
+    expect(lit(tester, 'orders'), isTrue);
+  });
+
+  testWidgets('a slow network on the all-modules tab: the grey skeleton, not a spinning wheel', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: AllModulesPage(
+                modules: const [], counts: const NavCounts(), onOpen: (_) {}, onRefresh: () async {}, loading: true))));
+    await tester.pump();
+    expect(find.byType(LoadingSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+}

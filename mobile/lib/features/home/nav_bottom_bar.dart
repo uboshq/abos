@@ -293,7 +293,7 @@ class _BarItem extends StatelessWidget {
     );
     final label = Text(
       spec.label,
-      maxLines: 2,
+      // ⓘ নাম কখনো কাটে না, "…" হয় না: বড় অক্ষরে দুই লাইনে নামে, বার নিজে উঁচু হয়
       softWrap: true,
       textAlign: wide ? TextAlign.start : TextAlign.center,
       style: TextStyle(
@@ -507,7 +507,7 @@ class _ScreenFrameState extends ConsumerState<ScreenFrame> {
     }
     return Scaffold(
       floatingActionButton: fabButton,
-      body: Row(children: [
+      body: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (tabs.length >= 2)
           RoleRail(
             tabs: tabs,
