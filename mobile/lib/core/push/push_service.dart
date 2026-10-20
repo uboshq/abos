@@ -24,6 +24,44 @@ class PushService {
   bool _ready = false;
   StreamSubscription<String>? _refresh;
 
+  /// ⭐ Firebase ওঠার আগে চাওয়া কাজ — উঠলে তখনই (ec, ১৯ অক্টোবর ২০২৬): Firebase এখন প্রথম ফ্রেমের পরে ওঠে ([[Startup]]),
+  /// আর অ্যাপের শোনা ([listenForTaps], [listenForSync]) বসে তার আগেই — আগে সেগুলো চুপচাপ বাদ পড়ত।
+  final List<void Function()> _pending = [];
+
+  /// উঠে থাকলে এখনই, নাহলে ওঠার পরে। ⓘ Firebase না উঠলে কখনো নয় — আগের মতোই চুপ।
+  @visibleForTesting
+  void whenReady(void Function() attach) {
+    if (_ready) {
+      attach();
+    } else {
+      _pending.add(attach);
+    }
+  }
+
+  void _attachPending() {
+    final waiting = List.of(_pending);
+    _pending.clear();
+    for (final attach in waiting) {
+      try {
+        attach();
+      } catch (_) {}
+    }
+  }
+
+  /// পরীক্ষার জন্য — Firebase ছাড়াই "উঠল"
+  @visibleForTesting
+  void debugMarkReady() {
+    _ready = true;
+    _attachPending();
+  }
+
+  /// পরীক্ষার জন্য
+  @visibleForTesting
+  void debugReset() {
+    _ready = false;
+    _pending.clear();
+  }
+
   /// অ্যাপ শুরুতে একবার। ⓘ ব্যর্থ হলে false, আর কিছু নয়।
   Future<bool> init() async {
     if (_ready) return true;
@@ -35,12 +73,14 @@ class PushService {
     } catch (e) {
       debugPrint('ABOS push: Firebase did not start ($e) — pushes off this run');
     }
+    if (_ready) _attachPending();
     return _ready;
   }
 
   /// লগইন বা সেশন ফেরার পরে — অনুমতি, তারপর টোকেন জমা; টোকেন বদলালে আবার।
   Future<void> register() async {
-    if (!_ready) return;
+    // ⓘ Firebase এখনো ওঠেনি (প্রথম ফ্রেমের পরে ওঠে) — উঠলে তখন
+    if (!_ready) return whenReady(() => unawaited(register()));
     try {
       final messaging = FirebaseMessaging.instance;
       await messaging.requestPermission();
@@ -89,29 +129,27 @@ class PushService {
 
   /// ⭐ রিয়েল-টাইম সিঙ্ক — অফিসে কিছু লেখা হলে সার্ভারের নীরব ডাক ([isSyncNudge]); খোলা অ্যাপ তখনই
   /// [run] চালায় (মালিক, ১০ অক্টোবর ২০২৬)। ⓘ অ্যাপ বন্ধ থাকলে কিছু নয় — খুললেই নিজের গোল চলে।
-  void listenForSync(Future<void> Function() run) {
-    if (!_ready) return;
-    try {
-      FirebaseMessaging.onMessage.listen((m) {
-        if (isSyncNudge(m.data)) unawaited(run().catchError((Object _) {}));
+  void listenForSync(Future<void> Function() run) => whenReady(() {
+        try {
+          FirebaseMessaging.onMessage.listen((m) {
+            if (isSyncNudge(m.data)) unawaited(run().catchError((Object _) {}));
+          });
+        } catch (_) {}
       });
-    } catch (_) {}
-  }
 
   /// বার্তায় চেপে অ্যাপ খুলল — শুরুতে একবার আর চলার সময়। ঠিকানা দেয় [destinationOf]।
-  void listenForTaps(void Function(String path) open) {
-    if (!_ready) return;
-    try {
-      FirebaseMessaging.instance.getInitialMessage().then((m) {
-        final path = destinationOf(m?.data);
-        if (path != null) open(path);
-      }).catchError((Object _) {});
-      FirebaseMessaging.onMessageOpenedApp.listen((m) {
-        final path = destinationOf(m.data);
-        if (path != null) open(path);
+  void listenForTaps(void Function(String path) open) => whenReady(() {
+        try {
+          FirebaseMessaging.instance.getInitialMessage().then((m) {
+            final path = destinationOf(m?.data);
+            if (path != null) open(path);
+          }).catchError((Object _) {});
+          FirebaseMessaging.onMessageOpenedApp.listen((m) {
+            final path = destinationOf(m.data);
+            if (path != null) open(path);
+          });
+        } catch (_) {}
       });
-    } catch (_) {}
-  }
 }
 
 /// ⭐ পেছনের নীরব ডাক — অ্যাপ পেছনে বা বন্ধ (মালিক ১০ অক্টোবর "ক"; a4-এর পরিকল্পনা সংস্করণ ২ §৪.১ ধাপ ৩)।
