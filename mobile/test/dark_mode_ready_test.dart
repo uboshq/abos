@@ -13,17 +13,7 @@ import 'package:abos_mobile/core/theme/app_theme.dart';
 /// তালিকা খালি হলে [AppTheme.mode] [ThemeMode.system] হবে। রঙিন পটের উপর সাদা আইকনের মতো যেটা দুই মোডেই ঠিক, সেই
 /// লাইনে `// dark-ok` লিখে ছাড়।
 const remaining = <String, int>{
-  'lib/features/customers/due_list_screen.dart': 1,
-  'lib/features/dashboards/dashboards_screen.dart': 8,
-  'lib/features/delivery_orders/delivery_order_screens.dart': 3,
-  'lib/features/home/home_dashboard.dart': 4,
-  'lib/features/home/home_shell.dart': 1,
-  'lib/features/home/module_pages.dart': 12,
-  'lib/features/home/nav_search.dart': 10,
   'lib/features/notifications/notifications_screen.dart': 2,
-  'lib/features/orders/delivery_tracking_screen.dart': 6,
-  'lib/features/orders/new_order_screen.dart': 10,
-  'lib/features/orders/order_sheets.dart': 2,
   'lib/features/reports/reports_screen.dart': 1,
 };
 
