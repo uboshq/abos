@@ -1023,4 +1023,12 @@ return [
             \App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature::class,
         ],
     ],
+
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — টাকা হাতে, খরচ, লাভ, ব্যাংক মেলানো (cb, ২০ অক্টোবর ২০২৬; [[WidgetSummaries]])
+    'phone_widgets' => [
+        \App\Modules\Accounts\Widgets\MoneyInHandSummary::class,
+        \App\Modules\Accounts\Widgets\ExpensesSummary::class,
+        \App\Modules\Accounts\Widgets\ProfitSummary::class,
+        \App\Modules\Accounts\Widgets\BankReconcileSummary::class,
+    ],
 ];

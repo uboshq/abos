@@ -333,4 +333,5 @@ return [
     'inter_company_reverse' => 'Reverse both sides',
     'inter_company_reverse_reason' => 'Reason',
     'inter_company_reversed' => 'Reversed',
+    'widget_other_heads' => 'All the rest',
 ];
