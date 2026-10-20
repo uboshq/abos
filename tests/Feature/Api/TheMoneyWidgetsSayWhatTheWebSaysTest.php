@@ -86,10 +86,10 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
     {
         $before = $this->widgets($this->owner)['expenses'];
 
-        $this->post([StandardChart::RENT => ['debit' => '1000']], 'test.rent');
+        $this->postLines([StandardChart::RENT => ['debit' => '1000']], 'test.rent');
         // ⛔ বেতনের খাতে — হাতের জাবেদায়, আর বেতনের রানের দাখিলায় অন্য খাতে
-        $this->post([StandardChart::SALARY_EXPENSE => ['debit' => '50000']], 'test.salary_by_hand');
-        $this->post([StandardChart::RENT => ['debit' => '7000']], 'payroll_run');
+        $this->postLines([StandardChart::SALARY_EXPENSE => ['debit' => '50000']], 'test.salary_by_hand');
+        $this->postLines([StandardChart::RENT => ['debit' => '7000']], 'payroll_run');
 
         $after = $this->widgets($this->owner)['expenses'];
 
@@ -98,6 +98,25 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
         $salaryName = StandardChart::find(StandardChart::SALARY_EXPENSE)->name();
         $this->assertNotContains($salaryName, array_column($after['rows'], 'head'), '⛔ বেতনের খাত উইজেটের সারিতে');
         $this->assertSame(now()->format('Y-m'), $after['month']);
+    }
+
+    /**
+     * ⭐ পয়সা পর্যন্ত, float নয় (a6-এর Mac দৌড়, ২০ অক্টোবর ২০২৬: MoneyIsNeverAFloatTest) — দুই খাত এক পয়সার তফাতে;
+     * বড়টা আগে, আর মোট হুবহু দুইটার যোগফল (string, bcmath)।
+     */
+    public function test_heads_one_paisa_apart_sort_by_bcmath_and_sum_to_the_paisa(): void
+    {
+        $before = $this->widgets($this->owner)['expenses'];
+
+        $this->postLines([StandardChart::RENT => ['debit' => '9000000.01']], 'test.rent_paisa');
+        $this->postLines([StandardChart::ENTERTAINMENT => ['debit' => '9000000.02']], 'test.entertainment_paisa');
+
+        $after = $this->widgets($this->owner)['expenses'];
+
+        $this->assertSame('18000000.0300', bcsub($after['total'], $before['total'], 4), '⛔ মোট পয়সায় মেলে না');
+        $heads = array_column($after['rows'], 'head');
+        $this->assertSame([StandardChart::find(StandardChart::ENTERTAINMENT)->name(), StandardChart::find(StandardChart::RENT)->name()],
+            array_slice($heads, 0, 2), '⛔ এক পয়সা বড় খাতটা আগে নয়');
     }
 
     public function test_profit_moves_with_a_sale_and_gross_is_sales_less_cost(): void
@@ -129,6 +148,8 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
             '⛔ সীমার অর্ধেকে থাকা গ্রাহক ঝুঁকির তালিকায়');
         $row = collect($widget['rows'])->firstWhere('link', '/customers/'.$near->id);
         $this->assertGreaterThanOrEqual(90, $row['percent']);
+        // ⓘ শতাংশ bcmath-এ ছাঁটা, float-এর floor নয় — বকেয়া ÷ সীমা, পূর্ণসংখ্যায় (210-এ 200 = 95.238… → 95)
+        $this->assertSame((int) bcdiv(bcmul($row['due'], '100', 4), $row['limit'], 0), $row['percent']);
     }
 
     public function test_cheques_due_today_and_bounced_show_and_a_post_dated_one_does_not(): void
@@ -166,6 +187,10 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
         $this->putCashIn('500');
         app(\App\Modules\Accounts\Services\VoucherService::class)->post($voucher);
 
+        // ⛔ দল-খাতের (১১০২ "ব্যাংক", নিজেও money_kind=bank) সারি গোনা হয় না — শিরোনামে টাকা বসে না (a6-এর দৌড়, MoneyNeverLandsOnAGroupAccountTest)
+        $line = $voucher->lines()->where('account_id', $bank->id)->firstOrFail();
+        $line->replicate()->forceFill(['account_id' => StandardChart::find(StandardChart::BANK)->id])->saveQuietly();
+
         $after = $this->widgets($this->owner)['bank_reconcile'];
         $this->assertSame($before['open'] + 1, $after['open'], '⛔ ব্যাংকের নতুন দাখিলা না-মেলানো সারিতে উঠল না');
         $this->assertSame('/accounts/reconciliations', $after['link']);
@@ -184,7 +209,7 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
     }
 
     /** @param array<string, array{debit?: string, credit?: string}> $sides */
-    private function post(array $sides, string $source): void
+    private function postLines(array $sides, string $source): void
     {
         static $n = 900000;
         $lines = [];

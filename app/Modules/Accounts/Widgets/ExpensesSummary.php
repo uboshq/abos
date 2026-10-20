@@ -67,7 +67,7 @@ final class ExpensesSummary implements WidgetSummary
             ->get()
             ->map(fn ($r) => ['id' => (int) $r->account_id, 'spent' => bcadd((string) $r->spent, '0', 4)])
             ->filter(fn (array $r) => bccomp($r['spent'], '0', 4) !== 0)
-            ->sortByDesc(fn (array $r) => (float) $r['spent'])
+            ->sort(fn (array $a, array $b) => bccomp($b['spent'], $a['spent'], 4))
             ->values();
 
         $names = Account::query()->whereKey($heads->pluck('id')->all())->get()->keyBy('id');

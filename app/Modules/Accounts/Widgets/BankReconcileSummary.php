@@ -40,7 +40,7 @@ final class BankReconcileSummary implements WidgetSummary
 
     public function data(User $user): array
     {
-        $banks = Account::query()->where('money_kind', Account::BANK)->pluck('id')->all();
+        $banks = Account::query()->money()->where('money_kind', Account::BANK)->pluck('id')->all();
         $confirmed = BankReconciliation::query()->where('status', BankReconciliation::CONFIRMED);
 
         $open = VoucherLine::query()
