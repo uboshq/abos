@@ -6,6 +6,7 @@ namespace Tests\Feature\Api;
 
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\User;
@@ -62,8 +63,21 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
     public function test_money_in_hand_is_the_today_doors_money_figure_to_the_paisa(): void
     {
         // ⓘ ব্যাংকে পয়সাসহ টাকা — নইলে ডেমোর ব্যাংক শূন্য, আর মোট থেকে ব্যাংক বাদ পড়লেও কেউ টের পেত না (মিউট্যান্ট s_total বেঁচে ছিল)
-        $bank = (int) Account::query()->money()->where('money_kind', Account::BANK)->orderBy('id')->value('id');
-        $this->assertGreaterThan(0, $bank, 'প্রস্তুতিটাই ভুল — ডেমোতে ব্যাংকের পাতা-খাত নেই।');
+        // ⓘ ডেমোর TDEPOT-এ ব্যাংকের পাতা-খাত নেই (Mac, ২১ অক্টোবর ২০২৬: প্রস্তুতিই লাল) — ব্যাংক দলের নিচে একটা খোলা, যেমন হাতে খোলা হয়
+        $bank = (int) Account::query()->create([
+            'company_id' => $this->company->id,
+            'code' => '1102-WGT',
+            'name_en' => 'Widget Bank',
+            'name_bn' => 'উইজেট ব্যাংক',
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
+            'type' => Account::ASSET,
+            'nature' => Account::DEBIT,
+            'money_kind' => Account::BANK,
+            'is_active' => true,
+            'status' => DocumentStatus::CONFIRMED,
+        ])->id;
+        $this->assertContains($bank, Account::query()->money()->where('money_kind', Account::BANK)->pluck('id')->map(fn ($id) => (int) $id)->all(),
+            'প্রস্তুতিটাই ভুল — নতুন খাতটা টাকার ব্যাংক হিসেবে গোনা হয় না।');
         app(PostingEngine::class)->post(sourceType: 'test.bank_in', sourceId: 1, trxDate: now()->toDateString(), lines: [
             ['account_id' => $bank, 'debit' => '25000.37', 'credit' => '0'],
             ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'debit' => '0', 'credit' => '25000.37'],
