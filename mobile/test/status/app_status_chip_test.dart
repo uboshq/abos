@@ -230,6 +230,63 @@ void main() {
     expect(chip.height, lessThan(40), reason: 'one line at normal size');
   });
 
+  testWidgets('rejected is its own red state, not cancelled: own icon, own words', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(_app(const Column(children: [
+      AppStatusChip(state: PaperState.rejected),
+      AppStatusChip(state: PaperState.cancelled),
+    ])));
+    expect(_words('প্রত্যাখ্যাত'), findsOneWidget);
+    expect(_words('বাতিল'), findsOneWidget);
+    expect(paperStateIcon(PaperState.rejected), isNot(paperStateIcon(PaperState.cancelled)));
+    expect(find.bySemanticsLabel('অবস্থা: প্রত্যাখ্যাত'), findsOneWidget);
+    expect(PaperState.rejected.spec.role, PaperRole.negative);
+    handle.dispose();
+  });
+
+  testWidgets('approved: "অনুমোদিত" in general, "অনুমোদিত · টাকার অপেক্ষায়" on a claim, blue', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(_app(const Column(children: [
+      AppStatusChip(state: PaperState.approved),
+      AppStatusChip(state: PaperState.approved, kind: PaperKind.claim),
+      AppStatusChip.compact(state: PaperState.approved, kind: PaperKind.claim),
+    ])));
+    expect(_words('অনুমোদিত'), findsOneWidget);
+    expect(_words('অনুমোদিত · টাকার অপেক্ষায়'), findsNWidgets(2));
+    expect(find.bySemanticsLabel('অবস্থা: অনুমোদিত'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: অনুমোদিত, টাকার অপেক্ষায়'), findsNWidgets(2));
+    expect(PaperState.approved.spec.role, PaperRole.information);
+    handle.dispose();
+  });
+
+  testWidgets('posted: a money paper went to the books, a stock paper to the stock; the short chip says "পাকা" for both',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(_app(const Column(children: [
+      AppStatusChip(state: PaperState.posted),
+      AppStatusChip(state: PaperState.posted, kind: PaperKind.stock),
+      AppStatusChip.compact(state: PaperState.posted, kind: PaperKind.stock),
+      AppStatusChip(state: PaperState.posting, kind: PaperKind.stock),
+    ])));
+    expect(_words('পাকা · খাতায় উঠেছে'), findsOneWidget);
+    expect(_words('পাকা · মজুদে উঠেছে'), findsOneWidget);
+    expect(_words('পাকা'), findsOneWidget);
+    expect(_words('সই শেষ · মজুদে উঠছে'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: পাকা, মজুদে উঠেছে'), findsNWidgets(2));
+    expect(find.bySemanticsLabel('অবস্থা: পাকা, খাতায় উঠেছে'), findsOneWidget);
+    handle.dispose();
+  });
+
+  test('a kind without its own words uses the plain ones (stock draft is still "খসড়া")', () {
+    for (final s in PaperState.values) {
+      for (final k in PaperKind.values) {
+        expect(s.spec.label(kind: k), isNotEmpty);
+      }
+    }
+    expect(PaperState.draft.spec.label(kind: PaperKind.stock), 'খসড়া');
+    expect(PaperState.posted.spec.label(kind: PaperKind.claim), 'পাকা · খাতায় উঠেছে');
+  });
+
   group('PaperState.fromServer — every server state string the app receives', () {
     const cases = <String, PaperState?>{
       // vouchers: lib/core/accounts/voucher_api.dart (state), server VoucherApiController::row
@@ -244,8 +301,10 @@ void main() {
       // expense claims and advances: lib/core/hr/claims_api.dart, server ExpenseClaim::STATES
       'submitted': PaperState.waiting,
       'paid': PaperState.posted,
-      'rejected': PaperState.cancelled,
-      'approved': null,
+      'rejected': PaperState.rejected,
+      'approved': PaperState.approved,
+      // approval requests: lib/features/approvals/my_requests_screen.dart (pending, approved, rejected, returned)
+      'pending': PaperState.waiting,
       // sent back, posting, not posted
       'returned': PaperState.sentBack,
       'sent_back': PaperState.sentBack,
@@ -270,10 +329,10 @@ void main() {
   testWidgets('forServer: a known state is a chip, an unknown one keeps the server\'s own words', (tester) async {
     await tester.pumpWidget(_app(Column(children: [
       AppStatusChip.forServer('paid', fallbackLabel: 'পরিশোধিত'),
-      AppStatusChip.forServer('approved', fallbackLabel: 'অনুমোদিত — টাকার অপেক্ষায়'),
+      AppStatusChip.forServer('somethingNew', fallbackLabel: 'নতুন কিছু'),
     ])));
     expect(find.byType(AppStatusChip), findsOneWidget);
     expect(_words('পাকা · খাতায় উঠেছে'), findsOneWidget);
-    expect(find.text('অনুমোদিত — টাকার অপেক্ষায়'), findsOneWidget);
+    expect(find.text('নতুন কিছু'), findsOneWidget);
   });
 }

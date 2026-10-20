@@ -57,7 +57,7 @@ void main() {
   for (final dark in [false, true]) {
     final mode = dark ? 'dark' : 'light';
     testWidgets('all paper-state chips ($mode) look as approved', (tester) async {
-      tester.view.physicalSize = const Size(420, 400);
+      tester.view.physicalSize = const Size(420, 580);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(MaterialApp(
@@ -81,6 +81,16 @@ void main() {
                           AppStatusChip(state: s, level: 1, levels: 2, reason: 'বাকির সীমা পার'),
                           const Spacer(),
                           AppStatusChip.compact(state: s, level: 1, levels: 2),
+                        ]),
+                      ),
+                    // ধরনের কথা: মজুদের কাগজ পাকা, দাবি অনুমোদিত
+                    for (final (s, k) in const [(PaperState.posted, PaperKind.stock), (PaperState.approved, PaperKind.claim)])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(children: [
+                          AppStatusChip(state: s, kind: k),
+                          const Spacer(),
+                          AppStatusChip.compact(state: s, kind: k),
                         ]),
                       ),
                   ]),

@@ -63,7 +63,31 @@ void main() {
     }
   }
 
+  // ⭐ WCAG ১.৪.১১: যেখানে ধার আঁকা হয় (পুরো চিপ; ছোট চিপে কেবল "পোস্ট হয়নি"-এর ভাঙা ধার), সেখানে ধার নিজের পটে আর
+  // পাতার পটে কমপক্ষে ৩:১ — আলো আর অন্ধকারে
+  for (final role in PaperRole.values) {
+    for (final b in Brightness.values) {
+      test('${role.name} border (${b.name}) reaches 3:1 on the chip and on every page surface', () {
+        final c = paperRoleSpecs[role]!.of(b);
+        final onChip = contrast(c.border, c.background);
+        expect(onChip, greaterThanOrEqualTo(3.0), reason: 'on its own background: ${onChip.toStringAsFixed(2)}');
+        for (final page in pages[b]!.entries) {
+          final r = contrast(c.border, page.value);
+          expect(r, greaterThanOrEqualTo(3.0), reason: 'on ${page.key}: ${r.toStringAsFixed(2)}');
+        }
+      });
+    }
+  }
+
   test('print the table (for the report)', () {
+    for (final b in Brightness.values) {
+      for (final role in PaperRole.values) {
+        final c = paperRoleSpecs[role]!.of(b);
+        final ps = pages[b]!.values.map((p) => contrast(c.border, p).toStringAsFixed(2)).join(' ');
+        // ignore: avoid_print
+        print('BORDER ${b.name} ${role.name} chip=${contrast(c.border, c.background).toStringAsFixed(2)} pages=$ps');
+      }
+    }
     for (final b in Brightness.values) {
       for (final state in PaperState.values) {
         final c = state.spec.colours.of(b);

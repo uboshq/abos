@@ -16,13 +16,24 @@ import 'paper_state_icons.dart';
 /// ("পাকা", "2-এর 1"), মালিকের অনুমোদিত পুরো-পাতার নমুনার মাপে (২০ অক্টোবর ২০২৬)। TalkBack দুটোতেই পুরো বাক্য বলে।
 class AppStatusChip extends StatelessWidget {
   const AppStatusChip(
-      {super.key, required this.state, this.level, this.levels, this.reason, this.onReasonTap, this.dense = false});
+      {super.key,
+      required this.state,
+      this.kind = PaperKind.money,
+      this.level,
+      this.levels,
+      this.reason,
+      this.onReasonTap,
+      this.dense = false});
 
   /// তালিকার সারির ছোট চিপ — বাঁয়ে নম্বর · পক্ষ, ডানে এটা, এক লাইনে
-  const AppStatusChip.compact({super.key, required this.state, this.level, this.levels, this.reason, this.onReasonTap})
+  const AppStatusChip.compact(
+      {super.key, required this.state, this.kind = PaperKind.money, this.level, this.levels, this.reason, this.onReasonTap})
       : dense = true;
 
   final PaperState state;
+
+  /// কাগজের ধরন — কথা বদলায় ("মজুদে উঠেছে", "টাকার অপেক্ষায়"), অবস্থা আর রং একই
+  final PaperKind kind;
 
   /// ছোট মাপ, ছোট লেখা
   final bool dense;
@@ -48,9 +59,11 @@ class AppStatusChip extends StatelessWidget {
           int? level,
           int? levels,
           String? reason,
+          PaperKind kind = PaperKind.money,
           bool dense = false}) =>
       switch (PaperState.fromServer(state)) {
-        final s? => AppStatusChip(key: key, state: s, level: level, levels: levels, reason: reason, dense: dense),
+        final s? =>
+          AppStatusChip(key: key, state: s, kind: kind, level: level, levels: levels, reason: reason, dense: dense),
         null => Text(fallbackLabel, key: key, style: TextStyle(fontWeight: FontWeight.w600, color: fallbackColour)),
       };
 
@@ -103,7 +116,9 @@ class AppStatusChip extends StatelessWidget {
     final spec = state.spec;
     final colours = spec.colours.of(Theme.of(context).brightness);
     final base = Theme.of(context).textTheme.labelLarge ?? const TextStyle();
-    final label = dense ? spec.shortLabel(level: level, levels: levels) : spec.label(level: level, levels: levels);
+    final label = dense
+        ? spec.shortLabel(level: level, levels: levels, kind: kind)
+        : spec.label(level: level, levels: levels, kind: kind);
     // পাতায়: Material 3 চিপ (কোণ 8, উচ্চতা 32, ধার); সারিতে: নমুনার `.st` (কোণ 12, প্যাড 9/2, লেখা 12, ধার নেই)
     final radius = BorderRadius.all(Radius.circular(dense ? 12 : 8));
 
@@ -138,7 +153,7 @@ class AppStatusChip extends StatelessWidget {
       chip = CustomPaint(foregroundPainter: _DashedBorder(colours.border, radius.topLeft.x), child: chip);
     }
 
-    final speak = spec.semantics(level: level, levels: levels);
+    final speak = spec.semantics(level: level, levels: levels, kind: kind);
     if (!spec.tappable) {
       return Semantics(container: true, label: speak, excludeSemantics: true, child: chip);
     }

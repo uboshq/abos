@@ -137,7 +137,8 @@ void main() {
 
     expect(find.text('বিক্রয় বিল · INV-0059'), findsOneWidget);
     // ⭐ নিশ্চিত বিল → অ্যাপের এক চিপ "পাকা · খাতায় উঠেছে" (নকশা ৩, অংশ ৫); সার্ভারের ইংরেজি লেখা কখনো নয়
-    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted && w.kind == PaperKind.money),
+        findsOneWidget);
     expect(find.text('Confirmed'), findsNothing);
     expect(find.text('কসমস বিস্কুট'), findsOneWidget);
     expect(find.textContaining('ফ্রি 1'), findsOneWidget);
@@ -154,6 +155,9 @@ void main() {
     expect(find.text('এই চালানের বিল'), findsOneWidget);
     expect(find.text('INV-0059'), findsOneWidget);
     expect(find.text('বাকি'), findsNothing);
+    // ⭐ নিশ্চিত চালান মজুদের কাগজ — "পাকা · মজুদে উঠেছে" (fe, ২০ অক্টোবর ২০২৬)
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted && w.kind == PaperKind.stock),
+        findsOneWidget);
   });
 
   group('the doors', () {

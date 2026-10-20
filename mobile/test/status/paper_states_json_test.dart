@@ -30,6 +30,13 @@ void main() {
       final d = paperRoleSpecs[role]!;
       expect(j['fiori'], d.fiori);
       expect(j['adjusted_for_contrast'], d.adjustedForContrast);
+      // what was moved off Fiori, and Fiori's own value, is the same on both sides
+      final adjusted = (j['adjusted'] as Map<String, dynamic>?) ?? const {};
+      expect(adjusted.keys.toSet(), d.fioriOriginal.keys.toSet());
+      for (final e in d.fioriOriginal.entries) {
+        expect((adjusted[e.key] as Map)['fiori'], e.value);
+      }
+      expect(d.adjustedForContrast, d.fioriOriginal.isNotEmpty, reason: 'flag and record go together');
       for (final (mode, c) in [('light', d.light), ('dark', d.dark)]) {
         final m = j[mode] as Map<String, dynamic>;
         expect(m['foreground'], _hex(c.foreground), reason: '$mode foreground');
@@ -58,14 +65,22 @@ void main() {
       expect(j['reason_title_bn'], d.reasonTitleBn);
       expect(j['reason_missing_bn'], d.reasonMissingBn);
       expect(j['reason_close_bn'], d.reasonCloseBn);
+      final kindKeys = RegExp(r'^(label_bn|label_bn_short|semantics_bn)_(stock|claim)$');
+      expect({for (final k in j.keys.where(kindKeys.hasMatch)) k: j[k]}, d.byKind, reason: 'words by kind');
       const known = {
         'label_bn', 'label_bn_without_level', 'label_bn_short', 'label_bn_short_without_level', 'semantics_bn',
         'semantics_bn_without_level', 'semantics_hint_bn', 'icon', 'role', 'border_style', 'tappable', 'app_only',
         'reason_title_bn', 'reason_missing_bn', 'reason_close_bn',
       };
-      expect(j.keys.where((k) => !known.contains(k)), isEmpty, reason: 'a JSON key the Dart side does not mirror');
+      expect(j.keys.where((k) => !known.contains(k) && !kindKeys.hasMatch(k)), isEmpty,
+          reason: 'a JSON key the Dart side does not mirror');
     });
   }
+
+  test('the JSON names exactly the Dart paper kinds', () {
+    final kinds = (json['kinds'] as Map<String, dynamic>).keys.where((k) => k != 'about').toList();
+    expect(kinds, PaperKind.values.map((k) => k.name).toList());
+  });
 
   test('the JSON cites the Fiori Horizon sources and says levels use latin digits', () {
     final source = json['source'] as Map<String, dynamic>;

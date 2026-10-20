@@ -7,6 +7,7 @@ import '../../core/auth/session_profile.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/records/money.dart';
 import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -17,6 +18,13 @@ import '../../core/widgets/unsaved_guard.dart';
 /// ⭐ ফোনে অফিসের লোকের ভাউচার — আদায়, পরিশোধ, খরচ (বাকিতেও), জাবেদা, কন্ট্রা (মালিক, ৭ অক্টোবর ২০২৬; সার্ভার 2bd0f620)।
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস। নিয়ম সব সার্ভারের — এখানে কেবল যা না থাকলে পাঠানোই অর্থহীন। ⛔ কেবল নেট থাকলে।
+/// ⭐ ভাউচারের অবস্থার চিপ — খাতায় তোলা আটকে থাকলে (`posting_failed`) আগে সেটাই: "পোস্ট হয়নি", চাপলে সার্ভারের বাংলা কারণ
+/// (সার্ভারে অবস্থা তখনো খসড়া)। নইলে সার্ভারের অবস্থা, সইয়ের অপেক্ষায় ধাপ দুটো এলে "2-এর 1"।
+Widget voucherStateChip(VoucherRow v, {Key? key, bool dense = false}) => v.postingFailed
+    ? AppStatusChip(key: key, state: PaperState.notPosted, reason: v.postProblem, dense: dense)
+    : AppStatusChip.forServer(v.state,
+        key: key, fallbackLabel: v.stateWords, level: v.approvalLevel, levels: v.approvalLevels, dense: dense);
+
 class VoucherListScreen extends StatefulWidget {
   const VoucherListScreen({
     super.key,
@@ -234,8 +242,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                     // ⭐ অবস্থা — অ্যাপের এক চিপ: আইকন + রং + লেখা (নকশা ৩, অংশ ৫)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: AppStatusChip.forServer(v.state,
-                          key: ValueKey('voucher-state-${v.id}'), fallbackLabel: v.stateWords, dense: true),
+                      child: voucherStateChip(v, key: ValueKey('voucher-state-${v.id}'), dense: true),
                     ),
                     if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
                     // ⭐ টাকা কোন খাতে — জমা/থেকে/দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬); পুরনো সার্ভারে কিছুই নয়
@@ -355,7 +362,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
           if (p == null && _error == null) const LinearProgressIndicator(),
           if (p != null) ...[
             FactRow('ধরন', p.row.kindLabel),
-            PaperStateFact(chip: AppStatusChip.forServer(p.row.state, key: const ValueKey('voucher-state'), fallbackLabel: p.row.stateWords)),
+            PaperStateFact(chip: voucherStateChip(p.row, key: const ValueKey('voucher-state'))),
             FactRow('টাকা', Money.taka(p.row.amount)),
             if (p.row.date != null) FactRow('তারিখ', dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),

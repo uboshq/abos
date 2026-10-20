@@ -16,6 +16,8 @@ const paperStateIcons = <String, IconData>{
   'do_not_disturb_on': Symbols.do_not_disturb_on_rounded,
   'warning': Symbols.warning_rounded,
   'cloud_upload': Symbols.cloud_upload_rounded,
+  'cancel': Symbols.cancel_rounded,
+  'verified': Symbols.verified_rounded,
 };
 
 /// এক অবস্থার আইকন

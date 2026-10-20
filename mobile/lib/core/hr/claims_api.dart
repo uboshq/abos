@@ -37,6 +37,8 @@ class Claim {
     this.submittedAt,
     this.decidedAt,
     this.paidAt,
+    this.approvalLevel,
+    this.approvalLevels,
   });
 
   final String id;
@@ -57,6 +59,11 @@ class Claim {
   final String? submittedAt;
   final String? decidedAt;
   final String? paidAt;
+
+  /// ⭐ সইয়ের কোন ধাপ এখন আর মোট কত — কেবল সইয়ের অপেক্ষায় (সার্ভার a6/paper-level-reason); পুরনো সার্ভারে null।
+  /// ⓘ দাবির খাতায় তোলা আটকে থাকে না (posting_failed নেই) — টাকা দেয় ক্যাশিয়ারের ভাউচার
+  final int? approvalLevel;
+  final int? approvalLevels;
 
   bool get isAdvance => kind == 'advance';
 
@@ -90,9 +97,15 @@ class Claim {
       submittedAt: j['submitted_at']?.toString(),
       decidedAt: j['decided_at']?.toString(),
       paidAt: j['paid_at']?.toString(),
+      approvalLevel: _intOrNull(j['approval_level']),
+      approvalLevels: _intOrNull(j['approval_levels']),
     );
   }
 }
+
+/// সার্ভারের সংখ্যা → int; না এলে বা অচেনা হলে null (পুরনো সার্ভার এই ঘর পাঠায় না)
+int? _intOrNull(Object? v) => v is num ? v.toInt() : int.tryParse('${v ?? ''}');
+
 
 class ClaimsPage {
   const ClaimsPage({required this.claims, this.openAdvance});
