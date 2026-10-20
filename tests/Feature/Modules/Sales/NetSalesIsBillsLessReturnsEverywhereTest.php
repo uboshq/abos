@@ -352,7 +352,62 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertSame(self::FULL_LABEL, __('sales::field.net_sales'));
     }
 
+    /**
+     * ⭐ খাতাই বিচারক (fe, ২১ অক্টোবর ২০২৬): দিনের নিট বিক্রি = বিক্রয় খাতের (৪১০০) জমা − খরচ বাদ বিক্রয় ফেরতের খাতের (৪১১০)
+     * খরচ − জমা, পয়সায়; VAT = প্রদেয় VAT-এর (২১২০) নড়াচড়া; বিলে যোগ করা গাড়িভাড়া = নিজের আয়ের খাতের (৪৩৬০) নড়াচড়া — বিক্রয়ে নয়।
+     * ⓘ খাতগুলো পোস্টিং কোডের নিজের ([[SalesInvoiceService::postToLedger()]], [[SalesReturnService::postToLedger()]])।
+     */
+    public function test_net_sales_vat_and_freight_reconcile_to_the_ledger(): void
+    {
+        $today = Carbon::today()->toDateString();
+        $before = $this->books($today);
+
+        $bill = $this->bill('10', '10000', null, 'Rahim Traders', '500');
+        $this->giveBack($bill, '1', $today);
+        $this->assertSame('500.0000', bcadd((string) $bill->freight_charge, '0', 4), 'প্রস্তুতিটাই ভুল — বিলে গাড়িভাড়া নেই।');
+        $this->assertSame('110500.0000', bcadd((string) $bill->total, '0', 4), 'প্রস্তুতিটাই ভুল — বিলটা VAT আর ভাড়াসহ ১,১০,৫০০ নয়।');
+
+        $after = $this->books($today);
+        $d = fn (string $k) => bcsub($after[$k], $before[$k], 4);
+
+        $this->assertSame('90000.0000', $d('net'), '⛔ নিট বিক্রি ৯০,০০০ নয় — ভাড়া বা VAT নিটে ঢুকেছে।');
+        $this->assertSame($d('net'), bcsub($d('sales'), $d('returns'), 4), '⛔ নিট বিক্রি খাতার বিক্রয় − বিক্রয় ফেরতের সমান নয়।');
+        $this->assertSame($d('vat'), $d('vat_account'), '⛔ VAT খাতার প্রদেয় VAT-এর নড়াচড়ার সমান নয়।');
+        $this->assertSame('9000.0000', $d('vat'));
+        $this->assertSame('500.0000', $d('freight_account'), '⛔ গাড়িভাড়া নিজের আয়ের খাতে যায়নি।');
+
+        // ⭐ পুরো দিনের মিল — শুধু এই দুই কাগজ নয়
+        $this->assertSame($after['net'], bcsub($after['sales'], $after['returns'], 4), '⛔ দিনের নিট বিক্রি খাতার সাথে মেলে না।');
+        $this->assertSame($after['vat'], $after['vat_account'], '⛔ দিনের VAT খাতার সাথে মেলে না।');
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
+
+    /** @return array{net: string, vat: string, sales: string, returns: string, vat_account: string, freight_account: string} গোটা কোম্পানি, এক দিন */
+    private function books(string $day): array
+    {
+        $this->web($this->owner);
+        CompanyContext::set((int) $this->company->id, null);
+        $parts = SalesMetrics::netParts($day, $day);
+        $move = function (string $code, bool $credit) use ($day): string {
+            $id = \App\Modules\Accounts\Models\Account::query()->where('code', $code)->value('id');
+            $this->assertNotNull($id, "প্রস্তুতিটাই ভুল — {$code} খাতটা নেই।");
+            $row = \Illuminate\Support\Facades\DB::table('ledger_entries')->where('company_id', $this->company->id)
+                ->where('account_id', $id)->whereDate('trx_date', $day)
+                ->selectRaw('COALESCE(SUM(credit), 0) as c, COALESCE(SUM(debit), 0) as d')->first();
+
+            return $credit ? bcsub((string) $row->c, (string) $row->d, 4) : bcsub((string) $row->d, (string) $row->c, 4);
+        };
+
+        return [
+            'net' => $parts['net'],
+            'vat' => $parts['vat'],
+            'sales' => $move(\App\Modules\Accounts\Services\StandardChart::SALES, true),
+            'returns' => $move(\App\Modules\Accounts\Services\StandardChart::SALES_RETURN, false),
+            'vat_account' => $move(\App\Modules\Accounts\Services\StandardChart::VAT_PAYABLE, true),
+            'freight_account' => $move(\App\Modules\Accounts\Services\StandardChart::FREIGHT_INCOME, true),
+        ];
+    }
 
     /** @return array{customer: array<string, string>, product: array<string, string>, brand: array<string, string>, customer_total: string} */
     private function reports(Customer $customer, Product $product): array
@@ -405,7 +460,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         ];
     }
 
-    private function bill(string $qty, string $rate, ?string $on = null, string $customer = 'Rahim Traders'): SalesInvoice
+    private function bill(string $qty, string $rate, ?string $on = null, string $customer = 'Rahim Traders', string $freight = '0'): SalesInvoice
     {
         $this->web($this->owner);
         CompanyContext::set((int) $this->company->id, (int) $this->warehouse->branch_id);
@@ -415,6 +470,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
             'customer_id' => Customer::acrossDealers()->where('name_en', $customer)->firstOrFail()->id,
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => $on ?? Carbon::today()->toDateString(),
+            'freight_charge' => $freight,
         ], [[
             'product_id' => Product::query()->where('name_en', 'Miniket Rice 50kg')->firstOrFail()->id,
             'qty' => $qty, 'rate' => $rate,
