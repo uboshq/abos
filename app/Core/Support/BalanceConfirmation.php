@@ -26,7 +26,8 @@ use Illuminate\Http\Response;
  */
 final class BalanceConfirmation
 {
-    public const ACTION = 'balance_confirmation_printed';
+    /** ⚠️ `audit_trails.action` ২৪ অক্ষরের — লম্বা নাম ছাপার মুহূর্তে ৫০০ দিত (Mac দৌড়, d0cc67882) */
+    public const ACTION = 'balance_letter_printed';
 
     /** উত্তর ফেরত দেওয়ার দিন */
     public const REPLY_DAYS = 15;
