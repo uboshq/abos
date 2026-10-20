@@ -82,7 +82,7 @@ class OwnerMoneyCard extends StatelessWidget {
           excludeSemantics: true,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label, style: TextStyle(fontSize: 12.5, color: fg)),
-            Text(value == null ? '—' : '$sign${Money.taka(value)}',
+            Text('$sign${figureText(value)}',
                 key: ValueKey('owner-money-$key-value'),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
           ]),
