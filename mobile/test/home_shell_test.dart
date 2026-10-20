@@ -12,6 +12,7 @@ import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/navigation/nav_prefs.dart';
+import 'package:abos_mobile/core/navigation/top_bar/abos_top_bar.dart';
 import 'package:abos_mobile/core/privacy/device_integrity.dart';
 import 'package:abos_mobile/core/records/notice_bar.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
@@ -135,9 +136,14 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
+    // ⓘ ছবি এখন নিজের মেনু খোলে; "আমি" পাতা তার "সেটিংস" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
+    await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('avatar-settings')));
+    await tester.pumpAndSettle();
     await _scrollToLogout(tester);
     expect(find.text('বেরিয়ে যান'), findsOneWidget,
-        reason: 'the photo opens the profile');
+        reason: 'the photo opens my menu, its settings row the profile');
   });
 
   // ⭐ মালিক, ১০ অক্টোবর ২০২৬: ঘণ্টার পাশে অনুমোদনের আইকন — অপেক্ষার সংখ্যাসহ, চাপলে তালিকা
@@ -172,7 +178,7 @@ void main() {
 
     expect(
         find.descendant(
-            of: find.byType(AppBar), matching: find.byIcon(Icons.sync_outlined)),
+            of: find.byType(AbosTopBar), matching: find.byIcon(Icons.sync_outlined)),
         findsNothing);
 
     await tester.fling(find.byType(ListView).first, const Offset(0, 400), 1000);

@@ -111,7 +111,7 @@ void main() {
     expect(page(tester), AppTheme.dark().scaffoldBackgroundColor);
   });
 
-  testWidgets('the "আমি" page offers the three choices and a tap is the choice', (tester) async {
+  testWidgets('the avatar menu offers the three choices and a tap is the choice', (tester) async {
     setScreenSize(tester, const Size(390, 1600));
     await tester.runAsync(seedMainData);
     await tester.pumpWidget(homeShell());

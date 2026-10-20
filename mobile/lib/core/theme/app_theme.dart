@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'app_palette.dart';
+import 'bar_palette.dart';
 
 /// The one [ThemeData] the app builds from tokens — screens ask for
 /// `Theme.of(context)` and its extensions, never a literal colour or size.
@@ -85,7 +86,7 @@ class AppTheme {
       ),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       pageTransitionsTheme: pageTransitions,
-      extensions: [palette],
+      extensions: [palette, BarPalette.dark],
     );
   }
 
@@ -174,7 +175,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
       pageTransitionsTheme: pageTransitions,
-      extensions: const [palette],
+      extensions: const [palette, BarPalette.light],
     );
   }
 }

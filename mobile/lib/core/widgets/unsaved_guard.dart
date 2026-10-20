@@ -9,15 +9,48 @@ import 'package:flutter/material.dart';
 /// ⓘ [dirty] পর্দা নিজে বলে: কিছু লেখা হয়েছে আর এখনো পাঠানো হয়নি। খালি ফর্মে কিছু জিজ্ঞেস করে না। পাঠানোর পরে ফর্ম
 /// নিজে `Navigator.pop()` দিয়ে বন্ধ হলে এই পাহারা খাটে না — `pop()` পাহারা মানে না, কেবল `maybePop()` আর ফোনের
 /// "পিছনে" মানে — তাই সফল কাজের পরে অকারণ প্রশ্ন নেই।
-class UnsavedGuard extends StatelessWidget {
+class UnsavedGuard extends StatefulWidget {
   const UnsavedGuard({super.key, required this.dirty, required this.child});
 
   /// কিছু লেখা আছে যা এখনো পাঠানো হয়নি
   final bool dirty;
   final Widget child;
 
+  /// ⭐ অ্যাপের কোথাও আধা-লেখা ফর্ম খোলা আছে কি না — শাখা বদলের আগে উপরের বার জিজ্ঞেস করে
+  /// ("না রেখে বদলাবেন?"; ওপরের বার, নকশা ৩ §৭, ২০ অক্টোবর ২০২৬)
+  static bool get anyDirty => _dirty.isNotEmpty;
+
+  static final Set<State<UnsavedGuard>> _dirty = {};
+
+  @override
+  State<UnsavedGuard> createState() => _UnsavedGuardState();
+}
+
+class _UnsavedGuardState extends State<UnsavedGuard> {
+  void _note() => widget.dirty ? UnsavedGuard._dirty.add(this) : UnsavedGuard._dirty.remove(this);
+
+  @override
+  void initState() {
+    super.initState();
+    _note();
+  }
+
+  @override
+  void didUpdateWidget(UnsavedGuard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _note();
+  }
+
+  @override
+  void dispose() {
+    UnsavedGuard._dirty.remove(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final dirty = widget.dirty;
+    final child = widget.child;
     return PopScope(
       canPop: !dirty,
       onPopInvokedWithResult: (didPop, result) async {

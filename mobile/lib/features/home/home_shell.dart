@@ -17,6 +17,8 @@ import '../../core/navigation/nav_catalog.dart';
 import '../../core/navigation/nav_prefs.dart';
 import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/recent_papers.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart';
+import '../../core/navigation/top_bar/avatar_menu.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
@@ -27,8 +29,6 @@ import '../../core/records/today_record.dart';
 import '../../core/sync_engine/auto_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_palette.dart';
-import '../../core/theme/theme_choice.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
@@ -334,6 +334,62 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _loadPending();
   }
 
+  /// ⭐ ছবির মেনু খোলা — ছবির চারপাশে কমলা দাগ
+  bool _menuOpen = false;
+
+  /// ⭐ ছবিতে চাপ — নিজের মেনু (মালিকের নকশা ৩ §৩, পুরো-পাতার নমুনা পাতা ২)
+  Future<void> _openAvatarMenu(double top, AuthUser user, OrgSnapshot? org) async {
+    setState(() => _menuOpen = true);
+    final choice = await showAvatarMenu(
+      context,
+      top: top,
+      name: user.name,
+      designation: _designation,
+      branch: org?.branch ?? '',
+      avatar: avatarImage(_avatarUrl),
+      canSwitchCompany: (_profile?.companies.length ?? 0) > 1,
+    );
+    if (!mounted) return;
+    setState(() => _menuOpen = false);
+    switch (choice) {
+      case AvatarChoice.profile:
+        await _showProfile(user, org);
+      case AvatarChoice.company:
+        if (await mayLeaveUnsaved(context)) await _openPicker();
+      case AvatarChoice.lock:
+        await _showLockDelaySheet(context);
+      case AvatarChoice.settings:
+        _setPage(HomePage.me);
+      case AvatarChoice.logout:
+        await _confirmLogout(context, ref);
+      case null:
+        break;
+    }
+  }
+
+  /// নিজের প্রোফাইল — নাম, পদবি, ইমেইল, কোথায়। ⓘ ছবি বদলের সার্ভার-অংশ এখনো আসেনি (ec-এর কাজ); বানানো ডাক নয়,
+  /// তাই বোতামটা বন্ধ আর কারণ লেখা।
+  Future<void> _showProfile(AuthUser user, OrgSnapshot? org) => showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          key: const ValueKey('profile-dialog'),
+          icon: AvatarDisc(name: user.name, image: avatarImage(_avatarUrl), size: 64),
+          title: Text(user.name),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_designation != null) Text(_designation!),
+            if (user.email.isNotEmpty) Text(user.email),
+            if (org != null && !org.isEmpty)
+              Text([org.company, org.branch].where((s) => s.isNotEmpty).join(' · ')),
+            const SizedBox(height: AppSpacing.md),
+            const Text('ছবি বদল শীঘ্রই: সার্ভারের অংশ তৈরি হচ্ছে, এলে এখান থেকেই বদলাবেন।',
+                textAlign: TextAlign.center),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('বন্ধ করুন')),
+          ],
+        ),
+      );
+
   static Future<SessionProfile?> _fetchProfile() async {
     try {
       return (await MeApi.fetch()).profile;
@@ -487,33 +543,41 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         if (!didPop && up != null) _setPage(up);
       },
       child: Scaffold(
-        appBar: AppBar(
-          titleSpacing: AppSpacing.md,
-          title: switch (page.kind) {
-            HomePageKind.home => _Header(
-                title: headerNamesOrg ? org.company : user.name,
-                subtitle: headerNamesOrg
-                    ? (org.branch.isNotEmpty ? org.branch : null)
-                    // ⭐ পদবি, রোল নয় (মালিক, ২ অক্টোবর ২০২৬)
-                    : _designation,
-                onTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
-              ),
-            HomePageKind.modules => const _PageTitle('সব মডিউল'),
-            HomePageKind.module => _PageTitle(module?.label ?? 'সব মডিউল'),
-            HomePageKind.subList =>
-              _PageTitle(_tree.parent(page.parent!)?.label ?? ''),
-            HomePageKind.me => const _PageTitle('আমি'),
+        // ⭐ উপরের বার — মালিকের নকশা ৩ আর পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬): সব পাতায় "কোম্পানি · শাখা ▾",
+        // ভেতরের পাতায় "› মডিউল › পাতা"; ডানে খোঁজা, বিজ্ঞপ্তি, নিজের ছবি ([AbosTopBar])
+        appBar: AbosTopBar(
+          company: headerNamesOrg ? org.company : '',
+          branch: headerNamesOrg ? org.branch : '',
+          fallbackTitle: user.name,
+          crumbs: switch (page.kind) {
+            HomePageKind.home => const [],
+            HomePageKind.modules => const ['সব মডিউল'],
+            HomePageKind.module => [module?.label ?? 'সব মডিউল'],
+            HomePageKind.subList => [
+                if (module != null) module.label,
+                if (_tree.parent(page.parent!) case final p?) p.label,
+              ],
+            HomePageKind.me => const ['আমি'],
           },
-          // ⭐ মালিক, ৬ অক্টোবর ২০২৬: মাথার একদম ডানে ব্যবহারকারীর ছবি (চাপলে প্রোফাইল)।
-          // ⓘ ঘণ্টা আর অনুমোদন এখন নিচের বারে — প্রতিটা পর্দায় এক চাপে (মালিক, ১২ অক্টোবর ২০২৬)
-          actions: [
-            _AvatarAction(
-              name: user.name,
-              avatarUrl: _avatarUrl,
-              onTap: () => _setPage(HomePage.me),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
+          leading: switch (page.kind) {
+            HomePageKind.home || HomePageKind.modules => TopBarLeading.menu,
+            _ => TopBarLeading.back,
+          },
+          // ≡ পুরো মেনু = সব মডিউল; ← এক ধাপ উপরে (অ্যান্ড্রয়েডের "পিছনে"-র একই নিয়ম)
+          onLeading: () => _setPage(page.up == null || page.kind == HomePageKind.modules
+              ? HomePage.modules
+              : page.up!),
+          onOrgTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
+          onSearch: _openSearch,
+          unread: _unread,
+          onBell: () async {
+            await (widget.openPath ?? _push)('notifications');
+            if (mounted) _loadUnread();
+          },
+          avatarName: user.name,
+          avatar: avatarImage(_avatarUrl),
+          menuOpen: _menuOpen,
+          onAvatar: (top) => _openAvatarMenu(top, user, org),
         ),
         // docs/Contract §৬. Wrapped here rather than around the whole app: the
         // login screen must stay reachable for somebody whose build is too old,
@@ -635,103 +699,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 }
 
-class _PageTitle extends StatelessWidget {
-  const _PageTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700));
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.title, this.subtitle, this.onTap});
-
-  final String title;
-  final String? subtitle;
-
-  /// Opens the company/branch picker; null when there is nothing to pick.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final names = _names();
-    if (onTap == null) return names;
-    // ⓘ চাপার জায়গা অন্তত ৪৮dp উঁচু (নকশার নিয়ম ০.৪.৩৮ §২)
-    return InkWell(
-      key: const ValueKey('workspace-header'),
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: names),
-            const SizedBox(width: AppSpacing.xs),
-            const Icon(Icons.swap_horiz, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _names() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        if (subtitle != null && subtitle!.isNotEmpty)
-          // ⭐ মাথার নিজের লেখার রং, একটু মলিন — বাঁধা সাদা নয়, তাই মাথার পট বদলালেও পড়া যায়
-          // (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
-          Opacity(
-            opacity: 0.7,
-            child: Text(subtitle!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12)),
-          ),
-      ],
-    );
-  }
-}
-
-/// ⭐ The person's photo at the far right of the header — a tap opens the
-/// profile ("আমি").
-class _AvatarAction extends StatelessWidget {
-  const _AvatarAction(
-      {required this.name, required this.avatarUrl, required this.onTap});
-
-  final String name;
-  final String? avatarUrl;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
-    final cs = Theme.of(context).colorScheme;
-    return IconButton(
-      key: const ValueKey('header-avatar'),
-      tooltip: 'প্রোফাইল',
-      onPressed: onTap,
-      icon: CircleAvatar(
-        radius: 15,
-        backgroundColor: context.palette.surface,
-        foregroundColor: cs.primary,
-        foregroundImage: avatarImage(avatarUrl),
-        child: Text(name.trim().isEmpty ? '?' : name.trim().characters.first,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
-      ),
-    );
-  }
-}
-
 /// "আমি" — who is signed in, where, the sync status, the update button and
 /// the way out. Signing out asks first: on a shared phone one stray tap must
 /// not cost somebody their session and the login that follows.
@@ -813,8 +780,7 @@ class _MoreTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ-তালার সময় — কতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN (অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬; [[LockDelay]])
         const _LockDelayTile(),
-        // ⭐ আলো বা অন্ধকার — মানুষের নিজের বাছাই (মালিকের আদেশ, ২০ অক্টোবর ২০২৬; [[ThemeChoices]])
-        const _ThemeTile(),
+        // ⓘ আলো বা অন্ধকার এখন ছবির মেনুতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬; [[AvatarMenu]])
         const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ হালনাগাদ — হাতে যাচাই (মালিক, ৭ অক্টোবর ২০২৬)
         const AppUpdateTile(),
@@ -832,71 +798,34 @@ class _MoreTab extends ConsumerWidget {
       ],
     );
   }
-
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final pending = SyncEngine.instance.pendingCount;
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('বেরিয়ে যাবেন?'),
-        content: Text(pending > 0
-            ? 'এই ফোনে আপনার $pending টি অর্ডার এখনো পাঠানো হয়নি। বেরিয়ে গেলেও '
-                'ওগুলো ফোনেই থাকবে, আর আপনি আবার ঢুকলে তবেই যাবে — অন্য কেউ '
-                'ঢুকলে তাঁর নামে যাবে না।'
-            : 'আবার ঢুকতে পাসওয়ার্ড লাগবে।'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('থাক'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('বেরিয়ে যান'),
-          ),
-        ],
-      ),
-    );
-    if (yes == true) {
-      await ref.read(authStateProvider.notifier).logout();
-    }
-  }
 }
 
-/// আলো বা অন্ধকার — তিন পছন্দ এক সারিতে (SegmentedButton); চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না
-class _ThemeTile extends StatelessWidget {
-  const _ThemeTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeChoice>(
-      valueListenable: ThemeChoices.instance.current,
-      builder: (context, choice, _) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Row(children: [
-              Icon(Icons.contrast),
-              SizedBox(width: AppSpacing.md),
-              Text('আলো বা অন্ধকার', style: TextStyle(fontWeight: FontWeight.w600)),
-            ]),
-            const SizedBox(height: AppSpacing.sm),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<ThemeChoice>(
-                key: const ValueKey('me-theme'),
-                showSelectedIcon: false,
-                segments: [
-                  for (final c in ThemeChoice.values)
-                    ButtonSegment(value: c, label: Text(c.label, key: ValueKey('theme-${c.name}'))),
-                ],
-                selected: {choice},
-                onSelectionChanged: (picked) => ThemeChoices.instance.choose(picked.single),
-              ),
-            ),
-          ]),
+/// বেরোনোর আগে জিজ্ঞেস — শেয়ার করা ফোনে এক ভুল চাপে কারও সেশন না যায় ("আমি" পাতা আর ছবির মেনু দুটোই)
+Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+  final pending = SyncEngine.instance.pendingCount;
+  final yes = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('বেরিয়ে যাবেন?'),
+      content: Text(pending > 0
+          ? 'এই ফোনে আপনার $pending টি অর্ডার এখনো পাঠানো হয়নি। বেরিয়ে গেলেও '
+              'ওগুলো ফোনেই থাকবে, আর আপনি আবার ঢুকলে তবেই যাবে — অন্য কেউ '
+              'ঢুকলে তাঁর নামে যাবে না।'
+          : 'আবার ঢুকতে পাসওয়ার্ড লাগবে।'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('থাক'),
         ),
-      ),
-    );
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('বেরিয়ে যান'),
+        ),
+      ],
+    ),
+  );
+  if (yes == true) {
+    await ref.read(authStateProvider.notifier).logout();
   }
 }
 
@@ -915,31 +844,37 @@ class _LockDelayTile extends StatelessWidget {
           title: const Text('অ্যাপ-তালার সময়'),
           subtitle: Text('এতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN লাগবে: ${LockDelay.label(delay.inMinutes)}'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => showModalBottomSheet<void>(
-            context: context,
-            builder: (sheet) => SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const ListTile(title: Text('অ্যাপ-তালার সময়', style: TextStyle(fontWeight: FontWeight.w700))),
-                  for (final minutes in LockDelay.choices)
-                    ListTile(
-                      key: ValueKey('lock-delay-$minutes'),
-                      leading: Icon(delay.inMinutes == minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                      title: Text(LockDelay.label(minutes)),
-                      onTap: () async {
-                        await LockDelay.instance.choose(minutes);
-                        if (sheet.mounted) Navigator.of(sheet).pop();
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
+          onTap: () => _showLockDelaySheet(context),
         ),
       ),
     );
   }
+}
+
+/// অ্যাপ-তালার সময়ের চার পছন্দ — "আমি" পাতা আর ছবির মেনুর "পিন ও আঙুলের ছাপ" দুটোই খোলে ([[LockDelay]])
+Future<void> _showLockDelaySheet(BuildContext context) {
+  final delay = LockDelay.instance.current.value;
+  return showModalBottomSheet<void>(
+    context: context,
+    builder: (sheet) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ListTile(title: Text('অ্যাপ-তালার সময়', style: TextStyle(fontWeight: FontWeight.w700))),
+          for (final minutes in LockDelay.choices)
+            ListTile(
+              key: ValueKey('lock-delay-$minutes'),
+              leading: Icon(delay.inMinutes == minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+              title: Text(LockDelay.label(minutes)),
+              onTap: () async {
+                await LockDelay.instance.choose(minutes);
+                if (sheet.mounted) Navigator.of(sheet).pop();
+              },
+            ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// ⭐ মানুষের ছবি — যত ছোট দেখায় তত ছোট করে খোলা (১২০ পিক্সেল, ৪০dp গোলের ৩ গুণ)। ⛔ নইলে ফোনের ৪০০০ পিক্সেলের ছবি

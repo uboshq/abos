@@ -111,6 +111,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('header-avatar')));
       await tester.pumpAndSettle();
+      // ⓘ ছবি এখন নিজের মেনু খোলে; "আমি" পাতা তার "সেটিংস" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
+      await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('avatar-settings')));
+      await tester.pumpAndSettle();
       await expectLater(tester, meetsGuideline(g.value));
       handle.dispose();
     });
