@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
+import 'package:abos_mobile/core/widgets/day_part.dart';
 
 import 'package:abos_mobile/core/approvals/approvals_api.dart';
 import 'package:abos_mobile/core/auth/auth_controller.dart';
@@ -259,7 +259,7 @@ void main() {
     expect(find.text('৳8,12,500.00'), findsOneWidget);
     expect(find.textContaining('3 টি নথি'), findsOneWidget);
     // ⓘ যন্ত্রের নিজের সময়-অঞ্চলে (ঢাকায় 10:04 AM) — পরীক্ষা যেকোনো অঞ্চলের যন্ত্রে চলে
-    expect(find.textContaining(DateFormat('hh:mm a').format(DateTime.parse('2026-09-27T10:04:11+06:00').toLocal())), findsOneWidget);
+    expect(find.textContaining(banglaStamp(DateTime.parse('2026-09-27T10:04:11+06:00').toLocal())), findsOneWidget);
     // No cash block came back, so no cash card — absent is not zero.
     expect(find.text('হাতে নগদ'), findsNothing);
   });
@@ -293,8 +293,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('গ্রাহক'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('header-avatar')));
-    await tester.pumpAndSettle();
+    // ⓘ "আমি" এখন ছবি → মেনু → "সেটিংস · সংস্করণ" সারিতে (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
+    await _openMe(tester);
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
     // ⭐ প্রিন্টার — থার্মাল আর নরমাল (মালিক, ১৪ অক্টোবর ২০২৬)
     expect(find.byKey(const ValueKey('me-printer')), findsOneWidget);
@@ -320,13 +320,30 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
 
+    // ⭐ ছবির মেনুর "বের হওয়া" — বেরোনোর মূল পথ (মালিকের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('avatar-logout')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('avatar-logout')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('বেরিয়ে যাবেন?'), findsOneWidget,
+        reason: 'the menu\'s way out asks first');
+    await tester.tap(find.text('থাক'));
+    await tester.pumpAndSettle();
+    expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
+    expect(find.byKey(const ValueKey('header-avatar')), findsOneWidget,
+        reason: '"থাক" keeps me signed in');
+
+    // ⓘ "আমি" পাতার বোতামও একই প্রশ্ন করে
+    await _openMe(tester);
     await _scrollToLogout(tester);
     await tester.tap(find.widgetWithText(OutlinedButton, 'বেরিয়ে যান'));
     await tester.pumpAndSettle();
 
-    expect(find.text('বেরিয়ে যাবেন?'), findsOneWidget);
+    expect(find.text('বেরিয়ে যাবেন?'), findsOneWidget,
+        reason: 'the আমি page\'s way out asks first');
     await tester.tap(find.text('থাক'));
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
@@ -366,6 +383,17 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+}
+
+/// "আমি" — the photo opens my menu; its "সেটিংস · সংস্করণ" row opens the page
+/// (the owner's bar design 3 §৩, 20 Oct 2026).
+Future<void> _openMe(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('header-avatar')));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(find.byKey(const ValueKey('avatar-settings')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('avatar-settings')));
+  await tester.pumpAndSettle();
 }
 
 /// "আমি" grew a printer row (14 Oct 2026); on the test's 800×600 screen the

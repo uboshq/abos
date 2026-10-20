@@ -283,8 +283,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
-    // ⓘ "আমি" এখন মাথার ছবিতে (বারের নকশা ৩, অংশ ৪)
+    // ⓘ "আমি" এখন ছবি → মেনু → "সেটিংস · সংস্করণ" সারিতে (বারের নকশা ৩ §৩, ২০ অক্টোবর ২০২৬)
     await tester.tap(find.byKey(const ValueKey('header-avatar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('avatar-settings')));
     await tester.pumpAndSettle();
 
     expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
