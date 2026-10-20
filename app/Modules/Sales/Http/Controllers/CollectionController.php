@@ -54,7 +54,7 @@ class CollectionController extends Controller implements HasMiddleware
     {
         $query = Collection::query()
             ->search($request->query('q'))
-            ->with(['customer.location', 'account'])
+            ->with(['customer.location.parent', 'customer.branch', 'account'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
@@ -252,7 +252,8 @@ class CollectionController extends Controller implements HasMiddleware
     {
         return [
             // ⭐ জের-থাকা নিষ্ক্রিয় গ্রাহকও — বকেয়া রেখে বন্ধ দোকানের টাকা আদায়ের পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
-            'customers' => Customer::query()->inViewedBranch()->activeOrOwing()->orderBy('name_en')->get(),
+            // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; একবারে, সারি ধরে নয় ([[Customer::PLACE]])
+            'customers' => Customer::query()->inViewedBranch()->activeOrOwing()->with(Customer::PLACE)->orderBy('name_en')->get(),
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
             'accounts' => Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()

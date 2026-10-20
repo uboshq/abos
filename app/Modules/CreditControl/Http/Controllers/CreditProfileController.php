@@ -73,7 +73,8 @@ class CreditProfileController extends Controller
 
         return view('credit_control::profile', [
             'menu' => $this->menu->forUser($request->user()),
-            'customer' => $customer,
+            // ⭐ মাথায় "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+            'customer' => $customer->loadMissing(Customer::PLACE),
             'position' => $this->credit->positionOf($customer),
             // ⭐ ঝুঁকির মাত্রা আর তার কারণ — কেবল জানায় (ধাপ ৩.১)
             'risk' => app(CreditRisk::class)->rate($customer),

@@ -70,7 +70,7 @@ final class SalesOrderBookReports
                         DeliveryOrderStatus::SUBMITTED, DeliveryOrderStatus::SUPERVISOR_PENDING, DeliveryOrderStatus::SUPERVISOR_APPROVED,
                         DeliveryOrderStatus::ACCOUNTS_HELD, DeliveryOrderStatus::ACCOUNTS_APPROVED, DeliveryOrderStatus::DEPOT_CHECK,
                     ]).' as status')
-                    ->selectRaw(self::name('cu').' as customer_name')
+                    ->selectRaw(self::name('cu').' as customer_name')->selectRaw('cu.id as customer_id')
                     ->selectRaw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name')
                     ->selectRaw("{$wanted} as wanted_qty, {$held} as held_qty")
                     ->selectRaw("GREATEST({$wanted} - {$held}, 0) as back_order_qty")
@@ -80,7 +80,8 @@ final class SalesOrderBookReports
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'document_no', 'label' => 'core.table.document', 'width' => '8rem'],
                 ['key' => 'status', 'label' => 'sales::order_book.status', 'width' => '9rem'],
-                ['key' => 'customer_name', 'label' => 'sales::field.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'sales::field.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'product_name', 'label' => 'sales::field.product'],
                 ['key' => 'wanted_qty', 'label' => 'sales::order_book.wanted', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'held_qty', 'label' => 'sales::order_book.held', 'type' => ReportColumn::QUANTITY],
@@ -119,7 +120,7 @@ final class SalesOrderBookReports
                     ->where('o.status', DeliveryOrderStatus::ACCOUNTS_HELD)
                     ->when($f['customer_id'] ?? null, fn ($q, $id) => $q->where('o.customer_id', (int) $id))
                     ->select(['o.trx_date', 'o.document_no', 'o.total', 'o.accounts_short', 'cu.credit_limit'])
-                    ->selectRaw(self::name('cu').' as customer_name')
+                    ->selectRaw(self::name('cu').' as customer_name')->selectRaw('cu.id as customer_id')
                     ->selectRaw('o.accounts_held_at as held_at')
                     ->selectRaw('DATE(o.accounts_held_at) as held_on')
                     ->selectRaw('DATEDIFF(?, DATE(o.accounts_held_at)) as days_held', [now()->toDateString()]);
@@ -133,7 +134,7 @@ final class SalesOrderBookReports
                     ->where('s.status', SalesOrderStatus::CREDIT_HELD)
                     ->when($f['customer_id'] ?? null, fn ($q, $id) => $q->where('s.customer_id', (int) $id))
                     ->select(['s.trx_date', 's.document_no', 's.total', 's.credit_short as accounts_short', 'cu.credit_limit'])
-                    ->selectRaw(self::name('cu').' as customer_name')
+                    ->selectRaw(self::name('cu').' as customer_name')->selectRaw('cu.id as customer_id')
                     ->selectRaw('s.credit_held_at as held_at')
                     ->selectRaw('DATE(s.credit_held_at) as held_on')
                     ->selectRaw('DATEDIFF(?, DATE(s.credit_held_at)) as days_held', [now()->toDateString()]);
@@ -144,7 +145,8 @@ final class SalesOrderBookReports
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'document_no', 'label' => 'core.table.document', 'width' => '8rem'],
-                ['key' => 'customer_name', 'label' => 'sales::field.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'sales::field.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'total', 'label' => 'sales::field.total', 'type' => ReportColumn::MONEY],
                 ['key' => 'credit_limit', 'label' => 'sales::order_book.limit', 'type' => ReportColumn::MONEY, 'total' => false],
                 ['key' => 'accounts_short', 'label' => 'sales::order_book.short', 'type' => ReportColumn::MONEY],
@@ -186,7 +188,7 @@ final class SalesOrderBookReports
                     ->select(['i.id', 'i.trx_date', 'i.document_no', 'x.document_no as cxl_no'])
                     ->selectRaw(self::label('i.status', fn (string $s) => DocumentStatus::label($s), [...DocumentStatus::POSTED, DocumentStatus::CANCELLED]).' as status')
                     ->selectRaw("'".SalesInvoice::drillSourceType()."' as source_type_literal")
-                    ->selectRaw(self::name('cu').' as customer_name')
+                    ->selectRaw(self::name('cu').' as customer_name')->selectRaw('cu.id as customer_id')
                     ->selectRaw('i.subtotal, COALESCE(i.discount, 0) + COALESCE(i.bill_discount, 0) as discount, COALESCE(i.tax, 0) as tax, i.total')
                     ->selectRaw("CASE WHEN i.status = {$cancelled} THEN 0 ELSE {$paid} END as paid")
                     ->selectRaw("CASE WHEN i.status = {$cancelled} THEN 0 ELSE GREATEST(i.total - {$paid} - i.returned_total - i.claimed_total, 0) END as due");
@@ -195,7 +197,8 @@ final class SalesOrderBookReports
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'document_no', 'label' => 'core.table.document', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'source_type_literal', 'source_id' => 'id'],
-                ['key' => 'customer_name', 'label' => 'sales::field.customer'],
+                // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                ['key' => 'customer_name', 'label' => 'sales::field.customer', 'place' => ['customer', 'customer_id']],
                 ['key' => 'subtotal', 'label' => 'sales::field.subtotal', 'type' => ReportColumn::MONEY],
                 ['key' => 'discount', 'label' => 'sales::field.discount', 'type' => ReportColumn::MONEY],
                 ['key' => 'tax', 'label' => 'sales::field.tax', 'type' => ReportColumn::MONEY],

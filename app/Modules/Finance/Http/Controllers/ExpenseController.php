@@ -10,6 +10,7 @@ use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherParties;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Finance\Services\HeadTotals;
 use Illuminate\Http\Request;
@@ -84,12 +85,18 @@ class ExpenseController extends Controller implements HasMiddleware
     {
         [$from, $to] = $this->range($request);
 
+        $waiting = $this->waiting();
+        $recent = Voucher::query()
+            ->ofType(Voucher::EXPENSE)
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->limit(20)->get();
+
         return view('finance::expense.index', [
             'menu' => $this->menu->forUser($request->user()),
             'from' => $from,
             'to' => $to,
             'heads' => $this->matching($this->heads($from, $to), trim((string) $request->query('q', ''))),
-            'waiting' => $this->waiting(),
+            'waiting' => $waiting,
 
             /*
              * ঝুলে থাকা মোট কয়টা — তালিকার দৈর্ঘ্য থেকে নয়, নিজের গোনা থেকে।
@@ -101,10 +108,9 @@ class ExpenseController extends Controller implements HasMiddleware
              * ঠিক আগের মতোই।
              */
             'waitingTotal' => $this->waitingCount(),
-            'recent' => Voucher::query()
-                ->ofType(Voucher::EXPENSE)
-                ->orderByDesc('trx_date')->orderByDesc('id')
-                ->limit(20)->get(),
+            'recent' => $recent,
+            // ⭐ নম্বরের পাশে পক্ষ — কাকে দেওয়া (মালিক, ১৯ অক্টোবর ২০২৬); দুই তালিকা মিলে একবারে ([[VoucherParties]])
+            'partyNames' => app(VoucherParties::class)->of($waiting->concat($recent)->unique('id')->values()),
         ]);
     }
 

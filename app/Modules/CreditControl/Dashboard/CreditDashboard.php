@@ -257,7 +257,8 @@ final class CreditDashboard implements ProvidesDashboard
                 ['key' => 'at', 'label' => __('credit_control::profile.when'), 'width' => '7rem',
                     'render' => fn (CustomerCreditChange $c) => DateFormat::format($c->created_at)],
                 ['key' => 'customer', 'label' => __('credit_control::report.customer'),
-                    'render' => fn (CustomerCreditChange $c) => $c->customer?->name() ?? '—'],
+                    // ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+                    'render' => fn (CustomerCreditChange $c) => $c->customer?->nameWithPoint() ?? '—'],
                 ['key' => 'what', 'label' => __('credit_control::profile.what'),
                     'render' => fn (CustomerCreditChange $c) => __('customer::credit_history.'.$c->field)],
                 ['key' => 'change', 'label' => __('credit_control::dashboard.old_new'),
@@ -266,7 +267,7 @@ final class CreditDashboard implements ProvidesDashboard
                         : ($c->old_value ?? '—').' → '.($c->new_value ?? '—')],
             ],
             rows: $ids === [] ? collect() : CustomerCreditChange::query()->whereIn('customer_id', $ids)
-                ->with('customer')->latest('id')->limit(3)->get(),
+                ->with(Customer::placeVia('customer'))->latest('id')->limit(3)->get(),
             empty: __('credit_control::dashboard.no_changes'),
         );
     }
@@ -274,7 +275,15 @@ final class CreditDashboard implements ProvidesDashboard
     /** @param  list<int>  $ids */
     private static function recentBlocks(array $ids): Listing
     {
-        $names = Customer::query()->inViewedBranch()->whereIn('customers.id', $ids)->get()->keyBy('id');
+        $rows = $ids === [] ? collect() : AuditTrail::query()
+            ->where('auditable_type', Customer::class)
+            ->whereIn('auditable_id', $ids)
+            ->whereIn('action', ['credit_blocked', 'credit_unblocked'])
+            ->latest('id')->limit(3)->get();
+
+        // ⓘ কেবল এই তিন সারির গ্রাহক, জায়গাসহ, এক প্রশ্নে — আগে দেখার দেয়ালের সব গ্রাহক তোলা হত তিনটা নামের জন্য
+        $names = Customer::query()->inViewedBranch()->whereIn('customers.id', $rows->pluck('auditable_id')->map(fn ($id) => (int) $id)->all() ?: [0])
+            ->with(Customer::PLACE)->get()->keyBy('id');
 
         return new Listing(
             label: __('credit_control::dashboard.recent_blocks'),
@@ -282,17 +291,14 @@ final class CreditDashboard implements ProvidesDashboard
                 ['key' => 'at', 'label' => __('credit_control::profile.when'), 'width' => '7rem',
                     'render' => fn (AuditTrail $t) => DateFormat::format($t->created_at)],
                 ['key' => 'customer', 'label' => __('credit_control::report.customer'),
-                    'render' => fn (AuditTrail $t) => $names[$t->auditable_id]?->name() ?? '—'],
+                    // ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+                    'render' => fn (AuditTrail $t) => $names->get((int) $t->auditable_id)?->nameWithPoint() ?? '—'],
                 ['key' => 'what', 'label' => __('credit_control::profile.what'),
                     'render' => fn (AuditTrail $t) => __('credit_control::profile.'.$t->action)],
                 ['key' => 'reason', 'label' => __('credit_control::profile.reason'),
                     'render' => fn (AuditTrail $t) => $t->reason ?? '—'],
             ],
-            rows: $ids === [] ? collect() : AuditTrail::query()
-                ->where('auditable_type', Customer::class)
-                ->whereIn('auditable_id', $ids)
-                ->whereIn('action', ['credit_blocked', 'credit_unblocked'])
-                ->latest('id')->limit(3)->get(),
+            rows: $rows,
             empty: __('credit_control::dashboard.no_blocks'),
             href: route('sales.report.show', ['slug' => 'blocked-customers'] + self::branch()),
         );

@@ -40,6 +40,7 @@ use App\Modules\Sales\Support\ChallanPaperFacts;
 use App\Modules\Sales\Support\InvoicePrintLook;
 use App\Modules\Sales\Support\OrderPaperFacts;
 use App\Modules\Sales\Support\PaperDesigns;
+use App\Modules\Sales\Support\PaperPlace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -159,7 +160,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
         /* ⓘ `brandRow`-ও সাথে — নাহলে প্রতিটা সারিতে একটা করে কোয়েরি যেত */
-        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine.batch', 'customer', 'branch']);
+        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine.batch', 'customer', 'customer.location.parent', 'customer.branch', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
@@ -340,6 +341,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $invoice->loadMissing([
             'customer.location.parent',
+            'customer.branch',
             'creator',
             'lines.challanLine.challan.vehicle.vehicleType',
             'lines.challanLine.challan.order',
@@ -438,7 +440,8 @@ class SalesPrintController extends Controller implements HasMiddleware
         return [
             'bill_to' => [
                 'name' => (string) ($customer?->name('en') ?? ''),
-                'point' => (string) ($point?->name('en') ?? ''),
+                // ⭐ "পয়েন্ট · শাখা" — এক লাইনে, কাগজের মাপ অক্ষত ([[PaperPlace::of()]]; মালিক, ১৯ অক্টোবর ২০২৬)
+                'point' => PaperPlace::of($customer, $point),
                 'phone' => (string) ($customer?->phone ?? ''),
                 'address' => (string) ($customer?->address('en') ?? ''),
             ],
@@ -689,7 +692,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
-        $invoice->load(['lines.product.unit', 'lines.challanLine.batch', 'customer', 'branch']);
+        $invoice->load(['lines.product.unit', 'lines.challanLine.batch', 'customer', 'customer.location.parent', 'customer.branch', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
@@ -717,7 +720,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $this->assertNotAnUnfinishedCounterSale($challan);
 
-        $challan->load(['lines.product.unit', 'lines.batch', 'customer', 'warehouse']);
+        $challan->load(['lines.product.unit', 'lines.batch', 'customer', 'customer.location.parent', 'customer.branch', 'warehouse']);
 
         /*
          * ⭐ টাকাসহ না টাকা ছাড়া — মালিক, ২ অক্টোবর ২০২৬: *"Challan Print er age Amount soho print hobe na amount chara"*।
@@ -792,7 +795,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $this->assertNotAnUnfinishedCounterSale($challan);
 
-        $challan->load(['lines.product.unit', 'lines.batch', 'customer', 'warehouse']);
+        $challan->load(['lines.product.unit', 'lines.batch', 'customer', 'customer.location.parent', 'customer.branch', 'warehouse']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.gatepass'),
@@ -823,7 +826,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function loadingSheet(Request $request, Shipment $shipment): Response
     {
-        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
+        $shipment->load(['lines.challan.customer.location.parent', 'lines.challan.customer.branch', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
 
         $products = array_map(fn (array $row) => [
             'code' => '',
@@ -843,7 +846,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         ], LoadingSheetController::productTotals($shipment));
 
         $byChallan = $shipment->lines->map(fn ($tripLine) => trim(($tripLine->challan?->document_no ?? '').' · '
-            .($tripLine->challan?->customer?->name() ?? '')).' — '
+            .($tripLine->challan?->customer?->nameWithPoint() ?? '')).' — '
             .($tripLine->challan?->lines ?? collect())->map(fn ($l) => $l->product?->name().' '.$this->qty(bcadd((string) $l->delivered_qty, (string) ($l->free_qty ?? '0'), 4)))->implode(', '))
             ->implode(' | ');
 
@@ -858,7 +861,7 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'sales::field.driver_phone' => (string) ($shipment->driver_phone ?? ''),
                 'sales::field.carrier_name' => (string) ($shipment->carrier_name ?? ''),
                 'sales::loading.challan_list' => $shipment->lines
-                    ->map(fn ($l) => trim(($l->challan?->document_no ?? '').' '.($l->challan?->customer?->name() ?? '')))
+                    ->map(fn ($l) => trim(($l->challan?->document_no ?? '').' '.($l->challan?->customer?->nameWithPoint() ?? '')))
                     ->implode(' · '),
             ],
             lines: $products,
@@ -881,7 +884,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function gatePassDocument(Request $request, GatePass $gatePass): Response
     {
-        $challan = $gatePass->challan()->with(['lines.product.unit', 'customer', 'warehouse', 'vehicle.vehicleType'])->firstOrFail();
+        $challan = $gatePass->challan()->with(['lines.product.unit', 'customer', 'customer.location.parent', 'customer.branch', 'warehouse', 'vehicle.vehicleType'])->firstOrFail();
         $gatePass->loadMissing('issuer');
 
         /*
@@ -906,7 +909,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             meta: [
                 'core.print.document_no' => $gatePass->document_no,
                 'sales::gate_pass.column.challan' => $challan->document_no,
-                'sales::field.customer' => $challan->customer?->name() ?? '',
+                'sales::field.customer' => $challan->customer?->nameWithPoint() ?? '',
                 ...$transport,
                 'sales::gate_pass.column.issued_by' => trim(($gatePass->issuer?->name ?? '').' · '.DateFormat::format($gatePass->issued_at), ' ·'),
             ],
@@ -935,7 +938,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function cancellation(Request $request, SalesInvoiceCancellation $cancellation): Response
     {
-        $invoice = SalesInvoice::query()->with(['lines.product.unit', 'customer'])->findOrFail($cancellation->sales_invoice_id);
+        $invoice = SalesInvoice::query()->with(['lines.product.unit', 'customer', 'customer.location.parent', 'customer.branch'])->findOrFail($cancellation->sales_invoice_id);
         $cancellation->loadMissing(['creator', 'confirmer']);
 
         $collected = $invoice->collectedAmount();
@@ -945,7 +948,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             meta: array_filter([
                 'core.print.document_no' => $cancellation->document_no,
                 'core.print.date' => DateFormat::format($cancellation->trx_date),
-                'sales::field.customer' => $invoice->customer?->name() ?? '',
+                'sales::field.customer' => $invoice->customer?->nameWithPoint() ?? '',
                 'sales::cancellation.of_invoice' => $invoice->document_no.' · '.DateFormat::format($invoice->trx_date),
                 'sales::cancellation.reason' => $cancellation->reason,
             ], fn ($v) => filled($v)),
@@ -991,14 +994,14 @@ class SalesPrintController extends Controller implements HasMiddleware
 
     public function order(Request $request, SalesOrder $order): Response
     {
-        $order->load(['lines.product.unit', 'customer', 'warehouse']);
+        $order->load(['lines.product.unit', 'customer', 'customer.location.parent', 'customer.branch', 'warehouse']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.order'),
             meta: [
                 'core.print.document_no' => $order->document_no,
                 'core.print.date' => DateFormat::format($order->trx_date),
-                'sales::field.customer' => $order->customer?->name() ?? '',
+                'sales::field.customer' => $order->customer?->nameWithPoint() ?? '',
                 'sales::field.deliver_on' => DateFormat::format($order->deliver_on),
             ],
             lines: $this->productLines($order->lines, 'ordered_qty'),
@@ -1024,7 +1027,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function deliveryOrder(Request $request, SalesOrder $order): Response
     {
-        $order->load(['lines.product.unit', 'customer', 'warehouse']);
+        $order->load(['lines.product.unit', 'customer', 'customer.location.parent', 'customer.branch', 'warehouse']);
 
         $pending = $order->lines
             ->filter(fn ($line) => bccomp($line->pendingQty(), '0', 4) > 0)
@@ -1043,7 +1046,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             meta: [
                 'core.print.document_no' => $order->document_no,
                 'core.print.date' => DateFormat::format(now()),
-                'sales::field.customer' => $order->customer?->name() ?? '',
+                'sales::field.customer' => $order->customer?->nameWithPoint() ?? '',
                 'sales::field.warehouse' => $order->warehouse?->name() ?? '',
             ],
             lines: $pending,
@@ -1060,14 +1063,14 @@ class SalesPrintController extends Controller implements HasMiddleware
     /** টাকার রসিদ — আদায়ের কাগজ। */
     public function receipt(Request $request, Collection $collection): Response
     {
-        $collection->load(['lines.invoice', 'customer', 'account']);
+        $collection->load(['lines.invoice', 'customer', 'customer.location.parent', 'customer.branch', 'account']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.collection'),
             meta: [
                 'core.print.document_no' => $collection->document_no,
                 'core.print.date' => DateFormat::format($collection->trx_date),
-                'sales::field.customer' => $collection->customer?->name() ?? '',
+                'sales::field.customer' => $collection->customer?->nameWithPoint() ?? '',
                 'sales::field.account' => $collection->account?->name() ?? '',
                 'sales::field.instrument_no' => $collection->instrument_no ?? '',
             ],
@@ -1102,7 +1105,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $meta = [
             'core.print.document_no' => $invoice->document_no,
             'core.print.date' => DateFormat::format($invoice->trx_date),
-            'sales::field.customer' => $invoice->customer?->name() ?? '',
+            'sales::field.customer' => $invoice->customer?->nameWithPoint() ?? '',
             'sales::field.due_on' => DateFormat::format($invoice->due_on),
 
             /*
@@ -1586,7 +1589,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         return [
             'core.print.document_no' => $challan->document_no,
             'core.print.date' => DateFormat::format($challan->trx_date),
-            'sales::field.customer' => $challan->customer?->name() ?? '',
+            'sales::field.customer' => $challan->customer?->nameWithPoint() ?? '',
             'sales::field.warehouse' => $challan->warehouse?->name() ?? '',
             // বহরের গাড়ি হলে মাস্টারের নম্বরপ্লেট, নাহলে লেখা নম্বরটা
             // ⭐ নিজস্ব পরিবহন নয়তো বাহক — পাতার সাথে একই উত্তর ([[DeliveryChallan::transportLabel()]])

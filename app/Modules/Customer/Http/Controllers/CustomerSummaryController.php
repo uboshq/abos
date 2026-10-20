@@ -53,7 +53,8 @@ final class CustomerSummaryController extends Controller implements HasMiddlewar
 
         return view('customer::summary', [
             'menu' => $this->menu->forUser($request->user()),
-            'customer' => $customer,
+            // ⭐ মাথায় "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+            'customer' => $customer->loadMissing(Customer::PLACE),
             /*
              * ⛔ হেডারে বাছা শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৩; [[TheSummaryFollowsTheBranchInTheHeaderTest]])।
              * ⓘ কার্ডের বিলের অঙ্ক বিলের শাখার দেয়ালে ছাঁকা, অথচ বকেয়া গোটা কোম্পানির — "ময়মনসিংহ" বেছে নেত্রকোনার বকেয়াও দেখাত, আর

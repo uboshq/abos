@@ -41,7 +41,7 @@ class GatePassController extends Controller implements HasMiddleware
         $passes = GatePass::query()
             ->search($term === '' ? null : $term)
             ->when(! $showCancelled, fn ($q) => $q->where('status', GatePass::ISSUED))
-            ->with(['challan.customer', 'issuer'])
+            ->with(['challan.customer.location.parent', 'challan.customer.branch', 'issuer'])
             ->orderByDesc('issued_at')
             ->orderByDesc('id')
             ->paginate(50)

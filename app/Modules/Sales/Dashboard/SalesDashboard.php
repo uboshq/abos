@@ -12,9 +12,11 @@ use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\PartyRegistry;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
@@ -74,6 +76,11 @@ final class SalesDashboard implements ProvidesDashboard
         $versus = app(\App\Core\Engines\Report\ReportEngine::class)->get(\App\Modules\Sales\Reports\PartyTargetReport::KEY)->allows(auth()->user())
             ? \App\Modules\Sales\Reports\PartyTargetReport::thisMonth()
             : null;
+
+        // ⭐ পিছিয়ে থাকা গ্রাহকের "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পাঁচ সারির এক প্রশ্নে, সারি ধরে নয়
+        $laggingPlaces = $versus === null ? [] : app(PartyRegistry::class)->pointAndBranchOf(
+            $versus['lagging']->map(fn ($r) => [Customer::drillSourceType(), (int) $r->source_id])->all(),
+        );
 
         return new DashboardDefinition(
             title: __('sales::dashboard.title'),
@@ -209,6 +216,10 @@ final class SalesDashboard implements ProvidesDashboard
                             'render' => fn ($i) => $i->document_no],
                         ['key' => 'party', 'label' => __('sales::field.customer'),
                             'render' => fn ($i) => $i->customer?->name() ?? '—'],
+                        // ⭐ গ্রাহকের পরে পয়েন্ট (মালিক, ২৮ সেপ্টেম্বর ও ১৯ অক্টোবর ২০২৬) — পাশের "পিছিয়ে থাকা" তালিকার একই কলাম
+                        // ⭐ শাখাও — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "পয়েন্ট · শাখা" ([[Customer::placeName()]])
+                        ['key' => 'point', 'label' => __('customer::field.place'),
+                            'render' => fn ($i) => $i->customer?->placeName() ?? '—'],
                         ['key' => 'due', 'label' => __('sales::dashboard.outstanding'), 'width' => '9rem',
                             'render' => fn ($i) => Money::format($i->dueAmount())],
                     ],
@@ -221,7 +232,8 @@ final class SalesDashboard implements ProvidesDashboard
                     label: __('sales::party_target.lagging'),
                     columns: [
                         ['key' => 'customer', 'label' => __('sales::party_target.customer'), 'render' => fn ($r) => (string) $r->customer],
-                        ['key' => 'point', 'label' => __('sales::party_target.point'), 'render' => fn ($r) => (string) ($r->point ?? '—')],
+                        ['key' => 'point', 'label' => __('customer::field.place'),
+                            'render' => fn ($r) => $laggingPlaces[Customer::drillSourceType().':'.(int) $r->source_id] ?? (string) ($r->point ?? '—')],
                         ['key' => 'inflow', 'label' => __('sales::party_target.inflow'), 'width' => '8rem', 'render' => fn ($r) => Money::format($r->inflow)],
                         ['key' => 'target', 'label' => __('sales::party_target.target'), 'width' => '8rem', 'render' => fn ($r) => Money::format($r->target)],
                         ['key' => 'percent', 'label' => __('sales::party_target.percent'), 'width' => '5rem',
@@ -341,7 +353,7 @@ final class SalesDashboard implements ProvidesDashboard
             ->pluck('id')
             ->all();
 
-        return SalesInvoice::query()->withCollected()->with('customer')->whereIn('sal_invoices.id', $ranked ?: [0])->get()
+        return SalesInvoice::query()->withCollected()->with(['customer.location.parent', 'customer.branch'])->whereIn('sal_invoices.id', $ranked ?: [0])->get()
             ->sortBy(fn (SalesInvoice $i) => array_search($i->id, $ranked, true))
             ->values();
     }

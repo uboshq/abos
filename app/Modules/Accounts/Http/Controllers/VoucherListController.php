@@ -7,10 +7,12 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\SourceParties;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherParties;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -149,12 +151,16 @@ class VoucherListController extends Controller implements HasMiddleware
          * কী আছে। ⚠️ তারিখের ছাঁকনি সংখ্যাতেও খাটে, নাহলে ট্যাব বলত
          * "১২০" আর খুললে দেখাত "৩"।
          */
+        $vouchers = (clone $query)->paginate(50)->withQueryString();
+
         return view('accounts::voucher.list', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'tabs' => self::TABS,
             'counts' => $this->counts($request),
-            'vouchers' => (clone $query)->paginate(50)->withQueryString(),
+            'vouchers' => $vouchers,
+            // ⭐ নম্বরের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬); গোটা পাতার একবারে ([[VoucherParties]])
+            'partyNames' => app(VoucherParties::class)->of($vouchers->getCollection()),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             // ⓘ কেবল পাকা ভাউচার মোটে — বাতিল আর খসড়া নয় ([[Voucher::countedAmount()]])
             'grand' => $this->grandTotals($query, ['amount' => \App\Modules\Accounts\Models\Voucher::countedAmountSql()]),
@@ -186,12 +192,21 @@ class VoucherListController extends Controller implements HasMiddleware
             'document_no' => fn ($q) => $q->orderBy('document_no'),
         ]);
 
+        $bills = (clone $query)->paginate(50)->withQueryString();
+
         return view('accounts::voucher.list', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'tabs' => self::TABS,
             'counts' => $this->counts($request),
-            'vouchers' => (clone $query)->paginate(50)->withQueryString(),
+            'vouchers' => $bills,
+            /*
+             * ⭐ বিলের পাশে গ্রাহক/সরবরাহকারী (মালিক, ১৯ অক্টোবর ২০২৬) — খাতার পক্ষ-ওয়ালা সারি থেকে, পাতার একবারে
+             * ([[SourceParties]])। ⓘ গোছানো প্রশ্নটা ছোঁয়া হয়নি — ONLY_FULL_GROUP_BY অক্ষত।
+             */
+            'partyNames' => app(SourceParties::class)->of(
+                $bills->getCollection()->map(fn ($d) => [(string) $d->source_type, (int) $d->source_id]),
+            ),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'q' => $request->query('q'),

@@ -628,7 +628,13 @@ class ListExport
             return '';
         }
 
-        $text = html_entity_decode(strip_tags((string) $value), ENT_QUOTES, 'UTF-8');
+        /*
+         * ⭐ নম্বরের পাশের পক্ষ ([[x-ui.party-cell]], `data-party-beside`) কেবল পর্দার জন্য — ফাইলে নম্বরের ঘর কেবল নম্বর, যাতে
+         * নম্বর ধরে খোঁজা বা মেলানো না ভাঙে (মালিক, ১৯ অক্টোবর ২০২৬: নম্বরের পাশে নাম; রপ্তানির ঘর আগের মতো)।
+         */
+        $value = (string) preg_replace('/<span\b[^>]*\sdata-party-beside(?=[\s>])[^>]*>.*?<\/span>/su', '', (string) $value);
+
+        $text = html_entity_decode(strip_tags($value), ENT_QUOTES, 'UTF-8');
 
         /*
          * Blade-এর ইন্ডেন্ট ও লাইন ভাঙা এক ফাঁকায় নামানো।

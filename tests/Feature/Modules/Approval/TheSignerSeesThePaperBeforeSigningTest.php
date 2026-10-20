@@ -193,7 +193,11 @@ final class TheSignerSeesThePaperBeforeSigningTest extends TestCase
 
         $this->assertStringContainsString(e(__('approval::field.party_card')), $sheet, 'পক্ষের কার্ডটাই নেই।');
         $this->assertFact($sheet, __('customer::field.phone'), '01711000777');
-        $this->assertFact($sheet, __('customer::field.point'), (string) $customer->location->name());
+        // ⭐ "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); পয়েন্টের নাম আর গ্রাহকের শাখা, দুটোই
+        $place = (string) $customer->fresh(['location.parent', 'branch'])->placeName();
+        $this->assertStringContainsString('Sheet Point SHEET-PT', $place, 'দাবির ভিত্তি নেই — পয়েন্ট নেই।');
+        $this->assertStringContainsString(' · ', $place, 'দাবির ভিত্তি নেই — গ্রাহকের শাখা নেই।');
+        $this->assertFact($sheet, __('customer::field.place'), $place);
         $this->assertFact($sheet, __('customer::field.outstanding'), Money::format($customer->outstanding()));
         $this->assertFact($sheet, __('customer::field.credit_limit'), Money::format('25000'));
     }

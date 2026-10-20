@@ -148,6 +148,13 @@ final class ApprovalApiController extends Controller
                 'currentLevel' => (int) $approval->current_level,
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'requesterName' => $approval->requesterName(),
+
+                /*
+                 * ⭐ পক্ষ আলাদা ঘরে — নম্বরের লাইনে বসানোর জন্য (মালিক, ১৯ অক্টোবর ২০২৬: *"নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের
+                 * নাম দিলে সহজে বোঝা যায়"*)। ⓘ গ্রাহক হলে "নাম · পয়েন্ট", নয়তো সরবরাহকারী/কর্মী/ব্যক্তি ([[ApprovalFacts]]) — ওয়েবের
+                 * ইনবক্সের একই লেখা। ⚠️ `summary` আগের মতোই (পক্ষ দিয়েই শুরু) — পুরনো অ্যাপ নতুন ঘর উপেক্ষা করে আর সারাংশে পক্ষ পায়।
+                 */
+                'party' => $fact['party'] ?? null,
                 'summary' => ($changed ? __('approval::field.changed_after_request', ['amount' => \App\Core\Support\Money::format($asked)]).' · ' : '')
                     .$this->summaryOf($approval, $fact),
 
@@ -213,6 +220,8 @@ final class ApprovalApiController extends Controller
                 'currentLevel' => (int) $approval->current_level,
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
                 'decidedAt' => $approval->decided_at?->toIso8601String(),
+                // ⭐ পক্ষ আলাদা ঘরে — নম্বরের লাইনে (১৯ অক্টোবর ২০২৬; উপরের [[pending()]]-এর একই নিয়ম)
+                'party' => $facts[(int) $approval->id]['party'] ?? null,
                 'summary' => $this->summaryOf($approval, $facts[(int) $approval->id] ?? []),
                 // ⓘ শেষ কথা — কে, কী, আর কেন (ফেরত বা সংশোধনের নোট লেখককে জানতেই হয়)
                 'lastDecision' => $last === null ? null : [

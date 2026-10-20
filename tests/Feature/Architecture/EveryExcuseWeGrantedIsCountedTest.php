@@ -96,6 +96,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
         // ⓘ শাখার ছাপের পাহারার বাইরের প্যারামিটারহীন POST দরজা, প্রতিটা কারণসহ (RCV-0143; ec, ২০ অক্টোবর ২০২৬)
         'EveryNewPaperFormCarriesItsBranchTest::EXCLUDED',
+        // ⓘ গ্রাহকের নামের পাশে পয়েন্ট আর শাখা নেই — POS, মালিকের আদেশে ২১ অক্টোবর পর্যন্ত বন্ধ (মালিক, ১৯ অক্টোবর ২০২৬; a5)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -120,6 +122,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     private const NOT_EXCUSES = [
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
         'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
+        // ⓘ তথ্য: গ্রাহকের নাম আছে, কিন্তু দেখানো নয় — ফর্মের ঘরের মান, স্ক্রিন-রিডারের বোতামের নাম, নিজের পাতা/পোর্টাল (১৯ অক্টোবর ২০২৬)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_A_DISPLAY',
         // ⓘ চাহিদা: অন্য কোম্পানিতে ঢোকার প্রতিটা দরজা তালিকায় থাকতে হবে, আর বেশিরভাগ নিজেই canInCompany() ডাকে (৫ অক্টোবর ২০২৬)
         'EveryDoorIntoAnotherCompanyAsksTheKeyThereTest::DOORS',
         // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)
@@ -411,7 +415,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       নিজের শাখায়), আর লেখে-না এমন পূর্বদর্শন। ⓘ বেশিরভাগ কাগজই বানায় না, তবু গোনা — কারণ থাকা মানে ছাড়টা ছাড় নয়, এমন
      *       নয় (২২২ → ২২৪-এর একই যুক্তি)। ⭐ কোনো দরজা কাগজ বানাতে শুরু করলে সারিটা CREATE_DOORS-এ যায় আর ছাদ এক কমে
      */
-    private const CEILING = 453;
+    /*
+     * ── ⚠️ ৩৭১ → ৩৭২ (দুই শাখা মিলে ৩৭১ + ৮২ + ১ = ৪৫৪, fe বান্ডেল ২০ অক্টোবর), ১৯ অক্টোবর ২০২৬ (গ্রাহকের নামের পাশে পয়েন্ট আর শাখা — মালিকের স্থায়ী নিয়ম; a5) ──────────────────────
+     *   +১  ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET — Sales-এর POS পর্দার গ্রাহক-পিকার: POS মালিকের আদেশে ২১ অক্টোবর
+     *       পর্যন্ত বন্ধ; খুললে nameWithPoint() আর with(Customer::PLACE), তখন সারি ওঠে আর ছাদ কমে
+     */
+    private const CEILING = 454;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

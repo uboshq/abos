@@ -83,9 +83,10 @@ class WhoActuallyMattersTest extends TestCase
         return Customer::query()->orderBy('id')->take($count)->get()->all();
     }
 
+    /** ⭐ রিপোর্টের নামের ঘর — "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম; [[ReportColumn::$place]]) */
     private function nameOf(Customer $customer): string
     {
-        return $customer->name_bn ?: $customer->name_en;
+        return $customer->fresh(['location.parent', 'branch'])->nameWithPoint();
     }
 
     // ── অবদান ───────────────────────────────────────────────────────

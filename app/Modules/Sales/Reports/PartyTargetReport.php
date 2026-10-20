@@ -222,7 +222,8 @@ final class PartyTargetReport
                 ['key' => 'sl', 'label' => 'sales::party_target.sl', 'type' => ReportColumn::QUANTITY, 'total' => false, 'width' => '4rem'],
                 ['key' => 'customer', 'label' => 'sales::party_target.customer', 'type' => ReportColumn::DOCUMENT,
                     'source_type' => 'source_type', 'source_id' => 'source_id'],
-                ['key' => 'point', 'label' => 'sales::party_target.point'],
+                // ⭐ "পয়েন্ট · শাখা" — শাখা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম); SQL অক্ষত
+                ['key' => 'point', 'label' => 'sales::party_target.place', 'place' => ['customer', 'source_id', 'branch']],
                 ['key' => 'inflow', 'label' => 'sales::party_target.inflow', 'type' => ReportColumn::MONEY],
                 ['key' => 'target', 'label' => 'sales::party_target.target', 'type' => ReportColumn::MONEY],
                 ['key' => 'percent', 'label' => 'sales::party_target.percent', 'type' => ReportColumn::PERCENT, 'ratio' => ['inflow', 'target']],

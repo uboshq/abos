@@ -229,7 +229,8 @@ final class TheSignerSeesWhatIsBeingSoldTest extends TestCase
             'other product' => e($this->plainOne->code.' - '.$this->plainOne->name()),
             'free' => Money::format('2'),
             'phone' => e((string) $customer->phone),
-            'point' => e((string) $customer->location?->name()),
+            // ⭐ "পয়েন্ট · শাখা" — কার্ডের এক নিয়ম ([[Customer::placeName()]]; মালিক, ১৯ অক্টোবর ২০২৬)
+            'point' => e((string) $customer->fresh(['location.parent', 'branch'])->placeName()),
             'outstanding' => Money::format($customer->outstanding()),
             'outstanding label' => e((string) __('customer::field.outstanding')),
         ] as $what => $expected) {

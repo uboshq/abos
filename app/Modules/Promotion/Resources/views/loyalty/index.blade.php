@@ -39,7 +39,8 @@
                                 <td>
                                     <a class="underline" href="{{ route('promotion.loyalty.show', $customer) }}">{{ $customer->code }}</a>
                                 </td>
-                                <td>{{ $customer->name() }}</td>
+                                {{-- ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); এক লাইনে, পুরোটা title-এ --}}
+                                <td><span class="block max-w-64 truncate" title="{{ $customer->nameWithPoint() }}">{{ $customer->nameWithPoint() }}</span></td>
                                 {{-- ⚠️ ঋণাত্মক হতে পারে: খরচ করা পয়েন্টের বিল বাতিল হলে — লুকানো নয়, লাল --}}
                                 <td @class(['num tabular-nums', 'text-(--color-danger)' => str_starts_with($balances[$customer->id] ?? '0', '-')])>
                                     {{ $balances[$customer->id] ?? '0' }}

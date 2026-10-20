@@ -509,7 +509,8 @@ final class PartyReports
                 'source_type' => 'party_type_literal',
                 'source_id' => $idKey,
             ],
-            ['key' => 'point_name', 'label' => 'master_data::level.point', 'type' => ReportColumn::TEXT],
+            // ⭐ "পয়েন্ট · শাখা" — শাখা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম); SQL আর GROUP BY অক্ষত
+            ['key' => 'point_name', 'label' => 'customer::field.place', 'type' => ReportColumn::TEXT, 'place' => ['customer', $idKey, 'branch']],
             ['key' => 'area_name', 'label' => 'master_data::level.territory', 'type' => ReportColumn::TEXT],
             $address ? ['key' => 'full_address', 'label' => 'customer::field.full_address', 'type' => ReportColumn::TEXT] : null,
             $owner ? ['key' => 'owner_name', 'label' => 'customer::field.owner_name', 'type' => ReportColumn::TEXT] : null,

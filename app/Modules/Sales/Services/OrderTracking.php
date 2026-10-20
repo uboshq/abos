@@ -144,7 +144,8 @@ final class OrderTracking
          */
         $orders = SalesOrder::query()
             ->fromSub($base, 'sal_orders')
-            ->with(['customer'])
+            // ⭐ গ্রাহকের পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; পাতার একবারে, সারি ধরে নয়
+            ->with(['customer.location.parent', 'customer.branch'])
             ->latest('trx_date')
             ->latest('id');
 

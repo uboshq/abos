@@ -11,7 +11,8 @@
     $card = 'rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4';
     $field = 'h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2';
     $label = 'mb-1 block text-sm text-(--color-ink-muted)';
-    $customerName = fn ($c) => $c === null ? '—' : $c->code.' · '.(app()->getLocale() === 'bn' && filled($c->name_bn) ? $c->name_bn : $c->name_en);
+    // ⭐ "কোড · নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); জায়গা নিয়ন্ত্রক একবারে আনে ([[Customer::PLACE]])
+    $customerName = fn ($c) => $c === null ? '—' : $c->code.' · '.$c->nameWithPoint();
     $areaName = fn ($l) => app()->getLocale() === 'bn' && filled($l->name_bn) ? $l->name_bn : $l->name_en;
 @endphp
 

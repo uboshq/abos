@@ -28,7 +28,8 @@
 <div class="rule"></div>
 <div class="cap">{{ mb_strtoupper($t('sales::paper_design.order_for')) }}</div>
 <div data-order-for><strong>{{ $to['name'] }}</strong></div>
-@if ($to['point'] !== '')<div class="small">{{ $t('sales::print.classic.point') }} {{ $to['point'] }}</div>@endif
+{{-- ⭐ রোলে এক লাইন: "পয়েন্ট · শাখা" কেবল মান, ৪০ অক্ষরে কাটা — নাম ছাড়া (মালিক, ১৯ অক্টোবর ২০২৬; [[PaperPlace::of()]]) --}}
+@if ($to['point'] !== '')<div class="small" data-place>{{ mb_strimwidth($to['point'], 0, 40, '…') }}</div>@endif
 @if ($to['address'] !== '')<div class="small">{{ $to['address'] }}</div>@endif
 @if ($to['phone'] !== '')<div class="small">{{ $to['phone'] }}</div>@endif
 
