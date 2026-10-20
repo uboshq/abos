@@ -83,7 +83,8 @@ final class TheCustomerPlaceReachesReportsPrintsAndNoticesTest extends TestCase
 
         // ⓘ দেখার শাখার গ্রাহক — অন্য শাখার পক্ষে বিল লেখা যায় না; ⛔ শূন্য সীমা = বাকি নেই, তাই বড় সীমা (এই দাবি সীমা মাপে না)
         $this->customer = Customer::query()->inViewedBranch()->firstOrFail();
-        $this->customer->forceFill(['location_id' => $point->id, 'credit_limit' => '10000000000'])->save();
+        // ⓘ শাখাও নিজে বসানো — ডেমোর কিছু গ্রাহক শাখাহীন (সব শাখার), আর দেখার শাখার তালিকায় তারাও আসে; তখন দাবির ভিত্তিই থাকত না
+        $this->customer->forceFill(['location_id' => $point->id, 'branch_id' => CompanyContext::branchId(), 'credit_limit' => '10000000000'])->save();
         $this->customer = $this->customer->fresh(['location.parent', 'branch']);
 
         $this->branch = (string) $this->customer->branchName();
