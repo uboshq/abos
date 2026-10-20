@@ -211,6 +211,69 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->assertNotSame(S::DRAFT, SalesOrder::query()->where('public_id', $out['entityId'])->firstOrFail()->status);
     }
 
+    /**
+     * ⭐ পুরনো পথ (সুইচ `sales.orders_replace_do` বন্ধ, ডিফল্ট) — সীমার ভিতরে "নিশ্চিত" চলে, মাল ধরা পড়ে, সাক্ষ্যে "হ্যাঁ"
+     * (fe-র উত্তর, ফাঁক ২৮: সীমা পুরনো পথেও পরম)।
+     */
+    public function test_on_the_old_path_an_order_within_the_limit_is_confirmed(): void
+    {
+        $this->oldPath();
+        $this->limit('100000000');
+        $order = $this->draft('10');
+        $before = $this->reserved();
+
+        $this->post(route('sales.order.confirm', $order))->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(S::CONFIRMED, $order->fresh()->status, '⛔ পুরনো পথে সীমার ভিতরের আদেশ নিশ্চিত হয়নি।');
+        $this->assertSame(S::HOLD_LEDGER, $order->fresh()->hold_mode, 'দৃশ্যটাই ভুল — আদেশ পুরনো পথে যায়নি।');
+        $this->assertSame(0, bccomp(bcadd($before, '10', 4), $this->reserved(), 4), 'দাবির ভিত্তি নেই — পুরনো পথ মাল ধরেনি।');
+        $this->assertSame(['sales_order', 'pass', 'within_limit'], $this->decision($order, 'pass'));
+    }
+
+    /** ⛔ পুরনো পথ — সীমার বাইরে "নিশ্চিত" ৪২২, জমার একই কথায়; খসড়াই থাকে, মাল ধরা নেই, সই চাওয়া নেই; সাক্ষ্যে "না" */
+    public function test_on_the_old_path_an_order_past_the_limit_is_refused_with_the_same_reason(): void
+    {
+        $this->oldPath();
+        $order = $this->draft('10');
+        $total = bcadd((string) $order->total, '0', 4);
+        $half = bcdiv($total, '2', 4);
+        $this->limit($half);
+        $before = $this->reserved();
+
+        $reason = $this->postJson(route('sales.order.confirm', $order))->assertStatus(422)->json('errors.customer_id.0');
+
+        $this->assertSame($this->expected($total, $half, '0'), $reason, '⛔ পুরনো পথ সীমা দেখে না, বা অন্য কথা বলে।');
+        $this->assertSame(S::DRAFT, $order->fresh()->status, '⛔ পুরনো পথে সীমা পার করা আদেশ নিশ্চিত হলো।');
+        $this->assertSame(0, bccomp($before, $this->reserved(), 4), '⛔ ফেরানো আদেশ মাল ধরে রাখল।');
+        $this->assertNull($this->approvalOf($order), '⛔ ফেরানো আদেশের সই চাওয়া হলো — সীমা সইয়ের আগে।');
+        $this->assertSame(['sales_order', 'stop', 'over_limit'], $this->decision($order, 'stop'));
+
+        $this->post(route('sales.order.confirm', $order))->assertRedirect()->assertSessionHasErrors(['customer_id' => $reason]);
+        $this->assertSame(S::DRAFT, $order->fresh()->status);
+    }
+
+    /** ⭐ পুরনো পথ — একই আদেশ: সুইচ বন্ধে চলে; চলতি অস্থায়ী সীমায় চলে */
+    public function test_on_the_old_path_the_switch_off_and_a_live_temporary_limit_let_it_through(): void
+    {
+        $this->oldPath();
+        $this->limit('0');
+        $first = $this->draft('5');
+        $second = $this->draft('5');
+
+        $this->postJson(route('sales.order.confirm', $first))->assertStatus(422);
+        $this->assertSame(S::DRAFT, $first->fresh()->status, 'দৃশ্যটাই ভুল — পুরনো পথে সীমা ০-তেও আদেশ ফেরেনি।');
+
+        app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+        $this->post(route('sales.order.confirm', $first))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(S::CONFIRMED, $first->fresh()->status, '⛔ সুইচ বন্ধেও পুরনো পথে সীমা আটকাল।');
+
+        app(SettingsService::class)->set('customer.credit_limit_enabled', true);
+        $this->postJson(route('sales.order.confirm', $second))->assertStatus(422);
+        Customer::query()->whereKey($this->buyer->id)->update(['temp_credit_limit' => '100000000', 'temp_credit_limit_until' => now()->addDays(3)->toDateString()]);
+        $this->post(route('sales.order.confirm', $second))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(S::CONFIRMED, $second->fresh()->status, '⛔ পুরনো পথে চলতি অস্থায়ী সীমা গোনা হয়নি।');
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function expected(string $order, string $limit, string $used): string
@@ -222,6 +285,13 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
             'order' => Money::format($order),
             'short' => Money::format(bcsub(bcadd($used, $order, 4), $limit, 4)),
         ]);
+    }
+
+    /** ⓘ পুরনো পথ — DO বিক্রয় আদেশে মেশে না (ডিফল্ট); মাল ধরা আদেশেই (setUp-এর `sales.reserve_on_order`) */
+    private function oldPath(): void
+    {
+        app(SettingsService::class)->set(SalesOrderService::REPLACES_DO, false);
+        app()->forgetInstance(SalesOrderService::class);
     }
 
     private function limit(string $limit): void
