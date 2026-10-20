@@ -33,7 +33,7 @@ class CreditDecision extends Model
     public const STOP = 'stop';
 
     /** কোথায় দেয়াল দাঁড়িয়েছিল */
-    public const STAGES = ['delivery_order', 'challan', 'invoice', 'counter'];
+    public const STAGES = ['delivery_order', 'challan', 'invoice', 'counter', 'sales_order'];
 
     /** কেন — পাশ: সীমার ভিতরে, বা সীমার সুইচ বন্ধ; থামা: সীমা পার, হাতে বন্ধ, মেয়াদ পেরোনো বাকি, হিসাবই চলেনি */
     public const REASONS = ['within_limit', 'switch_off', 'over_limit', 'blocked', 'overdue', 'error'];

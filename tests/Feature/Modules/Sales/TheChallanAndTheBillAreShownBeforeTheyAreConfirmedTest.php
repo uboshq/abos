@@ -172,7 +172,8 @@ final class TheChallanAndTheBillAreShownBeforeTheyAreConfirmedTest extends TestC
     /**
      * ⭐ বিক্রয় আদেশ — দুই পথ ([[SalesOrderService::whatTheConfirmWouldDo()]]):
      *   সুইচ বন্ধ: মাল আটকানোর আগে মজুদ নেই → "নিশ্চিত হবে না";
-     *   সুইচ চালু: "নিশ্চিত" মানে জমা — সীমা পার হলেও থামে না, বলে "টাকার অপেক্ষায় থাকবে" (`warn`, blocks নয়);
+     *   সুইচ চালু: "নিশ্চিত" মানে জমা — সীমা পার হলে জমাই হবে না, বলে "থামবে" (`stop`, blocks; fe-র বিক্রয়ের ফাঁক ২৮), সীমা
+     *   কুলোলে "জমা হবে";
      *   আর কিছুই লেখা হয় না (খসড়াই থাকে), পাতায় পপ-আপ বসানো।
      */
     public function test_the_order_overview_knows_both_paths_and_writes_nothing(): void
@@ -194,10 +195,16 @@ final class TheChallanAndTheBillAreShownBeforeTheyAreConfirmedTest extends TestC
         app()->forgetInstance(\App\Modules\Sales\Services\SalesOrderService::class);
         $this->customer->forceFill(['credit_limit' => '100'])->save();
 
+        // ⛔ ফাঁক ২৮ — সীমা ১০০, আদেশ ১০ লাখ: জমা ফিরবে, সারাংশও থামে আর "জমা হবে" বলে না
+        $this->post(route('sales.order.overview', $order))->assertOk()
+            ->assertSee('data-overview-blocks="1"', false)
+            ->assertSee('data-overview-note="stop"', false)
+            ->assertDontSee(__('sales::overview_confirm.order_submits'));
+
+        $this->customer->forceFill(['credit_limit' => '100000000'])->save();
         $this->post(route('sales.order.overview', $order))->assertOk()
             ->assertSee('data-overview-blocks="0"', false)
-            ->assertSee(__('sales::overview_confirm.order_submits'))
-            ->assertSee('data-overview-note="warn"', false);
+            ->assertSee(__('sales::overview_confirm.order_submits'));
 
         $this->assertSame(DocumentStatus::DRAFT, $order->fresh()->status, '⛔ সারাংশ দেখতে গিয়েই আদেশ জমা হয়ে গেল।');
 
