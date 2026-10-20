@@ -166,7 +166,8 @@ final class TheBigDuesWidgetIsTheLedgerTest extends TestCase
         $there = (int) Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
             ->where('id', '<>', $this->here)->orderBy('id')->firstOrFail()->id;
         $near = $this->owes($this->customer(), '300.0000');
-        $far = $this->owes($this->customer('BD Far Branch Shop'), '800.0000', $there);
+        // ⓘ দূরের দোকান দূরের শাখারই — এক শাখার পার্টির লেনদেন অন্য শাখায় যায় না (মালিক, ১৯ অক্টোবর; PostingEngine থামায়)
+        $far = $this->owes($this->customer('BD Far Branch Shop', $there), '800.0000', $there);
 
         $all = $this->widget($this->owner);
         $this->assertSame('1100.0000', $all['total'], 'প্রস্তুতিটাই ভুল — "সব শাখা"-তে দুজনই নেই।');
@@ -221,13 +222,13 @@ final class TheBigDuesWidgetIsTheLedgerTest extends TestCase
         return (string) $this->actingAs($this->owner->fresh())->get('/customers/'.$id)->assertOk()->viewData('outstanding');
     }
 
-    private function customer(?string $name = null): Customer
+    private function customer(?string $name = null, ?int $branch = null): Customer
     {
         $this->serial++;
 
         return Customer::query()->create([
             'company_id' => $this->company->id,
-            'branch_id' => $this->here,
+            'branch_id' => $branch ?? $this->here,
             'code' => 'BD-'.$this->serial,
             'name_en' => $name ?? 'BD Shop '.$this->serial,
             'is_active' => true,
