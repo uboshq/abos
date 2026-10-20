@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/menu/menu_item.dart';
 import '../../core/navigation/nav_catalog.dart';
@@ -10,6 +11,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/row_icon.dart';
 import '../today/today_panel.dart';
+import 'owner_home_cards.dart';
 
 /// The হোম tab: the search box, the day's figures ("আজ"), the person's own
 /// favourites ("প্রিয়") and what they opened last ("সাম্প্রতিক") — the owner's
@@ -35,6 +37,7 @@ class HomeDashboard extends StatelessWidget {
     this.recents = const [],
     this.onOpen,
     this.onUnfavourite,
+    this.loadWaiting,
   });
 
   final AuthUser user;
@@ -72,6 +75,9 @@ class HomeDashboard extends StatelessWidget {
   /// A favourite held down — take it off the home.
   final ValueChanged<NavRow>? onUnfavourite;
 
+  /// ⭐ মালিকের হোমের "সইয়ের অপেক্ষায়" সারি (০.৪.৪১) — সাধারণত `ApprovalsApi.pending(limit: 3)`। null হলে কেবল সার্ভারের গোনা।
+  final Future<ApprovalPage> Function()? loadWaiting;
+
   @override
   Widget build(BuildContext context) {
     // ⭐ রং কেবল থিমের ভূমিকা থেকে — আলো আর অন্ধকার দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
@@ -86,6 +92,16 @@ class HomeDashboard extends StatelessWidget {
       onOpenSales: () => _go(context, 'orders', 'অর্ডারের অবস্থা'),
       onOpenDues: () => _go(context, 'dues', 'বকেয়া তালিকা'),
       onOpenApprovals: () => _go(context, 'approvals', 'অনুমোদন'),
+      // ⭐ মালিকের হোম, ০.৪.৪১ (মালিকের অনুমোদিত পুরো-পাতার নমুনা, ২০ অক্টোবর ২০২৬): টাকার কার্ড, সইয়ের অপেক্ষা, শাখার বিক্রি
+      figures: (context, today) => isOwnersHome(today)
+          ? ownerHomeCards(
+              today,
+              loadWaiting: loadWaiting,
+              onOpenApprovals: () => _go(context, 'approvals', 'অনুমোদন'),
+              onOpenSales: () => _go(context, 'orders', 'অর্ডারের অবস্থা'),
+              onOpenMoney: () => _go(context, 'dues', 'বকেয়া তালিকা'),
+            )
+          : null,
       // ⓘ সংখ্যাগুলোর নিচে — আজকের অঙ্কই পর্দার প্রথম জিনিস থাকে
       trailing: [
         const SizedBox(height: AppSpacing.sm),

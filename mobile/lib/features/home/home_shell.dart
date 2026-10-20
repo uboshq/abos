@@ -547,6 +547,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   recents: _recentRows,
                   onOpen: _open,
                   onUnfavourite: _toggleFavourite,
+                  // ⭐ মালিকের হোমের "সইয়ের অপেক্ষায়" — অনুমোদনের ঘরের একই সারি (০.৪.৪১)
+                  loadWaiting: widget.fetchPending ?? () => ApprovalsApi.pending(limit: 3),
                 ),
                 _modulesArea(page, module, counts),
                 _MoreTab(

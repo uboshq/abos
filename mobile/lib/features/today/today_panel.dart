@@ -31,6 +31,7 @@ class TodayPanel extends StatefulWidget {
     this.onRecord,
     this.onPull,
     this.padding = const EdgeInsets.all(AppSpacing.md),
+    this.figures,
   });
 
   /// Seams — the real ones need a server.
@@ -70,6 +71,11 @@ class TodayPanel extends StatefulWidget {
   final Future<void> Function()? onPull;
 
   final EdgeInsets padding;
+
+  /// ⭐ A screen's own drawing of the figures (the owner's home of 0.4.41, a5, 20 Oct 2026). Null, or a builder that
+  /// returns null for this record, keeps the cards below exactly as they were; a list replaces them and the approvals
+  /// count card (the home draws the waiting papers itself).
+  final List<Widget>? Function(BuildContext context, TodayRecord today)? figures;
 
   @override
   State<TodayPanel> createState() => _TodayPanelState();
@@ -170,6 +176,9 @@ class _TodayPanelState extends State<TodayPanel> {
                     ),
                   _OriginLine(today: today, showOrigin: widget.showOrigin),
                   const SizedBox(height: AppSpacing.sm),
+                  if (widget.figures?.call(context, today) case final own?)
+                    ...own
+                  else ...[
                   // ⚠️ An absent figure draws no card at all. See
                   // TodayRecord's own doc comment: zero is a number somebody
                   // acts on, and "no cash today" is not "you may not see the
@@ -209,6 +218,7 @@ class _TodayPanelState extends State<TodayPanel> {
                       count: today.pendingApprovals!,
                       onTap: widget.onOpenApprovals,
                     ),
+                  ],
                 ],
                 ...widget.trailing,
               ],
