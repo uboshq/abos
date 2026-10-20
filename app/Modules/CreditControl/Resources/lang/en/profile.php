@@ -44,6 +44,7 @@ return [
     'stage_challan' => 'Challan',
     'stage_invoice' => 'Bill',
     'stage_counter' => 'Counter',
+    'stage_sales_order' => 'Sales order',
     'reason_within_limit' => 'Passed — within limit',
     'reason_switch_off' => 'Passed — credit checks off',
     'reason_over_limit' => 'Stopped — over limit',

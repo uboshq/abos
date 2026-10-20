@@ -26,6 +26,7 @@ use App\Modules\Sales\Events\SalesOrderClosed;
 use App\Modules\Sales\Events\SalesOrderLineRejected;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
+use App\Modules\Sales\Support\CreditPaper;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -190,6 +191,15 @@ final class SalesOrderService
         }
 
         /*
+         * ⛔ বাকির সীমা — পুরনো পথেও, সইয়ের আগে (fe-র বিক্রয়ের ফাঁক ২৮, ২০ অক্টোবর ২০২৬: সীমা পরম; SAP আদেশে আর ডেলিভারিতে দুই জায়গায়ই
+         * যাচাই করে)। ⓘ এখানে তালা ছাড়া আগাম যাচাই — সই চাওয়ার আগেই "না" ([[CreditExposure::assertRoom()]]-এর একই ক্রম);
+         * তালাসহ পাকা যাচাই আর সাক্ষ্য নিচে, লেনদেনের ভিতরে। ⚠️ নিচের ২৬ সেপ্টেম্বরের "আদেশে সীমা দেখা হয় না" কথাটা এতে উল্টেছে।
+         */
+        if ($order->customer !== null) {
+            $this->refuseOverTheLimit($order, $order->customer, null);
+        }
+
+        /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
          *
          * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
@@ -221,6 +231,9 @@ final class SalesOrderService
          * আটকায় কেবল বিল না হওয়া চালান আর খসড়া বিল।
          */
         return DB::transaction(function () use ($order) {
+            // ⛔ তালার ক্রম আগে গ্রাহক, তারপর আদেশ — জমার একই ক্রম ([[submit()]])
+            $customer = $this->credit->lockCustomer((int) $order->customer_id);
+
             // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
             $this->lockAndReread($order);
 
@@ -229,6 +242,9 @@ final class SalesOrderService
                     'status' => __('sales::validation.only_draft_confirms', ['no' => $order->document_no]),
                 ]);
             }
+
+            // ⛔ ফাঁক ২৮ — তালাসহ পাকা যাচাই, সাক্ষ্যসহ; না কুলোলে ৪২২, কিছুই নিশ্চিত বা ধরা হয় না
+            $this->refuseOverTheLimit($order, $customer, CreditPaper::of('sales_order', $order));
 
             // ⓘ ডিফল্ট বন্ধ — মালিক, ৬ অক্টোবর ২০২৬: মাল ধরা শুরু ডিপোর চালান নিশ্চিত হলে, আদেশে নয়
             if ($this->settings->get('sales.reserve_on_order', false)) {
@@ -402,7 +418,7 @@ final class SalesOrderService
                 'hold_mode' => SalesOrderStatus::HOLD_HOLDS,
             ])->save();
 
-            return $this->checkCreditThenAsk($order, $customer);
+            return $this->checkCreditThenAsk($order, $customer, refuse: true);
         });
     }
 
@@ -603,12 +619,24 @@ final class SalesOrderService
      * ⓘ সূত্র দেয়ালের হুবহু ([[CreditExposure::check()]]): বকেয়া + আটকে থাকা + ক্লিয়ার না হওয়া চেক + এই আদেশ ≤ সীমা।
      * কোম্পানির বাকির সীমার সুইচ বন্ধ থাকলে ([[CreditExposure::isOn()]]) যাচাই নেই — সোজা সইয়ের পথে।
      */
-    private function checkCreditThenAsk(SalesOrder $order, Customer $customer): SalesOrder
+    private function checkCreditThenAsk(SalesOrder $order, Customer $customer, bool $refuse = false): SalesOrder
     {
         // ⓘ আদেশটা নিজেকে গোনে না — "জমা" আদেশ এখন সীমা আটকায় ([[CreditExposure::forOrderUnderCheck()]])
+        // ⓘ জমায় সিদ্ধান্তটা সাক্ষ্যে বসে ([[CreditDecision]], ধাপ `sales_order`) — DO-র যাচাইয়ের একই নিয়মে
+        $paper = $refuse ? CreditPaper::of('sales_order', $order) : null;
         $result = $this->credit->isOn()
-            ? CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($customer, (string) $order->total))
+            ? CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($customer, (string) $order->total, null, $paper))
             : ['fits' => true, 'short' => '0.0000'];
+
+        /*
+         * ⛔ জমায় সীমা পার হলে জমাই হয় না — ৪২২, কারণসহ (fe-র বিক্রয়ের ফাঁক ২৮, ২০ অক্টোবর ২০২৬; মালিকের নিয়ম: সীমা পরম;
+         * SAP SD-র আদেশে বাকির যাচাই)। ⚠️ আগে আদেশ `credit_held`-এ বসে থাকত, আর পরে টাকা এলে নিজে নিজে সইয়ে যেত।
+         * ⓘ লেনদেন ফেরে: আদেশ খসড়াই থাকে, মাল ধরা হয় না, সই চাওয়া হয় না। ⓘ সুইচ বন্ধ আর অস্থায়ী সীমা আগের মতোই
+         * ([[CreditExposure::isOn()]], [[Customer::effectiveCreditLimit()]])। ⓘ আগে আটকে থাকা আদেশের আবার-যাচাই বদলায়নি।
+         */
+        if ($refuse && ! $result['fits']) {
+            throw ValidationException::withMessages(['customer_id' => $this->overTheLimit($order, $customer, $result)]);
+        }
 
         if (! $result['fits']) {
             $firstHold = $order->credit_held_at === null;
@@ -653,6 +681,46 @@ final class SalesOrderService
         }
 
         return $this->markApproved($order);
+    }
+
+    /**
+     * ⛔ পুরনো পথের দেয়াল (ফাঁক ২৮) — জমার হুবহু: সুইচ বন্ধে কিছু নয়, চলতি অস্থায়ী সীমা গোনা ([[CreditExposure::check()]]), আর একই কথা।
+     */
+    private function refuseOverTheLimit(SalesOrder $order, Customer $customer, ?CreditPaper $paper): void
+    {
+        if (! $this->credit->isOn()) {
+            return;
+        }
+
+        $result = CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($customer, (string) $order->total, null, $paper));
+
+        if (! $result['fits']) {
+            throw ValidationException::withMessages(['customer_id' => $this->overTheLimit($order, $customer, $result)]);
+        }
+    }
+
+    /**
+     * জমা ফেরানোর কথা — সীমা, ব্যবহৃত, এই আদেশ, কত বেশি। ⓘ বাকি বন্ধ বা মেয়াদ পেরোনো বাকি হলে দেয়ালের নিজের কথা।
+     * ⓘ ব্যবহৃত = সীমা + কত বেশি − এই আদেশ — [[CreditExposure::check()]]-এর নিজের অঙ্ক থেকে, নতুন যোগ নয়।
+     *
+     * @param  array{fits: bool, short: string, reason?: ?string}  $result
+     */
+    private function overTheLimit(SalesOrder $order, Customer $customer, array $result): string
+    {
+        if (($result['reason'] ?? null) !== null) {
+            return (string) $result['reason'];
+        }
+
+        $limit = $customer->effectiveCreditLimit();
+        $adding = bcadd((string) $order->total, '0', 4);
+
+        return __('sales::order_status.over_credit_limit', [
+            'customer' => $customer->nameWithPoint(),
+            'limit' => \App\Core\Support\Money::format($limit),
+            'used' => \App\Core\Support\Money::format(bcsub(bcadd($limit, (string) $result['short'], 4), $adding, 4)),
+            'order' => \App\Core\Support\Money::format($adding),
+            'short' => \App\Core\Support\Money::format((string) $result['short']),
+        ]);
     }
 
     /** আদেশের মোট — লাইনগুলো থেকে আবার (সুপারভাইজার পরিমাণ কমানোর পরে)। */
@@ -1108,8 +1176,8 @@ final class SalesOrderService
      * ⭐ "নিশ্চিত করুন" চাপলে কী হবে — কিছু না লিখে (মালিক, ৪ অক্টোবর ২০২৬; [[SalesPaperOverview::order()]])।
      *
      * ⓘ দুই পথ, [[confirm()]]-এর একই ভাগে:
-     *   · সুইচ চালু ([[REPLACES_DO]]) — "নিশ্চিত" মানে জমা ([[submit()]]): সীমা পার হলে থামে না, আদেশ টাকার অপেক্ষায়
-     *     দাঁড়ায়; জায়গা থাকলে সইয়ে যায় (ছক থাকলে)। সীমার মাপ [[checkCreditThenAsk()]]-এর হুবহু — [[CreditExposure::check()]]।
+     *   · সুইচ চালু ([[REPLACES_DO]]) — "নিশ্চিত" মানে জমা ([[submit()]]): সীমা পার হলে জমাই হবে না — জমার একই কথায়
+     *     "থামবে" (fe-র বিক্রয়ের ফাঁক ২৮); জায়গা থাকলে সইয়ে যায় (ছক থাকলে)। সীমার মাপ [[checkCreditThenAsk()]]-এর হুবহু — [[CreditExposure::check()]]।
      *   · সুইচ বন্ধ — পুরনো নিশ্চিত: মাল আটকানো চালু থাকলে প্রতিটা সারিতে মজুদ ([[assertEnoughToSell()]]), আর সই।
      * ⛔ সইয়ের প্রশ্ন [[ApprovalEngine::requires()]] দিয়ে, `request()` নয় — দেখতে গিয়ে অনুরোধ লেখা চলে না।
      *
@@ -1133,9 +1201,13 @@ final class SalesOrderService
 
         $short = null;
 
-        if ($submits && $order->customer !== null && $this->credit->isOn()) {
+        // ⓘ দুই পথেই — পুরনো নিশ্চিতও সীমা পার হলে থামে (ফাঁক ২৮)
+        if ($order->customer !== null && $this->credit->isOn()) {
             $result = CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($order->customer, (string) $order->total));
-            $short = $result['fits'] ? null : (string) $result['short'];
+            // ⛔ ফাঁক ২৮ — জমা ফিরবে, তাই সারাংশেও "থামবে", জমার হুবহু কথায় ([[overTheLimit()]])
+            if (! $result['fits']) {
+                $stops[] = $this->overTheLimit($order, $order->customer, $result);
+            }
         }
 
         if (! $submits && $stops === [] && $this->settings->get('sales.reserve_on_order', false)) {
