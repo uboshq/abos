@@ -67,6 +67,20 @@ void main() {
           findsOneWidget);
     });
 
+    testWidgets('the branch card says what the figure is (gross bills, not net sales) and names a branchless row', (tester) async {
+      // ⓘ fe, ২০ অক্টোবর ২০২৬: অঙ্কটা ফেরত বাদ না দেওয়া মোট বিল — "আজ বিল হয়েছে"; IFRS 15-এ "বিক্রি" মানে ফেরত বাদে নিট
+      final today = ownerToday();
+      today['salesByBranch'] = <Object?>[...(today['salesByBranch'] as List), <String, Object?>{'branch_id': null, 'branch': null, 'amount': '0.50'}];
+      await pump(tester, ownerHomeBody(today: today));
+      expect(find.text('আজ বিল হয়েছে'), findsOneWidget);
+      expect(find.text('আজকের বিক্রি'), findsNothing, reason: '⛔ মোট বিলকে "বিক্রি" বলা — ফেরত বাদ যায়নি');
+      expect(find.byKey(const ValueKey('branch-sale-শাখা নেই')), findsOneWidget, reason: '⛔ শাখাহীন বিলের সারির নাম নেই');
+      expect(
+          find.descendant(of: find.byKey(const ValueKey('branch-sales-total')), matching: find.text('৳1,62,700.50')),
+          findsOneWidget,
+          reason: 'শাখাহীন সারিও মোটে গোনা');
+    });
+
     testWidgets('waiting papers: number · party with point and branch, the amount, a chip each', (tester) async {
       await pump(tester, ownerHomeBody());
       expect(find.text('সইয়ের অপেক্ষায় · 3টি'), findsOneWidget);
