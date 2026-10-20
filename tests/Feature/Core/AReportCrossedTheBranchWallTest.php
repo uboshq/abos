@@ -218,7 +218,8 @@ final class AReportCrossedTheBranchWallTest extends TestCase
     {
         $body = $this->phone()->assertOk()->json();
 
-        $this->assertSame([self::OURS], array_column($body['rows'], 'customer_name'),
+        // ⓘ সারিতে নামের পাশে পয়েন্ট আর শাখা (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬) — দেয়ালের দাবি কেবল নামটা মাপে
+        $this->assertSame([self::OURS], array_map(fn (string $name) => explode(' · ', $name)[0], array_column($body['rows'], 'customer_name')),
             '⛔ ফোনে অন্য শাখার বিক্রয় এসেছে।');
         $this->assertSame(0, bccomp((string) $body['totals']['total'], self::OURS_AMOUNT, 2));
 

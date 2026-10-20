@@ -22,6 +22,8 @@ use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DeliveryChallanService;
+use App\Modules\Sales\Services\DeliveryStage;
+use App\Modules\Sales\Services\DeliveryStageService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -110,6 +112,8 @@ final class ThePhoneSendsTheCustomersBranchTest extends TestCase
             'customer_id' => $this->shop->id, 'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id,
             'trx_date' => now()->toDateString(),
         ], [['product_id' => $this->product->id, 'delivered_qty' => '1', 'rate' => '10']]));
+        // ⓘ "আজকের ডেলিভারি" কেবল পথে থাকা চালান দেখায় ([[DeliveryRunApiController]]) — তাই রওনা করানো
+        app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DISPATCHED);
 
         $this->phone();
         $range = '?from='.now()->subDay()->toDateString().'&to='.now()->toDateString();
