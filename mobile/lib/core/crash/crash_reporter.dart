@@ -44,6 +44,11 @@ class CrashReporter {
   /// দুই পাঠানোর মাঝে অন্তত এটুকু — সার্ভারের দরজায় মিনিটে ১০টার সীমা
   static const Duration minGap = Duration(seconds: 30);
 
+  /// ⛔ দরজা নেই (404, পুরনো সার্ভার) — এই চালুতে এতক্ষণ আর চেষ্টা নয়, যাতে প্রতি সিঙ্কে বৃথা ডাকে ব্যাটারি আর ডেটা না যায়
+  /// (a4, fe ২০ অক্টোবর ২০২৬)। ⓘ কেবল এই চালুর জন্য, মনে রাখা হয় না — সার্ভারে দরজা এলে পরের চালুতেই যায়। নেট নেই বা ৫xx
+  /// হলে আগের মতো [minGap]।
+  static const Duration notFoundGap = Duration(hours: 6);
+
   /// যত লম্বা ফ্রেমকে "আটকে থাকা" ধরা হয়
   static const Duration stallAfter = Duration(seconds: 1);
 
@@ -71,6 +76,7 @@ class CrashReporter {
   final Map<String, int> _seen = {};
   Map<String, String>? _device;
   DateTime? _lastSend;
+  DateTime? _doorMissingUntil;
   Future<void> _chain = Future<void>.value();
 
   static final RegExp _id = RegExp(
@@ -201,12 +207,18 @@ class CrashReporter {
   Future<void> flush() => _serial(() async {
         final last = _lastSend;
         if (last != null && clock().difference(last) < minGap) return;
+        final missing = _doorMissingUntil;
+        if (missing != null && clock().isBefore(missing)) return;
         final queue = await _read();
         if (queue.isEmpty) return;
         _lastSend = clock();
         final batch = queue.take(batchSize).toList();
         try {
           await send(batch);
+        } on DioException catch (e) {
+          // ⓘ দরজাই নেই — [notFoundGap] পরে; অন্য ফেরানো (৪২২, ৫xx, নেট নেই) [minGap] পরে। সারি যেমন ছিল থাকে
+          if (e.response?.statusCode == 404) _doorMissingUntil = clock().add(notFoundGap);
+          return;
         } catch (_) {
           // ⓘ নেট নেই বা সার্ভার ফেরাল — সারি যেমন ছিল থাকে; পরের বার
           return;
@@ -332,6 +344,7 @@ class CrashReporter {
     _screen = '';
     _device = null;
     _lastSend = null;
+    _doorMissingUntil = null;
     _chain = Future<void>.value();
   }
 
