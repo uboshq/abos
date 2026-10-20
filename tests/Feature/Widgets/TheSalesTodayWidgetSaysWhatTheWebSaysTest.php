@@ -173,7 +173,7 @@ final class TheSalesTodayWidgetSaysWhatTheWebSaysTest extends TestCase
         $this->actingAs($this->owner->fresh());
         $shop = Customer::query()->create(['company_id' => $this->company->id, 'branch_id' => CompanyContext::branchId(),
             'code' => 'ST-'.uniqid(), 'name_en' => 'Today shop '.uniqid(), 'status' => DocumentStatus::CONFIRMED, 'is_active' => true,
-            'credit_limit' => '1000000']);
+            'credit_limit' => '1000000', 'credit_days' => 15]);
 
         return app(DirectSaleService::class)->complete(
             ['customer_id' => $shop->id, 'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'own_transport' => '1']
