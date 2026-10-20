@@ -109,6 +109,24 @@ final class AStolenPhoneStayedSignedInTest extends TestCase
         $this->assertSame(0, AuditTrail::query()->withoutGlobalScopes()->where('action', 'device_signed_out')->count());
     }
 
+    public function test_one_shared_handset_signs_out_only_my_login_on_it(): void
+    {
+        // ⓘ দোকানের এক ফোন, দুই মানুষ পালা করে — একই deviceId-তে দুজনেরই টোকেন ([[AuthController::issue()]] কেবল নিজেরটা মোছে)
+        $mine = $this->login('sales@abos.test', 'shop-phone-01', 'android');
+        $theirs = $this->login('accounts@abos.test', 'shop-phone-01', 'android');
+
+        $id = $this->as($mine['accessToken'])->getJson('/api/v1/me/devices')->json('data.0.id');
+        $this->as($mine['accessToken'])->deleteJson('/api/v1/me/devices/'.$id)->assertNoContent();
+
+        $this->as($mine['accessToken'])->getJson('/api/v1/me')->assertUnauthorized();
+
+        // ⛔ একই হ্যান্ডসেটে অন্যজনের লগইন চলতেই থাকে — নবায়নসহ
+        $this->as($theirs['accessToken'])->getJson('/api/v1/me')->assertOk();
+        $accounts = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
+        $this->assertSame(2, $accounts->tokens()->where('name', 'like', '%:shop-phone-01')->count(),
+            '⛔ আমার ফোন বের করতে গিয়ে একই হ্যান্ডসেটে অন্যের টোকেনও মুছল');
+    }
+
     public function test_signing_out_this_very_phone_is_allowed_and_signs_it_out(): void
     {
         $a = $this->login('sales@abos.test', 'phone-a-0001', 'android');

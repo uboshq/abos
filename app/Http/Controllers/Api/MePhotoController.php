@@ -35,19 +35,11 @@ final class MePhotoController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 403, 'staff-token-only');
 
-        $request->validate([
-            'photo' => [
-                'required',
-                'file',
-                'mimetypes:'.implode(',', self::PHONE_ACCEPTS),
-                'max:'.(int) (AvatarService::MAX_BYTES / 1024),
-            ],
-        ]);
+        $request->validate(self::rules());
 
         $file = $request->file('photo');
-        $sniffed = @getimagesize((string) $file->getRealPath());
 
-        if ($sniffed === false || ! in_array($sniffed['mime'] ?? '', self::PHONE_ACCEPTS, true)) {
+        if (! self::isJpegOrPng((string) $file->getRealPath())) {
             throw ValidationException::withMessages(['photo' => __('core.avatar.phone_jpg_png_only')]);
         }
 
@@ -63,6 +55,37 @@ final class MePhotoController extends Controller
             'photo_url' => $user->avatarApiUrl(),
             'updated_at' => $user->updated_at?->toIso8601String(),
         ]);
+    }
+
+    /**
+     * ⛔ প্রথম স্তর — Laravel-এর নিয়ম, `mimetypes` ফাইলের বাইট finfo দিয়ে পড়ে। ⓘ নিজের নামে, দ্বিতীয় স্তরের একই কারণে:
+     * দাবি যেন এই স্তরকে একা ছোঁয়, নাহলে পেছনের স্তর এর ভাঙন ঢেকে দিত।
+     *
+     * @return array<string, list<string>>
+     */
+    public static function rules(): array
+    {
+        return [
+            'photo' => [
+                'required',
+                'file',
+                'mimetypes:'.implode(',', self::PHONE_ACCEPTS),
+                'max:'.(int) (AvatarService::MAX_BYTES / 1024),
+            ],
+        ];
+    }
+
+    /**
+     * ⛔ দ্বিতীয় স্তর — ফাইলের ভেতরটা GD-র চোখে JPG বা PNG কি না (a6, ২০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রথম স্তর `mimetypes` (finfo); দুইটা আলাদা পাঠক, তাই একটার ফাঁক অন্যটায় আটকায়। ⚠️ নিজের নামে আলাদা, যাতে
+     * দাবিটা এই স্তরকেই সরাসরি ছোঁয় — দরজা দিয়ে গেলে প্রথম স্তর আগেই ফেরায়, আর এই স্তর ভাঙলেও কেউ টের পেত না।
+     */
+    public static function isJpegOrPng(string $path): bool
+    {
+        $sniffed = $path === '' ? false : @getimagesize($path);
+
+        return $sniffed !== false && in_array($sniffed['mime'] ?? '', self::PHONE_ACCEPTS, true);
     }
 
     public function destroy(Request $request): Response

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Console\Commands\MoveFacesToPrivate;
+use App\Core\Services\AvatarService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\AuditTrail;
@@ -159,6 +160,59 @@ final class TheOldFacesStayedOnThePublicDiskTest extends TestCase
         $this->assertSame($before, DB::table('users')->orderBy('id')->pluck('avatar_path', 'id')->all(), '⛔ যাচাই না মেলা কপিতে সারি বদলাল');
         $this->assertCount(2, Storage::disk('public')->allFiles('avatars'), '⛔ যাচাই না মেলায় public ফাইল মুছে গেল — মুখ হারাল');
         $this->assertCount(1, Storage::disk('local')->allFiles('faces'), '⛔ অর্ধেক লেখা কপি পড়ে রইল');
+    }
+
+    public function test_the_service_alone_leaves_an_already_private_face_alone(): void
+    {
+        // ⛔ সেবার নিজের পাহারা — কমান্ড আগে গুনে বাদ দেয়, কিন্তু অন্য কোনো ডাকিয়ে তা না-ও করতে পারে।
+        // ⓘ ফাঁদ: public ডিস্কে একই নামের একটা ফাইল — পাহারা না থাকলে সেবা সেটাকেই "পুরনো ছবি" ভেবে সরাত
+        $path = (string) $this->already->fresh()->avatar_path;
+        Storage::disk('public')->put($path, $this->jpeg(30));
+
+        $this->assertSame(AvatarService::MOVE_SKIPPED, app(AvatarService::class)->moveToPrivate($this->already->fresh()));
+        $this->assertSame($path, $this->already->fresh()->avatar_path, '⛔ আগেই-ব্যক্তিগত মুখের সারি বদলাল');
+        $this->assertCount(1, Storage::disk('local')->allFiles('faces'), '⛔ আগেই-ব্যক্তিগত মুখের কপি বানাল');
+        Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_a_photo_changed_while_the_copy_was_written_wins(): void
+    {
+        $old = (string) $this->sales->fresh()->avatar_path;
+        $theirs = 'faces/'.$this->sales->id.'-9999999999999999.jpg';
+        $userId = (int) $this->sales->id;
+        $bytes = $this->jpeg(50);
+
+        // ⛔ লেখার ঠিক আগে মানুষটা নিজেই নতুন ছবি দিলেন (অন্য অনুরোধে) — সারি এখন তাঁর নতুন পথে
+        $real = Storage::disk('local');
+        $racing = new class($real->getDriver(), $real->getAdapter(), $real->getConfig()) extends FilesystemAdapter
+        {
+            public ?\Closure $before = null;
+
+            public function put($path, $contents, $options = [])
+            {
+                if ($this->before !== null) {
+                    $race = $this->before;
+                    $this->before = null;
+                    $race();
+                }
+
+                return parent::put($path, $contents, $options);
+            }
+        };
+        $racing->before = function () use ($racing, $theirs, $userId, $bytes): void {
+            $racing->put($theirs, $bytes);
+            DB::table('users')->where('id', $userId)->update(['avatar_path' => $theirs]);
+        };
+        Storage::set('local', $racing);
+
+        $this->assertSame(AvatarService::MOVE_SKIPPED, app(AvatarService::class)->moveToPrivate($this->sales->fresh()));
+
+        // ⭐ মানুষটার সিদ্ধান্তই থাকে; আমাদের কপি যায়
+        $this->assertSame($theirs, $this->sales->fresh()->avatar_path, '⛔ সরানোর কাজ মানুষটার নতুন ছবি মুছে পুরনোটা বসাল');
+        $this->assertEqualsCanonicalizing([$theirs, 'faces/'.$this->already->id.'-0123456789abcdef.jpg'], Storage::disk('local')->allFiles('faces'),
+            '⛔ ফেলে-দেওয়া কপি পড়ে রইল');
+        // ⓘ লেখা অনুযায়ী: public ফাইলটা এখানে থাকে — বাস্তবে মানুষটার নিজের আপলোড ([[AvatarService::store()]]) ওটা মোছে
+        Storage::disk('public')->assertExists($old);
     }
 
     private function summaries()

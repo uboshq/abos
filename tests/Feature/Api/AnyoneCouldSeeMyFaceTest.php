@@ -7,6 +7,7 @@ namespace Tests\Feature\Api;
 use App\Core\Engines\Image\ImageEngine;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\MePhotoController;
 use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
 use App\Models\Company;
@@ -195,6 +196,51 @@ final class AnyoneCouldSeeMyFaceTest extends TestCase
         $this->phone($this->me)->post('/api/v1/me/photo', ['photo' => $this->image(400, 400, 'jpg')], ['Accept' => 'application/json'])
             ->assertOk();
         Storage::disk('public')->assertMissing('avatars/old.jpg');
+    }
+
+    public function test_a_jpeg_header_over_garbage_is_refused_422(): void
+    {
+        // ⓘ finfo মাথা দেখে "image/jpeg" বলে; ভেতরে ছবি নেই — দ্বিতীয় স্তর বা ইঞ্জিনে আটকায়, ৫০০ নয়
+        $path = tempnam(sys_get_temp_dir(), 'soi').'.jpg';
+        file_put_contents($path, "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00".random_bytes(2048));
+
+        $this->phone($this->me)->post('/api/v1/me/photo', [
+            'photo' => new UploadedFile($path, 'photo.jpg', 'image/jpeg', null, true),
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonValidationErrors('photo');
+
+        $this->assertNull($this->me->fresh()->avatar_path);
+        $this->assertSame([], Storage::disk('local')->allFiles('faces'));
+    }
+
+    public function test_the_first_layer_on_its_own_takes_only_jpg_and_png(): void
+    {
+        // ⛔ নিয়মের স্তর একা — দ্বিতীয় স্তর WebP-ও ফেরায়, তাই দরজা দিয়ে গেলে এই স্তরের ভাঙন ঢাকা পড়ত
+        $passes = fn (UploadedFile $file): bool => \Illuminate\Support\Facades\Validator::make(['photo' => $file], MePhotoController::rules())->passes();
+
+        $this->assertTrue($passes($this->image(32, 32, 'jpg')));
+        $this->assertTrue($passes($this->image(32, 32, 'png')));
+        $this->assertFalse($passes($this->image(32, 32, 'webp')), '⛔ নিয়মের স্তর WebP নিল');
+
+        $text = tempnam(sys_get_temp_dir(), 'txt').'.jpg';
+        file_put_contents($text, 'not an image');
+        $this->assertFalse($passes(new UploadedFile($text, 'photo.jpg', 'image/jpeg', null, true)), '⛔ নিয়মের স্তর নাম দেখে নিল');
+    }
+
+    public function test_the_second_layer_on_its_own_takes_only_jpg_and_png(): void
+    {
+        // ⛔ স্তরটা সরাসরি — দরজা দিয়ে গেলে প্রথম স্তর (`mimetypes`) আগেই ফেরাত, আর এই স্তরের ভাঙন ঢাকা পড়ত
+        $file = function (string $bytes, string $ext): string {
+            $path = tempnam(sys_get_temp_dir(), 'lyr').'.'.$ext;
+            file_put_contents($path, $bytes);
+
+            return $path;
+        };
+
+        $this->assertTrue(MePhotoController::isJpegOrPng($file($this->bytes(32, 32, 'jpg'), 'jpg')));
+        $this->assertTrue(MePhotoController::isJpegOrPng($file($this->bytes(32, 32, 'png'), 'png')));
+        $this->assertFalse(MePhotoController::isJpegOrPng($file($this->bytes(32, 32, 'webp'), 'jpg')), '⛔ WebP ফোনের দরজায় ঢুকল');
+        $this->assertFalse(MePhotoController::isJpegOrPng($file('not an image', 'jpg')));
+        $this->assertFalse(MePhotoController::isJpegOrPng(''));
     }
 
     private function assertTrailWithoutBytes(string $action): void
