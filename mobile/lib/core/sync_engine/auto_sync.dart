@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../launcher_widgets/hub/widget_hub.dart';
+import '../crash/crash_reporter.dart';
 import 'reference_sync.dart';
 import 'sync_engine.dart';
 
@@ -54,6 +55,8 @@ class AutoSync with WidgetsBindingObserver {
 
   /// Push the queue, then pull every module.
   static Future<void> fullRound() async {
+    // ⓘ জমা ক্র্যাশের খবরও — নেট ফিরলে বা সামনে এলে; অপেক্ষা নয়, ভুলও ছোড়ে না ([[CrashReporter.flush]])
+    unawaited(CrashReporter.instance.flush());
     await SyncEngine.instance.flushAll();
     await ReferenceSync.syncAll();
     // ⭐ সফল গোলের পরে নতুন উইজেটগুলো — অপেক্ষা নয়, কখনো ছোড়ে না ([WidgetHub])
