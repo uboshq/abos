@@ -4,11 +4,12 @@ import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/today_record.dart';
+import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/state_views.dart';
-import 'app_status_chip_stand_in.dart';
 
 /// ⭐ মালিকের হোম, ০.৪.৪১ — মালিকের অনুমোদিত পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬, পাতা ২: "ok ei planei kore felo")।
 /// ভিতরের তিন কার্ড: টাকার বড় কার্ড (হাতে ও ব্যাংকে মোট · নগদ · ব্যাংক · আজ এসেছে · বকেয়া), সইয়ের অপেক্ষায় থাকা কাগজ, আর
@@ -303,7 +304,78 @@ class _WaitingPapersCardState extends State<WaitingPapersCard> {
   }
 }
 
-/// একটা কাগজ: "নম্বর · পক্ষ (নাম · পয়েন্ট · শাখা)", নিচে "ধরন · টাকা", ডানে চিপ।
+/// "নাম · পয়েন্ট · শাখা" লেখাকে নাম আর জায়গায় ভাগ — নমুনার মতো নাম প্রথম লাইনে, জায়গা নিচে।
+(String, String?) splitPlace(String label) {
+  final at = label.indexOf(' · ');
+  return at < 0 ? (label, null) : (label.substring(0, at), label.substring(at + 3));
+}
+
+/// ⭐ তালিকার কাগজের সারি (০.৪.৪১ নমুনা; a4: বাঁয়ে নম্বর · পক্ষ, ডানে চিপ): প্রথম লাইনে "নম্বর · নাম", নিচে
+/// "পয়েন্ট · শাখা" আর বাকি কথা; ডানে টাকা (থাকলে) আর তার নিচে a6-এর [AppStatusChip.compact]। পুরো সারি চাপা যায়
+/// (অন্তত ৫৬dp)। TalkBack: সারি বলে নম্বর, পুরো নাম আর টাকা কথায়; চিপ নিজে পুরো অবস্থার বাক্য বলে।
+class PaperRow extends StatelessWidget {
+  const PaperRow({super.key, required this.no, required this.party, this.detail, this.amount, required this.chip, this.onTap});
+
+  final String no;
+
+  /// "নাম · পয়েন্ট · শাখা" ([withPoint] / [CustomerRecord.label])
+  final String party;
+  final String? detail;
+  final double? amount;
+  final Widget chip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final (name, place) = splitPlace(party);
+    final first = [no, name].where((s) => s.isNotEmpty).join(' · ');
+    final second = [if (place != null) place, if (detail != null) detail!].where((s) => s.isNotEmpty).join(' · ');
+    final spoken = [
+      [no, party].where((s) => s.isNotEmpty).join(' · '),
+      if (detail != null && detail!.isNotEmpty) Money.speakable(detail!),
+      if (amount != null) Money.spoken(amount)!,
+    ].join(', ');
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
+            Expanded(
+              child: Semantics(
+                container: true,
+                button: onTap != null,
+                label: spoken,
+                excludeSemantics: true,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  CustomerLine(first, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  if (second.isNotEmpty) Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                ]),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+                if (amount != null)
+                  ExcludeSemantics(
+                    child: Text(Money.taka(amount),
+                        textAlign: TextAlign.end,
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                  ),
+                if (amount != null) const SizedBox(height: 2),
+                chip,
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// একটা সইয়ের কাগজ — নমুনার মতো টাকা নিচের লাইনে, ডানে কেবল চিপ।
 class WaitingPaperRow extends StatelessWidget {
   const WaitingPaperRow({super.key, required this.record, this.onTap});
 
@@ -312,38 +384,15 @@ class WaitingPaperRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final who = record.party ?? record.summary ?? record.documentTypeLabel;
-    final first = [record.documentNo, who].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
-    final second = [record.documentTypeLabel, if (record.amount != null) Money.taka(record.amount)].join(' · ');
     final level = record.currentLevel;
-    // ⓘ সার্ভার মোট ধাপ পাঠায় না, তাই a6-এর "{levels}-এর {level}" নয় — ধাপ জানা থাকলে "ধাপ N", নয়তো "সইয়ের অপেক্ষায়"
-    final chip = level > 0 ? 'ধাপ $level' : 'সইয়ের অপেক্ষায়';
-    return InkWell(
+    return PaperRow(
       key: ValueKey('waiting-${record.id}'),
+      no: record.documentNo ?? '',
+      party: record.party ?? record.summary ?? record.documentTypeLabel,
+      detail: record.amount == null ? record.documentTypeLabel : Money.taka(record.amount),
+      // ⚠️ সার্ভার মোট ধাপ (levels) পাঠায় না — তাই a6-এর চিপ "2-এর 1" নয়, "সইয়ের অপেক্ষায়" বলে; levels এলে নিজেই বসবে
+      chip: AppStatusChip.compact(state: PaperState.waiting, level: level > 0 ? level : null, levels: (record.payload['levels'] as num?)?.toInt()),
       onTap: onTap,
-      child: Semantics(
-        container: true,
-        button: onTap != null,
-        label: '$first, ${Money.speakable(second)}, অবস্থা: সইয়ের অপেক্ষায়${level > 0 ? ', ধাপ $level' : ''}',
-        excludeSemantics: true,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  CustomerLine(first, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                  Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                ]),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(child: AppStatusChip(chip, AppStatusTone.critical, icon: Icons.hourglass_top)),
-            ]),
-          ),
-        ),
-      ),
     );
   }
 }

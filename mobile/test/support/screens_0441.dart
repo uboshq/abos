@@ -52,6 +52,13 @@ const waitingPapers = ApprovalPage(rows: [
   }),
 ]);
 
+const waitingWithLevels = ApprovalPage(rows: [
+  ApprovalRecord({
+    'id': 'a1', 'documentType': 'Collection', 'documentNo': 'RCV-0190', 'amount': '50000.0000', 'currentLevel': 1, 'levels': 2,
+    'party': 'রহিম স্টোর · কেন্দুয়া · ময়মনসিংহ',
+  }),
+]);
+
 const ownerUser = AuthUser(id: 'u1', name: 'আল-আমিন শুভ', email: 'o@x', roles: ['Owner'], permissions: []);
 
 Widget ownerHomeBody({Map<String, dynamic>? today, Future<ApprovalPage> Function()? loadWaiting}) => Scaffold(
@@ -96,8 +103,9 @@ class SampleBooks implements BooksApi {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
-Widget srCollectBody({List<ShopDue> Function()? dues, BooksApi? api}) =>
-    MoneyInListScreen(api: api ?? SampleBooks(), today: DateTime(2026, 10, 20), dues: dues ?? sampleDues);
+Widget srCollectBody({List<ShopDue> Function()? dues, BooksApi? api, List<UnsentCollection> Function()? unsent}) =>
+    MoneyInListScreen(
+        api: api ?? SampleBooks(), today: DateTime(2026, 10, 20), dues: dues ?? sampleDues, unsent: unsent ?? () => const []);
 
 /// অ্যাপের নিজের থিমে, ঠিক মাপে আর অক্ষরের মাপে
 Widget framed(Widget child, {bool dark = false, double textScale = 1, ThemeData Function(ThemeData)? font}) {

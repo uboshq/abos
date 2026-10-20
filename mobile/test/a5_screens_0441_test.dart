@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/theme/app_colors.dart';
-import 'package:abos_mobile/core/theme/app_palette.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
-import 'package:abos_mobile/features/home/app_status_chip_stand_in.dart';
+import 'package:abos_mobile/core/status/app_status_chip.dart';
+import 'package:abos_mobile/core/status/paper_state.dart';
+import 'package:abos_mobile/features/books/money_in_screens.dart';
 import 'package:abos_mobile/features/home/owner_home_cards.dart';
 
 import 'support/main_screens.dart' show setScreenSize;
@@ -69,10 +70,31 @@ void main() {
     testWidgets('waiting papers: number · party with point and branch, the amount, a chip each', (tester) async {
       await pump(tester, ownerHomeBody());
       expect(find.text('সইয়ের অপেক্ষায় · 3টি'), findsOneWidget);
-      expect(find.text('RCV-0190 · রহিম স্টোর · কেন্দুয়া · ময়মনসিংহ'), findsOneWidget);
-      expect(find.textContaining('৳4,87,900.00'), findsOneWidget);
-      expect(find.byType(AppStatusChip), findsNWidgets(3));
-      expect(find.text('ধাপ 2'), findsOneWidget);
+      // ⓘ নমুনার মতো: প্রথম লাইনে নম্বর · নাম, নিচে পয়েন্ট · শাখা · টাকা
+      expect(find.text('RCV-0190 · রহিম স্টোর'), findsOneWidget);
+      expect(find.text('কেন্দুয়া · ময়মনসিংহ · ৳50,000.00'), findsOneWidget);
+      expect(find.text('ময়মনসিংহ · ৳4,87,900.00'), findsOneWidget);
+      final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
+      expect(chips, hasLength(3));
+      expect(chips.every((c) => c.state == PaperState.waiting && c.dense), isTrue, reason: 'সারিতে a6-এর compact চিপ');
+      // ⚠️ সার্ভার মোট ধাপ পাঠায় না → "সইয়ের অপেক্ষায়"; পাঠালে "2-এর 1"
+      expect(find.descendant(of: find.byType(AppStatusChip), matching: find.textContaining('সইয়ের অপেক্ষায়', findRichText: true)), findsNWidgets(3));
+    });
+
+    testWidgets('waiting papers: when the server sends the number of levels, the chip says "2-এর 1"', (tester) async {
+      await pump(tester, ownerHomeBody(loadWaiting: () async => waitingWithLevels));
+      expect(find.textContaining('2-এর 1', findRichText: true), findsOneWidget);
+    });
+
+    testWidgets('a row reads number · party on the left and the chip on the right, on one row', (tester) async {
+      await pump(tester, ownerHomeBody());
+      final row = find.byKey(const ValueKey('waiting-a1'));
+      final line = tester.getRect(find.descendant(of: row, matching: find.text('RCV-0190 · রহিম স্টোর')));
+      final chip = tester.getRect(find.descendant(of: row, matching: find.byType(AppStatusChip)));
+      expect(chip.left, greaterThan(line.left));
+      expect(chip.right, closeTo(tester.getRect(row).right, 1), reason: 'চিপ ডানের কিনারে');
+      expect(chip.top, lessThan(tester.getRect(row).bottom));
+      expect(chip.bottom, greaterThan(tester.getRect(row).top));
     });
 
     testWidgets('TalkBack reads the figures in Bengali words, and says an absent one is not known', (tester) async {
@@ -81,7 +103,8 @@ void main() {
       expect(find.bySemanticsLabel('হাতে ও ব্যাংকে মোট, ১১ লাখ ৬৬ হাজার ৩২০ টাকা'), findsOneWidget);
       expect(find.bySemanticsLabel('হাতে নগদ, জানা নেই'), findsOneWidget);
       expect(find.bySemanticsLabel('মোট, ১ লাখ ৬২ হাজার ৭০০ টাকা'), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp(r'^RCV-0190 · .*৫০ হাজার টাকা, অবস্থা: সইয়ের অপেক্ষায়, ধাপ 1$')), findsOneWidget);
+      expect(find.bySemanticsLabel('RCV-0190 · রহিম স্টোর · কেন্দুয়া · ময়মনসিংহ, ৫০ হাজার টাকা'), findsOneWidget);
+      expect(find.bySemanticsLabel('অবস্থা: সইয়ের অপেক্ষায়'), findsNWidgets(3), reason: 'a6-এর চিপ নিজেই পুরো বাক্য বলে');
       handle.dispose();
     });
   });
@@ -98,20 +121,38 @@ void main() {
     });
 
     testWidgets('names carry point and branch, in the collections and in the dues', (tester) async {
+      final handle = tester.ensureSemantics();
       await pump(tester, srCollectBody());
-      expect(find.text('মুসকান এন্টারপ্রাইজ · ফুলবাড়িয়া · ময়মনসিংহ'), findsNWidgets(2));
-      expect(find.text('রহিম স্টোর · কেন্দুয়া · ময়মনসিংহ'), findsNWidgets(2));
-      expect(find.text('নূর ট্রেডার্স · ত্রিশাল · ময়মনসিংহ'), findsOneWidget);
+      // আদায়: প্রথম লাইনে নম্বর · নাম, নিচে পয়েন্ট · শাখা; TalkBack পুরো নাম বলে
+      expect(find.text('RCV-0191 · মুসকান এন্টারপ্রাইজ'), findsOneWidget);
+      expect(find.textContaining('ফুলবাড়িয়া · ময়মনসিংহ ·'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(r'^RCV-0193 · নূর ট্রেডার্স · ত্রিশাল · ময়মনসিংহ, ')), findsOneWidget);
+      // বকেয়া: এক লাইনে পুরো নাম
+      expect(find.text('মুসকান এন্টারপ্রাইজ · ফুলবাড়িয়া · ময়মনসিংহ'), findsOneWidget);
+      expect(find.text('রহিম স্টোর · কেন্দুয়া · ময়মনসিংহ'), findsOneWidget);
+      handle.dispose();
     });
 
     testWidgets('a chip on every row, read as "অবস্থা: পাকা"; the last row clears the FAB', (tester) async {
       final handle = tester.ensureSemantics();
       await pump(tester, srCollectBody());
-      expect(find.byType(AppStatusChip), findsNWidgets(3));
-      expect(find.bySemanticsLabel('অবস্থা: পাকা'), findsNWidgets(3));
+      final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
+      expect(chips, hasLength(3));
+      expect(chips.every((c) => c.state == PaperState.posted && c.dense), isTrue);
+      expect(find.bySemanticsLabel('অবস্থা: পাকা, খাতায় উঠেছে'), findsNWidgets(3));
       final list = tester.widget<ListView>(find.byType(ListView).first);
       expect((list.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(88), reason: 'FAB ৫৬dp + ফাঁক');
       handle.dispose();
+    });
+
+    testWidgets('a collection still on the phone shows first, chip "পাঠানো বাকি"', (tester) async {
+      await pump(tester,
+          srCollectBody(unsent: () => const [UnsentCollection('মুসকান এন্টারপ্রাইজ · ফুলবাড়িয়া · ময়মনসিংহ', 30000)]));
+      final row = find.byKey(const ValueKey('money-in-unsent-0'));
+      expect(tester.widget<AppStatusChip>(find.descendant(of: row, matching: find.byType(AppStatusChip))).state,
+          PaperState.unsent);
+      expect(find.descendant(of: row, matching: find.textContaining('পাঠানো বাকি', findRichText: true)), findsOneWidget);
+      expect(tester.getTopLeft(row).dy, lessThan(tester.getTopLeft(find.byKey(const ValueKey('money-in-RCV-0191'))).dy));
     });
 
     testWidgets('a shop due is read in Bengali words', (tester) async {
@@ -154,16 +195,15 @@ void main() {
       testWidgets('${s.key}: in dark mode the theme\'s own colours, readable', (tester) async {
         await pump(tester, s.value(), dark: true);
         final ctx = tester.element(find.byType(AppStatusChip).first);
-        final p = ctx.palette;
         final cs = AppTheme.dark().colorScheme;
         expect(Theme.of(ctx).brightness, Brightness.dark);
         final chips = find.byType(AppStatusChip);
         for (var i = 0; i < chips.evaluate().length; i++) {
+          final chip = tester.widget<AppStatusChip>(chips.at(i));
+          final dark = chip.state.spec.colours.of(Brightness.dark);
           final box = tester.widget<Container>(find.descendant(of: chips.at(i), matching: find.byType(Container)).first);
-          final bg = (box.decoration! as BoxDecoration).color!;
-          final fg = tester.widget<Text>(find.descendant(of: chips.at(i), matching: find.byType(Text))).style!.color!;
-          expect([p.successSurface, p.warningSurface], contains(bg));
-          expect(AppColors.contrast(fg, bg), greaterThanOrEqualTo(4.5));
+          expect((box.decoration! as BoxDecoration).color, dark.background, reason: 'অন্ধকারের চিপ-রং');
+          expect(AppColors.contrast(dark.foreground, dark.background), greaterThanOrEqualTo(4.5));
         }
         if (s.key == 'owner home') {
           final card = tester.widget<Card>(find.byKey(const ValueKey('owner-money-card')));
