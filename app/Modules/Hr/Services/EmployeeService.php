@@ -8,6 +8,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\PaymentChange;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -83,7 +84,23 @@ final class EmployeeService
              */
             $active = array_key_exists('leaving_date', $data) ? ['is_active' => $this->stillHere($data['leaving_date'])] : [];
 
-            $employee->update([...$data, 'code' => $code, ...$active]);
+            /*
+             * ⛔ বেতনের ঠিকানা এখানে বসে না — দ্বিতীয় সইয়ে বসে (#৮, ২০ অক্টোবর ২০২৬; [[PaymentChanges]])। ⓘ বাকি ঘরগুলো আগের মতো
+             * সাথে সাথে; পথ বা ব্যাংকের কোনো ঘর আলাদা হলে "অপেক্ষার বদল" হয়, আর ততদিন বেতন যায় পুরনো হিসাবে।
+             */
+            $payment = array_intersect_key($data, array_flip(PaymentChange::FIELDS));
+            $employee->update([...array_diff_key($data, $payment), 'code' => $code, ...$active]);
+
+            if ($payment !== []) {
+                $user = auth()->user();
+
+                // ⛔ কে চাইলেন না জানলে বদলটা লেখাই যায় না — নীরবে ফেলে দেওয়াও নয়
+                if (! $user instanceof User) {
+                    throw new \RuntimeException('A change to where the salary goes needs a signed-in user to stand behind it.');
+                }
+
+                app(PaymentChanges::class)->propose($employee, $payment, $user);
+            }
 
             return $employee->fresh();
         });

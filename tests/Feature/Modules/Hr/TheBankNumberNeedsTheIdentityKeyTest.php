@@ -110,7 +110,10 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
 
         $this->give($clerk, 'hr.identity.view');
         $this->as($clerk)->put(route('hr.employee.update', $employee->id), [...$form, 'bank_account_no' => '5555555555555'])->assertSessionHasNoErrors();
-        $this->assertSame('5555555555555', (string) $employee->fresh()->bank_account_no, 'চাবি থাকলে বদলায়, আগের মতো');
+        // ⓘ চাবি থাকলে বদলটা লেখা হয় — কিন্তু বসে দ্বিতীয় সইয়ে (#৮, ২০ অক্টোবর ২০২৬; [[TheSalaryWentWhereOneHandSaidTest]])
+        $this->assertSame(self::ACCOUNT, (string) $employee->fresh()->bank_account_no, '⛔ একজনের হাতেই ব্যাংকের নম্বর বসল');
+        $this->assertSame('5555555555555', (string) \App\Modules\Hr\Models\PaymentChange::query()->where('employee_id', $employee->id)
+            ->where('status', 'pending')->firstOrFail()->proposed['bank_account_no'], 'চাবি থাকলে বদলটা সইয়ের অপেক্ষায় লেখা হয়');
     }
 
     /**

@@ -16,11 +16,13 @@ use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\PaymentChange;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EmployeePhotoService;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\JobHistory;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Services\PaymentChanges;
 use App\Modules\Hr\Services\SalaryStructureService;
 use App\Modules\Hr\Support\BranchReach;
 use App\Modules\MasterData\Models\Department;
@@ -57,6 +59,8 @@ class EmployeeController extends Controller implements HasMiddleware
         return [
             new Middleware('can:hr.employee.view', only: ['index', 'show']),
             new Middleware('can:hr.employee.manage', only: ['create', 'store', 'edit', 'update', 'destroy']),
+            // ⓘ সই আর ফেরানো — কর্মীর পাতা দেখার চাবি; বাকিটা [[PaymentChanges]] নিজে দেখে (সইয়ের চাবি, লেখক নন)
+            new Middleware('can:hr.employee.view', only: ['approvePaymentChange', 'rejectPaymentChange']),
         ];
     }
 
@@ -179,7 +183,32 @@ class EmployeeController extends Controller implements HasMiddleware
 
             // ⭐ চাকরির ইতিহাস — নিরীক্ষার খাতা থেকে ([[JobHistory]]); প্রোফাইল খোলার চাবিতেই, কারণ পদবি-বিভাগ এখানে আগে থেকেই খোলা
             'history' => app(JobHistory::class)->of($employee),
+
+            // ⭐ বেতনের ঠিকানার অপেক্ষার বদল (#৮) — পাতার মাথায়, সই আর ফেরানোর বোতামসহ
+            'paymentChange' => app(PaymentChanges::class)->pendingFor($employee),
         ]);
+    }
+
+    /** ⭐ দ্বিতীয় হাতের সই — বেতনের ঠিকানা এখন বসে (#৮, ২০ অক্টোবর ২০২৬) */
+    public function approvePaymentChange(Request $request, Employee $employee, PaymentChange $change): RedirectResponse
+    {
+        $this->authorize('view', $employee);
+        abort_unless((int) $change->employee_id === (int) $employee->id, 404);
+
+        app(PaymentChanges::class)->approve($change, $request->user());
+
+        return redirect()->route('hr.employee.show', $employee)->with('saved', __('hr::payment_change.applied'));
+    }
+
+    /** না — বা লেখক নিজে ফিরিয়ে নিলেন; কর্মীর সারি যেমন ছিল */
+    public function rejectPaymentChange(Request $request, Employee $employee, PaymentChange $change): RedirectResponse
+    {
+        $this->authorize('view', $employee);
+        abort_unless((int) $change->employee_id === (int) $employee->id, 404);
+
+        app(PaymentChanges::class)->reject($change, $request->user(), $request->string('note')->toString());
+
+        return redirect()->route('hr.employee.show', $employee)->with('saved', __('hr::payment_change.rejected'));
     }
 
     public function edit(Request $request, Employee $employee): View
@@ -198,12 +227,18 @@ class EmployeeController extends Controller implements HasMiddleware
         $this->authorize('update', $employee);
 
         $this->checkPhoto($request, $employee);
+
+        // ⓘ বেতনের ঠিকানার নতুন অপেক্ষার বদল হলে সেটাই বলা — "সংশোধিত" বললে মানুষ ভাবতেন নতুন হিসাবে বেতন যাবে
+        $before = app(PaymentChanges::class)->pendingFor($employee)?->id;
         $this->employees->update($employee, $this->validated($request, $employee));
+        $after = app(PaymentChanges::class)->pendingFor($employee)?->id;
         $this->savePhoto($request, $employee);
 
         return redirect()
             ->route('hr.employee.show', $employee)
-            ->with('saved', __('hr::message.employee_updated'));
+            ->with('saved', $after !== null && $after !== $before
+                ? __('hr::payment_change.waiting_saved')
+                : __('hr::message.employee_updated'));
     }
 
     /**

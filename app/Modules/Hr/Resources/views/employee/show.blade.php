@@ -44,6 +44,60 @@
 
     <x-ui.errors />
 
+    {{-- ⭐ বেতনের ঠিকানার অপেক্ষার বদল — দ্বিতীয় সইয়ের আগে বসে না (#৮, ২০ অক্টোবর ২০২৬; [[PaymentChanges]])।
+         ⓘ নম্বর ঢাকা — শেষ চার অঙ্ক; পুরোটা কেবল hr.identity.view-এ। সই কেবল চাবি থাকা, লেখক নন এমন জনের; লেখক নিজে ফিরিয়ে নেন। --}}
+    @if ($paymentChange)
+        @php
+            $viewer = auth()->user();
+            $now = \App\Modules\Hr\Services\PaymentChanges::detailsOf($employee);
+            $asked = $paymentChange->proposed;
+            $mine = (int) $paymentChange->requested_by === (int) $viewer?->id;
+            $canSign = ! $mine && (bool) $viewer?->can('hr.payment_change.approve');
+        @endphp
+        <section data-payment-change role="status" data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-ink) bg-(--color-badge-warning-bg) p-4 text-sm">
+            <p class="font-semibold text-(--color-badge-warning-ink)">
+                {{ __('hr::payment_change.banner', ['by' => $paymentChange->requester?->name, 'at' => \App\Core\Support\DateFormat::format($paymentChange->created_at)]) }}
+            </p>
+            <p class="mt-1 text-(--color-ink-muted)">{{ __('hr::payment_change.banner_note') }}</p>
+
+            <table class="ui-lines mt-3 w-full">
+                <thead>
+                    <tr>
+                        <th class="text-start">{{ __('hr::payment_change.field') }}</th>
+                        <th class="text-start">{{ __('hr::payment_change.now') }}</th>
+                        <th class="text-start">{{ __('hr::payment_change.asked') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (\App\Modules\Hr\Models\PaymentChange::FIELDS as $field)
+                        @continue(($now[$field] ?? null) === ($asked[$field] ?? null))
+                        <tr data-changed-field="{{ $field }}">
+                            <td data-label="{{ __('hr::payment_change.field') }}">{{ __('hr::field.'.$field) }}</td>
+                            <td data-label="{{ __('hr::payment_change.now') }}">{{ \App\Modules\Hr\Services\PaymentChanges::shown($field, $now[$field] ?? null, $viewer) }}</td>
+                            <td data-label="{{ __('hr::payment_change.asked') }}">{{ \App\Modules\Hr\Services\PaymentChanges::shown($field, $asked[$field] ?? null, $viewer) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+                @if ($canSign)
+                    <form method="POST" action="{{ route('hr.employee.payment_change.approve', [$employee, $paymentChange]) }}">
+                        @csrf
+                        <x-ui.button type="submit" tone="primary">{{ __('hr::payment_change.approve') }}</x-ui.button>
+                    </form>
+                @endif
+                @if ($canSign || $mine)
+                    <form method="POST" action="{{ route('hr.employee.payment_change.reject', [$employee, $paymentChange]) }}">
+                        @csrf
+                        <x-ui.button type="submit" tone="secondary">{{ $mine ? __('hr::payment_change.withdraw') : __('hr::payment_change.reject') }}</x-ui.button>
+                    </form>
+                @endif
+            </div>
+        </section>
+    @endif
+
     {{-- ── কভার ─────────────────────────────────────────────────────────
          ব্র্যান্ডের রঙে ব্যানার, তার উপর গোল ছবির ঘর, নাম আর এক লাইনে পরিচয়। --}}
     <section data-profile-cover data-boxed
