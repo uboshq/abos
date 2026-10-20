@@ -17,7 +17,7 @@
     <x-slot:title>{{ $quotation->document_no }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$quotation->document_no" :subtitle="$quotation->customer?->name()">
+        <x-ui.page-header :title="$quotation->document_no" :subtitle="$quotation->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 @can('update', $quotation)
                     <x-ui.button tone="secondary" :href="route('sales.quotation.edit', $quotation)">

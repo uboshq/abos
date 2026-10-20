@@ -10,6 +10,8 @@ return [
     'sl' => 'SL#',
     'customer' => 'Customer',
     'point' => 'Point',
+    // ⭐ রিপোর্টের কলাম — পয়েন্টের পাশে গ্রাহকের শাখা (মালিক, ১৯ অক্টোবর ২০২৬)
+    'place' => 'Point · Branch',
     'inflow' => 'Collected (inflow)',
     'target' => 'Target',
     'percent' => 'Achieved %',

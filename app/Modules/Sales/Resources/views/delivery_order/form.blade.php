@@ -13,7 +13,7 @@
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
                              :selected="old('customer_id')" placeholder="-" required />
                 <x-ui.field name="deliver_on" type="date" :label="__('sales::delivery_order.deliver_on')"
                             :value="old('deliver_on')" />

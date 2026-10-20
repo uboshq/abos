@@ -85,7 +85,7 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
         $search = PromotionCoupon::normalise((string) $request->query('q', ''));
 
         $rows = PromotionCoupon::query()
-            ->with(['promotion', 'customer'])
+            ->with(['promotion', ...Customer::placeVia('customer')])
             ->when($offer !== null, fn ($q) => $q->where('promotion_id', $offer->id))
             ->when($search !== '', fn ($q) => $q->where('code', 'like', '%'.addcslashes($search, '%_\\').'%'))
             ->orderByDesc('id')

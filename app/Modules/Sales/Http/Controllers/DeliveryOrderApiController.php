@@ -50,7 +50,7 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
     {
         $query = DeliveryOrder::query()
             // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
-            ->with('customer.location.parent')
+            ->with(['customer.location.parent', 'customer.branch'])
             ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when($request->query('scope') === 'awaiting_me', fn ($q) => $q->where('status', DeliveryOrderStatus::SUPERVISOR_PENDING)
                 ->whereIn('id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
@@ -200,7 +200,7 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
     private function facts(DeliveryOrder $o, bool $withLines, ?array $latest = null): array
     {
         // ⓘ সারি কেবল খুললে; তালিকার অনুমোদন এক ডাকে ([[LatestApprovals]]) — অডিট ফোন ⚠️১৭
-        $o->loadMissing($withLines ? ['customer.location.parent', 'lines.product'] : ['customer.location.parent']);
+        $o->loadMissing($withLines ? ['customer.location.parent', 'customer.branch', 'lines.product'] : ['customer.location.parent', 'customer.branch']);
         $pending = $o->status === DeliveryOrderStatus::SUPERVISOR_PENDING
             ? ($latest === null ? app(ApprovalEngine::class)->latestFor($o, DeliveryOrderService::APPROVAL_ACTION) : ($latest[(int) $o->id] ?? null)) : null;
         $user = request()->user();
@@ -209,7 +209,7 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
             'id' => (string) $o->public_id,
             'no' => (string) $o->document_no,
             'date' => $o->trx_date?->toDateString(),
-            'customer' => ['id' => (string) $o->customer?->public_id, 'name' => $o->customer?->name(), 'point' => $o->customer?->pointName()],
+            'customer' => ['id' => (string) $o->customer?->public_id, 'name' => $o->customer?->name(), 'point' => $o->customer?->pointName(), 'branch' => $o->customer?->branchName()],
             'status' => (string) $o->status,
             'status_label' => DeliveryOrderStatus::label((string) $o->status),
             'total' => bcadd((string) $o->total, '0', 2),

@@ -412,11 +412,14 @@ final class CustomerService
      */
     private function tellTheOwnersOfTheBounce(Customer $customer, int $companyId, int $chequeId, string $word): void
     {
+        // ⭐ "নাম · পয়েন্ট · শাখা" — কোন দোকান, কোন শাখা (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+        $customer->loadMissing(['location.parent', 'branch']);
+
         foreach (app(Ownership::class)->activeOwnersIn($companyId) as $owner) {
             app(NotificationService::class)->send(
                 $owner,
                 'customer.cheque_bounce_block',
-                __('customer::credit_block.bounce_notice_title', ['customer' => $customer->name()]),
+                __('customer::credit_block.bounce_notice_title', ['customer' => $customer->nameWithPoint()]),
                 __('customer::credit_block.bounce_notice_body', ['reason' => $word]),
                 route('customer.show', $customer),
                 evenToSelf: true,

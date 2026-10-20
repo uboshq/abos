@@ -280,8 +280,12 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         ]);
         $shop->forceFill(['location_id' => $point->id])->save();
         $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
-        $this->assertSame($shop->drillLabel().' · কারওয়ান বাজার', $page['party'], '⛔ ভাউচারের পক্ষে পয়েন্ট নেই।');
-        $this->assertSame([null, $shop->drillLabel().' · কারওয়ান বাজার'], array_column($page['lines'], 'party'));
+        // ⭐ শাখাও — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "নাম · পয়েন্ট · শাখা"
+        $branch = $shop->fresh()->branchName();
+        $this->assertNotNull($branch, 'প্রস্তুতিটাই ভুল — দোকানের শাখা নেই।');
+        $label = $shop->drillLabel().' · কারওয়ান বাজার · '.$branch;
+        $this->assertSame($label, $page['party'], '⛔ ভাউচারের পক্ষে পয়েন্ট আর শাখা নেই।');
+        $this->assertSame([null, $label], array_column($page['lines'], 'party'));
     }
 
     /**

@@ -49,7 +49,8 @@ final class LedgerCheckReports
                 ],
                 // ⭐ মালিক, ৫ অক্টোবর ২০২৬: গ্রাহকের পাশে মোবাইল আর পয়েন্ট — কাকে ফোন করবেন, কোন এলাকার
                 ['key' => 'phone', 'label' => 'customer::field.phone', 'type' => ReportColumn::TEXT],
-                ['key' => 'point', 'label' => 'customer::field.point', 'type' => ReportColumn::TEXT],
+                // ⭐ "পয়েন্ট · শাখা" — শাখা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম); SQL অক্ষত
+                ['key' => 'point', 'label' => 'customer::field.place', 'type' => ReportColumn::TEXT, 'place' => ['customer', 'party_id', 'branch']],
                 ['key' => 'party_total', 'label' => 'customer::ledger_check.party_total', 'type' => ReportColumn::MONEY],
                 ['key' => 'control_total', 'label' => 'customer::ledger_check.control_total', 'type' => ReportColumn::MONEY],
                 ['key' => 'difference', 'label' => 'customer::ledger_check.difference', 'type' => ReportColumn::MONEY],

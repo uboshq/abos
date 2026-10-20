@@ -68,6 +68,8 @@ final class CreditDaily
         $ending = $this->activeCustomers()
             ->whereNotNull('temp_credit_limit')
             ->whereBetween('temp_credit_limit_until', [$today->toDateString(), $today->copy()->addDays(self::ENDING_DAYS)->toDateString()])
+            // ⓘ খবরের নামের পাশে পয়েন্ট আর শাখা — গোটা দলের সাথে একবারে, সারি ধরে নয়
+            ->with(['location.parent', 'branch'])
             ->get();
 
         foreach ($ending as $customer) {
@@ -77,7 +79,8 @@ final class CreditDaily
                 app(NotificationService::class)->send(
                     $owner,
                     self::TEMPORARY_ENDING,
-                    __('credit_control::notice.temporary_ending_title', ['customer' => $customer->name(), 'date' => DateFormat::format($until)]),
+                    // ⭐ "নাম · পয়েন্ট · শাখা" — কোন দোকান, কোন শাখা (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+                    __('credit_control::notice.temporary_ending_title', ['customer' => $customer->nameWithPoint(), 'date' => DateFormat::format($until)]),
                     __('credit_control::notice.temporary_ending_body', [
                         'amount' => Money::format((string) $customer->temp_credit_limit),
                         'normal' => Money::format((string) ($customer->credit_limit ?? '0')),

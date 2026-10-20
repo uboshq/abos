@@ -104,13 +104,13 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
         \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendPushToUser::class]);
         app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DISPATCHED);
         $this->actingAs($this->owner);
-        // ⭐ লক-স্ক্রিনের পুশেও — নিচের লাইনে "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: "obosoi point dibe")
+        // ⭐ লক-স্ক্রিনের পুশেও — নিচের লাইনে "নাম · পয়েন্ট · শাখা" (শাখা মালিকের ১৯ অক্টোবরের নিয়মে) (মালিক, ১০ অক্টোবর ২০২৬: "obosoi point dibe")
         \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\SendPushToUser::class,
-            fn (\App\Jobs\SendPushToUser $job) => $job->userId === $this->owner->id && $job->body === $this->shop->name().' · কারওয়ান বাজার');
+            fn (\App\Jobs\SendPushToUser $job) => $job->userId === $this->owner->id && $job->body === $this->shop->fresh()->load('location.parent', 'branch')->nameWithPoint());
 
         // ⭐ বিজ্ঞপ্তিতেও — মালিক, ৭ অক্টোবর ২০২৬: "app e notification e customer er sathe point nai" ([[TrackingNotices]])
         $bodies = \App\Models\Notification::query()->where('user_id', $this->owner->id)->pluck('body')->all();
-        $this->assertContains($this->shop->name().' · কারওয়ান বাজার', $bodies, '⛔ ট্র্যাকিং-বিজ্ঞপ্তিতে গ্রাহকের পাশে পয়েন্ট নেই।');
+        $this->assertContains($this->shop->fresh()->load('location.parent', 'branch')->nameWithPoint(), $bodies, '⛔ ট্র্যাকিং-বিজ্ঞপ্তিতে গ্রাহকের পাশে পয়েন্ট নেই।');
 
         $this->phone($this->owner);
         $money = collect($this->getJson('/api/v1/sales/collections?from='.now()->subDay()->toDateString().'&to='.now()->toDateString())->assertOk()->json('rows'))
@@ -148,7 +148,7 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
         $summaries = array_column($this->getJson('/api/v1/approvals/pending')->assertOk()->json('rows'), 'summary');
         $mine = collect($summaries)->first(fn ($s) => str_starts_with((string) $s, $this->shop->name()));
         $theirs = collect($summaries)->first(fn ($s) => str_starts_with((string) $s, $other->name()));
-        $this->assertStringStartsWith($this->shop->name().' · কারওয়ান বাজার', (string) $mine, '⛔ সই-বাক্সের সারিতে দোকানের পয়েন্ট নেই।');
+        $this->assertStringStartsWith($this->shop->fresh()->load('location.parent', 'branch')->nameWithPoint(), (string) $mine, '⛔ সই-বাক্সের সারিতে দোকানের পয়েন্ট নেই।');
         $this->assertStringNotContainsString('কারওয়ান', (string) $theirs, '⛔ পয়েন্ট ছাড়া দোকানে অন্যের পয়েন্ট বসল।');
         $this->assertNotNull($theirs);
 
@@ -161,7 +161,7 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
         $do = \App\Modules\Sales\Models\DeliveryOrder::query()->findOrFail($mineApproval->approvable_id);
         $label = app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($mineApproval);
         $this->assertStringContainsString((string) $do->document_no, $label);
-        $this->assertStringEndsWith($this->shop->name().' · কারওয়ান বাজার', $label, '⛔ বিজ্ঞপ্তির লেবেলে দোকান আর পয়েন্ট নেই।');
+        $this->assertStringEndsWith($this->shop->fresh()->load('location.parent', 'branch')->nameWithPoint(), $label, '⛔ বিজ্ঞপ্তির লেবেলে দোকান আর পয়েন্ট নেই।');
         $this->assertStringNotContainsString('delivery_order', $label, '⛔ কাঁচা ইংরেজি চাবি।');
 
         $this->app['auth']->forgetGuards();

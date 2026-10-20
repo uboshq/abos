@@ -45,7 +45,7 @@
                                            @checked(in_array($option->id, $chosen, true))>
                                     <span>
                                         <span class="block font-semibold">{{ $option->document_no }}</span>
-                                        <span class="block">{{ $option->customer?->name() }}</span>
+                                        <span class="block">{{ $option->customer?->nameWithPoint() }}</span>
                                         <span class="block text-2xs text-(--color-ink-muted)">
                                             {{ \App\Core\Support\DateFormat::format($option->trx_date) }} · {{ \App\Core\Support\Money::format($option->total) }}
                                         </span>
@@ -72,7 +72,7 @@
                         @foreach ($quotations as $i => $quotation)
                             <th scope="col" class="min-w-56 text-start align-top font-semibold" data-column="{{ $quotation->id }}">
                                 <span class="block">@include('sales::components.doc-link', ['document' => $quotation, 'route' => 'sales.quotation.show'])</span>
-                                <span class="block font-normal">{{ $quotation->customer?->name() }}</span>
+                                <span class="block font-normal">{{ $quotation->customer?->nameWithPoint() }}</span>
                                 @if ($i === 0)
                                     <span class="block text-2xs font-normal text-(--color-ink-muted)">{{ __('sales::quotation.compare.base') }}</span>
                                 @endif

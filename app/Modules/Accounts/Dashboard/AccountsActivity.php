@@ -12,6 +12,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherParties;
 use Illuminate\Contracts\Database\Query\Builder;
 
 /**
@@ -37,12 +38,20 @@ final class AccountsActivity implements ContributesActivity
     /** @return list<Happening> */
     private static function vouchers(int $limit): array
     {
-        return Voucher::query()
+        $vouchers = Voucher::query()
             ->posted()
             ->with('lines')
             ->latest('id')
             ->limit($limit)
-            ->get()
+            ->get();
+
+        /*
+         * ⭐ ধরনের পাশে পক্ষ — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬: নম্বরের পাশে কার টাকা)। ⓘ গোটা তালিকার একবারে
+         * ([[VoucherParties]]) — লাইনগুলো আগেই তোলা, তবু পক্ষহীন ভাউচারের জন্য একটাই ছোট প্রশ্ন; সারি ধরে কখনো নয়।
+         */
+        $parties = app(VoucherParties::class)->of($vouchers);
+
+        return $vouchers
             ->map(fn (Voucher $voucher) => new Happening(
                 when: $voucher->updated_at ?? $voucher->created_at,
 
@@ -55,7 +64,9 @@ final class AccountsActivity implements ContributesActivity
                  */
                 title: $voucher->document_no.' · '
                     .Money::format($voucher->totals()['debit'], 2),
-                subtitle: __('accounts::doc.'.$voucher->type.'_voucher'),
+                subtitle: isset($parties[$voucher->id])
+                    ? __('accounts::doc.'.$voucher->type.'_voucher').' · '.$parties[$voucher->id]
+                    : __('accounts::doc.'.$voucher->type.'_voucher'),
                 icon: 'wallet',
                 permission: 'accounts.report',
 

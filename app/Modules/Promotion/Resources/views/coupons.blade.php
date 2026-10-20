@@ -112,7 +112,8 @@
                                     <x-ui.badge :tone="$row->usesLeft() > 0 ? 'info' : 'danger'">{{ $row->usesLeft() }}</x-ui.badge>
                                 </td>
                                 <td class="num">{{ $row->max_uses_per_customer ?? __('promotion::coupon_screen.no_limit') }}</td>
-                                <td>{{ $row->customer?->name() ?? __('promotion::coupon_screen.any_customer') }}</td>
+                                {{-- ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম) --}}
+                                <td>{{ $row->customer?->nameWithPoint() ?? __('promotion::coupon_screen.any_customer') }}</td>
                                 <td>
                                     @if ($row->valid_from || $row->valid_to)
                                         {{ $row->valid_from?->format('d/m/y') ?? '…' }} — {{ $row->valid_to?->format('d/m/y') ?? '…' }}

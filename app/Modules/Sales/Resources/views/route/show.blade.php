@@ -18,6 +18,9 @@
         ['key' => 'name', 'label' => __('sales::route.customers'),
             'render' => fn ($c) => new HtmlString('<a href="'.e(route('customer.show', $c)).'"'
                 .' class="text-(--color-brand-500) underline-offset-2 hover:underline">'.e($c->name()).'</a>')],
+        // ⭐ গ্রাহকের পরে "পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); নিয়ন্ত্রক পাতার একবারে আনে
+        ['key' => 'point', 'label' => __('customer::field.place'), 'width' => '12rem',
+            'render' => fn ($c) => view('customer::partials.place', ['customer' => $c])],
         ['key' => 'opening', 'label' => __('sales::route.opening'), 'numeric' => true,
             'render' => fn ($c) => $money($figures[$c->id]['opening'])],
         ['key' => 'sales', 'label' => __('sales::route.sales'), 'numeric' => true,

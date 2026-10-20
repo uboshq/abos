@@ -440,7 +440,8 @@ final class AReportCrossedTheBranchWallTest extends TestCase
     /** @return list<string> সারিগুলোর ক্রেতা, নাম ধরে সাজানো */
     private function names(ReportResult $result): array
     {
-        $names = array_map(fn (array $row): string => (string) $row['customer_name'], $result->rows);
+        // ⓘ নামটুকু — ঘরে পাশে পয়েন্ট আর শাখাও বসে ("নাম · পয়েন্ট · শাখা", ১৯ অক্টোবর ২০২৬); এই দাবি দেয়াল মাপে, লেখা নয়
+        $names = array_map(fn (array $row): string => explode(' · ', (string) $row['customer_name'])[0], $result->rows);
         sort($names);
 
         return $names;

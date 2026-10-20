@@ -413,14 +413,18 @@ class ApprovalInboxController extends Controller implements HasMiddleware
 
     public function mine(Request $request): View
     {
+        $approvals = self::searched(Approval::query(), (string) $request->query('q', ''))
+            ->where('requested_by', $request->user()?->id)
+            ->with(['decisions.user'])
+            ->orderByDesc('id')
+            ->paginate(50);
+
         return view('approval::inbox.mine', [
             'menu' => $this->menu->forUser($request->user()),
             'labels' => $this->flows->labels(),
-            'approvals' => self::searched(Approval::query(), (string) $request->query('q', ''))
-                ->where('requested_by', $request->user()?->id)
-                ->with(['decisions.user'])
-                ->orderByDesc('id')
-                ->paginate(50),
+            'approvals' => $approvals,
+            // ⭐ কাগজের নম্বর আর পক্ষ — মালিক, ১৯ অক্টোবর ২০২৬; নিজের অনুরোধ, তাই দেয়াল তোলা ([[ApprovalFacts::VIEW_WALLS]])
+            'facts' => $this->facts->of($approvals->getCollection(), true),
         ]);
     }
 
@@ -433,16 +437,23 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     {
         $signed = app(\App\Core\Engines\Approval\SignedButNotPosted::class);
 
+        $approvals = self::searched($signed->query($request->user()), (string) $request->query('q', ''))
+            ->with(['decisions.user'])
+            ->orderByDesc('decided_at')
+            ->paginate(50);
+
         return view('approval::inbox.mine', [
             'papers' => $signed->papers($request->user()),
             'menu' => $this->menu->forUser($request->user()),
             'labels' => $this->flows->labels(),
             'heading' => __('approval::menu.signed_unposted'),
             'emptyText' => __('approval::message.no_signed_unposted'),
-            'approvals' => self::searched($signed->query($request->user()), (string) $request->query('q', ''))
-                ->with(['decisions.user'])
-                ->orderByDesc('decided_at')
-                ->paginate(50),
+            'approvals' => $approvals,
+            /*
+             * ⭐ নম্বরের পাশে পক্ষ — মালিক, ১৯ অক্টোবর ২০২৬। ⓘ দেয়াল তোলা: তালিকাটা আগেই বেছেছে কে কী দেখেন (সইকারী/রিপোর্ট —
+             * গোটা কোম্পানি, বাকিরা নিজের পাঠানো; [[SignedButNotPosted::papers()]]), আর নম্বর ঐ একই দেয়াল-ছাড়া পথে আসে।
+             */
+            'facts' => $this->facts->of($approvals->getCollection(), true),
         ]);
     }
 

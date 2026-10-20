@@ -67,7 +67,8 @@
                     @php($challan = $tripLine->challan)
                     <li class="rounded-(--radius-field) border border-(--color-border) p-2">
                         <div class="flex flex-wrap justify-between gap-2">
-                            <span class="font-medium">{{ $challan?->document_no }} · {{ $challan?->customer?->name() }}</span>
+                            {{-- ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম) --}}
+                            <span class="font-medium">{{ $challan?->document_no }} · {{ $challan?->customer?->nameWithPoint() }}</span>
                             @if ($challan && isset($stages[$challan->id]))
                                 @include('sales::delivery.partials.badge', ['stage' => $stages[$challan->id]])
                             @endif

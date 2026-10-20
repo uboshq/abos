@@ -33,6 +33,7 @@ class Collection extends Model implements Drillable
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;
+    use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices; // ⭐ বিজ্ঞপ্তিতে গ্রাহক · পয়েন্ট (মালিক, ১৯ অক্টোবর ২০২৬)
     // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
     use \App\Core\Concerns\ScopedToUserDealers;
     use ScopedToUserBranch;

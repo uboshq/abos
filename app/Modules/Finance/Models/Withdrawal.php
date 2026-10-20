@@ -36,6 +36,7 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher, Settleme
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use \App\Core\Concerns\NamesItsPartyInNotices; // ⭐ বিজ্ঞপ্তিতে পক্ষের নাম (গ্রাহক হলে · পয়েন্ট) — মালিক, ১৯ অক্টোবর ২০২৬
     use ListedInViewedBranch;
     use OpensOnlyInReach;
 
