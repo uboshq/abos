@@ -193,10 +193,10 @@ class _TodayPanelState extends State<TodayPanel> {
                   else ...[
                     if (today.sales != null)
                       _HeroCard(
-                        heading: 'আজকের বিক্রি',
+                        heading: today.sales!.salesHeading,
                         figure: today.sales!,
                         colour: AppColors.primary,
-                        detail: _count(today.sales!.count, 'টি বিক্রয়'),
+                        detail: _salesDetail(today.sales!),
                         onTap: widget.onOpenSales,
                       ),
                     if (today.collections != null || today.dues != null)
@@ -228,6 +228,11 @@ class _TodayPanelState extends State<TodayPanel> {
       ],
     );
   }
+
+  /// নিট হলে তার দুই ভাগ — "বিল ৳… · ফেরত ৳…"; পুরনো সার্ভারে (ভাগ নেই) কেবল বিলের গোনা
+  static String? _salesDetail(TodayFigure sales) => sales.billed != null && sales.returned != null
+      ? 'বিল ${Money.taka(sales.billed)} · ফেরত ${Money.taka(sales.returned)}'
+      : _count(sales.count, 'টি বিক্রয়');
 
   static String? _count(int? count, String unit) =>
       count == null ? null : '$count $unit';
@@ -269,10 +274,10 @@ class _TodayPanelState extends State<TodayPanel> {
           left: sales == null
               ? null
               : _Stat(
-                  label: 'আজকের বিক্রি',
+                  label: sales.salesHeading,
                   value: Money.taka(sales.amount),
                   colour: AppColors.primary,
-                  detail: _count(sales.count, 'টি বিক্রয়'),
+                  detail: _salesDetail(sales),
                 ),
           right: moneyIn,
         ),

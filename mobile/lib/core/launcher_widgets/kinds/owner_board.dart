@@ -9,7 +9,7 @@ import '../kit/widget_kind.dart';
 /// হাতে মোট, বকেয়া, সই); `parts` — দলের অন্য উইজেটের সারাংশ যা মালিক পান (লক্ষ্য, লাভ, খরচ, চেক, কম মজুদ, চালান, নোটিশ)।
 /// যে ভাগ নেই (চাবি নেই বা মডিউল বন্ধ) তার সারিই নেই — "শূন্য" দেখানো নয়।
 ///
-/// <p>বিন্যাস (আঁকিয়ে মাপ বুঝে কাটে): মাথায় কোম্পানি আর শাখা; বড় অঙ্ক আজকের বিক্রি; সারিতে আদায়, হাতে মোট, বকেয়া, লাভ, খরচ;
+/// <p>বিন্যাস (আঁকিয়ে মাপ বুঝে কাটে): মাথায় কোম্পানি আর শাখা; বড় অঙ্ক আজকের বিক্রি (সার্ভারের নাম — "নিট বিক্রি", পুরনোয় "আজ বিল হয়েছে"); সারিতে আদায়, হাতে মোট, বকেয়া, লাভ, খরচ;
 /// দাগে মাসের লক্ষ্য; বোতামে পাঁচ সংকেত (সই, চেক, কম মজুদ, পথের চালান, নোটিশ) — প্রতিটা চাপলে সেই তালিকা।
 class OwnerBoardWidget extends LauncherWidgetKind {
   const OwnerBoardWidget();
@@ -111,7 +111,7 @@ class OwnerBoardWidget extends LauncherWidgetKind {
           ? null
           : WidgetHero(
               WidgetText.money(Money.taka(n(sales['amount']))),
-              caption: WidgetText('আজকের বিক্রি · ${n(sales['count']).toInt()}টা বিল'),
+              caption: WidgetText('${sales['label'] ?? 'আজ বিল হয়েছে'} · ${n(sales['count']).toInt()}টা বিল'),
             ),
       rows: rows,
       bars: bars,
