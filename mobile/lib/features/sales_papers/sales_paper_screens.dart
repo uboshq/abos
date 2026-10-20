@@ -30,7 +30,7 @@ extension on SalesPaperKind {
   String get recentKind => this == SalesPaperKind.invoice ? 'invoice' : 'challan';
   String get printType => this == SalesPaperKind.invoice ? 'SalesInvoice' : 'DeliveryChallan';
 
-  /// ⭐ চালান মজুদের কাগজ — "পাকা · মজুদে উঠেছে"; বিল টাকার — "পাকা · খাতায় উঠেছে" (fe, ২০ অক্টোবর ২০২৬)
+  /// ⭐ চালান মজুদের কাগজ — "পোস্ট হয়েছে · মজুদে উঠেছে"; বিল টাকার — "পোস্ট হয়েছে · খাতায় উঠেছে" (fe, ২০ অক্টোবর ২০২৬)
   PaperKind get paperKind => this == SalesPaperKind.challan ? PaperKind.stock : PaperKind.money;
 }
 
