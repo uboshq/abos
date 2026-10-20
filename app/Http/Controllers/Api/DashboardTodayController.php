@@ -40,6 +40,8 @@ use Illuminate\Support\Carbon;
  *   sales        sales.invoice.view  ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
  *                                    বিলের, আর ওয়েবের কার্ডও এই চাবি চায় —
  *                                    ফোন ওয়েবের চেয়ে বেশি দেখাবে না
+ *   salesByBranch sales.invoice.view  ⭐ ২০ অক্টোবর ২০২৬ (০.৪.৪১, মালিকের হোম): শাখা ধরে আজকের বিক্রি,
+ *                                    `sales`-এর একই উৎস আর দেয়াল; সারির যোগফল = salesByBranchTotal = sales.amount
  *   collections  sales.collection.view
  *   cashInHand   accounts.till.view  ⚠️ কেবল নগদ টিল; ওয়েবের কার্ড নগদ+ব্যাংক
  *                                    মিলিয়ে দেখায়, চুক্তির নাম "হাতে নগদ"
