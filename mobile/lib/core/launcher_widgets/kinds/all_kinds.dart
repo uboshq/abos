@@ -1,5 +1,11 @@
 import '../kit/widget_kind.dart';
+import 'bank_reconcile.dart';
+import 'cheques.dart';
+import 'credit_limits.dart';
+import 'expenses.dart';
+import 'money_in_hand.dart';
 import 'owner_board.dart';
+import 'profit.dart';
 
 /// ⭐ হোম-স্ক্রিনের সব উইজেটের চাবি — এই ক্রমেই (পরিকল্পনা ৪, অংশ ৯; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
 ///
@@ -45,5 +51,11 @@ const List<String> widgetKeys = [
 /// <p>⛔ তালিকায় না থাকা উইজেট ফোনে কখনো চালু হয় না (রিসিভার বন্ধ থাকে) — "লেখা হয়নি" আর "অনুমতি নেই" একই ফল।
 final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   // ⓘ এখানে এক লাইন করে — চাবির ক্রমে (sales_today … owner_board)
+  const MoneyInHandWidget(), // money_in_hand — cb
+  const CreditLimitsWidget(), // credit_limits — cb
+  const ChequesWidget(), // cheques — cb
+  const ExpensesWidget(), // expenses — cb
+  const ProfitWidget(), // profit — cb
+  const BankReconcileWidget(), // bank_reconcile — cb
   const OwnerBoardWidget(),
 ];
