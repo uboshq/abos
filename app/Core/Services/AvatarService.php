@@ -178,16 +178,13 @@ class AvatarService
     /**
      * ⭐ এই মানুষটা কি ঐ মানুষটার মুখ দেখতে পারেন? — a6, ২০ অক্টোবর ২০২৬।
      *
-     * ⓘ নিজের ছবি সবসময়। অন্যেরটা কেবল যখন দুজনেই একই **চালু** কোম্পানির **চালু** সদস্য (`company_user.is_active`
-     * দুই পাশে, `companies.is_active`)। ⛔ চলতি কোম্পানি দেখা হয় না, ইচ্ছা করে: দুই কোম্পানির মালিক এক কোম্পানিতে বসে
-     * অনুমোদনের ইতিহাসে অন্যটার সহকর্মীর মুখও দেখেন — সহকর্মী তো সহকর্মীই।
+     * ⓘ কেবল যখন দুজনেই একই **চালু** কোম্পানির **চালু** সদস্য (`company_user.is_active` দুই পাশে, `companies.is_active`)।
+     * নিজের মুখও এই নিয়মেই — নিজের সাথে নিজের একটা চালু কোম্পানি তো আছেই (না থাকলে কোনো দরজাতেই ঢোকা যায় না)।
+     * ⛔ চলতি কোম্পানি দেখা হয় না, ইচ্ছা করে: দুই কোম্পানির মালিক এক কোম্পানিতে বসে অনুমোদনের ইতিহাসে অন্যটার
+     * সহকর্মীর মুখও দেখেন — সহকর্মী তো সহকর্মীই। ⭐ দরজা এটা ডাকে [[UserPolicy::seeFace()]] দিয়ে, একটাই জায়গা।
      */
     public function visibleTo(User $viewer, User $owner): bool
     {
-        if ((int) $viewer->getKey() === (int) $owner->getKey()) {
-            return true;
-        }
-
         return DB::table('company_user as mine')
             ->join('company_user as theirs', 'theirs.company_id', '=', 'mine.company_id')
             ->join('companies', 'companies.id', '=', 'mine.company_id')

@@ -62,7 +62,15 @@ final class AnyoneCouldSeeMyFaceTest extends TestCase
 
         $this->assertStringStartsWith('faces/', $path, '⛔ ছবি ব্যক্তিগত ফোল্ডারে বসেনি');
         Storage::disk('local')->assertExists($path);
-        $this->assertSame([], Storage::disk('public')->allFiles(), '⛔ ছবি আবার public ডিস্কে গেল — লগইন ছাড়াই খোলা');
+        // ⓘ public-এ সিডারের কোম্পানির লোগো থাকে (`logos/…`) — তাই "খালি" নয়: মুখের ফোল্ডার খালি, আর মুখের বাইট কোথাও নেই
+        $public = Storage::disk('public');
+        $this->assertSame([], $public->allFiles('avatars'), '⛔ ছবি আবার public ডিস্কে গেল — লগইন ছাড়াই খোলা');
+        $this->assertSame([], $public->allFiles('faces'), '⛔ ছবি আবার public ডিস্কে গেল — লগইন ছাড়াই খোলা');
+        $face = hash('sha256', (string) Storage::disk('local')->get($path));
+        foreach ($public->allFiles() as $file) {
+            $this->assertNotSame($face, hash('sha256', (string) $public->get($file)), "⛔ মুখটা public ডিস্কে অন্য নামে: {$file}");
+            $this->assertStringNotContainsString(basename($path), $file, '⛔ মুখের নামে public-এ ফাইল');
+        }
 
         $size = getimagesizefromstring(Storage::disk('local')->get($path));
         $this->assertSame(ImageEngine::FACE_EDGE, $size[0]);

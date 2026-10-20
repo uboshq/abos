@@ -117,11 +117,6 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
             .'⚠️ যাচাই করা হয়েছে কোয়েরিটা পড়ে ([[papersWaiting()]]-এ '
             .'চলাচলের সারিতে company_id-র ছাঁকনি বসানো আছে), মন্তব্য পড়ে নয়।',
 
-        // ⭐ a6, ২০ অক্টোবর ২০২৬ — একজনের মুখ
-        'app/Http/Controllers/UserPhotoController.php' => 'তালিকা নয়, একটাই `first()` public_id ধরে — আর বাইটের আগেই '
-            .'`AvatarService::visibleTo()` দেখে দুজন একই চালু কোম্পানির চালু সদস্য কি না, নাহলে ৪০৪। ⓘ চলতি কোম্পানিতে '
-            .'ছাঁকা ইচ্ছা করে নয়: দুই কোম্পানির মালিক অন্যটার সহকর্মীর মুখও দেখেন',
-
         'app/Console/Commands/SyncPermissions.php' => 'রোল ও পারমিশন আজ কোম্পানি-নিরপেক্ষ (spatie teams বন্ধ); '
             .'⚠️ teams চালু হলে এই ছাড়টা **তুলে ফেলতে হবে**',
     ];

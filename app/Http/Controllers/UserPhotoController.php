@@ -15,7 +15,7 @@ use Illuminate\Http\Response;
  * ── কেন এই দরজা ──────────────────────────────────────────────────────
  * মালিকের নিয়ম: *"একই কোম্পানির মানুষই কেবল ফাইলটা দেখতে পারবে"*। ⚠️ আগে ছবি ছিল `public` ডিস্কে, `/storage/avatars/…`
  * — লগইন ছাড়াই খোলা। ⭐ এখন ওয়েব (`users.photo`, সেশন) আর ফোন (`api.users.photo`, টোকেন) দুইটাই এখানে আসে, আর
- * পাহারা একটাই: [[AvatarService::visibleTo()]]।
+ * পাহারা একটাই: [[UserPolicy::seeFace()]] → [[AvatarService::visibleTo()]]।
  *
  * ⛔ "নেই" আর "দেখার অধিকার নেই" — দুটোই ৪০৪, একই শব্দে: ৪০৩ দিলে অন্য কোম্পানির কেউ জেনে যেতেন ঐ id-র মানুষটা আছেন
  * আর তাঁর ছবি আছে।
@@ -33,9 +33,12 @@ final class UserPhotoController extends Controller
         // ⓘ কেবল কর্মী — পোর্টালের ডিলার বা সরবরাহকারী অন্য মডেল, তাঁদের কাছে কর্মীর মুখ নয়
         abort_unless($viewer instanceof User, 404);
 
-        $owner = User::query()->where('public_id', $user)->first();
+        $owner = User::findByPublicId($user);
 
-        abort_if($owner === null || ! $this->avatars->visibleTo($viewer, $owner), 404);
+        abort_if($owner === null, 404);
+
+        // ⛔ পাহারা একটাই, নীতিতে — সহকর্মী না হলে ৪০৪ ([[UserPolicy::seeFace()]] → [[AvatarService::visibleTo()]])
+        $this->authorize('seeFace', $owner);
 
         $bytes = $this->avatars->bytesOf($owner);
 

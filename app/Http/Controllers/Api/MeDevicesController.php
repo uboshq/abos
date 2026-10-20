@@ -42,11 +42,39 @@ final class MeDevicesController extends Controller
         $user = $this->staff($request);
         $current = $this->currentDeviceOf($user);
 
-        $rows = $this->devicesOf($user)
-            // ⓘ মেয়াদ শেষ জোড়া "ঢোকা" নয় — নবায়নের টোকেনও শেষ হলে ফোনটা আবার লগইন চাইবে
-            ->filter(fn (array $device): bool => $device['live'])
-            // ⭐ সবচেয়ে সাম্প্রতিক ব্যবহার আগে
-            ->sortByDesc(fn (array $device): int => $device['last_used_at']?->getTimestamp() ?? 0)
+        /*
+         * ⭐ পাতা ভাগ করা — এক ফোন এক সারি, তাই পাতাটা **refresh টোকেনের** উপর (a6, ২০ অক্টোবর ২০২৬)।
+         * ⓘ প্রতিটা লগইন আর নবায়ন ঠিক একটা refresh টোকেন বানায় ([[AuthController::issue()]]), আর তার মেয়াদ (৩০ দিন)
+         * access-এর (৩০ মিনিট) চেয়ে লম্বা — তাই "ঢোকা ফোন" = মেয়াদ না-ফুরোনো refresh টোকেন, এক সারি করে।
+         * ⭐ সাজানো "শেষ ব্যবহার" ধরে: জোড়ার দুই টোকেনের সবচেয়ে নতুন ব্যবহার (না থাকলে বানানোর সময়), উপ-কোয়েরিতে।
+         */
+        $refreshPrefix = AuthController::REFRESH.':';
+        $page = $user->tokens()
+            ->where('name', 'like', $refreshPrefix.'%')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->select('personal_access_tokens.*')
+            ->selectSub(fn ($q) => $q->from('personal_access_tokens as pair')
+                ->selectRaw('MAX(COALESCE(pair.last_used_at, pair.created_at))')
+                ->whereColumn('pair.tokenable_type', 'personal_access_tokens.tokenable_type')
+                ->whereColumn('pair.tokenable_id', 'personal_access_tokens.tokenable_id')
+                ->whereRaw('pair.name IN (CONCAT(?, SUBSTRING(personal_access_tokens.name, ?)), personal_access_tokens.name)',
+                    [AuthController::ACCESS.':', strlen($refreshPrefix) + 1]),
+                'pair_used_at')
+            ->orderByDesc('pair_used_at')
+            ->orderByDesc('personal_access_tokens.id')
+            ->paginate(20);
+
+        $devices = $page->getCollection()
+            ->map(fn (PersonalAccessToken $token): ?string => $this->deviceIn((string) $token->name))
+            ->filter()
+            ->values()
+            ->all();
+
+        $found = $this->devicesOf($user, $devices)->keyBy('device');
+
+        $rows = collect($devices)
+            ->map(fn (string $device): ?array => $found->get($device))
+            ->filter()
             ->map(fn (array $device): array => [
                 'id' => $device['id'],
                 'name' => $device['name'],
@@ -59,7 +87,11 @@ final class MeDevicesController extends Controller
             ->values()
             ->all();
 
-        return response()->json(['data' => $rows]);
+        // ⓘ ফোনের অন্য তালিকার একই ঘর ([[PhonePaperApiController::index()]])
+        return response()->json([
+            'data' => $rows,
+            'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
+        ]);
     }
 
     /**
@@ -104,15 +136,19 @@ final class MeDevicesController extends Controller
     }
 
     /**
+     * @param  list<string>|null  $only  কেবল এই deviceId-গুলো (তালিকার এক পাতা); null = সব (বের করার খোঁজ)
      * @return Collection<int, array{id: string, device: string, name: string, platform: ?string, app_version: ?string,
-     *     last_used_at: ?Carbon, created_at: ?Carbon, live: bool}>
+     *     last_used_at: ?Carbon, created_at: ?Carbon}>
      */
-    private function devicesOf(User $user): Collection
+    private function devicesOf(User $user, ?array $only = null): Collection
     {
         $tokens = $user->tokens()
+            ->when($only !== null, fn ($q) => $q->whereIn('name', collect($only)->flatMap(fn (string $device): array => [
+                AuthController::ACCESS.':'.$device, AuthController::REFRESH.':'.$device,
+            ])->all()))
             ->where(fn ($q) => $q->where('name', 'like', AuthController::ACCESS.':%')
                 ->orWhere('name', 'like', AuthController::REFRESH.':%'))
-            ->get(['id', 'name', 'last_used_at', 'created_at', 'expires_at']);
+            ->get(['id', 'name', 'last_used_at', 'created_at']);
 
         $byDevice = $tokens->groupBy(fn (PersonalAccessToken $token): string => (string) $this->deviceIn((string) $token->name))
             ->forget('');
@@ -145,7 +181,6 @@ final class MeDevicesController extends Controller
                 'last_used_at' => $used ?? $pair->pluck('created_at')->filter()->max(),
                 // ⚠️ নবায়নে জোড়া নতুন হয়, তাই এটা "শেষ লগইন বা নবায়ন" — প্রথম লগইনের দিন কোথাও লেখা নেই (মাইগ্রেশন ছাড়া)
                 'created_at' => $pair->pluck('created_at')->filter()->min(),
-                'live' => $pair->contains(fn (PersonalAccessToken $token): bool => $token->expires_at === null || $token->expires_at->isFuture()),
             ];
         })->values();
     }

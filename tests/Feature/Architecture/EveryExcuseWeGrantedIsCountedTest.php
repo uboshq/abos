@@ -402,7 +402,16 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.papers.index / show: দরজা একটা, ধরন সতেরো, প্রতিটার চাবি ওয়েবের তালিকার
      *       নিজের — `documents.pdf`-এর মতোই পদ্ধতির ভেতরে; একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)
      */
-    private const CEILING = 371;
+    /*
+     * ── ⚠️ ৩৭১ → ৩৭৩, ২০ অক্টোবর ২০২৬ (অ্যাপের প্রোফাইল মেনু ০.৪.৪১ — fe; a6) ────────────────────────────────────────────
+     *   +৪  EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.photo.store / .destroy, api.me.devices.index / .destroy: নিজের ছবি আর
+     *       নিজের ফোন, `/me`-র মতোই কোনো চাবি নেই (ঢুকতে পারা মানুষকে নিজের ছবি বদলাতে বা চুরি যাওয়া ফোন বের করতে বাধা নয়);
+     *       পাহারা নিয়ামকে — কেবল নিজের সারি আর নিজের টোকেন, অন্যের ফোনের id ৪০৪ (AStolenPhoneStayedSignedInTest)
+     *   −২  ছবির দরজা (`users.photo`, `api.users.photo`) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeFace')` → UserPolicy::seeFace
+     *       (AnyoneCouldSeeMyFaceTest); একই কারণে EveryUserListAsksWhichCompanyTest-এর ছাড়ও লাগেনি (`findByPublicId`)
+     *   ⓘ মোট +২। ⛔ "সাজানো" authorize বসিয়ে বাকি চারটা লুকানো হয়নি — নিজের-সারির দরজায় পলিসির প্রশ্নটা ফাঁপা হত।
+     */
+    private const CEILING = 373;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

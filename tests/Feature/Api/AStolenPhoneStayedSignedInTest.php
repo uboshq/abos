@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Http\Controllers\Api\AuthController;
 use App\Models\AuditTrail;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
@@ -138,6 +139,33 @@ final class AStolenPhoneStayedSignedInTest extends TestCase
 
         $this->as($a['accessToken'])->getJson('/api/v1/me')->assertUnauthorized();
         $this->assertSame(0, User::query()->where('email', 'sales@abos.test')->firstOrFail()->tokens()->count());
+    }
+
+    public function test_the_list_comes_in_pages_of_twenty_one_row_per_phone(): void
+    {
+        $a = $this->login('sales@abos.test', 'phone-a-0001', 'android');
+        $me = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+
+        // ⓘ আরও বিশটা ফোন — লগইনের দরজা মিনিটে দশটা নেয়, তাই টোকেন সরাসরি, লগইনের একই নামে আর একই মেয়াদে
+        for ($i = 1; $i <= 20; $i++) {
+            $me->createToken(AuthController::ACCESS.':extra-'.$i, [AuthController::ACCESS, AuthController::APP], now()->addMinutes(30));
+            $me->createToken(AuthController::REFRESH.':extra-'.$i, [AuthController::REFRESH], now()->addDays(30));
+        }
+        // ⛔ মেয়াদ ফুরোনো একটা জোড়া — তালিকায় নয়
+        $me->createToken(AuthController::REFRESH.':gone-1', [AuthController::REFRESH], now()->subMinute());
+        $this->travel(1)->minutes();
+
+        $first = $this->as($a['accessToken'])->getJson('/api/v1/me/devices')->assertOk();
+        $this->assertCount(20, $first->json('data'), '⛔ এক পাতায় বিশটা নয়');
+        $this->assertSame(2, $first->json('next_page'));
+        $this->assertTrue($first->json('data.0.current'), '⛔ এইমাত্র ব্যবহৃত এই ফোনটা প্রথম পাতার মাথায় নয়');
+
+        $second = $this->as($a['accessToken'])->getJson('/api/v1/me/devices?page=2')->assertOk();
+        $this->assertCount(1, $second->json('data'), '⛔ একুশটা ঢোকা ফোন, মেয়াদ-ফুরোনোটা বাদে');
+        $this->assertNull($second->json('next_page'));
+
+        $ids = collect($first->json('data'))->merge($second->json('data'))->pluck('id');
+        $this->assertSame(21, $ids->unique()->count(), '⛔ দুই পাতায় একই ফোন দুইবার, বা access আর refresh আলাদা সারি');
     }
 
     public function test_a_refresh_token_cannot_open_the_list(): void
