@@ -30,6 +30,8 @@ use Illuminate\Support\Facades\DB;
  * ⚠️ বিক্রয়কর্মীর ক্রম গোটা দলের মধ্যে, তাই কেবল ক্রম গোনার জন্য রিপোর্টের একই কোয়েরি ডিলারের দেয়াল ছাড়া চলে
  * ([[unwalled()]]) — শাখার সীমা তাঁর নিজেরই থাকে (ইঞ্জিনের ছাঁকা ফিল্টার)। ⓘ সেখান থেকে বাইরে আসে কেবল তিনটা সংখ্যা।
  *
+ * ⛔ সময় (`as_of`) সারাংশে নেই — দরজা নিজেই `asOf` পাঠায়, আর সারাংশে সময় থাকলে etag প্রতিবার বদলাত, 304 কখনো নয়।
+ *
  * ⓘ চাবি `sales.order.view`: রিপোর্টের চাবি `sales.report` মাঠের ছাঁচে (Field Sales) নেই, অথচ বিক্রয়কর্মীকে নিজের ক্রম
  * দেখতে হবে; অর্ডার দেখা মাঠের প্রতিটা ছাঁচের (Field Sales, ASM, RSM, DSM) দৈনিক চাবি। কারা পুরো তালিকা পান, সেটা আলাদা
  * করে `sales.report` আর দেয়াল ঠিক করে — ওয়েবের রিপোর্টের একই দুই তালা।
@@ -70,7 +72,6 @@ final class SrBoardSummary implements WidgetSummary
 
             if ($this->seesOnlySelf($user)) {
                 return [
-                    'as_of' => now()->toIso8601String(),
                     'self' => $this->self($user, $engine, $range),
                     'link' => $link,
                 ];
@@ -96,7 +97,6 @@ final class SrBoardSummary implements WidgetSummary
             }
 
             return [
-                'as_of' => now()->toIso8601String(),
                 'branch_label' => $this->branchLabel($user),
                 'rows' => $rows,
                 'link' => $link,

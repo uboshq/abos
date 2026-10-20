@@ -1926,6 +1926,7 @@ return [
     'phone_widgets' => [
         \App\Modules\Sales\Widgets\SrBoardSummary::class,
         \App\Modules\Sales\Widgets\SalesTodaySummary::class,
+        \App\Modules\Sales\Widgets\CollectionsTodaySummary::class,
     ],
 
 ];

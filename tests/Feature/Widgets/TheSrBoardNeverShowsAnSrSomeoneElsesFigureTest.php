@@ -131,7 +131,7 @@ final class TheSrBoardNeverShowsAnSrSomeoneElsesFigureTest extends TestCase
             $this->assertNotNull($board, "⛔ দরজা {$me->email}-কে উইজেটটা দিল না।");
             $this->assertArrayNotHasKey('rows', $board, "⛔ {$me->email} পুরো তালিকা পেলেন।");
             $this->assertArrayNotHasKey('branch_label', $board);
-            $this->assertSame(['as_of', 'self', 'link'], array_keys($board));
+            $this->assertSame(['self', 'link'], array_keys($board), '⛔ বিক্রয়কর্মীর উত্তরে নিজের ঘর আর লিংক ছাড়া কিছু — সময়ও নয় (দরজার asOf)।');
             $this->assertSame(['rank', 'amount', 'of'], array_keys($board['self']));
 
             $mine = $byName[$me->name] ?? null;
