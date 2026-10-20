@@ -265,6 +265,52 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertSame(SalesMetrics::net(Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()), $after['month']);
     }
 
+    /** ⭐ এই মাস, এই বছর, সাত দিনের রেখা আর গত সপ্তাহের তুলনা — সব নিট বিক্রিতে (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
+    public function test_month_year_spark_and_week_on_week_are_net_of_vat_and_returns(): void
+    {
+        $today = Carbon::today()->toDateString();
+        $lastWeek = Carbon::today()->subWeek()->toDateString();
+        $this->web($this->owner);
+        $month = fn () => bcadd(SalesMetrics::salesThisMonth()->value(), '0', 4);
+        $year = fn () => bcadd(SalesMetrics::salesThisYear()->value(), '0', 4);
+        [$monthBefore, $yearBefore] = [$month(), $year()];
+
+        // গত সপ্তাহের একই বারে: বিল ১,০০,০০০ + VAT, ফেরত ৫০,০০০ + VAT → নিট ৫০,০০০; আজ: বিল ১,০০,০০০ + VAT, ফেরত ১০,০০০ + VAT → নিট ৯০,০০০
+        $old = $this->bill('10', '10000', $lastWeek);
+        $this->giveBack($old, '5', $lastWeek);
+        $new = $this->bill('10', '10000');
+        $this->giveBack($new, '1', $today);
+
+        $this->web($this->owner);
+        $this->assertNotSame(SalesMetrics::invoiceTotal($today, $today), SalesMetrics::net($today, $today), 'প্রস্তুতিটাই ভুল — আজ বিল আর নিট এক।');
+        // ⓘ গত সপ্তাহের দিনটা এই মাসে/এই অর্থবছরে পড়লে তার নিট ৫০,০০০-ও যোগ হয়
+        $fyStart = SalesMetrics::financialYear()[0];
+        $this->assertSame(bcadd('90000', Carbon::parse($lastWeek)->isSameMonth(Carbon::today()) ? '50000' : '0', 4),
+            bcsub($month(), $monthBefore, 4), '⛔ এই মাসের বিক্রি নিট নয় (VAT ও ফেরত বাদে)।');
+        $this->assertSame(bcadd('90000', $lastWeek >= $fyStart ? '50000' : '0', 4),
+            bcsub($year(), $yearBefore, 4), '⛔ এই বছরের বিক্রি নিট নয় (VAT ও ফেরত বাদে)।');
+
+        // ── সাত দিনের রেখা: প্রতিটা দিন সেই দিনের নিট ──
+        $card = collect(\App\Modules\Sales\Dashboard\SalesWidgets::widgets())->first(fn ($w) => $w->group === 'kpi' && $w->sort === 10);
+        $this->assertNotNull($card, 'প্রস্তুতিটাই ভুল — হোমের বিক্রির কার্ড নেই।');
+        $this->assertCount(7, $card->spark);
+        $this->assertSame(SalesMetrics::net($today, $today), bcadd((string) $card->spark[6], '0', 4), '⛔ রেখার আজকের বিন্দু নিট নয়।');
+        $sixAgo = Carbon::today()->subDays(6)->toDateString();
+        $this->assertSame(SalesMetrics::net($sixAgo, $sixAgo), bcadd((string) $card->spark[0], '0', 4), '⛔ রেখার প্রথম বিন্দু নিট নয়।');
+
+        // ── গত সপ্তাহের তুলনা: নিট বনাম নিট ──
+        $now = SalesMetrics::net($today, $today);
+        $then = SalesMetrics::net($lastWeek, $lastWeek);
+        $this->assertSame(1, bccomp($then, '0', 4), 'প্রস্তুতিটাই ভুল — গত সপ্তাহের নিট শূন্য।');
+        $change = bcdiv(bcmul(bcsub($now, $then, 4), '100', 6), $then, 1);
+        $this->assertSame((bccomp($change, '0', 1) >= 0 ? '+' : '').$change.'%', $card->delta, '⛔ গত সপ্তাহের তুলনা নিট বিক্রিতে নয়।');
+
+        // ── নাম ──
+        app()->setLocale('bn');
+        $this->assertStringContainsString(self::FULL_LABEL, SalesMetrics::salesThisMonth()->label);
+        $this->assertStringContainsString(self::FULL_LABEL, SalesMetrics::salesThisYear()->label);
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
     /** @return array{card: string, month: string, label: string} সারাংশের নিট কার্ড (এ মাস) আর বারো মাসের এই মাসের ঘর */

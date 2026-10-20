@@ -90,7 +90,8 @@ class OneNumberIsNotADirectionTest extends TestCase
         $year = $this->get(route('dashboard', ['period' => 'year']))->assertOk()->getContent();
 
         $this->assertStringContainsString(__('sales::dashboard.sales_this_year'), $year);
-        $this->assertStringNotContainsString(__('sales::dashboard.sales_today'), $year);
+        // ⓘ ২০ অক্টোবর ২০২৬ থেকে আজকের নাম "নিট বিক্রি", আর বছরের নাম "এই বছরের নিট বিক্রি (…)" — তাই পুরো ঘরের লেখাটাই খোঁজা
+        $this->assertStringNotContainsString('>'.__('sales::dashboard.sales_today').'<', $year);
     }
 
     /**

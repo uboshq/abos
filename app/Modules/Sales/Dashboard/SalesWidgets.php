@@ -64,8 +64,8 @@ final class SalesWidgets implements DashboardWidgets
 
         return [
             self::money($sales, 'kpi', 10, route('sales.invoice.index', ['from' => $from, 'to' => $today]),
-                $isToday ? self::lastSevenDays('sal_invoices', 'total') : [], 'receipt',
-                $isToday ? self::againstLastWeek('sal_invoices', 'total') : null),
+                $isToday ? self::netLastSevenDays() : [], 'receipt',
+                $isToday ? self::netAgainstLastWeek() : null),
             self::money($collected, 'kpi', 20, route('sales.collection.index', ['from' => $from, 'to' => $today]),
                 $isToday ? self::lastSevenDays('sal_collections', 'amount') : [], 'inbox',
                 $isToday ? self::againstLastWeek('sal_collections', 'amount') : null),
@@ -93,8 +93,8 @@ final class SalesWidgets implements DashboardWidgets
                 /* আঁকা আইকন, মডিউলের ইমোজি নয় — পাশের কার্ডগুলোয়
                    `inbox`/`challan` বসে, আর এক সারিতে একটা রঙিন ইমোজি
                    বাকিদের থেকে আলাদা হয়ে চোখে লাগত (৩ সেপ্টেম্বর ২০২৬) */
-                self::lastSevenDays('sal_invoices', 'total'), 'receipt',
-                self::againstLastWeek('sal_invoices', 'total')),
+                self::netLastSevenDays(), 'receipt',
+                self::netAgainstLastWeek()),
 
             self::money(SalesMetrics::collectedToday(), 'today', 20,
                 route('sales.collection.index', ['from' => $today, 'to' => $today]),
@@ -279,9 +279,40 @@ final class SalesWidgets implements DashboardWidgets
             ->whereDate('trx_date', $day->toDateString())
             ->sum($column) ?: '0');
 
-        $now = $sum($today);
-        $then = $sum($before);
+        return self::versus($sum($today), $sum($before), $before);
+    }
 
+    /**
+     * ⭐ নিট বিক্রির তুলনা — আজকের নিট বনাম গত সপ্তাহের একই বারের নিট, [[SalesMetrics::net()]] (VAT ও ফেরত বাদে; IFRS 15,
+     * fe ২০ অক্টোবর ২০২৬)। ⛔ কার্ডের সংখ্যা নিট আর পাশের শতাংশ বিলের মোটে হলে দুই সংজ্ঞা এক কার্ডে বসত।
+     *
+     * @return array{delta: ?string, hint: string}
+     */
+    private static function netAgainstLastWeek(): array
+    {
+        $today = Carbon::today();
+        $before = $today->copy()->subWeek();
+
+        return self::versus(
+            SalesMetrics::net($today->toDateString(), $today->toDateString()),
+            SalesMetrics::net($before->toDateString(), $before->toDateString()),
+            $before,
+        );
+    }
+
+    /**
+     * ⭐ নিট বিক্রির সাত দিনের রেখা — [[SalesMetrics::netByDay()]], দিন ধরে দুই GROUP BY; খালি দিন শূন্য।
+     *
+     * @return list<string>
+     */
+    private static function netLastSevenDays(): array
+    {
+        return array_values(SalesMetrics::netByDay(Carbon::today()->subDays(6)->toDateString(), Carbon::today()->toDateString()));
+    }
+
+    /** @return array{delta: ?string, hint: string} */
+    private static function versus(string $now, string $then, Carbon $before): array
+    {
         $hint = __('core.dashboard.against_last', [
             'day' => $before->locale(app()->getLocale())->dayName,
         ]);

@@ -89,7 +89,7 @@ final class SalesMetrics implements ProvidesMetrics
             scale: 2,
             rounding: Metric::ROUND_AT_TOTAL,
             permission: 'sales.invoice.view',
-            value: fn () => self::invoiceTotal($from, $to),
+            value: fn () => self::net($from, $to), // ⭐ নিট বিক্রি — VAT ও ফেরত বাদে (২০ অক্টোবর ২০২৬)
         );
     }
 
@@ -148,7 +148,7 @@ final class SalesMetrics implements ProvidesMetrics
             scale: 2,
             rounding: Metric::ROUND_AT_TOTAL,
             permission: 'sales.invoice.view',
-            value: fn () => self::invoiceTotal($from, $to),
+            value: fn () => self::net($from, $to), // ⭐ নিট বিক্রি — VAT ও ফেরত বাদে (২০ অক্টোবর ২০২৬)
         );
     }
 
