@@ -33,7 +33,15 @@ plugins {
 
 android {
     namespace = "com.abos.abos_mobile"
-    compileSdk = flutter.compileSdkVersion
+    /*
+     * ⭐ compileSdk আর targetSdk স্পষ্ট লেখা, Flutter-এর ডিফল্টে ছেড়ে নয় (অ্যাপ রিলিজ নিরীক্ষা, ec, ২০ অক্টোবর ২০২৬)।
+     * Flutter 3.47.5-এর নিজের মান ৩৬ (FlutterExtension.kt), আর ওর সাথে পরীক্ষা করা সর্বশেষ স্থিতিশীল স্তরও ৩৬ (Android 16)।
+     * ⚠️ ডিফল্টে ছেড়ে রাখলে Flutter আপগ্রেডের দিন targetSdk নীরবে বদলাত — আর targetSdk বদলানো মানে ফোনে আচরণ বদল
+     * (অনুমতি, পটভূমির কাজ, পর্দার কিনারা), যা কোনো টেস্ট ধরে না। তাই বদলাতে হলে এখানে, জেনেশুনে, রিলিজ-চেকলিস্ট মেনে।
+     * ⓘ ৩৭ (Android 17) SDK-তে এসেছে, কিন্তু এই Flutter-এর ডিফল্ট নয় আর এই PC-তে বসানোও নেই — পরের Flutter-এর সাথে।
+     * test/android_build_config_test.dart এই দুই সংখ্যা ধরে রাখে।
+     */
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -46,7 +54,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         // ⛔ ২০,০০০ যোগ করা হচ্ছে, আর এটা ইচ্ছাকৃত — ইতিহাস মোছার জন্য।
         //
         // Flutter split-per-ABI বিল্ডে নিজে থেকেই `1000 * ABI_VERSION` যোগ করে
