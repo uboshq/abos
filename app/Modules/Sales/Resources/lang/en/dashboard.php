@@ -19,8 +19,8 @@ return [
 
     'title' => 'Dashboard',
     'subtitle' => 'Sales and collections — where things stand',
-    'today_hint' => 'Confirmed invoices, by transaction date',
-    'month_hint' => 'Confirmed invoices this month',
+    'today_hint' => 'Net sales — confirmed bills less confirmed returns, excl. VAT; each by its own date',
+    'month_hint' => 'Net sales this month — bills less returns, excl. VAT',
     'collected_hint' => 'Money that came in today',
     'outstanding' => 'Outstanding',
     'outstanding_hint' => 'What customers owe today in the books — collections and returns taken off, each shop by its own balance',
