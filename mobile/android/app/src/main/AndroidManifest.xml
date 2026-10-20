@@ -179,15 +179,275 @@
                 android:resource="@xml/approvals_widget_info" />
         </receiver>
 
+        <!--
+          ⭐ Widget kit (20 Oct 2026): 21 widgets, one receiver each, all drawn by
+          widgets/DocWidget.kt. Every one starts disabled; the app enables only the
+          widgets the signed-in person may see (MethodChannel abos/launcher_widgets).
+        -->
+        <receiver
+            android:name=".widgets.SalesTodayWidgetReceiver"
+            android:label="@string/widget_sales_today_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sales_today" />
+        </receiver>
+        <receiver
+            android:name=".widgets.MoneyInHandWidgetReceiver"
+            android:label="@string/widget_money_in_hand_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_money_in_hand" />
+        </receiver>
+        <receiver
+            android:name=".widgets.ApprovalsWidgetReceiver"
+            android:label="@string/widget_approvals_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_approvals" />
+        </receiver>
+        <receiver
+            android:name=".widgets.BigDuesWidgetReceiver"
+            android:label="@string/widget_big_dues_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_big_dues" />
+        </receiver>
+        <receiver
+            android:name=".widgets.StockAlertsWidgetReceiver"
+            android:label="@string/widget_stock_alerts_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_stock_alerts" />
+        </receiver>
+        <receiver
+            android:name=".widgets.ChallansTodayWidgetReceiver"
+            android:label="@string/widget_challans_today_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_challans_today" />
+        </receiver>
+        <receiver
+            android:name=".widgets.NoticesWidgetReceiver"
+            android:label="@string/widget_notices_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_notices" />
+        </receiver>
+        <receiver
+            android:name=".widgets.QuickActionsWidgetReceiver"
+            android:label="@string/widget_quick_actions_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_actions" />
+        </receiver>
+        <receiver
+            android:name=".widgets.TargetWidgetReceiver"
+            android:label="@string/widget_target_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_target" />
+        </receiver>
+        <receiver
+            android:name=".widgets.SyncStateWidgetReceiver"
+            android:label="@string/widget_sync_state_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sync_state" />
+        </receiver>
+        <receiver
+            android:name=".widgets.CollectionsTodayWidgetReceiver"
+            android:label="@string/widget_collections_today_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_collections_today" />
+        </receiver>
+        <receiver
+            android:name=".widgets.CreditLimitsWidgetReceiver"
+            android:label="@string/widget_credit_limits_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_credit_limits" />
+        </receiver>
+        <receiver
+            android:name=".widgets.ChequesWidgetReceiver"
+            android:label="@string/widget_cheques_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_cheques" />
+        </receiver>
+        <receiver
+            android:name=".widgets.SrBoardWidgetReceiver"
+            android:label="@string/widget_sr_board_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sr_board" />
+        </receiver>
+        <receiver
+            android:name=".widgets.GoodsIncomingWidgetReceiver"
+            android:label="@string/widget_goods_incoming_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_goods_incoming" />
+        </receiver>
+        <receiver
+            android:name=".widgets.ExpensesWidgetReceiver"
+            android:label="@string/widget_expenses_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_expenses" />
+        </receiver>
+        <receiver
+            android:name=".widgets.ProfitWidgetReceiver"
+            android:label="@string/widget_profit_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_profit" />
+        </receiver>
+        <receiver
+            android:name=".widgets.OffersWidgetReceiver"
+            android:label="@string/widget_offers_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_offers" />
+        </receiver>
+        <receiver
+            android:name=".widgets.AttendanceWidgetReceiver"
+            android:label="@string/widget_attendance_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_attendance" />
+        </receiver>
+        <receiver
+            android:name=".widgets.BankReconcileWidgetReceiver"
+            android:label="@string/widget_bank_reconcile_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_bank_reconcile" />
+        </receiver>
+        <receiver
+            android:name=".widgets.OwnerBoardWidgetReceiver"
+            android:label="@string/widget_owner_board_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_owner_board" />
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
         <!--
-          Glance comes in with home_widget but the app has no Glance widgets.
-          Its package-replaced receiver runs in the app's own process right after
+          Glance's package-replaced receiver runs in the app's own process right after
           every update; if it throws, the first launch after updating dies (0.4.1).
+          Still removed now that the widget kit is Glance (20 Oct 2026): after an
+          update the kit's widgets keep their last picture until the app's own
+          refresh (refreshAll) redraws them on its first run.
         -->
         <receiver android:name="androidx.glance.appwidget.MyPackageReplacedReceiver" tools:node="remove" />
     </application>

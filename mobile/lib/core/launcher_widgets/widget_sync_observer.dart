@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'hub/widget_hub.dart';
 import 'launcher_widget_refresh.dart';
 
 /// Fills the home-screen widgets at the moment somebody leaves the app.
@@ -22,13 +23,19 @@ class WidgetSyncObserver with WidgetsBindingObserver {
     required this.signedIn,
     Future<void> Function()? refresh,
     DateTime Function()? clock,
-  })  : _refresh = refresh ?? LauncherWidgetRefresh.refresh,
+  })  : _refresh = refresh ?? _both,
         _clock = clock ?? DateTime.now;
 
   /// Asked at the moment of leaving. Nobody signed in means there is nothing
   /// to fetch, and a refresh then would overwrite the "signed out" line with
   /// the "not for this account" one.
   final bool Function() signedIn;
+
+  /// পুরনো দুই উইজেট আর নতুনগুলো ([WidgetHub]) — দুটোই কখনো ছোড়ে না
+  static Future<void> _both() async {
+    await LauncherWidgetRefresh.refresh();
+    await WidgetHub.refresh();
+  }
 
   final Future<void> Function() _refresh;
   final DateTime Function() _clock;

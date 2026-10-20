@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../launcher_widgets/hub/widget_hub.dart';
 import 'reference_sync.dart';
 import 'sync_engine.dart';
 
@@ -55,6 +56,8 @@ class AutoSync with WidgetsBindingObserver {
   static Future<void> fullRound() async {
     await SyncEngine.instance.flushAll();
     await ReferenceSync.syncAll();
+    // ⭐ সফল গোলের পরে নতুন উইজেটগুলো — অপেক্ষা নয়, কখনো ছোড়ে না ([WidgetHub])
+    unawaited(WidgetHub.refresh());
   }
 
   void start() {

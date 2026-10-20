@@ -29,6 +29,8 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+    // ⭐ Glance widgets are Compose code (widget kit, 20 Oct 2026)
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -115,6 +117,13 @@ android {
      * ⓘ একটাই APK, একটাই versionCode, একটাই SHA-256 — সার্ভার আর আপডেট বোতাম যেমন ছিল তেমন।
      * test/android_build_config_test.dart এটা ধরে রাখে।
      */
+    /*
+     * ⭐ হোম-স্ক্রিনের উইজেট-কিট (২০ অক্টোবর ২০২৬) — একটাই Glance আঁকিয়ে (widgets/DocWidget.kt) সব WidgetDoc আঁকে।
+     */
+    buildFeatures {
+        compose = true
+    }
+
     packaging {
         jniLibs {
             excludes += setOf("lib/x86_64/**")
@@ -146,4 +155,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ⭐ Glance 1.1 — home_widget 0.7 brings 1.0.0; this lifts the whole app to the 1.1 line (widget kit, 20 Oct 2026)
+    implementation("androidx.glance:glance-appwidget:1.1.1")
 }

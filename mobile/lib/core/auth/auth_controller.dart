@@ -15,6 +15,8 @@ import '../api_client/network_errors.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/reference_sync.dart';
 import '../sync_engine/sync_engine.dart';
+import '../launcher_widgets/hub/widget_hub.dart';
+import '../launcher_widgets/hub/widget_hub_task.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
 import 'auth_exceptions.dart';
 import 'auth_state.dart';
@@ -103,6 +105,9 @@ class AuthController extends StateNotifier<AuthState> {
       // The home-screen widgets, now that there is a session to fill them
       // from. Not awaited: a launcher tile must not hold up a sign-in.
       unawaited(LauncherWidgetRefresh.refresh());
+      // ⭐ নতুন উইজেটগুলো আর তাদের ৩০ মিনিটের পেছনের কাজ ([WidgetHub], [WidgetHubTask])
+      unawaited(WidgetHub.refresh());
+      unawaited(WidgetHubTask.start());
     } on DioException catch (error) {
       final status = error.response?.statusCode;
       if (status == 409) {
@@ -160,6 +165,9 @@ class AuthController extends StateNotifier<AuthState> {
     // showing one person's cash in hand and approval queue after they have
     // signed out, possibly to somebody at a different company.
     unawaited(LauncherWidgetRefresh.clear());
+    // ⛔ নতুন ২১টা উইজেটও — নথি মোছা, রিসিভার বন্ধ, পেছনের কাজ বন্ধ ([WidgetHub.clear])
+    unawaited(WidgetHub.clear());
+    unawaited(WidgetHubTask.stop());
     // ⭐ অ্যাপের ভিতরের ওয়েব-জানালার সেশনও — পরের জন আগের জনের ওয়েবে নয় ([WebInsideSession])
     unawaited(WebInsideSession.clear());
     // ⛔ পর্দা আবার আড়াল — আগের কোম্পানি আড়াল বন্ধ রাখলে পরের জন `/me` আসা পর্যন্ত স্ক্রিনশট-যোগ্য পর্দায় থাকতেন
