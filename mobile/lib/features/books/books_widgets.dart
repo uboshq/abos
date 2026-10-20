@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -91,7 +92,12 @@ class TotalStrip extends StatelessWidget {
         color: AppColors.successSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
+          // ⓘ জায়গা না হলে অঙ্ক নামের নিচে নামে — বড় লেখায় বা কোটি টাকায় কেটে যায় না, ঢেকেও যায় না
+          // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এক সারিতে বাঁধা ছিল, ১৩ dp ওপারে চলে যেত।
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
             children: [
               Expanded(
                   child: Text(label,
@@ -100,6 +106,7 @@ class TotalStrip extends StatelessWidget {
               Flexible(
                 child: Text(value,
                     textAlign: TextAlign.end,
+                    semanticsLabel: Money.speakable(value),
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.w800)),
               ),

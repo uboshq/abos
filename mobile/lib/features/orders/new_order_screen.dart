@@ -581,6 +581,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 flex: 3,
                 child: Column(
                   children: [
+                    // ⓘ −, অঙ্ক আর + — প্রতিটা আঙুলের জায়গা ৪৮ dp; সাদা বৃত্ত আগের মতো ৩৮ (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(color: o.pill, borderRadius: BorderRadius.circular(999)),
@@ -590,14 +591,22 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                               key: ValueKey('order-minus-${product.id}')),
                           // ⓘ অন্তত ৪৮ উঁচু, বাঁধা নয় (আগে ৩৮); নকশার নিয়ম ০.৪.৩৮ §২
                           Expanded(
-                            child: InkWell(
-                              key: ValueKey('order-qty-${product.id}'),
-                              onTap: () => _openKeypad(product),
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(minHeight: 48),
-                                child: Center(
-                                  child: Text(bnQty(qty),
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                            child: Semantics(
+                              button: true,
+                              label: 'পরিমাণ',
+                              value: bnQty(qty),
+                              onTapHint: 'সংখ্যা লিখুন',
+                              child: InkWell(
+                                key: ValueKey('order-qty-${product.id}'),
+                                onTap: () => _openKeypad(product),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(minHeight: 48),
+                                  child: Center(
+                                    child: ExcludeSemantics(
+                                      child: Text(bnQty(qty),
+                                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -654,7 +663,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     );
   }
 
-  // ⓘ − আর + বোতাম ৪৮×৪৮ (আগে ৩৮) — চাপার জায়গা অন্তত ৪৮dp (নকশার নিয়ম ০.৪.৩৮ §২)
+  // ⓘ − আর + বোতাম ৪৮×৪৮ (আগে ৩৮) — চাপার জায়গা অন্তত ৪৮dp (নকশার নিয়ম ০.৪.৩৮ §২); TalkBack কেবল "কমান"/"বাড়ান" বলে, চিহ্নটা নয়
   Widget _round(String glyph, String label, VoidCallback onTap, {Key? key}) {
     final o = OrderInk.of(context);
     return Semantics(
@@ -671,7 +680,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             width: 48,
             height: 48,
             child: Center(
-              child: Text(glyph, style: TextStyle(fontSize: 20, color: o.onPill)),
+              child: ExcludeSemantics(child: Text(glyph, style: TextStyle(fontSize: 20, color: o.onPill))),
             ),
           ),
         ),
