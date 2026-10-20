@@ -80,15 +80,17 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
     }
 
     /**
-     * ⛔ ছক নেই, সুইচ চালু: চাবিওয়ালা ব্যবস্থাপকের সই থামে (৪২২, বাংলা কারণ), অফার চালু হয় না; মালিকের সইয়ে হয়।
+     * ⛔ ছক নেই, সুইচ চালু: চাবিওয়ালা ব্যবস্থাপকের সই থামে (সেশনে বাংলা কারণ), অফার চালু হয় না; মালিকের সইয়ে হয়।
      */
     public function test_a_manager_with_the_key_cannot_give_the_last_signature_and_the_owner_can(): void
     {
         $this->approvalSwitch(true);
         $offer = $this->submitted();
 
-        $response = $this->actingAs($this->manager)->postJson(route('promotion.approve', $offer))->assertStatus(422);
-        $this->assertSame(__('promotion::approval.owner_signs_last'), $response->json('errors.status.0'));
+        /* ⓘ ওয়েবের পথ — থামা মানে ফেরত পাঠানো আর সেশনে বাংলা কারণ (৪২২ কেবল /api/*-এ; bootstrap/app.php) */
+        $this->actingAs($this->manager)->post(route('promotion.approve', $offer))
+            ->assertRedirect()->assertSessionHasErrors(['status' => __('promotion::approval.owner_signs_last')]);
+        $this->assertSame(__('promotion::approval.owner_signs_last'), session('errors')->first('status'));
         $this->assertMatchesRegularExpression('/\p{Bengali}/u', (string) trans('promotion::approval.owner_signs_last', [], 'bn'));
         $this->assertSame(PromotionStatus::SUBMITTED, $offer->fresh()->status, 'ব্যবস্থাপকের সইয়েই অফার অনুমোদিত হয়ে গেছে।');
 
@@ -118,8 +120,9 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
         $this->actingAs($this->manager)->post(route('promotion.approve', $offer))->assertSessionHasNoErrors();
         $this->assertSame(2, (int) $this->request($offer)->current_level, 'আগের স্তরে ব্যবস্থাপকের সই বসেনি।');
 
-        $response = $this->actingAs($second)->postJson(route('promotion.approve', $offer))->assertStatus(422);
-        $this->assertSame(__('promotion::approval.owner_signs_last'), $response->json('errors.status.0'));
+        $this->actingAs($second)->post(route('promotion.approve', $offer))
+            ->assertRedirect()->assertSessionHasErrors(['status' => __('promotion::approval.owner_signs_last')]);
+        $this->assertSame(__('promotion::approval.owner_signs_last'), session('errors')->first('status'));
         $this->assertSame(PromotionStatus::SUBMITTED, $offer->fresh()->status);
         $this->assertSame(Approval::PENDING, $this->request($offer)->status, 'থামানো সইটা ইঞ্জিনে বসে রইল।');
 
@@ -159,8 +162,9 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
         $offer = $this->aDraft();
         $offer->forceFill(['status' => PromotionStatus::APPROVED, 'approved_by' => $this->manager->id, 'approved_at' => Carbon::now()])->save();
 
-        $response = $this->actingAs($this->maker)->postJson(route('promotion.activate', $offer))->assertStatus(422);
-        $this->assertSame(__('promotion::approval.owner_must_have_signed'), $response->json('errors.status.0'));
+        $this->actingAs($this->maker)->post(route('promotion.activate', $offer))
+            ->assertRedirect()->assertSessionHasErrors(['status' => __('promotion::approval.owner_must_have_signed')]);
+        $this->assertSame(__('promotion::approval.owner_must_have_signed'), session('errors')->first('status'));
         $this->assertSame(PromotionStatus::APPROVED, $offer->fresh()->status, 'চালুর দরজা মালিকের সই পাশ কাটাল।');
 
         $this->actingAs($this->owner)->post(route('promotion.activate', $offer))->assertSessionHasNoErrors();

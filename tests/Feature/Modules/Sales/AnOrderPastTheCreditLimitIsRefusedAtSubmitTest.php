@@ -101,7 +101,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->assertSame(['sales_order', 'pass', 'within_limit'], $this->decision($order, 'pass'));
     }
 
-    /** ⛔ সীমার বাইরে — ৪২২, বাংলায় সীমা·ব্যবহৃত·এই আদেশ·কত বেশি; আদেশ খসড়া, মাল ধরা নেই, সই চাওয়া নেই; সাক্ষ্যে "না" */
+    /** ⛔ সীমার বাইরে — ফেরানো, বাংলায় সীমা·ব্যবহৃত·এই আদেশ·কত বেশি; আদেশ খসড়া, মাল ধরা নেই, সই চাওয়া নেই; সাক্ষ্যে "না" */
     public function test_an_order_past_the_limit_is_refused_with_the_reason_and_stays_a_draft(): void
     {
         $order = $this->draft('10');
@@ -116,7 +116,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->assertSame(1, bccomp($total, $half, 4));
         $before = $this->reserved();
 
-        $reason = $this->postJson(route('sales.order.confirm', $order))->assertStatus(422)->json('errors.customer_id.0');
+        $reason = $this->refusedOnTheWeb($order);
 
         $this->assertSame($this->expected($total, $half, '0'), $reason, '⛔ কারণটা সীমা, ব্যবহৃত, এই আদেশ আর কত বেশি বলে না।');
         $this->assertStringContainsString($this->buyer->fresh()->nameWithPoint(), (string) $reason);
@@ -140,7 +140,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->limit('0');
         $order = $this->draft('10');
 
-        $this->postJson(route('sales.order.confirm', $order))->assertStatus(422);
+        $this->refusedOnTheWeb($order);
         $this->assertSame(S::DRAFT, $order->fresh()->status, 'দৃশ্যটাই ভুল — সুইচ চালুতেও আদেশ ফেরেনি।');
 
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
@@ -156,7 +156,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $order = $this->draft('10');
 
         Customer::query()->whereKey($this->buyer->id)->update(['temp_credit_limit' => '100000000', 'temp_credit_limit_until' => now()->subDay()->toDateString()]);
-        $this->postJson(route('sales.order.confirm', $order))->assertStatus(422);
+        $this->refusedOnTheWeb($order);
         $this->assertSame(S::DRAFT, $order->fresh()->status, '⛔ শেষ হয়ে যাওয়া অস্থায়ী সীমা আদেশ ছেড়ে দিল।');
 
         Customer::query()->whereKey($this->buyer->id)->update(['temp_credit_limit_until' => now()->addDays(3)->toDateString()]);
@@ -171,7 +171,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $total = bcadd((string) $web->total, '0', 4);
         $half = bcdiv($total, '2', 4);
         $this->limit($half);
-        $webReason = $this->postJson(route('sales.order.confirm', $web))->assertStatus(422)->json('errors.customer_id.0');
+        $webReason = $this->refusedOnTheWeb($web);
         $this->assertSame($this->expected($total, $half, '0'), $webReason, 'দৃশ্যটাই ভুল — ওয়েবও ফেরেনি।');
 
         $this->phone($this->seller());
@@ -195,7 +195,8 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $total = bcadd((string) $web->total, '0', 4);
         $half = bcdiv($total, '2', 4);
         $this->limit($half);
-        $webReason = $this->postJson(route('sales.order.confirm', $web))->assertStatus(422)->json('errors.customer_id.0');
+        $webReason = $this->refusedOnTheWeb($web);
+        $this->assertSame($this->expected($total, $half, '0'), $webReason, 'দৃশ্যটাই ভুল — ওয়েবও ফেরেনি।');
 
         $this->phone($this->seller());
         $before = SalesOrder::query()->count();
@@ -230,7 +231,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->assertSame(['sales_order', 'pass', 'within_limit'], $this->decision($order, 'pass'));
     }
 
-    /** ⛔ পুরনো পথ — সীমার বাইরে "নিশ্চিত" ৪২২, জমার একই কথায়; খসড়াই থাকে, মাল ধরা নেই, সই চাওয়া নেই; সাক্ষ্যে "না" */
+    /** ⛔ পুরনো পথ — সীমার বাইরে "নিশ্চিত" ফেরানো, জমার একই কথায়; খসড়াই থাকে, মাল ধরা নেই, সই চাওয়া নেই; সাক্ষ্যে "না" */
     public function test_on_the_old_path_an_order_past_the_limit_is_refused_with_the_same_reason(): void
     {
         $this->oldPath();
@@ -240,7 +241,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->limit($half);
         $before = $this->reserved();
 
-        $reason = $this->postJson(route('sales.order.confirm', $order))->assertStatus(422)->json('errors.customer_id.0');
+        $reason = $this->refusedOnTheWeb($order);
 
         $this->assertSame($this->expected($total, $half, '0'), $reason, '⛔ পুরনো পথ সীমা দেখে না, বা অন্য কথা বলে।');
         $this->assertSame(S::DRAFT, $order->fresh()->status, '⛔ পুরনো পথে সীমা পার করা আদেশ নিশ্চিত হলো।');
@@ -260,7 +261,7 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $first = $this->draft('5');
         $second = $this->draft('5');
 
-        $this->postJson(route('sales.order.confirm', $first))->assertStatus(422);
+        $this->refusedOnTheWeb($first);
         $this->assertSame(S::DRAFT, $first->fresh()->status, 'দৃশ্যটাই ভুল — পুরনো পথে সীমা ০-তেও আদেশ ফেরেনি।');
 
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
@@ -268,13 +269,27 @@ final class AnOrderPastTheCreditLimitIsRefusedAtSubmitTest extends TestCase
         $this->assertSame(S::CONFIRMED, $first->fresh()->status, '⛔ সুইচ বন্ধেও পুরনো পথে সীমা আটকাল।');
 
         app(SettingsService::class)->set('customer.credit_limit_enabled', true);
-        $this->postJson(route('sales.order.confirm', $second))->assertStatus(422);
+        $this->refusedOnTheWeb($second);
+        $this->assertSame(S::DRAFT, $second->fresh()->status, 'দৃশ্যটাই ভুল — সুইচ আবার চালুতে আদেশ ফেরেনি।');
         Customer::query()->whereKey($this->buyer->id)->update(['temp_credit_limit' => '100000000', 'temp_credit_limit_until' => now()->addDays(3)->toDateString()]);
         $this->post(route('sales.order.confirm', $second))->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(S::CONFIRMED, $second->fresh()->status, '⛔ পুরনো পথে চলতি অস্থায়ী সীমা গোনা হয়নি।');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⓘ ওয়েবের "নিশ্চিত" দরজা ফেরালে পাতায় ফিরিয়ে দেয়, গ্রাহকের ঘরে বাংলা কারণ — ৪২২ কেবল /api/*-এ
+     * (bootstrap/app.php-র shouldRenderJsonWhen)। ফেরানো কারণটাই ফেরত দেয়, যাতে দাবিগুলো হুবহু সেই কথা মাপে।
+     */
+    private function refusedOnTheWeb(SalesOrder $order): string
+    {
+        $this->post(route('sales.order.confirm', $order))->assertRedirect()->assertSessionHasErrors('customer_id');
+        $reason = (string) session('errors')->first('customer_id');
+        $this->assertNotSame('', $reason, 'ফেরানো হলো, কিন্তু গ্রাহকের ঘরে কারণ নেই।');
+
+        return $reason;
+    }
 
     private function expected(string $order, string $limit, string $used): string
     {
