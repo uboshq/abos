@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/books/books_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/records/customer_record.dart';
@@ -198,7 +199,7 @@ class _CollectScreenState extends State<CollectScreen> {
     final due =
         _customer == null ? null : CustomerDueRecord.forCustomer(_customer!.id);
     return Scaffold(
-      appBar: AppBar(title: const Text('টাকা আদায় নিন')),
+      appBar: const AbosScreenBar(title: 'টাকা আদায় নিন'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

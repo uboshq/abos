@@ -8,7 +8,6 @@ const _stillPlain = {
   // ⓘ ওয়েব-দেখার পর্দা — নিজের বন্ধ, ছাপা, আবার-আনা বোতাম আর লোড-ফিতা বারেই; নীল বার ওগুলো ঢেকে দিত
   'lib/features/web_inside/web_inside_screen.dart',
   // ⏳ a5-এর ভাগ (০.৪.৪১) — সরানো হলে এখান থেকে মুছে দাও
-  'lib/features/books/collect_screen.dart',
   'lib/features/books/money_in_screens.dart',
   'lib/features/customers/due_list_screen.dart',
   'lib/features/dashboards/dashboards_screen.dart',
