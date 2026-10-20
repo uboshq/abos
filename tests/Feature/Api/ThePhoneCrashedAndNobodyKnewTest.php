@@ -79,6 +79,38 @@ final class ThePhoneCrashedAndNobodyKnewTest extends TestCase
         $this->assertContains(429, $statuses, '⛔ খোলা দরজায় সীমা নেই।');
     }
 
+    /**
+     * ⭐ ফোন খবর জমিয়ে একসাথে পাঠায় (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬): একই ছাপের খবর একটা সারি, গোনা যোগ হয়;
+     * Android আর মডেল `file`-এ (মাইগ্রেশন নেই); ২০টার বেশি, খালি বা ভুল ছাপ ফেরে।
+     */
+    public function test_a_queued_batch_from_the_phone_is_written_with_the_phone_and_the_count(): void
+    {
+        $sr = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+        Sanctum::actingAs($sr, [AuthController::APP]);
+
+        $phone = ['android' => '14 (SDK 34)', 'device' => 'samsung SM-A145F', 'fingerprint' => str_repeat('a1', 20)];
+        $this->postJson('/api/v1/app/crash', ['reports' => [
+            [...$this->crash(), ...$phone, 'times' => 4],
+            [...$this->crash(), ...$phone, 'message' => 'Bad state: [n] rows', 'times' => 1],
+            [...$this->crash(), 'error' => 'FrameStall', 'stack' => '', 'fingerprint' => str_repeat('b2', 20)],
+        ]])->assertStatus(202);
+
+        $rows = ErrorEvent::query()->where('route', 'api.app.crash')->orderBy('id')->get();
+        $this->assertCount(2, $rows, '⛔ একই ছাপের খবর দুটো সারি হলো, বা একটা হারাল।');
+        $this->assertSame('phone:StateError', $rows[0]->class);
+        $this->assertSame(5, (int) $rows[0]->times, '⛔ ঝাঁকের গোনা হারাল।');
+        $this->assertStringContainsString('Android 14 (SDK 34)', (string) $rows[0]->file);
+        $this->assertStringContainsString('samsung SM-A145F', (string) $rows[0]->file);
+        $this->assertSame((int) $sr->id, (int) $rows[0]->user_id);
+        $this->assertSame('phone:FrameStall', $rows[1]->class);
+        $this->assertSame(1, (int) $rows[1]->times);
+
+        $this->postJson('/api/v1/app/crash', ['reports' => array_fill(0, 21, $this->crash())])->assertStatus(422);
+        $this->postJson('/api/v1/app/crash', ['reports' => [[...$this->crash(), 'fingerprint' => 'not-hex']]])->assertStatus(422);
+        $this->postJson('/api/v1/app/crash', ['reports' => []])->assertStatus(422);
+        $this->assertSame(2, ErrorEvent::query()->where('route', 'api.app.crash')->count());
+    }
+
     /** @return array<string, string> */
     private function crash(): array
     {

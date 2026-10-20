@@ -81,6 +81,23 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // ⭐ What the crash report says about the phone (ec, app enterprise
+        // grade, 19 Oct 2026): the Android version and the maker and model,
+        // nothing that names the person. lib/core/crash/crash_reporter.dart.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "describe" -> result.success(
+                        mapOf(
+                            "android" to "${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
+                            "device" to "${Build.MANUFACTURER} ${Build.MODEL}",
+                        )
+                    )
+
+                    else -> result.notImplemented()
+                }
+            }
+
         // ⭐ Screens out of screenshots and the recent-apps preview — the
         // owner's switch, mobile.secure_screens (coordinator's app audit,
         // 7 Oct 2026). lib/core/privacy/phone_privacy.dart turns it on at
@@ -138,6 +155,7 @@ class MainActivity : FlutterFragmentActivity() {
             (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
 
     companion object {
+        private const val DEVICE_CHANNEL = "com.abos.abos_mobile/device"
         private const val SECURE_CHANNEL = "com.abos.abos_mobile/secure"
         private const val INTEGRITY_CHANNEL = "com.abos.abos_mobile/integrity"
         private const val INSTALL_CHANNEL = "com.abos.abos_mobile/install"

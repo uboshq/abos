@@ -75,6 +75,12 @@ Future<void> main() async {
       child: const AbosApp(),
     ),
   );
+
+  // ⭐ প্রথম ফ্রেমের পরে: আটকে থাকা ফ্রেমের খোঁজ, আর আগের চালুর জমা ক্র্যাশ পাঠানো ([[CrashReporter.flush]])
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    CrashReporter.instance.watchStalls();
+    unawaited(CrashReporter.instance.flush());
+  });
 }
 
 class AbosApp extends ConsumerStatefulWidget {

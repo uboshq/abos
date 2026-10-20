@@ -105,18 +105,38 @@ final class ErrorJournal
      * লেখা আর stack; ব্যক্তিগত তথ্য বা টোকেন নয়। একই ভুল (ধরন + stack-এর প্রথম লাইন + সংস্করণ) আবার এলে গোনা বাড়ে।
      * ⚠️ এখানেও কিছু ছোড়া হয় না — ফাইল-লগে নামে, ওপরের [[record()]]-এর মতো।
      */
-    public function recordFromPhone(string $class, string $message, string $screen, string $version, string $stack, ?int $userId, ?int $companyId): void
-    {
+    public function recordFromPhone(
+        string $class,
+        string $message,
+        string $screen,
+        string $version,
+        string $stack,
+        ?int $userId,
+        ?int $companyId,
+        string $android = '',
+        string $device = '',
+        string $phoneFingerprint = '',
+        int $times = 1,
+    ): void {
         try {
             $top = trim((string) strtok($stack, "\n"));
-            $fingerprint = ErrorEvent::fingerprintFor('phone:'.$class, $version.' '.$top, 0);
+            // ⭐ ফোনের ছাপ থাকলে সেটাই (ধরন + প্রথম পাঁচ ফ্রেম), নাহলে আগের মতো stack-এর প্রথম লাইন (ec, ১৯ অক্টোবর ২০২৬)
+            $fingerprint = ErrorEvent::fingerprintFor('phone:'.$class, $version.' '.($phoneFingerprint !== '' ? $phoneFingerprint : $top), 0);
+            // ⓘ ফোন একই ভুলের ঝাঁক একবারে পাঠায়, সাথে কতবার
+            $times = max(1, min($times, 10000));
             $existing = ErrorEvent::query()->where('fingerprint', $fingerprint)->where('company_id', $companyId)->first();
 
             if ($existing !== null) {
-                $existing->forceFill(['times' => $existing->times + 1, 'last_seen_at' => now()])->save();
+                $existing->forceFill(['times' => $existing->times + $times, 'last_seen_at' => now()])->save();
 
                 return;
             }
+
+            // ⓘ ফোনটা — Android আর মডেল, মানুষ নয়; যা এসেছে কেবল তা
+            $phone = implode(' · ', array_filter(
+                ['app '.$version, $android !== '' ? 'Android '.$android : '', $device, $top],
+                static fn (string $part): bool => $part !== '',
+            ));
 
             ErrorEvent::create([
                 'company_id' => $companyId,
@@ -124,13 +144,13 @@ final class ErrorJournal
                 'fingerprint' => $fingerprint,
                 'class' => $this->trim('phone:'.$class, 191),
                 'message' => $this->trim($message, 2000),
-                'file' => $this->trim('app '.$version.' · '.$top, 500),
+                'file' => $this->trim($phone, 500),
                 'line' => 0,
                 'route' => 'api.app.crash',
                 'method' => 'APP',
                 'path' => $this->trim($screen, 500),
                 'trace' => $this->trim($stack, 4000),
-                'times' => 1,
+                'times' => $times,
                 'first_seen_at' => now(),
                 'last_seen_at' => now(),
             ]);
