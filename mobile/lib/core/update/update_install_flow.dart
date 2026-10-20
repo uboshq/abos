@@ -36,6 +36,14 @@ enum UpdateOutcome {
   /// The file is verified, but Android's install prompt did not open.
   installerRefused,
 
+  /// ⛔ The file is the server's, but not this app: another package name or
+  /// another signing key. Deleted, and not installed.
+  foreignPackage,
+
+  /// ⛔ The file is not newer than the installed build: refused, never a
+  /// downgrade. Deleted, and not installed.
+  notNewer,
+
   /// The release cannot be verified at all: no https address, no hash or no
   /// size. Nothing was downloaded.
   notInstallable,
@@ -68,6 +76,7 @@ class UpdateActions {
     required this.sha256Of,
     required this.install,
     required this.delete,
+    this.inspect = _noInspect,
   });
 
   const UpdateActions.real()
@@ -78,7 +87,8 @@ class UpdateActions {
         lengthOf = _lengthOf,
         sha256Of = ApkInstaller.sha256Of,
         install = ApkInstaller.install,
-        delete = _delete;
+        delete = _delete,
+        inspect = ApkInstaller.inspect;
 
   final Future<bool> Function() canInstall;
   final Future<File?> Function() cached;
@@ -89,6 +99,13 @@ class UpdateActions {
   final Future<String> Function(File file) sha256Of;
   final Future<void> Function(File file) install;
   final Future<void> Function(File file) delete;
+
+  /// Package, signer and version of the file against the installed app; null
+  /// when the phone cannot say. Optional so a test that is not about it need
+  /// not answer it.
+  final Future<ArchiveCheck?> Function(File file) inspect;
+
+  static Future<ArchiveCheck?> _noInspect(File file) async => null;
 
   static Future<File> _download(
           String url, void Function(int received, int total) onProgress) =>
@@ -114,9 +131,10 @@ class UpdateActions {
 /// 3. free space, measured against the size the server named;
 /// 4. the download, with progress;
 /// 5. the size (cheap), then the SHA-256;
-/// 6. Android's own install prompt.
+/// 6. package name, signing key and versionCode against the installed app;
+/// 7. Android's own install prompt.
 ///
-/// <p>⛔ A file that fails step 5 is deleted and never reaches step 6.
+/// <p>⛔ A file that fails step 5 or 6 is deleted and never reaches step 7.
 class UpdateInstallFlow {
   const UpdateInstallFlow._();
 
@@ -209,6 +227,27 @@ class UpdateInstallFlow {
   }
 
   static Future<UpdateResult> _handOver(
+      File file, UpdateActions actions) async {
+    final ArchiveCheck? check;
+    try {
+      check = await actions.inspect(file);
+    } catch (_) {
+      return _install(file, actions);
+    }
+    if (check != null && check.readable) {
+      if (check.foreign) {
+        await actions.delete(file);
+        return const UpdateResult(UpdateOutcome.foreignPackage);
+      }
+      if (check.notNewer) {
+        await actions.delete(file);
+        return const UpdateResult(UpdateOutcome.notNewer);
+      }
+    }
+    return _install(file, actions);
+  }
+
+  static Future<UpdateResult> _install(
       File file, UpdateActions actions) async {
     try {
       await actions.install(file);

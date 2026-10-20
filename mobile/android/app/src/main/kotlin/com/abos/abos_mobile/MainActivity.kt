@@ -2,6 +2,7 @@ package com.abos.abos_mobile
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -12,6 +13,7 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.security.MessageDigest
 
 /**
  * Three questions Dart cannot answer for itself, all for the in-app update
@@ -48,6 +50,26 @@ class MainActivity : FlutterFragmentActivity() {
                             )
                         }
                         result.success(null)
+                    }
+
+                    // ⛔ The downloaded file, checked against this app before the
+                    // installer sees it (20 Oct 2026): same package, same signing
+                    // key, a higher versionCode. The SHA-256 already says it is the
+                    // file the server named; this says the server named the right
+                    // file. Without it a debug-signed or older APK put on the
+                    // server reached Android's installer and ended as a bare
+                    // "App not installed".
+                    "checkArchive" -> {
+                        val path = call.argument<String>("path")
+                        if (path == null) {
+                            result.error("ARGUMENT", "path missing", null)
+                        } else {
+                            try {
+                                result.success(checkArchive(path))
+                            } catch (error: Exception) {
+                                result.error("ARCHIVE", error.message, null)
+                            }
+                        }
                     }
 
                     else -> result.notImplemented()
@@ -147,6 +169,52 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
     }
+
+    /**
+     * Package name, signer and versionCode of an APK on disk against this
+     * installed app. A signer that cannot be read on either side is null,
+     * "unknown", and the installer stays the judge of it.
+     */
+    private fun checkArchive(path: String): Map<String, Any?> {
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            @Suppress("DEPRECATION")
+            PackageManager.GET_SIGNATURES
+        }
+        val archive = packageManager.getPackageArchiveInfo(path, flags)
+            ?: return mapOf("readable" to false)
+        val self = packageManager.getPackageInfo(packageName, flags)
+        val archiveSigners = signerDigests(archive)
+        val selfSigners = signerDigests(self)
+        return mapOf(
+            "readable" to true,
+            "samePackage" to (archive.packageName == packageName),
+            "sameSigner" to if (archiveSigners.isEmpty() || selfSigners.isEmpty()) null else archiveSigners == selfSigners,
+            "newer" to (longVersionCode(archive) > longVersionCode(self)),
+        )
+    }
+
+    private fun signerDigests(info: PackageInfo): Set<String> {
+        val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.signingInfo?.apkContentsSigners
+        } else {
+            @Suppress("DEPRECATION")
+            info.signatures
+        }
+        return signatures.orEmpty().map { signature ->
+            MessageDigest.getInstance("SHA-256").digest(signature.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+        }.toSet()
+    }
+
+    private fun longVersionCode(info: PackageInfo): Long =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            info.versionCode.toLong()
+        }
 
     /** su-এর ফাইল, test-keys-এ সই করা বিল্ড, বা Magisk-এর চিহ্ন — কোনো একটা থাকলেই */
     private fun isRooted(): Boolean {

@@ -118,6 +118,22 @@ class ApkInstaller {
     return digest.toString();
   }
 
+  /// ⛔ The file against this installed app — same package, same signing key,
+  /// a higher versionCode — before the installer ever sees it (20 Oct 2026).
+  ///
+  /// <p>Null when the phone could not say. Null is "unknown", not "fine" and
+  /// not "refused": Android's installer still refuses a foreign signer or a
+  /// downgrade on its own, only without a reason a person can read.
+  static Future<ArchiveCheck?> inspect(File file) async {
+    try {
+      final answer = await _install.invokeMethod<Map<Object?, Object?>>(
+          'checkArchive', {'path': file.path});
+      return answer == null ? null : ArchiveCheck.fromMap(answer);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Hands the file to the system package installer, which asks the person.
   ///
   /// <p>⛔ The answer is read, not assumed (2 Oct 2026). `OpenFilex.open` does
@@ -139,6 +155,38 @@ class ApkInstaller {
         throw InstallerRefused('${result.type.name}: ${result.message}');
     }
   }
+}
+
+/// What the phone read out of a downloaded APK, against the app installed now.
+class ArchiveCheck {
+  const ArchiveCheck({
+    required this.readable,
+    this.samePackage,
+    this.sameSigner,
+    this.newer,
+  });
+
+  factory ArchiveCheck.fromMap(Map<Object?, Object?> map) => ArchiveCheck(
+        readable: map['readable'] == true,
+        samePackage: map['samePackage'] as bool?,
+        sameSigner: map['sameSigner'] as bool?,
+        newer: map['newer'] as bool?,
+      );
+
+  /// False when Android could not read it as a package at all.
+  final bool readable;
+
+  /// Null where the phone could not tell.
+  final bool? samePackage;
+  final bool? sameSigner;
+  final bool? newer;
+
+  /// Another app, or this app signed with another key: Android would refuse
+  /// it as an update, and it is not ours to offer.
+  bool get foreign => samePackage == false || sameSigner == false;
+
+  /// Not above the installed build: a downgrade, or the same build again.
+  bool get notNewer => newer == false;
 }
 
 /// Android would not let this app hand a package over: the "install unknown
