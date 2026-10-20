@@ -49,8 +49,8 @@ void main() {
 
   test('a row reads paper number · time ago against asOf, and opens its own paper', () {
     final doc = kind.build(sample, asOf: asOf);
-    expect(doc.rows[0].second!.text, 'CHQ-0077 · ৪০ মিনিট আগে');
-    expect(doc.rows[1].second!.text, '৩ ঘণ্টা আগে');
+    expect(doc.rows[0].second!.text, 'CHQ-0077 · 40 মিনিট আগে');
+    expect(doc.rows[1].second!.text, '3 ঘণ্টা আগে');
     expect([for (final r in doc.rows) r.link], ['/notifications/77', '/promotions/12']);
     for (final r in doc.rows) {
       expect(DeepLinks.targetFor(Uri.parse(r.link!)), isNotNull, reason: r.link);
@@ -79,7 +79,7 @@ void main() {
     expect(doc.rows[0].title.secret, isTrue);
     expect(doc.rows[0].second!.secret, isTrue);
     expect(doc.rows[0].second!.text, 'জমা ৳ 12,000');
-    expect(doc.rows[0].amount!.text, '৪০ মিনিট আগে');
+    expect(doc.rows[0].amount!.text, '40 মিনিট আগে');
     expect(doc.rows[0].amount!.secret, isFalse);
     expect(doc.rows[1].title.secret, isFalse);
     expect(doc.rows[1].second!.secret, isFalse);

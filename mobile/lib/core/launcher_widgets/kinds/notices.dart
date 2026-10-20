@@ -8,7 +8,7 @@ import '../kit/widget_kind.dart';
 /// <p>সারাংশ: `{"unread": int, "rows": [{"title", "second"|null, "at": ISO, "unread": bool, "link"|null}], "more": int}`।
 /// সারির নাম সার্ভার যেমন পাঠায় তেমনই — গ্রাহক থাকলে "নাম · পয়েন্ট · শাখা" সার্ভারেই বসে।
 ///
-/// <p>⛔ সময় "৪০ মিনিট আগে" [asOf] ধরে, ফোনের ঘড়ি নয় ([LastSyncLabel.ago]) — নথি খাঁটি থাকে।
+/// <p>⛔ সময় "40 মিনিট আগে" (উইজেটে সব সংখ্যা ইংরেজি অঙ্কে) [asOf] ধরে, ফোনের ঘড়ি নয় ([LastSyncLabel.ago]) — নথি খাঁটি থাকে।
 /// ⛔ নাম বা দ্বিতীয় লাইনে "৳" থাকলে সেই লেখা [WidgetText.secret] — সার্ভারের মুক্ত লেখায় টাকা থাকতে পারে।
 /// ⓘ না-পড়া সারি সাদামাটা রঙে আর "নতুন" চিপে; পড়া সারি [WidgetTone.muted]।
 class NoticesWidget extends LauncherWidgetKind {
@@ -48,8 +48,8 @@ class NoticesWidget extends LauncherWidgetKind {
     final tone = unread ? WidgetTone.plain : WidgetTone.muted;
     final at = DateTime.tryParse('${r['at'] ?? ''}');
     final body = (r['second'] ?? '').toString().trim();
-    final ago = at == null ? null : LastSyncLabel.ago(at, asOf);
-    // ⛔ টাকার লেখায় "৪০ মিনিট আগে"-র বাংলা অঙ্ক মেশে না (টাকা ইংরেজি অঙ্কে, আর গোপন লেখায় সময়ও ঢাকা পড়ত) — তখন সময় ডানে
+    final ago = at == null ? null : LastSyncLabel.ago(at, asOf, englishDigits: true);
+    // ⓘ টাকার লেখা গোপন — তার ভেতরে বসলে সময়ও তালাবন্ধ ফোনে ঢাকা পড়ত, তাই তখন সময় ডানে
     final moneyBody = _hasMoney(body);
     final second = [if (body.isNotEmpty) body, if (ago != null && !moneyBody) ago].join(' · ');
     final heading = '${r['title'] ?? ''}';

@@ -25,6 +25,10 @@ class SyncStateWidget extends LauncherWidgetKind {
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x1];
 
+  /// ⛔ পেছনের isolate-এ [localSummary] null — তখন ভিত্তি উইজেটটা যেমন ছিল তেমন রাখে, বন্ধ করে না (a4 b2dd4f758)
+  @override
+  bool get answersLocally => true;
+
   @override
   Map<String, dynamic>? localSummary() => (status ?? SyncStatus.instance).widgetSummary();
 
@@ -47,7 +51,7 @@ class SyncStateWidget extends LauncherWidgetKind {
       link: '/home/sync-status',
       hero: WidgetHero(
         WidgetText(words, tone: tone),
-        caption: WidgetText(last == null ? 'শেষ সিঙ্ক: এখনো হয়নি' : 'শেষ সিঙ্ক: ${LastSyncLabel.ago(last, asOf)}'),
+        caption: WidgetText(last == null ? 'শেষ সিঙ্ক: এখনো হয়নি' : 'শেষ সিঙ্ক: ${LastSyncLabel.ago(last, asOf, englishDigits: true)}'),
       ),
       rows: [
         WidgetRow(

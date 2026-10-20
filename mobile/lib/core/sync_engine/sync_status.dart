@@ -152,15 +152,19 @@ class LastSyncLabel extends StatelessWidget {
 
   /// ⭐ "এইমাত্র" · "২ মিনিট আগে" · "৩ ঘণ্টা আগে" · "৫ দিন আগে" — খাঁটি, [now] দেওয়া হয় (উইজেটের নোটিশ আর সিঙ্কও এটা পড়ে;
   /// a6, ২০ অক্টোবর ২০২৬)
-  static String ago(DateTime then, DateTime now) {
+  ///
+  /// <p>ⓘ [englishDigits] — হোম-স্ক্রিনের উইজেটে সব সংখ্যা ইংরেজি অঙ্কে ("2 মিনিট আগে"; a4-র সাথে ঠিক করা, ২০ অক্টোবর
+  /// ২০২৬); অ্যাপের নিজের পর্দায় যেমন ছিল তেমন বাংলা অঙ্ক।
+  static String ago(DateTime then, DateTime now, {bool englishDigits = false}) {
     final d = now.difference(then);
+    String n(int v) => englishDigits ? '$v' : _bn(v);
     return d.inSeconds < 60
         ? 'এইমাত্র'
         : d.inMinutes < 60
-            ? '${_bn(d.inMinutes)} মিনিট আগে'
+            ? '${n(d.inMinutes)} মিনিট আগে'
             : d.inHours < 24
-                ? '${_bn(d.inHours)} ঘণ্টা আগে'
-                : '${_bn(d.inDays)} দিন আগে';
+                ? '${n(d.inHours)} ঘণ্টা আগে'
+                : '${n(d.inDays)} দিন আগে';
   }
 
   static String _bn(int n) => n.toString().split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join();

@@ -26,7 +26,7 @@ void main() {
     expectWidgetRules(doc);
     expect(doc.hero!.figure.text, 'সিঙ্ক ঠিক আছে');
     expect(doc.hero!.figure.tone, WidgetTone.good);
-    expect(doc.hero!.caption!.text, 'শেষ সিঙ্ক: ২ মিনিট আগে');
+    expect(doc.hero!.caption!.text, 'শেষ সিঙ্ক: 2 মিনিট আগে');
     expect(doc.rows.single.title.text, 'জমা কাজ: 0');
     expect(doc.rows.single.second!.text, 'অফলাইনে জমা থাকে');
     expect(doc.link, '/home/sync-status');
@@ -78,7 +78,7 @@ void main() {
       'offline': false,
       'pending': 5,
     });
-    expect(kind.build(summary, asOf: asOf).hero!.caption!.text, 'শেষ সিঙ্ক: ২ মিনিট আগে');
+    expect(kind.build(summary, asOf: asOf).hero!.caption!.text, 'শেষ সিঙ্ক: 2 মিনিট আগে');
     await expectLater(status.track(() async => throw StateError('x')), throwsStateError);
     expect(status.widgetSummary()!['failed'], isTrue);
     // ⓘ জমা কাজ গুনতে ভাঙলেও (বাক্স খোলা নেই) উইজেট ভাঙে না

@@ -52,8 +52,17 @@ void main() {
     }
   });
 
+  test('every number on the five widgets is in English digits (a4, 20 Oct: one rule on the widgets)', () {
+    for (final MapEntry(key: kind, value: summary) in kinds.entries) {
+      for (final t in kind.build(summary, asOf: asOf.add(const Duration(hours: 3))).texts) {
+        expect(RegExp('[০-৯]').hasMatch(t.text), isFalse, reason: '${kind.key}: "${t.text}"');
+      }
+    }
+  });
+
   test('only sync_state answers from the phone; the other four read the server', () {
     for (final kind in kinds.keys) {
+      expect(kind.answersLocally, kind.key == 'sync_state', reason: kind.key);
       if (kind.key == 'sync_state') {
         expect(kind.localSummary(), isNotNull);
         // ⛔ নতুন isolate-এর (পেছনের WorkManager) অবস্থা কিছু দেখেনি — উত্তর নেই, উইজেট যেমন ছিল তেমন থাকে
