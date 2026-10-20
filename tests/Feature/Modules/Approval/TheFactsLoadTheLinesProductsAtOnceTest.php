@@ -45,13 +45,19 @@ final class TheFactsLoadTheLinesProductsAtOnceTest extends TestCase
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($owner);
 
-        $product = Product::query()->whereNull('tax_id')->orderBy('id')->firstOrFail();
+        /*
+         * ⓘ দুই পণ্যের দুই লাইন — Laravel অলস-টানা ধরে কেবল একাধিক মডেলের সংগ্রহে; এক লাইনের বিলে `product` চুপচাপ টানা হত,
+         * আর eager-load তুলে দিলেও দাবি সবুজ থাকত (Mac, ২১ অক্টোবর ২০২৬: মিউট্যান্ট m_no_products বেঁচে ছিল)।
+         */
+        [$product, $second] = Product::query()->whereNull('tax_id')->orderBy('id')->limit(2)->get()->all();
+        $this->assertNotNull($second, 'প্রস্তুতিটাই ভুল — ডেমোতে কর ছাড়া দুইটা পণ্য নেই।');
         $sales = app(SalesInvoiceService::class);
         $invoice = $sales->create(
             ['customer_id' => Customer::query()->orderBy('id')->value('id'),
                 'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'trx_date' => now()->toDateString()],
-            [['product_id' => $product->id, 'qty' => '2', 'rate' => '500']],
+            [['product_id' => $product->id, 'qty' => '2', 'rate' => '500'], ['product_id' => $second->id, 'qty' => '1', 'rate' => '300']],
         );
+        $this->assertSame(2, $invoice->lines()->count(), 'প্রস্তুতিটাই ভুল — বিলে দুই লাইন নেই।');
         $approval = Approval::query()->create([
             'company_id' => $company->id, 'approvable_type' => $invoice::class, 'approvable_id' => $invoice->id,
             'module' => 'sales', 'action' => 'invoice', 'amount' => '1000', 'status' => Approval::PENDING, 'current_level' => 1,
