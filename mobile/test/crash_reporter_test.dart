@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:abos_mobile/core/config/app_config.dart';
 import 'package:abos_mobile/core/crash/crash_reporter.dart';
 import 'package:dio/dio.dart';
@@ -156,6 +158,51 @@ void main() {
     }
     expect(calls, greaterThanOrEqualTo(7), reason: 'প্রতিটা চালুতে অন্তত একবার চেষ্টা');
     expect(store.data.length, CrashReporter.maxQueued, reason: '⛔ 404-এর সারি সীমা ছাড়িয়ে বাড়ল, বা ফেলে দিল');
+  });
+
+  /// ⛔ 404 মানে দরজাই নেই — এই চালুতে [CrashReporter.notFoundGap] (৬ ঘণ্টা) আর ডাক নয়; ৫০৩-এর মতো অন্য ফেরানোয় আগের মতো
+  /// [CrashReporter.minGap] পরে (a4, fe ২০ অক্টোবর ২০২৬: পুরনো সার্ভারে প্রতি সিঙ্কে বৃথা ডাক ব্যাটারি খেত)।
+  Future<int> afterFirstAnswer(int status, List<Duration> waits) async {
+    var calls = 0;
+    r.send = (_) async {
+      calls++;
+      final request = RequestOptions(path: '/app/crash');
+      throw DioException(
+        requestOptions: request,
+        response: Response<void>(requestOptions: request, statusCode: status),
+        type: DioExceptionType.badResponse,
+      );
+    };
+    await r.report(StateError('a'), StackTrace.fromString('#0 a'));
+    await r.flush();
+    expect(calls, 1, reason: 'প্রস্তুতিটাই ভুল — প্রথম ডাক যায়নি');
+    final start = now;
+    for (final wait in waits) {
+      now = start.add(wait);
+      await r.flush();
+    }
+    return calls - 1;
+  }
+
+  test('after a 404 nothing goes at 30 seconds, an hour or five hours, and one call goes after six hours', () async {
+    expect(await afterFirstAnswer(404, const [Duration(seconds: 31), Duration(hours: 1), Duration(hours: 5)]), 0,
+        reason: '⛔ দরজা নেই, তবু ৬ ঘণ্টার আগে আবার ডাকল');
+    r.forget();
+    r.store = store;
+    now = DateTime(2026, 10, 19, 10);
+    expect(await afterFirstAnswer(404, const [Duration(hours: 6, seconds: 1)]), 1, reason: '⛔ ৬ ঘণ্টা পরেও আর চেষ্টা করে না');
+  });
+
+  test('after a 503 the next call goes after the usual 30 seconds', () async {
+    expect(await afterFirstAnswer(503, const [Duration(seconds: 31)]), 1, reason: '⛔ সার্ভার ব্যস্ত (৫০৩), তবু ৬ ঘণ্টা থামল');
+  });
+
+  test('the reporter keeps no timer of its own: calls come only from start-up and sync', () {
+    final source = File('lib/core/crash/crash_reporter.dart').readAsStringSync();
+    expect(source, isNot(contains('Timer(')), reason: '⛔ নিজের টাইমার — ঘুমন্ত ফোন জাগিয়ে ব্যাটারি খাবে');
+    expect(source, isNot(contains('Timer.periodic')));
+    expect(source, isNot(contains('Stream.periodic')));
+    expect(source, isNot(contains('Future.delayed')), reason: '⛔ দেরি করে নিজেই আবার ডাকা');
   });
 
   test('at most ten different errors a run, and a failed store or send never throws', () async {
