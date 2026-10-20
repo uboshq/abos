@@ -10,11 +10,17 @@ import 'package:dio/io.dart';
 /// erp.adi.com.bd-এর নামে সার্টিফিকেট বানালে টোকেন আর টাকার অঙ্ক মাঝপথে পড়া যেত।
 ///
 /// <p>⭐ কেন পাতার সার্টিফিকেট নয়, মূল: লাইভের সার্টিফিকেট Let's Encrypt-এর, প্রতি ৯০ দিনে নতুন চাবিতে বদলায় — পাতায় pin
-/// করলে নবায়নের দিন সব ফোনের অ্যাপ বন্ধ হত। তাই মূল তিনটা, আর দুটো আলাদা কোম্পানির (বদলের সময় দুটো পিন):
+/// করলে নবায়নের দিন সব ফোনের অ্যাপ বন্ধ হত। তাই মূল পাঁচটা, আর দুটো আলাদা কোম্পানির (বদলের সময় দুটো পিন):
 ///  - ISRG Root X1 (Let's Encrypt, RSA; ২০৩৫ পর্যন্ত) — আজকের শৃঙ্খল এটাতেই শেষ (YR2 ← Root YR ← X1);
 ///  - ISRG Root X2 (Let's Encrypt, ECDSA; ২০৪০ পর্যন্ত);
+///  - ISRG Root YR আর Root YE (Let's Encrypt-এর নতুন Gen-Y মূল, ২০৪৫ পর্যন্ত) — ⭐ ২০ অক্টোবর ২০২৬ (a4-এর পর্যালোচনা):
+///    আজ Root YR চলে X1-এর ক্রস-সই দিয়ে; LE যেদিন ক্রস-সই ছাড়া শৃঙ্খল দেবে (YR2 ← Root YR), তিন মূলের pin-এ সেদিন সব
+///    ফোন লাইভ হারাত — openssl দিয়ে দেখা, পুরনো তিনটায় ঐ শৃঙ্খল ফেল করে। ছাপ letsencrypt.org/certificates-এর DER আর
+///    PEM দুটো থেকে মেলানো;
 ///  - USERTrust RSA (Sectigo; ২০৩৮ পর্যন্ত) — cPanel-এর AutoSSL Sectigo-তে গেলে।
-/// ⚠️ সার্ভার এই তিনের বাইরের কোম্পানিতে গেলে আগে নতুন অ্যাপ বের করতে হবে — নইলে অ্যাপ সার্ভারে পৌঁছাবে না।
+/// ⚠️ সার্ভার এই পাঁচের বাইরের কোম্পানিতে গেলে আগে নতুন অ্যাপ বের করতে হবে — নইলে অ্যাপ সার্ভারে পৌঁছাবে না।
+/// ⚠️ ফোনের ভেতরের ওয়েব পাতার (WebView) pin আলাদা জায়গায়, একই পাঁচ মূল: android/app/src/main/res/xml/
+/// network_security_config.xml — একটা বদলালে অন্যটাও (টেস্ট দুটো মেলায়)।
 /// ⓘ কেবল লাইভের ঠিকানায় ([[pinsFor]]); পরীক্ষার LAN/emulator ঠিকানায় নয়।
 class PinnedTrust {
   const PinnedTrust._();
@@ -25,7 +31,7 @@ class PinnedTrust {
   /// এই ঠিকানায় pin খাটে কি না
   static bool pinsFor(Uri url) => url.scheme == 'https' && url.host == host;
 
-  /// কেবল তিন মূলকে বিশ্বাস করা প্রসঙ্গ — ফোনের ভাণ্ডার নয় (`withTrustedRoots: false`)
+  /// কেবল এই মূলগুলোকে বিশ্বাস করা প্রসঙ্গ — ফোনের ভাণ্ডার নয় (`withTrustedRoots: false`)
   static SecurityContext context() =>
       SecurityContext(withTrustedRoots: false)..setTrustedCertificatesBytes(utf8.encode(roots.join('\n')));
 
@@ -35,7 +41,7 @@ class PinnedTrust {
       IOHttpClientAdapter(createHttpClient: () => HttpClient(context: (context ?? PinnedTrust.context)()));
 
   /// মূলগুলো, PEM — DER-এর SHA-256 ছাপ test/the_live_server_is_pinned_to_its_roots_test.dart মেলায়
-  static const List<String> roots = [isrgRootX1, isrgRootX2, userTrustRsa];
+  static const List<String> roots = [isrgRootX1, isrgRootX2, userTrustRsa, isrgRootYR, isrgRootYE];
 
   static const String isrgRootX1 = '''
 -----BEGIN CERTIFICATE-----
@@ -122,6 +128,54 @@ qS3fuQL39ZeatTXaw2ewh0qpKJ4jjv9cJ2vhsE/zB+4ALtRZh8tSQZXq9EfX7mRB
 VXyNWQKV3WKdwrnuWih0hKWbt5DHDAff9Yk2dDLWKMGwsAvgnEzDHNb842m1R0aB
 L6KCq9NjRHDEjf8tM7qtj3u1cIiuPhnPQCjY/MiQu12ZIvVS5ljFH4gxQ+6IHdfG
 jjxDah2nGN59PRbxYvnKkKj9
+-----END CERTIFICATE-----
+''';
+
+  static const String isrgRootYR = '''
+-----BEGIN CERTIFICATE-----
+MIIFKTCCAxGgAwIBAgIRAOxGNJNgz0sP+KmC2Tqpyj0wDQYJKoZIhvcNAQELBQAw
+LjELMAkGA1UEBhMCVVMxDTALBgNVBAoTBElTUkcxEDAOBgNVBAMTB1Jvb3QgWVIw
+HhcNMjUwOTAzMDAwMDAwWhcNNDUwOTAyMjM1OTU5WjAuMQswCQYDVQQGEwJVUzEN
+MAsGA1UEChMESVNSRzEQMA4GA1UEAxMHUm9vdCBZUjCCAiIwDQYJKoZIhvcNAQEB
+BQADggIPADCCAgoCggIBANvGJnN78CTJdWL3+eGfsLN5TrNBJs+VH9hRXqRbwxu9
+sGNiB0BD1fcOxbSUQCJIM1xE13Db+5Cw1w0s0EBYsvuIP/6joF0w8cuImbgR1OGg
+YbSQ4OpzI+DG8SGuTlcE873OCS+kh3srlo6vl43M5OJg4Aeo1sfHp6kTJDoIiFBN
+JAY+OKfX/FUvYKuhjT+no49lmqmupSBI5PkBQiqrEGtWU5uxU/cQWHGu8jSjFBzn
+ZqvbNPLMXMLFxCb3WTfrJBXXjqvWG+v4bjzxjjeAtOlU7qarRDvNOyAuQYLln904
+M+faKx8hnLCpJ15ZqaEgcNlY+9MMWcC5yvL2A2j3l9+2buggZX+dOE91zYmIdawT
+vSZuVvlbRrAlLxIB6pwMBjneXCjYQ8+3BCCjssbSNpZU3hTcBDdhfAlEDlYr6pEa
+tnMdmDT5BqnKC92bd0EhM1fbLHioLccLCuievT8ZkPhZrq7Mii7gNXAcUEAR8+lz
+Yal+9zTg7C5DALyVOeG/CqfRAMn1KSHCR0NSA6P8tn/mGRlnCct5rtVCLnVySVpU
+6H1qGg3DgTOuskf8eahTMiYbI5ezPJmO5ertalskQ1utp74+eDy92PI4ftHKTbq9
+IWhH4YZKh3WnJEIt+oQvlYZbY8tpEroKrFB6PFGzrJIDRyts4HqvuH52RFj2zv/B
+AgMBAAGjQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1Ud
+DgQWBBTe51tg0CJtQCh9Pw0B/qS1UrRRlDANBgkqhkiG9w0BAQsFAAOCAgEAWHnf
+713Bdkq7t5yN2dNIgQakUb94X9WuyhMEHHkgx4oDpSUlnG0w4g94MoqaEUE31ZjR
+LU7L5LD1g9ujFHTQu8AD215AHMVQFbm6j8hQxdXHAzDajFNQnOlDJrLjzIx176oy
+AjvUtejZx2NNmdb5fd0WGVGsCdoAJ3N8ozo7ajE8t6vfxStZb4BQ9WYJGHUDrv2N
+i5tJF6CNiPnlzs3BUfECRbE4JSk+jvy8+VoGiFE8qsH/j78x2fjgQhAQFV7P7Zxy
+dBTZ1wEkNpZNW2qnaK1SKBLa+xf6E06YRIq5uaI+HWH8SY1y5VbRgzq40EKg3yxP
+06fz+uYAUIFJoLNfhwRCc3Q6pQVuMX3yAjHAes4gk4moGcLQ5p7HAh39yeylZc1J
+41sx/jKwLIkPE6Rr1Nf4pxdsxf9SA4yOEiAkDgq04DVxn8hgYFdUtBCuiuVC2heA
+EiqVEa+8QZjuw8Gj0EbHXcRd1nInvGqRS1o9Is7YBdQN57X1AYveGBNNqjICSb7c
+awuw1EawTDrs13VUlJVEsbQ0/O/1aaV73mCdOQ8azqL2KTv1Ewu1xbquE2S+kdQU
+To9TUwat3wUA6cwXh1EfpS/3fJ0aGah5hdpRyoCLDlsSn8tkrjMfFFX0viC+GxHc
+sI1ANRYvqSFC2X1VRZfDg+wD6E21BccmifG4yWc=
+-----END CERTIFICATE-----
+''';
+
+  static const String isrgRootYE = '''
+-----BEGIN CERTIFICATE-----
+MIIB2TCCAWCgAwIBAgIRAKQCa6LvbHwg1AR+XmWmk4AwCgYIKoZIzj0EAwMwLjEL
+MAkGA1UEBhMCVVMxDTALBgNVBAoTBElTUkcxEDAOBgNVBAMTB1Jvb3QgWUUwHhcN
+MjUwOTAzMDAwMDAwWhcNNDUwOTAyMjM1OTU5WjAuMQswCQYDVQQGEwJVUzENMAsG
+A1UEChMESVNSRzEQMA4GA1UEAxMHUm9vdCBZRTB2MBAGByqGSM49AgEGBSuBBAAi
+A2IABDwS/6vhrcVqcbBo+wgdI3fwn9x7DNJJOY/lTOti0vkwuRN87RhEhTH17E7X
+yFjWsPYhIPt/wzOqxTd2b+4ZJNy9ID04YywF9U5zasDVyGSNErVNtz8uSGh5izW8
+7j77GaNCMEAwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+BBYEFKPIJlqOoUzQNWP8myPIOq5W809WMAoGCCqGSM49BAMDA2cAMGQCMHhMr8N9
+LdL1VQKs9BdV81r76eXRB6mtjuNjzk6/lBsPNToWLTDzGYgtQKO1jl63uAIwGV7m
+onyF377c+MM1oqVNs17sgu7F9YKZwgLmVbeOMDbKAXHtKMDLbiGllCcs8f47
 -----END CERTIFICATE-----
 ''';
 }

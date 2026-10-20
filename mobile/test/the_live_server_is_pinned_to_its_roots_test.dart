@@ -8,10 +8,14 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// ⭐ লাইভ সার্ভার কেবল তিন মূলে বাঁধা — অ্যাপের নিরাপত্তা, OWASP MASVS-NETWORK-2, ১৯ অক্টোবর ২০২৬ ([[PinnedTrust]])।
+/// ⭐ লাইভ সার্ভার কেবল পাঁচ মূলে বাঁধা — অ্যাপের নিরাপত্তা, OWASP MASVS-NETWORK-2, ১৯ অক্টোবর ২০২৬ ([[PinnedTrust]])।
 ///
 /// দাবি:
-///  - অ্যাপে বসানো মূলগুলো ঠিক ISRG Root X1, X2 আর USERTrust RSA — DER-এর SHA-256 ছাপ মিলিয়ে (openssl দিয়ে নেওয়া);
+///  - অ্যাপে বসানো মূলগুলো ঠিক ISRG Root X1, X2, USERTrust RSA, আর (২০ অক্টোবর ২০২৬) Let's Encrypt-এর নতুন Root YR ও YE —
+///    DER-এর SHA-256 ছাপ মিলিয়ে (letsencrypt.org/certificates-এর DER আর PEM দুটো থেকে, openssl দিয়ে নেওয়া);
+///  - Let's Encrypt-এর শৃঙ্খলগুলো এই মূলেই মেলে: আজকের (লাইভ থেকে নেওয়া: পাতা ← YR2 ← Root YR ← X1), ক্রস-সই ছাড়া নতুনটা
+///    (পাতা ← YR2 ← Root YR), আর ECDSA-রটা (YE2 ← Root YE); অচেনা মূল বা মাঝের সার্টিফিকেট ছাড়া পাতা মেলে না;
+///  - WebView-এর pin (android network_security_config.xml) ঠিক এই পাঁচ মূলের SPKI ছাপ, মেয়াদসহ;
 ///  - pin কেবল লাইভের ঠিকানায়, পরীক্ষার LAN-এ নয়;
 ///  - অন্য মূলের সার্টিফিকেট দেখানো সার্ভারে pin-করা অ্যাডাপ্টার পৌঁছায় না, অথচ একই অ্যাডাপ্টার সেই মূলকে বিশ্বাস করালে
 ///    পৌঁছায় — ফেরানোর কারণ মূলের তালিকাই, অন্য কিছু নয়।
@@ -20,6 +24,8 @@ void main() {
     'ISRG Root X1': '96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6',
     'ISRG Root X2': '69729b8e15a86efc177a57afb7171dfc64add28c2fca8cf1507e34453ccb1470',
     'USERTrust RSA': 'e793c9b02fd8aa13e21c31228accb08119643b749c898964b1746d46c3d4cbd2',
+    'ISRG Root YR': 'e57b7e6f150c419102e8d5c055729ff967b9d1a829bf00cec89ca604ebf4a86f',
+    'ISRG Root YE': 'e14ffcad5b0025731006caa43a121a22d8e9700f4fb9cf852f02a708aa5d5666',
   };
 
   String sha256OfPem(String pem) {
@@ -27,7 +33,7 @@ void main() {
     return sha256.convert(base64Decode(body)).toString();
   }
 
-  test('the app carries exactly the three roots, byte for byte', () {
+  test('the app carries exactly the five roots, byte for byte', () {
     expect(PinnedTrust.roots.map(sha256OfPem).toList(), fingerprints.values.toList(),
         reason: '⛔ বসানো মূল বদলে গেছে — ভুল মূলে pin করলে সব ফোন সার্ভারে পৌঁছাবে না');
     expect(PinnedTrust.context, returnsNormally);
@@ -48,6 +54,72 @@ void main() {
     final lan = ApiClient.buildFor('http://192.168.0.10:8090/api/v1').httpClientAdapter;
     expect(lan is IOHttpClientAdapter && lan.createHttpClient != null, isFalse,
         reason: '⛔ পরীক্ষার LAN-এও pin — ডেভেলপারের সার্ভারে পৌঁছানো যেত না');
+  });
+
+  group("the chains Let's Encrypt serves", () {
+    late String openssl;
+    late Directory dir;
+    late String pinned;
+
+    setUpAll(() async {
+      openssl = await _openssl();
+      dir = await Directory.systemTemp.createTemp('pins');
+      pinned = '${dir.path}/pinned.pem';
+      await File(pinned).writeAsString(PinnedTrust.roots.join('\n'));
+    });
+
+    tearDownAll(() => dir.delete(recursive: true));
+
+    // ⓘ লাইভের পাতা ১৪ ডিসেম্বর ২০২৬-এ শেষ — যাচাই ২০ অক্টোবর ২০২৬-এর সময়ে (-attime), তাই টেস্ট মেয়াদে পচে না
+    Future<bool> verifies(String cert, {List<String> between = const []}) async {
+      final untrusted = '${dir.path}/between.pem';
+      await File(untrusted).writeAsString(between.map((f) => File('test/fixtures/pins/$f').readAsStringSync()).join());
+      final r = await Process.run(openssl, [
+        'verify', '-attime', '1792497600', '-CAfile', pinned,
+        if (between.isNotEmpty) ...['-untrusted', untrusted],
+        cert,
+      ]);
+      return r.exitCode == 0;
+    }
+
+    test('the chain of today, the new chain without the cross-sign, and the ECDSA chain all verify', () async {
+      expect(await verifies('test/fixtures/pins/live-leaf.pem', between: ['yr2.pem', 'root-yr-by-x1.pem']), isTrue,
+          reason: '⛔ আজকের লাইভ শৃঙ্খল মেলে না — সব ফোন লাইভ হারাবে');
+      expect(await verifies('test/fixtures/pins/live-leaf.pem', between: ['yr2.pem']), isTrue,
+          reason: '⛔ ক্রস-সই ছাড়া নতুন শৃঙ্খল মেলে না — LE ক্রস-সই ছাড়লে সব ফোন লাইভ হারাবে (Root YR নেই)');
+      expect(await verifies('test/fixtures/pins/ye2.pem'), isTrue,
+          reason: '⛔ ECDSA শৃঙ্খল (YE2 ← Root YE) মেলে না — Root YE নেই');
+      expect(await verifies('test/fixtures/pins/ye2.pem', between: ['root-ye-by-x2.pem']), isTrue);
+    });
+
+    test('an unknown root, or the page without its intermediate, does not verify', () async {
+      final stranger = '${dir.path}/stranger.pem';
+      await File(stranger).writeAsString(_cert);
+      expect(await verifies(stranger), isFalse, reason: '⛔ অচেনা মূলের সার্টিফিকেট মিলে গেল');
+      expect(await verifies('test/fixtures/pins/live-leaf.pem'), isFalse,
+          reason: '⛔ মাঝের সার্টিফিকেট ছাড়াই পাতা মিলল — যাচাইটা আসলে কিছু দেখছে না');
+    });
+
+    test('the WebView pins are exactly these roots, with an expiry', () async {
+      final xml = File('android/app/src/main/res/xml/network_security_config.xml').readAsStringSync();
+      final pins = RegExp(r'<pin digest="SHA-256">([^<]+)</pin>').allMatches(xml).map((m) => m.group(1)).toSet();
+
+      final spki = <String>{};
+      for (final (i, root) in PinnedTrust.roots.indexed) {
+        final file = '${dir.path}/root$i.pem';
+        await File(file).writeAsString(root);
+        final r = await Process.run(openssl, ['x509', '-in', file, '-pubkey', '-noout']);
+        final body = (r.stdout as String).split(RegExp(r'\r?\n')).where((l) => l.isNotEmpty && !l.startsWith('-----')).join();
+        spki.add(base64Encode(sha256.convert(base64Decode(body)).bytes));
+      }
+      expect(spki, hasLength(PinnedTrust.roots.length));
+      expect(pins, spki, reason: '⛔ ওয়েব পাতার pin আর অ্যাপের মূল আলাদা — একটা বদলে আরেকটা ভুলে যাওয়া হয়েছে');
+      expect(xml, contains('<domain includeSubdomains="true">${PinnedTrust.host}</domain>'));
+
+      final expiry = DateTime.parse(RegExp(r'expiration="([0-9-]+)"').firstMatch(xml)!.group(1)!);
+      expect(expiry.isAfter(DateTime(2026, 10, 20)) && expiry.isBefore(DateTime(2028, 10, 21)), isTrue,
+          reason: '⛔ মেয়াদ নেই বা দুই বছরের বেশি — ভুল pin-এ পুরনো অ্যাপ বহু দিন আটকে থাকত');
+    });
   });
 
   group('a server under another root', () {
@@ -79,6 +151,18 @@ void main() {
       expect(ok.data, 'ok', reason: 'প্রস্তুতি: পরীক্ষার সার্ভারেই পৌঁছানো গেল না — দাবির ভিত্তি নেই');
     });
   });
+}
+
+/// openssl — PATH-এ, নইলে Git-এর সাথে আসাটা; ⛔ না পেলে টেস্ট ফেল করে, চুপচাপ বাদ দেয় না
+Future<String> _openssl() async {
+  for (final c in ['openssl', r'C:\Program Files\Git\usr\bin\openssl.exe', r'C:\Program Files\Git\mingw64\bin\openssl.exe']) {
+    try {
+      if ((await Process.run(c, ['version'])).exitCode == 0) return c;
+    } on ProcessException {
+      continue;
+    }
+  }
+  fail('openssl পাওয়া গেল না — শৃঙ্খলের দাবি চালানো যায় না');
 }
 
 /// পরীক্ষার নিজের সই করা সার্টিফিকেট (localhost) — তিন মূলের বাইরে
