@@ -70,7 +70,8 @@ Future<void> main() async {
     // ⭐ আটকে থাকা ফ্রেমের খোঁজ, আর আগের চালুর জমা ক্র্যাশ পাঠানো ([[CrashReporter.flush]])
     afterFrame: () {
       CrashReporter.instance.watchStalls();
-      unawaited(CrashReporter.instance.flush());
+      // ⓘ আগের চালুর ANR আর নেটিভ ক্র্যাশ Android-এর খাতা থেকে, তারপর পাঠানো ([[CrashReporter.reportPastExits]])
+      unawaited(CrashReporter.instance.reportPastExits().then((_) => CrashReporter.instance.flush()));
     },
   )).boot((_) => ProviderScope(
         overrides: [

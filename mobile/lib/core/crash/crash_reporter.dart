@@ -57,6 +57,10 @@ class CrashReporter {
   @visibleForTesting
   Future<Map<String, String>> Function() device = _askDevice;
 
+  /// পরীক্ষার পথ — আসলটা Android-এর নিজের খাতা (ApplicationExitInfo, Android 11+) থেকে আগের চালুগুলোর বন্ধ হওয়া
+  @visibleForTesting
+  Future<List<Map<String, Object?>>> Function() pastExits = _askExits;
+
   /// পরীক্ষার পথ — ঘড়ি
   @visibleForTesting
   DateTime Function() clock = DateTime.now;
@@ -107,6 +111,38 @@ class CrashReporter {
         unawaited(reportStall(t.buildDuration, t.rasterDuration));
         return;
       }
+    }
+  }
+
+  /// ⭐ আসল ANR — আগের চালুতে Android অ্যাপটা "সাড়া দিচ্ছে না" বলে বন্ধ করেছিল, বা নেটিভ কোডে ভেঙেছিল (ec, ১৯ অক্টোবর ২০২৬)।
+  ///
+  /// <p>ⓘ ANR-এর মুহূর্তে Dart চলে না, তাই তখন ধরা যায় না; কিন্তু Android 11 (API 30) থেকে প্রতিটা অ্যাপের বন্ধ হওয়ার কারণ
+  /// নিজের খাতায় রাখে (`ActivityManager.getHistoricalProcessExitReasons`)। পরের চালুতে, প্রথম ফ্রেমের পরে, সেখান থেকে
+  /// ANR আর নেটিভ ক্র্যাশগুলো সারিতে তোলা হয় — `ANR` / `NativeCrash`, Android-এর বিবরণ ছেঁকে ([scrub]), stack নয়। শেষ পাঠানোর
+  /// সময় মনে রাখা হয়, তাই একটা ঘটনা একবারই। ⓘ Android 10 বা পুরনোয় খাতা নেই — কিছুই আসে না। ⛔ কখনো ছোড়ে না।
+  Future<void> reportPastExits() async {
+    try {
+      final mark = await store.readExitMark();
+      final exits = await pastExits();
+      var newest = mark;
+      for (final e in exits) {
+        final time = (e['time'] as num?)?.toInt() ?? 0;
+        if (time <= mark) continue;
+        if (time > newest) newest = time;
+        final type = e['reason'] == 'anr' ? 'ANR' : 'NativeCrash';
+        final what = _cut(scrub('${e['description'] ?? ''}'), 2000);
+        await _enqueue({
+          'version': AppConfig.appVersion,
+          'screen': '',
+          'error': type,
+          'message': what,
+          'stack': '',
+          'fingerprint': _hash('$type|$what'),
+        });
+      }
+      if (newest > mark) await store.writeExitMark(newest);
+    } catch (_) {
+      // ⓘ পুরনো Android, বা খাতা পড়া গেল না — চুপ
     }
   }
 
@@ -310,6 +346,14 @@ class CrashReporter {
 
   static const MethodChannel _deviceChannel = MethodChannel('com.abos.abos_mobile/device');
 
+  static Future<List<Map<String, Object?>>> _askExits() async {
+    final answer = await _deviceChannel.invokeListMethod<Object?>('exits');
+    return [
+      for (final e in answer ?? const <Object?>[])
+        if (e is Map) e.map((k, v) => MapEntry('$k', v)),
+    ];
+  }
+
   static Future<Map<String, String>> _askDevice() async {
     final answer = await _deviceChannel.invokeMapMethod<String, Object?>('describe');
     return {
@@ -323,6 +367,10 @@ class CrashReporter {
 abstract class CrashStore {
   Future<List<Map>> read();
   Future<void> write(List<Map<String, dynamic>> queue);
+
+  /// শেষ যে বন্ধ-হওয়ার খবর পাঠানো হয়েছে তার সময় (মিলিসেকেন্ড) — [[CrashReporter.reportPastExits]]
+  Future<int> readExitMark();
+  Future<void> writeExitMark(int millis);
 }
 
 /// এনক্রিপ্ট করা বাক্স — বাকি সব বাক্সের মতো ([[HiveEncryptionKey]])। ⓘ প্রথম দরকারে খোলে।
@@ -343,6 +391,14 @@ class HiveCrashStore implements CrashStore {
   Future<void> write(List<Map<String, dynamic>> queue) async {
     await (await _open()).put('q', <String, dynamic>{'v': queue});
   }
+
+  @override
+  Future<int> readExitMark() async => ((await _open()).get('exitMark')?['v'] as num?)?.toInt() ?? 0;
+
+  @override
+  Future<void> writeExitMark(int millis) async {
+    await (await _open()).put('exitMark', <String, dynamic>{'v': millis});
+  }
 }
 
 /// পরীক্ষার জন্য
@@ -356,4 +412,12 @@ class MemoryCrashStore implements CrashStore {
   Future<void> write(List<Map<String, dynamic>> queue) async {
     data = queue.map((r) => Map<String, dynamic>.from(r)).toList();
   }
+
+  int exitMark = 0;
+
+  @override
+  Future<int> readExitMark() async => exitMark;
+
+  @override
+  Future<void> writeExitMark(int millis) async => exitMark = millis;
 }

@@ -130,6 +130,36 @@ void main() {
     expect(store.data.map((x) => x['error']), contains('StateError'));
   });
 
+  /// ⭐ আসল ANR — Android-এর নিজের খাতা থেকে, পরের চালুতে (ec, ১৯ অক্টোবর ২০২৬; [[CrashReporter.reportPastExits]])
+  test('an ANR Android recorded in an earlier run is queued once, scrubbed, and not again on the next start', () async {
+    r.send = (_) async => throw Exception('offline');
+    r.pastExits = () async => [
+          {'reason': 'anr', 'time': 1000, 'description': 'Input dispatching timed out (Waited 5005ms for 01712345678)'},
+          {'reason': 'native', 'time': 2000, 'description': 'crash in libflutter.so'},
+        ];
+    await r.reportPastExits();
+
+    expect(store.data.map((x) => x['error']), ['ANR', 'NativeCrash']);
+    final anr = store.data.first['message'] as String;
+    expect(anr, contains('Input dispatching timed out'));
+    expect(anr, isNot(contains('01712345678')), reason: '⛔ ফোন নম্বর ANR-এর খবরে গেল');
+    expect(store.exitMark, 2000);
+
+    // ⓘ পরের চালু — একই খাতা আবার আসে, সাথে একটা নতুন
+    r.forget();
+    r.pastExits = () async => [
+          {'reason': 'anr', 'time': 1000, 'description': 'Input dispatching timed out'},
+          {'reason': 'native', 'time': 2000, 'description': 'crash in libflutter.so'},
+          {'reason': 'anr', 'time': 3000, 'description': 'Broadcast of Intent timed out'},
+        ];
+    await r.reportPastExits();
+    expect(store.data, hasLength(3), reason: '⛔ আগের চালুতে পাঠানো ANR আবার সারিতে');
+    expect(store.data.last['message'], contains('Broadcast'));
+
+    r.pastExits = () async => throw Exception('old Android');
+    await expectLater(r.reportPastExits(), completes);
+  });
+
   test('a huge stack is cut to the server\'s limit', () async {
     r.send = (_) async => throw Exception('offline');
     await r.report(StateError('x'), StackTrace.fromString('#0 ${'y' * 9000}'));
@@ -169,4 +199,10 @@ class _BrokenStore implements CrashStore {
 
   @override
   Future<void> write(List<Map<String, dynamic>> queue) async => throw StateError('disk');
+
+  @override
+  Future<int> readExitMark() async => throw StateError('disk');
+
+  @override
+  Future<void> writeExitMark(int millis) async => throw StateError('disk');
 }

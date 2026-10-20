@@ -1,5 +1,7 @@
 package com.abos.abos_mobile
 
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -93,6 +95,36 @@ class MainActivity : FlutterFragmentActivity() {
                             "device" to "${Build.MANUFACTURER} ${Build.MODEL}",
                         )
                     )
+
+                    // ⭐ Why earlier runs of this app ended — only ANRs and
+                    // native crashes, the two Dart cannot see (ec, 19 Oct
+                    // 2026). Android keeps the record itself from 11 (API 30);
+                    // older phones answer an empty list. The time is the
+                    // dedupe mark on the Dart side; no trace file is read.
+                    "exits" -> {
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                            result.success(emptyList<Map<String, Any>>())
+                        } else {
+                            try {
+                                val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+                                val exits = manager.getHistoricalProcessExitReasons(packageName, 0, 10)
+                                    .filter {
+                                        it.reason == ApplicationExitInfo.REASON_ANR ||
+                                            it.reason == ApplicationExitInfo.REASON_CRASH_NATIVE
+                                    }
+                                    .map {
+                                        mapOf(
+                                            "reason" to if (it.reason == ApplicationExitInfo.REASON_ANR) "anr" else "native",
+                                            "time" to it.timestamp,
+                                            "description" to (it.description ?: ""),
+                                        )
+                                    }
+                                result.success(exits)
+                            } catch (error: Exception) {
+                                result.success(emptyList<Map<String, Any>>())
+                            }
+                        }
+                    }
 
                     else -> result.notImplemented()
                 }
