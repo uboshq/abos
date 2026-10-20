@@ -1455,7 +1455,23 @@ final class ApprovalEngine
             return $flows[$module.'|'.$action.'|'.$documentType];
         }
 
-        return $flows[$module.'|'.$action.'|'] ?? null;
+        if (isset($flows[$module.'|'.$action.'|'])) {
+            return $flows[$module.'|'.$action.'|'];
+        }
+
+        /*
+         * ⭐ নিজের সচল ছক না থাকলে মডিউল যে কাজের ছকে ফেরায় ([[ModuleDefinition::$approvalFallbacks]]; fe-র গ্যাপ ২৬, ২০ অক্টোবর
+         * ২০২৬) — একই সইকারী, একই ইনবক্স; নিজের ছক থাকলে সেটাই জেতে। ⓘ অনুরোধের `action` নিজের থাকে, তাই অন্য কাজের অনুরোধের
+         * সাথে মেশে না। ⓘ এক ধাপই — ফেরা কাজের আবার ফেরা নয়, তাই চক্র হয় না। ⛔ কোনো ছক বানানো হয় না।
+         */
+        $fallback = app(ModuleRegistry::class)->get($module)?->approvalFallbacks[$action] ?? null;
+
+        if ($fallback === null) {
+            return null;
+        }
+
+        return ($documentType !== null ? $flows[$module.'|'.$fallback.'|'.$documentType] ?? null : null)
+            ?? $flows[$module.'|'.$fallback.'|'] ?? null;
     }
 
     /**
