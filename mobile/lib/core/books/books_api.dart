@@ -86,7 +86,8 @@ class MoneyInDetail {
   final String status;
 
   String get statusLabel => switch (status) {
-        'confirmed' || 'closed' => 'পাকা — খাতায় উঠেছে',
+        // ⓘ খাতায় ওঠা = "পোস্ট হয়েছে" — এক ধারণার এক শব্দ, ওয়েব আর অ্যাপে (fe, ২১ অক্টোবর ২০২৬); "পাকা" আর নয়
+        'confirmed' || 'closed' => 'পোস্ট হয়েছে · খাতায় উঠেছে',
         'draft' => 'অপেক্ষায় — অনুমোদন বা নিশ্চিত বাকি',
         'cancelled' => 'বাতিল',
         _ => '',
