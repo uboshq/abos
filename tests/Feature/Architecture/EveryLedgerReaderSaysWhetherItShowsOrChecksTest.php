@@ -72,6 +72,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Core/Services/SourceParties.php' => 'পর্দায় আগে থেকে থাকা কাগজের পক্ষ কে — খাতার সারি থেকে কেবল party_type/party_id, কোনো অঙ্ক নয়; কাগজটা তালিকার নিজের শাখা-ছাঁকনিতে আগেই বাছা, তাই খোঁজ গোটা কোম্পানি ধরে (নম্বরের পাশে পক্ষ, a5, ১৯ অক্টোবর ২০২৬)',
         'app/Core/Concerns/PickableWhileOwing.php' => 'টাকার কাগজের বাছাইয়ে নিষ্ক্রিয় পক্ষের এখনো জের আছে কি না — গোটা কোম্পানি ধরে; জের শাখায় ভাগ হয় না (Customer/Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Services/AccountService.php' => 'খাতের দিক বা মা বদলের আগে নিচে দাখিলা আছে কি না — গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে বদল ভুল করে চলত (a6, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Database/Migrations/2027_02_18_100000_an_account_says_which_parties_it_holds.php' => 'কোন খাতে আজ পক্ষসহ সারি আছে — খাত কোন পক্ষ রাখে তা আজকের খাতা থেকে; গোটা কোম্পানি, শাখা নয় (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬)',
