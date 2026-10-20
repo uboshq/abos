@@ -1279,6 +1279,15 @@ return [
     'avatar' => [
         'not_an_image' => 'That file could not be opened as an image. Use JPG, PNG or WebP.',
         'too_large' => 'That photo is too large. Please use a smaller one.',
+        // the phone's profile menu takes JPG and PNG only (a6, 20 Oct 2026)
+        'phone_jpg_png_only' => 'Use a JPG or PNG photo.',
+    ],
+
+    // "My phones" on the app's profile menu ([[MeDevicesController]])
+    'devices' => [
+        'android' => 'Android phone',
+        'ios' => 'iPhone',
+        'phone' => 'Phone',
     ],
 
     // ছবির ইঞ্জিন যা ছুঁড়তে পারে। ⚠️ `avatar.*` থেকে আলাদা রাখা হয়েছে,

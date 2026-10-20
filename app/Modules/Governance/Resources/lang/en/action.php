@@ -39,6 +39,12 @@ return [
     'overridden' => 'Duplicate allowed',
     'two_step_reset' => 'Two-step reset',
     'two_step_off' => 'Two-step turned off',
+    // the profile photo and the phones on the app's profile menu (a6, 20 Oct 2026) — no file bytes in the trail
+    'photo_changed' => 'Profile photo changed',
+    'photo_removed' => 'Profile photo removed',
+    'device_signed_out' => 'Signed out of a phone',
+    // one-off move of the old public profile photos to the private disk — counts only ([[MoveFacesToPrivate]])
+    'faces_moved_private' => 'Old profile photos moved to the private disk',
     /*
      * Not only the eight in [[AuditTrail::ACTIONS]] — services that name their
      * own action land here too. These four were added on 29 September 2026,
