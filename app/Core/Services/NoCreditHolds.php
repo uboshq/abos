@@ -24,4 +24,10 @@ final class NoCreditHolds implements CreditHolds
     {
         return '0';
     }
+
+    /** ⓘ ইঞ্জিন নেই — গ্রাহকের পাতা কেবল খাতা দেখে ([[Customer::availableLimit()]]) */
+    public function availableOf(int $customerId): ?string
+    {
+        return null;
+    }
 }
