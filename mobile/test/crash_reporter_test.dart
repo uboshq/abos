@@ -1,5 +1,6 @@
 import 'package:abos_mobile/core/config/app_config.dart';
 import 'package:abos_mobile/core/crash/crash_reporter.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -119,6 +120,42 @@ void main() {
     await r.flush();
     expect(sent, hasLength(1), reason: '⛔ একই ভুল এক চালুতে দুবার গেল');
     expect(sent.single, hasLength(1));
+  });
+
+  /// ⛔ লাইভে দরজা না থাকা পুরনো সার্ভার (0.4.41-এর এখনকার অবস্থা; a4, ২০ অক্টোবর ২০২৬) — 404: সারি থাকে, কিছু ছোড়ে না,
+  /// আর দিনের পর দিন 404 এলেও সারি [CrashReporter.maxQueued]-এর বেশি বাড়ে না।
+  test('an old server without the door answers 404: the queue is kept, nothing throws, and it never grows past its cap', () async {
+    var calls = 0;
+    Never notFound() {
+      calls++;
+      final request = RequestOptions(path: '/app/crash');
+      throw DioException(
+        requestOptions: request,
+        response: Response<void>(requestOptions: request, statusCode: 404),
+        type: DioExceptionType.badResponse,
+      );
+    }
+
+    r.send = (_) async => notFound();
+    await r.report(StateError('a'), StackTrace.fromString('#0 a'));
+    await expectLater(r.flush(), completes, reason: '⛔ 404-এ flush ছুড়ল — অ্যাপ ভাঙবে');
+    expect(calls, 1, reason: 'প্রস্তুতিটাই ভুল — দরজায় ডাকই যায়নি');
+    expect(store.data, hasLength(1), reason: '⛔ 404-এ সারি মুছে গেল — দরজা এলে খবরটা আর যাবে না');
+
+    // ⓘ অনেক দিন, অনেক চালু — প্রতিবার নতুন ভুল, প্রতিবার 404
+    for (var run = 0; run < 6; run++) {
+      r.forget();
+      r.store = store;
+      r.clock = () => now;
+      r.send = (_) async => notFound();
+      for (var i = 0; i < CrashReporter.maxPerRun; i++) {
+        await r.report(StateError('run $run'), StackTrace.fromString('#0 run $run frame $i'));
+      }
+      now = now.add(CrashReporter.minGap);
+      await expectLater(r.flush(), completes);
+    }
+    expect(calls, greaterThanOrEqualTo(7), reason: 'প্রতিটা চালুতে অন্তত একবার চেষ্টা');
+    expect(store.data.length, CrashReporter.maxQueued, reason: '⛔ 404-এর সারি সীমা ছাড়িয়ে বাড়ল, বা ফেলে দিল');
   });
 
   test('at most ten different errors a run, and a failed store or send never throws', () async {
