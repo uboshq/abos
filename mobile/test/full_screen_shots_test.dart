@@ -112,7 +112,8 @@ void main() {
     await _loadRounded();
   });
 
-  const sizes = {'412': Size(412, 915), 'tablet': Size(800, 1280)};
+  // ⓘ শোয়ানো ট্যাবলেট ১২৮০dp — Material 3-এর "expanded": হোমের দুই কার্ড পাশাপাশি
+  const sizes = {'412': Size(412, 915), 'tablet': Size(800, 1280), 'tablet_wide': Size(1280, 800)};
   const screens = {'owner_home': 'owner', 'sr_collect': 'sr'};
 
   for (final MapEntry(key: screen, value: role) in screens.entries) {
