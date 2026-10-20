@@ -7,6 +7,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -28,6 +29,9 @@ extension on SalesPaperKind {
   String get path => this == SalesPaperKind.invoice ? 'invoices' : 'challans';
   String get recentKind => this == SalesPaperKind.invoice ? 'invoice' : 'challan';
   String get printType => this == SalesPaperKind.invoice ? 'SalesInvoice' : 'DeliveryChallan';
+
+  /// ⭐ চালান মজুদের কাগজ — "পাকা · মজুদে উঠেছে"; বিল টাকার — "পাকা · খাতায় উঠেছে" (fe, ২০ অক্টোবর ২০২৬)
+  PaperKind get paperKind => this == SalesPaperKind.challan ? PaperKind.stock : PaperKind.money;
 }
 
 class SalesPaperListScreen extends StatefulWidget {
@@ -160,7 +164,10 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: AppStatusChip.forServer(r.status,
-                              key: ValueKey('paper-state-${r.id}'), fallbackLabel: r.statusLabel, dense: true),
+                              key: ValueKey('paper-state-${r.id}'),
+                              fallbackLabel: r.statusLabel,
+                              kind: widget.kind.paperKind,
+                              dense: true),
                         ),
                     ],
                   ),
@@ -278,7 +285,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                       if (p.status.isNotEmpty || p.statusLabel.isNotEmpty)
                         PaperStateFact(
                             chip: AppStatusChip.forServer(p.status,
-                                key: const ValueKey('paper-state'), fallbackLabel: p.statusLabel)),
+                                key: const ValueKey('paper-state'), fallbackLabel: p.statusLabel, kind: widget.kind.paperKind)),
                       if (p.dueOn != null) _pair(context, 'মেয়াদ', dayOf(p.dueOn)),
                       if (p.warehouse != null && p.warehouse!.isNotEmpty) _pair(context, 'গুদাম', p.warehouse!),
                       if (p.vehicleNo != null && p.vehicleNo!.isNotEmpty) _pair(context, 'গাড়ি', p.vehicleNo!),

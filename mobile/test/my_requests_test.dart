@@ -1,3 +1,5 @@
+import 'package:abos_mobile/core/status/app_status_chip.dart';
+import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/approvals/approvals_api.dart';
 import 'package:abos_mobile/core/menu/module_gate.dart';
 import 'package:abos_mobile/core/router/native_for_web.dart';
@@ -63,6 +65,9 @@ void main() {
     expect(find.textContaining('1,000'), findsOneWidget);
     expect(find.text('কারণ: দর ঠিক করুন'), findsOneWidget, reason: '⛔ ফেরতের কারণ লেখক দেখেন না');
     expect(find.textContaining('শেষ কথা: সংশোধনে ফেরত · করিম'), findsOneWidget);
+    // ⭐ অবস্থা অ্যাপের এক চিপে (নকশা ৩, অংশ ৫): ফেরত → "ফেরত", অপেক্ষায় → সইয়ের অপেক্ষায়
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.sentBack && w.dense), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.waiting && w.dense), findsOneWidget);
     expect(find.textContaining('৩ টি').evaluate().isNotEmpty || find.textContaining('3 টি').evaluate().isNotEmpty, isTrue,
         reason: 'পুরো তালিকার গোনা মাথায় নেই');
     expect(find.byKey(const ValueKey('my-requests-pending')), findsOneWidget);

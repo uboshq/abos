@@ -158,6 +158,10 @@ class VoucherRow {
     this.fromLabel,
     this.toAccount,
     this.toLabel,
+    this.approvalLevel,
+    this.approvalLevels,
+    this.postingFailed = false,
+    this.postProblem,
   });
 
   final String id;
@@ -171,6 +175,16 @@ class VoucherRow {
   /// draft · awaiting · posted · cancelled
   final String state;
   final String stateLabel;
+
+  /// ⭐ সইয়ের কোন ধাপ এখন আর মোট কত ধাপ — কেবল সইয়ের অপেক্ষায়; চিপে "{levels}-এর {level}" (সার্ভার a6/paper-level-reason,
+  /// ২০ অক্টোবর ২০২৬)। ⓘ পুরনো সার্ভারে null — তখন কেবল "সইয়ের অপেক্ষায়"
+  final int? approvalLevel;
+  final int? approvalLevels;
+
+  /// ⭐ শেষ সই পড়েছে কিন্তু খাতায় তোলা আটকে গেছে (বাকির সীমা, বন্ধ বছর …) — সার্ভারে অবস্থা তখনো `draft`, পাকা করার বোতাম
+  /// থাকে; চিপ "পোস্ট হয়নি", চাপলে [postProblem] (পুরো বাংলা বাক্য)। পুরনো সার্ভারে false
+  final bool postingFailed;
+  final String? postProblem;
   final String? date;
   final double amount;
   final String? party;
@@ -274,6 +288,10 @@ class VoucherRow {
         fromLabel: _filled(j['from_label']?.toString()),
         toAccount: _filled(j['to_account']?.toString()),
         toLabel: _filled(j['to_label']?.toString()),
+        approvalLevel: _intOrNull(j['approval_level']),
+        approvalLevels: _intOrNull(j['approval_levels']),
+        postingFailed: j['posting_failed'] == true,
+        postProblem: _filled(j['post_problem']?.toString()),
       );
 
   String get kindLabel => typeLabel.isNotEmpty ? typeLabel : VoucherTypes.label(type);
@@ -288,6 +306,9 @@ class VoucherRow {
           _ => 'খসড়া',
         };
 }
+
+/// সার্ভারের সংখ্যা → int; না এলে বা অচেনা হলে null (পুরনো সার্ভার এই ঘর পাঠায় না)
+int? _intOrNull(Object? v) => v is num ? v.toInt() : int.tryParse('${v ?? ''}');
 
 class VoucherLineView {
   const VoucherLineView({required this.account, required this.debit, required this.credit, this.narration = '', this.party});
