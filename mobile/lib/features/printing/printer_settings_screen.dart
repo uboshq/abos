@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import 'thermal_flow.dart';
@@ -168,8 +167,8 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       key: const Key('printer-note'),
                       style: TextStyle(
                           color: _noteIsError
-                              ? AppColors.danger
-                              : AppColors.success)),
+                              ? context.palette.danger
+                              : context.palette.success)),
                 ],
                 const SizedBox(height: AppSpacing.lg),
                 const Text('কোন কাগজ কোথায় ছাপা হয়',

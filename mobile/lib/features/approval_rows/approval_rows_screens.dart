@@ -4,7 +4,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/approvals/approval_rows_api.dart';
 import '../../core/approvals/approvals_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -171,7 +170,7 @@ class _DelegationCard extends StatelessWidget {
         title: Text(d.person, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('${d.startsOn} থেকে ${d.endsOn} · $state',
-              style: TextStyle(color: d.active ? AppColors.success : context.palette.onSurfaceMuted)),
+              style: TextStyle(color: d.active ? context.palette.success : context.palette.onSurfaceMuted)),
           Text(d.modules.isEmpty ? 'সব কাজে' : d.modules.join(', ')),
           if (d.reason.isNotEmpty) Text(d.reason, style: const TextStyle(fontSize: 13)),
         ]),
@@ -333,7 +332,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              child: Text(_error!, style: TextStyle(color: context.palette.danger)),
             ),
           FilledButton(
             key: const ValueKey('delegation-save'),
@@ -522,7 +521,7 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
                       Text('চেয়েছেন: ${row.requester}'),
                       if (row.dueAt.isNotEmpty)
                         Text('শেষ সময়: ${row.dueAt}',
-                            style: TextStyle(color: row.overdue ? AppColors.danger : context.palette.onSurfaceMuted)),
+                            style: TextStyle(color: row.overdue ? context.palette.danger : context.palette.onSurfaceMuted)),
                       if (row.canDecide)
                         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                           TextButton(

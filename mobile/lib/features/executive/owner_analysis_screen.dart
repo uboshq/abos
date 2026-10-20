@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/records/money.dart';
 import '../../core/records/report_record.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
@@ -98,7 +98,7 @@ class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
                       subtitle: data.many ? Text(row.company) : null,
                       trailing: Text(
                         list.percent ? _percent(row.value) : ownerCell(row.value),
-                        style: TextStyle(fontWeight: FontWeight.w700, color: ownerTone(row.value)),
+                        style: TextStyle(fontWeight: FontWeight.w700, color: ownerTone(context, row.value)),
                       ),
                     ),
                 ],
@@ -122,7 +122,7 @@ class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
             ),
           ],
           if (!data.canSeeCost)
-            const OwnerNote('খরচ দেখার অনুমতি নেই — লাভ আর মার্জিনের ঘর ঢাকা থাকবে।', colour: AppColors.warning),
+            OwnerNote('খরচ দেখার অনুমতি নেই — লাভ আর মার্জিনের ঘর ঢাকা থাকবে।', colour: context.palette.warning),
         ],
       );
 

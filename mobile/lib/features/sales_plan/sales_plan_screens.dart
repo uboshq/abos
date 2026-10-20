@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
@@ -243,9 +242,9 @@ String _withPoint(PlanRow r, [String nameKey = 'name']) =>
 Color _percentColour(BuildContext context, String? percent) {
   final value = double.tryParse(percent ?? '');
   if (value == null) return context.palette.onSurfaceMuted;
-  if (value >= 100) return AppColors.success;
-  if (value < 50) return AppColors.danger;
-  return AppColors.warning;
+  if (value >= 100) return context.palette.success;
+  if (value < 50) return context.palette.danger;
+  return context.palette.warning;
 }
 
 // ───────────────────────────── লক্ষ্যমাত্রা ─────────────────────────────
@@ -424,11 +423,11 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
               if (p.number('unrouted') > 0)
                 Card(
                   key: const ValueKey('route-unrouted'),
-                  color: AppColors.warningSurface,
+                  color: context.palette.warningSurface,
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     child: Text('⚠ ${p.number('unrouted')} জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।',
-                        style: const TextStyle(color: AppColors.warning)),
+                        style: TextStyle(color: context.palette.warning)),
                   ),
                 ),
             ];
@@ -500,7 +499,7 @@ class RouteDetailScreen extends StatelessWidget {
                     FactRow('আগের জের', Money.taka(f.text('opening'))),
                     FactRow('বিক্রি', Money.taka(f.text('sales'))),
                     FactRow('ফেরত', Money.taka(f.text('returns'))),
-                    FactRow('আদায়', Money.taka(f.text('collections')), colour: AppColors.success),
+                    FactRow('আদায়', Money.taka(f.text('collections')), colour: context.palette.success),
                     FactRow('অন্যান্য', Money.taka(f.text('other'))),
                     FactRow('লক্ষ্য', takaOrDash(t.maybe('target'))),
                     FactRow('লক্ষ্যের অর্জন', '${Money.taka(t.text('achieved'))} · ${percentOf(t.maybe('percent'))}',

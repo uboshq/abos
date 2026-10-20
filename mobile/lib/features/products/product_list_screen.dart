@@ -5,7 +5,6 @@ import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/records/stock_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -190,8 +189,8 @@ class _ProductTile extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: stock.available > 0
-                              ? AppColors.success
-                              : AppColors.danger,
+                              ? context.palette.success
+                              : context.palette.danger,
                         ),
                       ),
                     ),

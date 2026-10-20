@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -426,7 +425,7 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
                   key: const ValueKey('loading-crew'), style: muted),
             if (_notice != null)
               Card(
-                color: AppColors.successSurface,
+                color: context.palette.successSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Text(_notice!, key: const ValueKey('loading-notice')),
@@ -483,9 +482,9 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600))),
                           if (c.packed)
-                            const Chip(
-                                label: Text('প্যাক হয়েছে'),
-                                backgroundColor: AppColors.successSurface),
+                            Chip(
+                                label: const Text('প্যাক হয়েছে'),
+                                backgroundColor: context.palette.successSurface),
                         ]),
                         for (final l in c.lines)
                           Text('• ${l.product} — ${Money.plain(l.qty)}'
@@ -522,10 +521,10 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        color: AppColors.dangerSurface,
+        color: context.palette.dangerSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Text(text, style: const TextStyle(color: AppColors.danger)),
+          child: Text(text, style: TextStyle(color: context.palette.danger)),
         ),
       );
 }

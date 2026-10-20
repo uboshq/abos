@@ -5,7 +5,6 @@ import '../../core/api_client/once_key.dart';
 import '../../core/hr/self_service_api.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -19,10 +18,10 @@ import '../../core/widgets/unsaved_guard.dart';
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস। আবেদন পাঠানো মানে ছুটি পাওয়া নয় — মঞ্জুরি অফিসের।
 
 Color leaveColour(BuildContext context, String status) => switch (status) {
-      'approved' => AppColors.success,
-      'rejected' => AppColors.danger,
+      'approved' => context.palette.success,
+      'rejected' => context.palette.danger,
       'cancelled' => context.palette.onSurfaceMuted,
-      _ => AppColors.pending,
+      _ => context.palette.pending,
     };
 
 class LeaveScreen extends StatefulWidget {
@@ -264,10 +263,10 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
             if (_error != null)
               Card(
                 key: const ValueKey('leave-error'),
-                color: AppColors.dangerSurface,
+                color: context.palette.dangerSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                  child: Text(_error!, style: TextStyle(color: context.palette.danger)),
                 ),
               ),
             DropdownButtonFormField<String>(
@@ -396,10 +395,10 @@ class PayslipScreen extends StatelessWidget {
           if (s.paymentMethod.isNotEmpty) FactRow('কীভাবে', _paidBy(s.paymentMethod)),
           const SectionTitle('আয়'),
           for (final l in s.lines.where((l) => l.earning)) FactRow(l.name, Money.taka(l.amount)),
-          FactRow('মোট আয়', Money.taka(s.gross), colour: AppColors.success),
+          FactRow('মোট আয়', Money.taka(s.gross), colour: context.palette.success),
           const SectionTitle('কর্তন'),
           for (final l in s.lines.where((l) => !l.earning)) FactRow(l.name, Money.taka(l.amount)),
-          FactRow('মোট কর্তন', Money.taka(s.deductions), colour: AppColors.danger),
+          FactRow('মোট কর্তন', Money.taka(s.deductions), colour: context.palette.danger),
         ],
       );
 }

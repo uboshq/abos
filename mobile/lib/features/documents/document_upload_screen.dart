@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/documents_library/upload_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -224,7 +223,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                  child: Text(_error!, style: TextStyle(color: context.palette.danger)),
                 ),
               FilledButton(
                 key: const ValueKey('upload-save'),

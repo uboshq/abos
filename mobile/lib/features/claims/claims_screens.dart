@@ -5,7 +5,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/hr/claims_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -15,10 +14,10 @@ import '../../core/permissions/camera_shot.dart';
 /// ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; সার্ভার f727b846)।
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস, কোনো টেবিল নয়। পাঠানো মানে টাকা পাওয়া নয় — সই আর ক্যাশিয়ারের পরে।
-Color stateColour(String status) => switch (status) {
-      'paid' => AppColors.success,
-      'rejected' => AppColors.danger,
-      _ => AppColors.pending,
+Color stateColour(BuildContext context, String status) => switch (status) {
+      'paid' => context.palette.success,
+      'rejected' => context.palette.danger,
+      _ => context.palette.pending,
     };
 
 class ClaimListScreen extends StatefulWidget {
@@ -104,7 +103,7 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(Money.taka(c.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text(c.stateLabel, style: TextStyle(color: stateColour(c.status))),
+                      Text(c.stateLabel, style: TextStyle(color: stateColour(context, c.status))),
                       if (c.reason.isNotEmpty) Text(c.reason, maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   ),
@@ -158,7 +157,7 @@ class _ClaimScreenState extends State<ClaimScreen> {
           if (c == null && _error == null) const LinearProgressIndicator(),
           if (c != null) ...[
             FactRow('ধরন', c.kindLabel),
-            FactRow('অবস্থা', c.stateLabel, colour: stateColour(c.status)),
+            FactRow('অবস্থা', c.stateLabel, colour: stateColour(context, c.status)),
             FactRow('টাকা', Money.taka(c.amount)),
             if (c.head != null) FactRow('খরচের খাত', c.head!),
             if (c.spentOn != null) FactRow('খরচের তারিখ', dayOf(c.spentOn)),
@@ -306,10 +305,10 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
           if (_error != null)
             Card(
               key: const ValueKey('claim-error'),
-              color: AppColors.dangerSurface,
+              color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                child: Text(_error!, style: TextStyle(color: context.palette.danger)),
               ),
             ),
           SegmentedButton<String>(
@@ -361,7 +360,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
               key: const ValueKey('claim-receipt'),
               onPressed: _busy ? null : _pickReceipt,
               icon: Icon(_receipt == null ? Icons.photo_camera_outlined : Icons.check_circle,
-                  color: _receipt == null ? null : AppColors.success),
+                  color: _receipt == null ? null : context.palette.success),
               label: Text(_receipt == null ? 'রসিদের ছবি তুলুন' : 'ছবি নেওয়া হয়েছে — আবার তুলুন'),
             ),
           const SizedBox(height: AppSpacing.md),

@@ -4,7 +4,7 @@ import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/records/product_record.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -23,7 +23,7 @@ String _today() {
 }
 
 void _tell(BuildContext context, String notice) =>
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: AppColors.success, content: Text(notice.isEmpty ? 'বসেছে।' : notice)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: context.palette.success, content: Text(notice.isEmpty ? 'বসেছে।' : notice)));
 
 // ── সার্ভার ─────────────────────────────────────────────────────────────────────────────────────
 

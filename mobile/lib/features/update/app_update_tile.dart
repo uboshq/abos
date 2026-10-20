@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import 'update_download_button.dart';
@@ -71,15 +71,15 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
               onTap: _ask,
             ),
             if (_state == _Asked.latest)
-              const _Line('সর্বশেষ সংস্করণ চলছে।', AppColors.success, key: ValueKey('app-update-latest')),
+              _Line('সর্বশেষ সংস্করণ চলছে।', context.palette.success, key: const ValueKey('app-update-latest')),
             if (_state == _Asked.offline)
-              const _Line('সার্ভারে পৌঁছানো গেল না। ইন্টারনেট সংযোগ দেখে আবার চাপুন।', AppColors.danger,
-                  key: ValueKey('app-update-offline')),
+              _Line('সার্ভারে পৌঁছানো গেল না। ইন্টারনেট সংযোগ দেখে আবার চাপুন।', context.palette.danger,
+                  key: const ValueKey('app-update-offline')),
             if (_state == _Asked.newer && release != null) ...[
               _Line('নতুন সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
-                  AppColors.pending,
+                  context.palette.pending,
                   key: const ValueKey('app-update-newer')),
-              for (final line in release.whatsNew) _Line('• $line', AppColors.pending),
+              for (final line in release.whatsNew) _Line('• $line', context.palette.pending),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                 child: UpdateDownloadButton(release: release, label: 'এখনই আপডেট করুন'),

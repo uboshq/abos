@@ -7,7 +7,6 @@ import '../../core/dashboard/dashboard_api.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
@@ -296,7 +295,7 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
                   key: const Key('overview-refused'),
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(d.periodRefused!,
-                      style: const TextStyle(color: AppColors.warning)),
+                      style: TextStyle(color: context.palette.warning)),
                 ),
               if (d.subtitle.isNotEmpty)
                 Padding(
@@ -327,10 +326,10 @@ class _StatCard extends StatelessWidget {
   final DashboardStat stat;
 
   // ⭐ সাধারণ লেখা context.palette থেকে (আলোতে হুবহু আগের রং, অন্ধকারে ঠিক — নকশার নিয়ম ০.৪.৩৮ §১, a4 c5e7fbbd6);
-  // ভুল থিমের error (আলোতে AppColors.danger-ই); ভালো/সাবধান অবস্থার রং, আগের মতো
+  // ভুল থিমের error (আলোতে context.palette.danger-ই); ভালো/সাবধান অবস্থার রং, আগের মতো
   Color _tone(BuildContext context) => switch (stat.tone) {
-        'good' => AppColors.success,
-        'warn' => AppColors.warning,
+        'good' => context.palette.success,
+        'warn' => context.palette.warning,
         'bad' => Theme.of(context).colorScheme.error,
         _ => context.palette.onSurface,
       };
@@ -425,7 +424,7 @@ class _PanelCard extends StatelessWidget {
                 TextSpan(style: Theme.of(context).textTheme.bodySmall, children: [
                   TextSpan(text: '■ ', style: TextStyle(color: first)),
                   TextSpan(text: '${panel['firstLabel']}   '),
-                  const TextSpan(text: '■ ', style: TextStyle(color: AppColors.warning)),
+                  TextSpan(text: '■ ', style: TextStyle(color: context.palette.warning)),
                   TextSpan(text: '${panel['secondLabel']}'),
                 ]),
               ),
@@ -437,7 +436,7 @@ class _PanelCard extends StatelessWidget {
                 bar((r['first'] ?? '').toString(), barValue(r['first']),
                     first),
                 bar((r['second'] ?? '').toString(), barValue(r['second']),
-                    AppColors.warning),
+                    context.palette.warning),
               ] else
                 bar((r['value'] ?? '').toString(), barValue(r['value']),
                     first),

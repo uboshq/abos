@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
@@ -72,7 +71,7 @@ class RejectedOrderCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(item.reason,
-                style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                style: TextStyle(color: context.palette.danger, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
             Text(
               DateFormat('dd/MM/yyyy hh:mm a').format(item.enqueuedAt),

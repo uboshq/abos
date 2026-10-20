@@ -7,7 +7,6 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
@@ -176,11 +175,11 @@ class _Header extends StatelessWidget {
             child: Text(line, style: Theme.of(context).textTheme.bodySmall),
           ),
         if (!customer.isActive)
-          const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text('⚠️ এই গ্রাহক নিষ্ক্রিয়',
                 style: TextStyle(
-                    color: AppColors.warning, fontWeight: FontWeight.w600)),
+                    color: context.palette.warning, fontWeight: FontWeight.w600)),
           ),
       ],
     );
@@ -207,7 +206,7 @@ class _DueCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: owes ? AppColors.danger : context.palette.onSurface,
+                  color: owes ? context.palette.danger : context.palette.onSurface,
                 )),
             if (due.hasCreditLimit || due.creditDays > 0)
               Text(

@@ -322,7 +322,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
             const SizedBox(height: AppSpacing.md),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) ...[
-              Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              Text(_error!, style: TextStyle(color: context.palette.danger)),
               const SizedBox(height: AppSpacing.sm),
               TextButton(onPressed: _load, child: const Text('আবার চেষ্টা')),
             ] else if (papers != null) ...[
@@ -373,7 +373,7 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
                   key: const Key('print-note'),
                   style: TextStyle(
                       color:
-                          _noteIsError ? AppColors.danger : AppColors.success),
+                          _noteIsError ? context.palette.danger : context.palette.success),
                 ),
               ],
               const Divider(),

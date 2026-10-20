@@ -6,7 +6,7 @@ import '../../core/books/collection_entry.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'money_in_screens.dart';
@@ -205,12 +205,12 @@ class _CollectScreenState extends State<CollectScreen> {
           if (_busy) const LinearProgressIndicator(),
           if (_error != null)
             Card(
-              color: AppColors.dangerSurface,
+              color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(_error!,
                     key: const ValueKey('collect-error'),
-                    style: const TextStyle(color: AppColors.danger)),
+                    style: TextStyle(color: context.palette.danger)),
               ),
             ),
           Card(

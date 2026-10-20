@@ -6,7 +6,6 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import 'customer_list_screen.dart' show isLargeText;
 import '../../core/widgets/customer_line.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -131,9 +130,9 @@ class _DueHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final due = head.due;
     final (label, colour) = due > 0.004
-        ? ('বাকি আছে', AppColors.danger)
+        ? ('বাকি আছে', context.palette.danger)
         : due < -0.004
-            ? ('আগাম জমা আছে', AppColors.success)
+            ? ('আগাম জমা আছে', context.palette.success)
             : ('হিসাব মিলে আছে', context.palette.onSurface);
 
     return Card(
@@ -199,7 +198,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final took = row.debit > 0.004;
-    final colour = took ? AppColors.danger : AppColors.success;
+    final colour = took ? context.palette.danger : context.palette.success;
     final amount = took ? row.debit : row.credit;
 
     // ⓘ বড় লেখায় (দেড়গুণের বেশি) অঙ্ক ডানে নয়, তারিখের নিচে নিজের লাইনে, পুরো মাপে; ডানে থাকলে সারির ৪০%-এর বেশি নেয় না

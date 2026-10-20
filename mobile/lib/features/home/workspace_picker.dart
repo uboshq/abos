@@ -128,7 +128,7 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Text(_error!,
                       key: const ValueKey('workspace-error'),
-                      style: const TextStyle(color: AppColors.danger)),
+                      style: TextStyle(color: context.palette.danger)),
                 ),
               if (profile.companies.length > 1) ...[
                 const _SectionTitle('কোম্পানি'),

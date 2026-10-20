@@ -326,7 +326,7 @@ class _DuePill extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: owes ? AppColors.danger : context.palette.onSurfaceMuted,
+              color: owes ? context.palette.danger : context.palette.onSurfaceMuted,
             ),
           ),
           if (due.creditDays > 0)

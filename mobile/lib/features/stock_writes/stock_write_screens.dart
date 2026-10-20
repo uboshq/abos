@@ -320,7 +320,7 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
 void _tell(BuildContext context, StockResult result) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     key: const ValueKey('stock-result'),
-    backgroundColor: result.done ? AppColors.success : AppColors.pending,
+    backgroundColor: result.done ? context.palette.success : context.palette.pending,
     content: Text(result.notice.isEmpty ? (result.done ? 'বসেছে।' : 'অপেক্ষায় রাখা হলো।') : result.notice),
   ));
 }

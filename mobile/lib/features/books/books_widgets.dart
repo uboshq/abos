@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 
@@ -89,7 +88,7 @@ class TotalStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
         key: const ValueKey('books-total'),
-        color: AppColors.successSurface,
+        color: context.palette.successSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           // ⓘ জায়গা না হলে অঙ্ক নামের নিচে নামে — বড় লেখায় বা কোটি টাকায় কেটে যায় না, ঢেকেও যায় না
@@ -127,10 +126,10 @@ class BooksError extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
         key: const ValueKey('books-error'),
-        color: AppColors.dangerSurface,
+        color: context.palette.dangerSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Text(text, style: const TextStyle(color: AppColors.danger)),
+          child: Text(text, style: TextStyle(color: context.palette.danger)),
         ),
       );
 }

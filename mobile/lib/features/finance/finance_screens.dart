@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/finance/finance_api.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
@@ -26,7 +25,7 @@ String daysWords(int? days) {
 }
 
 Color _dayColour(BuildContext context, int? days) =>
-    days == null ? context.palette.onSurfaceMuted : days < 0 ? AppColors.danger : days <= 30 ? AppColors.warning : context.palette.onSurfaceMuted;
+    days == null ? context.palette.onSurfaceMuted : days < 0 ? context.palette.danger : days <= 30 ? context.palette.warning : context.palette.onSurfaceMuted;
 
 int? _daysUntil(String? iso, [DateTime? today]) {
   final d = iso == null ? null : DateTime.tryParse(iso);
@@ -77,9 +76,9 @@ String instalmentState(String s) => switch (s) {
     };
 
 Color _instalmentColour(BuildContext context, String s) => switch (s) {
-      'paid' => AppColors.success,
-      'overdue' => AppColors.danger,
-      'today' => AppColors.warning,
+      'paid' => context.palette.success,
+      'overdue' => context.palette.danger,
+      'today' => context.palette.warning,
       _ => context.palette.onSurfaceMuted,
     };
 
@@ -207,7 +206,7 @@ class DepositScreen extends StatelessWidget {
             FactRow('মাসের কিস্তি',
                 '${Money.taka(d.instalmentAmount)}${d.instalmentDay == null ? '' : ' · প্রতি মাসের ${d.instalmentDay} তারিখ'}'),
           if (d.closedOn != null) FactRow('শেষ হয়েছে', dayOf(d.closedOn)),
-          if (d.pledged) const FactRow('বাঁধা', 'ঋণের বিপরীতে বাঁধা — ভাঙানো যাবে না', colour: AppColors.warning),
+          if (d.pledged) FactRow('বাঁধা', 'ঋণের বিপরীতে বাঁধা — ভাঙানো যাবে না', colour: context.palette.warning),
           if (d.note.isNotEmpty) FactRow('নোট', d.note),
           if (d.movements.isNotEmpty) const SectionTitle('চলাচল'),
           for (final m in d.movements)
@@ -255,7 +254,7 @@ class _LoanListScreenState extends State<LoanListScreen> {
             title: '${l.bank} · ${loanKind(l.kind)}',
             lines: [l.no, 'সীমা ${Money.taka(l.limit)}'],
             amount: Money.taka(l.outstanding),
-            amountColour: AppColors.danger,
+            amountColour: context.palette.danger,
             foot: l.next == null
                 ? null
                 : 'পরের কিস্তি ${dayOf(l.next!.dueOn)} · ${Money.taka(l.next!.amount)} · ${instalmentState(l.next!.state)}',
@@ -295,11 +294,11 @@ class LoanScreen extends StatelessWidget {
             FactRow('কিস্তি', '${l.instalmentsPaid ?? 0} দেওয়া · ${l.instalmentsLeft ?? 0} বাকি · মোট ${l.instalments}'),
           if (l.instalmentAmount != null) FactRow('কিস্তির অঙ্ক', Money.taka(l.instalmentAmount)),
           if (l.overdue > 0)
-            FactRow('দিন পেরোনো কিস্তি', '${l.overdue}টি', colour: AppColors.danger),
+            FactRow('দিন পেরোনো কিস্তি', '${l.overdue}টি', colour: context.palette.danger),
           if (l.next != null)
             Card(
               key: const ValueKey('loan-next'),
-              color: l.next!.state == 'overdue' ? AppColors.dangerSurface : AppColors.warningSurface,
+              color: l.next!.state == 'overdue' ? context.palette.dangerSurface : context.palette.warningSurface,
               child: ListTile(
                 title: const Text('পরের কিস্তি'),
                 subtitle: Text('${dayOf(l.next!.dueOn)} · ${instalmentState(l.next!.state)}'),
@@ -368,7 +367,7 @@ class _RentListScreenState extends State<RentListScreen> {
             ],
             amount: Money.taka(r.monthlyRent),
             foot: _rentDue(r),
-            footColour: _rentDueOwed(r) ? AppColors.danger : null,
+            footColour: _rentDueOwed(r) ? context.palette.danger : null,
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => RentScreen(side: r.side, id: r.id, api: widget.api))),
           ),
@@ -405,10 +404,10 @@ class RentScreen extends StatelessWidget {
           if (_rentDue(r) != null)
             Card(
               key: const ValueKey('rent-due'),
-              color: AppColors.dangerSurface,
+              color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(_rentDue(r)!, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w700)),
+                child: Text(_rentDue(r)!, style: TextStyle(color: context.palette.danger, fontWeight: FontWeight.w700)),
               ),
             ),
           FactRow(r.weLet ? 'ভাড়াটে' : 'বাড়িওয়ালা', r.party),
@@ -426,7 +425,7 @@ class RentScreen extends StatelessWidget {
           if (r.note.isNotEmpty) FactRow('নোট', r.note),
           if (r.overdueMonths.isNotEmpty) const SectionTitle('বাকি মাস'),
           for (final m in r.overdueMonths)
-            _Row(title: monthWords(m.month), lines: const [], amount: Money.taka(m.amount), amountColour: AppColors.danger),
+            _Row(title: monthWords(m.month), lines: const [], amount: Money.taka(m.amount), amountColour: context.palette.danger),
         ],
       );
 }
@@ -483,7 +482,7 @@ class _HandLoanListScreenState extends State<HandLoanListScreen> {
             title: h.name,
             lines: [if (h.dueOn != null) 'ফেরতের দিন ${dayOf(h.dueOn)}', repaymentWords(h.repayment)],
             amount: Money.taka(h.balance.abs()),
-            amountColour: h.balance > 0.004 ? AppColors.success : h.balance < -0.004 ? AppColors.danger : null,
+            amountColour: h.balance > 0.004 ? context.palette.success : h.balance < -0.004 ? context.palette.danger : null,
             foot: handLoanSide(h.balance),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => HandLoanScreen(id: h.id, api: widget.api, canMove: widget.canMove))),
@@ -543,7 +542,7 @@ class HandLoanScreen extends StatelessWidget {
               title: m.kind == 'out' ? 'টাকা দেওয়া' : 'টাকা পাওয়া',
               lines: [dayOf(m.date), if (m.returnOn != null) 'ফেরতের কথা ${dayOf(m.returnOn)}'],
               amount: Money.taka(m.amount),
-              amountColour: m.kind == 'out' ? AppColors.danger : AppColors.success,
+              amountColour: m.kind == 'out' ? context.palette.danger : context.palette.success,
             ),
         ],
       );

@@ -238,7 +238,7 @@ class _TodayPanelState extends State<TodayPanel> {
         ? _Stat(
             label: 'আজকের ইনফ্লো/আদায়',
             value: Money.taka(inflow.amount),
-            colour: AppColors.success,
+            colour: context.palette.success,
             detail: collections == null
                 ? null
                 : 'আদায় ${Money.taka(collections.amount)}',
@@ -248,7 +248,7 @@ class _TodayPanelState extends State<TodayPanel> {
             : _Stat(
                 label: 'আজকের আদায়',
                 value: Money.taka(collections.amount),
-                colour: AppColors.success,
+                colour: context.palette.success,
                 detail: _count(collections.count, 'টি আদায়'),
               );
 
@@ -274,7 +274,7 @@ class _TodayPanelState extends State<TodayPanel> {
               : _Stat(
                   label: 'পাওনা (Recoverable)',
                   value: Money.taka(dues.amount),
-                  colour: AppColors.success,
+                  colour: context.palette.success,
                   detail: dues.shops == null ? null : '${dues.shops} টি দোকান',
                 ),
           right: payable == null
@@ -282,7 +282,7 @@ class _TodayPanelState extends State<TodayPanel> {
               : _Stat(
                   label: 'দেনা (Payable)',
                   value: Money.taka(payable.amount),
-                  colour: AppColors.danger,
+                  colour: context.palette.danger,
                   detail: handLoans > 0
                       ? 'হাতধার ${Money.taka(handLoans)} সহ'
                       : null,
@@ -345,18 +345,18 @@ class _Notice extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.warningSurface,
+        color: context.palette.warningSurface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off_outlined,
-              size: 18, color: AppColors.warning),
+          Icon(Icons.cloud_off_outlined,
+              size: 18, color: context.palette.warning),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(text,
                 style:
-                    const TextStyle(fontSize: 12.5, color: AppColors.warning)),
+                    TextStyle(fontSize: 12.5, color: context.palette.warning)),
           ),
         ],
       ),
@@ -485,7 +485,7 @@ class _CollectionsDuesCard extends StatelessWidget {
                   child: _Stat(
                     label: 'আজকের আদায়',
                     value: Money.taka(collections!.amount),
-                    colour: AppColors.success,
+                    colour: context.palette.success,
                     detail: collections!.count == null
                         ? null
                         : '${collections!.count} টি আদায়',
@@ -496,7 +496,7 @@ class _CollectionsDuesCard extends StatelessWidget {
                   child: _Stat(
                     label: 'মোট বকেয়া',
                     value: Money.taka(dues!.amount),
-                    colour: AppColors.danger,
+                    colour: context.palette.danger,
                     detail:
                         dues!.shops == null ? null : '${dues!.shops} টি দোকান',
                   ),
@@ -641,13 +641,13 @@ class _PrincipalsCard extends StatelessWidget {
             figure('মোট ইনফ্লো', Money.taka(line.inflow)),
             // ⭐ লোকসান কথায়, লাল — ওয়েবের বাক্সের মতো, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
             figure('কমিশন (${line.basisRate})', line.commissionText,
-                colour: line.isLoss ? AppColors.danger : null),
+                colour: line.isLoss ? context.palette.danger : null),
             figure('প্রিন্সিপালকে পাঠানো', Money.taka(line.paid)),
             figure('বাকি ইনফ্লো', line.balanceLabel,
                 size: 16,
                 colour: (line.balance ?? 0) > 0
-                    ? AppColors.danger
-                    : AppColors.success),
+                    ? context.palette.danger
+                    : context.palette.success),
           ],
         ],
       ),
@@ -688,11 +688,11 @@ class _ApprovalsCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.warningSurface,
+              color: context.palette.warningSurface,
               borderRadius: BorderRadius.circular(10),
             ),
             child:
-                const Icon(Icons.fact_check_outlined, color: AppColors.warning),
+                Icon(Icons.fact_check_outlined, color: context.palette.warning),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

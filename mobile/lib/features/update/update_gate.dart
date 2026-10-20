@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/retired_build.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
@@ -102,7 +101,7 @@ class _UpdateNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.pendingSurface,
+      color: context.palette.pendingSurface,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
             AppSpacing.md, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
@@ -112,16 +111,16 @@ class _UpdateNotice extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.system_update_outlined,
-                    size: 18, color: AppColors.pending),
+                Icon(Icons.system_update_outlined,
+                    size: 18, color: context.palette.pending),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     'নতুন সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.pending),
+                        color: context.palette.pending),
                   ),
                 ),
                 IconButton(
@@ -137,7 +136,7 @@ class _UpdateNotice extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 26, right: AppSpacing.sm, top: 2),
                 child: Text('• $line',
-                    style: const TextStyle(fontSize: 12.5, color: AppColors.pending)),
+                    style: TextStyle(fontSize: 12.5, color: context.palette.pending)),
               ),
             // docs/Contract section 6, rule kha: the app downloads, checks
             // and hands over its own update. No link, no browser.
@@ -178,8 +177,8 @@ class _UpdateWall extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.system_update,
-                    size: 56, color: AppColors.warning),
+                Icon(Icons.system_update,
+                    size: 56, color: context.palette.warning),
                 const SizedBox(height: AppSpacing.md),
                 const Text(
                   'এই সংস্করণটি আর ব্যবহার করা যাবে না',
@@ -198,16 +197,16 @@ class _UpdateWall extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: AppColors.dangerSurface,
+                      color: context.palette.dangerSurface,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       children: [
                         Text(
                           'এই ফোনে $pending টি অর্ডার এখনো পাঠানো হয়নি',
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.danger),
+                              color: context.palette.danger),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppSpacing.xs),

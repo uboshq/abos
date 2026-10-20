@@ -102,7 +102,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     leading: Icon(
                       n.owesSignature ? Icons.draw_outlined : (n.standing == 'unread' ? Icons.mark_email_unread_outlined : Icons.drafts_outlined),
                       color: n.owesSignature
-                          ? AppColors.danger
+                          ? context.palette.danger
                           : (n.standing == 'unread' ? AppColors.primary : context.palette.onSurfaceMuted),
                     ),
                     title: Text(n.title,
@@ -203,14 +203,14 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
             const Divider(height: AppSpacing.xl),
             if (n.ackDeadline != null && !signed)
               Text('সইয়ের শেষ সময় ${_when(n.ackDeadline)}',
-                  style: TextStyle(color: _standing == 'overdue' || _standing == 'escalated' ? AppColors.danger : AppColors.warning)),
+                  style: TextStyle(color: _standing == 'overdue' || _standing == 'escalated' ? context.palette.danger : context.palette.warning)),
             if (signed)
-              const Row(
-                key: ValueKey('notice-signed'),
+              Row(
+                key: const ValueKey('notice-signed'),
                 children: [
-                  Icon(Icons.verified_outlined, color: AppColors.success),
-                  SizedBox(width: AppSpacing.xs),
-                  Text('আপনি সই দিয়েছেন', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w700)),
+                  Icon(Icons.verified_outlined, color: context.palette.success),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text('আপনি সই দিয়েছেন', style: TextStyle(color: context.palette.success, fontWeight: FontWeight.w700)),
                 ],
               )
             else
@@ -223,7 +223,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                child: Text(_error!, style: TextStyle(color: context.palette.danger)),
               ),
           ],
         ],

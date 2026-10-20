@@ -221,15 +221,15 @@ class ModuleMenuPage extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: AppSpacing.sm),
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.pendingSurface,
+              color: context.palette.pendingSurface,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(children: [
-              const Icon(Icons.schedule_outlined, size: 20, color: AppColors.pending),
+              Icon(Icons.schedule_outlined, size: 20, color: context.palette.pending),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                   child: Text(note!,
-                      style: const TextStyle(fontSize: 13, color: AppColors.pending))),
+                      style: TextStyle(fontSize: 13, color: context.palette.pending))),
             ]),
           ),
         for (final group in groups) ...[
@@ -302,9 +302,9 @@ class _MenuRow extends StatelessWidget {
           ? null
           : Row(mainAxisSize: MainAxisSize.min, children: [
               if (favourite)
-                const Padding(
-                  padding: EdgeInsets.only(right: AppSpacing.xs),
-                  child: Icon(Icons.star_rounded, size: 18, color: AppColors.warning),
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: Icon(Icons.star_rounded, size: 18, color: context.palette.warning),
                 ),
               if (count > 0)
                 Container(

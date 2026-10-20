@@ -5,7 +5,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -45,7 +44,7 @@ class MoneyResult {
 
 void _tell(BuildContext context, MoneyResult r) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       key: const ValueKey('money-result'),
-      backgroundColor: r.done ? AppColors.success : AppColors.pending,
+      backgroundColor: r.done ? context.palette.success : context.palette.pending,
       content: Text(r.notice.isEmpty ? (r.done ? 'বসেছে।' : 'সইয়ের অপেক্ষায়।') : r.notice),
     ));
 
@@ -871,7 +870,7 @@ class CfoScreen extends StatelessWidget {
                   for (final f in _maps(d['figures'])) FactRow(f['label'].toString(), f['value'].toString()),
                   if (liquidity.isNotEmpty)
                     FactRow(liquidity['label']?.toString() ?? '', liquidity['rule']?.toString() ?? '',
-                        colour: liquidity['code'] == 'good' ? AppColors.success : AppColors.danger),
+                        colour: liquidity['code'] == 'good' ? context.palette.success : context.palette.danger),
                 ]),
               ),
             ),

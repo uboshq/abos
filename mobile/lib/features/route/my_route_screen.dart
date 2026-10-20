@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/my_route_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
@@ -137,7 +136,7 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
                         Text('এ মাসে আদায়: ${Money.taka(shop.collections)}'),
                         Text('বকেয়া: ${Money.taka(shop.outstanding)}',
                             style: TextStyle(
-                              color: shop.outstanding > 0 ? AppColors.danger : context.palette.onSurfaceMuted,
+                              color: shop.outstanding > 0 ? context.palette.danger : context.palette.onSurfaceMuted,
                               fontWeight: FontWeight.w600,
                             )),
                       ],

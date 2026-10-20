@@ -8,7 +8,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/documents_library/library_api.dart';
 import '../../core/navigation/recent_papers.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
@@ -51,7 +50,7 @@ String signatureWords(String state) => switch (state) {
     };
 
 Color _levelColour(BuildContext context, String level) => switch (level) {
-      'confidential' || 'highly_confidential' || 'restricted' => AppColors.danger,
+      'confidential' || 'highly_confidential' || 'restricted' => context.palette.danger,
       _ => context.palette.onSurfaceMuted,
     };
 
@@ -149,7 +148,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
                     style: TextStyle(color: _levelColour(context, d.level)),
                   ),
                   if (d.deleted)
-                    const Text('মোছা — ফেরানো ওয়েবে', style: TextStyle(color: AppColors.danger)),
+                    Text('মোছা — ফেরানো ওয়েবে', style: TextStyle(color: context.palette.danger)),
                 ],
               ),
               // ⓘ বিনের কাগজ খোলা যায় না — সার্ভারের দরজা ৪০৪ দিত
@@ -233,7 +232,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ফিরে যান')),
           FilledButton(
               key: const ValueKey('refuse-confirm'),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              style: FilledButton.styleFrom(backgroundColor: context.palette.danger),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('সই দেব না')),
         ],
@@ -320,13 +319,13 @@ class _DocumentScreenState extends State<DocumentScreen> {
             if (sig != null) ...[
               const SectionTitle('সই'),
               FactRow('অবস্থা', signatureWords(sig.state),
-                  colour: sig.state == 'signed' ? AppColors.success : sig.state == 'pending' ? AppColors.warning : null),
+                  colour: sig.state == 'signed' ? context.palette.success : sig.state == 'pending' ? context.palette.warning : null),
               for (final s in sig.signed)
                 FactRow(s.by, '${dayOf(s.at)}${s.current ? '' : ' · পুরনো ভার্সনে'}'),
               if (sig.approvalId != null)
                 Card(
                   key: const ValueKey('doc-sign-card'),
-                  color: AppColors.warningSurface,
+                  color: context.palette.warningSurface,
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(

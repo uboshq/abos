@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -124,9 +123,9 @@ class _RequestCard extends StatelessWidget {
 
   /// অবস্থার রং — অপেক্ষা হলুদ, হ্যাঁ সবুজ, না বা ফেরত লাল
   Color _tone(BuildContext context) => switch (r.status) {
-        'approved' => AppColors.success,
-        'rejected' || 'returned' => AppColors.danger,
-        'pending' => AppColors.warning,
+        'approved' => context.palette.success,
+        'rejected' || 'returned' => context.palette.danger,
+        'pending' => context.palette.warning,
         _ => context.palette.onSurfaceMuted,
       };
 

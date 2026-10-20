@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/sync_engine/sync_history_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
@@ -138,7 +137,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                               style: TextStyle(
                                 fontSize: 12.5,
                                 color: failures.first.isServerRefusal
-                                    ? AppColors.danger
+                                    ? context.palette.danger
                                     : context.palette.onSurfaceMuted,
                               ),
                             ),

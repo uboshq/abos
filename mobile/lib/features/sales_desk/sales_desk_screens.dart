@@ -4,7 +4,6 @@ import '../../core/records/money.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/sales_desk_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -166,7 +165,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
                 Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
               ]),
               Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted(context)),
-              for (final w in o.list('warnings')) Text('⚠ $w', style: const TextStyle(fontSize: 13, color: AppColors.warning)),
+              for (final w in o.list('warnings')) Text('⚠ $w', style: TextStyle(fontSize: 13, color: context.palette.warning)),
             ]),
           if (p.rows('held').isNotEmpty) ...[
             const Padding(
@@ -208,10 +207,10 @@ class PrintQueueScreen extends StatelessWidget {
               Row(children: [
                 Expanded(child: Text(j.text('document_no').isEmpty ? '—' : j.text('document_no'), style: _bold)),
                 Text(j.text('status_label'),
-                    style: TextStyle(color: j.flag('failed') ? AppColors.danger : AppColors.warning, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: j.flag('failed') ? context.palette.danger : context.palette.warning, fontWeight: FontWeight.w600)),
               ]),
               if (j.text('paper').isNotEmpty) Text('কাগজ: ${j.text('paper')}', style: _muted(context)),
-              if (j.text('failure').isNotEmpty) Text('কারণ: ${j.text('failure')}', style: const TextStyle(color: AppColors.danger)),
+              if (j.text('failure').isNotEmpty) Text('কারণ: ${j.text('failure')}', style: TextStyle(color: context.palette.danger)),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -294,7 +293,7 @@ class _DeliveryPerformanceScreenState extends State<DeliveryPerformanceScreen> {
             _card(key: ValueKey('late-${d.text('id')}'), children: [
               Row(children: [
                 Expanded(child: NumberWithParty(number: d.text('document_no'), party: _customerOf(d), style: _bold)),
-                Text('${d.number('days_late')} দিন দেরি', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
+                Text('${d.number('days_late')} দিন দেরি', style: TextStyle(color: context.palette.danger, fontWeight: FontWeight.w600)),
               ]),
               Text('কথা ছিল ${d.text('promised_on')} · পৌঁছেছে ${d.text('arrived_on')}', style: _muted(context)),
               Text([if (d.text('order_no').isNotEmpty) 'আদেশ ${d.text('order_no')}', d.text('stage')].join(' · '), style: _muted(context)),

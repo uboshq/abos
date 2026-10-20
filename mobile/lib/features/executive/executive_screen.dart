@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -177,8 +176,8 @@ class _FigureGrid extends StatelessWidget {
                             Text(cellText(f.value, money: f.money),
                                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                             if (f.partial)
-                              const Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
-                                  style: TextStyle(fontSize: 11, color: AppColors.warning)),
+                              Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
+                                  style: TextStyle(fontSize: 11, color: context.palette.warning)),
                           ],
                         ),
                       ),
@@ -211,8 +210,8 @@ class _CreditCard extends StatelessWidget {
               _pair(context, 'বাকি বন্ধ গ্রাহক', '${credit.blocked} জন'),
               _pair(context, 'সীমা বাড়ানোর অনুরোধ', '${credit.pendingRequests}টা'),
               if (credit.partial)
-                const Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
-                    style: TextStyle(fontSize: 11, color: AppColors.warning)),
+                Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
+                    style: TextStyle(fontSize: 11, color: context.palette.warning)),
             ],
           ),
         ),
@@ -294,7 +293,7 @@ class _AlertTile extends StatelessWidget {
       child: ListTile(
         key: ValueKey('alert-${alert.kind}'),
         leading: Icon(hot ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-            color: hot ? AppColors.danger : AppColors.success),
+            color: hot ? context.palette.danger : context.palette.success),
         title: Text(ExecutiveToday.alertLabels[alert.kind] ?? alert.label),
         subtitle: alert.companies.length > 1
             ? Text(alert.companies
@@ -302,7 +301,7 @@ class _AlertTile extends StatelessWidget {
                 .join(' · '))
             : null,
         trailing: Text(hot ? '${alert.total}' : 'কিছু নেই',
-            style: TextStyle(fontWeight: FontWeight.w700, color: hot ? AppColors.danger : context.palette.onSurfaceMuted)),
+            style: TextStyle(fontWeight: FontWeight.w700, color: hot ? context.palette.danger : context.palette.onSurfaceMuted)),
       ),
     );
   }

@@ -5,7 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../../core/widgets/customer_line.dart';
@@ -194,13 +194,13 @@ class _ReturnScreenState extends State<ReturnScreen> {
           // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
           if (_error != null)
             Card(
-              color: AppColors.dangerSurface,
+              color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(_error!,
                     key: const ValueKey('return-error'),
-                    style: const TextStyle(
-                        color: AppColors.danger)),
+                    style: TextStyle(
+                        color: context.palette.danger)),
               ),
             ),
           if (setup != null && bill == null) ...[

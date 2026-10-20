@@ -13,7 +13,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../core/auth/token_storage.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/web_inside/web_files.dart';
 import '../../core/web_inside/web_inside.dart';
@@ -500,7 +500,7 @@ class _TextDialogState extends State<_TextDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: widget.title == null ? null : Text(widget.title!),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.message, style: TextStyle(color: widget.messageIsError ? AppColors.danger : null)),
+          Text(widget.message, style: TextStyle(color: widget.messageIsError ? context.palette.danger : null)),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             key: widget.fieldKey,

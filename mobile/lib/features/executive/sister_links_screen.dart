@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -73,7 +73,7 @@ class _SisterLinksScreenState extends State<SisterLinksScreen> {
             children: [
               const OwnerNote('এক কোম্পানির কোনো ক্রেতা বা সরবরাহকারী যদি আসলে আমাদেরই আরেকটা কোম্পানি হয়, জোড়া থাকলে গ্রুপের মোট '
                   'থেকে দুইয়ের মাঝের বিক্রি, পাওনা আর দেনা বাদ যায়। নাম মিলিয়ে কিছু আন্দাজ করা হয় না।'),
-              const OwnerNote('জোড়া দেওয়া আর তোলা ওয়েবের পাতায় — এখানে কেবল দেখা।', colour: AppColors.warning),
+              OwnerNote('জোড়া দেওয়া আর তোলা ওয়েবের পাতায় — এখানে কেবল দেখা।', colour: context.palette.warning),
               // ⛔ পুরনো সার্ভার গোনা না পাঠালে পট্টিই নেই — এক পাতার গোনা দেখানো মিথ্যা মোট
               if (_total != null) OwnerTotal(key: const ValueKey('links-total'), label: 'মোট জোড়া', value: '$_totalটা'),
               if (_busy) const LinearProgressIndicator(),

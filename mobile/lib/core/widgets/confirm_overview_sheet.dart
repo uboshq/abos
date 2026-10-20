@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/records/money.dart';
 
-import '../theme/app_colors.dart';
+import '../theme/app_palette.dart';
 import '../theme/app_spacing.dart';
 
 /// নিশ্চিতের আগে সারাংশ — সার্ভারের কেন্দ্রীয় ইঞ্জিনের ([[ConfirmOverview]]) একই আকার, নিচ থেকে ওঠা পাতায়
@@ -74,10 +74,10 @@ class ConfirmOverviewSheet extends StatelessWidget {
   final ConfirmOverviewData data;
   final bool allowDraft;
 
-  Color _tone(String tone) => switch (tone) {
-        'bad' || 'stop' => AppColors.danger,
-        'good' => AppColors.success,
-        'warn' => AppColors.warning,
+  Color _tone(BuildContext context, String tone) => switch (tone) {
+        'bad' || 'stop' => context.palette.danger,
+        'good' => context.palette.success,
+        'warn' => context.palette.warning,
         _ => Colors.black87,
       };
 
@@ -106,13 +106,13 @@ class ConfirmOverviewSheet extends StatelessWidget {
             for (final t in data.totals)
               Text('${t.label}: ${Money.taka(t.amount)}', style: t.strong ? text.titleMedium : null),
             const Divider(),
-            for (final m in data.money) Text('${m.label}: ${Money.taka(m.amount)}', style: TextStyle(color: _tone(m.tone))),
+            for (final m in data.money) Text('${m.label}: ${Money.taka(m.amount)}', style: TextStyle(color: _tone(context, m.tone))),
             for (final n in data.notes)
               Card(
-                color: n.tone == 'stop' ? AppColors.dangerSurface : null,
+                color: n.tone == 'stop' ? context.palette.dangerSurface : null,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Text(n.text, style: TextStyle(color: _tone(n.tone))),
+                  child: Text(n.text, style: TextStyle(color: _tone(context, n.tone))),
                 ),
               ),
             const SizedBox(height: AppSpacing.md),

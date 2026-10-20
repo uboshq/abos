@@ -7,7 +7,6 @@ import '../../core/api_client/once_key.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../printing/document_actions_sheet.dart';
@@ -234,7 +233,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
                 icon: order.awaitingMe
                     ? Icons.draw_outlined
                     : (widget.api.forOrders ? Icons.receipt_long_outlined : Icons.local_shipping_outlined),
-                tone: order.awaitingMe ? AppColors.warning : null,
+                tone: order.awaitingMe ? context.palette.warning : null,
                 party: order.customer ?? 'গ্রাহক নেই',
                 number: order.no,
                 detail: order.date,
@@ -517,10 +516,10 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
           // ⓘ সবুজ পটে নিজের গাঢ় সবুজ লেখা — থিমের লেখা অন্ধকার মোডে এই হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১)
           if (_done != null)
             Card(
-              color: AppColors.successSurface,
+              color: context.palette.successSurface,
               child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(_done!, style: const TextStyle(color: AppColors.success))),
+                  child: Text(_done!, style: TextStyle(color: context.palette.success))),
             ),
           if (order != null) ...[
             // ⭐ মাথায় গ্রাহক "নাম · পয়েন্ট · শাখা", তার নিচে কাগজের নম্বর · তারিখ (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
@@ -717,10 +716,10 @@ class OrderChips extends StatelessWidget {
   /// ⭐ অবস্থার রং জোড়ায় (পট, লেখা) — রঙিন জোড়া দুই মোডে একই; ধরন না চিনলে থিমের মলিন পট আর লেখা
   /// (নকশার নিয়ম ০.৪.৩৮ §১; a4, ১৯ অক্টোবর ২০২৬: context.palette — আলোতে হুবহু আগের রং)
   static (Color, Color) colours(String tone, AppPalette p) => switch (tone) {
-        'success' => (AppColors.successSurface, AppColors.success),
-        'warning' => (AppColors.warningSurface, AppColors.warning),
-        'danger' => (AppColors.dangerSurface, AppColors.danger),
-        'info' || 'pending' => (AppColors.pendingSurface, AppColors.pending),
+        'success' => (p.successSurface, p.success),
+        'warning' => (p.warningSurface, p.warning),
+        'danger' => (p.dangerSurface, p.danger),
+        'info' || 'pending' => (p.pendingSurface, p.pending),
         _ => (p.surfaceMuted, p.onSurfaceMuted),
       };
 
@@ -787,10 +786,10 @@ class _ErrorCard extends StatelessWidget {
   @override
   // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১)
   Widget build(BuildContext context) => Card(
-        color: AppColors.dangerSurface,
+        color: context.palette.dangerSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Text(text, style: const TextStyle(color: AppColors.danger)),
+          child: Text(text, style: TextStyle(color: context.palette.danger)),
         ),
       );
 }

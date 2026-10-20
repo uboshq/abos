@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/sync_engine/reference_sync.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
@@ -213,7 +213,7 @@ class _DueTile extends StatelessWidget {
     return DesignListRow(
       key: ValueKey('due-${row.customer.id}'),
       icon: Icons.account_balance_wallet_outlined,
-      tone: AppColors.danger,
+      tone: context.palette.danger,
       name: row.customer.label,
       second: code == null ? 'বকেয়া' : '$code · বকেয়া',
       amount: row.due.outstandingInView,

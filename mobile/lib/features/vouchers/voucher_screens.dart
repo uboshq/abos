@@ -7,7 +7,7 @@ import '../../core/auth/session_profile.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/records/money.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
@@ -16,10 +16,10 @@ import '../../core/widgets/unsaved_guard.dart';
 /// ⭐ ফোনে অফিসের লোকের ভাউচার — আদায়, পরিশোধ, খরচ (বাকিতেও), জাবেদা, কন্ট্রা (মালিক, ৭ অক্টোবর ২০২৬; সার্ভার 2bd0f620)।
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস। নিয়ম সব সার্ভারের — এখানে কেবল যা না থাকলে পাঠানোই অর্থহীন। ⛔ কেবল নেট থাকলে।
-Color voucherStateColour(String state) => switch (state) {
-      'posted' => AppColors.success,
-      'cancelled' => AppColors.danger,
-      _ => AppColors.pending,
+Color voucherStateColour(BuildContext context, String state) => switch (state) {
+      'posted' => context.palette.success,
+      'cancelled' => context.palette.danger,
+      _ => context.palette.pending,
     };
 
 class VoucherListScreen extends StatefulWidget {
@@ -236,7 +236,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                   title: Text('${v.no} · ${v.kindLabel}'),
                   subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(Money.taka(v.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(v.stateWords, style: TextStyle(color: voucherStateColour(v.state))),
+                    Text(v.stateWords, style: TextStyle(color: voucherStateColour(context, v.state))),
                     if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
                     // ⭐ টাকা কোন খাতে — জমা/থেকে/দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬); পুরনো সার্ভারে কিছুই নয়
                     if (v.moneyLine case final money?) Text(money, key: ValueKey('voucher-money-${v.id}')),
@@ -348,14 +348,14 @@ class _VoucherScreenState extends State<VoucherScreen> {
           if (_error != null) BooksError(_error!),
           if (_notice != null)
             Card(
-                color: AppColors.successSurface,
+                color: context.palette.successSurface,
                 child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Text(_notice!, key: const ValueKey('voucher-notice'), style: const TextStyle(color: AppColors.success)))),
+                    child: Text(_notice!, key: const ValueKey('voucher-notice'), style: TextStyle(color: context.palette.success)))),
           if (p == null && _error == null) const LinearProgressIndicator(),
           if (p != null) ...[
             FactRow('ধরন', p.row.kindLabel),
-            FactRow('অবস্থা', p.row.stateWords, colour: voucherStateColour(p.row.state)),
+            FactRow('অবস্থা', p.row.stateWords, colour: voucherStateColour(context, p.row.state)),
             FactRow('টাকা', Money.taka(p.row.amount)),
             if (p.row.date != null) FactRow('তারিখ', dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),
@@ -377,10 +377,10 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 trailing: Text(l.debit > 0 ? 'ডেবিট ${Money.taka(l.debit)}' : 'ক্রেডিট ${Money.taka(l.credit)}'),
               ),
             if (p.awaitsAnotherHand)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Text('নিজের লেখা ভাউচার নিজে পাকা হয় না — অন্য কেউ খুলে "পাকা করুন" চাপবেন।',
-                    key: ValueKey('voucher-another-hand'), style: TextStyle(color: AppColors.pending)),
+                    key: const ValueKey('voucher-another-hand'), style: TextStyle(color: context.palette.pending)),
               ),
             if (p.canPost) ...[
               if (_needsTrx)
@@ -644,12 +644,12 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
           if (_error != null)
             Card(
                 key: const ValueKey('voucher-error'),
-                color: AppColors.dangerSurface,
+                color: context.palette.dangerSurface,
                 child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Text(_error!, style: const TextStyle(color: AppColors.danger)))),
+                    child: Text(_error!, style: TextStyle(color: context.palette.danger)))),
           if (s?.cashHiddenReason != null)
-            Text(s!.cashHiddenReason!, style: const TextStyle(color: AppColors.warning, fontSize: 12.5)),
+            Text(s!.cashHiddenReason!, style: TextStyle(color: context.palette.warning, fontSize: 12.5)),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('তারিখ'),

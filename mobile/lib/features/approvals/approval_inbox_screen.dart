@@ -7,7 +7,7 @@ import '../printing/document_actions_sheet.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
@@ -398,7 +398,7 @@ class _ApprovalCard extends StatelessWidget {
                     TextButton(
                       onPressed: onReject,
                       style: TextButton.styleFrom(
-                          foregroundColor: AppColors.danger),
+                          foregroundColor: context.palette.danger),
                       child: const Text('প্রত্যাখ্যান'),
                     ),
                     FilledButton(
@@ -484,7 +484,7 @@ class _RemarksDialogState extends State<_RemarksDialog> {
           onPressed:
               ready ? () => Navigator.of(context).pop(_controller.text) : null,
           style: widget.destructive
-              ? FilledButton.styleFrom(backgroundColor: AppColors.danger)
+              ? FilledButton.styleFrom(backgroundColor: context.palette.danger)
               : null,
           child: Text(widget.confirmLabel),
         ),
@@ -522,7 +522,7 @@ class _ApprovalDetails extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Text(errorMessageFor(snap.error!, fallback: 'বিস্তারিত আনা গেল না।'),
-                      style: const TextStyle(color: AppColors.danger)),
+                      style: TextStyle(color: context.palette.danger)),
                 );
               }
               final s = snap.data!;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/apk_installer.dart';
 import '../../core/update/app_version_check.dart';
@@ -85,9 +85,9 @@ class _UpdateDownloadButtonState extends State<UpdateDownloadButton> {
     // A release that cannot be verified offers no button. A download that
     // cannot be checked must not be started.
     if (!widget.release.installable) {
-      return const _Message(
+      return _Message(
         'এই আপডেট অ্যাপের ভেতর থেকে বসানো যাচ্ছে না। অফিসে জানান।',
-        colour: AppColors.warning,
+        colour: context.palette.warning,
       );
     }
 
@@ -103,12 +103,12 @@ class _UpdateDownloadButtonState extends State<UpdateDownloadButton> {
             minHeight: 4,
           ),
           const SizedBox(height: AppSpacing.xs),
-          _Message(_stepText(_step!, _progress), colour: AppColors.pending),
+          _Message(_stepText(_step!, _progress), colour: context.palette.pending),
         ] else if (result?.outcome == UpdateOutcome.needsPermission) ...[
-          const _Message(
+          _Message(
             'এই অ্যাপ থেকে আপডেট বসানোর অনুমতি দেওয়া নেই। সেটিংসে গিয়ে '
             '"এই উৎস থেকে অনুমতি দিন" চালু করুন, তারপর ফিরে এসে আবার চাপুন।',
-            colour: AppColors.warning,
+            colour: context.palette.warning,
           ),
           const SizedBox(height: AppSpacing.xs),
           _button(
@@ -121,7 +121,7 @@ class _UpdateDownloadButtonState extends State<UpdateDownloadButton> {
           _button(widget.label, _start, icon: Icons.download_outlined),
           if (result != null) ...[
             const SizedBox(height: AppSpacing.xs),
-            _Message(_failureText(result), colour: AppColors.danger),
+            _Message(_failureText(result), colour: context.palette.danger),
           ],
         ],
       ],

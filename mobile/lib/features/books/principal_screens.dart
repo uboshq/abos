@@ -4,7 +4,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
@@ -117,8 +116,8 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: p.balance > 0
-                                ? AppColors.danger
-                                : AppColors.success)),
+                                ? context.palette.danger
+                                : context.palette.success)),
                     onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                             builder: (_) => PrincipalLedgerScreen(
@@ -203,7 +202,7 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
                   if (p.phone.isNotEmpty) FactRow('ফোন', p.phone),
                   FactRow('জের', p.balanceLabel,
                       colour:
-                          p.balance > 0 ? AppColors.danger : AppColors.success),
+                          p.balance > 0 ? context.palette.danger : context.palette.success),
                   FactRow('শেষ ক্রয়',
                       p.lastPurchaseOn == null ? '—' : dayOf(p.lastPurchaseOn)),
                 ]),

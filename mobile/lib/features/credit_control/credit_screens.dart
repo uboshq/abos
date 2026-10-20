@@ -7,7 +7,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
@@ -175,8 +174,8 @@ class _DashboardCard extends StatelessWidget {
                   key: const ValueKey('credit-exposure'),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
               if (!dash.on)
-                const Text('এই প্রতিষ্ঠানে সীমার যাচাই বন্ধ — অঙ্কগুলো কেবল দেখার জন্য।',
-                    style: TextStyle(fontSize: 12, color: AppColors.warning)),
+                Text('এই প্রতিষ্ঠানে সীমার যাচাই বন্ধ — অঙ্কগুলো কেবল দেখার জন্য।',
+                    style: TextStyle(fontSize: 12, color: context.palette.warning)),
               const SizedBox(height: AppSpacing.xs),
               creditPair(context, 'মোট সীমা', Money.taka(dash.limit)),
               creditPair(context, 'অবশিষ্ট সীমা', Money.taka(dash.available)),
@@ -198,7 +197,7 @@ Widget creditPair(BuildContext context, String label, String value, {bool danger
         children: [
           Expanded(child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted))),
           Text(value,
-              style: TextStyle(fontWeight: FontWeight.w600, color: danger ? AppColors.danger : context.palette.onSurface)),
+              style: TextStyle(fontWeight: FontWeight.w600, color: danger ? context.palette.danger : context.palette.onSurface)),
         ],
       ),
     );
@@ -237,7 +236,7 @@ class _ListRow extends StatelessWidget {
         isThreeLine: lines.length > 1,
         trailing: amount == null
             ? null
-            : Text(Money.taka(amount), style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.danger)),
+            : Text(Money.taka(amount), style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.danger)),
         onTap: row.customer.isEmpty ? null : () => context.push('/home/credit/${row.customer}'),
       ),
     );
@@ -322,17 +321,17 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
             if (d != null && d.block != null)
               Card(
                 key: const ValueKey('credit-blocked'),
-                color: AppColors.dangerSurface,
+                color: context.palette.dangerSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('বাকি বন্ধ', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.danger)),
+                      Text('বাকি বন্ধ', style: TextStyle(fontWeight: FontWeight.w800, color: context.palette.danger)),
                       Text(d.block!.reason),
                       if (d.block!.bouncedCheque)
-                        const Text('চেক ফেরতের বন্ধ — খোলেন কেবল মালিক',
-                            style: TextStyle(fontSize: 12, color: AppColors.danger)),
+                        Text('চেক ফেরতের বন্ধ — খোলেন কেবল মালিক',
+                            style: TextStyle(fontSize: 12, color: context.palette.danger)),
                       if (d.mayLift)
                         Align(
                           alignment: Alignment.centerRight,
@@ -370,7 +369,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                         Text('সীমার ${Money.plain(p.usedPercent)}% ব্যবহৃত',
                             style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
                       if (p.stop != null && p.stop!.isNotEmpty)
-                        Text(p.stop!, style: const TextStyle(color: AppColors.danger)),
+                        Text(p.stop!, style: TextStyle(color: context.palette.danger)),
                       const SizedBox(height: AppSpacing.xs),
                       creditPair(context, 'সীমা', Money.taka(p.baseLimit)),
                       if (p.tempLimit != null)
@@ -436,7 +435,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                     trailing: Text(Money.taka(b.unpaid),
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: b.daysOverdue > 0 ? AppColors.danger : context.palette.onSurface)),
+                            color: b.daysOverdue > 0 ? context.palette.danger : context.palette.onSurface)),
                   ),
                 ),
               const _SectionTitle('সীমা বাড়ানোর অনুরোধ'),
@@ -487,11 +486,11 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
         decoration: BoxDecoration(
-          color: danger ? AppColors.dangerSurface : AppColors.successSurface,
+          color: danger ? context.palette.dangerSurface : context.palette.successSurface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(text,
-            style: TextStyle(fontWeight: FontWeight.w700, color: danger ? AppColors.danger : AppColors.success)),
+            style: TextStyle(fontWeight: FontWeight.w700, color: danger ? context.palette.danger : context.palette.success)),
       );
 }
 
@@ -614,7 +613,7 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text(_error!, key: const ValueKey('request-error'), style: const TextStyle(color: AppColors.danger)),
+                  child: Text(_error!, key: const ValueKey('request-error'), style: TextStyle(color: context.palette.danger)),
                 ),
               const SizedBox(height: AppSpacing.sm),
               FilledButton(
@@ -682,7 +681,7 @@ class _LiftBlockDialogState extends State<LiftBlockDialog> {
               maxLength: 500,
               decoration: const InputDecoration(labelText: 'কারণ'),
             ),
-            if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            if (_error != null) Text(_error!, style: TextStyle(color: context.palette.danger)),
           ],
         ),
         actions: [

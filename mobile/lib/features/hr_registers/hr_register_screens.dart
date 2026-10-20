@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/hr/hr_register_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -62,9 +61,9 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
   }
 
   Color _tone(String? status) => switch (status) {
-        'present' => AppColors.success,
-        'absent' => AppColors.danger,
-        'leave' || 'holiday' => AppColors.warning,
+        'present' => context.palette.success,
+        'absent' => context.palette.danger,
+        'leave' || 'holiday' => context.palette.warning,
         _ => context.palette.onSurfaceMuted,
       };
 
@@ -94,7 +93,7 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
             else if (p != null) ...[
               Card(
                 key: const ValueKey('attendance-counts'),
-                color: AppColors.successSurface,
+                color: context.palette.successSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

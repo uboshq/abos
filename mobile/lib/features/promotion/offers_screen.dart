@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/promotion/offers_api.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
@@ -91,7 +90,7 @@ class _OfferCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.local_offer, color: AppColors.success, size: 20),
+                Icon(Icons.local_offer, color: context.palette.success, size: 20),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(child: Text(offer.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
               ],
@@ -106,7 +105,7 @@ class _OfferCard extends StatelessWidget {
             for (final rule in offer.rules)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text('• $rule', style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.success)),
+                child: Text('• $rule', style: TextStyle(fontWeight: FontWeight.w600, color: context.palette.success)),
               ),
             if (whom != null) FactRow('কার জন্য', whom),
             FactRow(
@@ -116,7 +115,7 @@ class _OfferCard extends StatelessWidget {
                 if (offer.endsAt != null) offer.endsAt!,
                 if (left != null) left == 0 ? 'আজই শেষ' : 'আর $left দিন',
               ].join(' · '),
-              colour: left != null && left <= 3 ? AppColors.danger : null,
+              colour: left != null && left <= 3 ? context.palette.danger : null,
             ),
           ],
         ),

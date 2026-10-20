@@ -161,7 +161,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               PaperListRow(
                 key: ValueKey('tracked-row-${sale.id}'),
                 icon: Icons.local_shipping_outlined,
-                tone: _saleColour(sale),
+                tone: _saleColour(context, sale),
                 party: sale.customer ?? 'গ্রাহক নেই',
                 // ⭐ বিক্রির নম্বর আর কাগজের নিজের নম্বর, দুটোই — খোঁজায় যেকোনোটা চলে
                 number: _numbers(sale),
@@ -199,14 +199,14 @@ AppStatusKind _kind(TrackedSale sale) => switch (sale.step) {
     };
 
 /// সার্ভারের ৯ রং ([trackingColours]); পুরনো সার্ভারে category না এলে ধাপ থেকে আন্দাজ।
-Color _saleColour(TrackedSale sale) =>
-    trackingColours[sale.category] ?? _colour(sale.step);
+Color _saleColour(BuildContext context, TrackedSale sale) =>
+    trackingColours[sale.category] ?? _colour(context, sale.step);
 
-Color _colour(String step) => switch (step) {
-      'delivered' => AppColors.success,
-      'cancelled' || 'credit_hold' => AppColors.danger,
-      'approval' || 'draft' => AppColors.warning,
-      _ => AppColors.pending,
+Color _colour(BuildContext context, String step) => switch (step) {
+      'delivered' => context.palette.success,
+      'cancelled' || 'credit_hold' => context.palette.danger,
+      'approval' || 'draft' => context.palette.warning,
+      _ => context.palette.pending,
     };
 
 /// একটা বিক্রির সময়রেখা — পুরনো আগে, এক লাইনে এক ঘটনা।
@@ -301,7 +301,7 @@ class _StoryScreenState extends State<_StoryScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.circle, size: 10, color: _colour(e.step)),
+                    Icon(Icons.circle, size: 10, color: _colour(context, e.step)),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Column(

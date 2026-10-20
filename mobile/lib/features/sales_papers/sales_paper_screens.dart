@@ -6,7 +6,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -167,7 +166,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                         Text(Money.valueOrZero(r.due) > 0.004 ? 'বাকি ${Money.taka(r.due)}' : 'শোধ',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: Money.valueOrZero(r.due) > 0.004 ? AppColors.danger : AppColors.success)),
+                                color: Money.valueOrZero(r.due) > 0.004 ? context.palette.danger : context.palette.success)),
                     ],
                   ),
                   onTap: () => context.push('/home/${RecentPapers.path(widget.kind.recentKind, r.id)}'),
@@ -306,7 +305,7 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                       if (invoice && p.collected != null) _pair(context, 'আদায়', Money.taka(p.collected)),
                       if (invoice && p.due != null)
                         _pair(context, 'বাকি', Money.taka(p.due), bold: true,
-                            colour: Money.valueOrZero(p.due) > 0.004 ? AppColors.danger : AppColors.success),
+                            colour: Money.valueOrZero(p.due) > 0.004 ? context.palette.danger : context.palette.success),
                     ],
                   ),
                 ),

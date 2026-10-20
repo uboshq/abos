@@ -4,7 +4,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/design_list_row.dart';
 import '../../core/widgets/empty_state.dart';
@@ -187,7 +187,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
               DesignListRow(
                 key: ValueKey('money-in-${row.no}'),
                 icon: Icons.south_west,
-                tone: AppColors.success,
+                tone: context.palette.success,
                 name: row.customer.isEmpty ? '—' : row.customer,
                 // ⓘ দ্বিতীয় লাইনে নম্বর · তারিখ · পদ্ধতি — তালিকা কেবল পাকা আদায়ের (সার্ভার POSTED ছাঁকে), তাই আলাদা অবস্থার চিপ নেই
                 second: '${row.no} · ${dayOf(row.date)} · ${MoneyInRow.methodLabel(row.method)}',

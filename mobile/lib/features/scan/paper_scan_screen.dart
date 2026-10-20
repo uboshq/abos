@@ -7,7 +7,7 @@ import '../../core/orders/paper_scan_api.dart';
 import '../../core/permissions/permission_rationale.dart';
 import 'receive_screen.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 
 /// কাগজের QR স্ক্যান — গেটম্যান "মাল বেরোল", ডেলিভারিম্যান "ডেলিভারি নিশ্চিত" (0.4.3)।
@@ -233,11 +233,11 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
         if (_busy) const LinearProgressIndicator(),
         if (_error != null)
           Card(
-            color: AppColors.dangerSurface,
+            color: context.palette.dangerSurface,
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Text(_error!,
-                  style: const TextStyle(color: AppColors.danger)),
+                  style: TextStyle(color: context.palette.danger)),
             ),
           ),
         if (paper != null) ...[
@@ -263,8 +263,8 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
           Text(paper.transportNamed ? 'গাড়ি বসানো আছে' : '⚠ গাড়ি বসানো নেই',
               style: TextStyle(
                   color: paper.transportNamed
-                      ? AppColors.success
-                      : AppColors.warning)),
+                      ? context.palette.success
+                      : context.palette.warning)),
           if (paper.vehicle != null) Text('গাড়ি ${paper.vehicle}'),
           if (paper.driver != null) Text('চালক ${paper.driver}'),
           if (paper.billTotal != null) ...[

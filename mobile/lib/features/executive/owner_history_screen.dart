@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -119,7 +119,7 @@ class _RowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
         key: ValueKey('history-row-${row.company}-${row.branch ?? 'whole'}'),
-        color: row.whole ? AppColors.successSurface : null,
+        color: row.whole ? context.palette.successSurface : null,
         margin: const EdgeInsets.only(bottom: AppSpacing.xs),
         child: ExpansionTile(
           title: Text(row.name, style: TextStyle(fontWeight: row.whole ? FontWeight.w800 : FontWeight.w600)),

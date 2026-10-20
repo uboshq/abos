@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_palette.dart';
 
 enum AppStatusKind { success, warning, danger, pending, neutral }
@@ -17,10 +16,10 @@ class AppStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color bg, Color fg) = switch (kind) {
-      AppStatusKind.success => (AppColors.successSurface, AppColors.success),
-      AppStatusKind.warning => (AppColors.warningSurface, AppColors.warning),
-      AppStatusKind.danger => (AppColors.dangerSurface, AppColors.danger),
-      AppStatusKind.pending => (AppColors.pendingSurface, AppColors.pending),
+      AppStatusKind.success => (context.palette.successSurface, context.palette.success),
+      AppStatusKind.warning => (context.palette.warningSurface, context.palette.warning),
+      AppStatusKind.danger => (context.palette.dangerSurface, context.palette.danger),
+      AppStatusKind.pending => (context.palette.pendingSurface, context.palette.pending),
       AppStatusKind.neutral => (context.palette.surfaceMuted, context.palette.onSurfaceMuted),
     };
 

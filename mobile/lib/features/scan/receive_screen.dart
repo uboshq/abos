@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -191,7 +190,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                         return short > 0.00001
                             ? Text('কম: ${Money.plain(short)}',
                                 key: ValueKey('receive-short-${l.line}'),
-                                style: const TextStyle(color: AppColors.danger))
+                                style: TextStyle(color: context.palette.danger))
                             : const SizedBox.shrink();
                       }),
                     ],
@@ -203,7 +202,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Text(_error!,
                     key: const ValueKey('receive-error'),
-                    style: const TextStyle(color: AppColors.danger)),
+                    style: TextStyle(color: context.palette.danger)),
               ),
             FilledButton(
               key: const ValueKey('receive-done'),

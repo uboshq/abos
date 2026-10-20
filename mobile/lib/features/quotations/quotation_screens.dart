@@ -7,7 +7,7 @@ import '../../core/orders/quotation_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -369,7 +369,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
           if (_error != null) _ErrorCard(_error!),
           if (_done != null)
             Card(
-              color: AppColors.successSurface,
+              color: context.palette.successSurface,
               child: Padding(padding: const EdgeInsets.all(AppSpacing.md), child: Text(_done!)),
             ),
           if (q != null) ...[
@@ -422,7 +422,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
               ),
               OutlinedButton(
                 key: const Key('quotation-do-reject'),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                style: OutlinedButton.styleFrom(foregroundColor: context.palette.danger),
                 onPressed: _busy
                     ? null
                     : () {
@@ -550,10 +550,10 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        color: AppColors.dangerSurface,
+        color: context.palette.dangerSurface,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Text(text, style: const TextStyle(color: AppColors.danger)),
+          child: Text(text, style: TextStyle(color: context.palette.danger)),
         ),
       );
 }

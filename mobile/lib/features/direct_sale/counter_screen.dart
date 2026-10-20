@@ -9,7 +9,6 @@ import '../../core/orders/sales_return_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
@@ -1080,8 +1079,8 @@ class _CounterScreenState extends State<CounterScreen> {
               padding: const EdgeInsets.symmetric(
                   vertical: AppSpacing.sm, horizontal: 2),
               // ⓘ বাছা বোতাম সবুজ পটে নিজের গাঢ় সবুজ লেখায় — জোড়া রং, অন্ধকার মোডেও পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১)
-              backgroundColor: marked ? AppColors.successSurface : null,
-              foregroundColor: marked ? AppColors.success : colour,
+              backgroundColor: marked ? context.palette.successSurface : null,
+              foregroundColor: marked ? context.palette.success : colour,
             ),
             onPressed: onPressed,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1178,21 +1177,21 @@ class _CounterScreenState extends State<CounterScreen> {
           // অন্ধকার মোডে হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
           if (_error != null)
             Card(
-              color: AppColors.dangerSurface,
+              color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(_error!,
                     key: const ValueKey('counter-error'),
-                    style: const TextStyle(
-                        color: AppColors.danger)),
+                    style: TextStyle(
+                        color: context.palette.danger)),
               ),
             ),
           if (_resumeNo != null)
             Card(
-              color: AppColors.warningSurface,
+              color: context.palette.warningSurface,
               child: ListTile(
                 key: const ValueKey('counter-resume-banner'),
-                textColor: AppColors.warning,
+                textColor: context.palette.warning,
                 title: Text('খসড়া $_resumeNo খোলা আছে'),
                 subtitle: const Text(
                     'নিশ্চিত করলে এই খসড়াটাই পাকা হবে, নতুন বিল নয়।'),
@@ -1236,14 +1235,14 @@ class _CounterScreenState extends State<CounterScreen> {
           if (_noWarehouse)
             Card(
               key: const ValueKey('counter-no-warehouse'),
-              color: AppColors.warningSurface,
+              color: context.palette.warningSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
                     setup!.warehouses.isEmpty
                         ? 'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'
                         : 'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।',
-                    style: const TextStyle(color: AppColors.warning)),
+                    style: TextStyle(color: context.palette.warning)),
               ),
             ),
           if (setup != null &&

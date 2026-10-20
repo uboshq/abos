@@ -5,7 +5,6 @@ import '../../core/api_client/once_key.dart';
 import '../../core/orders/deposit_request_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -215,8 +214,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
               style: TextStyle(color: context.palette.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.md),
           if (_busy) const LinearProgressIndicator(),
-          if (_error != null) _note2(_error!, AppColors.danger, AppColors.dangerSurface),
-          if (_done != null) _note2(_done!, AppColors.success, AppColors.successSurface),
+          if (_error != null) _note2(_error!, context.palette.danger, context.palette.dangerSurface),
+          if (_done != null) _note2(_done!, context.palette.success, context.palette.successSurface),
           TextField(
             controller: _amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -284,7 +283,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
           if (_method != 'cash')
             OutlinedButton.icon(
               onPressed: _busy ? null : _pickSlip,
-              icon: Icon(_slip == null ? Icons.photo_camera_outlined : Icons.check_circle, color: _slip == null ? null : AppColors.success),
+              icon: Icon(_slip == null ? Icons.photo_camera_outlined : Icons.check_circle, color: _slip == null ? null : context.palette.success),
               label: Text(_slip == null ? 'স্লিপের ছবি তুলুন' : 'ছবি নেওয়া হয়েছে — আবার তুলুন'),
             ),
           const SizedBox(height: AppSpacing.sm),
@@ -306,9 +305,9 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                     Text(row.statusLabel,
                         style: TextStyle(
                             color: switch (row.status) {
-                          'accepted' => AppColors.success,
-                          'rejected' => AppColors.danger,
-                          _ => AppColors.pending,
+                          'accepted' => context.palette.success,
+                          'rejected' => context.palette.danger,
+                          _ => context.palette.pending,
                         })),
                     if (row.date != null) Text('তারিখ ${row.date}'),
                     if (row.submittedBy != null) Text('পাঠালেন ${row.submittedBy}'),
@@ -316,7 +315,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                     for (final (no, amount) in row.bills) Text('বিল $no · ${Money.taka(amount)}'),
                     if (row.status == 'rejected' || (row.reason ?? '').isNotEmpty)
                       Text('কারণ: ${(row.reason ?? '').isEmpty ? 'জানানো হয়নি' : row.reason}',
-                          style: row.status == 'rejected' ? const TextStyle(color: AppColors.danger) : null),
+                          style: row.status == 'rejected' ? TextStyle(color: context.palette.danger) : null),
                   ],
                 ),
               ),

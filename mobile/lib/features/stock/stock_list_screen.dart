@@ -5,7 +5,7 @@ import '../../core/records/report_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/stock_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
@@ -227,8 +227,8 @@ class _StockTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                         color: row.available > 0
-                            ? AppColors.success
-                            : AppColors.danger,
+                            ? context.palette.success
+                            : context.palette.danger,
                       ),
                     ),
                     Text('বিক্রয়যোগ্য',

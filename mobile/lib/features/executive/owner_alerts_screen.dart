@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -66,7 +65,7 @@ class _AlertCard extends StatelessWidget {
             Row(
               children: [
                 Icon(hot ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                    color: hot ? AppColors.danger : AppColors.success),
+                    color: hot ? context.palette.danger : context.palette.success),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(ExecutiveToday.alertLabels[alert.kind] ?? alert.label,
@@ -74,13 +73,13 @@ class _AlertCard extends StatelessWidget {
                 ),
                 Text(hot ? Money.plain(alert.total) : 'কিছু নেই',
                     key: ValueKey('alert-total-${alert.kind}'),
-                    style: TextStyle(fontWeight: FontWeight.w800, color: hot ? AppColors.danger : context.palette.onSurfaceMuted)),
+                    style: TextStyle(fontWeight: FontWeight.w800, color: hot ? context.palette.danger : context.palette.onSurfaceMuted)),
               ],
             ),
             if (many) ...[
               for (final p in alert.parts)
                 FactRow(p.name, p.count == null ? 'অনুমতি নেই' : Money.plain(p.count),
-                    colour: (p.count ?? 0) > 0 ? AppColors.danger : context.palette.onSurfaceMuted),
+                    colour: (p.count ?? 0) > 0 ? context.palette.danger : context.palette.onSurfaceMuted),
               FactRow('গ্রুপের মোট', Money.plain(alert.total)),
             ],
           ],

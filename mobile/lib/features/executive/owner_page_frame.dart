@@ -137,7 +137,7 @@ class OwnerTotal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        color: AppColors.successSurface,
+        color: context.palette.successSurface,
         margin: const EdgeInsets.only(bottom: AppSpacing.xs),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -198,9 +198,9 @@ String? ownerChange(String? change) {
 }
 
 /// ঋণাত্মক সংখ্যা লাল — লোকসান, কম মার্জিন
-Color? ownerTone(String? value) {
+Color? ownerTone(BuildContext context, String? value) {
   final v = Money.value(value);
-  return v != null && v < 0 ? AppColors.danger : null;
+  return v != null && v < 0 ? context.palette.danger : null;
 }
 
 /// দুই তারিখ, ওয়েবের রূপে — "01/10/2026 – 19/10/2026"
@@ -245,7 +245,7 @@ class OwnerBars extends StatelessWidget {
         for (final r in rows) ...[
           Text(r.label, style: const TextStyle(fontSize: 12.5)),
           bar(r.first, AppColors.primary),
-          if (secondLabel != null) bar(r.second, AppColors.warning),
+          if (secondLabel != null) bar(r.second, context.palette.warning),
           const SizedBox(height: AppSpacing.xs),
         ],
       ],

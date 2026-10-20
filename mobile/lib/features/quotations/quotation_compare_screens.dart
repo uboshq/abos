@@ -5,7 +5,6 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/orders/quotation_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -257,7 +256,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
     Widget cell(String? text, {bool changed = false, bool bold = false}) => Container(
           width: 150,
           padding: const EdgeInsets.all(6),
-          color: changed ? AppColors.pending.withValues(alpha: 0.18) : null,
+          color: changed ? context.palette.pending.withValues(alpha: 0.18) : null,
           child: Text(text ?? '—', style: TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w400)),
         );
     Widget row(String label, List<Widget> cells) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

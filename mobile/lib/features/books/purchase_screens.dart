@@ -4,7 +4,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
@@ -281,7 +281,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                     FactRow('পরিশোধিত', Money.taka(d.row.paid)),
                   if (d.row.due != null)
                     FactRow('বাকি', Money.taka(d.row.due),
-                        colour: (d.row.due ?? 0) > 0 ? AppColors.danger : null),
+                        colour: (d.row.due ?? 0) > 0 ? context.palette.danger : null),
                   if (d.narration.isNotEmpty) FactRow('বিবরণ', d.narration),
                 ]),
               ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -191,11 +190,11 @@ class _Figure extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(ownerCell(now), style: TextStyle(fontWeight: FontWeight.w700, color: ownerTone(now))),
+              Text(ownerCell(now), style: TextStyle(fontWeight: FontWeight.w700, color: ownerTone(context, now))),
               if (now != ownerHidden) ...[
                 Text('তখন ${ownerCell(row.was[column])}', style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
                 if (change != null)
-                  Text(change, style: TextStyle(fontSize: 11.5, color: up ? AppColors.success : AppColors.danger)),
+                  Text(change, style: TextStyle(fontSize: 11.5, color: up ? context.palette.success : context.palette.danger)),
               ],
             ],
           ),

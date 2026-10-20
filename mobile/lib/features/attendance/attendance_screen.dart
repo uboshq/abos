@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../core/records/attendance_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -181,8 +180,8 @@ class _TodayCard extends StatelessWidget {
             Text('আজ', style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: AppSpacing.lg),
             if (marked) ...[
-              const Icon(Icons.check_circle,
-                  size: 48, color: AppColors.success),
+              Icon(Icons.check_circle,
+                  size: 48, color: context.palette.success),
               const SizedBox(height: AppSpacing.sm),
               const Text('আজকের হাজিরা তোলা হয়েছে',
                   style: TextStyle(fontWeight: FontWeight.w700)),
@@ -222,8 +221,8 @@ class _DayTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = row.date;
     final colour = switch (row.status) {
-      'present' => AppColors.success,
-      'absent' => AppColors.danger,
+      'present' => context.palette.success,
+      'absent' => context.palette.danger,
       _ => context.palette.onSurfaceMuted,
     };
 

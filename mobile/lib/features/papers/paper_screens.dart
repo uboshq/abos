@@ -8,7 +8,6 @@ import '../../core/menu/me_api.dart';
 import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -404,9 +403,9 @@ class _PaperScreenState extends State<PaperScreen> {
 
   Widget _signature(BuildContext context, PaperSignature s) {
     final colour = switch (s.status) {
-      'approved' => AppColors.success,
-      'rejected' || 'cancelled' => AppColors.danger,
-      _ => AppColors.pending,
+      'approved' => context.palette.success,
+      'rejected' || 'cancelled' => context.palette.danger,
+      _ => context.palette.pending,
     };
 
     return Card(

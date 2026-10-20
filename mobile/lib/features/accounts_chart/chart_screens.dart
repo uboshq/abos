@@ -211,7 +211,7 @@ class _LedgerTotals extends StatelessWidget {
 
     return Card(
       key: const ValueKey('ledger-totals'),
-      color: AppColors.successSurface,
+      color: context.palette.successSurface,
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),

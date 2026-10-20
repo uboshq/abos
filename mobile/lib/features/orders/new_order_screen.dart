@@ -10,7 +10,6 @@ import '../../core/records/product_record.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_cache.dart';
 import '../../core/sync_engine/sync_engine.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
@@ -838,14 +837,14 @@ class DueNotice extends StatelessWidget {
     // ⭐ পট আর লেখা জোড়ায় জোড়ায় — সীমা পার: লাল পটে লাল; বকেয়া: হলুদ পটে নিজের গাঢ় হলুদ; বাকি: context.palette-এর
     // মলিন পট আর লেখা — কোনো পটে উল্টো মোডের লেখা বসে না (নকশার নিয়ম ০.৪.৩৮ §১)
     final fill = willCross
-        ? AppColors.dangerSurface
+        ? context.palette.dangerSurface
         : owes
-            ? AppColors.warningSurface
+            ? context.palette.warningSurface
             : context.palette.surfaceMuted;
     final ink = willCross
-        ? AppColors.danger
+        ? context.palette.danger
         : owes
-            ? AppColors.warning
+            ? context.palette.warning
             : context.palette.onSurfaceMuted;
 
     return Padding(

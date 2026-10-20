@@ -302,7 +302,7 @@ class _AppLockGateState extends State<AppLockGate> {
             const SizedBox(height: AppSpacing.md),
             _pinBox(const ValueKey('app-pin-field'), _pinField, 'PIN'),
             if (_pinError != null)
-              Text(_pinError!, key: const ValueKey('app-pin-error'), style: const TextStyle(color: AppColors.danger)),
+              Text(_pinError!, key: const ValueKey('app-pin-error'), style: TextStyle(color: context.palette.danger)),
             const SizedBox(height: AppSpacing.md),
             FilledButton(key: const ValueKey('app-pin-open'), onPressed: _enterPin, child: const Text('খুলুন')),
             if (widget.onSignOut != null) TextButton(onPressed: widget.onSignOut, child: const Text('বেরিয়ে যান')),
@@ -333,7 +333,7 @@ class _AppLockGateState extends State<AppLockGate> {
             _pinBox(const ValueKey('app-pin-new-field'), _pinField, 'নতুন PIN'),
             _pinBox(const ValueKey('app-pin-new-again'), _pinAgain, 'আবার একই PIN'),
             if (_pinError != null)
-              Text(_pinError!, key: const ValueKey('app-pin-error'), style: const TextStyle(color: AppColors.danger)),
+              Text(_pinError!, key: const ValueKey('app-pin-error'), style: TextStyle(color: context.palette.danger)),
             const SizedBox(height: AppSpacing.md),
             FilledButton(key: const ValueKey('app-pin-save'), onPressed: _savePin, child: const Text('সংরক্ষণ')),
             if (widget.onSignOut != null) TextButton(onPressed: widget.onSignOut, child: const Text('বেরিয়ে যান')),

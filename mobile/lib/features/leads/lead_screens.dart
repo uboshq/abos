@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/lead_api.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -294,10 +294,10 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
           const SizedBox(height: AppSpacing.md),
           if (_error != null)
             Card(
-              color: AppColors.dangerSurface,
+              color: context.palette.dangerSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                child: Text(_error!, style: TextStyle(color: context.palette.danger)),
               ),
             ),
           if (_busy) const LinearProgressIndicator(),

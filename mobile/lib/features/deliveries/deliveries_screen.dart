@@ -4,7 +4,6 @@ import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/paper_scan_api.dart';
 import '../../core/records/money.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -218,7 +217,7 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
             if (_busy) const LinearProgressIndicator(),
             if (_notice != null)
               Card(
-                color: AppColors.successSurface,
+                color: context.palette.successSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child:
@@ -227,11 +226,11 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
               ),
             if (_error != null)
               Card(
-                color: AppColors.dangerSurface,
+                color: context.palette.dangerSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Text(_error!,
-                      style: const TextStyle(color: AppColors.danger)),
+                      style: TextStyle(color: context.palette.danger)),
                 ),
               ),
             // ⭐ গোটা তালিকার গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
