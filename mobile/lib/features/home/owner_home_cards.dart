@@ -140,7 +140,8 @@ class OwnerMoneyCard extends StatelessWidget {
                     ]),
                   ),
               if (extra.isNotEmpty)
-                Text('মোটের মধ্যে $extra', key: const ValueKey('owner-money-extra'), style: TextStyle(fontSize: 12, color: fg)),
+                Text('মোটের মধ্যে $extra',
+                    key: const ValueKey('owner-money-extra'), style: TextStyle(fontSize: 12, color: fg)),
             ]),
           ),
         ),
@@ -204,7 +205,8 @@ class HomeSectionCard extends StatelessWidget {
 
 /// একটা লাইন: নাম বাঁয়ে, টাকা ডানে (w700)। মোটের লাইন মোটা। জায়গা না হলে টাকা নিচের লাইনে ডানে নামে — কাটে না।
 class AmountLine extends StatelessWidget {
-  const AmountLine({super.key, required this.label, required this.amount, this.total = false, this.labelIsName = false});
+  const AmountLine(
+      {super.key, required this.label, required this.amount, this.total = false, this.labelIsName = false});
 
   final String label;
   final double? amount;
@@ -314,7 +316,8 @@ class _WaitingPapersCardState extends State<WaitingPapersCard> {
 /// "পয়েন্ট · শাখা" আর বাকি কথা; ডানে টাকা (থাকলে) আর তার নিচে a6-এর [AppStatusChip.compact]। পুরো সারি চাপা যায়
 /// (অন্তত ৫৬dp)। TalkBack: সারি বলে নম্বর, পুরো নাম আর টাকা কথায়; চিপ নিজে পুরো অবস্থার বাক্য বলে।
 class PaperRow extends StatelessWidget {
-  const PaperRow({super.key, required this.no, required this.party, this.detail, this.amount, required this.chip, this.onTap});
+  const PaperRow(
+      {super.key, required this.no, required this.party, this.detail, this.amount, required this.chip, this.onTap});
 
   final String no;
 
@@ -342,33 +345,39 @@ class PaperRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 56),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(children: [
-            Expanded(
-              child: Semantics(
-                container: true,
-                button: onTap != null,
-                label: spoken,
-                excludeSemantics: true,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  CustomerLine(first, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                  if (second.isNotEmpty) Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+          child: LayoutBuilder(
+            builder: (context, box) => Row(children: [
+              Expanded(
+                child: Semantics(
+                  container: true,
+                  button: onTap != null,
+                  label: spoken,
+                  excludeSemantics: true,
+                  child:
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    CustomerLine(first,
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                    if (second.isNotEmpty) Text(second, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // ⓘ টাকা আর চিপ ডানের কিনারে, সারির ৪৫%-এর বেশি নয় — বড় অক্ষরে মোড়ে, ছাপায় না
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+                  if (amount != null)
+                    ExcludeSemantics(
+                      child: Text(Money.taka(amount),
+                          textAlign: TextAlign.end,
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                    ),
+                  if (amount != null) const SizedBox(height: 2),
+                  chip,
                 ]),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                if (amount != null)
-                  ExcludeSemantics(
-                    child: Text(Money.taka(amount),
-                        textAlign: TextAlign.end,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
-                  ),
-                if (amount != null) const SizedBox(height: 2),
-                chip,
-              ]),
-            ),
-          ]),
+            ]),
+          ),
         ),
       ),
     );
@@ -391,7 +400,10 @@ class WaitingPaperRow extends StatelessWidget {
       party: record.party ?? record.summary ?? record.documentTypeLabel,
       detail: record.amount == null ? record.documentTypeLabel : Money.taka(record.amount),
       // ⚠️ সার্ভার মোট ধাপ (levels) পাঠায় না — তাই a6-এর চিপ "2-এর 1" নয়, "সইয়ের অপেক্ষায়" বলে; levels এলে নিজেই বসবে
-      chip: AppStatusChip.compact(state: PaperState.waiting, level: level > 0 ? level : null, levels: (record.payload['levels'] as num?)?.toInt()),
+      chip: AppStatusChip.compact(
+          state: PaperState.waiting,
+          level: level > 0 ? level : null,
+          levels: (record.payload['levels'] as num?)?.toInt()),
       onTap: onTap,
     );
   }
@@ -416,7 +428,8 @@ class BranchSalesCard extends StatelessWidget {
       onAction: onOpen,
       children: [
         for (final l in lines ?? const <BranchSale>[])
-          AmountLine(key: ValueKey('branch-sale-${l.branch}'), label: l.branch.isEmpty ? '—' : l.branch, amount: l.amount),
+          AmountLine(
+              key: ValueKey('branch-sale-${l.branch}'), label: l.branch.isEmpty ? '—' : l.branch, amount: l.amount),
         AmountLine(key: const ValueKey('branch-sales-total'), label: 'মোট', amount: total, total: true),
       ],
     );

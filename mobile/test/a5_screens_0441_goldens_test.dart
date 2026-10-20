@@ -30,6 +30,11 @@ void main() {
     await _load('Roboto', ['$_material/roboto-regular.ttf', '$_material/roboto-medium.ttf', '$_material/roboto-bold.ttf']);
     await _load('Bangla', ['C:/Windows/Fonts/Shonar.ttf', 'C:/Windows/Fonts/Shonarb.ttf']);
     await _load('MaterialIcons', ['$_material/materialicons-regular.otf']);
+    // ⓘ a6-এর চিপের আইকন — material_symbols_icons-এর Rounded ফন্ট (a6-এর paper_state_goldens_test-এর একই পথ)
+    final config = File('.dart_tool/package_config.json').readAsStringSync();
+    final m = RegExp(r'"rootUri":\s*"([^"]*material_symbols_icons-[^"]*)"').firstMatch(config)!;
+    final root = Uri.parse(m.group(1)!).toFilePath(windows: Platform.isWindows);
+    await _load('packages/material_symbols_icons/MaterialSymbolsRounded', ['$root/lib/fonts/MaterialSymbolsRounded.ttf']);
   });
 
   final screens = <String, (Widget Function(), Future<void> Function(WidgetTester))>{
