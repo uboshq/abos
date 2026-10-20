@@ -7,8 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 const _stillPlain = {
   // ⓘ ওয়েব-দেখার পর্দা — নিজের বন্ধ, ছাপা, আবার-আনা বোতাম আর লোড-ফিতা বারেই; নীল বার ওগুলো ঢেকে দিত
   'lib/features/web_inside/web_inside_screen.dart',
-  // ⏳ a5-এর ভাগ (০.৪.৪১) — সরানো হলে এখান থেকে মুছে দাও
-  'lib/features/books/collect_screen.dart',
 };
 
 void main() {
