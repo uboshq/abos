@@ -243,7 +243,7 @@
                 --}}
                 {{-- ⛔ যিনি খুলেছেন তিনি বন্ধ করেন না (maker-checker, সেবাতেও একই পাহারা) — বোতামের জায়গায় কারণটা --}}
                 @if ($summary['agrees'] && ! \App\Core\Support\MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by))
-                    <p class="text-sm text-amber-700 dark:text-amber-300">{{ __('accounts::recon.needs_another_hand') }}</p>
+                    <p role="note" class="text-sm text-(--color-badge-pending-ink)">{{ __('accounts::recon.needs_another_hand') }}</p>
                 @elseif ($summary['agrees'])
                     <form method="POST" action="{{ route('accounts.reconciliation.confirm', $recon) }}">
                         @csrf
