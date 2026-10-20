@@ -108,18 +108,20 @@
     <div id="general" class="mb-4 grid gap-4 lg:grid-cols-2">
         @foreach ([
             'hr::profile.personal_info' => [
-                'hr::field.father_name' => $employee->father_name,
-                'hr::field.mother_name' => $employee->mother_name,
-                'hr::field.date_of_birth' => $employee->date_of_birth?->format('d M Y'),
-                'hr::field.blood_group' => $employee->blood_group,
+                {{-- ⭐ ব্যক্তিগত তথ্য — পরিচয়ের চাবি ছাড়া ঢাকা ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯) --}}
+                'hr::field.father_name' => \App\Core\Security\FieldSecurity::show($employee, 'father_name', $employee->father_name),
+                'hr::field.mother_name' => \App\Core\Security\FieldSecurity::show($employee, 'mother_name', $employee->mother_name),
+                'hr::field.date_of_birth' => \App\Core\Security\FieldSecurity::show($employee, 'date_of_birth', $employee->date_of_birth?->format('d M Y')),
+                'hr::field.blood_group' => \App\Core\Security\FieldSecurity::show($employee, 'blood_group', $employee->blood_group),
                 'hr::field.mobile' => $employee->mobile,
                 'hr::field.email' => $employee->email,
                 'hr::field.national_id' => \App\Core\Security\FieldSecurity::show(
                     $employee, 'national_id', $employee->national_id),
-                'hr::field.present_address' => $employee->present_address,
-                'hr::field.permanent_address' => $employee->permanent_address,
-                'hr::field.emergency_name' => collect([$employee->emergency_name, $employee->emergency_relation ? '('.$employee->emergency_relation.')' : null])->filter()->implode(' '),
-                'hr::field.emergency_mobile' => $employee->emergency_mobile,
+                'hr::field.present_address' => \App\Core\Security\FieldSecurity::show($employee, 'present_address', $employee->present_address),
+                'hr::field.permanent_address' => \App\Core\Security\FieldSecurity::show($employee, 'permanent_address', $employee->permanent_address),
+                'hr::field.emergency_name' => \App\Core\Security\FieldSecurity::show($employee, 'emergency_name',
+                    collect([$employee->emergency_name, $employee->emergency_relation ? '('.$employee->emergency_relation.')' : null])->filter()->implode(' ')),
+                'hr::field.emergency_mobile' => \App\Core\Security\FieldSecurity::show($employee, 'emergency_mobile', $employee->emergency_mobile),
             ],
             'hr::profile.job_info' => [
                 'hr::field.department' => $employee->department?->name(),

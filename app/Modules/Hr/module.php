@@ -454,12 +454,8 @@ return [
     ],
 
     'sensitive_fields' => [
-        Employee::class => [
-            'national_id' => 'hr.identity.view',
-            'bank_account_no' => 'hr.identity.view',
-            'bank_routing_no' => 'hr.identity.view',
-            'mfs_number' => 'hr.identity.view',
-        ],
+        // ⭐ পরিচয় আর ব্যক্তিগত তথ্য — এক তালিকা ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯)
+        Employee::class => array_fill_keys(Employee::GUARDED, 'hr.identity.view'),
         Payslip::class => [
             'bank_account_no' => 'hr.identity.view',
             'bank_routing_no' => 'hr.identity.view',

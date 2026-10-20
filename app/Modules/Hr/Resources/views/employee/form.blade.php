@@ -46,8 +46,10 @@
                             :value="old('name_en', $employee->name_en)" required />
                 <x-ui.field name="name_bn" :label="__('hr::field.employee_name_bn')"
                             :value="old('name_bn', $employee->name_bn)" />
-                <x-ui.field name="father_name" :label="__('hr::field.father_name')"
-                            :value="old('father_name', $employee->father_name)" />
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'father_name'))
+                    <x-ui.field name="father_name" :label="__('hr::field.father_name')"
+                                :value="old('father_name', $employee->father_name)" />
+                @endif
                 <x-ui.field name="mobile" :label="__('hr::field.mobile')"
                             :value="old('mobile', $employee->mobile)" />
                 <x-ui.field name="email" type="email" :label="__('hr::field.email')"
@@ -95,23 +97,26 @@
             </div>
 
             <div class="grid gap-3 md:grid-cols-3">
-                <x-ui.field name="date_of_birth" type="date" :label="__('hr::field.date_of_birth')"
-                            :value="old('date_of_birth', $employee->date_of_birth?->toDateString())" />
-                <x-ui.field name="mother_name" :label="__('hr::field.mother_name')"
-                            :value="old('mother_name', $employee->mother_name)" />
-                <x-ui.select name="blood_group" :label="__('hr::field.blood_group')"
-                             :options="collect($bloodGroups)->mapWithKeys(fn ($g) => [$g => $g])"
-                             :selected="old('blood_group', $employee->blood_group)" placeholder="-" />
-                <x-ui.field name="present_address" :label="__('hr::field.present_address')"
-                            :value="old('present_address', $employee->present_address)" />
-                <x-ui.field name="permanent_address" :label="__('hr::field.permanent_address')"
-                            :value="old('permanent_address', $employee->permanent_address)" />
-                <x-ui.field name="emergency_name" :label="__('hr::field.emergency_name')"
-                            :value="old('emergency_name', $employee->emergency_name)" />
-                <x-ui.field name="emergency_relation" :label="__('hr::field.emergency_relation')"
-                            :value="old('emergency_relation', $employee->emergency_relation)" />
-                <x-ui.field name="emergency_mobile" :label="__('hr::field.emergency_mobile')"
-                            :value="old('emergency_mobile', $employee->emergency_mobile)" />
+                {{-- ⭐ ব্যক্তিগত তথ্য — পরিচয়ের চাবির পেছনে ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯) --}}
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'date_of_birth'))
+                    <x-ui.field name="date_of_birth" type="date" :label="__('hr::field.date_of_birth')"
+                                :value="old('date_of_birth', $employee->date_of_birth?->toDateString())" />
+                    <x-ui.field name="mother_name" :label="__('hr::field.mother_name')"
+                                :value="old('mother_name', $employee->mother_name)" />
+                    <x-ui.select name="blood_group" :label="__('hr::field.blood_group')"
+                                 :options="collect($bloodGroups)->mapWithKeys(fn ($g) => [$g => $g])"
+                                 :selected="old('blood_group', $employee->blood_group)" placeholder="-" />
+                    <x-ui.field name="present_address" :label="__('hr::field.present_address')"
+                                :value="old('present_address', $employee->present_address)" />
+                    <x-ui.field name="permanent_address" :label="__('hr::field.permanent_address')"
+                                :value="old('permanent_address', $employee->permanent_address)" />
+                    <x-ui.field name="emergency_name" :label="__('hr::field.emergency_name')"
+                                :value="old('emergency_name', $employee->emergency_name)" />
+                    <x-ui.field name="emergency_relation" :label="__('hr::field.emergency_relation')"
+                                :value="old('emergency_relation', $employee->emergency_relation)" />
+                    <x-ui.field name="emergency_mobile" :label="__('hr::field.emergency_mobile')"
+                                :value="old('emergency_mobile', $employee->emergency_mobile)" />
+                @endif
             </div>
         </section>
 

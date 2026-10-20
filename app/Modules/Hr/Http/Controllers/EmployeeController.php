@@ -276,7 +276,7 @@ class EmployeeController extends Controller implements HasMiddleware
          * অনুপস্থিত চাবি `$employee->update($data)` ছোঁয় না, তাই
          * আগের মানটা যেমন ছিল তেমনই থাকে।
          */
-        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+        foreach (Employee::GUARDED as $guarded) {
             if (! FieldSecurity::visible(Employee::class, $guarded)) {
                 $request->request->remove($guarded);
             }
@@ -402,7 +402,7 @@ class EmployeeController extends Controller implements HasMiddleware
          * ঠিকানার query-ও পড়ে: `PUT /hr/employees/12?bank_account_no=…` পাঠালে পরিচয়ের চাবি ছাড়াই ব্যাংকের নম্বর বদলাত, আর পরের
          * ব্যাংক-ফাইল বেতন সেই হিসাবে পাঠাত — যিনি বদলালেন তিনি আগের নম্বরটা কখনো দেখেননি।
          */
-        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+        foreach (Employee::GUARDED as $guarded) {
             if (! FieldSecurity::visible(Employee::class, $guarded)) {
                 unset($data[$guarded]);
             }

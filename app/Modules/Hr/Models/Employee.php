@@ -47,6 +47,19 @@ class Employee extends Model implements Drillable
 
     protected $table = 'hr_employees';
 
+    /**
+     * ⭐ পরিচয়ের চাবির (`hr.identity.view`) পেছনের ঘর — এক তালিকা: মডিউলের `sensitive_fields`, লেখার দুই পাহারা
+     * ([[EmployeeController]]) আর পর্দা এখান থেকেই পড়ে।
+     * ⛔ আগে কেবল NID আর ব্যাংক/MFS — জন্মতারিখ, বাবা-মায়ের নাম, রক্তের গ্রুপ, ঠিকানা আর জরুরি যোগাযোগ `hr.employee.view`
+     * থাকলেই সবাই দেখতেন (ঘাটতির তালিকা #১৯; GDPR ন্যূনতম তথ্য, ISO 27001 A.5.34; a6, ২০ অক্টোবর ২০২৬)।
+     *
+     * @var list<string>
+     */
+    public const GUARDED = [
+        'national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number',
+        'father_name', 'mother_name', 'date_of_birth', 'blood_group', 'present_address', 'permanent_address', 'emergency_name', 'emergency_relation', 'emergency_mobile',
+    ];
+
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
         'father_name', 'mobile', 'email', 'national_id',
