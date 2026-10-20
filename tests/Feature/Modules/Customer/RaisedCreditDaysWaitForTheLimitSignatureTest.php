@@ -146,6 +146,39 @@ final class RaisedCreditDaysWaitForTheLimitSignatureTest extends TestCase
         $this->assertSame(0, bccomp((string) $this->customer->fresh()->credit_limit, '0', 4), '⛔ দিনের সইয়ে সীমা বদলে গেল।');
     }
 
+    /**
+     * ⭐ দিনের নিজের ছক থাকলে সেটাই জেতে — দুই ছক চালু, দুই আলাদা সইকারী (fe, ২০ অক্টোবর ২০২৬)।
+     * ⓘ দিনের অনুরোধ যায় দিনের ছকের সইকারীর কাছে; সীমার ছকের সইকারী (মালিক) এতে সিদ্ধান্ত দিতে পারেন না।
+     */
+    public function test_with_both_flows_on_a_raise_goes_to_the_days_flows_own_signer(): void
+    {
+        $daysSigner = User::factory()->create(['is_active' => true]);
+        $daysSigner->companies()->attach($this->company, ['is_active' => true]);
+
+        $this->flows(limit: true, days: false);
+        $days = ApprovalFlow::create(['module' => 'customer', 'action' => 'credit_days']);
+        ApprovalFlowStep::create(['approval_flow_id' => $days->id, 'level' => 1,
+            'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $daysSigner->id]);
+        app()->forgetInstance(ApprovalEngine::class);
+        app()->forgetInstance(DocumentApproval::class);
+        app()->forgetInstance(CustomerService::class);
+
+        $this->assertSame(2, ApprovalFlow::query()->where('module', 'customer')->whereIn('action', ['credit_limit', 'credit_days'])->where('is_active', true)->count(),
+            'ফিক্সচার: দুইটা ছকই চালু থাকার কথা।');
+        $this->assertFixture(on: true);
+
+        $this->actingAs($this->clerk)
+            ->put(route('customer.update', $this->customer), $this->form(['credit_days' => '90']))
+            ->assertSessionHasErrors('credit_days');
+
+        $pending = $this->daysRequests()->where('status', Approval::PENDING)->sole();
+        $engine = app(ApprovalEngine::class);
+
+        $this->assertTrue($engine->canDecide($pending, $daysSigner), '⛔ দিনের ছকের সইকারী নিজের ছকের অনুরোধে সই দিতে পারেন না।');
+        $this->assertFalse($engine->canDecide($pending, $this->owner), '⛔ দিনের নিজের ছক থাকতেও অনুরোধ সীমার ছকে গেল।');
+        $this->assertSame(30, $this->days());
+    }
+
     // ── (খ) ────────────────────────────────────────────────────────────
 
     public function test_a_decrease_lands_at_once_with_the_signature_on(): void
