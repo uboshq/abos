@@ -4,21 +4,18 @@ declare(strict_types=1);
 
 namespace App\Core\Widgets;
 
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\PhoneModules;
 use App\Models\User;
+use InvalidArgumentException;
 
 /**
- * ⭐ ফোনের উইজেটের সারাংশগুলোর তালিকা — প্রতিটা উইজেট এখানে এক লাইন ([[WidgetSummary]])।
- *
- * ⓘ একটা তালিকা, পাঁচজন একসাথে লিখবে — প্রত্যেকে নিজের লাইন যোগ করে, মেশানোর সময় a4 মেলায়।
+ * ⭐ ফোনের উইজেটের সারাংশগুলো — প্রতিটা মডিউল নিজের `module.php`-তে `'phone_widgets' => [XSummary::class]` বলে
+ * ([[ModuleDefinition::$phoneWidgets]]); এখানে কেবল জড়ো করা। ⛔ কোর মডিউলের নাম জানে না ([[BoundariesTest]]; cb-র ধরা,
+ * ২০ অক্টোবর ২০২৬) — তাই এখানে কোনো তালিকা নেই।
  */
 final class WidgetSummaries
 {
-    /** @var list<class-string<WidgetSummary>> */
-    public const CLASSES = [
-        \App\Modules\Executive\Widgets\OwnerBoardSummary::class,
-    ];
-
     /** @var list<class-string<WidgetSummary>> কেবল টেস্টে — দরজার দাবি নিজের নকল সারাংশ বসায় */
     public static array $testing = [];
 
@@ -26,8 +23,16 @@ final class WidgetSummaries
     public static function all(): array
     {
         $out = [];
-        foreach ([...static::CLASSES, ...static::$testing] as $class) {
+        $classes = static::$testing;
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            array_push($classes, ...$module->phoneWidgets);
+        }
+        foreach ($classes as $class) {
             $summary = app($class);
+            if (isset($out[$summary->key()])) {
+                // ⛔ দুই উইজেট একই চাবি — একটা নীরবে আরেকটাকে চাপা দিলে ফোন ভুল উইজেট আঁকত
+                throw new InvalidArgumentException("Two phone widgets declare the key '{$summary->key()}'.");
+            }
             $out[$summary->key()] = $summary;
         }
 

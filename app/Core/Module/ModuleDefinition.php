@@ -15,6 +15,7 @@ use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
 use App\Core\Contracts\ReportFilterSource;
 use App\Core\Events\DomainEvent;
+use App\Core\Widgets\WidgetSummary;
 use Illuminate\Contracts\Auth\UserProvider;
 use InvalidArgumentException;
 
@@ -509,6 +510,16 @@ final class ModuleDefinition
          * @var array<class-string, array<string, string>>
          */
         public readonly array $sectionGuardedFields = [],
+
+        /**
+         * ⭐ ফোনের হোম-স্ক্রিন উইজেটের সারাংশ — WidgetSummary বাস্তবায়ন করে (মোবাইলের পরিকল্পনা ৪, অংশ ৯; ২০ অক্টোবর ২০২৬)।
+         *
+         * ⓘ মডিউল নিজে বলে, যেমন `integrity` — কোর মডিউলের নাম জানে না ([[BoundariesTest]]); দরজা
+         * ([[WidgetSummaries::all()]]) এখান থেকে পড়ে। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var list<class-string<WidgetSummary>>
+         */
+        public readonly array $phoneWidgets = [],
     ) {}
 
     /**
@@ -720,7 +731,31 @@ final class ModuleDefinition
                 $raw['permissions'] ?? [],
                 $path,
             ),
+            phoneWidgets: self::validatePhoneWidgets($raw['phone_widgets'] ?? [], $path),
         );
+    }
+
+    /**
+     * @param  list<mixed>  $widgets
+     * @return list<class-string<WidgetSummary>>
+     */
+    private static function validatePhoneWidgets(array $widgets, string $path): array
+    {
+        foreach ($widgets as $class) {
+            if (! is_string($class) || ! class_exists($class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: phone widget '".(is_string($class) ? $class : gettype($class))."' does not exist."
+                );
+            }
+
+            if (! is_subclass_of($class, WidgetSummary::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: phone widget {$class} must implement the WidgetSummary contract."
+                );
+            }
+        }
+
+        return array_values($widgets);
     }
 
     /**
