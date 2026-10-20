@@ -6,7 +6,7 @@ import 'summary_reader.dart';
 ///
 /// <p>সারাংশ (`widgets.sales_today`): `total`, `invoices`, `collections`, `change_percent` (গতকাল ০ হলে null), `link`।
 /// `yesterday` পড়া হয় না — তুলনা সার্ভারের `change_percent`-এ।
-///  - মাথার কোণে: হিসাবের সময় "১০:৪২" (ঢাকা); বড় অঙ্ক: মোট বিক্রি;
+///  - মাথার কোণে কিছু নয় (সময় আঁকিয়ের); বড় অঙ্ক: মোট বিক্রি;
 ///  - নিচে: "▲ গতকালের চেয়ে 12% বেশি" (সবুজ) / "▼ … কম" (লাল) / `change_percent` না থাকলে কিছু নয়;
 ///  - এক সারি: "বিল 38টা · আদায়" আর ডানে আদায়ের টাকা (টাকা গোপন-যোগ্য, বিলের সংখ্যা নয়)।
 class SalesTodayWidget extends LauncherWidgetKind {
@@ -35,8 +35,7 @@ class SalesTodayWidget extends LauncherWidgetKind {
       title: title,
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
-      // নকশা: মাথার কোণে হিসাবের সময়, ঢাকার ঘড়িতে — "১০:৪২"
-      corner: WidgetText(SummaryReader.dhakaClock(asOf)),
+      // ⓘ কোণ ফাঁকা: নকশার "১০:৪২" আঁকিয়ে নিজেই asOf থেকে লেখে (পুরনো হলে ধূসর) — কোণ দিলে ২×২-এ সময়টা সরে যেত
       hero: total == null ? null : WidgetHero(total, caption: _change(summary['change_percent'])),
       rows: [
         if (lineTitle.isNotEmpty) WidgetRow(title: WidgetText(lineTitle), amount: collected),
