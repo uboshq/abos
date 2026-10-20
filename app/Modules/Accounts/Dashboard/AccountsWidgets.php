@@ -147,6 +147,32 @@ final class AccountsWidgets implements DashboardWidgets
         return self::sumOf(Account::query()->ofMoneyKind(Account::MFS)->pluck('id')->all(), true);
     }
 
+    /**
+     * ⭐ MFS-এর প্রতিটা খাত আর তার জের — ফোনের হোমে MFS-এ চাপলে (মালিক, ২০ অক্টোবর ২০২৬: "MFS-এ কত আছে দেখায় না")।
+     * [[mfsBalance()]]-এর একই খাত, একই শাখা-ছাঁকনি, একই হিসাব — তাই সারির যোগফল ঠিক সেই মোট, পয়সা পর্যন্ত।
+     *
+     * @return list<array{name: string, balance: string}>
+     */
+    public static function mfsAccounts(): array
+    {
+        $accounts = Account::query()->ofMoneyKind(Account::MFS)->orderBy('code')->get(['id', 'code', 'name_en', 'name_bn']);
+
+        if ($accounts->isEmpty()) {
+            return [];
+        }
+
+        $sums = self::inView(LedgerEntry::query()->whereIn('account_id', $accounts->pluck('id')->all()), 'ledger_entries.branch_id')
+            ->groupBy('account_id')
+            ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->get()
+            ->keyBy('account_id');
+
+        return $accounts->map(fn (Account $account) => [
+            'name' => $account->name(),
+            'balance' => bcsub((string) ($sums[$account->id]->d ?? '0'), (string) ($sums[$account->id]->c ?? '0'), 4),
+        ])->values()->all();
+    }
+
     public static function bankBalance(): string
     {
         // ⛔ কেবল ব্যাংক — MFS আলাদা সংখ্যা, একসাথে গুনলে দুইটাই মিথ্যা
