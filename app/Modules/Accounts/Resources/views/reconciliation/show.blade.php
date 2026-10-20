@@ -242,7 +242,7 @@
                     এটা কেবল যাতে কেউ চেপে ভুল বার্তা না পান।
                 --}}
                 {{-- ⛔ যিনি খুলেছেন তিনি বন্ধ করেন না (maker-checker, সেবাতেও একই পাহারা) — বোতামের জায়গায় কারণটা --}}
-                @if ($summary['agrees'] && ! \App\Core\Support\MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by))
+                @if ($summary['agrees'] && app(\App\Modules\Accounts\Services\BankReconciliationService::class)->openerMayNotClose($recon))
                     <p role="note" class="text-sm text-(--color-badge-pending-ink)">{{ __('accounts::recon.needs_another_hand') }}</p>
                 @elseif ($summary['agrees'])
                     <form method="POST" action="{{ route('accounts.reconciliation.confirm', $recon) }}">

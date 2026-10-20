@@ -100,6 +100,24 @@ final class TheReconcilerClosedTheirOwnBankRecTest extends TestCase
         $this->assertTrue($recon->fresh()->isConfirmed(), 'super admin-এর ছাড় নেই — মালিক একা কাজ করলে আটকে গেল');
     }
 
+    /**
+     * ⛔ অনুমোদন বন্ধের কোম্পানি (UB, ADI, TCL — ভাউচারের লেখক ≠ পাকাকারী সুইচ বন্ধ) আটকায় না: মালিকের নিয়ম, অনুমোদন বন্ধ
+     * থাকলে নতুন কোনো সই কিছু আটকায় না, আর একজন মানুষের কোম্পানিও কাজ চালাতে পারে (fe, ২০ অক্টোবর ২০২৬)।
+     */
+    public function test_with_the_maker_checker_switch_off_the_one_accountant_closes_their_own(): void
+    {
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\VoucherService::MAKER_CHECKER, false);
+        $alone = $this->accountant();
+        $recon = $this->agreedReconOpenedBy($alone);
+
+        $this->actingAs($alone);
+        $this->get(route('accounts.reconciliation.show', $recon))->assertOk()
+            ->assertDontSee(__('accounts::recon.needs_another_hand'))
+            ->assertSee(route('accounts.reconciliation.confirm', $recon));
+        $this->post(route('accounts.reconciliation.confirm', $recon))->assertSessionHasNoErrors();
+        $this->assertTrue($recon->fresh()->isConfirmed(), '⛔ অনুমোদন বন্ধের কোম্পানিতে একা হিসাবরক্ষক আটকে গেলেন');
+    }
+
     public function test_a_reconciliation_that_does_not_agree_still_cannot_be_closed_by_the_second_hand(): void
     {
         $maker = $this->accountant();

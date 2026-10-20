@@ -203,6 +203,23 @@ final class BankReconciliationService
     }
 
     /**
+     * ⛔ এই মানুষ কি নিজের খোলা মিলকরণ বন্ধ করতে যাচ্ছেন — সুইচ চালু থাকলে তবেই আটকায়।
+     *
+     * <p>সুইচ ভাউচারের লেখক ≠ পাকাকারীর একই সুইচ (`accounts.voucher_maker_checker`, [[VoucherService::MAKER_CHECKER]]): নতুন
+     * কোম্পানিতে চালু, ঘোষণার দিনের পুরনো কোম্পানিগুলোতে (ADI, UB, TCL) মাইগ্রেশনে বন্ধ। ⛔ মালিকের নিয়ম — অনুমোদন বন্ধ থাকলে
+     * নতুন কোনো সই কিছু আটকায় না, একজন মানুষের কোম্পানিও আটকে যায় না (fe, ২০ অক্টোবর ২০২৬); আর মালিক (super admin) সবসময়
+     * নিজে বন্ধ করতে পারেন ([[MakerChecker]])। পর্দার বোতামও এটাই দেখে।
+     */
+    public function openerMayNotClose(BankReconciliation $recon): bool
+    {
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get(VoucherService::MAKER_CHECKER, true)) {
+            return false;
+        }
+
+        return ! MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by);
+    }
+
+    /**
      * মিলকরণ বন্ধ করা।
      *
      * অঙ্ক না মিললে আটকায়। এটাই পুরো ফিচারটার একমাত্র শক্ত দরজা — এটা
@@ -217,7 +234,7 @@ final class BankReconciliationService
     {
         $this->assertDraft($recon);
 
-        if (! MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by)) {
+        if ($this->openerMayNotClose($recon)) {
             throw ValidationException::withMessages(['status' => __('accounts::recon.needs_another_hand')]);
         }
 
