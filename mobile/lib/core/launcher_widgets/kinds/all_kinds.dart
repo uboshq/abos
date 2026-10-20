@@ -1,11 +1,15 @@
 import '../kit/widget_kind.dart';
+
 import 'bank_reconcile.dart';
+import 'challans_today.dart';
 import 'cheques.dart';
 import 'credit_limits.dart';
 import 'expenses.dart';
+import 'goods_incoming.dart';
 import 'money_in_hand.dart';
 import 'owner_board.dart';
 import 'profit.dart';
+import 'stock_alerts.dart';
 
 /// ⭐ হোম-স্ক্রিনের সব উইজেটের চাবি — এই ক্রমেই (পরিকল্পনা ৪, অংশ ৯; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
 ///
@@ -57,5 +61,8 @@ final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   const ExpensesWidget(), // expenses — cb
   const ProfitWidget(), // profit — cb
   const BankReconcileWidget(), // bank_reconcile — cb
+  const StockAlertsWidget(), // stock_alerts (ec)
+  const ChallansTodayWidget(), // challans_today (ec)
+  const GoodsIncomingWidget(), // goods_incoming (ec)
   const OwnerBoardWidget(),
 ];
