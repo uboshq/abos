@@ -1923,7 +1923,10 @@ return [
     ],
 
     // ⭐ ফোনের হোম-স্ক্রিন উইজেট — আজকের চালান (নকশা ৬), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    // ⭐ ফোনের হোম-স্ক্রিনে ৮ দ্রুত কাজ আর ৯ লক্ষ্য বনাম অর্জন (a6, ২০ অক্টোবর ২০২৬)
     'phone_widgets' => [
         \App\Modules\Sales\Widgets\ChallansTodaySummary::class,
+        \App\Modules\Sales\Widgets\QuickActionsSummary::class,
+        \App\Modules\Sales\Widgets\TargetSummary::class,
     ],
 ];
