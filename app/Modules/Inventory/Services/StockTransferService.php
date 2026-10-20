@@ -69,11 +69,19 @@ final class StockTransferService
 
             $this->assertDifferent($from, $to);
 
-            $documentNo = $this->numbers->next('STF');
+            /*
+             * ⛔ কাগজ পাঠানো গুদামের শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯
+             * অক্টোবর ২০২৬)। ⓘ আগে উপরের শাখা: A-র গুদাম থেকে মাল গেল, অথচ কাগজ আর নম্বর B-র — B-র তালিকায় এমন স্থানান্তর যা B
+             * পাঠায়নি, A-র তালিকায় নেই। খাতার দুই পা আগে থেকেই গুদামের শাখায় ([[moveTheValueBetweenBranches()]])। শাখাহীন গুদামে আগের মতো।
+             */
+            $branchId = $data['branch_id'] ?? $from->branch_id ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            $documentNo = $this->numbers->next('STF', $branchId);
 
             $transfer = StockTransfer::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
                 'document_no' => $documentNo,
                 'from_warehouse_id' => $from->id,
@@ -563,6 +571,8 @@ final class StockTransferService
                 ['account_id' => $inventory->id, 'credit' => $amount, 'narration' => $note, 'branch_id' => (int) $from],
             ],
             documentNo: $transfer->document_no,
+            // ⓘ সারি দুটো নিজের শাখা বলে; কাগজের শাখা তবু কাগজেরই, উপরের নয় (ec, ১৯ অক্টোবর ২০২৬)
+            branchId: $transfer->branch_id === null ? null : (int) $transfer->branch_id,
         );
     }
 

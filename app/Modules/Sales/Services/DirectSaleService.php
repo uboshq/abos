@@ -344,6 +344,8 @@ final class DirectSaleService
             $invoiceHeader = [
                 'customer_id' => $customer->id,
                 'warehouse_id' => $warehouse->id,
+                // ⛔ বিল চালানের শাখায় — মাল, পাওনা আর নগদ এক শাখায় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+                'branch_id' => $challan->branch_id,
                 'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                 'due_on' => $this->dueOn($data, $customer),
                 // হাতে লেখা নম্বর — খালি হলে সিরিজ নিজেই দেবে
@@ -627,6 +629,8 @@ final class DirectSaleService
             $invoiceHeader = [
                 'customer_id' => $customer->id,
                 'warehouse_id' => $warehouse->id,
+                // ⛔ বিল চালানের শাখায় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+                'branch_id' => $challan->branch_id,
                 'trx_date' => $trxDate,
                 'due_on' => $this->dueOn($data, $customer),
                 'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
@@ -1789,6 +1793,11 @@ final class DirectSaleService
             [
                 'type' => Voucher::RECEIPT,
                 'trx_date' => $trxDate,
+                /*
+                 * ⛔ কাউন্টারের রসিদ চালানের শাখায় — উপরের শাখা-বাছাই নয়। RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"*
+                 * (ec, ১৯ অক্টোবর ২০২৬)। ⓘ আগে মাল A-র গুদাম থেকে, অথচ নগদ আর পাওনা-কমা B-তে বসত।
+                 */
+                'branch_id' => $challan->branch_id,
                 'party_type' => 'customer',
                 'party_id' => $customer->id,
                 'instrument' => $row['instrument'] ?? null,

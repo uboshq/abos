@@ -136,15 +136,19 @@ final class DeliveryChallanService
              * ⭐ ২ অক্টোবর ২০২৬ থেকে খসড়া DRF নম্বরে জন্মায়; আসল CHA নম্বর নিশ্চিতে ([[giveTheSaleItsNumber()]])।
              * ⓘ হাতে লেখা নম্বর জন্মেই চূড়ান্ত — পুরনো কাগজের বই থেকে বসানো।
              */
+            // ⛔ নম্বরও গুদামের শাখার সিরিজে, উপরের শাখার নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)
+            $branchId = $warehouse->branch_id ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
             $numbers = app(SaleNumber::class);
-            $saleNo = $numbers->isHandWritten($given) ? $this->saleNumberFor($order?->id, $given) : null;
+            $saleNo = $numbers->isHandWritten($given) ? $this->saleNumberFor($order?->id, $given, $branchId) : null;
             $documentNo = $saleNo !== null
                 ? $numbers->forPaper(DeliveryChallan::class, $saleNo)
-                : $numbers->draft();
+                : $numbers->draft($branchId);
 
             $challan = DeliveryChallan::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'sale_no' => $saleNo,
@@ -883,6 +887,8 @@ final class DeliveryChallanService
                 ],
             ],
             documentNo: $challan->document_no,
+            // ⛔ চালানের নিজের শাখায়, উপরের শাখায় নয় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+            branchId: $challan->branch_id === null ? null : (int) $challan->branch_id,
         );
     }
 
@@ -1099,7 +1105,7 @@ final class DeliveryChallanService
             return;
         }
 
-        $saleNo = $this->saleNumberFor($challan->sales_order_id, '');
+        $saleNo = $this->saleNumberFor($challan->sales_order_id, '', $challan->branch_id === null ? null : (int) $challan->branch_id);
         $documentNo = app(SaleNumber::class)->forPaper(DeliveryChallan::class, $saleNo);
 
         $challan->update(['sale_no' => $saleNo, 'document_no' => $documentNo]);
@@ -1424,7 +1430,7 @@ final class DeliveryChallanService
     }
 
     /** এই DO-র বিক্রির নম্বর — আদেশের আগের DO-র নম্বর, নাহলে নতুন ([[SaleNumber::begin()]])। */
-    private function saleNumberFor(?int $orderId, string $given): string
+    private function saleNumberFor(?int $orderId, string $given, ?int $branchId = null): string
     {
         if ($orderId !== null) {
             $earlier = DeliveryChallan::query()->withoutGlobalScopes()
@@ -1439,6 +1445,6 @@ final class DeliveryChallanService
             }
         }
 
-        return app(SaleNumber::class)->begin(DeliveryChallan::class, $given);
+        return app(SaleNumber::class)->begin(DeliveryChallan::class, $given, $branchId);
     }
 }

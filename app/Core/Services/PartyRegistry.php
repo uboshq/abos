@@ -441,6 +441,52 @@ final class PartyRegistry
     }
 
     /**
+     * পক্ষের নিজের শাখা — যে মডেলের `branch_id` আছে (গ্রাহক, সরবরাহকারী); বাকিদের চাবিটাই থাকে না।
+     *
+     * ⛔ মালিক, ১৯ অক্টোবর ২০২৬: *"ei party super er tai eta lion e keno zabe"* — পক্ষের টাকা পক্ষের শাখাতেই
+     * (Accounts-এর ভাউচার সেবা)। ⓘ গ্লোবাল স্কোপ ছাড়া, কোম্পানি ধরে: লেখক নিজে যে শাখা বা ডিলার দেখেন তার বাইরের
+     * পক্ষেরও আসল শাখা চাই, নইলে Lion-এ বসা লেখকের কাছে Super-এর গ্রাহকের শাখা "নেই" হয়ে পাহারা চুপ থাকত।
+     *
+     * @param  iterable<array{0: string|null, 1: int|string|null}>  $pairs
+     * @return array<string, int> "ধরন:আইডি" => শাখা
+     */
+    public function branchesOf(iterable $pairs): array
+    {
+        $byType = [];
+
+        foreach ($pairs as [$type, $id]) {
+            if ($type !== null && $type !== '' && (int) $id > 0) {
+                $byType[$type][] = (int) $id;
+            }
+        }
+
+        $branches = [];
+
+        foreach ($byType as $type => $ids) {
+            $model = $this->modelFor($type);
+
+            if ($model === null || ! in_array('branch_id', $model->getFillable(), true)) {
+                continue;
+            }
+
+            $rows = $model::query()->withoutGlobalScopes()
+                ->when(
+                    in_array('company_id', $model->getFillable(), true),
+                    fn ($q) => $q->where('company_id', CompanyContext::id()),
+                )
+                ->whereKey(array_unique($ids))
+                ->whereNotNull('branch_id')
+                ->pluck('branch_id', $model->getKeyName());
+
+            foreach ($rows as $id => $branch) {
+                $branches[$type.':'.$id] = (int) $branch;
+            }
+        }
+
+        return $branches;
+    }
+
+    /**
      * লেখার সাথে মেলে এমন পক্ষ — নাম (দুই ভাষা), কোড, বা জায়গার নাম; তালিকার খোঁজার জন্য।
      *
      * @param  list<string>  $types

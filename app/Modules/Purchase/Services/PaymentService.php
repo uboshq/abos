@@ -110,11 +110,22 @@ final class PaymentService
                 ]),
             );
 
-            $documentNo = $this->numbers->next('SP');
+            /*
+             * ⛔ সরবরাহকারীর টাকা তাঁর শাখায়, নম্বরও সেই শাখার সিরিজে — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯
+             * অক্টোবর ২০২৬)। ⓘ আগে উপরের শাখা: A-র সরবরাহকারীর পরিশোধ B-তে বসত, আর খাতার দরজা ([[PostingEngine]]) পাকা করতে দিত না।
+             * সরবরাহকারীর শাখা না থাকলে আগের মতো ([[CollectionService]]-এর একই নিয়ম)।
+             */
+            $supplierId = (int) $data['supplier_id'];
+            $branchId = $data['branch_id']
+                ?? (app(\App\Core\Services\PartyRegistry::class)->branchesOf([['supplier', $supplierId]])['supplier:'.$supplierId] ?? null)
+                ?? CompanyContext::branchId();
+            $branchId = $branchId === null ? null : (int) $branchId;
+
+            $documentNo = $this->numbers->next('SP', $branchId);
 
             $payment = Payment::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],

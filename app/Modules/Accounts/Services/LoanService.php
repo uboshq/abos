@@ -9,6 +9,7 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
@@ -48,10 +49,13 @@ final class LoanService
         return DB::transaction(function () use ($data, $intoAccountId) {
             $kind = $data['kind'] ?? Loan::TERM;
 
+            // ⛔ টাকা যে বাক্সে ঢুকল তার শাখায় — উপরের শাখায় নয়; নম্বরও সেই শাখার সিরিজে (ec, ১৯ অক্টোবর ২০২৬; RCV-0143)
+            $branchId = CashTill::branchOfAccounts([$intoAccountId]) ?? CompanyContext::branchId();
+
             $loan = Loan::create([
                 ...$data,
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'kind' => $kind,
 
                 /*
@@ -69,7 +73,7 @@ final class LoanService
                 'direction' => $kind === Loan::HAND
                     ? ($data['direction'] ?? Loan::TAKEN)
                     : Loan::TAKEN,
-                'document_no' => $this->numbers->next('LN'),
+                'document_no' => $this->numbers->next('LN', $branchId),
                 'status' => DocumentStatus::CONFIRMED,
                 'created_by' => auth()->id(),
             ]);

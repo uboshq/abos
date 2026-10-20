@@ -1,0 +1,451 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Core;
+
+use App\Core\Services\DataScope;
+use App\Core\Services\NumberSeriesProvisioner;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\FinancialYear;
+use App\Models\IssuedNumber;
+use App\Models\LedgerEntry;
+use App\Models\NumberSeries;
+use App\Models\User;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockTransfer;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\Purchase\Models\Payment;
+use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Models\PurchaseOrder;
+use App\Modules\Purchase\Models\PurchaseReceipt;
+use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryOrder;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Models\SalesQuotation;
+use App\Modules\Sales\Models\SalesReturn;
+use App\Modules\Sales\Services\DeliveryChallanService;
+use App\Modules\Sales\Services\SalesOrderService;
+use App\Modules\Supplier\Models\Supplier;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Tests\Concerns\PutsMoneyInTheTill;
+use Tests\TestCase;
+
+/**
+ * ⛔ একটা কাগজ অন্য শাখায় নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"*।
+ *
+ * ⓘ যা ভেঙেছিল: উপরের শাখা-বাছাই একজন ব্যবহারকারীর সব ট্যাবে একটাই (`users.current_branch_id`)। A-র ট্যাবে ফর্ম খোলা,
+ * আরেক ট্যাবে উপরে B বাছা — জমা দিলে কাগজ, তার নম্বর, খাতার সারি আর ভাউচার B-তে বসত, অথচ মাল A-র গুদাম থেকে, পক্ষ A-র।
+ * ⭐ এখন কাগজের শাখা তার নোঙর থেকে (গুদাম, চালান, বিল, পক্ষ), আর নম্বর সেই শাখার নিজের সিরিজ থেকে।
+ *
+ * ⓘ দৃশ্য সবখানে একই, আসল দরজা দিয়ে: মালিক উপরে B (নেত্রকোনা) বেছে "সব শাখা" দেখছেন, আর A-র (ময়মনসিংহ) গুদাম বা পক্ষের
+ * কাগজ জমা দিচ্ছেন। ⚠️ একটা শাখা দেখলে গুদামের খোঁজ নিজেই A-র গুদাম লুকায় — সেটা কাকতালীয় পাহারা, তাই দৃশ্যটা "সব শাখা"-তে।
+ * নম্বরের দাবির জন্য A আর B দুই শাখার নিজের সিরিজ বসানো থাকে; কোন সিরিজ থেকে নম্বর এল তা ইস্যুর খাতা বলে।
+ *
+ * ec, ১৯ অক্টোবর ২০২৬।
+ */
+final class APaperLandsInItsOwnBranchTest extends TestCase
+{
+    use PutsMoneyInTheTill;
+    use RefreshDatabase;
+
+    private Company $company;
+
+    private User $owner;
+
+    private Branch $a;
+
+    private Branch $b;
+
+    private Warehouse $inA;
+
+    private Warehouse $inB;
+
+    private Customer $customer;
+
+    private Supplier $supplier;
+
+    private Product $product;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->a = $this->branch('MMS');
+        $this->b = $this->branch('NTK');
+
+        CompanyContext::set($this->company->id, $this->a->id);
+        $this->actingAs($this->owner);
+        app(StandardChart::class)->install();
+        app(CashTillService::class)->ensurePrimaryTill();
+
+        $this->inA = $this->warehouse('WH-MMS');
+        $this->inB = $this->warehouse('WH-NTK');
+
+        // ⓘ A-র পক্ষ — লাইভের Super-এর গ্রাহক
+        $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
+        $this->customer->forceFill(['branch_id' => $this->a->id, 'credit_limit' => '1000000000'])->save();
+        $this->supplier = Supplier::query()->orderBy('id')->firstOrFail();
+        $this->supplier->forceFill(['branch_id' => $this->a->id])->save();
+
+        $this->product = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
+    }
+
+    public function test_a_challan_and_a_goods_receipt_take_their_number_from_their_warehouses_branch(): void
+    {
+        $this->seriesInBothBranches('DRF', 'GRN');
+
+        $orders = app(SalesOrderService::class);
+        $order = $orders->confirm($orders->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->inA->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'ordered_qty' => '1', 'rate' => '10']],
+        ));
+
+        $this->headerOn($this->b);
+
+        $this->post(route('sales.challan.store'), [
+            'sales_order_id' => $order->id,
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'trx_date' => now()->toDateString(),
+            'own_transport' => '1',
+            'lines' => [['product_id' => $this->product->id, 'sales_order_line_id' => $order->lines()->value('id'),
+                'delivered_qty' => '1', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $challan = DeliveryChallan::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $challan->branch_id);
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($challan->document_no), '⛔ A-র গুদামের চালানের নম্বর B-র সিরিজ থেকে');
+
+        $this->post(route('purchase.receipt.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->inA->id,
+            'trx_date' => now()->toDateString(),
+            'supplier_challan_no' => 'BR-PIN-1',
+            'lines' => [['product_id' => $this->product->id, 'received_qty' => '5', 'rate' => '8']],
+        ])->assertSessionHasNoErrors();
+
+        $receipt = PurchaseReceipt::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $receipt->branch_id);
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($receipt->document_no), '⛔ A-র গুদামের GRN-এর নম্বর B-র সিরিজ থেকে');
+    }
+
+    public function test_a_bill_and_a_return_from_a_warehouse_in_a_land_in_a_with_their_numbers_and_books(): void
+    {
+        $this->seriesInBothBranches('DRF', 'SR');
+
+        // ⓘ A-র গুদাম থেকে পাকা চালান — উপরে তখনো A
+        $challans = app(DeliveryChallanService::class);
+        $challan = $challans->confirm($challans->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->inA->id, 'trx_date' => now()->toDateString(), 'own_transport' => true],
+            [['product_id' => $this->product->id, 'delivered_qty' => '2', 'rate' => '10']],
+        ));
+
+        $this->headerOn($this->b);
+
+        // ── বিল ──────────────────────────────────────────────────────────
+        $line = $challan->lines()->firstOrFail();
+        $this->post(route('sales.invoice.store'), [
+            'delivery_challan_id' => $challan->id,
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'trx_date' => now()->toDateString(),
+            'lines' => [['product_id' => $line->product_id, 'delivery_challan_line_id' => $line->id, 'qty' => '2', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $invoice = SalesInvoice::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $invoice->branch_id, '⛔ A-র মালের বিল উপরের B-তে বসল');
+        // ⓘ পাকা চালানের বিল নতুন নম্বর টানে না — চালানের বিক্রির নম্বরই নেয় (এক বিক্রি এক নম্বর, মালিক ২৯ সেপ্টেম্বর)
+        $saleNo = $challan->fresh()->sale_no;
+        $this->assertNotNull($saleNo, 'দৃশ্যটাই বানানো যায়নি — পাকা চালানের বিক্রির নম্বর নেই');
+        $this->assertSame($saleNo, $invoice->sale_no, '⛔ বিল চালানের বিক্রির নম্বর না নিয়ে নতুন নম্বর টানল');
+
+        $this->post(route('sales.invoice.confirm', $invoice))->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', SalesInvoice::acrossBranches()->findOrFail($invoice->id)->status, 'দৃশ্যটাই বানানো যায়নি — বিল পাকা হয়নি');
+        $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesInvoice::drillSourceType(), (int) $invoice->id),
+            '⛔ বিলের পাওনা আর মজুদের সারি A-র বাইরে');
+
+        // ── ফেরত ─────────────────────────────────────────────────────────
+        $this->post(route('sales.return.store'), [
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'sales_invoice_id' => $invoice->id,
+            'reason_code_id' => ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->firstOrFail()->id,
+            'trx_date' => now()->toDateString(),
+            'lines' => [['product_id' => $this->product->id, 'sales_invoice_line_id' => $invoice->lines()->value('id'), 'qty' => '1', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $return = SalesReturn::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $return->branch_id, '⛔ A-র গুদামে ফেরা মালের ফেরত উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($return->document_no), '⛔ ফেরতের নম্বর B-র সিরিজ থেকে');
+
+        $this->post(route('sales.return.confirm', $return))->assertSessionHasNoErrors();
+        $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesReturn::drillSourceType(), (int) $return->id),
+            '⛔ ফেরতের পাওনা আর মজুদের সারি A-র বাইরে');
+    }
+
+    public function test_a_counter_sale_from_a_warehouse_in_a_keeps_its_stock_receivable_and_cash_in_a(): void
+    {
+        $this->seriesInBothBranches('DRF', 'S');
+        app(SettingsService::class)->set('sales.invoice_at_goods_issue', false);
+
+        // ⓘ ব্যাংকের খাত, A-তে টাকাসহ — উপরে তখনো A
+        $bank = Account::query()->ofMoneyKind(Account::BANK)->postable()->active()->orderBy('id')->first();
+
+        if ($bank === null) {
+            $bank = Account::query()->ofMoneyKind(Account::CASH)->postable()->orderBy('id')->firstOrFail()->replicate(['public_id']);
+            $bank->forceFill(['code' => 'BANK-PIN', 'name_en' => 'BANK-PIN', 'name_bn' => 'BANK-PIN', 'money_kind' => Account::BANK])->save();
+        }
+
+        $this->putMoneyIn($bank, '1000');
+
+        $this->headerOn($this->b);
+
+        $this->post(route('sales.direct.store'), [
+            'own_transport' => '1',
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->inA->id,
+            'vehicle_no' => 'DHA-GA-11-2233',
+            'deposits' => [['amount' => '30', 'account_id' => $bank->id, 'reference' => 'TRX-PIN-1']],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '3', 'rate' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $invoice = SalesInvoice::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame('confirmed', $invoice->status, 'দৃশ্যটাই বানানো যায়নি — কাউন্টারের বিক্রি পাকা হয়নি');
+
+        $challan = DeliveryChallan::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $challan->branch_id);
+        $this->assertSame((int) $this->a->id, (int) $invoice->branch_id, '⛔ A-র মালের কাউন্টার-বিল উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf((string) $challan->sale_no), '⛔ বিক্রির নম্বর B-র সিরিজ থেকে');
+
+        $this->assertSame([(int) $this->a->id], $this->ledgerBranches(SalesInvoice::drillSourceType(), (int) $invoice->id),
+            '⛔ বিলের পাওনা আর মজুদের সারি A-র বাইরে');
+
+        $vouchers = Voucher::acrossBranches()->where('against_type', SalesInvoice::drillSourceType())->where('against_id', $invoice->id)->get();
+        $this->assertCount(1, $vouchers, 'দৃশ্যটাই বানানো যায়নি — কাউন্টারের রসিদ হয়নি');
+
+        foreach ($vouchers as $voucher) {
+            $this->assertSame((int) $this->a->id, (int) $voucher->branch_id, '⛔ কাউন্টারের রসিদ উপরের B-তে বসল');
+            $this->assertSame([(int) $this->a->id], $this->ledgerBranches(Voucher::SOURCE_TYPES[$voucher->type], (int) $voucher->id),
+                '⛔ রসিদের নগদ আর পাওনা-কমার সারি A-র বাইরে');
+        }
+    }
+
+    public function test_a_direct_purchase_into_a_pays_from_a(): void
+    {
+        $bank = (int) Account::query()->firstOrCreate(['code' => '1102-PIN'], [
+            'company_id' => $this->company->id,
+            'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            'name_en' => 'Pin Bank', 'name_bn' => 'পিন ব্যাংক',
+            'type' => Account::ASSET, 'nature' => Account::DEBIT, 'is_group' => false, 'money_kind' => Account::BANK,
+        ])->id;
+        $this->putMoneyIn(Account::query()->findOrFail($bank), '1000');
+
+        $this->headerOn($this->b);
+
+        $this->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->inA->id,
+            'trx_date' => now()->toDateString(),
+            'supplier_bill_no' => 'PIN-77',
+            'deposits' => [[
+                'payment_method_id' => (int) PaymentMethod::query()->where('code', 'BANK')->value('id'),
+                'account_id' => $bank,
+                'amount' => '80',
+                'reference' => 'PIN-TRX',
+                'ref_date' => now()->toDateString(),
+            ]],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '8', 'sales_price' => '10']],
+        ])->assertSessionHasNoErrors();
+
+        $bill = PurchaseBill::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $bill->branch_id);
+
+        $vouchers = Voucher::acrossBranches()->where('against_type', PurchaseBill::drillSourceType())->where('against_id', $bill->id)->get();
+        $this->assertCount(1, $vouchers, 'দৃশ্যটাই বানানো যায়নি — পরিশোধের ভাউচার হয়নি');
+
+        foreach ($vouchers as $voucher) {
+            $this->assertSame((int) $this->a->id, (int) $voucher->branch_id, '⛔ A-র বিলের পরিশোধ উপরের B-তে বসল');
+            $this->assertSame([(int) $this->a->id], $this->ledgerBranches(Voucher::SOURCE_TYPES[$voucher->type], (int) $voucher->id),
+                '⛔ পরিশোধের টাকা আর দেনা-কমার সারি A-র বাইরে');
+        }
+    }
+
+    public function test_a_transfer_out_of_a_warehouse_in_a_is_a_paper_of_a(): void
+    {
+        $this->seriesInBothBranches('STF');
+
+        $this->headerOn($this->b);
+
+        $this->post(route('inventory.transfer.store'), [
+            'from_warehouse_id' => $this->inA->id,
+            'to_warehouse_id' => $this->inB->id,
+            'trx_date' => now()->toDateString(),
+            'lines' => [['product_id' => $this->product->id, 'qty' => '2']],
+        ])->assertSessionHasNoErrors();
+
+        $transfer = StockTransfer::acrossBranches()->latest('id')->firstOrFail();
+        $this->assertSame((int) $this->a->id, (int) $transfer->branch_id, '⛔ A-র গুদাম থেকে পাঠানোর কাগজ উপরের B-তে বসল');
+        $this->assertSame((int) $this->a->id, $this->seriesBranchOf($transfer->document_no), '⛔ স্থানান্তরের নম্বর B-র সিরিজ থেকে');
+    }
+
+    public function test_the_papers_of_a_party_of_a_land_in_a_with_their_numbers(): void
+    {
+        $this->seriesInBothBranches('SO', 'QTN', 'DO', 'COL', 'SP', 'PO');
+        $bank = (int) Account::query()->firstOrCreate(['code' => '1102-PIN'], [
+            'company_id' => $this->company->id,
+            'parent_id' => Account::query()->where('code', StandardChart::BANK)->value('id'),
+            'name_en' => 'Pin Bank', 'name_bn' => 'পিন ব্যাংক',
+            'type' => Account::ASSET, 'nature' => Account::DEBIT, 'is_group' => false, 'money_kind' => Account::BANK,
+        ])->id;
+
+        $this->headerOn($this->b);
+
+        $papers = [
+            // ⓘ বিক্রয় আদেশ — গ্রাহকের শাখায়
+            'বিক্রয় আদেশ' => [SalesOrder::class, route('sales.order.store'), [
+                'customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(),
+                'lines' => [['product_id' => $this->product->id, 'ordered_qty' => '1', 'rate' => '10']],
+            ]],
+            // ⓘ উদ্ধৃতি — গ্রাহকের শাখায়
+            'উদ্ধৃতি' => [SalesQuotation::class, route('sales.quotation.store'), [
+                'customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'valid_until' => now()->addDays(10)->toDateString(),
+                'lines' => [['product_id' => $this->product->id, 'qty' => '1', 'rate' => '10']],
+            ]],
+            // ⓘ ডেস্কের DO — আগে উপরের শাখা গ্রাহকের শাখার আগে জিতত
+            'ডেস্কের DO' => [DeliveryOrder::class, route('sales.delivery_order.store'), [
+                'customer_id' => $this->customer->id,
+                'lines' => [['product_id' => $this->product->id, 'qty' => '1']],
+            ]],
+            // ⓘ আদায় — শাখা আগেই গ্রাহকের (fe), এখন নম্বরও
+            'আদায়' => [Collection::class, route('sales.collection.store'), [
+                'customer_id' => $this->customer->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50',
+            ]],
+            // ⓘ সরবরাহকারীকে পরিশোধ — সরবরাহকারীর শাখায়
+            'সরবরাহকারীকে পরিশোধ' => [Payment::class, route('purchase.payment.store'), [
+                'supplier_id' => $this->supplier->id, 'account_id' => $bank, 'trx_date' => now()->toDateString(), 'amount' => '50',
+            ]],
+            // ⓘ ক্রয় আদেশ — মাল যে গুদামে নামবে তার শাখায়
+            'ক্রয় আদেশ' => [PurchaseOrder::class, route('purchase.order.store'), [
+                'supplier_id' => $this->supplier->id, 'warehouse_id' => $this->inA->id, 'trx_date' => now()->toDateString(),
+                'lines' => [['product_id' => $this->product->id, 'ordered_qty' => '2', 'rate' => '8']],
+            ]],
+        ];
+
+        foreach ($papers as $name => [$model, $url, $form]) {
+            $this->post($url, $form)->assertSessionHasNoErrors();
+
+            $paper = $model::acrossBranches()->latest('id')->firstOrFail();
+            $this->assertSame((int) $this->a->id, (int) $paper->branch_id, "⛔ {$name}: A-র পক্ষের কাগজ উপরের B-তে বসল");
+            $this->assertSame((int) $this->a->id, $this->seriesBranchOf((string) $paper->document_no), "⛔ {$name}: নম্বর B-র সিরিজ থেকে");
+        }
+    }
+
+    // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⓘ আসল পথে উপরের শাখা বদল — আগে B বাছা, তারপর "সব শাখা" দেখা (কাজের শাখা B-ই থাকে)।
+     */
+    private function headerOn(Branch $branch): void
+    {
+        $this->actingAs($this->owner->fresh())->post(route('branch.switch'), ['branch_id' => (string) $branch->id])->assertRedirect();
+        $this->actingAs($this->owner->fresh())->post(route('branch.switch'), ['branch_id' => 'all'])->assertRedirect();
+
+        $this->owner = $this->owner->fresh();
+        $this->assertSame((int) $branch->id, (int) $this->owner->current_branch_id, 'দৃশ্যটাই বানানো যায়নি — উপরে B বসেনি');
+        $this->assertTrue((bool) $this->owner->view_all_branches, 'দৃশ্যটাই বানানো যায়নি — "সব শাখা" দেখা চালু হয়নি');
+
+        CompanyContext::set($this->company->id, $branch->id);
+        app(DataScope::class)->forget();
+        $this->app->forgetScopedInstances();
+        $this->actingAs($this->owner);
+    }
+
+    /**
+     * ⓘ A আর B দুই শাখার নিজের সিরিজ — কোম্পানি-ব্যাপী সারির নকল, অনেক দূরের ক্রম থেকে (পুরনো নম্বরে ধাক্কা নয়)।
+     */
+    private function seriesInBothBranches(string ...$types): void
+    {
+        $year = FinancialYear::forDate(Carbon::today());
+        app(NumberSeriesProvisioner::class)->provision($year);
+
+        foreach ($types as $type) {
+            $base = NumberSeries::query()->withoutGlobalScopes()
+                ->where('company_id', $this->company->id)
+                ->where('doc_type', $type)
+                ->whereNull('branch_id')
+                ->where('financial_year_id', $year?->id)
+                ->firstOrFail();
+
+            foreach ([[$this->a, 500000], [$this->b, 700000]] as [$branch, $from]) {
+                $exists = NumberSeries::query()->withoutGlobalScopes()
+                    ->where('company_id', $this->company->id)
+                    ->where('doc_type', $type)
+                    ->where('branch_id', $branch->id)
+                    ->where('financial_year_id', $year?->id)
+                    ->exists();
+
+                if (! $exists) {
+                    // ⓘ `branch_key` আর `financial_year_key` ডাটাবেজের হিসাব-করা কলাম — নকলে লেখা যায় না (MySQL 3105)
+                    $copy = $base->replicate(['public_id', 'branch_key', 'financial_year_key']);
+                    $copy->forceFill(['branch_id' => $branch->id, 'next_number' => (int) $base->next_number + $from])->save();
+                }
+            }
+        }
+    }
+
+    /** কোন শাখার সিরিজ থেকে এই নম্বর এল — ইস্যুর খাতা থেকে */
+    private function seriesBranchOf(string $documentNo): ?int
+    {
+        $seriesId = IssuedNumber::query()->withoutGlobalScopes()
+            ->where('company_id', $this->company->id)
+            ->where('document_no', $documentNo)
+            ->latest('id')
+            ->value('number_series_id');
+
+        $branch = NumberSeries::query()->withoutGlobalScopes()->whereKey($seriesId)->value('branch_id');
+
+        return $branch === null ? null : (int) $branch;
+    }
+
+    /** @return list<int> এই কাগজের খাতার সারিগুলোর শাখা */
+    private function ledgerBranches(string $sourceType, int $sourceId): array
+    {
+        return LedgerEntry::query()->withoutGlobalScopes()
+            ->where('company_id', $this->company->id)
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->pluck('branch_id')
+            ->map(fn ($branch) => (int) $branch)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function branch(string $code): Branch
+    {
+        return Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', $code)->firstOrFail();
+    }
+
+    private function warehouse(string $code): Warehouse
+    {
+        return Warehouse::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', $code)->firstOrFail();
+    }
+}

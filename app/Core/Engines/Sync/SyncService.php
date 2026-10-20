@@ -325,6 +325,13 @@ final class SyncService
             );
         } catch (ValidationException $refused) {
             return $this->refuse($user, $deviceId, $module, $change, $this->firstMessage($refused));
+        } catch (\App\Core\Engines\Posting\PostingException $refused) {
+            /*
+             * ⛔ খাতার "না" একটা উত্তর, ক্ষণিকের ব্যর্থতা নয় — বন্ধ মাস, অন্য শাখার পক্ষ, অমিল দাখিলা; আবার পাঠালেও একই উত্তর।
+             * ⓘ a4-এর পর্যালোচনা, ১৯ অক্টোবর ২০২৬: আগে নিচের Throwable-এ পড়ত — ফোন চিরকাল আবার পাঠাত, SR কিছুই জানতেন না,
+             * টাকা হাতে অথচ খাতায় নেই। এখন কারণসহ ফেরত, বাংলায় ([[PostingException::forPeople()]])।
+             */
+            return $this->refuse($user, $deviceId, $module, $change, $refused->forPeople());
         } catch (Throwable $failure) {
             /*
              * ⚠️ এখানে সারিটা REJECTED করা হয় **না**, আর সেটা ইচ্ছাকৃত।

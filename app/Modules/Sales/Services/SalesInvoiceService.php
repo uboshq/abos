@@ -432,21 +432,24 @@ final class SalesInvoiceService
              * ⭐ ২ অক্টোবর ২০২৬ থেকে: চালানের বিক্রির নম্বর থাকলে সেটা (INV-0154 ↔ CHA-0154); চালান খসড়া হলে, বা
              * চালান ছাড়া বিলে, খসড়া DRF নম্বর — আসল নম্বর নিশ্চিতে ([[giveTheSaleItsNumber()]])। হাতে লেখা নম্বর জন্মেই চূড়ান্ত।
              */
+            $warehouseId = $data['warehouse_id'] ?? $this->defaultWarehouse()?->id;
+            $branchId = $this->branchOfTheBill($data, $warehouseId === null ? null : (int) $warehouseId, $lines);
+
             $numbers = app(SaleNumber::class);
             $saleNo = $this->saleNumberOfLines($lines)
-                ?? ($this->hasChallanLines($lines) || ! $numbers->isHandWritten($given) ? null : $numbers->begin(SalesInvoice::class, $given));
+                ?? ($this->hasChallanLines($lines) || ! $numbers->isHandWritten($given) ? null : $numbers->begin(SalesInvoice::class, $given, $branchId));
             $documentNo = $saleNo !== null
                 ? $numbers->forPaper(SalesInvoice::class, $saleNo)
-                : $numbers->draft();
+                : $numbers->draft($branchId);
 
             $invoice = SalesInvoice::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                'branch_id' => $branchId,
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'sale_no' => $saleNo,
                 'customer_id' => $data['customer_id'],
-                'warehouse_id' => $data['warehouse_id'] ?? $this->defaultWarehouse()?->id,
+                'warehouse_id' => $warehouseId,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $this->dueOn($data, $trxDate, (int) $data['customer_id']),
                 'narration' => $data['narration'] ?? null,
@@ -505,6 +508,40 @@ final class SalesInvoiceService
         }
 
         return $days > 0 ? $trxDate->copy()->addDays($days)->toDateString() : null;
+    }
+
+    /**
+     * ⛔ বিলের শাখা = তার নোঙরের শাখা, উপরের শাখা-বাছাই নয় — RCV-0143 / মালিক: *"কোনোভাবেই অন্য শাখায় নয়"* (ec, ১৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে বিল নিত উপরের শাখা: A-র ট্যাবে খোলা ফর্ম, আরেক ট্যাবে উপরে B বাছা, জমা দিলে বিল, তার নম্বর আর খাতার সারি B-তে —
+     * অথচ মাল বেরোল A-র গুদাম থেকে। ⭐ এখন ক্রম: ডাকা সেবা নিজে শাখা বললে সেটা ([[DispatchBill]] চালানের শাখা দেয়) →
+     * চালানের সারি থেকে বিল হলে চালানের শাখা → বিলের গুদামের শাখা → কিছু না থাকলে আগের মতো উপরের শাখা।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function branchOfTheBill(array $data, ?int $warehouseId, array $lines): ?int
+    {
+        if (filled($data['branch_id'] ?? null)) {
+            return (int) $data['branch_id'];
+        }
+
+        $challanLines = collect($lines)->pluck('delivery_challan_line_id')->filter()->map(fn ($id) => (int) $id)->values()->all();
+
+        $branch = $challanLines === [] ? null : DeliveryChallan::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->whereIn('id', DeliveryChallanLine::query()->withoutGlobalScopes()->whereIn('id', $challanLines)->select('delivery_challan_id'))
+            ->whereNotNull('branch_id')
+            ->value('branch_id');
+
+        $branch ??= $warehouseId === null ? null : Warehouse::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->whereKey($warehouseId)
+            ->value('branch_id');
+
+        $branch ??= CompanyContext::branchId();
+
+        return $branch === null ? null : (int) $branch;
     }
 
     /**
@@ -2123,7 +2160,9 @@ final class SalesInvoiceService
             ->map(fn ($l) => ['delivery_challan_line_id' => $l->delivery_challan_line_id])->all();
 
         $numbers = app(SaleNumber::class);
-        $saleNo = $this->saleNumberOfLines($lines) ?? $numbers->begin(SalesInvoice::class);
+        // ⛔ বিলের নিজের শাখার সিরিজ — উপরের শাখা নয় (RCV-0143, ec, ১৯ অক্টোবর ২০২৬)
+        $saleNo = $this->saleNumberOfLines($lines)
+            ?? $numbers->begin(SalesInvoice::class, '', $invoice->branch_id === null ? null : (int) $invoice->branch_id);
         $documentNo = $numbers->forPaper(SalesInvoice::class, $saleNo);
 
         $invoice->update(['sale_no' => $saleNo, 'document_no' => $documentNo]);
