@@ -205,7 +205,10 @@ final class SalesWidgets implements DashboardWidgets
             sort: $sort,
             hint: $against['hint'] ?? null,
             delta: $against['delta'] ?? null,
-            definition: $metric->definition(),
+            /* ⭐ নিট বিক্রির কার্ড খুললে (টুলটিপ) বিল আর ফেরত আলাদা — "বিল ৳… − ফেরত ৳… = নিট ৳…" (IFRS 15, ২০ অক্টোবর ২০২৬) */
+            definition: $metric->key === 'sales.today'
+                ? SalesMetrics::netPartsLine(Carbon::today()->toDateString(), Carbon::today()->toDateString()).' · '.$metric->definition()
+                : $metric->definition(),
 
             /*
              * লেবেলের আগে আইকন।

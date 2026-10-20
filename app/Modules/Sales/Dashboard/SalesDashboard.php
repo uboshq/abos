@@ -125,7 +125,10 @@ final class SalesDashboard implements ProvidesDashboard
                 new Stat(
                     label: $today->label,
                     value: Money::format($today->value()),
-                    hint: __('sales::dashboard.today_hint'),
+                    // ⭐ নিট বিক্রি হলে বিল আর ফেরত আলাদা (IFRS 15, ২০ অক্টোবর ২০২৬)
+                    hint: $today->key === 'sales.today'
+                        ? SalesMetrics::netPartsLine(Carbon::today()->toDateString(), Carbon::today()->toDateString())
+                        : __('sales::dashboard.today_hint'),
                     href: route('sales.invoice.index', ['view' => 'today']),
                     tone: Stat::GOOD,
                 ),

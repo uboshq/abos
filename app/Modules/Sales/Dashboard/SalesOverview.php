@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Modules\Sales\Metrics\SalesAnalytics;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Metrics\SalesPeriod;
+use Illuminate\Support\Carbon;
 
 /**
  * বিক্রয়ের পর্দা — কোন কার্ড কে দেখবেন, আর কোন সংখ্যা কোথা থেকে (NEXUS §৪)।
@@ -181,7 +182,10 @@ final class SalesOverview
             'label' => $metric->label,
             'raw' => $metric->value(),
             'value' => Money::format($metric->value(), $metric->scale),
-            'hint' => $metric->definition(),
+            // ⭐ নিট বিক্রি: বিল আর ফেরত আলাদা, কার্ডের নিচের লেখায় (IFRS 15, ২০ অক্টোবর ২০২৬)
+            'hint' => $metric->key === 'sales.today'
+                ? SalesMetrics::netPartsLine(Carbon::today()->toDateString(), Carbon::today()->toDateString())
+                : $metric->definition(),
             'href' => null,
             'tone' => 'money',
         ];
