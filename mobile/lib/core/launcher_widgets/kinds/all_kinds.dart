@@ -1,5 +1,6 @@
 import '../kit/widget_kind.dart';
 import 'owner_board.dart';
+import 'stock_alerts.dart';
 
 /// ⭐ হোম-স্ক্রিনের সব উইজেটের চাবি — এই ক্রমেই (পরিকল্পনা ৪, অংশ ৯; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
 ///
@@ -45,5 +46,6 @@ const List<String> widgetKeys = [
 /// <p>⛔ তালিকায় না থাকা উইজেট ফোনে কখনো চালু হয় না (রিসিভার বন্ধ থাকে) — "লেখা হয়নি" আর "অনুমতি নেই" একই ফল।
 final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   // ⓘ এখানে এক লাইন করে — চাবির ক্রমে (sales_today … owner_board)
+  const StockAlertsWidget(), // stock_alerts (ec)
   const OwnerBoardWidget(),
 ];
