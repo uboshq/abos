@@ -19,23 +19,31 @@
     $money = fn ($v) => \App\Core\Support\Money::format($v);
     // ⓘ এক বা একাধিক হিসাব করা সারি — আগের বন্ধ-না-হওয়া লাভ আর চলতি বছরের লাভ আলাদা (ধাপ ০, ১২ অক্টোবর ২০২৬)
     $extras = $extras ?? (isset($extra) ? [$extra] : []);
+    // ⭐ তুলনার কলাম (IAS 1.38; [[BalanceSheetService::withComparative()]]) — থাকলে প্রতিটা অঙ্কের পাশে আগের বছরের শেষের অঙ্ক
+    $compared = isset($groups[0]) && array_key_exists('prior', $groups[0]);
 @endphp
 
 @foreach ($groups as $group)
     <div class="border-b border-(--color-border) last:border-b-0">
-        <div class="flex items-baseline justify-between px-4 py-2">
-            <span class="font-medium">{{ $group['head']->name() }}</span>
-            <span class="tabular-nums font-medium">{{ $money($group['total']) }}</span>
+        <div class="flex items-baseline justify-between gap-3 px-4 py-2">
+            <span class="flex-1 font-medium">{{ $group['head']->name() }}</span>
+            <span class="w-32 text-end tabular-nums font-medium">{{ $money($group['total']) }}</span>
+            @if ($compared)
+                <span data-prior class="w-32 text-end tabular-nums text-(--color-ink-muted)">{{ $money($group['prior']) }}</span>
+            @endif
         </div>
 
         @foreach ($group['lines'] as $line)
-            <div class="flex items-baseline justify-between px-4 py-1.5 ps-8 text-sm">
+            <div class="flex items-baseline justify-between gap-3 px-4 py-1.5 ps-8 text-sm">
                 <a href="{{ route('accounts.coa.show', $line['account']) }}#transactions"
-                   class="truncate text-(--color-link) hover:underline">
+                   class="flex-1 truncate text-(--color-link) hover:underline">
                     {{-- ⓘ অগ্রিমের লাইন নিজের নামে, লিংক পক্ষের খাতে ([[BalanceSheetService::withAdvance()]]) --}}
                     {{ $line['label'] ?? $line['account']->name() }}
                 </a>
-                <span class="tabular-nums">{{ $money($line['amount']) }}</span>
+                <span class="w-32 text-end tabular-nums">{{ $money($line['amount']) }}</span>
+                @if ($compared)
+                    <span data-prior class="w-32 text-end tabular-nums text-(--color-ink-muted)">{{ $money($line['prior']) }}</span>
+                @endif
             </div>
         @endforeach
     </div>
@@ -44,12 +52,15 @@
 @foreach ($extras as $extra)
     {{-- হিসাব করা সারি — খাত নয়, তাই লিংকও নেই। পর্দায় সেটা স্পষ্ট
          থাকা দরকার, নাহলে কেউ ছকে ওটা খুঁজতে গিয়ে পেত না। --}}
-    <div class="flex items-baseline justify-between border-t border-(--color-border)
+    <div class="flex items-baseline justify-between gap-3 border-t border-(--color-border)
                 px-4 py-2">
-        <span class="font-medium">{{ $extra['label'] }}</span>
-        <span @class(['tabular-nums font-medium',
+        <span class="flex-1 font-medium">{{ $extra['label'] }}</span>
+        <span @class(['w-32 text-end tabular-nums font-medium',
             'text-(--color-badge-danger-ink)' => bccomp((string) $extra['amount'], '0', 4) < 0])>
             {{ $money($extra['amount']) }}
         </span>
+        @if ($compared)
+            <span data-prior class="w-32 text-end tabular-nums text-(--color-ink-muted)">{{ $money($extra['prior'] ?? '0') }}</span>
+        @endif
     </div>
 @endforeach

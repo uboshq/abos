@@ -67,7 +67,11 @@ class BalanceSheetController extends Controller implements HasMiddleware
         return view('accounts::report.balance-sheet', [
             'menu' => $this->menu->forUser($request->user()),
             // ⓘ না চাইলে শাখাটা সার্ভিস নিজেই হেডার থেকে নেয় — নিয়ম এক জায়গায় ([[BalanceSheetService::build()]])
-            'sheet' => $this->sheet->build(is_string($asOf) ? $asOf : null, $asked),
+            /*
+             * ⭐ পাশে আগের অর্থবছরের শেষ দিনের অঙ্ক, একই শাখায় — IAS 1.38 (ERP ১০০%-এর হিসাবের ফাঁক #৭, ২০ অক্টোবর ২০২৬;
+             * [[TheBalanceSheetHadNoLastYearTest]])। আগে স্থিতিপত্রে কেবল এক দিনের অঙ্ক ছিল।
+             */
+            'sheet' => $this->comparedSheet(is_string($asOf) && $asOf !== '' ? $asOf : now()->toDateString(), $asked),
             'branchId' => $asked ?? ViewedBranch::one($request->user()),
 
             /*
@@ -83,5 +87,13 @@ class BalanceSheetController extends Controller implements HasMiddleware
                 ->orderBy('name_en')
                 ->get(),
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function comparedSheet(string $asOf, ?int $branchId): array
+    {
+        $now = $this->sheet->build($asOf, $branchId);
+
+        return $this->sheet->withComparative($now, $this->sheet->build($this->sheet->priorDate($asOf), $branchId));
     }
 }

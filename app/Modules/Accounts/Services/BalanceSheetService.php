@@ -413,6 +413,85 @@ final class BalanceSheetService
         return $side;
     }
 
+    /**
+     * ⭐ তুলনার কলাম — আগের অর্থবছরের শেষ দিনের স্থিতিপত্র, প্রতিটা সারির পাশে (IAS 1.38: প্রতিটা অঙ্কের আগের সময়ের অঙ্ক;
+     * ERP ১০০%-এর হিসাবের ফাঁক #৭, ২০ অক্টোবর ২০২৬)। ⓘ লাভ-ক্ষতির পাতায় তুলনা ছিল, স্থিতিপত্রে ছিল না।
+     *
+     * <p>দুটো [[build()]]-এর ফল জোড়া: প্রতিটা মাথা আর সারিতে `prior`, আর `prior` চাবিতে আগের দিনের যোগ, লাভ আর তারিখ।
+     * শূন্য সারি [[side()]] বাদ দেয়, তাই যে খাত কেবল আগের বছরে ছিল (যেমন শোধ হওয়া ঋণ) সেটা এ বছরের অঙ্ক ০ নিয়ে বসে —
+     * নাহলে আগের বছরের মাথার যোগ তার সারিগুলোর যোগের সাথে মিলত না। ⓘ সারির চাবি খাত আর লেবেল (অগ্রিমের সারিতে খাতটা
+     * পক্ষের খাত, লেবেল আলাদা)।
+     *
+     * @param  array<string, mixed>  $sheet
+     * @param  array<string, mixed>  $prior
+     * @return array<string, mixed>
+     */
+    /**
+     * তুলনার দিন — এই অর্থবছরের শুরুর আগের দিন (১ জুলাইয়ের বছরে ৩০ জুন), অর্থাৎ আগের বছরের শেষ স্থিতিপত্র। ⓘ বছরটা খাতায়
+     * না থাকলে এক বছর আগের একই দিন।
+     */
+    public function priorDate(string $asOf): string
+    {
+        $start = FinancialYear::forDate($asOf)?->starts_on;
+
+        return $start === null
+            ? Carbon::parse($asOf)->subYear()->toDateString()
+            : Carbon::parse($start)->subDay()->toDateString();
+    }
+
+    public function withComparative(array $sheet, array $prior): array
+    {
+        foreach (['assets', 'liabilities', 'equity'] as $side) {
+            $sheet[$side] = $this->pairSide($sheet[$side], $prior[$side]);
+        }
+
+        $sheet['prior'] = [
+            'totals' => $prior['totals'],
+            'profit_this_year' => $prior['profit_this_year'],
+            'profit_earlier' => $prior['profit_earlier'],
+            'agrees' => $prior['agrees'],
+            'as_of' => $prior['as_of'],
+        ];
+
+        return $sheet;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $now
+     * @param  list<array<string, mixed>>  $then
+     * @return list<array<string, mixed>>
+     */
+    private function pairSide(array $now, array $then): array
+    {
+        $key = fn (array $line): string => $line['account']->id.'|'.($line['label'] ?? '');
+        $earlier = [];
+
+        foreach ($then as $group) {
+            $earlier[(int) $group['head']->id] = $group;
+        }
+
+        foreach ($now as $i => $group) {
+            $old = $earlier[(int) $group['head']->id] ?? ['total' => '0', 'lines' => []];
+            $now[$i]['prior'] = $old['total'];
+
+            $oldLines = [];
+            foreach ($old['lines'] as $line) {
+                $oldLines[$key($line)] = $line;
+            }
+
+            foreach ($group['lines'] as $j => $line) {
+                $now[$i]['lines'][$j]['prior'] = isset($oldLines[$key($line)]) ? $oldLines[$key($line)]['amount'] : '0';
+                unset($oldLines[$key($line)]);
+            }
+
+            foreach ($oldLines as $line) {
+                $now[$i]['lines'][] = [...$line, 'amount' => '0', 'prior' => $line['amount']];
+            }
+        }
+
+        return $now;
+    }
+
     /** @param  list<array<string, mixed>>  $side */
     private function sum(array $side): string
     {
