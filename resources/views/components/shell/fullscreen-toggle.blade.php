@@ -14,6 +14,7 @@
         @fullscreenchange.document="sync()"
         @click="toggle()"
         :aria-pressed="full"
+        title="{{ __('core.action.fullscreen') }}"
         :title="full ? '{{ __('core.action.exit_fullscreen') }}' : '{{ __('core.action.fullscreen') }}'"
         :aria-label="full ? '{{ __('core.action.exit_fullscreen') }}' : '{{ __('core.action.fullscreen') }}'"
         class="hidden size-(--spacing-touch) shrink-0 items-center justify-center rounded-(--radius-field)

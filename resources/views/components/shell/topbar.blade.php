@@ -103,6 +103,7 @@
             class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
                    border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
                    hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"
+            aria-label="{{ __('core.a11y.collapse_sidebar') }}"
             :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
             :aria-label="$store.sidebar.collapsed
                 ? '{{ __('core.a11y.expand_sidebar') }}'

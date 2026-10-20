@@ -169,7 +169,7 @@
     {{-- ব্রাউজারের নিজের পিকার — দেখা যায় না, কিন্তু কাজ করে।
          showPicker() Chrome/Edge ৯৯+ এ আছে; না থাকলে ঘরটায় হাতে লেখা যায়,
          তাই কোথাও আটকে যায় না। --}}
-    <input type="date" x-ref="native" x-bind:value="iso" tabindex="-1" aria-hidden="true"
+    <input type="date" x-ref="native" x-bind:value="iso" tabindex="-1" aria-hidden="true" aria-label="{{ __('core.form.pick_date') }}"
            @if ($min) min="{{ $min }}" @endif @if ($max) max="{{ $max }}" @endif
            x-on:change="fromNative($event.target.value)"
            @class(['pointer-events-none absolute bottom-0 h-0 w-0 opacity-0', 'end-9' => ! $dense, 'end-7' => $dense])>

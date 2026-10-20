@@ -50,7 +50,7 @@
                    @keydown.down.prevent="next()"
                    @keydown.up.prevent="prev()"
                    @keydown.enter.prevent="choose($event)"
-                   role="combobox" aria-autocomplete="list"
+                   role="combobox" aria-autocomplete="list" aria-label="{{ __('core.action.search_anything') }}"
                    aria-controls="command-hits" :aria-expanded="items.length > 0"
                    :aria-activedescendant="activeId"
                    placeholder="{{ __('core.action.search_anything') }}"

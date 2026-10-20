@@ -86,6 +86,7 @@
                             <button type="button" @click="show = !show"
                                     class="absolute inset-y-0 end-0 flex w-12 items-center justify-center
                                            text-(--color-ink-muted)"
+                                    aria-label="{{ __('auth.show_password') }}"
                                     :aria-label="show ? '{{ __('auth.hide_password') }}' : '{{ __('auth.show_password') }}'">
                                 {{-- দুইটা আলাদা আঁকা, একটা ঘুরিয়ে নয়: কাটা-চোখ
                                      মানে "এখন লুকানো", আর সেটা চোখের উপর একটা

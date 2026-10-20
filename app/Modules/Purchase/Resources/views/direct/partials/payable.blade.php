@@ -66,7 +66,7 @@
                                         class="w-6 shrink-0 rounded-(--radius-field) border
                                                border-(--color-border) py-0.5 text-center
                                                font-medium hover:bg-(--color-surface-hover)"
-                                        x-text="entry.discount_mode === 'percent' ? '%' : '৳'"></button>
+                                        x-text="entry.discount_mode === 'percent' ? '%' : '৳'">৳</button>
 
                                 <span class="num w-14 shrink-0 text-end" x-text="money(entryDiscount)"></span>
                             </dd>

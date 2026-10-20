@@ -198,7 +198,7 @@
 
                                 <td class="text-end">
                                     <button type="button" x-on:click="lines.splice(i, 1)"
-                                            :aria-label="'{{ __('inventory::action.remove_ingredient') }}'"
+                                            aria-label="{{ __('inventory::action.remove_ingredient') }}"
                                             class="grid size-8 place-items-center rounded-(--radius-field)
                                                    text-(--color-ink-muted) hover:bg-(--color-surface-hover)
                                                    hover:text-(--color-danger)">

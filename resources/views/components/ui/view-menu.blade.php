@@ -265,6 +265,7 @@
                 <input type="text" name="name" required maxlength="80"
                        form="view-store-{{ $formId }}"
                        x-ref="viewName"
+                       aria-label="{{ __('core.view.name_placeholder') }}"
                        placeholder="{{ __('core.view.name_placeholder') }}"
                        class="min-h-(--spacing-field) w-full rounded-(--radius-field)
                               border border-(--color-border) bg-(--color-surface-app) px-2
