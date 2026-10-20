@@ -110,8 +110,10 @@ final class ApprovalApiController extends Controller
 
         $engine = app(ApprovalEngine::class);
         $owner = app(\App\Core\Services\Ownership::class)->isOwnerIn($user, (int) \App\Core\Support\CompanyContext::id());
+        // ⭐ "সংশোধনে ফেরত" — গোটা পাতার, কাগজের ধরন ধরে এক ডাকে; ⛔ আগে সারি ধরে কাগজ পড়া হত (a6, ২০ অক্টোবর ২০২৬; [[ApprovalEngine::canSendBackMany()]])
+        $sendBack = $engine->canSendBackMany($approvals);
 
-        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner): array {
+        $rows = $approvals->map(function (Approval $approval) use ($facts, $documents, $engine, $owner, $sendBack): array {
             $document = $documents[$approval->approvable_type][(int) $approval->approvable_id] ?? null;
             $fact = $facts[(int) $approval->id] ?? [];
             $now = self::paperAmountNow($document);
@@ -156,7 +158,7 @@ final class ApprovalApiController extends Controller
                  * ⭐ কোন বোতাম দেখাবে — মালিকের আদেশ, ১৪ অক্টোবর ২০২৬। ⓘ "সংশোধনে ফেরত" খসড়া কাগজে; "বদলে সই" কেবল মালিক
                  * (বদল হয় কাগজের নিজের পর্দায়); অন্য সইকারী কেবল বিবরণ ঠিক করতে পারেন। ⚠️ পুরনো অ্যাপ ঘরগুলো উপেক্ষা করে।
                  */
-                'canSendBack' => $engine->canSendBack($approval),
+                'canSendBack' => $sendBack[(int) $approval->id] ?? false,
                 'canEditAndSign' => $owner,
                 'canCorrectText' => ! $owner,
             ];
