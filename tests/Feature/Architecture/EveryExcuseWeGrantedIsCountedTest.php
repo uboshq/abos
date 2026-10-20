@@ -94,6 +94,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
         // ⓘ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — রেস্টুরেন্ট পরে (মালিক, ২১ অক্টোবরের পরে; ১৩ অক্টোবর ২০২৬)
         'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
+        // ⓘ শাখার ছাপের পাহারার বাইরের প্যারামিটারহীন POST দরজা, প্রতিটা কারণসহ (RCV-0143; ec, ২০ অক্টোবর ২০২৬)
+        'EveryNewPaperFormCarriesItsBranchTest::EXCLUDED',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -402,7 +404,14 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.papers.index / show: দরজা একটা, ধরন সতেরো, প্রতিটার চাবি ওয়েবের তালিকার
      *       নিজের — `documents.pdf`-এর মতোই পদ্ধতির ভেতরে; একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)
      */
-    private const CEILING = 371;
+    /*
+     * ── ⚠️ ৩৭১ → ৪৫৩, ২০ অক্টোবর ২০২৬ (ফর্ম খোলার শাখায় জমা — RCV-0143, মালিক: কোনোভাবেই অন্য শাখায় নয়; ec) ─────────────
+     *   +৮২ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — প্যারামিটারহীন POST দরজা যা `*.store` নয়, CREATE_DOORS-এও নয়:
+     *       সুইচ, ব্যক্তিগত পছন্দ, বিজ্ঞপ্তি, লগইন, ডিফল্ট-তালিকা বসানো (মাস্টারের লুপের ২১টা সহ), মাসিক দৌড় (প্রতিটা কাগজ
+     *       নিজের শাখায়), আর লেখে-না এমন পূর্বদর্শন। ⓘ বেশিরভাগ কাগজই বানায় না, তবু গোনা — কারণ থাকা মানে ছাড়টা ছাড় নয়, এমন
+     *       নয় (২২২ → ২২৪-এর একই যুক্তি)। ⭐ কোনো দরজা কাগজ বানাতে শুরু করলে সারিটা CREATE_DOORS-এ যায় আর ছাদ এক কমে
+     */
+    private const CEILING = 453;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
