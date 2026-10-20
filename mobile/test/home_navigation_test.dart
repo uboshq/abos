@@ -63,9 +63,10 @@ void main() {
     List<MenuItem>? items,
     Future<ApprovalPage> Function()? pending,
     List<CustomerHit> Function(String)? customers,
+    AuthUser user = _user,
   }) =>
       ProviderScope(
-        overrides: [authStateProvider.overrideWith((ref) => _SignedIn(_user))],
+        overrides: [authStateProvider.overrideWith((ref) => _SignedIn(user))],
         child: MaterialApp(
           home: HomeShell(
             loadHome: (_) async => HomeMenu(items: items ?? _salesman),
@@ -282,7 +283,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    // ⓘ "আমি" এখন মাথার ছবিতে (বারের নকশা ৩, অংশ ৪)
+    await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
 
     expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
@@ -291,16 +293,18 @@ void main() {
     expect(opened, ['sync-status']);
   });
 
-  testWidgets('the bottom bar opens the approvals and the notifications', (tester) async {
+  // ⓘ বারের নকশা ৩ (২০ অক্টোবর ২০২৬): অনুমোদনের ঘর চাবিতে (`approval.decide`); ঘণ্টা ওপরের বারে, নিচে নয়
+  testWidgets('the bottom bar opens the approvals; the bell is no longer on it', (tester) async {
     await tester.pumpWidget(shell(
+        user: const AuthUser(id: 'u1', name: 'করিম', email: '', roles: ['Manager'],
+            permissions: ['sales.order.view', 'customer.view', 'approval.decide']),
         pending: () async => const ApprovalPage(rows: [], nextCursor: null)));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('nav-approvals')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('nav-notifications')));
-    await tester.pumpAndSettle();
-    expect(opened, ['approvals', 'notifications']);
+    expect(find.byKey(const ValueKey('nav-notifications')), findsNothing);
+    expect(opened, ['approvals']);
   });
 
   // ── মালিকের চার উত্তর, ১২ অক্টোবর ২০২৬ ──

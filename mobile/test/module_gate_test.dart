@@ -182,7 +182,8 @@ void main() {
     expect(find.text('নতুন অর্ডার'), findsWidgets);
     expect(find.text('হাজিরা'), findsNothing, reason: 'hr is off for this company\'s phones');
 
-    await tester.tap(find.byKey(const ValueKey('nav-me')));
+    // ⓘ "আমি" এখন মাথার ছবিতে (বারের নকশা ৩, অংশ ৪)
+    await tester.tap(find.byKey(const ValueKey('header-avatar')));
     await tester.pumpAndSettle();
     expect(find.text('সিঙ্কের অবস্থা'), findsWidgets);
     expect(find.text('হাজিরা'), findsNothing, reason: 'hr is off for this company\'s phones');

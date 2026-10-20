@@ -106,7 +106,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // however it was reached — tile, saved link or a widget's tap.
       // ⭐ And every one is [_framed]: the bottom bar under it (owner, 12 Oct
       // 2026) — the screen and its route unchanged.
-      GoRoute(
+      // ⭐ হোমও একই কাঠামোয় — বার, খাড়া বার, ＋ নতুন আর ঘরের ইতিহাস এক জায়গায় (বারের নকশা ৩)
+      _framed(
         path: '/home',
         builder: (context, state) => const HomeShell(),
         routes: [
@@ -465,7 +466,7 @@ GoRoute _framed({
       path: path,
       routes: routes,
       builder: (context, state) =>
-          ScreenFrame(location: state.uri.path, child: builder(context, state)),
+          ScreenFrame(location: state.matchedLocation, child: builder(context, state)),
     );
 
 /// ⭐ গ্রাহকের পাতার "বাকির অবস্থা" — বাকি নিয়ন্ত্রণের দেখার চাবি আর কোম্পানির ফোন-সুইচ (১৩ অক্টোবর ২০২৬)। ⓘ পাতা খোলার

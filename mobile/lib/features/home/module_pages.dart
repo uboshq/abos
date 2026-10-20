@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/state_views.dart';
 import 'nav_search.dart' show webRowNote;
 
 /// What a row or tile can tell about itself beyond its name — the counts the
@@ -57,10 +58,12 @@ class AllModulesPage extends StatelessWidget {
                   AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
               sliver: SliverToBoxAdapter(child: header),
             ),
+          // ⭐ ধীর নেটে ধূসর কাঠামো, ঘোরানো চাকা নয় (বারের নকশা ৩, অংশ ৭: "ধীর নেট")
           if (loading)
-            const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()))
+            const SliverToBoxAdapter(
+                child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.md),
+                    child: LoadingSkeleton()))
           else if (modules.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
