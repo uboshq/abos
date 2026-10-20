@@ -52,6 +52,21 @@
                         </tr>
                     @endforeach
                 </tbody>
+                {{-- ⭐ সর্বমোট — সার্ভারের হিসাব ([[Listing::$total]]), পাতা কিছু গোনে না; সারির ঠিক নিচে, মোটা রেখা আর মোটা লেখায়;
+                     ⓘ রেখার রং সারির রেখারই (`white/15`) — লাইভে node নেই, বান্ডিলে যে শ্রেণি আছে কেবল সেটাই চলে --}}
+                @if ($listing->total !== null)
+                    <tfoot data-hero-total>
+                        <tr class="border-t-2 border-white/15">
+                            @foreach ($listing->columns as $i => $column)
+                                <td @class([
+                                    'py-1.5 font-bold',
+                                    'pe-4 text-start' => $i === 0,
+                                    'tabular whitespace-nowrap px-3 text-end' => $i > 0,
+                                ])>{{ $listing->total[$column['key']] ?? '' }}</td>
+                            @endforeach
+                        </tr>
+                    </tfoot>
+                @endif
             </table>
         </div>
     @endif

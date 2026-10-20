@@ -258,6 +258,54 @@ final class APrincipalEarnsOnWhatTheDepotCollectsTest extends TestCase
         $this->assertSame('কোম্পানির কাছে পাব: 23,850.00', $this->cellsNow()['balance'], '⛔ বাকি ইনফ্লো খালি বিয়োগ চিহ্নে।');
     }
 
+    /**
+     * ⭐ সর্বমোট — মালিক, ১৯ অক্টোবর ২০২৬: প্রিন্সিপালের সারি ছিল, নিচে মোট নেই ([[Listing::$total]])।
+     * ⓘ মোট = সারিগুলোর যোগফল, bcmath-এ; বাকি ইনফ্লো চিহ্নসহ যোগ হয়ে নিট দিক কথায়; পাতায় সারিগুলোর নিচে।
+     */
+    public function test_the_card_ends_in_a_grand_total_that_is_the_sum_of_its_rows(): void
+    {
+        $this->other->forceFill([
+            'principal_branch_id' => $this->a->id,
+            'commission_basis' => 'margin',
+            'commission_rate' => '2',
+            'cycle_start_day' => 2,
+            'cycle_close_day' => 1,
+        ])->save();
+        $this->theMonth();
+        app()->setLocale('bn');
+
+        $rows = collect(app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, [])->rows);
+        $this->assertCount(2, $rows, 'প্রস্তুতি: দুই প্রিন্সিপালের সারি নেই — যোগফলের দাবির ভিত্তি নেই।');
+        $sum = fn (string $key): string => $rows->reduce(fn (string $c, array $r): string => bcadd($c, (string) $r[$key], 4), '0');
+
+        $total = $this->listing()->total;
+        $this->assertNotNull($total, '⛔ প্রিন্সিপালের কমিশনের বাক্সে সর্বমোটের সারি নেই।');
+        $this->assertSame('সর্বমোট', $total['principal']);
+        $this->assertSame(Money::format($sum('inflow')), $total['inflow'], '⛔ মোট ইনফ্লো সারিগুলোর যোগফল নয়।');
+        $this->assertSame(Money::format($sum('commission')), $total['commission'], '⛔ মোট কমিশন সারিগুলোর যোগফল নয়।');
+        $this->assertSame(Money::format($sum('paid')), $total['paid'], '⛔ মোট পাঠানো সারিগুলোর যোগফল নয়।');
+        $this->assertSame('দিতে হবে: '.Money::format($sum('balance')), $total['balance'], '⛔ মোট বাকি সারিগুলোর যোগফল নয়।');
+        $this->assertNotSame($total['inflow'], Money::format((string) $rows->first()['inflow']), 'প্রস্তুতি: মোট একটা সারির সমান — যোগ দেখা গেল না।');
+
+        $this->get(route('module.dashboard', ['module' => 'supplier']))->assertOk()
+            ->assertSee('data-hero-total', false)
+            ->assertSeeInOrder(['data-hero-listing', 'সর্বমোট', $total['inflow'], $total['commission'], $total['paid'], $total['balance']], false);
+
+        // ⓘ উল্টো দিকের সারি — অন্যজনকে অংশের বেশি পাঠানো; মোট চিহ্নসহ যোগ হয়ে নিট দিকটাই বলে
+        $this->pay($this->other, '200000', '2026-10-04');
+        $rows = collect(app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, [])->rows);
+        $net = $rows->reduce(fn (string $c, array $r): string => bcadd($c, (string) $r['balance'], 4), '0');
+        $this->assertSame(-1, bccomp($net, '0', 4), 'প্রস্তুতি: নিট এখনো "দিতে হবে" দিকে।');
+        $this->assertSame('কোম্পানির কাছে পাব: '.Money::format(ltrim(Money::round($net, 2), '-')), $this->listing()->total['balance'],
+            '⛔ দুই দিকের বাকি চিহ্ন না মেনে যোগ হলো।');
+    }
+
+    private function listing(): Listing
+    {
+        return collect(SupplierDashboard::dashboard()->listings)
+            ->first(fn (Listing $l) => $l->label === __('supplier::principal.dashboard_title'));
+    }
+
     /** @return array<string, string> */
     private function cellsNow(): array
     {
