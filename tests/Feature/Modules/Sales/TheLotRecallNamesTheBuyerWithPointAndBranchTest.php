@@ -35,7 +35,13 @@ final class TheLotRecallNamesTheBuyerWithPointAndBranchTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        $owner->forceFill(['locale' => 'en'])->save();
+        /*
+         * ⓘ মালিক বাংলায় পড়েন — পাতা তাঁর ভাষায় ([[ResolveCompanyContext]] তাঁর `locale` বসায়), আর প্রত্যাশিত লেখাও একই ভাষায়
+         * বানানো হয়। ⚠️ আগে মালিক 'en'-এ বসানো ছিল অথচ লেখাটা পরীক্ষার নিজের ভাষায় (bn) — পাতা ঠিক "Rahim Traders · …" দেখাত,
+         * আর দাবি খুঁজত "রহিম ট্রেডার্স · …"; লাল পাতার নয়, দাবির ভাষার।
+         */
+        $owner->forceFill(['locale' => 'bn'])->save();
+        app()->setLocale('bn');
         $this->actingAs($owner->fresh());
 
         // ⓘ ক্রেতাকে একটা পয়েন্টে বসানো — পয়েন্টের নাম পাতায় না এলে দাবিটা ধরবে
@@ -60,8 +66,10 @@ final class TheLotRecallNamesTheBuyerWithPointAndBranchTest extends TestCase
         $label = app(PartyRegistry::class)->labelsOf([['customer', (int) $buyer->id]])['customer:'.$buyer->id] ?? null;
         $this->assertNotNull($label, 'দৃশ্যটাই বানানো যায়নি — পক্ষের উৎস ক্রেতাকে চেনে না');
         $this->assertStringStartsWith($buyer->name().' · '.$buyer->pointName(), $label, 'পক্ষের উৎস নামের পাশে পয়েন্ট দেয় না');
+        $this->assertStringStartsWith(trim((string) ($buyer->name_bn ?: $buyer->name_en)), $label, 'দৃশ্যটাই বানানো যায়নি — লেখাটা মালিকের ভাষায় নয়');
 
         $page = $this->get(route('sales.lot.trace', ['batch' => $batch->id]))->assertOk();
+        $this->assertSame('bn', app()->getLocale(), 'দৃশ্যটাই বানানো যায়নি — পাতা মালিকের ভাষায় খোলেনি');
 
         // ⭐ সারিতে পুরো লেখাটা — নাম · পয়েন্ট (· শাখা, পক্ষের উৎস যখন শাখা দেয়), খালি নাম নয়
         $page->assertSee($label);
