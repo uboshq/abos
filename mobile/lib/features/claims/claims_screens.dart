@@ -6,6 +6,7 @@ import '../../core/api_client/once_key.dart';
 import '../../core/hr/claims_api.dart';
 import '../../core/records/money.dart';
 import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -104,13 +105,16 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(Money.taka(c.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      // ⭐ অবস্থা — অ্যাপের এক চিপ (নকশা ৩, অংশ ৫); "অনুমোদিত — টাকার অপেক্ষায়" সাতটার কোনোটা নয়, তাই লেখাই
+                      // ⭐ অবস্থা — অ্যাপের এক চিপ (নকশা ৩, অংশ ৫); দাবির ধরনে "অনুমোদিত · টাকার অপেক্ষায়"
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: AppStatusChip.forServer(c.status,
                             key: ValueKey('claim-state-${c.id}'),
                             fallbackLabel: c.stateLabel,
                             fallbackColour: stateColour(context, c.status),
+                            kind: PaperKind.claim,
+                            level: c.approvalLevel,
+                            levels: c.approvalLevels,
                             dense: true),
                       ),
                       if (c.reason.isNotEmpty) Text(c.reason, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -168,7 +172,12 @@ class _ClaimScreenState extends State<ClaimScreen> {
             FactRow('ধরন', c.kindLabel),
             PaperStateFact(
                 chip: AppStatusChip.forServer(c.status,
-                    key: const ValueKey('claim-state'), fallbackLabel: c.stateLabel, fallbackColour: stateColour(context, c.status))),
+                    key: const ValueKey('claim-state'),
+                    fallbackLabel: c.stateLabel,
+                    fallbackColour: stateColour(context, c.status),
+                    kind: PaperKind.claim,
+                    level: c.approvalLevel,
+                    levels: c.approvalLevels)),
             FactRow('টাকা', Money.taka(c.amount)),
             if (c.head != null) FactRow('খরচের খাত', c.head!),
             if (c.spentOn != null) FactRow('খরচের তারিখ', dayOf(c.spentOn)),

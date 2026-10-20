@@ -20,7 +20,13 @@ enum PaperState {
   notPosted('not_posted'),
 
   /// কেবল অ্যাপের: ফোনে রাখা, এখনো সার্ভারে যায়নি (বিক্রয়কর্মীর অফলাইন আদায়; মালিকের পুরো-পাতার নমুনা, ২০ অক্টোবর ২০২৬)
-  unsent('unsent');
+  unsent('unsent'),
+
+  /// সইদাতা "না" বলেছেন — শেষ অবস্থা; বাতিল থেকে আলাদা (বাতিল মানে কাগজটা নিজেই তুলে নেওয়া)
+  rejected('rejected'),
+
+  /// সই শেষ, অনুমোদিত — খরচের দাবিতে "টাকার অপেক্ষায়" ([PaperKind.claim])
+  approved('approved');
 
   const PaperState(this.key);
 
@@ -38,29 +44,38 @@ enum PaperState {
   /// <li>`awaiting` — ভাউচার, সইয়ের অপেক্ষায় (voucher_api.dart; সার্ভার VoucherApiController::row)
   /// <li>`awaiting_approval` — বিক্রয় বিল/চালান (sales_paper_screens.dart `_status`)
   /// <li>`submitted` — খরচের দাবি/অগ্রিম, সইয়ের অপেক্ষায় (core/hr/claims_api.dart; সার্ভার ExpenseClaim::SUBMITTED)
+  /// <li>`pending` — নিজের পাঠানো সইয়ের অনুরোধ, অপেক্ষায় (approvals/my_requests_screen.dart)
   /// <li>`returned` · `sent_back` — সই না দিয়ে ফেরত (approvals/my_requests_screen.dart `returned`)
   /// <li>`posting` — শেষ সই পড়েছে, খাতায় উঠছে
   /// <li>`posted` — ভাউচার পাকা
   /// <li>`confirmed` · `closed` — বিক্রয় বিল/চালান নিশ্চিত/সম্পন্ন (sales_paper_screens.dart `_status`)
   /// <li>`paid` — খরচের দাবি টাকা দেওয়া, ভাউচার পাকা (claims_api.dart; ExpenseClaim::PAID)
   /// <li>`cancelled` — ভাউচার, বিক্রয় বিল/চালান
-  /// <li>`rejected` — খরচের দাবি নামঞ্জুর, শেষ অবস্থা (claims_api.dart; ExpenseClaim::REJECTED)
+  /// <li>`rejected` — খরচের দাবি নামঞ্জুর (claims_api.dart; ExpenseClaim::REJECTED), সইয়ের অনুরোধ নামঞ্জুর
+  /// (my_requests_screen.dart) — [PaperState.rejected], বাতিল নয়
+  /// <li>`approved` — খরচের দাবি অনুমোদিত, টাকার অপেক্ষায় (ExpenseClaim::APPROVED; চিপে [PaperKind.claim]), সইয়ের
+  /// অনুরোধ মঞ্জুর — [PaperState.approved]
   /// <li>`not_posted` · `post_failed` — খাতায় তোলা আটকে গেছে
   /// </ul>
   /// ⓘ [PaperState.unsent] সার্ভারের কোনো লেখা নয় — ফোনের সারিতে জমা থাকা কাগজ; পর্দা নিজেই বসায়।
-  /// ⓘ খরচের দাবির `approved` (সই শেষ, ক্যাশিয়ারের টাকার অপেক্ষায় — দিনের পর দিন থাকতে পারে) সাতটার কোনোটা নয়: নীল
-  /// "খাতায় উঠছে" কয়েক সেকেন্ডের অবস্থা (নকশা ৩)। তাই null — পর্দা সার্ভারের লেখা দেখায়।
   static PaperState? fromServer(String state) => switch (state.trim().toLowerCase()) {
         'draft' => PaperState.draft,
-        'awaiting' || 'awaiting_approval' || 'submitted' => PaperState.waiting,
+        'awaiting' || 'awaiting_approval' || 'submitted' || 'pending' => PaperState.waiting,
         'returned' || 'sent_back' => PaperState.sentBack,
         'posting' => PaperState.posting,
         'posted' || 'confirmed' || 'closed' || 'paid' => PaperState.posted,
-        'cancelled' || 'rejected' => PaperState.cancelled,
+        'cancelled' => PaperState.cancelled,
+        'rejected' => PaperState.rejected,
+        'approved' => PaperState.approved,
         'not_posted' || 'post_failed' => PaperState.notPosted,
         _ => null,
       };
 }
+
+/// ⭐ কাগজের ধরন — অবস্থা একটাই, কথা ধরন মেনে (fe, ২০ অক্টোবর ২০২৬): টাকার কাগজ "পাকা · খাতায় উঠেছে", মজুদের কাগজ
+/// (চালান, ডেলিভারি, মজুদ বদলি) "পাকা · মজুদে উঠেছে", খরচের দাবি "অনুমোদিত · টাকার অপেক্ষায়"। JSON-এ `<নাম>_<ধরন>`
+/// চাবি থাকলে সেটা, নইলে সাধারণ চাবি।
+enum PaperKind { money, stock, claim }
 
 /// Fiori-র অর্থবোধক ভূমিকা
 enum PaperRole { neutral, critical, information, positive, negative }
@@ -76,7 +91,8 @@ class PaperColours {
 
 /// এক ভূমিকার রং — Fiori-র প্যারামিটারের নাম সহ
 class PaperRoleSpec {
-  const PaperRoleSpec({required this.fiori, required this.light, required this.dark, this.adjustedForContrast = false});
+  const PaperRoleSpec(
+      {required this.fiori, required this.light, required this.dark, this.adjustedForContrast = false, this.fioriOriginal = const {}});
 
   /// foreground · background · border → Fiori প্যারামিটার
   final Map<String, String> fiori;
@@ -84,14 +100,20 @@ class PaperRoleSpec {
   final PaperColours dark;
   final bool adjustedForContrast;
 
+  /// কোন রং Fiori-র থেকে সরানো, আর Fiori-র আসল মান — যেমন `light.border` → `#788FA6`
+  final Map<String, String> fioriOriginal;
+
   PaperColours of(Brightness b) => b == Brightness.dark ? dark : light;
 }
 
 const paperRoleSpecs = <PaperRole, PaperRoleSpec>{
   PaperRole.neutral: PaperRoleSpec(
     fiori: {'foreground': 'sapNeutralTextColor', 'background': 'sapNeutralBackground', 'border': 'sapNeutralBorderColor'},
-    light: PaperColours(foreground: Color(0xFF131E29), background: Color(0xFFEFF1F2), border: Color(0xFF788FA6)),
+    // ⓘ WCAG ১.৪.১১: Fiori-র #788FA6 নিজের পটে 2.95:1 — একই রঙে আলো 56.1% থেকে 55.5%, এখন 3.03:1
+    light: PaperColours(foreground: Color(0xFF131E29), background: Color(0xFFEFF1F2), border: Color(0xFF768DA5)),
     dark: PaperColours(foreground: Color(0xFFF5F6F7), background: Color(0xFF242E38), border: Color(0xFFA9B4BE)),
+    adjustedForContrast: true,
+    fioriOriginal: {'light.border': '#788FA6'},
   ),
   PaperRole.critical: PaperRoleSpec(
     fiori: {'foreground': 'sapCriticalTextColor', 'background': 'sapWarningBackground', 'border': 'sapWarningBorderColor'},
@@ -133,6 +155,7 @@ class PaperStateSpec {
     this.reasonMissingBn,
     this.reasonCloseBn,
     this.appOnly = false,
+    this.byKind = const {},
   });
 
   /// `{level}` · `{levels}` থাকলে ডেটার সংখ্যা বসে
@@ -158,19 +181,28 @@ class PaperStateSpec {
   /// কেবল অ্যাপের অবস্থা — ওয়েবে নেই
   final bool appOnly;
 
+  /// ধরনের নিজের কথা — JSON-এর চাবি হুবহু (`label_bn_stock`, `semantics_bn_claim` …)
+  final Map<String, String> byKind;
+
+  String _of(String key, String plain, PaperKind kind) =>
+      kind == PaperKind.money ? plain : (byKind['${key}_${kind.name}'] ?? plain);
+
   PaperRoleSpec get colours => paperRoleSpecs[role]!;
 
   bool get _hasLevel => labelBn.contains('{level}');
 
   /// পর্দার লেখা — ধাপ দুটোই জানা থাকলে "2-এর 1" অংশ, নইলে ছাড়া। ⛔ অঙ্ক ইংরেজিতে, টাকা আর তারিখের মতো
   /// (fe, ২০ অক্টোবর ২০২৬); কেবল কথাগুলো বাংলা — কোনো চিপের লেখায় বা TalkBack-এর কথায় বাংলা অঙ্ক নয়
-  String label({int? level, int? levels}) => _fill(labelBn, labelBnWithoutLevel, level, levels);
+  String label({int? level, int? levels, PaperKind kind = PaperKind.money}) =>
+      _fill(_of('label_bn', labelBn, kind), labelBnWithoutLevel, level, levels);
 
   /// তালিকার সারির ছোট লেখা
-  String shortLabel({int? level, int? levels}) => _fill(labelBnShort, labelBnShortWithoutLevel, level, levels);
+  String shortLabel({int? level, int? levels, PaperKind kind = PaperKind.money}) =>
+      _fill(_of('label_bn_short', labelBnShort, kind), labelBnShortWithoutLevel, level, levels);
 
   /// TalkBack যা বলে — দুই মাপের চিপেই পুরো বাক্য
-  String semantics({int? level, int? levels}) => _fill(semanticsBn, semanticsBnWithoutLevel, level, levels);
+  String semantics({int? level, int? levels, PaperKind kind = PaperKind.money}) =>
+      _fill(_of('semantics_bn', semanticsBn, kind), semanticsBnWithoutLevel, level, levels);
 
   String _fill(String withLevel, String without, int? level, int? levels) {
     if (!_hasLevel) return withLevel;
@@ -219,6 +251,11 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     labelBnShortWithoutLevel: 'খাতায় উঠছে',
     icon: 'draw',
     role: PaperRole.information,
+    byKind: {
+      'label_bn_stock': 'সই শেষ · মজুদে উঠছে',
+      'semantics_bn_stock': 'অবস্থা: সই শেষ, মজুদে উঠছে',
+      'label_bn_short_stock': 'মজুদে উঠছে',
+    },
   ),
   PaperState.posted: PaperStateSpec(
     labelBn: 'পাকা · খাতায় উঠেছে',
@@ -229,6 +266,10 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     labelBnShortWithoutLevel: 'পাকা',
     icon: 'check_circle',
     role: PaperRole.positive,
+    byKind: {
+      'label_bn_stock': 'পাকা · মজুদে উঠেছে',
+      'semantics_bn_stock': 'অবস্থা: পাকা, মজুদে উঠেছে',
+    },
   ),
   PaperState.cancelled: PaperStateSpec(
     labelBn: 'বাতিল',
@@ -266,5 +307,30 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     icon: 'cloud_upload',
     role: PaperRole.information,
     appOnly: true,
+  ),
+  PaperState.rejected: PaperStateSpec(
+    labelBn: 'প্রত্যাখ্যাত',
+    labelBnWithoutLevel: 'প্রত্যাখ্যাত',
+    semanticsBn: 'অবস্থা: প্রত্যাখ্যাত',
+    semanticsBnWithoutLevel: 'অবস্থা: প্রত্যাখ্যাত',
+    labelBnShort: 'প্রত্যাখ্যাত',
+    labelBnShortWithoutLevel: 'প্রত্যাখ্যাত',
+    icon: 'cancel',
+    role: PaperRole.negative,
+  ),
+  PaperState.approved: PaperStateSpec(
+    labelBn: 'অনুমোদিত',
+    labelBnWithoutLevel: 'অনুমোদিত',
+    semanticsBn: 'অবস্থা: অনুমোদিত',
+    semanticsBnWithoutLevel: 'অবস্থা: অনুমোদিত',
+    labelBnShort: 'অনুমোদিত',
+    labelBnShortWithoutLevel: 'অনুমোদিত',
+    icon: 'verified',
+    role: PaperRole.information,
+    byKind: {
+      'label_bn_claim': 'অনুমোদিত · টাকার অপেক্ষায়',
+      'semantics_bn_claim': 'অবস্থা: অনুমোদিত, টাকার অপেক্ষায়',
+      'label_bn_short_claim': 'অনুমোদিত · টাকার অপেক্ষায়',
+    },
   ),
 };

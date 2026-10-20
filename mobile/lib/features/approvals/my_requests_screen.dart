@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -164,8 +165,16 @@ class _RequestCard extends StatelessWidget {
             // ⓘ পক্ষ নম্বরের লাইনে — সারাংশে আর দুইবার নয় ([[summaryAfterParty]])
             if (summaryAfterParty(r.summary, r.party) case final rest?) Text(rest),
             const SizedBox(height: AppSpacing.xs),
-            Text([r.statusLabel, _day(r.requestedAt)].where((s) => s.isNotEmpty).join(' · '),
-                style: TextStyle(color: _tone(context), fontWeight: FontWeight.w600)),
+            // ⭐ অবস্থা — অ্যাপের এক চিপ (নকশা ৩, অংশ ৫): অপেক্ষায় · মঞ্জুর · প্রত্যাখ্যাত · ফেরত; পাশে পাঠানোর দিন
+            Wrap(spacing: AppSpacing.xs, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              AppStatusChip.forServer(r.status,
+                  key: ValueKey('my-request-state-${r.id}'),
+                  fallbackLabel: r.statusLabel,
+                  fallbackColour: _tone(context),
+                  dense: true),
+              if (_day(r.requestedAt).isNotEmpty)
+                Text(_day(r.requestedAt), style: TextStyle(color: context.palette.onSurfaceMuted)),
+            ]),
             if (said.isNotEmpty) Text('শেষ কথা: $said', style: TextStyle(color: context.palette.onSurfaceMuted)),
             if ((r.lastRemarks ?? '').isNotEmpty)
               Text('কারণ: ${r.lastRemarks}', key: ValueKey('my-request-remarks-${r.id}')),

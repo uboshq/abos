@@ -15,12 +15,19 @@
     "levels": "how many levels the paper needs, from the data",
     "digits": "latin (0-9) everywhere, levels too ('2-এর 1', 'ধাপ 1'), as money (owner's খ) and the web's dates ('20 অক্টোবর 2026'); the words stay Bengali (fe, 20 Oct 2026, correcting the sample's '২-এর ১')"
   },
+  "kinds": {
+    "about": "One state, words by the paper's kind: a key '<name>_<kind>' (e.g. label_bn_stock) replaces '<name>' for that kind when present; otherwise the plain key is used.",
+    "money": "default: vouchers, invoices, bills, receipts, payments, returns of money",
+    "stock": "stock papers: delivery challans, deliveries, stock transfers, stock adjustments",
+    "claim": "expense claims and advances (a money paper with its own words for 'approved')"
+  },
   "roles": {
     "neutral": {
       "fiori": { "foreground": "sapNeutralTextColor", "background": "sapNeutralBackground", "border": "sapNeutralBorderColor" },
-      "light": { "foreground": "#131E29", "background": "#EFF1F2", "border": "#788FA6" },
+      "light": { "foreground": "#131E29", "background": "#EFF1F2", "border": "#768DA5" },
       "dark": { "foreground": "#F5F6F7", "background": "#242E38", "border": "#A9B4BE" },
-      "adjusted_for_contrast": false
+      "adjusted_for_contrast": true,
+      "adjusted": { "light.border": { "fiori": "#788FA6", "why": "WCAG 2.2 SC 1.4.11: sapNeutralBorderColor #788FA6 is 2.95:1 on sapNeutralBackground #EFF1F2; darkened within its hue (HSL lightness 56.1% to 55.5%) to 3.03:1" } }
     },
     "critical": {
       "fiori": { "foreground": "sapCriticalTextColor", "background": "sapWarningBackground", "border": "sapWarningBorderColor" },
@@ -86,10 +93,13 @@
     },
     "posting": {
       "label_bn": "সই শেষ · খাতায় উঠছে",
+      "label_bn_stock": "সই শেষ · মজুদে উঠছে",
       "label_bn_without_level": "সই শেষ · খাতায় উঠছে",
       "semantics_bn": "অবস্থা: সই শেষ, খাতায় উঠছে",
+      "semantics_bn_stock": "অবস্থা: সই শেষ, মজুদে উঠছে",
       "semantics_bn_without_level": "অবস্থা: সই শেষ, খাতায় উঠছে",
       "label_bn_short": "খাতায় উঠছে",
+      "label_bn_short_stock": "মজুদে উঠছে",
       "label_bn_short_without_level": "খাতায় উঠছে",
       "icon": "draw",
       "role": "information",
@@ -98,8 +108,10 @@
     },
     "posted": {
       "label_bn": "পাকা · খাতায় উঠেছে",
+      "label_bn_stock": "পাকা · মজুদে উঠেছে",
       "label_bn_without_level": "পাকা · খাতায় উঠেছে",
       "semantics_bn": "অবস্থা: পাকা, খাতায় উঠেছে",
+      "semantics_bn_stock": "অবস্থা: পাকা, মজুদে উঠেছে",
       "semantics_bn_without_level": "অবস্থা: পাকা, খাতায় উঠেছে",
       "label_bn_short": "পাকা",
       "label_bn_short_without_level": "পাকা",
@@ -148,7 +160,39 @@
       "border_style": "solid",
       "tappable": false,
       "app_only": true
+    },
+    "rejected": {
+      "label_bn": "প্রত্যাখ্যাত",
+      "label_bn_without_level": "প্রত্যাখ্যাত",
+      "semantics_bn": "অবস্থা: প্রত্যাখ্যাত",
+      "semantics_bn_without_level": "অবস্থা: প্রত্যাখ্যাত",
+      "label_bn_short": "প্রত্যাখ্যাত",
+      "label_bn_short_without_level": "প্রত্যাখ্যাত",
+      "icon": "cancel",
+      "role": "negative",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "approved": {
+      "label_bn": "অনুমোদিত",
+      "label_bn_claim": "অনুমোদিত · টাকার অপেক্ষায়",
+      "label_bn_without_level": "অনুমোদিত",
+      "semantics_bn": "অবস্থা: অনুমোদিত",
+      "semantics_bn_claim": "অবস্থা: অনুমোদিত, টাকার অপেক্ষায়",
+      "semantics_bn_without_level": "অবস্থা: অনুমোদিত",
+      "label_bn_short": "অনুমোদিত",
+      "label_bn_short_claim": "অনুমোদিত · টাকার অপেক্ষায়",
+      "label_bn_short_without_level": "অনুমোদিত",
+      "icon": "verified",
+      "role": "information",
+      "border_style": "solid",
+      "tappable": false
     }
+  },
+  "border_contrast_measured": {
+    "about": "WCAG 2.2 SC 1.4.11 (3:1) for every drawn border: [against the chip background, lowest against the page surfaces]. Light pages #FFFFFF and #F3F6F7; dark pages Fiori #1D232A/#12171C here, the app's own surfaces in mobile/test/status/paper_state_contrast_test.dart. Compact list chips draw no border except not_posted's dashed one.",
+    "light": { "neutral": [3.03, 3.16], "critical": [3.40, 3.34], "information": [4.04, 4.20], "positive": [3.73, 3.66], "negative": [4.06, 4.28] },
+    "dark": { "neutral": [6.54, 7.51], "critical": [8.51, 9.36], "information": [7.55, 6.82], "positive": [5.06, 5.77], "negative": [6.03, 5.24] }
   },
   "contrast_measured": {
     "about": "WCAG relative-luminance ratios, foreground against the chip background and against the app page surfaces (light: #FFFFFF card, #F3F6F7 page; dark: Fiori #1D232A/#12171C here, the app's own dark surfaces are checked in mobile/test/status/paper_state_contrast_test.dart). All pass 4.5:1 unadjusted.",
