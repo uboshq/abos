@@ -52,11 +52,13 @@ class LoadingSkeleton extends StatelessWidget {
   }
 }
 
-/// ভুল — বাংলায় কী হলো আর "আবার চেষ্টা করুন" (৪৮dp)। [onRetry] না দিলে বোতাম নেই।
+/// ভুল — বাংলায় কী হলো আর "আবার চেষ্টা করুন" (৪৮dp)। [onRetry] না দিলে বোতাম নেই। [title] দিলে উপরে মোটা শিরোনাম
+/// ("তথ্য আনা গেল না"), [message] নিচে বিস্তারিত (নকশা ৩, পাতা ৮; a5-এর অনুরোধ)।
 class ErrorState extends StatelessWidget {
-  const ErrorState({super.key, required this.message, this.onRetry});
+  const ErrorState({super.key, required this.message, this.title, this.onRetry});
 
   final String message;
+  final String? title;
   final VoidCallback? onRetry;
 
   @override
@@ -69,7 +71,13 @@ class ErrorState extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.cloud_off_outlined, size: 48, color: cs.error),
           const SizedBox(height: AppSpacing.md),
-          Text(message, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: cs.onSurface)),
+          if (title != null) ...[
+            Text(title!, textAlign: TextAlign.center, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: cs.onSurface)),
+            const SizedBox(height: AppSpacing.xs),
+          ],
+          Text(message,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: title == null ? 16 : 14, color: title == null ? cs.onSurface : cs.onSurfaceVariant)),
           if (onRetry != null) ...[
             const SizedBox(height: AppSpacing.md),
             FilledButton.tonalIcon(

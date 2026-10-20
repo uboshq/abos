@@ -20,10 +20,12 @@ class DesignListRow extends StatelessWidget {
     this.tone,
     required this.name,
     required this.second,
-    required this.amount,
+    this.amount,
     this.amountColor,
     this.pill,
     this.onTap,
+    this.below,
+    this.secondKey,
   });
 
   final IconData icon;
@@ -34,8 +36,15 @@ class DesignListRow extends StatelessWidget {
 
   /// দ্বিতীয় লাইন — কাগজের নম্বর আগে
   final String second;
-  final num amount;
+  /// টাকা নেই এমন সারিতে (যেমন ট্র্যাকিং) null — ডানে তখন কেবল চিপ
+  final num? amount;
   final Color? amountColor;
+
+  /// দ্বিতীয় লাইনের নিচে আরেক লাইন — যেমন DO-র ওয়েবের চিপ (ব্যাক অর্ডার …)
+  final Widget? below;
+
+  /// দ্বিতীয় লাইনের লেখার key — টেস্ট "নম্বর দ্বিতীয় লাইনে" ধরতে পারে
+  final Key? secondKey;
   final Widget? pill;
   final VoidCallback? onTap;
 
@@ -61,7 +70,8 @@ class DesignListRow extends StatelessWidget {
                       CustomerLine(name,
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface)),
                       const SizedBox(height: 2),
-                      Text(second, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+                      Text(second, key: secondKey, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+                      if (below != null) ...[const SizedBox(height: 4), below!],
                     ],
                   ),
                 ),
@@ -72,10 +82,11 @@ class DesignListRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(Money.taka(amount),
-                          textAlign: TextAlign.end,
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: amountColor ?? cs.onSurface)),
-                      if (pill != null) ...[const SizedBox(height: 4), pill!],
+                      if (amount != null)
+                        Text(Money.taka(amount!),
+                            textAlign: TextAlign.end,
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: amountColor ?? cs.onSurface)),
+                      if (pill != null) ...[if (amount != null) const SizedBox(height: 4), pill!],
                     ],
                   ),
                 ),
