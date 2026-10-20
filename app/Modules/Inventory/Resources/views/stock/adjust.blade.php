@@ -117,22 +117,22 @@
             <form method="POST" action="{{ route('inventory.stock.hold') }}" class="space-y-3">
                 @csrf
 
-                <x-ui.select name="product_id" :label="__('inventory::field.product')"
+                <x-ui.select name="product_id" id="product_id-2" :label="__('inventory::field.product')"
                              :options="$products->mapWithKeys(fn ($p) => [$p->id => $p->code . ' - ' . $p->name()])"
                              placeholder="-" required />
 
-                <x-ui.select name="warehouse_id" :label="__('inventory::field.warehouse')"
+                <x-ui.select name="warehouse_id" id="warehouse_id-2" :label="__('inventory::field.warehouse')"
                              :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
                              placeholder="-" required />
 
                 <x-ui.field name="qty" type="number" step="0.01" inputmode="decimal"
                             :label="__('inventory::field.quantity')" numeric required />
 
-                <x-ui.select name="reason_code_id" :label="__('inventory::field.reason')"
+                <x-ui.select name="reason_code_id" id="reason_code_id-2" :label="__('inventory::field.reason')"
                              :options="$holdReasons->mapWithKeys(fn ($r) => [$r->id => $r->name()])"
                              placeholder="-" required />
 
-                <x-ui.field name="trx_date" type="date" :label="__('inventory::field.date')"
+                <x-ui.field name="trx_date" id="trx_date-2" type="date" :label="__('inventory::field.date')"
                             :value="now()->toDateString()" />
 
                 <div class="flex flex-wrap gap-2">

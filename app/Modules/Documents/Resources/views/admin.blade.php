@@ -172,9 +172,9 @@
             <form method="POST" action="{{ route('documents.admin.store', 'fields') }}"
                   class="grid gap-2 border-t border-(--color-border) px-4 py-3 sm:grid-cols-3 sm:items-end">
                 @csrf
-                <x-ui.field name="code" :label="__('documents::field.code')" maxlength="24" required />
-                <x-ui.field name="name_bn" :label="__('documents::field.name_bn')" maxlength="120" />
-                <x-ui.field name="name_en" :label="__('documents::field.name_en')" maxlength="120" required />
+                <x-ui.field name="code" id="code-2" :label="__('documents::field.code')" maxlength="24" required />
+                <x-ui.field name="name_bn" id="name_bn-2" :label="__('documents::field.name_bn')" maxlength="120" />
+                <x-ui.field name="name_en" id="name_en-2" :label="__('documents::field.name_en')" maxlength="120" required />
                 <x-ui.select name="kind" :label="__('documents::field.field_kind')" required
                              :options="collect(\App\Modules\Documents\Models\MetadataField::KINDS)
                                  ->mapWithKeys(fn ($k) => [$k => __('documents::catalog.field_kind.'.$k)])->all()"
@@ -238,7 +238,7 @@
             <div class="grid gap-4 border-t border-(--color-border) px-4 py-3 lg:grid-cols-2">
                 <form method="POST" action="{{ route('documents.admin.store', 'classify') }}" class="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)_5rem_auto] sm:items-end">
                     @csrf
-                    <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$allTypes" required />
+                    <x-ui.select name="doc_type" id="doc_type-2" :label="__('documents::field.doc_type')" :options="$allTypes" required />
                     <x-ui.field name="keywords" :label="__('documents::field.keywords')" maxlength="500" required />
                     <x-ui.field name="weight" type="number" min="1" max="10" :label="__('documents::field.weight')" value="1" />
                     <x-ui.button type="submit" tone="primary" icon="plus">{{ __('documents::action.add') }}</x-ui.button>
@@ -246,7 +246,7 @@
 
                 <form method="POST" action="{{ route('documents.admin.store', 'extract') }}" class="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
                     @csrf
-                    <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$allTypes" required />
+                    <x-ui.select name="doc_type" id="doc_type-3" :label="__('documents::field.doc_type')" :options="$allTypes" required />
                     <x-ui.field name="label" :label="__('documents::field.rule_label')" maxlength="120" required />
                     <x-ui.field name="pattern" :label="__('documents::field.pattern')" maxlength="500" required
                                 :hint="__('documents::message.pattern_hint')" />
@@ -300,7 +300,7 @@
                   class="grid gap-2 border-t border-(--color-border) px-4 py-3 sm:grid-cols-[repeat(5,minmax(0,1fr))_auto] sm:items-end">
                 @csrf
                 <x-ui.select name="folder" :label="__('documents::field.folder')" :options="$allFolders" :placeholder="__('documents::message.every_type')" />
-                <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$allTypes" :placeholder="__('documents::message.every_type')" />
+                <x-ui.select name="doc_type" id="doc_type-4" :label="__('documents::field.doc_type')" :options="$allTypes" :placeholder="__('documents::message.every_type')" />
                 <x-ui.select name="basis" :label="__('documents::field.basis')" required selected="created"
                              :options="collect(\App\Modules\Documents\Models\RetentionPolicy::BASES)->mapWithKeys(fn ($b) => [$b => __('documents::catalog.basis.'.$b)])->all()" />
                 <x-ui.field name="archive_after_days" type="number" min="1" :label="__('documents::field.archive_after_days')" />

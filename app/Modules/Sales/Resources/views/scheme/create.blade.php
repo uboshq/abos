@@ -67,7 +67,7 @@
                  বোঝা যেত না। --}}
             @foreach (\App\Modules\Sales\Http\Controllers\SchemeController::targets() as $kind => $options)
                 <div x-cloak x-show="appliesTo === '{{ $kind }}'">
-                    <x-ui.select name="target_id" :label="__('sales::applies.' . $kind)"
+                    <x-ui.select name="target_id" :id="'target_id_'.$kind" :label="__('sales::applies.' . $kind)"
                                  :options="$options"
                                  :placeholder="__('sales::field.choose')"
                                  :selected="old('target_id')" />
