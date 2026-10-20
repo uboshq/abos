@@ -258,6 +258,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      */
     Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
         ->name('balance_sheet');
+    // ⭐ মালিকানা-স্বত্বের পরিবর্তনের বিবরণী (IAS 1.106) — স্থিতিপত্রের একই সেবা, একই চাবি; catch-all-এর আগে, একই কারণে
+    Route::get('/reports/changes-in-equity', [BalanceSheetController::class, 'equity'])
+        ->name('equity_statement');
 
     /*
      * গ্রুপের হিসাব — স্থিতিপত্রের মতোই catch-all-এর **আগে**।

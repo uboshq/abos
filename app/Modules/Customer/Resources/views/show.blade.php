@@ -16,6 +16,10 @@
                 <x-ui.button tone="secondary" type="button" x-data @click="$dispatch('party-eye')" data-party-eye>
                     <x-ui.icon name="eye" :size="16" /> {{ __('customer::action.details') }}
                 </x-ui.button>
+                {{-- ⭐ পাওনা-দেনা নিশ্চিতকরণের চিঠি (ISA 505, ২০ অক্টোবর ২০২৬) — পাতার খাতার একই জের, A4 --}}
+                <x-ui.button tone="secondary" icon="print" :href="route('customer.balance_confirmation', $customer)" data-balance-confirmation>
+                    {{ __('confirmation.button') }}
+                </x-ui.button>
                 @can('update', $customer)
                     <x-ui.button tone="secondary" :href="route('customer.edit', $customer)">
                         {{ __('core.action.edit') }}
