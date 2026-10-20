@@ -169,8 +169,28 @@ class _CustomerTile extends StatelessWidget {
     ].join(' · ');
     final due = CustomerDueRecord.forCustomer(customer.id);
 
+    // ⓘ বড় লেখায় (দেড়গুণের বেশি) বকেয়া ডানে নয়, নামের নিচে নিজের লাইনে — পুরো মাপে, পড়ার মতো; ডানে থাকলে সারির
+    // চওড়ার ৪০%-এর বেশি নেয় না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে বকেয়া পুরো সারি খেয়ে
+    // ফেলত: "Trailing widget consumes the entire tile width"।
+    final big = isLargeText(context);
+    Widget? duePill(double maxWidth) => due == null
+        ? null
+        : Semantics(
+            container: true,
+            button: true,
+            onTapHint: 'খাতা খুলুন',
+            child: InkWell(
+              key: ValueKey('ledger-${customer.id}'),
+              onTap: () => context.push('/home/customers/${customer.id}/ledger'),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: 48, minHeight: 48, maxWidth: maxWidth),
+                child: _DuePill(due: due, shrinkToFit: !big),
+              ),
+            ),
+          );
     return Card(
-      child: ListTile(
+      child: LayoutBuilder(
+        builder: (context, constraints) => ListTile(
         // ⓘ নামের প্রথম অক্ষরের বৃত্ত সাজ — TalkBack নামটা একবারই পড়ে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
         leading: ExcludeSemantics(
           child: CircleAvatar(
@@ -184,9 +204,17 @@ class _CustomerTile extends StatelessWidget {
         ),
         // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); লম্বা হলে "…", পুরোটা ছুঁয়ে ধরে রাখলে
         title: CustomerLine(customer.label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: subtitle.isEmpty
-            ? null
-            : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: big && due != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (subtitle.isNotEmpty) Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  duePill(constraints.maxWidth)!,
+                ],
+              )
+            : subtitle.isEmpty
+                ? null
+                : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
         onTap: () => context.go('/home/customers/${customer.id}'),
         // No due row at all when this shop's CustomerDue has not been pulled
         // yet — the two entity types have separate watermarks, so one can
@@ -195,32 +223,23 @@ class _CustomerTile extends StatelessWidget {
         // ⭐ বকেয়ার অঙ্কে চাপলে সোজা খাতা — মালিক, ১২ অক্টোবর ২০২৬
         // ⓘ TalkBack-এ বকেয়ার অঙ্ক নিজেই একটা বোতাম — "বকেয়া ৳…, খাতা খুলুন", আঙুলের জায়গা অন্তত ৪৮ dp
         // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এর চাপটা কার্ডের নামহীন ঘরে গিয়ে পড়ত।
-        trailing: due == null
-            ? null
-            : Semantics(
-                container: true,
-                button: true,
-                onTapHint: 'খাতা খুলুন',
-                child: InkWell(
-                  key: ValueKey('ledger-${customer.id}'),
-                  onTap: () =>
-                      context.push('/home/customers/${customer.id}/ledger'),
-                  child: ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(minWidth: 48, minHeight: 48),
-                    child: _DuePill(due: due),
-                  ),
-                ),
-              ),
+        trailing: big ? null : duePill(constraints.maxWidth * 0.4),
+        ),
       ),
     );
   }
 }
 
+/// ⓘ ফোনের লেখা দেড়গুণের বেশি বড় — তখন সারির ডানের অঙ্ক নিচে নামে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+bool isLargeText(BuildContext context) => MediaQuery.textScalerOf(context).scale(10) > 15;
+
 class _DuePill extends StatelessWidget {
-  const _DuePill({required this.due});
+  const _DuePill({required this.due, this.shrinkToFit = true});
 
   final CustomerDueRecord due;
+
+  /// ডানের ঘরে — জায়গা না হলে ছোট হয়; নামের নিচে (বড় লেখায়) পুরো মাপে
+  final bool shrinkToFit;
 
   @override
   Widget build(BuildContext context) {
@@ -229,25 +248,33 @@ class _DuePill extends StatelessWidget {
     // case shout as loudly as the one a rep has to act on.
     final owes = due.outstandingInView > 0;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          due.outstandingLabel,
-          semanticsLabel: Money.speakable(due.outstandingLabel),
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-            color: owes ? AppColors.danger : context.palette.onSurfaceMuted,
-          ),
-        ),
-        if (due.creditDays > 0)
+    // ⓘ অঙ্ক আর দিন — সারির ঘরে না ধরলে দুটোই একসাথে ছোট হয়; অঙ্ক মাঝখানে ভাঙে না, নিচে কেটেও যায় না
+    // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে ১৮ dp নিচে বেরিয়ে যেত।
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: shrinkToFit ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: shrinkToFit ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
           Text(
-            '${due.creditDays} দিন',
-            style: Theme.of(context).textTheme.bodySmall,
+            due.outstandingLabel,
+            semanticsLabel: Money.speakable(due.outstandingLabel),
+            maxLines: 1,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: owes ? AppColors.danger : context.palette.onSurfaceMuted,
+            ),
           ),
-      ],
+          if (due.creditDays > 0)
+            Text(
+              '${due.creditDays} দিন',
+              maxLines: 1,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
+      ),
     );
   }
 }

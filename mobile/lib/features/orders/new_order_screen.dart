@@ -697,10 +697,18 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
         decoration: BoxDecoration(color: o.bar, borderRadius: BorderRadius.circular(20)),
-        child: Row(
+        // ⓘ জায়গা না হলে "পাঠান" মোটের নিচে নামে — বড় লেখায় মোট সরু ঘরে চেপে লম্বা হয় না (ec, অ্যাপ এন্টারপ্রাইজ মান,
+        // ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে পট্টিটা পর্দার অর্ধেক খেত, পণ্যের তালিকা প্রায় ঢেকে যেত।
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('বিক্রি ${bnQty(_pieces)} পিস · ফ্রি ${bnQty(_freePieces)}',

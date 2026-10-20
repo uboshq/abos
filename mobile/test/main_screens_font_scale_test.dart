@@ -1,0 +1,117 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
+import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
+
+import 'support/fake_secure_storage.dart';
+import 'support/hive_test_harness.dart';
+import 'support/main_screens.dart';
+
+/// ⭐ বড় লেখায় পর্দা ভাঙে না — ফোনের "ফন্টের মাপ" ১৩০% আর ২০০%-এ মূল পর্দাগুলো (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+///
+/// <p>কম দেখেন এমন দোকানি বা বিক্রয়কর্মী ফোনের লেখা বড় করে রাখেন। তখন সারি ভাঙা, অঙ্ক কাটা বা হলুদ-কালো ডোরা মানে
+/// তাঁর কাছে পর্দাটাই নেই। লেখা মোড়ায়, দরকারে ছোট হয় বা "…" দিয়ে থামে, আর পাতা নিচে গড়ায়।
+///
+/// <p>ছবিগুলো `test/goldens/`-এ জমা — লেআউট বদলালে লাল। ⓘ পরীক্ষার ফন্টে প্রতিটা অক্ষর একটা চৌকো ঘর, আসল বাংলার
+/// চেয়ে চওড়া: এখানে যা ধরে, ফোনে তা আরও আরামে ধরে। ছবিতে বাংলা অক্ষর চৌকো দেখায় — এটা পরীক্ষার ফন্ট, ভুল নয়।
+void main() {
+  late HiveTestHarness harness;
+
+  setUpAll(() async {
+    FakeSecureStorage.install();
+    harness = await HiveTestHarness.setUp();
+    await ReferenceCache.instance.init();
+    await SyncEngine.instance.init();
+  });
+
+  tearDownAll(() async {
+    await SyncEngine.instance.dispose();
+    await harness.tearDown();
+  });
+
+  final screens = <String, Widget Function({double textScale})>{
+    'login': loginScreen,
+    'home': homeShell,
+    'customer_list': customerList,
+    'customer_detail': customerDetail,
+    'new_order': newOrder,
+    'collection': collect,
+    'ledger': customerLedger,
+    'printer_settings': printerSettings,
+  };
+
+  /// [build] চালায় আর যত ভাঙন (RenderFlex overflow, ListTile-এর জায়গা ফুরানো) হলো তার তালিকা দেয়
+  Future<List<String>> collectBreaks(Future<void> Function() build) async {
+    final breaks = <String>[];
+    final previous = FlutterError.onError;
+    FlutterError.onError = (details) {
+      final text = details.exceptionAsString();
+      if (text.contains('overflowed') || text.contains('consumes the entire tile width')) {
+        breaks.add('${text.split('\n').first} @ ${_where(details)}');
+      } else {
+        previous?.call(details);
+      }
+    };
+    try {
+      await build();
+    } finally {
+      FlutterError.onError = previous;
+    }
+    return breaks;
+  }
+
+  Future<List<String>> open(WidgetTester tester, Widget app) => collectBreaks(() async {
+        await tester.runAsync(seedMainData);
+        await tester.pumpWidget(app);
+        await tester.pumpAndSettle();
+      });
+
+  Future<List<String>> openSettings(WidgetTester tester, double scale) => collectBreaks(() async {
+        await tester.pumpWidget(homeShell(textScale: scale));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('header-avatar')));
+        await tester.pumpAndSettle();
+      });
+
+  for (final screen in screens.entries) {
+    testWidgets('${screen.key}: nothing overflows at 200% text', (tester) async {
+      setScreenSize(tester, const Size(390, 844));
+      final breaks = await open(tester, screen.value(textScale: 2.0));
+      expect(breaks, isEmpty, reason: '⛔ ২০০% লেখায় পর্দা ভাঙল: ${breaks.join(' | ')}');
+    });
+
+    for (final scale in [1.3, 2.0]) {
+      final pct = (scale * 100).round();
+      testWidgets('${screen.key}: golden at $pct% text', (tester) async {
+        setScreenSize(tester, const Size(390, 844));
+        final breaks = await open(tester, screen.value(textScale: scale));
+        expect(breaks, isEmpty, reason: '⛔ ছবিতে ডোরা থাকত: ${breaks.join(' | ')}');
+        await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/${screen.key}_$pct.png'));
+      });
+    }
+  }
+
+  // "আমি" — সেটিংসের পাতা
+  testWidgets('settings (আমি): nothing overflows at 200% text', (tester) async {
+    setScreenSize(tester, const Size(390, 844));
+    final breaks = await openSettings(tester, 2.0);
+    expect(breaks, isEmpty, reason: '⛔ ২০০% লেখায় "আমি" ভাঙল: ${breaks.join(' | ')}');
+  });
+
+  for (final scale in [1.3, 2.0]) {
+    final pct = (scale * 100).round();
+    testWidgets('settings (আমি): golden at $pct% text', (tester) async {
+      setScreenSize(tester, const Size(390, 844));
+      final breaks = await openSettings(tester, scale);
+      expect(breaks, isEmpty);
+      await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/settings_$pct.png'));
+    });
+  }
+}
+
+/// কোন পর্দার কোন লাইনে ভাঙল — লাল হলে খুঁজতে হয় না
+String _where(FlutterErrorDetails details) {
+  final at = RegExp(r'lib/features/[^\s)]+').allMatches(details.toString()).map((m) => m[0]!).toSet();
+  return at.isEmpty ? '?' : at.join(', ');
+}
