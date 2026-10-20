@@ -315,15 +315,17 @@
              আর বাকি ন'টায় চিহ্নটা একেবারেই নেই — শিরোনাম কেবল শিরোনাম,
              আর দৃশ্য বাছার বোতামটা নিচে ডান দিকের নিয়ন্ত্রণগুলোর সাথে। --}}
         @if ($title)
+            {{-- ⓘ পাতায় প্রথম শিরোনাম h1, পরেরটা h2 — page-header আগে থাকলে এটা h2 ([[PageHeading]]) --}}
+            @php($headingTag = \App\Core\Support\PageHeading::tag())
             @if ($viewMode === 'dropdown')
-                <h1 class="contents">
+                <{{ $headingTag }} class="contents">
                     <x-ui.view-menu :label="$title" mode="heading" />
-                </h1>
+                </{{ $headingTag }}>
             @else
-                <h1 data-view-selector
+                <{{ $headingTag }} data-view-selector
                     class="shrink-0 truncate text-lg font-semibold text-(--color-ink)">
                     {{ $title }}
-                </h1>
+                </{{ $headingTag }}>
             @endif
 
             @if ($count !== null || $subtitle)

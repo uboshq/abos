@@ -419,6 +419,12 @@
                          রাখে, ফলে তালিকার পর্দাগুলোয় কিছুই বসে না। --}}
                     <x-ui.anchor-nav />
 
+                    {{-- ⭐ পাতায় কোনো h1 না থাকলে অদৃশ্য একটা, পাতার নামে — প্রতিটা পাতায় ঠিক একটা মূল শিরোনাম
+                         (ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬; [[PageHeading]])। ⓘ স্লট আগেই আঁকা, তাই দেখে বলা যায়। --}}
+                    @unless (\App\Core\Support\PageHeading::present((string) ($header ?? ''), (string) $slot))
+                        <h1 class="sr-only">{{ $title ?? 'ABOS' }}</h1>
+                    @endunless
+
                     {{ $slot }}
                 </div>
             </main>
