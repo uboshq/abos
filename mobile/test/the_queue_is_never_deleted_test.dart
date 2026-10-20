@@ -109,7 +109,9 @@ void main() {
     final background = QueueLock(names: names);
 
     expect(await app.acquire(), isTrue);
-    expect(await background.acquire(ping: const Duration(milliseconds: 200)), isFalse, reason: '⛔ দুজনেই বাক্স পেলেন');
+    // ⓘ ২০০ms-এর ping আর নয় — পুরো দৌড়ের চাপে একবার "দুজনেই পেলেন" হয়েছিল (ec, ২০ অক্টোবর ২০২৬); এখন ডিফল্ট ping আর পরপর দুইবার,
+    //    আর জীবিত মালিক উত্তর দেন নিয়ন্ত্রণ-পোর্টে (নিচের "ব্যস্ত মালিক" দাবি)
+    expect(await background.acquire(), isFalse, reason: '⛔ দুজনেই বাক্স পেলেন');
 
     app.release();
     expect(await background.acquire(), isTrue);
@@ -122,6 +124,63 @@ void main() {
       expect(text.contains('মোছা হয়নি') || text.contains('ফোনেই রাখা আছে'), isTrue, reason: '${trouble.name}: "$text"');
     }
   });
+
+  // ── ২০ অক্টোবর ২০২৬: ব্যস্ত মালিক মৃত নন ([[QueueLock._alive]]) ─────────────────────────────────────────────────────────────
+
+  test('a live owner that is busy, not dead, keeps the lock — the other side asks the isolate itself, not its event loop', () async {
+    // ⓘ সত্যিকারের আরেকটা isolate তালা নেয়, তারপর ৬ সেকেন্ড event loop বন্ধ রেখে ঘোরে — পুরনো "আছেন?" তখন কখনো উত্তর পেত না
+    final name = 'abos_test_busy_owner_${DateTime.now().microsecondsSinceEpoch}';
+    final ready = ReceivePort();
+    final owner = await Isolate.spawn(_holdThenSpin, <Object>[ready.sendPort, name]);
+    try {
+      expect(await ready.first.timeout(const Duration(seconds: 15)), isTrue, reason: 'প্রস্তুতিটাই ভুল — অন্য isolate তালা পায়নি');
+
+      final other = QueueLock(name: name);
+      final got = await other.acquire(ping: const Duration(milliseconds: 300), misses: 2);
+
+      expect(got, isFalse, reason: '⛔ ব্যস্ত (জীবিত) মালিককে মৃত ধরে তালা কেড়ে নেওয়া হল — একই বাক্সে দুই লেখক');
+      expect(other.held, isFalse);
+    } finally {
+      owner.kill(priority: Isolate.immediate);
+      ready.close();
+      const IsolatePortNames()
+        ..remove(name)
+        ..remove('$name.isolate');
+    }
+  });
+
+  test('an owner whose lock was taken knows it before writing, and its release leaves the new owner alone', () async {
+    final names = FakePortNames();
+    final first = QueueLock(names: names);
+    expect(await first.acquire(), isTrue);
+    expect(first.stillMine, isTrue);
+
+    // ⓘ কেউ কেড়ে নিল — নামের খাতায় এখন অন্যের পোর্ট
+    final taker = ReceivePort();
+    names.remove(QueueLock.defaultName);
+    names.register(taker.sendPort, QueueLock.defaultName);
+
+    expect(first.held, isTrue, reason: 'প্রস্তুতিটাই ভুল');
+    expect(first.stillMine, isFalse, reason: '⛔ তালা হারিয়েও মালিক ভাবেন তিনিই — লেখা চলত, দুই লেখক');
+
+    first.release();
+    expect(names.lookup(QueueLock.defaultName), taker.sendPort, reason: '⛔ পুরনো মালিক ছাড়তে গিয়ে নতুন মালিকের নাম মুছে দিলেন');
+    taker.close();
+  });
+}
+
+/// অন্য isolate-এ: তালা নেওয়া, "পেয়েছি" জানানো, তারপর ৬ সেকেন্ড event loop না ছেড়ে ঘোরা (ব্যস্ত, কিন্তু জীবিত)
+Future<void> _holdThenSpin(List<Object> args) async {
+  final ready = args[0] as SendPort;
+  final lock = QueueLock(name: args[1] as String);
+  ready.send(await lock.acquire());
+  final until = DateTime.now().add(const Duration(seconds: 6));
+  var spins = 0;
+  while (DateTime.now().isBefore(until)) {
+    spins++;
+  }
+  lock.release();
+  if (spins < 0) ready.send(false);
 }
 
 /// [IsolateNameServer]-এর একই নিয়ম — একটা নাম একবারই বসে — একটা isolate-এর ভিতরে
