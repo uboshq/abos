@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 
 /// One customer the search found — from the customers already synced to this
@@ -63,28 +64,32 @@ class NavSearchBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ রং থিমের ভূমিকা থেকে, চাপার জায়গা অন্তত ৪৮dp উঁচু (নকশার নিয়ম ০.৪.৩৮ §১, §২; a4, ১৯ অক্টোবর ২০২৬)
     return Material(
-      color: AppColors.surface,
+      color: context.palette.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: context.palette.border),
       ),
       child: InkWell(
         key: const ValueKey('nav-search'),
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
-          child: Row(children: [
-            Icon(Icons.search, color: AppColors.onSurfaceMuted),
-            SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(hint,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppColors.onSurfaceMuted, fontSize: 13.5)),
-            ),
-          ]),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+            child: Row(children: [
+              Icon(Icons.search, color: context.palette.onSurfaceMuted),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(hint,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.palette.onSurfaceMuted, fontSize: 13.5)),
+              ),
+            ]),
+          ),
         ),
       ),
     );
@@ -108,8 +113,8 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
     final theme = Theme.of(context);
     return theme.copyWith(
       appBarTheme: theme.appBarTheme.copyWith(
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.onSurface,
+        backgroundColor: context.palette.surface,
+        foregroundColor: context.palette.onSurface,
       ),
       inputDecorationTheme: const InputDecorationTheme(border: InputBorder.none),
     );
@@ -141,10 +146,10 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
   Widget _results(BuildContext context) {
     final q = query.trim();
     if (q.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Text('পর্দার নাম ("অর্ডার", "চালান", "stock") বা গ্রাহকের নাম/মোবাইল লিখুন।',
-            style: TextStyle(color: AppColors.onSurfaceMuted)),
+            style: TextStyle(color: context.palette.onSurfaceMuted)),
       );
     }
     final screens = tree.search(q);
@@ -153,7 +158,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
       return Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Text('"$q" — কিছু পাওয়া গেল না।',
-            style: const TextStyle(color: AppColors.onSurfaceMuted)),
+            style: TextStyle(color: context.palette.onSurfaceMuted)),
       );
     }
     return ListView(
@@ -163,6 +168,8 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
         for (final row in screens)
           ListTile(
             key: ValueKey('hit-${row.path}'),
+            // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
+            minTileHeight: 72,
             leading: _Dot(color: AppColors.moduleSolid(row.module), icon: row.icon),
             title: Text(row.label),
             // ⓘ ওয়েবের পর্দা হলে বলে দেয় — খোলে অ্যাপের ভিতরেই
@@ -176,6 +183,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
         for (final c in customers)
           ListTile(
             key: ValueKey('hit-customer-${c.id}'),
+            minTileHeight: 72,
             leading: _Dot(color: AppColors.moduleSolid('customer'), icon: Icons.storefront_outlined),
             title: Text(c.label),
             subtitle: c.detail == null ? null : Text(c.detail!, style: const TextStyle(fontSize: 12)),
@@ -196,7 +204,10 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xs),
         child: Text(text,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: context.palette.onSurfaceMuted)),
       );
 }
 
@@ -211,6 +222,7 @@ class _Dot extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: Colors.white, size: 20),
+        // ⓘ moduleSolid সাদার সাথে ৩:১ মেপে বানানো — আইকন দুই মোডেই সাদা (AppColors.onPrimary)
+        child: Icon(icon, color: AppColors.onPrimary, size: 20), // dark-ok
       );
 }

@@ -124,7 +124,9 @@ void main() {
     final squares = spans.where((s) => (s.text ?? '').startsWith('■')).toList();
 
     // ⓘ আগে দুটো ■ লেখার রঙে কালো — কোন স্তম্ভ কোনটা বোঝা যেত না (মোবাইলের নকশার তুলনা, ১৯ অক্টোবর ২০২৬)
-    expect(squares.map((s) => s.style?.color).toList(), [AppColors.primary, AppColors.warning]);
+    // ⓘ প্রথম সারির রং এখন থিমের primary (নকশার নিয়ম ০.৪.৩৮ §১) — স্তম্ভও একই রঙে আঁকা
+    final primary = Theme.of(tester.element(find.byKey(const ValueKey('series-legend')))).colorScheme.primary;
+    expect(squares.map((s) => s.style?.color).toList(), [primary, AppColors.warning]);
     expect(legend.textSpan!.toPlainText(), contains('এসেছে'));
     expect(legend.textSpan!.toPlainText(), contains('গেছে'));
   });

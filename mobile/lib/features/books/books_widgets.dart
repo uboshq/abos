@@ -96,9 +96,13 @@ class TotalStrip extends StatelessWidget {
               Expanded(
                   child: Text(label,
                       style: const TextStyle(fontWeight: FontWeight.w600))),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800)),
+              // ⓘ টাকা Flexible — ৩৬০dp ফোনে বা বড় অক্ষরে (২০০%) লম্বা টাকা সারি ছাপিয়ে যেত (নকশার নিয়ম ০.৪.৩৮ §২)
+              Flexible(
+                child: Text(value,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w800)),
+              ),
               if (count != null)
                 Padding(
                   padding: const EdgeInsets.only(left: AppSpacing.sm),

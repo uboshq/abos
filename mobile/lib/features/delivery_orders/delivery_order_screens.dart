@@ -8,6 +8,7 @@ import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
@@ -143,7 +144,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
               ),
             for (final order in rows)
               Card(
+                // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২, a4, ১৯ অক্টোবর ২০২৬)
                 child: ListTile(
+                  minTileHeight: 72,
                   onTap: () => _open(order),
                   title: Text(order.no),
                   subtitle: Column(
@@ -419,10 +422,13 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
         children: [
           if (_busy) const LinearProgressIndicator(),
           if (_error != null) _ErrorCard(_error!),
+          // ⓘ সবুজ পটে নিজের গাঢ় সবুজ লেখা — থিমের লেখা অন্ধকার মোডে এই হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১)
           if (_done != null)
             Card(
               color: AppColors.successSurface,
-              child: Padding(padding: const EdgeInsets.all(AppSpacing.md), child: Text(_done!)),
+              child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(_done!, style: const TextStyle(color: AppColors.success))),
             ),
           if (order != null) ...[
             Text(order.no, style: Theme.of(context).textTheme.titleLarge),
@@ -433,7 +439,8 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             // ⓘ বিক্রয় আদেশ বাকির সীমায় আটকে — লেখক দেখেন কেন থেমে আছে; টাকা এলে সার্ভার নিজেই আবার দেখে
             if (order.creditShort != null)
               Text('বাকির সীমায় আটকে — কম ${Money.taka(order.creditShort)}',
-                  key: const ValueKey('do-credit-short'), style: const TextStyle(color: AppColors.danger)),
+                  key: const ValueKey('do-credit-short'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (order.chips.isNotEmpty) OrderChips(order.chips),
             // ⭐ মজুদ এখন — ধরা হয়নি: আছে, চাই, কম (ওয়েবের আদেশের পাতার একই উৎস)
             if (order.stockNow.isNotEmpty) _StockNowCard(order.stockNow),
@@ -494,7 +501,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
               ),
               OutlinedButton(
                 key: const ValueKey('do-reject'),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                 onPressed: _busy
                     ? null
                     : () {
@@ -592,6 +599,7 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
             child: ListView.builder(
               itemCount: shown.length,
               itemBuilder: (_, i) => ListTile(
+                minTileHeight: 72,
                 title: Text(widget.label(shown[i])),
                 onTap: () => Navigator.of(context).pop(shown[i]),
               ),
@@ -609,12 +617,14 @@ class OrderChips extends StatelessWidget {
 
   final List<OrderChip> chips;
 
-  static (Color, Color) colours(String tone) => switch (tone) {
+  /// ⭐ অবস্থার রং জোড়ায় (পট, লেখা) — রঙিন জোড়া দুই মোডে একই; ধরন না চিনলে থিমের মলিন পট আর লেখা
+  /// (নকশার নিয়ম ০.৪.৩৮ §১; a4, ১৯ অক্টোবর ২০২৬: context.palette — আলোতে হুবহু আগের রং)
+  static (Color, Color) colours(String tone, AppPalette p) => switch (tone) {
         'success' => (AppColors.successSurface, AppColors.success),
         'warning' => (AppColors.warningSurface, AppColors.warning),
         'danger' => (AppColors.dangerSurface, AppColors.danger),
         'info' || 'pending' => (AppColors.pendingSurface, AppColors.pending),
-        _ => (AppColors.surfaceMuted, AppColors.onSurfaceMuted),
+        _ => (p.surfaceMuted, p.onSurfaceMuted),
       };
 
   @override
@@ -629,9 +639,13 @@ class OrderChips extends StatelessWidget {
                 key: ValueKey('order-chip-${c.key}'),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                 decoration: BoxDecoration(
-                    color: colours(c.tone).$1, borderRadius: BorderRadius.circular(12)),
+                    color: colours(c.tone, context.palette).$1,
+                    borderRadius: BorderRadius.circular(12)),
                 child: Text(c.label,
-                    style: TextStyle(fontSize: 12, color: colours(c.tone).$2, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: colours(c.tone, context.palette).$2,
+                        fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -652,15 +666,15 @@ class _StockNowCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('মজুদ এখন — ধরা হয়নি', style: TextStyle(fontWeight: FontWeight.w700)),
-              const Text('মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।',
-                  style: TextStyle(color: AppColors.onSurfaceMuted)),
+              Text('মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।',
+                  style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final r in rows) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(r.product, style: const TextStyle(fontWeight: FontWeight.w600)),
                 Text(r.have != null ? 'আছে ${_qty(r.have!)} · চাই ${_qty(r.want)}' : 'চাই ${_qty(r.want)}'),
                 if (!r.enough)
                   Text(r.short != null ? 'কম ${_qty(r.short!)}' : 'মজুদে কুলোয় না',
-                      style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
               ],
             ],
           ),
@@ -674,6 +688,7 @@ class _ErrorCard extends StatelessWidget {
   final String text;
 
   @override
+  // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১)
   Widget build(BuildContext context) => Card(
         color: AppColors.dangerSurface,
         child: Padding(

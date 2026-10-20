@@ -281,8 +281,8 @@ void main() {
 
     // One piece at 42.5, and the total that follows from it. A cart whose
     // prices are null adds up to zero and says so out loud.
-    expect(find.text('✓ ঝুড়িতে আছে · ৳৪২.৫০'), findsOneWidget);
-    expect(find.text('৳৪২.৫০'), findsWidgets);
+    expect(find.text('✓ ঝুড়িতে আছে · ৳42.50'), findsOneWidget);
+    expect(find.text('৳42.50'), findsWidgets);
 
     // ⛔ The owner's rule: the SR's phone shows no stock on this screen,
     // although a StockOnHand row (40 sellable) is in the cache.

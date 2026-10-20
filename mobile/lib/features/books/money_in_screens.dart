@@ -165,8 +165,10 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
               ),
             for (final row in _rows)
               Card(
+                // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২, a4, ১৯ অক্টোবর ২০২৬)
                 child: ListTile(
                   key: ValueKey('money-in-${row.no}'),
+                  minTileHeight: 72,
                   title: Text(row.customer.isEmpty ? '—' : row.customer),
                   subtitle: Text(
                       '${row.no} · ${dayOf(row.date)} · ${MoneyInRow.methodLabel(row.method)}'),

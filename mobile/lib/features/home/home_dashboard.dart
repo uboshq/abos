@@ -7,6 +7,7 @@ import '../../core/navigation/nav_catalog.dart';
 import '../../core/navigation/nav_prefs.dart';
 import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../today/today_panel.dart';
 
@@ -73,6 +74,8 @@ class HomeDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ রং কেবল থিমের ভূমিকা থেকে — আলো আর অন্ধকার দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
+    final cs = Theme.of(context).colorScheme;
     return TodayPanel(
       fetch: fetchToday,
       lastKnown: lastKnownToday,
@@ -89,8 +92,7 @@ class HomeDashboard extends StatelessWidget {
         Card(
           key: const Key('home-dashboards'),
           child: ListTile(
-            leading:
-                const Icon(Icons.insights_outlined, color: AppColors.primary),
+            leading: Icon(Icons.insights_outlined, color: cs.primary),
             title: const Text('ব্যবসার ড্যাশবোর্ড',
                 style: TextStyle(fontWeight: FontWeight.w700)),
             subtitle: const Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা'),
@@ -104,30 +106,34 @@ class HomeDashboard extends StatelessWidget {
           const Padding(
             key: ValueKey('favourites-empty'),
             padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text(
-                'কোনো মডিউলের মেনুতে একটা সারি চেপে ধরে রাখুন — এখানে এসে বসবে (ছয়টা পর্যন্ত)।',
-                style:
-                    TextStyle(fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+            child: _Muted(
+                'কোনো মডিউলের মেনুতে একটা সারি চেপে ধরে রাখুন — এখানে এসে বসবে (ছয়টা পর্যন্ত)।'),
           )
         else
-          GridView.count(
+          // ⭐ চারটা করে পাশাপাশি, কিন্তু ঘরের উচ্চতা বাঁধা নয় — বড় অক্ষরে (২০০%) নাম ভাঙে না, ঘর নিজের মাপে বাড়ে
+          // (নকশার নিয়ম ০.৪.৩৮ §২, a4, ১৯ অক্টোবর ২০২৬)। ⓘ আগে GridView-এর childAspectRatio উচ্চতা বেঁধে রাখত।
+          LayoutBuilder(
             key: const ValueKey('favourites'),
-            crossAxisCount: 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.sm,
-            crossAxisSpacing: AppSpacing.sm,
-            childAspectRatio: 0.85,
-            children: [
-              for (final row in favourites)
-                _FavouriteTile(
-                  row: row,
-                  onTap: () => _go(context, row.path!, row.label),
-                  onLongPress: onUnfavourite == null
-                      ? null
-                      : () => onUnfavourite!(row),
-                ),
-            ],
+            builder: (context, box) {
+              final width = (box.maxWidth - 3 * AppSpacing.sm) / 4;
+              return Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final row in favourites)
+                    SizedBox(
+                      width: width,
+                      child: _FavouriteTile(
+                        row: row,
+                        onTap: () => _go(context, row.path!, row.label),
+                        onLongPress: onUnfavourite == null
+                            ? null
+                            : () => onUnfavourite!(row),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         if (recents.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
@@ -136,16 +142,17 @@ class HomeDashboard extends StatelessWidget {
             key: const ValueKey('recents'),
             child: Column(children: [
               for (var i = 0; i < recents.length && i < 5; i++) ...[
-                if (i > 0) const Divider(height: 1, color: AppColors.border),
+                if (i > 0) Divider(height: 1, color: context.palette.border),
+                // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
                 ListTile(
                   key: ValueKey('recent-${recents[i].path}'),
-                  dense: true,
+                  minTileHeight: 72,
                   title: Text(recents[i].label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 14)),
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppColors.onSurfaceMuted),
+                  trailing: Icon(Icons.chevron_right,
+                      color: context.palette.onSurfaceMuted),
                   onTap: () =>
                       _go(context, recents[i].path, recents[i].label),
                 ),
@@ -188,16 +195,28 @@ class _SectionTitle extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: AppSpacing.xs),
         child: Row(children: [
           if (icon != null) ...[
-            Icon(icon, size: 18, color: AppColors.primary),
+            Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: AppSpacing.xs),
           ],
           Text(text,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.onSurface)),
+                  color: context.palette.onSurface)),
         ]),
       );
+}
+
+class _Muted extends StatelessWidget {
+  const _Muted(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: TextStyle(
+          fontSize: 12.5,
+          color: context.palette.onSurfaceMuted));
 }
 
 class _FavouriteTile extends StatelessWidget {
@@ -222,6 +241,7 @@ class _FavouriteTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xs),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(

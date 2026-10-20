@@ -159,7 +159,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     // which the server has never sent, so every confirmed
                     // order here said "নম্বর নেই"; see SalesOrderRecord.
                     ...shown.map((order) => Card(
+                          // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২, a4, ১৯ অক্টোবর ২০২৬)
                           child: ListTile(
+                            minTileHeight: 72,
                             leading: const AppStatusPill(
                                 label: 'সম্পন্ন', kind: AppStatusKind.success),
                             title: Text(order.documentNo ?? 'নম্বর নেই'),

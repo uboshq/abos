@@ -10,6 +10,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../printing/document_actions_sheet.dart';
@@ -815,7 +816,7 @@ class _CounterScreenState extends State<CounterScreen> {
                       mode == option.$1
                           ? Icons.radio_button_checked
                           : Icons.radio_button_off,
-                      color: AppColors.primary),
+                      color: Theme.of(sheet).colorScheme.primary),
                   title: Text(option.$2),
                   onTap: () => setSheet(() => mode = option.$1),
                 ),
@@ -1035,7 +1036,9 @@ class _CounterScreenState extends State<CounterScreen> {
               child: const Text('ফিরে যান')),
           FilledButton(
             key: const ValueKey('counter-void-confirm'),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(dialog).colorScheme.error,
+                foregroundColor: Theme.of(dialog).colorScheme.onError),
             onPressed: () {
               if (reason.text.trim().isNotEmpty) Navigator.pop(dialog, true);
             },
@@ -1075,8 +1078,9 @@ class _CounterScreenState extends State<CounterScreen> {
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(
                   vertical: AppSpacing.sm, horizontal: 2),
+              // ⓘ বাছা বোতাম সবুজ পটে নিজের গাঢ় সবুজ লেখায় — জোড়া রং, অন্ধকার মোডেও পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১)
               backgroundColor: marked ? AppColors.successSurface : null,
-              foregroundColor: colour,
+              foregroundColor: marked ? AppColors.success : colour,
             ),
             onPressed: onPressed,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1162,6 +1166,8 @@ class _CounterScreenState extends State<CounterScreen> {
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (_busy) const LinearProgressIndicator(),
+          // ⭐ ভুলের পট আর লেখা জোড়া রং — লাল পটে নিজের লাল লেখা, দুই মোডেই পড়া যায়; হলুদ পটে নিজের গাঢ় হলুদ লেখা — থিমের লেখা
+          // অন্ধকার মোডে হালকা পটে হারাত (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
           if (_error != null)
             Card(
               color: AppColors.dangerSurface,
@@ -1169,7 +1175,8 @@ class _CounterScreenState extends State<CounterScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(_error!,
                     key: const ValueKey('counter-error'),
-                    style: const TextStyle(color: AppColors.danger)),
+                    style: const TextStyle(
+                        color: AppColors.danger)),
               ),
             ),
           if (_resumeNo != null)
@@ -1177,6 +1184,7 @@ class _CounterScreenState extends State<CounterScreen> {
               color: AppColors.warningSurface,
               child: ListTile(
                 key: const ValueKey('counter-resume-banner'),
+                textColor: AppColors.warning,
                 title: Text('খসড়া $_resumeNo খোলা আছে'),
                 subtitle: const Text(
                     'নিশ্চিত করলে এই খসড়াটাই পাকা হবে, নতুন বিল নয়।'),
@@ -1218,9 +1226,11 @@ class _CounterScreenState extends State<CounterScreen> {
               color: AppColors.warningSurface,
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(setup!.warehouses.isEmpty
-                    ? 'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'
-                    : 'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।'),
+                child: Text(
+                    setup!.warehouses.isEmpty
+                        ? 'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'
+                        : 'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।',
+                    style: const TextStyle(color: AppColors.warning)),
               ),
             ),
           if (setup != null &&
@@ -1357,7 +1367,9 @@ class _CounterScreenState extends State<CounterScreen> {
           // ── কার্ট — কেবল পড়ার ─────────────────────────────────────
           for (final line in _cart)
             Card(
+              // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
               child: ListTile(
+                minTileHeight: 72,
                 title: Text(line.productName),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1437,14 +1449,14 @@ class _CounterScreenState extends State<CounterScreen> {
           Row(children: [
             _button('counter-draft', 'খসড়া রাখুন', Icons.save_outlined,
                 _busy ? null : () => _sell(draft: true),
-                colour: Colors.black54),
+                colour: context.palette.onSurfaceMuted),
             _button('counter-open-draft', 'খসড়া খুলুন',
                 Icons.folder_open_outlined, _busy ? null : _openDraft),
             _button('counter-reprint', 'আবার ছাপা', Icons.print_outlined,
                 _busy ? null : _reprint),
             _button('counter-void', 'বিল বাতিল', Icons.delete_outline,
                 _busy ? null : _voidBill,
-                colour: AppColors.danger),
+                colour: Theme.of(context).colorScheme.error),
           ]),
           const SizedBox(height: AppSpacing.xs),
           SizedBox(
@@ -1503,6 +1515,7 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
             child: ListView.builder(
               itemCount: shown.length,
               itemBuilder: (_, i) => ListTile(
+                minTileHeight: 72,
                 title: Text(widget.label(shown[i])),
                 onTap: () => Navigator.of(context).pop(shown[i]),
               ),
