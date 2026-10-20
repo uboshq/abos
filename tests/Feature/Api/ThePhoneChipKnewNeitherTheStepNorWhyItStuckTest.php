@@ -93,6 +93,9 @@ final class ThePhoneChipKnewNeitherTheStepNorWhyItStuckTest extends TestCase
         app(ApprovalEngine::class)->approve($approval->fresh(), $this->second);
         $this->assertTrue(Voucher::query()->withoutGlobalScopes()->findOrFail($voucher->id)->isPosted(), 'পরীক্ষার ভিত্তি — শেষ সইয়ে পাকা');
 
+        // ⛔ ইঞ্জিনের নিজের কথা — সই শেষ হওয়া অনুরোধের কোনো ধাপ নেই, যে-ই জিজ্ঞেস করুক ([[ApprovalEngine::standingOf()]]; M17)
+        $this->assertNull(app(ApprovalEngine::class)->standingOf($approval->fresh()), '⛔ সই শেষ হওয়া অনুরোধ এখনো "২-এর ২" বলে।');
+
         $row = $this->listRow($voucher);
         $page = $this->showPage($voucher);
         foreach ([$row, $page] as $answer) {
@@ -175,6 +178,43 @@ final class ThePhoneChipKnewNeitherTheStepNorWhyItStuckTest extends TestCase
         $this->assertSame('posted', $after['state']);
         $this->assertFalse($after['posting_failed']);
         $this->assertNull($after['post_problem'], '⛔ পাকা হওয়ার পরেও পুরনো কারণ।');
+    }
+
+    /**
+     * ⛔ সইয়ের পরে লেখক কাগজটা বদলালেন — সইটা আর এই কাগজের নয়, তাই "সই শেষ, পোস্ট আটকে" নয় ([[SignedButNotPosted::stillSigned()]]; M16)।
+     * ⓘ ওয়েবের "সই হয়েছে, পোস্ট হয়নি" তালিকারও একই নিয়ম — ফোন বললে মিথ্যা বলত: হাতে পোস্ট নতুন সই চাইবে।
+     */
+    public function test_a_stuck_voucher_edited_after_signing_is_no_longer_called_signed_and_stuck(): void
+    {
+        $this->twoSteps('accounts', 'journal');
+        [$voucher, $approval] = $this->sentForSignature();
+        $this->assertNotNull($approval->fresh()->state_hash, 'পরীক্ষার ভিত্তি — সইয়ে কাগজের ছাপ বসে');
+
+        $this->as($this->first);
+        app(ApprovalEngine::class)->approve($approval->fresh(), $this->first);
+        PeriodLock::query()->create([
+            'company_id' => $this->company->id, 'year' => (int) now()->year, 'month' => (int) now()->month,
+            'reason' => 'রিপোর্ট পাঠানো হয়ে গেছে', 'locked_by' => $this->first->id, 'locked_at' => now(),
+        ]);
+        $this->as($this->second);
+        app(ApprovalEngine::class)->approve($approval->fresh(), $this->second);
+        $this->assertTrue($this->listRow($voucher)['posting_failed'], 'পরীক্ষার ভিত্তি — সই শেষ, পোস্ট আটকে');
+
+        // ⓘ মাস খুলল, আর লেখক খসড়ার বিবরণ বদলালেন — ভাউচারের পর্দার একই সেবায়
+        PeriodLock::query()->delete();
+        $this->as($this->writer);
+        [$a, $b] = $this->twoAccounts();
+        app(VoucherService::class)->update(
+            Voucher::query()->withoutGlobalScopes()->findOrFail($voucher->id),
+            ['narration' => 'সইয়ের পরে বদলানো'],
+            [['account_id' => $a->id, 'debit' => '500', 'credit' => '0'], ['account_id' => $b->id, 'debit' => '0', 'credit' => '500']],
+        );
+        $this->assertTrue(Voucher::query()->withoutGlobalScopes()->findOrFail($voucher->id)->isDraft(), 'পরীক্ষার ভিত্তি — বদলেও খসড়া');
+
+        $row = $this->listRow($voucher);
+        $this->assertSame('draft', $row['state']);
+        $this->assertFalse($row['posting_failed'], '⛔ সইয়ের পরে বদলানো কাগজকে "সই শেষ, পোস্ট আটকে" বলা হলো — সইটা আর এর নয়।');
+        $this->assertNull($row['post_problem'], '⛔ বদলানো কাগজে পুরনো সইয়ের কারণ।');
     }
 
     public function test_the_list_asks_the_same_number_of_questions_for_two_rows_and_for_six(): void
@@ -275,9 +315,15 @@ final class ThePhoneChipKnewNeitherTheStepNorWhyItStuckTest extends TestCase
         return [$voucher->fresh(), $stopping];
     }
 
+    /** @return array{0: Account, 1: Account} জাবেদার দুই খাত — টাকার খাত নয় */
+    private function twoAccounts(): array
+    {
+        return Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '5%')->orderBy('code')->take(2)->get()->all();
+    }
+
     private function draft(string $narration): Voucher
     {
-        [$a, $b] = Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '5%')->orderBy('code')->take(2)->get()->all();
+        [$a, $b] = $this->twoAccounts();
 
         $this->as($this->writer);
 
