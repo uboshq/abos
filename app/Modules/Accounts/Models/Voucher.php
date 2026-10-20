@@ -9,6 +9,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\KeepsRevisions;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\RepostsAfterRevision;
@@ -42,6 +43,8 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
     use IsAudited;
     use \App\Core\Concerns\NamesItsPartyInNotices; // ⭐ বিজ্ঞপ্তিতে পক্ষের নাম (গ্রাহক হলে · পয়েন্ট) — মালিক, ১৯ অক্টোবর ২০২৬
     use KeepsRevisions;
+    // ⭐ পাতা নাগাল ধরে খোলে, মাথার শাখা ধরে নয় — সইয়ের পাতা আর নোটিশের লিংক আর ৪০৪ নয় (মালিক, ১৯ অক্টোবর ২০২৬)
+    use OpensInReach;
     use ScopedToUserBranch;
     use SoftDeletes;
 

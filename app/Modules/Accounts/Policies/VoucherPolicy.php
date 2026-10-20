@@ -30,7 +30,8 @@ class VoucherPolicy
 
     public function view(User $user, Voucher $voucher): bool
     {
-        return $user->can('accounts.report');
+        // ⭐ এই ভাউচারের সইকারীও — সইয়ের পাতা যে কাগজে তাঁর সই চায়, সেটা পড়তে পারেন; অন্য ভাউচার নয় (fe, ১৯ অক্টোবর ২০২৬)
+        return $user->can('accounts.report') || \App\Core\Engines\Approval\PaperSigners::isSigner($user, $voucher);
     }
 
     public function create(User $user): bool
