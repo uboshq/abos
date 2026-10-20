@@ -75,6 +75,35 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
             ->assertSee('9,000.00');
     }
 
+    /**
+     * ⓘ নিট অঙ্ক শোধ হলেই বিলটা "বাকি আছে" তালিকা থেকে সরে — পরিশোধের ফর্মের বিল-তালিকা ([[PurchaseBill::scopeStillOwed()]])।
+     * ⛔ কাটা অংশ বাকি ধরলে ১,০০০ টাকার "বাকি" নিয়ে বিলটা চিরকাল তালিকায় থাকত, আর কেউ সেটাও সরবরাহকারীকে দিয়ে ফেলত।
+     */
+    public function test_paying_the_net_takes_the_bill_off_the_list_of_bills_still_owed(): void
+    {
+        $bill = $this->confirmedBill(['ait_amount' => '500', 'vds_amount' => '500']);
+
+        $this->get(route('purchase.payment.create'))->assertOk()->assertSee($bill->document_no);
+
+        $bank = Account::query()->create([
+            'company_id' => CompanyContext::id(), 'code' => '1102-AITP', 'name_en' => '1102-AITP', 'name_bn' => '1102-AITP',
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'money_kind' => Account::BANK, 'is_active' => true, 'status' => DocumentStatus::CONFIRMED,
+        ]);
+
+        $this->post(route('purchase.payment.store'), [
+            'supplier_id' => $this->supplier->id, 'account_id' => $bank->id, 'trx_date' => now()->toDateString(), 'amount' => '9000',
+            'instrument' => 'cheque', 'instrument_no' => 'CHQ-AIT-1',
+            'lines' => [['purchase_bill_id' => $bill->id, 'amount' => '9000']],
+        ])->assertSessionHasNoErrors();
+        $payment = \App\Modules\Purchase\Models\Payment::query()->latest('id')->firstOrFail();
+        $this->post(route('purchase.payment.confirm', $payment))->assertSessionHasNoErrors();
+
+        $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '0', 4), '⛔ নিট শোধের পরেও বাকি আছে');
+        $this->assertFalse(PurchaseBill::query()->whereKey($bill->id)->stillOwed()->exists(), '⛔ কাটা অংশ "বাকি" ধরে বিলটা তালিকায় রইল');
+        $this->get(route('purchase.payment.create'))->assertOk()->assertDontSee($bill->document_no);
+    }
+
     public function test_withholding_above_the_bill_total_is_refused_and_nothing_posts(): void
     {
         $entries = LedgerEntry::query()->count();
