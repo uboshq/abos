@@ -351,7 +351,7 @@ final class Board
      * ⓘ ভাই-কোম্পানি বাদের আগের ভাগ — বাদটা মোটের ঘরে আলাদা সারিতে ([[Eliminations]])।
      *
      * @param  list<array<string, mixed>>  $companies
-     * @return array{billed: string, returned: string}|null
+     * @return array{billed: string, returned: string, vat: string}|null
      */
     private static function salesParts(array $companies): ?array
     {
@@ -367,6 +367,7 @@ final class Board
             $out = [
                 'billed' => bcadd($out['billed'] ?? '0', (string) $part['billed'], 4),
                 'returned' => bcadd($out['returned'] ?? '0', (string) $part['returned'], 4),
+                'vat' => bcadd($out['vat'] ?? '0', (string) ($part['vat'] ?? '0'), 4),
             ];
         }
 

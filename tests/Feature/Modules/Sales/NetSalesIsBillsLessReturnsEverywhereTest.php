@@ -6,6 +6,7 @@ namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -18,6 +19,7 @@ use App\Modules\Executive\Services\Figures;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Models\Tax;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
@@ -39,7 +41,7 @@ use Tests\TestCase;
  *
  * দাবি, আসল পথে (ওয়েবের হোম `GET /`, ফোনের `GET /api/v1/dashboard/today` Sanctum + অ্যাপের ক্ষমতা, মালিকের ছক [[Board]]),
  * আসল নিশ্চিত বিলে আর আসল নিশ্চিত বিক্রয় ফেরতে ([[SalesInvoiceService]], [[SalesReturnService]]):
- *   · আজ বিল ১,০০,০০০, ফেরত ১০,০০০ → নিট ৯০,০০০: SalesMetrics, ওয়েবের কার্ড, ফোনের `sales.amount`, ছকের SALES;
+ *   · আজ বিল ১,০০,০০০ + VAT, ফেরত ১০,০০০ + VAT → নিট ৯০,০০০ (VAT বাদে, IFRS 15.47), VAT ৯,০০০ আলাদা: SalesMetrics, ওয়েবের কার্ড, ফোনের `sales.amount`, ছকের SALES;
  *   · বিল আর ফেরত আলাদা দেখায় — ফোনের `sales.billed`/`sales.returned`, ওয়েবের কার্ডের খোলা-ঘর, ছকের `sales_parts`;
  *   · ফেরত নিজের তারিখে: গতকালের ফেরত আজ কমায় না, আজকের ফেরত গতকালের বিলেরও হলে আজ কমায়;
  *   · শাখার সারির যোগ = মোট, প্রতিটা সারি নিট আর পাশে বিল-ফেরত;
@@ -71,6 +73,14 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->web($this->owner);
         $this->warehouse = Warehouse::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('is_default', true)->firstOrFail();
 
+        app(SettingsService::class)->set('sales.vat_enabled', true);
+        $this->assertTrue((bool) app(SettingsService::class)->get('sales.vat_enabled', false), 'প্রস্তুতিটাই ভুল — বিক্রিতে VAT চালু হয়নি।');
+
+        // ⭐ চালে ১০% VAT, দামের উপরে — বিল আর ফেরত দুইটাতেই VAT থাকে, আর নিট বিক্রি VAT বাদে (IFRS 15.47)
+        $vat = Tax::query()->create(['code' => 'NET-VAT10', 'name_en' => 'NET-VAT10', 'name_bn' => 'NET-VAT10', 'rate' => '10', 'kind' => 'vat',
+            'is_inclusive' => false, 'is_active' => true]);
+        Product::query()->where('name_en', 'Miniket Rice 50kg')->firstOrFail()->forceFill(['tax_id' => $vat->id])->save();
+
         // ⓘ বাকির সীমা আর দিন এই দাবির বিষয় নয় — বিক্রি যেন আটকে না যায়
         Customer::acrossDealers()->whereIn('name_en', ['Rahim Traders', 'Niloy Store'])->get()
             ->each(fn (Customer $c) => $c->forceFill(['credit_limit' => '100000000', 'credit_days' => 60])->save());
@@ -85,9 +95,11 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $bill = $this->bill('10', '10000');
         $return = $this->giveBack($bill, '1', $today);
 
-        // প্রস্তুতি: বিল ১,০০,০০০ আর ফেরত ১০,০০০, দুইটাই খাতায় বসা, আজকের তারিখে
-        $this->assertSame('100000.0000', bcadd((string) $bill->total, '0', 4), 'প্রস্তুতিটাই ভুল — বিলটা ১,০০,০০০ নয়।');
-        $this->assertSame('10000.0000', bcadd((string) $return->total, '0', 4), 'প্রস্তুতিটাই ভুল — ফেরতটা ১০,০০০ নয়।');
+        // প্রস্তুতি: বিল ১,০০,০০০ + VAT ১০,০০০ আর ফেরত ১০,০০০ + VAT ১,০০০, দুইটাই খাতায় বসা, আজকের তারিখে
+        $this->assertSame('110000.0000', bcadd((string) $bill->total, '0', 4), 'প্রস্তুতিটাই ভুল — বিলটা VAT সহ ১,১০,০০০ নয়।');
+        $this->assertSame('10000.0000', bcadd((string) $bill->tax, '0', 4), 'প্রস্তুতিটাই ভুল — বিলে VAT ১০,০০০ নয়।');
+        $this->assertSame('11000.0000', bcadd((string) $return->total, '0', 4), 'প্রস্তুতিটাই ভুল — ফেরতটা VAT সহ ১১,০০০ নয়।');
+        $this->assertSame('1000.0000', bcadd((string) $return->tax, '0', 4), 'প্রস্তুতিটাই ভুল — ফেরতে VAT ১,০০০ নয়।');
         $this->assertContains($return->status, DocumentStatus::POSTED, 'প্রস্তুতিটাই ভুল — ফেরত খাতায় বসেনি।');
         $this->assertSame($today, $return->trx_date->toDateString());
 
@@ -95,19 +107,22 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $metrics = $this->metrics($today);
         $this->assertSame('100000.0000', bcsub($metrics['billed'], $metricsBefore['billed'], 4), '⛔ বিলের অঙ্ক ভুল।');
         $this->assertSame('10000.0000', bcsub($metrics['returned'], $metricsBefore['returned'], 4), '⛔ ফেরত গোনা হয়নি।');
-        $this->assertSame('90000.0000', bcsub($metrics['net'], $metricsBefore['net'], 4), '⛔ নিট = বিল − ফেরত নয়।');
+        $this->assertSame('90000.0000', bcsub($metrics['net'], $metricsBefore['net'], 4), '⛔ নিট = বিল − ফেরত নয় (VAT বাদে)।');
+        $this->assertSame('9000.0000', bcsub($metrics['vat'], $metricsBefore['vat'], 4), '⛔ VAT আলাদা আসেনি (বিলের VAT − ফেরতের VAT)।');
+        $this->assertSame('99000.0000', bcsub($metrics['gross'], $metricsBefore['gross'], 4), '⛔ VAT সহ মোট (আদায়যোগ্য) ভুল।');
         $this->assertSame($metrics['net'], $metrics['today'], '⛔ sales.today নিট নয়।');
 
         // ── ফোন: amount নিট, পাশে billed, returned, label ──
         $after = $this->phone($this->owner)->json('sales');
-        foreach (['amount', 'billed', 'returned', 'label'] as $key) {
+        foreach (['amount', 'billed', 'returned', 'vat', 'label'] as $key) {
             $this->assertArrayHasKey($key, $after, "⛔ ফোনের sales.{$key} নেই।");
         }
         $this->assertSame('90000.0000', bcsub($after['amount'], $before['amount'], 4), '⛔ ফোনের sales.amount নিট নয়।');
         $this->assertSame('100000.0000', bcsub($after['billed'], $before['billed'], 4), '⛔ ফোনের sales.billed ভুল।');
         $this->assertSame('10000.0000', bcsub($after['returned'], $before['returned'], 4), '⛔ ফোনের sales.returned ভুল।');
+        $this->assertSame('9000.0000', bcsub($after['vat'], $before['vat'], 4), '⛔ ফোনের sales.vat ভুল।');
         $this->assertSame(bcsub($after['billed'], $after['returned'], 4), $after['amount'], '⛔ ফোনে amount ≠ billed − returned।');
-        foreach (['amount', 'billed', 'returned'] as $key) {
+        foreach (['amount', 'billed', 'returned', 'vat'] as $key) {
             $this->assertMatchesRegularExpression('/^-?\d+\.\d{4}$/', $after[$key], "⛔ sales.{$key} চার ঘরের টাকা-স্ট্রিং নয়।");
         }
         $this->assertSame(self::NET_LABEL, $after['label'], '⛔ ফোনের নাম "নিট বিক্রি" নয়।');
@@ -118,6 +133,8 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertSame(Money::format($after['amount']), $card['value'], '⛔ ওয়েবের কার্ড আর ফোন দুই অঙ্ক।');
         $this->assertStringContainsString(Money::format($after['billed']), $card['title'], '⛔ কার্ড খুললে বিল দেখায় না।');
         $this->assertStringContainsString(Money::format($after['returned']), $card['title'], '⛔ কার্ড খুললে ফেরত দেখায় না।');
+        $this->assertStringContainsString('VAT সহ মোট (আদায়যোগ্য) '.Money::format(bcadd($after['amount'], $after['vat'], 4)), $card['title'],
+            '⛔ কার্ড খুললে VAT সহ মোট আলাদা লাইনে নেই।');
 
         // ── মালিকের ছক = ফোন ──
         $board = $this->board();
@@ -125,6 +142,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertNotNull($board['sales_parts'], 'প্রস্তুতিটাই ভুল — মালিক ছকের বিক্রি দেখেন না।');
         $this->assertSame($after['billed'], bcadd($board['sales_parts']['billed'], '0', 4), '⛔ ছকের বিল আর ফোন দুই অঙ্ক।');
         $this->assertSame($after['returned'], bcadd($board['sales_parts']['returned'], '0', 4), '⛔ ছকের ফেরত আর ফোন দুই অঙ্ক।');
+        $this->assertSame($after['vat'], bcadd($board['sales_parts']['vat'], '0', 4), '⛔ ছকের VAT আর ফোন দুই অঙ্ক।');
     }
 
     public function test_a_return_dated_yesterday_does_not_lower_today(): void
@@ -228,12 +246,15 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
-    /** @return array{billed: string, returned: string, net: string, today: string} */
+    /** @return array{billed: string, returned: string, net: string, vat: string, gross: string, today: string} */
     private function metrics(string $day): array
     {
         $this->web($this->owner);
+        $parts = SalesMetrics::netParts($day, $day);
 
         return [
+            'vat' => $parts['vat'],
+            'gross' => $parts['gross'],
             'billed' => SalesMetrics::billed($day, $day),
             'returned' => SalesMetrics::returned($day, $day),
             'net' => SalesMetrics::net($day, $day),

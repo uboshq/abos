@@ -37,7 +37,7 @@ use Illuminate\Support\Carbon;
  * রুটে কোনো `can:` নেই; প্রতিটা ঘর নিজের চাবি দেখে।
  *
  * ── চাবিগুলো, আর চুক্তি থেকে যেখানে সরে আসা ─────────────────────────
- *   sales        sales.invoice.view  ⭐ amount নিট (বিল − ফেরত) + billed, returned, label (২০ অক্টোবর ২০২৬) ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
+ *   sales        sales.invoice.view  ⭐ amount নিট (বিল − ফেরত, VAT বাদে) + billed, returned, vat, label (২০ অক্টোবর ২০২৬) ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
  *                                    বিলের, আর ওয়েবের কার্ডও এই চাবি চায় —
  *                                    ফোন ওয়েবের চেয়ে বেশি দেখাবে না
  *   salesByBranch sales.invoice.view  ⭐ ২০ অক্টোবর ২০২৬ (০.৪.৪১, মালিকের হোম): শাখা ধরে আজকের বিক্রি,
@@ -94,13 +94,14 @@ class DashboardTodayController extends Controller
              * ([[SalesMetrics::salesToday()]])। `billed` আর `returned` আলাদা, `label` সার্ভারের বাংলা নাম (অ্যাপ ০.৪.৪১ দেখায়)।
              * ⓘ পুরনো অ্যাপ কেবল `amount` পড়ে — সেটাই এখন নিট। `count` আগের মতো আজকের পাকা বিলের সংখ্যা।
              */
-            $billed = self::money(SalesMetrics::billed($today, $today));
-            $returned = self::money(SalesMetrics::returned($today, $today));
+            // ⭐ সব ভ্যাট বাদে (IFRS 15.47); ভ্যাট আলাদা `vat`-এ (বিলের ভ্যাট − ফেরতের ভ্যাট)
+            $parts = SalesMetrics::netParts($today, $today);
             $body['sales'] = [
                 'count' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$today, $today])->count(),
                 'amount' => self::money(SalesMetrics::salesToday()->value()),
-                'billed' => $billed,
-                'returned' => $returned,
+                'billed' => self::money($parts['billed']),
+                'returned' => self::money($parts['returned']),
+                'vat' => self::money($parts['vat']),
                 'label' => __('sales::dashboard.sales_today'),
             ];
 

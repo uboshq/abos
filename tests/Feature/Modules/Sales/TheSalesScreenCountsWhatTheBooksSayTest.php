@@ -208,8 +208,9 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
         // ⭐ ফোন আর হোম পর্দার একই সংজ্ঞা — "আজকের বিক্রয়" কার্ড আর নিট এক অঙ্ক
         $this->actingAs($this->user);
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        // ⓘ ২০ অক্টোবর ২০২৬ থেকে "নিট বিক্রি" VAT বাদে (IFRS 15.47) — বিলের নিট বাদ VAT; এই দিনে কোনো ফেরত নেই
         $this->assertSame(bcadd(SalesMetrics::salesToday()->value(), '0', 4),
-            bcadd($cards['sales.overview.net']['raw'], '0', 4), '⛔ একই দিনের দুই সংজ্ঞা — পর্দা আর ফোন আলাদা বলবে।');
+            bcsub($cards['sales.overview.net']['raw'], $cards['sales.overview.tax']['raw'], 4), '⛔ একই দিনের দুই সংজ্ঞা — পর্দা আর ফোন আলাদা বলবে।');
         $this->assertSame($cards['sales.today']['raw'], SalesMetrics::salesToday()->value());
     }
 

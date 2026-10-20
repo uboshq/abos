@@ -244,83 +244,117 @@ final class SalesMetrics implements ProvidesMetrics
     }
 
     /**
-     * ⭐ নিট বিক্রি — IFRS 15: আয় ফেরত বাদে (fe, ২০ অক্টোবর ২০২৬)। তিনটা সংখ্যা, একটাই ভিত:
-     *   billed   = পাকা বিলের `total` ([[invoiceTotal()]] হুবহু — ভ্যাটসহ, ছাড় বাদে, রাউন্ডিংসহ)
-     *   returned = পাকা বিক্রয় ফেরতের `total`, **ফেরতের নিজের তারিখে** (subtotal + tax — বিলের দিকের একই ভ্যাটসহ রীতি)
-     *   net      = billed − returned
+     * ⭐ নিট বিক্রি — IFRS 15 (fe, ২০ অক্টোবর ২০২৬): আয় ফেরত বাদে (১৫.৫১) **আর ভ্যাট বাদে** (১৫.৪৭ — তৃতীয় পক্ষের হয়ে তোলা টাকা আয় নয়)।
+     *   billed   = পাকা বিলের `total − tax` (ছাড় বাদে, রাউন্ডিং আর গাড়িভাড়াসহ, ভ্যাট বাদে)
+     *   returned = পাকা বিক্রয় ফেরতের `total − tax`, **ফেরতের নিজের তারিখে**
+     *   net      = billed − returned  ("নিট বিক্রি")
+     *   vat      = বিলের ভ্যাট − ফেরতের ভ্যাট (আলাদা দেখানো, আয় নয়)
+     *   gross    = net + vat = "VAT সহ মোট (আদায়যোগ্য)" — গ্রাহকের কাছে পাওনা হওয়া মোট
      * ⛔ ফেরত বিলের তারিখে নয়: গতকালের ফেরত আজকের বিক্রি কমায় না, আজকের ফেরত গত মাসের বিলেরও হলে আজই কমায়।
      * ⓘ দেয়াল দুই দিকেই একই — কোম্পানি, শাখা/হেডারের শাখা ([[ScopedToUserBranch]]), বিক্রয়কর্মীর ডিলার
-     * ([[ScopedToUserDealers]]), আর হোমের ছাঁকনি। ⓘ সব bcmath, চার ঘর।
+     * ([[ScopedToUserDealers]]), আর হোমের ছাঁকনি। ⓘ সব bcmath, চার ঘর। ⓘ [[invoiceTotal()]] আগের মতোই ভ্যাটসহ বিল।
+     *
+     * @return array{billed: string, returned: string, net: string, vat: string, gross: string}
      */
+    public static function netParts(string $from, string $to, ?array $customerIds = null): array
+    {
+        [$billed, $billedVat] = self::exVat(self::invoices($from, $to, $customerIds), 'sal_invoices');
+        [$returned, $returnedVat] = self::exVat(self::returns($from, $to, $customerIds), 'sal_returns');
+
+        return self::parts($billed, $billedVat, $returned, $returnedVat);
+    }
+
     public static function billed(string $from, string $to, ?array $customerIds = null): string
     {
-        return bcadd(self::invoiceTotal($from, $to, $customerIds), '0', 4);
+        return self::exVat(self::invoices($from, $to, $customerIds), 'sal_invoices')[0];
     }
 
     public static function returned(string $from, string $to, ?array $customerIds = null): string
     {
-        return bcadd((string) (self::returns($from, $to, $customerIds)->sum('sal_returns.total') ?: '0'), '0', 4);
+        return self::exVat(self::returns($from, $to, $customerIds), 'sal_returns')[0];
     }
 
     public static function net(string $from, string $to, ?array $customerIds = null): string
     {
-        return bcsub(self::billed($from, $to, $customerIds), self::returned($from, $to, $customerIds), 4);
+        return self::netParts($from, $to, $customerIds)['net'];
+    }
+
+    /** ভ্যাট — বিলের ভ্যাট বাদ ফেরতের ভ্যাট; আয় নয়, আলাদা দেখানো */
+    public static function vat(string $from, string $to, ?array $customerIds = null): string
+    {
+        return self::netParts($from, $to, $customerIds)['vat'];
     }
 
     /**
-     * নিটের ভেতরের ভাগ, এক লাইনে — "বিল ৳… − ফেরত ৳… = নিট ৳…"; কার্ডের খোলা-ঘরে (টুলটিপ) বসে।
-     * ⓘ তিনটা অঙ্কই উপরের একই তিন পদ্ধতি, তাই কার্ডের সংখ্যা আর এই লাইনের নিট পয়সায় এক।
+     * নিটের ভেতরের ভাগ — "বিল ৳… − ফেরত ৳… = নিট বিক্রি ৳…", আর আলাদা লাইনে "VAT সহ মোট (আদায়যোগ্য) ৳…";
+     * কার্ডের খোলা-ঘরে (টুলটিপ) বসে। ⓘ অঙ্কগুলো [[netParts()]] — কার্ডের সংখ্যার একই উৎস।
      */
     public static function netPartsLine(string $from, string $to): string
     {
-        $billed = self::billed($from, $to);
-        $returned = self::returned($from, $to);
+        $p = self::netParts($from, $to);
 
         return __('sales::dashboard.net_parts', [
-            'billed' => Money::format($billed),
-            'returned' => Money::format($returned),
-            'net' => Money::format(bcsub($billed, $returned, 4)),
+            'billed' => Money::format($p['billed']),
+            'returned' => Money::format($p['returned']),
+            'net' => Money::format($p['net']),
+        ])."\n".__('sales::dashboard.net_with_vat', [
+            'gross' => Money::format($p['gross']),
+            'vat' => Money::format($p['vat']),
         ]);
     }
 
-    /** @return array<int, string> শাখার আইডি → বিল (শাখাহীন `0`) */
-    public static function billedByBranch(string $from, string $to): array
+    /**
+     * ⓘ শাখা ধরে নিট — দুই কোয়েরি (বিল আর ফেরত, প্রতিটা একটা `GROUP BY`), শাখা ধরে লুপ নয়। চাবি শাখার আইডি, শাখাহীন `0`।
+     * ⛔ সারির `net`-এর যোগ = [[net()]] পয়সায় — যে শাখায় কেবল ফেরত, সেটাও সারি পায়।
+     *
+     * @return array<int, array{billed: string, returned: string, net: string, vat: string, gross: string}>
+     */
+    public static function netByBranch(string $from, string $to): array
     {
-        return array_map(fn (string $v): string => bcadd($v, '0', 4), self::invoiceTotalByBranch($from, $to));
-    }
-
-    /** @return array<int, string> শাখার আইডি → ফেরত, ফেরতের নিজের শাখা আর তারিখে (শাখাহীন `0`); এক কোয়েরি */
-    public static function returnedByBranch(string $from, string $to): array
-    {
+        $billed = self::exVatByBranch(self::invoices($from, $to), 'sal_invoices');
+        $returned = self::exVatByBranch(self::returns($from, $to), 'sal_returns');
         $out = [];
 
-        foreach (self::returns($from, $to)
-            ->selectRaw('sal_returns.branch_id as branch_id, COALESCE(SUM(sal_returns.total), 0) as amount')
-            ->groupBy('sal_returns.branch_id')
-            ->toBase()
-            ->get() as $row) {
-            $out[(int) $row->branch_id] = bcadd((string) $row->amount, '0', 4);
+        foreach (array_unique([...array_keys($billed), ...array_keys($returned)]) as $branch) {
+            $out[(int) $branch] = self::parts(
+                $billed[$branch][0] ?? '0.0000', $billed[$branch][1] ?? '0.0000',
+                $returned[$branch][0] ?? '0.0000', $returned[$branch][1] ?? '0.0000',
+            );
         }
 
         return $out;
     }
 
-    /**
-     * ⓘ শাখা ধরে নিট — দুই কোয়েরি (বিল আর ফেরত, প্রতিটা একটা `GROUP BY`), শাখা ধরে লুপ নয়।
-     * ⛔ সারির যোগ = [[net()]] পয়সায় — যে শাখায় কেবল ফেরত, সেটাও সারি পায়।
-     *
-     * @return array<int, array{billed: string, returned: string, net: string}>
-     */
-    public static function netByBranch(string $from, string $to): array
+    /** @return array{billed: string, returned: string, net: string, vat: string, gross: string} */
+    private static function parts(string $billed, string $billedVat, string $returned, string $returnedVat): array
     {
-        $billed = self::billedByBranch($from, $to);
-        $returned = self::returnedByBranch($from, $to);
+        $net = bcsub($billed, $returned, 4);
+        $vat = bcsub($billedVat, $returnedVat, 4);
+
+        return ['billed' => $billed, 'returned' => $returned, 'net' => $net, 'vat' => $vat, 'gross' => bcadd($net, $vat, 4)];
+    }
+
+    /**
+     * একটা কোয়েরিতে ভ্যাট-বাদ অঙ্ক আর ভ্যাট।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function exVat(\Illuminate\Database\Eloquent\Builder $query, string $table): array
+    {
+        $row = $query->selectRaw("COALESCE(SUM({$table}.total - {$table}.tax), 0) as ex_vat, COALESCE(SUM({$table}.tax), 0) as vat")
+            ->toBase()->first();
+
+        return [bcadd((string) ($row->ex_vat ?? '0'), '0', 4), bcadd((string) ($row->vat ?? '0'), '0', 4)];
+    }
+
+    /** @return array<int, array{0: string, 1: string}> শাখা → [ভ্যাট-বাদ, ভ্যাট] */
+    private static function exVatByBranch(\Illuminate\Database\Eloquent\Builder $query, string $table): array
+    {
         $out = [];
 
-        foreach (array_unique([...array_keys($billed), ...array_keys($returned)]) as $branch) {
-            $b = $billed[$branch] ?? '0.0000';
-            $r = $returned[$branch] ?? '0.0000';
-            $out[(int) $branch] = ['billed' => $b, 'returned' => $r, 'net' => bcsub($b, $r, 4)];
+        foreach ($query->selectRaw("{$table}.branch_id as branch_id, COALESCE(SUM({$table}.total - {$table}.tax), 0) as ex_vat, COALESCE(SUM({$table}.tax), 0) as vat")
+            ->groupBy("{$table}.branch_id")->toBase()->get() as $row) {
+            $out[(int) $row->branch_id] = [bcadd((string) $row->ex_vat, '0', 4), bcadd((string) $row->vat, '0', 4)];
         }
 
         return $out;

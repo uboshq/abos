@@ -181,7 +181,7 @@ final class Figures
      *
      * ⚠️ [[CompanyLens::within()]]-এর ভিতরে ডাকতে হয়।
      *
-     * @return array{billed: string, returned: string}|null
+     * @return array{billed: string, returned: string, vat: string}|null
      */
     public function salesParts(User $user, string $from, string $to): ?array
     {
@@ -189,7 +189,10 @@ final class Figures
             return null;
         }
 
-        return ['billed' => SalesMetrics::billed($from, $to), 'returned' => SalesMetrics::returned($from, $to)];
+        // ⓘ ভ্যাট বাদে (IFRS 15.47); ভ্যাট আলাদা
+        $parts = SalesMetrics::netParts($from, $to);
+
+        return ['billed' => $parts['billed'], 'returned' => $parts['returned'], 'vat' => $parts['vat']];
     }
 
     /** নিচে নামার প্রথম ধাপ — ঐ মডিউলের ড্যাশবোর্ড */
