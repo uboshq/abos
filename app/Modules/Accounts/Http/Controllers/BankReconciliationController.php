@@ -12,6 +12,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankReconciliation;
 use App\Modules\Accounts\Services\BankReconciliationService;
 use App\Modules\Accounts\Services\BankStatementService;
+use App\Modules\Accounts\Services\VoucherParties;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -102,12 +103,19 @@ class BankReconciliationController extends Controller implements HasMiddleware
 
     public function show(Request $request, BankReconciliation $reconciliation): View
     {
+        $lines = $this->recons->candidates($reconciliation)
+            ->sortBy([['voucher.trx_date', 'asc'], ['id', 'asc']])
+            ->values();
+
         return view('accounts::reconciliation.show', [
             'menu' => $this->menu->forUser($request->user()),
             'recon' => $reconciliation->load('bankAccount', 'confirmer'),
-            'lines' => $this->recons->candidates($reconciliation)
-                ->sortBy([['voucher.trx_date', 'asc'], ['id', 'asc']])
-                ->values(),
+            'lines' => $lines,
+            /*
+             * ⭐ ভাউচার নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — কার টাকা ব্যাংকে ঢুকল/বেরোল, মেলাতে সেটাই প্রথম প্রশ্ন।
+             * ⓘ ব্যাংকের সারিতে পক্ষ থাকে না, তাই ভাউচারের পক্ষ ([[VoucherParties]]); গোটা পাতার একবারে।
+             */
+            'partyNames' => app(VoucherParties::class)->of($lines->pluck('voucher')->filter()->unique('id')->values()),
             'summary' => $this->recons->summary($reconciliation),
 
             /*

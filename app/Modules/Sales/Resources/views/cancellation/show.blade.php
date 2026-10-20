@@ -18,7 +18,7 @@
     <x-ui.errors />
 
     <x-slot:header>
-        <x-ui.page-header :title="$cancellation->document_no" :subtitle="__('sales::cancellation.title').' · '.($cancellation->customer?->name() ?? '')">
+        <x-ui.page-header :title="$cancellation->document_no" :subtitle="__('sales::cancellation.title').' · '.($cancellation->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint() ?? '')">
             <x-slot:actions>
                 <x-ui.button tone="secondary" :href="route('sales.invoice.show', $invoice)">
                     {{ $invoice->document_no }}

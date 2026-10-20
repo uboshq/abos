@@ -350,7 +350,8 @@ final class ReportDefinition
 
         return array_values(array_map(
             fn (ReportColumn $c) => $c->key,
-            array_filter($this->columns, fn (ReportColumn $c) => in_array($c->type, $searchable, true)),
+            // ⓘ পক্ষের ঘর বাদ — নামটা SQL-এ নেই, ইঞ্জিন পরে বসায় ([[ReportColumn::$partyKey]])
+            array_filter($this->columns, fn (ReportColumn $c) => in_array($c->type, $searchable, true) && ! $c->isParty()),
         ));
     }
 

@@ -76,7 +76,39 @@ final class ReportColumn
          * @var array{0: string, 1: string}|null
          */
         public readonly ?array $ratio = null,
+
+        /*
+         * ⭐ পক্ষের ঘর — নম্বরের পাশে "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬: *"নম্বরের পাশে গ্রাহকের নাম আর পয়েন্টের নাম দিলে
+         * সহজে বোঝা যায়"*)। ⓘ লেখার ([[self::TEXT]]) কলাম, তবে মানটা SQL থেকে নয়: সারির এই চাবির ঘরে থাকে "ধরন:id"
+         * (যেমন `customer:12`), আর ইঞ্জিন পাতা তোলার পরে গোটা পাতার নাম একবারে বসায় ([[ReportEngine::withParties()]],
+         * [[PartyRegistry::labelsOf()]])। ⛔ রিপোর্ট নিজে গ্রাহক/সরবরাহকারীর টেবিলে জোড় লাগায় না — হিসাব মডিউল কারও উপর
+         * দাঁড়ায় না। ⚠️ খোঁজার কলাম নয় — SQL-এ এই নামের কোনো ঘর নেই ([[ReportDefinition::searchableColumns()]])।
+         */
+        public readonly ?string $partyKey = null,
+
+        /*
+         * ⭐ নামের পাশে জায়গা — "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম: *"গ্রাহকের নামের পাশে পয়েন্ট দিতে
+         * হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে"*)। ⓘ `[ধরন, id-র ঘর]` বা `[ধরন, id-র ঘর, 'branch']` — নামটা SQL
+         * থেকেই আসে (খোঁজা, সাজানো আগের মতো চলে), আর ইঞ্জিন পাতা তোলার পরে গোটা পাতার জায়গা একবারে তার পাশে জোড়ে
+         * ([[ReportEngine::withParties()]], [[PartyRegistry::pointAndBranchOf()]])। `'branch'` — যে রিপোর্টের নিজের পয়েন্টের
+         * কলাম আছে, সেই কলামে কেবল শাখা জোড়ে ("পয়েন্ট · শাখা")। ⛔ রিপোর্ট শাখার টেবিলে জোড় লাগায় না — GROUP BY অক্ষত।
+         *
+         * @var array{0: string, 1: string, 2: bool}|null  [ধরন, id-র ঘর, কেবল শাখা]
+         */
+        public readonly ?array $place = null,
     ) {}
+
+    /** এই কলামের পাশে ইঞ্জিন জায়গা জোড়ে ([[self::$place]]) */
+    public function hasPlace(): bool
+    {
+        return $this->place !== null;
+    }
+
+    /** এই কলামের মান ইঞ্জিন পাতা তোলার পরে বসায় — পক্ষের নাম ([[self::$partyKey]]) */
+    public function isParty(): bool
+    {
+        return $this->partyKey !== null;
+    }
 
     /** @param array<string, mixed> $definition */
     public static function fromArray(array $definition, int $index): self
@@ -112,7 +144,58 @@ final class ReportColumn
             permission: $definition['permission'] ?? null,
             words: isset($definition['words']) ? [(string) $definition['words'][0], (string) $definition['words'][1]] : null,
             ratio: isset($definition['ratio']) ? [(string) $definition['ratio'][0], (string) $definition['ratio'][1]] : null,
+            partyKey: self::partyKeyOf($definition, $type),
+            place: self::placeOf($definition, $type),
         );
+    }
+
+    /**
+     * ⛔ জায়গা কেবল লেখার বা কাগজের (ড্রিল) কলামে, পক্ষের ঘরে নয় (সেটা নিজেই "নাম · পয়েন্ট · শাখা")।
+     *
+     * @param  array<string, mixed>  $definition
+     * @return array{0: string, 1: string, 2: bool}|null
+     */
+    private static function placeOf(array $definition, string $type): ?array
+    {
+        if (! isset($definition['place'])) {
+            return null;
+        }
+
+        $place = array_values((array) $definition['place']);
+        $partyType = (string) ($place[0] ?? '');
+        $idKey = (string) ($place[1] ?? '');
+        $branchOnly = ($place[2] ?? null) === 'branch';
+
+        if (! in_array($type, [self::TEXT, self::DOCUMENT], true) || isset($definition['party']) || $partyType === '' || $idKey === ''
+            || (isset($place[2]) && ! $branchOnly)) {
+            throw new InvalidArgumentException(
+                "Report column '{$definition['key']}' has a bad 'place': it must be [party type, id field] or [party type, id field, 'branch'] on a text or document column without 'party'."
+            );
+        }
+
+        return [$partyType, $idKey, $branchOnly];
+    }
+
+    /**
+     * ⛔ পক্ষের ঘর কেবল লেখার কলামে, আর নিজের চাবি থেকে আলাদা ঘরে — নাহলে নাম বসাতে গিয়ে "ধরন:id"-টাই মুছে যেত।
+     *
+     * @param  array<string, mixed>  $definition
+     */
+    private static function partyKeyOf(array $definition, string $type): ?string
+    {
+        if (! isset($definition['party'])) {
+            return null;
+        }
+
+        $from = (string) $definition['party'];
+
+        if ($type !== self::TEXT || $from === '' || $from === $definition['key']) {
+            throw new InvalidArgumentException(
+                "Report column '{$definition['key']}' names its party from '{$from}': a party column must be text and read another field."
+            );
+        }
+
+        return $from;
     }
 
     /**

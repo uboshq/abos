@@ -56,6 +56,16 @@
             'width' => '9rem',
             'render' => fn ($c) => $c->ladderNode(\App\Modules\MasterData\Models\Location::TERRITORY)?->name() ?? '—',
         ],
+        /*
+         * ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার
+         * নামও দিতে হবে।"* ⓘ পয়েন্ট আর এরিয়ার পাশে, নিজের কলামে; শাখা গোটা পাতার এক প্রশ্নে (নিয়ন্ত্রকের `branch`)।
+         */
+        [
+            'key' => 'branch',
+            'label' => __('customer::field.branch'),
+            'width' => '9rem',
+            'render' => fn ($c) => view('customer::partials.place', ['place' => $c->branchName()]),
+        ],
         [
             'key' => 'address',
             'label' => __('customer::field.full_address'),

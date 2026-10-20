@@ -230,4 +230,9 @@ return [
             'group' => 'limits',
         ],
     ],
+
+    // ⭐ ফোনের হোম-স্ক্রিনে "সইয়ের অপেক্ষা" — ফোনের সই-বাক্সের হুবহু তালিকা (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)
+    'phone_widgets' => [
+        \App\Modules\Approval\Widgets\ApprovalsSummary::class,
+    ],
 ];

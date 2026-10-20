@@ -10,7 +10,7 @@
     <x-slot:title>{{ $challan->document_no }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$challan->document_no" :subtitle="$challan->customer?->name()">
+        <x-ui.page-header :title="$challan->document_no" :subtitle="$challan->customer?->loadMissing(['location.parent', 'branch'])->nameWithPoint()">
             <x-slot:actions>
                 <x-ui.button tone="secondary" :href="route('sales.delivery.index')">
                     {{ __('sales::delivery.title') }}
@@ -40,7 +40,7 @@
             <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ([
                     'sales::field.date' => \App\Core\Support\DateFormat::format($challan->trx_date),
-                    'sales::field.customer' => $challan->customer?->name() ?: '-',
+                    'sales::field.customer' => $challan->customer?->nameWithPoint() ?: '-',
                     'sales::field.warehouse' => $challan->warehouse?->name() ?: '-',
                     'sales::field.vehicle_no' => $challan->vehiclePlate() ?: '-',
                 ] as $label => $value)

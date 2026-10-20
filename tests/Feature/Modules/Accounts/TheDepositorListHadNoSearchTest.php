@@ -120,8 +120,11 @@ final class TheDepositorListHadNoSearchTest extends TestCase
 
         $this->assertSame($first['label'], $second['label'], 'দুই দোকানের নাম এক — পরীক্ষার পূর্বশর্ত।');
 
-        $this->assertSame('BIS-001 · Kawran Bazar Point · 01711000001', $first['hint']);
-        $this->assertSame('BIS-002 · 01711000002', $second['hint']);
+        // ⭐ পয়েন্টের পরে শাখা — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম): "কোড · পয়েন্ট · শাখা · মোবাইল"
+        $branch = (string) $this->company->defaultBranch()?->name();
+        $this->assertNotSame('', $branch, 'দৃশ্যটাই ভুল — মূল শাখার নাম নেই।');
+        $this->assertSame('BIS-001 · Kawran Bazar Point · '.$branch.' · 01711000001', $first['hint']);
+        $this->assertSame('BIS-002 · '.$branch.' · 01711000002', $second['hint']);
 
         foreach (['bis-001', 'kawran', '01711000001', 'bismillah'] as $needle) {
             $this->assertStringContainsString($needle, $first['find'], "⛔ '{$needle}' দিয়ে দোকানটা খুঁজে পাওয়া যেত না।");

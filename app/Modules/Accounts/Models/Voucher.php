@@ -40,6 +40,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use \App\Core\Concerns\NamesItsPartyInNotices; // ⭐ বিজ্ঞপ্তিতে পক্ষের নাম (গ্রাহক হলে · পয়েন্ট) — মালিক, ১৯ অক্টোবর ২০২৬
     use KeepsRevisions;
     use ScopedToUserBranch;
     use SoftDeletes;

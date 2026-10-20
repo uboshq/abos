@@ -169,7 +169,8 @@
 
 <div class="rule"></div>
 <div><strong>{{ $st['lang'] === 'bn' ? '' : $v->en('ms').' ' }}{{ $facts['bill_to']['name'] }}</strong></div>
-@if (filled($facts['bill_to']['point']))<div class="small">{{ $L('point') }}: {{ $facts['bill_to']['point'] }}</div>@endif
+{{-- ⭐ রোলে এক লাইন: "পয়েন্ট · শাখা" কেবল মান, ৪০ অক্ষরে কাটা — নাম ছাড়া (মালিক, ১৯ অক্টোবর ২০২৬; [[PaperPlace::of()]]) --}}
+@if (filled($facts['bill_to']['point']))<div class="small" data-place>{{ mb_strimwidth($facts['bill_to']['point'], 0, 40, '…') }}</div>@endif
 @if (filled($facts['bill_to']['address']))<div class="small">{{ $facts['bill_to']['address'] }}</div>@endif
 @if (filled($facts['bill_to']['phone']))<div class="small">{{ $facts['bill_to']['phone'] }}</div>@endif
 @if ($v->shows('transport'))

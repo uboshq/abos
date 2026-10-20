@@ -165,7 +165,7 @@ final class PriceBookController extends Controller implements HasMiddleware
     private function choices(): array
     {
         return [
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn', 'location_id', 'branch_id', 'is_active']),
             'tiers' => PartyType::query()->active()->whereIn('applies_to', [PartyType::CUSTOMER, PartyType::BOTH])->orderBy('code')->get(),
             'places' => Location::query()->inViewedBranch()->active()->orderBy('code')->get(),
         ];
@@ -180,12 +180,13 @@ final class PriceBookController extends Controller implements HasMiddleware
     private function aims(iterable $lists): array
     {
         $lists = collect($lists);
-        $customers = Customer::query()->inViewedBranch()->whereIn('id', $lists->pluck('customer_id')->filter())->get()->keyBy('id');
+        $customers = Customer::query()->inViewedBranch()->whereIn('id', $lists->pluck('customer_id')->filter())->with(Customer::PLACE)->get()->keyBy('id');
         $tiers = PartyType::query()->whereIn('id', $lists->pluck('party_type_id')->filter())->get()->keyBy('id');
         $places = Location::query()->whereIn('id', $lists->pluck('location_id')->filter())->get()->keyBy('id');
 
         return $lists->mapWithKeys(fn (PriceList $l) => [(int) $l->id => match (SalesPrice::targetOf($l)) {
-            SalesPrice::CUSTOMER => $customers->get($l->customer_id)?->name() ?? '—',
+            // ⭐ "নাম · পয়েন্ট · শাখা" — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
+            SalesPrice::CUSTOMER => $customers->get($l->customer_id)?->nameWithPoint() ?? '—',
             SalesPrice::TIER => $tiers->get($l->party_type_id)?->name() ?? '—',
             SalesPrice::TERRITORY => $places->get($l->location_id)?->path() ?? '—',
             default => __('sales::price_book.everyone'),

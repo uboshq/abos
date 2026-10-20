@@ -101,7 +101,7 @@ class SaleTrackingController extends Controller
                 'recent' => __('sales::sort.recent'), 'oldest' => __('sales::sort.oldest'),
                 'largest' => __('sales::sort.largest'), 'customer' => __('sales::sort.customer'),
             ],
-            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'name_en', 'name_bn', 'code']),
+            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn', 'location_id', 'branch_id', 'is_active']),
             'branches' => \App\Models\Branch::query()->orderBy('name_en')->get(),
         ]);
     }

@@ -23,8 +23,9 @@ use Illuminate\Support\Facades\DB;
  * তারিখ (চেকের তারিখ), শাখা, দিক (`direction`: গৃহীত/দেওয়া), অবস্থা (`status`): খাতার নিজের অবস্থাগুলো, আর দুইটা
  * কাজের প্রশ্ন — `pdc` (আগামী তারিখের, এখনো হাতে) আর `due` (তারিখ এসে গেছে, এখনো জমা হয়নি)।
  *
- * ⓘ পক্ষের নাম এখানে নেই, ইচ্ছাকৃত — Accounts কারও উপর নির্ভর করে না ([[CoreReports::inflow()]]-এর একই কারণ);
- * নম্বরটা ক্লিকযোগ্য, আর চেকের পাতায় পক্ষ আছে।
+ * ⭐ পক্ষ এখন আছে — "নাম · পয়েন্ট" (মালিক, ১৯ অক্টোবর ২০২৬: নম্বরের পাশে কার চেক)। ⓘ গ্রাহক/সরবরাহকারীর টেবিলে জোড় এখনো নেই
+ * (Accounts কারও উপর নির্ভর করে না): SQL কেবল চেকের নিজের "ধরন:id" দেয়, আর নাম বসায় ইঞ্জিন, পাতার একবারে
+ * ([[ReportColumn::$partyKey]], [[CoreReports::inflow()]]-এর একই উপায়)।
  */
 final class ChequeReports
 {
@@ -63,6 +64,8 @@ final class ChequeReports
                     'source_id' => 'source_id',
                     'width' => '10rem',
                 ],
+                // ⭐ নম্বরের পাশে পক্ষ (মালিক, ১৯ অক্টোবর ২০২৬) — নাম বসায় ইঞ্জিন, পাতার একবারে
+                ['key' => 'party', 'label' => 'accounts::field.party', 'party' => 'party_key', 'width' => '14rem'],
                 ['key' => 'cheque_no', 'label' => 'accounts::cheque.cheque_no', 'type' => ReportColumn::TEXT],
                 ['key' => 'bank_name', 'label' => 'accounts::cheque.bank_name', 'type' => ReportColumn::TEXT],
                 ['key' => 'direction_label', 'label' => 'accounts::cheque.direction', 'type' => ReportColumn::TEXT, 'width' => '7rem'],
@@ -106,6 +109,8 @@ final class ChequeReports
                 'c.amount',
                 DB::raw("'".Cheque::STOCK_SOURCE."' as source_type"),
                 'c.id as source_id',
+                // ⓘ পক্ষের চাবি "ধরন:id" — নাম নয় ([[ReportColumn::$partyKey]]); পক্ষ না থাকলে NULL (CONCAT-এ একটা NULL = NULL)
+                DB::raw("CONCAT(c.party_type, ':', c.party_id) as party_key"),
                 DB::raw(self::label('c.direction', [Cheque::RECEIVED, Cheque::ISSUED]).' as direction_label'),
                 DB::raw(self::label('c.status', [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED, Cheque::BOUNCED, Cheque::CANCELLED]).' as status_label'),
                 DB::raw('DATEDIFF(c.cheque_date, '.DB::getPdo()->quote($today).') as days'),

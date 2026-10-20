@@ -69,7 +69,10 @@ final class TheLedgersAgreeWithTheirControlAndBranchesSettleTest extends TestCas
 
         // ⭐ মালিক, ৫ অক্টোবর ২০২৬: গ্রাহকের পাশে মোবাইল আর পয়েন্ট
         $this->assertSame($customer->phone, $mine['phone'], '⛔ সারিতে গ্রাহকের মোবাইল নেই।');
-        $this->assertSame($customer->location?->name(), $mine['point'], '⛔ সারিতে গ্রাহকের পয়েন্ট নেই।');
+        // ⭐ পয়েন্টের ঘরে শাখাও — "পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
+        $branch = (string) $customer->fresh('branch')->branchName();
+        $this->assertSame(implode(' · ', array_filter([(string) $customer->location?->name(), $branch])), $mine['point'],
+            '⛔ সারিতে গ্রাহকের পয়েন্ট আর শাখা নেই।');
 
         $nobody = $rows->first(fn (array $r) => $r['party_id'] === null);
         $this->assertNotNull($nobody, '⛔ পাওনার খাতে কারও নামে নয় এমন টাকা খাতায় আলাদা সারি পায়নি।');

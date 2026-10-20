@@ -94,6 +94,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
         // ⓘ হাতে থাকা কাগজের তালা-দেওয়া আবার-পড়া শাখার দেয়াল দিয়ে — রেস্টুরেন্ট পরে (মালিক, ২১ অক্টোবরের পরে; ১৩ অক্টোবর ২০২৬)
         'ARowInHandIsLockedAcrossBranchesTest::EXCUSED',
+        // ⓘ গ্রাহকের নামের পাশে পয়েন্ট আর শাখা নেই — POS, মালিকের আদেশে ২১ অক্টোবর পর্যন্ত বন্ধ (মালিক, ১৯ অক্টোবর ২০২৬; a5)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET',
         // ⓘ ARowInHandIsLockedAcrossBranchesTest::NOT_YET ছিল অস্থায়ী (২৪ সারি) — ১৩ অক্টোবর ২০২৬-এই খালি হয়ে উঠে গেছে, ছাদ ৩৯৩ → ৩৬৯
         // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
         //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
@@ -118,6 +120,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     private const NOT_EXCUSES = [
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
         'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
+        // ⓘ তথ্য: গ্রাহকের নাম আছে, কিন্তু দেখানো নয় — ফর্মের ঘরের মান, স্ক্রিন-রিডারের বোতামের নাম, নিজের পাতা/পোর্টাল (১৯ অক্টোবর ২০২৬)
+        'ACustomerNameAlwaysCarriesItsPlaceTest::NOT_A_DISPLAY',
         // ⓘ চাহিদা: অন্য কোম্পানিতে ঢোকার প্রতিটা দরজা তালিকায় থাকতে হবে, আর বেশিরভাগ নিজেই canInCompany() ডাকে (৫ অক্টোবর ২০২৬)
         'EveryDoorIntoAnotherCompanyAsksTheKeyThereTest::DOORS',
         // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)
@@ -402,7 +406,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.papers.index / show: দরজা একটা, ধরন সতেরো, প্রতিটার চাবি ওয়েবের তালিকার
      *       নিজের — `documents.pdf`-এর মতোই পদ্ধতির ভেতরে; একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)
      */
-    private const CEILING = 371;
+    /*
+     * ── ⚠️ ৩৭১ → ৩৭২, ১৯ অক্টোবর ২০২৬ (গ্রাহকের নামের পাশে পয়েন্ট আর শাখা — মালিকের স্থায়ী নিয়ম; a5) ──────────────────────
+     *   +১  ACustomerNameAlwaysCarriesItsPlaceTest::NOT_YET — Sales-এর POS পর্দার গ্রাহক-পিকার: POS মালিকের আদেশে ২১ অক্টোবর
+     *       পর্যন্ত বন্ধ; খুললে nameWithPoint() আর with(Customer::PLACE), তখন সারি ওঠে আর ছাদ কমে
+     */
+    private const CEILING = 372;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

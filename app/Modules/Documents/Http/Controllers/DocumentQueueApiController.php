@@ -12,6 +12,7 @@ use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Models\DocumentSignature;
+use App\Modules\Documents\Services\DocumentParties;
 use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -77,11 +78,15 @@ final class DocumentQueueApiController extends Controller implements HasMiddlewa
                 ->orderByDesc('id')
                 ->paginate(50, ['*'], 'page', $page);
 
+            // ⭐ নম্বরের পাশে পক্ষ — আলাদা ঘর `party`, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]]); পুরনো অ্যাপ উপেক্ষা করে
+            $parties = app(DocumentParties::class)->of(collect($rows->items())->pluck('document_id'));
+
             return response()->json([
                 'tab' => $tab,
                 'rows' => collect($rows->items())->map(fn (DocumentSignature $s) => [
                     'document_id' => $s->document?->public_id,
                     'document_no' => (string) ($s->document?->document_no ?? ''),
+                    'party' => $parties[(int) $s->document_id] ?? null,
                     'name' => (string) ($s->document?->name ?? ''),
                     'signer' => (string) ($s->signer?->name ?? ''),
                     'signed_at' => $s->signed_at ? DateFormat::formatWithTime($s->signed_at) : '',
@@ -116,9 +121,12 @@ final class DocumentQueueApiController extends Controller implements HasMiddlewa
             ->get()
             ->keyBy('id');
 
+        // ⭐ নম্বরের পাশে পক্ষ — আলাদা ঘর `party`, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬; [[DocumentParties]])
+        $parties = app(DocumentParties::class)->of($documents->keys());
+
         return response()->json([
             'tab' => $tab,
-            'rows' => collect($rows->items())->map(function (Approval $a) use ($documents, $decides) {
+            'rows' => collect($rows->items())->map(function (Approval $a) use ($documents, $decides, $parties) {
                 $paper = $documents[(int) $a->approvable_id] ?? null;
 
                 return [
@@ -126,6 +134,7 @@ final class DocumentQueueApiController extends Controller implements HasMiddlewa
                     'id' => (string) $a->public_id,
                     'document_id' => $paper?->public_id,
                     'document_no' => (string) ($paper?->document_no ?? ''),
+                    'party' => $parties[(int) $a->approvable_id] ?? null,
                     'name' => (string) ($paper?->name ?? $a->requested_reason ?? ''),
                     'action' => (string) $a->action,
                     'version' => (string) (($a->payload['version'] ?? null) ?? ''),

@@ -196,7 +196,7 @@ class QrScanController extends Controller
     /** @return array<string, mixed> */
     private function facts(Request $request, DeliveryChallan $challan): array
     {
-        $challan->loadMissing(['customer', 'lines.product', 'lines.batch']);
+        $challan->loadMissing(['customer.location.parent', 'customer.branch', 'lines.product', 'lines.batch']);
         $user = $request->user();
         $stage = (string) $this->stages->ensure($challan)->stage;
         $out = $this->gatePass($challan);
@@ -210,7 +210,9 @@ class QrScanController extends Controller
             'trx_date' => $challan->trx_date?->toDateString(),
             'status' => (string) $challan->status,
             'stage' => $stage,
-            'customer' => ['name' => $challan->customer?->name(), 'code' => $challan->customer?->code, 'point' => $challan->customer?->pointName()],
+            'customer' => ['name' => $challan->customer?->name(), 'code' => $challan->customer?->code, 'point' => $challan->customer?->pointName(),
+                // ⭐ শাখা — মালিক, ১৯ অক্টোবর ২০২৬: "নাম · পয়েন্ট · শাখা" ([[Customer::branchName()]]); ⓘ পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'branch' => $challan->customer?->branchName()],
             'lines' => $challan->lines->map(fn ($l) => [
                 // ⓘ সারির ক্রমিক — "আংশিক পৌঁছেছে"-তে ফোন এটা দিয়েই সারি চেনায় ([[deliver()]])
                 'line' => (int) $l->line_no,
