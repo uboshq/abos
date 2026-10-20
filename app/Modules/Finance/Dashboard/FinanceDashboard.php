@@ -700,12 +700,13 @@ final class FinanceDashboard implements ProvidesDashboard
             ->whereNull('pur_bills.deleted_at')
             ->whereNotNull('pur_bills.due_on')
             ->where('pur_bills.due_on', '<=', $weekEnd), 'pur_bills.branch_id')
-            ->select(['pur_bills.due_on', 'pur_bills.total'])
+            ->select(['pur_bills.due_on', 'pur_bills.total', 'pur_bills.ait_amount', 'pur_bills.vds_amount'])
             ->selectSub($paidByLines, 'paid_lines')
             ->selectSub($paidByVouchers, 'paid_vouchers')
             ->selectSub($returned, 'returned');
 
-        $left = 'b.total - b.paid_lines - b.paid_vouchers - b.returned';
+        // ⓘ উৎসে কর্তন বাদ — সরবরাহকারীর পাওনা নয় ([[PurchaseBill::withheldAmount()]], হিসাব #১)
+        $left = 'b.total - b.ait_amount - b.vds_amount - b.paid_lines - b.paid_vouchers - b.returned';
 
         $row = DB::query()->fromSub($bills, 'b')
             ->whereRaw("{$left} > 0")

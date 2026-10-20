@@ -179,4 +179,7 @@ return [
     'need_rate' => 'Type the purchase rate — a line cannot go into the cart at 0.',
     'need_sales_price' => 'Type the sales rate, or give a markup % or margin % — a line cannot go into the cart without one.',
     'need_priced_lines' => 'A cart line has no purchase rate or sales rate — fix it, then receive the goods.',
+
+    'withheld_ait' => ':no — income tax withheld at source (AIT), owed to the Government',
+    'withheld_vds' => ':no — VAT withheld at source (VDS), owed to the Government',
 ];

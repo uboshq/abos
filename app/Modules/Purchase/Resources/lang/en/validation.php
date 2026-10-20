@@ -127,4 +127,6 @@ return [
     'contract_rate_negative' => 'An agreed rate cannot be less than zero.',
     'contract_duplicate_product' => 'The same product is in the contract twice. Then there would be two answers to "what is the contract rate".',
     'requisition_over_budget' => 'This cost centre has :budget for the month and :already is already approved. Adding the :asking on this paper goes past the limit - either the budget rises or the request comes down.',
+
+    'withheld_over_total' => 'Tax withheld at source (:withheld) cannot exceed the bill total (:total).',
 ];
