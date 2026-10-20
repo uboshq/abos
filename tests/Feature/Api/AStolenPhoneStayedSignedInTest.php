@@ -128,6 +128,25 @@ final class AStolenPhoneStayedSignedInTest extends TestCase
             '⛔ আমার ফোন বের করতে গিয়ে একই হ্যান্ডসেটে অন্যের টোকেনও মুছল');
     }
 
+    public function test_a_colleague_on_the_shared_handset_never_shows_in_my_row(): void
+    {
+        // ⓘ সহকর্মী দোকানের ফোনে আগে ঢুকেছেন, আমি ১০ মিনিট পরে — আমার সারি কেবল আমার টোকেনের কথা বলে
+        $this->login('accounts@abos.test', 'shop-phone-01', 'android');
+        $this->travel(10)->minutes();
+        $mine = $this->login('sales@abos.test', 'shop-phone-01', 'android');
+
+        $me = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+        $myStart = $me->tokens()->where('name', 'like', '%:shop-phone-01')->min('created_at');
+
+        $row = $this->as($mine['accessToken'])->getJson('/api/v1/me/devices')->assertOk()->json('data.0');
+
+        $this->assertSame(
+            \Illuminate\Support\Carbon::parse($myStart)->toIso8601String(),
+            $row['created_at'],
+            '⛔ একই হ্যান্ডসেটে সহকর্মীর ঢোকার সময় আমার সারিতে — অন্যের কাজের খবর ফাঁস',
+        );
+    }
+
     public function test_signing_out_this_very_phone_is_allowed_and_signs_it_out(): void
     {
         $a = $this->login('sales@abos.test', 'phone-a-0001', 'android');
