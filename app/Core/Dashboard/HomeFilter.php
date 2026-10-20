@@ -111,6 +111,24 @@ final class HomeFilter
     }
 
     /**
+     * ⭐ বিক্রয় ফেরতের কোয়েরি ছাঁকা — বিলের একই ছাঁকনি, যাতে নিট বিক্রি = বিল − ফেরত একই ভাগে গোনা হয় (IFRS 15, ২০ অক্টোবর ২০২৬)।
+     * ⓘ গুদাম আর এলাকা ফেরতের নিজের ঘরে; বিক্রেতা ফেরতের বিলের বিক্রেতা — ফেরত যিনি লেখেন তিনি প্রায়ই ডেস্কের মানুষ।
+     *
+     * @template T of \Illuminate\Contracts\Database\Query\Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    public function onReturns($query, string $table)
+    {
+        return $query
+            ->when($this->warehouse !== null, fn ($q) => $q->where($table.'.warehouse_id', $this->warehouse))
+            ->when($this->seller !== null, fn ($q) => $q->whereIn($table.'.sales_invoice_id',
+                \Illuminate\Support\Facades\DB::table('sal_invoices')->select('id')->where('created_by', $this->seller)))
+            ->when($this->customers !== null, fn ($q) => $q->whereIn($table.'.customer_id', $this->customers ?: [0]));
+    }
+
+    /**
      * বকেয়ার গ্রাহক — কেবল এলাকা খাটে; `null` মানে বকেয়া বদলায় না।
      *
      * @return list<int>|null

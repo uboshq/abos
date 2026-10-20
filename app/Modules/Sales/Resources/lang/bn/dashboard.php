@@ -9,7 +9,10 @@ declare(strict_types=1);
  * জানতে চান, "বিক্রয় রাজস্ব (চলতি দিন)" নয়।
  */
 return [
-    'sales_today' => 'আজকের বিক্রয়',
+    'sales_today' => 'নিট বিক্রি',
+    'net_billed' => 'বিল',
+    'net_returned' => 'ফেরত',
+    'net_parts' => 'বিল :billed − ফেরত :returned = নিট :net (ফেরত নিজের তারিখে)',
     'collected_today' => 'আজ আদায়',
     'sales_this_month' => 'এই মাসের বিক্রয়',
     'collected_this_month' => 'এই মাসে আদায়',

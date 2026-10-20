@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 return [
-    'sales_today' => 'Sales today',
+    'sales_today' => 'Net sales',
+    'net_billed' => 'Billed',
+    'net_returned' => 'Returned',
+    'net_parts' => 'Billed :billed − returned :returned = net :net (returns by their own date)',
     'collected_today' => 'Collected today',
     'sales_this_month' => 'Sales this month',
     'collected_this_month' => 'Collected this month',

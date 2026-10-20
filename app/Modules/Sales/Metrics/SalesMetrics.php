@@ -13,6 +13,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Support\Carbon;
 
 /**
@@ -54,7 +55,10 @@ final class SalesMetrics implements ProvidesMetrics
         return $out;
     }
 
-    /** কোম্পানির আজকের বিক্রয়। */
+    /**
+     * কোম্পানির আজকের **নিট** বিক্রয় — আজকের পাকা বিল বাদ আজকের পাকা ফেরত ([[net()]]; IFRS 15, fe ২০ অক্টোবর ২০২৬)।
+     * ⓘ বিল আর ফেরত আলাদা চাইলে [[billed()]] আর [[returned()]] — একই দিন, একই দেয়াল। ⓘ চাবিটা আগের মতোই `sales.today`।
+     */
     public static function salesToday(): Metric
     {
         $today = Carbon::today()->toDateString();
@@ -67,7 +71,7 @@ final class SalesMetrics implements ProvidesMetrics
             scale: 2,
             rounding: Metric::ROUND_AT_TOTAL,
             permission: 'sales.invoice.view',
-            value: fn () => self::invoiceTotal($today, $today),
+            value: fn () => self::net($today, $today),
         );
     }
 
@@ -237,6 +241,106 @@ final class SalesMetrics implements ProvidesMetrics
         }
 
         return $out;
+    }
+
+    /**
+     * ⭐ নিট বিক্রি — IFRS 15: আয় ফেরত বাদে (fe, ২০ অক্টোবর ২০২৬)। তিনটা সংখ্যা, একটাই ভিত:
+     *   billed   = পাকা বিলের `total` ([[invoiceTotal()]] হুবহু — ভ্যাটসহ, ছাড় বাদে, রাউন্ডিংসহ)
+     *   returned = পাকা বিক্রয় ফেরতের `total`, **ফেরতের নিজের তারিখে** (subtotal + tax — বিলের দিকের একই ভ্যাটসহ রীতি)
+     *   net      = billed − returned
+     * ⛔ ফেরত বিলের তারিখে নয়: গতকালের ফেরত আজকের বিক্রি কমায় না, আজকের ফেরত গত মাসের বিলেরও হলে আজই কমায়।
+     * ⓘ দেয়াল দুই দিকেই একই — কোম্পানি, শাখা/হেডারের শাখা ([[ScopedToUserBranch]]), বিক্রয়কর্মীর ডিলার
+     * ([[ScopedToUserDealers]]), আর হোমের ছাঁকনি। ⓘ সব bcmath, চার ঘর।
+     */
+    public static function billed(string $from, string $to, ?array $customerIds = null): string
+    {
+        return bcadd(self::invoiceTotal($from, $to, $customerIds), '0', 4);
+    }
+
+    public static function returned(string $from, string $to, ?array $customerIds = null): string
+    {
+        return bcadd((string) (self::returns($from, $to, $customerIds)->sum('sal_returns.total') ?: '0'), '0', 4);
+    }
+
+    public static function net(string $from, string $to, ?array $customerIds = null): string
+    {
+        return bcsub(self::billed($from, $to, $customerIds), self::returned($from, $to, $customerIds), 4);
+    }
+
+    /**
+     * নিটের ভেতরের ভাগ, এক লাইনে — "বিল ৳… − ফেরত ৳… = নিট ৳…"; কার্ডের খোলা-ঘরে (টুলটিপ) বসে।
+     * ⓘ তিনটা অঙ্কই উপরের একই তিন পদ্ধতি, তাই কার্ডের সংখ্যা আর এই লাইনের নিট পয়সায় এক।
+     */
+    public static function netPartsLine(string $from, string $to): string
+    {
+        $billed = self::billed($from, $to);
+        $returned = self::returned($from, $to);
+
+        return __('sales::dashboard.net_parts', [
+            'billed' => Money::format($billed),
+            'returned' => Money::format($returned),
+            'net' => Money::format(bcsub($billed, $returned, 4)),
+        ]);
+    }
+
+    /** @return array<int, string> শাখার আইডি → বিল (শাখাহীন `0`) */
+    public static function billedByBranch(string $from, string $to): array
+    {
+        return array_map(fn (string $v): string => bcadd($v, '0', 4), self::invoiceTotalByBranch($from, $to));
+    }
+
+    /** @return array<int, string> শাখার আইডি → ফেরত, ফেরতের নিজের শাখা আর তারিখে (শাখাহীন `0`); এক কোয়েরি */
+    public static function returnedByBranch(string $from, string $to): array
+    {
+        $out = [];
+
+        foreach (self::returns($from, $to)
+            ->selectRaw('sal_returns.branch_id as branch_id, COALESCE(SUM(sal_returns.total), 0) as amount')
+            ->groupBy('sal_returns.branch_id')
+            ->toBase()
+            ->get() as $row) {
+            $out[(int) $row->branch_id] = bcadd((string) $row->amount, '0', 4);
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⓘ শাখা ধরে নিট — দুই কোয়েরি (বিল আর ফেরত, প্রতিটা একটা `GROUP BY`), শাখা ধরে লুপ নয়।
+     * ⛔ সারির যোগ = [[net()]] পয়সায় — যে শাখায় কেবল ফেরত, সেটাও সারি পায়।
+     *
+     * @return array<int, array{billed: string, returned: string, net: string}>
+     */
+    public static function netByBranch(string $from, string $to): array
+    {
+        $billed = self::billedByBranch($from, $to);
+        $returned = self::returnedByBranch($from, $to);
+        $out = [];
+
+        foreach (array_unique([...array_keys($billed), ...array_keys($returned)]) as $branch) {
+            $b = $billed[$branch] ?? '0.0000';
+            $r = $returned[$branch] ?? '0.0000';
+            $out[(int) $branch] = ['billed' => $b, 'returned' => $r, 'net' => bcsub($b, $r, 4)];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ফেরতের ভিত — পাকা ফেরত, ফেরতের তারিখে, মডেলের দেয়াল আর হোমের ছাঁকনি; [[invoices()]]-এর জোড়া।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<SalesReturn>
+     */
+    private static function returns(string $from, string $to, ?array $customerIds = null): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = SalesReturn::query()
+            ->posted()
+            ->whereBetween('sal_returns.trx_date', [$from, $to])
+            ->when($customerIds !== null, fn ($q) => $q->whereIn('sal_returns.customer_id', $customerIds ?: [0]));
+
+        HomeFilter::current()?->onReturns($query, 'sal_returns');
+
+        return $query;
     }
 
     /**
