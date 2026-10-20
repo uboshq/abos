@@ -202,15 +202,15 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
         $this->assertSame(bcadd($before['gross'], '1400.0000', 4), bcadd($cards['sales.overview.gross']['raw'], '0', 4));
         $this->assertSame(bcadd($before['discount'], '50.0000', 4), bcadd($cards['sales.overview.discount']['raw'], '0', 4));
         $this->assertSame(bcadd($before['tax'], '71.2500', 4), bcadd($cards['sales.overview.tax']['raw'], '0', 4));
-        $this->assertSame(bcadd($before['net'], '1421.2500', 4), bcadd($cards['sales.overview.net']['raw'], '0', 4),
-            '⛔ খসড়া বিল গোনা হয়েছে, বা নিশ্চিত বিল বাদ পড়েছে।');
+        // ⓘ ২০ অক্টোবর ২০২৬ থেকে নিট বিক্রি VAT বাদে (IFRS 15.47): ১,০২১.২৫ − ৭১.২৫ + ৪০০ = ১,৩৫০; আগের বিলগুলোরও নিট − VAT
+        $this->assertSame(bcadd(bcsub($before['net'], $before['tax'], 4), '1350.0000', 4), bcadd($cards['sales.overview.net']['raw'], '0', 4),
+            '⛔ খসড়া বিল গোনা হয়েছে, বা নিশ্চিত বিল বাদ পড়েছে, বা VAT নিটে রয়ে গেছে।');
 
         // ⭐ ফোন আর হোম পর্দার একই সংজ্ঞা — "আজকের বিক্রয়" কার্ড আর নিট এক অঙ্ক
         $this->actingAs($this->user);
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
-        // ⓘ ২০ অক্টোবর ২০২৬ থেকে "নিট বিক্রি" VAT বাদে (IFRS 15.47) — বিলের নিট বাদ VAT; এই দিনে কোনো ফেরত নেই
         $this->assertSame(bcadd(SalesMetrics::salesToday()->value(), '0', 4),
-            bcsub($cards['sales.overview.net']['raw'], $cards['sales.overview.tax']['raw'], 4), '⛔ একই দিনের দুই সংজ্ঞা — পর্দা আর ফোন আলাদা বলবে।');
+            bcadd($cards['sales.overview.net']['raw'], '0', 4), '⛔ একই দিনের দুই সংজ্ঞা — পর্দা আর ফোন আলাদা বলবে।');
         $this->assertSame($cards['sales.today']['raw'], SalesMetrics::salesToday()->value());
     }
 
@@ -228,7 +228,8 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         foreach ($monthly as $month) {
-            $this->assertSame(bcadd(SalesMetrics::invoiceTotal($month['from'], $month['to']), '0', 4),
+            // ⓘ ২০ অক্টোবর ২০২৬ থেকে নিট বিক্রি (VAT ও ফেরত বাদে) — [[SalesMetrics::net()]]
+            $this->assertSame(SalesMetrics::net($month['from'], $month['to']),
                 bcadd($month['net'], '0', 4), "⛔ {$month['ym']} মাসের ধারা আর বিক্রয়ের সংজ্ঞা আলাদা।");
         }
 

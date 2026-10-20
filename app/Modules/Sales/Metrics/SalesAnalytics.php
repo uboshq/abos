@@ -69,8 +69,7 @@ final class SalesAnalytics
     /**
      * বিলের মোট দাম, ছাড়, ভ্যাট আর নিট — একই বিলগুলো থেকে।
      *
-     * ⓘ নিট = বিলের `total` — অর্থাৎ [[SalesMetrics::invoiceTotal()]] নিজেই,
-     * দ্বিতীয় যোগফল নয়। দাম (`subtotal`) ছাড়ের আগে, ভ্যাটের আগে।
+     * ⓘ নিট = [[SalesMetrics::net()]] — বিল বাদ ফেরত, VAT বাদে (IFRS 15; ২০ অক্টোবর ২০২৬), দ্বিতীয় যোগফল নয়। দাম (`subtotal`) ছাড়ের আগে, ভ্যাটের আগে।
      * ⚠️ নিট ≠ দাম − ছাড় + ভ্যাট সবসময়: দামের ভেতরের ভ্যাটে (`is_inclusive`)
      * ভ্যাট আলাদা লেখা হয় কিন্তু মোটে যোগ হয় না — তাই নিটটা বিলের নিজের
      * `total` থেকেই, তিন ঘর জোড়া দিয়ে নয়।
@@ -90,7 +89,8 @@ final class SalesAnalytics
             'gross' => Money::of($row->gross ?? '0'),
             'discount' => Money::of($row->discount ?? '0'),
             'tax' => Money::of($row->tax ?? '0'),
-            'net' => SalesMetrics::invoiceTotal($from, $to),
+            // ⭐ নিট বিক্রি — VAT আর ফেরত বাদে (IFRS 15; fe, ২০ অক্টোবর ২০২৬), হোম আর ফোনের একই উৎস ([[SalesMetrics::net()]])
+            'net' => SalesMetrics::net($from, $to),
         ];
     }
 
@@ -252,7 +252,7 @@ final class SalesAnalytics
     /**
      * মাসে মাসে বিক্রয়, দাম আর ছাড় — এক কোয়েরিতে; ছাড়ের বিশ্লেষণও এটাই।
      *
-     * ⚠️ প্রতিটা মাসের নিট [[SalesMetrics::invoiceTotal()]]-এর সমান হতে
+     * ⚠️ প্রতিটা মাসের নিট [[SalesMetrics::net()]]-এর সমান হতে
      * বাধ্য — একই ছাঁকনি, কেবল মাস ধরে ভাগ। পরীক্ষাটা মাসে মাসে মেলায়।
      *
      * @return list<array{label: string, ym: string, from: string, to: string, count: int, gross: string, discount: string, net: string, discount_percent: ?string}>
@@ -270,7 +270,10 @@ final class SalesAnalytics
             ->get()
             ->keyBy('ym');
 
-        return array_map(function (array $m) use ($rows): array {
+        // ⭐ মাসের নিট বিক্রি — VAT আর ফেরত বাদে, [[SalesMetrics::netByMonth()]] (দুই GROUP BY); দাম আর ছাড় আগের মতো বিল থেকে
+        $nets = SalesMetrics::netByMonth($months[0]['from'], $end->toDateString());
+
+        return array_map(function (array $m) use ($rows, $nets): array {
             $row = $rows->get($m['ym']);
             $gross = Money::of($row->gross ?? '0');
             $discount = Money::of($row->discount ?? '0');
@@ -279,7 +282,7 @@ final class SalesAnalytics
                 'count' => (int) ($row->n ?? 0),
                 'gross' => $gross,
                 'discount' => $discount,
-                'net' => Money::of($row->net ?? '0'),
+                'net' => $nets[$m['ym']]['net'] ?? '0.0000',
                 'discount_percent' => self::share($discount, $gross),
             ];
         }, $months);

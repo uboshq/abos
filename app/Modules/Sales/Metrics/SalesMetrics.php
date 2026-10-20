@@ -325,6 +325,62 @@ final class SalesMetrics implements ProvidesMetrics
         return $out;
     }
 
+    /**
+     * ⭐ দিন ধরে নিট বিক্রি — কার্ডের সাত দিনের রেখা আর গত সপ্তাহের তুলনা (২০ অক্টোবর ২০২৬)। দুই কোয়েরি, `GROUP BY trx_date`;
+     * খালি দিন "0.0000"। ⛔ প্রতিটা দিন = [[net()]] ঐ দিনের, পয়সায়।
+     *
+     * @return array<string, string> তারিখ (Y-m-d) → নিট
+     */
+    public static function netByDay(string $from, string $to): array
+    {
+        $billed = self::exVatGrouped(self::invoices($from, $to), 'sal_invoices', 'DATE(sal_invoices.trx_date)');
+        $returned = self::exVatGrouped(self::returns($from, $to), 'sal_returns', 'DATE(sal_returns.trx_date)');
+        $out = [];
+
+        for ($day = Carbon::parse($from); $day->lte(Carbon::parse($to)); $day->addDay()) {
+            $key = $day->toDateString();
+            $out[$key] = bcsub($billed[$key][0] ?? '0.0000', $returned[$key][0] ?? '0.0000', 4);
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ মাস ধরে নিট বিক্রি — বিক্রয়ের সারাংশের বারো মাসের ঘর (২০ অক্টোবর ২০২৬)। দুই কোয়েরি, `GROUP BY` মাস।
+     * ⛔ প্রতিটা মাস = [[netParts()]] ঐ মাসের, পয়সায়।
+     *
+     * @return array<string, array{billed: string, returned: string, net: string, vat: string, gross: string}> `Y-m` → ভাগ (কেবল যে মাসে কিছু আছে)
+     */
+    public static function netByMonth(string $from, string $to): array
+    {
+        $billed = self::exVatGrouped(self::invoices($from, $to), 'sal_invoices', "DATE_FORMAT(sal_invoices.trx_date, '%Y-%m')");
+        $returned = self::exVatGrouped(self::returns($from, $to), 'sal_returns', "DATE_FORMAT(sal_returns.trx_date, '%Y-%m')");
+        $out = [];
+
+        foreach (array_unique([...array_keys($billed), ...array_keys($returned)]) as $ym) {
+            $out[(string) $ym] = self::parts(
+                $billed[$ym][0] ?? '0.0000', $billed[$ym][1] ?? '0.0000',
+                $returned[$ym][0] ?? '0.0000', $returned[$ym][1] ?? '0.0000',
+            );
+        }
+
+        return $out;
+    }
+
+    /** @return array<string, array{0: string, 1: string}> দল → [নিট, ভ্যাট] */
+    private static function exVatGrouped(\Illuminate\Database\Eloquent\Builder $query, string $table, string $expr): array
+    {
+        $out = [];
+
+        foreach ($query->selectRaw("{$expr} as k, COALESCE(SUM(".self::netSql($table).'), 0) as ex_vat, COALESCE(SUM('.$table.'.tax), 0) as vat')
+            ->groupByRaw($expr)->toBase()->get() as $row) {
+            $key = $row->k instanceof \DateTimeInterface ? $row->k->format('Y-m-d') : substr((string) $row->k, 0, strlen((string) $row->k) > 7 ? 10 : 7);
+            $out[$key] = [bcadd((string) $row->ex_vat, '0', 4), bcadd((string) $row->vat, '0', 4)];
+        }
+
+        return $out;
+    }
+
     /** @return array{billed: string, returned: string, net: string, vat: string, gross: string} */
     private static function parts(string $billed, string $billedVat, string $returned, string $returnedVat): array
     {

@@ -55,6 +55,8 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
 
     private const NET_LABEL = 'নিট বিক্রি';
 
+    private const FULL_LABEL = 'নিট বিক্রি (VAT ও ফেরত বাদে)';
+
     private Company $company;
 
     private User $owner;
@@ -244,7 +246,39 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertSame(self::NET_LABEL, trim($cell->textContent), '⛔ মালিকের ছকের ঘরের নাম "নিট বিক্রি" নয়।');
     }
 
+    /** ⭐ বিক্রয়ের সারাংশ: "নিট বিক্রি (VAT ও ফেরত বাদে)" কার্ড আর বারো মাসের নিট ঘর — একই উৎস (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
+    public function test_the_overview_net_card_and_the_twelve_months_are_net_of_vat_and_returns(): void
+    {
+        $before = $this->overviewNet();
+
+        $bill = $this->bill('10', '10000');
+        $this->giveBack($bill, '1', Carbon::today()->toDateString());
+        $this->assertSame('10000.0000', bcadd((string) $bill->tax, '0', 4), 'প্রস্তুতিটাই ভুল — বিলে VAT নেই।');
+
+        $after = $this->overviewNet();
+        $this->assertSame('90000.0000', bcsub($after['card'], $before['card'], 4), '⛔ সারাংশের নিট কার্ড VAT বা ফেরত বাদ দেয় না।');
+        $this->assertSame('90000.0000', bcsub($after['month'], $before['month'], 4), '⛔ বারো মাসের এই মাসের নিট VAT বা ফেরত বাদ দেয় না।');
+        $this->assertSame(self::FULL_LABEL, $after['label'], '⛔ কার্ডের নাম "নিট বিক্রি (VAT ও ফেরত বাদে)" নয়।');
+
+        // ⓘ সারাংশ = হোম/ফোনের একই উৎস — এই মাসে
+        $this->web($this->owner);
+        $this->assertSame(SalesMetrics::net(Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()), $after['month']);
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
+
+    /** @return array{card: string, month: string, label: string} সারাংশের নিট কার্ড (এ মাস) আর বারো মাসের এই মাসের ঘর */
+    private function overviewNet(): array
+    {
+        $this->web($this->owner);
+        $response = $this->get(route('sales.overview', ['period' => 'month']))->assertOk();
+        $card = collect($response->viewData('cards'))->firstWhere('key', 'sales.overview.net');
+        $this->assertNotNull($card, 'প্রস্তুতিটাই ভুল — সারাংশে নিট কার্ড নেই।');
+        $month = collect($response->viewData('panels')['monthly']['rows'])->firstWhere('ym', Carbon::today()->format('Y-m'));
+        $this->assertNotNull($month, 'প্রস্তুতিটাই ভুল — বারো মাসে এই মাস নেই।');
+
+        return ['card' => bcadd((string) $card['raw'], '0', 4), 'month' => bcadd((string) $month['net'], '0', 4), 'label' => (string) $card['label']];
+    }
 
     /** @return array{billed: string, returned: string, net: string, vat: string, gross: string, today: string} */
     private function metrics(string $day): array
