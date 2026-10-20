@@ -30,6 +30,10 @@ abstract class LauncherWidgetKind {
   /// যে মাপে বসানো যায়; প্রথমটা শুরুর মাপ
   List<WidgetSize> get sizes;
 
+  /// ফোনের নিজের সারাংশ — যে উইজেটের তথ্য সার্ভারে নেই (যেমন সিঙ্কের অবস্থা)। null হলে (সাধারণ) সার্ভারের উত্তর থেকে
+  /// নেওয়া হয়; না-null হলে সার্ভারে এই চাবি খোঁজা হয় না (a6-এর অনুরোধ, ২০ অক্টোবর ২০২৬)।
+  Map<String, dynamic>? localSummary() => null;
+
   /// সার্ভারের সারাংশ (`widgets.<key>`) থেকে নথি। সারাংশ না থাকলে (অনুমতি নেই) এটা ডাকা হয় না।
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf});
 }
