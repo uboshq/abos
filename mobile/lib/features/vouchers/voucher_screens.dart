@@ -6,6 +6,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/auth/session_profile.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -16,12 +17,6 @@ import '../../core/widgets/unsaved_guard.dart';
 /// ⭐ ফোনে অফিসের লোকের ভাউচার — আদায়, পরিশোধ, খরচ (বাকিতেও), জাবেদা, কন্ট্রা (মালিক, ৭ অক্টোবর ২০২৬; সার্ভার 2bd0f620)।
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস। নিয়ম সব সার্ভারের — এখানে কেবল যা না থাকলে পাঠানোই অর্থহীন। ⛔ কেবল নেট থাকলে।
-Color voucherStateColour(BuildContext context, String state) => switch (state) {
-      'posted' => context.palette.success,
-      'cancelled' => context.palette.danger,
-      _ => context.palette.pending,
-    };
-
 class VoucherListScreen extends StatefulWidget {
   const VoucherListScreen({
     super.key,
@@ -236,7 +231,12 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                   title: Text('${v.no} · ${v.kindLabel}'),
                   subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(Money.taka(v.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(v.stateWords, style: TextStyle(color: voucherStateColour(context, v.state))),
+                    // ⭐ অবস্থা — অ্যাপের এক চিপ: আইকন + রং + লেখা (নকশা ৩, অংশ ৫)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: AppStatusChip.forServer(v.state,
+                          key: ValueKey('voucher-state-${v.id}'), fallbackLabel: v.stateWords, dense: true),
+                    ),
                     if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
                     // ⭐ টাকা কোন খাতে — জমা/থেকে/দুই দিক (মালিক, ১৭ অক্টোবর ২০২৬); পুরনো সার্ভারে কিছুই নয়
                     if (v.moneyLine case final money?) Text(money, key: ValueKey('voucher-money-${v.id}')),
@@ -355,7 +355,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
           if (p == null && _error == null) const LinearProgressIndicator(),
           if (p != null) ...[
             FactRow('ধরন', p.row.kindLabel),
-            FactRow('অবস্থা', p.row.stateWords, colour: voucherStateColour(context, p.row.state)),
+            PaperStateFact(chip: AppStatusChip.forServer(p.row.state, key: const ValueKey('voucher-state'), fallbackLabel: p.row.stateWords)),
             FactRow('টাকা', Money.taka(p.row.amount)),
             if (p.row.date != null) FactRow('তারিখ', dayOf(p.row.date)),
             if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),

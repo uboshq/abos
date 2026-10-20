@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_palette.dart';
-import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
@@ -228,7 +229,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
                 name: i.customer.isEmpty ? '—' : i.customer,
                 second: '${i.no} · ${dayOf(i.date)}',
                 amount: Money.valueOrZero(i.total),
-                pill: const AppStatusPill(label: 'নিশ্চিত', kind: AppStatusKind.success),
+                // ⭐ ফেরত নেওয়া যায় কেবল পাকা বিলের — অ্যাপের এক চিপ (নকশা ৩, অংশ ৫)
+                pill: const AppStatusChip.compact(state: PaperState.posted),
                 onTap: _busy ? null : () => _openBill(i),
               ),
           ],

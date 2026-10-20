@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/status/app_status_chip.dart';
+import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/books/books_api.dart';
 import 'package:abos_mobile/core/orders/direct_sale_api.dart';
 import 'package:abos_mobile/core/orders/sales_return_api.dart';
@@ -367,7 +369,7 @@ void main() {
         expect(api.draftCalls, 2);
         _expectRow(tester, const ValueKey('counter-draft-drf-1'), _label, 'DRF-0014');
         expect(find.text('৳4,820.00'), findsOneWidget);
-        expect(find.text('খসড়া'), findsOneWidget, reason: 'অবস্থার চিপ');
+        expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.draft), findsOneWidget, reason: 'অবস্থার চিপ');
 
         final empty = _Counter(draftAnswers: [<CounterDraftSummary>[]]);
         await _pump(tester, theme(), CounterScreen(api: empty, customers: const [], products: const []));

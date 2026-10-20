@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:abos_mobile/core/status/app_status_chip.dart';
+import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
 import 'package:abos_mobile/core/api_client/api_client.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
@@ -372,8 +374,9 @@ void main() {
     final api = _FakeVouchers();
     await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const []));
     expect(find.text('RV-0001 · আদায় ভাউচার'), findsOneWidget);
-    expect(find.text('সইয়ের অপেক্ষায়'), findsWidgets);
-    expect(find.text('পাকা'), findsOneWidget);
+    // ⭐ অবস্থা অ্যাপের এক চিপে (নকশা ৩, অংশ ৫)
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.waiting), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('voucher-awaiting')));
     await tester.pumpAndSettle();
