@@ -60,16 +60,24 @@ class AbosScreenBar extends StatelessWidget implements PreferredSizeWidget {
     return _LiveScreenBar(bar: this);
   }
 
-  /// সেশন ছাড়া — আগের সাদামাটা বার
-  Widget plain(BuildContext context) => AppBar(
-        key: const ValueKey('screen-bar-plain'),
-        title: Text(title),
-        actions: actions,
-        bottom: bottom,
-        leading: onBack == null
-            ? null
-            : IconButton(tooltip: 'পিছনে', onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
-      );
+  /// সেশন ছাড়া — আগের সাদামাটা বার, আগের উচ্চতায়।
+  /// ⛔ [preferredSize] নীল বারের ছাদ (৪৮০dp); সাদামাটা AppBar পুরো ছাদ জুড়ে বসে যায় — তাই নিজের মাপে বাঁধা।
+  Widget plain(BuildContext context) {
+    final bar = AppBar(
+      key: const ValueKey('screen-bar-plain'),
+      title: Text(title),
+      actions: actions,
+      bottom: bottom,
+      leading: onBack == null
+          ? null
+          : IconButton(tooltip: 'পিছনে', onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
+    );
+    return Align(
+      alignment: Alignment.topCenter,
+      heightFactor: 1,
+      child: SizedBox(height: bar.preferredSize.height + MediaQuery.paddingOf(context).top, child: bar),
+    );
+  }
 
   /// ← — `maybePop`, যাতে আধা-লেখা ফর্ম আগে জিজ্ঞেস করে; পেছনে কিছু না থাকলে হোমে
   static Future<void> back(BuildContext context) async {
