@@ -70,5 +70,7 @@ void main() {
     final doc = kind.build({'company': 'ADI Corporation', 'today': {}, 'parts': {}}, asOf: asOf);
     expect(doc.empty, isNotNull);
     expect(doc.hero, isNull);
+    expect(doc.rows, isEmpty);
+    expect(doc.actions, isEmpty, reason: '⛔ না-পাওয়া ভাগের বোতাম (নোটিশ, সই …)');
   });
 }
