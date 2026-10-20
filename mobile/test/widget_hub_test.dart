@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/launcher_widgets/hub/widget_hub.dart';
@@ -150,6 +151,31 @@ void main() {
 
     expect(saved['doc_sales_today'], isNull);
     expect(enabled['sales_today'], isFalse);
+  });
+
+  /// ⛔ অ্যাপ সার্ভারের আগে লাইভে যেতে পারে (fe, ২০ অক্টোবর ২০২৬): দরজা না থাকলে (৪০৪) চুপচাপ — ভাঙে না, সার্ভার-উইজেট
+  /// বন্ধ থাকে (তালিকাতেই আসে না), ফোনের-নিজের উইজেট চলে, আর এক গোলে একবারই চায় — বারবার চেষ্টা করে ব্যাটারি খায় না
+  test('an older server without the door: quiet, server widgets stay off, phone-only ones work, one ask per round', () async {
+    var asked = 0;
+    WidgetHub.kinds = () => const [_FakeKind('sales_today'), _FakeKind('sync_state', local: {'n': 1})];
+    WidgetSummaryApi.transport = (etag) async {
+      asked++;
+      throw DioException(
+        requestOptions: RequestOptions(path: '/widgets/summary'),
+        response: Response(requestOptions: RequestOptions(path: '/widgets/summary'), statusCode: 404),
+      );
+    };
+
+    await WidgetHub.refresh();
+
+    expect(asked, 1, reason: '⛔ এক গোলে একাধিকবার চাইল');
+    expect(saved['doc_sales_today'], isNull);
+    expect(enabled['sales_today'], isFalse, reason: '⛔ দরজা নেই, তবু সার্ভার-উইজেট চালু');
+    expect(saved['doc_sync_state'], isNotNull, reason: 'ফোনের-নিজের উইজেট চলে');
+    expect(enabled['sync_state'], isTrue);
+
+    await WidgetHub.refresh();
+    expect(asked, 2, reason: 'পরের গোল (৩০ মিনিট বা সিঙ্ক) আবার একবার — নিজে থেকে বারবার নয়');
   });
 
   /// ⭐ উইজেটও মানুষের আলো/অন্ধকার বাছাই মানে — পেছনের isolate-এও ভাণ্ডার থেকে পড়ে লেখে, "ফোনের মতো" ধরে নয়

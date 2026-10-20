@@ -276,6 +276,10 @@ void main() {
   });
 
   testWidgets('the sync status and the update button are under আমি', (tester) async {
+    // ⓘ "আমি" পাতায় সারি বেড়েছে (আলো/অন্ধকার, ২০ অক্টোবর ২০২৬) — লম্বা পর্দায়, যাতে সব সারি একসাথে দেখা যায়
+    tester.view.physicalSize = const Size(1200, 7200);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('nav-me')));
