@@ -85,6 +85,9 @@ final class EmployeeService
 
             $employee->update([...$data, 'code' => $code, ...$active]);
 
+            // ⭐ ছাড়ার দিন পেরিয়ে থাকলে লগইনও বন্ধ ([[LeaversLoseTheirLogin]]; ISO A.5.18)
+            app(LeaversLoseTheirLogin::class)->apply($employee->fresh());
+
             return $employee->fresh();
         });
     }
@@ -115,6 +118,9 @@ final class EmployeeService
             'leaving_date' => $date->toDateString(),
             'is_active' => $this->stillHere($date->toDateString()),
         ])->save();
+
+        // ⭐ ছাড়ার দিন পেরিয়ে থাকলে লগইনও এখনই বন্ধ; ভবিষ্যতের দিন হলে রোজকার কাজে ([[LeaversLoseTheirLogin]])
+        app(LeaversLoseTheirLogin::class)->apply($employee->fresh());
 
         return $employee->fresh();
     }

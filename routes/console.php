@@ -197,6 +197,13 @@ Schedule::command('abos:reports-due')
  * ⭐ মেয়াদটা [[FormIsNotSubmittedTwice::KEEP_DAYS]]-এ, হাতে লেখা সংখ্যা
  * নয় — সেবাটাই জানে কতদিন তার নিজের সারি দরকার।
  */
+/*
+ * ⭐ চাকরি ছাড়ার দিন পেরোলে লগইন বন্ধ — আগে থেকে নোটিশ দেওয়া কর্মী (ISO A.5.18; [[LeaversLoseTheirLogin]], a6, ২০ অক্টোবর ২০২৬)
+ */
+Schedule::command('abos:hr-leavers')
+    ->dailyAt('00:20')
+    ->withoutOverlapping();
+
 Schedule::call(fn () => app(FormIsNotSubmittedTwice::class)->prune())
     ->dailyAt('02:10')
     ->name('submitted-forms-prune')

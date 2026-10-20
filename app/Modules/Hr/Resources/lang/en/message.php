@@ -52,4 +52,6 @@ return [
     'leave_part_day' => ':share day leave',
     // ⓘ ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬
     'leave_employee_gone' => 'Your employee record is closed (inactive or deleted), so leave cannot be applied for. If this is wrong, tell HR or the owner.',
+    // ⭐ চাকরি ছাড়লে লগইন বন্ধ ([[LeaversLoseTheirLogin]])
+    'leaver_login_closed' => 'Login of :name closed in this company — the leaving date :date has passed.',
 ];
