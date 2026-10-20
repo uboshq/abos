@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Models\Approval;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
+use App\Models\AuditTrail;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Promotion\Models\Promotion;
@@ -145,7 +146,8 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
         $fresh = $offer->fresh();
         $this->assertNotSame(PromotionStatus::ACTIVE, $fresh->status, 'মালিকের সই ছাড়া ফোনের পথে অফার চালু হলো।');
         $this->assertSame(PromotionStatus::DRAFT, $fresh->status);
-        $this->assertSame(__('promotion::approval.not_signed_by_owner'), app(PromotionApprovalChain::class)->lastReason($fresh));
+        /* ⓘ ছকের একমাত্র স্তরে মালিক নেই — তাই কারণটাও তাই বলে */
+        $this->assertSame(__('promotion::approval.no_owner_at_last_level'), app(PromotionApprovalChain::class)->lastReason($fresh));
     }
 
     /**
@@ -178,6 +180,56 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
         $fresh = $offer->fresh();
         $this->assertSame(PromotionStatus::ACTIVE, $fresh->status, 'সুইচ বন্ধ, তবু মালিকের সই চাওয়া হলো।');
         $this->assertSame($this->maker->id, (int) $fresh->approved_by);
+    }
+
+    /**
+     * ⛔ মালিক নিজের অফারে সই দিলে অডিটে আলাদা চিহ্ন (SOX) — অন্যের অফারে সই দিলে চিহ্ন নেই।
+     */
+    public function test_the_owner_signing_his_own_offer_is_marked_in_the_audit_and_someone_elses_is_not(): void
+    {
+        $this->approvalSwitch(true);
+
+        $own = $this->aDraft();
+        $own->forceFill(['created_by' => $this->owner->id])->save();
+        $this->actingAs($this->owner)->post(route('promotion.submit', $own))->assertSessionHasNoErrors();
+        $this->assertSame(PromotionStatus::SUBMITTED, $own->fresh()->status, 'মালিকের অফার জমাই হলো না।');
+        $this->assertSame(0, $this->selfSignedMarks($own), 'সইয়ের আগেই চিহ্ন বসে আছে।');
+
+        $this->actingAs($this->owner)->post(route('promotion.approve', $own))->assertSessionHasNoErrors();
+        $this->assertSame(PromotionStatus::APPROVED, $own->fresh()->status);
+        $this->assertSame(1, $this->selfSignedMarks($own), 'মালিক নিজের অফারে সই দিলেন, অডিটে আলাদা চিহ্ন নেই।');
+        $this->assertSame(__('promotion::approval.owner_self_signed'), AuditTrail::query()
+            ->forRecord(Promotion::class, (int) $own->id)->where('action', PromotionApprovalChain::OWNER_SELF_SIGNED)->value('reason'));
+
+        $others = $this->submitted();
+        $this->actingAs($this->owner)->post(route('promotion.approve', $others))->assertSessionHasNoErrors();
+        $this->assertSame(PromotionStatus::APPROVED, $others->fresh()->status);
+        $this->assertSame(0, $this->selfSignedMarks($others), 'অন্যের অফারে সই, তবু "নিজে সই" চিহ্ন বসল।');
+    }
+
+    /**
+     * ⛔ ছকের শেষ স্তরে মালিক নেই: শেষ অ-মালিক সইয়ে অফার অনুমোদিত হয় না, খসড়ায় ফেরে, আর বাংলা কারণ পাতায় দেখা যায়।
+     */
+    public function test_a_flow_without_the_owner_at_its_last_level_sends_the_offer_back_with_the_reason_on_its_page(): void
+    {
+        $this->approvalSwitch(true);
+        $this->flow([1 => [$this->manager]]);
+        $this->assertFalse(ApprovalFlowStep::query()->get()
+            ->where('approval_flow_id', ApprovalFlow::query()->where('module', PromotionApprovalChain::MODULE)->value('id'))
+            ->contains(fn (ApprovalFlowStep $step) => $step->allows($this->owner)), 'ছকের শেষ স্তরে মালিক আছেন — দাবিটা অন্য কিছু মাপত।');
+
+        $offer = $this->submitted();
+        $this->actingAs($this->manager)->post(route('promotion.approve', $offer));
+
+        $fresh = $offer->fresh();
+        $this->assertNotSame(PromotionStatus::APPROVED, $fresh->status, 'মালিক ছাড়া ছকের শেষ সইয়ে অফার অনুমোদিত।');
+        $this->assertNotSame(PromotionStatus::ACTIVE, $fresh->status);
+        $this->assertSame(PromotionStatus::DRAFT, $fresh->status);
+
+        $reason = __('promotion::approval.no_owner_at_last_level');
+        $this->assertMatchesRegularExpression('/\p{Bengali}/u', (string) trans('promotion::approval.no_owner_at_last_level', [], 'bn'));
+        $this->assertSame($reason, app(PromotionApprovalChain::class)->lastReason($fresh));
+        $this->actingAs($this->maker)->get(route('promotion.show', $offer))->assertOk()->assertSee($reason);
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
@@ -240,6 +292,12 @@ final class AnOfferWentLiveWithoutTheOwnersSignatureTest extends TestCase
 
         $this->app->forgetScopedInstances();
         app()->forgetInstance(ApprovalEngine::class);
+    }
+
+    private function selfSignedMarks(Promotion $offer): int
+    {
+        return AuditTrail::query()->forRecord(Promotion::class, (int) $offer->id)
+            ->where('action', PromotionApprovalChain::OWNER_SELF_SIGNED)->count();
     }
 
     private function request(Promotion $offer): Approval

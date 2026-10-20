@@ -70,6 +70,12 @@ final class PromotionApprovalChain
      */
     public const SENT_BACK = 'sent_back';
 
+    /**
+     * ⛔ অডিটের আলাদা চিহ্ন — মালিক নিজের বানানো অফারে নিজেই সই দিলেন (fe, ২০ অক্টোবর ২০২৬; SOX: শীর্ষ কর্তার
+     * নিজে-অনুমোদিত ছাড় আলাদা করে চিহ্নিত)। ⚠️ কলাম ২৪ অক্ষরের।
+     */
+    public const OWNER_SELF_SIGNED = 'owner_self_signed';
+
     public function __construct(
         private readonly ApprovalEngine $engine,
         private readonly PromotionLifecycle $life,
@@ -158,7 +164,10 @@ final class PromotionApprovalChain
 
             /* ⭐ ছক নেই — আজকের দরজা, তার নিজের নিয়ম আর নিজের বার্তাসহ */
             if ($approval === null) {
-                return $this->life->approve($offer);
+                $offer = $this->life->approve($offer);
+                $this->markSelfSigned($offer, (int) $user->id);
+
+                return $offer;
             }
 
             /*
@@ -185,7 +194,12 @@ final class PromotionApprovalChain
              * ⓘ মালিকের নিয়ম: যেকোনো ছাড়ে মালিকের সই। আগের স্তরে অন্য কেউ সই দিতে পারেন, শেষেরটা নয়। ⚠️ থামলে
              * লেনদেন ফেরে, তাই ইঞ্জিনে বসা এই সইটাও মুছে যায় আর অনুরোধ শেষ স্তরেই অপেক্ষায় থাকে।
              */
-            if ($this->needsApproval() && $decided->status === Approval::APPROVED && ! self::isOwner($offer, (int) $user->id)) {
+            /*
+             * ⓘ শেষ স্তরে মালিক থাকলে অনুরোধটা তাঁর অপেক্ষায় থাকে (৪২২)। ⚠️ ছকের শেষ স্তরে মালিক না থাকলে অপেক্ষা
+             * চিরকালের হত — তখন সইটা থাকে, আর [[settle()]] অফারটা কারণসহ খসড়ায় ফেরায় (পাতায় দেখা যায়)।
+             */
+            if ($this->needsApproval() && $decided->status === Approval::APPROVED && ! self::isOwner($offer, (int) $user->id)
+                && $this->ownerStandsAtLastLevel($offer, $decided)) {
                 throw ValidationException::withMessages([
                     'status' => __('promotion::approval.owner_signs_last'),
                 ]);
@@ -328,7 +342,13 @@ final class PromotionApprovalChain
 
         /* ⛔ ইনবক্স বা ফোনের পথে শেষ সই মালিকের না হলে অনুমোদনটা গণ্য নয় — [[sign()]]-এর একই নিয়ম (গ্যাপ ৪৩) */
         if ($this->needsApproval() && ! self::isOwner($offer, (int) $last->user_id)) {
-            return $this->returnToDraft($offer, __('promotion::approval.not_signed_by_owner'));
+            return $this->returnToDraft($offer, $this->ownerStandsAtLastLevel($offer, $latest)
+                ? __('promotion::approval.not_signed_by_owner')
+                : __('promotion::approval.no_owner_at_last_level'));
+        }
+
+        if ($signed->contains(fn (ApprovalDecision $d) => $this->isCreatorId($offer, (int) $d->user_id))) {
+            $this->markSelfSigned($offer, (int) $offer->created_by);
         }
 
         return $this->life->signedOff(
@@ -628,6 +648,26 @@ final class PromotionApprovalChain
         $user = $userId === null ? null : User::query()->find($userId);
 
         return $user !== null && app(Ownership::class)->isOwnerIn($user, (int) $offer->company_id);
+    }
+
+    /**
+     * ⓘ ছকের শেষ স্তরে কোম্পানির কোনো সক্রিয় মালিক সইকারী কি না — ধাপ নিজেই বলে ([[ApprovalFlowStep::allows()]])।
+     */
+    private function ownerStandsAtLastLevel(Promotion $offer, Approval $approval): bool
+    {
+        $steps = $this->engine->stepsFor($approval);
+        $last = $steps->where('level', $steps->max('level'));
+
+        return app(Ownership::class)->activeOwnersIn((int) $offer->company_id)
+            ->contains(fn (User $owner) => $last->contains(fn ($step) => $step->allows($owner)));
+    }
+
+    /** ⛔ মালিক নিজের অফারে সই দিলে অডিটে আলাদা চিহ্ন — কেবল সুইচ চালু থাকলে, কারণ বন্ধ থাকলে সই-ই নেই */
+    private function markSelfSigned(Promotion $offer, int $signer): void
+    {
+        if ($this->needsApproval() && $this->isCreatorId($offer, $signer) && self::isOwner($offer, $signer)) {
+            $offer->auditAction(self::OWNER_SELF_SIGNED, __('promotion::approval.owner_self_signed'));
+        }
     }
 
     private function needsApproval(): bool
