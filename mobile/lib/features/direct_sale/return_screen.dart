@@ -13,7 +13,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../books/books_widgets.dart' show dayOf;
-import '../books/money_in_screens.dart' show DesignListRow;
+import '../../core/widgets/design_list_row.dart';
 
 /// ⭐ বিক্রি ফেরত, ফোনে — কাউন্টারের "ফেরত" বোতাম (মালিক, ৪ অক্টোবর ২০২৬)।
 ///

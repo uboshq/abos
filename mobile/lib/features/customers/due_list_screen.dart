@@ -10,7 +10,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
-import '../books/money_in_screens.dart' show DesignListRow;
+import '../../core/widgets/design_list_row.dart';
 
 /// Who owes what — the whole round's debt on one page.
 ///

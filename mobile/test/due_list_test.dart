@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/widgets/customer_line.dart';
 import 'package:abos_mobile/core/widgets/totals_bar.dart';
-import 'package:abos_mobile/features/books/money_in_screens.dart' show DesignListRow;
+import 'package:abos_mobile/core/widgets/design_list_row.dart';
 import 'package:abos_mobile/features/customers/due_list_screen.dart';
 
 import 'support/fake_secure_storage.dart';

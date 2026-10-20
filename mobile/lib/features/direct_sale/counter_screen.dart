@@ -18,7 +18,7 @@ import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../books/books_widgets.dart' show dayOf;
-import '../books/money_in_screens.dart' show DesignListRow;
+import '../../core/widgets/design_list_row.dart';
 import '../printing/document_actions_sheet.dart';
 import 'return_screen.dart';
 import '../../core/widgets/unsaved_guard.dart';
