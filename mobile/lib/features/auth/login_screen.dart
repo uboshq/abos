@@ -355,8 +355,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ],
             gap,
-            SizedBox(
-              height: 56,
+            // ⓘ অন্তত ৫৬, বড় লেখায় বোতাম নিজে বাড়ে — লেখা কাটে না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
               child: FilledButton(
                 key: const ValueKey('login-submit'),
                 style: FilledButton.styleFrom(

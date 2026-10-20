@@ -4,6 +4,7 @@ import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import 'customer_list_screen.dart' show isLargeText;
 import '../../core/widgets/customer_line.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
@@ -201,9 +202,19 @@ class _Row extends StatelessWidget {
     final colour = took ? AppColors.danger : AppColors.success;
     final amount = took ? row.debit : row.credit;
 
+    // ⓘ বড় লেখায় (দেড়গুণের বেশি) অঙ্ক ডানে নয়, তারিখের নিচে নিজের লাইনে, পুরো মাপে; ডানে থাকলে সারির ৪০%-এর বেশি নেয় না
+    // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে অঙ্ক পুরো সারি খেয়ে ফেলত।
+    final big = isLargeText(context);
+    final amountText = Text('${took ? '+' : '−'}${Money.taka(amount)}',
+        semanticsLabel: '${took ? 'মাল' : 'জমা'} ${Money.spoken(amount)}',
+        maxLines: 1,
+        style: TextStyle(fontWeight: FontWeight.w700, color: colour));
+    final balanceText = Text(dueWords(row.balance),
+        maxLines: 1, style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted));
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: ListTile(
+      child: LayoutBuilder(
+        builder: (context, constraints) => ListTile(
         leading: CircleAvatar(
           backgroundColor: colour.withValues(alpha: 0.12),
           child: Icon(took ? Icons.shopping_bag_outlined : Icons.payments_outlined,
@@ -211,27 +222,43 @@ class _Row extends StatelessWidget {
         ),
         title: Text(took ? 'মাল নিয়েছেন' : 'টাকা দিয়েছেন',
             style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          [
-            [dayOf(row.date), if (row.no.isNotEmpty) row.no].join(' · '),
-            if (row.narration.isNotEmpty) row.narration,
-          ].join('\n'),
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
+        subtitle: big
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      [dayOf(row.date), if (row.no.isNotEmpty) row.no].join(' · '),
+                      if (row.narration.isNotEmpty) row.narration,
+                    ].join('\n'),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: amountText),
+                  Text(dueWords(row.balance), style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
+                ],
+              )
+            : Text(
+                [
+                  [dayOf(row.date), if (row.no.isNotEmpty) row.no].join(' · '),
+                  if (row.narration.isNotEmpty) row.narration,
+                ].join('\n'),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+        isThreeLine: !big && row.narration.isNotEmpty,
+        trailing: big ? null : ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.4),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerEnd, child: amountText),
+              FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerEnd, child: balanceText),
+            ],
+          ),
         ),
-        isThreeLine: row.narration.isNotEmpty,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('${took ? '+' : '−'}${Money.taka(amount)}',
-                semanticsLabel: '${took ? 'মাল' : 'জমা'} ${Money.spoken(amount)}',
-                style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-            Text(dueWords(row.balance),
-                style: TextStyle(
-                    fontSize: 11.5, color: context.palette.onSurfaceMuted)),
-          ],
-        ),
+      ),
       ),
     );
   }

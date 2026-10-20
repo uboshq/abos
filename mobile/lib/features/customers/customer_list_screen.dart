@@ -12,6 +12,7 @@ import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
+import 'customer_detail_screen.dart';
 
 /// Every customer this device has pulled, each with what the shop owes.
 ///
@@ -25,7 +26,14 @@ import '../books/books_widgets.dart';
 /// keep the figure fresh. A rep walking a route decides which shop to call on
 /// from this list; the figure is worth nothing a tap away.
 class CustomerListScreen extends StatefulWidget {
-  const CustomerListScreen({super.key});
+  const CustomerListScreen({super.key, this.detailBuilder});
+
+  /// ⭐ ট্যাবলেটে বা আড়াআড়ি ফোনে ([twoPaneWidth]-এর বেশি চওড়া) ডানের ঘরে যে পাতা বসে — রাউটার দেয় "বাকির অবস্থা"-র
+  /// চাবিসহ; না দিলে সাধারণ [CustomerDetailScreen]।
+  final Widget Function(BuildContext context, String customerId)? detailBuilder;
+
+  /// এর বেশি চওড়া হলে দুই ঘর: বাঁয়ে তালিকা, ডানে বাছা গ্রাহক (Material-এর "medium/expanded" মাপ ৬০০ dp থেকে)।
+  static const twoPaneWidth = 600.0;
 
   @override
   State<CustomerListScreen> createState() => _CustomerListScreenState();
@@ -37,6 +45,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
   String _sort = CustomerListQuery.defaultSort;
   ListFilters _filters = const {};
+
+  /// ⭐ দুই ঘরে বাছা গ্রাহক — এই State-এ থাকে, তাই ফোন ঘোরালে (চওড়া বদলালে) হারায় না: সরু হলে তালিকায় দাগ দেওয়া থাকে,
+  /// আবার চওড়া হলে সেই গ্রাহকই ডানে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+  String? _selectedId;
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -67,6 +79,41 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       return due > 0 ? sum + due : sum;
     });
 
+    // ⭐ চওড়া পর্দায় দুই ঘর — বাঁয়ে তালিকা, ডানে গ্রাহকের পাতা; ফোনে আগের মতো এক ঘর, চাপলে নিজের পাতা
+    // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+    return LayoutBuilder(builder: (context, constraints) {
+      final twoPane = constraints.maxWidth > CustomerListScreen.twoPaneWidth;
+      final list = _list(context, all, filtered, owed, trouble, twoPane);
+      if (!twoPane) return list;
+      final selected = _selectedId == null ? null : CustomerRecord.byId(_selectedId!);
+      return Row(
+        key: const ValueKey('customers-two-pane'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: (constraints.maxWidth * 0.4).clamp(320.0, 420.0), child: list),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: selected == null
+                ? const Scaffold(
+                    key: ValueKey('customers-detail-empty'),
+                    body: EmptyState(
+                      icon: Icons.touch_app_outlined,
+                      title: 'বাঁয়ের তালিকা থেকে একজন গ্রাহক বাছুন',
+                    ),
+                  )
+                : KeyedSubtree(
+                    key: ValueKey('customers-detail-${selected.id}'),
+                    child: widget.detailBuilder?.call(context, selected.id) ??
+                        CustomerDetailScreen(customerId: selected.id),
+                  ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _list(BuildContext context, List<CustomerRecord> all, List<CustomerRecord> filtered, double owed,
+      String? trouble, bool twoPane) {
     return Scaffold(
       appBar: AppBar(title: const Text('গ্রাহক')),
       body: Column(
@@ -143,8 +190,17 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           itemCount: filtered.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: AppSpacing.xs),
-                          itemBuilder: (context, index) =>
-                              _CustomerTile(customer: filtered[index]),
+                          itemBuilder: (context, index) {
+                            final customer = filtered[index];
+                            return _CustomerTile(
+                              customer: customer,
+                              selected: twoPane && customer.id == _selectedId,
+                              // চওড়া পর্দায় ডানের ঘরে খোলে; ফোনে আগের মতো নিজের পাতায়
+                              onOpen: twoPane
+                                  ? () => setState(() => _selectedId = customer.id)
+                                  : () => context.go('/home/customers/${customer.id}'),
+                            );
+                          },
                         ),
             ),
           ),
@@ -155,9 +211,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 }
 
 class _CustomerTile extends StatelessWidget {
-  const _CustomerTile({required this.customer});
+  const _CustomerTile({required this.customer, required this.onOpen, this.selected = false});
 
   final CustomerRecord customer;
+  final VoidCallback onOpen;
+
+  /// দুই ঘরে ডানে যে খোলা — সারিটা রঙে আর TalkBack-এ "বাছা"
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -169,8 +229,30 @@ class _CustomerTile extends StatelessWidget {
     ].join(' · ');
     final due = CustomerDueRecord.forCustomer(customer.id);
 
+    // ⓘ বড় লেখায় (দেড়গুণের বেশি) বকেয়া ডানে নয়, নামের নিচে নিজের লাইনে — পুরো মাপে, পড়ার মতো; ডানে থাকলে সারির
+    // চওড়ার ৪০%-এর বেশি নেয় না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে বকেয়া পুরো সারি খেয়ে
+    // ফেলত: "Trailing widget consumes the entire tile width"।
+    final big = isLargeText(context);
+    Widget? duePill(double maxWidth) => due == null
+        ? null
+        : Semantics(
+            container: true,
+            button: true,
+            onTapHint: 'খাতা খুলুন',
+            child: InkWell(
+              key: ValueKey('ledger-${customer.id}'),
+              onTap: () => context.push('/home/customers/${customer.id}/ledger'),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: 48, minHeight: 48, maxWidth: maxWidth),
+                child: _DuePill(due: due, shrinkToFit: !big),
+              ),
+            ),
+          );
     return Card(
-      child: ListTile(
+      child: LayoutBuilder(
+        builder: (context, constraints) => ListTile(
+        key: ValueKey('customer-row-${customer.id}'),
+        selected: selected,
         // ⓘ নামের প্রথম অক্ষরের বৃত্ত সাজ — TalkBack নামটা একবারই পড়ে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
         leading: ExcludeSemantics(
           child: CircleAvatar(
@@ -184,10 +266,18 @@ class _CustomerTile extends StatelessWidget {
         ),
         // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম); লম্বা হলে "…", পুরোটা ছুঁয়ে ধরে রাখলে
         title: CustomerLine(customer.label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: subtitle.isEmpty
-            ? null
-            : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-        onTap: () => context.go('/home/customers/${customer.id}'),
+        subtitle: big && due != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (subtitle.isNotEmpty) Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  duePill(constraints.maxWidth)!,
+                ],
+              )
+            : subtitle.isEmpty
+                ? null
+                : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        onTap: onOpen,
         // No due row at all when this shop's CustomerDue has not been pulled
         // yet — the two entity types have separate watermarks, so one can
         // arrive a sync ahead of the other, and a shop showing "বকেয়া নেই"
@@ -195,32 +285,23 @@ class _CustomerTile extends StatelessWidget {
         // ⭐ বকেয়ার অঙ্কে চাপলে সোজা খাতা — মালিক, ১২ অক্টোবর ২০২৬
         // ⓘ TalkBack-এ বকেয়ার অঙ্ক নিজেই একটা বোতাম — "বকেয়া ৳…, খাতা খুলুন", আঙুলের জায়গা অন্তত ৪৮ dp
         // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ আগে এর চাপটা কার্ডের নামহীন ঘরে গিয়ে পড়ত।
-        trailing: due == null
-            ? null
-            : Semantics(
-                container: true,
-                button: true,
-                onTapHint: 'খাতা খুলুন',
-                child: InkWell(
-                  key: ValueKey('ledger-${customer.id}'),
-                  onTap: () =>
-                      context.push('/home/customers/${customer.id}/ledger'),
-                  child: ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(minWidth: 48, minHeight: 48),
-                    child: _DuePill(due: due),
-                  ),
-                ),
-              ),
+        trailing: big ? null : duePill(constraints.maxWidth * 0.4),
+        ),
       ),
     );
   }
 }
 
+/// ⓘ ফোনের লেখা দেড়গুণের বেশি বড় — তখন সারির ডানের অঙ্ক নিচে নামে (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+bool isLargeText(BuildContext context) => MediaQuery.textScalerOf(context).scale(10) > 15;
+
 class _DuePill extends StatelessWidget {
-  const _DuePill({required this.due});
+  const _DuePill({required this.due, this.shrinkToFit = true});
 
   final CustomerDueRecord due;
+
+  /// ডানের ঘরে — জায়গা না হলে ছোট হয়; নামের নিচে (বড় লেখায়) পুরো মাপে
+  final bool shrinkToFit;
 
   @override
   Widget build(BuildContext context) {
@@ -229,25 +310,33 @@ class _DuePill extends StatelessWidget {
     // case shout as loudly as the one a rep has to act on.
     final owes = due.outstandingInView > 0;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          due.outstandingLabel,
-          semanticsLabel: Money.speakable(due.outstandingLabel),
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-            color: owes ? AppColors.danger : context.palette.onSurfaceMuted,
-          ),
-        ),
-        if (due.creditDays > 0)
+    // ⓘ অঙ্ক আর দিন — সারির ঘরে না ধরলে দুটোই একসাথে ছোট হয়; অঙ্ক মাঝখানে ভাঙে না, নিচে কেটেও যায় না
+    // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে ১৮ dp নিচে বেরিয়ে যেত।
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: shrinkToFit ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: shrinkToFit ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
           Text(
-            '${due.creditDays} দিন',
-            style: Theme.of(context).textTheme.bodySmall,
+            due.outstandingLabel,
+            semanticsLabel: Money.speakable(due.outstandingLabel),
+            maxLines: 1,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: owes ? AppColors.danger : context.palette.onSurfaceMuted,
+            ),
           ),
-      ],
+          if (due.creditDays > 0)
+            Text(
+              '${due.creditDays} দিন',
+              maxLines: 1,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
+      ),
     );
   }
 }
