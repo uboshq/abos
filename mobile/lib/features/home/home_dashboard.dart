@@ -6,9 +6,9 @@ import '../../core/menu/menu_item.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/navigation/nav_prefs.dart';
 import '../../core/records/today_record.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/row_icon.dart';
 import '../today/today_panel.dart';
 
 /// The হোম tab: the search box, the day's figures ("আজ"), the person's own
@@ -76,6 +76,7 @@ class HomeDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     // ⭐ রং কেবল থিমের ভূমিকা থেকে — আলো আর অন্ধকার দুই মোডেই পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
     final cs = Theme.of(context).colorScheme;
+    // ⓘ "আজ"-এর লোড, ভুল আর খালি অবস্থা TodayPanel-এর নিজের (today_panel.dart) — হোম নিজে কিছু আনে না
     return TodayPanel(
       fetch: fetchToday,
       lastKnown: lastKnownToday,
@@ -92,11 +93,14 @@ class HomeDashboard extends StatelessWidget {
         Card(
           key: const Key('home-dashboards'),
           child: ListTile(
-            leading: Icon(Icons.insights_outlined, color: cs.primary),
+            // ⭐ নকশার সারি (নকশা ৩, পাতা ৩): RowIcon ৪০dp · নাম 16 w600 · নিচে মলিন 13 · সারি অন্তত ৭২dp
+            minTileHeight: 72,
+            leading: const RowIcon(Icons.insights_outlined),
             title: const Text('ব্যবসার ড্যাশবোর্ড',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: const Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা'),
-            trailing: const Icon(Icons.chevron_right),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            subtitle: Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা',
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+            trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
             onTap: () => _go(context, 'dashboards', 'ব্যবসার ড্যাশবোর্ড'),
           ),
         ),
@@ -147,6 +151,8 @@ class HomeDashboard extends StatelessWidget {
                 ListTile(
                   key: ValueKey('recent-${recents[i].path}'),
                   minTileHeight: 72,
+                  // ⓘ পর্দার নিজের মডিউলের আইকন — অচেনা পথে (যেমন একটা গ্রাহক) ইতিহাসের আইকন
+                  leading: _recentIcon(recents[i].path),
                   title: Text(recents[i].label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -172,6 +178,13 @@ class HomeDashboard extends StatelessWidget {
         const _SectionTitle('আজ'),
       ],
     );
+  }
+
+  static Widget _recentIcon(String path) {
+    final def = NavCatalog.screenDef(path);
+    return def == null
+        ? const RowIcon(Icons.history)
+        : RowIcon(def.icon, module: def.module);
   }
 
   void _go(BuildContext context, String path, String label) {
@@ -229,9 +242,6 @@ class _FavouriteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ⓘ হালকা পটে আইকন সেই রঙের গাঢ় সুরে, অন্তত ৩:১ ([[AppColors.moduleInk]])
-    final tint = AppColors.moduleTint(row.module);
-    final colour = AppColors.moduleInk(row.module);
     return Card(
       key: ValueKey('favourite-${row.path}'),
       child: InkWell(
@@ -244,15 +254,8 @@ class _FavouriteTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: tint,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(row.icon, color: colour, size: 22),
-              ),
+              // ⓘ নকশার RowIcon — ৪০dp গোল, হালকা পটে মডিউলের গাঢ় সুর, অন্তত ৩:১ (নকশা ৩, পাতা ২)
+              RowIcon(row.icon, module: row.module),
               const SizedBox(height: AppSpacing.xs),
               Text(row.label,
                   maxLines: 2,

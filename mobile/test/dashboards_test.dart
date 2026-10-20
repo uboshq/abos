@@ -141,6 +141,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('আনা গেল না'), findsOneWidget);
+    // ⓘ নকশা ৩, পাতা ৮: বাংলায় কারণ আর "আবার চেষ্টা করুন" (a5, ২০ অক্টোবর ২০২৬) — পুরো দাবি a5_home_dashboards_design3_test-এ
+    expect(find.textContaining('আনা গেল না'), findsOneWidget);
+    expect(find.byKey(const ValueKey('error-retry')), findsOneWidget);
   });
 }

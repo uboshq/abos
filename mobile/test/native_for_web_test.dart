@@ -76,7 +76,8 @@ void main() {
     expect(find.text('12,500.00'), findsWidgets);
     expect(find.text('শেষ 30 দিনের বিক্রয়'), findsOneWidget);
     expect(find.text('রহিম স্টোর'), findsOneWidget);
-    expect(find.text('টাকা: 12,500.00'), findsOneWidget);
+    // ⓘ নকশা ৩-এর সারি (a5, ২০ অক্টোবর ২০২৬): টাকার ঘর ডানে, Money.taka-য় — "টাকা: …" লেবেল-লাইন নয়
+    expect(find.text('৳12,500.00'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('range-month')));
     await tester.pumpAndSettle();
