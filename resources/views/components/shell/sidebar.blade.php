@@ -237,7 +237,7 @@
                     {{-- ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬): লোগো বারে উঠেছে, তাই রেলের মাথায়
                          মালিকের নমুনার ⌂ হোম — মডিউলের টাইলের একই মাপ ও একই "এখানে আছি" চিহ্ন। --}}
                     <a href="{{ route('dashboard') }}" data-rail-home
-                       class="relative flex h-8 w-full items-center justify-center rounded-(--radius-field)
+                       class="relative flex h-8 w-full items-center justify-center
                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
                        @if ($onDashboard) aria-current="page" @endif
                        aria-label="{{ __('core.menu.dashboard') }}"

@@ -44,21 +44,30 @@ class TheProfileButtonWasOffTheEdgeOfThePhoneTest extends TestCase
      */
     public function test_the_two_shortcuts_step_aside_on_a_small_screen(): void
     {
+        /*
+         * ⭐ ২০ অক্টোবর ২০২৬ থেকে (ওয়েবের মান ধাপ ২, SAP Fiori shell bar, মালিকের অনুমোদিত নমুনা): ভাষা আর রঙের সুইচ বারে
+         * কোনো মাপেই নেই — ছবির মেনুতে। ⓘ দাবির উদ্দেশ্য একই, আরও কড়া: ডানের ঝাঁকে কেবল ＋ তৈরি · অনুমোদন · 🔔 · ছবি, তাই
+         * ৩৭৫px-এও প্রোফাইলের বোতাম পর্দার ভেতরে; ১২৮০-র নিচে লুকানোর ফাঁদও আর নেই (কারণ ওরা বারেই নেই)।
+         */
         $topbar = (string) file_get_contents(
             resource_path('views/components/shell/topbar.blade.php')
         );
+        $code = preg_replace('/\{\{--.*?--\}\}/s', '', $topbar) ?? $topbar;
 
-        $this->assertStringContainsString(
-            'class="hidden min-[1280px]:contents"',
-            $topbar,
-            'ভাষার সুইচটা আর ছোট পর্দায় লুকানো নেই — ৩৭৫px-এ প্রোফাইলের বোতাম আবার পর্দার বাইরে যাবে।',
-        );
+        $this->assertStringNotContainsString("route('locale.switch')", $code,
+            '⛔ ভাষার সুইচ আবার বারে — ৩৭৫px-এ প্রোফাইলের বোতাম পর্দার বাইরে যাবে।');
+        $this->assertStringNotContainsString('theme-toggle', $code, '⛔ রঙের সুইচ আবার বারে।');
+        $this->assertStringNotContainsString('fullscreen-toggle', $code, '⛔ পূর্ণপর্দার বোতাম আবার বারে।');
 
-        $this->assertStringContainsString(
-            '<span class="hidden min-[1280px]:contents">',
-            $topbar,
-            'থিমের সুইচটা আর ছোট পর্দায় লুকানো নেই।',
-        );
+        $actions = substr($code, (int) strpos($code, 'data-shell-actions'));
+        $actions = substr($actions, 0, (int) strpos($actions, '</div>'));
+        preg_match_all('/<x-shell\.([a-z-]+)/', $actions, $parts);
+        $this->assertSame(['create-menu', 'approval-quick-access', 'notification-bell', 'profile-menu'], $parts[1],
+            '⛔ ডানের ঝাঁকে বাড়তি কিছু — ছোট পর্দায় প্রোফাইলের বোতাম আবার ঠেলে বাইরে যেতে পারে।');
+
+        $menu = (string) file_get_contents(resource_path('views/components/shell/profile-menu.blade.php'));
+        $this->assertStringContainsString('data-menu-language', $menu, 'ভাষার সুইচ ছবির মেনুতেও নেই — তাহলে কোথাও নেই।');
+        $this->assertStringContainsString('data-menu-theme', $menu, 'রঙের সুইচ ছবির মেনুতেও নেই।');
     }
 
     /**

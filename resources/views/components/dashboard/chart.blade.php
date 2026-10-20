@@ -50,7 +50,7 @@
         [data-chart-tip]:focus-visible { outline: 2px solid var(--color-brand-600); outline-offset: 2px; }
         [data-chart-tip] > .chart-tip { display: none; position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
             z-index: 20; white-space: nowrap; padding: .25rem .5rem; border-radius: .375rem; font-size: {{ $px }}px; line-height: 1.25rem;
-            font-weight: 600; color: var(--color-surface-card); background: var(--color-ink); box-shadow: 0 2px 6px rgb(0 0 0 / .25);
+            font-weight: 600; color: var(--color-surface-card); background: var(--color-ink); box-shadow: var(--shadow-overlay);
             pointer-events: none; }
         [data-chart-tip]:focus-visible > .chart-tip { display: block; }
     </style>

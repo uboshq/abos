@@ -93,9 +93,10 @@
                 <form method="POST" action="{{ route('documents.admin.store', $kind) }}"
                       class="grid gap-2 border-t border-(--color-border) px-4 py-3 sm:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
                     @csrf
-                    <x-ui.field name="code" :label="__('documents::field.code')" maxlength="24" required />
-                    <x-ui.field name="name_bn" :label="__('documents::field.name_bn')" maxlength="120" />
-                    <x-ui.field name="name_en" :label="__('documents::field.name_en')" maxlength="120" required />
+                    {{-- ⓘ প্রতিটা ধরনের নিজের ফর্ম, তাই id-তে ধরনের নাম — একই নামের ঘর পাতায় কয়েকবার (TwoFieldsAnsweredToOneNameTest) --}}
+                    <x-ui.field name="code" id="code-{{ $kind }}" :label="__('documents::field.code')" maxlength="24" required />
+                    <x-ui.field name="name_bn" id="name_bn-{{ $kind }}" :label="__('documents::field.name_bn')" maxlength="120" />
+                    <x-ui.field name="name_en" id="name_en-{{ $kind }}" :label="__('documents::field.name_en')" maxlength="120" required />
                     <x-ui.button type="submit" tone="primary" icon="plus">{{ __('documents::action.add') }}</x-ui.button>
                 </form>
             </section>

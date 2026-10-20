@@ -247,10 +247,11 @@
                     <div data-money-today class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                         @foreach ($heroTiles as $heroTile)
                             <div data-money-tile="{{ $heroTile['tone'] }}" @if (($heroTile['mark'] ?? null) === 'owed') data-home-owed @endif
-                                 class="min-w-0 rounded-(--radius-field) px-2.5 py-1.5" style="background: rgb(255 255 255 / .08)">
+                                 class="min-w-0 rounded-(--radius-field) px-2.5 py-1.5" style="background: var(--color-on-brand-surface)">
                                 <p class="text-xs text-white/70">{{ $heroTile['label'] }}</p>
+                                {{-- ⓘ রং টোকেন থেকে (tokens.css: --color-on-brand-in/out), হাতে লেখা নয় — নকশার নিয়ম --}}
                                 <p data-money-tile-value class="tabular text-base font-semibold"
-                                   @if ($heroTile['tone'] === 'in') style="color: #8ff0c0" @elseif ($heroTile['tone'] === 'out') style="color: #ffc9a3" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</p>
+                                   @if ($heroTile['tone'] === 'in') style="color: var(--color-on-brand-in)" @elseif ($heroTile['tone'] === 'out') style="color: var(--color-on-brand-out)" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</p>
                                 @if (filled($heroTile['hint'] ?? null))
                                     <p data-money-tile-hint class="text-xs text-white/70">{{ $heroTile['hint'] }}</p>
                                 @endif

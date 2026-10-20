@@ -328,6 +328,22 @@
     --color-ink-disabled: #94a3b8;  /* ছিল #CBD5E1 → ১.৪৮, পড়াই যেত না */
     --color-ink-inverse: #ffffff;
 
+    /* ⭐ টাকার বাক্সের ঘর — ব্র্যান্ডের গাঢ় জমিনের উপর (হোম, ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬)। জমিনটা দুই রঙেই গাঢ় ব্র্যান্ড,
+       তাই এই টোকেনগুলো আলো-অন্ধকারে বদলায় না। ⓘ নমুনার HTML-এর হাতে লেখা রং পর্দায় নয়, এখানে — EveryScreenObeysTheThemeTest।
+       কনট্রাস্ট (#0b2a4a-এর উপর): in ১০.৪, out ১১.১ ✓ */
+    --color-on-brand-surface: rgb(255 255 255 / .08);
+    --color-on-brand-in: #8ff0c0;
+    --color-on-brand-out: #ffc9a3;
+
+    /* ⭐ কাগজের অবস্থার চিপ ([[x-ui.paper-state]]) — প্রতিটা চিপ নিজের রং paper_states.json থেকে বসায়; এগুলো কেবল
+       ডিফল্ট, যাতে কোনো চিপ রং না পেলেও নিরপেক্ষ দেখায় (AScreenAskedForAColourNobodyDeclaresTest) */
+    --ps-fg: var(--color-ink);
+    --ps-bg: var(--color-surface-hover);
+    --ps-bd: var(--color-border);
+    --ps-fg-d: var(--color-ink);
+    --ps-bg-d: var(--color-surface-hover);
+    --ps-bd-d: var(--color-border);
+
     /* ─────────────────────────────────────────────────────────────
        সাইডবার।
 
