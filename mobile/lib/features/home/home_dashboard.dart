@@ -191,7 +191,8 @@ class HomeDashboard extends StatelessWidget {
           search!,
           const SizedBox(height: AppSpacing.md),
         ],
-        const _SectionTitle('আজ'),
+        // ⓘ মাথার বারে কোম্পানি · শাখা থাকলে "আজ" সময়ের লাইনেই বসে ("আজ · হিসাব … পর্যন্ত", TodayPanel)
+        if (!headerNamesOrg) const _SectionTitle('আজ'),
       ],
     );
   }

@@ -401,9 +401,24 @@ class _OriginLine extends StatelessWidget {
     ].join(' · ');
     final asOf = today.asOf;
 
+    // ⭐ কোম্পানি · শাখা মাথার বারে থাকলে (হোম) এক লাইনে "আজ · হিসাব 20/10/2026 সকাল 10:00 পর্যন্ত" — আলাদা একা "আজ"
+    // শিরোনাম বাড়তি ছিল, তারিখ তো ঠিক নিচেই (fe, ২০ অক্টোবর ২০২৬)
+    if (!showOrigin) {
+      final muted = TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted);
+      return Text.rich(
+        key: const ValueKey('today-heading'),
+        TextSpan(children: [
+          TextSpan(
+              text: 'আজ',
+              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: context.palette.onSurface)),
+          if (asOf != null) TextSpan(text: ' · হিসাব ${banglaStamp(asOf)} পর্যন্ত', style: muted),
+        ]),
+      );
+    }
+
     return Row(
       children: [
-        if (showOrigin && origin.isNotEmpty)
+        if (origin.isNotEmpty)
           Expanded(
             child: Text(origin,
                 overflow: TextOverflow.ellipsis,

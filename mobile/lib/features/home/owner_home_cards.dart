@@ -463,24 +463,56 @@ List<Widget> ownerHomeCards(
 }) =>
     [
       OwnerMoneyCard(today: today, onTap: onOpenMoney),
-      if (today.pendingApprovals == null)
-        const SizedBox.shrink()
-      else if (loadWaiting == null)
+      WidePair(
+        first: today.pendingApprovals == null ? null : _waitingCard(today, loadWaiting, onOpenApprovals),
+        second: BranchSalesCard(today: today, onOpen: onOpenSales),
+      ),
+    ];
+
+/// ⭐ বড় পর্দায় (Material 3 "expanded", জানালা ৮৪০dp বা বেশি) দুই কার্ড পাশাপাশি — টাকার কার্ড পুরো চওড়ায়, তার নিচে
+/// সইয়ের অপেক্ষা আর আজকের বিল (fe, ২০ অক্টোবর ২০২৬: এক কলামে টানা কার্ডের ডানে খালি জায়গা)। ছোট পর্দায় একটার নিচে আরেকটা।
+class WidePair extends StatelessWidget {
+  const WidePair({super.key, required this.first, required this.second});
+
+  /// Material 3 window size class "expanded"
+  static const double expandedWidth = 840;
+
+  final Widget? first;
+  final Widget second;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = first;
+    if (a == null) return second;
+    if (MediaQuery.sizeOf(context).width < expandedWidth) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [a, second]);
+    }
+    return Row(
+      key: const ValueKey('home-wide-pair'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: a),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: second),
+      ],
+    );
+  }
+}
+
+Widget _waitingCard(TodayRecord today, Future<ApprovalPage> Function()? loadWaiting, VoidCallback? onOpenApprovals) =>
+    loadWaiting == null
         // ⓘ সারি আনার পথ না থাকলে কেবল সার্ভারের গোনা — নাম বানিয়ে নেওয়া হয় না
-        HomeSectionCard(
+        ? HomeSectionCard(
           key: const ValueKey('waiting-papers'),
           title: 'সইয়ের অপেক্ষায় · ${today.pendingApprovals}টি',
           actionLabel: 'সব দেখুন',
           onAction: onOpenApprovals,
           children: const [],
         )
-      else
-        WaitingPapersCard(
+        : WaitingPapersCard(
           // ⓘ নতুন হিসাব (টেনে আনা) এলে তালিকাও নতুন করে
           key: ValueKey('waiting-${today.asOf}'),
           load: loadWaiting,
           count: today.pendingApprovals,
           onOpenAll: onOpenApprovals,
-        ),
-      BranchSalesCard(today: today, onOpen: onOpenSales),
-    ];
+        );
