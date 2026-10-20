@@ -685,7 +685,9 @@
                                    ])
                                    @if (! $item['url']) aria-disabled="true" @endif
                                    @if ($item['active']) aria-current="page" @endif>
-                                    <span class="min-w-0 truncate">{{ $item['label'] }}</span>
+                                    {{-- ⭐ নাম কাটা নয়, দুই লাইন পর্যন্ত ভাঙে (Material 3 navigation: লেবেল কখনো কাটা নয়; fe-র ছবি-যাচাই,
+                                         ২০ অক্টোবর ২০২৬: "মাসওয়ারি টাকা আসা-..."); সারির উচ্চতা ন্যূনতম, তাই দুই লাইনে নিজে বাড়ে --}}
+                                    <span class="line-clamp-2 min-w-0 py-1 leading-snug" title="{{ $item['label'] }}">{{ $item['label'] }}</span>
 
                                     {{-- "শীঘ্রই" — ঘড়ি, লেখা নয়।
 

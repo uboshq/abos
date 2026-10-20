@@ -227,7 +227,9 @@
     @if ($kind === 'donut')
         {{-- ডোনাট — টুকরোর মাঝে সরু ফাঁক; মাঝখানে মোট (HTML-এ, 13px আর 12px — SVG-র ভিতরে ছোট হয়ে যেত); পাশে নাম, মান আর ভাগ --}}
         @php $r = 42; $circ = 2 * M_PI * $r; $at = 0.0; $sumFull = \App\Core\Engines\Dashboard\Series::full($sum); @endphp
-        <div class="flex items-center gap-3 px-4 py-3">
+        {{-- ⭐ সরু বাক্সে (১৩৬৬-এর হোম) পাশের নাম চেপে শূন্য হত — "● 0.00", কার রং বোঝা যেত না (fe, ২০ অক্টোবর ২০২৬)।
+             ⓘ এখন নামের তালিকার নিচের সীমা ৭rem; জায়গা না থাকলে ডোনাটের নিচে নামে (flex-wrap), নাম কখনো কাটা নয় --}}
+        <div class="flex flex-wrap items-center justify-center gap-3 px-4 py-3">
             <div class="shrink-0" style="position: relative; width: {{ $compact ? '8rem' : '9rem' }}">
                 <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="{{ $panel->label }}">
                     <circle cx="60" cy="60" r="{{ $r }}" fill="none" stroke-width="18" style="stroke: var(--color-surface-hover)" />
@@ -247,11 +249,11 @@
                 </div>
             </div>
             {{-- ⓘ চওড়া বাক্সেও নাম আর মান কাছাকাছি — পুরো সারি জুড়লে মানটা ডান কিনারায় চলে যেত (৬ অক্টোবর ২০২৬-এর যাচাই) --}}
-            <div class="min-w-0 flex-1 space-y-1.5" style="max-width: 28rem">
+            <div data-donut-legend class="min-w-0 flex-1 space-y-1.5" style="min-width: 7rem; max-width: 28rem">
                 @foreach ($parts as $i => $part)
                     <div class="flex items-center gap-1.5 text-xs" title="{{ $part['label'] }}: {{ $part['value'] }}">
                         <span class="inline-block size-2.5 shrink-0 rounded-full" style="background: {{ $palette[$i % 6] }}"></span>
-                        <span class="min-w-0 flex-1 truncate text-(--color-ink-body)">{{ $part['label'] }}</span>
+                        <span class="min-w-0 flex-1 break-words leading-tight text-(--color-ink-body)">{{ $part['label'] }}</span>
                         <span data-bar-value class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
                         @unless ($compact)
                             <span class="w-10 shrink-0 text-end tabular-nums text-(--color-ink-muted)">{{ $sum > 0 ? (int) round(max(0.0, $num($part['value'])) / $total * 100) : 0 }}%</span>

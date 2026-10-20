@@ -52,16 +52,24 @@ final class TheHomeHeadHoldsTheCompanyAndTheControlsTest extends TestCase
             $this->assertSame(1, $head->length, '⛔ হোমের মাথার সারি নেই।');
             $this->assertSame(1, $page->query('.//*[@data-home-title]', $head->item(0))->length, '⛔ শিরোনাম মাথার সারিতে নেই।');
             $this->assertSame(1, $page->query('.//*[@data-money-position]', $head->item(0))->length, '⛔ টাকার বাক্স শিরোনামের সারিতে নেই।');
-            $this->assertStringContainsString('align-items: flex-start', $head->item(0)->getAttribute('style'), '⛔ বাক্সটা উপরে সাঁটা নয়।');
+            // ⭐ মালিকের ২০ অক্টোবরের নমুনা: শিরোনাম · তারিখ · কোম্পানি · শাখা · বোতাম এক সারিতে, টাকার বাক্স তার ঠিক নিচে পুরো চওড়ায়
+            $headline = $page->query('.//*[@data-home-headline]', $head->item(0));
+            $this->assertSame(1, $headline->length, '⛔ মাথার এক সারি নেই।');
+            $this->assertSame(1, $page->query('.//*[@data-home-title]', $headline->item(0))->length, '⛔ শিরোনাম মাথার সারিতে নেই।');
+            $this->assertSame(1, $page->query('.//*[@data-home-controls]', $headline->item(0))->length, '⛔ বোতামগুলো শিরোনামের সারিতে নেই।');
             $this->assertSame(1, $page->query('//h1')->length, '⛔ পাতায় দুইটা শিরোনাম — পুরনো শিরোনামের সারি রয়ে গেছে।');
             // ⓘ শিরোনাম আর কোম্পানির সারি একদম কাছাকাছি (মালিক, ৬ অক্টোবর ২০২৬) — মাঝে সোনালি রেখার ফাঁকা নয়; ১০৮০-তে মাপা ১১px
             $this->assertSame(0, $page->query('.//*[@data-gold-hairline]', $head->item(0))->length, '⛔ শিরোনামের নিচে আবার ফাঁকার রেখা।');
 
-            // ── কোম্পানি-শাখা বাছাই মাথার সারিতে, শাখা বদলের দরজাসহ ──
+            // ── মাথায় "তারিখ · কোম্পানি · শাখা" লেখা; বাছাইটা (শাখা বদলের দরজাসহ) একবারই, পুরো চওড়া বারে ──
             $company = $page->query('//section[@data-command-head]//*[@data-home-company]');
-            $this->assertSame(1, $company->length, '⛔ মাথায় কোম্পানি-শাখা বাছাই নেই।');
-            $this->assertGreaterThan(0, $page->query('.//form[contains(@action, "/branch/switch")]', $company->item(0))->length,
-                '⛔ বাছাইয়ে শাখা বদলের দরজা নেই।');
+            $this->assertSame(1, $company->length, '⛔ মাথায় কোম্পানি · শাখার লেখা নেই।');
+            $this->assertStringContainsString(Company::query()->where('code', 'TDEPOT')->first()->name(),
+                $company->item(0)->textContent, '⛔ মাথার লেখায় কোম্পানির নাম নেই।');
+            $this->assertSame(0, $page->query('.//form[contains(@action, "/branch/switch")]', $head->item(0))->length,
+                '⛔ শাখার বাছাই মাথাতেও — বারের সাথে দুই জায়গায়।');
+            $this->assertGreaterThan(0, $page->query('//header[@data-topbar]//form[contains(@action, "/branch/switch")]')->length,
+                '⛔ বারে শাখা বদলের দরজা নেই।');
 
             // ── তিন বোতাম মাথার নিচের সারিতে, শিরোনামের কোণে নয় ──
             foreach (['data-home-filter', 'data-layout-menu', 'data-period-menu'] as $mark) {

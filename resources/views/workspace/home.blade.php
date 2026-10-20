@@ -82,19 +82,27 @@
     <x-slot:header>
     {{-- ── মাথা (মালিক, ৬ অক্টোবর ২০২৬): টাকার বাক্স সোজা উপরে, শিরোনামের সমান উচ্চতায় ডানে; বাঁয়ে শিরোনাম, তার ঠিক নিচে
          কোম্পানি · তারিখ, তার কাছেই ফিল্টার · লেআউট · সময় — মাঝে ফাঁকা নয়, যাতে চার্ট উপরে ওঠে ── --}}
-    <section data-command-head class="flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-start">
-        {{-- ⓘ শিরোনাম আর কোম্পানির সারি একদম কাছাকাছি (মালিক, ৬ অক্টোবর ২০২৬: *"একদম কাছাকাছি"*) — সোনালি রেখার
-             ফাঁকা জায়গা বাদ, বাছাইয়ের বোতামের ছোঁয়ার-উচ্চতা উপরে টেনে আনা --}}
-        <div class="flex min-w-0 flex-1 flex-col" style="gap: 0.375rem">
+    {{-- ⭐ মাথা এক সারিতে — মালিকের অনুমোদিত নমুনা (২০ অক্টোবর ২০২৬; fe-র ছবি-যাচাই: ১৩৬৬-এ সব নিচে নিচে নেমে বড় জায়গা নষ্ট হত):
+         শিরোনাম · "তারিখ · কোম্পানি · শাখা" · ডানে ফিল্টার, লেআউট, সময়; টাকার বাক্স তার নিচে পুরো চওড়ায়।
+         ⓘ কোম্পানি-শাখার বাছাই এখানে আর নেই — পুরো চওড়া বারেই আছে ([[shell.company-switcher]]), একই কাজ দুই জায়গায় নয়;
+         এখানে কেবল লেখা, বারের একই উত্তরে ([[ShellFacts::branchLabel()]])। ⛔ ৫–৬ অক্টোবরের পাশাপাশি সাজ নমুনায় বদলেছে। --}}
+    <section data-command-head class="flex flex-col gap-3" style="align-items: stretch">
+        <div class="flex min-w-0 flex-col" style="gap: 0.375rem">
+            <div data-home-headline class="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
             <h1 data-home-title class="truncate text-xl font-semibold" style="line-height: 1.75rem">{{ __('core.menu.dashboard') }}</h1>
-            {{-- ⭐ কোম্পানি আর শাখা — টপবারের একই বাছাই, এখানেও; বদলালে হোমের প্রতিটা সংখ্যা সেই শাখার --}}
-            <div data-home-company class="flex flex-wrap items-center gap-3" style="margin-top: -0.5rem; margin-inline-start: -0.5rem">
-                <x-shell.company-switcher :company="auth()->user()->currentCompany" :branch="auth()->user()->currentBranch" />
-                <span class="text-sm text-(--color-ink-muted)">{{ now()->locale(app()->getLocale())->translatedFormat('l, j F Y') }}</span>
-            </div>
+            @php
+                $headUser = auth()->user();
+                $headDate = strtr(now()->locale(app()->getLocale())->translatedFormat('l, j F Y'),
+                    ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+            @endphp
+            <p data-home-company class="min-w-0 text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
+                $headDate,
+                $headUser->currentCompany?->name(),
+                app(\App\Core\Services\ShellFacts::class)->branchLabel($headUser, $headUser->currentBranch),
+            ])) }}</p>
 
-            {{-- ⭐ ফিল্টার · লেআউট সাজান · সময় — মাথার ডান কোণ থেকে নেমে এখানে --}}
-            <div data-home-controls class="flex flex-wrap items-center gap-2">
+            {{-- ⭐ ফিল্টার · লেআউট সাজান · সময় — একই সারির ডান কোণে (নমুনার চিপ) --}}
+            <div data-home-controls class="ms-auto flex flex-wrap items-center gap-2">
                 {{-- ⭐ হোমের ফিল্টার — গুদাম, এলাকা, SR; বদলায় কেবল বিক্রি আর বকেয়া ([[HomeFilter]]) --}}
                 <details data-home-filter class="relative">
                     <summary @class([
@@ -188,6 +196,7 @@
                     </div>
                 </details>
             </div>
+            </div>
             @if ($filter->active())
                 <div data-home-filter-on class="mt-2 flex flex-wrap items-center gap-2 rounded-(--radius-field) border border-(--color-brand-600)
                             bg-(--color-brand-50) px-3 py-2 text-sm text-(--color-brand-700)">
@@ -207,7 +216,7 @@
             <a href="{{ $position->href }}" data-money-position
                class="block w-full shrink-0 rounded-(--radius-card) px-5 py-3 text-(--color-ink-inverse) shadow-lg
                       transition-shadow hover:shadow-xl"
-               style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900)); max-width: 40rem"
+               style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900))"
                @if ($position->definition) title="{{ $position->definition }}" @endif>
                 <p class="flex items-center gap-1.5 text-sm text-white/70">
                     @if ($position->icon)

@@ -23,9 +23,10 @@
               text-(--color-topbar-ink-muted) transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)"
        title="{{ $label }}"
        aria-label="{{ $label }}">
-        {{-- সিল-টিক — আকারটা নিজের, তাই আলো-অন্ধকার দুই থিমেই একই (ফন্টের ইমোজি নয়) --}}
+        {{-- ✅ টিক-বাক্স — Material Symbols-এর check_box, নমুনার ✅-এর আকার (ফন্টের ইমোজি নয়, তাই দুই থিমেই একই)।
+             ⛔ আগের খাঁজকাটা সিলটা ছোট মাপে ⚙-এর মতো দেখাত (fe-র ছবি-যাচাই, ২০ অক্টোবর ২০২৬) --}}
         <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
-            <path fill-rule="evenodd" d="M12 2 9.6 4.2 6.4 3.8 5.6 7 2.8 8.6 4 11.6 2.8 14.6 5.6 16.2 6.4 19.4 9.6 19 12 21.2 14.4 19l3.2.4.8-3.2 2.8-1.6-1.2-3 1.2-3-2.8-1.6-.8-3.2-3.2.4L12 2Zm-1.2 13.4 5.6-5.6-1.4-1.4-4.2 4.2-2-2-1.4 1.4 3.4 3.4Z"/>
+            <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9Z"/>
         </svg>
         @if ($pending > 0)
             <span class="absolute -end-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-(--color-danger) px-1

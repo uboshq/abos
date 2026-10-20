@@ -159,10 +159,10 @@
                  giyeche"*। --}}
             <span class="flex min-w-0 items-center gap-2 rounded-full bg-(--color-surface-selected)
                          px-2.5 py-px leading-none ring-1 ring-(--color-brand-500)/30">
-                <span class="max-w-48 truncate text-xs font-semibold text-(--color-ink)">{{ $user->name }}</span>
+                <span class="max-w-48 truncate text-xs font-semibold leading-normal text-(--color-ink)">{{ $user->name }}</span>
 
                 @if ($designation)
-                    <span class="max-w-40 truncate text-2xs text-(--color-ink-muted)">{{ $designation }}</span>
+                    <span class="max-w-40 truncate text-2xs leading-normal text-(--color-ink-muted)">{{ $designation }}</span>
                 @endif
             </span>
         </span>
