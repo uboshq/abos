@@ -6,6 +6,7 @@ namespace Tests\Feature\Api;
 
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\User;
@@ -61,6 +62,27 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
 
     public function test_money_in_hand_is_the_today_doors_money_figure_to_the_paisa(): void
     {
+        // ⓘ ব্যাংকে পয়সাসহ টাকা — নইলে ডেমোর ব্যাংক শূন্য, আর মোট থেকে ব্যাংক বাদ পড়লেও কেউ টের পেত না (মিউট্যান্ট s_total বেঁচে ছিল)
+        // ⓘ ডেমোর TDEPOT-এ ব্যাংকের পাতা-খাত নেই (Mac, ২১ অক্টোবর ২০২৬: প্রস্তুতিই লাল) — ব্যাংক দলের নিচে একটা খোলা, যেমন হাতে খোলা হয়
+        $bank = (int) Account::query()->create([
+            'company_id' => $this->company->id,
+            'code' => '1102-WGT',
+            'name_en' => 'Widget Bank',
+            'name_bn' => 'উইজেট ব্যাংক',
+            'parent_id' => StandardChart::find(StandardChart::BANK)->id,
+            'type' => Account::ASSET,
+            'nature' => Account::DEBIT,
+            'money_kind' => Account::BANK,
+            'is_active' => true,
+            'status' => DocumentStatus::CONFIRMED,
+        ])->id;
+        $this->assertContains($bank, Account::query()->money()->where('money_kind', Account::BANK)->pluck('id')->map(fn ($id) => (int) $id)->all(),
+            'প্রস্তুতিটাই ভুল — নতুন খাতটা টাকার ব্যাংক হিসেবে গোনা হয় না।');
+        app(PostingEngine::class)->post(sourceType: 'test.bank_in', sourceId: 1, trxDate: now()->toDateString(), lines: [
+            ['account_id' => $bank, 'debit' => '25000.37', 'credit' => '0'],
+            ['account_id' => StandardChart::find(StandardChart::OWNER_CAPITAL)->id, 'debit' => '0', 'credit' => '25000.37'],
+        ], documentNo: 'BANK-IN', branchId: $this->company->defaultBranch()?->id);
+
         $widget = $this->widgets($this->owner)['money_in_hand'] ?? null;
         $today = $this->as($this->owner)->getJson('/api/v1/dashboard/today')->assertOk()->json('money');
 
@@ -69,6 +91,9 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
             $this->assertSame($today[$part], $widget[$part], "⛔ {$part}: উইজেট আর আজকের পাতা আলাদা কথা বলে");
         }
         $this->assertSame($today['amount'], $widget['total']);
+        $this->assertSame(1, bccomp((string) $widget['bank'], '0', 4), '⛔ ব্যাংকের টাকা উইজেটে নেই।');
+        $parts = array_reduce(['cash', 'mfs', 'bank'], fn (string $sum, string $p) => bcadd($sum, (string) $widget[$p], 4), '0');
+        $this->assertSame(0, bccomp((string) $widget['total'], $parts, 4), '⛔ মোট ≠ নগদ + MFS + ব্যাংক — কোনো ঘর বাদ পড়েছে।');
     }
 
     public function test_a_key_is_absent_without_its_permission(): void
@@ -133,7 +158,9 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
     public function test_a_customer_near_the_limit_is_named_with_point_and_branch_and_one_far_from_it_is_not(): void
     {
         [$near, $far] = Customer::query()->orderBy('id')->take(2)->get()->all();
-        $near->forceFill(['credit_limit' => '210'])->save();
+        // ⓘ শাখাসহ — নইলে নামের "· শাখা" অংশ বাদ পড়লেও দাবি টের পেত না (মিউট্যান্ট s_label বেঁচে ছিল)
+        $near->forceFill(['credit_limit' => '210', 'branch_id' => $this->company->defaultBranch()?->id])->save();
+        $this->assertNotNull($near->fresh()->branch, 'প্রস্তুতিটাই ভুল — গ্রাহকের শাখা বসেনি।');
         $far->forceFill(['credit_limit' => '400'])->save();
         $this->sell($near, '100');
         $this->sell($far, '100');
