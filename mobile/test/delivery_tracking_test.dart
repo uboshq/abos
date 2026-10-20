@@ -48,10 +48,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: DeliveryTrackingScreen(api: api)));
     await tester.pumpAndSettle();
 
-    expect(find.text('S-0007'), findsOneWidget);
+    // ⓘ নম্বর দ্বিতীয় লাইনের শুরুতে — "নম্বর · বিবরণ" একটাই লেখা ([DesignListRow], ২০ অক্টোবর ২০২৬)
+    expect(find.textContaining('S-0007'), findsOneWidget);
     expect(find.text('গেট পেরিয়েছে · বিল হয়েছে'), findsOneWidget);
 
-    await tester.tap(find.text('S-0007'));
+    await tester.tap(find.textContaining('S-0007'));
     await tester.pumpAndSettle();
     expect(find.text('ডিও DC-0007 লেখা হলো'), findsOneWidget);
     expect(find.text('গেট পাস GP-3, গাড়ি ঢাকা-১২'), findsOneWidget);

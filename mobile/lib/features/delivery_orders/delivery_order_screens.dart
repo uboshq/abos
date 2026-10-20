@@ -13,6 +13,7 @@ import '../../core/theme/app_spacing.dart';
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/design_list_row.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/row_icon.dart';
 import '../../core/widgets/state_views.dart';
@@ -78,55 +79,19 @@ class PaperListRow extends StatelessWidget {
   final Key? numberKey;
   final VoidCallback? onTap;
 
+  /// ⭐ একটাই সারি অ্যাপজুড়ে — a4-এর [DesignListRow] (২০ অক্টোবর ২০২৬); এখানে কেবল "নম্বর · বিবরণ" জোড়া হয়
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final muted = TextStyle(fontSize: 13, color: cs.onSurfaceVariant);
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
+  Widget build(BuildContext context) => DesignListRow(
+        icon: icon,
+        tone: tone,
+        name: party,
+        second: (detail == null || detail!.isEmpty) ? number : '$number · $detail',
+        secondKey: numberKey,
+        amount: amount,
+        pill: pill,
+        below: below,
         onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 72),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-            child: Row(children: [
-              RowIcon(icon, tone: tone),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                flex: 3,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  CustomerLine(party,
-                      key: const ValueKey('paper-row-party'),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                  const SizedBox(height: 2),
-                  // ⭐ দ্বিতীয় লাইন — কাগজের নম্বর · তারিখ বা ধরন (মালিকের নিয়ম: নম্বর নামের নিচে)
-                  Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    Text(number, key: numberKey, style: muted),
-                    if (detail != null && detail!.isNotEmpty) Text(' · $detail', style: muted),
-                  ]),
-                  if (below != null) below!,
-                ]),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                flex: 2,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                  if (amount != null)
-                    Text(Money.taka(amount),
-                        key: const ValueKey('paper-row-amount'),
-                        textAlign: TextAlign.end,
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
-                  if (pill != null) ...[const SizedBox(height: AppSpacing.xs), pill!],
-                ]),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
+      );
 }
 
 class DeliveryOrderListScreen extends StatefulWidget {

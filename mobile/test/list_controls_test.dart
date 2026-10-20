@@ -337,7 +337,8 @@ void main() {
           MaterialApp(home: DeliveryTrackingScreen(api: _FakeApi())));
       await tester.pumpAndSettle();
 
-      double top(String no) => tester.getTopLeft(find.text(no)).dy;
+      // ⓘ নম্বর দ্বিতীয় লাইনের শুরুতে — "নম্বর · বিবরণ" একটাই লেখা ([DesignListRow], ২০ অক্টোবর ২০২৬)
+      double top(String no) => tester.getTopLeft(find.byWidgetPredicate((w) => w is Text && ((w.data ?? '') == no || (w.data ?? '').startsWith('$no · ')))).dy;
       // শুরুতে নতুন তারিখ আগে
       expect(top('S-2'), lessThan(top('S-3')));
       expect(find.text('তারিখ: নতুন আগে'), findsOneWidget);

@@ -118,7 +118,8 @@ void _expectRow(WidgetTester tester, Finder row, String number, ThemeData theme)
   final party = find.descendant(of: row, matching: find.byType(CustomerLine));
   expect(party, findsOneWidget);
   expect(tester.widget<CustomerLine>(party).text, _place, reason: '⛔ গ্রাহকের খালি নাম — পয়েন্ট আর শাখা চাই');
-  final numberText = find.descendant(of: row, matching: find.text(number));
+  // ⓘ দ্বিতীয় লাইন একটাই লেখা — "নম্বর · তারিখ" ([DesignListRow], ২০ অক্টোবর ২০২৬); নম্বর সেই লাইনের শুরুতে
+  final numberText = find.descendant(of: row, matching: find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith(number)));
   expect(numberText, findsOneWidget);
   expect(tester.getTopLeft(numberText).dy, greaterThanOrEqualTo(tester.getBottomLeft(party).dy - 0.5),
       reason: 'নম্বর নামের নিচের লাইনে');

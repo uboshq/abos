@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/orders/order_api.dart';
+import 'package:abos_mobile/core/widgets/design_list_row.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/features/customers/customer_list_screen.dart';
@@ -214,13 +215,13 @@ void main() {
     // The owner's second decision (docs/Contract §০): the number cannot be
     // given offline, so this is where the rep gets it. The screen read
     // `orderNumber`; the server sends `documentNo`.
-    expect(find.text('SO-2609-0042'), findsOneWidget);
+    expect(find.textContaining('SO-2609-0042'), findsOneWidget);
     expect(find.text('নম্বর নেই'), findsNothing);
 
     expect(find.textContaining('রহিম স্টোর'), findsOneWidget);
     expect(find.textContaining('নিশ্চিত'), findsOneWidget);
     // ⓘ সারির নিজের অঙ্ক — নিচের মোটের পট্টিতেও একই সংখ্যা বসে (এক আদেশ), তাই সারির ভেতরে খোঁজা
-    expect(tester.widget<Text>(find.byKey(const ValueKey('paper-row-amount'))).data, '৳1,275.00');
+    expect(find.descendant(of: find.byType(DesignListRow), matching: find.text('৳1,275.00')), findsOneWidget);
   });
 
   // ⭐ মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total" — দেখানো সারির মোট আর গোনা
