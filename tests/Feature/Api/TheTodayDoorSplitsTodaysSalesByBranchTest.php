@@ -90,7 +90,9 @@ final class TheTodayDoorSplitsTodaysSalesByBranchTest extends TestCase
 
         // ⓘ আকার — চাবি, পূর্ণসংখ্যা আইডি, চার ঘরের টাকা-স্ট্রিং
         foreach ($rows as $row) {
-            $this->assertSame(['branch_id', 'branch', 'amount'], array_keys($row));
+            // ⓘ ২০ অক্টোবর ২০২৬ থেকে সারি নিট, পাশে বিল আর ফেরত ([[NetSalesIsBillsLessReturnsEverywhereTest]]); এখানে ফেরত নেই, তাই নিট = বিল
+            $this->assertSame(['branch_id', 'branch', 'amount', 'billed', 'returned'], array_keys($row));
+            $this->assertSame($row['billed'], $row['amount']);
             $this->assertMatchesRegularExpression('/^-?\d+\.\d{4}$/', $row['amount']);
         }
 
