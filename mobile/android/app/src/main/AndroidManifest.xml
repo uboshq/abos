@@ -111,6 +111,41 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!--
+              ⭐ নোটিশ বা SMS-এর erp.adi.com.bd লিংক এই অ্যাপে খোলে (Android App Links; সার্ভারের
+              /.well-known/assetlinks.json এই অ্যাপের সই-চাবি মেলালে autoVerify পাস করে)। উপসর্গগুলো হুবহু
+              lib/core/router/deep_links.dart-এর DeepLinks.prefixes (টেস্ট মেলায়)। যাচাইয়ের QR, ডিলার-পোর্টাল, লগইন আর
+              পাসওয়ার্ড ফেরানোর লিংক এখানে নেই — সেগুলো ব্রাউজারেই খোলে।
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="erp.adi.com.bd"/>
+                <data android:pathPrefix="/accounts"/>
+                <data android:pathPrefix="/approvals"/>
+                <data android:pathPrefix="/credit-control"/>
+                <data android:pathPrefix="/customers"/>
+                <data android:pathPrefix="/dashboard"/>
+                <data android:pathPrefix="/documents"/>
+                <data android:pathPrefix="/finance"/>
+                <data android:pathPrefix="/governance"/>
+                <data android:pathPrefix="/hr"/>
+                <data android:pathPrefix="/inventory"/>
+                <data android:pathPrefix="/master-data"/>
+                <data android:pathPrefix="/notices"/>
+                <data android:pathPrefix="/notification"/>
+                <data android:pathPrefix="/notifications"/>
+                <data android:pathPrefix="/owner"/>
+                <data android:pathPrefix="/papers"/>
+                <data android:pathPrefix="/promotions"/>
+                <data android:pathPrefix="/purchase"/>
+                <data android:pathPrefix="/reports"/>
+                <data android:pathPrefix="/restaurant"/>
+                <data android:pathPrefix="/sales"/>
+                <data android:pathPrefix="/suppliers"/>
+            </intent-filter>
         </activity>
         <!--
           The two home-screen widgets.

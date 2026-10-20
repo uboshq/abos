@@ -45,6 +45,7 @@ import '../../features/credit_control/credit_screens.dart';
 import '../../features/notices/notice_board_screen.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
 import '../auth/auth_state.dart';
+import 'deep_links.dart';
 import '../../features/documents/document_screens.dart';
 import '../../features/finance/finance_screens.dart';
 import '../../features/promotion/offers_screen.dart';
@@ -77,6 +78,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authStateProvider);
       final goingToLogin = state.matchedLocation == '/login';
 
+      // ⭐ নোটিশ বা SMS-এর লিংক ([DeepLinks]) — সাইন-ইন থাকলে সোজা সেই পাতা; নইলে মনে রেখে আগে লগইন
+      final viaLink = DeepLinks.route(state.uri, auth.status);
+      if (viaLink != null) return viaLink;
+
       // Nobody has looked yet — restoreSession() is still running. Stay on
       // the splash rather than guessing signed-in or signed-out; guessing
       // wrong either flashes a login form for a session that turns out to
@@ -90,7 +95,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       }
       // Signed in — never leave someone stranded on the splash or the login
       // form once a session exists.
-      if (goingToLogin || state.matchedLocation == '/') return '/home';
+      if (goingToLogin || state.matchedLocation == '/') return DeepLinks.take() ?? '/home';
       return null;
     },
     routes: [
