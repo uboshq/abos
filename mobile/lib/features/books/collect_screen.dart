@@ -234,11 +234,15 @@ class _CollectScreenState extends State<CollectScreen> {
           DropdownButtonFormField<CollectionAccount>(
             key: const ValueKey('collect-account'),
             initialValue: _account,
+            // ⓘ লম্বা খাতের নাম ঘরের ভিতরেই থাকে (… দিয়ে), ওপারে যায় না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'কোন খাতে'),
             items: [
               for (final a in _accounts)
                 DropdownMenuItem(
-                    value: a, child: Text('${a.name} · ${a.kindLabel}')),
+                    value: a,
+                    child: Text('${a.name} · ${a.kindLabel}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis)),
             ],
             onChanged: _busy
                 ? null

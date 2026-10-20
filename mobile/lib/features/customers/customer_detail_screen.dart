@@ -8,6 +8,7 @@ import '../../core/records/money.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 
@@ -92,10 +93,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           _Header(customer: customer),
           const SizedBox(height: AppSpacing.md),
           // ⓘ বকেয়ার অঙ্কে চাপলেও খাতা — "এই অঙ্ক কোথা থেকে" প্রশ্নের উত্তর এক চাপে
+          // ⓘ TalkBack-এ কার্ডটা একটাই বোতাম — অঙ্ক পড়ে, তারপর "খাতা খুলুন" (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)।
+          // ⛔ আগে চাপার জায়গাটা ছিল নামহীন: কার্ডের লেখা আলাদা ঘরে পড়ত, বোতাম কেবল "বোতাম"।
           if (due != null)
-            InkWell(
-              onTap: () => context.push('/home/customers/$customerId/ledger'),
-              child: _DueCard(due: due),
+            MergeSemantics(
+              child: Semantics(
+                button: true,
+                onTapHint: 'খাতা খুলুন',
+                child: InkWell(
+                  key: const ValueKey('customer-due-card'),
+                  onTap: () => context.push('/home/customers/$customerId/ledger'),
+                  child: _DueCard(due: due),
+                ),
+              ),
             ),
           const SizedBox(height: AppSpacing.md),
           _Actions(customer: customer, showCredit: showCredit),
@@ -104,14 +114,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.sm),
           if (orders.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Text(
                 // Not "this shop has never ordered": only orders that have
                 // synced back are here, and a brand-new phone has none of
                 // them yet.
                 'এই ফোনে এই দোকানের কোনো অর্ডার সিঙ্ক হয়নি।',
-                style: TextStyle(color: AppColors.onSurfaceMuted),
+                style: TextStyle(color: context.palette.onSurfaceMuted),
               ),
             )
           else
@@ -127,6 +137,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     trailing: o.total == null
                         ? null
                         : Text(Money.taka(o.total),
+                            semanticsLabel: Money.spoken(o.total),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                   ),
@@ -192,10 +203,11 @@ class _DueCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(due.outstandingLabel,
+                semanticsLabel: Money.speakable(due.outstandingLabel),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: owes ? AppColors.danger : AppColors.onSurface,
+                  color: owes ? AppColors.danger : context.palette.onSurface,
                 )),
             if (due.hasCreditLimit || due.creditDays > 0)
               Text(
@@ -211,8 +223,8 @@ class _DueCard extends StatelessWidget {
             if (CustomerDueRecord.syncedAt(due.customerId) != null)
               Text(
                 'সিঙ্ক ${DateFormat('dd/MM/yyyy hh:mm a').format(CustomerDueRecord.syncedAt(due.customerId)!)}',
-                style: const TextStyle(
-                    fontSize: 11.5, color: AppColors.onSurfaceMuted),
+                style: TextStyle(
+                    fontSize: 11.5, color: context.palette.onSurfaceMuted),
               ),
           ],
         ),

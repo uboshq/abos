@@ -6,6 +6,7 @@ import '../../core/orders/quotation_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -227,8 +228,8 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
       return const [EmptyState(icon: Icons.request_quote_outlined, title: 'বাছার মতো কোনো উদ্ধৃতি নেই', message: '')];
     }
     return [
-      const Text('দুই থেকে ${QuotationCompareScreen.max}টা উদ্ধৃতি বাছুন — প্রথমটা ভিত্তি',
-          style: TextStyle(color: AppColors.onSurfaceMuted)),
+      Text('দুই থেকে ${QuotationCompareScreen.max}টা উদ্ধৃতি বাছুন — প্রথমটা ভিত্তি',
+          style: TextStyle(color: context.palette.onSurfaceMuted)),
       for (final q in choices)
         CheckboxListTile(
           key: ValueKey('compare-pick-${q.id}'),
@@ -263,7 +264,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
           SizedBox(
               width: 130,
               child:
-                  Padding(padding: const EdgeInsets.all(6), child: Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted)))),
+                  Padding(padding: const EdgeInsets.all(6), child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted)))),
           ...cells,
         ]);
 

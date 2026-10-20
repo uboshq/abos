@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../reports/reports_screen.dart';
 import 'owner_analysis_screen.dart';
@@ -70,7 +70,7 @@ class OwnerReportsScreen extends StatelessWidget {
                       dense: true,
                       leading: const Icon(Icons.bookmark_outline),
                       title: Text(v.name),
-                      trailing: Text(v.company, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+                      trailing: Text(v.company, style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
                     ),
                 ],
               ),

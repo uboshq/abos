@@ -7,6 +7,7 @@ import '../../core/orders/deposit_request_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
 
@@ -210,8 +211,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
         children: [
           if (customer != null)
             Text(customer.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          const Text('হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।',
-              style: TextStyle(color: AppColors.onSurfaceMuted)),
+          Text('হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।',
+              style: TextStyle(color: context.palette.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.md),
           if (_busy) const LinearProgressIndicator(),
           if (_error != null) _note2(_error!, AppColors.danger, AppColors.dangerSurface),
@@ -258,8 +259,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
           if (_bills.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             const Text('কোন বিলের বিপরীতে (ঐচ্ছিক)', style: TextStyle(fontWeight: FontWeight.w700)),
-            const Text('বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।',
-                style: TextStyle(color: AppColors.onSurfaceMuted)),
+            Text('বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।',
+                style: TextStyle(color: context.palette.onSurfaceMuted)),
             // ⓘ এক লাইনে এক বিল — মালিকের নিয়ম; টেবিল নয়
             for (final b in _bills)
               Row(

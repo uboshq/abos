@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_palette.dart';
 import '../theme/app_spacing.dart';
 
 /// ফিল্টার আর সাজানো — প্রতিটা তালিকার খোঁজ-বাক্সের নিচে একই দুটো বোতাম।
@@ -107,8 +108,8 @@ class ListControls extends StatelessWidget {
                           key: const Key('list-controls-sort-label'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.onSurfaceMuted),
+                          style: TextStyle(
+                              fontSize: 11, color: context.palette.onSurfaceMuted),
                         ),
                       ],
                     ),
@@ -297,7 +298,7 @@ class _ChoiceLine extends StatelessWidget {
       selected: selected,
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-        color: selected ? AppColors.primary : AppColors.onSurfaceMuted,
+        color: selected ? AppColors.primary : context.palette.onSurfaceMuted,
       ),
       title: Text(label),
       onTap: onTap,

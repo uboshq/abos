@@ -8,6 +8,7 @@ import '../../core/api_client/once_key.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
@@ -147,7 +148,7 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 child: Text('প্রথম ${page.rows.length}টা দেখানো হলো, মোট ${page.totalRows}টা — খুঁজে নিন।',
-                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
               ),
           ],
         ),
@@ -169,7 +170,7 @@ class _DashboardCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('ব্যবহৃত বাকি', style: TextStyle(color: AppColors.onSurfaceMuted)),
+              Text('ব্যবহৃত বাকি', style: TextStyle(color: context.palette.onSurfaceMuted)),
               Text(Money.taka(dash.exposure),
                   key: const ValueKey('credit-exposure'),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
@@ -177,27 +178,27 @@ class _DashboardCard extends StatelessWidget {
                 const Text('এই প্রতিষ্ঠানে সীমার যাচাই বন্ধ — অঙ্কগুলো কেবল দেখার জন্য।',
                     style: TextStyle(fontSize: 12, color: AppColors.warning)),
               const SizedBox(height: AppSpacing.xs),
-              creditPair('মোট সীমা', Money.taka(dash.limit)),
-              creditPair('অবশিষ্ট সীমা', Money.taka(dash.available)),
-              creditPair('সীমার ব্যবহার', dash.usedPercent == null ? '—' : '${dash.usedPercent}%'),
-              creditPair('মেয়াদ পেরোনো পাওনা', Money.taka(dash.overdue), danger: dash.overdueValue > 0.004),
-              creditPair('সীমা পার গ্রাহক', '${dash.overLimit} জন', danger: dash.overLimit > 0),
-              creditPair('মেয়াদ পেরোনো বাকিতে বন্ধ', '${dash.overdueStopped} জন', danger: dash.overdueStopped > 0),
-              creditPair('বাকি বন্ধ গ্রাহক', '${dash.blocked} জন', danger: dash.blocked > 0),
-              creditPair('সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)', '${dash.pendingRequests}টা'),
+              creditPair(context, 'মোট সীমা', Money.taka(dash.limit)),
+              creditPair(context, 'অবশিষ্ট সীমা', Money.taka(dash.available)),
+              creditPair(context, 'সীমার ব্যবহার', dash.usedPercent == null ? '—' : '${dash.usedPercent}%'),
+              creditPair(context, 'মেয়াদ পেরোনো পাওনা', Money.taka(dash.overdue), danger: dash.overdueValue > 0.004),
+              creditPair(context, 'সীমা পার গ্রাহক', '${dash.overLimit} জন', danger: dash.overLimit > 0),
+              creditPair(context, 'মেয়াদ পেরোনো বাকিতে বন্ধ', '${dash.overdueStopped} জন', danger: dash.overdueStopped > 0),
+              creditPair(context, 'বাকি বন্ধ গ্রাহক', '${dash.blocked} জন', danger: dash.blocked > 0),
+              creditPair(context, 'সীমা বাড়ানোর অনুরোধ (সইয়ের অপেক্ষায়)', '${dash.pendingRequests}টা'),
             ],
           ),
         ),
       );
 }
 
-Widget creditPair(String label, String value, {bool danger = false}) => Padding(
+Widget creditPair(BuildContext context, String label, String value, {bool danger = false}) => Padding(
       padding: const EdgeInsets.only(top: 3),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AppColors.onSurfaceMuted))),
+          Expanded(child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted))),
           Text(value,
-              style: TextStyle(fontWeight: FontWeight.w600, color: danger ? AppColors.danger : AppColors.onSurface)),
+              style: TextStyle(fontWeight: FontWeight.w600, color: danger ? AppColors.danger : context.palette.onSurface)),
         ],
       ),
     );
@@ -356,30 +357,30 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text(d.code, style: const TextStyle(color: AppColors.onSurfaceMuted))),
+                          Expanded(child: Text(d.code, style: TextStyle(color: context.palette.onSurfaceMuted))),
                           _Badge(text: CreditLabels.state[p.state] ?? p.stateLabel, danger: p.state != 'active'),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      const Text('অবশিষ্ট সীমা', style: TextStyle(color: AppColors.onSurfaceMuted)),
+                      Text('অবশিষ্ট সীমা', style: TextStyle(color: context.palette.onSurfaceMuted)),
                       Text(Money.taka(p.available),
                           key: const ValueKey('credit-available'),
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                       if (p.usedPercent != null)
                         Text('সীমার ${Money.plain(p.usedPercent)}% ব্যবহৃত',
-                            style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+                            style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
                       if (p.stop != null && p.stop!.isNotEmpty)
                         Text(p.stop!, style: const TextStyle(color: AppColors.danger)),
                       const SizedBox(height: AppSpacing.xs),
-                      creditPair('সীমা', Money.taka(p.baseLimit)),
+                      creditPair(context, 'সীমা', Money.taka(p.baseLimit)),
                       if (p.tempLimit != null)
-                        creditPair('অস্থায়ী সীমা', '${Money.taka(p.tempLimit)} (${dayOf(p.tempUntil)} পর্যন্ত)'),
-                      creditPair('চলতি সীমা', Money.taka(p.limit)),
-                      if (d.creditDays != null) creditPair('বাকির দিন', '${d.creditDays} দিন'),
-                      creditPair('খাতার বকেয়া', Money.taka(p.due)),
-                      creditPair('আটকে থাকা', Money.taka(p.held)),
-                      creditPair('ক্লিয়ার না হওয়া চেক', Money.taka(p.uncleared)),
-                      creditPair('ব্যবহৃত', Money.taka(p.exposure)),
+                        creditPair(context, 'অস্থায়ী সীমা', '${Money.taka(p.tempLimit)} (${dayOf(p.tempUntil)} পর্যন্ত)'),
+                      creditPair(context, 'চলতি সীমা', Money.taka(p.limit)),
+                      if (d.creditDays != null) creditPair(context, 'বাকির দিন', '${d.creditDays} দিন'),
+                      creditPair(context, 'খাতার বকেয়া', Money.taka(p.due)),
+                      creditPair(context, 'আটকে থাকা', Money.taka(p.held)),
+                      creditPair(context, 'ক্লিয়ার না হওয়া চেক', Money.taka(p.uncleared)),
+                      creditPair(context, 'ব্যবহৃত', Money.taka(p.exposure)),
                     ],
                   ),
                 ),
@@ -402,10 +403,10 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                         ],
                       ),
                       if (d.risk.reasons.isEmpty)
-                        const Text('কোনো লক্ষণ নেই', style: TextStyle(color: AppColors.onSurfaceMuted)),
+                        Text('কোনো লক্ষণ নেই', style: TextStyle(color: context.palette.onSurfaceMuted)),
                       for (final r in d.risk.reasons) Text('• $r'),
-                      const Text('মাত্রা কেবল জানায় — সীমা বা দেয়াল বদলায় না।',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.onSurfaceMuted)),
+                      Text('মাত্রা কেবল জানায় — সীমা বা দেয়াল বদলায় না।',
+                          style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
                     ],
                   ),
                 ),
@@ -423,7 +424,7 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
             if (d != null) ...[
               const _SectionTitle('খোলা বিল'),
               if (d.bills.isEmpty)
-                const Text('কোনো খোলা বিল নেই', style: TextStyle(color: AppColors.onSurfaceMuted)),
+                Text('কোনো খোলা বিল নেই', style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final b in d.bills)
                 Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -435,12 +436,12 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
                     trailing: Text(Money.taka(b.unpaid),
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: b.daysOverdue > 0 ? AppColors.danger : AppColors.onSurface)),
+                            color: b.daysOverdue > 0 ? AppColors.danger : context.palette.onSurface)),
                   ),
                 ),
               const _SectionTitle('সীমা বাড়ানোর অনুরোধ'),
               if (d.requests.isEmpty)
-                const Text('কোনো অনুরোধ নেই', style: TextStyle(color: AppColors.onSurfaceMuted)),
+                Text('কোনো অনুরোধ নেই', style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final r in d.requests)
                 Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -472,7 +473,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+        child: Text(text, style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
       );
 }
 
@@ -567,7 +568,7 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
               Text('সীমা বাড়ানোর অনুরোধ — ${widget.customer.name}',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               Text('এখনকার সীমা ${Money.taka(widget.customer.position.baseLimit)}',
-                  style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                  style: TextStyle(color: context.palette.onSurfaceMuted)),
               const SizedBox(height: AppSpacing.sm),
               SegmentedButton<String>(
                 segments: const [
@@ -608,8 +609,8 @@ class _LimitRequestSheetState extends State<LimitRequestSheet> {
                 maxLines: 2,
                 decoration: const InputDecoration(labelText: 'কারণ'),
               ),
-              const Text('মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।',
-                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+              Text('মালিকের সই পড়লে তবেই বসে; ততক্ষণ পুরনো সীমাই চলে।',
+                  style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xs),

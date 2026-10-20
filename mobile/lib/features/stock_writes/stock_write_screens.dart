@@ -5,6 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -716,7 +717,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
                         if (l.lot != null && l.lot!.isNotEmpty) 'লট ${l.lot}',
                         'অপেক্ষায় ${l.waiting}',
                         if (l.waitingFree != '0') 'ফ্রি ${l.waitingFree}',
-                      ].join(' · '), style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                      ].join(' · '), style: TextStyle(color: context.palette.onSurfaceMuted)),
                       Row(children: [
                         Expanded(
                           child: TextField(

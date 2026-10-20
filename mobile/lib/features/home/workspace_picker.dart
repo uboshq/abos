@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/auth/session_profile.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/workspace/workspace_switcher.dart';
 
@@ -177,12 +178,12 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
                               close: true,
                             ),
                   ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
                   child: Text(
                     'আপনি যা লিখবেন তা বাছা শাখার নামেই বসবে। "সব শাখা" কেবল দেখার জন্য — '
                     'কাজের শাখা বদলায় না।',
-                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted),
+                    style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),
                   ),
                 ),
               ],
@@ -203,8 +204,8 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xs),
         child: Text(text,
-            style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.onSurfaceMuted)),
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
       );
 }
 

@@ -5,6 +5,7 @@ import '../../core/api_client/once_key.dart';
 import '../../core/approvals/approval_rows_api.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -116,9 +117,9 @@ class _DelegationScreenState extends State<DelegationScreen> {
             else if (s != null) ...[
               _Heading('আমার কাছে যাঁদের ভার', s.held.length),
               if (s.held.isEmpty)
-                const Padding(
-                    padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Text('এখন কেউ আপনাকে ভার দেননি।', style: TextStyle(color: AppColors.onSurfaceMuted))),
+                Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text('এখন কেউ আপনাকে ভার দেননি।', style: TextStyle(color: context.palette.onSurfaceMuted))),
               for (final d in s.held) _DelegationCard(d: d),
               const SizedBox(height: AppSpacing.sm),
               _Heading('আমি যাঁদের দিয়েছি', s.given.length),
@@ -128,7 +129,7 @@ class _DelegationScreenState extends State<DelegationScreen> {
                     title: 'কোনো ভার নেই',
                     message: 'ছুটিতে গেলে "নতুন ভার" চেপে কাউকে আপনার হয়ে সই দিতে দিন।')
               else if (s.given.isEmpty)
-                const Text('আপনি কাউকে ভার দেননি।', style: TextStyle(color: AppColors.onSurfaceMuted)),
+                Text('আপনি কাউকে ভার দেননি।', style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final d in s.given)
                 _DelegationCard(d: d, onRevoke: d.revoked ? null : () => _revoke(d)),
             ],
@@ -170,7 +171,7 @@ class _DelegationCard extends StatelessWidget {
         title: Text(d.person, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('${d.startsOn} থেকে ${d.endsOn} · $state',
-              style: TextStyle(color: d.active ? AppColors.success : AppColors.onSurfaceMuted)),
+              style: TextStyle(color: d.active ? AppColors.success : context.palette.onSurfaceMuted)),
           Text(d.modules.isEmpty ? 'সব কাজে' : d.modules.join(', ')),
           if (d.reason.isNotEmpty) Text(d.reason, style: const TextStyle(fontSize: 13)),
         ]),
@@ -312,7 +313,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
             ),
           ]),
           const SizedBox(height: AppSpacing.sm),
-          const Text('কোন কাজে (কিছু না বাছলে সব কাজে)', style: TextStyle(color: AppColors.onSurfaceMuted)),
+          Text('কোন কাজে (কিছু না বাছলে সব কাজে)', style: TextStyle(color: context.palette.onSurfaceMuted)),
           Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
             for (final (code, label) in widget.setup.modules)
               FilterChip(
@@ -516,12 +517,12 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
                     if (signed) ...[
                       Text('সই: ${row.signer} · ${row.signedAt}'),
                       Text([if (row.version.isNotEmpty) row.version, if (row.hash.isNotEmpty) 'ছাপ ${row.hash}…'].join(' · '),
-                          style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+                          style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
                     ] else ...[
                       Text('চেয়েছেন: ${row.requester}'),
                       if (row.dueAt.isNotEmpty)
                         Text('শেষ সময়: ${row.dueAt}',
-                            style: TextStyle(color: row.overdue ? AppColors.danger : AppColors.onSurfaceMuted)),
+                            style: TextStyle(color: row.overdue ? AppColors.danger : context.palette.onSurfaceMuted)),
                       if (row.canDecide)
                         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                           TextButton(

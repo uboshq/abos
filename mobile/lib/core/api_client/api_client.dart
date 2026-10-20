@@ -1,5 +1,6 @@
 import 'network_errors.dart';
 import 'once_key.dart';
+import 'pinned_trust.dart';
 import 'retired_build.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -43,12 +44,14 @@ class ApiClient {
   /// not depend on one.
   static void Function()? onSessionExpired;
 
-  static final Dio dio = _build();
+  static final Dio dio = buildFor(AppConfig.apiBaseUrl);
 
-  static Dio _build() {
+  /// ⓘ ঠিকানা ধরে — পরীক্ষা দেখে লাইভে pin বসে আর LAN-এ বসে না ([[PinnedTrust]])
+  @visibleForTesting
+  static Dio buildFor(String baseUrl) {
     final client = Dio(
       BaseOptions(
-        baseUrl: AppConfig.apiBaseUrl,
+        baseUrl: baseUrl,
         connectTimeout: AppConfig.connectTimeout,
         receiveTimeout: AppConfig.receiveTimeout,
         contentType: Headers.jsonContentType,
@@ -58,6 +61,12 @@ class ApiClient {
             status != null && status >= 200 && status < 300,
       ),
     );
+
+    // ⭐ লাইভে কেবল তিন মূল সার্টিফিকেট — pinning (অ্যাপের নিরাপত্তা, MASVS-NETWORK-2, ১৯ অক্টোবর ২০২৬; [[PinnedTrust]]);
+    //   পরীক্ষার LAN/emulator ঠিকানায় নয়। APK নামানোও এই ক্লায়েন্টে, তাই সেটাও।
+    if (PinnedTrust.pinsFor(Uri.parse(baseUrl))) {
+      client.httpClientAdapter = PinnedTrust.adapter();
+    }
 
     client.interceptors.add(
       InterceptorsWrapper(

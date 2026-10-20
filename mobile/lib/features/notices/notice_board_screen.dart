@@ -5,6 +5,7 @@ import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
@@ -102,7 +103,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       n.owesSignature ? Icons.draw_outlined : (n.standing == 'unread' ? Icons.mark_email_unread_outlined : Icons.drafts_outlined),
                       color: n.owesSignature
                           ? AppColors.danger
-                          : (n.standing == 'unread' ? AppColors.primary : AppColors.onSurfaceMuted),
+                          : (n.standing == 'unread' ? AppColors.primary : context.palette.onSurfaceMuted),
                     ),
                     title: Text(n.title,
                         style: TextStyle(fontWeight: n.standing == 'unread' ? FontWeight.w700 : FontWeight.w500)),
@@ -185,7 +186,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
               if (n.author.isNotEmpty) n.author,
               if (n.publishedAt != null) _when(n.publishedAt),
             ].where((s) => s.isNotEmpty).join(' · '),
-            style: const TextStyle(color: AppColors.onSurfaceMuted),
+            style: TextStyle(color: context.palette.onSurfaceMuted),
           ),
           if (n.summary.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -196,7 +197,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
           if (n.expiresAt != null) ...[
             const SizedBox(height: AppSpacing.md),
             Text('মেয়াদ ${_when(n.expiresAt)} পর্যন্ত',
-                style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted)),
+                style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
           ],
           if (n.ackRequired) ...[
             const Divider(height: AppSpacing.xl),

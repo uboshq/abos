@@ -31,6 +31,8 @@ import '../../core/theme/app_palette.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
+import '../../core/privacy/device_integrity.dart';
+import '../../core/privacy/lock_delay.dart';
 import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
@@ -212,6 +214,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _loadPending();
     _loadPrefs();
     RecentPapers.changes.addListener(_loadPrefs);
+    // ⭐ root করা বা ছদ্ম-ফোন — একবার বলা, আটকানো নয় ([[DeviceIntegrity]])
+    WidgetsBinding.instance.addPostFrameCallback((_) => _warnIfUnsafe());
+  }
+
+  Future<void> _warnIfUnsafe() async {
+    final warning = await DeviceIntegrity.warnOnce();
+    if (warning == null || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        key: const ValueKey('device-integrity-warning'),
+        icon: Icon(Icons.gpp_maybe_outlined, color: Theme.of(dialog).colorScheme.error),
+        title: const Text('ফোনটা নিরাপদ নয়'),
+        content: Text(warning),
+        actions: [TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('বুঝেছি'))],
+      ),
+    );
   }
 
   @override
@@ -792,6 +811,9 @@ class _MoreTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // ⭐ অ্যাপ-তালার সময় — কতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN (অ্যাপের নিরাপত্তা, ১৯ অক্টোবর ২০২৬; [[LockDelay]])
+        const _LockDelayTile(),
+        const SizedBox(height: AppSpacing.sm),
         // ⭐ অ্যাপ হালনাগাদ — হাতে যাচাই (মালিক, ৭ অক্টোবর ২০২৬)
         const AppUpdateTile(),
         const SizedBox(height: AppSpacing.lg),
@@ -835,5 +857,47 @@ class _MoreTab extends ConsumerWidget {
     if (yes == true) {
       await ref.read(authStateProvider.notifier).logout();
     }
+  }
+}
+
+/// অ্যাপ-তালার সময় বাছাই — "আমি" ট্যাবে; চারটা পছন্দ, "কখনো না" নেই ([[LockDelay]])
+class _LockDelayTile extends StatelessWidget {
+  const _LockDelayTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Duration>(
+      valueListenable: LockDelay.instance.current,
+      builder: (context, delay, _) => Card(
+        child: ListTile(
+          key: const ValueKey('me-lock-delay'),
+          leading: const Icon(Icons.lock_clock_outlined),
+          title: const Text('অ্যাপ-তালার সময়'),
+          subtitle: Text('এতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN লাগবে: ${LockDelay.label(delay.inMinutes)}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            builder: (sheet) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ListTile(title: Text('অ্যাপ-তালার সময়', style: TextStyle(fontWeight: FontWeight.w700))),
+                  for (final minutes in LockDelay.choices)
+                    ListTile(
+                      key: ValueKey('lock-delay-$minutes'),
+                      leading: Icon(delay.inMinutes == minutes ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                      title: Text(LockDelay.label(minutes)),
+                      onTap: () async {
+                        await LockDelay.instance.choose(minutes);
+                        if (sheet.mounted) Navigator.of(sheet).pop();
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

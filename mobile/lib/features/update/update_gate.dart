@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client/retired_build.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import 'update_download_button.dart';
@@ -190,7 +191,7 @@ class _UpdateWall extends StatelessWidget {
                   release.note ??
                       'অ্যাপের নতুন সংস্করণ নামিয়ে বসান। পুরনো সংস্করণ ভুল তথ্য দেখাতে পারে।',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.onSurfaceMuted),
+                  style: TextStyle(color: context.palette.onSurfaceMuted),
                 ),
                 if (pending > 0) ...[
                   const SizedBox(height: AppSpacing.md),

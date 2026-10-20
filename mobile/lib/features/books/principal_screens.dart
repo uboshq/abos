@@ -5,6 +5,7 @@ import '../../core/books/books_api.dart';
 import '../../core/orders/paper_total.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'books_widgets.dart';
@@ -232,8 +233,8 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
                             : '−${Money.taka(e.debit)}',
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     Text(PrincipalRow.balanceWords(e.balance),
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.onSurfaceMuted)),
+                        style: TextStyle(
+                            fontSize: 12, color: context.palette.onSurfaceMuted)),
                   ],
                 ),
               ),

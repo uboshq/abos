@@ -4,6 +4,7 @@ import '../../core/finance/finance_api.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
@@ -24,8 +25,8 @@ String daysWords(int? days) {
   return days > 0 ? 'আর $days দিন' : '${-days} দিন পেরিয়েছে';
 }
 
-Color _dayColour(int? days) =>
-    days == null ? AppColors.onSurfaceMuted : days < 0 ? AppColors.danger : days <= 30 ? AppColors.warning : AppColors.onSurfaceMuted;
+Color _dayColour(BuildContext context, int? days) =>
+    days == null ? context.palette.onSurfaceMuted : days < 0 ? AppColors.danger : days <= 30 ? AppColors.warning : context.palette.onSurfaceMuted;
 
 int? _daysUntil(String? iso, [DateTime? today]) {
   final d = iso == null ? null : DateTime.tryParse(iso);
@@ -75,11 +76,11 @@ String instalmentState(String s) => switch (s) {
       _ => 'তারিখ নেই',
     };
 
-Color _instalmentColour(String s) => switch (s) {
+Color _instalmentColour(BuildContext context, String s) => switch (s) {
       'paid' => AppColors.success,
       'overdue' => AppColors.danger,
       'today' => AppColors.warning,
-      _ => AppColors.onSurfaceMuted,
+      _ => context.palette.onSurfaceMuted,
     };
 
 String repaymentWords(String r) => switch (r) {
@@ -121,7 +122,7 @@ class _Row extends StatelessWidget {
               for (final l in lines.where((l) => l.trim().isNotEmpty))
                 Text(l, maxLines: 1, overflow: TextOverflow.ellipsis),
               if (foot != null && foot!.isNotEmpty)
-                Text(foot!, style: TextStyle(color: footColour ?? AppColors.onSurfaceMuted, fontWeight: FontWeight.w600)),
+                Text(foot!, style: TextStyle(color: footColour ?? context.palette.onSurfaceMuted, fontWeight: FontWeight.w600)),
             ],
           ),
           trailing: Text(amount, style: TextStyle(fontWeight: FontWeight.w800, color: amountColour)),
@@ -169,7 +170,7 @@ class _DepositListScreenState extends State<DepositListScreen> {
             lines: [d.institution, if (d.maturesOn != null) 'মেয়াদ ${dayOf(d.maturesOn)}'],
             amount: Money.taka(d.principal),
             foot: d.status == 'active' ? daysWords(d.daysToMaturity) : depositStatus(d.status),
-            footColour: d.status == 'active' ? _dayColour(d.daysToMaturity) : AppColors.onSurfaceMuted,
+            footColour: d.status == 'active' ? _dayColour(context, d.daysToMaturity) : context.palette.onSurfaceMuted,
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => DepositScreen(id: d.id, api: widget.api))),
           ),
@@ -201,7 +202,7 @@ class DepositScreen extends StatelessWidget {
           FactRow('খোলা', dayOf(d.openedOn)),
           if (d.maturesOn != null)
             FactRow('মেয়াদ', '${dayOf(d.maturesOn)}${d.status == 'active' ? ' · ${daysWords(d.daysToMaturity)}' : ''}',
-                colour: d.status == 'active' ? _dayColour(d.daysToMaturity) : null),
+                colour: d.status == 'active' ? _dayColour(context, d.daysToMaturity) : null),
           if (d.instalmentAmount != null)
             FactRow('মাসের কিস্তি',
                 '${Money.taka(d.instalmentAmount)}${d.instalmentDay == null ? '' : ' · প্রতি মাসের ${d.instalmentDay} তারিখ'}'),
@@ -258,7 +259,7 @@ class _LoanListScreenState extends State<LoanListScreen> {
             foot: l.next == null
                 ? null
                 : 'পরের কিস্তি ${dayOf(l.next!.dueOn)} · ${Money.taka(l.next!.amount)} · ${instalmentState(l.next!.state)}',
-            footColour: l.next == null ? null : _instalmentColour(l.next!.state),
+            footColour: l.next == null ? null : _instalmentColour(context, l.next!.state),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => LoanScreen(id: l.id, api: widget.api))),
           ),
@@ -312,7 +313,7 @@ class LoanScreen extends StatelessWidget {
               lines: ['আসল ${Money.taka(r.principal)} · সুদ ${Money.taka(r.interest)}'],
               amount: Money.taka(r.amount),
               foot: instalmentState(r.state),
-              footColour: _instalmentColour(r.state),
+              footColour: _instalmentColour(context, r.state),
             ),
         ],
       );
@@ -415,10 +416,10 @@ class RentScreen extends StatelessWidget {
           if (r.place.isNotEmpty) FactRow('জায়গা', r.place),
           FactRow('চুক্তির নম্বর', r.no),
           if (r.rentDay != null) FactRow('ভাড়ার দিন', 'প্রতি মাসের ${r.rentDay} তারিখ'),
-          if (r.nextDueOn != null) FactRow('পরের ভাড়া', dayOf(r.nextDueOn), colour: _dayColour(_daysUntil(r.nextDueOn))),
+          if (r.nextDueOn != null) FactRow('পরের ভাড়া', dayOf(r.nextDueOn), colour: _dayColour(context, _daysUntil(r.nextDueOn))),
           FactRow('শুরু', dayOf(r.startsOn)),
           FactRow('শেষ', '${dayOf(r.endsOn)}${r.daysLeft == null ? '' : ' · ${daysWords(r.daysLeft)}'}',
-              colour: _dayColour(r.daysLeft)),
+              colour: _dayColour(context, r.daysLeft)),
           FactRow('জামানত', Money.taka(r.deposit)),
           if (r.depositLeft != null) FactRow(r.weLet ? 'হাতে থাকা জামানত' : 'জামানতের বাকি', Money.taka(r.depositLeft)),
           if (r.weLet && r.oldestUnpaid != null) FactRow('সবচেয়ে পুরনো বাকি মাস', monthWords(r.oldestUnpaid)),
@@ -522,7 +523,7 @@ class HandLoanScreen extends StatelessWidget {
           if (h.repayment.isNotEmpty) FactRow('ফেরতের ধরন', repaymentWords(h.repayment)),
           if (h.dueOn != null)
             FactRow('ফেরতের দিন', '${dayOf(h.dueOn)} · ${daysWords(_daysUntil(h.dueOn))}',
-                colour: _dayColour(_daysUntil(h.dueOn))),
+                colour: _dayColour(context, _daysUntil(h.dueOn))),
           FactRow('অবস্থা', h.status == 'settled' ? 'চুকে গেছে' : 'চালু'),
           if (h.note.isNotEmpty) FactRow('নোট', h.note),
           // ⭐ টাকা দেওয়া-নেওয়া — হাতধারের লেখার চাবিতে (১৭ অক্টোবর ২০২৬; [[HandLoanMoveScreen]])

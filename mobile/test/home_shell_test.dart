@@ -12,6 +12,7 @@ import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/navigation/nav_prefs.dart';
+import 'package:abos_mobile/core/privacy/device_integrity.dart';
 import 'package:abos_mobile/core/records/notice_bar.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
@@ -289,6 +290,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যাবেন?'), findsNothing);
   });
+  // ⭐ root করা বা ছদ্ম-ফোন — হোমে একবার বলা, আটকানো নয় (অ্যাপের নিরাপত্তা, MASVS-RESILIENCE-1, ১৯ অক্টোবর ২০২৬)
+  testWidgets('a rooted phone is warned once a run and the app goes on; a clean phone is not', (tester) async {
+    final before = DeviceIntegrity.checker;
+    addTearDown(() {
+      DeviceIntegrity.checker = before;
+      DeviceIntegrity.reset();
+    });
+
+    DeviceIntegrity.reset();
+    DeviceIntegrity.checker = () async => const IntegrityReport(rooted: true, emulator: false);
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('device-integrity-warning')), findsOneWidget, reason: '⛔ root করা ফোনে কিছুই বলা হলো না');
+    expect(find.textContaining('root করা'), findsOneWidget);
+    await tester.tap(find.text('বুঝেছি'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('device-integrity-warning')), findsNothing, reason: '⛔ সতর্কতা অ্যাপ আটকে রাখল');
+
+    // ⓘ একই চালুতে হোম আবার খুললে আর বলা নয়
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('device-integrity-warning')), findsNothing, reason: '⛔ প্রতিবার হোমে ফিরলেই একই সতর্কতা');
+
+    DeviceIntegrity.reset();
+    DeviceIntegrity.checker = () async => const IntegrityReport(rooted: false, emulator: false);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('device-integrity-warning')), findsNothing, reason: '⛔ ভালো ফোনেও সতর্কতা');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
 }
 
 /// "আমি" grew a printer row (14 Oct 2026); on the test's 800×600 screen the
