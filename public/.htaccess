@@ -35,6 +35,8 @@
 # রিলিজ বসানো মানে এই একটা ফাইল বদলানো — লিংক একই থাকে।
 <IfModule mod_mime.c>
     AddType application/vnd.android.package-archive .apk
+    # ⭐ Android App Links — /.well-known/assetlinks.json ঠিক application/json-এ, নইলে autoVerify ব্যর্থ আর লিংক ব্রাউজারে
+    AddType application/json .json
 </IfModule>
 
 # ⚠️ লিংক একই থাকে বলে পুরনো ফাইল কোনো ক্যাশে থেকে যেতে পারে (২ অক্টোবর ২০২৬:
