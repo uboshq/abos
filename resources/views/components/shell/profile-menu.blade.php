@@ -10,7 +10,8 @@
     $canSwitch = app(\App\Core\Services\ShellFacts::class)->canSwitch();
     $row = 'flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm transition-colors hover:bg-(--color-surface-hover)';
 @endphp
-<div x-data="{ open: false }" class="relative" data-profile-menu>
+{{-- ⓘ কোম্পানি-বদলের ঘটনা শুনে মেনু নিজেই বন্ধ হয় — CSP-Alpine এক হ্যান্ডলারে `;`-জোড়া দুই কাজ পড়ে না (csp-expressions.test.js) --}}
+<div x-data="{ open: false }" class="relative" data-profile-menu @open-company-switcher.window="open = false">
     <button type="button"
             @click="open = !open"
             @keydown.escape.window="open = false"
@@ -47,7 +48,7 @@
         {{-- কোম্পানি বা শাখা বদল — বারের "কোম্পানি · শাখা ▾"-টাই খোলে, দ্বিতীয় কোনো তালিকা নয় --}}
         @if ($canSwitch)
             <button type="button" role="menuitem" class="{{ $row }}" data-menu-company
-                    @click="open = false; $dispatch('open-company-switcher')">
+                    @click="$dispatch('open-company-switcher')">
                 <x-ui.icon name="building" :size="16" />
                 {{ __('core.company.switch') }}
             </button>
