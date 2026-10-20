@@ -149,11 +149,11 @@ final class ProfitByCustomerIsTheBooksOwnCostTest extends TestCase
 
         $page = $this->actingAs($this->owner)->get(route('executive.analysis'))->assertOk();
 
-        // ⓘ সেরা ক্রেতা = sales.by_customer-এর সবচেয়ে বড় সারি
+        // ⓘ সেরা ক্রেতা = sales.by_customer-এর নিট বিক্রিতে সবচেয়ে বড় সারি (২০ অক্টোবর ২০২৬ থেকে VAT ও ফেরত বাদে)
         $top = collect(app(ReportEngine::class)->run('sales.by_customer', [], 1, 50)->rows)
-            ->sortByDesc(fn ($r) => (float) $r['total'])->first();
+            ->sortByDesc(fn ($r) => (float) $r['net_sales'])->first();
         $page->assertSee($top['customer_name'])
-            ->assertSee(Money::format($top['total'], 0));
+            ->assertSee(Money::format($top['net_sales'], 0));
 
         foreach (['customers', 'products', 'areas', 'salespeople', 'losing', 'thin', 'dead'] as $list) {
             $page->assertSee('data-list="'.$list.'"', false);

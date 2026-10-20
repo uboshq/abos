@@ -58,7 +58,7 @@ final class TodayController extends Controller implements HasMiddleware
             'waiting' => $this->alerts->waiting($user, $companies, 6),
             // ⭐ বাকির চার সংখ্যা — বাকি নিয়ন্ত্রণের নিজের ড্যাশবোর্ড থেকে (ধাপ ৩.৩)
             'credit' => app(CreditHeadlines::class)->for($user, $companies),
-            'topCustomers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'total', 5, $month),
+            'topCustomers' => $this->rankings->top($user, $companies, 'sales.by_customer', 'net_sales', 5, $month),
             'topProducts' => $this->rankings->top($user, $companies, 'sales.by_product', 'revenue', 5, $month),
             'trend' => $this->series($board['trend']),
             'filters' => ['company' => $companyId, 'branch' => $branchId, 'period' => $board['period']],
