@@ -146,6 +146,23 @@ void main() {
         reason: 'the photo opens my menu, its settings row the profile');
   });
 
+  // ⭐ "আমার প্রোফাইল" — কেবল নিজের তথ্য, কোনো প্রতিশ্রুতি নয় (মালিক, ২০ অক্টোবর ২০২৬)
+  testWidgets('my profile shows who I am and where, and promises nothing', (tester) async {
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('header-avatar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('avatar-profile')));
+    await tester.pumpAndSettle();
+    final dialog = find.byKey(const ValueKey('profile-dialog'));
+    expect(dialog, findsOneWidget);
+    expect(find.descendant(of: dialog, matching: find.text('করিম')), findsOneWidget);
+    expect(find.descendant(of: dialog, matching: find.text('karim@testco.local')), findsOneWidget);
+    expect(find.descendant(of: dialog, matching: find.text('টেষ্ট কোম্পানী লিমিটেড · Head Office')), findsOneWidget);
+    expect(find.textContaining('শীঘ্রই'), findsNothing);
+    expect(find.textContaining('ছবি বদল'), findsNothing);
+  });
+
   // ⭐ মালিক, ১০ অক্টোবর ২০২৬: ঘণ্টার পাশে অনুমোদনের আইকন — অপেক্ষার সংখ্যাসহ, চাপলে তালিকা
   // ⓘ ১২ অক্টোবর ২০২৬: এখন নিচের বারের "অনুমোদন" ঘর
   testWidgets('beside the bell, the approval tab counts what waits for me',

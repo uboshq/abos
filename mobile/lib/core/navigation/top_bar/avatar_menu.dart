@@ -149,7 +149,7 @@ class AvatarMenu extends StatelessWidget {
               _Item(
                 key: const ValueKey('avatar-profile'),
                 icon: Symbols.person,
-                title: 'প্রোফাইল ও ছবি বদল',
+                title: 'আমার প্রোফাইল',
                 onTap: () => pick(AvatarChoice.profile),
               ),
               line,
@@ -175,18 +175,10 @@ class AvatarMenu extends StatelessWidget {
                 ),
               ),
               line,
-              // ⓘ কোন কোন ফোনে চালু — সার্ভারের অংশ এখনো নেই; বানানো ডাক নয়, তাই এখন বন্ধ, কারণ লেখা
-              const _Item(
-                key: ValueKey('avatar-devices'),
-                icon: Symbols.smartphone,
-                title: 'আমার ফোনগুলো',
-                note: 'শীঘ্রই: কোন কোন ফোনে চালু, এখানে দেখা যাবে',
-                onTap: null,
-              ),
-              line,
               _Item(
                 key: const ValueKey('avatar-settings'),
                 icon: Symbols.settings,
+                // ⓘ সংস্করণ অ্যাপের নিজের ধ্রুবক থেকে ([AppConfig.appVersion], pubspec-এর সাথে বাঁধা) — হাতে লেখা নয়
                 title: 'সেটিংস · সংস্করণ ${AppConfig.appVersion}',
                 onTap: () => pick(AvatarChoice.settings),
               ),
@@ -241,16 +233,13 @@ class _BigAvatar extends StatelessWidget {
 
 /// এক সারি — আইকন আর লেখা; চাপার জায়গা অন্তত ৪৮dp (WCAG 2.5.8)
 class _Item extends StatelessWidget {
-  const _Item({super.key, required this.icon, required this.title, this.hint, this.note, required this.onTap, this.color});
+  const _Item({super.key, required this.icon, required this.title, this.hint, required this.onTap, this.color});
 
   final IconData icon;
   final String title;
 
   /// পর্দা-পাঠকের বাড়তি কথা (চোখে দেখা যায় না, নমুনার মতো সারি এক লাইনের)
   final String? hint;
-
-  /// বন্ধ সারির কারণ — চোখেও দেখা যায়
-  final String? note;
   final VoidCallback? onTap;
   final Color? color;
 
@@ -275,7 +264,6 @@ class _Item extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                   Text(title, style: TextStyle(color: ink, fontSize: 14)),
-                  if (note != null) Text(note!, style: TextStyle(color: c.menuSub, fontSize: 12)),
                 ]),
               ),
             ]),

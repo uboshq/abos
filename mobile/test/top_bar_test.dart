@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/config/app_config.dart';
 import 'package:abos_mobile/core/navigation/top_bar/abos_top_bar.dart';
 import 'package:abos_mobile/core/navigation/top_bar/avatar_menu.dart';
 import 'package:abos_mobile/core/sync_engine/sync_status.dart';
@@ -16,13 +16,15 @@ import 'package:abos_mobile/core/theme/bar_palette.dart';
 import 'package:abos_mobile/core/theme/theme_choice.dart';
 import 'package:abos_mobile/core/widgets/unsaved_guard.dart';
 
+import 'support/bar_fonts.dart';
+
 /// ⭐ উপরের বার আর ছবির মেনু — মালিকের নকশা ৩ (§২, §৩, §৬, §৭) আর অনুমোদিত পুরো-পাতার নমুনা, পাতা ২ (২০ অক্টোবর ২০২৬)।
 /// প্রতিটা দাবি একটা নিয়ম; প্রতিটার জন্য হাতে মিউট্যান্ট চালানো হয়েছে (নিয়ম ভাঙলে লাল)।
 ///
 /// <p>ⓘ ছবি-টেস্ট আসল ফন্টে (Roboto, Shonar Bangla, Material Symbols) — নইলে সব অক্ষর চৌকো বাক্স। ফন্ট এই PC-র; ছবি
 /// এক PC-তে বানানো, একই ফন্টে বারবার একই।
 void main() {
-  setUpAll(_loadFonts);
+  setUpAll(loadBarFonts);
 
   late ThemeChoices themes;
   setUp(() {
@@ -136,6 +138,31 @@ void main() {
         });
       }
     }
+  });
+
+  group('a company name that does not fit shows its short code', () {
+    for (final (width, full) in [(320.0, false), (412.0, true)]) {
+      testWidgets('${width.toInt()} dp: ${full ? 'the full name' : 'the code'}, the branch whole, TalkBack the full name', (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pump(tester, _owner(), width: width);
+        expect(find.text('ADI Wholesale'), full ? findsOneWidget : findsNothing);
+        expect(find.text('ADI'), full ? findsNothing : findsOneWidget);
+        final company = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('top-company')));
+        expect(company.didExceedMaxLines, isFalse, reason: '⛔ "ADI …"-এর মতো আধা নাম');
+        final branch = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('top-branch')));
+        expect(branch.didExceedMaxLines, isFalse);
+        expect(find.text('সব শাখা'), findsOneWidget);
+        expect(tester.getSemantics(find.byKey(const ValueKey('top-title'))).getSemanticsData().label, 'ADI Wholesale, সব শাখা');
+        handle.dispose();
+      });
+    }
+    testWidgets('a long press on the code shows the full name', (tester) async {
+      await _pump(tester, _owner(), width: 320);
+      await tester.longPress(find.byKey(const ValueKey('workspace-header')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('ADI Wholesale · সব শাখা'), findsOneWidget);
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+    });
   });
 
   group('the bell badge (Material 3)', () {
@@ -272,7 +299,6 @@ void main() {
       'avatar-company',
       'avatar-theme',
       'avatar-lock',
-      'avatar-devices',
       'avatar-settings',
       'avatar-logout',
     ];
@@ -290,10 +316,11 @@ void main() {
       }
       expect(find.text('আল-আমিন শুভ'), findsOneWidget);
       expect(find.text('মালিক · সব শাখা'), findsOneWidget);
-      for (final t in ['প্রোফাইল ও ছবি বদল', 'কোম্পানি বদল', 'রং', 'পিন ও আঙুলের ছাপ', 'আমার ফোনগুলো', 'বের হওয়া']) {
+      for (final t in ['আমার প্রোফাইল', 'কোম্পানি বদল', 'রং', 'পিন ও আঙুলের ছাপ', 'বের হওয়া']) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
-      expect(find.textContaining('সেটিংস · সংস্করণ '), findsOneWidget);
+      // ⓘ সংস্করণ অ্যাপের ধ্রুবক থেকে
+      expect(find.text('সেটিংস · সংস্করণ ${AppConfig.appVersion}'), findsOneWidget);
       // ⓘ প্রতিটা সারির আইকন Material Symbols-এর (ইমোজি নয়)
       for (final k in order.skip(1).where((k) => k != 'avatar-theme')) {
         final icon = tester.widget<Icon>(find.descendant(of: find.byKey(ValueKey(k)), matching: find.byType(Icon)).first);
@@ -304,16 +331,26 @@ void main() {
       expect(menu.top, greaterThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('top-bar'))).bottom));
       expect(412 - menu.right, closeTo(10, 0.5));
 
-      // ⓘ "আমার ফোনগুলো" — সার্ভার নেই, বন্ধ আর কারণ লেখা
-      expect(find.textContaining('শীঘ্রই'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('avatar-devices')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('avatar-menu')), findsOneWidget, reason: 'বন্ধ সারি কিছু করে না');
+      // ⭐ যা কাজ করে না তা মেনুতে নেই — কোনো বন্ধ সারি নয়, কোথাও "শীঘ্রই" নয় (মালিক, ২০ অক্টোবর ২০২৬)
+      expect(find.byKey(const ValueKey('avatar-devices')), findsNothing);
+      expect(find.textContaining('শীঘ্রই'), findsNothing);
+      expect(find.textContaining('আমার ফোনগুলো'), findsNothing);
+      final rows = find.descendant(of: find.byKey(const ValueKey('avatar-menu')), matching: find.byType(InkWell));
+      expect(rows, findsWidgets);
+      for (final row in tester.widgetList<InkWell>(rows)) {
+        expect(row.onTap, isNotNull, reason: '⛔ মেনুতে বন্ধ সারি');
+      }
 
       await tester.tap(find.byKey(const ValueKey('avatar-settings')));
       await tester.pumpAndSettle();
       expect(picked, AvatarChoice.settings);
       expect(find.byKey(const ValueKey('avatar-menu')), findsNothing);
+    });
+
+    test('the version line reads the app constant, never a written number', () {
+      final src = File('lib/core/navigation/top_bar/avatar_menu.dart').readAsStringSync();
+      expect(src, contains(r"'সেটিংস · সংস্করণ ${AppConfig.appVersion}'"));
+      expect(RegExp(r'সংস্করণ\s*[0-9০-৯]').hasMatch(src), isFalse, reason: '⛔ সংস্করণ হাতে লেখা');
     });
 
     testWidgets('no company change offered to somebody in one company', (tester) async {
@@ -372,11 +409,14 @@ void main() {
         });
       }
       testWidgets('avatar menu $mode', (tester) async {
+        // ⓘ আসল ছায়া — টেস্টে ছায়া বন্ধ থাকলে কার্ডের চারপাশে মোটা ধূসর দাগ আঁকা হয়, ফোনে যা নেই
+        debugDisableShadows = false;
         await themes.choose(dark ? ThemeChoice.dark : ThemeChoice.light);
         await _pump(tester, _owner(), width: 412, height: 820, dark: dark, statusBar: true, wrap: true);
         await tester.tap(find.byKey(const ValueKey('header-avatar')));
         await tester.pumpAndSettle();
         await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/top_bar/avatar_menu_$mode.png'));
+        debugDisableShadows = true;
       });
     }
   });
@@ -390,6 +430,7 @@ int _lines(RenderParagraph p) => p.getBoxesForSelection(TextSelection(baseOffset
 /// মালিক — দুই কোম্পানি, "সব শাখা", ২১টা না-পড়া, হোমে
 _BarSpec _owner({bool canSwitchCompany = true, ValueChanged<AvatarChoice?>? onMenu}) => _bar(
       company: 'ADI Wholesale',
+      companyCode: 'ADI',
       branch: 'সব শাখা',
       unread: 21,
       onOrgTap: () {},
@@ -399,6 +440,7 @@ _BarSpec _owner({bool canSwitchCompany = true, ValueChanged<AvatarChoice?>? onMe
 /// বিক্রয়কর্মী — এক শাখা, বিক্রয় › আদায়, ৩টা না-পড়া, অফলাইন, ২টা পাঠানো বাকি
 _BarSpec _sr() => _bar(
       company: 'ADI Wholesale',
+      companyCode: 'ADI',
       branch: 'ময়মনসিংহ',
       crumbs: const ['বিক্রয়', 'আদায়'],
       leading: TopBarLeading.back,
@@ -418,6 +460,7 @@ class _BarSpec {
 _BarSpec _bar({
   required String company,
   required String branch,
+  String companyCode = '',
   List<String> crumbs = const [],
   TopBarLeading leading = TopBarLeading.menu,
   int? unread,
@@ -438,6 +481,7 @@ _BarSpec _bar({
         builder: (context) => AbosTopBar(
           company: company,
           branch: branch,
+          companyCode: companyCode,
           fallbackTitle: menu.name,
           crumbs: crumbs,
           leading: leading,
@@ -502,11 +546,6 @@ class _Pref extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) => child;
 }
 
-ThemeData _withFonts(ThemeData t) => t.copyWith(
-      textTheme: t.textTheme.apply(fontFamily: 'Roboto', fontFamilyFallback: const ['Bangla']),
-      primaryTextTheme: t.primaryTextTheme.apply(fontFamily: 'Roboto', fontFamilyFallback: const ['Bangla']),
-    );
-
 Widget _app(_BarSpec spec,
     {required double width,
     required double height,
@@ -525,8 +564,8 @@ Widget _app(_BarSpec spec,
     ),
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: _withFonts(AppTheme.light()),
-      darkTheme: _withFonts(AppTheme.dark()),
+      theme: withBarFonts(AppTheme.light()),
+      darkTheme: withBarFonts(AppTheme.dark()),
       themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       builder: (context, child) => RepaintBoundary(key: const ValueKey('shot'), child: child),
       home: _Host(spec: spec, body: body ?? (wrap ? const _Body() : const SizedBox.expand())),
@@ -562,29 +601,4 @@ Future<void> _shot(WidgetTester tester, _BarSpec spec,
     {required double width, required bool dark, required String name}) async {
   await _pump(tester, spec, width: width, height: 170, dark: dark, statusBar: true);
   await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/top_bar/$name.png'));
-}
-
-const _material = 'C:/tools/flutter/bin/cache/artifacts/material_fonts';
-const _symbols =
-    'C:/Users/alami/AppData/Local/Pub/Cache/hosted/pub.dev/material_symbols_icons-4.2960.0/lib/fonts/MaterialSymbolsOutlined.ttf';
-
-Future<void> _load(String family, List<String> files) async {
-  final loader = FontLoader(family);
-  var any = false;
-  for (final f in files) {
-    final file = File(f);
-    if (!file.existsSync()) continue;
-    any = true;
-    final bytes = file.readAsBytesSync();
-    loader.addFont(Future.value(ByteData.view(Uint8List.fromList(bytes).buffer)));
-  }
-  if (any) await loader.load();
-}
-
-/// Roboto (লাতিন), Shonar Bangla (বাংলা), Material Symbols (আইকন) — নইলে ছবিতে সব চৌকো বাক্স
-Future<void> _loadFonts() async {
-  await _load('Roboto', ['$_material/roboto-regular.ttf', '$_material/roboto-medium.ttf', '$_material/roboto-bold.ttf']);
-  await _load('Bangla', ['C:/Windows/Fonts/Shonar.ttf', 'C:/Windows/Fonts/Shonarb.ttf']);
-  await _load('MaterialIcons', ['$_material/materialicons-regular.otf']);
-  await _load('packages/material_symbols_icons/MaterialSymbolsOutlined', [_symbols]);
 }

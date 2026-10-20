@@ -19,6 +19,7 @@ import '../../core/navigation/nav_state.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/navigation/top_bar/abos_top_bar.dart';
 import '../../core/navigation/top_bar/avatar_menu.dart';
+import '../../core/navigation/top_bar/top_bar_context.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
@@ -268,6 +269,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (!mounted) return;
     if (cached != null && !cached.isEmpty && _org == null) {
       setState(() => _org = cached);
+      _publishTopBar();
     }
     if (cached?.phoneModules != null &&
         ref.read(phoneModulesProvider) == null) {
@@ -281,6 +283,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ? null
         : OrgSnapshot(
             company: profile.company.name,
+            companyCode: profile.company.code,
             branch: profile.viewAllBranches && profile.branches.length > 1
                 ? 'সব শাখা'
                 : profile.branch.name,
@@ -313,12 +316,48 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       }
       if (fresh != null && !fresh.isEmpty) _org = fresh;
     });
+    _publishTopBar();
     if (fresh != null && !fresh.isEmpty) {
       await (widget.cacheOrg ?? SessionRepository.instance.saveOrg)(fresh);
     }
   }
 
-  Future<void> _openPicker() async {
+  /// ⭐ ভেতরের পর্দার বার ([AbosScreenBar]) একই কোম্পানি, শাখা, ছবি আর একই কাজ পায় — হোম যা জানে তা-ই, নতুন ডাক নয়
+  void _publishTopBar() {
+    final user = ref.read(authStateProvider).user;
+    final org = _org;
+    if (!mounted || user == null) return;
+    final named = org != null && org.company.isNotEmpty;
+    ref.read(topBarContextProvider.notifier).state = TopBarContext(
+      company: named ? org.company : '',
+      companyCode: named ? org.companyCode : '',
+      branch: named ? org.branch : '',
+      designation: _designation,
+      avatar: avatarImage(_avatarUrl),
+      moduleOf: (path) {
+        final row = _tree.screen(path);
+        return row == null ? null : _tree.module(row.module)?.label;
+      },
+      search: (from) => _openSearch(from: from),
+      openNotifications: (_) async {
+        await (widget.openPath ?? _push)('notifications');
+        if (mounted) _loadUnread();
+      },
+      openMenu: (from, top) async {
+        final me = ref.read(authStateProvider).user;
+        if (!mounted || me == null) return;
+        await _openAvatarMenu(top, me, _org, from: from, fromScreen: true);
+      },
+      switchBranch: (_profile?.canSwitch ?? false)
+          ? (_) async {
+              if (mounted) await _openPicker(fromScreen: true);
+            }
+          : null,
+    );
+  }
+
+  /// [fromScreen] — ভেতরের পর্দার বার থেকে ডাকা: বদলালে হোমে ফেরা, যাতে আগের শাখার অঙ্ক কোনো পর্দায় না থাকে
+  Future<void> _openPicker({bool fromScreen = false}) async {
     final profile = _profile;
     if (profile == null || !profile.canSwitch) return;
     final moved = await showWorkspacePicker(
@@ -328,6 +367,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       switcher: widget.switcher,
     );
     if (!moved || !mounted) return;
+    if (fromScreen) GoRouter.maybeOf(context)?.go('/home');
     setState(() => _generation++);
     await _load();
     // ⓘ অপেক্ষার সই কোম্পানি ধরে — নতুন কোম্পানিতে আবার গোনা
@@ -338,10 +378,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   bool _menuOpen = false;
 
   /// ⭐ ছবিতে চাপ — নিজের মেনু (মালিকের নকশা ৩ §৩, পুরো-পাতার নমুনা পাতা ২)
-  Future<void> _openAvatarMenu(double top, AuthUser user, OrgSnapshot? org) async {
-    setState(() => _menuOpen = true);
+  /// [from] — যে পর্দার বার থেকে ডাকা (ভেতরের পর্দা হলে [fromScreen]); নইলে হোম নিজে
+  Future<void> _openAvatarMenu(double top, AuthUser user, OrgSnapshot? org,
+      {BuildContext? from, bool fromScreen = false}) async {
+    if (!fromScreen) setState(() => _menuOpen = true);
     final choice = await showAvatarMenu(
-      context,
+      from ?? context,
       top: top,
       name: user.name,
       designation: _designation,
@@ -350,16 +392,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       canSwitchCompany: (_profile?.companies.length ?? 0) > 1,
     );
     if (!mounted) return;
-    setState(() => _menuOpen = false);
+    if (!fromScreen) setState(() => _menuOpen = false);
     switch (choice) {
       case AvatarChoice.profile:
         await _showProfile(user, org);
       case AvatarChoice.company:
-        if (await mayLeaveUnsaved(context)) await _openPicker();
+        if (await mayLeaveUnsaved(context)) await _openPicker(fromScreen: fromScreen);
       case AvatarChoice.lock:
         await _showLockDelaySheet(context);
       case AvatarChoice.settings:
         _setPage(HomePage.me);
+        if (fromScreen) GoRouter.maybeOf(context)?.go('/home');
       case AvatarChoice.logout:
         await _confirmLogout(context, ref);
       case null:
@@ -367,8 +410,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
   }
 
-  /// নিজের প্রোফাইল — নাম, পদবি, ইমেইল, কোথায়। ⓘ ছবি বদলের সার্ভার-অংশ এখনো আসেনি (ec-এর কাজ); বানানো ডাক নয়,
-  /// তাই বোতামটা বন্ধ আর কারণ লেখা।
+  /// "আমার প্রোফাইল" — কেবল নিজের তথ্য: নাম, পদবি, কোম্পানি · শাখা, ইমেইল (সেশনে যা আছে)। ⓘ ছবি বদল, আমার ফোন আর
+  /// দূর থেকে বের করা সার্ভারের অংশ এলে আসবে — তার আগে কোনো বোতাম বা প্রতিশ্রুতি নয় (মালিক, ২০ অক্টোবর ২০২৬)।
   Future<void> _showProfile(AuthUser user, OrgSnapshot? org) => showDialog<void>(
         context: context,
         builder: (dialog) => AlertDialog(
@@ -376,13 +419,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           icon: AvatarDisc(name: user.name, image: avatarImage(_avatarUrl), size: 64),
           title: Text(user.name),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (_designation != null) Text(_designation!),
-            if (user.email.isNotEmpty) Text(user.email),
+            if (_designation != null) Text(_designation!, key: const ValueKey('profile-designation')),
             if (org != null && !org.isEmpty)
-              Text([org.company, org.branch].where((s) => s.isNotEmpty).join(' · ')),
-            const SizedBox(height: AppSpacing.md),
-            const Text('ছবি বদল শীঘ্রই: সার্ভারের অংশ তৈরি হচ্ছে, এলে এখান থেকেই বদলাবেন।',
-                textAlign: TextAlign.center),
+              Text([org.company, org.branch].where((s) => s.isNotEmpty).join(' · '),
+                  key: const ValueKey('profile-where'), textAlign: TextAlign.center),
+            if (user.email.isNotEmpty) Text(user.email, key: const ValueKey('profile-email')),
           ]),
           actions: [
             TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('বন্ধ করুন')),
@@ -408,6 +449,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (company == null) return;
     setState(() =>
         _org = OrgSnapshot(company: company, branch: record.branch ?? ''));
+    _publishTopBar();
   }
 
   void _setPage(HomePage page) =>
@@ -451,9 +493,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     ));
   }
 
-  Future<void> _openSearch() async {
+  Future<void> _openSearch({BuildContext? from}) async {
     final pick = await showSearch<NavPick?>(
-      context: context,
+      context: from ?? context,
       delegate: NavSearchDelegate(
         tree: _tree,
         // ⓘ গ্রাহকের তালিকার দরজা যাঁর আছে, কেবল তাঁর খোঁজায় দোকান
@@ -548,6 +590,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         appBar: AbosTopBar(
           company: headerNamesOrg ? org.company : '',
           branch: headerNamesOrg ? org.branch : '',
+          companyCode: headerNamesOrg ? org.companyCode : '',
           fallbackTitle: user.name,
           crumbs: switch (page.kind) {
             HomePageKind.home => const [],

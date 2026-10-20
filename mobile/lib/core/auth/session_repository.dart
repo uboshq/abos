@@ -80,9 +80,12 @@ class SessionRepository {
 /// The two names the home header shows. Names only: never an id, and never
 /// used as a cache key — that stays `public_id`-based, see [AuthUser].
 class OrgSnapshot {
-  const OrgSnapshot({required this.company, required this.branch, this.phoneModules});
+  const OrgSnapshot({required this.company, required this.branch, this.phoneModules, this.companyCode = ''});
 
   final String company;
+
+  /// কোম্পানির ছোট নাম (`/me`-র `company.code`, যেমন "ADI") — উপরের বারে পুরো নাম না ধরলে এটা বসে
+  final String companyCode;
   final String branch;
 
   /// The modules `/me` last said are on for the phone — kept so a widget
@@ -97,6 +100,7 @@ class OrgSnapshot {
     return OrgSnapshot(
       company: json['company']?.toString() ?? '',
       branch: json['branch']?.toString() ?? '',
+      companyCode: json['companyCode']?.toString() ?? '',
       phoneModules:
           modules is List ? modules.map((e) => e.toString()).toSet() : null,
     );
@@ -105,6 +109,7 @@ class OrgSnapshot {
   Map<String, dynamic> toJson() => {
         'company': company,
         'branch': branch,
+        if (companyCode.isNotEmpty) 'companyCode': companyCode,
         if (phoneModules != null) 'phoneModules': phoneModules!.toList()..sort(),
       };
 }

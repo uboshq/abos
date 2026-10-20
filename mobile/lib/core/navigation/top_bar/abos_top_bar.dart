@@ -23,6 +23,7 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     super.key,
     required this.company,
     required this.branch,
+    this.companyCode = '',
     this.fallbackTitle = '',
     this.crumbs = const [],
     this.leading = TopBarLeading.menu,
@@ -39,6 +40,8 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.demo,
     this.syncStatus,
     this.pendingCount,
+    this.screenActions = const [],
+    this.bottom,
   });
 
   /// কোম্পানির নাম — খালি হলে [fallbackTitle] (নাম এখনো জানা যায়নি)
@@ -46,6 +49,10 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
 
   /// শাখা — "সব শাখা" বা একটা শাখার নাম
   final String branch;
+
+  /// কোম্পানির ছোট নাম ("ADI") — পুরো নাম মাঝের জায়গায় না ধরলে এটা দেখায় (মাপে, আন্দাজে নয়); পুরো নাম তখনো
+  /// আঙুল চেপে রাখলে আর পর্দা-পাঠকে
+  final String companyCode;
   final String fallbackTitle;
 
   /// "› মডিউল › পাতা" — হোমে খালি
@@ -80,6 +87,13 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
   /// পরীক্ষার জন্য — অ্যাপে [SyncStatus.instance] আর [SyncEngine.pendingCount]
   final SyncStatus? syncStatus;
   final int Function()? pendingCount;
+
+  /// ⭐ পর্দার নিজের বোতাম (ছাঁকনি, ছাপা, ভাগ …) — ডান কোণের তিনটার পাশে নয় (Material 3: সর্বোচ্চ ৩), দ্বিতীয় সারিতে
+  /// "› মডিউল › পাতা"-র ডান প্রান্তে; দুটোর বেশি হলে বাকিগুলো "⋮"-এ ([ScreenActionsRow])। খালি হলে দ্বিতীয় লাইন হোমের মতো।
+  final List<Widget> screenActions;
+
+  /// বারের নিচে (যেমন TabBar) — বারের রঙেই, লেখা বারের লেখার রঙে
+  final PreferredSizeWidget? bottom;
 
   /// ⓘ Scaffold বারকে এর বেশি উঁচু হতে দেয় না — বার নিজের লেখা মেপে এর ভেতরে যত দরকার তত উঁচু হয় (২০০% লেখায় দুই-তিন
   /// লাইন, নিচে অফলাইনের ফিতা)। এটা ছাদ, বারের আসল উচ্চতা নয়।
@@ -262,11 +276,13 @@ class _AbosTopBarState extends State<AbosTopBar> {
               );
               final title = _Title(
                 company: widget.company,
+                code: widget.companyCode,
                 branch: widget.branch,
                 fallback: widget.fallbackTitle,
                 crumbs: widget.crumbs,
                 demo: demo,
                 colors: colors,
+                line2: widget.screenActions.isEmpty,
                 onTap: widget.onOrgTap == null ? null : _tapOrg,
               );
               final actions = [
@@ -289,18 +305,28 @@ class _AbosTopBarState extends State<AbosTopBar> {
               // ⭐ শাখার নাম মাঝের জায়গায় না ধরলে (ছোট ফোন, বড় লেখা) শিরোনাম আইকনের সারির নিচে পুরো চওড়ায় নামে —
               // Material 3-এর medium top app bar; শাখা কাটে না, বার লম্বা হয়
               final middle = box.maxWidth - 10 - 48 * 4 - 8;
-              if (_titleFits(context, middle)) {
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
-                  child: Row(children: [leading, Expanded(child: title), ...actions]),
-                );
-              }
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 6, 6),
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              final fits = _titleFits(context, middle);
+              final rows = <Widget>[
+                if (fits)
+                  Row(children: [leading, Expanded(child: title), ...actions])
+                else ...[
                   Row(children: [leading, const Spacer(), ...actions]),
                   Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: title),
-                ]),
+                ],
+                // ⭐ পর্দার বোতাম — "› মডিউল › পাতা"-র সারির ডান প্রান্তে
+                if (widget.screenActions.isNotEmpty)
+                  Padding(
+                    key: const ValueKey('top-action-row'),
+                    padding: EdgeInsetsDirectional.only(start: fits ? 52 : 12),
+                    child: Row(children: [
+                      Expanded(child: _Crumbs(crumbs: widget.crumbs, demo: demo, colors: colors)),
+                      ScreenActionsRow(actions: widget.screenActions, color: fg),
+                    ]),
+                  ),
+              ];
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
               );
             }),
           ),
@@ -308,12 +334,29 @@ class _AbosTopBarState extends State<AbosTopBar> {
       ),
     );
 
+    final bottom = widget.bottom;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: ThemeData.estimateBrightnessForColor(colors.background) == Brightness.dark
           ? SystemUiOverlayStyle.light
           : SystemUiOverlayStyle.dark,
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         bar,
+        if (bottom != null)
+          Material(
+            key: const ValueKey('top-bottom'),
+            color: colors.background,
+            child: Theme(
+              data: theme.copyWith(
+                tabBarTheme: theme.tabBarTheme.copyWith(
+                  labelColor: fg,
+                  unselectedLabelColor: colors.crumb,
+                  indicatorColor: fg,
+                  dividerColor: Colors.transparent,
+                ),
+              ),
+              child: IconTheme.merge(data: IconThemeData(color: fg), child: bottom),
+            ),
+          ),
         OfflineRibbon(status: widget.syncStatus, pendingCount: widget.pendingCount),
       ]),
     );
@@ -393,15 +436,21 @@ class TopBarColors {
 class _Title extends StatelessWidget {
   const _Title({
     required this.company,
+    required this.code,
     required this.branch,
     required this.fallback,
     required this.crumbs,
     required this.demo,
     required this.colors,
+    this.line2 = true,
     required this.onTap,
   });
 
   final String company;
+  final String code;
+
+  /// দ্বিতীয় লাইন এখানে — পর্দার বোতাম থাকলে সেটা বোতামের সারিতে যায় ([_Crumbs]); পর্দা-পাঠক তবু পুরোটা বলে
+  final bool line2;
   final String branch;
   final String fallback;
   final List<String> crumbs;
@@ -420,33 +469,9 @@ class _Title extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _OrgLine(company: first, branch: branch.trim(), style: line1, chevron: onTap != null),
-        if (crumbs.isNotEmpty || demo)
-          Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 2,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (demo)
-                  DecoratedBox(
-                    key: const ValueKey('top-demo'),
-                    decoration: BoxDecoration(color: colors.pill, borderRadius: BorderRadius.circular(6)),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text('ডেমো',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.onPill, height: 1.3)),
-                    ),
-                  ),
-                if (crumbs.isNotEmpty)
-                  Text('› ${crumbs.join(' › ')}',
-                      key: const ValueKey('top-crumbs'),
-                      softWrap: true,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: colors.crumb, height: 1.25)),
-              ],
-            ),
-          ),
+        _OrgLine(company: first, code: named ? code.trim() : '', branch: branch.trim(), style: line1, chevron: onTap != null),
+        if (line2 && (crumbs.isNotEmpty || demo))
+          Padding(padding: const EdgeInsets.only(top: 1), child: _Crumbs(crumbs: crumbs, demo: demo, colors: colors)),
       ],
     );
 
@@ -481,11 +506,93 @@ class _Title extends StatelessWidget {
   }
 }
 
+/// দ্বিতীয় লাইন: "ডেমো" চিহ্ন আর "› মডিউল › পাতা" — শব্দ ভাঙে না, দরকারে নিচের লাইনে নামে
+class _Crumbs extends StatelessWidget {
+  const _Crumbs({required this.crumbs, required this.demo, required this.colors});
+
+  final List<String> crumbs;
+  final bool demo;
+  final TopBarColors colors;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: 6,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (demo)
+            DecoratedBox(
+              key: const ValueKey('top-demo'),
+              decoration: BoxDecoration(color: colors.pill, borderRadius: BorderRadius.circular(6)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text('ডেমো',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.onPill, height: 1.3)),
+              ),
+            ),
+          if (crumbs.isNotEmpty)
+            Text('› ${crumbs.join(' › ')}',
+                key: const ValueKey('top-crumbs'),
+                softWrap: true,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: colors.crumb, height: 1.25)),
+        ],
+      );
+}
+
+/// ⭐ পর্দার নিজের বোতাম — দুটো পর্যন্ত সরাসরি (৪৮dp, নিজের tooltip সহ); দুটোর বেশি হলে প্রথম দুটো সারিতে, বাকিগুলো "⋮"
+/// মেনুতে (Material 3)। ⓘ মেনুতে যায় কেবল [IconButton] (তার আইকন, tooltip আর চাপ নিয়ে); অন্য ধরনের বোতাম ([TextButton]
+/// …) সারিতেই থাকে, কখনো হারায় না।
+class ScreenActionsRow extends StatelessWidget {
+  const ScreenActionsRow({super.key, required this.actions, required this.color});
+
+  final List<Widget> actions;
+  final Color color;
+
+  /// সারিতে সরাসরি কয়টা
+  static const int shown = 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final fixed = [for (final a in actions) if (a is! IconButton) a];
+    final icons = [for (final a in actions) if (a is IconButton) a];
+    final overflow = actions.length > shown;
+    final room = overflow ? (shown - fixed.length).clamp(0, shown) : icons.length;
+    final direct = icons.take(room).toSet();
+    final spill = icons.skip(room).toList();
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (final a in actions)
+        if (a is! IconButton || direct.contains(a)) a,
+      if (spill.isNotEmpty)
+        PopupMenuButton<int>(
+          key: const ValueKey('top-overflow'),
+          tooltip: 'আরও',
+          icon: Icon(Symbols.more_vert, color: color),
+          itemBuilder: (_) => [
+            for (var i = 0; i < spill.length; i++)
+              PopupMenuItem<int>(
+                value: i,
+                enabled: spill[i].onPressed != null,
+                child: Row(children: [
+                  IconTheme.merge(data: const IconThemeData(size: 20), child: spill[i].icon),
+                  const SizedBox(width: 12),
+                  Flexible(child: Text(spill[i].tooltip ?? '')),
+                ]),
+              ),
+          ],
+          onSelected: (i) => spill[i].onPressed?.call(),
+        ),
+    ]);
+  }
+}
+
 /// প্রথম লাইন: "কোম্পানি · শাখা ▾" — জায়গা হলে এক লাইনে (কোম্পানি "…"), না হলে শাখা নিচের লাইনে, পুরোটা
 class _OrgLine extends StatelessWidget {
-  const _OrgLine({required this.company, required this.branch, required this.style, required this.chevron});
+  const _OrgLine({required this.company, this.code = '', required this.branch, required this.style, required this.chevron});
 
   final String company;
+
+  /// ছোট নাম — পুরো নাম না ধরলে
+  final String code;
   final String branch;
   final TextStyle style;
   final bool chevron;
@@ -499,11 +606,8 @@ class _OrgLine extends StatelessWidget {
     final arrow = chevron
         ? Icon(Symbols.arrow_drop_down, size: _chevron, color: style.color, key: const ValueKey('top-chevron'))
         : null;
-    final companyText = Text(company,
+    Text companyText(String text) => Text(text,
         key: const ValueKey('top-company'), maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: style);
-    if (branch.isEmpty) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [Flexible(child: companyText), if (arrow != null) arrow]);
-    }
 
     return LayoutBuilder(builder: (context, c) {
       double width(String s) {
@@ -518,21 +622,30 @@ class _OrgLine extends StatelessWidget {
         return w;
       }
 
+      // ⭐ পুরো নাম ধরলে পুরো নাম, না ধরলে ছোট নাম ("ADI") — "ADI …"-এর মতো আধা নাম নয় (মালিক, ২০ অক্টোবর ২০২৬)
+      String fit(double room) => width(company) <= room || code.isEmpty ? company : code;
+      if (branch.isEmpty) {
+        return Row(mainAxisSize: MainAxisSize.min, children: [
+          Flexible(child: companyText(fit(c.maxWidth - (chevron ? _chevron : 0)))),
+          if (arrow != null) arrow,
+        ]);
+      }
       final branchWidth = width(' · ') + width(branch) + (chevron ? _chevron : 0);
+      final shown = fit(c.maxWidth - branchWidth);
       // কোম্পানির জন্য অন্তত দুই অক্ষর আর "…"
-      final companyMin = width('${company.characters.take(2)}…');
+      final companyMin = width(shown == code ? code : '${company.characters.take(2)}…');
       final oneLine = c.maxWidth - branchWidth >= companyMin;
       final branchText = Text(branch, key: const ValueKey('top-branch'), softWrap: true, style: style);
       if (oneLine) {
         return Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(child: companyText),
+          Flexible(child: companyText(shown)),
           Text(' · ', style: style),
           branchText,
           if (arrow != null) arrow,
         ]);
       }
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        companyText,
+        companyText(fit(c.maxWidth)),
         Row(mainAxisSize: MainAxisSize.min, children: [Flexible(child: branchText), if (arrow != null) arrow]),
       ]);
     });
