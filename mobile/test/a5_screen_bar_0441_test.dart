@@ -57,7 +57,7 @@ void main() {
           of: find.byKey(const ValueKey('money-in-new')), matching: find.bySemanticsLabel('নতুন আদায়'));
       expect(spoken, findsOneWidget);
       // ⓘ বোতাম আর তার নাম এক কথায় — "নতুন আদায়, বোতাম"
-      expect(tester.getSemantics(spoken), containsSemantics(label: 'নতুন আদায়', isButton: true, hasTapAction: true));
+      expect(tester.getSemantics(spoken), isSemantics(label: 'নতুন আদায়', isButton: true, hasTapAction: true));
       handle.dispose();
     });
   });

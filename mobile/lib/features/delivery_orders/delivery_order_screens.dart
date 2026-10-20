@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 
 import '../../core/navigation/recent_papers.dart';
@@ -168,7 +169,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     // ⭐ এই পাতার মোট — হাতে আসা সারির; ফেরত আর বাতিল সারিতে থাকে, মোটে নয় (সার্ভারের একই নিয়ম)
     final pageSum = rows.fold<double>(0, (sum, o) => _uncounted.contains(o.status) ? sum : sum + o.total);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? _title(widget.api))),
+      appBar: AbosScreenBar(title: widget.title ?? _title(widget.api), module: 'বিক্রয়'),
       floatingActionButton: widget.canWrite
           ? FloatingActionButton.extended(
               key: const ValueKey('do-new'),
@@ -338,7 +339,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('নতুন ${_paper(widget.api)}')),
+      appBar: AbosScreenBar(title: 'নতুন ${_paper(widget.api)}', module: 'বিক্রয়'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -492,7 +493,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   Widget build(BuildContext context) {
     final order = _order;
     return Scaffold(
-      appBar: AppBar(title: Text(order?.no ?? _title(widget.api)), actions: [
+      appBar: AbosScreenBar(title: order?.no ?? _title(widget.api), module: 'বিক্রয়', actions: [
         // ⭐ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)। ⓘ কেবল বিক্রয় আদেশ: সার্ভারের ছাপার দরজায় আলাদা
         // DO মডেলের কাগজ নেই (`sales_delivery_order` অর্ডারের মডেলই বাঁধে)।
         if (order != null && widget.api.forOrders)

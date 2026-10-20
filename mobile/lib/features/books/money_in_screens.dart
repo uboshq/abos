@@ -351,7 +351,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
   Widget build(BuildContext context) {
     final d = _detail;
     return Scaffold(
-      appBar: AppBar(title: Text(d?.row.no ?? 'আদায়'), actions: [
+      appBar: AbosScreenBar(title: d?.row.no ?? 'আদায়', module: 'বিক্রয়', actions: [
         // ⭐ টাকার রসিদ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)
         if (d != null)
           IconButton(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -77,7 +78,7 @@ class _DueListScreenState extends State<DueListScreen> {
         filtered.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('বকেয়া তালিকা')),
+      appBar: const AbosScreenBar(title: 'বকেয়া তালিকা', module: 'গ্রাহক'),
       bottomNavigationBar: rows.isEmpty
           ? null
           : TotalsBar(pageCount: filtered.length, pageSum: shown, allCount: rows.length, allSum: total),

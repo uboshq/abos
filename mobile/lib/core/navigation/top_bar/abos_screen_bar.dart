@@ -60,16 +60,21 @@ class AbosScreenBar extends StatelessWidget implements PreferredSizeWidget {
     return _LiveScreenBar(bar: this);
   }
 
-  /// সেশন ছাড়া — আগের সাদামাটা বার
-  Widget plain(BuildContext context) => AppBar(
-        key: const ValueKey('screen-bar-plain'),
-        title: Text(title),
-        actions: actions,
-        bottom: bottom,
-        leading: onBack == null
-            ? null
-            : IconButton(tooltip: 'পিছনে', onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
-      );
+  /// সেশন ছাড়া — আগের সাদামাটা বার। ⚠️ AppBar নিজে যতটা জায়গা পায় ততটা নেয় (ভেতরে `Align`), আর Scaffold তাকে
+  /// [preferredSize]-এর ৪৮০dp পর্যন্ত দেয় — তাই নিজের মাপে বাঁধা, নইলে পাতার দেহ ৪৮০dp নিচে নেমে যায় (a5, ২০ অক্টোবর ২০২৬)
+  Widget plain(BuildContext context) {
+    final bar = AppBar(
+      key: const ValueKey('screen-bar-plain'),
+      title: Text(title),
+      actions: actions,
+      bottom: bottom,
+      leading: onBack == null
+          ? null
+          : IconButton(tooltip: 'পিছনে', onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
+    );
+    return SizedBox(
+        height: AppBar.preferredHeightFor(context, bar.preferredSize) + MediaQuery.paddingOf(context).top, child: bar);
+  }
 
   /// ← — `maybePop`, যাতে আধা-লেখা ফর্ম আগে জিজ্ঞেস করে; পেছনে কিছু না থাকলে হোমে
   static Future<void> back(BuildContext context) async {

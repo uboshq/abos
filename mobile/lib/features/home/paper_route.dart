@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/paper_kinds.dart';
@@ -60,9 +61,9 @@ class PaperRoute extends StatelessWidget {
       _ => null,
     };
     if (list == null || screen == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('কাগজ')),
-        body: const EmptyState(
+      return const Scaffold(
+        appBar: AbosScreenBar(title: 'কাগজ'),
+        body: EmptyState(
           icon: Icons.description_outlined,
           title: 'এই কাগজটা এই অ্যাপে খোলা যায় না',
           message: 'অ্যাপটা হালনাগাদ করে আবার চেষ্টা করুন।',
