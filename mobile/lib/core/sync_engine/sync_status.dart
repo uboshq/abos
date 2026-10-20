@@ -29,6 +29,10 @@ class SyncStatus extends ChangeNotifier {
   bool _running = false;
   bool _failed = false;
   bool _offline = false;
+
+  /// এই isolate নিজে সিঙ্ক দেখেছে বা নেট শুনছে — অ্যাপের isolate। ⛔ পেছনের isolate-এ (৩০ মিনিটের WorkManager) নতুন
+  /// [SyncStatus] কিছুই জানে না; তখন "এখনো সিঙ্ক হয়নি" লিখলে সঠিক উইজেটটা মিথ্যায় ঢাকা পড়ত।
+  bool _live = false;
   StreamSubscription<List<ConnectivityResult>>? _net;
 
   /// শেষ সফল সিঙ্ক — null মানে এই চালুতে এখনো হয়নি
@@ -49,17 +53,28 @@ class SyncStatus extends ChangeNotifier {
 
   /// ⭐ ঘরের পর্দার "সিঙ্কের অবস্থা" উইজেটের সারাংশ — সার্ভারে নয়, ফোনেরই কথা ([SyncStateWidget.localSummary];
   /// a6, ২০ অক্টোবর ২০২৬)। ⓘ কেবল পড়া: কিছু বদলায় না, কাউকে ডাকে না।
-  Map<String, dynamic> widgetSummary() => {
-        'lastOkAt': _lastOkAt?.toUtc().toIso8601String(),
-        'running': _running,
-        'failed': _failed,
-        'stale': stale,
-        'offline': _offline,
-        'pending': _pending(),
-      };
+  /// ⛔ null — এই isolate কিছু জানে না (পেছনের isolate): উইজেট যেমন আছে তেমন থাকে। জমা কাজ গোনা ভাঙলে 0।
+  Map<String, dynamic>? widgetSummary() {
+    if (!_live) return null;
+    int pending;
+    try {
+      pending = _pending();
+    } catch (_) {
+      pending = 0;
+    }
+    return {
+      'lastOkAt': _lastOkAt?.toUtc().toIso8601String(),
+      'running': _running,
+      'failed': _failed,
+      'stale': stale,
+      'offline': _offline,
+      'pending': pending,
+    };
+  }
 
   /// নেটের খবর শোনা — অ্যাপ শুরুতে একবার
   void watchNetwork({Stream<List<ConnectivityResult>>? changes}) {
+    _live = true;
     if (_net != null) return;
     try {
       _net = (changes ?? Connectivity().onConnectivityChanged).listen((results) {
@@ -76,6 +91,7 @@ class SyncStatus extends ChangeNotifier {
 
   /// একটা গোল ঘিরে — শুরু, তারপর সফল বা ব্যর্থ
   Future<T> track<T>(Future<T> Function() round) async {
+    _live = true;
     _running = true;
     notifyListeners();
     try {
@@ -94,6 +110,7 @@ class SyncStatus extends ChangeNotifier {
 
   @visibleForTesting
   void reset() {
+    _live = false;
     _lastOkAt = null;
     _running = false;
     _failed = false;

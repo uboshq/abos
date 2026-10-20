@@ -61,6 +61,10 @@ void main() {
   test('the summary is the phone\'s own: SyncStatus.widgetSummary, with the queue count', () async {
     var now = DateTime.utc(2026, 10, 20, 9, 58);
     final status = SyncStatus(clock: () => now, pending: () => 5);
+    // ⛔ পেছনের isolate-এর মতো নতুন অবস্থা কিছু জানে না — উত্তর নেই, উইজেট যেমন ছিল তেমন
+    expect(status.widgetSummary(), isNull);
+    expect(SyncStateWidget(status: status).localSummary(), isNull);
+    status.watchNetwork(changes: const Stream.empty());
     expect(status.widgetSummary(),
         {'lastOkAt': null, 'running': false, 'failed': false, 'stale': true, 'offline': false, 'pending': 5});
     await status.track(() async {});
@@ -76,7 +80,11 @@ void main() {
     });
     expect(kind.build(summary, asOf: asOf).hero!.caption!.text, 'শেষ সিঙ্ক: ২ মিনিট আগে');
     await expectLater(status.track(() async => throw StateError('x')), throwsStateError);
-    expect(status.widgetSummary()['failed'], isTrue);
+    expect(status.widgetSummary()!['failed'], isTrue);
+    // ⓘ জমা কাজ গুনতে ভাঙলেও (বাক্স খোলা নেই) উইজেট ভাঙে না
+    final broken = SyncStatus(clock: () => now, pending: () => throw StateError('box closed'));
+    await broken.track(() async {});
+    expect(broken.widgetSummary()!['pending'], 0);
   });
 
   test('LastSyncLabel words are unchanged by the shared "ago"', () {

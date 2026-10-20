@@ -1,5 +1,10 @@
 import '../kit/widget_kind.dart';
+import 'attendance.dart';
+import 'notices.dart';
 import 'owner_board.dart';
+import 'quick_actions.dart';
+import 'sync_state.dart';
+import 'target.dart';
 
 /// ⭐ হোম-স্ক্রিনের সব উইজেটের চাবি — এই ক্রমেই (পরিকল্পনা ৪, অংশ ৯; মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
 ///
@@ -45,5 +50,10 @@ const List<String> widgetKeys = [
 /// <p>⛔ তালিকায় না থাকা উইজেট ফোনে কখনো চালু হয় না (রিসিভার বন্ধ থাকে) — "লেখা হয়নি" আর "অনুমতি নেই" একই ফল।
 final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   // ⓘ এখানে এক লাইন করে — চাবির ক্রমে (sales_today … owner_board)
+  const NoticesWidget(), // notices — a6
+  const QuickActionsWidget(), // quick_actions — a6
+  const TargetWidget(), // target — a6
+  const SyncStateWidget(), // sync_state — a6, ফোনের নিজের সারাংশ
+  const AttendanceWidget(), // attendance — a6
   const OwnerBoardWidget(),
 ];

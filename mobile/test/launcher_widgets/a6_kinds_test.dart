@@ -11,7 +11,7 @@ import 'package:abos_mobile/core/sync_engine/sync_status.dart';
 /// ⭐ a6-এর পাঁচ উইজেট একসাথে: সার্ভারের চাবি, খাঁটি build, আর কোনটা ফোনের নিজের সারাংশ পড়ে (a6, ২০ অক্টোবর ২০২৬)
 void main() {
   final asOf = DateTime.utc(2026, 10, 20, 10, 0);
-  final status = SyncStatus(clock: () => asOf, pending: () => 2);
+  final status = SyncStatus(clock: () => asOf, pending: () => 2)..watchNetwork(changes: const Stream.empty());
   final kinds = <LauncherWidgetKind, Map<String, dynamic>>{
     const NoticesWidget(): {
       'unread': 1,
@@ -26,7 +26,7 @@ void main() {
       ],
     },
     const TargetWidget(): {'month': '2026-10', 'target': '100', 'achieved': '50', 'days_left': 3, 'own': true, 'link': '/sales'},
-    SyncStateWidget(status: status): status.widgetSummary(),
+    SyncStateWidget(status: status): status.widgetSummary()!,
     const AttendanceWidget(): {
       'today': {'status': 'present', 'in_time': '09:12', 'late': false},
       'month': {'present': 1, 'absent': 0, 'leave': 0, 'late': 0},
@@ -56,7 +56,8 @@ void main() {
     for (final kind in kinds.keys) {
       if (kind.key == 'sync_state') {
         expect(kind.localSummary(), isNotNull);
-        expect(const SyncStateWidget().localSummary(), isNotNull);
+        // ⛔ নতুন isolate-এর (পেছনের WorkManager) অবস্থা কিছু দেখেনি — উত্তর নেই, উইজেট যেমন ছিল তেমন থাকে
+        expect(const SyncStateWidget().localSummary(), isNull);
       } else {
         expect(kind.localSummary(), isNull, reason: kind.key);
       }
