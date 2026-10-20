@@ -52,10 +52,10 @@ final class TheEquityStatementWasMissingTest extends TestCase
 
         // মালিক আনলেন ১,০০,০০০; বিক্রি ৩০,০০০; খরচ ১০,০০০.৫০; উত্তোলন ৫,০০০
         // ⓘ বছরের প্রথম দিনেই — শুরুর জের আগের দিনের, তাই এটা "অন্য চলাচল"-এ আসে, শুরুর জেরে নয়
-        $this->post(0, $till, StandardChart::find(StandardChart::OWNER_CAPITAL)->id, '100000');
-        $this->post(5, $till, $income, '30000');
-        $this->post(7, $expense, $till, '10000.50');
-        $this->post(9, StandardChart::find(StandardChart::DRAWINGS)->id, $till, '5000');
+        $this->book(0, $till, StandardChart::find(StandardChart::OWNER_CAPITAL)->id, '100000');
+        $this->book(5, $till, $income, '30000');
+        $this->book(7, $expense, $till, '10000.50');
+        $this->book(9, StandardChart::find(StandardChart::DRAWINGS)->id, $till, '5000');
     }
 
     public function test_before_the_close_every_column_runs_from_opening_to_closing_and_ends_on_the_balance_sheet(): void
@@ -131,7 +131,7 @@ final class TheEquityStatementWasMissingTest extends TestCase
         return $column;
     }
 
-    private function post(int $day, int $debit, int $credit, string $amount): void
+    private function book(int $day, int $debit, int $credit, string $amount): void
     {
         app(PostingEngine::class)->post(sourceType: 'journal_voucher', sourceId: random_int(1, 9_999_999),
             trxDate: Carbon::parse($this->year->starts_on)->addDays($day)->toDateString(), lines: [
