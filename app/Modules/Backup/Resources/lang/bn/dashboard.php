@@ -26,7 +26,7 @@ return [
     'latest_size_hint' => ':date-এর রান — হঠাৎ অনেক ছোট হলে কিছু বাদ পড়েছে',
     'latest_size_none' => 'এখনো নেই',
     'latest_size_none_hint' => 'সব গন্তব্যে পৌঁছানো একটা রানও এখনো খাতায় নেই',
-    'last_30_days' => 'গত ৩০ দিনের রান',
+    'last_30_days' => 'গত 30 দিনের রান',
     'last_30_days_hint' => ':count টা রান — চলমান রান বাদ',
     'run_verified' => 'যাচাই-করা',
     'run_success' => 'সফল, যাচাই হয়নি',

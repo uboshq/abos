@@ -112,8 +112,15 @@ final class TheBarIsAFioriShellBarTest extends TestCase
         $inbox = app(ApprovalEngine::class)->pendingQueryFor($this->owner->fresh())->count();
         $this->assertGreaterThan(0, $inbox, 'প্রস্তুতিটাই ভুল — ইনবক্সে কিছু নেই।');
 
-        $bar = $this->bar($this->page(route('dashboard')));
+        $home = $this->page(route('dashboard'));
+        $bar = $this->bar($home);
         $this->assertMatchesRegularExpression('/data-shell-approvals="'.$inbox.'"/', $bar, '⛔ বারের সংখ্যা ইনবক্সের সংখ্যা নয়।');
+
+        // ⭐ হোমের অনুমোদনের কার্ড — চার্ট নয়, কাগজের তালিকা আর অবস্থার চিপ (মালিকের নমুনা)
+        $card = substr($home, (int) strpos($home, 'data-picture="approval"'));
+        $card = substr($card, 0, (int) strpos($card, '</a>'));
+        $this->assertStringContainsString('data-home-listing', $card, '⛔ হোমের অনুমোদনের কার্ডে তালিকা নেই।');
+        $this->assertStringContainsString('data-paper-state="waiting"', $card, '⛔ তালিকার সারিতে অবস্থার চিপ নেই।');
         $this->assertStringContainsString(e(__('core.notice.approvals_waiting', ['count' => $inbox])), $bar, '⛔ চিহ্নের নামে সংখ্যা নেই।');
 
         $this->app['auth']->forgetGuards();

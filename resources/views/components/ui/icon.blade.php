@@ -376,6 +376,10 @@
         // ⓘ সতর্কবাণীর ফিতা ([[shell.notice-banner]], ২০ অক্টোবর ২০২৬) — Material Symbols-এর info আর close-এর রেখায়
         'info' => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.5h.01"/>',
         'x' => '<path d="m6 6 12 12M18 6 6 18"/>',
+        // ⓘ ছবির মেনু ([[shell.profile-menu]]) — ইমোজির বদলে Material Symbols-এর account_circle, palette, fullscreen-এর রেখায়
+        'person' => '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.3a6.5 6.5 0 0 1 11 0"/>',
+        'palette' => '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1-.9-1.4-.9-2.4 0-.9.7-1.5 1.6-1.5H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>',
+        'fullscreen' => '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',
 
         // ⓘ কাগজের অবস্থা v4 (a6 fbff00bfe) — Material Symbols-এর cancel (প্রত্যাখ্যাত) আর verified (অনুমোদিত)-এর রেখায়
         'cancel' => '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',

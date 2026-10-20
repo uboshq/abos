@@ -127,6 +127,8 @@ final class ApprovalDashboard implements ProvidesDashboard
                     rows: $waiting,
                     empty: __('approval::dashboard.nothing_waiting'),
                     href: route('approval.inbox.index'),
+                    // ⭐ হোমের অনুমোদনের কার্ডে এই তালিকা, চিপসহ — মালিকের অনুমোদিত নমুনা (২০ অক্টোবর ২০২৬)
+                    onHome: true,
                 ),
             ],
         );

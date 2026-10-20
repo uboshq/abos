@@ -40,7 +40,7 @@
         {{-- ছবি ও নাম বদলানোর জায়গা এখানে নয়, প্রোফাইল পাতায়: মেনুর
              ভেতরে আপলোড বসালে সেটিং দুই জায়গায় ভাগ হয়ে যায়। --}}
         <a href="{{ route('profile') }}" role="menuitem" class="{{ $row }}">
-            <span aria-hidden="true">👤</span>
+            <x-ui.icon name="person" :size="16" />
             {{ __('core.profile.title') }}
         </a>
 
@@ -48,7 +48,7 @@
         @if ($canSwitch)
             <button type="button" role="menuitem" class="{{ $row }}" data-menu-company
                     @click="open = false; $dispatch('open-company-switcher')">
-                <span aria-hidden="true">🏢</span>
+                <x-ui.icon name="building" :size="16" />
                 {{ __('core.company.switch') }}
             </button>
         @endif
@@ -56,7 +56,7 @@
         {{-- ভাষা — দুইটাই দেখা যায়, চলতিটা চিহ্নিত; চাপলে সেটাতেই যায় --}}
         <form method="POST" action="{{ route('locale.switch') }}" class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm" data-menu-language>
             @csrf
-            <span aria-hidden="true">🌐</span>
+            <x-ui.icon name="globe" :size="16" />
             <span>{{ __('core.profile.language') }}:</span>
             @foreach (['bn' => 'বাংলা', 'en' => 'English'] as $code => $name)
                 <button type="submit" name="locale" value="{{ $code }}" role="menuitemradio"
@@ -68,7 +68,7 @@
         {{-- রং — ফোনের মতো (যন্ত্রের পছন্দ), আলো, অন্ধকার — অ্যাপের একই তিনটা --}}
         <form method="POST" action="{{ route('theme.switch') }}" class="flex min-h-(--spacing-touch) flex-wrap items-center gap-x-2 px-3 text-sm" data-menu-theme>
             @csrf
-            <span aria-hidden="true">🎨</span>
+            <x-ui.icon name="palette" :size="16" />
             <span>{{ __('core.appearance.colour') }}:</span>
             @foreach (['system', 'light', 'dark'] as $mode)
                 <button type="submit" name="theme" value="{{ $mode }}" role="menuitemradio"
@@ -80,14 +80,14 @@
         {{-- পূর্ণপর্দা — বারের বোতামের একই যন্ত্র ([[fullscreenToggle]]) --}}
         <button type="button" role="menuitem" class="{{ $row }}" data-menu-fullscreen
                 x-data="fullscreenToggle" x-init="sync()" @fullscreenchange.document="sync()" @click="toggle()">
-            <span aria-hidden="true">⛶</span>
+            <x-ui.icon name="fullscreen" :size="16" />
             <span x-text="full ? '{{ __('core.action.exit_fullscreen') }}' : '{{ __('core.action.fullscreen') }}'">{{ __('core.action.fullscreen') }}</span>
         </button>
 
         <a href="{{ route('appearance') }}" role="menuitem"
            class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
                   transition-colors hover:bg-(--color-surface-hover)">
-            <span aria-hidden="true">🎨</span>
+            <x-ui.icon name="settings" :size="16" />
             {{ __('core.appearance.title') }}
         </a>
 

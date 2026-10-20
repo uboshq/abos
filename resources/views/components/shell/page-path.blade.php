@@ -27,7 +27,8 @@
     $company = $user?->currentCompany;
     $context = null;
 
-    if ($company !== null) {
+    // ⓘ হোমে নয় — হোমের নিজের মাথায় কোম্পানি · শাখা আর তারিখ আগেই আছে ([[workspace.home]]); একই কথা দুইবার নয়
+    if ($company !== null && ! request()->routeIs('dashboard')) {
         $today = now()->locale(app()->getLocale())->translatedFormat('l, j F Y');
         $today = strtr($today, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
         $context = implode(' · ', array_filter([

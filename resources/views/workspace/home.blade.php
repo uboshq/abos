@@ -292,8 +292,29 @@
                                     </span>
                                     <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
                                 </div>
+                                {{-- ⭐ মডিউল হোমের জন্য একটা তালিকা চিহ্নিত করলে ([[Listing::$onHome]]) চার্টের বদলে সেটা — প্রথম চারটা সারি,
+                                     প্রথম কলাম (কাগজ · পক্ষ) আর শেষ কলাম (অবস্থার চিপ); মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬ --}}
+                                @if ($row['listing'] ?? null)
+                                    @php
+                                        $homeList = $row['listing'];
+                                        $firstCol = $homeList->columns[0];
+                                        $lastCol = $homeList->columns[count($homeList->columns) - 1];
+                                    @endphp
+                                    <div data-home-listing class="px-4 py-2">
+                                        <p class="mb-1 text-xs text-(--color-ink-muted)">{{ $homeList->label }}</p>
+                                        @forelse ($homeList->rows->take(4) as $listRow)
+                                            <div class="flex min-w-0 items-center justify-between gap-2 border-b border-(--color-border) py-1.5 text-sm last:border-b-0">
+                                                <span class="min-w-0 truncate text-(--color-ink-body)" title="{{ ($firstCol['render'])($listRow) }}">{{ ($firstCol['render'])($listRow) }}</span>
+                                                <span class="shrink-0">{{ ($lastCol['render'])($listRow) }}</span>
+                                            </div>
+                                        @empty
+                                            <p class="py-3 text-sm text-(--color-ink-muted)">{{ $homeList->empty }}</p>
+                                        @endforelse
+                                    </div>
+                                @else
                                 {{-- ⓘ কার্ডটাই লিংক — ভেতরে আলাদা ফোকাসের জায়গা নয় ([[x-dashboard.chart]]-এর `interactive`) --}}
                                 <x-dashboard.chart :panel="$row['panel']" compact :show-range="false" :interactive="false" />
+                                @endif
                             </a>
                         @endforeach
                     </div>

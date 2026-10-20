@@ -130,6 +130,9 @@ final class DashboardEngine
                  */
                 'panel' => $definition->panels[0] ?? null,
 
+                /* ⭐ মডিউল যে তালিকাকে হোমের জন্য চিহ্নিত করে ([[Listing::$onHome]]) — থাকলে হোমের কার্ডে চার্টের বদলে সেটা */
+                'listing' => collect($definition->listings)->first(fn (Listing $listing): bool => $listing->onHome),
+
                 /* ⓘ নতুন হোম (`abos.dashboards_v2`) মডিউলের সব চার্টই দেখায় — একই সংজ্ঞা, একই দরজা, বাড়তি কোয়েরি নেই */
                 'panels' => $definition->panels,
             ];
