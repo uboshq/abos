@@ -74,7 +74,8 @@ class AvatarService
      * একই দরজা দিয়ে পড়া হয়, আর মানুষ ছবি বদলালে বা সরালে পুরনোটা মুছে যায়।
      * ⚠️ পুরনো ফাইলের `/storage/avatars/…` ঠিকানা তবু খোলা থাকে, যতদিন না
      * ফাইলটা সরানো হয় — কোনো পাতা আর ঐ ঠিকানা ছাপে না, কিন্তু আগে কেউ
-     * টুকে রাখলে খোলে। সরানোর এককালীন কাজটা আলাদা, মালিকের হ্যাঁ-র পরে।
+     * টুকে রাখলে খোলে। ⭐ সরানোর এককালীন কাজ: `php artisan abos:faces-private`
+     * (আগে `--dry-run`) — [[self::moveToPrivate()]], fe-র হ্যাঁ, ২০ অক্টোবর ২০২৬।
      */
     private const DIRECTORY = 'faces';
 
@@ -89,6 +90,15 @@ class AvatarService
     public const CHANGED = 'photo_changed';
 
     public const REMOVED = 'photo_removed';
+
+    /** ⓘ [[self::moveToPrivate()]]-এর চার উত্তর */
+    public const MOVE_MOVED = 'moved';
+
+    public const MOVE_SKIPPED = 'skipped';
+
+    public const MOVE_MISSING = 'missing';
+
+    public const MOVE_FAILED = 'failed';
 
     private readonly AuditEngine $audit;
 
@@ -229,6 +239,109 @@ class AvatarService
         }
 
         return null;
+    }
+
+    /**
+     * ⭐ একজনের পুরনো public ছবি ব্যক্তিগত ডিস্কে — এককালীন সরানো (fe-র হ্যাঁ, a6, ২০ অক্টোবর ২০২৬; [[MoveFacesToPrivate]])।
+     *
+     * ── ⛔ ক্রমটাই নিরাপত্তা — মাঝপথে ভাঙলেও প্রত্যেকের ছবি পড়া যায় ───────────
+     * ১. public বাইট পড়া, ছবি কি না দেখা। ২. ব্যক্তিগত ডিস্কে `faces/` নামে লেখা (নতুন আপলোডের একই নাম)। ৩. **ফিরে পড়া**:
+     * একই sha256 আর খোলা যায় এমন ছবি — না মিললে নতুনটা মুছে `FAILED`, public ফাইল আর সারি অক্ষত। ৪. সারি বদল
+     * ট্রানজ্যাকশনে, আর কেবল যদি সারিতে **এখনো** পুরনো পথটাই থাকে (ইতিমধ্যে মানুষটা ছবি বদলালে তাঁর নতুনটা ছোঁয়া হয় না)।
+     * ৫. **তারপরই** public ফাইল মোছা।
+     *
+     * ⓘ ২-এর পরে ভাঙলে: সারি তখনো public-এ, ফাইলও আছে — পড়া যায়; ব্যক্তিগত ডিস্কে একটা বাড়তি ফাইল পড়ে থাকে (ক্ষতিহীন)।
+     * ৪-এর পরে ভাঙলে: দুই কপিই আছে, সারি ব্যক্তিগতটায় — পড়া যায়; আবার চালালে ঐ সারি `SKIPPED` (public কপিটা হাতে মুছতে হয়)।
+     * ⭐ দুইবার চালানো ক্ষতিহীন: `faces/`-এর সারি ছোঁয়াই হয় না।
+     *
+     * @return string একটা `MOVE_*` — `$dryRun`-এ `MOVE_MOVED` মানে "সরানো হত", কিছুই লেখা হয় না
+     */
+    public function moveToPrivate(User $user, bool $dryRun = false): string
+    {
+        $old = (string) $user->getRawOriginal('avatar_path');
+
+        // ⓘ ইতিমধ্যে ব্যক্তিগত, খালি, বা আমাদের দুই ফোল্ডারের বাইরের পথ — ছোঁয়া নয়
+        if ($this->diskFor($old) !== self::LEGACY_DISK) {
+            return self::MOVE_SKIPPED;
+        }
+
+        $public = Storage::disk(self::LEGACY_DISK);
+
+        // ⛔ ফাইলই নেই — সারি যেমন আছে তেমন (ছবির জায়গায় আদ্যক্ষর তো আগেই দেখাচ্ছে); গোনা হয়, জানানো হয়
+        if (! $public->exists($old)) {
+            return self::MOVE_MISSING;
+        }
+
+        $bytes = $public->get($old);
+
+        if (! is_string($bytes) || $this->imageMimeOf($bytes) === null) {
+            return self::MOVE_FAILED;
+        }
+
+        if ($dryRun) {
+            return self::MOVE_MOVED;
+        }
+
+        $extension = match ($this->imageMimeOf($bytes)) {
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+        $new = self::DIRECTORY.'/'.$user->getKey().'-'.bin2hex(random_bytes(8)).'.'.$extension;
+        $private = Storage::disk(self::DISK);
+
+        try {
+            $back = $private->put($new, $bytes) ? $private->get($new) : null;
+        } catch (\Throwable) {
+            $back = null;
+        }
+
+        if (! is_string($back) || ! hash_equals(hash('sha256', $bytes), hash('sha256', $back)) || $this->imageMimeOf($back) === null) {
+            $this->quietlyDelete(self::DISK, $new);
+
+            return self::MOVE_FAILED;
+        }
+
+        $swapped = DB::transaction(fn (): int => DB::table('users')
+            ->where('id', $user->getKey())
+            ->where('avatar_path', $old)
+            ->update(['avatar_path' => $new]));
+
+        if ($swapped !== 1) {
+            // ⓘ মাঝখানে মানুষটা নিজেই ছবি বদলেছেন বা সরিয়েছেন — তাঁর সিদ্ধান্তই থাকে, আমাদের কপিটা যায়
+            $this->quietlyDelete(self::DISK, $new);
+
+            return self::MOVE_SKIPPED;
+        }
+
+        $user->setRawAttributes(['avatar_path' => $new] + $user->getAttributes(), true);
+
+        $this->quietlyDelete(self::LEGACY_DISK, $old);
+
+        return self::MOVE_MOVED;
+    }
+
+    /** ⓘ পথটা কি ইতিমধ্যে ব্যক্তিগত ডিস্কের? — সরানোর হিসাবে "আগেই ব্যক্তিগত" গুনতে */
+    public function onPrivateDisk(?string $path): bool
+    {
+        return $this->diskFor((string) $path) === self::DISK;
+    }
+
+    private function imageMimeOf(string $bytes): ?string
+    {
+        $info = @getimagesizefromstring($bytes);
+        $mime = $info === false ? '' : (string) ($info['mime'] ?? '');
+
+        return in_array($mime, self::ACCEPTED, true) ? $mime : null;
+    }
+
+    private function quietlyDelete(string $disk, string $path): void
+    {
+        try {
+            Storage::disk($disk)->delete($path);
+        } catch (\Throwable) {
+            // ⓘ মোছা না গেলেও সারি ঠিক জায়গায় — বাড়তি কপি ক্ষতিহীন
+        }
     }
 
     private function deleteFile(?string $path): void
