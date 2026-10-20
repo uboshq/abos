@@ -1,5 +1,6 @@
 import '../kit/widget_kind.dart';
 import 'challans_today.dart';
+import 'goods_incoming.dart';
 import 'owner_board.dart';
 import 'stock_alerts.dart';
 
@@ -49,5 +50,6 @@ final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   // ⓘ এখানে এক লাইন করে — চাবির ক্রমে (sales_today … owner_board)
   const StockAlertsWidget(), // stock_alerts (ec)
   const ChallansTodayWidget(), // challans_today (ec)
+  const GoodsIncomingWidget(), // goods_incoming (ec)
   const OwnerBoardWidget(),
 ];
