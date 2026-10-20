@@ -37,7 +37,7 @@ use Illuminate\Support\Carbon;
  * রুটে কোনো `can:` নেই; প্রতিটা ঘর নিজের চাবি দেখে।
  *
  * ── চাবিগুলো, আর চুক্তি থেকে যেখানে সরে আসা ─────────────────────────
- *   sales        sales.invoice.view  ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
+ *   sales        sales.invoice.view  ⭐ amount নিট (বিল − ফেরত) + billed, returned, label (২০ অক্টোবর ২০২৬) ⚠️ চুক্তিতে sales.order.view; কিন্তু সংখ্যাটা
  *                                    বিলের, আর ওয়েবের কার্ডও এই চাবি চায় —
  *                                    ফোন ওয়েবের চেয়ে বেশি দেখাবে না
  *   salesByBranch sales.invoice.view  ⭐ ২০ অক্টোবর ২০২৬ (০.৪.৪১, মালিকের হোম): শাখা ধরে আজকের বিক্রি,
@@ -89,14 +89,24 @@ class DashboardTodayController extends Controller
         $on = fn (string $module): bool => $phone->isOn($module);
 
         if ($on('sales') && $user->can('sales.invoice.view')) {
+            /*
+             * ⭐ নিট বিক্রি — IFRS 15 (fe, ২০ অক্টোবর ২০২৬): `amount` = আজকের বিল − আজকের ফেরত, ওয়েবের কার্ডের হুবহু
+             * ([[SalesMetrics::salesToday()]])। `billed` আর `returned` আলাদা, `label` সার্ভারের বাংলা নাম (অ্যাপ ০.৪.৪১ দেখায়)।
+             * ⓘ পুরনো অ্যাপ কেবল `amount` পড়ে — সেটাই এখন নিট। `count` আগের মতো আজকের পাকা বিলের সংখ্যা।
+             */
+            $billed = self::money(SalesMetrics::billed($today, $today));
+            $returned = self::money(SalesMetrics::returned($today, $today));
             $body['sales'] = [
                 'count' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$today, $today])->count(),
                 'amount' => self::money(SalesMetrics::salesToday()->value()),
+                'billed' => $billed,
+                'returned' => $returned,
+                'label' => __('sales::dashboard.sales_today'),
             ];
 
             /*
              * ⭐ শাখা ধরে আজকের বিক্রি — মালিকের হোমের "আজকের বিক্রি" কার্ড (অ্যাপ ০.৪.৪১, ২০ অক্টোবর ২০২৬)। ⓘ পুরনো অ্যাপ চাবিটা চেনে না।
-             * ⛔ উপরের মোটের একই ভিত ([[SalesMetrics::invoiceTotalByBranch()]]), তাই সারির যোগ = `sales.amount`, পয়সায়।
+             * ⛔ উপরের মোটের একই ভিত ([[SalesMetrics::netByBranch()]] — নিট), তাই সারির যোগ = `sales.amount`, পয়সায়।
              */
             [$body['salesByBranch'], $body['salesByBranchTotal']] = $this->salesByBranch($user, $today);
         }
@@ -195,11 +205,14 @@ class DashboardTodayController extends Controller
      * ⚠️ বিক্রি হয়েছে এমন বন্ধ শাখা, আর শাখাহীন বিল (কেবল "সব শাখা"-তে মোটে ঢোকে) নিজের সারিতে — নইলে যোগ মোটের সাথে মিলত না।
      * ক্রম: টাকা বড় থেকে ছোট, সমান হলে নাম।
      *
-     * @return array{0: list<array{branch_id: ?int, branch: string, amount: string}>, 1: string}
+     * ⭐ `amount` নিট (বিল − ফেরত), পাশে `billed` আর `returned` (IFRS 15, ২০ অক্টোবর ২০২৬)।
+     *
+     * @return array{0: list<array{branch_id: ?int, branch: string, amount: string, billed: string, returned: string}>, 1: string}
      */
     private function salesByBranch(User $user, string $today): array
     {
-        $sold = SalesMetrics::invoiceTotalByBranch($today, $today);
+        // ⭐ নিট, শাখা ধরে — বিল আর ফেরত দুই GROUP BY ([[SalesMetrics::netByBranch()]]); সারির যোগ = `sales.amount`
+        $sold = SalesMetrics::netByBranch($today, $today);
         $reach = $this->scope->viewBranchIds($user);
 
         $branches = Branch::query()->withoutGlobalScopes()
@@ -211,11 +224,11 @@ class DashboardTodayController extends Controller
         $rows = [];
 
         foreach ($branches as $branch) {
-            $rows[] = ['branch_id' => (int) $branch->id, 'branch' => $branch->name(), 'amount' => self::money($sold[(int) $branch->id] ?? '0')];
+            $rows[] = ['branch_id' => (int) $branch->id, 'branch' => $branch->name(), ...self::netRow($sold[(int) $branch->id] ?? null)];
         }
 
         if (isset($sold[0])) {
-            $rows[] = ['branch_id' => null, 'branch' => __('sales::overview.no_branch'), 'amount' => self::money($sold[0])];
+            $rows[] = ['branch_id' => null, 'branch' => __('sales::overview.no_branch'), ...self::netRow($sold[0])];
         }
 
         usort($rows, fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 4) ?: strcmp($a['branch'], $b['branch']));
@@ -227,6 +240,21 @@ class DashboardTodayController extends Controller
         }
 
         return [$rows, $total];
+    }
+
+    /**
+     * এক শাখার নিট সারি — বিক্রি-ফেরত কিছু না থাকলে তিনটাই "0.0000"।
+     *
+     * @param  array{billed: string, returned: string, net: string}|null  $part
+     * @return array{amount: string, billed: string, returned: string}
+     */
+    private static function netRow(?array $part): array
+    {
+        return [
+            'amount' => self::money($part['net'] ?? '0'),
+            'billed' => self::money($part['billed'] ?? '0'),
+            'returned' => self::money($part['returned'] ?? '0'),
+        ];
     }
 
     /** সীমা নেই → null; এক বা একাধিক শাখা → নামগুলো ", " দিয়ে। */
