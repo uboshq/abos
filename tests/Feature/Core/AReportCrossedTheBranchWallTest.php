@@ -227,9 +227,10 @@ final class AReportCrossedTheBranchWallTest extends TestCase
 
         $this->liftClerksLimit();
 
-        $this->assertSame([self::OURS, self::THEIRS], array_column($this->phone()->assertOk()->json('rows'), 'customer_name'));
-        $this->assertSame([self::THEIRS], array_column(
-            $this->phone(['branch_id' => $this->netrakona->id])->assertOk()->json('rows'), 'customer_name'));
+        $names = fn (array $rows) => array_map(fn (string $name) => explode(' · ', $name)[0], array_column($rows, 'customer_name'));
+        $this->assertSame([self::OURS, self::THEIRS], $names($this->phone()->assertOk()->json('rows')));
+        $this->assertSame([self::THEIRS], $names(
+            $this->phone(['branch_id' => $this->netrakona->id])->assertOk()->json('rows')));
     }
 
     // ── নির্ধারিত ফাইল ────────────────────────────────────────────────────
