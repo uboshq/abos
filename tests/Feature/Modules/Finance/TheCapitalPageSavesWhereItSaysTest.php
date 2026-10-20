@@ -12,6 +12,7 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\MovesTheHeaderBranch;
@@ -23,6 +24,9 @@ use Tests\TestCase;
  * ⚠️ যা ভাঙা ছিল: পাতার মাথায় লেখা "কার খাতায় লিখছেন: কোম্পানি — নেত্রকোনা (B)", অথচ বাছা টাকার খাত ময়মনসিংহের (A) বাক্সের।
  * কাগজটা চুপচাপ B-তে বসত, আর টাকা এলে A-র বাক্সে ঢুকত B-র খাতায়। ⭐ এখন থামে, কারণসহ — দেখানো আর বসানো শাখা কখনো নীরবে
  * আলাদা নয়; বাক্স পাতার শাখার হলে আগের মতোই বসে।
+ *
+ * ⚠️ ২০ অক্টোবর: থামা ফর্মের নতুন নামটা মানুষের তালিকায় রয়ে যেত, তাই ঠিক শাখায় ফিরে আবার জমা দিলে নকল-নামের দেয়াল থামাত
+ * (ম্যাকের রানে ধরা)। ⭐ এখন নাম আর সারি এক লেনদেনে।
  *
  * ec, ১৯ অক্টোবর ২০২৬।
  */
@@ -67,6 +71,9 @@ final class TheCapitalPageSavesWhereItSaysTest extends TestCase
 
         $this->assertSame($before, CapitalEntry::query()->withoutGlobalScopes()->count(),
             '⛔ পাতা B লিখল, অথচ A-র বাক্সের মূলধন নীরবে বসে গেল।');
+        // ⛔ থামা ফর্মের নতুন নাম রয়ে গেলে ঠিক শাখায় আবার জমা দিলে "এই নামে আগে থেকেই একটা পক্ষ আছে" — মানুষ আটকে যান (ec, ২০ অক্টোবর ২০২৬)
+        $this->assertSame(0, Person::query()->withoutGlobalScopes()->where('company_id', $company->id)->where('name_en', 'Rahim')->count(),
+            '⛔ মূলধন থামল, অথচ নতুন নামটা মানুষের তালিকায় রয়ে গেল।');
 
         // ⓘ উপরে A — পাতা "… — A" লেখে, বাক্সও A-র: আগের মতোই বসে
         $owner = $this->moveHeaderTo($owner, $a->id);
