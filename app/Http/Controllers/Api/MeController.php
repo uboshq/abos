@@ -161,9 +161,11 @@ class MeController extends Controller
              * আর গ্রুপের মালিকের এক পদবি সব কোম্পানিতে ([[Ownership::groupOwnerTitle()]])। ⛔ পদবি না থাকলে খালি —
              * ফাঁক ভরাতে রোল নয় (মালিক: "namer sate podobi rakbe roll noy")।
              * ⓘ ছবির ঠিকানা পুরো (https://…), ফোন নিজে জুড়ে নিতে পারে না।
+             * ⛔ ২০ অক্টোবর ২০২৬ (a6): ঠিকানাটা টোকেন চাওয়া দরজা (`/api/v1/users/{id}/photo`), public ফাইল নয় — ফোন ছবিটা
+             * `Authorization: Bearer` সহ আনে ([[User::avatarApiUrl()]])।
              */
             'designation' => $this->designationOf($user),
-            'avatar_url' => ($url = $user->avatarUrl()) === null ? null : url($url),
+            'avatar_url' => $user->avatarApiUrl(),
         ];
     }
 

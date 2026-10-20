@@ -224,6 +224,23 @@ Route::prefix('v1')
          */
         Route::get('/me', MeController::class)->name('me');
 
+        /*
+         * ⭐ প্রোফাইল মেনু — আমার ছবি আর আমার ফোনগুলো (অ্যাপ ০.৪.৪১; a6, ২০ অক্টোবর ২০২৬)।
+         *
+         * ⓘ `/me`-র মতোই `can:` নেই: নিজের মুখ, নিজের ফোন — ঢুকতে পারা মানুষকে নিজের ছবি বদলাতে বা চুরি যাওয়া ফোন বের
+         * করতে বাধা দেওয়ার কারণ নেই। ⛔ পাহারা নিয়ামকে: কেবল নিজের সারি ([[MePhotoController]], [[MeDevicesController]]),
+         * অন্যের ফোনের id ৪০৪; ছবির দরজায় সহকর্মী-যাচাই ([[UserPhotoController]])। ⚠️ আপলোডে আলাদা সীমা — মিনিটে ১০টা।
+         */
+        Route::post('/me/photo', [\App\Http\Controllers\Api\MePhotoController::class, 'store'])
+            ->middleware('throttle:10,1,me-photo')->name('me.photo.store');
+        Route::delete('/me/photo', [\App\Http\Controllers\Api\MePhotoController::class, 'destroy'])
+            ->middleware('throttle:10,1,me-photo')->name('me.photo.destroy');
+        Route::get('/users/{user}/photo', \App\Http\Controllers\UserPhotoController::class)
+            ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
+        Route::get('/me/devices', [\App\Http\Controllers\Api\MeDevicesController::class, 'index'])->name('me.devices.index');
+        Route::delete('/me/devices/{device}', [\App\Http\Controllers\Api\MeDevicesController::class, 'destroy'])
+            ->where('device', '[0-9a-f]{32}')->middleware('throttle:30,1,me-devices')->name('me.devices.destroy');
+
         // ⭐ ফোনের FCM টোকেন — নিজের ফোনে নিজের টোকেন ([[PushTokenController]], ২ অক্টোবর ২০২৬)
         Route::post('/devices/push-token', PushTokenController::class)->name('devices.push_token');
 

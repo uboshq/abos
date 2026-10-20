@@ -24,6 +24,8 @@ class ProfileAvatarTest extends TestCase
         parent::setUp();
 
         Storage::fake('public');
+        // ⛔ নতুন ছবি ব্যক্তিগত ডিস্কে — public-এ নয় (a6, ২০ অক্টোবর ২০২৬; [[AvatarService]])
+        Storage::fake('local');
 
         $company = Company::create(['code' => 'AV', 'name_en' => 'Avatar Co']);
         $this->user = User::factory()->create(['name' => 'Al Amin Shuvo']);
@@ -62,9 +64,9 @@ class ProfileAvatarTest extends TestCase
         $path = $this->user->fresh()->avatar_path;
 
         $this->assertNotNull($path);
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
 
-        $size = getimagesizefromstring(Storage::disk('public')->get($path));
+        $size = getimagesizefromstring(Storage::disk('local')->get($path));
 
         $this->assertSame(AvatarService::SIZE, $size[0]);
         $this->assertSame(AvatarService::SIZE, $size[1]);
@@ -85,7 +87,7 @@ class ProfileAvatarTest extends TestCase
             $this->assertStringEndsWith('.jpg', $path);
             $this->assertSame(
                 'image/jpeg',
-                getimagesizefromstring(Storage::disk('public')->get($path))['mime'],
+                getimagesizefromstring(Storage::disk('local')->get($path))['mime'],
             );
         }
     }
@@ -112,7 +114,7 @@ class ProfileAvatarTest extends TestCase
             ->post(route('profile.avatar'), ['avatar' => $this->image(800, 1600)]);
 
         $out = imagecreatefromstring(
-            Storage::disk('public')->get($this->user->fresh()->avatar_path)
+            Storage::disk('local')->get($this->user->fresh()->avatar_path)
         );
 
         $edge = imagesx($out);
@@ -137,8 +139,8 @@ class ProfileAvatarTest extends TestCase
         $second = $this->user->fresh()->avatar_path;
 
         $this->assertNotSame($first, $second, 'নতুন নাম না হলে ব্রাউজার পুরনো ছবিটাই ক্যাশ থেকে দেখাত।');
-        Storage::disk('public')->assertMissing($first);
-        Storage::disk('public')->assertExists($second);
+        Storage::disk('local')->assertMissing($first);
+        Storage::disk('local')->assertExists($second);
     }
 
     public function test_removing_a_photo_clears_the_record_and_the_file(): void
@@ -149,7 +151,7 @@ class ProfileAvatarTest extends TestCase
         $this->actingAs($this->user)->delete(route('profile.avatar.remove'))->assertRedirect();
 
         $this->assertNull($this->user->fresh()->avatar_path);
-        Storage::disk('public')->assertMissing($path);
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_a_non_image_named_like_one_is_refused(): void
@@ -164,6 +166,7 @@ class ProfileAvatarTest extends TestCase
             ->assertSessionHasErrors('avatar');
 
         $this->assertNull($this->user->fresh()->avatar_path);
+        $this->assertSame([], Storage::disk('local')->allFiles('faces'));
         $this->assertSame([], Storage::disk('public')->allFiles('avatars'));
     }
 
@@ -195,7 +198,7 @@ class ProfileAvatarTest extends TestCase
 
         $this->actingAs($this->user)
             ->get(route('profile'))
-            ->assertSee($this->user->fresh()->avatar_path, false);
+            ->assertSee((string) $this->user->fresh()->avatarUrl(), false);
     }
 
     /**
