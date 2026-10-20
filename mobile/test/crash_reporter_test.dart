@@ -76,6 +76,31 @@ void main() {
     expect(store.data, isEmpty, reason: '⛔ পাঠানো সফল, তবু সারিতে রয়ে গেল');
   });
 
+  /// ⛔ সার্ভার টোকেন ছাড়া এক ডাকে ৫টার বেশি ফেরায় (d1b8958d0) — ২০টা জমা থাকলে চার ডাকে যায়, একটাও হারায় না;
+  /// ফেরালে (৪২২) সারি থাকে (a4, fe ২০ অক্টোবর ২০২৬)।
+  test('twenty waiting reports go in four calls of five, none lost, and a refused call keeps them', () async {
+    store.data = [
+      for (var i = 0; i < 20; i++)
+        {'version': '0.4.38', 'screen': '/login', 'error': 'E$i', 'message': '', 'stack': '#0 f$i',
+          'fingerprint': i.toRadixString(16).padLeft(40, '0'), 'times': 1, 'android': '', 'device': ''},
+    ];
+
+    r.send = (_) async => throw Exception('422');
+    await r.flush();
+    expect(store.data, hasLength(20), reason: '⛔ সার্ভার ফেরাল, তবু খবর হারাল');
+
+    r.send = (batch) async => sent.add(batch);
+    for (var call = 0; call < 4; call++) {
+      now = now.add(CrashReporter.minGap);
+      await r.flush();
+    }
+    expect(sent, hasLength(4), reason: '⛔ ২০টা খবর চার ডাকে যায়নি');
+    expect(sent.every((b) => b.length <= 5), isTrue, reason: '⛔ এক ডাকে ৫টার বেশি — সার্ভার টোকেন ছাড়া ফেরাবে');
+    expect(sent.expand((b) => b).map((x) => x['error']).toSet(), {for (var i = 0; i < 20; i++) 'E$i'},
+        reason: '⛔ কোনো খবর হারাল বা দুবার গেল');
+    expect(store.data, isEmpty);
+  });
+
   test('the same error in a burst is sent once, with its count', () async {
     r.send = (_) async => throw Exception('offline');
     final trace = StackTrace.fromString('#0 same (package:abos_mobile/x.dart:12:3)');

@@ -36,8 +36,10 @@ class CrashReporter {
   /// ফোনে জমা সর্বোচ্চ — পুরনোগুলো আগে বাদ
   static const int maxQueued = 30;
 
-  /// এক ডাকে সর্বোচ্চ (সার্ভারের সীমার সমান — AppCrashController)
-  static const int batchSize = 20;
+  /// ⛔ এক ডাকে সর্বোচ্চ ৫ — সার্ভার টোকেন ছাড়া ৫টার বেশি ফেরায় (AppCrashController::BATCH_WITHOUT_TOKEN, fe ২০ অক্টোবর ২০২৬)।
+  /// ⓘ টোকেন থাকলেও ৫: ফোনে রাখা টোকেনের মেয়াদ ফুরালে সার্ভার তাকে "টোকেন ছাড়া" দেখে — ২০টার ঝাঁক তখন ৪২২ খেয়ে সারিতে
+  /// আটকে থাকত, আর একটা খবরও যেত না। ৩০ সেকেন্ডে এক ডাক — মিনিটে ১০টা, যথেষ্ট।
+  static const int batchSize = 5;
 
   /// দুই পাঠানোর মাঝে অন্তত এটুকু — সার্ভারের দরজায় মিনিটে ১০টার সীমা
   static const Duration minGap = Duration(seconds: 30);
