@@ -101,7 +101,7 @@ final class ApprovalFacts
                  */
                 ->when($this->linesCarryProducts($class), fn ($q) => $q->with('lines.product'))
                 // ⓘ গ্রাহকের পয়েন্ট — নামের পাশে (নিচের [[party()]]); কাগজগুলোর সাথে একবারে
-                ->when(method_exists($class, 'customer'), fn ($q) => $q->with(['customer.location.parent', 'customer.branch']))
+                ->when(method_exists($class, 'customer'), fn ($q) => $q->with('customer.location.parent'))
                 ->whereKey(array_values(array_unique($ids)))
                 ->get()
                 ->keyBy(fn (Model $m) => (int) $m->getKey());
@@ -181,15 +181,8 @@ final class ApprovalFacts
                  * nahoy cina zayna"। ফোনের সই-বাক্স আর ওয়েবের ইনবক্স একই সারি দেখায় ([[Customer::pointName()]])।
                  */
                 $point = method_exists($document->{$relation}, 'pointName') ? $document->{$relation}->pointName() : null;
-                /*
-                 * ⭐ আর শাখা — মালিকের স্থায়ী নিয়ম "নাম · পয়েন্ট · শাখা" (১৯ অক্টোবর ২০২৬); fe-র ছবি-যাচাই (২০ অক্টোবর): হোমের
-                 * অনুমোদনের কার্ডে শাখা ছিল না। ⓘ গ্রাহকের নিজের শাখা, কাগজটার নয়; একবারে আনা (`customer.branch`, উপরে)।
-                 */
-                $branch = $relation === 'customer' && method_exists($document->{$relation}, 'branch')
-                    ? $document->{$relation}->branch?->name()
-                    : null;
 
-                return $this->nameOf($document->{$relation}).($point === null ? '' : ' · '.$point).($branch ? ' · '.$branch : '');
+                return $this->nameOf($document->{$relation}).($point === null ? '' : ' · '.$point);
             }
         }
 
