@@ -241,7 +241,10 @@
                     সার্ভারেও একই পাহারা আছে, আর সেটাই আসল পাহারা;
                     এটা কেবল যাতে কেউ চেপে ভুল বার্তা না পান।
                 --}}
-                @if ($summary['agrees'])
+                {{-- ⛔ যিনি খুলেছেন তিনি বন্ধ করেন না (maker-checker, সেবাতেও একই পাহারা) — বোতামের জায়গায় কারণটা --}}
+                @if ($summary['agrees'] && ! \App\Core\Support\MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by))
+                    <p class="text-sm text-amber-700 dark:text-amber-300">{{ __('accounts::recon.needs_another_hand') }}</p>
+                @elseif ($summary['agrees'])
                     <form method="POST" action="{{ route('accounts.reconciliation.confirm', $recon) }}">
                         @csrf
                         <x-ui.button type="submit" tone="primary">

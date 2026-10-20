@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\MakerChecker;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankReconciliation;
@@ -207,10 +208,18 @@ final class BankReconciliationService
      * অঙ্ক না মিললে আটকায়। এটাই পুরো ফিচারটার একমাত্র শক্ত দরজা — এটা
      * না থাকলে যে কেউ একটা মিলকরণ খুলে, কিছু না মিলিয়ে, "হয়ে গেছে" বলে
      * বন্ধ করে দিতে পারত, আর কাগজে দেখাত কাজটা হয়েছে।
+     *
+     * ⛔ যিনি মিলকরণ খুলেছেন তিনি নিজে বন্ধ করেন না — মালিকের maker-checker নিয়ম (১৪ অক্টোবর ২০২৬; নগদ আর মজুদ গোনার একই
+     * [[MakerChecker]], ছাড় কেবল super admin)। ⓘ ব্যাংক মেলানোর বন্ধে দ্বিতীয় হাতের সই SOX-এর একটা মূল নিয়ন্ত্রণ (ERP ১০০%-এর
+     * হিসাবের ফাঁক #২৯, ২০ অক্টোবর ২০২৬)। আগে যিনি খুলে টিক দিলেন তিনিই "মিলেছে" লিখে বন্ধ করতেন।
      */
     public function confirm(BankReconciliation $recon): BankReconciliation
     {
         $this->assertDraft($recon);
+
+        if (! MakerChecker::isAnotherHand(auth()->user(), $recon->created_by === null ? null : (int) $recon->created_by)) {
+            throw ValidationException::withMessages(['status' => __('accounts::recon.needs_another_hand')]);
+        }
 
         $summary = $this->summary($recon);
 
