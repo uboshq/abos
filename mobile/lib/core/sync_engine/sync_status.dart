@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
+import 'sync_engine.dart';
+
 /// ⭐ সিঙ্কের সৎ অবস্থা — শেষ সফল সিঙ্ক কখন, এখন চলছে কি না, শেষটা ব্যর্থ কি না, পুরনো কি না, নেট আছে কি না
 /// (মালিক ১০ অক্টোবর "ক", রিয়েল-টাইম সিঙ্ক; a4-এর পরিকল্পনা সংস্করণ ২ §৪.১ ধাপ ৫; Core App Quality: সৎ অবস্থা দেখানো)।
 ///
 /// <p>ⓘ পর্দা নয়, অবস্থা — নামগুলো a4-এর সাথে ঠিক করা (`lastOkAt`, `running`, `failed`, `stale`, `offline`): মাথার
 /// "শেষ সিঙ্ক" ([LastSyncLabel]-কে a4 বসায় আর রং দেয়) আর অফলাইনের পট্টি (a4-এর `OfflineBanner`) এটাই পড়ে।
 class SyncStatus extends ChangeNotifier {
-  SyncStatus({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  SyncStatus({DateTime Function()? clock, int Function()? pending})
+      : _clock = clock ?? DateTime.now,
+        _pending = pending ?? (() => SyncEngine.instance.pendingCount);
 
   static final SyncStatus instance = SyncStatus();
 
@@ -17,6 +21,9 @@ class SyncStatus extends ChangeNotifier {
   static const Duration staleAfter = Duration(minutes: 15);
 
   final DateTime Function() _clock;
+
+  /// জমা কাজ — সার্ভারে না-যাওয়া সারি ([SyncEngine.pendingCount]; বাক্স না খুললে 0)। পরীক্ষায় নিজের গোনা
+  final int Function() _pending;
 
   DateTime? _lastOkAt;
   bool _running = false;
@@ -39,6 +46,17 @@ class SyncStatus extends ChangeNotifier {
 
   /// ফোনে নেট নেই (ফোনের নিজের কথা — সার্ভারে পৌঁছানোর নিশ্চয়তা নয়; সেটা [failed])
   bool get offline => _offline;
+
+  /// ⭐ ঘরের পর্দার "সিঙ্কের অবস্থা" উইজেটের সারাংশ — সার্ভারে নয়, ফোনেরই কথা ([SyncStateWidget.localSummary];
+  /// a6, ২০ অক্টোবর ২০২৬)। ⓘ কেবল পড়া: কিছু বদলায় না, কাউকে ডাকে না।
+  Map<String, dynamic> widgetSummary() => {
+        'lastOkAt': _lastOkAt?.toUtc().toIso8601String(),
+        'running': _running,
+        'failed': _failed,
+        'stale': stale,
+        'offline': _offline,
+        'pending': _pending(),
+      };
 
   /// নেটের খবর শোনা — অ্যাপ শুরুতে একবার
   void watchNetwork({Stream<List<ConnectivityResult>>? changes}) {
@@ -112,15 +130,20 @@ class LastSyncLabel extends StatelessWidget {
     if (s.offline) return 'নেট নেই — কাজ জমা থাকছে';
     final last = s.lastOkAt;
     if (last == null) return s.failed ? 'সিঙ্ক হয়নি — টেনে আবার চেষ্টা করুন' : 'এখনো সিঙ্ক হয়নি';
-    final ago = now.difference(last);
-    final when = ago.inSeconds < 60
+    return 'শেষ সিঙ্ক: ${ago(last, now)}${s.failed ? ' · শেষবার ব্যর্থ' : ''}';
+  }
+
+  /// ⭐ "এইমাত্র" · "২ মিনিট আগে" · "৩ ঘণ্টা আগে" · "৫ দিন আগে" — খাঁটি, [now] দেওয়া হয় (উইজেটের নোটিশ আর সিঙ্কও এটা পড়ে;
+  /// a6, ২০ অক্টোবর ২০২৬)
+  static String ago(DateTime then, DateTime now) {
+    final d = now.difference(then);
+    return d.inSeconds < 60
         ? 'এইমাত্র'
-        : ago.inMinutes < 60
-            ? '${_bn(ago.inMinutes)} মিনিট আগে'
-            : ago.inHours < 24
-                ? '${_bn(ago.inHours)} ঘণ্টা আগে'
-                : '${_bn(ago.inDays)} দিন আগে';
-    return 'শেষ সিঙ্ক: $when${s.failed ? ' · শেষবার ব্যর্থ' : ''}';
+        : d.inMinutes < 60
+            ? '${_bn(d.inMinutes)} মিনিট আগে'
+            : d.inHours < 24
+                ? '${_bn(d.inHours)} ঘণ্টা আগে'
+                : '${_bn(d.inDays)} দিন আগে';
   }
 
   static String _bn(int n) => n.toString().split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join();
