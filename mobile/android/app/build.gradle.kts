@@ -162,4 +162,6 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.1.1")
     // ⓘ মানুষের আলো/অন্ধকার বাছাই উইজেটে চাপাতে — Material 3-এর স্থির রং-পরিবার (২০ অক্টোবর ২০২৬)
     implementation("androidx.glance:glance-material3:1.1.1")
+    // ⓘ glance-material3 Material 3-এর রং-পরিবার (lightColorScheme, dynamic…) নিজে আনে না — compileOnly
+    implementation("androidx.compose.material3:material3:1.3.1")
 }
