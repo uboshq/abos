@@ -89,6 +89,10 @@ void main() {
           matchesSemantics(label: 'হোম', isButton: true, hasTapAction: true, hasSelectedState: true,
               isSelected: true, isInMutuallyExclusiveGroup: true));
       expect(tester.getSemantics(tab('reports')).label, 'রিপোর্ট');
+      // one sentence per tab: the name and the red count are not read again as loose pieces
+      expect(find.bySemanticsLabel('অনুমোদন'), findsNothing);
+      expect(find.bySemanticsLabel('5'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp(r'^অনুমোদন')), findsOneWidget);
       handle.dispose();
     });
 
