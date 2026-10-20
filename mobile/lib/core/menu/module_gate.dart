@@ -50,6 +50,9 @@ class ModuleGate {
     'deliveries': 'sales',
     'loading': 'sales',
     'principals': 'purchase',
+    // ⭐ প্রিন্সিপালের কমিশন — সার্ভারের দরজা ফোনের ক্রয়ের সুইচ দেখে (৪০৩ `module_off`), প্রিন্সিপালের তালিকার মতোই
+    // (cb, ২০ অক্টোবর ২০২৬); মেনুর ঘর সরবরাহকারীতে ([NavCatalog])
+    'principal-commission': 'purchase',
     'purchases': 'purchase',
     'today': 'sales',
     'products': 'inventory',

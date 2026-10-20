@@ -121,7 +121,7 @@ void main() {
   });
 
   /// ⛔ সাইন-আউট/কোম্পানি বদল — ২১টা নথিই মোছা, ২১টাই বন্ধ, আর পরের ডাকে আগের ETag যায় না
-  test('clear() removes all 21 docs and disables all', () async {
+  test('clear() removes all 22 docs and disables all', () async {
     WidgetHub.kinds = () => const [_FakeKind('sales_today')];
     replies = [ok({'sales_today': {'n': 1}}), ok({'sales_today': {'n': 2}}, etag: '"e2"')];
     await WidgetHub.refresh();
@@ -133,7 +133,7 @@ void main() {
       expect(saved['doc_$key'], isNull, reason: key);
       expect(enabled[key], isFalse, reason: key);
     }
-    expect(enabled.length, 21);
+    expect(enabled.length, 22);
     await WidgetHub.refresh();
     expect(sentEtags.last, isNull, reason: 'আগের মানুষের ETag নয়');
   });
@@ -270,9 +270,9 @@ void main() {
   });
 
   /// ⛔ ২১টা আলাদা চাবি, আর লেখা প্রতিটা উইজেটের চাবি সেই তালিকায় — নইলে সাইন-আউট সেটা মুছত না
-  test('widgetKeys has 21 unique keys and every allKinds key is in widgetKeys', () {
-    expect(widgetKeys.length, 21);
-    expect(widgetKeys.toSet().length, 21);
+  test('widgetKeys has 22 unique keys and every allKinds key is in widgetKeys', () {
+    expect(widgetKeys.length, 22);
+    expect(widgetKeys.toSet().length, 22);
     expect(widgetKeys.first, 'sales_today');
     expect(widgetKeys.last, 'owner_board');
     for (final kind in allKinds) {

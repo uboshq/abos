@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../auth/auth_user.dart';
 import '../auth/session_profile.dart';
@@ -367,6 +368,15 @@ class MenuRepository {
             label: 'প্রিন্সিপাল',
             icon: Icons.business_outlined,
             routeName: 'principals',
+          ),
+        // ⭐ প্রিন্সিপালের কমিশন — ওয়েবের রিপোর্টের একই চাবি `supplier.report` (মালিকের আদেশ "app e dekhate hobe", fe-র
+        // মাধ্যমে; ২০ অক্টোবর ২০২৬)। ⓘ ওয়েবের মেনু-সারিটা ([NativeForWeb.twinOf]) এই ঘরেরই যমজ — দুবার নয়
+        if (user.can('supplier.report'))
+          const MenuItem(
+            key: 'supplier.principal_commission',
+            label: 'প্রিন্সিপালের কমিশন',
+            icon: Symbols.percent,
+            routeName: 'principal-commission',
           ),
         if (user.can('purchase.bill.view'))
           const MenuItem(

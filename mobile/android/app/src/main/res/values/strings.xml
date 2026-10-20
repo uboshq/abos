@@ -50,5 +50,6 @@
     <string name="widget_offers_name">অফার</string>
     <string name="widget_attendance_name">উপস্থিতি</string>
     <string name="widget_bank_reconcile_name">ব্যাংক মেলানো</string>
+    <string name="widget_principal_commission_name">প্রিন্সিপালের কমিশন</string>
     <string name="widget_owner_board_name">মালিকের পূর্ণ পর্দা</string>
 </resources>
