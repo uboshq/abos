@@ -7,6 +7,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/printing/documents_api.dart';
 import '../../core/records/report_record.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../printing/document_actions_sheet.dart';
@@ -395,7 +396,7 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
           if (page != null)
             Container(
               width: double.infinity,
-              color: AppColors.surfaceMuted,
+              color: context.palette.surfaceMuted,
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               // ⚠️ Says which slice of the report is on screen. Without it a

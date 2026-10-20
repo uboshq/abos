@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -92,9 +94,15 @@ void setScreenSize(WidgetTester tester, Size size) {
   addTearDown(tester.view.reset);
 }
 
+/// ⓘ অন্ধকার মোডের পরীক্ষার জন্য (a4, ২০ অক্টোবর ২০২৬) — true হলে [appFrame] অ্যাপের নিজের দুই থিম পরে, অন্ধকারে; নইলে আগের মতো।
+bool appFrameInDark = false;
+
 /// [child]-কে অ্যাপের মতো মোড়ে — লেখার মাপ [textScale]।
 Widget appFrame(Widget child, {double textScale = 1}) => MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: appFrameInDark ? AppTheme.light() : null,
+      darkTheme: appFrameInDark ? AppTheme.dark() : null,
+      themeMode: appFrameInDark ? ThemeMode.dark : ThemeMode.system,
       builder: (context, inner) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
         child: inner!,

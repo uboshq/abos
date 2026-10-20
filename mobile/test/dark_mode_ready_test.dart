@@ -13,8 +13,7 @@ import 'package:abos_mobile/core/theme/app_theme.dart';
 /// তালিকা খালি হলে [AppTheme.mode] [ThemeMode.system] হবে। রঙিন পটের উপর সাদা আইকনের মতো যেটা দুই মোডেই ঠিক, সেই
 /// লাইনে `// dark-ok` লিখে ছাড়।
 const remaining = <String, int>{
-  'lib/features/notifications/notifications_screen.dart': 2,
-  'lib/features/reports/reports_screen.dart': 1,
+
 };
 
 final _fixed = RegExp(r'AppColors\.(surface|surfaceMuted|onSurface|onSurfaceMuted|border|primarySoft)\b|Colors\.(white|black|grey)\b');
@@ -37,7 +36,6 @@ Map<String, int> countFixedColours() {
 void main() {
   test('no screen gains a fixed light colour, and none comes back', () {
     final now = countFixedColours();
-    expect(now, isNotEmpty, reason: 'গোনা চলছে কিনা — খালি হলে নিচের টেস্ট অন্ধকার চালু করতে বলবে');
     for (final MapEntry(key: path, value: n) in now.entries) {
       expect(remaining.containsKey(path), isTrue, reason: '⛔ $path: নতুন বাঁধা রং ($n) — colorScheme থেকে নাও');
       expect(n, lessThanOrEqualTo(remaining[path]!), reason: '⛔ $path: বাঁধা রং বেড়েছে ($n > ${remaining[path]})');
@@ -50,6 +48,24 @@ void main() {
     } else {
       expect(AppTheme.mode, ThemeMode.light, reason: '⛔ বাঁধা রং থাকতে অন্ধকার চালু করলে লেখা মিলিয়ে যায়');
     }
+  });
+
+  testWidgets('the app follows the phone: a phone in dark draws the dark page, a phone in light the light one', (tester) async {
+    Future<Color> pageOn(Brightness phone) async {
+      tester.platformDispatcher.platformBrightnessTestValue = phone;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: AppTheme.mode,
+        home: const Scaffold(body: Text('আজ')),
+      ));
+      await tester.pumpAndSettle();
+      return tester.widget<Material>(find.descendant(of: find.byType(Scaffold), matching: find.byType(Material)).first).color!;
+    }
+
+    expect(await pageOn(Brightness.dark), AppTheme.dark().scaffoldBackgroundColor);
+    expect(await pageOn(Brightness.light), AppTheme.light().scaffoldBackgroundColor);
   });
 
   test('the dark theme reads: body text 4.5:1 or more on the page, the card and the field', () {
