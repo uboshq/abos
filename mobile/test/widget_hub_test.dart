@@ -151,6 +151,19 @@ void main() {
     expect(enabled['sales_today'], isFalse);
   });
 
+  /// ⛔ ফোনের-নিজের উইজেট (সিঙ্কের অবস্থা) পেছনের isolate-এ কিছু না জানলে বন্ধ হয় না — যেমন ছিল তেমন (a6-এর ধরা)
+  test('a phone-only widget that knows nothing yet is left as it was, not switched off', () async {
+    WidgetHub.kinds = () => const [_LocalOnly()];
+    WidgetHub.fetch = () async => WidgetSummary(asOf: now, widgets: const {});
+    saved['doc_sync_state'] = '{"v":1}';
+    enabled['sync_state'] = true;
+
+    await WidgetHub.refresh();
+
+    expect(saved['doc_sync_state'], '{"v":1}', reason: '⛔ ফোনের-নিজের উইজেটের নথি মুছে গেল');
+    expect(enabled['sync_state'], isTrue, reason: '⛔ ফোনের-নিজের উইজেট বন্ধ হয়ে গেল');
+  });
+
   /// ⛔ সাইন-আউট দুই উইজেটের মাঝখানে এলে পরের উইজেট আর লেখা হয় না — আগের মানুষের অঙ্ক নতুন করে ফেরে না
   test('a sign-out between two widgets stops the round: the next widget is not written', () async {
     WidgetHub.kinds = () => const [_FakeKind('sales_today'), _FakeKind('approvals')];
@@ -229,4 +242,11 @@ void main() {
     }
     expect(allKinds.map((k) => k.key).toSet().length, allKinds.length, reason: 'এক চাবি দুবার নয়');
   });
+}
+
+class _LocalOnly extends _FakeKind {
+  const _LocalOnly() : super('sync_state');
+
+  @override
+  bool get answersLocally => true;
 }

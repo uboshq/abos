@@ -131,6 +131,8 @@ class WidgetHub {
         summary = local;
         asOf = clock();
       } else {
+        // ⓘ ফোনের-নিজের উইজেট এই মুহূর্তে কিছু জানে না — যেমন ছিল তেমন; সার্ভারে খুঁজে বন্ধ করা নয়
+        if (kind.answersLocally) return;
         // নেট নেই — এই উইজেট যেমন ছিল তেমন
         if (server == null) return;
         summary = server.widgets[key];

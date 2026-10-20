@@ -34,6 +34,11 @@ abstract class LauncherWidgetKind {
   /// নেওয়া হয়; না-null হলে সার্ভারে এই চাবি খোঁজা হয় না (a6-এর অনুরোধ, ২০ অক্টোবর ২০২৬)।
   Map<String, dynamic>? localSummary() => null;
 
+  /// এই উইজেটের তথ্য কেবল ফোনেরই ([localSummary]) — সার্ভারে কখনো থাকে না। তখন [localSummary] null দিলে (যেমন পেছনের
+  /// নতুন isolate, যেখানে ফোন এখনো কিছু দেখেনি) উইজেট যেমন ছিল তেমন থাকে; সার্ভারে খুঁজে "নেই" ধরে বন্ধ করা নয়
+  /// (a6-এর ধরা, ২০ অক্টোবর ২০২৬)।
+  bool get answersLocally => false;
+
   /// সার্ভারের সারাংশ (`widgets.<key>`) থেকে নথি। সারাংশ না থাকলে (অনুমতি নেই) এটা ডাকা হয় না।
   WidgetDoc build(Map<String, dynamic> summary, {required DateTime asOf});
 }
