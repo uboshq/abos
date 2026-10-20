@@ -24,7 +24,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -207,12 +206,9 @@ class WithdrawalController extends Controller implements HasMiddleware
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // ⛔ নতুন নাম আর উত্তোলন এক লেনদেনে — অন্য শাখার বাক্সে থামলে নামটাও থাকে না (RCV-0143, ec, ২০ অক্টোবর ২০২৬)
-        $withdrawal = DB::transaction(function () use ($data) {
-            $data['person_id'] = $this->people->resolve($data);
+        $data['person_id'] = $this->people->resolve($data);
 
-            return $this->withdrawals->request($data);
-        });
+        $withdrawal = $this->withdrawals->request($data);
 
         $this->keepThePaper($request, $withdrawal);
 
