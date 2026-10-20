@@ -84,6 +84,12 @@
     <div x-show="open" x-cloak x-transition.opacity
          class="pops-onto-page absolute end-0 z-30 mt-1 w-80 overflow-hidden rounded-(--radius-card)
                 border border-(--color-border) bg-(--color-surface-card) shadow-lg">
+        {{-- ⭐ আপনার কাজ — "সই হয়েছে, খাতায় ওঠেনি" বার থেকে এখানে এল (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬; Fiori: কাজ নোটিশের
+             ভেতরে)। ⓘ চিহ্ন আর লিংক যেমন ছিল ([[shell.signed-unposted]]), পাশে নাম লেখা। আমার সইয়ের অপেক্ষা বারেই থাকে। --}}
+        <div class="flex items-center gap-2 border-b border-(--color-border) px-3 py-2 text-sm" data-bell-tasks>
+            <x-shell.signed-unposted />
+            <span>{{ __('core.notify.signed_unposted') }}</span>
+        </div>
 
         @if ($mine->isNotEmpty())
             <div class="flex items-center justify-between border-b border-(--color-border) px-3 py-2">

@@ -354,6 +354,8 @@ final class HrDashboard implements ProvidesDashboard
             points: $points,
             firstLabel: __('hr::field.gross'),
             secondLabel: __('hr::field.net'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             // ⓘ কবে থেকে কবে — মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ
             range: DateRange::label($start, Carbon::today()),
         )];

@@ -1,6 +1,10 @@
 @use('App\Core\Support\Ui')
 
-@props(['menu' => []])
+@props([
+    'menu' => [],
+    /** ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২): সাইডবার বারের নিচ থেকে শুরু, লোগো বারেই — রেলে আর নয় */
+    'underBar' => false,
+])
 
 {{--
     সাইডবার — সেকশন ১৫.২ ও ২০.২।
@@ -118,6 +122,8 @@
            Alpine কেবল গুটানো অবস্থাটা সামলায় — অর্থাৎ সে দেরি করলে
            পাতার চেহারা ভাঙে না, শুধু গুটানো থাকলে খুলতে এক পলক লাগে।
        --}}
+       {{-- ⭐ পুরো চওড়া বারের নিচে — বারের উচ্চতা বাদ দিয়ে আটকে থাকে, যাতে মেনুর শেষটা পর্দার বাইরে না যায় --}}
+       @if ($underBar) style="top: var(--spacing-header); height: calc(100dvh - var(--spacing-header))" data-under-bar @endif
        class="relative sticky top-0 hidden h-dvh shrink-0 md:flex
               md:w-(--spacing-sidebar-icon)
               lg:w-(--spacing-sidebar) xl:w-(--spacing-sidebar-wide)"
@@ -227,6 +233,23 @@
                     $onDashboard = request()->routeIs('dashboard');
                 @endphp
 
+                @if ($underBar)
+                    {{-- ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬): লোগো বারে উঠেছে, তাই রেলের মাথায়
+                         মালিকের নমুনার ⌂ হোম — মডিউলের টাইলের একই মাপ ও একই "এখানে আছি" চিহ্ন। --}}
+                    <a href="{{ route('dashboard') }}" data-rail-home
+                       class="relative flex h-8 w-full items-center justify-center rounded-(--radius-field)
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
+                       @if ($onDashboard) aria-current="page" @endif
+                       aria-label="{{ __('core.menu.dashboard') }}"
+                       title="{{ __('core.menu.dashboard') }}">
+                        <span class="grid size-8 place-items-center" aria-hidden="true"
+                              style="background: {{ $onDashboard ? 'var(--rail-tile-on-bg, var(--rail-tile-bg))' : 'var(--rail-tile-bg)' }};
+                                     border-radius: var(--rail-tile-radius); color: var(--rail-tile-ink);
+                                     @if ($onDashboard) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif">
+                            <x-ui.icon name="home" :size="22" drawn />
+                        </span>
+                    </a>
+                @else
                 <a href="{{ route('dashboard') }}"
                    @class([
                        'mb-1 grid size-10 shrink-0 place-items-center overflow-hidden rounded-[11px]',
@@ -242,6 +265,7 @@
                     <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
                          aria-hidden="true" class="size-7 object-contain">
                 </a>
+                @endif
 
                 {{-- ⚠️ ড্যাশবোর্ডের টাইলটা এখানে আর নেই — মালিকের সিদ্ধান্ত
                      (৩ সেপ্টেম্বর ২০২৬): *"লোগোই যদি হোমের কাজ করে, তাহলে
@@ -428,9 +452,14 @@
                                     ⚠️ চিহ্নটা এখানে নেই, ভেতরের টাইলে —
                                     নিচের মন্তব্য দেখুন। --}}
                                'relative flex h-8 w-full items-center justify-center transition-transform',
+                               {{-- ⭐ কি-বোর্ডে কোথায় আছি দেখা যায় — WCAG 2.4.7/2.4.11 (ওয়েবের মান ধাপ ২, ভুল ৯) --}}
+                               'rounded-(--radius-field) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)',
                                'hover:-translate-y-px' => ! $isActive,
                            ])
+                           {{-- ⓘ পাতা নেই এমন মডিউলও Tab-এ ধরা যায় — তার তালিকাটা focus-within-এ খোলে --}}
+                           @unless ($first) tabindex="0" @endunless
                            @if ($isActive) aria-current="true" @endif
+                           aria-label="{{ $module['label'] }}"
                            title="{{ $module['label'] }}">
 
                             {{-- টাইলের রং, কোণ ও আইকনের রং — তিনটাই টোকেনে।
@@ -591,7 +620,9 @@
                         $itemCount = collect($activeModule['groups'])->flatten(1)->count();
                     @endphp
 
-                    @if ($itemCount >= 10)
+                    {{-- ⭐ পুরো চওড়া বারের নিচে এই ঘর নেই — SAP Fiori: একটাই খোঁজা (ওয়েবের মান ধাপ ২, ভুল ২)। পাতার নাম আধা মনে
+                         থাকলেও বারের খোঁজাতেই মেলে ([[SearchController::pagesMatching()]]), তাই এই কাজ হারায়নি। --}}
+                    @if ($itemCount >= 10 && ! $underBar)
                         <label class="relative shrink-0 px-2 pt-2.5 pb-1">
                             <span class="sr-only">
                                 {{ __('core.a11y.filter_this_menu', ['module' => $activeModule['label']]) }}

@@ -15,11 +15,6 @@
 --}}
 @php
     $user = auth()->user();
-    /*
-     * ⭐ সব নোটিশ এখানে — মানুষের লেখা আগে, যন্ত্রের সতর্কতা পরে ([[StatusNotices::forTicker()]])। মালিক, ১১ অক্টোবর ২০২৬:
-     * *"footer e na dekhiye upore dekhay notice"* — ১০ অক্টোবরের উপরের হলুদ ব্যানার তোলা হলো; ঘণ্টাতেও সব থাকে।
-     */
-    $notices = $user ? app(\App\Core\Services\StatusNotices::class)->forTicker() : [];
 
     /*
      * ⭐ পদবি — মালিকের নির্দেশ, ১৩ সেপ্টেম্বর ২০২৬:
@@ -121,122 +116,10 @@
         <span class="hidden lg:inline">{{ __('core.brand.rights') }}</span>
     </span>
 
-    {{-- নোটিশগুলো — ক্লিকযোগ্য, কারণ জানানোই যথেষ্ট নয়।
-
-         "৩টা খসড়া ভাউচার পোস্ট হয়নি" পড়ে ব্যবহারকারী সমস্যাটা জানেন,
-         কিন্তু কোথায় গিয়ে ঠিক করবেন তা নয়। লিংক ছাড়া বার্তাটা অভিযোগ,
-         সাহায্য নয় (নিয়ম ১)।
-
-         যেগুলোর কোনো পর্দা নেই (ব্যাকআপ — কমান্ড লাইনের কাজ; প্রতিষ্ঠানের
-         নোটিশ — ওটা পড়ার জিনিস), সেখানে লিংকও নেই: যে লিংক কোথাও নিয়ে
-         যায় না সেটাই মৃত লিংক।
-
-         ── লেখাটা চলে, আর কেন ─────────────────────────────────────
-         মালিকের নির্দেশ: "footer e notice cholbe dms er moto"। আগে
-         এখানে স্থির ছিল, আর কারণটা এই মন্তব্যেই লেখা ছিল — সেটা ভুল
-         ছিল দুইভাবে: সিদ্ধান্তটা মালিকের, আর স্থির বারে দ্বিতীয়
-         নোটিশটা কেটে গিয়ে কেউ কোনোদিন দেখত না।
-
-         চলন্ত লেখার আসল আপত্তিগুলো সারানো হয়েছে, এড়ানো হয়নি:
-           • মাউস রাখলে থামে — যে সংখ্যা সরে যাচ্ছে সেটা কেউ ক্লিক
-             করতে পারে না
-           • `motion-safe:` — যিনি চলন্ত জিনিস বন্ধ রেখেছেন তাঁর
-             পর্দায় নড়ে না, তালিকাটা স্থিরই থাকে
-           • কিছু না থাকলে বারটা চুপ — "সব ঠিক আছে" ঘুরতে থাকলে দুই
-             সপ্তাহে মানুষ তাকানো বন্ধ করে দেয়
-
-         দুইটা কপি পাশাপাশি, এক কপির সমান সরে (-৫০%) — এতেই লুপটা
-         নির্বিঘ্ন: প্রথমটা যে মুহূর্তে বেরিয়ে যায়, দ্বিতীয়টা ঠিক
-         সেখানেই থাকে যেখানে প্রথমটা শুরু হয়েছিল।
-
-         ── কেন প্রতিটা কপি অন্তত পর্দার সমান চওড়া, ৩০ আগস্ট ২০২৬ ──
-         নোটিশ যখন একটা বা দুইটা, কপি দুইটা এত ছোট হত যে **দুইটাই
-         একসাথে চোখের সামনে থাকত** — অর্থাৎ একই বাক্য পাশাপাশি দুইবার:
-
-           ● ব্যাকআপ ও খাতা একই ডিস্কে…  ● ব্যাকআপ ও খাতা একই ডিস্কে…
-
-         HP ২৫ আগস্ট এটাকে "ফুটারের বার্তা দুইবার" বলে রিপোর্ট করেছেন,
-         আর ঠিকই করেছেন: পাঠকের কাছে ওটা লুপের কৌশল নয়, একটা ভুল।
-
-         `min-w-full` দিলে দ্বিতীয় কপিটা শুরুতেই পর্দার বাইরে থাকে,
-         আর প্রথমটা বেরিয়ে যেতে যেতে ভেতরে আসে — যেভাবে চলন্ত লেখা
-         পড়ার কথা। --}}
-    <div class="group relative hidden min-w-0 flex-1 overflow-hidden md:block">
-        <div class="inline-flex whitespace-nowrap will-change-transform
-                    motion-safe:animate-[abos-ticker_30s_linear_infinite]
-                    group-hover:[animation-play-state:paused]">
-            @for ($copy = 0; $copy < 2; $copy++)
-                <span class="inline-flex min-w-full items-center gap-6 pe-12"
-                      @if ($copy === 1) aria-hidden="true" @endif>
-                    @foreach ($notices as $notice)
-                        @php
-                            $tone = match ($notice['tone']) {
-                                'danger' => 'text-(--color-danger)',
-                                'pending' => 'text-(--color-badge-pending-ink)',
-                                default => 'text-(--color-badge-info-ink)',
-                            };
-                        @endphp
-
-                        {{-- চলন্ত বারে `truncate` নেই — জায়গার সীমা আর
-                             নেই, পুরো বাক্যটাই ঘুরে আসে। ওটাই স্থির
-                             বারের সবচেয়ে বড় সমস্যা ছিল: দ্বিতীয়
-                             নোটিশটা কেটে গিয়ে কেউ কোনোদিন দেখত না। --}}
-                        @if ($notice['url'])
-                            <a href="{{ $notice['url'] }}"
-                               class="inline-flex items-center gap-1.5 {{ $tone }} hover:underline"
-                               @if ($copy === 1) tabindex="-1" @endif>
-                                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
-                                {{ $notice['text'] }}
-                            </a>
-                        @else
-                            <span class="inline-flex items-center gap-1.5 {{ $tone }}">
-                                <span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
-                                {{ $notice['text'] }}
-                            </span>
-                        @endif
-
-                        {{-- সরানোর ক্রস — কেবল মানুষের লেখা নোটিশে, আর
-                             কেবল যেগুলো সরানো যায়।
-
-                             ⓘ যন্ত্রের সতর্কতায় (ব্যাকআপ হয়নি) কোনো ক্রস নেই —
-                             ⛔ ওটা সরালে সমস্যাটা সরত না, কেবল খবরটা সরত।
-
-                             ⚠️ দ্বিতীয় কপিতে ফর্মটা আঁকা হয় না: লুপের জন্য রাখা
-                             কপিটা `aria-hidden`, আর ওখানে বোতাম রাখলে একই কাজের
-                             দুইটা বোতাম থাকত, যার একটা পর্দায় দেখাই যায় না। --}}
-                        @if ($copy === 0 && ($notice['id'] ?? null) && ($notice['can_dismiss'] ?? false)
-                            && \Illuminate\Support\Facades\Route::has('system_admin.notice.dismiss'))
-                            <form method="POST"
-                                  action="{{ route('system_admin.notice.dismiss', $notice['id']) }}"
-                                  class="inline-flex">
-                                @csrf
-                                <button type="submit"
-                                        title="{{ __('core.notice.dismiss') }}"
-                                        aria-label="{{ __('core.notice.dismiss') }}"
-                                        class="px-1 leading-none opacity-60 hover:opacity-100">&times;</button>
-                            </form>
-                        @endif
-                    @endforeach
-                </span>
-            @endfor
-        </div>
-    </div>
-
-    {{--
-        চলাটার নিয়ম — এখানেই, বিশ্বজনীন স্টাইলশিটে নয়।
-
-        গোটা পণ্যে এটাই একমাত্র অ্যানিমেশন। একটা কম্পোনেন্টের জন্য
-        বিশ্বজনীন ফাইলে কীফ্রেম রাখলে সেটা কম্পোনেন্টটার চেয়েও বেশি
-        দিন বেঁচে থাকে, আর কেউ জানে না কেন আছে।
-    --}}
-    @once
-        <style @nonce>
-            @keyframes abos-ticker {
-                from { transform: translateX(0); }
-                to   { transform: translateX(-50%); }
-            }
-        </style>
-    @endonce
+    {{-- ⭐ ফুটারে কেবল সংস্করণ · © · নাম (ওয়েবের মান ধাপ ২, মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬; ভুল ৮)।
+         ⛔ চলন্ত নোটিশ-বার উঠে গেল — নোটিশ এখন বারের নিচে স্থির ফিতায় ([[shell.notice-banner]], "বিস্তারিত" আর ✕ সহ);
+         নড়া লেখা পড়তে চোখ তাড়া করতে হত আর লিংক চাপার আগে সরে যেত (WCAG 2.2.2)। ফাঁকা অংশটা নাম-পদবিকে ডানে ঠেলে রাখে। --}}
+    <span class="min-w-0 flex-1" aria-hidden="true"></span>
 
     {{-- ⭐ ডান কোণ — কে বসে আছেন। মালিকের নির্দেশ, ১৪ সেপ্টেম্বর ২০২৬:
          *"Dane User Name Desig"*।

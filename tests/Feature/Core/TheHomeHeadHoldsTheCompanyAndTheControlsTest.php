@@ -75,10 +75,12 @@ final class TheHomeHeadHoldsTheCompanyAndTheControlsTest extends TestCase
             $this->assertSame(1, $salesRange->length, '⛔ বিক্রয়ের চার্টে "কবে থেকে কবে" নেই।');
             $this->assertMatchesRegularExpression('/২০২৬|2026/u', $salesRange->item(0)->textContent);
 
-            // ── লম্বা দণ্ডের মান দণ্ডের ভেতরে, খাড়া ──
-            $inside = $page->query('//*[@data-picture="sales"]//span[@data-bar-value and contains(@style, "writing-mode: vertical-rl")]');
-            $this->assertGreaterThan(0, $inside->length, '⛔ বিক্রির লম্বা দণ্ডের মান দণ্ডের ভেতরে নয়।');
-            $this->assertNotSame('', trim($inside->item(0)->textContent));
+            // ── দণ্ডের মান আড়াআড়ি, দেখা যায় (ওয়েবের মান ধাপ ২, ভুল ৬: খাড়া লেখা আর নয়; WCAG 1.4.4 — অন্তত 12px) ──
+            $this->assertSame(0, $page->query('//*[@data-picture="sales"]//*[contains(@style, "writing-mode")]')->length,
+                '⛔ বিক্রির চার্টে খাড়া লেখা ফিরে এসেছে।');
+            $shown = $page->query('//*[@data-picture="sales"]//span[@data-bar-value and not(contains(concat(" ", @class, " "), " sr-only "))]');
+            $this->assertGreaterThan(0, $shown->length, '⛔ বিক্রির দণ্ডের একটা মানও দেখা যায় না।');
+            $this->assertNotSame('', trim($shown->item(0)->textContent));
         }
     }
 

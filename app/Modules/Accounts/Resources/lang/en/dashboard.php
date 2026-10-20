@@ -93,4 +93,7 @@ return [
     'total_expense' => 'Total expense',
     'net_profit' => 'Net profit',
     'income_expense_profit_hint' => 'Net profit = total income − total expense; negative means a loss',
+    // ⭐ টাকার কার্ডের আজকের ঘর (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬)
+    'today_in' => 'In today',
+    'today_out' => 'Out today',
 ];

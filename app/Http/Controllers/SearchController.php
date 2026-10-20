@@ -70,12 +70,47 @@ class SearchController extends Controller
         $hits = $this->search->search($term, $request->user());
 
         return response()->json([
-            'hits' => array_map(fn (SearchHit $hit): array => [
+            // ⭐ পাতা আগে, তারপর কাগজ ([[pagesMatching()]]) — একটাই খোঁজা (ওয়েবের মান ধাপ ২, ভুল ২)
+            'hits' => [...$this->pagesMatching($term, $request->user()), ...array_map(fn (SearchHit $hit): array => [
                 'type' => $hit->type,
                 'no' => $hit->documentNo,
                 'label' => $hit->label,
                 'url' => $hit->url,
-            ], $hits),
+            ], $hits)],
         ]);
+    }
+
+    /**
+     * ⭐ মেনুর পাতাও খোঁজায় — ওয়েবের মান ধাপ ২ (মালিকের আদেশ "100% int. standard", ২০ অক্টোবর ২০২৬; SAP Fiori: একটাই খোঁজা)।
+     *
+     * ⛔ আগে দুইটা খোঁজার ঘর ছিল: বারের "যেকোনো কিছু খুঁজুন" (কেবল কাগজ আর মানুষ) আর মডিউল-প্যানেলের "হিসাব · খুঁজুন" (কেবল
+     * সেই মডিউলের পাতা)। Fiori-তে একটাই — তাই প্যানেলের ঘর উঠে গেল, আর তার কাজ এখানে এল: যিনি পাতাটার নাম আধা মনে রাখেন
+     * ("রোল"), তিনিও একই ঘরে পান। ⓘ মেনু যেমন দেখায় তেমনই — [[MenuBuilder::forUser()]] অনুমতি আর ফোন-সুইচ ছেঁকে দেয়,
+     * পরিকল্পিত (লিংক নেই) পাতা বাদ; ধরন-ঘরে মডিউলের নাম। সর্বোচ্চ ৮টা, যাতে কাগজের ফলও দেখা যায়।
+     *
+     * @return list<array{type: string, no: string, label: string, url: string}>
+     */
+    private function pagesMatching(string $term, ?\App\Models\User $user): array
+    {
+        $needle = mb_strtolower($term);
+        $out = [];
+
+        foreach (app(\App\Core\Services\MenuBuilder::class)->forUser($user) as $module) {
+            foreach (collect($module['groups'] ?? [])->flatten(1) as $item) {
+                $label = (string) ($item['label'] ?? '');
+
+                if (($item['url'] ?? null) === null || ! str_contains(mb_strtolower($label), $needle)) {
+                    continue;
+                }
+
+                $out[$item['url']] = ['type' => (string) $module['label'], 'no' => '', 'label' => $label, 'url' => (string) $item['url']];
+
+                if (count($out) >= 8) {
+                    return array_values($out);
+                }
+            }
+        }
+
+        return array_values($out);
     }
 }

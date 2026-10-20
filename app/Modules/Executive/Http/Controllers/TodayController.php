@@ -87,6 +87,8 @@ final class TodayController extends Controller implements HasMiddleware
             points: array_map(fn (array $p) => ['label' => $p['label'], 'first' => $p['sales'], 'second' => $p['collections']], $trend),
             firstLabel: __('executive::figure.sales'),
             secondLabel: __('executive::figure.collections'),
+            // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+            money: true,
             chart: 'line',
             range: DateRange::label(Carbon::parse($trend[0]['date']), Carbon::parse($trend[count($trend) - 1]['date'])),
         );

@@ -279,6 +279,7 @@ return [
         'delete' => 'Delete',
         'search' => 'Search',
         'search_anything' => 'Search anything…',
+        'search_everything' => 'Search anything: pages, customers, products, paper numbers…',
         'switch_language' => 'Switch language',
         'logout' => 'Log out',
         'more' => 'More',
@@ -345,9 +346,10 @@ return [
         'against_last' => 'against last :day',
         // ⓘ দণ্ডের মাথার ছোট মান ([[Series::short()]], ৪ অক্টোবর ২০২৬)
         'chart_total' => 'Total',
-        'short_thousand' => 'K',
-        'short_lakh' => 'L',
-        'short_crore' => 'Cr',
+        'short_thousand' => 'thousand',
+        'short_lakh' => 'lakh',
+        'short_crore' => 'crore',
+        'taka' => 'Tk',
         // ⓘ মাস্টার তালিকার স্বাস্থ্য ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
         'health_hint' => 'incomplete :missing · same phone/name :same · inactive :off',
         'oldest_is' => 'oldest is :days days old',
@@ -428,6 +430,8 @@ return [
         'theme_note' => 'Light or dark background.',
         'light' => 'Light',
         'dark' => 'Dark',
+        'system' => 'Like the device',
+        'colour' => 'Colour',
         'language' => 'Language',
         'saved' => 'Saved.',
 
@@ -914,7 +918,12 @@ return [
         'code_auto_hint' => 'Leave it empty and one will be given. Type one only to keep a code from your old books.',
     ],
     'notice' => [
+        // ⭐ সতর্কবাণীর ফিতা ([[shell.notice-banner]], ওয়েবের মান ধাপ ২)
+        'details' => 'Details',
+        'close' => 'Close',
+        'more_in_bell' => ':count more notices in the bell',
         'awaiting_mine' => 'Waiting for your decision',
+        'approvals_waiting' => 'Approvals, :count waiting',
         'signed_unposted' => 'Signed, not posted',
         'approvals_later' => 'Approvals — the screen arrives with the module that raises them.',
         'title' => 'Needs attention',
@@ -1192,6 +1201,8 @@ return [
 
     'profile' => [
         'title' => 'My profile',
+        'menu' => ':name — profile and settings',
+        'language' => 'Language',
         'subtitle' => 'Your details, your photo and your password',
         'identity' => 'Identity',
         'name' => 'Name',
@@ -1322,6 +1333,7 @@ return [
 
     // বিজ্ঞপ্তি — একজনের জন্য একটা খবর
     'notify' => [
+        'signed_unposted' => 'Signed, not yet posted',
         'title' => 'For you',
         'none' => 'Nothing new.',
         'mark_all' => 'Mark all read',

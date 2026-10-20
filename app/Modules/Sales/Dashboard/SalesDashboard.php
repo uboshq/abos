@@ -184,6 +184,8 @@ final class SalesDashboard implements ProvidesDashboard
                     points: self::monthly(),
                     firstLabel: __('sales::dashboard.billed'),
                     secondLabel: __('sales::dashboard.collected'),
+                    // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
+                    money: true,
                     // ⓘ বিল বনাম আদায় — পাশাপাশি স্তম্ভই আন্তর্জাতিক রীতি (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
                     chart: 'bars',
                     // ⭐ কোন তারিখ থেকে কোন তারিখ (মালিক, ৫ অক্টোবর ২০২৬) — নতুন রূপে বছরের শুরু, পুরনোয় ছয় মাস আগের ১ তারিখ

@@ -18,8 +18,11 @@ use App\Models\Approval;
 use App\Models\ApprovalDelegation;
 use App\Models\User;
 use App\Models\UserDataScope;
+use App\Modules\Approval\Services\ApprovalFacts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 
 /**
  * অনুমোদন মডিউলের ড্যাশবোর্ড।
@@ -58,6 +61,17 @@ final class ApprovalDashboard implements ProvidesDashboard
 
     public static function dashboard(): DashboardDefinition
     {
+        $waiting = self::seen()->where('status', Approval::PENDING)->latest('id')->limit(8)->get();
+
+        /*
+         * ⭐ প্রতিটা সারিতে "কাগজের নম্বর · পক্ষ" আর ডানে অবস্থার চিপ (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬)।
+         * ⓘ নম্বর আর পক্ষ ইনবক্সের একই উৎস ([[ApprovalFacts::of()]]) — গ্রাহক হলে নাম · পয়েন্ট · শাখা (মালিকের স্থায়ী নিয়ম);
+         * দেখার দেয়াল তোলা হয় না (`false`), কারণ এই তালিকায় অন্যের সারিও থাকে।
+         * ⓘ চিপ `x-ui.paper-state` (paper_states.json): অপেক্ষমাণ = waiting, ধাপ ছক থেকে ([[ApprovalEngine::stepsFor()]])।
+         */
+        $facts = app(ApprovalFacts::class)->of($waiting, false);
+        $engine = app(ApprovalEngine::class);
+
         return new DashboardDefinition(
             title: __('approval::dashboard.title'),
             subtitle: __('approval::dashboard.subtitle'),
@@ -100,19 +114,39 @@ final class ApprovalDashboard implements ProvidesDashboard
                 new Listing(
                     label: __('approval::dashboard.waiting_now'),
                     columns: [
-                        ['key' => 'module', 'label' => __('approval::dashboard.module'), 'width' => '9rem',
-                            'render' => fn ($a) => $a->module],
-                        ['key' => 'action', 'label' => __('approval::dashboard.action'),
-                            'render' => fn ($a) => $a->action],
+                        ['key' => 'paper', 'label' => __('approval::field.paper_no'),
+                            'render' => fn ($a) => self::paperLine($a, $facts[$a->id] ?? [])],
                         ['key' => 'amount', 'label' => __('approval::dashboard.amount'), 'width' => '9rem',
-                            'render' => fn ($a) => $a->amount],
+                            'render' => fn ($a) => $a->amount === null ? '—' : Money::format($a->amount)],
+                        ['key' => 'state', 'label' => __('approval::dashboard.state'), 'width' => '13rem',
+                            'render' => fn ($a) => new HtmlString(Blade::render(
+                                '<x-ui.paper-state state="waiting" :level="$level" :levels="$levels" />',
+                                ['level' => $a->current_level, 'levels' => $engine->stepsFor($a)->count() ?: null],
+                            ))],
                     ],
-                    rows: self::seen()->where('status', Approval::PENDING)->latest('id')->limit(8)->get(),
+                    rows: $waiting,
                     empty: __('approval::dashboard.nothing_waiting'),
                     href: route('approval.inbox.index'),
                 ),
             ],
         );
+    }
+
+    /**
+     * "PAPER-NO · পক্ষ" — নম্বর না থাকলে (কাগজ মুছে গেছে বা দেয়ালের বাইরে) মডিউল আর কাজ, আগের মতো।
+     *
+     * @param  array{no?: ?string, party?: ?string}  $fact
+     */
+    private static function paperLine(Approval $approval, array $fact): string
+    {
+        $no = (string) ($fact['no'] ?? '');
+        $party = (string) ($fact['party'] ?? '');
+
+        if ($no === '') {
+            return trim($approval->module.' · '.$approval->action, ' ·');
+        }
+
+        return $party === '' ? $no : $no.' · '.$party;
     }
 
     /**

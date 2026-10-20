@@ -47,4 +47,5 @@ return [
     'delegations_today_hint' => 'Hand-overs in force today and not withdrawn',
     'my_queue' => 'Waiting for my signature, by module',
     'my_queue_hint' => ':count in my inbox',
+    'state' => 'State',
 ];

@@ -122,6 +122,15 @@ final class Widget
          * কাউকে ঠেলে সরায় না।
          */
         public readonly ?string $definition = null,
+
+        /*
+         * ⭐ প্রধান কার্ডের নিচের ছোট ঘর — যেমন টাকার বাক্সে "আজ এসেছে" · "আজ গেছে" (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬)।
+         * ⓘ প্রতিটা `['label' => …, 'value' => সাজানো অঙ্ক, 'sign' => '+'|'−'|'', 'tone' => 'in'|'out'|'plain']`।
+         * ⛔ যে ঘরের চাবি নেই সেটা এখানে আসেই না — শূন্য দেখানো নয় ("দেখতে পারেন না" আর "শূন্য" দুই কথা)।
+         *
+         * @var list<array{label: string, value: string, sign: string, tone: string}>
+         */
+        public readonly array $tiles = [],
     ) {
         if (! in_array($group, self::GROUPS, true)) {
             throw new InvalidArgumentException(

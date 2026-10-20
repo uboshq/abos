@@ -40,9 +40,13 @@
 
     // ⭐ "সব শাখা" — কেবল যাঁর নাগালে একাধিক শাখা (২৯ সেপ্টেম্বর ২০২৬)
     $viewAll = $branches->count() > 1 && (bool) ($user?->view_all_branches ?? true);
+
+    // ⭐ শাখার নাম সবসময় — একটাই উত্তর, পাতার মাথার সাথে একই ([[ShellFacts::branchLabel()]]; ভুল ৪)
+    $branchLabel = $shell->branchLabel($user, $branch);
 @endphp
 
-<div x-data="{ open: false }" class="relative">
+<div x-data="{ open: false }" class="relative" data-company-branch
+     @open-company-switcher.window="open = true">
     <button type="button"
             @click="open = !open"
             @keydown.escape.window="open = false"
@@ -88,14 +92,14 @@
         --}}
         <span class="min-w-0 max-w-64 truncate text-start text-sm font-semibold
                      text-(--color-ink)">
-            {{ $company->name() }}@if ($viewAll)<span class="font-normal text-(--color-ink-muted)"> ({{ __('core.company.all_branches') }})</span>@elseif ($branch)<span class="font-normal text-(--color-ink-muted)"> ({{ $branch->name() }})</span>@endif
+            {{ $company->name() }}@if ($branchLabel)<span class="font-normal" data-shell-branch> · {{ $branchLabel }}</span>@endif
         </span>
 
         @if ($canSwitch)
             {{-- দুই দিকের তীর, নিচের ক্যারেট নয়: ক্যারেট বলে "আরও আছে",
                  এটা বলে "বদলানো যায়" — আর কাজটা বদলানোই। --}}
             <svg viewBox="0 0 24 24" class="size-4 shrink-0 fill-(--color-ink-muted)" aria-hidden="true">
-                <path d="M7 7h10.2l-2.6-2.6L16 3l5 5-5 5-1.4-1.4 2.6-2.6H7V7Zm10 10H6.8l2.6 2.6L8 21l-5-5 5-5 1.4 1.4L6.8 15H17v2Z"/>
+                <path d="m7 10 5 5 5-5H7Z"/>
             </svg>
         @endif
     </button>

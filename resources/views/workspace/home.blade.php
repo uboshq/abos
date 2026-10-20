@@ -33,10 +33,30 @@
     // ── মূল সূচক — মডিউলের নিজের `kpi` ঘর, ক্রম মডিউলই বলে (sort) ──
     $kpis = $groups['kpi'] ?? [];
 
+    /*
+     * ⭐ "বাজারে বকেয়া" টাকার বাক্সের নিচে (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — মূল সূচকের সেই ঘরটাই সরে আসে, নতুন করে
+     * গোনা নয়: একই উৎস ([[CustomerMetrics::dues()]], হোমের ছাঁকনিসহ), একই চাবি (customer.report), চাবি না থাকলে ঘরটাই নেই।
+     * ⛔ একই সংখ্যা দুইবার নয় — বাক্সে উঠলে মূল সূচকের সারি থেকে বাদ। টাকার বাক্স না থাকলে আগের মতো সূচকের সারিতেই।
+     */
+    $owed = null;
+    if ($position) {
+        foreach ($kpis as $k => $candidate) {
+            if ($candidate->label === __('customer::dashboard.kpi_owed')) {
+                $owed = $candidate;
+                unset($kpis[$k]);
+                $kpis = array_values($kpis);
+                break;
+            }
+        }
+    }
+
     // ⛔ পাতায় যা আগেই আছে তার নাম — ব্যতিক্রম কেন্দ্রে আবার নয়
     $shown = array_map(fn ($w) => $w->label, $kpis);
     if ($position) {
         $shown[] = $position->label;
+    }
+    if ($owed) {
+        $shown[] = $owed->label;
     }
 
     $todo = collect($groups['todo'] ?? [])->reject(fn ($w) => in_array($w->label, $shown, true));
@@ -204,6 +224,26 @@
                         </div>
                     @endforeach
                 </div>
+                {{-- ⭐ আজ এসেছে · আজ গেছে · বাজারে বকেয়া (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — ফোনের আজকের পাতার একই উৎস:
+                     [[AccountsWidgets::todayTiles()]] (accounts.view) আর মূল সূচকের "বাজারে বকেয়া" ঘর (customer.report)।
+                     ⓘ চিহ্ন লেখায় ("+ " / "− "), রং একা কিছু বলে না; চাবি না থাকা ঘর আঁকাই হয় না, শূন্য নয়। --}}
+                @php
+                    $heroTiles = $position->tiles;
+                    if ($owed) {
+                        $heroTiles[] = ['label' => $owed->label, 'value' => $owed->value, 'sign' => '', 'tone' => 'plain'];
+                    }
+                @endphp
+                @if ($heroTiles !== [])
+                    <div data-money-today class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        @foreach ($heroTiles as $heroTile)
+                            <div data-money-tile="{{ $heroTile['tone'] }}" class="min-w-0 rounded-(--radius-field) px-2.5 py-1.5" style="background: rgb(255 255 255 / .08)">
+                                <p class="text-xs text-white/70">{{ $heroTile['label'] }}</p>
+                                <p class="tabular text-base font-semibold"
+                                   @if ($heroTile['tone'] === 'in') style="color: #8ff0c0" @elseif ($heroTile['tone'] === 'out') style="color: #ffc9a3" @endif>{{ $heroTile['sign'] !== '' ? $heroTile['sign'].' ' : '' }}{{ $heroTile['value'] }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </a>
         @endif
     </section>
@@ -243,13 +283,17 @@
                                       bg-(--color-surface-card) shadow-(--shadow-card) transition-colors hover:bg-(--color-surface-hover)">
                                 <div class="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-4 py-2">
                                     <span class="min-w-0">
-                                        <span class="block truncate text-sm font-semibold text-(--color-ink)">{{ $row['name'] }}</span>
-                                        {{-- ⓘ হোমে তারিখ শিরোনামের আগে — নিচে আলাদা লাইন হলে এক পর্দায় ধরত না, পরে বসালে লম্বা শিরোনামে কেটে যেত --}}
-                                        <span class="block truncate text-2xs text-(--color-ink-muted)">@if ($row['panel']->range)<span data-chart-range class="font-semibold text-(--color-ink-body)">{{ $row['panel']->range }}</span> · @endif{{ $row['panel']->label }}</span>
+                                        <span class="block break-words text-sm font-semibold text-(--color-ink)">{{ $row['name'] }}</span>
+                                        {{-- ⓘ হোমে তারিখ শিরোনামের আগে — নিচে আলাদা লাইন হলে এক পর্দায় ধরত না
+                                             ⭐ উপশিরোনাম কাটা নয়, দুই লাইন পর্যন্ত ভাঙে (Material 3: মূল লেখা কখনো কাটা নয়; ২০ অক্টোবর ২০২৬ —
+                                             আগে "ছয় মাসের বি…" দেখাত); তার বেশি হলে পুরোটা title-এ --}}
+                                        <span class="line-clamp-2 block text-xs text-(--color-ink-muted)"
+                                              title="{{ $row['panel']->range ? $row['panel']->range.' · ' : '' }}{{ $row['panel']->label }}">@if ($row['panel']->range)<span data-chart-range class="font-semibold text-(--color-ink-body)">{{ $row['panel']->range }}</span> · @endif{{ $row['panel']->label }}</span>
                                     </span>
                                     <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
                                 </div>
-                                <x-dashboard.chart :panel="$row['panel']" compact :show-range="false" />
+                                {{-- ⓘ কার্ডটাই লিংক — ভেতরে আলাদা ফোকাসের জায়গা নয় ([[x-dashboard.chart]]-এর `interactive`) --}}
+                                <x-dashboard.chart :panel="$row['panel']" compact :show-range="false" :interactive="false" />
                             </a>
                         @endforeach
                     </div>

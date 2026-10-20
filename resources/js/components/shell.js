@@ -148,6 +148,16 @@ export function commandCenter ({ url }) {
         hotkey (event) {
             if (event.defaultPrevented) return
 
+            /*
+             * ⭐ "/" — Fiori আর বড় ওয়েব-অ্যাপের চেনা খোঁজার চাবি (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬)। ⛔ কেবল যখন কেউ কোনো
+             * ঘরে লিখছেন না — নাহলে তারিখ বা ভগ্নাংশ লেখার মাঝে খোঁজা খুলে যেত।
+             */
+            if (event.key === '/' && ! event.ctrlKey && ! event.metaKey && ! event.altKey && ! this.typing(event.target)) {
+                event.preventDefault()
+                this.show()
+                return
+            }
+
             if (! (event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
 
             const key = typeof event.key === 'string' ? event.key.toLowerCase() : ''
@@ -156,6 +166,13 @@ export function commandCenter ({ url }) {
 
             event.preventDefault()
             this.show()
+        },
+
+        /** কেউ কি কোনো লেখার ঘরে আছেন — তখন "/" লেখা, খোঁজা নয় */
+        typing (target) {
+            if (! target || typeof target.closest !== 'function') return false
+
+            return target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]') !== null
         },
 
         close () {

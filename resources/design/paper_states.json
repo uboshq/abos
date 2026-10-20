@@ -1,0 +1,202 @@
+{
+  "name": "paper_states",
+  "version": 1,
+  "about": "The one list of a paper's states for the app chip (mobile/lib/core/status/paper_state.dart) and the web chip. Every state shows icon + colour + Bengali text together (WCAG 2.2 SC 1.4.1). Owner-approved design: E:\\ABOS\\মালিকের-ফাইল\\অ্যাপের-বার-চূড়ান্ত-নকশা-সংস্করণ-৩-২০-অক্টোবর.pdf, part 5 (20 Oct 2026). A change here must be made in paper_state.dart too; mobile/test/status/paper_states_json_test.dart fails on any drift.",
+  "source": {
+    "colours": "SAP Fiori Horizon theme semantic parameters, @sap-theming/theming-base-content 11.29.3 (Theming Engine 15.0.8)",
+    "light": "https://unpkg.com/@sap-theming/theming-base-content@11.29.3/content/Base/baseLib/sap_horizon/css_variables.css",
+    "dark": "https://unpkg.com/@sap-theming/theming-base-content@11.29.3/content/Base/baseLib/sap_horizon_dark/css_variables.css",
+    "repository": "https://github.com/SAP/theming-base-content",
+    "icons": "Material Symbols, Rounded style (https://fonts.google.com/icons), Apache-2.0",
+    "contrast": "WCAG 2.2 SC 1.4.3 (text 4.5:1) and SC 1.4.11; foreground is used for both the text and the icon"
+  },
+  "placeholders": {
+    "level": "the level now waiting for its signature (1-based), from the data",
+    "levels": "how many levels the paper needs, from the data",
+    "digits": "latin (0-9) everywhere, levels too ('2-এর 1', 'ধাপ 1'), as money (owner's খ) and the web's dates ('20 অক্টোবর 2026'); the words stay Bengali (fe, 20 Oct 2026, correcting the sample's '২-এর ১')"
+  },
+  "kinds": {
+    "about": "One state, words by the paper's kind: a key '<name>_<kind>' (e.g. label_bn_stock) replaces '<name>' for that kind when present; otherwise the plain key is used.",
+    "money": "default: vouchers, invoices, bills, receipts, payments, returns of money",
+    "stock": "stock papers: delivery challans, deliveries, stock transfers, stock adjustments",
+    "claim": "expense claims and advances (a money paper with its own words for 'approved')"
+  },
+  "roles": {
+    "neutral": {
+      "fiori": { "foreground": "sapNeutralTextColor", "background": "sapNeutralBackground", "border": "sapNeutralBorderColor" },
+      "light": { "foreground": "#131E29", "background": "#EFF1F2", "border": "#768DA5" },
+      "dark": { "foreground": "#F5F6F7", "background": "#242E38", "border": "#A9B4BE" },
+      "adjusted_for_contrast": true,
+      "adjusted": { "light.border": { "fiori": "#788FA6", "why": "WCAG 2.2 SC 1.4.11: sapNeutralBorderColor #788FA6 is 2.95:1 on sapNeutralBackground #EFF1F2; darkened within its hue (HSL lightness 56.1% to 55.5%) to 3.03:1" } }
+    },
+    "critical": {
+      "fiori": { "foreground": "sapCriticalTextColor", "background": "sapWarningBackground", "border": "sapWarningBorderColor" },
+      "light": { "foreground": "#B44F00", "background": "#FFF8D6", "border": "#DD6100" },
+      "dark": { "foreground": "#FFDF72", "background": "#382700", "border": "#F7BF00" },
+      "adjusted_for_contrast": false
+    },
+    "information": {
+      "fiori": { "foreground": "sapInformativeTextColor", "background": "sapInformationBackground", "border": "sapInformationBorderColor" },
+      "light": { "foreground": "#0064D9", "background": "#E1F4FF", "border": "#0070F2" },
+      "dark": { "foreground": "#4DB1FF", "background": "#00144A", "border": "#4DB1FF" },
+      "adjusted_for_contrast": false
+    },
+    "positive": {
+      "fiori": { "foreground": "sapPositiveTextColor", "background": "sapSuccessBackground", "border": "sapSuccessBorderColor" },
+      "light": { "foreground": "#256F3A", "background": "#F5FAE5", "border": "#30914C" },
+      "dark": { "foreground": "#97DD40", "background": "#11331A", "border": "#6DAD1F" },
+      "adjusted_for_contrast": false
+    },
+    "negative": {
+      "fiori": { "foreground": "sapNegativeTextColor", "background": "sapErrorBackground", "border": "sapErrorBorderColor" },
+      "light": { "foreground": "#AA0808", "background": "#FFEAF4", "border": "#E90B0B" },
+      "dark": { "foreground": "#FA6161", "background": "#350000", "border": "#FA6161" },
+      "adjusted_for_contrast": false
+    }
+  },
+  "states": {
+    "draft": {
+      "label_bn": "খসড়া",
+      "label_bn_without_level": "খসড়া",
+      "semantics_bn": "অবস্থা: খসড়া",
+      "semantics_bn_without_level": "অবস্থা: খসড়া",
+      "label_bn_short": "খসড়া",
+      "label_bn_short_without_level": "খসড়া",
+      "icon": "edit_note",
+      "role": "neutral",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "waiting": {
+      "label_bn": "সইয়ের অপেক্ষায় · {levels}-এর {level}",
+      "label_bn_without_level": "সইয়ের অপেক্ষায়",
+      "semantics_bn": "অবস্থা: সইয়ের অপেক্ষায়, {levels}-এর {level}",
+      "semantics_bn_without_level": "অবস্থা: সইয়ের অপেক্ষায়",
+      "label_bn_short": "{levels}-এর {level}",
+      "label_bn_short_without_level": "সইয়ের অপেক্ষায়",
+      "icon": "hourglass_top",
+      "role": "critical",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "sent_back": {
+      "label_bn": "ফেরত: ঠিক করুন",
+      "label_bn_without_level": "ফেরত: ঠিক করুন",
+      "semantics_bn": "অবস্থা: ফেরত পাঠানো, ঠিক করুন",
+      "semantics_bn_without_level": "অবস্থা: ফেরত পাঠানো, ঠিক করুন",
+      "label_bn_short": "ফেরত",
+      "label_bn_short_without_level": "ফেরত",
+      "icon": "undo",
+      "role": "critical",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "posting": {
+      "label_bn": "সই শেষ · খাতায় উঠছে",
+      "label_bn_stock": "সই শেষ · মজুদে উঠছে",
+      "label_bn_without_level": "সই শেষ · খাতায় উঠছে",
+      "semantics_bn": "অবস্থা: সই শেষ, খাতায় উঠছে",
+      "semantics_bn_stock": "অবস্থা: সই শেষ, মজুদে উঠছে",
+      "semantics_bn_without_level": "অবস্থা: সই শেষ, খাতায় উঠছে",
+      "label_bn_short": "খাতায় উঠছে",
+      "label_bn_short_stock": "মজুদে উঠছে",
+      "label_bn_short_without_level": "খাতায় উঠছে",
+      "icon": "draw",
+      "role": "information",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "posted": {
+      "label_bn": "পাকা · খাতায় উঠেছে",
+      "label_bn_stock": "পাকা · মজুদে উঠেছে",
+      "label_bn_without_level": "পাকা · খাতায় উঠেছে",
+      "semantics_bn": "অবস্থা: পাকা, খাতায় উঠেছে",
+      "semantics_bn_stock": "অবস্থা: পাকা, মজুদে উঠেছে",
+      "semantics_bn_without_level": "অবস্থা: পাকা, খাতায় উঠেছে",
+      "label_bn_short": "পাকা",
+      "label_bn_short_without_level": "পাকা",
+      "icon": "check_circle",
+      "role": "positive",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "cancelled": {
+      "label_bn": "বাতিল",
+      "label_bn_without_level": "বাতিল",
+      "semantics_bn": "অবস্থা: বাতিল",
+      "semantics_bn_without_level": "অবস্থা: বাতিল",
+      "label_bn_short": "বাতিল",
+      "label_bn_short_without_level": "বাতিল",
+      "icon": "do_not_disturb_on",
+      "role": "negative",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "not_posted": {
+      "label_bn": "পোস্ট হয়নি: কারণ দেখুন",
+      "label_bn_without_level": "পোস্ট হয়নি: কারণ দেখুন",
+      "semantics_bn": "অবস্থা: পোস্ট হয়নি",
+      "semantics_bn_without_level": "অবস্থা: পোস্ট হয়নি",
+      "label_bn_short": "পোস্ট হয়নি",
+      "label_bn_short_without_level": "পোস্ট হয়নি",
+      "semantics_hint_bn": "কারণ দেখতে চাপুন",
+      "icon": "warning",
+      "role": "negative",
+      "border_style": "dashed",
+      "tappable": true,
+      "reason_title_bn": "কেন পোস্ট হয়নি",
+      "reason_missing_bn": "কারণ জানা যায়নি — হিসাব বিভাগে জিজ্ঞেস করুন।",
+      "reason_close_bn": "বন্ধ করুন"
+    },
+    "unsent": {
+      "label_bn": "পাঠানো বাকি · নেট এলে নিজেই যাবে",
+      "label_bn_without_level": "পাঠানো বাকি · নেট এলে নিজেই যাবে",
+      "semantics_bn": "অবস্থা: পাঠানো বাকি, নেট এলে নিজেই যাবে",
+      "semantics_bn_without_level": "অবস্থা: পাঠানো বাকি, নেট এলে নিজেই যাবে",
+      "label_bn_short": "পাঠানো বাকি",
+      "label_bn_short_without_level": "পাঠানো বাকি",
+      "icon": "cloud_upload",
+      "role": "information",
+      "border_style": "solid",
+      "tappable": false,
+      "app_only": true
+    },
+    "rejected": {
+      "label_bn": "প্রত্যাখ্যাত",
+      "label_bn_without_level": "প্রত্যাখ্যাত",
+      "semantics_bn": "অবস্থা: প্রত্যাখ্যাত",
+      "semantics_bn_without_level": "অবস্থা: প্রত্যাখ্যাত",
+      "label_bn_short": "প্রত্যাখ্যাত",
+      "label_bn_short_without_level": "প্রত্যাখ্যাত",
+      "icon": "cancel",
+      "role": "negative",
+      "border_style": "solid",
+      "tappable": false
+    },
+    "approved": {
+      "label_bn": "অনুমোদিত",
+      "label_bn_claim": "অনুমোদিত · টাকার অপেক্ষায়",
+      "label_bn_without_level": "অনুমোদিত",
+      "semantics_bn": "অবস্থা: অনুমোদিত",
+      "semantics_bn_claim": "অবস্থা: অনুমোদিত, টাকার অপেক্ষায়",
+      "semantics_bn_without_level": "অবস্থা: অনুমোদিত",
+      "label_bn_short": "অনুমোদিত",
+      "label_bn_short_claim": "অনুমোদিত · টাকার অপেক্ষায়",
+      "label_bn_short_without_level": "অনুমোদিত",
+      "icon": "verified",
+      "role": "information",
+      "border_style": "solid",
+      "tappable": false
+    }
+  },
+  "border_contrast_measured": {
+    "about": "WCAG 2.2 SC 1.4.11 (3:1) for every drawn border: [against the chip background, lowest against the page surfaces]. Light pages #FFFFFF and #F3F6F7; dark pages Fiori #1D232A/#12171C here, the app's own surfaces in mobile/test/status/paper_state_contrast_test.dart. Compact list chips draw no border except not_posted's dashed one.",
+    "light": { "neutral": [3.03, 3.16], "critical": [3.40, 3.34], "information": [4.04, 4.20], "positive": [3.73, 3.66], "negative": [4.06, 4.28] },
+    "dark": { "neutral": [6.54, 7.51], "critical": [8.51, 9.36], "information": [7.55, 6.82], "positive": [5.06, 5.77], "negative": [6.03, 5.24] }
+  },
+  "contrast_measured": {
+    "about": "WCAG relative-luminance ratios, foreground against the chip background and against the app page surfaces (light: #FFFFFF card, #F3F6F7 page; dark: Fiori #1D232A/#12171C here, the app's own dark surfaces are checked in mobile/test/status/paper_state_contrast_test.dart). All pass 4.5:1 unadjusted.",
+    "light": { "neutral": 14.88, "critical": 4.84, "information": 4.86, "positive": 5.77, "negative": 6.67 },
+    "dark": { "neutral": 12.74, "critical": 11.01, "information": 7.55, "positive": 8.42, "negative": 6.03 }
+  }
+}
