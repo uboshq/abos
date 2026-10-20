@@ -209,7 +209,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                       no: '',
                       party: u.party,
                       amount: u.amount,
-                      chip: const AppStatusChip.compact(state: PaperState.unsent),
+                      chip: const AppStatusChip.compact(state: PaperState.unsent, kind: PaperKind.money),
                     ),
                   for (final row in _rows)
                     PaperRow(
@@ -221,7 +221,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                           : '${dayOf(row.date)} · ${MoneyInRow.methodLabel(row.method)}',
                       amount: row.amount,
                       // ⓘ তালিকা কেবল পাকা আদায়ের (সার্ভার POSTED ছাঁকে) — তাই "পাকা"
-                      chip: const AppStatusChip.compact(state: PaperState.posted),
+                      chip: const AppStatusChip.compact(state: PaperState.posted, kind: PaperKind.money),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                           builder: (_) => MoneyInScreen(id: row.id, api: widget.api))),
                     ),
@@ -351,7 +351,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
   Widget build(BuildContext context) {
     final d = _detail;
     return Scaffold(
-      appBar: AppBar(title: Text(d?.row.no ?? 'আদায়'), actions: [
+      appBar: AbosScreenBar(title: d?.row.no ?? 'আদায়', module: 'বিক্রয়', actions: [
         // ⭐ টাকার রসিদ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)
         if (d != null)
           IconButton(

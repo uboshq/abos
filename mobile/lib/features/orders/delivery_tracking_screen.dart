@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/tracking_api.dart';
 import '../../core/records/list_queries.dart';
@@ -92,7 +93,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     final rows = TrackingListQuery.apply(list?.rows ?? const <TrackedSale>[],
         sort: _sort);
     return Scaffold(
-      appBar: AppBar(title: const Text('ডেলিভারি ট্র্যাকিং')),
+      appBar: const AbosScreenBar(title: 'ডেলিভারি ট্র্যাকিং', module: 'বিক্রয়'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -256,7 +257,7 @@ class _StoryScreenState extends State<_StoryScreen> {
   Widget build(BuildContext context) {
     final sale = _sale ?? widget.sale;
     return Scaffold(
-      appBar: AppBar(title: Text(sale.no)),
+      appBar: AbosScreenBar(title: sale.no, module: 'বিক্রয়'),
       // ⭐ টেনে নামালে নতুন — মালিকের আদেশ (ধাপ ২)
       body: RefreshIndicator(
         onRefresh: _load,

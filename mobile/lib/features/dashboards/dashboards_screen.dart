@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/dashboard/dashboard_api.dart';
 import '../../core/navigation/nav_catalog.dart';
@@ -57,7 +58,7 @@ class _DashboardsScreenState extends State<DashboardsScreen> {
     final entries = _entries;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ব্যবসার ড্যাশবোর্ড')),
+      appBar: const AbosScreenBar(title: 'ব্যবসার ড্যাশবোর্ড', module: 'ড্যাশবোর্ড'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -155,8 +156,7 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
     final d = _dashboard;
 
     return Scaffold(
-      appBar: AppBar(
-          title: Text(d?.title.isNotEmpty == true ? d!.title : widget.name)),
+      appBar: AbosScreenBar(title: d?.title.isNotEmpty == true ? d!.title : widget.name, module: 'ড্যাশবোর্ড'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -263,8 +263,7 @@ class _SalesOverviewScreenState extends State<SalesOverviewScreen> {
     final d = _dashboard;
 
     return Scaffold(
-      appBar: AppBar(
-          title: Text(d?.title.isNotEmpty == true ? d!.title : 'বিক্রয়ের হালচাল')),
+      appBar: AbosScreenBar(title: d?.title.isNotEmpty == true ? d!.title : 'বিক্রয়ের হালচাল', module: 'বিক্রয়'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

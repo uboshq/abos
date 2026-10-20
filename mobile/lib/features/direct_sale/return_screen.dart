@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/status/app_status_chip.dart';
 import '../../core/status/paper_state.dart';
@@ -183,7 +184,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
     final bill = _bill;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('বিক্রি ফেরত')),
+      appBar: const AbosScreenBar(title: 'বিক্রি ফেরত', module: 'বিক্রয়'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

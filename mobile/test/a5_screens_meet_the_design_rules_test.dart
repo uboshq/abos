@@ -37,7 +37,11 @@ import 'package:abos_mobile/features/orders/delivery_tracking_screen.dart';
 import 'package:abos_mobile/features/orders/new_order_screen.dart';
 import 'package:abos_mobile/features/orders/order_sheets.dart';
 
+import 'package:abos_mobile/core/navigation/top_bar/abos_screen_bar.dart';
+import 'package:abos_mobile/features/home/paper_route.dart';
+import 'package:abos_mobile/features/orders/order_list_screen.dart';
 import 'return_screen_test.dart' show FakeReturnApi;
+import 'support/screens_0441.dart' show inSession;
 import 'support/fake_secure_storage.dart';
 import 'support/hive_test_harness.dart';
 
@@ -134,7 +138,19 @@ class _Orders implements DeliveryOrderApi {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// বিক্রয় আদেশ — একই কাগজ, কিন্তু ছাপার বোতাম আছে (ভেতরের বারের দ্বিতীয় সারিতে যায় কি না দেখতে)
+class _SalesOrders extends _Orders {
+  @override
+  bool get forOrders => true;
+}
+
 class _Books implements BooksApi {
+  @override
+  Future<MoneyInDetail> moneyInDetail(String id) async => const MoneyInDetail(
+      row: MoneyInRow(
+          id: 'c1', no: 'RCV-2610-0002', date: '2026-10-06', customer: 'মেসার্স রহমান ট্রেডার্স',
+          account: 'প্রধান নগদ', method: 'cash', amount: 125000));
+
   @override
   Future<MoneyInPage> moneyIn(
           {required String from, required String to, String? q, String? method, int page = 1}) async =>
@@ -612,5 +628,85 @@ void main() {
     ]) {
       expect(_banned.hasMatch(_code(ok)), isFalse, reason: ok);
     }
+  });
+
+  // ⭐ ০.৪.৪১ — a5-এর প্রতিটা পর্দায় a4-এর ভেতরের পর্দার বার ([AbosScreenBar]): "কোম্পানি · শাখা › মডিউল › পাতা"
+  // (মালিকের নিয়ম: "প্রতিটা পাতায়, সবসময়"); পর্দার আগের বোতাম বারের দ্বিতীয় সারিতে, চাপা যায়
+  group('ভেতরের পর্দার বার', () {
+    final bars = <String, (Widget Function(), String title, String? module, List<String> actions)>{
+      'ড্যাশবোর্ডের তালিকা': (_cases.firstWhere((c) => c.name == 'ড্যাশবোর্ডের তালিকা').build, 'ব্যবসার ড্যাশবোর্ড', 'ড্যাশবোর্ড', const []),
+      'মডিউলের ড্যাশবোর্ড': (_cases.firstWhere((c) => c.name == 'মডিউলের ড্যাশবোর্ড').build, 'মজুদ', 'ড্যাশবোর্ড', const []),
+      // ⓘ নাম সার্ভারের দেওয়া (এখানে নমুনার "মজুদ"), মডিউল বিক্রয়
+      'বিক্রয়ের হালচাল': (_cases.firstWhere((c) => c.name == 'বিক্রয়ের হালচাল').build, 'মজুদ', 'বিক্রয়', const []),
+      'ডেলিভারি ট্র্যাকিং': (() => DeliveryTrackingScreen(api: _Tracking()), 'ডেলিভারি ট্র্যাকিং', 'বিক্রয়', const []),
+      'অর্ডারের অবস্থা': (() => const OrderListScreen(), 'অর্ডারের অবস্থা', 'বিক্রয়', const []),
+      'ডিও তালিকা': (() => DeliveryOrderListScreen(api: _Orders()), 'ডেলিভারি অর্ডার', 'বিক্রয়', const []),
+      'নতুন ডিও': (_cases.firstWhere((c) => c.name == 'নতুন ডিও').build, 'নতুন DO', 'বিক্রয়', const []),
+      'একটা বিক্রয় আদেশ': (() => DeliveryOrderScreen(id: 'do-1', api: _SalesOrders()), 'DO-2610-0001', 'বিক্রয়', const ['order-print']),
+      'কাউন্টার': (_cases.firstWhere((c) => c.name == 'কাউন্টার').build, 'সরাসরি বিক্রয়', 'বিক্রয়', const []),
+      'বিক্রি ফেরত': (() => ReturnScreen(customerId: 'cus-1', api: FakeReturnApi()), 'বিক্রি ফেরত', 'বিক্রয়', const []),
+      'বকেয়া তালিকা': (() => const DueListScreen(), 'বকেয়া তালিকা', 'গ্রাহক', const []),
+      'আদায়ের তালিকা': (() => MoneyInListScreen(api: _Books(), today: DateTime(2026, 10, 6)), 'আদায়', 'বিক্রয়', const []),
+      'একটা আদায়': (() => MoneyInScreen(id: 'c1', api: _Books()), 'RCV-2610-0002', 'বিক্রয়', const ['money-in-print']),
+      'অজানা কাগজ': (() => const PaperRoute(kind: 'nope', id: 'x'), 'কাগজ', null, const []),
+    };
+
+    Future<void> pumpBar(WidgetTester tester, Widget screen, {bool settle = true}) async {
+      tester.view.physicalSize = const Size(412, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(inSession(MaterialApp(theme: AppTheme.light(), home: screen)));
+      if (settle) {
+        await tester.pumpAndSettle();
+      } else {
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+      }
+    }
+
+    void expectBar(WidgetTester tester, String title, String? module) {
+      final bar = tester.widget<AbosScreenBar>(find.byType(AbosScreenBar));
+      expect(bar.title, title);
+      expect(bar.module, module);
+      expect(find.byKey(const ValueKey('screen-bar')), findsOneWidget, reason: 'সেশনে আসল নীল বার');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('top-crumbs'))).data,
+          '› ${[if (module != null) module, title].join(' › ')}');
+    }
+
+    for (final b in bars.entries) {
+      testWidgets('${b.key}: the bar is AbosScreenBar "${b.value.$2}" under ${b.value.$3 ?? 'no module'}, its buttons reachable',
+          (tester) async {
+        await pumpBar(tester, b.value.$1());
+        expectBar(tester, b.value.$2, b.value.$3);
+        for (final key in b.value.$4) {
+          final action = find.descendant(of: find.byKey(const ValueKey('top-action-row')), matching: find.byKey(ValueKey(key)));
+          expect(action, findsOneWidget, reason: '$key বারের দ্বিতীয় সারিতে');
+          expect(tester.getSize(action).height, greaterThanOrEqualTo(48));
+          expect(tester.hitTestOnBinding(tester.getCenter(action)).path.any((e) => e.target is RenderBox), isTrue);
+        }
+      });
+    }
+
+    testWidgets('a sale\'s story: the bar is the sale\'s number under বিক্রয়', (tester) async {
+      await pumpBar(tester, DeliveryTrackingScreen(api: _Tracking()));
+      await tester.tap(find.textContaining('S-0007'));
+      await tester.pumpAndSettle();
+      expectBar(tester, 'S-0007', 'বিক্রয়');
+    });
+
+    testWidgets('new order: the bar is "নতুন অর্ডার" under বিক্রয়, and the customer picker is right under it, 48dp+, one tap',
+        (tester) async {
+      await pumpBar(
+          tester,
+          NewOrderScreen(api: _OrderApi(), memory: _Memory(), offerDelay: const Duration(milliseconds: 10), enqueue: (_) async {}),
+          settle: false);
+      expectBar(tester, 'নতুন অর্ডার', 'বিক্রয়');
+      final picker = find.descendant(of: find.byKey(const ValueKey('top-bottom')), matching: find.byKey(const ValueKey('order-customer')));
+      expect(picker, findsOneWidget, reason: 'গ্রাহক বাছাই বারের নিচের সারিতে');
+      expect(tester.getSize(picker).height, greaterThanOrEqualTo(48));
+      expect(tester.widget<InkWell>(picker).onTap, isNotNull);
+    });
   });
 }

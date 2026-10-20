@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/order_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -372,33 +374,39 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     final customer = _customer;
     // ⭐ পট, লেখা আর বোতাম থিমের ভূমিকা থেকে — অন্ধকার মোডেও পড়া যায় (নকশার নিয়ম ০.৪.৩৮ §১, a4, ১৯ অক্টোবর ২০২৬)
     final o = OrderInk.of(context);
+    // ⓘ গ্রাহক বাছাইয়ের সারি — ৫৬dp, বড় অক্ষরেও এক লাইন ধরে (১৫pt × মাপ × ১.৫ লাইন + ওপর-নিচে ৮)
+    final pickerHeight = math.max(56.0, MediaQuery.textScalerOf(context).scale(15) * 1.5 + 16);
 
     return Scaffold(
       backgroundColor: o.page,
-      appBar: AppBar(
-        backgroundColor: o.page,
-        foregroundColor: o.ink,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 0,
-        title: InkWell(
-          key: const ValueKey('order-customer'),
-          onTap: _pickCustomer,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('নতুন অর্ডার', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-              // ⭐ গ্রাহক "নাম · পয়েন্ট · শাখা" (আর ঠিকানা) — [CustomerLine]: এক লাইন, ছুঁয়ে ধরলে পুরোটা
-              if (customer == null)
-                Text('গ্রাহক বাছুন', style: TextStyle(fontSize: 15, color: o.brand, fontWeight: FontWeight.w700))
-              else
-                CustomerLine(
-                  [customer.label, if (customer.address != null) customer.address!].join(' · '),
-                  key: const ValueKey('order-customer-line'),
-                  style: TextStyle(fontSize: 15, color: o.muted, fontWeight: FontWeight.w400),
+      // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › নতুন অর্ডার" (মালিকের নিয়ম: "প্রতিটা পাতায়, সবসময়"; ০.৪.৪১);
+      // গ্রাহক বাছাই বারের ঠিক নিচে, পাতার রঙে — আগের মতোই এক চাপে
+      appBar: AbosScreenBar(
+        title: 'নতুন অর্ডার',
+        module: 'বিক্রয়',
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(pickerHeight),
+          child: Material(
+            color: o.page,
+            child: InkWell(
+              key: const ValueKey('order-customer'),
+              onTap: _pickCustomer,
+              child: Container(
+                height: pickerHeight,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  // ⭐ গ্রাহক "নাম · পয়েন্ট · শাখা" (আর ঠিকানা) — [CustomerLine]: এক লাইন, ছুঁয়ে ধরলে পুরোটা
+                  child: customer == null
+                      ? Text('গ্রাহক বাছুন', style: TextStyle(fontSize: 15, color: o.brand, fontWeight: FontWeight.w700))
+                      : CustomerLine(
+                          [customer.label, if (customer.address != null) customer.address!].join(' · '),
+                          key: const ValueKey('order-customer-line'),
+                          style: TextStyle(fontSize: 15, color: o.muted, fontWeight: FontWeight.w400),
+                        ),
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/approvals/approvals_api.dart';
+import 'package:abos_mobile/core/records/approval_record.dart';
 import 'package:abos_mobile/core/theme/app_colors.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
@@ -100,6 +102,32 @@ void main() {
       expect(find.textContaining('2-এর 1', findRichText: true), findsOneWidget);
     });
 
+    // ⓘ কার্ডে প্রথম তিনটে সারি — তিন ধরনের একটা করে
+    testWidgets('chip v4: each waiting row tells the chip its paper kind (claim, stock, money)', (tester) async {
+      await pump(tester, ownerHomeBody(loadWaiting: () async => const ApprovalPage(rows: [
+            ApprovalRecord({'id': 'k1', 'documentType': 'Collection', 'documentNo': 'RCV-1', 'amount': '10.0000', 'currentLevel': 1}),
+            ApprovalRecord({'id': 'k2', 'documentType': 'ExpenseClaim', 'documentNo': 'EXP-1', 'amount': '10.0000', 'currentLevel': 1}),
+            ApprovalRecord({'id': 'k3', 'documentType': 'DeliveryChallan', 'documentNo': 'CH-1', 'amount': '10.0000', 'currentLevel': 1}),
+          ])));
+      PaperKind kindIn(String id) => tester
+          .widget<AppStatusChip>(find.descendant(of: find.byKey(ValueKey('waiting-$id')), matching: find.byType(AppStatusChip)))
+          .kind;
+      expect(kindIn('k1'), PaperKind.money);
+      expect(kindIn('k2'), PaperKind.claim);
+      expect(kindIn('k3'), PaperKind.stock);
+    });
+
+    test('paperKindOf: claims, stock papers and money papers by the documentType the server sends', () {
+      expect(paperKindOf('ExpenseClaim'), PaperKind.claim);
+      expect(paperKindOf('expense_claim'), PaperKind.claim);
+      for (final t in ['Challan', 'DeliveryChallan', 'DeliveryOrder', 'StockTransfer', 'GoodsReceipt']) {
+        expect(paperKindOf(t), PaperKind.stock, reason: t);
+      }
+      for (final t in ['Collection', 'PurchaseBill', 'Voucher', 'Invoice', '', null]) {
+        expect(paperKindOf(t), PaperKind.money, reason: '$t');
+      }
+    });
+
     testWidgets('a row reads number · party on the left and the chip on the right, on one row', (tester) async {
       await pump(tester, ownerHomeBody());
       final row = find.byKey(const ValueKey('waiting-a1'));
@@ -152,7 +180,8 @@ void main() {
       await pump(tester, srCollectBody());
       final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
       expect(chips, hasLength(3));
-      expect(chips.every((c) => c.state == PaperState.posted && c.dense), isTrue);
+      expect(chips.every((c) => c.state == PaperState.posted && c.dense && c.kind == PaperKind.money), isTrue,
+          reason: 'চিপ v4: আদায় টাকার কাগজ');
       expect(find.bySemanticsLabel('অবস্থা: পাকা, খাতায় উঠেছে'), findsNWidgets(3));
       final list = tester.widget<ListView>(find.byType(ListView).first);
       expect((list.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(88), reason: 'FAB ৫৬dp + ফাঁক');
@@ -163,8 +192,9 @@ void main() {
       await pump(tester,
           srCollectBody(unsent: () => const [UnsentCollection('মুসকান এন্টারপ্রাইজ · ফুলবাড়িয়া · ময়মনসিংহ', 30000)]));
       final row = find.byKey(const ValueKey('money-in-unsent-0'));
-      expect(tester.widget<AppStatusChip>(find.descendant(of: row, matching: find.byType(AppStatusChip))).state,
-          PaperState.unsent);
+      final chip = tester.widget<AppStatusChip>(find.descendant(of: row, matching: find.byType(AppStatusChip)));
+      expect(chip.state, PaperState.unsent);
+      expect(chip.kind, PaperKind.money);
       expect(find.descendant(of: row, matching: find.textContaining('পাঠানো বাকি', findRichText: true)), findsOneWidget);
       expect(tester.getTopLeft(row).dy, lessThan(tester.getTopLeft(find.byKey(const ValueKey('money-in-RCV-0191'))).dy));
     });

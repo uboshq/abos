@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -76,7 +77,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('অর্ডারের অবস্থা')),
+      appBar: const AbosScreenBar(title: 'অর্ডারের অবস্থা', module: 'বিক্রয়'),
       bottomNavigationBar: synced.isEmpty
           ? null
           : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: synced.length, allSum: allTotal),

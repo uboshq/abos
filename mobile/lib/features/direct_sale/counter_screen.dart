@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/navigation/recent_papers.dart';
@@ -1162,7 +1163,7 @@ class _CounterScreenState extends State<CounterScreen> {
   Widget _screen(BuildContext context) {
     final setup = _setup;
     return Scaffold(
-      appBar: AppBar(title: const Text('সরাসরি বিক্রয়')),
+      appBar: const AbosScreenBar(title: 'সরাসরি বিক্রয়', module: 'বিক্রয়'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

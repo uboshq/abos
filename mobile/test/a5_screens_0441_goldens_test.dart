@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/sync_engine/sync_status.dart';
+
+import 'support/bar_fonts.dart' show loadBarFonts;
 import 'support/main_screens.dart' show setScreenSize;
 import 'support/screens_0441.dart';
 
 /// ⭐ ০.৪.৪১-এর দুই পর্দার ছবি — আসল ফন্টে (লাতিনে Roboto, বাংলায় Shonar Bangla, Material আইকন), ৩৬০ আর ৪১২dp, আলো আর
-/// অন্ধকার; নমুনার নাম আর অঙ্ক। a4-এর design_preview-এর একই ফন্ট-লোড। ⓘ মাথার বার আর নিচের বার এই ছবিতে নেই (a4-এর আর
-/// আরেক a5-এর) — বার মিললে a5 ছবি আবার তুলবে।
+/// অন্ধকার; নমুনার নাম আর অঙ্ক। a4-এর design_preview-এর একই ফন্ট-লোড। আদায়ের পাতা a4-এর আসল নীল বারসহ (সেশনে);
+/// মালিকের হোম কেবল দেহ।
 const _material = 'C:/tools/flutter/bin/cache/artifacts/material_fonts';
 
 Future<void> _load(String family, List<String> files) async {
@@ -35,17 +38,23 @@ void main() {
     final m = RegExp(r'"rootUri":\s*"([^"]*material_symbols_icons-[^"]*)"').firstMatch(config)!;
     final root = Uri.parse(m.group(1)!).toFilePath(windows: Platform.isWindows);
     await _load('packages/material_symbols_icons/MaterialSymbolsRounded', ['$root/lib/fonts/MaterialSymbolsRounded.ttf']);
+    // ⓘ a4-এর বারের আইকন — Material Symbols Outlined (screen_bar_test-এর একই ফন্ট)
+    await loadBarFonts();
   });
+  setUp(SyncStatus.instance.reset);
 
-  final screens = <String, (Widget Function(), Future<void> Function(WidgetTester))>{
-    'screen_owner_home': (ownerHomeBody, (_) async {}),
+  // ⓘ তৃতীয়টা: আসল বারে আঁকা কি না — আদায়ের পাতা ভেতরের পর্দা, তাই সেশনসহ: a4-এর নীল বার "ADI Wholesale · ময়মনসিংহ ›
+  // বিক্রয় › আদায়" (fe, ২০ অক্টোবর ২০২৬)। মালিকের হোমের এই ছবি কেবল দেহ — তার বার হোমের নিজের (নিচের বারের ছবিতে পুরো পাতা)।
+  final screens = <String, (Widget Function(), Future<void> Function(WidgetTester), bool)>{
+    'screen_owner_home': (ownerHomeBody, (_) async {}, false),
     // ⓘ নমুনার "আজকের আদায়" — তারিখের বারে "আজ" চেপে
     'screen_sr_collect': (
-      srCollectBody,
+      () => srCollectBody(canCollect: true), // ⓘ নমুনার মতো "＋ নতুন আদায়" সহ
       (tester) async {
         await tester.tap(find.byKey(const ValueKey('range-today')));
         await tester.pumpAndSettle();
-      }
+      },
+      true
     ),
   };
 
@@ -58,7 +67,9 @@ void main() {
           setScreenSize(tester, Size(width, height));
           await tester.pumpWidget(RepaintBoundary(
             key: const ValueKey('shot'),
-            child: framed(s.value.$1(), dark: dark, font: _realFonts),
+            child: s.value.$3
+                ? inSession(framed(s.value.$1(), dark: dark, font: _realFonts))
+                : framed(s.value.$1(), dark: dark, font: _realFonts),
           ));
           await tester.pumpAndSettle();
           await s.value.$2(tester);

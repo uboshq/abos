@@ -409,10 +409,20 @@ class WaitingPaperRow extends StatelessWidget {
       chip: AppStatusChip.compact(
           state: PaperState.waiting,
           level: level > 0 ? level : null,
-          levels: (record.payload['levels'] as num?)?.toInt()),
+          levels: (record.payload['levels'] as num?)?.toInt(),
+          kind: paperKindOf(record.documentType)),
       onTap: onTap,
     );
   }
+}
+
+/// ⭐ কাগজের ধরন, সার্ভারের `documentType` থেকে — a6-এর চিপ v4 কথা বদলায় ধরন মেনে (fe, ২০ অক্টোবর ২০২৬): খরচের দাবি
+/// [PaperKind.claim]; চালান, ডেলিভারি, মজুদ বদলি আর মাল-গ্রহণ [PaperKind.stock]; বাকি সব (আদায়, বিল, ভাউচার) টাকার।
+PaperKind paperKindOf(String? documentType) {
+  final t = (documentType ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+  if (t.contains('claim')) return PaperKind.claim;
+  const stock = ['challan', 'delivery', 'stock', 'transfer', 'goodsreceipt', 'grn', 'gatepass'];
+  return stock.any(t.contains) ? PaperKind.stock : PaperKind.money;
 }
 
 /// ── ৩ · আজকের বিক্রি, শাখা ধরে ──
