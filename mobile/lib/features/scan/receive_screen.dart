@@ -5,6 +5,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ "বুঝিয়ে দিন" — পৌঁছানোর প্রমাণ, মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৭, ৬ অক্টোবর ২০২৬: *"ডিলার বুঝে নিলেন —
 /// নাম, ফোন … কম বা ভাঙা মাল → ফেরত বা দাবি"*।
@@ -127,7 +128,7 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
   Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
 
   Widget _screen(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text('বুঝিয়ে দিন — ${widget.documentNo}')),
+        appBar: AbosScreenBar(title: 'বুঝিয়ে দিন — ${widget.documentNo}'),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [

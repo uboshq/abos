@@ -430,6 +430,15 @@ void main() {
     expect(api.asked.last['branch'], isNull);
   });
 
+  // ⭐ "নতুন ভাউচার" কেবল লেখার চাবিওয়ালার — চাবি না থাকলে বোতামই নেই (সার্ভারের দরজাও `can:accounts.voucher.create`)
+  testWidgets('"নতুন ভাউচার" shows only to one who may write a voucher', (tester) async {
+    await _pump(tester, VoucherListScreen(api: _FakeVouchers(), newChangeId: _key, branches: () async => const []));
+    expect(find.byKey(const ValueKey('voucher-new')), findsNothing, reason: '⛔ চাবি ছাড়াই নতুন ভাউচারের বোতাম');
+
+    await _pump(tester, VoucherListScreen(api: _FakeVouchers(), newChangeId: _key, branches: () async => const [], canCreate: true));
+    expect(find.byKey(const ValueKey('voucher-new')), findsOneWidget, reason: 'চাবি থাকলেও বোতাম নেই');
+  });
+
   test('the tile comes with the web\'s write key and the phone\'s accounts switch closes it', () async {
     const repository = MenuRepository();
     const clerk = AuthUser(id: '1', name: 'C', email: 'c@abos.test', roles: ['accountant'], permissions: ['accounts.voucher.create']);
@@ -485,7 +494,7 @@ void main() {
       testWidgets('opened as "$title": asks $type/$money first, says so on top, and "নতুন ভাউচার" goes straight to its form',
           (tester) async {
         final api = _FakeVouchers();
-        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view));
+        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view, canCreate: true));
 
         expect(api.asked, hasLength(1), reason: 'আগে "সব" চেয়ে তারপর ধরন — দুবার ডাকা হয়েছে');
         expect([api.asked.single['type'], api.asked.single['money']], [type, money]);
@@ -505,7 +514,7 @@ void main() {
         (tester) async {
       for (final view in [null, 'no-such-kind']) {
         final api = _FakeVouchers();
-        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view));
+        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view, canCreate: true));
 
         expect([api.asked.single['type'], api.asked.single['money']], [null, null]);
         expect(find.descendant(of: find.byType(AppBar), matching: find.text('ভাউচার')), findsOneWidget);

@@ -11,6 +11,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../printing/document_actions_sheet.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// Every report this person may run — docs/Contract §৯.
 ///
@@ -83,7 +84,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             .toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? 'রিপোর্ট')),
+      appBar: AbosScreenBar(title: widget.title ?? 'রিপোর্ট'),
       body: Column(
         children: [
           Padding(
@@ -323,8 +324,8 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(page?.title ?? widget.report.title),
+      appBar: AbosScreenBar(
+        title: page?.title ?? widget.report.title,
         actions: [
           // ⭐ PDF — দেখা, ছাপা, পাঠানো; এই পর্দার একই তারিখ আর ছাঁকনিতে, সব সারি (মালিক, ৪ অক্টোবর ২০২৬)
           IconButton(

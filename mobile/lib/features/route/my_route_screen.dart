@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ আজকের রুট — ছকে আজ যে রুট, তার দোকান এক লাইনে এক তথ্য (মালিকের নিয়ম); দোকানে চাপলে দোকানের পাতা,
 /// সেখান থেকে অর্ডার, জমা, খতিয়ান। অন্য দিন দেখতে তারিখ বদলান (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)।
@@ -93,7 +94,7 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('আজকের রুট')),
+      appBar: const AbosScreenBar(title: 'আজকের রুট'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

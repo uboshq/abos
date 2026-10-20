@@ -3,6 +3,9 @@ import 'dart:typed_data';
 
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
 import 'package:abos_mobile/core/api_client/api_client.dart';
+import 'package:abos_mobile/core/auth/auth_controller.dart';
+import 'package:abos_mobile/core/auth/auth_state.dart';
+import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_module.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
@@ -13,6 +16,7 @@ import 'package:abos_mobile/features/sales_papers/sales_paper_screens.dart';
 import 'package:abos_mobile/features/vouchers/voucher_screens.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_secure_storage.dart';
@@ -32,7 +36,26 @@ void main() {
     return (screen! as ModuleGateView).child;
   }
 
-  test('every voucher row of the web menu opens the phone\'s voucher list on its own kind', () {
+  /// ⓘ ভাউচারের তালিকা লেখার চাবি পড়ে (`Consumer`), তাই সেশনসহ বানিয়ে ভেতরের পর্দাটা খোঁজা হয়
+  Future<VoucherListScreen> voucherList(WidgetTester tester, Widget? screen, AuthUser user) async {
+    final real = ApiClient.dio.httpClientAdapter;
+    ApiClient.dio.httpClientAdapter = _Server();
+    addTearDown(() => ApiClient.dio.httpClientAdapter = real);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(ProviderScope(
+      overrides: [authStateProvider.overrideWith((ref) => _SignedIn(user))],
+      child: MaterialApp(home: inner(screen)),
+    ));
+    await tester.pumpAndSettle();
+    final found = find.byType(VoucherListScreen);
+    expect(found, findsOneWidget, reason: 'ভাউচারের তালিকা খোলেনি');
+    final list = tester.widget<VoucherListScreen>(found);
+    await tester.pumpWidget(const SizedBox());
+    return list;
+  }
+
+  testWidgets('every voucher row of the web menu opens the phone\'s voucher list on its own kind', (tester) async {
+    FakeSecureStorage.install();
     for (final (web, view) in [
       ('/accounts/vouchers/receipt', 'receipt'),
       ('/accounts/vouchers/payment', 'payment'),
@@ -40,16 +63,27 @@ void main() {
       ('/accounts/vouchers/journal', 'journal'),
       ('/accounts/vouchers/contra', 'contra'),
     ]) {
-      final screen = inner(NativeForWeb.screenFor(web, title: 'নাম'));
-      expect(screen, isA<VoucherListScreen>(), reason: '$web এখনো ওয়েব-জানালায়');
-      expect((screen as VoucherListScreen).view, view);
+      final screen = NativeForWeb.screenFor(web, title: 'নাম');
+      expect(screen, isA<ModuleGateView>(), reason: '$web এখনো ওয়েব-জানালায়');
+      final list = await voucherList(tester, screen, _clerk);
+      expect(list.view, view);
+      expect(list.canCreate, isTrue, reason: 'লেখার চাবিওয়ালা "নতুন ভাউচার" পেল না');
       expect(VoucherView.byKey(view), isNotNull, reason: '$view চাবি পর্দা চেনে না — "সব" খুলত');
     }
     expect(VoucherView.byKey('receipt')?.type, 'receipt');
     expect(VoucherView.byKey('receipt')?.money, isNull, reason: '"আদায়" মানে সব রসিদ — নগদ/ব্যাংক বেছে নয়');
 
-    expect(inner(NativeForWeb.screenFor('/accounts/voucher-list')), isA<VoucherListScreen>());
+    expect((await voucherList(tester, NativeForWeb.screenFor('/accounts/voucher-list'), _clerk)).canCreate, isTrue);
     expect(NativeForWeb.screenFor('/accounts/vouchers/no-such-kind'), isNull, reason: 'অচেনা ধরন আন্দাজে নয়');
+  });
+
+  // ⭐ "নতুন ভাউচার" কেবল `accounts.voucher.create`-ওয়ালার — চাবি ছাড়া দুই দরজাতেই বন্ধ
+  testWidgets('without the voucher write key both web doors open the list with no new-voucher button', (tester) async {
+    FakeSecureStorage.install();
+    for (final web in ['/accounts/vouchers/receipt', '/accounts/voucher-list']) {
+      final list = await voucherList(tester, NativeForWeb.screenFor(web), _reader);
+      expect(list.canCreate, isFalse, reason: '⛔ $web: চাবি ছাড়াই "নতুন ভাউচার"');
+    }
   });
 
   test('the cancelled-invoice row opens the invoice list asking only for cancelled bills; the plain row does not', () {
@@ -140,6 +174,15 @@ class _Asked {
   _Asked(this.path, this.query);
   final String path;
   final Map<String, String> query;
+}
+
+const _clerk = AuthUser(id: '1', name: 'C', email: 'c@abos.test', roles: ['accountant'], permissions: ['accounts.voucher.create']);
+const _reader = AuthUser(id: '2', name: 'R', email: 'r@abos.test', roles: ['viewer'], permissions: ['accounts.report']);
+
+class _SignedIn extends AuthController {
+  _SignedIn(AuthUser user) {
+    state = AuthState.signedIn(user);
+  }
 }
 
 class _Server implements HttpClientAdapter {

@@ -12,6 +12,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ উদ্ধৃতি (কোটেশন) — তালিকা, নতুন উদ্ধৃতি, আর একটা উদ্ধৃতির পাতা: জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর
 /// (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)। এক লাইনে এক তথ্য (মালিকের নিয়ম); কোন বোতাম দেখাবে সার্ভার বলে।
@@ -90,7 +91,7 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('উদ্ধৃতি')),
+      appBar: const AbosScreenBar(title: 'উদ্ধৃতি'),
       floatingActionButton: widget.canWrite
           ? FloatingActionButton.extended(
               key: const Key('quotation-new'),
@@ -236,7 +237,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('নতুন উদ্ধৃতি')),
+      appBar: const AbosScreenBar(title: 'নতুন উদ্ধৃতি'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -361,7 +362,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Widget build(BuildContext context) {
     final q = _q;
     return Scaffold(
-      appBar: AppBar(title: Text(q?.no ?? 'উদ্ধৃতি')),
+      appBar: AbosScreenBar(title: q?.no ?? 'উদ্ধৃতি'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

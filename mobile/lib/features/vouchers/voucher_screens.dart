@@ -14,6 +14,7 @@ import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ ফোনে অফিসের লোকের ভাউচার — আদায়, পরিশোধ, খরচ (বাকিতেও), জাবেদা, কন্ট্রা (মালিক, ৭ অক্টোবর ২০২৬; সার্ভার 2bd0f620)।
 ///
@@ -33,6 +34,7 @@ class VoucherListScreen extends StatefulWidget {
     this.branches = _myBranches,
     this.today,
     this.view,
+    this.canCreate = false,
   });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
@@ -56,6 +58,9 @@ class VoucherListScreen extends StatefulWidget {
   /// ⭐ মেনুর আলাদা ঘর থেকে খোলা ধরন ([VoucherView.key], `/home/vouchers/<key>`) — মালিক, ১৭ অক্টোবর ২০২৬।
   /// null বা অচেনা হলে "সব", আগের মতো।
   final String? view;
+
+  /// ⭐ "নতুন ভাউচার" কেবল যার লেখার চাবি আছে (`accounts.voucher.create`) — পথ থেকে আসে, না দিলে বন্ধ
+  final bool canCreate;
 
   @override
   State<VoucherListScreen> createState() => _VoucherListScreenState();
@@ -160,13 +165,15 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     final total = _page?.total;
 
     return Scaffold(
-      appBar: AppBar(title: Text(!_preset ? 'ভাউচার' : _view.type == null ? 'সব ভাউচার' : _view.label)),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const ValueKey('voucher-new'),
-        onPressed: _new,
-        icon: const Icon(Icons.add),
-        label: const Text('নতুন ভাউচার'),
-      ),
+      appBar: AbosScreenBar(title: !_preset ? 'ভাউচার' : _view.type == null ? 'সব ভাউচার' : _view.label),
+      floatingActionButton: widget.canCreate
+          ? FloatingActionButton.extended(
+              key: const ValueKey('voucher-new'),
+              onPressed: _new,
+              icon: const Icon(Icons.add),
+              label: const Text('নতুন ভাউচার'),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -339,7 +346,7 @@ class _VoucherScreenState extends State<VoucherScreen> {
   Widget build(BuildContext context) {
     final p = _page;
     return Scaffold(
-      appBar: AppBar(title: Text(p?.row.no ?? 'ভাউচার'), actions: [
+      appBar: AbosScreenBar(title: p?.row.no ?? 'ভাউচার', actions: [
         if (p != null)
           IconButton(
             key: const ValueKey('voucher-print'),
@@ -643,7 +650,7 @@ class _VoucherFormScreenState extends State<VoucherFormScreen> {
   Widget _screen(BuildContext context) {
     final s = _setup;
     return Scaffold(
-      appBar: AppBar(title: Text(VoucherTypes.label(widget.type))),
+      appBar: AbosScreenBar(title: VoucherTypes.label(widget.type)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

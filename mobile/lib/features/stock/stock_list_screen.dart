@@ -11,6 +11,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// Hand-on-shelf quantities — reachable only from a menu tile gated on
 /// `inventory.stock.view` (see menu_repository.dart), so a role without that
@@ -63,7 +64,7 @@ class _StockListScreenState extends State<StockListScreen> {
     final available = filtered.fold<double>(0, (sum, row) => sum + row.available);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('হাতে থাকা মজুদ')),
+      appBar: const AbosScreenBar(title: 'হাতে থাকা মজুদ'),
       body: Column(
         children: [
           // ⭐ মজুদ মডিউল — মূল্য আর রিপোর্ট (মালিক, ৪ অক্টোবর ২০২৬: "stock qty, value, ivinno report")। মূল্য ওয়েবের রিপোর্ট

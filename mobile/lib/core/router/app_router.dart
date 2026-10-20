@@ -124,8 +124,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           _framed(
             path: 'vouchers',
             // ⭐ অফিসের লোকের ভাউচার (৭ অক্টোবর ২০২৬) — ফোনের হিসাব-সুইচের পিছনে
-            builder: (context, state) => const ModuleGateView(
-                path: 'vouchers', child: VoucherListScreen()),
+            builder: (context, state) => ModuleGateView(
+                path: 'vouchers',
+                child: Consumer(
+                    builder: (context, ref, _) => VoucherListScreen(
+                        canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false))),
           ),
           // ⭐ প্রতিটা ভাউচার-ধরন আলাদা ঘরে — নগদ/MFS/ব্যাংক রসিদ, পেমেন্ট, কন্ট্রা, জার্নাল, খরচ (মালিক, ১৭ অক্টোবর ২০২৬);
           // একই হিসাব-সুইচের পিছনে, অচেনা ধরন হলে "সব"
@@ -133,9 +136,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'vouchers/:view',
             builder: (context, state) => ModuleGateView(
                 path: 'vouchers',
-                child: VoucherListScreen(
-                    key: ValueKey('vouchers-${state.pathParameters['view']}'),
-                    view: state.pathParameters['view'])),
+                child: Consumer(
+                    builder: (context, ref, _) => VoucherListScreen(
+                        key: ValueKey('vouchers-${state.pathParameters['view']}'),
+                        view: state.pathParameters['view'],
+                        canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false))),
           ),
           _framed(
             path: 'claims',
