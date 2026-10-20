@@ -9,16 +9,6 @@ const _stillPlain = {
   'lib/features/web_inside/web_inside_screen.dart',
   // ⏳ a5-এর ভাগ (০.৪.৪১) — সরানো হলে এখান থেকে মুছে দাও
   'lib/features/books/collect_screen.dart',
-  'lib/features/books/money_in_screens.dart',
-  'lib/features/customers/due_list_screen.dart',
-  'lib/features/dashboards/dashboards_screen.dart',
-  'lib/features/delivery_orders/delivery_order_screens.dart',
-  'lib/features/direct_sale/counter_screen.dart',
-  'lib/features/direct_sale/return_screen.dart',
-  'lib/features/home/paper_route.dart',
-  'lib/features/orders/delivery_tracking_screen.dart',
-  'lib/features/orders/new_order_screen.dart',
-  'lib/features/orders/order_list_screen.dart',
 };
 
 void main() {
