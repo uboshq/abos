@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -9,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
 import 'order_prefill.dart';
+import '../../core/widgets/day_part.dart';
 
 /// One rejected `SalesOrder`, named rather than shown as raw JSON — see
 /// [RejectedOrderSummary]'s own doc comment for the "কোন দোকান · কোন অর্ডার ·
@@ -74,7 +74,7 @@ class RejectedOrderCard extends StatelessWidget {
                 style: TextStyle(color: context.palette.danger, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              DateFormat('dd/MM/yyyy hh:mm a').format(item.enqueuedAt),
+              banglaStamp(item.enqueuedAt),
               style:
                   TextStyle(fontSize: 11, color: context.palette.onSurfaceMuted),
             ),

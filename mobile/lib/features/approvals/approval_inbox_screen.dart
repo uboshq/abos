@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../printing/document_actions_sheet.dart';
 import '../../core/api_client/network_errors.dart';
@@ -11,6 +10,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
+import '../../core/widgets/day_part.dart';
 
 /// What is waiting for this person's decision — docs/Contract §৫.
 ///
@@ -341,7 +341,7 @@ class _ApprovalCard extends StatelessWidget {
               [
                 if (approval.requesterName != null) approval.requesterName!,
                 if (requestedAt != null)
-                  DateFormat('dd/MM/yyyy hh:mm a').format(requestedAt),
+                  banglaStamp(requestedAt),
                 if (approval.currentLevel > 0) 'ধাপ ${approval.currentLevel}',
               ].join(' · '),
               style: Theme.of(context).textTheme.bodySmall,

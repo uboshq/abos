@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/notification_record.dart';
@@ -9,6 +8,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/web_inside/web_inside.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/day_part.dart';
 
 /// The bell's page — this person's messages, newest first; a tap marks one
 /// read, and "সব পড়া হয়েছে" empties the bell (owner, 6 Oct 2026).
@@ -153,7 +153,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         subtitle: Text(
                           [
                             if (item.body.isNotEmpty) item.body,
-                            if (item.at != null) DateFormat('dd/MM/yyyy hh:mm a').format(item.at!),
+                            if (item.at != null) banglaStamp(item.at!),
                           ].join('\n'),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,

@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 /// The greeting a depot actually says at this hour.
 ///
 /// <p>Takes a [DateTime] rather than reading the clock itself, so every
@@ -52,3 +54,7 @@ String banglaClock(DateTime when) {
   final minute = when.minute.toString().padLeft(2, '0');
   return '${banglaDayPart(when)} $hour:$minute';
 }
+
+/// ⭐ "20/10/2026 সকাল 10:00" — তারিখ আর সময় এক লাইনে, সব পর্দায় এক নিয়মে: অঙ্ক ইংরেজিতে, শব্দ বাংলায় (fe, ২০ অক্টোবর ২০২৬:
+/// "ইংরেজি AM চলবে না")। ⛔ `DateFormat('… hh:mm a')` নয় — ওটা "AM/PM" লেখে।
+String banglaStamp(DateTime when) => '${DateFormat('dd/MM/yyyy').format(when)} ${banglaClock(when)}';

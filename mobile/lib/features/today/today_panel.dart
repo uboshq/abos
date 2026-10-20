@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
@@ -7,6 +6,7 @@ import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/day_part.dart';
 
 /// The day's figures as cards, without a Scaffold around them — docs/Contract
 /// §৮, drawn the same way whether the home tab embeds them under a greeting
@@ -193,10 +193,10 @@ class _TodayPanelState extends State<TodayPanel> {
                   else ...[
                     if (today.sales != null)
                       _HeroCard(
-                        heading: 'আজকের বিক্রি',
+                        heading: today.sales!.salesHeading,
                         figure: today.sales!,
                         colour: AppColors.primary,
-                        detail: _count(today.sales!.count, 'টি বিক্রয়'),
+                        detail: _salesDetail(today.sales!),
                         onTap: widget.onOpenSales,
                       ),
                     if (today.collections != null || today.dues != null)
@@ -228,6 +228,11 @@ class _TodayPanelState extends State<TodayPanel> {
       ],
     );
   }
+
+  /// নিট হলে তার দুই ভাগ — "বিল ৳… · ফেরত ৳…"; পুরনো সার্ভারে (ভাগ নেই) কেবল বিলের গোনা
+  static String? _salesDetail(TodayFigure sales) => sales.billed != null && sales.returned != null
+      ? 'বিল ${Money.taka(sales.billed)} · ফেরত ${Money.taka(sales.returned)}'
+      : _count(sales.count, 'টি বিক্রয়');
 
   static String? _count(int? count, String unit) =>
       count == null ? null : '$count $unit';
@@ -269,10 +274,10 @@ class _TodayPanelState extends State<TodayPanel> {
           left: sales == null
               ? null
               : _Stat(
-                  label: 'আজকের বিক্রি',
+                  label: sales.salesHeading,
                   value: Money.taka(sales.amount),
                   colour: AppColors.primary,
-                  detail: _count(sales.count, 'টি বিক্রয়'),
+                  detail: _salesDetail(sales),
                 ),
           right: moneyIn,
         ),
@@ -411,7 +416,7 @@ class _OriginLine extends StatelessWidget {
         if (asOf != null)
           Flexible(
             child: Text(
-              'হিসাব ${DateFormat('dd/MM/yyyy hh:mm a').format(asOf)} পর্যন্ত',
+              'হিসাব ${banglaStamp(asOf)} পর্যন্ত',
               textAlign: TextAlign.end,
               style:
                   TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),

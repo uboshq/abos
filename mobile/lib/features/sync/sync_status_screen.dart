@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -10,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../orders/rejected_order_card.dart';
+import '../../core/widgets/day_part.dart';
 
 /// The screen the 4 September briefing calls the most important one this
 /// app has: "যা যায়নি" (what did not go up) is invisible everywhere else,
@@ -172,8 +172,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                             trailing: Text(
                               status.lastSyncedAt == null
                                   ? 'কখনো না'
-                                  : DateFormat('dd/MM/yyyy hh:mm a')
-                                      .format(status.lastSyncedAt!),
+                                  : banglaStamp(status.lastSyncedAt!),
                               style: TextStyle(
                                   color: context.palette.onSurfaceMuted, fontSize: 12),
                             ),

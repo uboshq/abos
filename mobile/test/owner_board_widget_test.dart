@@ -38,7 +38,10 @@ void main() {
     expect(doc.title, 'ADI Corporation · সব শাখা');
     expect(doc.link, '/owner');
     expect(doc.hero!.figure.text, '৳4,82,350.00');
-    expect(doc.hero!.caption!.text, 'আজকের বিক্রি · 38টা বিল');
+    expect(doc.hero!.caption!.text, 'আজ বিল হয়েছে · 38টা বিল', reason: 'পুরনো সার্ভার — মোট বিল, নিট নয়');
+    final net = Map<String, dynamic>.from(full['today'] as Map)
+      ..['sales'] = {'count': 38, 'amount': '470000.0000', 'label': 'নিট বিক্রি'};
+    expect(kind.build({...full, 'today': net}, asOf: asOf).hero!.caption!.text, 'নিট বিক্রি · 38টা বিল');
     expect([for (final r in doc.rows) r.title.text], ['আজকের আদায়', 'নগদ + ব্যাংক + MFS', 'মোট বকেয়া', 'এ মাসের মোট লাভ', 'এ মাসের খরচ']);
     expect(doc.rows[2].amount!.text, '৳62,18,400.00');
     expect(doc.rows[1].second!.secret, isTrue, reason: 'নগদের অঙ্কও লুকানো যায়');

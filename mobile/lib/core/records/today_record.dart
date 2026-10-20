@@ -105,6 +105,9 @@ class TodayRecord {
       amount: Money.value(block['amount']),
       count: (block['count'] as num?)?.toInt(),
       shops: (block['shops'] as num?)?.toInt(),
+      label: (block['label'] as String?)?.trim().isEmpty ?? true ? null : (block['label'] as String).trim(),
+      billed: block['billed'] == null ? null : Money.value(block['billed']),
+      returned: block['returned'] == null ? null : Money.value(block['returned']),
     );
   }
 
@@ -119,11 +122,22 @@ class TodayRecord {
 /// One number on the page, and whatever comes with it — a count of documents
 /// for sales and collections, a count of shops for dues, nothing for cash.
 class TodayFigure {
-  const TodayFigure({this.amount, this.count, this.shops});
+  const TodayFigure({this.amount, this.count, this.shops, this.label, this.billed, this.returned});
 
   final double? amount;
   final int? count;
   final int? shops;
+
+  /// সার্ভারের নিজের নাম এই অঙ্কের — "নিট বিক্রি" (IFRS 15: বিল − ফেরত, ফেরতের তারিখ ধরে; fe, ২০ অক্টোবর ২০২৬)। ⓘ পুরনো
+  /// সার্ভার পাঠায় না — তখন অঙ্কটা মোট বিল, ফেরত বাদ নয়, তাই নাম "আজ বিল হয়েছে" ([salesHeading])
+  final String? label;
+
+  /// নিটের দুই ভাগ — আজ বিল হয়েছে আর আজ ফেরত এসেছে (নতুন সার্ভার)
+  final double? billed;
+  final double? returned;
+
+  /// বিক্রির ঘরের নাম — সার্ভার যা বলে; না বললে "আজ বিল হয়েছে", কারণ তখন অঙ্কটা ফেরত বাদ দেওয়া নয় (কখনো হাতে লেখা "আজকের বিক্রি" নয়)
+  String get salesHeading => label ?? 'আজ বিল হয়েছে';
 }
 
 /// "হাতে ও ব্যাংকে মোট" — the web home's top-right box, the same figures: the

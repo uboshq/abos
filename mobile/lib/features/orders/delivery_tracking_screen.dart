@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
@@ -15,6 +14,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
 import '../../core/widgets/state_views.dart';
 import '../delivery_orders/delivery_order_screens.dart' show PaperListRow;
+import '../../core/widgets/day_part.dart';
 
 /// ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি এখন কোথায়, আর চাপলে কে কখন কী করলেন (0.4.6)।
 ///
@@ -256,7 +256,6 @@ class _StoryScreenState extends State<_StoryScreen> {
   @override
   Widget build(BuildContext context) {
     final sale = _sale ?? widget.sale;
-    final when = DateFormat('dd/MM/yyyy hh:mm a');
     return Scaffold(
       appBar: AbosScreenBar(title: sale.no, module: 'বিক্রয়'),
       // ⭐ টেনে নামালে নতুন — মালিকের আদেশ (ধাপ ২)
@@ -286,8 +285,7 @@ class _StoryScreenState extends State<_StoryScreen> {
             for (var i = 0; i < _milestones.length; i++)
               _MilestoneRow(
                   milestone: _milestones[i],
-                  last: i == _milestones.length - 1,
-                  when: when),
+                  last: i == _milestones.length - 1),
             if (_milestones.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               const Text('কে কখন কী করলেন',
@@ -313,7 +311,7 @@ class _StoryScreenState extends State<_StoryScreen> {
                                   const TextStyle(fontWeight: FontWeight.w600)),
                           Text(
                             [
-                              if (e.at != null) when.format(e.at!),
+                              if (e.at != null) banglaStamp(e.at!),
                               if (e.by != null) e.by!
                             ].join(' · '),
                             style: TextStyle(
@@ -335,11 +333,10 @@ class _StoryScreenState extends State<_StoryScreen> {
 
 class _MilestoneRow extends StatelessWidget {
   const _MilestoneRow(
-      {required this.milestone, required this.last, required this.when});
+      {required this.milestone, required this.last});
 
   final Milestone milestone;
   final bool last;
-  final DateFormat when;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +408,7 @@ class _MilestoneRow extends StatelessWidget {
                   if (m.at != null || m.by != null)
                     Text(
                       [
-                        if (m.at != null) when.format(m.at!),
+                        if (m.at != null) banglaStamp(m.at!),
                         if (m.by != null) m.by!
                       ].join(' · '),
                       style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),

@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
+import 'package:abos_mobile/core/widgets/day_part.dart';
 
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/theme/app_colors.dart';
@@ -62,8 +62,8 @@ void main() {
     expect(find.textContaining('প্রধান শাখা'), findsOneWidget);
     // A stale figure looks exactly like a fresh one.
     expect(find.textContaining('হিসাব'), findsWidgets);
-    // ⓘ যন্ত্রের নিজের সময়-অঞ্চলে — পর্দা তা-ই দেখায় (ঢাকায় 06:04 PM); পরীক্ষা যেকোনো অঞ্চলের যন্ত্রে চলে
-    final local = DateFormat('hh:mm a').format(DateTime.parse('2026-09-16T18:04:11+06:00').toLocal());
+    // ⓘ যন্ত্রের নিজের সময়-অঞ্চলে — পর্দা তা-ই দেখায় (ঢাকায় "16/09/2026 সন্ধ্যা 6:04"); পরীক্ষা যেকোনো অঞ্চলের যন্ত্রে চলে
+    final local = banglaStamp(DateTime.parse('2026-09-16T18:04:11+06:00').toLocal());
     expect(find.textContaining(local), findsOneWidget);
   });
 
@@ -81,9 +81,24 @@ void main() {
     await tester.pumpWidget(screen(fetch: () async => withoutCash));
     await tester.pumpAndSettle();
 
-    expect(find.text('আজকের বিক্রি'), findsOneWidget);
+    expect(find.text('আজ বিল হয়েছে'), findsOneWidget, reason: 'পুরনো সার্ভার — অঙ্কটা মোট বিল, নিট নয়');
     expect(find.text('হাতে নগদ'), findsNothing);
     expect(find.text('৳0.00'), findsNothing);
+  });
+
+  // ⭐ নিট বিক্রি (IFRS 15; fe, ২০ অক্টোবর ২০২৬): সার্ভার নাম দিলে সেটাই, নিচে বিল আর ফেরত আলাদা
+  testWidgets('the server names the sale (net) and the card shows billed and returned apart', (tester) async {
+    const net = TodayRecord({
+      'date': '2026-10-20',
+      'company': 'ADI',
+      'sales': {'count': 38, 'amount': '470000.0000', 'label': 'নিট বিক্রি', 'billed': '482350.0000', 'returned': '12350.0000'},
+    });
+    await tester.pumpWidget(screen(fetch: () async => net));
+    await tester.pumpAndSettle();
+
+    expect(find.text('নিট বিক্রি'), findsOneWidget);
+    expect(find.text('আজকের বিক্রি'), findsNothing, reason: '⛔ হাতে লেখা নাম');
+    expect(find.text('বিল ৳4,82,350.00 · ফেরত ৳12,350.00'), findsOneWidget);
   });
 
   // ⭐ The owner's home, 6 Oct 2026, drawn on a screenshot: sale | money in;
@@ -131,7 +146,7 @@ void main() {
     await tester.pumpWidget(screen(fetch: () async => owners));
     await tester.pumpAndSettle();
 
-    expect(find.text('আজকের বিক্রি'), findsOneWidget);
+    expect(find.text('আজ বিল হয়েছে'), findsOneWidget, reason: 'পুরনো সার্ভার — অঙ্কটা মোট বিল, নিট নয়');
     expect(find.text('আজকের ইনফ্লো/আদায়'), findsOneWidget);
     expect(find.text('৳9,400.00'), findsOneWidget);
     expect(find.textContaining('আদায় ৳1,500.00'), findsOneWidget);
