@@ -8,7 +8,6 @@ use App\Core\Concerns\OpensInReach;
 use App\Core\Services\PaperTrail;
 use App\Models\DocumentShare;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -191,7 +190,13 @@ class SharedPaperController extends Controller
          * OpensInReach-এ লগইন-ছাড়া কোনো ছাড় নেই, ছাড়টা কেবল এই লিংকের পথে, আর নিচে আইডি আবার মেলানো হয়।
          */
         $first = (string) array_key_first($documentParams);
-        $class = Relation::getMorphedModel($share->document_type) ?? $share->document_type;
+        // ⓘ ধরনটা লিংকের সারির ছোট নাম ('voucher'), মডেলের নাম নয় — তাই মডেল নেওয়া হয় রুটের নিজের স্বাক্ষর থেকে
+        $class = null;
+        foreach ($route->signatureParameters(['subClass' => Model::class]) as $parameter) {
+            if ($parameter->getName() === $first) {
+                $class = $parameter->getType()?->getName();
+            }
+        }
 
         if (is_string($class) && class_exists($class) && in_array(OpensInReach::class, class_uses_recursive($class), true)) {
             $route->setParameter($first, $class::acrossBranches()->whereKey((int) $share->document_id)->first()
