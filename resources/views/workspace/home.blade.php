@@ -287,8 +287,13 @@
                                         {{-- ⓘ হোমে তারিখ শিরোনামের আগে — নিচে আলাদা লাইন হলে এক পর্দায় ধরত না
                                              ⭐ উপশিরোনাম কাটা নয়, দুই লাইন পর্যন্ত ভাঙে (Material 3: মূল লেখা কখনো কাটা নয়; ২০ অক্টোবর ২০২৬ —
                                              আগে "ছয় মাসের বি…" দেখাত); তার বেশি হলে পুরোটা title-এ --}}
+                                        @if ($row['listing'] ?? null)
+                                            {{-- ⓘ তালিকা দেখালে উপশিরোনামও তালিকার — চার্টের ("কত দিন ধরে") কথা তালিকার মাথায় বেমানান --}}
+                                            <span class="line-clamp-2 block text-xs text-(--color-ink-muted)">{{ $row['listing']->label }}</span>
+                                        @else
                                         <span class="line-clamp-2 block text-xs text-(--color-ink-muted)"
                                               title="{{ $row['panel']->range ? $row['panel']->range.' · ' : '' }}{{ $row['panel']->label }}">@if ($row['panel']->range)<span data-chart-range class="font-semibold text-(--color-ink-body)">{{ $row['panel']->range }}</span> · @endif{{ $row['panel']->label }}</span>
+                                        @endif
                                     </span>
                                     <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
                                 </div>
@@ -301,7 +306,6 @@
                                         $lastCol = $homeList->columns[count($homeList->columns) - 1];
                                     @endphp
                                     <div data-home-listing class="px-4 py-2">
-                                        <p class="mb-1 text-xs text-(--color-ink-muted)">{{ $homeList->label }}</p>
                                         @forelse ($homeList->rows->take(4) as $listRow)
                                             <div class="flex min-w-0 items-center justify-between gap-2 border-b border-(--color-border) py-1.5 text-sm last:border-b-0">
                                                 <span class="min-w-0 truncate text-(--color-ink-body)" title="{{ ($firstCol['render'])($listRow) }}">{{ ($firstCol['render'])($listRow) }}</span>
