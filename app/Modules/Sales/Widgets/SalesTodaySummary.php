@@ -6,7 +6,8 @@ namespace App\Modules\Sales\Widgets;
 
 use App\Core\Widgets\WidgetSummary;
 use App\Models\User;
-use App\Modules\Executive\Services\Figures;
+use App\Core\Engines\Dashboard\DashboardEngine;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
 
@@ -14,8 +15,9 @@ use Illuminate\Support\Carbon;
  * ⭐ "আজকের বিক্রি" — ফোনের হোম-স্ক্রিন উইজেটের সার্ভার-অংশ (মালিকের আদেশ, ২০ অক্টোবর ২০২৬)।
  *
  * ⭐ নিজে কিছু গোনে না:
- *  - আজকের আর গতকালের বিক্রি, আজকের আদায় — মালিকের পাতার একই সংখ্যা ([[Figures::value()]] SALES / COLLECTIONS), যা নিজেই
- *    [[SalesMetrics::invoiceTotal()]] আর [[SalesMetrics::collectionTotal()]] ডাকে — ওয়েবের হোমের "আজকের বিক্রয়"-এর একই সংজ্ঞা;
+ *  - আজকের আর গতকালের বিক্রি, আজকের আদায় — [[SalesMetrics::invoiceTotal()]] আর [[SalesMetrics::collectionTotal()]], মালিকের
+ *    পাতার ([[Figures::value()]] SALES / COLLECTIONS) একই উৎস আর একই দেখার নিয়ম (বিক্রির ড্যাশবোর্ডের দরজা, তারপর নিজের চাবি);
+ *    ⓘ Sales নিজের মেট্রিক সরাসরি পড়ে — Executive-এর উপর নির্ভর করে না ([[BoundariesTest]], a6-এর Mac দৌড়, ২০ অক্টোবর ২০২৬);
  *  - বিলের সংখ্যা — খাতায় বসা বিল (`posted()`), ফোনের "আজ কেমন গেল" দরজার হুবহু একই গোনা ([[DashboardTodayController]])।
  *
  * ⭐ দেয়াল মডেলের নিজের: বিল আর আদায়ের কাগজে কোম্পানি, হেডারের শাখা ([[ScopedToUserBranch]]) আর বিক্রয়কর্মীর ডিলার-দেয়াল
@@ -27,7 +29,7 @@ use Illuminate\Support\Carbon;
  */
 final class SalesTodaySummary implements WidgetSummary
 {
-    public function __construct(private readonly Figures $figures) {}
+    public function __construct(private readonly DashboardEngine $dashboards) {}
 
     public function key(): string
     {
@@ -39,7 +41,7 @@ final class SalesTodaySummary implements WidgetSummary
         return 'sales';
     }
 
-    /** ওয়েবের "আজকের বিক্রয়" ঘরের চাবি ([[SalesMetrics::salesToday()]], [[Figures::definition()]] SALES) */
+    /** ওয়েবের "আজকের বিক্রয়" ঘরের চাবি ([[SalesMetrics::salesToday()]]; মালিকের পাতায় SALES-এর একই চাবি) */
     public function permission(): ?string
     {
         return 'sales.invoice.view';
@@ -47,20 +49,29 @@ final class SalesTodaySummary implements WidgetSummary
 
     public function data(User $user): array
     {
-        [$from, $to] = Figures::window(Figures::TODAY);
-        [$yFrom, $yTo] = Figures::window(Figures::TODAY, Carbon::yesterday());
+        $from = $to = Carbon::today()->toDateString();
+        $yFrom = $yTo = Carbon::yesterday()->toDateString();
+        $sales = $this->sees($user, 'sales.invoice.view');
 
-        $total = $this->figures->value($user, Figures::SALES, $from, $to) ?? '0.0000';
-        $yesterday = $this->figures->value($user, Figures::SALES, $yFrom, $yTo) ?? '0.0000';
+        $total = $sales ? bcadd(SalesMetrics::invoiceTotal($from, $to), '0', 4) : '0.0000';
+        $yesterday = $sales ? bcadd(SalesMetrics::invoiceTotal($yFrom, $yTo), '0', 4) : '0.0000';
 
         return [
             'total' => $total,
             'invoices' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$from, $to])->count(),
-            'collections' => $this->figures->value($user, Figures::COLLECTIONS, $from, $to),
+            'collections' => $this->sees($user, 'sales.collection.view') ? bcadd(SalesMetrics::collectionTotal($from, $to), '0', 4) : null,
             'yesterday' => $yesterday,
             'change_percent' => self::changePercent($total, $yesterday),
             'link' => route('sales.invoice.index', ['view' => 'today'], false),
         ];
+    }
+
+    /** মালিকের পাতার একই দেখার নিয়ম ([[Figures::visible()]]): বিক্রির ড্যাশবোর্ডের দরজা থাকলে আগে সেটা, তারপর ঘরের নিজের চাবি */
+    private function sees(User $user, string $key): bool
+    {
+        $gate = $this->dashboards->has('sales') ? $this->dashboards->permissionFor('sales') : null;
+
+        return ($gate === null || $user->can($gate)) && $user->can($key);
     }
 
     /** গতকালের তুলনায় শতাংশ, এক দশমিকে, অর্ধেক উপরে (শূন্য থেকে দূরে); গতকাল শূন্য হলে null */
