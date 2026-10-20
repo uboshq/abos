@@ -18,6 +18,7 @@ class WidgetDoc {
     required this.title,
     required this.asOf,
     this.link,
+    this.corner,
     this.hero,
     this.rows = const [],
     this.bars = const [],
@@ -34,6 +35,9 @@ class WidgetDoc {
 
   /// পুরো উইজেটে চাপলে কোথায় — ওয়েবের পথ (`/sales/invoices`) বা অ্যাপের পথ (`/home/approvals`)
   final String? link;
+
+  /// মাথার ডান কোণে ছোট লেখা — "7", "চালু 3", "শাখা: সব" (a5-এর অনুরোধ, ২০ অক্টোবর ২০২৬)। টাকা হলে [WidgetText.money]
+  final WidgetText? corner;
 
   /// বড় অঙ্ক আর তার নিচের এক লাইন
   final WidgetHero? hero;
@@ -58,6 +62,7 @@ class WidgetDoc {
         'title': title,
         'asOf': asOf.toUtc().toIso8601String(),
         if (link != null) 'link': link,
+        if (corner != null) 'corner': corner!.toJson(),
         if (hero != null) 'hero': hero!.toJson(),
         if (rows.isNotEmpty) 'rows': [for (final r in rows) r.toJson()],
         if (bars.isNotEmpty) 'bars': [for (final b in bars) b.toJson()],
@@ -73,6 +78,7 @@ class WidgetDoc {
     yield WidgetText(title);
     if (empty != null) yield WidgetText(empty!);
     if (more != null) yield WidgetText(more!);
+    if (corner != null) yield corner!;
     if (hero != null) {
       yield hero!.figure;
       if (hero!.caption != null) yield hero!.caption!;
