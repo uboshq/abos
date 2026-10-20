@@ -80,6 +80,7 @@ final class TheGoodsIncomingWidgetMarksTheLateOrderTest extends TestCase
         $this->assertSame(['PO-0209', 'PO-0215', 'PO-0217'], array_column($widget['rows'], 'no'), '⛔ তারিখ ধরে আগে নয়, বা তিনটার বেশি/কম।');
         $this->assertSame(4, $widget['count'], '⛔ এই সপ্তাহের চারটা — পরের সপ্তাহ, তারিখ ছাড়া, খসড়া আর বাতিল নয়।');
         $this->assertSame(1, $widget['late'], '⛔ দেরি একটাই।');
+        $this->assertSame('/purchase/orders', $widget['link']);
         $this->assertSame([true, false, false], array_column($widget['rows'], 'late'), '⛔ দেরির চিহ্ন ভুল আদেশে।');
 
         $row = $widget['rows'][1];

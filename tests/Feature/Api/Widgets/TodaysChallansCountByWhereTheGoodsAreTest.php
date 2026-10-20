@@ -80,11 +80,11 @@ final class TodaysChallansCountByWhereTheGoodsAreTest extends TestCase
         $grew = fn (string $box) => $after[$box] - $before[$box];
 
         $this->assertSame(2, $grew('gate_pending'), '⛔ গেট পাস বাকি: বরাদ্দ আর প্যাক।');
-        $this->assertSame(3, $grew('on_the_way'), '⛔ পথে: রওনা দুটো আর আংশিক একটা।');
+        $this->assertSame(3, $grew('moving'), '⛔ পথে: রওনা দুটো আর আংশিক একটা।');
         $this->assertSame(3, $grew('delivered'), '⛔ পৌঁছেছে: আজকের তিনটা, গতকালেরটা নয়।');
         $this->assertSame(1, $grew('returned'), '⛔ ফেরত: পৌঁছায়নি একটা।');
         $this->assertSame(9, $grew('total'), '⛔ খসড়া, বাতিল বা গতকালের চালান মোটে ঢুকেছে।');
-        $this->assertSame($after['gate_pending'] + $after['on_the_way'] + $after['delivered'] + $after['returned'], $after['total'],
+        $this->assertSame($after['gate_pending'] + $after['moving'] + $after['delivered'] + $after['returned'], $after['total'],
             '⛔ চার ঘরের যোগ মোট নয় — কোনো চালান দুই ঘরে বা কোনোটাতেই নয়।');
 
         $customer = $last->customer()->with(['location.parent', 'branch'])->first();
@@ -93,6 +93,7 @@ final class TodaysChallansCountByWhereTheGoodsAreTest extends TestCase
         $this->assertSame($last->document_no, $after['latest']['no']);
         $this->assertSame('ঢাকা মেট্রো-ট 14-2231', $after['latest']['vehicle']);
         $this->assertSame('/sales/challans/'.$last->id, $after['latest']['link']);
+        $this->assertSame('/sales/deliveries?stage=dispatched', $after['link'], '⛔ উইজেটের লিংক ডেলিভারির পাতায় নয়।');
     }
 
     public function test_another_branchs_challans_stay_behind_the_wall(): void

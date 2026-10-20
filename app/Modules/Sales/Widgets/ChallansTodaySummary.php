@@ -32,7 +32,7 @@ final class ChallansTodaySummary implements WidgetSummary
     /** @var array<string, list<?string>> ঘর → ধাপ (null = ধাপের সারি এখনো নেই) */
     public const BOXES = [
         'gate_pending' => [null, DeliveryStage::PENDING, DeliveryStage::ALLOCATED, DeliveryStage::PICKING, DeliveryStage::PACKED],
-        'on_the_way' => [DeliveryStage::DISPATCHED, DeliveryStage::PARTIALLY_DELIVERED],
+        'moving' => [DeliveryStage::DISPATCHED, DeliveryStage::PARTIALLY_DELIVERED],
         'delivered' => [DeliveryStage::DELIVERED],
         'returned' => [DeliveryStage::FAILED],
     ];
@@ -53,7 +53,7 @@ final class ChallansTodaySummary implements WidgetSummary
     }
 
     /**
-     * @return array{total: int, gate_pending: int, on_the_way: int, delivered: int, returned: int, latest: ?array{customer: string, no: string, vehicle: ?string, link: string}}
+     * @return array{link: string, total: int, gate_pending: int, moving: int, delivered: int, returned: int, latest: ?array{customer: string, no: string, vehicle: ?string, link: string}}
      */
     public function data(User $user): array
     {
@@ -79,6 +79,8 @@ final class ChallansTodaySummary implements WidgetSummary
             ->first();
 
         return [
+            // ⓘ পুরো উইজেটে চাপলে — ডেলিভারির পাতা; মালিকের পূর্ণ পর্দার "চালান পথে" বোতামও এটা পড়ে ([[OwnerBoardSummary]])
+            'link' => '/sales/deliveries?stage=dispatched',
             'total' => array_sum($counts),
             ...$counts,
             'latest' => $latest === null ? null : [

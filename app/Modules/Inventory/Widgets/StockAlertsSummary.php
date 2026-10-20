@@ -49,7 +49,7 @@ final class StockAlertsSummary implements WidgetSummary
     }
 
     /**
-     * @return array{count: int, warehouse: ?string, branch: ?string, rows: list<array{product: string, available: string, reorder: string, share: string, unit: ?string, link: string}>}
+     * @return array{link: string, count: int, warehouse: ?string, branch: ?string, rows: list<array{product: string, available: string, reorder: string, share: string, unit: ?string, link: string}>}
      */
     public function data(User $user): array
     {
@@ -69,6 +69,8 @@ final class StockAlertsSummary implements WidgetSummary
         }
 
         return [
+            // ⓘ পুরো উইজেটে চাপলে — মজুদের পাতা, কম আগে (ওয়েবের ড্যাশবোর্ডের তালিকার একই লিংক)
+            'link' => '/inventory/stock?sort=available',
             'count' => $this->facts->belowReorder(),
             ...$this->where($user),
             'rows' => $rows,

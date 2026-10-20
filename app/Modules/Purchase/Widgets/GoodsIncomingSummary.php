@@ -45,7 +45,7 @@ final class GoodsIncomingSummary implements WidgetSummary
     }
 
     /**
-     * @return array{count: int, late: int, rows: list<array<string, mixed>>}
+     * @return array{link: string, count: int, late: int, rows: list<array<string, mixed>>}
      */
     public function data(User $user): array
     {
@@ -76,6 +76,7 @@ final class GoodsIncomingSummary implements WidgetSummary
         }
 
         return [
+            'link' => '/purchase/orders',
             'count' => $due()->count(),
             'late' => $due()->whereDate('expected_on', '<', $today->toDateString())->count(),
             'rows' => $rows,

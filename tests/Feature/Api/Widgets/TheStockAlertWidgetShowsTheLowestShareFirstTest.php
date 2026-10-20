@@ -87,6 +87,7 @@ final class TheStockAlertWidgetShowsTheLowestShareFirstTest extends TestCase
         $this->assertSame('200', $first['reorder']);
         $this->assertSame(0, bccomp($first['share'], '0.12', 4), '⛔ ভাগ ২৪ ÷ ২০০ = ০.১২ নয়।');
         $this->assertSame('/inventory/stock?q=W5-A', $first['link']);
+        $this->assertSame('/inventory/stock?sort=available', $widget['link']);
         $this->assertNotEmpty($first['unit']);
         $this->assertNotContains('Above the level', array_column($widget['rows'], 'product'));
         // ⓘ শাখায় একটাই গুদাম হলে তার নাম; নমুনার শাখায় আগে থেকে গুদাম থাকলে কেবল শাখা ("সব গুদাম")
