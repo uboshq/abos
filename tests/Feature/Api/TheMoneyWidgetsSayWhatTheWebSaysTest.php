@@ -189,7 +189,8 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
 
         // ⛔ দল-খাতের (১১০২ "ব্যাংক", নিজেও money_kind=bank) সারি গোনা হয় না — শিরোনামে টাকা বসে না (a6-এর দৌড়, MoneyNeverLandsOnAGroupAccountTest)
         $line = $voucher->lines()->where('account_id', $bank->id)->firstOrFail();
-        $line->replicate()->forceFill(['account_id' => StandardChart::find(StandardChart::BANK)->id])->saveQuietly();
+        // ⓘ নিজের public_id — saveQuietly() "creating" ঘটনা চালায় না, আর replicate() পুরনোটা অনন্য কলামে নকল করত
+        $line->replicate()->forceFill(['account_id' => StandardChart::find(StandardChart::BANK)->id, 'public_id' => (string) \Illuminate\Support\Str::uuid7()])->saveQuietly();
 
         $after = $this->widgets($this->owner)['bank_reconcile'];
         $this->assertSame($before['open'] + 1, $after['open'], '⛔ ব্যাংকের নতুন দাখিলা না-মেলানো সারিতে উঠল না');
