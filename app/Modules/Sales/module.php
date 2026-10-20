@@ -1922,4 +1922,8 @@ return [
         \App\Modules\Sales\Models\CreditDecision::class => 'append-only record of what the credit wall saw and said; never edited',
     ],
 
+    // ⭐ ফোনের হোম-স্ক্রিন উইজেট — আজকের চালান (নকশা ৬), মালিকের আদেশ ২০ অক্টোবর ২০২৬ (ec)
+    'phone_widgets' => [
+        \App\Modules\Sales\Widgets\ChallansTodaySummary::class,
+    ],
 ];
