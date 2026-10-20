@@ -533,10 +533,12 @@ class ShellTest extends TestCase
 
     public function test_the_top_bar_has_a_full_screen_button(): void
     {
-        $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
-        $toggle = $this->codeOf(resource_path('views/components/shell/fullscreen-toggle.blade.php'));
+        // ⭐ পূর্ণপর্দা এখন ছবির মেনুতে — SAP Fiori shell bar (ওয়েবের মান ধাপ ২, মালিকের অনুমোদিত নমুনা, ২০ অক্টোবর ২০২৬);
+        //    বোতামটা হারায়নি, জায়গা বদলেছে, আর একই যন্ত্র ([[fullscreenToggle]]) চালায়
+        $markup = $this->codeOf(resource_path('views/components/shell/profile-menu.blade.php'));
+        $toggle = $markup;
 
-        $this->assertStringContainsString('fullscreen-toggle', $markup);
+        $this->assertStringContainsString('data-menu-fullscreen', $markup);
 
         // অবস্থাটা document থেকে পড়া, নিজে মনে রাখা নয়: Esc বা F11 দিয়েও
         // ফুল-স্ক্রিন ছাড়া যায়, আর তখন নিজের রাখা boolean বাস্তবের সাথে
