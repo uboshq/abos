@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/auth_user.dart';
+import '../../core/auth/me_features.dart';
 import '../../core/auth/session_profile.dart';
 import '../../core/auth/session_repository.dart';
 import '../../core/menu/me_api.dart';
@@ -298,6 +299,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ref.read(ordersReplaceDoProvider.notifier).state =
           profile.ordersReplaceDo;
       ref.read(mayCollectProvider.notifier).state = profile.mayCollect;
+      // ⭐ সার্ভার ছবি বদল আর "আমার ফোনগুলো" জানে কি না — মেনু আর প্রোফাইলের পর্দা এটা দেখে ([MeFeatures])
+      ref.read(meFeaturesProvider.notifier).state = profile.features;
       // ⭐ মালিকের দুই সুইচ — পর্দা আড়াল, আর উইজেটের অঙ্ক; হোম আঁকা এর জন্য থামে না
       unawaited(PhonePrivacy.follow(
           secureScreens: profile.secureScreens,

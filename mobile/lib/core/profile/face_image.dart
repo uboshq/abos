@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api_client/api_client.dart';
+import 'face_cache.dart';
 
 /// ⭐ নিজের মুখের ঠিকানা — হোম `/me` থেকে লেখে, ছবির পর্দা বসানো বা সরানোর পরে (a6, ২০ অক্টোবর ২০২৬)। ⓘ null = ছবি নেই
 /// (নামের প্রথম অক্ষর)। হোম এটা শোনে, তাই নতুন মুখ সাথে সাথে ওপরের বার, ছবির মেনু আর "আমি" পাতায় — `/me` আবার না ডেকেই।
@@ -22,7 +23,8 @@ final myFaceProvider = StateProvider<String?>((ref) => null);
 /// <p>⛔ টোকেন কেবল অ্যাপের নিজের সার্ভারে ([sameOrigin]) — অন্য ঠিকানার ছবিতে (পুরনো কোনো বাইরের লিংক) টোকেন যায় না।
 ///
 /// <p>⭐ ক্যাশ: চাবি কেবল ঠিকানা (টোকেন নয়), আর ঠিকানায় `v=` ছাপ — ছবি না বদলালে একই চাবি, Flutter-এর ImageCache থেকে আসে,
-/// নতুন টোকেনে আবার নামে না; বদলালে নতুন ঠিকানা, পুরনোটা আর দেখায় না। ⓘ ফোনের ডিস্কে মুখ জমা রাখা হয় না (গোপনীয়তা)।
+/// নতুন টোকেনে আবার নামে না; বদলালে নতুন ঠিকানা, পুরনোটা আর দেখায় না। ⭐ অ্যাপ বন্ধ-খোলার পরে ডিস্কের জমা থেকে, ETag মিলিয়ে
+/// ([FaceCache] — অ্যাপের নিজের ক্যাশ-ফোল্ডারে, বেরোলে মোছা)।
 @immutable
 class FaceImage extends ImageProvider<FaceImage> {
   const FaceImage(this.url, {this.fetch});
@@ -50,20 +52,37 @@ class FaceImage extends ImageProvider<FaceImage> {
     return ImageInfo(image: frame.image, debugLabel: 'face');
   }
 
-  /// ছবির বাইট — নিজের সার্ভারে টোকেনসহ ([ApiClient] নিজে বসায়), অন্য ঠিকানায় টোকেন ছাড়া
-  static Future<Uint8List> fetchBytes(String url, {Dio? dio}) async {
+  /// ছবির বাইট — নিজের সার্ভারে টোকেনসহ ([ApiClient] নিজে বসায়), অন্য ঠিকানায় টোকেন ছাড়া।
+  ///
+  /// <p>⭐ নিজের সার্ভারের মুখ ডিস্কে জমা ([FaceCache]): জমা থাকলে `If-None-Match` সহ জিজ্ঞেস — ৩০৪ মানে একই মুখ, শরীর আসে না,
+  /// জমাটাই; ২০০ মানে নতুন, জমা বদলায়। ⓘ অন্য ঠিকানার ছবি জমা হয় না।
+  static Future<Uint8List> fetchBytes(String url, {Dio? dio, FaceCache? cache}) async {
     final client = dio ?? ApiClient.dio;
+    final store = cache ?? FaceCache.instance;
     final ours = sameOrigin(Uri.parse(url), Uri.parse(client.options.baseUrl));
+    final startedAt = store.generation;
+    final kept = ours ? await store.get(url) : null;
     final response = await client.get<List<int>>(
       url,
       options: Options(
         responseType: ResponseType.bytes,
-        headers: const {'Accept': 'image/jpeg, image/png, image/*'},
+        headers: {
+          'Accept': 'image/jpeg, image/png, image/*',
+          if (kept != null) 'If-None-Match': kept.etag,
+        },
         extra: ours ? null : ApiClient.skipAuthRefresh,
+        // ⓘ ৩০৪ ভুল নয় — "আপনার কাছেরটাই ঠিক"
+        validateStatus: (status) => status != null && ((status >= 200 && status < 300) || (status == 304 && kept != null)),
       ),
     );
+    if (response.statusCode == 304 && kept != null) return kept.bytes;
     final data = response.data;
-    return data == null ? Uint8List(0) : Uint8List.fromList(data);
+    final bytes = data == null ? Uint8List(0) : Uint8List.fromList(data);
+    final etag = response.headers.value('etag');
+    if (ours && etag != null && bytes.isNotEmpty) {
+      await store.put(url, bytes, etag, startedAt: startedAt);
+    }
+    return bytes;
   }
 
   /// একই scheme, host আর port — তবেই টোকেন

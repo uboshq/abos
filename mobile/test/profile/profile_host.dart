@@ -1,4 +1,5 @@
 import 'package:abos_mobile/core/auth/auth_state.dart';
+import 'package:abos_mobile/core/auth/me_features.dart';
 import 'package:abos_mobile/core/navigation/top_bar/top_bar_context.dart';
 import 'package:abos_mobile/core/profile/face_image.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
@@ -18,12 +19,16 @@ TopBarContext topBar() => TopBarContext(
       openMenu: (_, __) async {},
     );
 
-ProviderContainer profileContainer({SignedIn? auth, String? face, bool withBar = true}) {
+/// নতুন সার্ভার — দুটোই আছে
+const allFeatures = MeFeatures(profilePhoto: true, myPhones: true);
+
+ProviderContainer profileContainer({SignedIn? auth, String? face, bool withBar = true, MeFeatures? features = allFeatures}) {
   final c = ProviderContainer(overrides: [
     authStateProvider.overrideWith((ref) => auth ?? SignedIn()),
     if (withBar) topBarContextProvider.overrideWith((ref) => topBar()),
   ]);
   c.read(myFaceProvider.notifier).state = face;
+  c.read(meFeaturesProvider.notifier).state = features;
   return c;
 }
 

@@ -8,6 +8,7 @@ import 'package:home_widget/home_widget.dart';
 import '../../api_client/network_errors.dart';
 import '../../auth/token_storage.dart';
 import '../../privacy/phone_privacy.dart';
+import '../../profile/face_cache.dart';
 import '../kinds/all_kinds.dart';
 import '../../theme/theme_choice.dart';
 import '../kit/widget_doc.dart';
@@ -222,6 +223,8 @@ class WidgetHub {
   static Future<void>? _clearing;
 
   static Future<void> _wipe() async {
+    // ⛔ মুখের জমাও — বেরোনো, কোম্পানি বদল আর দূর থেকে বের করা তিনটাই এখানে আসে (fe, ২০ অক্টোবর ২০২৬; [FaceCache])
+    await FaceCache.instance.wipe();
     try {
       for (final key in widgetKeys) {
         await _quiet(() => save(docKey(key), null), key);

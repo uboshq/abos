@@ -80,22 +80,16 @@ class FakeProfileApi implements ProfileApi {
     this.signOutAnswer,
   }) : pages = pages ?? [[phone('aaaa1111', current: true), phone('bbbb2222')]];
 
-  bool? doors;
+  /// false = পুরনো সার্ভার: তালিকার দরজা ৪০৪
+  bool doors;
   List<List<MyPhone>> pages;
   Future<PhotoChange> Function(Uint8List jpeg)? uploadAnswer;
   Future<bool> Function(String id)? signOutAnswer;
 
-  int doorChecks = 0;
   final List<Uint8List> uploads = [];
   int removals = 0;
   final List<int> pagesAsked = [];
   final List<String> signedOut = [];
-
-  @override
-  Future<bool?> doorsOpen() async {
-    doorChecks++;
-    return doors;
-  }
 
   @override
   Future<PhotoChange> uploadPhoto(Uint8List jpeg, {void Function(double sent)? onProgress}) async {
@@ -112,7 +106,7 @@ class FakeProfileApi implements ProfileApi {
   @override
   Future<PhonePage> phones(int page) async {
     pagesAsked.add(page);
-    if (doors == false) throw const ProfileDoorsMissing();
+    if (!doors) throw const ProfileDoorsMissing();
     final rows = page - 1 < pages.length ? pages[page - 1] : const <MyPhone>[];
     return PhonePage(rows, page < pages.length ? page + 1 : null);
   }

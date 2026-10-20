@@ -14,7 +14,7 @@ import 'profile_fakes.dart';
 ///
 /// <p>দাবি: ছবি যায় multipart `photo` নামে, JPEG হয়ে; ৪২২-এর বাংলা বাক্য (`errors.photo[0]`) পর্দায় যায়, ইংরেজিটা নয়; ফোনের
 /// তালিকা পাতা ধরে (`page`, `next_page`), ভাঙা সারি বাদ; বের করায় ২০৪ = হলো, ৪০৪ = আগেই নেই; ⭐ পুরনো সার্ভারে (দরজা নেই,
-/// ৪০৪) ছবি আর তালিকা [ProfileDoorsMissing] — "সার্ভার আপডেট হয়নি"।
+/// ৪০৪) ছবি আর তালিকা [ProfileDoorsMissing] — "এখনো এই সার্ভারে নেই" (শেষ পাহারা; আসল সিদ্ধান্ত `/me`-র features)।
 void main() {
   late StubServer server;
   late HttpClientAdapter real;
@@ -93,7 +93,7 @@ void main() {
       serve((o, _) => json({'message': 'The route api/v1/me/photo could not be found.'}, 404));
       await expectLater(api.uploadPhoto(jpeg), throwsA(isA<ProfileDoorsMissing>()));
       await expectLater(api.removePhoto(), throwsA(isA<ProfileDoorsMissing>()));
-      expect(ProfileDoorsMissing.message, contains('সার্ভার আপডেট হয়নি'));
+      expect(ProfileDoorsMissing.message, contains('এখনো এই সার্ভারে নেই'));
     });
   });
 
@@ -154,17 +154,15 @@ void main() {
       expect(await api.signOutPhone('0123456789abcdef0123456789abcdef'), isFalse);
     });
 
-    test('an old server (no list door) reads as "server not updated"; doorsOpen says false, true or unknown', () async {
+    test('the last guard: an old server (no list door, 404) reads as "not on this server yet", no signal stays a network error', () async {
       var status = 404;
       serve((o, _) => status == 0
           ? throw DioException(requestOptions: o, type: DioExceptionType.connectionError)
-          : json(status == 200 ? {'data': [], 'next_page': null} : {'message': 'Not Found'}, status));
+          : json({'message': 'Not Found'}, status));
       await expectLater(api.phones(1), throwsA(isA<ProfileDoorsMissing>()));
-      expect(await api.doorsOpen(), isFalse);
-      status = 200;
-      expect(await api.doorsOpen(), isTrue);
+      expect(ProfileDoorsMissing.title, 'এখনো এই সার্ভারে নেই');
       status = 0;
-      expect(await api.doorsOpen(), isNull, reason: 'নেট নেই — জানা নেই, "পুরনো সার্ভার" বলা ভুল হত');
+      await expectLater(api.phones(1), throwsA(isA<DioException>()), reason: 'নেট নেই — "পুরনো সার্ভার" বলা ভুল হত');
     });
   });
 }

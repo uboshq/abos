@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../auth/me_features.dart';
 
 /// ⭐ প্রোফাইল মেনুর দুই পর্দার পথ (অ্যাপ ০.৪.৪১; মালিকের অনুমোদিত পুরো-পাতার নমুনা, পাতা ২: ছবির মেনুতে
 /// "প্রোফাইল ও ছবি বদল" আর "আমার ফোনগুলো"; a6, ২০ অক্টোবর ২০২৬)।
@@ -9,6 +12,21 @@ class ProfileRoutes {
   /// `/home/` এর পরের অংশ — হোমের `openPath` এটাই নেয়
   static const String profile = 'me/profile';
   static const String phones = 'me/phones';
+
+  /// ⭐ এই সার্ভারে কী আছে — মেনু (a4) এখান থেকে পড়ে; `/me` না এলে বা Riverpod না থাকলে (একা মেনুর টেস্ট) [MeFeatures.none]
+  static MeFeatures featuresOf(BuildContext context) {
+    try {
+      return ProviderScope.containerOf(context, listen: false).read(meFeaturesProvider) ?? MeFeatures.none;
+    } catch (_) {
+      return MeFeatures.none;
+    }
+  }
+
+  /// মেনুর প্রথম সারির নাম — ছবি বদল থাকলে "প্রোফাইল ও ছবি বদল", নইলে "আমার প্রোফাইল" (কোনো প্রতিশ্রুতি নয়)
+  static String profileTitle(MeFeatures features) => features.profilePhoto ? 'প্রোফাইল ও ছবি বদল' : 'আমার প্রোফাইল';
+
+  /// "আমার ফোনগুলো" সারি দেখাবে কি না
+  static bool showsPhones(MeFeatures features) => features.myPhones;
 
   /// ⭐ ছবির মেনুর সারি থেকে সরাসরি — মেনু বন্ধ করে "আমার ফোনগুলো" খোলে। ⓘ মেনুর ফাইলটা a4-এর
   /// (`lib/core/navigation/top_bar/avatar_menu.dart`); এর জন্য সেখানে একটা সারিই লাগে, নতুন [AvatarChoice] নয়।

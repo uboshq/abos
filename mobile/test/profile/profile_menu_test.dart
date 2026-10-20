@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:abos_mobile/core/auth/auth_state.dart';
+import 'package:abos_mobile/core/auth/me_features.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/auth/session_profile.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
@@ -37,6 +38,7 @@ void main() {
                 company: OrgRef(publicId: 'c1', code: 'ADI', name: 'ADI Wholesale'),
                 branch: OrgRef(publicId: 'b1', code: 'MMS', name: 'ময়মনসিংহ'),
                 locale: 'bn',
+                features: MeFeatures(profilePhoto: true),
               ),
             ),
             fetchToday: () async => throw StateError('offline'),
@@ -73,6 +75,15 @@ void main() {
     expect(opened, [ProfileRoutes.profile]);
     expect(ProfileRoutes.profile, 'me/profile');
     expect(find.byKey(const ValueKey('profile-dialog')), findsNothing, reason: 'আগের ছোট dialog নয় — পুরো পর্দা');
+  });
+
+  testWidgets('/me\'s features reach the menu and the profile screen', (tester) async {
+    final c = container();
+    addTearDown(c.dispose);
+    expect(c.read(meFeaturesProvider), isNull, reason: '/me আসার আগে — জানা নেই');
+    await tester.pumpWidget(shell(c, []));
+    await tester.pumpAndSettle();
+    expect(c.read(meFeaturesProvider), const MeFeatures(profilePhoto: true));
   });
 
   testWidgets('/me\'s face is shared, and a new face from the photo screen reaches the header and inner bars at once', (tester) async {

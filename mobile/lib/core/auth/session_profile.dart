@@ -1,3 +1,5 @@
+import 'me_features.dart';
+
 /// A company or branch, as `GET /me` names one — just enough to show which
 /// tenant this session is inside, never used as a cache key (that stays
 /// `public_id`-based the way [AuthUser] already is).
@@ -37,6 +39,7 @@ class SessionProfile {
     this.mayCollect = false,
     this.secureScreens = true,
     this.widgetAmounts = false,
+    this.features = MeFeatures.none,
   });
 
   final OrgRef company;
@@ -76,6 +79,9 @@ class SessionProfile {
   /// ⭐ উইজেটে টাকার অঙ্ক — মালিকের সুইচ; পুরনো সার্ভারে লুকানো
   final bool widgetAmounts;
 
+  /// ⭐ প্রোফাইল মেনুর নতুন কাজ — পুরনো সার্ভারে দুটোই false ([MeFeatures])
+  final MeFeatures features;
+
   /// Whether there is anything to switch between at all — a picker with one
   /// company and one branch is a button that does nothing.
   bool get canSwitch => companies.length > 1 || branches.length > 1;
@@ -95,6 +101,7 @@ class SessionProfile {
       mayCollect: json['mayCollect'] == true,
       secureScreens: json['secureScreens'] != false,
       widgetAmounts: json['widgetAmounts'] == true,
+      features: MeFeatures.fromJson(json['features']),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:abos_mobile/core/auth/auth_state.dart';
+import 'package:abos_mobile/core/auth/me_features.dart';
 import 'package:abos_mobile/core/profile/profile_api.dart';
 import 'package:abos_mobile/core/widgets/empty_state.dart';
 import 'package:abos_mobile/features/profile/my_phones_screen.dart';
@@ -13,7 +14,7 @@ import 'profile_host.dart';
 ///
 /// <p>দাবি: প্রতিটা ফোন নাম আর "শেষ ব্যবহার: 20/10/2026 সকাল 10:00" (অ্যাপের তারিখের নিয়ম) নিয়ে, নিজেরটায় "এই ফোন"; পাতা
 /// ধরে শেষ পর্যন্ত; "বের করে দিন" ফোনের নাম ধরে জিজ্ঞেস করে, ২০৪-এ সারি সরে; ⛔ এই ফোনটাই হলে অ্যাপ নিজেও বের হয়; ৪০৪-এ
-/// তালিকা নতুন করে আর বাংলায় কারণ; পুরনো সার্ভারে "সার্ভার আপডেট হয়নি"; পর্দা-পাঠক ফোনের নাম বলে, বাংলায়; ৪৮dp, ২০০%, অন্ধকার।
+/// তালিকা নতুন করে আর বাংলায় কারণ; পুরনো সার্ভারে (`my_phones` false বা ৪০৪) "এখনো এই সার্ভারে নেই"; পর্দা-পাঠক ফোনের নাম বলে, বাংলায়; ৪৮dp, ২০০%, অন্ধকার।
 void main() {
   Future<SignedIn> open(WidgetTester tester, FakeProfileApi api, {bool dark = false, double scale = 1}) async {
     final auth = SignedIn();
@@ -113,12 +114,26 @@ void main() {
     expect(find.byKey(const ValueKey('phone-bbbb2222')), findsNothing);
   });
 
-  testWidgets('an old server: "সার্ভার আপডেট হয়নি", no rows, no button', (tester) async {
-    await open(tester, FakeProfileApi(doors: false));
+  testWidgets('/me says no my_phones: "এখনো এই সার্ভারে নেই" at once, without asking the server', (tester) async {
+    final api = FakeProfileApi();
+    final c = profileContainer(features: const MeFeatures(profilePhoto: true));
+    await tester.pumpWidget(profileHost(c, MyPhonesScreen(api: api)));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('phones-server-old')), findsOneWidget);
-    expect(find.text('সার্ভার আপডেট হয়নি'), findsOneWidget);
+    expect(find.text('এখনো এই সার্ভারে নেই'), findsOneWidget);
+    expect(api.pagesAsked, isEmpty, reason: 'সার্ভারে যে দরজা নেই সেখানে টোকা নয়');
     expect(find.text('বের করে দিন'), findsNothing);
+  });
+
+  testWidgets('a deep link before /me answered: the list asks, and a 404 (old server) is the same Bengali state', (tester) async {
+    final api = FakeProfileApi(doors: false);
+    final c = profileContainer(features: null);
+    await tester.pumpWidget(profileHost(c, MyPhonesScreen(api: api)));
+    await tester.pumpAndSettle();
+    expect(api.pagesAsked, [1]);
+    expect(find.text('এখনো এই সার্ভারে নেই'), findsOneWidget);
     expect(find.byKey(const ValueKey('phones-error')), findsNothing, reason: 'ভুল নয় — সার্ভার পুরনো');
+    expect(find.text('বের করে দিন'), findsNothing);
   });
 
   testWidgets('pulling the list down asks the server again, even when it was empty', (tester) async {

@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/auth/auth_state.dart';
+import '../../core/auth/me_features.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/profile/profile_api.dart';
 import '../../core/theme/app_palette.dart';
@@ -21,7 +22,8 @@ import '../books/books_widgets.dart' show MoreButton;
 /// জিজ্ঞেস। ২০৪ → সারি সরে; এই ফোনটাই হলে অ্যাপের নিজের বের-হওয়া ([AuthController.signOutHere]) — লগইন পাতায়। ৪০৪ → ফোনটা
 /// আগেই বের হয়ে গেছে: তালিকা নতুন করে, বাংলায় জানিয়ে।
 ///
-/// <p>⭐ পাতা ভাগ: সার্ভার ২০টা করে দেয় (`next_page`); শেষে "আরও দেখুন"। ⓘ পুরনো সার্ভার (দরজা নেই) → "সার্ভার আপডেট হয়নি"।
+/// <p>⭐ পাতা ভাগ: সার্ভার ২০টা করে দেয় (`next_page`); শেষে "আরও দেখুন"। ⓘ পুরনো সার্ভার (`/me`-র `my_phones` false, বা
+/// তালিকার দরজা ৪০৪) → "এখনো এই সার্ভারে নেই"।
 class MyPhonesScreen extends ConsumerStatefulWidget {
   const MyPhonesScreen({super.key, this.api = const ServerProfileApi(), this.signOutHere});
 
@@ -50,7 +52,14 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    // ⭐ `/me` বলেছে সার্ভার "আমার ফোনগুলো" জানে না → ডাক ছাড়াই "এখনো এই সার্ভারে নেই"। ⓘ `/me` এখনো না এলে (ঠান্ডা শুরুতে সরাসরি
+    // লিংক) তালিকা চাওয়াই শেষ পাহারা — ৪০৪ হলে একই কথা
+    final features = ref.read(meFeaturesProvider);
+    if (features != null && !features.myPhones) {
+      _old = true;
+    } else {
+      _load();
+    }
   }
 
   Future<void> _load({bool more = false}) async {
@@ -149,8 +158,8 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
         const EmptyState(
           key: ValueKey('phones-server-old'),
           icon: Symbols.cloud_sync,
-          title: 'সার্ভার আপডেট হয়নি',
-          message: ProfileDoorsMissing.message,
+          title: ProfileDoorsMissing.title,
+          message: 'আমার ফোনগুলো সার্ভারের নতুন সংস্করণ এলে চালু হবে।',
         ),
       if (_error != null) ErrorState(key: const ValueKey('phones-error'), message: _error!, onRetry: _busy ? null : _load),
       if (_loaded && _rows.isEmpty && _error == null && !_old)

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:abos_mobile/core/auth/me_features.dart';
 import 'package:abos_mobile/core/permissions/permission_rationale.dart';
 import 'package:abos_mobile/core/profile/face_image.dart';
 import 'package:abos_mobile/core/profile/face_picker.dart';
@@ -20,7 +21,7 @@ import 'profile_host.dart';
 ///
 /// <p>দাবি: পর্দা খুললে কোনো অনুমতি বা ছবি-বাছাই নয় — ক্যামেরা কেবল বোতাম চাপলে, আগে বাংলা ব্যাখ্যা; বাছা ছবি বর্গ হয়ে যায়,
 /// কত গেল দেখায়, হলে নতুন মুখ সবখানে ([myFaceProvider]); ⛔ বাছা ফাইল ফোনে থাকে না (সফল বা ব্যর্থ); সার্ভারের "না" বাংলায়;
-/// সরানোর আগে জিজ্ঞেস; ⭐ পুরনো সার্ভারে "সার্ভার আপডেট হয়নি" আর বোতাম বন্ধ; পর্দা-পাঠকে বাংলা, ৪৮dp, ২০০% লেখা, অন্ধকার।
+/// সরানোর আগে জিজ্ঞেস; ⭐ `/me`-র features-এ ছবি বদল না থাকলে ছবির অংশই নেই (বন্ধ বোতাম নয়), ফোনগুলো না থাকলে সেই সারিও নেই; পর্দা-পাঠকে বাংলা, ৪৮dp, ২০০% লেখা, অন্ধকার।
 void main() {
   final fakeJpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 9, 9, 0xFF, 0xD9]);
   Future<Uint8List> fakeShrink(Uint8List _) async => fakeJpeg;
@@ -224,27 +225,45 @@ void main() {
     expect(find.text('alamin@adi.test'), findsOneWidget);
   });
 
-  testWidgets('an old server: a Bengali "server not updated" note, the three buttons off, my details still there', (tester) async {
-    final api = FakeProfileApi(doors: false);
-    final c = profileContainer(face: oldFace);
+  testWidgets('an old server (no profile_photo): the whole photo part is gone, not disabled; my details still there', (tester) async {
+    final api = FakeProfileApi();
+    final c = profileContainer(face: oldFace, features: const MeFeatures(myPhones: true));
     await tester.pumpWidget(profileHost(c, ProfileScreen(api: api, picker: picker(), faceOf: (_) => MemoryImage(onePixelPng))));
     await tester.pumpAndSettle();
-    expect(api.doorChecks, 1);
-    expect(find.byKey(const ValueKey('profile-server-old')), findsOneWidget);
-    expect(find.textContaining('সার্ভার আপডেট হয়নি'), findsOneWidget);
-    for (final key in ['profile-camera', 'profile-gallery']) {
-      expect(tester.widget<ButtonStyleButton>(find.byKey(ValueKey(key))).onPressed, isNull, reason: key);
+    for (final key in ['profile-camera', 'profile-gallery', 'profile-remove']) {
+      expect(find.byKey(ValueKey(key)), findsNothing, reason: '⛔ $key — বন্ধ বোতামও নয়, নেই-ই');
     }
-    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('profile-remove'))).onPressed, isNull);
+    expect(find.byType(ButtonStyleButton), findsNothing);
+    expect(find.textContaining('সার্ভার'), findsNothing, reason: 'ছবি নিয়ে কোনো কথা নয়');
+    expect(find.textContaining('বর্গ করে'), findsNothing);
+    expect(find.textContaining('আমার প্রোফাইল'), findsWidgets, reason: 'নামেও "ছবি" নয়');
+    expect(find.textContaining('প্রোফাইল ও ছবি'), findsNothing);
+    expect(find.byKey(const ValueKey('profile-face')), findsOneWidget, reason: 'মুখ বা অক্ষর থাকে');
     expect(find.text('alamin@adi.test'), findsOneWidget);
+    expect(find.text('ADI Wholesale · সব শাখা'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-designation')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-phones')), findsOneWidget, reason: 'ফোনগুলো আলাদা সুইচ');
+    expect(api.uploads, isEmpty);
   });
 
-  testWidgets('no signal at open is not "old server": the buttons stay on', (tester) async {
-    final c = profileContainer();
-    await tester.pumpWidget(profileHost(c, ProfileScreen(api: FakeProfileApi(doors: null), picker: picker())));
+  testWidgets('/me not answered yet counts as "not there": no photo part', (tester) async {
+    final c = profileContainer(features: null);
+    await tester.pumpWidget(profileHost(c, ProfileScreen(api: FakeProfileApi(), picker: picker())));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('profile-server-old')), findsNothing);
+    expect(find.byKey(const ValueKey('profile-camera')), findsNothing);
+    expect(find.byKey(const ValueKey('profile-phones')), findsNothing);
+  });
+
+  testWidgets('profile_photo true: the three buttons are there and work; my_phones false: no phones row', (tester) async {
+    final c = profileContainer(features: const MeFeatures(profilePhoto: true));
+    await tester.pumpWidget(profileHost(c, ProfileScreen(api: FakeProfileApi(), picker: picker())));
+    await tester.pumpAndSettle();
+    for (final key in ['profile-camera', 'profile-gallery', 'profile-remove']) {
+      expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
+    }
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('profile-camera'))).onPressed, isNotNull);
+    expect(find.textContaining('প্রোফাইল ও ছবি'), findsWidgets);
+    expect(find.byKey(const ValueKey('profile-phones')), findsNothing, reason: 'my_phones false — সারি নেই');
   });
 
   testWidgets('"আমার ফোনগুলো" opens from here', (tester) async {
@@ -297,7 +316,7 @@ void main() {
         setScreenSize(tester, Size(width, 720));
         final c = profileContainer(face: oldFace);
         await tester.pumpWidget(profileHost(
-            c, ProfileScreen(api: FakeProfileApi(doors: false), picker: picker(), faceOf: (_) => MemoryImage(onePixelPng)),
+            c, ProfileScreen(api: FakeProfileApi(), picker: picker(), faceOf: (_) => MemoryImage(onePixelPng)),
             scale: 2));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

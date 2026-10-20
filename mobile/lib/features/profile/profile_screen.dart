@@ -9,6 +9,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/auth/auth_state.dart';
+import '../../core/auth/me_features.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/navigation/top_bar/top_bar_context.dart';
 import '../../core/profile/face_image.dart';
@@ -29,8 +30,9 @@ import '../../core/theme/app_spacing.dart';
 /// <p>⛔ অনুমতি কেবল বোতাম চাপলে ([FacePicker]) — পর্দা খুললে নয়। ⛔ বাছা ফাইলটা ফোনে থাকে না: পড়ার পরেই মুছে দেওয়া হয়,
 /// পাঠানো সফল হোক বা না হোক।
 ///
-/// <p>⭐ পুরনো সার্ভার (দরজা নেই): পর্দা খোলার সময় একবার দেখা ([ProfileApi.doorsOpen]); নেই হলে উপরে "সার্ভার আপডেট হয়নি" আর
-/// তিন বোতাম বন্ধ — নিজের তথ্য তবু দেখায়।
+/// <p>⭐ কোন অংশ দেখাবে তা `/me`-র `features` বলে ([meFeaturesProvider]): `profile_photo` false (পুরনো সার্ভার) → ছবির পুরো অংশ
+/// নেই — বোতাম, কথা, কিছুই না, বন্ধ বোতামও না; নিজের তথ্য (নাম, পদবি, কোম্পানি · শাখা, ইমেইল) তবু দেখায়। `my_phones` false →
+/// "আমার ফোনগুলো" সারি নেই। ⓘ পর্দা খুলতে সার্ভারে কোনো ডাক নেই।
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({
     super.key,
@@ -54,30 +56,16 @@ class ProfileScreen extends ConsumerStatefulWidget {
   final VoidCallback? openPhones;
 
   static const String title = 'প্রোফাইল ও ছবি';
+  static const String plainTitle = 'আমার প্রোফাইল';
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  /// দরজা আছে কি না — null জানা নেই (তখন বোতাম খোলা; পাঠাতে গেলে নিজের ভুল বলবে)
-  bool? _doors;
   bool _busy = false;
   double? _progress;
   String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkDoors();
-  }
-
-  Future<void> _checkDoors() async {
-    final open = await widget.api.doorsOpen();
-    if (mounted) setState(() => _doors = open);
-  }
-
-  bool get _closed => _doors == false;
 
   Future<void> _take(ImageSource source) async {
     setState(() => _error = null);
@@ -125,10 +113,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) setState(() => _error = e.message);
     } on ProfileDoorsMissing {
       if (mounted) {
-        setState(() {
-          _doors = false;
-          _error = ProfileDoorsMissing.message;
-        });
+        setState(() => _error = ProfileDoorsMissing.message);
       }
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ছবি পাঠানো গেল না। একটু পরে আবার চেষ্টা করুন।'));
@@ -179,10 +164,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _say('ছবি সরানো হলো।');
     } on ProfileDoorsMissing {
       if (mounted) {
-        setState(() {
-          _doors = false;
-          _error = ProfileDoorsMissing.message;
-        });
+        setState(() => _error = ProfileDoorsMissing.message);
       }
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ছবি সরানো গেল না। একটু পরে আবার চেষ্টা করুন।'));
@@ -215,11 +197,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final where = [top?.company ?? '', top?.branch ?? ''].where((s) => s.trim().isNotEmpty).join(' · ');
     final designation = top?.designation;
     final face = url == null ? null : (widget.faceOf ?? _faceOf)(url);
-    final locked = _busy || _closed;
+    final features = ref.watch(meFeaturesProvider) ?? MeFeatures.none;
     final percent = ((_progress ?? 0) * 100).round();
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: ProfileScreen.title, module: 'আমি'),
+      // ⓘ ছবি বদল না থাকলে নামেও তার প্রতিশ্রুতি নয়
+      appBar: AbosScreenBar(title: features.profilePhoto ? ProfileScreen.title : ProfileScreen.plainTitle, module: 'আমি'),
       body: ListView(
         key: const ValueKey('profile-screen'),
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -238,97 +221,81 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (user != null && user.email.isNotEmpty)
             Text(user.email, key: const ValueKey('profile-email'), textAlign: TextAlign.center, style: TextStyle(color: p.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.lg),
-          if (_closed)
-            Semantics(
-              liveRegion: true,
-              child: Container(
-                key: const ValueKey('profile-server-old'),
-                padding: const EdgeInsets.all(AppSpacing.md),
-                margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: p.warningSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: p.border),
-                ),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Icon(Symbols.cloud_sync, color: p.warning),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(ProfileDoorsMissing.message, style: TextStyle(color: p.onSurface)),
+          // ⛔ সার্ভার ছবি বদল না জানলে এই পুরো অংশই নেই — বোতাম, কথা কিছুই না
+          if (features.profilePhoto) ...[
+            if (_progress != null)
+              Semantics(
+                key: const ValueKey('profile-progress'),
+                liveRegion: true,
+                label: 'ছবি পাঠানো হচ্ছে, $percent শতাংশ',
+                child: ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      LinearProgressIndicator(value: _progress == 0 ? null : _progress),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text('ছবি পাঠানো হচ্ছে… $percent%', textAlign: TextAlign.center),
+                    ]),
                   ),
-                ]),
+                ),
               ),
-            ),
-          if (_progress != null)
-            Semantics(
-              key: const ValueKey('profile-progress'),
-              liveRegion: true,
-              label: 'ছবি পাঠানো হচ্ছে, $percent শতাংশ',
-              child: ExcludeSemantics(
+            if (_error != null)
+              Semantics(
+                liveRegion: true,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    LinearProgressIndicator(value: _progress == 0 ? null : _progress),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('ছবি পাঠানো হচ্ছে… $percent%', textAlign: TextAlign.center),
-                  ]),
+                  child: Text(_error!,
+                      key: const ValueKey('profile-photo-error'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: cs.error, fontWeight: FontWeight.w600)),
                 ),
               ),
-            ),
-          if (_error != null)
-            Semantics(
-              liveRegion: true,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: Text(_error!,
-                    key: const ValueKey('profile-photo-error'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: cs.error, fontWeight: FontWeight.w600)),
+            _Wide(
+              child: FilledButton.icon(
+                key: const ValueKey('profile-camera'),
+                onPressed: _busy ? null : () => _take(ImageSource.camera),
+                icon: const Icon(Symbols.photo_camera),
+                label: const Text('ক্যামেরায় তুলুন'),
               ),
             ),
-          _Wide(
-            child: FilledButton.icon(
-              key: const ValueKey('profile-camera'),
-              onPressed: locked ? null : () => _take(ImageSource.camera),
-              icon: const Icon(Symbols.photo_camera),
-              label: const Text('ক্যামেরায় তুলুন'),
+            _Wide(
+              child: FilledButton.tonalIcon(
+                key: const ValueKey('profile-gallery'),
+                onPressed: _busy ? null : () => _take(ImageSource.gallery),
+                icon: const Icon(Symbols.photo_library),
+                label: const Text('গ্যালারি থেকে'),
+              ),
             ),
-          ),
-          _Wide(
-            child: FilledButton.tonalIcon(
-              key: const ValueKey('profile-gallery'),
-              onPressed: locked ? null : () => _take(ImageSource.gallery),
-              icon: const Icon(Symbols.photo_library),
-              label: const Text('গ্যালারি থেকে'),
+            _Wide(
+              child: OutlinedButton.icon(
+                key: const ValueKey('profile-remove'),
+                style: OutlinedButton.styleFrom(foregroundColor: cs.error),
+                onPressed: _busy || url == null ? null : _remove,
+                icon: const Icon(Symbols.no_photography),
+                label: const Text('ছবি সরান'),
+              ),
             ),
-          ),
-          _Wide(
-            child: OutlinedButton.icon(
-              key: const ValueKey('profile-remove'),
-              style: OutlinedButton.styleFrom(foregroundColor: cs.error),
-              onPressed: locked || url == null ? null : _remove,
-              icon: const Icon(Symbols.no_photography),
-              label: const Text('ছবি সরান'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                'ছবি মাঝখান থেকে বর্গ করে ছোট করা হয়, ছবির ভেতরের জায়গা-সময়ের তথ্য মুছে। কেবল আপনার কোম্পানির সহকর্মীরা দেখেন।',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: p.onSurfaceMuted, fontSize: 13),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text(
-              'ছবি মাঝখান থেকে বর্গ করে ছোট করা হয়, ছবির ভেতরের জায়গা-সময়ের তথ্য মুছে। কেবল আপনার কোম্পানির সহকর্মীরা দেখেন।',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: p.onSurfaceMuted, fontSize: 13),
+          ],
+          if (features.myPhones) ...[
+            const Divider(height: AppSpacing.lg),
+            ListTile(
+              key: const ValueKey('profile-phones'),
+              minVerticalPadding: 12,
+              leading: const Icon(Symbols.devices),
+              title: const Text('আমার ফোনগুলো'),
+              subtitle: const Text('কোন কোন ফোনে ঢোকা আছেন — হারানো ফোন দূর থেকে বের করে দিন'),
+              trailing: const Icon(Symbols.chevron_right),
+              onTap: _openPhones,
             ),
-          ),
-          const Divider(height: AppSpacing.lg),
-          ListTile(
-            key: const ValueKey('profile-phones'),
-            minVerticalPadding: 12,
-            leading: const Icon(Symbols.devices),
-            title: const Text('আমার ফোনগুলো'),
-            subtitle: const Text('কোন কোন ফোনে ঢোকা আছেন — হারানো ফোন দূর থেকে বের করে দিন'),
-            trailing: const Icon(Symbols.chevron_right),
-            onTap: _openPhones,
-          ),
+          ],
         ],
       ),
     );

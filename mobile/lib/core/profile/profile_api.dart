@@ -15,14 +15,11 @@ import '../api_client/once_key.dart';
 ///   <li>`GET /me/devices?page=n` → `{data: [...], next_page}`; `DELETE /me/devices/{id}` → ২০৪ বা ৪০৪</li>
 /// </ul>
 ///
-/// <p>⭐ <b>পুরনো সার্ভার</b> (দরজাগুলো নেই): ফোন একটা একটা করে বদলায়, তাই নতুন অ্যাপ পুরনো সার্ভারে থাকবেই। তখন দরজাটা ৪০৪
-/// দেয় (Laravel-এর নিজের ইংরেজি "not found") — সেটা [ProfileDoorsMissing] হয়ে পর্দায় "সার্ভার আপডেট হয়নি"। ⛔ ব্যতিক্রম
+/// <p>⭐ <b>পুরনো সার্ভার</b>: কোন কাজ আছে তা `/me`-র `features` বলে ([MeFeatures]) — না থাকলে পর্দা ঐ অংশ দেখায়ই না। এখানে
+/// শেষ পাহারা: দরজাটা তবু ৪০৪ দিলে (Laravel-এর ইংরেজি "not found") [ProfileDoorsMissing] — "এখনো এই সার্ভারে নেই"। ⛔ ব্যতিক্রম
 /// কেবল `DELETE /me/devices/{id}`: তালিকা এসেছে মানে সার্ভার নতুন, তাই সেখানে ৪০৪ = ফোনটা আগেই বের হয়ে গেছে ([signOutPhone]
 /// false দেয়)।
 abstract interface class ProfileApi {
-  /// দরজাগুলো সার্ভারে আছে কি না — true আছে, false নেই (পুরনো সার্ভার), null জানা গেল না (নেট নেই)
-  Future<bool?> doorsOpen();
-
   /// নিজের ছবি বসানো — [jpeg] ফোনেই ৫১২-র বর্গ করা; [onProgress] ০..১
   Future<PhotoChange> uploadPhoto(Uint8List jpeg, {void Function(double sent)? onProgress});
 
@@ -123,7 +120,8 @@ class PhotoRefused implements Exception {
 class ProfileDoorsMissing implements Exception {
   const ProfileDoorsMissing();
 
-  static const String message = 'সার্ভার আপডেট হয়নি — ছবি বদল আর ফোনের তালিকা সার্ভারের নতুন সংস্করণ এলে চালু হবে।';
+  static const String title = 'এখনো এই সার্ভারে নেই';
+  static const String message = 'এখনো এই সার্ভারে নেই — সার্ভারের নতুন সংস্করণ এলে চালু হবে।';
 
   @override
   String toString() => message;
@@ -138,18 +136,6 @@ class ServerProfileApi implements ProfileApi {
   Dio get _dio => dio ?? ApiClient.dio;
 
   static const String refusedFallback = 'ছবিটা নেওয়া গেল না — JPG বা PNG, ৫ MB-এর কম, আরেকটা দিয়ে চেষ্টা করুন।';
-
-  @override
-  Future<bool?> doorsOpen() async {
-    try {
-      await _dio.get<Object?>('/me/devices', queryParameters: {'page': 1});
-      return true;
-    } on DioException catch (e) {
-      final status = e.response?.statusCode;
-      if (status == 404 || status == 405) return false;
-      return null;
-    }
-  }
 
   @override
   Future<PhotoChange> uploadPhoto(Uint8List jpeg, {void Function(double sent)? onProgress}) async {
