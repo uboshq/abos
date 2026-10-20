@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Promotion\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Services\Ownership;
 use App\Core\Services\SettingsService;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
@@ -167,7 +168,7 @@ final class PromotionApprovalChain
              * দেয় না। ⚠️ ইঞ্জিন সুপার অ্যাডমিনকে ছাড় দেয় — এখানে দেয় না।
              * ⓘ থামলে লেনদেন ফেরে, তাই উপরে খোলা অনুরোধও থাকে না।
              */
-            if ($this->needsApproval() && $this->isCreator($offer, $user)) {
+            if ($this->needsApproval() && $this->isCreator($offer, $user) && ! self::isOwner($offer, (int) $user->id)) {
                 throw ValidationException::withMessages([
                     'status' => __('promotion::approval.cannot_sign_own'),
                 ]);
@@ -176,7 +177,19 @@ final class PromotionApprovalChain
             $this->assertNotSignedBefore($approval, $user);
             $this->assertCanDecide($approval, $user);
 
-            $this->engine->approve($approval, $user, $note);
+            $decided = $this->engine->approve($approval, $user, $note);
+
+            /*
+             * ⛔ যে সইয়ে অফারটা অনুমোদিত হয়, সেটা মালিকের — গ্যাপ ৪৩ (fe-র বিক্রয় তালিকা, ২০ অক্টোবর ২০২৬)।
+             *
+             * ⓘ মালিকের নিয়ম: যেকোনো ছাড়ে মালিকের সই। আগের স্তরে অন্য কেউ সই দিতে পারেন, শেষেরটা নয়। ⚠️ থামলে
+             * লেনদেন ফেরে, তাই ইঞ্জিনে বসা এই সইটাও মুছে যায় আর অনুরোধ শেষ স্তরেই অপেক্ষায় থাকে।
+             */
+            if ($this->needsApproval() && $decided->status === Approval::APPROVED && ! self::isOwner($offer, (int) $user->id)) {
+                throw ValidationException::withMessages([
+                    'status' => __('promotion::approval.owner_signs_last'),
+                ]);
+            }
 
             return $this->settle($offer);
         });
@@ -297,7 +310,8 @@ final class PromotionApprovalChain
 
         $signed = $this->approvedDecisions($latest);
 
-        if ($signed->contains(fn (ApprovalDecision $d) => $this->isCreatorId($offer, (int) $d->user_id)
+        if (! self::isOwner($offer, $offer->created_by === null ? null : (int) $offer->created_by)
+            && $signed->contains(fn (ApprovalDecision $d) => $this->isCreatorId($offer, (int) $d->user_id)
             || ($d->on_behalf_of !== null && $this->isCreatorId($offer, (int) $d->on_behalf_of)))) {
             return $this->returnToDraft($offer, __('promotion::approval.creator_signed'));
         }
@@ -311,6 +325,11 @@ final class PromotionApprovalChain
         }
 
         $last = $signed->sortByDesc('id')->first();
+
+        /* ⛔ ইনবক্স বা ফোনের পথে শেষ সই মালিকের না হলে অনুমোদনটা গণ্য নয় — [[sign()]]-এর একই নিয়ম (গ্যাপ ৪৩) */
+        if ($this->needsApproval() && ! self::isOwner($offer, (int) $last->user_id)) {
+            return $this->returnToDraft($offer, __('promotion::approval.not_signed_by_owner'));
+        }
 
         return $this->life->signedOff(
             $offer,
@@ -330,14 +349,22 @@ final class PromotionApprovalChain
             return false;
         }
 
-        if ($this->needsApproval() && $this->isCreator($offer, $user)) {
+        $owner = self::isOwner($offer, (int) $user->id);
+
+        if ($this->needsApproval() && $this->isCreator($offer, $user) && ! $owner) {
             return false;
         }
 
         $approval = $this->pendingOf($offer);
 
         if ($approval === null) {
-            return true;
+            return ! $this->needsApproval() || $owner;
+        }
+
+        /* ⓘ শেষ স্তরে কেবল মালিক — [[sign()]] যা মানবে, বোতামও তাই (গ্যাপ ৪৩) */
+        if ($this->needsApproval() && ! $owner
+            && (int) $approval->current_level >= (int) $this->engine->stepsFor($approval)->max('level')) {
+            return false;
         }
 
         return ! $this->hasSigned($approval, $user) && $this->engine->canDecide($approval, $user);
@@ -587,6 +614,20 @@ final class PromotionApprovalChain
     private function isCreatorId(Promotion $offer, int $userId): bool
     {
         return $offer->created_by !== null && (int) $offer->created_by === $userId;
+    }
+
+    /**
+     * ⭐ এই মানুষটা কি অফারের কোম্পানির মালিক (super admin) — গ্যাপ ৪৩।
+     *
+     * ⓘ মালিকের নিয়ম *"যেকোনো ছাড়ে মালিকের সই"*: অফারও ছাড়, তাই যে সইয়ে অফার অনুমোদিত হয় সেটা এঁর। ⓘ মালিক নিজের
+     * বানানো অফারেও সই দেন — বিলের ছাড়ের মতোই (মালিক নিজে ছাড় দিলেও তাঁর সই লাগে); নাহলে এক-মালিকের কোম্পানিতে
+     * মালিকের অফার কোনোদিন চালু হত না। ⚠️ মাপা হয় [[Ownership::isOwnerIn()]] দিয়ে, অফারের নিজের কোম্পানিতে।
+     */
+    public static function isOwner(Promotion $offer, ?int $userId): bool
+    {
+        $user = $userId === null ? null : User::query()->find($userId);
+
+        return $user !== null && app(Ownership::class)->isOwnerIn($user, (int) $offer->company_id);
     }
 
     private function needsApproval(): bool

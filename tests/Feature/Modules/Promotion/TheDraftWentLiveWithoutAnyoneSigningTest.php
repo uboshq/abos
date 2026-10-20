@@ -99,14 +99,25 @@ final class TheDraftWentLiveWithoutAnyoneSigningTest extends TestCase
     public function test_nobody_approves_their_own_offer(): void
     {
         $this->approvalSwitch(true);
-        $offer = $this->aDraft();
 
-        $this->actingAs($this->owner)->post(route('promotion.submit', $offer));
+        /*
+         * ⓘ গ্যাপ ৪৩ (২০ অক্টোবর ২০২৬): মালিক নিজের অফারেও সই দেন — শেষ সই তাঁরই, বিলের ছাড়ের মতো। ⚠️ তাই
+         * "নিজের অফার নয়" নিয়মটা এখন মালিক নন এমন নির্মাতার — সইয়ের চাবি থাকা সত্ত্বেও।
+         */
+        $maker = User::factory()->create(['is_active' => true, 'current_company_id' => CompanyContext::id()]);
+        $maker->companies()->attach(CompanyContext::id(), ['is_active' => true]);
+        foreach (['promotion.view', 'promotion.submit', 'promotion.approve'] as $key) {
+            $maker->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate($key, 'web'));
+        }
+        $maker = $maker->fresh();
+        $offer = $this->aDraft($maker->id);
+
+        $this->actingAs($maker)->post(route('promotion.submit', $offer));
         $this->assertSame(PromotionStatus::SUBMITTED, $offer->fresh()->status, 'জমা দেওয়াই গেল না।');
 
-        $this->actingAs($this->owner)
+        $this->actingAs($maker)
             ->post(route('promotion.approve', $offer))
-            ->assertSessionHasErrors('status');
+            ->assertSessionHasErrors(['status' => __('promotion::validation.cannot_approve_own')]);
 
         $this->assertSame(PromotionStatus::SUBMITTED, $offer->fresh()->status,
             'যিনি বানালেন তিনিই অনুমোদন দিয়ে দিলেন।');

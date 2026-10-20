@@ -41,4 +41,9 @@ return [
     'rejected_without_reason' => 'Sent back without a reason.',
     'creator_signed' => 'The person who made the offer signed it, so the approval does not count. Submit it again.',
     'signed_twice' => ':name signed two levels, so the approval does not count. Submit it again.',
+
+    /* ⓘ মালিকের সই — গ্যাপ ৪৩ (যেকোনো ছাড়ে মালিকের সই) */
+    'owner_signs_last' => 'The last signature on an offer is the owner\'s. Yours would have approved this offer, so it goes to the owner — it is approved when the owner signs.',
+    'not_signed_by_owner' => 'The last signature was not the owner\'s, so the approval does not count. Submit it again — the owner gives the last signature.',
+    'owner_must_have_signed' => 'This offer was approved by someone who is not the owner. An offer needs the owner\'s signature — the owner can activate it himself.',
 ];
