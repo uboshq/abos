@@ -95,7 +95,9 @@
             :view-url="fn ($d) => route('sales.challan.show', $d)"
             :empty="__('sales::delivery_performance.nothing_late')"
             :rows="$late"
-            :columns="$columns" />
+            :columns="$columns"
+            :totals="$late->isEmpty() ? [] : ['stage' => '']"
+            :totalsLabel="__('sales::delivery_performance.late_total', ['count' => $summary['late']])" />
 
         <x-ui.pager :rows="$late" />
         <x-ui.list-totals :rows="$late" />

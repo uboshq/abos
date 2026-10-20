@@ -89,6 +89,29 @@
                         <tr><td colspan="5" class="px-3 py-6 text-center text-(--color-ink-muted)">{{ __('sales::customer_target.nobody') }}</td></tr>
                     @endforelse
                 </tbody>
+
+                {{-- ⭐ সর্বমোট — ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬; লক্ষ্য না বসানো ডিলার লক্ষ্য আর বাকির যোগে নেই --}}
+                @if ($rows !== [])
+                    @php
+                        $sum = ['target' => '0', 'achieved' => '0', 'left' => '0'];
+                        foreach ($rows as $r) {
+                            $sum['achieved'] = bcadd($sum['achieved'], (string) $r['achieved'], 4);
+                            if ($r['target'] !== null) {
+                                $sum['target'] = bcadd($sum['target'], (string) $r['target'], 4);
+                                $sum['left'] = bcadd($sum['left'], bccomp($r['achieved'], $r['target'], 4) >= 0 ? '0' : bcsub($r['target'], $r['achieved'], 4), 4);
+                            }
+                        }
+                    @endphp
+                    <tfoot data-grand-total>
+                        <tr class="font-semibold">
+                            <td>{{ __('core.table.grand_total') }}</td>
+                            <td class="text-end tabular">{{ Money::format($sum['target']) }}</td>
+                            <td></td>
+                            <td class="text-end tabular">{{ Money::format($sum['achieved']) }}</td>
+                            <td class="text-end tabular">{{ Money::format($sum['left']) }}</td>
+                        </tr>
+                    </tfoot>
+                @endif
             </table>
         </div>
 

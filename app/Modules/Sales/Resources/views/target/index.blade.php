@@ -28,6 +28,7 @@
             'key' => 'target',
             'label' => __('sales::target.target'),
             'numeric' => true,
+            'total' => 'money',
             'width' => '11rem',
             'render' => fn ($r) => view('sales::target.partials.target',
                 ['row' => $r, 'canManage' => $canManage]),
@@ -36,6 +37,7 @@
             'key' => 'achieved',
             'label' => __('sales::target.achieved'),
             'numeric' => true,
+            'total' => 'money',
             'width' => '11rem',
             'render' => fn ($r) => view('sales::target.partials.achieved',
                 ['row' => $r, 'month' => $month]),
@@ -91,8 +93,17 @@
 
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
+        {{-- ⭐ সর্বমোট — ওয়েব-মান ধাপ ২, ২০ অক্টোবর ২০২৬: পাতা ভাগ নেই, তাই সারির যোগই গোটা দলের; লক্ষ্য না বসানো সারি যোগে নেই --}}
+        @php
+            $grand = ['target' => '0', 'achieved' => '0'];
+            foreach ($rows as $r) {
+                $grand['target'] = bcadd($grand['target'], (string) ($r['target'] ?? '0'), 4);
+                $grand['achieved'] = bcadd($grand['achieved'], (string) $r['achieved'], 4);
+            }
+        @endphp
         <x-ui.table :rows="$rows"
                     :columns="$columns"
+                    :grand="$rows === [] ? [] : $grand"
                     :empty="__('sales::target.nobody_sells')" />
         </div>
 
