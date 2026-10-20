@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ উদ্ধৃতির তুলনা আর সংস্করণ — ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
 ///
@@ -190,8 +191,8 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
     final result = _result;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('উদ্ধৃতির তুলনা'),
+      appBar: AbosScreenBar(
+        title: 'উদ্ধৃতির তুলনা',
         actions: [
           if (result != null && widget.family == null)
             IconButton(
@@ -339,7 +340,7 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('উদ্ধৃতির সংস্করণ')),
+      appBar: const AbosScreenBar(title: 'উদ্ধৃতির সংস্করণ'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

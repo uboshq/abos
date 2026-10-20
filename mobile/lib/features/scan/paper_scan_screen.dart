@@ -9,6 +9,7 @@ import 'receive_screen.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// কাগজের QR স্ক্যান — গেটম্যান "মাল বেরোল", ডেলিভারিম্যান "ডেলিভারি নিশ্চিত" (0.4.3)।
 ///
@@ -176,7 +177,7 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('কাগজ স্ক্যান')),
+      appBar: const AbosScreenBar(title: 'কাগজ স্ক্যান'),
       body: _token != null
           ? _sheet(context)
           : _cameraAllowed

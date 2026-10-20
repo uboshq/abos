@@ -79,7 +79,7 @@ void main() {
         ),
         dark),
     'vouchers': (dark) => themed(
-        VoucherListScreen(api: const _Vouchers(), newChangeId: () => 'k', branches: () async => const [], today: DateTime(2026, 10, 20)),
+        VoucherListScreen(api: const _Vouchers(), newChangeId: () => 'k', branches: () async => const [], today: DateTime(2026, 10, 20), canCreate: true),
         dark),
     'due_list': (dark) => themed(DueListScreen(refresh: () async {}), dark),
   };

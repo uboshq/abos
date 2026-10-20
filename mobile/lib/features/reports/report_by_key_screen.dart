@@ -4,6 +4,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/records/report_record.dart';
 import '../../core/widgets/empty_state.dart';
 import 'reports_screen.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ একটা রিপোর্ট, চাবি ধরে — মেনুর রিপোর্ট-সারি থেকে ([ReportPaths]; fe, ১৯ অক্টোবর ২০২৬)।
 ///
@@ -67,7 +68,7 @@ class _ReportByKeyScreenState extends State<ReportByKeyScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title.isEmpty ? 'রিপোর্ট' : widget.title)),
+      appBar: AbosScreenBar(title: widget.title.isEmpty ? 'রিপোর্ট' : widget.title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/records/today_record.dart';
 import 'today_panel.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// How the day is going, on one page — docs/Contract §৮.
 ///
@@ -21,7 +22,7 @@ class TodayScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('আজকের হিসাব')),
+      appBar: const AbosScreenBar(title: 'আজকের হিসাব'),
       body: TodayPanel(
         fetch: fetch,
         lastKnown: lastKnown,

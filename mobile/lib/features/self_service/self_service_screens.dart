@@ -12,6 +12,7 @@ import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
 import '../finance/finance_screens.dart' show monthWords;
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ নিজের ছুটি আর নিজের বেতনের স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
 ///
@@ -68,7 +69,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
     final book = _book;
     final canApply = book != null && book.employee && book.types.isNotEmpty;
     return Scaffold(
-      appBar: AppBar(title: const Text('আমার ছুটি')),
+      appBar: const AbosScreenBar(title: 'আমার ছুটি'),
       floatingActionButton: canApply
           ? FloatingActionButton.extended(
               key: const ValueKey('leave-new'),
@@ -252,7 +253,7 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
   Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
 
   Widget _screen(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('ছুটির আবেদন')),
+        appBar: const AbosScreenBar(title: 'ছুটির আবেদন'),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -341,7 +342,7 @@ class _PayslipListScreenState extends State<PayslipListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('আমার বেতনের স্লিপ')),
+        appBar: const AbosScreenBar(title: 'আমার বেতনের স্লিপ'),
         body: PagedList<Payslip>(
           load: (page) async {
             final p = await widget.api.payslips(page: page);

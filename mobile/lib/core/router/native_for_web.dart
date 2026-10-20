@@ -343,10 +343,19 @@ class NativeForWeb {
     final type = RegExp(r'^/accounts/vouchers/([a-z_-]+)$').firstMatch(path)?.group(1);
     if (type != null && _voucherViews.containsKey(type)) {
       return ModuleGateView(
-          path: 'vouchers', child: VoucherListScreen(key: ValueKey('vouchers-web-$type'), view: _voucherViews[type]));
+          path: 'vouchers',
+          child: Consumer(
+              builder: (context, ref, _) => VoucherListScreen(
+                  key: ValueKey('vouchers-web-$type'),
+                  view: _voucherViews[type],
+                  canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false)));
     }
     if (path == '/accounts/voucher-list') {
-      return const ModuleGateView(path: 'vouchers', child: VoucherListScreen());
+      return ModuleGateView(
+          path: 'vouchers',
+          child: Consumer(
+              builder: (context, ref, _) => VoucherListScreen(
+                  canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false)));
     }
 
     if (path == '/sales/invoices') {

@@ -10,6 +10,7 @@ import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../orders/rejected_order_card.dart';
 import '../../core/widgets/day_part.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// The screen the 4 September briefing calls the most important one this
 /// app has: "যা যায়নি" (what did not go up) is invisible everywhere else,
@@ -88,7 +89,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
     final pendingCount = SyncEngine.instance.pendingCount;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('সিঙ্কের অবস্থা')),
+      appBar: const AbosScreenBar(title: 'সিঙ্কের অবস্থা'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

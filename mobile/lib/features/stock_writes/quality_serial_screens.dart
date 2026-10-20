@@ -10,6 +10,7 @@ import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import 'stock_write_screens.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ মান যাচাই (QC) আর সিরিয়াল নম্বর — ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
 ///
@@ -253,7 +254,7 @@ class _QualityListScreenState extends State<QualityListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('মান যাচাই')),
+      appBar: const AbosScreenBar(title: 'মান যাচাই'),
       floatingActionButton: widget.canCreate
           ? FloatingActionButton.extended(
               key: const ValueKey('qc-new'),
@@ -389,7 +390,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
     const gap = SizedBox(height: AppSpacing.sm);
 
     return Scaffold(
-      appBar: AppBar(title: Text(p == null ? 'মান যাচাই' : 'মান যাচাই · ${p.row.no}')),
+      appBar: AbosScreenBar(title: p == null ? 'মান যাচাই' : 'মান যাচাই · ${p.row.no}'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -572,7 +573,7 @@ class _NewInspectionScreenState extends State<NewInspectionScreen> {
   Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
-      appBar: AppBar(title: const Text('নতুন মান যাচাই')),
+      appBar: const AbosScreenBar(title: 'নতুন মান যাচাই'),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         Card(
           child: ListTile(
@@ -667,7 +668,7 @@ class _SerialScreenState extends State<SerialScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('সিরিয়াল নম্বর')),
+      appBar: const AbosScreenBar(title: 'সিরিয়াল নম্বর'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -797,7 +798,7 @@ class _SerialFormScreenState extends State<SerialFormScreen> {
   Widget _screen(BuildContext context) {
     const gap = SizedBox(height: AppSpacing.sm);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.receive ? 'পিস ঢোকান' : 'পিস বের করুন')),
+      appBar: AbosScreenBar(title: widget.receive ? 'পিস ঢোকান' : 'পিস বের করুন'),
       body: ListView(padding: const EdgeInsets.all(AppSpacing.md), children: [
         if (widget.receive) ...[
           Card(

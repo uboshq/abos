@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ মজুদের পাঁচ লেখা, ফোনের নিজের ফর্মে — মাল বসানো, গণনা-সমন্বয়, ইস্যু, খোলা মজুদ, লট (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
 ///
@@ -273,7 +274,7 @@ class _StockWorkScreenState extends State<StockWorkScreen> {
         );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('মজুদের কাজ')),
+      appBar: const AbosScreenBar(title: 'মজুদের কাজ'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -457,7 +458,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
     const gap = SizedBox(height: AppSpacing.sm);
 
     return Scaffold(
-      appBar: AppBar(title: Text(_form.title)),
+      appBar: AbosScreenBar(title: _form.title),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -690,7 +691,7 @@ class _PlacementScreenState extends State<PlacementScreen> {
         widget.setup.warehouses.where((w) => w.id == warehouseId).expand((w) => w.places).toList(growable: false);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('মাল বসানো')),
+      appBar: const AbosScreenBar(title: 'মাল বসানো'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -828,7 +829,7 @@ class _WaitingCountsScreenState extends State<WaitingCountsScreen> {
     final counts = _counts;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('মেনে নেওয়ার অপেক্ষার গণনা')),
+      appBar: const AbosScreenBar(title: 'মেনে নেওয়ার অপেক্ষার গণনা'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -924,7 +925,7 @@ class _StockDoorState extends State<StockDoor> {
     final s = _setup;
     if (s == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('মজুদের কাজ')),
+        appBar: const AbosScreenBar(title: 'মজুদের কাজ'),
         body: _error == null ? const LinearProgressIndicator() : Padding(padding: const EdgeInsets.all(AppSpacing.md), child: BooksError(_error!)),
       );
     }

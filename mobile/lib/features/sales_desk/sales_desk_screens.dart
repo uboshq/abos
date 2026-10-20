@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
 import '../books/books_widgets.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ বিক্রয়ের ডেস্ক-পাতা আর দলিলের ছাঁচ, ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage app e bujajayna"*)।
 ///
@@ -80,7 +81,7 @@ class _DeskPageState extends State<_DeskPage> {
     final p = _page;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AbosScreenBar(title: widget.title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

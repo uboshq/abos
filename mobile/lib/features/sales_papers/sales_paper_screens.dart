@@ -13,6 +13,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ বিক্রয় বিল আর চালান — তালিকা ও পাতা (মালিক, ১৩ অক্টোবর ২০২৬: *"Mobile App e kora invoice, challan, voucher — kono
 /// kichuri list show korche na"*)।
@@ -105,7 +106,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
     final invoice = widget.kind == SalesPaperKind.invoice;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? widget.kind.title)),
+      appBar: AbosScreenBar(title: widget.title ?? widget.kind.title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -247,8 +248,8 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
     final invoice = widget.kind == SalesPaperKind.invoice;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(p == null ? widget.kind.title : '${widget.kind.title} · ${p.no}'),
+      appBar: AbosScreenBar(
+        title: p == null ? widget.kind.title : '${widget.kind.title} · ${p.no}',
         actions: [
           if (p != null)
             IconButton(

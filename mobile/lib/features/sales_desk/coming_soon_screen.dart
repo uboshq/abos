@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/widgets/empty_state.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ যে পর্দা এখনো তৈরি হয়নি (ওয়েবের "planned") — ফোনে স্পষ্ট "শীঘ্রই আসছে", ওয়েব-জানালা নয় (fe, ১৭ অক্টোবর ২০২৬)।
 class ComingSoonScreen extends StatelessWidget {
@@ -10,7 +11,7 @@ class ComingSoonScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title.isEmpty ? 'শীঘ্রই আসছে' : title)),
+        appBar: AbosScreenBar(title: title.isEmpty ? 'শীঘ্রই আসছে' : title),
         body: const EmptyState(
           icon: Icons.construction_outlined,
           title: 'শীঘ্রই আসছে',
