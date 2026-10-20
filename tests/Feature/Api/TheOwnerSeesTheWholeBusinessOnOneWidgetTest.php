@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Core\Support\CompanyContext;
-use App\Core\Widgets\WidgetSummaries;
-use App\Core\Widgets\WidgetSummary;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Executive\Widgets\OwnerBoardSummary;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -34,13 +33,6 @@ final class TheOwnerSeesTheWholeBusinessOnOneWidgetTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        WidgetSummaries::$testing = [ProbeTarget::class];
-    }
-
-    protected function tearDown(): void
-    {
-        WidgetSummaries::$testing = [];
-        parent::tearDown();
     }
 
     public function test_the_board_carries_todays_figures_exactly_as_the_today_door_and_the_teams_parts_as_they_are(): void
@@ -54,8 +46,12 @@ final class TheOwnerSeesTheWholeBusinessOnOneWidgetTest extends TestCase
         }
         $this->assertArrayHasKey('sales', $board['today'], 'প্রস্তুতিটাই ভুল — মালিক বিক্রি দেখেন।');
 
-        $target = $this->as($this->owner)->getJson('/api/v1/widgets/summary?keys=target')->json('widgets.target');
-        $this->assertSame($target, $board['parts']['target'] ?? null, '⛔ লক্ষ্যের ছোট উইজেট আর পূর্ণ-পর্দা আলাদা।');
+        // ⭐ দলের আসল উইজেট (a6-এর TargetSummary …) — ছোট উইজেট আর পূর্ণ-পর্দা অক্ষরে অক্ষরে এক
+        $small = $this->as($this->owner)->getJson('/api/v1/widgets/summary')->assertOk()->json('widgets');
+        $this->assertArrayHasKey('target', $small, 'প্রস্তুতিটাই ভুল — মালিক লক্ষ্যের উইজেট পান।');
+        foreach (OwnerBoardSummary::PARTS as $part) {
+            $this->assertSame($small[$part] ?? null, $board['parts'][$part] ?? null, "⛔ {$part}: ছোট উইজেট আর পূর্ণ-পর্দা আলাদা।");
+        }
         $this->assertSame('/owner', $board['link']);
     }
 
@@ -74,28 +70,5 @@ final class TheOwnerSeesTheWholeBusinessOnOneWidgetTest extends TestCase
         Sanctum::actingAs($user->fresh(), [AuthController::APP]);
 
         return $this;
-    }
-}
-
-final class ProbeTarget implements WidgetSummary
-{
-    public function key(): string
-    {
-        return 'target';
-    }
-
-    public function module(): string
-    {
-        return 'sales';
-    }
-
-    public function permission(): ?string
-    {
-        return null;
-    }
-
-    public function data(User $user): array
-    {
-        return ['month' => '2026-10', 'target' => '20000000.00', 'achieved' => '13600000.00', 'days_left' => 12];
     }
 }

@@ -84,6 +84,14 @@ final class TheWidgetsAskOneDoorForEverythingTest extends TestCase
         $this->getJson('/api/v1/widgets/summary')->assertUnauthorized();
     }
 
+    /** ⛔ চুরি যাওয়া নবায়নের টোকেনে (অ্যাপের ক্ষমতা নেই) দরজা খোলে না — `abilities:app` */
+    public function test_a_token_without_the_app_ability_is_refused(): void
+    {
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($this->owner->fresh(), ['refresh']);
+        $this->getJson('/api/v1/widgets/summary')->assertForbidden();
+    }
+
     private function switch(string $module, bool $on): void
     {
         app(SettingsService::class)->set(PhoneModules::key($module), $on);
