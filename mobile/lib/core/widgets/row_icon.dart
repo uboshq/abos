@@ -13,17 +13,36 @@ class RowIcon extends StatelessWidget {
   final String? module;
   final Color? tone;
 
-  /// (পট, আইকন)
-  (Color, Color) get colours {
+  /// (পট, আইকন) — আলোতে
+  (Color, Color) get colours => coloursOn(Brightness.light);
+
+  /// (পট, আইকন) — অন্ধকারে পট অন্ধকার পটের উপর রঙের ছোঁয়া, আইকন সেই রঙেরই হালকা সুর; দুই মোডেই অন্তত ৩:১
+  /// (a5-এর অনুরোধ: অন্ধকারে আগে হালকা পট থেকে যেত)।
+  (Color, Color) coloursOn(Brightness brightness) {
+    final base = module != null ? AppColors.moduleColor(module!) : (tone ?? AppColors.primary);
+    if (brightness == Brightness.dark) {
+      final tint = Color.alphaBlend(base.withValues(alpha: 0.24), darkPage);
+      return (tint, _lighten(base, tint, 3));
+    }
     if (module != null) return (AppColors.moduleTint(module!), AppColors.moduleInk(module!));
-    final base = tone ?? AppColors.primary;
     final tint = Color.alphaBlend(base.withValues(alpha: 0.14), const Color(0xFFFFFFFF));
     return (tint, AppColors.deepen(base, tint, 3));
   }
 
+  /// অন্ধকার থিমের কার্ডের মোটামুটি রং — ছোঁয়ার ভিত্তি
+  static const Color darkPage = Color(0xFF1B2023);
+
+  static Color _lighten(Color c, Color background, double target) {
+    var hsl = HSLColor.fromColor(c);
+    while (AppColors.contrast(hsl.toColor(), background) < target && hsl.lightness < 0.98) {
+      hsl = hsl.withLightness((hsl.lightness + 0.01).clamp(0.0, 1.0));
+    }
+    return hsl.toColor();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final (bg, ink) = colours;
+    final (bg, ink) = coloursOn(Theme.of(context).brightness);
     return ExcludeSemantics(
       child: Container(
         width: 40,
