@@ -13,7 +13,7 @@
   "placeholders": {
     "level": "the level now waiting for its signature (1-based), from the data",
     "levels": "how many levels the paper needs, from the data",
-    "digits": "bengali (০-৯): the owner-approved full-page sample (20 Oct 2026, page 2) writes '২-এর ১'; money stays in English digits everywhere"
+    "digits": "latin (0-9) everywhere, levels too ('2-এর 1', 'ধাপ 1'), as money (owner's খ) and the web's dates ('20 অক্টোবর 2026'); the words stay Bengali (fe, 20 Oct 2026, correcting the sample's '২-এর ১')"
   },
   "roles": {
     "neutral": {
