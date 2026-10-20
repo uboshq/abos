@@ -180,6 +180,15 @@ final class SalesOrderService
         }
 
         /*
+         * ⛔ বাকির সীমা — পুরনো পথেও, সইয়ের আগে (fe-র বিক্রয়ের ফাঁক ২৮, ২০ অক্টোবর ২০২৬: সীমা পরম; SAP আদেশে আর ডেলিভারিতে দুই জায়গায়ই
+         * যাচাই করে)। ⓘ এখানে তালা ছাড়া আগাম যাচাই — সই চাওয়ার আগেই "না" ([[CreditExposure::assertRoom()]]-এর একই ক্রম);
+         * তালাসহ পাকা যাচাই আর সাক্ষ্য নিচে, লেনদেনের ভিতরে। ⚠️ নিচের ২৬ সেপ্টেম্বরের "আদেশে সীমা দেখা হয় না" কথাটা এতে উল্টেছে।
+         */
+        if ($order->customer !== null) {
+            $this->refuseOverTheLimit($order, $order->customer, null);
+        }
+
+        /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
          *
          * মালিকের কথা: *"এখন সব জায়গায় এপ্রুভাল দিয়ে টেস্ট কর, পরে যে
@@ -211,6 +220,9 @@ final class SalesOrderService
          * আটকায় কেবল বিল না হওয়া চালান আর খসড়া বিল।
          */
         return DB::transaction(function () use ($order) {
+            // ⛔ তালার ক্রম আগে গ্রাহক, তারপর আদেশ — জমার একই ক্রম ([[submit()]])
+            $customer = $this->credit->lockCustomer((int) $order->customer_id);
+
             // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
             $this->lockAndReread($order);
 
@@ -219,6 +231,9 @@ final class SalesOrderService
                     'status' => __('sales::validation.only_draft_confirms', ['no' => $order->document_no]),
                 ]);
             }
+
+            // ⛔ ফাঁক ২৮ — তালাসহ পাকা যাচাই, সাক্ষ্যসহ; না কুলোলে ৪২২, কিছুই নিশ্চিত বা ধরা হয় না
+            $this->refuseOverTheLimit($order, $customer, CreditPaper::of('sales_order', $order));
 
             // ⓘ ডিফল্ট বন্ধ — মালিক, ৬ অক্টোবর ২০২৬: মাল ধরা শুরু ডিপোর চালান নিশ্চিত হলে, আদেশে নয়
             if ($this->settings->get('sales.reserve_on_order', false)) {
@@ -655,6 +670,22 @@ final class SalesOrderService
         }
 
         return $this->markApproved($order);
+    }
+
+    /**
+     * ⛔ পুরনো পথের দেয়াল (ফাঁক ২৮) — জমার হুবহু: সুইচ বন্ধে কিছু নয়, চলতি অস্থায়ী সীমা গোনা ([[CreditExposure::check()]]), আর একই কথা।
+     */
+    private function refuseOverTheLimit(SalesOrder $order, Customer $customer, ?CreditPaper $paper): void
+    {
+        if (! $this->credit->isOn()) {
+            return;
+        }
+
+        $result = CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($customer, (string) $order->total, null, $paper));
+
+        if (! $result['fits']) {
+            throw ValidationException::withMessages(['customer_id' => $this->overTheLimit($order, $customer, $result)]);
+        }
     }
 
     /**
@@ -1159,7 +1190,8 @@ final class SalesOrderService
 
         $short = null;
 
-        if ($submits && $order->customer !== null && $this->credit->isOn()) {
+        // ⓘ দুই পথেই — পুরনো নিশ্চিতও সীমা পার হলে থামে (ফাঁক ২৮)
+        if ($order->customer !== null && $this->credit->isOn()) {
             $result = CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($order->customer, (string) $order->total));
             // ⛔ ফাঁক ২৮ — জমা ফিরবে, তাই সারাংশেও "থামবে", জমার হুবহু কথায় ([[overTheLimit()]])
             if (! $result['fits']) {
