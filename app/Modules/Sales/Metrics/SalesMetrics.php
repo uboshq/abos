@@ -245,11 +245,11 @@ final class SalesMetrics implements ProvidesMetrics
 
     /**
      * ⭐ নিট বিক্রি — IFRS 15 (fe, ২০ অক্টোবর ২০২৬): আয় ফেরত বাদে (১৫.৫১) **আর ভ্যাট বাদে** (১৫.৪৭ — তৃতীয় পক্ষের হয়ে তোলা টাকা আয় নয়)।
-     *   billed   = পাকা বিলের `total − tax` (ছাড় বাদে, রাউন্ডিং আর গাড়িভাড়াসহ, ভ্যাট বাদে)
+     *   billed   = পাকা বিলের `total − tax − freight_charge` (ছাড় বাদে, রাউন্ডিংসহ; ভ্যাট আর বিলে যোগ করা গাড়িভাড়া বাদে)
      *   returned = পাকা বিক্রয় ফেরতের `total − tax`, **ফেরতের নিজের তারিখে**
      *   net      = billed − returned  ("নিট বিক্রি")
      *   vat      = বিলের ভ্যাট − ফেরতের ভ্যাট (আলাদা দেখানো, আয় নয়)
-     *   gross    = net + vat = "VAT সহ মোট (আদায়যোগ্য)" — গ্রাহকের কাছে পাওনা হওয়া মোট
+     *   gross    = net + vat = "VAT সহ মোট (আদায়যোগ্য)" — বিক্রির অংশে গ্রাহকের কাছে পাওনা (গাড়িভাড়া বাদে)
      * ⛔ ফেরত বিলের তারিখে নয়: গতকালের ফেরত আজকের বিক্রি কমায় না, আজকের ফেরত গত মাসের বিলেরও হলে আজই কমায়।
      * ⓘ দেয়াল দুই দিকেই একই — কোম্পানি, শাখা/হেডারের শাখা ([[ScopedToUserBranch]]), বিক্রয়কর্মীর ডিলার
      * ([[ScopedToUserDealers]]), আর হোমের ছাঁকনি। ⓘ সব bcmath, চার ঘর। ⓘ [[invoiceTotal()]] আগের মতোই ভ্যাটসহ বিল।
@@ -335,16 +335,37 @@ final class SalesMetrics implements ProvidesMetrics
     }
 
     /**
+     * ⭐ বিলের নিট বিক্রির SQL — `total − tax − freight_charge`: ভ্যাট বাদে (IFRS 15.47), আর বিলে যোগ করা গাড়িভাড়াও বাদ —
+     * ওটা খাতায় আলাদা আয় ([[StandardChart::FREIGHT_INCOME]]), পণ্যের বিক্রি নয়; সারি-ধরা নিট ([[LineNetSale]]) আর খাতার
+     * বিক্রির হিসাবের সাথে হুবহু। ⓘ লক্ষ্যের অর্জনও এটাই পড়ে ([[SalesTargetService::achievedByUser()]])।
+     */
+    public static function billNetSql(string $table): string
+    {
+        return "({$table}.total - {$table}.tax - {$table}.freight_charge)";
+    }
+
+    /** ⭐ ফেরতের নিট বিক্রির SQL — `total − tax` (ফেরতে গাড়িভাড়া নেই, [[AReturnDoesNotRefundTheFreightTest]]) */
+    public static function returnNetSql(string $table): string
+    {
+        return "({$table}.total - {$table}.tax)";
+    }
+
+    /**
      * একটা কোয়েরিতে ভ্যাট-বাদ অঙ্ক আর ভ্যাট।
      *
      * @return array{0: string, 1: string}
      */
     private static function exVat(\Illuminate\Database\Eloquent\Builder $query, string $table): array
     {
-        $row = $query->selectRaw("COALESCE(SUM({$table}.total - {$table}.tax), 0) as ex_vat, COALESCE(SUM({$table}.tax), 0) as vat")
+        $row = $query->selectRaw('COALESCE(SUM('.self::netSql($table).'), 0) as ex_vat, COALESCE(SUM('.$table.'.tax), 0) as vat')
             ->toBase()->first();
 
         return [bcadd((string) ($row->ex_vat ?? '0'), '0', 4), bcadd((string) ($row->vat ?? '0'), '0', 4)];
+    }
+
+    private static function netSql(string $table): string
+    {
+        return $table === 'sal_returns' ? self::returnNetSql($table) : self::billNetSql($table);
     }
 
     /** @return array<int, array{0: string, 1: string}> শাখা → [ভ্যাট-বাদ, ভ্যাট] */
@@ -352,7 +373,7 @@ final class SalesMetrics implements ProvidesMetrics
     {
         $out = [];
 
-        foreach ($query->selectRaw("{$table}.branch_id as branch_id, COALESCE(SUM({$table}.total - {$table}.tax), 0) as ex_vat, COALESCE(SUM({$table}.tax), 0) as vat")
+        foreach ($query->selectRaw($table.'.branch_id as branch_id, COALESCE(SUM('.self::netSql($table).'), 0) as ex_vat, COALESCE(SUM('.$table.'.tax), 0) as vat')
             ->groupBy("{$table}.branch_id")->toBase()->get() as $row) {
             $out[(int) $row->branch_id] = [bcadd((string) $row->ex_vat, '0', 4), bcadd((string) $row->vat, '0', 4)];
         }
