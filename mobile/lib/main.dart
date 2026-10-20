@@ -25,6 +25,7 @@ import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
 import 'core/sync_engine/sync_engine.dart';
 import 'core/theme/app_theme.dart';
+import 'core/permissions/permission_rationale.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -131,6 +132,7 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     _listenForWidgetTaps();
 
     final signedIn = ref.read(authStateProvider).status == AuthStatus.signedIn;
+    if (signedIn) _askNotifications();
     _lock = AppLock(startLocked: signedIn)..signedIn = signedIn;
     WidgetsBinding.instance.addObserver(_lock);
 
@@ -145,9 +147,23 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     ref.listenManual<AuthState>(authStateProvider, (previous, next) {
       if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {
         unawaited(PushService.instance.register());
+        _askNotifications();
       }
       // ⓘ বেরোলে তালার কিছু নেই; নতুন করে ঢুকলে তালা খোলা (এইমাত্র পাসওয়ার্ড দিলেন)
       _lock.signedIn = next.status == AuthStatus.signedIn;
+    });
+  }
+
+  /// ⭐ বার্তার অনুমতি — পর্দা ওঠার পরে, বাংলা ব্যাখ্যা দিয়ে, একবারই ([[PushService.askPermissionOnce]])।
+  void _askNotifications() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(PushService.instance.askPermissionOnce(() async {
+        final context = ref.read(goRouterProvider).routerDelegate.navigatorKey.currentContext;
+        if (context == null || !context.mounted) return false;
+        return PermissionRationale.explainBeforeAsking(context, AppPermission.notifications,
+            isGranted: (_) async => false);
+      }));
     });
   }
 

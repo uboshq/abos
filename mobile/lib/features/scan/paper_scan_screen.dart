@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/paper_scan_api.dart';
+import '../../core/permissions/permission_rationale.dart';
 import 'receive_screen.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
@@ -16,9 +17,12 @@ import '../../core/theme/app_spacing.dart';
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস, কোনো টেবিল নয় — ছোট পর্দার ডান পাশ কাটা পড়ে।
 class PaperScanScreen extends StatefulWidget {
-  const PaperScanScreen({super.key, this.api = const ServerPaperScanApi()});
+  const PaperScanScreen({super.key, this.api = const ServerPaperScanApi(), this.isGranted});
 
   final PaperScanApi api;
+
+  /// পরীক্ষার পথ — ক্যামেরার অনুমতি আগে থেকে আছে কিনা ([PermissionCheck.granted])।
+  final Future<bool?> Function(AppPermission)? isGranted;
 
   @override
   State<PaperScanScreen> createState() => _PaperScanScreenState();
@@ -34,6 +38,28 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
   ScannedPaper? _paper;
   String? _error;
   bool _busy = false;
+
+  /// ⭐ ক্যামেরা খোলে কেবল বাংলা ব্যাখ্যার পরে — MobileScanner আঁকা হলেই Android-এর প্রশ্ন আসে, তাই তার আগে
+  /// ([PermissionRationale], ২০ অক্টোবর ২০২৬)। "এখন না" বললে পর্দা বন্ধ।
+  bool _cameraAllowed = false;
+  bool _cameraDeclined = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askCamera());
+  }
+
+  Future<void> _askCamera() async {
+    if (!mounted) return;
+    final yes = await PermissionRationale.explainBeforeAsking(context, AppPermission.camera,
+        isGranted: widget.isGranted);
+    if (!mounted) return;
+    setState(() {
+      _cameraAllowed = yes;
+      _cameraDeclined = !yes;
+    });
+  }
 
   @override
   void dispose() {
@@ -151,7 +177,29 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('কাগজ স্ক্যান')),
-      body: _token == null ? _scanner() : _sheet(context),
+      body: _token != null
+          ? _sheet(context)
+          : _cameraAllowed
+              ? _scanner()
+              : _cameraDeclined
+                  ? _noCamera()
+                  : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _noCamera() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('ক্যামেরা ছাড়া QR পড়া যায় না।', textAlign: TextAlign.center),
+          const SizedBox(height: AppSpacing.md),
+          FilledButton(
+              key: const Key('scan-ask-camera'),
+              onPressed: _askCamera,
+              child: const Text('ক্যামেরা চালু করুন')),
+        ]),
+      ),
     );
   }
 

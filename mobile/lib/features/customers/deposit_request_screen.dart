@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
@@ -10,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/permissions/camera_shot.dart';
 
 /// দোকানির জমার বিজ্ঞপ্তি, ব্যাংক স্লিপের ছবিসহ (0.4.3; নাম ৭ অক্টোবর ২০২৬)।
 ///
@@ -106,7 +106,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   Future<void> _pickSlip() async {
     final path = widget.picker != null
         ? await widget.picker!()
-        : (await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 70, maxWidth: 1800))?.path;
+        : (await takeCameraShot(context, imageQuality: 70, maxWidth: 1800))?.path;
     if (path != null && mounted) setState(() => _slip = path);
   }
 

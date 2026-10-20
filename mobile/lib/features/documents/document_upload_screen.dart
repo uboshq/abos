@@ -10,6 +10,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/permissions/camera_shot.dart';
 
 /// ⭐ কাগজ তোলা — গ্যালারি থেকে এক বা একাধিক ছবি, বা ক্যামেরায় স্ক্যান; নাম, ফোল্ডার, ধরন, গোপনীয়তা, শাখা (মালিক, ১৭ অক্টোবর
 /// ২০২৬: *"direct webpage app e bujajayna"*)।
@@ -95,7 +96,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     } else if (widget.picker != null) {
       got = await widget.picker!();
     } else if (widget.scan) {
-      final shot = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 2400);
+      final shot = await takeCameraShot(context, imageQuality: 85, maxWidth: 2400);
       got = [if (shot != null) shot.path];
     } else {
       got = [for (final x in await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 2400)) x.path];

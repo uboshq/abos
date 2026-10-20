@@ -26,3 +26,8 @@ BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
 "$BT"/apksigner.bat verify --print-certs "$APK" | grep "SHA-256"
 "$BT"/aapt.exe dump badging "$APK" | head -1
 sha256sum "$APK"
+# ⭐ সার্ভারের .env-এর তিন লাইন, ঠিক যেমন বসাতে হবে — হাতে লিখলে একটা অক্ষর ভুলেই প্রতিটা ফোন "মেলেনি" বলে
+# (অ্যাপ রিলিজ নিরীক্ষা, ২০ অক্টোবর ২০২৬; app/Http/Controllers/Api/AppVersionController.php)
+echo "ANDROID_APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)"
+echo "ANDROID_APK_SIZE_BYTES=$(stat -c %s "$APK")"
+echo "ANDROID_VERSION_CODE=$(grep -E '^version:' pubspec.yaml | sed 's/.*+//')"

@@ -5,6 +5,10 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+
+import '../permissions/permission_rationale.dart';
+import '../storage/hive_encryption.dart';
 
 import '../api_client/api_client.dart';
 import '../auth/token_storage.dart';
@@ -38,18 +42,35 @@ class PushService {
     return _ready;
   }
 
-  /// লগইন বা সেশন ফেরার পরে — অনুমতি, তারপর টোকেন জমা; টোকেন বদলালে আবার।
+  /// লগইন বা সেশন ফেরার পরে — টোকেন জমা; টোকেন বদলালে আবার। ⓘ অনুমতি এখানে নয় — [askPermissionOnce], পর্দা ওঠার পরে,
+  /// বাংলা ব্যাখ্যা দিয়ে (আগে এখানেই সরাসরি Android-এর প্রশ্ন খুলত, কোনো ব্যাখ্যা ছাড়া)।
   Future<void> register() async {
     if (!_ready) return;
     try {
       final messaging = FirebaseMessaging.instance;
-      await messaging.requestPermission();
       final token = await messaging.getToken();
       if (token != null) await _send(token);
       await _refresh?.cancel();
       _refresh = messaging.onTokenRefresh.listen((t) => unawaited(_send(t)));
     } catch (e) {
       debugPrint('ABOS push: register failed ($e)');
+    }
+  }
+
+  /// ⭐ Android 13+ বার্তার অনুমতি — আগে বাংলা ব্যাখ্যা ([explain]), তারপর Android-এর প্রশ্ন; এই ফোনে একবারই
+  /// ("এখন না" বললে প্রতিবার খোলায় আবার জিজ্ঞেস করা হয় না)। অনুমতি আগে থেকে থাকলে কিছুই নয়।
+  Future<void> askPermissionOnce(Future<bool> Function() explain) async {
+    if (!_ready) return;
+    try {
+      await askNotificationsOnce(
+        granted: () => PermissionCheck.granted(AppPermission.notifications),
+        alreadyAsked: _NotificationAskedFlag.read,
+        markAsked: _NotificationAskedFlag.write,
+        explain: explain,
+        request: () => FirebaseMessaging.instance.requestPermission(),
+      );
+    } catch (e) {
+      debugPrint('ABOS push: permission not asked ($e)');
     }
   }
 
@@ -110,6 +131,47 @@ class PushService {
         final path = destinationOf(m.data);
         if (path != null) open(path);
       });
+    } catch (_) {}
+  }
+}
+
+/// বার্তার অনুমতির ধাপগুলো, ফোন ছাড়া পরীক্ষার জন্য আলাদা। true = Android-এর প্রশ্ন খোলা হল।
+///
+/// <p>⛔ ক্রম: অনুমতি আছে → কিছু নয়; আগে একবার জিজ্ঞেস হয়েছে → কিছু নয়; তারপর "জিজ্ঞেস হল" লেখা, বাংলা ব্যাখ্যা,
+/// আর কেবল "ঠিক আছে" বললে তবে [request]।
+Future<bool> askNotificationsOnce({
+  required Future<bool?> Function() granted,
+  required Future<bool> Function() alreadyAsked,
+  required Future<void> Function() markAsked,
+  required Future<bool> Function() explain,
+  required Future<void> Function() request,
+}) async {
+  if (await granted() == true) return false;
+  if (await alreadyAsked()) return false;
+  await markAsked();
+  if (!await explain()) return false;
+  await request();
+  return true;
+}
+
+/// "বার্তার অনুমতি একবার জিজ্ঞেস হয়েছে" — এই ফোনে, এনক্রিপ্ট করা বাক্সে। ⓘ খুলতে না পারলে "হয়নি" ধরা।
+class _NotificationAskedFlag {
+  static const String _boxName = 'abos_permissions';
+  static const String _key = 'notifications_asked';
+
+  static Future<bool> read() async {
+    try {
+      final box = await HiveEncryptionKey.openBox<Map>(_boxName);
+      return box.get(_key)?['v'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> write() async {
+    try {
+      final Box<Map> box = await HiveEncryptionKey.openBox<Map>(_boxName);
+      await box.put(_key, <String, dynamic>{'v': true});
     } catch (_) {}
   }
 }
