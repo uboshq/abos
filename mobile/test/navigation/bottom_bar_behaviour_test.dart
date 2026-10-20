@@ -90,9 +90,11 @@ void main() {
               isSelected: true, isInMutuallyExclusiveGroup: true));
       expect(tester.getSemantics(tab('reports')).label, 'রিপোর্ট');
       // one sentence per tab: the name and the red count are not read again as loose pieces
-      expect(find.bySemanticsLabel('অনুমোদন'), findsNothing);
-      expect(find.bySemanticsLabel('5'), findsNothing);
-      expect(find.bySemanticsLabel(RegExp(r'^অনুমোদন')), findsOneWidget);
+      for (final name in ['home', 'approvals', 'reports', 'modules']) {
+        expect(tester.getSemantics(tab(name)).childrenCount, 0, reason: name);
+      }
+      expect(find.bySemanticsLabel(RegExp('অনুমোদন')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(r'^5$', multiLine: true)), findsNothing);
       handle.dispose();
     });
 
