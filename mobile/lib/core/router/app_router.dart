@@ -13,6 +13,8 @@ import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
+import '../../features/profile/my_phones_screen.dart';
+import '../../features/profile/profile_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/nav_bottom_bar.dart';
 import '../../features/home/paper_route.dart';
@@ -46,6 +48,7 @@ import '../../features/notices/notice_board_screen.dart';
 import '../../features/sales_papers/sales_paper_screens.dart';
 import '../auth/auth_state.dart';
 import 'deep_links.dart';
+import 'profile_routes.dart';
 import '../../features/documents/document_screens.dart';
 import '../../features/finance/finance_screens.dart';
 import '../../features/promotion/offers_screen.dart';
@@ -354,6 +357,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           _framed(
             path: 'notifications',
             builder: (context, state) => NotificationsScreen(openId: state.uri.queryParameters['open']),
+          ),
+          // ⭐ প্রোফাইল মেনু — নিজের ছবি আর নিজের ফোনগুলো (অ্যাপ ০.৪.৪১, a6, ২০ অক্টোবর ২০২৬)। ⓘ মডিউলের পর্দা নয়: খোলে ছবির
+          // মেনু থেকে (মালিকের নমুনা, পাতা ২), তাই মডিউলের মেনুতে ঘর নেই আর মডিউলের সুইচে আটকায় না — `/me`-র মতোই নিজের জিনিস
+          _framed(
+            path: ProfileRoutes.profile,
+            builder: (context, state) => const ProfileScreen(),
+          ),
+          _framed(
+            path: ProfileRoutes.phones,
+            builder: (context, state) => const MyPhonesScreen(),
           ),
           // ⭐ বিক্রয় বিল আর চালান — তালিকা; একটা কাগজ খোলে `paper/invoice|challan/:id`-এ (মালিক, ১৩ অক্টোবর ২০২৬)
           _framed(
