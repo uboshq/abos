@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:abos_mobile/core/auth/auth_state.dart';
+import 'package:abos_mobile/core/privacy/app_lock.dart';
 import 'package:abos_mobile/core/router/deep_links.dart';
 import 'package:abos_mobile/core/web_inside/web_inside.dart';
 
@@ -61,5 +64,32 @@ void main() {
     final router = File('lib/core/router/app_router.dart').readAsStringSync();
     expect(router, contains('DeepLinks.route(state.uri, auth.status)'));
     expect(router, contains("return DeepLinks.take() ?? '/home';"));
+  });
+
+  // ⓘ a6-এর দাবি (তাঁর থামানো ডিপ-লিংকের কাজ থেকে, ২০ অক্টোবর ২০২৬): লিংকে খোলা পর্দাও তালার নিচে
+  testWidgets('a screen opened by a link sits under the app lock like any other', (tester) async {
+    final lock = AppLock(startLocked: true, authenticate: () async => false, deviceSupported: () async => true);
+    final router = GoRouter(
+      initialLocation: '/home',
+      redirect: (context, state) => DeepLinks.route(state.uri, AuthStatus.signedIn),
+      routes: [
+        GoRoute(path: '/home', builder: (_, __) => const Text('HOME'), routes: [
+          GoRoute(path: 'web/:code', builder: (_, __) => const Text('PAPER')),
+        ]),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp.router(
+      routerConfig: router,
+      builder: (context, child) => AppLockGate(lock: lock, child: child ?? const SizedBox()),
+    ));
+    await tester.pumpAndSettle();
+
+    router.go('/accounts/vouchers/12');
+    await tester.pumpAndSettle();
+
+    expect(find.text('PAPER'), findsOneWidget, reason: 'লিংকের কাগজের পর্দা');
+    expect(find.byKey(const ValueKey('app-lock')), findsOneWidget, reason: '⛔ লিংকে খোলা পর্দায় তালা নেই');
+    // ⓘ অ্যাপের আসল গঠনেও তালা প্রতিটা পর্দার উপরে — main.dart-এর builder
+    expect(File('lib/main.dart').readAsStringSync(), contains('builder: (context, child) => AppLockGate('));
   });
 }
