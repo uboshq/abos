@@ -60,8 +60,8 @@ class AbosScreenBar extends StatelessWidget implements PreferredSizeWidget {
     return _LiveScreenBar(bar: this);
   }
 
-  /// সেশন ছাড়া — আগের সাদামাটা বার। ⚠️ AppBar নিজে যতটা জায়গা পায় ততটা নেয় (ভেতরে `Align`), আর Scaffold তাকে
-  /// [preferredSize]-এর ৪৮০dp পর্যন্ত দেয় — তাই নিজের মাপে বাঁধা, নইলে পাতার দেহ ৪৮০dp নিচে নেমে যায় (a5, ২০ অক্টোবর ২০২৬)
+  /// সেশন ছাড়া — আগের সাদামাটা বার, আগের উচ্চতায়।
+  /// ⛔ [preferredSize] নীল বারের ছাদ (৪৮০dp); সাদামাটা AppBar পুরো ছাদ জুড়ে বসে যায় — তাই নিজের মাপে বাঁধা।
   Widget plain(BuildContext context) {
     final bar = AppBar(
       key: const ValueKey('screen-bar-plain'),
@@ -72,8 +72,11 @@ class AbosScreenBar extends StatelessWidget implements PreferredSizeWidget {
           ? null
           : IconButton(tooltip: 'পিছনে', onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
     );
-    return SizedBox(
-        height: AppBar.preferredHeightFor(context, bar.preferredSize) + MediaQuery.paddingOf(context).top, child: bar);
+    return Align(
+      alignment: Alignment.topCenter,
+      heightFactor: 1,
+      child: SizedBox(height: bar.preferredSize.height + MediaQuery.paddingOf(context).top, child: bar),
+    );
   }
 
   /// ← — `maybePop`, যাতে আধা-লেখা ফর্ম আগে জিজ্ঞেস করে; পেছনে কিছু না থাকলে হোমে
