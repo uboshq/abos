@@ -8,6 +8,7 @@ import 'package:abos_mobile/core/launcher_widgets/kinds/all_kinds.dart';
 import 'package:abos_mobile/core/launcher_widgets/kit/widget_doc.dart';
 import 'package:abos_mobile/core/launcher_widgets/kit/widget_kind.dart';
 import 'package:abos_mobile/core/privacy/phone_privacy.dart';
+import 'package:abos_mobile/core/theme/theme_choice.dart';
 import 'package:abos_mobile/main.dart' show widgetDestination;
 
 /// নকল উইজেট — সার্ভারের সারাংশের `n` শিরোনামে বসায়
@@ -149,6 +150,17 @@ void main() {
 
     expect(saved['doc_sales_today'], isNull);
     expect(enabled['sales_today'], isFalse);
+  });
+
+  /// ⭐ উইজেটও মানুষের আলো/অন্ধকার বাছাই মানে — পেছনের isolate-এও ভাণ্ডার থেকে পড়ে লেখে, "ফোনের মতো" ধরে নয়
+  test("the widgets carry the person's light or dark choice, read from storage even in the background", () async {
+    WidgetHub.kinds = () => const [];
+    WidgetHub.fetch = () async => WidgetSummary(asOf: now, widgets: const {});
+    ThemeChoices.instance = ThemeChoices(read: () async => 'dark', write: (_) async {});
+
+    await WidgetHub.refresh();
+
+    expect(saved['widget_theme'], 'dark');
   });
 
   /// ⛔ ফোনের-নিজের উইজেট (সিঙ্কের অবস্থা) পেছনের isolate-এ কিছু না জানলে বন্ধ হয় না — যেমন ছিল তেমন (a6-এর ধরা)

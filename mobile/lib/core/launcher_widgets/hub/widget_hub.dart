@@ -6,6 +6,7 @@ import 'package:home_widget/home_widget.dart';
 import '../../api_client/network_errors.dart';
 import '../../privacy/phone_privacy.dart';
 import '../kinds/all_kinds.dart';
+import '../../theme/theme_choice.dart';
 import '../kit/widget_kind.dart';
 import 'widget_summary_api.dart';
 
@@ -25,6 +26,9 @@ class WidgetHub {
 
   /// গোপন অঙ্কের সুইচ — Kotlin আঁকিয়ে পড়ে: "1" = লুকাও
   static const amountsHiddenKey = 'widget_amounts_hidden';
+
+  /// মানুষের আলো/অন্ধকার বাছাই — উইজেটও একই রঙে ([ThemeChoices]; "phone", "light", "dark")
+  static const themeKey = 'widget_theme';
 
   static String docKey(String key) => 'doc_$key';
 
@@ -109,6 +113,10 @@ class WidgetHub {
       final show = await PhonePrivacy.widgetAmounts();
       if (!current()) return;
       await _quiet(() => save(amountsHiddenKey, show ? '0' : '1'), 'amounts');
+      // ⓘ পেছনের isolate-এ বাছাই আগে পড়া হয়নি — প্রতিবার ভাণ্ডার থেকে, যাতে ভুল করে "ফোনের মতো" না লেখে
+      await ThemeChoices.instance.load();
+      if (!current()) return;
+      await _quiet(() => save(themeKey, ThemeChoices.instance.current.value.name), 'theme');
 
       for (final kind in kinds()) {
         if (!current()) return;

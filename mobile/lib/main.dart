@@ -29,6 +29,7 @@ import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
 import 'core/sync_engine/sync_engine.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_choice.dart';
 import 'core/permissions/permission_rationale.dart';
 
 Future<void> main() async {
@@ -57,7 +58,12 @@ Future<void> main() async {
     queue: SyncEngine.instance.init,
     referenceCache: ReferenceCache.instance.init,
     // ⭐ অ্যাপ-তালার সময় — মানুষের বাছাই ([[LockDelay]]); পড়া না গেলে ৫ মিনিট, কখনো ছোড়ে না
-    lockDelay: LockDelay.instance.load,
+    // ⓘ তালার সময় আর আলো/অন্ধকারের বাছাই — দুটোই কেবল ফোনের ভাণ্ডার, প্রথম ফ্রেমের আগে
+    lockDelay: () async {
+      await LockDelay.instance.load();
+      await ThemeChoices.instance.load();
+      ThemeChoices.onChanged = (_) => WidgetHub.refresh();
+    },
     restoreSession: () async {
       await authController.restoreSession();
       return authController.isSignedIn;
@@ -247,24 +253,28 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       _watched?.routerDelegate.removeListener(_noteScreen);
       _watched = router..routerDelegate.addListener(_noteScreen);
     }
-    return MaterialApp.router(
-      title: 'ABOS',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: AppTheme.mode,
-      /*
-       * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
-       * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
-       */
-      locale: AppLocale.locale,
-      supportedLocales: AppLocale.supported,
-      localizationsDelegates: AppLocale.delegates,
-      routerConfig: router,
-      builder: (context, child) => AppLockGate(
-        lock: _lock,
-        onSignOut: () => ref.read(authStateProvider.notifier).logout(),
-        child: child ?? const SizedBox.shrink(),
+    // ⭐ মানুষের আলো/অন্ধকার বাছাই — চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না ([ThemeChoices])
+    return ValueListenableBuilder<ThemeChoice>(
+      valueListenable: ThemeChoices.instance.current,
+      builder: (context, choice, _) => MaterialApp.router(
+        title: 'ABOS',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: choice.mode,
+        /*
+         * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
+         * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
+         */
+        locale: AppLocale.locale,
+        supportedLocales: AppLocale.supported,
+        localizationsDelegates: AppLocale.delegates,
+        routerConfig: router,
+        builder: (context, child) => AppLockGate(
+          lock: _lock,
+          onSignOut: () => ref.read(authStateProvider.notifier).logout(),
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }
