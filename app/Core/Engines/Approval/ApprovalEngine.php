@@ -1508,6 +1508,37 @@ final class ApprovalEngine
             ->values();
     }
 
+    /**
+     * ⭐ অপেক্ষমাণ সইটা কোন ধাপে — "২-এর ১" (a6, ২০ অক্টোবর ২০২৬; ফোনের কাগজের চিপ "সইয়ের অপেক্ষায় · ২-এর ১")।
+     *
+     * ⓘ ধাপ গোনা হয় [[stepsFor()]] থেকে, স্তর ধরে — ওয়েবের যাত্রাপথ ([[ApprovalInboxController::timelineOf()]]) একই
+     * স্তরগুলোকে সারি করে, আর [[approve()]] পরের স্তর খোঁজে একই ছকে (`level > current_level`-এর সবচেয়ে ছোটটা)। ⛔ তাই একই
+     * স্তরে দুইজন (N-of-M) দুই ধাপ নয়, আর ফাঁকা স্তর (১, ৩) "৩-এর ২" নয় — "২-এর ২"।
+     * ⓘ `level` ক্রমিক (১ থেকে): এখনকার স্তর পর্যন্ত কয়টা স্তর। ⛔ ছক আর চালু না থাকলে বা অনুরোধ আর অপেক্ষায় না থাকলে `null` —
+     * অনুমান করা "১-এর ১" মিথ্যা হত। ⓘ ছকগুলো অনুরোধে একবারই তোলা ([[flows()]]), তাই সারি যতই হোক বাড়তি কোয়েরি নেই।
+     *
+     * @return array{level: int, levels: int}|null
+     */
+    public function standingOf(Approval $approval): ?array
+    {
+        if ($approval->status !== Approval::PENDING) {
+            return null;
+        }
+
+        $levels = $this->stepsFor($approval)->map(fn (ApprovalFlowStep $s) => (int) $s->level)->unique()->values();
+
+        if ($levels->isEmpty()) {
+            return null;
+        }
+
+        $current = (int) $approval->current_level;
+
+        return [
+            'level' => max(1, $levels->filter(fn (int $l) => $l <= $current)->count()),
+            'levels' => $levels->count(),
+        ];
+    }
+
     public function stepNamesFor(Approval $approval): array
     {
         $names = [];
