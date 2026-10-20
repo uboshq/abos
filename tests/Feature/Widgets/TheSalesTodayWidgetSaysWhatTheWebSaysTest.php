@@ -68,8 +68,14 @@ final class TheSalesTodayWidgetSaysWhatTheWebSaysTest extends TestCase
         $yesterday = Carbon::yesterday()->toDateString();
         $after = $this->widget();
 
-        $this->assertSame(0, bccomp($after['total'], SalesMetrics::invoiceTotal($today, $today), 4), '⛔ আজকের মোট ওয়েবের "আজকের বিক্রয়" নয়।');
-        $this->assertSame(0, bccomp($after['yesterday'], SalesMetrics::invoiceTotal($yesterday, $yesterday), 4), '⛔ গতকাল ওয়েবের সংজ্ঞায় নয়।');
+        // ⓘ নিট বিক্রি — ওয়েবের একই উৎস (fe, ২১ অক্টোবর ২০২৬; IFRS 15: VAT আর ফেরত বাদে)
+        $this->assertSame(0, bccomp($after['total'], SalesMetrics::net($today, $today), 4), '⛔ আজকের অঙ্ক ওয়েবের "নিট বিক্রি" নয়।');
+        $this->assertSame(0, bccomp($after['yesterday'], SalesMetrics::net($yesterday, $yesterday), 4), '⛔ গতকাল ওয়েবের সংজ্ঞায় নয়।');
+        $parts = SalesMetrics::netParts($today, $today);
+        $this->assertSame(0, bccomp($after['billed'], $parts['billed'], 4), '⛔ বিল ওয়েবের নয়।');
+        $this->assertSame(0, bccomp($after['returned'], $parts['returned'], 4), '⛔ ফেরত ওয়েবের নয়।');
+        $this->assertSame(0, bccomp($after['vat'], $parts['vat'], 4), '⛔ VAT ওয়েবের নয়।');
+        $this->assertSame(__('sales::dashboard.sales_today'), $after['label'], '⛔ উইজেটের নাম সার্ভারের "নিট বিক্রি" নয়।');
         $this->assertSame(0, bccomp($after['collections'], SalesMetrics::collectionTotal($today, $today), 4), '⛔ আদায় ওয়েবের "আজ আদায়" নয়।');
         $this->assertSame(SalesInvoice::query()->posted()->whereBetween('trx_date', [$today, $today])->count(), $after['invoices'],
             '⛔ বিলের সংখ্যা খাতায় বসা বিলের গোনা নয়।');
@@ -136,7 +142,7 @@ final class TheSalesTodayWidgetSaysWhatTheWebSaysTest extends TestCase
         $today = Carbon::today()->toDateString();
         $this->assertSame(0, bccomp($there['total'], $before[$other]['total'], 4), '⛔ অন্য শাখা হেডারে, তবু এই শাখার বিল মোটে এল।');
         $this->assertSame($before[$other]['invoices'], $there['invoices'], '⛔ অন্য শাখা হেডারে, তবু এই শাখার বিল গোনা হলো।');
-        $this->assertSame(0, bccomp($there['total'], SalesMetrics::invoiceTotal($today, $today), 4), '⛔ শাখা-ছাঁকা মোট ওয়েবের নয়।');
+        $this->assertSame(0, bccomp($there['total'], SalesMetrics::net($today, $today), 4), '⛔ শাখা-ছাঁকা অঙ্ক ওয়েবের নয়।');
     }
 
     public function test_through_the_door_the_widget_is_there_with_the_key_and_gone_without_it(): void

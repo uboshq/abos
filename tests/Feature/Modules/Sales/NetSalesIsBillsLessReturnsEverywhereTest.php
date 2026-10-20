@@ -145,6 +145,15 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertSame($after['billed'], bcadd($board['sales_parts']['billed'], '0', 4), '⛔ ছকের বিল আর ফোন দুই অঙ্ক।');
         $this->assertSame($after['returned'], bcadd($board['sales_parts']['returned'], '0', 4), '⛔ ছকের ফেরত আর ফোন দুই অঙ্ক।');
         $this->assertSame($after['vat'], bcadd($board['sales_parts']['vat'], '0', 4), '⛔ ছকের VAT আর ফোন দুই অঙ্ক।');
+
+        // ── হোম-স্ক্রিন উইজেট (sales_today) = ফোন — উইজেটও নিট, একই নাম আর একই ভাগ (a5, ২১ অক্টোবর ২০২৬) ──
+        $this->actingAs($this->owner);
+        $widget = app(\App\Modules\Sales\Widgets\SalesTodaySummary::class)->data($this->owner->fresh());
+        $this->assertSame($after['amount'], $widget['total'], '⛔ উইজেট আর ফোন দুই অঙ্ক — উইজেট এখনো মোট বিল।');
+        $this->assertSame($after['billed'], $widget['billed'], '⛔ উইজেটের বিল আর ফোন দুই অঙ্ক।');
+        $this->assertSame($after['returned'], $widget['returned'], '⛔ উইজেটের ফেরত আর ফোন দুই অঙ্ক।');
+        $this->assertSame($after['vat'], $widget['vat'], '⛔ উইজেটের VAT আর ফোন দুই অঙ্ক।');
+        $this->assertSame(self::NET_LABEL, $widget['label'], '⛔ উইজেটের নাম "নিট বিক্রি" নয়।');
     }
 
     public function test_a_return_dated_yesterday_does_not_lower_today(): void
