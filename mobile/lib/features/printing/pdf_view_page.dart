@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
+
 /// ⭐ কাগজটা ফোনের পর্দায় — মালিক, ৭ অক্টোবর ২০২৬: *"app e voucher approvale asle view hoyna"*। লাইভে সার্ভার PDF
 /// দিয়েছিল (২০০, ১৯৪ KB), কিন্তু কাগজের শিটে দেখার কোনো পথ ছিল না — কেবল প্রিন্ট, শেয়ার আর সেভ। এখন সার্ভারের
 /// সেই PDF-ই পাতা ধরে আঁকা হয়; প্রিন্ট আর শেয়ার শিটেই থাকে, তাই এখানে কেবল দেখা।
@@ -17,7 +19,7 @@ class PdfViewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title, overflow: TextOverflow.ellipsis)),
+        appBar: AbosScreenBar(title: title),
         body: PdfPreview(
           build: (_) async => pdf,
           allowPrinting: false,

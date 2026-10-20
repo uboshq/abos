@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/promotion/offers_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -31,7 +32,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('চলতি অফার')),
+        appBar: const AbosScreenBar(title: 'চলতি অফার'),
         body: PagedList<Offer>(
           reloadKey: _q,
           load: (_) async {

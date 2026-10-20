@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -275,7 +276,7 @@ class _LoadingListScreenState extends State<LoadingListScreen> {
   Widget build(BuildContext context) {
     final rows = _rows ?? const <LoadingTrip>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('লোডিং শিট')),
+      appBar: const AbosScreenBar(title: 'লোডিং শিট'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -413,7 +414,7 @@ class _LoadingSheetScreenState extends State<LoadingSheetScreen> {
         sheet.challans.every((c) => c.packed);
     final muted = TextStyle(color: context.palette.onSurfaceMuted);
     return Scaffold(
-      appBar: AppBar(title: Text('লোডিং শিট ${trip.documentNo}')),
+      appBar: AbosScreenBar(title: 'লোডিং শিট ${trip.documentNo}'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

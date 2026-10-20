@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -117,7 +118,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('মালিকের কেন্দ্র')),
+      appBar: const AbosScreenBar(title: 'মালিকের কেন্দ্র'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

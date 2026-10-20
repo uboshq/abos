@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/printing/printer_settings.dart';
 import '../../core/printing/thermal_printer.dart';
 import '../../core/theme/app_palette.dart';
@@ -103,7 +104,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   Widget build(BuildContext context) {
     final s = _settings;
     return Scaffold(
-      appBar: AppBar(title: const Text('প্রিন্টার')),
+      appBar: const AbosScreenBar(title: 'প্রিন্টার'),
       body: s == null
           ? const LinearProgressIndicator()
           : ListView(

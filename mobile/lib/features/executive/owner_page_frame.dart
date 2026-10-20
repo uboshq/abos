@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
@@ -79,7 +80,7 @@ class _OwnerPageFrameState<T> extends State<OwnerPageFrame<T>> {
   Widget build(BuildContext context) {
     final data = _data;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title, overflow: TextOverflow.ellipsis)),
+      appBar: AbosScreenBar(title: widget.title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

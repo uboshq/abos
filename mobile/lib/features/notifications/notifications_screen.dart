@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
@@ -109,8 +110,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('নোটিফিকেশন'),
+      appBar: AbosScreenBar(
+        title: 'নোটিফিকেশন',
         actions: [
           if ((page?.unread ?? 0) > 0)
             TextButton(
