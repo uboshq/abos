@@ -6,6 +6,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -150,11 +151,18 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                   key: ValueKey('paper-${r.id}'),
                   title: Text([r.no, if (r.saleNo != null && r.saleNo!.isNotEmpty) r.saleNo!].join(' · '),
                       style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(
-                    [
-                      withPoint(r.customer, r.point, r.branch),
-                      [dayOf(r.date), r.statusLabel].where((s) => s.isNotEmpty).join(' · '),
-                    ].join('\n'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text([withPoint(r.customer, r.point, r.branch), dayOf(r.date)].join('\n')),
+                      // ⭐ অবস্থা — অ্যাপের এক চিপ (নকশা ৩, অংশ ৫); অচেনা অবস্থায় সার্ভারের লেখা
+                      if (r.status.isNotEmpty || r.statusLabel.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: AppStatusChip.forServer(r.status,
+                              key: ValueKey('paper-state-${r.id}'), fallbackLabel: r.statusLabel, dense: true),
+                        ),
+                    ],
                   ),
                   isThreeLine: true,
                   trailing: Column(
@@ -267,7 +275,10 @@ class _SalesPaperScreenState extends State<SalesPaperScreen> {
                       const SizedBox(height: AppSpacing.xs),
                       _pair(context, 'তারিখ', dayOf(p.date)),
                       if (p.saleNo != null && p.saleNo!.isNotEmpty) _pair(context, 'বিক্রির নম্বর', p.saleNo!),
-                      _pair(context, 'অবস্থা', p.statusLabel),
+                      if (p.status.isNotEmpty || p.statusLabel.isNotEmpty)
+                        PaperStateFact(
+                            chip: AppStatusChip.forServer(p.status,
+                                key: const ValueKey('paper-state'), fallbackLabel: p.statusLabel)),
                       if (p.dueOn != null) _pair(context, 'মেয়াদ', dayOf(p.dueOn)),
                       if (p.warehouse != null && p.warehouse!.isNotEmpty) _pair(context, 'গুদাম', p.warehouse!),
                       if (p.vehicleNo != null && p.vehicleNo!.isNotEmpty) _pair(context, 'গাড়ি', p.vehicleNo!),
@@ -453,6 +464,7 @@ class SalesPaperDetail {
     this.saleNo,
     this.date,
     this.dueOn,
+    this.status = '',
     this.statusLabel = '',
     this.customer = '',
     this.point,
@@ -475,6 +487,9 @@ class SalesPaperDetail {
   final String? saleNo;
   final String? date;
   final String? dueOn;
+
+  /// সার্ভারের অবস্থার চাবি — চিপের জন্য ([PaperState.fromServer])
+  final String status;
   final String statusLabel;
   final String customer;
   final String? point;
@@ -503,6 +518,7 @@ class SalesPaperDetail {
       saleNo: j['sale_no']?.toString(),
       date: j['date']?.toString(),
       dueOn: j['due_on']?.toString(),
+      status: j['status']?.toString() ?? '',
       statusLabel: _status(j['status']?.toString(), j['status_label']?.toString()),
       customer: j['customer']?.toString() ?? '',
       point: j['point']?.toString(),

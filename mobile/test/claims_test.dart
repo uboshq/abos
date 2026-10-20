@@ -1,3 +1,5 @@
+import 'package:abos_mobile/core/status/app_status_chip.dart';
+import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/api_client/once_key.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/hr/claims_api.dart';
@@ -101,8 +103,9 @@ void main() {
     expect(find.byKey(const ValueKey('claim-open-advance')), findsOneWidget);
     expect(find.textContaining('2,500'), findsOneWidget);
     expect(find.text('EXC-0001 · অগ্রিম'), findsOneWidget);
-    expect(find.text('পরিশোধিত'), findsOneWidget);
-    expect(find.text('প্রত্যাখ্যাত'), findsOneWidget);
+    // ⭐ অবস্থা অ্যাপের এক চিপে (নকশা ৩, অংশ ৫): টাকা দেওয়া → পাকা, নামঞ্জুর → বাতিল
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.cancelled), findsOneWidget);
   });
 
   // ⭐ টাকা লেখা থাকলে "পিছনে" জিজ্ঞেস করে; খালি দাবিতে নয় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; [[UnsavedGuard]])

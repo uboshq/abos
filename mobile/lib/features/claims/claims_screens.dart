@@ -5,6 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/hr/claims_api.dart';
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
@@ -103,7 +104,15 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(Money.taka(c.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text(c.stateLabel, style: TextStyle(color: stateColour(context, c.status))),
+                      // ⭐ অবস্থা — অ্যাপের এক চিপ (নকশা ৩, অংশ ৫); "অনুমোদিত — টাকার অপেক্ষায়" সাতটার কোনোটা নয়, তাই লেখাই
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: AppStatusChip.forServer(c.status,
+                            key: ValueKey('claim-state-${c.id}'),
+                            fallbackLabel: c.stateLabel,
+                            fallbackColour: stateColour(context, c.status),
+                            dense: true),
+                      ),
                       if (c.reason.isNotEmpty) Text(c.reason, maxLines: 1, overflow: TextOverflow.ellipsis),
                     ],
                   ),
@@ -157,7 +166,9 @@ class _ClaimScreenState extends State<ClaimScreen> {
           if (c == null && _error == null) const LinearProgressIndicator(),
           if (c != null) ...[
             FactRow('ধরন', c.kindLabel),
-            FactRow('অবস্থা', c.stateLabel, colour: stateColour(context, c.status)),
+            PaperStateFact(
+                chip: AppStatusChip.forServer(c.status,
+                    key: const ValueKey('claim-state'), fallbackLabel: c.stateLabel, fallbackColour: stateColour(context, c.status))),
             FactRow('টাকা', Money.taka(c.amount)),
             if (c.head != null) FactRow('খরচের খাত', c.head!),
             if (c.spentOn != null) FactRow('খরচের তারিখ', dayOf(c.spentOn)),
