@@ -311,7 +311,70 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertStringContainsString(self::FULL_LABEL, SalesMetrics::salesThisYear()->label);
     }
 
+    /** ⭐ ক্রেতা, পণ্য আর ব্র্যান্ড ধরে বিক্রি — নিট (VAT ও ফেরত বাদে), মুনাফাও নিট (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
+    public function test_the_customer_product_and_brand_reports_are_net_of_vat_and_returns(): void
+    {
+        $today = Carbon::today()->toDateString();
+        $rice = Product::query()->where('name_en', 'Miniket Rice 50kg')->firstOrFail();
+        $rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
+        $before = $this->reports($rahim, $rice);
+
+        $bill = $this->bill('10', '10000');
+        $return = $this->giveBack($bill, '1', $today);
+        $this->assertSame(1, bccomp((string) $return->cost_of_goods, '0', 4), 'প্রস্তুতিটাই ভুল — ফেরতের খরচ শূন্য, তাই মুনাফার দাবি কিছু মাপে না।');
+        $this->assertSame('10000.0000', bcadd((string) $bill->tax, '0', 4), 'প্রস্তুতিটাই ভুল — বিলে VAT নেই।');
+
+        $after = $this->reports($rahim, $rice);
+        $d = fn (string $report, string $column) => bcsub($after[$report][$column], $before[$report][$column], 4);
+
+        // ── ক্রেতা ধরে ──
+        $this->assertSame('10000.0000', $d('customer', 'returned'), '⛔ ক্রেতার সারিতে ফেরত (VAT বাদে) নেই।');
+        $this->assertSame('90000.0000', $d('customer', 'net_sales'), '⛔ ক্রেতার নিট বিক্রি VAT বা ফেরত বাদ দেয় না।');
+        $this->assertSame(bcsub('90000', bcsub((string) $bill->cost_of_goods, (string) $return->cost_of_goods, 4), 4), $d('customer', 'gross_profit'),
+            '⛔ ক্রেতার মুনাফা নিট নয় — ফেরতের নিট বা ফেরত আসা মালের খরচ বাদ পড়েছে।');
+
+        // ── পণ্য ধরে ──
+        $this->assertSame('10000.0000', $d('product', 'returned'), '⛔ পণ্যের সারিতে ফেরত নেই।');
+        $this->assertSame('90000.0000', $d('product', 'revenue'), '⛔ পণ্যের বিক্রি VAT বা ফেরত বাদ দেয় না।');
+        $this->assertSame(bcsub($d('product', 'revenue'), $d('product', 'cost'), 4), $d('product', 'gross_profit'));
+        $this->assertSame(bcsub('90000', bcsub((string) $bill->cost_of_goods, (string) $return->cost_of_goods, 4), 4), $d('product', 'gross_profit'),
+            '⛔ পণ্যের মুনাফা নিট নয়।');
+        $this->assertSame('9.0000', $d('product', 'qty'), '⛔ পণ্যের পরিমাণে ফেরত বাদ যায়নি।');
+
+        // ── ব্র্যান্ড ধরে ──
+        $this->assertSame('90000.0000', $d('brand', 'revenue'), '⛔ ব্র্যান্ডের বিক্রি VAT বা ফেরত বাদ দেয় না।');
+
+        // ── একই উৎস: ক্রেতা ধরে রিপোর্টের নিট যোগ = হোমের নিট বিক্রি ──
+        $this->assertSame(SalesMetrics::net($today, $today), $after['customer_total'], '⛔ রিপোর্টের নিট আর হোমের নিট বিক্রি দুই অঙ্ক।');
+
+        // ⓘ নাম
+        app()->setLocale('bn');
+        $this->assertSame(self::FULL_LABEL, __('sales::field.net_sales'));
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
+
+    /** @return array{customer: array<string, string>, product: array<string, string>, brand: array<string, string>, customer_total: string} */
+    private function reports(Customer $customer, Product $product): array
+    {
+        $this->web($this->owner);
+        $engine = app(\App\Core\Engines\Report\ReportEngine::class);
+        $today = ['from' => Carbon::today()->toDateString(), 'to' => Carbon::today()->toDateString()];
+        $pick = function (array $rows, string $key, mixed $id, array $columns): array {
+            $row = collect($rows)->map(fn ($r) => (array) $r)->first(fn (array $r) => (string) ($r[$key] ?? '') === (string) ($id ?? ''));
+
+            return collect($columns)->mapWithKeys(fn (string $c) => [$c => bcadd((string) ($row[$c] ?? '0'), '0', 4)])->all();
+        };
+
+        $customers = $engine->run('sales.by_customer', $today, 1, 500)->rows;
+
+        return [
+            'customer' => $pick($customers, 'customer_id', $customer->id, ['returned', 'net_sales', 'gross_profit']),
+            'product' => $pick($engine->run('sales.by_product', $today, 1, 500)->rows, 'product_id', $product->id, ['qty', 'returned', 'revenue', 'cost', 'gross_profit']),
+            'brand' => $pick($engine->run('sales.by_brand', $today, 1, 500)->rows, 'brand_id', $product->brand_id, ['revenue']),
+            'customer_total' => array_reduce($customers, fn (string $s, $r) => bcadd($s, (string) ((array) $r)['net_sales'], 4), '0.0000'),
+        ];
+    }
 
     /** @return array{card: string, month: string, label: string} সারাংশের নিট কার্ড (এ মাস) আর বারো মাসের এই মাসের ঘর */
     private function overviewNet(): array

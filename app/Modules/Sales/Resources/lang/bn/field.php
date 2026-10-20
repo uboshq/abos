@@ -81,6 +81,9 @@ return [
     'invoice_count' => 'বিল সংখ্যা',
     'gross_profit' => 'মোট মুনাফা',
     'revenue' => 'বিক্রয়',
+    // ⭐ নিট বিক্রি — VAT আর ফেরত বাদে (IFRS 15; ২০ অক্টোবর ২০২৬)
+    'net_sales' => 'নিট বিক্রি (VAT ও ফেরত বাদে)',
+    'returned_net' => 'ফেরত (VAT বাদে)',
     'cost' => 'ক্রয়মূল্য',
     'margin_percent' => 'মার্জিন %',
     'product_count' => 'পণ্য সংখ্যা',

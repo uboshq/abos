@@ -306,7 +306,7 @@
                 @endif
             </section>
 
-            @foreach ([['top_customers', $topCustomers, 'customer_name', 'total'], ['top_products', $topProducts, 'product_name', 'revenue']] as [$title, $list, $labelKey, $measure])
+            @foreach ([['top_customers', $topCustomers, 'customer_name', 'net_sales'], ['top_products', $topProducts, 'product_name', 'revenue']] as [$title, $list, $labelKey, $measure])
                 <section data-top="{{ $title }}" class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                     <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('executive::today.'.$title) }}</h2>
                     <ol class="min-h-0 flex-1 overflow-auto text-sm">

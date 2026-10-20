@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Database\Query\Expression;
@@ -179,40 +180,32 @@ final class SalesReports
              * বিক্রয়ের ৬৮%"। এক ক্রেতা একাই ৪০% হলে সেটা একটা ঝুঁকি,
              * আর ওই সংখ্যাটা তালিকা দেখে বোঝা যায় না।
              */
-            rankBy: 'total',
-            query: fn (array $f) => DB::table('sal_invoices as i')
-                ->join('customers as cu', 'cu.id', '=', 'i.customer_id')
-                ->where('i.company_id', $f['company_id'])
-                ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
-                ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
-                ->whereBetween('i.trx_date', [$f['from'], $f['to']])
-                ->whereNull('i.deleted_at')
-                /*
-                 * খাতায় বসা বিল — খসড়া নয়।
-                 *
-                 * ── আগে "বাতিল ছাড়া সব" ছিল, আর সেটা ভুল উত্তর দিত ───
-                 * তাতে খসড়াও ঢুকত। কাউন্টারে ধরে রাখা একটা বিল — ক্রেতা
-                 * টাকা আনতে গেছেন — এই রিপোর্টে তাঁর নামে যোগ হয়ে বসে
-                 * থাকত, অথচ হোম পর্দা ওটা গুনত না। একই প্রশ্ন, দুইটা
-                 * উত্তর: "এই মাসে করিম সাহেব কত কিনেছেন" ড্যাশবোর্ডে এক,
-                 * রিপোর্টে আরেক। আর তার উপর মুনাফা হিসাব হত এমন বিল
-                 * ধরে যেটা এখনো বিক্রয়ই নয়।
-                 */
-                ->whereIn('i.status', DocumentStatus::POSTED)
-                ->groupBy('i.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn')
-                ->orderByRaw('SUM(i.total) desc')
+            rankBy: 'net_sales',
+
+            /*
+             * ⭐ নিট বিক্রি — VAT আর ফেরত বাদে (IFRS 15; fe, ২০ অক্টোবর ২০২৬)। বিলের সারি আর ফেরতের সারি এক যোগফলে:
+             * বিলের নিট [[SalesMetrics::billNetSql()]], ফেরতের নিট [[SalesMetrics::returnNetSql()]] **ফেরতের নিজের তারিখে** —
+             * হোম, ফোন আর মালিকের ছকের নিট বিক্রির একই সংজ্ঞা। ⓘ যে ক্রেতার এই সময়ে কেবল ফেরত, তিনিও সারি পান — নইলে যোগফল
+             * নিটের সাথে মিলত না। ⓘ মুনাফাও নিট: ফেরতের নিট বাদ, ফেরত আসা মালের খরচ (`cost_of_goods`) ফেরত।
+             * ⓘ দাম, ছাড়, VAT, মোট — বিলের নিজের ঘর, আগের মতো।
+             */
+            query: fn (array $f) => DB::query()->fromSub(self::customerBills($f)->unionAll(self::customerReturns($f)), 'x')
+                ->join('customers as cu', 'cu.id', '=', 'x.customer_id')
+                ->groupBy('x.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn')
+                ->orderByRaw('SUM(x.sold) - SUM(x.returned) desc')
                 ->select([
-                    'i.customer_id',
+                    'x.customer_id',
                     DB::raw("'customer' as source_type_literal"),
                     self::customerName(),
-                    DB::raw('COUNT(*) as invoice_count'),
-                    DB::raw('SUM(i.subtotal) as subtotal'),
-                    DB::raw('SUM(i.discount) as discount'),
-                    DB::raw('SUM(i.tax) as tax'),
-                    DB::raw('SUM(i.total) as total'),
-                    // মুনাফা — বিক্রয় বাদ খরচ; খরচটা বিলের সময় জমা রাখা
-                    // ⛔ বিলে যোগ করা ভাড়া খাতায় ভাড়ার আয়, বিক্রি নয় — লাভে নয় (১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
-                    DB::raw('SUM(i.total - i.tax - i.freight_charge - i.cost_of_goods) as gross_profit'),
+                    DB::raw('SUM(x.n) as invoice_count'),
+                    DB::raw('SUM(x.subtotal) as subtotal'),
+                    DB::raw('SUM(x.discount) as discount'),
+                    DB::raw('SUM(x.tax) as tax'),
+                    DB::raw('SUM(x.total) as total'),
+                    DB::raw('SUM(x.returned) as returned'),
+                    DB::raw('SUM(x.sold) - SUM(x.returned) as net_sales'),
+                    // মুনাফা — নিট বিক্রি বাদ খরচ; ⛔ বিলে যোগ করা ভাড়া খাতায় ভাড়ার আয়, বিক্রি নয় — লাভে নয় (১৩ অক্টোবর ২০২৬)
+                    DB::raw('SUM(x.profit) as gross_profit'),
                 ]),
             columns: [
                 [
@@ -227,6 +220,8 @@ final class SalesReports
                 ['key' => 'discount', 'label' => 'sales::field.discount', 'type' => ReportColumn::MONEY],
                 ['key' => 'tax', 'label' => 'sales::field.tax', 'type' => ReportColumn::MONEY],
                 ['key' => 'total', 'label' => 'sales::field.total', 'type' => ReportColumn::MONEY],
+                ['key' => 'returned', 'label' => 'sales::field.returned_net', 'type' => ReportColumn::MONEY],
+                ['key' => 'net_sales', 'label' => 'sales::field.net_sales', 'type' => ReportColumn::MONEY],
                 /*
                  * মুনাফা — অনুমতির পেছনে।
                  *
@@ -277,58 +272,36 @@ final class SalesReports
             // "সবচেয়ে বড়" মানে এখানে মুনাফা, বিক্রয় নয় — রিপোর্টটার
             // প্রশ্নই তো "কোনটা আসলে টাকা দেয়"
             rankBy: 'gross_profit',
-            query: fn (array $f) => DB::table('sal_invoice_lines as il')
-                ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
-                ->join('inv_products as p', 'p.id', '=', 'il.product_id')
-                // ⛔ বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগ সারিতে ([[LineNetSale]], ১৩ অক্টোবর ২০২৬)
-                ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
-                ->where('i.company_id', $f['company_id'])
-                ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
-                ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
-                ->whereBetween('i.trx_date', [$f['from'], $f['to']])
-                ->whereNull('i.deleted_at')
-                // খাতায় বসা বিল — byCustomer()-এর একই কারণে
-                ->whereIn('i.status', DocumentStatus::POSTED)
-                ->groupBy('il.product_id', 'p.code', 'p.name_en', 'p.name_bn')
-                ->orderByRaw('SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) desc')
+            /*
+             * ⭐ নিট — VAT আর ফেরত বাদে (IFRS 15; fe, ২০ অক্টোবর ২০২৬): বিলের সারির নিট ([[LineNetSale]]) বাদ ফেরতের সারির নিট
+             * (`rl.amount`, আগেই VAT বাদে), ফেরতের নিজের তারিখে; খরচ থেকে ফেরত আসা মালের খরচ বাদ ([[lineUnion()]])।
+             */
+            query: fn (array $f) => DB::query()->fromSub(self::lineUnion($f), 'x')
+                ->join('inv_products as p', 'p.id', '=', 'x.product_id')
+                ->groupBy('x.product_id', 'p.code', 'p.name_en', 'p.name_bn')
+                ->orderByRaw('SUM(x.revenue) - SUM(x.returned) - SUM(x.cost) desc')
                 ->select([
-                    'il.product_id',
+                    'x.product_id',
                     DB::raw("'".Product::drillSourceType()."' as source_type_literal"),
                     self::productName(),
-                    DB::raw('SUM(il.qty) as qty'),
-                    DB::raw('SUM(il.discount) as discount'),
+                    DB::raw('SUM(x.qty) as qty'),
+                    DB::raw('SUM(x.discount) as discount'),
 
                     /*
-                     * বিক্রয় — ভ্যাট বাদ দিয়ে।
+                     * বিক্রয় — ভ্যাট বাদ দিয়ে, ফেরত বাদ দিয়ে।
                      *
-                     * লাইনের `amount` = (পরিমাণ × দর) − ছাড় + ভ্যাট।
-                     * ভ্যাটটা কখনোই আমাদের আয় নয়, ওটা সরকারের টাকা যা
-                     * আমরা কেবল আদায় করে জমা দিই। না বাদ দিলে ভ্যাটটা
-                     * মুনাফা হিসেবে গোনা হত — অর্থাৎ ৫% ভ্যাটওয়ালা
-                     * পণ্যকে ৫% বেশি লাভজনক দেখাত, আর সেই ভুল তুলনার
-                     * উপর দাঁড়িয়েই দর ঠিক করা হত।
-                     *
-                     * গ্রাহকভিত্তিক রিপোর্টে নিয়মটা একই: `total − tax − ভাড়া`। ⛔ বিলের ছাড়ের ভাগও
-                     * সারিতে ([[LineNetSale]]) — নইলে ছাড়ের বিল পুরো দামে বিকোত দেখাত।
+                     * ভ্যাটটা কখনোই আমাদের আয় নয়, ওটা সরকারের টাকা যা আমরা কেবল আদায় করে জমা দিই; না বাদ দিলে ৫% ভ্যাটওয়ালা
+                     * পণ্যকে ৫% বেশি লাভজনক দেখাত। ⛔ বিলের ছাড়ের ভাগও সারিতে ([[LineNetSale]])। ⭐ ফেরত বাদ — ফেরত আসা মাল বিক্রি নয়।
                      */
-                    DB::raw('SUM('.LineNetSale::sql().') as revenue'),
-                    DB::raw('SUM(il.qty * il.unit_cost) as cost'),
-                    DB::raw('SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) as gross_profit'),
+                    DB::raw('SUM(x.returned) as returned'),
+                    DB::raw('SUM(x.revenue) - SUM(x.returned) as revenue'),
+                    DB::raw('SUM(x.cost) as cost'),
+                    DB::raw('SUM(x.revenue) - SUM(x.returned) - SUM(x.cost) as gross_profit'),
 
-                    /*
-                     * মার্জিন — টাকার অঙ্ক নয়, শতাংশ।
-                     *
-                     * দুইটাই লাগে: ৫০ টাকা লাভ ২০০ টাকার বিক্রিতে ভালো,
-                     * ৫,০০০ টাকার বিক্রিতে নয়। কেবল টাকার অঙ্ক দেখলে বড়
-                     * পণ্যগুলো সবসময় উপরে থাকত, আর যে ছোট পণ্যটা সবচেয়ে
-                     * বেশি লাভ দিচ্ছে সেটা চোখেই পড়ত না।
-                     *
-                     * শূন্য বিক্রয়ে ভাগ করা হয় না — শূন্য বিক্রয়ে মার্জিন
-                     * বলে কিছু নেই, আর ডাটাবেজ ওখানে NULL দিত।
-                     */
-                    DB::raw('CASE WHEN SUM('.LineNetSale::sql().') = 0 THEN 0
-                             ELSE ROUND(SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) * 100
-                                        / SUM('.LineNetSale::sql().'), 2) END as margin_percent'),
+                    // মার্জিন — শতাংশ, নিট বিক্রিতে; শূন্য বিক্রয়ে ভাগ করা হয় না (ডাটাবেজ ওখানে NULL দিত)
+                    DB::raw('CASE WHEN SUM(x.revenue) - SUM(x.returned) = 0 THEN 0
+                             ELSE ROUND((SUM(x.revenue) - SUM(x.returned) - SUM(x.cost)) * 100
+                                        / (SUM(x.revenue) - SUM(x.returned)), 2) END as margin_percent'),
                 ]),
             columns: [
                 [
@@ -340,7 +313,8 @@ final class SalesReports
                 ],
                 ['key' => 'qty', 'label' => 'sales::field.quantity', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'discount', 'label' => 'sales::field.discount', 'type' => ReportColumn::MONEY],
-                ['key' => 'revenue', 'label' => 'sales::field.revenue', 'type' => ReportColumn::MONEY],
+                ['key' => 'returned', 'label' => 'sales::field.returned_net', 'type' => ReportColumn::MONEY],
+                ['key' => 'revenue', 'label' => 'sales::field.net_sales', 'type' => ReportColumn::MONEY],
 
                 /*
                  * ক্রয়মূল্য, মুনাফা ও মার্জিন — তিনটাই অনুমতির পেছনে।
@@ -392,36 +366,30 @@ final class SalesReports
 
             // "সবচেয়ে বড়" মানে এখানে বিক্রয় — দরকষাকষির সংখ্যাটা ওটাই
             rankBy: 'revenue',
-            query: fn (array $f) => DB::table('sal_invoice_lines as il')
-                ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
-                ->join('inv_products as p', 'p.id', '=', 'il.product_id')
+            // ⭐ নিট — VAT আর ফেরত বাদে, পণ্য ধরে রিপোর্টের একই সারি ([[lineUnion()]]; fe, ২০ অক্টোবর ২০২৬)
+            query: fn (array $f) => DB::query()->fromSub(self::lineUnion($f), 'x')
+                ->join('inv_products as p', 'p.id', '=', 'x.product_id')
                 ->leftJoin('mdm_brands as b', 'b.id', '=', 'p.brand_id')
-                // ⛔ বিলের ছাড়ের ভাগ সারিতে — পণ্য ধরে রিপোর্টের একই নিয়ম ([[LineNetSale]], ১৩ অক্টোবর ২০২৬)
-                ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
-                ->where('i.company_id', $f['company_id'])
-                ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
-                ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
-                ->whereBetween('i.trx_date', [$f['from'], $f['to']])
-                ->whereNull('i.deleted_at')
-                ->whereIn('i.status', DocumentStatus::POSTED)
                 ->groupBy('p.brand_id', 'b.name_en', 'b.name_bn')
-                ->orderByRaw('SUM('.LineNetSale::sql().') desc')
+                ->orderByRaw('SUM(x.revenue) - SUM(x.returned) desc')
                 ->select([
                     'p.brand_id',
                     self::brandName(),
-                    DB::raw('COUNT(DISTINCT il.product_id) as product_count'),
-                    DB::raw('SUM(il.qty) as qty'),
+                    DB::raw('COUNT(DISTINCT x.product_id) as product_count'),
+                    DB::raw('SUM(x.qty) as qty'),
 
-                    // ভ্যাট বাদ — ওটা সরকারের টাকা, আমাদের আয় নয়
-                    DB::raw('SUM('.LineNetSale::sql().') as revenue'),
-                    DB::raw('SUM(il.qty * il.unit_cost) as cost'),
-                    DB::raw('SUM('.LineNetSale::sql().' - il.qty * il.unit_cost) as gross_profit'),
+                    // ভ্যাট বাদ — ওটা সরকারের টাকা, আমাদের আয় নয়; ফেরত বাদ — ফেরত আসা মাল বিক্রি নয়
+                    DB::raw('SUM(x.returned) as returned'),
+                    DB::raw('SUM(x.revenue) - SUM(x.returned) as revenue'),
+                    DB::raw('SUM(x.cost) as cost'),
+                    DB::raw('SUM(x.revenue) - SUM(x.returned) - SUM(x.cost) as gross_profit'),
                 ]),
             columns: [
                 ['key' => 'brand_name', 'label' => 'inventory::field.brand'],
                 ['key' => 'product_count', 'label' => 'sales::field.product_count'],
                 ['key' => 'qty', 'label' => 'sales::field.quantity', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'revenue', 'label' => 'sales::field.revenue', 'type' => ReportColumn::MONEY],
+                ['key' => 'returned', 'label' => 'sales::field.returned_net', 'type' => ReportColumn::MONEY],
+                ['key' => 'revenue', 'label' => 'sales::field.net_sales', 'type' => ReportColumn::MONEY],
 
                 // ক্রয়মূল্য ও মুনাফা অনুমতির পেছনে — নিয়ম ২৪
                 ['key' => 'cost', 'label' => 'sales::field.cost', 'type' => ReportColumn::MONEY,
@@ -466,6 +434,87 @@ final class SalesReports
         return DB::raw("CONCAT(p.code, ' - ', {$name}) as product_name");
     }
 
+    /**
+     * ক্রেতা ধরে রিপোর্টের বিলের সারি — খাতায় বসা বিল, খসড়া নয় (আগে "বাতিল ছাড়া সব" ছিল; তাতে কাউন্টারে ধরে রাখা খসড়াও
+     * ঢুকত আর হোম পর্দার সাথে মিলত না)।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function customerBills(array $f): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('sal_invoices as i')
+            ->where('i.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
+            ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+            ->whereNull('i.deleted_at')
+            ->whereIn('i.status', DocumentStatus::POSTED)
+            ->selectRaw('i.customer_id as customer_id, 1 as n, i.subtotal as subtotal, i.discount as discount, i.tax as tax, '
+                .'i.total as total, '.SalesMetrics::billNetSql('i').' as sold, 0 as returned, '
+                .'('.SalesMetrics::billNetSql('i').' - i.cost_of_goods) as profit');
+    }
+
+    /**
+     * ক্রেতা ধরে রিপোর্টের ফেরতের সারি — খাতায় বসা ফেরত, **ফেরতের তারিখে**, একই দুই দেয়াল।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function customerReturns(array $f): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('sal_returns as r')
+            ->where('r.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'r.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'r.customer_id'))
+            ->whereBetween('r.trx_date', [$f['from'], $f['to']])
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.status', DocumentStatus::POSTED)
+            ->selectRaw('r.customer_id as customer_id, 0 as n, 0 as subtotal, 0 as discount, 0 as tax, 0 as total, 0 as sold, '
+                .SalesMetrics::returnNetSql('r').' as returned, '
+                .'(r.cost_of_goods - '.SalesMetrics::returnNetSql('r').') as profit');
+    }
+
+    /**
+     * ⭐ পণ্য আর ব্র্যান্ড ধরে রিপোর্টের সারি — বিলের সারি আর ফেরতের সারি এক তালিকায় (fe, ২০ অক্টোবর ২০২৬)।
+     *
+     *   বিলের সারি:  qty = বিক্রির পরিমাণ, revenue = [[LineNetSale]] (VAT আর বিলের ছাড়ের ভাগ বাদে), cost = পরিমাণ × `unit_cost`
+     *   ফেরতের সারি: qty = − ফেরতের পরিমাণ, returned = `rl.amount` (আগেই VAT বাদে, বিলের ছাড়ের ভাগসহ —
+     *               [[SalesReturnService::shareOfTheBill()]]), cost = − ফেরতের খরচের ভাগ (ফেরতের `cost_of_goods`, সারির টাকার অনুপাতে)
+     *
+     * ⓘ ফেরত **নিজের তারিখে**, একই দুই দেয়াল (শাখা, বিক্রয়কর্মীর ডিলার)। ⓘ সব ফেরতের সারির `amount`-এর যোগ = ফেরতের
+     * `total − tax` = [[SalesMetrics::returnNetSql()]], তাই রিপোর্টের নিট = হোমের নিট (বিলে যোগ করা ভাড়া ছাড়া)।
+     * ⚠️ বিনা-দামের (ফ্রি) ফেরত সারি খরচের ভাগ পায় না — দাম শূন্য বলে অনুপাতও শূন্য।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function lineUnion(array $f): \Illuminate\Database\Query\Builder
+    {
+        $bills = DB::table('sal_invoice_lines as il')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            // ⛔ বিলের মাথার ছাড় আর রাউন্ডিংয়ের ভাগ সারিতে ([[LineNetSale]], ১৩ অক্টোবর ২০২৬)
+            ->tap(fn ($q) => LineNetSale::joinBasis($q, (int) $f['company_id'], $f['from'], $f['to']))
+            ->where('i.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
+            ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+            ->whereNull('i.deleted_at')
+            // খাতায় বসা বিল — byCustomer()-এর একই কারণে
+            ->whereIn('i.status', DocumentStatus::POSTED)
+            ->selectRaw('il.product_id as product_id, il.qty as qty, il.discount as discount, '
+                .LineNetSale::sql().' as revenue, 0 as returned, il.qty * il.unit_cost as cost');
+
+        $returns = DB::table('sal_return_lines as rl')
+            ->join('sal_returns as r', 'r.id', '=', 'rl.sales_return_id')
+            ->where('r.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'r.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'r.customer_id'))
+            ->whereBetween('r.trx_date', [$f['from'], $f['to']])
+            ->whereNull('r.deleted_at')
+            ->whereIn('r.status', DocumentStatus::POSTED)
+            ->selectRaw('rl.product_id as product_id, 0 - rl.qty as qty, 0 as discount, 0 as revenue, rl.amount as returned, '
+                .'0 - COALESCE(r.cost_of_goods * rl.amount / NULLIF(r.subtotal, 0), 0) as cost');
+
+        return $bills->unionAll($returns);
+    }
     private static function customerName(): Expression
     {
         $name = app()->getLocale() === 'bn'
