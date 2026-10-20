@@ -126,6 +126,8 @@ class PayrollController extends Controller implements HasMiddleware
         $slips = $reach->throughEmployee($run->payslips()->getQuery(), $request->user())->with(['employee', 'lines'])->get();
         $run->setRelation('payslips', $slips);
         $limited = $reach->branches($request->user()) !== null;
+        // ⭐ রানের বেতন খোলা — নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($run, 'payroll_viewed');
 
         return view('hr::payroll.show', [
             'menu' => $this->menu->forUser($request->user()),

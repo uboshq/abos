@@ -54,4 +54,9 @@ return [
     'leave_employee_gone' => 'আপনার কর্মীর খাতা বন্ধ (নিষ্ক্রিয় বা মুছে ফেলা) — তাই ছুটির আবেদন করা যায় না। ভুল হলে HR বা মালিককে বলুন।',
     // ⭐ চাকরি ছাড়লে লগইন বন্ধ ([[LeaversLoseTheirLogin]])
     'leaver_login_closed' => ':name-এর লগইন এই কোম্পানিতে বন্ধ — চাকরি ছাড়ার দিন :date পেরিয়েছে।',
+    // ⭐ কে কী দেখলেন — নিরীক্ষায়, অঙ্ক ছাড়া ([[SensitiveViews]]; ঘাটতির তালিকা #১৮)
+    'salary_viewed' => ':viewer বেতন দেখলেন।',
+    'identity_viewed' => ':viewer পরিচয়ের তথ্য (NID, ব্যাংক, ঠিকানা) দেখলেন।',
+    'payslip_viewed' => ':viewer বেতনশিট খুললেন।',
+    'payroll_viewed' => ':viewer বেতনের রান খুললেন।',
 ];

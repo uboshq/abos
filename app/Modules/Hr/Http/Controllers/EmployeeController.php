@@ -144,6 +144,14 @@ class EmployeeController extends Controller implements HasMiddleware
 
         $seesSalary = (bool) $request->user()?->can('viewSalary', $employee);
 
+        // ⭐ কে কার বেতন বা পরিচয় দেখলেন — নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        if ($seesSalary) {
+            app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($employee, 'salary_viewed', $employee);
+        }
+        if (\App\Core\Security\FieldSecurity::visible($employee, 'national_id')) {
+            app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($employee, 'identity_viewed', $employee);
+        }
+
         $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator', 'user', 'photo',
             'reportsTo.designation', 'reports' => fn ($q) => $q->active()->with('designation')->orderBy('name_en')]);
 

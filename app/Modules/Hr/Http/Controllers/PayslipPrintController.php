@@ -71,6 +71,8 @@ class PayslipPrintController extends Controller implements HasMiddleware
          * ফোনের দরজার ([[PayslipApiController]]) একই নিয়ম।
          */
         $payslip->load(['employee.department', 'employee.designation', 'lines', 'run' => fn ($q) => $q->withoutGlobalScope('user-branch')]);
+        // ⭐ অন্যের বেতনশিট ছাপা — নিরীক্ষায়, অঙ্ক ছাড়া; নিজেরটা নয় (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($payslip, 'payslip_viewed', $payslip->employee);
 
         return $this->pdf(
             $request,
@@ -95,6 +97,8 @@ class PayslipPrintController extends Controller implements HasMiddleware
             ->all();
 
         abort_if($documents === [], 404);
+        // ⭐ রানের সব শিট ছাপা — নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($run, 'payroll_viewed');
 
         return $this->pdf($request, $documents, $run->document_no, 'hr_payroll_run', (int) $run->id);
     }

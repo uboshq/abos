@@ -42,6 +42,8 @@ class SalaryStructureController extends Controller implements HasMiddleware
     {
         // ⓘ অনুমতির সাথে কর্মীর শাখাও — [[EmployeePolicy]]
         $this->authorize('viewSalary', $employee);
+        // ⭐ দেখা নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($employee, 'salary_viewed', $employee);
 
         $on = $this->asOf($request);
 

@@ -54,4 +54,9 @@ return [
     'leave_employee_gone' => 'Your employee record is closed (inactive or deleted), so leave cannot be applied for. If this is wrong, tell HR or the owner.',
     // ⭐ চাকরি ছাড়লে লগইন বন্ধ ([[LeaversLoseTheirLogin]])
     'leaver_login_closed' => 'Login of :name closed in this company — the leaving date :date has passed.',
+    // ⭐ কে কী দেখলেন — নিরীক্ষায়, অঙ্ক ছাড়া ([[SensitiveViews]]; ঘাটতির তালিকা #১৮)
+    'salary_viewed' => ':viewer viewed the salary.',
+    'identity_viewed' => ':viewer viewed the identity details (NID, bank, address).',
+    'payslip_viewed' => ':viewer opened the payslip.',
+    'payroll_viewed' => ':viewer opened the payroll run.',
 ];
