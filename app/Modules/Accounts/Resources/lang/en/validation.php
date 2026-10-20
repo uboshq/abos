@@ -181,4 +181,8 @@ return [
     'maker_checker' => ':no was written by you. You cannot post your own voucher; someone else must post it.',
     'phone_unknown_reference' => 'This could not be found any more - fetch the list again. It may belong to another branch, or it has changed meanwhile.',
     'transfer_cancel_only_sender' => 'Before it is received, a transfer can be cancelled only by its sender or by someone with the transfer-manage key.',
+
+    'gross_is_paid_plus_withheld' => 'The bill total (:gross) must equal the amount paid (:paid) + AIT (:ait) + VDS (:vds).',
+    'withheld_needs_expense_head' => 'Tax withheld at source needs an expense head.',
+    'missing_account' => 'Account :code is missing from the chart — add it first.',
 ];

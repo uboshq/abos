@@ -353,4 +353,7 @@ return [
     'inter_company_reverse' => 'দুই পাশ উল্টান',
     'inter_company_reverse_reason' => 'কারণ',
     'inter_company_reversed' => 'উল্টানো হয়েছে',
+
+    'withheld_ait' => 'উৎসে কর্তিত আয়কর (AIT)',
+    'withheld_vds' => 'উৎসে কর্তিত মূসক (VDS)',
 ];
