@@ -220,7 +220,7 @@ void main() {
     expect(find.textContaining('রহিম স্টোর'), findsOneWidget);
     expect(find.textContaining('নিশ্চিত'), findsOneWidget);
     // ⓘ সারির নিজের অঙ্ক — নিচের মোটের পট্টিতেও একই সংখ্যা বসে (এক আদেশ), তাই সারির ভেতরে খোঁজা
-    expect(find.descendant(of: find.byType(ListTile), matching: find.text('৳1,275.00')), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('paper-row-amount'))).data, '৳1,275.00');
   });
 
   // ⭐ মালিক, ১৭ অক্টোবর ২০২৬: "সব পর্দায় summary/grand total" — দেখানো সারির মোট আর গোনা
@@ -234,8 +234,9 @@ void main() {
 
     await tester.pumpWidget(const MaterialApp(home: OrderListScreen()));
     await tester.pump();
-    final orders = find.byKey(const ValueKey('books-total'));
-    expect(find.descendant(of: orders, matching: find.text('মোট অর্ডার')), findsOneWidget);
+    // ⓘ নকশা ৩ (a5, ১৯ অক্টোবর ২০২৬): নিচের পট্টি — দেখানো আর পুরো তালিকা
+    final orders = find.byKey(const ValueKey('totals-all'));
+    expect(find.descendant(of: orders, matching: find.text('সর্বমোট · 1টি')), findsOneWidget);
     expect(find.descendant(of: orders, matching: find.text('৳1,275.00')), findsOneWidget);
 
     await tester.pumpWidget(const MaterialApp(home: StockListScreen()));
