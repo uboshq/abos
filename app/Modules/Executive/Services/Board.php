@@ -118,6 +118,7 @@ final class Board
         return [
             'companies' => $companies,
             'total' => $total,
+            'sales_parts' => self::salesParts($companies),
             'partial' => $partial,
             'eliminated' => $eliminated,
             'header_branch' => $header,
@@ -173,6 +174,8 @@ final class Board
             'rows' => $rows,
             'unsplit' => $only === null ? $this->unsplit($values, $rows) : null,
             'values' => $values,
+            // ⭐ নিট বিক্রির বিল আর ফেরত — ঘরটা খুললে দেখায় (IFRS 15, ২০ অক্টোবর ২০২৬); ঢাকা ঘরে null
+            'sales_parts' => $this->lens->within($user, $companyId, $only, fn () => $this->figures->salesParts($user, $from, $to)),
             'trend' => $this->lens->within($user, $companyId, $only, fn () => $this->dailyTrend($user)),
         ];
     }
@@ -297,7 +300,8 @@ final class Board
         $from = Carbon::today()->subDays(self::TREND_DAYS - 1)->toDateString();
 
         $sales = $this->figures->visible($user, Figures::SALES)
-            ? Trend::series(Trend::DAILY, $from, $to, fn (string $f, string $t) => SalesMetrics::invoiceTotal($f, $t))
+            // ⭐ নিট — উপরের ঘরের একই সংজ্ঞা (IFRS 15, ২০ অক্টোবর ২০২৬)
+            ? Trend::series(Trend::DAILY, $from, $to, fn (string $f, string $t) => SalesMetrics::net($f, $t))
             : null;
 
         $collections = $this->figures->visible($user, Figures::COLLECTIONS)
@@ -337,6 +341,33 @@ final class Board
             }
 
             $out[] = ['label' => $bucket['label'], 'date' => $bucket['from'], 'sales' => $sales, 'collections' => $collections];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ গ্রুপের নিট বিক্রির বিল আর ফেরত — যে কোম্পানিতে ঘরটা দেখা যায় তাদের যোগ; কোথাও না দেখা গেলে null।
+     * ⓘ ভাই-কোম্পানি বাদের আগের ভাগ — বাদটা মোটের ঘরে আলাদা সারিতে ([[Eliminations]])।
+     *
+     * @param  list<array<string, mixed>>  $companies
+     * @return array{billed: string, returned: string}|null
+     */
+    private static function salesParts(array $companies): ?array
+    {
+        $out = null;
+
+        foreach ($companies as $company) {
+            $part = $company['sales_parts'] ?? null;
+
+            if ($part === null) {
+                continue;
+            }
+
+            $out = [
+                'billed' => bcadd($out['billed'] ?? '0', (string) $part['billed'], 4),
+                'returned' => bcadd($out['returned'] ?? '0', (string) $part['returned'], 4),
+            ];
         }
 
         return $out;
