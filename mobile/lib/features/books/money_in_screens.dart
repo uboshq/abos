@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/navigation/recent_papers.dart';
+import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/books/books_api.dart';
 import '../../core/records/customer_record.dart';
@@ -13,6 +14,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
+import '../home/nav_bottom_bar.dart' show BarFab;
 import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
@@ -110,14 +112,11 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     final shownSum = _rows.fold<double>(0, (sum, r) => sum + r.amount);
     final unsent = (widget.unsent ?? unsentCollections)();
     return Scaffold(
-      appBar: AppBar(title: const Text('টাকা আদায়')),
+      // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › আদায়" (০.৪.৪১ নমুনা, পাতা ২); অফলাইনের হলুদ পট্টি বার নিজে আঁকে
+      appBar: const AbosScreenBar(title: 'আদায়', module: 'বিক্রয়'),
+      // ⭐ "＋ নতুন আদায়" — সব পাতার একই [BarFab], কেবল আদায় নেওয়ার চাবি থাকলে
       floatingActionButton: widget.canCollect
-          ? FloatingActionButton.extended(
-              key: const ValueKey('money-in-new'),
-              onPressed: _collect,
-              icon: const Icon(Icons.add),
-              label: const Text('নতুন আদায়'),
-            )
+          ? BarFab(key: const ValueKey('money-in-new'), label: 'নতুন আদায়', onPressed: _collect)
           : null,
       bottomNavigationBar: page == null || _rows.isEmpty
           ? null

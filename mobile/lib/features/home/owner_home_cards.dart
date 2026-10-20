@@ -39,8 +39,14 @@ List<BranchSale>? branchSalesOf(TodayRecord today) {
   return [
     for (final row in list)
       if (row is Map && Money.value(row['amount']) != null)
-        BranchSale((row['branch'] ?? row['name'] ?? '').toString(), Money.value(row['amount'])!),
+        // ⓘ শাখাহীন বিলের সারি (`branch_id: null`) — "শাখা নেই" (fe, ২০ অক্টোবর ২০২৬)
+        BranchSale(_branchName(row), Money.value(row['amount'])!),
   ];
+}
+
+String _branchName(Map row) {
+  final name = (row['branch'] ?? row['name'] ?? '').toString().trim();
+  return name.isEmpty ? 'শাখা নেই' : name;
 }
 
 /// সারির যোগফল — পয়সায় গুনে, যাতে ভগ্নাংশের ভুল মোটে না জমে।
@@ -423,7 +429,8 @@ class BranchSalesCard extends StatelessWidget {
     final total = lines == null || lines.isEmpty ? today.sales?.amount : sumOf(lines.map((l) => l.amount));
     return HomeSectionCard(
       key: const ValueKey('branch-sales'),
-      title: 'আজকের বিক্রি',
+      // ⓘ ফেরত বাদ না দেওয়া মোট বিল — তাই "আজ বিল হয়েছে", "বিক্রি" নয় (fe, ২০ অক্টোবর ২০২৬; IFRS 15: আয় ফেরত বাদে নিট)
+      title: 'আজ বিল হয়েছে',
       actionLabel: 'বিস্তারিত',
       onAction: onOpen,
       children: [
