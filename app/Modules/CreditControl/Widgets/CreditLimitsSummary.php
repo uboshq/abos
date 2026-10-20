@@ -70,7 +70,7 @@ final class CreditLimitsSummary implements WidgetSummary
                 'name' => self::label($customer),
                 'due' => bcadd((string) $position['exposure'], '0', 4),
                 'limit' => bcadd((string) $position['limit'], '0', 4),
-                'percent' => (int) floor((float) $position['used_percent']),
+                'percent' => (int) bcadd((string) $position['used_percent'], '0', 0),
                 'link' => '/customers/'.$id,
             ];
         }
