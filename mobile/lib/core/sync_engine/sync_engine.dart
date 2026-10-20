@@ -222,6 +222,33 @@ class SyncEngine {
     }
   }
 
+  /// ⭐ লেখার আগের পাহারা — তালা এখনো এই isolate-এর কি না ([[QueueLock.stillMine]], ২০ অক্টোবর ২০২৬)।
+  ///
+  /// <p>⛔ কেউ কেড়ে নিয়ে থাকলে আমাদের খোলা বাক্সের ছবিটা পুরনো (অন্য isolate তখন লিখছে) — বন্ধ করা হয়, তালাটা ভুলে যাওয়া হয়
+  /// (অন্যের নাম অক্ষত, [QueueLock.forget]), আর [_openQueue] আবার চেষ্টা চালায়; ওরা ছেড়ে দিলেই নতুন করে খোলা।
+  /// ⓘ [waitFor] দিলে ততক্ষণ নতুন করে খোলার অপেক্ষা (অর্ডার লেখার সময়)। ফেরত: বাক্স খোলা আর তালা আমার কি না।
+  Future<bool> _ensureOwned({Duration waitFor = Duration.zero}) async {
+    if (_queue != null && _lock.stillMine) return true;
+
+    if (_queue != null) {
+      final stale = _queue;
+      _queue = null;
+      try {
+        await stale?.close();
+      } catch (_) {}
+      _lock.forget();
+      trouble.value = QueueTrouble.busy;
+      await _openQueue(retry: true);
+    }
+
+    final deadline = DateTime.now().add(waitFor);
+    while (!(_queue != null && _lock.stillMine)) {
+      if (!DateTime.now().isBefore(deadline)) return false;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    return true;
+  }
+
   Box<Map> get _box {
     final box = _queue;
     if (box == null) {
@@ -429,6 +456,12 @@ class SyncEngine {
       );
     }
 
+    // ⛔ লেখার আগে তালা দেখা — কেউ কেড়ে নিলে বাক্স নতুন করে খোলার অপেক্ষা (৩০ সেকেন্ড), তারপরও না পেলে ব্যর্থ, তবু
+    // অন্যের সাথে একসাথে লেখা নয় ([[_ensureOwned]], ২০ অক্টোবর ২০২৬)
+    if (!await _ensureOwned(waitFor: const Duration(seconds: 30))) {
+      throw StateError('ABOS sync: the offline queue is held elsewhere right now — try again in a moment');
+    }
+
     final changeId = _newChangeId();
     await _box.add(<String, dynamic>{
       'changeId': changeId,
@@ -597,6 +630,8 @@ class SyncEngine {
       // Loops until the module's queue is empty: a rep who was offline all
       // morning can have far more than one batch waiting.
       while (true) {
+        // ⛔ তালা এখনো আমার কি না — কেউ কেড়ে নিলে এখানেই থামা, দুই লেখক নয় ([[QueueLock.stillMine]], ২০ অক্টোবর ২০২৬)
+        if (!await _ensureOwned()) return;
         // Keys, not values: a key is what lets us delete exactly the rows the
         // server confirmed, while other rows may be added concurrently.
         // Rejected rows are excluded — they are done trying; re-sending a
@@ -648,6 +683,10 @@ class SyncEngine {
             if (o is Map && o['changeId'] != null)
               o['changeId'] as String: o.cast<String, dynamic>(),
         };
+
+        // ⛔ সার্ভারের উত্তরের অপেক্ষাই সবচেয়ে লম্বা ফাঁক — লেখার আগে আবার দেখা। তালা গেলে কিছুই লেখা হয় না: সারিগুলো
+        // "অপেক্ষায়" থাকে, নতুন মালিক আবার পাঠান, আর সার্ভার একই changeId-কে DUPLICATE বলে — কিছু দুবার বসে না
+        if (!await _ensureOwned()) return;
 
         final toDelete = <dynamic>[];
         for (final key in keys) {
