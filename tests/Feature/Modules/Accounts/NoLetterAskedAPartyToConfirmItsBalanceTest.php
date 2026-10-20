@@ -58,8 +58,10 @@ final class NoLetterAskedAPartyToConfirmItsBalanceTest extends TestCase
 
     public function test_a_customers_letter_names_the_customer_and_says_the_ledger_balance_to_the_paisa_in_english(): void
     {
-        // ⓘ শাখা আছে এমন গ্রাহক — নামের "· শাখা" অংশটা দেখা যায় (নমুনার প্রথম গ্রাহক শাখাহীন)
-        $customer = Customer::query()->with(['location.parent', 'branch'])->whereNotNull('branch_id')->orderBy('id')->firstOrFail();
+        // ⓘ নমুনার গ্রাহকেরা শাখাহীন — শাখা বসিয়ে নেওয়া, যাতে নামের "· শাখা" অংশটা দেখা যায়
+        $customer = Customer::query()->orderBy('id')->firstOrFail();
+        $customer->forceFill(['branch_id' => CompanyContext::branchId() ?? Company::query()->findOrFail(CompanyContext::id())->defaultBranch()->id])->saveQuietly();
+        $customer = $customer->fresh(['location.parent', 'branch']);
         $party = ['party_type' => Customer::drillSourceType(), 'party_id' => $customer->id];
         $receivable = (int) StandardChart::find(StandardChart::RECEIVABLE)->id;
         $sales = (int) StandardChart::find(StandardChart::SALES)->id;
