@@ -232,6 +232,8 @@ class _TodayPanelState extends State<TodayPanel> {
   /// নিট হলে তার দুই ভাগ — "বিল ৳… · ফেরত ৳…"; পুরনো সার্ভারে (ভাগ নেই) কেবল বিলের গোনা
   static String? _salesDetail(TodayFigure sales) => sales.billed != null && sales.returned != null
       ? 'বিল ${Money.taka(sales.billed)} · ফেরত ${Money.taka(sales.returned)}'
+          // ⓘ বিল আর ফেরত VAT বাদে — VAT আলাদা দেখায়, যাতে বিলের কাগজের মোটের সাথে মেলানো যায়
+          '${sales.vat == null ? '' : ' · VAT ${Money.taka(sales.vat)}'}'
       : _count(sales.count, 'টি বিক্রয়');
 
   static String? _count(int? count, String unit) =>

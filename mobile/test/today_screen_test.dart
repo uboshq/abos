@@ -101,6 +101,21 @@ void main() {
     expect(find.text('বিল ৳4,82,350.00 · ফেরত ৳12,350.00'), findsOneWidget);
   });
 
+  // ⭐ নিট বিক্রি VAT বাদে (IFRS 15.47) — বিল আর ফেরত VAT বাদে, VAT আলাদা লেখা; পুরনো সার্ভারে VAT-এর অংশ নেই
+  testWidgets('a VAT-free net sale shows its VAT apart on the detail line', (tester) async {
+    const net = TodayRecord({
+      'date': '2026-10-20',
+      'company': 'ADI',
+      'sales': {
+        'count': 38, 'amount': '409000.0000', 'label': 'নিট বিক্রি',
+        'billed': '420000.0000', 'returned': '11000.0000', 'vat': '63000.0000',
+      },
+    });
+    await tester.pumpWidget(screen(fetch: () async => net));
+    await tester.pumpAndSettle();
+    expect(find.text('বিল ৳4,20,000.00 · ফেরত ৳11,000.00 · VAT ৳63,000.00'), findsOneWidget);
+  });
+
   // ⭐ The owner's home, 6 Oct 2026, drawn on a screenshot: sale | money in;
   // Recoverable | Payable; "হাতে ও ব্যাংকে মোট" with its four parts; and the
   // principal commission under it.
