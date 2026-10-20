@@ -44,4 +44,20 @@ void main() {
     expect(seen.surface, AppTheme.dark().extension<AppPalette>()!.surface);
     expect(seen.surface, isNot(AppColors.surface));
   });
+
+  test('the state colours are the old ones in light, and in dark each reads on the page, the card and its own tint', () {
+    final l = AppTheme.light().extension<AppPalette>()!;
+    expect([l.success, l.successSurface, l.danger, l.dangerSurface, l.warning, l.warningSurface, l.pending, l.pendingSurface], [
+      AppColors.success, AppColors.successSurface, AppColors.danger, AppColors.dangerSurface,
+      AppColors.warning, AppColors.warningSurface, AppColors.pending, AppColors.pendingSurface,
+    ]);
+    final d = AppTheme.dark().extension<AppPalette>()!;
+    for (final (ink, tint) in [(d.success, d.successSurface), (d.danger, d.dangerSurface), (d.warning, d.warningSurface), (d.pending, d.pendingSurface)]) {
+      expect(tint.computeLuminance(), lessThan(0.1), reason: 'অন্ধকারে ছোঁয়াও অন্ধকার');
+      for (final bg in [d.surface, d.surfaceMuted, tint]) {
+        expect(AppColors.contrast(ink, bg), greaterThanOrEqualTo(4.5));
+      }
+      expect(AppColors.contrast(d.onSurface, tint), greaterThanOrEqualTo(4.5), reason: 'ছোঁয়ার উপর থিমের সাধারণ লেখা');
+    }
+  });
 }
