@@ -45,9 +45,14 @@ void main() {
     expect(image, isA<ResizeImage>());
     expect((image! as ResizeImage).width, lessThanOrEqualTo(160));
     expect(avatarImage(null), isNull);
-    // ⓘ মাথা আর প্রোফাইল — দুই জায়গাই এই পথে; কাঁচা NetworkImage আর নেই
-    final shell = File('lib/features/home/home_shell.dart').readAsStringSync();
-    expect(RegExp(r'NetworkImage\(').allMatches(shell).length, 1, reason: 'কেবল avatarImage-এর ভেতরে');
-    expect(RegExp(r'avatarImage\(avatarUrl\)').allMatches(shell).length, 2);
+    // ⓘ মানুষের ছবি যেখানেই (ওপরের বার, ছবির মেনু, প্রোফাইল) — সব এই এক পথে; গোটা অ্যাপে কাঁচা NetworkImage কেবল avatarImage-এর ভেতরে
+    final raw = <String>[];
+    for (final f in Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
+      final n = RegExp(r'NetworkImage\(').allMatches(f.readAsStringSync()).length;
+      for (var i = 0; i < n; i++) {
+        raw.add(f.path.replaceAll(r'\', '/'));
+      }
+    }
+    expect(raw, ['lib/features/home/home_shell.dart'], reason: '⛔ মানুষের ছবি পুরো মাপে খোলা হচ্ছে');
   });
 }
