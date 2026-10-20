@@ -132,7 +132,7 @@ Route::middleware('auth')->group(function () {
      * ⭐ একজনের মুখ — কেবল সহকর্মীর চোখে (মালিক, a6, ২০ অক্টোবর ২০২৬)। ⚠️ আগে `/storage/avatars/…`, লগইন ছাড়াই খোলা।
      * ⓘ `can:` নেই: পাহারা নিয়ামকে — একই চালু কোম্পানির চালু সদস্য না হলে ৪০৪ ([[UserPhotoController]])। ফোনের যমজ `api.users.photo`।
      */
-    Route::get('/users/{user}/photo', \App\Http\Controllers\UserPhotoController::class)
+    Route::get('/users/{user}/photo', [\App\Http\Controllers\UserPhotoController::class, 'show'])
         ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
 
     /*

@@ -235,7 +235,7 @@ Route::prefix('v1')
             ->middleware('throttle:10,1,me-photo')->name('me.photo.store');
         Route::delete('/me/photo', [\App\Http\Controllers\Api\MePhotoController::class, 'destroy'])
             ->middleware('throttle:10,1,me-photo')->name('me.photo.destroy');
-        Route::get('/users/{user}/photo', \App\Http\Controllers\UserPhotoController::class)
+        Route::get('/users/{user}/photo', [\App\Http\Controllers\UserPhotoController::class, 'show'])
             ->where('user', '[0-9A-Za-z-]{1,64}')->name('users.photo');
         Route::get('/me/devices', [\App\Http\Controllers\Api\MeDevicesController::class, 'index'])->name('me.devices.index');
         Route::delete('/me/devices/{device}', [\App\Http\Controllers\Api\MeDevicesController::class, 'destroy'])

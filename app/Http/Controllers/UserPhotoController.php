@@ -26,7 +26,7 @@ final class UserPhotoController extends Controller
 {
     public function __construct(private readonly AvatarService $avatars) {}
 
-    public function __invoke(Request $request, string $user): Response
+    public function show(Request $request, string $user): Response
     {
         $viewer = $request->user();
 
