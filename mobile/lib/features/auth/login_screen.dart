@@ -75,15 +75,17 @@ class _Words {
   String get version => bn ? 'সংস্করণ' : 'Version';
 }
 
+/// ⭐ মালিকের "মুক্তা সাদা" — পট আর কার্ড হুবহু; কেবল তিনটা লেখার রং সেই রঙেরই একটু গাঢ় সুর, যাতে পটে অন্তত ৪.৫:১
+/// (WCAG 2.1 AA; ec-র প্রবেশযোগ্যতার টেস্ট ধরল, সমন্বয়ক, ২০ অক্টোবর ২০২৬)। আগে: মলিন ৪.১, লিংক ৩.৪, নিচের লেখা ২.৪।
 class _Palette {
   static const page = Color(0xFFEEF5F7);
   static const ink = Color(0xFF0B2A31);
-  static const muted = Color(0xFF5B7B83);
+  static const muted = Color(0xFF56747B);
   static const border = Color(0xFFD6E4E8);
   static const cardBorder = Color(0xFFE3EDF0);
-  static const link = Color(0xFF0A8FAE);
+  static const link = Color(0xFF087993);
   static const divider = Color(0xFFBFE3EA);
-  static const footer = Color(0xFF8AA4AA);
+  static const footer = Color(0xFF59747A);
   static const danger = Color(0xFFB42318);
   static const dangerSurface = Color(0xFFFEF3F2);
 }

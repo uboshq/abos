@@ -44,9 +44,9 @@ void main() {
     'text contrast': textContrastGuideline,
   };
 
-  // ⓘ রঙ a4-এর (থিম) — যেখানে থিমের রঙই ৪.৫:১-এর নিচে, সেখানে এই পরীক্ষা থিম বদলের অপেক্ষায়, পর্দার দোষে নয়।
-  // লগইনের "মুক্তা সাদা" রঙ (মালিকের বাছাই, ১ অক্টোবর ২০২৬): muted 4.35, link 3.61, footer 2.49 — a4-কে জানানো।
-  const themeHolds = {'login: text contrast'};
+  // ⓘ থিমের রঙের অপেক্ষায় থাকা পরীক্ষা — এখন কিছু নেই: লগইনের "মুক্তা সাদা"-র তিন লেখার রং ৪.৫:১-এ গাঢ় হয়েছে
+  // (পট হুবহু; a4, ২০ অক্টোবর ২০২৬)।
+  const themeHolds = <String>{};
 
   for (final screen in screens.entries) {
     testWidgets('${screen.key}: every text field has a label TalkBack reads', (tester) async {
