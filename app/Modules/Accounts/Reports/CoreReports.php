@@ -946,6 +946,7 @@ final class CoreReports
                     'lines' => isset($f['from'], $f['to'], $f['company_id']) ? [
                         ['label' => __('accounts::message.cf_opening_cash'), 'value' => self::cashAt($f, (string) $f['from'], false)],
                         ['label' => __('accounts::message.cf_closing_cash'), 'value' => self::cashAt($f, (string) $f['to'], true)],
+                        ...self::indirectLines($f),
                     ] : [],
                     'label' => __('accounts::message.cf_net_change'),
                     'value' => $good ? $net : bcmul($net, '-1', 4),
@@ -953,6 +954,78 @@ final class CoreReports
                 ];
             },
         );
+    }
+
+    /**
+     * ⭐ পরোক্ষ পদ্ধতির মিলন — নিট লাভ থেকে পরিচালনার নগদ (IAS 7.18(b), 7.20; ERP ১০০%-এর হিসাবের ফাঁক #৩৪, ২০ অক্টোবর ২০২৬)।
+     *
+     * <p>পরিচালনার খাত = নগদ প্রবাহের পরিচালন ভাগ ([[cashFlowSections()]]): টাকা, ওভারড্রাফট, বিনিয়োগ আর অর্থায়নের খাত বাদে
+     * সব। সময়ের সব কাগজে এদের (Cr − Dr)-এর যোগ = নিট লাভ + চলতি মূলধনের বদল; টাকার সারি আছে এমন কাগজে এদের যোগ = প্রত্যক্ষ
+     * পদ্ধতির পরিচালনার নগদ। তফাত কেবল টাকাহীন যে কাগজ বিনিয়োগ বা অর্থায়নের খাত ছোঁয় (অবচয়, বাকিতে সম্পদ কেনা) — সেটাই
+     * "নগদহীন খরচ ও লেনদেন"। ⓘ টাকাহীন যে কাগজ কেবল পরিচালনার খাতে (বাকিতে বিক্রি) নিজেই শূন্যে মেলে। তাই দুই পদ্ধতি
+     * গঠনেই মেলে, আর শেষ সারি দুটো পাশাপাশি দেখায় — না মিললে খাতায় কিছু ভাঙা। বছর বন্ধের দাখিলা বাদ (টাকাহীন, লাভ সরায় মাত্র)।
+     *
+     * @param  array<string, mixed>  $f
+     * @return list<array{label: string, value: string}>
+     */
+    private static function indirectLines(array $f): array
+    {
+        $companyId = (int) $f['company_id'];
+        $overdrafts = self::overdraftIds($companyId) ?: [0];
+        $investing = self::subtreeIds($companyId, [StandardChart::FIXED_ASSETS, StandardChart::DEPOSITS_AND_INVESTMENTS, '1161', '1162', '1163', StandardChart::HAND_LOAN]);
+        $financing = self::subtreeIds($companyId, ['2200', '2170', '2180', StandardChart::PROFIT_PAYABLE]);
+        $nonOperating = [...$investing, ...$financing] ?: [0];
+        $close = \App\Modules\Accounts\Services\YearEndService::closingSources();
+
+        $sameDoc = fn (string $where) => 'EXISTS (SELECT 1 FROM ledger_entries m JOIN accounts ma ON ma.id = m.account_id'
+            .' WHERE m.company_id = ledger_entries.company_id AND m.source_type = ledger_entries.source_type'
+            .' AND m.source_id = ledger_entries.source_id AND ('.$where.'))';
+        $cashDoc = $sameDoc('ma.money_kind IS NOT NULL OR ma.id IN ('.implode(',', $overdrafts).')');
+        $nonOpDoc = $sameDoc("ma.type = '".Account::EQUITY."' OR ma.id IN (".implode(',', $nonOperating).')');
+
+        $rows = DB::table('ledger_entries')
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', $companyId)
+            ->whereNull('accounts.money_kind')
+            ->whereNotIn('ledger_entries.account_id', [...$overdrafts, ...$nonOperating])
+            ->where('accounts.type', '!=', Account::EQUITY)
+            ->whereNotIn('ledger_entries.source_type', $close)
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+            ->groupBy('ledger_entries.account_id', 'accounts.type')
+            ->select(['ledger_entries.account_id', 'accounts.type'])
+            ->selectRaw('SUM(ledger_entries.credit - ledger_entries.debit) as all_net')
+            ->selectRaw("SUM(CASE WHEN {$cashDoc} THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as cash_net")
+            ->selectRaw("SUM(CASE WHEN NOT {$cashDoc} AND {$nonOpDoc} THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as noncash_net")
+            ->get();
+
+        $receivable = array_flip(self::subtreeIds($companyId, [StandardChart::RECEIVABLE]));
+        $inventory = array_flip(self::subtreeIds($companyId, [StandardChart::INVENTORY]));
+        $payable = array_flip(self::subtreeIds($companyId, [StandardChart::PAYABLE_GROUP]));
+
+        $sum = ['profit' => '0', 'noncash' => '0', 'receivable' => '0', 'inventory' => '0', 'payable' => '0', 'other' => '0', 'direct' => '0'];
+        foreach ($rows as $row) {
+            $id = (int) $row->account_id;
+            $bucket = in_array($row->type, [Account::INCOME, Account::EXPENSE], true) ? 'profit'
+                : (isset($receivable[$id]) ? 'receivable' : (isset($inventory[$id]) ? 'inventory' : (isset($payable[$id]) ? 'payable' : 'other')));
+            $sum[$bucket] = bcadd($sum[$bucket], (string) $row->all_net, 4);
+            // ⓘ নগদহীন কাগজের অংশ লাভ বা চলতি মূলধনে ঢুকে আছে, অথচ টাকা নড়েনি — ফিরিয়ে নেওয়া
+            $sum['noncash'] = bcsub($sum['noncash'], (string) $row->noncash_net, 4);
+            $sum['direct'] = bcadd($sum['direct'], (string) $row->cash_net, 4);
+        }
+
+        $indirect = array_reduce(['profit', 'noncash', 'receivable', 'inventory', 'payable', 'other'], fn (string $t, string $k) => bcadd($t, $sum[$k], 4), '0');
+
+        return [
+            ['label' => __('accounts::message.cf_ind_profit'), 'value' => $sum['profit']],
+            ['label' => __('accounts::message.cf_ind_noncash'), 'value' => $sum['noncash']],
+            ['label' => __('accounts::message.cf_ind_receivable'), 'value' => $sum['receivable']],
+            ['label' => __('accounts::message.cf_ind_inventory'), 'value' => $sum['inventory']],
+            ['label' => __('accounts::message.cf_ind_payable'), 'value' => $sum['payable']],
+            ['label' => __('accounts::message.cf_ind_other'), 'value' => $sum['other']],
+            ['label' => __('accounts::message.cf_ind_operating'), 'value' => $indirect],
+            ['label' => __('accounts::message.cf_ind_direct'), 'value' => $sum['direct']],
+        ];
     }
 
     /**
