@@ -237,6 +237,11 @@ String? destinationOf(Map<String, dynamic>? data) {
   if (data == null) return null;
   return switch (data['open']) {
     'tracking' => '/home/tracking',
+    // ⭐ সাধারণ নোটিফিকেশন (MobilePushChannel) — সেটাই খোলা; আগে চাপলে কিছুই হত না
+    'notification' => switch (data['id']) {
+        final String id when id.isNotEmpty => '/home/notifications?open=${Uri.encodeQueryComponent(id)}',
+        _ => '/home/notifications',
+      },
     _ => null,
   };
 }

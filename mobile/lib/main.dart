@@ -186,7 +186,12 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     });
   }
 
-  void _openFromPush(String path) {
+  void _openFromPush(String path) => _openOrHold(path);
+
+  /// ⭐ বার্তা বা উইজেটের চাপ — সাইন-ইন না থাকলে (বা সেশন এখনো খোঁজা হচ্ছে, ঠান্ডা শুরু) পথটা [DeepLinks]-এ মনে রেখে
+  /// লগইন, তারপর ঠিক সেই পাতা; আগে লগইনের পরে কেবল হোম আসত। ওয়েবের লিংকের একই নিয়ম।
+  void _openOrHold(String path) {
+    DeepLinks.holdUnlessSignedIn(path, ref.read(authStateProvider).status);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(goRouterProvider).go(path);
@@ -216,11 +221,8 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     final path = widgetDestination(uri);
     if (path == null) return;
     // Signed out, the router's own redirect sends this to the login screen,
-    // which is where somebody tapping a wiped widget ought to land.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref.read(goRouterProvider).go(path);
-    });
+    // and the page opens right after signing in.
+    _openOrHold(path);
   }
 
   @override

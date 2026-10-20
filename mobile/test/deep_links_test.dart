@@ -51,6 +51,24 @@ void main() {
     expect(DeepLinks.take(), isNull, reason: 'সাইন-ইন থাকলে কিছু জমে না');
   });
 
+  // ⭐ বার্তা বা উইজেটের চাপ, সাইন-ইন ছাড়া — আগে লগইনের পরে কেবল হোম আসত
+  test('a push or widget tap made signed out opens its page right after sign-in, once', () {
+    DeepLinks.take();
+    DeepLinks.holdUnlessSignedIn('/home/notifications?open=n-1', AuthStatus.signedOut);
+    expect(DeepLinks.take(), '/home/notifications?open=n-1');
+    expect(DeepLinks.take(), isNull);
+
+    DeepLinks.holdUnlessSignedIn('/home/approvals', AuthStatus.unknown);
+    expect(DeepLinks.take(), '/home/approvals', reason: 'ঠান্ডা শুরু — সেশন খোঁজা শেষে সেই পাতা');
+
+    DeepLinks.holdUnlessSignedIn('/home/approvals', AuthStatus.signedIn);
+    expect(DeepLinks.take(), isNull, reason: 'সাইন-ইন থাকলে সোজা যায়, কিছু জমে না');
+
+    DeepLinks.holdUnlessSignedIn('https://evil.example/x', AuthStatus.signedOut);
+    DeepLinks.holdUnlessSignedIn('/login', AuthStatus.signedOut);
+    expect(DeepLinks.take(), isNull, reason: 'কেবল অ্যাপের নিজের পথ');
+  });
+
   test('the manifest claims exactly these prefixes on the live host, verified', () {
     final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
     expect(manifest, contains('<intent-filter android:autoVerify="true">'));

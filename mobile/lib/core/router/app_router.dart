@@ -353,7 +353,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           // ⭐ মাথার ঘণ্টা — নিজের নোটিফিকেশন (মালিক, ৬ অক্টোবর ২০২৬)
           _framed(
             path: 'notifications',
-            builder: (context, state) => const NotificationsScreen(),
+            builder: (context, state) => NotificationsScreen(openId: state.uri.queryParameters['open']),
           ),
           // ⭐ বিক্রয় বিল আর চালান — তালিকা; একটা কাগজ খোলে `paper/invoice|challan/:id`-এ (মালিক, ১৩ অক্টোবর ২০২৬)
           _framed(

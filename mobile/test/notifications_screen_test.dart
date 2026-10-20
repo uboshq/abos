@@ -55,6 +55,42 @@ void main() {
         reason: 'the message opens');
   });
 
+  // ⭐ ফোনের বার্তায় চাপ → সেই নোটিফিকেশনটাই খোলা আর পড়া দাগ, একবারই
+  testWidgets('opened from a push, the screen opens that notification once and marks it read', (tester) async {
+    final marked = <String>[];
+    var read = false;
+    await tester.pumpWidget(MaterialApp(
+      home: NotificationsScreen(
+        openId: 'n-1',
+        fetch: () async => page(firstRead: read, unread: read ? 0 : 1),
+        markRead: (id) async {
+          marked.add(id);
+          read = true;
+        },
+        markAllRead: () async {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('আজ কিস্তি ৳10,000.00'), findsWidgets, reason: 'সেই খবরটা নিজেই খুলেছে');
+    expect(marked, ['n-1'], reason: 'একবারই, পরের আনায় আবার নয়');
+  });
+
+  testWidgets('a push for a notification not in the list just shows the list', (tester) async {
+    final marked = <String>[];
+    await tester.pumpWidget(MaterialApp(
+      home: NotificationsScreen(
+        openId: 'gone',
+        fetch: () async => page(firstRead: false),
+        markRead: (id) async => marked.add(id),
+        markAllRead: () async {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('ব্যাংক ঋণের কিস্তি — Sonali'), findsOneWidget);
+    expect(find.text('আজ কিস্তি ৳10,000.00'), findsNothing);
+    expect(marked, isEmpty);
+  });
+
   testWidgets('read-all empties the bell', (tester) async {
     var all = false;
 

@@ -62,6 +62,12 @@ class DeepLinks {
 
   static String? _pending;
 
+  /// ⭐ বার্তা বা উইজেটের চাপে অ্যাপের পথ — সাইন-ইন না থাকলে (বা সেশন এখনো খোঁজা হচ্ছে) মনে রাখা, যাতে লগইনের পরে
+  /// হোম নয়, ঠিক সেই পাতা খোলে। ⓘ কেবল অ্যাপের নিজের পথ (`/home…`)।
+  static void holdUnlessSignedIn(String path, AuthStatus status) {
+    if (status != AuthStatus.signedIn && (path == '/home' || path.startsWith('/home/'))) hold(path);
+  }
+
   /// সাইন-ইন হওয়ার আগে আসা লিংক — লগইনের পরে একবারই খোলে
   static void hold(String target) => _pending = target;
 

@@ -14,7 +14,11 @@ import '../../core/widgets/day_part.dart';
 /// The bell's page — this person's messages, newest first; a tap marks one
 /// read, and "সব পড়া হয়েছে" empties the bell (owner, 6 Oct 2026).
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key, this.fetch, this.markRead, this.markAllRead, this.openWeb});
+  const NotificationsScreen({super.key, this.fetch, this.markRead, this.markAllRead, this.openWeb, this.openId});
+
+  /// ⭐ ফোনের বার্তায় চাপলে সেই নোটিফিকেশনটাই খোলে (সার্ভারের পুশ: `open: notification, id: <public_id>`)। তালিকায় না
+  /// পেলে (পুরনো, বা অন্য পাতায়) কেবল তালিকা।
+  final String? openId;
 
   /// Seams — the real ones need a server.
   final Future<NotificationPage> Function()? fetch;
@@ -31,6 +35,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   NotificationPage? _page;
   String? _error;
+  bool _openedFromPush = false;
 
   @override
   void initState() {
@@ -46,6 +51,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _page = page;
         _error = null;
       });
+      final wanted = widget.openId;
+      if (wanted != null && wanted.isNotEmpty && !_openedFromPush) {
+        _openedFromPush = true; // ⓘ একবারই — পড়া দাগের পরের আনায় আবার নয়
+        for (final item in page.items) {
+          if (item.id == wanted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _open(item);
+            });
+            break;
+          }
+        }
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = errorMessageFor(error,
