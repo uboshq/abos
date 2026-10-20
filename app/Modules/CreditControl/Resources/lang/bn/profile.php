@@ -44,6 +44,7 @@ return [
     'stage_challan' => 'চালান',
     'stage_invoice' => 'বিল',
     'stage_counter' => 'কাউন্টার',
+    'stage_sales_order' => 'বিক্রয় আদেশ',
     'reason_within_limit' => 'গেল — সীমার ভিতরে',
     'reason_switch_off' => 'গেল — সীমার যাচাই বন্ধ',
     'reason_over_limit' => 'থামল — সীমা পার',
