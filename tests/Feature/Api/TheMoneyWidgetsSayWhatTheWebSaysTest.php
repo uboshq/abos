@@ -180,7 +180,7 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
         $before = $this->widgets($this->owner)['bank_reconcile'];
 
         $voucher = app(\App\Modules\Accounts\Services\VoucherService::class)->create(
-            ['type' => 'contra', 'trx_date' => now()->toDateString(), 'amount' => '500', 'narration' => 'নগদ ব্যাংকে'],
+            ['type' => 'contra', 'trx_date' => now()->toDateString(), 'amount' => '500', 'narration' => 'নগদ ব্যাংকে', 'instrument_no' => 'TRX-WGT-0001'],
             app(\App\Modules\Accounts\Services\VoucherService::class)->twoLineEntry('contra',
                 (int) Account::query()->where('money_kind', Account::CASH)->where('is_group', false)->orderBy('id')->value('id'), $bank->id, '500'),
         );
@@ -216,7 +216,7 @@ final class TheMoneyWidgetsSayWhatTheWebSaysTest extends TestCase
         $total = '0';
 
         foreach ($sides as $code => $side) {
-            $lines[] = ['account_id' => StandardChart::find($code)->id, 'debit' => $side['debit'] ?? '0', 'credit' => '0'];
+            $lines[] = ['account_id' => StandardChart::find((string) $code)->id, 'debit' => $side['debit'] ?? '0', 'credit' => '0'];
             $total = bcadd($total, $side['debit'] ?? '0', 4);
         }
 
