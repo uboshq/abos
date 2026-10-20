@@ -35,8 +35,41 @@ final class TheAppLinksFileNamesOnlyTheReleaseKeyTest extends TestCase
 
     public function test_the_file_is_served_as_it_is_not_through_laravel(): void
     {
-        // ⓘ public/.htaccess পাঠায় কেবল যা ফাইল নয় — এই ফাইল আছে, তাই Apache নিজেই .json হিসেবে দেয়, কোনো redirect ছাড়া
-        $htaccess = (string) file_get_contents(dirname(__DIR__, 2).'/public/.htaccess');
-        $this->assertStringContainsString('RewriteCond %{REQUEST_FILENAME} !-f', $htaccess);
+        // ⓘ public/.htaccess পাঠায় কেবল যা ফাইল নয় — এই ফাইল আছে, তাই Apache নিজেই দেয়, Laravel-এর পথে নয়
+        $this->assertStringContainsString('RewriteCond %{REQUEST_FILENAME} !-f', $this->htaccess());
+    }
+
+    public function test_the_file_goes_out_as_application_json(): void
+    {
+        // ⛔ Android যাচাই কেবল application/json মানে — সার্ভারের ডিফল্টে ভরসা নয়, .htaccess নিজে বলে দেয়
+        $this->assertMatchesRegularExpression('#^\s*AddType\s+application/json\s+\.json\s*$#m', $this->htaccess());
+    }
+
+    public function test_no_redirect_can_reach_the_file(): void
+    {
+        // ⛔ Android যাচাই redirect মানে না (একটা 301-ও লিংক ব্রাউজারে ফেলে দেয়)। .htaccess-এর একমাত্র redirect
+        // শেষের '/' মোছে — যার পথ '/' দিয়ে শেষ আর যা ফোল্ডার নয়; '/.well-known/assetlinks.json' তাতে পড়ে না।
+        $lines = array_values(array_filter(
+            array_map('trim', preg_split('/\R/', $this->htaccess())),
+            fn (string $l) => $l !== '' && $l[0] !== '#',
+        ));
+
+        foreach ($lines as $line) {
+            $this->assertDoesNotMatchRegularExpression('/^Redirect(Match|Permanent)?\b/i', $line, 'no mod_alias redirect');
+        }
+
+        // ⓘ RewriteRule-এর পতাকায় R বা R=30x — redirect
+        $redirects = array_keys(array_filter(
+            $lines,
+            fn (string $l) => (bool) preg_match('/^RewriteRule\b.*\[[^\]]*\bR(=\d+)?\b[^\]]*\]/', $l),
+        ));
+        $this->assertCount(1, $redirects, 'one redirect only: the trailing-slash one');
+        $this->assertSame('RewriteCond %{REQUEST_URI} (.+)/$', $lines[$redirects[0] - 1]);
+        $this->assertSame(0, preg_match('#(.+)/$#', '/.well-known/assetlinks.json'), 'the file path does not end in a slash');
+    }
+
+    private function htaccess(): string
+    {
+        return (string) file_get_contents(dirname(__DIR__, 2).'/public/.htaccess');
     }
 }
