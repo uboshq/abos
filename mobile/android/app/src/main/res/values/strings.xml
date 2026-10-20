@@ -27,4 +27,28 @@
     <string name="widget_receivable">মোট পাওনা</string>
     <string name="widget_payable">মোট দেনা</string>
     <string name="widget_stock_value">স্টকের মূল্য</string>
+
+    <!-- ⭐ Widget kit (20 Oct 2026): the picker names of the 21 widgets (same words as widgets/WidgetKeys.LABELS) -->
+    <string name="widget_kit_description">ABOS — অ্যাপ সিঙ্ক করলে হালনাগাদ হয়</string>
+    <string name="widget_sales_today_name">আজকের বিক্রি</string>
+    <string name="widget_money_in_hand_name">টাকা হাতে</string>
+    <string name="widget_approvals_name">সইয়ের অপেক্ষা</string>
+    <string name="widget_big_dues_name">বড় বকেয়া</string>
+    <string name="widget_stock_alerts_name">মজুদ সতর্কতা</string>
+    <string name="widget_challans_today_name">আজকের চালান</string>
+    <string name="widget_notices_name">নোটিশ</string>
+    <string name="widget_quick_actions_name">দ্রুত কাজ</string>
+    <string name="widget_target_name">লক্ষ্য বনাম অর্জন</string>
+    <string name="widget_sync_state_name">সিঙ্কের অবস্থা</string>
+    <string name="widget_collections_today_name">আজকের আদায়</string>
+    <string name="widget_credit_limits_name">বাকির সীমা</string>
+    <string name="widget_cheques_name">চেক</string>
+    <string name="widget_sr_board_name">SR তালিকা</string>
+    <string name="widget_goods_incoming_name">মাল আসছে</string>
+    <string name="widget_expenses_name">খরচ</string>
+    <string name="widget_profit_name">লাভ</string>
+    <string name="widget_offers_name">অফার</string>
+    <string name="widget_attendance_name">উপস্থিতি</string>
+    <string name="widget_bank_reconcile_name">ব্যাংক মেলানো</string>
+    <string name="widget_owner_board_name">মালিকের পূর্ণ পর্দা</string>
 </resources>

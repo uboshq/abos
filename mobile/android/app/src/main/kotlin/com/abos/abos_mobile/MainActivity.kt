@@ -10,6 +10,8 @@ import android.os.PowerManager
 import android.os.StatFs
 import android.provider.Settings
 import android.view.WindowManager
+import com.abos.abos_mobile.widgets.LauncherWidgetsChannel
+import com.abos.abos_mobile.widgets.LockWatch
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -168,6 +170,12 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // ⭐ Home-screen widget kit (20 Oct 2026): which widgets the picker offers,
+        // redraw all, and the key list (widgets/LauncherWidgetsChannel.kt). While
+        // the app runs, the kit's secret texts follow lock and unlock (LockWatch).
+        LauncherWidgetsChannel.register(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        LockWatch.ensure(applicationContext)
     }
 
     /**

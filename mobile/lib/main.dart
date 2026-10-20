@@ -16,10 +16,13 @@ import 'core/auth/session_watch.dart';
 import 'core/privacy/app_lock.dart';
 import 'core/privacy/lock_delay.dart';
 import 'core/privacy/phone_privacy.dart';
+import 'core/launcher_widgets/hub/widget_hub.dart';
+import 'core/launcher_widgets/hub/widget_hub_task.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
+import 'core/router/deep_links.dart';
 import 'core/sync_engine/auto_sync.dart';
 import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
@@ -66,6 +69,9 @@ Future<void> main() async {
   // awaited: the app must not wait on a launcher tile to draw itself.
   if (authController.isSignedIn) {
     unawaited(LauncherWidgetRefresh.refresh());
+    // ⭐ নতুন উইজেটগুলো আর তাদের ৩০ মিনিটের কাজ — ফিরিয়ে আনা সেশনেও ([WidgetHub], [WidgetHubTask])
+    unawaited(WidgetHub.refresh());
+    unawaited(WidgetHubTask.start());
   }
 
   runApp(
@@ -140,9 +146,10 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
     PushService.instance.listenForTaps(_openFromPush);
     // ⭐ অফিসে কিছু লেখা হলে নীরব ডাক — খোলা অ্যাপ তখনই সিঙ্ক করে (রিয়েল-টাইম, মালিক, ১০ অক্টোবর ২০২৬)
+    // ⭐ নীরব ডাকে উইজেটও — গোল ব্যর্থ হলেও ([WidgetHub.refresh] চলতি গোলে জুড়ে যায়, দুবার নয়)
     PushService.instance.listenForSync(() =>
         ref.read(authStateProvider).status == AuthStatus.signedIn
-            ? _autoSync.runNow()
+            ? _autoSync.runNow().whenComplete(WidgetHub.refresh)
             : Future<void>.value());
     ref.listenManual<AuthState>(authStateProvider, (previous, next) {
       if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {
@@ -264,8 +271,18 @@ class _AbosAppState extends ConsumerState<AbosApp> {
 /// click intents: `abos://widget/approvals` and `abos://widget/today`.
 /// Anything else opens the app where it already was, which is what a tap on
 /// an unknown thing should do.
+///
+/// <p>⭐ নতুন উইজেটের ঠিকানা ([WidgetHub]): `abos://widget/open?path=<পথ>` — অ্যাপের পথ (`/home…`) যেমন আছে, ওয়েবের পথ
+/// [DeepLinks.targetFor] দিয়ে; `abos://widget/open?key=<চাবি>` — ঘর। ⛔ অচেনা বা বাইরের পথ সবসময় `/home`, অন্য কোথাও নয়।
 String? widgetDestination(Uri? uri) {
   if (uri == null || uri.scheme != 'abos' || uri.host != 'widget') return null;
+  if (uri.path == '/open') {
+    final path = uri.queryParameters['path'];
+    if (path == null || path.isEmpty) return '/home';
+    if (path == '/home' || path.startsWith('/home/')) return path;
+    final link = Uri.tryParse(path);
+    return (link == null ? null : DeepLinks.targetFor(link)) ?? '/home';
+  }
   return switch (uri.path) {
     '/approvals' => '/home/approvals',
     '/today' => '/home',

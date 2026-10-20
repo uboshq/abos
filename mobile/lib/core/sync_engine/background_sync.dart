@@ -4,6 +4,8 @@ import 'package:workmanager/workmanager.dart';
 
 import '../auth/session_repository.dart';
 import '../auth/token_storage.dart';
+import '../launcher_widgets/hub/widget_hub.dart';
+import '../launcher_widgets/hub/widget_hub_task.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
 import 'sync_engine.dart';
 
@@ -60,9 +62,27 @@ class BackgroundSync {
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    // ⭐ উইজেটের ৩০ মিনিটের কাজ — কেবল উইজেট, সারি ছোঁয় না ([WidgetHubTask])
+    if (task == WidgetHubTask.taskName) {
+      await widgetRound();
+      return true;
+    }
     await backgroundRound();
     return true;
   });
+}
+
+/// ⭐ পেছনের উইজেট-গোল — সাইন-ইন না থাকলে কিছু নয় (৪০১-এ কিছু মোছা হত না, শুধু নষ্ট ডাক)।
+/// ⛔ Hive-এর সারি এখানে খোলা হয় না — খোলা অ্যাপের বাক্সের সাথে টক্কর নয়।
+Future<void> widgetRound() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    final refreshToken = await TokenStorage.instance.refreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) return;
+    await WidgetHub.refresh();
+  } catch (error) {
+    debugPrint('ABOS widget hub task: failed ($error)');
+  }
 }
 
 /// ⭐ পেছনের একটা গোল — জমা কাজ পাঠানো আর ঘরের পর্দার উইজেট; WorkManager-এর ১৫ মিনিটের কাজ আর পেছনের নীরব ডাক
@@ -96,6 +116,8 @@ Future<void> backgroundRound() async {
       // the only thing that runs for them. After the flush, so the figures
       // include the orders that just went up.
       await LauncherWidgetRefresh.refresh();
+      // ⭐ নতুন উইজেটগুলোও একই গোলে — কখনো ছোড়ে না ([WidgetHub])
+      await WidgetHub.refresh();
     } catch (error) {
       // ⓘ নিচে finally — ব্যর্থ হলেও তালা ছাড়া হয়
       // flush()/flushAll() already catch their own network and server failures

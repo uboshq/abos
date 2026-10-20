@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../api_client/api_client.dart';
 import '../api_client/network_errors.dart';
+import '../launcher_widgets/hub/widget_hub.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/reference_sync.dart';
@@ -58,12 +59,14 @@ class WorkspaceSwitcher {
     void Function()? forgetLastFailure,
     Future<void> Function()? syncAll,
     Future<void> Function()? refreshWidgets,
+    Future<void> Function()? clearWidgets,
     int Function()? pendingCount,
   })  : _post = post ?? _postToServer,
         _clearCache = clearCache ?? ReferenceCache.instance.clearAll,
         _forgetLastFailure = forgetLastFailure ?? ReferenceSync.forgetLastFailure,
         _syncAll = syncAll ?? _pullEverything,
-        _refreshWidgets = refreshWidgets ?? LauncherWidgetRefresh.refresh,
+        _refreshWidgets = refreshWidgets ?? _refreshAllWidgets,
+        _clearWidgets = clearWidgets ?? WidgetHub.clear,
         _pendingCount = pendingCount ?? (() => SyncEngine.instance.pendingCount);
 
   /// "সব শাখা" — the web header's own word for it, sent as-is.
@@ -74,6 +77,13 @@ class WorkspaceSwitcher {
   final void Function() _forgetLastFailure;
   final Future<void> Function() _syncAll;
   final Future<void> Function() _refreshWidgets;
+  final Future<void> Function() _clearWidgets;
+
+  /// পুরনো দুই উইজেট আর নতুনগুলো ([WidgetHub])
+  static Future<void> _refreshAllWidgets() async {
+    await LauncherWidgetRefresh.refresh();
+    await WidgetHub.refresh();
+  }
   final int Function() _pendingCount;
 
   /// Moves this session to [companyPublicId] and [branch] (a branch
@@ -108,6 +118,9 @@ class WorkspaceSwitcher {
     if (companyChanged) {
       await _clearCache();
       _forgetLastFailure();
+      // ⛔ আগের কোম্পানির উইজেট-নথি নতুন কোম্পানিতে নয় — নেট না থাকলেও ([WidgetHub.clear]; কখনো ছোড়ে না;
+      // অপেক্ষা নয় — পরের গোল নিজেই মোছা শেষ হওয়ার অপেক্ষা করে)
+      unawaited(_clearWidgets());
       // Not awaited: the picker closes now and the lists fill as they come.
       unawaited(_syncAll().catchError((Object error) {
         debugPrint('ABOS workspace: full sync after company change failed ($error)');
