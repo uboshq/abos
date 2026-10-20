@@ -44,6 +44,9 @@ final class ApprovalFacts
     /** পক্ষের নিজের সম্পর্ক — পুরনো ক্রমে: ব্যক্তি, গ্রাহক, সরবরাহকারী, কর্মী */
     private const PARTY_RELATIONS = ['person', 'customer', 'supplier', 'employee'];
 
+    /** কোন কাগজের লাইনে পণ্য থাকে — [[about()]]-এর "প্রথম পণ্য" একবারে আনতে; একবার দেখে মনে রাখা হয়। */
+    private static array $linesCarryProducts = [];
+
     /** টাকার খাত যে ঘরগুলোয় বসতে পারে, অগ্রাধিকারের ক্রমে। */
     private const ACCOUNT_FIELDS = ['money_account_id', 'account_id', 'bank_account_id', 'to_account_id', 'from_account_id'];
 
@@ -99,6 +102,12 @@ final class ApprovalFacts
                  * মডেলটাকে জিজ্ঞেস করা হয়, কাগজটাকে নয়।
                  */
                 ->when($this->linesCarryAccounts($class), fn ($q) => $q->with('lines.account'))
+                /*
+                 * ⭐ লাইনের পণ্যও একবারে — [[about()]] খালি বিবরণে প্রথম পণ্যের নাম পড়ে। ⛔ আগে প্রতিটা কাগজে আলাদা করে
+                 * `lines` আর `product` টানা হত (N+1); স্থানীয় পরিবেশে অলস-টানা নিষেধ, তাই অনুমোদনের অপেক্ষায় বিক্রয় বিল
+                 * থাকলেই হোম আর ড্যাশবোর্ড ৫০০ দিত (ওয়েবের মান ধাপ ২-এর ছবি তুলতে গিয়ে ধরা, ২০ অক্টোবর ২০২৬)।
+                 */
+                ->when($this->linesCarryProducts($class), fn ($q) => $q->with('lines.product'))
                 ->whereKey(array_values(array_unique($ids)))
                 ->get()
                 ->keyBy(fn (Model $m) => (int) $m->getKey());
@@ -424,6 +433,24 @@ final class ApprovalFacts
         }
 
         return self::$linesCarryAccounts[$class];
+    }
+
+    /** কাগজের লাইনে `product` সম্পর্ক আছে কি না — [[linesCarryAccounts()]]-এর একই নিয়মে, লাইনের মডেলকে জিজ্ঞেস করে */
+    private function linesCarryProducts(string $class): bool
+    {
+        if (! method_exists($class, 'lines')) {
+            return false;
+        }
+
+        if (! array_key_exists($class, self::$linesCarryProducts)) {
+            try {
+                self::$linesCarryProducts[$class] = method_exists((new $class)->lines()->getRelated(), 'product');
+            } catch (Throwable) {
+                self::$linesCarryProducts[$class] = false;
+            }
+        }
+
+        return self::$linesCarryProducts[$class];
     }
 
     /**
