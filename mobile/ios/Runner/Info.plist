@@ -47,6 +47,8 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>ABOS খুলতে আপনার মুখ চেনা হবে — শুধু এই ফোনেই, কোথাও পাঠানো হয় না।</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
