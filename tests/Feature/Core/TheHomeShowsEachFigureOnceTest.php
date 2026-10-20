@@ -60,22 +60,32 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         $pictures = array_map(fn ($n) => $n->getAttribute('data-picture'), iterator_to_array($page->query('//*[@data-picture]')));
         $this->assertSame(config('abos.home_pictures'), $pictures, '⛔ চার্টগুলো মালিকের ক্রমে নয়।');
 
-        // ── ৮টা মূল সূচক, মালিকের ক্রমে ──
+        // ── মূল সূচক, মালিকের ক্রমে ──
+        // ⭐ "বাজারে বকেয়া" এখন সূচকের সারিতে নয়, টাকার বাক্সের ঘরে — মালিকের অনুমোদিত নমুনা (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬)।
+        //    জায়গা বদলেছে, যাচাই নয়: নিচে বাক্সের ঘর থেকে পড়া, একই উৎস, একই পয়সা, আর পাতায় ঠিক একবার।
         $kpis = $this->kpis($page);
         $this->assertSame([
             __('sales::dashboard.sales_today'),
             __('sales::dashboard.collected_today'),
             __('purchase::widget.margin_this_month'),
-            __('customer::dashboard.kpi_owed'),
             __('supplier::widget.owed_to_principals'),
             __('inventory::overview.stock_value'),
             __('purchase::dashboard.purchases_today'),
             __('approval::dashboard.waiting_for_me'),
         ], array_keys($kpis), '⛔ মূল সূচকের ঘর বা ক্রম মালিকের পরিকল্পনা মতো নয়।');
 
-        // ── কোনো নাম দুইবার নয় — টাকার বাক্স, সূচক, ব্যতিক্রম মিলিয়ে ──
+        $owedTile = $page->query('//*[@data-home-owed]');
+        $this->assertSame(1, $owedTile->length, '⛔ "বাজারে বকেয়া" টাকার বাক্সে নেই, বা দুইবার।');
+        $owedLabel = trim($page->query('.//p[1]', $owedTile->item(0))->item(0)?->textContent ?? '');
+        $owedValue = trim($page->query('.//*[@data-money-tile-value]', $owedTile->item(0))->item(0)?->textContent ?? '');
+        $this->assertSame(__('customer::dashboard.kpi_owed'), $owedLabel);
+        $tileLabels = array_map(fn ($n) => trim($page->query('.//p[1]', $n)->item(0)?->textContent ?? ''),
+            iterator_to_array($page->query('//*[@data-money-tile]')));
+
+        // ── কোনো নাম দুইবার নয় — টাকার বাক্স (তার ঘরগুলোসহ), সূচক, ব্যতিক্রম মিলিয়ে ──
         $names = array_merge(
             [trim($page->query('//*[@data-money-position]/p[1]')->item(0)->textContent)],
+            $tileLabels,
             array_keys($kpis),
             array_map(fn ($n) => trim($n->getElementsByTagName('span')->item(1)?->textContent ?? ''), iterator_to_array($page->query('//*[@data-exception]'))),
         );
@@ -89,7 +99,7 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
 
         // ⓘ ৬ অক্টোবর ২০২৬ থেকে পাওনা মোট — প্রতি দোকানের ধনাত্মক জেরের যোগ, ফোনের একই উৎস ([[TheHomeOwedByCustomersIsGrossTest]])
         $this->assertSame(Money::format(app(CustomerMetrics::class)->dues(auth()->user(), $today)['amount']),
-            $kpis[__('customer::dashboard.kpi_owed')], '⛔ বাজারে বকেয়া গ্রাহকের খতিয়ানের বকেয়ার যোগ নয়।');
+            $owedValue, '⛔ বাজারে বকেয়া গ্রাহকের খতিয়ানের বকেয়ার যোগ নয়।');
 
         // ⓘ ১৩ অক্টোবর ২০২৬ থেকে দেনাও মোট, নিট নয় — প্রতি প্রিন্সিপালের বিল হওয়া ধনাত্মক জের আর বিল-না-আসা মাল; প্রদেয়ের তালিকার দুই ঘরের
         // যোগ ([[ThePayableListNettedTheAdvancesTest]])

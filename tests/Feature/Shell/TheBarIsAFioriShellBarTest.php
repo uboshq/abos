@@ -147,7 +147,7 @@ final class TheBarIsAFioriShellBarTest extends TestCase
         $html = $this->page(route('dashboard'));
 
         $this->assertStringContainsString('data-money-today', $html, 'প্রস্তুতিটাই ভুল — টাকার বাক্সে আজকের ঘর নেই।');
-        preg_match('/data-money-tile="plain".*?<p class="tabular[^"]*"[^>]*>([^<]+)</su', $html, $m);
+        preg_match('/data-home-owed.*?data-money-tile-value[^>]*>([^<]+)</su', $html, $m);
         $this->assertNotEmpty($m, '⛔ "বাজারে বকেয়া" ঘর টাকার বাক্সে নেই।');
 
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
