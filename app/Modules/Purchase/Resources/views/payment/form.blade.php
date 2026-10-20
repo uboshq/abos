@@ -102,7 +102,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('purchase::field.bill') }}">
-                                        <select :name="'lines[' + (i) + '][purchase_bill_id]'" x-model="row.purchase_bill_id"
+                                        <select :id="'pp-' + i + '-product'" aria-label="{{ __('purchase::field.bill') }}" :name="'lines[' + (i) + '][purchase_bill_id]'" x-model="row.purchase_bill_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -114,7 +114,7 @@
                                         </select>
                                     </td>
                                     <td class="cell-input" data-label="{{ __('purchase::field.amount') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('purchase::field.amount') }}" :id="'pp-' + i + '-amount'" :aria-labelledby="'pp-' + i + '-amount' + ' ' + 'pp-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][amount]'" x-model="row.amount"
                                                class="num h-(--spacing-field-compact) w-full sm:w-32 rounded-(--radius-field)
                                                       border border-(--color-border)

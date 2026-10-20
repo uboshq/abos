@@ -141,7 +141,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('sales::field.invoice') }}">
-                                        <select :name="'lines[' + (i) + '][sales_invoice_id]'" x-model="row.sales_invoice_id"
+                                        <select :id="'co-' + i + '-product'" aria-label="{{ __('sales::field.invoice') }}" :name="'lines[' + (i) + '][sales_invoice_id]'" x-model="row.sales_invoice_id"
                                                 @change="fillDue(row)"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
@@ -152,7 +152,7 @@
                                         </select>
                                     </td>
                                     <td class="cell-input" data-label="{{ __('sales::field.amount') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('sales::field.amount') }}" :id="'co-' + i + '-amount'" :aria-labelledby="'co-' + i + '-amount' + ' ' + 'co-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][amount]'" x-model="row.amount"
                                                class="num h-(--spacing-field-compact) w-full sm:w-32 rounded-(--radius-field)
                                                       border border-(--color-border)

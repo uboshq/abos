@@ -90,7 +90,7 @@
                                 <template x-for="(row, i) in rows" :key="i">
                                     <tr class="border-b border-(--color-border)">
                                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
-                                            <select :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
+                                            <select :id="'pc-' + i + '-product'" aria-label="{{ __('purchase::field.product') }}" :name="'lines[' + i + '][product_id]'" x-model="row.product_id"
                                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field)
                                                            border border-(--color-border)
                                                            bg-(--color-surface-card) px-2">
@@ -102,7 +102,7 @@
                                         </td>
 
                                         <td class="cell-input" data-label="{{ __('purchase::field.agreed_rate') }}">
-                                            <input type="number" step="0.01" inputmode="decimal"
+                                            <input aria-label="{{ __('purchase::field.agreed_rate') }}" :id="'pc-' + i + '-agreed_rate'" :aria-labelledby="'pc-' + i + '-agreed_rate' + ' ' + 'pc-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                    :name="'lines[' + i + '][agreed_rate]'" x-model="row.agreed_rate"
                                                    class="num h-(--spacing-field-compact) w-full sm:w-28
                                                           rounded-(--radius-field) border border-(--color-border)
@@ -110,7 +110,7 @@
                                         </td>
 
                                         <td class="cell-input" data-label="{{ __('purchase::field.qty_limit') }}">
-                                            <input type="number" step="0.01" inputmode="decimal"
+                                            <input aria-label="{{ __('purchase::field.qty_limit') }}" :id="'pc-' + i + '-qty_limit'" :aria-labelledby="'pc-' + i + '-qty_limit' + ' ' + 'pc-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                    :name="'lines[' + i + '][qty_limit]'" x-model="row.qty_limit"
                                                    class="num h-(--spacing-field-compact) w-full sm:w-28
                                                           rounded-(--radius-field) border border-(--color-border)
@@ -118,7 +118,7 @@
                                         </td>
 
                                         <td class="cell-input" data-label="{{ __('purchase::field.value_limit') }}">
-                                            <input type="number" step="0.01" inputmode="decimal"
+                                            <input aria-label="{{ __('purchase::field.value_limit') }}" :id="'pc-' + i + '-value_limit'" :aria-labelledby="'pc-' + i + '-value_limit' + ' ' + 'pc-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                    :name="'lines[' + i + '][value_limit]'" x-model="row.value_limit"
                                                    class="num h-(--spacing-field-compact) w-full sm:w-28
                                                           rounded-(--radius-field) border border-(--color-border)

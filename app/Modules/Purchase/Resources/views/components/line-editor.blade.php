@@ -198,7 +198,7 @@
                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
                             {{-- ⛔ বারো কলামের ছকে ঘরটা চেপে যেত, আর পণ্যের জায়গায় দেখাত কেবল "7" — কোডের প্রথম অক্ষর
                                  (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬); ⓘ এখন অন্তত কোড আর নামের শুরু, ছক নিজের ঘরে পাশে সরে --}}
-                            <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
+                            <select :id="'pl-' + i + '-product'" aria-label="{{ __('purchase::field.product') }}" :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
                                     @change="pickProduct(row)" data-product-pick
                                     class="h-(--spacing-field-compact) w-full min-w-64 rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
@@ -211,7 +211,7 @@
 
                         @if ($linkField)
                             <td class="cell-input" data-label="{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}">
-                                <select :name="'lines[' + (i) + '][{{ $linkField }}]'" x-model="row.link"
+                                <select aria-label="{{ __('purchase::field.'.($linkField === 'purchase_order_line_id' ? 'order' : 'receipt')) }}" :id="'pl-' + i + '-link'" :aria-labelledby="'pl-' + i + '-link' + ' ' + 'pl-' + i + '-product'" :name="'lines[' + (i) + '][{{ $linkField }}]'" x-model="row.link"
                                         class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
                                     <option value="">-</option>
@@ -223,7 +223,7 @@
                         @endif
 
                         <td class="cell-input" data-label="{{ __('purchase::field.quantity') }}">
-                            <input type="number" step="0.01" inputmode="decimal" required
+                            <input aria-label="{{ __('purchase::field.quantity') }}" :id="'pl-' + i + '-qty'" :aria-labelledby="'pl-' + i + '-qty' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" inputmode="decimal" required
                                    :name="'lines[' + (i) + '][{{ $qtyField }}]'" x-model="row.qty"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                           bg-(--color-surface-card) px-2 text-end">
@@ -233,7 +233,7 @@
                              ⚠️ তাই ঘরটা `required` নয় আর অঙ্কেও হাত দেয় না। --}}
                         @if ($showFree)
                             <td class="cell-input" data-label="{{ __('purchase::field.free_qty') }}">
-                                <input type="number" step="0.01" min="0" inputmode="decimal"
+                                <input aria-label="{{ __('purchase::field.free_qty') }}" :id="'pl-' + i + '-free_qty'" :aria-labelledby="'pl-' + i + '-free_qty' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" min="0" inputmode="decimal"
                                        :name="'lines[' + (i) + '][free_qty]'" x-model="row.free_qty"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
@@ -253,7 +253,7 @@
                                 পর্দার markup আর খাতার markup এক থাকে।
                             --}}
                             <td class="cell-input" data-label="{{ __('purchase::field.unit') }}">
-                                <select :name="'lines[' + (i) + '][unit_id]'" x-model="row.unit_id"
+                                <select aria-label="{{ __('purchase::field.unit') }}" :id="'pl-' + i + '-unit_id'" :aria-labelledby="'pl-' + i + '-unit_id' + ' ' + 'pl-' + i + '-product'" :name="'lines[' + (i) + '][unit_id]'" x-model="row.unit_id"
                                         x-show="unitsFor(row).length > 0"
                                         class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-card) px-2">
@@ -314,7 +314,7 @@
                             </td>
 
                             <td class="cell-input" data-label="{{ __('inventory::field.mrp') }}">
-                                <input type="number" step="0.01" inputmode="decimal" min="0"
+                                <input aria-label="{{ __('inventory::field.mrp') }}" :id="'pl-' + i + '-mrp'" :aria-labelledby="'pl-' + i + '-mrp' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" inputmode="decimal" min="0"
                                        x-show="tracksLot(row)"
                                        :name="'lines[' + (i) + '][mrp]'" x-model="row.mrp"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border
@@ -323,7 +323,7 @@
                         @endif
 
                         <td class="cell-input" data-label="{{ __('purchase::field.rate') }}">
-                            <input type="number" step="0.0001" inputmode="decimal" required
+                            <input aria-label="{{ __('purchase::field.rate') }}" :id="'pl-' + i + '-rate'" :aria-labelledby="'pl-' + i + '-rate' + ' ' + 'pl-' + i + '-product'" type="number" step="0.0001" inputmode="decimal" required
                                    :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                    @input="priced(row, 'rate')"
                                    class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -339,7 +339,7 @@
                                 হবেই, আর তখন কোনটা সত্যি বলার উপায় থাকে না।
                             --}}
                             <td class="cell-input" data-label="{{ __('purchase::field.sales_price') }}">
-                                <input type="number" step="0.01" min="0" inputmode="decimal"
+                                <input aria-label="{{ __('purchase::field.sales_price') }}" :id="'pl-' + i + '-sales_price'" :aria-labelledby="'pl-' + i + '-sales_price' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" min="0" inputmode="decimal"
                                        :name="'lines[' + (i) + '][sales_price]'" x-model="row.sales_price"
                                        @input="priced(row, 'sales_price')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border border-(--color-border)
@@ -362,13 +362,13 @@
                                     যায়ই না। ⛔ যে ঘর তথ্য পাঠায় না, সে তথ্য সংরক্ষণ
                                     আটকাতেও পারে না — এটাই আসল ভুলটা ছিল।
                                 --}}
-                                <input type="number" step="any" inputmode="decimal"
+                                <input aria-label="{{ __('purchase::field.markup') }}" :id="'pl-' + i + '-markup'" :aria-labelledby="'pl-' + i + '-markup' + ' ' + 'pl-' + i + '-product'" type="number" step="any" inputmode="decimal"
                                        x-model="row.markup" @input="priced(row, 'markup')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             <td class="cell-input" data-label="{{ __('purchase::field.margin') }}">
-                                <input type="number" step="any" inputmode="decimal"
+                                <input aria-label="{{ __('purchase::field.margin') }}" :id="'pl-' + i + '-margin'" :aria-labelledby="'pl-' + i + '-margin' + ' ' + 'pl-' + i + '-product'" type="number" step="any" inputmode="decimal"
                                        x-model="row.margin" @input="priced(row, 'margin')"
                                        class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
@@ -377,14 +377,14 @@
 
                         @if ($showDiscount)
                             <td class="cell-input" data-label="{{ __('purchase::field.discount') }}">
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input aria-label="{{ __('purchase::field.discount') }}" :id="'pl-' + i + '-discount'" :aria-labelledby="'pl-' + i + '-discount' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                        :name="'lines[' + (i) + '][discount]'" x-model="row.discount"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
                             @if ($showTax)
                             <td class="cell-input" data-label="{{ __('purchase::field.tax') }}">
-                                <input type="number" step="0.01" inputmode="decimal"
+                                <input aria-label="{{ __('purchase::field.tax') }}" :id="'pl-' + i + '-tax'" :aria-labelledby="'pl-' + i + '-tax' + ' ' + 'pl-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                        :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">

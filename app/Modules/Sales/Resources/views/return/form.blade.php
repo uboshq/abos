@@ -165,7 +165,7 @@
                             <template x-for="(row, i) in rows" :key="i">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="cell-input" data-label="{{ __('sales::field.product') }}">
-                                        <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id"
+                                        <select :id="'sr-' + i + '-product'" aria-label="{{ __('sales::field.product') }}" :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">-</option>
@@ -179,7 +179,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('sales::field.quantity') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('sales::field.quantity') }}" :id="'sr-' + i + '-qty'" :aria-labelledby="'sr-' + i + '-qty' + ' ' + 'sr-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][qty]'" x-model="row.qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
@@ -188,7 +188,7 @@
 
                                     {{-- ফ্রি বা উপহারের মাল — ফ্রি ভাণ্ডারে ফেরে, শূন্য দামে; পাওনা কমায় না --}}
                                     <td class="cell-input" data-label="{{ __('sales::field.free_qty') }}">
-                                        <input type="number" step="0.01" min="0" inputmode="decimal"
+                                        <input aria-label="{{ __('sales::field.free_qty') }}" :id="'sr-' + i + '-free_qty'" :aria-labelledby="'sr-' + i + '-free_qty' + ' ' + 'sr-' + i + '-product'" type="number" step="0.01" min="0" inputmode="decimal"
                                                :name="'lines[' + (i) + '][free_qty]'" x-model="row.free_qty"
                                                class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field)
                                                       border border-(--color-border)
@@ -196,7 +196,7 @@
                                     </td>
 
                                     <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
-                                        <input type="number" step="0.01" inputmode="decimal"
+                                        <input aria-label="{{ __('sales::field.rate') }}" :id="'sr-' + i + '-rate'" :aria-labelledby="'sr-' + i + '-rate' + ' ' + 'sr-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
@@ -205,7 +205,7 @@
 
                                     {{-- লাইনের নিজের কারণ — খালি মানে উপরেরটাই; নোট লাগে কেবল কারণ চাইলে --}}
                                     <td class="cell-input" data-label="{{ __('sales::return_reason.line_reason') }}">
-                                        <select :name="'lines[' + (i) + '][reason_code_id]'" x-model="row.reason_code_id"
+                                        <select aria-label="{{ __('sales::return_reason.line_reason') }}" :id="'sr-' + i + '-reason_code_id'" :aria-labelledby="'sr-' + i + '-reason_code_id' + ' ' + 'sr-' + i + '-product'" :name="'lines[' + (i) + '][reason_code_id]'" x-model="row.reason_code_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">{{ __('sales::return_reason.same_as_header') }}</option>
@@ -214,7 +214,7 @@
                                             @endforeach
                                         </select>
 
-                                        <input type="text" maxlength="500"
+                                        <input aria-label="{{ __('sales::return_reason.line_reason') }}" :id="'sr-' + i + '-reason_note'" :aria-labelledby="'sr-' + i + '-reason_note' + ' ' + 'sr-' + i + '-product'" type="text" maxlength="500"
                                                :name="'lines[' + (i) + '][reason_note]'" x-model="row.reason_note"
                                                placeholder="{{ __('sales::return_reason.reason_note') }}"
                                                class="mt-1 h-(--spacing-field-compact) w-full rounded-(--radius-field)
@@ -223,7 +223,7 @@
 
                                     {{-- লট — কেবল এই লাইনের পণ্যের; মেয়াদোত্তীর্ণ মালে বাধ্যতামূলক --}}
                                     <td class="cell-input" data-label="{{ __('sales::return_reason.lot') }}">
-                                        <select :name="'lines[' + (i) + '][batch_id]'" x-model="row.batch_id"
+                                        <select aria-label="{{ __('sales::return_reason.lot') }}" :id="'sr-' + i + '-batch_id'" :aria-labelledby="'sr-' + i + '-batch_id' + ' ' + 'sr-' + i + '-product'" :name="'lines[' + (i) + '][batch_id]'" x-model="row.batch_id"
                                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-2">
                                             <option value="">{{ __('sales::return_reason.no_lot') }}</option>

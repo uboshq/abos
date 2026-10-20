@@ -158,8 +158,8 @@
                     <tbody>
                         <template x-for="(line, i) in lines" :key="line.key">
                             <tr>
-                                <td>
-                                    <select :name="'lines[' + i + '][product_id]'" x-model="line.product_id" required
+                                <td data-label="{{ __('inventory::field.ingredient') }}">
+                                    <select :id="'rc-' + i + '-product'" aria-label="{{ __('inventory::field.ingredient') }}" :name="'lines[' + i + '][product_id]'" x-model="line.product_id" required
                                             class="min-h-(--spacing-field) w-full min-w-[12rem]
                                                    rounded-(--radius-field) border border-(--color-border)
                                                    bg-(--color-surface-app) px-2 text-sm">
@@ -170,16 +170,16 @@
                                     </select>
                                 </td>
 
-                                <td>
-                                    <input type="number" :name="'lines[' + i + '][qty]'" x-model="line.qty"
+                                <td data-label="{{ __('inventory::field.qty_used') }}">
+                                    <input aria-label="{{ __('inventory::field.qty_used') }}" :id="'rc-' + i + '-qty'" :aria-labelledby="'rc-' + i + '-qty' + ' ' + 'rc-' + i + '-product'" type="number" :name="'lines[' + i + '][qty]'" x-model="line.qty"
                                            step="0.0001" min="0.0001" required
                                            class="min-h-(--spacing-field) w-28 rounded-(--radius-field)
                                                   border border-(--color-border) bg-(--color-surface-app)
                                                   px-2 text-end text-sm">
                                 </td>
 
-                                <td>
-                                    <input type="number" :name="'lines[' + i + '][waste_pct]'" x-model="line.waste_pct"
+                                <td data-label="{{ __('inventory::field.waste_pct') }}">
+                                    <input aria-label="{{ __('inventory::field.waste_pct') }}" :id="'rc-' + i + '-waste_pct'" :aria-labelledby="'rc-' + i + '-waste_pct' + ' ' + 'rc-' + i + '-product'" type="number" :name="'lines[' + i + '][waste_pct]'" x-model="line.waste_pct"
                                            step="0.01" min="0" max="99.99"
                                            class="min-h-(--spacing-field) w-24 rounded-(--radius-field)
                                                   border border-(--color-border) bg-(--color-surface-app)

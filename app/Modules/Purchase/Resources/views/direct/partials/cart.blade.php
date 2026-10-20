@@ -46,7 +46,7 @@
                                     :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="num" x-text="index + 1"></td>
                                     <td>
-                                        <span x-text="line.name"></span>
+                                        <span :id="'dc-' + index + '-product'" x-text="line.name"></span>
                                         <input type="hidden" :name="'lines[' + (index) + '][product_id]'" :value="line.id">
                                         <input type="hidden" :name="'lines[' + (index) + '][sales_price]'"
                                                :value="line.sales_price">
@@ -224,6 +224,8 @@
                                         <td>
                                             <template x-if="line.vat_mode === 'amount'">
                                                 <input type="number" step="0.01" inputmode="decimal"
+                                                       aria-label="{{ __('purchase::field.tax') }}" :id="'dc-' + index + '-tax'"
+                                                       :aria-labelledby="'dc-' + index + '-tax dc-' + index + '-product'"
                                                        :name="'lines[' + (index) + '][tax]'" x-model="line.tax"
                                                        class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
                                                               border-(--color-border) bg-(--color-surface-card) px-1 text-end">
@@ -302,7 +304,7 @@
                                                     {{ __('purchase::field.gift') }}
                                                 </span>
 
-                                                <select :name="'gifts[' + (line.key) + '-' + (gi) + '][product_id]'"
+                                                <select :name="'gifts[' + (line.key) + '-' + (gi) + '][product_id]'" aria-label="{{ __('purchase::action.gift_item') }}"
                                                         x-model="gift.product_id" required
                                                         class="h-(--spacing-field-dense) rounded-(--radius-field) border
                                                                border-(--color-border) bg-(--color-surface-card)
@@ -323,7 +325,7 @@
                                                 </select>
 
                                                 <input type="number" step="0.01" inputmode="decimal" min="0"
-                                                       :name="'gifts[' + (line.key) + '-' + (gi) + '][qty]'" x-model="gift.qty"
+                                                       :name="'gifts[' + (line.key) + '-' + (gi) + '][qty]'" x-model="gift.qty" aria-label="{{ __('purchase::field.qty') }}"
                                                        placeholder="{{ __('purchase::field.qty') }}"
                                                        class="num h-(--spacing-field-dense) w-16 rounded-(--radius-field)
                                                               border border-(--color-border) bg-(--color-surface-card)
@@ -348,7 +350,7 @@
 
                                                      ⓘ খালি মানে পণ্যের নিজের একক, ঠিক উপরের
                                                      সারির নিয়মেই। --}}
-                                                <select :name="'gifts[' + (line.key) + '-' + (gi) + '][unit_id]'"
+                                                <select :name="'gifts[' + (line.key) + '-' + (gi) + '][unit_id]'" aria-label="{{ __('purchase::field.unit') }}"
                                                         x-model="gift.unit_id"
                                                         class="h-(--spacing-field-dense) rounded-(--radius-field) border
                                                                border-(--color-border) bg-(--color-surface-card)
@@ -359,7 +361,7 @@
                                                     </template>
                                                 </select>
 
-                                                <input type="text" maxlength="191"
+                                                <input type="text" maxlength="191" aria-label="{{ __('purchase::field.narration') }}"
                                                        :name="'gifts[' + (line.key) + '-' + (gi) + '][remarks]'"
                                                        x-model="gift.remarks"
                                                        placeholder="{{ __('purchase::field.narration') }}"
