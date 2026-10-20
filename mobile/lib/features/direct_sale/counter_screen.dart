@@ -8,10 +8,11 @@ import '../../core/orders/direct_sale_api.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/status/app_status_chip.dart';
+import '../../core/status/paper_state.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
@@ -1623,7 +1624,7 @@ class _DraftsSheetState extends State<_DraftsSheet> {
                 name: d.customer.isEmpty ? '—' : d.customer,
                 second: _second(d),
                 amount: Money.valueOrZero(d.total),
-                pill: const AppStatusPill(label: 'খসড়া', kind: AppStatusKind.neutral),
+                pill: const AppStatusChip.compact(state: PaperState.draft),
                 onTap: () => Navigator.of(context).pop(d),
               ),
           ],

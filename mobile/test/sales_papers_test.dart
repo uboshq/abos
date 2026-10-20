@@ -1,3 +1,5 @@
+import 'package:abos_mobile/core/status/app_status_chip.dart';
+import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/accounts/voucher_api.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
@@ -134,7 +136,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('বিক্রয় বিল · INV-0059'), findsOneWidget);
-    expect(find.text('নিশ্চিত'), findsOneWidget);
+    // ⭐ নিশ্চিত বিল → অ্যাপের এক চিপ "পাকা · খাতায় উঠেছে" (নকশা ৩, অংশ ৫); সার্ভারের ইংরেজি লেখা কখনো নয়
+    expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted), findsOneWidget);
     expect(find.text('Confirmed'), findsNothing);
     expect(find.text('কসমস বিস্কুট'), findsOneWidget);
     expect(find.textContaining('ফ্রি 1'), findsOneWidget);
