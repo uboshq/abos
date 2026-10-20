@@ -110,7 +110,7 @@ final class TheStockAlertWidgetShowsTheLowestShareFirstTest extends TestCase
     {
         $other = Branch::query()->where('company_id', $this->company->id)->whereKeyNot($this->home->id)->firstOrFail();
         $far = Warehouse::query()->create(['branch_id' => $other->id, 'code' => 'W5-FAR', 'name_en' => 'Far store', 'is_active' => true]);
-        $this->probe('W5-Z', 'Far away low', '1000', '1', $far);
+        $farProduct = $this->probe('W5-Z', 'Far away low', '1000', '1', $far);
 
         /*
          * ⓘ পণ্যটা এই শাখাতেও বিক্রি হয়, আর এখানে তার একটাও নেই — তাই এখানেও সীমার নিচে, ০ নিয়ে (ওয়েবের "পুনঃক্রয়ের নিচে"-র
@@ -122,9 +122,12 @@ final class TheStockAlertWidgetShowsTheLowestShareFirstTest extends TestCase
         $this->assertNotNull($far, 'প্রস্তুতিটাই ভুল — এই শাখায় শূন্য, সীমা ১০০০, তবু সারি নেই');
         $this->assertSame('0', $far['available'], '⛔ অন্য শাখার গুদামের মাল এই শাখার উইজেটে গোনা হলো।');
 
+        // ⓘ দূরের শাখায় বাকি নমুনা-পণ্যও ০ নিয়ে সীমার নিচে, আর উইজেট কেবল তিনটা দেখায় — তাই বাকিদের সীমা তুলে নেওয়া
+        Product::query()->whereKeyNot($farProduct->id)->update(['reorder_level' => 0]);
         $this->narrowTo($other);
         $rows = $this->summary($this->owner)->json('widgets.stock_alerts.rows');
         $this->assertSame('Far away low', $rows[0]['product'] ?? null, 'প্রস্তুতিটাই ভুল — নিজের শাখায় পণ্যটা আসে।');
+        $this->assertSame('1', $rows[0]['available'], '⛔ নিজের শাখার গুদামের ১টা গোনা হলো না।');
     }
 
     private function probe(string $code, string $name, string $reorder, string $onHand, Warehouse $warehouse): Product
