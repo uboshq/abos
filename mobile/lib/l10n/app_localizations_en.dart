@@ -7378,4 +7378,417 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get papersSign => 'Sign';
+
+  @override
+  String get collectTitle => 'Collection';
+
+  @override
+  String get collectNoLater => 'Number: given on saving';
+
+  @override
+  String collectNumber(String no) {
+    return 'No: $no';
+  }
+
+  @override
+  String collectBranchOf(String branch) {
+    return 'Branch: the customer\'s branch ($branch)';
+  }
+
+  @override
+  String get collectMonthOpen => 'Month open ✓';
+
+  @override
+  String get collectMonthClosed => 'Month closed — posting is refused';
+
+  @override
+  String get collectFigureDue => 'Customer\'s due';
+
+  @override
+  String get collectFigureThis => 'This collection';
+
+  @override
+  String get collectFigureLeft => 'Left to pay';
+
+  @override
+  String get collectFigureCredit => 'Stays as credit to the customer';
+
+  @override
+  String get collectCustomer => 'Customer *';
+
+  @override
+  String get collectPickCustomer => 'Choose a customer';
+
+  @override
+  String collectDue(String amount) {
+    return 'Due $amount';
+  }
+
+  @override
+  String collectCreditLimit(String amount) {
+    return 'Credit limit $amount';
+  }
+
+  @override
+  String collectOldestOverdue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Oldest unpaid $days days',
+      one: 'Oldest unpaid $days day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectDate => 'Date *';
+
+  @override
+  String get collectAmount => 'Amount *';
+
+  @override
+  String get collectFullDue => 'Full due';
+
+  @override
+  String collectOverDue(String extra) {
+    return '$extra more than the due — the extra amount stays as credit (Cr) in the customer\'s ledger.';
+  }
+
+  @override
+  String get collectMethod => 'Method';
+
+  @override
+  String get collectMethodCash => 'Cash';
+
+  @override
+  String get collectMethodTransfer => 'Bank transfer';
+
+  @override
+  String get collectMethodDeposit => 'Cash deposit';
+
+  @override
+  String get collectMethodCheque => 'Cheque';
+
+  @override
+  String get collectAccount => 'Received into *';
+
+  @override
+  String collectAccountMine(String name) {
+    return '$name · my own cash';
+  }
+
+  @override
+  String get collectTransferMode => 'Transfer mode';
+
+  @override
+  String get collectReference => 'Reference / TrxID *';
+
+  @override
+  String get collectValueDate => 'Value date';
+
+  @override
+  String get collectChequeDate => 'Cheque date';
+
+  @override
+  String get collectBankCharge => 'Bank charge (Tk)';
+
+  @override
+  String get collectBankChargeHint =>
+      'The charge goes to the bank charge account; the customer is credited the full amount.';
+
+  @override
+  String get collectBillsTitle => 'Open invoices and credits';
+
+  @override
+  String get collectBillsAuto => 'Automatic: oldest invoices first';
+
+  @override
+  String collectBillsAutoWith(String list) {
+    return 'Automatic: oldest invoices first — $list';
+  }
+
+  @override
+  String get collectBillsChange => 'Change';
+
+  @override
+  String get collectBillsFold => 'Fold';
+
+  @override
+  String get collectBillsHint =>
+      'Oldest first, set automatically · tick or change an amount to adjust';
+
+  @override
+  String get collectBillsOldestFirst => 'Oldest invoices first';
+
+  @override
+  String get collectBillsNone =>
+      'This customer has no open invoice — the amount stays as credit in their ledger and comes off the next invoice.';
+
+  @override
+  String get collectBillsNeedCustomer =>
+      'Choose a customer to see the open invoices.';
+
+  @override
+  String get collectBillsFailed =>
+      'The open invoices could not be loaded — the server will apply the oldest first.';
+
+  @override
+  String collectItemDueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String collectItemLate(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days late',
+      one: '$days day late',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectItemOpen(String amount) {
+    return 'Open $amount';
+  }
+
+  @override
+  String collectItemOriginal(String amount) {
+    return 'Original amount $amount';
+  }
+
+  @override
+  String get collectItemApply => 'Apply now';
+
+  @override
+  String collectItemApplyOf(String no) {
+    return '$no — apply now';
+  }
+
+  @override
+  String collectItemTick(String no) {
+    return 'Apply $no';
+  }
+
+  @override
+  String get collectItemCredit => 'Credit';
+
+  @override
+  String get collectItemCreditNote => 'Credit note';
+
+  @override
+  String get collectItemDebitNote => 'Debit note';
+
+  @override
+  String get collectAppliedTotal => 'Total applied';
+
+  @override
+  String collectOverApplied(String amount) {
+    return 'Cannot apply more — at most $amount.';
+  }
+
+  @override
+  String get collectCreditFloor =>
+      'Cannot take less — the ticked invoices need that amount.';
+
+  @override
+  String get collectDifference => 'Discount / Rounding';
+
+  @override
+  String get collectDifferenceDiscount => 'Discount';
+
+  @override
+  String get collectDifferenceRounding => 'Rounding';
+
+  @override
+  String get collectDifferenceAmount => 'Discount / rounding figure';
+
+  @override
+  String get collectDifferenceSign =>
+      'Needs the owner\'s signature — posting sends it for signing.';
+
+  @override
+  String get collectWithheldTitle => 'Withheld at source (optional)';
+
+  @override
+  String get collectVds => 'Withheld by the customer: VAT at source (VDS)';
+
+  @override
+  String get collectAit => 'Withheld by the customer: tax at source (AIT)';
+
+  @override
+  String get collectSummaryTitle => 'Calculation summary';
+
+  @override
+  String get collectSumReceived => 'Amount received';
+
+  @override
+  String get collectSumApplied => 'Applied to invoices';
+
+  @override
+  String get collectSumUnapplied =>
+      'Unapplied (credit in the customer\'s ledger)';
+
+  @override
+  String get collectSumBalanced =>
+      'Balanced: received + withheld + discount = applied + unapplied';
+
+  @override
+  String get collectJournalTitle => 'What goes to the books';
+
+  @override
+  String get collectJournalHint => 'See before posting';
+
+  @override
+  String get collectJournalAccount => 'Account';
+
+  @override
+  String get collectJournalBranch => 'Branch';
+
+  @override
+  String get collectJournalDr => 'Debit';
+
+  @override
+  String get collectJournalCr => 'Credit';
+
+  @override
+  String get collectJournalTotal => 'Total';
+
+  @override
+  String get collectJournalBalanced => 'Totals match ✓';
+
+  @override
+  String get collectJournalUnbalanced =>
+      'Totals do not match — do not post; tell the office.';
+
+  @override
+  String get collectControlsTitle => 'Controls';
+
+  @override
+  String get collectControlSignature =>
+      'Needs a signature — after posting it is awaiting signature.';
+
+  @override
+  String get collectControlNoSignature =>
+      'No signature needed — posting puts it in the books at once.';
+
+  @override
+  String get collectControlSlip => 'This company requires a slip photo.';
+
+  @override
+  String get collectControlNoUndo =>
+      'A posted collection cannot be edited; to correct it, reverse it with a reason (a second person signs).';
+
+  @override
+  String get collectControlStops =>
+      'Posting is blocked for the reason above — it can be kept as a draft.';
+
+  @override
+  String get collectAttachTitle => 'Attachment and narration';
+
+  @override
+  String get collectSlip => 'Slip photo';
+
+  @override
+  String get collectSlipNeeded => 'Slip photo *';
+
+  @override
+  String get collectSlipCamera => 'Camera';
+
+  @override
+  String get collectSlipGallery => 'Gallery';
+
+  @override
+  String get collectSlipRemove => 'Remove photo';
+
+  @override
+  String collectSlipChosen(String name) {
+    return 'Photo chosen: $name';
+  }
+
+  @override
+  String get collectSlipMissing =>
+      'Add the slip photo — this company requires it.';
+
+  @override
+  String get collectSlipTooBig =>
+      'The photo is over 5 MB — choose a smaller one.';
+
+  @override
+  String get collectSlipFailed =>
+      'The collection is saved, but the slip photo could not be sent — add it again from the receipt.';
+
+  @override
+  String get collectNarration => 'Narration (optional)';
+
+  @override
+  String get collectDraft => 'Save draft';
+
+  @override
+  String get collectPost => 'Post';
+
+  @override
+  String get collectReferenceMissing => 'Enter the reference / TrxID.';
+
+  @override
+  String get collectDifferenceTooBig =>
+      'The discount / rounding cannot be more than the amount received.';
+
+  @override
+  String get collectCheckTitle => 'Check before posting';
+
+  @override
+  String get collectCheckCustomer => 'Customer';
+
+  @override
+  String get collectCheckAmount => 'Amount';
+
+  @override
+  String get collectCheckWords => 'In words';
+
+  @override
+  String get collectCheckAccount => 'Received into';
+
+  @override
+  String get collectCheckBills => 'Applied to';
+
+  @override
+  String get collectCheckBack => 'Go back';
+
+  @override
+  String get collectCheckPost => 'Post now';
+
+  @override
+  String collectDone(String no) {
+    return 'Collection saved: $no';
+  }
+
+  @override
+  String collectDoneWords(String words) {
+    return 'In words: $words';
+  }
+
+  @override
+  String get collectOpenReceipt => 'Open the receipt';
+
+  @override
+  String get collectReceiptHint =>
+      'After posting: the receipt (amount in words) · PDF · WhatsApp or email';
+
+  @override
+  String get collectNewOne => 'New collection';
+
+  @override
+  String get collectClose => 'Done';
+
+  @override
+  String get collectOtherIncome => 'Other income';
+
+  @override
+  String get collectOtherIncomeHint =>
+      'From someone who is not a customer, such as rent';
+
+  @override
+  String get collectFromCustomerHint => 'From a customer — on one page';
 }

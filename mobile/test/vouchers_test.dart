@@ -494,7 +494,15 @@ void main() {
       testWidgets('opened as "$title": asks $type/$money first, says so on top, and "নতুন ভাউচার" goes straight to its form',
           (tester) async {
         final api = _FakeVouchers();
-        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view, canCreate: true));
+        await _pump(
+            tester,
+            VoucherListScreen(
+                api: api,
+                newChangeId: _key,
+                branches: () async => const [],
+                view: view,
+                canCreate: true,
+                collect: () => const _CollectPage()));
 
         expect(api.asked, hasLength(1), reason: 'আগে "সব" চেয়ে তারপর ধরন — দুবার ডাকা হয়েছে');
         expect([api.asked.single['type'], api.asked.single['money']], [type, money]);
@@ -505,10 +513,44 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('voucher-new')));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('voucher-type-receipt')), findsNothing, reason: 'ধরন বাছাই আর দেখানোর কথা নয়');
-        expect(find.byType(VoucherFormScreen), findsOneWidget);
-        expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, type);
+        if (type == 'receipt') {
+          // ⭐ এক পথ (মালিক, ২১ অক্টোবর ২০২৬): রসিদের ধরন থেকে "নতুন" খোলে আদায়ের পাতা
+          expect(find.byType(_CollectPage), findsOneWidget, reason: '⛔ রসিদ থেকে নতুন — আদায়ের পাতা নয়');
+          expect(find.byType(VoucherFormScreen), findsNothing);
+        } else {
+          expect(find.byType(VoucherFormScreen), findsOneWidget);
+          expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, type);
+        }
       });
     }
+
+    testWidgets('one path: "আদায় ভাউচার" opens the collection screen; "অন্য আয়" is a separate entry that opens the receipt form',
+        (tester) async {
+      await _pump(
+          tester,
+          VoucherListScreen(
+              api: _FakeVouchers(),
+              newChangeId: _key,
+              branches: () async => const [],
+              canCreate: true,
+              collect: () => const _CollectPage()));
+      await tester.tap(find.byKey(const ValueKey('voucher-new')));
+      await tester.pumpAndSettle();
+      expect(find.text('অন্য আয়'), findsOneWidget, reason: 'গ্রাহক ছাড়া আয়ের আলাদা ঘর নেই');
+      await tester.tap(find.byKey(const ValueKey('voucher-type-receipt')));
+      await tester.pumpAndSettle();
+      expect(find.byType(_CollectPage), findsOneWidget, reason: '⛔ "আদায় ভাউচার" আদায়ের পাতা খোলেনি');
+      expect(find.byType(VoucherFormScreen), findsNothing, reason: '⛔ আদায়ের দুই পথ রয়ে গেল');
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('voucher-new')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('voucher-type-other-income')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, 'receipt');
+      expect(find.byType(_CollectPage), findsNothing);
+    });
 
     testWidgets('opened plain (old favourites, recents) or with an unknown kind: "ভাউচার", all, and the type picker',
         (tester) async {
@@ -693,4 +735,12 @@ class _Server implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+/// আদায়ের পাতার জায়গায় — পথটা ঠিক কি না দেখতে, নেট ছাড়া
+class _CollectPage extends StatelessWidget {
+  const _CollectPage();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(), body: const SizedBox());
 }

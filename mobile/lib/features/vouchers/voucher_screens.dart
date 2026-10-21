@@ -12,6 +12,8 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
+import '../books/collect_screen.dart';
+import '../../core/locale/l10n.dart';
 import '../printing/document_actions_sheet.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -35,9 +37,15 @@ class VoucherListScreen extends StatefulWidget {
     this.today,
     this.view,
     this.canCreate = false,
+    this.collect = _collectScreen,
   });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
+
+  static Widget _collectScreen() => const CollectScreen();
+
+  /// ⭐ "আদায় ভাউচার" = আদায়ের এক পাতা (মালিক, ২১ অক্টোবর ২০২৬: এক পথ) — পরীক্ষা নিজের পাতা দেয়
+  final Widget Function() collect;
 
   /// ⓘ নাগালের শাখা — `/me` থেকে; না পেলে শাখার ছাঁকনিই দেখায় না
   static Future<List<OrgRef>> _myBranches() async {
@@ -134,25 +142,45 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
     }
   }
 
+  /// "অন্য আয়" — গ্রাহক ছাড়া কারো টাকা (যেমন ভাড়া): আদায় ভাউচারের পুরনো ফর্ম, আলাদা নামে
+  static const _otherIncome = 'other-income';
+
   Future<void> _new() async {
     // ⭐ ধরন নিয়ে খোলা হলে সরাসরি সেই ধরনের ফর্ম; "সব"-এ আগের মতো ধরন বাছাই
     final preset = _preset ? _view.type : null;
     final type = preset ?? await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => SafeArea(
+      builder: (sheet) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final t in VoucherTypes.all)
+          for (final t in VoucherTypes.all) ...[
             ListTile(
               key: ValueKey('voucher-type-$t'),
               title: Text(VoucherTypes.label(t)),
-              onTap: () => Navigator.of(context).pop(t),
+              subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.collectFromCustomerHint) : null,
+              onTap: () => Navigator.of(sheet).pop(t),
             ),
+            // ⭐ গ্রাহক ছাড়া অন্য আয় — আলাদা, পরিষ্কার নামে; আদায়ের সাথে মেশানো নয় (মালিক, ২১ অক্টোবর ২০২৬)
+            if (t == VoucherTypes.receipt)
+              ListTile(
+                key: const ValueKey('voucher-type-$_otherIncome'),
+                title: Text(sheet.l10n.collectOtherIncome),
+                subtitle: Text(sheet.l10n.collectOtherIncomeHint),
+                onTap: () => Navigator.of(sheet).pop(_otherIncome),
+              ),
+          ],
         ]),
       ),
     );
     if (type == null || !mounted) return;
+    // ⭐ গ্রাহকের টাকা নেওয়ার একটাই পথ: "আদায় ভাউচার" খোলে আদায়ের পাতা (মালিক, ২১ অক্টোবর ২০২৬)
+    if (type == VoucherTypes.receipt) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => widget.collect()));
+      if (mounted) await _load();
+      return;
+    }
+    final formType = type == _otherIncome ? VoucherTypes.receipt : type;
     final landed = await Navigator.of(context).push<String>(MaterialPageRoute(
-        builder: (_) => VoucherFormScreen(type: type, api: widget.api, newChangeId: widget.newChangeId)));
+        builder: (_) => VoucherFormScreen(type: formType, api: widget.api, newChangeId: widget.newChangeId)));
     if (!mounted) return;
     await _load();
     if (landed != null && mounted) {

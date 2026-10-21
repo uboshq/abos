@@ -33,7 +33,8 @@ class MoneyInListScreen extends StatefulWidget {
       this.today,
       this.canCollect = false,
       this.dues,
-      this.unsent});
+      this.unsent,
+      this.collect});
 
   final BooksApi api;
   final DateTime? today;
@@ -46,6 +47,9 @@ class MoneyInListScreen extends StatefulWidget {
 
   /// ফোনে আটকে থাকা আদায় ([unsentCollections]); টেস্ট নিজের সারি দেয়
   final List<UnsentCollection> Function()? unsent;
+
+  /// ⭐ "＋ নতুন আদায়" খোলে আদায়ের এক পাতা ([CollectScreen]) — এক পথ (মালিক, ২১ অক্টোবর ২০২৬); টেস্ট নিজের পাতা দেয়
+  final Widget Function()? collect;
 
   @override
   State<MoneyInListScreen> createState() => _MoneyInListScreenState();
@@ -246,7 +250,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
   }
 
   Future<void> _collect() async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CollectScreen(books: widget.api)));
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => widget.collect?.call() ?? CollectScreen(books: widget.api)));
     if (mounted) await _load();
   }
 }

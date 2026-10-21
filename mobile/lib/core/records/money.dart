@@ -98,7 +98,9 @@ class Money {
   ///
   /// <p>⛔ পর্দার "৳12,34,567.50" যন্ত্রের গলায় কমায় কমায় ভেঙে আলাদা সংখ্যা হয়ে যায় ("বারো, চৌত্রিশ, …"), আর "৳" চিহ্নটা
   /// কেউ পড়ে, কেউ পড়ে না। লাখ-হাজারের ভাগে বললে বাংলাদেশের কানে একটাই অঙ্ক। পড়া না গেলে null।
-  static String? spoken(dynamic value) {
+  ///
+  /// <p>[englishDigits]: পর্দায় লেখা "কথায়" অঙ্কের জন্য — মালিকের নিয়মে টাকার অঙ্ক ইংরেজিতে ("45 হাজার 200 টাকা")।
+  static String? spoken(dynamic value, {bool englishDigits = false}) {
     final parsed = Money.value(value);
     if (parsed == null) return null;
     final paisaTotal = (parsed.abs() * 100).round();
@@ -109,7 +111,7 @@ class Money {
     taka %= 10000000;
     // ⓘ কথা এখনকার ভাষায় (ARB); বাংলায় অঙ্কও বাংলা — যন্ত্রের বাংলা গলা তবেই এক অঙ্ক পড়ে
     final w = AppLocale.l10n;
-    final english = AppLocale.isEnglish();
+    final english = englishDigits || AppLocale.isEnglish();
     String d(int n) => english ? '$n' : _bnDigits(n);
     if (crore > 0) parts.add(w.moneySpokenCrore(d(crore)));
     final lakh = taka ~/ 100000;

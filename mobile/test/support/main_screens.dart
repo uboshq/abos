@@ -253,7 +253,20 @@ class _Entry implements CollectionEntryApi {
       ];
 
   @override
+  List<CustomerRecord> customers() =>
+      const [CustomerRecord({'id': shopId, 'nameBn': 'ভাই ভাই এন্টারপ্রাইজ', 'pointName': 'ফুলপুর বাজার'})];
+
+  @override
+  Future<OpenBills?> openBills(String customerId) async => null;
+
+  @override
+  Future<CollectionPreview?> preview(CollectionDraft draft) async => null;
+
+  @override
   Future<PushOutcome> send(CollectionDraft draft, String changeId) async => const PushOutcome(landedId: 'x');
+
+  @override
+  Future<void> attachSlip(String collectionId, String path) async {}
 }
 
 class _Books implements BooksApi {
@@ -267,7 +280,6 @@ Widget collect({double textScale = 1}) => appFrame(
       CollectScreen(
         api: _Entry(),
         books: _Books(),
-        customers: const [CustomerRecord({'id': shopId, 'nameBn': 'ভাই ভাই এন্টারপ্রাইজ', 'pointName': 'ফুলপুর বাজার'})],
         newChangeId: () => 'k-${_seq++}',
         today: DateTime(2026, 10, 7),
       ),

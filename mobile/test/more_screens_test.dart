@@ -256,7 +256,7 @@ void main() {
     expect(find.byKey(const ValueKey('serial-receive')), findsNothing, reason: 'চাবি ছাড়া পিস ঢোকানো');
   });
 
-  test('the nine web paths open the phone screens behind their own module switch', () {
+  test('the ten web paths open the phone screens behind their own module switch', () {
     const gates = {
       '/sales/quotations': 'quotations',
       '/sales/quotations/create': 'quotations',
@@ -267,6 +267,8 @@ void main() {
       '/sales/deliveries': 'deliveries',
       '/inventory/quality': 'stock',
       '/inventory/serials': 'stock',
+      // ⭐ ওয়েবের "নতুন আদায়" → আদায়ের এক পাতা (মালিক, ২১ অক্টোবর ২০২৬: এক পথ)
+      '/sales/collections/create': 'collections',
     };
     expect(NativeForWeb.desks, gates.keys.toSet());
     for (final entry in gates.entries) {

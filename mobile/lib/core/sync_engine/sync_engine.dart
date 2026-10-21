@@ -544,6 +544,7 @@ class SyncEngine {
     return PushOutcome(
       refusal: refusal,
       landedId: refusal == null && landed is String && landed.isNotEmpty ? landed : null,
+      details: outcome,
     );
   }
 
@@ -793,10 +794,13 @@ class SyncEngine {
 /// pending by the caller, treated as neither done nor refused).
 /// ⭐ [SyncEngine.pushNow]-এর উত্তর — বসলে সার্ভারের আইডি, ফেরালে কারণ।
 class PushOutcome {
-  const PushOutcome({this.landedId, this.refusal});
+  const PushOutcome({this.landedId, this.refusal, this.details = const {}});
 
   final String? landedId;
   final String? refusal;
+
+  /// ⓘ সার্ভারের পুরো উত্তর-সারি (এই বদলের) — নতুন সার্ভার বাড়তি ঘর দেয় (যেমন আদায়ের `no`, `state`, `receipt`); পুরনোয় কেবল চেনা ঘর
+  final Map<String, dynamic> details;
 }
 
 /// নেট নেই — যে কাজ কেবল নেট থাকলে হয় ([[SyncEngine.pushNow]]), তার জন্য।

@@ -36,6 +36,7 @@ import '../../features/sales_plan/sales_plan_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/stock_writes/quality_serial_screens.dart';
 import '../../features/stock_writes/stock_write_screens.dart';
+import '../../features/books/collect_screen.dart';
 import '../../features/vouchers/voucher_screens.dart';
 import '../../features/web_inside/web_inside_screen.dart';
 import '../accounts/voucher_api.dart';
@@ -109,6 +110,8 @@ class NativeForWeb {
   static const Set<String> desks = {
     '/sales/quotations', '/sales/quotations/create', '/sales/quotations/compare', '/sales/quotations/revisions',
     '/sales/orders', '/sales/orders/create', '/sales/deliveries', '/inventory/quality', '/inventory/serials',
+    // ⭐ ওয়েবের "নতুন আদায়" → ফোনের আদায়ের এক পাতা (মালিক, ২১ অক্টোবর ২০২৬: এক পথ)
+    '/sales/collections/create',
   };
 
   /// ⭐ টাকার হাতবদল, নগদ গোনা আর অর্থের পাতা — ওয়েবের পথ → ফোনের পর্দা (মালিক, ১৭ অক্টোবর ২০২৬; fe)।
@@ -155,6 +158,7 @@ class NativeForWeb {
       '/sales/orders' => const ModuleGateView(path: 'orders', child: OrderListScreen()),
       '/sales/orders/create' => const ModuleGateView(path: 'new-order', child: NewOrderScreen()),
       '/sales/deliveries' => const ModuleGateView(path: 'deliveries', child: DeliveriesScreen()),
+      '/sales/collections/create' => const ModuleGateView(path: 'collections', child: CollectScreen()),
       '/inventory/quality' => ModuleGateView(
           path: 'stock', child: Consumer(builder: (context, ref, _) => QualityListScreen(canCreate: can(ref, 'inventory.qc.create')))),
       '/inventory/serials' => ModuleGateView(

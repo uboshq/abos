@@ -9895,5 +9895,555 @@
   "papersSign": "সই দিন",
   "@papersSign": {
     "description": "Paper page: the sign button"
+  },
+  "collectTitle": "আদায়",
+  "@collectTitle": {
+    "description": "Collection screen: the bar title (the web menu name)"
+  },
+  "collectNoLater": "নম্বর: সংরক্ষণ করলে বসবে",
+  "@collectNoLater": {
+    "description": "Collection header: before saving there is no number yet"
+  },
+  "collectNumber": "নম্বর: {no}",
+  "@collectNumber": {
+    "description": "Collection header: the saved paper number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "collectBranchOf": "শাখা: গ্রাহকের শাখা ({branch})",
+  "@collectBranchOf": {
+    "description": "Collection header: the branch is always the customer's own (item 14)",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "collectMonthOpen": "মাস খোলা ✓",
+  "@collectMonthOpen": {
+    "description": "Collection header: the accounting month is open (item 13)"
+  },
+  "collectMonthClosed": "মাস বন্ধ — পোস্ট হবে না",
+  "@collectMonthClosed": {
+    "description": "Collection header: the accounting month is closed (item 13)"
+  },
+  "collectFigureDue": "গ্রাহকের বকেয়া",
+  "@collectFigureDue": {
+    "description": "Collection: top figure 1, what the customer owes"
+  },
+  "collectFigureThis": "এই আদায়",
+  "@collectFigureThis": {
+    "description": "Collection: top figure 2, the amount being collected"
+  },
+  "collectFigureLeft": "বাকি থাকবে",
+  "@collectFigureLeft": {
+    "description": "Collection: top figure 3, due minus this collection"
+  },
+  "collectFigureCredit": "গ্রাহকের খাতায় জমা থাকবে",
+  "@collectFigureCredit": {
+    "description": "Collection: top figure 3 when the collection is more than the due"
+  },
+  "collectCustomer": "গ্রাহক *",
+  "@collectCustomer": {
+    "description": "Collection: customer field label (required)"
+  },
+  "collectPickCustomer": "গ্রাহক বাছুন",
+  "@collectPickCustomer": {
+    "description": "Collection: customer field before a choice"
+  },
+  "collectDue": "বকেয়া {amount}",
+  "@collectDue": {
+    "description": "Collection: the customer's due under the name",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "collectCreditLimit": "বাকির সীমা {amount}",
+  "@collectCreditLimit": {
+    "description": "Collection: the customer's credit limit (item 1)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "collectOldestOverdue": "{days, plural, other{সবচেয়ে পুরনো বাকি {days} দিন}}",
+  "@collectOldestOverdue": {
+    "description": "Collection: days since the oldest unpaid invoice fell due (item 1)",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "collectDate": "তারিখ *",
+  "@collectDate": {
+    "description": "Collection: date field label"
+  },
+  "collectAmount": "টাকা *",
+  "@collectAmount": {
+    "description": "Collection: amount field label"
+  },
+  "collectFullDue": "পুরো বকেয়া",
+  "@collectFullDue": {
+    "description": "Collection: chip that fills the whole due"
+  },
+  "collectOverDue": "বকেয়ার চেয়ে {extra} বেশি — বাড়তি টাকা গ্রাহকের খাতায় জমা (Cr) থাকবে।",
+  "@collectOverDue": {
+    "description": "Collection: warning when the amount is more than the due",
+    "placeholders": {
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "collectMethod": "পদ্ধতি",
+  "@collectMethod": {
+    "description": "Collection: the payment method choice"
+  },
+  "collectMethodCash": "নগদ",
+  "@collectMethodCash": {
+    "description": "Collection method: cash"
+  },
+  "collectMethodTransfer": "ব্যাংক ট্রান্সফার",
+  "@collectMethodTransfer": {
+    "description": "Collection method: bank transfer"
+  },
+  "collectMethodDeposit": "নগদ জমা",
+  "@collectMethodDeposit": {
+    "description": "Collection method: cash deposited into the bank"
+  },
+  "collectMethodCheque": "চেক",
+  "@collectMethodCheque": {
+    "description": "Collection method: cheque"
+  },
+  "collectAccount": "যে খাতে জমা হলো *",
+  "@collectAccount": {
+    "description": "Collection: the money account (web sales::field.account)"
+  },
+  "collectAccountMine": "{name} · আমার হাতের নগদ",
+  "@collectAccountMine": {
+    "description": "Collection: the person's own cash account in the list",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collectTransferMode": "ট্রান্সফার মোড",
+  "@collectTransferMode": {
+    "description": "Collection: bank transfer mode (web accounts::field.transfer_mode)"
+  },
+  "collectReference": "রেফারেন্স / TrxID *",
+  "@collectReference": {
+    "description": "Collection: the reference or TrxID field"
+  },
+  "collectValueDate": "মূল্য-তারিখ",
+  "@collectValueDate": {
+    "description": "Collection: bank value date"
+  },
+  "collectChequeDate": "চেকের তারিখ",
+  "@collectChequeDate": {
+    "description": "Collection: cheque date (web sales::field.instrument_date)"
+  },
+  "collectBankCharge": "ব্যাংক চার্জ (৳)",
+  "@collectBankCharge": {
+    "description": "Collection: bank charge, one field (item 9)"
+  },
+  "collectBankChargeHint": "চার্জ যায় ব্যাংক চার্জ খাতে; গ্রাহকের খাতায় পুরো টাকা।",
+  "@collectBankChargeHint": {
+    "description": "Collection: what the bank charge does (item 9)"
+  },
+  "collectBillsTitle": "খোলা বিল ও ক্রেডিট",
+  "@collectBillsTitle": {
+    "description": "Collection: the open items table title (item 3)"
+  },
+  "collectBillsAuto": "নিজে থেকে: পুরনো বিল আগে",
+  "@collectBillsAuto": {
+    "description": "Collection: the folded bills line, also on an old server"
+  },
+  "collectBillsAutoWith": "নিজে থেকে: পুরনো বিল আগে — {list}",
+  "@collectBillsAutoWith": {
+    "description": "Collection: the folded bills line with the invoices",
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "collectBillsChange": "বদলান",
+  "@collectBillsChange": {
+    "description": "Collection: unfold the bills to change them"
+  },
+  "collectBillsFold": "গুটিয়ে নিন",
+  "@collectBillsFold": {
+    "description": "Collection: fold the bills table"
+  },
+  "collectBillsHint": "পুরনো আগে নিজে বসেছে · টিক বা অঙ্ক বদলে ঠিক করুন",
+  "@collectBillsHint": {
+    "description": "Collection: bills table hint"
+  },
+  "collectBillsOldestFirst": "পুরনো বিল আগে",
+  "@collectBillsOldestFirst": {
+    "description": "Collection: button that re-applies oldest first (web sales::action.oldest_bills_first)"
+  },
+  "collectBillsNone": "এই গ্রাহকের কোনো খোলা বিল নেই — টাকাটা তাঁর খাতায় জমা থাকবে, পরের বিলে কাটবে।",
+  "@collectBillsNone": {
+    "description": "Collection: no open invoice"
+  },
+  "collectBillsNeedCustomer": "গ্রাহক বাছলে খোলা বিল দেখাবে।",
+  "@collectBillsNeedCustomer": {
+    "description": "Collection: bills before a customer"
+  },
+  "collectBillsFailed": "খোলা বিল আনা গেল না — সার্ভার নিজে পুরনো বিল আগে বসাবে।",
+  "@collectBillsFailed": {
+    "description": "Collection: open invoices failed to load"
+  },
+  "collectItemDueOn": "শেষ দিন {date}",
+  "@collectItemDueOn": {
+    "description": "Collection: invoice due date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "collectItemLate": "{days, plural, other{{days} দিন দেরি}}",
+  "@collectItemLate": {
+    "description": "Collection: days overdue",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "collectItemOpen": "বাকি {amount}",
+  "@collectItemOpen": {
+    "description": "Collection: what is still open on the paper",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "collectItemOriginal": "মূল টাকা {amount}",
+  "@collectItemOriginal": {
+    "description": "Collection: the paper's original amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "collectItemApply": "এখন প্রয়োগ",
+  "@collectItemApply": {
+    "description": "Collection: the amount applied now"
+  },
+  "collectItemApplyOf": "{no} — এখন প্রয়োগ",
+  "@collectItemApplyOf": {
+    "description": "Collection: screen reader label of a row's amount field",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "collectItemTick": "{no} প্রয়োগ করুন",
+  "@collectItemTick": {
+    "description": "Collection: screen reader label of a row's tick",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "collectItemCredit": "ক্রেডিট",
+  "@collectItemCredit": {
+    "description": "Collection: tag of an open credit"
+  },
+  "collectItemCreditNote": "ক্রেডিট নোট",
+  "@collectItemCreditNote": {
+    "description": "Collection: tag of a credit note"
+  },
+  "collectItemDebitNote": "ডেবিট নোট",
+  "@collectItemDebitNote": {
+    "description": "Collection: tag of a debit note"
+  },
+  "collectAppliedTotal": "মোট প্রয়োগ",
+  "@collectAppliedTotal": {
+    "description": "Collection: total of the bills table"
+  },
+  "collectOverApplied": "এর বেশি বসানো যায় না — সর্বোচ্চ {amount}।",
+  "@collectOverApplied": {
+    "description": "Collection: an allocation was capped",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "collectCreditFloor": "এর কম নেওয়া যায় না — বসানো বিলের টাকা হাতে থাকতে হবে।",
+  "@collectCreditFloor": {
+    "description": "Collection: a credit cannot drop below what the ticked invoices need"
+  },
+  "collectDifference": "ছাড় / রাউন্ডিং",
+  "@collectDifference": {
+    "description": "Collection: the difference line (item 4)"
+  },
+  "collectDifferenceDiscount": "ছাড়",
+  "@collectDifferenceDiscount": {
+    "description": "Collection: difference kind discount"
+  },
+  "collectDifferenceRounding": "রাউন্ডিং",
+  "@collectDifferenceRounding": {
+    "description": "Collection: difference kind rounding"
+  },
+  "collectDifferenceAmount": "ছাড় / রাউন্ডিংয়ের অঙ্ক",
+  "@collectDifferenceAmount": {
+    "description": "Collection: the difference amount field"
+  },
+  "collectDifferenceSign": "মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।",
+  "@collectDifferenceSign": {
+    "description": "Collection: a discount or rounding needs the owner's signature (item 4)"
+  },
+  "collectWithheldTitle": "উৎসে কাটা (ঐচ্ছিক)",
+  "@collectWithheldTitle": {
+    "description": "Collection: VAT or tax the customer withheld"
+  },
+  "collectVds": "গ্রাহক কেটে রেখেছে: উৎসে ভ্যাট (VDS)",
+  "@collectVds": {
+    "description": "Collection: VAT deducted at source by the customer"
+  },
+  "collectAit": "গ্রাহক কেটে রেখেছে: উৎসে কর (AIT)",
+  "@collectAit": {
+    "description": "Collection: income tax deducted at source by the customer"
+  },
+  "collectSummaryTitle": "হিসাবের সারাংশ",
+  "@collectSummaryTitle": {
+    "description": "Collection: the calculation summary card"
+  },
+  "collectSumReceived": "পাওয়া টাকা",
+  "@collectSumReceived": {
+    "description": "Collection summary: amount received"
+  },
+  "collectSumApplied": "বিলে প্রয়োগ",
+  "@collectSumApplied": {
+    "description": "Collection summary: applied to invoices"
+  },
+  "collectSumUnapplied": "অপ্রয়োগকৃত (গ্রাহকের খাতায় জমা)",
+  "@collectSumUnapplied": {
+    "description": "Collection summary: what is left unapplied (item 4)"
+  },
+  "collectSumBalanced": "মিলেছে: পাওয়া + কাটা + ছাড় = প্রয়োগ + অপ্রয়োগকৃত",
+  "@collectSumBalanced": {
+    "description": "Collection summary: the check line"
+  },
+  "collectJournalTitle": "খাতায় যা যাবে",
+  "@collectJournalTitle": {
+    "description": "Collection: the journal preview (item 10)"
+  },
+  "collectJournalHint": "পোস্টের আগে দেখুন",
+  "@collectJournalHint": {
+    "description": "Collection: journal preview hint"
+  },
+  "collectJournalAccount": "খাত",
+  "@collectJournalAccount": {
+    "description": "Collection journal column: account"
+  },
+  "collectJournalBranch": "শাখা",
+  "@collectJournalBranch": {
+    "description": "Collection journal column: branch"
+  },
+  "collectJournalDr": "ডেবিট",
+  "@collectJournalDr": {
+    "description": "Collection journal column: debit"
+  },
+  "collectJournalCr": "ক্রেডিট",
+  "@collectJournalCr": {
+    "description": "Collection journal column: credit"
+  },
+  "collectJournalTotal": "মোট",
+  "@collectJournalTotal": {
+    "description": "Collection journal: total row"
+  },
+  "collectJournalBalanced": "মোট মিলেছে ✓",
+  "@collectJournalBalanced": {
+    "description": "Collection journal: debit equals credit"
+  },
+  "collectJournalUnbalanced": "মোট মেলেনি — পোস্ট করবেন না, অফিসে জানান।",
+  "@collectJournalUnbalanced": {
+    "description": "Collection journal: debit differs from credit"
+  },
+  "collectControlsTitle": "নিয়ন্ত্রণ",
+  "@collectControlsTitle": {
+    "description": "Collection: the control messages card"
+  },
+  "collectControlSignature": "এই আদায়ে সই লাগবে — পোস্ট করলে সইয়ের অপেক্ষায় যাবে।",
+  "@collectControlSignature": {
+    "description": "Collection control: the server says it goes for signature (items 4 and 11)"
+  },
+  "collectControlNoSignature": "এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।",
+  "@collectControlNoSignature": {
+    "description": "Collection control: no signature needed"
+  },
+  "collectControlSlip": "এই কোম্পানিতে স্লিপের ছবি বাধ্যতামূলক।",
+  "@collectControlSlip": {
+    "description": "Collection control: slip required (item 15)"
+  },
+  "collectControlNoUndo": "পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে উল্টাতে হয় (দ্বিতীয় জনের সই)।",
+  "@collectControlNoUndo": {
+    "description": "Collection control: posted papers are immutable"
+  },
+  "collectControlStops": "উপরের কারণে পোস্ট হবে না — খসড়া রাখা যায়।",
+  "@collectControlStops": {
+    "description": "Collection control: the server's stops block posting"
+  },
+  "collectAttachTitle": "সংযুক্তি ও বিবরণ",
+  "@collectAttachTitle": {
+    "description": "Collection: attachment and narration card"
+  },
+  "collectSlip": "স্লিপের ছবি",
+  "@collectSlip": {
+    "description": "Collection: slip photo, optional"
+  },
+  "collectSlipNeeded": "স্লিপের ছবি *",
+  "@collectSlipNeeded": {
+    "description": "Collection: slip photo, required (item 15)"
+  },
+  "collectSlipCamera": "ক্যামেরা",
+  "@collectSlipCamera": {
+    "description": "Collection: take the slip photo"
+  },
+  "collectSlipGallery": "গ্যালারি",
+  "@collectSlipGallery": {
+    "description": "Collection: pick the slip photo"
+  },
+  "collectSlipRemove": "ছবি সরান",
+  "@collectSlipRemove": {
+    "description": "Collection: remove the chosen photo"
+  },
+  "collectSlipChosen": "ছবি বাছা হয়েছে: {name}",
+  "@collectSlipChosen": {
+    "description": "Collection: the chosen photo's name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "collectSlipMissing": "স্লিপের ছবি দিন — এই কোম্পানিতে বাধ্যতামূলক।",
+  "@collectSlipMissing": {
+    "description": "Collection: slip required but missing"
+  },
+  "collectSlipTooBig": "ছবিটা 5 MB-এর বেশি — ছোট ছবি দিন।",
+  "@collectSlipTooBig": {
+    "description": "Collection: slip over the server limit"
+  },
+  "collectSlipFailed": "আদায় বসেছে, কিন্তু স্লিপের ছবি পাঠানো গেল না — রসিদের পাতা থেকে আবার দিন।",
+  "@collectSlipFailed": {
+    "description": "Collection: slip upload failed after saving"
+  },
+  "collectNarration": "বিবরণ (ঐচ্ছিক)",
+  "@collectNarration": {
+    "description": "Collection: narration (web sales::field.narration)"
+  },
+  "collectDraft": "খসড়া রাখুন",
+  "@collectDraft": {
+    "description": "Collection: bottom button, keep as draft"
+  },
+  "collectPost": "পোস্ট",
+  "@collectPost": {
+    "description": "Collection: bottom button, post"
+  },
+  "collectReferenceMissing": "রেফারেন্স / TrxID দিন।",
+  "@collectReferenceMissing": {
+    "description": "Collection: reference required for MFS and bank"
+  },
+  "collectDifferenceTooBig": "ছাড় / রাউন্ডিং পাওয়া টাকার চেয়ে বেশি হতে পারে না।",
+  "@collectDifferenceTooBig": {
+    "description": "Collection: difference bigger than the amount"
+  },
+  "collectCheckTitle": "পোস্টের আগে দেখে নিন",
+  "@collectCheckTitle": {
+    "description": "Collection summary sheet title (item 10)"
+  },
+  "collectCheckCustomer": "গ্রাহক",
+  "@collectCheckCustomer": {
+    "description": "Collection summary sheet: customer"
+  },
+  "collectCheckAmount": "টাকা",
+  "@collectCheckAmount": {
+    "description": "Collection summary sheet: amount"
+  },
+  "collectCheckWords": "কথায়",
+  "@collectCheckWords": {
+    "description": "Collection summary sheet: the amount in words"
+  },
+  "collectCheckAccount": "যে খাতে জমা হলো",
+  "@collectCheckAccount": {
+    "description": "Collection summary sheet: account"
+  },
+  "collectCheckBills": "কোন বিলে বসবে",
+  "@collectCheckBills": {
+    "description": "Collection summary sheet: which invoices"
+  },
+  "collectCheckBack": "ফিরে যান",
+  "@collectCheckBack": {
+    "description": "Collection summary sheet: back to the form"
+  },
+  "collectCheckPost": "পোস্ট করুন",
+  "@collectCheckPost": {
+    "description": "Collection summary sheet: the one tap that posts"
+  },
+  "collectDone": "আদায় বসেছে: {no}",
+  "@collectDone": {
+    "description": "Collection: saved, with its number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "collectDoneWords": "কথায়: {words}",
+  "@collectDoneWords": {
+    "description": "Collection: saved, the amount in words",
+    "placeholders": {
+      "words": {
+        "type": "String"
+      }
+    }
+  },
+  "collectOpenReceipt": "রসিদ খুলুন",
+  "@collectOpenReceipt": {
+    "description": "Collection: open the receipt PDF (item 17)"
+  },
+  "collectReceiptHint": "পোস্টের পরে: টাকার রসিদ (টাকা কথায়) · PDF · WhatsApp বা ইমেইল",
+  "@collectReceiptHint": {
+    "description": "Collection: what happens after posting (item 17)"
+  },
+  "collectNewOne": "নতুন আদায়",
+  "@collectNewOne": {
+    "description": "Collection: start another one"
+  },
+  "collectClose": "শেষ",
+  "@collectClose": {
+    "description": "Collection: close after saving"
+  },
+  "collectOtherIncome": "অন্য আয়",
+  "@collectOtherIncome": {
+    "description": "Voucher list: income from non-customers, a separate entry"
+  },
+  "collectOtherIncomeHint": "গ্রাহক নন এমন কারো থেকে, যেমন ভাড়া",
+  "@collectOtherIncomeHint": {
+    "description": "Voucher list: hint under Other income"
+  },
+  "collectFromCustomerHint": "গ্রাহকের কাছ থেকে — এক পাতায়",
+  "@collectFromCustomerHint": {
+    "description": "Voucher list: hint under the collection voucher"
   }
 }

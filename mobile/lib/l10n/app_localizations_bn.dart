@@ -7251,4 +7251,411 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get papersSign => 'সই দিন';
+
+  @override
+  String get collectTitle => 'আদায়';
+
+  @override
+  String get collectNoLater => 'নম্বর: সংরক্ষণ করলে বসবে';
+
+  @override
+  String collectNumber(String no) {
+    return 'নম্বর: $no';
+  }
+
+  @override
+  String collectBranchOf(String branch) {
+    return 'শাখা: গ্রাহকের শাখা ($branch)';
+  }
+
+  @override
+  String get collectMonthOpen => 'মাস খোলা ✓';
+
+  @override
+  String get collectMonthClosed => 'মাস বন্ধ — পোস্ট হবে না';
+
+  @override
+  String get collectFigureDue => 'গ্রাহকের বকেয়া';
+
+  @override
+  String get collectFigureThis => 'এই আদায়';
+
+  @override
+  String get collectFigureLeft => 'বাকি থাকবে';
+
+  @override
+  String get collectFigureCredit => 'গ্রাহকের খাতায় জমা থাকবে';
+
+  @override
+  String get collectCustomer => 'গ্রাহক *';
+
+  @override
+  String get collectPickCustomer => 'গ্রাহক বাছুন';
+
+  @override
+  String collectDue(String amount) {
+    return 'বকেয়া $amount';
+  }
+
+  @override
+  String collectCreditLimit(String amount) {
+    return 'বাকির সীমা $amount';
+  }
+
+  @override
+  String collectOldestOverdue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'সবচেয়ে পুরনো বাকি $days দিন',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectDate => 'তারিখ *';
+
+  @override
+  String get collectAmount => 'টাকা *';
+
+  @override
+  String get collectFullDue => 'পুরো বকেয়া';
+
+  @override
+  String collectOverDue(String extra) {
+    return 'বকেয়ার চেয়ে $extra বেশি — বাড়তি টাকা গ্রাহকের খাতায় জমা (Cr) থাকবে।';
+  }
+
+  @override
+  String get collectMethod => 'পদ্ধতি';
+
+  @override
+  String get collectMethodCash => 'নগদ';
+
+  @override
+  String get collectMethodTransfer => 'ব্যাংক ট্রান্সফার';
+
+  @override
+  String get collectMethodDeposit => 'নগদ জমা';
+
+  @override
+  String get collectMethodCheque => 'চেক';
+
+  @override
+  String get collectAccount => 'যে খাতে জমা হলো *';
+
+  @override
+  String collectAccountMine(String name) {
+    return '$name · আমার হাতের নগদ';
+  }
+
+  @override
+  String get collectTransferMode => 'ট্রান্সফার মোড';
+
+  @override
+  String get collectReference => 'রেফারেন্স / TrxID *';
+
+  @override
+  String get collectValueDate => 'মূল্য-তারিখ';
+
+  @override
+  String get collectChequeDate => 'চেকের তারিখ';
+
+  @override
+  String get collectBankCharge => 'ব্যাংক চার্জ (৳)';
+
+  @override
+  String get collectBankChargeHint =>
+      'চার্জ যায় ব্যাংক চার্জ খাতে; গ্রাহকের খাতায় পুরো টাকা।';
+
+  @override
+  String get collectBillsTitle => 'খোলা বিল ও ক্রেডিট';
+
+  @override
+  String get collectBillsAuto => 'নিজে থেকে: পুরনো বিল আগে';
+
+  @override
+  String collectBillsAutoWith(String list) {
+    return 'নিজে থেকে: পুরনো বিল আগে — $list';
+  }
+
+  @override
+  String get collectBillsChange => 'বদলান';
+
+  @override
+  String get collectBillsFold => 'গুটিয়ে নিন';
+
+  @override
+  String get collectBillsHint =>
+      'পুরনো আগে নিজে বসেছে · টিক বা অঙ্ক বদলে ঠিক করুন';
+
+  @override
+  String get collectBillsOldestFirst => 'পুরনো বিল আগে';
+
+  @override
+  String get collectBillsNone =>
+      'এই গ্রাহকের কোনো খোলা বিল নেই — টাকাটা তাঁর খাতায় জমা থাকবে, পরের বিলে কাটবে।';
+
+  @override
+  String get collectBillsNeedCustomer => 'গ্রাহক বাছলে খোলা বিল দেখাবে।';
+
+  @override
+  String get collectBillsFailed =>
+      'খোলা বিল আনা গেল না — সার্ভার নিজে পুরনো বিল আগে বসাবে।';
+
+  @override
+  String collectItemDueOn(String date) {
+    return 'শেষ দিন $date';
+  }
+
+  @override
+  String collectItemLate(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days দিন দেরি',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectItemOpen(String amount) {
+    return 'বাকি $amount';
+  }
+
+  @override
+  String collectItemOriginal(String amount) {
+    return 'মূল টাকা $amount';
+  }
+
+  @override
+  String get collectItemApply => 'এখন প্রয়োগ';
+
+  @override
+  String collectItemApplyOf(String no) {
+    return '$no — এখন প্রয়োগ';
+  }
+
+  @override
+  String collectItemTick(String no) {
+    return '$no প্রয়োগ করুন';
+  }
+
+  @override
+  String get collectItemCredit => 'ক্রেডিট';
+
+  @override
+  String get collectItemCreditNote => 'ক্রেডিট নোট';
+
+  @override
+  String get collectItemDebitNote => 'ডেবিট নোট';
+
+  @override
+  String get collectAppliedTotal => 'মোট প্রয়োগ';
+
+  @override
+  String collectOverApplied(String amount) {
+    return 'এর বেশি বসানো যায় না — সর্বোচ্চ $amount।';
+  }
+
+  @override
+  String get collectCreditFloor =>
+      'এর কম নেওয়া যায় না — বসানো বিলের টাকা হাতে থাকতে হবে।';
+
+  @override
+  String get collectDifference => 'ছাড় / রাউন্ডিং';
+
+  @override
+  String get collectDifferenceDiscount => 'ছাড়';
+
+  @override
+  String get collectDifferenceRounding => 'রাউন্ডিং';
+
+  @override
+  String get collectDifferenceAmount => 'ছাড় / রাউন্ডিংয়ের অঙ্ক';
+
+  @override
+  String get collectDifferenceSign =>
+      'মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।';
+
+  @override
+  String get collectWithheldTitle => 'উৎসে কাটা (ঐচ্ছিক)';
+
+  @override
+  String get collectVds => 'গ্রাহক কেটে রেখেছে: উৎসে ভ্যাট (VDS)';
+
+  @override
+  String get collectAit => 'গ্রাহক কেটে রেখেছে: উৎসে কর (AIT)';
+
+  @override
+  String get collectSummaryTitle => 'হিসাবের সারাংশ';
+
+  @override
+  String get collectSumReceived => 'পাওয়া টাকা';
+
+  @override
+  String get collectSumApplied => 'বিলে প্রয়োগ';
+
+  @override
+  String get collectSumUnapplied => 'অপ্রয়োগকৃত (গ্রাহকের খাতায় জমা)';
+
+  @override
+  String get collectSumBalanced =>
+      'মিলেছে: পাওয়া + কাটা + ছাড় = প্রয়োগ + অপ্রয়োগকৃত';
+
+  @override
+  String get collectJournalTitle => 'খাতায় যা যাবে';
+
+  @override
+  String get collectJournalHint => 'পোস্টের আগে দেখুন';
+
+  @override
+  String get collectJournalAccount => 'খাত';
+
+  @override
+  String get collectJournalBranch => 'শাখা';
+
+  @override
+  String get collectJournalDr => 'ডেবিট';
+
+  @override
+  String get collectJournalCr => 'ক্রেডিট';
+
+  @override
+  String get collectJournalTotal => 'মোট';
+
+  @override
+  String get collectJournalBalanced => 'মোট মিলেছে ✓';
+
+  @override
+  String get collectJournalUnbalanced =>
+      'মোট মেলেনি — পোস্ট করবেন না, অফিসে জানান।';
+
+  @override
+  String get collectControlsTitle => 'নিয়ন্ত্রণ';
+
+  @override
+  String get collectControlSignature =>
+      'এই আদায়ে সই লাগবে — পোস্ট করলে সইয়ের অপেক্ষায় যাবে।';
+
+  @override
+  String get collectControlNoSignature =>
+      'এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।';
+
+  @override
+  String get collectControlSlip => 'এই কোম্পানিতে স্লিপের ছবি বাধ্যতামূলক।';
+
+  @override
+  String get collectControlNoUndo =>
+      'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে উল্টাতে হয় (দ্বিতীয় জনের সই)।';
+
+  @override
+  String get collectControlStops =>
+      'উপরের কারণে পোস্ট হবে না — খসড়া রাখা যায়।';
+
+  @override
+  String get collectAttachTitle => 'সংযুক্তি ও বিবরণ';
+
+  @override
+  String get collectSlip => 'স্লিপের ছবি';
+
+  @override
+  String get collectSlipNeeded => 'স্লিপের ছবি *';
+
+  @override
+  String get collectSlipCamera => 'ক্যামেরা';
+
+  @override
+  String get collectSlipGallery => 'গ্যালারি';
+
+  @override
+  String get collectSlipRemove => 'ছবি সরান';
+
+  @override
+  String collectSlipChosen(String name) {
+    return 'ছবি বাছা হয়েছে: $name';
+  }
+
+  @override
+  String get collectSlipMissing =>
+      'স্লিপের ছবি দিন — এই কোম্পানিতে বাধ্যতামূলক।';
+
+  @override
+  String get collectSlipTooBig => 'ছবিটা 5 MB-এর বেশি — ছোট ছবি দিন।';
+
+  @override
+  String get collectSlipFailed =>
+      'আদায় বসেছে, কিন্তু স্লিপের ছবি পাঠানো গেল না — রসিদের পাতা থেকে আবার দিন।';
+
+  @override
+  String get collectNarration => 'বিবরণ (ঐচ্ছিক)';
+
+  @override
+  String get collectDraft => 'খসড়া রাখুন';
+
+  @override
+  String get collectPost => 'পোস্ট';
+
+  @override
+  String get collectReferenceMissing => 'রেফারেন্স / TrxID দিন।';
+
+  @override
+  String get collectDifferenceTooBig =>
+      'ছাড় / রাউন্ডিং পাওয়া টাকার চেয়ে বেশি হতে পারে না।';
+
+  @override
+  String get collectCheckTitle => 'পোস্টের আগে দেখে নিন';
+
+  @override
+  String get collectCheckCustomer => 'গ্রাহক';
+
+  @override
+  String get collectCheckAmount => 'টাকা';
+
+  @override
+  String get collectCheckWords => 'কথায়';
+
+  @override
+  String get collectCheckAccount => 'যে খাতে জমা হলো';
+
+  @override
+  String get collectCheckBills => 'কোন বিলে বসবে';
+
+  @override
+  String get collectCheckBack => 'ফিরে যান';
+
+  @override
+  String get collectCheckPost => 'পোস্ট করুন';
+
+  @override
+  String collectDone(String no) {
+    return 'আদায় বসেছে: $no';
+  }
+
+  @override
+  String collectDoneWords(String words) {
+    return 'কথায়: $words';
+  }
+
+  @override
+  String get collectOpenReceipt => 'রসিদ খুলুন';
+
+  @override
+  String get collectReceiptHint =>
+      'পোস্টের পরে: টাকার রসিদ (টাকা কথায়) · PDF · WhatsApp বা ইমেইল';
+
+  @override
+  String get collectNewOne => 'নতুন আদায়';
+
+  @override
+  String get collectClose => 'শেষ';
+
+  @override
+  String get collectOtherIncome => 'অন্য আয়';
+
+  @override
+  String get collectOtherIncomeHint => 'গ্রাহক নন এমন কারো থেকে, যেমন ভাড়া';
+
+  @override
+  String get collectFromCustomerHint => 'গ্রাহকের কাছ থেকে — এক পাতায়';
 }
