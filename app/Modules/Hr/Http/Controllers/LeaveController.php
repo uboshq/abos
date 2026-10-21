@@ -12,6 +12,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\MaternityDelivery;
+use App\Modules\Hr\Services\MaternityDeliveryService;
 use App\Modules\Hr\Services\LeaveService;
 use App\Modules\Hr\Services\LeaveTypeDefaults;
 use App\Modules\Hr\Support\BranchReach;
@@ -41,7 +43,7 @@ class LeaveController extends Controller implements HasMiddleware
             new Middleware('can:hr.leave.view', only: ['index', 'create', 'types']),
             new Middleware('can:hr.leave.manage', only: ['store', 'cancel', 'storeType', 'installTypes']),
             // ⓘ চাবি দরজায়; "কার ছুটি" — কর্মীর নিজের ব্যবস্থাপক বা HR — সেবায় ([[LeaveSigner]], ঘাটতির তালিকা #১৫)
-            new Middleware('can:hr.leave.approve', only: ['approve', 'reject']),
+            new Middleware('can:hr.leave.approve', only: ['approve', 'reject', 'recordDelivery', 'signDelivery', 'rejectDelivery']),
         ];
     }
 
@@ -175,6 +177,44 @@ class LeaveController extends Controller implements HasMiddleware
         $this->leave->cancel($this->reachable($request, $application), $request->user());
 
         return back()->with('saved', __('hr::message.leave_cancelled'));
+    }
+
+    /**
+     * ⭐ প্রসবের আসল দিন লেখা — কিছুই সরে না, অনুরোধ "সইয়ের অপেক্ষায়" (ধারা ৪৫; [[MaternityDeliveryService::record()]])।
+     */
+    public function recordDelivery(Request $request, int $application): RedirectResponse
+    {
+        $date = $request->validate(['actual_delivery_date' => ['required', 'date']])['actual_delivery_date'];
+
+        app(MaternityDeliveryService::class)->record($this->reachable($request, $application)->load('leaveType'), (string) $date, $request->user());
+
+        return back()->with('saved', __('hr::message.delivery_recorded'));
+    }
+
+    /** ⭐ "সই দিন" — তবেই ছুটির শেষ দিন সরে ([[MaternityDeliveryService::sign()]]) */
+    public function signDelivery(Request $request, int $delivery): RedirectResponse
+    {
+        app(MaternityDeliveryService::class)->sign($this->reachableDelivery($request, $delivery), $request->user());
+
+        return back()->with('saved', __('hr::message.delivery_signed_short'));
+    }
+
+    public function rejectDelivery(Request $request, int $delivery): RedirectResponse
+    {
+        $remarks = $request->validate(['remarks' => ['required', 'string', 'max:500']])['remarks'];
+
+        app(MaternityDeliveryService::class)->reject($this->reachableDelivery($request, $delivery), $request->user(), $remarks);
+
+        return back()->with('saved', __('hr::message.delivery_rejected'));
+    }
+
+    /** অনুরোধটা — কেবল কর্মী নাগালে থাকলে; নইলে ৪০৩ ([[reachable()]]-এর একই দেয়াল) */
+    private function reachableDelivery(Request $request, int $delivery): MaternityDelivery
+    {
+        $found = MaternityDelivery::query()->findOrFail($delivery);
+        $this->reachable($request, (int) $found->leave_application_id);
+
+        return $found;
     }
 
     // ── ছুটির ধরন ─────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\MaternityDelivery;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
@@ -476,6 +477,47 @@ final class PayrollService
             } else {
                 $deductions = bcadd($deductions, $amount, 4);
             }
+        }
+
+        /*
+         * ⭐ প্রসবের আসল দিনে সরে যাওয়া মাতৃত্বকালীন ছুটির দেওয়া মাসের পার্থক্য — পরের রানে, একটা সমন্বয়ের সারিতে (ধারা ৪৫; fe-র উত্তর ৩,
+         * ২১ অক্টোবর ২০২৬; [[MaternityDeliveryService::paidMonthsDifference()]]; a6)। ⓘ নিশ্চিত রান কখনো বদলায় না — পার্থক্য এই খসড়ায় বসে;
+         * পাওনা হলে আয়, ফেরতযোগ্য হলে কর্তন। কোন রানে বসল তা লেখা থাকে: আবার-বানানো একই রানে আবার বসায়, বাতিল রান হলে পরের রানে।
+         */
+        $adjustments = MaternityDelivery::query()->withoutGlobalScopes()
+            ->where('employee_id', $employee->id)
+            ->where('status', MaternityDelivery::APPROVED)
+            ->where('adjustment', '!=', 0)
+            ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+                ->orWhereIn('payroll_run_id', PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
+            ->orderBy('id')
+            ->get();
+
+        foreach ($adjustments as $change) {
+            $amount = (string) $change->adjustment;
+            $kind = bccomp($amount, '0', 2) > 0 ? SalaryHead::EARNING : SalaryHead::DEDUCTION;
+            $amount = Money::round(ltrim($amount, '-'), 2);
+
+            PayslipLine::create([
+                'company_id' => $run->company_id,
+                'payslip_id' => $slip->id,
+                'salary_head_id' => null,
+                'head_code' => MaternityBenefit::ADJUSTMENT_CODE,
+                'head_name_en' => 'Maternity adjustment ('.$change->actual_delivery_date->toDateString().')',
+                'head_name_bn' => 'মাতৃত্বকালীন সমন্বয় ('.$change->actual_delivery_date->toDateString().')',
+                'kind' => $kind,
+                'amount' => $amount,
+                'sort_order' => 910,
+                'account_id' => $this->fallbackAccount($kind)?->id,
+            ]);
+
+            if ($kind === SalaryHead::EARNING) {
+                $gross = bcadd($gross, $amount, 4);
+            } else {
+                $deductions = bcadd($deductions, $amount, 4);
+            }
+
+            $change->forceFill(['payroll_run_id' => $run->id])->save();
         }
 
         foreach ($benefits as $amount) {

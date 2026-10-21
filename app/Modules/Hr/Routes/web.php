@@ -99,6 +99,13 @@ Route::middleware('auth')->prefix('hr')->group(function () {
             ->whereNumber('application')->name('reject');
         Route::post('/{application}/cancel', [LeaveController::class, 'cancel'])
             ->whereNumber('application')->name('cancel');
+        // ⭐ প্রসবের আসল দিন — লেখা, তারপর "সই দিন" বা প্রত্যাখ্যান (ধারা ৪৫; fe-র উত্তর ৩; [[MaternityDeliveryService]])
+        Route::post('/{application}/delivery', [LeaveController::class, 'recordDelivery'])
+            ->whereNumber('application')->name('delivery');
+        Route::post('/deliveries/{delivery}/sign', [LeaveController::class, 'signDelivery'])
+            ->whereNumber('delivery')->name('delivery_sign');
+        Route::post('/deliveries/{delivery}/reject', [LeaveController::class, 'rejectDelivery'])
+            ->whereNumber('delivery')->name('delivery_reject');
     });
 
     /*

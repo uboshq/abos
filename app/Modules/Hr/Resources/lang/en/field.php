@@ -96,4 +96,5 @@ return [
     // ⭐ s.2(45) wages (a6, 21 Oct 2026)
     'outside_wages' => 'Not wages under s.2(45)',
     'outside_wages_hint' => 'Tick for bonus or festival allowance, the employer\'s provident fund contribution, travelling or special-expense allowance. These are left out of the daily rate for unused earned leave.',
+    'actual_delivery_date' => 'Actual delivery date',
 ];

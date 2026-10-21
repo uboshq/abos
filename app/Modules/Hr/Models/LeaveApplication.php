@@ -43,7 +43,7 @@ class LeaveApplication extends Model
 
     protected $fillable = [
         'company_id', 'employee_id', 'leave_type_id',
-        'from_date', 'to_date', 'expected_delivery_date', 'days', 'reason',
+        'from_date', 'to_date', 'expected_delivery_date', 'actual_delivery_date', 'days', 'reason',
         'status', 'decided_by', 'decided_at', 'decision_remarks', 'created_by',
     ];
 
@@ -54,6 +54,8 @@ class LeaveApplication extends Model
             'to_date' => 'date',
             // ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭; fe, ২১ অক্টোবর ২০২৬)
             'expected_delivery_date' => 'date',
+            // ⭐ প্রসবের আসল দিন — সই পড়লে বসে (ধারা ৪৫; [[MaternityDeliveryService::sign()]])
+            'actual_delivery_date' => 'date',
             'days' => 'decimal:1',
             'decided_at' => 'datetime',
         ];

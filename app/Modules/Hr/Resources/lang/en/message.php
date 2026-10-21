@@ -91,4 +91,10 @@ return [
     'weekly_off_saved' => 'Weekly off saved for the branch.',
     'weekly_off_branches' => 'Weekly off by branch',
     'weekly_off_company' => 'As the company (:day)',
+    // ⭐ actual delivery date (s.45; a6, 21 Oct 2026)
+    'delivery_recorded' => 'Actual delivery date entered — waiting for a signature.',
+    'delivery_signed_short' => 'Signed — the weeks after delivery now run from the actual date.',
+    'delivery_rejected' => 'Actual delivery date rejected — nothing changed.',
+    'delivery_waiting' => 'Delivery :date — waiting for a signature (leave would end :to)',
+    'delivery_signed' => 'Actual delivery :actual signed: leave end moved :old → :new.',
 ];

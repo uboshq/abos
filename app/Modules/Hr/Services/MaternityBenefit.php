@@ -35,6 +35,9 @@ final class MaternityBenefit
     /** বেতনশিটের সারির কোড */
     public const LINE_CODE = 'MATERNITY_BENEFIT';
 
+    /** প্রসবের আসল দিনে সরা ছুটির দেওয়া মাসের পার্থক্যের সারি ([[MaternityDeliveryService]]) */
+    public const ADJUSTMENT_CODE = 'MATERNITY_ADJUST';
+
     /** @return string|null গড় দৈনিক মজুরি (১০ ঘর), বা আগের মজুরি না থাকলে null */
     public function averageDailyWage(LeaveApplication $application): ?string
     {

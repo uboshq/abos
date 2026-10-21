@@ -75,4 +75,9 @@ return [
     'maternity_expected_required' => 'Give the expected delivery date — maternity leave is 8 weeks before and 8 weeks after it (s.47).',
     'maternity_too_early' => 'Maternity leave can start at most 8 weeks before the expected delivery date — from :date.',
     'maternity_too_late' => 'Maternity leave ends at most 8 weeks after the expected delivery date — on :date.',
+    // ⭐ actual delivery date (s.45; a6, 21 Oct 2026)
+    'delivery_not_maternity' => 'The actual delivery date goes only on an approved maternity leave.',
+    'delivery_out_of_range' => 'The actual delivery date must be on or after the first day of leave and not in the future.',
+    'delivery_already_waiting' => 'An actual delivery date for this leave is already waiting for a signature.',
+    'delivery_entered_by_you' => 'You entered this delivery date, so you cannot sign or refuse it. Ask another signer or the owner.',
 ];

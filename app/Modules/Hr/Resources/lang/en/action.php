@@ -37,4 +37,7 @@ return [
     // ⭐ public holidays (a6, 21 Oct 2026)
     'add_holiday' => 'Add holiday',
     'delete' => 'Delete',
+    // ⭐ actual delivery date (a6, 21 Oct 2026)
+    'record_delivery' => 'Enter delivery date',
+    'sign' => 'Sign',
 ];

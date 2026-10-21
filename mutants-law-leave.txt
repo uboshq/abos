@@ -528,3 +528,52 @@ Q1.6 app/Modules/Hr/Services/SalaryHeadService.php (installDefaults)
   old: 'outside_wages' => $code === 'CONVEY',
   new: 'outside_wages' => false,
   kill: tests/Feature/Modules/Hr/ASalaryHeadSaysWhetherItIsWagesTest.php::test_the_standard_travel_allowance_is_outside_and_the_box_turns_it_on_and_off
+
+== Q3 — actual delivery date moves the 8 weeks after (s.45), signed, adjustment in the next run ==
+K = tests/Feature/Modules/Hr/TheActualDeliveryMovesTheWeeksAfterTest.php (one test: test_the_end_moves_only_after_signing_and_the_next_run_carries_the_exact_difference)
+
+Q3.1 app/Modules/Hr/Services/MaternityDeliveryService.php (sign)
+  old: 'to_date' => $new->toDateString(),
+  new: 'to_date' => $old->toDateString(),
+  kill: K (to_date stays 2026-11-20 after signing)
+
+Q3.2 app/Modules/Hr/Services/MaternityDeliveryService.php (sign)
+  old: $this->assertNotRequestedBy($change, $decider);
+
+        return DB::transaction(function () use ($change, $application, $decider) {
+  new: return DB::transaction(function () use ($change, $application, $decider) {
+  kill: K (the clerk who entered the date signs it)
+
+Q3.3 app/Modules/Hr/Services/MaternityDeliveryService.php (paidMonthsDifference)
+  old: $total = bcadd($total, bcmul(bcmul($sign, $days, 0), bcsub($average, $this->structureDaily($employee, $month), 10), 10), 10);
+  new: $total = bcadd($total, bcmul(bcmul($sign, $days, 0), $average, 10), 10);
+  kill: K (-4800.00, not -800.00)
+
+Q3.4 app/Modules/Hr/Services/MaternityDeliveryService.php (moveOpenDays, the shrink loop)
+  old: if (! $this->paid($employee, $day)) {
+                Attendance::query()
+  new: if (true) {
+                Attendance::query()
+  kill: K (the paid November's 15-20 Nov leave rows are deleted)
+
+Q3.5 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+  new: ->where(fn ($q) => $q->whereNull('payroll_run_id')
+  kill: K (rebuild of December drops the adjustment line)
+
+Q3.6 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: ->where('adjustment', '!=', 0)
+            ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+                ->orWhereIn('payroll_run_id', PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
+  new: ->where('adjustment', '!=', 0)
+  kill: K (January carries the already-settled -800 again)
+
+Q3.7 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: $kind = bccomp($amount, '0', 2) > 0 ? SalaryHead::EARNING : SalaryHead::DEDUCTION;
+  new: $kind = SalaryHead::EARNING;
+  kill: K (kind 'earning', not 'deduction')
+
+Q3.8 app/Modules/Hr/Services/MaternityDeliveryService.php (record)
+  old: 'new_to_date' => $actual->copy()->addDays(LeaveService::MATERNITY_WEEKS_EACH_SIDE * 7 - 1)->toDateString(),
+  new: 'new_to_date' => $actual->copy()->addDays(LeaveService::MATERNITY_WEEKS_EACH_SIDE * 7)->toDateString(),
+  kill: K (2026-11-15, not 2026-11-14)
