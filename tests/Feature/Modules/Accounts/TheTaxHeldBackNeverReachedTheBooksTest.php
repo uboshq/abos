@@ -58,6 +58,8 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
     {
         $rent = $this->account(StandardChart::RENT);
         $withheld = $this->account(StandardChart::TAX_DEDUCTED_AT_SOURCE);
+        // ⭐ VDS নিজের খাতে (২১২২) — মূসক আর আয়কর আলাদা রিটার্ন (fe, ২১ অক্টোবর ২০২৬)
+        $vds = $this->account(StandardChart::VDS_PAYABLE);
 
         $this->expense(['amount' => '9000', 'gross_amount' => '10000', 'ait_amount' => '500', 'vds_amount' => '500'])
             ->assertSessionHasNoErrors();
@@ -67,15 +69,14 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
 
         $this->assertMoved($book, $rent, debit: '10000', message: '⛔ খরচ মোটে বসেনি — কর্তনটা খরচ থেকে হারাল');
         $this->assertMoved($book, $this->mfs, credit: '9000', message: '⛔ হাতে দেওয়া টাকা নিট নয়');
-        $this->assertMoved($book, $withheld, credit: '1000', message: '⛔ কেটে রাখা কর সরকারের দায়ে বসেনি');
-        $this->assertSame(['500.0000', '500.0000'], LedgerEntry::query()->where('source_type', Voucher::SOURCE_TYPES[Voucher::EXPENSE])
-            ->where('source_id', $voucher->id)->where('account_id', $withheld->id)->orderBy('id')->pluck('credit')->map(fn ($v) => bcadd((string) $v, '0', 4))->all(),
-            'AIT আর VDS আলাদা সারিতে নেই');
+        $this->assertMoved($book, $withheld, credit: '500', message: '⛔ কেটে রাখা আয়কর (AIT) ২১২১-এ বসেনি');
+        $this->assertMoved($book, $vds, credit: '500', message: '⛔ কেটে রাখা ভ্যাট (VDS) নিজের খাতে (২১২২) বসেনি');
         $this->assertBalanced($voucher);
-        $this->assertSame('1000.0000', $this->owed($withheld), '২১২১-এ দায় ১,০০০ নয়');
+        $this->assertSame('500.0000', $this->owed($withheld), '২১২১-এ দায় ৫০০ নয়');
+        $this->assertSame('500.0000', $this->owed($vds), '২১২২-এ দায় ৫০০ নয়');
 
         // ⓘ সরকারকে জমা — দায় শূন্যে
-        $this->submit(Voucher::PAYMENT, ['from_account_id' => $this->bank->id, 'to_account_id' => $withheld->id, 'amount' => '1000'])
+        $this->submit(Voucher::PAYMENT, ['from_account_id' => $this->bank->id, 'to_account_id' => $withheld->id, 'amount' => '500'])
             ->assertSessionHasNoErrors();
         $this->lastConfirmed(Voucher::PAYMENT);
         $this->assertSame('0.0000', $this->owed($withheld), '⛔ সরকারকে জমার পরেও দায় রইল');

@@ -1679,7 +1679,8 @@ final class PurchaseBillService
         foreach (['ait' => (string) $bill->ait_amount, 'vds' => (string) $bill->vds_amount] as $kind => $value) {
             if (bccomp($value, '0', 4) > 0) {
                 $lines[] = [
-                    'account_id' => $this->account(StandardChart::TAX_DEDUCTED_AT_SOURCE)->id,
+                    // ⭐ AIT ২১২১, VDS ২১২২ (fe, ২১ অক্টোবর ২০২৬)
+                    'account_id' => $this->account($kind === 'vds' ? StandardChart::VDS_PAYABLE : StandardChart::TAX_DEDUCTED_AT_SOURCE)->id,
                     'credit' => bcadd($value, '0', 4),
                     'narration' => __('purchase::message.withheld_'.$kind, ['no' => $bill->document_no]),
                 ];
