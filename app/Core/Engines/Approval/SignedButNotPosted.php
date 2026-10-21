@@ -78,7 +78,8 @@ final class SignedButNotPosted
          * সেটায় সই দিয়েছেন বা নিজেই চেয়েছিলেন — খোলার নিয়মের সইকারীর ছাড়ের মতো।
          */
         $scope = app(\App\Core\Services\DataScope::class);
-        $decided = $signed->isEmpty() ? [] : array_flip(DB::table('approval_decisions')
+        // ⓘ সইয়ের সারিতে কোম্পানির ঘর নেই — কোম্পানি আসে উপরের অনুমোদনগুলো থেকে (সেগুলো কোম্পানি ধরে ছাঁকা), তাই মডেলে, কাঁচা টেবিলে নয়
+        $decided = $signed->isEmpty() ? [] : array_flip(\App\Models\ApprovalDecision::query()
             ->where('user_id', $user->id)
             ->whereIn('approval_id', $signed->pluck('id')->all())
             ->pluck('approval_id')
