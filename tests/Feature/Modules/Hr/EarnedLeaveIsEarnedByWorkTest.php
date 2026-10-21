@@ -18,8 +18,10 @@ use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveCarryForward;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Services\EarnedLeave;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Services\SalaryStructureService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -31,14 +33,17 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
- * ⭐ অর্জিত ছুটি কাজ থেকে — প্রতি ১৮ দিন "উপস্থিত"-এ ১ দিন, বছর শেষে বড়জোর ৪০ দিন পরের বছরে (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬;
- * বাংলাদেশ শ্রম আইন ২০০৬ ধারা ১১৭; [[EarnedLeave]], [[CarryEarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)।
+ * ⭐ অর্জিত ছুটি — ধারা ১১৭ হুবহু: এক বছর চাকরির পরে, আগের বছরের প্রতি ১৮ দিন "উপস্থিত"-এ ১ দিন; বছর শেষে বড়জোর ৪০ দিন পরের বছরে;
+ * চাকরি ছাড়লে না-নেওয়া দিনের টাকা (মালিকের অনুমোদন ও fe-র উত্তর, ২১ অক্টোবর ২০২৬; বাংলাদেশ শ্রম আইন ২০০৬ ধারা ১১, ১১৭;
+ * [[EarnedLeave]], [[CarryEarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)।
  *
  * ── দাবি ───────────────────────────────────────────────────────────────
- *  · ৩৫ দিন কাজে ১, ৩৬ দিনে ২ দিন অর্জিত; অনুপস্থিত, ছুটি আর ছুটির দিনের সারি কাজ নয়; ধরনের "বছরে ১৫ দিন" খাটে না।
- *  · বছর শেষের জের: জের + অর্জিত − নেওয়া, ৪০-এ থামে; সীমা সেটিং বদলালে নতুন সীমা; আবার চালালে একই একটা সারি; চলে যাওয়া কর্মীর
- *    জের নয়; চলতি বছর বন্ধ করা যায় না।
- *  · একই দিনে কর্মীর পাওনা (সেবা), ছুটির জের রিপোর্ট আর ফোন — তিনটাই একই অর্জিত + জের − নেওয়া; আর বাকির বেশি চাওয়া ফেরে।
+ *  · আগের বছরে ৩৫ দিন কাজে ১, ৩৬ দিনে ২; চলতি বছরের কাজ চলতি পাওনায় নেই; অনুপস্থিত, ছুটি আর ছুটির দিনের সারি কাজ নয়; ধরনের
+ *    "বছরে ১৫ দিন" খাটে না; যোগদানের এক বছর পূর্ণ হওয়ার আগের দিন শূন্য, সেদিন থেকে পুরোটা।
+ *  · বছর শেষের জের: জের + পাওনা − নেওয়া, ৪০-এ থামে, শূন্যের নিচে নয়; সীমা সেটিং বদলালে নতুন সীমা; আবার চালালে একই একটা সারি;
+ *    চলে যাওয়া কর্মীর জের নয়; চলতি বছর বন্ধ করা যায় না।
+ *  · একই দিনে কর্মীর পাওনা (সেবা), ছুটির জের রিপোর্ট আর ফোন — তিনটাই একই; আর বাকির বেশি চাওয়া ফেরে।
+ *  · চাকরি ছাড়ার দিনে: না-নেওয়া দিন = বাকি + চলতি বছরের কাজে অর্জিত, টাকা = দিন × মাসিক মজুরি ÷ ৩০; এক বছরের আগে ছাড়লে শূন্য।
  */
 final class EarnedLeaveIsEarnedByWorkTest extends TestCase
 {
@@ -65,56 +70,61 @@ final class EarnedLeaveIsEarnedByWorkTest extends TestCase
         app(SettingsService::class)->set(PhoneModules::key('hr'), true);
 
         $this->worker = $this->user(['hr.leave.self']);
-        $this->employee = $this->employee('E-1', '2025-01-01', $this->worker);
+        // ⓘ ২০২৪-এ যোগদান — ২০২৫ থেকে যোগ্য
+        $this->employee = $this->employee('E-1', '2024-01-01', $this->worker);
 
         // ⓘ "বছরে ১৫ দিন" ইচ্ছে করে — অর্জিত ছুটিতে এটা খাটে না
         $this->earned = LeaveType::query()->create(['company_id' => $this->company->id, 'code' => LeaveType::EARNED,
             'name_en' => 'Earned Leave', 'name_bn' => 'অর্জিত ছুটি', 'days_per_year' => '15', 'is_paid' => true, 'is_active' => true]);
     }
 
-    public function test_thirty_six_worked_days_earn_two_days_and_only_present_days_count(): void
+    public function test_thirty_six_days_worked_last_year_earn_two_days_and_only_present_days_count(): void
     {
-        $this->rows($this->employee, '2026-01-01', 35, Attendance::PRESENT);
-        // ⓘ কাজ নয় — অনুপস্থিত, ছুটি, ছুটির দিন
-        $this->rows($this->employee, '2026-03-01', 3, Attendance::ABSENT);
-        $this->rows($this->employee, '2026-03-04', 3, Attendance::LEAVE);
-        $this->rows($this->employee, '2026-03-07', 3, Attendance::HOLIDAY);
+        $this->rows($this->employee, '2025-01-01', 35, Attendance::PRESENT);
+        // ⓘ কাজ নয় — অনুপস্থিত, ছুটি, ছুটির দিন; আর চলতি বছরের কাজ চলতি পাওনায় নয়
+        $this->rows($this->employee, '2025-03-01', 3, Attendance::ABSENT);
+        $this->rows($this->employee, '2025-03-04', 3, Attendance::LEAVE);
+        $this->rows($this->employee, '2025-03-07', 3, Attendance::HOLIDAY);
+        $this->rows($this->employee, '2026-01-01', 50, Attendance::PRESENT);
 
         $balance = $this->leave()->balance($this->employee, $this->earned, Carbon::parse('2026-09-30'));
-        $this->assertSame('1.0', $balance['accrued'], '⛔ ৩৫ দিনে ১ নয় — বা অনুপস্থিত/ছুটির সারিও কাজ গোনা হল');
+        $this->assertSame('1.0', $balance['accrued'], '⛔ আগের বছরের ৩৫ দিনে ১ নয় — বা অনুপস্থিত/ছুটির সারি, বা চলতি বছরের কাজও গোনা হল');
         $this->assertSame('1.0', $balance['allowed'], '⛔ ধরনের বাঁধা "বছরে ১৫ দিন" অর্জিত ছুটিতে খাটল');
 
-        $this->rows($this->employee, '2026-04-01', 1, Attendance::PRESENT);
+        $this->rows($this->employee, '2025-04-01', 1, Attendance::PRESENT);
         $this->assertSame('2.0', $this->leave()->balance($this->employee, $this->earned, Carbon::parse('2026-09-30'))['accrued'],
             '⛔ ৩৬ দিন কাজে ২ দিন অর্জিত হয়নি');
+    }
 
-        // ⓘ হিসাবের দিনের পরের কাজ সেদিনের পাওনায় নেই
-        $this->assertSame('1.0', $this->leave()->balance($this->employee, $this->earned, Carbon::parse('2026-03-31'))['accrued']);
+    public function test_nothing_is_earned_before_one_year_of_service(): void
+    {
+        // ⓘ ১ জুন ২০২৫ যোগদান — এক বছর পূর্ণ ১ জুন ২০২৬; ২০২৫-এ ১০০ দিন কাজ (৫ দিন)
+        $new = $this->employee('E-J', '2025-06-01', null);
+        $this->rows($new, '2025-06-02', 100, Attendance::PRESENT);
+
+        $this->assertSame('0.0', $this->leave()->balance($new, $this->earned, Carbon::parse('2026-05-31'))['allowed'],
+            '⛔ এক বছর পূর্ণ হওয়ার আগেই অর্জিত ছুটি');
+        $this->assertSame('5.0', $this->leave()->balance($new, $this->earned, Carbon::parse('2026-06-01'))['allowed'],
+            '⛔ এক বছর পূর্ণ হওয়ার দিনেও আগের বছরের কাজের ছুটি নেই');
     }
 
     public function test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row(): void
     {
-        // ⓘ ২০২৫-এ ঢোকা জের ৩০, ২০২৫-এ ৩৬০ দিন কাজ (২০ দিন), নেওয়া ৪ — সমাপনী ৪৬, সীমা ৪০
+        // ⓘ ২০২৫-এ ঢোকা জের ৩০, ২০২৪-এ ৩৬০ দিন কাজ (২০২৫-এর পাওনা ২০), ২০২৫-এ নেওয়া ৪ — সমাপনী ৪৬, সীমা ৪০
         LeaveCarryForward::query()->create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id,
             'leave_type_id' => $this->earned->id, 'year' => 2025, 'days' => '30']);
-        $this->rows($this->employee, '2025-01-01', 360, Attendance::PRESENT);
-        LeaveApplication::query()->create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id,
-            'leave_type_id' => $this->earned->id, 'from_date' => '2025-06-02', 'to_date' => '2025-06-05', 'days' => '4',
-            'status' => LeaveApplication::APPROVED]);
+        $this->rows($this->employee, '2024-01-01', 360, Attendance::PRESENT);
+        $this->approved($this->employee, '2025-06-02', '2025-06-05', '4');
         // ⓘ সীমার নিচে নেওয়াটা কমায় — ৯০ দিন কাজ (৫), নেওয়া ২ → ৩
-        $small = $this->employee('E-2', '2025-01-01', null);
-        $this->rows($small, '2025-01-01', 90, Attendance::PRESENT);
-        LeaveApplication::query()->create(['company_id' => $this->company->id, 'employee_id' => $small->id,
-            'leave_type_id' => $this->earned->id, 'from_date' => '2025-07-01', 'to_date' => '2025-07-02', 'days' => '2',
-            'status' => LeaveApplication::APPROVED]);
+        $small = $this->employee('E-2', '2024-01-01', null);
+        $this->rows($small, '2024-01-01', 90, Attendance::PRESENT);
+        $this->approved($small, '2025-07-01', '2025-07-02', '2');
         // ⓘ বেশি নেওয়া (সরাসরি বসানো) — সমাপনী শূন্যের নিচে নামে না: ১৮ দিন কাজ (১), নেওয়া ৩ → ০
-        $over = $this->employee('E-3', '2025-01-01', null);
-        $this->rows($over, '2025-01-01', 18, Attendance::PRESENT);
-        LeaveApplication::query()->create(['company_id' => $this->company->id, 'employee_id' => $over->id,
-            'leave_type_id' => $this->earned->id, 'from_date' => '2025-08-04', 'to_date' => '2025-08-06', 'days' => '3',
-            'status' => LeaveApplication::APPROVED]);
-        $gone = $this->employee('E-9', '2025-01-01', null, '2025-12-31');
-        $this->rows($gone, '2025-01-01', 100, Attendance::PRESENT);
+        $over = $this->employee('E-3', '2024-01-01', null);
+        $this->rows($over, '2024-01-01', 18, Attendance::PRESENT);
+        $this->approved($over, '2025-08-04', '2025-08-06', '3');
+        $gone = $this->employee('E-9', '2024-01-01', null, '2025-12-31');
+        $this->rows($gone, '2024-01-01', 100, Attendance::PRESENT);
 
         $this->artisan('abos:hr-carry-earned-leave', ['--year' => 2025])->assertSuccessful();
         $this->artisan('abos:hr-carry-earned-leave', ['--year' => 2025])->assertSuccessful();
@@ -127,7 +137,8 @@ final class EarnedLeaveIsEarnedByWorkTest extends TestCase
         $this->assertSame('40.0', $this->leave()->balance($this->employee, $this->earned, Carbon::parse('2026-01-01'))['carried']);
 
         app(SettingsService::class)->set('hr.earned_leave_carry_cap', 10);
-        app()->forgetInstance(SettingsService::class);
+        // ⓘ SettingsService cache — a6/settings-cache-fix
+        app(SettingsService::class)->flush();
         $this->artisan('abos:hr-carry-earned-leave', ['--year' => 2025])->assertSuccessful();
         $this->assertSame('10.0', (string) LeaveCarryForward::query()->where('year', 2026)->where('employee_id', $this->employee->id)->sole()->days,
             '⛔ সীমার সেটিং খাটেনি');
@@ -141,16 +152,15 @@ final class EarnedLeaveIsEarnedByWorkTest extends TestCase
     {
         // ⓘ প্রমিত ধরনে "বছরে দিন" শূন্যও হতে পারে — অর্জিত ছুটি তবু সীমাহীন নয়, আর রিপোর্টে থাকে
         $this->earned->forceFill(['days_per_year' => 0])->save();
-        $this->rows($this->employee, '2026-01-01', 40, Attendance::PRESENT);
-        // ⓘ কাজ নয় — রিপোর্টও এগুলো গোনে না
-        $this->rows($this->employee, '2026-05-01', 20, Attendance::ABSENT);
+        $this->rows($this->employee, '2025-01-01', 40, Attendance::PRESENT);
+        // ⓘ কাজ নয় — রিপোর্টও এগুলো গোনে না; চলতি বছরের কাজও এ বছরের পাওনায় নয়
+        $this->rows($this->employee, '2025-05-01', 20, Attendance::ABSENT);
+        $this->rows($this->employee, '2026-01-01', 30, Attendance::PRESENT);
         LeaveCarryForward::query()->create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id,
             'leave_type_id' => $this->earned->id, 'year' => 2026, 'days' => '5']);
-        LeaveApplication::query()->create(['company_id' => $this->company->id, 'employee_id' => $this->employee->id,
-            'leave_type_id' => $this->earned->id, 'from_date' => '2026-08-03', 'to_date' => '2026-08-04', 'days' => '2',
-            'status' => LeaveApplication::APPROVED]);
+        $this->approved($this->employee, '2026-08-03', '2026-08-04', '2');
 
-        // ⓘ অর্জিত ⌊৪০ ÷ ১৮⌋ = ২, জের ৫, নেওয়া ২ — বাকি ৫
+        // ⓘ পাওনা ⌊৪০ ÷ ১৮⌋ = ২, জের ৫, নেওয়া ২ — বাকি ৫
         $balance = $this->leave()->balance($this->employee, $this->earned, Carbon::parse('2026-09-30'));
         $this->assertSame(['7.0', '2.0', '5.0', '2.0', '5.0'],
             [$balance['allowed'], $balance['taken'], $balance['left'], $balance['accrued'], $balance['carried']]);
@@ -163,14 +173,65 @@ final class EarnedLeaveIsEarnedByWorkTest extends TestCase
         $this->assertSame(0, bccomp($balance['taken'], (string) $row['taken'], 1));
         $this->assertSame(0, bccomp((string) $balance['left'], (string) $row['remaining'], 1), '⛔ রিপোর্টের বাকি সেবার সাথে মেলে না');
 
+        // ⓘ এক বছরের আগে — রিপোর্টেও শূন্য (জের ছাড়া)
+        $new = $this->employee('E-7', '2025-12-01', null);
+        $this->rows($new, '2025-12-01', 30, Attendance::PRESENT);
+        $young = collect(app(ReportEngine::class)->run('hr.leave_balance', ['from' => '2026-09-01', 'to' => '2026-09-30'])->rows)
+            ->first(fn (array $r) => str_starts_with((string) $r['employee'], 'E-7 '));
+        $this->assertSame(0, bccomp('0', (string) $young['allowed'], 1), '⛔ রিপোর্টে এক বছরের আগেই অর্জিত ছুটি');
+
         $this->app['auth']->forgetGuards();
         Sanctum::actingAs($this->worker->fresh(), [AuthController::APP]);
         $type = collect($this->getJson('/api/v1/hr/leave')->assertOk()->json('types'))->firstWhere('id', $this->earned->public_id);
         $this->assertSame(['7.0', '5.0', '2.0', '5.0'], [(string) $type['allowed'], (string) $type['left'], (string) $type['accrued'], (string) $type['carried']],
             '⛔ ফোনের পাওনা সেবার সাথে মেলে না');
 
-        // ⓘ বাকির বেশি চাওয়া ফেরে — সীমা অর্জিত + জের
+        // ⓘ বাকির বেশি চাওয়া ফেরে — সীমা পাওনা + জের
         $this->assertThrows(fn () => $this->leave()->apply($this->employee, $this->earned, '2026-10-05', '2026-10-12', '6'), ValidationException::class);
+    }
+
+    public function test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty(): void
+    {
+        $head = SalaryHead::query()->create(['company_id' => $this->company->id, 'code' => 'BASIC', 'name_en' => 'Basic',
+            'kind' => SalaryHead::EARNING, 'calculation' => SalaryHead::FIXED, 'is_basic' => true, 'prorated_by_attendance' => true, 'is_active' => true]);
+
+        // ⓘ ২০২৫-এ ৫৪ দিন কাজ (২০২৬-এর পাওনা ৩) + জের ৪ − নেওয়া ২ = বাকি ৫; ২০২৬-এ ছাড়ার দিন পর্যন্ত ৪০ দিন কাজ (২) — মোট ৭
+        $leaver = $this->employee('E-L', '2024-01-01', null, '2026-09-30');
+        app(SalaryStructureService::class)->set($leaver, $head, '2024-01-01', '30000');
+        // ⓘ কর্তন মজুরি কমায় না — দৈনিক হার মোট আয় ধরে, নিট নয়
+        $pf = SalaryHead::query()->create(['company_id' => $this->company->id, 'code' => 'PF', 'name_en' => 'PF',
+            'kind' => SalaryHead::DEDUCTION, 'calculation' => SalaryHead::FIXED, 'is_basic' => false, 'prorated_by_attendance' => false, 'is_active' => true]);
+        app(SalaryStructureService::class)->set($leaver, $pf, '2024-01-01', '2000');
+        $this->rows($leaver, '2025-01-01', 54, Attendance::PRESENT);
+        $this->rows($leaver, '2026-01-01', 40, Attendance::PRESENT);
+        LeaveCarryForward::query()->create(['company_id' => $this->company->id, 'employee_id' => $leaver->id,
+            'leave_type_id' => $this->earned->id, 'year' => 2026, 'days' => '4']);
+        $this->approved($leaver, '2026-03-02', '2026-03-03', '2');
+
+        $this->assertSame('7.0', $this->leave()->encashableEarnedDays($leaver, Carbon::parse('2026-09-30')));
+        $this->assertSame(['days' => '7.0', 'monthly_wage' => '30000.00', 'daily_rate' => '1000.00', 'amount' => '7000.00'],
+            $this->leave()->earnedLeaveEncashment($leaver, Carbon::parse('2026-09-30')), '⛔ না-নেওয়া ছুটির টাকা মাসিক মজুরি ÷ ৩০-এ নয়');
+
+        // ⓘ বেশি নেওয়া (সরাসরি বসানো) বাকিকে শূন্যের নিচে নামায় না: পাওনা ১ − নেওয়া ৩ → ০, আর এ বছরের ১৮ দিন কাজে ১ — মোট ১
+        $over = $this->employee('E-O', '2024-01-01', null, '2026-09-30');
+        $this->rows($over, '2025-01-01', 18, Attendance::PRESENT);
+        $this->rows($over, '2026-01-01', 18, Attendance::PRESENT);
+        $this->approved($over, '2026-04-06', '2026-04-08', '3');
+        $this->assertSame('1.0', $this->leave()->encashableEarnedDays($over, Carbon::parse('2026-09-30')), '⛔ বাকি শূন্যের নিচে নেমে এ বছরের অর্জন খেয়ে ফেলল');
+
+        // ⛔ এক বছরের আগে ছাড়লে অর্জিত ছুটিই নেই
+        $short = $this->employee('E-S', '2026-01-01', null, '2026-09-30');
+        app(SalaryStructureService::class)->set($short, $head, '2026-01-01', '30000');
+        $this->rows($short, '2026-01-01', 40, Attendance::PRESENT);
+        $this->assertSame('0.0', $this->leave()->encashableEarnedDays($short, Carbon::parse('2026-09-30')));
+        $this->assertSame('0.00', $this->leave()->earnedLeaveEncashment($short, Carbon::parse('2026-09-30'))['amount']);
+    }
+
+    private function approved(Employee $employee, string $from, string $to, string $days): void
+    {
+        LeaveApplication::query()->create(['company_id' => $this->company->id, 'employee_id' => $employee->id,
+            'leave_type_id' => $this->earned->id, 'from_date' => $from, 'to_date' => $to, 'days' => $days,
+            'status' => LeaveApplication::APPROVED]);
     }
 
     private function leave(): LeaveService

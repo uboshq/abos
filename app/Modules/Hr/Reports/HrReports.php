@@ -216,7 +216,7 @@ final class HrReports
      * ⭐ ছুটির জের — "শেষ" তারিখের বছরে প্রতিজন কর্মী × প্রতিটা চালু ধরন, যার বছরে সীমা আছে: পাওনা, নেওয়া, বাকি।
      *
      * ⓘ নেওয়া = [[LeaveService::takenInYear()]] — মঞ্জুর হওয়া আবেদন, শুরুর দিন সেই বছরে; [[LeaveService::balance()]]-এর হুবহু
-     * সারি। পাওনা = ধরনের `days_per_year` — ⭐ অর্জিত ছুটিতে (কোড EARNED) অর্জিত + জের ([[EarnedLeave]], শ্রম আইন ধারা ১১৭; a6,
+     * সারি। পাওনা = ধরনের `days_per_year` — ⭐ অর্জিত ছুটিতে (কোড EARNED) এক বছর চাকরির পরে আগের বছরের কাজে অর্জিত + জের ([[EarnedLeave]], শ্রম আইন ধারা ১১৭; a6,
      * ২১ অক্টোবর ২০২৬); বাকি = পাওনা − নেওয়া (ফোনের "এ বছর কত বাকি"-ও এই সেবাই)। ⛔ সীমাহীন ধরন (০ দিন,
      * যেমন বিনা বেতনে) বাদ — "কত বাকি" প্রশ্নটারই মানে নেই ([[LeaveType::hasNoYearlyLimit()]])।
      * ⓘ কেবল সেদিন কর্মরতরা ([[Employee::wasEmployedOn()]]); যোগ নেই — আলাদা ধরনের দিন যোগ করলে অর্থহীন সংখ্যা।
@@ -245,10 +245,12 @@ final class HrReports
                     ->selectRaw('SUM(hr_leave_applications.days) as taken');
 
                 /*
-                 * ⭐ অর্জিত ছুটি — [[EarnedLeave]]-এর হুবহু: ১ জানুয়ারি থেকে "শেষ" তারিখ পর্যন্ত "উপস্থিত" দিন ÷ ১৮ (পুরো দিনে), আর
-                 * এই বছরে ঢোকা জের (বছর শেষের ছবি)। ⛔ এখানে আলাদা নিয়ম লিখলে কর্মীর পাতা, ফোন আর রিপোর্ট আলাদা হত।
+                 * ⭐ অর্জিত ছুটি — [[EarnedLeave]]-এর হুবহু (ধারা ১১৭): যোগদান + ১ বছর পেরোলে আগের ক্যালেন্ডার বছরের "উপস্থিত" দিন ÷ ১৮
+                 * (পুরো দিনে), আর এই বছরে ঢোকা জের (বছর শেষের ছবি)। ⛔ এখানে আলাদা নিয়ম লিখলে কর্মীর পাতা, ফোন আর রিপোর্ট আলাদা হত।
+                 * ⓘ `DATE_ADD(…, INTERVAL 1 YEAR)` ২৯ ফেব্রুয়ারিকে ২৮-এ নামায় — Carbon-এর `addYearsNoOverflow()`-এর একই উত্তর।
                  */
-                $worked = AttendanceService::rowsBetween($asOf->copy()->startOfYear()->toDateString(), $asOf->toDateString())->toBase()
+                $previous = $asOf->copy()->subYearNoOverflow();
+                $worked = AttendanceService::rowsBetween($previous->copy()->startOfYear()->toDateString(), $previous->copy()->endOfYear()->toDateString())->toBase()
                     ->where('hr_attendance.status', Attendance::PRESENT)
                     ->groupBy('hr_attendance.employee_id')
                     ->select('hr_attendance.employee_id')
@@ -258,8 +260,11 @@ final class HrReports
                     ->where('hr_leave_carry_forwards.year', $asOf->year)
                     ->select(['hr_leave_carry_forwards.employee_id', 'hr_leave_carry_forwards.leave_type_id', 'hr_leave_carry_forwards.days']);
 
-                $allowed = 'CASE WHEN lt.code = ? THEN FLOOR(COALESCE(wk.worked, 0) / '.EarnedLeave::WORKED_DAYS_PER_DAY.') + COALESCE(cf.days, 0)'
-                    .' ELSE lt.days_per_year END';
+                $allowed = 'CASE WHEN lt.code = ? THEN'
+                    .' (CASE WHEN hr_employees.joining_date IS NOT NULL AND DATE_ADD(hr_employees.joining_date, INTERVAL '.EarnedLeave::SERVICE_YEARS.' YEAR) <= ?'
+                    .' THEN FLOOR(COALESCE(wk.worked, 0) / '.EarnedLeave::WORKED_DAYS_PER_DAY.') ELSE 0 END)'
+                    .' + COALESCE(cf.days, 0) ELSE lt.days_per_year END';
+                $allowedBindings = [LeaveType::EARNED, $asOf->toDateString()];
 
                 return self::staff($f)
                     ->tap(self::employedBetween($f['to'], $f['to']))
@@ -276,9 +281,9 @@ final class HrReports
                         DB::raw(self::nameOf('d').' as department'),
                         DB::raw(self::nameOf('lt').' as leave_type'),
                     ])
-                    ->selectRaw("{$allowed} as allowed", [LeaveType::EARNED])
+                    ->selectRaw("{$allowed} as allowed", $allowedBindings)
                     ->selectRaw('COALESCE(tk.taken, 0) as taken')
-                    ->selectRaw("({$allowed}) - COALESCE(tk.taken, 0) as remaining", [LeaveType::EARNED]);
+                    ->selectRaw("({$allowed}) - COALESCE(tk.taken, 0) as remaining", $allowedBindings);
             },
             columns: [
                 ['key' => 'employee', 'label' => 'hr::field.employee', 'width' => '14rem'],

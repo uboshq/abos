@@ -235,7 +235,7 @@ final class LeaveService
      * ভুললে সংখ্যাটা চিরকাল ভুল থেকে যেত, আর কেউ ধরতে পারত না —
      * কারণ ভুলটা দেখতে একদম স্বাভাবিক।
      *
-     * ⭐ অর্জিত ছুটিতে পাওনা = এ বছর অর্জিত (হাজিরা থেকে, `$on` পর্যন্ত) + আগের বছরের জের — বাঁধা কোটা নয় (শ্রম আইন ধারা ১১৭;
+     * ⭐ অর্জিত ছুটিতে পাওনা = এ বছরের পাওনা (এক বছর চাকরির পরে, আগের বছরের কাজ থেকে) + আগের বছরের জের — বাঁধা কোটা নয় (শ্রম আইন ধারা ১১৭;
      * [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)। বাকি ধরনে `accrued`/`carried` খালি।
      *
      * @return array{allowed: string, taken: string, left: string|null, accrued: string|null, carried: string|null}
@@ -268,6 +268,25 @@ final class LeaveService
             'accrued' => null,
             'carried' => null,
         ];
+    }
+
+    /**
+     * ⭐ চাকরি ছাড়ার দিনে না-নেওয়া অর্জিত ছুটির দিন — চূড়ান্ত পাওনার কাজ এটা ডাকে (শ্রম আইন ধারা ১১ ও ১১৭; fe, ২১ অক্টোবর ২০২৬;
+     * [[EarnedLeave::encashableDays()]])। ⓘ কেবল পড়ে; যোগ্যতার (১ বছর) আগে শূন্য।
+     */
+    public function encashableEarnedDays(Employee $employee, Carbon $on): string
+    {
+        return app(EarnedLeave::class)->encashableDays($employee, $on);
+    }
+
+    /**
+     * ⭐ সেই দিনগুলোর টাকা — দিন × (মাসিক মজুরি ÷ ৩০), পয়সায় গোল ([[EarnedLeave::encashment()]])।
+     *
+     * @return array{days: string, monthly_wage: string, daily_rate: string, amount: string}
+     */
+    public function earnedLeaveEncashment(Employee $employee, Carbon $on): array
+    {
+        return app(EarnedLeave::class)->encashment($employee, $on);
     }
 
     /**

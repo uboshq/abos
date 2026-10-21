@@ -109,8 +109,9 @@ M2.3 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
   kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (46.0)
 
 M2.4 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
-  old: $open = bcsub(bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1), $taken, 1);
+  old: $open = bcsub(bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1), $this->takenIn($employee, $type, $year), 1);
   new: $open = bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1);
+  (text updated in P1 — closingOf now calls takenIn())
   kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (E-2 gets 5.0, not 3.0)
 
 M2.5 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
@@ -246,3 +247,60 @@ M3.14 app/Modules/Hr/Models/LeaveType.php (isMaternity)
   old: return $this->code === self::MATERNITY;
   new: return false;
   kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (male passes)
+
+== Phase 2 (fe's answers, 21 Oct 2026) ==
+NOTE: M2.x above stay valid against the P1 code (M2.4 text updated); their test names moved to the "last year" fixtures in
+P1 (test_thirty_six_days_worked_last_year_earn_two_days_and_only_present_days_count replaces the old test 1 name).
+
+== P1 — s.117 exactly: one year of service, previous year's work, encashment ==
+K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
+
+P1.1 app/Modules/Hr/Services/EarnedLeave.php
+  old: public const SERVICE_YEARS = 1;
+  new: public const SERVICE_YEARS = 0;
+  kill: K::test_nothing_is_earned_before_one_year_of_service (5.0 on 31 May 2026)
+
+P1.2 app/Modules/Hr/Services/EarnedLeave.php (isEligibleOn)
+  old: return $from !== null && $on->copy()->startOfDay()->gte($from);
+  new: return $from !== null && $on->copy()->startOfDay()->gt($from);
+  kill: K::test_nothing_is_earned_before_one_year_of_service (0.0 on the anniversary)
+
+P1.3 app/Modules/Hr/Services/EarnedLeave.php (accrued)
+  old: $previous = $on->copy()->subYearNoOverflow();
+  new: $previous = $on->copy();
+  kill: K::test_thirty_six_days_worked_last_year_earn_two_days_and_only_present_days_count (this year's 50 days → 2.0)
+
+P1.4 app/Modules/Hr/Reports/HrReports.php (leaveBalance)
+  old: .' (CASE WHEN hr_employees.joining_date IS NOT NULL AND DATE_ADD(hr_employees.joining_date, INTERVAL '.EarnedLeave::SERVICE_YEARS.' YEAR) <= ?'
+  new: .' (CASE WHEN ? IS NOT NULL'
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (E-7 under one year shows 1 in the report)
+
+P1.5 app/Modules/Hr/Reports/HrReports.php (leaveBalance)
+  old: $previous = $asOf->copy()->subYearNoOverflow();
+  new: $previous = $asOf->copy();
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (report counts 2026's 30 days → 1 + 5 = 6 vs 7)
+
+P1.6 app/Modules/Hr/Services/EarnedLeave.php (encashableDays)
+  old: return bcadd($left, (string) $thisYear, 1);
+  new: return $left;
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (5.0, not 7.0)
+
+P1.7 app/Modules/Hr/Services/EarnedLeave.php (encashableDays)
+  old: if (! $type instanceof LeaveType || ! $this->isEligibleOn($employee, $on)) {
+  new: if (! $type instanceof LeaveType) {
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (E-S under one year gets 2.0)
+
+P1.8 app/Modules/Hr/Services/EarnedLeave.php
+  old: public const DAILY_RATE_DIVISOR = 30;
+  new: public const DAILY_RATE_DIVISOR = 26;
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (daily 1153.85)
+
+P1.9 app/Modules/Hr/Services/EarnedLeave.php (encashableDays)
+  old: $left = bccomp($left, '0', 1) < 0 ? '0.0' : $left;
+  new: (line deleted)
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (E-O gets -1.0, not 1.0)
+
+P1.10 app/Modules/Hr/Services/EarnedLeave.php (encashment)
+  old: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['gross'];
+  new: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['net'];
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (PF 2000 → daily 933.33)
