@@ -151,7 +151,8 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
             'code' => 'EMP-LATE', 'name_en' => 'Late Joiner', 'joining_date' => '2026-08-10', 'payment_method' => 'cash',
         ]);
 
-        $row = $this->salaries()->set($late, $this->basic, '2026-08-10', '15000');
+        $row = $this->notRefused(fn () => $this->salaries()->set($late, $this->basic, '2026-08-10', '15000'),
+            '⛔ আগস্টের রানে না-থাকা কর্মীকে আগস্টের জন্য আটকানো হলো');
 
         $this->assertSame(0, bccomp('15000', (string) $row->amount, 4), '⛔ আগস্টের রানে না-থাকা কর্মীর আগস্টের কাঠামো বসল না।');
     }
@@ -161,7 +162,8 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
         $run = $this->paidAugust();
         app(PayrollService::class)->cancel($run->fresh(), 'Wrong amounts');
 
-        $this->salaries()->set($this->employee, $this->basic, '2026-08-01', self::RAISED_BASIC);
+        $this->notRefused(fn () => $this->salaries()->set($this->employee, $this->basic, '2026-08-01', self::RAISED_BASIC),
+            '⛔ বাতিল রান মাসটা আটকে দিল');
 
         $this->assertSame(['2026-01-15' => self::PAID_BASIC, '2026-08-01' => self::RAISED_BASIC], $this->rowsByDate());
     }
@@ -206,6 +208,8 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
     {
         $this->assertArrayHasKey('hr.salary_change', app(ApprovalFlowService::class)->labels(),
             '⛔ ছকের পর্দায় "বেতনের কাঠামো বদল" নেই — কোম্পানি দ্বিতীয় সই চালুই করতে পারত না।');
+        $this->assertStringContainsString((string) __('hr::approval.salary_change'), (string) app(ApprovalFlowService::class)->labels()['hr.salary_change'],
+            '⛔ ছকের পর্দায় বেতন-বদলের নাম অন্য কাজের নামে দেখায়।');
         $this->assertSame(0, ApprovalFlow::query()->withoutGlobalScopes()->where('module', 'hr')->where('action', 'salary_change')->count(),
             '⛔ বেতন-বদলের ছক নিজে থেকে বসে গেছে — অনুমোদন বন্ধ রাখা কোম্পানিতে বেতন আটকাত।');
 
@@ -323,7 +327,8 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
         $this->assertSame('confirmed', (string) $september->status);
 
         $this->actingAs($signer);
-        app(ApprovalEngine::class)->approve($approval->fresh(), $signer->fresh(), 'late');
+        $this->notRefused(fn () => app(ApprovalEngine::class)->approve($approval->fresh(), $signer->fresh(), 'late'),
+            '⛔ দেরির সই প্রত্যাখ্যানে ভেঙে পড়ল — না-বসার কথা অডিটে না লিখে');
 
         $this->assertArrayNotHasKey('2026-09-01', $this->rowsByDate(), '⛔ দেওয়া মাসে দেরির সই অঙ্ক বদলে দিল।');
         $this->assertFalse($approval->fresh()->isUsed());
@@ -332,6 +337,19 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
     }
 
     // ── সাহায্যকারী ─────────────────────────────────────────────────────
+
+    /**
+     * ⓘ যে কাজ প্রত্যাখ্যাত হওয়ার কথা নয়, তা প্রত্যাখ্যাত হলে দাবির নিজের বার্তায় লাল হয় — ভুল ধরা পড়ে দাবিতে, অচেনা
+     * exception-এ নয় (fe, ২১ অক্টোবর ২০২৬)।
+     */
+    private function notRefused(callable $do, string $why): mixed
+    {
+        try {
+            return $do();
+        } catch (ValidationException $e) {
+            $this->fail($why.' — '.collect($e->errors())->flatten()->first());
+        }
+    }
 
     /** ⓘ ঝলকের লেখা অনুরোধের ভাষায় — দুই ভাষার যেকোনোটা */
     private function assertSaid(string $key): void
