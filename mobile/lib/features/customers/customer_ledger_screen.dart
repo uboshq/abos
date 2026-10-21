@@ -9,7 +9,6 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
-import '../../core/launcher_widgets/kinds/money_kinds_support.dart' show banglaNumber;
 import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/widgets/day_part.dart';
@@ -278,14 +277,12 @@ String dueWords(double balance) {
       : AppLocale.l10n.customersLedgerRowCredit(Money.taka(-balance));
 }
 
-/// `2026-10-12` → "অক্টোবর ২০২৬"
-String monthOf(String? iso) {
+/// `2026-10-12` → "অক্টোবর 2026" (বাংলায়) বা "October 2026" (ইংরেজিতে) — মাসের নাম ভাষায়, অঙ্ক দুই ভাষাতেই ইংরেজি
+/// (মালিকের স্থায়ী নিয়ম; a4-এর সিদ্ধান্ত, ২১ অক্টোবর ২০২৬)। ⛔ আগে বছর বাংলা অঙ্কে ছিল ("অক্টোবর ২০২৬")।
+String monthOf(String? iso, [Locale? locale]) {
   final d = iso == null ? null : DateTime.tryParse(iso);
   if (d == null) return AppLocale.l10n.customersLedgerNoDate;
-  // ⓘ ইংরেজিতে "October 2026" ([monthText]); বাংলায় আগের মতোই বাংলা অঙ্কে বছর — ছবি-টেস্ট আর খাতার পরীক্ষা তা-ই চায়
-  if (AppLocale.isEnglish()) return monthText(d);
-  final year = banglaNumber(d.year);
-  return '${banglaMonths[d.month - 1]} $year';
+  return monthText(d, locale);
 }
 
 class CustomerLedgerRow {

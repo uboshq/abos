@@ -48,7 +48,7 @@ void main() {
     expect(find.text('রহিম স্টোর'), findsOneWidget);
     expect(find.text('বাকি আছে'), findsOneWidget);
     expect(find.text(Money.taka(1500)), findsWidgets);
-    expect(find.text('অক্টোবর ২০২৬'), findsOneWidget);
+    expect(find.text('অক্টোবর 2026'), findsOneWidget);
     expect(find.text('মাল নিয়েছেন'), findsOneWidget);
     expect(find.text('টাকা দিয়েছেন'), findsOneWidget);
     expect(find.textContaining('ডেবিট'), findsNothing);
@@ -72,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.asked, [1, 2]);
-    expect(find.text('সেপ্টেম্বর ২০২৬'), findsOneWidget);
+    expect(find.text('সেপ্টেম্বর 2026'), findsOneWidget);
     expect(find.byKey(const ValueKey('ledger-more')), findsNothing);
   });
 
