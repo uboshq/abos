@@ -8,6 +8,7 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
+use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use Illuminate\Support\Carbon;
 
@@ -53,6 +54,12 @@ final class MaternityBenefit
             ->where('hr_payslips.employee_id', $employee->id)
             ->join('hr_payroll_runs as r', 'r.id', '=', 'hr_payslips.payroll_run_id')
             ->where('r.status', DocumentStatus::CONFIRMED)
+            /*
+             * ⛔ কেবল মাসের বেতনের রান — উৎসব ভাতার রান নয় (মেশানোর পর, a6, ২১ অক্টোবর ২০২৬; [[TheFestivalBonusIsNotAMaternityMonthTest]])।
+             * ⓘ উপরের সূত্র "বেতনের রানের স্লিপ" বলে, অথচ প্রশ্নটা সব নিশ্চিত রান যোগ করত; পে-শাখার ভাতার রান আসার পর নোটিশের আগের তিন
+             * মাসে ঈদ পড়লেই এক মাসের মূল বাড়তি যোগ হত — একই বেতনের দুই মায়ের গড় দৈনিক মজুরি ঈদের তারিখে আলাদা।
+             */
+            ->where('r.run_type', PayrollRun::SALARY)
             ->whereNull('r.deleted_at')
             ->whereBetween('r.month', [$from->toDateString(), $to->toDateString()])
             ->pluck('hr_payslips.gross')

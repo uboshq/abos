@@ -196,6 +196,12 @@ final class MaternityDeliveryService
     {
         return PayrollRun::acrossBranches()
             ->where('status', DocumentStatus::CONFIRMED)
+            /*
+             * ⛔ কেবল মাসের বেতন — উৎসব ভাতার রান মাসটা "দেওয়া" করে না, [[PaidMonth::assertOpen()]]-এর মতোই (মেশানোর পর, a6, ২১ অক্টোবর
+             * ২০২৬; [[TheFestivalBonusIsNotAMaternityMonthTest]])। ⓘ নইলে ঈদের মাসটা দেওয়া ধরে পার্থক্য এখনই বসত, আর সেই মাসের বেতনের
+             * রান নতুন তারিখে সুবিধাটা আবার দিত (দুইবার); হাজিরার "ছুটি" সারিও সরত না।
+             */
+            ->ofType(PayrollRun::SALARY)
             ->whereDate('month', $month->copy()->startOfMonth()->toDateString())
             ->whereHas('payslips', fn ($q) => $q->where('employee_id', $employee->id))
             ->exists();
