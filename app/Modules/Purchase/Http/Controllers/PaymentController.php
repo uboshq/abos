@@ -273,14 +273,32 @@ class PaymentController extends Controller implements HasMiddleware
     private function formData(): array
     {
         $moneyCodes = StandardChart::MONEY_PARENTS;
+        $accounts = self::moneyAccounts();
 
         return [
+            /*
+             * ⭐ নকশার ডানের "নিয়ন্ত্রণ" আর নিচের মূল বোতাম — কোম্পানিতে টাকা দেওয়ায় সই চালু থাকলে "সইয়ে পাঠান", নইলে "পোস্ট"
+             * (নকশা #১১)। ⓘ পোস্টের মুহূর্তে আসল বিচার [[DocumentApproval::assertClear()]]-এর; এটা কেবল বোতামের নাম।
+             */
+            'signatures' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires('purchase', 'payment', null, class_basename(Payment::class)),
+            'threeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true),
+            'modes' => \App\Modules\MasterData\Models\TransferMode::query()->orderBy('code')->get()
+                ->mapWithKeys(fn ($m) => [$m->id => $m->name_en ?: $m->code])->all(),
+
+            /*
+             * ⭐ খাতে টাকা আছে কি না (নকশা #২৪) — প্রতিটা টাকার খাতের ধরন আর এখনকার জের, পাতা খোলার মুহূর্তের। ⓘ পোস্টের আসল
+             * পাহারা নগদ আর MFS-এ ([[PaymentService::assertMoneyIsThere()]]); ব্যাংকে কম থাকলে কেবল সতর্কতা।
+             */
+            'balances' => $accounts->mapWithKeys(fn (Account $a) => [$a->id => [
+                'kind' => $a->money_kind,
+                'balance' => bcadd($a->balanceInView(), '0', 2),
+            ]])->all(),
             // ⭐ কেবল পণ্যের সরবরাহকারী — পরিশোধ ক্রয় বিল মেটায়; সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬)
             // ⭐ জের-থাকা নিষ্ক্রিয় সরবরাহকারীও — বন্ধ সরবরাহকারীর বাকি দেনা মেটানোর পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
             'suppliers' => Supplier::query()->inViewedBranch()->activeOrOwing()->forPurchasing()->orderBy('name_en')->get(),
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
-            'accounts' => self::moneyAccounts(),
+            'accounts' => $accounts,
 
             /*
              * যে বিলগুলোয় এখনো টাকা বাকি।
