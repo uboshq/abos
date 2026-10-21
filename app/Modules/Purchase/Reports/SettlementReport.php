@@ -193,12 +193,15 @@ final class SettlementReport
      */
     public static function lineRates(int $company, string $from, string $to): Builder
     {
+        // ⭐ যে বিলের টান এই সময়ে পড়েছে — বিক্রি, বা পুরনো বিলের বাতিল/সম্পাদনার উল্টো টান; বিলের নিজের তারিখ যা-ই হোক (২১ অক্টোবর ২০২৬)
+        $touched = self::usesOn($company, [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'], $from, $to);
+
         $lines = DB::table('sal_invoice_lines as sl')
             ->join('sal_invoices as si', 'si.id', '=', 'sl.sales_invoice_id')
             ->where('si.company_id', $company)
-            ->whereBetween('si.trx_date', [$from, $to]);
+            ->whereIn('si.id', $touched);
 
-        return LineNetSale::joinBasis($lines, $company, $from, $to, 'si')
+        return LineNetSale::joinBasis($lines, $company, self::EVER, self::FOREVER, 'si', fn ($b) => $b->whereIn('bi.id', $touched))
             ->groupBy('sl.sales_invoice_id', 'sl.product_id')
             ->selectRaw('sl.sales_invoice_id, sl.product_id, SUM('.LineNetSale::sql('sl', 'si').') as net, SUM(sl.qty) as qty');
     }
@@ -212,7 +215,8 @@ final class SettlementReport
         return DB::table('sal_return_lines as rl')
             ->join('sal_returns as rr', 'rr.id', '=', 'rl.sales_return_id')
             ->where('rr.company_id', $company)
-            ->whereBetween('rr.trx_date', [$from, $to])
+            // ⭐ যে ফেরতের টান এই সময়ে পড়েছে — ফেরত নিজে, বা পুরনো ফেরতের বাতিল (২১ অক্টোবর ২০২৬)
+            ->whereIn('rr.id', self::usesOn($company, [SalesReturn::STOCK_SOURCE, SalesReturn::STOCK_SOURCE.':cancel'], $from, $to))
             ->groupBy('rl.sales_return_id', 'rl.product_id')
             ->selectRaw('rl.sales_return_id, rl.product_id, SUM(rl.amount) as net, SUM(rl.qty) as qty');
     }
@@ -220,10 +224,14 @@ final class SettlementReport
     /**
      * ⭐ বিক্রি হওয়া মালের প্রতিটা স্তর-টান, নিট বিক্রি আর খরচসহ — নিষ্পত্তি আর পুঁজির ফেরত দুইটাই এখান থেকে পড়ে (২১ অক্টোবর ২০২৬)।
      *
-     * প্রিন্সিপালের কমিশনের একই নিয়ম ([[PrincipalCommission::costOfSales()]]):
-     *   · বিল = `sales_invoice` টান আর তার বাতিল/সম্পাদনার উল্টো টান (`sales_invoice:cancel`, ঋণাত্মক) — বিলের তারিখে;
-     *     বাতিল বিল তাই শূন্যে মেলে (বিক্রি আর খরচ দুইটাই), সম্পাদনায় দুইবার গোনা হয় না। মোছা বিল বাদ।
-     *   · ফেরত = `sales_return` টান (ঋণাত্মক, একই স্তরে ফেরা) — **ফেরতের নিজের তারিখে**, কেবল পাকা ফেরত, মোছা বাদ।
+     * ⭐ প্রতিটা টান **নিজের তারিখে** (`inv_cost_layer_uses.trx_date`) — IFRS 15 আর IAS 8: ফেরত বা বাতিল চলতি সময়ের ঘটনা, আগের
+     * সময়ের ভুল নয়, তাই বন্ধ মাসের অঙ্ক কখনো বদলায় না (fe, ২১ অক্টোবর ২০২৬; প্রিন্সিপালের কমিশনেরও একই নিয়ম,
+     * [[PrincipalCommission::costOfSales()]]):
+     *   · বিল = `sales_invoice` টান (বিলের তারিখে লেখা) আর তার বাতিল/সম্পাদনার উল্টো টান (`sales_invoice:cancel`, ঋণাত্মক,
+     *     **বাতিলের দিনে** লেখা) — আগস্টের বিল অক্টোবরে বাতিল হলে আগস্ট অক্ষত, অক্টোবরে বিয়োগ। মোছা বিল বাদ।
+     *   · ফেরত = `sales_return` টান (ঋণাত্মক, ফেরতের দিনে) আর ফেরত বাতিলের উল্টো টান (`sales_return:cancel`, ধনাত্মক, বাতিলের
+     *     দিনে) — ফেরত বাতিল হলেও ফেরতের মাস অক্ষত। মোছা ফেরত বাদ।
+     * ⓘ বিক্রয়মূল্য বিলের (বা ফেরতের) নিজের সারি থেকে — তারিখ যা-ই হোক, একই দর।
      * ⛔ আগে কেবল পাকা বিলের `sales_invoice` টান: ফেরত এলে বিক্রি আর খরচ দুইটাই আগের মতো থাকত, আর বিক্রি ছিল ভ্যাট আর
      * বিলের ছাড়ের আগের দামে।
      *
@@ -241,7 +249,7 @@ final class SettlementReport
             ->whereIn('u.source_type', [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'])
             ->where('i.company_id', $company)
             ->whereNull('i.deleted_at')
-            ->whereBetween('i.trx_date', [$from, $to])
+            ->whereBetween('u.trx_date', [$from, $to])
             ->select(['u.cost_layer_id', DB::raw('CASE WHEN il.qty = 0 THEN 0 ELSE il.net * u.qty / il.qty END as sold'), DB::raw('u.amount as cost')]);
 
         $returns = DB::table('inv_cost_layer_uses as u')
@@ -251,14 +259,32 @@ final class SettlementReport
                     ->on('rl.product_id', '=', 'u.product_id');
             })
             ->where('u.company_id', $company)
-            ->where('u.source_type', SalesReturn::STOCK_SOURCE)
+            ->whereIn('u.source_type', [SalesReturn::STOCK_SOURCE, SalesReturn::STOCK_SOURCE.':cancel'])
             ->where('rt.company_id', $company)
             ->whereNull('rt.deleted_at')
-            ->whereIn('rt.status', DocumentStatus::POSTED)
-            ->whereBetween('rt.trx_date', [$from, $to])
+            ->whereBetween('u.trx_date', [$from, $to])
             ->select(['u.cost_layer_id', DB::raw('CASE WHEN rl.qty = 0 THEN 0 ELSE rl.net * u.qty / rl.qty END as sold'), DB::raw('u.amount as cost')]);
 
         return $bills->unionAll($returns);
+    }
+
+    /** ⓘ বিলের/ফেরতের তারিখের বাঁধ নেই — টানের নিজের তারিখই বাঁধ ([[usesOn()]]) */
+    private const EVER = '1000-01-01';
+
+    private const FOREVER = '9999-12-31';
+
+    /**
+     * যে কাগজগুলোর (`source_id`) এই ধরনের টান এই সময়ে পড়েছে — টানের নিজের তারিখে।
+     *
+     * @param  list<string>  $types
+     */
+    private static function usesOn(int $company, array $types, string $from, string $to): Builder
+    {
+        return DB::table('inv_cost_layer_uses')
+            ->where('company_id', $company)
+            ->whereIn('source_type', $types)
+            ->whereBetween('trx_date', [$from, $to])
+            ->select('source_id');
     }
 
     /**
