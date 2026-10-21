@@ -31,6 +31,11 @@ void main() {
     expect(doc.hero!.figure.text, '৳4,82,350.00');
     expect(doc.hero!.figure.secret, isTrue);
     expect(doc.rows.single.title.text, 'বিল 38টা · আদায়');
+    // ⓘ ফেরত বাদ না দেওয়া মোট বিল — "বিক্রি" নয় (fe, ২০ অক্টোবর ২০২৬)
+    expect(doc.title, 'আজ বিল হয়েছে', reason: 'পুরনো সার্ভার label পাঠায় না — অঙ্কটা মোট বিল');
+    // ⭐ নতুন সার্ভার নিজের নাম পাঠায় ("নিট বিক্রি") — উইজেট সেটাই লেখে, হাতে লেখা নাম নয়
+    final net = w.build({...full(), 'label': 'নিট বিক্রি'}, asOf: asOf);
+    expect(net.title, 'নিট বিক্রি', reason: '⛔ সার্ভারের নাম উপেক্ষা — নিট অঙ্কে "আজ বিল হয়েছে" লেখা');
     expect(doc.rows.single.amount!.text, '৳3,10,000.00');
     expect(doc.rows.single.amount!.secret, isTrue);
     expect(doc.link, '/sales/invoices?period=today');

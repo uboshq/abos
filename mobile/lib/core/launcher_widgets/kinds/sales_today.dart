@@ -16,7 +16,8 @@ class SalesTodayWidget extends LauncherWidgetKind {
   String get key => 'sales_today';
 
   @override
-  String get title => 'আজকের বিক্রি';
+  // ⓘ অঙ্কটা ফেরত বাদ না দেওয়া মোট বিল — তাই "আজ বিল হয়েছে" (fe, ২০ অক্টোবর ২০২৬; IFRS 15-এ বিক্রি মানে ফেরত বাদে নিট)
+  String get title => 'আজ বিল হয়েছে';
 
   @override
   List<WidgetSize> get sizes => const [WidgetSize.s2x2, WidgetSize.s2x1];
@@ -32,7 +33,9 @@ class SalesTodayWidget extends LauncherWidgetKind {
     ].join(' · ');
 
     return WidgetDoc(
-      title: title,
+      // ⭐ নাম সার্ভারের (`label`, এখন "নিট বিক্রি" — VAT আর ফেরত বাদে; fe, ২১ অক্টোবর ২০২৬)। পুরনো সার্ভার label পাঠায় না —
+      //    তখন অঙ্কটা মোট বিল, তাই "আজ বিল হয়েছে" ([[title]])
+      title: SummaryReader.text(summary['label']) ?? title,
       asOf: asOf,
       link: SummaryReader.link(summary['link']),
       // ⓘ কোণ ফাঁকা: নকশার "১০:৪২" আঁকিয়ে নিজেই asOf থেকে লেখে (পুরনো হলে ধূসর) — কোণ দিলে ২×২-এ সময়টা সরে যেত
