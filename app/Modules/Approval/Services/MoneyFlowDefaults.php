@@ -281,6 +281,13 @@ final class MoneyFlowDefaults implements ProvisionsCompany
                     'approver_type' => ApprovalFlowStep::BY_ROLE,
                     'approver_id' => (int) $role->id,
                 ]],
+                /*
+                 * ⚠️ সইকারীর চাবির পাহারা এখানে নয় — a6, ২১ অক্টোবর ২০২৬ (fe-র কাছে খোলা প্রশ্ন)। মালিকের নিয়ম (২৭ সেপ্টেম্বর):
+                 * প্রতিটা টাকার কাজে হিসাবরক্ষকের সই; আর হিসাবরক্ষকের ছাঁচে `hr.salary.view` নেই। পাহারা খাটালে বেতনের রানের ছকই
+                 * বসত না (কোম্পানি খোলা থামত)। ⓘ তাই নিজে-বসানো ছকটা বসে; তাঁর ইনবক্সে রানের নিট ঢাকা ([[PayrollRunSummary]])।
+                 * মানুষের ছকের পর্দা ([[ApprovalFlowService::create()]]) পাহারা মানে।
+                 */
+                signerKeys: false,
             );
 
             $report['created'][] = $key;

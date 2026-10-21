@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\Drillable;
@@ -34,6 +35,13 @@ class PayrollRun extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    /*
+     * ⭐ রান খোলে নাগাল ধরে, মাথার শাখা ধরে নয় — fe, ২১ অক্টোবর ২০২৬, a6 ([[OpensInReach]], ভাউচারের একই নিয়ম;
+     * [[APayrollRunOpensByReachTest]])। ⓘ তালিকা মাথার শাখা মানে (শাখা ছাড়া রান কেবল "সব শাখা"-য়); কিন্তু সরাসরি খোলা —
+     * পাতা, ছাপা, ব্যাংকের ফাইল, লিংক, খবর বা সইয়ের পাতা থেকে — মানুষের নাগালে: শাখা ছাড়া রান কোম্পানির নাগালের সবার জন্য,
+     * নাগালের বাইরে কেবল এই রানের সইকারী, আর কেবল পড়ায় (GET)। ⛔ আগে মাথায় একটা শাখা বাছা থাকলে শাখা ছাড়া রানের লিংক ৪০৪।
+     */
+    use OpensInReach;
     use ScopedToUserBranch;
     use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;

@@ -27,6 +27,22 @@ final class ApprovalRules
         return is_string($key) && $key !== '' ? $key : null;
     }
 
+    /**
+     * ⛔ এই কাজের অনুরোধের অঙ্ক কোন চাবির পেছনে — থাকলে অঙ্কটা `approvals.amount`-এ **খোলা বসে না** (a6, ২১ অক্টোবর ২০২৬; fe-র
+     * উত্তর, বেতনের রান)।
+     *
+     * ⓘ এক নিয়ম, প্রতিটা দরজা: ইনবক্স, সইয়ের পাতা, একসাথে সইয়ের তালিকা, ফোনের কার্ড, ঘণ্টা আর চিঠির খবর ([[ApprovalEngine::noticeData()]]),
+     * অনুমোদনের রিপোর্ট আর তার ফাইল (কাঁচা SQL), ইনবক্সের খোঁজা — সবাই `amount` পড়ে, আর সেটা খালি। অঙ্কটা থাকে `payload`-এ
+     * এনক্রিপ্ট করা ([[Approval::SEALED_AMOUNT]]); ইঞ্জিনের হিসাব (সই কোন অঙ্ক ঢাকে, কর্তৃত্বের সীমা) পড়ে [[Approval::signedAmount()]]।
+     * চাবি থাকা মানুষ অঙ্কটা দেখেন মডিউলের সারাংশে ([[summaryOf()]]), যেখানে ঢাকনা [[FieldSecurity]] দিয়ে।
+     */
+    public function amountKey(string $module, string $action): ?string
+    {
+        $key = $this->modules->get($module)?->approvalRules[$action]['amount_key'] ?? null;
+
+        return is_string($key) && $key !== '' ? $key : null;
+    }
+
     public function summaryOf(Approval $approval): ?string
     {
         $class = $this->modules->get((string) $approval->module)?->approvalRules[(string) $approval->action]['summary'] ?? null;

@@ -767,12 +767,15 @@ final class ModuleDefinition
                 );
             }
 
-            $key = $rule['signer_key'] ?? null;
+            // ⓘ `amount_key` (a6, ২১ অক্টোবর ২০২৬) — অনুরোধের অঙ্ক খোলা জমা হয় না ([[ApprovalRules::amountKey()]]); একই যাচাই
+            foreach (['signer_key', 'amount_key'] as $slot) {
+                $key = $rule[$slot] ?? null;
 
-            if ($key !== null && (! is_string($key) || ! in_array($key, $permissions, true))) {
-                throw new InvalidArgumentException(
-                    "{$path}: approval_rules.{$action}.signer_key must be a permission this module declares."
-                );
+                if ($key !== null && (! is_string($key) || ! in_array($key, $permissions, true))) {
+                    throw new InvalidArgumentException(
+                        "{$path}: approval_rules.{$action}.{$slot} must be a permission this module declares."
+                    );
+                }
             }
 
             $summary = $rule['summary'] ?? null;

@@ -170,6 +170,7 @@ final class ApprovalEngine
              * পুরনো প্রবাহগুলো **অবিকল আগের মতো** চলে।
              */
             $first = $flow->steps->firstWhere('level', 1);
+            [$shownAmount, $payload] = $this->sealed($module, $action, $amount, $payload);
 
             return Approval::create([
                 'company_id' => CompanyContext::id(),
@@ -177,7 +178,7 @@ final class ApprovalEngine
                 'approvable_id' => $document->getKey(),
                 'module' => $module,
                 'action' => $action,
-                'amount' => $amount,
+                'amount' => $shownAmount,
                 'status' => Approval::PENDING,
                 'current_level' => 1,
                 'payload' => $payload,
@@ -645,10 +646,15 @@ final class ApprovalEngine
                 return;
             }
 
+            // ⓘ চাবির পেছনের অঙ্ক এখানেও খোলা বসে না ([[sealed()]])
+            [$shownAmount, $payload] = $this->sealed((string) $locked->module, (string) $locked->action, $amount, [
+                ...(array) ($locked->payload ?? []), 'edited_by_signer' => (int) $by->id, 'edited_at' => now()->toDateTimeString(),
+            ]);
+
             $locked->update([
                 'state_hash' => $hash,
-                'amount' => $amount,
-                'payload' => [...(array) ($locked->payload ?? []), 'edited_by_signer' => (int) $by->id, 'edited_at' => now()->toDateTimeString()],
+                'amount' => $shownAmount,
+                'payload' => $payload,
             ]);
         });
 
@@ -667,6 +673,24 @@ final class ApprovalEngine
             key: 'approval:'.$approval->id.':edited:'.now()->timestamp,
             about: $approval->approvable instanceof Model ? $approval->approvable : null,
         );
+    }
+
+    /**
+     * ⛔ চাবির পেছনের কাজের অঙ্ক — খোলা ঘর খালি, অঙ্কটা `payload`-এ এনক্রিপ্ট করা (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::amountKey()]])।
+     *
+     * ⓘ এক নিয়ম, লেখার মুহূর্তে: যে দরজাই `approvals.amount` পড়ুক (পর্দা, ফোন, খবর, রিপোর্ট, খোঁজা, অডিটের সারি), সেখানে খালি।
+     * শর্ত মাপা (`catches`) এর আগেই হয়ে গেছে আসল অঙ্কে, তাই সীমার ছক আগের মতোই ধরে।
+     *
+     * @param  array<string, mixed>|null  $payload
+     * @return array{0: ?string, 1: array<string, mixed>|null}
+     */
+    private function sealed(string $module, string $action, ?string $amount, ?array $payload): array
+    {
+        if ($amount === null || $amount === '' || app(ApprovalRules::class)->amountKey($module, $action) === null) {
+            return [$amount, $payload];
+        }
+
+        return [null, [...($payload ?? []), Approval::SEALED_AMOUNT => \Illuminate\Support\Facades\Crypt::encryptString((string) $amount)]];
     }
 
     /** অনুরোধকারী নিজে প্রত্যাহার করলে। */

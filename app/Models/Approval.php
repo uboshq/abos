@@ -39,6 +39,9 @@ class Approval extends Model implements Drillable
      */
     public const RETURNED = 'returned';
 
+    /** ⛔ চাবির পেছনের অঙ্ক — `payload`-এর এই ঘরে এনক্রিপ্ট করা, `amount` খালি ([[signedAmount()]], [[ApprovalRules::amountKey()]]) */
+    public const SEALED_AMOUNT = 'sealed_amount';
+
     protected $fillable = [
         'company_id', 'approvable_type', 'approvable_id', 'module', 'action',
         'amount', 'status', 'current_level', 'assigned_to', 'payload', 'state_hash',
@@ -87,6 +90,31 @@ class Approval extends Model implements Drillable
      * ⭐ বাস্তবে কারো পথ আটকায় না: নিচে নামলে অঙ্কটা সীমার নিচে পড়ে আর
      * `request()` এমনিতেই `null` ফেরায়।
      */
+    /**
+     * ⭐ সইয়ের অঙ্ক — খোলা ঘরে থাকলে সেটা, নাহলে `payload`-এ এনক্রিপ্ট করা ([[SEALED_AMOUNT]])। a6, ২১ অক্টোবর ২০২৬।
+     *
+     * ⛔ কেবল ইঞ্জিনের হিসাবের জন্য (সই কোন অঙ্ক ঢাকে, কর্তৃত্বের সীমা) — পর্দায় ছাপার জন্য নয়: যে কাজের অঙ্ক চাবির পেছনে
+     * ([[ApprovalRules::amountKey()]]), তার অঙ্ক কেবল মডিউলের সারাংশ দেখায়, চাবি মেনে।
+     */
+    public function signedAmount(): ?string
+    {
+        if ($this->amount !== null) {
+            return (string) $this->amount;
+        }
+
+        $sealed = ((array) ($this->payload ?? []))[self::SEALED_AMOUNT] ?? null;
+
+        if (! is_string($sealed)) {
+            return null;
+        }
+
+        try {
+            return bcadd(\Illuminate\Support\Facades\Crypt::decryptString($sealed), '0', 4);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException|\ValueError) {
+            return null;
+        }
+    }
+
     public function covers(?string $amount): bool
     {
         /*
@@ -97,7 +125,8 @@ class Approval extends Model implements Drillable
          * `ValueError` ছোঁড়ে — অর্থাৎ পাহারাটা বসানোর ফল হত একটা ভেঙে
          * পড়া পোস্টিং, আটকানো নয়।
          */
-        $signed = $this->amount === null ? null : (string) $this->amount;
+        // ⓘ ঢাকা অঙ্কও — খোলা ঘর খালি, অঙ্কটা `payload`-এ এনক্রিপ্ট করা ([[signedAmount()]], a6, ২১ অক্টোবর ২০২৬)
+        $signed = $this->signedAmount();
 
         $signed = ($signed === null || $signed === '') ? null : $signed;
         $amount = ($amount === null || $amount === '') ? null : $amount;

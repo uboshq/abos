@@ -262,6 +262,19 @@ return [
             'signer_key' => 'hr.salary.view',
             'summary' => \App\Modules\Hr\Services\SalaryChangeSummary::class,
         ],
+        /*
+         * ⛔ বেতনের রানের সই — নিট কেবল `hr.salary.view`-এ (fe, ২১ অক্টোবর ২০২৬, a6)।
+         *  · `amount_key` — অনুরোধের নিট `approvals.amount`-এ খোলা বসে না, এনক্রিপ্ট করা থাকে; ইনবক্স, সইয়ের পাতা, ফোন, খবর,
+         *    রিপোর্ট, খোঁজা — সবখানে খালি ([[ApprovalRules::amountKey()]])।
+         *  · `summary` — মাস, জন, নিট; নিট চাবি ছাড়া ঢাকা ([[PayrollRunSummary]])।
+         *  · `signer_key` — ছকের পর্দায় চাবি ছাড়া কেউ সইকারী নন ([[ApprovalFlowService]]; ⚠️ হিসাবরক্ষকের নিজে-বসানো ছক ব্যতিক্রম,
+         *    [[MoneyFlowDefaults]]-এর টীকা)।
+         */
+        'payroll' => [
+            'signer_key' => 'hr.salary.view',
+            'amount_key' => 'hr.salary.view',
+            'summary' => \App\Modules\Hr\Services\PayrollRunSummary::class,
+        ],
     ],
 
     /*
