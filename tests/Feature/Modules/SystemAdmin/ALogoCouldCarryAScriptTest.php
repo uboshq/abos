@@ -1,0 +1,140 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Modules\SystemAdmin;
+
+use App\Core\Support\CompanyContext;
+use App\Models\AuditFieldChange;
+use App\Models\AuditTrail;
+use App\Models\Company;
+use App\Models\User;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+/**
+ * ⭐ কোম্পানির লোগো এখন SVG-ও — কিন্তু স্ক্রিপ্ট ছেঁটে (মালিক, fe-র মাধ্যমে, ২১ অক্টোবর ২০২৬; [[SafeSvg]])।
+ *
+ * ⓘ লোগো এখন বারের বাঁ কোণে, প্রতিটা পাতায়; আর `/storage/logos/…`-এ সরাসরি পরিবেশিত হয় — কেউ ঠিকানাটা খুললে ব্রাউজার
+ * SVG-র ভেতরের স্ক্রিপ্ট চালাত, আমাদের ডোমেইনে।
+ *
+ * দাবি, আসল দরজা দিয়ে (কোম্পানির সম্পাদনা, `system_admin.company.update`):
+ *  - স্ক্রিপ্টওয়ালা SVG নেওয়া হয়, কিন্তু রাখা ফাইলে `<script>`, `on…`, `javascript:`, `<foreignObject>` নেই; আঁকাটা থাকে;
+ *  - ছবি নয় এমন ফাইল, ১ MB-র বড় SVG, ১২ MB-র বড় ছবি — ফেরত, পুরনো লোগো অক্ষত;
+ *  - কেবল `system_admin.company.manage`-ওয়ালা মানুষ পারেন — অন্যরা দরজাতেই ৪০৩;
+ *  - অডিটে আগের আর পরের ফাইল দুইটাই (`logo_path`, পুরনো → নতুন), আর পুরনো ফাইলটা ডিস্কে থেকে যায়।
+ */
+final class ALogoCouldCarryAScriptTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private const HOSTILE = <<<'SVG'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="120" height="40" onload="alert('load')">
+          <script>alert('script')</script>
+          <rect id="mark" width="40" height="40" fill="#0e4b59" onclick="alert('click')"/>
+          <a xlink:href="java&#x09;script:alert('href')"><text x="48" y="26">ABC</text></a>
+          <foreignObject width="10" height="10"><body xmlns="http://www.w3.org/1999/xhtml"><iframe src="https://evil.test"/></body></foreignObject>
+          <set attributeName="href" to="javascript:alert('set')"/>
+        </svg>
+        SVG;
+
+    private Company $company;
+
+    private User $owner;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        Storage::fake('public');
+    }
+
+    public function test_a_script_in_an_svg_logo_is_cut_out_and_the_drawing_stays(): void
+    {
+        $this->send($this->owner, UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))
+            ->assertSessionHasNoErrors()->assertRedirect();
+
+        $path = (string) $this->company->fresh()->logo_path;
+        $this->assertStringEndsWith('.svg', $path, '⛔ SVG লোগো রাখা হয়নি।');
+        $kept = (string) Storage::disk('public')->get($path);
+
+        foreach (['<script', 'onload', 'onclick', 'javascript', 'foreignObject', '<iframe'] as $danger) {
+            $this->assertStringNotContainsStringIgnoringCase($danger, $kept, "⛔ রাখা লোগোয় এখনো {$danger}।");
+        }
+        $this->assertStringContainsString('<rect id="mark"', $kept, '⛔ ছাঁটতে গিয়ে আঁকাটাই গেছে।');
+        $this->assertStringContainsString('ABC', $kept, '⛔ ছাঁটতে গিয়ে লেখাটাই গেছে।');
+        $this->assertStringStartsWith('<svg', $kept, '⛔ রাখা ফাইলটা SVG নয়।');
+    }
+
+    public function test_a_non_image_an_oversize_svg_and_an_oversize_picture_are_refused(): void
+    {
+        Storage::disk('public')->put('logos/before.png', 'png');
+        $this->company->forceFill(['logo_path' => 'logos/before.png'])->save();
+
+        $bigSvg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/><desc>'.str_repeat('x', 1100 * 1024).'</desc></svg>';
+        $refused = [
+            'ছবি নয় (PDF)' => UploadedFile::fake()->create('logo.pdf', 20, 'application/pdf'),
+            'ছবি নয় (লেখা)' => UploadedFile::fake()->createWithContent('logo.png', 'just some text, not a picture'),
+            '১ MB-র বড় SVG' => UploadedFile::fake()->createWithContent('big.svg', $bigSvg),
+            '১২ MB-র বড় ছবি' => UploadedFile::fake()->image('big.png', 200, 80)->size(13000),
+            'SVG নামে অন্য জিনিস' => UploadedFile::fake()->createWithContent('page.svg', '<html><body><script>alert(1)</script></body></html>'),
+        ];
+
+        foreach ($refused as $what => $file) {
+            $this->send($this->owner, $file)->assertSessionHasErrors('logo');
+            $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, "⛔ {$what}: ফেরত যাওয়ার কথা, অথচ লোগো বদলে গেল।");
+        }
+    }
+
+    public function test_only_company_manage_may_change_the_logo(): void
+    {
+        Storage::disk('public')->put('logos/before.png', 'png');
+        $this->company->forceFill(['logo_path' => 'logos/before.png'])->save();
+
+        $clerk = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $clerk->companies()->attach($this->company, ['is_active' => true]);
+        $this->assertFalse($clerk->fresh()->canInCompany((int) $this->company->id, 'system_admin.company.manage'), 'প্রস্তুতিটাই ভুল — কর্মীর হাতে চাবি আছে।');
+
+        $this->send($clerk->fresh(), UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))->assertForbidden();
+        $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ চাবি ছাড়াই লোগো বদলে গেল।');
+    }
+
+    public function test_the_audit_keeps_the_file_before_and_after(): void
+    {
+        Storage::disk('public')->put('logos/before.png', 'png');
+        $this->company->forceFill(['logo_path' => 'logos/before.png'])->save();
+
+        $this->send($this->owner, UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))->assertSessionHasNoErrors();
+        $after = (string) $this->company->fresh()->logo_path;
+        $this->assertNotSame('logos/before.png', $after, 'প্রস্তুতিটাই ভুল — লোগো বদলায়নি।');
+
+        $trails = AuditTrail::query()->forRecord(Company::class, (int) $this->company->id)->pluck('id');
+        $change = AuditFieldChange::query()->whereIn('audit_trail_id', $trails)->where('field', 'logo_path')->latest('id')->first();
+
+        $this->assertNotNull($change, '⛔ লোগো বদলের অডিট সারি নেই।');
+        $this->assertSame('logos/before.png', $change->old_value, '⛔ অডিটে আগের ফাইল নেই।');
+        $this->assertSame($after, $change->new_value, '⛔ অডিটে নতুন ফাইল নেই।');
+        Storage::disk('public')->assertExists('logos/before.png');
+    }
+
+    private function send(User $who, UploadedFile $logo): \Illuminate\Testing\TestResponse
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this->actingAs($who)
+            ->from(route('system_admin.company.edit', $this->company))
+            ->put(route('system_admin.company.update', $this->company), [
+                'code' => $this->company->code,
+                'name_en' => $this->company->name_en,
+                'name_bn' => (string) $this->company->name_bn,
+                'logo' => $logo,
+            ]);
+    }
+}
