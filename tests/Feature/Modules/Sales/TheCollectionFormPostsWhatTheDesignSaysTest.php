@@ -692,10 +692,15 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     }
 
     /** দফা ১৮ — দেয়ালের SR কেবল নিজের ডিলারের খোলা কাগজ দেখেন; অন্যের ডিলার ৪০৪, কিছুই ফাঁস নয় */
-    public function test_item_18_a_walled_salesman_opens_only_his_own_dealers_items(): void
+    /**
+     * দফা ১৮ — দেয়ালের SR ওয়েবেও আদায় নেন না (মালিক: *"বিক্রয়কর্মী কিছুই তৈরি করতে পারবেন না — কেবল অর্ডার দেবেন"*,
+     * [[DealerScope::MAY_CREATE]]): আদায়ের চাবি থাকলেও পর্দা, খোলা কাগজ আর প্রিভিউ ৪০৩ — নিজের ডিলারেও।
+     * ⓘ সংশোধন (a6, ২২ অক্টোবর ২০২৬): আগের দাবি ধরে নিত SR নিজের ডিলারের কাগজ খোলেন — নিয়মের উল্টো; Mac-এ লাল হত।
+     * ⓘ তুলনার জন্য: দেয়ালের বাইরের কর্তা ([[maker]]) একই গ্রাহকে ২০০ — দাবিটা কিছু মাপে।
+     */
+    public function test_item_18_a_walled_salesman_takes_no_collection_on_the_web(): void
     {
         app(SettingsService::class)->set(DealerScope::SWITCH, true);
-        $stranger = Customer::query()->create(['code' => 'CF-X', 'name_en' => 'Not His Store', 'is_active' => true]);
         $this->bill('INV-CF-SR', 10, '900');
 
         $sr = $this->person(['sales.collection.create', 'sales.collection.view', DealerScope::OWN]);
@@ -705,10 +710,14 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->actingAs($sr);
         $this->assertTrue(app(DealerScope::class)->walled(), 'প্রস্তুতিটাই ভুল — SR দেয়ালে নেই');
 
-        $this->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->assertOk()
-            ->assertJsonPath('customer.id', (string) $this->dealer->public_id);
-        $this->getJson(route('sales.collection.open_items', ['customer' => $stranger->id]))
-            ->assertNotFound();
+        $this->assertSame(403, $this->get(route('sales.collection.create'))->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের পর্দা খুললেন');
+        $items = $this->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]));
+        $this->assertSame(403, $items->status(), '⛔ দফা ১৮: দেয়ালের SR নিজের ডিলারের খোলা কাগজ আদায়ের জন্য খুললেন');
+        $preview = $this->postJson(route('sales.collection.preview'), $this->form(['amount' => '100']));
+        $this->assertSame(403, $preview->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের প্রিভিউ খুললেন');
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->maker)->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->assertOk();
     }
 
     /**

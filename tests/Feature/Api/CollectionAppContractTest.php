@@ -284,20 +284,30 @@ final class CollectionAppContractTest extends TestCase
             '⛔ দফা ১৩: বন্ধ মাসের খাতায় সারি বসল');
     }
 
-    /** দফা ১৮ — দেয়ালের SR অন্যের ডিলারের খোলা বিল আর প্রিভিউ পান না (৪০৪, কিছুই ফাঁস নয়) */
-    public function test_item_18_a_walled_salesman_gets_no_other_dealers_bills(): void
+    /**
+     * দফা ১৮ — দেয়ালের SR আদায় নেন না: মালিকের নিয়ম *"বিক্রয়কর্মী কিছুই তৈরি করতে পারবেন না — কেবল অর্ডার দেবেন"*
+     * ([[DealerScope::MAY_CREATE]] কেবল `sales.order.create`), আর ৭ অক্টোবরের ফোন-আদায়ে "দেয়ালের SR-এর ফোনে লুকানো"।
+     * তাই আদায়ের চাবি থাকলেও ফোনের দুই দরজাই ৪০৩ — নিজের ডিলারেও; খাতার কোনো লাইন বা বকেয়া ফেরে না।
+     * ⓘ সংশোধন (a6, ২২ অক্টোবর ২০২৬): আগের দাবি ৪০৪/৪২২ ধরত — দেয়াল আগেই ৪০৩ দেয়, তাই Mac-এ লাল হত।
+     */
+    public function test_item_18_a_walled_salesman_takes_no_collection_on_the_phone(): void
     {
         app(\App\Core\Services\SettingsService::class)->set(\App\Core\Services\DealerScope::SWITCH, true);
         $sr = $this->person(['sales.collection.create', 'sales.collection.view', \App\Core\Services\DealerScope::OWN]);
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $sr->id,
+            'customer_id' => $this->dealer->id, 'starts_on' => now()->subDay()->toDateString(), 'created_by' => $sr->id]);
         app(\App\Core\Services\DealerScope::class)->forget();
         $this->bill('INV-APP-SR', 5, '900');
+        $this->assertTrue(app(\App\Core\Services\DealerScope::class)->walled($sr->fresh()), 'প্রস্তুতিটাই ভুল — SR দেয়ালে নেই');
 
         $this->phone($sr);
-        $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id)->assertNotFound();
-        // ⓘ গ্রাহক দেয়ালের ওপারে — "গ্রাহক চেনা নেই" (৪২২) বা ৪০৪; দুই পথেই খাতার কোনো লাইন বা বকেয়া ফেরে না
+        $bills = $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id);
+        $this->assertSame(403, $bills->status(), '⛔ দফা ১৮: দেয়ালের SR নিজের ডিলারের বকেয়া বিল আদায়ের জন্য খুললেন ('.$bills->status().')');
+        $this->assertArrayNotHasKey('bills', (array) $bills->json(), '⛔ দফা ১৮: দেয়ালের SR-এর কাছে বকেয়া বিল ফাঁস হলো');
+
         $preview = $this->postJson('/api/v1/sales/collections/preview', $this->payload(['amount' => '100']));
-        $this->assertContains($preview->status(), [404, 422], '⛔ দফা ১৮: অন্যের ডিলারের প্রিভিউ খুলে গেল ('.$preview->status().')');
-        $this->assertArrayNotHasKey('lines', (array) $preview->json(), '⛔ দফা ১৮: অন্যের ডিলারের খাতার লাইন ফাঁস হলো');
+        $this->assertSame(403, $preview->status(), '⛔ দফা ১৮: দেয়ালের SR আদায়ের প্রিভিউ খুললেন ('.$preview->status().')');
+        $this->assertArrayNotHasKey('lines', (array) $preview->json(), '⛔ দফা ১৮: দেয়ালের SR-এর কাছে খাতার লাইন ফাঁস হলো');
     }
 
     /**
