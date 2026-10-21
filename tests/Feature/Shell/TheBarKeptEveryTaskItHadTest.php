@@ -96,7 +96,8 @@ final class TheBarKeptEveryTaskItHadTest extends TestCase
         $first = $this->person(['approval.decide']);
         $second = $this->person(['approval.decide']);
         $writer = $this->person(['accounts.voucher.create', 'accounts.voucher.update', 'approval.decide']);
-        $idle = $this->person(['approval.decide']);
+        // ⓘ সইদাতা নন, নিজের কোনো কাগজও আটকে নেই — সইদাতা (approval.decide) কোম্পানির সব আটকে-থাকা দেখেন ([[SignedButNotPosted::papers()]])
+        $idle = $this->person(['accounts.voucher.create']);
 
         // ⓘ দুই ধাপের সই; শেষ সইয়ের আগে মাস বন্ধ — কাগজ সই-শেষ, পোস্ট আটকে ([[SignedPaperFinisher]])
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'journal', 'is_active' => true]);
