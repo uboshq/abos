@@ -1339,5 +1339,263 @@
   "deliveryOrdersStockNotEnough": "মজুদে কুলোয় না",
   "@deliveryOrdersStockNotEnough": {
     "description": "DO page: stock is short, amount unknown"
+  },
+  "salesPlanLoadFailed": "আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@salesPlanLoadFailed": {
+    "description": "Sales plan pages: the page could not be loaded"
+  },
+  "salesPlanNotOnServer": "সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।",
+  "@salesPlanNotOnServer": {
+    "description": "Sales plan pages: the server does not have this door yet"
+  },
+  "salesPlanPreviousMonth": "আগের মাস",
+  "@salesPlanPreviousMonth": {
+    "description": "Month bar: tooltip of the previous-month button"
+  },
+  "salesPlanNextMonth": "পরের মাস",
+  "@salesPlanNextMonth": {
+    "description": "Month bar: tooltip of the next-month button"
+  },
+  "salesPlanPeople": "{count, plural, other{{count} জন}}",
+  "@salesPlanPeople": {
+    "description": "Sales plan: a count of people",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanTargetsTitle": "লক্ষ্যমাত্রা",
+  "@salesPlanTargetsTitle": {
+    "description": "Sales targets: screen title"
+  },
+  "salesPlanTargetsEmpty": "এই মাসে কোনো বিক্রয়কর্মী নেই",
+  "@salesPlanTargetsEmpty": {
+    "description": "Sales targets: empty title"
+  },
+  "salesPlanTargetsNote": "ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।",
+  "@salesPlanTargetsNote": {
+    "description": "Sales targets: the note under the month"
+  },
+  "salesPlanTotalTarget": "মোট লক্ষ্য",
+  "@salesPlanTotalTarget": {
+    "description": "Sales plan: the total target"
+  },
+  "salesPlanTotalAchieved": "মোট অর্জন",
+  "@salesPlanTotalAchieved": {
+    "description": "Sales plan: the total achieved"
+  },
+  "salesPlanTargetHoldersAchieved": "লক্ষ্যধারীদের অর্জন",
+  "@salesPlanTargetHoldersAchieved": {
+    "description": "Sales targets: the achievement percent of people who have a target"
+  },
+  "salesPlanTargetSet": "লক্ষ্য বসানো",
+  "@salesPlanTargetSet": {
+    "description": "Sales plan: how many people have a target"
+  },
+  "salesPlanTargetAchieved": "লক্ষ্য {target} · অর্জন {achieved}",
+  "@salesPlanTargetAchieved": {
+    "description": "Sales targets: a salesperson row; amounts from Money.taka",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "achieved": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanDealerTargetsTitle": "ডিলারের লক্ষ্য",
+  "@salesPlanDealerTargetsTitle": {
+    "description": "Dealer targets: screen title"
+  },
+  "salesPlanDealerTargetsNoneSet": "এই মাসে কারো লক্ষ্য বসানো নেই",
+  "@salesPlanDealerTargetsNoneSet": {
+    "description": "Dealer targets: empty title when only targets are shown"
+  },
+  "salesPlanDealerTargetsEmpty": "কোনো ডিলার নেই",
+  "@salesPlanDealerTargetsEmpty": {
+    "description": "Dealer targets: empty title"
+  },
+  "salesPlanDealerTargetsSearch": "ডিলারের নাম বা কোড",
+  "@salesPlanDealerTargetsSearch": {
+    "description": "Dealer targets: search hint"
+  },
+  "salesPlanDealerTargetsOnlySet": "কেবল যাঁদের লক্ষ্য আছে",
+  "@salesPlanDealerTargetsOnlySet": {
+    "description": "Dealer targets: filter chip"
+  },
+  "salesPlanDealerTargetsNote": "ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।",
+  "@salesPlanDealerTargetsNote": {
+    "description": "Dealer targets: the note under the filters"
+  },
+  "salesPlanTotalDue": "মোট বাকি",
+  "@salesPlanTotalDue": {
+    "description": "Sales plan: the total still owed"
+  },
+  "salesPlanAchieved": "অর্জন {amount}",
+  "@salesPlanAchieved": {
+    "description": "Dealer targets: achieved on a row; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanDue": "বাকি {amount}",
+  "@salesPlanDue": {
+    "description": "Sales plan: still owed on a row; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanEnds": "শেষ {date}",
+  "@salesPlanEnds": {
+    "description": "Dealer targets: the last day of the target",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanRouteBookTitle": "রুটের খাতা",
+  "@salesPlanRouteBookTitle": {
+    "description": "Route book: screen title"
+  },
+  "salesPlanRouteBookEmpty": "কোনো রুট নেই",
+  "@salesPlanRouteBookEmpty": {
+    "description": "Route book: empty title"
+  },
+  "salesPlanRouteBookSearch": "রুটের নাম বা কোড",
+  "@salesPlanRouteBookSearch": {
+    "description": "Route book: search hint"
+  },
+  "salesPlanTotalSales": "মোট বিক্রি",
+  "@salesPlanTotalSales": {
+    "description": "Route book: the total sales"
+  },
+  "salesPlanTotalCollections": "মোট আদায়",
+  "@salesPlanTotalCollections": {
+    "description": "Route book: the total collections"
+  },
+  "salesPlanTargetAchievement": "লক্ষ্যের অর্জন",
+  "@salesPlanTargetAchievement": {
+    "description": "Sales plan: how much of the target is achieved"
+  },
+  "salesPlanDealers": "ডিলার",
+  "@salesPlanDealers": {
+    "description": "Sales plan: the dealers row and section title"
+  },
+  "salesPlanUnrouted": "{count, plural, other{⚠ {count} জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।}}",
+  "@salesPlanUnrouted": {
+    "description": "Route book: dealers on no route",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanDealerCount": "{count, plural, other{{count} জন ডিলার}}",
+  "@salesPlanDealerCount": {
+    "description": "Route book: how many dealers a route has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanSalesCollections": "বিক্রি {sales} · আদায় {collections}",
+  "@salesPlanSalesCollections": {
+    "description": "Sales plan: sales and collections on a row; amounts from Money.taka",
+    "placeholders": {
+      "sales": {
+        "type": "String"
+      },
+      "collections": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanTargetPercent": "লক্ষ্য {target} · {percent}",
+  "@salesPlanTargetPercent": {
+    "description": "Route book: the target and the percent achieved",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanRouteEmpty": "এই রুটে কোনো ডিলার নেই",
+  "@salesPlanRouteEmpty": {
+    "description": "Route page: empty title"
+  },
+  "salesPlanClosingBalance": "শেষ জের (বাকি)",
+  "@salesPlanClosingBalance": {
+    "description": "Route page: the closing balance"
+  },
+  "salesPlanOpeningBalance": "আগের জের",
+  "@salesPlanOpeningBalance": {
+    "description": "Route page: the opening balance"
+  },
+  "salesPlanSales": "বিক্রি",
+  "@salesPlanSales": {
+    "description": "Route page: sales of the month"
+  },
+  "salesPlanReturns": "ফেরত",
+  "@salesPlanReturns": {
+    "description": "Route page: sales returns of the month"
+  },
+  "salesPlanCollections": "আদায়",
+  "@salesPlanCollections": {
+    "description": "Route page: collections of the month"
+  },
+  "salesPlanOther": "অন্যান্য",
+  "@salesPlanOther": {
+    "description": "Route page: other entries of the month"
+  },
+  "salesPlanTarget": "লক্ষ্য",
+  "@salesPlanTarget": {
+    "description": "Route page: the target"
+  },
+  "salesPlanWeeklyPlan": "সাপ্তাহিক ছক",
+  "@salesPlanWeeklyPlan": {
+    "description": "Route page: section title of the weekly visit plan"
+  },
+  "salesPlanWeeklyPlanEmpty": "ছকে কেউ বসানো নেই।",
+  "@salesPlanWeeklyPlanEmpty": {
+    "description": "Route page: the weekly plan is empty"
+  },
+  "salesPlanVisitActive": "চালু",
+  "@salesPlanVisitActive": {
+    "description": "Route page: a visit plan row that is running"
+  },
+  "salesPlanVisitEnded": "শেষ",
+  "@salesPlanVisitEnded": {
+    "description": "Route page: a visit plan row that has ended"
+  },
+  "salesPlanFromTo": "{from} থেকে {to}",
+  "@salesPlanFromTo": {
+    "description": "Sales plan: a date or amount range",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanOngoing": "চলছে",
+  "@salesPlanOngoing": {
+    "description": "Route page: a visit plan with no end date"
+  },
+  "salesPlanRouteNote": "ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।",
+  "@salesPlanRouteNote": {
+    "description": "Route page: the note under the weekly plan"
   }
 }

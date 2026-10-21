@@ -1073,4 +1073,193 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get deliveryOrdersStockNotEnough => 'Not enough stock';
+
+  @override
+  String get salesPlanLoadFailed => 'Could not load. Pull down to try again.';
+
+  @override
+  String get salesPlanNotOnServer =>
+      'The server does not have this phone screen yet. Tell the office.';
+
+  @override
+  String get salesPlanPreviousMonth => 'Previous month';
+
+  @override
+  String get salesPlanNextMonth => 'Next month';
+
+  @override
+  String salesPlanPeople(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPlanTargetsTitle => 'Sales targets';
+
+  @override
+  String get salesPlanTargetsEmpty => 'No salespeople this month';
+
+  @override
+  String get salesPlanTargetsNote =>
+      'ⓘ Targets are set on the web. Achievement counts confirmed invoices, without VAT and discount.';
+
+  @override
+  String get salesPlanTotalTarget => 'Total target';
+
+  @override
+  String get salesPlanTotalAchieved => 'Total achieved';
+
+  @override
+  String get salesPlanTargetHoldersAchieved =>
+      'Achievement of those with a target';
+
+  @override
+  String get salesPlanTargetSet => 'Target set';
+
+  @override
+  String salesPlanTargetAchieved(String target, String achieved) {
+    return 'Target $target · Achieved $achieved';
+  }
+
+  @override
+  String get salesPlanDealerTargetsTitle => 'Dealer targets';
+
+  @override
+  String get salesPlanDealerTargetsNoneSet => 'No one has a target this month';
+
+  @override
+  String get salesPlanDealerTargetsEmpty => 'No dealers';
+
+  @override
+  String get salesPlanDealerTargetsSearch => 'Dealer name or code';
+
+  @override
+  String get salesPlanDealerTargetsOnlySet => 'Only those with a target';
+
+  @override
+  String get salesPlanDealerTargetsNote =>
+      'ⓘ Targets are set on the web. Achieved means collections, receipts and cleared cheques.';
+
+  @override
+  String get salesPlanTotalDue => 'Total due';
+
+  @override
+  String salesPlanAchieved(String amount) {
+    return 'Achieved $amount';
+  }
+
+  @override
+  String salesPlanDue(String amount) {
+    return 'Due $amount';
+  }
+
+  @override
+  String salesPlanEnds(String date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String get salesPlanRouteBookTitle => 'Route book';
+
+  @override
+  String get salesPlanRouteBookEmpty => 'No routes';
+
+  @override
+  String get salesPlanRouteBookSearch => 'Route name or code';
+
+  @override
+  String get salesPlanTotalSales => 'Total sales';
+
+  @override
+  String get salesPlanTotalCollections => 'Total collection';
+
+  @override
+  String get salesPlanTargetAchievement => 'Target achievement';
+
+  @override
+  String get salesPlanDealers => 'Dealers';
+
+  @override
+  String salesPlanUnrouted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '⚠ $count dealers are on no route — their figures are not here.',
+      one: '⚠ $count dealer is on no route — their figures are not here.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPlanDealerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dealers',
+      one: '$count dealer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPlanSalesCollections(String sales, String collections) {
+    return 'Sales $sales · Collection $collections';
+  }
+
+  @override
+  String salesPlanTargetPercent(String target, String percent) {
+    return 'Target $target · $percent';
+  }
+
+  @override
+  String get salesPlanRouteEmpty => 'No dealers on this route';
+
+  @override
+  String get salesPlanClosingBalance => 'Closing balance (due)';
+
+  @override
+  String get salesPlanOpeningBalance => 'Opening balance';
+
+  @override
+  String get salesPlanSales => 'Sales';
+
+  @override
+  String get salesPlanReturns => 'Returns (goods sent back)';
+
+  @override
+  String get salesPlanCollections => 'Collection';
+
+  @override
+  String get salesPlanOther => 'Other';
+
+  @override
+  String get salesPlanTarget => 'Target';
+
+  @override
+  String get salesPlanWeeklyPlan => 'Weekly plan';
+
+  @override
+  String get salesPlanWeeklyPlanEmpty => 'No one is on the plan.';
+
+  @override
+  String get salesPlanVisitActive => 'Active';
+
+  @override
+  String get salesPlanVisitEnded => 'Ended';
+
+  @override
+  String salesPlanFromTo(String from, String to) {
+    return '$from to $to';
+  }
+
+  @override
+  String get salesPlanOngoing => 'ongoing';
+
+  @override
+  String get salesPlanRouteNote => 'ⓘ The plan and targets are set on the web.';
 }

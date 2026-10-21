@@ -1560,6 +1560,300 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'মজুদে কুলোয় না'**
   String get deliveryOrdersStockNotEnough;
+
+  /// Sales plan pages: the page could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get salesPlanLoadFailed;
+
+  /// Sales plan pages: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।'**
+  String get salesPlanNotOnServer;
+
+  /// Month bar: tooltip of the previous-month button
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের মাস'**
+  String get salesPlanPreviousMonth;
+
+  /// Month bar: tooltip of the next-month button
+  ///
+  /// In bn, this message translates to:
+  /// **'পরের মাস'**
+  String get salesPlanNextMonth;
+
+  /// Sales plan: a count of people
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count} জন}}'**
+  String salesPlanPeople(int count);
+
+  /// Sales targets: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্যমাত্রা'**
+  String get salesPlanTargetsTitle;
+
+  /// Sales targets: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মাসে কোনো বিক্রয়কর্মী নেই'**
+  String get salesPlanTargetsEmpty;
+
+  /// Sales targets: the note under the month
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।'**
+  String get salesPlanTargetsNote;
+
+  /// Sales plan: the total target
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট লক্ষ্য'**
+  String get salesPlanTotalTarget;
+
+  /// Sales plan: the total achieved
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট অর্জন'**
+  String get salesPlanTotalAchieved;
+
+  /// Sales targets: the achievement percent of people who have a target
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্যধারীদের অর্জন'**
+  String get salesPlanTargetHoldersAchieved;
+
+  /// Sales plan: how many people have a target
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য বসানো'**
+  String get salesPlanTargetSet;
+
+  /// Sales targets: a salesperson row; amounts from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য {target} · অর্জন {achieved}'**
+  String salesPlanTargetAchieved(String target, String achieved);
+
+  /// Dealer targets: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলারের লক্ষ্য'**
+  String get salesPlanDealerTargetsTitle;
+
+  /// Dealer targets: empty title when only targets are shown
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মাসে কারো লক্ষ্য বসানো নেই'**
+  String get salesPlanDealerTargetsNoneSet;
+
+  /// Dealer targets: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো ডিলার নেই'**
+  String get salesPlanDealerTargetsEmpty;
+
+  /// Dealer targets: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলারের নাম বা কোড'**
+  String get salesPlanDealerTargetsSearch;
+
+  /// Dealer targets: filter chip
+  ///
+  /// In bn, this message translates to:
+  /// **'কেবল যাঁদের লক্ষ্য আছে'**
+  String get salesPlanDealerTargetsOnlySet;
+
+  /// Dealer targets: the note under the filters
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।'**
+  String get salesPlanDealerTargetsNote;
+
+  /// Sales plan: the total still owed
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বাকি'**
+  String get salesPlanTotalDue;
+
+  /// Dealer targets: achieved on a row; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্জন {amount}'**
+  String salesPlanAchieved(String amount);
+
+  /// Sales plan: still owed on a row; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String salesPlanDue(String amount);
+
+  /// Dealer targets: the last day of the target
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ {date}'**
+  String salesPlanEnds(String date);
+
+  /// Route book: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'রুটের খাতা'**
+  String get salesPlanRouteBookTitle;
+
+  /// Route book: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো রুট নেই'**
+  String get salesPlanRouteBookEmpty;
+
+  /// Route book: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'রুটের নাম বা কোড'**
+  String get salesPlanRouteBookSearch;
+
+  /// Route book: the total sales
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বিক্রি'**
+  String get salesPlanTotalSales;
+
+  /// Route book: the total collections
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট আদায়'**
+  String get salesPlanTotalCollections;
+
+  /// Sales plan: how much of the target is achieved
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্যের অর্জন'**
+  String get salesPlanTargetAchievement;
+
+  /// Sales plan: the dealers row and section title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার'**
+  String get salesPlanDealers;
+
+  /// Route book: dealers on no route
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{⚠ {count} জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।}}'**
+  String salesPlanUnrouted(int count);
+
+  /// Route book: how many dealers a route has
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count} জন ডিলার}}'**
+  String salesPlanDealerCount(int count);
+
+  /// Sales plan: sales and collections on a row; amounts from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি {sales} · আদায় {collections}'**
+  String salesPlanSalesCollections(String sales, String collections);
+
+  /// Route book: the target and the percent achieved
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য {target} · {percent}'**
+  String salesPlanTargetPercent(String target, String percent);
+
+  /// Route page: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই রুটে কোনো ডিলার নেই'**
+  String get salesPlanRouteEmpty;
+
+  /// Route page: the closing balance
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ জের (বাকি)'**
+  String get salesPlanClosingBalance;
+
+  /// Route page: the opening balance
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের জের'**
+  String get salesPlanOpeningBalance;
+
+  /// Route page: sales of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি'**
+  String get salesPlanSales;
+
+  /// Route page: sales returns of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত'**
+  String get salesPlanReturns;
+
+  /// Route page: collections of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়'**
+  String get salesPlanCollections;
+
+  /// Route page: other entries of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্যান্য'**
+  String get salesPlanOther;
+
+  /// Route page: the target
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য'**
+  String get salesPlanTarget;
+
+  /// Route page: section title of the weekly visit plan
+  ///
+  /// In bn, this message translates to:
+  /// **'সাপ্তাহিক ছক'**
+  String get salesPlanWeeklyPlan;
+
+  /// Route page: the weekly plan is empty
+  ///
+  /// In bn, this message translates to:
+  /// **'ছকে কেউ বসানো নেই।'**
+  String get salesPlanWeeklyPlanEmpty;
+
+  /// Route page: a visit plan row that is running
+  ///
+  /// In bn, this message translates to:
+  /// **'চালু'**
+  String get salesPlanVisitActive;
+
+  /// Route page: a visit plan row that has ended
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ'**
+  String get salesPlanVisitEnded;
+
+  /// Sales plan: a date or amount range
+  ///
+  /// In bn, this message translates to:
+  /// **'{from} থেকে {to}'**
+  String salesPlanFromTo(String from, String to);
+
+  /// Route page: a visit plan with no end date
+  ///
+  /// In bn, this message translates to:
+  /// **'চলছে'**
+  String get salesPlanOngoing;
+
+  /// Route page: the note under the weekly plan
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।'**
+  String get salesPlanRouteNote;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

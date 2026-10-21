@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
+import '../../core/widgets/day_part.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -23,18 +25,12 @@ TextStyle _muted(BuildContext context) => TextStyle(fontSize: 13, color: context
 const _bold = TextStyle(fontWeight: FontWeight.w600);
 const _amount = TextStyle(fontWeight: FontWeight.w700);
 const _failed = 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।';
-const _absent = 'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।';
-
-const _months = [
-  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-];
 
 /// `DateTime(2026, 10)` → `2026-10` (সার্ভারের `?month=`)
 String monthKey(DateTime month) => '${month.year}-${month.month.toString().padLeft(2, '0')}';
 
-/// `DateTime(2026, 10)` → "অক্টোবর 2026"
-String monthLabel(DateTime month) => '${_months[month.month - 1]} ${month.year}';
+/// `DateTime(2026, 10)` → "অক্টোবর 2026" (ইংরেজিতে "October 2026") — [monthText]
+String monthLabel(DateTime month) => monthText(month);
 
 /// শতাংশ — "85.0%"; লক্ষ্য না থাকলে "—"
 String percentOf(String? percent) => percent == null ? '—' : '$percent%';
@@ -108,7 +104,7 @@ class _PlanListState extends State<_PlanList> {
         _next = page.nextPage;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: _failed, whenAbsent: _absent));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.salesPlanLoadFailed, whenAbsent: context.l10n.salesPlanNotOnServer));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -151,7 +147,7 @@ class MonthBar extends StatelessWidget {
         children: [
           IconButton(
             key: const ValueKey('month-previous'),
-            tooltip: 'আগের মাস',
+            tooltip: context.l10n.salesPlanPreviousMonth,
             icon: const Icon(Icons.chevron_left),
             onPressed: () => onChanged(DateTime(month.year, month.month - 1)),
           ),
@@ -161,7 +157,7 @@ class MonthBar extends StatelessWidget {
           ),
           IconButton(
             key: const ValueKey('month-next'),
-            tooltip: 'পরের মাস',
+            tooltip: context.l10n.salesPlanNextMonth,
             icon: const Icon(Icons.chevron_right),
             onPressed: () => onChanged(DateTime(month.year, month.month + 1)),
           ),
@@ -273,22 +269,22 @@ class _SalesTargetsScreenState extends State<SalesTargetsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'লক্ষ্যমাত্রা'),
+        appBar: AbosScreenBar(title: context.l10n.salesPlanTargetsTitle),
         body: _PlanList(
           reloadKey: monthKey(_month),
           load: (page) => widget.api.targets(month: monthKey(_month), page: page),
           rowsKey: 'rows',
-          emptyTitle: 'এই মাসে কোনো বিক্রয়কর্মী নেই',
+          emptyTitle: context.l10n.salesPlanTargetsEmpty,
           controls: [
             MonthBar(month: _month, onChanged: (m) => setState(() => _month = m)),
-            _note(context, 'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।'),
+            _note(context, context.l10n.salesPlanTargetsNote),
           ],
           summary: (context, p) {
             final t = p.child('totals');
-            return _totals('মোট লক্ষ্য', Money.taka(t.text('target')), p.number('count'), [
-              ('মোট অর্জন', Money.taka(t.text('achieved'))),
-              ('লক্ষ্যধারীদের অর্জন', percentOf(t.maybe('percent'))),
-              ('লক্ষ্য বসানো', '${t.number('with_target')} জন'),
+            return _totals(context.l10n.salesPlanTotalTarget, Money.taka(t.text('target')), p.number('count'), [
+              (context.l10n.salesPlanTotalAchieved, Money.taka(t.text('achieved'))),
+              (context.l10n.salesPlanTargetHoldersAchieved, percentOf(t.maybe('percent'))),
+              (context.l10n.salesPlanTargetSet, context.l10n.salesPlanPeople(t.number('with_target'))),
             ]);
           },
           item: (context, r) => _card(key: ValueKey('target-${r.text('id')}'), children: [
@@ -297,7 +293,7 @@ class _SalesTargetsScreenState extends State<SalesTargetsScreen> {
               Text(percentOf(r.maybe('percent')),
                   style: TextStyle(fontWeight: FontWeight.w700, color: _percentColour(context, r.maybe('percent')))),
             ]),
-            Text('লক্ষ্য ${takaOrDash(r.maybe('target'))} · অর্জন ${Money.taka(r.text('achieved'))}', style: _muted(context)),
+            Text(context.l10n.salesPlanTargetAchieved(takaOrDash(r.maybe('target')), Money.taka(r.text('achieved'))), style: _muted(context)),
           ]),
         ),
       );
@@ -330,31 +326,31 @@ class _DealerTargetsScreenState extends State<DealerTargetsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'ডিলারের লক্ষ্য'),
+        appBar: AbosScreenBar(title: context.l10n.salesPlanDealerTargetsTitle),
         body: _PlanList(
           reloadKey: '${monthKey(_month)}|$_q|$_onlySet',
           load: (page) => widget.api.dealerTargets(month: monthKey(_month), q: _q, onlySet: _onlySet, page: page),
           rowsKey: 'rows',
-          emptyTitle: _onlySet ? 'এই মাসে কারো লক্ষ্য বসানো নেই' : 'কোনো ডিলার নেই',
+          emptyTitle: _onlySet ? context.l10n.salesPlanDealerTargetsNoneSet : context.l10n.salesPlanDealerTargetsEmpty,
           controls: [
             MonthBar(month: _month, onChanged: (m) => setState(() => _month = m)),
-            _Search(fieldKey: 'dealer-target-search', hint: 'ডিলারের নাম বা কোড', onSearch: (v) => setState(() => _q = v)),
+            _Search(fieldKey: 'dealer-target-search', hint: context.l10n.salesPlanDealerTargetsSearch, onSearch: (v) => setState(() => _q = v)),
             Wrap(spacing: AppSpacing.xs, children: [
               FilterChip(
                 key: const ValueKey('dealer-target-only-set'),
-                label: const Text('কেবল যাঁদের লক্ষ্য আছে'),
+                label: Text(context.l10n.salesPlanDealerTargetsOnlySet),
                 selected: _onlySet,
                 onSelected: (v) => setState(() => _onlySet = v),
               ),
             ]),
-            _note(context, 'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।'),
+            _note(context, context.l10n.salesPlanDealerTargetsNote),
           ],
           summary: (context, p) {
             final t = p.child('totals');
-            return _totals('মোট লক্ষ্য', Money.taka(t.text('target')), p.number('count'), [
-              ('মোট অর্জন', Money.taka(t.text('achieved'))),
-              ('মোট বাকি', Money.taka(t.text('remaining'))),
-              ('লক্ষ্য বসানো', '${t.number('with_target')} জন'),
+            return _totals(context.l10n.salesPlanTotalTarget, Money.taka(t.text('target')), p.number('count'), [
+              (context.l10n.salesPlanTotalAchieved, Money.taka(t.text('achieved'))),
+              (context.l10n.salesPlanTotalDue, Money.taka(t.text('remaining'))),
+              (context.l10n.salesPlanTargetSet, context.l10n.salesPlanPeople(t.number('with_target'))),
             ]);
           },
           item: (context, r) => _card(key: ValueKey('dealer-target-${r.text('code')}'), children: [
@@ -364,9 +360,9 @@ class _DealerTargetsScreenState extends State<DealerTargetsScreen> {
             ]),
             Text(
               [
-                'অর্জন ${Money.taka(r.text('achieved'))}',
-                if (r.maybe('remaining') != null) 'বাকি ${Money.taka(r.text('remaining'))}',
-                if (r.maybe('closes_on') != null) 'শেষ ${dayOf(r.maybe('closes_on'))}',
+                context.l10n.salesPlanAchieved(Money.taka(r.text('achieved'))),
+                if (r.maybe('remaining') != null) context.l10n.salesPlanDue(Money.taka(r.text('remaining'))),
+                if (r.maybe('closes_on') != null) context.l10n.salesPlanEnds(dayOf(r.maybe('closes_on'))),
               ].join(' · '),
               style: _muted(context),
             ),
@@ -401,25 +397,25 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'রুটের খাতা'),
+        appBar: AbosScreenBar(title: context.l10n.salesPlanRouteBookTitle),
         body: _PlanList(
           reloadKey: '${monthKey(_month)}|$_q',
           load: (page) => widget.api.routes(month: monthKey(_month), q: _q, page: page),
           rowsKey: 'rows',
-          emptyTitle: 'কোনো রুট নেই',
+          emptyTitle: context.l10n.salesPlanRouteBookEmpty,
           controls: [
             MonthBar(month: _month, onChanged: (m) => setState(() => _month = m)),
-            _Search(fieldKey: 'route-search', hint: 'রুটের নাম বা কোড', onSearch: (v) => setState(() => _q = v)),
+            _Search(fieldKey: 'route-search', hint: context.l10n.salesPlanRouteBookSearch, onSearch: (v) => setState(() => _q = v)),
           ],
           summary: (context, p) {
             final t = p.child('totals');
             return [
-              ..._totals('মোট বিক্রি', Money.taka(t.text('sales')), p.number('count'), [
-                ('মোট আদায়', Money.taka(t.text('collections'))),
-                ('মোট বাকি', Money.taka(t.text('outstanding'))),
-                ('মোট লক্ষ্য', Money.taka(t.text('target'))),
-                ('লক্ষ্যের অর্জন', percentOf(t.maybe('percent'))),
-                ('ডিলার', '${t.number('customers')} জন'),
+              ..._totals(context.l10n.salesPlanTotalSales, Money.taka(t.text('sales')), p.number('count'), [
+                (context.l10n.salesPlanTotalCollections, Money.taka(t.text('collections'))),
+                (context.l10n.salesPlanTotalDue, Money.taka(t.text('outstanding'))),
+                (context.l10n.salesPlanTotalTarget, Money.taka(t.text('target'))),
+                (context.l10n.salesPlanTargetAchievement, percentOf(t.maybe('percent'))),
+                (context.l10n.salesPlanDealers, context.l10n.salesPlanPeople(t.number('customers'))),
               ]),
               if (p.number('unrouted') > 0)
                 Card(
@@ -427,7 +423,7 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
                   color: context.palette.warningSurface,
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.sm),
-                    child: Text('⚠ ${p.number('unrouted')} জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।',
+                    child: Text(context.l10n.salesPlanUnrouted(p.number('unrouted')),
                         style: TextStyle(color: context.palette.warning)),
                   ),
                 ),
@@ -446,15 +442,15 @@ class _RouteBookScreenState extends State<RouteBookScreen> {
               Text(
                 [
                   if (r.maybe('point') != null) r.text('point'),
-                  '${r.number('customers')} জন ডিলার',
+                  context.l10n.salesPlanDealerCount(r.number('customers')),
                   if (r.list('salespeople').isNotEmpty) r.list('salespeople').join(', '),
                 ].join(' · '),
                 style: _muted(context),
               ),
-              Text('বিক্রি ${Money.taka(r.text('sales'))} · আদায় ${Money.taka(r.text('collections'))}', style: _muted(context)),
+              Text(context.l10n.salesPlanSalesCollections(Money.taka(r.text('sales')), Money.taka(r.text('collections'))), style: _muted(context)),
               Row(children: [
-                Expanded(child: Text('বাকি ${Money.taka(r.text('outstanding'))}', style: _amount)),
-                Text('লক্ষ্য ${takaOrDash(r.maybe('target'))} · ${percentOf(r.maybe('percent'))}',
+                Expanded(child: Text(context.l10n.salesPlanDue(Money.taka(r.text('outstanding'))), style: _amount)),
+                Text(context.l10n.salesPlanTargetPercent(takaOrDash(r.maybe('target')), percentOf(r.maybe('percent'))),
                     style: TextStyle(fontSize: 13, color: _percentColour(context, r.maybe('percent')))),
               ]),
             ],
@@ -484,43 +480,43 @@ class RouteDetailScreen extends StatelessWidget {
         body: _PlanList(
           load: (page) => api.route(id, month: monthKey(month), page: page),
           rowsKey: 'customers',
-          emptyTitle: 'এই রুটে কোনো ডিলার নেই',
+          emptyTitle: context.l10n.salesPlanRouteEmpty,
           summary: (context, p) {
             final f = p.child('figures');
             final t = p.child('target');
             return [
               Text('${monthLabel(month)} · ${dayOf(p.maybe('from'))} – ${dayOf(p.maybe('to'))}', key: const ValueKey('route-period'), style: _muted(context)),
               const SizedBox(height: AppSpacing.xs),
-              TotalStrip(label: 'শেষ জের (বাকি)', value: Money.taka(f.text('outstanding')), count: p.number('customers_count')),
+              TotalStrip(label: context.l10n.salesPlanClosingBalance, value: Money.taka(f.text('outstanding')), count: p.number('customers_count')),
               Card(
                 key: const ValueKey('route-figures'),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                   child: Column(children: [
-                    FactRow('আগের জের', Money.taka(f.text('opening'))),
-                    FactRow('বিক্রি', Money.taka(f.text('sales'))),
-                    FactRow('ফেরত', Money.taka(f.text('returns'))),
-                    FactRow('আদায়', Money.taka(f.text('collections')), colour: context.palette.success),
-                    FactRow('অন্যান্য', Money.taka(f.text('other'))),
-                    FactRow('লক্ষ্য', takaOrDash(t.maybe('target'))),
-                    FactRow('লক্ষ্যের অর্জন', '${Money.taka(t.text('achieved'))} · ${percentOf(t.maybe('percent'))}',
+                    FactRow(context.l10n.salesPlanOpeningBalance, Money.taka(f.text('opening'))),
+                    FactRow(context.l10n.salesPlanSales, Money.taka(f.text('sales'))),
+                    FactRow(context.l10n.salesPlanReturns, Money.taka(f.text('returns'))),
+                    FactRow(context.l10n.salesPlanCollections, Money.taka(f.text('collections')), colour: context.palette.success),
+                    FactRow(context.l10n.salesPlanOther, Money.taka(f.text('other'))),
+                    FactRow(context.l10n.salesPlanTarget, takaOrDash(t.maybe('target'))),
+                    FactRow(context.l10n.salesPlanTargetAchievement, '${Money.taka(t.text('achieved'))} · ${percentOf(t.maybe('percent'))}',
                         colour: _percentColour(context, t.maybe('percent'))),
                   ]),
                 ),
               ),
-              const SectionTitle('সাপ্তাহিক ছক'),
-              if (p.rows('schedule').isEmpty) _note(context, 'ছকে কেউ বসানো নেই।'),
+              SectionTitle(context.l10n.salesPlanWeeklyPlan),
+              if (p.rows('schedule').isEmpty) _note(context, context.l10n.salesPlanWeeklyPlanEmpty),
               for (final v in p.rows('schedule'))
                 _card(key: ValueKey('visit-${v.text('who')}-${v.number('weekday')}-${v.text('from')}'), children: [
                   Row(children: [
                     Expanded(child: Text('${v.text('weekday_label')} · ${v.text('who')}', style: _bold)),
                     AppStatusPill(
-                        label: v.flag('active') ? 'চালু' : 'শেষ', kind: v.flag('active') ? AppStatusKind.success : AppStatusKind.neutral),
+                        label: v.flag('active') ? context.l10n.salesPlanVisitActive : context.l10n.salesPlanVisitEnded, kind: v.flag('active') ? AppStatusKind.success : AppStatusKind.neutral),
                   ]),
-                  Text('${dayOf(v.maybe('from'))} থেকে ${v.maybe('to') == null ? 'চলছে' : dayOf(v.maybe('to'))}', style: _muted(context)),
+                  Text(context.l10n.salesPlanFromTo(dayOf(v.maybe('from')), v.maybe('to') == null ? context.l10n.salesPlanOngoing : dayOf(v.maybe('to'))), style: _muted(context)),
                 ]),
-              _note(context, 'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।'),
-              const SectionTitle('ডিলার'),
+              _note(context, context.l10n.salesPlanRouteNote),
+              SectionTitle(context.l10n.salesPlanDealers),
             ];
           },
           item: (context, c) => _card(key: ValueKey('route-dealer-${c.text('id')}'), children: [
@@ -528,7 +524,8 @@ class RouteDetailScreen extends StatelessWidget {
               Expanded(child: Text('${c.text('code')} · ${_withPoint(c)}', style: _bold)),
               Text(Money.taka(c.text('outstanding')), style: _amount),
             ]),
-            Text('বিক্রি ${Money.taka(c.text('sales'))} · আদায় ${Money.taka(c.text('collections'))}', style: _muted(context)),
+            Text(context.l10n.salesPlanSalesCollections(Money.taka(c.text('sales')), Money.taka(c.text('collections'))), style: _muted(context)),
+
             if (c.text('phone').isNotEmpty) Text(c.text('phone'), style: _muted(context)),
           ]),
         ),

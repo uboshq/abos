@@ -1058,4 +1058,189 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get deliveryOrdersStockNotEnough => 'মজুদে কুলোয় না';
+
+  @override
+  String get salesPlanLoadFailed => 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।';
+
+  @override
+  String get salesPlanNotOnServer =>
+      'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।';
+
+  @override
+  String get salesPlanPreviousMonth => 'আগের মাস';
+
+  @override
+  String get salesPlanNextMonth => 'পরের মাস';
+
+  @override
+  String salesPlanPeople(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count জন',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPlanTargetsTitle => 'লক্ষ্যমাত্রা';
+
+  @override
+  String get salesPlanTargetsEmpty => 'এই মাসে কোনো বিক্রয়কর্মী নেই';
+
+  @override
+  String get salesPlanTargetsNote =>
+      'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।';
+
+  @override
+  String get salesPlanTotalTarget => 'মোট লক্ষ্য';
+
+  @override
+  String get salesPlanTotalAchieved => 'মোট অর্জন';
+
+  @override
+  String get salesPlanTargetHoldersAchieved => 'লক্ষ্যধারীদের অর্জন';
+
+  @override
+  String get salesPlanTargetSet => 'লক্ষ্য বসানো';
+
+  @override
+  String salesPlanTargetAchieved(String target, String achieved) {
+    return 'লক্ষ্য $target · অর্জন $achieved';
+  }
+
+  @override
+  String get salesPlanDealerTargetsTitle => 'ডিলারের লক্ষ্য';
+
+  @override
+  String get salesPlanDealerTargetsNoneSet => 'এই মাসে কারো লক্ষ্য বসানো নেই';
+
+  @override
+  String get salesPlanDealerTargetsEmpty => 'কোনো ডিলার নেই';
+
+  @override
+  String get salesPlanDealerTargetsSearch => 'ডিলারের নাম বা কোড';
+
+  @override
+  String get salesPlanDealerTargetsOnlySet => 'কেবল যাঁদের লক্ষ্য আছে';
+
+  @override
+  String get salesPlanDealerTargetsNote =>
+      'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।';
+
+  @override
+  String get salesPlanTotalDue => 'মোট বাকি';
+
+  @override
+  String salesPlanAchieved(String amount) {
+    return 'অর্জন $amount';
+  }
+
+  @override
+  String salesPlanDue(String amount) {
+    return 'বাকি $amount';
+  }
+
+  @override
+  String salesPlanEnds(String date) {
+    return 'শেষ $date';
+  }
+
+  @override
+  String get salesPlanRouteBookTitle => 'রুটের খাতা';
+
+  @override
+  String get salesPlanRouteBookEmpty => 'কোনো রুট নেই';
+
+  @override
+  String get salesPlanRouteBookSearch => 'রুটের নাম বা কোড';
+
+  @override
+  String get salesPlanTotalSales => 'মোট বিক্রি';
+
+  @override
+  String get salesPlanTotalCollections => 'মোট আদায়';
+
+  @override
+  String get salesPlanTargetAchievement => 'লক্ষ্যের অর্জন';
+
+  @override
+  String get salesPlanDealers => 'ডিলার';
+
+  @override
+  String salesPlanUnrouted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '⚠ $count জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPlanDealerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count জন ডিলার',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPlanSalesCollections(String sales, String collections) {
+    return 'বিক্রি $sales · আদায় $collections';
+  }
+
+  @override
+  String salesPlanTargetPercent(String target, String percent) {
+    return 'লক্ষ্য $target · $percent';
+  }
+
+  @override
+  String get salesPlanRouteEmpty => 'এই রুটে কোনো ডিলার নেই';
+
+  @override
+  String get salesPlanClosingBalance => 'শেষ জের (বাকি)';
+
+  @override
+  String get salesPlanOpeningBalance => 'আগের জের';
+
+  @override
+  String get salesPlanSales => 'বিক্রি';
+
+  @override
+  String get salesPlanReturns => 'ফেরত';
+
+  @override
+  String get salesPlanCollections => 'আদায়';
+
+  @override
+  String get salesPlanOther => 'অন্যান্য';
+
+  @override
+  String get salesPlanTarget => 'লক্ষ্য';
+
+  @override
+  String get salesPlanWeeklyPlan => 'সাপ্তাহিক ছক';
+
+  @override
+  String get salesPlanWeeklyPlanEmpty => 'ছকে কেউ বসানো নেই।';
+
+  @override
+  String get salesPlanVisitActive => 'চালু';
+
+  @override
+  String get salesPlanVisitEnded => 'শেষ';
+
+  @override
+  String salesPlanFromTo(String from, String to) {
+    return '$from থেকে $to';
+  }
+
+  @override
+  String get salesPlanOngoing => 'চলছে';
+
+  @override
+  String get salesPlanRouteNote => 'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।';
 }
