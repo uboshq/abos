@@ -535,8 +535,9 @@ class BranchSalesCard extends StatelessWidget {
     final total = lines == null || lines.isEmpty ? today.sales?.amount : sumOf(lines.map((l) => l.amount));
     return HomeSectionCard(
       key: const ValueKey('branch-sales'),
-      // ⓘ ফেরত বাদ না দেওয়া মোট বিল — তাই "আজ বিল হয়েছে", "বিক্রি" নয় (fe, ২০ অক্টোবর ২০২৬; IFRS 15: আয় ফেরত বাদে নিট)
-      title: 'আজ বিল হয়েছে',
+      // ⓘ সার্ভার যা বলে তা-ই — নিট পাঠালে "নিট বিক্রি" (VAT আর ফেরত বাদে, IFRS 15); পুরনো সার্ভারের মোট বিল "আজ বিল হয়েছে"
+      // ([TodayFigure.salesHeading]); নাম আর অঙ্ক কখনো আলাদা কথা বলে না
+      title: today.sales?.salesHeading ?? 'আজ বিল হয়েছে',
       // ⭐ ০.৪.৪০-এর বিক্রির নিচের লাইন ফেরত — আজকের পাতার একই লেখা ([TodayFigure.salesDetail])
       subtitle: today.sales?.salesDetail,
       subtitleKey: const ValueKey('branch-sales-detail'),

@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../config/app_config.dart';
 import '../../privacy/lock_delay.dart';
+import '../../router/profile_routes.dart';
 import '../../theme/bar_palette.dart';
 import '../../theme/theme_choice.dart';
 
@@ -114,6 +115,8 @@ class AvatarMenu extends StatelessWidget {
       if (branch.trim().isNotEmpty) branch.trim(),
     ].join(' · ');
     final line = Divider(height: 1, thickness: 1, color: c.menuLine);
+    // ⓘ সার্ভার কী পারে (/me features) — Riverpod না থাকলে (একা-চলা টেস্ট) কিছুই চালু ধরা হয় না
+    final features = ProfileRoutes.featuresOf(context);
 
     return Material(
       key: const ValueKey('avatar-menu'),
@@ -149,7 +152,8 @@ class AvatarMenu extends StatelessWidget {
               _Item(
                 key: const ValueKey('avatar-profile'),
                 icon: Symbols.person,
-                title: 'আমার প্রোফাইল',
+                // ⭐ সার্ভার ছবি বদল নিলে "প্রোফাইল ও ছবি বদল", নইলে "আমার প্রোফাইল" — অচল প্রতিশ্রুতি নয় (/me features)
+                title: ProfileRoutes.profileTitle(features),
                 onTap: () => pick(AvatarChoice.profile),
               ),
               line,
@@ -175,6 +179,16 @@ class AvatarMenu extends StatelessWidget {
                 ),
               ),
               line,
+              // ⭐ "আমার ফোনগুলো" কেবল যখন সার্ভারের দরজা আছে (/me features.my_phones) — মালিকের নিয়ম: অচল সারি নয়
+              if (ProfileRoutes.showsPhones(features)) ...[
+                _Item(
+                  key: const ValueKey('avatar-devices'),
+                  icon: Symbols.devices,
+                  title: 'আমার ফোনগুলো',
+                  onTap: () => ProfileRoutes.openPhonesFromMenu(context),
+                ),
+                line,
+              ],
               _Item(
                 key: const ValueKey('avatar-settings'),
                 icon: Symbols.settings,

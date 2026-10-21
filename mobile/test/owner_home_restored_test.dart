@@ -52,6 +52,18 @@ void main() {
         moneyTotal: '1167633.4600',
       );
 
+  // ⭐ শাখার কার্ডের নাম সার্ভারের — নিট পাঠালে "নিট বিক্রি", পুরনো সার্ভারে "আজ বিল হয়েছে"; নাম আর অঙ্ক এক কথা বলে
+  testWidgets('the branch card is named by the server: net sales say so, an old server says bills', (tester) async {
+    final net = ownerToday();
+    net['sales'] = {...(net['sales'] as Map), 'label': 'নিট বিক্রি'};
+    await pump(tester, ownerHomeBody(today: net));
+    expect(find.descendant(of: find.byKey(const ValueKey('branch-sales')), matching: find.text('নিট বিক্রি')), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await pump(tester, ownerHomeBody(today: ownerToday()));
+    expect(find.descendant(of: find.byKey(const ValueKey('branch-sales')), matching: find.text('আজ বিল হয়েছে')), findsOneWidget);
+  });
+
   testWidgets('1 · MFS and on-the-road show even at zero; the total is cash + MFS + bank, never + transit',
       (tester) async {
     await pump(tester, ownerHomeBody(today: ownerToday()));
