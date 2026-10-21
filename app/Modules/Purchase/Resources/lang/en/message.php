@@ -184,4 +184,5 @@ return [
 
     'withheld_ait' => ':no — income tax withheld at source (AIT), owed to the Government',
     'withheld_vds' => ':no — VAT withheld at source (VDS), owed to the Government',
+    'withholding_undone_on_bounce' => 'Cheque :cheque bounced — the tax/VAT withheld on :no is reversed too',
 ];

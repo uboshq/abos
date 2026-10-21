@@ -346,6 +346,47 @@ final class PaymentService
     }
 
     /**
+     * ⭐ চেকের পথে কাটা কর/ভ্যাটের দাখিলা উল্টো — চেক বাতিলে আর চেক ফেরতে ([[UndoThePaymentOfABouncedCheque]])। ⛔ নইলে টাকা না
+     * গিয়েও সরকারের কাছে কর দেনা থেকে যেত, আর সরবরাহকারীর দেনা থেকে কাটা অংশ কমেই থাকত (cb, ২২ অক্টোবর ২০২৬)।
+     * ⓘ কিছু কাটা না থাকলে কোনো দাখিলাই ছিল না — তখন কিছুই নয়; বিলের দাগও তোলা হয় যদি আর কোনো চালু পরিশোধ না কাটে।
+     */
+    public function undoChequeWithholding(Payment $payment, Carbon|string $date, string $reason): void
+    {
+        if (bccomp(bcadd((string) ($payment->ait_amount ?? '0'), (string) ($payment->vds_amount ?? '0'), 4), '0', 4) > 0) {
+            $this->posting->reverse(
+                sourceType: Payment::drillSourceType(),
+                sourceId: $payment->id,
+                reversalDate: $date,
+                reason: $reason,
+            );
+        }
+
+        $this->unmarkWithheldOnPayment($payment);
+    }
+
+    /**
+     * ⓘ পরিশোধ বাতিল হলে বিলের "পরিশোধে কাটা" দাগ ওঠে — যদি আর কোনো চালু পরিশোধ সেই বিলে না কাটে। ⛔ নইলে বাতিলের পরেও
+     * দাগটা বিলে কাটার পথ বন্ধ রাখত, অথচ কোথাও কাটা নেই (cb, ২২ অক্টোবর ২০২৬)।
+     */
+    private function unmarkWithheldOnPayment(Payment $payment): void
+    {
+        $billIds = $payment->lines()->whereRaw('ait_amount + vds_amount > 0')->pluck('purchase_bill_id')->filter()->unique()->all();
+
+        foreach ($billIds as $billId) {
+            $stillCut = PaymentLine::query()
+                ->where('purchase_bill_id', $billId)
+                ->where('payment_id', '!=', $payment->id)
+                ->whereRaw('ait_amount + vds_amount > 0')
+                ->whereIn('payment_id', Payment::acrossBranches()->where('status', DocumentStatus::CONFIRMED)->select('id'))
+                ->exists();
+
+            if (! $stillCut) {
+                PurchaseBill::acrossBranches()->whereKey($billId)->where('withheld_at', 'payment')->update(['withheld_at' => null]);
+            }
+        }
+    }
+
+    /**
      * ⭐ প্রস্তাবক ≠ সইদাতা ≠ টাকাদাতা — টাকা আসা-যাওয়ার আন্তর্জাতিক পরিকল্পনা, ধাপ খ ১২ (৭ অক্টোবর ২০২৬)।
      *
      * ⓘ প্রস্তাবক = খসড়ার লেখক (প্রস্তাবের PP তৈরিকারী); সইদাতা = এই পরিশোধে 'payment' নিয়মে "হ্যাঁ" দেওয়া মানুষ; টাকাদাতা
@@ -435,6 +476,9 @@ final class PaymentService
                     // ⛔ পরিশোধ এখনই বাতিল, তাই চেকের উল্টোও এখনই — ফেরতের সইয়ে অপেক্ষা নয় ([[ACancelledChequeUndidNothingTest]])
                     $this->cheques->cancel($cheque, $reason, $date, asksItsSignature: false);
                 }
+
+                // ⛔ চেকের পথে কাটা অংশের দাখিলা পরিশোধের নিজের — সেটাও উল্টো ([[settleByCheque()]])
+                $this->undoChequeWithholding($payment, $date, $reason);
             } elseif ($payment->status === DocumentStatus::CONFIRMED) {
                 /*
                  * উল্টো দাখিলা, মুছে ফেলা নয় (নিয়ম ৫)।
@@ -457,6 +501,7 @@ final class PaymentService
                 'cancelled_at' => now(),
                 'cancel_reason' => $reason,
             ]);
+            $this->unmarkWithheldOnPayment($payment);
 
             return $payment->fresh(['lines']);
         });
@@ -492,6 +537,29 @@ final class PaymentService
             ]);
         }
 
+        /*
+         * ⛔ চেকে দিলেও কর একবার কাটা (নকশা #৫; cb, ২২ অক্টোবর ২০২৬) — আগে চেকের পথ কাটা AIT/VDS জানতই না: চেক লেখা হত পুরো
+         * টাকায়, ২১২১/২১২২-এ কিছু বসত না, আর প্রিভিউ যা দেখাত (নিট) পোস্ট তা করত না। ⭐ এখন চেক নিটে, আর কাটা অংশটা পরিশোধের
+         * নিজের দাখিলায়: Dr প্রদেয় (AIT + VDS) / Cr ২১২১ / Cr ২১২২। দুই দাখিলা মিলিয়ে ঠিক [[linesFor()]]।
+         */
+        $cut = $this->withholdingLines($payment);
+        $net = bcsub(bcsub((string) $payment->amount, (string) ($payment->ait_amount ?? '0'), 4), (string) ($payment->vds_amount ?? '0'), 4);
+
+        if (bccomp($net, '0', 4) <= 0) {
+            throw ValidationException::withMessages(['amount' => __('purchase::validation.withheld_takes_all', ['no' => $payment->document_no])]);
+        }
+
+        if ($cut !== []) {
+            $this->posting->post(
+                sourceType: Payment::drillSourceType(),
+                sourceId: $payment->id,
+                trxDate: $payment->trx_date,
+                lines: $cut,
+                documentNo: $payment->document_no,
+                branchId: $payment->branch_id,
+            );
+        }
+
         $cheque = $this->cheques->create([
             'direction' => Cheque::ISSUED,
 
@@ -503,7 +571,7 @@ final class PaymentService
             'cheque_date' => $payment->instrument_date ?? $payment->trx_date,
             'received_on' => $payment->trx_date,
             'cheque_no' => $payment->instrument_no,
-            'amount' => (string) $payment->amount,
+            'amount' => $net,
             'party_type' => 'supplier',
             'party_id' => $payment->supplier_id,
             'bank_account_id' => $payment->account_id,
@@ -515,6 +583,7 @@ final class PaymentService
             'cheque_id' => $cheque->id,
             'status' => DocumentStatus::CONFIRMED,
         ])->save();
+        $this->markWithheldOnPayment($payment);
 
         return $payment->fresh(['lines', 'cheque']);
     }
@@ -726,13 +795,42 @@ final class PaymentService
         }
 
         // ⓘ টাকার খাত থেকে যায় নিট আর চার্জ: মোট − AIT − VDS + চার্জ
+        // ⓘ চেকে টাকা এখনো যায়নি — নিট বসে "দেওয়া চেক" (২১১৫)-এ, চেকের কাগজ যেমন বসায় ([[settleByCheque()]], [[ChequeService]])
         $lines[] = [
-            'account_id' => $payment->account_id,
+            'account_id' => $payment->instrument === self::CHEQUE ? $this->account(StandardChart::CHEQUES_ISSUED)->id : $payment->account_id,
             'credit' => bcadd(bcsub(bcsub($amount, $ait, 4), $vds, 4), $charge, 4),
             'narration' => __('purchase::message.money_out', ['no' => $no]),
         ];
 
         return $lines;
+    }
+
+    /**
+     * ⓘ চেকের পথে পরিশোধের নিজের দাখিলা — কেবল কাটা অংশ: Dr প্রদেয় (AIT + VDS) / Cr ২১২১ / Cr ২১২২; কিছু না কাটলে ফাঁকা।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function withholdingLines(Payment $payment): array
+    {
+        $heads = [$this->account(StandardChart::TAX_DEDUCTED_AT_SOURCE)->id, $this->account(StandardChart::VDS_PAYABLE)->id];
+        $taxes = array_values(array_filter(
+            $this->linesFor($payment),
+            fn (array $line) => in_array((int) $line['account_id'], $heads, true),
+        ));
+
+        if ($taxes === []) {
+            return [];
+        }
+
+        $cut = array_reduce($taxes, fn (string $sum, array $line) => bcadd($sum, (string) $line['credit'], 4), '0');
+
+        return [[
+            'account_id' => $this->account(StandardChart::PAYABLE)->id,
+            'debit' => $cut,
+            'party_type' => 'supplier',
+            'party_id' => $payment->supplier_id,
+            'narration' => __('purchase::message.against_payable', ['no' => (string) $payment->document_no]),
+        ], ...$taxes];
     }
 
     /**

@@ -247,6 +247,89 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
     }
 
     /**
+     * ⛔ #৫ + #১০, চেকে: কর একবার কাটা, চেক নিটে, আর প্রিভিউ = পরিশোধ + চেকের দুই দাখিলা মিলিয়ে (cb, ২২ অক্টোবর ২০২৬)। আগে চেকের পথ
+     * কাটা জানতই না — চেক পুরো ১১,৫০০-এ, ২১২১/২১২২ ফাঁকা, বিলে দাগ নেই। বাতিলে সব উল্টো, আর বিলের দাগ ওঠে।
+     */
+    public function test_item_5_and_10_a_cheque_withholds_once_pays_the_net_and_matches_its_preview(): void
+    {
+        $this->supplier->forceFill(['ait_rate' => '5', 'vds_rate' => '15'])->save();
+        $bill = $this->bill('10000', tax: '1500');
+        $data = ['account_id' => $this->bank->id, 'instrument' => 'cheque', 'instrument_no' => 'CHQ-5501', 'instrument_date' => now()->toDateString()];
+
+        $preview = $this->post(route('purchase.payment.simulate'), $this->form($data, [[$bill->id, '11500']], '11500'))->assertOk()->json();
+        $shown = [];
+        foreach ($preview['rows'] as $row) {
+            $code = strtok((string) $row['account'], ' ');
+            $shown[$code] = [
+                bcadd($shown[$code][0] ?? '0', str_replace(',', '', $row['debit'] ?: '0'), 2),
+                bcadd($shown[$code][1] ?? '0', str_replace(',', '', $row['credit'] ?: '0'), 2),
+            ];
+        }
+
+        $this->pay($data, [[$bill->id, '11500']], amount: '11500');
+        $payment = $this->lastPayment()->fresh(['cheque']);
+        $this->assertSame(DocumentStatus::CONFIRMED, $payment->status, '⛔ চেকে কর কাটা পরিশোধ পোস্ট হল না: '.$this->errorOn('amount').$this->errorOn('lines'));
+        $this->assertSame(0, bccomp((string) $payment->cheque?->amount, '10775', 4), '⛔ #৫: চেক নিটে (১১,৫০০ − ৫০০ − ২২৫) লেখা হয়নি');
+
+        $posted = $this->bothPapers($payment);
+        $this->assertMoved($posted, StandardChart::TAX_DEDUCTED_AT_SOURCE, credit: '500', message: '⛔ #৫: চেকের পথে AIT ২১২১-এ বসেনি');
+        $this->assertMoved($posted, StandardChart::VDS_PAYABLE, credit: '225', message: '⛔ #৫: চেকের পথে VDS ২১২২-এ বসেনি');
+        $this->assertMoved($posted, StandardChart::PAYABLE, debit: '11500', message: '⛔ #৫: সরবরাহকারীর পুরো ১১,৫০০ মেটেনি');
+        $this->assertMoved($posted, StandardChart::CHEQUES_ISSUED, credit: '10775', message: '⛔ #৫: দেওয়া চেকে নিট বসেনি');
+        foreach ($posted as $code => $moved) {
+            $this->assertSame([bcadd($moved['debit'], '0', 2), bcadd($moved['credit'], '0', 2)], $shown[$code] ?? null,
+                "⛔ #১০: চেকে প্রিভিউ যা দেখাল খাতায় তা বসেনি — খাত {$code}");
+        }
+        $this->assertSame(count($shown), count($posted), '⛔ #১০: প্রিভিউর খাত আর খাতার খাত সংখ্যায় আলাদা');
+        $this->assertSame('payment', $bill->fresh()->withheld_at, '⛔ #৫: চেকে কাটার পরেও বিলে "পরিশোধে কাটা" দাগ নেই');
+
+        app(\App\Modules\Purchase\Services\PaymentService::class)->cancel($payment->fresh(), 'Wrong cheque');
+        foreach ($this->bothPapers($payment) as $code => $moved) {
+            $this->assertSame(0, bccomp($moved['debit'], $moved['credit'], 4), "⛔ বাতিলের পরেও খাত {$code}-এ চেকের পরিশোধের দাগ রয়ে গেল");
+        }
+        $this->assertNull($bill->fresh()->withheld_at, '⛔ বাতিলের পরেও বিলে "পরিশোধে কাটা" দাগ — বিলে কাটার পথ মিথ্যে বন্ধ');
+    }
+
+    /** ⛔ #৫: চেক ফেরত এলে টাকা যায়নি — কাটা কর/ভ্যাটও উল্টো, সরবরাহকারীর পুরো দেনা ফেরে, বিলের দাগ ওঠে */
+    public function test_item_5_a_bounced_cheque_undoes_the_tax_it_withheld(): void
+    {
+        $this->supplier->forceFill(['ait_rate' => '5', 'vds_rate' => '15'])->save();
+        $bill = $this->bill('10000', tax: '1500');
+        $data = ['account_id' => $this->bank->id, 'instrument' => 'cheque', 'instrument_no' => 'CHQ-5502', 'instrument_date' => now()->toDateString()];
+
+        $this->pay($data, [[$bill->id, '11500']], amount: '11500');
+        $payment = $this->lastPayment()->fresh(['cheque']);
+        $this->assertSame(DocumentStatus::CONFIRMED, $payment->status, 'প্রস্তুতিটাই ভুল — চেকের পরিশোধ পোস্ট হয়নি');
+
+        app(\App\Modules\Accounts\Services\ChequeService::class)->bounce($payment->cheque()->firstOrFail(), 'তহবিল নেই');
+
+        $book = $this->bothPapers($payment->fresh());
+        foreach ([StandardChart::TAX_DEDUCTED_AT_SOURCE, StandardChart::VDS_PAYABLE, StandardChart::PAYABLE] as $code) {
+            $this->assertSame(0, bccomp($book[$code]['debit'] ?? '0', $book[$code]['credit'] ?? '0', 4),
+                "⛔ #৫: চেক ফেরতের পরেও খাত {$code}-এ পরিশোধের দাগ — টাকা না গিয়েও কর দেনা বা দেনা কম");
+        }
+        $this->assertNull($bill->fresh()->withheld_at, '⛔ #৫: চেক ফেরতের পরেও বিলে "পরিশোধে কাটা" দাগ');
+    }
+
+    /** @return array<string, array{debit: string, credit: string}> পরিশোধ আর তার চেক — দুই কাগজের দাখিলা খাত ধরে */
+    private function bothPapers(Payment $payment): array
+    {
+        $book = $this->book($payment);
+        $codes = Account::query()->pluck('code', 'id');
+        // ⓘ চেকের নিজের দাখিলা, বাতিলের উল্টো (`cheque:returned`) আর ফেরতের উল্টো (`cheque:bounced`) — [[ChequeService]]
+        $cheque = \App\Modules\Accounts\Models\Cheque::drillSourceType();
+        LedgerEntry::query()->whereIn('source_type', [$cheque, $cheque.':returned', $cheque.':bounced'])->where('source_id', $payment->cheque_id)->get()
+            ->each(function (LedgerEntry $entry) use (&$book, $codes): void {
+                $code = (string) $codes[$entry->account_id];
+                $book[$code] ??= ['debit' => '0', 'credit' => '0'];
+                $book[$code]['debit'] = bcadd($book[$code]['debit'], (string) $entry->debit, 4);
+                $book[$code]['credit'] = bcadd($book[$code]['credit'], (string) $entry->credit, 4);
+            });
+
+        return $book;
+    }
+
+    /**
      * ⛔ #১০: প্রিভিউ ফর্মের একবারের টোকেন খরচ করে না — আগে প্রথম প্রিভিউ টোকেনটা খেয়ে ফেলত, আর পরে "পোস্ট" চাপলে পরিশোধ "জমা
      * হয়েছে" বলে ফিরত, কিছুই না রেখে (মিল-তালিকার সময় ধরা, ২২ অক্টোবর ২০২৬)। একই টোকেনে দুইবার প্রিভিউ, তারপর জমা — জমা হয়।
      */
