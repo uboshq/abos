@@ -99,7 +99,7 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
         $after = $this->customerStat();
 
         $this->assertSame('90000.0000', bcsub($after, $before, 4), '⛔ গ্রাহকের ড্যাশবোর্ডের "এ মাসের বিক্রি" VAT বা ফেরত বাদ দেয় না।');
-        $this->assertSame('এ মাসের নিট বিক্রি (VAT ও ফেরত বাদে)', __('customer::dashboard.sales_month'));
+        $this->assertSame('এ মাসের নিট বিক্রি (ভ্যাট ও ফেরত বাদে)', __('customer::dashboard.sales_month'));
 
         // ── সবচেয়ে বড় ক্রেতা — ফোনের দরজা, হাতে গোনা নিট, আর যোগের সারি ──
         $this->phone();
@@ -129,7 +129,7 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
         $this->assertSame('90000.0000', bcsub($after['month'], $before['month'], 4), '⛔ সারাংশের "এই মাসে" VAT বা ফেরত বাদ দেয় না।');
         $this->assertSame('90000.0000', bcsub($after['lifetime'], $before['lifetime'], 4), '⛔ সারাংশের "সব মিলিয়ে" VAT বা ফেরত বাদ দেয় না।');
         $this->assertSame(1, $after['count'] - $before['count'], 'প্রস্তুতিটাই ভুল — বিলের সংখ্যা এক বাড়েনি।');
-        $this->assertStringContainsString('নিট বিক্রি (VAT ও ফেরত বাদে)', $after['html'], '⛔ সারাংশ বলে না যে টাকাটা নিট বিক্রি।');
+        $this->assertStringContainsString('নিট বিক্রি (ভ্যাট ও ফেরত বাদে)', $after['html'], '⛔ সারাংশ বলে না যে টাকাটা নিট বিক্রি।');
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────

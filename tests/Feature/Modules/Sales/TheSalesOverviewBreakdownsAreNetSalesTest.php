@@ -117,8 +117,8 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         $this->assertSame(Money::format($after['net']), $branchListing['total']['net'] ?? null, '⛔ ফোনের শাখার তালিকার মোট নিট বিক্রি নয়।');
         $this->assertSame(__('sales::overview.total_all'), $branchListing['total']['name'] ?? null);
 
-        // ⓘ নাম — "নিট বিক্রি (VAT ও ফেরত বাদে)"
-        $this->assertSame('নিট বিক্রি (VAT ও ফেরত বাদে)', __('sales::overview.col.net'));
+        // ⓘ নাম — "নিট বিক্রি (ভ্যাট ও ফেরত বাদে)"
+        $this->assertSame('নিট বিক্রি (ভ্যাট ও ফেরত বাদে)', __('sales::overview.col.net'));
         $this->assertSame($rahim->id, $after['customer_id']);
         $this->assertSame($rice->id, $after['product_id']);
         $this->assertNotNull($bill);

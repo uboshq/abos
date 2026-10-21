@@ -55,7 +55,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
 
     private const NET_LABEL = 'নিট বিক্রি';
 
-    private const FULL_LABEL = 'নিট বিক্রি (VAT ও ফেরত বাদে)';
+    private const FULL_LABEL = 'নিট বিক্রি (ভ্যাট ও ফেরত বাদে)';
 
     private Company $company;
 
@@ -255,7 +255,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertSame(self::NET_LABEL, trim($cell->textContent), '⛔ মালিকের ছকের ঘরের নাম "নিট বিক্রি" নয়।');
     }
 
-    /** ⭐ বিক্রয়ের সারাংশ: "নিট বিক্রি (VAT ও ফেরত বাদে)" কার্ড আর বারো মাসের নিট ঘর — একই উৎস (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
+    /** ⭐ বিক্রয়ের সারাংশ: "নিট বিক্রি (ভ্যাট ও ফেরত বাদে)" কার্ড আর বারো মাসের নিট ঘর — একই উৎস (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
     public function test_the_overview_net_card_and_the_twelve_months_are_net_of_vat_and_returns(): void
     {
         $before = $this->overviewNet();
@@ -267,7 +267,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $after = $this->overviewNet();
         $this->assertSame('90000.0000', bcsub($after['card'], $before['card'], 4), '⛔ সারাংশের নিট কার্ড VAT বা ফেরত বাদ দেয় না।');
         $this->assertSame('90000.0000', bcsub($after['month'], $before['month'], 4), '⛔ বারো মাসের এই মাসের নিট VAT বা ফেরত বাদ দেয় না।');
-        $this->assertSame(self::FULL_LABEL, $after['label'], '⛔ কার্ডের নাম "নিট বিক্রি (VAT ও ফেরত বাদে)" নয়।');
+        $this->assertSame(self::FULL_LABEL, $after['label'], '⛔ কার্ডের নাম "নিট বিক্রি (ভ্যাট ও ফেরত বাদে)" নয়।');
 
         // ⓘ সারাংশ = হোম/ফোনের একই উৎস — এই মাসে
         $this->web($this->owner);
@@ -295,9 +295,9 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         // ⓘ গত সপ্তাহের দিনটা এই মাসে/এই অর্থবছরে পড়লে তার নিট ৫০,০০০-ও যোগ হয়
         $fyStart = SalesMetrics::financialYear()[0];
         $this->assertSame(bcadd('90000', Carbon::parse($lastWeek)->isSameMonth(Carbon::today()) ? '50000' : '0', 4),
-            bcsub($month(), $monthBefore, 4), '⛔ এই মাসের বিক্রি নিট নয় (VAT ও ফেরত বাদে)।');
+            bcsub($month(), $monthBefore, 4), '⛔ এই মাসের বিক্রি নিট নয় (ভ্যাট ও ফেরত বাদে)।');
         $this->assertSame(bcadd('90000', $lastWeek >= $fyStart ? '50000' : '0', 4),
-            bcsub($year(), $yearBefore, 4), '⛔ এই বছরের বিক্রি নিট নয় (VAT ও ফেরত বাদে)।');
+            bcsub($year(), $yearBefore, 4), '⛔ এই বছরের বিক্রি নিট নয় (ভ্যাট ও ফেরত বাদে)।');
 
         // ── সাত দিনের রেখা: প্রতিটা দিন সেই দিনের নিট ──
         $card = collect(\App\Modules\Sales\Dashboard\SalesWidgets::widgets())->first(fn ($w) => $w->group === 'kpi' && $w->sort === 10);
@@ -320,7 +320,7 @@ final class NetSalesIsBillsLessReturnsEverywhereTest extends TestCase
         $this->assertStringContainsString(self::FULL_LABEL, SalesMetrics::salesThisYear()->label);
     }
 
-    /** ⭐ ক্রেতা, পণ্য আর ব্র্যান্ড ধরে বিক্রি — নিট (VAT ও ফেরত বাদে), মুনাফাও নিট (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
+    /** ⭐ ক্রেতা, পণ্য আর ব্র্যান্ড ধরে বিক্রি — নিট (ভ্যাট ও ফেরত বাদে), মুনাফাও নিট (fe-র ৩ নম্বর, ২০ অক্টোবর ২০২৬) */
     public function test_the_customer_product_and_brand_reports_are_net_of_vat_and_returns(): void
     {
         $today = Carbon::today()->toDateString();

@@ -11,7 +11,7 @@ return [
     'invoices' => 'বিল',
     'this_month' => 'এই মাসে',
     'lifetime' => 'সব মিলিয়ে',
-    'amount_basis' => 'টাকা: নিট বিক্রি (VAT ও ফেরত বাদে)',
+    'amount_basis' => 'টাকা: নিট বিক্রি (ভ্যাট ও ফেরত বাদে)',
     'invoice_count' => ':count টা বিল',
     'outstanding' => 'বকেয়া',
     'pending_bills' => 'বকেয়া বিল',
