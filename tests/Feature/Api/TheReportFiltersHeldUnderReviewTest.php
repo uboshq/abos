@@ -221,9 +221,12 @@ final class TheReportFiltersHeldUnderReviewTest extends TestCase
         [$mine, $other] = [$branches[0], $branches[1]];
 
         Permission::findOrCreate('inventory.report', 'web');
+        // ⓘ মজুদের কেরানি মজুদ দেখেন — চাবি ছাড়া ফোনে মজুদের রিপোর্টই খোলে না ([[ThePhoneReportListShowedStockToASalesmanTest]]);
+        // এই দাবির বিষয় শাখার দেয়াল
+        Permission::findOrCreate('inventory.stock.view', 'web');
         $clerk = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
         $clerk->companies()->attach($this->company->id, ['is_active' => true]);
-        $clerk->givePermissionTo('inventory.report');
+        $clerk->givePermissionTo('inventory.report', 'inventory.stock.view');
         UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $clerk->id,
             'scope_type' => UserDataScope::BRANCH, 'scope_id' => $mine->id]);
 
