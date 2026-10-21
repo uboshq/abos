@@ -134,9 +134,12 @@ class EmployeeController extends Controller implements HasMiddleware
         $employee = $this->employees->create($this->validated($request));
         $this->savePhoto($request, $employee);
 
+        // ⓘ প্রথম ব্যাংক/MFS তথ্য দ্বিতীয় সইয়ের অপেক্ষায় — সেটাই বলা (fe, ২১ অক্টোবর ২০২৬; [[EmployeeService::create()]])
         return redirect()
             ->route('hr.employee.salary', $employee)
-            ->with('saved', __('hr::message.employee_created'));
+            ->with('saved', app(PaymentChanges::class)->pendingFor($employee) === null
+                ? __('hr::message.employee_created')
+                : __('hr::payment_change.waiting_saved'));
     }
 
     public function show(Request $request, Employee $employee): View
