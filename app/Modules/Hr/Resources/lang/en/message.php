@@ -59,4 +59,10 @@ return [
     'identity_viewed' => ':viewer viewed the identity details (NID, bank, address).',
     'payslip_viewed' => ':viewer opened the payslip.',
     'payroll_viewed' => ':viewer opened the payroll run.',
+    // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
+    'salary_change_waiting' => 'The change is waiting for a signature. It takes effect only when someone else presses "Sign"; until then the old amounts stay.',
+    'salary_change_asked' => 'Salary structure change from :date, waiting for a signature.',
+    'salary_change_late' => 'The signed salary structure change was not applied: :reason',
+    'salary_waiting_title' => 'Change from :date, waiting for a signature',
+    'salary_waiting_note' => 'These amounts are not in effect yet. The person who asked cannot sign it themselves; once signed it is entered in their name, and if it is rejected nothing changes.',
 ];

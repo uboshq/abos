@@ -13,4 +13,6 @@ return [
     'payroll' => 'Confirming a payroll run',
     'expense_claim' => 'Employee expense claim',
     'cash_advance' => 'Employee cash advance request',
+    // ⭐ বেতনের কাঠামো বদল — দ্বিতীয় সই, ছক চালু করলে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
+    'salary_change' => 'Changing a salary structure',
 ];
