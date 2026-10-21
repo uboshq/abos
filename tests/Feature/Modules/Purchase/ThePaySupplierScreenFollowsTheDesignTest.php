@@ -297,6 +297,9 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertMatchesRegularExpression('/'.preg_quote(e(__('money.screen.party_type')), '/').'\s*<span class="text-\(--color-danger\)">\*<\/span>/u', $html,
             '⛔ #২: পক্ষের ধরনে বাধ্যতামূলক তারকা নেই');
         $this->assertStringContainsString('data-balance-ok', $html, '⛔ #২৪: খাতে যথেষ্ট টাকায় ✓ নেই');
+        // ⭐ মিল-তালিকা #৩ — কর-নোট, কেবল কাটা হলে (কখন দেখায় তার দাবি pay-bills.test.js-এ)
+        $this->assertMatchesRegularExpression('/<p[^>]*x-show="withheld"[^>]*data-sum-tax-note[^>]*>\s*'.preg_quote(e(__('money.screen.sum.tax_note')), '/').'\s*<\/p>/u', $html,
+            '⛔ #৩: কাটা কর/ভ্যাটের জমা আর মূসক-৬.৬-এর নোট সারাংশে নেই');
     }
 
     /**

@@ -425,6 +425,8 @@ export function payBills ({
         /* ⓘ সারাংশে কাটা অঙ্ক বিয়োগে — শূন্যে চিহ্ন নয় (নকশা; মিল-তালিকার ফাঁক ৬) */
         get aitMinus () { return this.aitText === '0.00' ? '0.00' : '−' + this.aitText },
         get vdsMinus () { return this.vdsText === '0.00' ? '0.00' : '−' + this.vdsText },
+        /* ⓘ সত্যি কিছু কাটা হলে তবেই কর-নোট (মিল-তালিকা #৩) */
+        get withheld () { return paisa(this.aitText) > 0 || paisa(this.vdsText) > 0 },
 
         /* ⓘ নিট কোথা থেকে যায় — পদ্ধতি ধরে (ব্যাংক · MFS · নগদ), লেখা পাতার data-তে */
         get netLabel () {

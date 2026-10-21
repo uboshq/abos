@@ -108,6 +108,7 @@ return [
             'charge' => 'Bank charge (our expense)',
             'unapplied' => "Unapplied (advance — on the supplier's account)",
             'over' => 'Applied to bills is more than the total',
+            'tax_note' => 'Withheld tax and VAT must be deposited to the government treasury within the legal deadline, and the supplier must be given a Mushak-6.6 certificate.',
             'matches' => 'Balanced: applied + unapplied = total',
         ],
         'tag' => [

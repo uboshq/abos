@@ -284,6 +284,10 @@
                        x-show="matches || hasUnapplied" x-cloak data-sum-matches>{{ __('money.screen.sum.matches') }}</p>
                     <p class="mt-3 border-s-2 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-xs text-(--color-badge-danger-ink)"
                        x-show="overApplied" x-cloak data-sum-over>{{ __('money.screen.sum.over') }}</p>
+                    {{-- ⭐ কাটা কর/ভ্যাটের দায় মনে করানো — কেবল সত্যি কাটা হলে (টাকা দেওয়ার মিল-তালিকা #৩, ২২ অক্টোবর ২০২৬)। ⓘ "করণীয় তালিকায়
+                         উঠবে" অংশটা তালিকা বানানোর পরে — আগে লিখলে পর্দা এমন কিছু কথা দিত যা ব্যবস্থায় নেই --}}
+                    <p class="mt-3 border-s-2 border-(--color-warning) bg-(--color-badge-warning-bg) px-3 py-2 text-xs text-(--color-badge-warning-ink)"
+                       x-show="withheld" x-cloak data-sum-tax-note>{{ __('money.screen.sum.tax_note') }}</p>
                 </section>
 
                 {{-- ── খাতায় যা যাবে (#১০) — সার্ভারের হিসাবে ── --}}

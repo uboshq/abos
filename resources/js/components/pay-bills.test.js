@@ -156,3 +156,29 @@ describe('মিল-তালিকা #৫ — স্লিপ/TrxID লেখ�
         host.remove()
     })
 })
+
+describe('মিল-তালিকা #৩ — কাটা কর/ভ্যাটের নোট', () => {
+    it('কেবল সত্যি কিছু কাটা হলে দেখায়', async () => {
+        const host = document.createElement('div')
+        host.innerHTML = `
+            <form x-data="payBills({ bills: [], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '' })">
+                <p data-sum-tax-note x-show="withheld">নোট</p>
+            </form>`
+        document.body.appendChild(host)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        const pay = Alpine.$data(host.querySelector('form'))
+        const note = host.querySelector('[data-sum-tax-note]')
+        expect(note.style.display, '⛔ #৩: কিছু কাটা হয়নি, তবু কর-নোট').toBe('none')
+
+        pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '15,652.17', net: '1.00' }
+        await Alpine.nextTick()
+        expect(note.style.display, '⛔ #৩: ভ্যাট কাটা হল, অথচ জমা আর মূসক-৬.৬-এর কথা নেই').toBe('')
+
+        pay.preview = { rows: [], debit: '', credit: '', balanced: true, ait: '0.00', vds: '0.00', net: '1.00' }
+        await Alpine.nextTick()
+        expect(note.style.display, '⛔ #৩: কাটা শূন্যে ফিরল, তবু কর-নোট রইল').toBe('none')
+        host.remove()
+    })
+})
