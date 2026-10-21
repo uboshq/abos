@@ -46,6 +46,7 @@ class SalesOverviewController extends Controller implements HasMiddleware
             'period' => $period,
             'cards' => $board['cards'],
             'panels' => $board['panels'],
+            'totals' => $board['totals'],
         ]);
     }
 }

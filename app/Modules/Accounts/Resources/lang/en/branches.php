@@ -7,7 +7,7 @@ declare(strict_types=1);
 return [
     'title' => 'Branches side by side',
     'branch' => 'Branch',
-    'sales' => 'Sales',
+    'sales' => 'Net sales (excl. VAT and returns)',
     'income' => 'Income',
     'expense' => 'Expense',
     'profit' => 'Profit',

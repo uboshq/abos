@@ -7,11 +7,9 @@ namespace App\Modules\Purchase\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
-use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseReceipt;
-use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
@@ -285,54 +283,25 @@ final class ReturnOnCapitalReport
     /**
      * এই পরিসরে কার মাল কত বিক্রি হলো, আর মার্জিন কত।
      *
-     * নিষ্পত্তির রিপোর্টের সাথে একই পথ ধরে গোনা — দুই পাতায় দুই রকম
-     * সংখ্যা দেখালে কোনটা সত্যি সেটাই প্রশ্ন হয়ে দাঁড়াত।
+     * নিষ্পত্তির রিপোর্টের সাথে হুবহু একই পথ ([[SettlementReport::soldBySupplier()]]) — দুই পাতায় দুই রকম সংখ্যা দেখালে
+     * কোনটা সত্যি সেটাই প্রশ্ন হয়ে দাঁড়াত। ⭐ মার্জিন = নিট বিক্রি (ভ্যাট বাদে, ফেরত বাদে ফেরতের তারিখে, বাতিল বিল বাদ) −
+     * সেই মালের খরচ (ফেরত আর বাতিলে কমে) — ২১ অক্টোবর ২০২৬; আগে ফেরত এলেও মার্জিন আর খরচ আগের মতোই থাকত।
      */
     private static function traded(int $company, string $from, string $to): Builder
     {
-        return DB::table('inv_cost_layer_uses as u')
-            ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
-            ->join('sal_invoices as i', function ($join) {
-                $join->on('i.id', '=', 'u.source_id')
-                    ->where('u.source_type', '=', SalesInvoice::STOCK_SOURCE);
-            })
-            // ⛔ বিল আর পণ্য ধরে এক সারি — নিষ্পত্তির একই পথ ([[SettlementReport::lineRates()]], অডিট ⛔৮)
-            ->joinSub(SettlementReport::lineRates($company), 'il', function ($join) {
-                $join->on('il.sales_invoice_id', '=', 'i.id')
-                    ->on('il.product_id', '=', 'u.product_id');
-            })
-            ->leftJoin('pur_receipts as r', function ($join) {
-                $join->on('r.id', '=', 'l.source_id')
-                    ->where('l.source_type', '=', PurchaseReceipt::STOCK_SOURCE);
-            })
-            ->leftJoin('pur_bills as b', function ($join) {
-                $join->on('b.id', '=', 'l.source_id')
-                    ->where('l.source_type', '=', PurchaseBill::STOCK_SOURCE);
-            })
-            ->where('u.company_id', $company)
-            ->whereBetween('i.trx_date', [$from, $to])
-            ->whereIn('i.status', DocumentStatus::POSTED)
-            ->whereNotNull(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
-            ->groupBy(DB::raw('COALESCE(r.supplier_id, b.supplier_id)'))
+        return DB::query()->fromSub(SettlementReport::soldBySupplier($company, $from, $to), 'sb')
             ->select([
-                DB::raw('COALESCE(r.supplier_id, b.supplier_id) as supplier_id'),
-                DB::raw('SUM(u.amount) as cost'),
-                DB::raw('SUM(il.rate * u.qty) - SUM(u.amount) as margin'),
+                'sb.supplier_id',
+                DB::raw('sb.cost_of_sold as cost'),
+                DB::raw('sb.sold - sb.cost_of_sold as margin'),
             ]);
     }
 
-    /** সব মিল মিলিয়ে বিক্রীত মালের মোট ব্যয় — ভাগ করার হর। */
+    /** সব মিল মিলিয়ে বিক্রীত মালের মোট ব্যয় (ফেরত আর বাতিল বাদে) — ভাগ করার হর; [[SettlementReport::soldMoves()]]-এর একই টান। */
     private static function totalCost(int $company, string $from, string $to): Builder
     {
-        return DB::table('inv_cost_layer_uses as u')
-            ->join('sal_invoices as i', function ($join) {
-                $join->on('i.id', '=', 'u.source_id')
-                    ->where('u.source_type', '=', SalesInvoice::STOCK_SOURCE);
-            })
-            ->where('u.company_id', $company)
-            ->whereBetween('i.trx_date', [$from, $to])
-            ->whereIn('i.status', DocumentStatus::POSTED)
-            ->select([DB::raw('COALESCE(SUM(u.amount), 0) as total_cost')]);
+        return DB::query()->fromSub(SettlementReport::soldMoves($company, $from, $to), 'm')
+            ->select([DB::raw('COALESCE(SUM(m.cost), 0) as total_cost')]);
     }
 
     private static function supplierName(): Expression

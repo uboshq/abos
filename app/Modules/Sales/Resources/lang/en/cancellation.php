@@ -27,7 +27,8 @@ return [
     'after_gate_pass' => 'The goods of :no left through the gate pass — make a return (SRT), not a cancellation invoice.',
     'after_return' => ':no has a return or a credit note — reverse those first.',
     'shared_challan' => 'Challan :challan of :no also carries another invoice’s goods — make a return, not a cancellation invoice.',
-    'month_closed' => 'The month :month of :no is closed — someone allowed must reopen it with a reason first.',
+    // the cancellation's own month — a bill in a closed month can still be cancelled (fe, 21 Oct 2026; [[SalesInvoiceCancellationService::confirm()]])
+    'month_closed' => 'This month (:month) is closed — a cancellation invoice posts on today’s date; someone allowed must reopen the month with a reason first.',
     'approval' => 'Cancellation invoice (signature)',
     'reissue' => 'Make the correct bill',
     'reissue_hint' => 'The cancelled bill\'s lines open at the counter — fix them and save for a new bill with a new number.',

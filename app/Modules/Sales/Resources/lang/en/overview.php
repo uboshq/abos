@@ -29,6 +29,8 @@ return [
     'receivable_hint' => 'In :shops shops, by the ledger up to :date',
     'target_none' => 'No target is set for :month',
     'target_hint' => ':achieved of a :target target — before VAT',
+    'total_all' => 'Total',
+    'total_shown' => 'Total of these rows',
 
     'card' => [
         'invoices' => 'Confirmed invoices',
@@ -42,7 +44,9 @@ return [
         'returns' => 'Returns',
         'collection' => 'Collected',
         'receivable' => 'Receivable',
-        'outstanding' => 'Left unpaid this period',
+        'outstanding' => 'Receivable rose this period',
+        'outstanding_up' => 'Receivable rose this period',
+        'outstanding_down' => 'Receivable fell this period',
         'target' => 'Target achieved',
     ],
 
@@ -58,21 +62,21 @@ return [
         'returns' => 'Confirmed returns',
         'collection' => 'Collections and customer receipts, posted',
         'receivable' => "Positive balances in the customers' ledger",
-        'outstanding' => 'Net sales − collected; negative means old dues came in',
+        'outstanding' => 'Bills (incl. VAT) − returns (incl. VAT, by their own date) − collected: not sales, the movement of what customers owe',
         'target' => 'For the month of the end date',
     ],
 
     'panel' => [
-        'daily' => 'Sales over the last :days days',
+        'daily' => 'Net sales over the last :days days (excl. VAT and returns)',
         'monthly' => 'Sales over twelve months',
         'return_trend' => 'Returns over twelve months',
         'discount' => 'Discount month by month',
         'top_customers' => 'Top customers',
         'top_products' => 'Top products',
         'slow_products' => 'Slowest products',
-        'by_seller' => 'Invoices by who cut them',
-        'by_territory' => 'Sales by :level',
-        'by_branch' => 'Sales by branch',
+        'by_seller' => 'Net sales by who cut the invoice',
+        'by_territory' => 'Net sales by :level',
+        'by_branch' => 'Net sales by branch',
     ],
 
     'col' => [
@@ -82,7 +86,7 @@ return [
         'share' => 'Share',
         'product' => 'Product',
         'qty' => 'Quantity',
-        'revenue' => 'Sales (before VAT)',
+        'revenue' => 'Net sales (excl. VAT and returns)',
         'month' => 'Month',
         'gross' => 'Gross',
         'discount' => 'Discount',

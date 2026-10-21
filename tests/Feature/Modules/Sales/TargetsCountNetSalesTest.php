@@ -103,7 +103,7 @@ final class TargetsCountNetSalesTest extends TestCase
         $after = $this->figures();
 
         foreach (['scoreboard', 'analytics', 'route'] as $where) {
-            $this->assertSame('90000.0000', bcsub($after[$where], $before[$where], 4), "⛔ {$where}: অর্জন নিট বিক্রি (VAT ও ফেরত বাদে) নয়।");
+            $this->assertSame('90000.0000', bcsub($after[$where], $before[$where], 4), "⛔ {$where}: অর্জন নিট বিক্রি (ভ্যাট ও ফেরত বাদে) নয়।");
         }
 
         // ⓘ শতাংশ সেই নিট অঙ্কে — লক্ষ্যের পাতা আর সারাংশের কার্ড

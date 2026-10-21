@@ -11,6 +11,7 @@ return [
     'invoices' => 'Invoices',
     'this_month' => 'This month',
     'lifetime' => 'Lifetime',
+    'amount_basis' => 'Amounts: net sales (excl. VAT and returns)',
     'invoice_count' => ':count invoices',
     'outstanding' => 'Outstanding',
     'pending_bills' => 'Unpaid bills',

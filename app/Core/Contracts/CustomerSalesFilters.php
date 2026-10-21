@@ -32,14 +32,15 @@ interface CustomerSalesFilters
      */
 
     /**
-     * দুই তারিখের মধ্যে পাকা বিলের সংখ্যা আর মোট টাকা
+     * দুই তারিখের মধ্যে পাকা বিলের সংখ্যা আর মোট টাকা (`total`, বিলের মোট), আর নিট বিক্রি (`net` — বিল − ফেরত, VAT আর
+     * গাড়িভাড়া বাদে, ফেরত নিজের তারিখে; fe, ২১ অক্টোবর ২০২৬)
      *
-     * @return array{count: int, total: string}|null
+     * @return array{count: int, total: string, net: string}|null
      */
     public function billsBetween(string $from, string $to): ?array;
 
     /**
-     * দুই তারিখের মধ্যে সবচেয়ে বেশি কেনা গ্রাহক, বড়টা আগে
+     * দুই তারিখের মধ্যে সবচেয়ে বেশি কেনা গ্রাহক, নিট বিক্রি ধরে (`total` = বিল − ফেরত, VAT ও গাড়িভাড়া বাদে), বড়টা আগে
      *
      * @return list<array{customer_id: int, total: string}>|null
      */

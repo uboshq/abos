@@ -345,6 +345,88 @@ final class SalesMetrics implements ProvidesMetrics
         return $out;
     }
 
+    /**
+     * ⭐ যেকোনো চাবি ধরে নিট বিক্রি — বিক্রয়ের সারাংশের ভাগ (শাখা, ক্রেতা, বিক্রেতা, এরিয়া) আর ড্যাশবোর্ডের দণ্ড (fe, ২১ অক্টোবর ২০২৬)।
+     * দুই কোয়েরি, [[invoices()]] আর [[returns()]]-এর একই ভিত ও দেয়াল, প্রতিটা একটা `GROUP BY`; ফেরত নিজের তারিখে।
+     * ⓘ `$billKey` বিলের (`sal_invoices`) উপর SQL, `$returnKey` ফেরতের (`sal_returns`) উপর — যেমন বিক্রেতা: বিলের `created_by`,
+     * ফেরতের মূল বিলের `created_by` ([[sellerOfReturnSql()]])। ⓘ চাবি স্ট্রিং, খালি চাবি `''`; `count` = পাকা বিলের সংখ্যা।
+     * ⛔ সারির `net`-এর যোগ = [[net()]] পয়সায় — যে দলে কেবল ফেরত, সেটাও সারি পায়।
+     *
+     * @param  list<string>|null  $customerIds
+     * @return array<string, array{billed: string, returned: string, net: string, vat: string, gross: string, count: int}>
+     */
+    public static function netBy(string $from, string $to, string $billKey, string $returnKey, ?array $customerIds = null): array
+    {
+        $billed = self::exVatByKey(self::invoices($from, $to, $customerIds), 'sal_invoices', $billKey);
+        $returned = self::exVatByKey(self::returns($from, $to, $customerIds), 'sal_returns', $returnKey);
+        $out = [];
+
+        foreach (array_unique(array_map('strval', [...array_keys($billed), ...array_keys($returned)])) as $key) {
+            $out[$key] = self::parts(
+                $billed[$key][0] ?? '0.0000', $billed[$key][1] ?? '0.0000',
+                $returned[$key][0] ?? '0.0000', $returned[$key][1] ?? '0.0000',
+            ) + ['count' => $billed[$key][2] ?? 0];
+        }
+
+        return $out;
+    }
+
+    /** ⓘ ফেরতের বিক্রেতা — মূল বিল যিনি কেটেছেন, বিল না থাকলে ফেরত যিনি লিখেছেন ([[SalespersonReports]]-এর একই নিয়ম) */
+    public static function sellerOfReturnSql(): string
+    {
+        return '(COALESCE((SELECT ri.created_by FROM sal_invoices ri WHERE ri.id = sal_returns.sales_invoice_id), sal_returns.created_by))';
+    }
+
+    /**
+     * ⭐ পণ্য ধরে নিট বিক্রি — বিলের সারির নিট ([[LineNetSale]]: VAT, বিলের ছাড় আর রাউন্ডিংয়ের ভাগ) বাদ ফেরতের সারির নিট
+     * (`rl.amount`, আগেই VAT বাদে), ফেরতের নিজের তারিখে; পরিমাণ বিক্রি − ফেরত (fe, ২১ অক্টোবর ২০২৬)। ⓘ বিল আর ফেরত
+     * [[invoices()]]/[[returns()]]-এর একই দেয়ালে ছাঁকা। ⛔ সারির যোগ = [[net()]]: বিলের সারির নিট যোগ = `total − tax − freight`,
+     * ফেরতের সারির `amount` যোগ = `total − tax`।
+     * ⓘ ফেরত দেয় একটা কোয়েরি — `product_id`, `qty`, `amount` — সাজানো বা জোড়া লাগানো ডাকে যে (সেরা আর ধীর পণ্য)।
+     */
+    public static function netByProduct(string $from, string $to): \Illuminate\Database\Query\Builder
+    {
+        $sold = \Illuminate\Support\Facades\DB::table('sal_invoice_lines as il')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->tap(fn ($q) => \App\Modules\Sales\Reports\LineNetSale::joinBasis($q, (int) \App\Core\Support\CompanyContext::id(), $from, $to))
+            ->whereIn('il.sales_invoice_id', self::invoices($from, $to)->select('sal_invoices.id'))
+            ->selectRaw('il.product_id as product_id, il.qty as qty, '.\App\Modules\Sales\Reports\LineNetSale::sql().' as amount');
+
+        $back = \Illuminate\Support\Facades\DB::table('sal_return_lines as rl')
+            ->whereIn('rl.sales_return_id', self::returns($from, $to)->select('sal_returns.id'))
+            ->selectRaw('rl.product_id as product_id, 0 - rl.qty as qty, 0 - rl.amount as amount');
+
+        return \Illuminate\Support\Facades\DB::query()
+            ->fromSub($sold->unionAll($back), 'x')
+            ->groupBy('x.product_id')
+            ->selectRaw('x.product_id as product_id, COALESCE(SUM(x.qty), 0) as qty, COALESCE(SUM(x.amount), 0) as amount');
+    }
+
+    /**
+     * ⭐ এই সময়ে গ্রাহকের কাছে পাওনা কত বাড়ল (বা কমল) — বিক্রি নয়, পাওনার নড়াচড়া (fe, ২১ অক্টোবর ২০২৬):
+     * পাকা বিলের `total` (VAT আর বিলে যোগ করা গাড়িভাড়াসহ — গ্রাহক এগুলোও দেন) − পাকা ফেরতের `total` (VAT সহ, ফেরতের তারিখে)
+     * − আদায় ([[collectionTotal()]])। ⓘ বিল আর ফেরত [[invoices()]]/[[returns()]]-এর একই দেয়ালে। ধনাত্মক = বাড়ল, ঋণাত্মক = কমল।
+     */
+    public static function receivableMovement(string $from, string $to): string
+    {
+        $returns = Money::of(self::returns($from, $to)->sum('sal_returns.total'));
+
+        return bcsub(bcsub(self::invoiceTotal($from, $to), $returns, 4), self::collectionTotal($from, $to), 4);
+    }
+
+    /** @return array<string, array{0: string, 1: string, 2: int}> চাবি → [নিট, ভ্যাট, বিলের সংখ্যা] */
+    private static function exVatByKey(\Illuminate\Database\Eloquent\Builder $query, string $table, string $key): array
+    {
+        $out = [];
+
+        foreach ($query->selectRaw("{$key} as k, COUNT(*) as n, COALESCE(SUM(".self::netSql($table).'), 0) as ex_vat, COALESCE(SUM('.$table.'.tax), 0) as vat')
+            ->groupByRaw('k')->toBase()->get() as $row) {
+            $out[(string) $row->k] = [bcadd((string) $row->ex_vat, '0', 4), bcadd((string) $row->vat, '0', 4), (int) $row->n];
+        }
+
+        return $out;
+    }
+
     /** @return array<string, array{0: string, 1: string}> দল → [নিট, ভ্যাট] */
     private static function exVatGrouped(\Illuminate\Database\Eloquent\Builder $query, string $table, string $expr): array
     {

@@ -60,6 +60,8 @@ return [
     'edit_after_gate_pass' => ':no has passed the gate — only a return or a credit note now, with the owner\'s signature.',
     'edit_after_return' => ':no has a return or a credit note against it — it cannot be edited.',
     'edit_while_cancelling' => ':no has an open cancellation request (:cxl) — the bill cannot change before the owner decides.',
+    // ⛔ no edit of a bill in a closed month, nor onto a closed month's date — fe, 21 Oct 2026 (IAS 8; [[SaleEditor::assertEditable()]])
+    'edit_month_closed' => 'This month is closed — cancel the bill and make a new one',
     'edit_no_draft' => 'A confirmed sale does not go back to draft — press "Update".',
     'edit_no_new_money' => 'No new deposit while editing — take money on the collection page.',
     'edit_could_not_finish' => ':no could not be edited — nothing changed.',
