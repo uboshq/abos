@@ -26,6 +26,7 @@ use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Support\AdvanceBalance;
 use App\Modules\Hr\Support\BranchReach;
+use App\Modules\Hr\Support\WorkCalendar;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -458,27 +459,25 @@ final class PayrollService
         return app(PaymentChanges::class)->pendingFor($employee) !== null ? 'hr::payroll.held_waiting' : 'hr::payroll.held_no_account';
     }
 
-    /** ⓘ আইনের দিন গোনায় সাপ্তাহিক ছুটি — এই কোডে ছুটির পঞ্জিকা নেই, তাই কেবল শুক্রবার (fe, ২১ অক্টোবর ২০২৬) */
+    /** ⓘ মজুরিকাল শেষের পরে কত কর্মদিবস — শ্রম আইন ২০০৬ ধারা ১২৩ */
     public const WAGE_DAYS = 7;
 
     /**
-     * ⛔ মজুরি দেওয়ার শেষ দিন — মজুরিকাল (রানের মাস) শেষের পরে সাত কর্মদিবস, শ্রম আইন ২০০৬ ধারা ১২৩। ⓘ কর্মদিবস = শুক্রবার বাদে
-     * সব দিন; সরকারি ছুটির পঞ্জিকা এই কোডে নেই, তাই সেগুলো গোনা হয় না (খোলা প্রশ্ন)।
+     * ⛔ মজুরি দেওয়ার শেষ দিন — মজুরিকাল (রানের মাস) শেষের পরে সাত কর্মদিবস, শ্রম আইন ২০০৬ ধারা ১২৩।
+     *
+     * ⭐ কর্মদিবস গোনা ছুটির পঞ্জিকায় — কর্মীর নিজের শাখার সাপ্তাহিক ছুটি (নইলে কোম্পানির), আর তালিকার সরকারি ছুটি (সব শাখার বা তাঁর
+     * শাখার) বাদ ([[WorkCalendar::addWorkingDays()]]; মেশানোর পর, a6, ২১ অক্টোবর ২০২৬; [[TheWageDeadlineCountsTheWorkCalendarTest]])।
+     * ⓘ আগে কেবল শুক্রবার বাদ যেত — ঈদের সপ্তাহ বা শনিবারে বন্ধ দোকানের কর্মীর শেষ দিন আইনের আগেই "পেরিয়ে গেছে" (লাল) দেখাত।
+     * ⓘ কর্মী না দিলে (বা শাখাহীন কর্মী) কোম্পানির পঞ্জিকা — সাপ্তাহিক ছুটি কোম্পানির, তালিকার কেবল সব-শাখার ছুটি।
      */
-    public static function wageDeadline(PayrollRun $run): Carbon
+    public static function wageDeadline(PayrollRun $run, ?Employee $employee = null, ?WorkCalendar $calendar = null): Carbon
     {
-        $day = $run->month->copy()->endOfMonth()->startOfDay();
-        $left = self::WAGE_DAYS;
-
-        while ($left > 0) {
-            $day->addDay();
-
-            if (! $day->isFriday()) {
-                $left--;
-            }
-        }
-
-        return $day;
+        return ($calendar ?? app(WorkCalendar::class))->addWorkingDays(
+            $run->month->copy()->endOfMonth(),
+            self::WAGE_DAYS,
+            (int) $run->company_id,
+            $employee?->branch_id === null ? null : (int) $employee->branch_id,
+        );
     }
 
     /**
@@ -494,11 +493,13 @@ final class PayrollService
             ->where('payment_method', self::HELD)
             ->get();
 
-        $deadline = self::wageDeadline($run);
+        // ⓘ শেষ দিন কর্মী ধরে — শাখার সাপ্তাহিক ছুটি আলাদা হতে পারে ([[wageDeadline()]]); এক পঞ্জিকা, ছুটির তালিকা একবার পড়া
+        $calendar = app(WorkCalendar::class);
         $paid = HeldWagePayment::query()->whereIn('payslip_id', $slips->modelKeys())->with(['paidIn', 'voucher'])->get()->keyBy('payslip_id');
 
-        return $slips->map(function (Payslip $slip) use ($deadline, $paid): array {
+        return $slips->map(function (Payslip $slip) use ($run, $calendar, $paid): array {
             $employee = $slip->employee;
+            $deadline = self::wageDeadline($run, $employee, $calendar);
             $payment = $paid->get($slip->id);
             $reason = $employee === null ? null : self::heldReason($employee);
 
@@ -534,8 +535,10 @@ final class PayrollService
 
         $query = $user === null ? $query : app(BranchReach::class)->throughEmployee($query, $user);
 
-        return $query->orderBy('id')->get()->map(function (Payslip $slip): array {
-            $deadline = self::wageDeadline($slip->run);
+        $calendar = app(WorkCalendar::class);
+
+        return $query->orderBy('id')->get()->map(function (Payslip $slip) use ($calendar): array {
+            $deadline = self::wageDeadline($slip->run, $slip->employee, $calendar);
 
             return [
                 'employee' => (string) $slip->employee?->name(),

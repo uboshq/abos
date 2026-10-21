@@ -84,6 +84,26 @@ final class WorkCalendar
     }
 
     /**
+     * ⭐ একটা দিনের পরে `$days`টা কাজের দিন গুনে শেষ দিনটা — দিনটা নিজে গোনায় নয় (শ্রম আইন ২০০৬ ধারা ১২৩-এর "মজুরিকাল শেষের সাত
+     * কর্মদিবস"; [[PayrollService::wageDeadline()]]; a6, ২১ অক্টোবর ২০২৬)। ⓘ সাপ্তাহিক ছুটি (শাখার নিজের, নইলে কোম্পানির) আর তালিকার
+     * ছুটি বাদ — [[isOffDay()]]-এর একই নিয়ম, তাই ছুটির কোটা, বেতনের কাটা দিন আর আইনের শেষ দিন এক পঞ্জিকায়।
+     */
+    public function addWorkingDays(Carbon $after, int $days, ?int $companyId, ?int $branchId): Carbon
+    {
+        $day = $after->copy()->startOfDay();
+
+        while ($days > 0) {
+            $day->addDay();
+
+            if (! $this->isOffDay($day, $companyId, $branchId)) {
+                $days--;
+            }
+        }
+
+        return $day;
+    }
+
+    /**
      * @return list<int> সপ্তাহের যে দিনগুলো ছুটি — শাখার নিজের বাছাই থাকলে সেটা, নইলে কোম্পানির
      *
      * ⭐ শাখার বদল — fe-র উত্তর ৬, ২১ অক্টোবর ২০২৬ (শ্রম আইন ধারা ১০৩ ও ১১৪: দোকান আর কারখানার সাপ্তাহিক ছুটি আলাদা হতে পারে)।

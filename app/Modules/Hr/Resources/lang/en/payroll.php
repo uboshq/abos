@@ -10,7 +10,7 @@ return [
     'held_waiting' => 'The salary bank/mobile account is waiting for a second signature — no salary goes there until it is signed; the wage stays owed and joins the next bank file as arrears once signed.',
     'held_next_file' => 'The account is signed — the wage joins the next bank file as arrears.',
     'held_paid_later' => 'Paid as arrears in the bank file of :no.',
-    'held_deadline' => 'Legal deadline (Labour Act s.123 — 7 working days after the wage period, Fridays off): :date',
+    'held_deadline' => 'Legal deadline (Labour Act s.123 — 7 working days after the wage period, weekly off and listed holidays excluded): :date',
     'held_late' => '⛔ Past the deadline',
     'arrears_reference' => 'Wage arrears :no :month',
     'held_owed_title' => 'Held wages — not yet paid',
