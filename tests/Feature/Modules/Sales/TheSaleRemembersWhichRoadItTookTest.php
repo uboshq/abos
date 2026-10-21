@@ -229,13 +229,13 @@ final class TheSaleRemembersWhichRoadItTookTest extends TestCase
 
         $posted = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->get();
 
-        $expectedNet = $posted->reduce(fn (string $s, SalesInvoice $i) => bcadd($s, bcsub((string) $i->total, (string) $i->tax, 4), 4), '0');
+        $expectedNet = $posted->reduce(fn (string $s, SalesInvoice $i) => bcadd($s, bcsub(bcsub((string) $i->total, (string) $i->tax, 4), (string) $i->freight_charge, 4), 4), '0'); // ⓘ বিল ভ্যাট আর ভাড়া বাদে (SalesMetrics::billNetSql, ২১ অক্টোবর ২০২৬)
         $expectedDiscount = $posted->reduce(fn (string $s, SalesInvoice $i) => bcadd($s, (string) $i->discount, 4), '0');
         $expectedGross = $posted->reduce(fn (string $s, SalesInvoice $i) => bcadd($s, (string) $i->subtotal, 4), '0');
         $expectedQty = $posted->reduce(fn (string $s, SalesInvoice $i) => bcadd($s, (string) $i->lines()->sum('qty'), 4), '0');
 
-        $this->assertSame(0, bccomp($result->totals['net_sales'], $expectedNet, 2),
-            "রিপোর্টের বিক্রয় {$result->totals['net_sales']}, বিলগুলোর {$expectedNet}।");
+        $this->assertSame(0, bccomp($result->totals['billed'], $expectedNet, 2),
+            "রিপোর্টের বিক্রয় {$result->totals['billed']}, বিলগুলোর {$expectedNet}।");
         $this->assertSame(0, bccomp($result->totals['discount'], $expectedDiscount, 2));
         $this->assertSame(0, bccomp($result->totals['gross'], $expectedGross, 2));
         $this->assertSame(0, bccomp($result->totals['qty'], $expectedQty, 2));
@@ -255,7 +255,7 @@ final class TheSaleRemembersWhichRoadItTookTest extends TestCase
         // পথহীন বিলটা নিজের সারিতে, নাম "পথ বসানো হয়নি"
         $this->assertArrayHasKey('none', $rows, 'পথহীন বিলটা রিপোর্ট থেকে হারিয়ে গেছে।');
         $this->assertSame(__('sales::channel.none'), $rows['none']['channel_name']);
-        $this->assertSame(0, bccomp((string) $rows['none']['net_sales'], '50', 2));
+        $this->assertSame(0, bccomp((string) $rows['none']['billed'], '50', 2));
     }
 
     // ── ⓸ কোম্পানির দেয়াল ──────────────────────────────────────────────
