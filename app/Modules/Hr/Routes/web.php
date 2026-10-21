@@ -37,6 +37,12 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::get('/{employee}/edit', [EmployeeController::class, 'edit'])->whereNumber('employee')->name('edit');
         Route::put('/{employee}', [EmployeeController::class, 'update'])->whereNumber('employee')->name('update');
         Route::delete('/{employee}', [EmployeeController::class, 'destroy'])->whereNumber('employee')->name('destroy');
+
+        // ⭐ বেতনের ঠিকানার বদলে দ্বিতীয় সই — #৮, ২০ অক্টোবর ২০২৬ ([[PaymentChanges]])
+        Route::post('/{employee}/payment-change/{change}/approve', [EmployeeController::class, 'approvePaymentChange'])
+            ->whereNumber('employee')->whereNumber('change')->name('payment_change.approve');
+        Route::post('/{employee}/payment-change/{change}/reject', [EmployeeController::class, 'rejectPaymentChange'])
+            ->whereNumber('employee')->whereNumber('change')->name('payment_change.reject');
     });
 
     /*

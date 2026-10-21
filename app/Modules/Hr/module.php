@@ -119,6 +119,12 @@ return [
          */
         'hr.identity.view',
 
+        /*
+         * ⭐ কর্মীর বেতনের ঠিকানার বদলে দ্বিতীয় সই — #৮, ২০ অক্টোবর ২০২৬ ([[PaymentChanges]])। ⓘ কোনো ভূমিকায় ডিফল্টে নেই:
+         * মালিক (super admin) সব চাবি পান, আর কাকে দেবেন তা তিনিই ঠিক করেন। ⛔ যিনি বদলটা লিখলেন, চাবি থাকলেও তিনি সই দেন না।
+         */
+        'hr.payment_change.approve',
+
         'hr.salary.view',
         'hr.salary.manage',
 
@@ -422,6 +428,17 @@ return [
          * (সেবা স্তরেও দ্বিতীয় পাহারা আছে: যে দিনের সারি লেখা নেই সেটা
          * গোনাই হয় না। কিন্তু বেতনের মতো জায়গায় একটা পাহারা যথেষ্ট নয়।)
          */
+        /*
+         * ⭐ বেতনের ঠিকানার বদলে দ্বিতীয় সই — #৮, ২০ অক্টোবর ২০২৬ ([[PaymentChanges]])। ⓘ ডিফল্টে চালু, আর কোম্পানির সাধারণ সই-ছক
+         * (UB-তে সব বন্ধ) এটা বন্ধ করে না — বেতন জালিয়াতির পথ বলে আলাদা সুইচ। বন্ধ করলে বদল সাথে সাথে বসে, তবু লেখা থাকে আর কর্মী খবর পান।
+         */
+        [
+            'key' => 'hr.payment_change_needs_second_hand',
+            'label' => 'hr::settings.payment_change_needs_second_hand',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
         [
             'key' => 'hr.attendance_affects_salary',
             'label' => 'hr::settings.attendance_affects_salary',
