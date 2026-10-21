@@ -321,3 +321,31 @@ M61 app/Modules/Accounts/Reports/CoreReports.php
     old: "            ->whereIn('ledger_entries.account_id', $ids)"
     new: "            ->whereIn('ledger_entries.account_id', [0])"
     kill: same test
+
+== cb's review — nobody but the maker holds the keys: say which keys to give ==
+(cb's old mutants on the removed permission hr.payment_change.approve, the hr.payment_change_needs_second_hand setting and the owner's instant apply no longer apply and are not listed. The maker-signs-own and one-person-twice mutants are M41 and M45 above.)
+
+M62 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            ->contains(fn (User $user) => $this->canDecide($approval, $user));"   (in noSecondSignerNote)
+    new: "            ->contains(fn (User $user) => true);"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_run_nobody_else_can_sign_says_which_keys_to_give_until_someone_holds_them (no banner while nobody can sign)
+
+M63 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            ->contains(fn (User $user) => $this->canDecide($approval, $user));"
+    new: "            ->contains(fn (User $user) => false);"
+    kill: same test (the banner stays after a clerk gets the keys)
+
+M64 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            ->when($approval->requested_by !== null, fn ($q) => $q->whereKeyNot((int) $approval->requested_by))"
+    new: ""
+    EQUIVALENT: the requester never passes canDecide() on these actions (M41's line), so leaving him in the list changes nothing; the filter only saves one canDecide call.
+
+M65 resources/views/components/ui/no-second-signer.blade.php
+    old: "@if ($note !== null)"
+    new: "@if (false)"
+    kill: same test (the run page, the signing page, the salary page and the bank banner)
+
+M66 app/Modules/Approval/Resources/views/inbox/mine.blade.php
+    old: "            if ($nobody !== null) {"
+    new: "            if (false) {"
+    kill: same test (the "my requests" row)

@@ -385,6 +385,54 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
             ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ "নিজে-সই" চিহ্ন বসল।');
     }
 
+    // ── সই দেওয়ার কেউ নেই ──────────────────────────────────────────────
+
+    /**
+     * ⛔ অনুরোধকারী ছাড়া চাবি কারও হাতে নেই — অনুরোধ নীরবে ঝোলে না: রানের পাতা, অনুমোদনের পাতা আর "আমার অনুরোধ"-এর সারি বলে
+     * কোন তিনটা চাবি কাকে দিতে হবে; চাবি দিলে লেখাটা যায়, আর তিনি সই দিতে পারেন (cb-র রিভিউ, ২১ অক্টোবর ২০২৬)।
+     */
+    public function test_a_run_nobody_else_can_sign_says_which_keys_to_give_until_someone_holds_them(): void
+    {
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $approval = $this->pendingFor($run);
+        $this->assertNotNull(app(ApprovalEngine::class)->noSecondSignerNote($approval->fresh()),
+            'প্রস্তুতি — ডেমোতে মালিক ছাড়াও কেউ রানের তিন চাবি ধরে আছেন।');
+
+        foreach ([route('hr.payroll.show', $run->id), route('approval.inbox.show', $approval->id), route('approval.inbox.mine')] as $page) {
+            $this->as($this->owner)->get($page)->assertOk()
+                ->assertSee((string) __('core.approval.no_second_signer', ['keys' => 'hr.payroll.manage, hr.salary.view, approval.decide']), false);
+        }
+
+        $clerk = $this->payrollClerk();
+        $this->as($this->owner)->get(route('hr.payroll.show', $run->id))->assertOk()->assertDontSee('data-no-second-signer', false);
+        $this->assertNull(app(ApprovalEngine::class)->noSecondSignerNote($approval->fresh()));
+
+        $this->as($clerk)->post(route('approval.inbox.approve', $approval->id))->assertRedirect();
+        $this->assertSame(Approval::APPROVED, (string) $approval->fresh()->status, '⛔ চাবি পেয়েও সই দিতে পারলেন না।');
+    }
+
+    public function test_a_salary_change_and_a_bank_change_nobody_else_can_sign_say_which_keys_to_give(): void
+    {
+        $change = app(SalaryStructureService::class)->change($this->employee, '2026-09-01', [$this->basic->id => self::RAISED]);
+        $this->as($this->owner)->get(route('hr.employee.salary', $this->employee))->assertOk()
+            ->assertSee((string) __('core.approval.no_second_signer', ['keys' => 'hr.salary.manage, hr.salary.view, approval.decide']), false);
+        $this->salaryClerk();
+        $this->as($this->owner)->get(route('hr.employee.salary', $this->employee))->assertOk()->assertDontSee('data-no-second-signer', false);
+        $this->assertInstanceOf(Approval::class, $change);
+
+        $this->as($this->owner);
+        app(EmployeeService::class)->update($this->employee->fresh(), [
+            'payment_method' => 'bank', 'bank_name' => 'Sonali', 'bank_account_no' => '7777777777777', 'bank_routing_no' => '200270001',
+        ]);
+        $this->assertNotNull(app(\App\Modules\Hr\Services\PaymentChanges::class)->pendingFor($this->employee), 'প্রস্তুতি — বদলটা অপেক্ষায় নয়।');
+        $this->as($this->owner)->get(route('hr.employee.show', $this->employee))->assertOk()
+            ->assertSee((string) __('core.approval.no_second_signer', ['keys' => 'hr.employee.manage, hr.identity.view, approval.decide']), false);
+
+        $this->secondHandIn((int) $this->company->id, 'hr.employee.view', 'hr.employee.manage', 'hr.identity.view', 'approval.decide');
+        $this->as($this->owner)->get(route('hr.employee.show', $this->employee))->assertOk()->assertDontSee('data-no-second-signer', false);
+    }
+
     // ── মডিউলের ঘোষণা ─────────────────────────────────────────────────
 
     public function test_a_module_cannot_name_a_second_hand_key_it_does_not_declare(): void

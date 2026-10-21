@@ -62,6 +62,8 @@
                 {{ __('hr::payment_change.banner', ['by' => $paymentChange->requester?->name, 'at' => \App\Core\Support\DateFormat::format($paymentChange->created_at)]) }}
             </p>
             <p class="mt-1 text-(--color-ink-muted)">{{ __('hr::payment_change.banner_note') }}</p>
+            {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+            <x-ui.no-second-signer :approval="app(\App\Modules\Hr\Services\PaymentChanges::class)->approvalOf($paymentChange)" />
 
             <table class="ui-lines mt-3 w-full">
                 <thead>

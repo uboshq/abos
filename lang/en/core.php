@@ -1336,6 +1336,7 @@ return [
         'delegate_not_self' => 'You cannot delegate to yourself — that would open a path to approving your own request.',
         'delegate_bad_dates' => 'The end date cannot fall before the start date.',
         'second_hand' => 'Second signature',
+        'no_second_signer' => 'Nobody can give the second signature — give someone these three keys: :keys',
         'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
         'awaiting_because' => 'This has gone for approval — :reason. It moves on once the approver decides.',
         'rejected' => 'Approval was refused — :reason. Put that right, edit the document, and it can go again.',

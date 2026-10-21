@@ -119,6 +119,9 @@
         @endcan
     </div>
 
+    {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে — কোন চাবি কাকে দিতে হবে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+    <x-ui.no-second-signer :approval="app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($run, 'payroll')" />
+
     {{-- ⭐ ব্যাংক ফাইলে কারা নেই আর কেন — সই-না-পড়া হিসাবে বেতন আটকে (fe, ২১ অক্টোবর ২০২৬; [[PayrollService::heldReason()]]) --}}
     @if (! empty($leftOut))
         <section data-bank-left-out role="status" data-boxed

@@ -1419,6 +1419,38 @@ final class ApprovalEngine
     }
 
     /**
+     * ⛔ দুই হাতের অনুরোধে অনুরোধকারী ছাড়া সই দিতে পারেন এমন কেউ নেই — তবে বাংলায় বলা, কোন চাবিগুলো কাউকে দিতে হবে (cb-র রিভিউ,
+     * ২১ অক্টোবর ২০২৬; a6)। ⓘ UB-র মতো ছোট কোম্পানিতে মালিক নিজে রান চাইলে আর কারও হাতে চাবি না থাকলে অনুরোধটা নীরবে ঝুলত।
+     * ⓘ প্রশ্নটা [[canDecide()]]-কেই করা — ইনবক্স যাকে দেখায়, ঠিক তাঁরাই গোনা হন। চাবির নাম মডিউলের ঘোষণা থেকে, সাথে সইয়ের দরজা।
+     *
+     * @return string|null `null` = বলার কিছু নেই (অপেক্ষায় নয়, দুই হাতের কাজ নয়, বা কেউ আছেন)
+     */
+    public function noSecondSignerNote(Approval $approval): ?string
+    {
+        if (! $approval->isPending() || ! $this->twoHands((string) $approval->module, (string) $approval->action)) {
+            return null;
+        }
+
+        $someone = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey((int) $approval->company_id))
+            ->where('is_active', true)
+            ->when($approval->requested_by !== null, fn ($q) => $q->whereKeyNot((int) $approval->requested_by))
+            ->get()
+            ->contains(fn (User $user) => $this->canDecide($approval, $user));
+
+        if ($someone) {
+            return null;
+        }
+
+        $keys = array_values(array_unique([
+            ...app(ApprovalRules::class)->secondHand((string) $approval->module, (string) $approval->action),
+            self::DECIDE_KEY,
+        ]));
+
+        return (string) __('core.approval.no_second_signer', ['keys' => implode(', ', $keys)]);
+    }
+
+    /**
      * ⓘ ইনবক্সে দুই হাতের কাজের নিজের অনুরোধ নয় — মালিকেরও না ([[canDecide()]]-এর একই নিয়ম, SQL-এ; [[TheInboxAgreesWithTheDecisionTest]])।
      */
     private function exceptOwnTwoHanded(Builder $query, User $user): void
