@@ -294,3 +294,30 @@ M56 app/Modules/Hr/Services/PaymentChanges.php
     old: "        $change->auditAction('payment_change_withdrawn', __('hr::payment_change.withdrawn_note'));"
     new: ""
     kill: same test (no audit row)
+
+== fe round 2, answer 4 — WPPF on its own line in the profit and loss, above profit before tax ==
+
+M57 app/Modules/Accounts/Reports/CoreReports.php
+    old: "            'rank' => \"CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$wppf} THEN 5 WHEN {$income} THEN 3 ELSE 4 END\","
+    new: "            'rank' => \"CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$income} THEN 3 ELSE 4 END\","
+    EQUIVALENT for the claim's figures (order of rows only): with 5223 ranked with the other expenses its row still carries its own section label; the visible order of the section within expenses is not asserted. Kept for reading order, not for a figure.
+
+M58 app/Modules/Accounts/Reports/CoreReports.php
+    old: "            'label' => \"CASE WHEN {$revenue} THEN ? WHEN {$cost} THEN ? WHEN {$wppf} THEN ? WHEN {$income} THEN ? ELSE ? END\","
+    new: "            'label' => \"CASE WHEN {$revenue} THEN ? WHEN {$cost} THEN ? WHEN 1=0 THEN ? WHEN {$income} THEN ? ELSE ? END\","
+    kill: WorkersGetTheirShareOfTheProfitTest::test_the_profit_and_loss_shows_the_fund_on_its_own_line_above_profit_before_tax (the 5223 row's section is "4. Expenses")
+
+M59 app/Modules/Accounts/Reports/CoreReports.php
+    old: "                if (bccomp($wppf, '0', 4) !== 0) {"
+    new: "                if (false) {"
+    kill: same test (no WPPF and profit-before-tax lines)
+
+M60 app/Modules/Accounts/Reports/CoreReports.php
+    old: "                    $lines[] = ['label' => __('accounts::message.profit_before_tax'), 'value' => $net];"
+    new: "                    $lines[] = ['label' => __('accounts::message.profit_before_tax'), 'value' => bcadd($net, $wppf, 4)];"
+    kill: same test (profit before tax 123,457.31 instead of 117,284.44; WPPF + PBT no longer adds up)
+
+M61 app/Modules/Accounts/Reports/CoreReports.php
+    old: "            ->whereIn('ledger_entries.account_id', $ids)"
+    new: "            ->whereIn('ledger_entries.account_id', [0])"
+    kill: same test
