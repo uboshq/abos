@@ -215,6 +215,10 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         });
         $this->assertSame([], $news, "⛔ core.php-র বিজ্ঞপ্তির ব্লকে এখনো \"খবর\":\n".implode("\n", $news));
 
+        // ⓘ fe, ২১ অক্টোবর ২০২৬: সেটিংসের দুই দলও — ঘণ্টা আর পাঠানো
+        $this->assertSame('ঘণ্টার বিজ্ঞপ্তি', __('core.settings_group.bell', [], 'bn'), '⛔ সেটিংসের ঘণ্টার দল এখনো "খবর"।');
+        $this->assertSame('বিজ্ঞপ্তি পাঠানো', __('core.settings_group.delivery', [], 'bn'), '⛔ সেটিংসের পাঠানোর দল এখনো "খবর"।');
+
         // ⓘ চিপ নিজেও ফাইলের লেখা আঁকে
         $this->assertSame($states['posted']['label_bn_short_without_level'], PaperStates::chip('posted')['label']);
         $this->assertSame($states['posted']['label_bn_stock'], PaperStates::chip('posted', kind: 'stock')['label']);
