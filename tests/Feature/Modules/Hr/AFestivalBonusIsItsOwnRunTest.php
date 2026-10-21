@@ -105,6 +105,28 @@ final class AFestivalBonusIsItsOwnRunTest extends TestCase
         $this->assertSame(PayrollRun::BONUS, $this->payroll()->buildBonus('2026-10-05')->run_type, '⛔ বাতিল রানও গোনায় পড়ল।');
     }
 
+    /**
+     * ⭐ সীমা পঞ্জিকা-বছরের — জানুয়ারি থেকে ডিসেম্বর, আয়ের বছর (জুলাই–জুন) নয় (fe, ২১ অক্টোবর ২০২৬, দফা ৫)।
+     * ⓘ ২০২৬-এর দুইটার পরে ডিসেম্বর ২০২৬ ফেরে, অথচ জানুয়ারি ২০২৭ চলে — জুলাই–জুন ধরলে দুটোই এক বছরের হত।
+     */
+    public function test_the_limit_is_two_per_calendar_year(): void
+    {
+        $this->employee('BN-A', '2025-03-01', '23456.78');
+
+        $this->payroll()->buildBonus('2026-04-10');
+        $this->payroll()->buildBonus('2026-06-16');
+
+        try {
+            $this->payroll()->buildBonus('2026-12-20');
+            $this->fail('⛔ ২০২৬ সালের তৃতীয় উৎসব ভাতা বসল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('bonus_date', $e->errors());
+        }
+
+        $this->assertSame(PayrollRun::BONUS, $this->payroll()->buildBonus('2027-01-10')->run_type,
+            '⛔ নতুন পঞ্জিকা-বছরের প্রথম উৎসব ভাতা আটকে গেল।');
+    }
+
     public function test_one_live_run_a_month_holds_per_type(): void
     {
         $this->employee('BN-A', '2025-03-01', '23456.78');
