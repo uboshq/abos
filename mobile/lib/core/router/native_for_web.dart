@@ -40,6 +40,7 @@ import '../../features/vouchers/voucher_screens.dart';
 import '../../features/web_inside/web_inside_screen.dart';
 import '../accounts/voucher_api.dart';
 import '../auth/auth_state.dart';
+import '../locale/app_locale.dart';
 import '../menu/module_gate.dart';
 import '../navigation/paper_kinds.dart';
 import '../orders/delivery_order_api.dart';
@@ -387,7 +388,7 @@ class NativeForWeb {
           key: ValueKey('invoices-web-$cancelled'),
           kind: SalesPaperKind.invoice,
           api: ServerSalesPaperApi(cancelled: cancelled),
-          title: cancelled ? (named ?? 'বাতিল বিক্রয় বিল') : null,
+          title: cancelled ? (named ?? AppLocale.l10n.navScreenCancelledInvoices) : null,
         ),
       );
     }

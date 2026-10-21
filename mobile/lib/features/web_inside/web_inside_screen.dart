@@ -13,6 +13,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../core/auth/token_storage.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart' show bnDigits;
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/web_inside/web_files.dart';
@@ -76,7 +79,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
     if (path == null) {
       setState(() {
         _asking = false;
-        _error = 'এই পর্দার ঠিকানাটা চেনা গেল না — মেনু থেকে আবার খুলুন।';
+        _error = AppLocale.l10n.webInsideBadAddress;
       });
       return;
     }
@@ -93,7 +96,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         if (typed == null) {
           setState(() {
             _asking = false;
-            _error = 'দুই ধাপের কোড ছাড়া ওয়েবের পর্দা খোলে না — ওয়েবের লগইনের মতোই।';
+            _error = AppLocale.l10n.webInsideNeedsCode;
           });
           return;
         }
@@ -124,13 +127,13 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => _TextDialog(
-          title: 'দুই ধাপের কোড',
+          title: context.l10n.webInsideCodeTitle,
           message: message,
           messageIsError: wasWrong,
           fieldKey: const ValueKey('web-inside-code'),
-          hint: 'অথেনটিকেটর অ্যাপের ৬ অঙ্ক',
+          hint: context.l10n.webInsideCodeHint(bnDigits(6, Locale(context.l10n.localeName))),
           numeric: true,
-          okLabel: 'খুলুন',
+          okLabel: context.l10n.commonOpen,
           cancelValue: null,
         ),
       );
@@ -155,7 +158,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         },
         onWebResourceError: (error) {
           if (error.isForMainFrame != true || !mounted) return;
-          setState(() => _error = 'পাতাটা আনা গেল না — সংযোগ দেখে আবার চেষ্টা করুন।');
+          setState(() => _error = AppLocale.l10n.webInsideLoadFailed);
         },
         onNavigationRequest: _onNavigation,
       ))
@@ -196,7 +199,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
   }
 
   void _download(Uri uri) {
-    _snack('ফাইল আনা হচ্ছে…');
+    _snack(AppLocale.l10n.webInsideFileFetching);
     unawaited(_controller?.runJavaScript(WebFiles.fetchScript(uri)).catchError((_) {}));
   }
 
@@ -214,7 +217,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
   Future<void> _onFile(String message) async {
     final file = WebFiles.decodePosted(message, Uri.parse(_issuedUrl ?? 'https://${WebPaths.allowedHost}/'));
     if (file == null) {
-      _snack('ফাইলটা আনা গেল না — আবার চেষ্টা করুন।');
+      _snack(AppLocale.l10n.webInsideFileFetchFailed);
       return;
     }
     try {
@@ -224,7 +227,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
       if (!mounted) return;
       await _offerFile(saved, file.mime);
     } catch (_) {
-      _snack('ফাইলটা রাখা গেল না — ফোনে জায়গা আছে কি না দেখুন।');
+      _snack(AppLocale.l10n.webInsideFileSaveFailed);
     }
   }
 
@@ -239,7 +242,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
             ListTile(
               key: const ValueKey('web-file-open'),
               leading: const Icon(Icons.open_in_new),
-              title: const Text('খুলুন'),
+              title: Text(context.l10n.commonOpen),
               onTap: () {
                 Navigator.of(context).pop();
                 unawaited(OpenFilex.open(file.path, type: mime));
@@ -248,7 +251,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
             ListTile(
               key: const ValueKey('web-file-share'),
               leading: const Icon(Icons.share_outlined),
-              title: const Text('পাঠান বা সেভ করুন'),
+              title: Text(context.l10n.webInsideFileShare),
               onTap: () {
                 Navigator.of(context).pop();
                 unawaited(Share.shareXFiles([XFile(file.path, mimeType: mime)]));
@@ -273,7 +276,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         onLayout: (format) => Printing.convertHtml(format: format, html: html, baseUrl: base),
       );
     } catch (_) {
-      _snack('ছাপা গেল না — পাতাটা পুরো আসার পরে আবার চেষ্টা করুন।');
+      _snack(AppLocale.l10n.webInsidePrintFailed);
     }
   }
 
@@ -287,16 +290,16 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('ছবি তুলুন'),
+              title: Text(context.l10n.webInsideTakePhoto),
               onTap: () => Navigator.of(context).pop('camera')),
           ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('গ্যালারি থেকে'),
+              title: Text(context.l10n.webInsideFromGallery),
               onTap: () => Navigator.of(context).pop('gallery')),
           if (!imagesOnly)
             ListTile(
                 leading: const Icon(Icons.attach_file),
-                title: const Text('ফাইল বাছুন (PDF, এক্সেল…)'),
+                title: Text(context.l10n.webInsidePickFile),
                 onTap: () => Navigator.of(context).pop('file')),
         ]),
       ),
@@ -318,7 +321,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         case 'file':
           final groups = [
             XTypeGroup(
-              label: 'ফাইল',
+              label: AppLocale.l10n.webInsideFile,
               mimeTypes: [
                 for (final t in params.acceptTypes)
                   if (t.contains('/')) t.trim(),
@@ -333,7 +336,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
           return file == null ? const [] : [Uri.file(file.path).toString()];
       }
     } catch (_) {
-      _snack('ফাইলটা নেওয়া গেল না — আবার চেষ্টা করুন।');
+      _snack(AppLocale.l10n.webInsideFilePickFailed);
     }
     return const [];
   }
@@ -342,7 +345,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         context: context,
         builder: (context) => AlertDialog(
           content: Text(message),
-          actions: [FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('ঠিক আছে'))],
+          actions: [FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.webInsideOk))],
         ),
       );
 
@@ -352,8 +355,8 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         builder: (context) => AlertDialog(
           content: Text(message),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('না')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('হ্যাঁ')),
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(context.l10n.webInsideNo)),
+            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(context.l10n.webInsideYes)),
           ],
         ),
       ) ??
@@ -362,7 +365,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
   Future<String> _prompt(String message, String? initial) async =>
       await showDialog<String>(
         context: context,
-        builder: (context) => _TextDialog(message: message, initial: initial, okLabel: 'ঠিক আছে', cancelValue: ''),
+        builder: (context) => _TextDialog(message: message, initial: initial, okLabel: context.l10n.webInsideOk, cancelValue: ''),
       ) ??
       '';
 
@@ -395,7 +398,7 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
         appBar: AppBar(
           leading: IconButton(
             key: const ValueKey('web-inside-close'),
-            tooltip: 'বন্ধ করুন',
+            tooltip: context.l10n.webInsideClose,
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
@@ -404,13 +407,13 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
             if (url != null && _error == null) ...[
               IconButton(
                 key: const ValueKey('web-inside-print'),
-                tooltip: 'ছাপুন বা PDF',
+                tooltip: context.l10n.webInsidePrint,
                 icon: const Icon(Icons.print_outlined),
                 onPressed: _print,
               ),
               IconButton(
                 key: const ValueKey('web-inside-reload'),
-                tooltip: 'নতুন করে আনুন',
+                tooltip: context.l10n.webInsideReload,
                 icon: const Icon(Icons.refresh),
                 onPressed: () => _controller?.reload(),
               ),
@@ -434,13 +437,13 @@ class _WebInsideScreenState extends State<WebInsideScreen> {
       return Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          EmptyState(icon: Icons.public_off_outlined, title: 'পাতাটা খোলা গেল না', message: _error),
+          EmptyState(icon: Icons.public_off_outlined, title: context.l10n.webInsideOpenFailedTitle, message: _error),
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             key: const ValueKey('web-inside-retry'),
             onPressed: () => _open(_currentPath ?? widget.webPath),
             icon: const Icon(Icons.refresh),
-            label: const Text('আবার চেষ্টা করুন'),
+            label: Text(context.l10n.commonRetry),
           ),
         ]),
       );
@@ -512,7 +515,7 @@ class _TextDialogState extends State<_TextDialog> {
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(widget.cancelValue), child: const Text('থাক')),
+          TextButton(onPressed: () => Navigator.of(context).pop(widget.cancelValue), child: Text(context.l10n.webInsideCancel)),
           FilledButton(
             onPressed: () {
               final text = _field.text.trim();

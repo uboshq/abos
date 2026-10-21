@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../locale/app_locale.dart';
+import '../navigation/top_bar/abos_top_bar.dart' show bnDigits;
+
 /// ⭐ অ্যাপ-তালার সময় — কতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN লাগে (অ্যাপের নিরাপত্তা, OWASP MASVS-AUTH-3,
 /// ১৯ অক্টোবর ২০২৬; [[AppLock]])।
 ///
@@ -57,9 +60,8 @@ class LockDelay {
   }
 
   /// পর্দার লেখা — "সাথে সাথে", "১ মিনিট" …
-  static String label(int minutes) => minutes == 0
-      ? 'সাথে সাথে'
-      : '${'$minutes'.split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join()} মিনিট';
+  static String label(int minutes) =>
+      minutes == 0 ? AppLocale.l10n.lockDelayNow : AppLocale.l10n.lockDelayMinutes(minutes, bnDigits(minutes));
 
   static Future<String?> _readStore() => _store.read(key: _key);
 

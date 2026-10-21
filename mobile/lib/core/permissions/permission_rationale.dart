@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../locale/app_locale.dart';
+
 /// ফোনের যে অনুমতিগুলো অ্যাপ চলার সময় চায়, আর প্রতিটার আগে বাংলায় কেন — Android-এর নিজের ইংরেজি/অস্পষ্ট
 /// প্রশ্নটা আসার **আগে** (অ্যাপ রিলিজ নিরীক্ষা, ec, ২০ অক্টোবর ২০২৬)।
 ///
@@ -28,20 +30,14 @@ class PermissionCheck {
 class PermissionRationale {
   const PermissionRationale._();
 
-  static const String cameraTitle = 'ক্যামেরার অনুমতি';
-  static const String cameraBody =
-      'QR পড়তে, স্লিপ বা রসিদের ছবি আর নিজের প্রোফাইলের ছবি তুলতে ABOS ফোনের ক্যামেরা ব্যবহার করবে। '
-      'এরপর ফোন ক্যামেরার অনুমতি চাইবে — "অনুমতি দিন" চাপুন। '
-      'আপনি না চাপলে ক্যামেরা চালু হয় না, আর কেবল আপনার পাঠানো ছবিটাই অফিসে যায়।';
+  static String get cameraTitle => AppLocale.l10n.permissionCameraTitle;
+  static String get cameraBody => AppLocale.l10n.permissionCameraBody;
 
-  static const String notificationsTitle = 'বার্তার অনুমতি';
-  static const String notificationsBody =
-      'সই চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। '
-      'এরপর ফোন বার্তার অনুমতি চাইবে — "অনুমতি দিন" চাপুন। '
-      'না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।';
+  static String get notificationsTitle => AppLocale.l10n.permissionNotificationsTitle;
+  static String get notificationsBody => AppLocale.l10n.permissionNotificationsBody;
 
-  static const String notNow = 'এখন না';
-  static const String ok = 'ঠিক আছে';
+  static String get notNow => AppLocale.l10n.permissionNotNow;
+  static String get ok => AppLocale.l10n.permissionOk;
 
   static String titleOf(AppPermission p) => switch (p) {
         AppPermission.camera => cameraTitle,
@@ -75,11 +71,11 @@ class PermissionRationale {
           TextButton(
               key: const Key('permission-rationale-no'),
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(notNow)),
+              child: Text(notNow)),
           FilledButton(
               key: const Key('permission-rationale-ok'),
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(ok)),
+              child: Text(ok)),
         ],
       ),
     );

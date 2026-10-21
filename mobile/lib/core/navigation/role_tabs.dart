@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../locale/app_locale.dart';
 import '../menu/module_gate.dart';
+import 'top_bar/abos_top_bar.dart' as top_bar show bnDigits;
 import '../web_inside/web_inside.dart';
 
 /// ⭐ নিচের বারের চার ঘর, ভূমিকা অনুযায়ী — বারের চূড়ান্ত নকশা, সংস্করণ ৩, অংশ ৪ আর ৭ (মালিকের "হ্যাঁ", ২০ অক্টোবর ২০২৬)।
@@ -25,8 +27,8 @@ class BarTabSpec {
     required this.icon,
     this.path,
     this.anyOf = const [],
-    this.waiting = 'অপেক্ষায়',
-  });
+    String? waiting,
+  }) : _waiting = waiting;
 
   final BarTab tab;
 
@@ -40,8 +42,10 @@ class BarTabSpec {
   /// এর যেকোনো একটা চাবি থাকলে ঘর দেখা যায়; খালি মানে সবার (হোম, সব মডিউল)
   final List<String> anyOf;
 
+  final String? _waiting;
+
   /// লাল গোনার পরে TalkBack-এর শব্দ, যেমন "অনুমোদন, ৫টা অপেক্ষায়"
-  final String waiting;
+  String get waiting => _waiting ?? AppLocale.l10n.navTabWaiting;
 
   /// ঘরটা খোলার ঠিকানা
   String get location => path == null ? '/home' : '/home/$path';
@@ -52,52 +56,55 @@ class RoleTabs {
 
   /// প্রতিটা ঘর একবারই লেখা। চাবিগুলো সেই একই, যা "সব মডিউল"-এর টাইল দেখায় ([MenuRepository]) — ঘর আছে অথচ টাইল
   /// নেই, বা উল্টো, এমন হয় না।
-  static const Map<BarTab, BarTabSpec> specs = {
-    BarTab.home: BarTabSpec(tab: BarTab.home, label: 'হোম', icon: Symbols.home),
+  static Map<BarTab, BarTabSpec> get specs {
+    final l = AppLocale.l10n;
+    return {
+    BarTab.home: BarTabSpec(tab: BarTab.home, label: l.navTabHome, icon: Symbols.home),
     BarTab.approvals: BarTabSpec(
         tab: BarTab.approvals,
-        label: 'অনুমোদন',
+        label: l.navTabApprovals,
         icon: Symbols.fact_check,
         path: 'approvals',
-        anyOf: ['approval.decide']),
+        anyOf: const ['approval.decide']),
     BarTab.reports: BarTabSpec(
         tab: BarTab.reports,
-        label: 'রিপোর্ট',
+        label: l.navTabReports,
         icon: Symbols.bar_chart,
         path: 'reports',
-        anyOf: ['sales.order.view', 'customer.view']),
+        anyOf: const ['sales.order.view', 'customer.view']),
     BarTab.orders: BarTabSpec(
         tab: BarTab.orders,
-        label: 'অর্ডার',
+        label: l.navTabOrders,
         icon: Symbols.shopping_cart,
         path: 'orders',
-        anyOf: ['sales.order.view']),
+        anyOf: const ['sales.order.view']),
     BarTab.collections: BarTabSpec(
         tab: BarTab.collections,
-        label: 'আদায়',
+        label: l.navTabCollections,
         icon: Symbols.payments,
         path: 'collections',
-        anyOf: ['sales.collection.view']),
+        anyOf: const ['sales.collection.view']),
     BarTab.challans: BarTabSpec(
         tab: BarTab.challans,
-        label: 'চালান',
+        label: l.navTabChallans,
         icon: Symbols.local_shipping,
         path: 'challans',
-        anyOf: ['sales.challan.view']),
+        anyOf: const ['sales.challan.view']),
     BarTab.stock: BarTabSpec(
         tab: BarTab.stock,
-        label: 'মজুদ',
+        label: l.navTabStock,
         icon: Symbols.inventory_2,
         path: 'stock',
-        anyOf: ['inventory.stock.view']),
+        anyOf: const ['inventory.stock.view']),
     BarTab.vouchers: BarTabSpec(
         tab: BarTab.vouchers,
-        label: 'ভাউচার',
+        label: l.navTabVouchers,
         icon: Symbols.receipt_long,
         path: 'vouchers',
-        anyOf: ['accounts.voucher.create']),
-    BarTab.modules: BarTabSpec(tab: BarTab.modules, label: 'সব মডিউল', icon: Symbols.apps),
-  };
+        anyOf: const ['accounts.voucher.create']),
+    BarTab.modules: BarTabSpec(tab: BarTab.modules, label: l.navTabModules, icon: Symbols.apps),
+    };
+  }
 
   /// নকশার অংশ ৪-এর সারণি, হুবহু
   static const Map<BarRole, List<BarTab>> byRole = {
@@ -197,17 +204,18 @@ class RoleTabs {
       final choices = createChoices(p, modulesOn: modulesOn, mayCollect: mayCollect);
       return choices.isEmpty
           ? null
-          : FabSpec(label: 'নতুন', drawnByScreen: false, choices: choices);
+          : FabSpec(label: AppLocale.l10n.navFabNew, drawnByScreen: false, choices: choices);
     }
     if (!rest.startsWith('/home/')) return null;
     rest = rest.substring('/home/'.length);
+    final l = AppLocale.l10n;
     final FabSpec? spec = switch (rest) {
-      'orders' when p.contains('sales.order.create') => const FabSpec(
-          label: 'নতুন অর্ডার', route: '/home/new-order', drawnByScreen: false),
-      'collections' when mayCollect => const FabSpec(label: 'নতুন আদায়', drawnByScreen: true),
-      'claims' when p.contains('hr.claim.self') => const FabSpec(label: 'নতুন দাবি', drawnByScreen: true),
+      'orders' when p.contains('sales.order.create') =>
+        FabSpec(label: l.navFabNewOrder, route: '/home/new-order', drawnByScreen: false),
+      'collections' when mayCollect => FabSpec(label: l.navFabNewCollection, drawnByScreen: true),
+      'claims' when p.contains('hr.claim.self') => FabSpec(label: l.navFabNewClaim, drawnByScreen: true),
       _ when (rest == 'vouchers' || rest.startsWith('vouchers/')) && p.contains('accounts.voucher.create') =>
-        const FabSpec(label: 'নতুন ভাউচার', drawnByScreen: true),
+        FabSpec(label: l.navFabNewVoucher, drawnByScreen: true),
       _ => null,
     };
     if (spec == null) return null;
@@ -218,39 +226,38 @@ class RoleTabs {
   static List<FabChoice> createChoices(Iterable<String> permissions,
       {Set<String>? modulesOn, bool mayCollect = false}) {
     final p = permissions.toSet();
+    final l = AppLocale.l10n;
     return [
       if (p.contains('sales.order.create'))
-        const FabChoice(label: 'নতুন অর্ডার', route: '/home/new-order', icon: Symbols.shopping_cart),
-      if (mayCollect) const FabChoice(label: 'নতুন আদায়', route: '/home/collections', icon: Symbols.payments),
-      if (p.contains('accounts.voucher.create')) ...const [
-        FabChoice(label: 'নতুন খরচ', route: '/home/vouchers/expense', icon: Symbols.shopping_bag),
-        FabChoice(label: 'নতুন ভাউচার', route: '/home/vouchers', icon: Symbols.receipt_long),
+        FabChoice(label: l.navFabNewOrder, route: '/home/new-order', icon: Symbols.shopping_cart),
+      if (mayCollect) FabChoice(label: l.navFabNewCollection, route: '/home/collections', icon: Symbols.payments),
+      if (p.contains('accounts.voucher.create')) ...[
+        FabChoice(label: l.navFabNewExpense, route: '/home/vouchers/expense', icon: Symbols.shopping_bag),
+        FabChoice(label: l.navFabNewVoucher, route: '/home/vouchers', icon: Symbols.receipt_long),
       ],
       if (p.contains('hr.claim.self'))
-        const FabChoice(label: 'খরচের দাবি', route: '/home/claims', icon: Symbols.request_quote),
+        FabChoice(label: l.navFabExpenseClaim, route: '/home/claims', icon: Symbols.request_quote),
     ].where((c) => ModuleGate.allows(modulesOn, c.route.substring('/home/'.length))).toList();
   }
 
   /// ⭐ লাল গোনা —১ থেকে ৯৯, তার বেশি "99+", গোনা জানা না থাকলে (আরও আছে, কত জানা নেই) শুধু বিন্দু
   static TabBadge badgeFor(int? count, {bool more = false}) {
     final n = count ?? 0;
-    if (n > 99) return const TabBadge.text('99+', spoken: '৯৯টার বেশি');
+    if (n > 99) return TabBadge.text('99+', spoken: AppLocale.l10n.navTabBadgeOver(bnDigits(99)));
     if (more) return const TabBadge.dot();
     if (n <= 0) return const TabBadge.none();
-    return TabBadge.text('$n', spoken: '${bnDigits(n)}টা');
+    return TabBadge.text('$n', spoken: AppLocale.l10n.navTabBadgeCount(bnDigits(n)));
   }
 
   /// TalkBack যা পড়ে — "অনুমোদন, ৫টা অপেক্ষায়"; বিন্দুতে "অনুমোদন, নতুন অপেক্ষায়"
   static String spokenLabel(BarTabSpec spec, TabBadge badge) => switch (badge.kind) {
         TabBadgeKind.none => spec.label,
-        TabBadgeKind.dot => '${spec.label}, নতুন ${spec.waiting}',
+        TabBadgeKind.dot => AppLocale.l10n.navTabSpokenNew(spec.label, spec.waiting),
         TabBadgeKind.text => '${spec.label}, ${badge.spoken} ${spec.waiting}',
       };
 
-  static String bnDigits(int n) {
-    const bn = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return n.toString().split('').map((c) => bn[int.parse(c)]).join();
-  }
+  /// পর্দা-পাঠকের অঙ্ক — বাংলায় বাংলা অঙ্ক, ইংরেজিতে যেমন আছে ([top_bar.bnDigits])
+  static String bnDigits(int n) => top_bar.bnDigits(n);
 
   /// ⭐ কোন বার — চওড়া ৬০০dp বা বেশি, অথবা আড়াআড়ি ফোন: বাঁ পাশে খাড়া বার; ৮৪০dp বা বেশি: পুরো পাশ-মেনু খোলা
   /// (Material 3 window size classes: compact < 600 ≤ medium < 840 ≤ expanded)।

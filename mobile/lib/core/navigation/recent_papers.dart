@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../locale/app_locale.dart';
 import 'nav_prefs.dart';
 import 'paper_kinds.dart';
 
@@ -21,27 +22,30 @@ class RecentPapers {
   static final ValueNotifier<int> changes = ValueNotifier<int>(0);
 
   /// kind → (the list screen whose door the paper sits behind, its name).
-  static const Map<String, (String, String)> kinds = {
-    'do': ('delivery-orders', 'ডেলিভারি অর্ডার'),
-    'order': ('delivery-orders', 'বিক্রয় আদেশ'),
-    'quotation': ('quotations', 'উদ্ধৃতি'),
-    'money-in': ('collections', 'টাকা আদায়'),
-    'purchase': ('purchases', 'ক্রয়'),
-    'voucher': ('vouchers', 'ভাউচার'),
-    'claim': ('claims', 'খরচের দাবি'),
+  static Map<String, (String, String)> get kinds {
+    final l = AppLocale.l10n;
+    return {
+      'do': ('delivery-orders', l.paperKindDeliveryOrder),
+      'order': ('delivery-orders', l.paperKindSalesOrder),
+      'quotation': ('quotations', l.paperKindQuotation),
+      'money-in': ('collections', l.paperKindCollection),
+      'purchase': ('purchases', l.paperKindPurchase),
+      'voucher': ('vouchers', l.paperKindVoucher),
+      'claim': ('claims', l.paperKindClaim),
     // ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬); ভাড়ার দিক (`pay`/`let`) `?k=`-এ
-    'deposit': ('deposits', 'জমা'),
-    'bank-loan': ('bank-loans', 'ব্যাংক ঋণ'),
-    'rent': ('rents', 'ভাড়া'),
-    'hand-loan': ('hand-loans', 'হাতধার'),
-    'document': ('documents', 'ডকুমেন্ট'),
-    'payslip': ('payslips', 'বেতনের স্লিপ'),
+      'deposit': ('deposits', l.paperKindDeposit),
+      'bank-loan': ('bank-loans', l.paperKindBankLoan),
+      'rent': ('rents', l.paperKindRent),
+      'hand-loan': ('hand-loans', l.paperKindHandLoan),
+      'document': ('documents', l.paperKindDocument),
+      'payslip': ('payslips', l.paperKindPayslip),
     // ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬)
-    'invoice': ('invoices', 'বিক্রয় বিল'),
-    'challan': ('challans', 'চালান'),
+      'invoice': ('invoices', l.paperKindInvoice),
+      'challan': ('challans', l.paperKindChallan),
     // ⭐ ক্রয়, বিক্রয়ের বাকি কাগজ আর স্থানান্তর — ফোনের নিজের পর্দায় (মালিক, ১৭ অক্টোবর ২০২৬; [PaperKinds])
-    ...PaperKinds.all,
-  };
+      ...PaperKinds.all,
+    };
+  }
 
   /// `paper/<kind>/<id>`, with the purchase's own kind (`bill`, `receipt` …)
   /// as `?k=` — the one paper whose screen needs it.

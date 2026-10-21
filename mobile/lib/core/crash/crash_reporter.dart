@@ -286,8 +286,8 @@ class CrashReporter {
       caseSensitive: false);
   static final RegExp _query = RegExp(r'\?[^\s)]+');
   static final RegExp _longToken = RegExp(r'\b(?=[A-Za-z0-9_\-]*\d)[A-Za-z0-9_\-]{24,}\b');
-  static final RegExp _number = RegExp(r'[0-9০-৯](?:[0-9০-৯,.]*[0-9০-৯])?');
-  static final RegExp _digit = RegExp(r'[0-9০-৯]');
+  static final RegExp _number = RegExp(r'[0-9০-৯](?:[0-9০-৯,.]*[0-9০-৯])?'); // l10n-ok: a pattern that matches Bengali digits, not text
+  static final RegExp _digit = RegExp(r'[0-9০-৯]'); // l10n-ok: a pattern that matches Bengali digits, not text
   static final RegExp _stackDigits = RegExp(r'\d{6,}');
 
   /// চার বা বেশি অঙ্কের একটা সংখ্যা (কমা-দশমিক সহ: ১,২৩,৪৫৬ বা 55000.50) — ছোটগুলো থাকে (`index 5`, `HTTP 500`)
