@@ -103,7 +103,7 @@ void main() {
     expect(find.byKey(const ValueKey('claim-open-advance')), findsOneWidget);
     expect(find.textContaining('2,500'), findsOneWidget);
     expect(find.text('EXC-0001 · অগ্রিম'), findsOneWidget);
-    // ⭐ অবস্থা অ্যাপের এক চিপে (নকশা ৩, অংশ ৫): টাকা দেওয়া → পাকা, নামঞ্জুর → প্রত্যাখ্যাত (বাতিল নয়), দাবির ধরনে
+    // ⭐ অবস্থা অ্যাপের এক চিপে (নকশা ৩, অংশ ৫): টাকা দেওয়া → পরিশোধিত, নামঞ্জুর → প্রত্যাখ্যাত (বাতিল নয়), দাবির ধরনে
     expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.posted && w.kind == PaperKind.claim),
         findsOneWidget);
     expect(find.byWidgetPredicate((w) => w is AppStatusChip && w.state == PaperState.rejected), findsOneWidget);

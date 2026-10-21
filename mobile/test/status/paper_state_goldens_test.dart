@@ -57,7 +57,7 @@ void main() {
   for (final dark in [false, true]) {
     final mode = dark ? 'dark' : 'light';
     testWidgets('all paper-state chips ($mode) look as approved', (tester) async {
-      tester.view.physicalSize = const Size(420, 580);
+      tester.view.physicalSize = const Size(420, 620);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(MaterialApp(
@@ -83,8 +83,12 @@ void main() {
                           AppStatusChip.compact(state: s, level: 1, levels: 2),
                         ]),
                       ),
-                    // ধরনের কথা: মজুদের কাগজ পাকা, দাবি অনুমোদিত
-                    for (final (s, k) in const [(PaperState.posted, PaperKind.stock), (PaperState.approved, PaperKind.claim)])
+                    // ধরনের কথা: মজুদের কাগজ পোস্ট হয়েছে, দাবি অনুমোদিত আর পরিশোধিত
+                    for (final (s, k) in const [
+                      (PaperState.posted, PaperKind.stock),
+                      (PaperState.approved, PaperKind.claim),
+                      (PaperState.posted, PaperKind.claim),
+                    ])
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: Row(children: [

@@ -58,11 +58,11 @@ void main() {
     }
   }
 
-  testWidgets('posted speaks "অবস্থা: পাকা, খাতায় উঠেছে"', (tester) async {
+  testWidgets('posted speaks "অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে"', (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(_app(const Align(child: AppStatusChip.compact(state: PaperState.posted))));
-    expect(find.bySemanticsLabel('অবস্থা: পাকা, খাতায় উঠেছে'), findsOneWidget);
-    expect(_words('পাকা'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে'), findsOneWidget);
+    expect(_words('পোস্ট হয়েছে'), findsOneWidget);
     handle.dispose();
   });
 
@@ -101,12 +101,15 @@ void main() {
 
   testWidgets('no Bengali digit reaches the screen or TalkBack', (tester) async {
     final handle = tester.ensureSemantics();
-    await tester.pumpWidget(_app(Column(children: [
-      for (final s in PaperState.values) ...[
-        AppStatusChip(state: s, level: 2, levels: 3),
-        AppStatusChip.compact(state: s, level: 2, levels: 3),
-      ],
-    ])));
+    // ⓘ every state in both sizes is taller than one screen — scroll, the test is about digits, not layout
+    await tester.pumpWidget(_app(SingleChildScrollView(
+      child: Column(children: [
+        for (final s in PaperState.values) ...[
+          AppStatusChip(state: s, level: 2, levels: 3),
+          AppStatusChip.compact(state: s, level: 2, levels: 3),
+        ],
+      ]),
+    )));
     for (final t in tester.widgetList<RichText>(find.byType(RichText))) {
       expect(_bnDigit.hasMatch(t.text.toPlainText()), isFalse, reason: t.text.toPlainText());
     }
@@ -259,7 +262,7 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('posted: a money paper went to the books, a stock paper to the stock; the short chip says "পাকা" for both',
+  testWidgets('posted: a money paper went to the books, a stock paper to the stock; the short chip says "পোস্ট হয়েছে" for both',
       (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(_app(const Column(children: [
@@ -268,13 +271,39 @@ void main() {
       AppStatusChip.compact(state: PaperState.posted, kind: PaperKind.stock),
       AppStatusChip(state: PaperState.posting, kind: PaperKind.stock),
     ])));
-    expect(_words('পাকা · খাতায় উঠেছে'), findsOneWidget);
-    expect(_words('পাকা · মজুদে উঠেছে'), findsOneWidget);
-    expect(_words('পাকা'), findsOneWidget);
+    expect(_words('পোস্ট হয়েছে · খাতায় উঠেছে'), findsOneWidget);
+    expect(_words('পোস্ট হয়েছে · মজুদে উঠেছে'), findsOneWidget);
+    expect(_words('পোস্ট হয়েছে'), findsOneWidget);
     expect(_words('সই শেষ · মজুদে উঠছে'), findsOneWidget);
-    expect(find.bySemanticsLabel('অবস্থা: পাকা, মজুদে উঠেছে'), findsNWidgets(2));
-    expect(find.bySemanticsLabel('অবস্থা: পাকা, খাতায় উঠেছে'), findsOneWidget);
+    expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, মজুদে উঠেছে'), findsNWidgets(2));
+    expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে'), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('a paid claim says "পরিশোধিত" in both sizes and to TalkBack; sent back says "সংশোধনে ফেরত"',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(_app(const Column(children: [
+      AppStatusChip(state: PaperState.posted, kind: PaperKind.claim),
+      AppStatusChip.compact(state: PaperState.posted, kind: PaperKind.claim),
+      AppStatusChip(state: PaperState.sentBack),
+      AppStatusChip.compact(state: PaperState.sentBack),
+    ])));
+    expect(_words('পরিশোধিত'), findsNWidgets(2));
+    expect(find.bySemanticsLabel('অবস্থা: পরিশোধিত'), findsNWidgets(2));
+    expect(_words('সংশোধনে ফেরত'), findsNWidgets(2));
+    expect(find.bySemanticsLabel('অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান'), findsNWidgets(2));
+    handle.dispose();
+  });
+
+  test('"পাকা" is gone from every chip word, for every kind', () {
+    for (final s in PaperState.values) {
+      for (final k in PaperKind.values) {
+        for (final t in [s.spec.label(kind: k), s.spec.shortLabel(kind: k), s.spec.semantics(kind: k)]) {
+          expect(t, isNot(contains('পাকা')), reason: '${s.key}/${k.name}: "$t"');
+        }
+      }
+    }
   });
 
   test('a kind without its own words uses the plain ones (stock draft is still "খসড়া")', () {
@@ -284,7 +313,8 @@ void main() {
       }
     }
     expect(PaperState.draft.spec.label(kind: PaperKind.stock), 'খসড়া');
-    expect(PaperState.posted.spec.label(kind: PaperKind.claim), 'পাকা · খাতায় উঠেছে');
+    expect(PaperState.posted.spec.label(kind: PaperKind.claim), 'পরিশোধিত');
+    expect(PaperState.cancelled.spec.label(kind: PaperKind.claim), 'বাতিল');
   });
 
   group('PaperState.fromServer — every server state string the app receives', () {
@@ -332,7 +362,7 @@ void main() {
       AppStatusChip.forServer('somethingNew', fallbackLabel: 'নতুন কিছু'),
     ])));
     expect(find.byType(AppStatusChip), findsOneWidget);
-    expect(_words('পাকা · খাতায় উঠেছে'), findsOneWidget);
+    expect(_words('পোস্ট হয়েছে · খাতায় উঠেছে'), findsOneWidget);
     expect(find.text('নতুন কিছু'), findsOneWidget);
   });
 }

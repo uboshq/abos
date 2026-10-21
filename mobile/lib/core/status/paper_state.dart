@@ -47,9 +47,9 @@ enum PaperState {
   /// <li>`pending` — নিজের পাঠানো সইয়ের অনুরোধ, অপেক্ষায় (approvals/my_requests_screen.dart)
   /// <li>`returned` · `sent_back` — সই না দিয়ে ফেরত (approvals/my_requests_screen.dart `returned`)
   /// <li>`posting` — শেষ সই পড়েছে, খাতায় উঠছে
-  /// <li>`posted` — ভাউচার পাকা
+  /// <li>`posted` — ভাউচার পোস্ট হয়েছে
   /// <li>`confirmed` · `closed` — বিক্রয় বিল/চালান নিশ্চিত/সম্পন্ন (sales_paper_screens.dart `_status`)
-  /// <li>`paid` — খরচের দাবি টাকা দেওয়া, ভাউচার পাকা (claims_api.dart; ExpenseClaim::PAID)
+  /// <li>`paid` — খরচের দাবি টাকা দেওয়া, ভাউচার পোস্ট হয়েছে (claims_api.dart; ExpenseClaim::PAID); চিপে "পরিশোধিত"
   /// <li>`cancelled` — ভাউচার, বিক্রয় বিল/চালান
   /// <li>`rejected` — খরচের দাবি নামঞ্জুর (claims_api.dart; ExpenseClaim::REJECTED), সইয়ের অনুরোধ নামঞ্জুর
   /// (my_requests_screen.dart) — [PaperState.rejected], বাতিল নয়
@@ -72,8 +72,9 @@ enum PaperState {
       };
 }
 
-/// ⭐ কাগজের ধরন — অবস্থা একটাই, কথা ধরন মেনে (fe, ২০ অক্টোবর ২০২৬): টাকার কাগজ "পাকা · খাতায় উঠেছে", মজুদের কাগজ
-/// (চালান, ডেলিভারি, মজুদ বদলি) "পাকা · মজুদে উঠেছে", খরচের দাবি "অনুমোদিত · টাকার অপেক্ষায়"। JSON-এ `<নাম>_<ধরন>`
+/// ⭐ কাগজের ধরন — অবস্থা একটাই, কথা ধরন মেনে (fe, ২০ অক্টোবর ২০২৬): টাকার কাগজ "পোস্ট হয়েছে · খাতায় উঠেছে", মজুদের
+/// কাগজ (চালান, ডেলিভারি, মজুদ বদলি) "পোস্ট হয়েছে · মজুদে উঠেছে", খরচের দাবি "অনুমোদিত · টাকার অপেক্ষায়" আর "পরিশোধিত"।
+/// ⓘ এক ধারণা, এক শব্দ — মালিকের নিজের শব্দ, ওয়েবে আর অ্যাপে একই (fe, ২১ অক্টোবর ২০২৬); চিপে "পাকা" আর নেই। JSON-এ `<নাম>_<ধরন>`
 /// চাবি থাকলে সেটা, নইলে সাধারণ চাবি।
 enum PaperKind { money, stock, claim }
 
@@ -164,7 +165,7 @@ class PaperStateSpec {
   final String semanticsBn;
   final String semanticsBnWithoutLevel;
 
-  /// তালিকার সারির ছোট লেখা ([AppStatusChip.compact]) — যেমন "2-এর 1", "পাকা"
+  /// তালিকার সারির ছোট লেখা ([AppStatusChip.compact]) — যেমন "2-এর 1", "পোস্ট হয়েছে"
   final String labelBnShort;
   final String labelBnShortWithoutLevel;
   final String? semanticsHintBn;
@@ -233,12 +234,12 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     role: PaperRole.critical,
   ),
   PaperState.sentBack: PaperStateSpec(
-    labelBn: 'ফেরত: ঠিক করুন',
-    labelBnWithoutLevel: 'ফেরত: ঠিক করুন',
-    semanticsBn: 'অবস্থা: ফেরত পাঠানো, ঠিক করুন',
-    semanticsBnWithoutLevel: 'অবস্থা: ফেরত পাঠানো, ঠিক করুন',
-    labelBnShort: 'ফেরত',
-    labelBnShortWithoutLevel: 'ফেরত',
+    labelBn: 'সংশোধনে ফেরত',
+    labelBnWithoutLevel: 'সংশোধনে ফেরত',
+    semanticsBn: 'অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান',
+    semanticsBnWithoutLevel: 'অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান',
+    labelBnShort: 'সংশোধনে ফেরত',
+    labelBnShortWithoutLevel: 'সংশোধনে ফেরত',
     icon: 'undo',
     role: PaperRole.critical,
   ),
@@ -258,17 +259,21 @@ const paperStateSpecs = <PaperState, PaperStateSpec>{
     },
   ),
   PaperState.posted: PaperStateSpec(
-    labelBn: 'পাকা · খাতায় উঠেছে',
-    labelBnWithoutLevel: 'পাকা · খাতায় উঠেছে',
-    semanticsBn: 'অবস্থা: পাকা, খাতায় উঠেছে',
-    semanticsBnWithoutLevel: 'অবস্থা: পাকা, খাতায় উঠেছে',
-    labelBnShort: 'পাকা',
-    labelBnShortWithoutLevel: 'পাকা',
+    labelBn: 'পোস্ট হয়েছে · খাতায় উঠেছে',
+    labelBnWithoutLevel: 'পোস্ট হয়েছে · খাতায় উঠেছে',
+    semanticsBn: 'অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে',
+    semanticsBnWithoutLevel: 'অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে',
+    labelBnShort: 'পোস্ট হয়েছে',
+    labelBnShortWithoutLevel: 'পোস্ট হয়েছে',
     icon: 'check_circle',
     role: PaperRole.positive,
     byKind: {
-      'label_bn_stock': 'পাকা · মজুদে উঠেছে',
-      'semantics_bn_stock': 'অবস্থা: পাকা, মজুদে উঠেছে',
+      'label_bn_stock': 'পোস্ট হয়েছে · মজুদে উঠেছে',
+      'semantics_bn_stock': 'অবস্থা: পোস্ট হয়েছে, মজুদে উঠেছে',
+      // খরচের দাবি পোস্ট মানে টাকা দেওয়া — ক্যাশিয়ারের ভাউচার পোস্ট হয়েছে
+      'label_bn_claim': 'পরিশোধিত',
+      'semantics_bn_claim': 'অবস্থা: পরিশোধিত',
+      'label_bn_short_claim': 'পরিশোধিত',
     },
   ),
   PaperState.cancelled: PaperStateSpec(
