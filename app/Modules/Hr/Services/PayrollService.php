@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\MaternityDelivery;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
@@ -399,6 +400,27 @@ final class PayrollService
          */
         $factor = $this->attendanceFactor($employee, $monthEnd);
 
+        /*
+         * ⭐ মাতৃত্বকালীন সুবিধা — ধারা ৪৮ (fe-র উত্তর ২, ২১ অক্টোবর ২০২৬; [[MaternityBenefit]]; a6)।
+         * ⓘ বেতনসহ মাতৃত্বকালীন ছুটির দিনগুলো কাঠামোর বেতনে নয়, আগের তিন মাসের গড় দৈনিক মজুরিতে: হাজিরায় কমে এমন আয়ের খাত থেকে
+         * সেই দিনগুলোর ভাগ (দিন ÷ মাসের দিন) বাদ, আর "মাতৃত্বকালীন সুবিধা" সারি = দিন × গড়। আগের মজুরি না থাকলে (গড় নেই) কাঠামোই চলে।
+         */
+        $benefits = [];
+        $maternity = app(MaternityBenefit::class);
+
+        foreach ($maternity->daysIn($employee, $monthEnd) as ['application' => $application, 'days' => $mDays]) {
+            $average = $maternity->averageDailyWage($application);
+
+            if ($average === null) {
+                continue;
+            }
+
+            $factor = bcsub($factor, bcdiv($mDays, (string) $monthEnd->daysInMonth, 10), 10);
+            $benefits[] = Money::round(bcmul($mDays, $average, 10), 2);
+        }
+
+        $factor = bccomp($factor, '0', 10) < 0 ? '0' : $factor;
+
         $slip = Payslip::create([
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
@@ -455,6 +477,65 @@ final class PayrollService
             } else {
                 $deductions = bcadd($deductions, $amount, 4);
             }
+        }
+
+        /*
+         * ⭐ প্রসবের আসল দিনে সরে যাওয়া মাতৃত্বকালীন ছুটির দেওয়া মাসের পার্থক্য — পরের রানে, একটা সমন্বয়ের সারিতে (ধারা ৪৫; fe-র উত্তর ৩,
+         * ২১ অক্টোবর ২০২৬; [[MaternityDeliveryService::paidMonthsDifference()]]; a6)। ⓘ নিশ্চিত রান কখনো বদলায় না — পার্থক্য এই খসড়ায় বসে;
+         * পাওনা হলে আয়, ফেরতযোগ্য হলে কর্তন। কোন রানে বসল তা লেখা থাকে: আবার-বানানো একই রানে আবার বসায়, বাতিল রান হলে পরের রানে।
+         */
+        $adjustments = MaternityDelivery::query()->withoutGlobalScopes()
+            ->where('employee_id', $employee->id)
+            ->where('status', MaternityDelivery::APPROVED)
+            ->where('adjustment', '!=', 0)
+            ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+                ->orWhereIn('payroll_run_id', PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
+            ->orderBy('id')
+            ->get();
+
+        foreach ($adjustments as $change) {
+            $amount = (string) $change->adjustment;
+            $kind = bccomp($amount, '0', 2) > 0 ? SalaryHead::EARNING : SalaryHead::DEDUCTION;
+            $amount = Money::round(ltrim($amount, '-'), 2);
+
+            PayslipLine::create([
+                'company_id' => $run->company_id,
+                'payslip_id' => $slip->id,
+                'salary_head_id' => null,
+                'head_code' => MaternityBenefit::ADJUSTMENT_CODE,
+                'head_name_en' => 'Maternity adjustment ('.$change->actual_delivery_date->toDateString().')',
+                'head_name_bn' => 'মাতৃত্বকালীন সমন্বয় ('.$change->actual_delivery_date->toDateString().')',
+                'kind' => $kind,
+                'amount' => $amount,
+                'sort_order' => 910,
+                'account_id' => $this->fallbackAccount($kind)?->id,
+            ]);
+
+            if ($kind === SalaryHead::EARNING) {
+                $gross = bcadd($gross, $amount, 4);
+            } else {
+                $deductions = bcadd($deductions, $amount, 4);
+            }
+
+            $change->forceFill(['payroll_run_id' => $run->id])->save();
+        }
+
+        foreach ($benefits as $amount) {
+            PayslipLine::create([
+                'company_id' => $run->company_id,
+                'payslip_id' => $slip->id,
+                'salary_head_id' => null,
+                'head_code' => MaternityBenefit::LINE_CODE,
+                'head_name_en' => 'Maternity benefit',
+                'head_name_bn' => 'মাতৃত্বকালীন সুবিধা',
+                'kind' => SalaryHead::EARNING,
+                'amount' => $amount,
+                'sort_order' => 900,
+                // ⓘ বেতনের খরচেই — খাতের নিজের হিসাব-খাত নেই, তাই আয়ের ফলব্যাক ([[fallbackAccount()]])
+                'account_id' => $this->fallbackAccount(SalaryHead::EARNING)?->id,
+            ]);
+
+            $gross = bcadd($gross, $amount, 4);
         }
 
         $slip->forceFill([

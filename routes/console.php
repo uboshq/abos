@@ -204,6 +204,15 @@ Schedule::command('abos:hr-leavers')
     ->dailyAt('00:20')
     ->withoutOverlapping();
 
+/*
+ * ⭐ অর্জিত ছুটির জের — আগের বছরের সমাপনী এই বছরে (শ্রম আইন ধারা ১১৭; [[CarryEarnedLeave]], a6, ২১ অক্টোবর ২০২৬)।
+ * ⓘ রোজ, বছরে একবার নয়: কাজটা বারবার চালানো যায় (একই সারি নতুন করে), তাই ১ জানুয়ারি ফসকালেও পরের ভোরে বসে, আর আগের
+ * বছরের দেরিতে লেখা হাজিরা বা প্রত্যাহার করা ছুটিও জেরে ধরা পড়ে।
+ */
+Schedule::command('abos:hr-carry-earned-leave')
+    ->dailyAt('00:40')
+    ->withoutOverlapping();
+
 Schedule::call(fn () => app(FormIsNotSubmittedTwice::class)->prune())
     ->dailyAt('02:10')
     ->name('submitted-forms-prune')

@@ -55,9 +55,46 @@ class LeaveType extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** সীমাহীন ছুটি — বিনা বেতনের ছুটিতে বছরের কোটা থাকে না। */
+    /**
+     * ⭐ অর্জিত ছুটির প্রমিত কোড — এর পাওনা বছরে বাঁধা দিন নয়, হাজিরা থেকে অর্জিত (শ্রম আইন ধারা ১১৭; [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ কোড দিয়ে চেনা, কারণ প্রমিত ধরনগুলো এই কোডেই বসে ([[LeaveTypeDefaults]]); অন্য কোডের ধরন আগের মতো `days_per_year` মানে।
+     */
+    public const EARNED = 'EARNED';
+
+    public function isEarned(): bool
+    {
+        return $this->code === self::EARNED;
+    }
+
+    /**
+     * ⭐ মাতৃত্বকালীন ছুটির প্রমিত কোড — ১৬ সপ্তাহ, বেতনসহ, কেবল নারী কর্মী, চাকরি অন্তত ৬ মাস (শ্রম আইন অধ্যায় ৪, ধারা ৪৫–৫০;
+     * [[LeaveService::assertEligible()]]; a6, ২১ অক্টোবর ২০২৬)।
+     */
+    public const MATERNITY = 'MATERNITY';
+
+    /** ১৬ সপ্তাহ */
+    public const MATERNITY_DAYS = 112;
+
+    /** ছুটির প্রথম দিনে চাকরির ন্যূনতম বয়স, মাসে */
+    public const MATERNITY_SERVICE_MONTHS = 6;
+
+    public function isMaternity(): bool
+    {
+        return $this->code === self::MATERNITY;
+    }
+
+    /**
+     * ⓘ দিন গোনা ক্যালেন্ডারে — সাপ্তাহিক ছুটি আর তালিকার ছুটিও ছুটির দিন। মাতৃত্বকালীন ছুটি আইনে "সপ্তাহ" ধরে (ধারা ৪৬), কাজের
+     * দিন নয়: ১৬ সপ্তাহের ছুটিতে শুক্রবার বাদ দিলে ১১২ দিনের কোটা ৯৬ দিনেই ফুরাত না, আর আবার চাওয়া যেত।
+     */
+    public function countsCalendarDays(): bool
+    {
+        return $this->isMaternity();
+    }
+
+    /** সীমাহীন ছুটি — বিনা বেতনের ছুটিতে বছরের কোটা থাকে না। ⛔ অর্জিত ছুটি কখনো সীমাহীন নয় — সীমা অর্জনটাই। */
     public function hasNoYearlyLimit(): bool
     {
-        return bccomp((string) $this->days_per_year, '0', 1) <= 0;
+        return ! $this->isEarned() && bccomp((string) $this->days_per_year, '0', 1) <= 0;
     }
 }

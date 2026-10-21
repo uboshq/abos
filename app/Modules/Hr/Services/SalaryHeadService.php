@@ -168,6 +168,8 @@ final class SalaryHeadService
                  * কমে না — ধার তো পুরোটাই নেওয়া হয়েছিল।
                  */
                 'prorated_by_attendance' => $kind === SalaryHead::EARNING,
+                // ⭐ যাতায়াত ভাতা ধারা ২(৪৫)-এর মজুরি নয় — না-নেওয়া ছুটির হারে ধরা হয় না (a6, ২১ অক্টোবর ২০২৬)
+                'outside_wages' => $code === 'CONVEY',
                 'sort_order' => $order,
                 'is_active' => true,
                 'created_by' => auth()->id(),

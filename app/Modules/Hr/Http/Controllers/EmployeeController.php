@@ -182,6 +182,15 @@ class EmployeeController extends Controller implements HasMiddleware
                     ->all()
                 : null,
 
+            /*
+             * ⭐ চাকরি ছাড়লে না-নেওয়া অর্জিত ছুটির টাকা — বেতন আর ছুটির দুই চাবিতেই (টাকার অঙ্ক বেতনের চাবির পেছনে); ছাড়ার তারিখ বসানো থাকলে
+             * সেদিনের, নইলে আজকের ([[LeaveService::earnedLeaveEncashment()]]; ধারা ১১, ১১৭, ২(৪৫); a6, ২১ অক্টোবর ২০২৬)।
+             */
+            'encashment' => $seesSalary && $seesLeave
+                ? ['on' => ($employee->leaving_date ?? now())->toDateString()]
+                    + $this->leaves->earnedLeaveEncashment($employee, ($employee->leaving_date ?? now())->copy())
+                : null,
+
             // ⭐ চাকরির ইতিহাস — নিরীক্ষার খাতা থেকে ([[JobHistory]]); প্রোফাইল খোলার চাবিতেই, কারণ পদবি-বিভাগ এখানে আগে থেকেই খোলা
             'history' => app(JobHistory::class)->of($employee),
         ]);
@@ -301,6 +310,10 @@ class EmployeeController extends Controller implements HasMiddleware
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'mother_name' => ['nullable', 'string', 'max:150'],
             'blood_group' => ['nullable', Rule::in(Employee::BLOOD_GROUPS)],
+            // ⭐ লিঙ্গ — পরিচয়ের চাবির পেছনে, উপরের দুই পাহারায় ([[Employee::GUARDED]]; a6, ২১ অক্টোবর ২০২৬)
+            'gender' => ['nullable', Rule::in(Employee::GENDERS)],
+            // ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধার শর্ত (ধারা ৪৬(৩)); খালি = তথ্য নেই
+            'surviving_children' => ['nullable', 'integer', 'min:0', 'max:30'],
             'present_address' => ['nullable', 'string', 'max:500'],
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'emergency_name' => ['nullable', 'string', 'max:150'],
@@ -436,6 +449,7 @@ class EmployeeController extends Controller implements HasMiddleware
             'paymentMethods' => Employee::PAYMENT_METHODS,
             'taggableUsers' => $this->taggableUsers($employee),
             'bloodGroups' => Employee::BLOOD_GROUPS,
+            'genders' => Employee::GENDERS,
 
             // ⓘ যাঁর অধীনে বসানো যায় — এই কোম্পানির চালু কর্মীরা, নিজে বাদ
             // ⛔ শাখার দেয়াল — কর্মী মডেলে শাখার স্কোপ নেই, তাই তালিকায় অন্য শাখার সবার নাম-পদবি আসত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ১০)

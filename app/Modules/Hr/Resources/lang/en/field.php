@@ -83,4 +83,18 @@ return [
     'reports_to' => 'Reports To',
     'photo' => 'Photo',
     'photo_hint' => 'JPG, PNG or WebP — a large photo is made smaller. A new photo replaces the old one.',
+    // ⭐ public holidays (a6, 21 Oct 2026)
+    'holiday_date' => 'Date',
+    'holiday_name' => 'Holiday',
+    'all_branches' => 'All branches',
+    'year' => 'Year',
+    // ⭐ gender — maternity eligibility (labour law ch.4; a6, 21 Oct 2026)
+    'gender' => 'Gender',
+    // ⭐ maternity (s.46(3), s.47; a6, 21 Oct 2026)
+    'surviving_children' => 'Surviving children',
+    'expected_delivery_date' => 'Expected delivery date',
+    // ⭐ s.2(45) wages (a6, 21 Oct 2026)
+    'outside_wages' => 'Not wages under s.2(45)',
+    'outside_wages_hint' => 'Tick for bonus or festival allowance, the employer\'s provident fund contribution, travelling or special-expense allowance. These are left out of the daily rate for unused earned leave.',
+    'actual_delivery_date' => 'Actual delivery date',
 ];

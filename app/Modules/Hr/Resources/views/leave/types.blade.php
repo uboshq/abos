@@ -38,7 +38,8 @@
     @if ($canInstallDefaults)
         <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center">
-            <h2 class="text-lg font-semibold">{{ __('hr::message.empty_leave_types') }}</h2>
+            {{-- ⓘ খালি তালিকা, বা কিছু প্রমিত ধরন বাকি (যেমন নতুন মাতৃত্বকালীন) — [[LeaveTypeDefaults::anyMissing()]] --}}
+            <h2 class="text-lg font-semibold">{{ __($types->isEmpty() ? 'hr::message.empty_leave_types' : 'hr::message.leave_types_missing') }}</h2>
 
             @can('hr.leave.manage')
                 <form method="POST" action="{{ route('hr.leave_type.install') }}" class="mt-4">
@@ -51,6 +52,7 @@
         </div>
     @endif
 
+    {{-- ⭐ অর্জিত ছুটির পাওনা হাজিরা থেকে, বাঁধা দিন নয় — "বছরে দিন" ঘরে হার লেখা (শ্রম আইন ধারা ১১৭; [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬) --}}
     <div class="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
@@ -64,7 +66,8 @@
                      'render' => fn ($t) => $t->name()],
                     ['key' => 'days', 'label' => __('hr::field.days_per_year'), 'numeric' => true,
                      'width' => '9rem',
-                     'render' => fn ($t) => $t->hasNoYearlyLimit() ? '—' : rtrim(rtrim((string) $t->days_per_year, '0'), '.')],
+                     'render' => fn ($t) => $t->isEarned() ? __('hr::message.earned_accrues', ['per' => \App\Modules\Hr\Services\EarnedLeave::WORKED_DAYS_PER_DAY])
+                         : ($t->hasNoYearlyLimit() ? '—' : rtrim(rtrim((string) $t->days_per_year, '0'), '.'))],
                     ['key' => 'paid', 'label' => __('hr::field.is_paid'), 'width' => '7rem',
                      'render' => fn ($t) => $t->is_paid ? '✓' : '—'],
                 ]" />

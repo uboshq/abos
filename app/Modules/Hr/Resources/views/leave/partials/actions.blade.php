@@ -35,6 +35,10 @@
         <span class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.leave_falls_to_hr') }}</span>
     @endif
 @elseif ($application->isApproved())
+    {{-- ⭐ মাতৃত্বকালীন ছুটি — প্রসবের আসল দিন লেখা, আর অপেক্ষার অনুরোধে "সই দিন" (ধারা ৪৫; [[MaternityDeliveryService]]) --}}
+    @if ($application->leaveType?->isMaternity())
+        @include('hr::leave.partials.delivery', ['application' => $application])
+    @endif
     @can('hr.leave.manage')
         <form method="POST" action="{{ route('hr.leave.cancel', $application->id) }}" class="text-end">
             @csrf

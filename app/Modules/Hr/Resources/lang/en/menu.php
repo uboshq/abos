@@ -16,4 +16,6 @@ return [
     'report_payroll' => 'Payroll register',
     'report_headcount' => 'Headcount by department',
     'report_leave_balance' => 'Leave balance',
+    // ⭐ public holidays (labour law s.118, a6, 21 Oct 2026)
+    'holidays' => 'Holidays',
 ];

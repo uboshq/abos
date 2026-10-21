@@ -124,6 +124,8 @@ final class HrRegisterApiController extends Controller implements HasMiddleware
                 'can_decide' => $signer->maySign($user, $a),
                 // ⭐ ব্যবস্থাপকের নাগালের বাইরের কর্মী — বোতামের বদলে এই কথা (fe, ২১ অক্টোবর ২০২৬)
                 'note' => $signer->fallsToHr($user, $a) ? __('hr::message.leave_falls_to_hr') : null,
+                // ⭐ মাতৃত্বকালীন ছুটিতে জীবিত সন্তানের "তথ্য নেই" — সইকারীকে সতর্কতা (ধারা ৪৬(৩); fe, ২১ অক্টোবর ২০২৬)
+                'warning' => $a->signerWarning(),
             ])->values(),
             'count' => $page->total(),
             // ⭐ "আমার সইয়ের অপেক্ষায়" — এই মানুষ যেগুলোতে এখনই সই দিতে পারেন; HR-জুড়ে হলে সব অপেক্ষার ছুটিও আলাদা (fe, ২১ অক্টোবর ২০২৬)

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
+use App\Modules\Hr\Http\Controllers\HolidayController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
@@ -98,6 +99,27 @@ Route::middleware('auth')->prefix('hr')->group(function () {
             ->whereNumber('application')->name('reject');
         Route::post('/{application}/cancel', [LeaveController::class, 'cancel'])
             ->whereNumber('application')->name('cancel');
+        // ⭐ প্রসবের আসল দিন — লেখা, তারপর "সই দিন" বা প্রত্যাখ্যান (ধারা ৪৫; fe-র উত্তর ৩; [[MaternityDeliveryService]])
+        Route::post('/{application}/delivery', [LeaveController::class, 'recordDelivery'])
+            ->whereNumber('application')->name('delivery');
+        Route::post('/deliveries/{delivery}/sign', [LeaveController::class, 'signDelivery'])
+            ->whereNumber('delivery')->name('delivery_sign');
+        Route::post('/deliveries/{delivery}/reject', [LeaveController::class, 'rejectDelivery'])
+            ->whereNumber('delivery')->name('delivery_reject');
+    });
+
+    /*
+     * ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব, সব শাখার বা একটা শাখার (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ চাবি নিয়ামকে: দেখা `hr.attendance.view` বা `hr.leave.view`, লেখা কেবল `hr.attendance.manage`; শাখার দেয়ালও সেখানে।
+     */
+    Route::prefix('holidays')->name('holiday.')->group(function () {
+        Route::get('/', [HolidayController::class, 'index'])->name('index');
+        Route::post('/', [HolidayController::class, 'store'])->name('store');
+        // ⭐ শাখার সাপ্তাহিক ছুটি (ধারা ১০৩, ১১৪; fe, ২১ অক্টোবর ২০২৬)
+        Route::post('/weekly-off', [HolidayController::class, 'storeWeeklyOff'])->name('weekly_off.store');
+        Route::get('/{holiday}/edit', [HolidayController::class, 'edit'])->whereNumber('holiday')->name('edit');
+        Route::put('/{holiday}', [HolidayController::class, 'update'])->whereNumber('holiday')->name('update');
+        Route::delete('/{holiday}', [HolidayController::class, 'destroy'])->whereNumber('holiday')->name('destroy');
     });
 
     Route::prefix('leave-types')->name('leave_type.')->group(function () {

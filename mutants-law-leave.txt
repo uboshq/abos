@@ -1,0 +1,645 @@
+Mutants — Bangladesh leave law (a6/hr-law-leave, a6, 21 Oct 2026)
+Each: file · exact old → new · killing test. Run one at a time on the Mac, from the tested commit, restore with mtime = now.
+Status: listed, not yet run (Mac).
+
+== Item 1 — holiday calendar + weekly off ==
+K = tests/Feature/Modules/Hr/LeaveCountsOnlyWorkingDaysTest.php
+
+M1.1 app/Modules/Hr/Support/WorkCalendar.php
+  old: if (in_array($day->dayOfWeek, $this->weeklyOff(), true)) {
+  new: if (false) {
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (6 days pass)
+
+M1.2 app/Modules/Hr/Support/WorkCalendar.php
+  old: : $q->whereNull('branch_id')->orWhere('branch_id', $branchId))
+  new: : $q->whereNull('branch_id'))
+  kill: K::test_a_holiday_of_one_branch_does_not_shorten_another_branchs_leave (Dhaka employee gets 2 days)
+
+M1.3 app/Modules/Hr/Support/WorkCalendar.php
+  old: ? $q->whereNull('branch_id')
+  new: ? $q->whereNotNull('branch_id')->orWhereNull('branch_id')
+  kill: K::test_a_holiday_of_one_branch_does_not_shorten_another_branchs_leave (branchless employee refused)
+
+M1.4 app/Modules/Hr/Services/AttendanceService.php
+  old: if (! $calendar->isOffDay($row->work_date, $companyId, $branchId)) {
+  new: if (true) {
+  kill: K::test_absence_on_a_weekly_off_or_a_holiday_is_not_deducted (5.0, not 3.0)
+
+M1.5 app/Modules/Hr/Models/Attendance.php
+  old: if ($calendar->isOffDay($day, $companyId, $branchId)) {
+  new: if (false) {
+  kill: K::test_absence_on_a_weekly_off_or_a_holiday_is_not_deducted (legacy Friday LEAVE row cuts 1 → 4.0)
+
+M1.6 app/Modules/Hr/Models/Attendance.php
+  old: : (string) $calendar->workingDays($application->from_date, $day->copy()->subDay(), $companyId, $branchId);
+  new: : (string) $application->from_date->copy()->startOfDay()->diffInDays($day->copy()->startOfDay());
+  kill: K::test_absence_on_a_weekly_off_or_a_holiday_is_not_deducted (Saturday share 0 → 2.0)
+
+M1.7 app/Modules/Hr/Services/LeaveService.php (stampAttendance)
+  old: if ($calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+  new: if (false) {
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (rows on 16 and 18 Dec)
+
+M1.8 app/Modules/Hr/Services/LeaveService.php (apply)
+  old: $this->assertWithinWorkingDays($employee, $from, $to, $days);
+  new: (line deleted)
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (6 days pass)
+
+M1.9 app/Modules/Hr/Services/LeaveService.php (approve)
+  old: $this->assertWithinWorkingDays($employee, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
+  new: (line deleted)
+  kill: K::test_a_holiday_listed_after_the_application_is_measured_again_at_approval
+
+M1.10 app/Modules/Hr/Services/LeaveService.php (assertWithinWorkingDays)
+  old: if (bccomp($days, $working, 1) > 0) {
+  new: if (bccomp($days, $working, 1) > 1) {
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (bccomp returns 1 → never > 1, 6 passes)
+
+M1.11 app/Modules/Hr/Support/WorkCalendar.php (weeklyOffKey)
+  old: return array_key_exists($value, self::WEEKLY_OFF) ? $value : self::DEFAULT_WEEKLY_OFF;
+  new: return self::DEFAULT_WEEKLY_OFF;
+  kill: K::test_the_weekly_off_setting_decides_the_off_day
+
+M1.12 app/Modules/Hr/Http/Controllers/HolidayController.php (writable)
+  old: abort_unless($limited === null || ($row->branch_id !== null && in_array((int) $row->branch_id, $limited, true)), 403);
+  new: abort_unless(true, 403);
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (limited user deletes Netrokona row)
+
+M1.13 app/Modules/Hr/Http/Controllers/HolidayController.php (writable)
+  old: ($row->branch_id !== null && in_array((int) $row->branch_id, $limited, true))
+  new: ($row->branch_id === null || in_array((int) $row->branch_id, $limited, true))
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (limited user deletes the all-branch Victory Day)
+
+M1.14 app/Modules/Hr/Http/Controllers/HolidayController.php (validated)
+  old: Rule::requiredIf($limited !== null),
+  new: Rule::requiredIf(false),
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (limited user stores an all-branch holiday)
+
+M1.15 app/Modules/Hr/Http/Controllers/HolidayController.php (validated)
+  old: if ($twice) {
+  new: if (false) {
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (second row on 26 Mar)
+
+M1.16 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+  new: new Middleware('can:hr.attendance.manage', only: ['edit', 'update', 'destroy']),
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (viewer stores Independence Day)
+
+M1.17 SUPERSEDED by P5.2 (the index door moved from `can:` middleware into authorizeViewing()).
+
+== Item 2 — earned leave accrual + carry forward ==
+K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
+
+M2.1 app/Modules/Hr/Services/EarnedLeave.php
+  old: public const WORKED_DAYS_PER_DAY = 18;
+  new: public const WORKED_DAYS_PER_DAY = 17;
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count (35/17 = 2, not 1)
+
+M2.2 app/Modules/Hr/Services/EarnedLeave.php (workedDays)
+  old: ->where('status', Attendance::PRESENT)
+  new: (line deleted)
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count (44 rows → 2)
+
+M2.3 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
+  old: return bccomp($open, $this->cap(), 1) > 0 ? bcadd($this->cap(), '0', 1) : $open;
+  new: return $open;
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (46.0)
+
+M2.4 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
+  old: $open = bcsub(bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1), $this->takenIn($employee, $type, $year), 1);
+  new: $open = bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1);
+  (text updated in P1 — closingOf now calls takenIn())
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (E-2 gets 5.0, not 3.0)
+
+M2.5 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
+  old: if (bccomp($open, '0', 1) < 0) {
+  new: if (false) {
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (E-3 carries -2.0, not 0.0)
+
+M2.6 app/Modules/Hr/Services/EarnedLeave.php (carryForward)
+  old: if (! $employee->wasEmployedOn($next)) {
+  new: if (false) {
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (3 rows, leaver carried)
+
+M2.7 app/Modules/Hr/Services/EarnedLeave.php (carriedInto)
+  old: ->where('year', $year)
+  new: (line deleted)
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (balance on 1 Jan 2026 reads the 2025 row, 30.0)
+
+M2.8 app/Modules/Hr/Services/LeaveService.php (balance)
+  old: if ($type->isEarned()) {
+  new: if (false) {
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count (allowed 15.0)
+
+M2.9 app/Modules/Hr/Services/LeaveService.php (balance)
+  old: $allowed = bcadd($accrued, $carried, 1);
+  new: $allowed = $accrued;
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (2.0, not 7.0)
+
+M2.10 app/Modules/Hr/Models/LeaveType.php (hasNoYearlyLimit)
+  old: return ! $this->isEarned() && bccomp((string) $this->days_per_year, '0', 1) <= 0;
+  new: return bccomp((string) $this->days_per_year, '0', 1) <= 0;
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (left null; 6 days pass with days_per_year 0)
+
+M2.11 app/Modules/Hr/Models/LeaveType.php (isEarned)
+  old: return $this->code === self::EARNED;
+  new: return false;
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count
+
+M2.12 app/Modules/Hr/Reports/HrReports.php (leaveBalance types)
+  old: ->where(fn ($q) => $q->where('hr_leave_types.days_per_year', '>', 0)->orWhere('hr_leave_types.code', LeaveType::EARNED))
+  new: ->where('hr_leave_types.days_per_year', '>', 0)
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (no EARNED row in the report)
+
+M2.13 app/Modules/Hr/Reports/HrReports.php (leaveBalance allowed)
+  old: .') + COALESCE(cf.days, 0)'
+  new: .')'
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (report allowed 2 vs 7)
+
+M2.14 app/Modules/Hr/Reports/HrReports.php (leaveBalance worked)
+  old: ->where('hr_attendance.status', Attendance::PRESENT)
+  new: (line deleted)
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (20 ABSENT rows → report allowed FLOOR(60/18)+5 = 8 vs 7)
+
+M2.15 app/Console/Commands/CarryEarnedLeave.php
+  old: if ($year < 2000 || $year >= (int) now()->year) {
+  new: if ($year < 2000 || $year > (int) now()->year) {
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (--year=2026 succeeds)
+
+M2.16 app/Modules/Hr/Http/Controllers/LeaveApiController.php
+  old: 'carried' => $balance['carried'],
+  new: 'carried' => $balance['accrued'],
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (phone carried 2.0)
+
+
+== Item 3 — maternity leave (chapter 4) ==
+K = tests/Feature/Modules/Hr/MaternityLeaveFollowsTheLawTest.php
+
+M3.1 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($employee->gender !== Employee::FEMALE) {
+  new: if ($employee->gender === 'male') {
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it ('other' and blank pass)
+
+M3.2 app/Modules/Hr/Models/LeaveType.php
+  old: public const MATERNITY_SERVICE_MONTHS = 6;
+  new: public const MATERNITY_SERVICE_MONTHS = 5;
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (31 Aug passes)
+
+M3.3 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($eligibleFrom === null || $from->copy()->startOfDay()->lt($eligibleFrom)) {
+  new: if ($eligibleFrom === null || $from->copy()->startOfDay()->lte($eligibleFrom)) {
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (1 Sep refused)
+
+M3.4 app/Modules/Hr/Services/LeaveService.php (apply)
+  old: $this->assertEligible($employee, $type, $from);
+  new: (line deleted)
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it
+
+M3.5 app/Modules/Hr/Services/LeaveService.php (approve)
+  old: $this->assertEligible($employee, $type, $application->from_date->copy());
+  new: (line deleted)
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (gender changed to male after applying, approval passes)
+
+M3.6 app/Modules/Hr/Models/LeaveType.php (countsCalendarDays)
+  old: return $this->isMaternity();
+  new: return false;
+  kill: K::test_an_eligible_womans_maternity_leave_is_approved_and_the_payslip_is_not_cut (112 days over 16 Fridays exceed the working days)
+
+M3.7 app/Modules/Hr/Services/LeaveService.php (stampAttendance)
+  old: if (! $everyDay && $calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+  new: if ($calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+  kill: K::test_an_eligible_womans_maternity_leave_is_approved_and_the_payslip_is_not_cut (27 August rows, not 31)
+
+M3.8 app/Modules/Hr/Models/Attendance.php (shareOf)
+  old: if ($application->leaveType?->countsCalendarDays()) {
+  new: if (false) {
+  kill: K::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (12.0, not 14.0)
+
+M3.9 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
+  old: if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
+  new: if (false) {
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once (two MATERNITY rows / CASUAL rewritten)
+
+M3.10 app/Modules/Hr/Models/LeaveType.php
+  old: public const MATERNITY_DAYS = 112;
+  new: public const MATERNITY_DAYS = 111;
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once ('112.0')
+
+M3.11 app/Modules/Hr/module.php (provisions)
+  old: \App\Modules\Hr\Services\LeaveTypeDefaults::class,
+  new: (line deleted, leaving 'provisions' => [])
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once (no MATERNITY in the seeded company)
+
+M3.12 app/Modules/Hr/Services/LeaveTypeDefaults.php (anyMissing)
+  old: return LeaveType::query()->withTrashed()->whereIn('code', $codes)->count() < count($codes);
+  new: return LeaveType::query()->withTrashed()->whereIn('code', $codes)->count() <= count($codes);
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once (button shown with all types in)
+
+M3.13 app/Modules/Hr/Models/Employee.php (GUARDED)
+  old: 'gender',
+  new: (line deleted from GUARDED only)
+  kill: K::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (clerk sees gender)
+
+M3.14 app/Modules/Hr/Models/LeaveType.php (isMaternity)
+  old: return $this->code === self::MATERNITY;
+  new: return false;
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (male passes)
+
+== Phase 2 (fe's answers, 21 Oct 2026) ==
+NOTE: M2.x above stay valid against the P1 code (M2.4 text updated); their test names moved to the "last year" fixtures in
+P1 (test_thirty_six_days_worked_last_year_earn_two_days_and_only_present_days_count replaces the old test 1 name).
+
+== P1 — s.117 exactly: one year of service, previous year's work, encashment ==
+K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
+
+P1.1 app/Modules/Hr/Services/EarnedLeave.php
+  old: public const SERVICE_YEARS = 1;
+  new: public const SERVICE_YEARS = 0;
+  kill: K::test_nothing_is_earned_before_one_year_of_service (5.0 on 31 May 2026)
+
+P1.2 app/Modules/Hr/Services/EarnedLeave.php (isEligibleOn)
+  old: return $from !== null && $on->copy()->startOfDay()->gte($from);
+  new: return $from !== null && $on->copy()->startOfDay()->gt($from);
+  kill: K::test_nothing_is_earned_before_one_year_of_service (0.0 on the anniversary)
+
+P1.3 app/Modules/Hr/Services/EarnedLeave.php (accrued)
+  old: $previous = $on->copy()->subYearNoOverflow();
+  new: $previous = $on->copy();
+  kill: K::test_thirty_six_days_worked_last_year_earn_two_days_and_only_present_days_count (this year's 50 days → 2.0)
+
+P1.4 app/Modules/Hr/Reports/HrReports.php (leaveBalance)
+  old: .' (CASE WHEN hr_employees.joining_date IS NOT NULL AND DATE_ADD(hr_employees.joining_date, INTERVAL '.EarnedLeave::SERVICE_YEARS.' YEAR) <= ?'
+  new: .' (CASE WHEN ? IS NOT NULL'
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (E-7 under one year shows 1 in the report)
+
+P1.5 app/Modules/Hr/Reports/HrReports.php (leaveBalance)
+  old: $previous = $asOf->copy()->subYearNoOverflow();
+  new: $previous = $asOf->copy();
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (report counts 2026's 30 days → 1 + 5 = 6 vs 7)
+
+P1.6 app/Modules/Hr/Services/EarnedLeave.php (encashableDays)
+  old: return bcadd($left, (string) $thisYear, 1);
+  new: return $left;
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (5.0, not 7.0)
+
+P1.7 app/Modules/Hr/Services/EarnedLeave.php (encashableDays)
+  old: if (! $type instanceof LeaveType || ! $this->isEligibleOn($employee, $on)) {
+  new: if (! $type instanceof LeaveType) {
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (E-S under one year gets 2.0)
+
+P1.8 app/Modules/Hr/Services/EarnedLeave.php
+  old: public const DAILY_RATE_DIVISOR = 30;
+  new: public const DAILY_RATE_DIVISOR = 26;
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (daily 1153.85)
+
+P1.9 app/Modules/Hr/Services/EarnedLeave.php (encashableDays)
+  old: $left = bccomp($left, '0', 1) < 0 ? '0.0' : $left;
+  new: (line deleted)
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (E-O gets -1.0, not 1.0)
+
+P1.10 app/Modules/Hr/Services/EarnedLeave.php (encashment)
+  old: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['gross'];
+  new: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['net'];
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (PF 2000 → daily 933.33)
+
+== P2 — maternity s.46(3), s.47, s.48 ==
+K2 = tests/Feature/Modules/Hr/MaternityBenefitFollowsSections46To48Test.php · K3 = tests/Feature/Modules/Hr/MaternityLeaveFollowsTheLawTest.php
+
+P2.1 app/Modules/Hr/Services/LeaveService.php
+  old: public const MATERNITY_CHILDREN_LIMIT = 2;
+  new: public const MATERNITY_CHILDREN_LIMIT = 3;
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer
+
+P2.2 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($employee->surviving_children !== null && (int) $employee->surviving_children >= self::MATERNITY_CHILDREN_LIMIT) {
+  new: if ((int) $employee->surviving_children >= self::MATERNITY_CHILDREN_LIMIT || $employee->surviving_children === null) {
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (empty box blocks)
+
+P2.3 app/Modules/Hr/Models/LeaveApplication.php (signerWarning)
+  old: return $employee !== null && $employee->surviving_children === null ? __('hr::message.maternity_children_unknown') : null;
+  new: return null;
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (no web/phone warning)
+
+P2.4 app/Modules/Hr/Http/Controllers/HrRegisterApiController.php
+  old: 'warning' => $a->signerWarning(),
+  new: 'warning' => null,
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (phone row)
+
+P2.5 app/Modules/Hr/Services/LeaveService.php (approve)
+  old: $this->assertEligible($employee, $type, $application->from_date->copy(), $application->to_date->copy(),
+  new: $this->assertEligible($employee, LeaveType::query()->make(['code' => 'X']), $application->from_date->copy(), $application->to_date->copy(),
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (children set to 2 after applying, approval passes)
+
+P2.6 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($expected === null) {
+  new: if (false) {
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (null expected → TypeError/no message)
+
+P2.7 app/Modules/Hr/Services/LeaveService.php
+  old: public const MATERNITY_WEEKS_EACH_SIDE = 8;
+  new: public const MATERNITY_WEEKS_EACH_SIDE = 9;
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (31 Jul passes)
+
+P2.8 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: $latest = $expected->copy()->addDays(self::MATERNITY_WEEKS_EACH_SIDE * 7 - 1);
+  new: $latest = $expected->copy()->addDays(self::MATERNITY_WEEKS_EACH_SIDE * 7);
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (21 Nov passes)
+
+P2.9 app/Modules/Hr/Services/LeaveService.php (apply)
+  old: 'expected_delivery_date' => $expected?->toDateString(),
+  new: 'expected_delivery_date' => null,
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (date not stored)
+
+P2.10 app/Modules/Hr/Services/MaternityBenefit.php (averageDailyWage)
+  old: ->where('r.status', DocumentStatus::CONFIRMED)
+  new: (line deleted)
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (cancelled June run's 99999 counted)
+
+P2.11 app/Modules/Hr/Services/MaternityBenefit.php (window)
+  old: return [$notice->copy()->subMonthsNoOverflow(self::MONTHS), $notice->copy()->subDay()];
+  new: return [$notice->copy()->subMonthsNoOverflow(self::MONTHS - 1), $notice->copy()->subDay()];
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (40000 / 75 → not 800)
+
+P2.12 app/Modules/Hr/Services/MaternityBenefit.php (averageDailyWage)
+  old: if ($worked === 0) {
+  new: if (true) {
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (mother ÷ 92, not 75)
+
+P2.13 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: $factor = bcsub($factor, bcdiv($mDays, (string) $monthEnd->daysInMonth, 10), 10);
+  new: (line deleted)
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (BASIC 20000 kept beside the benefit)
+
+P2.14 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: $gross = bcadd($gross, $amount, 4);
+        }
+
+        $slip->forceFill([
+  new: (the bcadd line deleted)
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (gross 0, not 24800)
+
+P2.15 app/Modules/Hr/Services/MaternityBenefit.php (daysIn)
+  old: || $application->leaveType->is_paid !== true) {
+  new: ) {
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (unpaid type still gets a benefit line after rebuild)
+
+P2.16 app/Modules/Hr/Models/Employee.php (GUARDED)
+  old: 'surviving_children',
+  new: (line deleted from GUARDED only)
+  kill: K3::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (clerk sees the count)
+
+== P3 — paid months and approved papers are never rewritten ==
+K = tests/Feature/Modules/Hr/APaidMonthKeepsItsAmountsWhenTheRulesChangeTest.php
+
+P3.1 app/Modules/Hr/Services/PayrollService.php (rebuild, first line of the method)
+  old: $this->assertDraft($run);
+
+        return DB::transaction(function () use ($run) {
+  new: return DB::transaction(function () use ($run) {   (and the inner assertDraft after lockFresh deleted)
+  kill: K::test_a_confirmed_run_and_an_approved_leave_stay_as_they_were (rebuild rewrites the confirmed slip: gross 31000 under the new rules)
+
+P3.2 app/Modules/Hr/Services/LeaveService.php (cancel)
+  old: PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
+  new: (line deleted)
+  kill: K::test_a_confirmed_run_and_an_approved_leave_stay_as_they_were (withdrawal in a paid month passes)
+
+P3.3 app/Modules/Hr/Services/LeaveService.php (stampAttendance is only called on approve) — EQUIVALENT check not applicable:
+  no code recomputes approved leaves; the claim is that nothing does. A mutant that would rewrite them does not exist in the code to mutate.
+
+== P4 — EARNED days_per_year to 0 for existing companies (data command) ==
+K = tests/Feature/Modules/Hr/EarnedLeaveDaysGoToZeroOnceTest.php
+
+P4.1 app/Console/Commands/EarnedLeaveDaysToZero.php
+  old: if (! $dry) {
+  new: if (true) {
+  kill: K::test_dry_lists_then_the_real_run_writes_the_old_value_to_the_audit_once (--dry writes)
+
+P4.2 app/Console/Commands/EarnedLeaveDaysToZero.php
+  old: foreach (LeaveType::query()->where('code', LeaveType::EARNED)->where('days_per_year', '!=', 0)->get() as $type) {
+  new: foreach (LeaveType::query()->where('days_per_year', '!=', 0)->get() as $type) {
+  kill: K (CASUAL 10 becomes 0)
+
+P4.3 app/Console/Commands/EarnedLeaveDaysToZero.php
+  old: $type->forceFill(['days_per_year' => 0])->save();
+  new: LeaveType::query()->whereKey($type->id)->update(['days_per_year' => 0]);
+  kill: K (no audit row with the old value — a query update skips the model events)
+
+== P5 — holiday screen: view with hr.attendance.view OR hr.leave.view, write only hr.attendance.manage ==
+K = tests/Feature/Modules/Hr/LeaveCountsOnlyWorkingDaysTest.php
+
+P5.1 app/Modules/Hr/Http/Controllers/HolidayController.php (index)
+  old: $this->authorizeViewing($request, ['hr.attendance.view', 'hr.leave.view']);
+  new: $this->authorizeViewing($request, ['hr.attendance.view']);
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (leave viewer gets 403 on the list)
+
+P5.2 app/Modules/Hr/Http/Controllers/HolidayController.php (authorizeViewing)
+  old: abort_unless((bool) $request->user()?->canAny($keys), 403);
+  new: abort_unless(true, 403);
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (stranger gets 200)
+
+P5.3 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+  new: new Middleware('can:hr.attendance.manage', only: ['store', 'update', 'destroy']),
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (leave viewer opens the edit page — writable() lets an unlimited user through)
+
+== P6 — weekly off: company default + per-branch override (branch wins) ==
+K = tests/Feature/Modules/Hr/EachBranchKeepsItsOwnWeeklyOffTest.php
+
+P6.1 app/Modules/Hr/Support/WorkCalendar.php (weeklyOff)
+  old: if ($companyId !== null && $branchId !== null) {
+  new: if (false) {
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys (Netrokona's Friday refused)
+
+P6.2 app/Modules/Hr/Support/WorkCalendar.php (isOffDay)
+  old: if (in_array($day->dayOfWeek, $this->weeklyOff($companyId, $branchId), true)) {
+  new: if (in_array($day->dayOfWeek, $this->weeklyOff(), true)) {
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys
+
+P6.3 app/Modules/Hr/Support/WorkCalendar.php (weeklyOff)
+  old: ->where('branch_id', $branchId)
+  new: (line deleted)
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys (Dhaka picks up Netrokona's Saturday: Friday leave passes for E-D)
+
+P6.4 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff)
+  old: if ($limited !== null && ! in_array((int) $value, $limited, true)) {
+                        $fail(__('hr::validation.holiday_branch_out_of_reach'));
+  new: if (false) {
+                        $fail(__('hr::validation.holiday_branch_out_of_reach'));   (the second closure, in storeWeeklyOff)
+  kill: K::test_a_branch_limited_person_sets_only_their_own_branch
+
+P6.5 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff)
+  old: if (blank($data['weekly_off'] ?? null)) {
+  new: if (false) {
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys (reset to company fails / row stays)
+
+P6.6 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy', 'storeWeeklyOff']),
+  new: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+  kill: K::test_a_branch_limited_person_sets_only_their_own_branch (view-key holder writes)
+
+== P8 — five standard types once; no live approval flow in an approvals-off company ==
+K = tests/Feature/Modules/Hr/TheLeaveInstallersStayQuietInAnApprovalsOffCompanyTest.php
+
+P8.1 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
+  old: if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
+  new: if (LeaveType::query()->where('code', $code)->exists()) {
+  kill: K::test_five_types_once_and_no_live_approval_flow (the deliberately deleted SICK comes back: SICK twice)
+
+P8.2 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
+  old: continue;
+  new: (line deleted — every run creates all five)
+  kill: K::test_five_types_once_and_no_live_approval_flow (10+ rows)
+
+P8.3 approval flows: no file on a6/hr-law-leave writes approval_flows (grep ApprovalFlow over the branch diff: only this test).
+  EQUIVALENT by absence — there is no write to mutate; K pins that none appears.
+
+== Phase 3 (fe's answers, 21 Oct 2026, second round) ==
+
+== Q1 — encashment rate on s.2(45) wages ==
+K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
+
+Q1.1 app/Modules/Hr/Services/EarnedLeave.php (monthlyWages)
+  old: if ($head->isEarning() && ! $head->outside_wages) {
+  new: if ($head->isEarning()) {
+  kill: K::test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival (38000, rate 1266.67)
+
+Q1.2 app/Modules/Hr/Services/EarnedLeave.php (monthlyWages)
+  old: if ($head->isEarning() && ! $head->outside_wages) {
+  new: if (! $head->outside_wages) {
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (PF deduction 2000 counted: 32000)
+
+Q1.3 app/Modules/Hr/Services/EarnedLeave.php (encashment)
+  old: $monthly = $this->monthlyWages($employee, $on);
+  new: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['gross'];
+  kill: K::test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival
+
+Q1.4 app/Modules/Hr/Http/Controllers/SalaryHeadController.php
+  old: 'outside_wages' => $request->boolean('outside_wages'),
+  new: (line deleted)
+  kill: tests/Feature/Modules/Hr/ASalaryHeadSaysWhetherItIsWagesTest.php::test_the_standard_travel_allowance_is_outside_and_the_box_turns_it_on_and_off
+        (unticking keeps MEDICAL outside)
+
+Q1.5 app/Modules/Hr/Resources/views/employee/show.blade.php
+  old: @if ($encashment !== null)
+  new: @if (false)
+  kill: K::test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival (no data-encashment / rule text)
+
+Q1.6 app/Modules/Hr/Services/SalaryHeadService.php (installDefaults)
+  old: 'outside_wages' => $code === 'CONVEY',
+  new: 'outside_wages' => false,
+  kill: tests/Feature/Modules/Hr/ASalaryHeadSaysWhetherItIsWagesTest.php::test_the_standard_travel_allowance_is_outside_and_the_box_turns_it_on_and_off
+
+== Q3 — actual delivery date moves the 8 weeks after (s.45), signed, adjustment in the next run ==
+K = tests/Feature/Modules/Hr/TheActualDeliveryMovesTheWeeksAfterTest.php (one test: test_the_end_moves_only_after_signing_and_the_next_run_carries_the_exact_difference)
+
+Q3.1 app/Modules/Hr/Services/MaternityDeliveryService.php (sign)
+  old: 'to_date' => $new->toDateString(),
+  new: 'to_date' => $old->toDateString(),
+  kill: K (to_date stays 2026-11-20 after signing)
+
+Q3.2 app/Modules/Hr/Services/MaternityDeliveryService.php (sign)
+  old: $this->assertNotRequestedBy($change, $decider);
+
+        return DB::transaction(function () use ($change, $application, $decider) {
+  new: return DB::transaction(function () use ($change, $application, $decider) {
+  kill: K (the clerk who entered the date signs it)
+
+Q3.3 app/Modules/Hr/Services/MaternityDeliveryService.php (paidMonthsDifference)
+  old: $total = bcadd($total, bcmul(bcmul($sign, $days, 0), bcsub($average, $this->structureDaily($employee, $month), 10), 10), 10);
+  new: $total = bcadd($total, bcmul(bcmul($sign, $days, 0), $average, 10), 10);
+  kill: K (-4800.00, not -800.00)
+
+Q3.4 app/Modules/Hr/Services/MaternityDeliveryService.php (moveOpenDays, the shrink loop)
+  old: if (! $this->paid($employee, $day)) {
+                Attendance::query()
+  new: if (true) {
+                Attendance::query()
+  kill: K (the paid November's 15-20 Nov leave rows are deleted)
+
+Q3.5 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+  new: ->where(fn ($q) => $q->whereNull('payroll_run_id')
+  kill: K (rebuild of December drops the adjustment line)
+
+Q3.6 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: ->where('adjustment', '!=', 0)
+            ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+                ->orWhereIn('payroll_run_id', PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
+  new: ->where('adjustment', '!=', 0)
+  kill: K (January carries the already-settled -800 again)
+
+Q3.7 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: $kind = bccomp($amount, '0', 2) > 0 ? SalaryHead::EARNING : SalaryHead::DEDUCTION;
+  new: $kind = SalaryHead::EARNING;
+  kill: K (kind 'earning', not 'deduction')
+
+Q3.8 app/Modules/Hr/Services/MaternityDeliveryService.php (record)
+  old: 'new_to_date' => $actual->copy()->addDays(LeaveService::MATERNITY_WEEKS_EACH_SIDE * 7 - 1)->toDateString(),
+  new: 'new_to_date' => $actual->copy()->addDays(LeaveService::MATERNITY_WEEKS_EACH_SIDE * 7)->toDateString(),
+  kill: K (2026-11-15, not 2026-11-14)
+
+== Q4 — one card for the weekly off (company default + branch overrides) ==
+K = tests/Feature/Modules/Hr/TheWeeklyOffHasOneHomeTest.php (test_the_company_weekly_off_changes_only_on_the_holiday_card)
+
+Q4.1 app/Modules/SystemAdmin/Http/Controllers/SettingsController.php (editable)
+  old: && ! isset($d['owned_by'])
+  new: (line deleted)
+  kill: K (settings page shows the field and its PUT sets sunday)
+
+Q4.2 app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php (update)
+  old: if (isset($definition['owned_by'])) {
+                continue;
+            }
+
+            $raw = $submitted[$key] ?? null;
+  new: $raw = $submitted[$key] ?? null;
+  kill: K (control panel PUT with scope[] sets sunday)
+
+Q4.3 app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php (byModule)
+  old: if (isset($definition['owned_by'])) {
+                    continue;
+                }
+
+                $group = $definition['group'] ?? 'general';
+  new: $group = $definition['group'] ?? 'general';
+  kill: K (the HR tab draws settings[hr.weekly_off])
+
+Q4.4 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff, company branch)
+  old: if ($limited !== null) {
+                throw ValidationException::withMessages(['branch_id' => __('hr::validation.weekly_off_company_needs_all_branches')]);
+  new: if (false) {
+                throw ValidationException::withMessages(['branch_id' => __('hr::validation.weekly_off_company_needs_all_branches')]);
+  kill: K (a branch-limited user changes the company rule)
+
+Q4.5 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff)
+  old: app(\App\Core\Services\SettingsService::class)->set('hr.weekly_off', $value);
+  new: (line deleted)
+  kill: K (the card leaves friday)
+
+Q4.6 app/Modules/Hr/module.php
+  old: 'owned_by' => 'hr.holiday.index',
+  new: (line deleted)
+  kill: K (both other screens show and change it)
+
+== R — an owned_by key sent to the Settings page or the Control Panel is refused with a clear error ==
+K = tests/Feature/Modules/Hr/TheWeeklyOffHasOneHomeTest.php (test_the_company_weekly_off_changes_only_on_the_holiday_card)
+
+R.1 app/Modules/SystemAdmin/Http/Controllers/SettingsController.php (update)
+  old: if (($refusal = OwnedSettings::refusal($this->settings->definitions(), array_keys($submitted))) !== null) {
+  new: if (false) {
+  kill: K (no session error; hr.show_left_employees saves from the refused request)
+
+R.2 app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php (update)
+  old: [...array_keys($scope), ...array_keys($submitted)]
+  new: array_keys($scope)
+  kill: K (the key only in settings[] is not refused)
+
+R.3 app/Core/Services/OwnedSettings.php (refusal)
+  old: $messages[] = __((string) ($definition['label'] ?? $key)).' — '.(isset($definition['owned_where'])
+  new: $messages[] = __((string) ($definition['label'] ?? $key)).' — '.(false
+  kill: K (the error does not name the weekly off card)
+
+R.4 app/Core/Services/OwnedSettings.php (refusal)
+  old: if ($definition === null || ! isset($definition['owned_by'])) {
+  new: if ($definition === null) {
+  kill: K (the ordinary key hr.show_left_employees is refused on both pages)

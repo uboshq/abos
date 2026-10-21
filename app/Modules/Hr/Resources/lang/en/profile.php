@@ -51,4 +51,11 @@ return [
     'event_employment_type_id' => 'Employment type changed',
     'event_reports_to_employee_id' => 'Reporting line changed',
     'by' => 'by :name',
+    // ⭐ unused earned leave on leaving (s.11, s.117; a6, 21 Oct 2026)
+    'encashment' => 'Unused earned leave if leaving on :date',
+    'encashment_days' => 'Days',
+    'encashment_wages' => 'Monthly wages',
+    'encashment_rate' => 'Daily rate',
+    'encashment_amount' => 'Amount',
+    'encashment_rule' => 'Daily rate = monthly wages ÷ 30. Wages under s.2(45): basic and allowances, leaving out bonus or festival allowance, the employer\'s provident fund contribution and travelling or special-expense allowance.',
 ];

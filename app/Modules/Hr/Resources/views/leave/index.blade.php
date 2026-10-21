@@ -6,7 +6,7 @@
         ['key' => 'employee', 'label' => __('hr::field.name'),
          'render' => fn ($a) => $a->employee?->label() ?? '—'],
         ['key' => 'type', 'label' => __('hr::field.leave_type'), 'width' => '12rem',
-         'render' => fn ($a) => $a->leaveType?->name() ?? '—'],
+         'render' => fn ($a) => view('hr::leave.partials.type', ['application' => $a])],
         ['key' => 'from', 'label' => __('hr::field.from_date'), 'width' => '9rem',
          'render' => fn ($a) => $a->from_date->format('d M Y')],
         ['key' => 'to', 'label' => __('hr::field.to_date'), 'width' => '9rem',
@@ -49,6 +49,8 @@
                 :sort="$sortOptions"
                 :columns="$columns" :search="false">
         <x-slot:actions>
+            {{-- ⭐ ছুটির দিনের তালিকা — ছুটির চাবিতেও দেখা যায় (fe-র উত্তর ৫; [[HolidayController]]) --}}
+            <x-ui.button :href="route('hr.holiday.index')">{{ __('hr::menu.holidays') }}</x-ui.button>
             @can('hr.leave.manage')
                     <x-ui.button :href="route('hr.leave_type.index')">
                         {{ __('hr::menu.leave_types') }}

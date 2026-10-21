@@ -73,4 +73,29 @@ return [
     'owner_self_signed' => 'The owner signed a salary change he asked for himself — a self-approved change.',
     // ⭐ বেতনের রানের সইয়ের সারি — নিট চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬; [[PayrollRunSummary]])
     'payroll_signing_summary' => ':month payroll · :count people · net :net',
+    // ⭐ public holidays (a6, 21 Oct 2026; [[HolidayController]])
+    'holiday_saved' => 'Holiday added.',
+    'holiday_updated' => 'Holiday changed.',
+    'holiday_deleted' => 'Holiday removed.',
+    'no_holidays' => 'No holidays listed for this year.',
+    'holiday_note' => 'Leave days and salary cuts skip these days and the weekly off (:weekly). A holiday for all branches applies to staff with no branch too.',
+    // ⭐ earned leave (labour law s.117; a6, 21 Oct 2026)
+    'earned_accrues' => '1 per :per days worked',
+    // ⭐ a standard type is missing (a6, 21 Oct 2026; [[LeaveTypeDefaults]])
+    'leave_types_missing' => 'Some standard leave types (for example maternity leave) are not in this company yet. Installing adds only the missing ones.',
+    // ⭐ maternity signer warning (s.46(3); a6, 21 Oct 2026)
+    'no_information' => 'No information',
+    'maternity_children_unknown' => 'No information on surviving children — with two or more, no maternity benefit is due (s.46(3)). Check before you sign.',
+    'maternity_benefit_line' => 'Maternity benefit',
+    // ⭐ branch weekly off (s.103, s.114; a6, 21 Oct 2026)
+    'weekly_off_saved' => 'Weekly off saved for the branch.',
+    'weekly_off_branches' => 'Weekly off by branch',
+    'weekly_off_company' => 'As the company (:day)',
+    // ⭐ actual delivery date (s.45; a6, 21 Oct 2026)
+    'delivery_recorded' => 'Actual delivery date entered — waiting for a signature.',
+    'delivery_signed_short' => 'Signed — the weeks after delivery now run from the actual date.',
+    'delivery_rejected' => 'Actual delivery date rejected — nothing changed.',
+    'delivery_waiting' => 'Delivery :date — waiting for a signature (leave would end :to)',
+    'delivery_signed' => 'Actual delivery :actual signed: leave end moved :old → :new.',
+    'weekly_off_company_row' => 'Company default',
 ];

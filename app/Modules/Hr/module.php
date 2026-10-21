@@ -64,6 +64,8 @@ return [
         'master' => [
             ['label' => 'hr::menu.employees', 'icon' => 'people', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.salary_heads', 'icon' => 'wallet', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
+            // ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.holidays', 'icon' => 'calendar', 'route' => 'hr.holiday.index', 'permission' => 'hr.attendance.view'],
         ],
 
         'transactions' => [
@@ -374,6 +376,14 @@ return [
         EmployeeFacts::class,
     ],
 
+    /*
+     * ⭐ নতুন কোম্পানিতে প্রমিত ছুটির ধরন — মাতৃত্বকালীন সহ (শ্রম আইন; [[LeaveTypeDefaults]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ চলতি কোম্পানিতে `abos:hr-install-leave-types` বা ছুটির ধরনের পর্দার বোতাম; বারবার চালানো নিরাপদ।
+     */
+    'provisions' => [
+        \App\Modules\Hr\Services\LeaveTypeDefaults::class,
+    ],
+
     'dashboard' => HrDashboard::class,
 
     // ⭐ রিপোর্ট ইঞ্জিন boot-এ নিবন্ধন করে — হাজিরা, বেতনশিট, কর্মী সংখ্যা, ছুটির জের ([[HrReports]])
@@ -427,6 +437,37 @@ return [
             'label' => 'hr::settings.attendance_affects_salary',
             'type' => 'boolean',
             'default' => false,
+            'group' => 'entry',
+        ],
+        /*
+         * ⭐ সাপ্তাহিক ছুটি — ডিফল্ট শুক্রবার (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ শ্রম আইন ২০০৬ ধারা ১০৩; [[WorkCalendar]];
+         * a6, ২১ অক্টোবর ২০২৬)।
+         * ⓘ ছুটির আবেদনের দিন গোনায় এই দিনগুলো বাদ, আর এই দিনে লেখা "অনুপস্থিত" বেতন থেকে কাটে না। সরকারি ছুটি আর উৎসব আলাদা
+         * তালিকায় ([[HolidayController]])। ⛔ সপ্তাহের দিন সারি হয়ে বসে না — ৫২টা সারি ভুলে গেলে গোটা বছর কাজের দিন হত।
+         */
+        [
+            'key' => 'hr.weekly_off',
+            'label' => 'hr::settings.weekly_off',
+            'type' => 'choice',
+            'options' => array_keys(\App\Modules\Hr\Support\WorkCalendar::WEEKLY_OFF),
+            'option_label' => 'hr::settings.weekly_off_',
+            'default' => \App\Modules\Hr\Support\WorkCalendar::DEFAULT_WEEKLY_OFF,
+            'group' => 'entry',
+            // ⭐ শাখা নিজের দিন বাছতে পারে — দোকান আর কারখানা আলাদা (ধারা ১০৩, ১১৪; fe, ২১ অক্টোবর ২০২৬); বদলটা ছুটির দিনের পর্দায় ([[HolidayController::storeWeeklyOff()]])
+            'per_branch' => true,
+            // ⭐ এক নিয়ম, এক জায়গা — কোম্পানির ডিফল্টও ছুটির দিনের পর্দার কার্ডে; সেটিংসের পাতা আর কন্ট্রোল প্যানেল দেখায় না (fe-র উত্তর ৪)
+            'owned_by' => 'hr.holiday.index',
+            'owned_where' => 'hr::settings.weekly_off_owned',
+        ],
+        /*
+         * ⭐ অর্জিত ছুটির জের — বছর শেষে বড়জোর কত দিন পরের বছরে যায়, ডিফল্ট ৪০ (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা
+         * ১১৭; [[EarnedLeave::closingOf()]]; a6, ২১ অক্টোবর ২০২৬)। ⓘ অর্জন নিজে আইনের হার — প্রতি ১৮ দিন কাজে ১ দিন — সেটিং নয়।
+         */
+        [
+            'key' => 'hr.earned_leave_carry_cap',
+            'label' => 'hr::settings.earned_leave_carry_cap',
+            'type' => 'integer',
+            'default' => \App\Modules\Hr\Services\EarnedLeave::DEFAULT_CARRY_CAP,
             'group' => 'entry',
         ],
         [

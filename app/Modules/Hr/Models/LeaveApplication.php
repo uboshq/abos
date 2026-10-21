@@ -43,7 +43,7 @@ class LeaveApplication extends Model
 
     protected $fillable = [
         'company_id', 'employee_id', 'leave_type_id',
-        'from_date', 'to_date', 'days', 'reason',
+        'from_date', 'to_date', 'expected_delivery_date', 'actual_delivery_date', 'days', 'reason',
         'status', 'decided_by', 'decided_at', 'decision_remarks', 'created_by',
     ];
 
@@ -52,6 +52,10 @@ class LeaveApplication extends Model
         return [
             'from_date' => 'date',
             'to_date' => 'date',
+            // ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭; fe, ২১ অক্টোবর ২০২৬)
+            'expected_delivery_date' => 'date',
+            // ⭐ প্রসবের আসল দিন — সই পড়লে বসে (ধারা ৪৫; [[MaternityDeliveryService::sign()]])
+            'actual_delivery_date' => 'date',
             'days' => 'decimal:1',
             'decided_at' => 'datetime',
         ];
@@ -97,5 +101,21 @@ class LeaveApplication extends Model
     public function isApproved(): bool
     {
         return $this->status === self::APPROVED;
+    }
+
+    /**
+     * ⭐ সইকারীর জন্য সতর্কবার্তা — মাতৃত্বকালীন ছুটিতে কর্মীর জীবিত সন্তানের সংখ্যা লেখা নেই ("তথ্য নেই"; ধারা ৪৬(৩); fe-র উত্তর ২,
+     * ২১ অক্টোবর ২০২৬; a6)। ⓘ আটকায় না — ওয়েবের তালিকা আর ফোনের সারি দেখায়, যাতে সইকারী জেনে সই দেন। সংখ্যাটা নয়, কেবল যে লেখা
+     * নেই — তাই পরিচয়ের চাবি ছাড়াও দেখানো চলে।
+     */
+    public function signerWarning(): ?string
+    {
+        if (! $this->isPending() || ! (bool) $this->leaveType?->isMaternity()) {
+            return null;
+        }
+
+        $employee = $this->employee ?? Employee::query()->withoutGlobalScopes()->find($this->employee_id);
+
+        return $employee !== null && $employee->surviving_children === null ? __('hr::message.maternity_children_unknown') : null;
     }
 }
