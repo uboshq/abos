@@ -159,9 +159,11 @@
                                @if ($tile['waiting'] > 0)
                                    aria-label="{{ $tile['label'] }} — {{ __('core.ui.waiting_signature', ['count' => $tile['waiting']]) }}"
                                @endif>
+                                {{-- ⭐ টাইলের রং লঞ্চারের নিজের তালিকা থেকে (`--color-launcher-<কোড>`, tokens.css; মালিক, ২১ অক্টোবর ২০২৬: "Odoo-র মতো")
+                                     — রেলের টিল নয়; রেল ABOS রূপে এক রঙেই থাকে (৪ সেপ্টেম্বরের সিদ্ধান্ত) --}}
                                 <span class="relative grid size-[64px] shrink-0 place-items-center rounded-[16px] text-white shadow-sm
                                              transition-transform group-hover/tile:-translate-y-px"
-                                      style="background: var(--color-module-{{ $tile['code'] }}, var(--color-brand-600))"
+                                      style="background: var(--color-launcher-{{ $tile['code'] }})"
                                       aria-hidden="true">
                                     <x-ui.icon :name="$tile['icon']" :size="34" drawn />
                                     @if ($tile['waiting'] > 0)

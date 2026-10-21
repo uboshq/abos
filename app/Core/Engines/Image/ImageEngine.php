@@ -101,6 +101,16 @@ final class ImageEngine
     public const MARK_BYTES = 200 * 1024;
 
     /**
+     * ⭐ রাখা লোগোর কড়া সীমা — ৫০০KB (মালিক, fe-র মাধ্যমে, ২১ অক্টোবর ২০২৬: ছবি ১২ MB পর্যন্ত নেওয়া যায় কারণ আমরা ছোট করি,
+     * কিন্তু রাখা ফাইলটা ৫০০KB-র নিচে)।
+     *
+     * ⛔ আগে PNG-র কোনো সীমাই ছিল না: ৮০০×৮০০ পর্যন্ত নামিয়ে স্তর-৯ PNG — ঝিরঝিরে ছবি (ফটো, গ্রেডিয়েন্ট) তাতেও ~২ MB থাকত,
+     * আর সেটা বারের প্রতিটা পাতায় আর প্রতিটা ছাপায় base64 হয়ে যেত। ⭐ এখন ধাপে ধাপে: পুরো রঙের PNG → ২৫৫ রঙের PNG (স্বচ্ছতা
+     * অক্ষত) → বাহু ৮০% করে ছোট; JPEG-এ মান ৮৫→৪০, তারপর বাহু ছোট। যেটা প্রথম সীমায় ঢোকে সেটাই।
+     */
+    public const MARK_STORED_MAX = 500 * 1024;
+
+    /**
      * এই ফাইলটা কি আমরা ছুঁতে পারি?
      *
      * ⓘ `getimagesize()` ফাইলের **ভিতর** দেখে, নাম বা ব্রাউজারের বলা
@@ -278,25 +288,59 @@ final class ImageEngine
         $image = $this->fit($image, self::MARK_EDGE);
 
         // PNG ও WebP স্বচ্ছতা বহন করতে পারে, তাই ওদের PNG-ই রাখা হয়।
-        if ($sourceMime === 'image/png' || $sourceMime === 'image/webp') {
-            imagealphablending($image, false);
-            imagesavealpha($image, true);
+        $transparent = $sourceMime === 'image/png' || $sourceMime === 'image/webp';
+        $smallest = null;
 
-            ob_start();
-            imagepng($image, null, 9);
+        /* ⭐ সীমায় না ঢোকা পর্যন্ত বাহু ছোট — ৮০০ → ৬৪০ → ৫১২ → ৪১০ → ৩২৮ → ২৬২ ([[MARK_STORED_MAX]]) */
+        foreach ([1.0, 0.8, 0.64, 0.512, 0.41, 0.328] as $step) {
+            $try = $this->scaleBy($image, $step);
+            imagealphablending($try, false);
+            imagesavealpha($try, true);
 
-            return [
-                'bytes' => (string) ob_get_clean(),
-                'extension' => 'png',
-                'mime' => 'image/png',
-            ];
+            $out = $transparent
+                ? ['bytes' => $this->pngWithin($try, self::MARK_STORED_MAX), 'extension' => 'png', 'mime' => 'image/png']
+                : ['bytes' => $this->squeeze($try, self::MARK_BYTES), 'extension' => 'jpg', 'mime' => 'image/jpeg'];
+
+            if (strlen($out['bytes']) <= self::MARK_STORED_MAX) {
+                return $out;
+            }
+
+            if ($smallest === null || strlen($out['bytes']) < strlen($smallest['bytes'])) {
+                $smallest = $out;
+            }
         }
 
-        return [
-            'bytes' => $this->squeeze($image, self::MARK_BYTES),
-            'extension' => 'jpg',
-            'mime' => 'image/jpeg',
-        ];
+        return $smallest ?? throw new RuntimeException('image.not_an_image');
+    }
+
+    /**
+     * স্বচ্ছ PNG, সীমার ভেতরে যদি পারা যায় — আগে পুরো রঙে, না হলে ২৫৫ রঙে (একটা ঘর স্বচ্ছতার)।
+     * ⓘ লোগো সাধারণত কয়েকটা রং — ২৫৫ রঙে চোখে তফাত নেই, আকার কয়েক গুণ কম; ফটোতে সামান্য দানা, তবু স্বচ্ছতা থাকে।
+     */
+    private function pngWithin(GdImage $image, int $budget): string
+    {
+        ob_start();
+        imagepng($image, null, 9);
+        $full = (string) ob_get_clean();
+
+        if (strlen($full) <= $budget) {
+            return $full;
+        }
+
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $palette = imagecreatetruecolor($w, $h);
+        imagealphablending($palette, false);
+        imagesavealpha($palette, true);
+        imagecopy($palette, $image, 0, 0, 0, 0, $w, $h);
+        imagetruecolortopalette($palette, false, 255);
+        imagesavealpha($palette, true);
+
+        ob_start();
+        imagepng($palette, null, 9);
+        $few = (string) ob_get_clean();
+
+        return strlen($few) < strlen($full) ? $few : $full;
     }
 
     /* ── ধাপগুলো ───────────────────────────────────────────────────── */

@@ -1081,6 +1081,34 @@
     /* ⭐ ⊞ সব মডিউলের পাতার পর্দা — পাতার নিজের জমিন, একটু স্বচ্ছ, পেছনে ঝাপসা (`backdrop-blur`)। পাতার জমিন থেকে নেওয়া,
        তাই অন্ধকারে নিজেই গাঢ় — আলাদা গাঢ় মান লাগে না। */
     --color-launcher-scrim: color-mix(in srgb, var(--color-surface-app) 86%, transparent);
+
+    /* ⭐ ⊞ সব মডিউলের টাইল — প্রতিটা মডিউলের নিজের রং, Odoo-র মতো (মালিক, fe-র মাধ্যমে, ২১ অক্টোবর ২০২৬)।
+       ⓘ কেবল লঞ্চারের — রেল আর বাকি সব জায়গা ABOS রূপে এক টিল (মালিক, ৪ সেপ্টেম্বর; Looks/navy.php-র `--color-module-*`)।
+       ⓘ এক জায়গায়, এই তালিকায়; কোডটাই নামের শেষাংশ (§১৯.৭)। নতুন মডিউল এলে এখানে একটা সারি — না থাকলে
+       [[TheLauncherWearsEachModulesOwnColourTest]] লাল।
+       ⓘ সাদা আইকনের সাথে বৈসাদৃশ্য (WCAG, ≥ ৩ঃ১ চাই — বড় চিহ্ন), পাশে লেখা; টাইলের রং থিমে বদলায় না, আইকনও সাদাই থাকে,
+       তাই আলো আর অন্ধকারে একই মান — গাঢ় অংশে আলাদা মান লাগে না।
+       ⓘ বাকি নিয়ন্ত্রণের লাল আর মালিকের কেন্দ্রের সোনালি-বাদামি — আগের মতোই (মালিক)। */
+    --color-launcher-accounts: #4f46e5;       /* ইন্ডিগো — ৬.২৯ঃ১ */
+    --color-launcher-finance: #0369a1;        /* গাঢ় আকাশি — ৫.৯৩ঃ১ */
+    --color-launcher-supplier: #0f766e;       /* টিল — ৫.৪৭ঃ১ */
+    --color-launcher-purchase: #b45309;       /* অ্যাম্বার — ৫.০২ঃ১ */
+    --color-launcher-inventory: #0e7490;      /* সায়ান — ৫.৩৬ঃ১ */
+    --color-launcher-customer: #7c3aed;       /* ভায়োলেট — ৫.৭০ঃ১ */
+    --color-launcher-credit_control: #9f1239; /* গাঢ় রুবি, আগের মতোই — ৮.০২ঃ১ */
+    --color-launcher-sales: #15803d;          /* সবুজ — ৫.০২ঃ১ */
+    --color-launcher-promotion: #be185d;      /* গোলাপি — ৬.০৪ঃ১ */
+    --color-launcher-hr: #e11d48;             /* রোজ — ৪.৭০ঃ১ */
+    --color-launcher-governance: #1e40af;     /* গাঢ় নীল — ৮.৭২ঃ১ */
+    --color-launcher-approval: #c2410c;       /* কমলা — ৫.১৮ঃ১ */
+    --color-launcher-master_data: #a21caf;    /* ফুশিয়া — ৬.৩২ঃ১ */
+    --color-launcher-system_admin: #334155;   /* স্লেট — ১০.৩৫ঃ১ */
+    --color-launcher-executive: #a16207;      /* গাঢ় সোনালি-বাদামি, আগের মতোই — ৪.৯২ঃ১ */
+    --color-launcher-documents: #4d7c0f;      /* লেবু-সবুজ — ৪.৯৯ঃ১ */
+    --color-launcher-notification: #0284c7;   /* আকাশি — ৪.১০ঃ১ */
+    --color-launcher-fixed_assets: #78350f;   /* বাদামি — ৯.০৭ঃ১ */
+    --color-launcher-backup: #57534e;         /* পাথুরে ধূসর — ৭.৬৩ঃ১ */
+    --color-launcher-restaurant: #dc2626;     /* লাল — ৪.৮৩ঃ১ */
 }
 
 /* ─────────────────────────────────────────────────────────────────

@@ -157,6 +157,9 @@ class CompanyController extends Controller implements HasMiddleware
             'year_name' => ['required', 'string', 'max:32'],
             'year_starts_on' => ['required', 'date'],
             'year_ends_on' => ['required', 'date', 'after:year_starts_on'],
+
+            /* ⭐ লোগো — সম্পাদনার একই দরজা ([[logoRules()]], [[keepLogo()]]); ⛔ আগে পর্দায় ঘর ছিল, অথচ এখানে ফাইলটা পড়াই হত না */
+            'logo' => $this->logoRules($request),
         ]);
 
         /*
@@ -211,6 +214,12 @@ class CompanyController extends Controller implements HasMiddleware
         $this->assertCodeExists($branchCode, 'branch_code', $data['branch_name_en']);
 
         /*
+         * ⓘ লোগো আগে — কোম্পানি তৈরির আগেই ছাঁকা ও ছোট করা হয়: খারাপ SVG হলে এখানেই ফেরত, অর্ধেক-তৈরি কোম্পানি থাকে না।
+         * ⓘ বসে তৈরির **পরে**, আলাদা হালনাগাদে — তাই অডিটে `logo_path` খালি → নতুন ফাইল, সম্পাদনার মতোই।
+         */
+        $logo = $this->keepLogo($request, $companyCode);
+
+        /*
          * ⛔ তৈরি আর মালিকের অধিকার এক লেনদেনে — সিস্টেম-অ্যাডমিন লাইন-ধরে নিরীক্ষা, ১৪ অক্টোবর ২০২৬ ([[FirstRun::open()]]-এর একই
          * নিয়ম)। ⓘ আগে কোম্পানি নিজের লেনদেনে কমিট হত, আর অধিকার দেওয়া চলত তার বাইরে: সেটা ভাঙলে কোম্পানি থাকত শাখা, বছর আর
          * নম্বর-সিরিজসহ, কিন্তু কোনো সদস্য বা সুপার অ্যাডমিন ছাড়া — আর [[WholeDatabaseAccess]] সব কোম্পানি গোনে বলে মালিক সাথে
@@ -246,7 +255,13 @@ class CompanyController extends Controller implements HasMiddleware
          * এটা না করলে নতুন কোম্পানিটা তালিকায় দেখা যেত কিন্তু সুইচারে
          * আসত না — আর কেন আসছে না তার কোনো ব্যাখ্যাও পর্দায় থাকত না।
          */
-        ), fn (Company $created) => $provisioner->grantAccess($created, $request->user())));
+        ), function (Company $created) use ($provisioner, $request, $logo): void {
+            $provisioner->grantAccess($created, $request->user());
+
+            if (($logo['logo_path'] ?? null) !== null) {
+                $created->update($logo);
+            }
+        }));
 
         return redirect()
             ->route('system_admin.company.index')
@@ -417,9 +432,7 @@ class CompanyController extends Controller implements HasMiddleware
             // ⓘ ছবি (PNG/JPG/WebP) ১২ MB — ইঞ্জিন নিজেই নামিয়ে আনে বলে দরজাটা আর সরু রাখার
             // দরকার নেই; সীমাটা কেবল অস্বাভাবিক ফাইল ঠেকাতে। ⓘ SVG কি না, নামের শেষাংশ দেখে — MIME-এ
             // SVG কখনো text/xml, কখনো text/plain আসে; আসল যাচাই পরে, ভেতরটা পড়ে।
-            'logo' => $this->sentAnSvg($request)
-                ? ['nullable', 'file', 'max:1024']
-                : ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'],
+            'logo' => $this->logoRules($request),
 
             /*
              * লোগো সরানোর ঘর — আলাদা, কারণ "নতুন ফাইল দিইনি" আর
@@ -429,7 +442,7 @@ class CompanyController extends Controller implements HasMiddleware
             'remove_logo' => ['nullable', 'boolean'],
         ]);
 
-        $logo = $this->keepLogo($request, $company);
+        $logo = $this->keepLogo($request, $company->code);
 
         unset($data['logo'], $data['remove_logo']);
 
@@ -476,7 +489,7 @@ class CompanyController extends Controller implements HasMiddleware
      *
      * @return array<string, string|null>
      */
-    private function keepLogo(Request $request, Company $company): array
+    private function keepLogo(Request $request, string $code): array
     {
         if ($request->boolean('remove_logo')) {
             return ['logo_path' => null];
@@ -496,7 +509,7 @@ class CompanyController extends Controller implements HasMiddleware
                 throw ValidationException::withMessages(['logo' => __('validation.image', ['attribute' => 'logo'])]);
             }
 
-            $path = 'logos/'.$company->code.'-'.now()->format('Ymd-His').'.svg';
+            $path = 'logos/'.$code.'-'.now()->format('Ymd-His').'.svg';
             Storage::disk('public')->put($path, $clean);
 
             return ['logo_path' => $path];
@@ -518,7 +531,7 @@ class CompanyController extends Controller implements HasMiddleware
             try {
                 $mark = (new ImageEngine)->mark($source);
 
-                $name = $company->code.'-'.now()->format('Ymd-His').'.'.$mark['extension'];
+                $name = $code.'-'.now()->format('Ymd-His').'.'.$mark['extension'];
                 $path = 'logos/'.$name;
 
                 Storage::disk('public')->put($path, $mark['bytes']);
@@ -536,15 +549,29 @@ class CompanyController extends Controller implements HasMiddleware
          * ⓘ সেই কাজটা না হলে ভরসাটা মিথ্যা, আর তখন একটা ১২ MB লোগো
          * **প্রতিটা ছাপা কাগজে** base64 হয়ে বসত (≈১৬ MB)।
          */
-        if ((int) $file->getSize() > 2 * 1024 * 1024) {
+        /* ⭐ ২১ অক্টোবর ২০২৬: সীমা ২ MB থেকে রাখা লোগোর সীমায় (৫০০KB, [[ImageEngine::MARK_STORED_MAX]]) — রাখা ফাইল কখনো তার বেশি নয় */
+        if ((int) $file->getSize() > ImageEngine::MARK_STORED_MAX) {
             throw ValidationException::withMessages([
                 'logo' => __('core.image.logo_not_processed'),
             ]);
         }
 
-        $name = $company->code.'-'.now()->format('Ymd-His').'.'.$file->extension();
+        $name = $code.'-'.now()->format('Ymd-His').'.'.$file->extension();
 
         return ['logo_path' => $file->storeAs('logos', $name, ['disk' => 'public'])];
+    }
+
+    /**
+     * লোগোর দরজার নিয়ম — তৈরি আর সম্পাদনা দুই পর্দাতেই একটাই (⛔ ২১ অক্টোবর ২০২৬ পর্যন্ত তৈরির পর্দা লোগোটা নিতই না)।
+     * ⓘ SVG ১ MB (ইঞ্জিনে ছোট হয় না); ছবি ১২ MB (ইঞ্জিন নামিয়ে ৫০০KB-র নিচে রাখে)।
+     *
+     * @return list<string>
+     */
+    private function logoRules(Request $request): array
+    {
+        return $this->sentAnSvg($request)
+            ? ['nullable', 'file', 'max:1024']
+            : ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'];
     }
 
     /** ⓘ পাঠানো লোগোটা SVG কি না — নামের শেষাংশ ধরে (MIME-এ SVG নানা নামে আসে); ভেতরটা যাচাই করে [[SafeSvg::clean()]] */
