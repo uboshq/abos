@@ -159,7 +159,10 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         $clerk->companies()->attach($this->company, ['is_active' => true]);
         $this->assertFalse($clerk->fresh()->canInCompany((int) $this->company->id, 'system_admin.company.manage'), 'প্রস্তুতিটাই ভুল — কর্মীর হাতে চাবি আছে।');
 
-        $this->send($clerk->fresh(), UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))->assertForbidden();
+        // ⓘ দরজায় দুই স্তর — রুটের চাবি (৪০৩) আর "এই কোম্পানির চাবি" (৪০৪, [[CompanyController::mustBeYourCompany()]]);
+        //   যেকোনোটা থামালেই চলে, দাবিটা "থামল আর লোগো আগেরটাই"
+        $status = $this->send($clerk->fresh(), UploadedFile::fake()->createWithContent('logo.svg', self::HOSTILE))->status();
+        $this->assertContains($status, [403, 404], "⛔ চাবি ছাড়া লোগো বদলের দরজা খুলল (উত্তর {$status})।");
         $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, '⛔ চাবি ছাড়াই লোগো বদলে গেল।');
     }
 
