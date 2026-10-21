@@ -62,25 +62,26 @@
     </p>
 
     <section data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <table class="w-full text-sm">
-            <thead class="bg-(--color-section-head)">
+        {{-- ⓘ `ui-grid` — ঘরের মাপ আর ধার থিমের টোকেন থেকে (EveryScreenObeysTheThemeTest), নিজের px/py নয়; সংখ্যার ঘরে `num` --}}
+        <table class="ui-grid">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-start font-semibold">{{ __('accounts::field.equity_component') }}</th>
+                    <th scope="col" class="text-start">{{ __('accounts::field.equity_component') }}</th>
                     @foreach ($statement['columns'] as $column)
-                        <th class="px-4 py-3 text-end font-semibold">{{ $column['label'] }}</th>
+                        <th scope="col" class="num">{{ $column['label'] }}</th>
                     @endforeach
-                    <th class="px-4 py-3 text-end font-semibold">{{ __('accounts::field.equity_total') }}</th>
+                    <th scope="col" class="num">{{ __('accounts::field.equity_total') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($rows as $key => $label)
                     <tr data-row="{{ $key }}" @class(['border-t border-(--color-border)', 'font-semibold border-t-2' => in_array($key, ['opening', 'closing'], true)])>
-                        <th scope="row" class="px-4 py-2 text-start font-medium">{{ $label }}</th>
+                        <th scope="row" class="text-start font-medium">{{ $label }}</th>
                         @foreach ($statement['columns'] as $column)
-                            <td @class(['px-4 py-2 text-end tabular-nums',
+                            <td @class(['num',
                                 'text-(--color-badge-danger-ink)' => bccomp($column[$key], '0', 4) < 0])>{{ $money($column[$key]) }}</td>
                         @endforeach
-                        <td data-total class="px-4 py-2 text-end tabular-nums font-semibold">{{ $money($statement['total'][$key]) }}</td>
+                        <td data-total class="num font-semibold">{{ $money($statement['total'][$key]) }}</td>
                     </tr>
                 @endforeach
             </tbody>
