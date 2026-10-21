@@ -14,6 +14,7 @@ import '../../core/widgets/list_controls.dart';
 import '../books/books_widgets.dart';
 import 'customer_detail_screen.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// Every customer this device has pulled, each with what the shop owes.
 ///
@@ -95,11 +96,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           const VerticalDivider(width: 1),
           Expanded(
             child: selected == null
-                ? const Scaffold(
-                    key: ValueKey('customers-detail-empty'),
+                ? Scaffold(
+                    key: const ValueKey('customers-detail-empty'),
                     body: EmptyState(
                       icon: Icons.touch_app_outlined,
-                      title: 'বাঁয়ের তালিকা থেকে একজন গ্রাহক বাছুন',
+                      title: context.l10n.customersPickFromList,
                     ),
                   )
                 : KeyedSubtree(
@@ -116,15 +117,15 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   Widget _list(BuildContext context, List<CustomerRecord> all, List<CustomerRecord> filtered, double owed,
       String? trouble, bool twoPane) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'গ্রাহক'),
+      appBar: AbosScreenBar(title: context.l10n.customersTitle),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'নাম বা মোবাইল দিয়ে খুঁজুন',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: context.l10n.customersSearchHint,
+                prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
@@ -140,7 +141,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           if (filtered.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: TotalStrip(label: 'মোট বকেয়া', value: Money.taka(owed), count: filtered.length),
+              child: TotalStrip(label: context.l10n.customersTotalDue, value: Money.taka(owed), count: filtered.length),
             ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
@@ -160,15 +161,15 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                               ? Icons.people_outline
                               : Icons.cloud_off_outlined,
                           title: trouble == null
-                              ? 'এখনো কোনো গ্রাহক সিঙ্ক হয়নি'
-                              : 'গ্রাহকের তালিকা আনা যায়নি',
+                              ? context.l10n.customersNoneSynced
+                              : context.l10n.customersListFailed,
                           // ⚠️ A failed pull and an empty catalogue leave this
                           // screen looking identical, and only one of the two
                           // is fixed by pulling. Without the reason here, a
                           // phone whose token expired answers every pull with
                           // the same 'নিচে টেনে আবার চেষ্টা করুন' — the pull
                           // half of what SyncEngine.lastFailureFor documents.
-                          message: trouble ?? 'নিচে টেনে আবার চেষ্টা করুন।',
+                          message: trouble ?? context.l10n.customersPullToRetry,
                         ),
                       ],
                     )
@@ -177,11 +178,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           children: [
                             EmptyState(
                               icon: Icons.search_off,
-                              title: 'কোনো মিল পাওয়া যায়নি',
+                              title: context.l10n.customersNoMatch,
                               // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
                               message: _filters.isEmpty
                                   ? null
-                                  : 'ফিল্টার মুছে আবার দেখুন।',
+                                  : context.l10n.customersClearFilters,
                             ),
                           ],
                         )
@@ -239,7 +240,7 @@ class _CustomerTile extends StatelessWidget {
         : Semantics(
             container: true,
             button: true,
-            onTapHint: 'খাতা খুলুন',
+            onTapHint: context.l10n.customersOpenLedgerHint,
             child: InkWell(
               key: ValueKey('ledger-${customer.id}'),
               onTap: () => context.push('/home/customers/${customer.id}/ledger'),
@@ -332,7 +333,7 @@ class _DuePill extends StatelessWidget {
           ),
           if (due.creditDays > 0)
             Text(
-              '${due.creditDays} দিন',
+              context.l10n.customersCreditDaysShort(due.creditDays),
               maxLines: 1,
               style: Theme.of(context).textTheme.bodySmall,
             ),

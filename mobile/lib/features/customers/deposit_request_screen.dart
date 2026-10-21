@@ -10,6 +10,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 
 /// দোকানির জমার বিজ্ঞপ্তি, ব্যাংক স্লিপের ছবিসহ (0.4.3; নাম ৭ অক্টোবর ২০২৬)।
 ///
@@ -97,8 +99,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'তথ্য আনা যায়নি।',
-            whenAbsent: 'সার্ভারে এই সুবিধা এখনো আসেনি — অফিসে জানান।'));
+            fallback: AppLocale.l10n.customersDepositLoadFailed,
+            whenAbsent: AppLocale.l10n.customersDepositAbsent));
       }
     }
   }
@@ -114,11 +116,11 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     // ⓘ ১,২৫০ বা 1,250 — পাঠানো হয় পরিষ্কার রূপে ([[Money.typedText]])
     final amount = Money.typedText(_amount.text);
     if ((Money.typed(amount) ?? 0) <= 0) {
-      setState(() => _error = 'টাকার অঙ্ক লিখুন।');
+      setState(() => _error = context.l10n.customersDepositNeedAmount);
       return;
     }
     if (_method == 'bank' && _slip == null) {
-      setState(() => _error = 'ব্যাংকে জমায় স্লিপের ছবি দিতেই হবে।');
+      setState(() => _error = context.l10n.customersDepositNeedSlip);
       return;
     }
     final shares = <BillShare>[];
@@ -128,19 +130,19 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       final value = Money.typed(text);
       // ⛔ লেখা আছে অথচ পড়া যায় না — আগে চুপচাপ বাদ পড়ত, আর বিজ্ঞপ্তি ঐ বিলের ভাগ ছাড়াই যেত (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
       if (value == null || (text.isNotEmpty && value <= 0)) {
-        setState(() => _error = 'বিল ${b.no}-এর ভাগ পড়া গেল না — কেবল সংখ্যা লিখুন।');
+        setState(() => _error = context.l10n.customersDepositShareUnreadable(b.no));
         return;
       }
       if (value <= 0) continue;
       if (value > b.due + 0.001) {
-        setState(() => _error = 'বিল ${b.no}-এর বকেয়া ${Money.taka(b.due)} — তার বেশি এই বিলে দেখানো যায় না।');
+        setState(() => _error = context.l10n.customersDepositShareOverDue(b.no, Money.taka(b.due)));
         return;
       }
       shares.add(BillShare(b.id, text));
       shared += value;
     }
     if (shared > (Money.typed(amount) ?? 0) + 0.001) {
-      setState(() => _error = 'বিলগুলোতে মোট ${Money.taka(shared)}, অথচ জমা ${Money.taka(Money.typed(amount) ?? 0)} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।');
+      setState(() => _error = context.l10n.customersDepositSharesOverAmount(Money.taka(shared), Money.taka(Money.typed(amount) ?? 0)));
       return;
     }
     setState(() {
@@ -162,7 +164,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       ));
       if (!mounted) return;
       setState(() {
-        _done = 'পাঠানো হয়েছে — হিসাবরক্ষক মিলিয়ে দেখবেন। ততক্ষণ বকেয়া কমবে না।';
+        _done = context.l10n.customersDepositSent;
         _amount.clear();
         _reference.clear();
         _note.clear();
@@ -173,7 +175,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       });
       await _load();
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'পাঠানো যায়নি। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: AppLocale.l10n.customersDepositSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -205,13 +207,13 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   Widget _screen(BuildContext context) {
     final customer = CustomerRecord.byId(widget.customerId);
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'জমার বিজ্ঞপ্তি'),
+      appBar: AbosScreenBar(title: context.l10n.customersDepositNotice),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (customer != null)
             Text(customer.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          Text('হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।',
+          Text(context.l10n.customersDepositIntro,
               style: TextStyle(color: context.palette.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.md),
           if (_busy) const LinearProgressIndicator(),
@@ -220,21 +222,21 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
           TextField(
             controller: _amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'টাকা'),
+            decoration: InputDecoration(labelText: context.l10n.customersDepositAmount),
           ),
           const SizedBox(height: AppSpacing.sm),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('জমার তারিখ'),
+            title: Text(context.l10n.customersDepositDate),
             subtitle: Text('${_date.day}/${_date.month}/${_date.year}'),
             trailing: const Icon(Icons.calendar_today_outlined),
             onTap: _pickDate,
           ),
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'bank', label: Text('ব্যাংক')),
-              ButtonSegment(value: 'mfs', label: Text('বিকাশ/নগদ')),
-              ButtonSegment(value: 'cash', label: Text('নগদ')),
+            segments: [
+              ButtonSegment(value: 'bank', label: Text(context.l10n.customersDepositBank)),
+              ButtonSegment(value: 'mfs', label: Text(context.l10n.customersDepositMfs)),
+              ButtonSegment(value: 'cash', label: Text(context.l10n.customersDepositCash)),
             ],
             selected: {_method},
             onSelectionChanged: (s) => setState(() => _method = s.first),
@@ -244,7 +246,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
             DropdownButtonFormField<int>(
               initialValue: _bank,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'কোন ব্যাংকে'),
+              decoration: InputDecoration(labelText: context.l10n.customersDepositWhichBank),
               items: [
                 for (final b in _banks) DropdownMenuItem(value: b.id, child: Text(b.name, overflow: TextOverflow.ellipsis)),
               ],
@@ -254,18 +256,18 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
             TextField(
               controller: _reference,
               maxLength: 64,
-              decoration: const InputDecoration(labelText: 'স্লিপ / লেনদেন নম্বর'),
+              decoration: InputDecoration(labelText: context.l10n.customersDepositReference),
             ),
           if (_bills.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
-            const Text('কোন বিলের বিপরীতে (ঐচ্ছিক)', style: TextStyle(fontWeight: FontWeight.w700)),
-            Text('বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।',
+            Text(context.l10n.customersDepositAgainstBills, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(context.l10n.customersDepositBillsHint,
                 style: TextStyle(color: context.palette.onSurfaceMuted)),
             // ⓘ এক লাইনে এক বিল — মালিকের নিয়ম; টেবিল নয়
             for (final b in _bills)
               Row(
                 children: [
-                  Expanded(child: Text('${b.no} · বকেয়া ${Money.taka(b.due)}')),
+                  Expanded(child: Text(context.l10n.customersDepositBillDue(b.no, Money.taka(b.due)))),
                   SizedBox(
                     width: 120,
                     child: TextField(
@@ -273,28 +275,28 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                       controller: _shares[b.id],
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       textAlign: TextAlign.end,
-                      decoration: const InputDecoration(hintText: 'এই বিলে'),
+                      decoration: InputDecoration(hintText: context.l10n.customersDepositOnThisBill),
                     ),
                   ),
                 ],
               ),
           ],
-          TextField(controller: _note, decoration: const InputDecoration(labelText: 'আর কিছু বলার')),
+          TextField(controller: _note, decoration: InputDecoration(labelText: context.l10n.customersDepositNote)),
           const SizedBox(height: AppSpacing.md),
           if (_method != 'cash')
             OutlinedButton.icon(
               onPressed: _busy ? null : _pickSlip,
               icon: Icon(_slip == null ? Icons.photo_camera_outlined : Icons.check_circle, color: _slip == null ? null : context.palette.success),
-              label: Text(_slip == null ? 'স্লিপের ছবি তুলুন' : 'ছবি নেওয়া হয়েছে — আবার তুলুন'),
+              label: Text(_slip == null ? context.l10n.customersDepositTakeSlip : context.l10n.customersDepositSlipTaken),
             ),
           const SizedBox(height: AppSpacing.sm),
           FilledButton.icon(
             onPressed: _busy ? null : _send,
             icon: const Icon(Icons.send_outlined),
-            label: const Text('পাঠান'),
+            label: Text(context.l10n.customersDepositSend),
           ),
           const Divider(height: AppSpacing.xl),
-          Text('আগের বিজ্ঞপ্তি (${_history.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(context.l10n.customersDepositHistory(_history.length), style: const TextStyle(fontWeight: FontWeight.w700)),
           for (final row in _history)
             Card(
               child: Padding(
@@ -310,12 +312,12 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                           'rejected' => context.palette.danger,
                           _ => context.palette.pending,
                         })),
-                    if (row.date != null) Text('তারিখ ${row.date}'),
-                    if (row.submittedBy != null) Text('পাঠালেন ${row.submittedBy}'),
-                    if (row.reference != null) Text('নম্বর ${row.reference}'),
-                    for (final (no, amount) in row.bills) Text('বিল $no · ${Money.taka(amount)}'),
+                    if (row.date != null) Text(context.l10n.customersDepositHistoryDate(row.date!)),
+                    if (row.submittedBy != null) Text(context.l10n.customersDepositHistoryBy(row.submittedBy!)),
+                    if (row.reference != null) Text(context.l10n.customersDepositHistoryRef(row.reference!)),
+                    for (final (no, amount) in row.bills) Text(context.l10n.customersDepositHistoryBill(no, Money.taka(amount))),
                     if (row.status == 'rejected' || (row.reason ?? '').isNotEmpty)
-                      Text('কারণ: ${(row.reason ?? '').isEmpty ? 'জানানো হয়নি' : row.reason}',
+                      Text(context.l10n.customersDepositHistoryReason((row.reason ?? '').isEmpty ? context.l10n.customersDepositReasonNotGiven : row.reason!),
                           style: row.status == 'rejected' ? TextStyle(color: context.palette.danger) : null),
                   ],
                 ),

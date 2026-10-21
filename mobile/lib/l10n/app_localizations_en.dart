@@ -2354,6 +2354,2987 @@ class AppL10nEn extends AppL10n {
       'Uninstalling the app loses them. Do not remove the old version when installing the new one — install over it, and the orders stay.';
 
   @override
+  String get ordersModuleSales => 'Sales';
+
+  @override
+  String get ordersUnknownCustomer => 'Unknown customer';
+
+  @override
+  String get ordersRejectedFailed => 'Failed';
+
+  @override
+  String ordersRejectedItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count products',
+      one: '$count product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ordersRejectedDismiss => 'Got it, remove';
+
+  @override
+  String get ordersRejectedRewrite => 'Write it again';
+
+  @override
+  String ordersDepositStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(
+      status,
+      {
+        'pending': 'Sent',
+        'verifying': 'Being checked',
+        'accepted': 'Accepted',
+        'rejected': 'Rejected',
+        'other': 'Being checked',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ordersTrackingStepOrdered => 'Order received';
+
+  @override
+  String get ordersTrackingStepCreditHold => 'Held at the credit limit';
+
+  @override
+  String get ordersTrackingStepDraft => 'Draft';
+
+  @override
+  String get ordersTrackingStepApproval => 'Awaiting approval';
+
+  @override
+  String get ordersTrackingStepWarehouse => 'In the warehouse';
+
+  @override
+  String get ordersTrackingStepGateOut => 'Out of the gate';
+
+  @override
+  String get ordersTrackingStepPartial => 'Partly delivered';
+
+  @override
+  String get ordersTrackingStepDelivered => 'Delivered';
+
+  @override
+  String get ordersTrackingStepCancelled => 'Cancelled';
+
+  @override
+  String get ordersTrackingStepBilled => 'Billed';
+
+  @override
+  String get ordersListTitle => 'Order status';
+
+  @override
+  String get ordersListLoadFailed => 'Could not load the order list';
+
+  @override
+  String get ordersListEmptyTitle => 'No orders yet';
+
+  @override
+  String get ordersListEmptyMessage => 'Pull down to try again.';
+
+  @override
+  String get ordersNewOrder => 'New order';
+
+  @override
+  String ordersListPendingHeader(String count) {
+    return 'Waiting ($count)';
+  }
+
+  @override
+  String get ordersListPendingPill => 'Waiting';
+
+  @override
+  String get ordersListPendingNote =>
+      'It goes out as soon as there is a connection — the order is safe on this phone.';
+
+  @override
+  String ordersListRejectedHeader(String count) {
+    return 'Not accepted ($count)';
+  }
+
+  @override
+  String ordersListSyncedHeader(String count) {
+    return 'Synced ($count)';
+  }
+
+  @override
+  String get ordersListFilterEmpty => 'No orders match this filter.';
+
+  @override
+  String get ordersListNoNumber => 'No number';
+
+  @override
+  String get ordersTrackingLoadFailed =>
+      'Could not load the list. Pull down to try again.';
+
+  @override
+  String get ordersTrackingAbsent =>
+      'Delivery tracking is not on the server yet — tell the office.';
+
+  @override
+  String get ordersTrackingTitle => 'Delivery tracking';
+
+  @override
+  String get ordersTrackingSearchHint => 'Sale number, DO or shop';
+
+  @override
+  String get ordersSearch => 'Search';
+
+  @override
+  String get ordersTrackingEmptyTitle => 'No sales.';
+
+  @override
+  String get ordersTrackingEmptyFiltered => 'Nothing matches this filter.';
+
+  @override
+  String get ordersTrackingEmptyHint =>
+      'A sale appears here once its gate pass is done.';
+
+  @override
+  String get ordersTrackingShowAll => 'Show all';
+
+  @override
+  String get ordersTrackingReload => 'Check again';
+
+  @override
+  String get ordersTrackingNoCustomer => 'No customer';
+
+  @override
+  String get ordersTrackingBackOrder => 'The rest goes later';
+
+  @override
+  String get ordersTrackingStoryFailed => 'Could not load the timeline.';
+
+  @override
+  String get ordersTrackingStoryWho => 'Who did what, and when';
+
+  @override
+  String get counterReturnLoadFailed =>
+      'Could not load the bills for returns. Check the connection and try again.';
+
+  @override
+  String get counterReturnBillFailed => 'Could not open the bill';
+
+  @override
+  String get counterTryAgain => 'Try again.';
+
+  @override
+  String get counterReturnQtyUnreadable =>
+      'Could not read the quantity returned — type numbers only.';
+
+  @override
+  String get counterReturnPickReason => 'Choose a reason.';
+
+  @override
+  String get counterReturnNeedQty =>
+      'Give a quantity returned for at least one item.';
+
+  @override
+  String get counterReturnDraftKeptTitle => 'Returns draft kept';
+
+  @override
+  String get counterReturnDraftKeptText =>
+      'Not confirmed — it stays as a draft in the web returns list.';
+
+  @override
+  String get counterReturnDone => 'Returned';
+
+  @override
+  String get counterAwaitingSignature => 'Awaiting signature';
+
+  @override
+  String get counterReturnFailed => 'Not returned';
+
+  @override
+  String get counterOk => 'OK';
+
+  @override
+  String get counterReturnTitle => 'Sales return';
+
+  @override
+  String get counterReturnWhichBill => 'Returns against which bill';
+
+  @override
+  String get counterReturnEmptyTitle =>
+      'No confirmed bill that can be returned.';
+
+  @override
+  String get counterReturnEmptyHint => 'A bill shows here once it is posted.';
+
+  @override
+  String get counterReload => 'Check again';
+
+  @override
+  String counterReturnBillNo(String no) {
+    return 'Bill $no';
+  }
+
+  @override
+  String counterLotNo(String lot) {
+    return 'Lot: $lot';
+  }
+
+  @override
+  String counterReturnSold(String qty, String rate) {
+    return 'Sold: $qty × $rate';
+  }
+
+  @override
+  String get counterReturnQtyLabel => 'Quantity returned';
+
+  @override
+  String get counterReturnReasonLabel => 'Why returned';
+
+  @override
+  String get counterNoteLabel => 'Details (optional)';
+
+  @override
+  String get counterConfirm => 'Confirm';
+
+  @override
+  String get counterReturnOtherBill => 'Choose another bill';
+
+  @override
+  String get ordersFilter => 'Filter';
+
+  @override
+  String get ordersFilterOffer => 'Has an offer';
+
+  @override
+  String get ordersFilterBoughtBefore => 'This shop bought it before';
+
+  @override
+  String get ordersSale => 'Sale';
+
+  @override
+  String get ordersFree => 'Free';
+
+  @override
+  String get ordersKeypadCarton => 'Carton';
+
+  @override
+  String ordersKeypadCartonFactor(String one, String carton, String factor) {
+    return '$one $carton = $factor pcs';
+  }
+
+  @override
+  String get ordersKeypadPieces => 'Pieces';
+
+  @override
+  String get ordersKeypadTotalPieces => 'Total pieces';
+
+  @override
+  String ordersKeypadLikeLast(String qty) {
+    return 'Same as last time ($qty)';
+  }
+
+  @override
+  String get ordersKeypadBackspace => 'Delete';
+
+  @override
+  String get ordersKeypadAddToCart => 'Add to cart';
+
+  @override
+  String ordersKeypadLineAmount(String amount) {
+    return 'This line $amount';
+  }
+
+  @override
+  String get ordersKeypadEitherUnit =>
+      'Type cartons or pieces, whichever you like';
+
+  @override
+  String get ordersSortCatalogue => 'Catalogue order';
+
+  @override
+  String get ordersSortName => 'By name';
+
+  @override
+  String get ordersSortPrice => 'By price';
+
+  @override
+  String get ordersFilterClearAll => 'Clear all';
+
+  @override
+  String get ordersFilterShowHeading => 'Show';
+
+  @override
+  String get ordersFilterSortHeading => 'Sort';
+
+  @override
+  String ordersFilterApply(int n, String count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Show $count products',
+      one: 'Show $count product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ordersConfirmTitle => 'Check before sending';
+
+  @override
+  String get ordersConfirmStandingLoading => 'Loading the account…';
+
+  @override
+  String get ordersConfirmStandingOffline =>
+      'No internet — the account can be seen later';
+
+  @override
+  String get ordersConfirmStandingFailed =>
+      'Could not load the account now — the order still goes; see the account later';
+
+  @override
+  String get ordersConfirmAdvance => 'In advance';
+
+  @override
+  String get ordersConfirmPendingClaims => 'Awaiting approval';
+
+  @override
+  String get ordersConfirmToPay => 'To pay';
+
+  @override
+  String ordersConfirmOverLimit(String amount) {
+    return 'Over the credit limit — the order goes, but it is not delivered until $amount is paid. No one can pass this limit, not even the owner.';
+  }
+
+  @override
+  String get ordersConfirmColProduct => 'Product';
+
+  @override
+  String get ordersConfirmColAmount => 'Amount';
+
+  @override
+  String get ordersConfirmTotal => 'Total';
+
+  @override
+  String get ordersConfirmRemarks => 'Remarks (optional)';
+
+  @override
+  String get ordersConfirmSend => 'OK, send';
+
+  @override
+  String get ordersConfirmBack => 'Go back';
+
+  @override
+  String get ordersConfirmSoon => 'Coming soon';
+
+  @override
+  String get ordersOk => 'OK';
+
+  @override
+  String get ordersConfirmBankSlip => 'Send bank slip';
+
+  @override
+  String get ordersNewNoBarcodeProduct => 'No product has this barcode';
+
+  @override
+  String get ordersNewQueued =>
+      'Order saved. Its number comes after sync — it cannot be told yet.';
+
+  @override
+  String get ordersNewPickCustomer => 'Choose a customer';
+
+  @override
+  String get ordersNewNoProductsTitle => 'The product list has not synced yet';
+
+  @override
+  String get ordersNewNoProductsHint =>
+      'Go to the products screen, pull down once, then come back.';
+
+  @override
+  String get ordersNewSearchHint => 'Type a name or code';
+
+  @override
+  String get ordersNewScanBarcode => 'Scan barcode';
+
+  @override
+  String get ordersNewChipRemove => 'Remove';
+
+  @override
+  String get ordersNewNoMatch => 'No match found';
+
+  @override
+  String get ordersNewInCart => '✓ In the cart';
+
+  @override
+  String get ordersNewNoRate => 'Price not known';
+
+  @override
+  String get ordersNewLess => 'Less';
+
+  @override
+  String get ordersNewMore => 'More';
+
+  @override
+  String get ordersNewQty => 'Quantity';
+
+  @override
+  String get ordersNewQtyHint => 'Type a number';
+
+  @override
+  String ordersNewSaleAmount(String amount) {
+    return 'Sale · $amount';
+  }
+
+  @override
+  String get ordersNewFreeAuto => 'Free · added by itself';
+
+  @override
+  String ordersNewBarPieces(String sold, String free) {
+    return 'Sale $sold pcs · Free $free';
+  }
+
+  @override
+  String get ordersNewSend => 'Send';
+
+  @override
+  String get ordersNewBarcodeTitle => 'Barcode';
+
+  @override
+  String get ordersNewBarcodeHint => 'Scan or type';
+
+  @override
+  String ordersNewDueLimit(String amount) {
+    return 'Limit $amount';
+  }
+
+  @override
+  String ordersNewDueHeadroom(String amount) {
+    return 'Left $amount';
+  }
+
+  @override
+  String ordersNewDueDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ordersNewOverAlready(String amount) {
+    return 'Already past the limit — this order adds $amount.';
+  }
+
+  @override
+  String ordersNewOverBy(String amount) {
+    return 'This order goes $amount over the limit.';
+  }
+
+  @override
+  String ordersNewDueSynced(String when) {
+    return 'Dues synced $when';
+  }
+
+  @override
+  String get counterLoadFailed =>
+      'Could not open the counter. Check the connection and try again.';
+
+  @override
+  String get counterAbsent =>
+      'The phone counter is not on the server yet — tell the office.';
+
+  @override
+  String get counterThisUnit => 'This unit';
+
+  @override
+  String counterNoFraction(String unit) {
+    return '$unit is not sold in fractions — type a whole number.';
+  }
+
+  @override
+  String counterQtyDecimals(String places) {
+    return 'A quantity takes at most $places decimals (like 2.5 or 0.125).';
+  }
+
+  @override
+  String get counterNoWarehouseLot =>
+      'No warehouse found — lots need a warehouse.';
+
+  @override
+  String get counterPickProduct => 'Choose a product.';
+
+  @override
+  String get counterPickLot => 'Choose a lot — this product is sold by lot.';
+
+  @override
+  String get counterNeedQty => 'Give a quantity.';
+
+  @override
+  String get counterNeedRate => 'No sale without a rate.';
+
+  @override
+  String counterDiscountRange(String min, String max) {
+    return 'Discount is $min to $max%.';
+  }
+
+  @override
+  String counterFreeMax(String max) {
+    return 'The scheme allows at most $max free.';
+  }
+
+  @override
+  String get counterNoWarehouseSale =>
+      'No warehouse found — no sale without a warehouse.';
+
+  @override
+  String get counterPickBuyer => 'Choose a buyer.';
+
+  @override
+  String get counterCartEmpty => 'Put at least one product in the cart.';
+
+  @override
+  String get counterSold => 'Sold';
+
+  @override
+  String get counterDraftKept => 'Draft kept';
+
+  @override
+  String get counterOpenBill => 'See the bill';
+
+  @override
+  String get counterSaleFailed => 'Sale failed';
+
+  @override
+  String get counterSaleFailedRetry => 'Could not make the sale. Try again.';
+
+  @override
+  String get counterOverviewFailed => 'Could not load the summary';
+
+  @override
+  String get counterCheckNet => 'Check the connection and try again.';
+
+  @override
+  String get counterMoneyTitle => 'Amount received';
+
+  @override
+  String counterMoneyReference(String ref) {
+    return 'Reference: $ref';
+  }
+
+  @override
+  String get counterRemove => 'Remove';
+
+  @override
+  String get counterMoneyMethod => 'How';
+
+  @override
+  String get counterMoneyAccount => 'Into which account';
+
+  @override
+  String get counterMoneyAmount => 'Amount';
+
+  @override
+  String get counterMoneyReferenceLabel => 'Reference / transaction number';
+
+  @override
+  String get counterMoneyAddAnother => 'Add another amount';
+
+  @override
+  String counterMoneyTotal(String amount) {
+    return 'Total taken: $amount';
+  }
+
+  @override
+  String get counterUnreadableAmount =>
+      'Could not read the figure — type numbers only, like 1250.';
+
+  @override
+  String get counterVehicleTitle => 'Vehicle and fare';
+
+  @override
+  String get counterVehicleOwner => 'Whose vehicle';
+
+  @override
+  String get counterVehicleOwn => 'Our vehicle';
+
+  @override
+  String get counterVehicleHired => 'Hired vehicle';
+
+  @override
+  String get counterVehicleCustomer => 'Buyer\'s vehicle';
+
+  @override
+  String get counterVehicleNone => 'No vehicle needed';
+
+  @override
+  String get counterCarrier => 'Carrier';
+
+  @override
+  String get counterCarrierName => 'Carrier name (if not in the list)';
+
+  @override
+  String get counterFare => 'Fare';
+
+  @override
+  String get counterFarePaidBy => 'Who pays the fare';
+
+  @override
+  String get counterFareUs => 'We do — our cost';
+
+  @override
+  String get counterFareUsAddToBill => 'We pay, added to the bill';
+
+  @override
+  String get counterFareCustomer => 'The buyer pays the driver';
+
+  @override
+  String get counterFareNone => 'No fare';
+
+  @override
+  String get counterFareNow => 'Paid now';
+
+  @override
+  String get counterFareLater => 'Pay later';
+
+  @override
+  String get counterFareAccount => 'Paid from which account';
+
+  @override
+  String get counterFareTrxId => 'Transaction number (TrxID)';
+
+  @override
+  String get counterFarePayer => 'Who paid';
+
+  @override
+  String get counterFareCarrierLater => 'Carrier — to be paid later';
+
+  @override
+  String get counterDeliveryTitle => 'How the goods go';
+
+  @override
+  String get counterDeliveryTakeNow => 'The buyer takes them now';
+
+  @override
+  String get counterDeliverySendLater => 'Sent later';
+
+  @override
+  String get counterDeliveryPickupLater => 'The buyer collects them later';
+
+  @override
+  String get counterShipTo => 'Where to send';
+
+  @override
+  String get counterShipDatePick => 'When to send — choose a date';
+
+  @override
+  String counterShipDate(String date) {
+    return 'Send date: $date';
+  }
+
+  @override
+  String get counterDraftOpenFailed => 'Could not open the draft';
+
+  @override
+  String get counterPriceCheckPick => 'Check a price — choose a product';
+
+  @override
+  String get counterPriceFailed => 'Could not load the price';
+
+  @override
+  String counterPriceRate(String rate, String unit) {
+    return 'Sale rate: $rate / $unit';
+  }
+
+  @override
+  String get counterPriceStockHidden =>
+      'Saleable stock: no permission to see it';
+
+  @override
+  String counterPriceStock(String qty, String unit) {
+    return 'Saleable stock: $qty $unit';
+  }
+
+  @override
+  String counterPriceLot(String no) {
+    return 'Lot $no';
+  }
+
+  @override
+  String counterPriceExpiry(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String counterPriceHave(String qty) {
+    return 'In stock $qty';
+  }
+
+  @override
+  String get counterBack => 'Go back';
+
+  @override
+  String get counterPriceToBill => 'Put on the bill';
+
+  @override
+  String get counterReprint => 'Reprint';
+
+  @override
+  String get counterReprintNone =>
+      'No bill made at this counter yet. To print an old bill, open it from the bill list.';
+
+  @override
+  String counterBillTitle(String no) {
+    return 'Bill · $no';
+  }
+
+  @override
+  String get counterVoidBill => 'Cancel bill';
+
+  @override
+  String get counterVoidNothing => 'Nothing to cancel.';
+
+  @override
+  String get counterVoidReason => 'Why cancel (required)';
+
+  @override
+  String get counterVoidConfirm => 'Cancel it';
+
+  @override
+  String get counterVoided => 'Bill cancelled';
+
+  @override
+  String get counterVoidedNote => 'It stays in the books with its reason.';
+
+  @override
+  String get counterVoidFailed => 'Not cancelled';
+
+  @override
+  String get counterRepeatTitle => 'The same bill was already made';
+
+  @override
+  String get counterRepeatTick => 'I know, and I am making the same bill again';
+
+  @override
+  String get counterRepeatGo => 'Do it again';
+
+  @override
+  String get counterTitle => 'Direct sale';
+
+  @override
+  String counterResumeBanner(String no) {
+    return 'Draft $no is open';
+  }
+
+  @override
+  String get counterResumeNote =>
+      'Confirming posts this same draft, not a new bill.';
+
+  @override
+  String get counterPickBuyerTitle => 'Choose a buyer';
+
+  @override
+  String get counterPriceCheck => 'Check price';
+
+  @override
+  String get counterNoWarehouseBranch =>
+      'No active warehouse in this branch — without one no lots come and nothing can be sold. Tell the office.';
+
+  @override
+  String get counterWarehouseNotSet =>
+      'Warehouse not set — choose one below; lots need a warehouse.';
+
+  @override
+  String get counterWarehouse => 'Warehouse';
+
+  @override
+  String get counterTerm => 'Terms';
+
+  @override
+  String get counterPickProductTitle => 'Choose a product';
+
+  @override
+  String get counterLot => 'Lot';
+
+  @override
+  String get counterQty => 'Quantity';
+
+  @override
+  String get counterRate => 'Rate';
+
+  @override
+  String get counterDiscountLabel =>
+      'Discount % (needs the owner\'s signature)';
+
+  @override
+  String get counterFree => 'Free';
+
+  @override
+  String counterFreeMaxLabel(String max) {
+    return 'Free (scheme allows at most $max)';
+  }
+
+  @override
+  String get counterAddToCart => 'Add to cart';
+
+  @override
+  String get counterUpdate => 'Update';
+
+  @override
+  String counterLineDiscount(String percent) {
+    return 'Discount: $percent%';
+  }
+
+  @override
+  String counterLineFree(String qty) {
+    return 'Free: $qty';
+  }
+
+  @override
+  String get counterEdit => 'Edit';
+
+  @override
+  String counterRunningTotal(String amount) {
+    return 'Running total: $amount';
+  }
+
+  @override
+  String counterMoneyTaken(String amount) {
+    return 'Amount taken: $amount';
+  }
+
+  @override
+  String counterDeliverySummary(String mode) {
+    return 'Delivery: $mode';
+  }
+
+  @override
+  String counterDeliverySummarySend(String to, String date) {
+    return 'Sent later — $to · $date';
+  }
+
+  @override
+  String get counterDeliverySummaryPickup => 'The buyer collects later';
+
+  @override
+  String get counterDeliverySummaryNow => 'Taken now';
+
+  @override
+  String counterFareSummary(String amount) {
+    return 'Fare: $amount';
+  }
+
+  @override
+  String get counterDelivery => 'Delivery';
+
+  @override
+  String get counterReturnButton => 'Returns';
+
+  @override
+  String get counterKeepDraft => 'Keep as draft';
+
+  @override
+  String get counterOpenDraft => 'Open a draft';
+
+  @override
+  String counterConfirmDraft(String no) {
+    return 'Confirm — draft $no';
+  }
+
+  @override
+  String get counterDraftsLoadFailed =>
+      'Could not load the drafts. Check the connection and try again.';
+
+  @override
+  String counterDraftLines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count products',
+      one: '$count product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get counterDraftsEmpty => 'No kept drafts';
+
+  @override
+  String get counterDraftsEmptyHint =>
+      'Press \"Keep as draft\" at the counter and the bill shows here.';
+
+  @override
+  String get counterNewBill => 'Write a new bill';
+
+  @override
+  String get booksMethodCash => 'Cash';
+
+  @override
+  String get booksMethodBank => 'Bank';
+
+  @override
+  String get booksMethodCheque => 'Cheque';
+
+  @override
+  String get booksMethodOther => 'Other';
+
+  @override
+  String get booksMethodMobileBanking => 'Mobile banking';
+
+  @override
+  String get booksReceiptPosted => 'Posted · Posted to the books';
+
+  @override
+  String get booksReceiptPending => 'Pending — still to approve or confirm';
+
+  @override
+  String get booksReceiptCancelled => 'Cancelled';
+
+  @override
+  String get booksBalanceNone => 'No balance';
+
+  @override
+  String booksBalanceToPay(String amount) {
+    return 'To pay: $amount';
+  }
+
+  @override
+  String booksBalanceToReceive(String amount) {
+    return 'To receive: $amount';
+  }
+
+  @override
+  String get booksRangeToday => 'Today';
+
+  @override
+  String get booksRangeMonth => 'This month';
+
+  @override
+  String booksTotalCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '· $count items',
+      one: '· $count item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get booksMore => 'Show more';
+
+  @override
+  String get booksCollectAccountsFailed =>
+      'Could not load the money accounts. Check the internet and open again.';
+
+  @override
+  String get booksCollectPickCustomerError => 'Choose a customer.';
+
+  @override
+  String get booksCollectAmountWrong =>
+      'The figure is not right — more than zero, up to two decimals.';
+
+  @override
+  String get booksCollectPickAccountError => 'Choose a money account.';
+
+  @override
+  String get booksCollectNotLanded =>
+      'The collection did not go in. Try again.';
+
+  @override
+  String get booksCollectMayHaveLanded =>
+      'No answer for the collection — it may have reached the server — press again without changing anything; if the first one went in you will see it, it will not go in twice.';
+
+  @override
+  String get booksCollectNeedsNet =>
+      'A collection needs the internet. Turn it on and press again — nothing was kept on the phone.';
+
+  @override
+  String get booksCollectSendFailed =>
+      'Could not submit the collection. Try again.';
+
+  @override
+  String get booksCollectTitle => 'Take a collection amount';
+
+  @override
+  String get booksCollectPickCustomer => 'Choose a customer';
+
+  @override
+  String get booksCollectAmountLabel => 'Amount (Tk)';
+
+  @override
+  String get booksCollectAccountLabel => 'Into which account';
+
+  @override
+  String get booksCollectInstrumentLabel => 'Channel';
+
+  @override
+  String get booksCollectInstrumentHint => 'e.g. bKash, Nagad, bank deposit';
+
+  @override
+  String get booksCollectTrxLabel => 'Transaction no. (TrxID)';
+
+  @override
+  String get booksCollectDate => 'Date';
+
+  @override
+  String get booksCollectRemarks => 'Remarks (optional)';
+
+  @override
+  String get booksCollectConfirmNow => 'Confirm now';
+
+  @override
+  String get booksCollectConfirmHint =>
+      'If approvals are needed, the collection stays pending, as on the web';
+
+  @override
+  String get booksCollectSend => 'Submit collection';
+
+  @override
+  String booksCollectSendAmount(String amount) {
+    return 'Submit collection — $amount';
+  }
+
+  @override
+  String get booksCollectSearchLabel => 'Name, code, phone or point';
+
+  @override
+  String get booksCollectNoCustomer => 'No customer matched.';
+
+  @override
+  String get booksMoneyInListFailed =>
+      'Could not load the collections. Check the internet and try again.';
+
+  @override
+  String get booksMoneyInListAbsent =>
+      'The server does not have the collections list yet — tell the office.';
+
+  @override
+  String get booksMoneyInTitle => 'Collection';
+
+  @override
+  String get booksModuleSales => 'Sales';
+
+  @override
+  String get booksMoneyInNew => 'New collection';
+
+  @override
+  String get booksMoneyInSearchHint => 'Search customer, shop or number';
+
+  @override
+  String get booksMoneyInEmptyTitle => 'No collection in this period';
+
+  @override
+  String get booksMoneyInEmptyHint => 'Try another date or method.';
+
+  @override
+  String get booksMoneyInEmptyCollect => 'Take a collection';
+
+  @override
+  String get booksRefresh => 'Refresh';
+
+  @override
+  String get booksMoneyInToday => 'Today\'s collection';
+
+  @override
+  String get booksShopDuesTitle => 'Shop dues';
+
+  @override
+  String booksShopDuesMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more shops',
+      one: '$count more shop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String booksShopDuesTotal(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Total · $count shops',
+      one: 'Total · $count shop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get booksMoneyInFailed =>
+      'Could not load this collection. Check the internet and try again.';
+
+  @override
+  String get booksPrintSend => 'Print / send';
+
+  @override
+  String booksMoneyInPrintTitle(String no) {
+    return 'Money receipt · $no';
+  }
+
+  @override
+  String get booksFactCustomer => 'Customer';
+
+  @override
+  String get booksFactDate => 'Date';
+
+  @override
+  String get booksFactAmount => 'Amount';
+
+  @override
+  String get booksFactMethod => 'Method';
+
+  @override
+  String get booksFactAccount => 'Account';
+
+  @override
+  String get booksFactNumber => 'Number';
+
+  @override
+  String get booksFactInstrumentDate => 'Instrument date';
+
+  @override
+  String get booksFactNarration => 'Narration';
+
+  @override
+  String get booksFactWrittenBy => 'Entered by';
+
+  @override
+  String get booksMoneyInLines => 'Against which bills';
+
+  @override
+  String get booksMoneyInAdvance => 'Advance';
+
+  @override
+  String get booksPcTitle => 'Principal commission';
+
+  @override
+  String get booksModuleSupplier => 'Supplier';
+
+  @override
+  String get booksPcLoadFailedTitle => 'Could not load the data';
+
+  @override
+  String get booksPcLoadFailed =>
+      'Could not load the principal commission. Try again in a little while.';
+
+  @override
+  String get booksPcAbsent =>
+      'The server does not have this page yet, or the supplier part is off. It will show once the server is updated.';
+
+  @override
+  String get booksPcEmptyTitle => 'No principal commission in this cycle';
+
+  @override
+  String get booksPcEmptyHint =>
+      'Principals with a commission rule will show here.';
+
+  @override
+  String booksPcGrandTotal(int count, String side) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Grand total · $side · $count principals',
+      one: 'Grand total · $side · $count principal',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get booksPcPrevMonth => 'Previous month';
+
+  @override
+  String get booksPcCurrentCycle => 'Current cycle';
+
+  @override
+  String get booksPcNextMonth => 'Next month';
+
+  @override
+  String get booksPcCurrent => 'Current';
+
+  @override
+  String get booksPcTotalInflow => 'Total inflow';
+
+  @override
+  String get booksPcTotalCommission => 'Commission';
+
+  @override
+  String get booksPcTotalSent => 'Sent';
+
+  @override
+  String booksPcInflowLine(String amount) {
+    return 'Inflow $amount';
+  }
+
+  @override
+  String booksPcCommissionLine(String amount) {
+    return 'Commission $amount';
+  }
+
+  @override
+  String booksPcCommissionRateLine(String rate, String amount) {
+    return 'Commission ($rate) $amount';
+  }
+
+  @override
+  String booksPcSentLine(String amount) {
+    return 'Sent $amount';
+  }
+
+  @override
+  String get booksPcUnknown => 'not known';
+
+  @override
+  String booksPcCycle(String cycle) {
+    return 'Cycle: $cycle';
+  }
+
+  @override
+  String get booksPrincipalListFailed =>
+      'Could not load the principals. Pull down to try again.';
+
+  @override
+  String get booksPrincipalListAbsent =>
+      'The server does not have the principals list yet — tell the office.';
+
+  @override
+  String get booksPrincipalTitle => 'Principals';
+
+  @override
+  String get booksPrincipalSearchHint => 'Search name or code';
+
+  @override
+  String get booksPrincipalTotalDue => 'Total payable';
+
+  @override
+  String get booksPrincipalNone => 'No principal.';
+
+  @override
+  String get booksPrincipalNoPurchase => 'No purchase yet';
+
+  @override
+  String booksPrincipalLastPurchaseOn(String date) {
+    return 'Last purchase: $date';
+  }
+
+  @override
+  String get booksLedgerFailed => 'Could not load the ledger.';
+
+  @override
+  String get booksFactFullName => 'Full name';
+
+  @override
+  String get booksFactPhone => 'Phone';
+
+  @override
+  String get booksFactBalance => 'Balance';
+
+  @override
+  String get booksFactLastPurchase => 'Last purchase';
+
+  @override
+  String get booksLedgerEmpty => 'No transaction in the ledger.';
+
+  @override
+  String get booksPurchaseListFailed =>
+      'Could not load the purchases. Pull down to try again.';
+
+  @override
+  String get booksPurchaseListAbsent =>
+      'The server does not have the purchases list yet — tell the office.';
+
+  @override
+  String get booksPurchasePrincipalsFailed => 'Could not load the principals.';
+
+  @override
+  String get booksPurchaseAllPrincipals => 'All principals';
+
+  @override
+  String get booksPurchaseTitle => 'Purchases';
+
+  @override
+  String get booksPurchaseBill => 'Purchase bill';
+
+  @override
+  String get booksPurchaseGoodsReceipt => 'Goods receipt';
+
+  @override
+  String get booksPurchaseTotalBills => 'Total purchases';
+
+  @override
+  String get booksPurchaseTotalReceipts => 'Total received';
+
+  @override
+  String get booksPurchaseEmpty => 'Nothing in this period.';
+
+  @override
+  String booksPurchasePaidDue(String paid, String due) {
+    return 'Paid $paid · Due $due';
+  }
+
+  @override
+  String get booksPurchaseFailed => 'Could not load this paper.';
+
+  @override
+  String booksPurchasePrintTitle(String kind, String no) {
+    return '$kind · $no';
+  }
+
+  @override
+  String get booksFactPrincipal => 'Principal';
+
+  @override
+  String get booksFactSupplierNo => 'Their paper number';
+
+  @override
+  String get booksFactTotal => 'Total';
+
+  @override
+  String get booksFactPaid => 'Paid';
+
+  @override
+  String get booksFactDue => 'Due';
+
+  @override
+  String get booksPurchaseProducts => 'Products';
+
+  @override
+  String booksPurchaseQty(String qty) {
+    return 'Qty $qty';
+  }
+
+  @override
+  String booksPurchaseFree(String qty) {
+    return 'Free $qty';
+  }
+
+  @override
+  String booksPurchaseLot(String lot) {
+    return 'Lot $lot';
+  }
+
+  @override
+  String booksPurchaseRate(String amount) {
+    return 'Rate $amount';
+  }
+
+  @override
+  String get customersTitle => 'Customers';
+
+  @override
+  String get customersDetailGone =>
+      'This customer is no longer on this phone — sync and look again.';
+
+  @override
+  String get customersOpenLedgerHint => 'Open the ledger';
+
+  @override
+  String customersDetailOrders(int count) {
+    return 'Orders of this shop ($count)';
+  }
+
+  @override
+  String get customersDetailNoOrders =>
+      'No order of this shop has synced to this phone.';
+
+  @override
+  String get customersDetailNoNumber => 'No number';
+
+  @override
+  String get customersDetailInactive => '⚠️ This customer is inactive';
+
+  @override
+  String customersDetailLimit(String amount) {
+    return 'Limit $amount';
+  }
+
+  @override
+  String customersDetailCreditDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days-day terms',
+      one: '$days-day terms',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customersDetailSynced(String stamp) {
+    return 'Synced $stamp';
+  }
+
+  @override
+  String get customersDetailCall => 'Call';
+
+  @override
+  String get customersDetailAddress => 'Address';
+
+  @override
+  String get customersDetailLedger => 'View ledger';
+
+  @override
+  String get customersDetailCredit => 'Credit status';
+
+  @override
+  String get customersDepositNotice => 'Deposit notification';
+
+  @override
+  String get customersDetailNewOrder => 'New order';
+
+  @override
+  String get customersLedgerFailed => 'Could not load the ledger.';
+
+  @override
+  String get customersLedgerEmpty =>
+      'This shop\'s ledger has no transaction yet.';
+
+  @override
+  String get customersLedgerMore => 'Older transactions';
+
+  @override
+  String get customersLedgerTitle => 'Ledger';
+
+  @override
+  String get customersLedgerHasDue => 'Due';
+
+  @override
+  String get customersLedgerHasAdvance => 'Paid in advance';
+
+  @override
+  String get customersLedgerSettled => 'All settled';
+
+  @override
+  String customersLedgerCode(String code) {
+    return 'Code $code';
+  }
+
+  @override
+  String get customersLedgerOpening => 'Opening balance';
+
+  @override
+  String get customersLedgerGoodsTotal => 'Total goods taken';
+
+  @override
+  String get customersLedgerPaidTotal => 'Total amount paid';
+
+  @override
+  String get customersLedgerClosing => 'Closing balance';
+
+  @override
+  String customersLedgerSpokenGoods(String amount) {
+    return 'Goods $amount';
+  }
+
+  @override
+  String customersLedgerSpokenPaid(String amount) {
+    return 'Paid $amount';
+  }
+
+  @override
+  String get customersLedgerTookGoods => 'Took goods';
+
+  @override
+  String get customersLedgerPaidMoney => 'Paid an amount';
+
+  @override
+  String get customersLedgerRowSettled => 'Settled';
+
+  @override
+  String customersLedgerRowDue(String amount) {
+    return 'Due $amount';
+  }
+
+  @override
+  String customersLedgerRowCredit(String amount) {
+    return 'In credit $amount';
+  }
+
+  @override
+  String get customersLedgerNoDate => 'No date';
+
+  @override
+  String get customersPickFromList =>
+      'Choose a customer from the list on the left';
+
+  @override
+  String get customersSearchHint => 'Search by name or mobile';
+
+  @override
+  String get customersTotalDue => 'Total due';
+
+  @override
+  String get customersNoneSynced => 'No customer has synced yet';
+
+  @override
+  String get customersListFailed => 'Could not load the customers';
+
+  @override
+  String get customersPullToRetry => 'Pull down to try again.';
+
+  @override
+  String get customersNoMatch => 'No match found';
+
+  @override
+  String get customersClearFilters => 'Clear the filters and look again.';
+
+  @override
+  String customersCreditDaysShort(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get customersDueTitle => 'Due list';
+
+  @override
+  String get customersDueListFailed => 'Could not load the due list';
+
+  @override
+  String get customersDueNone => 'Nobody owes anything';
+
+  @override
+  String get customersDueNoneHint => 'If it looks unsynced, refresh.';
+
+  @override
+  String get customersRefresh => 'Refresh';
+
+  @override
+  String get customersDueWord => 'Due';
+
+  @override
+  String customersDueWithCode(String code) {
+    return '$code · Due';
+  }
+
+  @override
+  String get customersDepositLoadFailed => 'Could not load the data.';
+
+  @override
+  String get customersDepositAbsent =>
+      'The server does not have this feature yet — tell the office.';
+
+  @override
+  String get customersDepositNeedAmount => 'Write the amount.';
+
+  @override
+  String get customersDepositNeedSlip =>
+      'A bank deposit needs a photo of the slip.';
+
+  @override
+  String customersDepositShareUnreadable(String no) {
+    return 'Could not read the share for bill $no — write numbers only.';
+  }
+
+  @override
+  String customersDepositShareOverDue(String no, String amount) {
+    return 'Bill $no has $amount due — you cannot put more than that on it.';
+  }
+
+  @override
+  String customersDepositSharesOverAmount(String shared, String amount) {
+    return 'The bills add up to $shared, but the deposit is $amount — the bill shares cannot be more than the deposit.';
+  }
+
+  @override
+  String get customersDepositSent =>
+      'Sent — the accountant will check it. Until then the due will not go down.';
+
+  @override
+  String get customersDepositSendFailed => 'Could not send. Try again.';
+
+  @override
+  String get customersDepositIntro =>
+      'The due goes down only when the accountant checks the slip and accepts it.';
+
+  @override
+  String get customersDepositAmount => 'Amount';
+
+  @override
+  String get customersDepositDate => 'Deposit date';
+
+  @override
+  String get customersDepositBank => 'Bank';
+
+  @override
+  String get customersDepositMfs => 'bKash/Nagad (mobile cash)';
+
+  @override
+  String get customersDepositCash => 'Cash';
+
+  @override
+  String get customersDepositWhichBank => 'Which bank';
+
+  @override
+  String get customersDepositReference => 'Slip / transaction number';
+
+  @override
+  String get customersDepositAgainstBills => 'Against which bills (optional)';
+
+  @override
+  String get customersDepositBillsHint =>
+      'Choose bills and the amount is matched to them when accepted; otherwise the whole amount goes to the shop ledger.';
+
+  @override
+  String customersDepositBillDue(String no, String amount) {
+    return '$no · Due $amount';
+  }
+
+  @override
+  String get customersDepositOnThisBill => 'On this bill';
+
+  @override
+  String get customersDepositNote => 'Anything else to say';
+
+  @override
+  String get customersDepositTakeSlip => 'Take a photo of the slip';
+
+  @override
+  String get customersDepositSlipTaken => 'Photo taken — take it again';
+
+  @override
+  String get customersDepositSend => 'Send';
+
+  @override
+  String customersDepositHistory(int count) {
+    return 'Earlier notifications ($count)';
+  }
+
+  @override
+  String customersDepositHistoryDate(String date) {
+    return 'Date $date';
+  }
+
+  @override
+  String customersDepositHistoryBy(String name) {
+    return 'Sent by $name';
+  }
+
+  @override
+  String customersDepositHistoryRef(String reference) {
+    return 'Number $reference';
+  }
+
+  @override
+  String customersDepositHistoryBill(String no, String amount) {
+    return 'Bill $no · $amount';
+  }
+
+  @override
+  String customersDepositHistoryReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get customersDepositReasonNotGiven => 'not given';
+
+  @override
+  String get salesDeskComingSoonTitle => 'Coming soon';
+
+  @override
+  String get salesDeskComingSoonMessage =>
+      'This screen is still being built. It will open here when it is ready.';
+
+  @override
+  String get deliveriesTodayLoadFailed =>
+      'Could not load the delivery list. Pull down to try again.';
+
+  @override
+  String get deliveriesTodayNotOnServer =>
+      'Today\'s deliveries are not on the server yet. Tell the office.';
+
+  @override
+  String get deliveriesTodayMoreFailed =>
+      'Could not load the next page. Try again.';
+
+  @override
+  String deliveriesTodayPartlyDelivered(String no) {
+    return '$no: partly delivered. The short and damaged goods went on a return paper.';
+  }
+
+  @override
+  String deliveriesTodayDelivered(String no, String receiver) {
+    return '$no: delivered. $receiver took the goods.';
+  }
+
+  @override
+  String get deliveriesTodaySaveFailed =>
+      'Could not record the delivery. Try again.';
+
+  @override
+  String get deliveriesTodayTitle => 'Today\'s deliveries';
+
+  @override
+  String get deliveriesTodayTotalLabel => 'Delivery challans on the road';
+
+  @override
+  String deliveriesTodayTotalValue(String count) {
+    return '$count';
+  }
+
+  @override
+  String get deliveriesTodayEmpty => 'No delivery challan is on the road.';
+
+  @override
+  String deliveriesTodayVehicle(String vehicle) {
+    return 'Vehicle $vehicle';
+  }
+
+  @override
+  String deliveriesTodayDriver(String driver) {
+    return 'Driver $driver';
+  }
+
+  @override
+  String get deliveriesTodayHandOver => 'Hand over';
+
+  @override
+  String get deliveriesTodayMore => 'Show more';
+
+  @override
+  String routeMyWeekday(String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      day,
+      {
+        'mon': 'Monday',
+        'tue': 'Tuesday',
+        'wed': 'Wednesday',
+        'thu': 'Thursday',
+        'fri': 'Friday',
+        'sat': 'Saturday',
+        'other': 'Sunday',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get routeMyLoadFailed =>
+      'Could not load the route. Pull down to try again.';
+
+  @override
+  String get routeMyNotOnServer =>
+      'The server does not have routes yet. Tell the office.';
+
+  @override
+  String get routeMyPickDay => 'Route for which day';
+
+  @override
+  String get routeMyTitle => 'Today\'s route';
+
+  @override
+  String get routeMyErrorTitle => 'Could not load';
+
+  @override
+  String get routeMyNoRouteTitle => 'No route on this day';
+
+  @override
+  String get routeMyNoRouteMessage =>
+      'The weekly plan has no route in your name on this day. Tell the office.';
+
+  @override
+  String routeMyMonthSales(String amount) {
+    return 'Sales this month: $amount';
+  }
+
+  @override
+  String routeMyMonthCollections(String amount) {
+    return 'Collection this month: $amount';
+  }
+
+  @override
+  String routeMyOutstanding(String amount) {
+    return 'Due: $amount';
+  }
+
+  @override
+  String get routeMyMoreShops => 'More shops';
+
+  @override
+  String get salesDashboardsListLoadFailed =>
+      'Could not load the dashboard list.';
+
+  @override
+  String get salesDashboardsTitle => 'Business dashboards';
+
+  @override
+  String get salesDashboardsModule => 'Dashboards';
+
+  @override
+  String get salesDashboardsNoneTitle => 'No dashboard for you';
+
+  @override
+  String get salesDashboardsNoneMessage =>
+      'A module\'s dashboard appears here once you may see it.';
+
+  @override
+  String get salesDashboardsNoKey => 'No access';
+
+  @override
+  String get salesDashboardsLoadFailed => 'Could not load the dashboard.';
+
+  @override
+  String get salesDashboardsEmptyTitle => 'Nothing on this dashboard yet';
+
+  @override
+  String get salesDashboardsEmptyMessage =>
+      'The figures appear here once work starts or you are given access.';
+
+  @override
+  String get salesDashboardsReports => 'This module\'s reports';
+
+  @override
+  String salesDashboardsReportsTitle(String name) {
+    return '$name — Reports';
+  }
+
+  @override
+  String get salesDashboardsOverviewLoadFailed =>
+      'Could not load the sales overview.';
+
+  @override
+  String get salesDashboardsOverviewTitle => 'Sales overview';
+
+  @override
+  String get salesDashboardsSalesModule => 'Sales';
+
+  @override
+  String get salesDashboardsOverviewNoAccess =>
+      'You may not see any figure on this screen.';
+
+  @override
+  String get salesDashboardsNoKeyLong =>
+      'No access — permission needed to see this';
+
+  @override
+  String get salesDashboardsRefresh => 'Refresh';
+
+  @override
+  String get salesDashboardsGrandTotal => 'Grand total';
+
+  @override
+  String get quotationsCompareListLoadFailed =>
+      'Could not load the quotation list.';
+
+  @override
+  String get quotationsCompareLoadFailed => 'Could not load the comparison.';
+
+  @override
+  String get quotationsCompareNotOnServer =>
+      'This server cannot compare yet. The app is newer than the server.';
+
+  @override
+  String get quotationsCompareTitle => 'Compare quotations';
+
+  @override
+  String get quotationsCompareRepick => 'Pick again';
+
+  @override
+  String get quotationsCompareNeedTwoTitle =>
+      'At least two are needed to compare';
+
+  @override
+  String get quotationsCompareNeedTwoMessage => 'Pick one more quotation.';
+
+  @override
+  String get quotationsCompareNoChoices => 'No quotation to pick';
+
+  @override
+  String quotationsComparePickHint(String max) {
+    return 'Pick two to $max quotations. The first is the base.';
+  }
+
+  @override
+  String quotationsCompareGo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Compare $count',
+      one: 'Compare $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String quotationsCompareRevision(String revision) {
+    return ' (rev $revision)';
+  }
+
+  @override
+  String get quotationsRevisionsLoadFailed =>
+      'Could not load the revision list.';
+
+  @override
+  String get quotationsRevisionsNotOnServer =>
+      'This server does not have this list yet. The app is newer than the server.';
+
+  @override
+  String get quotationsRevisionsTitle => 'Quotation revisions';
+
+  @override
+  String get quotationsRevisionsSearch => 'Number or shop name';
+
+  @override
+  String get quotationsRevisionsEmptyTitle => 'No quotation revisions';
+
+  @override
+  String get quotationsRevisionsEmptyMessage => 'Pull down to look again.';
+
+  @override
+  String quotationsRevisionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count revisions',
+      one: '$count revision',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get quotationsRevisionsMore => 'More';
+
+  @override
+  String get salesDeskNothing => 'Nothing here';
+
+  @override
+  String get salesDeskLoadFailed => 'Could not load. Pull down to try again.';
+
+  @override
+  String get salesDeskNotOnServer =>
+      'The server does not have this phone screen yet. Tell the office.';
+
+  @override
+  String get salesDeskErrorTitle => 'Could not load';
+
+  @override
+  String get salesDeskDepotTitle => 'Depot check';
+
+  @override
+  String get salesDeskDepotEmpty => 'Nothing is pending a check';
+
+  @override
+  String get salesDeskDepotSearch => 'Number, shop name or code';
+
+  @override
+  String get salesDeskDepotTotal => 'DOs pending a check';
+
+  @override
+  String get salesDeskDepotWebNote =>
+      'ⓘ Checking and opening the sale is still on the web counter.';
+
+  @override
+  String salesDeskDepotLine(String date, int lines, String status) {
+    String _temp0 = intl.Intl.pluralLogic(
+      lines,
+      locale: localeName,
+      other: '$lines products',
+      one: '$lines product',
+    );
+    return '$date · $_temp0 · $status';
+  }
+
+  @override
+  String get salesDeskDepotHeld => 'Sales orders on hold';
+
+  @override
+  String get salesDeskPrintTitle => 'Unprinted papers';
+
+  @override
+  String get salesDeskPrintEmpty => 'Every paper is printed';
+
+  @override
+  String salesDeskTotalCount(String count) {
+    return 'Total $count';
+  }
+
+  @override
+  String salesDeskPrintPaper(String paper) {
+    return 'Paper: $paper';
+  }
+
+  @override
+  String salesDeskPrintReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get salesDeskPrintSettled => 'Marked as printed and removed.';
+
+  @override
+  String get salesDeskPrintSettleFailed => 'Could not remove it.';
+
+  @override
+  String get salesDeskPrintSettle => 'Printed by hand';
+
+  @override
+  String get salesDeskDeliveryTitle => 'Delivery performance';
+
+  @override
+  String salesDeskDeliveryLate(String count) {
+    return 'Late delivery challans · $count';
+  }
+
+  @override
+  String salesDeskDeliveryDaysLate(String days) {
+    return '$days days late';
+  }
+
+  @override
+  String salesDeskDeliveryPromised(String promised, String arrived) {
+    return 'Promised $promised · Arrived $arrived';
+  }
+
+  @override
+  String salesDeskDeliveryOrder(String no) {
+    return 'Order $no';
+  }
+
+  @override
+  String get salesDeskPipelineTitle => 'Pipeline';
+
+  @override
+  String get salesDeskPipelineEmpty => 'No opportunities';
+
+  @override
+  String get salesDeskPipelineOpen => 'Open opportunities (weighted)';
+
+  @override
+  String salesDeskPipelineStage(String stage, String count) {
+    return '$stage · $count';
+  }
+
+  @override
+  String salesDeskPipelineTotals(String total, String weighted) {
+    return 'Total $total · Weighted $weighted';
+  }
+
+  @override
+  String salesDeskPipelineCloses(String date) {
+    return 'Closes $date';
+  }
+
+  @override
+  String get salesDeskTemplatesTitle => 'Document templates';
+
+  @override
+  String get salesDeskTemplatesEmpty => 'No templates';
+
+  @override
+  String salesDeskTemplatesCount(String count) {
+    return 'Total $count templates · Writing and editing on the web';
+  }
+
+  @override
+  String get salesDeskTemplatesInactive => 'Inactive';
+
+  @override
+  String salesPapersKindTitle(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'invoice': 'Sales invoice',
+        'other': 'Delivery challan',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPapersListLoadFailed(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'invoice': 'Could not load the sales invoice list.',
+        'other': 'Could not load the delivery challan list.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPapersNotOnServer =>
+      'This server does not have this list yet. The app is newer than the server.';
+
+  @override
+  String get salesPapersSearch => 'Number or shop name';
+
+  @override
+  String salesPapersTotal(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'invoice': 'Total sales invoices',
+        'other': 'Total delivery challans',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPapersEmptyTitle(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'invoice': 'No sales invoice in this period',
+        'other': 'No delivery challan in this period',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPapersEmptyMessage =>
+      'Change the dates or pull down to look again.';
+
+  @override
+  String salesPapersDueAmount(String amount) {
+    return 'Due $amount';
+  }
+
+  @override
+  String get salesPapersPaid => 'Paid';
+
+  @override
+  String get salesPapersMore => 'More';
+
+  @override
+  String salesPapersLoadFailed(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'invoice': 'Could not load the sales invoice.',
+        'other': 'Could not load the delivery challan.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPapersPrint => 'Print / Send';
+
+  @override
+  String get salesPapersDate => 'Date';
+
+  @override
+  String get salesPapersSaleNo => 'Sale number';
+
+  @override
+  String get salesPapersDueOn => 'Expires (due date)';
+
+  @override
+  String get salesPapersWarehouse => 'Warehouse';
+
+  @override
+  String get salesPapersVehicle => 'Vehicle';
+
+  @override
+  String get salesPapersCreatedBy => 'Created by';
+
+  @override
+  String get salesPapersProducts => 'Products';
+
+  @override
+  String salesPapersFreeQty(String qty) {
+    return 'Free $qty';
+  }
+
+  @override
+  String salesPapersLineDiscount(String amount) {
+    return 'Discount $amount';
+  }
+
+  @override
+  String get salesPapersDiscount => 'Discount';
+
+  @override
+  String get salesPapersTax => 'Tax';
+
+  @override
+  String get salesPapersGrandTotal => 'Total';
+
+  @override
+  String get salesPapersCollected => 'Collection';
+
+  @override
+  String get salesPapersDue => 'Due';
+
+  @override
+  String get salesPapersInvoiceChallans => 'Delivery challans of this invoice';
+
+  @override
+  String get salesPapersChallanInvoices => 'Invoices of this challan';
+
+  @override
+  String salesPapersStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(
+      status,
+      {
+        'draft': 'Draft',
+        'confirmed': 'Confirmed',
+        'cancelled': 'Cancelled',
+        'closed': 'Closed',
+        'awaiting_approval': 'Awaiting approval',
+        'other': 'Unknown',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String quotationsListTab(String tab) {
+    String _temp0 = intl.Intl.selectLogic(
+      tab,
+      {
+        'all': 'All',
+        'draft': 'Draft',
+        'approved': 'Approved',
+        'sent': 'Sent',
+        'accepted': 'Accepted',
+        'other': 'Converted to order',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get quotationsListLoadFailed =>
+      'Could not load the quotations. Pull down to try again.';
+
+  @override
+  String get quotationsListNotOnServer =>
+      'The server does not have quotations yet. Tell the office.';
+
+  @override
+  String get quotationsListTitle => 'Quotations';
+
+  @override
+  String get quotationsListNew => 'New quotation';
+
+  @override
+  String get quotationsListTotal => 'Total quotations';
+
+  @override
+  String get quotationsListErrorTitle => 'Could not load';
+
+  @override
+  String get quotationsListEmpty => 'No quotations';
+
+  @override
+  String get quotationsListMore => 'More quotations';
+
+  @override
+  String get quotationsNewPickProduct => 'Pick a product';
+
+  @override
+  String get quotationsNewNeedShop => 'Pick a shop.';
+
+  @override
+  String get quotationsNewNeedLine => 'Add at least one product.';
+
+  @override
+  String get quotationsNewSaveFailed =>
+      'Could not save the quotation. Try again.';
+
+  @override
+  String get quotationsNewPickShop => 'Pick a shop';
+
+  @override
+  String quotationsQty(String qty) {
+    return 'Quantity: $qty';
+  }
+
+  @override
+  String quotationsRate(String rate) {
+    return 'Rate: $rate';
+  }
+
+  @override
+  String get quotationsNewProductPrice => 'product\'s price';
+
+  @override
+  String get quotationsNewRemoveLine => 'Remove';
+
+  @override
+  String get quotationsNewAddLine => 'Add a product';
+
+  @override
+  String get quotationsNewNote => 'Remarks (optional)';
+
+  @override
+  String get quotationsSubmit => 'Submit';
+
+  @override
+  String get quotationsNewKeepDraft => 'Keep as draft';
+
+  @override
+  String get quotationsActFailed => 'That did not work. Try again.';
+
+  @override
+  String quotationsStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String quotationsShop(String shop) {
+    return 'Shop: $shop';
+  }
+
+  @override
+  String quotationsDate(String date) {
+    return 'Date: $date';
+  }
+
+  @override
+  String quotationsValidUntil(String date) {
+    return 'Expires: $date';
+  }
+
+  @override
+  String quotationsTotal(String amount) {
+    return 'Total: $amount';
+  }
+
+  @override
+  String quotationsOrder(String no) {
+    return 'Order: $no';
+  }
+
+  @override
+  String get quotationsSubmitted => 'Submitted.';
+
+  @override
+  String get quotationsSentDone => 'Sent to the shopkeeper.';
+
+  @override
+  String get quotationsSend => 'Sent to the shopkeeper';
+
+  @override
+  String get quotationsAcceptedDone =>
+      'The shopkeeper agreed. An order can be made now.';
+
+  @override
+  String get quotationsAccept => 'Shopkeeper agreed';
+
+  @override
+  String get quotationsRejectReason => 'Reason for refusal';
+
+  @override
+  String get quotationsRejectNeedReason => 'Write the reason for refusal.';
+
+  @override
+  String get quotationsRejectedDone => 'The shopkeeper refused. Recorded.';
+
+  @override
+  String get quotationsReject => 'Shopkeeper refused';
+
+  @override
+  String get quotationsConvertedDone => 'Sales order made.';
+
+  @override
+  String get quotationsConvert => 'Make the order';
+
+  @override
+  String get quotationsLineQty => 'Quantity';
+
+  @override
+  String get quotationsLineRate => 'Rate';
+
+  @override
+  String get quotationsLineCancel => 'Cancel';
+
+  @override
+  String get quotationsLineOk => 'OK';
+
+  @override
+  String deliveryOrdersPaper(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'Order',
+        'other': 'DO',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deliveryOrdersTitle(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'Sales order',
+        'other': 'Delivery order',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersListLoadFailed =>
+      'Could not load the list. Pull down to try again.';
+
+  @override
+  String deliveryOrdersNotOnServer(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'The server does not have sales orders yet. Tell the office.',
+        'other':
+            'The server does not have delivery orders yet. Tell the office.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersModule => 'Sales';
+
+  @override
+  String deliveryOrdersNew(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'New order',
+        'other': 'New DO',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersFilterAll => 'All';
+
+  @override
+  String get deliveryOrdersFilterMine => 'Awaiting signature (mine)';
+
+  @override
+  String deliveryOrdersEmpty(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'No orders.',
+        'other': 'No DOs.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersEmptyMine =>
+      'Nothing is awaiting signature from you now.';
+
+  @override
+  String get deliveryOrdersNoCustomer => 'No customer';
+
+  @override
+  String get deliveryOrdersPickProduct => 'Pick a product';
+
+  @override
+  String get deliveryOrdersNeedDealer => 'Pick a dealer.';
+
+  @override
+  String get deliveryOrdersNeedLine => 'Add at least one product.';
+
+  @override
+  String deliveryOrdersSaveFailed(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'Could not save the order. Try again.',
+        'other': 'Could not save the DO. Try again.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersPickDealer => 'Pick a dealer';
+
+  @override
+  String deliveryOrdersQty(String qty) {
+    return 'Quantity: $qty';
+  }
+
+  @override
+  String get deliveryOrdersRemoveLine => 'Remove';
+
+  @override
+  String get deliveryOrdersAddLine => 'Add a product';
+
+  @override
+  String get deliveryOrdersNote => 'Remarks (optional)';
+
+  @override
+  String get deliveryOrdersSubmit => 'Submit';
+
+  @override
+  String get deliveryOrdersKeepDraft => 'Keep as draft';
+
+  @override
+  String get deliveryOrdersActFailed => 'That did not work. Try again.';
+
+  @override
+  String deliveryOrdersLoadFailed(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'Could not load the order.',
+        'other': 'Could not load the DO.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersPrint => 'Print / Send';
+
+  @override
+  String deliveryOrdersPrintTitle(String no) {
+    return 'Sales order · $no';
+  }
+
+  @override
+  String deliveryOrdersStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String deliveryOrdersTotal(String amount) {
+    return 'Total: $amount';
+  }
+
+  @override
+  String deliveryOrdersCreditShort(String amount) {
+    return 'Held at the credit limit — short by $amount';
+  }
+
+  @override
+  String deliveryOrdersAsked(String qty) {
+    return 'Asked: $qty';
+  }
+
+  @override
+  String get deliveryOrdersApprovedQtyField => 'Approved quantity';
+
+  @override
+  String deliveryOrdersApprovedQty(String qty) {
+    return 'Approved: $qty';
+  }
+
+  @override
+  String deliveryOrdersSubmitted(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'Order submitted. The supervisor will look at it.',
+        'other': 'DO submitted. The supervisor will look at it.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersQtySaved => 'Approved quantities saved.';
+
+  @override
+  String get deliveryOrdersSaveQty => 'Save quantities';
+
+  @override
+  String get deliveryOrdersApproved => 'Approved.';
+
+  @override
+  String get deliveryOrdersApprove => 'Approve';
+
+  @override
+  String get deliveryOrdersRejectReason => 'Reason for sending back';
+
+  @override
+  String get deliveryOrdersRejectNeedReason =>
+      'Write the reason for sending back.';
+
+  @override
+  String deliveryOrdersRejected(String kind) {
+    String _temp0 = intl.Intl.selectLogic(
+      kind,
+      {
+        'order': 'Order sent back.',
+        'other': 'DO sent back.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deliveryOrdersReject => 'Send back';
+
+  @override
+  String get deliveryOrdersDialogQty => 'Quantity';
+
+  @override
+  String get deliveryOrdersDialogCancel => 'Cancel';
+
+  @override
+  String get deliveryOrdersDialogOk => 'OK';
+
+  @override
+  String get deliveryOrdersStockTitle => 'Stock now — not reserved';
+
+  @override
+  String get deliveryOrdersStockNote =>
+      'Goods are held when the depot\'s delivery challan is confirmed; this only shows what is in stock and what is wanted.';
+
+  @override
+  String deliveryOrdersStockHaveWant(String have, String want) {
+    return 'In stock $have · Wanted $want';
+  }
+
+  @override
+  String deliveryOrdersStockWant(String want) {
+    return 'Wanted $want';
+  }
+
+  @override
+  String deliveryOrdersStockShort(String qty) {
+    return 'Short $qty';
+  }
+
+  @override
+  String get deliveryOrdersStockNotEnough => 'Not enough stock';
+
+  @override
+  String get salesPlanLoadFailed => 'Could not load. Pull down to try again.';
+
+  @override
+  String get salesPlanNotOnServer =>
+      'The server does not have this phone screen yet. Tell the office.';
+
+  @override
+  String get salesPlanPreviousMonth => 'Previous month';
+
+  @override
+  String get salesPlanNextMonth => 'Next month';
+
+  @override
+  String salesPlanPeople(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPlanTargetsTitle => 'Sales targets';
+
+  @override
+  String get salesPlanTargetsEmpty => 'No salespeople this month';
+
+  @override
+  String get salesPlanTargetsNote =>
+      'ⓘ Targets are set on the web. Achievement counts confirmed invoices, without VAT and discount.';
+
+  @override
+  String get salesPlanTotalTarget => 'Total target';
+
+  @override
+  String get salesPlanTotalAchieved => 'Total achieved';
+
+  @override
+  String get salesPlanTargetHoldersAchieved =>
+      'Achievement of those with a target';
+
+  @override
+  String get salesPlanTargetSet => 'Target set';
+
+  @override
+  String salesPlanTargetAchieved(String target, String achieved) {
+    return 'Target $target · Achieved $achieved';
+  }
+
+  @override
+  String get salesPlanDealerTargetsTitle => 'Dealer targets';
+
+  @override
+  String get salesPlanDealerTargetsNoneSet => 'No one has a target this month';
+
+  @override
+  String get salesPlanDealerTargetsEmpty => 'No dealers';
+
+  @override
+  String get salesPlanDealerTargetsSearch => 'Dealer name or code';
+
+  @override
+  String get salesPlanDealerTargetsOnlySet => 'Only those with a target';
+
+  @override
+  String get salesPlanDealerTargetsNote =>
+      'ⓘ Targets are set on the web. Achieved means collections, receipts and cleared cheques.';
+
+  @override
+  String get salesPlanTotalDue => 'Total due';
+
+  @override
+  String salesPlanAchieved(String amount) {
+    return 'Achieved $amount';
+  }
+
+  @override
+  String salesPlanDue(String amount) {
+    return 'Due $amount';
+  }
+
+  @override
+  String salesPlanEnds(String date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String get salesPlanRouteBookTitle => 'Route book';
+
+  @override
+  String get salesPlanRouteBookEmpty => 'No routes';
+
+  @override
+  String get salesPlanRouteBookSearch => 'Route name or code';
+
+  @override
+  String get salesPlanTotalSales => 'Total sales';
+
+  @override
+  String get salesPlanTotalCollections => 'Total collection';
+
+  @override
+  String get salesPlanTargetAchievement => 'Target achievement';
+
+  @override
+  String get salesPlanDealers => 'Dealers';
+
+  @override
+  String salesPlanUnrouted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '⚠ $count dealers are on no route — their figures are not here.',
+      one: '⚠ $count dealer is on no route — their figures are not here.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPlanDealerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dealers',
+      one: '$count dealer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String salesPlanSalesCollections(String sales, String collections) {
+    return 'Sales $sales · Collection $collections';
+  }
+
+  @override
+  String salesPlanTargetPercent(String target, String percent) {
+    return 'Target $target · $percent';
+  }
+
+  @override
+  String get salesPlanRouteEmpty => 'No dealers on this route';
+
+  @override
+  String get salesPlanClosingBalance => 'Closing balance (due)';
+
+  @override
+  String get salesPlanOpeningBalance => 'Opening balance';
+
+  @override
+  String get salesPlanSales => 'Sales';
+
+  @override
+  String get salesPlanReturns => 'Returns';
+
+  @override
+  String get salesPlanCollections => 'Collection';
+
+  @override
+  String get salesPlanOther => 'Other';
+
+  @override
+  String get salesPlanTarget => 'Target';
+
+  @override
+  String get salesPlanWeeklyPlan => 'Weekly plan';
+
+  @override
+  String get salesPlanWeeklyPlanEmpty => 'No one is on the plan.';
+
+  @override
+  String get salesPlanVisitActive => 'Active';
+
+  @override
+  String get salesPlanVisitEnded => 'Ended';
+
+  @override
+  String salesPlanFromTo(String from, String to) {
+    return '$from to $to';
+  }
+
+  @override
+  String get salesPlanOngoing => 'ongoing';
+
+  @override
+  String get salesPlanRouteNote => 'ⓘ The plan and targets are set on the web.';
+
+  @override
+  String get salesPlanStatusAll => 'All';
+
+  @override
+  String get salesPlanSchemesTitle => 'Schemes';
+
+  @override
+  String get salesPlanSchemesEmpty => 'No schemes';
+
+  @override
+  String get salesPlanSchemesSearch => 'Scheme code or name';
+
+  @override
+  String salesPlanSchemesCount(String count) {
+    return 'Total $count schemes · Set up and changed on the web';
+  }
+
+  @override
+  String salesPlanSchemeLine(String basis, String appliesTo, int rules) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rules,
+      locale: localeName,
+      other: '$rules steps',
+      one: '$rules step',
+    );
+    return '$basis · $appliesTo · $_temp0';
+  }
+
+  @override
+  String get salesPlanSchemeLive => ' · Running today';
+
+  @override
+  String get salesPlanSchemeCode => 'Code';
+
+  @override
+  String get salesPlanSchemeStatus => 'Status';
+
+  @override
+  String get salesPlanSchemeBasis => 'Basis';
+
+  @override
+  String get salesPlanSchemeAppliesTo => 'Applies to';
+
+  @override
+  String get salesPlanSchemeValidity => 'Validity (expires)';
+
+  @override
+  String get salesPlanSchemeNotes => 'Notes';
+
+  @override
+  String salesPlanSchemeSteps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Steps · $count',
+      one: 'Steps · $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPlanSchemeNoSteps => 'No steps set';
+
+  @override
+  String salesPlanSchemeRoleLevel(String role, String level) {
+    return '$role · Level $level';
+  }
+
+  @override
+  String salesPlanSchemeFromUp(String from) {
+    return '$from and above';
+  }
+
+  @override
+  String get salesPlanSchemeNote =>
+      'ⓘ Steps are set, started and stopped on the web.';
+
+  @override
+  String get salesPlanCommissionTitle => 'Commission';
+
+  @override
+  String get salesPlanCommissionEmpty => 'No commission';
+
+  @override
+  String get salesPlanCommissionSearch => 'Number, dealer or company';
+
+  @override
+  String get salesPlanCommissionGrandTotal => 'Grand total';
+
+  @override
+  String get salesPlanCommissionPending =>
+      'Claimed from the company, still due';
+
+  @override
+  String salesPlanCommissionByStatus(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count',
+      one: '$count',
+    );
+    return '$label · $_temp0';
+  }
+
+  @override
+  String get salesPlanCommissionTotalNote =>
+      'ⓘ Cancelled claims are not in the total; claims sent back are in the total as the depot\'s cost';
+
+  @override
+  String get salesPlanCommissionWebNote =>
+      'ⓘ New claims, settling and cancelling are on the web.';
+
+  @override
+  String salesPlanCommissionInvoice(String no) {
+    return 'Invoice $no';
+  }
+
+  @override
+  String salesPlanCommissionBase(String amount) {
+    return 'Base $amount';
+  }
+
+  @override
+  String salesPlanCommissionRate(String rate) {
+    return 'Rate $rate';
+  }
+
+  @override
+  String salesPlanCommissionLump(String amount) {
+    return 'Lump sum $amount';
+  }
+
+  @override
+  String salesPlanCommissionReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
   String get approvalsRejectReasonRequired => 'A reason is required to reject';
 
   @override

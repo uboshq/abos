@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/quotation_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -164,7 +165,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
       final (rows, _, _) = await widget.quotations.list();
       if (mounted) setState(() => _choices = rows);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'উদ্ধৃতির তালিকা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.quotationsCompareListLoadFailed));
     }
   }
 
@@ -179,7 +180,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error =
-            errorMessageFor(e, fallback: 'তুলনা আনা গেল না।', whenAbsent: 'তুলনা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            errorMessageFor(e, fallback: context.l10n.quotationsCompareLoadFailed, whenAbsent: context.l10n.quotationsCompareNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -192,12 +193,12 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
 
     return Scaffold(
       appBar: AbosScreenBar(
-        title: 'উদ্ধৃতির তুলনা',
+        title: context.l10n.quotationsCompareTitle,
         actions: [
           if (result != null && widget.family == null)
             IconButton(
               key: const ValueKey('compare-again'),
-              tooltip: 'আবার বাছুন',
+              tooltip: context.l10n.quotationsCompareRepick,
               icon: const Icon(Icons.checklist),
               onPressed: () => setState(() => _result = null),
             ),
@@ -213,7 +214,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
             if (_error != null) BooksError(_error!),
             if (result == null && widget.family == null) ..._picker(),
             if (result != null && !result.compared)
-              const EmptyState(icon: Icons.compare_arrows, title: 'তুলনার জন্য অন্তত দুটো লাগে', message: 'আরেকটা উদ্ধৃতি বাছুন।'),
+              EmptyState(icon: Icons.compare_arrows, title: context.l10n.quotationsCompareNeedTwoTitle, message: context.l10n.quotationsCompareNeedTwoMessage),
             if (result != null && result.compared) _table(result),
           ],
         ),
@@ -225,10 +226,10 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
     final choices = _choices;
     if (choices == null) return [if (_error == null) const LinearProgressIndicator()];
     if (choices.isEmpty) {
-      return const [EmptyState(icon: Icons.request_quote_outlined, title: 'বাছার মতো কোনো উদ্ধৃতি নেই', message: '')];
+      return [EmptyState(icon: Icons.request_quote_outlined, title: context.l10n.quotationsCompareNoChoices, message: '')];
     }
     return [
-      Text('দুই থেকে ${QuotationCompareScreen.max}টা উদ্ধৃতি বাছুন — প্রথমটা ভিত্তি',
+      Text(context.l10n.quotationsComparePickHint('${QuotationCompareScreen.max}'),
           style: TextStyle(color: context.palette.onSurfaceMuted)),
       for (final q in choices)
         CheckboxListTile(
@@ -248,7 +249,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
         key: const ValueKey('compare-go'),
         onPressed: _picked.length < 2 || _busy ? null : _compare,
         icon: const Icon(Icons.compare_arrows),
-        label: Text('${_picked.length}টা তুলনা করুন'),
+        label: Text(context.l10n.quotationsCompareGo(_picked.length)),
       ),
     ];
   }
@@ -272,7 +273,7 @@ class _QuotationCompareScreenState extends State<QuotationCompareScreen> {
       key: const ValueKey('compare-table'),
       scrollDirection: Axis.horizontal,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        row('', [for (final q in c.quotations) cell('${q.no}${q.revisionNo > 0 ? ' (সং ${q.revisionNo})' : ''}', bold: true)]),
+        row('', [for (final q in c.quotations) cell('${q.no}${q.revisionNo > 0 ? context.l10n.quotationsCompareRevision('${q.revisionNo}') : ''}', bold: true)]),
         for (final r in c.head)
           row(r.label, [for (final (i, v) in r.values.indexed) cell(v, changed: r.changed.elementAtOrNull(i) ?? false)]),
         const Divider(),
@@ -330,7 +331,7 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'সংস্করণের তালিকা আনা গেল না।', whenAbsent: 'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.quotationsRevisionsLoadFailed, whenAbsent: context.l10n.quotationsRevisionsNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -340,7 +341,7 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'উদ্ধৃতির সংস্করণ'),
+      appBar: AbosScreenBar(title: context.l10n.quotationsRevisionsTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -351,14 +352,14 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
               key: const ValueKey('revisions-search'),
               controller: _search,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'নম্বর বা দোকানের নাম', isDense: true),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.quotationsRevisionsSearch, isDense: true),
               onSubmitted: (_) => _load(),
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_busy && !_loaded) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (_loaded && _rows.isEmpty)
-              const EmptyState(icon: Icons.history, title: 'কোনো উদ্ধৃতির সংস্করণ নেই', message: 'নিচে টেনে আবার দেখুন।'),
+              EmptyState(icon: Icons.history, title: context.l10n.quotationsRevisionsEmptyTitle, message: context.l10n.quotationsRevisionsEmptyMessage),
             for (final f in _rows)
               Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -366,7 +367,7 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
                   key: ValueKey('revision-${f.root.id}'),
                   title: Text('${f.root.no} → ${f.latest.no}', style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(
-                      [f.root.customer ?? '', '${f.revisions}টা সংস্করণ', f.latest.statusLabel].where((s) => s.isNotEmpty).join(' · ')),
+                      [f.root.customer ?? '', context.l10n.quotationsRevisionsCount(f.revisions), f.latest.statusLabel].where((s) => s.isNotEmpty).join(' · ')),
                   trailing: Text(Money.taka(f.latest.total), style: const TextStyle(fontWeight: FontWeight.w700)),
                   onTap: () => Navigator.of(context)
                       .push(MaterialPageRoute<void>(builder: (_) => QuotationCompareScreen(family: f.root.id, api: widget.api))),
@@ -375,7 +376,8 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
             if (_next != null)
               Center(
                   child: TextButton.icon(
-                      onPressed: _busy ? null : () => _load(more: true), icon: const Icon(Icons.expand_more), label: const Text('আরও'))),
+                      onPressed: _busy ? null : () => _load(more: true), icon: const Icon(Icons.expand_more), label: Text(context.l10n.quotationsRevisionsMore))),
+
           ],
         ),
       ),

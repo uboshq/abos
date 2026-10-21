@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
@@ -41,7 +42,7 @@ class RejectedOrderCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const AppStatusPill(label: 'ব্যর্থ', kind: AppStatusKind.danger),
+                AppStatusPill(label: context.l10n.ordersRejectedFailed, kind: AppStatusKind.danger),
                 const SizedBox(width: AppSpacing.sm),
                 // Falls back to the bare entity type if this row is not
                 // a SalesOrder this build's decoder understands — see
@@ -53,7 +54,7 @@ class RejectedOrderCard extends StatelessWidget {
                           CustomerLine(summary.customerName,
                               key: const ValueKey('rejected-customer'),
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                          Text('${summary.itemCount}টা পণ্য',
+                          Text(context.l10n.ordersRejectedItemCount(summary.itemCount),
                               style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
                         ])
                       : Text(syncEntityLabel(item.entityType),
@@ -61,7 +62,7 @@ class RejectedOrderCard extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  tooltip: 'বুঝেছি, সরিয়ে ফেলুন',
+                  tooltip: context.l10n.ordersRejectedDismiss,
                   onPressed: () async {
                     await SyncEngine.instance.dismissRejected(item.key);
                     onDismissed();
@@ -74,7 +75,7 @@ class RejectedOrderCard extends StatelessWidget {
                 style: TextStyle(color: context.palette.danger, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              banglaStamp(item.enqueuedAt),
+              stampText(item.enqueuedAt),
               style:
                   TextStyle(fontSize: 11, color: context.palette.onSurfaceMuted),
             ),
@@ -84,7 +85,7 @@ class RejectedOrderCard extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('নতুন করে লিখুন'),
+                  label: Text(context.l10n.ordersRejectedRewrite),
                   onPressed: () =>
                       context.push('/home/new-order', extra: summary.prefill),
                 ),

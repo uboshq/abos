@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../core/locale/app_locale.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -78,7 +79,7 @@ class RejectedOrderSummary {
       final customerId = draft.customerId;
       final items = draft.lines;
       final customerName =
-          CustomerRecord.byId(customerId)?.label ?? 'অজানা গ্রাহক';
+          CustomerRecord.byId(customerId)?.label ?? AppLocale.l10n.ordersUnknownCustomer;
 
       return RejectedOrderSummary(
         customerName: customerName,

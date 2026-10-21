@@ -12,6 +12,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'money_in_screens.dart';
 import '../../core/widgets/unsaved_guard.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ টাকা আদায় নিন — অফিসের লোকের ফোনে (মালিক, ৭ অক্টোবর ২০২৬: "এখন অ্যাপে পেমেন্ট অপশন চালু করো … এটা কেবল
 /// অফিসের লোকদের জন্য")।
@@ -103,7 +105,7 @@ class _CollectScreenState extends State<CollectScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'টাকার খাতের তালিকা আনা গেল না। নেট দেখে আবার খুলুন।'));
+            fallback: AppLocale.l10n.booksCollectAccountsFailed));
       }
     }
   }
@@ -129,12 +131,12 @@ class _CollectScreenState extends State<CollectScreen> {
   }
 
   String? _problem() {
-    if (_customer == null) return 'গ্রাহক বাছুন।';
+    if (_customer == null) return context.l10n.booksCollectPickCustomerError;
     final amount = _amount.text.trim();
     if (!_amountShape.hasMatch(amount) || double.parse(amount) <= 0) {
-      return 'অঙ্কটা ঠিক নয় — শূন্যের বেশি, দুই দশমিক পর্যন্ত।';
+      return context.l10n.booksCollectAmountWrong;
     }
-    if (_account == null) return 'টাকার খাত বাছুন।';
+    if (_account == null) return context.l10n.booksCollectPickAccountError;
     return null;
   }
 
@@ -171,20 +173,20 @@ class _CollectScreenState extends State<CollectScreen> {
       }
       // ⓘ সার্ভার ফেরাল — কারণসহ; ঠিক করে আবার পাঠালে নতুন চাবি (ফেরানো চাবি আবার পাঠালে আবার ফেরে)
       setState(() {
-        _error = outcome.refusal ?? 'আদায়টা বসেনি। আবার চেষ্টা করুন।';
+        _error = outcome.refusal ?? context.l10n.booksCollectNotLanded;
         _changeId = null;
       });
     } on NoNetworkForThis catch (e) {
       // ⓘ চাবি থাকে — নেট এলে আবার চাপলে একই কাজ, দুবার নয়
       if (mounted) {
         setState(() => _error = e.mayHaveLanded
-            ? 'আদায়ের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।'
-            : 'আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
+            ? context.l10n.booksCollectMayHaveLanded
+            : context.l10n.booksCollectNeedsNet);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'আদায় জমা করা গেল না। আবার চেষ্টা করুন।'));
+            fallback: AppLocale.l10n.booksCollectSendFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -199,7 +201,7 @@ class _CollectScreenState extends State<CollectScreen> {
     final due =
         _customer == null ? null : CustomerDueRecord.forCustomer(_customer!.id);
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'টাকা আদায় নিন'),
+      appBar: AbosScreenBar(title: context.l10n.booksCollectTitle),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -218,7 +220,7 @@ class _CollectScreenState extends State<CollectScreen> {
             child: ListTile(
               key: const ValueKey('collect-customer'),
               // ⭐ "নাম · পয়েন্ট · শাখা" এক লাইনে — মালিক, ১৯ অক্টোবর ২০২৬ (স্থায়ী নিয়ম)
-              title: CustomerLine(_customer?.label ?? 'গ্রাহক বাছুন'),
+              title: CustomerLine(_customer?.label ?? context.l10n.booksCollectPickCustomer),
               subtitle: _customer == null || due == null ? null : Text(due.outstandingLabel),
               trailing: const Icon(Icons.search),
               onTap: _busy ? null : _pickCustomer,
@@ -229,7 +231,7 @@ class _CollectScreenState extends State<CollectScreen> {
             key: const ValueKey('collect-amount'),
             controller: _amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'অঙ্ক (টাকা)'),
+            decoration: InputDecoration(labelText: context.l10n.booksCollectAmountLabel),
           ),
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<CollectionAccount>(
@@ -237,7 +239,7 @@ class _CollectScreenState extends State<CollectScreen> {
             initialValue: _account,
             // ⓘ লম্বা খাতের নাম ঘরের ভিতরেই থাকে (… দিয়ে), ওপারে যায় না (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'কোন খাতে'),
+            decoration: InputDecoration(labelText: context.l10n.booksCollectAccountLabel),
             items: [
               for (final a in _accounts)
                 DropdownMenuItem(
@@ -258,22 +260,22 @@ class _CollectScreenState extends State<CollectScreen> {
             TextField(
               key: const ValueKey('collect-instrument'),
               controller: _instrument,
-              decoration: const InputDecoration(
-                  labelText: 'মাধ্যম',
-                  hintText: 'যেমন bKash, Nagad, ব্যাংক জমা'),
+              decoration: InputDecoration(
+                  labelText: context.l10n.booksCollectInstrumentLabel,
+                  hintText: context.l10n.booksCollectInstrumentHint),
             ),
             const SizedBox(height: AppSpacing.sm),
             TextField(
               key: const ValueKey('collect-instrument-no'),
               controller: _instrumentNo,
               decoration:
-                  const InputDecoration(labelText: 'লেনদেন-নম্বর (TrxID)'),
+                  InputDecoration(labelText: context.l10n.booksCollectTrxLabel),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('তারিখ'),
+            title: Text(context.l10n.booksCollectDate),
             subtitle: Text(
                 '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}'),
             trailing: const Icon(Icons.calendar_today_outlined),
@@ -283,16 +285,15 @@ class _CollectScreenState extends State<CollectScreen> {
             key: const ValueKey('collect-narration'),
             controller: _narration,
             maxLength: 500,
-            decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)'),
+            decoration: InputDecoration(labelText: context.l10n.booksCollectRemarks),
           ),
           SwitchListTile(
             key: const ValueKey('collect-confirm'),
             contentPadding: EdgeInsets.zero,
             value: _confirm,
             onChanged: _busy ? null : (v) => setState(() => _confirm = v),
-            title: const Text('এখনই নিশ্চিত'),
-            subtitle: const Text(
-                'অনুমোদন লাগলে আদায়টা অপেক্ষায় থাকবে, ওয়েবের মতো'),
+            title: Text(context.l10n.booksCollectConfirmNow),
+            subtitle: Text(context.l10n.booksCollectConfirmHint),
           ),
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
@@ -300,8 +301,8 @@ class _CollectScreenState extends State<CollectScreen> {
             onPressed: _busy ? null : _send,
             icon: const Icon(Icons.payments_outlined),
             label: Text(_amount.text.trim().isEmpty
-                ? 'আদায় জমা দিন'
-                : 'আদায় জমা দিন — ${Money.taka(double.tryParse(_amount.text.trim()) ?? 0)}'),
+                ? context.l10n.booksCollectSend
+                : context.l10n.booksCollectSendAmount(Money.taka(double.tryParse(_amount.text.trim()) ?? 0))),
           ),
         ],
       ),
@@ -349,14 +350,14 @@ class _CustomerSheetState extends State<_CustomerSheet> {
               TextField(
                 key: const ValueKey('collect-customer-search'),
                 autofocus: true,
-                decoration: const InputDecoration(
-                    labelText: 'নাম, কোড, ফোন বা পয়েন্ট',
-                    prefixIcon: Icon(Icons.search)),
+                decoration: InputDecoration(
+                    labelText: context.l10n.booksCollectSearchLabel,
+                    prefixIcon: const Icon(Icons.search)),
                 onChanged: (v) => setState(() => _q = v),
               ),
               Expanded(
                 child: rows.isEmpty
-                    ? const Center(child: Text('কোনো গ্রাহক মেলেনি।'))
+                    ? Center(child: Text(context.l10n.booksCollectNoCustomer))
                     : ListView(
                         children: [
                           for (final c in rows)

@@ -3979,6 +3979,4590 @@ abstract class AppL10n {
   /// **'অ্যাপ মুছে ফেললে ওগুলো চলে যাবে। নতুন সংস্করণ বসানোর সময় পুরনোটা মুছবেন না — উপরে বসিয়ে দিন, অর্ডারগুলো থেকে যাবে।'**
   String get updateWallKeepOrders;
 
+  /// Screen bar: the module name above the title on the order and tracking screens
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get ordersModuleSales;
+
+  /// A queued order whose customer is no longer on this phone
+  ///
+  /// In bn, this message translates to:
+  /// **'অজানা গ্রাহক'**
+  String get ordersUnknownCustomer;
+
+  /// Rejected order card: the red pill
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যর্থ'**
+  String get ordersRejectedFailed;
+
+  /// Rejected order card: how many products the order had
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা পণ্য}}'**
+  String ordersRejectedItemCount(int count);
+
+  /// Rejected order card: tooltip of the close button that removes the card
+  ///
+  /// In bn, this message translates to:
+  /// **'বুঝেছি, সরিয়ে ফেলুন'**
+  String get ordersRejectedDismiss;
+
+  /// Rejected order card: button that opens a new order filled from the rejected one
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে লিখুন'**
+  String get ordersRejectedRewrite;
+
+  /// Payment advice: its state when the server sends no label of its own
+  ///
+  /// In bn, this message translates to:
+  /// **'{status, select, pending{পাঠানো} verifying{যাচাই চলছে} accepted{গৃহীত} rejected{প্রত্যাখ্যাত} other{যাচাই চলছে}}'**
+  String ordersDepositStatus(String status);
+
+  /// Delivery tracking step: the order came in
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডার এসেছে'**
+  String get ordersTrackingStepOrdered;
+
+  /// Delivery tracking step: held because the customer is over the credit limit
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির সীমায় আটকে'**
+  String get ordersTrackingStepCreditHold;
+
+  /// Delivery tracking step: draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া'**
+  String get ordersTrackingStepDraft;
+
+  /// Delivery tracking step: waiting for approval
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনের অপেক্ষায়'**
+  String get ordersTrackingStepApproval;
+
+  /// Delivery tracking step: being picked in the warehouse
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদামে'**
+  String get ordersTrackingStepWarehouse;
+
+  /// Delivery tracking step: the goods left through the gate
+  ///
+  /// In bn, this message translates to:
+  /// **'গেট পেরিয়েছে'**
+  String get ordersTrackingStepGateOut;
+
+  /// Delivery tracking step: part of the goods delivered
+  ///
+  /// In bn, this message translates to:
+  /// **'কিছু পৌঁছেছে'**
+  String get ordersTrackingStepPartial;
+
+  /// Delivery tracking step: delivered
+  ///
+  /// In bn, this message translates to:
+  /// **'পৌঁছেছে'**
+  String get ordersTrackingStepDelivered;
+
+  /// Delivery tracking step: cancelled
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get ordersTrackingStepCancelled;
+
+  /// Delivery tracking step and chip: the sale has been billed
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল হয়েছে'**
+  String get ordersTrackingStepBilled;
+
+  /// Order list screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডারের অবস্থা'**
+  String get ordersListTitle;
+
+  /// Order list: the last pull failed
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডারের তালিকা আনা যায়নি'**
+  String get ordersListLoadFailed;
+
+  /// Order list: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো কোনো অর্ডার নেই'**
+  String get ordersListEmptyTitle;
+
+  /// Order list: empty state hint to pull down
+  ///
+  /// In bn, this message translates to:
+  /// **'নিচে টেনে আবার চেষ্টা করুন।'**
+  String get ordersListEmptyMessage;
+
+  /// Order list: button to start a new order
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন অর্ডার'**
+  String get ordersNewOrder;
+
+  /// Order list: section header for orders waiting on this phone; count in English digits
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষমাণ ({count})'**
+  String ordersListPendingHeader(String count);
+
+  /// Order list: pill on the waiting-orders card
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষমাণ'**
+  String get ordersListPendingPill;
+
+  /// Order list: the waiting orders go out once there is a connection
+  ///
+  /// In bn, this message translates to:
+  /// **'সংযোগ পেলেই পাঠানো হবে — অর্ডার এই ফোনেই আছে।'**
+  String get ordersListPendingNote;
+
+  /// Order list: section header for orders the server refused
+  ///
+  /// In bn, this message translates to:
+  /// **'যা যায়নি ({count})'**
+  String ordersListRejectedHeader(String count);
+
+  /// Order list: section header for orders confirmed by the server
+  ///
+  /// In bn, this message translates to:
+  /// **'সিঙ্ক হয়েছে ({count})'**
+  String ordersListSyncedHeader(String count);
+
+  /// Order list: nothing matches the chosen filter
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ফিল্টারে কোনো অর্ডার নেই।'**
+  String get ordersListFilterEmpty;
+
+  /// Order list: an order without its number yet
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর নেই'**
+  String get ordersListNoNumber;
+
+  /// Delivery tracking: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get ordersTrackingLoadFailed;
+
+  /// Delivery tracking: the server does not have this feature yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।'**
+  String get ordersTrackingAbsent;
+
+  /// Delivery tracking screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারি ট্র্যাকিং'**
+  String get ordersTrackingTitle;
+
+  /// Delivery tracking: search box hint
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় নম্বর, ডিও বা দোকান'**
+  String get ordersTrackingSearchHint;
+
+  /// Delivery tracking: tooltip of the search button
+  ///
+  /// In bn, this message translates to:
+  /// **'খুঁজুন'**
+  String get ordersSearch;
+
+  /// Delivery tracking: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো বিক্রি নেই।'**
+  String get ordersTrackingEmptyTitle;
+
+  /// Delivery tracking: nothing matches the filter
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ছাঁকনিতে কিছু নেই।'**
+  String get ordersTrackingEmptyFiltered;
+
+  /// Delivery tracking: a sale appears here after its gate pass
+  ///
+  /// In bn, this message translates to:
+  /// **'গেট পাস হলে বিক্রি এখানে আসে।'**
+  String get ordersTrackingEmptyHint;
+
+  /// Delivery tracking: clear the filter
+  ///
+  /// In bn, this message translates to:
+  /// **'সব দেখুন'**
+  String get ordersTrackingShowAll;
+
+  /// Delivery tracking: load the list again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get ordersTrackingReload;
+
+  /// Delivery tracking: a sale without a customer name
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক নেই'**
+  String get ordersTrackingNoCustomer;
+
+  /// Delivery tracking chip: the rest of the goods go later (back order)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি মাল পরে যাবে'**
+  String get ordersTrackingBackOrder;
+
+  /// Delivery tracking: the sale's timeline could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'সময়রেখা আনা গেল না।'**
+  String get ordersTrackingStoryFailed;
+
+  /// Delivery tracking timeline: header over who did what and when
+  ///
+  /// In bn, this message translates to:
+  /// **'কে কখন কী করলেন'**
+  String get ordersTrackingStoryWho;
+
+  /// Sales return: the bills to return against could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'**
+  String get counterReturnLoadFailed;
+
+  /// Sales return: popup title when the chosen bill could not be opened
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল খোলা গেল না'**
+  String get counterReturnBillFailed;
+
+  /// Counter and sales return: fallback popup text when the server gave no reason
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার চেষ্টা করুন।'**
+  String get counterTryAgain;
+
+  /// Sales return: a quantity box holds something that is not a number
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।'**
+  String get counterReturnQtyUnreadable;
+
+  /// Sales return: no return reason chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ বাছুন।'**
+  String get counterReturnPickReason;
+
+  /// Sales return: every quantity is empty
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্তত একটা মালের ফেরত পরিমাণ দিন।'**
+  String get counterReturnNeedQty;
+
+  /// Sales return: popup title when the person backs out of the summary
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া ফেরত রাখা হলো'**
+  String get counterReturnDraftKeptTitle;
+
+  /// Sales return: the draft stays on the web, unconfirmed
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত হয়নি — ওয়েবের ফেরতের তালিকায় খসড়া হয়ে আছে।'**
+  String get counterReturnDraftKeptText;
+
+  /// Sales return: popup title after the return is confirmed
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত হলো'**
+  String get counterReturnDone;
+
+  /// Counter and sales return: popup title when the paper waits for a signature
+  ///
+  /// In bn, this message translates to:
+  /// **'সইয়ের অপেক্ষায়'**
+  String get counterAwaitingSignature;
+
+  /// Sales return: popup title when the return could not be made
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত হলো না'**
+  String get counterReturnFailed;
+
+  /// Counter and sales return: popup button that closes it
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get counterOk;
+
+  /// Sales return screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি ফেরত'**
+  String get counterReturnTitle;
+
+  /// Sales return: heading over the bill list
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন বিলের ফেরত'**
+  String get counterReturnWhichBill;
+
+  /// Sales return: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।'**
+  String get counterReturnEmptyTitle;
+
+  /// Sales return: empty state hint (fe: posted is পোস্ট, not পাকা)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল পোস্ট হলে এখানে আসবে।'**
+  String get counterReturnEmptyHint;
+
+  /// Counter and sales return: load the list again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get counterReload;
+
+  /// Sales return: the chosen bill number
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল {no}'**
+  String counterReturnBillNo(String no);
+
+  /// Sales return line: the lot number
+  ///
+  /// In bn, this message translates to:
+  /// **'লট: {lot}'**
+  String counterLotNo(String lot);
+
+  /// Sales return line: quantity sold times the rate (rate from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'বেচা: {qty} × {rate}'**
+  String counterReturnSold(String qty, String rate);
+
+  /// Sales return line: the quantity box label
+  ///
+  /// In bn, this message translates to:
+  /// **'কত ফেরত'**
+  String get counterReturnQtyLabel;
+
+  /// Sales return: the reason dropdown label
+  ///
+  /// In bn, this message translates to:
+  /// **'কেন ফেরত'**
+  String get counterReturnReasonLabel;
+
+  /// Counter and sales return: the free-text note label
+  ///
+  /// In bn, this message translates to:
+  /// **'বিবরণ (ঐচ্ছিক)'**
+  String get counterNoteLabel;
+
+  /// Counter and sales return: button that shows the summary before confirming
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত করুন'**
+  String get counterConfirm;
+
+  /// Sales return: back to the bill list
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্য বিল বাছুন'**
+  String get counterReturnOtherBill;
+
+  /// New order: the filter button and the filter sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিল্টার'**
+  String get ordersFilter;
+
+  /// New order filter: only products with an offer
+  ///
+  /// In bn, this message translates to:
+  /// **'অফার আছে'**
+  String get ordersFilterOffer;
+
+  /// New order filter: only products this shop bought before
+  ///
+  /// In bn, this message translates to:
+  /// **'এই দোকান আগে নিয়েছে'**
+  String get ordersFilterBoughtBefore;
+
+  /// New order: the sold quantity (column head and the label under the quantity)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি'**
+  String get ordersSale;
+
+  /// New order: the free quantity (column head and the label under it)
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি'**
+  String get ordersFree;
+
+  /// Keypad: the carton unit when the product has no name for it
+  ///
+  /// In bn, this message translates to:
+  /// **'কার্টন'**
+  String get ordersKeypadCarton;
+
+  /// Keypad: how many pieces one carton holds; numbers as text, English digits
+  ///
+  /// In bn, this message translates to:
+  /// **'{one} {carton} = {factor} পিস'**
+  String ordersKeypadCartonFactor(String one, String carton, String factor);
+
+  /// Keypad: the pieces box
+  ///
+  /// In bn, this message translates to:
+  /// **'পিস'**
+  String get ordersKeypadPieces;
+
+  /// Keypad: the total pieces box
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট পিস'**
+  String get ordersKeypadTotalPieces;
+
+  /// Keypad: quick button with the quantity of the last order
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের মতো ({qty})'**
+  String ordersKeypadLikeLast(String qty);
+
+  /// Keypad: screen reader name of the backspace key
+  ///
+  /// In bn, this message translates to:
+  /// **'মুছুন'**
+  String get ordersKeypadBackspace;
+
+  /// Keypad: the button that puts the quantity in the cart
+  ///
+  /// In bn, this message translates to:
+  /// **'ঝুড়িতে যোগ'**
+  String get ordersKeypadAddToCart;
+
+  /// Keypad: what this line comes to (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'এই লাইনে {amount}'**
+  String ordersKeypadLineAmount(String amount);
+
+  /// Keypad: hint under the keys
+  ///
+  /// In bn, this message translates to:
+  /// **'কার্টন বা পিস যেটায় খুশি লিখুন'**
+  String get ordersKeypadEitherUnit;
+
+  /// New order sort: as the catalogue lists them
+  ///
+  /// In bn, this message translates to:
+  /// **'তালিকার ক্রমে'**
+  String get ordersSortCatalogue;
+
+  /// New order sort: by name
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম ধরে'**
+  String get ordersSortName;
+
+  /// New order sort: by price
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম ধরে'**
+  String get ordersSortPrice;
+
+  /// Filter sheet: clear every choice
+  ///
+  /// In bn, this message translates to:
+  /// **'সব মুছুন'**
+  String get ordersFilterClearAll;
+
+  /// Filter sheet: heading over the show-only choices
+  ///
+  /// In bn, this message translates to:
+  /// **'দেখান'**
+  String get ordersFilterShowHeading;
+
+  /// Filter sheet: heading over the sort choices
+  ///
+  /// In bn, this message translates to:
+  /// **'সাজান'**
+  String get ordersFilterSortHeading;
+
+  /// Filter sheet: apply button; n picks the form, count is n as text (English digits in both languages)
+  ///
+  /// In bn, this message translates to:
+  /// **'{n, plural, other{{count}টা পণ্য দেখান}}'**
+  String ordersFilterApply(int n, String count);
+
+  /// Order confirm sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানোর আগে দেখে নিন'**
+  String get ordersConfirmTitle;
+
+  /// Order confirm: the customer account is loading
+  ///
+  /// In bn, this message translates to:
+  /// **'হিসাব আনা হচ্ছে…'**
+  String get ordersConfirmStandingLoading;
+
+  /// Order confirm: offline, the account cannot be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'নেট নেই — হিসাব পরে দেখা যাবে'**
+  String get ordersConfirmStandingOffline;
+
+  /// Order confirm: the account could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'হিসাব এখন আনা গেল না — অর্ডার তবু যাবে, হিসাব পরে দেখা যাবে'**
+  String get ordersConfirmStandingFailed;
+
+  /// Order confirm tile: money the customer has paid in advance
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা আছে'**
+  String get ordersConfirmAdvance;
+
+  /// Order confirm tile: payments waiting for approval
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনের অপেক্ষায়'**
+  String get ordersConfirmPendingClaims;
+
+  /// Order confirm tile: what the customer must pay
+  ///
+  /// In bn, this message translates to:
+  /// **'দিতে হবে'**
+  String get ordersConfirmToPay;
+
+  /// Order confirm: the order crosses the absolute credit limit (amount from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু {amount} জমা না হলে ডেলিভারি হবে না। এই সীমা কেউ পার করাতে পারেন না, মালিকও না।'**
+  String ordersConfirmOverLimit(String amount);
+
+  /// Order confirm table: product column
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য'**
+  String get ordersConfirmColProduct;
+
+  /// Order confirm table: amount column
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা'**
+  String get ordersConfirmColAmount;
+
+  /// Order confirm table: total row
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট'**
+  String get ordersConfirmTotal;
+
+  /// Order confirm: the note box label
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ঐচ্ছিক)'**
+  String get ordersConfirmRemarks;
+
+  /// Order confirm: send the order
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে, পাঠান'**
+  String get ordersConfirmSend;
+
+  /// Order confirm: back to the cart
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিরে যান'**
+  String get ordersConfirmBack;
+
+  /// Order confirm: the bank slip feature is not ready
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে'**
+  String get ordersConfirmSoon;
+
+  /// Order screens: button that closes a popup
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get ordersOk;
+
+  /// Order confirm: send a bank slip
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যাংক স্লিপ পাঠান'**
+  String get ordersConfirmBankSlip;
+
+  /// New order: the scanned barcode matched nothing
+  ///
+  /// In bn, this message translates to:
+  /// **'এই বারকোডে কোনো পণ্য নেই'**
+  String get ordersNewNoBarcodeProduct;
+
+  /// New order: the order is queued on the phone
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডার লেখা হয়েছে। নম্বর সিঙ্কের পর আসবে — এখনই বলা যাবে না।'**
+  String get ordersNewQueued;
+
+  /// New order: the customer picker and its search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক বাছুন'**
+  String get ordersNewPickCustomer;
+
+  /// New order: no products on the phone
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্যের তালিকা এখনো সিঙ্ক হয়নি'**
+  String get ordersNewNoProductsTitle;
+
+  /// New order: how to get the products
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্যের পর্দায় গিয়ে একবার নিচে টানুন, তারপর ফিরে আসুন।'**
+  String get ordersNewNoProductsHint;
+
+  /// New order: product search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম বা কোড লিখুন'**
+  String get ordersNewSearchHint;
+
+  /// New order: the barcode button
+  ///
+  /// In bn, this message translates to:
+  /// **'বারকোড স্ক্যান'**
+  String get ordersNewScanBarcode;
+
+  /// New order: tooltip that removes a filter chip
+  ///
+  /// In bn, this message translates to:
+  /// **'সরান'**
+  String get ordersNewChipRemove;
+
+  /// New order: search found nothing
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো মিল পাওয়া যায়নি'**
+  String get ordersNewNoMatch;
+
+  /// New order row: the product is in the cart
+  ///
+  /// In bn, this message translates to:
+  /// **'✓ ঝুড়িতে আছে'**
+  String get ordersNewInCart;
+
+  /// New order row: no price for this product
+  ///
+  /// In bn, this message translates to:
+  /// **'দর জানা নেই'**
+  String get ordersNewNoRate;
+
+  /// New order row: screen reader name of the minus button
+  ///
+  /// In bn, this message translates to:
+  /// **'কমান'**
+  String get ordersNewLess;
+
+  /// New order row: screen reader name of the plus button
+  ///
+  /// In bn, this message translates to:
+  /// **'বাড়ান'**
+  String get ordersNewMore;
+
+  /// New order row: screen reader name of the quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get ordersNewQty;
+
+  /// New order row: screen reader hint on the quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'সংখ্যা লিখুন'**
+  String get ordersNewQtyHint;
+
+  /// New order row: what the sold quantity comes to (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি · {amount}'**
+  String ordersNewSaleAmount(String amount);
+
+  /// New order row: the free quantity the offer put in
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি · নিজে বসেছে'**
+  String get ordersNewFreeAuto;
+
+  /// New order bottom bar: pieces sold and free; numbers as text, English digits
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি {sold} পিস · ফ্রি {free}'**
+  String ordersNewBarPieces(String sold, String free);
+
+  /// New order bottom bar: send the order
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠান'**
+  String get ordersNewSend;
+
+  /// Barcode dialog title
+  ///
+  /// In bn, this message translates to:
+  /// **'বারকোড'**
+  String get ordersNewBarcodeTitle;
+
+  /// Barcode dialog: the field hint
+  ///
+  /// In bn, this message translates to:
+  /// **'স্ক্যান করুন বা লিখুন'**
+  String get ordersNewBarcodeHint;
+
+  /// New order dues card: the credit limit (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'সীমা {amount}'**
+  String ordersNewDueLimit(String amount);
+
+  /// New order dues card: what is left under the limit (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String ordersNewDueHeadroom(String amount);
+
+  /// New order dues card: the credit days
+  ///
+  /// In bn, this message translates to:
+  /// **'{days, plural, other{{days} দিন}}'**
+  String ordersNewDueDays(int days);
+
+  /// New order dues card: the customer was over the limit before this order
+  ///
+  /// In bn, this message translates to:
+  /// **'সীমা আগেই পেরিয়ে আছে — এই অর্ডারে {amount} যোগ হবে।'**
+  String ordersNewOverAlready(String amount);
+
+  /// New order dues card: this order crosses the limit by amount
+  ///
+  /// In bn, this message translates to:
+  /// **'এই অর্ডারে সীমা {amount} ছাড়িয়ে যাবে।'**
+  String ordersNewOverBy(String amount);
+
+  /// New order dues card: when the dues were last synced (from stampText)
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়ার তথ্য সিঙ্ক {when}'**
+  String ordersNewDueSynced(String when);
+
+  /// Counter: the setup could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'কাউন্টার খোলা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।'**
+  String get counterLoadFailed;
+
+  /// Counter: the server does not have the phone counter yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ফোনের কাউন্টার এখনো আসেনি — অফিসে জানান।'**
+  String get counterAbsent;
+
+  /// Counter: stands in for the unit name when the product has none
+  ///
+  /// In bn, this message translates to:
+  /// **'এই একক'**
+  String get counterThisUnit;
+
+  /// Counter: this unit takes whole numbers only
+  ///
+  /// In bn, this message translates to:
+  /// **'{unit} ভগ্নাংশে বিক্রি হয় না — পূর্ণ সংখ্যা লিখুন।'**
+  String counterNoFraction(String unit);
+
+  /// Counter: too many decimals in the quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ {places} দশমিকের বেশি নয় (যেমন 2.5 বা 0.125)।'**
+  String counterQtyDecimals(String places);
+
+  /// Counter: no warehouse, so no lots
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না।'**
+  String get counterNoWarehouseLot;
+
+  /// Counter: no product chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন।'**
+  String get counterPickProduct;
+
+  /// Counter: a lot-tracked product needs a lot
+  ///
+  /// In bn, this message translates to:
+  /// **'লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।'**
+  String get counterPickLot;
+
+  /// Counter: no quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ দিন।'**
+  String get counterNeedQty;
+
+  /// Counter: a zero rate is refused
+  ///
+  /// In bn, this message translates to:
+  /// **'দর ছাড়া বিক্রি হয় না।'**
+  String get counterNeedRate;
+
+  /// Counter: the discount percent is out of range
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড় {min} থেকে {max}%।'**
+  String counterDiscountRange(String min, String max);
+
+  /// Counter: more free quantity than the scheme allows
+  ///
+  /// In bn, this message translates to:
+  /// **'স্কিমে ফ্রি সর্বোচ্চ {max}।'**
+  String counterFreeMax(String max);
+
+  /// Counter: no warehouse, so no sale
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।'**
+  String get counterNoWarehouseSale;
+
+  /// Counter: no buyer chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা বাছুন।'**
+  String get counterPickBuyer;
+
+  /// Counter: the cart is empty
+  ///
+  /// In bn, this message translates to:
+  /// **'কার্টে অন্তত একটা পণ্য দিন।'**
+  String get counterCartEmpty;
+
+  /// Counter popup title: the sale is done
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি হলো'**
+  String get counterSold;
+
+  /// Counter popup title: the sale is kept as a draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখা হলো'**
+  String get counterDraftKept;
+
+  /// Counter popup: open the new bill
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলটা দেখুন'**
+  String get counterOpenBill;
+
+  /// Counter popup title: the sale was refused
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি হলো না'**
+  String get counterSaleFailed;
+
+  /// Counter: fallback when the sale failed without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি করা গেল না। আবার চেষ্টা করুন।'**
+  String get counterSaleFailedRetry;
+
+  /// Counter popup title: the summary before confirming could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'সারাংশ আনা গেল না'**
+  String get counterOverviewFailed;
+
+  /// Counter: fallback when the server could not be reached
+  ///
+  /// In bn, this message translates to:
+  /// **'নেট আছে কি না দেখে আবার চেষ্টা করুন।'**
+  String get counterCheckNet;
+
+  /// Counter: the money-taken sheet title and its button
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা নেওয়া'**
+  String get counterMoneyTitle;
+
+  /// Counter money sheet: a payment reference
+  ///
+  /// In bn, this message translates to:
+  /// **'রেফারেন্স: {ref}'**
+  String counterMoneyReference(String ref);
+
+  /// Counter: remove a payment or a cart line
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get counterRemove;
+
+  /// Counter money sheet: the payment method
+  ///
+  /// In bn, this message translates to:
+  /// **'কীভাবে'**
+  String get counterMoneyMethod;
+
+  /// Counter money sheet: the money account
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাতে'**
+  String get counterMoneyAccount;
+
+  /// Counter money sheet: the amount box
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা'**
+  String get counterMoneyAmount;
+
+  /// Counter money sheet: the reference box
+  ///
+  /// In bn, this message translates to:
+  /// **'রেফারেন্স / লেনদেন নম্বর'**
+  String get counterMoneyReferenceLabel;
+
+  /// Counter money sheet: add one more payment
+  ///
+  /// In bn, this message translates to:
+  /// **'আরেকটা টাকা যোগ করুন'**
+  String get counterMoneyAddAnother;
+
+  /// Counter money sheet: the total taken (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট নেওয়া: {amount}'**
+  String counterMoneyTotal(String amount);
+
+  /// Counter money sheet: the amount is not a number
+  ///
+  /// In bn, this message translates to:
+  /// **'অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।'**
+  String get counterUnreadableAmount;
+
+  /// Counter: the vehicle and fare sheet title and its button
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি ও ভাড়া'**
+  String get counterVehicleTitle;
+
+  /// Counter vehicle sheet: whose vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'কার গাড়ি'**
+  String get counterVehicleOwner;
+
+  /// Counter vehicle sheet: our own vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'আমাদের গাড়ি'**
+  String get counterVehicleOwn;
+
+  /// Counter vehicle sheet: a hired vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়ার গাড়ি'**
+  String get counterVehicleHired;
+
+  /// Counter vehicle sheet: the buyer's vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতার গাড়ি'**
+  String get counterVehicleCustomer;
+
+  /// Counter vehicle sheet: no vehicle
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি লাগবে না'**
+  String get counterVehicleNone;
+
+  /// Counter vehicle sheet: the carrier list
+  ///
+  /// In bn, this message translates to:
+  /// **'বাহক (পরিবহনকারী)'**
+  String get counterCarrier;
+
+  /// Counter vehicle sheet: a carrier typed by hand
+  ///
+  /// In bn, this message translates to:
+  /// **'বাহকের নাম (তালিকায় না থাকলে)'**
+  String get counterCarrierName;
+
+  /// Counter vehicle sheet: the fare amount
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া'**
+  String get counterFare;
+
+  /// Counter vehicle sheet: who pays the fare
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া কে দেবে'**
+  String get counterFarePaidBy;
+
+  /// Counter vehicle sheet: we pay, as our cost
+  ///
+  /// In bn, this message translates to:
+  /// **'আমরা — আমাদের খরচ'**
+  String get counterFareUs;
+
+  /// Counter vehicle sheet: we pay and add it to the bill
+  ///
+  /// In bn, this message translates to:
+  /// **'আমরা দেব, বিলে যোগ হবে'**
+  String get counterFareUsAddToBill;
+
+  /// Counter vehicle sheet: the buyer pays the driver
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা চালককে দেবেন'**
+  String get counterFareCustomer;
+
+  /// Counter vehicle sheet: no fare
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া নেই'**
+  String get counterFareNone;
+
+  /// Counter vehicle sheet: the fare is paid now
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনই দিলাম'**
+  String get counterFareNow;
+
+  /// Counter vehicle sheet: the fare is paid later
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে দেব'**
+  String get counterFareLater;
+
+  /// Counter vehicle sheet: the account the fare came from
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাত থেকে দিলেন'**
+  String get counterFareAccount;
+
+  /// Counter vehicle sheet: the bank or MFS transaction id
+  ///
+  /// In bn, this message translates to:
+  /// **'লেনদেন নম্বর (TrxID)'**
+  String get counterFareTrxId;
+
+  /// Counter vehicle sheet: the person who paid the fare
+  ///
+  /// In bn, this message translates to:
+  /// **'কে দিলেন'**
+  String get counterFarePayer;
+
+  /// Counter vehicle sheet: the carrier owed the fare
+  ///
+  /// In bn, this message translates to:
+  /// **'বাহক — যাঁকে পরে দেবেন'**
+  String get counterFareCarrierLater;
+
+  /// Counter: the delivery sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল কীভাবে যাবে'**
+  String get counterDeliveryTitle;
+
+  /// Counter delivery sheet: taken now
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা এখনই নিয়ে যাবেন'**
+  String get counterDeliveryTakeNow;
+
+  /// Counter delivery sheet: sent later
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে পাঠানো হবে'**
+  String get counterDeliverySendLater;
+
+  /// Counter delivery sheet: collected later
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা পরে এসে নেবেন'**
+  String get counterDeliveryPickupLater;
+
+  /// Counter delivery sheet: the address
+  ///
+  /// In bn, this message translates to:
+  /// **'কোথায় পাঠানো হবে'**
+  String get counterShipTo;
+
+  /// Counter delivery sheet: no date chosen yet
+  ///
+  /// In bn, this message translates to:
+  /// **'কবে পাঠানো হবে — তারিখ বাছুন'**
+  String get counterShipDatePick;
+
+  /// Counter delivery sheet: the chosen date
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানোর তারিখ: {date}'**
+  String counterShipDate(String date);
+
+  /// Counter popup title: a kept draft could not be opened
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া খোলা গেল না'**
+  String get counterDraftOpenFailed;
+
+  /// Counter price check: the product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম দেখুন — পণ্য বাছুন'**
+  String get counterPriceCheckPick;
+
+  /// Counter price check: popup title when the price could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম আনা গেল না'**
+  String get counterPriceFailed;
+
+  /// Counter price check: the rate per unit (rate from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় দর: {rate} / {unit}'**
+  String counterPriceRate(String rate, String unit);
+
+  /// Counter price check: the person may not see stock
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই'**
+  String get counterPriceStockHidden;
+
+  /// Counter price check: the saleable stock
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়যোগ্য মজুদ: {qty} {unit}'**
+  String counterPriceStock(String qty, String unit);
+
+  /// Counter price check: a lot number
+  ///
+  /// In bn, this message translates to:
+  /// **'লট {no}'**
+  String counterPriceLot(String no);
+
+  /// Counter: the lot expiry date
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ {date}'**
+  String counterPriceExpiry(String date);
+
+  /// Counter: the quantity left in a lot
+  ///
+  /// In bn, this message translates to:
+  /// **'আছে {qty}'**
+  String counterPriceHave(String qty);
+
+  /// Counter: close a sheet or dialog without acting
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিরে যান'**
+  String get counterBack;
+
+  /// Counter price check: put the product in the entry row
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলে তুলুন'**
+  String get counterPriceToBill;
+
+  /// Counter: print the last bill again (button and popup title)
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার ছাপা'**
+  String get counterReprint;
+
+  /// Counter: nothing to reprint yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এই কাউন্টারে এখনো কোনো বিল হয়নি। পুরনো বিল ছাপতে বিলের তালিকা থেকে খুলুন।'**
+  String get counterReprintNone;
+
+  /// Counter: title of the print sheet for the last bill
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল · {no}'**
+  String counterBillTitle(String no);
+
+  /// Counter: cancel the bill being written (button, dialog and popup title)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল বাতিল'**
+  String get counterVoidBill;
+
+  /// Counter: the cart is empty and no draft is open
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল করার মতো কিছু নেই।'**
+  String get counterVoidNothing;
+
+  /// Counter cancel dialog: the reason
+  ///
+  /// In bn, this message translates to:
+  /// **'কেন বাতিল (বাধ্যতামূলক)'**
+  String get counterVoidReason;
+
+  /// Counter cancel dialog: the red button
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল করুন'**
+  String get counterVoidConfirm;
+
+  /// Counter popup title: the bill is cancelled
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল বাতিল হলো'**
+  String get counterVoided;
+
+  /// Counter popup: the cancel is recorded with the reason
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণসহ খাতায় লেখা থাকল।'**
+  String get counterVoidedNote;
+
+  /// Counter popup title: the cancel failed
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল হলো না'**
+  String get counterVoidFailed;
+
+  /// Counter: the server warns of a duplicate bill
+  ///
+  /// In bn, this message translates to:
+  /// **'একই বিল আগেই হয়েছে'**
+  String get counterRepeatTitle;
+
+  /// Counter duplicate dialog: the tick that allows a repeat
+  ///
+  /// In bn, this message translates to:
+  /// **'জেনেশুনে আবার একই বিল করছি'**
+  String get counterRepeatTick;
+
+  /// Counter duplicate dialog: send the same bill again
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার করুন'**
+  String get counterRepeatGo;
+
+  /// Counter screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'সরাসরি বিক্রয়'**
+  String get counterTitle;
+
+  /// Counter: a kept draft is open for editing
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া {no} খোলা আছে'**
+  String counterResumeBanner(String no);
+
+  /// Counter: confirming the open draft posts it (fe: পোস্ট, not পাকা)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত করলে এই খসড়াটাই পোস্ট হবে, নতুন বিল নয়।'**
+  String get counterResumeNote;
+
+  /// Counter: the buyer row and the buyer picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা বাছুন'**
+  String get counterPickBuyerTitle;
+
+  /// Counter: the price check button
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম দেখুন'**
+  String get counterPriceCheck;
+
+  /// Counter: the branch has no active warehouse
+  ///
+  /// In bn, this message translates to:
+  /// **'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'**
+  String get counterNoWarehouseBranch;
+
+  /// Counter: no warehouse chosen yet
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।'**
+  String get counterWarehouseNotSet;
+
+  /// Counter: the warehouse dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম'**
+  String get counterWarehouse;
+
+  /// Counter: the payment terms dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'শর্ত'**
+  String get counterTerm;
+
+  /// Counter: the product row and the product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন'**
+  String get counterPickProductTitle;
+
+  /// Counter: the lot dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'লট'**
+  String get counterLot;
+
+  /// Counter: the quantity box
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get counterQty;
+
+  /// Counter: the rate box
+  ///
+  /// In bn, this message translates to:
+  /// **'দর'**
+  String get counterRate;
+
+  /// Counter: the discount box; any discount needs the owner to sign
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড় % (দিলে মালিকের সই লাগবে)'**
+  String get counterDiscountLabel;
+
+  /// Counter: the free quantity box
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি'**
+  String get counterFree;
+
+  /// Counter: the free quantity box when a scheme caps it
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি (স্কিমে সর্বোচ্চ {max})'**
+  String counterFreeMaxLabel(String max);
+
+  /// Counter: put the entry row in the cart
+  ///
+  /// In bn, this message translates to:
+  /// **'কার্টে যোগ করুন'**
+  String get counterAddToCart;
+
+  /// Counter: save changes to a cart line
+  ///
+  /// In bn, this message translates to:
+  /// **'হালনাগাদ করুন'**
+  String get counterUpdate;
+
+  /// Counter cart line: its discount
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড়: {percent}%'**
+  String counterLineDiscount(String percent);
+
+  /// Counter cart line: its free quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি: {qty}'**
+  String counterLineFree(String qty);
+
+  /// Counter cart line: edit it
+  ///
+  /// In bn, this message translates to:
+  /// **'সম্পাদনা'**
+  String get counterEdit;
+
+  /// Counter: the cart total (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি মোট: {amount}'**
+  String counterRunningTotal(String amount);
+
+  /// Counter: the money taken so far (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'নেওয়া টাকা: {amount}'**
+  String counterMoneyTaken(String amount);
+
+  /// Counter: how the goods go, in one line
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারি: {mode}'**
+  String counterDeliverySummary(String mode);
+
+  /// Counter delivery line: sent later to an address on a date
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে পাঠানো — {to} · {date}'**
+  String counterDeliverySummarySend(String to, String date);
+
+  /// Counter delivery line: collected later
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা পরে নেবেন'**
+  String get counterDeliverySummaryPickup;
+
+  /// Counter delivery line: taken now
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনই নিয়ে যাবেন'**
+  String get counterDeliverySummaryNow;
+
+  /// Counter: the fare (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া: {amount}'**
+  String counterFareSummary(String amount);
+
+  /// Counter: the delivery button
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারি'**
+  String get counterDelivery;
+
+  /// Counter: the button that opens the sales return
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত'**
+  String get counterReturnButton;
+
+  /// Counter: keep the bill as a draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get counterKeepDraft;
+
+  /// Counter: open a kept draft (button and sheet title)
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া খুলুন'**
+  String get counterOpenDraft;
+
+  /// Counter: confirm the open draft
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত করুন — খসড়া {no}'**
+  String counterConfirmDraft(String no);
+
+  /// Counter drafts sheet: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া আনা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।'**
+  String get counterDraftsLoadFailed;
+
+  /// Counter drafts sheet: how many products a draft has
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টি পণ্য}}'**
+  String counterDraftLines(int count);
+
+  /// Counter drafts sheet: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'রাখা কোনো খসড়া নেই'**
+  String get counterDraftsEmpty;
+
+  /// Counter drafts sheet: empty state hint
+  ///
+  /// In bn, this message translates to:
+  /// **'কাউন্টারে \"খসড়া রাখুন\" চাপলে বিল এখানে আসে।'**
+  String get counterDraftsEmptyHint;
+
+  /// Counter drafts sheet: close it and write a new bill
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন বিল লিখুন'**
+  String get counterNewBill;
+
+  /// Payment method / money account kind: cash
+  ///
+  /// In bn, this message translates to:
+  /// **'নগদ'**
+  String get booksMethodCash;
+
+  /// Payment method / money account kind: bank
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যাংক'**
+  String get booksMethodBank;
+
+  /// Payment method: cheque
+  ///
+  /// In bn, this message translates to:
+  /// **'চেক'**
+  String get booksMethodCheque;
+
+  /// Payment method: anything else
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্য'**
+  String get booksMethodOther;
+
+  /// Money account kind: mobile banking (bKash, Nagad)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোবাইল ব্যাংকিং'**
+  String get booksMethodMobileBanking;
+
+  /// Money receipt state: confirmed, in the ledger (fe's word, 21 Oct 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'পোস্ট হয়েছে · খাতায় উঠেছে'**
+  String get booksReceiptPosted;
+
+  /// Money receipt state: draft, waiting for approval or confirmation
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষায় — অনুমোদন বা নিশ্চিত বাকি'**
+  String get booksReceiptPending;
+
+  /// Money receipt state: cancelled
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get booksReceiptCancelled;
+
+  /// Principal balance: zero
+  ///
+  /// In bn, this message translates to:
+  /// **'জের নেই'**
+  String get booksBalanceNone;
+
+  /// Principal balance: we owe them this much
+  ///
+  /// In bn, this message translates to:
+  /// **'দিতে হবে: {amount}'**
+  String booksBalanceToPay(String amount);
+
+  /// Principal balance: they owe us this much
+  ///
+  /// In bn, this message translates to:
+  /// **'পাব: {amount}'**
+  String booksBalanceToReceive(String amount);
+
+  /// Date range chip: today
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ'**
+  String get booksRangeToday;
+
+  /// Date range chip: this month so far
+  ///
+  /// In bn, this message translates to:
+  /// **'এ মাস'**
+  String get booksRangeMonth;
+
+  /// Total strip: how many rows the total covers
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{· {count} টি}}'**
+  String booksTotalCount(int count);
+
+  /// Button under a list: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও দেখুন'**
+  String get booksMore;
+
+  /// Take a collection: the money account list did not load
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকার খাতের তালিকা আনা গেল না। নেট দেখে আবার খুলুন।'**
+  String get booksCollectAccountsFailed;
+
+  /// Take a collection: error, no customer chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক বাছুন।'**
+  String get booksCollectPickCustomerError;
+
+  /// Take a collection: error, the amount typed is not a valid number
+  ///
+  /// In bn, this message translates to:
+  /// **'অঙ্কটা ঠিক নয় — শূন্যের বেশি, দুই দশমিক পর্যন্ত।'**
+  String get booksCollectAmountWrong;
+
+  /// Take a collection: error, no money account chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকার খাত বাছুন।'**
+  String get booksCollectPickAccountError;
+
+  /// Take a collection: the server refused without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়টা বসেনি। আবার চেষ্টা করুন।'**
+  String get booksCollectNotLanded;
+
+  /// Take a collection: the network dropped after sending
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়ের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।'**
+  String get booksCollectMayHaveLanded;
+
+  /// Take a collection: no network before sending
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।'**
+  String get booksCollectNeedsNet;
+
+  /// Take a collection: sending failed
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায় জমা করা গেল না। আবার চেষ্টা করুন।'**
+  String get booksCollectSendFailed;
+
+  /// Take a collection: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা আদায় নিন'**
+  String get booksCollectTitle;
+
+  /// Take a collection: the customer tile before one is chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক বাছুন'**
+  String get booksCollectPickCustomer;
+
+  /// Take a collection: amount field label
+  ///
+  /// In bn, this message translates to:
+  /// **'অঙ্ক (টাকা)'**
+  String get booksCollectAmountLabel;
+
+  /// Take a collection: money account dropdown label
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন খাতে'**
+  String get booksCollectAccountLabel;
+
+  /// Take a collection: instrument field label (bank or mobile wallet name)
+  ///
+  /// In bn, this message translates to:
+  /// **'মাধ্যম'**
+  String get booksCollectInstrumentLabel;
+
+  /// Take a collection: instrument field hint
+  ///
+  /// In bn, this message translates to:
+  /// **'যেমন bKash, Nagad, ব্যাংক জমা'**
+  String get booksCollectInstrumentHint;
+
+  /// Take a collection: transaction number field label
+  ///
+  /// In bn, this message translates to:
+  /// **'লেনদেন-নম্বর (TrxID)'**
+  String get booksCollectTrxLabel;
+
+  /// Take a collection: date row
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ'**
+  String get booksCollectDate;
+
+  /// Take a collection: remarks field label
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ঐচ্ছিক)'**
+  String get booksCollectRemarks;
+
+  /// Take a collection: switch, confirm the receipt at once
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনই নিশ্চিত'**
+  String get booksCollectConfirmNow;
+
+  /// Take a collection: hint under the confirm switch
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন লাগলে আদায়টা অপেক্ষায় থাকবে, ওয়েবের মতো'**
+  String get booksCollectConfirmHint;
+
+  /// Take a collection: send button, no amount yet
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায় জমা দিন'**
+  String get booksCollectSend;
+
+  /// Take a collection: send button with the amount
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায় জমা দিন — {amount}'**
+  String booksCollectSendAmount(String amount);
+
+  /// Take a collection: customer search field label
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম, কোড, ফোন বা পয়েন্ট'**
+  String get booksCollectSearchLabel;
+
+  /// Take a collection: customer search found nothing
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো গ্রাহক মেলেনি।'**
+  String get booksCollectNoCustomer;
+
+  /// Collections list: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়ের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'**
+  String get booksMoneyInListFailed;
+
+  /// Collections list: the server is too old for this page
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে আদায়ের তালিকা এখনো আসেনি — অফিসে জানান।'**
+  String get booksMoneyInListAbsent;
+
+  /// Collections: screen title, and a receipt's title before its number loads
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়'**
+  String get booksMoneyInTitle;
+
+  /// Screen bar: the module name 'Sales' above the title
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get booksModuleSales;
+
+  /// Collections list: the floating button to take a new collection
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন আদায়'**
+  String get booksMoneyInNew;
+
+  /// Collections list: search field hint
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক, দোকান বা নম্বর খুঁজুন'**
+  String get booksMoneyInSearchHint;
+
+  /// Collections list: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই সময়ে কোনো আদায় নেই'**
+  String get booksMoneyInEmptyTitle;
+
+  /// Collections list: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ বা পদ্ধতি বদলে দেখুন।'**
+  String get booksMoneyInEmptyHint;
+
+  /// Collections list: empty state button for office staff
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায় নিন'**
+  String get booksMoneyInEmptyCollect;
+
+  /// Books screens: button that loads the list again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get booksRefresh;
+
+  /// Collections list: card title when the range is today
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের আদায়'**
+  String get booksMoneyInToday;
+
+  /// Collections list: card of shops that owe money
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানের বকেয়া'**
+  String get booksShopDuesTitle;
+
+  /// Shop dues card: how many shops are not shown
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{আরও {count}টি দোকান}}'**
+  String booksShopDuesMore(int count);
+
+  /// Shop dues card: total line over every shop
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{মোট · {count}টি দোকান}}'**
+  String booksShopDuesTotal(int count);
+
+  /// Money receipt: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়টা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'**
+  String get booksMoneyInFailed;
+
+  /// Tooltip: print or share this paper
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপুন / পাঠান'**
+  String get booksPrintSend;
+
+  /// Print sheet title for a money receipt
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকার রসিদ · {no}'**
+  String booksMoneyInPrintTitle(String no);
+
+  /// Fact row label: customer
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক'**
+  String get booksFactCustomer;
+
+  /// Fact row label: date
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ'**
+  String get booksFactDate;
+
+  /// Fact row label: the money amount
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা'**
+  String get booksFactAmount;
+
+  /// Fact row label: payment method
+  ///
+  /// In bn, this message translates to:
+  /// **'পদ্ধতি'**
+  String get booksFactMethod;
+
+  /// Fact row label: money account
+  ///
+  /// In bn, this message translates to:
+  /// **'খাত'**
+  String get booksFactAccount;
+
+  /// Fact row label: instrument (cheque or transaction) number
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর'**
+  String get booksFactNumber;
+
+  /// Fact row label: date on the cheque or slip
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজের তারিখ'**
+  String get booksFactInstrumentDate;
+
+  /// Fact row label: narration
+  ///
+  /// In bn, this message translates to:
+  /// **'বিবরণ'**
+  String get booksFactNarration;
+
+  /// Fact row label: who entered it
+  ///
+  /// In bn, this message translates to:
+  /// **'লিখেছেন'**
+  String get booksFactWrittenBy;
+
+  /// Money receipt: heading of the bill-by-bill split
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন বিলে কত'**
+  String get booksMoneyInLines;
+
+  /// Money receipt: a split line not tied to any bill
+  ///
+  /// In bn, this message translates to:
+  /// **'অগ্রিম'**
+  String get booksMoneyInAdvance;
+
+  /// Principal commission: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপালের কমিশন'**
+  String get booksPcTitle;
+
+  /// Screen bar: the module name 'Supplier' above the title
+  ///
+  /// In bn, this message translates to:
+  /// **'সরবরাহকারী'**
+  String get booksModuleSupplier;
+
+  /// Principal commission: error title
+  ///
+  /// In bn, this message translates to:
+  /// **'তথ্য আনা গেল না'**
+  String get booksPcLoadFailedTitle;
+
+  /// Principal commission: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপালের কমিশন আনা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।'**
+  String get booksPcLoadFailed;
+
+  /// Principal commission: the server is too old or the supplier module is off
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে এই পাতা এখনো নেই, বা সরবরাহকারীর অংশ বন্ধ। সার্ভার হালনাগাদ হলে দেখা যাবে।'**
+  String get booksPcAbsent;
+
+  /// Principal commission: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই চক্রে কোনো প্রিন্সিপালের কমিশন নেই'**
+  String get booksPcEmptyTitle;
+
+  /// Principal commission: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'কমিশনের নিয়ম দেওয়া প্রিন্সিপাল থাকলে এখানে দেখা যাবে।'**
+  String get booksPcEmptyHint;
+
+  /// Principal commission: bottom bar label; side is the net direction word (to pay / to receive)
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{সর্বমোট · {side} · {count} জন}}'**
+  String booksPcGrandTotal(int count, String side);
+
+  /// Principal commission: tooltip, go one month back
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের মাস'**
+  String get booksPcPrevMonth;
+
+  /// Principal commission: the month bar when no month is chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি চক্র'**
+  String get booksPcCurrentCycle;
+
+  /// Principal commission: tooltip, go one month forward
+  ///
+  /// In bn, this message translates to:
+  /// **'পরের মাস'**
+  String get booksPcNextMonth;
+
+  /// Principal commission: button back to the current cycle
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি'**
+  String get booksPcCurrent;
+
+  /// Principal commission totals card: total money in
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট এসেছে'**
+  String get booksPcTotalInflow;
+
+  /// Principal commission totals card: commission
+  ///
+  /// In bn, this message translates to:
+  /// **'কমিশন'**
+  String get booksPcTotalCommission;
+
+  /// Principal commission totals card: money sent
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো'**
+  String get booksPcTotalSent;
+
+  /// Principal commission row: money in
+  ///
+  /// In bn, this message translates to:
+  /// **'এসেছে {amount}'**
+  String booksPcInflowLine(String amount);
+
+  /// Principal commission row: commission
+  ///
+  /// In bn, this message translates to:
+  /// **'কমিশন {amount}'**
+  String booksPcCommissionLine(String amount);
+
+  /// Principal commission row: commission with its basis rate
+  ///
+  /// In bn, this message translates to:
+  /// **'কমিশন ({rate}) {amount}'**
+  String booksPcCommissionRateLine(String rate, String amount);
+
+  /// Principal commission row: money sent
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো {amount}'**
+  String booksPcSentLine(String amount);
+
+  /// Principal commission screen reader: an amount the server did not give
+  ///
+  /// In bn, this message translates to:
+  /// **'জানা নেই'**
+  String get booksPcUnknown;
+
+  /// Principal commission row: the cycle's dates
+  ///
+  /// In bn, this message translates to:
+  /// **'চক্র: {cycle}'**
+  String booksPcCycle(String cycle);
+
+  /// Principals list: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপালের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get booksPrincipalListFailed;
+
+  /// Principals list: the server is too old for this page
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে প্রিন্সিপালের তালিকা এখনো আসেনি — অফিসে জানান।'**
+  String get booksPrincipalListAbsent;
+
+  /// Principals: screen title, and a ledger's title before its name loads
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপাল'**
+  String get booksPrincipalTitle;
+
+  /// Principals list: search field hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম বা কোড খুঁজুন'**
+  String get booksPrincipalSearchHint;
+
+  /// Principals list: total strip, what we owe all principals
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট দেনা'**
+  String get booksPrincipalTotalDue;
+
+  /// Principals list: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো প্রিন্সিপাল নেই।'**
+  String get booksPrincipalNone;
+
+  /// Principals list row: never bought from
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো কোনো ক্রয় নেই'**
+  String get booksPrincipalNoPurchase;
+
+  /// Principals list row: date of the last purchase
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ ক্রয়: {date}'**
+  String booksPrincipalLastPurchaseOn(String date);
+
+  /// Principal ledger: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'খাতা আনা গেল না।'**
+  String get booksLedgerFailed;
+
+  /// Fact row label: full name
+  ///
+  /// In bn, this message translates to:
+  /// **'পুরো নাম'**
+  String get booksFactFullName;
+
+  /// Fact row label: phone
+  ///
+  /// In bn, this message translates to:
+  /// **'ফোন'**
+  String get booksFactPhone;
+
+  /// Fact row label: running balance
+  ///
+  /// In bn, this message translates to:
+  /// **'জের'**
+  String get booksFactBalance;
+
+  /// Fact row label: date of the last purchase
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ ক্রয়'**
+  String get booksFactLastPurchase;
+
+  /// Principal ledger: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'খাতায় কোনো লেনদেন নেই।'**
+  String get booksLedgerEmpty;
+
+  /// Purchases list: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রয়ের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get booksPurchaseListFailed;
+
+  /// Purchases list: the server is too old for this page
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ক্রয়ের তালিকা এখনো আসেনি — অফিসে জানান।'**
+  String get booksPurchaseListAbsent;
+
+  /// Purchases list: the principal picker did not load
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপালের তালিকা আনা গেল না।'**
+  String get booksPurchasePrincipalsFailed;
+
+  /// Purchases list: principal filter, every principal
+  ///
+  /// In bn, this message translates to:
+  /// **'সব প্রিন্সিপাল'**
+  String get booksPurchaseAllPrincipals;
+
+  /// Purchases list: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রয়'**
+  String get booksPurchaseTitle;
+
+  /// Purchase paper kind: purchase bill
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রয় বিল'**
+  String get booksPurchaseBill;
+
+  /// Purchase paper kind: goods received
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল গ্রহণ'**
+  String get booksPurchaseGoodsReceipt;
+
+  /// Purchases list: total strip for bills
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট ক্রয়'**
+  String get booksPurchaseTotalBills;
+
+  /// Purchases list: total strip for goods receipts
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট গ্রহণ'**
+  String get booksPurchaseTotalReceipts;
+
+  /// Purchases list: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'এই সময়ে কিছু নেই।'**
+  String get booksPurchaseEmpty;
+
+  /// Purchases list row: paid and outstanding on the bill
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিশোধিত {paid} · বাকি {due}'**
+  String booksPurchasePaidDue(String paid, String due);
+
+  /// Purchase paper: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজটা আনা গেল না।'**
+  String get booksPurchaseFailed;
+
+  /// Print sheet title for a purchase paper: kind word and number
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind} · {no}'**
+  String booksPurchasePrintTitle(String kind, String no);
+
+  /// Fact row label: principal (supplier)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রিন্সিপাল'**
+  String get booksFactPrincipal;
+
+  /// Fact row label: the supplier's own paper number
+  ///
+  /// In bn, this message translates to:
+  /// **'তাদের কাগজের নম্বর'**
+  String get booksFactSupplierNo;
+
+  /// Fact row label: total
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট'**
+  String get booksFactTotal;
+
+  /// Fact row label: paid
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিশোধিত'**
+  String get booksFactPaid;
+
+  /// Fact row label: still owed
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি'**
+  String get booksFactDue;
+
+  /// Purchase paper: heading of the product lines
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য'**
+  String get booksPurchaseProducts;
+
+  /// Purchase line: quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ {qty}'**
+  String booksPurchaseQty(String qty);
+
+  /// Purchase line: free quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি {qty}'**
+  String booksPurchaseFree(String qty);
+
+  /// Purchase line: lot/batch
+  ///
+  /// In bn, this message translates to:
+  /// **'লট {lot}'**
+  String booksPurchaseLot(String lot);
+
+  /// Purchase line: buying rate
+  ///
+  /// In bn, this message translates to:
+  /// **'দর {amount}'**
+  String booksPurchaseRate(String amount);
+
+  /// Customers: screen title, and a customer screen's title when the customer is missing
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক'**
+  String get customersTitle;
+
+  /// Customer detail: the customer dropped out of the local catalogue
+  ///
+  /// In bn, this message translates to:
+  /// **'এই গ্রাহক আর এই ফোনে নেই — সিঙ্ক করে দেখুন।'**
+  String get customersDetailGone;
+
+  /// Screen reader tap hint / button: open the customer's ledger
+  ///
+  /// In bn, this message translates to:
+  /// **'খাতা খুলুন'**
+  String get customersOpenLedgerHint;
+
+  /// Customer detail: heading of the shop's synced orders
+  ///
+  /// In bn, this message translates to:
+  /// **'এই দোকানের অর্ডার ({count})'**
+  String customersDetailOrders(int count);
+
+  /// Customer detail: no synced orders
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ফোনে এই দোকানের কোনো অর্ডার সিঙ্ক হয়নি।'**
+  String get customersDetailNoOrders;
+
+  /// Customer detail: an order without a document number
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর নেই'**
+  String get customersDetailNoNumber;
+
+  /// Customer detail: warning, inactive customer
+  ///
+  /// In bn, this message translates to:
+  /// **'⚠️ এই গ্রাহক নিষ্ক্রিয়'**
+  String get customersDetailInactive;
+
+  /// Customer detail due card: credit limit amount
+  ///
+  /// In bn, this message translates to:
+  /// **'সীমা {amount}'**
+  String customersDetailLimit(String amount);
+
+  /// Customer detail due card: credit days
+  ///
+  /// In bn, this message translates to:
+  /// **'{days, plural, other{{days} দিনের শর্ত}}'**
+  String customersDetailCreditDays(int days);
+
+  /// Customer detail due card: when the due figure last synced
+  ///
+  /// In bn, this message translates to:
+  /// **'সিঙ্ক {stamp}'**
+  String customersDetailSynced(String stamp);
+
+  /// Customer detail: dial the shop
+  ///
+  /// In bn, this message translates to:
+  /// **'কল করুন'**
+  String get customersDetailCall;
+
+  /// Customer detail: open the address in maps
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিকানা'**
+  String get customersDetailAddress;
+
+  /// Customer detail: open the shop's ledger
+  ///
+  /// In bn, this message translates to:
+  /// **'খাতা দেখুন'**
+  String get customersDetailLedger;
+
+  /// Customer detail: open the credit page
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির অবস্থা'**
+  String get customersDetailCredit;
+
+  /// Deposit notification: button and screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'জমার বিজ্ঞপ্তি'**
+  String get customersDepositNotice;
+
+  /// Customer detail: start a new order
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন অর্ডার'**
+  String get customersDetailNewOrder;
+
+  /// Customer ledger: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'খাতা আনা গেল না।'**
+  String get customersLedgerFailed;
+
+  /// Customer ledger: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'এই দোকানের খাতায় এখনো কোনো লেনদেন নেই।'**
+  String get customersLedgerEmpty;
+
+  /// Customer ledger: load older rows
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও আগের লেনদেন'**
+  String get customersLedgerMore;
+
+  /// Customer ledger: title before the shop's name loads
+  ///
+  /// In bn, this message translates to:
+  /// **'খাতা'**
+  String get customersLedgerTitle;
+
+  /// Customer ledger header: the shop owes this much
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি আছে'**
+  String get customersLedgerHasDue;
+
+  /// Customer ledger header: the shop has paid ahead
+  ///
+  /// In bn, this message translates to:
+  /// **'আগাম জমা আছে'**
+  String get customersLedgerHasAdvance;
+
+  /// Customer ledger header: nothing owed either way
+  ///
+  /// In bn, this message translates to:
+  /// **'হিসাব মিলে আছে'**
+  String get customersLedgerSettled;
+
+  /// Customer ledger header: the shop's code
+  ///
+  /// In bn, this message translates to:
+  /// **'কোড {code}'**
+  String customersLedgerCode(String code);
+
+  /// Customer ledger statement: opening balance
+  ///
+  /// In bn, this message translates to:
+  /// **'শুরুর জের'**
+  String get customersLedgerOpening;
+
+  /// Customer ledger statement: total debits (goods taken)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট মাল নিয়েছেন'**
+  String get customersLedgerGoodsTotal;
+
+  /// Customer ledger statement: total credits (money paid)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট টাকা দিয়েছেন'**
+  String get customersLedgerPaidTotal;
+
+  /// Customer ledger statement: closing balance
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষের জের'**
+  String get customersLedgerClosing;
+
+  /// Screen reader: a ledger row where goods were taken
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল {amount}'**
+  String customersLedgerSpokenGoods(String amount);
+
+  /// Screen reader: a ledger row where money was paid
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা {amount}'**
+  String customersLedgerSpokenPaid(String amount);
+
+  /// Customer ledger row title: goods taken (due went up)
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল নিয়েছেন'**
+  String get customersLedgerTookGoods;
+
+  /// Customer ledger row title: money paid (due went down)
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা দিয়েছেন'**
+  String get customersLedgerPaidMoney;
+
+  /// Customer ledger row: balance after the row is zero
+  ///
+  /// In bn, this message translates to:
+  /// **'মিলে গেছে'**
+  String get customersLedgerRowSettled;
+
+  /// Customer ledger row: balance after the row, shop owes
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String customersLedgerRowDue(String amount);
+
+  /// Customer ledger row: balance after the row, shop is in credit
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা {amount}'**
+  String customersLedgerRowCredit(String amount);
+
+  /// Customer ledger: month heading for rows without a date
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ নেই'**
+  String get customersLedgerNoDate;
+
+  /// Customers two-pane: nothing chosen yet
+  ///
+  /// In bn, this message translates to:
+  /// **'বাঁয়ের তালিকা থেকে একজন গ্রাহক বাছুন'**
+  String get customersPickFromList;
+
+  /// Customers / due list: search field hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম বা মোবাইল দিয়ে খুঁজুন'**
+  String get customersSearchHint;
+
+  /// Customers list: total strip of what the shown customers owe
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বকেয়া'**
+  String get customersTotalDue;
+
+  /// Customers list: empty catalogue
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো কোনো গ্রাহক সিঙ্ক হয়নি'**
+  String get customersNoneSynced;
+
+  /// Customers list: the pull failed
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহকের তালিকা আনা যায়নি'**
+  String get customersListFailed;
+
+  /// Customers list: hint under the empty or failed state
+  ///
+  /// In bn, this message translates to:
+  /// **'নিচে টেনে আবার চেষ্টা করুন।'**
+  String get customersPullToRetry;
+
+  /// Customers / due list: search found nothing
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো মিল পাওয়া যায়নি'**
+  String get customersNoMatch;
+
+  /// Customers / due list: search found nothing while filters are on
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিল্টার মুছে আবার দেখুন।'**
+  String get customersClearFilters;
+
+  /// Customers list row: credit days
+  ///
+  /// In bn, this message translates to:
+  /// **'{days, plural, other{{days} দিন}}'**
+  String customersCreditDaysShort(int days);
+
+  /// Due list: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়া তালিকা'**
+  String get customersDueTitle;
+
+  /// Due list: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়ার তালিকা আনা যায়নি'**
+  String get customersDueListFailed;
+
+  /// Due list: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'কারো কাছে বকেয়া নেই'**
+  String get customersDueNone;
+
+  /// Due list: hint under the empty state
+  ///
+  /// In bn, this message translates to:
+  /// **'সিঙ্ক হয়নি মনে হলে নতুন করে দেখুন।'**
+  String get customersDueNoneHint;
+
+  /// Due list: button that loads again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get customersRefresh;
+
+  /// Due list row: second line when the customer has no code
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়া'**
+  String get customersDueWord;
+
+  /// Due list row: second line with the customer's code
+  ///
+  /// In bn, this message translates to:
+  /// **'{code} · বকেয়া'**
+  String customersDueWithCode(String code);
+
+  /// Deposit notification: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'তথ্য আনা যায়নি।'**
+  String get customersDepositLoadFailed;
+
+  /// Deposit notification: the server is too old
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে এই সুবিধা এখনো আসেনি — অফিসে জানান।'**
+  String get customersDepositAbsent;
+
+  /// Deposit notification: error, no amount
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকার অঙ্ক লিখুন।'**
+  String get customersDepositNeedAmount;
+
+  /// Deposit notification: error, bank deposit without a slip photo
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যাংকে জমায় স্লিপের ছবি দিতেই হবে।'**
+  String get customersDepositNeedSlip;
+
+  /// Deposit notification: error, a bill share is not a number
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল {no}-এর ভাগ পড়া গেল না — কেবল সংখ্যা লিখুন।'**
+  String customersDepositShareUnreadable(String no);
+
+  /// Deposit notification: error, a bill share is more than the bill's due
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল {no}-এর বকেয়া {amount} — তার বেশি এই বিলে দেখানো যায় না।'**
+  String customersDepositShareOverDue(String no, String amount);
+
+  /// Deposit notification: error, the shares add up to more than the deposit
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলগুলোতে মোট {shared}, অথচ জমা {amount} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।'**
+  String customersDepositSharesOverAmount(String shared, String amount);
+
+  /// Deposit notification: sent
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো হয়েছে — হিসাবরক্ষক মিলিয়ে দেখবেন। ততক্ষণ বকেয়া কমবে না।'**
+  String get customersDepositSent;
+
+  /// Deposit notification: sending failed
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো যায়নি। আবার চেষ্টা করুন।'**
+  String get customersDepositSendFailed;
+
+  /// Deposit notification: line under the customer's name
+  ///
+  /// In bn, this message translates to:
+  /// **'হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।'**
+  String get customersDepositIntro;
+
+  /// Deposit notification: amount field label
+  ///
+  /// In bn, this message translates to:
+  /// **'টাকা'**
+  String get customersDepositAmount;
+
+  /// Deposit notification: date row
+  ///
+  /// In bn, this message translates to:
+  /// **'জমার তারিখ'**
+  String get customersDepositDate;
+
+  /// Deposit notification: method, bank
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যাংক'**
+  String get customersDepositBank;
+
+  /// Deposit notification: method, mobile wallet (bKash or Nagad)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিকাশ/নগদ'**
+  String get customersDepositMfs;
+
+  /// Deposit notification: method, cash
+  ///
+  /// In bn, this message translates to:
+  /// **'নগদ'**
+  String get customersDepositCash;
+
+  /// Deposit notification: bank account dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন ব্যাংকে'**
+  String get customersDepositWhichBank;
+
+  /// Deposit notification: reference field label
+  ///
+  /// In bn, this message translates to:
+  /// **'স্লিপ / লেনদেন নম্বর'**
+  String get customersDepositReference;
+
+  /// Deposit notification: heading of the bill shares
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন বিলের বিপরীতে (ঐচ্ছিক)'**
+  String get customersDepositAgainstBills;
+
+  /// Deposit notification: explanation of bill shares
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।'**
+  String get customersDepositBillsHint;
+
+  /// Deposit notification: one bill and its due
+  ///
+  /// In bn, this message translates to:
+  /// **'{no} · বকেয়া {amount}'**
+  String customersDepositBillDue(String no, String amount);
+
+  /// Deposit notification: hint of a bill share field
+  ///
+  /// In bn, this message translates to:
+  /// **'এই বিলে'**
+  String get customersDepositOnThisBill;
+
+  /// Deposit notification: note field label
+  ///
+  /// In bn, this message translates to:
+  /// **'আর কিছু বলার'**
+  String get customersDepositNote;
+
+  /// Deposit notification: camera button
+  ///
+  /// In bn, this message translates to:
+  /// **'স্লিপের ছবি তুলুন'**
+  String get customersDepositTakeSlip;
+
+  /// Deposit notification: camera button after a photo
+  ///
+  /// In bn, this message translates to:
+  /// **'ছবি নেওয়া হয়েছে — আবার তুলুন'**
+  String get customersDepositSlipTaken;
+
+  /// Deposit notification: send button
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠান'**
+  String get customersDepositSend;
+
+  /// Deposit notification: heading of earlier notifications
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের বিজ্ঞপ্তি ({count})'**
+  String customersDepositHistory(int count);
+
+  /// Deposit history row: date
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ {date}'**
+  String customersDepositHistoryDate(String date);
+
+  /// Deposit history row: who sent it
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠালেন {name}'**
+  String customersDepositHistoryBy(String name);
+
+  /// Deposit history row: slip or transaction number
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর {reference}'**
+  String customersDepositHistoryRef(String reference);
+
+  /// Deposit history row: share on one bill
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল {no} · {amount}'**
+  String customersDepositHistoryBill(String no, String amount);
+
+  /// Deposit history row: why it was refused
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ: {reason}'**
+  String customersDepositHistoryReason(String reason);
+
+  /// Deposit history row: refused without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'জানানো হয়নি'**
+  String get customersDepositReasonNotGiven;
+
+  /// Coming-soon screen: bar title when none is given, and the empty-state title
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে'**
+  String get salesDeskComingSoonTitle;
+
+  /// Coming-soon screen: the message under the title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই পর্দাটা এখনো তৈরি হচ্ছে। তৈরি হলে এখানেই খুলবে।'**
+  String get salesDeskComingSoonMessage;
+
+  /// Today's deliveries: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get deliveriesTodayLoadFailed;
+
+  /// Today's deliveries: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে আজকের ডেলিভারি এখনো আসেনি — অফিসে জানান।'**
+  String get deliveriesTodayNotOnServer;
+
+  /// Today's deliveries: the next page could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'পরের পাতা আনা গেল না। আবার চেষ্টা করুন।'**
+  String get deliveriesTodayMoreFailed;
+
+  /// Today's deliveries: notice after a partial hand-over; no is the challan number
+  ///
+  /// In bn, this message translates to:
+  /// **'{no}: আংশিক পৌঁছেছে — কম আর ভাঙা মাল ফেরতের কাগজে উঠেছে।'**
+  String deliveriesTodayPartlyDelivered(String no);
+
+  /// Today's deliveries: notice after a full hand-over; no is the challan number, receiver the person's name
+  ///
+  /// In bn, this message translates to:
+  /// **'{no}: পৌঁছেছে — {receiver} বুঝে নিলেন।'**
+  String deliveriesTodayDelivered(String no, String receiver);
+
+  /// Today's deliveries: the hand-over could not be saved
+  ///
+  /// In bn, this message translates to:
+  /// **'পৌঁছানো লেখা গেল না। আবার চেষ্টা করুন।'**
+  String get deliveriesTodaySaveFailed;
+
+  /// Today's deliveries: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের ডেলিভারি'**
+  String get deliveriesTodayTitle;
+
+  /// Today's deliveries: total strip label (all pages)
+  ///
+  /// In bn, this message translates to:
+  /// **'পথে মোট চালান'**
+  String get deliveriesTodayTotalLabel;
+
+  /// Today's deliveries: total strip value, the number of challans
+  ///
+  /// In bn, this message translates to:
+  /// **'{count} টি'**
+  String deliveriesTodayTotalValue(String count);
+
+  /// Today's deliveries: nothing on the road
+  ///
+  /// In bn, this message translates to:
+  /// **'পথে কোনো চালান নেই।'**
+  String get deliveriesTodayEmpty;
+
+  /// Today's deliveries: the vehicle on a card
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি {vehicle}'**
+  String deliveriesTodayVehicle(String vehicle);
+
+  /// Today's deliveries: the driver on a card
+  ///
+  /// In bn, this message translates to:
+  /// **'চালক {driver}'**
+  String deliveriesTodayDriver(String driver);
+
+  /// Today's deliveries: button that records the hand-over to the buyer
+  ///
+  /// In bn, this message translates to:
+  /// **'বুঝিয়ে দিন'**
+  String get deliveriesTodayHandOver;
+
+  /// Today's deliveries: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও দেখুন'**
+  String get deliveriesTodayMore;
+
+  /// My route: the weekday on the day button (mon … sat, other = Sunday)
+  ///
+  /// In bn, this message translates to:
+  /// **'{day, select, mon{সোমবার} tue{মঙ্গলবার} wed{বুধবার} thu{বৃহস্পতিবার} fri{শুক্রবার} sat{শনিবার} other{রবিবার}}'**
+  String routeMyWeekday(String day);
+
+  /// My route: the route could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'রুট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get routeMyLoadFailed;
+
+  /// My route: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে রুটের দরজা এখনো আসেনি — অফিসে জানান।'**
+  String get routeMyNotOnServer;
+
+  /// My route: date picker heading
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন দিনের রুট'**
+  String get routeMyPickDay;
+
+  /// My route: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের রুট'**
+  String get routeMyTitle;
+
+  /// My route: error card title
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get routeMyErrorTitle;
+
+  /// My route: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই দিনে কোনো রুট নেই'**
+  String get routeMyNoRouteTitle;
+
+  /// My route: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'সাপ্তাহিক ছকে এই দিনে আপনার নামে রুট বসানো নেই — অফিসে জানান।'**
+  String get routeMyNoRouteMessage;
+
+  /// My route: a shop's sales this month; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'এ মাসে বিক্রি: {amount}'**
+  String routeMyMonthSales(String amount);
+
+  /// My route: a shop's collections this month; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'এ মাসে আদায়: {amount}'**
+  String routeMyMonthCollections(String amount);
+
+  /// My route: what the shop owes; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়া: {amount}'**
+  String routeMyOutstanding(String amount);
+
+  /// My route: load the next page of shops
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও দোকান'**
+  String get routeMyMoreShops;
+
+  /// Business dashboards: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ড্যাশবোর্ডের তালিকা আনা গেল না।'**
+  String get salesDashboardsListLoadFailed;
+
+  /// Business dashboards: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যবসার ড্যাশবোর্ড'**
+  String get salesDashboardsTitle;
+
+  /// Dashboards: the module name in the bar crumbs
+  ///
+  /// In bn, this message translates to:
+  /// **'ড্যাশবোর্ড'**
+  String get salesDashboardsModule;
+
+  /// Business dashboards: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনার জন্য কোনো ড্যাশবোর্ড নেই'**
+  String get salesDashboardsNoneTitle;
+
+  /// Business dashboards: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো মডিউলের ড্যাশবোর্ড দেখার অনুমতি পেলে এখানে আসবে।'**
+  String get salesDashboardsNoneMessage;
+
+  /// Dashboards: a figure this person has no key (permission) to see, short form
+  ///
+  /// In bn, this message translates to:
+  /// **'চাবি নেই'**
+  String get salesDashboardsNoKey;
+
+  /// Module dashboard: could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ড্যাশবোর্ড আনা গেল না।'**
+  String get salesDashboardsLoadFailed;
+
+  /// Module dashboard: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ড্যাশবোর্ডে এখনো কিছু নেই'**
+  String get salesDashboardsEmptyTitle;
+
+  /// Module dashboard: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজ শুরু হলে বা অনুমতি পেলে সংখ্যাগুলো এখানে আসবে।'**
+  String get salesDashboardsEmptyMessage;
+
+  /// Module dashboard: button that opens the module reports
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মডিউলের রিপোর্ট'**
+  String get salesDashboardsReports;
+
+  /// Module dashboard: the reports screen title; name is the dashboard name
+  ///
+  /// In bn, this message translates to:
+  /// **'{name} — রিপোর্ট'**
+  String salesDashboardsReportsTitle(String name);
+
+  /// Sales overview: could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়ের হালচাল আনা গেল না।'**
+  String get salesDashboardsOverviewLoadFailed;
+
+  /// Sales overview: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়ের হালচাল'**
+  String get salesDashboardsOverviewTitle;
+
+  /// Sales overview: the module name in the bar crumbs
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get salesDashboardsSalesModule;
+
+  /// Sales overview: every figure is hidden from this person
+  ///
+  /// In bn, this message translates to:
+  /// **'এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।'**
+  String get salesDashboardsOverviewNoAccess;
+
+  /// Dashboards: a hidden figure on a stat card
+  ///
+  /// In bn, this message translates to:
+  /// **'চাবি নেই — দেখার অনুমতি লাগে'**
+  String get salesDashboardsNoKeyLong;
+
+  /// Dashboards: empty-state button that loads again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get salesDashboardsRefresh;
+
+  /// Dashboards: the total row under a short list
+  ///
+  /// In bn, this message translates to:
+  /// **'সর্বমোট'**
+  String get salesDashboardsGrandTotal;
+
+  /// Quotation compare: the list to pick from could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতির তালিকা আনা গেল না।'**
+  String get quotationsCompareListLoadFailed;
+
+  /// Quotation compare: the comparison could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'তুলনা আনা গেল না।'**
+  String get quotationsCompareLoadFailed;
+
+  /// Quotation compare: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'তুলনা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'**
+  String get quotationsCompareNotOnServer;
+
+  /// Quotation compare: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতির তুলনা'**
+  String get quotationsCompareTitle;
+
+  /// Quotation compare: tooltip of the button that goes back to the picker
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার বাছুন'**
+  String get quotationsCompareRepick;
+
+  /// Quotation compare: only one quotation came back
+  ///
+  /// In bn, this message translates to:
+  /// **'তুলনার জন্য অন্তত দুটো লাগে'**
+  String get quotationsCompareNeedTwoTitle;
+
+  /// Quotation compare: only one quotation came back, the hint
+  ///
+  /// In bn, this message translates to:
+  /// **'আরেকটা উদ্ধৃতি বাছুন।'**
+  String get quotationsCompareNeedTwoMessage;
+
+  /// Quotation compare: nothing to pick from
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছার মতো কোনো উদ্ধৃতি নেই'**
+  String get quotationsCompareNoChoices;
+
+  /// Quotation compare: the picker hint; max is the most that can be picked
+  ///
+  /// In bn, this message translates to:
+  /// **'দুই থেকে {max}টা উদ্ধৃতি বাছুন — প্রথমটা ভিত্তি'**
+  String quotationsComparePickHint(String max);
+
+  /// Quotation compare: the button, with how many are picked
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা তুলনা করুন}}'**
+  String quotationsCompareGo(int count);
+
+  /// Quotation compare: after the quotation number when it is a revision
+  ///
+  /// In bn, this message translates to:
+  /// **' (সং {revision})'**
+  String quotationsCompareRevision(String revision);
+
+  /// Quotation revisions: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'সংস্করণের তালিকা আনা গেল না।'**
+  String get quotationsRevisionsLoadFailed;
+
+  /// Quotation revisions: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'**
+  String get quotationsRevisionsNotOnServer;
+
+  /// Quotation revisions: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতির সংস্করণ'**
+  String get quotationsRevisionsTitle;
+
+  /// Quotation revisions: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর বা দোকানের নাম'**
+  String get quotationsRevisionsSearch;
+
+  /// Quotation revisions: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো উদ্ধৃতির সংস্করণ নেই'**
+  String get quotationsRevisionsEmptyTitle;
+
+  /// Quotation revisions: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'নিচে টেনে আবার দেখুন।'**
+  String get quotationsRevisionsEmptyMessage;
+
+  /// Quotation revisions: how many revisions a family has
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা সংস্করণ}}'**
+  String quotationsRevisionsCount(int count);
+
+  /// Quotation revisions: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও'**
+  String get quotationsRevisionsMore;
+
+  /// Sales desk pages: the default empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কিছু নেই'**
+  String get salesDeskNothing;
+
+  /// Sales desk pages: the page could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get salesDeskLoadFailed;
+
+  /// Sales desk pages: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।'**
+  String get salesDeskNotOnServer;
+
+  /// Sales desk pages: error card title
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get salesDeskErrorTitle;
+
+  /// Depot check: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিপোর যাচাই'**
+  String get salesDeskDepotTitle;
+
+  /// Depot check: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'যাচাইয়ের অপেক্ষায় কিছু নেই'**
+  String get salesDeskDepotEmpty;
+
+  /// Depot check: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর, দোকানের নাম বা কোড'**
+  String get salesDeskDepotSearch;
+
+  /// Depot check: total strip label; DO is a delivery order
+  ///
+  /// In bn, this message translates to:
+  /// **'যাচাইয়ের অপেক্ষায় DO'**
+  String get salesDeskDepotTotal;
+
+  /// Depot check: note that the next step is on the web
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।'**
+  String get salesDeskDepotWebNote;
+
+  /// Depot check: the second line of an order card; status comes from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'{date} · {lines, plural, other{{lines}টি পণ্য}} · {status}'**
+  String salesDeskDepotLine(String date, int lines, String status);
+
+  /// Depot check: heading of the held sales orders
+  ///
+  /// In bn, this message translates to:
+  /// **'ধরে রাখা বিক্রয় আদেশ'**
+  String get salesDeskDepotHeld;
+
+  /// Print queue: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'না ছাপা কাগজ'**
+  String get salesDeskPrintTitle;
+
+  /// Print queue: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'সব কাগজ ছাপা হয়েছে'**
+  String get salesDeskPrintEmpty;
+
+  /// Sales desk: how many rows in all
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count} টি'**
+  String salesDeskTotalCount(String count);
+
+  /// Print queue: which paper; paper comes from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ: {paper}'**
+  String salesDeskPrintPaper(String paper);
+
+  /// Print queue: why the print failed; reason comes from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ: {reason}'**
+  String salesDeskPrintReason(String reason);
+
+  /// Print queue: snack bar after marking a job printed by hand
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপা হয়েছে বলে সরানো হলো।'**
+  String get salesDeskPrintSettled;
+
+  /// Print queue: marking printed failed
+  ///
+  /// In bn, this message translates to:
+  /// **'সরানো গেল না।'**
+  String get salesDeskPrintSettleFailed;
+
+  /// Print queue: button that marks a job printed by hand
+  ///
+  /// In bn, this message translates to:
+  /// **'হাতে ছাপা হলো'**
+  String get salesDeskPrintSettle;
+
+  /// Delivery performance: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারির কাজ'**
+  String get salesDeskDeliveryTitle;
+
+  /// Delivery performance: heading of the late challans, with their count
+  ///
+  /// In bn, this message translates to:
+  /// **'দেরির চালান · {count} টি'**
+  String salesDeskDeliveryLate(String count);
+
+  /// Delivery performance: how many days late
+  ///
+  /// In bn, this message translates to:
+  /// **'{days} দিন দেরি'**
+  String salesDeskDeliveryDaysLate(String days);
+
+  /// Delivery performance: the promised and the arrival date
+  ///
+  /// In bn, this message translates to:
+  /// **'কথা ছিল {promised} · পৌঁছেছে {arrived}'**
+  String salesDeskDeliveryPromised(String promised, String arrived);
+
+  /// Delivery performance: the order number of a late challan
+  ///
+  /// In bn, this message translates to:
+  /// **'আদেশ {no}'**
+  String salesDeskDeliveryOrder(String no);
+
+  /// Pipeline: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'পাইপলাইন'**
+  String get salesDeskPipelineTitle;
+
+  /// Pipeline: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো সম্ভাবনা নেই'**
+  String get salesDeskPipelineEmpty;
+
+  /// Pipeline: total strip of the open stages, weighted
+  ///
+  /// In bn, this message translates to:
+  /// **'চলমান সম্ভাবনা (ওজন-করা)'**
+  String get salesDeskPipelineOpen;
+
+  /// Pipeline: a stage and how many in it
+  ///
+  /// In bn, this message translates to:
+  /// **'{stage} · {count} টি'**
+  String salesDeskPipelineStage(String stage, String count);
+
+  /// Pipeline: a stage total and weighted total; amounts from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {total} · ওজন-করা {weighted}'**
+  String salesDeskPipelineTotals(String total, String weighted);
+
+  /// Pipeline: the expected close date of an opportunity
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ {date}'**
+  String salesDeskPipelineCloses(String date);
+
+  /// Document templates: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'দলিলের ছাঁচ'**
+  String get salesDeskTemplatesTitle;
+
+  /// Document templates: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো ছাঁচ নেই'**
+  String get salesDeskTemplatesEmpty;
+
+  /// Document templates: the count, and where to edit
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count} টি ছাঁচ · লেখা ও বদল ওয়েবে'**
+  String salesDeskTemplatesCount(String count);
+
+  /// Document templates: a template that is switched off
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ'**
+  String get salesDeskTemplatesInactive;
+
+  /// Sales papers: the name of the paper kind (invoice, or other = challan), used as a title
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{বিক্রয় বিল} other{চালান}}'**
+  String salesPapersKindTitle(String kind);
+
+  /// Sales papers: the list could not be loaded (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{বিক্রয় বিলের তালিকা আনা গেল না।} other{চালানের তালিকা আনা গেল না।}}'**
+  String salesPapersListLoadFailed(String kind);
+
+  /// Sales papers: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'**
+  String get salesPapersNotOnServer;
+
+  /// Sales papers: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর বা দোকানের নাম'**
+  String get salesPapersSearch;
+
+  /// Sales papers: total strip label (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{মোট বিক্রয় বিল} other{মোট চালান}}'**
+  String salesPapersTotal(String kind);
+
+  /// Sales papers: empty list title (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{এই সময়ে কোনো বিক্রয় বিল নেই} other{এই সময়ে কোনো চালান নেই}}'**
+  String salesPapersEmptyTitle(String kind);
+
+  /// Sales papers: empty list hint
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ বদলে বা নিচে টেনে আবার দেখুন।'**
+  String get salesPapersEmptyMessage;
+
+  /// Sales papers: what is still owed on an invoice; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String salesPapersDueAmount(String amount);
+
+  /// Sales papers: an invoice with nothing owed
+  ///
+  /// In bn, this message translates to:
+  /// **'শোধ'**
+  String get salesPapersPaid;
+
+  /// Sales papers: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও'**
+  String get salesPapersMore;
+
+  /// Sales paper: one paper could not be loaded (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{বিক্রয় বিলটা আনা গেল না।} other{চালানটা আনা গেল না।}}'**
+  String salesPapersLoadFailed(String kind);
+
+  /// Sales paper: tooltip of the print and share button
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপা / পাঠান'**
+  String get salesPapersPrint;
+
+  /// Sales paper: the date row
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ'**
+  String get salesPapersDate;
+
+  /// Sales paper: the sale number row
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রির নম্বর'**
+  String get salesPapersSaleNo;
+
+  /// Sales paper: the date the invoice falls due
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ'**
+  String get salesPapersDueOn;
+
+  /// Sales paper: the warehouse row
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম'**
+  String get salesPapersWarehouse;
+
+  /// Sales paper: the vehicle row
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি'**
+  String get salesPapersVehicle;
+
+  /// Sales paper: who wrote the paper
+  ///
+  /// In bn, this message translates to:
+  /// **'লিখেছেন'**
+  String get salesPapersCreatedBy;
+
+  /// Sales paper: heading of the product lines
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য'**
+  String get salesPapersProducts;
+
+  /// Sales paper: free quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি {qty}'**
+  String salesPapersFreeQty(String qty);
+
+  /// Sales paper: discount on a line; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড় {amount}'**
+  String salesPapersLineDiscount(String amount);
+
+  /// Sales paper: the discount total row
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড়'**
+  String get salesPapersDiscount;
+
+  /// Sales paper: the tax total row
+  ///
+  /// In bn, this message translates to:
+  /// **'কর'**
+  String get salesPapersTax;
+
+  /// Sales paper: the total row
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট'**
+  String get salesPapersGrandTotal;
+
+  /// Sales paper: what was collected on the invoice
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়'**
+  String get salesPapersCollected;
+
+  /// Sales paper: what is still owed on the invoice
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি'**
+  String get salesPapersDue;
+
+  /// Sales paper: heading of the challans linked to an invoice
+  ///
+  /// In bn, this message translates to:
+  /// **'এই বিলের চালান'**
+  String get salesPapersInvoiceChallans;
+
+  /// Sales paper: heading of the invoices linked to a challan
+  ///
+  /// In bn, this message translates to:
+  /// **'এই চালানের বিল'**
+  String get salesPapersChallanInvoices;
+
+  /// Sales papers: the phone's own word for a paper's status; only these five are asked; other is a fallback
+  ///
+  /// In bn, this message translates to:
+  /// **'{status, select, draft{খসড়া} confirmed{নিশ্চিত} cancelled{বাতিল} closed{সম্পন্ন} awaiting_approval{অনুমোদনের অপেক্ষায়} other{অজানা}}'**
+  String salesPapersStatus(String status);
+
+  /// Quotations: the status filter chips (all, draft, approved, sent, accepted; other = converted)
+  ///
+  /// In bn, this message translates to:
+  /// **'{tab, select, all{সব} draft{খসড়া} approved{অনুমোদিত} sent{পাঠানো} accepted{গৃহীত} other{আদেশ হয়েছে}}'**
+  String quotationsListTab(String tab);
+
+  /// Quotations: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতি আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get quotationsListLoadFailed;
+
+  /// Quotations: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে উদ্ধৃতির দরজা এখনো আসেনি — অফিসে জানান।'**
+  String get quotationsListNotOnServer;
+
+  /// Quotations: list screen title, and a quotation page title before it loads
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতি'**
+  String get quotationsListTitle;
+
+  /// Quotations: the button and the screen title for a new quotation
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন উদ্ধৃতি'**
+  String get quotationsListNew;
+
+  /// Quotations: total strip label (all pages)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট উদ্ধৃতি'**
+  String get quotationsListTotal;
+
+  /// Quotations: error card title
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get quotationsListErrorTitle;
+
+  /// Quotations: empty list title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো উদ্ধৃতি নেই'**
+  String get quotationsListEmpty;
+
+  /// Quotations: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও উদ্ধৃতি'**
+  String get quotationsListMore;
+
+  /// New quotation: product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন'**
+  String get quotationsNewPickProduct;
+
+  /// New quotation: saved without a shop
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান বাছুন।'**
+  String get quotationsNewNeedShop;
+
+  /// New quotation: saved without a product
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্তত একটা পণ্য দিন।'**
+  String get quotationsNewNeedLine;
+
+  /// New quotation: saving failed
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতি রাখা গেল না। আবার চেষ্টা করুন।'**
+  String get quotationsNewSaveFailed;
+
+  /// New quotation: the shop row before a shop is picked, and the shop picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান বাছুন'**
+  String get quotationsNewPickShop;
+
+  /// Quotation: the quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ: {qty}'**
+  String quotationsQty(String qty);
+
+  /// Quotation: the rate on a line; rate is an amount from Money.taka or the product-price words
+  ///
+  /// In bn, this message translates to:
+  /// **'দর: {rate}'**
+  String quotationsRate(String rate);
+
+  /// New quotation: no rate typed, the product's own price is used
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্যের দাম'**
+  String get quotationsNewProductPrice;
+
+  /// New quotation: tooltip of the button that removes a line
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get quotationsNewRemoveLine;
+
+  /// New quotation: add a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য যোগ করুন'**
+  String get quotationsNewAddLine;
+
+  /// New quotation: the remarks field
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ঐচ্ছিক)'**
+  String get quotationsNewNote;
+
+  /// Quotation: the submit button
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা দিন'**
+  String get quotationsSubmit;
+
+  /// New quotation: save without submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get quotationsNewKeepDraft;
+
+  /// Quotation page: an action failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজটা হলো না। আবার চেষ্টা করুন।'**
+  String get quotationsActFailed;
+
+  /// Quotation page: the status; status is the server's label
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা: {status}'**
+  String quotationsStatus(String status);
+
+  /// Quotation page: the shop
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান: {shop}'**
+  String quotationsShop(String shop);
+
+  /// Quotation page: the date
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ: {date}'**
+  String quotationsDate(String date);
+
+  /// Quotation page: the date the quotation is valid until
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ: {date}'**
+  String quotationsValidUntil(String date);
+
+  /// Quotation page: the total; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট: {amount}'**
+  String quotationsTotal(String amount);
+
+  /// Quotation page: the order made from it
+  ///
+  /// In bn, this message translates to:
+  /// **'আদেশ: {no}'**
+  String quotationsOrder(String no);
+
+  /// Quotation page: notice after submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা হলো।'**
+  String get quotationsSubmitted;
+
+  /// Quotation page: notice after sending
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানিকে পাঠানো হলো।'**
+  String get quotationsSentDone;
+
+  /// Quotation page: button that records it was sent to the shopkeeper
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানিকে পাঠানো হলো'**
+  String get quotationsSend;
+
+  /// Quotation page: notice after the shopkeeper accepted
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি — এখন আদেশ বানানো যায়।'**
+  String get quotationsAcceptedDone;
+
+  /// Quotation page: button that records the shopkeeper accepted
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি'**
+  String get quotationsAccept;
+
+  /// Quotation page: field for why the shopkeeper refused
+  ///
+  /// In bn, this message translates to:
+  /// **'রাজি না হওয়ার কারণ'**
+  String get quotationsRejectReason;
+
+  /// Quotation page: refused without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'রাজি না হওয়ার কারণ লিখুন।'**
+  String get quotationsRejectNeedReason;
+
+  /// Quotation page: notice after the shopkeeper refused
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি নন — লেখা হলো।'**
+  String get quotationsRejectedDone;
+
+  /// Quotation page: button that records the shopkeeper refused
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি নন'**
+  String get quotationsReject;
+
+  /// Quotation page: notice after converting to a sales order
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় আদেশ হলো।'**
+  String get quotationsConvertedDone;
+
+  /// Quotation page: button that converts it to a sales order
+  ///
+  /// In bn, this message translates to:
+  /// **'আদেশ বানান'**
+  String get quotationsConvert;
+
+  /// Quotation line dialog: the quantity field
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get quotationsLineQty;
+
+  /// Quotation line dialog: the rate field
+  ///
+  /// In bn, this message translates to:
+  /// **'দর'**
+  String get quotationsLineRate;
+
+  /// Quotation line dialog: close without adding
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ'**
+  String get quotationsLineCancel;
+
+  /// Quotation line dialog: add the line
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get quotationsLineOk;
+
+  /// Delivery orders: the short paper name (order when the company works in sales orders, other = DO)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ} other{DO}}'**
+  String deliveryOrdersPaper(String kind);
+
+  /// Delivery orders: the screen title (order = sales orders, other = delivery orders)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{বিক্রয় আদেশ} other{ডেলিভারি অর্ডার}}'**
+  String deliveryOrdersTitle(String kind);
+
+  /// Delivery orders: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get deliveryOrdersListLoadFailed;
+
+  /// Delivery orders: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{সার্ভারে বিক্রয় আদেশ এখনো আসেনি — অফিসে জানান।} other{সার্ভারে ডেলিভারি অর্ডার এখনো আসেনি — অফিসে জানান।}}'**
+  String deliveryOrdersNotOnServer(String kind);
+
+  /// Delivery orders: the module name in the bar crumbs
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get deliveryOrdersModule;
+
+  /// Delivery orders: the new button and the new screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{নতুন আদেশ} other{নতুন DO}}'**
+  String deliveryOrdersNew(String kind);
+
+  /// Delivery orders: filter chip, every paper
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get deliveryOrdersFilterAll;
+
+  /// Delivery orders: filter chip, papers waiting for my signature
+  ///
+  /// In bn, this message translates to:
+  /// **'আমার সইয়ের অপেক্ষায়'**
+  String get deliveryOrdersFilterMine;
+
+  /// Delivery orders: empty list title
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{কোনো আদেশ নেই।} other{কোনো DO নেই।}}'**
+  String deliveryOrdersEmpty(String kind);
+
+  /// Delivery orders: empty list when filtered to my signature
+  ///
+  /// In bn, this message translates to:
+  /// **'এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।'**
+  String get deliveryOrdersEmptyMine;
+
+  /// Delivery orders: a paper without a customer
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক নেই'**
+  String get deliveryOrdersNoCustomer;
+
+  /// New DO: product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন'**
+  String get deliveryOrdersPickProduct;
+
+  /// New DO: saved without a dealer
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার বাছুন।'**
+  String get deliveryOrdersNeedDealer;
+
+  /// New DO: saved without a product
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্তত একটা পণ্য দিন।'**
+  String get deliveryOrdersNeedLine;
+
+  /// New DO: saving failed
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ রাখা গেল না। আবার চেষ্টা করুন।} other{DO রাখা গেল না। আবার চেষ্টা করুন।}}'**
+  String deliveryOrdersSaveFailed(String kind);
+
+  /// New DO: the dealer row before one is picked, and the dealer picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার বাছুন'**
+  String get deliveryOrdersPickDealer;
+
+  /// New DO: the quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ: {qty}'**
+  String deliveryOrdersQty(String qty);
+
+  /// New DO: tooltip of the button that removes a line
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get deliveryOrdersRemoveLine;
+
+  /// New DO: add a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য যোগ করুন'**
+  String get deliveryOrdersAddLine;
+
+  /// New DO: the remarks field
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ঐচ্ছিক)'**
+  String get deliveryOrdersNote;
+
+  /// Delivery orders: the submit button
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা দিন'**
+  String get deliveryOrdersSubmit;
+
+  /// New DO: save without submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get deliveryOrdersKeepDraft;
+
+  /// DO page: an action failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজটা হলো না। আবার চেষ্টা করুন।'**
+  String get deliveryOrdersActFailed;
+
+  /// DO page: the paper could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ আনা গেল না।} other{DO আনা গেল না।}}'**
+  String deliveryOrdersLoadFailed(String kind);
+
+  /// DO page: tooltip of the print and share button
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপুন / পাঠান'**
+  String get deliveryOrdersPrint;
+
+  /// DO page: the print sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় আদেশ · {no}'**
+  String deliveryOrdersPrintTitle(String no);
+
+  /// DO page: the status; status is the server's label
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা: {status}'**
+  String deliveryOrdersStatus(String status);
+
+  /// DO page: the total; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট: {amount}'**
+  String deliveryOrdersTotal(String amount);
+
+  /// DO page: the order waits on the credit limit; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির সীমায় আটকে — কম {amount}'**
+  String deliveryOrdersCreditShort(String amount);
+
+  /// DO page: the quantity asked on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'চাওয়া: {qty}'**
+  String deliveryOrdersAsked(String qty);
+
+  /// DO page: the field where the supervisor sets the approved quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদিত পরিমাণ'**
+  String get deliveryOrdersApprovedQtyField;
+
+  /// DO page: the approved quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদিত: {qty}'**
+  String deliveryOrdersApprovedQty(String qty);
+
+  /// DO page: notice after submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ জমা হলো — সুপারভাইজার দেখবেন।} other{DO জমা হলো — সুপারভাইজার দেখবেন।}}'**
+  String deliveryOrdersSubmitted(String kind);
+
+  /// DO page: notice after saving the approved quantities
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদিত পরিমাণ রাখা হলো।'**
+  String get deliveryOrdersQtySaved;
+
+  /// DO page: button that saves the approved quantities
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ রাখুন'**
+  String get deliveryOrdersSaveQty;
+
+  /// DO page: notice after the supervisor approved
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন দেওয়া হলো।'**
+  String get deliveryOrdersApproved;
+
+  /// DO page: the supervisor approve button
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন দিন'**
+  String get deliveryOrdersApprove;
+
+  /// DO page: the field for why it is sent back
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের কারণ'**
+  String get deliveryOrdersRejectReason;
+
+  /// DO page: sent back without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের কারণ লিখুন।'**
+  String get deliveryOrdersRejectNeedReason;
+
+  /// DO page: notice after sending it back
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ ফেরত পাঠানো হলো।} other{DO ফেরত পাঠানো হলো।}}'**
+  String deliveryOrdersRejected(String kind);
+
+  /// DO page: the send-back button
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত পাঠান'**
+  String get deliveryOrdersReject;
+
+  /// DO quantity dialog: the field
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get deliveryOrdersDialogQty;
+
+  /// DO quantity dialog: close without a change
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ'**
+  String get deliveryOrdersDialogCancel;
+
+  /// DO quantity dialog: keep the quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get deliveryOrdersDialogOk;
+
+  /// DO page: heading of the stock card
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদ এখন — ধরা হয়নি'**
+  String get deliveryOrdersStockTitle;
+
+  /// DO page: the note under the stock heading
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।'**
+  String get deliveryOrdersStockNote;
+
+  /// DO page: stock on hand and wanted for a product
+  ///
+  /// In bn, this message translates to:
+  /// **'আছে {have} · চাই {want}'**
+  String deliveryOrdersStockHaveWant(String have, String want);
+
+  /// DO page: wanted for a product, stock unknown
+  ///
+  /// In bn, this message translates to:
+  /// **'চাই {want}'**
+  String deliveryOrdersStockWant(String want);
+
+  /// DO page: how much stock is short
+  ///
+  /// In bn, this message translates to:
+  /// **'কম {qty}'**
+  String deliveryOrdersStockShort(String qty);
+
+  /// DO page: stock is short, amount unknown
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদে কুলোয় না'**
+  String get deliveryOrdersStockNotEnough;
+
+  /// Sales plan pages: the page could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get salesPlanLoadFailed;
+
+  /// Sales plan pages: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।'**
+  String get salesPlanNotOnServer;
+
+  /// Month bar: tooltip of the previous-month button
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের মাস'**
+  String get salesPlanPreviousMonth;
+
+  /// Month bar: tooltip of the next-month button
+  ///
+  /// In bn, this message translates to:
+  /// **'পরের মাস'**
+  String get salesPlanNextMonth;
+
+  /// Sales plan: a count of people
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count} জন}}'**
+  String salesPlanPeople(int count);
+
+  /// Sales targets: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্যমাত্রা'**
+  String get salesPlanTargetsTitle;
+
+  /// Sales targets: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মাসে কোনো বিক্রয়কর্মী নেই'**
+  String get salesPlanTargetsEmpty;
+
+  /// Sales targets: the note under the month
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।'**
+  String get salesPlanTargetsNote;
+
+  /// Sales plan: the total target
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট লক্ষ্য'**
+  String get salesPlanTotalTarget;
+
+  /// Sales plan: the total achieved
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট অর্জন'**
+  String get salesPlanTotalAchieved;
+
+  /// Sales targets: the achievement percent of people who have a target
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্যধারীদের অর্জন'**
+  String get salesPlanTargetHoldersAchieved;
+
+  /// Sales plan: how many people have a target
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য বসানো'**
+  String get salesPlanTargetSet;
+
+  /// Sales targets: a salesperson row; amounts from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য {target} · অর্জন {achieved}'**
+  String salesPlanTargetAchieved(String target, String achieved);
+
+  /// Dealer targets: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলারের লক্ষ্য'**
+  String get salesPlanDealerTargetsTitle;
+
+  /// Dealer targets: empty title when only targets are shown
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মাসে কারো লক্ষ্য বসানো নেই'**
+  String get salesPlanDealerTargetsNoneSet;
+
+  /// Dealer targets: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো ডিলার নেই'**
+  String get salesPlanDealerTargetsEmpty;
+
+  /// Dealer targets: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলারের নাম বা কোড'**
+  String get salesPlanDealerTargetsSearch;
+
+  /// Dealer targets: filter chip
+  ///
+  /// In bn, this message translates to:
+  /// **'কেবল যাঁদের লক্ষ্য আছে'**
+  String get salesPlanDealerTargetsOnlySet;
+
+  /// Dealer targets: the note under the filters
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।'**
+  String get salesPlanDealerTargetsNote;
+
+  /// Sales plan: the total still owed
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বাকি'**
+  String get salesPlanTotalDue;
+
+  /// Dealer targets: achieved on a row; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্জন {amount}'**
+  String salesPlanAchieved(String amount);
+
+  /// Sales plan: still owed on a row; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String salesPlanDue(String amount);
+
+  /// Dealer targets: the last day of the target
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ {date}'**
+  String salesPlanEnds(String date);
+
+  /// Route book: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'রুটের খাতা'**
+  String get salesPlanRouteBookTitle;
+
+  /// Route book: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো রুট নেই'**
+  String get salesPlanRouteBookEmpty;
+
+  /// Route book: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'রুটের নাম বা কোড'**
+  String get salesPlanRouteBookSearch;
+
+  /// Route book: the total sales
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বিক্রি'**
+  String get salesPlanTotalSales;
+
+  /// Route book: the total collections
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট আদায়'**
+  String get salesPlanTotalCollections;
+
+  /// Sales plan: how much of the target is achieved
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্যের অর্জন'**
+  String get salesPlanTargetAchievement;
+
+  /// Sales plan: the dealers row and section title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার'**
+  String get salesPlanDealers;
+
+  /// Route book: dealers on no route
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{⚠ {count} জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।}}'**
+  String salesPlanUnrouted(int count);
+
+  /// Route book: how many dealers a route has
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count} জন ডিলার}}'**
+  String salesPlanDealerCount(int count);
+
+  /// Sales plan: sales and collections on a row; amounts from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি {sales} · আদায় {collections}'**
+  String salesPlanSalesCollections(String sales, String collections);
+
+  /// Route book: the target and the percent achieved
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য {target} · {percent}'**
+  String salesPlanTargetPercent(String target, String percent);
+
+  /// Route page: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই রুটে কোনো ডিলার নেই'**
+  String get salesPlanRouteEmpty;
+
+  /// Route page: the closing balance
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ জের (বাকি)'**
+  String get salesPlanClosingBalance;
+
+  /// Route page: the opening balance
+  ///
+  /// In bn, this message translates to:
+  /// **'আগের জের'**
+  String get salesPlanOpeningBalance;
+
+  /// Route page: sales of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রি'**
+  String get salesPlanSales;
+
+  /// Route page: sales returns of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত'**
+  String get salesPlanReturns;
+
+  /// Route page: collections of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়'**
+  String get salesPlanCollections;
+
+  /// Route page: other entries of the month
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্যান্য'**
+  String get salesPlanOther;
+
+  /// Route page: the target
+  ///
+  /// In bn, this message translates to:
+  /// **'লক্ষ্য'**
+  String get salesPlanTarget;
+
+  /// Route page: section title of the weekly visit plan
+  ///
+  /// In bn, this message translates to:
+  /// **'সাপ্তাহিক ছক'**
+  String get salesPlanWeeklyPlan;
+
+  /// Route page: the weekly plan is empty
+  ///
+  /// In bn, this message translates to:
+  /// **'ছকে কেউ বসানো নেই।'**
+  String get salesPlanWeeklyPlanEmpty;
+
+  /// Route page: a visit plan row that is running
+  ///
+  /// In bn, this message translates to:
+  /// **'চালু'**
+  String get salesPlanVisitActive;
+
+  /// Route page: a visit plan row that has ended
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ'**
+  String get salesPlanVisitEnded;
+
+  /// Sales plan: a date or amount range
+  ///
+  /// In bn, this message translates to:
+  /// **'{from} থেকে {to}'**
+  String salesPlanFromTo(String from, String to);
+
+  /// Route page: a visit plan with no end date
+  ///
+  /// In bn, this message translates to:
+  /// **'চলছে'**
+  String get salesPlanOngoing;
+
+  /// Route page: the note under the weekly plan
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।'**
+  String get salesPlanRouteNote;
+
+  /// Schemes and commissions: the status chip for every status
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get salesPlanStatusAll;
+
+  /// Schemes: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'স্কিম'**
+  String get salesPlanSchemesTitle;
+
+  /// Schemes: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো স্কিম নেই'**
+  String get salesPlanSchemesEmpty;
+
+  /// Schemes: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'স্কিমের কোড বা নাম'**
+  String get salesPlanSchemesSearch;
+
+  /// Schemes: how many in all, and where they are changed
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count} টি স্কিম · বসানো ও বদল ওয়েবে'**
+  String salesPlanSchemesCount(String count);
+
+  /// Schemes: a scheme's basis, what it applies to (server labels) and its step count
+  ///
+  /// In bn, this message translates to:
+  /// **'{basis} · {appliesTo} · {rules, plural, other{{rules}টি ধাপ}}'**
+  String salesPlanSchemeLine(String basis, String appliesTo, int rules);
+
+  /// Schemes: after the dates when the scheme runs today
+  ///
+  /// In bn, this message translates to:
+  /// **' · আজ চলছে'**
+  String get salesPlanSchemeLive;
+
+  /// Scheme page: the code row
+  ///
+  /// In bn, this message translates to:
+  /// **'কোড'**
+  String get salesPlanSchemeCode;
+
+  /// Scheme page: the status row
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা'**
+  String get salesPlanSchemeStatus;
+
+  /// Scheme page: what the scheme is counted on
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিত্তি'**
+  String get salesPlanSchemeBasis;
+
+  /// Scheme page: what the scheme applies to
+  ///
+  /// In bn, this message translates to:
+  /// **'কীসের উপর'**
+  String get salesPlanSchemeAppliesTo;
+
+  /// Scheme page: the from – to dates of the scheme
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ'**
+  String get salesPlanSchemeValidity;
+
+  /// Scheme page: free-text notes on the scheme (not a debit or credit note)
+  ///
+  /// In bn, this message translates to:
+  /// **'নোট'**
+  String get salesPlanSchemeNotes;
+
+  /// Scheme page: section title with the step count
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{ধাপ · {count}টি}}'**
+  String salesPlanSchemeSteps(int count);
+
+  /// Scheme page: no steps
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো ধাপ বসানো নেই'**
+  String get salesPlanSchemeNoSteps;
+
+  /// Scheme page: a step, its role (server label) and level
+  ///
+  /// In bn, this message translates to:
+  /// **'{role} · স্তর {level}'**
+  String salesPlanSchemeRoleLevel(String role, String level);
+
+  /// Scheme page: a slab with no upper end; from is an amount
+  ///
+  /// In bn, this message translates to:
+  /// **'{from} থেকে উপরে'**
+  String salesPlanSchemeFromUp(String from);
+
+  /// Scheme page: the note at the end
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।'**
+  String get salesPlanSchemeNote;
+
+  /// Commission: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'কমিশন'**
+  String get salesPlanCommissionTitle;
+
+  /// Commission: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো কমিশন নেই'**
+  String get salesPlanCommissionEmpty;
+
+  /// Commission: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর, ডিলার বা কোম্পানি'**
+  String get salesPlanCommissionSearch;
+
+  /// Commission: the grand total
+  ///
+  /// In bn, this message translates to:
+  /// **'সর্বমোট'**
+  String get salesPlanCommissionGrandTotal;
+
+  /// Commission: what the company still owes
+  ///
+  /// In bn, this message translates to:
+  /// **'কোম্পানির কাছে দাবি, এখনো বাকি'**
+  String get salesPlanCommissionPending;
+
+  /// Commission: a status (server label) and how many claims
+  ///
+  /// In bn, this message translates to:
+  /// **'{label} · {count, plural, other{{count}টি}}'**
+  String salesPlanCommissionByStatus(String label, int count);
+
+  /// Commission: what the total counts
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'**
+  String get salesPlanCommissionTotalNote;
+
+  /// Commission: where claims are changed
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।'**
+  String get salesPlanCommissionWebNote;
+
+  /// Commission: the invoice number of a claim
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল {no}'**
+  String salesPlanCommissionInvoice(String no);
+
+  /// Commission: the base amount; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিত্তি {amount}'**
+  String salesPlanCommissionBase(String amount);
+
+  /// Commission: the rate
+  ///
+  /// In bn, this message translates to:
+  /// **'হার {rate}'**
+  String salesPlanCommissionRate(String rate);
+
+  /// Commission: a fixed amount; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'থোক {amount}'**
+  String salesPlanCommissionLump(String amount);
+
+  /// Commission: why it was decided so; reason from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ: {reason}'**
+  String salesPlanCommissionReason(String reason);
+
   /// Approvals: error when a rejection is sent with no reason (the screen checks first)
   ///
   /// In bn, this message translates to:

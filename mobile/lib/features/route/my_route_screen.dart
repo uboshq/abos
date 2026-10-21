@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/my_route_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -30,7 +31,7 @@ class MyRouteScreen extends StatefulWidget {
 class _MyRouteScreenState extends State<MyRouteScreen> {
   static final DateFormat _wire = DateFormat('yyyy-MM-dd');
   static final DateFormat _shown = DateFormat('dd/MM/yyyy');
-  static const _weekdays = ['সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার', 'রবিবার'];
+  static const _weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
   late DateTime _day;
   Map<String, String> _routes = const {};
@@ -67,8 +68,8 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'রুট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে রুটের দরজা এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.routeMyLoadFailed,
+            whenAbsent: context.l10n.routeMyNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -81,7 +82,7 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
       initialDate: _day,
       firstDate: _day.subtract(const Duration(days: 60)),
       lastDate: _day.add(const Duration(days: 60)),
-      helpText: 'কোন দিনের রুট',
+      helpText: context.l10n.routeMyPickDay,
     );
     if (picked == null || !mounted) return;
     setState(() => _day = picked);
@@ -94,7 +95,7 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'আজকের রুট'),
+      appBar: AbosScreenBar(title: context.l10n.routeMyTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -104,17 +105,17 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
               key: const Key('route-day'),
               onPressed: _busy ? null : _pickDay,
               icon: const Icon(Icons.event_outlined),
-              label: Text('${_weekdays[_day.weekday - 1]}, ${_shown.format(_day)}'),
+              label: Text('${context.l10n.routeMyWeekday(_weekdays[_day.weekday - 1])}, ${_shown.format(_day)}'),
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.routeMyErrorTitle, message: _error),
             if (_loaded && _routes.isEmpty && _error == null)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.route_outlined,
-                title: 'এই দিনে কোনো রুট নেই',
-                message: 'সাপ্তাহিক ছকে এই দিনে আপনার নামে রুট বসানো নেই — অফিসে জানান।',
+                title: context.l10n.routeMyNoRouteTitle,
+                message: context.l10n.routeMyNoRouteMessage,
               ),
             for (final entry in _routes.entries) ...[
               Padding(
@@ -133,9 +134,9 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
                         Text(shop.code),
                         if (shop.phone != null && shop.phone!.isNotEmpty) Text(shop.phone!),
                         if (shop.address != null && shop.address!.isNotEmpty) Text(shop.address!),
-                        Text('এ মাসে বিক্রি: ${Money.taka(shop.sales)}'),
-                        Text('এ মাসে আদায়: ${Money.taka(shop.collections)}'),
-                        Text('বকেয়া: ${Money.taka(shop.outstanding)}',
+                        Text(context.l10n.routeMyMonthSales(Money.taka(shop.sales))),
+                        Text(context.l10n.routeMyMonthCollections(Money.taka(shop.collections))),
+                        Text(context.l10n.routeMyOutstanding(Money.taka(shop.outstanding)),
                             style: TextStyle(
                               color: shop.outstanding > 0 ? context.palette.danger : context.palette.onSurfaceMuted,
                               fontWeight: FontWeight.w600,
@@ -150,7 +151,8 @@ class _MyRouteScreenState extends State<MyRouteScreen> {
               OutlinedButton(
                 key: const Key('route-more'),
                 onPressed: _busy ? null : () => _load(more: true),
-                child: const Text('আরও দোকান'),
+                child: Text(context.l10n.routeMyMoreShops),
+
               ),
           ],
         ),

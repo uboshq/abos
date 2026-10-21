@@ -11,6 +11,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/day_part.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// One shop, everything the phone already knows about it.
 ///
@@ -61,12 +62,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       // A shop can drop out of the local catalogue between opening a list and
       // tapping a row — a re-sync, a deactivation. Saying so is better than a
       // screen of blanks that looks like a bug.
-      return const Scaffold(
-        appBar: AbosScreenBar(title: 'গ্রাহক'),
+      return Scaffold(
+        appBar: AbosScreenBar(title: context.l10n.customersTitle),
         body: Center(
           child: Padding(
-            padding: EdgeInsets.all(AppSpacing.lg),
-            child: Text('এই গ্রাহক আর এই ফোনে নেই — সিঙ্ক করে দেখুন।',
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text(context.l10n.customersDetailGone,
                 textAlign: TextAlign.center),
           ),
         ),
@@ -99,7 +100,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             MergeSemantics(
               child: Semantics(
                 button: true,
-                onTapHint: 'খাতা খুলুন',
+                onTapHint: context.l10n.customersOpenLedgerHint,
                 child: InkWell(
                   key: const ValueKey('customer-due-card'),
                   onTap: () => context.push('/home/customers/$customerId/ledger'),
@@ -110,7 +111,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           const SizedBox(height: AppSpacing.md),
           _Actions(customer: customer, showCredit: showCredit),
           const SizedBox(height: AppSpacing.lg),
-          Text('এই দোকানের অর্ডার (${orders.length})',
+          Text(context.l10n.customersDetailOrders(orders.length),
               style: const TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.sm),
           if (orders.isEmpty)
@@ -120,7 +121,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 // Not "this shop has never ordered": only orders that have
                 // synced back are here, and a brand-new phone has none of
                 // them yet.
-                'এই ফোনে এই দোকানের কোনো অর্ডার সিঙ্ক হয়নি।',
+                context.l10n.customersDetailNoOrders,
                 style: TextStyle(color: context.palette.onSurfaceMuted),
               ),
             )
@@ -128,7 +129,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             ...orders.map((o) => Card(
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: ListTile(
-                    title: Text(o.documentNo ?? 'নম্বর নেই'),
+                    title: Text(o.documentNo ?? context.l10n.customersDetailNoNumber),
                     subtitle: Text([
                       if (o.trxDate != null)
                         DateFormat('dd/MM/yyyy').format(o.trxDate!),
@@ -178,7 +179,7 @@ class _Header extends StatelessWidget {
         if (!customer.isActive)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Text('⚠️ এই গ্রাহক নিষ্ক্রিয়',
+            child: Text(context.l10n.customersDetailInactive,
                 style: TextStyle(
                     color: context.palette.warning, fontWeight: FontWeight.w600)),
           ),
@@ -212,8 +213,8 @@ class _DueCard extends StatelessWidget {
             if (due.hasCreditLimit || due.creditDays > 0)
               Text(
                 [
-                  if (due.hasCreditLimit) 'সীমা ${Money.taka(due.creditLimit)}',
-                  if (due.creditDays > 0) '${due.creditDays} দিনের শর্ত',
+                  if (due.hasCreditLimit) context.l10n.customersDetailLimit(Money.taka(due.creditLimit)),
+                  if (due.creditDays > 0) context.l10n.customersDetailCreditDays(due.creditDays),
                 ].join(' · '),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -222,7 +223,7 @@ class _DueCard extends StatelessWidget {
             // the number somebody is about to promise goods against.
             if (CustomerDueRecord.syncedAt(due.customerId) != null)
               Text(
-                'সিঙ্ক ${banglaStamp(CustomerDueRecord.syncedAt(due.customerId)!)}',
+                context.l10n.customersDetailSynced(stampText(CustomerDueRecord.syncedAt(due.customerId)!)),
                 style: TextStyle(
                     fontSize: 11.5, color: context.palette.onSurfaceMuted),
               ),
@@ -251,7 +252,7 @@ class _Actions extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: () => _open('tel:${customer.phone}'),
             icon: const Icon(Icons.call_outlined),
-            label: const Text('কল করুন'),
+            label: Text(context.l10n.customersDetailCall),
           ),
         if (customer.address != null)
           OutlinedButton.icon(
@@ -261,7 +262,7 @@ class _Actions extends StatelessWidget {
             onPressed: () =>
                 _open('geo:0,0?q=${Uri.encodeComponent(customer.address!)}'),
             icon: const Icon(Icons.location_on_outlined),
-            label: const Text('ঠিকানা'),
+            label: Text(context.l10n.customersDetailAddress),
           ),
         // ⭐ দোকানের খাতা — মালিক, ১২ অক্টোবর ২০২৬
         FilledButton.tonalIcon(
@@ -269,7 +270,7 @@ class _Actions extends StatelessWidget {
           onPressed: () =>
               context.push('/home/customers/${customer.id}/ledger'),
           icon: const Icon(Icons.menu_book_outlined),
-          label: const Text('খাতা দেখুন'),
+          label: Text(context.l10n.customersDetailLedger),
         ),
         // ⭐ বাকির পাতা — সীমা, অবশিষ্ট, ঝুঁকি (বাকি নিয়ন্ত্রণ, ১৩ অক্টোবর ২০২৬)
         if (showCredit)
@@ -277,19 +278,19 @@ class _Actions extends StatelessWidget {
             key: const ValueKey('customer-credit'),
             onPressed: () => context.push('/home/credit/${customer.id}'),
             icon: const Icon(Icons.credit_score_outlined),
-            label: const Text('বাকির অবস্থা'),
+            label: Text(context.l10n.customersDetailCredit),
           ),
         // ⭐ জমার বিজ্ঞপ্তি, স্লিপসহ (0.4.3)
         OutlinedButton.icon(
           onPressed: () =>
               context.push('/home/customers/${customer.id}/deposit'),
           icon: const Icon(Icons.receipt_long_outlined),
-          label: const Text('জমার বিজ্ঞপ্তি'),
+          label: Text(context.l10n.customersDepositNotice),
         ),
         FilledButton.icon(
           onPressed: () => context.go('/home/new-order'),
           icon: const Icon(Icons.add_shopping_cart_outlined),
-          label: const Text('নতুন অর্ডার'),
+          label: Text(context.l10n.customersDetailNewOrder),
         ),
       ],
     );

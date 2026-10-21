@@ -3143,6 +3143,4038 @@
   "@updateWallKeepOrders": {
     "description": "Update wall: how not to lose queued orders"
   },
+  "ordersModuleSales": "বিক্রয়",
+  "@ordersModuleSales": {
+    "description": "Screen bar: the module name above the title on the order and tracking screens"
+  },
+  "ordersUnknownCustomer": "অজানা গ্রাহক",
+  "@ordersUnknownCustomer": {
+    "description": "A queued order whose customer is no longer on this phone"
+  },
+  "ordersRejectedFailed": "ব্যর্থ",
+  "@ordersRejectedFailed": {
+    "description": "Rejected order card: the red pill"
+  },
+  "ordersRejectedItemCount": "{count, plural, other{{count}টা পণ্য}}",
+  "@ordersRejectedItemCount": {
+    "description": "Rejected order card: how many products the order had",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ordersRejectedDismiss": "বুঝেছি, সরিয়ে ফেলুন",
+  "@ordersRejectedDismiss": {
+    "description": "Rejected order card: tooltip of the close button that removes the card"
+  },
+  "ordersRejectedRewrite": "নতুন করে লিখুন",
+  "@ordersRejectedRewrite": {
+    "description": "Rejected order card: button that opens a new order filled from the rejected one"
+  },
+  "ordersDepositStatus": "{status, select, pending{পাঠানো} verifying{যাচাই চলছে} accepted{গৃহীত} rejected{প্রত্যাখ্যাত} other{যাচাই চলছে}}",
+  "@ordersDepositStatus": {
+    "description": "Payment advice: its state when the server sends no label of its own",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersTrackingStepOrdered": "অর্ডার এসেছে",
+  "@ordersTrackingStepOrdered": {
+    "description": "Delivery tracking step: the order came in"
+  },
+  "ordersTrackingStepCreditHold": "বাকির সীমায় আটকে",
+  "@ordersTrackingStepCreditHold": {
+    "description": "Delivery tracking step: held because the customer is over the credit limit"
+  },
+  "ordersTrackingStepDraft": "খসড়া",
+  "@ordersTrackingStepDraft": {
+    "description": "Delivery tracking step: draft"
+  },
+  "ordersTrackingStepApproval": "অনুমোদনের অপেক্ষায়",
+  "@ordersTrackingStepApproval": {
+    "description": "Delivery tracking step: waiting for approval"
+  },
+  "ordersTrackingStepWarehouse": "গুদামে",
+  "@ordersTrackingStepWarehouse": {
+    "description": "Delivery tracking step: being picked in the warehouse"
+  },
+  "ordersTrackingStepGateOut": "গেট পেরিয়েছে",
+  "@ordersTrackingStepGateOut": {
+    "description": "Delivery tracking step: the goods left through the gate"
+  },
+  "ordersTrackingStepPartial": "কিছু পৌঁছেছে",
+  "@ordersTrackingStepPartial": {
+    "description": "Delivery tracking step: part of the goods delivered"
+  },
+  "ordersTrackingStepDelivered": "পৌঁছেছে",
+  "@ordersTrackingStepDelivered": {
+    "description": "Delivery tracking step: delivered"
+  },
+  "ordersTrackingStepCancelled": "বাতিল",
+  "@ordersTrackingStepCancelled": {
+    "description": "Delivery tracking step: cancelled"
+  },
+  "ordersTrackingStepBilled": "বিল হয়েছে",
+  "@ordersTrackingStepBilled": {
+    "description": "Delivery tracking step and chip: the sale has been billed"
+  },
+  "ordersListTitle": "অর্ডারের অবস্থা",
+  "@ordersListTitle": {
+    "description": "Order list screen title"
+  },
+  "ordersListLoadFailed": "অর্ডারের তালিকা আনা যায়নি",
+  "@ordersListLoadFailed": {
+    "description": "Order list: the last pull failed"
+  },
+  "ordersListEmptyTitle": "এখনো কোনো অর্ডার নেই",
+  "@ordersListEmptyTitle": {
+    "description": "Order list: empty state title"
+  },
+  "ordersListEmptyMessage": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@ordersListEmptyMessage": {
+    "description": "Order list: empty state hint to pull down"
+  },
+  "ordersNewOrder": "নতুন অর্ডার",
+  "@ordersNewOrder": {
+    "description": "Order list: button to start a new order"
+  },
+  "ordersListPendingHeader": "অপেক্ষমাণ ({count})",
+  "@ordersListPendingHeader": {
+    "description": "Order list: section header for orders waiting on this phone; count in English digits",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "ordersListPendingPill": "অপেক্ষমাণ",
+  "@ordersListPendingPill": {
+    "description": "Order list: pill on the waiting-orders card"
+  },
+  "ordersListPendingNote": "সংযোগ পেলেই পাঠানো হবে — অর্ডার এই ফোনেই আছে।",
+  "@ordersListPendingNote": {
+    "description": "Order list: the waiting orders go out once there is a connection"
+  },
+  "ordersListRejectedHeader": "যা যায়নি ({count})",
+  "@ordersListRejectedHeader": {
+    "description": "Order list: section header for orders the server refused",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "1"
+      }
+    }
+  },
+  "ordersListSyncedHeader": "সিঙ্ক হয়েছে ({count})",
+  "@ordersListSyncedHeader": {
+    "description": "Order list: section header for orders confirmed by the server",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "ordersListFilterEmpty": "এই ফিল্টারে কোনো অর্ডার নেই।",
+  "@ordersListFilterEmpty": {
+    "description": "Order list: nothing matches the chosen filter"
+  },
+  "ordersListNoNumber": "নম্বর নেই",
+  "@ordersListNoNumber": {
+    "description": "Order list: an order without its number yet"
+  },
+  "ordersTrackingLoadFailed": "তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@ordersTrackingLoadFailed": {
+    "description": "Delivery tracking: the list could not be loaded"
+  },
+  "ordersTrackingAbsent": "সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।",
+  "@ordersTrackingAbsent": {
+    "description": "Delivery tracking: the server does not have this feature yet"
+  },
+  "ordersTrackingTitle": "ডেলিভারি ট্র্যাকিং",
+  "@ordersTrackingTitle": {
+    "description": "Delivery tracking screen title"
+  },
+  "ordersTrackingSearchHint": "বিক্রয় নম্বর, ডিও বা দোকান",
+  "@ordersTrackingSearchHint": {
+    "description": "Delivery tracking: search box hint"
+  },
+  "ordersSearch": "খুঁজুন",
+  "@ordersSearch": {
+    "description": "Delivery tracking: tooltip of the search button"
+  },
+  "ordersTrackingEmptyTitle": "কোনো বিক্রি নেই।",
+  "@ordersTrackingEmptyTitle": {
+    "description": "Delivery tracking: empty state title"
+  },
+  "ordersTrackingEmptyFiltered": "এই ছাঁকনিতে কিছু নেই।",
+  "@ordersTrackingEmptyFiltered": {
+    "description": "Delivery tracking: nothing matches the filter"
+  },
+  "ordersTrackingEmptyHint": "গেট পাস হলে বিক্রি এখানে আসে।",
+  "@ordersTrackingEmptyHint": {
+    "description": "Delivery tracking: a sale appears here after its gate pass"
+  },
+  "ordersTrackingShowAll": "সব দেখুন",
+  "@ordersTrackingShowAll": {
+    "description": "Delivery tracking: clear the filter"
+  },
+  "ordersTrackingReload": "নতুন করে দেখুন",
+  "@ordersTrackingReload": {
+    "description": "Delivery tracking: load the list again"
+  },
+  "ordersTrackingNoCustomer": "গ্রাহক নেই",
+  "@ordersTrackingNoCustomer": {
+    "description": "Delivery tracking: a sale without a customer name"
+  },
+  "ordersTrackingBackOrder": "বাকি মাল পরে যাবে",
+  "@ordersTrackingBackOrder": {
+    "description": "Delivery tracking chip: the rest of the goods go later (back order)"
+  },
+  "ordersTrackingStoryFailed": "সময়রেখা আনা গেল না।",
+  "@ordersTrackingStoryFailed": {
+    "description": "Delivery tracking: the sale's timeline could not be loaded"
+  },
+  "ordersTrackingStoryWho": "কে কখন কী করলেন",
+  "@ordersTrackingStoryWho": {
+    "description": "Delivery tracking timeline: header over who did what and when"
+  },
+  "counterReturnLoadFailed": "ফেরতের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "@counterReturnLoadFailed": {
+    "description": "Sales return: the bills to return against could not be loaded"
+  },
+  "counterReturnBillFailed": "বিল খোলা গেল না",
+  "@counterReturnBillFailed": {
+    "description": "Sales return: popup title when the chosen bill could not be opened"
+  },
+  "counterTryAgain": "আবার চেষ্টা করুন।",
+  "@counterTryAgain": {
+    "description": "Counter and sales return: fallback popup text when the server gave no reason"
+  },
+  "counterReturnQtyUnreadable": "ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।",
+  "@counterReturnQtyUnreadable": {
+    "description": "Sales return: a quantity box holds something that is not a number"
+  },
+  "counterReturnPickReason": "কারণ বাছুন।",
+  "@counterReturnPickReason": {
+    "description": "Sales return: no return reason chosen"
+  },
+  "counterReturnNeedQty": "অন্তত একটা মালের ফেরত পরিমাণ দিন।",
+  "@counterReturnNeedQty": {
+    "description": "Sales return: every quantity is empty"
+  },
+  "counterReturnDraftKeptTitle": "খসড়া ফেরত রাখা হলো",
+  "@counterReturnDraftKeptTitle": {
+    "description": "Sales return: popup title when the person backs out of the summary"
+  },
+  "counterReturnDraftKeptText": "নিশ্চিত হয়নি — ওয়েবের ফেরতের তালিকায় খসড়া হয়ে আছে।",
+  "@counterReturnDraftKeptText": {
+    "description": "Sales return: the draft stays on the web, unconfirmed"
+  },
+  "counterReturnDone": "ফেরত হলো",
+  "@counterReturnDone": {
+    "description": "Sales return: popup title after the return is confirmed"
+  },
+  "counterAwaitingSignature": "সইয়ের অপেক্ষায়",
+  "@counterAwaitingSignature": {
+    "description": "Counter and sales return: popup title when the paper waits for a signature"
+  },
+  "counterReturnFailed": "ফেরত হলো না",
+  "@counterReturnFailed": {
+    "description": "Sales return: popup title when the return could not be made"
+  },
+  "counterOk": "ঠিক আছে",
+  "@counterOk": {
+    "description": "Counter and sales return: popup button that closes it"
+  },
+  "counterReturnTitle": "বিক্রি ফেরত",
+  "@counterReturnTitle": {
+    "description": "Sales return screen title"
+  },
+  "counterReturnWhichBill": "কোন বিলের ফেরত",
+  "@counterReturnWhichBill": {
+    "description": "Sales return: heading over the bill list"
+  },
+  "counterReturnEmptyTitle": "ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।",
+  "@counterReturnEmptyTitle": {
+    "description": "Sales return: empty state title"
+  },
+  "counterReturnEmptyHint": "বিল পোস্ট হলে এখানে আসবে।",
+  "@counterReturnEmptyHint": {
+    "description": "Sales return: empty state hint (fe: posted is পোস্ট, not পাকা)"
+  },
+  "counterReload": "নতুন করে দেখুন",
+  "@counterReload": {
+    "description": "Counter and sales return: load the list again"
+  },
+  "counterReturnBillNo": "বিল {no}",
+  "@counterReturnBillNo": {
+    "description": "Sales return: the chosen bill number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterLotNo": "লট: {lot}",
+  "@counterLotNo": {
+    "description": "Sales return line: the lot number",
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "counterReturnSold": "বেচা: {qty} × {rate}",
+  "@counterReturnSold": {
+    "description": "Sales return line: quantity sold times the rate (rate from Money.taka)",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "counterReturnQtyLabel": "কত ফেরত",
+  "@counterReturnQtyLabel": {
+    "description": "Sales return line: the quantity box label"
+  },
+  "counterReturnReasonLabel": "কেন ফেরত",
+  "@counterReturnReasonLabel": {
+    "description": "Sales return: the reason dropdown label"
+  },
+  "counterNoteLabel": "বিবরণ (ঐচ্ছিক)",
+  "@counterNoteLabel": {
+    "description": "Counter and sales return: the free-text note label"
+  },
+  "counterConfirm": "নিশ্চিত করুন",
+  "@counterConfirm": {
+    "description": "Counter and sales return: button that shows the summary before confirming"
+  },
+  "counterReturnOtherBill": "অন্য বিল বাছুন",
+  "@counterReturnOtherBill": {
+    "description": "Sales return: back to the bill list"
+  },
+  "ordersFilter": "ফিল্টার",
+  "@ordersFilter": {
+    "description": "New order: the filter button and the filter sheet title"
+  },
+  "ordersFilterOffer": "অফার আছে",
+  "@ordersFilterOffer": {
+    "description": "New order filter: only products with an offer"
+  },
+  "ordersFilterBoughtBefore": "এই দোকান আগে নিয়েছে",
+  "@ordersFilterBoughtBefore": {
+    "description": "New order filter: only products this shop bought before"
+  },
+  "ordersSale": "বিক্রি",
+  "@ordersSale": {
+    "description": "New order: the sold quantity (column head and the label under the quantity)"
+  },
+  "ordersFree": "ফ্রি",
+  "@ordersFree": {
+    "description": "New order: the free quantity (column head and the label under it)"
+  },
+  "ordersKeypadCarton": "কার্টন",
+  "@ordersKeypadCarton": {
+    "description": "Keypad: the carton unit when the product has no name for it"
+  },
+  "ordersKeypadCartonFactor": "{one} {carton} = {factor} পিস",
+  "@ordersKeypadCartonFactor": {
+    "description": "Keypad: how many pieces one carton holds; numbers as text, English digits",
+    "placeholders": {
+      "one": {
+        "type": "String"
+      },
+      "carton": {
+        "type": "String"
+      },
+      "factor": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersKeypadPieces": "পিস",
+  "@ordersKeypadPieces": {
+    "description": "Keypad: the pieces box"
+  },
+  "ordersKeypadTotalPieces": "মোট পিস",
+  "@ordersKeypadTotalPieces": {
+    "description": "Keypad: the total pieces box"
+  },
+  "ordersKeypadLikeLast": "আগের মতো ({qty})",
+  "@ordersKeypadLikeLast": {
+    "description": "Keypad: quick button with the quantity of the last order",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersKeypadBackspace": "মুছুন",
+  "@ordersKeypadBackspace": {
+    "description": "Keypad: screen reader name of the backspace key"
+  },
+  "ordersKeypadAddToCart": "ঝুড়িতে যোগ",
+  "@ordersKeypadAddToCart": {
+    "description": "Keypad: the button that puts the quantity in the cart"
+  },
+  "ordersKeypadLineAmount": "এই লাইনে {amount}",
+  "@ordersKeypadLineAmount": {
+    "description": "Keypad: what this line comes to (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersKeypadEitherUnit": "কার্টন বা পিস যেটায় খুশি লিখুন",
+  "@ordersKeypadEitherUnit": {
+    "description": "Keypad: hint under the keys"
+  },
+  "ordersSortCatalogue": "তালিকার ক্রমে",
+  "@ordersSortCatalogue": {
+    "description": "New order sort: as the catalogue lists them"
+  },
+  "ordersSortName": "নাম ধরে",
+  "@ordersSortName": {
+    "description": "New order sort: by name"
+  },
+  "ordersSortPrice": "দাম ধরে",
+  "@ordersSortPrice": {
+    "description": "New order sort: by price"
+  },
+  "ordersFilterClearAll": "সব মুছুন",
+  "@ordersFilterClearAll": {
+    "description": "Filter sheet: clear every choice"
+  },
+  "ordersFilterShowHeading": "দেখান",
+  "@ordersFilterShowHeading": {
+    "description": "Filter sheet: heading over the show-only choices"
+  },
+  "ordersFilterSortHeading": "সাজান",
+  "@ordersFilterSortHeading": {
+    "description": "Filter sheet: heading over the sort choices"
+  },
+  "ordersFilterApply": "{n, plural, other{{count}টা পণ্য দেখান}}",
+  "@ordersFilterApply": {
+    "description": "Filter sheet: apply button; n picks the form, count is n as text (English digits in both languages)",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersConfirmTitle": "পাঠানোর আগে দেখে নিন",
+  "@ordersConfirmTitle": {
+    "description": "Order confirm sheet title"
+  },
+  "ordersConfirmStandingLoading": "হিসাব আনা হচ্ছে…",
+  "@ordersConfirmStandingLoading": {
+    "description": "Order confirm: the customer account is loading"
+  },
+  "ordersConfirmStandingOffline": "নেট নেই — হিসাব পরে দেখা যাবে",
+  "@ordersConfirmStandingOffline": {
+    "description": "Order confirm: offline, the account cannot be loaded"
+  },
+  "ordersConfirmStandingFailed": "হিসাব এখন আনা গেল না — অর্ডার তবু যাবে, হিসাব পরে দেখা যাবে",
+  "@ordersConfirmStandingFailed": {
+    "description": "Order confirm: the account could not be loaded"
+  },
+  "ordersConfirmAdvance": "জমা আছে",
+  "@ordersConfirmAdvance": {
+    "description": "Order confirm tile: money the customer has paid in advance"
+  },
+  "ordersConfirmPendingClaims": "অনুমোদনের অপেক্ষায়",
+  "@ordersConfirmPendingClaims": {
+    "description": "Order confirm tile: payments waiting for approval"
+  },
+  "ordersConfirmToPay": "দিতে হবে",
+  "@ordersConfirmToPay": {
+    "description": "Order confirm tile: what the customer must pay"
+  },
+  "ordersConfirmOverLimit": "বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু {amount} জমা না হলে ডেলিভারি হবে না। এই সীমা কেউ পার করাতে পারেন না, মালিকও না।",
+  "@ordersConfirmOverLimit": {
+    "description": "Order confirm: the order crosses the absolute credit limit (amount from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersConfirmColProduct": "পণ্য",
+  "@ordersConfirmColProduct": {
+    "description": "Order confirm table: product column"
+  },
+  "ordersConfirmColAmount": "টাকা",
+  "@ordersConfirmColAmount": {
+    "description": "Order confirm table: amount column"
+  },
+  "ordersConfirmTotal": "মোট",
+  "@ordersConfirmTotal": {
+    "description": "Order confirm table: total row"
+  },
+  "ordersConfirmRemarks": "মন্তব্য (ঐচ্ছিক)",
+  "@ordersConfirmRemarks": {
+    "description": "Order confirm: the note box label"
+  },
+  "ordersConfirmSend": "ঠিক আছে, পাঠান",
+  "@ordersConfirmSend": {
+    "description": "Order confirm: send the order"
+  },
+  "ordersConfirmBack": "ফিরে যান",
+  "@ordersConfirmBack": {
+    "description": "Order confirm: back to the cart"
+  },
+  "ordersConfirmSoon": "শীঘ্রই আসছে",
+  "@ordersConfirmSoon": {
+    "description": "Order confirm: the bank slip feature is not ready"
+  },
+  "ordersOk": "ঠিক আছে",
+  "@ordersOk": {
+    "description": "Order screens: button that closes a popup"
+  },
+  "ordersConfirmBankSlip": "ব্যাংক স্লিপ পাঠান",
+  "@ordersConfirmBankSlip": {
+    "description": "Order confirm: send a bank slip"
+  },
+  "ordersNewNoBarcodeProduct": "এই বারকোডে কোনো পণ্য নেই",
+  "@ordersNewNoBarcodeProduct": {
+    "description": "New order: the scanned barcode matched nothing"
+  },
+  "ordersNewQueued": "অর্ডার লেখা হয়েছে। নম্বর সিঙ্কের পর আসবে — এখনই বলা যাবে না।",
+  "@ordersNewQueued": {
+    "description": "New order: the order is queued on the phone"
+  },
+  "ordersNewPickCustomer": "গ্রাহক বাছুন",
+  "@ordersNewPickCustomer": {
+    "description": "New order: the customer picker and its search hint"
+  },
+  "ordersNewNoProductsTitle": "পণ্যের তালিকা এখনো সিঙ্ক হয়নি",
+  "@ordersNewNoProductsTitle": {
+    "description": "New order: no products on the phone"
+  },
+  "ordersNewNoProductsHint": "পণ্যের পর্দায় গিয়ে একবার নিচে টানুন, তারপর ফিরে আসুন।",
+  "@ordersNewNoProductsHint": {
+    "description": "New order: how to get the products"
+  },
+  "ordersNewSearchHint": "নাম বা কোড লিখুন",
+  "@ordersNewSearchHint": {
+    "description": "New order: product search hint"
+  },
+  "ordersNewScanBarcode": "বারকোড স্ক্যান",
+  "@ordersNewScanBarcode": {
+    "description": "New order: the barcode button"
+  },
+  "ordersNewChipRemove": "সরান",
+  "@ordersNewChipRemove": {
+    "description": "New order: tooltip that removes a filter chip"
+  },
+  "ordersNewNoMatch": "কোনো মিল পাওয়া যায়নি",
+  "@ordersNewNoMatch": {
+    "description": "New order: search found nothing"
+  },
+  "ordersNewInCart": "✓ ঝুড়িতে আছে",
+  "@ordersNewInCart": {
+    "description": "New order row: the product is in the cart"
+  },
+  "ordersNewNoRate": "দর জানা নেই",
+  "@ordersNewNoRate": {
+    "description": "New order row: no price for this product"
+  },
+  "ordersNewLess": "কমান",
+  "@ordersNewLess": {
+    "description": "New order row: screen reader name of the minus button"
+  },
+  "ordersNewMore": "বাড়ান",
+  "@ordersNewMore": {
+    "description": "New order row: screen reader name of the plus button"
+  },
+  "ordersNewQty": "পরিমাণ",
+  "@ordersNewQty": {
+    "description": "New order row: screen reader name of the quantity"
+  },
+  "ordersNewQtyHint": "সংখ্যা লিখুন",
+  "@ordersNewQtyHint": {
+    "description": "New order row: screen reader hint on the quantity"
+  },
+  "ordersNewSaleAmount": "বিক্রি · {amount}",
+  "@ordersNewSaleAmount": {
+    "description": "New order row: what the sold quantity comes to (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewFreeAuto": "ফ্রি · নিজে বসেছে",
+  "@ordersNewFreeAuto": {
+    "description": "New order row: the free quantity the offer put in"
+  },
+  "ordersNewBarPieces": "বিক্রি {sold} পিস · ফ্রি {free}",
+  "@ordersNewBarPieces": {
+    "description": "New order bottom bar: pieces sold and free; numbers as text, English digits",
+    "placeholders": {
+      "sold": {
+        "type": "String"
+      },
+      "free": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewSend": "পাঠান",
+  "@ordersNewSend": {
+    "description": "New order bottom bar: send the order"
+  },
+  "ordersNewBarcodeTitle": "বারকোড",
+  "@ordersNewBarcodeTitle": {
+    "description": "Barcode dialog title"
+  },
+  "ordersNewBarcodeHint": "স্ক্যান করুন বা লিখুন",
+  "@ordersNewBarcodeHint": {
+    "description": "Barcode dialog: the field hint"
+  },
+  "ordersNewDueLimit": "সীমা {amount}",
+  "@ordersNewDueLimit": {
+    "description": "New order dues card: the credit limit (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewDueHeadroom": "বাকি {amount}",
+  "@ordersNewDueHeadroom": {
+    "description": "New order dues card: what is left under the limit (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewDueDays": "{days, plural, other{{days} দিন}}",
+  "@ordersNewDueDays": {
+    "description": "New order dues card: the credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ordersNewOverAlready": "সীমা আগেই পেরিয়ে আছে — এই অর্ডারে {amount} যোগ হবে।",
+  "@ordersNewOverAlready": {
+    "description": "New order dues card: the customer was over the limit before this order",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewOverBy": "এই অর্ডারে সীমা {amount} ছাড়িয়ে যাবে।",
+  "@ordersNewOverBy": {
+    "description": "New order dues card: this order crosses the limit by amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewDueSynced": "বকেয়ার তথ্য সিঙ্ক {when}",
+  "@ordersNewDueSynced": {
+    "description": "New order dues card: when the dues were last synced (from stampText)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "counterLoadFailed": "কাউন্টার খোলা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।",
+  "@counterLoadFailed": {
+    "description": "Counter: the setup could not be loaded"
+  },
+  "counterAbsent": "সার্ভারে ফোনের কাউন্টার এখনো আসেনি — অফিসে জানান।",
+  "@counterAbsent": {
+    "description": "Counter: the server does not have the phone counter yet"
+  },
+  "counterThisUnit": "এই একক",
+  "@counterThisUnit": {
+    "description": "Counter: stands in for the unit name when the product has none"
+  },
+  "counterNoFraction": "{unit} ভগ্নাংশে বিক্রি হয় না — পূর্ণ সংখ্যা লিখুন।",
+  "@counterNoFraction": {
+    "description": "Counter: this unit takes whole numbers only",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "counterQtyDecimals": "পরিমাণ {places} দশমিকের বেশি নয় (যেমন 2.5 বা 0.125)।",
+  "@counterQtyDecimals": {
+    "description": "Counter: too many decimals in the quantity",
+    "placeholders": {
+      "places": {
+        "type": "String"
+      }
+    }
+  },
+  "counterNoWarehouseLot": "গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না।",
+  "@counterNoWarehouseLot": {
+    "description": "Counter: no warehouse, so no lots"
+  },
+  "counterPickProduct": "পণ্য বাছুন।",
+  "@counterPickProduct": {
+    "description": "Counter: no product chosen"
+  },
+  "counterPickLot": "লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।",
+  "@counterPickLot": {
+    "description": "Counter: a lot-tracked product needs a lot"
+  },
+  "counterNeedQty": "পরিমাণ দিন।",
+  "@counterNeedQty": {
+    "description": "Counter: no quantity"
+  },
+  "counterNeedRate": "দর ছাড়া বিক্রি হয় না।",
+  "@counterNeedRate": {
+    "description": "Counter: a zero rate is refused"
+  },
+  "counterDiscountRange": "ছাড় {min} থেকে {max}%।",
+  "@counterDiscountRange": {
+    "description": "Counter: the discount percent is out of range",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "counterFreeMax": "স্কিমে ফ্রি সর্বোচ্চ {max}।",
+  "@counterFreeMax": {
+    "description": "Counter: more free quantity than the scheme allows",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "counterNoWarehouseSale": "গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।",
+  "@counterNoWarehouseSale": {
+    "description": "Counter: no warehouse, so no sale"
+  },
+  "counterPickBuyer": "ক্রেতা বাছুন।",
+  "@counterPickBuyer": {
+    "description": "Counter: no buyer chosen"
+  },
+  "counterCartEmpty": "কার্টে অন্তত একটা পণ্য দিন।",
+  "@counterCartEmpty": {
+    "description": "Counter: the cart is empty"
+  },
+  "counterSold": "বিক্রি হলো",
+  "@counterSold": {
+    "description": "Counter popup title: the sale is done"
+  },
+  "counterDraftKept": "খসড়া রাখা হলো",
+  "@counterDraftKept": {
+    "description": "Counter popup title: the sale is kept as a draft"
+  },
+  "counterOpenBill": "বিলটা দেখুন",
+  "@counterOpenBill": {
+    "description": "Counter popup: open the new bill"
+  },
+  "counterSaleFailed": "বিক্রি হলো না",
+  "@counterSaleFailed": {
+    "description": "Counter popup title: the sale was refused"
+  },
+  "counterSaleFailedRetry": "বিক্রি করা গেল না। আবার চেষ্টা করুন।",
+  "@counterSaleFailedRetry": {
+    "description": "Counter: fallback when the sale failed without a reason"
+  },
+  "counterOverviewFailed": "সারাংশ আনা গেল না",
+  "@counterOverviewFailed": {
+    "description": "Counter popup title: the summary before confirming could not be loaded"
+  },
+  "counterCheckNet": "নেট আছে কি না দেখে আবার চেষ্টা করুন।",
+  "@counterCheckNet": {
+    "description": "Counter: fallback when the server could not be reached"
+  },
+  "counterMoneyTitle": "টাকা নেওয়া",
+  "@counterMoneyTitle": {
+    "description": "Counter: the money-taken sheet title and its button"
+  },
+  "counterMoneyReference": "রেফারেন্স: {ref}",
+  "@counterMoneyReference": {
+    "description": "Counter money sheet: a payment reference",
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "counterRemove": "বাদ দিন",
+  "@counterRemove": {
+    "description": "Counter: remove a payment or a cart line"
+  },
+  "counterMoneyMethod": "কীভাবে",
+  "@counterMoneyMethod": {
+    "description": "Counter money sheet: the payment method"
+  },
+  "counterMoneyAccount": "কোন খাতে",
+  "@counterMoneyAccount": {
+    "description": "Counter money sheet: the money account"
+  },
+  "counterMoneyAmount": "টাকা",
+  "@counterMoneyAmount": {
+    "description": "Counter money sheet: the amount box"
+  },
+  "counterMoneyReferenceLabel": "রেফারেন্স / লেনদেন নম্বর",
+  "@counterMoneyReferenceLabel": {
+    "description": "Counter money sheet: the reference box"
+  },
+  "counterMoneyAddAnother": "আরেকটা টাকা যোগ করুন",
+  "@counterMoneyAddAnother": {
+    "description": "Counter money sheet: add one more payment"
+  },
+  "counterMoneyTotal": "মোট নেওয়া: {amount}",
+  "@counterMoneyTotal": {
+    "description": "Counter money sheet: the total taken (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterUnreadableAmount": "অঙ্কটা পড়া গেল না — কেবল সংখ্যা লিখুন, যেমন 1250।",
+  "@counterUnreadableAmount": {
+    "description": "Counter money sheet: the amount is not a number"
+  },
+  "counterVehicleTitle": "গাড়ি ও ভাড়া",
+  "@counterVehicleTitle": {
+    "description": "Counter: the vehicle and fare sheet title and its button"
+  },
+  "counterVehicleOwner": "কার গাড়ি",
+  "@counterVehicleOwner": {
+    "description": "Counter vehicle sheet: whose vehicle"
+  },
+  "counterVehicleOwn": "আমাদের গাড়ি",
+  "@counterVehicleOwn": {
+    "description": "Counter vehicle sheet: our own vehicle"
+  },
+  "counterVehicleHired": "ভাড়ার গাড়ি",
+  "@counterVehicleHired": {
+    "description": "Counter vehicle sheet: a hired vehicle"
+  },
+  "counterVehicleCustomer": "ক্রেতার গাড়ি",
+  "@counterVehicleCustomer": {
+    "description": "Counter vehicle sheet: the buyer's vehicle"
+  },
+  "counterVehicleNone": "গাড়ি লাগবে না",
+  "@counterVehicleNone": {
+    "description": "Counter vehicle sheet: no vehicle"
+  },
+  "counterCarrier": "বাহক (পরিবহনকারী)",
+  "@counterCarrier": {
+    "description": "Counter vehicle sheet: the carrier list"
+  },
+  "counterCarrierName": "বাহকের নাম (তালিকায় না থাকলে)",
+  "@counterCarrierName": {
+    "description": "Counter vehicle sheet: a carrier typed by hand"
+  },
+  "counterFare": "ভাড়া",
+  "@counterFare": {
+    "description": "Counter vehicle sheet: the fare amount"
+  },
+  "counterFarePaidBy": "ভাড়া কে দেবে",
+  "@counterFarePaidBy": {
+    "description": "Counter vehicle sheet: who pays the fare"
+  },
+  "counterFareUs": "আমরা — আমাদের খরচ",
+  "@counterFareUs": {
+    "description": "Counter vehicle sheet: we pay, as our cost"
+  },
+  "counterFareUsAddToBill": "আমরা দেব, বিলে যোগ হবে",
+  "@counterFareUsAddToBill": {
+    "description": "Counter vehicle sheet: we pay and add it to the bill"
+  },
+  "counterFareCustomer": "ক্রেতা চালককে দেবেন",
+  "@counterFareCustomer": {
+    "description": "Counter vehicle sheet: the buyer pays the driver"
+  },
+  "counterFareNone": "ভাড়া নেই",
+  "@counterFareNone": {
+    "description": "Counter vehicle sheet: no fare"
+  },
+  "counterFareNow": "এখনই দিলাম",
+  "@counterFareNow": {
+    "description": "Counter vehicle sheet: the fare is paid now"
+  },
+  "counterFareLater": "পরে দেব",
+  "@counterFareLater": {
+    "description": "Counter vehicle sheet: the fare is paid later"
+  },
+  "counterFareAccount": "কোন খাত থেকে দিলেন",
+  "@counterFareAccount": {
+    "description": "Counter vehicle sheet: the account the fare came from"
+  },
+  "counterFareTrxId": "লেনদেন নম্বর (TrxID)",
+  "@counterFareTrxId": {
+    "description": "Counter vehicle sheet: the bank or MFS transaction id"
+  },
+  "counterFarePayer": "কে দিলেন",
+  "@counterFarePayer": {
+    "description": "Counter vehicle sheet: the person who paid the fare"
+  },
+  "counterFareCarrierLater": "বাহক — যাঁকে পরে দেবেন",
+  "@counterFareCarrierLater": {
+    "description": "Counter vehicle sheet: the carrier owed the fare"
+  },
+  "counterDeliveryTitle": "মাল কীভাবে যাবে",
+  "@counterDeliveryTitle": {
+    "description": "Counter: the delivery sheet title"
+  },
+  "counterDeliveryTakeNow": "ক্রেতা এখনই নিয়ে যাবেন",
+  "@counterDeliveryTakeNow": {
+    "description": "Counter delivery sheet: taken now"
+  },
+  "counterDeliverySendLater": "পরে পাঠানো হবে",
+  "@counterDeliverySendLater": {
+    "description": "Counter delivery sheet: sent later"
+  },
+  "counterDeliveryPickupLater": "ক্রেতা পরে এসে নেবেন",
+  "@counterDeliveryPickupLater": {
+    "description": "Counter delivery sheet: collected later"
+  },
+  "counterShipTo": "কোথায় পাঠানো হবে",
+  "@counterShipTo": {
+    "description": "Counter delivery sheet: the address"
+  },
+  "counterShipDatePick": "কবে পাঠানো হবে — তারিখ বাছুন",
+  "@counterShipDatePick": {
+    "description": "Counter delivery sheet: no date chosen yet"
+  },
+  "counterShipDate": "পাঠানোর তারিখ: {date}",
+  "@counterShipDate": {
+    "description": "Counter delivery sheet: the chosen date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDraftOpenFailed": "খসড়া খোলা গেল না",
+  "@counterDraftOpenFailed": {
+    "description": "Counter popup title: a kept draft could not be opened"
+  },
+  "counterPriceCheckPick": "দাম দেখুন — পণ্য বাছুন",
+  "@counterPriceCheckPick": {
+    "description": "Counter price check: the product picker title"
+  },
+  "counterPriceFailed": "দাম আনা গেল না",
+  "@counterPriceFailed": {
+    "description": "Counter price check: popup title when the price could not be loaded"
+  },
+  "counterPriceRate": "বিক্রয় দর: {rate} / {unit}",
+  "@counterPriceRate": {
+    "description": "Counter price check: the rate per unit (rate from Money.taka)",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceStockHidden": "বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই",
+  "@counterPriceStockHidden": {
+    "description": "Counter price check: the person may not see stock"
+  },
+  "counterPriceStock": "বিক্রয়যোগ্য মজুদ: {qty} {unit}",
+  "@counterPriceStock": {
+    "description": "Counter price check: the saleable stock",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceLot": "লট {no}",
+  "@counterPriceLot": {
+    "description": "Counter price check: a lot number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceExpiry": "মেয়াদ {date}",
+  "@counterPriceExpiry": {
+    "description": "Counter: the lot expiry date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceHave": "আছে {qty}",
+  "@counterPriceHave": {
+    "description": "Counter: the quantity left in a lot",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "counterBack": "ফিরে যান",
+  "@counterBack": {
+    "description": "Counter: close a sheet or dialog without acting"
+  },
+  "counterPriceToBill": "বিলে তুলুন",
+  "@counterPriceToBill": {
+    "description": "Counter price check: put the product in the entry row"
+  },
+  "counterReprint": "আবার ছাপা",
+  "@counterReprint": {
+    "description": "Counter: print the last bill again (button and popup title)"
+  },
+  "counterReprintNone": "এই কাউন্টারে এখনো কোনো বিল হয়নি। পুরনো বিল ছাপতে বিলের তালিকা থেকে খুলুন।",
+  "@counterReprintNone": {
+    "description": "Counter: nothing to reprint yet"
+  },
+  "counterBillTitle": "বিল · {no}",
+  "@counterBillTitle": {
+    "description": "Counter: title of the print sheet for the last bill",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterVoidBill": "বিল বাতিল",
+  "@counterVoidBill": {
+    "description": "Counter: cancel the bill being written (button, dialog and popup title)"
+  },
+  "counterVoidNothing": "বাতিল করার মতো কিছু নেই।",
+  "@counterVoidNothing": {
+    "description": "Counter: the cart is empty and no draft is open"
+  },
+  "counterVoidReason": "কেন বাতিল (বাধ্যতামূলক)",
+  "@counterVoidReason": {
+    "description": "Counter cancel dialog: the reason"
+  },
+  "counterVoidConfirm": "বাতিল করুন",
+  "@counterVoidConfirm": {
+    "description": "Counter cancel dialog: the red button"
+  },
+  "counterVoided": "বিল বাতিল হলো",
+  "@counterVoided": {
+    "description": "Counter popup title: the bill is cancelled"
+  },
+  "counterVoidedNote": "কারণসহ খাতায় লেখা থাকল।",
+  "@counterVoidedNote": {
+    "description": "Counter popup: the cancel is recorded with the reason"
+  },
+  "counterVoidFailed": "বাতিল হলো না",
+  "@counterVoidFailed": {
+    "description": "Counter popup title: the cancel failed"
+  },
+  "counterRepeatTitle": "একই বিল আগেই হয়েছে",
+  "@counterRepeatTitle": {
+    "description": "Counter: the server warns of a duplicate bill"
+  },
+  "counterRepeatTick": "জেনেশুনে আবার একই বিল করছি",
+  "@counterRepeatTick": {
+    "description": "Counter duplicate dialog: the tick that allows a repeat"
+  },
+  "counterRepeatGo": "আবার করুন",
+  "@counterRepeatGo": {
+    "description": "Counter duplicate dialog: send the same bill again"
+  },
+  "counterTitle": "সরাসরি বিক্রয়",
+  "@counterTitle": {
+    "description": "Counter screen title"
+  },
+  "counterResumeBanner": "খসড়া {no} খোলা আছে",
+  "@counterResumeBanner": {
+    "description": "Counter: a kept draft is open for editing",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterResumeNote": "নিশ্চিত করলে এই খসড়াটাই পোস্ট হবে, নতুন বিল নয়।",
+  "@counterResumeNote": {
+    "description": "Counter: confirming the open draft posts it (fe: পোস্ট, not পাকা)"
+  },
+  "counterPickBuyerTitle": "ক্রেতা বাছুন",
+  "@counterPickBuyerTitle": {
+    "description": "Counter: the buyer row and the buyer picker title"
+  },
+  "counterPriceCheck": "দাম দেখুন",
+  "@counterPriceCheck": {
+    "description": "Counter: the price check button"
+  },
+  "counterNoWarehouseBranch": "এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।",
+  "@counterNoWarehouseBranch": {
+    "description": "Counter: the branch has no active warehouse"
+  },
+  "counterWarehouseNotSet": "গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।",
+  "@counterWarehouseNotSet": {
+    "description": "Counter: no warehouse chosen yet"
+  },
+  "counterWarehouse": "গুদাম",
+  "@counterWarehouse": {
+    "description": "Counter: the warehouse dropdown"
+  },
+  "counterTerm": "শর্ত",
+  "@counterTerm": {
+    "description": "Counter: the payment terms dropdown"
+  },
+  "counterPickProductTitle": "পণ্য বাছুন",
+  "@counterPickProductTitle": {
+    "description": "Counter: the product row and the product picker title"
+  },
+  "counterLot": "লট",
+  "@counterLot": {
+    "description": "Counter: the lot dropdown"
+  },
+  "counterQty": "পরিমাণ",
+  "@counterQty": {
+    "description": "Counter: the quantity box"
+  },
+  "counterRate": "দর",
+  "@counterRate": {
+    "description": "Counter: the rate box"
+  },
+  "counterDiscountLabel": "ছাড় % (দিলে মালিকের সই লাগবে)",
+  "@counterDiscountLabel": {
+    "description": "Counter: the discount box; any discount needs the owner to sign"
+  },
+  "counterFree": "ফ্রি",
+  "@counterFree": {
+    "description": "Counter: the free quantity box"
+  },
+  "counterFreeMaxLabel": "ফ্রি (স্কিমে সর্বোচ্চ {max})",
+  "@counterFreeMaxLabel": {
+    "description": "Counter: the free quantity box when a scheme caps it",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "counterAddToCart": "কার্টে যোগ করুন",
+  "@counterAddToCart": {
+    "description": "Counter: put the entry row in the cart"
+  },
+  "counterUpdate": "হালনাগাদ করুন",
+  "@counterUpdate": {
+    "description": "Counter: save changes to a cart line"
+  },
+  "counterLineDiscount": "ছাড়: {percent}%",
+  "@counterLineDiscount": {
+    "description": "Counter cart line: its discount",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "counterLineFree": "ফ্রি: {qty}",
+  "@counterLineFree": {
+    "description": "Counter cart line: its free quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "counterEdit": "সম্পাদনা",
+  "@counterEdit": {
+    "description": "Counter cart line: edit it"
+  },
+  "counterRunningTotal": "চলতি মোট: {amount}",
+  "@counterRunningTotal": {
+    "description": "Counter: the cart total (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterMoneyTaken": "নেওয়া টাকা: {amount}",
+  "@counterMoneyTaken": {
+    "description": "Counter: the money taken so far (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDeliverySummary": "ডেলিভারি: {mode}",
+  "@counterDeliverySummary": {
+    "description": "Counter: how the goods go, in one line",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDeliverySummarySend": "পরে পাঠানো — {to} · {date}",
+  "@counterDeliverySummarySend": {
+    "description": "Counter delivery line: sent later to an address on a date",
+    "placeholders": {
+      "to": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDeliverySummaryPickup": "ক্রেতা পরে নেবেন",
+  "@counterDeliverySummaryPickup": {
+    "description": "Counter delivery line: collected later"
+  },
+  "counterDeliverySummaryNow": "এখনই নিয়ে যাবেন",
+  "@counterDeliverySummaryNow": {
+    "description": "Counter delivery line: taken now"
+  },
+  "counterFareSummary": "ভাড়া: {amount}",
+  "@counterFareSummary": {
+    "description": "Counter: the fare (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDelivery": "ডেলিভারি",
+  "@counterDelivery": {
+    "description": "Counter: the delivery button"
+  },
+  "counterReturnButton": "ফেরত",
+  "@counterReturnButton": {
+    "description": "Counter: the button that opens the sales return"
+  },
+  "counterKeepDraft": "খসড়া রাখুন",
+  "@counterKeepDraft": {
+    "description": "Counter: keep the bill as a draft"
+  },
+  "counterOpenDraft": "খসড়া খুলুন",
+  "@counterOpenDraft": {
+    "description": "Counter: open a kept draft (button and sheet title)"
+  },
+  "counterConfirmDraft": "নিশ্চিত করুন — খসড়া {no}",
+  "@counterConfirmDraft": {
+    "description": "Counter: confirm the open draft",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDraftsLoadFailed": "খসড়া আনা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।",
+  "@counterDraftsLoadFailed": {
+    "description": "Counter drafts sheet: the list could not be loaded"
+  },
+  "counterDraftLines": "{count, plural, other{{count}টি পণ্য}}",
+  "@counterDraftLines": {
+    "description": "Counter drafts sheet: how many products a draft has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "counterDraftsEmpty": "রাখা কোনো খসড়া নেই",
+  "@counterDraftsEmpty": {
+    "description": "Counter drafts sheet: empty state title"
+  },
+  "counterDraftsEmptyHint": "কাউন্টারে \"খসড়া রাখুন\" চাপলে বিল এখানে আসে।",
+  "@counterDraftsEmptyHint": {
+    "description": "Counter drafts sheet: empty state hint"
+  },
+  "counterNewBill": "নতুন বিল লিখুন",
+  "@counterNewBill": {
+    "description": "Counter drafts sheet: close it and write a new bill"
+  },
+  "booksMethodCash": "নগদ",
+  "@booksMethodCash": {
+    "description": "Payment method / money account kind: cash"
+  },
+  "booksMethodBank": "ব্যাংক",
+  "@booksMethodBank": {
+    "description": "Payment method / money account kind: bank"
+  },
+  "booksMethodCheque": "চেক",
+  "@booksMethodCheque": {
+    "description": "Payment method: cheque"
+  },
+  "booksMethodOther": "অন্য",
+  "@booksMethodOther": {
+    "description": "Payment method: anything else"
+  },
+  "booksMethodMobileBanking": "মোবাইল ব্যাংকিং",
+  "@booksMethodMobileBanking": {
+    "description": "Money account kind: mobile banking (bKash, Nagad)"
+  },
+  "booksReceiptPosted": "পোস্ট হয়েছে · খাতায় উঠেছে",
+  "@booksReceiptPosted": {
+    "description": "Money receipt state: confirmed, in the ledger (fe's word, 21 Oct 2026)"
+  },
+  "booksReceiptPending": "অপেক্ষায় — অনুমোদন বা নিশ্চিত বাকি",
+  "@booksReceiptPending": {
+    "description": "Money receipt state: draft, waiting for approval or confirmation"
+  },
+  "booksReceiptCancelled": "বাতিল",
+  "@booksReceiptCancelled": {
+    "description": "Money receipt state: cancelled"
+  },
+  "booksBalanceNone": "জের নেই",
+  "@booksBalanceNone": {
+    "description": "Principal balance: zero"
+  },
+  "booksBalanceToPay": "দিতে হবে: {amount}",
+  "@booksBalanceToPay": {
+    "description": "Principal balance: we owe them this much",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksBalanceToReceive": "পাব: {amount}",
+  "@booksBalanceToReceive": {
+    "description": "Principal balance: they owe us this much",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksRangeToday": "আজ",
+  "@booksRangeToday": {
+    "description": "Date range chip: today"
+  },
+  "booksRangeMonth": "এ মাস",
+  "@booksRangeMonth": {
+    "description": "Date range chip: this month so far"
+  },
+  "booksTotalCount": "{count, plural, other{· {count} টি}}",
+  "@booksTotalCount": {
+    "description": "Total strip: how many rows the total covers",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "booksMore": "আরও দেখুন",
+  "@booksMore": {
+    "description": "Button under a list: load the next page"
+  },
+  "booksCollectAccountsFailed": "টাকার খাতের তালিকা আনা গেল না। নেট দেখে আবার খুলুন।",
+  "@booksCollectAccountsFailed": {
+    "description": "Take a collection: the money account list did not load"
+  },
+  "booksCollectPickCustomerError": "গ্রাহক বাছুন।",
+  "@booksCollectPickCustomerError": {
+    "description": "Take a collection: error, no customer chosen"
+  },
+  "booksCollectAmountWrong": "অঙ্কটা ঠিক নয় — শূন্যের বেশি, দুই দশমিক পর্যন্ত।",
+  "@booksCollectAmountWrong": {
+    "description": "Take a collection: error, the amount typed is not a valid number"
+  },
+  "booksCollectPickAccountError": "টাকার খাত বাছুন।",
+  "@booksCollectPickAccountError": {
+    "description": "Take a collection: error, no money account chosen"
+  },
+  "booksCollectNotLanded": "আদায়টা বসেনি। আবার চেষ্টা করুন।",
+  "@booksCollectNotLanded": {
+    "description": "Take a collection: the server refused without a reason"
+  },
+  "booksCollectMayHaveLanded": "আদায়ের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।",
+  "@booksCollectMayHaveLanded": {
+    "description": "Take a collection: the network dropped after sending"
+  },
+  "booksCollectNeedsNet": "আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।",
+  "@booksCollectNeedsNet": {
+    "description": "Take a collection: no network before sending"
+  },
+  "booksCollectSendFailed": "আদায় জমা করা গেল না। আবার চেষ্টা করুন।",
+  "@booksCollectSendFailed": {
+    "description": "Take a collection: sending failed"
+  },
+  "booksCollectTitle": "টাকা আদায় নিন",
+  "@booksCollectTitle": {
+    "description": "Take a collection: screen title"
+  },
+  "booksCollectPickCustomer": "গ্রাহক বাছুন",
+  "@booksCollectPickCustomer": {
+    "description": "Take a collection: the customer tile before one is chosen"
+  },
+  "booksCollectAmountLabel": "অঙ্ক (টাকা)",
+  "@booksCollectAmountLabel": {
+    "description": "Take a collection: amount field label"
+  },
+  "booksCollectAccountLabel": "কোন খাতে",
+  "@booksCollectAccountLabel": {
+    "description": "Take a collection: money account dropdown label"
+  },
+  "booksCollectInstrumentLabel": "মাধ্যম",
+  "@booksCollectInstrumentLabel": {
+    "description": "Take a collection: instrument field label (bank or mobile wallet name)"
+  },
+  "booksCollectInstrumentHint": "যেমন bKash, Nagad, ব্যাংক জমা",
+  "@booksCollectInstrumentHint": {
+    "description": "Take a collection: instrument field hint"
+  },
+  "booksCollectTrxLabel": "লেনদেন-নম্বর (TrxID)",
+  "@booksCollectTrxLabel": {
+    "description": "Take a collection: transaction number field label"
+  },
+  "booksCollectDate": "তারিখ",
+  "@booksCollectDate": {
+    "description": "Take a collection: date row"
+  },
+  "booksCollectRemarks": "মন্তব্য (ঐচ্ছিক)",
+  "@booksCollectRemarks": {
+    "description": "Take a collection: remarks field label"
+  },
+  "booksCollectConfirmNow": "এখনই নিশ্চিত",
+  "@booksCollectConfirmNow": {
+    "description": "Take a collection: switch, confirm the receipt at once"
+  },
+  "booksCollectConfirmHint": "অনুমোদন লাগলে আদায়টা অপেক্ষায় থাকবে, ওয়েবের মতো",
+  "@booksCollectConfirmHint": {
+    "description": "Take a collection: hint under the confirm switch"
+  },
+  "booksCollectSend": "আদায় জমা দিন",
+  "@booksCollectSend": {
+    "description": "Take a collection: send button, no amount yet"
+  },
+  "booksCollectSendAmount": "আদায় জমা দিন — {amount}",
+  "@booksCollectSendAmount": {
+    "description": "Take a collection: send button with the amount",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksCollectSearchLabel": "নাম, কোড, ফোন বা পয়েন্ট",
+  "@booksCollectSearchLabel": {
+    "description": "Take a collection: customer search field label"
+  },
+  "booksCollectNoCustomer": "কোনো গ্রাহক মেলেনি।",
+  "@booksCollectNoCustomer": {
+    "description": "Take a collection: customer search found nothing"
+  },
+  "booksMoneyInListFailed": "আদায়ের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "@booksMoneyInListFailed": {
+    "description": "Collections list: loading failed"
+  },
+  "booksMoneyInListAbsent": "সার্ভারে আদায়ের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@booksMoneyInListAbsent": {
+    "description": "Collections list: the server is too old for this page"
+  },
+  "booksMoneyInTitle": "আদায়",
+  "@booksMoneyInTitle": {
+    "description": "Collections: screen title, and a receipt's title before its number loads"
+  },
+  "booksModuleSales": "বিক্রয়",
+  "@booksModuleSales": {
+    "description": "Screen bar: the module name 'Sales' above the title"
+  },
+  "booksMoneyInNew": "নতুন আদায়",
+  "@booksMoneyInNew": {
+    "description": "Collections list: the floating button to take a new collection"
+  },
+  "booksMoneyInSearchHint": "গ্রাহক, দোকান বা নম্বর খুঁজুন",
+  "@booksMoneyInSearchHint": {
+    "description": "Collections list: search field hint"
+  },
+  "booksMoneyInEmptyTitle": "এই সময়ে কোনো আদায় নেই",
+  "@booksMoneyInEmptyTitle": {
+    "description": "Collections list: empty state title"
+  },
+  "booksMoneyInEmptyHint": "তারিখ বা পদ্ধতি বদলে দেখুন।",
+  "@booksMoneyInEmptyHint": {
+    "description": "Collections list: empty state message"
+  },
+  "booksMoneyInEmptyCollect": "আদায় নিন",
+  "@booksMoneyInEmptyCollect": {
+    "description": "Collections list: empty state button for office staff"
+  },
+  "booksRefresh": "নতুন করে দেখুন",
+  "@booksRefresh": {
+    "description": "Books screens: button that loads the list again"
+  },
+  "booksMoneyInToday": "আজকের আদায়",
+  "@booksMoneyInToday": {
+    "description": "Collections list: card title when the range is today"
+  },
+  "booksShopDuesTitle": "দোকানের বকেয়া",
+  "@booksShopDuesTitle": {
+    "description": "Collections list: card of shops that owe money"
+  },
+  "booksShopDuesMore": "{count, plural, other{আরও {count}টি দোকান}}",
+  "@booksShopDuesMore": {
+    "description": "Shop dues card: how many shops are not shown",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "booksShopDuesTotal": "{count, plural, other{মোট · {count}টি দোকান}}",
+  "@booksShopDuesTotal": {
+    "description": "Shop dues card: total line over every shop",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "booksMoneyInFailed": "আদায়টা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "@booksMoneyInFailed": {
+    "description": "Money receipt: loading failed"
+  },
+  "booksPrintSend": "ছাপুন / পাঠান",
+  "@booksPrintSend": {
+    "description": "Tooltip: print or share this paper"
+  },
+  "booksMoneyInPrintTitle": "টাকার রসিদ · {no}",
+  "@booksMoneyInPrintTitle": {
+    "description": "Print sheet title for a money receipt",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "MR-0012"
+      }
+    }
+  },
+  "booksFactCustomer": "গ্রাহক",
+  "@booksFactCustomer": {
+    "description": "Fact row label: customer"
+  },
+  "booksFactDate": "তারিখ",
+  "@booksFactDate": {
+    "description": "Fact row label: date"
+  },
+  "booksFactAmount": "টাকা",
+  "@booksFactAmount": {
+    "description": "Fact row label: the money amount"
+  },
+  "booksFactMethod": "পদ্ধতি",
+  "@booksFactMethod": {
+    "description": "Fact row label: payment method"
+  },
+  "booksFactAccount": "খাত",
+  "@booksFactAccount": {
+    "description": "Fact row label: money account"
+  },
+  "booksFactNumber": "নম্বর",
+  "@booksFactNumber": {
+    "description": "Fact row label: instrument (cheque or transaction) number"
+  },
+  "booksFactInstrumentDate": "কাগজের তারিখ",
+  "@booksFactInstrumentDate": {
+    "description": "Fact row label: date on the cheque or slip"
+  },
+  "booksFactNarration": "বিবরণ",
+  "@booksFactNarration": {
+    "description": "Fact row label: narration"
+  },
+  "booksFactWrittenBy": "লিখেছেন",
+  "@booksFactWrittenBy": {
+    "description": "Fact row label: who entered it"
+  },
+  "booksMoneyInLines": "কোন বিলে কত",
+  "@booksMoneyInLines": {
+    "description": "Money receipt: heading of the bill-by-bill split"
+  },
+  "booksMoneyInAdvance": "অগ্রিম",
+  "@booksMoneyInAdvance": {
+    "description": "Money receipt: a split line not tied to any bill"
+  },
+  "booksPcTitle": "প্রিন্সিপালের কমিশন",
+  "@booksPcTitle": {
+    "description": "Principal commission: screen title"
+  },
+  "booksModuleSupplier": "সরবরাহকারী",
+  "@booksModuleSupplier": {
+    "description": "Screen bar: the module name 'Supplier' above the title"
+  },
+  "booksPcLoadFailedTitle": "তথ্য আনা গেল না",
+  "@booksPcLoadFailedTitle": {
+    "description": "Principal commission: error title"
+  },
+  "booksPcLoadFailed": "প্রিন্সিপালের কমিশন আনা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।",
+  "@booksPcLoadFailed": {
+    "description": "Principal commission: loading failed"
+  },
+  "booksPcAbsent": "সার্ভারে এই পাতা এখনো নেই, বা সরবরাহকারীর অংশ বন্ধ। সার্ভার হালনাগাদ হলে দেখা যাবে।",
+  "@booksPcAbsent": {
+    "description": "Principal commission: the server is too old or the supplier module is off"
+  },
+  "booksPcEmptyTitle": "এই চক্রে কোনো প্রিন্সিপালের কমিশন নেই",
+  "@booksPcEmptyTitle": {
+    "description": "Principal commission: empty state title"
+  },
+  "booksPcEmptyHint": "কমিশনের নিয়ম দেওয়া প্রিন্সিপাল থাকলে এখানে দেখা যাবে।",
+  "@booksPcEmptyHint": {
+    "description": "Principal commission: empty state message"
+  },
+  "booksPcGrandTotal": "{count, plural, other{সর্বমোট · {side} · {count} জন}}",
+  "@booksPcGrandTotal": {
+    "description": "Principal commission: bottom bar label; side is the net direction word (to pay / to receive)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "side": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPcPrevMonth": "আগের মাস",
+  "@booksPcPrevMonth": {
+    "description": "Principal commission: tooltip, go one month back"
+  },
+  "booksPcCurrentCycle": "চলতি চক্র",
+  "@booksPcCurrentCycle": {
+    "description": "Principal commission: the month bar when no month is chosen"
+  },
+  "booksPcNextMonth": "পরের মাস",
+  "@booksPcNextMonth": {
+    "description": "Principal commission: tooltip, go one month forward"
+  },
+  "booksPcCurrent": "চলতি",
+  "@booksPcCurrent": {
+    "description": "Principal commission: button back to the current cycle"
+  },
+  "booksPcTotalInflow": "মোট এসেছে",
+  "@booksPcTotalInflow": {
+    "description": "Principal commission totals card: total money in"
+  },
+  "booksPcTotalCommission": "কমিশন",
+  "@booksPcTotalCommission": {
+    "description": "Principal commission totals card: commission"
+  },
+  "booksPcTotalSent": "পাঠানো",
+  "@booksPcTotalSent": {
+    "description": "Principal commission totals card: money sent"
+  },
+  "booksPcInflowLine": "এসেছে {amount}",
+  "@booksPcInflowLine": {
+    "description": "Principal commission row: money in",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcCommissionLine": "কমিশন {amount}",
+  "@booksPcCommissionLine": {
+    "description": "Principal commission row: commission",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcCommissionRateLine": "কমিশন ({rate}) {amount}",
+  "@booksPcCommissionRateLine": {
+    "description": "Principal commission row: commission with its basis rate",
+    "placeholders": {
+      "rate": {
+        "type": "String",
+        "example": "2%"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcSentLine": "পাঠানো {amount}",
+  "@booksPcSentLine": {
+    "description": "Principal commission row: money sent",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcUnknown": "জানা নেই",
+  "@booksPcUnknown": {
+    "description": "Principal commission screen reader: an amount the server did not give"
+  },
+  "booksPcCycle": "চক্র: {cycle}",
+  "@booksPcCycle": {
+    "description": "Principal commission row: the cycle's dates",
+    "placeholders": {
+      "cycle": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPrincipalListFailed": "প্রিন্সিপালের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@booksPrincipalListFailed": {
+    "description": "Principals list: loading failed"
+  },
+  "booksPrincipalListAbsent": "সার্ভারে প্রিন্সিপালের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@booksPrincipalListAbsent": {
+    "description": "Principals list: the server is too old for this page"
+  },
+  "booksPrincipalTitle": "প্রিন্সিপাল",
+  "@booksPrincipalTitle": {
+    "description": "Principals: screen title, and a ledger's title before its name loads"
+  },
+  "booksPrincipalSearchHint": "নাম বা কোড খুঁজুন",
+  "@booksPrincipalSearchHint": {
+    "description": "Principals list: search field hint"
+  },
+  "booksPrincipalTotalDue": "মোট দেনা",
+  "@booksPrincipalTotalDue": {
+    "description": "Principals list: total strip, what we owe all principals"
+  },
+  "booksPrincipalNone": "কোনো প্রিন্সিপাল নেই।",
+  "@booksPrincipalNone": {
+    "description": "Principals list: empty"
+  },
+  "booksPrincipalNoPurchase": "এখনো কোনো ক্রয় নেই",
+  "@booksPrincipalNoPurchase": {
+    "description": "Principals list row: never bought from"
+  },
+  "booksPrincipalLastPurchaseOn": "শেষ ক্রয়: {date}",
+  "@booksPrincipalLastPurchaseOn": {
+    "description": "Principals list row: date of the last purchase",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "20/10/2026"
+      }
+    }
+  },
+  "booksLedgerFailed": "খাতা আনা গেল না।",
+  "@booksLedgerFailed": {
+    "description": "Principal ledger: loading failed"
+  },
+  "booksFactFullName": "পুরো নাম",
+  "@booksFactFullName": {
+    "description": "Fact row label: full name"
+  },
+  "booksFactPhone": "ফোন",
+  "@booksFactPhone": {
+    "description": "Fact row label: phone"
+  },
+  "booksFactBalance": "জের",
+  "@booksFactBalance": {
+    "description": "Fact row label: running balance"
+  },
+  "booksFactLastPurchase": "শেষ ক্রয়",
+  "@booksFactLastPurchase": {
+    "description": "Fact row label: date of the last purchase"
+  },
+  "booksLedgerEmpty": "খাতায় কোনো লেনদেন নেই।",
+  "@booksLedgerEmpty": {
+    "description": "Principal ledger: empty"
+  },
+  "booksPurchaseListFailed": "ক্রয়ের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@booksPurchaseListFailed": {
+    "description": "Purchases list: loading failed"
+  },
+  "booksPurchaseListAbsent": "সার্ভারে ক্রয়ের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@booksPurchaseListAbsent": {
+    "description": "Purchases list: the server is too old for this page"
+  },
+  "booksPurchasePrincipalsFailed": "প্রিন্সিপালের তালিকা আনা গেল না।",
+  "@booksPurchasePrincipalsFailed": {
+    "description": "Purchases list: the principal picker did not load"
+  },
+  "booksPurchaseAllPrincipals": "সব প্রিন্সিপাল",
+  "@booksPurchaseAllPrincipals": {
+    "description": "Purchases list: principal filter, every principal"
+  },
+  "booksPurchaseTitle": "ক্রয়",
+  "@booksPurchaseTitle": {
+    "description": "Purchases list: screen title"
+  },
+  "booksPurchaseBill": "ক্রয় বিল",
+  "@booksPurchaseBill": {
+    "description": "Purchase paper kind: purchase bill"
+  },
+  "booksPurchaseGoodsReceipt": "মাল গ্রহণ",
+  "@booksPurchaseGoodsReceipt": {
+    "description": "Purchase paper kind: goods received"
+  },
+  "booksPurchaseTotalBills": "মোট ক্রয়",
+  "@booksPurchaseTotalBills": {
+    "description": "Purchases list: total strip for bills"
+  },
+  "booksPurchaseTotalReceipts": "মোট গ্রহণ",
+  "@booksPurchaseTotalReceipts": {
+    "description": "Purchases list: total strip for goods receipts"
+  },
+  "booksPurchaseEmpty": "এই সময়ে কিছু নেই।",
+  "@booksPurchaseEmpty": {
+    "description": "Purchases list: empty"
+  },
+  "booksPurchasePaidDue": "পরিশোধিত {paid} · বাকি {due}",
+  "@booksPurchasePaidDue": {
+    "description": "Purchases list row: paid and outstanding on the bill",
+    "placeholders": {
+      "paid": {
+        "type": "String",
+        "example": "৳ 500.00"
+      },
+      "due": {
+        "type": "String",
+        "example": "৳ 750.00"
+      }
+    }
+  },
+  "booksPurchaseFailed": "কাগজটা আনা গেল না।",
+  "@booksPurchaseFailed": {
+    "description": "Purchase paper: loading failed"
+  },
+  "booksPurchasePrintTitle": "{kind} · {no}",
+  "@booksPurchasePrintTitle": {
+    "description": "Print sheet title for a purchase paper: kind word and number",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "booksFactPrincipal": "প্রিন্সিপাল",
+  "@booksFactPrincipal": {
+    "description": "Fact row label: principal (supplier)"
+  },
+  "booksFactSupplierNo": "তাদের কাগজের নম্বর",
+  "@booksFactSupplierNo": {
+    "description": "Fact row label: the supplier's own paper number"
+  },
+  "booksFactTotal": "মোট",
+  "@booksFactTotal": {
+    "description": "Fact row label: total"
+  },
+  "booksFactPaid": "পরিশোধিত",
+  "@booksFactPaid": {
+    "description": "Fact row label: paid"
+  },
+  "booksFactDue": "বাকি",
+  "@booksFactDue": {
+    "description": "Fact row label: still owed"
+  },
+  "booksPurchaseProducts": "পণ্য",
+  "@booksPurchaseProducts": {
+    "description": "Purchase paper: heading of the product lines"
+  },
+  "booksPurchaseQty": "পরিমাণ {qty}",
+  "@booksPurchaseQty": {
+    "description": "Purchase line: quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPurchaseFree": "ফ্রি {qty}",
+  "@booksPurchaseFree": {
+    "description": "Purchase line: free quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPurchaseLot": "লট {lot}",
+  "@booksPurchaseLot": {
+    "description": "Purchase line: lot/batch",
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPurchaseRate": "দর {amount}",
+  "@booksPurchaseRate": {
+    "description": "Purchase line: buying rate",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersTitle": "গ্রাহক",
+  "@customersTitle": {
+    "description": "Customers: screen title, and a customer screen's title when the customer is missing"
+  },
+  "customersDetailGone": "এই গ্রাহক আর এই ফোনে নেই — সিঙ্ক করে দেখুন।",
+  "@customersDetailGone": {
+    "description": "Customer detail: the customer dropped out of the local catalogue"
+  },
+  "customersOpenLedgerHint": "খাতা খুলুন",
+  "@customersOpenLedgerHint": {
+    "description": "Screen reader tap hint / button: open the customer's ledger"
+  },
+  "customersDetailOrders": "এই দোকানের অর্ডার ({count})",
+  "@customersDetailOrders": {
+    "description": "Customer detail: heading of the shop's synced orders",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDetailNoOrders": "এই ফোনে এই দোকানের কোনো অর্ডার সিঙ্ক হয়নি।",
+  "@customersDetailNoOrders": {
+    "description": "Customer detail: no synced orders"
+  },
+  "customersDetailNoNumber": "নম্বর নেই",
+  "@customersDetailNoNumber": {
+    "description": "Customer detail: an order without a document number"
+  },
+  "customersDetailInactive": "⚠️ এই গ্রাহক নিষ্ক্রিয়",
+  "@customersDetailInactive": {
+    "description": "Customer detail: warning, inactive customer"
+  },
+  "customersDetailLimit": "সীমা {amount}",
+  "@customersDetailLimit": {
+    "description": "Customer detail due card: credit limit amount",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 50,000.00"
+      }
+    }
+  },
+  "customersDetailCreditDays": "{days, plural, other{{days} দিনের শর্ত}}",
+  "@customersDetailCreditDays": {
+    "description": "Customer detail due card: credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDetailSynced": "সিঙ্ক {stamp}",
+  "@customersDetailSynced": {
+    "description": "Customer detail due card: when the due figure last synced",
+    "placeholders": {
+      "stamp": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDetailCall": "কল করুন",
+  "@customersDetailCall": {
+    "description": "Customer detail: dial the shop"
+  },
+  "customersDetailAddress": "ঠিকানা",
+  "@customersDetailAddress": {
+    "description": "Customer detail: open the address in maps"
+  },
+  "customersDetailLedger": "খাতা দেখুন",
+  "@customersDetailLedger": {
+    "description": "Customer detail: open the shop's ledger"
+  },
+  "customersDetailCredit": "বাকির অবস্থা",
+  "@customersDetailCredit": {
+    "description": "Customer detail: open the credit page"
+  },
+  "customersDepositNotice": "জমার বিজ্ঞপ্তি",
+  "@customersDepositNotice": {
+    "description": "Deposit notification: button and screen title"
+  },
+  "customersDetailNewOrder": "নতুন অর্ডার",
+  "@customersDetailNewOrder": {
+    "description": "Customer detail: start a new order"
+  },
+  "customersLedgerFailed": "খাতা আনা গেল না।",
+  "@customersLedgerFailed": {
+    "description": "Customer ledger: loading failed"
+  },
+  "customersLedgerEmpty": "এই দোকানের খাতায় এখনো কোনো লেনদেন নেই।",
+  "@customersLedgerEmpty": {
+    "description": "Customer ledger: empty"
+  },
+  "customersLedgerMore": "আরও আগের লেনদেন",
+  "@customersLedgerMore": {
+    "description": "Customer ledger: load older rows"
+  },
+  "customersLedgerTitle": "খাতা",
+  "@customersLedgerTitle": {
+    "description": "Customer ledger: title before the shop's name loads"
+  },
+  "customersLedgerHasDue": "বাকি আছে",
+  "@customersLedgerHasDue": {
+    "description": "Customer ledger header: the shop owes this much"
+  },
+  "customersLedgerHasAdvance": "আগাম জমা আছে",
+  "@customersLedgerHasAdvance": {
+    "description": "Customer ledger header: the shop has paid ahead"
+  },
+  "customersLedgerSettled": "হিসাব মিলে আছে",
+  "@customersLedgerSettled": {
+    "description": "Customer ledger header: nothing owed either way"
+  },
+  "customersLedgerCode": "কোড {code}",
+  "@customersLedgerCode": {
+    "description": "Customer ledger header: the shop's code",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "customersLedgerOpening": "শুরুর জের",
+  "@customersLedgerOpening": {
+    "description": "Customer ledger statement: opening balance"
+  },
+  "customersLedgerGoodsTotal": "মোট মাল নিয়েছেন",
+  "@customersLedgerGoodsTotal": {
+    "description": "Customer ledger statement: total debits (goods taken)"
+  },
+  "customersLedgerPaidTotal": "মোট টাকা দিয়েছেন",
+  "@customersLedgerPaidTotal": {
+    "description": "Customer ledger statement: total credits (money paid)"
+  },
+  "customersLedgerClosing": "শেষের জের",
+  "@customersLedgerClosing": {
+    "description": "Customer ledger statement: closing balance"
+  },
+  "customersLedgerSpokenGoods": "মাল {amount}",
+  "@customersLedgerSpokenGoods": {
+    "description": "Screen reader: a ledger row where goods were taken",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerSpokenPaid": "জমা {amount}",
+  "@customersLedgerSpokenPaid": {
+    "description": "Screen reader: a ledger row where money was paid",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerTookGoods": "মাল নিয়েছেন",
+  "@customersLedgerTookGoods": {
+    "description": "Customer ledger row title: goods taken (due went up)"
+  },
+  "customersLedgerPaidMoney": "টাকা দিয়েছেন",
+  "@customersLedgerPaidMoney": {
+    "description": "Customer ledger row title: money paid (due went down)"
+  },
+  "customersLedgerRowSettled": "মিলে গেছে",
+  "@customersLedgerRowSettled": {
+    "description": "Customer ledger row: balance after the row is zero"
+  },
+  "customersLedgerRowDue": "বাকি {amount}",
+  "@customersLedgerRowDue": {
+    "description": "Customer ledger row: balance after the row, shop owes",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerRowCredit": "জমা {amount}",
+  "@customersLedgerRowCredit": {
+    "description": "Customer ledger row: balance after the row, shop is in credit",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerNoDate": "তারিখ নেই",
+  "@customersLedgerNoDate": {
+    "description": "Customer ledger: month heading for rows without a date"
+  },
+  "customersPickFromList": "বাঁয়ের তালিকা থেকে একজন গ্রাহক বাছুন",
+  "@customersPickFromList": {
+    "description": "Customers two-pane: nothing chosen yet"
+  },
+  "customersSearchHint": "নাম বা মোবাইল দিয়ে খুঁজুন",
+  "@customersSearchHint": {
+    "description": "Customers / due list: search field hint"
+  },
+  "customersTotalDue": "মোট বকেয়া",
+  "@customersTotalDue": {
+    "description": "Customers list: total strip of what the shown customers owe"
+  },
+  "customersNoneSynced": "এখনো কোনো গ্রাহক সিঙ্ক হয়নি",
+  "@customersNoneSynced": {
+    "description": "Customers list: empty catalogue"
+  },
+  "customersListFailed": "গ্রাহকের তালিকা আনা যায়নি",
+  "@customersListFailed": {
+    "description": "Customers list: the pull failed"
+  },
+  "customersPullToRetry": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@customersPullToRetry": {
+    "description": "Customers list: hint under the empty or failed state"
+  },
+  "customersNoMatch": "কোনো মিল পাওয়া যায়নি",
+  "@customersNoMatch": {
+    "description": "Customers / due list: search found nothing"
+  },
+  "customersClearFilters": "ফিল্টার মুছে আবার দেখুন।",
+  "@customersClearFilters": {
+    "description": "Customers / due list: search found nothing while filters are on"
+  },
+  "customersCreditDaysShort": "{days, plural, other{{days} দিন}}",
+  "@customersCreditDaysShort": {
+    "description": "Customers list row: credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDueTitle": "বকেয়া তালিকা",
+  "@customersDueTitle": {
+    "description": "Due list: screen title"
+  },
+  "customersDueListFailed": "বকেয়ার তালিকা আনা যায়নি",
+  "@customersDueListFailed": {
+    "description": "Due list: loading failed"
+  },
+  "customersDueNone": "কারো কাছে বকেয়া নেই",
+  "@customersDueNone": {
+    "description": "Due list: empty"
+  },
+  "customersDueNoneHint": "সিঙ্ক হয়নি মনে হলে নতুন করে দেখুন।",
+  "@customersDueNoneHint": {
+    "description": "Due list: hint under the empty state"
+  },
+  "customersRefresh": "নতুন করে দেখুন",
+  "@customersRefresh": {
+    "description": "Due list: button that loads again"
+  },
+  "customersDueWord": "বকেয়া",
+  "@customersDueWord": {
+    "description": "Due list row: second line when the customer has no code"
+  },
+  "customersDueWithCode": "{code} · বকেয়া",
+  "@customersDueWithCode": {
+    "description": "Due list row: second line with the customer's code",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositLoadFailed": "তথ্য আনা যায়নি।",
+  "@customersDepositLoadFailed": {
+    "description": "Deposit notification: loading failed"
+  },
+  "customersDepositAbsent": "সার্ভারে এই সুবিধা এখনো আসেনি — অফিসে জানান।",
+  "@customersDepositAbsent": {
+    "description": "Deposit notification: the server is too old"
+  },
+  "customersDepositNeedAmount": "টাকার অঙ্ক লিখুন।",
+  "@customersDepositNeedAmount": {
+    "description": "Deposit notification: error, no amount"
+  },
+  "customersDepositNeedSlip": "ব্যাংকে জমায় স্লিপের ছবি দিতেই হবে।",
+  "@customersDepositNeedSlip": {
+    "description": "Deposit notification: error, bank deposit without a slip photo"
+  },
+  "customersDepositShareUnreadable": "বিল {no}-এর ভাগ পড়া গেল না — কেবল সংখ্যা লিখুন।",
+  "@customersDepositShareUnreadable": {
+    "description": "Deposit notification: error, a bill share is not a number",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      }
+    }
+  },
+  "customersDepositShareOverDue": "বিল {no}-এর বকেয়া {amount} — তার বেশি এই বিলে দেখানো যায় না।",
+  "@customersDepositShareOverDue": {
+    "description": "Deposit notification: error, a bill share is more than the bill's due",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositSharesOverAmount": "বিলগুলোতে মোট {shared}, অথচ জমা {amount} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।",
+  "@customersDepositSharesOverAmount": {
+    "description": "Deposit notification: error, the shares add up to more than the deposit",
+    "placeholders": {
+      "shared": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositSent": "পাঠানো হয়েছে — হিসাবরক্ষক মিলিয়ে দেখবেন। ততক্ষণ বকেয়া কমবে না।",
+  "@customersDepositSent": {
+    "description": "Deposit notification: sent"
+  },
+  "customersDepositSendFailed": "পাঠানো যায়নি। আবার চেষ্টা করুন।",
+  "@customersDepositSendFailed": {
+    "description": "Deposit notification: sending failed"
+  },
+  "customersDepositIntro": "হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।",
+  "@customersDepositIntro": {
+    "description": "Deposit notification: line under the customer's name"
+  },
+  "customersDepositAmount": "টাকা",
+  "@customersDepositAmount": {
+    "description": "Deposit notification: amount field label"
+  },
+  "customersDepositDate": "জমার তারিখ",
+  "@customersDepositDate": {
+    "description": "Deposit notification: date row"
+  },
+  "customersDepositBank": "ব্যাংক",
+  "@customersDepositBank": {
+    "description": "Deposit notification: method, bank"
+  },
+  "customersDepositMfs": "বিকাশ/নগদ",
+  "@customersDepositMfs": {
+    "description": "Deposit notification: method, mobile wallet (bKash or Nagad)"
+  },
+  "customersDepositCash": "নগদ",
+  "@customersDepositCash": {
+    "description": "Deposit notification: method, cash"
+  },
+  "customersDepositWhichBank": "কোন ব্যাংকে",
+  "@customersDepositWhichBank": {
+    "description": "Deposit notification: bank account dropdown"
+  },
+  "customersDepositReference": "স্লিপ / লেনদেন নম্বর",
+  "@customersDepositReference": {
+    "description": "Deposit notification: reference field label"
+  },
+  "customersDepositAgainstBills": "কোন বিলের বিপরীতে (ঐচ্ছিক)",
+  "@customersDepositAgainstBills": {
+    "description": "Deposit notification: heading of the bill shares"
+  },
+  "customersDepositBillsHint": "বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।",
+  "@customersDepositBillsHint": {
+    "description": "Deposit notification: explanation of bill shares"
+  },
+  "customersDepositBillDue": "{no} · বকেয়া {amount}",
+  "@customersDepositBillDue": {
+    "description": "Deposit notification: one bill and its due",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositOnThisBill": "এই বিলে",
+  "@customersDepositOnThisBill": {
+    "description": "Deposit notification: hint of a bill share field"
+  },
+  "customersDepositNote": "আর কিছু বলার",
+  "@customersDepositNote": {
+    "description": "Deposit notification: note field label"
+  },
+  "customersDepositTakeSlip": "স্লিপের ছবি তুলুন",
+  "@customersDepositTakeSlip": {
+    "description": "Deposit notification: camera button"
+  },
+  "customersDepositSlipTaken": "ছবি নেওয়া হয়েছে — আবার তুলুন",
+  "@customersDepositSlipTaken": {
+    "description": "Deposit notification: camera button after a photo"
+  },
+  "customersDepositSend": "পাঠান",
+  "@customersDepositSend": {
+    "description": "Deposit notification: send button"
+  },
+  "customersDepositHistory": "আগের বিজ্ঞপ্তি ({count})",
+  "@customersDepositHistory": {
+    "description": "Deposit notification: heading of earlier notifications",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDepositHistoryDate": "তারিখ {date}",
+  "@customersDepositHistoryDate": {
+    "description": "Deposit history row: date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositHistoryBy": "পাঠালেন {name}",
+  "@customersDepositHistoryBy": {
+    "description": "Deposit history row: who sent it",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositHistoryRef": "নম্বর {reference}",
+  "@customersDepositHistoryRef": {
+    "description": "Deposit history row: slip or transaction number",
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositHistoryBill": "বিল {no} · {amount}",
+  "@customersDepositHistoryBill": {
+    "description": "Deposit history row: share on one bill",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositHistoryReason": "কারণ: {reason}",
+  "@customersDepositHistoryReason": {
+    "description": "Deposit history row: why it was refused",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositReasonNotGiven": "জানানো হয়নি",
+  "@customersDepositReasonNotGiven": {
+    "description": "Deposit history row: refused without a reason"
+  },
+  "salesDeskComingSoonTitle": "শীঘ্রই আসছে",
+  "@salesDeskComingSoonTitle": {
+    "description": "Coming-soon screen: bar title when none is given, and the empty-state title"
+  },
+  "salesDeskComingSoonMessage": "এই পর্দাটা এখনো তৈরি হচ্ছে। তৈরি হলে এখানেই খুলবে।",
+  "@salesDeskComingSoonMessage": {
+    "description": "Coming-soon screen: the message under the title"
+  },
+  "deliveriesTodayLoadFailed": "ডেলিভারির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@deliveriesTodayLoadFailed": {
+    "description": "Today's deliveries: the list could not be loaded"
+  },
+  "deliveriesTodayNotOnServer": "সার্ভারে আজকের ডেলিভারি এখনো আসেনি — অফিসে জানান।",
+  "@deliveriesTodayNotOnServer": {
+    "description": "Today's deliveries: the server does not have this door yet"
+  },
+  "deliveriesTodayMoreFailed": "পরের পাতা আনা গেল না। আবার চেষ্টা করুন।",
+  "@deliveriesTodayMoreFailed": {
+    "description": "Today's deliveries: the next page could not be loaded"
+  },
+  "deliveriesTodayPartlyDelivered": "{no}: আংশিক পৌঁছেছে — কম আর ভাঙা মাল ফেরতের কাগজে উঠেছে।",
+  "@deliveriesTodayPartlyDelivered": {
+    "description": "Today's deliveries: notice after a partial hand-over; no is the challan number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayDelivered": "{no}: পৌঁছেছে — {receiver} বুঝে নিলেন।",
+  "@deliveriesTodayDelivered": {
+    "description": "Today's deliveries: notice after a full hand-over; no is the challan number, receiver the person's name",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      },
+      "receiver": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodaySaveFailed": "পৌঁছানো লেখা গেল না। আবার চেষ্টা করুন।",
+  "@deliveriesTodaySaveFailed": {
+    "description": "Today's deliveries: the hand-over could not be saved"
+  },
+  "deliveriesTodayTitle": "আজকের ডেলিভারি",
+  "@deliveriesTodayTitle": {
+    "description": "Today's deliveries: screen title"
+  },
+  "deliveriesTodayTotalLabel": "পথে মোট চালান",
+  "@deliveriesTodayTotalLabel": {
+    "description": "Today's deliveries: total strip label (all pages)"
+  },
+  "deliveriesTodayTotalValue": "{count} টি",
+  "@deliveriesTodayTotalValue": {
+    "description": "Today's deliveries: total strip value, the number of challans",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayEmpty": "পথে কোনো চালান নেই।",
+  "@deliveriesTodayEmpty": {
+    "description": "Today's deliveries: nothing on the road"
+  },
+  "deliveriesTodayVehicle": "গাড়ি {vehicle}",
+  "@deliveriesTodayVehicle": {
+    "description": "Today's deliveries: the vehicle on a card",
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayDriver": "চালক {driver}",
+  "@deliveriesTodayDriver": {
+    "description": "Today's deliveries: the driver on a card",
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayHandOver": "বুঝিয়ে দিন",
+  "@deliveriesTodayHandOver": {
+    "description": "Today's deliveries: button that records the hand-over to the buyer"
+  },
+  "deliveriesTodayMore": "আরও দেখুন",
+  "@deliveriesTodayMore": {
+    "description": "Today's deliveries: load the next page"
+  },
+  "routeMyWeekday": "{day, select, mon{সোমবার} tue{মঙ্গলবার} wed{বুধবার} thu{বৃহস্পতিবার} fri{শুক্রবার} sat{শনিবার} other{রবিবার}}",
+  "@routeMyWeekday": {
+    "description": "My route: the weekday on the day button (mon … sat, other = Sunday)",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyLoadFailed": "রুট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@routeMyLoadFailed": {
+    "description": "My route: the route could not be loaded"
+  },
+  "routeMyNotOnServer": "সার্ভারে রুটের দরজা এখনো আসেনি — অফিসে জানান।",
+  "@routeMyNotOnServer": {
+    "description": "My route: the server does not have this door yet"
+  },
+  "routeMyPickDay": "কোন দিনের রুট",
+  "@routeMyPickDay": {
+    "description": "My route: date picker heading"
+  },
+  "routeMyTitle": "আজকের রুট",
+  "@routeMyTitle": {
+    "description": "My route: screen title"
+  },
+  "routeMyErrorTitle": "আনা গেল না",
+  "@routeMyErrorTitle": {
+    "description": "My route: error card title"
+  },
+  "routeMyNoRouteTitle": "এই দিনে কোনো রুট নেই",
+  "@routeMyNoRouteTitle": {
+    "description": "My route: empty state title"
+  },
+  "routeMyNoRouteMessage": "সাপ্তাহিক ছকে এই দিনে আপনার নামে রুট বসানো নেই — অফিসে জানান।",
+  "@routeMyNoRouteMessage": {
+    "description": "My route: empty state message"
+  },
+  "routeMyMonthSales": "এ মাসে বিক্রি: {amount}",
+  "@routeMyMonthSales": {
+    "description": "My route: a shop's sales this month; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyMonthCollections": "এ মাসে আদায়: {amount}",
+  "@routeMyMonthCollections": {
+    "description": "My route: a shop's collections this month; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyOutstanding": "বকেয়া: {amount}",
+  "@routeMyOutstanding": {
+    "description": "My route: what the shop owes; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyMoreShops": "আরও দোকান",
+  "@routeMyMoreShops": {
+    "description": "My route: load the next page of shops"
+  },
+  "salesDashboardsListLoadFailed": "ড্যাশবোর্ডের তালিকা আনা গেল না।",
+  "@salesDashboardsListLoadFailed": {
+    "description": "Business dashboards: the list could not be loaded"
+  },
+  "salesDashboardsTitle": "ব্যবসার ড্যাশবোর্ড",
+  "@salesDashboardsTitle": {
+    "description": "Business dashboards: screen title"
+  },
+  "salesDashboardsModule": "ড্যাশবোর্ড",
+  "@salesDashboardsModule": {
+    "description": "Dashboards: the module name in the bar crumbs"
+  },
+  "salesDashboardsNoneTitle": "আপনার জন্য কোনো ড্যাশবোর্ড নেই",
+  "@salesDashboardsNoneTitle": {
+    "description": "Business dashboards: empty state title"
+  },
+  "salesDashboardsNoneMessage": "কোনো মডিউলের ড্যাশবোর্ড দেখার অনুমতি পেলে এখানে আসবে।",
+  "@salesDashboardsNoneMessage": {
+    "description": "Business dashboards: empty state message"
+  },
+  "salesDashboardsNoKey": "চাবি নেই",
+  "@salesDashboardsNoKey": {
+    "description": "Dashboards: a figure this person has no key (permission) to see, short form"
+  },
+  "salesDashboardsLoadFailed": "ড্যাশবোর্ড আনা গেল না।",
+  "@salesDashboardsLoadFailed": {
+    "description": "Module dashboard: could not be loaded"
+  },
+  "salesDashboardsEmptyTitle": "এই ড্যাশবোর্ডে এখনো কিছু নেই",
+  "@salesDashboardsEmptyTitle": {
+    "description": "Module dashboard: empty state title"
+  },
+  "salesDashboardsEmptyMessage": "কাজ শুরু হলে বা অনুমতি পেলে সংখ্যাগুলো এখানে আসবে।",
+  "@salesDashboardsEmptyMessage": {
+    "description": "Module dashboard: empty state message"
+  },
+  "salesDashboardsReports": "এই মডিউলের রিপোর্ট",
+  "@salesDashboardsReports": {
+    "description": "Module dashboard: button that opens the module reports"
+  },
+  "salesDashboardsReportsTitle": "{name} — রিপোর্ট",
+  "@salesDashboardsReportsTitle": {
+    "description": "Module dashboard: the reports screen title; name is the dashboard name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDashboardsOverviewLoadFailed": "বিক্রয়ের হালচাল আনা গেল না।",
+  "@salesDashboardsOverviewLoadFailed": {
+    "description": "Sales overview: could not be loaded"
+  },
+  "salesDashboardsOverviewTitle": "বিক্রয়ের হালচাল",
+  "@salesDashboardsOverviewTitle": {
+    "description": "Sales overview: screen title"
+  },
+  "salesDashboardsSalesModule": "বিক্রয়",
+  "@salesDashboardsSalesModule": {
+    "description": "Sales overview: the module name in the bar crumbs"
+  },
+  "salesDashboardsOverviewNoAccess": "এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।",
+  "@salesDashboardsOverviewNoAccess": {
+    "description": "Sales overview: every figure is hidden from this person"
+  },
+  "salesDashboardsNoKeyLong": "চাবি নেই — দেখার অনুমতি লাগে",
+  "@salesDashboardsNoKeyLong": {
+    "description": "Dashboards: a hidden figure on a stat card"
+  },
+  "salesDashboardsRefresh": "নতুন করে দেখুন",
+  "@salesDashboardsRefresh": {
+    "description": "Dashboards: empty-state button that loads again"
+  },
+  "salesDashboardsGrandTotal": "সর্বমোট",
+  "@salesDashboardsGrandTotal": {
+    "description": "Dashboards: the total row under a short list"
+  },
+  "quotationsCompareListLoadFailed": "উদ্ধৃতির তালিকা আনা গেল না।",
+  "@quotationsCompareListLoadFailed": {
+    "description": "Quotation compare: the list to pick from could not be loaded"
+  },
+  "quotationsCompareLoadFailed": "তুলনা আনা গেল না।",
+  "@quotationsCompareLoadFailed": {
+    "description": "Quotation compare: the comparison could not be loaded"
+  },
+  "quotationsCompareNotOnServer": "তুলনা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@quotationsCompareNotOnServer": {
+    "description": "Quotation compare: the server does not have this door yet"
+  },
+  "quotationsCompareTitle": "উদ্ধৃতির তুলনা",
+  "@quotationsCompareTitle": {
+    "description": "Quotation compare: screen title"
+  },
+  "quotationsCompareRepick": "আবার বাছুন",
+  "@quotationsCompareRepick": {
+    "description": "Quotation compare: tooltip of the button that goes back to the picker"
+  },
+  "quotationsCompareNeedTwoTitle": "তুলনার জন্য অন্তত দুটো লাগে",
+  "@quotationsCompareNeedTwoTitle": {
+    "description": "Quotation compare: only one quotation came back"
+  },
+  "quotationsCompareNeedTwoMessage": "আরেকটা উদ্ধৃতি বাছুন।",
+  "@quotationsCompareNeedTwoMessage": {
+    "description": "Quotation compare: only one quotation came back, the hint"
+  },
+  "quotationsCompareNoChoices": "বাছার মতো কোনো উদ্ধৃতি নেই",
+  "@quotationsCompareNoChoices": {
+    "description": "Quotation compare: nothing to pick from"
+  },
+  "quotationsComparePickHint": "দুই থেকে {max}টা উদ্ধৃতি বাছুন — প্রথমটা ভিত্তি",
+  "@quotationsComparePickHint": {
+    "description": "Quotation compare: the picker hint; max is the most that can be picked",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsCompareGo": "{count, plural, other{{count}টা তুলনা করুন}}",
+  "@quotationsCompareGo": {
+    "description": "Quotation compare: the button, with how many are picked",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quotationsCompareRevision": " (সং {revision})",
+  "@quotationsCompareRevision": {
+    "description": "Quotation compare: after the quotation number when it is a revision",
+    "placeholders": {
+      "revision": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsRevisionsLoadFailed": "সংস্করণের তালিকা আনা গেল না।",
+  "@quotationsRevisionsLoadFailed": {
+    "description": "Quotation revisions: the list could not be loaded"
+  },
+  "quotationsRevisionsNotOnServer": "এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@quotationsRevisionsNotOnServer": {
+    "description": "Quotation revisions: the server does not have this door yet"
+  },
+  "quotationsRevisionsTitle": "উদ্ধৃতির সংস্করণ",
+  "@quotationsRevisionsTitle": {
+    "description": "Quotation revisions: screen title"
+  },
+  "quotationsRevisionsSearch": "নম্বর বা দোকানের নাম",
+  "@quotationsRevisionsSearch": {
+    "description": "Quotation revisions: search hint"
+  },
+  "quotationsRevisionsEmptyTitle": "কোনো উদ্ধৃতির সংস্করণ নেই",
+  "@quotationsRevisionsEmptyTitle": {
+    "description": "Quotation revisions: empty state title"
+  },
+  "quotationsRevisionsEmptyMessage": "নিচে টেনে আবার দেখুন।",
+  "@quotationsRevisionsEmptyMessage": {
+    "description": "Quotation revisions: empty state message"
+  },
+  "quotationsRevisionsCount": "{count, plural, other{{count}টা সংস্করণ}}",
+  "@quotationsRevisionsCount": {
+    "description": "Quotation revisions: how many revisions a family has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quotationsRevisionsMore": "আরও",
+  "@quotationsRevisionsMore": {
+    "description": "Quotation revisions: load the next page"
+  },
+  "salesDeskNothing": "কিছু নেই",
+  "@salesDeskNothing": {
+    "description": "Sales desk pages: the default empty title"
+  },
+  "salesDeskLoadFailed": "আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@salesDeskLoadFailed": {
+    "description": "Sales desk pages: the page could not be loaded"
+  },
+  "salesDeskNotOnServer": "সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।",
+  "@salesDeskNotOnServer": {
+    "description": "Sales desk pages: the server does not have this door yet"
+  },
+  "salesDeskErrorTitle": "আনা গেল না",
+  "@salesDeskErrorTitle": {
+    "description": "Sales desk pages: error card title"
+  },
+  "salesDeskDepotTitle": "ডিপোর যাচাই",
+  "@salesDeskDepotTitle": {
+    "description": "Depot check: screen title"
+  },
+  "salesDeskDepotEmpty": "যাচাইয়ের অপেক্ষায় কিছু নেই",
+  "@salesDeskDepotEmpty": {
+    "description": "Depot check: empty title"
+  },
+  "salesDeskDepotSearch": "নম্বর, দোকানের নাম বা কোড",
+  "@salesDeskDepotSearch": {
+    "description": "Depot check: search hint"
+  },
+  "salesDeskDepotTotal": "যাচাইয়ের অপেক্ষায় DO",
+  "@salesDeskDepotTotal": {
+    "description": "Depot check: total strip label; DO is a delivery order"
+  },
+  "salesDeskDepotWebNote": "ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।",
+  "@salesDeskDepotWebNote": {
+    "description": "Depot check: note that the next step is on the web"
+  },
+  "salesDeskDepotLine": "{date} · {lines, plural, other{{lines}টি পণ্য}} · {status}",
+  "@salesDeskDepotLine": {
+    "description": "Depot check: the second line of an order card; status comes from the server",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "lines": {
+        "type": "int"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskDepotHeld": "ধরে রাখা বিক্রয় আদেশ",
+  "@salesDeskDepotHeld": {
+    "description": "Depot check: heading of the held sales orders"
+  },
+  "salesDeskPrintTitle": "না ছাপা কাগজ",
+  "@salesDeskPrintTitle": {
+    "description": "Print queue: screen title"
+  },
+  "salesDeskPrintEmpty": "সব কাগজ ছাপা হয়েছে",
+  "@salesDeskPrintEmpty": {
+    "description": "Print queue: empty title"
+  },
+  "salesDeskTotalCount": "মোট {count} টি",
+  "@salesDeskTotalCount": {
+    "description": "Sales desk: how many rows in all",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskPrintPaper": "কাগজ: {paper}",
+  "@salesDeskPrintPaper": {
+    "description": "Print queue: which paper; paper comes from the server",
+    "placeholders": {
+      "paper": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskPrintReason": "কারণ: {reason}",
+  "@salesDeskPrintReason": {
+    "description": "Print queue: why the print failed; reason comes from the server",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskPrintSettled": "ছাপা হয়েছে বলে সরানো হলো।",
+  "@salesDeskPrintSettled": {
+    "description": "Print queue: snack bar after marking a job printed by hand"
+  },
+  "salesDeskPrintSettleFailed": "সরানো গেল না।",
+  "@salesDeskPrintSettleFailed": {
+    "description": "Print queue: marking printed failed"
+  },
+  "salesDeskPrintSettle": "হাতে ছাপা হলো",
+  "@salesDeskPrintSettle": {
+    "description": "Print queue: button that marks a job printed by hand"
+  },
+  "salesDeskDeliveryTitle": "ডেলিভারির কাজ",
+  "@salesDeskDeliveryTitle": {
+    "description": "Delivery performance: screen title"
+  },
+  "salesDeskDeliveryLate": "দেরির চালান · {count} টি",
+  "@salesDeskDeliveryLate": {
+    "description": "Delivery performance: heading of the late challans, with their count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskDeliveryDaysLate": "{days} দিন দেরি",
+  "@salesDeskDeliveryDaysLate": {
+    "description": "Delivery performance: how many days late",
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskDeliveryPromised": "কথা ছিল {promised} · পৌঁছেছে {arrived}",
+  "@salesDeskDeliveryPromised": {
+    "description": "Delivery performance: the promised and the arrival date",
+    "placeholders": {
+      "promised": {
+        "type": "String"
+      },
+      "arrived": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskDeliveryOrder": "আদেশ {no}",
+  "@salesDeskDeliveryOrder": {
+    "description": "Delivery performance: the order number of a late challan",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskPipelineTitle": "পাইপলাইন",
+  "@salesDeskPipelineTitle": {
+    "description": "Pipeline: screen title"
+  },
+  "salesDeskPipelineEmpty": "কোনো সম্ভাবনা নেই",
+  "@salesDeskPipelineEmpty": {
+    "description": "Pipeline: empty title"
+  },
+  "salesDeskPipelineOpen": "চলমান সম্ভাবনা (ওজন-করা)",
+  "@salesDeskPipelineOpen": {
+    "description": "Pipeline: total strip of the open stages, weighted"
+  },
+  "salesDeskPipelineStage": "{stage} · {count} টি",
+  "@salesDeskPipelineStage": {
+    "description": "Pipeline: a stage and how many in it",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskPipelineTotals": "মোট {total} · ওজন-করা {weighted}",
+  "@salesDeskPipelineTotals": {
+    "description": "Pipeline: a stage total and weighted total; amounts from Money.taka",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "weighted": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskPipelineCloses": "শেষ {date}",
+  "@salesDeskPipelineCloses": {
+    "description": "Pipeline: the expected close date of an opportunity",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskTemplatesTitle": "দলিলের ছাঁচ",
+  "@salesDeskTemplatesTitle": {
+    "description": "Document templates: screen title"
+  },
+  "salesDeskTemplatesEmpty": "কোনো ছাঁচ নেই",
+  "@salesDeskTemplatesEmpty": {
+    "description": "Document templates: empty title"
+  },
+  "salesDeskTemplatesCount": "মোট {count} টি ছাঁচ · লেখা ও বদল ওয়েবে",
+  "@salesDeskTemplatesCount": {
+    "description": "Document templates: the count, and where to edit",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDeskTemplatesInactive": "বন্ধ",
+  "@salesDeskTemplatesInactive": {
+    "description": "Document templates: a template that is switched off"
+  },
+  "salesPapersKindTitle": "{kind, select, invoice{বিক্রয় বিল} other{চালান}}",
+  "@salesPapersKindTitle": {
+    "description": "Sales papers: the name of the paper kind (invoice, or other = challan), used as a title",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersListLoadFailed": "{kind, select, invoice{বিক্রয় বিলের তালিকা আনা গেল না।} other{চালানের তালিকা আনা গেল না।}}",
+  "@salesPapersListLoadFailed": {
+    "description": "Sales papers: the list could not be loaded (invoice, or other = challan)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersNotOnServer": "এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@salesPapersNotOnServer": {
+    "description": "Sales papers: the server does not have this door yet"
+  },
+  "salesPapersSearch": "নম্বর বা দোকানের নাম",
+  "@salesPapersSearch": {
+    "description": "Sales papers: search hint"
+  },
+  "salesPapersTotal": "{kind, select, invoice{মোট বিক্রয় বিল} other{মোট চালান}}",
+  "@salesPapersTotal": {
+    "description": "Sales papers: total strip label (invoice, or other = challan)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersEmptyTitle": "{kind, select, invoice{এই সময়ে কোনো বিক্রয় বিল নেই} other{এই সময়ে কোনো চালান নেই}}",
+  "@salesPapersEmptyTitle": {
+    "description": "Sales papers: empty list title (invoice, or other = challan)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersEmptyMessage": "তারিখ বদলে বা নিচে টেনে আবার দেখুন।",
+  "@salesPapersEmptyMessage": {
+    "description": "Sales papers: empty list hint"
+  },
+  "salesPapersDueAmount": "বাকি {amount}",
+  "@salesPapersDueAmount": {
+    "description": "Sales papers: what is still owed on an invoice; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersPaid": "শোধ",
+  "@salesPapersPaid": {
+    "description": "Sales papers: an invoice with nothing owed"
+  },
+  "salesPapersMore": "আরও",
+  "@salesPapersMore": {
+    "description": "Sales papers: load the next page"
+  },
+  "salesPapersLoadFailed": "{kind, select, invoice{বিক্রয় বিলটা আনা গেল না।} other{চালানটা আনা গেল না।}}",
+  "@salesPapersLoadFailed": {
+    "description": "Sales paper: one paper could not be loaded (invoice, or other = challan)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersPrint": "ছাপা / পাঠান",
+  "@salesPapersPrint": {
+    "description": "Sales paper: tooltip of the print and share button"
+  },
+  "salesPapersDate": "তারিখ",
+  "@salesPapersDate": {
+    "description": "Sales paper: the date row"
+  },
+  "salesPapersSaleNo": "বিক্রির নম্বর",
+  "@salesPapersSaleNo": {
+    "description": "Sales paper: the sale number row"
+  },
+  "salesPapersDueOn": "মেয়াদ",
+  "@salesPapersDueOn": {
+    "description": "Sales paper: the date the invoice falls due"
+  },
+  "salesPapersWarehouse": "গুদাম",
+  "@salesPapersWarehouse": {
+    "description": "Sales paper: the warehouse row"
+  },
+  "salesPapersVehicle": "গাড়ি",
+  "@salesPapersVehicle": {
+    "description": "Sales paper: the vehicle row"
+  },
+  "salesPapersCreatedBy": "লিখেছেন",
+  "@salesPapersCreatedBy": {
+    "description": "Sales paper: who wrote the paper"
+  },
+  "salesPapersProducts": "পণ্য",
+  "@salesPapersProducts": {
+    "description": "Sales paper: heading of the product lines"
+  },
+  "salesPapersFreeQty": "ফ্রি {qty}",
+  "@salesPapersFreeQty": {
+    "description": "Sales paper: free quantity on a line",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersLineDiscount": "ছাড় {amount}",
+  "@salesPapersLineDiscount": {
+    "description": "Sales paper: discount on a line; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPapersDiscount": "ছাড়",
+  "@salesPapersDiscount": {
+    "description": "Sales paper: the discount total row"
+  },
+  "salesPapersTax": "কর",
+  "@salesPapersTax": {
+    "description": "Sales paper: the tax total row"
+  },
+  "salesPapersGrandTotal": "মোট",
+  "@salesPapersGrandTotal": {
+    "description": "Sales paper: the total row"
+  },
+  "salesPapersCollected": "আদায়",
+  "@salesPapersCollected": {
+    "description": "Sales paper: what was collected on the invoice"
+  },
+  "salesPapersDue": "বাকি",
+  "@salesPapersDue": {
+    "description": "Sales paper: what is still owed on the invoice"
+  },
+  "salesPapersInvoiceChallans": "এই বিলের চালান",
+  "@salesPapersInvoiceChallans": {
+    "description": "Sales paper: heading of the challans linked to an invoice"
+  },
+  "salesPapersChallanInvoices": "এই চালানের বিল",
+  "@salesPapersChallanInvoices": {
+    "description": "Sales paper: heading of the invoices linked to a challan"
+  },
+  "salesPapersStatus": "{status, select, draft{খসড়া} confirmed{নিশ্চিত} cancelled{বাতিল} closed{সম্পন্ন} awaiting_approval{অনুমোদনের অপেক্ষায়} other{অজানা}}",
+  "@salesPapersStatus": {
+    "description": "Sales papers: the phone's own word for a paper's status; only these five are asked; other is a fallback",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsListTab": "{tab, select, all{সব} draft{খসড়া} approved{অনুমোদিত} sent{পাঠানো} accepted{গৃহীত} other{আদেশ হয়েছে}}",
+  "@quotationsListTab": {
+    "description": "Quotations: the status filter chips (all, draft, approved, sent, accepted; other = converted)",
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsListLoadFailed": "উদ্ধৃতি আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@quotationsListLoadFailed": {
+    "description": "Quotations: the list could not be loaded"
+  },
+  "quotationsListNotOnServer": "সার্ভারে উদ্ধৃতির দরজা এখনো আসেনি — অফিসে জানান।",
+  "@quotationsListNotOnServer": {
+    "description": "Quotations: the server does not have this door yet"
+  },
+  "quotationsListTitle": "উদ্ধৃতি",
+  "@quotationsListTitle": {
+    "description": "Quotations: list screen title, and a quotation page title before it loads"
+  },
+  "quotationsListNew": "নতুন উদ্ধৃতি",
+  "@quotationsListNew": {
+    "description": "Quotations: the button and the screen title for a new quotation"
+  },
+  "quotationsListTotal": "মোট উদ্ধৃতি",
+  "@quotationsListTotal": {
+    "description": "Quotations: total strip label (all pages)"
+  },
+  "quotationsListErrorTitle": "আনা গেল না",
+  "@quotationsListErrorTitle": {
+    "description": "Quotations: error card title"
+  },
+  "quotationsListEmpty": "কোনো উদ্ধৃতি নেই",
+  "@quotationsListEmpty": {
+    "description": "Quotations: empty list title"
+  },
+  "quotationsListMore": "আরও উদ্ধৃতি",
+  "@quotationsListMore": {
+    "description": "Quotations: load the next page"
+  },
+  "quotationsNewPickProduct": "পণ্য বাছুন",
+  "@quotationsNewPickProduct": {
+    "description": "New quotation: product picker title"
+  },
+  "quotationsNewNeedShop": "দোকান বাছুন।",
+  "@quotationsNewNeedShop": {
+    "description": "New quotation: saved without a shop"
+  },
+  "quotationsNewNeedLine": "অন্তত একটা পণ্য দিন।",
+  "@quotationsNewNeedLine": {
+    "description": "New quotation: saved without a product"
+  },
+  "quotationsNewSaveFailed": "উদ্ধৃতি রাখা গেল না। আবার চেষ্টা করুন।",
+  "@quotationsNewSaveFailed": {
+    "description": "New quotation: saving failed"
+  },
+  "quotationsNewPickShop": "দোকান বাছুন",
+  "@quotationsNewPickShop": {
+    "description": "New quotation: the shop row before a shop is picked, and the shop picker title"
+  },
+  "quotationsQty": "পরিমাণ: {qty}",
+  "@quotationsQty": {
+    "description": "Quotation: the quantity on a line",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsRate": "দর: {rate}",
+  "@quotationsRate": {
+    "description": "Quotation: the rate on a line; rate is an amount from Money.taka or the product-price words",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsNewProductPrice": "পণ্যের দাম",
+  "@quotationsNewProductPrice": {
+    "description": "New quotation: no rate typed, the product's own price is used"
+  },
+  "quotationsNewRemoveLine": "বাদ দিন",
+  "@quotationsNewRemoveLine": {
+    "description": "New quotation: tooltip of the button that removes a line"
+  },
+  "quotationsNewAddLine": "পণ্য যোগ করুন",
+  "@quotationsNewAddLine": {
+    "description": "New quotation: add a line"
+  },
+  "quotationsNewNote": "মন্তব্য (ঐচ্ছিক)",
+  "@quotationsNewNote": {
+    "description": "New quotation: the remarks field"
+  },
+  "quotationsSubmit": "জমা দিন",
+  "@quotationsSubmit": {
+    "description": "Quotation: the submit button"
+  },
+  "quotationsNewKeepDraft": "খসড়া রাখুন",
+  "@quotationsNewKeepDraft": {
+    "description": "New quotation: save without submitting"
+  },
+  "quotationsActFailed": "কাজটা হলো না। আবার চেষ্টা করুন।",
+  "@quotationsActFailed": {
+    "description": "Quotation page: an action failed"
+  },
+  "quotationsStatus": "অবস্থা: {status}",
+  "@quotationsStatus": {
+    "description": "Quotation page: the status; status is the server's label",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsShop": "দোকান: {shop}",
+  "@quotationsShop": {
+    "description": "Quotation page: the shop",
+    "placeholders": {
+      "shop": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsDate": "তারিখ: {date}",
+  "@quotationsDate": {
+    "description": "Quotation page: the date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsValidUntil": "মেয়াদ: {date}",
+  "@quotationsValidUntil": {
+    "description": "Quotation page: the date the quotation is valid until",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsTotal": "মোট: {amount}",
+  "@quotationsTotal": {
+    "description": "Quotation page: the total; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsOrder": "আদেশ: {no}",
+  "@quotationsOrder": {
+    "description": "Quotation page: the order made from it",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "quotationsSubmitted": "জমা হলো।",
+  "@quotationsSubmitted": {
+    "description": "Quotation page: notice after submitting"
+  },
+  "quotationsSentDone": "দোকানিকে পাঠানো হলো।",
+  "@quotationsSentDone": {
+    "description": "Quotation page: notice after sending"
+  },
+  "quotationsSend": "দোকানিকে পাঠানো হলো",
+  "@quotationsSend": {
+    "description": "Quotation page: button that records it was sent to the shopkeeper"
+  },
+  "quotationsAcceptedDone": "দোকানি রাজি — এখন আদেশ বানানো যায়।",
+  "@quotationsAcceptedDone": {
+    "description": "Quotation page: notice after the shopkeeper accepted"
+  },
+  "quotationsAccept": "দোকানি রাজি",
+  "@quotationsAccept": {
+    "description": "Quotation page: button that records the shopkeeper accepted"
+  },
+  "quotationsRejectReason": "রাজি না হওয়ার কারণ",
+  "@quotationsRejectReason": {
+    "description": "Quotation page: field for why the shopkeeper refused"
+  },
+  "quotationsRejectNeedReason": "রাজি না হওয়ার কারণ লিখুন।",
+  "@quotationsRejectNeedReason": {
+    "description": "Quotation page: refused without a reason"
+  },
+  "quotationsRejectedDone": "দোকানি রাজি নন — লেখা হলো।",
+  "@quotationsRejectedDone": {
+    "description": "Quotation page: notice after the shopkeeper refused"
+  },
+  "quotationsReject": "দোকানি রাজি নন",
+  "@quotationsReject": {
+    "description": "Quotation page: button that records the shopkeeper refused"
+  },
+  "quotationsConvertedDone": "বিক্রয় আদেশ হলো।",
+  "@quotationsConvertedDone": {
+    "description": "Quotation page: notice after converting to a sales order"
+  },
+  "quotationsConvert": "আদেশ বানান",
+  "@quotationsConvert": {
+    "description": "Quotation page: button that converts it to a sales order"
+  },
+  "quotationsLineQty": "পরিমাণ",
+  "@quotationsLineQty": {
+    "description": "Quotation line dialog: the quantity field"
+  },
+  "quotationsLineRate": "দর",
+  "@quotationsLineRate": {
+    "description": "Quotation line dialog: the rate field"
+  },
+  "quotationsLineCancel": "বাদ",
+  "@quotationsLineCancel": {
+    "description": "Quotation line dialog: close without adding"
+  },
+  "quotationsLineOk": "ঠিক আছে",
+  "@quotationsLineOk": {
+    "description": "Quotation line dialog: add the line"
+  },
+  "deliveryOrdersPaper": "{kind, select, order{আদেশ} other{DO}}",
+  "@deliveryOrdersPaper": {
+    "description": "Delivery orders: the short paper name (order when the company works in sales orders, other = DO)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersTitle": "{kind, select, order{বিক্রয় আদেশ} other{ডেলিভারি অর্ডার}}",
+  "@deliveryOrdersTitle": {
+    "description": "Delivery orders: the screen title (order = sales orders, other = delivery orders)",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersListLoadFailed": "তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@deliveryOrdersListLoadFailed": {
+    "description": "Delivery orders: the list could not be loaded"
+  },
+  "deliveryOrdersNotOnServer": "{kind, select, order{সার্ভারে বিক্রয় আদেশ এখনো আসেনি — অফিসে জানান।} other{সার্ভারে ডেলিভারি অর্ডার এখনো আসেনি — অফিসে জানান।}}",
+  "@deliveryOrdersNotOnServer": {
+    "description": "Delivery orders: the server does not have this door yet",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersModule": "বিক্রয়",
+  "@deliveryOrdersModule": {
+    "description": "Delivery orders: the module name in the bar crumbs"
+  },
+  "deliveryOrdersNew": "{kind, select, order{নতুন আদেশ} other{নতুন DO}}",
+  "@deliveryOrdersNew": {
+    "description": "Delivery orders: the new button and the new screen title",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersFilterAll": "সব",
+  "@deliveryOrdersFilterAll": {
+    "description": "Delivery orders: filter chip, every paper"
+  },
+  "deliveryOrdersFilterMine": "আমার সইয়ের অপেক্ষায়",
+  "@deliveryOrdersFilterMine": {
+    "description": "Delivery orders: filter chip, papers waiting for my signature"
+  },
+  "deliveryOrdersEmpty": "{kind, select, order{কোনো আদেশ নেই।} other{কোনো DO নেই।}}",
+  "@deliveryOrdersEmpty": {
+    "description": "Delivery orders: empty list title",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersEmptyMine": "এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।",
+  "@deliveryOrdersEmptyMine": {
+    "description": "Delivery orders: empty list when filtered to my signature"
+  },
+  "deliveryOrdersNoCustomer": "গ্রাহক নেই",
+  "@deliveryOrdersNoCustomer": {
+    "description": "Delivery orders: a paper without a customer"
+  },
+  "deliveryOrdersPickProduct": "পণ্য বাছুন",
+  "@deliveryOrdersPickProduct": {
+    "description": "New DO: product picker title"
+  },
+  "deliveryOrdersNeedDealer": "ডিলার বাছুন।",
+  "@deliveryOrdersNeedDealer": {
+    "description": "New DO: saved without a dealer"
+  },
+  "deliveryOrdersNeedLine": "অন্তত একটা পণ্য দিন।",
+  "@deliveryOrdersNeedLine": {
+    "description": "New DO: saved without a product"
+  },
+  "deliveryOrdersSaveFailed": "{kind, select, order{আদেশ রাখা গেল না। আবার চেষ্টা করুন।} other{DO রাখা গেল না। আবার চেষ্টা করুন।}}",
+  "@deliveryOrdersSaveFailed": {
+    "description": "New DO: saving failed",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersPickDealer": "ডিলার বাছুন",
+  "@deliveryOrdersPickDealer": {
+    "description": "New DO: the dealer row before one is picked, and the dealer picker title"
+  },
+  "deliveryOrdersQty": "পরিমাণ: {qty}",
+  "@deliveryOrdersQty": {
+    "description": "New DO: the quantity on a line",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersRemoveLine": "বাদ দিন",
+  "@deliveryOrdersRemoveLine": {
+    "description": "New DO: tooltip of the button that removes a line"
+  },
+  "deliveryOrdersAddLine": "পণ্য যোগ করুন",
+  "@deliveryOrdersAddLine": {
+    "description": "New DO: add a line"
+  },
+  "deliveryOrdersNote": "মন্তব্য (ঐচ্ছিক)",
+  "@deliveryOrdersNote": {
+    "description": "New DO: the remarks field"
+  },
+  "deliveryOrdersSubmit": "জমা দিন",
+  "@deliveryOrdersSubmit": {
+    "description": "Delivery orders: the submit button"
+  },
+  "deliveryOrdersKeepDraft": "খসড়া রাখুন",
+  "@deliveryOrdersKeepDraft": {
+    "description": "New DO: save without submitting"
+  },
+  "deliveryOrdersActFailed": "কাজটা হলো না। আবার চেষ্টা করুন।",
+  "@deliveryOrdersActFailed": {
+    "description": "DO page: an action failed"
+  },
+  "deliveryOrdersLoadFailed": "{kind, select, order{আদেশ আনা গেল না।} other{DO আনা গেল না।}}",
+  "@deliveryOrdersLoadFailed": {
+    "description": "DO page: the paper could not be loaded",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersPrint": "ছাপুন / পাঠান",
+  "@deliveryOrdersPrint": {
+    "description": "DO page: tooltip of the print and share button"
+  },
+  "deliveryOrdersPrintTitle": "বিক্রয় আদেশ · {no}",
+  "@deliveryOrdersPrintTitle": {
+    "description": "DO page: the print sheet title",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersStatus": "অবস্থা: {status}",
+  "@deliveryOrdersStatus": {
+    "description": "DO page: the status; status is the server's label",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersTotal": "মোট: {amount}",
+  "@deliveryOrdersTotal": {
+    "description": "DO page: the total; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersCreditShort": "বাকির সীমায় আটকে — কম {amount}",
+  "@deliveryOrdersCreditShort": {
+    "description": "DO page: the order waits on the credit limit; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersAsked": "চাওয়া: {qty}",
+  "@deliveryOrdersAsked": {
+    "description": "DO page: the quantity asked on a line",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersApprovedQtyField": "অনুমোদিত পরিমাণ",
+  "@deliveryOrdersApprovedQtyField": {
+    "description": "DO page: the field where the supervisor sets the approved quantity"
+  },
+  "deliveryOrdersApprovedQty": "অনুমোদিত: {qty}",
+  "@deliveryOrdersApprovedQty": {
+    "description": "DO page: the approved quantity on a line",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersSubmitted": "{kind, select, order{আদেশ জমা হলো — সুপারভাইজার দেখবেন।} other{DO জমা হলো — সুপারভাইজার দেখবেন।}}",
+  "@deliveryOrdersSubmitted": {
+    "description": "DO page: notice after submitting",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersQtySaved": "অনুমোদিত পরিমাণ রাখা হলো।",
+  "@deliveryOrdersQtySaved": {
+    "description": "DO page: notice after saving the approved quantities"
+  },
+  "deliveryOrdersSaveQty": "পরিমাণ রাখুন",
+  "@deliveryOrdersSaveQty": {
+    "description": "DO page: button that saves the approved quantities"
+  },
+  "deliveryOrdersApproved": "অনুমোদন দেওয়া হলো।",
+  "@deliveryOrdersApproved": {
+    "description": "DO page: notice after the supervisor approved"
+  },
+  "deliveryOrdersApprove": "অনুমোদন দিন",
+  "@deliveryOrdersApprove": {
+    "description": "DO page: the supervisor approve button"
+  },
+  "deliveryOrdersRejectReason": "ফেরতের কারণ",
+  "@deliveryOrdersRejectReason": {
+    "description": "DO page: the field for why it is sent back"
+  },
+  "deliveryOrdersRejectNeedReason": "ফেরতের কারণ লিখুন।",
+  "@deliveryOrdersRejectNeedReason": {
+    "description": "DO page: sent back without a reason"
+  },
+  "deliveryOrdersRejected": "{kind, select, order{আদেশ ফেরত পাঠানো হলো।} other{DO ফেরত পাঠানো হলো।}}",
+  "@deliveryOrdersRejected": {
+    "description": "DO page: notice after sending it back",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersReject": "ফেরত পাঠান",
+  "@deliveryOrdersReject": {
+    "description": "DO page: the send-back button"
+  },
+  "deliveryOrdersDialogQty": "পরিমাণ",
+  "@deliveryOrdersDialogQty": {
+    "description": "DO quantity dialog: the field"
+  },
+  "deliveryOrdersDialogCancel": "বাদ",
+  "@deliveryOrdersDialogCancel": {
+    "description": "DO quantity dialog: close without a change"
+  },
+  "deliveryOrdersDialogOk": "ঠিক আছে",
+  "@deliveryOrdersDialogOk": {
+    "description": "DO quantity dialog: keep the quantity"
+  },
+  "deliveryOrdersStockTitle": "মজুদ এখন — ধরা হয়নি",
+  "@deliveryOrdersStockTitle": {
+    "description": "DO page: heading of the stock card"
+  },
+  "deliveryOrdersStockNote": "মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।",
+  "@deliveryOrdersStockNote": {
+    "description": "DO page: the note under the stock heading"
+  },
+  "deliveryOrdersStockHaveWant": "আছে {have} · চাই {want}",
+  "@deliveryOrdersStockHaveWant": {
+    "description": "DO page: stock on hand and wanted for a product",
+    "placeholders": {
+      "have": {
+        "type": "String"
+      },
+      "want": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersStockWant": "চাই {want}",
+  "@deliveryOrdersStockWant": {
+    "description": "DO page: wanted for a product, stock unknown",
+    "placeholders": {
+      "want": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersStockShort": "কম {qty}",
+  "@deliveryOrdersStockShort": {
+    "description": "DO page: how much stock is short",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryOrdersStockNotEnough": "মজুদে কুলোয় না",
+  "@deliveryOrdersStockNotEnough": {
+    "description": "DO page: stock is short, amount unknown"
+  },
+  "salesPlanLoadFailed": "আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@salesPlanLoadFailed": {
+    "description": "Sales plan pages: the page could not be loaded"
+  },
+  "salesPlanNotOnServer": "সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।",
+  "@salesPlanNotOnServer": {
+    "description": "Sales plan pages: the server does not have this door yet"
+  },
+  "salesPlanPreviousMonth": "আগের মাস",
+  "@salesPlanPreviousMonth": {
+    "description": "Month bar: tooltip of the previous-month button"
+  },
+  "salesPlanNextMonth": "পরের মাস",
+  "@salesPlanNextMonth": {
+    "description": "Month bar: tooltip of the next-month button"
+  },
+  "salesPlanPeople": "{count, plural, other{{count} জন}}",
+  "@salesPlanPeople": {
+    "description": "Sales plan: a count of people",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanTargetsTitle": "লক্ষ্যমাত্রা",
+  "@salesPlanTargetsTitle": {
+    "description": "Sales targets: screen title"
+  },
+  "salesPlanTargetsEmpty": "এই মাসে কোনো বিক্রয়কর্মী নেই",
+  "@salesPlanTargetsEmpty": {
+    "description": "Sales targets: empty title"
+  },
+  "salesPlanTargetsNote": "ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন নিশ্চিত বিলের, ভ্যাট আর ছাড় বাদে।",
+  "@salesPlanTargetsNote": {
+    "description": "Sales targets: the note under the month"
+  },
+  "salesPlanTotalTarget": "মোট লক্ষ্য",
+  "@salesPlanTotalTarget": {
+    "description": "Sales plan: the total target"
+  },
+  "salesPlanTotalAchieved": "মোট অর্জন",
+  "@salesPlanTotalAchieved": {
+    "description": "Sales plan: the total achieved"
+  },
+  "salesPlanTargetHoldersAchieved": "লক্ষ্যধারীদের অর্জন",
+  "@salesPlanTargetHoldersAchieved": {
+    "description": "Sales targets: the achievement percent of people who have a target"
+  },
+  "salesPlanTargetSet": "লক্ষ্য বসানো",
+  "@salesPlanTargetSet": {
+    "description": "Sales plan: how many people have a target"
+  },
+  "salesPlanTargetAchieved": "লক্ষ্য {target} · অর্জন {achieved}",
+  "@salesPlanTargetAchieved": {
+    "description": "Sales targets: a salesperson row; amounts from Money.taka",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "achieved": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanDealerTargetsTitle": "ডিলারের লক্ষ্য",
+  "@salesPlanDealerTargetsTitle": {
+    "description": "Dealer targets: screen title"
+  },
+  "salesPlanDealerTargetsNoneSet": "এই মাসে কারো লক্ষ্য বসানো নেই",
+  "@salesPlanDealerTargetsNoneSet": {
+    "description": "Dealer targets: empty title when only targets are shown"
+  },
+  "salesPlanDealerTargetsEmpty": "কোনো ডিলার নেই",
+  "@salesPlanDealerTargetsEmpty": {
+    "description": "Dealer targets: empty title"
+  },
+  "salesPlanDealerTargetsSearch": "ডিলারের নাম বা কোড",
+  "@salesPlanDealerTargetsSearch": {
+    "description": "Dealer targets: search hint"
+  },
+  "salesPlanDealerTargetsOnlySet": "কেবল যাঁদের লক্ষ্য আছে",
+  "@salesPlanDealerTargetsOnlySet": {
+    "description": "Dealer targets: filter chip"
+  },
+  "salesPlanDealerTargetsNote": "ⓘ লক্ষ্য বসানো ওয়েবে। অর্জন মানে আদায়, রসিদ আর পাশ হওয়া চেক।",
+  "@salesPlanDealerTargetsNote": {
+    "description": "Dealer targets: the note under the filters"
+  },
+  "salesPlanTotalDue": "মোট বাকি",
+  "@salesPlanTotalDue": {
+    "description": "Sales plan: the total still owed"
+  },
+  "salesPlanAchieved": "অর্জন {amount}",
+  "@salesPlanAchieved": {
+    "description": "Dealer targets: achieved on a row; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanDue": "বাকি {amount}",
+  "@salesPlanDue": {
+    "description": "Sales plan: still owed on a row; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanEnds": "শেষ {date}",
+  "@salesPlanEnds": {
+    "description": "Dealer targets: the last day of the target",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanRouteBookTitle": "রুটের খাতা",
+  "@salesPlanRouteBookTitle": {
+    "description": "Route book: screen title"
+  },
+  "salesPlanRouteBookEmpty": "কোনো রুট নেই",
+  "@salesPlanRouteBookEmpty": {
+    "description": "Route book: empty title"
+  },
+  "salesPlanRouteBookSearch": "রুটের নাম বা কোড",
+  "@salesPlanRouteBookSearch": {
+    "description": "Route book: search hint"
+  },
+  "salesPlanTotalSales": "মোট বিক্রি",
+  "@salesPlanTotalSales": {
+    "description": "Route book: the total sales"
+  },
+  "salesPlanTotalCollections": "মোট আদায়",
+  "@salesPlanTotalCollections": {
+    "description": "Route book: the total collections"
+  },
+  "salesPlanTargetAchievement": "লক্ষ্যের অর্জন",
+  "@salesPlanTargetAchievement": {
+    "description": "Sales plan: how much of the target is achieved"
+  },
+  "salesPlanDealers": "ডিলার",
+  "@salesPlanDealers": {
+    "description": "Sales plan: the dealers row and section title"
+  },
+  "salesPlanUnrouted": "{count, plural, other{⚠ {count} জন ডিলার কোনো রুটে বসানো নেই — তাঁদের অঙ্ক এখানে নেই।}}",
+  "@salesPlanUnrouted": {
+    "description": "Route book: dealers on no route",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanDealerCount": "{count, plural, other{{count} জন ডিলার}}",
+  "@salesPlanDealerCount": {
+    "description": "Route book: how many dealers a route has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanSalesCollections": "বিক্রি {sales} · আদায় {collections}",
+  "@salesPlanSalesCollections": {
+    "description": "Sales plan: sales and collections on a row; amounts from Money.taka",
+    "placeholders": {
+      "sales": {
+        "type": "String"
+      },
+      "collections": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanTargetPercent": "লক্ষ্য {target} · {percent}",
+  "@salesPlanTargetPercent": {
+    "description": "Route book: the target and the percent achieved",
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanRouteEmpty": "এই রুটে কোনো ডিলার নেই",
+  "@salesPlanRouteEmpty": {
+    "description": "Route page: empty title"
+  },
+  "salesPlanClosingBalance": "শেষ জের (বাকি)",
+  "@salesPlanClosingBalance": {
+    "description": "Route page: the closing balance"
+  },
+  "salesPlanOpeningBalance": "আগের জের",
+  "@salesPlanOpeningBalance": {
+    "description": "Route page: the opening balance"
+  },
+  "salesPlanSales": "বিক্রি",
+  "@salesPlanSales": {
+    "description": "Route page: sales of the month"
+  },
+  "salesPlanReturns": "ফেরত",
+  "@salesPlanReturns": {
+    "description": "Route page: sales returns of the month"
+  },
+  "salesPlanCollections": "আদায়",
+  "@salesPlanCollections": {
+    "description": "Route page: collections of the month"
+  },
+  "salesPlanOther": "অন্যান্য",
+  "@salesPlanOther": {
+    "description": "Route page: other entries of the month"
+  },
+  "salesPlanTarget": "লক্ষ্য",
+  "@salesPlanTarget": {
+    "description": "Route page: the target"
+  },
+  "salesPlanWeeklyPlan": "সাপ্তাহিক ছক",
+  "@salesPlanWeeklyPlan": {
+    "description": "Route page: section title of the weekly visit plan"
+  },
+  "salesPlanWeeklyPlanEmpty": "ছকে কেউ বসানো নেই।",
+  "@salesPlanWeeklyPlanEmpty": {
+    "description": "Route page: the weekly plan is empty"
+  },
+  "salesPlanVisitActive": "চালু",
+  "@salesPlanVisitActive": {
+    "description": "Route page: a visit plan row that is running"
+  },
+  "salesPlanVisitEnded": "শেষ",
+  "@salesPlanVisitEnded": {
+    "description": "Route page: a visit plan row that has ended"
+  },
+  "salesPlanFromTo": "{from} থেকে {to}",
+  "@salesPlanFromTo": {
+    "description": "Sales plan: a date or amount range",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanOngoing": "চলছে",
+  "@salesPlanOngoing": {
+    "description": "Route page: a visit plan with no end date"
+  },
+  "salesPlanRouteNote": "ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।",
+  "@salesPlanRouteNote": {
+    "description": "Route page: the note under the weekly plan"
+  },
+  "salesPlanStatusAll": "সব",
+  "@salesPlanStatusAll": {
+    "description": "Schemes and commissions: the status chip for every status"
+  },
+  "salesPlanSchemesTitle": "স্কিম",
+  "@salesPlanSchemesTitle": {
+    "description": "Schemes: screen title"
+  },
+  "salesPlanSchemesEmpty": "কোনো স্কিম নেই",
+  "@salesPlanSchemesEmpty": {
+    "description": "Schemes: empty title"
+  },
+  "salesPlanSchemesSearch": "স্কিমের কোড বা নাম",
+  "@salesPlanSchemesSearch": {
+    "description": "Schemes: search hint"
+  },
+  "salesPlanSchemesCount": "মোট {count} টি স্কিম · বসানো ও বদল ওয়েবে",
+  "@salesPlanSchemesCount": {
+    "description": "Schemes: how many in all, and where they are changed",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanSchemeLine": "{basis} · {appliesTo} · {rules, plural, other{{rules}টি ধাপ}}",
+  "@salesPlanSchemeLine": {
+    "description": "Schemes: a scheme's basis, what it applies to (server labels) and its step count",
+    "placeholders": {
+      "basis": {
+        "type": "String"
+      },
+      "appliesTo": {
+        "type": "String"
+      },
+      "rules": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanSchemeLive": " · আজ চলছে",
+  "@salesPlanSchemeLive": {
+    "description": "Schemes: after the dates when the scheme runs today"
+  },
+  "salesPlanSchemeCode": "কোড",
+  "@salesPlanSchemeCode": {
+    "description": "Scheme page: the code row"
+  },
+  "salesPlanSchemeStatus": "অবস্থা",
+  "@salesPlanSchemeStatus": {
+    "description": "Scheme page: the status row"
+  },
+  "salesPlanSchemeBasis": "ভিত্তি",
+  "@salesPlanSchemeBasis": {
+    "description": "Scheme page: what the scheme is counted on"
+  },
+  "salesPlanSchemeAppliesTo": "কীসের উপর",
+  "@salesPlanSchemeAppliesTo": {
+    "description": "Scheme page: what the scheme applies to"
+  },
+  "salesPlanSchemeValidity": "মেয়াদ",
+  "@salesPlanSchemeValidity": {
+    "description": "Scheme page: the from – to dates of the scheme"
+  },
+  "salesPlanSchemeNotes": "নোট",
+  "@salesPlanSchemeNotes": {
+    "description": "Scheme page: free-text notes on the scheme (not a debit or credit note)"
+  },
+  "salesPlanSchemeSteps": "{count, plural, other{ধাপ · {count}টি}}",
+  "@salesPlanSchemeSteps": {
+    "description": "Scheme page: section title with the step count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanSchemeNoSteps": "কোনো ধাপ বসানো নেই",
+  "@salesPlanSchemeNoSteps": {
+    "description": "Scheme page: no steps"
+  },
+  "salesPlanSchemeRoleLevel": "{role} · স্তর {level}",
+  "@salesPlanSchemeRoleLevel": {
+    "description": "Scheme page: a step, its role (server label) and level",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanSchemeFromUp": "{from} থেকে উপরে",
+  "@salesPlanSchemeFromUp": {
+    "description": "Scheme page: a slab with no upper end; from is an amount",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanSchemeNote": "ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।",
+  "@salesPlanSchemeNote": {
+    "description": "Scheme page: the note at the end"
+  },
+  "salesPlanCommissionTitle": "কমিশন",
+  "@salesPlanCommissionTitle": {
+    "description": "Commission: screen title"
+  },
+  "salesPlanCommissionEmpty": "কোনো কমিশন নেই",
+  "@salesPlanCommissionEmpty": {
+    "description": "Commission: empty title"
+  },
+  "salesPlanCommissionSearch": "নম্বর, ডিলার বা কোম্পানি",
+  "@salesPlanCommissionSearch": {
+    "description": "Commission: search hint"
+  },
+  "salesPlanCommissionGrandTotal": "সর্বমোট",
+  "@salesPlanCommissionGrandTotal": {
+    "description": "Commission: the grand total"
+  },
+  "salesPlanCommissionPending": "কোম্পানির কাছে দাবি, এখনো বাকি",
+  "@salesPlanCommissionPending": {
+    "description": "Commission: what the company still owes"
+  },
+  "salesPlanCommissionByStatus": "{label} · {count, plural, other{{count}টি}}",
+  "@salesPlanCommissionByStatus": {
+    "description": "Commission: a status (server label) and how many claims",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanCommissionTotalNote": "ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে",
+  "@salesPlanCommissionTotalNote": {
+    "description": "Commission: what the total counts"
+  },
+  "salesPlanCommissionWebNote": "ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।",
+  "@salesPlanCommissionWebNote": {
+    "description": "Commission: where claims are changed"
+  },
+  "salesPlanCommissionInvoice": "বিল {no}",
+  "@salesPlanCommissionInvoice": {
+    "description": "Commission: the invoice number of a claim",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionBase": "ভিত্তি {amount}",
+  "@salesPlanCommissionBase": {
+    "description": "Commission: the base amount; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionRate": "হার {rate}",
+  "@salesPlanCommissionRate": {
+    "description": "Commission: the rate",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionLump": "থোক {amount}",
+  "@salesPlanCommissionLump": {
+    "description": "Commission: a fixed amount; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionReason": "কারণ: {reason}",
+  "@salesPlanCommissionReason": {
+    "description": "Commission: why it was decided so; reason from the server",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "approvalsRejectReasonRequired": "প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক",
   "@approvalsRejectReasonRequired": {
     "description": "Approvals: error when a rejection is sent with no reason (the screen checks first)"

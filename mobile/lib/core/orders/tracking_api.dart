@@ -1,6 +1,7 @@
 import 'dart:ui' show Color;
 
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 import '../records/money.dart';
 import '../records/customer_record.dart';
 
@@ -127,18 +128,22 @@ class TrackingList {
 }
 
 /// ধাপের বাংলা নাম — সার্ভারের `sales::tracking.step` তালিকার হুবহু।
-const Map<String, String> trackingStepLabels = {
-  'ordered': 'অর্ডার এসেছে',
-  'credit_hold': 'বাকির সীমায় আটকে',
-  'draft': 'খসড়া',
-  'approval': 'অনুমোদনের অপেক্ষায়',
-  'warehouse': 'গুদামে',
-  'gate_out': 'গেট পেরিয়েছে',
-  'partial': 'কিছু পৌঁছেছে',
-  'delivered': 'পৌঁছেছে',
-  'cancelled': 'বাতিল',
-  'billed': 'বিল হয়েছে',
-};
+/// ⓘ এখনকার ভাষায় ([AppLocale.l10n]), তাই প্রতিবার নতুন করে পড়া
+Map<String, String> get trackingStepLabels {
+  final l = AppLocale.l10n;
+  return {
+    'ordered': l.ordersTrackingStepOrdered,
+    'credit_hold': l.ordersTrackingStepCreditHold,
+    'draft': l.ordersTrackingStepDraft,
+    'approval': l.ordersTrackingStepApproval,
+    'warehouse': l.ordersTrackingStepWarehouse,
+    'gate_out': l.ordersTrackingStepGateOut,
+    'partial': l.ordersTrackingStepPartial,
+    'delivered': l.ordersTrackingStepDelivered,
+    'cancelled': l.ordersTrackingStepCancelled,
+    'billed': l.ordersTrackingStepBilled,
+  };
+}
 
 abstract class TrackingApi {
   Future<TrackingList> list({String? query, String? step});

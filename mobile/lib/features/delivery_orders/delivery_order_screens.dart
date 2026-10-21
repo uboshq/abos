@@ -5,6 +5,7 @@ import '../../core/records/money.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
@@ -28,9 +29,10 @@ import '../../core/widgets/unsaved_guard.dart';
 String _qty(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
 /// ⭐ কাগজের নাম — কোম্পানি বিক্রয় আদেশে চলে গেলে একই পর্দা "আদেশ" বলে (DO+SO মেশানো, ধাপ ১০)।
-String _paper(DeliveryOrderApi api) => api.forOrders ? 'আদেশ' : 'DO';
+/// ⓘ ARB-এর select-এর চাবি: `order` (বিক্রয় আদেশ) বা `do`
+String _kind(DeliveryOrderApi api) => api.forOrders ? 'order' : 'do';
 
-String _title(DeliveryOrderApi api) => api.forOrders ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার';
+String _title(BuildContext context, DeliveryOrderApi api) => context.l10n.deliveryOrdersTitle(_kind(api));
 
 /// ⭐ মোটে না পড়া অবস্থা — ফেরত আর বাতিল কাগজ সারিতে থাকে, মোটে নয় (সার্ভারের UNCOUNTED-এর একই নিয়ম; fe, ১৭ অক্টোবর ২০২৬)
 const _uncounted = {'rejected', 'cancelled'};
@@ -138,8 +140,8 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ${_title(widget.api)} এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.deliveryOrdersListLoadFailed,
+            whenAbsent: context.l10n.deliveryOrdersNotOnServer(_kind(widget.api))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -169,13 +171,13 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
     // ⭐ এই পাতার মোট — হাতে আসা সারির; ফেরত আর বাতিল সারিতে থাকে, মোটে নয় (সার্ভারের একই নিয়ম)
     final pageSum = rows.fold<double>(0, (sum, o) => _uncounted.contains(o.status) ? sum : sum + o.total);
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.title ?? _title(widget.api), module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: widget.title ?? _title(context, widget.api), module: context.l10n.deliveryOrdersModule),
       floatingActionButton: widget.canWrite
           ? FloatingActionButton.extended(
               key: const ValueKey('do-new'),
               onPressed: _new,
               icon: const Icon(Icons.add),
-              label: Text('নতুন ${_paper(widget.api)}'),
+              label: Text(context.l10n.deliveryOrdersNew(_kind(widget.api))),
             )
           : null,
       // ⭐ নিচে স্থির পট্টি — "এই পাতা" হাতে আসা সারির, "সর্বমোট" সার্ভারের পুরো ছাঁকা তালিকার (মালিক, ১৭ অক্টোবর ২০২৬;
@@ -191,7 +193,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(
-                label: const Text('সব'),
+                label: Text(context.l10n.deliveryOrdersFilterAll),
                 selected: !_awaitingMe,
                 onSelected: (_) {
                   setState(() => _awaitingMe = false);
@@ -200,7 +202,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
               ),
               ChoiceChip(
                 key: const ValueKey('do-awaiting-me'),
-                label: const Text('আমার সইয়ের অপেক্ষায়'),
+                label: Text(context.l10n.deliveryOrdersFilterMine),
                 selected: _awaitingMe,
                 onSelected: (_) {
                   setState(() => _awaitingMe = true);
@@ -216,15 +218,15 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
             if (_rows != null && rows.isEmpty && !_busy && _error == null)
               EmptyState(
                 icon: Icons.local_shipping_outlined,
-                title: 'কোনো ${_paper(widget.api)} নেই।',
-                message: _awaitingMe ? 'এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।' : null,
+                title: context.l10n.deliveryOrdersEmpty(_kind(widget.api)),
+                message: _awaitingMe ? context.l10n.deliveryOrdersEmptyMine : null,
                 action: widget.canWrite
                     ? FilledButton.icon(
                         key: const ValueKey('do-empty-new'),
                         style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
                         onPressed: _new,
                         icon: const Icon(Icons.add),
-                        label: Text('নতুন ${_paper(widget.api)}'),
+                        label: Text(context.l10n.deliveryOrdersNew(_kind(widget.api))),
                       )
                     : null,
               ),
@@ -235,7 +237,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
                     ? Icons.draw_outlined
                     : (widget.api.forOrders ? Icons.receipt_long_outlined : Icons.local_shipping_outlined),
                 tone: order.awaitingMe ? context.palette.warning : null,
-                party: order.customer ?? 'গ্রাহক নেই',
+                party: order.customer ?? context.l10n.deliveryOrdersNoCustomer,
                 number: order.no,
                 detail: order.date,
                 amount: order.total,
@@ -293,7 +295,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
       );
 
   Future<void> _addLine() async {
-    final product = await _pick<ProductRecord>('পণ্য বাছুন', _products, (p) => p.name);
+    final product = await _pick<ProductRecord>(context.l10n.deliveryOrdersPickProduct, _products, (p) => p.name);
     if (product == null || !mounted) return;
     final qty = await _askQty(product.name, 1);
     if (qty == null || qty <= 0) return;
@@ -309,7 +311,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
   Future<void> _save({required bool submit}) async {
     final customer = _customer;
     if (customer == null || _lines.isEmpty) {
-      setState(() => _error = customer == null ? 'ডিলার বাছুন।' : 'অন্তত একটা পণ্য দিন।');
+      setState(() => _error = customer == null ? context.l10n.deliveryOrdersNeedDealer : context.l10n.deliveryOrdersNeedLine);
       return;
     }
     setState(() {
@@ -326,7 +328,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e, fallback: '${_paper(widget.api)} রাখা গেল না। আবার চেষ্টা করুন।'));
+        setState(() => _error = errorMessageFor(e, fallback: context.l10n.deliveryOrdersSaveFailed(_kind(widget.api))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -339,7 +341,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: AbosScreenBar(title: 'নতুন ${_paper(widget.api)}', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.deliveryOrdersNew(_kind(widget.api)), module: context.l10n.deliveryOrdersModule),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -347,10 +349,10 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
             child: ListTile(
               key: const ValueKey('do-customer'),
               leading: const Icon(Icons.storefront_outlined),
-              title: Text(_customer?.label ?? 'ডিলার বাছুন'),
+              title: Text(_customer?.label ?? context.l10n.deliveryOrdersPickDealer),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
-                final picked = await _pick<CustomerRecord>('ডিলার বাছুন', _customers, (c) => c.label);
+                final picked = await _pick<CustomerRecord>(context.l10n.deliveryOrdersPickDealer, _customers, (c) => c.label);
                 if (picked != null) setState(() => _customer = picked);
               },
             ),
@@ -359,10 +361,10 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
             Card(
               child: ListTile(
                 title: Text(line.$1.name),
-                subtitle: Text('পরিমাণ: ${line.$2}'),
+                subtitle: Text(context.l10n.deliveryOrdersQty('${line.$2}')),
                 trailing: IconButton(
                   icon: const Icon(Icons.close),
-                  tooltip: 'বাদ দিন',
+                  tooltip: context.l10n.deliveryOrdersRemoveLine,
                   onPressed: () => setState(() => _lines.remove(line)),
                 ),
                 onTap: () async {
@@ -377,26 +379,26 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
             key: const ValueKey('do-add-line'),
             onPressed: _addLine,
             icon: const Icon(Icons.add),
-            label: const Text('পণ্য যোগ করুন'),
+            label: Text(context.l10n.deliveryOrdersAddLine),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _note,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)')),
+              decoration: InputDecoration(labelText: context.l10n.deliveryOrdersNote)),
           const SizedBox(height: AppSpacing.md),
           if (_error != null) _ErrorCard(_error!),
           if (_busy) const LinearProgressIndicator(),
           FilledButton(
             key: const ValueKey('do-submit'),
             onPressed: _busy ? null : () => _save(submit: true),
-            child: const Text('জমা দিন'),
+            child: Text(context.l10n.deliveryOrdersSubmit),
           ),
           const SizedBox(height: AppSpacing.xs),
           OutlinedButton(
             key: const ValueKey('do-keep-draft'),
             onPressed: _busy ? null : () => _save(submit: false),
-            child: const Text('খসড়া রাখুন'),
+            child: Text(context.l10n.deliveryOrdersKeepDraft),
           ),
         ],
       ),
@@ -464,7 +466,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'কাজটা হলো না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.deliveryOrdersActFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -479,7 +481,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
       final order = await widget.api.show(widget.id);
       if (mounted) setState(() => _take(order));
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: '${_paper(widget.api)} আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.deliveryOrdersLoadFailed(_kind(widget.api))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -493,16 +495,16 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   Widget build(BuildContext context) {
     final order = _order;
     return Scaffold(
-      appBar: AbosScreenBar(title: order?.no ?? _title(widget.api), module: 'বিক্রয়', actions: [
+      appBar: AbosScreenBar(title: order?.no ?? _title(context, widget.api), module: context.l10n.deliveryOrdersModule, actions: [
         // ⭐ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)। ⓘ কেবল বিক্রয় আদেশ: সার্ভারের ছাপার দরজায় আলাদা
         // DO মডেলের কাগজ নেই (`sales_delivery_order` অর্ডারের মডেলই বাঁধে)।
         if (order != null && widget.api.forOrders)
           IconButton(
             key: const ValueKey('order-print'),
-            tooltip: 'ছাপুন / পাঠান',
+            tooltip: context.l10n.deliveryOrdersPrint,
             icon: const Icon(Icons.print_outlined),
             onPressed: () => DocumentActionsSheet.show(context,
-                type: 'SalesOrder', id: widget.id, title: 'বিক্রয় আদেশ · ${order.no}', fileStem: order.no),
+                type: 'SalesOrder', id: widget.id, title: context.l10n.deliveryOrdersPrintTitle(order.no), fileStem: order.no),
           ),
       ]),
       body: ListView(
@@ -524,18 +526,18 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             ),
           if (order != null) ...[
             // ⭐ মাথায় গ্রাহক "নাম · পয়েন্ট · শাখা", তার নিচে কাগজের নম্বর · তারিখ (মালিকের স্থায়ী নিয়ম, ১৯ অক্টোবর ২০২৬)
-            CustomerLine(order.customer ?? 'গ্রাহক নেই',
+            CustomerLine(order.customer ?? context.l10n.deliveryOrdersNoCustomer,
                 key: const ValueKey('do-customer-line'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
             Text([order.no, if (order.date != null) order.date!].join(' · '),
                 key: const ValueKey('do-number-line'),
                 style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: AppSpacing.xs),
-            Text('অবস্থা: ${order.statusLabel}', key: const ValueKey('do-status')),
-            Text('মোট: ${Money.taka(order.total)}'),
+            Text(context.l10n.deliveryOrdersStatus(order.statusLabel), key: const ValueKey('do-status')),
+            Text(context.l10n.deliveryOrdersTotal(Money.taka(order.total))),
             // ⓘ বিক্রয় আদেশ বাকির সীমায় আটকে — লেখক দেখেন কেন থেমে আছে; টাকা এলে সার্ভার নিজেই আবার দেখে
             if (order.creditShort != null)
-              Text('বাকির সীমায় আটকে — কম ${Money.taka(order.creditShort)}',
+              Text(context.l10n.deliveryOrdersCreditShort(Money.taka(order.creditShort)),
                   key: const ValueKey('do-credit-short'),
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (order.chips.isNotEmpty) OrderChips(order.chips),
@@ -550,16 +552,16 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(line.product, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text('চাওয়া: ${_qty(line.qty)}'),
+                      Text(context.l10n.deliveryOrdersAsked(_qty(line.qty))),
                       if (order.awaitingMe)
                         TextField(
                           key: ValueKey('do-line-${line.id}'),
                           controller: _boxes[line.id],
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'অনুমোদিত পরিমাণ'),
+                          decoration: InputDecoration(labelText: context.l10n.deliveryOrdersApprovedQtyField),
                         )
                       else if (line.approvedQty != null)
-                        Text('অনুমোদিত: ${_qty(line.approvedQty!)}'),
+                        Text(context.l10n.deliveryOrdersApprovedQty(_qty(line.approvedQty!))),
                       Text(Money.taka(line.lineTotal)),
                     ],
                   ),
@@ -568,14 +570,14 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             if (order.editable)
               FilledButton(
                 key: const ValueKey('do-send'),
-                onPressed: _busy ? null : () => _run(() => widget.api.submit(order.id), '${_paper(widget.api)} জমা হলো — সুপারভাইজার দেখবেন।'),
-                child: const Text('জমা দিন'),
+                onPressed: _busy ? null : () => _run(() => widget.api.submit(order.id), context.l10n.deliveryOrdersSubmitted(_kind(widget.api))),
+                child: Text(context.l10n.deliveryOrdersSubmit),
               ),
             if (order.awaitingMe && order.approvalId != null) ...[
               OutlinedButton(
                 key: const ValueKey('do-save-qty'),
-                onPressed: _busy ? null : () => _run(() => widget.api.setQuantities(order.id, _wanted()), 'অনুমোদিত পরিমাণ রাখা হলো।'),
-                child: const Text('পরিমাণ রাখুন'),
+                onPressed: _busy ? null : () => _run(() => widget.api.setQuantities(order.id, _wanted()), context.l10n.deliveryOrdersQtySaved),
+                child: Text(context.l10n.deliveryOrdersSaveQty),
               ),
               const SizedBox(height: AppSpacing.xs),
               FilledButton(
@@ -587,14 +589,14 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                           await widget.api.setQuantities(order.id, _wanted());
                           await widget.api.approve(order.approvalId!);
                           return null;
-                        }, 'অনুমোদন দেওয়া হলো।'),
-                child: const Text('অনুমোদন দিন'),
+                        }, context.l10n.deliveryOrdersApproved),
+                child: Text(context.l10n.deliveryOrdersApprove),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 key: const ValueKey('do-reason'),
                 controller: _reason,
-                decoration: const InputDecoration(labelText: 'ফেরতের কারণ'),
+                decoration: InputDecoration(labelText: context.l10n.deliveryOrdersRejectReason),
               ),
               OutlinedButton(
                 key: const ValueKey('do-reject'),
@@ -603,15 +605,15 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                     ? null
                     : () {
                         if (_reason.text.trim().isEmpty) {
-                          setState(() => _error = 'ফেরতের কারণ লিখুন।');
+                          setState(() => _error = context.l10n.deliveryOrdersRejectNeedReason);
                           return;
                         }
                         _run(() async {
                           await widget.api.reject(order.approvalId!, _reason.text);
                           return null;
-                        }, '${_paper(widget.api)} ফেরত পাঠানো হলো।');
+                        }, context.l10n.deliveryOrdersRejected(_kind(widget.api)));
                       },
-                child: const Text('ফেরত পাঠান'),
+                child: Text(context.l10n.deliveryOrdersReject),
               ),
             ],
           ],
@@ -649,13 +651,13 @@ class _QtyDialogState extends State<_QtyDialog> {
           controller: _controller,
           autofocus: true,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'পরিমাণ'),
+          decoration: InputDecoration(labelText: context.l10n.deliveryOrdersDialogQty),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাদ')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.deliveryOrdersDialogCancel)),
           FilledButton(
             onPressed: () => Navigator.pop(context, int.tryParse(_controller.text.trim())),
-            child: const Text('ঠিক আছে'),
+            child: Text(context.l10n.deliveryOrdersDialogOk),
           ),
         ],
       );
@@ -762,15 +764,18 @@ class _StockNowCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('মজুদ এখন — ধরা হয়নি', style: TextStyle(fontWeight: FontWeight.w700)),
-              Text('মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।',
+              Text(context.l10n.deliveryOrdersStockTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(context.l10n.deliveryOrdersStockNote,
                   style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final r in rows) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(r.product, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(r.have != null ? 'আছে ${_qty(r.have!)} · চাই ${_qty(r.want)}' : 'চাই ${_qty(r.want)}'),
+                Text(r.have != null
+                    ? context.l10n.deliveryOrdersStockHaveWant(_qty(r.have!), _qty(r.want))
+                    : context.l10n.deliveryOrdersStockWant(_qty(r.want))),
                 if (!r.enough)
-                  Text(r.short != null ? 'কম ${_qty(r.short!)}' : 'মজুদে কুলোয় না',
+                  Text(r.short != null ? context.l10n.deliveryOrdersStockShort(_qty(r.short!)) : context.l10n.deliveryOrdersStockNotEnough,
+
                       style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)),
               ],
             ],

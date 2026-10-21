@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 import '../records/money.dart';
 
 /// জমার বিজ্ঞপ্তি (Payment Advice) — `/sales/deposit-requests` (0.4.3, মালিক ১ অক্টোবর ২০২৬; নাম ও চার অবস্থা
@@ -93,13 +94,7 @@ class DepositRequestRow {
   /// `verifying` বসান হিসাবরক্ষক (ওয়েবের "যাচাই শুরু"); ফোন কখনো পাঠায় না, কেবল পড়ে।
   String get statusLabel => serverLabel.isNotEmpty
       ? serverLabel
-      : switch (status) {
-          'pending' => 'পাঠানো',
-          'verifying' => 'যাচাই চলছে',
-          'accepted' => 'গৃহীত',
-          'rejected' => 'প্রত্যাখ্যাত',
-          _ => 'যাচাই চলছে',
-        };
+      : AppLocale.l10n.ordersDepositStatus(status);
 }
 
 abstract class DepositRequestApi {

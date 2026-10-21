@@ -93,7 +93,7 @@ void main() {
         tester.getSemantics(find.byKey(const ValueKey('order-qty-$soapId'))),
         matchesSemantics(
             label: 'পরিমাণ',
-            value: '০',
+            value: '0', // ⓘ ইংরেজি অঙ্ক বাংলাতেও (মালিকের নিয়ম; a4, ২১ অক্টোবর ২০২৬)
             onTapHint: 'সংখ্যা লিখুন',
             isButton: true,
             hasTapAction: true,

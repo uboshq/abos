@@ -9,6 +9,8 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import 'books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ প্রিন্সিপালের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
 ///
@@ -63,10 +65,8 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback:
-                'প্রিন্সিপালের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent:
-                'সার্ভারে প্রিন্সিপালের তালিকা এখনো আসেনি — অফিসে জানান।'));
+            fallback: AppLocale.l10n.booksPrincipalListFailed,
+            whenAbsent: AppLocale.l10n.booksPrincipalListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -75,7 +75,7 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'প্রিন্সিপাল'),
+        appBar: AbosScreenBar(title: context.l10n.booksPrincipalTitle),
         body: RefreshIndicator(
           onRefresh: _load,
           child: ListView(
@@ -85,24 +85,24 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
                 key: const ValueKey('principal-search'),
                 controller: _search,
                 textInputAction: TextInputAction.search,
-                decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'নাম বা কোড খুঁজুন'),
+                decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: context.l10n.booksPrincipalSearchHint),
                 onSubmitted: (_) => _load(),
               ),
               // ⭐ গোটা ছাঁকনির মোট দেনা — সার্ভারের, সব পাতার, ওয়েবের সরবরাহকারীর তালিকার একই যোগ; ⛔ পুরনো সার্ভারে পট্টি নেই
               // (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
               if (_total != null && _rows.isNotEmpty)
                 TotalStrip(
-                    label: 'মোট দেনা',
+                    label: context.l10n.booksPrincipalTotalDue,
                     value: Money.taka(_total!.sum),
                     count: _total!.count),
               if (_busy) const LinearProgressIndicator(),
               if (_error != null) BooksError(_error!),
               if (_loaded && _rows.isEmpty && !_busy)
-                const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Center(child: Text('কোনো প্রিন্সিপাল নেই।')),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Center(child: Text(context.l10n.booksPrincipalNone)),
                 ),
               for (final p in _rows)
                 Card(
@@ -111,8 +111,8 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
                     title: CustomerLine(p.label,
                         style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(p.lastPurchaseOn == null
-                        ? 'এখনো কোনো ক্রয় নেই'
-                        : 'শেষ ক্রয়: ${dayOf(p.lastPurchaseOn)}'),
+                        ? context.l10n.booksPrincipalNoPurchase
+                        : context.l10n.booksPrincipalLastPurchaseOn(dayOf(p.lastPurchaseOn))),
                     trailing: Text(p.balanceLabel,
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
@@ -176,7 +176,7 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
     } catch (e) {
       if (mounted) {
         setState(
-            () => _error = errorMessageFor(e, fallback: 'খাতা আনা গেল না।'));
+            () => _error = errorMessageFor(e, fallback: AppLocale.l10n.booksLedgerFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -187,7 +187,7 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
   Widget build(BuildContext context) {
     final p = _principal;
     return Scaffold(
-      appBar: AbosScreenBar(title: p?.name ?? 'প্রিন্সিপাল'),
+      appBar: AbosScreenBar(title: p?.name ?? context.l10n.booksPrincipalTitle),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -199,20 +199,20 @@ class _PrincipalLedgerScreenState extends State<PrincipalLedgerScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(children: [
                   if (p.fullName.isNotEmpty && p.fullName != p.name)
-                    FactRow('পুরো নাম', p.fullName),
-                  if (p.phone.isNotEmpty) FactRow('ফোন', p.phone),
-                  FactRow('জের', p.balanceLabel,
+                    FactRow(context.l10n.booksFactFullName, p.fullName),
+                  if (p.phone.isNotEmpty) FactRow(context.l10n.booksFactPhone, p.phone),
+                  FactRow(context.l10n.booksFactBalance, p.balanceLabel,
                       colour:
                           p.balance > 0 ? context.palette.danger : context.palette.success),
-                  FactRow('শেষ ক্রয়',
+                  FactRow(context.l10n.booksFactLastPurchase,
                       p.lastPurchaseOn == null ? '—' : dayOf(p.lastPurchaseOn)),
                 ]),
               ),
             ),
           if (p != null && _entries.isEmpty && !_busy)
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
-              child: Center(child: Text('খাতায় কোনো লেনদেন নেই।')),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Center(child: Text(context.l10n.booksLedgerEmpty)),
             ),
           for (final e in _entries)
             Card(
