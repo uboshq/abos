@@ -203,9 +203,7 @@ final class SalesInvoiceCancellationService
              * ⛔ বাতিলের নিজের মাসই বন্ধ হলে থামে — সেই একই মাসের তালা ([[OpenPeriod::lockOn()]]); আগে অনুমতিপ্রাপ্ত কেউ কারণসহ মাস খুলুন।
              */
             if (app(OpenPeriod::class)->lockOn($date->format('Y-m-d')) !== null) {
-                throw ValidationException::withMessages(['reason' => __('sales::cancellation.month_closed', [
-                    'no' => $paper->document_no, 'month' => $date->format('m/Y'),
-                ])]);
+                throw ValidationException::withMessages(['reason' => __('sales::cancellation.month_closed', ['month' => $date->format('m/Y')])]);
             }
 
             foreach ($challans as $challan) {

@@ -19,6 +19,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -40,6 +41,9 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
 
     private const TABLES = ['ledger_entries', 'inv_cost_layer_uses', 'inv_stock_movements'];
 
+    /** ⓘ fe-র কথা হুবহু — বার্তাটাই আচরণ: মানুষকে বলে কী করতে হবে */
+    private const EDIT_CLOSED = 'এই মাস বন্ধ — বিলটা বাতিল করে নতুন বিল করুন';
+
     private Company $company;
 
     private User $owner;
@@ -59,6 +63,9 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ বাংলায় — বার্তাটা হুবহু মেলানো হয়
+        $this->owner->forceFill(['locale' => 'bn'])->save();
+        app()->setLocale('bn');
         $this->actingAs($this->owner);
 
         $this->biscuit = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
@@ -83,7 +90,7 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
         $sale = $this->sell('2');
 
         Carbon::setTestNow('2026-10-10 10:00:00');
-        $this->closeAugust();
+        $lock = $this->closeAugust();
 
         // প্রস্তুতি: বিলটা সত্যিই আগস্টের, আগস্ট সত্যিই বন্ধ, অক্টোবর খোলা
         $this->assertSame('2026-08-10', $sale->trx_date->toDateString(), 'প্রস্তুতিটাই ভুল — বিলটা আগস্টের নয়।');
@@ -98,9 +105,7 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
         $response = $this->from($edit)->post(route('sales.direct.store'), $this->form($sale, '3'));
 
         $response->assertStatus(302)->assertRedirect($edit);
-        $response->assertSessionHasErrors(['edit' => __('sales::validation.edit_month_closed', ['no' => $sale->document_no])]);
-        $this->assertSame('এই মাস বন্ধ — বিলটা বাতিল করে নতুন বিল করুন', __('sales::validation.edit_month_closed', [], 'bn'),
-            '⛔ বার্তাটা fe-র বাংলা কথা নয়।');
+        $this->assertRefusedWithTheEditMessage($response, $lock);
 
         $fresh = $sale->fresh();
         $this->assertSame(DocumentStatus::CONFIRMED, $fresh->status, '⛔ বন্ধ মাসের বিল খসড়ায় পড়ে আছে।');
@@ -117,7 +122,7 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
     {
         Carbon::setTestNow('2026-10-10 10:00:00');
         $sale = $this->sell('2');
-        $this->closeAugust();
+        $lock = $this->closeAugust();
 
         $this->assertSame('2026-10-10', $sale->trx_date->toDateString(), 'প্রস্তুতিটাই ভুল — বিলটা অক্টোবরের নয়।');
         $this->assertNotNull(app(OpenPeriod::class)->lockOn('2026-08-15'), 'প্রস্তুতিটাই ভুল — আগস্ট বন্ধ নয়।');
@@ -128,7 +133,7 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
         $response = $this->from($edit)->post(route('sales.direct.store'), $this->form($sale, '3', '2026-08-15'));
 
         $response->assertStatus(302)->assertRedirect($edit);
-        $response->assertSessionHasErrors(['edit' => __('sales::validation.edit_month_closed', ['no' => $sale->document_no])]);
+        $this->assertRefusedWithTheEditMessage($response, $lock);
         $this->assertSame(DocumentStatus::CONFIRMED, $sale->fresh()->status, '⛔ থামা সম্পাদনায় বিল খসড়ায় পড়ে আছে।');
         $this->assertSame(0, bccomp('20', (string) $sale->fresh()->total, 4), '⛔ থামা সম্পাদনায় মোট বদলেছে।');
         $this->assertSame($rows, $this->lastIds(), '⛔ বন্ধ মাসের তারিখের সম্পাদনায় খাতা, খরচের স্তর বা মজুদে নতুন সারি বসেছে।');
@@ -141,9 +146,28 @@ final class AClosedMonthsBillIsNotEditedTest extends TestCase
 
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
-    private function closeAugust(): void
+    /**
+     * ⛔ থামা মানে fe-র বাংলা কথা, হুবহু, ঠিক `edit` ঘরে — আর খাতার সাধারণ মাসের তালার কথা নয় (সেটা এলে পাহারাটা কাজ করেনি,
+     * থামিয়েছে নিচের তালা; মানুষ জানত না কী করতে হবে)।
+     */
+    private function assertRefusedWithTheEditMessage(TestResponse $response, PeriodLock $lock): void
     {
-        PeriodLock::query()->create([
+        $bag = app('session.store')->get('errors')?->getBag('default');
+        $this->assertNotNull($bag, '⛔ থামেনি — সেশনে কোনো ত্রুটি নেই।');
+        $seen = json_encode($bag->toArray(), JSON_UNESCAPED_UNICODE);
+
+        foreach (['bn', 'en'] as $locale) {
+            $generic = (string) __('core.period.month_closed', ['month' => $lock->label(), 'reason' => $lock->reason], $locale);
+            $this->assertNotContains($generic, $bag->all(), '⛔ পাহারা নয়, খাতার সাধারণ মাসের তালা থামাল: '.$seen);
+        }
+
+        $this->assertSame([self::EDIT_CLOSED], $bag->get('edit'), '⛔ `edit` ঘরে fe-র বার্তা হুবহু নেই: '.$seen);
+        $this->assertSame(self::EDIT_CLOSED, (string) __('sales::validation.edit_month_closed', [], 'bn'), '⛔ ভাষার ফাইলে বার্তাটা fe-র কথা নয়।');
+    }
+
+    private function closeAugust(): PeriodLock
+    {
+        return PeriodLock::query()->create([
             'company_id' => $this->company->id, 'year' => 2026, 'month' => 8,
             'reason' => 'আগস্টের হিসাব ছাপা', 'locked_by' => $this->owner->id, 'locked_at' => now(),
         ]);

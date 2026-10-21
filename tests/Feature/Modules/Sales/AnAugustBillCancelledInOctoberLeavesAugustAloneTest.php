@@ -223,19 +223,36 @@ final class AnAugustBillCancelledInOctoberLeavesAugustAloneTest extends TestCase
     {
         Carbon::setTestNow(self::OCTOBER_DAY.' 10:00:00');
         $sale = $this->sell('2');
-        PeriodLock::query()->create([
+        $lock = PeriodLock::query()->create([
             'company_id' => $this->company->id, 'year' => 2026, 'month' => 10,
             'reason' => 'অক্টোবর বন্ধ', 'locked_by' => $this->owner->id, 'locked_at' => now(),
         ]);
         $this->assertNotNull(app(OpenPeriod::class)->lockOn(self::OCTOBER_DAY), 'প্রস্তুতিটাই ভুল — অক্টোবর বন্ধ নয়।');
         $last = $this->lastIds();
 
+        /*
+         * ⛔ থামা মানে বাতিল-ইনভয়েসের নিজের বার্তা, হুবহু, ঠিক `reason` ঘরে — খাতার সাধারণ মাসের তালার কথা নয়। ⓘ সাধারণটা এলে
+         * পাহারাটা কাজ করেনি, থামিয়েছে নিচের তালা (মজুদ বা খাতা), আর মানুষ জানত না বাতিল আজকের তারিখে বসে।
+         */
+        app()->setLocale('bn');
+        $own = '⛔ আজকের মাস 10/2026 বন্ধ — বাতিল-ইনভয়েস বসে আজকের তারিখে; অনুমতিপ্রাপ্ত কেউ কারণ লিখে মাস খুললে তবেই।';
+
         try {
             app(SalesInvoiceCancellationService::class)->request($sale, $this->owner, 'ভুল বিল');
             $this->fail('⛔ বাতিলের নিজের মাস বন্ধ, তবু বাতিল-ইনভয়েস হয়ে গেল।');
         } catch (ValidationException $e) {
-            $this->assertStringContainsString('10/2026', (string) ($e->errors()['reason'][0] ?? ''), json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+            $seen = json_encode($e->errors(), JSON_UNESCAPED_UNICODE);
+            $all = collect($e->errors())->flatten()->all();
+
+            foreach (['bn', 'en'] as $locale) {
+                $generic = (string) __('core.period.month_closed', ['month' => $lock->label(), 'reason' => $lock->reason], $locale);
+                $this->assertNotContains($generic, $all, '⛔ পাহারা নয়, খাতার সাধারণ মাসের তালা থামাল: '.$seen);
+            }
+
+            $this->assertSame([$own], $e->errors()['reason'] ?? null, '⛔ `reason` ঘরে বাতিলের নিজের মাসের বার্তা হুবহু নেই: '.$seen);
         }
+
+        $this->assertSame($own, (string) __('sales::cancellation.month_closed', ['month' => '10/2026'], 'bn'), '⛔ ভাষার ফাইলের বার্তা বদলেছে।');
 
         $this->assertSame(DocumentStatus::CONFIRMED, $sale->fresh()->status);
         $this->assertSame(0, SalesInvoiceCancellation::query()->count(), '⛔ থামার পরেও কাগজ রয়ে গেছে।');
