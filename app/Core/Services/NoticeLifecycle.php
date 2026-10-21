@@ -93,6 +93,8 @@ final class NoticeLifecycle
                 'ends_on' => $data['ends_on'] ?? null,
                 'is_active' => true,
                 'in_ticker' => $priority->goesToTheBar(),
+                // ⭐ লেখকের "জরুরি" টিক — উপরের স্থির ফিতায় (মালিক, ২১ অক্টোবর ২০২৬; [[NoticeBoard::forStrip()]])
+                'is_urgent' => (bool) ($data['is_urgent'] ?? false),
                 'read_required' => (bool) ($data['read_required'] ?? false),
 
                 /*
@@ -424,6 +426,8 @@ final class NoticeLifecycle
             $notice->fill(array_intersect_key($data, array_flip([
                 'title', 'summary', 'body', 'priority',
                 'starts_on', 'ends_on', 'ack_required', 'ack_deadline',
+                // ⓘ জরুরি টিক প্রকাশিত নোটিশেও বদলায় — জায়গা বদলায়, লেখা নয়; বদলটা নিরীক্ষায় আগে/পরে সহ বসে ([[IsAudited]])
+                'is_urgent',
             ])))->save();
 
             return $notice->fresh();

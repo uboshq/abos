@@ -923,6 +923,10 @@ return [
         'details' => 'Details',
         'close' => 'Close',
         'more_in_bell' => ':count more notices in the bell',
+        // ⭐ নিচের চলন্ত ঘোষণা ([[shell.statusbar]], মালিক, ২১ অক্টোবর ২০২৬)
+        'ticker_label' => 'Announcements',
+        'ticker_pause' => 'Pause announcements',
+        'ticker_play' => 'Play announcements',
         'awaiting_mine' => 'Waiting for your decision',
         'approvals_waiting' => 'Approvals, :count waiting',
         'signed_unposted' => 'Signed, not posted',

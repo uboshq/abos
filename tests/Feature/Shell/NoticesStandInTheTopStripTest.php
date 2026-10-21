@@ -26,8 +26,9 @@ use Tests\TestCase;
  * ফাইল ওই দুইটার জায়গা নিল)। নমুনায় ফুটারে কেবল সংস্করণ · © · নাম, আর সতর্কতা উপরে, স্থির, "বিস্তারিত" আর ✕ সহ।
  *
  * দাবি, আসল পাতার দরজা দিয়ে:
- *  - যন্ত্রের সতর্কতা (ব্যাকআপ বাসি, খসড়া পড়ে আছে) ফিতায়, ফুটারে নয়, ঘণ্টাতেও থাকে; চলন্ত বারের চিহ্নও পাতায় নেই।
- *  - মানুষের লেখা নোটিশ ফিতায়, যন্ত্রের সতর্কতার আগে।
+ *  - যন্ত্রের সতর্কতা (ব্যাকআপ বাসি, খসড়া পড়ে আছে) ফিতায়, ফুটারে নয়, ঘণ্টাতেও থাকে; ঘোষণা না থাকলে চলন্ত বারের চিহ্নও পাতায় নেই।
+ *  - মানুষের লেখা নোটিশ, "জরুরি" টিক দেওয়া, ফিতায় — যন্ত্রের সতর্কতার আগে (২১ অক্টোবর ২০২৬ থেকে জরুরি নয় এমন ঘোষণা নিচের
+ *    চলন্ত বারে: [[AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest]])।
  *  - ✕ চাপলে এই লগইনে ফিতা থেকে সরে, ঘণ্টায় থাকে।
  *  - তিনটার বেশি হলে তিনটা ফিতা আর "আরও Nটা ঘণ্টায়"।
  *  - কিছু না থাকলে ফিতাই নেই।
@@ -95,8 +96,10 @@ final class NoticesStandInTheTopStripTest extends TestCase
 
     public function test_a_notice_people_wrote_stands_first(): void
     {
+        // ⓘ "জরুরি" টিক — ২১ অক্টোবর ২০২৬ থেকে জরুরি নয় এমন ঘোষণা ফিতায় নয়, নিচের চলন্ত বারে
+        // ([[AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest]])
         Notice::create(['title' => 'রবিবার থেকে দাম বাড়বে', 'body' => 'রবিবার থেকে দাম বাড়বে', 'is_active' => true,
-            'in_ticker' => true, 'created_by' => $this->owner()->id]);
+            'in_ticker' => true, 'is_urgent' => true, 'created_by' => $this->owner()->id]);
         Cache::flush();
 
         $html = $this->actingAs($this->owner())->get(route('dashboard'))->assertOk()->getContent();
@@ -128,7 +131,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
     {
         foreach (['এক', 'দুই', 'তিন', 'চার'] as $word) {
             Notice::create(['title' => "নোটিশ {$word}", 'body' => "নোটিশ {$word}", 'is_active' => true,
-                'in_ticker' => true, 'created_by' => $this->owner()->id]);
+                'in_ticker' => true, 'is_urgent' => true, 'created_by' => $this->owner()->id]);
         }
         Cache::flush();
 

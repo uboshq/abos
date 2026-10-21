@@ -142,6 +142,20 @@
                     </span>
                 </span>
             </label>
+
+            {{-- ⭐ জরুরি — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*।
+                 ⓘ টিক দিলে নোটিশটা উপরের স্থির ফিতায় ([[StatusNotices::forStrip()]]), নিচের চলন্ত বারে নয়; টিক বদলালে
+                 নিরীক্ষায় আগে/পরে সহ বসে। ⛔ ফাঁকা টিক কিছু পাঠায় না — নিয়ন্ত্রক তাই মিথ্যা বসায় ([[NoticeController::validated()]])। --}}
+            <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
+                <input type="checkbox" name="is_urgent" value="1" data-urgent-tick
+                       @checked(old('is_urgent', $notice->is_urgent)) class="mt-1 size-4">
+                <span>
+                    {{ __('system_admin::notice.is_urgent') }}
+                    <span class="block text-2xs text-(--color-ink-muted)">
+                        {{ __('system_admin::notice.urgent_hint') }}
+                    </span>
+                </span>
+            </label>
         </div>
 
         {{-- ⭐ বাতিল · সংরক্ষণ নিচের স্থির পট্টিতে — সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬ (আগে "বাতিল" ছিলই না) --}}

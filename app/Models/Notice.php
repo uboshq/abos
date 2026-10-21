@@ -48,7 +48,7 @@ final class Notice extends Model
     protected $fillable = [
         'company_id', 'notice_category_id', 'type', 'priority',
         'title', 'summary', 'body',
-        'starts_on', 'ends_on', 'expires_at', 'is_active', 'in_ticker',
+        'starts_on', 'ends_on', 'expires_at', 'is_active', 'in_ticker', 'is_urgent',
         'read_required', 'ack_required', 'ack_deadline', 'created_by',
     ];
 
@@ -59,6 +59,8 @@ final class Notice extends Model
             'ends_on' => 'date',
             'is_active' => 'boolean',
             'in_ticker' => 'boolean',
+            // ⭐ জরুরি — উপরের স্থির ফিতায়, নিচের চলন্ত বারে নয় (মালিক, ২১ অক্টোবর ২০২৬; [[StatusNotices::forStrip()]])
+            'is_urgent' => 'boolean',
             'read_required' => 'boolean',
             'ack_required' => 'boolean',
             'published_at' => 'datetime',

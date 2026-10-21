@@ -966,3 +966,84 @@ function send (url, el, body) {
         return response
     })
 }
+
+/*
+ * ⭐ নিচের চলন্ত ঘোষণা — থামানো/চালানোর বোতাম আর চলার গতি (মালিক, ২১ অক্টোবর ২০২৬, fe-র মাধ্যমে: *"জরুরি সতর্কতা উপরে
+ * স্থির, ঘোষণা নিচে চলন্ত"*; [[shell.statusbar]])।
+ *
+ * ⓘ চলাটা CSS-এর (`abos-ticker`, app.css) — JS ছাড়াও চলে, মাউস রাখলে বা Tab-এ ফোকাস এলে থামে, আর যিনি চলন্ত জিনিস বন্ধ
+ * রেখেছেন তাঁর পর্দায় নড়েই না (`motion-safe:`)। এই কম্পোনেন্ট কেবল দুইটা কাজ করে:
+ *   • ⏸/▶ — WCAG 2.2.2: নড়া লেখা থামানোর একটা পথ, আর বাছাইটা এই ব্রাউজারে মনে থাকে। ⓘ মনে রাখাটা সুবিধা, নিয়ম নয় —
+ *     localStorage না পেলে (গোপন জানালা, আটকানো সাইট-ডেটা) চুপচাপ চলন্তই থাকে, পাতা ভাঙে না।
+ *   • গতি লেখার দৈর্ঘ্য ধরে — সেকেন্ডে ~৪০px। ⛔ বাঁধা ৩০ সেকেন্ডে লম্বা ঘোষণা দৌড়াত আর ছোটটা হামাগুড়ি দিত; ধীর আর
+ *     সমান গতিই পড়া যায়।
+ */
+export const TICKER_KEY = 'abos.ticker.paused'
+export const TICKER_SPEED = 40
+
+/** এক কপির চওড়া (px) থেকে এক পাক কত সেকেন্ড — কখনো ২০-এর কম নয়, ছোট লেখা যেন ছুটে না পালায় */
+export function tickerSeconds (width) {
+    return Math.max(20, Math.round(width / TICKER_SPEED))
+}
+
+function tickerRemembered () {
+    try {
+        return window.localStorage.getItem(TICKER_KEY) === '1'
+    } catch {
+        return false
+    }
+}
+
+function tickerRemember (paused) {
+    try {
+        if (paused) {
+            window.localStorage.setItem(TICKER_KEY, '1')
+        } else {
+            window.localStorage.removeItem(TICKER_KEY)
+        }
+    } catch {
+        // ⓘ মনে না থাকলেও বোতামটা এই পাতায় কাজ করে
+    }
+}
+
+export function noticeTicker () {
+    return {
+        paused: false,
+        pauseLabel: '',
+        playLabel: '',
+
+        init () {
+            const el = this.$el
+
+            this.pauseLabel = el.dataset.pauseLabel || ''
+            this.playLabel = el.dataset.playLabel || ''
+            this.paused = tickerRemembered()
+
+            const copy = el.querySelector('[data-ticker-copy]')
+            const width = copy ? copy.offsetWidth : 0
+
+            if (width > 0) {
+                el.style.setProperty('--ticker-duration', tickerSeconds(width) + 's')
+            }
+        },
+
+        toggle () {
+            this.paused = ! this.paused
+            tickerRemember(this.paused)
+        },
+
+        /** `data-state` — CSS এটা দেখে চলা থামায় */
+        get state () {
+            return this.paused ? 'paused' : 'running'
+        },
+
+        get running () {
+            return ! this.paused
+        },
+
+        /** বোতামের নাম — এখন চাপলে কী হবে */
+        get label () {
+            return this.paused ? this.playLabel : this.pauseLabel
+        },
+    }
+}
