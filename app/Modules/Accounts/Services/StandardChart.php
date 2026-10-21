@@ -474,11 +474,11 @@ final class StandardChart implements ProvisionsCompany
 
     /**
      * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — বাংলাদেশ শ্রম আইন ২০০৬, অধ্যায় ১৫, ধারা ২৩৪ (২০১৩-র সংশোধনী): নিট মুনাফার ৫%,
-     * ৮০:১০:১০ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])। ⓘ খরচ ৫২২৩-এ, তিন তহবিলের দেনা একসাথে ২১৩২-এ — ভাগ কাগজে আর পর্দায়।
+     * ৮০:১০:১০ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])। ⓘ খরচ ৫২২৩-এ, তিন তহবিলের দেনা একসাথে ২১৩৩-এ — ভাগ কাগজে আর পর্দায়।
      */
     public const WPPF_EXPENSE = '5223';
 
-    public const WPPF_PAYABLE = '2132';
+    public const WPPF_PAYABLE = '2133';
 
     public const EMPLOYEE_ADVANCE = '1131';
 
@@ -1049,7 +1049,7 @@ final class StandardChart implements ProvisionsCompany
              */
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
             // ⭐ WPPF ও কল্যাণ তহবিলের দেনা — শ্রম আইন ধারা ২৩৪ ([[WPPF_PAYABLE]]; a6, ২১ অক্টোবর ২০২৬)
-            ['2132', 'WPPF & Welfare Fund Payable', 'প্রদেয় মুনাফায় অংশগ্রহণ ও কল্যাণ তহবিল', $L, '2100', false, []],
+            ['2133', 'WPPF & Welfare Fund Payable', 'প্রদেয় মুনাফায় অংশগ্রহণ ও কল্যাণ তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
