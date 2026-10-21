@@ -137,9 +137,13 @@
                 <x-ui.select name="designation_id" :label="__('hr::field.designation')"
                              :options="$designations->mapWithKeys(fn ($d) => [$d->id => $d->name()])"
                              :selected="old('designation_id', $employee->designation_id)" placeholder="-" />
-                <x-ui.select name="employment_type_id" :label="__('hr::field.employment_type')"
-                             :options="$employmentTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
-                             :selected="old('employment_type_id', $employee->employment_type_id)" placeholder="-" />
+                <div>
+                    <x-ui.select name="employment_type_id" :label="__('hr::field.employment_type')"
+                                 :options="$employmentTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
+                                 :selected="old('employment_type_id', $employee->employment_type_id)" placeholder="-" />
+                    {{-- ⭐ "শ্রমিক" কে — BLA ধারা 2(65); অধিকাল কেবল শ্রমিকের (a6, ২১ অক্টোবর ২০২৬) --}}
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)" data-worker-note>{{ __('hr::message.worker_note') }}</p>
+                </div>
                 {{-- ⭐ রিপোর্টিং লাইন — নিজে তালিকায় নেই; চক্র কন্ট্রোলারে আটকায় --}}
                 <x-ui.select name="reports_to_employee_id" :label="__('hr::field.reports_to')"
                              :options="$managers->mapWithKeys(fn ($m) => [$m->id => $m->name().($m->designation ? ' · '.$m->designation->name() : '')])"

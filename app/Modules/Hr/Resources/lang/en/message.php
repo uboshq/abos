@@ -95,4 +95,6 @@ return [
     'bonus_note' => 'Everyone with at least one year of service on that day gets the set percentage of basic (default one month\'s basic). At most two a year; signature and books as for salary, expense on "Festival Bonus".',
     // ⭐ উৎসব ভাতার সইয়ের সারি (a6, ২১ অক্টোবর ২০২৬)
     'bonus_signing_summary' => 'Festival bonus :month · :count people · net :net',
+    // ⭐ শ্রমিক কে — BLA ধারা 2(65) (a6, ২১ অক্টোবর ২০২৬)
+    'worker_note' => '"Worker" (WORKER) — under BLA s.2(65) staff employed in a managerial or administrative capacity are not workers; do not give them this type, and they get no overtime.',
 ];

@@ -49,6 +49,8 @@
             {{ __($enabled ? 'hr::message.ot_on_note' : 'hr::message.ot_off_note', ['hours' => $dailyHours, 'types' => $eligible === '' ? '—' : $eligible]) }}
         </p>
         <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.ot_formula_note') }}</p>
+        {{-- ⭐ BLA ধারা 2(65) — ব্যবস্থাপক/প্রশাসনিক কর্মী শ্রমিক নন, অধিকাল নেই (a6, ২১ অক্টোবর ২০২৬) --}}
+        <p class="mt-1 text-2xs text-(--color-ink-muted)" data-worker-note>{{ __('hr::message.worker_note') }}</p>
 
         @can('hr.attendance.manage')
             <form method="POST" action="{{ route('hr.overtime.store') }}" class="mt-3">
