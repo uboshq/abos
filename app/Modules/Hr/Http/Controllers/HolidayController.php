@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Http\Controllers;
 
+use App\Core\Services\BranchSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -48,7 +49,7 @@ class HolidayController extends Controller implements HasMiddleware
     {
         return [
             // ⓘ দেখা দুই চাবির যেকোনোটায় — `can:` একটাই চাবি নেয়, তাই পদ্ধতিতে ([[authorizeViewing()]])
-            new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+            new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy', 'storeWeeklyOff']),
         ];
     }
 
@@ -103,6 +104,36 @@ class HolidayController extends Controller implements HasMiddleware
             ->with('saved', __('hr::message.holiday_deleted'));
     }
 
+    /**
+     * ⭐ একটা শাখার সাপ্তাহিক ছুটি — কোম্পানির নিয়মের উপরে বদল, বা খালি পাঠালে কোম্পানির মতো (fe-র উত্তর ৬, ২১ অক্টোবর ২০২৬; শ্রম আইন
+     * ধারা ১০৩, ১১৪; [[WorkCalendar::weeklyOff()]])। ⓘ সারিটা [[BranchSettings]]-এ, নিরীক্ষিত; ⛔ সীমিত নাগালে কেবল নিজের শাখা।
+     */
+    public function storeWeeklyOff(Request $request): RedirectResponse
+    {
+        $companyId = CompanyContext::id();
+        $limited = $this->reach->branches($request->user());
+
+        $data = $request->validate([
+            'branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->where('company_id', $companyId),
+                function (string $attribute, mixed $value, \Closure $fail) use ($limited): void {
+                    if ($limited !== null && ! in_array((int) $value, $limited, true)) {
+                        $fail(__('hr::validation.holiday_branch_out_of_reach'));
+                    }
+                }],
+            'weekly_off' => ['nullable', Rule::in(array_keys(WorkCalendar::WEEKLY_OFF))],
+        ]);
+
+        $branches = app(BranchSettings::class);
+
+        if (blank($data['weekly_off'] ?? null)) {
+            $branches->reset('hr.weekly_off', (int) $data['branch_id']);
+        } else {
+            $branches->set('hr.weekly_off', (int) $data['branch_id'], $data['weekly_off']);
+        }
+
+        return back()->with('saved', __('hr::message.weekly_off_saved'));
+    }
+
     private function screen(Request $request, Holiday $editing): View
     {
         $year = $request->integer('year', $editing->exists ? $editing->holiday_date->year : (int) now()->year);
@@ -127,6 +158,10 @@ class HolidayController extends Controller implements HasMiddleware
             'branches' => $this->branchesFor($request->user()),
             'mayAllBranches' => $this->reach->branches($request->user()) === null,
             'weeklyOff' => __('hr::settings.weekly_off_'.app(WorkCalendar::class)->weeklyOffKey()),
+            // ⭐ শাখার নিজের সাপ্তাহিক ছুটি — শাখা → মান (না থাকলে কোম্পানির মতো)
+            'branchWeeklyOff' => \App\Models\BranchSetting::query()->where('company_id', CompanyContext::id())
+                ->where('key', 'hr.weekly_off')->pluck('value', 'branch_id')->all(),
+            'weeklyOffOptions' => array_keys(WorkCalendar::WEEKLY_OFF),
         ]);
     }
 

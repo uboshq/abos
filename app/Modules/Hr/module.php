@@ -453,6 +453,8 @@ return [
             'option_label' => 'hr::settings.weekly_off_',
             'default' => \App\Modules\Hr\Support\WorkCalendar::DEFAULT_WEEKLY_OFF,
             'group' => 'entry',
+            // ⭐ শাখা নিজের দিন বাছতে পারে — দোকান আর কারখানা আলাদা (ধারা ১০৩, ১১৪; fe, ২১ অক্টোবর ২০২৬); বদলটা ছুটির দিনের পর্দায় ([[HolidayController::storeWeeklyOff()]])
+            'per_branch' => true,
         ],
         /*
          * ⭐ অর্জিত ছুটির জের — বছর শেষে বড়জোর কত দিন পরের বছরে যায়, ডিফল্ট ৪০ (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা

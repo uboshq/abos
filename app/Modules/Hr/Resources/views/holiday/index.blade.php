@@ -94,6 +94,31 @@
                     @endif
                 </div>
             </form>
+
+            {{-- ⭐ শাখা ধরে সাপ্তাহিক ছুটি — দোকান আর কারখানা আলাদা (ধারা ১০৩, ১১৪; fe-র উত্তর ৬; [[HolidayController::storeWeeklyOff()]]) --}}
+            <section data-weekly-off class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="mb-3 font-semibold">{{ __('hr::message.weekly_off_branches') }}</h2>
+
+                <div class="space-y-2">
+                    @foreach ($branches as $branch)
+                        <form method="POST" action="{{ route('hr.holiday.weekly_off.store') }}" class="flex items-center gap-2">
+                            @csrf
+                            <input type="hidden" name="branch_id" value="{{ $branch->id }}">
+                            <span class="w-28 truncate text-sm">{{ $branch->name() }}</span>
+                            <select name="weekly_off" aria-label="{{ $branch->name() }}"
+                                    class="h-(--spacing-field) flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                <option value="">{{ __('hr::message.weekly_off_company', ['day' => $weeklyOff]) }}</option>
+                                @foreach ($weeklyOffOptions as $option)
+                                    <option value="{{ $option }}" @selected(($branchWeeklyOff[$branch->id] ?? null) === $option)>
+                                        {{ __('hr::settings.weekly_off_'.$option) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-ui.button type="submit">{{ __('hr::action.save') }}</x-ui.button>
+                        </form>
+                    @endforeach
+                </div>
+            </section>
         @endcan
     </div>
 </x-layouts.app>

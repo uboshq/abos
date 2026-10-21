@@ -108,6 +108,8 @@ Route::middleware('auth')->prefix('hr')->group(function () {
     Route::prefix('holidays')->name('holiday.')->group(function () {
         Route::get('/', [HolidayController::class, 'index'])->name('index');
         Route::post('/', [HolidayController::class, 'store'])->name('store');
+        // ⭐ শাখার সাপ্তাহিক ছুটি (ধারা ১০৩, ১১৪; fe, ২১ অক্টোবর ২০২৬)
+        Route::post('/weekly-off', [HolidayController::class, 'storeWeeklyOff'])->name('weekly_off.store');
         Route::get('/{holiday}/edit', [HolidayController::class, 'edit'])->whereNumber('holiday')->name('edit');
         Route::put('/{holiday}', [HolidayController::class, 'update'])->whereNumber('holiday')->name('update');
         Route::delete('/{holiday}', [HolidayController::class, 'destroy'])->whereNumber('holiday')->name('destroy');

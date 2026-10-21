@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Support;
 
 use App\Core\Services\SettingsService;
+use App\Models\BranchSetting;
 use App\Modules\Hr\Models\Holiday;
 use Illuminate\Support\Carbon;
 
@@ -46,6 +47,9 @@ final class WorkCalendar
     /** @var list<int>|null */
     private ?array $weekly = null;
 
+    /** @var array<string, list<int>|null> "কোম্পানি|শাখা" => শাখার নিজের সাপ্তাহিক ছুটি, বা null (কোম্পানির মতো) */
+    private array $branchWeekly = [];
+
     /** @var array<string, array<string, true>> "কোম্পানি|শাখা|বছর" => তারিখ => হ্যাঁ */
     private array $holidays = [];
 
@@ -54,7 +58,7 @@ final class WorkCalendar
     /** এই দিনটা কি ছুটির দিন — সাপ্তাহিক, বা তালিকার (সব শাখার বা এই শাখার) */
     public function isOffDay(Carbon $day, ?int $companyId, ?int $branchId): bool
     {
-        if (in_array($day->dayOfWeek, $this->weeklyOff(), true)) {
+        if (in_array($day->dayOfWeek, $this->weeklyOff($companyId, $branchId), true)) {
             return true;
         }
 
@@ -79,13 +83,37 @@ final class WorkCalendar
         return $count;
     }
 
-    /** @return list<int> সপ্তাহের যে দিনগুলো ছুটি */
-    public function weeklyOff(): array
+    /**
+     * @return list<int> সপ্তাহের যে দিনগুলো ছুটি — শাখার নিজের বাছাই থাকলে সেটা, নইলে কোম্পানির
+     *
+     * ⭐ শাখার বদল — fe-র উত্তর ৬, ২১ অক্টোবর ২০২৬ (শ্রম আইন ধারা ১০৩ ও ১১৪: দোকান আর কারখানার সাপ্তাহিক ছুটি আলাদা হতে পারে)।
+     * ⓘ বদলটা শাখার সেটিংয়ের সারিতে (`branch_settings`, [[BranchSettings]] — `hr.weekly_off` `per_branch`); কোম্পানি ধরা হয় স্পষ্ট করে,
+     * প্রসঙ্গ থেকে নয়। অচেনা মান হলে কোম্পানির নিয়ম।
+     */
+    public function weeklyOff(?int $companyId = null, ?int $branchId = null): array
     {
+        if ($companyId !== null && $branchId !== null) {
+            $key = $companyId.'|'.$branchId;
+
+            if (! array_key_exists($key, $this->branchWeekly)) {
+                $own = BranchSetting::query()
+                    ->where('company_id', $companyId)
+                    ->where('branch_id', $branchId)
+                    ->where('key', 'hr.weekly_off')
+                    ->value('value');
+
+                $this->branchWeekly[$key] = is_string($own) && array_key_exists($own, self::WEEKLY_OFF) ? self::WEEKLY_OFF[$own] : null;
+            }
+
+            if ($this->branchWeekly[$key] !== null) {
+                return $this->branchWeekly[$key];
+            }
+        }
+
         return $this->weekly ??= self::WEEKLY_OFF[$this->weeklyOffKey()];
     }
 
-    /** সেটিংয়ের মান — অচেনা হলে ডিফল্ট (শুক্রবার), যাতে ভাঙা একটা সারি গোটা সপ্তাহকে কাজের দিন না বানায় */
+    /** কোম্পানির সেটিংয়ের মান — অচেনা হলে ডিফল্ট (শুক্রবার), যাতে ভাঙা একটা সারি গোটা সপ্তাহকে কাজের দিন না বানায় */
     public function weeklyOffKey(): string
     {
         $value = (string) $this->settings->get('hr.weekly_off', self::DEFAULT_WEEKLY_OFF);

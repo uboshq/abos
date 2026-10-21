@@ -441,3 +441,38 @@ P5.3 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
   old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
   new: new Middleware('can:hr.attendance.manage', only: ['store', 'update', 'destroy']),
   kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (leave viewer opens the edit page — writable() lets an unlimited user through)
+
+== P6 — weekly off: company default + per-branch override (branch wins) ==
+K = tests/Feature/Modules/Hr/EachBranchKeepsItsOwnWeeklyOffTest.php
+
+P6.1 app/Modules/Hr/Support/WorkCalendar.php (weeklyOff)
+  old: if ($companyId !== null && $branchId !== null) {
+  new: if (false) {
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys (Netrokona's Friday refused)
+
+P6.2 app/Modules/Hr/Support/WorkCalendar.php (isOffDay)
+  old: if (in_array($day->dayOfWeek, $this->weeklyOff($companyId, $branchId), true)) {
+  new: if (in_array($day->dayOfWeek, $this->weeklyOff(), true)) {
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys
+
+P6.3 app/Modules/Hr/Support/WorkCalendar.php (weeklyOff)
+  old: ->where('branch_id', $branchId)
+  new: (line deleted)
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys (Dhaka picks up Netrokona's Saturday: Friday leave passes for E-D)
+
+P6.4 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff)
+  old: if ($limited !== null && ! in_array((int) $value, $limited, true)) {
+                        $fail(__('hr::validation.holiday_branch_out_of_reach'));
+  new: if (false) {
+                        $fail(__('hr::validation.holiday_branch_out_of_reach'));   (the second closure, in storeWeeklyOff)
+  kill: K::test_a_branch_limited_person_sets_only_their_own_branch
+
+P6.5 app/Modules/Hr/Http/Controllers/HolidayController.php (storeWeeklyOff)
+  old: if (blank($data['weekly_off'] ?? null)) {
+  new: if (false) {
+  kill: K::test_the_branchs_own_weekly_off_wins_over_the_companys (reset to company fails / row stays)
+
+P6.6 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy', 'storeWeeklyOff']),
+  new: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+  kill: K::test_a_branch_limited_person_sets_only_their_own_branch (view-key holder writes)

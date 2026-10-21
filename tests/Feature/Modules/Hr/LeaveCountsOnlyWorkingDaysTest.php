@@ -165,7 +165,8 @@ final class LeaveCountsOnlyWorkingDaysTest extends TestCase
         $employee = $this->employee('E-S', $this->dhaka);
 
         app(SettingsService::class)->set('hr.weekly_off', 'none');
-        app()->forgetInstance(SettingsService::class);
+        // ⓘ SettingsService cache — a6/settings-cache-fix
+        app(SettingsService::class)->flush();
 
         // ⓘ শুক্রবার এখন কাজের দিন — রবি ১৩ – শনি ১৯-এ কেবল বিজয় দিবস বাদ, ৬ দিন
         $this->assertSame(LeaveApplication::PENDING,
