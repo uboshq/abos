@@ -1854,6 +1854,192 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।'**
   String get salesPlanRouteNote;
+
+  /// Schemes and commissions: the status chip for every status
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get salesPlanStatusAll;
+
+  /// Schemes: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'স্কিম'**
+  String get salesPlanSchemesTitle;
+
+  /// Schemes: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো স্কিম নেই'**
+  String get salesPlanSchemesEmpty;
+
+  /// Schemes: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'স্কিমের কোড বা নাম'**
+  String get salesPlanSchemesSearch;
+
+  /// Schemes: how many in all, and where they are changed
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count} টি স্কিম · বসানো ও বদল ওয়েবে'**
+  String salesPlanSchemesCount(String count);
+
+  /// Schemes: a scheme's basis, what it applies to (server labels) and its step count
+  ///
+  /// In bn, this message translates to:
+  /// **'{basis} · {appliesTo} · {rules, plural, other{{rules}টি ধাপ}}'**
+  String salesPlanSchemeLine(String basis, String appliesTo, int rules);
+
+  /// Schemes: after the dates when the scheme runs today
+  ///
+  /// In bn, this message translates to:
+  /// **' · আজ চলছে'**
+  String get salesPlanSchemeLive;
+
+  /// Scheme page: the code row
+  ///
+  /// In bn, this message translates to:
+  /// **'কোড'**
+  String get salesPlanSchemeCode;
+
+  /// Scheme page: the status row
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা'**
+  String get salesPlanSchemeStatus;
+
+  /// Scheme page: what the scheme is counted on
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিত্তি'**
+  String get salesPlanSchemeBasis;
+
+  /// Scheme page: what the scheme applies to
+  ///
+  /// In bn, this message translates to:
+  /// **'কীসের উপর'**
+  String get salesPlanSchemeAppliesTo;
+
+  /// Scheme page: the from – to dates of the scheme
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ'**
+  String get salesPlanSchemeValidity;
+
+  /// Scheme page: free-text notes on the scheme (not a debit or credit note)
+  ///
+  /// In bn, this message translates to:
+  /// **'নোট'**
+  String get salesPlanSchemeNotes;
+
+  /// Scheme page: section title with the step count
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{ধাপ · {count}টি}}'**
+  String salesPlanSchemeSteps(int count);
+
+  /// Scheme page: no steps
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো ধাপ বসানো নেই'**
+  String get salesPlanSchemeNoSteps;
+
+  /// Scheme page: a step, its role (server label) and level
+  ///
+  /// In bn, this message translates to:
+  /// **'{role} · স্তর {level}'**
+  String salesPlanSchemeRoleLevel(String role, String level);
+
+  /// Scheme page: a slab with no upper end; from is an amount
+  ///
+  /// In bn, this message translates to:
+  /// **'{from} থেকে উপরে'**
+  String salesPlanSchemeFromUp(String from);
+
+  /// Scheme page: the note at the end
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।'**
+  String get salesPlanSchemeNote;
+
+  /// Commission: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'কমিশন'**
+  String get salesPlanCommissionTitle;
+
+  /// Commission: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো কমিশন নেই'**
+  String get salesPlanCommissionEmpty;
+
+  /// Commission: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর, ডিলার বা কোম্পানি'**
+  String get salesPlanCommissionSearch;
+
+  /// Commission: the grand total
+  ///
+  /// In bn, this message translates to:
+  /// **'সর্বমোট'**
+  String get salesPlanCommissionGrandTotal;
+
+  /// Commission: what the company still owes
+  ///
+  /// In bn, this message translates to:
+  /// **'কোম্পানির কাছে দাবি, এখনো বাকি'**
+  String get salesPlanCommissionPending;
+
+  /// Commission: a status (server label) and how many claims
+  ///
+  /// In bn, this message translates to:
+  /// **'{label} · {count, plural, other{{count}টি}}'**
+  String salesPlanCommissionByStatus(String label, int count);
+
+  /// Commission: what the total counts
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'**
+  String get salesPlanCommissionTotalNote;
+
+  /// Commission: where claims are changed
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।'**
+  String get salesPlanCommissionWebNote;
+
+  /// Commission: the invoice number of a claim
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল {no}'**
+  String salesPlanCommissionInvoice(String no);
+
+  /// Commission: the base amount; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিত্তি {amount}'**
+  String salesPlanCommissionBase(String amount);
+
+  /// Commission: the rate
+  ///
+  /// In bn, this message translates to:
+  /// **'হার {rate}'**
+  String salesPlanCommissionRate(String rate);
+
+  /// Commission: a fixed amount; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'থোক {amount}'**
+  String salesPlanCommissionLump(String amount);
+
+  /// Commission: why it was decided so; reason from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ: {reason}'**
+  String salesPlanCommissionReason(String reason);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

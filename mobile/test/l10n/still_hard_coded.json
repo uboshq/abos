@@ -143,7 +143,6 @@
   "lib/features/promotion/offers_screen.dart": 14,
   "lib/features/reports/report_by_key_screen.dart": 5,
   "lib/features/reports/reports_screen.dart": 22,
-  "lib/features/sales_plan/sales_plan_screens.dart": 33,
   "lib/features/scan/paper_scan_screen.dart": 35,
   "lib/features/scan/receive_screen.dart": 13,
   "lib/features/self_service/self_service_screens.dart": 49,

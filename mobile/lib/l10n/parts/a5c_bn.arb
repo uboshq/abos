@@ -1481,5 +1481,196 @@
   "salesPlanRouteNote": "ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।",
   "@salesPlanRouteNote": {
     "description": "Route page: the note under the weekly plan"
+  },
+  "salesPlanStatusAll": "সব",
+  "@salesPlanStatusAll": {
+    "description": "Schemes and commissions: the status chip for every status"
+  },
+  "salesPlanSchemesTitle": "স্কিম",
+  "@salesPlanSchemesTitle": {
+    "description": "Schemes: screen title"
+  },
+  "salesPlanSchemesEmpty": "কোনো স্কিম নেই",
+  "@salesPlanSchemesEmpty": {
+    "description": "Schemes: empty title"
+  },
+  "salesPlanSchemesSearch": "স্কিমের কোড বা নাম",
+  "@salesPlanSchemesSearch": {
+    "description": "Schemes: search hint"
+  },
+  "salesPlanSchemesCount": "মোট {count} টি স্কিম · বসানো ও বদল ওয়েবে",
+  "@salesPlanSchemesCount": {
+    "description": "Schemes: how many in all, and where they are changed",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanSchemeLine": "{basis} · {appliesTo} · {rules, plural, other{{rules}টি ধাপ}}",
+  "@salesPlanSchemeLine": {
+    "description": "Schemes: a scheme's basis, what it applies to (server labels) and its step count",
+    "placeholders": {
+      "basis": {
+        "type": "String"
+      },
+      "appliesTo": {
+        "type": "String"
+      },
+      "rules": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanSchemeLive": " · আজ চলছে",
+  "@salesPlanSchemeLive": {
+    "description": "Schemes: after the dates when the scheme runs today"
+  },
+  "salesPlanSchemeCode": "কোড",
+  "@salesPlanSchemeCode": {
+    "description": "Scheme page: the code row"
+  },
+  "salesPlanSchemeStatus": "অবস্থা",
+  "@salesPlanSchemeStatus": {
+    "description": "Scheme page: the status row"
+  },
+  "salesPlanSchemeBasis": "ভিত্তি",
+  "@salesPlanSchemeBasis": {
+    "description": "Scheme page: what the scheme is counted on"
+  },
+  "salesPlanSchemeAppliesTo": "কীসের উপর",
+  "@salesPlanSchemeAppliesTo": {
+    "description": "Scheme page: what the scheme applies to"
+  },
+  "salesPlanSchemeValidity": "মেয়াদ",
+  "@salesPlanSchemeValidity": {
+    "description": "Scheme page: the from – to dates of the scheme"
+  },
+  "salesPlanSchemeNotes": "নোট",
+  "@salesPlanSchemeNotes": {
+    "description": "Scheme page: free-text notes on the scheme (not a debit or credit note)"
+  },
+  "salesPlanSchemeSteps": "{count, plural, other{ধাপ · {count}টি}}",
+  "@salesPlanSchemeSteps": {
+    "description": "Scheme page: section title with the step count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanSchemeNoSteps": "কোনো ধাপ বসানো নেই",
+  "@salesPlanSchemeNoSteps": {
+    "description": "Scheme page: no steps"
+  },
+  "salesPlanSchemeRoleLevel": "{role} · স্তর {level}",
+  "@salesPlanSchemeRoleLevel": {
+    "description": "Scheme page: a step, its role (server label) and level",
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanSchemeFromUp": "{from} থেকে উপরে",
+  "@salesPlanSchemeFromUp": {
+    "description": "Scheme page: a slab with no upper end; from is an amount",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanSchemeNote": "ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।",
+  "@salesPlanSchemeNote": {
+    "description": "Scheme page: the note at the end"
+  },
+  "salesPlanCommissionTitle": "কমিশন",
+  "@salesPlanCommissionTitle": {
+    "description": "Commission: screen title"
+  },
+  "salesPlanCommissionEmpty": "কোনো কমিশন নেই",
+  "@salesPlanCommissionEmpty": {
+    "description": "Commission: empty title"
+  },
+  "salesPlanCommissionSearch": "নম্বর, ডিলার বা কোম্পানি",
+  "@salesPlanCommissionSearch": {
+    "description": "Commission: search hint"
+  },
+  "salesPlanCommissionGrandTotal": "সর্বমোট",
+  "@salesPlanCommissionGrandTotal": {
+    "description": "Commission: the grand total"
+  },
+  "salesPlanCommissionPending": "কোম্পানির কাছে দাবি, এখনো বাকি",
+  "@salesPlanCommissionPending": {
+    "description": "Commission: what the company still owes"
+  },
+  "salesPlanCommissionByStatus": "{label} · {count, plural, other{{count}টি}}",
+  "@salesPlanCommissionByStatus": {
+    "description": "Commission: a status (server label) and how many claims",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "salesPlanCommissionTotalNote": "ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে",
+  "@salesPlanCommissionTotalNote": {
+    "description": "Commission: what the total counts"
+  },
+  "salesPlanCommissionWebNote": "ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।",
+  "@salesPlanCommissionWebNote": {
+    "description": "Commission: where claims are changed"
+  },
+  "salesPlanCommissionInvoice": "বিল {no}",
+  "@salesPlanCommissionInvoice": {
+    "description": "Commission: the invoice number of a claim",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionBase": "ভিত্তি {amount}",
+  "@salesPlanCommissionBase": {
+    "description": "Commission: the base amount; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionRate": "হার {rate}",
+  "@salesPlanCommissionRate": {
+    "description": "Commission: the rate",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionLump": "থোক {amount}",
+  "@salesPlanCommissionLump": {
+    "description": "Commission: a fixed amount; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesPlanCommissionReason": "কারণ: {reason}",
+  "@salesPlanCommissionReason": {
+    "description": "Commission: why it was decided so; reason from the server",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }

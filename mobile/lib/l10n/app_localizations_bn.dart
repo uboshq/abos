@@ -1243,4 +1243,136 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get salesPlanRouteNote => 'ⓘ ছক আর লক্ষ্য বসানো ওয়েবে।';
+
+  @override
+  String get salesPlanStatusAll => 'সব';
+
+  @override
+  String get salesPlanSchemesTitle => 'স্কিম';
+
+  @override
+  String get salesPlanSchemesEmpty => 'কোনো স্কিম নেই';
+
+  @override
+  String get salesPlanSchemesSearch => 'স্কিমের কোড বা নাম';
+
+  @override
+  String salesPlanSchemesCount(String count) {
+    return 'মোট $count টি স্কিম · বসানো ও বদল ওয়েবে';
+  }
+
+  @override
+  String salesPlanSchemeLine(String basis, String appliesTo, int rules) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rules,
+      locale: localeName,
+      other: '$rulesটি ধাপ',
+    );
+    return '$basis · $appliesTo · $_temp0';
+  }
+
+  @override
+  String get salesPlanSchemeLive => ' · আজ চলছে';
+
+  @override
+  String get salesPlanSchemeCode => 'কোড';
+
+  @override
+  String get salesPlanSchemeStatus => 'অবস্থা';
+
+  @override
+  String get salesPlanSchemeBasis => 'ভিত্তি';
+
+  @override
+  String get salesPlanSchemeAppliesTo => 'কীসের উপর';
+
+  @override
+  String get salesPlanSchemeValidity => 'মেয়াদ';
+
+  @override
+  String get salesPlanSchemeNotes => 'নোট';
+
+  @override
+  String salesPlanSchemeSteps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ধাপ · $countটি',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPlanSchemeNoSteps => 'কোনো ধাপ বসানো নেই';
+
+  @override
+  String salesPlanSchemeRoleLevel(String role, String level) {
+    return '$role · স্তর $level';
+  }
+
+  @override
+  String salesPlanSchemeFromUp(String from) {
+    return '$from থেকে উপরে';
+  }
+
+  @override
+  String get salesPlanSchemeNote => 'ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।';
+
+  @override
+  String get salesPlanCommissionTitle => 'কমিশন';
+
+  @override
+  String get salesPlanCommissionEmpty => 'কোনো কমিশন নেই';
+
+  @override
+  String get salesPlanCommissionSearch => 'নম্বর, ডিলার বা কোম্পানি';
+
+  @override
+  String get salesPlanCommissionGrandTotal => 'সর্বমোট';
+
+  @override
+  String get salesPlanCommissionPending => 'কোম্পানির কাছে দাবি, এখনো বাকি';
+
+  @override
+  String salesPlanCommissionByStatus(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countটি',
+    );
+    return '$label · $_temp0';
+  }
+
+  @override
+  String get salesPlanCommissionTotalNote =>
+      'ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে';
+
+  @override
+  String get salesPlanCommissionWebNote =>
+      'ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।';
+
+  @override
+  String salesPlanCommissionInvoice(String no) {
+    return 'বিল $no';
+  }
+
+  @override
+  String salesPlanCommissionBase(String amount) {
+    return 'ভিত্তি $amount';
+  }
+
+  @override
+  String salesPlanCommissionRate(String rate) {
+    return 'হার $rate';
+  }
+
+  @override
+  String salesPlanCommissionLump(String amount) {
+    return 'থোক $amount';
+  }
+
+  @override
+  String salesPlanCommissionReason(String reason) {
+    return 'কারণ: $reason';
+  }
 }

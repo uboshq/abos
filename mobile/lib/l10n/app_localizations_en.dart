@@ -1229,7 +1229,7 @@ class AppL10nEn extends AppL10n {
   String get salesPlanSales => 'Sales';
 
   @override
-  String get salesPlanReturns => 'Returns (goods sent back)';
+  String get salesPlanReturns => 'Returns';
 
   @override
   String get salesPlanCollections => 'Collection';
@@ -1262,4 +1262,141 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get salesPlanRouteNote => 'ⓘ The plan and targets are set on the web.';
+
+  @override
+  String get salesPlanStatusAll => 'All';
+
+  @override
+  String get salesPlanSchemesTitle => 'Schemes';
+
+  @override
+  String get salesPlanSchemesEmpty => 'No schemes';
+
+  @override
+  String get salesPlanSchemesSearch => 'Scheme code or name';
+
+  @override
+  String salesPlanSchemesCount(String count) {
+    return 'Total $count schemes · Set up and changed on the web';
+  }
+
+  @override
+  String salesPlanSchemeLine(String basis, String appliesTo, int rules) {
+    String _temp0 = intl.Intl.pluralLogic(
+      rules,
+      locale: localeName,
+      other: '$rules steps',
+      one: '$rules step',
+    );
+    return '$basis · $appliesTo · $_temp0';
+  }
+
+  @override
+  String get salesPlanSchemeLive => ' · Running today';
+
+  @override
+  String get salesPlanSchemeCode => 'Code';
+
+  @override
+  String get salesPlanSchemeStatus => 'Status';
+
+  @override
+  String get salesPlanSchemeBasis => 'Basis';
+
+  @override
+  String get salesPlanSchemeAppliesTo => 'Applies to';
+
+  @override
+  String get salesPlanSchemeValidity => 'Validity (expires)';
+
+  @override
+  String get salesPlanSchemeNotes => 'Notes';
+
+  @override
+  String salesPlanSchemeSteps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Steps · $count',
+      one: 'Steps · $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get salesPlanSchemeNoSteps => 'No steps set';
+
+  @override
+  String salesPlanSchemeRoleLevel(String role, String level) {
+    return '$role · Level $level';
+  }
+
+  @override
+  String salesPlanSchemeFromUp(String from) {
+    return '$from and above';
+  }
+
+  @override
+  String get salesPlanSchemeNote =>
+      'ⓘ Steps are set, started and stopped on the web.';
+
+  @override
+  String get salesPlanCommissionTitle => 'Commission';
+
+  @override
+  String get salesPlanCommissionEmpty => 'No commission';
+
+  @override
+  String get salesPlanCommissionSearch => 'Number, dealer or company';
+
+  @override
+  String get salesPlanCommissionGrandTotal => 'Grand total';
+
+  @override
+  String get salesPlanCommissionPending =>
+      'Claimed from the company, still due';
+
+  @override
+  String salesPlanCommissionByStatus(String label, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count',
+      one: '$count',
+    );
+    return '$label · $_temp0';
+  }
+
+  @override
+  String get salesPlanCommissionTotalNote =>
+      'ⓘ Cancelled claims are not in the total; claims sent back are in the total as the depot\'s cost';
+
+  @override
+  String get salesPlanCommissionWebNote =>
+      'ⓘ New claims, settling and cancelling are on the web.';
+
+  @override
+  String salesPlanCommissionInvoice(String no) {
+    return 'Invoice $no';
+  }
+
+  @override
+  String salesPlanCommissionBase(String amount) {
+    return 'Base $amount';
+  }
+
+  @override
+  String salesPlanCommissionRate(String rate) {
+    return 'Rate $rate';
+  }
+
+  @override
+  String salesPlanCommissionLump(String amount) {
+    return 'Lump sum $amount';
+  }
+
+  @override
+  String salesPlanCommissionReason(String reason) {
+    return 'Reason: $reason';
+  }
 }

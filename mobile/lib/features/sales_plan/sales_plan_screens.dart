@@ -24,7 +24,6 @@ import 'sales_plan_api.dart';
 TextStyle _muted(BuildContext context) => TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted);
 const _bold = TextStyle(fontWeight: FontWeight.w600);
 const _amount = TextStyle(fontWeight: FontWeight.w700);
-const _failed = 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।';
 
 /// `DateTime(2026, 10)` → `2026-10` (সার্ভারের `?month=`)
 String monthKey(DateTime month) => '${month.year}-${month.month.toString().padLeft(2, '0')}';
@@ -542,12 +541,12 @@ AppStatusKind _schemeKind(String status) => switch (status) {
     };
 
 /// অবস্থার চিপ — "সব" আর সার্ভারের পাঠানো অবস্থা, প্রতিটার গোনাসহ
-Widget _statusChips(String prefix, List<PlanRow> statuses, String selected, ValueChanged<String> onSelected) => Padding(
+Widget _statusChips(BuildContext context, String prefix, List<PlanRow> statuses, String selected, ValueChanged<String> onSelected) => Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
         ChoiceChip(
           key: ValueKey('$prefix-status-all'),
-          label: const Text('সব'),
+          label: Text(context.l10n.salesPlanStatusAll),
           selected: selected.isEmpty,
           onSelected: (_) => onSelected(''),
         ),
@@ -580,7 +579,7 @@ class _SchemeListScreenState extends State<SchemeListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'স্কিম'),
+        appBar: AbosScreenBar(title: context.l10n.salesPlanSchemesTitle),
         body: _PlanList(
           reloadKey: '$_q|$_status',
           load: (page) async {
@@ -589,15 +588,15 @@ class _SchemeListScreenState extends State<SchemeListScreen> {
             return p;
           },
           rowsKey: 'rows',
-          emptyTitle: 'কোনো স্কিম নেই',
+          emptyTitle: context.l10n.salesPlanSchemesEmpty,
           controls: [
-            _Search(fieldKey: 'scheme-search', hint: 'স্কিমের কোড বা নাম', onSearch: (v) => setState(() => _q = v)),
-            if (_statuses.isNotEmpty) _statusChips('scheme', _statuses, _status, (s) => setState(() => _status = s)),
+            _Search(fieldKey: 'scheme-search', hint: context.l10n.salesPlanSchemesSearch, onSearch: (v) => setState(() => _q = v)),
+            if (_statuses.isNotEmpty) _statusChips(context, 'scheme', _statuses, _status, (s) => setState(() => _status = s)),
           ],
           summary: (context, p) => [
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Text('মোট ${p.number('count')} টি স্কিম · বসানো ও বদল ওয়েবে', key: const ValueKey('scheme-count'), style: _bold),
+              child: Text(context.l10n.salesPlanSchemesCount('${p.number('count')}'), key: const ValueKey('scheme-count'), style: _bold),
             ),
           ],
           item: (context, s) => _card(
@@ -610,8 +609,8 @@ class _SchemeListScreenState extends State<SchemeListScreen> {
                 Expanded(child: Text('${s.text('code')} · ${s.text('name')}', style: _bold)),
                 AppStatusPill(label: s.text('status_label'), kind: _schemeKind(s.text('status'))),
               ]),
-              Text('${s.text('basis_label')} · ${s.text('applies_to_label')} · ${s.number('rules')}টি ধাপ', style: _muted(context)),
-              Text('${dayOf(s.maybe('valid_from'))} – ${dayOf(s.maybe('valid_to'))}${s.flag('live') ? ' · আজ চলছে' : ''}', style: _muted(context)),
+              Text(context.l10n.salesPlanSchemeLine(s.text('basis_label'), s.text('applies_to_label'), s.number('rules')), style: _muted(context)),
+              Text('${dayOf(s.maybe('valid_from'))} – ${dayOf(s.maybe('valid_to'))}${s.flag('live') ? context.l10n.salesPlanSchemeLive : ''}', style: _muted(context)),
             ],
           ),
         ),
@@ -630,39 +629,39 @@ class SchemeDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) => PaperPage<PlanRow>(
         title: title,
         load: () => api.scheme(id),
-        failed: _failed,
+        failed: context.l10n.salesPlanLoadFailed,
         body: (context, s) => [
           Card(
             key: const ValueKey('scheme-facts'),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
               child: Column(children: [
-                FactRow('কোড', s.text('code')),
-                FactRow('অবস্থা', s.text('status_label')),
-                FactRow('ভিত্তি', s.text('basis_label')),
-                FactRow('কীসের উপর', [s.text('applies_to_label'), if (s.maybe('target') != null) s.text('target')].join(' · ')),
-                FactRow('মেয়াদ', '${dayOf(s.maybe('valid_from'))} – ${dayOf(s.maybe('valid_to'))}'),
-                if (s.text('notes').isNotEmpty) FactRow('নোট', s.text('notes')),
+                FactRow(context.l10n.salesPlanSchemeCode, s.text('code')),
+                FactRow(context.l10n.salesPlanSchemeStatus, s.text('status_label')),
+                FactRow(context.l10n.salesPlanSchemeBasis, s.text('basis_label')),
+                FactRow(context.l10n.salesPlanSchemeAppliesTo, [s.text('applies_to_label'), if (s.maybe('target') != null) s.text('target')].join(' · ')),
+                FactRow(context.l10n.salesPlanSchemeValidity, '${dayOf(s.maybe('valid_from'))} – ${dayOf(s.maybe('valid_to'))}'),
+                if (s.text('notes').isNotEmpty) FactRow(context.l10n.salesPlanSchemeNotes, s.text('notes')),
               ]),
             ),
           ),
-          SectionTitle('ধাপ · ${s.rows('rules').length}টি'),
-          if (s.rows('rules').isEmpty) const EmptyState(icon: Icons.stairs_outlined, title: 'কোনো ধাপ বসানো নেই'),
+          SectionTitle(context.l10n.salesPlanSchemeSteps(s.rows('rules').length)),
+          if (s.rows('rules').isEmpty) EmptyState(icon: Icons.stairs_outlined, title: context.l10n.salesPlanSchemeNoSteps),
           for (final (i, r) in s.rows('rules').indexed)
             _card(key: ValueKey('scheme-rule-$i'), children: [
               Row(children: [
-                Expanded(child: Text('${r.text('role')} · স্তর ${r.number('level')}', style: _bold)),
+                Expanded(child: Text(context.l10n.salesPlanSchemeRoleLevel(r.text('role'), '${r.number('level')}'), style: _bold)),
                 Text(r.maybe('fixed_amount') != null ? Money.taka(r.text('fixed_amount')) : percentOf(r.maybe('rate_percent')),
                     style: _amount),
               ]),
               Text(
                 r.maybe('slab_to') == null
-                    ? '${Money.taka(r.text('slab_from'))} থেকে উপরে'
-                    : '${Money.taka(r.text('slab_from'))} থেকে ${Money.taka(r.text('slab_to'))}',
+                    ? context.l10n.salesPlanSchemeFromUp(Money.taka(r.text('slab_from')))
+                    : context.l10n.salesPlanFromTo(Money.taka(r.text('slab_from')), Money.taka(r.text('slab_to'))),
                 style: _muted(context),
               ),
             ]),
-          _note(context, 'ⓘ ধাপ বসানো, চালু আর থামানো ওয়েবে।'),
+          _note(context, context.l10n.salesPlanSchemeNote),
         ],
       );
 }
@@ -692,7 +691,7 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'কমিশন'),
+        appBar: AbosScreenBar(title: context.l10n.salesPlanCommissionTitle),
         body: _PlanList(
           reloadKey: '$_q|$_status',
           load: (page) async {
@@ -701,22 +700,23 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
             return p;
           },
           rowsKey: 'rows',
-          emptyTitle: 'কোনো কমিশন নেই',
+          emptyTitle: context.l10n.salesPlanCommissionEmpty,
           controls: [
-            _Search(fieldKey: 'commission-search', hint: 'নম্বর, ডিলার বা কোম্পানি', onSearch: (v) => setState(() => _q = v)),
-            if (_statuses.isNotEmpty) _statusChips('commission', _statuses, _status, (s) => setState(() => _status = s)),
+            _Search(fieldKey: 'commission-search', hint: context.l10n.salesPlanCommissionSearch, onSearch: (v) => setState(() => _q = v)),
+            if (_statuses.isNotEmpty) _statusChips(context, 'commission',
+ _statuses, _status, (s) => setState(() => _status = s)),
           ],
           summary: (context, p) {
             final t = p.child('totals');
             return [
-              ..._totals('সর্বমোট', Money.taka(t.text('amount')), p.number('count'), [
-                ('কোম্পানির কাছে দাবি, এখনো বাকি', Money.taka(t.text('pending'))),
+              ..._totals(context.l10n.salesPlanCommissionGrandTotal, Money.taka(t.text('amount')), p.number('count'), [
+                (context.l10n.salesPlanCommissionPending, Money.taka(t.text('pending'))),
                 for (final s in p.rows('by_status'))
-                  if (s.number('count') > 0) ('${s.text('label')} · ${s.number('count')}টি', Money.taka(s.text('amount'))),
+                  if (s.number('count') > 0) (context.l10n.salesPlanCommissionByStatus(s.text('label'), s.number('count')), Money.taka(s.text('amount'))),
               ]),
               // ⭐ মোটে কী আছে — ওয়েবের পাতার নিচের একই কথা (fe, ১৯ অক্টোবর ২০২৬; সার্ভারের CommissionClaim::UNCOUNTED)
-              _note(context, 'ⓘ বাতিল দাবি মোটে নেই; ফেরত দেওয়া দাবি ডিপোর খরচ হিসেবে মোটে আছে'),
-              _note(context, 'ⓘ নতুন দাবি, মেটানো আর বাতিল ওয়েবে।'),
+              _note(context, context.l10n.salesPlanCommissionTotalNote),
+              _note(context, context.l10n.salesPlanCommissionWebNote),
             ];
           },
           item: (context, c) => _card(key: ValueKey('commission-${c.text('id')}'), children: [
@@ -728,7 +728,7 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
               [
                 dayOf(c.maybe('date')),
                 if (c.text('supplier').isNotEmpty) c.text('supplier'),
-                if (c.maybe('invoice_no') != null) 'বিল ${c.text('invoice_no')}',
+                if (c.maybe('invoice_no') != null) context.l10n.salesPlanCommissionInvoice(c.text('invoice_no')),
               ].join(' · '),
               style: _muted(context),
             ),
@@ -736,16 +736,16 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
               Expanded(
                 child: Text(
                   [
-                    if (c.maybe('base_amount') != null) 'ভিত্তি ${Money.taka(c.text('base_amount'))}',
-                    if (c.maybe('rate') != null) 'হার ${c.text('rate')}',
-                    if (c.maybe('rate') == null && c.maybe('rate_amount') != null) 'থোক ${Money.taka(c.text('rate_amount'))}',
+                    if (c.maybe('base_amount') != null) context.l10n.salesPlanCommissionBase(Money.taka(c.text('base_amount'))),
+                    if (c.maybe('rate') != null) context.l10n.salesPlanCommissionRate(c.text('rate')),
+                    if (c.maybe('rate') == null && c.maybe('rate_amount') != null) context.l10n.salesPlanCommissionLump(Money.taka(c.text('rate_amount'))),
                   ].join(' · '),
                   style: _muted(context),
                 ),
               ),
               AppStatusPill(label: c.text('status_label'), kind: _claimKind(c.text('status'))),
             ]),
-            if (c.text('decision_reason').isNotEmpty) Text('কারণ: ${c.text('decision_reason')}', style: _muted(context)),
+            if (c.text('decision_reason').isNotEmpty) Text(context.l10n.salesPlanCommissionReason(c.text('decision_reason')), style: _muted(context)),
             if (c.text('narration').isNotEmpty) Text(c.text('narration'), style: _muted(context)),
           ]),
         ),
