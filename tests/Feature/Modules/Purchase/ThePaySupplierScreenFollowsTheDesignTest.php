@@ -411,9 +411,10 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
     private function book(Payment $payment): array
     {
         $book = [];
-        LedgerEntry::query()->where('source_type', Payment::drillSourceType())->where('source_id', $payment->id)->with('account')->get()
-            ->each(function (LedgerEntry $entry) use (&$book): void {
-                $code = (string) $entry->account?->code;
+        $codes = Account::query()->pluck('code', 'id');
+        LedgerEntry::query()->where('source_type', Payment::drillSourceType())->where('source_id', $payment->id)->get()
+            ->each(function (LedgerEntry $entry) use (&$book, $codes): void {
+                $code = (string) $codes[$entry->account_id];
                 $book[$code] ??= ['debit' => '0', 'credit' => '0'];
                 $book[$code]['debit'] = bcadd($book[$code]['debit'], (string) $entry->debit, 4);
                 $book[$code]['credit'] = bcadd($book[$code]['credit'], (string) $entry->credit, 4);

@@ -101,7 +101,8 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
             'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
             'money_kind' => Account::MFS,
         ]);
-        $claim = $this->claim('20000');
+        // ⓘ ওয়ালেটে আসা টাকার দাবি MFS পদ্ধতিতে — নগদের দাবি ওয়ালেটে নেওয়া পদ্ধতি-খাত মিলের নিয়মে ঠিকই থামে
+        $claim = $this->claim('20000', DepositClaim::MFS, 'TRX9MFS20000');
         $dueBefore = $this->dealer->outstanding();
 
         $this->actingAs($this->decider->fresh())
@@ -175,13 +176,13 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
         $this->assertSame(0, bccomp((string) $draft->fresh()->amount, '50000', 4), '⛔ ফেরানো সম্পাদনা তবু অঙ্ক বদলে দিল');
     }
 
-    private function claim(string $amount): DepositClaim
+    private function claim(string $amount, string $method = DepositClaim::CASH, ?string $reference = null): DepositClaim
     {
         return app(DepositClaimService::class)->raise($this->dealer, [
             'claimed_on' => now()->subDay()->toDateString(),
             'amount' => $amount,
-            'method' => DepositClaim::CASH,
-            'reference' => null,
+            'method' => $method,
+            'reference' => $reference,
             'bank_account_id' => $this->bank->id,
         ]);
     }

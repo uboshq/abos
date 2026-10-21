@@ -63,9 +63,12 @@ final class TheSchemeTookTheWrongTargetTest extends TestCase
 
     public function test_only_the_chosen_kinds_box_counts(): void
     {
-        $this->post(route('sales.scheme.store'), $this->scheme('Chosen', [
+        $response = $this->post(route('sales.scheme.store'), $this->scheme('Chosen', [
             'targets' => [Scheme::PRODUCT => $this->product, Scheme::BRAND => $this->otherProduct, Scheme::CATEGORY => ''],
-        ]))->assertSessionHasNoErrors();
+        ]));
+        $response->assertSessionHasNoErrors();
+        // ⛔ স্কিম সত্যিই বসে — ফর্মের `targets` স্কিমের সারিতে ঢুকে দরজা ভাঙে না (২২ অক্টোবর ২০২৬)
+        $this->assertSame(302, $response->status(), '⛔ ফর্মের targets ঘর স্কিমের সারিতে গেল — স্কিম বসল না।');
 
         $this->assertSame($this->product, (int) Scheme::query()->where('name', 'Chosen')->value('target_id'),
             '⛔ বাছা পণ্যের বদলে অন্য ঘরের নম্বর বসল');

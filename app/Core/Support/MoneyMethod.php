@@ -64,7 +64,16 @@ final class MoneyMethod
      */
     public static function onlyItsOwn(array $data, string $chargeField = 'charge_amount'): array
     {
-        $method = (string) ($data['instrument'] ?? 'cash');
+        /*
+         * ⛔ পদ্ধতি না এলে কিছুই ছাঁটা নয় — পুরনো ডাক (প্রস্তাব, API, পুরনো পরিশোধ) পদ্ধতি ছাড়াই স্লিপ নম্বর পাঠায়।
+         * ⓘ আগে খালি পদ্ধতিকে "নগদ" ধরে `instrument_no` মুছত: স্লিপ নীরবে হারাত, আর "একই স্লিপ দুবার নয়" পাহারা অন্ধ হত
+         * ([[ASlipUsedTwiceThroughAnEditTest]], ২২ অক্টোবর ২০২৬)।
+         */
+        if (blank($data['instrument'] ?? null)) {
+            return $data;
+        }
+
+        $method = (string) $data['instrument'];
 
         $keeps = match ($method) {
             'cash' => [],
