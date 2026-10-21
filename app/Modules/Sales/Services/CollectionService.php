@@ -17,6 +17,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Core\Support\MoneyMethod;
+use App\Core\Support\Settlement;
 use App\Models\Approval;
 use App\Models\Branch;
 use App\Models\FinancialYear;
@@ -71,14 +72,11 @@ final class CollectionService
         private readonly OpenPeriod $periods,
     ) {}
 
-    /** ⓘ রাউন্ডিংয়ের ডিফল্ট সীমা, টাকায় — fe-র D3 (২১ অক্টোবর ২০২৬): ৳১০ পর্যন্ত, তার উপরে ফেরত */
-    public const ROUNDING_LIMIT = '10';
+    /** ⓘ রাউন্ডিংয়ের ডিফল্ট সীমা — নিয়ম এখন এক জায়গায়, পরিশোধের সাথে ভাগ করা ([[Settlement::LIMIT]]) */
+    public const ROUNDING_LIMIT = Settlement::LIMIT;
 
-    /**
-     * ⓘ সই ছাড়া রাউন্ডিং — ৳০.৫০ পর্যন্ত (মালিক, ১ অক্টোবর ২০২৬; বিলের একই সীমা, [[SalesInvoiceService::discountAwaitingSignature()]])।
-     * তার উপরে সীমা পর্যন্ত মালিকের সই, সীমার উপরে ফেরত (fe, ২২ অক্টোবর ২০২৬)।
-     */
-    public const ROUNDING_UNSIGNED = '0.50';
+    /** ⓘ সই ছাড়া রাউন্ডিং — ৳০.৫০ পর্যন্ত ([[Settlement::UNSIGNED]]; মালিক, ১ অক্টোবর ২০২৬) */
+    public const ROUNDING_UNSIGNED = Settlement::UNSIGNED;
 
     /**
      * @param  array<string, mixed>  $data
@@ -920,9 +918,7 @@ final class CollectionService
 
     private function roundingLimit(): string
     {
-        $raw = trim((string) $this->settings->get('sales.collection.rounding_limit', self::ROUNDING_LIMIT));
-
-        return is_numeric($raw) && bccomp($raw, '0', 4) >= 0 ? bcadd($raw, '0', 4) : bcadd(self::ROUNDING_LIMIT, '0', 4);
+        return Settlement::limit($this->settings);
     }
 
     /** গ্রাহকের শাখা — আদায় সেখানেই বসে (দফা ১৪); গ্রাহকের শাখা না থাকলে উপরের বাছা শাখা */
@@ -1077,15 +1073,8 @@ final class CollectionService
      */
     public static function differenceNeedsOwner(?string $kind, string $amount): bool
     {
-        if (bccomp($amount, '0', 4) <= 0) {
-            return false;
-        }
-
-        return match ($kind) {
-            'discount' => true,
-            'rounding' => bccomp($amount, self::ROUNDING_UNSIGNED, 4) > 0,
-            default => false,
-        };
+        // ⓘ নিয়ম Core-এ, পরিশোধের সাথে ভাগ করা — দুই দিক আলাদা কথা বলতে পারে না ([[Settlement::differenceNeedsOwner()]])
+        return Settlement::differenceNeedsOwner($kind, $amount);
     }
 
     /** ছাড়ের সইয়ের ছাপ — গ্রাহক, খাত, টাকা, কাটা, ছাড় আর প্রতিটা প্রয়োগ; বিবরণ বাদ */
