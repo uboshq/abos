@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,9 @@ class Holiday extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    // ⓘ HR-এর প্রতিটা কোম্পানি-ছাঁকা মডেলের মতো "গোটা গ্রুপের এক খাতা" সুইচ মানে ([[TheStaffRegisterCanBeOneForTheGroupTest]]);
+    // গোনা ([[WorkCalendar]]) তবু কর্মীর নিজের কোম্পানি ধরে
+    use SharedAcrossCompaniesWhenAsked;
 
     protected $table = 'hr_holidays';
 
