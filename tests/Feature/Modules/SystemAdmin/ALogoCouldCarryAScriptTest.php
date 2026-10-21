@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\SystemAdmin;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\UploadLimit;
 use App\Models\AuditFieldChange;
 use App\Models\AuditTrail;
 use App\Models\Company;
@@ -125,22 +126,26 @@ final class ALogoCouldCarryAScriptTest extends TestCase
     }
 
     /**
-     * ⭐ ছবি ১২ MB পর্যন্ত নেওয়া হয় কারণ আমরা ছোট করি — কিন্তু রাখা ফাইল ৫০০KB-র নিচে, আর এখনো ছবি (fe, ২১ অক্টোবর ২০২৬)।
+     * ⭐ সার্ভার যতটা নেয় তার ভেতরের বড় ছবি ছোট হয়ে ৫০০KB-র নিচে, আর এখনো ছবি; সীমার বেশি হলে বাংলা বার্তায় ফেরত (fe, ২১ অক্টোবর ২০২৬)।
      *
-     * ⓘ ৪০০০×৪০০০, ৪px-এর এলোমেলো রঙের খোপ — ফটোর মতো ঝিরঝিরে, সংকোচনে সবচেয়ে কঠিন। ⛔ আগে PNG ৮০০px-এ নামিয়ে পুরো রঙে
-     * রাখা হত — এই ছবিতে ~৬৩০KB; JPEG আগে থেকেই ছোট (~২১০KB), তবু দুইটাই দাবি। ⓘ ৪০০০² ছোট করতে GD-র ~১৬০ MB লাগে, তাই
-     * এই পরীক্ষায় স্মৃতির সীমা ১ GB (সার্ভারের সীমা আলাদা কথা — না কুলালে দরজা "প্রক্রিয়া হয়নি" বলে ফেরায়, কাঁচা রাখে না)।
+     * ⓘ সীমা লাইভের মতো: post_max_size ৮ MB ([[UploadLimit]], কনফিগে বসানো — চলমান PHP-তে upload-এর ini নামানো যায় না) →
+     * ছবির সীমা ৭.৭৫ MB, পর্দায় "7.7"। ⛔ আগে এই দাবি ৭.৭ MB-র JPEG পাঠাত — লাইভের সীমার গা ঘেঁষে; এখন সীমার ভেতরে
+     * ৪০০০×৪০০০ PNG (~৪ MB) আর ৩০০০×৩০০০ JPEG (~৪ MB), আর সীমার বাইরে ৯ MB-র ছবি।
+     * ⓘ ছবিগুলো ৪px-এর এলোমেলো রঙের খোপ — ফটোর মতো ঝিরঝিরে, সংকোচনে সবচেয়ে কঠিন; ⛔ আগে PNG ৮০০px-এ পুরো রঙে থাকত (~৬৩০KB)।
+     * ⓘ ৪০০০² ছোট করতে GD-র ~১৬০ MB লাগে, তাই এই পরীক্ষায় স্মৃতির সীমা ১ GB (লাইভে ৫১২M — কুলায়)।
      */
-    public function test_a_large_photo_is_shrunk_and_stored_under_500_kb(): void
+    public function test_a_large_photo_within_the_limit_is_stored_under_500_kb_and_one_over_it_is_refused(): void
     {
+        config(['abos.uploads.post_max_size' => '8M', 'abos.uploads.upload_max_filesize' => '50M']);
+        $this->assertSame('7.7', UploadLimit::megabytes(UploadLimit::pictureBytes()), 'প্রস্তুতিটাই ভুল — লাইভের সীমা বসেনি।');
         $limit = ini_set('memory_limit', '1G');
 
         try {
-            foreach (['png', 'jpg'] as $type) {
-                $photo = $this->blockNoise(4000, 4000, $type);
+            foreach (['png' => 4000, 'jpg' => 3000] as $type => $edge) {
+                $photo = $this->blockNoise($edge, $edge, $type);
                 $size = (int) filesize($photo);
-                $this->assertGreaterThan(1024 * 1024, $size, "প্রস্তুতিটাই ভুল — {$type} ছবিটা বড় নয়।");
-                $this->assertLessThan(12 * 1024 * 1024, $size, "প্রস্তুতিটাই ভুল — {$type} ছবিটা দরজার ১২ MB-র বেশি।");
+                $this->assertGreaterThan(2 * 1024 * 1024, $size, "প্রস্তুতিটাই ভুল — {$type} ছবিটা বড় নয়।");
+                $this->assertLessThan(UploadLimit::pictureBytes(), $size, "প্রস্তুতিটাই ভুল — {$type} ছবিটা সীমার বাইরে।");
 
                 $this->send($this->owner, new UploadedFile($photo, 'photo.'.$type, $type === 'png' ? 'image/png' : 'image/jpeg', null, true))
                     ->assertSessionHasNoErrors()->assertRedirect();
@@ -157,6 +162,13 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         } finally {
             ini_set('memory_limit', (string) $limit);
         }
+
+        // ⛔ সীমার বাইরে (৯ MB) — বাংলা বার্তা, লোগো বদলায় না
+        $this->owner->forceFill(['locale' => 'bn'])->save();
+        $before = $this->company->fresh()->logo_path;
+        $this->send($this->owner, UploadedFile::fake()->image('phone-photo.jpg', 400, 300)->size(9 * 1024))
+            ->assertSessionHasErrors(['logo' => 'ফাইলটা 7.7 MB-র বেশি — ছোট করে আবার দিন']);
+        $this->assertSame($before, $this->company->fresh()->logo_path, '⛔ সীমার বাইরের ছবিতে লোগো বদলে গেল।');
     }
 
     /** ৪px খোপের এলোমেলো রঙ — সংকোচনে কঠিন, তবু ১২ MB-র নিচে */
