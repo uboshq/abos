@@ -62,7 +62,8 @@ class TheProfileButtonWasOffTheEdgeOfThePhoneTest extends TestCase
         $actions = substr($code, (int) strpos($code, 'data-shell-actions'));
         $actions = substr($actions, 0, (int) strpos($actions, '</div>'));
         preg_match_all('/<x-shell\.([a-z-]+)/', $actions, $parts);
-        $this->assertSame(['create-menu', 'approval-quick-access', 'notification-bell', 'profile-menu'], $parts[1],
+        // ⓘ ২১ অক্টোবর ২০২৬: "সই হয়েছে, পোস্ট হয়নি" বারে ফিরল (মালিকের নিজের আইকন); ৩৭৫px-এ খোঁজা আইকন হয়ে জায়গা ছাড়ে
+        $this->assertSame(['create-menu', 'approval-quick-access', 'signed-unposted', 'notification-bell', 'profile-menu'], $parts[1],
             '⛔ ডানের ঝাঁকে বাড়তি কিছু — ছোট পর্দায় প্রোফাইলের বোতাম আবার ঠেলে বাইরে যেতে পারে।');
 
         $menu = (string) file_get_contents(resource_path('views/components/shell/profile-menu.blade.php'));
