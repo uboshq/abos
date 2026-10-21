@@ -97,10 +97,17 @@ final class ALogoCouldCarryAScriptTest extends TestCase
 
         foreach ($refused as $what => $file) {
             $this->send($this->owner, $file);
-            // ⓘ পরীক্ষার সেশনে ভুলগুলো কখনো ViewErrorBag, কখনো সাধারণ array (Mac-এ দেখা) — দুই রূপই পড়া হয়
+            /*
+             * ⓘ সেশন JSON-এ রাখা (`session.serialization = json`): রাখার মুহূর্তে Laravel ভুলের থলেটাকে array বানায়
+             * (`Store::prepareErrorBagForSerialization()`), আর পরের অনুরোধে আবার থলে বানায় (`marshalErrorBag()`) — তাই পরীক্ষার
+             * স্মৃতিতে এটা array, আসল অনুরোধে সবসময় ViewErrorBag (Mac-এ "has() on array", ২১ অক্টোবর ২০২৬)। দুই রূপই পড়া হয়।
+             */
             $errors = session('errors');
             $has = $errors instanceof \Illuminate\Support\ViewErrorBag ? $errors->has('logo') : array_key_exists('logo', (array) $errors);
             $this->assertTrue($has, "⛔ {$what}: লোগোর ঘরে ভুলের বার্তা নেই — দরজা ফেরায়নি।");
+
+            // ⭐ আর পাতাটা আবার খুললে ভুলসহ আঁকা হয়, ৫০০ নয় — Blade-এর `$errors` আসল থলে পায় (fe-র প্রশ্ন, ২১ অক্টোবর ২০২৬)
+            $this->actingAs($this->owner)->get(route('system_admin.company.edit', $this->company))->assertOk();
             $this->assertSame('logos/before.png', $this->company->fresh()->logo_path, "⛔ {$what}: ফেরত যাওয়ার কথা, অথচ লোগো বদলে গেল।");
         }
     }
