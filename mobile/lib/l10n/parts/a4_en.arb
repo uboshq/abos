@@ -1,0 +1,28 @@
+{
+  "@@locale": "en",
+
+  "commonOpen": "Open",
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonRetry": "Try again",
+  "commonPaperCount": "{count, plural, =0{No papers} one{{count} paper} other{{count} papers}}",
+  "commonPaperState": "{state, select, draft{Draft} posted{Posted} cancelled{Cancelled} other{Unknown}}",
+
+  "topBarBell": "Notifications",
+  "topBarBellUnread": "Notifications, {count} unread",
+  "topBarBellNews": "Notifications, something new",
+
+  "avatarMenuClose": "Close menu",
+  "avatarMenuSwitchCompany": "Switch company",
+  "avatarMenuColour": "Colour",
+  "avatarMenuThemePhone": "System",
+  "avatarMenuThemeLight": "Light",
+  "avatarMenuThemeDark": "Dark",
+  "avatarMenuLanguage": "Language",
+  "avatarMenuLanguagePhone": "Phone language",
+  "avatarMenuPinAndFingerprint": "PIN and fingerprint",
+  "avatarMenuLockAfter": "Locks after: {delay}",
+  "avatarMenuMyPhones": "My phones",
+  "avatarMenuSettingsVersion": "Settings · Version {version}",
+  "avatarMenuSignOut": "Sign out"
+}

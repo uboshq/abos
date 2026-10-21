@@ -1,65 +1,119 @@
 {
   "@@locale": "bn",
-
   "commonOpen": "খুলুন",
-  "@commonOpen": {"description": "Button: open a paper or a page"},
+  "@commonOpen": {
+    "description": "Button: open a paper or a page"
+  },
   "commonCancel": "বাতিল",
-  "@commonCancel": {"description": "Button: cancel and close a dialog"},
+  "@commonCancel": {
+    "description": "Button: cancel and close a dialog"
+  },
   "commonSave": "রাখুন",
-  "@commonSave": {"description": "Button: save what was written"},
+  "@commonSave": {
+    "description": "Button: save what was written"
+  },
   "commonRetry": "আবার চেষ্টা করুন",
-  "@commonRetry": {"description": "Button: try the failed thing again"},
+  "@commonRetry": {
+    "description": "Button: try the failed thing again"
+  },
   "commonPaperCount": "{count, plural, =0{কোনো কাগজ নেই} other{{count}টা কাগজ}}",
   "@commonPaperCount": {
     "description": "How many papers (plural example). Bengali uses 'other' for every number; English uses one/other.",
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "commonPaperState": "{state, select, draft{খসড়া} posted{পোস্ট হয়েছে} cancelled{বাতিল} other{অজানা}}",
   "@commonPaperState": {
     "description": "A paper's state word (select example); the server's state code picks the word",
-    "placeholders": {"state": {"type": "String"}}
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
   },
-
   "topBarBell": "বিজ্ঞপ্তি",
-  "@topBarBell": {"description": "Screen reader: the bell, nothing new"},
+  "@topBarBell": {
+    "description": "Screen reader: the bell, nothing new"
+  },
   "topBarBellUnread": "বিজ্ঞপ্তি, {count}টা না-পড়া",
   "@topBarBellUnread": {
     "description": "Screen reader: the bell with unread notifications; count is already written in the reader's digits",
-    "placeholders": {"count": {"type": "String", "example": "3"}}
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "topBarBellNews": "বিজ্ঞপ্তি, নতুন খবর আছে",
-  "@topBarBellNews": {"description": "Screen reader: the bell when there is news but no count"},
-
+  "@topBarBellNews": {
+    "description": "Screen reader: the bell when there is news but no count"
+  },
   "avatarMenuClose": "মেনু বন্ধ",
-  "@avatarMenuClose": {"description": "Screen reader: the dim area behind the avatar menu closes it"},
+  "@avatarMenuClose": {
+    "description": "Screen reader: the dim area behind the avatar menu closes it"
+  },
   "avatarMenuSwitchCompany": "কোম্পানি বদল",
-  "@avatarMenuSwitchCompany": {"description": "Avatar menu row: switch to another company"},
+  "@avatarMenuSwitchCompany": {
+    "description": "Avatar menu row: switch to another company"
+  },
   "avatarMenuColour": "রং",
-  "@avatarMenuColour": {"description": "Avatar menu: heading of the light/dark choice"},
+  "@avatarMenuColour": {
+    "description": "Avatar menu: heading of the light/dark choice"
+  },
   "avatarMenuThemePhone": "ফোনের মতো",
-  "@avatarMenuThemePhone": {"description": "Theme choice: follow the phone's light/dark setting"},
+  "@avatarMenuThemePhone": {
+    "description": "Theme choice: follow the phone's light/dark setting"
+  },
   "avatarMenuThemeLight": "আলো",
-  "@avatarMenuThemeLight": {"description": "Theme choice: light"},
+  "@avatarMenuThemeLight": {
+    "description": "Theme choice: light"
+  },
   "avatarMenuThemeDark": "অন্ধকার",
-  "@avatarMenuThemeDark": {"description": "Theme choice: dark"},
+  "@avatarMenuThemeDark": {
+    "description": "Theme choice: dark"
+  },
   "avatarMenuLanguage": "ভাষা",
-  "@avatarMenuLanguage": {"description": "Avatar menu: heading of the language choice"},
+  "@avatarMenuLanguage": {
+    "description": "Avatar menu: heading of the language choice"
+  },
   "avatarMenuLanguagePhone": "ফোনের মতো",
-  "@avatarMenuLanguagePhone": {"description": "Language choice: follow the phone's language (Bangla phone: Bangla, else English)"},
+  "@avatarMenuLanguagePhone": {
+    "description": "Language choice: follow the phone's language (Bangla phone: Bangla, else English)"
+  },
   "avatarMenuPinAndFingerprint": "পিন ও আঙুলের ছাপ",
-  "@avatarMenuPinAndFingerprint": {"description": "Avatar menu row: the app lock's PIN and fingerprint"},
+  "@avatarMenuPinAndFingerprint": {
+    "description": "Avatar menu row: the app lock's PIN and fingerprint"
+  },
   "avatarMenuLockAfter": "তালার সময়: {delay}",
   "@avatarMenuLockAfter": {
     "description": "Screen reader hint on the lock row: after how long the app locks",
-    "placeholders": {"delay": {"type": "String", "example": "5 মিনিট"}}
+    "placeholders": {
+      "delay": {
+        "type": "String",
+        "example": "5 মিনিট"
+      }
+    }
   },
   "avatarMenuMyPhones": "আমার ফোনগুলো",
-  "@avatarMenuMyPhones": {"description": "Avatar menu row: the phones this person is signed in on"},
+  "@avatarMenuMyPhones": {
+    "description": "Avatar menu row: the phones this person is signed in on"
+  },
   "avatarMenuSettingsVersion": "সেটিংস · সংস্করণ {version}",
   "@avatarMenuSettingsVersion": {
     "description": "Avatar menu row: settings, with the app's version",
-    "placeholders": {"version": {"type": "String", "example": "0.4.43"}}
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.4.43"
+      }
+    }
   },
   "avatarMenuSignOut": "বের হওয়া",
-  "@avatarMenuSignOut": {"description": "Avatar menu row: sign out"}
+  "@avatarMenuSignOut": {
+    "description": "Avatar menu row: sign out"
+  }
 }
