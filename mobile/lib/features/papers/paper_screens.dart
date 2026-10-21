@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/auth/session_profile.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
@@ -115,8 +116,8 @@ class _PaperListScreenState extends State<PaperListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: '$_title-এর তালিকা আনা গেল না।',
-            whenAbsent: 'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.papersListFailed(_title),
+            whenAbsent: context.l10n.papersListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -127,6 +128,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
   Widget build(BuildContext context) {
     final page = _page;
     final filters = page?.filters;
+    final w = context.l10n;
 
     return Scaffold(
       appBar: AbosScreenBar(title: _title),
@@ -156,7 +158,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
                 child: Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
                   ChoiceChip(
                       key: const ValueKey('paper-branch-all'),
-                      label: const Text('সব শাখা'),
+                      label: Text(w.papersAllBranches),
                       selected: _branch == null,
                       onSelected: (_) {
                         setState(() => _branch = null);
@@ -180,7 +182,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
                 child: Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
                   ChoiceChip(
                       key: const ValueKey('paper-status-all'),
-                      label: const Text('সব'),
+                      label: Text(w.papersAll),
                       selected: _status == null,
                       onSelected: (_) {
                         setState(() => _status = null);
@@ -204,7 +206,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
                   key: const ValueKey('paper-search'),
                   controller: _search,
                   textInputAction: TextInputAction.search,
-                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'নম্বর বা নাম', isDense: true),
+                  decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: w.papersSearchHint, isDense: true),
                   onSubmitted: (_) => _load(),
                 ),
               ),
@@ -212,24 +214,24 @@ class _PaperListScreenState extends State<PaperListScreen> {
             if (_error != null) BooksError(_error!),
             // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, সার্ভারের গোনা; নিচে এই পাতার মোট
             if (page != null && page.sum != null && _rows.isNotEmpty) ...[
-              TotalStrip(label: 'সর্বমোট', value: Money.taka(page.sum), count: page.count),
+              TotalStrip(label: w.papersGrandTotal, value: Money.taka(page.sum), count: page.count),
               if (page.pageSum != null)
                 Padding(
                   key: const ValueKey('paper-page-sum'),
                   padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: FactRow('এই পাতার মোট (${page.rows.length}টি)', Money.taka(page.pageSum)),
+                  child: FactRow(w.papersPageTotal(page.rows.length), Money.taka(page.pageSum)),
                 ),
             ],
             if (page != null && page.sum == null && _rows.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Text('${page.count}টি', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                child: Text(w.papersCount(page.count), style: TextStyle(color: context.palette.onSurfaceMuted)),
               ),
             if (page != null && _rows.isEmpty)
               EmptyState(
                 icon: Icons.description_outlined,
-                title: 'কোনো $_title নেই',
-                message: (filters?.dated ?? true) ? 'তারিখ বা ছাঁকনি বদলে, বা নিচে টেনে আবার দেখুন।' : 'নিচে টেনে আবার দেখুন।',
+                title: w.papersNone(_title),
+                message: (filters?.dated ?? true) ? w.papersNoneDated : w.papersNoneUndated,
               ),
             for (final r in _rows)
               Card(
@@ -255,7 +257,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
                   key: const ValueKey('paper-more'),
                   onPressed: _busy ? null : () => _load(more: true),
                   icon: const Icon(Icons.expand_more),
-                  label: const Text('আরও'),
+                  label: Text(w.papersMore),
                 ),
               ),
           ],
@@ -300,13 +302,14 @@ class _PaperScreenState extends State<PaperScreen> {
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ
       RecentPapers.note(kind: widget.paperKey, id: widget.id, number: paper.row.no, party: paper.row.party);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: '$_title-টা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.papersOneFailed(_title)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final p = _paper;
+    final w = context.l10n;
 
     return Scaffold(
       appBar: AbosScreenBar(
@@ -315,7 +318,7 @@ class _PaperScreenState extends State<PaperScreen> {
           if (p != null && p.printType != null)
             IconButton(
               key: const ValueKey('paper-print'),
-              tooltip: 'ছাপা / পাঠান',
+              tooltip: w.papersPrint,
               icon: const Icon(Icons.print_outlined),
               onPressed: () => DocumentActionsSheet.show(context,
                   type: p.printType!, id: p.row.id, title: '$_title · ${p.row.no}', fileStem: p.row.no),
@@ -340,8 +343,8 @@ class _PaperScreenState extends State<PaperScreen> {
                       if (p.row.party != null && p.row.party!.isNotEmpty)
                         Text(p.row.party!, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                       const SizedBox(height: AppSpacing.xs),
-                      if (p.row.statusLabel.isNotEmpty) FactRow('অবস্থা', p.row.statusLabel),
-                      if (p.row.branch != null && p.row.branch!.isNotEmpty) FactRow('শাখা', p.row.branch!),
+                      if (p.row.statusLabel.isNotEmpty) FactRow(w.papersStatus, p.row.statusLabel),
+                      if (p.row.branch != null && p.row.branch!.isNotEmpty) FactRow(w.papersBranch, p.row.branch!),
                       for (final f in p.facts) FactRow(f.label, f.value),
                     ],
                   ),
@@ -350,7 +353,7 @@ class _PaperScreenState extends State<PaperScreen> {
               if (p.rows.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                  child: Text('সারি', style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
+                  child: Text(w.papersLines, style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
                 ),
                 for (final (i, row) in p.rows.indexed) _line(p, row, i),
               ],
@@ -360,14 +363,14 @@ class _PaperScreenState extends State<PaperScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(children: [
-                      for (final t in p.totals.entries) FactRow('মোট ${p.labelOf(t.key)}'.trim(), t.value),
+                      for (final t in p.totals.entries) FactRow(w.papersTotalOf(p.labelOf(t.key)).trim(), t.value),
                     ]),
                   ),
                 ),
               if (p.signatures.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, AppSpacing.md, 4, AppSpacing.xs),
-                  child: Text('সই', style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
+                  child: Text(w.papersSignatures, style: TextStyle(fontWeight: FontWeight.w700, color: context.palette.onSurfaceMuted)),
                 ),
                 for (final s in p.signatures) _signature(context, s),
               ],
@@ -409,6 +412,7 @@ class _PaperScreenState extends State<PaperScreen> {
       _ => context.palette.pending,
     };
 
+    final w = context.l10n;
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Padding(
@@ -417,8 +421,8 @@ class _PaperScreenState extends State<PaperScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(s.statusLabel, style: TextStyle(fontWeight: FontWeight.w700, color: colour)),
-            if (s.requestedBy != null) Text('চেয়েছেন: ${s.requestedBy}${s.requestedAt == null ? '' : ' · ${s.requestedAt}'}'),
-            if (s.steps.isNotEmpty) Text('ধাপ: ${s.steps.join(' → ')}'),
+            if (s.requestedBy != null) Text(w.papersRequestedBy(s.requestedBy!) + (s.requestedAt == null ? '' : ' · ${s.requestedAt}')),
+            if (s.steps.isNotEmpty) Text(w.papersSteps(s.steps.join(' → '))),
             for (final d in s.decisions)
               Text([d.decisionLabel, if (d.by != null) d.by!, if (d.at != null) d.at!].join(' · ') +
                   (d.remarks == null || d.remarks!.isEmpty ? '' : '\n“${d.remarks}”')),
@@ -430,7 +434,7 @@ class _PaperScreenState extends State<PaperScreen> {
                   key: const ValueKey('paper-sign'),
                   onPressed: () => context.push('/home/approvals'),
                   icon: const Icon(Icons.draw_outlined),
-                  label: const Text('সই দিন'),
+                  label: Text(w.papersSign),
                 ),
               ),
           ],

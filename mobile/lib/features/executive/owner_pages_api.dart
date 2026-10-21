@@ -1,4 +1,6 @@
 import '../../core/api_client/api_client.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ মালিকের কেন্দ্রের বাকি ছয় পাতা, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬: *"100% app e, app er nijer style e, sob
 /// Bangla, protita list e total"*।
@@ -166,16 +168,13 @@ class OwnerReportCard {
   final List<String> filters;
   final bool allowed;
 
-  /// ⓘ সার্ভারের লেখা মানুষটার ভাষায় (ইংরেজিও হতে পারে) — চেনা রিপোর্টের নাম ফোন নিজে বাংলায় বলে
-  static const Map<String, ({String title, String hint})> bangla = {
-    'executive.profit_by_customer': (
-      title: 'ক্রেতা ধরে লাভ',
-      hint: 'প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পাকা হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।',
-    ),
-  };
+  /// ⓘ সার্ভারের লেখা মানুষটার ভাষায় (ইংরেজিও হতে পারে) — চেনা রিপোর্টের নাম ফোন নিজে বলে, অ্যাপের ভাষায় (ARB, 0.4.43)
+  static Map<String, ({String title, String hint})> known(AppL10n w) => {
+        'executive.profit_by_customer': (title: w.ownerReportProfitByCustomer, hint: w.ownerReportProfitByCustomerHint),
+      };
 
-  String get shownTitle => bangla[key]?.title ?? title;
-  String get shownHint => bangla[key]?.hint ?? hint;
+  String get shownTitle => known(AppLocale.l10n)[key]?.title ?? title;
+  String get shownHint => known(AppLocale.l10n)[key]?.hint ?? hint;
 
   Map<String, dynamic> get summary => {'key': key, 'title': shownTitle, 'module': module, 'filters': filters};
 

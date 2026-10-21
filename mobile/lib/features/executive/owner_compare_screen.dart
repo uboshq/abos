@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -31,33 +32,33 @@ class _OwnerCompareScreenState extends State<OwnerCompareScreen> {
   List<OwnerCompany> _companies = const [];
   String? _shownCompany;
 
-  static const Map<String, String> _modes = {
-    OwnerCompare.companiesMode: 'কোম্পানি বনাম কোম্পানি',
-    OwnerCompare.branchesMode: 'শাখা বনাম শাখা',
-  };
+  static Map<String, String> _modes(AppL10n w) => {
+        OwnerCompare.companiesMode: w.ownerModeCompanies,
+        OwnerCompare.branchesMode: w.ownerModeBranches,
+      };
 
-  static const Map<String, String> _againsts = {
-    'previous_month': 'আগের মাসের একই দিনগুলো',
-    'last_year': 'গত বছরের একই সময়',
-  };
+  static Map<String, String> _againsts(AppL10n w) => {
+        'previous_month': w.ownerAgainstPreviousMonth,
+        'last_year': w.ownerAgainstLastYear,
+      };
 
-  static const Map<String, String> _grains = {
-    'daily': 'দিন ধরে',
-    'weekly': 'সপ্তাহ ধরে',
-    'monthly': 'মাস ধরে',
-    'quarterly': 'তিন মাস ধরে',
-    'yearly': 'বছর ধরে',
-  };
+  static Map<String, String> _grains(AppL10n w) => {
+        'daily': w.ownerGrainDaily,
+        'weekly': w.ownerGrainWeekly,
+        'monthly': w.ownerGrainMonthly,
+        'quarterly': w.ownerGrainQuarterly,
+        'yearly': w.ownerGrainYearly,
+      };
 
-  /// ওয়েবের `executive::figure` — বাংলায়, ফোনের নিজের
-  static const Map<String, String> labels = {
-    'sales': 'বিক্রি',
-    'collections': 'আদায়',
-    'receivable': 'পাওনা (বাকি)',
-    'profit': 'লাভ',
-    'expenses': 'খরচ',
-    'cash_flow': 'নগদ প্রবাহ (নিট)',
-  };
+  /// ওয়েবের `executive::figure` — ফোনের নিজের নাম, ARB থেকে
+  static Map<String, String> labelsIn(AppL10n w) => {
+        'sales': w.ownerFigureSales,
+        'collections': w.ownerFigureCollections,
+        'receivable': w.ownerFigureReceivable,
+        'profit': w.ownerFigureProfit,
+        'expenses': w.ownerFigureExpenses,
+        'cash_flow': w.ownerFigureCashFlow,
+      };
 
   Future<OwnerCompare> _load() async {
     final data = await widget.api.compare(mode: _mode, company: _company, against: _against, grain: _grain, figure: _figure);
@@ -73,20 +74,22 @@ class _OwnerCompareScreenState extends State<OwnerCompareScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final w = context.l10n;
+    final labels = labelsIn(w);
     final companyChoices = {
-      if (_mode == OwnerCompare.companiesMode) '': 'সব কোম্পানি',
+      if (_mode == OwnerCompare.companiesMode) '': w.ownerAllCompanies,
       for (final c in _companies) c.id: c.name,
     };
 
     return OwnerPageFrame<OwnerCompare>(
-      title: 'তুলনা',
-      failed: 'তুলনার সংখ্যা আনা গেল না।',
+      title: w.ownerCompareTitle,
+      failed: w.ownerCompareFailed,
       reloadKey: (_mode, _company, _against, _grain, _figure),
       load: _load,
       controls: [
         OwnerChips(
           prefix: 'mode',
-          choices: _modes,
+          choices: _modes(w),
           selected: _mode,
           onSelected: (m) => setState(() {
             _mode = m;
@@ -101,20 +104,20 @@ class _OwnerCompareScreenState extends State<OwnerCompareScreen> {
             selected: _shownCompany ?? '',
             onSelected: (id) => setState(() => _company = id.isEmpty ? null : id),
           ),
-        OwnerChips(prefix: 'against', choices: _againsts, selected: _against, onSelected: (a) => setState(() => _against = a)),
+        OwnerChips(prefix: 'against', choices: _againsts(w), selected: _against, onSelected: (a) => setState(() => _against = a)),
       ],
       body: (context, data) => [
-        OwnerNote('এখন: ${ownerRange(data.nowFrom, data.nowTo)} · তখন: ${ownerRange(data.wasFrom, data.wasTo)}'),
+        OwnerNote(w.ownerNowThen(ownerRange(data.nowFrom, data.nowTo), ownerRange(data.wasFrom, data.wasTo))),
         if (data.rows.isEmpty)
-          const EmptyState(
+          EmptyState(
             icon: Icons.business_outlined,
-            title: 'দেখার মতো কিছু নেই',
-            message: 'কোনো কোম্পানিতে আপনার এই পর্দা দেখার অনুমতি নেই।',
+            title: w.ownerNothingToShow,
+            message: w.ownerScreenNotAllowed,
           ),
         for (final row in data.rows) _RowCard(row: row, columns: data.columns),
-        const OwnerNote('বাকি একটা জের: "তখন" মানে ঐ দিনের রাতে রাখা হিসাব। রাতের হিসাব না থাকলে "—"।'),
+        OwnerNote(w.ownerReceivableNote),
         const SizedBox(height: AppSpacing.sm),
-        Text('${labels[data.figure] ?? data.figure} — সময়ের সাথে', style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(w.ownerTrendOf(labels[data.figure] ?? data.figure), style: const TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.xs),
         OwnerChips(
           prefix: 'figure',
@@ -125,9 +128,9 @@ class _OwnerCompareScreenState extends State<OwnerCompareScreen> {
           selected: data.figure,
           onSelected: (f) => setState(() => _figure = f),
         ),
-        OwnerChips(prefix: 'grain', choices: _grains, selected: data.grain, onSelected: (g) => setState(() => _grain = g)),
+        OwnerChips(prefix: 'grain', choices: _grains(w), selected: data.grain, onSelected: (g) => setState(() => _grain = g)),
         if (data.trend.isEmpty)
-          const OwnerNote('দেখার অনুমতি নেই')
+          OwnerNote(w.ownerNotAllowedToSee)
         else
           Card(
             key: const ValueKey('compare-trend'),
@@ -135,7 +138,7 @@ class _OwnerCompareScreenState extends State<OwnerCompareScreen> {
               padding: const EdgeInsets.all(AppSpacing.md),
               child: OwnerBars(
                 firstLabel: labels[data.figure] ?? data.figure,
-                secondLabel: 'গত বছর',
+                secondLabel: w.ownerLastYear,
                 rows: [for (final b in data.trend) (label: b.label, first: b.value, second: b.lastYear)],
               ),
             ),
@@ -162,7 +165,7 @@ class _RowCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(row.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-              for (final c in columns) _Figure(label: _OwnerCompareScreenState.labels[c.key] ?? c.label, row: row, column: c.key),
+              for (final c in columns) _Figure(label: _OwnerCompareScreenState.labelsIn(context.l10n)[c.key] ?? c.label, row: row, column: c.key),
             ],
           ),
         ),
@@ -192,7 +195,7 @@ class _Figure extends StatelessWidget {
             children: [
               Text(ownerCell(now), style: TextStyle(fontWeight: FontWeight.w700, color: ownerTone(context, now))),
               if (now != ownerHidden) ...[
-                Text('তখন ${ownerCell(row.was[column])}', style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
+                Text(context.l10n.ownerThen(ownerCell(row.was[column])), style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),
                 if (change != null)
                   Text(change, style: TextStyle(fontSize: 11.5, color: up ? context.palette.success : context.palette.danger)),
               ],

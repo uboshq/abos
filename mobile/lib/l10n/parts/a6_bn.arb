@@ -1500,5 +1500,1225 @@
   "hrPayslipFestivalBonus": "উৎসব ভাতা",
   "@hrPayslipFestivalBonus": {
     "description": "Payslip: label on a slip from a bonus run (run_type 'bonus'); a salary slip has no label"
+  },
+  "ownerCentreTitle": "মালিকের কেন্দ্র",
+  "@ownerCentreTitle": {
+    "description": "Owner's centre: the Today screen's title"
+  },
+  "ownerTodayFailed": "মালিকের কেন্দ্রের সংখ্যা আনা গেল না।",
+  "@ownerTodayFailed": {
+    "description": "Owner's centre Today: load failed"
+  },
+  "ownerTodayAbsent": "মালিকের কেন্দ্র এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@ownerTodayAbsent": {
+    "description": "Owner's centre Today: the server has no such endpoint (old server)"
+  },
+  "ownerPageAbsent": "মালিকের কেন্দ্রের এই পাতা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন। অফিসে জানান।",
+  "@ownerPageAbsent": {
+    "description": "Owner's centre sub-page: the server has no such endpoint (old server)"
+  },
+  "ownerNoCompanyTitle": "দেখার মতো কোনো কোম্পানি নেই",
+  "@ownerNoCompanyTitle": {
+    "description": "Owner's centre Today: empty state title when no company is visible"
+  },
+  "ownerNoCompanyMessage": "কোনো কোম্পানিতে আপনার মালিকের কেন্দ্র দেখার অনুমতি নেই।",
+  "@ownerNoCompanyMessage": {
+    "description": "Owner's centre Today: empty state message"
+  },
+  "ownerCompaniesAndBranches": "কোম্পানি ও শাখা",
+  "@ownerCompaniesAndBranches": {
+    "description": "Owner's centre Today: heading over the company cards"
+  },
+  "ownerAlerts": "সতর্কতা",
+  "@ownerAlerts": {
+    "description": "Owner's centre: alerts heading and the Alerts page title"
+  },
+  "ownerAwaitingSignature": "সইয়ের অপেক্ষায়",
+  "@ownerAwaitingSignature": {
+    "description": "Owner's centre: papers awaiting signature (heading and the figure's label)"
+  },
+  "ownerNothingAwaitingNow": "এখন কোনো কাগজ সইয়ের অপেক্ষায় নেই।",
+  "@ownerNothingAwaitingNow": {
+    "description": "Owner's centre Today: nothing awaits signature"
+  },
+  "ownerSomeCompaniesLeftOut": "কিছু কোম্পানি বাদ — অনুমতি নেই",
+  "@ownerSomeCompaniesLeftOut": {
+    "description": "Owner's centre: a figure misses companies the user may not see"
+  },
+  "ownerCredit": "বাকি",
+  "@ownerCredit": {
+    "description": "Owner's centre Today: the credit card's title"
+  },
+  "ownerCreditExposure": "ব্যবহৃত বাকি",
+  "@ownerCreditExposure": {
+    "description": "Owner's centre credit card: credit in use"
+  },
+  "ownerCreditOverdue": "মেয়াদ পেরোনো পাওনা",
+  "@ownerCreditOverdue": {
+    "description": "Owner's centre credit card: overdue receivables"
+  },
+  "ownerCreditBlocked": "বাকি বন্ধ গ্রাহক",
+  "@ownerCreditBlocked": {
+    "description": "Owner's centre credit card: customers whose credit is blocked"
+  },
+  "ownerCreditBlockedCount": "{count} জন",
+  "@ownerCreditBlockedCount": {
+    "description": "Owner's centre credit card: number of blocked customers (people)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerCreditRequests": "সীমা বাড়ানোর অনুরোধ",
+  "@ownerCreditRequests": {
+    "description": "Owner's centre credit card: credit-limit raise requests waiting"
+  },
+  "ownerCount": "{count}টা",
+  "@ownerCount": {
+    "description": "Owner's centre: a plain count of things",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerCompanySummary": "বিক্রি {sales} · আদায় {collections}",
+  "@ownerCompanySummary": {
+    "description": "Owner's centre company card subtitle; amounts already formatted",
+    "placeholders": {
+      "sales": {
+        "type": "String"
+      },
+      "collections": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerUnsplit": "শাখায় ভাগ হয়নি",
+  "@ownerUnsplit": {
+    "description": "Owner's centre company card: rows with no branch"
+  },
+  "ownerNotAllowed": "অনুমতি নেই",
+  "@ownerNotAllowed": {
+    "description": "Owner's centre: the user may not see this company's figure (not zero)"
+  },
+  "ownerNone": "কিছু নেই",
+  "@ownerNone": {
+    "description": "Owner's centre alert: nothing to alert"
+  },
+  "ownerPeriodToday": "আজ",
+  "@ownerPeriodToday": {
+    "description": "Owner's centre period chip"
+  },
+  "ownerPeriodWeek": "এই সপ্তাহ",
+  "@ownerPeriodWeek": {
+    "description": "Owner's centre period chip"
+  },
+  "ownerPeriodMonth": "এই মাস",
+  "@ownerPeriodMonth": {
+    "description": "Owner's centre period chip"
+  },
+  "ownerFigureSales": "বিক্রি",
+  "@ownerFigureSales": {
+    "description": "Owner's centre figure"
+  },
+  "ownerFigureCollections": "আদায়",
+  "@ownerFigureCollections": {
+    "description": "Owner's centre figure"
+  },
+  "ownerFigureReceivable": "পাওনা (বাকি)",
+  "@ownerFigureReceivable": {
+    "description": "Owner's centre figure: what customers owe"
+  },
+  "ownerFigurePayable": "সরবরাহকারীর দেনা",
+  "@ownerFigurePayable": {
+    "description": "Owner's centre figure"
+  },
+  "ownerFigureFund": "নগদ + ব্যাংক",
+  "@ownerFigureFund": {
+    "description": "Owner's centre figure: cash, bank and mobile money"
+  },
+  "ownerFigureStock": "মজুদের মূল্য",
+  "@ownerFigureStock": {
+    "description": "Owner's centre figure: remaining goods at purchase cost (fe's word: মজুদের মূল্য, as on the web dashboard)"
+  },
+  "ownerFigureProfit": "লাভ",
+  "@ownerFigureProfit": {
+    "description": "Owner's centre figure"
+  },
+  "ownerFigureExpenses": "খরচ",
+  "@ownerFigureExpenses": {
+    "description": "Owner's centre figure"
+  },
+  "ownerFigureCashFlow": "নগদ প্রবাহ (নিট)",
+  "@ownerFigureCashFlow": {
+    "description": "Owner's centre figure"
+  },
+  "ownerAlertOverLimit": "বাকির সীমা ছাড়িয়েছে",
+  "@ownerAlertOverLimit": {
+    "description": "Owner's centre alert"
+  },
+  "ownerAlertOverdue": "মেয়াদ পেরোনো বাকি",
+  "@ownerAlertOverdue": {
+    "description": "Owner's centre alert"
+  },
+  "ownerAlertStockLow": "মজুদ পুনঃঅর্ডারের নিচে",
+  "@ownerAlertStockLow": {
+    "description": "Owner's centre alert"
+  },
+  "ownerAlertStockNegative": "মজুদ শূন্যের নিচে",
+  "@ownerAlertStockNegative": {
+    "description": "Owner's centre alert"
+  },
+  "ownerAlertStockDead": "অচল মাল",
+  "@ownerAlertStockDead": {
+    "description": "Owner's centre alert"
+  },
+  "ownerAlertLateDelivery": "দেরির চালান ({days} দিন)",
+  "@ownerAlertLateDelivery": {
+    "description": "Owner's centre alert: late deliveries in the last N days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAlertFailedLogin": "ব্যর্থ লগইন ({days} দিন)",
+  "@ownerAlertFailedLogin": {
+    "description": "Owner's centre alert: failed sign-ins in the last N days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAlertBackdated": "পিছনের তারিখের কাগজ (এ মাসে)",
+  "@ownerAlertBackdated": {
+    "description": "Owner's centre alert"
+  },
+  "ownerAlertsFailed": "সতর্কতার তালিকা আনা গেল না।",
+  "@ownerAlertsFailed": {
+    "description": "Owner's centre Alerts: load failed"
+  },
+  "ownerFiguresMayBeOld": "সংখ্যাগুলো {minutes} মিনিট পর্যন্ত পুরনো হতে পারে। টেনে নামালে নতুন করে আনে।",
+  "@ownerFiguresMayBeOld": {
+    "description": "Owner's centre Alerts: cache note",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerAwaitingSignatureCount": "সইয়ের অপেক্ষায় ({count}টা)",
+  "@ownerAwaitingSignatureCount": {
+    "description": "Owner's centre Alerts: heading with the number of papers",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerNothingAwaiting": "কোনো কাগজ সইয়ের অপেক্ষায় নেই।",
+  "@ownerNothingAwaiting": {
+    "description": "Owner's centre Alerts: nothing awaits signature"
+  },
+  "ownerGroupTotal": "গ্রুপের মোট",
+  "@ownerGroupTotal": {
+    "description": "Owner's centre: total over all group companies"
+  },
+  "ownerHistoryTitle": "আগের দিনের হিসাব",
+  "@ownerHistoryTitle": {
+    "description": "Owner's centre History: title"
+  },
+  "ownerHistoryFailed": "আগের দিনের হিসাব আনা গেল না।",
+  "@ownerHistoryFailed": {
+    "description": "Owner's centre History: load failed"
+  },
+  "ownerHistoryDay": "কোন দিন: {day}",
+  "@ownerHistoryDay": {
+    "description": "Owner's centre History: the day chip; day already formatted",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHistoryAsKept": "{date} — ঐ দিন রাত {time}-এ পর্দায় যা ছিল, ঠিক তাই। আজকের খাতা থেকে নতুন করে গোনা নয়।",
+  "@ownerHistoryAsKept": {
+    "description": "Owner's centre History: what the nightly record means; time is 23:55",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerHistoryNoneTitle": "ঐ দিনের রাতের হিসাব নেই",
+  "@ownerHistoryNoneTitle": {
+    "description": "Owner's centre History: empty state title"
+  },
+  "ownerHistoryNoneMessage": "হিসাব রাখা শুরু হওয়ার আগের দিন, বা সেই রাতে লেখা হয়নি।",
+  "@ownerHistoryNoneMessage": {
+    "description": "Owner's centre History: empty state message"
+  },
+  "ownerHistoryTrend": "{figure} — গত {days} দিন, রাতের হিসাব থেকে",
+  "@ownerHistoryTrend": {
+    "description": "Owner's centre History: trend card title",
+    "placeholders": {
+      "figure": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerHistoryMonthBefore": "গত মাসের একই দিন",
+  "@ownerHistoryMonthBefore": {
+    "description": "Owner's centre History: the second bar's label"
+  },
+  "ownerReportProfitByCustomer": "ক্রেতা ধরে লাভ",
+  "@ownerReportProfitByCustomer": {
+    "description": "Owner's centre report title"
+  },
+  "ownerReportProfitByCustomerHint": "প্রতিটা বিলের সারির আসল FIFO খরচ — বিল পাকা হওয়ার সময় স্তর থেকে যা টানা হয়েছিল; ফেরত তার নিজের খরচে বাদ।",
+  "@ownerReportProfitByCustomerHint": {
+    "description": "Owner's centre report hint"
+  },
+  "ownerReportsTitle": "রিপোর্ট",
+  "@ownerReportsTitle": {
+    "description": "Owner's centre Reports: title"
+  },
+  "ownerReportsFailed": "রিপোর্টের পাতা আনা গেল না।",
+  "@ownerReportsFailed": {
+    "description": "Owner's centre Reports: load failed"
+  },
+  "ownerReportsCentre": "রিপোর্ট সেন্টার — সব রিপোর্ট",
+  "@ownerReportsCentre": {
+    "description": "Owner's centre Reports: link to all reports"
+  },
+  "ownerReportsOwn": "মালিকের কেন্দ্রের রিপোর্ট",
+  "@ownerReportsOwn": {
+    "description": "Owner's centre: heading over its own reports"
+  },
+  "ownerReportNotAllowed": "এই রিপোর্ট দেখার অনুমতি নেই।",
+  "@ownerReportNotAllowed": {
+    "description": "Owner's centre Reports: the user lacks the report's key"
+  },
+  "ownerReportsExportNote": "রিপোর্টের পাতায় তারিখ বাছা, PDF আর ভাগ করা যায়; প্রতিটা নামানো রপ্তানির খাতায় লেখা থাকে।",
+  "@ownerReportsExportNote": {
+    "description": "Owner's centre Reports: note"
+  },
+  "ownerSavedViews": "আমার সংরক্ষিত দৃশ্য ({count}টা)",
+  "@ownerSavedViews": {
+    "description": "Owner's centre Reports: heading with the number of saved views",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerNoSavedViews": "কোনো সংরক্ষিত দৃশ্য নেই — রিপোর্টের পাতায় \"দৃশ্য\" থেকে রাখা যায়।",
+  "@ownerNoSavedViews": {
+    "description": "Owner's centre Reports: no saved views"
+  },
+  "ownerScheduledReports": "নির্ধারিত রিপোর্ট",
+  "@ownerScheduledReports": {
+    "description": "Owner's centre Reports: heading"
+  },
+  "ownerSchedulesOnWeb": "সূচি বসানো আর বদলানো ওয়েবের পাতায়।",
+  "@ownerSchedulesOnWeb": {
+    "description": "Owner's centre Reports: schedules are edited on the web"
+  },
+  "ownerNoScheduleKey": "নির্ধারিত রিপোর্ট বসানোর অনুমতি নেই।",
+  "@ownerNoScheduleKey": {
+    "description": "Owner's centre Reports: no key to schedule"
+  },
+  "ownerReportsInAppOnly": "তৈরি হওয়া রিপোর্ট অ্যাপের ভিতরেই আসে, ই-মেইলে নয়।",
+  "@ownerReportsInAppOnly": {
+    "description": "Owner's centre Reports: note"
+  },
+  "ownerLinksTitle": "ভাই-কোম্পানির পক্ষ",
+  "@ownerLinksTitle": {
+    "description": "Owner's centre Sister links: title"
+  },
+  "ownerLinksFailed": "ভাই-কোম্পানির পক্ষের তালিকা আনা গেল না।",
+  "@ownerLinksFailed": {
+    "description": "Owner's centre Sister links: load failed"
+  },
+  "ownerLinksExplain": "এক কোম্পানির কোনো ক্রেতা বা সরবরাহকারী যদি আসলে আমাদেরই আরেকটা কোম্পানি হয়, জোড়া থাকলে গ্রুপের মোট থেকে দুইয়ের মাঝের বিক্রি, পাওনা আর দেনা বাদ যায়। নাম মিলিয়ে কিছু আন্দাজ করা হয় না।",
+  "@ownerLinksExplain": {
+    "description": "Owner's centre Sister links: what a link does"
+  },
+  "ownerLinksWebOnly": "জোড়া দেওয়া আর তোলা ওয়েবের পাতায় — এখানে কেবল দেখা।",
+  "@ownerLinksWebOnly": {
+    "description": "Owner's centre Sister links: read-only note"
+  },
+  "ownerLinksTotal": "মোট জোড়া",
+  "@ownerLinksTotal": {
+    "description": "Owner's centre Sister links: total strip label"
+  },
+  "ownerLinksNoneTitle": "কোনো জোড়া নেই",
+  "@ownerLinksNoneTitle": {
+    "description": "Owner's centre Sister links: empty title"
+  },
+  "ownerLinksNoneMessage": "গ্রুপের মোট থেকে কিছু বাদ যাচ্ছে না।",
+  "@ownerLinksNoneMessage": {
+    "description": "Owner's centre Sister links: empty message"
+  },
+  "ownerLinksIsSister": "{company} → আসলে আমাদের {sister}",
+  "@ownerLinksIsSister": {
+    "description": "Owner's centre Sister links: row subtitle",
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "sister": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerPartyCustomer": "ক্রেতা",
+  "@ownerPartyCustomer": {
+    "description": "Owner's centre Sister links: party type"
+  },
+  "ownerPartySupplier": "সরবরাহকারী",
+  "@ownerPartySupplier": {
+    "description": "Owner's centre Sister links: party type"
+  },
+  "ownerAnalysisTitle": "বিশ্লেষণ",
+  "@ownerAnalysisTitle": {
+    "description": "Owner's centre Analysis: title"
+  },
+  "ownerAnalysisFailed": "বিশ্লেষণের তালিকা আনা গেল না।",
+  "@ownerAnalysisFailed": {
+    "description": "Owner's centre Analysis: load failed"
+  },
+  "ownerPeriodThreeMonths": "গত তিন মাস",
+  "@ownerPeriodThreeMonths": {
+    "description": "Owner's centre period chip"
+  },
+  "ownerPeriodYear": "এই বছর",
+  "@ownerPeriodYear": {
+    "description": "Owner's centre period chip"
+  },
+  "ownerListTopCustomers": "সেরা {count} ক্রেতা",
+  "@ownerListTopCustomers": {
+    "description": "Owner's centre Analysis list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerListTopProducts": "সেরা {count} পণ্য",
+  "@ownerListTopProducts": {
+    "description": "Owner's centre Analysis list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerListTopAreas": "সেরা {count} রুট",
+  "@ownerListTopAreas": {
+    "description": "Owner's centre Analysis list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerListTopSalespeople": "সেরা {count} বিক্রয়কর্মী",
+  "@ownerListTopSalespeople": {
+    "description": "Owner's centre Analysis list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerListLosing": "সবচেয়ে কম লাভের ক্রেতা",
+  "@ownerListLosing": {
+    "description": "Owner's centre Analysis list"
+  },
+  "ownerListThin": "সবচেয়ে কম মার্জিনের পণ্য",
+  "@ownerListThin": {
+    "description": "Owner's centre Analysis list"
+  },
+  "ownerListDead": "অচল মাল (দাম ধরে)",
+  "@ownerListDead": {
+    "description": "Owner's centre Analysis list"
+  },
+  "ownerBucketCurrent": "চলতি বাকি",
+  "@ownerBucketCurrent": {
+    "description": "Owner's centre Analysis: age-of-dues bucket"
+  },
+  "ownerBucketOver": "{days} দিনের বেশি",
+  "@ownerBucketOver": {
+    "description": "Owner's centre Analysis: age-of-dues bucket",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ownerOutstanding": "মোট বাকি",
+  "@ownerOutstanding": {
+    "description": "Owner's centre Analysis: all dues"
+  },
+  "ownerAgeing": "বাকির বয়স — সব কোম্পানি মিলিয়ে",
+  "@ownerAgeing": {
+    "description": "Owner's centre Analysis: heading"
+  },
+  "ownerRefused": "দেখার অনুমতি নেই: {companies}",
+  "@ownerRefused": {
+    "description": "Owner's centre: companies whose figures the user may not see",
+    "placeholders": {
+      "companies": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerNothingInPeriod": "এই সময়ে কিছু নেই।",
+  "@ownerNothingInPeriod": {
+    "description": "Owner's centre Analysis: empty list"
+  },
+  "ownerNoCostKey": "খরচ দেখার অনুমতি নেই — লাভ আর মার্জিনের ঘর ঢাকা থাকবে।",
+  "@ownerNoCostKey": {
+    "description": "Owner's centre Analysis: no cost key"
+  },
+  "ownerCompareTitle": "তুলনা",
+  "@ownerCompareTitle": {
+    "description": "Owner's centre Compare: title"
+  },
+  "ownerCompareFailed": "তুলনার সংখ্যা আনা গেল না।",
+  "@ownerCompareFailed": {
+    "description": "Owner's centre Compare: load failed"
+  },
+  "ownerModeCompanies": "কোম্পানি বনাম কোম্পানি",
+  "@ownerModeCompanies": {
+    "description": "Owner's centre Compare mode"
+  },
+  "ownerModeBranches": "শাখা বনাম শাখা",
+  "@ownerModeBranches": {
+    "description": "Owner's centre Compare mode"
+  },
+  "ownerAgainstPreviousMonth": "আগের মাসের একই দিনগুলো",
+  "@ownerAgainstPreviousMonth": {
+    "description": "Owner's centre Compare: against what"
+  },
+  "ownerAgainstLastYear": "গত বছরের একই সময়",
+  "@ownerAgainstLastYear": {
+    "description": "Owner's centre Compare: against what"
+  },
+  "ownerGrainDaily": "দিন ধরে",
+  "@ownerGrainDaily": {
+    "description": "Owner's centre Compare: trend step"
+  },
+  "ownerGrainWeekly": "সপ্তাহ ধরে",
+  "@ownerGrainWeekly": {
+    "description": "Owner's centre Compare: trend step"
+  },
+  "ownerGrainMonthly": "মাস ধরে",
+  "@ownerGrainMonthly": {
+    "description": "Owner's centre Compare: trend step"
+  },
+  "ownerGrainQuarterly": "তিন মাস ধরে",
+  "@ownerGrainQuarterly": {
+    "description": "Owner's centre Compare: trend step"
+  },
+  "ownerGrainYearly": "বছর ধরে",
+  "@ownerGrainYearly": {
+    "description": "Owner's centre Compare: trend step"
+  },
+  "ownerAllCompanies": "সব কোম্পানি",
+  "@ownerAllCompanies": {
+    "description": "Owner's centre Compare: company chip"
+  },
+  "ownerNowThen": "এখন: {now} · তখন: {was}",
+  "@ownerNowThen": {
+    "description": "Owner's centre Compare: the two date ranges",
+    "placeholders": {
+      "now": {
+        "type": "String"
+      },
+      "was": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerNothingToShow": "দেখার মতো কিছু নেই",
+  "@ownerNothingToShow": {
+    "description": "Owner's centre Compare: empty title"
+  },
+  "ownerScreenNotAllowed": "কোনো কোম্পানিতে আপনার এই পর্দা দেখার অনুমতি নেই।",
+  "@ownerScreenNotAllowed": {
+    "description": "Owner's centre Compare: empty message"
+  },
+  "ownerReceivableNote": "বাকি একটা জের: \"তখন\" মানে ঐ দিনের রাতে রাখা হিসাব। রাতের হিসাব না থাকলে \"—\"।",
+  "@ownerReceivableNote": {
+    "description": "Owner's centre Compare: note"
+  },
+  "ownerTrendOf": "{figure} — সময়ের সাথে",
+  "@ownerTrendOf": {
+    "description": "Owner's centre Compare: trend heading",
+    "placeholders": {
+      "figure": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerNotAllowedToSee": "দেখার অনুমতি নেই",
+  "@ownerNotAllowedToSee": {
+    "description": "Owner's centre Compare: trend hidden"
+  },
+  "ownerLastYear": "গত বছর",
+  "@ownerLastYear": {
+    "description": "Owner's centre Compare: the second bar's label"
+  },
+  "ownerThen": "তখন {value}",
+  "@ownerThen": {
+    "description": "Owner's centre Compare: the earlier figure",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsLevelPublic": "সবার জন্য",
+  "@documentsLevelPublic": {
+    "description": "Documents: confidentiality level"
+  },
+  "documentsLevelInternal": "অভ্যন্তরীণ",
+  "@documentsLevelInternal": {
+    "description": "Documents: confidentiality level"
+  },
+  "documentsLevelConfidential": "গোপন",
+  "@documentsLevelConfidential": {
+    "description": "Documents: confidentiality level"
+  },
+  "documentsLevelHighlyConfidential": "অতি গোপন",
+  "@documentsLevelHighlyConfidential": {
+    "description": "Documents: confidentiality level"
+  },
+  "documentsLevelRestricted": "সংরক্ষিত",
+  "@documentsLevelRestricted": {
+    "description": "Documents: confidentiality level"
+  },
+  "documentsStatusDraft": "খসড়া",
+  "@documentsStatusDraft": {
+    "description": "Documents: status"
+  },
+  "documentsStatusSubmitted": "জমা হয়েছে",
+  "@documentsStatusSubmitted": {
+    "description": "Documents: status"
+  },
+  "documentsStatusUnderReview": "পর্যালোচনায়",
+  "@documentsStatusUnderReview": {
+    "description": "Documents: status"
+  },
+  "documentsStatusChangesRequested": "বদল চাওয়া হয়েছে",
+  "@documentsStatusChangesRequested": {
+    "description": "Documents: status"
+  },
+  "documentsStatusApproved": "অনুমোদিত",
+  "@documentsStatusApproved": {
+    "description": "Documents: status"
+  },
+  "documentsStatusRejected": "প্রত্যাখ্যাত",
+  "@documentsStatusRejected": {
+    "description": "Documents: status (fe's word: প্রত্যাখ্যাত, not বাতিল)"
+  },
+  "documentsStatusPublished": "প্রকাশিত",
+  "@documentsStatusPublished": {
+    "description": "Documents: status"
+  },
+  "documentsStatusPublishedUnapproved": "অনুমোদন ছাড়া প্রকাশিত",
+  "@documentsStatusPublishedUnapproved": {
+    "description": "Documents: status"
+  },
+  "documentsStatusExpired": "মেয়াদোত্তীর্ণ",
+  "@documentsStatusExpired": {
+    "description": "Documents: status"
+  },
+  "documentsStatusArchived": "আর্কাইভে",
+  "@documentsStatusArchived": {
+    "description": "Documents: status"
+  },
+  "documentsSignaturePending": "সইয়ের অপেক্ষায়",
+  "@documentsSignaturePending": {
+    "description": "Documents: signature state"
+  },
+  "documentsSignatureSigned": "সই হয়েছে — চলতি ভার্সনে",
+  "@documentsSignatureSigned": {
+    "description": "Documents: signature state"
+  },
+  "documentsSignatureStale": "সই পুরনো ভার্সনে — চলতিটায় সই নেই",
+  "@documentsSignatureStale": {
+    "description": "Documents: signature state"
+  },
+  "documentsSignatureNone": "সই চাওয়া হয়নি",
+  "@documentsSignatureNone": {
+    "description": "Documents: signature state"
+  },
+  "documentsViewAll": "সব",
+  "@documentsViewAll": {
+    "description": "Documents list tab"
+  },
+  "documentsViewMine": "আমার",
+  "@documentsViewMine": {
+    "description": "Documents list tab"
+  },
+  "documentsViewShared": "আমার সাথে শেয়ার",
+  "@documentsViewShared": {
+    "description": "Documents list tab"
+  },
+  "documentsViewRecent": "সাম্প্রতিক",
+  "@documentsViewRecent": {
+    "description": "Documents list tab"
+  },
+  "documentsViewExpiry": "মেয়াদ",
+  "@documentsViewExpiry": {
+    "description": "Documents list tab: documents by expiry date"
+  },
+  "documentsViewArchive": "আর্কাইভ",
+  "@documentsViewArchive": {
+    "description": "Documents list tab"
+  },
+  "documentsViewRecycle": "রিসাইকেল বিন",
+  "@documentsViewRecycle": {
+    "description": "Documents list tab"
+  },
+  "documentsViewSearch": "খোঁজ (আর্কাইভসহ)",
+  "@documentsViewSearch": {
+    "description": "Documents list tab"
+  },
+  "documentsTitle": "ডকুমেন্টস",
+  "@documentsTitle": {
+    "description": "Documents list: title"
+  },
+  "documentsListFailed": "কাগজের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@documentsListFailed": {
+    "description": "Documents list: load failed"
+  },
+  "documentsListAbsent": "সার্ভারে ডকুমেন্টস এখনো আসেনি — অফিসে জানান।",
+  "@documentsListAbsent": {
+    "description": "Documents list: old server"
+  },
+  "documentsListEmpty": "এখানে দেখার মতো কোনো কাগজ নেই",
+  "@documentsListEmpty": {
+    "description": "Documents list: empty"
+  },
+  "documentsSearchHint": "নাম, নম্বর বা ট্যাগ",
+  "@documentsSearchHint": {
+    "description": "Documents list: search hint"
+  },
+  "documentsCount": "{count, plural, other{মোট {count} টি কাগজ}}",
+  "@documentsCount": {
+    "description": "Documents list: number of documents in the whole list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsExpires": "মেয়াদ {date}",
+  "@documentsExpires": {
+    "description": "Documents list: expiry date; date already formatted",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsDeleted": "মোছা — ফেরানো ওয়েবে",
+  "@documentsDeleted": {
+    "description": "Documents list: a deleted document"
+  },
+  "documentsFileOpenFailed": "ফাইলটা খোলা গেল না।",
+  "@documentsFileOpenFailed": {
+    "description": "Document: file open failed"
+  },
+  "documentsSignAsk": "এই কাগজে সই দেবেন?",
+  "@documentsSignAsk": {
+    "description": "Document: sign dialog title"
+  },
+  "documentsRemarksOptional": "মন্তব্য (ইচ্ছা হলে)",
+  "@documentsRemarksOptional": {
+    "description": "Document: sign dialog field"
+  },
+  "documentsNo": "না",
+  "@documentsNo": {
+    "description": "Document: sign dialog, do not go ahead"
+  },
+  "documentsSign": "সই দিন",
+  "@documentsSign": {
+    "description": "Document: the sign button"
+  },
+  "documentsSigned": "সই দেওয়া হয়েছে।",
+  "@documentsSigned": {
+    "description": "Document: signed message"
+  },
+  "documentsRefuseAsk": "সই দেবেন না?",
+  "@documentsRefuseAsk": {
+    "description": "Document: refuse dialog title"
+  },
+  "documentsReasonField": "কারণ লিখুন",
+  "@documentsReasonField": {
+    "description": "Document: refuse dialog field"
+  },
+  "documentsGoBack": "ফিরে যান",
+  "@documentsGoBack": {
+    "description": "Document: refuse dialog, step back"
+  },
+  "documentsRefuse": "সই দেব না",
+  "@documentsRefuse": {
+    "description": "Document: the refuse button"
+  },
+  "documentsReasonNeeded": "সই না দেওয়ার কারণ লিখতে হবে।",
+  "@documentsReasonNeeded": {
+    "description": "Document: refusing needs a reason"
+  },
+  "documentsRefused": "সই দেওয়া হয়নি — কারণসহ জানানো হয়েছে।",
+  "@documentsRefused": {
+    "description": "Document: refused message"
+  },
+  "documentsDecisionFailed": "সিদ্ধান্তটা পাঠানো গেল না। আবার চেষ্টা করুন।",
+  "@documentsDecisionFailed": {
+    "description": "Document: sign or refuse failed"
+  },
+  "documentsPaper": "কাগজ",
+  "@documentsPaper": {
+    "description": "Document page: title before it loads"
+  },
+  "documentsOneFailed": "কাগজটা আনা গেল না।",
+  "@documentsOneFailed": {
+    "description": "Document page: load failed"
+  },
+  "documentsNumber": "নম্বর",
+  "@documentsNumber": {
+    "description": "Document page: field"
+  },
+  "documentsType": "ধরন",
+  "@documentsType": {
+    "description": "Document page and upload: field"
+  },
+  "documentsFolder": "ফোল্ডার",
+  "@documentsFolder": {
+    "description": "Document page and upload: field"
+  },
+  "documentsLevel": "গোপনীয়তা",
+  "@documentsLevel": {
+    "description": "Document page and upload: field"
+  },
+  "documentsStatus": "অবস্থা",
+  "@documentsStatus": {
+    "description": "Document page: field"
+  },
+  "documentsDate": "তারিখ",
+  "@documentsDate": {
+    "description": "Document page: field"
+  },
+  "documentsExpiry": "মেয়াদ",
+  "@documentsExpiry": {
+    "description": "Document page: expiry date field"
+  },
+  "documentsOwner": "মালিক",
+  "@documentsOwner": {
+    "description": "Document page: who owns the document"
+  },
+  "documentsTags": "ট্যাগ",
+  "@documentsTags": {
+    "description": "Document page: field"
+  },
+  "documentsDescription": "বিবরণ",
+  "@documentsDescription": {
+    "description": "Document page: field"
+  },
+  "documentsFile": "ফাইল",
+  "@documentsFile": {
+    "description": "Document page: section"
+  },
+  "documentsNoFile": "এই কাগজে এখনো কোনো ফাইল নেই।",
+  "@documentsNoFile": {
+    "description": "Document page: no file"
+  },
+  "documentsFileName": "নাম",
+  "@documentsFileName": {
+    "description": "Document page: file name"
+  },
+  "documentsVersion": "ভার্সন",
+  "@documentsVersion": {
+    "description": "Document page: file version"
+  },
+  "documentsViewFile": "দেখুন",
+  "@documentsViewFile": {
+    "description": "Document page: open the file"
+  },
+  "documentsDownload": "নামান / পাঠান",
+  "@documentsDownload": {
+    "description": "Document page: download or share the file"
+  },
+  "documentsCannotOpen": "এই ফাইলটা ফোনে দেখা যায় না, আর নামানোর অধিকার আপনার নেই।",
+  "@documentsCannotOpen": {
+    "description": "Document page: no view and no download"
+  },
+  "documentsSignature": "সই",
+  "@documentsSignature": {
+    "description": "Document page: section"
+  },
+  "documentsSignedOld": "{date} · পুরনো ভার্সনে",
+  "@documentsSignedOld": {
+    "description": "Document page: a signature on an old version; date already formatted",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsSignWanted": "এই কাগজে আপনার সই চাওয়া হয়েছে। ফাইলটা দেখে সই দিন।",
+  "@documentsSignWanted": {
+    "description": "Document page: the user must sign"
+  },
+  "documentsUploadFormFailed": "তোলার ফর্ম আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@documentsUploadFormFailed": {
+    "description": "Upload: form load failed"
+  },
+  "documentsUploadAbsent": "সার্ভারে ফোন থেকে তোলা এখনো আসেনি — অফিসে জানান।",
+  "@documentsUploadAbsent": {
+    "description": "Upload: old server"
+  },
+  "documentsUploadTakePhotoFirst": "আগে কাগজটার ছবি তুলুন।",
+  "@documentsUploadTakePhotoFirst": {
+    "description": "Upload (scan): nothing picked"
+  },
+  "documentsUploadPickFirst": "আগে অন্তত একটা ছবি বা ফাইল বাছুন।",
+  "@documentsUploadPickFirst": {
+    "description": "Upload: nothing picked"
+  },
+  "documentsUploadPickFields": "ফোল্ডার, ধরন আর গোপনীয়তা বাছুন।",
+  "@documentsUploadPickFields": {
+    "description": "Upload: fields missing"
+  },
+  "documentsUploaded": "{count, plural, other{{count} টি কাগজ তোলা হলো।}}",
+  "@documentsUploaded": {
+    "description": "Upload: done",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsUploadFailed": "কাগজ তোলা গেল না।",
+  "@documentsUploadFailed": {
+    "description": "Upload: failed"
+  },
+  "documentsScanTitle": "ক্যামেরায় স্ক্যান",
+  "@documentsScanTitle": {
+    "description": "Upload (scan): title"
+  },
+  "documentsUploadTitle": "কাগজ তোলা",
+  "@documentsUploadTitle": {
+    "description": "Upload: title"
+  },
+  "documentsLoadFailed": "আনা গেল না",
+  "@documentsLoadFailed": {
+    "description": "Upload: empty state title on failure"
+  },
+  "documentsTakePhoto": "ছবি তুলুন",
+  "@documentsTakePhoto": {
+    "description": "Upload (scan): button"
+  },
+  "documentsPickPhotos": "ছবি বাছুন",
+  "@documentsPickPhotos": {
+    "description": "Upload: button"
+  },
+  "documentsPickFiles": "ফাইল বাছুন (PDF ইত্যাদি)",
+  "@documentsPickFiles": {
+    "description": "Upload: button"
+  },
+  "documentsUploadFileCount": "{count, plural, other{{count} টি ফাইল — প্রতিটা আলাদা কাগজ হবে}}",
+  "@documentsUploadFileCount": {
+    "description": "Upload: files picked",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsUploadRulesNote": "ⓘ কোন ধরনের ফাইল চলে আর কত বড়, সার্ভার ওয়েবের নিয়মেই দেখে। লেখা পড়া (OCR) ওয়েবে।",
+  "@documentsUploadRulesNote": {
+    "description": "Upload: note"
+  },
+  "documentsUploadName": "নাম (ফাঁকা রাখলে ফাইলের নাম)",
+  "@documentsUploadName": {
+    "description": "Upload: name field"
+  },
+  "documentsBranch": "শাখা",
+  "@documentsBranch": {
+    "description": "Upload: branch field"
+  },
+  "documentsWholeCompany": "গোটা কোম্পানি",
+  "@documentsWholeCompany": {
+    "description": "Upload: no branch"
+  },
+  "documentsDescriptionOptional": "বিবরণ (ঐচ্ছিক)",
+  "@documentsDescriptionOptional": {
+    "description": "Upload: description field"
+  },
+  "documentsUploading": "তোলা হচ্ছে…",
+  "@documentsUploading": {
+    "description": "Upload: busy"
+  },
+  "documentsUpload": "তুলুন",
+  "@documentsUpload": {
+    "description": "Upload: the button"
+  },
+  "leadsFailed": "লিড আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@leadsFailed": {
+    "description": "Leads list: load failed"
+  },
+  "leadsAbsent": "সার্ভারে লিডের দরজা এখনো আসেনি — অফিসে জানান।",
+  "@leadsAbsent": {
+    "description": "Leads list: old server"
+  },
+  "leadsTitle": "লিড",
+  "@leadsTitle": {
+    "description": "Leads list: title"
+  },
+  "leadsNew": "নতুন লিড",
+  "@leadsNew": {
+    "description": "Leads: new lead button and form title"
+  },
+  "leadsSearchHint": "নাম, ফোন বা নম্বর",
+  "@leadsSearchHint": {
+    "description": "Leads list: search hint"
+  },
+  "leadsAll": "সব",
+  "@leadsAll": {
+    "description": "Leads list: all statuses chip"
+  },
+  "leadsTotal": "মোট লিড",
+  "@leadsTotal": {
+    "description": "Leads list: total strip label"
+  },
+  "leadsCount": "{count} টি",
+  "@leadsCount": {
+    "description": "Leads list: number of leads",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "leadsLoadFailed": "আনা গেল না",
+  "@leadsLoadFailed": {
+    "description": "Leads list: empty state title on failure"
+  },
+  "leadsNone": "কোনো লিড নেই",
+  "@leadsNone": {
+    "description": "Leads list: empty"
+  },
+  "leadsMore": "আরও লিড",
+  "@leadsMore": {
+    "description": "Leads list: load more"
+  },
+  "leadsNameNeeded": "দোকানের নাম লিখুন।",
+  "@leadsNameNeeded": {
+    "description": "Lead form: name missing"
+  },
+  "leadsSourceNeeded": "কীভাবে খোঁজ পেলেন, বাছুন।",
+  "@leadsSourceNeeded": {
+    "description": "Lead form: source missing"
+  },
+  "leadsSaveFailed": "লিড রাখা গেল না। আবার চেষ্টা করুন।",
+  "@leadsSaveFailed": {
+    "description": "Lead form: save failed"
+  },
+  "leadsStatusNow": "অবস্থা: {status}",
+  "@leadsStatusNow": {
+    "description": "Lead form: current status (server label)",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leadsOwner": "মালিক: {name}",
+  "@leadsOwner": {
+    "description": "Lead form: who owns the lead",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "leadsConverted": "গ্রাহক হয়ে গেছেন — আর বদলানো যায় না।",
+  "@leadsConverted": {
+    "description": "Lead form: converted, read only"
+  },
+  "leadsShopName": "দোকানের নাম",
+  "@leadsShopName": {
+    "description": "Lead form: field"
+  },
+  "leadsContactPerson": "যাঁর সাথে কথা",
+  "@leadsContactPerson": {
+    "description": "Lead form: field"
+  },
+  "leadsPhone": "ফোন",
+  "@leadsPhone": {
+    "description": "Lead form: field"
+  },
+  "leadsAddress": "ঠিকানা",
+  "@leadsAddress": {
+    "description": "Lead form: field"
+  },
+  "leadsSource": "কীভাবে খোঁজ পেলেন",
+  "@leadsSource": {
+    "description": "Lead form: field"
+  },
+  "leadsStatus": "অবস্থা",
+  "@leadsStatus": {
+    "description": "Lead form: field"
+  },
+  "leadsLostReason": "কেন হারালাম",
+  "@leadsLostReason": {
+    "description": "Lead form: field"
+  },
+  "leadsNotes": "টুকিটাকি",
+  "@leadsNotes": {
+    "description": "Lead form: field"
+  },
+  "papersListFailed": "{title}-এর তালিকা আনা গেল না।",
+  "@papersListFailed": {
+    "description": "Paper list: load failed; title is the kind of paper",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "papersListAbsent": "এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@papersListAbsent": {
+    "description": "Paper list: old server"
+  },
+  "papersAllBranches": "সব শাখা",
+  "@papersAllBranches": {
+    "description": "Paper list: branch chip"
+  },
+  "papersAll": "সব",
+  "@papersAll": {
+    "description": "Paper list: all statuses chip"
+  },
+  "papersSearchHint": "নম্বর বা নাম",
+  "@papersSearchHint": {
+    "description": "Paper list: search hint"
+  },
+  "papersGrandTotal": "সর্বমোট",
+  "@papersGrandTotal": {
+    "description": "Paper list: total of the whole filtered list"
+  },
+  "papersPageTotal": "এই পাতার মোট ({count}টি)",
+  "@papersPageTotal": {
+    "description": "Paper list: total of this page",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "papersCount": "{count}টি",
+  "@papersCount": {
+    "description": "Paper list: number of papers",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "papersNone": "কোনো {title} নেই",
+  "@papersNone": {
+    "description": "Paper list: empty; title is the kind of paper",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "papersNoneDated": "তারিখ বা ছাঁকনি বদলে, বা নিচে টেনে আবার দেখুন।",
+  "@papersNoneDated": {
+    "description": "Paper list: empty, dated list"
+  },
+  "papersNoneUndated": "নিচে টেনে আবার দেখুন।",
+  "@papersNoneUndated": {
+    "description": "Paper list: empty"
+  },
+  "papersMore": "আরও",
+  "@papersMore": {
+    "description": "Paper list: load more"
+  },
+  "papersOneFailed": "{title}-টা আনা গেল না।",
+  "@papersOneFailed": {
+    "description": "Paper page: load failed; title is the kind of paper",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "papersPrint": "ছাপা / পাঠান",
+  "@papersPrint": {
+    "description": "Paper page: print button tooltip"
+  },
+  "papersStatus": "অবস্থা",
+  "@papersStatus": {
+    "description": "Paper page: field"
+  },
+  "papersBranch": "শাখা",
+  "@papersBranch": {
+    "description": "Paper page: field"
+  },
+  "papersLines": "সারি",
+  "@papersLines": {
+    "description": "Paper page: section"
+  },
+  "papersTotalOf": "মোট {column}",
+  "@papersTotalOf": {
+    "description": "Paper page: a column's total; column is the server's column name, may be empty",
+    "placeholders": {
+      "column": {
+        "type": "String"
+      }
+    }
+  },
+  "papersSignatures": "সই",
+  "@papersSignatures": {
+    "description": "Paper page: section"
+  },
+  "papersRequestedBy": "চেয়েছেন: {name}",
+  "@papersRequestedBy": {
+    "description": "Paper page: who asked for the signature",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "papersSteps": "ধাপ: {steps}",
+  "@papersSteps": {
+    "description": "Paper page: signing steps, joined with arrows",
+    "placeholders": {
+      "steps": {
+        "type": "String"
+      }
+    }
+  },
+  "papersSign": "সই দিন",
+  "@papersSign": {
+    "description": "Paper page: the sign button"
   }
 }

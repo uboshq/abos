@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -19,17 +20,17 @@ class OwnerAlertsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OwnerPageFrame<OwnerAlerts>(
-        title: 'সতর্কতা',
-        failed: 'সতর্কতার তালিকা আনা গেল না।',
+        title: context.l10n.ownerAlerts,
+        failed: context.l10n.ownerAlertsFailed,
         load: api.alerts,
         body: (context, data) => [
-          const OwnerNote('সংখ্যাগুলো ৫ মিনিট পর্যন্ত পুরনো হতে পারে। টেনে নামালে নতুন করে আনে।'),
+          OwnerNote(context.l10n.ownerFiguresMayBeOld(5)),
           for (final alert in data.alerts) _AlertCard(alert: alert, many: data.companies.length > 1),
-          SectionHeading('সইয়ের অপেক্ষায় (${data.waiting.length}টা)'),
+          SectionHeading(context.l10n.ownerAwaitingSignatureCount(data.waiting.length)),
           if (data.waiting.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Text('কোনো কাগজ সইয়ের অপেক্ষায় নেই।'),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Text(context.l10n.ownerNothingAwaiting),
             ),
           for (final w in data.waiting)
             Card(
@@ -54,6 +55,7 @@ class _AlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hot = alert.total > 0;
+    final w = context.l10n;
     return Card(
       key: ValueKey('alert-${alert.kind}'),
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -68,19 +70,19 @@ class _AlertCard extends StatelessWidget {
                     color: hot ? context.palette.danger : context.palette.success),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: Text(ExecutiveToday.alertLabels[alert.kind] ?? alert.label,
+                  child: Text(ExecutiveToday.alertLabelsIn(w)[alert.kind] ?? alert.label,
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
-                Text(hot ? Money.plain(alert.total) : 'কিছু নেই',
+                Text(hot ? Money.plain(alert.total) : w.ownerNone,
                     key: ValueKey('alert-total-${alert.kind}'),
                     style: TextStyle(fontWeight: FontWeight.w800, color: hot ? context.palette.danger : context.palette.onSurfaceMuted)),
               ],
             ),
             if (many) ...[
               for (final p in alert.parts)
-                FactRow(p.name, p.count == null ? 'অনুমতি নেই' : Money.plain(p.count),
+                FactRow(p.name, p.count == null ? w.ownerNotAllowed : Money.plain(p.count),
                     colour: (p.count ?? 0) > 0 ? context.palette.danger : context.palette.onSurfaceMuted),
-              FactRow('গ্রুপের মোট', Money.plain(alert.total)),
+              FactRow(w.ownerGroupTotal, Money.plain(alert.total)),
             ],
           ],
         ),

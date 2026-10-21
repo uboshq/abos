@@ -321,7 +321,7 @@ void main() {
           reason: '⛔ মোট বাকির পট্টি সার্ভারের যোগ নয়');
       expect(find.text('চলতি বাকি'), findsOneWidget);
       expect(find.text('দেখার অনুমতি নেই: ফ্রেশ মার্ট'), findsOneWidget);
-      expect(find.text('সেরা ১০ ক্রেতা'), findsOneWidget, reason: '⛔ তালিকার নাম বাংলায় নয়');
+      expect(find.text('সেরা 10 ক্রেতা'), findsOneWidget, reason: '⛔ তালিকার নাম বাংলায় নয়');
       expect(find.text('৳4,500.00'), findsOneWidget);
       expect(find.text('••••'), findsOneWidget);
       expect(find.text('-8.50%'), findsOneWidget);

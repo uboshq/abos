@@ -33,7 +33,7 @@ class _Library implements DocumentLibraryApi {
 /// ⭐ মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage app e bujajayna"* — দলিলের আটটা তালিকা এক ফোন-পর্দায়, মেনুর ঘর বাছা অবস্থায়।
 void main() {
   test('each of the eight document rows opens the phone list on its own view', () {
-    for (final view in DocumentListScreen.views.keys) {
+    for (final view in DocumentListScreen.viewKeys) {
       expect(NativeForWeb.screenFor('/documents/$view').toString(), contains('ModuleGateView'), reason: '/documents/$view');
     }
     expect(NativeForWeb.screenFor('/documents/ghost'), isNull);

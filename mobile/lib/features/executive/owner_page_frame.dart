@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
@@ -69,7 +70,7 @@ class _OwnerPageFrameState<T> extends State<OwnerPageFrame<T>> {
       if (mounted && ask == _asked) {
         setState(() => _error = errorMessageFor(e,
             fallback: widget.failed,
-            whenAbsent: 'মালিকের কেন্দ্রের এই পাতা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন। অফিসে জানান।'));
+            whenAbsent: context.l10n.ownerPageAbsent));
       }
     } finally {
       if (mounted && ask == _asked) setState(() => _busy = false);

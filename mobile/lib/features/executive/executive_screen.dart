@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/api_client.dart';
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
@@ -47,8 +49,8 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'মালিকের কেন্দ্রের সংখ্যা আনা গেল না।',
-            whenAbsent: 'মালিকের কেন্দ্র এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.ownerTodayFailed,
+            whenAbsent: context.l10n.ownerTodayAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -64,11 +66,12 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
   @override
   Widget build(BuildContext context) {
     final data = _data;
+    final w = context.l10n;
     final children = <Widget>[
       Wrap(
         spacing: AppSpacing.xs,
         children: [
-          for (final p in ExecutiveToday.periods.entries)
+          for (final p in ExecutiveToday.periodsIn(w).entries)
             ChoiceChip(
               key: ValueKey('period-${p.key}'),
               label: Text(p.value),
@@ -83,25 +86,25 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
 
     if (data != null) {
       if (data.companies.isEmpty) {
-        children.add(const EmptyState(
+        children.add(EmptyState(
           icon: Icons.business_outlined,
-          title: 'দেখার মতো কোনো কোম্পানি নেই',
-          message: 'কোনো কোম্পানিতে আপনার মালিকের কেন্দ্র দেখার অনুমতি নেই।',
+          title: w.ownerNoCompanyTitle,
+          message: w.ownerNoCompanyMessage,
         ));
       } else {
         children
           ..add(_FigureGrid(figures: data.figures))
           ..addAll([
             if (data.credit != null) _CreditCard(credit: data.credit!),
-            const _Heading('কোম্পানি ও শাখা'),
+            _Heading(w.ownerCompaniesAndBranches),
             for (final c in data.companies) _CompanyCard(company: c),
-            const _Heading('সতর্কতা'),
+            _Heading(w.ownerAlerts),
             for (final a in data.alerts) _AlertTile(alert: a),
-            const _Heading('সইয়ের অপেক্ষায়'),
+            _Heading(w.ownerAwaitingSignature),
             if (data.waiting.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
-                child: Text('এখন কোনো কাগজ সইয়ের অপেক্ষায় নেই।'),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(w.ownerNothingAwaitingNow),
               ),
             for (final w in data.waiting)
               Card(
@@ -118,7 +121,7 @@ class _ExecutiveScreenState extends State<ExecutiveScreen> {
     }
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'মালিকের কেন্দ্র'),
+      appBar: AbosScreenBar(title: w.ownerCentreTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -177,7 +180,7 @@ class _FigureGrid extends StatelessWidget {
                             Text(cellText(f.value, money: f.money),
                                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                             if (f.partial)
-                              Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
+                              Text(context.l10n.ownerSomeCompaniesLeftOut,
                                   style: TextStyle(fontSize: 11, color: context.palette.warning)),
                           ],
                         ),
@@ -197,7 +200,9 @@ class _CreditCard extends StatelessWidget {
   final ExecutiveCredit credit;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) {
+    final w = context.l10n;
+    return Card(
         key: const ValueKey('executive-credit'),
         margin: const EdgeInsets.only(top: AppSpacing.sm),
         child: Padding(
@@ -205,18 +210,19 @@ class _CreditCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('বাকি', style: TextStyle(fontWeight: FontWeight.w700)),
-              _pair(context, 'ব্যবহৃত বাকি', Money.taka(credit.exposure)),
-              _pair(context, 'মেয়াদ পেরোনো পাওনা', Money.taka(credit.overdue)),
-              _pair(context, 'বাকি বন্ধ গ্রাহক', '${credit.blocked} জন'),
-              _pair(context, 'সীমা বাড়ানোর অনুরোধ', '${credit.pendingRequests}টা'),
+              Text(w.ownerCredit, style: const TextStyle(fontWeight: FontWeight.w700)),
+              _pair(context, w.ownerCreditExposure, Money.taka(credit.exposure)),
+              _pair(context, w.ownerCreditOverdue, Money.taka(credit.overdue)),
+              _pair(context, w.ownerCreditBlocked, w.ownerCreditBlockedCount(credit.blocked)),
+              _pair(context, w.ownerCreditRequests, w.ownerCount(credit.pendingRequests)),
               if (credit.partial)
-                Text('কিছু কোম্পানি বাদ — অনুমতি নেই',
+                Text(w.ownerSomeCompaniesLeftOut,
                     style: TextStyle(fontSize: 11, color: context.palette.warning)),
             ],
           ),
         ),
       );
+  }
 }
 
 Widget _pair(BuildContext context, String label, String value) => Padding(
@@ -241,8 +247,8 @@ class _CompanyCard extends StatelessWidget {
         child: ExpansionTile(
           key: ValueKey('company-${company.id}'),
           title: Text(company.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(
-              'বিক্রি ${cellText(company.values['sales'], money: true)} · আদায় ${cellText(company.values['collections'], money: true)}'),
+          subtitle: Text(context.l10n.ownerCompanySummary(
+              cellText(company.values['sales'], money: true), cellText(company.values['collections'], money: true))),
           childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
           children: [
             _Values(values: company.values),
@@ -256,9 +262,9 @@ class _CompanyCard extends StatelessWidget {
             ],
             if (company.unsplit != null) ...[
               const Divider(),
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
-                child: Text('শাখায় ভাগ হয়নি', style: TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(context.l10n.ownerUnsplit, style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
               _Values(values: company.unsplit!),
             ],
@@ -276,7 +282,7 @@ class _Values extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         children: [
           for (final key in ExecutiveToday.keys)
-            _pair(context, ExecutiveToday.labels[key] ?? key, cellText(values[key], money: key != 'signatures')),
+            _pair(context, ExecutiveToday.labelsIn(context.l10n)[key] ?? key, cellText(values[key], money: key != 'signatures')),
         ],
       );
 }
@@ -289,19 +295,20 @@ class _AlertTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hot = alert.total > 0;
+    final w = context.l10n;
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: ListTile(
         key: ValueKey('alert-${alert.kind}'),
         leading: Icon(hot ? Icons.warning_amber_rounded : Icons.check_circle_outline,
             color: hot ? context.palette.danger : context.palette.success),
-        title: Text(ExecutiveToday.alertLabels[alert.kind] ?? alert.label),
+        title: Text(ExecutiveToday.alertLabelsIn(w)[alert.kind] ?? alert.label),
         subtitle: alert.companies.length > 1
             ? Text(alert.companies
-                .map((c) => '${c.name}: ${c.count ?? 'অনুমতি নেই'}')
+                .map((c) => '${c.name}: ${c.count ?? w.ownerNotAllowed}')
                 .join(' · '))
             : null,
-        trailing: Text(hot ? '${alert.total}' : 'কিছু নেই',
+        trailing: Text(hot ? '${alert.total}' : w.ownerNone,
             style: TextStyle(fontWeight: FontWeight.w700, color: hot ? context.palette.danger : context.palette.onSurfaceMuted)),
       ),
     );
@@ -403,34 +410,38 @@ class ExecutiveToday {
   /// সার্ভারের ঢাকা ঘরের চিহ্ন
   static const String hidden = 'hidden';
 
-  static const Map<String, String> periods = {'today': 'আজ', 'week': 'এই সপ্তাহ', 'month': 'এই মাস'};
+  static Map<String, String> periodsIn(AppL10n w) =>
+      {'today': w.ownerPeriodToday, 'week': w.ownerPeriodWeek, 'month': w.ownerPeriodMonth};
 
   static const List<String> keys = [
     'sales', 'collections', 'receivable', 'payable', 'fund', 'stock', 'profit', 'signatures',
   ];
 
-  /// ওয়েবের `executive::figure` — বাংলায়, ফোনের নিজের
-  static const Map<String, String> labels = {
-    'sales': 'বিক্রি',
-    'collections': 'আদায়',
-    'receivable': 'পাওনা (বাকি)',
-    'payable': 'সরবরাহকারীর দেনা',
-    'fund': 'নগদ + ব্যাংক',
-    'stock': 'মজুদের দাম',
-    'profit': 'লাভ',
-    'signatures': 'সইয়ের অপেক্ষায়',
-  };
+  /// ওয়েবের `executive::figure` — ফোনের নিজের নাম, ARB থেকে (0.4.43)
+  static Map<String, String> labelsIn(AppL10n w) => {
+        'sales': w.ownerFigureSales,
+        'collections': w.ownerFigureCollections,
+        'receivable': w.ownerFigureReceivable,
+        'payable': w.ownerFigurePayable,
+        'fund': w.ownerFigureFund,
+        'stock': w.ownerFigureStock,
+        'profit': w.ownerFigureProfit,
+        'signatures': w.ownerAwaitingSignature,
+      };
 
-  static const Map<String, String> alertLabels = {
-    'over_limit': 'বাকির সীমা ছাড়িয়েছে',
-    'overdue': 'মেয়াদ পেরোনো বাকি',
-    'stock_low': 'মজুদ পুনঃঅর্ডারের নিচে',
-    'stock_negative': 'মজুদ শূন্যের নিচে',
-    'stock_dead': 'অচল মাল',
-    'late_delivery': 'দেরির চালান (৭ দিন)',
-    'failed_login': 'ব্যর্থ লগইন (৭ দিন)',
-    'backdated': 'পিছনের তারিখের কাগজ (এ মাসে)',
-  };
+  /// উইজেট-গাছের বাইরে ([ExecutiveToday.fromJson]) — এখনকার ভাষায়
+  static Map<String, String> get labels => labelsIn(AppLocale.l10n);
+
+  static Map<String, String> alertLabelsIn(AppL10n w) => {
+        'over_limit': w.ownerAlertOverLimit,
+        'overdue': w.ownerAlertOverdue,
+        'stock_low': w.ownerAlertStockLow,
+        'stock_negative': w.ownerAlertStockNegative,
+        'stock_dead': w.ownerAlertStockDead,
+        'late_delivery': w.ownerAlertLateDelivery(7),
+        'failed_login': w.ownerAlertFailedLogin(7),
+        'backdated': w.ownerAlertBackdated,
+      };
 
   final String period;
   final List<ExecutiveFigure> figures;
