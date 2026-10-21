@@ -499,6 +499,10 @@ return [
         'area_switch' => 'Change area',
         'launcher' => 'Pick an app',
         'launcher_search' => 'Search apps…',
+        'all_modules' => 'All modules',
+        'all_modules_search' => 'Find a module — Bangla or English…',
+        'all_modules_none' => 'No module by that name',
+        'waiting_signature' => ':count waiting for signature',
         'classic' => 'Classic',
         'classic_blurb' => 'Menu across the top, striped rows, amber. The densest of the eight.',
         'tiles' => 'Tiles',
@@ -1145,6 +1149,8 @@ return [
         'main_navigation' => 'Main navigation',
         // The path row — "Home / Module / Screen"
         'breadcrumb' => 'Where you are',
+        'menu' => 'Menu',
+        'home' => 'Home',
     ],
 
     'company' => [

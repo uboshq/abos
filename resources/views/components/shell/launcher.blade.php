@@ -1,137 +1,184 @@
 @props(['menu' => []])
 
 {{--
-    মডিউল লঞ্চার — টপবারের ৯-ফোঁটার বোতাম আর তার নিচের প্যানেল।
+    ⊞ সব মডিউল — বারের বোতাম আর পুরো পর্দার মডিউল-পাতা (Odoo-র হোমের মতো)।
 
-    ── কেন বোতাম ও প্যানেল একই ফাইলে, একই `x-data`-তে ────────────────────
-    প্রথম খসড়ায় দুইটা আলাদা ছিল: বোতাম বারে, আর শিটটা পাতার একদম উপরে,
-    যোগাযোগ একটা ঘটনা দিয়ে। ⛔ কিন্তু তাতে প্যানেলটা **বোতামের নিচে**
-    বসানো যেত না — `absolute` কাজ করে তার নিকটতম `relative` পূর্বপুরুষের
-    সাপেক্ষে, আর দুইটা আলাদা ডালে থাকলে সেই সম্পর্কটাই নেই।
+    ── ⭐ কেন ফিরল, ২১ অক্টোবর ২০২৬ ─────────────────────────────────────
+    মালিক: ⊞ লঞ্চার ফেরাও — Odoo, Google, M365, Fiori সবারই আছে। ওয়েবের মান ধাপ ২-এ (২০ অক্টোবর) বারটা Fiori-র মাপে নামানোর
+    সময় এটা উঠে গিয়েছিল ("রেলেই সব মডিউল আছে")। ⓘ রেল আছে, কিন্তু রেল কেবল আইকন — নাম পড়তে হলে প্রতিটার উপর ইঁদুর রাখতে হয়,
+    আর ফোনে রেলই নেই। এক নজরে সব মডিউল, নামসহ, খোঁজা দিয়ে — সেটাই এই পাতা।
 
-    ⓘ মালিকের দেওয়া ছবিতে প্যানেলটা বোতামের ঠিক নিচে ঝোলে, পুরো পর্দা
-    ঢাকে না — তাই দুইটা এখন এক বাক্সে, `create-menu`-র মতোই।
+    ── ⭐ পুরনোটাই, নতুন করে লেখা নয় ───────────────────────────────────
+    বোতামটা এই ফাইলের আগের চার-বর্গের ⊞; পাতাটা Odoo রূপের শিটের ছাঁচে ([[shell.chrome.apps]]-এর `overlay`), একই
+    `launcher` Alpine-উপাদান (shell.js) — কেবল খোঁজা এখন বাংলা আর ইংরেজি দুই নামেই, আর তীর-চাবি, Alt+M, সইয়ের সংখ্যা যোগ হলো।
+    ⛔ আগের খসড়ার ঝুলন্ত প্যানেলটা (তিন কলাম, বোতামের নিচে) নয় — মালিক এবার পুরো পর্দা চেয়েছেন, পেছনটা হালকা ঝাপসা।
 
-    ── কেন পুরো-পর্দার শিট নয় ───────────────────────────────────────────
-    Odoo পুরো পর্দা ঢাকে, আর সেটারও যুক্তি আছে। ⚠️ কিন্তু মালিকের চাওয়া
-    গড়নটা আলাদা: পিছনের পাতাটা দেখা যেতে থাকে, তাই মডিউল বদলানো একটা
-    **ছোট সিদ্ধান্ত** মনে হয় — পর্দা বদলে যাওয়া নয়। যেটা দিনে দশবার
-    লাগে, সেটার জন্য পুরো পর্দা নেওয়া বেশি।
+    ── ⭐ টাইল কোথা থেকে ─────────────────────────────────────────────────
+    `$menu` — রেল যেটা আঁকে, ঠিক সেটাই ([[MenuBuilder::forUser()]]): অনুমতি নেই এমন সারি আর বন্ধ মডিউল ([[MenuSwitches]])
+    সেখানেই বাদ। তাই রেলে যা আছে লঞ্চারেও তাই, একই ক্রমে। ⓘ যে মডিউলের একটাও খোলা পাতা নেই (সব সারি "শীঘ্রই") তার টাইল নেই —
+    মরা টাইল রাখা হয় না; রেলে সে থাকে কেবল ঝুলন্ত তালিকা দেখাতে। টাইল চাপলে রেলের একই ঠিকানা: মডিউলের প্রথম পাতা, অর্থাৎ
+    তার ড্যাশবোর্ড।
+
+    ── ⭐ সইয়ের অপেক্ষা ──────────────────────────────────────────────────
+    টাইলের কোণে ঐ মডিউলের কতগুলো কাগজ এই মানুষের সইয়ের অপেক্ষায় — অনুমোদনের ইনবক্সের হুবহু হিসাব
+    ([[ApprovalEngine::pendingQueryFor()]]), মডিউল ধরে ভাগ করা। শূন্যে কিছুই নেই।
+
+    ── ⓘ প্রিয় মডিউল টেনে সাজানো — নেই, ইচ্ছাকৃত ──────────────────────────
+    মালিক চেয়েছিলেন "কেবল যদি ব্যবহারকারীর পছন্দের টেবিল আগে থেকেই থাকে"। নেই (users-এর `ui`/`theme`/`accent` ঘর আছে, ক্রমের
+    কোনো ঘর নেই), আর নতুন মাইগ্রেশন নিষেধ — তাই এই ধাপে নয়।
 --}}
-<div x-data="{ open: false }" class="relative shrink-0">
-    <button type="button"
+@php
+    $user = auth()->user();
+    $registry = app(\App\Core\Module\ModuleRegistry::class);
+
+    /* ⓘ সইয়ের অপেক্ষা, মডিউল ধরে — এক কোয়েরি (ইনবক্সের শর্তই, কেবল গোনা) */
+    $waiting = [];
+    if ($user !== null) {
+        $waiting = app(\App\Core\Engines\Approval\ApprovalEngine::class)->pendingQueryFor($user)
+            ->setEagerLoads([])
+            ->reorder()
+            ->toBase()
+            ->select('approvals.module')
+            ->selectRaw('count(*) as waiting')
+            ->groupBy('approvals.module')
+            ->pluck('waiting', 'module')
+            ->map(fn ($n): int => (int) $n)
+            ->all();
+    }
+
+    $tiles = [];
+    foreach ($menu as $module) {
+        $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
+
+        if ($first === null) {
+            continue;
+        }
+
+        /* ⓘ খোঁজার চাবি — বাংলা আর ইংরেজি দুই নামই, কোডসহ; ছোট হাতে (JS-এ একই রূপে মেলানো হয়) */
+        $keys = [$module['code'], $module['label']];
+        foreach ($module['codes'] as $code) {
+            $definition = $registry->get($code);
+            $keys[] = $code;
+            $keys[] = $definition?->label('bn');
+            $keys[] = $definition?->label('en');
+        }
+
+        $tiles[] = [
+            'code' => $module['code'],
+            'label' => $module['label'],
+            'icon' => $module['icon'],
+            'url' => $first['url'],
+            'keys' => mb_strtolower(implode(' ', array_unique(array_filter($keys)))),
+            'waiting' => array_sum(array_map(fn (string $code): int => $waiting[$code] ?? 0, $module['codes'])),
+        ];
+    }
+@endphp
+
+<div x-data="launcher" class="relative shrink-0" data-module-launcher-box
+     @open-module-launcher.window="show()"
+     @keydown.window="hotkey($event)">
+    <button type="button" x-ref="button"
             data-module-launcher
-            @click="open = ! open" @click.outside="open = false"
-            @keydown.escape.window="open = false"
-            :aria-expanded="open.toString()"
-            class="grid size-9 shrink-0 place-items-center rounded-(--radius-field)
-                   text-(--color-topbar-ink) transition-colors hover:bg-(--color-topbar-hover)"
-            aria-label="{{ __('core.ui.launcher') }}"
-            title="{{ __('core.ui.launcher') }}">
-        {{-- চারটা বর্গ — ছবির বোতামটার মতোই। ⓘ ৯ ফোঁটা Odoo-র চিহ্ন;
-             এটা ABOS-এর নিজের, তাই আলাদা দেখতে হওয়াই ঠিক। --}}
+            @click="show()"
+            :aria-expanded="openFlag"
+            aria-haspopup="dialog"
+            aria-controls="module-launcher"
+            aria-keyshortcuts="Alt+M"
+            class="grid size-[40px] shrink-0 place-items-center rounded-full text-(--color-topbar-ink-muted)
+                   transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
+                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+            style="--topbar-control-h: 40px"
+            aria-label="{{ __('core.ui.all_modules') }}"
+            title="{{ __('core.ui.all_modules') }} (Alt+M)">
+        {{-- চারটা বর্গ — ⊞। ⓘ ৯ ফোঁটা Odoo-র চিহ্ন; এটা ABOS-এর নিজের, তাই আলাদা দেখতে হওয়াই ঠিক। --}}
         <span class="grid grid-cols-2 gap-[3px]" aria-hidden="true">
             @for ($i = 0; $i < 4; $i++)
-                <span class="block size-[6px] rounded-[2px] border-2 border-current"></span>
+                <span class="block size-[7px] rounded-[2px] border-2 border-current"></span>
             @endfor
         </span>
     </button>
 
     {{--
-        প্যানেলটা — তিন কলাম, আর **স্ক্রলবার ছাড়া**।
+        পুরো পর্দার পাতা — বারের উপরেও (Odoo-র হোম), পেছনে পাতাটা হালকা ঝাপসা।
 
-        ── কেন `max-h` ও `overflow` তুলে দেওয়া হলো ────────────────────
-        প্রথম খসড়ায় `max-h-[70vh] overflow-y-auto` ছিল, আর তাতে ১৪টা
-        মডিউলের জন্যও একটা স্ক্রলবার বসত। ⛔ মালিকের নির্দেশ: স্ক্রলবার
-        যাতে না লাগে সেভাবে সাজাতে।
-
-        ⓘ যুক্তিটাও তাঁর দিকে: লঞ্চারের পুরো কাজই **এক নজরে সবটা
-        দেখা**। যে তালিকা গোটাতে হয়, সেটা তালিকা নয় — খোঁজা। আর
-        তিন কলামে ১৪টা মানে পাঁচ সারি, যা যেকোনো ল্যাপটপের পর্দাতেই ধরে।
-
-        ⚠️ সীমাটা সৎভাবে বলে রাখি: মডিউল যদি একুশের বেশি হয়ে যায়, তখন
-        প্যানেলটা ছোট পর্দায় নিচ দিয়ে বেরোতে পারে। সেদিন কলাম বাড়াতে
-        হবে (চার), স্ক্রলবার ফেরানো নয়।
-
-        `end-0` — বোতামটা টপবারের ডান দিকে, তাই প্যানেল ডান ধার ধরে ঝোলে;
-        বাঁ ধার ধরলে চওড়া প্যানেলটা পর্দার বাইরে চলে যেত।
+        ⓘ `pops-onto-page` — বারের ৩৬px বোতাম-উচ্চতা আর বারের কালি এখানে নয় (app.css-এর `.topbar` নিয়ম)।
+        ⓘ কলাম: ৩৭৫px-এ ৩, ট্যাবলেটে ৪, ১৩৬৬-এ ৫, ১৯২০-এ ৬ (মালিকের মাপ) — Tailwind-এর sm/xl/2xl ধাপে (মিডিয়া-কোয়েরির rem
+        ব্রাউজারের ১৬px ধরে, পাতার বদলানো মূল-ফন্ট নয়)।
+        ⓘ ARIA: dialog, ভেতরে grid — এক সারির গ্রিড, ঘরগুলো চোখে কয়েক সারিতে ভাঙে; তীর-চাবি চোখের সারি ধরেই চলে (`move()`)।
     --}}
-    <div x-show="open" x-cloak x-transition.opacity.duration.120ms
-         class="absolute end-0 top-full z-40 mt-2 w-[42rem] max-w-[calc(100vw-2rem)]
-                rounded-(--radius-card) border border-(--color-border)
-                bg-(--color-surface-card) p-3 shadow-lg"
-         role="menu"
-         aria-label="{{ __('core.ui.launcher') }}">
+    <div id="module-launcher" x-show="open" x-cloak
+         data-module-launcher-sheet
+         role="dialog" aria-modal="true" aria-label="{{ __('core.ui.all_modules') }}"
+         @click.self="close()"
+         class="pops-onto-page fixed inset-0 z-50 overflow-y-auto bg-(--color-launcher-scrim) backdrop-blur-sm">
+        <div class="mx-auto w-full max-w-6xl px-4 pt-6 pb-[calc(var(--spacing-bottom-nav)+2rem)] md:px-8 md:pt-10 md:pb-10"
+             @click.self="close()">
+            <div class="mx-auto flex max-w-xl items-center gap-2">
+                <label class="flex min-h-[44px] min-w-0 flex-1 items-center gap-2 rounded-full border border-(--color-border)
+                              bg-(--color-surface-card) px-4 text-(--color-ink-muted) shadow-sm
+                              focus-within:border-(--color-brand-500)">
+                    <svg viewBox="0 0 24 24" class="size-[20px] shrink-0 fill-current" aria-hidden="true">
+                        <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+                    </svg>
+                    <input type="search" x-ref="q" x-model="q" data-launcher-search
+                           autocomplete="off" enterkeyhint="go"
+                           @keydown.down.prevent="first()"
+                           @keydown.enter.prevent="openFirst()"
+                           aria-label="{{ __('core.ui.all_modules_search') }}"
+                           aria-controls="module-launcher-grid"
+                           placeholder="{{ __('core.ui.all_modules_search') }}"
+                           class="min-w-0 flex-1 border-0 bg-transparent text-sm text-(--color-ink) outline-none
+                                  placeholder:text-(--color-ink-placeholder)">
+                </label>
 
-        {{--
-            WARN: কলামের সংখ্যা **জায়গা অনুযায়ী**, স্থির নয়।
+                <button type="button" @click="close()"
+                        class="grid size-[44px] shrink-0 place-items-center rounded-full text-(--color-ink-muted)
+                               hover:bg-(--color-surface-hover)
+                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+                        aria-label="{{ __('core.action.close') }} (Esc)">
+                    <svg viewBox="0 0 24 24" class="size-[20px] fill-current" aria-hidden="true">
+                        <path d="m12 10.6 5.3-5.3 1.4 1.4-5.3 5.3 5.3 5.3-1.4 1.4-5.3-5.3-5.3 5.3-1.4-1.4 5.3-5.3-5.3-5.3 1.4-1.4z"/>
+                    </svg>
+                </button>
+            </div>
 
-            আগে `grid-cols-4` স্থির ছিল, আর তাতে সরু জায়গায় — ব্রাউজার
-            জুম করা থাকলে, বা ছোট জানালায় — টালিগুলো এত সরু হয়ে যেত যে
-            নাম বাক্সের বাইরে উপচে পড়ত। উপরের `max-w` প্যানেলটাকে ছোট
-            করত, কিন্তু কলাম চারটাই থেকে যেত।
+            <div id="module-launcher-grid" role="grid" aria-label="{{ __('core.ui.all_modules') }}" class="mt-8"
+                 @keydown="move($event)">
+                <div role="row" data-launcher-row
+                     class="grid grid-cols-3 gap-x-2 gap-y-5 sm:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                    @foreach ($tiles as $tile)
+                        <div role="gridcell" data-launcher-cell data-launcher-keys="{{ $tile['keys'] }}">
+                            <a href="{{ $tile['url'] }}" data-launcher-tile="{{ $tile['code'] }}"
+                               class="group/tile flex flex-col items-center gap-2 rounded-(--radius-card) px-1 py-3 text-center
+                                      transition-colors hover:bg-(--color-surface-hover)
+                                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+                               @if ($tile['waiting'] > 0)
+                                   aria-label="{{ $tile['label'] }} — {{ __('core.ui.waiting_signature', ['count' => $tile['waiting']]) }}"
+                               @endif>
+                                <span class="relative grid size-[64px] shrink-0 place-items-center rounded-[16px] text-white shadow-sm
+                                             transition-transform group-hover/tile:-translate-y-px"
+                                      style="background: var(--color-module-{{ $tile['code'] }}, var(--color-brand-600))"
+                                      aria-hidden="true">
+                                    <x-ui.icon :name="$tile['icon']" :size="34" drawn />
+                                    @if ($tile['waiting'] > 0)
+                                        <span data-launcher-waiting="{{ $tile['waiting'] }}"
+                                              title="{{ __('core.ui.waiting_signature', ['count' => $tile['waiting']]) }}"
+                                              class="absolute -end-[6px] -top-[6px] flex min-w-[20px] items-center justify-center rounded-full
+                                                     border-2 border-(--color-surface-card) bg-(--color-danger) px-[5px] text-[11px]
+                                                     font-semibold leading-[16px] text-white">{{ $tile['waiting'] > 99 ? '99+' : $tile['waiting'] }}</span>
+                                    @endif
+                                </span>
+                                <span class="w-full text-[13px] leading-snug font-semibold [overflow-wrap:anywhere]
+                                             text-(--color-ink)">{{ $tile['label'] }}</span>
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
 
-            জুম করা পর্দা অস্বাভাবিক কিছু নয় — যিনি সারাদিন সংখ্যা পড়েন
-            তিনি প্রায়ই বড় করে রাখেন।
-        --}}
-        {{--
-            ── জ্যামিতিটা inline style-এ, আর সেটা ইচ্ছাকৃত ব্যতিক্রম ──────
-            এই রিপোর নিয়ম টোকেন ও ইউটিলিটি ক্লাস, আর সেটাই ঠিক। ⛔ কিন্তু
-            এই প্যানেলটা পরপর তিনবার ভাঙা অবস্থায় মালিকের পর্দায় গেছে,
-            আর প্রতিবার কারণ ছিল এক: কোনো একটা ক্লাস **কম্পাইলই হয়নি**,
-            অথচ ব্লেডে ওটা লেখা ছিল। ⚠️ যে ক্লাস নেই সে চুপ করে কিছুই
-            করে না — কোনো ভুলের বার্তা নেই, কেবল ভাঙা পর্দা।
-
-            ⓘ তাই যেটুকুর উপর গড়নটা দাঁড়িয়ে আছে — ছক, মাপ, ফাঁক — সেটুকু
-            inline, কারণ inline style কম্পাইল হওয়ার অপেক্ষা করে না। রং
-            আগের মতোই টোকেনে, তাই থিম বদলালে সাথে যায়।
-
-            `auto-fill minmax(120px, 1fr)` — কলামের সংখ্যা আর কোথাও লেখা
-            নেই; যত জায়গা, তত কলাম। জুম করা পর্দা বা সরু জানালায় নিজে
-            থেকেই কমে যায়, আর কোনো breakpoint মনে রাখতে হয় না।
-        --}}
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
-            @foreach ($menu as $module)
-                @php
-                    $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
-                @endphp
-
-                @continue ($first === null)
-
-                <a href="{{ $first['url'] }}" role="menuitem"
-                   class="transition-colors hover:bg-(--color-surface-muted)"
-                   style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-                          gap:8px;min-height:104px;padding:12px 8px;text-align:center;
-                          border:1px solid var(--color-border);border-radius:10px;
-                          background:var(--color-surface-app)">
-                    <span style="display:grid;place-items:center;width:40px;aspect-ratio:1;flex:none;
-                                 border-radius:10px;background:var(--color-surface-muted)">
-                        <x-ui.icon :name="$module['icon']" :size="24" />
-                    </span>
-
-                    <span style="width:100%;font-size:12px;line-height:1.35;overflow-wrap:break-word;
-                                 color:var(--color-ink-body)">{{ $module['label'] }}</span>
-                </a>
-            @endforeach
-
-            {{-- ⭐ রিপোর্ট সেন্টার — সব মডিউলের রিপোর্ট এক পাতায় (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬)।
-                 ⓘ কেবল যাঁর অন্তত একটা রিপোর্ট আছে — নইলে টালিটা একটা খালি পাতায় নিয়ে যেত। --}}
-            @if (collect($menu)->contains(fn ($m) => collect($m['groups']['reports'] ?? [])->contains(fn ($r) => $r['url'] !== null)))
-                <a href="{{ route('reports.center') }}" role="menuitem" data-report-center
-                   class="transition-colors hover:bg-(--color-surface-muted)"
-                   style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-                          gap:8px;min-height:104px;padding:12px 8px;text-align:center;
-                          border:1px solid var(--color-border);border-radius:10px;
-                          background:var(--color-surface-app)">
-                    <span style="display:grid;place-items:center;width:40px;aspect-ratio:1;flex:none;
-                                 border-radius:10px;background:var(--color-surface-muted)">
-                        <x-ui.icon name="reports" :size="24" />
-                    </span>
-
-                    <span style="width:100%;font-size:12px;line-height:1.35;overflow-wrap:break-word;
-                                 color:var(--color-ink-body)">{{ __('report_center.open') }}</span>
-                </a>
-            @endif
+            <p x-show="none" x-cloak data-launcher-none class="mt-8 text-center text-sm text-(--color-ink-muted)">
+                {{ __('core.ui.all_modules_none') }}
+            </p>
         </div>
     </div>
 </div>

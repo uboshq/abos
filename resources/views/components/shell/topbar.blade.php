@@ -17,6 +17,14 @@
      * বিরোধ নয় — বরং নকলটা এখন সব প্রস্থেই সত্যি।
      */
     'narrow' => false,
+
+    /**
+     * ⭐ বারটা রেলের মাথার উপর দিয়ে যায় — পুরো চওড়া বার (`rail` রূপ; মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ তখন "≡" ঠিক রেলের কলামে বসে (একই `--spacing-sidebar-icon` প্রস্থ, মাঝখানে), আর তার ডানে ⊞ সব মডিউল।
+     * ⛔ মালিকের ছবিতে "≡" অর্ধেক রেলের উপর, অর্ধেক বারের উপর — বারের নিজের ২০px বাঁ-ফাঁক তাকে রেলের মাঝ থেকে সরিয়ে দিত।
+     */
+    'overRail' => false,
 ])
 
 {{--
@@ -38,6 +46,27 @@
     $user = auth()->user();
     $company = $user?->currentCompany;
     $branch = $user?->currentBranch;
+
+    /*
+     * ⭐ বাঁ কোণের চিহ্ন — চলতি কোম্পানির নিজের লোগো, ABOS-এর নয় (মালিক, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অনুরোধপ্রতি পড়া হয়, তাই কোম্পানি বদলালে পরের পাতাতেই নতুন লোগো। লোগো না থাকলে নামের দুই শব্দের প্রথম অক্ষর
+     * ("আল-আমিন কর্পোরেশন" → "আক") কোম্পানির নিজের রঙের গোল ব্যাজে — রংটা id ধরে ছয়টার একটা, তাই একই কোম্পানি
+     * সবসময় একই রঙে। ⓘ অক্ষর মানে একটা গোটা গ্রাফিম (`\X`), বাইট নয়; হসন্তে শেষ হলে পরেরটাও, নইলে "ক্" একা ঝুলত।
+     * ⓘ ABOS-এর চিহ্ন রেলের মাথায়, হোমের বোতাম হয়ে ([[shell.sidebar]])।
+     */
+    $brandName = $company?->name() ?? 'ABOS';
+    $brandLogo = $company?->logoUrl();
+    $brandInitials = '';
+    foreach (array_slice(preg_split('/\s+/u', trim($brandName), -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 2) as $word) {
+        preg_match_all('/\X/u', $word, $graphemes);
+        $letter = $graphemes[0][0] ?? '';
+        if (str_ends_with($letter, "\u{09CD}") && isset($graphemes[0][1])) {
+            $letter .= $graphemes[0][1];
+        }
+        $brandInitials .= mb_strtoupper($letter);
+    }
+    $brandTone = $company ? ((int) $company->id - 1) % 6 + 1 : 1;
 @endphp
 
 {{-- `data-topbar` — পাহারার জন্য, নকশার জন্য নয়।
@@ -54,6 +83,7 @@
         @class([
             'topbar sticky top-0 z-30 flex h-(--spacing-header) shrink-0 items-center gap-2',
             'border-b border-(--color-topbar-border) bg-(--color-topbar) px-3 md:px-5',
+            'md:ps-0' => $overRail,
             'lg:hidden' => $narrow,
         ])>
 
@@ -65,42 +95,97 @@
         ⭐ SAP Fiori shell bar — ওয়েবের মান ধাপ ২ (মালিকের আদেশ "100% int. standard", ২০ অক্টোবর ২০২৬; নকশা:
         E:\ABOS\মালিকের-ফাইল\ওয়েবের-চেহারা-ভুল-ও-পরিকল্পনা-২০-অক্টোবর.pdf, পাতা ৩)।
 
-        বাঁ থেকে ডানে, আর কিছু নয়:  [মেনু] লোগো · কোম্পানি · শাখা ▾ │ একটাই খোঁজা │ ＋ তৈরি · 🔔 · ছবি
+        বাঁ থেকে ডানে, আর কিছু নয়:  [≡] ⊞ লোগো · কোম্পানি · শাখা ▾ │ একটাই খোঁজা │ ＋ তৈরি · 🔔 · ছবি
 
         ⛔ আগে বারে দশটার বেশি জিনিস ছিল (⊞ লঞ্চার, তৈরি, সবুজ টিক, কাগজ, 🔔, পূর্ণপর্দা, EN, 🌙, কোম্পানি, ⇄, ছবি) — Fiori-র
         বারে থাকে কেবল পরিচয়, খোঁজা আর কয়েকটা কাজ। ⓘ কিছুই হারায়নি, জায়গা বদলেছে, অ্যাপের বারের এক নিয়মে:
           · আমার সইয়ের অপেক্ষা বারেই থাকে, ＋ তৈরি আর 🔔-এর মাঝে, কেবল সইদাতার (মালিক, ২০ অক্টোবর); "সই হয়েছে, পোস্ট হয়নি" → ঘণ্টার প্যানেলের মাথায় "আপনার কাজ";
           · ভাষা, রং (ফোনের মতো · আলো · অন্ধকার), পূর্ণপর্দা, কোম্পানি বদল → ছবির মেনুতে;
-          · মডিউলের লঞ্চার → বাঁয়ের রেলেই সব মডিউল আছে; সরু পর্দায় নিচের নেভিগেশন;
+          · মডিউলের লঞ্চার → ⊞ আবার বারে, "≡"-এর ডানে (মালিক, ২১ অক্টোবর ২০২৬: Odoo-র হোমের মতো পুরো পর্দা); রেলেও সব মডিউল;
           · চলতি মডিউলের নাম → মডিউল-প্যানেলের মাথায় আর পাতার পথে।
         ⓘ কোম্পানির সাথে শাখা সবসময় ([[shell.company-switcher]], মালিকের স্থায়ী নিয়ম)।
     --}}
     {{-- মেনু গুটানো-খোলার একমাত্র সুইচ — দুই অবস্থাতেই একই জায়গায় ($store.sidebar; [[AListenerNobodyEverBoundTest]]) --}}
-    <button type="button"
-            x-data
-            @click="$store.sidebar.toggle()"
-            class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
-                   border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
-                   hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"
-            aria-label="{{ __('core.a11y.collapse_sidebar') }}"
-            :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
-            :aria-label="$store.sidebar.collapsed
-                ? '{{ __('core.a11y.expand_sidebar') }}'
-                : '{{ __('core.a11y.collapse_sidebar') }}'">
-        <x-ui.icon name="list" :size="18" />
-    </button>
+    @if ($overRail)
+        {{--
+            ⭐ "≡" রেলের কলামেই — মালিক, ২১ অক্টোবর ২০২৬ (ছবিতে বোতামটা অর্ধেক রেলে, অর্ধেক বারে)।
 
-    <a href="{{ route('dashboard') }}" data-shell-logo class="flex shrink-0 items-center rounded-(--radius-field)"
-       title="{{ __('core.menu.dashboard') }}" aria-label="ABOS · {{ __('core.menu.dashboard') }}">
-        <img src="{{ asset('brand/abos-icon-64.png') }}" alt="" aria-hidden="true" class="size-8">
-    </a>
-
-    {{-- কোম্পানি · শাখা ▾ — লোগোর ঠিক পাশে, সব মাপে (ফোনে নাম ছোট হয়ে কাটে, বার নয়) --}}
-    @if ($company)
-        <div class="min-w-0 shrink" data-shell-company>
-            <x-shell.company-switcher :company="$company" :branch="$branch" />
+            ঘরটা রেলের সমান: একই `w-(--spacing-sidebar-icon)`, একই `border-e` (স্বচ্ছ — দেখা যায় না, কেবল মাপ মেলায়), আর
+            ভেতরে মাঝখানে; রেলের টাইলগুলোও ঠিক তাই ([[shell.sidebar]]-এর `nav`)। ⓘ ফলে "≡"-এর মাঝ আর রেলের আইকনের মাঝ
+            একই x-এ, যে রূপ রেলের প্রস্থ যা-ই বসাক। বোতাম ৪০×৪০ (টাচ), আইকন ২২px, ঘষা পড়লে গোল হালকা জমিন।
+            ⓘ বারের রং পুরো চওড়ায়, রেলের রং বারের নিচ থেকে — কোণে দুই রং কাটাকাটি করে না।
+            ⓘ ফোনে রেল নেই (নিচের নেভিগেশন), তাই "≡"-ও নেই — কাজহীন বোতাম রাখা হয় না; ⊞ আর লোগো একই সারিতে থাকে।
+        --}}
+        <div data-menu-cell
+             class="hidden w-(--spacing-sidebar-icon) shrink-0 items-center justify-center border-e border-transparent md:flex">
+            <button type="button"
+                    x-data
+                    data-menu-toggle
+                    @click="$store.sidebar.toggle()"
+                    class="flex size-[40px] shrink-0 items-center justify-center rounded-full text-(--color-topbar-ink-muted)
+                           transition-colors hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink)
+                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+                    style="--topbar-control-h: 40px"
+                    aria-label="{{ __('core.a11y.menu') }}"
+                    title="{{ __('core.a11y.menu') }}"
+                    :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'">
+                <x-ui.icon name="list" :size="22" />
+            </button>
         </div>
+    @else
+        <button type="button"
+                x-data
+                @click="$store.sidebar.toggle()"
+                class="hidden size-9 shrink-0 items-center justify-center rounded-(--radius-field)
+                       border border-(--color-topbar-border) text-(--color-topbar-ink-muted) transition-colors
+                       hover:bg-(--color-topbar-hover) hover:text-(--color-topbar-ink) md:flex"
+                aria-label="{{ __('core.a11y.collapse_sidebar') }}"
+                :aria-expanded="$store.sidebar.collapsed ? 'false' : 'true'"
+                :aria-label="$store.sidebar.collapsed
+                    ? '{{ __('core.a11y.expand_sidebar') }}'
+                    : '{{ __('core.a11y.collapse_sidebar') }}'">
+            <x-ui.icon name="list" :size="18" />
+        </button>
     @endif
+
+    {{-- ⭐ ⊞ · লোগো · কোম্পানি · শাখা ▾ — এক সারিতে, ৩৭৫ থেকে ১৯২০px (মালিক, ২১ অক্টোবর ২০২৬)।
+         ⓘ "≡"-এর কিনারা থেকে ঠিক ১৪px: ঘরের ভেতরে "≡"-এর ডানে (রেল − ৪০px) ÷ ২ ফাঁকা, তার পরে বারের `gap-2` — দুইটা বাদ দিয়ে বাকিটা। --}}
+    <div data-shell-start @class(['flex min-w-0 shrink items-center gap-[12px]',
+                                  'md:ms-[calc(14px_-_0.5rem_-_(var(--spacing-sidebar-icon)_-_40px)_/_2)]' => $overRail])>
+        {{-- ⭐ ⊞ সব মডিউল — Odoo-র হোমের মতো পুরো পর্দা (মালিক, ২১ অক্টোবর ২০২৬; Google · M365 · Fiori সবারই আছে)।
+             ⓘ টাইল রেলের একই তালিকা থেকে ($menu: অনুমতি আর মডিউলের সুইচ দুইটাই দেখা), তাই রেলে যা নেই লঞ্চারেও নেই। --}}
+        @if ($overRail)
+            <x-shell.launcher :menu="$menu ?? []" />
+        @endif
+
+        {{-- ⭐ গ্রাহকের ব্র্যান্ড — চলতি কোম্পানির লোগো, চাপলে হোম; লোগো না থাকলে আদ্যক্ষরের ব্যাজ (উপরের `@php`)।
+             মাপ: উচ্চতা ২৮px (৩২px পাতের ভেতরে), চওড়া বড়জোর ১৪০px, `object-contain` — চওড়া লোগো ছোট হয়, ভাঙে না।
+             অন্ধকারে লোগোর পেছনে হালকা পাত (`--color-company-logo-plate`), আলোতে পাতটা স্বচ্ছ।
+             ⛔ আগে এখানে ABOS-এর চিহ্ন, আর কোম্পানির লোগো সুইচারের ভেতরে — এখন লোগো একবারই, এখানে; সুইচারে কেবল নাম। --}}
+        <a href="{{ route('dashboard') }}" data-shell-logo data-shell-brand="{{ $company?->id }}"
+           class="flex shrink-0 items-center rounded-(--radius-field)
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-500)"
+           title="{{ $brandName }}"
+           @unless ($brandLogo) aria-label="{{ $brandName }}" @endunless>
+            @if ($brandLogo)
+                <span class="flex h-[32px] max-w-[140px] items-center rounded-[6px] bg-(--color-company-logo-plate) px-[2px]">
+                    <img src="{{ $brandLogo }}" alt="{{ $brandName }}" data-company-logo
+                         class="h-[28px] w-auto max-w-[136px] object-contain">
+                </span>
+            @else
+                <span data-company-initials aria-hidden="true"
+                      class="grid size-[32px] shrink-0 place-items-center rounded-full text-[13px] font-bold leading-none"
+                      style="background: var(--color-company-mark-{{ $brandTone }}); color: var(--color-company-mark-ink)">{{ $brandInitials }}</span>
+            @endif
+        </a>
+
+        {{-- কোম্পানি · শাখা ▾ — লোগোর ঠিক পাশে, সব মাপে (ফোনে নাম ছোট হয়ে কাটে, বার নয়); লোগো বাঁয়ের চিহ্নেই, তাই এখানে নয় --}}
+        @if ($company)
+            <div class="min-w-0 shrink" data-shell-company>
+                <x-shell.company-switcher :company="$company" :branch="$branch" :logo="false" />
+            </div>
+        @endif
+    </div>
 
     {{-- একটাই খোঁজা — মাঝে, চওড়া; পাতা, মেনু, গ্রাহক, পণ্য আর কাগজের নম্বর সবই এখানে ([[SearchController::pagesMatching()]])।
          "/" বা Ctrl+K চাপলেও খোলে ([[commandCenter]])। --}}

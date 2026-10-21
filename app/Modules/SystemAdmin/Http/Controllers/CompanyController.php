@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Engines\Image\ImageEngine;
+use App\Core\Engines\Image\SafeSvg;
 use App\Core\Services\CompanyProvisioner;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
@@ -404,13 +405,21 @@ class CompanyController extends Controller implements HasMiddleware
              * সবই দরকার। লোগো তার কোনোটাই নয়: একটাই ফাইল, একটাই পথ,
              * আর সেটা কোম্পানির **পরিচয়ের অংশ**, তার কোনো নথি নয়।
              *
-             * ⚠️ `svg` ইচ্ছাকৃতভাবে বাদ: SVG-তে স্ক্রিপ্ট বসানো যায়,
-             * আর ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়। ⓘ এটা
-             * সুবিধার প্রশ্ন নয়, নিরাপত্তার।
+             * ⚠️ `svg` এতদিন ইচ্ছাকৃতভাবে বাদ ছিল: SVG-তে স্ক্রিপ্ট বসানো যায়,
+             * আর ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়।
+             *
+             * ⭐ ২১ অক্টোবর ২০২৬ থেকে SVG নেওয়া হয় — মালিক: লোগো এখন বারের
+             * বাঁ কোণে, আর লোগো সাধারণত SVG-তেই আসে (যেকোনো মাপে ধারালো)।
+             * ⛔ কাঁচা নয়: [[SafeSvg::clean()]] স্ক্রিপ্ট, `on…`, `javascript:`,
+             * `<foreignObject>` ছেঁটে তবে রাখে; যা SVG হিসেবে পড়াই যায় না তা
+             * ফেরত যায়। সীমা ১ MB (মালিকের মাপ) — SVG ইঞ্জিনে ছোট হয় না।
              */
-            // ⓘ ১২ MB — ইঞ্জিন নিজেই নামিয়ে আনে বলে দরজাটা আর সরু রাখার
-            // দরকার নেই; সীমাটা কেবল অস্বাভাবিক ফাইল ঠেকাতে।
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'],
+            // ⓘ ছবি (PNG/JPG/WebP) ১২ MB — ইঞ্জিন নিজেই নামিয়ে আনে বলে দরজাটা আর সরু রাখার
+            // দরকার নেই; সীমাটা কেবল অস্বাভাবিক ফাইল ঠেকাতে। ⓘ SVG কি না, নামের শেষাংশ দেখে — MIME-এ
+            // SVG কখনো text/xml, কখনো text/plain আসে; আসল যাচাই পরে, ভেতরটা পড়ে।
+            'logo' => $this->sentAnSvg($request)
+                ? ['nullable', 'file', 'max:1024']
+                : ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'],
 
             /*
              * লোগো সরানোর ঘর — আলাদা, কারণ "নতুন ফাইল দিইনি" আর
@@ -479,6 +488,20 @@ class CompanyController extends Controller implements HasMiddleware
             return [];
         }
 
+        /* ⭐ SVG — স্ক্রিপ্ট ছেঁটে, তবেই রাখা; পড়া না গেলে পুরনো লোগো অক্ষত রেখে ফেরত */
+        if ($this->sentAnSvg($request)) {
+            $clean = SafeSvg::clean((string) file_get_contents((string) $file->getRealPath()));
+
+            if ($clean === null) {
+                throw ValidationException::withMessages(['logo' => __('validation.image', ['attribute' => 'logo'])]);
+            }
+
+            $path = 'logos/'.$company->code.'-'.now()->format('Ymd-His').'.svg';
+            Storage::disk('public')->put($path, $clean);
+
+            return ['logo_path' => $path];
+        }
+
         /*
          * ⭐ ১৪ সেপ্টেম্বর ২০২৬: এখানে আগে কাঁচা ফাইলটাই বসত।
          *
@@ -522,6 +545,14 @@ class CompanyController extends Controller implements HasMiddleware
         $name = $company->code.'-'.now()->format('Ymd-His').'.'.$file->extension();
 
         return ['logo_path' => $file->storeAs('logos', $name, ['disk' => 'public'])];
+    }
+
+    /** ⓘ পাঠানো লোগোটা SVG কি না — নামের শেষাংশ ধরে (MIME-এ SVG নানা নামে আসে); ভেতরটা যাচাই করে [[SafeSvg::clean()]] */
+    private function sentAnSvg(Request $request): bool
+    {
+        $file = $request->file('logo');
+
+        return $file !== null && ! is_array($file) && strtolower($file->getClientOriginalExtension()) === 'svg';
     }
 
     /** নতুন শাখা — চলতি নয়, যে কোম্পানির পাতা খোলা আছে তার। */

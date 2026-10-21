@@ -1,4 +1,13 @@
-@props(['company', 'branch' => null])
+@props([
+    'company',
+    'branch' => null,
+    /**
+     * ⭐ বোতামে কোম্পানির লোগো — বারে নয় (মালিক, ২১ অক্টোবর ২০২৬): বারের বাঁ কোণে লোগোটা নিজেই ব্র্যান্ডের চিহ্ন
+     * ([[shell.topbar]]-এর `data-shell-logo`), তাই সেখানে এটা `false` — একই লোগো পাশাপাশি দুইবার নয়।
+     * ⓘ যে রূপে বারের চিহ্ন নেই (Linear-এর পা), সেখানে আগের মতোই এখানে।
+     */
+    'logo' => true,
+])
 
 {{--
     কোম্পানি ও শাখা সুইচার — সেকশন ১৫.১৫।
@@ -68,8 +77,8 @@
              ঘরটা ৪০px — টপবার ৬৪px, পাশের নাম+শাখা ব্লকও প্রায় ততটাই।
              max-w ১২৮px, ৬৪px নয়: চওড়া লকআপ (৬:১ বা তার বেশি) সরু ঘরে
              উচ্চতা পায় না, তখন লেখাটা দাগ হয়ে যায়। --}}
-        @if ($logo = $company->logoUrl())
-            <img src="{{ $logo }}" alt=""
+        @if ($logo && ($logoUrl = $company->logoUrl()))
+            <img src="{{ $logoUrl }}" alt=""
                  class="h-10 w-auto max-w-32 shrink-0 object-contain" aria-hidden="true">
         @endif
 

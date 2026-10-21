@@ -122,8 +122,9 @@
                     স্থায়ী নিয়মও তাই: আপলোড-সম্পাদনা-মোছা যে জিনিসের,
                     তার নিজের পর্দাতেই।
 
-                    ⚠️ SVG নেওয়া হয় না: ওতে স্ক্রিপ্ট বসানো যায়, আর
-                    ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়।
+                    ⚠️ SVG-তে স্ক্রিপ্ট বসানো যায়, আর ফাইলটা পরে সরাসরি ব্রাউজারে
+                    পরিবেশিত হয় — তাই এতদিন নেওয়া হত না। ⭐ ২১ অক্টোবর ২০২৬ থেকে নেওয়া
+                    হয়, স্ক্রিপ্ট ছেঁটে ([[SafeSvg]]; মালিক: লোগো এখন বারের বাঁ কোণেও)।
                 --}}
                 <div class="sm:col-span-2">
                     <span class="text-2xs text-(--color-ink-muted)">
@@ -160,7 +161,7 @@
                              যেত। ⭐ সার্ভারের `ImageEngine::mark()` এটাকে
                              PNG রেখেই ছোট করে। --}}
                         {{-- ⭐ বাংলা বোতাম, ব্রাউজারের ইংরেজি "Choose File" নয় — সিস্টেম পর্দার নকশা §৪, ১০ অক্টোবর ২০২৬ --}}
-                        <x-ui.file-input name="logo" accept="image/png,image/jpeg,image/webp" />
+                        <x-ui.file-input name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" />
                     </div>
 
                     <p class="mt-1 text-2xs text-(--color-ink-muted)">
