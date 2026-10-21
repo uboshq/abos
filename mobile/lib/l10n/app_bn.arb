@@ -1159,6 +1159,34 @@
   "@webInsideCancel": {
     "description": "A web screen inside the app: the page's prompt, cancel"
   },
+  "commonNo": "না",
+  "@commonNo": {
+    "description": "Button: no / cancel a yes-no question"
+  },
+  "commonMore": "আরও",
+  "@commonMore": {
+    "description": "Button: load or show more rows"
+  },
+  "commonAll": "সব",
+  "@commonAll": {
+    "description": "Filter choice: everything, no filter"
+  },
+  "commonStatus": "অবস্থা",
+  "@commonStatus": {
+    "description": "Label: the state of a paper or a row"
+  },
+  "commonBranch": "শাখা",
+  "@commonBranch": {
+    "description": "Label: a company branch"
+  },
+  "commonLoadFailed": "আনা গেল না",
+  "@commonLoadFailed": {
+    "description": "Error title: the list or page could not be fetched"
+  },
+  "commonSign": "সই দিন",
+  "@commonSign": {
+    "description": "Button: sign (approve) a paper — fe: the action is \"সই দিন\""
+  },
   "voucherTypeReceipt": "আদায় ভাউচার",
   "@voucherTypeReceipt": {
     "description": "Voucher type name when the server sends none: receipt"

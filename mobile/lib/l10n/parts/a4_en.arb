@@ -261,5 +261,12 @@
   "webInsidePrint": "Print or PDF",
   "webInsideReload": "Reload",
   "webInsideOpenFailedTitle": "The page could not be opened",
-  "webInsideCancel": "Cancel"
+  "webInsideCancel": "Cancel",
+  "commonNo": "No",
+  "commonMore": "More",
+  "commonAll": "All",
+  "commonStatus": "Status",
+  "commonBranch": "Branch",
+  "commonLoadFailed": "Could not load",
+  "commonSign": "Sign"
 }

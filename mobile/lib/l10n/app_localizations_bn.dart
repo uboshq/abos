@@ -883,6 +883,27 @@ class AppL10nBn extends AppL10n {
   String get webInsideCancel => 'থাক';
 
   @override
+  String get commonNo => 'না';
+
+  @override
+  String get commonMore => 'আরও';
+
+  @override
+  String get commonAll => 'সব';
+
+  @override
+  String get commonStatus => 'অবস্থা';
+
+  @override
+  String get commonBranch => 'শাখা';
+
+  @override
+  String get commonLoadFailed => 'আনা গেল না';
+
+  @override
+  String get commonSign => 'সই দিন';
+
+  @override
   String get voucherTypeReceipt => 'আদায় ভাউচার';
 
   @override

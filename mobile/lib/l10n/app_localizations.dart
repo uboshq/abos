@@ -1669,6 +1669,48 @@ abstract class AppL10n {
   /// **'থাক'**
   String get webInsideCancel;
 
+  /// Button: no / cancel a yes-no question
+  ///
+  /// In bn, this message translates to:
+  /// **'না'**
+  String get commonNo;
+
+  /// Button: load or show more rows
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও'**
+  String get commonMore;
+
+  /// Filter choice: everything, no filter
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get commonAll;
+
+  /// Label: the state of a paper or a row
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা'**
+  String get commonStatus;
+
+  /// Label: a company branch
+  ///
+  /// In bn, this message translates to:
+  /// **'শাখা'**
+  String get commonBranch;
+
+  /// Error title: the list or page could not be fetched
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get commonLoadFailed;
+
+  /// Button: sign (approve) a paper — fe: the action is "সই দিন"
+  ///
+  /// In bn, this message translates to:
+  /// **'সই দিন'**
+  String get commonSign;
+
   /// Voucher type name when the server sends none: receipt
   ///
   /// In bn, this message translates to:

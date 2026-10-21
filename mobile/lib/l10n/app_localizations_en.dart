@@ -890,6 +890,27 @@ class AppL10nEn extends AppL10n {
   String get webInsideCancel => 'Cancel';
 
   @override
+  String get commonNo => 'No';
+
+  @override
+  String get commonMore => 'More';
+
+  @override
+  String get commonAll => 'All';
+
+  @override
+  String get commonStatus => 'Status';
+
+  @override
+  String get commonBranch => 'Branch';
+
+  @override
+  String get commonLoadFailed => 'Could not load';
+
+  @override
+  String get commonSign => 'Sign';
+
+  @override
   String get voucherTypeReceipt => 'Collection voucher';
 
   @override
