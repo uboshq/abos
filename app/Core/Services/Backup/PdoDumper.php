@@ -216,9 +216,17 @@ final class PdoDumper
         $order = $this->primaryKeyOrder($pdo, $table);
         $offset = 0;
 
+        /*
+         * ⛔ গণনা-করা (generated) ঘর বাদ — ২১ অক্টোবর ২০২৬ (ec, ফেরানো-পরখে ধরা)। ⓘ `number_series`-এর `branch_key` আর
+         * `financial_year_key` VIRTUAL (2026_11_27); `SELECT *` সেগুলোও আনত, আর ফেরানোর INSERT সেখানে থামত (3105: generated
+         * ঘরে মান বসে না) — ডাম্প নেওয়া যেত, ফেরানো যেত না। MySQL নিজেই মানগুলো আবার গোনে।
+         */
+        $stored = $this->storedColumns($pdo, $table);
+        $select = $stored === [] ? '*' : implode(', ', $stored);
+
         while (true) {
             $rows = $pdo
-                ->query("SELECT * FROM {$quoted}{$order} LIMIT ".self::CHUNK.' OFFSET '.$offset)
+                ->query("SELECT {$select} FROM {$quoted}{$order} LIMIT ".self::CHUNK.' OFFSET '.$offset)
                 ->fetchAll(PDO::FETCH_ASSOC);
 
             if ($rows === []) {
@@ -241,6 +249,23 @@ final class PdoDumper
 
             $offset += self::CHUNK;
         }
+    }
+
+    /**
+     * টেবিলের যে ঘরগুলোয় মান সত্যিই রাখা — গণনা-করা ঘর (VIRTUAL/STORED/PERSISTENT GENERATED) বাদ, ক্রম টেবিলের মতো।
+     * ⓘ `DEFAULT_GENERATED` (CURRENT_TIMESTAMP ডিফল্টের ঘর) রাখা ঘর, বাদ নয় — তাই কেবল ঐ তিন শব্দ।
+     *
+     * @return list<string> উদ্ধৃত নাম
+     */
+    private function storedColumns(PDO $pdo, string $table): array
+    {
+        $statement = $pdo->prepare(
+            'SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? '
+            ."AND NOT (extra REGEXP '(VIRTUAL|STORED|PERSISTENT) GENERATED') ORDER BY ordinal_position"
+        );
+        $statement->execute([$table]);
+
+        return array_map(fn ($c) => '`'.str_replace('`', '``', (string) $c).'`', $statement->fetchAll(PDO::FETCH_COLUMN));
     }
 
     /** ⓘ ` ORDER BY` প্রাথমিক কী-র কলামে — কী না থাকলে খালি */
