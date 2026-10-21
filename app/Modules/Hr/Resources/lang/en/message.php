@@ -104,4 +104,12 @@ return [
     'pf_enrol_done' => ':name has joined the fund.',
     'pf_enrol_waiting' => ':name joining the fund is awaiting signature.',
     'pf_enrolled' => 'Joined the provident fund — at :rate%, from :date.',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_on_note' => 'Monthly provision is on — confirming a month\'s salary trues the books up to that month\'s obligation.',
+    'gratuity_off_note' => 'Monthly provision is off — it is not booked with salary; use the button below to book it by hand.',
+    'gratuity_formula_note' => 'Obligation = last basic × days ÷ 30; days = counted years × 30, or × 45 after more than 10 years; counted years = completed years, plus one when the remainder exceeds six months (BLA s.2(10)). The books are trued up to the obligation each month — an increase is expense, a decrease reverses.',
+    'gratuity_booked_so_far' => 'Provision booked so far :booked; obligation as computed :total.',
+    'gratuity_booked' => 'The gratuity provision for :month is booked.',
+    'gratuity_nothing' => 'Nothing to book for :month — already booked, or the obligation did not change.',
+    'gratuity_narration' => 'Gratuity provision :month',
 ];

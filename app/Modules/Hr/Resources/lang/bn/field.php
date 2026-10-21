@@ -118,4 +118,10 @@ return [
     // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
     'bonus_date' => 'ভাতার দিন',
     'narration' => 'বিবরণ (যেমন ঈদুল ফিতর)',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_years' => 'গোনা বছর',
+    'gratuity_days' => 'দিন',
+    'gratuity_basic' => 'শেষ মূল',
+    'gratuity_obligation' => 'দায়',
+    'as_of' => 'যে দিনের হিসাব',
 ];

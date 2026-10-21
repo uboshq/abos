@@ -21,4 +21,6 @@ return [
     'pf_proposal' => 'Provident fund rate — proposed change',
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
     'overtime' => 'Overtime sheets',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'report_gratuity' => 'Gratuity obligation',
 ];

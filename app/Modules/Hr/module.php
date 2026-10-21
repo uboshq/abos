@@ -94,6 +94,8 @@ return [
             // ⭐ ভবিষ্য তহবিলের খাতা — পুরোটাই টাকা, বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬)
             ['label' => 'hr::menu.report_provident_fund', 'icon' => 'wallet', 'route' => 'hr.report.show',
                 'route_params' => ['slug' => 'provident-fund'], 'permission' => 'hr.salary.view'],
+            // ⭐ গ্র্যাচুইটির দায় — বেতনের চাবিতে (fe, ২১ অক্টোবর ২০২৬, দফা ৮)
+            ['label' => 'hr::menu.report_gratuity', 'icon' => 'wallet', 'route' => 'hr.gratuity.report', 'permission' => 'hr.salary.view'],
         ],
     ],
 
@@ -471,6 +473,18 @@ return [
          * ⭐ প্রতিষ্ঠানের ভাগ কতটা কর্মীর প্রাপ্য — চাকরির পূর্ণ বছর ধরে (BLA ধারা ২৬৭; fe, ২১ অক্টোবর ২০২৬; [[ProvidentFund::vest()]])।
          * ⛔ ডিফল্ট খালি = "বসানো নেই" (১০০% নয়) — চূড়ান্ত নিষ্পত্তি তখন হিসাব করবে না। লেখার ধরন: "3:50, 5:100"।
          */
+        /*
+         * ⭐ গ্র্যাচুইটির মাসিক সঞ্চিতি — চালু থাকলে মাসের বেতন নিশ্চিত হওয়ার সাথে সেই মাসের দায় পর্যন্ত খাতায় (BLA ধারা 2(10), IAS 19;
+         * fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])। ⓘ ডিফল্টে বন্ধ — রিপোর্ট আর হাতের বোতাম সবসময় চলে।
+         */
+        [
+            'key' => 'hr.gratuity.enabled',
+            'label' => 'hr::settings.gratuity_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
         [
             'key' => 'hr.pf.vesting_steps',
             'label' => 'hr::settings.pf_vesting_steps',

@@ -22,4 +22,6 @@ return [
     'bonus_percent_of_basic' => 'Festival bonus — % of basic (100 = one month\'s basic; never more)',
     // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
     'pf_vesting_steps' => 'Provident fund — employer-share vesting steps, "completed years:percent" separated by commas (e.g. 3:50, 5:100); empty = not set, final settlement will not compute',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_enabled' => 'Gratuity — when a month\'s salary is confirmed, the provision is trued up to that month\'s obligation (5227 expense / 2134 liability)',
 ];

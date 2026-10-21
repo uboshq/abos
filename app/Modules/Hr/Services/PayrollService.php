@@ -63,6 +63,7 @@ final class PayrollService
         private readonly ProvidentFund $fund,
         private readonly OvertimeService $overtime,
         private readonly SalaryTax $tax,
+        private readonly Gratuity $gratuity,
     ) {}
 
     /**
@@ -352,6 +353,14 @@ final class PayrollService
             );
 
             $run->forceFill(['status' => DocumentStatus::CONFIRMED])->save();
+
+            /*
+             * ⭐ মাসের বেতন নিশ্চিত হলে সেই মাসের গ্র্যাচুইটি সঞ্চিতিও — একই লেনদেনে; সুইচ চালু থাকলে, আর মাসটা আগে বসানো না থাকলে
+             * (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity::accrue()]])। ⓘ উৎসব ভাতার রানে নয়।
+             */
+            if (! $run->isBonus() && $this->gratuity->enabled()) {
+                $this->gratuity->accrue($run->month->copy());
+            }
 
             return $run->fresh();
         });

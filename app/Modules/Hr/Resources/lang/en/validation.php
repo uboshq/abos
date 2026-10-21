@@ -80,4 +80,6 @@ return [
     'bonus_account_missing' => 'The festival bonus account (5226) is missing — use "Install standard chart" in the chart of accounts.',
     // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
     'pf_not_eligible' => 'This employee cannot join the fund — already a member, or not a year of service on that date.',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_accounts_missing' => 'The gratuity accounts (5227 expense, 2134 payable) are missing — run `php artisan abos:hr-law-accounts`.',
 ];

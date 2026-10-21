@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
+use App\Modules\Hr\Http\Controllers\GratuityController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\OvertimeController;
@@ -147,5 +148,11 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::post('/', [ProvidentFundController::class, 'store'])->name('store');
         // ⭐ একজনকে তহবিলে যোগ — আলাদা কাজ, নিজে থেকে নয় (BLA ধারা ২৬৪; fe, দফা ১)
         Route::post('/{employee}/enrol', [ProvidentFundController::class, 'enrol'])->whereNumber('employee')->name('enrol');
+    });
+
+    // ⭐ গ্র্যাচুইটি — রিপোর্ট বেতনের চাবিতে, মাসের সঞ্চিতি বেতনের রান চালানোর চাবিতে (fe, দফা ৮; [[GratuityController]])
+    Route::prefix('gratuity')->name('gratuity.')->group(function () {
+        Route::get('/', [GratuityController::class, 'report'])->name('report');
+        Route::post('/', [GratuityController::class, 'store'])->name('store');
     });
 });
