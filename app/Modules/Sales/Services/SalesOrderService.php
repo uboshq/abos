@@ -196,7 +196,7 @@ final class SalesOrderService
          * তালাসহ পাকা যাচাই আর সাক্ষ্য নিচে, লেনদেনের ভিতরে। ⚠️ নিচের ২৬ সেপ্টেম্বরের "আদেশে সীমা দেখা হয় না" কথাটা এতে উল্টেছে।
          */
         if ($order->customer !== null) {
-            $this->refuseOverTheLimit($order, $order->customer, null);
+            $this->refuseOverTheLimit($order, $order->customer, CreditPaper::of('sales_order', $order), early: true);
         }
 
         /*
@@ -686,13 +686,25 @@ final class SalesOrderService
     /**
      * ⛔ পুরনো পথের দেয়াল (ফাঁক ২৮) — জমার হুবহু: সুইচ বন্ধে কিছু নয়, চলতি অস্থায়ী সীমা গোনা ([[CreditExposure::check()]]), আর একই কথা।
      */
-    private function refuseOverTheLimit(SalesOrder $order, Customer $customer, ?CreditPaper $paper): void
+    private function refuseOverTheLimit(SalesOrder $order, Customer $customer, ?CreditPaper $paper, bool $early = false): void
     {
         if (! $this->credit->isOn()) {
             return;
         }
 
-        $result = CreditExposure::forOrderUnderCheck((int) $order->id, fn () => $this->credit->check($customer, (string) $order->total, null, $paper));
+        $check = fn (?CreditPaper $witness) => CreditExposure::forOrderUnderCheck((int) $order->id,
+            fn () => $this->credit->check($customer, (string) $order->total, null, $witness));
+
+        /*
+         * ⛔ আগাম যাচাই (তালা ছাড়া, সইয়ের আগে) "হ্যাঁ" লেখে না — পাকা "হ্যাঁ" তালাসহটার; কিন্তু "না" এখানেই থামায়, তাই "না"-র
+         * সাক্ষ্যও এখানেই, একবার (fe, ২১ অক্টোবর ২০২৬: আগে পুরনো পথের ফেরানো আদেশের কোনো সাক্ষ্যই থাকত না)। ⓘ থামার সারি
+         * [[CreditExposure::witness()]]-এর নিজের নিয়মে বসে — লেনদেন ফিরলেও থাকে।
+         */
+        $result = $check($early ? null : $paper);
+
+        if (! $result['fits'] && $early) {
+            $result = $check($paper);
+        }
 
         if (! $result['fits']) {
             throw ValidationException::withMessages(['customer_id' => $this->overTheLimit($order, $customer, $result)]);
