@@ -8,6 +8,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Services\ExpenseClaimService;
@@ -113,6 +114,11 @@ final class PayslipApiController extends Controller implements HasMiddleware
             'gross' => Money::round((string) $slip->gross, 2),
             'deductions' => Money::round((string) $slip->deductions, 2),
             'net' => Money::round((string) $slip->net, 2),
+            /*
+             * ⭐ নতুন ঘর, কেবল যোগ — বেতনের স্লিপ না উৎসব ভাতার (`salary` | `bonus`; fe-র সিদ্ধান্ত ৩, ২১ অক্টোবর ২০২৬)। ⛔ আগের কোনো ঘরের
+             * নাম বা মান বদলায় না — অ্যাপ 0.4.42 যা পড়ে তা অবিকল ([[APayslipSaysWhetherItIsSalaryOrBonusTest]])। ⓘ পুরনো রানে ঘর খালি হলে বেতন।
+             */
+            'run_type' => (string) ($slip->run?->run_type ?: PayrollRun::SALARY),
         ];
     }
 }
