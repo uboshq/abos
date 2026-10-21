@@ -38,7 +38,8 @@
     @if ($canInstallDefaults)
         <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-8 text-center">
-            <h2 class="text-lg font-semibold">{{ __('hr::message.empty_leave_types') }}</h2>
+            {{-- ⓘ খালি তালিকা, বা কিছু প্রমিত ধরন বাকি (যেমন নতুন মাতৃত্বকালীন) — [[LeaveTypeDefaults::anyMissing()]] --}}
+            <h2 class="text-lg font-semibold">{{ __($types->isEmpty() ? 'hr::message.empty_leave_types' : 'hr::message.leave_types_missing') }}</h2>
 
             @can('hr.leave.manage')
                 <form method="POST" action="{{ route('hr.leave_type.install') }}" class="mt-4">

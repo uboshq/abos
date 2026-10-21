@@ -13,6 +13,7 @@ use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Services\LeaveTypeDefaults;
 use App\Modules\Hr\Support\BranchReach;
 use App\Modules\Hr\Support\LeaveSigner;
 use Illuminate\Http\RedirectResponse;
@@ -182,7 +183,8 @@ class LeaveController extends Controller implements HasMiddleware
         return view('hr::leave.types', [
             'menu' => $this->menu->forUser($request->user()),
             'types' => $types,
-            'canInstallDefaults' => $types->isEmpty(),
+            // ⭐ কোনো প্রমিত ধরন বাকি থাকলেই — নতুন প্রমিত ধরন (মাতৃত্বকালীন) চলতি কোম্পানিতেও পৌঁছায় ([[LeaveTypeDefaults]], a6, ২১ অক্টোবর ২০২৬)
+            'canInstallDefaults' => app(LeaveTypeDefaults::class)->anyMissing(),
         ]);
     }
 
@@ -217,35 +219,14 @@ class LeaveController extends Controller implements HasMiddleware
     }
 
     /**
-     * প্রমিত ছুটির ধরনগুলো।
+     * প্রমিত ছুটির ধরনগুলো — তালিকা [[LeaveTypeDefaults]]-এ (নতুন কোম্পানি আর কনসোলের একই তালিকা; a6, ২১ অক্টোবর ২০২৬)।
      *
-     * বাংলাদেশের শ্রম আইনের প্রচলিত ভাগ। প্রতিষ্ঠান নিজের নীতি অনুযায়ী
-     * দিন বদলে নেবে — কিন্তু খালি তালিকা থেকে শুরু করতে হবে না।
+     * বাংলাদেশের শ্রম আইনের প্রচলিত ভাগ। প্রতিষ্ঠান নিজের নীতি অনুযায়ী দিন বদলে নেবে — কিন্তু খালি তালিকা থেকে শুরু করতে হবে না।
+     * ⓘ যা আছে তা আবার বসে না; কেবল বাকিগুলো।
      */
     public function installTypes(): RedirectResponse
     {
-        $rows = [
-            ['CASUAL', 'Casual Leave', 'নৈমিত্তিক ছুটি', 10, true],
-            ['SICK', 'Sick Leave', 'অসুস্থতাজনিত ছুটি', 14, true],
-            ['EARNED', 'Earned Leave', 'অর্জিত ছুটি', 15, true],
-            ['UNPAID', 'Leave Without Pay', 'বিনা বেতনে ছুটি', 0, false],
-        ];
-
-        foreach ($rows as [$code, $en, $bn, $days, $paid]) {
-            if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
-                continue;
-            }
-
-            LeaveType::create([
-                'code' => $code,
-                'name_en' => $en,
-                'name_bn' => $bn,
-                'days_per_year' => $days,
-                'is_paid' => $paid,
-                'is_active' => true,
-                'created_by' => auth()->id(),
-            ]);
-        }
+        app(LeaveTypeDefaults::class)->install();
 
         return back()->with('saved', __('hr::message.leave_types_installed'));
     }

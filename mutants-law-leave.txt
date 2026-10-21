@@ -173,3 +173,76 @@ M2.16 app/Modules/Hr/Http/Controllers/LeaveApiController.php
   new: 'carried' => $balance['accrued'],
   kill: K::test_the_balance_the_report_and_the_phone_say_the_same (phone carried 2.0)
 
+
+== Item 3 — maternity leave (chapter 4) ==
+K = tests/Feature/Modules/Hr/MaternityLeaveFollowsTheLawTest.php
+
+M3.1 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($employee->gender !== Employee::FEMALE) {
+  new: if ($employee->gender === 'male') {
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it ('other' and blank pass)
+
+M3.2 app/Modules/Hr/Models/LeaveType.php
+  old: public const MATERNITY_SERVICE_MONTHS = 6;
+  new: public const MATERNITY_SERVICE_MONTHS = 5;
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (31 Aug passes)
+
+M3.3 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($eligibleFrom === null || $from->copy()->startOfDay()->lt($eligibleFrom)) {
+  new: if ($eligibleFrom === null || $from->copy()->startOfDay()->lte($eligibleFrom)) {
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (1 Sep refused)
+
+M3.4 app/Modules/Hr/Services/LeaveService.php (apply)
+  old: $this->assertEligible($employee, $type, $from);
+  new: (line deleted)
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it
+
+M3.5 app/Modules/Hr/Services/LeaveService.php (approve)
+  old: $this->assertEligible($employee, $type, $application->from_date->copy());
+  new: (line deleted)
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (gender changed to male after applying, approval passes)
+
+M3.6 app/Modules/Hr/Models/LeaveType.php (countsCalendarDays)
+  old: return $this->isMaternity();
+  new: return false;
+  kill: K::test_an_eligible_womans_maternity_leave_is_approved_and_the_payslip_is_not_cut (112 days over 16 Fridays exceed the working days)
+
+M3.7 app/Modules/Hr/Services/LeaveService.php (stampAttendance)
+  old: if (! $everyDay && $calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+  new: if ($calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+  kill: K::test_an_eligible_womans_maternity_leave_is_approved_and_the_payslip_is_not_cut (27 August rows, not 31)
+
+M3.8 app/Modules/Hr/Models/Attendance.php (shareOf)
+  old: if ($application->leaveType?->countsCalendarDays()) {
+  new: if (false) {
+  kill: K::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (12.0, not 14.0)
+
+M3.9 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
+  old: if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
+  new: if (false) {
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once (two MATERNITY rows / CASUAL rewritten)
+
+M3.10 app/Modules/Hr/Models/LeaveType.php
+  old: public const MATERNITY_DAYS = 112;
+  new: public const MATERNITY_DAYS = 111;
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once ('112.0')
+
+M3.11 app/Modules/Hr/module.php (provisions)
+  old: \App\Modules\Hr\Services\LeaveTypeDefaults::class,
+  new: (line deleted, leaving 'provisions' => [])
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once (no MATERNITY in the seeded company)
+
+M3.12 app/Modules/Hr/Services/LeaveTypeDefaults.php (anyMissing)
+  old: return LeaveType::query()->withTrashed()->whereIn('code', $codes)->count() < count($codes);
+  new: return LeaveType::query()->withTrashed()->whereIn('code', $codes)->count() <= count($codes);
+  kill: K::test_a_new_company_has_the_type_and_the_console_adds_it_to_an_existing_one_once (button shown with all types in)
+
+M3.13 app/Modules/Hr/Models/Employee.php (GUARDED)
+  old: 'gender',
+  new: (line deleted from GUARDED only)
+  kill: K::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (clerk sees gender)
+
+M3.14 app/Modules/Hr/Models/LeaveType.php (isMaternity)
+  old: return $this->code === self::MATERNITY;
+  new: return false;
+  kill: K::test_only_a_woman_with_six_months_of_service_may_take_it (male passes)

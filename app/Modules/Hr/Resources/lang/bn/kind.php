@@ -20,4 +20,8 @@ return [
     'approved' => 'মঞ্জুর',
     'rejected' => 'নামঞ্জুর',
     'cancelled' => 'প্রত্যাহৃত',
+    // ⭐ লিঙ্গ (a6, ২১ অক্টোবর ২০২৬)
+    'gender_female' => 'নারী',
+    'gender_male' => 'পুরুষ',
+    'gender_other' => 'অন্যান্য',
 ];

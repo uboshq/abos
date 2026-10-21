@@ -48,8 +48,9 @@ final class LeaveService
         $to = Carbon::parse($toDate);
 
         $this->assertDatesMakeSense($from, $to, $days);
-        $this->assertWithinWorkingDays($employee, $from, $to, $days);
+        $this->assertWithinWorkingDays($employee, $type, $from, $to, $days);
         $this->assertEmployedThroughout($employee, $from, $to);
+        $this->assertEligible($employee, $type, $from);
 
         return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason) {
             /*
@@ -108,7 +109,9 @@ final class LeaveService
             $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
             $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
             // ⛔ আবেদনের পরে তালিকায় ছুটির দিন বসলে কাজের দিন কমে — আবার মাপা, নইলে কোটা বেশি কাটত ([[assertWithinWorkingDays()]])
-            $this->assertWithinWorkingDays($employee, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
+            $this->assertWithinWorkingDays($employee, $type, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
+            // ⛔ মাতৃত্বকালীন ছুটির যোগ্যতা মঞ্জুরের মুহূর্তেও — আবেদনের পরে লিঙ্গ বদলালে বা ফোনের পুরনো আবেদনে ([[assertEligible()]])
+            $this->assertEligible($employee, $type, $application->from_date->copy());
             $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
 
             /*
@@ -295,13 +298,15 @@ final class LeaveService
         $employee = Employee::query()->withoutGlobalScopes()->find($application->employee_id);
         $application->setRelation('employee', $employee);
         $branchId = $employee?->branch_id === null ? null : (int) $employee->branch_id;
+        // ⓘ মাতৃত্বকালীন ছুটি ক্যালেন্ডারের দিনে — ছুটির দিনেও "ছুটি"-র সারি ([[LeaveType::countsCalendarDays()]])
+        $everyDay = (bool) LeaveType::query()->withoutGlobalScopes()->find($application->leave_type_id)?->countsCalendarDays();
 
         while ($day->lte($application->to_date)) {
             /*
              * ⭐ ছুটির দিনে "ছুটি"-র সারি বসে না — মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬ (শ্রম আইন ধারা ১১৮; [[WorkCalendar]]; a6)।
              * ⓘ শুক্রবার বা তালিকার ছুটির দিন আবেদনের দিন নয়; সেদিনের সারি (থাকলে) যেমন আছে তেমন থাকে, না থাকলে খালি — "লেখা হয়নি"।
              */
-            if ($calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+            if (! $everyDay && $calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
                 $day->addDay();
 
                 continue;
@@ -410,14 +415,48 @@ final class LeaveService
      * এখন চাওয়া দিন পরিসরের কাজের দিনের বেশি নয় — কর্মীর শাখার ছুটি ধরে। ⛔ পুরো পরিসর ছুটির দিন হলে (কেবল একটা শুক্রবার) কাজের
      * দিন শূন্য, তাই কোনো দিনই চাওয়া যায় না — ছুটির দিনে ছুটির আবেদন অর্থহীন।
      */
-    private function assertWithinWorkingDays(Employee $employee, Carbon $from, Carbon $to, string $days): void
+    private function assertWithinWorkingDays(Employee $employee, LeaveType $type, Carbon $from, Carbon $to, string $days): void
     {
+        // ⓘ মাতৃত্বকালীন ছুটি সপ্তাহে, ক্যালেন্ডারের দিনে — পরিসরের সীমা উপরে [[assertDatesMakeSense()]]-এ ([[LeaveType::countsCalendarDays()]])
+        if ($type->countsCalendarDays()) {
+            return;
+        }
+
         $working = (string) app(WorkCalendar::class)->workingDays(
             $from, $to, (int) $employee->company_id, $employee->branch_id === null ? null : (int) $employee->branch_id);
 
         if (bccomp($days, $working, 1) > 0) {
             throw ValidationException::withMessages([
                 'days' => __('hr::validation.days_exceed_working', ['working' => $working]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ মাতৃত্বকালীন ছুটি কার — কেবল নারী কর্মী, আর ছুটির প্রথম দিনে চাকরি অন্তত ৬ মাস (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ
+     * শ্রম আইন ২০০৬ অধ্যায় ৪, ধারা ৪৬; a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ লিঙ্গ কর্মীর পাতার ঘর (`gender`, পরিচয়ের চাবির পেছনে); খালি থাকলে "নারী" নয় — তাই আগে পাতায় লিখতে হয়। ৬ মাস = যোগদানের
+     * তারিখ + ৬ ক্যালেন্ডার মাস (মাসের শেষ পেরোয় না: ৩১ আগস্ট + ৬ = ২৮ ফেব্রুয়ারি), সেদিন বা তার পরে শুরু হলে চলে। যোগদানের তারিখ
+     * না থাকলে চাকরির বয়স মাপা যায় না, তাই ফেরে। ⓘ বেতনসহ — ধরনের `is_paid`; বেতনের হিসাব তাই কাটে না ([[AttendanceService::unpaidDays()]])।
+     */
+    private function assertEligible(Employee $employee, LeaveType $type, Carbon $from): void
+    {
+        if (! $type->isMaternity()) {
+            return;
+        }
+
+        if ($employee->gender !== Employee::FEMALE) {
+            throw ValidationException::withMessages([
+                'leave_type_id' => __('hr::validation.maternity_women_only'),
+            ]);
+        }
+
+        $eligibleFrom = $employee->joining_date?->copy()->startOfDay()->addMonthsNoOverflow(LeaveType::MATERNITY_SERVICE_MONTHS);
+
+        if ($eligibleFrom === null || $from->copy()->startOfDay()->lt($eligibleFrom)) {
+            throw ValidationException::withMessages([
+                'from_date' => __('hr::validation.maternity_six_months', ['date' => $eligibleFrom?->toDateString() ?? '—']),
             ]);
         }
     }

@@ -81,4 +81,6 @@ return [
     'holiday_note' => 'Leave days and salary cuts skip these days and the weekly off (:weekly). A holiday for all branches applies to staff with no branch too.',
     // ⭐ earned leave (labour law s.117; a6, 21 Oct 2026)
     'earned_accrues' => '1 per :per days worked',
+    // ⭐ a standard type is missing (a6, 21 Oct 2026; [[LeaveTypeDefaults]])
+    'leave_types_missing' => 'Some standard leave types (for example maternity leave) are not in this company yet. Installing adds only the missing ones.',
 ];

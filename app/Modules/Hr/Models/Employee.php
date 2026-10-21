@@ -58,6 +58,8 @@ class Employee extends Model implements Drillable
     public const GUARDED = [
         'national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number',
         'father_name', 'mother_name', 'date_of_birth', 'blood_group', 'present_address', 'permanent_address', 'emergency_name', 'emergency_relation', 'emergency_mobile',
+        // ⭐ লিঙ্গ — মাতৃত্বকালীন ছুটির যোগ্যতা (শ্রম আইন অধ্যায় ৪; a6, ২১ অক্টোবর ২০২৬)
+        'gender',
     ];
 
     protected $fillable = [
@@ -65,7 +67,7 @@ class Employee extends Model implements Drillable
         'father_name', 'mobile', 'email', 'national_id',
         // ⭐ প্রোফাইলের মানুষটা ও রিপোর্টিং লাইন — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬
         'date_of_birth', 'mother_name', 'blood_group', 'present_address', 'permanent_address',
-        'emergency_name', 'emergency_relation', 'emergency_mobile', 'reports_to_employee_id',
+        'emergency_name', 'emergency_relation', 'emergency_mobile', 'reports_to_employee_id', 'gender',
         'user_id', 'department_id', 'designation_id', 'employment_type_id',
         'joining_date', 'leaving_date',
         'payment_method', 'bank_name', 'bank_branch',
@@ -115,6 +117,12 @@ class Employee extends Model implements Drillable
 
     /** ⓘ রক্তের আটটা গ্রুপ — বাছাই থেকে, হাতে লেখা নয়, যাতে "B +ve" আর "B+" দুই রকম না হয় */
     public const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+    /** ⭐ লিঙ্গ — বাছাই থেকে; মাতৃত্বকালীন ছুটি কেবল `female` ([[LeaveService::assertEligible()]]; a6, ২১ অক্টোবর ২০২৬) */
+    public const FEMALE = 'female';
+
+    /** @var list<string> */
+    public const GENDERS = [self::FEMALE, 'male', 'other'];
 
     public function creator(): BelongsTo
     {

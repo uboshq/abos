@@ -20,4 +20,8 @@ return [
     'approved' => 'Approved',
     'rejected' => 'Rejected',
     'cancelled' => 'Withdrawn',
+    // ⭐ gender (a6, 21 Oct 2026)
+    'gender_female' => 'Female',
+    'gender_male' => 'Male',
+    'gender_other' => 'Other',
 ];

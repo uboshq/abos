@@ -301,6 +301,8 @@ class EmployeeController extends Controller implements HasMiddleware
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'mother_name' => ['nullable', 'string', 'max:150'],
             'blood_group' => ['nullable', Rule::in(Employee::BLOOD_GROUPS)],
+            // ⭐ লিঙ্গ — পরিচয়ের চাবির পেছনে, উপরের দুই পাহারায় ([[Employee::GUARDED]]; a6, ২১ অক্টোবর ২০২৬)
+            'gender' => ['nullable', Rule::in(Employee::GENDERS)],
             'present_address' => ['nullable', 'string', 'max:500'],
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'emergency_name' => ['nullable', 'string', 'max:150'],
@@ -436,6 +438,7 @@ class EmployeeController extends Controller implements HasMiddleware
             'paymentMethods' => Employee::PAYMENT_METHODS,
             'taggableUsers' => $this->taggableUsers($employee),
             'bloodGroups' => Employee::BLOOD_GROUPS,
+            'genders' => Employee::GENDERS,
 
             // ⓘ যাঁর অধীনে বসানো যায় — এই কোম্পানির চালু কর্মীরা, নিজে বাদ
             // ⛔ শাখার দেয়াল — কর্মী মডেলে শাখার স্কোপ নেই, তাই তালিকায় অন্য শাখার সবার নাম-পদবি আসত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ১০)

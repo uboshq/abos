@@ -376,6 +376,14 @@ return [
         EmployeeFacts::class,
     ],
 
+    /*
+     * ⭐ নতুন কোম্পানিতে প্রমিত ছুটির ধরন — মাতৃত্বকালীন সহ (শ্রম আইন; [[LeaveTypeDefaults]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ চলতি কোম্পানিতে `abos:hr-install-leave-types` বা ছুটির ধরনের পর্দার বোতাম; বারবার চালানো নিরাপদ।
+     */
+    'provisions' => [
+        \App\Modules\Hr\Services\LeaveTypeDefaults::class,
+    ],
+
     'dashboard' => HrDashboard::class,
 
     // ⭐ রিপোর্ট ইঞ্জিন boot-এ নিবন্ধন করে — হাজিরা, বেতনশিট, কর্মী সংখ্যা, ছুটির জের ([[HrReports]])

@@ -85,6 +85,14 @@ class Attendance extends Model
          * [[WorkCalendar]]; a6, ২১ অক্টোবর ২০২৬)। ⓘ আগে প্রথম তারিখ থেকে ক্যালেন্ডারের দিন ধরে ভরত: "বৃহস্পতি–শনি, ২ দিন"-এ
          * বৃহস্পতি আর শুক্র পুরো, শনি শূন্য — বিনা বেতনের ছুটিতে শনিবার কাজে এলেও শুক্রবারের দিনটা কাটত।
          */
+        // ⓘ ক্যালেন্ডারের দিনে গোনা ধরন (মাতৃত্বকালীন) — আগের নিয়মে, প্রতিটা দিন ([[LeaveType::countsCalendarDays()]])
+        if ($application->leaveType?->countsCalendarDays()) {
+            $before = (string) $application->from_date->copy()->startOfDay()->diffInDays($day->copy()->startOfDay());
+            $left = bcsub((string) $application->days, $before, 1);
+
+            return bccomp($left, '1', 1) >= 0 ? '1' : (bccomp($left, '0', 1) > 0 ? $left : '0');
+        }
+
         $calendar ??= app(WorkCalendar::class);
         $companyId = $application->company_id === null ? null : (int) $application->company_id;
         $branchId = self::branchOf($application);

@@ -88,4 +88,6 @@ return [
     'holiday_name' => 'Holiday',
     'all_branches' => 'All branches',
     'year' => 'Year',
+    // ⭐ gender — maternity eligibility (labour law ch.4; a6, 21 Oct 2026)
+    'gender' => 'Gender',
 ];

@@ -67,4 +67,7 @@ return [
     'holiday_twice' => 'This date is already a holiday for this branch or for all branches.',
     'holiday_branch_out_of_reach' => 'That branch is outside your reach.',
     'holiday_branch_required' => 'Pick a branch — your reach is limited, so you cannot set a holiday for every branch.',
+    // ⭐ maternity leave (labour law ch.4, ss.45-50; a6, 21 Oct 2026; [[LeaveService::assertEligible()]])
+    'maternity_women_only' => 'Maternity leave is for women employees only. If this is wrong, set the gender to female on the employee profile.',
+    'maternity_six_months' => 'Maternity leave needs at least 6 months of service on the first day of leave. This employee completes 6 months on :date.',
 ];
