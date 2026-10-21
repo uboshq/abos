@@ -106,7 +106,7 @@
 
                     {{-- ⭐ পক্ষের ধরন — প্রথম ঘর (fe, ২১ অক্টোবর ২০২৬)। এই পথে সরবরাহকারী স্থির; বাকি ধরন হিসাবের পরিশোধ ভাউচারে যায় --}}
                     <fieldset class="mb-3" data-party-type>
-                        <legend class="mb-1 block text-sm font-medium">{{ __('money.screen.party_type') }}</legend>
+                        <legend class="mb-1 block text-sm font-medium">{{ __('money.screen.party_type') }} <span class="text-(--color-danger)">*</span></legend>
                         <div class="inline-flex overflow-hidden rounded-(--radius-field) border border-(--color-border)">
                             @foreach (['customer', 'supplier', 'staff', 'other'] as $type)
                                 @if ($type === 'supplier')
@@ -150,7 +150,7 @@
                             {{-- ⭐ খাতে টাকা আছে কি না (#২৪) --}}
                             <p class="mt-1 text-2xs" data-account-balance x-show="hasBalance" x-cloak :class="balanceClass">
                                 {{ __('money.screen.in_account') }}<span x-text="balanceText"></span>
-                                <span x-show="short">— {{ __('money.screen.short') }}</span>
+                                <span x-show="short">— {{ __('money.screen.short') }}</span><span x-show="! short" data-balance-ok>✓</span>
                             </p>
                         </div>
 
@@ -257,9 +257,15 @@
                     <h2 class="mb-3 font-semibold">{{ __('money.screen.summary') }}</h2>
                     <dl class="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
                         <dt>{{ __('money.screen.sum.applied') }}</dt><dd class="num" x-text="appliedText"></dd>
-                        <dt>{{ __('money.screen.sum.ait') }}</dt><dd class="num" data-sum-ait x-text="aitText"></dd>
-                        <dt>{{ __('money.screen.sum.vds') }}</dt><dd class="num" data-sum-vds x-text="vdsText"></dd>
-                        <dt class="border-t border-(--color-border) pt-2 font-semibold">{{ __('money.screen.sum.net') }}</dt>
+                        {{-- ⭐ কাটা অঙ্ক বিয়োগ চিহ্নে, পাশে হারের ছোট ট্যাগ (নকশা; মিল-তালিকার ফাঁক ৬) --}}
+                        <dt>{{ __('money.screen.sum.ait') }} <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)">{{ __('money.screen.tag.ait') }}</span></dt>
+                        <dd class="num" data-sum-ait x-text="aitMinus"></dd>
+                        <dt>{{ __('money.screen.sum.vds') }} <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)">{{ __('money.screen.tag.vds') }}</span></dt>
+                        <dd class="num" data-sum-vds x-text="vdsMinus"></dd>
+                        {{-- ⭐ নিটের নাম পদ্ধতি ধরে — ব্যাংক / MFS / নগদ থেকে যাবে (মিল-তালিকার ফাঁক ৭) --}}
+                        <dt class="border-t border-(--color-border) pt-2 font-semibold" data-net-label x-text="netLabel"
+                            data-net-bank="{{ __('money.screen.sum.net_bank') }}" data-net-mfs="{{ __('money.screen.sum.net_mfs') }}"
+                            data-net-cash="{{ __('money.screen.sum.net_cash') }}">{{ __('money.screen.sum.net') }}</dt>
                         <dd class="num border-t border-(--color-border) pt-2 font-semibold" x-text="netText"></dd>
                         <dt>{{ __('money.screen.sum.charge') }}</dt><dd class="num" data-sum-charge x-text="chargeText"></dd>
                         <dt x-show="hasUnapplied" x-cloak>{{ __('money.screen.sum.unapplied') }}</dt>

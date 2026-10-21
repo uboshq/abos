@@ -147,7 +147,9 @@ class PaymentController extends Controller implements HasMiddleware
             $d = (string) ($line['debit'] ?? '0');
             $c = (string) ($line['credit'] ?? '0');
             $rows[] = [
-                'account' => $account === null ? '—' : $account->code.' '.$account->name(),
+                // ⭐ দেনার সারিতে সরবরাহকারীর নাম — নকশার "২১১০ দেনা · জাবেদ অ্যাগ্রো" (মিল-তালিকার ফাঁক ৮)
+                'account' => ($account === null ? '—' : $account->code.' '.$account->name())
+                    .(($line['party_type'] ?? null) === 'supplier' && $supplier !== null ? ' · '.$supplier->name() : ''),
                 'party' => ($line['party_type'] ?? null) === 'supplier' ? $supplier?->name() : null,
                 'branch' => $branch?->name(),
                 'debit' => bccomp($d, '0', 4) > 0 ? Money::format($d) : '',

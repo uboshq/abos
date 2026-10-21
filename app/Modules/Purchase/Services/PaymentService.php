@@ -706,15 +706,7 @@ final class PaymentService
             'narration' => __('purchase::message.against_payable', ['no' => $no]),
         ]];
 
-        if (bccomp($charge, '0', 4) > 0) {
-            $lines[] = [
-                'account_id' => $this->chargeHead((int) $payment->account_id)->id,
-                'debit' => $charge,
-                'narration' => __('purchase::message.charge_on_payment', ['no' => $no]),
-            ];
-        }
-
-        // ⭐ কেটে রাখা কর সরকারের দায় — AIT ২১২১, VDS ২১২২ (নকশা #৫; fe, ২১ অক্টোবর ২০২৬)
+        // ⭐ কেটে রাখা কর সরকারের দায় — AIT ২১২১, VDS ২১২২ (নকশা #৫; fe, ২১ অক্টোবর ২০২৬)। ⓘ ক্রম নকশার: দেনা, AIT, VDS, চার্জ, টাকার খাত
         foreach (['ait' => [$ait, StandardChart::TAX_DEDUCTED_AT_SOURCE], 'vds' => [$vds, StandardChart::VDS_PAYABLE]] as $kind => [$value, $code]) {
             if (bccomp($value, '0', 4) > 0) {
                 $lines[] = [
@@ -723,6 +715,14 @@ final class PaymentService
                     'narration' => __('purchase::message.withheld_'.$kind, ['no' => $no]),
                 ];
             }
+        }
+
+        if (bccomp($charge, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->chargeHead((int) $payment->account_id)->id,
+                'debit' => $charge,
+                'narration' => __('purchase::message.charge_on_payment', ['no' => $no]),
+            ];
         }
 
         // ⓘ টাকার খাত থেকে যায় নিট আর চার্জ: মোট − AIT − VDS + চার্জ
