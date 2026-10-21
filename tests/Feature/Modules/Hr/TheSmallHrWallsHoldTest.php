@@ -140,7 +140,7 @@ final class TheSmallHrWallsHoldTest extends TestCase
         $this->get(route('hr.payroll.index'))->assertOk()->assertSee('আগস্ট')->assertDontSee('Aug 2026');
         // ⓘ ছাপা PDF — কাগজের মাথার ঘরগুলো সরাসরি পড়া
         $document = (new \ReflectionMethod(PayslipPrintController::class, 'documentFor'))
-            ->invoke(app(PayslipPrintController::class), $run->payslips()->firstOrFail());
+            ->invoke(app(PayslipPrintController::class), $run->payslips()->firstOrFail(), true);
         $this->assertContains('আগস্ট 2026', $document->meta, '⛔ বেতনশিটে মাসের নাম বাংলায় নয়');
 
         try {

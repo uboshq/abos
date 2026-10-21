@@ -72,7 +72,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
          */
         $payslip->load(['employee.department', 'employee.designation', 'lines', 'run' => fn ($q) => $q->withoutGlobalScope('user-branch')]);
         // ⭐ অন্যের বেতনশিট ছাপা — নিরীক্ষায়, অঙ্ক ছাড়া; নিজেরটা নয় (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
-        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($payslip, 'payslip_viewed', $payslip->employee);
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($payslip, 'payslip_viewed', (int) $payslip->employee_id);
 
         return $this->pdf(
             $request,

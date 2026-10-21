@@ -100,7 +100,8 @@ final class NobodyKnewWhoReadTheSalariesTest extends TestCase
     public function test_the_payroll_and_someone_elses_payslip_are_logged_but_ones_own_payslip_is_not(): void
     {
         $run = app(PayrollService::class)->build('2026-08-01');
-        $slip = $run->payslips()->firstOrFail();
+        // ⛔ এই কর্মীরই স্লিপ — ডেমোর অন্য কর্মীরাও রানে আছেন, প্রথম স্লিপটা তাঁদের কারো হতে পারে
+        $slip = $run->payslips()->where('employee_id', $this->employee->id)->firstOrFail();
 
         $accounts = $this->staff('hr.payroll.view');
         $this->as($accounts)->get(route('hr.payroll.show', $run->id))->assertOk();
@@ -115,6 +116,30 @@ final class NobodyKnewWhoReadTheSalariesTest extends TestCase
         $this->employee->forceFill(['user_id' => $self->id])->save();
         $this->as($self)->get(route('hr.payslip.print', $slip->id))->assertOk();
         $this->assertSame(0, $this->lines($self, $slip, 'payslip_viewed'), '⛔ নিজের বেতনশিট দেখাও নজরদারিতে উঠল');
+    }
+
+    /**
+     * ⛔ হেডারে বাছা শাখা আর কর্মীর নিজের শাখা আলাদা হলেও নিজের বেতনশিট নিজের — কর্মীর সম্পর্ক শাখার দেয়ালে ফাঁকা আসতে পারে,
+     * তাই মালিকানা পড়া হয় আইডি ধরে, দেয়াল ছাড়া ([[SensitiveViews::seen()]])।
+     * ⓘ সংশোধন (hr5 দৌড়, ২১ অক্টোবর ২০২৬): আগের লাল ছিল টেস্টের ভুল — রানের প্রথম স্লিপ ডেমোর অন্য কর্মীর ছিল; এখন এই কর্মীরই স্লিপ।
+     */
+    public function test_ones_own_payslip_printed_under_another_header_branch_is_not_logged(): void
+    {
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $slip = $run->payslips()->where('employee_id', $this->employee->id)->firstOrFail();
+
+        $elsewhere = \App\Models\Branch::query()->where('company_id', $this->company->id)
+            ->whereKeyNot((int) $this->employee->branch_id)->orderBy('id')->firstOrFail();
+
+        $self = $this->staff('hr.payroll.view');
+        $this->employee->forceFill(['user_id' => $self->id])->save();
+        $self->forceFill(['current_branch_id' => $elsewhere->id, 'view_all_branches' => false])->save();
+        CompanyContext::set($this->company->id, $elsewhere->id);
+
+        $this->as($self)->get(route('hr.payslip.print', $slip->id))->assertOk();
+
+        $this->assertSame(0, $this->lines($self, $slip, 'payslip_viewed'),
+            '⛔ অন্য শাখা বাছা থাকায় নিজের বেতনশিটও নজরদারিতে উঠল — দেয়ালে কর্মীর সম্পর্ক ফাঁকা এসেছিল।');
     }
 
     private function lines(User $viewer, Model $subject, string $action): int

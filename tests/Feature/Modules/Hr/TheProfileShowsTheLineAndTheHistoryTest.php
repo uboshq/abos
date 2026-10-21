@@ -40,13 +40,14 @@ final class TheProfileShowsTheLineAndTheHistoryTest extends TestCase
         $this->branch = Branch::query()->create(['company_id' => $this->company->id, 'code' => 'DHK', 'name_en' => 'Dhaka', 'is_active' => true]);
         CompanyContext::set($this->company->id, $this->branch->id);
 
-        foreach (['hr.employee.view', 'hr.employee.manage'] as $key) {
+        foreach (['hr.employee.view', 'hr.employee.manage', 'hr.identity.view'] as $key) {
             Permission::findOrCreate($key, 'web');
         }
 
         $this->clerk = User::factory()->create(['name' => 'HR Clerk', 'current_company_id' => $this->company->id]);
         $this->clerk->companies()->attach($this->company->id);
-        $this->clerk->givePermissionTo(['hr.employee.view', 'hr.employee.manage']);
+        // ⓘ জন্মতারিখ, ঠিকানা আর জরুরি যোগাযোগ পরিচয়ের চাবির পেছনে (ঘাটতির তালিকা #১৯), তাই কেরানির চাবিতে সেটাও
+        $this->clerk->givePermissionTo(['hr.employee.view', 'hr.employee.manage', 'hr.identity.view']);
     }
 
     public function test_the_person_the_line_and_the_history_reach_the_profile(): void

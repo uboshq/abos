@@ -115,5 +115,6 @@ final class TheSignatureCoversTheNetThatIsPostedTest extends TestCase
         // ⓘ খসড়ার অঙ্কের সই বদলানো কাগজ ঢাকে না — নতুন অনুরোধ, পুরনো সই খাটেনি
         $this->assertNotSame((int) $signed->id, (int) $asked->id, '⛔ খসড়ার অঙ্কের সইয়ে বদলানো রান পার হওয়ার পথ খোলা');
         $this->assertFalse($signed->fresh()->isUsed(), '⛔ খসড়ার অঙ্কের সই খাটানো হলো');
+        $this->assertSame(0, bccomp((string) $asked->signedAmount(), bcadd($draftNet, '10000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
     }
 }
