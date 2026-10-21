@@ -508,6 +508,14 @@ final class PayrollService
         $paysIntoFund = false;
         $fundId = $this->fund->enabled() ? $this->fund->fundAccount()?->id : null;
 
+        /*
+         * ⛔ তহবিল চালু অথচ খাত নেই — রান থামে, বাংলায় কারণ বলে; ভুল খাতে (প্রদেয় বেতন বা বেতন-খরচ) নীরবে বসে না (a6, ২১ অক্টোবর ২০২৬;
+         * খাত বসানোর কমান্ড `abos:hr-law-accounts`)।
+         */
+        if ($this->fund->enabled() && ($fundId === null || $this->fund->expenseAccount() === null)) {
+            throw ValidationException::withMessages(['account' => __('hr::validation.pf_accounts_missing')]);
+        }
+
         foreach ($components as $component) {
             /** @var SalaryHead $head */
             $head = $component['head'];

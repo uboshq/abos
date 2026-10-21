@@ -489,6 +489,19 @@ final class StandardChart implements ProvisionsCompany
     /** ⭐ উৎসব ভাতা — বেতন থেকে আলাদা খরচ, বছরে দুই উৎসবের (শ্রম বিধিমালা ২০১৫ বিধি ১১১; a6, ২১ অক্টোবর ২০২৬) */
     public const FESTIVAL_BONUS_EXPENSE = '5226';
 
+    /**
+     * ⭐ গ্র্যাচুইটি — খরচ আর দায় (BLA ২০০৬ ধারা ২(১০), IAS 19 ¶৬৭–৭০: চাকরির সাথে জমে ওঠা সুবিধা, প্রতি মাসে বই-এ; a6,
+     * ২১ অক্টোবর ২০২৬; [[Gratuity]])। ⓘ ৫২২৩ (শ্রমিকের মুনাফা) আর ২১৩৩ অন্য শাখার — তাই ৫২২৭ আর ২১৩৪।
+     */
+    public const GRATUITY_EXPENSE = '5227';
+
+    public const GRATUITY_LIABILITY = '2134';
+
+    /** ⭐ HR-এর আইনি বেতনের খাত — বসানোর কমান্ড ([[HrLawAccounts]]) আর বেতনের রান এই তালিকাই দেখে */
+    public const HR_LAW_CODES = [
+        self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE, self::GRATUITY_EXPENSE, self::GRATUITY_LIABILITY,
+    ];
+
     public const EMPLOYEE_ADVANCE = '1131';
 
     /**
@@ -668,6 +681,7 @@ final class StandardChart implements ProvisionsCompany
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
         self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE,
+        self::GRATUITY_EXPENSE, self::GRATUITY_LIABILITY,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
@@ -675,15 +689,29 @@ final class StandardChart implements ProvisionsCompany
     public function __construct(private readonly AccountService $accounts) {}
 
     /**
+     * ⓘ এই কোডগুলোর কোনটা এই কোম্পানিতে নেই — শুকনো চালানোর (`--dry`) উত্তর; কিছুই বসায় না।
+     *
+     * @param  list<string>  $codes
+     * @return list<string>
+     */
+    public function missing(array $codes): array
+    {
+        $have = Account::query()->whereIn('code', $codes)->pluck('code')->map(fn ($c) => (string) $c)->all();
+
+        return array_values(array_diff($codes, $have));
+    }
+
+    /**
      * ছকটা বসানো। আগে বসানো থাকলে কিছুই হয় না।
      *
+     * @param  list<string>|null  $only  ⭐ কেবল এই কোডগুলো (HR-এর আইনি বেতনের খাত বসানোর কমান্ড; a6, ২১ অক্টোবর ২০২৬); `null` = পুরো ছক
      * @return int কতগুলো খাত তৈরি হল
      */
-    public function install(): int
+    public function install(?array $only = null): int
     {
         $this->accounts->assertCompanyContext();
 
-        return DB::transaction(function () {
+        return DB::transaction(function () use ($only) {
             $created = 0;
 
             /*
@@ -706,7 +734,7 @@ final class StandardChart implements ProvisionsCompany
             foreach ($this->definition() as $row) {
                 [$code, $en, $bn, $type, $parentCode, $isGroup, $flags] = $row;
 
-                if (isset($byCode[$code])) {
+                if (isset($byCode[$code]) || ($only !== null && ! in_array($code, $only, true))) {
                     continue;
                 }
 
@@ -1059,6 +1087,8 @@ final class StandardChart implements ProvisionsCompany
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
             // ⭐ বেতন থেকে উৎসে কাটা কর (a6, ২১ অক্টোবর ২০২৬; [[TDS_PAYABLE]])
             ['2132', 'Tax Deducted at Source Payable — Salary', 'প্রদেয় উৎসে কর (বেতন)', $L, '2100', false, []],
+            // ⭐ গ্র্যাচুইটির দায় — কর্মীদের জমে ওঠা পাওনা (a6, ২১ অক্টোবর ২০২৬; [[GRATUITY_LIABILITY]])
+            ['2134', 'Gratuity Payable', 'প্রদেয় গ্র্যাচুইটি', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
@@ -1303,6 +1333,8 @@ final class StandardChart implements ProvisionsCompany
             ['5225', 'Provident Fund — Employer Contribution', 'ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা', $X, '5200', false, []],
             // ⭐ উৎসব ভাতা (a6, ২১ অক্টোবর ২০২৬; [[FESTIVAL_BONUS_EXPENSE]])
             ['5226', 'Festival Bonus', 'উৎসব ভাতা', $X, '5200', false, []],
+            // ⭐ গ্র্যাচুইটির খরচ (a6, ২১ অক্টোবর ২০২৬; [[GRATUITY_EXPENSE]])
+            ['5227', 'Gratuity Expense', 'গ্র্যাচুইটি খরচ', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],
