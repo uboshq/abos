@@ -19,4 +19,6 @@ return [
     // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
     'report_provident_fund' => 'Provident fund ledger',
     'pf_proposal' => 'Provident fund rate — proposed change',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'overtime' => 'Overtime sheets',
 ];

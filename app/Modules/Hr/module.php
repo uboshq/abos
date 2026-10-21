@@ -71,6 +71,8 @@ return [
         'transactions' => [
             ['label' => 'hr::menu.payroll', 'icon' => 'cash', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
             ['label' => 'hr::menu.attendance', 'icon' => 'calendar', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
+            // ⭐ অধিকালের শিট — হাজিরা থেকে, ব্যবস্থাপকের সই (BLA ধারা ১০৮; a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.overtime', 'icon' => 'clock', 'route' => 'hr.overtime.index', 'permission' => 'hr.attendance.view'],
             ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
             // ⭐ খরচের দাবি আর অগ্রিম — কর্মী নিজে (মালিকের আদেশ, ৭ অক্টোবর ২০২৬; [[ExpenseClaimController]])
             ['label' => 'hr::menu.claims', 'icon' => 'wallet', 'route' => 'hr.claim.index', 'permission' => 'hr.claim.self'],
@@ -470,6 +472,36 @@ return [
             'label' => 'hr::settings.pf_employer_percent',
             'type' => 'number',
             'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+
+        /*
+         * ⭐ অধিকাল — BLA ২০০৬ ধারা ১০৮: মূল ÷ ২০৮ × ২ × বাড়তি ঘণ্টা (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])।
+         * ⓘ সুইচ ডিফল্টে বন্ধ। দিনের কাজের ঘণ্টা ডিফল্ট ৮; কারা পান — নিয়োগের ধরনের কোড, কমা দিয়ে (ডিফল্ট `WORKER` = শ্রমিক)।
+         * ⛔ ব্যবস্থাপকের সই হওয়া ঘণ্টাই কেবল বেতনে।
+         */
+        [
+            'key' => 'hr.ot.enabled',
+            'label' => 'hr::settings.ot_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.ot.daily_hours',
+            'label' => 'hr::settings.ot_daily_hours',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.ot.eligible_types',
+            'label' => 'hr::settings.ot_eligible_types',
+            'type' => 'string',
+            'default' => 'WORKER',
             'group' => 'entry',
             'super_admin_only' => true,
         ],

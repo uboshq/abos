@@ -91,4 +91,8 @@ return [
     'pf_proposed' => 'Proposed deduction',
     'pf_employer' => 'Employer share',
     'pf_changes' => 'Change',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_days' => 'Days over',
+    'ot_hours' => 'Extra hours',
+    'ot_signed_by' => 'Signed by',
 ];

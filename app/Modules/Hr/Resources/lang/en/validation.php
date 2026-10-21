@@ -66,4 +66,8 @@ return [
     'pf_accounts_missing' => 'The provident fund accounts are missing — the chart needs 5225 (employer contribution) and 2131 (provident fund payable). Use "Install standard chart" in the chart of accounts.',
     'pf_head_missing' => 'No provident fund salary head — a deduction head on a percentage of basic, booked to 2131 (provident fund payable), is needed.',
     'pf_apply_needs_the_key' => 'Applying the proposed rate needs the salary-change permission (hr.salary.manage).',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_month_paid' => 'The salary for :month (:no) is already confirmed — that month\'s overtime can no longer be built or signed.',
+    'ot_already_signed' => 'This sheet is already approved.',
+    'ot_not_your_line' => 'Only the employee\'s own manager can sign this sheet — on one\'s own or self-built sheet, only the owner.',
 ];

@@ -106,4 +106,8 @@ return [
     'pf_proposed' => 'প্রস্তাবিত কাটা',
     'pf_employer' => 'প্রতিষ্ঠানের ভাগ',
     'pf_changes' => 'বদল',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_days' => 'বাড়তি দিন',
+    'ot_hours' => 'বাড়তি ঘণ্টা',
+    'ot_signed_by' => 'সই দিলেন',
 ];

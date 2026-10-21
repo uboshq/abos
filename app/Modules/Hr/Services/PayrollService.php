@@ -53,6 +53,7 @@ final class PayrollService
         private readonly NumberSeriesEngine $numbers,
         private readonly DocumentApproval $approvals,
         private readonly ProvidentFund $fund,
+        private readonly OvertimeService $overtime,
     ) {}
 
     /**
@@ -467,6 +468,33 @@ final class PayrollService
                 if ($fundId !== null && $this->accountFor($head)?->id === $fundId && bccomp($amount, '0', 2) > 0) {
                     $paysIntoFund = true;
                 }
+            }
+        }
+
+        /*
+         * ⭐ অধিকাল — BLA ধারা ১০৮: মূল ÷ ২০৮ × ২ × অনুমোদিত বাড়তি ঘণ্টা (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])।
+         * ⛔ সুইচ চালু, কর্মী যোগ্য (নিয়োগের ধরন), আর ব্যবস্থাপকের সই হওয়া শিট — তিনটাই, তবে। সইয়ের অপেক্ষায় থাকা ঘণ্টার এক পয়সাও নয়।
+         * ⓘ আয়ের সারি, "বেতন ও মজুরি" খরচে; মোট আয় আর নিটে ঢোকে, তাই রানের সই আর ব্যাংকের ফাইলও এটা ধরে।
+         */
+        if ($this->overtime->enabled() && $this->overtime->isEligible($employee)) {
+            $hours = $this->overtime->signedHours($employee, $monthEnd);
+            $pay = bccomp($hours, '0', 4) > 0 ? $this->overtime->amountFor($basic, $hours) : '0';
+
+            if (bccomp($pay, '0', 2) > 0) {
+                PayslipLine::create([
+                    'company_id' => $run->company_id,
+                    'payslip_id' => $slip->id,
+                    'salary_head_id' => null,
+                    'head_code' => OvertimeService::LINE_CODE,
+                    'head_name_en' => 'Overtime ('.rtrim(rtrim($hours, '0'), '.').' h)',
+                    'head_name_bn' => 'অধিকাল ভাতা ('.rtrim(rtrim($hours, '0'), '.').' ঘণ্টা)',
+                    'kind' => SalaryHead::EARNING,
+                    'amount' => $pay,
+                    'sort_order' => 900,
+                    'account_id' => $this->accountByCode(StandardChart::SALARY_EXPENSE)?->id,
+                ]);
+
+                $gross = bcadd($gross, $pay, 4);
             }
         }
 

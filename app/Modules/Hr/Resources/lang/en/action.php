@@ -37,4 +37,7 @@ return [
     // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
     'pf_preview' => 'Show',
     'pf_apply' => 'Apply the proposed rate',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_prepare' => 'Build from attendance',
+    'ot_sign' => 'Sign',
 ];

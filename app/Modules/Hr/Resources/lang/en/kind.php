@@ -25,4 +25,7 @@ return [
     'pf_member' => 'Member',
     'pf_not_member' => 'Not a member',
     'pf_changes' => 'Will change',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_signed' => 'Approved',
+    'ot_waiting' => 'Awaiting signature',
 ];

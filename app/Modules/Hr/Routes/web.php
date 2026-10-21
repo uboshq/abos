@@ -7,6 +7,7 @@ use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
+use App\Modules\Hr\Http\Controllers\OvertimeController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
 use App\Modules\Hr\Http\Controllers\ProvidentFundController;
@@ -126,6 +127,16 @@ Route::middleware('auth')->prefix('hr')->group(function () {
     /*
      * ⭐ ভবিষ্য তহবিলের প্রস্তাবিত বদল — দেখা বেতনের চাবিতে, বসানো বেতন বদলানোর চাবিতে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFundController]])।
      */
+    /*
+     * ⭐ অধিকালের শিট — হাজিরার চাবিতে তালিকা, হাজিরা বদলানোর চাবিতে বানানো, রিপোর্টিং লাইনে সই (BLA ধারা ১০৮; a6, ২১ অক্টোবর ২০২৬;
+     * [[OvertimeController]])।
+     */
+    Route::prefix('overtime')->name('overtime.')->group(function () {
+        Route::get('/', [OvertimeController::class, 'index'])->name('index');
+        Route::post('/', [OvertimeController::class, 'store'])->name('store');
+        Route::post('/{sheet}/sign', [OvertimeController::class, 'sign'])->whereNumber('sheet')->name('sign');
+    });
+
     Route::prefix('provident-fund')->name('pf.')->group(function () {
         Route::get('/', [ProvidentFundController::class, 'proposal'])->name('proposal');
         Route::post('/', [ProvidentFundController::class, 'store'])->name('store');

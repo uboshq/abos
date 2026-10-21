@@ -80,4 +80,12 @@ return [
     'pf_off_note' => 'Provident fund is off — no employer share is booked. Proposed rates: employee :employee, employer :employer.',
     'pf_proposal_note' => 'Nothing changes by itself. Only fund members (deducted at more than zero today) change, from the chosen date; a month already paid is not touched.',
     'pf_apply_note' => 'The proposed rate applies from :date — written to each person\'s audit trail.',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_prepared' => ':count sheets built or refreshed — awaiting signature.',
+    'ot_signed' => 'Signed — these hours go into this month\'s salary.',
+    'ot_on_note' => 'Overtime is on — a working day is :hours hours; eligible: :types.',
+    'ot_off_note' => 'Overtime is off — sheets can be built and signed, but nothing is paid. A working day is :hours hours; eligible: :types.',
+    'ot_formula_note' => 'Pay = basic ÷ 208 × 2 × signed extra hours (BLA s.108). Only the employee\'s own manager signs — on one\'s own or self-built sheet, only the owner.',
+    'ot_none' => 'No overtime sheets this month.',
+    'ot_owner_self_signed' => 'The owner signed an overtime sheet that was their own or that they built.',
 ];

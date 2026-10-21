@@ -25,4 +25,7 @@ return [
     'pf_member' => 'সদস্য',
     'pf_not_member' => 'সদস্য নন',
     'pf_changes' => 'বদলাবে',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_signed' => 'অনুমোদিত',
+    'ot_waiting' => 'সইয়ের অপেক্ষায়',
 ];
