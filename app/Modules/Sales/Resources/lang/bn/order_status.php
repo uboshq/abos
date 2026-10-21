@@ -10,7 +10,7 @@ return [
     'state' => [
         'draft' => 'খসড়া',
         'submitted' => 'জমা',
-        'awaiting_approval' => 'অনুমোদনের অপেক্ষায়',
+        'awaiting_approval' => 'সইয়ের অপেক্ষায়',
         'approved' => 'অনুমোদিত',
         'credit_held' => 'সীমায় আটকে',
         'confirmed' => 'নিশ্চিত',

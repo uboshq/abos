@@ -60,7 +60,7 @@ return [
     'repriced' => 'লটের দাম বদল',
     'expiry_corrected' => 'মেয়াদ সংশোধন',
     'shift_closed' => 'শিফট বন্ধ',
-    'sent_back' => 'ফেরত পাঠানো',
+    'sent_back' => 'সংশোধনে ফেরত',
     // ⭐ বাকি বন্ধ বসানো-তোলা, কারণসহ (বাকি ও আদায়, ৫ অক্টোবর ২০২৬; [[CustomerService::blockCredit()]])
     'credit_blocked' => 'বাকি বন্ধ',
     'credit_unblocked' => 'বাকি আবার চালু',

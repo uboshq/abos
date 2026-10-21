@@ -99,7 +99,7 @@ return [
     'decision' => [
         'approved' => 'অনুমোদিত',
         'rejected' => 'নামঞ্জুর',
-        'returned' => 'ফেরত পাঠানো',
+        'returned' => 'সংশোধনে ফেরত',
         'forwarded' => 'এগিয়ে দেওয়া',
         'submitted' => 'জমা',
     ],

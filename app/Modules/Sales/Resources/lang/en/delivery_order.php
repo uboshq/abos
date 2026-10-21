@@ -36,8 +36,8 @@ return [
     'save_quantities' => 'Save quantities',
     'quantities_saved' => 'Approved quantities saved.',
     'approve' => 'Approve',
-    'reject' => 'Send back',
-    'reject_reason' => 'Reason for sending back',
+    'reject' => 'Reject',
+    'reject_reason' => 'Reason for rejecting',
     // ⭐ অফিসের DO ডেস্কের ট্যাব ([[DeliveryOrderDeskController::TABS]])
     'tab' => [
         'all' => 'All',
