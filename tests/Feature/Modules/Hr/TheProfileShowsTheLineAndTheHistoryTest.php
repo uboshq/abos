@@ -40,7 +40,7 @@ final class TheProfileShowsTheLineAndTheHistoryTest extends TestCase
         $this->branch = Branch::query()->create(['company_id' => $this->company->id, 'code' => 'DHK', 'name_en' => 'Dhaka', 'is_active' => true]);
         CompanyContext::set($this->company->id, $this->branch->id);
 
-        foreach (['hr.employee.view', 'hr.employee.manage'] as $key) {
+        foreach (['hr.employee.view', 'hr.employee.manage', 'hr.identity.view'] as $key) {
             Permission::findOrCreate($key, 'web');
         }
 
