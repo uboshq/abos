@@ -11,6 +11,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CodeFromName;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\UploadLimit;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
@@ -160,7 +161,7 @@ class CompanyController extends Controller implements HasMiddleware
 
             /* ⭐ লোগো — সম্পাদনার একই দরজা ([[logoRules()]], [[keepLogo()]]); ⛔ আগে পর্দায় ঘর ছিল, অথচ এখানে ফাইলটা পড়াই হত না */
             'logo' => $this->logoRules($request),
-        ]);
+        ], $this->logoMessages($request));
 
         /*
          * কোড না লিখলে নাম থেকে — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
@@ -440,7 +441,7 @@ class CompanyController extends Controller implements HasMiddleware
              * করলেই লোগো মুছে যেত।
              */
             'remove_logo' => ['nullable', 'boolean'],
-        ]);
+        ], $this->logoMessages($request));
 
         $logo = $this->keepLogo($request, $company->code);
 
@@ -563,15 +564,31 @@ class CompanyController extends Controller implements HasMiddleware
 
     /**
      * লোগোর দরজার নিয়ম — তৈরি আর সম্পাদনা দুই পর্দাতেই একটাই (⛔ ২১ অক্টোবর ২০২৬ পর্যন্ত তৈরির পর্দা লোগোটা নিতই না)।
-     * ⓘ SVG ১ MB (ইঞ্জিনে ছোট হয় না); ছবি ১২ MB (ইঞ্জিন নামিয়ে ৫০০KB-র নিচে রাখে)।
+     * ⓘ SVG ১ MB (ইঞ্জিনে ছোট হয় না); ছবি সার্ভার যতটা নিতে পারে — বড়জোর ১২ MB ([[UploadLimit::pictureBytes()]]; ইঞ্জিন নামিয়ে
+     * ৫০০KB-র নিচে রাখে)। ⛔ আগে "১২ MB" হাতে লেখা ছিল, অথচ লাইভের post_max_size ৮ MB — মাঝের ফাইল কোনোদিন দরজায় পৌঁছাত না।
      *
      * @return list<string>
      */
     private function logoRules(Request $request): array
     {
         return $this->sentAnSvg($request)
-            ? ['nullable', 'file', 'max:1024']
-            : ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'];
+            ? ['nullable', 'file', 'max:'.UploadLimit::kilobytes(UploadLimit::svgBytes())]
+            : ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:'.UploadLimit::kilobytes(UploadLimit::pictureBytes())];
+    }
+
+    /**
+     * ⭐ বড় ফাইলের বাংলা বার্তা — ঘরের পাশের "সর্বোচ্চ X MB"-এর একই সংখ্যা (fe, ২১ অক্টোবর ২০২৬)।
+     * ⓘ `uploaded` — PHP নিজেই ফাইলটা ফেলে দিলে (upload_max_filesize) Laravel এটাই বলে; বার্তা একই।
+     *
+     * @return array<string, string>
+     */
+    private function logoMessages(Request $request): array
+    {
+        $tooBig = __('system_admin::message.logo_too_big', [
+            'mb' => UploadLimit::megabytes($this->sentAnSvg($request) ? UploadLimit::svgBytes() : UploadLimit::pictureBytes()),
+        ]);
+
+        return ['logo.max' => $tooBig, 'logo.uploaded' => $tooBig];
     }
 
     /** ⓘ পাঠানো লোগোটা SVG কি না — নামের শেষাংশ ধরে (MIME-এ SVG নানা নামে আসে); ভেতরটা যাচাই করে [[SafeSvg::clean()]] */
