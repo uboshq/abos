@@ -115,5 +115,1101 @@
   "avatarMenuSignOut": "বের হওয়া",
   "@avatarMenuSignOut": {
     "description": "Avatar menu row: sign out"
+  },
+  "booksMethodCash": "নগদ",
+  "@booksMethodCash": {
+    "description": "Payment method / money account kind: cash"
+  },
+  "booksMethodBank": "ব্যাংক",
+  "@booksMethodBank": {
+    "description": "Payment method / money account kind: bank"
+  },
+  "booksMethodCheque": "চেক",
+  "@booksMethodCheque": {
+    "description": "Payment method: cheque"
+  },
+  "booksMethodOther": "অন্য",
+  "@booksMethodOther": {
+    "description": "Payment method: anything else"
+  },
+  "booksMethodMobileBanking": "মোবাইল ব্যাংকিং",
+  "@booksMethodMobileBanking": {
+    "description": "Money account kind: mobile banking (bKash, Nagad)"
+  },
+  "booksReceiptPosted": "পোস্ট হয়েছে · খাতায় উঠেছে",
+  "@booksReceiptPosted": {
+    "description": "Money receipt state: confirmed, in the ledger (fe's word, 21 Oct 2026)"
+  },
+  "booksReceiptPending": "অপেক্ষায় — অনুমোদন বা নিশ্চিত বাকি",
+  "@booksReceiptPending": {
+    "description": "Money receipt state: draft, waiting for approval or confirmation"
+  },
+  "booksReceiptCancelled": "বাতিল",
+  "@booksReceiptCancelled": {
+    "description": "Money receipt state: cancelled"
+  },
+  "booksBalanceNone": "জের নেই",
+  "@booksBalanceNone": {
+    "description": "Principal balance: zero"
+  },
+  "booksBalanceToPay": "দিতে হবে: {amount}",
+  "@booksBalanceToPay": {
+    "description": "Principal balance: we owe them this much",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksBalanceToReceive": "পাব: {amount}",
+  "@booksBalanceToReceive": {
+    "description": "Principal balance: they owe us this much",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksRangeToday": "আজ",
+  "@booksRangeToday": {
+    "description": "Date range chip: today"
+  },
+  "booksRangeMonth": "এ মাস",
+  "@booksRangeMonth": {
+    "description": "Date range chip: this month so far"
+  },
+  "booksTotalCount": "{count, plural, other{· {count} টি}}",
+  "@booksTotalCount": {
+    "description": "Total strip: how many rows the total covers",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "booksMore": "আরও দেখুন",
+  "@booksMore": {
+    "description": "Button under a list: load the next page"
+  },
+  "booksCollectAccountsFailed": "টাকার খাতের তালিকা আনা গেল না। নেট দেখে আবার খুলুন।",
+  "@booksCollectAccountsFailed": {
+    "description": "Take a collection: the money account list did not load"
+  },
+  "booksCollectPickCustomerError": "গ্রাহক বাছুন।",
+  "@booksCollectPickCustomerError": {
+    "description": "Take a collection: error, no customer chosen"
+  },
+  "booksCollectAmountWrong": "অঙ্কটা ঠিক নয় — শূন্যের বেশি, দুই দশমিক পর্যন্ত।",
+  "@booksCollectAmountWrong": {
+    "description": "Take a collection: error, the amount typed is not a valid number"
+  },
+  "booksCollectPickAccountError": "টাকার খাত বাছুন।",
+  "@booksCollectPickAccountError": {
+    "description": "Take a collection: error, no money account chosen"
+  },
+  "booksCollectNotLanded": "আদায়টা বসেনি। আবার চেষ্টা করুন।",
+  "@booksCollectNotLanded": {
+    "description": "Take a collection: the server refused without a reason"
+  },
+  "booksCollectMayHaveLanded": "আদায়ের উত্তর আসেনি — সার্ভারে হয়তো পৌঁছেছে — কিছু না বদলে আবার চাপুন; আগেরটা বসে থাকলে সেটাই দেখাবে, দুবার বসবে না।",
+  "@booksCollectMayHaveLanded": {
+    "description": "Take a collection: the network dropped after sending"
+  },
+  "booksCollectNeedsNet": "আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।",
+  "@booksCollectNeedsNet": {
+    "description": "Take a collection: no network before sending"
+  },
+  "booksCollectSendFailed": "আদায় জমা করা গেল না। আবার চেষ্টা করুন।",
+  "@booksCollectSendFailed": {
+    "description": "Take a collection: sending failed"
+  },
+  "booksCollectTitle": "টাকা আদায় নিন",
+  "@booksCollectTitle": {
+    "description": "Take a collection: screen title"
+  },
+  "booksCollectPickCustomer": "গ্রাহক বাছুন",
+  "@booksCollectPickCustomer": {
+    "description": "Take a collection: the customer tile before one is chosen"
+  },
+  "booksCollectAmountLabel": "অঙ্ক (টাকা)",
+  "@booksCollectAmountLabel": {
+    "description": "Take a collection: amount field label"
+  },
+  "booksCollectAccountLabel": "কোন খাতে",
+  "@booksCollectAccountLabel": {
+    "description": "Take a collection: money account dropdown label"
+  },
+  "booksCollectInstrumentLabel": "মাধ্যম",
+  "@booksCollectInstrumentLabel": {
+    "description": "Take a collection: instrument field label (bank or mobile wallet name)"
+  },
+  "booksCollectInstrumentHint": "যেমন bKash, Nagad, ব্যাংক জমা",
+  "@booksCollectInstrumentHint": {
+    "description": "Take a collection: instrument field hint"
+  },
+  "booksCollectTrxLabel": "লেনদেন-নম্বর (TrxID)",
+  "@booksCollectTrxLabel": {
+    "description": "Take a collection: transaction number field label"
+  },
+  "booksCollectDate": "তারিখ",
+  "@booksCollectDate": {
+    "description": "Take a collection: date row"
+  },
+  "booksCollectRemarks": "মন্তব্য (ঐচ্ছিক)",
+  "@booksCollectRemarks": {
+    "description": "Take a collection: remarks field label"
+  },
+  "booksCollectConfirmNow": "এখনই নিশ্চিত",
+  "@booksCollectConfirmNow": {
+    "description": "Take a collection: switch, confirm the receipt at once"
+  },
+  "booksCollectConfirmHint": "অনুমোদন লাগলে আদায়টা অপেক্ষায় থাকবে, ওয়েবের মতো",
+  "@booksCollectConfirmHint": {
+    "description": "Take a collection: hint under the confirm switch"
+  },
+  "booksCollectSend": "আদায় জমা দিন",
+  "@booksCollectSend": {
+    "description": "Take a collection: send button, no amount yet"
+  },
+  "booksCollectSendAmount": "আদায় জমা দিন — {amount}",
+  "@booksCollectSendAmount": {
+    "description": "Take a collection: send button with the amount",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksCollectSearchLabel": "নাম, কোড, ফোন বা পয়েন্ট",
+  "@booksCollectSearchLabel": {
+    "description": "Take a collection: customer search field label"
+  },
+  "booksCollectNoCustomer": "কোনো গ্রাহক মেলেনি।",
+  "@booksCollectNoCustomer": {
+    "description": "Take a collection: customer search found nothing"
+  },
+  "booksMoneyInListFailed": "আদায়ের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "@booksMoneyInListFailed": {
+    "description": "Collections list: loading failed"
+  },
+  "booksMoneyInListAbsent": "সার্ভারে আদায়ের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@booksMoneyInListAbsent": {
+    "description": "Collections list: the server is too old for this page"
+  },
+  "booksMoneyInTitle": "আদায়",
+  "@booksMoneyInTitle": {
+    "description": "Collections: screen title, and a receipt's title before its number loads"
+  },
+  "booksModuleSales": "বিক্রয়",
+  "@booksModuleSales": {
+    "description": "Screen bar: the module name 'Sales' above the title"
+  },
+  "booksMoneyInNew": "নতুন আদায়",
+  "@booksMoneyInNew": {
+    "description": "Collections list: the floating button to take a new collection"
+  },
+  "booksMoneyInSearchHint": "গ্রাহক, দোকান বা নম্বর খুঁজুন",
+  "@booksMoneyInSearchHint": {
+    "description": "Collections list: search field hint"
+  },
+  "booksMoneyInAllMethods": "সব",
+  "@booksMoneyInAllMethods": {
+    "description": "Collections list: method chip, every method"
+  },
+  "booksMoneyInEmptyTitle": "এই সময়ে কোনো আদায় নেই",
+  "@booksMoneyInEmptyTitle": {
+    "description": "Collections list: empty state title"
+  },
+  "booksMoneyInEmptyHint": "তারিখ বা পদ্ধতি বদলে দেখুন।",
+  "@booksMoneyInEmptyHint": {
+    "description": "Collections list: empty state message"
+  },
+  "booksMoneyInEmptyCollect": "আদায় নিন",
+  "@booksMoneyInEmptyCollect": {
+    "description": "Collections list: empty state button for office staff"
+  },
+  "booksRefresh": "নতুন করে দেখুন",
+  "@booksRefresh": {
+    "description": "Books screens: button that loads the list again"
+  },
+  "booksMoneyInToday": "আজকের আদায়",
+  "@booksMoneyInToday": {
+    "description": "Collections list: card title when the range is today"
+  },
+  "booksShopDuesTitle": "দোকানের বকেয়া",
+  "@booksShopDuesTitle": {
+    "description": "Collections list: card of shops that owe money"
+  },
+  "booksShopDuesMore": "{count, plural, other{আরও {count}টি দোকান}}",
+  "@booksShopDuesMore": {
+    "description": "Shop dues card: how many shops are not shown",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "booksShopDuesTotal": "{count, plural, other{মোট · {count}টি দোকান}}",
+  "@booksShopDuesTotal": {
+    "description": "Shop dues card: total line over every shop",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "booksMoneyInFailed": "আদায়টা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "@booksMoneyInFailed": {
+    "description": "Money receipt: loading failed"
+  },
+  "booksPrintSend": "ছাপুন / পাঠান",
+  "@booksPrintSend": {
+    "description": "Tooltip: print or share this paper"
+  },
+  "booksMoneyInPrintTitle": "টাকার রসিদ · {no}",
+  "@booksMoneyInPrintTitle": {
+    "description": "Print sheet title for a money receipt",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "MR-0012"
+      }
+    }
+  },
+  "booksFactCustomer": "গ্রাহক",
+  "@booksFactCustomer": {
+    "description": "Fact row label: customer"
+  },
+  "booksFactDate": "তারিখ",
+  "@booksFactDate": {
+    "description": "Fact row label: date"
+  },
+  "booksFactAmount": "টাকা",
+  "@booksFactAmount": {
+    "description": "Fact row label: the money amount"
+  },
+  "booksFactStatus": "অবস্থা",
+  "@booksFactStatus": {
+    "description": "Fact row label: the paper's state"
+  },
+  "booksFactMethod": "পদ্ধতি",
+  "@booksFactMethod": {
+    "description": "Fact row label: payment method"
+  },
+  "booksFactAccount": "খাত",
+  "@booksFactAccount": {
+    "description": "Fact row label: money account"
+  },
+  "booksFactNumber": "নম্বর",
+  "@booksFactNumber": {
+    "description": "Fact row label: instrument (cheque or transaction) number"
+  },
+  "booksFactInstrumentDate": "কাগজের তারিখ",
+  "@booksFactInstrumentDate": {
+    "description": "Fact row label: date on the cheque or slip"
+  },
+  "booksFactNarration": "বিবরণ",
+  "@booksFactNarration": {
+    "description": "Fact row label: narration"
+  },
+  "booksFactWrittenBy": "লিখেছেন",
+  "@booksFactWrittenBy": {
+    "description": "Fact row label: who entered it"
+  },
+  "booksMoneyInLines": "কোন বিলে কত",
+  "@booksMoneyInLines": {
+    "description": "Money receipt: heading of the bill-by-bill split"
+  },
+  "booksMoneyInAdvance": "অগ্রিম",
+  "@booksMoneyInAdvance": {
+    "description": "Money receipt: a split line not tied to any bill"
+  },
+  "booksPcTitle": "প্রিন্সিপালের কমিশন",
+  "@booksPcTitle": {
+    "description": "Principal commission: screen title"
+  },
+  "booksModuleSupplier": "সরবরাহকারী",
+  "@booksModuleSupplier": {
+    "description": "Screen bar: the module name 'Supplier' above the title"
+  },
+  "booksPcLoadFailedTitle": "তথ্য আনা গেল না",
+  "@booksPcLoadFailedTitle": {
+    "description": "Principal commission: error title"
+  },
+  "booksPcLoadFailed": "প্রিন্সিপালের কমিশন আনা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।",
+  "@booksPcLoadFailed": {
+    "description": "Principal commission: loading failed"
+  },
+  "booksPcAbsent": "সার্ভারে এই পাতা এখনো নেই, বা সরবরাহকারীর অংশ বন্ধ। সার্ভার হালনাগাদ হলে দেখা যাবে।",
+  "@booksPcAbsent": {
+    "description": "Principal commission: the server is too old or the supplier module is off"
+  },
+  "booksPcEmptyTitle": "এই চক্রে কোনো প্রিন্সিপালের কমিশন নেই",
+  "@booksPcEmptyTitle": {
+    "description": "Principal commission: empty state title"
+  },
+  "booksPcEmptyHint": "কমিশনের নিয়ম দেওয়া প্রিন্সিপাল থাকলে এখানে দেখা যাবে।",
+  "@booksPcEmptyHint": {
+    "description": "Principal commission: empty state message"
+  },
+  "booksPcGrandTotal": "{count, plural, other{সর্বমোট · {side} · {count} জন}}",
+  "@booksPcGrandTotal": {
+    "description": "Principal commission: bottom bar label; side is the net direction word (to pay / to receive)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "side": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPcPrevMonth": "আগের মাস",
+  "@booksPcPrevMonth": {
+    "description": "Principal commission: tooltip, go one month back"
+  },
+  "booksPcCurrentCycle": "চলতি চক্র",
+  "@booksPcCurrentCycle": {
+    "description": "Principal commission: the month bar when no month is chosen"
+  },
+  "booksPcNextMonth": "পরের মাস",
+  "@booksPcNextMonth": {
+    "description": "Principal commission: tooltip, go one month forward"
+  },
+  "booksPcCurrent": "চলতি",
+  "@booksPcCurrent": {
+    "description": "Principal commission: button back to the current cycle"
+  },
+  "booksPcTotalInflow": "মোট এসেছে",
+  "@booksPcTotalInflow": {
+    "description": "Principal commission totals card: total money in"
+  },
+  "booksPcTotalCommission": "কমিশন",
+  "@booksPcTotalCommission": {
+    "description": "Principal commission totals card: commission"
+  },
+  "booksPcTotalSent": "পাঠানো",
+  "@booksPcTotalSent": {
+    "description": "Principal commission totals card: money sent"
+  },
+  "booksPcInflowLine": "এসেছে {amount}",
+  "@booksPcInflowLine": {
+    "description": "Principal commission row: money in",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcCommissionLine": "কমিশন {amount}",
+  "@booksPcCommissionLine": {
+    "description": "Principal commission row: commission",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcCommissionRateLine": "কমিশন ({rate}) {amount}",
+  "@booksPcCommissionRateLine": {
+    "description": "Principal commission row: commission with its basis rate",
+    "placeholders": {
+      "rate": {
+        "type": "String",
+        "example": "2%"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcSentLine": "পাঠানো {amount}",
+  "@booksPcSentLine": {
+    "description": "Principal commission row: money sent",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "booksPcUnknown": "জানা নেই",
+  "@booksPcUnknown": {
+    "description": "Principal commission screen reader: an amount the server did not give"
+  },
+  "booksPcCycle": "চক্র: {cycle}",
+  "@booksPcCycle": {
+    "description": "Principal commission row: the cycle's dates",
+    "placeholders": {
+      "cycle": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPrincipalListFailed": "প্রিন্সিপালের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@booksPrincipalListFailed": {
+    "description": "Principals list: loading failed"
+  },
+  "booksPrincipalListAbsent": "সার্ভারে প্রিন্সিপালের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@booksPrincipalListAbsent": {
+    "description": "Principals list: the server is too old for this page"
+  },
+  "booksPrincipalTitle": "প্রিন্সিপাল",
+  "@booksPrincipalTitle": {
+    "description": "Principals: screen title, and a ledger's title before its name loads"
+  },
+  "booksPrincipalSearchHint": "নাম বা কোড খুঁজুন",
+  "@booksPrincipalSearchHint": {
+    "description": "Principals list: search field hint"
+  },
+  "booksPrincipalTotalDue": "মোট দেনা",
+  "@booksPrincipalTotalDue": {
+    "description": "Principals list: total strip, what we owe all principals"
+  },
+  "booksPrincipalNone": "কোনো প্রিন্সিপাল নেই।",
+  "@booksPrincipalNone": {
+    "description": "Principals list: empty"
+  },
+  "booksPrincipalNoPurchase": "এখনো কোনো ক্রয় নেই",
+  "@booksPrincipalNoPurchase": {
+    "description": "Principals list row: never bought from"
+  },
+  "booksPrincipalLastPurchaseOn": "শেষ ক্রয়: {date}",
+  "@booksPrincipalLastPurchaseOn": {
+    "description": "Principals list row: date of the last purchase",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "20/10/2026"
+      }
+    }
+  },
+  "booksLedgerFailed": "খাতা আনা গেল না।",
+  "@booksLedgerFailed": {
+    "description": "Principal ledger: loading failed"
+  },
+  "booksFactFullName": "পুরো নাম",
+  "@booksFactFullName": {
+    "description": "Fact row label: full name"
+  },
+  "booksFactPhone": "ফোন",
+  "@booksFactPhone": {
+    "description": "Fact row label: phone"
+  },
+  "booksFactBalance": "জের",
+  "@booksFactBalance": {
+    "description": "Fact row label: running balance"
+  },
+  "booksFactLastPurchase": "শেষ ক্রয়",
+  "@booksFactLastPurchase": {
+    "description": "Fact row label: date of the last purchase"
+  },
+  "booksLedgerEmpty": "খাতায় কোনো লেনদেন নেই।",
+  "@booksLedgerEmpty": {
+    "description": "Principal ledger: empty"
+  },
+  "booksPurchaseListFailed": "ক্রয়ের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@booksPurchaseListFailed": {
+    "description": "Purchases list: loading failed"
+  },
+  "booksPurchaseListAbsent": "সার্ভারে ক্রয়ের তালিকা এখনো আসেনি — অফিসে জানান।",
+  "@booksPurchaseListAbsent": {
+    "description": "Purchases list: the server is too old for this page"
+  },
+  "booksPurchasePrincipalsFailed": "প্রিন্সিপালের তালিকা আনা গেল না।",
+  "@booksPurchasePrincipalsFailed": {
+    "description": "Purchases list: the principal picker did not load"
+  },
+  "booksPurchaseAllPrincipals": "সব প্রিন্সিপাল",
+  "@booksPurchaseAllPrincipals": {
+    "description": "Purchases list: principal filter, every principal"
+  },
+  "booksPurchaseTitle": "ক্রয়",
+  "@booksPurchaseTitle": {
+    "description": "Purchases list: screen title"
+  },
+  "booksPurchaseBill": "ক্রয় বিল",
+  "@booksPurchaseBill": {
+    "description": "Purchase paper kind: purchase bill"
+  },
+  "booksPurchaseGoodsReceipt": "মাল গ্রহণ",
+  "@booksPurchaseGoodsReceipt": {
+    "description": "Purchase paper kind: goods received"
+  },
+  "booksPurchaseTotalBills": "মোট ক্রয়",
+  "@booksPurchaseTotalBills": {
+    "description": "Purchases list: total strip for bills"
+  },
+  "booksPurchaseTotalReceipts": "মোট গ্রহণ",
+  "@booksPurchaseTotalReceipts": {
+    "description": "Purchases list: total strip for goods receipts"
+  },
+  "booksPurchaseEmpty": "এই সময়ে কিছু নেই।",
+  "@booksPurchaseEmpty": {
+    "description": "Purchases list: empty"
+  },
+  "booksPurchasePaidDue": "পরিশোধিত {paid} · বাকি {due}",
+  "@booksPurchasePaidDue": {
+    "description": "Purchases list row: paid and outstanding on the bill",
+    "placeholders": {
+      "paid": {
+        "type": "String",
+        "example": "৳ 500.00"
+      },
+      "due": {
+        "type": "String",
+        "example": "৳ 750.00"
+      }
+    }
+  },
+  "booksPurchaseFailed": "কাগজটা আনা গেল না।",
+  "@booksPurchaseFailed": {
+    "description": "Purchase paper: loading failed"
+  },
+  "booksPurchasePrintTitle": "{kind} · {no}",
+  "@booksPurchasePrintTitle": {
+    "description": "Print sheet title for a purchase paper: kind word and number",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "booksFactPrincipal": "প্রিন্সিপাল",
+  "@booksFactPrincipal": {
+    "description": "Fact row label: principal (supplier)"
+  },
+  "booksFactSupplierNo": "তাদের কাগজের নম্বর",
+  "@booksFactSupplierNo": {
+    "description": "Fact row label: the supplier's own paper number"
+  },
+  "booksFactTotal": "মোট",
+  "@booksFactTotal": {
+    "description": "Fact row label: total"
+  },
+  "booksFactPaid": "পরিশোধিত",
+  "@booksFactPaid": {
+    "description": "Fact row label: paid"
+  },
+  "booksFactDue": "বাকি",
+  "@booksFactDue": {
+    "description": "Fact row label: still owed"
+  },
+  "booksPurchaseProducts": "পণ্য",
+  "@booksPurchaseProducts": {
+    "description": "Purchase paper: heading of the product lines"
+  },
+  "booksPurchaseQty": "পরিমাণ {qty}",
+  "@booksPurchaseQty": {
+    "description": "Purchase line: quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPurchaseFree": "ফ্রি {qty}",
+  "@booksPurchaseFree": {
+    "description": "Purchase line: free quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPurchaseLot": "লট {lot}",
+  "@booksPurchaseLot": {
+    "description": "Purchase line: lot/batch",
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "booksPurchaseRate": "দর {amount}",
+  "@booksPurchaseRate": {
+    "description": "Purchase line: buying rate",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersTitle": "গ্রাহক",
+  "@customersTitle": {
+    "description": "Customers: screen title, and a customer screen's title when the customer is missing"
+  },
+  "customersDetailGone": "এই গ্রাহক আর এই ফোনে নেই — সিঙ্ক করে দেখুন।",
+  "@customersDetailGone": {
+    "description": "Customer detail: the customer dropped out of the local catalogue"
+  },
+  "customersOpenLedgerHint": "খাতা খুলুন",
+  "@customersOpenLedgerHint": {
+    "description": "Screen reader tap hint / button: open the customer's ledger"
+  },
+  "customersDetailOrders": "এই দোকানের অর্ডার ({count})",
+  "@customersDetailOrders": {
+    "description": "Customer detail: heading of the shop's synced orders",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDetailNoOrders": "এই ফোনে এই দোকানের কোনো অর্ডার সিঙ্ক হয়নি।",
+  "@customersDetailNoOrders": {
+    "description": "Customer detail: no synced orders"
+  },
+  "customersDetailNoNumber": "নম্বর নেই",
+  "@customersDetailNoNumber": {
+    "description": "Customer detail: an order without a document number"
+  },
+  "customersDetailInactive": "⚠️ এই গ্রাহক নিষ্ক্রিয়",
+  "@customersDetailInactive": {
+    "description": "Customer detail: warning, inactive customer"
+  },
+  "customersDetailLimit": "সীমা {amount}",
+  "@customersDetailLimit": {
+    "description": "Customer detail due card: credit limit amount",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 50,000.00"
+      }
+    }
+  },
+  "customersDetailCreditDays": "{days, plural, other{{days} দিনের শর্ত}}",
+  "@customersDetailCreditDays": {
+    "description": "Customer detail due card: credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDetailSynced": "সিঙ্ক {stamp}",
+  "@customersDetailSynced": {
+    "description": "Customer detail due card: when the due figure last synced",
+    "placeholders": {
+      "stamp": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDetailCall": "কল করুন",
+  "@customersDetailCall": {
+    "description": "Customer detail: dial the shop"
+  },
+  "customersDetailAddress": "ঠিকানা",
+  "@customersDetailAddress": {
+    "description": "Customer detail: open the address in maps"
+  },
+  "customersDetailLedger": "খাতা দেখুন",
+  "@customersDetailLedger": {
+    "description": "Customer detail: open the shop's ledger"
+  },
+  "customersDetailCredit": "বাকির অবস্থা",
+  "@customersDetailCredit": {
+    "description": "Customer detail: open the credit page"
+  },
+  "customersDepositNotice": "জমার বিজ্ঞপ্তি",
+  "@customersDepositNotice": {
+    "description": "Deposit notification: button and screen title"
+  },
+  "customersDetailNewOrder": "নতুন অর্ডার",
+  "@customersDetailNewOrder": {
+    "description": "Customer detail: start a new order"
+  },
+  "customersLedgerFailed": "খাতা আনা গেল না।",
+  "@customersLedgerFailed": {
+    "description": "Customer ledger: loading failed"
+  },
+  "customersLedgerEmpty": "এই দোকানের খাতায় এখনো কোনো লেনদেন নেই।",
+  "@customersLedgerEmpty": {
+    "description": "Customer ledger: empty"
+  },
+  "customersLedgerMore": "আরও আগের লেনদেন",
+  "@customersLedgerMore": {
+    "description": "Customer ledger: load older rows"
+  },
+  "customersLedgerTitle": "খাতা",
+  "@customersLedgerTitle": {
+    "description": "Customer ledger: title before the shop's name loads"
+  },
+  "customersLedgerHasDue": "বাকি আছে",
+  "@customersLedgerHasDue": {
+    "description": "Customer ledger header: the shop owes this much"
+  },
+  "customersLedgerHasAdvance": "আগাম জমা আছে",
+  "@customersLedgerHasAdvance": {
+    "description": "Customer ledger header: the shop has paid ahead"
+  },
+  "customersLedgerSettled": "হিসাব মিলে আছে",
+  "@customersLedgerSettled": {
+    "description": "Customer ledger header: nothing owed either way"
+  },
+  "customersLedgerCode": "কোড {code}",
+  "@customersLedgerCode": {
+    "description": "Customer ledger header: the shop's code",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "customersLedgerOpening": "শুরুর জের",
+  "@customersLedgerOpening": {
+    "description": "Customer ledger statement: opening balance"
+  },
+  "customersLedgerGoodsTotal": "মোট মাল নিয়েছেন",
+  "@customersLedgerGoodsTotal": {
+    "description": "Customer ledger statement: total debits (goods taken)"
+  },
+  "customersLedgerPaidTotal": "মোট টাকা দিয়েছেন",
+  "@customersLedgerPaidTotal": {
+    "description": "Customer ledger statement: total credits (money paid)"
+  },
+  "customersLedgerClosing": "শেষের জের",
+  "@customersLedgerClosing": {
+    "description": "Customer ledger statement: closing balance"
+  },
+  "customersLedgerSpokenGoods": "মাল {amount}",
+  "@customersLedgerSpokenGoods": {
+    "description": "Screen reader: a ledger row where goods were taken",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerSpokenPaid": "জমা {amount}",
+  "@customersLedgerSpokenPaid": {
+    "description": "Screen reader: a ledger row where money was paid",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerTookGoods": "মাল নিয়েছেন",
+  "@customersLedgerTookGoods": {
+    "description": "Customer ledger row title: goods taken (due went up)"
+  },
+  "customersLedgerPaidMoney": "টাকা দিয়েছেন",
+  "@customersLedgerPaidMoney": {
+    "description": "Customer ledger row title: money paid (due went down)"
+  },
+  "customersLedgerRowSettled": "মিলে গেছে",
+  "@customersLedgerRowSettled": {
+    "description": "Customer ledger row: balance after the row is zero"
+  },
+  "customersLedgerRowDue": "বাকি {amount}",
+  "@customersLedgerRowDue": {
+    "description": "Customer ledger row: balance after the row, shop owes",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerRowCredit": "জমা {amount}",
+  "@customersLedgerRowCredit": {
+    "description": "Customer ledger row: balance after the row, shop is in credit",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersLedgerNoDate": "তারিখ নেই",
+  "@customersLedgerNoDate": {
+    "description": "Customer ledger: month heading for rows without a date"
+  },
+  "customersPickFromList": "বাঁয়ের তালিকা থেকে একজন গ্রাহক বাছুন",
+  "@customersPickFromList": {
+    "description": "Customers two-pane: nothing chosen yet"
+  },
+  "customersSearchHint": "নাম বা মোবাইল দিয়ে খুঁজুন",
+  "@customersSearchHint": {
+    "description": "Customers / due list: search field hint"
+  },
+  "customersTotalDue": "মোট বকেয়া",
+  "@customersTotalDue": {
+    "description": "Customers list: total strip of what the shown customers owe"
+  },
+  "customersNoneSynced": "এখনো কোনো গ্রাহক সিঙ্ক হয়নি",
+  "@customersNoneSynced": {
+    "description": "Customers list: empty catalogue"
+  },
+  "customersListFailed": "গ্রাহকের তালিকা আনা যায়নি",
+  "@customersListFailed": {
+    "description": "Customers list: the pull failed"
+  },
+  "customersPullToRetry": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@customersPullToRetry": {
+    "description": "Customers list: hint under the empty or failed state"
+  },
+  "customersNoMatch": "কোনো মিল পাওয়া যায়নি",
+  "@customersNoMatch": {
+    "description": "Customers / due list: search found nothing"
+  },
+  "customersClearFilters": "ফিল্টার মুছে আবার দেখুন।",
+  "@customersClearFilters": {
+    "description": "Customers / due list: search found nothing while filters are on"
+  },
+  "customersCreditDaysShort": "{days, plural, other{{days} দিন}}",
+  "@customersCreditDaysShort": {
+    "description": "Customers list row: credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDueTitle": "বকেয়া তালিকা",
+  "@customersDueTitle": {
+    "description": "Due list: screen title"
+  },
+  "customersDueListFailed": "বকেয়ার তালিকা আনা যায়নি",
+  "@customersDueListFailed": {
+    "description": "Due list: loading failed"
+  },
+  "customersDueNone": "কারো কাছে বকেয়া নেই",
+  "@customersDueNone": {
+    "description": "Due list: empty"
+  },
+  "customersDueNoneHint": "সিঙ্ক হয়নি মনে হলে নতুন করে দেখুন।",
+  "@customersDueNoneHint": {
+    "description": "Due list: hint under the empty state"
+  },
+  "customersRefresh": "নতুন করে দেখুন",
+  "@customersRefresh": {
+    "description": "Due list: button that loads again"
+  },
+  "customersDueWord": "বকেয়া",
+  "@customersDueWord": {
+    "description": "Due list row: second line when the customer has no code"
+  },
+  "customersDueWithCode": "{code} · বকেয়া",
+  "@customersDueWithCode": {
+    "description": "Due list row: second line with the customer's code",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositLoadFailed": "তথ্য আনা যায়নি।",
+  "@customersDepositLoadFailed": {
+    "description": "Deposit notification: loading failed"
+  },
+  "customersDepositAbsent": "সার্ভারে এই সুবিধা এখনো আসেনি — অফিসে জানান।",
+  "@customersDepositAbsent": {
+    "description": "Deposit notification: the server is too old"
+  },
+  "customersDepositNeedAmount": "টাকার অঙ্ক লিখুন।",
+  "@customersDepositNeedAmount": {
+    "description": "Deposit notification: error, no amount"
+  },
+  "customersDepositNeedSlip": "ব্যাংকে জমায় স্লিপের ছবি দিতেই হবে।",
+  "@customersDepositNeedSlip": {
+    "description": "Deposit notification: error, bank deposit without a slip photo"
+  },
+  "customersDepositShareUnreadable": "বিল {no}-এর ভাগ পড়া গেল না — কেবল সংখ্যা লিখুন।",
+  "@customersDepositShareUnreadable": {
+    "description": "Deposit notification: error, a bill share is not a number",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      }
+    }
+  },
+  "customersDepositShareOverDue": "বিল {no}-এর বকেয়া {amount} — তার বেশি এই বিলে দেখানো যায় না।",
+  "@customersDepositShareOverDue": {
+    "description": "Deposit notification: error, a bill share is more than the bill's due",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositSharesOverAmount": "বিলগুলোতে মোট {shared}, অথচ জমা {amount} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।",
+  "@customersDepositSharesOverAmount": {
+    "description": "Deposit notification: error, the shares add up to more than the deposit",
+    "placeholders": {
+      "shared": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositSent": "পাঠানো হয়েছে — হিসাবরক্ষক মিলিয়ে দেখবেন। ততক্ষণ বকেয়া কমবে না।",
+  "@customersDepositSent": {
+    "description": "Deposit notification: sent"
+  },
+  "customersDepositSendFailed": "পাঠানো যায়নি। আবার চেষ্টা করুন।",
+  "@customersDepositSendFailed": {
+    "description": "Deposit notification: sending failed"
+  },
+  "customersDepositIntro": "হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।",
+  "@customersDepositIntro": {
+    "description": "Deposit notification: line under the customer's name"
+  },
+  "customersDepositAmount": "টাকা",
+  "@customersDepositAmount": {
+    "description": "Deposit notification: amount field label"
+  },
+  "customersDepositDate": "জমার তারিখ",
+  "@customersDepositDate": {
+    "description": "Deposit notification: date row"
+  },
+  "customersDepositBank": "ব্যাংক",
+  "@customersDepositBank": {
+    "description": "Deposit notification: method, bank"
+  },
+  "customersDepositMfs": "বিকাশ/নগদ",
+  "@customersDepositMfs": {
+    "description": "Deposit notification: method, mobile wallet (bKash or Nagad)"
+  },
+  "customersDepositCash": "নগদ",
+  "@customersDepositCash": {
+    "description": "Deposit notification: method, cash"
+  },
+  "customersDepositWhichBank": "কোন ব্যাংকে",
+  "@customersDepositWhichBank": {
+    "description": "Deposit notification: bank account dropdown"
+  },
+  "customersDepositReference": "স্লিপ / লেনদেন নম্বর",
+  "@customersDepositReference": {
+    "description": "Deposit notification: reference field label"
+  },
+  "customersDepositAgainstBills": "কোন বিলের বিপরীতে (ঐচ্ছিক)",
+  "@customersDepositAgainstBills": {
+    "description": "Deposit notification: heading of the bill shares"
+  },
+  "customersDepositBillsHint": "বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।",
+  "@customersDepositBillsHint": {
+    "description": "Deposit notification: explanation of bill shares"
+  },
+  "customersDepositBillDue": "{no} · বকেয়া {amount}",
+  "@customersDepositBillDue": {
+    "description": "Deposit notification: one bill and its due",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositOnThisBill": "এই বিলে",
+  "@customersDepositOnThisBill": {
+    "description": "Deposit notification: hint of a bill share field"
+  },
+  "customersDepositNote": "আর কিছু বলার",
+  "@customersDepositNote": {
+    "description": "Deposit notification: note field label"
+  },
+  "customersDepositTakeSlip": "স্লিপের ছবি তুলুন",
+  "@customersDepositTakeSlip": {
+    "description": "Deposit notification: camera button"
+  },
+  "customersDepositSlipTaken": "ছবি নেওয়া হয়েছে — আবার তুলুন",
+  "@customersDepositSlipTaken": {
+    "description": "Deposit notification: camera button after a photo"
+  },
+  "customersDepositSend": "পাঠান",
+  "@customersDepositSend": {
+    "description": "Deposit notification: send button"
+  },
+  "customersDepositHistory": "আগের বিজ্ঞপ্তি ({count})",
+  "@customersDepositHistory": {
+    "description": "Deposit notification: heading of earlier notifications",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDepositHistoryDate": "তারিখ {date}",
+  "@customersDepositHistoryDate": {
+    "description": "Deposit history row: date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositHistoryBy": "পাঠালেন {name}",
+  "@customersDepositHistoryBy": {
+    "description": "Deposit history row: who sent it",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositHistoryRef": "নম্বর {reference}",
+  "@customersDepositHistoryRef": {
+    "description": "Deposit history row: slip or transaction number",
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositHistoryBill": "বিল {no} · {amount}",
+  "@customersDepositHistoryBill": {
+    "description": "Deposit history row: share on one bill",
+    "placeholders": {
+      "no": {
+        "type": "String",
+        "example": "SI-0042"
+      },
+      "amount": {
+        "type": "String",
+        "example": "৳ 1,250.00"
+      }
+    }
+  },
+  "customersDepositHistoryReason": "কারণ: {reason}",
+  "@customersDepositHistoryReason": {
+    "description": "Deposit history row: why it was refused",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "customersDepositReasonNotGiven": "জানানো হয়নি",
+  "@customersDepositReasonNotGiven": {
+    "description": "Deposit history row: refused without a reason"
   }
 }

@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ ক্রয়ের তালিকা — মালিক, ৬ অক্টোবর ২০২৬।
 ///
@@ -73,8 +74,8 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ক্রয়ের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ক্রয়ের তালিকা এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.booksPurchaseListFailed,
+            whenAbsent: context.l10n.booksPurchaseListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -88,7 +89,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error =
-            errorMessageFor(e, fallback: 'প্রিন্সিপালের তালিকা আনা গেল না।'));
+            errorMessageFor(e, fallback: context.l10n.booksPurchasePrincipalsFailed));
       }
       return;
     }
@@ -102,7 +103,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
           shrinkWrap: true,
           children: [
             ListTile(
-                title: const Text('সব প্রিন্সিপাল'),
+                title: Text(context.l10n.booksPurchaseAllPrincipals),
                 onTap: () => Navigator.pop(
                     sheet, const PrincipalRow(id: '', name: '', balance: 0))),
             for (final p in all)
@@ -121,7 +122,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
   Widget build(BuildContext context) {
     final page = _page;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'ক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.booksPurchaseTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -129,9 +130,9 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
           children: [
             if (widget.canSeeReceipts)
               Wrap(spacing: AppSpacing.xs, children: [
-                for (final (kind, label) in const [
-                  ('bill', 'ক্রয় বিল'),
-                  ('receipt', 'মাল গ্রহণ')
+                for (final (kind, label) in [
+                  ('bill', context.l10n.booksPurchaseBill),
+                  ('receipt', context.l10n.booksPurchaseGoodsReceipt)
                 ])
                   ChoiceChip(
                     key: ValueKey('purchase-kind-$kind'),
@@ -158,21 +159,21 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
             ActionChip(
               key: const ValueKey('purchase-principal'),
               avatar: const Icon(Icons.business_outlined, size: 18),
-              label: Text(_principal?.name ?? 'সব প্রিন্সিপাল'),
+              label: Text(_principal?.name ?? context.l10n.booksPurchaseAllPrincipals),
               onPressed: _pickPrincipal,
             ),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (page != null)
               TotalStrip(
-                  label: _kind == 'bill' ? 'মোট ক্রয়' : 'মোট গ্রহণ',
+                  label: _kind == 'bill' ? context.l10n.booksPurchaseTotalBills : context.l10n.booksPurchaseTotalReceipts,
                   // ⓘ দামের চাবি ছাড়া অঙ্ক আসে না — কেবল কয়টা
                   value: page.total == null ? '—' : Money.taka(page.total),
                   count: page.count),
             if (page != null && _rows.isEmpty && !_busy)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Center(child: Text('এই সময়ে কিছু নেই।')),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Center(child: Text(context.l10n.booksPurchaseEmpty)),
               ),
             for (final row in _rows)
               Card(
@@ -183,7 +184,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
                   subtitle: Text([
                     '${row.no} · ${dayOf(row.date)} · ${row.statusLabel}',
                     if (row.paid != null)
-                      'পরিশোধিত ${Money.taka(row.paid)} · বাকি ${Money.taka(row.due)}',
+                      context.l10n.booksPurchasePaidDue(Money.taka(row.paid), Money.taka(row.due)),
                   ].join('\n')),
                   isThreeLine: row.paid != null,
                   trailing: row.total == null
@@ -236,7 +237,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     }).catchError((Object e) {
       if (mounted) {
         setState(
-            () => _error = errorMessageFor(e, fallback: 'কাগজটা আনা গেল না।'));
+            () => _error = errorMessageFor(e, fallback: context.l10n.booksPurchaseFailed));
       }
     });
   }
@@ -247,18 +248,18 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
     return Scaffold(
       appBar: AbosScreenBar(
           title: d?.row.no ??
-              (widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ'),
+              (widget.kind == 'bill' ? context.l10n.booksPurchaseBill : context.l10n.booksPurchaseGoodsReceipt),
           actions: [
             // ⭐ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬); দাম ঢাকা-না-ঢাকা সার্ভারের কাগজই ঠিক করে
             if (d != null)
               IconButton(
                 key: const ValueKey('purchase-print'),
-                tooltip: 'ছাপুন / পাঠান',
+                tooltip: context.l10n.booksPrintSend,
                 icon: const Icon(Icons.print_outlined),
                 onPressed: () => DocumentActionsSheet.show(context,
                     type: widget.kind == 'bill' ? 'PurchaseBill' : 'PurchaseReceipt',
                     id: widget.id,
-                    title: '${widget.kind == 'bill' ? 'ক্রয় বিল' : 'মাল গ্রহণ'} · ${d.row.no}',
+                    title: context.l10n.booksPurchasePrintTitle(widget.kind == 'bill' ? context.l10n.booksPurchaseBill : context.l10n.booksPurchaseGoodsReceipt, d.row.no),
                     fileStem: d.row.no),
               ),
           ]),
@@ -272,36 +273,36 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(children: [
-                  FactRow('প্রিন্সিপাল', d.row.principal),
-                  FactRow('তারিখ', dayOf(d.row.date)),
-                  FactRow('অবস্থা', d.row.statusLabel),
+                  FactRow(context.l10n.booksFactPrincipal, d.row.principal),
+                  FactRow(context.l10n.booksFactDate, dayOf(d.row.date)),
+                  FactRow(context.l10n.booksFactStatus, d.row.statusLabel),
                   if (d.supplierNo.isNotEmpty)
-                    FactRow('তাদের কাগজের নম্বর', d.supplierNo),
-                  if (d.row.total != null) FactRow('মোট', Money.taka(d.row.total)),
+                    FactRow(context.l10n.booksFactSupplierNo, d.supplierNo),
+                  if (d.row.total != null) FactRow(context.l10n.booksFactTotal, Money.taka(d.row.total)),
                   if (d.row.paid != null)
-                    FactRow('পরিশোধিত', Money.taka(d.row.paid)),
+                    FactRow(context.l10n.booksFactPaid, Money.taka(d.row.paid)),
                   if (d.row.due != null)
-                    FactRow('বাকি', Money.taka(d.row.due),
+                    FactRow(context.l10n.booksFactDue, Money.taka(d.row.due),
                         colour: (d.row.due ?? 0) > 0 ? context.palette.danger : null),
-                  if (d.narration.isNotEmpty) FactRow('বিবরণ', d.narration),
+                  if (d.narration.isNotEmpty) FactRow(context.l10n.booksFactNarration, d.narration),
                 ]),
               ),
             ),
-            const Padding(
+            Padding(
               padding:
-                  EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
+                  const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
               child:
-                  Text('পণ্য', style: TextStyle(fontWeight: FontWeight.w700)),
+                  Text(context.l10n.booksPurchaseProducts, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
             for (final l in d.lines)
               Card(
                 child: ListTile(
                   title: Text(l.product),
                   subtitle: Text([
-                    'পরিমাণ ${Money.plain(l.qty)}',
-                    if (l.free > 0) 'ফ্রি ${Money.plain(l.free)}',
-                    if (l.batch.isNotEmpty) 'লট ${l.batch}',
-                    if (l.rate != null) 'দর ${Money.taka(l.rate)}',
+                    context.l10n.booksPurchaseQty(Money.plain(l.qty)),
+                    if (l.free > 0) context.l10n.booksPurchaseFree(Money.plain(l.free)),
+                    if (l.batch.isNotEmpty) context.l10n.booksPurchaseLot(l.batch),
+                    if (l.rate != null) context.l10n.booksPurchaseRate(Money.taka(l.rate)),
                   ].join(' · ')),
                   trailing:
                       l.amount == null ? null : Text(Money.taka(l.amount)),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api_client/api_client.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/sync_engine.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ ফোনে টাকা আদায় — কেবল অফিসের লোক (মালিক, ৭ অক্টোবর ২০২৬: "এটা কেবল অফিসের লোকদের জন্য থাকবে, আর ফিল্ডের
 /// জন্য থাকবে payment request")। সার্ভার `/me`-তে বলে (`mayCollect`) — আদায়ের চাবি আর খাতায় টাকা তোলার চাবি।
@@ -28,9 +29,9 @@ class CollectionAccount {
   final String kind;
 
   String get kindLabel => switch (kind) {
-        'bank' => 'ব্যাংক',
-        'mfs' => 'মোবাইল ব্যাংকিং',
-        _ => 'নগদ',
+        'bank' => AppLocale.l10n.booksMethodBank,
+        'mfs' => AppLocale.l10n.booksMethodMobileBanking,
+        _ => AppLocale.l10n.booksMethodCash,
       };
 
   factory CollectionAccount.fromJson(Map<String, dynamic> j) =>

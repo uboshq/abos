@@ -2,6 +2,7 @@ import '../api_client/api_client.dart';
 import '../orders/paper_total.dart';
 import '../records/money.dart';
 import '../records/customer_record.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ টাকা আদায়, প্রিন্সিপালের তালিকা আর ক্রয়ের তালিকা — কেবল পড়া (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে payment received,
 /// principal list আর purchase list দরকার")।
@@ -42,11 +43,11 @@ class MoneyInRow {
   static const methods = ['cash', 'bank', 'mfs', 'cheque'];
 
   static String methodLabel(String method) => switch (method) {
-        'cash' => 'নগদ',
-        'bank' => 'ব্যাংক',
+        'cash' => AppLocale.l10n.booksMethodCash,
+        'bank' => AppLocale.l10n.booksMethodBank,
         'mfs' => 'MFS',
-        'cheque' => 'চেক',
-        _ => 'অন্য',
+        'cheque' => AppLocale.l10n.booksMethodCheque,
+        _ => AppLocale.l10n.booksMethodOther,
       };
 }
 
@@ -87,9 +88,9 @@ class MoneyInDetail {
 
   String get statusLabel => switch (status) {
         // ⓘ খাতায় ওঠা = "পোস্ট হয়েছে" — এক ধারণার এক শব্দ, ওয়েব আর অ্যাপে (fe, ২১ অক্টোবর ২০২৬); "পাকা" আর নয়
-        'confirmed' || 'closed' => 'পোস্ট হয়েছে · খাতায় উঠেছে',
-        'draft' => 'অপেক্ষায় — অনুমোদন বা নিশ্চিত বাকি',
-        'cancelled' => 'বাতিল',
+        'confirmed' || 'closed' => AppLocale.l10n.booksReceiptPosted,
+        'draft' => AppLocale.l10n.booksReceiptPending,
+        'cancelled' => AppLocale.l10n.booksReceiptCancelled,
         _ => '',
       };
 
@@ -135,10 +136,10 @@ class PrincipalRow {
   String get balanceLabel => balanceWords(balance);
 
   static String balanceWords(double value) {
-    if (value.abs() < 0.005) return 'জের নেই';
+    if (value.abs() < 0.005) return AppLocale.l10n.booksBalanceNone;
     return value > 0
-        ? 'দিতে হবে: ${Money.taka(value)}'
-        : 'পাব: ${Money.taka(-value)}';
+        ? AppLocale.l10n.booksBalanceToPay(Money.taka(value))
+        : AppLocale.l10n.booksBalanceToReceive(Money.taka(-value));
   }
 }
 
