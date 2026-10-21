@@ -1,0 +1,240 @@
+{
+  "@@locale": "bn",
+  "salesDeskComingSoonTitle": "শীঘ্রই আসছে",
+  "@salesDeskComingSoonTitle": {
+    "description": "Coming-soon screen: bar title when none is given, and the empty-state title"
+  },
+  "salesDeskComingSoonMessage": "এই পর্দাটা এখনো তৈরি হচ্ছে। তৈরি হলে এখানেই খুলবে।",
+  "@salesDeskComingSoonMessage": {
+    "description": "Coming-soon screen: the message under the title"
+  },
+  "deliveriesTodayLoadFailed": "ডেলিভারির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@deliveriesTodayLoadFailed": {
+    "description": "Today's deliveries: the list could not be loaded"
+  },
+  "deliveriesTodayNotOnServer": "সার্ভারে আজকের ডেলিভারি এখনো আসেনি — অফিসে জানান।",
+  "@deliveriesTodayNotOnServer": {
+    "description": "Today's deliveries: the server does not have this door yet"
+  },
+  "deliveriesTodayMoreFailed": "পরের পাতা আনা গেল না। আবার চেষ্টা করুন।",
+  "@deliveriesTodayMoreFailed": {
+    "description": "Today's deliveries: the next page could not be loaded"
+  },
+  "deliveriesTodayPartlyDelivered": "{no}: আংশিক পৌঁছেছে — কম আর ভাঙা মাল ফেরতের কাগজে উঠেছে।",
+  "@deliveriesTodayPartlyDelivered": {
+    "description": "Today's deliveries: notice after a partial hand-over; no is the challan number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayDelivered": "{no}: পৌঁছেছে — {receiver} বুঝে নিলেন।",
+  "@deliveriesTodayDelivered": {
+    "description": "Today's deliveries: notice after a full hand-over; no is the challan number, receiver the person's name",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      },
+      "receiver": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodaySaveFailed": "পৌঁছানো লেখা গেল না। আবার চেষ্টা করুন।",
+  "@deliveriesTodaySaveFailed": {
+    "description": "Today's deliveries: the hand-over could not be saved"
+  },
+  "deliveriesTodayTitle": "আজকের ডেলিভারি",
+  "@deliveriesTodayTitle": {
+    "description": "Today's deliveries: screen title"
+  },
+  "deliveriesTodayTotalLabel": "পথে মোট চালান",
+  "@deliveriesTodayTotalLabel": {
+    "description": "Today's deliveries: total strip label (all pages)"
+  },
+  "deliveriesTodayTotalValue": "{count} টি",
+  "@deliveriesTodayTotalValue": {
+    "description": "Today's deliveries: total strip value, the number of challans",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayEmpty": "পথে কোনো চালান নেই।",
+  "@deliveriesTodayEmpty": {
+    "description": "Today's deliveries: nothing on the road"
+  },
+  "deliveriesTodayVehicle": "গাড়ি {vehicle}",
+  "@deliveriesTodayVehicle": {
+    "description": "Today's deliveries: the vehicle on a card",
+    "placeholders": {
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayDriver": "চালক {driver}",
+  "@deliveriesTodayDriver": {
+    "description": "Today's deliveries: the driver on a card",
+    "placeholders": {
+      "driver": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveriesTodayHandOver": "বুঝিয়ে দিন",
+  "@deliveriesTodayHandOver": {
+    "description": "Today's deliveries: button that records the hand-over to the buyer"
+  },
+  "deliveriesTodayMore": "আরও দেখুন",
+  "@deliveriesTodayMore": {
+    "description": "Today's deliveries: load the next page"
+  },
+  "routeMyWeekday": "{day, select, mon{সোমবার} tue{মঙ্গলবার} wed{বুধবার} thu{বৃহস্পতিবার} fri{শুক্রবার} sat{শনিবার} other{রবিবার}}",
+  "@routeMyWeekday": {
+    "description": "My route: the weekday on the day button (mon … sat, other = Sunday)",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyLoadFailed": "রুট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@routeMyLoadFailed": {
+    "description": "My route: the route could not be loaded"
+  },
+  "routeMyNotOnServer": "সার্ভারে রুটের দরজা এখনো আসেনি — অফিসে জানান।",
+  "@routeMyNotOnServer": {
+    "description": "My route: the server does not have this door yet"
+  },
+  "routeMyPickDay": "কোন দিনের রুট",
+  "@routeMyPickDay": {
+    "description": "My route: date picker heading"
+  },
+  "routeMyTitle": "আজকের রুট",
+  "@routeMyTitle": {
+    "description": "My route: screen title"
+  },
+  "routeMyErrorTitle": "আনা গেল না",
+  "@routeMyErrorTitle": {
+    "description": "My route: error card title"
+  },
+  "routeMyNoRouteTitle": "এই দিনে কোনো রুট নেই",
+  "@routeMyNoRouteTitle": {
+    "description": "My route: empty state title"
+  },
+  "routeMyNoRouteMessage": "সাপ্তাহিক ছকে এই দিনে আপনার নামে রুট বসানো নেই — অফিসে জানান।",
+  "@routeMyNoRouteMessage": {
+    "description": "My route: empty state message"
+  },
+  "routeMyMonthSales": "এ মাসে বিক্রি: {amount}",
+  "@routeMyMonthSales": {
+    "description": "My route: a shop's sales this month; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyMonthCollections": "এ মাসে আদায়: {amount}",
+  "@routeMyMonthCollections": {
+    "description": "My route: a shop's collections this month; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyOutstanding": "বকেয়া: {amount}",
+  "@routeMyOutstanding": {
+    "description": "My route: what the shop owes; amount from Money.taka",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "routeMyMoreShops": "আরও দোকান",
+  "@routeMyMoreShops": {
+    "description": "My route: load the next page of shops"
+  },
+  "salesDashboardsListLoadFailed": "ড্যাশবোর্ডের তালিকা আনা গেল না।",
+  "@salesDashboardsListLoadFailed": {
+    "description": "Business dashboards: the list could not be loaded"
+  },
+  "salesDashboardsTitle": "ব্যবসার ড্যাশবোর্ড",
+  "@salesDashboardsTitle": {
+    "description": "Business dashboards: screen title"
+  },
+  "salesDashboardsModule": "ড্যাশবোর্ড",
+  "@salesDashboardsModule": {
+    "description": "Dashboards: the module name in the bar crumbs"
+  },
+  "salesDashboardsNoneTitle": "আপনার জন্য কোনো ড্যাশবোর্ড নেই",
+  "@salesDashboardsNoneTitle": {
+    "description": "Business dashboards: empty state title"
+  },
+  "salesDashboardsNoneMessage": "কোনো মডিউলের ড্যাশবোর্ড দেখার অনুমতি পেলে এখানে আসবে।",
+  "@salesDashboardsNoneMessage": {
+    "description": "Business dashboards: empty state message"
+  },
+  "salesDashboardsNoKey": "চাবি নেই",
+  "@salesDashboardsNoKey": {
+    "description": "Dashboards: a figure this person has no key (permission) to see, short form"
+  },
+  "salesDashboardsLoadFailed": "ড্যাশবোর্ড আনা গেল না।",
+  "@salesDashboardsLoadFailed": {
+    "description": "Module dashboard: could not be loaded"
+  },
+  "salesDashboardsEmptyTitle": "এই ড্যাশবোর্ডে এখনো কিছু নেই",
+  "@salesDashboardsEmptyTitle": {
+    "description": "Module dashboard: empty state title"
+  },
+  "salesDashboardsEmptyMessage": "কাজ শুরু হলে বা অনুমতি পেলে সংখ্যাগুলো এখানে আসবে।",
+  "@salesDashboardsEmptyMessage": {
+    "description": "Module dashboard: empty state message"
+  },
+  "salesDashboardsReports": "এই মডিউলের রিপোর্ট",
+  "@salesDashboardsReports": {
+    "description": "Module dashboard: button that opens the module reports"
+  },
+  "salesDashboardsReportsTitle": "{name} — রিপোর্ট",
+  "@salesDashboardsReportsTitle": {
+    "description": "Module dashboard: the reports screen title; name is the dashboard name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "salesDashboardsOverviewLoadFailed": "বিক্রয়ের হালচাল আনা গেল না।",
+  "@salesDashboardsOverviewLoadFailed": {
+    "description": "Sales overview: could not be loaded"
+  },
+  "salesDashboardsOverviewTitle": "বিক্রয়ের হালচাল",
+  "@salesDashboardsOverviewTitle": {
+    "description": "Sales overview: screen title"
+  },
+  "salesDashboardsSalesModule": "বিক্রয়",
+  "@salesDashboardsSalesModule": {
+    "description": "Sales overview: the module name in the bar crumbs"
+  },
+  "salesDashboardsOverviewNoAccess": "এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।",
+  "@salesDashboardsOverviewNoAccess": {
+    "description": "Sales overview: every figure is hidden from this person"
+  },
+  "salesDashboardsNoKeyLong": "চাবি নেই — দেখার অনুমতি লাগে",
+  "@salesDashboardsNoKeyLong": {
+    "description": "Dashboards: a hidden figure on a stat card"
+  },
+  "salesDashboardsRefresh": "নতুন করে দেখুন",
+  "@salesDashboardsRefresh": {
+    "description": "Dashboards: empty-state button that loads again"
+  },
+  "salesDashboardsGrandTotal": "সর্বমোট",
+  "@salesDashboardsGrandTotal": {
+    "description": "Dashboards: the total row under a short list"
+  }
+}

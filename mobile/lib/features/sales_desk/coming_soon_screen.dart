@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
@@ -11,11 +12,12 @@ class ComingSoonScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AbosScreenBar(title: title.isEmpty ? 'শীঘ্রই আসছে' : title),
-        body: const EmptyState(
+        appBar: AbosScreenBar(title: title.isEmpty ? context.l10n.salesDeskComingSoonTitle : title),
+        body: EmptyState(
           icon: Icons.construction_outlined,
-          title: 'শীঘ্রই আসছে',
-          message: 'এই পর্দাটা এখনো তৈরি হচ্ছে। তৈরি হলে এখানেই খুলবে।',
+          title: context.l10n.salesDeskComingSoonTitle,
+          message: context.l10n.salesDeskComingSoonMessage,
         ),
+
       );
 }

@@ -228,6 +228,282 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'বের হওয়া'**
   String get avatarMenuSignOut;
+
+  /// Coming-soon screen: bar title when none is given, and the empty-state title
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে'**
+  String get salesDeskComingSoonTitle;
+
+  /// Coming-soon screen: the message under the title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই পর্দাটা এখনো তৈরি হচ্ছে। তৈরি হলে এখানেই খুলবে।'**
+  String get salesDeskComingSoonMessage;
+
+  /// Today's deliveries: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get deliveriesTodayLoadFailed;
+
+  /// Today's deliveries: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে আজকের ডেলিভারি এখনো আসেনি — অফিসে জানান।'**
+  String get deliveriesTodayNotOnServer;
+
+  /// Today's deliveries: the next page could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'পরের পাতা আনা গেল না। আবার চেষ্টা করুন।'**
+  String get deliveriesTodayMoreFailed;
+
+  /// Today's deliveries: notice after a partial hand-over; no is the challan number
+  ///
+  /// In bn, this message translates to:
+  /// **'{no}: আংশিক পৌঁছেছে — কম আর ভাঙা মাল ফেরতের কাগজে উঠেছে।'**
+  String deliveriesTodayPartlyDelivered(String no);
+
+  /// Today's deliveries: notice after a full hand-over; no is the challan number, receiver the person's name
+  ///
+  /// In bn, this message translates to:
+  /// **'{no}: পৌঁছেছে — {receiver} বুঝে নিলেন।'**
+  String deliveriesTodayDelivered(String no, String receiver);
+
+  /// Today's deliveries: the hand-over could not be saved
+  ///
+  /// In bn, this message translates to:
+  /// **'পৌঁছানো লেখা গেল না। আবার চেষ্টা করুন।'**
+  String get deliveriesTodaySaveFailed;
+
+  /// Today's deliveries: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের ডেলিভারি'**
+  String get deliveriesTodayTitle;
+
+  /// Today's deliveries: total strip label (all pages)
+  ///
+  /// In bn, this message translates to:
+  /// **'পথে মোট চালান'**
+  String get deliveriesTodayTotalLabel;
+
+  /// Today's deliveries: total strip value, the number of challans
+  ///
+  /// In bn, this message translates to:
+  /// **'{count} টি'**
+  String deliveriesTodayTotalValue(String count);
+
+  /// Today's deliveries: nothing on the road
+  ///
+  /// In bn, this message translates to:
+  /// **'পথে কোনো চালান নেই।'**
+  String get deliveriesTodayEmpty;
+
+  /// Today's deliveries: the vehicle on a card
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি {vehicle}'**
+  String deliveriesTodayVehicle(String vehicle);
+
+  /// Today's deliveries: the driver on a card
+  ///
+  /// In bn, this message translates to:
+  /// **'চালক {driver}'**
+  String deliveriesTodayDriver(String driver);
+
+  /// Today's deliveries: button that records the hand-over to the buyer
+  ///
+  /// In bn, this message translates to:
+  /// **'বুঝিয়ে দিন'**
+  String get deliveriesTodayHandOver;
+
+  /// Today's deliveries: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও দেখুন'**
+  String get deliveriesTodayMore;
+
+  /// My route: the weekday on the day button (mon … sat, other = Sunday)
+  ///
+  /// In bn, this message translates to:
+  /// **'{day, select, mon{সোমবার} tue{মঙ্গলবার} wed{বুধবার} thu{বৃহস্পতিবার} fri{শুক্রবার} sat{শনিবার} other{রবিবার}}'**
+  String routeMyWeekday(String day);
+
+  /// My route: the route could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'রুট আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get routeMyLoadFailed;
+
+  /// My route: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে রুটের দরজা এখনো আসেনি — অফিসে জানান।'**
+  String get routeMyNotOnServer;
+
+  /// My route: date picker heading
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন দিনের রুট'**
+  String get routeMyPickDay;
+
+  /// My route: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'আজকের রুট'**
+  String get routeMyTitle;
+
+  /// My route: error card title
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get routeMyErrorTitle;
+
+  /// My route: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই দিনে কোনো রুট নেই'**
+  String get routeMyNoRouteTitle;
+
+  /// My route: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'সাপ্তাহিক ছকে এই দিনে আপনার নামে রুট বসানো নেই — অফিসে জানান।'**
+  String get routeMyNoRouteMessage;
+
+  /// My route: a shop's sales this month; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'এ মাসে বিক্রি: {amount}'**
+  String routeMyMonthSales(String amount);
+
+  /// My route: a shop's collections this month; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'এ মাসে আদায়: {amount}'**
+  String routeMyMonthCollections(String amount);
+
+  /// My route: what the shop owes; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বকেয়া: {amount}'**
+  String routeMyOutstanding(String amount);
+
+  /// My route: load the next page of shops
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও দোকান'**
+  String get routeMyMoreShops;
+
+  /// Business dashboards: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ড্যাশবোর্ডের তালিকা আনা গেল না।'**
+  String get salesDashboardsListLoadFailed;
+
+  /// Business dashboards: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যবসার ড্যাশবোর্ড'**
+  String get salesDashboardsTitle;
+
+  /// Dashboards: the module name in the bar crumbs
+  ///
+  /// In bn, this message translates to:
+  /// **'ড্যাশবোর্ড'**
+  String get salesDashboardsModule;
+
+  /// Business dashboards: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনার জন্য কোনো ড্যাশবোর্ড নেই'**
+  String get salesDashboardsNoneTitle;
+
+  /// Business dashboards: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো মডিউলের ড্যাশবোর্ড দেখার অনুমতি পেলে এখানে আসবে।'**
+  String get salesDashboardsNoneMessage;
+
+  /// Dashboards: a figure this person has no key (permission) to see, short form
+  ///
+  /// In bn, this message translates to:
+  /// **'চাবি নেই'**
+  String get salesDashboardsNoKey;
+
+  /// Module dashboard: could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'ড্যাশবোর্ড আনা গেল না।'**
+  String get salesDashboardsLoadFailed;
+
+  /// Module dashboard: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ড্যাশবোর্ডে এখনো কিছু নেই'**
+  String get salesDashboardsEmptyTitle;
+
+  /// Module dashboard: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজ শুরু হলে বা অনুমতি পেলে সংখ্যাগুলো এখানে আসবে।'**
+  String get salesDashboardsEmptyMessage;
+
+  /// Module dashboard: button that opens the module reports
+  ///
+  /// In bn, this message translates to:
+  /// **'এই মডিউলের রিপোর্ট'**
+  String get salesDashboardsReports;
+
+  /// Module dashboard: the reports screen title; name is the dashboard name
+  ///
+  /// In bn, this message translates to:
+  /// **'{name} — রিপোর্ট'**
+  String salesDashboardsReportsTitle(String name);
+
+  /// Sales overview: could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়ের হালচাল আনা গেল না।'**
+  String get salesDashboardsOverviewLoadFailed;
+
+  /// Sales overview: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়ের হালচাল'**
+  String get salesDashboardsOverviewTitle;
+
+  /// Sales overview: the module name in the bar crumbs
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get salesDashboardsSalesModule;
+
+  /// Sales overview: every figure is hidden from this person
+  ///
+  /// In bn, this message translates to:
+  /// **'এই পর্দার কোনো সংখ্যা দেখার অনুমতি আপনার নেই।'**
+  String get salesDashboardsOverviewNoAccess;
+
+  /// Dashboards: a hidden figure on a stat card
+  ///
+  /// In bn, this message translates to:
+  /// **'চাবি নেই — দেখার অনুমতি লাগে'**
+  String get salesDashboardsNoKeyLong;
+
+  /// Dashboards: empty-state button that loads again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get salesDashboardsRefresh;
+
+  /// Dashboards: the total row under a short list
+  ///
+  /// In bn, this message translates to:
+  /// **'সর্বমোট'**
+  String get salesDashboardsGrandTotal;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
