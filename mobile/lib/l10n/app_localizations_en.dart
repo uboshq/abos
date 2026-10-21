@@ -1001,7 +1001,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String offerBenefitCredit(String amount) {
-    return '$amount sent back as credit on the next purchase';
+    return '$amount returned as credit on the next purchase';
   }
 
   @override
@@ -1470,7 +1470,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String todaySalesBilledReturned(String billed, String returned) {
-    return 'Billed $billed · Sent back $returned';
+    return 'Billed $billed · Returns $returned';
   }
 
   @override
@@ -3682,7 +3682,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get ownerReportProfitByCustomerHint =>
-      'Each bill line\'s actual FIFO cost, as drawn from the layers when the bill was posted; goods sent back come off at their own cost.';
+      'Each bill line\'s actual FIFO cost, as drawn from the layers when the bill was posted; returned goods come off at their own cost.';
 
   @override
   String get ownerReportsTitle => 'Reports';

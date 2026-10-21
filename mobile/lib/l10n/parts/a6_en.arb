@@ -363,7 +363,7 @@
   "ownerHistoryTrend": "{figure} — last {days} days, from the nightly records",
   "ownerHistoryMonthBefore": "Same day last month",
   "ownerReportProfitByCustomer": "Profit by customer",
-  "ownerReportProfitByCustomerHint": "Each bill line's actual FIFO cost, as drawn from the layers when the bill was posted; goods sent back come off at their own cost.",
+  "ownerReportProfitByCustomerHint": "Each bill line's actual FIFO cost, as drawn from the layers when the bill was posted; returned goods come off at their own cost.",
   "ownerReportsTitle": "Reports",
   "ownerReportsFailed": "The reports page could not be loaded.",
   "ownerReportsCentre": "Report centre — every report",
