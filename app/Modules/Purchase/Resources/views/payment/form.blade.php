@@ -70,6 +70,9 @@
                 <p data-pay-meta class="mt-1 text-xs text-(--color-ink-muted)">
                     {{ $isNew ? __('money.screen.meta.number_on_save') : __('money.screen.meta.number', ['no' => $payment->document_no]) }}
                     · {{ __('money.screen.meta.maker', ['name' => $maker ?? '—']) }}
+                    @if ($firstSigner !== null)
+                        · <span data-pay-signer>{{ __('money.screen.meta.signer', ['who' => $firstSigner['who'] !== '' ? $firstSigner['who'] : '—', 'levels' => $firstSigner['levels']]) }}</span>
+                    @endif
                     · <span @class(['text-(--color-danger)' => $year !== null && ! $year->isOpen()])>{{ $year !== null && ! $year->isOpen() ? __('money.screen.meta.month_closed') : __('money.screen.meta.month_open') }}</span>
                 </p>
             </div>

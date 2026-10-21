@@ -91,6 +91,7 @@ return [
             'number' => 'No.: :no',
             'number_on_save' => 'No.: assigned on save (SP-…)',
             'maker' => 'Made by: :name',
+            'signer' => 'Signs: :who (step 1/:levels)',
             'month_open' => 'Month open ✓',
             'month_closed' => 'Month closed — will not post',
         ],

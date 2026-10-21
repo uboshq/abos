@@ -107,6 +107,7 @@ return [
             'number' => 'নম্বর: :no',
             'number_on_save' => 'নম্বর: সংরক্ষণে বসবে (SP-…)',
             'maker' => 'বানালেন: :name',
+            'signer' => 'সই দেবেন: :who (ধাপ 1/:levels)',
             'month_open' => 'মাস খোলা ✓',
             'month_closed' => 'মাস বন্ধ — পোস্ট হবে না',
         ],

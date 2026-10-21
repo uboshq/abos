@@ -295,6 +295,8 @@ class PaymentController extends Controller implements HasMiddleware
              * (নকশা #১১)। ⓘ পোস্টের মুহূর্তে আসল বিচার [[DocumentApproval::assertClear()]]-এর; এটা কেবল বোতামের নাম।
              */
             'signatures' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires('purchase', 'payment', null, class_basename(Payment::class)),
+            // ⭐ মাথায় "সই দেবেন: … (ধাপ 1/N)" — একই ছক, একই শর্ত (মিল-তালিকা #৪; [[ApprovalEngine::firstSigner()]])
+            'firstSigner' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->firstSigner('purchase', 'payment', null, class_basename(Payment::class)),
             'threeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true),
             'modes' => \App\Modules\MasterData\Models\TransferMode::query()->orderBy('code')->get()
                 ->mapWithKeys(fn ($m) => [$m->id => $m->name_en ?: $m->code])->all(),

@@ -362,6 +362,30 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertMatchesRegularExpression('/data-pay-primary[^>]*>\s*'.preg_quote(e(__('money.screen.post')), '/').'\s*</u', $html,
             '⛔ #১১: সই বন্ধ কোম্পানিতে মূল বোতাম "পোস্ট" নয়');
         $this->assertStringContainsString(e(__('money.screen.draft')), $html);
+        $this->assertStringNotContainsString('data-pay-signer', $html, '⛔ #৪: সই বন্ধ, অথচ মাথায় "সই দেবেন" লেখা');
+    }
+
+    /** ⭐ মিল-তালিকা #৪ — সই চালু থাকলে মাথায় প্রথম সইকারী আর মোট ধাপ, পোস্টের একই ছক থেকে */
+    public function test_gap_4_the_head_names_who_signs_first_and_how_many_steps(): void
+    {
+        $role = \Spatie\Permission\Models\Role::query()->create(['name' => 'Payment manager', 'guard_name' => 'web', 'company_id' => $this->company->id]);
+        // ⓘ নমুনা-তথ্যে বন্ধ ছক থাকতে পারে (একই চাবি অনন্য) — তাই সেটাকেই চালু করা, ধাপ নতুন করে
+        $flow = \App\Models\ApprovalFlow::query()->updateOrCreate(
+            ['company_id' => $this->company->id, 'module' => 'purchase', 'action' => 'payment', 'document_type' => ''],
+            ['threshold_amount' => null, 'is_active' => true],
+        );
+        \App\Models\ApprovalFlowStep::query()->where('approval_flow_id', $flow->id)->delete();
+        $flow->conditions()->delete();
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'role', 'approver_id' => $role->id]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 2, 'approver_type' => 'user', 'approver_id' => $this->owner->id]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<span data-pay-signer>\s*'.preg_quote(e(__('money.screen.meta.signer', ['who' => 'Payment manager', 'levels' => 2])), '/').'\s*<\/span>/u', $html,
+            '⛔ #৪: সই চালু, অথচ মাথায় "সই দেবেন: Payment manager (ধাপ 1/2)" নেই');
+        $this->assertMatchesRegularExpression('/data-pay-primary[^>]*>\s*'.preg_quote(e(__('money.screen.send')), '/').'\s*</u', $html,
+            '⛔ #৪: মাথা সই বলছে, অথচ বোতাম "পোস্ট"');
     }
 
     public function test_item_24_the_paying_accounts_balance_is_on_the_screen(): void
