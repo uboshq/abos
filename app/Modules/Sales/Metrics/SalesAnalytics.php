@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Metrics;
 
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\Branch;
@@ -12,7 +13,6 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\SalesInvoice;
-use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\SalesTarget;
@@ -171,14 +171,14 @@ final class SalesAnalytics
     }
 
     /**
-     * সময়কালে যা বিল হলো তার কতটা আদায় হয়নি — নিট বিক্রয় − আদায়।
-     *
-     * ⓘ দুইটা ভাগ করা সংখ্যার বিয়োগ, নতুন কোনো গোনা নয়। ⚠️ ঋণাত্মক হতে
-     * পারে, আর সেটা সুখবর: পুরনো বকেয়া এই সময়ে উঠে এসেছে।
+     * এই সময়ে পাওনা কত বাড়ল — বিক্রি নয়, গ্রাহকের পাওনার নড়াচড়া ([[SalesMetrics::receivableMovement()]], fe, ২১ অক্টোবর ২০২৬):
+     * বিল (VAT সহ) − ফেরত (VAT সহ, ফেরতের তারিখে) − আদায়। ⓘ গ্রাহক VAT-ও দেন, তাই এখানে VAT থাকে; এটা নিট বিক্রি নয়।
+     * ⚠️ ঋণাত্মক হতে পারে, আর সেটা সুখবর: পাওনা কমল — পুরনো বকেয়া এই সময়ে উঠে এসেছে। ⛔ আগে বিলের মোট − আদায়:
+     * ফেরত ধরা হত না, তাই ফেরত আসা মাল নতুন বাকি দেখাত।
      */
     public function outstanding(string $from, string $to): string
     {
-        return bcsub(SalesMetrics::invoiceTotal($from, $to), $this->collection($from, $to), 4);
+        return SalesMetrics::receivableMovement($from, $to);
     }
 
     /**
@@ -232,12 +232,8 @@ final class SalesAnalytics
     {
         $start = $end->copy()->subDays(self::DAYS - 1);
 
-        $byDay = $this->posted($start->toDateString(), $end->toDateString())
-            ->selectRaw('trx_date as d, COALESCE(SUM(total), 0) as amount')
-            ->groupBy('trx_date')
-            ->toBase()
-            ->get()
-            ->mapWithKeys(fn ($r) => [Carbon::parse($r->d)->toDateString() => (string) $r->amount]);
+        // ⭐ দিনের নিট বিক্রি — VAT আর ফেরত বাদে, ফেরত নিজের দিনে ([[SalesMetrics::netByDay()]]; fe, ২১ অক্টোবর ২০২৬)
+        $byDay = SalesMetrics::netByDay($start->toDateString(), $end->toDateString());
 
         $out = [];
 
@@ -334,51 +330,45 @@ final class SalesAnalytics
     // ── ভাগ ────────────────────────────────────────────────────────────
 
     /**
-     * সবচেয়ে বড় ক্রেতা — নিট বিক্রয় ধরে।
+     * সবচেয়ে বড় ক্রেতা — নিট বিক্রি ধরে (VAT আর ফেরত বাদে, [[SalesMetrics::netBy()]]; fe, ২১ অক্টোবর ২০২৬); ভাগ নিট বিক্রির মোটে।
+     * ⓘ নাম "নাম · পয়েন্ট · শাখা" ([[PartyRegistry::labelsOf()]], মালিকের স্থায়ী নিয়ম)। ⓘ সমান হলে আগের id আগে।
      *
      * @return list<array{id: int, name: string, count: int, amount: string, share: ?string}>
      */
     public function topCustomers(string $from, string $to): array
     {
-        $rows = $this->posted($from, $to)
-            ->selectRaw('customer_id, COUNT(*) as n, COALESCE(SUM(total), 0) as amount')
-            ->groupBy('customer_id')
-            ->orderByRaw('SUM(total) desc')
-            ->orderBy('customer_id')
-            ->limit(self::TOP)
-            ->toBase()
-            ->get();
+        $rows = collect(SalesMetrics::netBy($from, $to, 'sal_invoices.customer_id', 'sal_returns.customer_id'))
+            ->map(fn (array $p, int|string $id): array => ['id' => (int) $id, 'count' => $p['count'], 'amount' => $p['net']])
+            ->sort(fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 4) ?: $a['id'] <=> $b['id'])
+            ->take(self::TOP)
+            ->values();
 
-        $names = Customer::query()->whereIn('id', $rows->pluck('customer_id'))->get()
-            ->mapWithKeys(fn (Customer $c) => [$c->id => $c->name()]);
-        $net = SalesMetrics::invoiceTotal($from, $to);
+        $names = $rows->isEmpty() ? [] : app(PartyRegistry::class)->labelsOf($rows->map(fn (array $r) => ['customer', $r['id']])->all());
+        $net = SalesMetrics::net($from, $to);
 
-        return $rows->map(fn ($r): array => [
-            'id' => (int) $r->customer_id,
-            'name' => (string) ($names[$r->customer_id] ?? '—'),
-            'count' => (int) $r->n,
-            'amount' => Money::of($r->amount),
-            'share' => self::share(Money::of($r->amount), $net),
-        ])->values()->all();
+        return $rows->map(fn (array $r): array => [
+            'id' => $r['id'],
+            'name' => (string) ($names['customer:'.$r['id']] ?? '—'),
+            'count' => $r['count'],
+            'amount' => $r['amount'],
+            'share' => self::share($r['amount'], $net),
+        ])->all();
     }
 
     /**
-     * সবচেয়ে বেশি বিকোনো পণ্য — ভ্যাট বাদে বিক্রয় ধরে।
+     * সবচেয়ে বেশি বিকোনো পণ্য — নিট বিক্রি ধরে ([[SalesMetrics::netByProduct()]]; fe, ২১ অক্টোবর ২০২৬)।
      *
-     * ⓘ পণ্যের বিক্রয় `amount − tax` — পণ্যভিত্তিক রিপোর্টের নিয়ম
-     * ([[SalesReports::byProduct()]]): ভ্যাট সরকারের টাকা, পণ্যের আয় নয়।
+     * ⓘ পণ্যের নিট = বিলের সারির নিট ([[LineNetSale]]: VAT আর বিলের ছাড়ের ভাগ বাদে) − ফেরতের সারি, ফেরতের দিনে; পরিমাণও
+     * ফেরত বাদে — পণ্যভিত্তিক রিপোর্টের নিয়ম ([[SalesReports::byProduct()]])। ⛔ আগে `amount − tax`: ফেরত আর বিলের ছাড় ধরা হত না।
      *
      * @return list<array{id: int, name: string, qty: string, amount: string}>
      */
     public function topProducts(string $from, string $to): array
     {
-        $rows = $this->lines($from, $to)
-            ->selectRaw('product_id, COALESCE(SUM(qty), 0) as qty, COALESCE(SUM(amount - tax), 0) as amount')
-            ->groupBy('product_id')
-            ->orderByRaw('SUM(amount - tax) desc')
-            ->orderBy('product_id')
+        $rows = SalesMetrics::netByProduct($from, $to)
+            ->orderByRaw('SUM(x.amount) desc')
+            ->orderBy('x.product_id')
             ->limit(self::TOP)
-            ->toBase()
             ->get();
 
         return $this->withProductNames($rows);
@@ -394,9 +384,8 @@ final class SalesAnalytics
      */
     public function slowProducts(string $from, string $to): array
     {
-        $sold = $this->lines($from, $to)
-            ->selectRaw('product_id, COALESCE(SUM(qty), 0) as qty, COALESCE(SUM(amount - tax), 0) as amount')
-            ->groupBy('product_id');
+        // ⭐ নিট — ফেরতও বাদ ([[SalesMetrics::netByProduct()]]); যে পণ্যের সবটা ফেরত এসেছে সে শূন্যে, ধীরের তালিকায়
+        $sold = SalesMetrics::netByProduct($from, $to);
 
         $rows = Product::query()
             ->where('inv_products.is_active', true)
@@ -415,7 +404,8 @@ final class SalesAnalytics
     }
 
     /**
-     * কে কত বিল কেটেছেন — বিলের `created_by` ধরে।
+     * কে কত বিক্রি করেছেন — নিট বিক্রি (VAT আর ফেরত বাদে), বিলের `created_by` ধরে; ফেরত কমে মূল বিলের মানুষের ঘর থেকে
+     * ([[SalesMetrics::sellerOfReturnSql()]], [[SalespersonReports]]-এর একই নিয়ম; fe, ২১ অক্টোবর ২০২৬)। `count` = বিলের সংখ্যা।
      *
      * ⓘ টার্গেটও এই মানুষটাকেই মাপে (লক্ষ্যমাত্রার মাইগ্রেশনে লেখা
      * কারণ) — কর্মী তালিকা আর লগইনের কোনো বাঁধা সম্পর্ক নেই।
@@ -424,24 +414,23 @@ final class SalesAnalytics
      */
     public function bySeller(string $from, string $to): array
     {
-        $rows = $this->posted($from, $to)
-            ->selectRaw('created_by, COUNT(*) as n, COALESCE(SUM(total), 0) as amount')
-            ->groupBy('created_by')
-            ->orderByRaw('SUM(total) desc')
-            ->orderBy('created_by')
-            ->toBase()
-            ->get();
+        $rows = collect(SalesMetrics::netBy($from, $to, 'sal_invoices.created_by', SalesMetrics::sellerOfReturnSql()))
+            ->map(fn (array $p, int|string $id): array => [
+                'id' => (string) $id === '' ? null : (int) $id, 'count' => $p['count'], 'amount' => $p['net'],
+            ])
+            ->sort(fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 4) ?: (int) $a['id'] <=> (int) $b['id'])
+            ->values();
 
-        $names = User::query()->whereIn('id', $rows->pluck('created_by')->filter())->pluck('name', 'id');
-        $net = SalesMetrics::invoiceTotal($from, $to);
+        $names = User::query()->whereIn('id', $rows->pluck('id')->filter())->pluck('name', 'id');
+        $net = SalesMetrics::net($from, $to);
 
-        return $rows->map(fn ($r): array => [
-            'id' => $r->created_by === null ? null : (int) $r->created_by,
-            'name' => (string) ($names[$r->created_by] ?? __('sales::overview.nobody')),
-            'count' => (int) $r->n,
-            'amount' => Money::of($r->amount),
-            'share' => self::share(Money::of($r->amount), $net),
-        ])->values()->all();
+        return $rows->map(fn (array $r): array => [
+            'id' => $r['id'],
+            'name' => (string) ($r['id'] === null ? __('sales::overview.nobody') : ($names[$r['id']] ?? __('sales::overview.nobody'))),
+            'count' => $r['count'],
+            'amount' => $r['amount'],
+            'share' => self::share($r['amount'], $net),
+        ])->all();
     }
 
     /**
@@ -458,55 +447,49 @@ final class SalesAnalytics
         // ⓘ নিয়মটা [[SalesArea]]-য় — হোমের ছাঁকনিও ওটাই ডাকে, যাতে দুই উত্তর না হয় (৪ অক্টোবর ২০২৬)
         $level = SalesArea::level();
 
-        $perCustomer = $this->posted($from, $to)
-            ->selectRaw('customer_id, COUNT(*) as n, COALESCE(SUM(total), 0) as amount')
-            ->groupBy('customer_id')
-            ->toBase()
-            ->get();
+        // ⭐ গ্রাহক ধরে নিট বিক্রি (VAT আর ফেরত বাদে, [[SalesMetrics::netBy()]]; fe, ২১ অক্টোবর ২০২৬), তারপর গ্রাহকের জায়গার মই
+        $perCustomer = SalesMetrics::netBy($from, $to, 'sal_invoices.customer_id', 'sal_returns.customer_id');
 
-        $placeOf = Customer::query()->whereIn('id', $perCustomer->pluck('customer_id'))->pluck('location_id', 'id');
+        $placeOf = Customer::query()->whereIn('id', array_keys($perCustomer))->pluck('location_id', 'id');
         $tree = SalesArea::tree();
 
         $buckets = [];
 
-        foreach ($perCustomer as $r) {
-            $node = SalesArea::of($placeOf[$r->customer_id] ?? null, $tree, $level);
+        foreach ($perCustomer as $customerId => $p) {
+            $node = SalesArea::of($placeOf[$customerId] ?? null, $tree, $level);
 
             $key = $node?->id ?? 0;
             $buckets[$key] ??= ['name' => $node?->name() ?? __('sales::overview.unplaced'), 'count' => 0, 'amount' => '0'];
-            $buckets[$key]['count'] += (int) $r->n;
-            $buckets[$key]['amount'] = bcadd($buckets[$key]['amount'], (string) $r->amount, 4);
+            $buckets[$key]['count'] += $p['count'];
+            $buckets[$key]['amount'] = bcadd($buckets[$key]['amount'], $p['net'], 4);
         }
 
         return ['level' => $level, 'rows' => $this->ranked($buckets, $from, $to)];
     }
 
     /**
-     * শাখা ধরে — শাখায় সীমিত মানুষ কেবল নিজের শাখাগুলো (আর শাখাহীন বিল) পান।
+     * শাখা ধরে নিট বিক্রি (VAT আর ফেরত বাদে; ফেরত নিজের শাখায় আর তারিখে — [[SalesMetrics::netBy()]], fe, ২১ অক্টোবর ২০২৬) —
+     * শাখায় সীমিত মানুষ কেবল নিজের শাখাগুলো (আর শাখাহীন বিল) পান।
      *
      * @return list<array{name: string, count: int, amount: string, share: ?string}>
      */
     public function byBranch(string $from, string $to): array
     {
-        $rows = $this->posted($from, $to)
-            ->selectRaw('branch_id, COUNT(*) as n, COALESCE(SUM(total), 0) as amount')
-            ->groupBy('branch_id')
-            ->toBase()
-            ->get();
+        $rows = SalesMetrics::netBy($from, $to, 'sal_invoices.branch_id', 'sal_returns.branch_id');
 
         $names = Branch::query()->withoutGlobalScopes()
             ->where('company_id', CompanyContext::id())
-            ->whereIn('id', $rows->pluck('branch_id')->filter())
+            ->whereIn('id', array_values(array_filter(array_map('intval', array_keys($rows)))))
             ->get()
             ->mapWithKeys(fn (Branch $b) => [$b->id => $b->name()]);
 
         $buckets = [];
 
-        foreach ($rows as $r) {
-            $buckets[(int) $r->branch_id] = [
-                'name' => (string) ($names[$r->branch_id] ?? __('sales::overview.no_branch')),
-                'count' => (int) $r->n,
-                'amount' => Money::of($r->amount),
+        foreach ($rows as $branchId => $p) {
+            $buckets[(int) $branchId] = [
+                'name' => (string) ($names[(int) $branchId] ?? __('sales::overview.no_branch')),
+                'count' => $p['count'],
+                'amount' => $p['net'],
             ];
         }
 
@@ -529,17 +512,6 @@ final class SalesAnalytics
     }
 
     /**
-     * ঐ বিলগুলোর লাইন — বিলের দেয়ালসহ (সাব-কোয়েরিটা মডেলের, তাই শাখাও)।
-     *
-     * @return Builder<SalesInvoiceLine>
-     */
-    private function lines(string $from, string $to): Builder
-    {
-        return SalesInvoiceLine::query()
-            ->whereIn('sales_invoice_id', $this->posted($from, $to)->select('sal_invoices.id'));
-    }
-
-    /**
      * @param  Collection<int, object>  $rows
      * @return list<array{id: int, name: string, qty: string, amount: string}>
      */
@@ -556,14 +528,14 @@ final class SalesAnalytics
     }
 
     /**
-     * টাকা ধরে সাজানো, আর নিট বিক্রয়ে কার কত ভাগ।
+     * টাকা ধরে সাজানো, আর নিট বিক্রিতে কার কত ভাগ — ভিত [[SalesMetrics::net()]] (VAT আর ফেরত বাদে; fe, ২১ অক্টোবর ২০২৬)।
      *
      * @param  array<int|string, array{name: string, count: int, amount: string}>  $buckets
      * @return list<array{name: string, count: int, amount: string, share: ?string}>
      */
     private function ranked(array $buckets, string $from, string $to): array
     {
-        $net = SalesMetrics::invoiceTotal($from, $to);
+        $net = SalesMetrics::net($from, $to);
         $rows = array_values($buckets);
 
         usort($rows, fn (array $a, array $b): int => bccomp($b['amount'], $a['amount'], 4));

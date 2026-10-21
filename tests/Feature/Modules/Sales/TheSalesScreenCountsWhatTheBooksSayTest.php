@@ -397,11 +397,17 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
             bcadd($after['sales.overview.collection']['raw'], '0', 4),
             '⛔ আদায়ের কার্ড নিশ্চিত আদায়ের যোগফল নয় — খসড়া গোনা হয়েছে, বা নিশ্চিতটা বাদ পড়েছে।');
 
-        // বাকি পড়ল = নিট − আদায়, দুইটাই এই পাতার নিজের কার্ড থেকে
+        /*
+         * ⭐ পাওনার নড়াচড়া = বিল (VAT সহ) − ফেরত (VAT সহ) − আদায় — বিক্রি নয় (fe, ২১ অক্টোবর ২০২৬; আগে নিট − আদায়)।
+         * ⓘ আদায় এই পাতার নিজের কার্ড থেকে, বিল আর ফেরত হাতে গোনা (PHP-তে, সারি ধরে)।
+         */
+        $today = Carbon::today()->toDateString();
+        $hand = fn (string $model) => $model::acrossBranches()->whereIn('status', DocumentStatus::POSTED)->whereDate('trx_date', $today)->get()
+            ->reduce(fn (string $c, $paper) => bcadd($c, (string) $paper->total, 4), '0.0000');
         $this->assertSame(
-            bcsub(bcadd($after['sales.overview.net']['raw'], '0', 4), bcadd($after['sales.overview.collection']['raw'], '0', 4), 4),
+            bcsub(bcsub($hand(SalesInvoice::class), $hand(SalesReturn::class), 4), bcadd($after['sales.overview.collection']['raw'], '0', 4), 4),
             bcadd($after['sales.overview.outstanding']['raw'], '0', 4),
-            '⛔ "বাকি পড়ল" নিট বিক্রয় থেকে আদায় বাদ দিয়ে হয় না।',
+            '⛔ পাওনার নড়াচড়া বিল − ফেরত − আদায় নয়।',
         );
         $this->assertSame(bcadd(bcsub($before['sales.overview.outstanding']['raw'], '0', 4), '700', 4),
             bcadd($after['sales.overview.outstanding']['raw'], '0', 4));
