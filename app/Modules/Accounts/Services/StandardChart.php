@@ -261,6 +261,16 @@ final class StandardChart implements ProvisionsCompany
      */
     public const SALES_RETURN = '4110';
 
+    /**
+     * ⭐ নিট বিক্রয়ের খাতগুলো — ৪১০০ − ৪১১০ − ৪১২০ (fe-র D3, IFRS 15; টাকা নেওয়ার নকশা দফা ৪, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আদায়ে দেওয়া ছাড় (৪১২০) বিক্রয়েরই বিপরীত, খরচ নয় — তাই নিট বিক্রয় যেখানে খাতা থেকে গোনা হয় (লাভ-ক্ষতির বিক্রয় ভাগ,
+     * আয়ের পাতা, ফোনের আয়, লাভের ছোট কার্ড) সবাই এই একটা তালিকা পড়ে। ⛔ এক জায়গায় ৪১২০ বাদ পড়লে দুই পর্দা দুই নিট বলত।
+     *
+     * @var list<string>
+     */
+    public const NET_SALES = [self::SALES, self::SALES_RETURN, self::COLLECTION_DISCOUNT];
+
     public const COST_OF_GOODS_SOLD = '5100';
 
     /**

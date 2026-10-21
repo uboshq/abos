@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
+use App\Core\Services\DealerScope;
+use App\Core\Support\AmountInWords;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Approval;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Services\CollectionInput;
+use App\Modules\Sales\Services\CollectionOpenItems;
+use App\Modules\Sales\Services\CollectionPreview;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
@@ -44,6 +52,106 @@ class CollectionApiController extends Controller implements HasMiddleware
             // ⓘ আদায় লেখার প্রস্তুতি — কেবল অফিসের লোক: আদায়ের চাবি আর খাতায় টাকা তোলার চাবি ([[CollectionSync::officeMayCollect()]])
             new Middleware('can:sales.collection.create', only: ['setup']),
             new Middleware('can:accounts.voucher.create', only: ['setup']),
+            // ⭐ টাকা নেওয়ার নকশা ১০০ — a4-এর চুক্তির তিন দরজা; খোলা বিল আর প্রিভিউ কেবল পড়ে, সংযুক্তি কাগজে যোগ করে
+            new Middleware('can:sales.collection.create', only: ['openBills', 'preview', 'attachment']),
+        ];
+    }
+
+    /**
+     * `GET /collections/open-bills?customer=<public_id>` — গ্রাহকের খোলা বিল ও ক্রেডিট, পুরনো আগে (দফা ১, ৩; a4-এর চুক্তি)।
+     *
+     * ⓘ ওয়েবের একই উত্তর ([[CollectionOpenItems::for()]]): বকেয়া = খাতার বকেয়া, বাকির সীমা, সবচেয়ে পুরনো বাকির দিন।
+     * ⛔ গ্রাহক কেবল ফোনে বাছা শাখার, আর SR হলে নিজের ডিলার — নাগালের বাইরে মানে ৪০৪, কিছুই ফাঁস নয় (দফা ১৮)।
+     */
+    public function openBills(Request $request, CollectionOpenItems $openItems): JsonResponse
+    {
+        $data = $request->validate(['customer' => ['required', 'string', 'max:64']]);
+
+        $customer = Customer::query()->inViewedBranch()->with(Customer::PLACE)->where('public_id', $data['customer'])->first();
+
+        abort_if($customer === null || ! app(DealerScope::class)->allowsCustomer((int) $customer->id), 404);
+
+        return response()->json($openItems->for($customer));
+    }
+
+    /**
+     * `POST /collections/preview` — সিঙ্কের আদায়-বদলের একই পাঠানো, আর খাতায় যা যাবে (দফা ১০)। ⛔ কিছুই লেখে না।
+     *
+     * ⓘ ওয়েবের পর্দার একই প্রিভিউ ([[CollectionPreview]] → সেবার সেই লাইন-বানানো যা পোস্ট খাতায় পাঠায়)।
+     */
+    public function preview(Request $request, CollectionPreview $preview): JsonResponse
+    {
+        $payload = $request->all();
+        $in = CollectionInput::fromPhone($payload);
+
+        abort_unless(app(DealerScope::class)->allowsCustomer($in->customerId), 404);
+
+        return response()->json($preview->of($in));
+    }
+
+    /**
+     * `POST /collections/{public_id}/attachment` — স্লিপ, অ্যাডভাইস বা স্ক্রিনশট: JPG, PNG বা PDF, ৫ MB (দফা ১৫)।
+     *
+     * ⓘ ওয়েবের একই ইঞ্জিন আর একই ধরনের তালিকা ([[AttachmentEngine::SLIP]]); কাগজটা এই মানুষের নাগালে না থাকলে ৪০৪।
+     */
+    public function attachment(Request $request, string $id): JsonResponse
+    {
+        $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,pdf']]);
+
+        $collection = ViewedBranch::narrow(Collection::query(), 'sal_collections.branch_id')->where('public_id', $id)->firstOrFail();
+
+        $paper = app(AttachmentEngine::class)->store($request->file('file'), 'sales', Collection::drillSourceType(), (int) $collection->id,
+            maxBytes: AttachmentEngine::SLIP_MAX_BYTES, only: AttachmentEngine::SLIP);
+
+        return response()->json(['id' => (string) ($paper->public_id ?? $paper->id), 'name' => (string) $paper->original_name], 201);
+    }
+
+    /**
+     * ⭐ আদায়ের উত্তর — সিঙ্কের উত্তর আর ফোনের রসিদ একই কথা বলে (a4-এর চুক্তি): নম্বর, অবস্থা (paper_states-এর কোড), টাকা কথায়,
+     * রসিদের PDF, কোন কাগজে কত বসল আর কত অপ্রয়োগকৃত।
+     *
+     * @return array{no: string, state: string, amount_words: string, receipt_pdf: string, applied: list<array{kind: string, no: string, amount: string}>, unapplied: string}
+     */
+    public static function answer(Collection $c): array
+    {
+        $c->loadMissing(['lines.invoice', 'applications']);
+
+        $applied = $c->lines->map(fn (CollectionLine $l) => [
+            'kind' => 'bill',
+            'no' => (string) ($l->invoice?->document_no ?? ''),
+            'amount' => Money::round((string) $l->amount, 4),
+        ])->values()->all();
+
+        foreach ($c->applications as $app) {
+            $no = match ($app->kind) {
+                'credit' => (string) Collection::acrossBranches()->whereKey($app->source_id)->value('document_no'),
+                default => (string) \App\Modules\Accounts\Models\Note::acrossBranches()->whereKey($app->source_id)->value('document_no'),
+            };
+            $applied[] = [
+                'kind' => (string) $app->kind,
+                'no' => $no,
+                'amount' => Money::round(in_array($app->kind, ['credit', 'credit_note'], true) ? '-'.$app->amount : (string) $app->amount, 4),
+            ];
+        }
+
+        $state = match (true) {
+            in_array((string) $c->status, DocumentStatus::POSTED, true) => 'posted',
+            (string) $c->status === DocumentStatus::CANCELLED => 'cancelled',
+            Approval::query()->where('approvable_type', Collection::class)->where('approvable_id', $c->id)->pending()->exists() => 'waiting',
+            default => 'draft',
+        };
+
+        $unapplied = $c->unapplied !== null
+            ? (string) $c->unapplied
+            : bcsub((string) $c->amount, (string) ($c->lines->sum('amount') ?: '0'), 4);
+
+        return [
+            'no' => (string) $c->document_no,
+            'state' => $state,
+            'amount_words' => AmountInWords::of(bcadd((string) $c->amount, '0', 4), 'bn'),
+            'receipt_pdf' => route('sales.print.receipt', $c->id),
+            'applied' => $applied,
+            'unapplied' => Money::round($unapplied, 4),
         ];
     }
 
@@ -71,6 +179,10 @@ class CollectionApiController extends Controller implements HasMiddleware
             ->postable()
             ->with('parent:id,code')->orderBy('code')->get();
 
+        // ⭐ যিনি লিখছেন তাঁর নিজের হাতের নগদ — ফোনে আগে থেকে বাছা (a4-এর চুক্তি, ২১ অক্টোবর ২০২৬; ওয়েবের পর্দার একই ক্রম)
+        $mine = \App\Modules\Accounts\Models\CashTill::query()->heldBy((int) auth()->id())->pluck('account_id')
+            ->map(fn ($id) => (int) $id)->all();
+
         return response()->json([
             'today' => now()->toDateString(),
             'accounts' => $accounts->map(fn (Account $a): array => [
@@ -78,7 +190,11 @@ class CollectionApiController extends Controller implements HasMiddleware
                 'code' => (string) $a->code,
                 'name' => $a->name(),
                 'kind' => $kindOf($a),
+                'mine' => in_array((int) $a->id, $mine, true),
             ])->values(),
+            // ⭐ ব্যাংক ট্রান্সফারের মোড — পাঠানোর `transfer_mode_id` এখান থেকে (cb-র পদ্ধতির ব্লকের একই তালিকা)
+            'transfer_modes' => \App\Modules\MasterData\Models\TransferMode::query()->active()->orderBy('code')->get()
+                ->map(fn ($m): array => ['id' => (string) $m->public_id, 'code' => (string) $m->code, 'name' => $m->name()])->values(),
         ]);
     }
 
@@ -135,6 +251,12 @@ class CollectionApiController extends Controller implements HasMiddleware
                 'invoice' => (string) ($l->invoice?->document_no ?? ''),
                 'amount' => Money::round((string) $l->amount, 4),
             ])->values(),
+            // ⭐ নকশা ১০০ — গ্রাহক যা কেটে রাখলেন, ছাড়/রাউন্ডিং, আর সিঙ্কের উত্তরের একই ঘর ([[answer()]])
+            'vds' => Money::round((string) ($collection->vds ?? '0'), 4),
+            'ait' => Money::round((string) ($collection->ait ?? '0'), 4),
+            'difference' => filled($collection->difference_kind)
+                ? ['kind' => (string) $collection->difference_kind, 'amount' => Money::round((string) $collection->difference_amount, 4)] : null,
+            ...self::answer($collection),
         ]);
     }
 

@@ -203,12 +203,13 @@ final class SyncService
                     'message' => __('sync.same_key_other_content'), 'entityId' => $existing->applied_entity_id];
             }
 
-            return array_filter([
+            // ⭐ একই বদল দ্বিতীয়বার — প্রথমবারের মতোই উত্তর, বাড়তি তথ্যসহ ([[AnswersAfterSync]]; নেট গেলে আবার চাপলেও একটাই)
+            return $this->withAnswer(array_filter([
                 'changeId' => $change->changeId,
                 'status' => $existing->isSettled() ? SyncChange::DUPLICATE : $existing->status,
                 'message' => $existing->message,
                 'entityId' => $existing->applied_entity_id,
-            ], fn ($value) => $value !== null);
+            ], fn ($value) => $value !== null), $this->registry->forEntityType($change->entityType));
         }
 
         $handler = $this->registry->forEntityType($change->entityType);
@@ -349,11 +350,40 @@ final class SyncService
             throw $failure;
         }
 
-        return [
+        return $this->withAnswer([
             'changeId' => $change->changeId,
             'status' => $record->status,
             'entityId' => $record->applied_entity_id,
-        ];
+        ], $handler);
+    }
+
+    /**
+     * ⭐ বসার উত্তরে জিনিসটার নিজের বাড়তি তথ্য — যে জিনিস [[AnswersAfterSync]] মানে (আদায়: নম্বর, অবস্থা, টাকা কথায়, রসিদ…)।
+     *
+     * ⓘ উত্তরের চার নাম (`changeId`, `status`, `entityId`, `message`) বদলায় না — বাড়তিগুলো কেবল পাশে বসে। ⛔ বানাতে ভাঙলে
+     * বাড়তিটা বাদ, বসাটা নয় — ফোন যেন "বসেছে" খবর হারিয়ে একই টাকা আবার না পাঠায়।
+     *
+     * @param  array<string, mixed>  $outcome
+     * @return array<string, mixed>
+     */
+    private function withAnswer(array $outcome, mixed $handler): array
+    {
+        $id = $outcome['entityId'] ?? null;
+
+        if (! $handler instanceof \App\Core\Contracts\AnswersAfterSync || ! is_string($id) || $id === ''
+            || ! in_array($outcome['status'] ?? null, [SyncChange::APPLIED, SyncChange::DUPLICATE], true)) {
+            return $outcome;
+        }
+
+        try {
+            $extra = $handler->answerFor($id);
+        } catch (Throwable $failure) {
+            report($failure);
+
+            return $outcome;
+        }
+
+        return [...array_diff_key($extra, array_flip(['changeId', 'status', 'entityId', 'message'])), ...$outcome];
     }
 
     /**

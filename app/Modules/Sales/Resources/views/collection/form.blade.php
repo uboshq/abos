@@ -1,206 +1,461 @@
 {{--
-    আদায় — টাকা এসেছে।
+    ⭐ টাকা নেওয়া — মালিকের নকশা ১০০, পাতা ২ (মালিকের-ফাইল/টাকা-নেওয়া-দেওয়া-চূড়ান্ত-নকশা-১০০-২১-অক্টোবর.pdf; ২১ অক্টোবর ২০২৬)।
 
-    লাইনগুলো পণ্যের নয়, বিলের: এক টাকা কয়েকটা বিলে ভাগ হতে পারে। ভাগটা
-    না রাখলে "কোন বিলটা এখনো বাকি" প্রশ্নের উত্তর থাকত না, শুধু মোট বকেয়া
-    জানা যেত।
+    ⓘ বাঁয়ে তিন কার্ড — সাধারণ তথ্য, খোলা বিল ও ক্রেডিট, সংযুক্তি ও বিবরণ; ডানে তিন — হিসাবের সারাংশ, খাতায় যা যাবে,
+    নিয়ন্ত্রণ; মাথায় তিন অঙ্ক; নিচে স্থির পট্টি "বাতিল · খসড়া রাখুন · পোস্ট"। "পোস্ট" নিশ্চিতের আগের সারাংশ দেখায় খাতার
+    লাইনসহ ([[CollectionController::overviewNew()]])।
+    ⓘ হিসাব সব সার্ভারে ([[CollectionService]]) — পর্দা কেবল দেখায় আর পাঠায়; "খাতায় যা যাবে" সার্ভারের প্রিভিউ, পোস্টের একই লাইন।
+    ⛔ CSP-Alpine: এক্সপ্রেশনে কেবল ঘরের নাম আর মেথড ([[collection.js]])।
 --}}
 @php
     $isNew = ! $collection->exists;
+    $money = fn ($v) => $v === null || $v === '' ? '' : number_format((float) $v, 2, '.', '');
 
-    // বিল ধরে খোলা হলে ওই বিলের বকেয়াটাই আগে থেকে বসে
-    $rows = $isNew && $invoice
-        ? [['sales_invoice_id' => (string) $invoice->id, 'amount' => $invoice->dueAmount()]]
-        : $collection->lines->map(fn ($l) => [
-            'sales_invoice_id' => (string) $l->sales_invoice_id,
-            'amount' => (string) $l->amount,
-        ])->all();
-
-    $existing = old('lines', $rows);
+    // ⓘ টাকার খাতের ধরন — `data-kind`, cb-র পদ্ধতির ব্লক খাত দেখে পদ্ধতি সরায় ([[moneyMethod]])
+    $kinds = $accounts->mapWithKeys(fn ($a) => [$a->id => in_array($a->money_kind, ['cash', 'bank', 'mfs'], true) ? $a->money_kind : 'cash'])->all();
 
     /*
-     * খোলা বিলগুলো JS-এর হাতে — **গ্রাহকের নম্বরসহ**।
-     *
-     * ── কী ভাঙা ছিল, ২৯ আগস্ট ২০২৬ ─────────────────────────────────
-     * লাইভে ৩২ জন গ্রাহকের কাছ থেকে টাকা নিতে গিয়ে ৩১ বার এসেছে
-     * **"বিলটা অন্য গ্রাহকের।"** কারণ তালিকাটা ছিল সব গ্রাহকের সব
-     * খোলা বিলের, আর গ্রাহক বদলালেও ওটা বদলাত না।
-     *
-     * সার্ভার ঠিকই আটকাত — কিন্তু ভুল পছন্দটা আগে **দেখানোই** হত।
-     * ডিপোতে ৩২ জন গ্রাহক আর শয়ে শয়ে বিল; ওই তালিকা থেকে ঠিক বিলটা
-     * খুঁজে বের করা এক জিনিস, আর ভুলটা বেছে সেভ টিপে ফেরত আসা আরেক।
-     *
-     * ── কেন সার্ভারে না গিয়ে এখানেই ছাঁকা ──────────────────────────
-     * বিলগুলো ইতিমধ্যেই পাতায় আছে। গ্রাহক বদলালে সার্ভারে যাওয়া মানে
-     * প্রতিটা বাছাইয়ে একটা করে অনুরোধ, আর ডিপোর লাইনে দাঁড়ানো
-     * মানুষের সামনে ওই অপেক্ষাটা টের পাওয়া যায়।
+     * ⓘ আগে বাছা সারি — public_id ধরে (পর্দার খোলা কাগজের `id`): ভুল নিয়ে ফেরা ফর্মে old(), খসড়া খুললে কাগজের নিজের সারি
+     * (বিলের পুরো অঙ্ক = টাকার অংশ + ক্রেডিটের অংশ), বিল ধরে খুললে সেই বিলের বকেয়া।
      */
-    $openList = $openInvoices->map(fn ($open) => [
-        'id' => (string) $open->id,
-        'customer_id' => (string) $open->customer_id,
-        'label' => $open->document_no.' — '.\App\Core\Support\Money::format($open->dueAmount()),
-        'due' => (string) $open->dueAmount(),
-        // ⓘ "পুরনো বিল আগে" বয়সের ক্রমে বসায় (অডিট ম১)
-        'date' => \Illuminate\Support\Carbon::parse($open->trx_date)->toDateString(),
-    ])->values();
+    $chosen = [];
+    if (is_array(old('lines'))) {
+        foreach (old('lines') as $line) {
+            if (is_array($line) && filled($line['id'] ?? null)) {
+                $chosen[] = ['id' => (string) $line['id'], 'amount' => (string) ($line['amount'] ?? '0')];
+            }
+        }
+    } elseif (! $isNew) {
+        $bills = [];
+        foreach ($collection->lines as $line) {
+            $key = (string) $line->invoice?->public_id;
+            $bills[$key] = bcadd($bills[$key] ?? '0', (string) $line->amount, 4);
+        }
+        foreach ($collection->applications as $app) {
+            $source = $app->kind === 'credit'
+                ? \App\Modules\Sales\Models\Collection::acrossBranches()->whereKey($app->source_id)->value('public_id')
+                : \App\Modules\Accounts\Models\Note::acrossBranches()->whereKey($app->source_id)->value('public_id');
+            $chosen[] = ['id' => (string) $source, 'amount' => (string) $app->amount];
+            if ($app->target_invoice_id !== null) {
+                $key = (string) \App\Modules\Sales\Models\SalesInvoice::acrossBranches()->whereKey($app->target_invoice_id)->value('public_id');
+                $bills[$key] = bcadd($bills[$key] ?? '0', (string) $app->amount, 4);
+            }
+        }
+        foreach ($bills as $id => $amount) {
+            $chosen[] = ['id' => (string) $id, 'amount' => $amount];
+        }
+    } elseif ($invoice !== null) {
+        $chosen[] = ['id' => (string) $invoice->public_id, 'amount' => $invoice->dueAmount()];
+    }
+
+    $amount = old('amount', $isNew ? ($invoice !== null ? $money($invoice->dueAmount()) : '') : $money($collection->amount));
+    $differenceKind = old('difference.kind', $collection->difference_kind);
+    $differenceAmount = old('difference.amount', $collection->difference_amount !== null && bccomp((string) $collection->difference_amount, '0', 4) > 0 ? $money($collection->difference_amount) : '');
+
+    $roundingLimit = \App\Core\Support\Money::format((string) app(\App\Core\Services\SettingsService::class)
+        ->get('sales.collection.rounding_limit', \App\Modules\Sales\Services\CollectionService::ROUNDING_LIMIT), 0);
+
+    $monthOpen = $open['month_open'] ?? app(\App\Core\Services\OpenPeriod::class)->isOpen(today());
+    $branchName = $open['customer']['branch'] ?? null;
+    $maker = $isNew ? auth()->user()?->name : $collection->creator?->name;
+    $state = ! $isNew && in_array((string) $collection->status, \App\Core\Support\DocumentStatus::POSTED, true) ? 'posted' : 'draft';
+
+    // ⓘ অন্য পক্ষের টাকা নেওয়া এখনো হিসাবের রসিদ ভাউচারে — বোতামগুলো সেখানেই নেয় (দফা ২-এর পক্ষের ধরন)
+    $receiptUrl = Route::has('accounts.voucher.create') && auth()->user()?->can('accounts.voucher.create')
+        ? route('accounts.voucher.create', ['type' => \App\Modules\Accounts\Models\Voucher::RECEIPT]) : null;
+
+    $config = [
+        'customerId' => (string) old('customer_id', $invoice?->customer_id ?? $collection->customer_id ?? ''),
+        'open' => $open,
+        'lines' => $chosen,
+        'amount' => (string) $amount,
+        'vds' => (string) old('vds', $isNew ? '' : $money(bccomp((string) $collection->vds, '0', 4) > 0 ? $collection->vds : null)),
+        'ait' => (string) old('ait', $isNew ? '' : $money(bccomp((string) $collection->ait, '0', 4) > 0 ? $collection->ait : null)),
+        'discount' => $differenceKind === 'discount' ? (string) $differenceAmount : '',
+        'rounding' => $differenceKind === 'rounding' ? (string) $differenceAmount : '',
+        'method' => (string) old('instrument', $collection->instrument ?? 'cash'),
+        'monthOpen' => (bool) $monthOpen,
+        'urls' => [
+            'openItems' => route('sales.collection.open_items'),
+            'preview' => route('sales.collection.preview'),
+        ],
+        'words' => [
+            'limit' => __('sales::collection_form.credit_limit'),
+            'noLimit' => __('sales::collection_form.no_limit'),
+            'oldest' => __('sales::collection_form.oldest'),
+            'days' => __('sales::collection_form.days'),
+            'chips' => [
+                'credit_note' => __('sales::collection_form.chip_credit_note'),
+                'debit_note' => __('sales::collection_form.chip_debit_note'),
+                'credit' => __('sales::collection_form.chip_credit'),
+            ],
+        ],
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ $isNew ? __('sales::action.new_collection') : $collection->document_no }}</x-slot:title>
+    <x-slot:title>{{ $isNew ? __('sales::collection_form.title') : $collection->document_no }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header
-            :title="$isNew ? __('sales::action.new_collection') : $collection->document_no"
-            :subtitle="__('sales::message.collection_note')" />
-    </x-slot:header>
+    {{-- ⓘ cb-র পদ্ধতির ব্লক নিজের মোড়কে আসে; এখানে তার ঘরগুলো সাধারণ তথ্যের চার কলামের গ্রিডে বসে — পদ্ধতি "যে খাতে জমা"-র
+         পাশে, পদ্ধতির ঘরগুলো নিচের সারিতে, নকশার মতো --}}
+    <style @nonce>
+        [data-collection-general] [data-money-method] { display: contents; }
+        [data-collection-general] [data-money-method] > fieldset { grid-column: span 2 / span 2; }
+        [data-collection-general] [data-money-method] > [data-method-block],
+        [data-collection-general] [data-money-method] > [data-charge-line] { grid-column: 1 / -1; }
+        @media (max-width: 1023px) {
+            [data-collection-general] [data-money-method] > fieldset { grid-column: 1 / -1; }
+        }
+    </style>
 
-    <form method="POST"
+    <form method="POST" enctype="multipart/form-data" data-collection-form
           action="{{ $isNew ? route('sales.collection.store') : route('sales.collection.update', $collection) }}"
-          class="space-y-4">
+          data-confirm-overview="{{ route('sales.collection.overview_new') }}"
+          x-data="collectionForm(@js($config))"
+          @money-method.window="moneyChanged($event.detail)"
+          class="flex flex-col gap-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
+        <input type="hidden" name="lines_given" value="1">
 
-        @if ($errors->any())
-            <div role="alert"
-                 class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
-                        text-(--color-badge-danger-ink)">
-                <ul class="list-inside list-disc">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {{-- গ্রাহক বদলালে বিলের তালিকাও বদলায়, আর বাছা বিলটা মুছে
-                     যায় — নাহলে আগের গ্রাহকের বিলটা বাছা অবস্থায় থেকে
-                     যেত আর সেভের সময় ফেরত আসত। --}}
-                <x-ui.select name="customer_id" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->pickerName()])"
-                             :selected="$invoice?->customer_id ?? $collection->customer_id"
-                             placeholder="-" required
-                             {{-- নিজের `x-data` লাগে: Alpine কেবল `x-data`-র
-                                  ভেতরের এলিমেন্টগুলোই পড়ে। বাইরের মোড়কটা
-                                  তুলে দেওয়ায় `@change` কোথাও বাঁধাই হয়নি —
-                                  পর্দায় কোনো ভুল দেখা যেত না, কেবল বিলের
-                                  তালিকা চিরকাল খালি থাকত। --}}
-                             x-data
-                             @change="$dispatch('customer-picked', $event.target.value)" />
-
-                <x-ui.select name="account_id" :label="__('sales::field.account')"
-                             :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->name()])"
-                             :selected="$collection->account_id" placeholder="-" required />
-
-                <x-ui.field name="trx_date" type="date" :label="__('sales::field.date')"
-                            :value="old('trx_date', $collection->trx_date?->toDateString() ?? now()->toDateString())"
-                            required />
-
-                <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
-                            :label="__('sales::field.amount')" numeric required
-                            :value="old('amount', $isNew ? ($invoice?->dueAmount()) : $collection->amount)" />
-
-                <x-ui.field name="instrument" :label="__('sales::field.instrument')"
-                            :value="old('instrument', $collection->instrument)" />
-
-                <x-ui.field name="instrument_no" :label="__('sales::field.instrument_no')"
-                            :value="old('instrument_no', $collection->instrument_no)" />
-
-                <x-ui.field name="instrument_date" type="date" :label="__('sales::field.instrument_date')"
-                            :value="old('instrument_date', $collection->instrument_date?->toDateString())" />
+        {{-- ── মাথা: নাম আর অবস্থা, এক লাইনের তথ্য, ডানে তিন অঙ্ক (দফা ১, ১৩) ── --}}
+        <header data-collection-head class="flex flex-wrap items-end justify-between gap-4">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    @php($tag = \App\Core\Support\PageHeading::tag())
+                    <{{ $tag }} class="text-xl font-semibold">{{ __('sales::collection_form.title') }}</{{ $tag }}>
+                    <x-ui.paper-state :state="$state" />
+                </div>
+                <p class="mt-1 text-sm text-(--color-ink-muted)" data-collection-facts>
+                    {{ __('sales::collection_form.number') }}: {{ $isNew ? __('sales::collection_form.number_on_save') : $collection->document_no }}
+                    · {{ __('sales::collection_form.made_by') }}: {{ $maker ?? '—' }}
+                    · {{ __('sales::collection_form.branch') }}: {{ __('sales::collection_form.customers_branch') }}@if ($branchName) ({{ $branchName }})@endif
+                    · <span data-month-open x-show="monthOpen">{{ __('sales::collection_form.month_open') }}</span><span data-month-closed x-show="!monthOpen" x-cloak class="text-(--color-danger)">{{ __('sales::collection_form.month_closed') }}</span>
+                </p>
             </div>
 
-            <div class="mt-3">
-                <x-ui.field name="narration" :label="__('sales::field.narration')"
-                            :value="old('narration', $collection->narration)" />
-            </div>
-        </section>
+            <dl class="flex flex-wrap gap-6" data-collection-figures>
+                <div>
+                    <dt class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.fig_due') }}</dt>
+                    <dd class="num text-xl font-semibold text-(--color-danger)">৳<span data-fig-due x-text="dueText">0.00</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.fig_this') }}</dt>
+                    <dd class="num text-xl font-semibold text-(--color-success)">৳<span data-fig-this x-text="thisText">0.00</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.fig_left') }}</dt>
+                    <dd class="num text-xl font-semibold">৳<span data-fig-left x-text="leftText">0.00</span></dd>
+                </div>
+            </dl>
+        </header>
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <h2 class="mb-3 font-semibold">{{ __('sales::message.lines') }}</h2>
+        <x-ui.errors />
 
-            <div x-data="invoiceCollection({
-                             customerId: @js((string) old('customer_id', $invoice?->customer_id ?? $collection->customer_id ?? '')),
-                             rows: @js($existing),
-                             open: @js($openList),
-                           })"
-                 @customer-picked.window="pickCustomer($event.detail)">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+            {{-- ════ বাঁ কলাম ════ --}}
+            <div class="flex min-w-0 flex-col gap-4">
 
-                <div class="table-responsive">
-                    <table class="ui-lines table-cards w-full text-sm">
-                        <thead>
-                            <tr>
-                                <th class="text-start">{{ __('sales::field.invoice') }}</th>
-                                <th class="text-end">{{ __('sales::field.amount') }}</th>
-                                <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
-                            </tr>
-                        </thead>
+                {{-- ── সাধারণ তথ্য (দফা ১, ২) ── --}}
+                <section data-boxed data-collection-general aria-labelledby="cf-general"
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <h2 id="cf-general" class="mb-3 font-semibold">{{ __('sales::collection_form.general') }}</h2>
 
-                        <tbody>
-                            <template x-for="(row, i) in rows" :key="i">
-                                <tr class="border-b border-(--color-border)">
-                                    <td class="cell-input" data-label="{{ __('sales::field.invoice') }}">
-                                        <select :id="'co-' + i + '-product'" aria-label="{{ __('sales::field.invoice') }}" :name="'lines[' + (i) + '][sales_invoice_id]'" x-model="row.sales_invoice_id"
-                                                @change="fillDue(row)"
-                                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                                                       bg-(--color-surface-card) px-2">
-                                            <option value="">-</option>
-                                            <template x-for="o in mine" :key="o.id">
-                                                <option :value="o.id" x-text="o.label"></option>
-                                            </template>
-                                        </select>
-                                    </td>
-                                    <td class="cell-input" data-label="{{ __('sales::field.amount') }}">
-                                        <input aria-label="{{ __('sales::field.amount') }}" :id="'co-' + i + '-amount'" :aria-labelledby="'co-' + i + '-amount' + ' ' + 'co-' + i + '-product'" type="number" step="0.01" inputmode="decimal"
-                                               :name="'lines[' + (i) + '][amount]'" x-model="row.amount"
-                                               class="num h-(--spacing-field-compact) w-full sm:w-32 rounded-(--radius-field)
-                                                      border border-(--color-border)
-                                                      bg-(--color-surface-card) px-2 text-end">
-                                    </td>
-                                    <td class="cell-input text-end">
-                                        <button type="button" @click="remove(i)"
-                                                class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
-                                                       hover:bg-(--color-surface-hover)">
-                                            &times;<span class="sr-only">{{ __('sales::action.remove_line') }}</span>
-                                        </button>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {{-- পক্ষের ধরন — এই পর্দা গ্রাহকের; বাকি তিনটা হিসাবের রসিদ ভাউচারে নেয় --}}
+                        <fieldset class="sm:col-span-2 lg:col-span-4" data-party-kind>
+                            <legend class="mb-1 block text-sm font-medium">
+                                {{ __('sales::collection_form.party_kind') }}
+                                <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                            </legend>
+                            <div class="inline-flex flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)">
+                                <span aria-current="page" data-party-kind-chip="customer"
+                                      class="border-e border-(--color-border) bg-(--color-brand-600) px-3 py-2 text-sm font-medium text-white">{{ __('sales::collection_form.kind_customer') }}</span>
+                                @foreach (['supplier' => 'kind_supplier', 'employee' => 'kind_employee', 'other' => 'kind_other'] as $kind => $word)
+                                    @if ($receiptUrl)
+                                        <a href="{{ $receiptUrl }}" data-party-kind-chip="{{ $kind }}"
+                                           class="border-e border-(--color-border) px-3 py-2 text-sm text-(--color-ink-body) last:border-e-0 hover:bg-(--color-surface-hover)">{{ __('sales::collection_form.'.$word) }}</a>
+                                    @else
+                                        <span data-party-kind-chip="{{ $kind }}" aria-disabled="true"
+                                              class="border-e border-(--color-border) px-3 py-2 text-sm text-(--color-ink-muted) last:border-e-0">{{ __('sales::collection_form.'.$word) }}</span>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </fieldset>
+
+                        <div class="sm:col-span-2">
+                            <x-ui.select name="customer_id" id="cf-customer" :label="__('sales::collection_form.customer')"
+                                         :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->pickerName()])"
+                                         :selected="$config['customerId']" placeholder="-" required
+                                         @change="pickCustomer($event.target.value)" />
+                            <p class="mt-1 text-2xs text-(--color-ink-muted)" data-customer-facts x-text="facts"></p>
+                        </div>
+
+                        <x-ui.field name="trx_date" id="cf-date" type="date" :label="__('sales::collection_form.date')"
+                                    :value="old('trx_date', $collection->trx_date?->toDateString() ?? now()->toDateString())"
+                                    required />
+
+                        <div>
+                            <x-ui.field name="amount" id="cf-amount" inputmode="decimal" :label="__('sales::collection_form.amount')"
+                                        numeric required :value="$amount" x-model="amount" @input="changed()" />
+                            <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                                <button type="button" class="text-(--color-link) hover:underline" @click="fillDue()" data-fill-due>{{ __('sales::collection_form.full_due') }}</button>
+                                ·
+                                <button type="button" class="text-(--color-link) hover:underline" @click="fillChosen()" data-fill-chosen>{{ __('sales::collection_form.chosen_bills') }}</button>
+                            </p>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <x-ui.select name="account_id" id="cf-account" :label="__('sales::collection_form.into')"
+                                         :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->code.' · '.$a->name()])"
+                                         :kinds="$kinds" :selected="old('account_id', $collection->account_id)" placeholder="-" required
+                                         @change="changed()" />
+                        </div>
+
+                        {{-- ⭐ cb-র পদ্ধতির ব্লক (দফা ২, ৯) — নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক; প্রতিটার কেবল নিজের ঘর --}}
+                        <x-money.method direction="in" :record="$isNew ? null : $collection" :modes="$transferModes"
+                                        :methods="['cash', 'mfs', 'transfer', 'deposit', 'cheque']"
+                                        money-field="account_id" charge-field="bank_charge" />
+
+                        <p class="text-2xs text-(--color-ink-muted) lg:col-start-2" data-reference-free
+                           x-show="referenceFree" x-cloak>{{ __('sales::collection_form.reference_free') }}</p>
+                    </div>
+
+                    <p role="status" data-over-due x-show="over" x-cloak
+                       class="mt-3 rounded-(--radius-field) border-s-2 border-(--color-warning) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">
+                        {{ __('sales::collection_form.over_due') }}
+                    </p>
+                </section>
+
+                {{-- ── খোলা বিল ও ক্রেডিট (দফা ৩) ── --}}
+                <section data-boxed data-open-items aria-labelledby="cf-open"
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                        <h2 id="cf-open" class="font-semibold">{{ __('sales::collection_form.open_title') }}</h2>
+                        <p class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.open_hint') }}</p>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="ui-grid" data-open-items-table>
+                            <thead>
+                                <tr>
+                                    <th scope="col"><span class="sr-only">{{ __('sales::collection_form.col_tick') }}</span></th>
+                                    <th scope="col">{{ __('sales::collection_form.col_paper') }}</th>
+                                    <th scope="col">{{ __('sales::collection_form.col_date') }}</th>
+                                    <th scope="col">{{ __('sales::collection_form.col_due_date') }}</th>
+                                    <th scope="col" class="num">{{ __('sales::collection_form.col_late') }}</th>
+                                    <th scope="col" class="num">{{ __('sales::collection_form.col_amount') }}</th>
+                                    <th scope="col" class="num">{{ __('sales::collection_form.col_open') }}</th>
+                                    <th scope="col" class="num">{{ __('sales::collection_form.col_apply') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(row, i) in items" :key="row.id">
+                                    <tr data-open-item>
+                                        <td>
+                                            <input type="checkbox" x-model="row.on" @change="touched(row)" :aria-label="row.no"
+                                                   class="size-4 accent-(--color-brand-600)">
+                                        </td>
+                                        <td>
+                                            <a :href="row.url" x-text="row.no" class="text-(--color-link) hover:underline"></a>
+                                            <span x-show="row.chip !== ''" x-text="row.chip"
+                                                  class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)"></span>
+                                            <input type="hidden" :name="'lines[' + i + '][kind]'" :value="row.kind" :disabled="!row.on">
+                                            <input type="hidden" :name="'lines[' + i + '][id]'" :value="row.id" :disabled="!row.on">
+                                            <input type="hidden" :name="'lines[' + i + '][amount]'" :value="row.apply" :disabled="!row.on">
+                                        </td>
+                                        <td x-text="row.date"></td>
+                                        <td x-text="row.dueDate"></td>
+                                        <td class="num" :class="row.lateOn ? 'font-semibold text-(--color-danger)' : ''" x-text="row.late"></td>
+                                        <td class="num" x-text="row.amountText"></td>
+                                        <td class="num" x-text="row.openText"></td>
+                                        <td class="num">
+                                            <input type="text" inputmode="decimal" x-model="row.apply" @input="typed()" :disabled="!row.on"
+                                                   :aria-label="row.no"
+                                                   class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="items.length === 0">
+                                    <td colspan="8" class="text-sm text-(--color-ink-muted)">
+                                        <span x-show="customerId === ''">{{ __('sales::collection_form.pick_customer') }}</span>
+                                        <span x-show="customerId !== ''">{{ __('sales::collection_form.no_items') }}</span>
                                     </td>
                                 </tr>
-                            </template>
-                        </tbody>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td></td>
+                                    <td colspan="5" class="font-semibold">{{ __('sales::collection_form.total_apply') }}</td>
+                                    <td class="num font-semibold" x-text="openTotalText"></td>
+                                    <td class="num font-semibold" data-total-applied x-text="appliedText"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
 
-                        <tfoot>
-                            <tr>
-                                <td class="cell text-end font-medium">{{ __('sales::field.total') }}</td>
-                                <td class="num cell font-semibold" x-text="allocated.toFixed(2)"></td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                {{-- ── সংযুক্তি ও বিবরণ (দফা ১৫) ── --}}
+                <section data-boxed aria-labelledby="cf-attach"
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <h2 id="cf-attach" class="mb-3 font-semibold">{{ __('sales::collection_form.attach_title') }}</h2>
 
-                <div class="mt-2 flex flex-wrap gap-2">
-                    <button type="button" @click="add()"
-                            class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
-                                   transition-colors hover:bg-(--color-surface-hover)">
-                        + {{ __('sales::action.add_line') }}
-                    </button>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label data-slip-drop
+                               class="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-(--radius-field) border border-dashed border-(--color-border-strong) text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)">
+                            <x-ui.icon name="attachment" :size="16" />
+                            <span>{{ __('sales::collection_form.drop') }}</span>
+                            <input type="file" name="slip" class="sr-only" accept="image/jpeg,image/png,image/webp,application/pdf">
+                        </label>
 
-                    {{-- ⭐ পুরনো বিল আগে — টাকার অঙ্ক বয়সের ক্রমে, যতটুকু বাকি ততটুকুই (অডিট ম১; মালিকের নিয়ম) --}}
-                    <button type="button" @click="oldestFirst()" x-show="mine.length > 0" x-cloak
-                            class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
-                                   transition-colors hover:bg-(--color-surface-hover)">
-                        {{ __('sales::action.oldest_bills_first') }}
-                    </button>
-                </div>
+                        <x-ui.field name="narration" id="cf-narration" :label="__('sales::collection_form.narration')"
+                                    :value="old('narration', $collection->narration)" />
+                    </div>
+                </section>
             </div>
-        </section>
 
-        <div class="flex flex-wrap gap-2">
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            <x-ui.button tone="secondary" :href="route('sales.collection.index')">
-                {{ __('core.action.cancel') }}
-            </x-ui.button>
+            {{-- ════ ডান কলাম ════ --}}
+            <div class="flex min-w-0 flex-col gap-4">
+
+                {{-- ── হিসাবের সারাংশ (দফা ৪, ৫) ── --}}
+                <section data-boxed data-collection-summary aria-labelledby="cf-summary"
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <h2 id="cf-summary" class="mb-3 font-semibold">{{ __('sales::collection_form.summary_title') }}</h2>
+
+                    <dl class="flex flex-col gap-2 text-sm">
+                        <div class="flex items-center justify-between gap-3">
+                            <dt>{{ __('sales::collection_form.summary.received') }}</dt>
+                            <dd class="num" data-received x-text="receivedText"></dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt>
+                                <label for="cf-vds">{{ __('sales::collection_form.summary.vds') }}</label>
+                                <span class="ms-1 rounded bg-(--color-badge-warning-bg) px-1.5 text-2xs text-(--color-badge-warning-ink)">{{ __('sales::collection_form.summary.vds_chip') }}</span>
+                            </dt>
+                            <dd><input id="cf-vds" name="vds" type="text" inputmode="decimal" x-model="vds" @input="changed()" placeholder="0.00"
+                                       class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt><label for="cf-ait">{{ __('sales::collection_form.summary.ait') }}</label></dt>
+                            <dd><input id="cf-ait" name="ait" type="text" inputmode="decimal" x-model="ait" @input="changed()" placeholder="0.00"
+                                       class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt>
+                                <label for="cf-discount">{{ __('sales::collection_form.summary.discount') }}</label>
+                                <span class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)" data-owner-signs>{{ __('sales::collection_form.summary.owner_chip') }}</span>
+                            </dt>
+                            <dd><input id="cf-discount" type="text" inputmode="decimal" x-model="discount" @input="changed()" placeholder="0.00"
+                                       class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt><label for="cf-rounding">{{ __('sales::collection_form.summary.rounding', ['limit' => $roundingLimit]) }}</label></dt>
+                            <dd><input id="cf-rounding" type="text" inputmode="decimal" x-model="rounding" @input="changed()" placeholder="0.00"
+                                       class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
+                        </div>
+                        {{-- ⓘ সার্ভার একটাই পার্থক্য নেয় — ছাড় বা রাউন্ডিং ([[CollectionInput]]) --}}
+                        <input type="hidden" name="difference[kind]" :value="diffKind">
+                        <input type="hidden" name="difference[amount]" :value="diffAmount">
+
+                        <div class="flex items-center justify-between gap-3 border-t-2 border-(--color-ink-body) pt-2 font-semibold">
+                            <dt>{{ __('sales::collection_form.summary.applied') }}</dt>
+                            <dd class="num" x-text="appliedText"></dd>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <dt>{{ __('sales::collection_form.summary.unapplied') }}</dt>
+                            <dd class="num" data-unapplied x-text="unappliedText"></dd>
+                        </div>
+                    </dl>
+
+                    <p role="status" data-balanced x-show="balanced"
+                       class="mt-3 rounded-(--radius-field) border-s-4 border-(--color-success) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">
+                        {{ __('sales::collection_form.summary.balanced') }}
+                    </p>
+                    <p role="alert" data-unbalanced x-show="short" x-cloak
+                       class="mt-3 rounded-(--radius-field) border-s-4 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
+                        {{ __('sales::collection_form.summary.unbalanced') }}
+                    </p>
+                    <p role="alert" data-both x-show="both" x-cloak
+                       class="mt-3 rounded-(--radius-field) border-s-4 border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
+                        {{ __('sales::collection_form.summary.both') }}
+                    </p>
+                </section>
+
+                {{-- ── খাতায় যা যাবে (দফা ১০) — সার্ভারের প্রিভিউ, পোস্টের একই লাইন ── --}}
+                <section data-boxed data-ledger-preview aria-labelledby="cf-ledger"
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <div class="mb-3 flex items-baseline justify-between gap-2">
+                        <h2 id="cf-ledger" class="font-semibold">{{ __('sales::collection_form.ledger_title') }}</h2>
+                        <p class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.ledger_hint') }}</p>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="ui-grid" data-ledger-table>
+                            <thead>
+                                <tr>
+                                    <th scope="col">{{ __('sales::collection_form.col_account') }}</th>
+                                    <th scope="col">{{ __('sales::collection_form.col_branch') }}</th>
+                                    <th scope="col" class="num">{{ __('sales::collection_form.col_dr') }}</th>
+                                    <th scope="col" class="num">{{ __('sales::collection_form.col_cr') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(line, n) in ledger" :key="n">
+                                    <tr>
+                                        <td x-text="line.account"></td>
+                                        <td x-text="line.branch"></td>
+                                        <td class="num" x-text="line.dr"></td>
+                                        <td class="num" x-text="line.cr"></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="ledger.length === 0">
+                                    <td colspan="4" class="text-sm text-(--color-ink-muted)">{{ __('sales::collection_form.ledger_empty') }}</td>
+                                </tr>
+                            </tbody>
+                            <tfoot x-show="ledger.length > 0">
+                                <tr>
+                                    <td colspan="2" class="font-semibold">{{ __('sales::collection_form.total') }}</td>
+                                    <td class="num font-semibold" x-text="ledgerDr"></td>
+                                    <td class="num font-semibold" x-text="ledgerCr"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <ul role="alert" data-preview-stops x-show="stops.length > 0" x-cloak class="mt-3 flex flex-col gap-1 text-sm text-(--color-danger)">
+                        <template x-for="(stop, s) in stops" :key="s">
+                            <li x-text="stop"></li>
+                        </template>
+                    </ul>
+                    <p role="alert" x-show="previewFailed" x-cloak class="mt-3 text-sm text-(--color-danger)">{{ __('sales::collection_form.preview_failed') }}</p>
+                </section>
+
+                {{-- ── নিয়ন্ত্রণ (দফা ১১, ১২, ৮) ── --}}
+                <section data-boxed data-collection-controls aria-labelledby="cf-controls"
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <h2 id="cf-controls" class="mb-3 font-semibold">{{ __('sales::collection_form.controls_title') }}</h2>
+                    <p class="rounded-(--radius-field) border-s-4 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-sm text-(--color-badge-info-ink)">
+                        {{ $collectionSigned ? __('sales::collection_form.controls_on') : __('sales::collection_form.controls_off') }}
+                    </p>
+                    <p class="mt-2 text-sm">{{ __('sales::collection_form.controls_bounce') }}</p>
+                </section>
+            </div>
         </div>
+
+        {{-- ── নিচের স্থির পট্টি: বাতিল · খসড়া রাখুন · পোস্ট; পোস্টের পরে রসিদ (দফা ১৭) ── --}}
+        <x-ui.form-actions :cancel="route('sales.collection.index')">
+            <p class="text-xs text-(--color-ink-muted)">{{ __('sales::collection_form.after_post') }}</p>
+
+            <x-slot:submit>
+                <x-ui.button type="submit" tone="secondary" name="save_as_draft" value="1" data-collection-draft>
+                    {{ __('sales::collection_form.draft') }}
+                </x-ui.button>
+                <x-ui.button type="submit" tone="primary" name="post" value="1" data-overview-trigger data-collection-post>
+                    {{ __('sales::collection_form.post') }}
+                </x-ui.button>
+            </x-slot:submit>
+        </x-ui.form-actions>
     </form>
+
+    <x-ui.confirm-overview :draft="true" />
 </x-layouts.app>

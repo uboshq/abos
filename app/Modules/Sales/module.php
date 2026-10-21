@@ -1454,6 +1454,27 @@ return [
         ],
         [
             /*
+             * ⭐ আদায়ে রাউন্ডিংয়ের সীমা, টাকায় — fe-র D3 (টাকা নেওয়ার নকশা ১০০, দফা ৪; ২১ অক্টোবর ২০২৬): ডিফল্ট ৳১০।
+             * ⓘ সীমার ভিতরে রাউন্ডিং ৫৩০৫-এ, সই ছাড়া; উপরে গেলে ফেরত — তখন সেটা ছাড়, মালিকের সইয়ে ([[CollectionService::plan()]])।
+             */
+            'key' => 'sales.collection.rounding_limit',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ
+            'super_admin_only' => true,
+            'label' => 'sales::settings.collection_rounding_limit',
+            'type' => 'number',
+            'default' => 10,
+            'group' => 'limits',
+        ],
+        [
+            /* ⭐ আদায়ে স্লিপ/অ্যাডভাইস/স্ক্রিনশট বাধ্যতামূলক — দফা ১৫ (ISA 500); ডিফল্ট বন্ধ, আজকের আচরণ */
+            'key' => 'sales.collection.attachment_required',
+            'label' => 'sales::settings.collection_attachment_required',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'limits',
+        ],
+        [
+            /*
              * বিক্রিতে ভ্যাট — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): দুই সুইচ, ডিফল্টে সব জায়গায় বন্ধ।
              * ⓘ বন্ধ মানে বন্ধ: ঘর নেই, সার্ভার ভ্যাট নেয় না ([[CalculatesSalesLines::lineFigures()]])।
              * ক্রয়ের সুইচ আলাদা (`purchase.vat_enabled`) — কোনো দিক অন্যটা পড়ে না।

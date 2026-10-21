@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Requests;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\MoneyMethod;
+use App\Modules\Sales\Services\CollectionInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -36,16 +38,42 @@ class CollectionRequest extends FormRequest
                 Rule::exists('accounts', 'id')->where('company_id', $companyId)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', PlainNumber::RULE, 'gt:0'],
-            'instrument' => ['nullable', 'string', 'max:32'],
-            'instrument_no' => ['nullable', 'string', 'max:64'],
-            'instrument_date' => ['nullable', 'date'],
+            /*
+             * ⭐ পদ্ধতির ঘর cb-র নিয়মে ([[MoneyMethod::rules()]]) — নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক; চার্জের ঘর `bank_charge`।
+             * ⓘ পুরনো ফর্ম/ফোনের মুক্ত লেখা (যেমন "bKash") আর চলে না এই দরজায় — নকশা ১০০-এর পর্দা কেবল পাঁচটা পাঠায়।
+             */
+            ...MoneyMethod::rules('bank_charge'),
+            'bank_charge' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
 
-            'lines' => ['nullable', 'array'],
+            // ⭐ দফা ৪, ৫ — গ্রাহক যা কেটে রাখলেন, আর কম পড়া অংশ ছাড় বা রাউন্ডিং
+            'vds' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'ait' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'difference' => ['nullable', 'array'],
+            'difference.kind' => ['nullable', 'in:discount,rounding'],
+            'difference.amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+
+            // ⭐ দফা ৩ — খোলা বিল ও ক্রেডিট; `id` খোলা কাগজের public_id (পুরনো ফর্মে বিলের সংখ্যা), ক্রেডিটের অঙ্ক ঋণাত্মক হতে পারে
+            'lines' => ['nullable', 'array', 'max:500'],
+            // ⓘ নতুন পর্দা পাঠায় — সব টিক তুললে "কোনো বিলে নয়", নিজে থেকে পুরনো আগে নয় ([[CollectionInput::$autoLines]])
+            'lines_given' => ['nullable', 'in:1'],
+            'lines.*.kind' => ['nullable', 'in:bill,debit_note,credit_note,credit'],
+            'lines.*.id' => ['nullable', 'string', 'max:64'],
             'lines.*.sales_invoice_id' => ['nullable', 'integer',
                 Rule::exists('sal_invoices', 'id')->where('company_id', $companyId)],
-            'lines.*.amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            'lines.*.amount' => ['nullable', 'numeric', PlainNumber::RULE],
+
+            // ⭐ দফা ১৫ — স্লিপ, অ্যাডভাইস বা স্ক্রিনশট (৫ MB; ধরন AttachmentEngine দেখে)
+            'slip' => ['nullable', 'file', 'max:5120'],
         ];
+    }
+
+    /** ⭐ নকশা ১০০-এর আবেদন — সেবার একটাই দরজা ([[CollectionService::createFrom()]]) */
+    public function collectionInput(): CollectionInput
+    {
+        $data = $this->safe()->except(['slip']);
+
+        return CollectionInput::fromRequest($data);
     }
 
     /**

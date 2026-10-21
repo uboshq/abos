@@ -14,8 +14,10 @@ use Illuminate\Validation\ValidationException;
 /**
  * ⭐ টাকা নেওয়ার একটা আবেদন — ওয়েবের ফর্ম আর ফোনের পাঠানো, দুটোই এই এক আকারে (a5/collection-form চুক্তি, ২১ অক্টোবর ২০২৬)।
  *
- * ⓘ ভারসাম্যের নিয়ম: amount + bankCharge + vds + ait + difference = Σ প্রয়োগ করা সারি + অপ্রয়োগকৃত (অপ্রয়োগকৃত ≥ ০, গ্রাহকের
- * খাতায় Cr থাকে)। `amount` = যা টাকার খাতে সত্যিই এল; ব্যাংক চার্জ তার উপরে, গ্রাহকের পাওনা কমে দুটোর যোগে।
+ * ⓘ ভারসাম্যের নিয়ম: amount + vds + ait + difference = Σ প্রয়োগ করা সারি + অপ্রয়োগকৃত (অপ্রয়োগকৃত ≥ ০, গ্রাহকের খাতায় Cr
+ * থাকে)। `amount` = গ্রাহক যা পাঠালেন (পর্দার "পাওয়া টাকা"); ব্যাংক চার্জ তার ভিতরেই — টাকার খাতে আসে amount − চার্জ, চার্জ
+ * চার্জের খাতে, আর গ্রাহকের খাতায় পুরো amount (নকশা দফা ৯; আজকের [[CollectionService::confirm()]] আর cb-র চার্জের লাইন)।
+ * ⚠️ a5-র খসড়ায় চার্জ amount-এর উপরে ধরা ছিল; a6 (২১ অক্টোবর ২০২৬) দফা ৯ আর আগের আচরণ মেনে ভিতরে করল।
  * ⓘ সারির `kind`: bill (sal_invoices) · debit_note / credit_note (acc_notes) · credit (আগের আদায়ের অপ্রয়োগকৃত, sal_collections)।
  * ক্রেডিটের সারি ঋণাত্মক বা ধনাত্মক — দুটোই চলে, ভেতরে পরম মান। সারি খালি = পুরনো আগে, নিজে থেকে।
  * ⓘ পদ্ধতি আর রেফারেন্স cb-র [[MoneyMethod]]-এর নামে: method → instrument, reference → instrument_no (জমায় deposit_slip_no)।
@@ -50,7 +52,30 @@ final readonly class CollectionInput
         public ?string $depositSlipNo = null,
         public ?string $fromBank = null,
         public ?string $instrumentDate = null,
+
+        /*
+         * ⓘ সারি না দিলে পুরনো বিল আগে, নিজে থেকে — কেবল যখন সারির ঘরটাই আসেনি (a4-এর চুক্তি, ২১ অক্টোবর ২০২৬): `lines: []` মানে
+         * "কোনো বিলে নয়", সবটা অপ্রয়োগকৃত; `lines` না পাঠালে আগের আচরণ। ওয়েবের পর্দা `lines_given` পাঠায়, তাই সব টিক তুললে বিলে বসে না।
+         */
+        public bool $autoLines = false,
     ) {}
+
+    /** ⓘ ফোনের পুরনো নাম → cb-র পদ্ধতির নাম ([[MoneyMethod::METHODS]]) — a4-এর ক্লায়েন্ট `bank_transfer`, `cash_deposit` লেখে */
+    public static function methodName(mixed $value): ?string
+    {
+        $text = trim((string) (is_scalar($value) ? $value : ''));
+
+        if ($text === '') {
+            return null;
+        }
+
+        return match (mb_strtolower($text)) {
+            'bank_transfer', 'transfer' => 'transfer',
+            'cash_deposit', 'deposit' => 'deposit',
+            'cash', 'mfs', 'cheque' => mb_strtolower($text),
+            default => $text,
+        };
+    }
 
     /**
      * ওয়েবের যাচাই-করা অনুরোধ ([[\App\Modules\Sales\Http\Requests\CollectionRequest]]) থেকে — id-গুলো ভেতরের সংখ্যা।
@@ -69,14 +94,25 @@ final readonly class CollectionInput
             }
 
             $kind = (string) ($line['kind'] ?? 'bill');
-            $id = (int) ($line['id'] ?? $line['sales_invoice_id'] ?? 0);
+            $kind = in_array($kind, self::KINDS, true) ? $kind : 'bill';
+            $raw = trim((string) ($line['id'] ?? $line['sales_invoice_id'] ?? ''));
             $amount = self::abs($line['amount'] ?? '0');
+
+            /*
+             * ⓘ পর্দা খোলা কাগজের public_id পাঠায় ([[CollectionOpenItems]]); পুরনো ফর্ম ভেতরের সংখ্যা — দুটোই চলে। ⛔ অচেনা
+             * public_id নীরবে বাদ নয়, কারণসহ ফেরত (অর্ধেক বণ্টন বসালে হিসাব গুলিয়ে যায়)।
+             */
+            $id = ctype_digit($raw) ? (int) $raw : ($raw === '' ? 0 : self::internalId($kind, $raw, (int) ($data['customer_id'] ?? 0)));
+
+            if ($id === null) {
+                throw ValidationException::withMessages(['lines' => __('sales::collection_rules.unknown_item')]);
+            }
 
             if ($id <= 0 || bccomp($amount, '0', 4) <= 0) {
                 continue;
             }
 
-            $lines[] = ['kind' => in_array($kind, self::KINDS, true) ? $kind : 'bill', 'id' => $id, 'amount' => $amount];
+            $lines[] = ['kind' => $kind, 'id' => $id, 'amount' => $amount];
         }
 
         return new self(
@@ -84,7 +120,7 @@ final readonly class CollectionInput
             accountId: filled($data['account_id'] ?? null) ? (int) $data['account_id'] : null,
             trxDate: (string) ($data['trx_date'] ?? now()->toDateString()),
             amount: self::money($data['amount'] ?? '0'),
-            method: filled($data['instrument'] ?? $data['method'] ?? null) ? (string) ($data['instrument'] ?? $data['method']) : null,
+            method: self::methodName($data['instrument'] ?? $data['method'] ?? null),
             reference: filled($data['instrument_no'] ?? $data['reference'] ?? null) ? trim((string) ($data['instrument_no'] ?? $data['reference'])) : null,
             valueDate: filled($data['value_date'] ?? null) ? (string) $data['value_date'] : null,
             bankCharge: self::money($data['bank_charge'] ?? '0'),
@@ -97,6 +133,7 @@ final readonly class CollectionInput
             depositSlipNo: filled($data['deposit_slip_no'] ?? null) ? trim((string) $data['deposit_slip_no']) : null,
             fromBank: filled($data['from_bank'] ?? null) ? (string) $data['from_bank'] : null,
             instrumentDate: filled($data['instrument_date'] ?? null) ? (string) $data['instrument_date'] : null,
+            autoLines: ! array_key_exists('lines', $data) && blank($data['lines_given'] ?? null),
         );
     }
 
@@ -171,7 +208,7 @@ final readonly class CollectionInput
             }
         }
 
-        $method = $payload['method'] ?? $payload['instrument'] ?? null;
+        $method = self::methodName($payload['method'] ?? $payload['instrument'] ?? null);
         $reference = $payload['reference'] ?? $payload['instrumentNo'] ?? $payload['instrument_no'] ?? null;
 
         return new self(
@@ -190,13 +227,36 @@ final readonly class CollectionInput
             lines: $lines,
             narration: filled($payload['narration'] ?? null) ? (string) $payload['narration'] : null,
             depositSlipNo: filled($payload['deposit_slip_no'] ?? null) ? trim((string) $payload['deposit_slip_no']) : null,
+            // ⓘ ফোন সেটআপের `transfer_modes[].id` (public_id) পাঠায়; সংখ্যাও চলে
+            transferModeId: self::transferMode($payload['transfer_mode_id'] ?? $payload['transferModeId'] ?? null),
+            autoLines: ! array_key_exists('lines', $payload) && ((array) ($payload['allocations'] ?? [])) === [],
         );
     }
 
-    /** গ্রাহকের পাওনা থেকে যা কমে — টাকা + চার্জ + VDS + AIT + পার্থক্য */
+    private static function transferMode(mixed $value): ?int
+    {
+        $text = trim((string) (is_scalar($value) ? $value : ''));
+
+        if ($text === '') {
+            return null;
+        }
+
+        $id = \App\Modules\MasterData\Models\TransferMode::query()->withoutGlobalScopes()->whereNull('deleted_at')
+            ->where(fn ($q) => $q->where('company_id', \App\Core\Support\CompanyContext::id())->orWhereNull('company_id'))
+            ->when(ctype_digit($text), fn ($q) => $q->whereKey((int) $text), fn ($q) => $q->where('public_id', $text))
+            ->value('id');
+
+        if ($id === null) {
+            throw ValidationException::withMessages(['transfer_mode_id' => __('sales::collection_rules.unknown_transfer_mode')]);
+        }
+
+        return (int) $id;
+    }
+
+    /** গ্রাহকের পাওনা থেকে যা কমে — টাকা (চার্জসহ) + VDS + AIT + পার্থক্য ([[Collection::grossToCustomer()]]-এর একই যোগ) */
     public function grossToCustomer(): string
     {
-        return bcadd(bcadd(bcadd(bcadd($this->amount, $this->bankCharge, 4), $this->vds, 4), $this->ait, 4), $this->differenceAmount(), 4);
+        return bcadd(bcadd(bcadd($this->amount, $this->vds, 4), $this->ait, 4), $this->differenceAmount(), 4);
     }
 
     public function differenceAmount(): string
@@ -255,7 +315,8 @@ final readonly class CollectionInput
         }
 
         $id = match ($kind) {
-            'bill' => SalesInvoice::acrossBranches()->where('public_id', $publicId)->where('customer_id', $customerId)->value('id'),
+            // ⓘ বিল গ্রাহক ছাড়াই খোঁজা — অন্যের বিল হলে সেবা কারণসহ ফেরায় ("বিলটা অন্য গ্রাহকের"), আগের ফোনের পথের মতো
+            'bill' => SalesInvoice::acrossBranches()->where('public_id', $publicId)->value('id'),
             'debit_note', 'credit_note' => Note::acrossBranches()->where('public_id', $publicId)
                 ->where('party_type', 'customer')->where('party_id', $customerId)->value('id'),
             'credit' => Collection::acrossBranches()->where('public_id', $publicId)->where('customer_id', $customerId)->value('id'),
