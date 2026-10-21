@@ -122,8 +122,13 @@
              x-cloak
              @click.outside="open = false"
              role="menu"
-             class="pops-onto-page absolute start-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-(--radius-card) border
-                    border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)">
+             {{-- ⓘ ফোনে বারের পাশে বোতামটা নেই (`besideMark`), তাই তালিকা বারের ঠিক নিচে, পর্দার দুই কিনারা ধরে — নইলে শূন্য-উঁচু
+                  বাক্স থেকে ঝুলে বারের মাঝখানে বসত --}}
+             @class([
+                 'pops-onto-page absolute start-0 top-full z-40 mt-1 w-72 overflow-hidden rounded-(--radius-card) border',
+                 'border-(--color-border) bg-(--color-surface-card) py-1 shadow-(--shadow-overlay)',
+                 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[calc(var(--spacing-header)_+_4px)] max-sm:mt-0 max-sm:w-auto' => $besideMark,
+             ])>
 
             {{-- ── কোম্পানি ── --}}
             @if ($companies->count() > 1)
