@@ -75,8 +75,9 @@ final class TheTaxHeldBackNeverReachedTheBooksTest extends TestCase
         $this->assertSame('500.0000', $this->owed($withheld), '২১২১-এ দায় ৫০০ নয়');
         $this->assertSame('500.0000', $this->owed($vds), '২১২২-এ দায় ৫০০ নয়');
 
-        // ⓘ সরকারকে জমা — দায় শূন্যে
-        $this->submit(Voucher::PAYMENT, ['from_account_id' => $this->bank->id, 'to_account_id' => $withheld->id, 'amount' => '500'])
+        // ⓘ সরকারকে জমা — দায় শূন্যে। ⛔ ব্যাংক থেকে, তাই রেফারেন্স (চালানের নম্বর) লাগে — ব্যাংকের খাতের পুরনো নিয়ম, Mac-এ ধরা
+        $this->submit(Voucher::PAYMENT, ['from_account_id' => $this->bank->id, 'to_account_id' => $withheld->id, 'amount' => '500',
+            'instrument' => 'transfer', 'instrument_no' => 'A-CHALLAN-2026-0001'])
             ->assertSessionHasNoErrors();
         $this->lastConfirmed(Voucher::PAYMENT);
         $this->assertSame('0.0000', $this->owed($withheld), '⛔ সরকারকে জমার পরেও দায় রইল');
