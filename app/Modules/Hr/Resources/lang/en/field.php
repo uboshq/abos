@@ -90,4 +90,7 @@ return [
     'year' => 'Year',
     // ⭐ gender — maternity eligibility (labour law ch.4; a6, 21 Oct 2026)
     'gender' => 'Gender',
+    // ⭐ maternity (s.46(3), s.47; a6, 21 Oct 2026)
+    'surviving_children' => 'Surviving children',
+    'expected_delivery_date' => 'Expected delivery date',
 ];

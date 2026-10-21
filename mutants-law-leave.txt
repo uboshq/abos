@@ -304,3 +304,89 @@ P1.10 app/Modules/Hr/Services/EarnedLeave.php (encashment)
   old: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['gross'];
   new: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['net'];
   kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (PF 2000 → daily 933.33)
+
+== P2 — maternity s.46(3), s.47, s.48 ==
+K2 = tests/Feature/Modules/Hr/MaternityBenefitFollowsSections46To48Test.php · K3 = tests/Feature/Modules/Hr/MaternityLeaveFollowsTheLawTest.php
+
+P2.1 app/Modules/Hr/Services/LeaveService.php
+  old: public const MATERNITY_CHILDREN_LIMIT = 2;
+  new: public const MATERNITY_CHILDREN_LIMIT = 3;
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer
+
+P2.2 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($employee->surviving_children !== null && (int) $employee->surviving_children >= self::MATERNITY_CHILDREN_LIMIT) {
+  new: if ((int) $employee->surviving_children >= self::MATERNITY_CHILDREN_LIMIT || $employee->surviving_children === null) {
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (empty box blocks)
+
+P2.3 app/Modules/Hr/Models/LeaveApplication.php (signerWarning)
+  old: return $employee !== null && $employee->surviving_children === null ? __('hr::message.maternity_children_unknown') : null;
+  new: return null;
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (no web/phone warning)
+
+P2.4 app/Modules/Hr/Http/Controllers/HrRegisterApiController.php
+  old: 'warning' => $a->signerWarning(),
+  new: 'warning' => null,
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (phone row)
+
+P2.5 app/Modules/Hr/Services/LeaveService.php (approve)
+  old: $this->assertEligible($employee, $type, $application->from_date->copy(), $application->to_date->copy(),
+  new: $this->assertEligible($employee, LeaveType::query()->make(['code' => 'X']), $application->from_date->copy(), $application->to_date->copy(),
+  kill: K2::test_two_surviving_children_end_the_benefit_and_an_empty_box_warns_the_signer (children set to 2 after applying, approval passes)
+
+P2.6 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: if ($expected === null) {
+  new: if (false) {
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (null expected → TypeError/no message)
+
+P2.7 app/Modules/Hr/Services/LeaveService.php
+  old: public const MATERNITY_WEEKS_EACH_SIDE = 8;
+  new: public const MATERNITY_WEEKS_EACH_SIDE = 9;
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (31 Jul passes)
+
+P2.8 app/Modules/Hr/Services/LeaveService.php (assertEligible)
+  old: $latest = $expected->copy()->addDays(self::MATERNITY_WEEKS_EACH_SIDE * 7 - 1);
+  new: $latest = $expected->copy()->addDays(self::MATERNITY_WEEKS_EACH_SIDE * 7);
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (21 Nov passes)
+
+P2.9 app/Modules/Hr/Services/LeaveService.php (apply)
+  old: 'expected_delivery_date' => $expected?->toDateString(),
+  new: 'expected_delivery_date' => null,
+  kill: K2::test_the_leave_sits_eight_weeks_before_and_eight_weeks_after_the_expected_day (date not stored)
+
+P2.10 app/Modules/Hr/Services/MaternityBenefit.php (averageDailyWage)
+  old: ->where('r.status', DocumentStatus::CONFIRMED)
+  new: (line deleted)
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (cancelled June run's 99999 counted)
+
+P2.11 app/Modules/Hr/Services/MaternityBenefit.php (window)
+  old: return [$notice->copy()->subMonthsNoOverflow(self::MONTHS), $notice->copy()->subDay()];
+  new: return [$notice->copy()->subMonthsNoOverflow(self::MONTHS - 1), $notice->copy()->subDay()];
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (40000 / 75 → not 800)
+
+P2.12 app/Modules/Hr/Services/MaternityBenefit.php (averageDailyWage)
+  old: if ($worked === 0) {
+  new: if (true) {
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (mother ÷ 92, not 75)
+
+P2.13 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: $factor = bcsub($factor, bcdiv($mDays, (string) $monthEnd->daysInMonth, 10), 10);
+  new: (line deleted)
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (BASIC 20000 kept beside the benefit)
+
+P2.14 app/Modules/Hr/Services/PayrollService.php (buildPayslip)
+  old: $gross = bcadd($gross, $amount, 4);
+        }
+
+        $slip->forceFill([
+  new: (the bcadd line deleted)
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (gross 0, not 24800)
+
+P2.15 app/Modules/Hr/Services/MaternityBenefit.php (daysIn)
+  old: || $application->leaveType->is_paid !== true) {
+  new: ) {
+  kill: K2::test_the_benefit_is_the_average_daily_wage_of_the_three_months_before_notice (unpaid type still gets a benefit line after rebuild)
+
+P2.16 app/Modules/Hr/Models/Employee.php (GUARDED)
+  old: 'surviving_children',
+  new: (line deleted from GUARDED only)
+  kill: K3::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (clerk sees the count)

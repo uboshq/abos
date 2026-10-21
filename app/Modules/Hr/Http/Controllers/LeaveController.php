@@ -119,6 +119,8 @@ class LeaveController extends Controller implements HasMiddleware
             // ⓘ "1e1" পরের হিসাবে (bcmath) ৫০০ দিত, আর "1.55" এক ঘরে মাপা হয়ে কোটা পার হত অথচ খাতায় 1.6 বসত
             'days' => ['required', 'decimal:0,1', 'regex:/^\d+(\.\d)?$/', 'gt:0', 'max:'.LeaveService::MAX_SPAN_DAYS],
             'reason' => ['nullable', 'string', 'max:500'],
+            // ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭; সেবা দেখে কখন লাগে)
+            'expected_delivery_date' => ['nullable', 'date'],
         ], [
             'days.decimal' => __('hr::validation.days_format'),
             'days.regex' => __('hr::validation.days_format'),
@@ -135,6 +137,7 @@ class LeaveController extends Controller implements HasMiddleware
             $data['to_date'],
             (string) $data['days'],
             $data['reason'] ?? null,
+            $data['expected_delivery_date'] ?? null,
         );
 
         return redirect()->route('hr.leave.index')

@@ -113,6 +113,7 @@
                 'hr::field.mother_name' => \App\Core\Security\FieldSecurity::show($employee, 'mother_name', $employee->mother_name),
                 'hr::field.date_of_birth' => \App\Core\Security\FieldSecurity::show($employee, 'date_of_birth', $employee->date_of_birth?->format('d M Y')),
                 'hr::field.blood_group' => \App\Core\Security\FieldSecurity::show($employee, 'blood_group', $employee->blood_group),
+                'hr::field.surviving_children' => \App\Core\Security\FieldSecurity::show($employee, 'surviving_children', $employee->surviving_children === null ? __('hr::message.no_information') : (string) $employee->surviving_children),
                 'hr::field.gender' => \App\Core\Security\FieldSecurity::show($employee, 'gender', $employee->gender === null ? null : __('hr::kind.gender_'.$employee->gender)),
                 'hr::field.mobile' => $employee->mobile,
                 'hr::field.email' => $employee->email,

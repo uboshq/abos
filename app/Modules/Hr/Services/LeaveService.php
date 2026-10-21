@@ -31,10 +31,17 @@ final class LeaveService
     /** এক আবেদনের তারিখ সবচেয়ে বেশি কত দিন জুড়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫) */
     public const MAX_SPAN_DAYS = 366;
 
+    /** ধারা ৪৬(৩) — এতজন বা তার বেশি জীবিত সন্তানে মাতৃত্বকালীন সুবিধা নয় */
+    public const MATERNITY_CHILDREN_LIMIT = 2;
+
+    /** ধারা ৪৭ — প্রসবের আগে ও পরে, প্রতিপাশে এত সপ্তাহ */
+    public const MATERNITY_WEEKS_EACH_SIDE = 8;
+
     /**
      * আবেদন জমা।
      *
      * @param  string  $days  আধা দিনের জন্য দশমিক — "১.৫"
+     * @param  string|null  $expectedDelivery  ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭; বাকি ধরনে উপেক্ষিত)
      */
     public function apply(
         Employee $employee,
@@ -43,16 +50,18 @@ final class LeaveService
         string $toDate,
         string $days,
         ?string $reason = null,
+        ?string $expectedDelivery = null,
     ): LeaveApplication {
         $from = Carbon::parse($fromDate);
         $to = Carbon::parse($toDate);
+        $expected = $type->isMaternity() && filled($expectedDelivery) ? Carbon::parse($expectedDelivery)->startOfDay() : null;
 
         $this->assertDatesMakeSense($from, $to, $days);
         $this->assertWithinWorkingDays($employee, $type, $from, $to, $days);
         $this->assertEmployedThroughout($employee, $from, $to);
-        $this->assertEligible($employee, $type, $from);
+        $this->assertEligible($employee, $type, $from, $to, $expected);
 
-        return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason) {
+        return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason, $expected) {
             /*
              * ⛔ কর্মীর সারিতে তালা, তারপর মেলা আর কোটা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪)।
              * ⓘ লেনদেন বা তালা ছিল না: দুইবার চাপলে বা ফোন আবার পাঠালে দুইটা অনুরোধই "মেলে না" দেখে একই দিনের দুইটা আবেদন বসাত।
@@ -68,6 +77,7 @@ final class LeaveService
                 'leave_type_id' => $type->id,
                 'from_date' => $from->toDateString(),
                 'to_date' => $to->toDateString(),
+                'expected_delivery_date' => $expected?->toDateString(),
                 'days' => $days,
                 'reason' => $reason,
                 'status' => LeaveApplication::PENDING,
@@ -111,7 +121,8 @@ final class LeaveService
             // ⛔ আবেদনের পরে তালিকায় ছুটির দিন বসলে কাজের দিন কমে — আবার মাপা, নইলে কোটা বেশি কাটত ([[assertWithinWorkingDays()]])
             $this->assertWithinWorkingDays($employee, $type, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
             // ⛔ মাতৃত্বকালীন ছুটির যোগ্যতা মঞ্জুরের মুহূর্তেও — আবেদনের পরে লিঙ্গ বদলালে বা ফোনের পুরনো আবেদনে ([[assertEligible()]])
-            $this->assertEligible($employee, $type, $application->from_date->copy());
+            $this->assertEligible($employee, $type, $application->from_date->copy(), $application->to_date->copy(),
+                $application->expected_delivery_date?->copy());
             $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
 
             /*
@@ -457,9 +468,16 @@ final class LeaveService
      *
      * ⓘ লিঙ্গ কর্মীর পাতার ঘর (`gender`, পরিচয়ের চাবির পেছনে); খালি থাকলে "নারী" নয় — তাই আগে পাতায় লিখতে হয়। ৬ মাস = যোগদানের
      * তারিখ + ৬ ক্যালেন্ডার মাস (মাসের শেষ পেরোয় না: ৩১ আগস্ট + ৬ = ২৮ ফেব্রুয়ারি), সেদিন বা তার পরে শুরু হলে চলে। যোগদানের তারিখ
-     * না থাকলে চাকরির বয়স মাপা যায় না, তাই ফেরে। ⓘ বেতনসহ — ধরনের `is_paid`; বেতনের হিসাব তাই কাটে না ([[AttendanceService::unpaidDays()]])।
+     * না থাকলে চাকরির বয়স মাপা যায় না, তাই ফেরে। ⓘ বেতনসহ — ধরনের `is_paid`; টাকা আগের তিন মাসের গড় দৈনিক মজুরিতে
+     * ([[MaternityBenefit]], ধারা ৪৮)।
+     *
+     * ⭐ fe-র উত্তর ২ (২১ অক্টোবর ২০২৬) — আরও দুই শর্ত:
+     *  · **ধারা ৪৬(৩):** জীবিত সন্তান দুই বা তার বেশি হলে মাতৃত্বকালীন সুবিধা নয় (অন্য পাওনা ছুটি চলে)। ঘর খালি = "তথ্য নেই" —
+     *    আটকায় না, সইকারীকে সতর্ক করে ([[LeaveApplication::signerWarning()]])।
+     *  · **ধারা ৪৭ — ৮ + ৮ সপ্তাহ:** প্রসবের সম্ভাব্য দিন লাগে; ছুটি শুরু সেদিনের বড়জোর ৫৬ দিন আগে, শেষ সেদিনসহ বড়জোর ৫৬ দিনে
+     *    (সম্ভাব্য দিন + ৫৫)। মোট ১১২ দিনের সীমা ধরনের কোটায়।
      */
-    private function assertEligible(Employee $employee, LeaveType $type, Carbon $from): void
+    private function assertEligible(Employee $employee, LeaveType $type, Carbon $from, ?Carbon $to = null, ?Carbon $expected = null): void
     {
         if (! $type->isMaternity()) {
             return;
@@ -476,6 +494,33 @@ final class LeaveService
         if ($eligibleFrom === null || $from->copy()->startOfDay()->lt($eligibleFrom)) {
             throw ValidationException::withMessages([
                 'from_date' => __('hr::validation.maternity_six_months', ['date' => $eligibleFrom?->toDateString() ?? '—']),
+            ]);
+        }
+
+        if ($employee->surviving_children !== null && (int) $employee->surviving_children >= self::MATERNITY_CHILDREN_LIMIT) {
+            throw ValidationException::withMessages([
+                'leave_type_id' => __('hr::validation.maternity_two_children', ['count' => (int) $employee->surviving_children]),
+            ]);
+        }
+
+        if ($expected === null) {
+            throw ValidationException::withMessages([
+                'expected_delivery_date' => __('hr::validation.maternity_expected_required'),
+            ]);
+        }
+
+        $earliest = $expected->copy()->subDays(self::MATERNITY_WEEKS_EACH_SIDE * 7);
+        $latest = $expected->copy()->addDays(self::MATERNITY_WEEKS_EACH_SIDE * 7 - 1);
+
+        if ($from->copy()->startOfDay()->lt($earliest)) {
+            throw ValidationException::withMessages([
+                'from_date' => __('hr::validation.maternity_too_early', ['date' => $earliest->toDateString()]),
+            ]);
+        }
+
+        if ($to !== null && $to->copy()->startOfDay()->gt($latest)) {
+            throw ValidationException::withMessages([
+                'to_date' => __('hr::validation.maternity_too_late', ['date' => $latest->toDateString()]),
             ]);
         }
     }

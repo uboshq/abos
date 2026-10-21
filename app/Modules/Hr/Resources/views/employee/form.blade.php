@@ -110,6 +110,9 @@
                     <x-ui.select name="gender" :label="__('hr::field.gender')"
                                  :options="collect($genders)->mapWithKeys(fn ($g) => [$g => __('hr::kind.gender_'.$g)])"
                                  :selected="old('gender', $employee->gender)" placeholder="-" />
+                    {{-- ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধা (ধারা ৪৬(৩)); খালি = তথ্য নেই --}}
+                    <x-ui.field name="surviving_children" type="number" min="0" :label="__('hr::field.surviving_children')"
+                                :value="old('surviving_children', $employee->surviving_children)" />
                     <x-ui.field name="present_address" :label="__('hr::field.present_address')"
                                 :value="old('present_address', $employee->present_address)" />
                     <x-ui.field name="permanent_address" :label="__('hr::field.permanent_address')"

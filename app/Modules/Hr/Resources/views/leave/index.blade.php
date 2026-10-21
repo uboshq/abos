@@ -6,7 +6,7 @@
         ['key' => 'employee', 'label' => __('hr::field.name'),
          'render' => fn ($a) => $a->employee?->label() ?? '—'],
         ['key' => 'type', 'label' => __('hr::field.leave_type'), 'width' => '12rem',
-         'render' => fn ($a) => $a->leaveType?->name() ?? '—'],
+         'render' => fn ($a) => view('hr::leave.partials.type', ['application' => $a])],
         ['key' => 'from', 'label' => __('hr::field.from_date'), 'width' => '9rem',
          'render' => fn ($a) => $a->from_date->format('d M Y')],
         ['key' => 'to', 'label' => __('hr::field.to_date'), 'width' => '9rem',

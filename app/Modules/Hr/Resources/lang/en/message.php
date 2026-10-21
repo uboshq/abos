@@ -83,4 +83,8 @@ return [
     'earned_accrues' => '1 per :per days worked',
     // ⭐ a standard type is missing (a6, 21 Oct 2026; [[LeaveTypeDefaults]])
     'leave_types_missing' => 'Some standard leave types (for example maternity leave) are not in this company yet. Installing adds only the missing ones.',
+    // ⭐ maternity signer warning (s.46(3); a6, 21 Oct 2026)
+    'no_information' => 'No information',
+    'maternity_children_unknown' => 'No information on surviving children — with two or more, no maternity benefit is due (s.46(3)). Check before you sign.',
+    'maternity_benefit_line' => 'Maternity benefit',
 ];

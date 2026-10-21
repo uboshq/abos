@@ -111,7 +111,7 @@ final class MaternityLeaveFollowsTheLawTest extends TestCase
             $this->assertSame(__('hr::validation.maternity_six_months', ['date' => '2026-09-01']), $e->errors()['from_date'][0]);
         }
 
-        $pending = $this->leave()->apply($new, $this->maternity(), '2026-09-01', '2026-12-21', '112');
+        $pending = $this->leave()->apply($new, $this->maternity(), '2026-09-01', '2026-12-21', '112', null, '2026-10-27');
         $this->assertSame(LeaveApplication::PENDING, $pending->status, '⛔ ৬ মাস পূর্ণ হওয়ার দিনেও ফিরল');
 
         // ⛔ মঞ্জুরের মুহূর্তেও যোগ্যতা — আবেদনের পরে লিঙ্গ বদলালে
@@ -131,9 +131,10 @@ final class MaternityLeaveFollowsTheLawTest extends TestCase
         $mother = $this->employee('E-MOM', '2026-01-15', 'female');
         app(SalaryStructureService::class)->set($mother, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '20000');
 
-        // ⓘ ১ আগস্ট থেকে ১৬ সপ্তাহ — ২০ নভেম্বর; শুক্রবারও ছুটির দিন, কাজের দিনে কমে না
+        // ⓘ ১ আগস্ট থেকে ১৬ সপ্তাহ — ২০ নভেম্বর (প্রসবের সম্ভাব্য দিন ২৬ সেপ্টেম্বর: ৫৬ দিন আগে, ৫৬ দিন সেদিনসহ পরে); শুক্রবারও ছুটির দিন।
+        // ⓘ আগের তিন মাসের বেতন নেই, তাই ধারা ৪৮-এর গড় নেই — কাঠামোর বেতনই চলে ([[MaternityBenefit]]; গড়ের দাবি MaternityBenefitFollowsSections46To48Test-এ)
         $application = $this->leave()->approve(
-            $this->leave()->apply($mother, $this->maternity(), '2026-08-01', '2026-11-20', '112'), $this->owner);
+            $this->leave()->apply($mother, $this->maternity(), '2026-08-01', '2026-11-20', '112', null, '2026-09-26'), $this->owner);
         $this->assertSame(LeaveApplication::APPROVED, $application->status);
         $this->assertSame(31, Attendance::query()->where('leave_application_id', $application->id)
             ->whereBetween('work_date', ['2026-08-01', '2026-08-31'])->count(), '⛔ আগস্টের সব দিন (শুক্রবারসহ) ছুটির সারিতে নেই');
@@ -153,7 +154,7 @@ final class MaternityLeaveFollowsTheLawTest extends TestCase
         // ⓘ কোম্পানির নীতি (আইনের বাইরে) — বিনা বেতনে করলে ক্যালেন্ডারের প্রতিটা দিন কাটে, শুক্রবারসহ
         $this->maternity()->forceFill(['is_paid' => false])->save();
         $mother = $this->employee('E-UP', '2025-01-01', 'female');
-        $this->leave()->approve($this->leave()->apply($mother, $this->maternity(), '2026-08-01', '2026-08-14', '14'), $this->owner);
+        $this->leave()->approve($this->leave()->apply($mother, $this->maternity(), '2026-08-01', '2026-08-14', '14', null, '2026-09-01'), $this->owner);
         $this->assertSame('14.0', app(AttendanceService::class)->unpaidDays($mother->fresh(), Carbon::parse('2026-08-01')),
             '⛔ ক্যালেন্ডারের দিনের ছুটিতে শুক্রবারের ভাগ শূন্য হয়ে দিন কম কাটল');
 
@@ -164,6 +165,7 @@ final class MaternityLeaveFollowsTheLawTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->actingAs($clerk->fresh());
         $this->assertFalse(FieldSecurity::visible(Employee::class, 'gender'), '⛔ পরিচয়ের চাবি ছাড়াই লিঙ্গ দেখা যায়');
+        $this->assertFalse(FieldSecurity::visible(Employee::class, 'surviving_children'), '⛔ পরিচয়ের চাবি ছাড়াই জীবিত সন্তানের সংখ্যা দেখা যায়');
         $this->actingAs($this->owner);
         $this->assertTrue(FieldSecurity::visible(Employee::class, 'gender'));
     }

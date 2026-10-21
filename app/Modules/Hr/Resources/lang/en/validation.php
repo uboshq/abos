@@ -70,4 +70,9 @@ return [
     // ⭐ maternity leave (labour law ch.4, ss.45-50; a6, 21 Oct 2026; [[LeaveService::assertEligible()]])
     'maternity_women_only' => 'Maternity leave is for women employees only. If this is wrong, set the gender to female on the employee profile.',
     'maternity_six_months' => 'Maternity leave needs at least 6 months of service on the first day of leave. This employee completes 6 months on :date.',
+    // ⭐ maternity s.46(3), s.47 (a6, 21 Oct 2026)
+    'maternity_two_children' => 'No maternity benefit is due: the employee has :count surviving children (two or more, s.46(3)). Other leave she is entitled to can still be taken.',
+    'maternity_expected_required' => 'Give the expected delivery date — maternity leave is 8 weeks before and 8 weeks after it (s.47).',
+    'maternity_too_early' => 'Maternity leave can start at most 8 weeks before the expected delivery date — from :date.',
+    'maternity_too_late' => 'Maternity leave ends at most 8 weeks after the expected delivery date — on :date.',
 ];

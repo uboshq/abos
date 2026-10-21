@@ -303,6 +303,8 @@ class EmployeeController extends Controller implements HasMiddleware
             'blood_group' => ['nullable', Rule::in(Employee::BLOOD_GROUPS)],
             // ⭐ লিঙ্গ — পরিচয়ের চাবির পেছনে, উপরের দুই পাহারায় ([[Employee::GUARDED]]; a6, ২১ অক্টোবর ২০২৬)
             'gender' => ['nullable', Rule::in(Employee::GENDERS)],
+            // ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধার শর্ত (ধারা ৪৬(৩)); খালি = তথ্য নেই
+            'surviving_children' => ['nullable', 'integer', 'min:0', 'max:30'],
             'present_address' => ['nullable', 'string', 'max:500'],
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'emergency_name' => ['nullable', 'string', 'max:150'],

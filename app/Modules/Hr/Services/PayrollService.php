@@ -399,6 +399,27 @@ final class PayrollService
          */
         $factor = $this->attendanceFactor($employee, $monthEnd);
 
+        /*
+         * ⭐ মাতৃত্বকালীন সুবিধা — ধারা ৪৮ (fe-র উত্তর ২, ২১ অক্টোবর ২০২৬; [[MaternityBenefit]]; a6)।
+         * ⓘ বেতনসহ মাতৃত্বকালীন ছুটির দিনগুলো কাঠামোর বেতনে নয়, আগের তিন মাসের গড় দৈনিক মজুরিতে: হাজিরায় কমে এমন আয়ের খাত থেকে
+         * সেই দিনগুলোর ভাগ (দিন ÷ মাসের দিন) বাদ, আর "মাতৃত্বকালীন সুবিধা" সারি = দিন × গড়। আগের মজুরি না থাকলে (গড় নেই) কাঠামোই চলে।
+         */
+        $benefits = [];
+        $maternity = app(MaternityBenefit::class);
+
+        foreach ($maternity->daysIn($employee, $monthEnd) as ['application' => $application, 'days' => $mDays]) {
+            $average = $maternity->averageDailyWage($application);
+
+            if ($average === null) {
+                continue;
+            }
+
+            $factor = bcsub($factor, bcdiv($mDays, (string) $monthEnd->daysInMonth, 10), 10);
+            $benefits[] = Money::round(bcmul($mDays, $average, 10), 2);
+        }
+
+        $factor = bccomp($factor, '0', 10) < 0 ? '0' : $factor;
+
         $slip = Payslip::create([
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
@@ -455,6 +476,24 @@ final class PayrollService
             } else {
                 $deductions = bcadd($deductions, $amount, 4);
             }
+        }
+
+        foreach ($benefits as $amount) {
+            PayslipLine::create([
+                'company_id' => $run->company_id,
+                'payslip_id' => $slip->id,
+                'salary_head_id' => null,
+                'head_code' => MaternityBenefit::LINE_CODE,
+                'head_name_en' => 'Maternity benefit',
+                'head_name_bn' => 'মাতৃত্বকালীন সুবিধা',
+                'kind' => SalaryHead::EARNING,
+                'amount' => $amount,
+                'sort_order' => 900,
+                // ⓘ বেতনের খরচেই — খাতের নিজের হিসাব-খাত নেই, তাই আয়ের ফলব্যাক ([[fallbackAccount()]])
+                'account_id' => $this->fallbackAccount(SalaryHead::EARNING)?->id,
+            ]);
+
+            $gross = bcadd($gross, $amount, 4);
         }
 
         $slip->forceFill([
