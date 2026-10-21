@@ -70,4 +70,7 @@ return [
     'ot_month_paid' => 'The salary for :month (:no) is already confirmed — that month\'s overtime can no longer be built or signed.',
     'ot_already_signed' => 'This sheet is already approved.',
     'ot_not_your_line' => 'Only the employee\'s own manager can sign this sheet — on one\'s own or self-built sheet, only the owner.',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'e_tin_shape' => 'An e-TIN is twelve digits — no spaces or dashes.',
+    'tds_account_missing' => 'The tax-at-source account (2132) is missing — use "Install standard chart" in the chart of accounts.',
 ];

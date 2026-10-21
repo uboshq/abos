@@ -497,6 +497,27 @@ return [
             'group' => 'entry',
             'super_admin_only' => true,
         ],
+        /*
+         * ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; সূত্র [[SalaryTax]])।
+         * ⓘ ধাপ ডিফল্টে খালি = কিছুই কাটা হয় না, আর রানের পাতায় "করের ধাপ বসানো নেই"। লেখার ধরন: "350000:0, 100000:5, …, *:30"।
+         * ছাড়ের সীমা — বেতনের এক-তৃতীয়াংশ বা এই অঙ্ক, যেটা কম (ডিফল্ট 450000)।
+         */
+        [
+            'key' => 'hr.tax.slabs',
+            'label' => 'hr::settings.tax_slabs',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.tax.exemption_cap',
+            'label' => 'hr::settings.tax_exemption_cap',
+            'type' => 'number',
+            'default' => 450000,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
         [
             'key' => 'hr.ot.eligible_types',
             'label' => 'hr::settings.ot_eligible_types',

@@ -54,6 +54,7 @@ final class PayrollService
         private readonly DocumentApproval $approvals,
         private readonly ProvidentFund $fund,
         private readonly OvertimeService $overtime,
+        private readonly SalaryTax $tax,
     ) {}
 
     /**
@@ -495,6 +496,38 @@ final class PayrollService
                 ]);
 
                 $gross = bcadd($gross, $pay, 4);
+            }
+        }
+
+        /*
+         * ⭐ বেতন থেকে উৎসে কর — আনুমানিক বার্ষিক কর ÷ ১২ (আয়কর আইন ২০২৩ ধারা ৮৬; a6, ২১ অক্টোবর ২০২৬; সূত্র [[SalaryTax]])।
+         * ⛔ ধাপ বসানো না থাকলে কিছুই কাটা হয় না (রানের পাতা বলে "করের ধাপ বসানো নেই")। ⓘ কর্তনের সারি, ২১৩২-এ ক্রেডিট; খাত না
+         * থাকলে থামে — প্রদেয় বেতনে নীরবে মিশে গেলে সরকারের পাওনা কর্মীর পাওনা হয়ে দেখাত।
+         */
+        if ($this->tax->hasSlabs()) {
+            $tds = $this->tax->estimate($employee, $monthEnd, $components)['monthly'];
+
+            if (bccomp($tds, '0', 2) > 0) {
+                $account = $this->tax->payableAccount();
+
+                if ($account === null) {
+                    throw ValidationException::withMessages(['account' => __('hr::validation.tds_account_missing')]);
+                }
+
+                PayslipLine::create([
+                    'company_id' => $run->company_id,
+                    'payslip_id' => $slip->id,
+                    'salary_head_id' => null,
+                    'head_code' => SalaryTax::LINE_CODE,
+                    'head_name_en' => 'Tax deducted at source',
+                    'head_name_bn' => 'উৎসে কর',
+                    'kind' => SalaryHead::DEDUCTION,
+                    'amount' => $tds,
+                    'sort_order' => 900,
+                    'account_id' => $account->id,
+                ]);
+
+                $deductions = bcadd($deductions, $tds, 4);
             }
         }
 

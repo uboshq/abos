@@ -13,6 +13,7 @@ use App\Modules\Hr\Http\Controllers\PayslipPrintController;
 use App\Modules\Hr\Http\Controllers\ProvidentFundController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
 use App\Modules\Hr\Http\Controllers\SalaryStructureController;
+use App\Modules\Hr\Http\Controllers\TaxCertificateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,6 +35,10 @@ Route::middleware('auth')->prefix('hr')->group(function () {
             ->whereNumber('employee')->name('salary');
         Route::post('/{employee}/salary', [SalaryStructureController::class, 'store'])
             ->whereNumber('employee')->name('salary.store');
+
+        // ⭐ বছরের কর-সনদ — বেতনের চাবি আর নাগাল (a6, ২১ অক্টোবর ২০২৬; [[TaxCertificateController]])
+        Route::get('/{employee}/tax-certificate', [TaxCertificateController::class, 'show'])
+            ->whereNumber('employee')->name('tax_certificate');
 
         Route::get('/{employee}', [EmployeeController::class, 'show'])->whereNumber('employee')->name('show');
         Route::get('/{employee}/edit', [EmployeeController::class, 'edit'])->whereNumber('employee')->name('edit');

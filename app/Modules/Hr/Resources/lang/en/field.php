@@ -95,4 +95,9 @@ return [
     'ot_days' => 'Days over',
     'ot_hours' => 'Extra hours',
     'ot_signed_by' => 'Signed by',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'e_tin' => 'e-TIN',
+    'income_year' => 'Income year',
+    'tds_total' => 'Tax deducted at source',
+    'employer_signature' => 'Employer\'s signature and seal',
 ];

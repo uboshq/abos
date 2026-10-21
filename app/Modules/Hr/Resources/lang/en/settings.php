@@ -15,4 +15,7 @@ return [
     'ot_enabled' => 'Overtime on — signed extra hours are paid at basic ÷ 208 × 2',
     'ot_daily_hours' => 'Overtime — working hours a day (beyond this is extra)',
     'ot_eligible_types' => 'Who gets overtime — employment type codes, comma separated (e.g. WORKER)',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'tax_slabs' => 'Tax at source — slabs as "width:rate" separated by commas, the last may be "*:rate" (e.g. 350000:0, 100000:5, 400000:10, *:30); empty = nothing is deducted',
+    'tax_exemption_cap' => 'Tax at source — salary exemption cap (one third or this amount, whichever is lower)',
 ];

@@ -40,4 +40,6 @@ return [
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
     'ot_prepare' => 'Build from attendance',
     'ot_sign' => 'Sign',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'tax_certificate' => 'Tax certificate',
 ];

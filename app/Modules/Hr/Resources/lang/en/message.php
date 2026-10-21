@@ -88,4 +88,7 @@ return [
     'ot_formula_note' => 'Pay = basic ÷ 208 × 2 × signed extra hours (BLA s.108). Only the employee\'s own manager signs — on one\'s own or self-built sheet, only the owner.',
     'ot_none' => 'No overtime sheets this month.',
     'ot_owner_self_signed' => 'The owner signed an overtime sheet that was their own or that they built.',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'tax_slabs_missing' => 'No tax slabs are set — no tax was deducted at source in this run. Set HR\'s tax slabs in the control panel.',
+    'tax_slabs_unreadable' => 'The tax slabs could not be read — write "width:rate" separated by commas; no tax was deducted at source in this run.',
 ];

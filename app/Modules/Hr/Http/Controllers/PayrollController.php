@@ -155,6 +155,8 @@ class PayrollController extends Controller implements HasMiddleware
                 'deductions' => (string) $run->deduction_total,
                 'net' => (string) $run->net_total,
             ],
+            // ⭐ করের ধাপ বসানো নেই — উৎসে কিছুই কাটা হয়নি, পাতায় সেটা স্পষ্ট (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax::note()]])
+            'taxNote' => app(\App\Modules\Hr\Services\SalaryTax::class)->note(),
             // ব্যাংকে কতজনের বেতন যাবে — ফাইলটা নামানোর আগে জানা দরকার
             'bankRows' => $run->payslips->where('payment_method', 'bank')
                 ->filter(fn ($s) => bccomp((string) $s->net, '0', 4) > 0)->count(),

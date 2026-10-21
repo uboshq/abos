@@ -66,6 +66,11 @@
                     <x-ui.field name="national_id" :label="__('hr::field.national_id')"
                                 :value="old('national_id', $employee->national_id)" />
                 @endif
+                {{-- ⭐ e-TIN — করদাতার শনাক্তকরণ নম্বর, পরিচয়ের চাবির পেছনে (আয়কর আইন ২০২৩; a6, ২১ অক্টোবর ২০২৬) --}}
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'e_tin'))
+                    <x-ui.field name="e_tin" :label="__('hr::field.e_tin')"
+                                :value="old('e_tin', $employee->e_tin)" />
+                @endif
             </div>
         </section>
 

@@ -117,6 +117,8 @@
                 'hr::field.email' => $employee->email,
                 'hr::field.national_id' => \App\Core\Security\FieldSecurity::show(
                     $employee, 'national_id', $employee->national_id),
+                // ⭐ e-TIN — পরিচয়ের চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬)
+                'hr::field.e_tin' => \App\Core\Security\FieldSecurity::show($employee, 'e_tin', $employee->e_tin),
                 'hr::field.present_address' => \App\Core\Security\FieldSecurity::show($employee, 'present_address', $employee->present_address),
                 'hr::field.permanent_address' => \App\Core\Security\FieldSecurity::show($employee, 'permanent_address', $employee->permanent_address),
                 'hr::field.emergency_name' => \App\Core\Security\FieldSecurity::show($employee, 'emergency_name',
@@ -392,7 +394,11 @@
     {{-- ── বেতন ──────────────────────────────────────────────────────────── --}}
     @can('viewSalary', $employee)
         <section id="salary" data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" style="max-width: 36rem">
-            <h2 class="mb-3 font-semibold">{{ __('hr::action.salary') }}</h2>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('hr::action.salary') }}</h2>
+                {{-- ⭐ বছরের কর-সনদ — আয়ের বছর ধরে উৎসে কাটা কর (a6, ২১ অক্টোবর ২০২৬) --}}
+                <x-ui.button :href="route('hr.employee.tax_certificate', $employee)">{{ __('hr::action.tax_certificate') }}</x-ui.button>
+            </div>
 
             @if ($components === [])
                 <p class="text-sm text-(--color-ink-muted)">{{ __('hr::message.no_salary_yet') }}</p>

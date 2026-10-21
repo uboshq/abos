@@ -298,6 +298,8 @@ class EmployeeController extends Controller implements HasMiddleware
             'mobile' => ['nullable', 'string', 'max:32'],
             'email' => ['nullable', 'email', 'max:120'],
             'national_id' => ['nullable', 'string', 'max:32'],
+            // ⭐ e-TIN — বাংলাদেশের করদাতা নম্বর, ১২ অঙ্ক (আয়কর আইন ২০২৩; a6, ২১ অক্টোবর ২০২৬)
+            'e_tin' => ['nullable', 'string', 'regex:/^\d{12}$/'],
 
             // ⭐ প্রোফাইলের মানুষটা — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬। সবই ঐচ্ছিক: পুরনো কর্মীদের এগুলো কেউ লেখেনি।
             'date_of_birth' => ['nullable', 'date', 'before:today'],
@@ -402,6 +404,7 @@ class EmployeeController extends Controller implements HasMiddleware
             'mfs_number' => ['nullable', 'string', 'max:32'],
         ], [
             'branch_id.required' => __('hr::validation.branch_required'),
+            'e_tin.regex' => __('hr::validation.e_tin_shape'),
         ]);
 
         /*

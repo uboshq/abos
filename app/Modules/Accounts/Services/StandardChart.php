@@ -480,6 +480,12 @@ final class StandardChart implements ProvisionsCompany
      */
     public const PF_EMPLOYER_EXPENSE = '5225';
 
+    /**
+     * ⭐ বেতন থেকে উৎসে কাটা কর — সরকারের পাওনা, জমা না দেওয়া পর্যন্ত দায় (আয়কর আইন ২০২৩ ধারা ৮৬; a6, ২১ অক্টোবর ২০২৬,
+     * [[SalaryTax]])। ⓘ প্রদেয় বেতনে মেশে না — "কর্মীকে কত দিতে হবে" আর "সরকারকে কত জমা দিতে হবে" আলাদা প্রশ্ন।
+     */
+    public const TDS_PAYABLE = '2132';
+
     public const EMPLOYEE_ADVANCE = '1131';
 
     /**
@@ -658,7 +664,7 @@ final class StandardChart implements ProvisionsCompany
         self::INVENTORY_SHORTAGE_SURPLUS,
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
-        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE,
+        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
@@ -1048,6 +1054,8 @@ final class StandardChart implements ProvisionsCompany
              * জমা দিতে হবে" দুইটা প্রশ্নের একটাই উত্তর থাকত।
              */
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
+            // ⭐ বেতন থেকে উৎসে কাটা কর (a6, ২১ অক্টোবর ২০২৬; [[TDS_PAYABLE]])
+            ['2132', 'Tax Deducted at Source Payable — Salary', 'প্রদেয় উৎসে কর (বেতন)', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],

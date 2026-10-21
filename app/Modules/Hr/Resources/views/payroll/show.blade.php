@@ -57,6 +57,15 @@
         </div>
     @endif
 
+    {{-- ⭐ করের ধাপ বসানো নেই — উৎসে কিছুই কাটা হয়নি (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax::note()]]) --}}
+    @if (($taxNote ?? null) !== null)
+        <div role="status" data-tax-note
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            {{ $taxNote }}
+        </div>
+    @endif
+
     <div class="mb-4 grid gap-4 lg:grid-cols-[1fr_22rem]">
         <div class="grid gap-3 sm:grid-cols-4">
             {{-- ⓘ নাগালের কর্মীদের মোট — সীমা না থাকলে রানের নিজের (অডিট HR ⛔২) --}}
