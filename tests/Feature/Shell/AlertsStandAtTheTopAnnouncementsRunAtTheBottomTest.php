@@ -260,7 +260,8 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->announce('পুরনো সাধারণ ঘোষণা', priority: 'normal');
         $this->announce('নতুন সাধারণ ঘোষণা', priority: 'normal');
 
-        $first = $this->part($this->dashboard(), 'data-ticker-copy', 'aria-hidden="true"');
+        // ⓘ প্রথম কপি শেষ হয় দ্বিতীয় কপির শুরুতে (`min-w-1/2`) — প্রতিটা ঘোষণার বিন্দুও `aria-hidden="true"`, তাই ওটা ধরে কাটলে প্রথম শিরোনামের আগেই কাটত
+        $first = $this->part($this->dashboard(), 'data-ticker-copy', 'min-w-1/2');
         $at = fn (string $title): int|false => strpos($first, $title);
 
         foreach (['বেশি-জরুরি ঘোষণা', 'নতুন সাধারণ ঘোষণা', 'পুরনো সাধারণ ঘোষণা', 'কম-জরুরি ঘোষণা'] as $title) {
