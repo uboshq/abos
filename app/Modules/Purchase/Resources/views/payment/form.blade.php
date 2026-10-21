@@ -183,7 +183,9 @@
                     <p class="text-sm text-(--color-ink-muted)" x-show="supplier === ''">{{ __('money.screen.pick_supplier_first') }}</p>
                     <p class="text-sm text-(--color-ink-muted)" x-show="supplier !== '' && visible.length === 0" x-cloak>{{ __('money.screen.no_bills') }}</p>
 
-                    {{-- ⓘ সাত কলাম এক কার্ডে — ঘরের পাশের ফাঁক কম (`--grid-pad-x`), নইলে "এখন প্রয়োগ" ঘর ডানে কেটে যেত (১৩৬৬-এর মিল-তালিকায় ধরা) --}}
+                    {{-- ⓘ সাত কলাম এক কার্ডে — ঘরের পাশের ফাঁক কম (`--grid-pad-x`)।
+                         ⭐ "এখন প্রয়োগ" ডানে আটকানো (sticky) — বাঁয়ের মডিউল-মেনু খোলা ১৩৬৬-এ টেবিল পাশে সরলেও লেখার ঘরটা সবসময়
+                         চোখে থাকে (মিল-তালিকার ফাঁক ১; fe, ২২ অক্টোবর ২০২৬: SAP/Xero-র চল)। --}}
                     <div class="table-responsive" x-show="visible.length > 0" x-cloak>
                         <table class="ui-grid w-full text-sm [--grid-pad-x:6px]">
                             <thead>
@@ -194,7 +196,7 @@
                                     <th class="text-start">{{ __('money.screen.col.due') }}</th>
                                     <th class="num">{{ __('money.screen.col.total') }}</th>
                                     <th class="num">{{ __('money.screen.col.remaining') }}</th>
-                                    <th class="num">{{ __('money.screen.col.apply') }}</th>
+                                    <th class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-apply-col>{{ __('money.screen.col.apply') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -206,7 +208,7 @@
                                         <td class="whitespace-nowrap" :class="bill.late ? 'text-(--color-danger) font-medium' : ''" x-text="bill.due"></td>
                                         <td class="num whitespace-nowrap" x-text="money(bill.total)"></td>
                                         <td class="num whitespace-nowrap" x-text="money(bill.remaining)"></td>
-                                        <td class="num">
+                                        <td class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-apply-col>
                                             <input type="text" inputmode="decimal" :value="shown(bill.id)" @change="typed(bill.id, $event.target.value)"
                                                    :aria-label="bill.no"
                                                    class="num h-(--spacing-field-compact) w-26 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
@@ -220,7 +222,7 @@
                                     <td colspan="3">{{ __('money.screen.col.applied_total') }}</td>
                                     <td class="num" x-text="billTotalText"></td>
                                     <td class="num" x-text="remainingText"></td>
-                                    <td class="num" data-applied-total x-text="appliedText"></td>
+                                    <td class="num sticky end-0 z-10 bg-(--color-surface-card) border-s border-(--color-border)" data-applied-total data-apply-col x-text="appliedText"></td>
                                 </tr>
                             </tfoot>
                         </table>

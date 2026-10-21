@@ -93,6 +93,11 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertNotFalse($first, '⛔ #৩: খোলা বিল পর্দায় আসেনি।');
         $this->assertLessThan($second, $first, '⛔ #৩: আগে যেটার শেষ দিন, সেটা আগে নয়।');
         $this->assertStringContainsString(e(__('money.screen.due_order')), $html);
+
+        // ⭐ "এখন প্রয়োগ" ডানে আটকানো — মাথায়, প্রতিটা সারিতে আর মোটে; মেনু খোলা ১৩৬৬-এ টেবিল সরলেও লেখার ঘর চোখে থাকে
+        // (মিল-তালিকার ফাঁক ১, ২২ অক্টোবর ২০২৬)
+        $this->assertSame(3, preg_match_all('/<t[hd] class="num sticky end-0[^"]*"[^>]*data-apply-col/', $html),
+            '⛔ #৩: "এখন প্রয়োগ" ঘর ডানে আটকানো নয় — মেনু খোলা ১৩৬৬-এ কেটে যায়');
     }
 
     public function test_item_2_only_the_needed_fields_and_no_paid_to_from_party_box(): void
