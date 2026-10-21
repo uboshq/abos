@@ -219,6 +219,12 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $this->assertSame('ঘণ্টার বিজ্ঞপ্তি', __('core.settings_group.bell', [], 'bn'), '⛔ সেটিংসের ঘণ্টার দল এখনো "খবর"।');
         $this->assertSame('বিজ্ঞপ্তি পাঠানো', __('core.settings_group.delivery', [], 'bn'), '⛔ সেটিংসের পাঠানোর দল এখনো "খবর"।');
 
+        // ⓘ fe, ২১ অক্টোবর ২০২৬ (cb-র মাধ্যমে): উপরের ফিতা — সংখ্যার সাথে "টা", ইংরেজি অঙ্ক, "সই"
+        $this->assertSame('1টা সইয়ের অপেক্ষায়', trans_choice('core.notice.awaiting_decision', 1, ['count' => 1], 'bn'), '⛔ ফিতা এখনো "১টি সিদ্ধান্ত"।');
+        $this->assertSame('3টা সইয়ের অপেক্ষায়', trans_choice('core.notice.awaiting_decision', 3, ['count' => 3], 'bn'), '⛔ ফিতার সংখ্যা আর "টা" জোড়া নয়।');
+        $this->assertSame('1টা লটের মেয়াদ 7 দিনের মধ্যে শেষ', trans_choice('core.notice.expiring_batches', 1, ['count' => 1, 'days' => 7], 'bn'), '⛔ লটের ফিতা এখনো "একটি"।');
+        $this->assertSame('4টা লটের মেয়াদ 7 দিনের মধ্যে শেষ', trans_choice('core.notice.expiring_batches', 4, ['count' => 4, 'days' => 7], 'bn'), '⛔ লটের ফিতা এখনো ":count টি"।');
+
         // ⓘ চিপ নিজেও ফাইলের লেখা আঁকে
         $this->assertSame($states['posted']['label_bn_short_without_level'], PaperStates::chip('posted')['label']);
         $this->assertSame($states['posted']['label_bn_stock'], PaperStates::chip('posted', kind: 'stock')['label']);
