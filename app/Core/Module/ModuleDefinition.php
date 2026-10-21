@@ -520,6 +520,15 @@ final class ModuleDefinition
          * @var list<class-string<WidgetSummary>>
          */
         public readonly array $phoneWidgets = [],
+
+        /**
+         * ⭐ নিজের সচল ছক না থাকলে কোন কাজ কোন কাজের ছকে সই চায় — মডিউল নিজে বলে, কোর কোনো মডিউলের নাম জানে না
+         * ([[ApprovalEngine::flowFor()]]; fe-র গ্যাপ ২৬, ২০ অক্টোবর ২০২৬)। ⓘ দুই দিকই এই মডিউলের `approvals`-এর কাজ, বুটেই যাচাই।
+         * ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<string, string> কাজ => ফিরে-যাওয়ার কাজ
+         */
+        public readonly array $approvalFallbacks = [],
     ) {}
 
     /**
@@ -732,6 +741,7 @@ final class ModuleDefinition
                 $path,
             ),
             phoneWidgets: self::validatePhoneWidgets($raw['phone_widgets'] ?? [], $path),
+            approvalFallbacks: self::validateApprovalFallbacks($raw['approval_fallbacks'] ?? [], $raw['approvals'] ?? [], $path),
         );
     }
 
@@ -1490,6 +1500,28 @@ final class ModuleDefinition
         }
 
         return $approvals;
+    }
+
+    /**
+     * ⛔ দুই দিকই এই মডিউলের ঘোষিত কাজ, আর নিজের দিকে ফেরা নয় — ভুল নাম নীরবে কিছুই ধরত না, আর সই চাওয়া বন্ধ হয়ে যেত।
+     *
+     * @param  array<mixed, mixed>  $fallbacks
+     * @param  array<mixed, mixed>  $approvals
+     * @return array<string, string>
+     */
+    private static function validateApprovalFallbacks(array $fallbacks, array $approvals, string $path): array
+    {
+        foreach ($fallbacks as $action => $to) {
+            if (! is_string($action) || ! is_string($to) || ! array_key_exists($action, $approvals)
+                || ! array_key_exists($to, $approvals) || $action === $to) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_fallbacks '".(is_string($action) ? $action : gettype($action))
+                    ."' must map one of this module's approval actions to another of them."
+                );
+            }
+        }
+
+        return $fallbacks;
     }
 
     /**

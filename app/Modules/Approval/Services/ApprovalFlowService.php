@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Module\ModuleRegistry;
 use App\Models\Approval;
 use App\Models\ApprovalCondition;
@@ -317,6 +318,8 @@ class ApprovalFlowService
     private function replaceConditions(ApprovalFlow $flow, array $conditions): void
     {
         $flow->conditions()->delete();
+        // ⓘ কোয়েরি-মোছা মডেলের ঘটনা চালায় না — ইঞ্জিনের জমানো ছক নিজে পুরনো করা (শর্ত না থাকলে আর কোনো লেখা আসে না)
+        ApprovalEngine::flowsChanged();
 
         foreach ($conditions as $condition) {
             ApprovalCondition::create([

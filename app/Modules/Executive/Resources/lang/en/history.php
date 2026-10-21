@@ -9,4 +9,5 @@ return [
     'none_that_day' => 'No nightly record for that day — it is before records began, or nothing was written that night.',
     'trend' => ':figure — last 90 days, from the nightly records',
     'month_before' => 'Same day last month',
+    'basis_changed' => '⚑ From :date sales are net (excl. VAT and returns); earlier nights are still bill totals — the two bases do not compare.',
 ];
