@@ -7269,7 +7269,7 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
-  String get collectMonthOpen => 'মাস খোলা ✓';
+  String get collectMonthOpen => 'মাস খোলা';
 
   @override
   String get collectMonthClosed => 'মাস বন্ধ — পোস্ট হবে না';
@@ -7525,7 +7525,7 @@ class AppL10nBn extends AppL10n {
   String get collectJournalTotal => 'মোট';
 
   @override
-  String get collectJournalBalanced => 'মোট মিলেছে ✓';
+  String get collectJournalBalanced => 'মোট মিলেছে';
 
   @override
   String get collectJournalUnbalanced =>

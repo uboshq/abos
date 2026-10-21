@@ -581,8 +581,13 @@ class _CollectScreenState extends State<CollectScreen> {
         if (_saved case final s? when s.state != null)
           AppStatusChip.forServer(s.state!, key: const ValueKey('collect-state'), fallbackLabel: s.state!, dense: true),
         if (branch != null) Text(w.collectBranchOf(branch), key: const ValueKey('collect-branch'), style: muted),
+        // ⓘ টিক চিহ্ন Material Symbols-এর আইকন, লেখার ✓ নয় (আইকনের নিয়ম; পর্দা-পাঠক কেবল লেখাটা পড়ে)
         if (month == true)
-          Text(w.collectMonthOpen, key: const ValueKey('collect-month'), style: muted.copyWith(color: context.palette.success)),
+          Row(key: const ValueKey('collect-month'), mainAxisSize: MainAxisSize.min, children: [
+            Text(w.collectMonthOpen, style: muted.copyWith(color: context.palette.success)),
+            const SizedBox(width: 2),
+            ExcludeSemantics(child: Icon(Symbols.check_circle, size: 14, color: context.palette.success)),
+          ]),
         if (month == false)
           Text(w.collectMonthClosed,
               key: const ValueKey('collect-month'), style: muted.copyWith(color: context.palette.danger, fontWeight: FontWeight.w600)),
@@ -1399,11 +1404,18 @@ class JournalLines extends StatelessWidget {
       amounts(totalDr, totalCr, strong: true),
       Padding(
         padding: const EdgeInsets.only(top: AppSpacing.xs),
-        child: Text(
-          balanced ? w.collectJournalBalanced : w.collectJournalUnbalanced,
-          key: const ValueKey('collect-journal-balanced'),
-          style: TextStyle(color: balanced ? context.palette.success : context.palette.danger, fontWeight: FontWeight.w600),
-        ),
+        child: Row(key: const ValueKey('collect-journal-balanced'), mainAxisSize: MainAxisSize.min, children: [
+          Flexible(
+            child: Text(
+              balanced ? w.collectJournalBalanced : w.collectJournalUnbalanced,
+              style: TextStyle(color: balanced ? context.palette.success : context.palette.danger, fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (balanced) ...[
+            const SizedBox(width: 4),
+            ExcludeSemantics(child: Icon(Symbols.check_circle, size: 16, color: context.palette.success)),
+          ],
+        ]),
       ),
     ]);
   }

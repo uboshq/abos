@@ -9922,7 +9922,7 @@
       }
     }
   },
-  "collectMonthOpen": "মাস খোলা ✓",
+  "collectMonthOpen": "মাস খোলা",
   "@collectMonthOpen": {
     "description": "Collection header: the accounting month is open (item 13)"
   },
@@ -10271,7 +10271,7 @@
   "@collectJournalTotal": {
     "description": "Collection journal: total row"
   },
-  "collectJournalBalanced": "মোট মিলেছে ✓",
+  "collectJournalBalanced": "মোট মিলেছে",
   "@collectJournalBalanced": {
     "description": "Collection journal: debit equals credit"
   },

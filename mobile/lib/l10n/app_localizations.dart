@@ -11962,7 +11962,7 @@ abstract class AppL10n {
   /// Collection header: the accounting month is open (item 13)
   ///
   /// In bn, this message translates to:
-  /// **'মাস খোলা ✓'**
+  /// **'মাস খোলা'**
   String get collectMonthOpen;
 
   /// Collection header: the accounting month is closed (item 13)
@@ -12388,7 +12388,7 @@ abstract class AppL10n {
   /// Collection journal: debit equals credit
   ///
   /// In bn, this message translates to:
-  /// **'মোট মিলেছে ✓'**
+  /// **'মোট মিলেছে'**
   String get collectJournalBalanced;
 
   /// Collection journal: debit differs from credit

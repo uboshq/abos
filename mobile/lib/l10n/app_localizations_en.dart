@@ -7396,7 +7396,7 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get collectMonthOpen => 'Month open ✓';
+  String get collectMonthOpen => 'Month open';
 
   @override
   String get collectMonthClosed => 'Month closed — posting is refused';
@@ -7656,7 +7656,7 @@ class AppL10nEn extends AppL10n {
   String get collectJournalTotal => 'Total';
 
   @override
-  String get collectJournalBalanced => 'Totals match ✓';
+  String get collectJournalBalanced => 'Totals match';
 
   @override
   String get collectJournalUnbalanced =>

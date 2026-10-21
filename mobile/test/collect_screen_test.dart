@@ -96,7 +96,7 @@ void main() {
     expect(find.text('করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ'), findsOneWidget, reason: '⛔ গ্রাহকের নাম · পয়েন্ট · শাখা নয়');
     expect(find.text('বকেয়া ৳53,200.00 · বাকির সীমা ৳1,00,000.00 · সবচেয়ে পুরনো বাকি 49 দিন'), findsOneWidget);
     expect(find.text('শাখা: গ্রাহকের শাখা (ময়মনসিংহ)'), findsOneWidget, reason: 'বিষয় ১৪: শাখা গ্রাহকের');
-    expect(find.text('মাস খোলা ✓'), findsOneWidget, reason: 'বিষয় ১৩');
+    expect(find.text('মাস খোলা'), findsOneWidget, reason: 'বিষয় ১৩');
     expect(find.text('নম্বর: সংরক্ষণ করলে বসবে'), findsOneWidget);
 
     await _type(tester, 'collect-amount', '45000');
@@ -287,7 +287,7 @@ void main() {
 
     // ⓘ পাতাতেও খাতায় যা যাবে, মোট মেলে
     expect(find.byKey(const ValueKey('collect-journal')), findsOneWidget);
-    expect(find.text('মোট মিলেছে ✓'), findsOneWidget);
+    expect(find.text('মোট মিলেছে'), findsOneWidget);
     expect(find.byKey(const ValueKey('collect-needs-signature')), findsOneWidget, reason: 'বিষয় ৪/১১: সইয়ে যাবে বলা নেই');
 
     await tester.tap(find.byKey(const ValueKey('collect-post')));
