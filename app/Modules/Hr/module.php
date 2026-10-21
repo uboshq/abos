@@ -467,6 +467,18 @@ return [
             'group' => 'entry',
             'super_admin_only' => true,
         ],
+        /*
+         * ⭐ প্রতিষ্ঠানের ভাগ কতটা কর্মীর প্রাপ্য — চাকরির পূর্ণ বছর ধরে (BLA ধারা ২৬৭; fe, ২১ অক্টোবর ২০২৬; [[ProvidentFund::vest()]])।
+         * ⛔ ডিফল্ট খালি = "বসানো নেই" (১০০% নয়) — চূড়ান্ত নিষ্পত্তি তখন হিসাব করবে না। লেখার ধরন: "3:50, 5:100"।
+         */
+        [
+            'key' => 'hr.pf.vesting_steps',
+            'label' => 'hr::settings.pf_vesting_steps',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
         [
             'key' => 'hr.pf.employer_percent',
             'label' => 'hr::settings.pf_employer_percent',

@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Services\ProvidentFund;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class ProvidentFundController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:hr.salary.view'),
-            new Middleware('can:hr.salary.manage', only: ['store']),
+            new Middleware('can:hr.salary.manage', only: ['store', 'enrol']),
         ];
     }
 
@@ -47,7 +48,24 @@ class ProvidentFundController extends Controller implements HasMiddleware
             'employeePercent' => $this->fund->employeePercent(),
             'employerPercent' => $this->fund->employerPercent(),
             'rows' => collect($this->fund->proposal($on, $request->user())),
+            // ⭐ সদস্য নন, অথচ এক বছরের চাকরি — আলাদা তালিকা, আলাদা "তহবিলে যোগ" (BLA ধারা ২৬৪; fe, দফা ১)
+            'candidates' => collect($this->fund->eligibleNonMembers($on, $request->user())),
         ]);
+    }
+
+    /** ⭐ একজনকে তহবিলে যোগ — বেছে নেওয়া তারিখ থেকে; নিজে থেকে কেউ যোগ হন না */
+    public function enrol(Request $request, Employee $employee): RedirectResponse
+    {
+        $this->authorize('viewSalary', $employee);
+
+        $data = $request->validate(['effective_from' => ['required', 'date_format:Y-m-d']]);
+        $from = Carbon::createFromFormat('Y-m-d', $data['effective_from'])->startOfDay();
+
+        $waiting = $this->fund->enrol($employee, $from, $request->user());
+
+        return redirect()
+            ->route('hr.pf.proposal', ['on' => $from->toDateString()])
+            ->with('saved', __($waiting === null ? 'hr::message.pf_enrol_done' : 'hr::message.pf_enrol_waiting', ['name' => $employee->label()]));
     }
 
     /** ⭐ "বসান" — বেছে নেওয়া তারিখ থেকে, কেবল যাঁদের হার আলাদা; ফল এক লাইনে, বাদ পড়াদের কারণসহ */

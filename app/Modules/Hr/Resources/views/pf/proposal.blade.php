@@ -79,7 +79,15 @@
             <p class="text-sm text-(--color-ink-muted)">{{ __('hr::validation.pf_head_missing') }}</p>
         </div>
     @else
-        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" />
+        @php
+            // ⭐ প্রস্তাব কেবল সদস্যদের — অ-সদস্যরা নিচে আলাদা তালিকায় (fe, দফা ১); নিচে যোগের সারি (দফা ৯)
+            $members = $rows->where('member', true)->values();
+            $sum = fn ($list, string $key) => \App\Core\Support\Money::format($list->reduce(fn ($c, $r) => bcadd($c, (string) $r[$key], 4), '0'));
+        @endphp
+        <h2 class="mb-2 font-semibold">{{ __('hr::message.pf_members_title') }}</h2>
+        <x-ui.table :rows="$members" :columns="$columns" :empty="__('core.empty.no_results')"
+                    :totals="['current' => $sum($members, 'current'), 'proposed' => $sum($members, 'proposed'), 'employer' => $sum($members, 'employer')]"
+                    :totalsLabel="__('core.print.total')" />
 
         @can('hr.salary.manage')
             @if ($rows->contains('changes', true))
@@ -92,5 +100,20 @@
                 </form>
             @endif
         @endcan
+
+        {{-- ⭐ সদস্য নন, অথচ এক বছরের চাকরি — যোগ দেওয়ার অধিকার আছে (BLA ধারা ২৬৪); কেউ নিজে থেকে যোগ হন না, প্রতিজনের আলাদা বোতাম --}}
+        <h2 class="mb-2 mt-4 font-semibold" data-pf-candidates>{{ __('hr::message.pf_candidates_title') }}</h2>
+        <x-ui.table :rows="$candidates" :empty="__('hr::message.pf_no_candidates')"
+                    :columns="[
+                        ['key' => 'employee', 'label' => __('hr::field.employee'), 'render' => fn ($r) => $r['employee']->label()],
+                        ['key' => 'proposed', 'label' => __('hr::field.pf_proposed'), 'numeric' => true, 'width' => '9rem',
+                         'render' => fn ($r) => \App\Core\Support\Money::format($r['proposed'])],
+                        ['key' => 'employer', 'label' => __('hr::field.pf_employer'), 'numeric' => true, 'width' => '9rem',
+                         'render' => fn ($r) => \App\Core\Support\Money::format($r['employer'])],
+                        ['key' => 'enrol', 'label' => '—', 'width' => '10rem',
+                         'render' => fn ($r) => view('hr::pf.partials.enrol', ['employee' => $r['employee'], 'on' => $on])],
+                    ]"
+                    :totals="['proposed' => $sum($candidates, 'proposed'), 'employer' => $sum($candidates, 'employer')]"
+                    :totalsLabel="__('core.print.total')" />
     @endif
 </x-layouts.app>

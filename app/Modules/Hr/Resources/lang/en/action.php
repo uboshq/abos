@@ -44,4 +44,6 @@ return [
     'tax_certificate' => 'Tax certificate',
     // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
     'new_bonus_run' => 'New festival bonus run',
+    // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
+    'pf_enrol' => 'Enrol in the fund',
 ];

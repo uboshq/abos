@@ -53,6 +53,12 @@ final class ProvidentFund
     /** ⓘ অডিটের চিহ্ন — প্রস্তাবিত হার বসানো হলো (কলাম ২৪ অক্ষরের) */
     public const RATE_APPLIED = 'pf_rate_applied';
 
+    /** ⓘ অডিটের চিহ্ন — তহবিলে যোগ দিলেন */
+    public const ENROLLED = 'pf_enrolled';
+
+    /** ⭐ প্রতিষ্ঠানের ভাগ প্রাপ্তির ধাপ (BLA ধারা ২৬৭) — খালি = বসানো নেই ([[vestingSteps()]]) */
+    public const VESTING_STEPS = 'hr.pf.vesting_steps';
+
     public function __construct(
         private readonly SettingsService $settings,
         private readonly SalaryStructureService $salaries,
@@ -216,6 +222,138 @@ final class ProvidentFund
         }
 
         return $result;
+    }
+
+    /**
+     * ⭐ সদস্য নন, অথচ যোগ্য — সেই তারিখে অন্তত এক বছরের চাকরি (BLA ধারা ২৬৪: এক বছর পূর্ণ হলে তহবিলে যোগ দেওয়ার অধিকার; fe, ২১ অক্টোবর
+     * ২০২৬, দফা ১)। ⓘ প্রস্তাবের পাতায় আলাদা তালিকা; ⛔ নিজে থেকে কাউকে তহবিলে ঢোকানো হয় না — যোগ দেওয়া আলাদা কাজ ([[enrol()]])।
+     *
+     * @return list<array{employee: Employee, proposed: string, employer: string}>
+     */
+    public function eligibleNonMembers(Carbon $on, ?User $for = null): array
+    {
+        $cutoff = $on->copy()->subYearNoOverflow();
+        $rows = [];
+
+        foreach ($this->proposal($on, $for) as $row) {
+            $joined = $row['employee']->joining_date;
+
+            if ($row['member'] || $joined === null || $joined->copy()->startOfDay()->gt($cutoff)) {
+                continue;
+            }
+
+            $basic = $this->basicOn($row['employee'], $on);
+            $rows[] = [
+                'employee' => $row['employee'],
+                'proposed' => Money::round(bcdiv(bcmul($basic, $this->employeePercent(), 10), '100', 10), 2),
+                'employer' => $this->employerShare($basic),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * ⭐ তহবিলে যোগ — একজন, একটা তারিখ থেকে, প্রস্তাবিত হারে; বেতনের কাঠামোর মানুষের দরজা দিয়ে (দ্বিতীয় সই চালু থাকলে সেটাও লাগে)।
+     *
+     * ⛔ কেবল যোগ্য অ-সদস্য ([[eligibleNonMembers()]]); সদস্যের হার বদল [[apply()]]-এর কাজ। অডিটে `pf_enrolled`, টাকা ছাড়া।
+     *
+     * @throws AuthorizationException `hr.salary.manage` না থাকলে
+     * @throws ValidationException যোগ্য নন, আগেই সদস্য, বা দেওয়া মাস
+     */
+    public function enrol(Employee $employee, Carbon $from, User $by): ?Approval
+    {
+        if (! $by->can('hr.salary.manage')) {
+            throw new AuthorizationException(__('hr::validation.pf_apply_needs_the_key'));
+        }
+
+        $head = $this->fundHead();
+
+        if ($head === null) {
+            throw ValidationException::withMessages(['effective_from' => __('hr::validation.pf_head_missing')]);
+        }
+
+        $eligible = collect($this->eligibleNonMembers($from))->contains(fn (array $row) => (int) $row['employee']->id === (int) $employee->id);
+
+        if (! $eligible) {
+            throw ValidationException::withMessages(['employee' => __('hr::validation.pf_not_eligible')]);
+        }
+
+        $waiting = $this->salaries->change($employee, $from->toDateString(), [$head->id => $this->employeePercent()]);
+
+        $employee->auditAction(self::ENROLLED, __('hr::message.pf_enrolled', [
+            'rate' => self::shown($this->employeePercent()),
+            'date' => $from->toDateString(),
+        ]));
+
+        return $waiting;
+    }
+
+    /**
+     * ⭐ প্রতিষ্ঠানের জমা ভাগের কতটা কর্মীর প্রাপ্য — চাকরির পূর্ণ বছর ধরে (BLA ধারা ২৬৭; fe, ২১ অক্টোবর ২০২৬, দফা ১)। খাঁটি হিসাব —
+     * কিছু পড়ে না, কিছু লেখে না।
+     *
+     * ⓘ ধাপ = [[vestingSteps()]]: "পূর্ণ বছর:শতাংশ", ছোট থেকে বড়। প্রাপ্য = সবচেয়ে বড় যে ধাপের বছর ≤ পূর্ণ বছর, তার শতাংশ; প্রথম ধাপের
+     * কম হলে শূন্য। পয়সায় একবার গোল।
+     *
+     * @param  list<array{years: int, percent: string}>  $steps
+     */
+    public static function vest(string $employerTotal, int $completedYears, array $steps): string
+    {
+        $percent = '0';
+
+        foreach ($steps as $step) {
+            if ($completedYears >= $step['years']) {
+                $percent = $step['percent'];
+            }
+        }
+
+        return Money::round(bcdiv(bcmul($employerTotal, $percent, 10), '100', 10), 2);
+    }
+
+    /**
+     * ⭐ সেটিংয়ের ধাপ — `hr.pf.vesting_steps`, যেমন "3:50, 5:100"।
+     *
+     * ⛔ খালি বা পড়া না গেলে `null` — মানে "বসানো নেই", ১০০% নয়। চূড়ান্ত নিষ্পত্তি (আসছে) তখন প্রতিষ্ঠানের ভাগের হিসাব করতে রাজি হবে না
+     * — কোম্পানির তহবিলের বিধি না জেনে টাকা দেওয়া যায় না; কোডে কোনো সংখ্যা বসানো নেই, কারণ বিধি তহবিলের নিজের।
+     *
+     * @return list<array{years: int, percent: string}>|null
+     */
+    public function vestingSteps(): ?array
+    {
+        $raw = trim((string) $this->settings->get(self::VESTING_STEPS));
+
+        if ($raw === '') {
+            return null;
+        }
+
+        $steps = [];
+
+        foreach (preg_split('/[,;\n]+/', $raw) ?: [] as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            if (! preg_match('/^(\d{1,2})\s*:\s*(\d{1,3}(?:\.\d{1,4})?)$/', $part, $m) || bccomp($m[2], '100', 4) > 0) {
+                return null;
+            }
+
+            $steps[] = ['years' => (int) $m[1], 'percent' => bcadd($m[2], '0', 4)];
+        }
+
+        usort($steps, fn (array $a, array $b) => $a['years'] <=> $b['years']);
+
+        return $steps === [] ? null : $steps;
+    }
+
+    /** ⓘ প্রাপ্য প্রতিষ্ঠানের ভাগ — ধাপ বসানো না থাকলে `null` (চূড়ান্ত নিষ্পত্তি থামবে) */
+    public function vestedEmployerShare(string $employerTotal, int $completedYears): ?string
+    {
+        $steps = $this->vestingSteps();
+
+        return $steps === null ? null : self::vest($employerTotal, $completedYears, $steps);
     }
 
     /**

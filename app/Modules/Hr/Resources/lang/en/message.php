@@ -97,4 +97,11 @@ return [
     'bonus_signing_summary' => 'Festival bonus :month · :count people · net :net',
     // ⭐ শ্রমিক কে — BLA ধারা 2(65) (a6, ২১ অক্টোবর ২০২৬)
     'worker_note' => '"Worker" (WORKER) — under BLA s.2(65) staff employed in a managerial or administrative capacity are not workers; do not give them this type, and they get no overtime.',
+    // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
+    'pf_members_title' => 'Fund members — current against proposed rate',
+    'pf_candidates_title' => 'Not members, with a year of service — entitled to join the fund (BLA s.264)',
+    'pf_no_candidates' => 'No non-member with a year of service.',
+    'pf_enrol_done' => ':name has joined the fund.',
+    'pf_enrol_waiting' => ':name joining the fund is awaiting signature.',
+    'pf_enrolled' => 'Joined the provident fund — at :rate%, from :date.',
 ];

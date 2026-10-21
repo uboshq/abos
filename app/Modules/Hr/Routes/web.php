@@ -145,5 +145,7 @@ Route::middleware('auth')->prefix('hr')->group(function () {
     Route::prefix('provident-fund')->name('pf.')->group(function () {
         Route::get('/', [ProvidentFundController::class, 'proposal'])->name('proposal');
         Route::post('/', [ProvidentFundController::class, 'store'])->name('store');
+        // ⭐ একজনকে তহবিলে যোগ — আলাদা কাজ, নিজে থেকে নয় (BLA ধারা ২৬৪; fe, দফা ১)
+        Route::post('/{employee}/enrol', [ProvidentFundController::class, 'enrol'])->whereNumber('employee')->name('enrol');
     });
 });

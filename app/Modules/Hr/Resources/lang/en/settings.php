@@ -20,4 +20,6 @@ return [
     'tax_exemption_cap' => 'Tax at source — salary exemption cap (one third or this amount, whichever is lower)',
     // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
     'bonus_percent_of_basic' => 'Festival bonus — % of basic (100 = one month\'s basic; never more)',
+    // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
+    'pf_vesting_steps' => 'Provident fund — employer-share vesting steps, "completed years:percent" separated by commas (e.g. 3:50, 5:100); empty = not set, final settlement will not compute',
 ];
