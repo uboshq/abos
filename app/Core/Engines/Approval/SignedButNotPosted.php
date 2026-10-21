@@ -69,7 +69,27 @@ final class SignedButNotPosted
             ->where('decided_at', '>=', now()->subDays(self::DAYS))
             ->when(! ($user->can('approval.decide') || $user->can('approval.report')),
                 fn ($q) => $q->where('requested_by', $user->id))
-            ->get(['id', 'approvable_type', 'approvable_id', 'action', 'state_hash', 'payload']);
+            ->get(['id', 'approvable_type', 'approvable_id', 'action', 'state_hash', 'payload', 'requested_by']);
+
+        /*
+         * ⛔ শাখার নাগাল — কাগজ খোলার একই নিয়মে ([[OpensInReach::opensFor()]]; লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬, fe-র প্রশ্নে ধরা)।
+         * ⓘ আগে কেবল কোম্পানি দেখা হত: শাখা-সীমিত সইদাতার সংখ্যায় অন্য শাখার আটকে-থাকা কাগজও গোনা হত — বারের ব্যাজ বাড়ত, আর
+         * তালিকায় এমন কাগজ আসত যা তিনি খুলতেই পারেন না। ⭐ এখন গোনা হয় যদি কাগজের শাখা তাঁর নাগালে (বা শাখাহীন), নয়তো তিনি নিজে
+         * সেটায় সই দিয়েছেন বা নিজেই চেয়েছিলেন — খোলার নিয়মের সইকারীর ছাড়ের মতো।
+         */
+        $scope = app(\App\Core\Services\DataScope::class);
+        $decided = $signed->isEmpty() ? [] : array_flip(DB::table('approval_decisions')
+            ->where('user_id', $user->id)
+            ->whereIn('approval_id', $signed->pluck('id')->all())
+            ->pluck('approval_id')
+            ->map(fn ($id) => (int) $id)
+            ->all());
+        $inReach = function (object $row, ?int $branch) use ($scope, $user, $decided): bool {
+            return $branch === null
+                || $scope->allows($user, \App\Models\UserDataScope::BRANCH, $branch)
+                || (int) $row->requested_by === (int) $user->id
+                || isset($decided[(int) $row->id]);
+        };
 
         $out = [];
 
@@ -94,20 +114,24 @@ final class SignedButNotPosted
                 }
 
                 // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
-                $drafts = DB::table($table)
+                $label = Schema::hasColumn($table, 'document_no') ? 'document_no' : 'id';
+                $hasBranch = Schema::hasColumn($table, 'branch_id');
+                $found = DB::table($table)
                     ->where('company_id', CompanyContext::id())
                     ->whereIn('id', $rows->pluck('approvable_id')->all())
                     ->where('status', DocumentStatus::DRAFT)
                     ->when(Schema::hasColumn($table, 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
-                    ->pluck(Schema::hasColumn($table, 'document_no') ? 'document_no' : 'id', 'id')
-                    ->all();
+                    ->get(array_values(array_unique(array_filter(['id', $label, $hasBranch ? 'branch_id' : null]))))
+                    ->keyBy(fn (object $d) => (int) $d->id);
+                $drafts = $found->map(fn (object $d) => $d->{$label})->all();
             } catch (Throwable $e) {
                 report($e);
 
                 continue;
             }
 
-            $rows = $rows->filter(fn (object $row) => array_key_exists((int) $row->approvable_id, $drafts));
+            $rows = $rows->filter(fn (object $row) => array_key_exists((int) $row->approvable_id, $drafts)
+                && $inReach($row, isset($found[(int) $row->approvable_id]->branch_id) ? (int) $found[(int) $row->approvable_id]->branch_id : null));
 
             foreach ($this->stillSigned($class, (string) $type, $rows) as $row) {
                 $out[(int) $row->id] = (string) $drafts[(int) $row->approvable_id];

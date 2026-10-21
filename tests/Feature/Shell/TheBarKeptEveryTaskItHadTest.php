@@ -93,13 +93,74 @@ final class TheBarKeptEveryTaskItHadTest extends TestCase
     /** ⭐ বারে, অনুমোদনের ঠিক পরে, ঘণ্টার আগে — সংখ্যাটা SignedButNotPosted-এর; শূন্যে ব্যাজ নেই, আইকন থাকে */
     public function test_signed_but_unposted_sits_in_the_bar_with_its_count(): void
     {
+        [, , $writer] = $this->aStuckPaper();
+        // ⓘ সইদাতা নন, নিজের কোনো কাগজও আটকে নেই — সইদাতা (approval.decide) নাগালের সব আটকে-থাকা দেখেন ([[SignedButNotPosted::papers()]])
+        $idle = $this->person(['accounts.voucher.create']);
+
+        foreach ([[$writer, true], [$idle, false]] as [$who, $stuck]) {
+            $this->as($who);
+            $bar = $this->between((string) $this->get(route('dashboard'))->assertOk()->getContent(), '<header data-topbar', 'data-profile-menu');
+            $count = app(SignedButNotPosted::class)->count($who);
+            $this->assertSame($stuck, $count > 0, 'প্রস্তুতিটাই ভুল — আটকে থাকা কাগজের সংখ্যা প্রত্যাশামতো নয় ('.$count.')।');
+
+            $this->assertMatchesRegularExpression('/data-signed-unposted-bar="'.$count.'"/', $bar, "⛔ বারে \"সই হয়েছে, পোস্ট হয়নি\" নেই, বা সংখ্যা {$count} নয়।");
+            $this->assertSame($stuck ? 1 : 0, preg_match('/data-signed-unposted-bar="\d+".*?data-signed-unposted-count[^>]*>\s*'.$count.'\s*</s', $bar),
+                $stuck ? "⛔ আটকে থাকা কাগজ {$count}, অথচ ব্যাজে সেই সংখ্যা নেই।" : '⛔ কিছু আটকে নেই, তবু ব্যাজ।');
+            $this->assertStringContainsString('title="'.e(__('core.notice.signed_unposted')).'"', $bar);
+            $this->assertLessThan(strpos($bar, 'data-notification-bell'), strpos($bar, 'data-signed-unposted-bar'), '⛔ আইকন ঘণ্টার পরে — অনুমোদনের পাশে বসার কথা।');
+            if (str_contains($bar, 'data-shell-approvals')) {
+                $this->assertLessThan(strpos($bar, 'data-signed-unposted-bar'), strpos($bar, 'data-shell-approvals'), '⛔ আইকন অনুমোদনের আগে।');
+            }
+        }
+    }
+
+    /**
+     * ⛔ শাখা-সীমিত সইদাতা অন্য শাখার আটকে-থাকা কাগজ গোনেন না — কাগজ খোলার একই নিয়ম ([[OpensInReach::opensFor()]]; fe-র প্রশ্নে ধরা,
+     * লাইভ-হটফিক্স ২১ অক্টোবর ২০২৬)। আগে কেবল কোম্পানি দেখা হত: ব্যাজে অন্য শাখার কাগজ, তালিকায় এমন কাগজ যা তিনি খুলতেই পারেন না।
+     * ⓘ ব্যতিক্রম খোলার নিয়মের মতোই: নিজে যে কাগজে সই দিয়েছেন সেটা গোনা হয়। আর পুরো কোম্পানির সইদাতা সব দেখেন।
+     */
+    public function test_a_branch_limited_signer_counts_only_the_stuck_papers_in_reach(): void
+    {
+        [$first, , , $voucher] = $this->aStuckPaper();
+        $home = (int) $this->company->defaultBranch()->id;
+        $other = (int) \App\Models\Branch::query()->where('company_id', $this->company->id)->where('id', '!=', $home)->orderBy('id')->value('id');
+        $this->assertGreaterThan(0, $other, 'প্রস্তুতিটাই ভুল — কোম্পানিতে দ্বিতীয় শাখা নেই।');
+        $this->assertSame($home, (int) Voucher::query()->withoutGlobalScopes()->findOrFail($voucher->id)->branch_id, 'প্রস্তুতিটাই ভুল — কাগজ প্রধান শাখায় নয়।');
+
+        $elsewhere = $this->person(['approval.decide']);
+        foreach ([$elsewhere, $first] as $who) {
+            \App\Models\UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $who->id,
+                'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $other]);
+        }
+        $whole = $this->person(['approval.decide']);
+        app(\App\Core\Services\DataScope::class)->forget();
+        \Illuminate\Support\Facades\Cache::flush();
+
+        $no = (string) Voucher::query()->withoutGlobalScopes()->findOrFail($voucher->id)->document_no;
+
+        $this->as($elsewhere);
+        $this->assertSame(0, app(SignedButNotPosted::class)->count($elsewhere), '⛔ অন্য শাখার সইদাতা প্রধান শাখার আটকে-থাকা কাগজ গুনলেন — যা তিনি খুলতেই পারেন না।');
+        $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertDontSee($no);
+
+        $this->as($first);
+        $this->assertSame(1, app(SignedButNotPosted::class)->count($first), '⛔ নিজে সই দেওয়া কাগজ, তবু গোনা হলো না — খোলার নিয়মে সইকারীর ছাড় আছে।');
+
+        $this->as($whole);
+        $this->assertSame(1, app(SignedButNotPosted::class)->count($whole), '⛔ পুরো কোম্পানির সইদাতা আটকে-থাকা কাগজটা গুনলেন না।');
+        $this->get(route('approval.inbox.signed_unposted'))->assertOk()->assertSee($no);
+    }
+
+    /**
+     * দুই ধাপের সই; শেষ সইয়ের আগে মাস বন্ধ — কাগজ সই-শেষ, পোস্ট আটকে ([[SignedPaperFinisher]]), প্রধান শাখায়।
+     *
+     * @return array{0: User, 1: User, 2: User, 3: Voucher} প্রথম সইদাতা, দ্বিতীয় সইদাতা, লেখক (সইদাতাও), কাগজ
+     */
+    private function aStuckPaper(): array
+    {
         $first = $this->person(['approval.decide']);
         $second = $this->person(['approval.decide']);
         $writer = $this->person(['accounts.voucher.create', 'accounts.voucher.update', 'approval.decide']);
-        // ⓘ সইদাতা নন, নিজের কোনো কাগজও আটকে নেই — সইদাতা (approval.decide) কোম্পানির সব আটকে-থাকা দেখেন ([[SignedButNotPosted::papers()]])
-        $idle = $this->person(['accounts.voucher.create']);
 
-        // ⓘ দুই ধাপের সই; শেষ সইয়ের আগে মাস বন্ধ — কাগজ সই-শেষ, পোস্ট আটকে ([[SignedPaperFinisher]])
         $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'journal', 'is_active' => true]);
         ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $first->id]);
         ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 2, 'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $second->id]);
@@ -122,21 +183,7 @@ final class TheBarKeptEveryTaskItHadTest extends TestCase
         app(ApprovalEngine::class)->approve($approval->fresh(), $second);
         $this->assertTrue(Voucher::query()->withoutGlobalScopes()->findOrFail($voucher->id)->isDraft(), 'প্রস্তুতিটাই ভুল — বন্ধ মাসেও পোস্ট হলো।');
 
-        foreach ([[$writer, true], [$idle, false]] as [$who, $stuck]) {
-            $this->as($who);
-            $bar = $this->between((string) $this->get(route('dashboard'))->assertOk()->getContent(), '<header data-topbar', 'data-profile-menu');
-            $count = app(SignedButNotPosted::class)->count($who);
-            $this->assertSame($stuck, $count > 0, 'প্রস্তুতিটাই ভুল — আটকে থাকা কাগজের সংখ্যা প্রত্যাশামতো নয় ('.$count.')।');
-
-            $this->assertMatchesRegularExpression('/data-signed-unposted-bar="'.$count.'"/', $bar, "⛔ বারে \"সই হয়েছে, পোস্ট হয়নি\" নেই, বা সংখ্যা {$count} নয়।");
-            $this->assertSame($stuck ? 1 : 0, preg_match('/data-signed-unposted-bar="\d+".*?data-signed-unposted-count[^>]*>\s*'.$count.'\s*</s', $bar),
-                $stuck ? "⛔ আটকে থাকা কাগজ {$count}, অথচ ব্যাজে সেই সংখ্যা নেই।" : '⛔ কিছু আটকে নেই, তবু ব্যাজ।');
-            $this->assertStringContainsString('title="'.e(__('core.notice.signed_unposted')).'"', $bar);
-            $this->assertLessThan(strpos($bar, 'data-notification-bell'), strpos($bar, 'data-signed-unposted-bar'), '⛔ আইকন ঘণ্টার পরে — অনুমোদনের পাশে বসার কথা।');
-            if (str_contains($bar, 'data-shell-approvals')) {
-                $this->assertLessThan(strpos($bar, 'data-signed-unposted-bar'), strpos($bar, 'data-shell-approvals'), '⛔ আইকন অনুমোদনের আগে।');
-            }
-        }
+        return [$first, $second, $writer, $voucher];
     }
 
     private function as(User $user): void
