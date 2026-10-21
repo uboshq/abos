@@ -117,6 +117,29 @@ final class NobodyKnewWhoReadTheSalariesTest extends TestCase
         $this->assertSame(0, $this->lines($self, $slip, 'payslip_viewed'), '⛔ নিজের বেতনশিট দেখাও নজরদারিতে উঠল');
     }
 
+    /**
+     * ⛔ কোডের ভুল, টেস্ট ধরেছে (Mac দৌড়, ২১ অক্টোবর ২০২৬): নিজের বেতনশিট ছাপলেও খাতায় উঠত, যখন হেডারে বাছা শাখা আর কর্মীর
+     * নিজের শাখা আলাদা — কর্মীর সম্পর্ক শাখার দেয়ালে ফাঁকা আসত, তাই "নিজের কি না" প্রশ্নটাই হত না।
+     */
+    public function test_ones_own_payslip_printed_under_another_header_branch_is_not_logged(): void
+    {
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $slip = $run->payslips()->firstOrFail();
+
+        $elsewhere = \App\Models\Branch::query()->where('company_id', $this->company->id)
+            ->whereKeyNot((int) $this->employee->branch_id)->orderBy('id')->firstOrFail();
+
+        $self = $this->staff('hr.payroll.view');
+        $this->employee->forceFill(['user_id' => $self->id])->save();
+        $self->forceFill(['current_branch_id' => $elsewhere->id, 'view_all_branches' => false])->save();
+        CompanyContext::set($this->company->id, $elsewhere->id);
+
+        $this->as($self)->get(route('hr.payslip.print', $slip->id))->assertOk();
+
+        $this->assertSame(0, $this->lines($self, $slip, 'payslip_viewed'),
+            '⛔ অন্য শাখা বাছা থাকায় নিজের বেতনশিটও নজরদারিতে উঠল — দেয়ালে কর্মীর সম্পর্ক ফাঁকা এসেছিল।');
+    }
+
     private function lines(User $viewer, Model $subject, string $action): int
     {
         return AuditTrail::query()->withoutGlobalScopes()->where('user_id', $viewer->id)->where('action', $action)
