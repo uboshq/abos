@@ -38,6 +38,7 @@ class LeaveController extends Controller implements HasMiddleware
         return [
             new Middleware('can:hr.leave.view', only: ['index', 'create', 'types']),
             new Middleware('can:hr.leave.manage', only: ['store', 'cancel', 'storeType', 'installTypes']),
+            // ⓘ চাবি দরজায়; "কার ছুটি" — কর্মীর নিজের ব্যবস্থাপক বা HR — সেবায় ([[LeaveSigner]], ঘাটতির তালিকা #১৫)
             new Middleware('can:hr.leave.approve', only: ['approve', 'reject']),
         ];
     }

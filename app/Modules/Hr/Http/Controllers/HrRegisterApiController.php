@@ -10,6 +10,7 @@ use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Support\BranchReach;
+use App\Modules\Hr\Support\LeaveSigner;
 use App\Modules\Hr\Services\LeaveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,8 @@ use Illuminate\Support\Carbon;
  * bujajayna"*; fe: "দুটোই রেজিস্টার")।
  *
  * ⓘ ওয়েবের পাতার একই প্রশ্ন, একই দেয়াল ([[BranchReach]] — চূড়ান্ত অডিট ⛔১৭) আর একই চাবি: দেখা `hr.attendance.view`/`hr.leave.view`,
- * মঞ্জুর/ফেরত `hr.leave.approve`। ⛔ মঞ্জুর আর ফেরত ওয়েবের একই সেবায় ([[LeaveService]]) — নিজের ছুটি নিজে মঞ্জুর নয়, বেতন
+ * মঞ্জুর/ফেরত `hr.leave.approve` — আর কেবল কর্মীর নিজের ব্যবস্থাপক বা HR ([[LeaveSigner]], ঘাটতির তালিকা #১৫)। ⛔ মঞ্জুর আর ফেরত
+ * ওয়েবের একই সেবায় ([[LeaveService]]) — নিজের ছুটি নিজে মঞ্জুর নয়, বেতন
  * হয়ে যাওয়া মাসে নয়, বছরের সীমা ছাড়িয়ে নয়; সব সেবাই আটকায়। ⓘ হাজিরা বসানো (বেতনের ভিত্তি) ওয়েবেই — ফোনে কেবল দেখা।
  * ⛔ বেতনের কোনো অঙ্ক এখানে নেই (চুক্তি §৪)।
  */
@@ -97,6 +99,8 @@ final class HrRegisterApiController extends Controller implements HasMiddleware
         $canDecide = $user->can('hr.leave.approve');
         // ⓘ সেবার নিজের ব্যতিক্রম — super admin নিজের ছুটিও মঞ্জুর করতে পারেন ([[LeaveService::assertNotOwn()]])
         $superAdmin = $user->hasRole(\App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+        // ⭐ কর্মীর নিজের ব্যবস্থাপক বা HR — সেবার একই প্রশ্ন, তাই বোতাম দেখা গেলে দরজাও খোলে (ঘাটতির তালিকা #১৫; [[LeaveSigner]])
+        $signer = app(LeaveSigner::class);
 
         $page = $this->reach->throughEmployee(LeaveApplication::query(), $user)
             ->with(['employee', 'leaveType', 'decider'])
@@ -119,7 +123,8 @@ final class HrRegisterApiController extends Controller implements HasMiddleware
                 'decider' => (string) ($a->decider?->name ?? ''),
                 // ⓘ বোতাম কেবল অপেক্ষমাণে আর চাবি থাকলে, আর নিজের আবেদনে নয় — তবু শেষ কথা সেবার ([[LeaveService::approve()]])
                 'can_decide' => $canDecide && $a->status === LeaveApplication::PENDING
-                    && ($superAdmin || (int) ($a->employee?->user_id ?? 0) !== (int) $user->id),
+                    && ($superAdmin || (int) ($a->employee?->user_id ?? 0) !== (int) $user->id)
+                    && $signer->mayDecide($user, $a),
             ])->values(),
             'count' => $page->total(),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,

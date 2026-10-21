@@ -1,7 +1,8 @@
 {{-- সিদ্ধান্ত হয়ে গেলে বোতামগুলো আর থাকে না — চাপা যায় অথচ কিছু হয় না
      এমন বোতাম রাখা মানে ব্যবহারকারীকে দিয়ে ভুল করানো। --}}
 @if ($application->isPending())
-    @can('hr.leave.approve')
+    {{-- ⭐ চাবির উপরে "কার" প্রশ্ন: কর্মীর নিজের ব্যবস্থাপক বা HR — সেবা যা মানে, বোতামও তাই (ঘাটতির তালিকা #১৫; [[LeaveSigner]]) --}}
+    @if (auth()->user()?->can('hr.leave.approve') && ($signer ?? app(\App\Modules\Hr\Support\LeaveSigner::class))->mayDecide(auth()->user(), $application))
         <span class="flex flex-wrap items-center justify-end gap-1">
             <form method="POST" action="{{ route('hr.leave.approve', $application->id) }}">
                 @csrf
@@ -28,7 +29,7 @@
                 </button>
             </form>
         </span>
-    @endcan
+    @endif
 @elseif ($application->isApproved())
     @can('hr.leave.manage')
         <form method="POST" action="{{ route('hr.leave.cancel', $application->id) }}" class="text-end">

@@ -54,4 +54,6 @@ return [
     'leave_own_withdrawal' => 'You cannot withdraw your own approved leave. Ask another manager or the owner.',
     'days_format' => 'Write the days as a plain number with at most one decimal place, such as 2 or 1.5.',
     'leave_type_closed' => 'That leave type cannot be chosen: it is switched off, deleted or not of this company. Choose an active leave type.',
+    // ⭐ leave goes to the line manager (gap list #15, a6, 21 Oct 2026)
+    'leave_not_your_line' => 'Only the employee\'s own manager (Reports To) or HR can sign this leave.',
 ];

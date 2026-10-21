@@ -10,4 +10,10 @@ return [
     'attendance' => 'Attendance',
     'leave' => 'Leave',
     'leave_types' => 'Leave Types',
+
+    // ⭐ HR reports (gap list #16, a6, 21 Oct 2026)
+    'report_attendance' => 'Attendance summary',
+    'report_payroll' => 'Payroll register',
+    'report_headcount' => 'Headcount by department',
+    'report_leave_balance' => 'Leave balance',
 ];

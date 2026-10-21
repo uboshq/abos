@@ -15,6 +15,7 @@ use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryStructure;
 use App\Modules\Hr\Panels\EmployeeFacts;
+use App\Modules\Hr\Reports\HrReports;
 use App\Modules\Hr\Services\UserEmployee;
 
 /**
@@ -70,6 +71,21 @@ return [
             ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
             // ⭐ খরচের দাবি আর অগ্রিম — কর্মী নিজে (মালিকের আদেশ, ৭ অক্টোবর ২০২৬; [[ExpenseClaimController]])
             ['label' => 'hr::menu.claims', 'icon' => 'wallet', 'route' => 'hr.claim.index', 'permission' => 'hr.claim.self'],
+        ],
+
+        /*
+         * ⭐ HR-এর চারটা রিপোর্ট (ঘাটতির তালিকা #১৬; a6, ২১ অক্টোবর ২০২৬) — প্রতিটা তার পর্দার চাবিতে।
+         * ⚠️ স্লাগ [[HrReportController::SLUGS]]-এর হুবহু; চাবিও সেখানকার — নইলে সারি দেখা যায় আর চাপলে ৪০৩/৪০৪।
+         */
+        'reports' => [
+            ['label' => 'hr::menu.report_attendance', 'icon' => 'calendar', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'attendance'], 'permission' => 'hr.attendance.view'],
+            ['label' => 'hr::menu.report_payroll', 'icon' => 'cash', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'payroll'], 'permission' => 'hr.payroll.view'],
+            ['label' => 'hr::menu.report_headcount', 'icon' => 'people', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'headcount'], 'permission' => 'hr.employee.view'],
+            ['label' => 'hr::menu.report_leave_balance', 'icon' => 'clock', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'leave-balance'], 'permission' => 'hr.leave.view'],
         ],
     ],
 
@@ -323,6 +339,11 @@ return [
     ],
 
     'dashboard' => HrDashboard::class,
+
+    // ⭐ রিপোর্ট ইঞ্জিন boot-এ নিবন্ধন করে — হাজিরা, বেতনশিট, কর্মী সংখ্যা, ছুটির জের ([[HrReports]])
+    'reports' => [
+        HrReports::class,
+    ],
 
     'widgets' => [
         HrWidgets::class,

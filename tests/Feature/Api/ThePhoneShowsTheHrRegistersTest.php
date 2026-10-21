@@ -71,7 +71,9 @@ final class ThePhoneShowsTheHrRegistersTest extends TestCase
         app(DataScope::class)->forget();
 
         $this->mine = $this->employee('E-1', $this->dhaka, 'Manager Self', $this->manager->id);
+        // ⓘ সহকর্মী ব্যবস্থাপকের অধীনে — ছুটিতে সই কেবল নিজের ব্যবস্থাপক বা HR-এর (ঘাটতির তালিকা #১৫, a6, ২১ অক্টোবর ২০২৬; [[LeaveSigner]])
         $this->colleague = $this->employee('E-2', $this->dhaka, 'Dhaka Colleague');
+        $this->colleague->forceFill(['reports_to_employee_id' => $this->mine->id])->save();
         $this->outside = $this->employee('E-3', $netrokona, 'Netrokona Person');
 
         $this->casual = LeaveType::query()->create(['company_id' => $this->company->id, 'code' => 'CL', 'name_en' => 'Casual',

@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Services;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Support\PaidMonth;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -198,17 +199,29 @@ final class AttendanceService
     }
 
     /**
+     * ⭐ একটা পরিসরের হাজিরার সারি — গোনার একমাত্র ভিত (a6, ২১ অক্টোবর ২০২৬; ঘাটতির তালিকা #১৬)।
+     *
+     * ⓘ [[monthlySummary()]] এখান থেকে একজনের এক মাস নেয়, আর হাজিরার সারাংশ রিপোর্ট ([[HrReports::attendanceSummary()]]) একই
+     * সারিগুলো কর্মী ধরে গোনে। ⛔ দুই জায়গায় আলাদা প্রশ্ন লিখলে একদিন প্রোফাইলের গোনা আর রিপোর্ট দুই সংখ্যা বলত।
+     *
+     * @return Builder<Attendance>
+     */
+    public static function rowsBetween(string $from, string $to): Builder
+    {
+        return Attendance::query()->forMonth($from, $to);
+    }
+
+    /**
      * @return Collection<int, Attendance>
      */
     private function rowsFor(Employee $employee, Carbon $month): Collection
     {
-        return Attendance::query()
+        return self::rowsBetween(
+            $month->copy()->startOfMonth()->toDateString(),
+            $month->copy()->endOfMonth()->toDateString(),
+        )
             ->with('leaveApplication.leaveType')
             ->where('employee_id', $employee->id)
-            ->forMonth(
-                $month->copy()->startOfMonth()->toDateString(),
-                $month->copy()->endOfMonth()->toDateString(),
-            )
             ->orderBy('work_date')
             ->get();
     }

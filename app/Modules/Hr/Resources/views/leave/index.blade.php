@@ -1,5 +1,7 @@
 {{-- ছুটির আবেদনের তালিকা। --}}
 @php
+    // ⭐ সইয়ের বোতাম কেবল কর্মীর নিজের ব্যবস্থাপক বা HR-এর — সেবার একই প্রশ্ন, পাতায় একবার (ঘাটতির তালিকা #১৫; [[LeaveSigner]])
+    $signer = app(\App\Modules\Hr\Support\LeaveSigner::class);
     $columns = [
         ['key' => 'employee', 'label' => __('hr::field.name'),
          'render' => fn ($a) => $a->employee?->label() ?? '—'],
@@ -14,7 +16,7 @@
         ['key' => 'status', 'label' => __('hr::field.status'), 'width' => '8rem',
          'render' => fn ($a) => __('hr::kind.' . $a->status)],
         ['key' => 'actions', 'label' => '—', 'width' => '14rem',
-         'render' => fn ($a) => view('hr::leave.partials.actions', ['application' => $a])],
+         'render' => fn ($a) => view('hr::leave.partials.actions', ['application' => $a, 'signer' => $signer])],
     ];
 @endphp
 

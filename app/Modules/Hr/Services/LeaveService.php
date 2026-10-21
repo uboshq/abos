@@ -10,6 +10,7 @@ use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Support\LeaveSigner;
 use App\Modules\Hr\Support\PaidMonth;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,8 @@ final class LeaveService
     {
         $this->assertPending($application);
         $this->assertNotOwn($application, $decider);
+        // ⛔ কর্মীর নিজের ব্যবস্থাপক বা HR — চাবি থাকলেই যে কেউ নয় (ঘাটতির তালিকা #১৫; [[LeaveSigner]])
+        app(LeaveSigner::class)->assertMayDecide($decider, $application);
 
         return DB::transaction(function () use ($application, $decider, $remarks) {
             /*
@@ -126,6 +129,13 @@ final class LeaveService
     public function reject(LeaveApplication $application, User $decider, string $remarks): LeaveApplication
     {
         $this->assertPending($application);
+        /*
+         * ⛔ ফেরানোও সই — নিজের আবেদনে নয়, আর কেবল কর্মীর নিজের ব্যবস্থাপক বা HR (ঘাটতির তালিকা #১৫; a6, ২১ অক্টোবর ২০২৬)।
+         * ⓘ আগে ফেরানোয় কোনো প্রশ্নই ছিল না: চাবি হাতে যে কেউ অন্য দলের ছুটি ফেরাতেন। নিজের অপেক্ষমাণ আবেদন তুলে নেওয়ার পথ
+         * আলাদা আর আগের মতোই খোলা ([[cancel()]])।
+         */
+        $this->assertNotOwn($application, $decider);
+        app(LeaveSigner::class)->assertMayDecide($decider, $application);
 
         return DB::transaction(function () use ($application, $decider, $remarks) {
             /*
@@ -217,15 +227,9 @@ final class LeaveService
      */
     public function balance(Employee $employee, LeaveType $type, ?Carbon $on = null): array
     {
-        $on = $on ?? now();
-        $yearStart = $on->copy()->startOfYear();
-        $yearEnd = $on->copy()->endOfYear();
-
-        $taken = LeaveApplication::query()
-            ->approved()
+        $taken = self::takenInYear($on ?? now())
             ->where('employee_id', $employee->id)
             ->where('leave_type_id', $type->id)
-            ->whereBetween('from_date', [$yearStart->toDateString(), $yearEnd->toDateString()])
             ->get()
             ->reduce(fn (string $carry, LeaveApplication $a) => bcadd($carry, (string) $a->days, 1), '0');
 
@@ -235,6 +239,21 @@ final class LeaveService
             // সীমাহীন ছুটিতে "কত বাকি" প্রশ্নটারই মানে নেই
             'left' => $type->hasNoYearlyLimit() ? null : bcsub((string) $type->days_per_year, $taken, 1),
         ];
+    }
+
+    /**
+     * ⭐ একটা বছরে নেওয়া ছুটি — মঞ্জুর হওয়া আবেদন, শুরুর দিন সেই বছরে (a6, ২১ অক্টোবর ২০২৬; ঘাটতির তালিকা #১৬)।
+     *
+     * ⓘ [[balance()]] এখান থেকে একজনের এক ধরন নেয়, আর ছুটির জের রিপোর্ট ([[HrReports::leaveBalance()]]) একই আবেদনগুলো কর্মী × ধরন
+     * ধরে যোগ করে। ⛔ দুই জায়গায় দুই প্রশ্ন হলে ফোনের "কত বাকি" আর রিপোর্টের "বাকি" একদিন আলাদা হত।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<LeaveApplication>
+     */
+    public static function takenInYear(Carbon $on): \Illuminate\Database\Eloquent\Builder
+    {
+        return LeaveApplication::query()
+            ->approved()
+            ->whereBetween('from_date', [$on->copy()->startOfYear()->toDateString(), $on->copy()->endOfYear()->toDateString()]);
     }
 
     /**

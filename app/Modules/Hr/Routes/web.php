@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
+use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
@@ -104,6 +105,12 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::post('/', [LeaveController::class, 'storeType'])->name('store');
         Route::post('/install-defaults', [LeaveController::class, 'installTypes'])->name('install');
     });
+
+    /*
+     * ⭐ HR-এর রিপোর্ট — হাজিরার সারাংশ, বেতনশিট, কর্মী সংখ্যা, ছুটির জের (ঘাটতির তালিকা #১৬; [[HrReportController]])।
+     * ⓘ চাবি প্রতিটা স্লাগের নিজের, পদ্ধতির ভেতরে।
+     */
+    Route::get('/reports/{slug}', [HrReportController::class, 'show'])->name('report.show');
 
     Route::prefix('salary-heads')->name('salary_head.')->group(function () {
         Route::get('/', [SalaryHeadController::class, 'index'])->name('index');
