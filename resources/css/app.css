@@ -1491,3 +1491,37 @@ input[type='number'] {
 .bottom-nav-item-on .bottom-nav-pill {
     background: rgb(255 255 255 / 0.22);
 }
+
+/* ⭐ টপবারের খোঁজা, ফোনে (sm-এর নিচে) — কেবল আইকন; চাপলে পুরো-প্রস্থের ঘর বারের উপরে নামে, ফল তার নিচে
+   (লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬; [[shell.topbar]], shell.js-এর commandCenter.expanded)।
+   ⓘ স্তরের বাইরে, ইচ্ছাকৃত: ঘরের `flex` ইউটিলিটিকে হারাতে হবে; প্যানেলের প্রস্থ inline, তাই !important। */
+@media (width < 40rem) {
+    [data-shell-search] [data-search-field] {
+        display: none;
+    }
+
+    [data-shell-search][data-expanded="true"] {
+        position: fixed;
+        inset-inline: 0;
+        top: 0;
+        z-index: 70;
+        max-width: none;
+        padding: 8px;
+        background: var(--color-topbar);
+    }
+
+    [data-shell-search][data-expanded="true"] [data-search-field] {
+        display: flex;
+    }
+
+    [data-shell-search][data-expanded="true"] [data-search-icon] {
+        display: none;
+    }
+
+    [data-shell-search][data-expanded="true"] [data-search-panel] {
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+}

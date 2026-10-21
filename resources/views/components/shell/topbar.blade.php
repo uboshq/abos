@@ -104,22 +104,111 @@
 
     {{-- একটাই খোঁজা — মাঝে, চওড়া; পাতা, মেনু, গ্রাহক, পণ্য আর কাগজের নম্বর সবই এখানে ([[SearchController::pagesMatching()]])।
          "/" বা Ctrl+K চাপলেও খোলে ([[commandCenter]])। --}}
-    <button type="button"
-            x-data
-            data-shell-search
-            @click="$dispatch('open-command-center')"
-            title="{{ __('core.action.search_everything') }} (/ · Ctrl K)"
-            aria-keyshortcuts="/ Control+K"
-            class="mx-auto flex min-h-(--spacing-touch) min-w-0 flex-1 items-center gap-2 rounded-(--radius-field)
-                   border border-(--color-topbar-border) bg-(--color-topbar-field) px-3
-                   text-start text-(--color-topbar-ink-muted) transition-colors
-                   hover:border-(--color-topbar-ink-muted) sm:max-w-xl">
-        <svg viewBox="0 0 24 24" class="size-(--spacing-icon) shrink-0 fill-current" aria-hidden="true">
-            <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
-        </svg>
-        <span class="truncate text-sm">{{ __('core.action.search_everything') }}</span>
-        <kbd class="ms-auto hidden rounded border border-(--color-topbar-border) px-1.5 text-xs md:inline" aria-hidden="true">/</kbd>
-    </button>
+    {{-- ⭐ খোঁজার ঘর নিজেই লেখার ঘর, ফল তার ঠিক নিচে (Fiori shell bar search; লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬)।
+         ⛔ আগে এটা একটা বোতাম ছিল যা পুরো পাতার উপর আলাদা প্যালেট খুলত — নিজের দ্বিতীয় "যেকোনো কিছু খুঁজুন" ঘরসহ, আর চওড়া
+         পর্দায় সেটা বাঁয়ে রেল-সাইডবারের উপর বসত (মালিকের স্ক্রিনশট, ১৬৮৭px)। এখন একটাই ঘর; Ctrl+K আর "/" এই ঘরেই আনে।
+         ⓘ যুক্তি shell.js-এর commandCenter-এ (CSP-Alpine অ্যাট্রিবিউটে পদ্ধতি পড়ে না)। ⓘ ফোনে কেবল আইকন — চাপলে পুরো-প্রস্থে নামে। --}}
+    <div x-data="commandCenter({ url: '{{ route('search') }}' })"
+         data-shell-search :data-expanded="expandedFlag"
+         @open-command-center.window="show()"
+         @keydown.window="hotkey($event)"
+         @click.outside="close()"
+         class="relative mx-auto flex min-w-0 flex-1 justify-end sm:max-w-xl sm:justify-start">
+
+        <button type="button" data-search-icon @click="show()"
+                aria-label="{{ __('core.action.search_everything') }}"
+                class="flex size-(--spacing-touch) shrink-0 items-center justify-center rounded-(--radius-field)
+                       text-(--color-topbar-ink) hover:bg-(--color-topbar-hover) sm:hidden">
+            <svg viewBox="0 0 24 24" class="size-(--spacing-icon) fill-current" aria-hidden="true">
+                <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+            </svg>
+        </button>
+
+        <label data-search-field
+               class="flex min-h-(--spacing-touch) w-full min-w-0 items-center gap-2 rounded-(--radius-field)
+                      border border-(--color-topbar-border) bg-(--color-topbar-field) px-3
+                      text-(--color-topbar-ink-muted) transition-colors focus-within:border-(--color-topbar-ink-muted)
+                      hover:border-(--color-topbar-ink-muted)">
+            <svg viewBox="0 0 24 24" class="size-(--spacing-icon) shrink-0 fill-current" aria-hidden="true">
+                <path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+            </svg>
+            <input x-ref="box" x-model="q" type="search" autocomplete="off" enterkeyhint="search"
+                   @focus="show()" @input="ask()"
+                   @keydown.down.prevent="next()"
+                   @keydown.up.prevent="prev()"
+                   @keydown.enter.prevent="choose($event)"
+                   @keydown.escape.stop="dismiss()"
+                   role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
+                   aria-label="{{ __('core.action.search_everything') }}"
+                   aria-controls="command-hits" :aria-expanded="open"
+                   :aria-activedescendant="activeId"
+                   aria-keyshortcuts="/ Control+K"
+                   placeholder="{{ __('core.action.search_everything') }}"
+                   class="min-w-0 flex-1 border-0 bg-transparent text-sm text-(--color-topbar-ink) outline-none
+                          placeholder:text-(--color-topbar-ink-muted)">
+            <span x-show="busy" x-cloak class="text-xs" aria-hidden="true">…</span>
+            <kbd class="ms-auto hidden rounded border border-(--color-topbar-border) px-1.5 text-xs md:inline" aria-hidden="true">/</kbd>
+        </label>
+
+        {{-- ⓘ ফল — ঘরের ঠিক নিচে, বাঁ কিনারা মিলিয়ে, প্রস্থ ঘরের সমান (অন্তত ৪৮০px); ডানে ছাড়ালে place() ভেতরে আনে।
+             `pops-onto-page` — বারের ৩৬px বোতাম-উচ্চতার নিয়ম এখানে নয়। ⓘ জ্যামিতি inline: ক্লাস নীরবে না এলে গড়ন ভাঙত। --}}
+        <div x-ref="panel" x-show="open" x-cloak data-search-panel
+             class="pops-onto-page"
+             style="position:absolute;top:calc(100% + 4px);left:0;z-index:60;width:max(100%, 480px);max-width:calc(100vw - 16px);
+                    border-radius:12px;overflow:hidden;border:1px solid var(--color-border);background:var(--color-surface-card);
+                    box-shadow:0 20px 60px color-mix(in srgb, black 25%, transparent)">
+            <div style="max-height:60vh;overflow-y:auto">
+                <template x-if="hint">
+                    <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">{{ __('core.search.type_to_find') }}</p>
+                </template>
+                <template x-if="nothingFound">
+                    <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">{{ __('core.search.nothing_found') }}</p>
+                </template>
+
+                <div id="command-hits" role="listbox" aria-label="{{ __('core.action.search_everything') }}">
+                    <div x-show="recentList.length > 0" role="group" aria-labelledby="command-recent-label">
+                        <p id="command-recent-label"
+                           style="margin:0;padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--color-ink-muted)">{{ __('core.search.recent') }}</p>
+                        <template x-for="(hit, i) in recentList" :key="hit.url">
+                            <a :href="hit.url" :id="hitId(i)" role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
+                               @mousemove="point(i)"
+                               class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                               style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border);text-decoration:none">
+                                <span style="flex:none;font-size:11px;color:var(--color-ink-muted)" x-text="hit.type"></span>
+                                <span style="flex:none;font-size:12px;color:var(--color-ink-muted)" x-text="hit.no"></span>
+                                <span style="flex:1;font-size:13px;color:var(--color-ink-body)" x-text="hit.label"></span>
+                            </a>
+                        </template>
+                    </div>
+
+                    <div x-show="actionList.length > 0" role="group" aria-labelledby="command-actions-label">
+                        <p id="command-actions-label"
+                           style="margin:0;padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--color-ink-muted)">{{ __('core.search.actions') }}</p>
+                        <template x-for="(act, j) in actionList" :key="act.url">
+                            <a :href="act.url" :id="actionId(j)" role="option" :aria-selected="isActionActive(j) ? 'true' : 'false'"
+                               @mousemove="pointAction(j)"
+                               class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                               style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border);text-decoration:none">
+                                <span style="flex:none;font-size:11px;color:var(--color-ink-muted)" x-text="act.type"></span>
+                                <span style="flex:1;font-size:13px;color:var(--color-ink-body)" x-text="act.label"></span>
+                            </a>
+                        </template>
+                    </div>
+
+                    <template x-for="(hit, i) in hitList" :key="hit.url">
+                        <a :href="hit.url" :id="hitId(i)" role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
+                           @mousemove="point(i)"
+                           class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                           style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--color-border);text-decoration:none">
+                            <span style="flex:none;font-size:11px;color:var(--color-ink-muted)" x-text="hit.type"></span>
+                            <span style="flex:none;font-size:12px;color:var(--color-ink-muted)" x-text="hit.no"></span>
+                            <span style="flex:1;font-size:13px;color:var(--color-ink-body)" x-text="hit.label"></span>
+                        </a>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- ডানে কেবল এগুলো: কাজ শুরু (＋ তৈরি), আমার সইয়ের অপেক্ষা (সইদাতা হলে), কী ঘটেছে (🔔), আর আমি কে (ছবি) --}}
     <div class="flex shrink-0 items-center gap-1" data-shell-actions>

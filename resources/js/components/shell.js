@@ -44,15 +44,45 @@ export function commandCenter ({ url }) {
         // ⓘ বাছা ফলের ক্রম — ফল না থাকলেও ০, পড়ার সময় `hits.length` দেখা হয়
         active: 0,
 
+        /*
+         * ⭐ ফোনে (sm-এর নিচে) ঘরটা কেবল আইকন — চাপলে পুরো-প্রস্থের খোঁজা নামে (লাইভ-হটফিক্স, ২১ অক্টোবর ২০২৬)।
+         * ⓘ CSS ঠিক করে কখন দেখায় (`[data-shell-search][data-expanded="true"]`), এখানে কেবল অবস্থা।
+         */
+        expanded: false,
+
+        get expandedFlag () {
+            return this.expanded ? 'true' : 'false'
+        },
+
         show () {
+            /* ⓘ ঘরটা চোখে না পড়লে (ফোনের আইকন-অবস্থা) আগে পুরো-প্রস্থে খোলা, তারপর ফোকাস */
+            if (this.$refs.box && this.$refs.box.offsetParent === null) this.expanded = true
+
             this.open = true
             this.$nextTick(() => {
                 this.$refs.box?.focus()
                 this.$refs.box?.select?.()
+                this.place()
             })
 
             /* ⓘ প্রতিবার খোলায় নতুন করে — এইমাত্র খোলা কাগজটাও যেন তালিকায় থাকে */
             if (this.blank) this.start()
+        },
+
+        /*
+         * ⭐ প্যানেল খোঁজার ঘরের ঠিক নিচে, বাঁ কিনারা ঘরের সাথে — ডানে পর্দা ছাড়ালে ভেতরে সরে আসে (Fiori shell bar search)।
+         * ⛔ আগে প্যানেলটা পুরো পাতার উপর আলাদা ডায়ালগ ছিল (`position:fixed; inset:0`) — বার থেকে বিচ্ছিন্ন, নিজের দ্বিতীয় ঘরসহ;
+         * চওড়া পর্দায় বাঁয়ে রেল আর সাইডবারের উপর খুলত (মালিকের স্ক্রিনশট, ১৬৮৭px)।
+         */
+        place () {
+            const panel = this.$refs.panel
+
+            if (! panel || typeof panel.getBoundingClientRect !== 'function') return
+
+            panel.style.transform = ''
+            const over = panel.getBoundingClientRect().right - (window.innerWidth - 8)
+
+            if (over > 0) panel.style.transform = 'translateX(' + (-Math.ceil(over)) + 'px)'
         },
 
         /*
@@ -177,6 +207,13 @@ export function commandCenter ({ url }) {
 
         close () {
             this.open = false
+            this.expanded = false
+        },
+
+        /** Esc ঘরের ভেতরে — বন্ধ, আর ফোকাস ছেড়ে দেওয়া (পাতার অন্য চাবি আবার কাজ করুক) */
+        dismiss () {
+            this.close()
+            this.$refs.box?.blur?.()
         },
 
         /** ↓ ↑ — দুই প্রান্তে থামে, ঘুরে অন্য মাথায় যায় না */
