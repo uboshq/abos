@@ -124,7 +124,7 @@ final class HrDashboard implements ProvidesDashboard
              * ⛔ অপেক্ষমাণ ছুটির তালিকা কেবল ছুটির চাবিতে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০)। ⓘ কর্মী দেখার চাবিওয়ালা
              * কেউ ছুটির চাবি ছাড়াই নাম, তারিখ আর দিন দেখতেন; এ মাসের ছুটির চার্ট ([[leaveThisMonth()]]) আগেই চাবি মানত।
              */
-            listings: ! auth()->user()?->can('hr.leave.view') ? [] : [
+            listings: [...self::heldWages(), ...(! auth()->user()?->can('hr.leave.view') ? [] : [
                 new Listing(
                     label: __('hr::dashboard.pending_leave'),
                     columns: [
@@ -140,8 +140,37 @@ final class HrDashboard implements ProvidesDashboard
                     empty: __('hr::dashboard.no_pending_leave'),
                     href: route('hr.leave.index'),
                 ),
-            ],
+            ])],
         );
+    }
+
+    /**
+     * ⛔ আটকে থাকা মজুরি — পাওনা, পথ নেই; আইনের শেষ দিনসহ, পেরোলে "⛔" (শ্রম আইন ধারা ১২৩; fe, ২১ অক্টোবর ২০২৬;
+     * [[PayrollService::heldWagesOwed()]])। ⓘ কেবল বেতনের রান দেখার চাবিতে, নাগালের কর্মীদের।
+     *
+     * @return list<Listing>
+     */
+    private static function heldWages(): array
+    {
+        $user = auth()->user();
+
+        if (! $user?->can('hr.payroll.view')) {
+            return [];
+        }
+
+        return [new Listing(
+            label: __('hr::payroll.held_owed_title'),
+            columns: [
+                ['key' => 'employee', 'label' => __('hr::dashboard.employee'), 'render' => fn ($l) => $l['employee']],
+                ['key' => 'run', 'label' => __('hr::payroll.held_run'), 'width' => '9rem', 'render' => fn ($l) => $l['run']],
+                ['key' => 'deadline', 'label' => __('hr::payroll.held_until'), 'width' => '12rem',
+                    'render' => fn ($l) => \Illuminate\Support\Carbon::parse($l['deadline'])->format('d M Y')
+                        .($l['late'] ? ' · '.__('hr::payroll.held_late') : '')],
+            ],
+            rows: app(\App\Modules\Hr\Services\PayrollService::class)->heldWagesOwed($user),
+            empty: __('hr::payroll.held_owed_none'),
+            href: route('hr.payroll.index'),
+        )];
     }
 
     /**

@@ -105,7 +105,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
 
     /**
      * ⛔ নতুন কর্মীর প্রথম ব্যাংক তথ্যও দ্বিতীয় সইয়ে, আর সই না পড়া পর্যন্ত বেতন সেখানে নয় — বেতনশিট "আটকে", ব্যাংক ফাইলে নাম নেই,
-     * রানের পাতা আর সঙ্গী-তালিকায় বাংলা কারণ; সই পড়ার পর রান আবার বানালে ফাইলে (fe, ২১ অক্টোবর ২০২৬)।
+     * রানের পাতা আর সঙ্গী-তালিকায় বাংলা কারণ; সই পড়লে পরের ব্যাংক ফাইলে বকেয়া মজুরি হয়ে (নিচের দাবি; fe, ২১ অক্টোবর ২০২৬)।
      */
     public function test_a_new_employees_first_bank_details_wait_and_the_salary_is_held_until_signed(): void
     {
@@ -161,6 +161,98 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
             ->where('action', 'payment_change_withdrawn')->exists(), '⛔ ফেরানো অডিটে নেই');
         $this->assertSame(self::OLD, (string) $this->employee->fresh()->bank_account_no, '⛔ ফেরানোর পরে হিসাব বদলাল');
         $this->assertNull(app(PaymentChanges::class)->pendingFor($this->employee));
+    }
+
+    /**
+     * ⛔ "আটকে" মানে কেবল ব্যাংক ফাইলে নেই — পাওনা নয় এমন নয় (শ্রম আইন ধারা ১২৩; fe, ২১ অক্টোবর ২০২৬):
+     *  - রান পোস্ট হলে আটকে থাকা নিটও প্রদেয় বেতনে, পুরো;
+     *  - রানের পাতা আর HR-এর ড্যাশবোর্ডে আইনের শেষ দিন (মাস শেষ + ৭ কর্মদিবস, শুক্রবার বাদ), পেরোলে লাল;
+     *  - সই পড়লে আবার বানানো ছাড়াই পরের ব্যাংক ফাইলে "বকেয়া মজুরি" — ঠিক একবার, তার পরের ফাইলে আর নয়;
+     *  - সব ফাইলের টাকা দিলে প্রদেয় বেতন পয়সায় পয়সায় শূন্য।
+     */
+    public function test_a_held_wage_stays_owed_and_is_paid_once_in_the_next_bank_file(): void
+    {
+        $this->travelTo('2026-12-05 10:00:00');
+        $this->as($this->clerk);
+        $fresh = app(EmployeeService::class)->create([
+            'code' => 'EMP-NEW', 'name_en' => 'New Joiner', 'joining_date' => '2026-01-15',
+            'payment_method' => 'bank', 'bank_account_no' => self::NEW, 'bank_name' => 'Sonali', 'bank_routing_no' => '200270001',
+        ]);
+        app(SalaryStructureService::class)->set($fresh, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '15000');
+
+        $this->as($this->owner);
+        $august = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
+        $held = $august->payslips()->where('employee_id', $fresh->id)->firstOrFail();
+        $this->assertSame(PayrollService::HELD, (string) $held->payment_method);
+
+        // ── পাওনা, পুরো: প্রদেয় বেতনে সব স্লিপের নিট, আটকে থাকাটাসহ
+        $payable = (int) \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::SALARY_PAYABLE)->id;
+        $credited = fn (int $runId) => (string) DB::table('ledger_entries')->where('source_type', \App\Modules\Hr\Models\PayrollRun::SOURCE_TYPE)
+            ->where('source_id', $runId)->where('account_id', $payable)->sum(DB::raw('credit - debit'));
+        $nets = (string) $august->payslips()->sum('net');
+        $this->assertSame(0, bccomp($nets, $credited($august->id), 4), '⛔ আটকে থাকা মজুরি প্রদেয় বেতনে নেই — পাওনাই মুছে গেল');
+        $this->assertSame(1, bccomp((string) $held->net, '0', 4));
+
+        // ── আইনের শেষ দিন: ৩১ আগস্ট ২০২৬ (সোম) + ৭ কর্মদিবস, শুক্রবার বাদ = ৮ সেপ্টেম্বর; আজ ৫ ডিসেম্বর — লাল
+        $this->assertSame('2026-09-08', PayrollService::wageDeadline($august)->toDateString());
+        $this->get(route('hr.payroll.show', $august->id))->assertOk()
+            ->assertSee('data-held-late', false)->assertSee('08 Sep 2026', false)->assertSee(__('hr::payroll.held_late'), false);
+        // ⓘ "রান আবার বানান" নির্দেশটা আর নেই — বকেয়া পরের ফাইলে যায়
+        $this->assertSame('hr::payroll.held_rebuild', __('hr::payroll.held_rebuild'));
+        $this->get(route('module.dashboard', ['module' => 'hr']))->assertOk()
+            ->assertSee(__('hr::payroll.held_owed_title'), false)->assertSee('New Joiner', false)->assertSee(__('hr::payroll.held_late'), false);
+
+        // ── সই পড়ার আগে পরের মাসের ফাইলেও বকেয়া নয় — হিসাব এখনো সই-না-পড়া
+        $september = $this->confirmedPayroll(app(PayrollService::class)->build('2026-09-01'));
+        $augustArrears = (string) __('hr::payroll.arrears_reference', ['no' => $august->document_no, 'month' => 'Aug 2026']);
+        $septemberArrears = (string) __('hr::payroll.arrears_reference', ['no' => $september->document_no, 'month' => 'Sep 2026']);
+        $this->assertStringNotContainsString($augustArrears, (string) app(PayrollService::class)->bankFile($september->fresh())['content'],
+            '⛔ সই-না-পড়া হিসাবে বকেয়া মজুরি গেল');
+        $this->assertSame(0, \App\Modules\Hr\Models\HeldWagePayment::query()->count());
+
+        // ── সই পড়ল — পোস্ট-হওয়া রান ছোঁয়া হয় না
+        $change = app(PaymentChanges::class)->pendingFor($fresh);
+        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$fresh, $change]))->assertSessionHasNoErrors();
+        $this->assertSame(PayrollService::HELD, (string) $held->fresh()->payment_method, '⛔ পোস্ট-হওয়া রানের স্লিপ বদলাল');
+
+        $this->as($this->owner);
+        // ⓘ আগের মাসের ফাইল আবার নামালে পরের রানের আটকে থাকা মজুরি সেখানে যায় না — বকেয়া কেবল পরের ফাইলে
+        $this->assertStringNotContainsString($septemberArrears, (string) app(PayrollService::class)->bankFile($august->fresh())['content']);
+        $this->assertSame(0, \App\Modules\Hr\Models\HeldWagePayment::query()->count(), '⛔ আগের ফাইল পরের মাসের বকেয়া নিল');
+        $october = $this->confirmedPayroll(app(PayrollService::class)->build('2026-10-01'));
+        $first = (string) app(PayrollService::class)->bankFile($october->fresh())['content'];
+        $again = (string) app(PayrollService::class)->bankFile($october->fresh())['content'];
+        foreach ([$augustArrears, $septemberArrears] as $arrears) {
+            $this->assertSame(1, substr_count($first, $arrears), '⛔ বকেয়া মজুরি পরের ফাইলে একবার নয়: '.$arrears);
+            $this->assertSame(1, substr_count($again, $arrears), '⛔ একই ফাইল আবার নামালে বকেয়া দুইবার');
+        }
+        $this->assertSame(1, \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->count());
+        $this->assertStringNotContainsString($augustArrears, (string) app(PayrollService::class)->bankFile($september->fresh())['content'],
+            '⛔ সেপ্টেম্বরের ফাইল (আবার নামানো) অক্টোবরের বকেয়া কেড়ে নিল');
+
+        // ── তিন ফাইলের টাকা দিলে প্রদেয় বেতন শূন্য, পয়সায় পয়সায়
+        $paid = '0';
+        foreach ([app(PayrollService::class)->bankFile($august->fresh())['content'], app(PayrollService::class)->bankFile($september->fresh())['content'], $first] as $file) {
+            foreach (array_slice(array_values(array_filter(explode("\r\n", (string) $file))), 1) as $line) {
+                $paid = bcadd($paid, (string) str_getcsv($line)[2], 4);
+            }
+        }
+        app(\App\Core\Engines\Posting\PostingEngine::class)->post(sourceType: 'test.salary_paid', sourceId: 1, trxDate: '2026-11-01', lines: [
+            ['account_id' => $payable, 'debit' => $paid, 'credit' => '0'],
+            ['account_id' => (int) \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::OWNER_CAPITAL)->id, 'debit' => '0', 'credit' => $paid],
+        ], documentNo: 'SAL-PAID', branchId: $this->company->defaultBranch()?->id);
+        $this->assertSame(0, bccomp('0', (string) DB::table('ledger_entries')->where('account_id', $payable)->sum(DB::raw('credit - debit')), 4),
+            '⛔ তিন ফাইলের টাকা দিয়েও প্রদেয় বেতন শূন্য হলো না');
+
+        $this->get(route('hr.payroll.show', $august->id))->assertOk()->assertDontSee('data-held-late', false)
+            ->assertSee(__('hr::payroll.held_paid_later', ['no' => $october->document_no]), false);
+        $this->assertCount(0, app(PayrollService::class)->heldWagesOwed());
+
+        // ── তার পরের ফাইলে আর নয়
+        $november = $this->confirmedPayroll(app(PayrollService::class)->build('2026-11-01'));
+        $later = (string) app(PayrollService::class)->bankFile($november->fresh())['content'];
+        $this->assertStringNotContainsString($augustArrears, $later, '⛔ বকেয়া মজুরি আবার পরের ফাইলে — দুইবার টাকা');
+        $this->assertStringNotContainsString($septemberArrears, $later, '⛔ বকেয়া মজুরি আবার পরের ফাইলে — দুইবার টাকা');
     }
 
     /** ⛔ খালি থেকে ব্যাংক — আগের পথ (নগদ) চলে, ব্যাংকে নয়, সই না পড়া পর্যন্ত */

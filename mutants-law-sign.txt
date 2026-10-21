@@ -349,3 +349,45 @@ M66 app/Modules/Approval/Resources/views/inbox/mine.blade.php
     old: "            if ($nobody !== null) {"
     new: "            if (false) {"
     kill: same test (the "my requests" row)
+
+== fe round 3, item 2a — a held wage is owed (BLA s.123): full accrual, legal deadline, paid once as arrears in the next bank file ==
+
+M67 app/Modules/Hr/Services/PayrollService.php
+    old: "            if (! $day->isFriday()) {"
+    new: "            if (true) {"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_held_wage_stays_owed_and_is_paid_once_in_the_next_bank_file (deadline 2026-09-07, not 09-08)
+
+M68 app/Modules/Hr/Services/PayrollService.php
+    old: "                'late' => $payment === null && Carbon::today()->greaterThan($deadline),"
+    new: "                'late' => false,"
+    kill: same test (data-held-late missing on the run page)
+
+M69 app/Modules/Hr/Services/PayrollService.php
+    old: "        foreach ($this->arrearsFor($run, $user) as [$slip, $arrears]) {"
+    new: "        foreach ([] as [$slip, $arrears]) {"
+    kill: same test (arrears not in the October file)
+
+M70 app/Modules/Hr/Services/PayrollService.php
+    old: "            if ((int) HeldWagePayment::query()->where('payslip_id', $slip->id)->value('paid_in_run_id') !== (int) $run->id) {"
+    new: "            if (false) {"
+    kill: same test (the September file, downloaded again after October's, carries the August arrears again; the November file too)
+
+M71 app/Modules/Hr/Services/PayrollService.php
+    old: "            ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED)->where('month', '<', $run->month))"
+    new: "            ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED))"
+    kill: same test (the August file, downloaded again after signing, takes September's held wage — a record appears before October)
+
+M72 app/Modules/Hr/Services/PayrollService.php
+    old: "            if ($employee === null || $employee->payment_method !== 'bank' || self::heldReason($employee) !== null) {"
+    new: "            if ($employee === null) {"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_held_wage_stays_owed_and_is_paid_once_in_the_next_bank_file (the September file, built before signing, carries the August arrears to an unsigned account)
+
+M73 app/Modules/Hr/Dashboard/HrDashboard.php
+    old: "        if (! $user?->can('hr.payroll.view')) {\n            return [];\n        }"   (in heldWages)
+    new: "        return [];"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_a_held_wage_stays_owed_and_is_paid_once_in_the_next_bank_file (the HR dashboard lists the held wage with its deadline)
+
+M74 app/Modules/Hr/Services/PayrollService.php
+    old: "            ->whereDoesntHave('heldPayment')"
+    new: ""
+    kill: same test (after the arrears went out, heldWagesOwed() still lists it)

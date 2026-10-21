@@ -129,7 +129,14 @@
             <p class="font-semibold text-(--color-badge-warning-ink)">{{ __('hr::payroll.left_out_title') }}</p>
             <ul class="mt-2 list-inside list-disc">
                 @foreach ($leftOut as $row)
-                    <li data-left-out="{{ $row['code'] }}">{{ $row['code'] }} · {{ $row['name'] }} — {{ $row['reason'] }}</li>
+                    {{-- ⛔ আইনের শেষ দিন (ধারা ১২৩) — পেরোলে লাল, যতক্ষণ না বকেয়া হয়ে কোনো ফাইলে যায় (fe, ২১ অক্টোবর ২০২৬) --}}
+                    <li data-left-out="{{ $row['code'] }}" @if ($row['late']) data-held-late class="font-semibold text-(--color-badge-danger-ink)" @endif>
+                        {{ $row['code'] }} · {{ $row['name'] }} — {{ $row['reason'] }}
+                        @unless ($row['paid'])
+                            · {{ __('hr::payroll.held_deadline', ['date' => \Illuminate\Support\Carbon::parse($row['deadline'])->format('d M Y')]) }}
+                            @if ($row['late']) · {{ __('hr::payroll.held_late') }} @endif
+                        @endunless
+                    </li>
                 @endforeach
             </ul>
             @if ($run->isConfirmed())

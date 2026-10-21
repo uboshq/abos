@@ -206,7 +206,7 @@ class PayrollController extends Controller implements HasMiddleware
 
         foreach ($this->payroll->leftOutOfTheBankFile($run, request()->user()) as $row) {
             $csv .= implode(',', array_map(fn (string $v) => '"'.str_replace('"', '""', ltrim($v, "=+-@\t\r")).'"',
-                [$row['code'], $row['name'], $row['reason']]))."\r\n";
+                [$row['code'], $row['name'], $row['reason'], $row['paid'] ? '' : $row['deadline']]))."\r\n";
         }
 
         return response($csv, 200, [
