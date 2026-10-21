@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/apk_installer.dart';
@@ -21,14 +23,14 @@ class UpdateDownloadButton extends StatefulWidget {
   const UpdateDownloadButton({
     super.key,
     required this.release,
-    this.label = 'নতুন সংস্করণ নামান',
+    this.label,
     this.dense = false,
     this.actions = const UpdateActions.real(),
     this.openInstallSettings,
   });
 
   final AppRelease release;
-  final String label;
+  final String? label;
 
   /// The compact form for the notice strip: a text button rather than the
   /// full-width filled one the wall uses.
@@ -86,7 +88,7 @@ class _UpdateDownloadButtonState extends State<UpdateDownloadButton> {
     // cannot be checked must not be started.
     if (!widget.release.installable) {
       return _Message(
-        'এই আপডেট অ্যাপের ভেতর থেকে বসানো যাচ্ছে না। অফিসে জানান।',
+        context.l10n.updateNotInstallable,
         colour: context.palette.warning,
       );
     }
@@ -106,19 +108,18 @@ class _UpdateDownloadButtonState extends State<UpdateDownloadButton> {
           _Message(_stepText(_step!, _progress), colour: context.palette.pending),
         ] else if (result?.outcome == UpdateOutcome.needsPermission) ...[
           _Message(
-            'এই অ্যাপ থেকে আপডেট বসানোর অনুমতি দেওয়া নেই। সেটিংসে গিয়ে '
-            '"এই উৎস থেকে অনুমতি দিন" চালু করুন, তারপর ফিরে এসে আবার চাপুন।',
+            context.l10n.updateNeedsPermission,
             colour: context.palette.warning,
           ),
           const SizedBox(height: AppSpacing.xs),
           _button(
-            'সেটিংস খুলুন',
+            context.l10n.updateOpenSettings,
             widget.openInstallSettings ?? ApkInstaller.openInstallSettings,
             icon: Icons.settings_outlined,
           ),
-          TextButton(onPressed: _start, child: const Text('আবার চেষ্টা করুন')),
+          TextButton(onPressed: _start, child: Text(context.l10n.commonRetry)),
         ] else ...[
-          _button(widget.label, _start, icon: Icons.download_outlined),
+          _button(widget.label ?? context.l10n.updateDownloadNew, _start, icon: Icons.download_outlined),
           if (result != null) ...[
             const SizedBox(height: AppSpacing.xs),
             _Message(_failureText(result), colour: context.palette.danger),
@@ -151,41 +152,26 @@ class _UpdateDownloadButtonState extends State<UpdateDownloadButton> {
   }
 
   static String _stepText(UpdateStep step, double? progress) => switch (step) {
-        UpdateStep.checking => 'দেখা হচ্ছে…',
+        UpdateStep.checking => AppLocale.l10n.updateChecking,
         UpdateStep.downloading => progress == null
-            ? 'নামানো হচ্ছে…'
-            : 'নামানো হচ্ছে… ${(progress * 100).floor()}%',
-        UpdateStep.verifying => 'ফাইলটা মিলিয়ে দেখা হচ্ছে…',
+            ? AppLocale.l10n.updateDownloading
+            : AppLocale.l10n.updateDownloadingPercent('${(progress * 100).floor()}'),
+        UpdateStep.verifying => AppLocale.l10n.updateVerifying,
       };
 
   static String _failureText(UpdateResult result) => switch (result.outcome) {
-        UpdateOutcome.notEnoughSpace =>
-          'ফোনে যথেষ্ট জায়গা নেই। অন্তত ${result.megabytesNeeded}MB ফাঁকা করে '
-              'আবার চেষ্টা করুন।',
-        UpdateOutcome.incomplete =>
-          'নামানো ফাইলটা অসম্পূর্ণ, তাই বসানো হয়নি। আবার চেষ্টা করুন।',
-        UpdateOutcome.mismatch =>
-          'নামানো ফাইলটা অফিসের দেওয়া ফাইলের সাথে মেলেনি, তাই বসানো হয়নি। '
-              'ফাইলটা মুছে ফেলা হয়েছে। আবার চেষ্টা করুন; আবারও না মিললে অফিসে '
-              'জানান।',
+        UpdateOutcome.notEnoughSpace => AppLocale.l10n.updateNotEnoughSpace('${result.megabytesNeeded}'),
+        UpdateOutcome.incomplete => AppLocale.l10n.updateIncomplete,
+        UpdateOutcome.mismatch => AppLocale.l10n.updateMismatch,
         // ⛔ ফাইলটা অফিসের দেওয়া ঠিকই, কিন্তু অন্য অ্যাপ বা অন্য চাবিতে সই — ফোন এমনিও নিত না
-        UpdateOutcome.foreignPackage =>
-          'নামানো ফাইলটা ABOS-এর নিজের সই করা অ্যাপ নয়, তাই বসানো হয়নি। '
-              'ফাইলটা মুছে ফেলা হয়েছে। অফিসে জানান — সার্ভারে ভুল ফাইল রাখা হয়েছে।',
+        UpdateOutcome.foreignPackage => AppLocale.l10n.updateForeignPackage,
         // ⛔ পুরনো সংস্করণে ফেরা নয়
-        UpdateOutcome.notNewer =>
-          'নামানো ফাইলটা এই ফোনের অ্যাপের চেয়ে নতুন নয়, তাই বসানো হয়নি — পুরনো '
-              'সংস্করণে ফেরা যায় না। ফাইলটা মুছে ফেলা হয়েছে। অফিসে জানান।',
-        UpdateOutcome.offline =>
-          'নামানো গেল না। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
-        UpdateOutcome.notInstallable =>
-          'এই আপডেট অ্যাপের ভেতর থেকে বসানো যাচ্ছে না। অফিসে জানান।',
+        UpdateOutcome.notNewer => AppLocale.l10n.updateNotNewer,
+        UpdateOutcome.offline => AppLocale.l10n.updateDownloadOffline,
+        UpdateOutcome.notInstallable => AppLocale.l10n.updateNotInstallable,
         // ⓘ ফাইল ঠিক আছে, কিন্তু ফোন বসানোর পর্দা খুলতে দিল না — কারণটা ছোট করে, অফিসের জন্য
-        UpdateOutcome.installerRefused =>
-          'ফাইল নামানো আর মেলানো হয়েছে, কিন্তু ফোন বসানোর পর্দা খুলতে দিল না। '
-              'সেটিংসে এই অ্যাপের "অজানা অ্যাপ বসানো" অনুমতি চালু করে আবার চাপুন; '
-              'তবুও না হলে এই লেখাটা অফিসে পাঠান: ${result.detail ?? '—'}',
-        _ => 'আপডেট বসানো গেল না। আবার চেষ্টা করুন।',
+        UpdateOutcome.installerRefused => AppLocale.l10n.updateInstallerRefused(result.detail ?? '—'),
+        _ => AppLocale.l10n.updateFailed,
       };
 }
 

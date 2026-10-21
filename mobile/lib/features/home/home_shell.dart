@@ -24,6 +24,8 @@ import '../../core/navigation/top_bar/top_bar_context.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/launcher_widgets/launcher_widget_refresh.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/privacy/phone_privacy.dart';
 import '../../core/profile/face_image.dart';
 import '../../core/router/profile_routes.dart';
@@ -231,9 +233,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       builder: (dialog) => AlertDialog(
         key: const ValueKey('device-integrity-warning'),
         icon: Icon(Icons.gpp_maybe_outlined, color: Theme.of(dialog).colorScheme.error),
-        title: const Text('ফোনটা নিরাপদ নয়'),
+        title: Text(dialog.l10n.homeUnsafePhoneTitle),
         content: Text(warning),
-        actions: [TextButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('বুঝেছি'))],
+        actions: [TextButton(onPressed: () => Navigator.of(dialog).pop(), child: Text(dialog.l10n.homeUnderstood))],
       ),
     );
   }
@@ -288,7 +290,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             company: profile.company.name,
             companyCode: profile.company.code,
             branch: profile.viewAllBranches && profile.branches.length > 1
-                ? 'সব শাখা'
+                ? AppLocale.l10n.homeAllBranches
                 : profile.branch.name,
             phoneModules: profile.phoneModules,
           );
@@ -472,10 +474,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(SnackBar(
       content: Text(switch (change) {
-        FavouriteChange.added => '"${row.label}" প্রিয়-তে যোগ হলো',
-        FavouriteChange.removed => '"${row.label}" প্রিয় থেকে সরানো হলো',
-        FavouriteChange.full =>
-          'প্রিয়-তে ছয়টার বেশি রাখা যায় না — আগে একটা সরান (হোমে চেপে ধরে)।',
+        FavouriteChange.added => context.l10n.homeFavouriteAdded(row.label),
+        FavouriteChange.removed => context.l10n.homeFavouriteRemoved(row.label),
+        FavouriteChange.full => context.l10n.homeFavouritesFull,
       }),
     ));
   }
@@ -530,7 +531,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       byPath: {if (pending > 0) 'approvals': pending},
       // "N অপেক্ষমাণ" — a plain grey line, not a red count: waiting for a
       // connection is normal, not a problem (the old grid's own rule).
-      quietByPath: {if (queued > 0) 'orders': '$queued অপেক্ষমাণ'},
+      quietByPath: {if (queued > 0) 'orders': AppLocale.l10n.homeQueuedCount('$queued')},
     );
   }
 
@@ -587,13 +588,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           fallbackTitle: user.name,
           crumbs: switch (page.kind) {
             HomePageKind.home => const [],
-            HomePageKind.modules => const ['সব মডিউল'],
-            HomePageKind.module => [module?.label ?? 'সব মডিউল'],
+            HomePageKind.modules => [context.l10n.homeAllModules],
+            HomePageKind.module => [module?.label ?? context.l10n.homeAllModules],
             HomePageKind.subList => [
                 if (module != null) module.label,
                 if (_tree.parent(page.parent!) case final p?) p.label,
               ],
-            HomePageKind.me => const ['আমি'],
+            HomePageKind.me => [context.l10n.homeMe],
           },
           leading: switch (page.kind) {
             HomePageKind.home || HomePageKind.modules => TopBarLeading.menu,
@@ -714,11 +715,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (page.kind == HomePageKind.module && module != null) {
       return ModuleMenuPage(
         key: ValueKey('menu-${module.code}'),
-        crumb: 'সব মডিউল',
+        crumb: context.l10n.homeAllModules,
         onCrumb: () => _setPage(HomePage.modules),
         note: module.live
             ? null
-            : '${module.label}-এর পর্দাগুলো এখনো ফোনে আসেনি — নিচের সারিগুলো শীঘ্রই আসছে।',
+            : context.l10n.homeModuleComingSoon(module.label),
         groups: module.groups,
         counts: counts,
         favourites: favourites,
@@ -798,10 +799,10 @@ class _MoreTab extends ConsumerWidget {
           child: ListTile(
             key: const ValueKey('me-sync-status'),
             leading: const Icon(Icons.sync_outlined),
-            title: const Text('সিঙ্কের অবস্থা'),
-            subtitle: const Text('কী গেছে, কী যায়নি, কী ফেরত এসেছে'),
+            title: Text(context.l10n.homeSyncStatus),
+            subtitle: Text(context.l10n.homeSyncStatusHint),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => onOpen('sync-status', 'সিঙ্কের অবস্থা'),
+            onTap: () => onOpen('sync-status', context.l10n.homeSyncStatus),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -810,8 +811,8 @@ class _MoreTab extends ConsumerWidget {
           child: ListTile(
             key: const ValueKey('me-printer'),
             leading: const Icon(Icons.print_outlined),
-            title: const Text('প্রিন্টার'),
-            subtitle: const Text('ব্লুটুথ রসিদ প্রিন্টার, রোলের মাপ, পরীক্ষামূলক ছাপা'),
+            title: Text(context.l10n.homePrinter),
+            subtitle: Text(context.l10n.homePrinterHint),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                 builder: (_) => const PrinterSettingsScreen())),
@@ -833,7 +834,7 @@ class _MoreTab extends ConsumerWidget {
           ),
           onPressed: () => _confirmLogout(context, ref),
           icon: const Icon(Icons.logout),
-          label: const Text('বেরিয়ে যান'),
+          label: Text(context.l10n.homeSignOut),
         ),
       ],
     );
@@ -846,20 +847,16 @@ Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
   final yes = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('বেরিয়ে যাবেন?'),
-      content: Text(pending > 0
-          ? 'এই ফোনে আপনার $pending টি অর্ডার এখনো পাঠানো হয়নি। বেরিয়ে গেলেও '
-              'ওগুলো ফোনেই থাকবে, আর আপনি আবার ঢুকলে তবেই যাবে — অন্য কেউ '
-              'ঢুকলে তাঁর নামে যাবে না।'
-          : 'আবার ঢুকতে পাসওয়ার্ড লাগবে।'),
+      title: Text(context.l10n.homeSignOutTitle),
+      content: Text(pending > 0 ? context.l10n.homeSignOutPending(pending) : context.l10n.homeSignOutPassword),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('থাক'),
+          child: Text(context.l10n.homeStay),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('বেরিয়ে যান'),
+          child: Text(context.l10n.homeSignOut),
         ),
       ],
     ),
@@ -881,8 +878,8 @@ class _LockDelayTile extends StatelessWidget {
         child: ListTile(
           key: const ValueKey('me-lock-delay'),
           leading: const Icon(Icons.lock_clock_outlined),
-          title: const Text('অ্যাপ-তালার সময়'),
-          subtitle: Text('এতক্ষণ বাইরে থাকলে ফিরতে আঙুলের ছাপ বা PIN লাগবে: ${LockDelay.label(delay.inMinutes)}'),
+          title: Text(context.l10n.homeLockDelay),
+          subtitle: Text(context.l10n.homeLockDelayHint(LockDelay.label(delay.inMinutes))),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _showLockDelaySheet(context),
         ),
@@ -900,7 +897,7 @@ Future<void> _showLockDelaySheet(BuildContext context) {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ListTile(title: Text('অ্যাপ-তালার সময়', style: TextStyle(fontWeight: FontWeight.w700))),
+          ListTile(title: Text(sheet.l10n.homeLockDelay, style: const TextStyle(fontWeight: FontWeight.w700))),
           for (final minutes in LockDelay.choices)
             ListTile(
               key: ValueKey('lock-delay-$minutes'),

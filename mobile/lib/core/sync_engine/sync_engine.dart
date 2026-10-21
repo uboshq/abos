@@ -12,6 +12,7 @@ import '../api_client/api_client.dart';
 import '../api_client/network_errors.dart';
 import '../auth/token_storage.dart';
 import '../config/app_config.dart';
+import '../locale/app_locale.dart';
 import 'queue_lock.dart';
 import 'queue_opening.dart';
 
@@ -314,7 +315,7 @@ class SyncEngine {
             return RejectedChange(
               key: key,
               entityType: row['entityType'] as String? ?? '',
-              reason: row['reason'] as String? ?? 'অজানা কারণ',
+              reason: row['reason'] as String? ?? AppLocale.l10n.syncUnknownReason,
               // Opaque here too, same as the queue row itself — this file
               // still does not decode a customer or an item out of it (see
               // the class doc comment); a screen that knows what a
@@ -368,7 +369,7 @@ class SyncEngine {
         return RejectedChange(
           key: key,
           entityType: row['entityType'] as String? ?? '',
-          reason: row['reason'] as String? ?? 'অজানা কারণ',
+          reason: row['reason'] as String? ?? AppLocale.l10n.syncUnknownReason,
           payloadJson: row['payloadJson'] as String? ?? '{}',
           enqueuedAt:
               DateTime.tryParse(row['enqueuedAt'] as String? ?? '') ?? DateTime.now(),
@@ -449,7 +450,7 @@ class SyncEngine {
     if (!_writableOffline.contains(entityType)) {
       throw UnsupportedError(
         'Nothing but ${_writableOffline.join(', ')} may be queued offline; '
-        'refused $entityType. docs/Contract §০ — the owner\'s decision of '
+        'refused $entityType. docs/Contract §০ — the owner\'s decision of ' // l10n-ok: a developer error naming the contract section, never on screen
         '2 September 2026: with no network, orders only. If this record can '
         'now be written honestly offline, that is a decision to record there '
         'first, and the server handler must accept a push for it.',
@@ -714,7 +715,7 @@ class SyncEngine {
               'attempts': attempts,
               if (attempts >= AppConfig.syncMaxAttempts) 'status': _statusRejected,
               if (attempts >= AppConfig.syncMaxAttempts)
-                'reason': 'সার্ভার এই বদলের উত্তর দেয়নি ($attempts বার) — তালিকা দেখে নিজে থেকে আবার লিখুন।',
+                'reason': AppLocale.l10n.syncNoAnswer(attempts),
             });
           }
           // No outcome for this changeId at all (should not happen, but a
@@ -762,8 +763,7 @@ class SyncEngine {
         await _box.put(key, <String, dynamic>{
           ...row.cast<String, dynamic>(),
           'status': _statusRejected,
-          'reason':
-              'বারবার পাঠানো ব্যর্থ হয়েছে ($attempts বার) — নিজে থেকে আবার লিখুন।',
+          'reason': AppLocale.l10n.syncSendFailedRepeatedly(attempts),
         });
         continue;
       }
@@ -813,7 +813,7 @@ String? reasonIfRejected(Map<String, dynamic>? outcome) {
   if (outcome == null) return null;
   final status = outcome['status'] as String?;
   if (status != 'REJECTED' && status != 'CONFLICT') return null;
-  return outcome['message'] as String? ?? 'কারণ জানানো হয়নি।';
+  return outcome['message'] as String? ?? AppLocale.l10n.syncNoReasonGiven;
 }
 
 /// One queued change the server would not accept — see
@@ -914,19 +914,18 @@ class SyncAttemptFailure {
           // stays empty until somebody pulls again, and promising it will
           // arrive on its own is how an empty catalogue gets waited on all
           // morning.
-          ? 'সংযোগ নেই — সংযোগ পেয়ে আবার নিচে টানুন।'
-          : 'সংযোগ নেই — সংযোগ পেলেই নিজে থেকে চলে যাবে।';
+          ? AppLocale.l10n.syncOfflinePull
+          : AppLocale.l10n.syncOfflinePush;
     }
     if (isServerRefusal) {
       final what = serverMessage == null
-          ? 'সার্ভার অনুরোধটাই নিচ্ছে না (কোড $statusCode)'
-          : 'সার্ভার বলছে: $serverMessage (কোড $statusCode)';
-      return '$what — অফিসে জানান, ${pulling ? 'বারবার টেনে' : 'অপেক্ষা করে'} '
-          'ঠিক হবে না।';
+          ? AppLocale.l10n.syncServerRefuses('$statusCode')
+          : AppLocale.l10n.syncServerSays(serverMessage!, '$statusCode');
+      return pulling ? AppLocale.l10n.syncRefusalTellOfficePull(what) : AppLocale.l10n.syncRefusalTellOfficePush(what);
     }
     return pulling
-        ? 'তালিকা আনা যায়নি — কারণ জানা যায়নি। অফিসে জানান।'
-        : 'পাঠানো যায়নি — কারণ জানা যায়নি। অফিসে জানান।';
+        ? AppLocale.l10n.syncPullUnknown
+        : AppLocale.l10n.syncPushUnknown;
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/records/notice_bar.dart';
 import '../../core/theme/app_spacing.dart';
 
@@ -79,7 +80,7 @@ class _NoticeTickerState extends State<NoticeTicker>
           shrinkWrap: true,
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text('নোটিশ', style: Theme.of(sheet).textTheme.titleMedium),
+            Text(sheet.l10n.homeNotices, style: Theme.of(sheet).textTheme.titleMedium),
             for (final n in _items)
               ListTile(
                 contentPadding: EdgeInsets.zero,

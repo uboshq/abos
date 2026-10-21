@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/records/money.dart';
 
+import '../locale/l10n.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_spacing.dart';
 
@@ -119,7 +120,7 @@ class ConfirmOverviewSheet extends StatelessWidget {
             FilledButton(
               key: const ValueKey('overview-confirm'),
               onPressed: data.blocks ? null : () => Navigator.pop(context, OverviewChoice.confirm),
-              child: const Text('নিশ্চিত করুন'),
+              child: Text(context.l10n.overviewConfirm),
             ),
             if (allowDraft) ...[
               const SizedBox(height: AppSpacing.xs),
@@ -128,14 +129,14 @@ class ConfirmOverviewSheet extends StatelessWidget {
                 key: const ValueKey('overview-draft'),
                 style: FilledButton.styleFrom(backgroundColor: Colors.grey.shade400, foregroundColor: Colors.black87), // dark-ok
                 onPressed: () => Navigator.pop(context, OverviewChoice.draft),
-                child: const Text('খসড়া রাখুন'),
+                child: Text(context.l10n.overviewKeepDraft),
               ),
             ],
             const SizedBox(height: AppSpacing.xs),
             OutlinedButton(
               key: const ValueKey('overview-back'),
               onPressed: () => Navigator.pop(context, OverviewChoice.back),
-              child: const Text('ফিরে যান'),
+              child: Text(context.l10n.sheetGoBack),
             ),
           ],
         ),

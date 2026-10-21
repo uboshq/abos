@@ -1,3 +1,5 @@
+import '../locale/app_locale.dart';
+import '../widgets/day_part.dart' show monthText;
 import 'money.dart';
 
 /// ⭐ প্রিন্সিপালের কমিশন — সার্ভারের এক হিসাব, অ্যাপের দুই নতুন জায়গা: পর্দা (`/home/principal-commission`) আর হোম-স্ক্রিন
@@ -34,16 +36,16 @@ enum BalanceSide {
 
   /// এক শব্দ — "দেনা/পাওনা"
   String get word => switch (this) {
-        BalanceSide.pay => 'দেনা',
-        BalanceSide.receive => 'পাওনা',
-        BalanceSide.settled => 'জের নেই',
+        BalanceSide.pay => AppLocale.l10n.commissionSidePay,
+        BalanceSide.receive => AppLocale.l10n.commissionSideReceive,
+        BalanceSide.settled => AppLocale.l10n.commissionSideSettled,
       };
 
   /// পুরো কথা — ওয়েবের কার্ডের "দিতে হবে" / "কোম্পানির কাছে পাব"
   String get sentence => switch (this) {
-        BalanceSide.pay => 'দেনা · দিতে হবে',
-        BalanceSide.receive => 'পাওনা · কোম্পানির কাছে পাব',
-        BalanceSide.settled => 'জের নেই',
+        BalanceSide.pay => AppLocale.l10n.commissionSidePaySentence,
+        BalanceSide.receive => AppLocale.l10n.commissionSideReceiveSentence,
+        BalanceSide.settled => AppLocale.l10n.commissionSideSettled,
       };
 }
 
@@ -211,19 +213,15 @@ String commissionText(String? commission, {String? label}) {
   if (label != null && label.trim().isNotEmpty) return label.trim();
   final c = commission?.trim();
   if (c == null) return '—';
-  return c.startsWith('-') ? 'লোকসান ${Money.taka(c.substring(1))} — কেনা দামের নিচে বিক্রি' : Money.taka(c);
+  return c.startsWith('-') ? AppLocale.l10n.commissionLoss(Money.taka(c.substring(1))) : Money.taka(c);
 }
 
-/// "2026-10" → "অক্টোবর 2026" (বছর ইংরেজি অঙ্কে, অ্যাপের নিয়ম)
+/// "2026-10" → "অক্টোবর 2026" (বছর ইংরেজি অঙ্কে, অ্যাপের নিয়ম); ইংরেজিতে "October 2026" ([monthText])
 String monthLabel(String month) {
-  const names = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-  ];
   final m = RegExp(r'^(\d{4})-(\d{2})$').firstMatch(month);
   if (m == null) return month;
   final i = int.parse(m[2]!);
-  return i < 1 || i > 12 ? month : '${names[i - 1]} ${m[1]}';
+  return i < 1 || i > 12 ? month : monthText(DateTime(int.parse(m[1]!), i));
 }
 
 /// "2026-10" থেকে [delta] মাস সরে — "2026-09"

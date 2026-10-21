@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 import 'money.dart';
 
@@ -110,7 +111,7 @@ class TodayRecord {
     final row = payload['principalsTotal'];
     if (row is! Map) return null;
     return PrincipalLine(
-      name: 'মোট',
+      name: AppLocale.l10n.todayTotal,
       period: '',
       basisRate: '',
       inflow: Money.value(row['inflow']),
@@ -176,17 +177,17 @@ class TodayFigure {
   final double? vat;
 
   /// বিক্রির ঘরের নাম — সার্ভার যা বলে; না বললে "আজ বিল হয়েছে", কারণ তখন অঙ্কটা ফেরত বাদ দেওয়া নয় (কখনো হাতে লেখা "আজকের বিক্রি" নয়)
-  String get salesHeading => label ?? 'আজ বিল হয়েছে';
+  String get salesHeading => label ?? AppLocale.l10n.todayBilledToday;
 
   /// ⭐ বিক্রির নিচের লাইন — নিট হলে তার দুই ভাগ "বিল ৳… · ফেরত ৳…" (VAT এলে " · VAT ৳…"); পুরনো সার্ভারে (ভাগ নেই) কেবল
   /// বিলের গোনা "N টি বিক্রয়"। আজকের পাতা আর মালিকের হোমের শাখার কার্ড — দুই জায়গায় এই এক লেখা।
   String? get salesDetail => billed != null && returned != null
-      ? 'বিল ${Money.taka(billed)} · ফেরত ${Money.taka(returned)}'
-          // ⓘ বিল আর ফেরত VAT বাদে — VAT আলাদা দেখায়, যাতে বিলের কাগজের মোটের সাথে মেলানো যায়
+      // ⓘ বিল আর ফেরত VAT বাদে — VAT আলাদা দেখায়, যাতে বিলের কাগজের মোটের সাথে মেলানো যায়
+      ? '${AppLocale.l10n.todaySalesBilledReturned(Money.taka(billed), Money.taka(returned))}'
           '${vat == null ? '' : ' · VAT ${Money.taka(vat)}'}'
       : count == null
           ? null
-          : '$count টি বিক্রয়';
+          : AppLocale.l10n.todaySalesCount(count!);
 }
 
 /// "হাতে ও ব্যাংকে মোট" — the web home's top-right box, the same figures: the
@@ -249,7 +250,7 @@ class PrincipalLine {
     if (said.isNotEmpty) return said;
     final value = commission ?? 0;
     return value < 0
-        ? 'লোকসান ${Money.taka(-value)} — কেনা দামের নিচে বিক্রি'
+        ? AppLocale.l10n.commissionLoss(Money.taka(-value))
         : Money.taka(value);
   }
 
@@ -261,10 +262,10 @@ class PrincipalLine {
 
   String get balanceLabel {
     final value = balance ?? 0;
-    if (value == 0) return 'জের নেই';
+    if (value == 0) return AppLocale.l10n.commissionSideSettled;
     return value > 0
-        ? 'দিতে হবে: ${Money.taka(value)}'
-        : 'কোম্পানির কাছে পাব: ${Money.taka(-value)}';
+        ? AppLocale.l10n.todayBalanceToPay(Money.taka(value))
+        : AppLocale.l10n.todayBalanceOwedToUs(Money.taka(-value));
   }
 }
 

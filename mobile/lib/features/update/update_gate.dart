@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/retired_build.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -116,7 +117,7 @@ class _UpdateNotice extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'নতুন সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
+                    release.versionName == null ? context.l10n.updateNewVersion : context.l10n.updateNewVersionNamed(release.versionName!),
                     style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -125,7 +126,7 @@ class _UpdateNotice extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 18),
-                  tooltip: 'সরিয়ে রাখুন',
+                  tooltip: context.l10n.updateDismiss,
                   onPressed: onDismiss,
                 ),
               ],
@@ -144,7 +145,7 @@ class _UpdateNotice extends StatelessWidget {
               padding: const EdgeInsets.only(right: AppSpacing.sm),
               child: UpdateDownloadButton(
                 release: release,
-                label: 'এখনই আপডেট করুন',
+                label: context.l10n.updateNow,
                 dense: true,
               ),
             ),
@@ -180,15 +181,14 @@ class _UpdateWall extends StatelessWidget {
                 Icon(Icons.system_update,
                     size: 56, color: context.palette.warning),
                 const SizedBox(height: AppSpacing.md),
-                const Text(
-                  'এই সংস্করণটি আর ব্যবহার করা যাবে না',
+                Text(
+                  context.l10n.updateWallTitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  release.note ??
-                      'অ্যাপের নতুন সংস্করণ নামিয়ে বসান। পুরনো সংস্করণ ভুল তথ্য দেখাতে পারে।',
+                  release.note ?? context.l10n.updateWallBody,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: context.palette.onSurfaceMuted),
                 ),
@@ -203,19 +203,17 @@ class _UpdateWall extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(
-                          'এই ফোনে $pending টি অর্ডার এখনো পাঠানো হয়নি',
+                          context.l10n.updateWallPending(pending),
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: context.palette.danger),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        const Text(
-                          'অ্যাপ মুছে ফেললে ওগুলো চলে যাবে। নতুন সংস্করণ '
-                          'বসানোর সময় পুরনোটা মুছবেন না — উপরে বসিয়ে দিন, '
-                          'অর্ডারগুলো থেকে যাবে।',
+                        Text(
+                          context.l10n.updateWallKeepOrders,
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12.5),
+                          style: const TextStyle(fontSize: 12.5),
                         ),
                       ],
                     ),

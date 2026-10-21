@@ -1,3 +1,4 @@
+import '../locale/app_locale.dart';
 import 'money.dart';
 
 /// One document waiting for a decision, as `GET /approvals/pending` sends it.
@@ -42,7 +43,7 @@ class ApprovalRecord {
   String? get amountText {
     if (amount == null) return null;
     final taka = Money.taka(amount);
-    return action == 'discount' ? 'ছাড় $taka' : taka;
+    return action == 'discount' ? AppLocale.l10n.approvalCardDiscount(taka) : taka;
   }
 
   /// কার্ডে যে অঙ্ক দেখানো — হুবহু সার্ভারের লেখা; সইয়ের সাথে ফেরত যায় ([[ApprovalsApi.approve]])
@@ -66,30 +67,33 @@ class ApprovalRecord {
   /// The document kind in the language the rest of this app speaks. An
   /// unfamiliar type is shown as it came rather than hidden — a document this
   /// build has not heard of is still a document somebody is waiting on.
-  String get documentTypeLabel => switch (documentType) {
-        'PurchaseOrder' => 'ক্রয় আদেশ',
-        'PurchaseBill' => 'ক্রয় বিল',
-        'PurchaseReturn' => 'ক্রয় ফেরত',
-        'Payment' => 'পরিশোধ',
-        'StockTransfer' => 'মজুদ স্থানান্তর',
-        'Payroll' => 'বেতন',
+  String get documentTypeLabel {
+    final w = AppLocale.l10n;
+    return switch (documentType) {
+        'PurchaseOrder' => w.approvalDocPurchaseOrder,
+        'PurchaseBill' => w.approvalDocPurchaseBill,
+        'PurchaseReturn' => w.approvalDocPurchaseReturn,
+        'Payment' => w.approvalDocPayment,
+        'StockTransfer' => w.approvalDocStockTransfer,
+        'Payroll' => w.approvalDocPayroll,
         // ⓘ বাকিগুলোও বাংলায় — মালিক কেবল বাংলা পড়েন; আগে "Voucher" ইংরেজিতে দেখাত
-        'Voucher' => 'ভাউচার',
-        'DeliveryOrder' => 'ডেলিভারি অর্ডার',
-        'SalesOrder' => 'বিক্রয় আদেশ',
-        'SalesInvoice' => 'বিক্রয় বিল',
-        'DeliveryChallan' => 'চালান',
-        'SalesQuotation' => 'দরপত্র',
-        'SalesReturn' => 'বিক্রয় ফেরত',
-        'Collection' => 'আদায়',
-        'ExpenseClaim' => 'খরচের দাবি',
-        'Note' => 'নোট',
-        'MoneyTransfer' => 'টাকা স্থানান্তর',
-        'Promotion' => 'অফার',
+        'Voucher' => w.approvalDocVoucher,
+        'DeliveryOrder' => w.approvalDocDeliveryOrder,
+        'SalesOrder' => w.approvalDocSalesOrder,
+        'SalesInvoice' => w.approvalDocSalesInvoice,
+        'DeliveryChallan' => w.approvalDocDeliveryChallan,
+        'SalesQuotation' => w.approvalDocSalesQuotation,
+        'SalesReturn' => w.approvalDocSalesReturn,
+        'Collection' => w.approvalDocCollection,
+        'ExpenseClaim' => w.approvalDocExpenseClaim,
+        'Note' => w.approvalDocNote,
+        'MoneyTransfer' => w.approvalDocMoneyTransfer,
+        'Promotion' => w.approvalDocPromotion,
         // ⭐ বাকির সীমা বাড়ানোর অনুরোধ — মালিকের সইয়ে (বাকি নিয়ন্ত্রণ, ১৩ অক্টোবর ২০২৬)
-        'CustomerCreditRequest' => 'বাকির সীমা বাড়ানোর অনুরোধ',
-        _ => documentType.isEmpty ? 'নথি' : documentType,
+        'CustomerCreditRequest' => w.approvalDocCustomerCreditRequest,
+        _ => documentType.isEmpty ? w.approvalDocUnknown : documentType,
       };
+  }
 
   /// <b>Salary never reaches a phone.</b> The owner's decision of 13
   /// September 2026, and docs/Contract §৪ before it: payroll is approved at

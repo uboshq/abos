@@ -1,3 +1,4 @@
+import '../locale/app_locale.dart';
 import '../orders/tracking_api.dart';
 import '../widgets/list_controls.dart';
 import 'customer_record.dart';
@@ -54,13 +55,14 @@ List<String> _distinct(Iterable<String?> values) {
   return seen.toList()..sort(compareText);
 }
 
-const _nameAsc = ListSortOption('name', 'নাম: ক থেকে হ');
-const _nameDesc = ListSortOption('nameDesc', 'নাম: হ থেকে ক');
-const _code = ListSortOption('code', 'কোড অনুযায়ী');
+// ⓘ লেখা ARB থেকে, এখনকার ভাষায় — তাই const নয়, প্রতিবার পড়া
+ListSortOption get _nameAsc => ListSortOption('name', AppLocale.l10n.listSortNameAz);
+ListSortOption get _nameDesc => ListSortOption('nameDesc', AppLocale.l10n.listSortNameZa);
+ListSortOption get _code => ListSortOption('code', AppLocale.l10n.listSortCode);
 
-const _activeGroup = ListFilterGroup('active', 'অবস্থা', [
-  ListFilterChoice('yes', 'সক্রিয়'),
-  ListFilterChoice('no', 'নিষ্ক্রিয়'),
+ListFilterGroup get _activeGroup => ListFilterGroup('active', AppLocale.l10n.listFilterStatus, [
+  ListFilterChoice('yes', AppLocale.l10n.listFilterActive),
+  ListFilterChoice('no', AppLocale.l10n.listFilterInactive),
 ]);
 
 // ───────────────────────────── গ্রাহক ─────────────────────────────
@@ -68,7 +70,7 @@ const _activeGroup = ListFilterGroup('active', 'অবস্থা', [
 class CustomerListQuery {
   const CustomerListQuery._();
 
-  static const sortOptions = [_nameAsc, _nameDesc, _code];
+  static List<ListSortOption> get sortOptions => [_nameAsc, _nameDesc, _code];
   static const defaultSort = 'name';
 
   /// ধরন (`customerType`) সার্ভারের মুক্ত লেখা/মাস্টারের নাম — যেমন এসেছে
@@ -77,13 +79,13 @@ class CustomerListQuery {
     final types = _distinct(all.map((c) => c.customerType));
     return [
       _activeGroup,
-      const ListFilterGroup('phone', 'মোবাইল নম্বর', [
-        ListFilterChoice('yes', 'আছে'),
-        ListFilterChoice('no', 'নেই'),
+      ListFilterGroup('phone', AppLocale.l10n.listFilterMobile, [
+        ListFilterChoice('yes', AppLocale.l10n.listFilterYes),
+        ListFilterChoice('no', AppLocale.l10n.listFilterNo),
       ]),
       if (types.length >= 2)
         ListFilterGroup(
-            'type', 'ধরন', [for (final t in types) ListFilterChoice(t, t)]),
+            'type', AppLocale.l10n.listFilterType, [for (final t in types) ListFilterChoice(t, t)]),
     ];
   }
 
@@ -140,11 +142,11 @@ class DueRow {
 class DueListQuery {
   const DueListQuery._();
 
-  static const sortOptions = [
-    ListSortOption('dueDesc', 'বকেয়া: বেশি আগে'),
-    ListSortOption('dueAsc', 'বকেয়া: কম আগে'),
+  static List<ListSortOption> get sortOptions => [
+    ListSortOption('dueDesc', AppLocale.l10n.listSortDueHigh),
+    ListSortOption('dueAsc', AppLocale.l10n.listSortDueLow),
     _nameAsc,
-    ListSortOption('limitUsed', 'সীমার ব্যবহার: বেশি আগে'),
+    ListSortOption('limitUsed', AppLocale.l10n.listSortLimitUsed),
   ];
 
   /// বড় বকেয়া উপরে — এই স্ক্রিনের আগের ক্রমই, এখনো প্রথম বাছাই।
@@ -155,15 +157,15 @@ class DueListQuery {
   static List<ListFilterGroup> filterGroups(Iterable<DueRow> all) {
     final days = all.map((r) => r.due.creditDays).toSet().toList()..sort();
     return [
-      const ListFilterGroup('limit', 'ঋণসীমা', [
-        ListFilterChoice('over', 'সীমা ছাড়িয়েছে'),
-        ListFilterChoice('within', 'সীমার মধ্যে'),
-        ListFilterChoice('none', 'সীমা নেই'),
+      ListFilterGroup('limit', AppLocale.l10n.listFilterCreditLimit, [
+        ListFilterChoice('over', AppLocale.l10n.listFilterOverLimit),
+        ListFilterChoice('within', AppLocale.l10n.listFilterWithinLimit),
+        ListFilterChoice('none', AppLocale.l10n.listFilterNoLimit),
       ]),
       if (days.length >= 2)
-        ListFilterGroup('days', 'বাকির শর্ত', [
+        ListFilterGroup('days', AppLocale.l10n.listFilterCreditTerms, [
           for (final d in days)
-            ListFilterChoice('$d', d == 0 ? 'শর্ত নেই' : '$d দিন'),
+            ListFilterChoice('$d', d == 0 ? AppLocale.l10n.listFilterNoTerms : AppLocale.l10n.listFilterCreditDays(d)),
         ]),
     ];
   }
@@ -212,12 +214,12 @@ double? _cachedAvailable(ProductRecord p) =>
 class ProductListQuery {
   const ProductListQuery._();
 
-  static const sortOptions = [
+  static List<ListSortOption> get sortOptions => [
     _nameAsc,
     _nameDesc,
     _code,
-    ListSortOption('priceDesc', 'দাম: বেশি আগে'),
-    ListSortOption('priceAsc', 'দাম: কম আগে'),
+    ListSortOption('priceDesc', AppLocale.l10n.listSortPriceHigh),
+    ListSortOption('priceAsc', AppLocale.l10n.listSortPriceLow),
   ];
   static const defaultSort = 'name';
 
@@ -231,14 +233,14 @@ class ProductListQuery {
     final stockKnown = all.any((p) => availableOf(p) != null);
     return [
       _activeGroup,
-      const ListFilterGroup('price', 'বিক্রয় দাম', [
-        ListFilterChoice('yes', 'দাম আছে'),
-        ListFilterChoice('no', 'দাম নেই'),
+      ListFilterGroup('price', AppLocale.l10n.listFilterSalePrice, [
+        ListFilterChoice('yes', AppLocale.l10n.listFilterHasPrice),
+        ListFilterChoice('no', AppLocale.l10n.listFilterNoPrice),
       ]),
       if (stockKnown)
-        const ListFilterGroup('stock', 'মজুদ', [
-          ListFilterChoice('yes', 'বিক্রয়যোগ্য আছে'),
-          ListFilterChoice('zero', 'মজুদ শূন্য'),
+        ListFilterGroup('stock', AppLocale.l10n.listFilterStock, [
+          ListFilterChoice('yes', AppLocale.l10n.listFilterSellable),
+          ListFilterChoice('zero', AppLocale.l10n.listFilterOutOfStock),
         ]),
     ];
   }
@@ -294,10 +296,10 @@ ProductRecord? _cachedProduct(StockRecord row) => row.product;
 class StockListQuery {
   const StockListQuery._();
 
-  static const sortOptions = [
+  static List<ListSortOption> get sortOptions => [
     _nameAsc,
-    ListSortOption('qtyDesc', 'পরিমাণ: বেশি আগে'),
-    ListSortOption('qtyAsc', 'পরিমাণ: কম আগে'),
+    ListSortOption('qtyDesc', AppLocale.l10n.listSortQtyHigh),
+    ListSortOption('qtyAsc', AppLocale.l10n.listSortQtyLow),
   ];
   static const defaultSort = 'name';
 
@@ -306,17 +308,17 @@ class StockListQuery {
   /// শূন্যগুলোও ফেরে।
   static const ListFilters defaultFilters = {'zero': 'hide'};
 
-  static const filterGroups = [
-    ListFilterGroup('zero', 'শূন্য মজুদ', [
-      ListFilterChoice('hide', 'লুকান'),
-      ListFilterChoice('only', 'শুধু শূন্য'),
+  static List<ListFilterGroup> get filterGroups => [
+    ListFilterGroup('zero', AppLocale.l10n.listFilterZeroStock, [
+      ListFilterChoice('hide', AppLocale.l10n.listFilterHide),
+      ListFilterChoice('only', AppLocale.l10n.listFilterOnlyZero),
     ]),
-    ListFilterGroup('commit', 'অর্ডারে বা আটকানো', [
-      ListFilterChoice('yes', 'আছে'),
-      ListFilterChoice('no', 'নেই'),
+    ListFilterGroup('commit', AppLocale.l10n.listFilterCommitted, [
+      ListFilterChoice('yes', AppLocale.l10n.listFilterYes),
+      ListFilterChoice('no', AppLocale.l10n.listFilterNo),
     ]),
-    ListFilterGroup('free', 'ফ্রি মাল', [
-      ListFilterChoice('yes', 'আছে'),
+    ListFilterGroup('free', AppLocale.l10n.listFilterFreeGoods, [
+      ListFilterChoice('yes', AppLocale.l10n.listFilterYes),
     ]),
   ];
 
@@ -360,18 +362,18 @@ class StockListQuery {
 
 String _cachedCustomerName(SalesOrderRecord order) => order.customerName;
 
-const _dateDesc = ListSortOption('dateDesc', 'তারিখ: নতুন আগে');
-const _dateAsc = ListSortOption('dateAsc', 'তারিখ: পুরনো আগে');
-const _amountDesc = ListSortOption('amountDesc', 'টাকা: বেশি আগে');
-const _amountAsc = ListSortOption('amountAsc', 'টাকা: কম আগে');
-const _customerAsc = ListSortOption('customer', 'দোকান: ক থেকে হ');
+ListSortOption get _dateDesc => ListSortOption('dateDesc', AppLocale.l10n.listSortDateNew);
+ListSortOption get _dateAsc => ListSortOption('dateAsc', AppLocale.l10n.listSortDateOld);
+ListSortOption get _amountDesc => ListSortOption('amountDesc', AppLocale.l10n.listSortAmountHigh);
+ListSortOption get _amountAsc => ListSortOption('amountAsc', AppLocale.l10n.listSortAmountLow);
+ListSortOption get _customerAsc => ListSortOption('customer', AppLocale.l10n.listSortShopAz);
 
 int? _millis(DateTime? date) => date?.millisecondsSinceEpoch;
 
 class OrderListQuery {
   const OrderListQuery._();
 
-  static const sortOptions = [
+  static List<ListSortOption> get sortOptions => [
     _dateDesc,
     _dateAsc,
     _amountDesc,
@@ -390,7 +392,7 @@ class OrderListQuery {
     }
     if (byStatus.length < 2) return const [];
     return [
-      ListFilterGroup('status', 'অবস্থা', [
+      ListFilterGroup('status', AppLocale.l10n.listFilterStatus, [
         for (final entry in byStatus.entries)
           ListFilterChoice(entry.key, entry.value),
       ]),
@@ -428,7 +430,7 @@ class OrderListQuery {
 class TrackingListQuery {
   const TrackingListQuery._();
 
-  static const sortOptions = [
+  static List<ListSortOption> get sortOptions => [
     _dateDesc,
     _dateAsc,
     _amountDesc,

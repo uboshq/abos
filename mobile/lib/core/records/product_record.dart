@@ -1,3 +1,4 @@
+import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 import 'money.dart';
 
@@ -24,7 +25,7 @@ class ProductRecord {
   String? get barcode => _text('barcode');
 
   /// Bengali first — see [CustomerRecord.name] for why.
-  String get name => _text('nameBn') ?? _text('nameEn') ?? code ?? 'নাম নেই';
+  String get name => _text('nameBn') ?? _text('nameEn') ?? code ?? AppLocale.l10n.customerNoName;
 
   /// The unit as a person says it ("পিস", "কার্টন"), falling back to the code
   /// the office files it under.

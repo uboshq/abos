@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
@@ -63,26 +64,26 @@ class _AppUpdateTileState extends State<AppUpdateTile> {
             ListTile(
               key: const ValueKey('app-update-check'),
               leading: const Icon(Icons.system_update_outlined),
-              title: const Text('অ্যাপ হালনাগাদ'),
-              subtitle: Text('চলছে ${widget.currentName}'),
+              title: Text(context.l10n.updateTileTitle),
+              subtitle: Text(context.l10n.updateRunningVersion(widget.currentName)),
               trailing: _state == _Asked.asking
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.refresh),
               onTap: _ask,
             ),
             if (_state == _Asked.latest)
-              _Line('সর্বশেষ সংস্করণ চলছে।', context.palette.success, key: const ValueKey('app-update-latest')),
+              _Line(context.l10n.updateLatest, context.palette.success, key: const ValueKey('app-update-latest')),
             if (_state == _Asked.offline)
-              _Line('সার্ভারে পৌঁছানো গেল না। ইন্টারনেট সংযোগ দেখে আবার চাপুন।', context.palette.danger,
+              _Line(context.l10n.updateOffline, context.palette.danger,
                   key: const ValueKey('app-update-offline')),
             if (_state == _Asked.newer && release != null) ...[
-              _Line('নতুন সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
+              _Line(release.versionName == null ? context.l10n.updateNewVersion : context.l10n.updateNewVersionNamed(release.versionName!),
                   context.palette.pending,
                   key: const ValueKey('app-update-newer')),
               for (final line in release.whatsNew) _Line('• $line', context.palette.pending),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                child: UpdateDownloadButton(release: release, label: 'এখনই আপডেট করুন'),
+                child: UpdateDownloadButton(release: release, label: context.l10n.updateNow),
               ),
             ],
           ],

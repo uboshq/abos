@@ -2,6 +2,7 @@ import 'dart:ui' show Locale;
 
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../locale/app_locale.dart';
 
 /// The greeting a depot actually says at this hour.
@@ -19,13 +20,15 @@ import '../locale/app_locale.dart';
 /// "শুভ রাত্রি" rather than "শুভ রাত" — so this is its own small map, not a
 /// day-part label with শুভ in front of it.
 String banglaGreeting(DateTime when) {
+  // ⓘ নাম অনুযায়ীই বাংলা — লেখা ARB-এর বাংলা ভাগ থেকে
+  final w = lookupAppL10n(AppLocale.locale);
   final hour = when.hour;
-  if (hour < 6) return 'শুভ রাত্রি';
-  if (hour < 12) return 'শুভ সকাল';
-  if (hour < 15) return 'শুভ দুপুর';
-  if (hour < 18) return 'শুভ বিকাল';
-  if (hour < 20) return 'শুভ সন্ধ্যা';
-  return 'শুভ রাত্রি';
+  if (hour < 6) return w.dayGreetingNight;
+  if (hour < 12) return w.dayGreetingMorning;
+  if (hour < 15) return w.dayGreetingNoon;
+  if (hour < 18) return w.dayGreetingAfternoon;
+  if (hour < 20) return w.dayGreetingEvening;
+  return w.dayGreetingNight;
 }
 
 /// রাত · ভোর · সকাল · দুপুর · বিকাল · সন্ধ্যা — the label that goes in front
@@ -35,14 +38,16 @@ String banglaGreeting(DateTime when) {
 /// would collapse everything before noon into "সকাল", which is how two in the
 /// morning becomes morning on a widget that is refreshed all night.
 String banglaDayPart(DateTime when) {
+  // ⓘ নাম অনুযায়ীই বাংলা — লেখা ARB-এর বাংলা ভাগ থেকে
+  final w = lookupAppL10n(AppLocale.locale);
   final hour = when.hour;
-  if (hour < 4) return 'রাত';
-  if (hour < 6) return 'ভোর';
-  if (hour < 12) return 'সকাল';
-  if (hour < 15) return 'দুপুর';
-  if (hour < 18) return 'বিকাল';
-  if (hour < 20) return 'সন্ধ্যা';
-  return 'রাত';
+  if (hour < 4) return w.dayPartNight;
+  if (hour < 6) return w.dayPartDawn;
+  if (hour < 12) return w.dayPartMorning;
+  if (hour < 15) return w.dayPartNoon;
+  if (hour < 18) return w.dayPartAfternoon;
+  if (hour < 20) return w.dayPartEvening;
+  return w.dayPartNight;
 }
 
 /// "সকাল 4:12" — a twelve-hour clock time with its part of day in front.
@@ -76,11 +81,14 @@ String clockText(DateTime when, [Locale? locale]) {
 String stampText(DateTime when, [Locale? locale]) =>
     AppLocale.isEnglish(locale) ? '${DateFormat('dd/MM/yyyy').format(when)} ${clockText(when, locale)}' : banglaStamp(when);
 
+/// বারো মাসের নাম [w]-এর ভাষায় — জানুয়ারি থেকে
+List<String> monthNames(AppL10n w) => [
+      w.monthJanuary, w.monthFebruary, w.monthMarch, w.monthApril, w.monthMay, w.monthJune,
+      w.monthJuly, w.monthAugust, w.monthSeptember, w.monthOctober, w.monthNovember, w.monthDecember,
+    ];
+
 /// বারো মাসের বাংলা নাম — জানুয়ারি থেকে
-const List<String> banglaMonths = [
-  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-];
+List<String> get banglaMonths => monthNames(lookupAppL10n(AppLocale.locale));
 
 /// বারো মাসের ইংরেজি নাম — জানুয়ারি থেকে
 const List<String> englishMonths = [
@@ -90,4 +98,4 @@ const List<String> englishMonths = [
 
 /// ⭐ "সেপ্টেম্বর 2026" বা "September 2026" — মাস আর বছর মানুষের ভাষায় ([locale] না দিলে [AppLocale.current]); বছর ইংরেজি অঙ্কে
 String monthText(DateTime month, [Locale? locale]) =>
-    '${(AppLocale.isEnglish(locale) ? englishMonths : banglaMonths)[month.month - 1]} ${month.year}';
+    '${monthNames(lookupAppL10n(locale ?? AppLocale.current))[month.month - 1]} ${month.year}';

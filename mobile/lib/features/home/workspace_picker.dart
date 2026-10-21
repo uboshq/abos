@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/auth/session_profile.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -108,9 +109,9 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Row(
                   children: [
-                    const Expanded(
-                      child: Text('কোম্পানি ও শাখা',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Expanded(
+                      child: Text(context.l10n.workspacePickerTitle,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     ),
                     if (_busy)
                       const SizedBox(
@@ -118,7 +119,7 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
                     else
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(_changed),
-                        child: const Text('বন্ধ করুন'),
+                        child: Text(context.l10n.workspacePickerClose),
                       ),
                   ],
                 ),
@@ -131,7 +132,7 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
                       style: TextStyle(color: context.palette.danger)),
                 ),
               if (profile.companies.length > 1) ...[
-                const _SectionTitle('কোম্পানি'),
+                _SectionTitle(context.l10n.workspacePickerCompany),
                 for (final company in profile.companies)
                   _Choice(
                     key: ValueKey('company-${company.publicId}'),
@@ -148,12 +149,12 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
               ],
               if (profile.branches.isNotEmpty) ...[
                 _SectionTitle(profile.company.name.isEmpty
-                    ? 'শাখা'
-                    : 'শাখা — ${profile.company.name}'),
+                    ? context.l10n.workspacePickerBranch
+                    : context.l10n.workspacePickerBranchOf(profile.company.name)),
                 if (profile.branches.length > 1)
                   _Choice(
                     key: const ValueKey('branch-all'),
-                    label: 'সব শাখা',
+                    label: context.l10n.homeAllBranches,
                     selected: allSelected,
                     onTap: _busy || allSelected
                         ? null
@@ -181,8 +182,7 @@ class _WorkspacePickerState extends State<WorkspacePicker> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
                   child: Text(
-                    'আপনি যা লিখবেন তা বাছা শাখার নামেই বসবে। "সব শাখা" কেবল দেখার জন্য — '
-                    'কাজের শাখা বদলায় না।',
+                    context.l10n.workspacePickerNote,
                     style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),
                   ),
                 ),

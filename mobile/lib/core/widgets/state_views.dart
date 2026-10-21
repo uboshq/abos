@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../locale/l10n.dart';
 import '../theme/app_spacing.dart';
 
 /// ⭐ তিন অবস্থার দুটো — লোড হচ্ছে আর ভুল; খালি অবস্থা [EmptyState] (মোবাইলের নকশা ৩, পাতা ৮ আর ১০; মালিকের "হ্যাঁ",
@@ -23,7 +24,7 @@ class LoadingSkeleton extends StatelessWidget {
         );
     return Semantics(
       key: const ValueKey('loading-skeleton'),
-      label: 'লোড হচ্ছে',
+      label: context.l10n.stateLoading,
       liveRegion: true,
       child: ExcludeSemantics(
         child: Column(children: [
@@ -85,7 +86,7 @@ class ErrorState extends StatelessWidget {
               style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('আবার চেষ্টা করুন'),
+              label: Text(context.l10n.commonRetry),
             ),
           ],
         ]),

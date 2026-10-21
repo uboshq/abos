@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../locale/app_locale.dart';
+
 /// ⭐ আলো বা অন্ধকার — মানুষের নিজের বাছাই (মালিকের আদেশ, ২০ অক্টোবর ২০২৬): "ফোনের মতো" (শুরুতে), "আলো", "অন্ধকার"।
 ///
 /// <p>বাছাই ফোনে থাকে, লগআউটেও মোছে না — এটা মানুষের চোখের পছন্দ, কোম্পানির তথ্য নয়। চাপ দিলেই [current] বদলায়, আর
 /// `MaterialApp.themeMode` সেটা শোনে, তাই অ্যাপ আবার খুলতে হয় না। হোম-স্ক্রিনের উইজেটও একই বাছাই মানে ([onChanged]-এ
 /// উইজেটের ভাণ্ডারে লেখা হয়)।
 enum ThemeChoice {
-  phone('ফোনের মতো', ThemeMode.system),
-  light('আলো', ThemeMode.light),
-  dark('অন্ধকার', ThemeMode.dark);
+  phone(ThemeMode.system),
+  light(ThemeMode.light),
+  dark(ThemeMode.dark);
 
-  const ThemeChoice(this.label, this.mode);
+  const ThemeChoice(this.mode);
 
-  final String label;
   final ThemeMode mode;
+
+  /// নাম এখনকার ভাষায় — ছবির মেনুর একই চাবি
+  String get label => switch (this) {
+        ThemeChoice.phone => AppLocale.l10n.avatarMenuThemePhone,
+        ThemeChoice.light => AppLocale.l10n.avatarMenuThemeLight,
+        ThemeChoice.dark => AppLocale.l10n.avatarMenuThemeDark,
+      };
 }
 
 class ThemeChoices {

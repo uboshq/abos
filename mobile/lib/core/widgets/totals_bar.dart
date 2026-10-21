@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../locale/l10n.dart';
 import '../records/money.dart';
 import '../theme/app_spacing.dart';
 
@@ -66,8 +67,8 @@ class TotalsBar extends StatelessWidget {
             if (grandLabel case final label?)
               line(label, allSum, true, const ValueKey('totals-all'))
             else ...[
-              line('এই পাতা · $pageCountটি', pageSum, false, const ValueKey('totals-page')),
-              line('সর্বমোট · $allCountটি', allSum, true, const ValueKey('totals-all')),
+              line(context.l10n.totalsThisPage('$pageCount'), pageSum, false, const ValueKey('totals-page')),
+              line(context.l10n.totalsAll('$allCount'), allSum, true, const ValueKey('totals-all')),
             ],
           ]),
         ),

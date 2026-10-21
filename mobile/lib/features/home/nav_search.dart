@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/theme/app_colors.dart';
@@ -17,7 +19,7 @@ class CustomerHit {
 }
 
 /// ⭐ The grey line under a web screen's name — it opens inside the app, but it is the web's own screen.
-const String webRowNote = 'ওয়েবের পর্দা';
+String get webRowNote => AppLocale.l10n.homeWebScreen;
 
 /// What a search result opens: `/home/<path>`, remembered as [label].
 class NavPick {
@@ -60,7 +62,7 @@ class NavSearchBox extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  static const String hint = 'খুঁজুন: "চালান", "রহিম ট্রেডার্স"…';
+  static String get hint => AppLocale.l10n.homeSearchHint;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +126,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
   List<Widget> buildActions(BuildContext context) => [
         if (query.isNotEmpty)
           IconButton(
-            tooltip: 'মুছুন',
+            tooltip: context.l10n.homeSearchClear,
             icon: const Icon(Icons.close),
             onPressed: () => query = '',
           ),
@@ -132,7 +134,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
 
   @override
   Widget buildLeading(BuildContext context) => IconButton(
-        tooltip: 'ফিরে যান',
+        tooltip: context.l10n.sheetGoBack,
         icon: const Icon(Icons.arrow_back),
         onPressed: () => close(context, null),
       );
@@ -148,7 +150,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
     if (q.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Text('পর্দার নাম ("অর্ডার", "চালান", "stock") বা গ্রাহকের নাম/মোবাইল লিখুন।',
+        child: Text(context.l10n.homeSearchHelp,
             style: TextStyle(color: context.palette.onSurfaceMuted)),
       );
     }
@@ -157,14 +159,14 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
     if (screens.isEmpty && customers.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Text('"$q" — কিছু পাওয়া গেল না।',
+        child: Text(context.l10n.homeSearchNothing(q),
             style: TextStyle(color: context.palette.onSurfaceMuted)),
       );
     }
     return ListView(
       key: const ValueKey('nav-search-results'),
       children: [
-        if (screens.isNotEmpty) const _Heading('পর্দা'),
+        if (screens.isNotEmpty) _Heading(context.l10n.homeSearchScreens),
         for (final row in screens)
           ListTile(
             key: ValueKey('hit-${row.path}'),
@@ -174,12 +176,12 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
             title: Text(row.label),
             // ⓘ ওয়েবের পর্দা হলে বলে দেয় — খোলে অ্যাপের ভিতরেই
             subtitle: Text(
-                [tree.moduleLabel(row.module) ?? 'আমি', if (row.web) webRowNote].join(' · '),
+                [tree.moduleLabel(row.module) ?? context.l10n.homeMe, if (row.web) webRowNote].join(' · '),
                 style: const TextStyle(fontSize: 12)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => close(context, NavPick(row.path!, row.label)),
           ),
-        if (customers.isNotEmpty) const _Heading('গ্রাহক'),
+        if (customers.isNotEmpty) _Heading(context.l10n.homeSearchCustomers),
         for (final c in customers)
           ListTile(
             key: ValueKey('hit-customer-${c.id}'),

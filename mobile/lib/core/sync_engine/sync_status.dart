@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
+import '../locale/app_locale.dart';
 import 'sync_engine.dart';
 
 /// ⭐ সিঙ্কের সৎ অবস্থা — শেষ সফল সিঙ্ক কখন, এখন চলছে কি না, শেষটা ব্যর্থ কি না, পুরনো কি না, নেট আছে কি না
@@ -143,11 +144,12 @@ class LastSyncLabel extends StatelessWidget {
 
   /// লেখাটা — পরীক্ষা আর মাথার নকশা দুটোই পড়ে
   static String words(SyncStatus s, DateTime now) {
-    if (s.running) return 'সিঙ্ক হচ্ছে…';
-    if (s.offline) return 'নেট নেই — কাজ জমা থাকছে';
+    final w = AppLocale.l10n;
+    if (s.running) return w.syncStatusRunning;
+    if (s.offline) return w.syncStatusOffline;
     final last = s.lastOkAt;
-    if (last == null) return s.failed ? 'সিঙ্ক হয়নি — টেনে আবার চেষ্টা করুন' : 'এখনো সিঙ্ক হয়নি';
-    return 'শেষ সিঙ্ক: ${ago(last, now)}${s.failed ? ' · শেষবার ব্যর্থ' : ''}';
+    if (last == null) return s.failed ? w.syncStatusFailedNever : w.syncStatusNever;
+    return s.failed ? w.syncStatusLastFailed(ago(last, now)) : w.syncStatusLast(ago(last, now));
   }
 
   /// ⭐ "এইমাত্র" · "২ মিনিট আগে" · "৩ ঘণ্টা আগে" · "৫ দিন আগে" — খাঁটি, [now] দেওয়া হয় (উইজেটের নোটিশ আর সিঙ্কও এটা পড়ে;
@@ -157,15 +159,17 @@ class LastSyncLabel extends StatelessWidget {
   /// ২০২৬); অ্যাপের নিজের পর্দায় যেমন ছিল তেমন বাংলা অঙ্ক।
   static String ago(DateTime then, DateTime now, {bool englishDigits = false}) {
     final d = now.difference(then);
-    String n(int v) => englishDigits ? '$v' : _bn(v);
+    final w = AppLocale.l10n;
+    // ⓘ ইংরেজিতে অঙ্ক সবসময় ইংরেজি
+    String n(int v) => englishDigits || AppLocale.isEnglish() ? '$v' : _bn(v);
     return d.inSeconds < 60
-        ? 'এইমাত্র'
+        ? w.syncAgoJustNow
         : d.inMinutes < 60
-            ? '${n(d.inMinutes)} মিনিট আগে'
+            ? w.syncAgoMinutes(d.inMinutes, n(d.inMinutes))
             : d.inHours < 24
-                ? '${n(d.inHours)} ঘণ্টা আগে'
-                : '${n(d.inDays)} দিন আগে';
+                ? w.syncAgoHours(d.inHours, n(d.inHours))
+                : w.syncAgoDays(d.inDays, n(d.inDays));
   }
 
-  static String _bn(int n) => n.toString().split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join();
+  static String _bn(int n) => n.toString().split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join(); // l10n-ok: the Bengali digit table, not text
 }

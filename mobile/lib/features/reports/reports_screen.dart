@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/printing/documents_api.dart';
 import '../../core/records/report_record.dart';
 import '../../core/theme/app_colors.dart';
@@ -62,9 +64,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _error = errorMessageFor(error,
-            fallback: 'রিপোর্টের তালিকা আনা গেল না।',
-            whenAbsent: 'রিপোর্ট এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের '
-                'চেয়ে নতুন। অফিসে জানান।'));
+            fallback: AppLocale.l10n.reportListLoadFailed,
+            whenAbsent: AppLocale.l10n.reportServerTooOld));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -84,15 +85,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
             .toList();
 
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.title ?? 'রিপোর্ট'),
+      appBar: AbosScreenBar(title: widget.title ?? context.l10n.reportTitle),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'রিপোর্টের নাম দিয়ে খুঁজুন',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: context.l10n.reportSearchHint,
+                prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
@@ -107,21 +108,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   if (_error != null)
                     EmptyState(
                       icon: Icons.cloud_off_outlined,
-                      title: 'তালিকা আনা গেল না',
+                      title: context.l10n.reportListFailedTitle,
                       message: _error,
                     )
                   else if (reports == null)
                     const SizedBox(height: 200)
                   else if (reports.isEmpty)
-                    const EmptyState(
+                    EmptyState(
                       icon: Icons.bar_chart_outlined,
                       // Not an error: the server sends only what this person
                       // may run, and for some roles that is nothing.
-                      title: 'আপনার জন্য কোনো রিপোর্ট নেই',
+                      title: context.l10n.reportNoneForYou,
                     )
                   else if (filtered.isEmpty)
-                    const EmptyState(
-                        icon: Icons.search_off, title: 'কোনো মিল পাওয়া যায়নি')
+                    EmptyState(
+                        icon: Icons.search_off, title: context.l10n.reportNoMatch)
                   else
                     ...filtered.map((r) => Card(
                           margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -280,8 +281,8 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(now.year, now.month, now.day),
       initialDateRange: _range,
-      helpText: 'কোন তারিখ থেকে কোন তারিখ',
-      saveText: 'দেখান',
+      helpText: context.l10n.reportDateRangeHelp,
+      saveText: context.l10n.reportDateRangeShow,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -312,7 +313,7 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
         // is gone as that the route is — and "your app is newer than the
         // server" would then be a confident, wrong explanation.
         setState(() =>
-            _error = errorMessageFor(error, fallback: 'রিপোর্ট আনা গেল না।'));
+            _error = errorMessageFor(error, fallback: AppLocale.l10n.reportLoadFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -330,7 +331,7 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
           // ⭐ PDF — দেখা, ছাপা, পাঠানো; এই পর্দার একই তারিখ আর ছাঁকনিতে, সব সারি (মালিক, ৪ অক্টোবর ২০২৬)
           IconButton(
             key: const Key('report-pdf'),
-            tooltip: 'PDF — দেখা, ছাপা, পাঠানো',
+            tooltip: context.l10n.reportPdfTooltip,
             icon: const Icon(Icons.picture_as_pdf_outlined),
             onPressed: page == null
                 ? null
@@ -387,7 +388,7 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
                       ActionChip(
                         key: ValueKey('report-choice-${c.key}'),
                         avatar: const Icon(Icons.filter_list, size: 16),
-                        label: Text('${c.label}: ${_picked[c.key]?.$2 ?? 'সব'}'),
+                        label: Text(context.l10n.reportChoice(c.label, _picked[c.key]?.$2 ?? context.l10n.reportChoiceAll)),
                         onPressed: _busy ? null : () => _pick(c),
                       ),
                   ],
@@ -430,15 +431,15 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
                         if (_error != null)
                           EmptyState(
                             icon: Icons.cloud_off_outlined,
-                            title: 'রিপোর্ট আনা গেল না',
+                            title: context.l10n.reportLoadFailedTitle,
                             message: _error,
                           )
                         else if (page == null)
                           const SizedBox(height: 200)
                         else
-                          const EmptyState(
+                          EmptyState(
                             icon: Icons.inbox_outlined,
-                            title: 'এই সময়ে কোনো সারি নেই',
+                            title: context.l10n.reportNoRowsInPeriod,
                           ),
                       ],
                     ),
@@ -516,7 +517,7 @@ class _ChoiceSheetState extends State<_ChoiceSheet> {
               padding: const EdgeInsets.all(AppSpacing.md),
               child: TextField(
                 key: const ValueKey('report-choice-search'),
-                decoration: InputDecoration(labelText: '${widget.title} খুঁজুন', prefixIcon: const Icon(Icons.search)),
+                decoration: InputDecoration(labelText: context.l10n.reportChoiceSearch(widget.title), prefixIcon: const Icon(Icons.search)),
                 onChanged: _ask,
               ),
             ),
@@ -526,8 +527,8 @@ class _ChoiceSheetState extends State<_ChoiceSheet> {
                 children: [
                   ListTile(
                     key: const ValueKey('report-choice-all'),
-                    title: const Text('সব'),
-                    onTap: () => Navigator.of(context).pop(('', 'সব')),
+                    title: Text(context.l10n.reportChoiceAll),
+                    onTap: () => Navigator.of(context).pop(('', context.l10n.reportChoiceAll)),
                   ),
                   for (final o in shown)
                     ListTile(
@@ -578,7 +579,7 @@ class _Table extends StatelessWidget {
                   for (var i = 0; i < columns.length; i++)
                     DataCell(Text(
                       i == 0
-                          ? 'মোট'
+                          ? context.l10n.reportTotal
                           : columns[i].format(page.totals[columns[i].key]),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     )),
@@ -610,14 +611,14 @@ class _Pager extends StatelessWidget {
             TextButton.icon(
               onPressed: onPrevious,
               icon: const Icon(Icons.chevron_left),
-              label: const Text('আগের'),
+              label: Text(context.l10n.reportPrevious),
             ),
-            Text('পাতা ${page.page} / ${page.lastPage}',
+            Text(context.l10n.reportPageOf('${page.page}', '${page.lastPage}'),
                 style: Theme.of(context).textTheme.bodySmall),
             TextButton.icon(
               onPressed: onNext,
               icon: const Icon(Icons.chevron_right),
-              label: const Text('পরের'),
+              label: Text(context.l10n.reportNext),
             ),
           ],
         ),
