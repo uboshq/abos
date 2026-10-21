@@ -503,8 +503,8 @@ final class PayrollService
 
         $gross = '0';
         $deductions = '0';
-        // ⓘ ভবিষ্য তহবিলের দুই প্রশ্ন — কাঠামোর মূল (অনুপস্থিতির ভাগ ছাড়া), আর কর্মী তহবিলে কিছু দিলেন কি না ([[ProvidentFund]])
-        $basic = '0';
+        // ⓘ ভবিষ্য তহবিল আর অধিকালের দুই প্রশ্ন — দেওয়া মূল (কাজের দিনের ভাগে), আর কর্মী তহবিলে কিছু দিলেন কি না ([[ProvidentFund]])
+        $paidBasic = '0';
         $paysIntoFund = false;
         $fundId = $this->fund->enabled() ? $this->fund->fundAccount()?->id : null;
 
@@ -520,10 +520,6 @@ final class PayrollService
             /** @var SalaryHead $head */
             $head = $component['head'];
 
-            if ($head->is_basic) {
-                $basic = (string) $component['amount'];
-            }
-
             /*
              * ⛔ পয়সায় গোল — এখানেই, একবার (চেকলিস্ট অডিট ২৭ সেপ্টেম্বর §২, ২ অক্টোবর ২০২৬;
              * [[TheBankFileAndTheBooksPaidTheSameSalaryTest]])। ⓘ আগে উপস্থিতির ভাগে চার ঘরের অঙ্ক থাকত
@@ -533,6 +529,14 @@ final class PayrollService
             $amount = Money::round($head->prorated_by_attendance
                 ? bcmul($component['amount'], $factor, 10)
                 : $component['amount'], 2);
+
+            /*
+             * ⭐ দেওয়া মূল — স্লিপের মূল-সারির অঙ্ক: মাসের কাজের দিনের ভাগে (যোগদান/ছাড়া আর বিনা-বেতনের দিন বাদ), পয়সায় গোল
+             * ([[attendanceFactor()]])। প্রতিষ্ঠানের PF ভাগ আর অধিকালের ভিত এটাই — কাঠামোর পুরো মূল নয় (fe, ২১ অক্টোবর ২০২৬, দফা ৪)।
+             */
+            if ($head->is_basic) {
+                $paidBasic = $amount;
+            }
 
             /*
              * ⛔ অগ্রিমের কিস্তি কর্মীর খোলা অগ্রিমের বেশি নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔৪)। ⓘ কিস্তি মাসিক নির্দিষ্ট
@@ -574,7 +578,8 @@ final class PayrollService
          */
         if ($this->overtime->enabled() && $this->overtime->isEligible($employee)) {
             $hours = $this->overtime->signedHours($employee, $monthEnd);
-            $pay = bccomp($hours, '0', 4) > 0 ? $this->overtime->amountFor($basic, $hours) : '0';
+            // ⓘ দেওয়া মূলের উপর — মাসের মাঝে যোগ দিলে ঘণ্টা-হারও সেই ভাগের (fe, দফা ৪)
+            $pay = bccomp($hours, '0', 4) > 0 ? $this->overtime->amountFor($paidBasic, $hours) : '0';
 
             if (bccomp($pay, '0', 2) > 0) {
                 PayslipLine::create([
@@ -632,7 +637,7 @@ final class PayrollService
          * ([[ledgerLines()]])। ⛔ সুইচ বন্ধ বা সদস্য নন — কোনো সারি নেই, আগের অবিকল বেতনশিট।
          */
         if ($paysIntoFund) {
-            $share = $this->fund->employerShare($basic);
+            $share = $this->fund->employerShare($paidBasic);
 
             if (bccomp($share, '0', 2) > 0) {
                 PayslipLine::create([
