@@ -443,7 +443,8 @@ final class CollectionService
 
             foreach ($built ?? [] as $line) {
                 $head = $accounts->get($line['account_id']);
-                $label = trim(($head?->code ?? '').' · '.($head?->name() ?? ''));
+                // ⓘ নকশার লেখা হুবহু — "1102 ডাচ্-বাংলা ব্যাংক" (কোডের পরে ফাঁকা, বিন্দু নয়), গ্রাহকের সারিতে " · নাম"
+                $label = trim(($head?->code ?? '').' '.($head?->name() ?? ''));
                 $dr = bcadd((string) ($line['debit'] ?? '0'), '0', 4);
                 $cr = bcadd((string) ($line['credit'] ?? '0'), '0', 4);
 

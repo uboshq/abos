@@ -19,7 +19,8 @@ use Illuminate\Validation\ValidationException;
  * চার্জের খাতে, আর গ্রাহকের খাতায় পুরো amount (নকশা দফা ৯; আজকের [[CollectionService::confirm()]] আর cb-র চার্জের লাইন)।
  * ⚠️ a5-র খসড়ায় চার্জ amount-এর উপরে ধরা ছিল; a6 (২১ অক্টোবর ২০২৬) দফা ৯ আর আগের আচরণ মেনে ভিতরে করল।
  * ⓘ সারির `kind`: bill (sal_invoices) · debit_note / credit_note (acc_notes) · credit (আগের আদায়ের অপ্রয়োগকৃত, sal_collections)।
- * ক্রেডিটের সারি ঋণাত্মক বা ধনাত্মক — দুটোই চলে, ভেতরে পরম মান। সারি খালি = পুরনো আগে, নিজে থেকে।
+ * ক্রেডিটের সারি ঋণাত্মক, বিল আর ডেবিট নোটের ধনাত্মক — চিহ্ন না মিললে ফেরত ([[signed()]]); ভেতরে পরম মান। সারির ঘরটাই না এলে
+ * পুরনো আগে, নিজে থেকে; `lines: []` মানে কোনো বিলে নয়।
  * ⓘ পদ্ধতি আর রেফারেন্স cb-র [[MoneyMethod]]-এর নামে: method → instrument, reference → instrument_no (জমায় deposit_slip_no)।
  */
 final readonly class CollectionInput
@@ -96,7 +97,7 @@ final readonly class CollectionInput
             $kind = (string) ($line['kind'] ?? 'bill');
             $kind = in_array($kind, self::KINDS, true) ? $kind : 'bill';
             $raw = trim((string) ($line['id'] ?? $line['sales_invoice_id'] ?? ''));
-            $amount = self::abs($line['amount'] ?? '0');
+            $amount = self::signed($kind, $line['amount'] ?? '0');
 
             /*
              * ⓘ পর্দা খোলা কাগজের public_id পাঠায় ([[CollectionOpenItems]]); পুরনো ফর্ম ভেতরের সংখ্যা — দুটোই চলে। ⛔ অচেনা
@@ -201,7 +202,7 @@ final readonly class CollectionInput
                 throw ValidationException::withMessages(['lines' => __('sales::sync.unknown_invoice')]);
             }
 
-            $amount = self::abs($line['amount']);
+            $amount = self::signed($kind, $line['amount']);
 
             if (bccomp($amount, '0', 4) > 0) {
                 $lines[] = ['kind' => $kind, 'id' => $id, 'amount' => $amount];
@@ -361,6 +362,28 @@ final readonly class CollectionInput
         }
 
         return bcadd($text, '0', 4);
+    }
+
+    /**
+     * ⛔ সারির অঙ্কের চিহ্ন তার ধরনের — a4-এর প্রশ্ন ১-এর উত্তর (a5, ২১ অক্টোবর ২০২৬; ফোন আর পর্দা দুজনেই এভাবে পাঠায়):
+     * ক্রেডিট নোট আর আগের জমা ঋণাত্মক (খোলা কাগজের `items`-এর একই দিক), বিল আর ডেবিট নোট ধনাত্মক। চিহ্ন না মিললে কারণসহ
+     * ফেরত — নীরবে পরম মান নিলে "−৫০০ বিলে" মানে কী, কেউ বলতে পারত না। শূন্য সারি বাদ পড়ে (চিহ্নের প্রশ্ন নেই)।
+     * ⓘ ফেরে পরম মান — ভেতরের হিসাব ([[CollectionService::plan()]]) ধরন দেখে দিক বোঝে।
+     */
+    private static function signed(string $kind, mixed $value): string
+    {
+        $text = is_scalar($value) ? trim((string) $value) : '';
+        $negative = str_starts_with($text, '-');
+        $amount = self::abs($text);
+
+        if (bccomp($amount, '0', 4) !== 0 && $negative !== in_array($kind, self::CREDIT_KINDS, true)) {
+            throw ValidationException::withMessages(['lines' => __('sales::collection_rules.sign_mismatch', [
+                'kind' => $kind,
+                'amount' => $text,
+            ])]);
+        }
+
+        return $amount;
     }
 
     private static function abs(mixed $value): string

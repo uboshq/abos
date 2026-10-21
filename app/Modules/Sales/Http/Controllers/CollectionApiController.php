@@ -103,7 +103,46 @@ class CollectionApiController extends Controller implements HasMiddleware
         $paper = app(AttachmentEngine::class)->store($request->file('file'), 'sales', Collection::drillSourceType(), (int) $collection->id,
             maxBytes: AttachmentEngine::SLIP_MAX_BYTES, only: AttachmentEngine::SLIP);
 
-        return response()->json(['id' => (string) ($paper->public_id ?? $paper->id), 'name' => (string) $paper->original_name], 201);
+        /*
+         * ⭐ স্লিপ এল — ফোন "পোস্ট" চেয়েছিল, তবে এখন পোস্ট (দফা ১৫; a4-এর অ্যাপ a3a030302, ২১ অক্টোবর ২০২৬)।
+         * ⓘ অ্যাপ আগে আদায় পাঠায় (`confirm: true`), স্লিপের ছবি পরে, বসার পরে। স্লিপ বাধ্যতামূলক কোম্পানিতে প্রথম চাপে পোস্ট
+         * আটকায় (তখনো স্লিপ নেই), আদায় খসড়া থাকে — আর ফোনে খসড়া পোস্টের আর কোনো বোতাম নেই, তাই চিরকাল খসড়া। ⓘ এখন:
+         * যিনি পাঠালেন তিনিই স্লিপ দিলে, আর তাঁর সিঙ্কের বদলটা সত্যিই পোস্ট চেয়েছিল, পোস্টের একই দরজা আবার
+         * ([[CollectionService::confirm()]]) — বাকি সব পাহারা (মাস বন্ধ, ছাড়ের সই, রেফারেন্স) আগের মতোই থামায়, তখন খসড়াই থাকে।
+         */
+        $collection = $collection->fresh();
+
+        if ($collection->status === DocumentStatus::DRAFT
+            && (int) $collection->created_by === (int) auth()->id()
+            && $this->phoneAskedToPost($collection)) {
+            try {
+                $collection = app(\App\Modules\Sales\Services\CollectionService::class)->confirm($collection->fresh(['lines']));
+            } catch (\Illuminate\Validation\ValidationException|\App\Core\Engines\Posting\PostingException) {
+                // ⓘ অন্য কারণে আটকাল — খসড়া থাকল, সিঙ্কের পথের একই আচরণ ([[CollectionSync::apply()]])
+            }
+        }
+
+        return response()->json([
+            'id' => (string) ($paper->public_id ?? $paper->id),
+            'name' => (string) $paper->original_name,
+            // ⓘ আদায়ের এখনকার অবস্থা — সিঙ্কের উত্তরের একই ঘর ([[answer()]])
+            'state' => self::answer($collection->fresh())['state'],
+        ], 201);
+    }
+
+    /** ফোনের সিঙ্কের যে বদল এই আদায়টা বানাল, সেটা "পোস্ট" (`confirm: true`) চেয়েছিল কি না */
+    private function phoneAskedToPost(Collection $collection): bool
+    {
+        $payload = \App\Models\SyncChange::query()
+            ->where('company_id', (int) $collection->company_id)
+            ->where('entity_type', \App\Modules\Sales\Sync\CollectionSync::entityType())
+            ->where('applied_entity_id', (string) $collection->public_id)
+            ->where('status', \App\Models\SyncChange::APPLIED)
+            ->value('payload_json');
+
+        $decoded = is_string($payload) ? json_decode($payload, true) : null;
+
+        return is_array($decoded) && ($decoded['confirm'] ?? false) === true;
     }
 
     /**
@@ -116,28 +155,54 @@ class CollectionApiController extends Controller implements HasMiddleware
     {
         $c->loadMissing(['lines.invoice', 'applications']);
 
-        $applied = $c->lines->map(fn (CollectionLine $l) => [
-            'kind' => 'bill',
-            'no' => (string) ($l->invoice?->document_no ?? ''),
-            'amount' => Money::round((string) $l->amount, 4),
-        ])->values()->all();
+        /*
+         * ⭐ প্রিভিউর একই তালিকা ([[CollectionService::preview()]]-এর `applied`) — বিলের সারিতে বিলে বসা পুরো অঙ্ক (টাকার অংশ +
+         * ক্রেডিটের অংশ), তারপর ডেবিট নোট, তারপর ক্রেডিট ঋণাত্মক; যোগফল = "বিলে প্রয়োগ" (নকশার সারাংশ)।
+         * ⚠️ আগে বিলে কেবল টাকার অংশ আর পাশে ক্রেডিট ঋণাত্মক — ১,২০০-র বিলে ৫০০ ক্রেডিট দিলে ৭০০ আর −৫০০, যোগ ২০০; অথচ
+         * পাওয়া ৭০০ (a6, ২১ অক্টোবর ২০২৬)।
+         */
+        $bills = [];
+        foreach ($c->lines as $line) {
+            $id = (int) $line->sales_invoice_id;
+            $bills[$id] = bcadd($bills[$id] ?? '0', (string) $line->amount, 4);
+        }
 
+        $notes = [];
+        $credits = [];
         foreach ($c->applications as $app) {
-            $no = match ($app->kind) {
-                'credit' => (string) Collection::acrossBranches()->whereKey($app->source_id)->value('document_no'),
-                default => (string) \App\Modules\Accounts\Models\Note::acrossBranches()->whereKey($app->source_id)->value('document_no'),
-            };
-            $applied[] = [
-                'kind' => (string) $app->kind,
-                'no' => $no,
-                'amount' => Money::round(in_array($app->kind, ['credit', 'credit_note'], true) ? '-'.$app->amount : (string) $app->amount, 4),
-            ];
+            if (in_array($app->kind, CollectionInput::CREDIT_KINDS, true)) {
+                $credits[] = $app;
+
+                if ($app->target_invoice_id !== null) {
+                    $id = (int) $app->target_invoice_id;
+                    $bills[$id] = bcadd($bills[$id] ?? '0', (string) $app->amount, 4);
+                }
+            } else {
+                $notes[] = $app;
+            }
+        }
+
+        $billNo = \App\Modules\Sales\Models\SalesInvoice::acrossBranches()->whereKey(array_keys($bills))->pluck('document_no', 'id');
+        $sourceNo = fn ($app) => (string) ($app->kind === 'credit'
+            ? Collection::acrossBranches()->whereKey($app->source_id)->value('document_no')
+            : \App\Modules\Accounts\Models\Note::acrossBranches()->whereKey($app->source_id)->value('document_no'));
+
+        $applied = [];
+        foreach ($bills as $id => $amount) {
+            $applied[] = ['kind' => 'bill', 'no' => (string) ($billNo[$id] ?? ''), 'amount' => Money::round($amount, 4)];
+        }
+        foreach ($notes as $app) {
+            $applied[] = ['kind' => (string) $app->kind, 'no' => $sourceNo($app), 'amount' => Money::round((string) $app->amount, 4)];
+        }
+        foreach ($credits as $app) {
+            $applied[] = ['kind' => (string) $app->kind, 'no' => $sourceNo($app), 'amount' => Money::round('-'.$app->amount, 4)];
         }
 
         $state = match (true) {
             in_array((string) $c->status, DocumentStatus::POSTED, true) => 'posted',
             (string) $c->status === DocumentStatus::CANCELLED => 'cancelled',
-            Approval::query()->where('approvable_type', Collection::class)->where('approvable_id', $c->id)->pending()->exists() => 'waiting',
+            Approval::query()->whereIn('approvable_type', [Collection::class, $c->getMorphClass()])
+                ->where('approvable_id', $c->id)->pending()->exists() => 'waiting',
             default => 'draft',
         };
 
