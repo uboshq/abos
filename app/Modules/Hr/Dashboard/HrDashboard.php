@@ -165,7 +165,9 @@ final class HrDashboard implements ProvidesDashboard
                 ['key' => 'run', 'label' => __('hr::payroll.held_run'), 'width' => '9rem', 'render' => fn ($l) => $l['run']],
                 // ⭐ সই-পড়া পথ — দেওয়ার অপেক্ষায় (ব্যাংক/MFS), নাহলে "হিসাব সইয়ের অপেক্ষায়" (fe, ২১ অক্টোবর ২০২৬)
                 ['key' => 'channel', 'label' => __('hr::field.payment_method'), 'width' => '10rem',
-                    'render' => fn ($l) => $l['channel'] === null ? __('hr::payroll.held_channel_waiting') : __('hr::payroll.held_ready_on', ['way' => __('hr::kind.'.$l['channel'])])],
+                    // ⭐ বাতিল রানের ব্যাংক ফাইলে গিয়েছিল — "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)
+                    'render' => fn ($l) => ($l['state'] ?? null) === 'bank_awaiting' ? __('hr::payroll.bank_awaiting')
+                        : ($l['channel'] === null ? __('hr::payroll.held_channel_waiting') : __('hr::payroll.held_ready_on', ['way' => __('hr::kind.'.$l['channel'])]))],
                 ['key' => 'deadline', 'label' => __('hr::payroll.held_until'), 'width' => '12rem',
                     'render' => fn ($l) => \Illuminate\Support\Carbon::parse($l['deadline'])->format('d M Y')
                         .($l['late'] ? ' · '.__('hr::payroll.held_late') : '')],

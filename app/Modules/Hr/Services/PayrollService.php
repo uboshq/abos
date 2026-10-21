@@ -496,12 +496,15 @@ final class PayrollService
         // ⓘ শেষ দিন কর্মী ধরে — শাখার সাপ্তাহিক ছুটি আলাদা হতে পারে ([[wageDeadline()]]); এক পঞ্জিকা, ছুটির তালিকা একবার পড়া
         $calendar = app(WorkCalendar::class);
         $paid = HeldWagePayment::query()->whereIn('payslip_id', $slips->modelKeys())->with(['paidIn', 'voucher'])->get()->keyBy('payslip_id');
+        // ⭐ বকেয়া যে রানের ফাইলে গেল সেটা বাতিল — "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" (fe-র সিদ্ধান্ত ২; [[HeldWages::awaitingBank()]])
+        $carriers = PayrollRun::acrossBranches()->whereKey($paid->pluck('paid_in_run_id')->filter()->all())->get(['id', 'status', 'document_no'])->keyBy('id');
 
-        return $slips->map(function (Payslip $slip) use ($run, $calendar, $paid): array {
+        return $slips->map(function (Payslip $slip) use ($run, $calendar, $paid, $carriers): array {
             $employee = $slip->employee;
             $deadline = self::wageDeadline($run, $employee, $calendar);
             $payment = $paid->get($slip->id);
             $reason = $employee === null ? null : self::heldReason($employee);
+            $carrier = $payment?->paid_in_run_id === null ? null : $carriers->get($payment->paid_in_run_id);
 
             return [
                 'code' => (string) $employee?->code,
@@ -510,7 +513,10 @@ final class PayrollService
                     ? ($payment->paid_in_run_id === null
                         // ⓘ বকেয়ার নিজের কাগজে, যেকোনো দিন ([[HeldWages::pay()]])
                         ? (string) __('hr::payroll.held_paid_voucher', ['no' => (string) $payment->voucher?->document_no])
-                        : (string) __('hr::payroll.held_paid_later', ['no' => (string) $payment->paidIn?->document_no]))
+                        : ($carrier?->status === DocumentStatus::CANCELLED
+                            // ⛔ বাতিল রানের ফাইলে গিয়েছিল — ব্যাংক হয়তো দিয়েছে; নিজে নিজে ছাড়া নয়
+                            ? (string) __('hr::payroll.bank_awaiting_on', ['no' => (string) $carrier->document_no])
+                            : (string) __('hr::payroll.held_paid_later', ['no' => (string) ($carrier?->document_no ?? $payment->paidIn?->document_no)])))
                     // ⓘ সই পড়ে গেছে — পরের ব্যাংক ফাইলে "বকেয়া মজুরি" হয়ে যাবে
                     : (string) __($reason ?? 'hr::payroll.held_next_file'),
                 'deadline' => $deadline->toDateString(),
@@ -523,7 +529,10 @@ final class PayrollService
     /**
      * ⭐ আটকে থাকা মজুরি, এখনো যা দেওয়া হয়নি — সব নিশ্চিত রান জুড়ে, HR-এর ড্যাশবোর্ডের তালিকা (fe, ২১ অক্টোবর ২০২৬)।
      *
-     * @return Collection<int, array{employee: string, channel: ?string, run: string, deadline: string, late: bool}>
+     * ⭐ সাথে বাতিল রানের ব্যাংক ফাইলে যাওয়া বকেয়া — `state` = `bank_awaiting`, "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" (fe-র সিদ্ধান্ত ২,
+     * ২১ অক্টোবর ২০২৬; [[HeldWages::awaitingBank()]]); বাকিগুলো `owed`। ⓘ ব্যাংক হয়তো দিয়েছে, তাই "শেষ দিন পেরিয়েছে" লাল নয়।
+     *
+     * @return Collection<int, array{employee: string, channel: ?string, run: string, deadline: string, late: bool, state: string}>
      */
     public function heldWagesOwed(?User $user = null): Collection
     {
@@ -537,7 +546,7 @@ final class PayrollService
 
         $calendar = app(WorkCalendar::class);
 
-        return $query->orderBy('id')->get()->map(function (Payslip $slip) use ($calendar): array {
+        $owed = $query->orderBy('id')->get()->map(function (Payslip $slip) use ($calendar): array {
             $deadline = self::wageDeadline($slip->run, $slip->employee, $calendar);
 
             return [
@@ -547,8 +556,21 @@ final class PayrollService
                 'run' => (string) $slip->run?->document_no,
                 'deadline' => $deadline->toDateString(),
                 'late' => Carbon::today()->greaterThan($deadline),
+                'state' => 'owed',
             ];
-        })->values();
+        });
+
+        $awaiting = app(HeldWages::class)->awaitingBank($user)->map(fn (array $line): array => [
+            'employee' => (string) $line['employee']?->name(),
+            'channel' => (string) $line['payment']->channel,
+            'run' => (string) $line['held_run']?->document_no,
+            'deadline' => $line['held_run'] === null ? Carbon::today()->toDateString()
+                : self::wageDeadline($line['held_run'], $line['employee'], $calendar)->toDateString(),
+            'late' => false,
+            'state' => 'bank_awaiting',
+        ]);
+
+        return $owed->concat($awaiting)->values();
     }
 
     /**
