@@ -81,4 +81,24 @@ return [
     'delivery_already_waiting' => 'An actual delivery date for this leave is already waiting for a signature.',
     'delivery_entered_by_you' => 'You entered this delivery date, so you cannot sign or refuse it. Ask another signer or the owner.',
     'weekly_off_company_needs_all_branches' => 'Only someone whose reach covers every branch can change the weekly off for the whole company.',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_accounts_missing' => 'The provident fund accounts are missing — the chart needs 5225 (employer contribution) and 2131 (provident fund payable). Use "Install standard chart" in the chart of accounts.',
+    'pf_head_missing' => 'No provident fund salary head — a deduction head on a percentage of basic, booked to 2131 (provident fund payable), is needed.',
+    'pf_apply_needs_the_key' => 'Applying the proposed rate needs the salary-change permission (hr.salary.manage).',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_month_paid' => 'The salary for :month (:no) is already confirmed — that month\'s overtime can no longer be built or signed.',
+    'ot_already_signed' => 'This sheet is already approved.',
+    'ot_not_your_line' => 'Only the employee\'s own manager can sign this sheet — on one\'s own or self-built sheet, only the owner.',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'e_tin_shape' => 'An e-TIN is twelve digits — no spaces or dashes.',
+    'tds_account_missing' => 'The tax-at-source account (2132) is missing — use "Install standard chart" in the chart of accounts.',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_month_already_run' => 'There is already a festival bonus run in :month — cancel it before making another.',
+    'bonus_limit_reached' => ':max festival bonuses were already run in :year — no more in a year.',
+    'nobody_due_a_bonus' => 'Nobody has a year of service on that day (or a basic set) — no one is due a festival bonus.',
+    'bonus_account_missing' => 'The festival bonus account (5226) is missing — use "Install standard chart" in the chart of accounts.',
+    // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
+    'pf_not_eligible' => 'This employee cannot join the fund — already a member, or not a year of service on that date.',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_accounts_missing' => 'The gratuity accounts (5227 expense, 2134 payable) are missing — run `php artisan abos:hr-law-accounts`.',
 ];

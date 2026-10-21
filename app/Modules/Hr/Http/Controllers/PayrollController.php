@@ -109,6 +109,22 @@ class PayrollController extends Controller implements HasMiddleware
          * ⓘ আগে ২০২৭-০৩-এর মতো মাসও নেওয়া হত, আর নিশ্চিত করলে না-খাটা মাসের বেতন আগাম খরচে বসত (IAS 19: কাজ হলে তবে খরচ)।
          * দিনটা মাসের আগে হতে পারে না — সেটা [[PayrollService::build()]]-এ, সব দরজার জন্য।
          */
+        /*
+         * ⭐ উৎসব ভাতার রান — নিজের দিন ধরে (যোগ্যতা সেদিন মাপা হয়), মাস নয় (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])।
+         */
+        if ($request->input('run_type') === PayrollRun::BONUS) {
+            $bonus = $request->validate([
+                'bonus_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'narration' => ['nullable', 'string', 'max:200'],
+            ]);
+
+            $run = $this->payroll->buildBonus($bonus['bonus_date'], $bonus['narration'] ?? null);
+
+            return redirect()
+                ->route('hr.payroll.show', $run)
+                ->with('saved', __('hr::message.run_built', ['count' => $run->employee_count]));
+        }
+
         $data = $request->validate([
             'month' => ['required', 'date_format:Y-m', 'before_or_equal:'.now()->format('Y-m')],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
@@ -155,6 +171,8 @@ class PayrollController extends Controller implements HasMiddleware
                 'deductions' => (string) $run->deduction_total,
                 'net' => (string) $run->net_total,
             ],
+            // ⭐ করের ধাপ বসানো নেই — উৎসে কিছুই কাটা হয়নি, পাতায় সেটা স্পষ্ট (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax::note()]])
+            'taxNote' => $run->isBonus() ? null : app(\App\Modules\Hr\Services\SalaryTax::class)->note(),
             // ব্যাংকে কতজনের বেতন যাবে — ফাইলটা নামানোর আগে জানা দরকার
             'bankRows' => $run->payslips->where('payment_method', 'bank')
                 ->filter(fn ($s) => bccomp((string) $s->net, '0', 4) > 0)->count(),

@@ -119,6 +119,8 @@
                 'hr::field.email' => $employee->email,
                 'hr::field.national_id' => \App\Core\Security\FieldSecurity::show(
                     $employee, 'national_id', $employee->national_id),
+                // ⭐ e-TIN — পরিচয়ের চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬)
+                'hr::field.e_tin' => \App\Core\Security\FieldSecurity::show($employee, 'e_tin', $employee->e_tin),
                 'hr::field.present_address' => \App\Core\Security\FieldSecurity::show($employee, 'present_address', $employee->present_address),
                 'hr::field.permanent_address' => \App\Core\Security\FieldSecurity::show($employee, 'permanent_address', $employee->permanent_address),
                 'hr::field.emergency_name' => \App\Core\Security\FieldSecurity::show($employee, 'emergency_name',
@@ -408,7 +410,11 @@
     {{-- ── বেতন ──────────────────────────────────────────────────────────── --}}
     @can('viewSalary', $employee)
         <section id="salary" data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" style="max-width: 36rem">
-            <h2 class="mb-3 font-semibold">{{ __('hr::action.salary') }}</h2>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('hr::action.salary') }}</h2>
+                {{-- ⭐ বছরের কর-সনদ — আয়ের বছর ধরে উৎসে কাটা কর (a6, ২১ অক্টোবর ২০২৬) --}}
+                <x-ui.button :href="route('hr.employee.tax_certificate', $employee)">{{ __('hr::action.tax_certificate') }}</x-ui.button>
+            </div>
 
             @if ($components === [])
                 <p class="text-sm text-(--color-ink-muted)">{{ __('hr::message.no_salary_yet') }}</p>
@@ -434,6 +440,42 @@
                 </dl>
             @endif
         </section>
+
+        {{-- ⭐ ভবিষ্য তহবিলের খাতা — মাস ধরে কর্মীর ভাগ, প্রতিষ্ঠানের ভাগ, চলতি জের; বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬) --}}
+        @if (($pfLedger ?? []) !== [])
+            <section id="provident-fund" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" style="max-width: 36rem">
+                <h2 class="mb-3 font-semibold">{{ __('hr::menu.report_provident_fund') }}</h2>
+                <dl class="space-y-1 text-sm">
+                    <div class="flex items-center justify-between gap-2 text-2xs text-(--color-ink-muted)">
+                        <dt>{{ __('hr::field.month') }}</dt>
+                        <dd>{{ __('hr::report.pf_employee_share') }} · {{ __('hr::report.pf_employer_share') }} · {{ __('hr::report.pf_balance') }}</dd>
+                    </div>
+                    @foreach ($pfLedger as $row)
+                        <div class="flex items-center justify-between gap-2" data-pf-month="{{ $row['month']->format('Y-m') }}">
+                            <dt class="text-(--color-ink-muted)">{{ $row['month']->format('M Y') }}</dt>
+                            <dd class="num">
+                                {{ \App\Core\Support\Money::format($row['employee_share']) }} ·
+                                {{ \App\Core\Support\Money::format($row['employer_share']) }} ·
+                                <span class="font-semibold">{{ \App\Core\Support\Money::format($row['balance']) }}</span>
+                            </dd>
+                        </div>
+                    @endforeach
+                    {{-- ⭐ নিচে যোগের সারি — দুই ভাগের যোগ আর শেষ জের (fe, ২১ অক্টোবর ২০২৬, দফা ৯) --}}
+                    @php
+                        $pfEmployee = collect($pfLedger)->reduce(fn ($c, $r) => bcadd($c, $r['employee_share'], 4), '0');
+                        $pfEmployer = collect($pfLedger)->reduce(fn ($c, $r) => bcadd($c, $r['employer_share'], 4), '0');
+                    @endphp
+                    <div class="mt-2 flex items-center justify-between gap-2 border-t border-(--color-border) pt-2 font-semibold" data-pf-total>
+                        <dt>{{ __('core.print.total') }}</dt>
+                        <dd class="num">
+                            {{ \App\Core\Support\Money::format($pfEmployee) }} ·
+                            {{ \App\Core\Support\Money::format($pfEmployer) }} ·
+                            {{ \App\Core\Support\Money::format(bcadd($pfEmployee, $pfEmployer, 4)) }}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+        @endif
     @endcan
 
     {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}

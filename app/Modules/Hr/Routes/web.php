@@ -6,12 +6,16 @@ use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
 use App\Modules\Hr\Http\Controllers\HolidayController;
+use App\Modules\Hr\Http\Controllers\GratuityController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
+use App\Modules\Hr\Http\Controllers\OvertimeController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
+use App\Modules\Hr\Http\Controllers\ProvidentFundController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
 use App\Modules\Hr\Http\Controllers\SalaryStructureController;
+use App\Modules\Hr\Http\Controllers\TaxCertificateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,6 +37,10 @@ Route::middleware('auth')->prefix('hr')->group(function () {
             ->whereNumber('employee')->name('salary');
         Route::post('/{employee}/salary', [SalaryStructureController::class, 'store'])
             ->whereNumber('employee')->name('salary.store');
+
+        // ⭐ বছরের কর-সনদ — বেতনের চাবি আর নাগাল (a6, ২১ অক্টোবর ২০২৬; [[TaxCertificateController]])
+        Route::get('/{employee}/tax-certificate', [TaxCertificateController::class, 'show'])
+            ->whereNumber('employee')->name('tax_certificate');
 
         Route::get('/{employee}', [EmployeeController::class, 'show'])->whereNumber('employee')->name('show');
         Route::get('/{employee}/edit', [EmployeeController::class, 'edit'])->whereNumber('employee')->name('edit');
@@ -142,5 +150,31 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::get('/{head}/edit', [SalaryHeadController::class, 'edit'])->whereNumber('head')->name('edit');
         Route::put('/{head}', [SalaryHeadController::class, 'update'])->whereNumber('head')->name('update');
         Route::delete('/{head}', [SalaryHeadController::class, 'destroy'])->whereNumber('head')->name('destroy');
+    });
+
+    /*
+     * ⭐ ভবিষ্য তহবিলের প্রস্তাবিত বদল — দেখা বেতনের চাবিতে, বসানো বেতন বদলানোর চাবিতে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFundController]])।
+     */
+    /*
+     * ⭐ অধিকালের শিট — হাজিরার চাবিতে তালিকা, হাজিরা বদলানোর চাবিতে বানানো, রিপোর্টিং লাইনে সই (BLA ধারা ১০৮; a6, ২১ অক্টোবর ২০২৬;
+     * [[OvertimeController]])।
+     */
+    Route::prefix('overtime')->name('overtime.')->group(function () {
+        Route::get('/', [OvertimeController::class, 'index'])->name('index');
+        Route::post('/', [OvertimeController::class, 'store'])->name('store');
+        Route::post('/{sheet}/sign', [OvertimeController::class, 'sign'])->whereNumber('sheet')->name('sign');
+    });
+
+    Route::prefix('provident-fund')->name('pf.')->group(function () {
+        Route::get('/', [ProvidentFundController::class, 'proposal'])->name('proposal');
+        Route::post('/', [ProvidentFundController::class, 'store'])->name('store');
+        // ⭐ একজনকে তহবিলে যোগ — আলাদা কাজ, নিজে থেকে নয় (BLA ধারা ২৬৪; fe, দফা ১)
+        Route::post('/{employee}/enrol', [ProvidentFundController::class, 'enrol'])->whereNumber('employee')->name('enrol');
+    });
+
+    // ⭐ গ্র্যাচুইটি — রিপোর্ট বেতনের চাবিতে, মাসের সঞ্চিতি বেতনের রান চালানোর চাবিতে (fe, দফা ৮; [[GratuityController]])
+    Route::prefix('gratuity')->name('gratuity.')->group(function () {
+        Route::get('/', [GratuityController::class, 'report'])->name('report');
+        Route::post('/', [GratuityController::class, 'store'])->name('store');
     });
 });

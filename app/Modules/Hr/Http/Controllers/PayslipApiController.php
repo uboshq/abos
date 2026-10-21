@@ -75,9 +75,15 @@ final class PayslipApiController extends Controller implements HasMiddleware
             'code' => (string) $employee->code,
             'payment_method' => (string) ($slip->payment_method ?? ''),
             // ⓘ আয় আগে, কর্তন পরে — সারির নিজের ক্রমে ([[Payslip::lines()]])
-            'lines' => $slip->lines->map(fn (PayslipLine $line) => [
+            // ⛔ প্রতিষ্ঠানের অংশ এখানে নয় — ফোন আয় আর কর্তন ছাড়া তৃতীয় কিছু চেনে না, আর এটা নিটে ঢোকে না ([[PayslipLine::EMPLOYER]])
+            'lines' => $slip->lines->reject(fn (PayslipLine $line) => $line->isEmployerShare())->map(fn (PayslipLine $line) => [
                 'name' => $line->headName('bn'),
                 'earning' => $line->isEarning(),
+                'amount' => Money::round((string) $line->amount, 2),
+            ])->values(),
+            // ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের ভাগ — আলাদা ঘরে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+            'employer_lines' => $slip->lines->filter(fn (PayslipLine $line) => $line->isEmployerShare())->map(fn (PayslipLine $line) => [
+                'name' => $line->headName('bn'),
                 'amount' => Money::round((string) $line->amount, 2),
             ])->values(),
         ]);

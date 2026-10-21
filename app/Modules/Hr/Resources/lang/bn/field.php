@@ -112,4 +112,30 @@ return [
     'outside_wages' => 'ধারা ২(৪৫)-এর মজুরি নয়',
     'outside_wages_hint' => 'বোনাস বা উৎসব ভাতা, মালিকের ভবিষ্য তহবিলের চাঁদা, যাতায়াত বা বিশেষ খরচের ভাতা হলে টিক দিন — না-নেওয়া অর্জিত ছুটির দৈনিক হারে এগুলো ধরা হয় না।',
     'actual_delivery_date' => 'প্রসবের আসল তারিখ',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_member' => 'তহবিলে',
+    'pf_current_percent' => 'আজকের হার',
+    'pf_current' => 'আজকের কাটা',
+    'pf_proposed_percent' => 'প্রস্তাবিত হার',
+    'pf_proposed' => 'প্রস্তাবিত কাটা',
+    'pf_employer' => 'প্রতিষ্ঠানের ভাগ',
+    'pf_changes' => 'বদল',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_days' => 'বাড়তি দিন',
+    'ot_hours' => 'বাড়তি ঘণ্টা',
+    'ot_signed_by' => 'সই দিলেন',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'e_tin' => 'e-TIN',
+    'income_year' => 'আয়ের বছর',
+    'tds_total' => 'উৎসে কাটা কর',
+    'employer_signature' => 'নিয়োগকর্তার সই ও সিল',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_date' => 'ভাতার দিন',
+    'narration' => 'বিবরণ (যেমন ঈদুল ফিতর)',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_years' => 'গোনা বছর',
+    'gratuity_days' => 'দিন',
+    'gratuity_basic' => 'শেষ মূল',
+    'gratuity_obligation' => 'দায়',
+    'as_of' => 'যে দিনের হিসাব',
 ];

@@ -506,6 +506,8 @@ final class HrDashboard implements ProvidesDashboard
         $rows = PayslipLine::query()
             ->join('hr_payslips', 'hr_payslips.id', '=', 'hr_payslip_lines.payslip_id')
             ->whereNull('hr_payslips.deleted_at')
+            // ⓘ কেবল আয় আর কর্তন — প্রতিষ্ঠানের অংশ (ভবিষ্য তহবিল) কর্মীর ভাতাও নয়, কর্তনও নয় ([[PayslipLine::EMPLOYER]])
+            ->whereIn('hr_payslip_lines.kind', SalaryHead::KINDS)
             ->whereIn('hr_payslips.payroll_run_id', self::payrollRuns()->where('hr_payroll_runs.month', $month->toDateString())->select('hr_payroll_runs.id'))
             ->selectRaw('hr_payslip_lines.kind, hr_payslip_lines.head_code, MAX(hr_payslip_lines.head_name_en) as name_en, '
                 .'MAX(hr_payslip_lines.head_name_bn) as name_bn, MIN(hr_payslip_lines.sort_order) as sort, SUM(hr_payslip_lines.amount) as total')

@@ -134,7 +134,8 @@ class PayslipPrintController extends Controller implements HasMiddleware
 
         foreach ($slip->lines as $line) {
             $lines[] = [
-                'name' => $line->headName().($line->isEarning() ? '' : ' ('.__('hr::kind.deduction').')'),
+                // ⓘ প্রতিষ্ঠানের অংশ নিজের নামে — "কর্তন" নয়, কারণ কর্মীর হাত থেকে যায়নি ([[PayslipLine::EMPLOYER]])
+                'name' => $line->headName().($line->isEarning() ? '' : ' ('.__($line->isEmployerShare() ? 'hr::kind.employer_share' : 'hr::kind.deduction').')'),
                 'qty' => '',
                 'unit' => '',
                 'rate' => '',

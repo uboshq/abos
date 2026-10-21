@@ -30,7 +30,8 @@ final class PayrollRunSummary implements SummarisesAnApproval
 
         $net = $approval->signedAmount() ?? (string) $run->net_total;
 
-        return __('hr::message.payroll_signing_summary', [
+        // ⭐ উৎসব ভাতার রান নিজের নামে — সইকারী যেন "বেতন" ভেবে সই না দেন (a6, ২১ অক্টোবর ২০২৬)
+        return __($run->isBonus() ? 'hr::message.bonus_signing_summary' : 'hr::message.payroll_signing_summary', [
             'month' => $run->month?->format('M Y') ?? '—',
             'count' => (int) $run->employee_count,
             'net' => FieldSecurity::visible(PayrollRun::class, 'net_total') ? Money::format($net) : FieldSecurity::mask(),

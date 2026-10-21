@@ -98,4 +98,45 @@ return [
     'delivery_waiting' => 'Delivery :date — waiting for a signature (leave would end :to)',
     'delivery_signed' => 'Actual delivery :actual signed: leave end moved :old → :new.',
     'weekly_off_company_row' => 'Company default',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_rate_applied' => 'Provident fund rate :from% to :to% — from :date.',
+    'pf_applied' => 'Applied for :applied, awaiting signature for :waiting, skipped :skipped.',
+    'pf_on_note' => 'Provident fund is on — employer share :employer, proposed employee share :employee.',
+    'pf_off_note' => 'Provident fund is off — no employer share is booked. Proposed rates: employee :employee, employer :employer.',
+    'pf_proposal_note' => 'Nothing changes by itself. Only fund members (deducted at more than zero today) change, from the chosen date; a month already paid is not touched.',
+    'pf_apply_note' => 'The proposed rate applies from :date — written to each person\'s audit trail.',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_prepared' => ':count sheets built or refreshed — awaiting signature.',
+    'ot_signed' => 'Signed — these hours go into this month\'s salary.',
+    'ot_on_note' => 'Overtime is on — a working day is :hours hours; eligible: :types.',
+    'ot_off_note' => 'Overtime is off — sheets can be built and signed, but nothing is paid. A working day is :hours hours; eligible: :types.',
+    'ot_formula_note' => 'Pay = basic ÷ 208 × 2 × signed extra hours (BLA s.108). Only the employee\'s own manager signs — on one\'s own or self-built sheet, only the owner.',
+    'ot_none' => 'No overtime sheets this month.',
+    'ot_owner_self_signed' => 'The owner signed an overtime sheet that was their own or that they built.',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'tax_slabs_missing' => 'No tax slabs are set — no tax was deducted at source in this run. Set HR\'s tax slabs in the control panel.',
+    'tax_slabs_unreadable' => 'The tax slabs could not be read — write "width:rate" separated by commas; no tax was deducted at source in this run.',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_note' => 'Everyone with at least one year of service on that day gets the set percentage of basic (default one month\'s basic). At most two a year; signature and books as for salary, expense on "Festival Bonus".',
+    // ⭐ উৎসব ভাতার সইয়ের সারি (a6, ২১ অক্টোবর ২০২৬)
+    'bonus_signing_summary' => 'Festival bonus :month · :count people · net :net',
+    // ⭐ শ্রমিক কে — BLA ধারা 2(65) (a6, ২১ অক্টোবর ২০২৬)
+    'worker_note' => '"Worker" (WORKER) — under BLA s.2(65) staff employed in a managerial or administrative capacity are not workers; do not give them this type, and they get no overtime.',
+    // ⭐ ভবিষ্য তহবিল — কেবল সদস্য, যোগ্যদের আলাদা যোগ, প্রাপ্তির ধাপ (BLA ধারা 264, 267; fe, ২১ অক্টোবর ২০২৬)
+    'pf_members_title' => 'Fund members — current against proposed rate',
+    'pf_candidates_title' => 'Not members, with a year of service — entitled to join the fund (BLA s.264)',
+    'pf_no_candidates' => 'No non-member with a year of service.',
+    'pf_enrol_done' => ':name has joined the fund.',
+    'pf_enrol_waiting' => ':name joining the fund is awaiting signature.',
+    'pf_enrolled' => 'Joined the provident fund — at :rate%, from :date.',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_on_note' => 'Monthly provision is on — confirming a month\'s salary trues the books up to that month\'s obligation.',
+    'gratuity_off_note' => 'Monthly provision is off — it is not booked with salary; use the button below to book it by hand.',
+    'gratuity_formula_note' => 'Obligation = last basic × days ÷ 30; days = counted years × 30, or × 45 after more than 10 years; counted years = completed years, plus one when the remainder exceeds six months (BLA s.2(10)). The books are trued up to the obligation each month — an increase is expense, a decrease reverses.',
+    'gratuity_booked_so_far' => 'Provision booked so far :booked; obligation as computed :total.',
+    'gratuity_booked' => 'The gratuity provision for :month is booked.',
+    'gratuity_nothing' => 'Nothing to book for :month — already booked, or the obligation did not change.',
+    'gratuity_narration' => 'Gratuity provision :month',
+    // ⭐ নিরীক্ষকের জন্য — IAS 19-এর সরলীকরণ (fe, ২১ অক্টোবর ২০২৬)
+    'gratuity_ias19' => 'Under IAS 19 gratuity is a defined benefit; instead of a full actuarial valuation we carry the accrued obligation at current salary — an acceptable simplification for a small company.',
 ];

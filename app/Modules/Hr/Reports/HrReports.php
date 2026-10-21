@@ -17,6 +17,7 @@ use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EarnedLeave;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Services\ProvidentFund;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,57 @@ final class HrReports
         $engine->register(self::payrollRegister());
         $engine->register(self::headcount());
         $engine->register(self::leaveBalance());
+        $engine->register(self::providentFund());
+    }
+
+    /**
+     * ⭐ ভবিষ্য তহবিলের খাতা — কর্মী আর মাস ধরে: কর্মীর ভাগ, প্রতিষ্ঠানের ভাগ, আর সেই মাস পর্যন্ত চলতি জের (a6, ২১ অক্টোবর ২০২৬;
+     * [[ProvidentFund::contributions()]])।
+     *
+     * ⓘ কেবল নিশ্চিত রান — বেতনশিটের রিপোর্টের একই কারণে। জের গোনা হয় সব মাস ধরে, তারপর পরিসর ছাঁকা হয় — তাই পরিসরের প্রথম সারির
+     * জেরেও আগের সব জমা আছে (খাতার প্রারম্ভিক জেরের মতো)। ⓘ কর্মীর পাতার তহবিলের অংশ ([[ProvidentFund::ledgerOf()]]) একই প্রশ্ন পড়ে।
+     * ⛔ পুরো রিপোর্টটাই টাকা — দরজার চাবি `hr.salary.view`, কলামেও।
+     */
+    public static function providentFund(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: 'hr.provident_fund',
+            permission: 'hr.salary.view',
+            title: 'hr::menu.report_provident_fund',
+            filters: ['date_range', 'branch'],
+            query: function (array $f): Builder {
+                // ⓘ ভেতরের প্রশ্নটা বেতনের স্লিপের সারির মডেল থেকে — কোম্পানির দেয়াল সেখানেই ([[ProvidentFund::contributions()]])
+                $inner = app(ProvidentFund::class)->contributions();
+                $running = $inner->newQuery()->fromSub($inner, 'c')
+                    ->select(['c.employee_id', 'c.month', 'c.employee_share', 'c.employer_share'])
+                    ->selectRaw('SUM(c.employee_share + c.employer_share) OVER (PARTITION BY c.employee_id ORDER BY c.month) as balance');
+
+                return self::staff($f)
+                    ->joinSub($running, 'pf', 'pf.employee_id', '=', 'hr_employees.id')
+                    ->whereBetween('pf.month', [Carbon::parse($f['from'])->startOfMonth()->toDateString(), $f['to']])
+                    ->orderBy('hr_employees.code')
+                    ->orderBy('pf.month')
+                    ->select([
+                        DB::raw("DATE_FORMAT(pf.month, '%Y-%m') as pay_month"),
+                        DB::raw(self::employeeLabel().' as employee'),
+                        DB::raw(self::nameOf('d').' as department'),
+                        'pf.employee_share',
+                        'pf.employer_share',
+                        DB::raw('pf.employee_share + pf.employer_share as month_total'),
+                        'pf.balance',
+                    ]);
+            },
+            columns: [
+                ['key' => 'pay_month', 'label' => 'hr::field.month', 'width' => '6rem'],
+                ['key' => 'employee', 'label' => 'hr::field.employee', 'width' => '14rem'],
+                ['key' => 'department', 'label' => 'hr::field.department', 'width' => '9rem'],
+                ['key' => 'employee_share', 'label' => 'hr::report.pf_employee_share', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
+                ['key' => 'employer_share', 'label' => 'hr::report.pf_employer_share', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
+                ['key' => 'month_total', 'label' => 'hr::report.pf_month_total', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
+                // ⓘ জের যোগ হয় না — চলতি জেরের যোগফল অর্থহীন
+                ['key' => 'balance', 'label' => 'hr::report.pf_balance', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view', 'total' => false],
+            ],
+        );
     }
 
     /**

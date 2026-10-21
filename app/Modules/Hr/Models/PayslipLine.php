@@ -29,6 +29,17 @@ class PayslipLine extends Model
 
     protected $table = 'hr_payslip_lines';
 
+    /**
+     * ⭐ তৃতীয় ধরন — প্রতিষ্ঠানের অংশ: কর্মীর আয়ও নয়, কর্তনও নয় (ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা; a6, ২১ অক্টোবর ২০২৬,
+     * [[ProvidentFund]])। ⓘ বেতনের স্লিপে দেখা যায় ("প্রতিষ্ঠানের অংশ"), কিন্তু মোট আয়, কর্তন আর নিটে ঢোকে না; খাতায় খরচ
+     * ডেবিট, তহবিলের দায় ক্রেডিট ([[PayrollService::ledgerLines()]])। ⛔ খাতের ধরন ([[SalaryHead::KINDS]]) নয় — কোনো খাত
+     * এই ধরনের হয় না, সারিটা হিসাব থেকে বসে।
+     */
+    public const EMPLOYER = 'employer';
+
+    /** ⓘ হিসাব থেকে বসা সারির কোড — খাতের কোড নয়, তাই কোনো খাতের সাথে মেলে না */
+    public const PF_EMPLOYER_CODE = 'PF_ER';
+
     protected $fillable = [
         'company_id', 'payslip_id', 'salary_head_id',
         'head_code', 'head_name_en', 'head_name_bn',
@@ -75,5 +86,11 @@ class PayslipLine extends Model
     public function isEarning(): bool
     {
         return $this->kind === SalaryHead::EARNING;
+    }
+
+    /** ⓘ প্রতিষ্ঠানের অংশ — কর্মীর নিটের বাইরে ([[EMPLOYER]]) */
+    public function isEmployerShare(): bool
+    {
+        return $this->kind === self::EMPLOYER;
     }
 }

@@ -62,11 +62,13 @@ class Employee extends Model implements Drillable
         'gender',
         // ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধা (ধারা ৪৬(৩); fe, ২১ অক্টোবর ২০২৬)
         'surviving_children',
+        // ⭐ e-TIN — করদাতার নম্বর; NID-এর মতোই পরিচয় (আয়কর আইন ২০২৩; a6, ২১ অক্টোবর ২০২৬, [[SalaryTax]])
+        'e_tin',
     ];
 
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
-        'father_name', 'mobile', 'email', 'national_id',
+        'father_name', 'mobile', 'email', 'national_id', 'e_tin',
         // ⭐ প্রোফাইলের মানুষটা ও রিপোর্টিং লাইন — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬
         'date_of_birth', 'mother_name', 'blood_group', 'present_address', 'permanent_address',
         'emergency_name', 'emergency_relation', 'emergency_mobile', 'reports_to_employee_id', 'gender', 'surviving_children',
@@ -101,6 +103,8 @@ class Employee extends Model implements Drillable
              * মানগুলোও হারায় — **চাবিটা এখন ব্যাকআপের অংশ**।
              */
             'national_id' => 'encrypted',
+            // ⭐ e-TIN — NID-এর মতোই ডাটাবেজেও ঢাকা (a6, ২১ অক্টোবর ২০২৬)
+            'e_tin' => 'encrypted',
             'bank_account_no' => 'encrypted',
             'bank_routing_no' => 'encrypted',
             'mfs_number' => 'encrypted',

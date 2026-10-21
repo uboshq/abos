@@ -642,6 +642,15 @@ final class ModuleDefinition
                     );
                 }
 
+                // ⭐ চাবির পাশে পাতার নিজের নীতি — [ক্ষমতা, মডেলের ক্লাস]; ভুল লিখলে সারি নীরবে লুকাত (a6, ২১ অক্টোবর ২০২৬; [[MenuBuilder::pageLets()]])
+                if (isset($item['policy']) && (! is_array($item['policy']) || count($item['policy']) !== 2
+                    || ! is_string($item['policy'][0]) || ! is_string($item['policy'][1]) || ! class_exists($item['policy'][1]))) {
+                    throw new InvalidArgumentException(
+                        "{$path}: menu item '{$item['route']}' has a 'policy' that is not [ability, existing model class]. "
+                        .'The row would ask a question nobody answers and stay hidden.'
+                    );
+                }
+
                 if (isset($item['setting']) && $host === null) {
                     $declared = array_column($raw['settings'] ?? [], 'key');
 

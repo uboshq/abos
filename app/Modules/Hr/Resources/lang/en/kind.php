@@ -24,4 +24,15 @@ return [
     'gender_female' => 'Female',
     'gender_male' => 'Male',
     'gender_other' => 'Other',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'employer_share' => 'employer share',
+    'pf_member' => 'Member',
+    'pf_not_member' => 'Not a member',
+    'pf_changes' => 'Will change',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_signed' => 'Approved',
+    'ot_waiting' => 'Awaiting signature',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'run_salary' => 'Monthly salary',
+    'run_bonus' => 'Festival bonus',
 ];

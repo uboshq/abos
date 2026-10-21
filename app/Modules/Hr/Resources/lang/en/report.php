@@ -12,4 +12,9 @@ return [
     'allowed' => 'Allowed',
     'taken' => 'Taken',
     'remaining' => 'Left over',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_employee_share' => 'Employee share',
+    'pf_employer_share' => 'Employer share',
+    'pf_month_total' => 'Month\'s contribution',
+    'pf_balance' => 'Balance',
 ];

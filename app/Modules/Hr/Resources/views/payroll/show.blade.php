@@ -15,7 +15,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="$run->month->locale(app()->getLocale())->translatedFormat('F Y')"
-            :subtitle="$run->document_no . ' · ' . __('core.status.' . $run->status)">
+            :subtitle="$run->document_no . ' · ' . __('hr::kind.run_' . ($run->run_type ?? 'salary')) . ' · ' . __('core.status.' . $run->status)">
             <x-slot:actions>
                 @can('hr.payroll.view')
                     <x-ui.button :href="route('hr.payroll.payslips', $run->id)">
@@ -54,6 +54,15 @@
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
+        </div>
+    @endif
+
+    {{-- ⭐ করের ধাপ বসানো নেই — উৎসে কিছুই কাটা হয়নি (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax::note()]]) --}}
+    @if (($taxNote ?? null) !== null)
+        <div role="status" data-tax-note
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            {{ $taxNote }}
         </div>
     @endif
 
@@ -138,6 +147,9 @@
                  'render' => fn ($s) => $money($s->net)],
                 ['key' => 'print', 'label' => '—', 'width' => '6rem',
                  'render' => fn ($s) => view('hr::payroll.partials.slip_print', ['slip' => $s])],
-            ]" />
+            ]"
+            :totals="['gross' => $money($summary['gross']), 'deductions' => $money($summary['deductions']), 'net' => $money($summary['net'])]"
+            :totalsLabel="__('core.print.total')" />
+        {{-- ⓘ ওপরের যোগের সারি — বেতন আর উৎসব ভাতা দুই রানেরই, নাগালের স্লিপের যোগ; চাবি ছাড়া ঢাকা (fe, দফা ৯) --}}
     </div>
 </x-layouts.app>

@@ -66,12 +66,19 @@ return [
             ['label' => 'hr::menu.salary_heads', 'icon' => 'wallet', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
             // ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)
             ['label' => 'hr::menu.holidays', 'icon' => 'calendar', 'route' => 'hr.holiday.index', 'permission' => 'hr.attendance.view'],
+            // ⭐ ভবিষ্য তহবিলের প্রস্তাবিত বদল — আজকের বনাম প্রস্তাবিত হার, তারিখ ধরে বসানো (a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.pf_proposal', 'icon' => 'wallet', 'route' => 'hr.pf.proposal', 'permission' => 'hr.salary.view'],
         ],
 
         'transactions' => [
             ['label' => 'hr::menu.payroll', 'icon' => 'cash', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
             ['label' => 'hr::menu.attendance', 'icon' => 'calendar', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
-            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
+            // ⭐ অধিকালের শিট — হাজিরা থেকে, ব্যবস্থাপকের সই (BLA ধারা ১০৮; a6, ২১ অক্টোবর ২০২৬)
+            // ⭐ চাবি না থাকলেও পাতার নিজের নীতি — দল থাকা ব্যবস্থাপক সারি দেখেন আর পাতা খোলে (a6, ২১ অক্টোবর ২০২৬; [[MenuBuilder::pageLets()]])
+            ['label' => 'hr::menu.overtime', 'icon' => 'clock', 'route' => 'hr.overtime.index', 'permission' => 'hr.attendance.view',
+                'policy' => ['viewAny', \App\Modules\Hr\Models\OvertimeSheet::class]],
+            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view',
+                'policy' => ['viewAny', \App\Modules\Hr\Models\LeaveApplication::class]],
             // ⭐ খরচের দাবি আর অগ্রিম — কর্মী নিজে (মালিকের আদেশ, ৭ অক্টোবর ২০২৬; [[ExpenseClaimController]])
             ['label' => 'hr::menu.claims', 'icon' => 'wallet', 'route' => 'hr.claim.index', 'permission' => 'hr.claim.self'],
         ],
@@ -89,6 +96,11 @@ return [
                 'route_params' => ['slug' => 'headcount'], 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.report_leave_balance', 'icon' => 'clock', 'route' => 'hr.report.show',
                 'route_params' => ['slug' => 'leave-balance'], 'permission' => 'hr.leave.view'],
+            // ⭐ ভবিষ্য তহবিলের খাতা — পুরোটাই টাকা, বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.report_provident_fund', 'icon' => 'wallet', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'provident-fund'], 'permission' => 'hr.salary.view'],
+            // ⭐ গ্র্যাচুইটির দায় — বেতনের চাবিতে (fe, ২১ অক্টোবর ২০২৬, দফা ৮)
+            ['label' => 'hr::menu.report_gratuity', 'icon' => 'wallet', 'route' => 'hr.gratuity.report', 'permission' => 'hr.salary.view'],
         ],
     ],
 
@@ -476,6 +488,125 @@ return [
             'type' => 'boolean',
             'default' => false,
             'group' => 'entry',
+        ],
+
+        /*
+         * ⭐ ভবিষ্য তহবিল — BLA ২০০৬ ধারা ২৬৪, শ্রম বিধিমালা ২০১৫ বিধি ২৬২ (মালিকের অনুমোদিত আইনি বেতনের পরিকল্পনা, a6, ২১ অক্টোবর
+         * ২০২৬; [[ProvidentFund]])।
+         * ⓘ সুইচ ডিফল্টে বন্ধ: চালু হলে প্রতিষ্ঠানের সমান ভাগ বেতনের স্লিপে আলাদা সারি হয়ে বসে আর খাতায় খরচ (৫২২৫) ও তহবিলের দায়
+         * (২১৩১)। কর্মীর ভাগের হার কর্মীর বেতন-কাঠামোয়; ⛔ এখানকার ৮% পুরনো কাঠামো নীরবে বদলায় না — প্রস্তাবিত বদলের পাতা থেকে একটা
+         * তারিখ ধরে হাতে বসাতে হয়। ⛔ কেবল সুপার অ্যাডমিন — বেতন থেকে টাকা কাটার নিয়ম।
+         */
+        [
+            'key' => 'hr.pf.enabled',
+            'label' => 'hr::settings.pf_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.employee_percent',
+            'label' => 'hr::settings.pf_employee_percent',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        /*
+         * ⭐ প্রতিষ্ঠানের ভাগ কতটা কর্মীর প্রাপ্য — চাকরির পূর্ণ বছর ধরে (BLA ধারা ২৬৭; fe, ২১ অক্টোবর ২০২৬; [[ProvidentFund::vest()]])।
+         * ⛔ ডিফল্ট খালি = "বসানো নেই" (১০০% নয়) — চূড়ান্ত নিষ্পত্তি তখন হিসাব করবে না। লেখার ধরন: "3:50, 5:100"।
+         */
+        /*
+         * ⭐ গ্র্যাচুইটির মাসিক সঞ্চিতি — চালু থাকলে মাসের বেতন নিশ্চিত হওয়ার সাথে সেই মাসের দায় পর্যন্ত খাতায় (BLA ধারা 2(10), IAS 19;
+         * fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])। ⓘ ডিফল্টে বন্ধ — রিপোর্ট আর হাতের বোতাম সবসময় চলে।
+         */
+        [
+            'key' => 'hr.gratuity.enabled',
+            'label' => 'hr::settings.gratuity_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.vesting_steps',
+            'label' => 'hr::settings.pf_vesting_steps',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.employer_percent',
+            'label' => 'hr::settings.pf_employer_percent',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+
+        /*
+         * ⭐ অধিকাল — BLA ২০০৬ ধারা ১০৮: মূল ÷ ২০৮ × ২ × বাড়তি ঘণ্টা (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])।
+         * ⓘ সুইচ ডিফল্টে বন্ধ। দিনের কাজের ঘণ্টা ডিফল্ট ৮; কারা পান — নিয়োগের ধরনের কোড, কমা দিয়ে (ডিফল্ট `WORKER` = শ্রমিক)।
+         * ⛔ ব্যবস্থাপকের সই হওয়া ঘণ্টাই কেবল বেতনে।
+         */
+        [
+            'key' => 'hr.ot.enabled',
+            'label' => 'hr::settings.ot_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.ot.daily_hours',
+            'label' => 'hr::settings.ot_daily_hours',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        /*
+         * ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; সূত্র [[SalaryTax]])।
+         * ⓘ ধাপ ডিফল্টে খালি = কিছুই কাটা হয় না, আর রানের পাতায় "করের ধাপ বসানো নেই"। লেখার ধরন: "350000:0, 100000:5, …, *:30"।
+         * ছাড়ের সীমা — বেতনের এক-তৃতীয়াংশ বা এই অঙ্ক, যেটা কম (ডিফল্ট 450000)।
+         */
+        /*
+         * ⭐ উৎসব ভাতা — মূলের শতাংশ (শ্রম বিধিমালা ২০১৫ বিধি ১১১: এক মাসের মূল পর্যন্ত; a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])।
+         * ⓘ ডিফল্ট 100 — কমানো যায়, 100-এর বেশি ধরা হয় না। বছরে বড়জোর দুইটা রান, এক বছরের চাকরি — কোডের নিয়ম, সেটিং নয়।
+         */
+        [
+            'key' => 'hr.bonus.percent_of_basic',
+            'label' => 'hr::settings.bonus_percent_of_basic',
+            'type' => 'number',
+            'default' => 100,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.tax.slabs',
+            'label' => 'hr::settings.tax_slabs',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.tax.exemption_cap',
+            'label' => 'hr::settings.tax_exemption_cap',
+            'type' => 'number',
+            'default' => 450000,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.ot.eligible_types',
+            'label' => 'hr::settings.ot_eligible_types',
+            'type' => 'string',
+            'default' => 'WORKER',
+            'group' => 'entry',
+            'super_admin_only' => true,
         ],
 
         /*
