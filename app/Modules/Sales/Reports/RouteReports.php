@@ -7,7 +7,9 @@ namespace App\Modules\Sales\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\DocumentStatus;
 use App\Modules\MasterData\Models\Location;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Services\RouteMetrics;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +21,12 @@ use Illuminate\Support\Facades\DB;
  * পর্দা দুই অঙ্ক দেখাত।
  *
  * ⓘ রুট মানে ডিলারের **আজকের** রুট — কারণটা [[RouteMetrics]]-এর মাথায়।
+ *
+ * ── ⭐ নিট বিক্রি (IFRS 15.47/15.51; fe, ২১ অক্টোবর ২০২৬) ─────────────────
+ * `net_sales` = পাকা বিলের [[SalesMetrics::billNetSql()]] − পাকা ফেরতের [[SalesMetrics::returnNetSql()]], **ফেরতের নিজের
+ * তারিখে**, ডিলারের আজকের রুট ধরে — হোম, ফোন আর ক্রেতা-রিপোর্টের নিট বিক্রির একই সংজ্ঞা; "সবচেয়ে বড় রুট" এটাই।
+ * ⓘ খতিয়ানের `sales`/`returns` ঘর থাকে, নাম "বিল (ভ্যাটসহ)"/"ফেরত (ভ্যাটসহ)": ওরা পাওনার সমীকরণের অংশ (আগের জের + বিল −
+ * ফেরত − আদায় + অন্যান্য = বাকি), আর বাকি ভ্যাটসহই পাওনা — ভ্যাট বাদ দিলে সমীকরণ ভাঙত।
  */
 final class RouteReports
 {
@@ -34,8 +42,8 @@ final class RouteReports
             title: 'sales::route.report_title',
             filters: ['date_range', 'branch'],
 
-            // ⓘ "সবচেয়ে বড় রুট" মানে বিক্রয় — অবদান % আর Top N এটা ধরেই
-            rankBy: 'sales',
+            // ⓘ "সবচেয়ে বড় রুট" মানে নিট বিক্রি (ভ্যাট ও ফেরত বাদে) — অবদান % আর Top N এটা ধরেই (২১ অক্টোবর ২০২৬)
+            rankBy: 'net_sales',
 
             // ⓘ বিক্রয়ের বাকি রিপোর্টগুলোর একই চাবি — রুটের অঙ্ক ডিলার ধরে বিক্রির মতোই স্পর্শকাতর
             permission: 'sales.report',
@@ -73,10 +81,11 @@ final class RouteReports
                         'lg', 'lg.route_id', '=', 'r.id',
                     )
                     ->leftJoinSub($people, 'sp', 'sp.route_id', '=', 'r.id')
+                    ->leftJoinSub(self::netByRoute($f), 'ns', 'ns.route_id', '=', 'r.id')
                     ->where('r.company_id', $company)
                     ->where('r.level', Location::ROUTE)
                     ->whereNull('r.deleted_at')
-                    ->orderByRaw('COALESCE(lg.sales, 0) DESC')
+                    ->orderByRaw('COALESCE(ns.net_sales, 0) DESC')
                     ->orderBy('r.code')
                     ->select([
                         'r.id as route_id',
@@ -86,6 +95,7 @@ final class RouteReports
                         DB::raw('COALESCE(cc.customer_count, 0) as customer_count'),
                         'sp.salespeople',
                         DB::raw('COALESCE(lg.opening, 0) as opening'),
+                        DB::raw('COALESCE(ns.net_sales, 0) as net_sales'),
                         DB::raw('COALESCE(lg.sales, 0) as sales'),
                         DB::raw('COALESCE(lg.returns, 0) as returns'),
                         DB::raw('COALESCE(lg.collections, 0) as collections'),
@@ -106,13 +116,47 @@ final class RouteReports
                 ['key' => 'customer_count', 'label' => 'sales::route.customers'],
                 ['key' => 'salespeople', 'label' => 'sales::route.salespeople', 'type' => ReportColumn::TEXT],
                 ['key' => 'opening', 'label' => 'sales::route.opening', 'type' => ReportColumn::MONEY],
-                ['key' => 'sales', 'label' => 'sales::route.sales', 'type' => ReportColumn::MONEY],
-                ['key' => 'returns', 'label' => 'sales::route.returns', 'type' => ReportColumn::MONEY],
+                ['key' => 'net_sales', 'label' => 'sales::route.net_sales', 'type' => ReportColumn::MONEY],
+                ['key' => 'sales', 'label' => 'sales::route.ledger_billed', 'type' => ReportColumn::MONEY],
+                ['key' => 'returns', 'label' => 'sales::route.ledger_returns', 'type' => ReportColumn::MONEY],
                 ['key' => 'collections', 'label' => 'sales::route.collections', 'type' => ReportColumn::MONEY],
                 ['key' => 'other', 'label' => 'sales::route.other', 'type' => ReportColumn::MONEY],
                 ['key' => 'outstanding', 'label' => 'sales::route.outstanding', 'type' => ReportColumn::MONEY],
             ],
         );
+    }
+
+    /**
+     * রুট ধরে নিট বিক্রি — বিলের সারি আর ফেরতের সারি এক যোগফলে, প্রতিটা নিজের তারিখে, একই দুই দেয়াল (শাখা, বিক্রয়কর্মীর
+     * ডিলার); ক্রেতা-রিপোর্টের ([[SalesReports::byCustomer()]]) একই গড়ন। ⓘ যে রুটে এই সময়ে কেবল ফেরত, সেটাও ঋণাত্মক নিট পায়।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function netByRoute(array $f): \Illuminate\Database\Query\Builder
+    {
+        $bills = DB::table('sal_invoices as i')
+            ->where('i.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
+            ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+            ->whereNull('i.deleted_at')
+            ->whereIn('i.status', DocumentStatus::POSTED)
+            ->selectRaw('i.customer_id as customer_id, '.SalesMetrics::billNetSql('i').' as sold, 0 as returned');
+
+        $returns = DB::table('sal_returns as rt')
+            ->where('rt.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'rt.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'rt.customer_id'))
+            ->whereBetween('rt.trx_date', [$f['from'], $f['to']])
+            ->whereNull('rt.deleted_at')
+            ->whereIn('rt.status', DocumentStatus::POSTED)
+            ->selectRaw('rt.customer_id as customer_id, 0 as sold, '.SalesMetrics::returnNetSql('rt').' as returned');
+
+        return DB::query()->fromSub($bills->unionAll($returns), 'n')
+            ->join('customers as nc', 'nc.id', '=', 'n.customer_id')
+            ->where('nc.company_id', $f['company_id'])
+            ->groupBy('nc.location_id')
+            ->selectRaw('nc.location_id as route_id, SUM(n.sold) - SUM(n.returned) as net_sales');
     }
 
     private static function localised(string $table): string
