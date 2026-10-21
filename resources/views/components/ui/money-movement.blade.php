@@ -177,6 +177,8 @@
             --}}
             @foreach (\App\Modules\Accounts\Models\Voucher::INSTRUMENTS as $way)
                 @continue($way === 'card' && $was('instrument') !== 'card')
+                {{-- ⓘ "নগদ জমা" নতুন ব্লকের ([[components.money.method]]) — এখানে তার ঘর নেই, তাই চিপও নয় --}}
+                @continue($way === 'deposit')
                 @continue($way === 'cheque' && $inward && $was('instrument') !== 'cheque')
                 <label class="cursor-pointer">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"

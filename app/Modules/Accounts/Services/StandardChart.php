@@ -204,6 +204,9 @@ final class StandardChart implements ProvisionsCompany
 
     public const VAT_PAYABLE = '2120';
 
+    /** ⭐ উৎসে কর্তিত কর — AIT আর VDS, সরকারকে জমা না দেওয়া পর্যন্ত দায় ([[WithheldTax]], #১, ২০ অক্টোবর ২০২৬) */
+    public const TAX_DEDUCTED_AT_SOURCE = '2121';
+
     /**
      * প্রাপ্ত মাল, বিল আসেনি।
      *

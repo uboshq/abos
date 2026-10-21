@@ -367,4 +367,7 @@ return [
     'inter_company_reversed' => 'উল্টানো হয়েছে',
     // ⭐ ফোনের খরচের উইজেট — বড় চারটার পরের খাতগুলো এক সারিতে
     'widget_other_heads' => 'বাকি সব',
+
+    'withheld_ait' => 'উৎসে কর্তিত আয়কর (AIT)',
+    'withheld_vds' => 'উৎসে কর্তিত মূসক (VDS)',
 ];

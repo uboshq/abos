@@ -236,6 +236,17 @@
                             :value="old('supplier_bill_no', $bill->supplier_bill_no)" />
             </div>
 
+            {{-- ⭐ উৎসে কর্তন — টাকার অঙ্ক (হিসাব #১, ২০ অক্টোবর ২০২৬; [[WithheldTax]])। ⓘ Alpine নেই, সাধারণ ঘর। --}}
+            <div class="mt-3 grid gap-3 sm:grid-cols-2" data-withheld>
+                <x-ui.field name="ait_amount" type="number" step="0.01" min="0" inputmode="decimal" numeric
+                            :label="__('purchase::field.ait_amount')"
+                            :value="old('ait_amount', (float) $bill->ait_amount > 0 ? $bill->ait_amount : null)" />
+                <x-ui.field name="vds_amount" type="number" step="0.01" min="0" inputmode="decimal" numeric
+                            :label="__('purchase::field.vds_amount')"
+                            :value="old('vds_amount', (float) $bill->vds_amount > 0 ? $bill->vds_amount : null)" />
+                <p class="text-xs text-(--color-ink-muted) sm:col-span-2">{{ __('purchase::field.withheld_note') }}</p>
+            </div>
+
             <div class="mt-3">
                 <x-ui.field name="narration" :label="__('purchase::field.narration')"
                             :value="old('narration', $bill->narration)" />

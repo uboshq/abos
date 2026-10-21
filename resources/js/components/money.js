@@ -85,6 +85,142 @@ export function wayForKind (kind, current) {
     return current
 }
 
+/**
+ * ⭐ [[components.money.method]]-এর মগজ — পদ্ধতি, চার্জের লাইন, আগাম চেক, নোট গোনা (মালিক, ২১ অক্টোবর ২০২৬)।
+ *
+ * ⓘ ব্যাংকের খাতে চারটা পথই চলে (ট্রান্সফার, নগদ জমা, চেক, পুরনো কার্ড), তাই আগে থেকে ওর একটা বাছা থাকলে সেটাই থাকে;
+ * নইলে ট্রান্সফার — [[wayForKind]]-এর একই নিয়ম, নগদ জমা যোগ করে।
+ */
+export function methodForKind (kind, current) {
+    if (kind === 'cash') return 'cash'
+    if (kind === 'mfs') return 'mfs'
+    if (kind === 'bank') return ['transfer', 'deposit', 'cheque', 'card'].includes(current) ? current : 'transfer'
+
+    return current
+}
+
+/** চার্জের লাইন — লেখার ছাঁচে অঙ্ক দুইটা বসানো (`:charge`, `:amount`, `:head`) */
+export function chargeLine (template, { charge, amount, head }) {
+    return String(template ?? '')
+        .replace(':charge', taka(charge))
+        .replace(':amount', taka(amount))
+        .replace(':head', head ?? '')
+}
+
+export function moneyMethod ({
+    method = 'cash',
+    charge = '',
+    chequeDate = '',
+    amountField = 'amount',
+    chargeField = 'charge_amount',
+    moneyField = '',
+    direction = 'in',
+    notes = {},
+} = {}) {
+    return {
+        method: method || 'cash',
+        charge: charge ?? '',
+        chequeDate: chequeDate || '',
+        amount: 0,
+        notes: (notes && typeof notes === 'object') ? { ...notes } : {},
+
+        readAmount () {
+            const field = this.$el.closest('form')?.querySelector(`[name="${amountField}"]`)
+            const raw = String(field?.value ?? '').replace(/[^0-9.]/g, '')
+
+            this.amount = raw === '' ? 0 : Number(raw)
+        },
+
+        /*
+         * ⓘ বাইরের অংশের জন্য (আদায়ের সারাংশ, a5): পদ্ধতি বা চার্জ বদলালেই `money-method` ঘটনা, `detail = { method, charge }` —
+         * চার্জ কেবল যে পদ্ধতিতে চার্জের ঘর আছে, নইলে ০ ([[chargeNumber]])।
+         */
+        announce () {
+            this.$dispatch('money-method', { method: this.method, charge: this.chargeNumber })
+        },
+
+        init () {
+            this.readAmount()
+            this.$watch('method', () => this.announce())
+            this.$watch('charge', () => this.announce())
+            this.$nextTick(() => this.announce())
+
+            const form = this.$el.closest('form')
+
+            form?.addEventListener('input', (event) => {
+                if (event.target?.name === amountField) {
+                    this.readAmount()
+                }
+            })
+
+            if (moneyField) {
+                form?.addEventListener('change', (event) => {
+                    if (event.target?.name === moneyField) {
+                        this.followAccount(event.target)
+                    }
+                })
+            }
+        },
+
+        followAccount (select) {
+            const option = [...(select?.options ?? [])].find(o => o.value === select.value)
+
+            this.method = methodForKind(option?.dataset?.kind ?? '', this.method)
+        },
+
+        /* ⓘ চার্জ কেবল যে পদ্ধতিতে চার্জের ঘর আছে — নগদে বা চেকে পুরনো সংখ্যা থেকে গেলে লাইনটা মিথ্যা বলত */
+        get chargeNumber () {
+            return ['mfs', 'transfer', 'deposit'].includes(this.method) ? (Number(this.charge) || 0) : 0
+        },
+
+        get hasCharge () {
+            return this.chargeNumber > 0
+        },
+
+        /* ⓘ `$root`, `$el` নয় — getter-এ `$el` হল যে ঘর লাইনটা আঁকে, আর ছাঁচগুলো বাক্সের মাথায় */
+        get chargeLine () {
+            const data = this.$root.dataset
+
+            return chargeLine(direction === 'out' ? data.lineOut : data.lineIn, {
+                charge: this.chargeNumber,
+                amount: this.amount,
+                head: this.method === 'mfs' ? data.headMfs : data.headBank,
+            })
+        },
+
+        get postDated () {
+            return this.method === 'cheque' && this.chequeDate !== ''
+                && this.chequeDate > new Date().toISOString().slice(0, 10)
+        },
+
+        noteTotal (note) {
+            const sum = (Number(this.notes[note]) || 0) * note
+
+            return sum ? taka(sum, { decimals: 0 }) : '—'
+        },
+
+        get counted () {
+            return countNotes(this.notes)
+        },
+
+        get countMatches () {
+            return Math.abs(this.counted - Number(this.amount || 0)) < 0.005
+        },
+
+        get countClass () {
+            return this.countMatches
+                ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
+                : 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)'
+        },
+
+        get countText () {
+            const line = this.$root.querySelector('[data-agrees]')
+
+            return this.countMatches ? (line?.dataset?.agrees ?? '') : (line?.dataset?.differs ?? '')
+        },
+    }
+}
+
 export function moneyMovement ({
     amountField,
     method = 'cash',

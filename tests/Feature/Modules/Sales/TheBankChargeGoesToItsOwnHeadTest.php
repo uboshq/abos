@@ -90,6 +90,34 @@ final class TheBankChargeGoesToItsOwnHeadTest extends TestCase
         $this->assertSame(0, bccomp((string) $charges, '0', 4), '⛔ বাতিলের পরেও চার্জ খাতে থেকে গেল');
     }
 
+    /**
+     * ⭐ দফা #৯ — MFS-এ আসা টাকার চার্জ MFS চার্জের খাতে (৫২১১), ব্যাংক চার্জে (৫২১০) নয় (fe, ২১ অক্টোবর ২০২৬)।
+     * ⛔ আগে আদায়ের সব চার্জ ৫২১০-এ যেত, তাই বিকাশের খরচ "ব্যাংক চার্জ"-এর রিপোর্টে বসত। পক্ষের খাতায় তবু পুরো টাকা।
+     */
+    public function test_item_9_an_mfs_charge_lands_on_the_mfs_head_not_the_banks(): void
+    {
+        $wallet = Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1105-CHARGE', 'name_en' => 'Charge wallet', 'name_bn' => 'চার্জের ওয়ালেট',
+            'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id, 'type' => Account::ASSET, 'nature' => Account::DEBIT,
+            'money_kind' => Account::MFS,
+        ]);
+        $claim = $this->claim('20000');
+        $dueBefore = $this->dealer->outstanding();
+
+        $this->actingAs($this->decider->fresh())
+            ->post(route('sales.claim.accept', $claim), ['account_id' => $wallet->id, 'amount' => '19820', 'bank_charge' => '180'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $collection = Collection::query()->findOrFail($claim->fresh()->collection_id);
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::MFS_CHARGES)->id, $collection), '180', 4),
+            '⛔ #৯: MFS-এর চার্জ MFS চার্জের খাতে (৫২১১) বসেনি');
+        $this->assertSame(0, bccomp($this->net(StandardChart::find(StandardChart::BANK_CHARGES)->id, $collection), '0', 4),
+            '⛔ #৯: MFS-এর চার্জ ব্যাংক চার্জে (৫২১০) গেল');
+        $this->assertSame(0, bccomp($this->net($wallet->id, $collection), '19820', 4), '⛔ ওয়ালেটে যা সত্যিই এসেছে, খাতায় তা নয়');
+        $this->assertSame(bcsub($dueBefore, '20000', 4), $this->dealer->fresh()->outstanding(), '⛔ ডিলারের পাওনা পুরো অঙ্কে কমেনি');
+    }
+
     public function test_without_a_charge_nothing_changes(): void
     {
         $claim = $this->claim('30000');

@@ -8,4 +8,5 @@ return [
     'mfs' => 'Mobile banking',
     'transfer' => 'Bank online',
     'card' => 'Card',
+    'deposit' => 'Cash deposit at bank',
 ];
