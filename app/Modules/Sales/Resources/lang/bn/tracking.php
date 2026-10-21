@@ -23,7 +23,7 @@ return [
         'ordered' => 'অর্ডার এসেছে',
         'credit_hold' => 'বাকির সীমায় আটকে',
         'draft' => 'খসড়া',
-        'approval' => 'অনুমোদনের অপেক্ষায়',
+        'approval' => 'সইয়ের অপেক্ষায়',
         'warehouse' => 'গুদামে',
         'gate_out' => 'গেট পেরিয়েছে',
         'partial' => 'কিছু পৌঁছেছে',
@@ -71,7 +71,7 @@ return [
     'do_written' => 'ডিও :no লেখা হলো',
     'sent_for_signature' => 'সইয়ের জন্য পাঠানো হলো',
     'decision' => [
-        'approved' => 'অনুমোদন দিলেন',
+        'approved' => 'সই দিলেন',
         'rejected' => 'ফেরত দিলেন',
         'forwarded' => 'অন্যকে পাঠালেন',
         'other' => 'সিদ্ধান্ত দিলেন',
