@@ -268,6 +268,37 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertSame(DocumentStatus::CONFIRMED, $this->lastPayment()->status);
     }
 
+    /** ⭐ #১০: প্রিভিউর সারি নকশার ক্রমে — দেনা (সরবরাহকারীর নামসহ), AIT, VDS, চার্জ, টাকার খাত (মিল-তালিকার ফাঁক ৮) */
+    public function test_item_10_the_preview_lists_the_lines_in_the_designs_order_and_names_the_supplier(): void
+    {
+        $this->supplier->forceFill(['ait_rate' => '5', 'vds_rate' => '15'])->save();
+        $bill = $this->bill('10000', tax: '1500');
+
+        $rows = $this->post(route('purchase.payment.simulate'),
+            $this->form(['instrument' => 'transfer', 'instrument_no' => 'BF261022001', 'charge_amount' => '25'], [[$bill->id, '11500']], '11500'))
+            ->assertOk()->json('rows');
+
+        $codes = array_map(fn (array $r) => strtok($r['account'], ' '), $rows);
+        $this->assertSame([StandardChart::PAYABLE, StandardChart::TAX_DEDUCTED_AT_SOURCE, StandardChart::VDS_PAYABLE, StandardChart::BANK_CHARGES, '1102-PAY'], $codes,
+            '⛔ #১০: প্রিভিউর সারি নকশার ক্রমে নয় (দেনা, AIT, VDS, চার্জ, ব্যাংক)');
+        $this->assertStringEndsWith(' · '.$this->supplier->name(), $rows[0]['account'], '⛔ #১০: দেনার সারিতে সরবরাহকারীর নাম নেই');
+    }
+
+    /** ⭐ #৫, #২: সারাংশে কাটা বিয়োগে আর হারের ট্যাগ; নিটের নাম পদ্ধতি ধরে; পক্ষের ধরন বাধ্যতামূলক তারকা; খাতে যথেষ্ট টাকায় ✓ (মিল-তালিকার ফাঁক ৬, ৭, ১০) */
+    public function test_item_5_and_2_the_summary_wears_the_designs_words(): void
+    {
+        $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
+
+        foreach (['tag.ait', 'tag.vds', 'sum.net_bank', 'sum.net_mfs', 'sum.net_cash'] as $key) {
+            $this->assertStringContainsString(e(__('money.screen.'.$key)), $html, "⛔ #৫: সারাংশে নকশার লেখা নেই: {$key}");
+        }
+        $this->assertStringContainsString('x-text="aitMinus"', $html, '⛔ #৫: AIT বিয়োগ চিহ্নে দেখানো হয় না');
+        $this->assertStringContainsString('x-text="vdsMinus"', $html, '⛔ #৫: VDS বিয়োগ চিহ্নে দেখানো হয় না');
+        $this->assertMatchesRegularExpression('/'.preg_quote(e(__('money.screen.party_type')), '/').'\s*<span class="text-\(--color-danger\)">\*<\/span>/u', $html,
+            '⛔ #২: পক্ষের ধরনে বাধ্যতামূলক তারকা নেই');
+        $this->assertStringContainsString('data-balance-ok', $html, '⛔ #২৪: খাতে যথেষ্ট টাকায় ✓ নেই');
+    }
+
     public function test_item_11_the_main_button_and_the_controls_follow_the_companys_signature_setting(): void
     {
         $html = (string) $this->get(route('purchase.payment.create'))->assertOk()->getContent();
