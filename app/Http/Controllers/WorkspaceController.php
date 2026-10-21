@@ -12,6 +12,7 @@ use App\Core\Support\Accent;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\LookRegistry;
 use App\Core\Support\Ui;
+use App\Core\Support\UserLocale;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Models\Company;
 use App\Models\LookSkin;
@@ -423,12 +424,10 @@ class WorkspaceController extends Controller
 
     public function switchLocale(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'locale' => ['required', 'string', 'in:bn,en'],
-        ]);
+        $validated = $request->validate(UserLocale::rules());
 
-        // ব্যবহারকারীর রেকর্ডে, সেশনে নয় — অন্য ডিভাইসেও একই ভাষা (নিয়ম ৯)।
-        $request->user()->forceFill(['locale' => $validated['locale']])->save();
+        // ব্যবহারকারীর রেকর্ডে, সেশনে নয় — অন্য ডিভাইসেও একই ভাষা (নিয়ম ৯); ফোনের দরজার একই নিয়ম ([[UserLocale]])
+        UserLocale::save($request->user(), $validated['locale']);
 
         return back();
     }

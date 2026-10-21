@@ -323,6 +323,8 @@ return Application::configure(basePath: dirname(__DIR__))
          * টোকেন পরের অনুরোধেই ৪০১ পায় আর মুছে যায়।
          */
         $middleware->api(append: [
+            // ⭐ ঢোকা না থাকলে ফোনের ভাষা Accept-Language থেকে; ঢোকা মানুষের users.locale পরে বসে (০.৪.৪৩)
+            \App\Http\Middleware\ApiLocaleFromHeader::class,
             RefuseInactiveAccounts::class,
             // ⛔ মেয়াদ শেষে ফোনও বন্ধ, কেবল ঢোকা-বেরোনো খোলা — ওয়েবের একই তালা (Api/Sync নিরীক্ষা, ১৪ অক্টোবর ২০২৬)
             RefuseWorkWithoutALicence::class,
