@@ -147,6 +147,9 @@
                  'render' => fn ($s) => $money($s->net)],
                 ['key' => 'print', 'label' => '—', 'width' => '6rem',
                  'render' => fn ($s) => view('hr::payroll.partials.slip_print', ['slip' => $s])],
-            ]" />
+            ]"
+            :totals="['gross' => $money($summary['gross']), 'deductions' => $money($summary['deductions']), 'net' => $money($summary['net'])]"
+            :totalsLabel="__('core.print.total')" />
+        {{-- ⓘ ওপরের যোগের সারি — বেতন আর উৎসব ভাতা দুই রানেরই, নাগালের স্লিপের যোগ; চাবি ছাড়া ঢাকা (fe, দফা ৯) --}}
     </div>
 </x-layouts.app>

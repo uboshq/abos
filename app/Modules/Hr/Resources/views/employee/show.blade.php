@@ -444,6 +444,19 @@
                             </dd>
                         </div>
                     @endforeach
+                    {{-- ⭐ নিচে যোগের সারি — দুই ভাগের যোগ আর শেষ জের (fe, ২১ অক্টোবর ২০২৬, দফা ৯) --}}
+                    @php
+                        $pfEmployee = collect($pfLedger)->reduce(fn ($c, $r) => bcadd($c, $r['employee_share'], 4), '0');
+                        $pfEmployer = collect($pfLedger)->reduce(fn ($c, $r) => bcadd($c, $r['employer_share'], 4), '0');
+                    @endphp
+                    <div class="mt-2 flex items-center justify-between gap-2 border-t border-(--color-border) pt-2 font-semibold" data-pf-total>
+                        <dt>{{ __('core.print.total') }}</dt>
+                        <dd class="num">
+                            {{ \App\Core\Support\Money::format($pfEmployee) }} ·
+                            {{ \App\Core\Support\Money::format($pfEmployer) }} ·
+                            {{ \App\Core\Support\Money::format(bcadd($pfEmployee, $pfEmployer, 4)) }}
+                        </dd>
+                    </div>
                 </dl>
             </section>
         @endif

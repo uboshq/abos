@@ -69,7 +69,13 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table :rows="$sheets" :columns="$columns" :empty="__('hr::message.ot_none')" />
+        {{-- ⭐ নিচে যোগের সারি — দিন আর ঘণ্টা (fe, ২১ অক্টোবর ২০২৬, দফা ৯) --}}
+        <x-ui.table :rows="$sheets" :columns="$columns" :empty="__('hr::message.ot_none')"
+                    :totals="[
+                        'days' => (string) collect($sheets->items())->sum('days'),
+                        'hours' => collect($sheets->items())->reduce(fn ($c, $s) => bcadd($c, (string) $s->hours, 2), '0.00'),
+                    ]"
+                    :totalsLabel="__('core.print.total')" />
 
         <x-ui.pager :rows="$sheets" />
         <x-ui.list-totals :rows="$sheets" />
