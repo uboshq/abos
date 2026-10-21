@@ -73,4 +73,11 @@ return [
     'owner_self_signed' => 'The owner signed a salary change he asked for himself — a self-approved change.',
     // ⭐ বেতনের রানের সইয়ের সারি — নিট চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬; [[PayrollRunSummary]])
     'payroll_signing_summary' => ':month payroll · :count people · net :net',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_rate_applied' => 'Provident fund rate :from% to :to% — from :date.',
+    'pf_applied' => 'Applied for :applied, awaiting signature for :waiting, skipped :skipped.',
+    'pf_on_note' => 'Provident fund is on — employer share :employer, proposed employee share :employee.',
+    'pf_off_note' => 'Provident fund is off — no employer share is booked. Proposed rates: employee :employee, employer :employer.',
+    'pf_proposal_note' => 'Nothing changes by itself. Only fund members (deducted at more than zero today) change, from the chosen date; a month already paid is not touched.',
+    'pf_apply_note' => 'The proposed rate applies from :date — written to each person\'s audit trail.',
 ];

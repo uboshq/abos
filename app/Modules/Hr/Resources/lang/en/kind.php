@@ -20,4 +20,9 @@ return [
     'approved' => 'Approved',
     'rejected' => 'Rejected',
     'cancelled' => 'Withdrawn',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'employer_share' => 'employer share',
+    'pf_member' => 'Member',
+    'pf_not_member' => 'Not a member',
+    'pf_changes' => 'Will change',
 ];

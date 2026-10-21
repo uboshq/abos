@@ -35,6 +35,8 @@ class HrReportController extends Controller implements HasMiddleware
         'payroll' => ['key' => 'hr.payroll_register', 'permission' => 'hr.payroll.view'],
         'headcount' => ['key' => 'hr.headcount', 'permission' => 'hr.employee.view'],
         'leave-balance' => ['key' => 'hr.leave_balance', 'permission' => 'hr.leave.view'],
+        // ⭐ ভবিষ্য তহবিলের খাতা — পুরোটাই টাকা, তাই বেতনের চাবি (a6, ২১ অক্টোবর ২০২৬; [[HrReports::providentFund()]])
+        'provident-fund' => ['key' => 'hr.provident_fund', 'permission' => 'hr.salary.view'],
     ];
 
     public function __construct(

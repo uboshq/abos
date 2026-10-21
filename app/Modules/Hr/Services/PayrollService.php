@@ -52,6 +52,7 @@ final class PayrollService
         private readonly PostingEngine $posting,
         private readonly NumberSeriesEngine $numbers,
         private readonly DocumentApproval $approvals,
+        private readonly ProvidentFund $fund,
     ) {}
 
     /**
@@ -413,10 +414,18 @@ final class PayrollService
 
         $gross = '0';
         $deductions = '0';
+        // ⓘ ভবিষ্য তহবিলের দুই প্রশ্ন — কাঠামোর মূল (অনুপস্থিতির ভাগ ছাড়া), আর কর্মী তহবিলে কিছু দিলেন কি না ([[ProvidentFund]])
+        $basic = '0';
+        $paysIntoFund = false;
+        $fundId = $this->fund->enabled() ? $this->fund->fundAccount()?->id : null;
 
         foreach ($components as $component) {
             /** @var SalaryHead $head */
             $head = $component['head'];
+
+            if ($head->is_basic) {
+                $basic = (string) $component['amount'];
+            }
 
             /*
              * ⛔ পয়সায় গোল — এখানেই, একবার (চেকলিস্ট অডিট ২৭ সেপ্টেম্বর §২, ২ অক্টোবর ২০২৬;
@@ -454,6 +463,34 @@ final class PayrollService
                 $gross = bcadd($gross, $amount, 4);
             } else {
                 $deductions = bcadd($deductions, $amount, 4);
+
+                if ($fundId !== null && $this->accountFor($head)?->id === $fundId && bccomp($amount, '0', 2) > 0) {
+                    $paysIntoFund = true;
+                }
+            }
+        }
+
+        /*
+         * ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের সমান ভাগ — সুইচ চালু আর কর্মী এই মাসে তহবিলে কিছু দিয়েছেন, তবেই (BLA ধারা ২৬৪; a6, ২১ অক্টোবর
+         * ২০২৬, [[ProvidentFund]])। ⓘ স্লিপে আলাদা সারি, নিটের বাইরে — মোট আয়, কর্তন আর নিট যেমন ছিল তেমনই; খাতায় খরচ আর তহবিলের দায়
+         * ([[ledgerLines()]])। ⛔ সুইচ বন্ধ বা সদস্য নন — কোনো সারি নেই, আগের অবিকল বেতনশিট।
+         */
+        if ($paysIntoFund) {
+            $share = $this->fund->employerShare($basic);
+
+            if (bccomp($share, '0', 2) > 0) {
+                PayslipLine::create([
+                    'company_id' => $run->company_id,
+                    'payslip_id' => $slip->id,
+                    'salary_head_id' => null,
+                    'head_code' => PayslipLine::PF_EMPLOYER_CODE,
+                    'head_name_en' => 'Provident Fund (employer)',
+                    'head_name_bn' => 'ভবিষ্য তহবিল (প্রতিষ্ঠানের অংশ)',
+                    'kind' => PayslipLine::EMPLOYER,
+                    'amount' => $share,
+                    'sort_order' => 10,
+                    'account_id' => $this->fund->expenseAccount()?->id,
+                ]);
             }
         }
 
@@ -568,6 +605,28 @@ final class PayrollService
             }
 
             foreach ($slip->lines as $line) {
+                /*
+                 * ⭐ প্রতিষ্ঠানের অংশ — খরচ ডেবিট, তহবিলের দায় ক্রেডিট, দুটোই কর্মীর শাখায় ([[ProvidentFund]]; a6, ২১ অক্টোবর ২০২৬)।
+                 * ⓘ নিটের বাইরে, তাই প্রদেয় বেতনে কিছু নয়; দুই পাশ সমান, তাই শাখার দাখিলা মেলে।
+                 */
+                if ($line->isEmployerShare()) {
+                    $expenseId = $line->account_id ?? $this->fund->expenseAccount()?->id;
+                    $fundId = $this->fund->fundAccount()?->id;
+
+                    if ($expenseId === null || $fundId === null) {
+                        throw ValidationException::withMessages([
+                            'account' => __('hr::validation.pf_accounts_missing'),
+                        ]);
+                    }
+
+                    $key = $expenseId.':'.$branch;
+                    $debits[$key] = [(int) $expenseId, $branch, bcadd($debits[$key][2] ?? '0', (string) $line->amount, 4)];
+                    $key = $fundId.':'.$branch;
+                    $credits[$key] = [(int) $fundId, $branch, bcadd($credits[$key][2] ?? '0', (string) $line->amount, 4)];
+
+                    continue;
+                }
+
                 $accountId = $line->account_id ?? $this->fallbackAccount($line->kind)?->id;
 
                 if ($accountId === null) {

@@ -20,4 +20,9 @@ return [
     'approved' => 'মঞ্জুর',
     'rejected' => 'নামঞ্জুর',
     'cancelled' => 'প্রত্যাহৃত',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'employer_share' => 'প্রতিষ্ঠানের অংশ',
+    'pf_member' => 'সদস্য',
+    'pf_not_member' => 'সদস্য নন',
+    'pf_changes' => 'বদলাবে',
 ];

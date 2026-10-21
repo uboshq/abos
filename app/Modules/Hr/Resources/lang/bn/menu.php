@@ -16,4 +16,7 @@ return [
     'report_payroll' => 'বেতনশিট',
     'report_headcount' => 'কর্মী সংখ্যা — বিভাগ ধরে',
     'report_leave_balance' => 'ছুটির জের',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'report_provident_fund' => 'ভবিষ্য তহবিলের খাতা',
+    'pf_proposal' => 'ভবিষ্য তহবিলের হার — প্রস্তাবিত বদল',
 ];

@@ -98,4 +98,12 @@ return [
     'reports_to' => 'যাঁর অধীনে',
     'photo' => 'ছবি',
     'photo_hint' => 'JPG, PNG বা WebP — বড় ছবি নিজেই ছোট হয়ে যায়। নতুন ছবি দিলে আগেরটার জায়গা নেয়।',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_member' => 'তহবিলে',
+    'pf_current_percent' => 'আজকের হার',
+    'pf_current' => 'আজকের কাটা',
+    'pf_proposed_percent' => 'প্রস্তাবিত হার',
+    'pf_proposed' => 'প্রস্তাবিত কাটা',
+    'pf_employer' => 'প্রতিষ্ঠানের ভাগ',
+    'pf_changes' => 'বদল',
 ];

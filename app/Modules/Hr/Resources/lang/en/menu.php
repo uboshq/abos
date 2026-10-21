@@ -16,4 +16,7 @@ return [
     'report_payroll' => 'Payroll register',
     'report_headcount' => 'Headcount by department',
     'report_leave_balance' => 'Leave balance',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'report_provident_fund' => 'Provident fund ledger',
+    'pf_proposal' => 'Provident fund rate — proposed change',
 ];

@@ -171,6 +171,8 @@ class EmployeeController extends Controller implements HasMiddleware
             'employee' => $employee,
             'components' => $seesSalary ? $this->salaries->componentsOn($employee, now()) : [],
             'totals' => $seesSalary ? $this->salaries->totalsOn($employee, now()) : null,
+            // ⭐ ভবিষ্য তহবিলের খাতা — বেতনের চাবিতে, নিশ্চিত রানের স্লিপ থেকে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund::ledgerOf()]])
+            'pfLedger' => $seesSalary ? app(\App\Modules\Hr\Services\ProvidentFund::class)->ledgerOf($employee) : [],
             'month' => $month,
             'attendance' => $seesAttendance ? [
                 'summary' => $this->attendance->monthlySummary($employee, $month),

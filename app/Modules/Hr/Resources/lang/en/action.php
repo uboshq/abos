@@ -34,4 +34,7 @@ return [
     'mark_all_present' => 'All present',
     // ⭐ সইয়ের অপেক্ষায় থাকা বেতন-বদলের অনুরোধ খোলা (§৮ ⚠️৫)
     'open_signature' => 'Signature page',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_preview' => 'Show',
+    'pf_apply' => 'Apply the proposed rate',
 ];

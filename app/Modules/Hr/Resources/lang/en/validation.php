@@ -62,4 +62,8 @@ return [
     // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
     'salary_month_paid' => 'The :month payroll (:no) has already paid this employee. Changing the amount from that month or earlier would make the paid payslip and the structure disagree. Arrears pay is coming; until then, enter the new amount from the next month.',
     'salary_change_waiting' => 'Another salary change for this employee is still waiting for a signature. Let it be signed or rejected first, then enter the new change.',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_accounts_missing' => 'The provident fund accounts are missing — the chart needs 5225 (employer contribution) and 2131 (provident fund payable). Use "Install standard chart" in the chart of accounts.',
+    'pf_head_missing' => 'No provident fund salary head — a deduction head on a percentage of basic, booked to 2131 (provident fund payable), is needed.',
+    'pf_apply_needs_the_key' => 'Applying the proposed rate needs the salary-change permission (hr.salary.manage).',
 ];

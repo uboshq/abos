@@ -64,6 +64,8 @@ return [
         'master' => [
             ['label' => 'hr::menu.employees', 'icon' => 'people', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.salary_heads', 'icon' => 'wallet', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
+            // ⭐ ভবিষ্য তহবিলের প্রস্তাবিত বদল — আজকের বনাম প্রস্তাবিত হার, তারিখ ধরে বসানো (a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.pf_proposal', 'icon' => 'wallet', 'route' => 'hr.pf.proposal', 'permission' => 'hr.salary.view'],
         ],
 
         'transactions' => [
@@ -87,6 +89,9 @@ return [
                 'route_params' => ['slug' => 'headcount'], 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.report_leave_balance', 'icon' => 'clock', 'route' => 'hr.report.show',
                 'route_params' => ['slug' => 'leave-balance'], 'permission' => 'hr.leave.view'],
+            // ⭐ ভবিষ্য তহবিলের খাতা — পুরোটাই টাকা, বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.report_provident_fund', 'icon' => 'wallet', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'provident-fund'], 'permission' => 'hr.salary.view'],
         ],
     ],
 
@@ -435,6 +440,38 @@ return [
             'type' => 'boolean',
             'default' => false,
             'group' => 'entry',
+        ],
+
+        /*
+         * ⭐ ভবিষ্য তহবিল — BLA ২০০৬ ধারা ২৬৪, শ্রম বিধিমালা ২০১৫ বিধি ২৬২ (মালিকের অনুমোদিত আইনি বেতনের পরিকল্পনা, a6, ২১ অক্টোবর
+         * ২০২৬; [[ProvidentFund]])।
+         * ⓘ সুইচ ডিফল্টে বন্ধ: চালু হলে প্রতিষ্ঠানের সমান ভাগ বেতনের স্লিপে আলাদা সারি হয়ে বসে আর খাতায় খরচ (৫২২৫) ও তহবিলের দায়
+         * (২১৩১)। কর্মীর ভাগের হার কর্মীর বেতন-কাঠামোয়; ⛔ এখানকার ৮% পুরনো কাঠামো নীরবে বদলায় না — প্রস্তাবিত বদলের পাতা থেকে একটা
+         * তারিখ ধরে হাতে বসাতে হয়। ⛔ কেবল সুপার অ্যাডমিন — বেতন থেকে টাকা কাটার নিয়ম।
+         */
+        [
+            'key' => 'hr.pf.enabled',
+            'label' => 'hr::settings.pf_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.employee_percent',
+            'label' => 'hr::settings.pf_employee_percent',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.employer_percent',
+            'label' => 'hr::settings.pf_employer_percent',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
         ],
 
         /*

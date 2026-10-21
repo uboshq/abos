@@ -9,6 +9,7 @@ use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
+use App\Modules\Hr\Http\Controllers\ProvidentFundController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
 use App\Modules\Hr\Http\Controllers\SalaryStructureController;
 use Illuminate\Support\Facades\Route;
@@ -120,5 +121,13 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::get('/{head}/edit', [SalaryHeadController::class, 'edit'])->whereNumber('head')->name('edit');
         Route::put('/{head}', [SalaryHeadController::class, 'update'])->whereNumber('head')->name('update');
         Route::delete('/{head}', [SalaryHeadController::class, 'destroy'])->whereNumber('head')->name('destroy');
+    });
+
+    /*
+     * ⭐ ভবিষ্য তহবিলের প্রস্তাবিত বদল — দেখা বেতনের চাবিতে, বসানো বেতন বদলানোর চাবিতে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFundController]])।
+     */
+    Route::prefix('provident-fund')->name('pf.')->group(function () {
+        Route::get('/', [ProvidentFundController::class, 'proposal'])->name('proposal');
+        Route::post('/', [ProvidentFundController::class, 'store'])->name('store');
     });
 });

@@ -472,6 +472,14 @@ final class StandardChart implements ProvisionsCompany
 
     public const PROVIDENT_FUND_PAYABLE = '2131';
 
+    /**
+     * ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা — খরচ (BLA ২০০৬ ধারা ২৬৪, IAS 19 ¶৫১: নির্ধারিত-চাঁদার পরিকল্পনা; a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কর্মীর ভাগ তাঁর বেতন থেকে কাটা — খরচ নয়, দায় ([[PROVIDENT_FUND_PAYABLE]])। প্রতিষ্ঠানের সমান ভাগটা প্রতিষ্ঠানের নিজের
+     * খরচ, আর দুই ভাগই তহবিলে জমা দেওয়ার দায় হয়ে ২১৩১-এ বসে ([[ProvidentFund]])।
+     */
+    public const PF_EMPLOYER_EXPENSE = '5225';
+
     public const EMPLOYEE_ADVANCE = '1131';
 
     /**
@@ -650,7 +658,7 @@ final class StandardChart implements ProvisionsCompany
         self::INVENTORY_SHORTAGE_SURPLUS,
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
-        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
+        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
@@ -1280,6 +1288,8 @@ final class StandardChart implements ProvisionsCompany
             ['5221', 'Insurance Premium', 'বীমা প্রিমিয়াম', $X, '5200', false, []],
             // ⭐ অফারের উপহার মাল — খরচের দামে (৪ অক্টোবর ২০২৬; [[PROMOTION_EXPENSE]])
             ['5222', 'Promotion Expense', 'প্রচারের খরচ', $X, '5200', false, []],
+            // ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা (a6, ২১ অক্টোবর ২০২৬; [[PF_EMPLOYER_EXPENSE]])
+            ['5225', 'Provident Fund — Employer Contribution', 'ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

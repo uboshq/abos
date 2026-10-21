@@ -418,6 +418,29 @@
                 </dl>
             @endif
         </section>
+
+        {{-- ⭐ ভবিষ্য তহবিলের খাতা — মাস ধরে কর্মীর ভাগ, প্রতিষ্ঠানের ভাগ, চলতি জের; বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬) --}}
+        @if (($pfLedger ?? []) !== [])
+            <section id="provident-fund" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" style="max-width: 36rem">
+                <h2 class="mb-3 font-semibold">{{ __('hr::menu.report_provident_fund') }}</h2>
+                <dl class="space-y-1 text-sm">
+                    <div class="flex items-center justify-between gap-2 text-2xs text-(--color-ink-muted)">
+                        <dt>{{ __('hr::field.month') }}</dt>
+                        <dd>{{ __('hr::report.pf_employee_share') }} · {{ __('hr::report.pf_employer_share') }} · {{ __('hr::report.pf_balance') }}</dd>
+                    </div>
+                    @foreach ($pfLedger as $row)
+                        <div class="flex items-center justify-between gap-2" data-pf-month="{{ $row['month']->format('Y-m') }}">
+                            <dt class="text-(--color-ink-muted)">{{ $row['month']->format('M Y') }}</dt>
+                            <dd class="num">
+                                {{ \App\Core\Support\Money::format($row['employee_share']) }} ·
+                                {{ \App\Core\Support\Money::format($row['employer_share']) }} ·
+                                <span class="font-semibold">{{ \App\Core\Support\Money::format($row['balance']) }}</span>
+                            </dd>
+                        </div>
+                    @endforeach
+                </dl>
+            </section>
+        @endif
     @endcan
 
     {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}

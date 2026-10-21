@@ -83,4 +83,12 @@ return [
     'reports_to' => 'Reports To',
     'photo' => 'Photo',
     'photo_hint' => 'JPG, PNG or WebP — a large photo is made smaller. A new photo replaces the old one.',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_member' => 'In the fund',
+    'pf_current_percent' => 'Current rate',
+    'pf_current' => 'Current deduction',
+    'pf_proposed_percent' => 'Proposed rate',
+    'pf_proposed' => 'Proposed deduction',
+    'pf_employer' => 'Employer share',
+    'pf_changes' => 'Change',
 ];
