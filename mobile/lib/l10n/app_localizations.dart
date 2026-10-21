@@ -12529,17 +12529,17 @@ abstract class AppL10n {
   /// **'আদায়ে ছাড় (সই লাগবে)'**
   String get collectSumDiscount;
 
-  /// Collection summary: rounding; above Tk 0.50 the owner signs (owner, 2 Oct 2026), in the style of the discount line
+  /// Collection summary: rounding; above the company's threshold (server setup rounding_sign_above, else Tk 0.50) the owner signs, in the style of the discount line
   ///
   /// In bn, this message translates to:
-  /// **'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই)'**
-  String get collectSumRounding;
+  /// **'রাউন্ডিং ({amount}-এর বেশি হলে মালিকের সই)'**
+  String collectSumRounding(String amount);
 
-  /// Collection: rounding above the limit
+  /// Collection: rounding above the company limit (server setup rounding_limit, else Tk 10)
   ///
   /// In bn, this message translates to:
-  /// **'রাউন্ডিং ৳10-এর বেশি হতে পারে না।'**
-  String get collectRoundingTooBig;
+  /// **'রাউন্ডিং {amount}-এর বেশি হতে পারে না।'**
+  String collectRoundingTooBig(String amount);
 
   /// Collection control: online only, idempotent
   ///
@@ -12696,6 +12696,12 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'এই গ্রাহক আপনার শাখায় নেই'**
   String get collectOutOfBranch;
+
+  /// Collection: the server answers 403 (a walled salesman only gives orders; owner, 7 Oct 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায় নেওয়ার অনুমতি নেই'**
+  String get collectNotAllowed;
 
   /// Voucher list: income from non-customers, a separate entry
   ///

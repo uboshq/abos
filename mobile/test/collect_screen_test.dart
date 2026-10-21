@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/books/collection_plan.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
+import 'package:abos_mobile/core/navigation/role_tabs.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
 import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
@@ -469,7 +470,7 @@ void main() {
     await _tap(tester, 'collect-adjust');
     await _tap(tester, 'collect-difference-rounding');
     await _type(tester, 'collect-difference', '11');
-    expect(find.text('রাউন্ডিং ৳10-এর বেশি হতে পারে না।'), findsOneWidget);
+    expect(find.text('রাউন্ডিং ৳10.00-এর বেশি হতে পারে না।'), findsOneWidget);
     expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull,
         reason: '⛔ ৳10-এর বেশি রাউন্ডিংয়েও পোস্ট খোলা');
     await _review(tester);
@@ -1183,6 +1184,80 @@ void main() {
     expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull);
     expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-draft'))).onPressed, isNull);
     expect(api.sent, isEmpty);
+  });
+
+  group('a6\'s final names (8006bd78e)', () {
+    testWidgets('403 on the collection doors (a walled SR): "আদায় নেওয়ার অনুমতি নেই", and nothing can be sent', (tester) async {
+      final api = FakeCollect(notAllowed: true);
+      await _pump(tester, _screen(api));
+      expect(find.text('আদায় নেওয়ার অনুমতি নেই'), findsOneWidget, reason: '⛔ ৪০৩-এর কথা নেই');
+      expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull);
+      expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-draft'))).onPressed, isNull);
+      expect(api.sent, isEmpty);
+    });
+
+    test('18 · a walled SR never sees "নতুন আদায়": the entry follows /me\'s mayCollect (collection + voucher keys, not walled)', () {
+      // ⓘ সার্ভার: mayCollect = sales.collection.create আর accounts.voucher.create, আর দেয়ালে বাঁধা নন (CollectionSync::officeMayCollect)
+      const sr = ['sales.order.create', 'sales.collection.view', 'sales.collection.create'];
+      expect(RoleTabs.createChoices(sr, mayCollect: false).map((c) => c.route), isNot(contains('/home/collections')),
+          reason: '⛔ দেয়ালের SR-এর "＋ নতুন"-এ আদায়');
+      expect(RoleTabs.createChoices(sr, mayCollect: false).map((c) => c.route), contains('/home/new-order'));
+      const office = ['sales.collection.create', 'accounts.voucher.create'];
+      expect(RoleTabs.createChoices(office, mayCollect: true).map((c) => c.route), contains('/home/collections'));
+    });
+
+    for (final (typed, blocked) in [('5.00', false), ('6.00', true)]) {
+      testWidgets('4 · the server\'s rounding limit wins: limit "5.0000", rounding ৳$typed ${blocked ? 'blocked' : 'allowed'}', (tester) async {
+        await _pump(tester, _screen(FakeCollect(roundingLimit: '5.0000')));
+        await _pickShop(tester);
+        await _type(tester, 'collect-amount', '45000');
+        await _tap(tester, 'collect-adjust');
+        await _tap(tester, 'collect-difference-rounding');
+        await _type(tester, 'collect-difference', typed);
+        expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed == null, blocked);
+        expect(find.text('রাউন্ডিং ৳5.00-এর বেশি হতে পারে না।'), blocked ? findsOneWidget : findsNothing);
+      });
+    }
+
+    testWidgets('4 · the server\'s signature threshold wins: above "1.0000", ৳0.51 needs no signature and the line says ৳1.00',
+        (tester) async {
+      await _pump(tester, _screen(FakeCollect(roundingSignAbove: '1.0000')));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _tap(tester, 'collect-adjust');
+      await _tap(tester, 'collect-difference-rounding');
+      await _type(tester, 'collect-difference', '0.51');
+      await _review(tester);
+      expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳1.00-এর বেশি হলে মালিকের সই) | ৳0.51');
+      expect(_texts(tester, 'collect-check-post'), 'পোস্ট', reason: '⛔ সার্ভারের সীমার নিচে, তবু সই চাওয়া হলো');
+    });
+
+    for (final (typed, sign, blocked) in [('0.51', true, false), ('10.00', true, false), ('10.01', false, true)]) {
+      testWidgets('4 · without the setup fields (old server) the owner\'s ৳0.50 / ৳10 apply: ৳$typed', (tester) async {
+        await _pump(tester, _screen(FakeCollect(roundingLimit: null, roundingSignAbove: null)));
+        await _pickShop(tester);
+        await _type(tester, 'collect-amount', '45000');
+        await _tap(tester, 'collect-adjust');
+        await _tap(tester, 'collect-difference-rounding');
+        await _type(tester, 'collect-difference', typed);
+        expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed == null, blocked);
+        if (blocked) {
+          expect(find.text('রাউন্ডিং ৳10.00-এর বেশি হতে পারে না।'), findsOneWidget);
+          return;
+        }
+        await _review(tester);
+        expect(_texts(tester, 'collect-check-post'), sign ? 'সইয়ে পাঠান' : 'পোস্ট');
+      });
+    }
+
+    test('17 · the receipt opens through the phone\'s documents door: the path from receipt_pdf, else the paper\'s own id', () {
+      const fromServer = CollectionSaved(id: 'col-9', receipt: 'https://erp.test/api/v1/documents/Collection/col-9/pdf');
+      expect(fromServer.receiptDoor, (type: 'Collection', id: 'col-9'));
+      const pathOnly = CollectionSaved(id: 'col-9', receipt: '/documents/Collection/9f2e-uuid/pdf');
+      expect(pathOnly.receiptDoor, (type: 'Collection', id: '9f2e-uuid'));
+      const none = CollectionSaved(id: 'col-7');
+      expect(none.receiptDoor, (type: 'Collection', id: 'col-7'), reason: 'পথ না এলে আদায়ের নিজের আইডি');
+    });
   });
 
   testWidgets('the collections list\'s "＋ নতুন আদায়" opens this screen', (tester) async {

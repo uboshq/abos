@@ -7742,11 +7742,14 @@ class AppL10nEn extends AppL10n {
   String get collectSumDiscount => 'Discount on collection (needs a signature)';
 
   @override
-  String get collectSumRounding =>
-      'Rounding (owner\'s signature above Tk 0.50)';
+  String collectSumRounding(String amount) {
+    return 'Rounding (owner\'s signature above $amount)';
+  }
 
   @override
-  String get collectRoundingTooBig => 'Rounding cannot be more than Tk 10.';
+  String collectRoundingTooBig(String amount) {
+    return 'Rounding cannot be more than $amount.';
+  }
 
   @override
   String get collectControlNet =>
@@ -7846,6 +7849,10 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get collectOutOfBranch => 'This customer is not in your branch';
+
+  @override
+  String get collectNotAllowed =>
+      'You don\'t have permission to take collections';
 
   @override
   String get collectOtherIncome => 'Other income';

@@ -114,10 +114,10 @@ Map<String, dynamic> previewJson({List<String> stops = const [], bool needsSigna
 }
 
 /// সার্ভারের সইয়ের নিয়ম (Settlement::differenceNeedsOwner): ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳0.50-এর বেশি হলে
-bool serverNeedsOwner(CollectionDraft d) {
+bool serverNeedsOwner(CollectionDraft d, {int above = 50}) {
   final amount = paisaOf(d.difference?.amount);
   if (amount <= 0) return false;
-  return d.difference!.kind == 'discount' || amount > 50;
+  return d.difference!.kind == 'discount' || amount > above;
 }
 
 class FakeCollect implements CollectionEntryApi {
@@ -136,6 +136,9 @@ class FakeCollect implements CollectionEntryApi {
     this.slipState = 'posted',
     this.unbalancedPreview = false,
     this.outOfReach = false,
+    this.notAllowed = false,
+    this.roundingLimit = '10.0000',
+    this.roundingSignAbove = '0.5000',
     this.transferModes = const [
       {'id': 'tm-beftn', 'code': 'BEFTN', 'name': 'BEFTN'},
       {'id': 'tm-npsb', 'code': 'NPSB', 'name': 'NPSB'},
@@ -148,8 +151,8 @@ class FakeCollect implements CollectionEntryApi {
               'no': 'RCV-2610-0012',
               'state': 'posted',
               'amount_words': 'পঁয়তাল্লিশ হাজার টাকা মাত্র',
-              // ⓘ সার্ভারের রসিদের ঠিকানা ওয়েবের পথ (route('sales.print.receipt'))
-              'receipt_pdf': 'https://erp.test/sales/print/receipt/41',
+              // ⓘ সার্ভারের রসিদ — ফোনের কাগজের দরজা (a6 8006bd78e: route('api.documents.pdf'))
+              'receipt_pdf': 'https://erp.test/api/v1/documents/Collection/col-1/pdf',
               'applied': [
                 {'kind': 'bill', 'no': 'INV-0094', 'amount': '30000.0000'},
                 {'kind': 'bill', 'no': 'INV-0101', 'amount': '15200.0000'},
@@ -178,6 +181,13 @@ class FakeCollect implements CollectionEntryApi {
   /// গ্রাহক নাগালের বাইরে — সার্ভারের ইচ্ছাকৃত ৪০৪ (খোলা বিল আর প্রিভিউ দুটোতেই)
   final bool outOfReach;
 
+  /// দেয়ালের SR — আদায়ের প্রতিটা দরজায় ৪০৩ (a6 8006bd78e)
+  final bool notAllowed;
+
+  /// সেটআপের রাউন্ডিংয়ের দুই সীমা, সার্ভারের ৪ দশমিকের লেখায়; null মানে সার্ভার পাঠায় না (পুরনো)
+  final String? roundingLimit;
+  final String? roundingSignAbove;
+
   /// শেষ প্রিভিউর উত্তর — দাবিগুলো খাতার যোগ মেলায়
   CollectionPreview? lastPreview;
 
@@ -201,8 +211,10 @@ class FakeCollect implements CollectionEntryApi {
   final Map<String, String> receipts = {};
 
   @override
-  Future<CollectionSetup> setup() async => CollectionSetup.fromJson({
+  Future<CollectionSetup> setup() async => notAllowed ? throw const CollectionNotAllowed() : CollectionSetup.fromJson({
         'today': '2026-10-21',
+        if (!oldServer && roundingLimit != null) 'rounding_limit': roundingLimit,
+        if (!oldServer && roundingSignAbove != null) 'rounding_sign_above': roundingSignAbove,
         // ⓘ সার্ভার প্রতিটা খাতে `mine` পাঠায়, সত্য বা মিথ্যা (CollectionAppContractTest-এর দাবি); পুরনো সার্ভারে নেই
         'accounts': [
           for (final a in accountList) {'id': a.id, 'code': a.code, 'name': a.name, 'kind': a.kind, if (!oldServer) 'mine': a.mine},
@@ -216,6 +228,7 @@ class FakeCollect implements CollectionEntryApi {
   @override
   Future<OpenBills?> openBills(String customerId) async {
     if (billsFail) throw StateError('500');
+    if (notAllowed) throw const CollectionNotAllowed();
     if (outOfReach) throw const CustomerOutOfReach();
     return oldServer ? null : OpenBills.fromJson(billsJson);
   }
@@ -233,7 +246,8 @@ class FakeCollect implements CollectionEntryApi {
       'lines': j.lines,
       'total_dr': paisaText(j.dr),
       'total_cr': paisaText(j.cr),
-      'needs_signature': previewData['needs_signature'] == true || serverNeedsOwner(draft),
+      'needs_signature': previewData['needs_signature'] == true ||
+          serverNeedsOwner(draft, above: roundingSignAbove == null ? 50 : paisaOf(roundingSignAbove)),
       'summary': {...summary, 'balanced': !unbalancedPreview && j.dr == j.cr},
     };
     return lastPreview = CollectionPreview.fromJson(json);

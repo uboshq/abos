@@ -10387,13 +10387,23 @@
   "@collectSumDiscount": {
     "description": "Collection summary: the discount, which needs the owner's signature"
   },
-  "collectSumRounding": "রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই)",
+  "collectSumRounding": "রাউন্ডিং ({amount}-এর বেশি হলে মালিকের সই)",
   "@collectSumRounding": {
-    "description": "Collection summary: rounding; above Tk 0.50 the owner signs (owner, 2 Oct 2026), in the style of the discount line"
+    "description": "Collection summary: rounding; above the company's threshold (server setup rounding_sign_above, else Tk 0.50) the owner signs, in the style of the discount line",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
-  "collectRoundingTooBig": "রাউন্ডিং ৳10-এর বেশি হতে পারে না।",
+  "collectRoundingTooBig": "রাউন্ডিং {amount}-এর বেশি হতে পারে না।",
   "@collectRoundingTooBig": {
-    "description": "Collection: rounding above the limit"
+    "description": "Collection: rounding above the company limit (server setup rounding_limit, else Tk 10)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "collectControlNet": "নেট না থাকলে জমা হবে না; আবার চাপলে একটাই রসিদ হবে।",
   "@collectControlNet": {
@@ -10528,6 +10538,10 @@
   "collectOutOfBranch": "এই গ্রাহক আপনার শাখায় নেই",
   "@collectOutOfBranch": {
     "description": "Collection: the server answers 404 for a customer outside this person's reach (on purpose, so existence is not revealed)"
+  },
+  "collectNotAllowed": "আদায় নেওয়ার অনুমতি নেই",
+  "@collectNotAllowed": {
+    "description": "Collection: the server answers 403 (a walled salesman only gives orders; owner, 7 Oct 2026)"
   },
   "collectOtherIncome": "অন্য আয়",
   "@collectOtherIncome": {

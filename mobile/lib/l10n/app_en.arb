@@ -2072,8 +2072,8 @@
   "collectSumFormula": "received + withheld + discount = applied to invoices + unapplied",
   "collectSumWithheld": "Withheld by the customer (VDS/AIT)",
   "collectSumDiscount": "Discount on collection (needs a signature)",
-  "collectSumRounding": "Rounding (owner's signature above Tk 0.50)",
-  "collectRoundingTooBig": "Rounding cannot be more than Tk 10.",
+  "collectSumRounding": "Rounding (owner's signature above {amount})",
+  "collectRoundingTooBig": "Rounding cannot be more than {amount}.",
   "collectControlNet": "Without the network nothing is saved; pressing again still makes only one receipt.",
   "collectGeneralTitle": "General information",
   "collectPartyKind": "Party type *",
@@ -2100,6 +2100,7 @@
   "collectOwnerSign": "This collection needs the owner's signature — it goes to the books after signing",
   "collectSendForSign": "Send for signature",
   "collectOutOfBranch": "This customer is not in your branch",
+  "collectNotAllowed": "You don't have permission to take collections",
   "collectOtherIncome": "Other income",
   "collectOtherIncomeHint": "From someone who is not a customer, such as rent",
   "collectFromCustomerHint": "From a customer — on one page"

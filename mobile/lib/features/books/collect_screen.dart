@@ -47,7 +47,10 @@ Future<String?> _pickSlip(BuildContext context, {required bool camera}) async {
 
 /// ⓘ চার চিপই একই রসিদ-পাতা খোলে — সেখানে PDF খোলা, ছাপা আর ফোনের নিজের পাঠানোর পাতা (WhatsApp, SMS, ইমেইল)
 Future<void> _openReceipt(BuildContext context, CollectionSaved saved, ReceiptAction action) => DocumentActionsSheet.show(context,
-    type: 'Collection', id: saved.id, title: context.l10n.booksMoneyInPrintTitle(saved.no ?? ''), fileStem: saved.no);
+    type: saved.receiptDoor.type,
+    id: saved.receiptDoor.id,
+    title: context.l10n.booksMoneyInPrintTitle(saved.no ?? ''),
+    fileStem: saved.no);
 
 Future<void> _otherParty(BuildContext context, String kind) => Navigator.of(context)
     .push(MaterialPageRoute<void>(builder: (_) => const VoucherFormScreen(type: VoucherTypes.receipt)));
@@ -103,7 +106,7 @@ class CollectScreen extends StatefulWidget {
   static const roundingLimit = 1000;
 
   /// রাউন্ডিংয়ে মালিকের সই লাগবে কি না
-  static bool roundingNeedsSign(int paisa) => paisa > roundingFreeLimit;
+  static bool roundingNeedsSign(int paisa, {int above = roundingFreeLimit}) => paisa > above;
 
   /// ⭐ ওয়েবের পদ্ধতি, ক্রমে — টাকার-পদ্ধতির মডেলের `instrument` (a5, ২১ অক্টোবর ২০২৬)
   static const methods = ['cash', 'mfs', 'transfer', 'deposit', 'cheque'];
@@ -158,6 +161,13 @@ class _CollectScreenState extends State<CollectScreen> {
   DateTime? _valueDate;
 
   _Bills _billsState = _Bills.none;
+
+  /// ⭐ রাউন্ডিংয়ের দুই সীমা, পয়সায় — সার্ভারের সেটআপ থেকে (`rounding_limit`, `rounding_sign_above`), না থাকলে মালিকের ৳10 আর ৳0.50
+  int _roundingLimit = CollectScreen.roundingLimit;
+  int _signAbove = CollectScreen.roundingFreeLimit;
+
+  /// ⛔ আদায়ের দরজায় ৪০৩ — এই মানুষ আদায় নিতে পারেন না (দেয়ালের SR); পাঠানো বন্ধ
+  bool _notAllowed = false;
   OpenBills? _openBills;
   CollectionPlan _plan = CollectionPlan();
   final Map<PlanRow, TextEditingController> _rowText = {};
@@ -308,15 +318,26 @@ class _CollectScreenState extends State<CollectScreen> {
         _accounts = list;
         _transferModes = setup.transferModes;
         _transferModeId = _transferModes.firstOrNull?.id;
+        _roundingLimit = setup.roundingLimit ?? CollectScreen.roundingLimit;
+        _signAbove = setup.roundingSignAbove ?? CollectScreen.roundingFreeLimit;
         _account = list.isEmpty ? null : list.first;
         if (_account != null) _method = _defaultMethod(_account!.kind);
       });
+    } on CollectionNotAllowed {
+      if (mounted) _refuse();
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e, fallback: AppLocale.l10n.booksCollectAccountsFailed));
       }
     }
   }
+
+  /// ⛔ ৪০৩ — "আদায় নেওয়ার অনুমতি নেই", পাঠানো বন্ধ
+  void _refuse() => setState(() {
+        _notAllowed = true;
+        _busy = false;
+        _error = context.l10n.collectNotAllowed;
+      });
 
   static String _defaultMethod(String kind) => switch (kind) { 'cash' => 'cash', 'mfs' => 'mfs', _ => 'transfer' };
 
@@ -349,6 +370,8 @@ class _CollectScreenState extends State<CollectScreen> {
         _plan = CollectionPlan(bills: bills.bills, credits: bills.credits);
       });
       _reallocate();
+    } on CollectionNotAllowed {
+      if (mounted) _refuse();
     } on CustomerOutOfReach {
       // ⛔ গ্রাহক নাগালের বাইরে (সার্ভারের ইচ্ছাকৃত ৪০৪) — পুরনো সার্ভার নয়; বলা হয়, পাঠানো বন্ধ
       if (mounted && _customer?.id == picked.id) {
@@ -394,7 +417,7 @@ class _CollectScreenState extends State<CollectScreen> {
   void _chooseParty(String kind) => setState(() => _party = kind);
 
   /// ⓘ রাউন্ডিং ৳10-এর বেশি — ফোনের আগাম সতর্কতা; আসল পাহারা সার্ভারের (ফেরালে তার কথাই দেখায়)
-  bool get _roundingTooBig => _differenceKind == 'rounding' && _differencePaisa > CollectScreen.roundingLimit;
+  bool get _roundingTooBig => _differenceKind == 'rounding' && _differencePaisa > _roundingLimit;
 
   // ── বিল ──
 
@@ -500,7 +523,7 @@ class _CollectScreenState extends State<CollectScreen> {
     if (_needsReference && _reference.text.trim().isEmpty) return w.collectReferenceMissing;
     if (_needsDepositSlip && _depositSlip.text.trim().isEmpty) return w.collectDepositSlipMissing;
     if (_differencePaisa + _withheldPaisa > _received) return w.collectDifferenceTooBig;
-    if (_differenceKind == 'rounding' && _differencePaisa > CollectScreen.roundingLimit) return w.collectRoundingTooBig;
+    if (_roundingTooBig) return w.collectRoundingTooBig(Money.taka(_roundingLimit / 100));
     if (post && _slipRequired && _slipPath == null) return w.collectSlipMissing;
     return null;
   }
@@ -536,6 +559,9 @@ class _CollectScreenState extends State<CollectScreen> {
     CollectionPreview? preview;
     try {
       preview = await widget.api.preview(_draft(confirm: true));
+    } on CollectionNotAllowed {
+      if (mounted) _refuse();
+      return;
     } on CustomerOutOfReach {
       if (!mounted) return;
       setState(() {
@@ -579,6 +605,7 @@ class _CollectScreenState extends State<CollectScreen> {
         words: preview?.amountWords ?? Money.spoken(_received / 100, englishDigits: true),
         preview: preview,
         monthClosed: _openBills?.monthOpen == false,
+        signAbove: _signAbove,
         slipRequired: _slipRequired,
       );
 
@@ -1180,12 +1207,16 @@ class _CollectScreenState extends State<CollectScreen> {
           ),
           if (_differenceKind == 'discount' && _differencePaisa > 0)
             _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
-          if (_differenceKind == 'rounding' && CollectScreen.roundingNeedsSign(_differencePaisa) && !_roundingTooBig)
+          if (_differenceKind == 'rounding' && CollectScreen.roundingNeedsSign(_differencePaisa, above: _signAbove) && !_roundingTooBig)
             _Note(
                 key: const ValueKey('collect-rounding-sign-1'),
                 text: w.collectRoundingSign(Money.taka(_differencePaisa / 100)),
                 tone: _Tone.info),
-          if (_roundingTooBig) _Note(key: const ValueKey('collect-rounding-warning'), text: w.collectRoundingTooBig, tone: _Tone.stop),
+          if (_roundingTooBig)
+            _Note(
+                key: const ValueKey('collect-rounding-warning'),
+                text: w.collectRoundingTooBig(Money.taka(_roundingLimit / 100)),
+                tone: _Tone.stop),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             key: const ValueKey('collect-vds'),
@@ -1216,7 +1247,7 @@ class _CollectScreenState extends State<CollectScreen> {
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
-            onPressed: _busy || _party != 'customer' || _billsState == _Bills.outOfReach ? null : _saveDraft,
+            onPressed: _busy || _notAllowed || _party != 'customer' || _billsState == _Bills.outOfReach ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
           ),
         ),
@@ -1226,7 +1257,8 @@ class _CollectScreenState extends State<CollectScreen> {
           child: FilledButton(
             key: const ValueKey('collect-post'),
             style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
-            onPressed: _busy || _party != 'customer' || _roundingTooBig || _billsState == _Bills.outOfReach ? null : _review,
+            onPressed:
+                _busy || _notAllowed || _party != 'customer' || _roundingTooBig || _billsState == _Bills.outOfReach ? null : _review,
             child: Text(w.collectPost, textAlign: TextAlign.center),
           ),
         ),
@@ -1289,6 +1321,7 @@ class CollectReview {
     this.words,
     this.preview,
     this.monthClosed = false,
+    this.signAbove = CollectScreen.roundingFreeLimit,
     this.slipRequired = false,
   });
 
@@ -1310,6 +1343,9 @@ class CollectReview {
   /// null = প্রিভিউয়ের দরজা নেই — "খাতায় যা যাবে" দেখায় না
   final CollectionPreview? preview;
   final bool monthClosed;
+
+  /// রাউন্ডিংয়ের যার বেশি হলে মালিকের সই — পয়সায়, সার্ভারের সেটআপ থেকে
+  final int signAbove;
   final bool slipRequired;
 }
 
@@ -1360,7 +1396,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
     final saved = _saved;
     final stops = p?.stops ?? const <String>[];
     // ⭐ মালিকের সই লাগবে — ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳0.50-এর বেশি হলে (মালিক, ২ অক্টোবর ২০২৬), বা সার্ভারের প্রিভিউ বললে
-    final sign = d.discount > 0 || CollectScreen.roundingNeedsSign(d.rounding) || p?.needsSignature == true;
+    final sign = d.discount > 0 || CollectScreen.roundingNeedsSign(d.rounding, above: d.signAbove) || p?.needsSignature == true;
     return Scaffold(
       appBar: AbosScreenBar(title: w.collectCheckTitle),
       bottomNavigationBar: _BottomBar(children: [
@@ -1412,7 +1448,8 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
               if (d.netApplied != null) ...[
                 _AmountRow(key: const ValueKey('collect-sum-withheld'), label: w.collectSumWithheld, paisa: d.withheld),
                 _AmountRow(key: const ValueKey('collect-sum-discount'), label: w.collectSumDiscount, paisa: d.discount),
-                _AmountRow(key: const ValueKey('collect-sum-rounding'), label: w.collectSumRounding, paisa: d.rounding),
+                _AmountRow(
+                    key: const ValueKey('collect-sum-rounding'), label: w.collectSumRounding(Money.taka(d.signAbove / 100)), paisa: d.rounding),
                 Divider(thickness: 2, color: Theme.of(context).colorScheme.onSurface),
                 _AmountRow(key: const ValueKey('collect-net-applied'), label: w.collectSumApplied, paisa: d.netApplied!, strong: true),
                 if (d.bills case final bills? when bills.isNotEmpty)

@@ -370,6 +370,13 @@ class CollectionSaved {
   /// (নম্বর, পয়সা)
   final List<(String, int)> applied;
 
+  /// ⭐ রসিদের দরজা — ফোনের নিজের কাগজের দরজা `/documents/{type}/{id}/pdf`, টোকেনসহ (a6 8006bd78e: `receipt_pdf` এই পথই);
+  /// উত্তরে পথ থাকলে তার ধরন আর আইডি, নইলে আদায়ের নিজের আইডি দিয়ে। ⛔ লগইন ছাড়া ব্রাউজারের ঠিকানা নয়।
+  ({String type, String id}) get receiptDoor {
+    final m = RegExp(r'/documents/([^/?#]+)/([^/?#]+)/pdf').firstMatch(receipt ?? '');
+    return m == null ? (type: 'Collection', id: id) : (type: Uri.decodeComponent(m[1]!), id: Uri.decodeComponent(m[2]!));
+  }
+
   /// একই আদায়, নতুন অবস্থায় — স্লিপের উত্তরের পরে
   CollectionSaved withState(String? next) => next == null
       ? this
@@ -410,6 +417,19 @@ class CustomerOutOfReach implements Exception {
   const CustomerOutOfReach();
 }
 
+/// ⭐ আদায়ের দরজায় ৪০৩ — এই মানুষ আদায় নিতে পারেন না (দেয়ালের SR: মালিকের নিয়ম, SR কেবল অর্ডার দেন — ৭ অক্টোবর ২০২৬;
+/// a6 8006bd78e)। পর্দা বলে "আদায় নেওয়ার অনুমতি নেই", পাঠানো বন্ধ।
+class CollectionNotAllowed implements Exception {
+  const CollectionNotAllowed();
+}
+
+/// ⓘ প্রিভিউর ৪২২ গ্রাহকের ঘরে ("গ্রাহক চেনা নেই") — নাগালের বাইরের বা নেই এমন গ্রাহক (a6 8006bd78e: CollectionInput::fromPhone)
+bool _customerUnknown(Object error) {
+  if (error is! DioException || error.response?.statusCode != 422) return false;
+  final errors = error.response?.data is Map ? (error.response!.data as Map)['errors'] : null;
+  return errors is Map && (errors.containsKey('customer_id') || errors.containsKey('customerId'));
+}
+
 /// ট্রান্সফার মোড — সেটআপের `transfer_modes:[{id, name}]`
 class TransferMode {
   const TransferMode({required this.id, required this.name});
@@ -425,10 +445,15 @@ class TransferMode {
 
 /// `GET /sales/collections/setup` — টাকার খাত (`mine` সহ) আর ট্রান্সফার মোড; ⓘ পুরনো সার্ভারে মোড নেই (খালি)
 class CollectionSetup {
-  const CollectionSetup({this.accounts = const [], this.transferModes = const []});
+  const CollectionSetup({this.accounts = const [], this.transferModes = const [], this.roundingLimit, this.roundingSignAbove});
 
   final List<CollectionAccount> accounts;
   final List<TransferMode> transferModes;
+
+  /// ⭐ রাউন্ডিংয়ের সীমা আর যার বেশি হলে মালিকের সই — সার্ভারের কোম্পানির নিয়ম, পয়সায় (a6 8006bd78e: `rounding_limit`,
+  /// `rounding_sign_above`, "10.0000"/"0.5000"); পুরনো সার্ভারে null — তখন মালিকের ৳10 আর ৳0.50
+  final int? roundingLimit;
+  final int? roundingSignAbove;
 
   factory CollectionSetup.fromJson(Map<String, dynamic> j) => CollectionSetup(
         accounts: [
@@ -439,11 +464,15 @@ class CollectionSetup {
           for (final m in (j['transfer_modes'] as List?) ?? const [])
             if (m is Map) TransferMode.fromJson(Map<String, dynamic>.from(m)),
         ],
+        roundingLimit: j['rounding_limit'] == null ? null : paisaOf(j['rounding_limit']),
+        roundingSignAbove: j['rounding_sign_above'] == null ? null : paisaOf(j['rounding_sign_above']),
       );
 
   Map<String, dynamic> toJson() => {
         'accounts': [for (final a in accounts) a.toJson()],
         'transfer_modes': [for (final m in transferModes) m.toJson()],
+        if (roundingLimit != null) 'rounding_limit': paisaText(roundingLimit!),
+        if (roundingSignAbove != null) 'rounding_sign_above': paisaText(roundingSignAbove!),
       };
 }
 
@@ -478,6 +507,15 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
   Future<CollectionSetup> setup() async {
     await ReferenceCache.instance.init();
     try {
+      return await _setup();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) throw const CollectionNotAllowed();
+      rethrow;
+    }
+  }
+
+  Future<CollectionSetup> _setup() async {
+    try {
       final response = await ApiClient.dio
           .get<Map<String, dynamic>>('/sales/collections/setup');
       final setup = CollectionSetup.fromJson(response.data ?? const {});
@@ -488,7 +526,9 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
         updatedAt: DateTime.now(),
       );
       return setup;
-    } catch (_) {
+    } catch (e) {
+      // ⛔ ৪০৩ ক্যাশে ঢাকা নয় — অনুমতি নেই মানে নেই
+      if (e is DioException && e.response?.statusCode == 403) rethrow;
       final cached = ReferenceCache.instance.get(_cacheType, _cacheId);
       if (cached == null) rethrow;
       return CollectionSetup.fromJson(cached);
@@ -527,6 +567,8 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
   /// মানে গ্রাহক নাগালের বাইরে → [CustomerOutOfReach]। অন্য ভুল যেমন ছিল তেমন (false, ডাকা জায়গা আবার ছোড়ে)।
   static Future<bool> _oldServerOr(Object error) async {
     final status = _status(error);
+    if (status == 403) throw const CollectionNotAllowed();
+    if (_customerUnknown(error)) throw const CustomerOutOfReach();
     if (status == 405) return true;
     if (status != 404) return false;
     try {

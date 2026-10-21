@@ -7611,10 +7611,14 @@ class AppL10nBn extends AppL10n {
   String get collectSumDiscount => 'আদায়ে ছাড় (সই লাগবে)';
 
   @override
-  String get collectSumRounding => 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই)';
+  String collectSumRounding(String amount) {
+    return 'রাউন্ডিং ($amount-এর বেশি হলে মালিকের সই)';
+  }
 
   @override
-  String get collectRoundingTooBig => 'রাউন্ডিং ৳10-এর বেশি হতে পারে না।';
+  String collectRoundingTooBig(String amount) {
+    return 'রাউন্ডিং $amount-এর বেশি হতে পারে না।';
+  }
 
   @override
   String get collectControlNet =>
@@ -7712,6 +7716,9 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get collectOutOfBranch => 'এই গ্রাহক আপনার শাখায় নেই';
+
+  @override
+  String get collectNotAllowed => 'আদায় নেওয়ার অনুমতি নেই';
 
   @override
   String get collectOtherIncome => 'অন্য আয়';
