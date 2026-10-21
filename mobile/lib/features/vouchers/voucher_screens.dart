@@ -38,6 +38,7 @@ class VoucherListScreen extends StatefulWidget {
     this.view,
     this.canCreate = false,
     this.collect = _collectScreen,
+    this.mayCollect = false,
   });
 
   static String _engineChangeId() => SyncEngine.instance.newChangeId();
@@ -46,6 +47,10 @@ class VoucherListScreen extends StatefulWidget {
 
   /// ⭐ "আদায় ভাউচার" = আদায়ের এক পাতা (মালিক, ২১ অক্টোবর ২০২৬: এক পথ) — পরীক্ষা নিজের পাতা দেয়
   final Widget Function() collect;
+
+  /// ⭐ "আদায় ভাউচার" দেখাবে কি না — `/me`-র `mayCollect`, হোমের "নতুন আদায়" আর আদায়ের তালিকার বোতামের একই উৎস (সার্ভার:
+  /// আদায় আর ভাউচারের চাবি, আর দেয়ালে বাঁধা নন — মালিকের নিয়ম, SR কেবল অর্ডার দেন, ৭ অক্টোবর ২০২৬)। ⛔ ভাউচারের চাবি একা যথেষ্ট নয়।
+  final bool mayCollect;
 
   /// ⓘ নাগালের শাখা — `/me` থেকে; না পেলে শাখার ছাঁকনিই দেখায় না
   static Future<List<OrgRef>> _myBranches() async {
@@ -153,12 +158,13 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       builder: (sheet) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           for (final t in VoucherTypes.all) ...[
-            ListTile(
-              key: ValueKey('voucher-type-$t'),
-              title: Text(VoucherTypes.label(t)),
-              subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.collectFromCustomerHint) : null,
-              onTap: () => Navigator.of(sheet).pop(t),
-            ),
+            if (t != VoucherTypes.receipt || widget.mayCollect)
+              ListTile(
+                key: ValueKey('voucher-type-$t'),
+                title: Text(VoucherTypes.label(t)),
+                subtitle: t == VoucherTypes.receipt ? Text(sheet.l10n.collectFromCustomerHint) : null,
+                onTap: () => Navigator.of(sheet).pop(t),
+              ),
             // ⭐ গ্রাহক ছাড়া অন্য আয় — আলাদা, পরিষ্কার নামে; আদায়ের সাথে মেশানো নয় (মালিক, ২১ অক্টোবর ২০২৬)
             if (t == VoucherTypes.receipt)
               ListTile(
@@ -172,8 +178,9 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
       ),
     );
     if (type == null || !mounted) return;
-    // ⭐ গ্রাহকের টাকা নেওয়ার একটাই পথ: "আদায় ভাউচার" খোলে আদায়ের পাতা (মালিক, ২১ অক্টোবর ২০২৬)
-    if (type == VoucherTypes.receipt) {
+    // ⭐ গ্রাহকের টাকা নেওয়ার একটাই পথ: "আদায় ভাউচার" খোলে আদায়ের পাতা (মালিক, ২১ অক্টোবর ২০২৬) — কেবল যিনি আদায় নিতে পারেন;
+    // ⓘ রসিদের ধরন থেকে "নতুন" অন্যদের জন্য গ্রাহক ছাড়া আয় ("অন্য আয়"-এর ফর্ম)
+    if (type == VoucherTypes.receipt && widget.mayCollect) {
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => widget.collect()));
       if (mounted) await _load();
       return;

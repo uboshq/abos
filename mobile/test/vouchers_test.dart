@@ -502,7 +502,8 @@ void main() {
                 branches: () async => const [],
                 view: view,
                 canCreate: true,
-                collect: () => const _CollectPage()));
+                collect: () => const _CollectPage(),
+                mayCollect: true));
 
         expect(api.asked, hasLength(1), reason: 'আগে "সব" চেয়ে তারপর ধরন — দুবার ডাকা হয়েছে');
         expect([api.asked.single['type'], api.asked.single['money']], [type, money]);
@@ -533,7 +534,8 @@ void main() {
               newChangeId: _key,
               branches: () async => const [],
               canCreate: true,
-              collect: () => const _CollectPage()));
+              collect: () => const _CollectPage(),
+                mayCollect: true));
       await tester.tap(find.byKey(const ValueKey('voucher-new')));
       await tester.pumpAndSettle();
       expect(find.text('অন্য আয়'), findsOneWidget, reason: 'গ্রাহক ছাড়া আয়ের আলাদা ঘর নেই');
@@ -552,11 +554,48 @@ void main() {
       expect(find.byType(_CollectPage), findsNothing);
     });
 
+    // ⭐ এক উৎস (মালিকের নিয়ম, ৭ অক্টোবর ২০২৬): "আদায় ভাউচার" `/me`-র mayCollect মানে — হোমের "নতুন আদায়" আর আদায়ের তালিকার বোতামের মতো
+    testWidgets('18 · a walled SR with voucher-create and the collection keys sees no "আদায় ভাউচার" (mayCollect false from /me)',
+        (tester) async {
+      await _pump(
+          tester,
+          VoucherListScreen(
+              api: _FakeVouchers(),
+              newChangeId: _key,
+              branches: () async => const [],
+              canCreate: true,
+              mayCollect: false,
+              collect: () => const _CollectPage()));
+      await tester.tap(find.byKey(const ValueKey('voucher-new')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('voucher-type-receipt')), findsNothing, reason: '⛔ দেয়ালের SR "আদায় ভাউচার" দেখল');
+      expect(find.byKey(const ValueKey('voucher-type-payment')), findsOneWidget, reason: 'বাকি ভাউচার যেমন ছিল');
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      // ⓘ রসিদের ধরন থেকে "নতুন" — আদায়ের পাতা নয়, গ্রাহক ছাড়া আয়ের ফর্ম
+      await _pump(
+          tester,
+          VoucherListScreen(
+              api: _FakeVouchers(),
+              newChangeId: _key,
+              branches: () async => const [],
+              view: 'cash-receipt',
+              canCreate: true,
+              mayCollect: false,
+              collect: () => const _CollectPage()));
+      await tester.tap(find.byKey(const ValueKey('voucher-new')));
+      await tester.pumpAndSettle();
+      expect(find.byType(_CollectPage), findsNothing, reason: '⛔ দেয়ালের SR আদায়ের পাতায় পৌঁছাল');
+      expect(tester.widget<VoucherFormScreen>(find.byType(VoucherFormScreen)).type, 'receipt');
+    });
+
     testWidgets('opened plain (old favourites, recents) or with an unknown kind: "ভাউচার", all, and the type picker',
         (tester) async {
       for (final view in [null, 'no-such-kind']) {
         final api = _FakeVouchers();
-        await _pump(tester, VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view, canCreate: true));
+        await _pump(tester,
+            VoucherListScreen(api: api, newChangeId: _key, branches: () async => const [], view: view, canCreate: true, mayCollect: true));
 
         expect([api.asked.single['type'], api.asked.single['money']], [null, null]);
         expect(find.descendant(of: find.byType(AppBar), matching: find.text('ভাউচার')), findsOneWidget);

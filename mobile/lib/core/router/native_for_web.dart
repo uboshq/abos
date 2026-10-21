@@ -40,6 +40,7 @@ import '../../features/books/collect_screen.dart';
 import '../../features/vouchers/voucher_screens.dart';
 import '../../features/web_inside/web_inside_screen.dart';
 import '../accounts/voucher_api.dart';
+import '../books/collection_entry.dart';
 import '../auth/auth_state.dart';
 import '../locale/app_locale.dart';
 import '../menu/module_gate.dart';
@@ -374,14 +375,16 @@ class NativeForWeb {
               builder: (context, ref, _) => VoucherListScreen(
                   key: ValueKey('vouchers-web-$type'),
                   view: _voucherViews[type],
-                  canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false)));
+                  canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false,
+                  mayCollect: ref.watch(mayCollectProvider))));
     }
     if (path == '/accounts/voucher-list') {
       return ModuleGateView(
           path: 'vouchers',
           child: Consumer(
               builder: (context, ref, _) => VoucherListScreen(
-                  canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false)));
+                  canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false,
+                  mayCollect: ref.watch(mayCollectProvider))));
     }
 
     if (path == '/sales/invoices') {

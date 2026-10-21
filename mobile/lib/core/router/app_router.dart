@@ -132,7 +132,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 path: 'vouchers',
                 child: Consumer(
                     builder: (context, ref, _) => VoucherListScreen(
-                        canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false))),
+                        canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false,
+                  mayCollect: ref.watch(mayCollectProvider)))),
           ),
           // ⭐ প্রতিটা ভাউচার-ধরন আলাদা ঘরে — নগদ/MFS/ব্যাংক রসিদ, পেমেন্ট, কন্ট্রা, জার্নাল, খরচ (মালিক, ১৭ অক্টোবর ২০২৬);
           // একই হিসাব-সুইচের পিছনে, অচেনা ধরন হলে "সব"
@@ -144,7 +145,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, ref, _) => VoucherListScreen(
                         key: ValueKey('vouchers-${state.pathParameters['view']}'),
                         view: state.pathParameters['view'],
-                        canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false))),
+                        canCreate: ref.watch(authStateProvider).user?.can('accounts.voucher.create') ?? false,
+                  mayCollect: ref.watch(mayCollectProvider)))),
           ),
           _framed(
             path: 'claims',
