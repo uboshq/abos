@@ -140,7 +140,14 @@ class ApprovalInboxController extends Controller implements HasMiddleware
          * করে কেন গার্ডটা আছে: আমার নিজের কোনো টেস্ট এটা ধরত না, কারণ
          * প্রতিটাতেই মানুষটার কোনো না কোনো চাবি ছিল।
          */
-        abort_unless($user->can('approval.decide') || $user->can('approval.report'), 403);
+        /*
+         * ⭐ ছকের বাইরের সই — সবসময় দ্বিতীয় একজনের (নকশা দফা #৬, ২১ অক্টোবর ২০২৬; [[SignaturesWaitingElsewhere]])।
+         * ⓘ যাঁর জন্য এমন সই অপেক্ষায়, তিনি `approval.decide` ছাড়াও বাক্সটা খোলেন — কেবল নিজের সারি দেখতে; সারিগুলো মডিউল
+         * নিজে ছাঁকে (চাবি, নাগাল, যিনি চেয়েছেন তিনি নন)।
+         */
+        $elsewhere = app(\App\Core\Contracts\SignaturesWaitingElsewhere::class)->waitingFor($user);
+
+        abort_unless($user->can('approval.decide') || $user->can('approval.report') || $elsewhere !== [], 403);
 
         /*
          * কার ইনবক্স — নিজের, নাকি অন্য কারো?
@@ -299,6 +306,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              */
             // ⓘ দেয়াল তোলা কেবল নিজের সারিতে — অন্যের সারি দেখা রিপোর্ট-পাঠক নিজের দেয়ালেই ([[ApprovalFacts::VIEW_WALLS]])
             'facts' => $this->facts->of($waiting, $subject->is($user)),
+            // ⭐ ছকের বাইরের সই — কেবল নিজের বাক্সে, অন্যের বাক্স দেখার সময় নয়
+            'elsewhere' => $subject->is($user) ? $elsewhere : [],
             'visibleTotal' => $visibleTotal,
             'labels' => $this->flows->labels(),
             'modules' => $modules,

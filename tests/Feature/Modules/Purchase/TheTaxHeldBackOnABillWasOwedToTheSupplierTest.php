@@ -56,9 +56,9 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
 
         $this->assertMoved($book, StandardChart::INVENTORY, debit: '10000', message: '⛔ মালের দাম মোটে বসেনি');
         $this->assertMoved($book, StandardChart::PAYABLE, credit: '9000', message: '⛔ সরবরাহকারীর দেনা নিট নয় — কাটা কর তাঁর পাওনা দেখাচ্ছে');
-        $this->assertMoved($book, StandardChart::TAX_DEDUCTED_AT_SOURCE, credit: '1000', message: '⛔ কেটে রাখা কর সরকারের দায়ে বসেনি');
-        $this->assertSame(2, LedgerEntry::query()->where('source_type', PurchaseBill::drillSourceType())->where('source_id', $bill->id)
-            ->where('account_id', StandardChart::find(StandardChart::TAX_DEDUCTED_AT_SOURCE)->id)->count(), 'AIT আর VDS আলাদা সারিতে নেই');
+        // ⭐ AIT ২১২১-এ, VDS ২১২২-এ — আলাদা রিটার্ন, আলাদা খাত (fe, ২১ অক্টোবর ২০২৬)
+        $this->assertMoved($book, StandardChart::TAX_DEDUCTED_AT_SOURCE, credit: '500', message: '⛔ কেটে রাখা আয়কর (AIT) ২১২১-এ বসেনি');
+        $this->assertMoved($book, StandardChart::VDS_PAYABLE, credit: '500', message: '⛔ কেটে রাখা ভ্যাট (VDS) নিজের খাতে (২১২২) বসেনি');
         $this->assertSame((int) $this->supplier->id, (int) LedgerEntry::query()->where('source_type', PurchaseBill::drillSourceType())
             ->where('source_id', $bill->id)->where('account_id', StandardChart::find(StandardChart::PAYABLE)->id)->value('party_id'));
         $this->assertBalanced($bill);
@@ -122,6 +122,7 @@ final class TheTaxHeldBackOnABillWasOwedToTheSupplierTest extends TestCase
 
         $this->assertMoved($book, StandardChart::PAYABLE, credit: '10000');
         $this->assertArrayNotHasKey((int) StandardChart::find(StandardChart::TAX_DEDUCTED_AT_SOURCE)->id, $book);
+        $this->assertArrayNotHasKey((int) StandardChart::find(StandardChart::VDS_PAYABLE)->id, $book);
         $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '10000', 4));
     }
 

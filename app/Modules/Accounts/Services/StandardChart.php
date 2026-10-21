@@ -208,6 +208,12 @@ final class StandardChart implements ProvisionsCompany
     public const TAX_DEDUCTED_AT_SOURCE = '2121';
 
     /**
+     * ⭐ উৎসে কর্তিত ভ্যাট (VDS) — নিজের খাত (fe, ২১ অক্টোবর ২০২৬: মূসক আর আয়কর আলাদা রিটার্ন, তাই আলাদা খাত)।
+     * ⓘ ২১২১ এখন কেবল AIT; পুরনো পোস্ট হওয়া VDS সারি ২১২১-এই থাকে, কিছু সরানো হয় না।
+     */
+    public const VDS_PAYABLE = '2122';
+
+    /**
      * প্রাপ্ত মাল, বিল আসেনি।
      *
      * ট্রাক আসে সোমবার, বিল আসে বৃহস্পতিবার। ওই তিন দিন মালটা গুদামে আছে —
@@ -690,6 +696,20 @@ final class StandardChart implements ProvisionsCompany
      *
      * @return int কতগুলো খাত তৈরি হল
      */
+    /**
+     * ⓘ এই কোম্পানিতে মান ছকের যে খাতগুলো নেই — `abos:sync-chart --dry-run`-এর জন্য, কিছু লেখে না।
+     *
+     * @return list<string>
+     */
+    public function missingCodes(): array
+    {
+        $this->accounts->assertCompanyContext();
+        $have = Account::query()->pluck('code')->flip()->all();
+
+        return array_values(array_filter(array_map(fn (array $row) => (string) $row[0], $this->definition()),
+            fn (string $code) => ! isset($have[$code])));
+    }
+
     public function install(): int
     {
         $this->accounts->assertCompanyContext();
@@ -1095,6 +1115,8 @@ final class StandardChart implements ProvisionsCompany
              * খরচ গজাত।
              */
             ['2121', 'Tax Deducted at Source', 'উৎসে কর্তিত কর', $L, '2100', false, []],
+            // ⭐ VDS-এর নিজের খাত — মূসকের রিটার্ন আয়করের থেকে আলাদা (২১ অক্টোবর ২০২৬; [[VDS_PAYABLE]])
+            ['2122', 'VAT Deducted at Source (VDS) Payable', 'উৎসে ভ্যাট প্রদেয় (VDS)', $L, '2100', false, []],
 
             /*
              * ঘোষিত মুনাফা — ভাগ করা হয়েছে, এখনো তোলা হয়নি।

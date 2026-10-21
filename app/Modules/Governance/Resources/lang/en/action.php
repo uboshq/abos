@@ -116,4 +116,9 @@ return [
     'document_from_template' => 'Document made from a template',
     'document_retained' => 'Document moved to the bin by a retention rule',
     'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
+    'bank_requested' => 'Bank details change requested',
+    'bank_replaced' => 'Older bank details request replaced',
+    'bank_signed' => 'Bank details second signature',
+    'bank_rejected' => 'Bank details change refused',
+    'bank_withdrawn' => 'Bank details change withdrawn',
 ];

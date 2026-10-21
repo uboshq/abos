@@ -45,6 +45,13 @@
 
     /* নগদে নোট গোনা — কেবল যে পর্দা নগদ গোনে (হিসাবের ভাউচার) */
     'counting' => false,
+
+    /*
+     * ⭐ নকশার সারি: "যে খাত থেকে | পদ্ধতি", তার নিচে প্রাপকের ব্যাংক, তার নিচে পদ্ধতির ঘর। ⓘ `inline` দিলে বাক্সটা নিজে কোনো
+     * ঘর নেয় না (`contents`) — তার অংশগুলো হোস্টের ৪-কলামের গ্রিডে বসে, আর `order` দিয়ে সাজে: হোস্টের খাত `order-0`,
+     * সেগমেন্ট `order-1` (দুই কলাম), হোস্টের প্রাপকের ব্যাংক `order-2`, পদ্ধতির ঘর `order-3`, চার্জের লাইন `order-4`।
+     */
+    'inline' => false,
 ])
 
 @php
@@ -61,7 +68,7 @@
     $notes = \App\Modules\Accounts\Models\CashCount::DENOMINATIONS;
 @endphp
 
-<div class="flex flex-col gap-3" data-money-method
+<div @class(['contents' => $inline, 'flex flex-col gap-3' => ! $inline]) data-money-method
      x-data="moneyMethod({ method: @js($chosen), charge: @js($charge), chequeDate: @js($dateOf($was('instrument_date'))), amountField: @js($amountField), chargeField: @js($chargeField), moneyField: @js($moneyField ?? ''), direction: @js($direction), notes: @js((array) ($was('note_counts') ?? [])) })"
      data-line-in="{{ __('money.charge_line.in') }}"
      data-line-out="{{ __('money.charge_line.out') }}"
@@ -69,14 +76,14 @@
      data-head-mfs="{{ __('money.charge_line.head_mfs') }}">
 
     {{-- ── পদ্ধতি: এক সারির সেগমেন্ট (নকশার "নগদ · MFS · ব্যাংক ট্রান্সফার · নগদ জমা · চেক") ── --}}
-    <fieldset>
+    <fieldset @class(['order-1 sm:col-span-2' => $inline])>
         <legend class="mb-1 block text-sm font-medium">{{ __('money.method.legend') }}</legend>
-        <div class="inline-flex flex-wrap overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
+        <div class="inline-flex max-w-full overflow-hidden rounded-(--radius-field) border border-(--color-border)" role="radiogroup">
             @foreach ($shown as $way)
                 <label class="cursor-pointer border-e border-(--color-border) last:border-e-0">
                     <input type="radio" name="instrument" value="{{ $way }}" class="peer sr-only"
                            data-method-chip="{{ $way }}" x-model="method" @checked($chosen === $way)>
-                    <span class="block px-3 py-2 text-sm text-(--color-ink-body) transition-colors
+                    <span class="block whitespace-nowrap px-2.5 py-2 text-sm text-(--color-ink-body) transition-colors
                                  hover:bg-(--color-surface-hover)
                                  peer-checked:bg-(--color-brand-600) peer-checked:font-medium peer-checked:text-white
                                  peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-(--color-brand-500)">
@@ -90,7 +97,7 @@
     {{-- ── নগদ: চাইলে নোট গোনা ── --}}
     @if ($counting)
         <template x-if="method === 'cash'">
-            <div data-method-block="cash" class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3">
+            <div data-method-block="cash" @class(['rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-sunken) p-3', 'order-3 col-span-full' => $inline])>
                 <div class="grid gap-x-5 gap-y-1 sm:grid-cols-2">
                     @foreach ($notes as $note)
                         <label class="grid grid-cols-[3.5rem_0.75rem_3.5rem_1fr] items-center gap-1.5 font-mono text-xs tabular-nums">
@@ -112,7 +119,7 @@
 
     {{-- ── MFS: TrxID আর চার্জ ── --}}
     <template x-if="method === 'mfs'">
-        <div data-method-block="mfs" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-method-block="mfs" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
             <div class="lg:col-span-2">
                 <x-ui.field name="instrument_no" :label="__('money.field.trx_id')" :value="$was('instrument_no')"
                             :hint="__('money.hint.reference_needed')" required />
@@ -124,7 +131,7 @@
 
     {{-- ── ব্যাংক ট্রান্সফার: মোড · রেফারেন্স · মূল্য-তারিখ · চার্জ (নকশার এক সারি) ── --}}
     <template x-if="method === 'transfer'">
-        <div data-method-block="transfer" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-method-block="transfer" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
             <x-ui.select name="transfer_mode_id" :label="__('money.field.transfer_mode')"
                          :options="$modes" :selected="$was('transfer_mode_id')" placeholder="—" />
             <x-ui.field name="instrument_no" :label="__('money.field.reference')" :value="$was('instrument_no')"
@@ -140,7 +147,7 @@
 
     {{-- ── ব্যাংকে নগদ জমা: জমা স্লিপ আর মূল্য-তারিখ ── --}}
     <template x-if="method === 'deposit'">
-        <div data-method-block="deposit" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div data-method-block="deposit" @class(['grid gap-3 sm:grid-cols-2 lg:grid-cols-4', 'order-3 col-span-full' => $inline])>
             <x-ui.field name="deposit_slip_no" :label="__('money.field.deposit_slip')" :value="$was('deposit_slip_no')"
                         :hint="__('money.hint.reference_needed')" required />
             <label class="block">
@@ -154,7 +161,7 @@
 
     {{-- ── চেক: নম্বর · তারিখ · ব্যাংক ── --}}
     <template x-if="method === 'cheque'">
-        <div data-method-block="cheque" class="flex flex-col gap-2">
+        <div data-method-block="cheque" @class(['flex flex-col gap-2', 'order-3 col-span-full' => $inline])>
             <div class="grid gap-3 sm:grid-cols-3">
                 <x-ui.field name="instrument_no" :label="__('money.field.cheque_no')" :value="$was('instrument_no')" required />
                 <label class="block">
@@ -172,5 +179,5 @@
 
     {{-- ── চার্জ কোথায় যাবে — এক লাইনে (নকশা #৯) ── --}}
     <p data-charge-line x-show="hasCharge" x-cloak x-text="chargeLine"
-       class="border-s-2 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-xs text-(--color-badge-info-ink)"></p>
+       @class(['border-s-2 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-xs text-(--color-badge-info-ink)', 'order-4 col-span-full' => $inline])></p>
 </div>

@@ -53,11 +53,11 @@ final class WithheldTax
             ]);
         }
 
-        $account = StandardChart::find(StandardChart::TAX_DEDUCTED_AT_SOURCE);
-
-        if ($account === null) {
-            throw ValidationException::withMessages([
-                'ait_amount' => __('accounts::validation.missing_account', ['code' => StandardChart::TAX_DEDUCTED_AT_SOURCE]),
+        // ⭐ AIT ২১২১-এ, VDS ২১২২-এ — আলাদা রিটার্ন, আলাদা খাত (fe, ২১ অক্টোবর ২০২৬)
+        $accounts = [];
+        foreach (['ait' => StandardChart::TAX_DEDUCTED_AT_SOURCE, 'vds' => StandardChart::VDS_PAYABLE] as $kind => $code) {
+            $accounts[$kind] = StandardChart::find($code) ?? throw ValidationException::withMessages([
+                $kind.'_amount' => __('accounts::validation.missing_account', ['code' => $code]),
             ]);
         }
 
@@ -80,7 +80,7 @@ final class WithheldTax
         foreach (['ait' => $ait, 'vds' => $vds] as $kind => $value) {
             if (bccomp($value, '0', 4) > 0) {
                 $lines[] = [
-                    'account_id' => (int) $account->id,
+                    'account_id' => (int) $accounts[$kind]->id,
                     'debit' => '0',
                     'credit' => $value,
                     'narration' => trim(__('accounts::field.withheld_'.$kind).' — '.($narration ?? ''), ' —'),

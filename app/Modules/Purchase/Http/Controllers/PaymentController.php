@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Controllers;
 
+use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Http\JsonResponse;
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\GrandTotals;
@@ -45,6 +49,8 @@ class PaymentController extends Controller implements HasMiddleware
         return [
             ...static::resourcePermissions(Payment::class, 'payment'),
             new Middleware('can:purchase.payment.create', only: ['confirm']),
+            // ⓘ প্রিভিউ ফর্মেরই অংশ — যিনি পরিশোধ লিখতে পারেন, কেবল তিনিই
+            new Middleware('can:purchase.payment.create', only: ['simulate']),
             new Middleware('can:purchase.payment.cancel', only: ['cancel']),
         ];
     }
@@ -110,9 +116,79 @@ class PaymentController extends Controller implements HasMiddleware
     {
         $document = $this->service->create($request->documentData(), $request->lineData());
 
-        return redirect()
-            ->route('purchase.payment.show', $document)
-            ->with('saved', __('purchase::message.payment_created'));
+        return $this->afterSave($request, $document, __('purchase::message.payment_created'));
+    }
+
+    /**
+     * ⭐ পোস্টের আগে খাতায় যা যাবে — Dr/Cr, খাত আর শাখা (নকশা #১০, SAP-এর "Simulate")। ⓘ কিছুই লেখা হয় না: ফর্মের মান থেকে
+     * একটা না-রাখা পরিশোধ বানিয়ে পোস্টের একই [[PaymentService::linesFor()]] ডাকা হয় — তাই প্রিভিউ আর খাতা কখনো আলাদা নয়।
+     */
+    public function simulate(PaymentRequest $request): JsonResponse
+    {
+        $data = $request->documentData();
+        $paper = new Payment([
+            ...$data,
+            'document_no' => '—',
+            'charge_amount' => blank($data['charge_amount'] ?? null) ? '0' : $data['charge_amount'],
+        ]);
+        $supplier = Supplier::query()->find((int) $data['supplier_id']);
+        // ⭐ কাটা — পোস্টের একই হিসাবে ([[PaymentWithholding::forLines()]]); প্রিভিউ আর খাতা কখনো আলাদা নয়
+        $cut = \App\Modules\Purchase\Services\PaymentWithholding::forLines($supplier, $request->lineData());
+        $paper->forceFill(['ait_amount' => $cut['ait'], 'vds_amount' => $cut['vds']]);
+        $branchId = $supplier === null ? null : (app(\App\Core\Services\PartyRegistry::class)
+            ->branchesOf([['supplier', (int) $supplier->id]])['supplier:'.$supplier->id] ?? null);
+        $branch = \App\Models\Branch::query()->find($branchId ?? CompanyContext::branchId());
+
+        $rows = [];
+        $debit = '0';
+        $credit = '0';
+        foreach ($this->service->linesFor($paper) as $line) {
+            $account = Account::query()->find((int) $line['account_id']);
+            $d = (string) ($line['debit'] ?? '0');
+            $c = (string) ($line['credit'] ?? '0');
+            $rows[] = [
+                'account' => $account === null ? '—' : $account->code.' '.$account->name(),
+                'party' => ($line['party_type'] ?? null) === 'supplier' ? $supplier?->name() : null,
+                'branch' => $branch?->name(),
+                'debit' => bccomp($d, '0', 4) > 0 ? Money::format($d) : '',
+                'credit' => bccomp($c, '0', 4) > 0 ? Money::format($c) : '',
+            ];
+            $debit = bcadd($debit, $d, 4);
+            $credit = bcadd($credit, $c, 4);
+        }
+
+        return response()->json([
+            'rows' => $rows,
+            'debit' => Money::format($debit),
+            'credit' => Money::format($credit),
+            'balanced' => bccomp($debit, $credit, 4) === 0,
+            'ait' => Money::format($cut['ait']),
+            'vds' => Money::format($cut['vds']),
+            'net' => Money::format(bcsub(bcsub(bcadd((string) ($data['amount'] ?? '0'), '0', 4), $cut['ait'], 4), $cut['vds'], 4)),
+        ]);
+    }
+
+    /**
+     * ⭐ নিচের বোতাম-সারি (নকশা): "খসড়া রাখুন" কেবল রাখে; "পোস্ট" (বা "সইয়ে পাঠান") রেখে সাথে সাথে পোস্টের চেষ্টা করে।
+     * ⓘ সই লাগলে ([[HeldForApproval]]) কাগজ সইয়ের পথে যায় — ভুল নয়, তাই দেখানোর পাতায় "সইয়ে পাঠানো হল"। অন্য বাধায় খসড়া
+     * থাকে আর সম্পাদনায় ফেরে, কারণসহ — লেখা হারায় না।
+     */
+    private function afterSave(Request $request, Payment $payment, string $saved): RedirectResponse
+    {
+        if ($request->input('intent') !== 'post') {
+            return redirect()->route('purchase.payment.show', $payment)->with('saved', $saved);
+        }
+
+        try {
+            $this->service->confirm($payment->fresh());
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+            return redirect()->route('purchase.payment.show', $payment)->with('saved', __('purchase::message.payment_sent_to_sign'));
+        } catch (ValidationException $e) {
+            return redirect()->route('purchase.payment.edit', $payment)->withErrors($e->errors())->withInput()
+                ->with('saved', $saved);
+        }
+
+        return redirect()->route('purchase.payment.show', $payment)->with('saved', __('purchase::message.payment_confirmed'));
     }
 
     public function show(Request $request, Payment $payment): View
@@ -141,9 +217,7 @@ class PaymentController extends Controller implements HasMiddleware
     {
         $this->service->update($payment, $request->documentData(), $request->lineData());
 
-        return redirect()
-            ->route('purchase.payment.show', $payment)
-            ->with('saved', __('purchase::message.payment_updated'));
+        return $this->afterSave($request, $payment, __('purchase::message.payment_updated'));
     }
 
     public function confirm(Payment $payment): RedirectResponse
@@ -205,14 +279,36 @@ class PaymentController extends Controller implements HasMiddleware
     private function formData(): array
     {
         $moneyCodes = StandardChart::MONEY_PARENTS;
+        $accounts = self::moneyAccounts();
+        $suppliers = Supplier::query()->inViewedBranch()->activeOrOwing()->forPurchasing()->orderBy('name_en')->get();
 
         return [
+            // ⓘ যাঁদের ব্যাংক তথ্য (সই-পাওয়া বা অপেক্ষার) আছে — এক প্রশ্নে; পর্দা কেবল এঁদের বাক্স আঁকে (নকশা #৬)
+            'bankSuppliers' => $suppliers->whereIn('id', \App\Modules\Supplier\Models\SupplierBankDetail::query()
+                ->whereIn('supplier_id', $suppliers->pluck('id'))->distinct()->pluck('supplier_id')->all())->values(),
+            /*
+             * ⭐ নকশার ডানের "নিয়ন্ত্রণ" আর নিচের মূল বোতাম — কোম্পানিতে টাকা দেওয়ায় সই চালু থাকলে "সইয়ে পাঠান", নইলে "পোস্ট"
+             * (নকশা #১১)। ⓘ পোস্টের মুহূর্তে আসল বিচার [[DocumentApproval::assertClear()]]-এর; এটা কেবল বোতামের নাম।
+             */
+            'signatures' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->requires('purchase', 'payment', null, class_basename(Payment::class)),
+            'threeHands' => (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true),
+            'modes' => \App\Modules\MasterData\Models\TransferMode::query()->orderBy('code')->get()
+                ->mapWithKeys(fn ($m) => [$m->id => $m->name_en ?: $m->code])->all(),
+
+            /*
+             * ⭐ খাতে টাকা আছে কি না (নকশা #২৪) — প্রতিটা টাকার খাতের ধরন আর এখনকার জের, পাতা খোলার মুহূর্তের। ⓘ পোস্টের আসল
+             * পাহারা নগদ আর MFS-এ ([[PaymentService::assertMoneyIsThere()]]); ব্যাংকে কম থাকলে কেবল সতর্কতা।
+             */
+            'balances' => $accounts->mapWithKeys(fn (Account $a) => [$a->id => [
+                'kind' => $a->money_kind,
+                'balance' => bcadd($a->balanceInView(), '0', 2),
+            ]])->all(),
             // ⭐ কেবল পণ্যের সরবরাহকারী — পরিশোধ ক্রয় বিল মেটায়; সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬)
             // ⭐ জের-থাকা নিষ্ক্রিয় সরবরাহকারীও — বন্ধ সরবরাহকারীর বাকি দেনা মেটানোর পথ ([[PickableWhileOwing]], ১৩ অক্টোবর ২০২৬)
-            'suppliers' => Supplier::query()->inViewedBranch()->activeOrOwing()->forPurchasing()->orderBy('name_en')->get(),
+            'suppliers' => $suppliers,
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
-            'accounts' => self::moneyAccounts(),
+            'accounts' => $accounts,
 
             /*
              * যে বিলগুলোয় এখনো টাকা বাকি।
@@ -236,6 +332,9 @@ class PaymentController extends Controller implements HasMiddleware
                  * পুরনো বাকি শোধ।
                  */
                 ->stillOwed()
+                // ⭐ শেষ দিনের ক্রমে — আগে যেটার দিন পেরোয়, টাকা আগে সেটায় (নকশা #৩: "শেষ দিনের ক্রমে"); দিন না থাকলে শেষে, তারিখ ধরে
+                ->orderByRaw('due_on IS NULL')
+                ->orderBy('due_on')
                 ->orderBy('trx_date')
                 ->orderBy('id')
                 ->limit(500)

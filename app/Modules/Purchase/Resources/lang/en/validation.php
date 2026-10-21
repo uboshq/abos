@@ -59,6 +59,7 @@ return [
     'unknown_account' => 'That account is not in this company chart.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not leave from there.',
     'not_enough_money_in' => ':account holds :held — :amount cannot be paid from it. Cash on hand never goes below zero.',
+    'charge_needs_bank_or_mfs' => 'A charge applies only to a bank or MFS account — leave it at zero when paying from cash.',
 
     // Return
     'zero_value_return' => 'A return worth nothing does not go in the books.',
@@ -129,4 +130,5 @@ return [
     'requisition_over_budget' => 'This cost centre has :budget for the month and :already is already approved. Adding the :asking on this paper goes past the limit - either the budget rises or the request comes down.',
 
     'withheld_over_total' => 'Tax withheld at source (:withheld) cannot exceed the bill total (:total).',
+    'withheld_twice' => 'Tax was already withheld on bill :no — it cannot be withheld again on the payment.',
 ];

@@ -87,6 +87,7 @@ return [
         'sales.shipment' => 'Shipments',
         'sales.target' => 'Targets',
         'supplier' => 'Suppliers',
+        'supplier.bank' => 'Supplier bank details',
         'system_admin.audit' => 'Audit',
         'system_admin.backup' => 'Backup settings',
         'system_admin.company' => 'Company',
