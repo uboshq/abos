@@ -12,7 +12,7 @@ return [
     'confirmed' => 'নিশ্চিত',
     'cancelled' => 'বাতিল',
     'approved' => 'অনুমোদিত',
-    'rejected' => 'নামঞ্জুর',
+    'rejected' => 'প্রত্যাখ্যাত',
     'end_session' => 'বের করে দিন',
     'end_other_sessions' => 'বাকি সব জায়গা থেকে বেরোন',
     'only_failed' => 'কেবল ব্যর্থ',

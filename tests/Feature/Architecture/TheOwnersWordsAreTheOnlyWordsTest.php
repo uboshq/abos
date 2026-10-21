@@ -25,7 +25,9 @@ use Tests\TestCase;
  *    ⛔ `lang/bn/core.php` আর `lang/bn/validation.php` বাদ — ওগুলো এই কাজে বদলানো নিষেধ (fe-র নিয়ম); ওদের পুরনো শব্দ fe-র তালিকায়।
  *  - যেখানে পুরনো শব্দটার মানে অন্য (মালের ফেরত, ডকুমেন্টের আলাদা অনুমোদন ধাপ ...), সেটা নিচের তালিকায় নাম-ধরে, কারণসহ;
  *    ⛔ তালিকার প্রতিটা ছাড় সত্যিই কোনো লেখায় লাগে — বাসি ছাড় পড়ে থাকে না।
- *  - পর্দায় যে অবস্থার লেখা দেখায় (posted, waiting, sent_back) তা ফাইলের লেখার হুবহু সমান, আর সইয়ের বোতাম হুবহু "সই দিন"।
+ *  - পর্দায় যে অবস্থার লেখা দেখায় (posted, waiting, sent_back, rejected) তা ফাইলের লেখার হুবহু সমান, আর সইয়ের বোতাম হুবহু
+ *    "সই দিন" (ছুটি আর রিকুইজিশনে "মঞ্জুর করুন")।
+ *  - core.php-র কেবল fe-র অনুমতির তিনটা জায়গা: status.awaiting_approval, notice.more_in_bell, বিজ্ঞপ্তির ব্লক।
  */
 final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
 {
@@ -48,6 +50,12 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         'attendance_old' => ['/উপস্থিতি/u', 'হাজিরা "হাজিরা"'],
     ];
 
+    /**
+     * ⓘ ছুটি আর রিকুইজিশনের বোতাম "সই দিন" নয়, "মঞ্জুর করুন" — "মঞ্জুর" ছুটির রোজকার শব্দ (fe-র সিদ্ধান্ত, ২১ অক্টোবর ২০২৬);
+     * মেশানো কিছু নয় ("সই দিন" বা "মঞ্জুর" একা নয়)।
+     */
+    private const LEAVE_APPROVE = 'মঞ্জুর করুন';
+
     /** বিজ্ঞপ্তি মডিউলে "খবর" মানে বিজ্ঞপ্তিই — সেখানে আলাদা নিয়ম */
     private const NOTIFICATION_NEWS = '/খবর/u';
 
@@ -67,10 +75,6 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
             'ডকুমেন্টে অনুমোদন আর সই দুই আলাদা ধাপ — দুইটা গোনা পাশাপাশি'],
         ['waiting_old', 'app/Modules/Documents/Resources/lang/bn/screen.php', 'আমার অনুমোদনের অপেক্ষায়',
             'ডকুমেন্টে অনুমোদন আর সই দুই আলাদা ধাপ — এটা অনুমোদনের ইনবক্স'],
-        ['notification_news', 'app/Modules/Notification/Resources/lang/bn/dashboard.php', 'গত 30 দিনের খবর',
-            'cb/web-standard-2-এর লেখা (অঙ্ক বদল, ২০ অক্টোবর) — ওই শাখার লেখা এই কাজে ছোঁয়া নিষেধ; fe মেলাবেন'],
-        ['notification_news', 'app/Modules/Notification/Resources/lang/bn/dashboard.php', 'গত 30 দিনে ঘণ্টায় যত খবর গেছে',
-            'cb/web-standard-2-এর লেখা (অঙ্ক বদল, ২০ অক্টোবর) — ওই শাখার লেখা এই কাজে ছোঁয়া নিষেধ; fe মেলাবেন'],
         ['notification_news', 'app/Modules/Notification/Resources/lang/bn/channel.php', 'ফেরত-খবরের গোপন চাবি',
             'প্রোভাইডারের ফেরত-বার্তা (webhook) — আমাদের বিজ্ঞপ্তি নয়'],
     ];
@@ -175,18 +179,41 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
             'governance::action.sent_back' => $states['sent_back']['label_bn'],
             // rejected — "ফেরত" নয়, যাতে সংশোধনে ফেরতের সাথে না মেশে
             'approval::status.rejected' => $states['rejected']['label_bn'],
+            'accounts::vx.decision.rejected' => $states['rejected']['label_bn'],
+            'governance::action.rejected' => $states['rejected']['label_bn'],
             // approve button
             'approval::action.approve' => self::APPROVE,
             'promotion::action.approve' => self::APPROVE,
             'promotion::approval.sign' => self::APPROVE,
             'sales::delivery_order.approve' => self::APPROVE,
             'accounts::action.approve_count' => self::APPROVE,
+            // ছাড়: ছুটি আর রিকুইজিশন — "মঞ্জুর" ছুটির রোজকার শব্দ
+            'hr::action.approve' => self::LEAVE_APPROVE,
+            'purchase::action.approve_requisition' => self::LEAVE_APPROVE,
         ];
 
         foreach ($want as $key => $text) {
             $this->assertNotSame($key, __($key, [], 'bn'), "প্রস্তুতিটাই ভুল — {$key} চাবিটাই নেই।");
             $this->assertSame($text, __($key, [], 'bn'), "⛔ {$key} মালিকের শব্দ বলে না।");
         }
+
+        /*
+         * ⓘ core.php: fe-র অনুমতি, ২১ অক্টোবর ২০২৬ — শুধু status.awaiting_approval, notice.more_in_bell আর বিজ্ঞপ্তির
+         * (`notify`) ব্লকের "খবর"; ফাইলের বাকিটা এই দাবির বাইরে।
+         */
+        $this->assertSame($states['waiting']['label_bn_without_level'], __('core.status.awaiting_approval', [], 'bn'), '⛔ core-এর অপেক্ষার লেখা মালিকের শব্দ নয়।');
+        $bell = __('core.notice.more_in_bell', ['count' => 3], 'bn');
+        $this->assertStringContainsString('বিজ্ঞপ্তি', $bell, '⛔ ঘণ্টার "আরও" লেখায় বিজ্ঞপ্তি নেই।');
+        $this->assertStringNotContainsString('নোটিশ', $bell, '⛔ ঘণ্টার বিজ্ঞপ্তিকে "নোটিশ" বলা হলো।');
+        $notify = (require lang_path('bn/core.php'))['notify'] ?? null;
+        $this->assertIsArray($notify, 'প্রস্তুতিটাই ভুল — core.php-তে বিজ্ঞপ্তির ব্লক নেই।');
+        $news = [];
+        array_walk_recursive($notify, function ($text, $key) use (&$news): void {
+            if (is_string($text) && str_contains($text, 'খবর')) {
+                $news[] = "notify…{$key}: {$text}";
+            }
+        });
+        $this->assertSame([], $news, "⛔ core.php-র বিজ্ঞপ্তির ব্লকে এখনো \"খবর\":\n".implode("\n", $news));
 
         // ⓘ চিপ নিজেও ফাইলের লেখা আঁকে
         $this->assertSame($states['posted']['label_bn_short_without_level'], PaperStates::chip('posted')['label']);

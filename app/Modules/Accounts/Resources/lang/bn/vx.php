@@ -98,7 +98,7 @@ return [
     'tk' => '৳',
     'decision' => [
         'approved' => 'অনুমোদিত',
-        'rejected' => 'নামঞ্জুর',
+        'rejected' => 'প্রত্যাখ্যাত',
         'returned' => 'সংশোধনে ফেরত',
         'forwarded' => 'এগিয়ে দেওয়া',
         'submitted' => 'জমা',
