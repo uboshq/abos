@@ -150,7 +150,7 @@
 
     {{-- ⭐ ⊞ · লোগো · কোম্পানি · শাখা ▾ — এক সারিতে, ৩৭৫ থেকে ১৯২০px (মালিক, ২১ অক্টোবর ২০২৬)।
          ⓘ "≡"-এর কিনারা থেকে ঠিক ১৪px: ঘরের ভেতরে "≡"-এর ডানে (রেল − ৪০px) ÷ ২ ফাঁকা, তার পরে বারের `gap-2` — দুইটা বাদ দিয়ে বাকিটা। --}}
-    <div data-shell-start @class(['flex min-w-0 shrink items-center gap-[12px]',
+    <div data-shell-start @class(['flex min-w-0 shrink items-center gap-[12px] max-sm:gap-0',
                                   'md:ms-[calc(14px_-_0.5rem_-_(var(--spacing-sidebar-icon)_-_40px)_/_2)]' => $overRail])>
         {{-- ⭐ ⊞ সব মডিউল — Odoo-র হোমের মতো পুরো পর্দা (মালিক, ২১ অক্টোবর ২০২৬; Google · M365 · Fiori সবারই আছে)।
              ⓘ টাইল রেলের একই তালিকা থেকে ($menu: অনুমতি আর মডিউলের সুইচ দুইটাই দেখা), তাই রেলে যা নেই লঞ্চারেও নেই। --}}
@@ -160,7 +160,9 @@
 
         {{-- ⭐ গ্রাহকের ব্র্যান্ড — চলতি কোম্পানির লোগো, চাপলে হোম; লোগো না থাকলে আদ্যক্ষরের ব্যাজ (উপরের `@php`)।
              মাপ: উচ্চতা ২৮px (৩২px পাতের ভেতরে), চওড়া বড়জোর ১৪০px, `object-contain` — চওড়া লোগো ছোট হয়, ভাঙে না।
-             অন্ধকারে লোগোর পেছনে হালকা পাত (`--color-company-logo-plate`), আলোতে পাতটা স্বচ্ছ।
+             ⓘ ফোনে (sm-এর নিচে) বড়জোর ৫৬px: ৩৭৫px-এ ডানের কাজগুলোর পরে লোগো আর খোঁজার আইকনের জন্য ~১০৭px থাকে; ৬:১ লোগো
+             ১৪০px নিলে খোঁজার আইকনটা লোগোর উপর চেপে বসত (ছবিতে দেখা, ২১ অক্টোবর ২০২৬)।
+             লোগোর পেছনে হালকা পাত (`--color-company-logo-plate`) — অন্ধকারে, আর আলোতেও, কারণ এই রূপের বার আলোতেও গাঢ়।
              ⛔ আগে এখানে ABOS-এর চিহ্ন, আর কোম্পানির লোগো সুইচারের ভেতরে — এখন লোগো একবারই, এখানে; সুইচারে কেবল নাম। --}}
         <a href="{{ route('dashboard') }}" data-shell-logo data-shell-brand="{{ $company?->id }}"
            class="flex shrink-0 items-center rounded-(--radius-field)
@@ -168,9 +170,9 @@
            title="{{ $brandName }}"
            @unless ($brandLogo) aria-label="{{ $brandName }}" @endunless>
             @if ($brandLogo)
-                <span class="flex h-[32px] max-w-[140px] items-center rounded-[6px] bg-(--color-company-logo-plate) px-[2px]">
+                <span class="flex h-[32px] max-w-[140px] items-center rounded-[6px] bg-(--color-company-logo-plate) px-[4px] max-sm:max-w-[56px]">
                     <img src="{{ $brandLogo }}" alt="{{ $brandName }}" data-company-logo
-                         class="h-[28px] w-auto max-w-[136px] object-contain">
+                         class="h-[28px] w-auto max-w-[132px] object-contain max-sm:max-w-[48px]">
                 </span>
             @else
                 <span data-company-initials aria-hidden="true"
@@ -182,7 +184,7 @@
         {{-- কোম্পানি · শাখা ▾ — লোগোর ঠিক পাশে, সব মাপে (ফোনে নাম ছোট হয়ে কাটে, বার নয়); লোগো বাঁয়ের চিহ্নেই, তাই এখানে নয় --}}
         @if ($company)
             <div class="min-w-0 shrink" data-shell-company>
-                <x-shell.company-switcher :company="$company" :branch="$branch" :logo="false" />
+                <x-shell.company-switcher :company="$company" :branch="$branch" beside-mark />
             </div>
         @endif
     </div>

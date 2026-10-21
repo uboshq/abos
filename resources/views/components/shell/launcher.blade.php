@@ -74,7 +74,8 @@
     }
 @endphp
 
-<div x-data="launcher" class="relative shrink-0" data-module-launcher-box
+{{-- ⓘ `max-sm:contents` — ফোনে বোতাম লুকানো, আর বাক্সটাও কোনো ঘর নেয় না (নইলে বারে ১২px ফাঁকা থেকে যেত); পাতাটা `fixed`, তাই দেখায় --}}
+<div x-data="launcher" class="relative shrink-0 max-sm:contents" data-module-launcher-box
      @open-module-launcher.window="show()"
      @keydown.window="hotkey($event)">
     {{-- ⓘ ফোনে (sm-এর নিচে) বোতামটা বারে নয়, নিচের নেভিগেশনের "আরও"-তে ([[shell.bottom-nav]]) — পাতাটা একই, এখান থেকেই খোলে।

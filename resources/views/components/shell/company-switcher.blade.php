@@ -2,11 +2,13 @@
     'company',
     'branch' => null,
     /**
-     * ⭐ বোতামে কোম্পানির লোগো — বারে নয় (মালিক, ২১ অক্টোবর ২০২৬): বারের বাঁ কোণে লোগোটা নিজেই ব্র্যান্ডের চিহ্ন
-     * ([[shell.topbar]]-এর `data-shell-logo`), তাই সেখানে এটা `false` — একই লোগো পাশাপাশি দুইবার নয়।
-     * ⓘ যে রূপে বারের চিহ্ন নেই (Linear-এর পা), সেখানে আগের মতোই এখানে।
+     * ⭐ বারে, কোম্পানির নিজের লোগোর পাশে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.topbar]]-এর `data-shell-logo`):
+     *  · বোতামে লোগো নেই — লোগোটা বাঁয়ের চিহ্নেই, একই লোগো পাশাপাশি দুইবার নয়;
+     *  · ফোনে (sm-এর নিচে) বোতামটাই নেই — "কেবল লোগো বা ব্যাজ"; নাম আর ▾ জায়গা না পেয়ে খোঁজার আইকনের উপর চেপে বসত
+     *    (ছবিতে মাপা)। ⓘ তালিকাটা তবু খোলে: ছবির মেনুর "কোম্পানি" সারি `open-company-switcher` পাঠায়, তালিকাটা এই বাক্সেই।
+     * ⓘ যে রূপে বারের চিহ্ন নেই (Linear-এর পা), সেখানে আগের মতোই লোগোসহ বোতাম।
      */
-    'logo' => true,
+    'besideMark' => false,
 ])
 
 {{--
@@ -65,6 +67,7 @@
             aria-label="{{ __('core.company.switch') }}"
             @class([
                 'flex min-h-(--spacing-touch) min-w-0 max-w-full items-center gap-2 rounded-(--radius-field) px-2 transition-colors',
+                'max-sm:hidden' => $besideMark,
                 'hover:bg-(--color-surface-hover)' => $canSwitch,
                 'cursor-default' => ! $canSwitch,
             ])
@@ -77,7 +80,7 @@
              ঘরটা ৪০px — টপবার ৬৪px, পাশের নাম+শাখা ব্লকও প্রায় ততটাই।
              max-w ১২৮px, ৬৪px নয়: চওড়া লকআপ (৬:১ বা তার বেশি) সরু ঘরে
              উচ্চতা পায় না, তখন লেখাটা দাগ হয়ে যায়। --}}
-        @if ($logo && ($logoUrl = $company->logoUrl()))
+        @if (! $besideMark && ($logoUrl = $company->logoUrl()))
             <img src="{{ $logoUrl }}" alt=""
                  class="h-10 w-auto max-w-32 shrink-0 object-contain" aria-hidden="true">
         @endif
