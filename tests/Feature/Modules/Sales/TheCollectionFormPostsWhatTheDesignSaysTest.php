@@ -418,6 +418,45 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     // ══ দফা ১০ — খাতার প্রিভিউ ══════════════════════════════════════════
 
     /** দফা ১০ — প্রিভিউর লাইন = পোস্টের লাইন: একই খাত, একই অঙ্ক, Dr = Cr, আর প্রিভিউ কিছুই লেখে না */
+    /**
+     * দফা ১০ — পার্থক্য থাকলে প্রিভিউ আর আসল পোস্ট দুটোতেই Dr-এর যোগ = Cr-এর যোগ = বিলে প্রয়োগ, আর পার্থক্যের নিজের সারি
+     * (রাউন্ডিং ০.৫১ → Dr ৫৩০৫, ছাড় → Dr ৪১২০) — fe, ২২ অক্টোবর ২০২৬ (অ্যাপের নকল প্রিভিউতে ৫৩০৫ ছিল না; সার্ভারেরটা বেঁধে রাখা)।
+     */
+    public function test_item_10_with_a_difference_the_preview_and_the_post_both_balance_to_what_was_applied(): void
+    {
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+
+        foreach ([['rounding', '0.51', StandardChart::ROUNDING_DIFFERENCE, 'R'], ['discount', '50', StandardChart::COLLECTION_DISCOUNT, 'D']] as [$kind, $diff, $code, $tag]) {
+            $applied = bcadd('1000', $diff, 4);
+            $bill = $this->bill('INV-CF-B'.$tag, 10, $applied);
+            $extra = ['amount' => '1000', 'difference' => ['kind' => $kind, 'amount' => $diff],
+                'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => $applied]]];
+
+            $preview = $this->actingAs($this->maker)->postJson(route('sales.collection.preview'), $this->form($extra))->assertOk()->json();
+            $own = collect($preview['lines'])->first(fn (array $l) => str_starts_with($l['account'], $code.' '));
+            $this->assertNotNull($own, "⛔ দফা ১০: {$kind}-এর প্রিভিউতে {$code}-এর সারি নেই");
+            $this->assertSame(0, bccomp((string) $own['dr'], $diff, 4), "⛔ দফা ১০: {$kind}-এর প্রিভিউতে {$code} Dr {$diff} নয়");
+            $this->assertSame(0, bccomp((string) $preview['total_dr'], $applied, 4), "⛔ দফা ১০: {$kind}-এর প্রিভিউতে Dr-এর যোগ বিলে প্রয়োগের সমান নয়");
+            $this->assertSame(0, bccomp((string) $preview['total_cr'], $applied, 4), "⛔ দফা ১০: {$kind}-এর প্রিভিউতে Cr-এর যোগ বিলে প্রয়োগের সমান নয়");
+
+            $collection = $this->bookAllowingStops($extra);
+            $approval = Approval::query()->where('action', 'discount')->where('status', Approval::PENDING)->latest('id')->first();
+            $this->assertNotNull($approval, "⛔ দফা ১০: {$kind}-এ মালিকের সইয়ের অনুরোধ যায়নি");
+            app(ApprovalEngine::class)->approve($approval->fresh(), $this->owner);
+            if ($collection->fresh()->status === DocumentStatus::DRAFT) {
+                $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
+            }
+            $this->assertSame(DocumentStatus::CONFIRMED, $collection->fresh()->status, "⛔ দফা ১০: {$kind}-এর আদায় সইয়ের পরেও পোস্ট হলো না");
+
+            $rows = LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)->get();
+            $dr = $rows->reduce(fn (string $s, LedgerEntry $e) => bcadd($s, (string) $e->debit, 4), '0');
+            $cr = $rows->reduce(fn (string $s, LedgerEntry $e) => bcadd($s, (string) $e->credit, 4), '0');
+            $this->assertSame(0, bccomp($dr, $applied, 4), "⛔ দফা ১০: {$kind}-এর পোস্টে Dr-এর যোগ বিলে প্রয়োগের সমান নয়");
+            $this->assertSame(0, bccomp($cr, $applied, 4), "⛔ দফা ১০: {$kind}-এর পোস্টে Cr-এর যোগ বিলে প্রয়োগের সমান নয়");
+            $this->assertSame(0, bccomp($this->dr($code, $collection->fresh()), $diff, 4), "⛔ দফা ১০: {$kind}-এর পোস্টে {$code} Dr {$diff} নয়");
+        }
+    }
+
     public function test_item_10_the_preview_shows_exactly_the_lines_the_post_writes(): void
     {
         // ⓘ রাউন্ডিং ৳০.৫০ — সই-মুক্ত, তাই পোস্ট এক চাপেই খাতায়
