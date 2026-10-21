@@ -116,4 +116,7 @@ return [
     'owner_self_signed' => 'Owner signed his own paper',
     'salary_change_signed' => 'Salary change signed',
     'leaver_login_closed' => 'Login closed on leaving',
+    // ⭐ the payroll signer role, for one company's Managers ([[GrantPayrollSigners]], owner, 21 Oct 2026)
+    'payroll_signer_made' => 'Payroll signer role made',
+    'payroll_signer_given' => 'Payroll signer role given',
 ];

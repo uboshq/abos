@@ -134,4 +134,7 @@ return [
     'owner_self_signed' => 'মালিক নিজের কাজে নিজে সই দিলেন',
     'salary_change_signed' => 'বেতন-বদলে সই',
     'leaver_login_closed' => 'চাকরি ছাড়ায় লগইন বন্ধ',
+    // ⭐ বেতনের সইয়ের রোল — এক কোম্পানির Manager-দের হাতে ([[GrantPayrollSigners]], মালিক, ২১ অক্টোবর ২০২৬)
+    'payroll_signer_made' => 'বেতনের সইয়ের রোল তৈরি',
+    'payroll_signer_given' => 'বেতনের সইয়ের রোল দেওয়া',
 ];
