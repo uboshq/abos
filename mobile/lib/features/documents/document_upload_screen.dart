@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
 import '../../core/documents_library/upload_api.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -78,8 +79,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'তোলার ফর্ম আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোন থেকে তোলা এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.documentsUploadFormFailed,
+            whenAbsent: context.l10n.documentsUploadAbsent));
       }
     }
   }
@@ -111,11 +112,11 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
   Future<void> _save() async {
     if (_paths.isEmpty) {
-      setState(() => _error = widget.scan ? 'আগে কাগজটার ছবি তুলুন।' : 'আগে অন্তত একটা ছবি বা ফাইল বাছুন।');
+      setState(() => _error = widget.scan ? context.l10n.documentsUploadTakePhotoFirst : context.l10n.documentsUploadPickFirst);
       return;
     }
     if (_folder == null || _type == null || _level == null) {
-      setState(() => _error = 'ফোল্ডার, ধরন আর গোপনীয়তা বাছুন।');
+      setState(() => _error = context.l10n.documentsUploadPickFields);
       return;
     }
     setState(() {
@@ -134,10 +135,10 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
           )));
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message.isNotEmpty ? message : '$count টি কাগজ তোলা হলো।')));
+          .showSnackBar(SnackBar(content: Text(message.isNotEmpty ? message : context.l10n.documentsUploaded(count))));
       Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'কাগজ তোলা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.documentsUploadFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -166,16 +167,17 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
   Widget _screen(BuildContext context) {
     final s = _setup;
+    final w = context.l10n;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.scan ? 'ক্যামেরায় স্ক্যান' : 'কাগজ তোলা'),
+      appBar: AbosScreenBar(title: widget.scan ? w.documentsScanTitle : w.documentsUploadTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             if (s == null && _error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: w.documentsLoadFailed, message: _error)
             else if (s == null)
               const Padding(padding: EdgeInsets.all(AppSpacing.xl), child: Center(child: CircularProgressIndicator()))
             else ...[
@@ -183,42 +185,42 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 OutlinedButton.icon(
                   key: const ValueKey('upload-pick'),
                   icon: Icon(widget.scan ? Icons.photo_camera_outlined : Icons.photo_library_outlined),
-                  label: Text(widget.scan ? 'ছবি তুলুন' : 'ছবি বাছুন'),
+                  label: Text(widget.scan ? w.documentsTakePhoto : w.documentsPickPhotos),
                   onPressed: _busy ? null : _pick,
                 ),
                 if (!widget.scan)
                   OutlinedButton.icon(
                     key: const ValueKey('upload-pick-file'),
                     icon: const Icon(Icons.attach_file),
-                    label: const Text('ফাইল বাছুন (PDF ইত্যাদি)'),
+                    label: Text(w.documentsPickFiles),
                     onPressed: _busy ? null : () => _pick(files: true),
                   ),
               ]),
               if (_paths.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  child: Text('${_paths.length} টি ফাইল — প্রতিটা আলাদা কাগজ হবে',
+                  child: Text(w.documentsUploadFileCount(_paths.length),
                       key: const ValueKey('upload-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
-              Text('ⓘ কোন ধরনের ফাইল চলে আর কত বড়, সার্ভার ওয়েবের নিয়মেই দেখে। লেখা পড়া (OCR) ওয়েবে।',
+              Text(w.documentsUploadRulesNote,
                   style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 key: const ValueKey('upload-name'),
                 controller: _name,
-                decoration: const InputDecoration(labelText: 'নাম (ফাঁকা রাখলে ফাইলের নাম)'),
+                decoration: InputDecoration(labelText: w.documentsUploadName),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _choose('upload-folder', 'ফোল্ডার', s.folders, _folder, (v) => setState(() => _folder = v)),
-              _choose('upload-type', 'ধরন', s.types, _type, (v) => setState(() => _type = v)),
-              _choose('upload-level', 'গোপনীয়তা', s.levels, _level, (v) => setState(() => _level = v)),
-              _choose('upload-branch', 'শাখা', s.branches, _branch, (v) => setState(() => _branch = v),
-                  allowNone: s.companyWide, noneLabel: 'গোটা কোম্পানি'),
+              _choose('upload-folder', w.documentsFolder, s.folders, _folder, (v) => setState(() => _folder = v)),
+              _choose('upload-type', w.documentsType, s.types, _type, (v) => setState(() => _type = v)),
+              _choose('upload-level', w.documentsLevel, s.levels, _level, (v) => setState(() => _level = v)),
+              _choose('upload-branch', w.documentsBranch, s.branches, _branch, (v) => setState(() => _branch = v),
+                  allowNone: s.companyWide, noneLabel: w.documentsWholeCompany),
               TextField(
                 key: const ValueKey('upload-description'),
                 controller: _description,
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)'),
+                decoration: InputDecoration(labelText: w.documentsDescriptionOptional),
               ),
               const SizedBox(height: AppSpacing.sm),
               if (_error != null)
@@ -229,7 +231,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
               FilledButton(
                 key: const ValueKey('upload-save'),
                 onPressed: _busy ? null : _save,
-                child: Text(_busy ? 'তোলা হচ্ছে…' : 'তুলুন'),
+                child: Text(_busy ? w.documentsUploading : w.documentsUpload),
               ),
             ],
           ],
