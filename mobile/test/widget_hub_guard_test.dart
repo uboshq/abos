@@ -87,7 +87,7 @@ void main() {
         response: Response(requestOptions: RequestOptions(path: '/widgets/summary'), statusCode: 401),
       );
 
-  test('a 401 after the session was ended remotely wipes all 21 docs and disables every widget', () async {
+  test('a 401 after the session was ended remotely wipes all 22 docs and disables every widget', () async {
     PhonePrivacy.amountsReader = () async => true;
     await WidgetHub.refresh();
     expect(saved['doc_money_in_hand'], isNotNull, reason: 'প্রস্তুতিটাই ভুল');

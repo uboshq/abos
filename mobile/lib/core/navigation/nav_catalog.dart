@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../menu/menu_item.dart';
 import '../theme/app_colors.dart';
@@ -320,6 +321,15 @@ class NavCatalog {
         label: 'প্রিন্সিপাল',
         icon: Icons.business_outlined,
         aliases: ['principal', 'supplier', 'সরবরাহকারী', 'কোম্পানি']),
+    // ── ⭐ সরবরাহকারী — প্রিন্সিপালের কমিশন (মালিকের আদেশ "app e dekhate hobe", fe-র মাধ্যমে; a4-এর নকশার নিয়ম ২;
+    // ২০ অক্টোবর ২০২৬)। চাবি সার্ভারের একই `supplier.report` ([MenuRepository]); দরজা ক্রয়ের ফোন-সুইচে, সার্ভারের মতো ([ModuleGate]) ──
+    NavScreenDef(
+        path: 'principal-commission',
+        module: 'supplier',
+        group: 'রিপোর্ট',
+        label: 'প্রিন্সিপালের কমিশন',
+        icon: Symbols.percent,
+        aliases: ['principal commission', 'commission', 'কমিশন', 'প্রিন্সিপাল', 'দেনা', 'পাওনা']),
     // ── মজুদ ──
     NavScreenDef(
         path: 'products',

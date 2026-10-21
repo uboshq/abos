@@ -13,6 +13,7 @@ import 'money_in_hand.dart';
 import 'notices.dart';
 import 'offers.dart';
 import 'owner_board.dart';
+import 'principal_commission.dart';
 import 'profit.dart';
 import 'quick_actions.dart';
 import 'sales_today.dart';
@@ -47,6 +48,8 @@ const List<String> widgetKeys = [
   'offers',
   'attendance',
   'bank_reconcile',
+  // ⭐ প্রিন্সিপালের কমিশন — মালিকের আদেশ "app e dekhate hobe" (cb, ২০ অক্টোবর ২০২৬); owner_board শেষেই থাকে
+  'principal_commission',
   'owner_board',
 ];
 
@@ -85,5 +88,6 @@ final List<LauncherWidgetKind> allKinds = <LauncherWidgetKind>[
   const OffersWidget(), // offers (a5)
   const AttendanceWidget(), // attendance — a6
   const BankReconcileWidget(), // bank_reconcile — cb
+  const PrincipalCommissionWidget(), // principal_commission — cb, ২০ অক্টোবর ২০২৬
   const OwnerBoardWidget(),
 ];

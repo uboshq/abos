@@ -1,7 +1,7 @@
 package com.abos.abos_mobile.widgets
 
 /**
- * ⭐ The 21 home-screen widgets of the widget kit (20 Oct 2026), one receiver each.
+ * ⭐ The 22 home-screen widgets (principal_commission added by cb, 20 Oct 2026) of the widget kit (20 Oct 2026), one receiver each.
  *
  * Every key is one widget the person can place. Dart writes the widget's
  * WidgetDoc under `doc_<key>` (lib/core/launcher_widgets/kit/widget_doc.dart),
@@ -36,6 +36,7 @@ object WidgetKeys {
         "offers" to OffersWidgetReceiver::class.java,
         "attendance" to AttendanceWidgetReceiver::class.java,
         "bank_reconcile" to BankReconcileWidgetReceiver::class.java,
+        "principal_commission" to PrincipalCommissionWidgetReceiver::class.java,
         "owner_board" to OwnerBoardWidgetReceiver::class.java,
     )
 
@@ -63,6 +64,7 @@ object WidgetKeys {
         "offers" to "অফার",
         "attendance" to "উপস্থিতি",
         "bank_reconcile" to "ব্যাংক মেলানো",
+        "principal_commission" to "প্রিন্সিপালের কমিশন",
         "owner_board" to "মালিকের পূর্ণ পর্দা",
     )
 

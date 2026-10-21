@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../features/accounts_chart/chart_screens.dart';
 import '../../features/approval_rows/approval_rows_screens.dart';
 import '../../features/approvals/my_requests_screen.dart';
+import '../../features/books/principal_commission_screen.dart';
 import '../../features/claims/claims_screens.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/dashboards/dashboards_screen.dart';
@@ -175,6 +177,13 @@ class NativeForWeb {
     '/sales/commissions': CommissionListScreen(),
   };
 
+  /// ⭐ প্রিন্সিপালের কমিশনের ওয়েব-পথ — ওয়েবের আসল পথ (`/suppliers/reports/principal-commission`, SupplierReportController)
+  /// আর চুক্তির `web_url`-এর বানান (`/supplier/…`), দুটোই এক পর্দায়
+  static const Set<String> principalCommissionPaths = {
+    '/suppliers/reports/principal-commission',
+    '/supplier/reports/principal-commission',
+  };
+
   /// দর তালিকার চার রকম — ওয়েবের `/sales/price-lists?target=`
   static const Set<String> priceLists = {'customer', 'tier', 'territory', 'all'};
 
@@ -185,6 +194,13 @@ class NativeForWeb {
 
     if (path == '/owner') {
       return const ModuleGateView(path: 'owner-centre', child: ExecutiveScreen());
+    }
+    // ⭐ প্রিন্সিপালের কমিশন — ওয়েবের রিপোর্টের পথ (নোটিশ, ড্যাশবোর্ডের "সব দেখুন", মেনু) ফোনের নিজের পর্দায়, মাসসহ
+    // (মালিকের আদেশ "app e dekhate hobe", ২০ অক্টোবর ২০২৬); রিপোর্টের সাধারণ পর্দার আগে
+    if (principalCommissionPaths.contains(path)) {
+      return ModuleGateView(
+          path: 'principal-commission',
+          child: PrincipalCommissionScreen(month: Uri.parse(webPath).queryParameters['month']));
     }
     // ⭐ a5-এর ভাগ — মালিকের কেন্দ্রের ছয় পাতা আর বিক্রয়ের পরিকল্পনার পাঁচ পাতা, শুধু দেখা; ওয়েবের একই সেবা আর চাবি
     // (মালিক, ১৭ অক্টোবর ২০২৬: "অ্যাপে ১০০%"; fe ১৯ অক্টোবর, a6-এর সাথে ভাগ — রিপোর্টের সারি a6-এর ব্লকে)
@@ -307,6 +323,10 @@ class NativeForWeb {
   /// ⓘ ওয়েবের "পরিশোধ" (`/accounts/vouchers/payment`) আর ফোনের "পেমেন্ট" (`vouchers/payment`) একই পর্দা, একই ছাঁকনি।
   static String? twinOf(String? webPath) {
     if (webPath == null) return null;
+    // ⓘ ওয়েবের "প্রিন্সিপালের কমিশন" সারি = ফোনের একই নামের ঘর (২০ অক্টোবর ২০২৬)
+    if (principalCommissionPaths.contains(Uri.parse(webPath).path.replaceAll(RegExp(r'/+$'), ''))) {
+      return 'principal-commission';
+    }
     final type = RegExp(r'^/accounts/vouchers/([a-z_-]+)/?$').firstMatch(Uri.parse(webPath).path)?.group(1);
     final view = _voucherViews[type];
     if (view == null || view == VoucherView.receipts.key) return null;
@@ -318,6 +338,7 @@ class NativeForWeb {
     if (webPath == null) return null;
     final path = Uri.parse(webPath).path.replaceAll(RegExp(r'/+$'), '');
     if (path == '/owner' || path == '/sales/overview') return Icons.insights_outlined;
+    if (principalCommissionPaths.contains(path)) return Symbols.percent;
     if (path.startsWith('/owner/') && ownerAndPlan.containsKey(path)) return Icons.insights_outlined;
     if (ownerAndPlan.containsKey(path)) return Icons.flag_outlined;
     final dashboard = RegExp(r'^/dashboard/([a-z_]+)$').firstMatch(path)?.group(1);

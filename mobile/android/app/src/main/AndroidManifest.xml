@@ -425,6 +425,18 @@
                 android:resource="@xml/widget_bank_reconcile" />
         </receiver>
         <receiver
+            android:name=".widgets.PrincipalCommissionWidgetReceiver"
+            android:label="@string/widget_principal_commission_name"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_principal_commission" />
+        </receiver>
+        <receiver
             android:name=".widgets.OwnerBoardWidgetReceiver"
             android:label="@string/widget_owner_board_name"
             android:exported="true"

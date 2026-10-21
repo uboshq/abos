@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget kit: প্রিন্সিপালের কমিশন (4x2 by default, resizes up to 4x6; cb, 20 Oct 2026). Drawn by widgets/DocWidget.kt (Glance) from doc_principal_commission.
+  updatePeriodMillis 0: the app redraws it whenever it has new figures, and on lock/unlock.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_kit_description" />

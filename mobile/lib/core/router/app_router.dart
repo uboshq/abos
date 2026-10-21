@@ -38,6 +38,7 @@ import '../books/collection_entry.dart';
 import '../../features/deliveries/deliveries_screen.dart';
 import '../../features/loading/loading_screens.dart';
 import '../../features/books/principal_screens.dart';
+import '../../features/books/principal_commission_screen.dart';
 import '../../features/books/purchase_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
@@ -295,6 +296,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'principals',
             builder: (context, state) => const ModuleGateView(
                 path: 'principals', child: PrincipalListScreen()),
+          ),
+          // ⭐ প্রিন্সিপালের কমিশন — সব মডিউল → সরবরাহকারী (মালিকের আদেশ "app e dekhate hobe", ২০ অক্টোবর ২০২৬)
+          _framed(
+            path: 'principal-commission',
+            builder: (context, state) => ModuleGateView(
+                path: 'principal-commission',
+                child: PrincipalCommissionScreen(month: state.uri.queryParameters['month'])),
           ),
           _framed(
             path: 'purchases',
