@@ -37,8 +37,9 @@ use Tests\TestCase;
  *
  * দাবি:
  *  · ধাপ খালি (ডিফল্ট) — কোনো TDS সারি নেই, রানের পাতায় "করের ধাপ বসানো নেই"।
- *  · ধাপ বসানো — মূল ৬১২৩৪.৫৬ + বাড়িভাড়া ৫০%: বার্ষিক ১১০২২২২.০৮, ছাড় এক-তৃতীয়াংশ ৩৬৭৪০৭.৩৬, করযোগ্য ৭৩৪৮১৪.৭২,
- *    কর ০ + ৫০০০ + ২৮৪৮১.৪৭২ = ৩৩৪৮১.৪৭২, মাসিক ২৭৯০.১২; বড় বেতনে ছাড় সীমায় আটকায় (৪৫০০০০) — মাসিক ৪৫৪১৬.৬৭।
+ *  · ধাপ বসানো — মূল ৬১২৩৪.৫৬ + বাড়িভাড়া ৫০%, আর বছরের দুই উৎসব ভাতা (২ × মূল; fe দফা ২): বার্ষিক ১২২৪৬৯১.২০, ছাড়
+ *    এক-তৃতীয়াংশ ৪০৮২৩০.৪০, করযোগ্য ৮১৬৪৬০.৮০, কর ০ + ৫০০০ + ৩৬৬৪৬.০৮ = ৪১৬৪৬.০৮, মাসিক ৩৪৭০.৫১; বড় বেতনে ছাড় সীমায়
+ *    আটকায় (৪৫০০০০) — মাসিক ৫৩৭৫০.০০।
  *  · খাতায় ২১৩২ ক্রেডিট = TDS সারির যোগ, পয়সা পর্যন্ত; দাখিলা মেলে।
  *  · বছরের সনদ — মাসে মাসে, যোগ = নিশ্চিত স্লিপগুলোর মোট আয় আর TDS-এর যোগ; ছাপা খোলে।
  *  · e-TIN — পরিচয়ের চাবি ছাড়া কর্মীর পাতা আর সনদে ঢাকা; চাবি থাকলে খোলা।
@@ -88,15 +89,15 @@ final class TaxIsDeductedAtSourceOnlyByTheSlabsTest extends TestCase
         $b = $this->employee('TX-B', '200000');
 
         $estimate = app(SalaryTax::class)->estimate($a, Carbon::parse('2026-07-31'));
-        $this->assertSame(0, bccomp($estimate['annual'], '1102222.08', 4));
-        $this->assertSame(0, bccomp($estimate['exempt'], '367407.36', 4));
-        $this->assertSame(0, bccomp($estimate['taxable'], '734814.72', 4));
-        $this->assertSame(0, bccomp($estimate['tax'], '33481.472', 4));
+        $this->assertSame(0, bccomp($estimate['annual'], '1224691.20', 4));
+        $this->assertSame(0, bccomp($estimate['exempt'], '408230.40', 4));
+        $this->assertSame(0, bccomp($estimate['taxable'], '816460.80', 4));
+        $this->assertSame(0, bccomp($estimate['tax'], '41646.08', 4));
 
         $run = $this->payroll()->build('2026-07-01');
 
-        $this->assertSame('2790.1200', $this->tdsOf($run, $a), '⛔ মাসিক কর ৩৩৪৮১.৪৭২ ÷ ১২ = ২৭৯০.১২ হওয়ার কথা।');
-        $this->assertSame('45416.6700', $this->tdsOf($run, $b), '⛔ বড় বেতনে ছাড় ৪৫০০০০-এ আটকানোর কথা — মাসিক ৪৫৪১৬.৬৭।');
+        $this->assertSame('3470.5100', $this->tdsOf($run, $a), '⛔ মাসিক কর ৪১৬৪৬.০৮ ÷ ১২ = ৩৪৭০.৫১ হওয়ার কথা (উৎসব ভাতাসহ)।');
+        $this->assertSame('53750.0000', $this->tdsOf($run, $b), '⛔ বড় বেতনে ছাড় ৪৫০০০০-এ আটকানোর কথা — মাসিক ৫৩৭৫০.০০।');
 
         $slip = $run->payslips()->where('employee_id', $a->id)->firstOrFail();
         $this->assertSame(0, bccomp((string) $slip->net, bcsub((string) $slip->gross, (string) $slip->deductions, 4), 4));
@@ -114,7 +115,7 @@ final class TaxIsDeductedAtSourceOnlyByTheSlabsTest extends TestCase
         $sum = $this->tdsLines($run)->reduce(fn ($c, $l) => bcadd($c, (string) $l->amount, 4), '0');
         $this->assertSame(0, bccomp($this->posted($run, StandardChart::TDS_PAYABLE, 'credit'), $sum, 4),
             '⛔ খাতার উৎসে কর আর বেতনের স্লিপের কর আলাদা।');
-        $this->assertSame(0, bccomp($sum, '48206.79', 4));
+        $this->assertSame(0, bccomp($sum, '57220.51', 4));
 
         $rows = LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->get();
         $this->assertSame(0, bccomp($rows->reduce(fn ($c, $e) => bcadd($c, (string) $e->debit, 4), '0'),
@@ -136,11 +137,11 @@ final class TaxIsDeductedAtSourceOnlyByTheSlabsTest extends TestCase
         $this->assertCount(2, $certificate['rows'], '⛔ আয়ের বছর জুলাই থেকে জুন — জুনের রান ২০২৫-২৬-এর।');
         $slips = collect([$july, $august])->map(fn (PayrollRun $r) => $r->payslips()->where('employee_id', $a->id)->firstOrFail());
         $this->assertSame(0, bccomp($certificate['gross'], $slips->reduce(fn ($c, $s) => bcadd($c, (string) $s->gross, 4), '0'), 4));
-        $this->assertSame(0, bccomp($certificate['tds'], '5580.24', 4), '⛔ সনদের কর দুই মাসের স্লিপের যোগ নয়।');
+        $this->assertSame(0, bccomp($certificate['tds'], '6941.02', 4), '⛔ সনদের কর দুই মাসের স্লিপের যোগ নয়।');
         $this->assertNotNull($june);
 
         $document = $this->printed($this->owner, route('hr.employee.tax_certificate', ['employee' => $a, 'year' => 2026]));
-        $this->assertContains(\App\Core\Support\Money::format('5580.24'), $document->totals);
+        $this->assertContains(\App\Core\Support\Money::format('6941.02'), $document->totals);
     }
 
     public function test_the_e_tin_is_masked_without_the_identity_key(): void

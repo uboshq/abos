@@ -605,7 +605,10 @@ final class PayrollService
          * থাকলে থামে — প্রদেয় বেতনে নীরবে মিশে গেলে সরকারের পাওনা কর্মীর পাওনা হয়ে দেখাত।
          */
         if ($this->tax->hasSlabs()) {
-            $tds = $this->tax->estimate($employee, $monthEnd, $components)['monthly'];
+            // ⭐ আয়ের বছরের শেষ মাসে (জুন) আনুমানিক ভাগ নয়, বছরের আসল আয়ের উপর সমন্বয় (fe, দফা ২; [[SalaryTax::trueUp()]])
+            $tds = SalaryTax::closesTheIncomeYear($monthEnd)
+                ? $this->tax->trueUp($employee, $monthEnd, $gross)['due']
+                : $this->tax->estimate($employee, $monthEnd, $components)['monthly'];
 
             if (bccomp($tds, '0', 2) > 0) {
                 $account = $this->tax->payableAccount();
@@ -1114,7 +1117,13 @@ final class PayrollService
     /** ⓘ উৎসব ভাতা — মূলের শতাংশ, ০ থেকে ১০০ (আইনের সীমা এক মাসের মূল); ভুল লেখায় ১০০ */
     private function bonusPercent(): string
     {
-        $value = trim((string) $this->settings->get(self::BONUS_PERCENT));
+        return self::clampBonusPercent($this->settings->get(self::BONUS_PERCENT));
+    }
+
+    /** ⓘ খাঁটি নিয়ম — সেটিংয়ের মান থেকে শতাংশ, ১০০-এর বেশি নয়; করের আনুমানিক হিসাবও এটাই পড়ে ([[SalaryTax::expectedBonus()]]) */
+    public static function clampBonusPercent(mixed $raw): string
+    {
+        $value = trim((string) $raw);
 
         if (! preg_match('/^\d{1,3}(\.\d{1,4})?$/', $value)) {
             return '100';
