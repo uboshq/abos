@@ -21,6 +21,7 @@ use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\PayrollRun;
+use App\Modules\Hr\Support\LeaveSigner;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
@@ -85,16 +86,28 @@ final class HrDashboard implements ProvidesDashboard
                  * করছেন, আর সিদ্ধান্ত না দিলে তিনি জানেন না কাল আসবেন
                  * কি না।
                  */
+                /*
+                 * ⭐ "আমার সইয়ের অপেক্ষায়" — কেবল যেগুলোতে এই মানুষ এখনই সই দিতে পারেন (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])।
+                 * ⓘ আগে এখানে দেখার শাখার সব অপেক্ষমাণ ছুটি গোনা হত, আর ব্যবস্থাপক অন্য দলের ছুটিও নিজের করণীয় ভাবতেন।
+                 */
                 new Stat(
+                    label: __('hr::dashboard.my_pending_leave'),
+                    value: (string) app(LeaveSigner::class)->countSignable(auth()->user(), self::leaveInView()->pending()),
+                    hint: __('hr::dashboard.my_pending_leave_hint'),
+                    href: route('hr.leave.index', ['pending' => 1]),
+                    tone: Stat::WARN,
+                    permission: 'hr.leave.approve',
+                ),
+                // ⭐ HR-জুড়ে হলে সব অপেক্ষার ছুটিও, আলাদা লাইনে — দেখার শাখার কর্মীর (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                ...(! app(LeaveSigner::class)->isHrWide(auth()->user()) ? [] : [new Stat(
                     label: __('hr::dashboard.pending_leave'),
-                    // ⭐ দেখার শাখার কর্মীর ছুটি — ছুটির সারিতে শাখা নেই, কর্মীর আছে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
                     value: (string) self::leaveInView()->where('status', 'pending')->count(),
                     hint: __('hr::dashboard.pending_leave_hint'),
                     href: route('hr.leave.index'),
                     tone: Stat::WARN,
                     // ⛔ ছুটির চাবি ছাড়া ঢাকা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০; [[ThePendingLeaveCountWentOverTheBranchWallTest]])
                     permission: 'hr.leave.view',
-                ),
+                )]),
                 // ⛔ বেতনের রানের গোনাও বেতনের খবর — ফোনের উত্তরে নয় (মালিক, ১৭ অক্টোবর ২০২৬; [[PhoneAnswer]])
                 ...(PhoneAnswer::active() ? [] : [new Stat(
                     label: __('hr::dashboard.payroll_runs'),
@@ -305,7 +318,8 @@ final class HrDashboard implements ProvidesDashboard
      */
     private static function showsPay(): bool
     {
-        return (bool) auth()->user()?->can('hr.payroll.view') && ! PhoneAnswer::active();
+        // ⛔ বেতনের অঙ্ক কেবল `hr.salary.view`-এ — সব জায়গায় এক নিয়ম (fe, ২১ অক্টোবর ২০২৬)
+        return (bool) auth()->user()?->can('hr.payroll.view') && (bool) auth()->user()?->can('hr.salary.view') && ! PhoneAnswer::active();
     }
 
     /**

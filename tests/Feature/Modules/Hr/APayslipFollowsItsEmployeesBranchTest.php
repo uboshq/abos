@@ -68,6 +68,8 @@ final class APayslipFollowsItsEmployeesBranchTest extends TestCase
         ]);
         CompanyContext::forCompany($this->company->id, fn () => $manager->givePermissionTo([
             Permission::findOrCreate('hr.payroll.view', 'web'), Permission::findOrCreate('hr.identity.view', 'web'),
+            // ⓘ অঙ্কের দাবি — বেতনের চাবি ছাড়া অঙ্ক এমনিতেই ঢাকা, আর তখন নিচের "দেখা যায় না" কিছুই মাপত না (fe, ২১ অক্টোবর ২০২৬)
+            Permission::findOrCreate('hr.salary.view', 'web'),
         ]));
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         app(DataScope::class)->forget();

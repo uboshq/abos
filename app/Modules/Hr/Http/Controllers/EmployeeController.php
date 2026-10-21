@@ -71,11 +71,8 @@ class EmployeeController extends Controller implements HasMiddleware
          * [[EmployeePolicy]]-র নিয়মেই। ⚠️ তালিকা আর পাতা দুই নিয়মে চললে
          * তালিকায় এমন সারি থাকত যেটা চাপলে ৪০৩ আসে।
          */
-        $branches = app(DataScope::class)->idsFor($request->user(), UserDataScope::BRANCH);
-
-        if ($branches !== null) {
-            $query->where(fn ($q) => $q->whereIn('branch_id', $branches)->orWhereNull('branch_id'));
-        }
+        // ⭐ আর হেডারের বাছা শাখা — একটা শাখা বাছা থাকলে কেবল তার কর্মী (মালিকের নিয়ম; [[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        app(BranchReach::class)->employeesInView($query, $request->user());
 
         /*
          * ছেড়ে যাওয়া কর্মীরা ডিফল্টে তালিকায় নেই।

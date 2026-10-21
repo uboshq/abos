@@ -34,7 +34,8 @@ final class ThePendingLeaveCountWentOverTheBranchWallTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const KEYS = ['hr.view', 'hr.leave.view', 'hr.leave.approve', 'hr.attendance.view'];
+    // ⓘ HR-জুড়ে (`hr.leave.manage`) — "সব অপেক্ষার ছুটি" কেবল তাঁদের, আর "আমার সইয়ের অপেক্ষায়"-ও তখন নাগালের সব (fe, ২১ অক্টোবর ২০২৬)
+    private const KEYS = ['hr.view', 'hr.leave.view', 'hr.leave.approve', 'hr.leave.manage', 'hr.attendance.view'];
 
     public function test_a_branch_limited_manager_counts_and_sees_only_their_branchs_leave(): void
     {
@@ -82,13 +83,17 @@ final class ThePendingLeaveCountWentOverTheBranchWallTest extends TestCase
         $stat = collect($dashboard->stats)->firstWhere('label', __('hr::dashboard.pending_leave'));
         $this->assertNotNull($stat, 'অপেক্ষমাণ ছুটির ঘরটাই নেই — দাবি অন্ধ।');
         $this->assertSame('1', $stat->value, '⛔ ঢাকার মানুষ নেত্রকোনার অপেক্ষমাণ ছুটিও গুনলেন।');
+        $mine = collect($dashboard->stats)->firstWhere('label', __('hr::dashboard.my_pending_leave'));
+        $this->assertSame('1', $mine?->value, '⛔ "আমার সইয়ের অপেক্ষায়" ঘরে নাগালের বাইরের ছুটি।');
 
         $listing = collect($dashboard->listings)->firstWhere('label', __('hr::dashboard.pending_leave'));
         $this->assertSame(['Dhaka Person'], $listing->rows->map(fn (LeaveApplication $l) => $l->employee?->name_en)->all(),
             '⛔ "অপেক্ষমাণ ছুটি" তালিকায় অন্য শাখার কর্মীর নাম এল।');
 
-        $widget = collect(HrWidgets::widgets())->firstWhere('label', __('hr::dashboard.leave_awaiting'));
-        $this->assertSame('1', $widget->value, '⛔ হোমের "ছুটির অপেক্ষায়" ঘরে অন্য শাখার ছুটি গোনা হলো।');
+        $widget = collect(HrWidgets::widgets())->firstWhere('label', __('hr::dashboard.my_pending_leave'));
+        $this->assertSame('1', $widget?->value, '⛔ হোমের "আমার সইয়ের অপেক্ষায়" ঘরে অন্য শাখার ছুটি গোনা হলো।');
+        $all = collect(HrWidgets::widgets())->firstWhere('label', __('hr::dashboard.all_pending_leave'));
+        $this->assertSame('1', $all?->value, '⛔ হোমের "সব অপেক্ষার ছুটি" ঘরে অন্য শাখার ছুটি গোনা হলো।');
     }
 
     /**
@@ -125,8 +130,11 @@ final class ThePendingLeaveCountWentOverTheBranchWallTest extends TestCase
 
         $this->assertNull(collect($dashboard->listings)->firstWhere('label', __('hr::dashboard.pending_leave')),
             '⛔ ছুটির চাবি ছাড়াই অপেক্ষমাণ ছুটির তালিকা (নামসহ) এল।');
-        $stat = collect($dashboard->stats)->firstWhere('label', __('hr::dashboard.pending_leave'));
-        $this->assertSame('hr.leave.view', $stat?->permission, '⛔ অপেক্ষমাণ ছুটির ঘর ছুটির চাবি চায় না — ঢাকা পড়ে না।');
+        // ⓘ নিজের সইয়ের ঘর সইয়ের চাবিতে ঢাকা; HR-জুড়ে নন বলে "সব অপেক্ষার ছুটি" ঘরটাই নেই (fe, ২১ অক্টোবর ২০২৬)
+        $stat = collect($dashboard->stats)->firstWhere('label', __('hr::dashboard.my_pending_leave'));
+        $this->assertSame('hr.leave.approve', $stat?->permission, '⛔ "আমার সইয়ের অপেক্ষায়" ঘর সইয়ের চাবি চায় না — ঢাকা পড়ে না।');
+        $this->assertNull(collect($dashboard->stats)->firstWhere('label', __('hr::dashboard.pending_leave')),
+            '⛔ HR-জুড়ে নন এমন কেউ সব অপেক্ষার ছুটির গোনা পেলেন।');
 
         // ⓘ একই মানুষ, এবার ছুটির চাবিসহ — তালিকা ফিরে আসে
         $clerk->givePermissionTo('hr.leave.view');

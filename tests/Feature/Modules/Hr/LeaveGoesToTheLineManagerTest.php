@@ -143,6 +143,8 @@ final class LeaveGoesToTheLineManagerTest extends TestCase
         $hrsOwn = $this->leaveFor($this->hrRow, '2026-10-05');
         $bossOwn = $this->leaveFor($this->bossRow, '2026-10-06');
 
+        // ⓘ HR-জুড়ে হলেও নিজের আবেদনে বোতাম নেই — দরজা যা ফেরায়, বোতামও দেখায় না
+        $this->web($this->hr)->get(route('hr.leave.index'))->assertOk()->assertDontSee(route('hr.leave.approve', $hrsOwn->id));
         $this->web($this->hr)->post(route('hr.leave.approve', $hrsOwn->id))->assertSessionHasErrors('status');
         $this->web($this->hr)->post(route('hr.leave.reject', $hrsOwn->id), ['remarks' => 'নিজে'])->assertSessionHasErrors('status');
         $this->phone($this->hr)->postJson('/api/v1/hr/leave/register/'.$hrsOwn->public_id.'/approve')->assertUnprocessable();

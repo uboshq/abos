@@ -52,4 +52,8 @@ return [
     'deduction_head' => '− :name',
     'cost_by_department' => 'Salary cost by department',
     'cost_by_department_hint' => 'Gross pay :total · confirmed payslips of the month shown',
+    // ⭐ my own signatures and HR's whole count (fe, 21 Oct 2026)
+    'my_pending_leave' => 'Awaiting my signature',
+    'my_pending_leave_hint' => 'Leave you can sign now',
+    'all_pending_leave' => 'All pending leave',
 ];

@@ -14,6 +14,7 @@ use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Services\LeaveService;
 use App\Modules\Hr\Support\BranchReach;
+use App\Modules\Hr\Support\LeaveSigner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -46,7 +47,9 @@ class LeaveController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         // ⭐ শাখার দেয়াল — কেবল নাগালের কর্মীদের আবেদন (চূড়ান্ত অডিট ⛔১৭, [[BranchReach]])
-        $query = $this->reach()->throughEmployee(LeaveApplication::query(), $request->user())
+        // ⭐ আর হেডারের বাছা শাখা ([[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        // ⭐ সাথে নিজের দলের আবেদন, নাগালের বাইরে হলেও — সারিতে বোতামের বদলে "HR-এর কাছে গেছে" ([[LeaveSigner::fallsToHr()]])
+        $query = LeaveSigner::listFor($request->user())
             ->with(['employee', 'leaveType', 'decider'])
             ->when($request->boolean('pending'), fn ($q) => $q->pending());
 

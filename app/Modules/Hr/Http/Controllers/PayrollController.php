@@ -52,15 +52,19 @@ class PayrollController extends Controller implements HasMiddleware
          * রানের নিজের মোটই, আগের মতো।
          */
         $reach = app(BranchReach::class);
-        $limited = $reach->branches($request->user()) !== null;
-        $seen = fn (string $sum) => $reach->throughEmployee(Payslip::query(), $request->user())
+        // ⭐ নাগাল, আর হেডারে একটা শাখা বাছা থাকলে সেটা — তালিকার মোট দেখার শাখার কর্মীদের ([[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        $limited = $reach->viewing($request->user()) !== null;
+        $seen = fn (string $sum) => $reach->throughEmployeeInView(Payslip::query(), $request->user())
             ->whereColumn('hr_payslips.payroll_run_id', 'hr_payroll_runs.id')
             ->selectRaw($sum)->toBase();
 
-        return view('hr::payroll.index', [
-            'menu' => $this->menu->forUser($request->user()),
-            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
-            'grand' => $this->grandTotals($list = PayrollRun::query()
+        /*
+         * ⛔ বেতনের অঙ্ক কেবল `hr.salary.view`-এ — সব জায়গায় এক নিয়ম (fe, ২১ অক্টোবর ২০২৬)। ⓘ চাবি ছাড়া রানগুলো দেখা যায়, অঙ্কের
+         * ঘরে [[FieldSecurity::mask()]]; সর্বমোটও গোনা হয় না, আর তালিকার ফাইল (CSV) পর্দার ঘরই নেয়, তাই সেখানেও ঢাকা।
+         */
+        $pay = $request->user()->can('hr.salary.view');
+
+        $list = PayrollRun::query()
                 ->with('branch')
                 ->when($limited, fn ($q) => $q->select('hr_payroll_runs.*')
                     ->selectSub($seen('COUNT(*)'), 'seen_count')
@@ -75,10 +79,15 @@ class PayrollController extends Controller implements HasMiddleware
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('narration', 'like', "%{$term}%"),
                 ))
-                ->orderByDesc('month')->orderByDesc('id'),
-                $limited
-                    ? ['gross_total' => 't.seen_gross', 'deduction_total' => 't.seen_deductions', 'net_total' => 't.seen_net']
-                    : ['gross_total' => 't.gross_total', 'deduction_total' => 't.deduction_total', 'net_total' => 't.net_total']),
+                ->orderByDesc('month')->orderByDesc('id');
+
+        return view('hr::payroll.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'pay' => $pay,
+            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+            'grand' => ! $pay ? [] : $this->grandTotals($list, $limited
+                ? ['gross_total' => 't.seen_gross', 'deduction_total' => 't.seen_deductions', 'net_total' => 't.seen_net']
+                : ['gross_total' => 't.gross_total', 'deduction_total' => 't.deduction_total', 'net_total' => 't.net_total']),
             // ⓘ withQueryString — পরের পাতায় গেলে খোঁজা আর ঘনত্ব হারায় না
             'runs' => $list->paginate(50)->withQueryString(),
         ]);
@@ -123,15 +132,18 @@ class PayrollController extends Controller implements HasMiddleware
          * সীমিত ম্যানেজার রানটা দেখতে পেলে সব কর্মীর মোট, কর্তন আর নিট দেখতেন। সীমা না থাকলে (মালিক) রানের নিজের মোটই।
          */
         $reach = app(BranchReach::class);
-        $slips = $reach->throughEmployee($run->payslips()->getQuery(), $request->user())->with(['employee', 'lines'])->get();
+        // ⭐ দেখার শাখা — হেডারে একটা শাখা বাছা থাকলে কেবল তার কর্মীর স্লিপ আর মোট ([[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        $slips = $reach->throughEmployeeInView($run->payslips()->getQuery(), $request->user())->with(['employee', 'lines'])->get();
         $run->setRelation('payslips', $slips);
-        $limited = $reach->branches($request->user()) !== null;
+        $limited = $reach->viewing($request->user()) !== null;
         // ⭐ রানের বেতন খোলা — নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
         app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($run, 'payroll_viewed');
 
         return view('hr::payroll.show', [
             'menu' => $this->menu->forUser($request->user()),
             'run' => $run,
+            // ⛔ বেতনের অঙ্ক কেবল `hr.salary.view`-এ — মোট আর প্রতিটা স্লিপ, চাবি ছাড়া ঢাকা (fe, ২১ অক্টোবর ২০২৬)
+            'pay' => $request->user()->can('hr.salary.view'),
             'summary' => $limited ? [
                 'count' => $slips->count(),
                 'gross' => (string) $slips->sum('gross'),

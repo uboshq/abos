@@ -52,4 +52,8 @@ return [
     'deduction_head' => '− :name',
     'cost_by_department' => 'বিভাগ অনুযায়ী বেতন খরচ',
     'cost_by_department_hint' => 'মোট বেতন :total · দেখানো মাসের নিশ্চিত বেতনশিট',
+    // ⭐ নিজের সইয়ের গোনা আর HR-এর গোটা গোনা (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])
+    'my_pending_leave' => 'আমার সইয়ের অপেক্ষায়',
+    'my_pending_leave_hint' => 'যে ছুটিতে আপনি এখনই সই দিতে পারেন',
+    'all_pending_leave' => 'সব অপেক্ষার ছুটি',
 ];

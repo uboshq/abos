@@ -83,6 +83,8 @@ final class LeaveService
     {
         $this->assertPending($application);
         $this->assertNotOwn($application, $decider);
+        // ⛔ অন্যের নামে যিনি বসিয়েছেন তিনি সই দেন না — মালিক ছাড়া, আর তখন অডিটে চিহ্ন (SoD; fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner]])
+        app(LeaveSigner::class)->assertNotEnteredBy($decider, $application);
         // ⛔ কর্মীর নিজের ব্যবস্থাপক বা HR — চাবি থাকলেই যে কেউ নয় (ঘাটতির তালিকা #১৫; [[LeaveSigner]])
         app(LeaveSigner::class)->assertMayDecide($decider, $application);
 
@@ -121,6 +123,7 @@ final class LeaveService
             ])->save();
 
             $this->stampAttendance($application->fresh());
+            app(LeaveSigner::class)->markOwnerSelfSigned($decider, $application);
 
             return $application->fresh();
         });
@@ -135,6 +138,7 @@ final class LeaveService
          * আলাদা আর আগের মতোই খোলা ([[cancel()]])।
          */
         $this->assertNotOwn($application, $decider);
+        app(LeaveSigner::class)->assertNotEnteredBy($decider, $application);
         app(LeaveSigner::class)->assertMayDecide($decider, $application);
 
         return DB::transaction(function () use ($application, $decider, $remarks) {
@@ -153,6 +157,7 @@ final class LeaveService
                 'decided_at' => now(),
                 'decision_remarks' => $remarks,
             ])->save();
+            app(LeaveSigner::class)->markOwnerSelfSigned($decider, $application);
 
             return $application->fresh();
         });

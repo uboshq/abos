@@ -59,4 +59,6 @@ return [
     'identity_viewed' => ':viewer viewed the identity details (NID, bank, address).',
     'payslip_viewed' => ':viewer opened the payslip.',
     'payroll_viewed' => ':viewer opened the payroll run.',
+    // ⭐ the employee is outside the manager's branch reach — HR signs (fe, 21 Oct 2026)
+    'leave_falls_to_hr' => 'This leave has gone to HR, because it is outside your reach',
 ];

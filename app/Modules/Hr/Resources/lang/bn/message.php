@@ -59,4 +59,6 @@ return [
     'identity_viewed' => ':viewer পরিচয়ের তথ্য (NID, ব্যাংক, ঠিকানা) দেখলেন।',
     'payslip_viewed' => ':viewer বেতনশিট খুললেন।',
     'payroll_viewed' => ':viewer বেতনের রান খুললেন।',
+    // ⭐ ব্যবস্থাপকের নাগালের বাইরের কর্মী — সই HR-এর (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::fallsToHr()]])
+    'leave_falls_to_hr' => 'এই ছুটি HR-এর কাছে গেছে, কারণ আপনার নাগালের বাইরে',
 ];

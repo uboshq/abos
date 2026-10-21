@@ -4,6 +4,11 @@
     উপরে মোট, তারপর কর্মী ধরে ধরে শিট। খসড়া অবস্থায় "আবার বানান" আছে
     (কাঠামো শুধরে), নিশ্চিত করার পর নেই — তখন অঙ্ক খাতায় বসে গেছে।
 --}}
+@php
+    // ⛔ বেতনের অঙ্ক কেবল `hr.salary.view`-এ — মোট আর প্রতিটা স্লিপ; চাবি ছাড়া মানুষ আর পথ দেখা যায়, অঙ্ক ঢাকা (fe, ২১ অক্টোবর ২০২৬)
+    $pay = $pay ?? auth()->user()?->can('hr.salary.view');
+    $money = fn ($value) => $pay ? \App\Core\Support\Money::format($value) : \App\Core\Security\FieldSecurity::mask();
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $run->document_no }}</x-slot:title>
 
@@ -57,9 +62,9 @@
             {{-- ⓘ নাগালের কর্মীদের মোট — সীমা না থাকলে রানের নিজের (অডিট HR ⛔২) --}}
             @foreach ([
                 'hr::field.employee_count' => $summary['count'],
-                'hr::field.gross' => \App\Core\Support\Money::format($summary['gross']),
-                'hr::field.deductions' => \App\Core\Support\Money::format($summary['deductions']),
-                'hr::field.net' => \App\Core\Support\Money::format($summary['net']),
+                'hr::field.gross' => $money($summary['gross']),
+                'hr::field.deductions' => $money($summary['deductions']),
+                'hr::field.net' => $money($summary['net']),
             ] as $label => $value)
                 <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
@@ -126,11 +131,11 @@
                 ['key' => 'method', 'label' => __('hr::field.payment_method'), 'width' => '9rem',
                  'render' => fn ($s) => __('hr::kind.' . $s->payment_method)],
                 ['key' => 'gross', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($s) => \App\Core\Support\Money::format($s->gross)],
+                 'render' => fn ($s) => $money($s->gross)],
                 ['key' => 'deductions', 'label' => __('hr::field.deductions'), 'numeric' => true,
-                 'width' => '9rem', 'render' => fn ($s) => \App\Core\Support\Money::format($s->deductions)],
+                 'width' => '9rem', 'render' => fn ($s) => $money($s->deductions)],
                 ['key' => 'net', 'label' => __('hr::field.net'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($s) => \App\Core\Support\Money::format($s->net)],
+                 'render' => fn ($s) => $money($s->net)],
                 ['key' => 'print', 'label' => '—', 'width' => '6rem',
                  'render' => fn ($s) => view('hr::payroll.partials.slip_print', ['slip' => $s])],
             ]" />

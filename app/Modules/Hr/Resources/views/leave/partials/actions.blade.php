@@ -1,8 +1,9 @@
 {{-- সিদ্ধান্ত হয়ে গেলে বোতামগুলো আর থাকে না — চাপা যায় অথচ কিছু হয় না
      এমন বোতাম রাখা মানে ব্যবহারকারীকে দিয়ে ভুল করানো। --}}
 @if ($application->isPending())
-    {{-- ⭐ চাবির উপরে "কার" প্রশ্ন: কর্মীর নিজের ব্যবস্থাপক বা HR — সেবা যা মানে, বোতামও তাই (ঘাটতির তালিকা #১৫; [[LeaveSigner]]) --}}
-    @if (auth()->user()?->can('hr.leave.approve') && ($signer ?? app(\App\Modules\Hr\Support\LeaveSigner::class))->mayDecide(auth()->user(), $application))
+    {{-- ⭐ সেবা যা সই নেবে, বোতামও কেবল সেখানে — চাবি, নিজের নয়, নিজে বসানো নয়, কর্মীর নিজের ব্যবস্থাপক বা HR (ঘাটতির তালিকা #১৫; [[LeaveSigner::maySign()]]) --}}
+    @php($signer ??= app(\App\Modules\Hr\Support\LeaveSigner::class))
+    @if ($signer->maySign(auth()->user(), $application))
         <span class="flex flex-wrap items-center justify-end gap-1">
             <form method="POST" action="{{ route('hr.leave.approve', $application->id) }}">
                 @csrf
@@ -29,6 +30,9 @@
                 </button>
             </form>
         </span>
+    @elseif ($signer->fallsToHr(auth()->user(), $application))
+        {{-- ⭐ নিজের দলের কর্মী, কিন্তু নাগালের বাইরে — সই HR-এর (fe, ২১ অক্টোবর ২০২৬) --}}
+        <span class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.leave_falls_to_hr') }}</span>
     @endif
 @elseif ($application->isApproved())
     @can('hr.leave.manage')

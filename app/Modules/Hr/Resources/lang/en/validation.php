@@ -56,4 +56,7 @@ return [
     'leave_type_closed' => 'That leave type cannot be chosen: it is switched off, deleted or not of this company. Choose an active leave type.',
     // ⭐ leave goes to the line manager (gap list #15, a6, 21 Oct 2026)
     'leave_not_your_line' => 'Only the employee\'s own manager (Reports To) or HR can sign this leave.',
+    // ⭐ segregation of duties (fe, 21 Oct 2026)
+    'leave_entered_by_you' => 'You entered this leave for someone else, so you cannot sign or refuse it. Ask another HR signer or the owner.',
+    'leave_owner_self_signed' => 'The owner signed a leave he entered himself.',
 ];
