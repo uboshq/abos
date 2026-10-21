@@ -21,15 +21,20 @@ use Illuminate\Support\Facades\Cache;
  */
 final class SensitiveViews
 {
-    public function seen(Model $subject, string $what, ?Employee $about = null): void
+    public function seen(Model $subject, string $what, Employee|int|null $about = null): void
     {
         $viewer = auth()->user();
         if (! $viewer instanceof User) {
             return;
         }
 
-        // ⓘ নিজের — নিজের বেতন বা পরিচয় দেখা নজরদারির বিষয় নয়
-        if ($about !== null && $about->user_id !== null && (int) $about->user_id === (int) $viewer->id) {
+        // ⓘ নিজের — নিজের বেতন বা পরিচয় দেখা নজরদারির বিষয় নয়।
+        // ⛔ কর্মীর সারি শাখার দেয়াল দিয়ে খোলা হলে সম্পর্কটা ফাঁকা আসতে পারত — তখন নিজের স্লিপও খাতায় উঠত; তাই আইডি দিলে
+        // মালিকানা দেয়াল ছাড়াই পড়া হয় (Mac দৌড়, ২১ অক্টোবর ২০২৬)।
+        $owner = is_int($about)
+            ? Employee::query()->withoutGlobalScopes()->whereKey($about)->value('user_id')
+            : $about?->user_id;
+        if ($owner !== null && (int) $owner === (int) $viewer->id) {
             return;
         }
 

@@ -100,7 +100,7 @@ final class ThePayrollSignatureShowsNoNetWithoutTheKeyTest extends TestCase
         $this->assertSame(0, bccomp($net, (string) $approval->signedAmount(), 4), '⛔ ইঞ্জিন সইয়ের নিট হারাল।');
 
         // ── খবর: ঘণ্টা আর চিঠির লেখা, ইঞ্জিনের খবরের তথ্য
-        $this->assertSame('', app(ApprovalEngine::class)->noticeData($approval)['amount'], '⛔ খবরের তথ্যে নিট।');
+        $this->assertSame('', (string) (app(ApprovalEngine::class)->noticeData($approval)['amount'] ?? ''), '⛔ খবরের তথ্যে নিট।');
         foreach ([Notification::query()->withoutGlobalScopes()->get()->toJson(), NotificationEvent::query()->withoutGlobalScopes()->get()->toJson()] as $sent) {
             $this->assertStringNotContainsString($digits, $sent, '⛔ ঘণ্টা বা চিঠির খবরে রানের নিট।');
             $this->assertStringNotContainsString(Money::format($net), $sent, '⛔ ঘণ্টা বা চিঠির খবরে রানের নিট।');

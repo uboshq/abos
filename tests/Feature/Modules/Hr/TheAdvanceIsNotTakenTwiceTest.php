@@ -153,7 +153,7 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
         $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, $run->fresh()->status, '⛔ রান নিশ্চিত হয়ে গেল');
         $this->assertSame(0, LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->count(), '⛔ খাতায় বেতন বসল');
         $asked = Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)->where('status', Approval::PENDING)->sole();
-        $this->assertSame(0, bccomp((string) $asked->amount, bcadd($draftNet, '1000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
+        $this->assertSame(0, bccomp((string) $asked->signedAmount(), bcadd($draftNet, '1000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
         $this->assertSame('1000', $this->deducted($run), 'কিস্তি নতুন খোলায় ঠিক হয়ে খসড়ায় থাকে');
     }
 

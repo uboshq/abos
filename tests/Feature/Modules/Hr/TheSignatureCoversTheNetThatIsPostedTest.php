@@ -100,6 +100,6 @@ final class TheSignatureCoversTheNetThatIsPostedTest extends TestCase
         $this->assertSame(0, LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->count(), '⛔ খাতায় বেতন বসল, সই ছাড়া');
 
         $asked = Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)->where('status', Approval::PENDING)->sole();
-        $this->assertSame(0, bccomp((string) $asked->amount, bcadd($draftNet, '10000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
+        $this->assertSame(0, bccomp((string) $asked->signedAmount(), bcadd($draftNet, '10000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
     }
 }

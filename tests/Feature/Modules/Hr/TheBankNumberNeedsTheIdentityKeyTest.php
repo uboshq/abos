@@ -141,7 +141,7 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $slip->load(['employee.department', 'employee.designation', 'lines', 'run']);
         $method = new \ReflectionMethod(PayslipPrintController::class, 'documentFor');
 
-        return $method->invoke(app(PayslipPrintController::class), $slip)->meta[__('hr::field.bank_account_no')] ?? null;
+        return $method->invoke(app(PayslipPrintController::class), $slip, true)->meta[__('hr::field.bank_account_no')] ?? null;
     }
 
     private function png(): \Illuminate\Http\UploadedFile
