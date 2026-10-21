@@ -109,3 +109,50 @@ describe('মিল-তালিকা #৯ — মোট টাকার ঘর
         host.remove()
     })
 })
+
+describe('মিল-তালিকা #৫ — স্লিপ/TrxID লেখার সাথে সাথে যাচাই', () => {
+    it('লিখলে সরবরাহকারী আর নম্বর নিয়ে জিজ্ঞেস করে, উত্তরটা দেখায়, আর কেবল শেষ প্রশ্নের উত্তর রাখে', async () => {
+        const asked = []
+        let release
+        vi.stubGlobal('fetch', vi.fn((url) => {
+            asked.push(url)
+            const no = new URL(url, 'http://x').searchParams.get('instrument_no')
+            const body = no === 'OLD-1'
+                ? { state: 'used', message: 'আগে দেওয়া' }
+                : { state: 'free', message: 'নতুন ✓' }
+            // ⓘ প্রথম প্রশ্নের উত্তর দেরিতে আসে
+            if (no === 'OLD-1') return new Promise(r => { release = () => r({ ok: true, json: async () => body }) })
+            return Promise.resolve({ ok: true, json: async () => body })
+        }))
+
+        const host = document.createElement('div')
+        host.innerHTML = `
+            <form x-data="payBills({ bills: [], supplier: '7', amount: '', account: '', picks: {}, balances: {}, taxIds: {}, bankIds: [], simulateUrl: '', slipUrl: '/purchase/payments/slip-check', paymentId: 41 })">
+                <input name="instrument_no">
+                <p data-slip-state x-show="slipShown" x-text="slip.message"></p>
+            </form>`
+        document.body.appendChild(host)
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        const field = host.querySelector('[name="instrument_no"]')
+        field.value = 'OLD-1'
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+        await new Promise(r => setTimeout(r, 350))
+
+        expect(asked.length, '⛔ #৫: লিখলেও যাচাইয়ের প্রশ্ন যায়নি').toBe(1)
+        const q = new URL(asked[0], 'http://x').searchParams
+        expect([q.get('supplier_id'), q.get('instrument_no'), q.get('payment')], '⛔ #৫: প্রশ্নে সরবরাহকারী, নম্বর বা নিজের কাগজ নেই').toEqual(['7', 'OLD-1', '41'])
+
+        field.value = 'NEW-2'
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+        await new Promise(r => setTimeout(r, 350))
+        await Alpine.nextTick()
+        release()
+        await new Promise(r => setTimeout(r, 0))
+        await Alpine.nextTick()
+
+        expect(host.querySelector('[data-slip-state]').textContent, '⛔ #৫: আগের প্রশ্নের দেরিতে-আসা উত্তর নতুনটাকে ঢেকে দিল').toBe('নতুন ✓')
+        host.remove()
+    })
+})

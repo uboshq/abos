@@ -54,7 +54,7 @@
     <form method="POST" data-pay-screen
           action="{{ $isNew ? route('purchase.payment.store') : route('purchase.payment.update', $payment) }}"
           enctype="multipart/form-data"
-          x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), bankIds: @js($bankSuppliers->map(fn ($s) => (string) $s->id)->values()), simulateUrl: @js(route('purchase.payment.simulate')) })"
+          x-data="payBills({ bills: @js($billRows), supplier: @js($supplierId), amount: @js($amount), account: @js($accountId), picks: @js($picks), balances: @js($balances), taxIds: @js($taxIds), bankIds: @js($bankSuppliers->map(fn ($s) => (string) $s->id)->values()), simulateUrl: @js(route('purchase.payment.simulate')), slipUrl: @js(route('purchase.payment.slip_check')), paymentId: @js($isNew ? null : $payment->id) })"
           @money-method="heard($event.detail)"
           class="pb-20">
         @csrf
@@ -176,7 +176,7 @@
                             </template>
                         </div>
 
-                        <x-money.method direction="out" inline :record="$isNew ? null : $payment" :modes="$modes"
+                        <x-money.method direction="out" inline slip-check :record="$isNew ? null : $payment" :modes="$modes"
                                         :methods="['cash', 'mfs', 'transfer', 'cheque']" money-field="account_id" />
                     </div>
                 </section>

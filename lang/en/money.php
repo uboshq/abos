@@ -87,6 +87,7 @@ return [
             'this' => 'This payment (gross)',
             'left' => 'Left after',
         ],
+        'slip_free' => 'Not used for this supplier before ✓',
         'meta' => [
             'number' => 'No.: :no',
             'number_on_save' => 'No.: assigned on save (SP-…)',

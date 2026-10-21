@@ -50,7 +50,7 @@ class PaymentController extends Controller implements HasMiddleware
             ...static::resourcePermissions(Payment::class, 'payment'),
             new Middleware('can:purchase.payment.create', only: ['confirm']),
             // ⓘ প্রিভিউ ফর্মেরই অংশ — যিনি পরিশোধ লিখতে পারেন, কেবল তিনিই
-            new Middleware('can:purchase.payment.create', only: ['simulate']),
+            new Middleware('can:purchase.payment.create', only: ['simulate', 'slipCheck']),
             new Middleware('can:purchase.payment.cancel', only: ['cancel']),
         ];
     }
@@ -123,6 +123,37 @@ class PaymentController extends Controller implements HasMiddleware
      * ⭐ পোস্টের আগে খাতায় যা যাবে — Dr/Cr, খাত আর শাখা (নকশা #১০, SAP-এর "Simulate")। ⓘ কিছুই লেখা হয় না: ফর্মের মান থেকে
      * একটা না-রাখা পরিশোধ বানিয়ে পোস্টের একই [[PaymentService::linesFor()]] ডাকা হয় — তাই প্রিভিউ আর খাতা কখনো আলাদা নয়।
      */
+    /**
+     * ⭐ স্লিপ/TrxID-এর তাৎক্ষণিক উত্তর — জমার একই নিয়মে ([[SlipIsNotUsedTwice::isUsed()]]: এই সরবরাহকারী, বাতিল বাদে, সম্পাদনায়
+     * নিজেকে বাদ)। ⓘ কিছু লেখে না, আর হেডারে বাছা শাখার বাইরের সরবরাহকারী ৪০৪ — প্রিভিউর মতোই।
+     */
+    public function slipCheck(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'supplier_id' => ['required', 'integer'],
+            'instrument_no' => ['nullable', 'string', 'max:64'],
+            'payment' => ['nullable', 'integer'],
+        ]);
+
+        $supplier = Supplier::query()->inViewedBranch()->find((int) $data['supplier_id']);
+        abort_if($supplier === null, 404);
+
+        $no = trim((string) ($data['instrument_no'] ?? ''));
+
+        if ($no === '') {
+            return response()->json(['state' => 'empty', 'message' => '']);
+        }
+
+        $used = app(\App\Core\Services\SlipIsNotUsedTwice::class)->isUsed(
+            'pur_payments', $no, (int) $supplier->id, 'supplier_id', isset($data['payment']) ? (int) $data['payment'] : null,
+        );
+
+        return response()->json([
+            'state' => $used ? 'used' : 'free',
+            'message' => $used ? __('purchase::validation.slip_used_twice', ['no' => $no]) : __('money.screen.slip_free'),
+        ]);
+    }
+
     public function simulate(PaymentRequest $request): JsonResponse
     {
         $data = $request->documentData();

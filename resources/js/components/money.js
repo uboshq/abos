@@ -268,9 +268,18 @@ export function payBills ({
     taxIds = {},
     bankIds = [],
     simulateUrl = '',
+    slipUrl = '',
+    paymentId = null,
 } = {}) {
+    // ⓘ ফর্মটা বন্ধনীতে, প্রতিক্রিয়াশীল তথ্যে নয় — DOM-কে Alpine-এর proxy-তে মোড়ানো নয়
+    let slipForm = null
+
     return {
         bills: bills.map(b => ({ ...b, remaining: paisa(b.remaining), total: paisa(b.total) })),
+        /* ⭐ স্লিপ/TrxID-এর তাৎক্ষণিক উত্তর (মিল-তালিকা #৫): empty · free · used — জমার একই নিয়মে, [[PaymentController::slipCheck()]] */
+        slip: { state: 'empty', message: '' },
+        slipAsked: 0,
+        slipTimer: null,
         supplier: String(supplier ?? ''),
         amount: String(amount ?? ''),
         account: String(account ?? ''),
@@ -288,7 +297,48 @@ export function payBills ({
             this.$watch('amount', (now, was) => { if (paisa(now) !== paisa(was)) this.allocate() })
             this.$watch('account', () => this.refresh())
             this.$nextTick(() => this.refresh())
+
+            // ⓘ পদ্ধতির ঘরগুলো x-if-এ আসে-যায়, তাই শোনা ফর্মে — যে ঘরের নাম `instrument_no`
+            slipForm = this.$el
+            this.$el.addEventListener('input', (e) => {
+                if (e.target?.name === 'instrument_no') this.slipSoon()
+            })
+            this.$watch('supplier', () => this.slipSoon())
         },
+
+        slipSoon () {
+            clearTimeout(this.slipTimer)
+            this.slipTimer = setTimeout(() => this.checkSlip(), 300)
+        },
+
+        /*
+         * ⓘ নম্বরটা পড়া হয় প্রশ্নের মুহূর্তে, সাজানোর মুহূর্তে নয় — সরবরাহকারী বদলালে যে প্রশ্ন যায় তার হাতে কোনো লেখা থাকে না,
+         * আর ৩০০ মিলিসেকেন্ডে ঘরের লেখা বদলেও যেতে পারে; তাই সবসময় ঘরে এখন যা আছে সেটাই।
+         */
+        async checkSlip (value = null) {
+            const no = String(value ?? slipForm?.querySelector('[name="instrument_no"]')?.value ?? '').trim()
+            // ⛔ কেবল শেষ প্রশ্নের উত্তর — দেরিতে-আসা আগের উত্তর নতুনটাকে ঢাকবে না (প্রিভিউর একই নিয়ম)
+            const ticket = ++this.slipAsked
+
+            if (!slipUrl || no === '' || this.supplier === '') {
+                this.slip = { state: 'empty', message: '' }
+                return
+            }
+
+            const query = new URLSearchParams({ supplier_id: this.supplier, instrument_no: no })
+            if (paymentId) query.set('payment', String(paymentId))
+
+            try {
+                const response = await fetch(slipUrl + '?' + query.toString(), { headers: { Accept: 'application/json' } })
+                const answer = response.ok ? await response.json() : { state: 'empty', message: '' }
+                if (ticket === this.slipAsked) this.slip = answer
+            } catch {
+                if (ticket === this.slipAsked) this.slip = { state: 'empty', message: '' }
+            }
+        },
+
+        get slipShown () { return this.slip.state === 'free' || this.slip.state === 'used' },
+        get slipUsed () { return this.slip.state === 'used' },
 
         /* ⭐ ঘর ছাড়লে লাখ-কমায় ("1,20,000.00", নকশার মিল-তালিকা #৯); ফাঁকা বা শূন্য যেমন ছিল */
         tidyAmount () {

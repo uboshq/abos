@@ -424,6 +424,44 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $this->assertNotSame('', $this->errorOn('amount'), '⛔ #৯: অক্ষরসহ অঙ্ক কমা ছাঁটার ফাঁকে ঢুকে গেল');
     }
 
+    /** ⭐ মিল-তালিকা #৫ — স্লিপ/TrxID লেখার সাথে সাথে "আগে ব্যবহার হয়নি ✓" বা আগের পরিশোধের কথা, জমার একই নিয়মে */
+    public function test_gap_5_the_slip_is_checked_as_it_is_typed_by_the_same_rule_as_the_post(): void
+    {
+        $bill = $this->bill('1000');
+        $ask = fn (array $q) => $this->getJson(route('purchase.payment.slip_check', ['supplier_id' => $this->supplier->id, ...$q]));
+
+        $ask(['instrument_no' => 'TT-77'])->assertOk()->assertJson(['state' => 'free', 'message' => __('money.screen.slip_free')]);
+        $ask(['instrument_no' => '  '])->assertOk()->assertJson(['state' => 'empty']);
+
+        $first = app(\App\Modules\Purchase\Services\PaymentService::class)->create(
+            ['supplier_id' => $this->supplier->id, 'trx_date' => now()->toDateString(), 'amount' => '100', 'instrument_no' => 'TT-77'],
+            [['purchase_bill_id' => $bill->id, 'amount' => '100']],
+        );
+
+        $this->assertSame('used', $ask(['instrument_no' => ' tt-77 '])->assertOk()->json('state'), '⛔ #৫: আগের পরিশোধের স্লিপ পর্দা "নতুন" বলল');
+        $this->assertSame(__('purchase::validation.slip_used_twice', ['no' => 'tt-77']), $ask(['instrument_no' => 'tt-77'])->json('message'),
+            '⛔ #৫: পর্দার কথা জমার কথার সাথে মেলে না');
+        // ⓘ সম্পাদনায় নিজের স্লিপ নিজের বিরুদ্ধে নয় — জমার একই ছাড়
+        $this->assertSame('free', $ask(['instrument_no' => 'TT-77', 'payment' => $first->id])->json('state'), '⛔ #৫: সম্পাদনায় নিজের স্লিপকেই "আগে ব্যবহৃত" বলল');
+
+        // ⛔ শাখায় সীমিত মানুষ অন্য শাখার সরবরাহকারীর স্লিপ জিজ্ঞেস করতে পারেন না (প্রিভিউর মতোই ৪০৪)
+        $mine = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'MMS')->firstOrFail();
+        $theirs = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'NTK')->firstOrFail();
+        $far = app(SupplierService::class)->create(['name_en' => 'Far Five', 'branch_id' => $theirs->id, 'credit_limit' => 0, 'credit_days' => 0,
+            'party_type_id' => $this->supplier->party_type_id]);
+        $clerk = $this->someone(['purchase.payment.view', 'purchase.payment.create']);
+        $clerk->forceFill(['current_branch_id' => $mine->id])->save();
+        \App\Models\UserDataScope::query()->withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'user_id' => $clerk->id, 'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $mine->id,
+        ]);
+        CompanyContext::set($this->company->id, $mine->id);
+        $this->actingAs($clerk->fresh());
+
+        $response = $this->getJson(route('purchase.payment.slip_check', ['supplier_id' => $far->id, 'instrument_no' => 'TT-77']));
+        $this->assertContains($response->status(), [403, 404], '⛔ #৫: অন্য শাখার সরবরাহকারীর স্লিপের খবর খুলল');
+        $this->assertStringNotContainsString('state', (string) $response->getContent(), '⛔ #৫: অন্য শাখার সরবরাহকারীর স্লিপের উত্তর ফাঁস হল');
+    }
+
     /** ⭐ মিল-তালিকা #১১ — প্রাপকের ব্যাংক এক লাইনে: ব্যাংক · শাখা · নাম · হিসাব ••••শেষ চার · রাউটিং · ✓ */
     public function test_gap_11_the_payees_bank_reads_on_one_line(): void
     {
