@@ -1519,6 +1519,8 @@ input[type='number'] {
     }
 
     [data-shell-search][data-expanded="true"] [data-search-panel] {
+        /* ⓘ ঘরের তল থেকে ৪px — ফালির নিজের ৮px নিচের ফাঁক বাদ দিয়ে (নইলে প্যানেল ১২px নিচে ঝুলত) */
+        top: calc(100% - 4px) !important;
         left: 8px !important;
         right: 8px !important;
         width: auto !important;
