@@ -41,6 +41,7 @@ void main() {
   /// ০.৪.৪০-এর মতো পুরো হিসাব — সব চাবি
   Map<String, dynamic> full() => ownerToday(
         outflow: '45000.0000',
+        stockValue: '2345678.9000',
         payable: {'amount': '1250000.0000', 'handLoans': '200000.0000'},
         principals: principals,
         mfsAccounts: mfsAccounts,
@@ -194,6 +195,38 @@ void main() {
     expect(textOf(tester, const ValueKey('branch-sales-detail')), '9 টি বিক্রয়');
   });
 
+  // ⭐ মজুদের দাম — বকেয়ার পাশে, খরচ-দামে; সার্ভার না পাঠালে (চাবি নেই, SR, পুরনো সার্ভার) ঘরই নেই
+  testWidgets('stock value sits beside the dues at cost, and is absent when the server sends none', (tester) async {
+    await pump(tester, ownerHomeBody(today: full()));
+    final dues = tester.getRect(find.byKey(const ValueKey('owner-money-dues')));
+    final stock = tester.getRect(find.byKey(const ValueKey('owner-money-stock')));
+    expect(stock.top, dues.top, reason: 'বকেয়ার একই সারিতে');
+    expect(stock.left, greaterThan(dues.right), reason: 'বকেয়ার ঠিক পাশে');
+    expect(find.descendant(of: find.byKey(const ValueKey('owner-money-stock')), matching: find.text('খরচ-দামে')),
+        findsOneWidget);
+
+    await pump(tester, ownerHomeBody(today: ownerToday(outflow: '45000.0000')));
+    expect(find.byKey(const ValueKey('owner-money-stock')), findsNothing);
+    expect(find.text('মজুদের দাম'), findsNothing, reason: '⛔ সার্ভার না পাঠালে "—" নয়, ঘরই নেই');
+  });
+
+  testWidgets('stock value opens the stock page only for one who has it in the menu', (tester) async {
+    Widget scoped(Widget body, Set<String>? on) =>
+        ProviderScope(overrides: [phoneModulesProvider.overrideWith((ref) => on)], child: body);
+    const stockKeeper =
+        AuthUser(id: 'u1', name: 'আল-আমিন শুভ', email: 'o@x', roles: ['Owner'], permissions: ['inventory.stock.view']);
+    final opened = <String>[];
+    await pump(tester,
+        scoped(ownerHomeBody(today: full(), user: stockKeeper, onOpen: (p, _) => opened.add(p)), {'sales', 'inventory'}));
+    await tester.tap(find.byKey(const ValueKey('owner-money-stock-tap')));
+    await tester.pumpAndSettle();
+    expect(opened, ['stock']);
+
+    await pump(tester, scoped(ownerHomeBody(today: full()), {'sales', 'inventory'}));
+    expect(find.byKey(const ValueKey('owner-money-stock-tap')), findsNothing, reason: 'মজুদের চাবি নেই — কেবল অঙ্ক');
+    expect(find.byKey(const ValueKey('owner-money-stock')), findsOneWidget);
+  });
+
   testWidgets('7 · regression guard: every 0.4.40 figure is on the home with a full payload', (tester) async {
     await pump(tester, ownerHomeBody(today: full()));
     const expected = [
@@ -215,6 +248,10 @@ void main() {
       '৳1,313.46',
       '৳11,66,320.00',
       '৳5,000.00',
+      // মজুদের দাম, খরচ-দামে (মালিক, ২১ অক্টোবর ২০২৬ — বকেয়ার পাশে)
+      'মজুদের দাম',
+      '৳23,45,678.90',
+      'খরচ-দামে',
       // প্রিন্সিপালের কমিশন
       'প্রিন্সিপালের কমিশন',
       'স্কয়ার',

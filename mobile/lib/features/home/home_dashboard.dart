@@ -97,6 +97,10 @@ class HomeDashboard extends StatelessWidget {
       ModuleGate.allows(modulesOn, 'principals') &&
       ModuleGate.allows(modulesOn, 'principal-commission');
 
+  /// ⭐ মজুদের দাম থেকে মজুদের পাতা — মেনুর একই নিয়ম: মজুদ দেখার চাবি আর ফোনের মজুদ-সুইচ চালু (cb: ওয়েবের পথ /inventory/stock)
+  static bool canOpenStock(AuthUser user, Set<String>? modulesOn) =>
+      user.can('inventory.stock.view') && ModuleGate.allows(modulesOn, 'stock');
+
   Widget _build(BuildContext context, Set<String>? modulesOn) {
     final cs = Theme.of(context).colorScheme;
     // ⓘ "আজ"-এর লোড, ভুল আর খালি অবস্থা TodayPanel-এর নিজের (today_panel.dart) — হোম নিজে কিছু আনে না
@@ -121,6 +125,7 @@ class HomeDashboard extends StatelessWidget {
               onOpenPrincipals: canOpenPrincipals(user, modulesOn)
                   ? () => _go(context, 'principal-commission', 'প্রিন্সিপালের কমিশন')
                   : null,
+              onOpenStock: canOpenStock(user, modulesOn) ? () => _go(context, 'stock', 'মজুদ') : null,
             )
           : null,
       // ⓘ সংখ্যাগুলোর নিচে — আজকের অঙ্কই পর্দার প্রথম জিনিস থাকে

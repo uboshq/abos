@@ -47,6 +47,10 @@ class TodayRecord {
   /// not a dash: the figure is new, not withheld.
   TodayFigure? get outflow => _tile('outflow');
 
+  /// ⭐ মজুদের দাম, খরচ-দামে (IAS 2) — ওয়েবের কার্ডের একই অঙ্ক; কেবল মজুদের দাম দেখার চাবি থাকলে আসে (SR-এর কখনো নয়)।
+  /// ঘর না এলে null — শূন্য নয় (cb/fe, ২১ অক্টোবর ২০২৬)
+  TodayFigure? get stockValue => _tile('stockValue');
+
   TodayFigure? get payable => _tile('payable');
 
   /// What of [payable] is hand loans we took — shown under it when not zero.
