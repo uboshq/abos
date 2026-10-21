@@ -909,8 +909,8 @@ class _CounterScreenState extends State<CounterScreen> {
       });
     } catch (e) {
       if (mounted) {
-        await _popup('খসড়া খোলা গেল না',
-            errorMessageFor(e, fallback: 'আবার চেষ্টা করুন।'));
+        await _popup(context.l10n.counterDraftOpenFailed,
+            errorMessageFor(e, fallback: context.l10n.counterTryAgain));
       }
     }
   }
@@ -918,7 +918,7 @@ class _CounterScreenState extends State<CounterScreen> {
   /// ⭐ দাম দেখুন — পণ্য বাছলে দর, বিক্রয়যোগ্য মজুদ আর লট; "বিলে তুলুন" চাপলে উপরের ঘরে বসে (ওয়েবের F3)
   Future<void> _priceCheck() async {
     final picked = await _pick<ProductRecord>(
-        'দাম দেখুন — পণ্য বাছুন', _products, (p) => p.name);
+        context.l10n.counterPriceCheckPick, _products, (p) => p.name);
     if (picked == null || !mounted) return;
     CounterPrice price;
     try {
@@ -926,8 +926,8 @@ class _CounterScreenState extends State<CounterScreen> {
           warehouseId: _warehouseId, customerId: _customer?.id);
     } catch (e) {
       if (mounted) {
-        await _popup('দাম আনা গেল না',
-            errorMessageFor(e, fallback: 'আবার চেষ্টা করুন।'));
+        await _popup(context.l10n.counterPriceFailed,
+            errorMessageFor(e, fallback: context.l10n.counterTryAgain));
       }
       return;
     }
@@ -946,26 +946,26 @@ class _CounterScreenState extends State<CounterScreen> {
                     ? price.name
                     : '${price.name} · ${price.code}',
                 style: Theme.of(sheet).textTheme.titleMedium),
-            Text('বিক্রয় দর: ${Money.taka(price.rate)} / ${price.unit}'),
+            Text(context.l10n.counterPriceRate(Money.taka(price.rate), price.unit)),
             Text(price.available == null
-                ? 'বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই'
-                : 'বিক্রয়যোগ্য মজুদ: ${price.available} ${price.unit}'),
+                ? context.l10n.counterPriceStockHidden
+                : context.l10n.counterPriceStock('${price.available}', price.unit)),
             for (final lot in price.lots)
               Text([
-                'লট ${lot.no}',
-                if (lot.expiry.isNotEmpty) 'মেয়াদ ${lot.expiry}',
-                if (lot.qty.isNotEmpty) 'আছে ${lot.qty}'
+                context.l10n.counterPriceLot(lot.no),
+                if (lot.expiry.isNotEmpty) context.l10n.counterPriceExpiry(lot.expiry),
+                if (lot.qty.isNotEmpty) context.l10n.counterPriceHave(lot.qty)
               ].join(' · ')),
             const SizedBox(height: AppSpacing.sm),
             Row(children: [
               TextButton(
                   onPressed: () => Navigator.pop(sheet, false),
-                  child: const Text('ফিরে যান')),
+                  child: Text(context.l10n.counterBack)),
               const Spacer(),
               FilledButton(
                 key: const ValueKey('counter-price-to-bill'),
                 onPressed: () => Navigator.pop(sheet, true),
-                child: const Text('বিলে তুলুন'),
+                child: Text(context.l10n.counterPriceToBill),
               ),
             ]),
           ],
@@ -988,21 +988,20 @@ class _CounterScreenState extends State<CounterScreen> {
   Future<void> _reprint() async {
     final id = _lastInvoiceId;
     if (id == null) {
-      await _popup('আবার ছাপা',
-          'এই কাউন্টারে এখনো কোনো বিল হয়নি। পুরনো বিল ছাপতে বিলের তালিকা থেকে খুলুন।');
+      await _popup(context.l10n.counterReprint, context.l10n.counterReprintNone);
       return;
     }
     await DocumentActionsSheet.show(context,
         type: 'SalesInvoice',
         id: id,
-        title: 'বিল · ${_lastInvoiceNo ?? ''}',
+        title: context.l10n.counterBillTitle(_lastInvoiceNo ?? ''),
         fileStem: _lastInvoiceNo);
   }
 
   /// বিল বাতিল — কারণসহ; খোলা খসড়া হলে খসড়াটাই বাতিল, নইলে না-জমা বিলটা অডিটে লেখা হয়
   Future<void> _voidBill() async {
     if (_cart.isEmpty && _resumeId == null) {
-      await _popup('বিল বাতিল', 'বাতিল করার মতো কিছু নেই।');
+      await _popup(context.l10n.counterVoidBill, context.l10n.counterVoidNothing);
       return;
     }
     final reason = _voidReason..clear();
@@ -1010,15 +1009,15 @@ class _CounterScreenState extends State<CounterScreen> {
       context: context,
       builder: (dialog) => AlertDialog(
         key: const ValueKey('counter-void-dialog'),
-        title: const Text('বিল বাতিল'),
+        title: Text(context.l10n.counterVoidBill),
         // ⓘ কারণ ওয়েবের পপ-আপের একই তালিকা থেকে; তালিকা না এলে (পুরনো সার্ভার) নিজে লেখা
         content: (_setup?.voidReasons.isNotEmpty ?? false)
             ? StatefulBuilder(
                 builder: (_, setDialog) => DropdownButtonFormField<String>(
                   key: const ValueKey('counter-void-reason-pick'),
                   initialValue: reason.text.isEmpty ? null : reason.text,
-                  decoration: const InputDecoration(
-                      labelText: 'কেন বাতিল (বাধ্যতামূলক)'),
+                  decoration: InputDecoration(
+                      labelText: context.l10n.counterVoidReason),
                   items: [
                     for (final r in _setup!.voidReasons)
                       DropdownMenuItem(value: r, child: Text(r))
@@ -1031,12 +1030,12 @@ class _CounterScreenState extends State<CounterScreen> {
                 controller: reason,
                 autofocus: true,
                 decoration:
-                    const InputDecoration(labelText: 'কেন বাতিল (বাধ্যতামূলক)'),
+                    InputDecoration(labelText: context.l10n.counterVoidReason),
               ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialog, false),
-              child: const Text('ফিরে যান')),
+              child: Text(context.l10n.counterBack)),
           FilledButton(
             key: const ValueKey('counter-void-confirm'),
             style: FilledButton.styleFrom(
@@ -1045,7 +1044,7 @@ class _CounterScreenState extends State<CounterScreen> {
             onPressed: () {
               if (reason.text.trim().isNotEmpty) Navigator.pop(dialog, true);
             },
-            child: const Text('বাতিল করুন'),
+            child: Text(context.l10n.counterVoidConfirm),
           ),
         ],
       ),
@@ -1061,11 +1060,11 @@ class _CounterScreenState extends State<CounterScreen> {
           total: _total);
       if (!mounted) return;
       setState(_startOver);
-      await _popup('বিল বাতিল হলো', 'কারণসহ খাতায় লেখা থাকল।');
+      await _popup(context.l10n.counterVoided, context.l10n.counterVoidedNote);
     } catch (e) {
       if (mounted) {
         await _popup(
-            'বাতিল হলো না', errorMessageFor(e, fallback: 'আবার চেষ্টা করুন।'));
+            context.l10n.counterVoidFailed, errorMessageFor(e, fallback: context.l10n.counterTryAgain));
       }
     }
   }
@@ -1104,7 +1103,7 @@ class _CounterScreenState extends State<CounterScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialog) => AlertDialog(
           key: const ValueKey('counter-repeat'),
-          title: const Text('একই বিল আগেই হয়েছে'),
+          title: Text(context.l10n.counterRepeatTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1115,7 +1114,7 @@ class _CounterScreenState extends State<CounterScreen> {
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: ticked,
-                title: const Text('জেনেশুনে আবার একই বিল করছি'),
+                title: Text(context.l10n.counterRepeatTick),
                 onChanged: (v) => setDialog(() => ticked = v ?? false),
               ),
             ],
@@ -1123,12 +1122,12 @@ class _CounterScreenState extends State<CounterScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('ফিরে যান')),
+                child: Text(context.l10n.counterBack)),
             FilledButton(
                 key: const ValueKey('counter-repeat-go'),
                 onPressed:
                     ticked ? () => Navigator.pop(dialogContext, true) : null,
-                child: const Text('আবার করুন')),
+                child: Text(context.l10n.counterRepeatGo)),
           ],
         ),
       ),
@@ -1145,7 +1144,7 @@ class _CounterScreenState extends State<CounterScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('ঠিক আছে')),
+                child: Text(context.l10n.counterOk)),
             if (action != null)
               FilledButton(
                   key: const ValueKey('counter-open-bill'),
@@ -1164,7 +1163,7 @@ class _CounterScreenState extends State<CounterScreen> {
   Widget _screen(BuildContext context) {
     final setup = _setup;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'সরাসরি বিক্রয়', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.counterTitle, module: context.l10n.ordersModuleSales),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -1195,9 +1194,8 @@ class _CounterScreenState extends State<CounterScreen> {
               child: ListTile(
                 key: const ValueKey('counter-resume-banner'),
                 textColor: context.palette.warning,
-                title: Text('খসড়া $_resumeNo খোলা আছে'),
-                subtitle: const Text(
-                    'নিশ্চিত করলে এই খসড়াটাই পাকা হবে, নতুন বিল নয়।'),
+                title: Text(context.l10n.counterResumeBanner('$_resumeNo')),
+                subtitle: Text(context.l10n.counterResumeNote),
               ),
             ),
           Card(
@@ -1206,14 +1204,14 @@ class _CounterScreenState extends State<CounterScreen> {
               leading: const Icon(Icons.storefront_outlined),
               // ⭐ বাছা ক্রেতা "নাম · পয়েন্ট · শাখা" (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম) — খালি নাম কখনো নয়
               title: _customer == null
-                  ? const Text('ক্রেতা বাছুন')
+                  ? Text(context.l10n.counterPickBuyerTitle)
                   : CustomerLine(_customer!.label,
                       key: const ValueKey('counter-customer-line'),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final picked = await _pick<CustomerRecord>(
-                    'ক্রেতা বাছুন', _customers, (c) => c.label, customers: true);
+                    context.l10n.counterPickBuyerTitle, _customers, (c) => c.label, customers: true);
                 if (picked == null) return;
                 setState(() => _customer = picked);
                 // ⓘ পণ্য আগে বাছা থাকলে (নতুন সারি) — দরটা এই ক্রেতার তালিকা থেকে
@@ -1231,7 +1229,7 @@ class _CounterScreenState extends State<CounterScreen> {
               key: const ValueKey('counter-price'),
               onPressed: _busy ? null : _priceCheck,
               icon: const Icon(Icons.price_check, size: 18),
-              label: const Text('দাম দেখুন'),
+              label: Text(context.l10n.counterPriceCheck),
             ),
           ),
           // ⭐ গুদাম নেই — খালি লটের বদলে স্পষ্ট কথা (৬ অক্টোবর ২০২৬: UB-র AVA TRADE-এ গুদাম না পেয়ে লট আসছিল না)
@@ -1243,8 +1241,8 @@ class _CounterScreenState extends State<CounterScreen> {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
                     setup!.warehouses.isEmpty
-                        ? 'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'
-                        : 'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।',
+                        ? context.l10n.counterNoWarehouseBranch
+                        : context.l10n.counterWarehouseNotSet,
                     style: TextStyle(color: context.palette.warning)),
               ),
             ),
@@ -1253,7 +1251,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   (_warehouseId == null && setup.warehouses.isNotEmpty)))
             DropdownButtonFormField<String>(
               initialValue: _warehouseId,
-              decoration: const InputDecoration(labelText: 'গুদাম'),
+              decoration: InputDecoration(labelText: context.l10n.counterWarehouse),
               items: [
                 for (final w in setup.warehouses)
                   DropdownMenuItem(value: w.id, child: Text(w.label))
@@ -1271,7 +1269,7 @@ class _CounterScreenState extends State<CounterScreen> {
             DropdownButtonFormField<String>(
               key: const ValueKey('counter-term'),
               initialValue: _term,
-              decoration: const InputDecoration(labelText: 'শর্ত'),
+              decoration: InputDecoration(labelText: context.l10n.counterTerm),
               items: [
                 for (final t in setup.paymentTerms)
                   DropdownMenuItem(value: t.id, child: Text(t.label))
@@ -1290,11 +1288,11 @@ class _CounterScreenState extends State<CounterScreen> {
                   ListTile(
                     key: const ValueKey('counter-product'),
                     contentPadding: EdgeInsets.zero,
-                    title: Text(_product?.name ?? 'পণ্য বাছুন'),
+                    title: Text(_product?.name ?? context.l10n.counterPickProductTitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       final picked = await _pick<ProductRecord>(
-                          'পণ্য বাছুন', _products, (p) => p.name);
+                          context.l10n.counterPickProductTitle, _products, (p) => p.name);
                       if (picked == null) return;
                       setState(() {
                         _product = picked;
@@ -1314,13 +1312,13 @@ class _CounterScreenState extends State<CounterScreen> {
                     DropdownButtonFormField<String>(
                       key: const ValueKey('counter-lot'),
                       initialValue: _lot?.id,
-                      decoration: const InputDecoration(labelText: 'লট'),
+                      decoration: InputDecoration(labelText: context.l10n.counterLot),
                       items: [
                         for (final l in _lotsOfProduct)
                           DropdownMenuItem(
                               value: l.id,
                               child: Text(
-                                  [l.no, 'মেয়াদ ${l.expiry}', if (l.qty.isNotEmpty) 'আছে ${l.qty}'].join(' · '))),
+                                  [l.no, context.l10n.counterPriceExpiry(l.expiry), if (l.qty.isNotEmpty) context.l10n.counterPriceHave(l.qty)].join(' · '))),
                       ],
                       onChanged: (v) {
                         setState(() => _lot =
@@ -1332,7 +1330,7 @@ class _CounterScreenState extends State<CounterScreen> {
                     key: const ValueKey('counter-qty'),
                     controller: _qty,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'পরিমাণ'),
+                    decoration: InputDecoration(labelText: context.l10n.counterQty),
                     onChanged: (_) => _askFree(),
                   ),
                   TextField(
@@ -1341,7 +1339,7 @@ class _CounterScreenState extends State<CounterScreen> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration:
-                        InputDecoration(labelText: 'দর', helperText: _rateNote),
+                        InputDecoration(labelText: context.l10n.counterRate, helperText: _rateNote),
                     // ⓘ হাতে লেখা দর — সার্ভারের দামের নোট আর খাটে না
                     onChanged: (_) => setState(() {
                       _rateTyped = true;
@@ -1353,8 +1351,8 @@ class _CounterScreenState extends State<CounterScreen> {
                     controller: _discount,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                        labelText: 'ছাড় % (দিলে মালিকের সই লাগবে)'),
+                    decoration: InputDecoration(
+                        labelText: context.l10n.counterDiscountLabel),
                   ),
                   TextField(
                     key: const ValueKey('counter-free'),
@@ -1362,8 +1360,8 @@ class _CounterScreenState extends State<CounterScreen> {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: _freeAllowed == null
-                          ? 'ফ্রি'
-                          : 'ফ্রি (স্কিমে সর্বোচ্চ $_freeAllowed)',
+                          ? context.l10n.counterFree
+                          : context.l10n.counterFreeMaxLabel('$_freeAllowed'),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -1371,8 +1369,8 @@ class _CounterScreenState extends State<CounterScreen> {
                     key: const ValueKey('counter-add'),
                     onPressed: _addOrUpdate,
                     child: Text(_editingKey == null
-                        ? 'কার্টে যোগ করুন'
-                        : 'হালনাগাদ করুন'),
+                        ? context.l10n.counterAddToCart
+                        : context.l10n.counterUpdate),
                   ),
                 ],
               ),
@@ -1389,11 +1387,11 @@ class _CounterScreenState extends State<CounterScreen> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (line.lotNo != null) Text('লট: ${line.lotNo}'),
+                    if (line.lotNo != null) Text(context.l10n.counterLotNo('${line.lotNo}')),
                     Text('${CounterLine.wire(line.qty)} × ${Money.taka(line.rate)}'),
                     if (line.discountPercent > 0)
-                      Text('ছাড়: ${line.discountPercent}%'),
-                    if (line.freeQty > 0) Text('ফ্রি: ${CounterLine.wire(line.freeQty)}'),
+                      Text(context.l10n.counterLineDiscount('${line.discountPercent}')),
+                    if (line.freeQty > 0) Text(context.l10n.counterLineFree(CounterLine.wire(line.freeQty))),
                     Text(Money.taka(line.total)),
                   ],
                 ),
@@ -1401,7 +1399,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   IconButton(
                     key: ValueKey('counter-edit-${line.key}'),
                     icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'সম্পাদনা',
+                    tooltip: context.l10n.counterEdit,
                     onPressed: () => _edit(line),
                   ),
                   IconButton(
@@ -1415,7 +1413,7 @@ class _CounterScreenState extends State<CounterScreen> {
           if (_cart.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Text('চলতি মোট: ${Money.taka(_total)}',
+              child: Text(context.l10n.counterRunningTotal(Money.taka(_total)),
                   key: const ValueKey('counter-total'),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
@@ -1423,36 +1421,36 @@ class _CounterScreenState extends State<CounterScreen> {
           // ⓘ কী কী বাছা আছে — এক লাইনে একটা (মালিক, ১ অক্টোবর: ডান দিক কেটে যায়)
           if (_deposits.isNotEmpty)
             Text(
-                'নেওয়া টাকা: ${Money.taka(_deposits.fold<double>(0, (s, d) => s + d.amount))}',
+                context.l10n.counterMoneyTaken(Money.taka(_deposits.fold<double>(0, (s, d) => s + d.amount))),
                 key: const ValueKey('counter-money-summary')),
           if (_delivery.mode != null)
-            Text('ডেলিভারি: ${switch (_delivery.mode) {
+            Text(context.l10n.counterDeliverySummary(switch (_delivery.mode) {
               'send_later' =>
-                'পরে পাঠানো — ${_delivery.shipTo ?? ''} · ${_delivery.shipDate ?? ''}',
-              'pickup_later' => 'ক্রেতা পরে নেবেন',
-              _ => 'এখনই নিয়ে যাবেন',
-            }}'),
+                context.l10n.counterDeliverySummarySend(_delivery.shipTo ?? '', _delivery.shipDate ?? ''),
+              'pickup_later' => context.l10n.counterDeliverySummaryPickup,
+              _ => context.l10n.counterDeliverySummaryNow,
+            })),
           if (_delivery.fare > 0)
-            Text('ভাড়া: ${Money.taka(_delivery.fare)}'),
+            Text(context.l10n.counterFareSummary(Money.taka(_delivery.fare))),
           TextField(
               controller: _note,
-              decoration: const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)')),
+              decoration: InputDecoration(labelText: context.l10n.counterNoteLabel)),
           const SizedBox(height: AppSpacing.md),
 
           // ── ⭐ ওয়েবের কাউন্টারের ৮ বোতাম, মালিকের ক্রমে (৪ অক্টোবর ২০২৬) ─────────────
           Row(children: [
-            _button('counter-money', 'টাকা নেওয়া', Icons.payments_outlined,
+            _button('counter-money', context.l10n.counterMoneyTitle, Icons.payments_outlined,
                 _busy || setup == null ? null : _takeMoney,
                 marked: _deposits.isNotEmpty),
-            _button('counter-vehicle', 'গাড়ি ও ভাড়া',
+            _button('counter-vehicle', context.l10n.counterVehicleTitle,
                 Icons.local_shipping_outlined, _busy ? null : _vehicleAndFare,
                 marked: _delivery.vehicleOwner != null),
-            _button('counter-delivery', 'ডেলিভারি', Icons.inventory_2_outlined,
+            _button('counter-delivery', context.l10n.counterDelivery, Icons.inventory_2_outlined,
                 _busy ? null : _deliveryMode,
                 marked: _delivery.mode != null),
             _button(
                 'counter-return',
-                'ফেরত',
+                context.l10n.counterReturnButton,
                 Icons.undo,
                 _busy
                     ? null
@@ -1462,14 +1460,14 @@ class _CounterScreenState extends State<CounterScreen> {
                         ))),
           ]),
           Row(children: [
-            _button('counter-draft', 'খসড়া রাখুন', Icons.save_outlined,
+            _button('counter-draft', context.l10n.counterKeepDraft, Icons.save_outlined,
                 _busy ? null : () => _sell(draft: true),
                 colour: context.palette.onSurfaceMuted),
-            _button('counter-open-draft', 'খসড়া খুলুন',
+            _button('counter-open-draft', context.l10n.counterOpenDraft,
                 Icons.folder_open_outlined, _busy ? null : _openDraft),
-            _button('counter-reprint', 'আবার ছাপা', Icons.print_outlined,
+            _button('counter-reprint', context.l10n.counterReprint, Icons.print_outlined,
                 _busy ? null : _reprint),
-            _button('counter-void', 'বিল বাতিল', Icons.delete_outline,
+            _button('counter-void', context.l10n.counterVoidBill, Icons.delete_outline,
                 _busy ? null : _voidBill,
                 colour: Theme.of(context).colorScheme.error),
           ]),
@@ -1481,8 +1479,8 @@ class _CounterScreenState extends State<CounterScreen> {
               // ⭐ আগে সারাংশ — মালিক, ৪ অক্টোবর ২০২৬; সারাংশ থেকেই "নিশ্চিত" বা "খসড়া"
               onPressed: _busy ? null : _review,
               child: Text(_resumeNo == null
-                  ? 'নিশ্চিত করুন'
-                  : 'নিশ্চিত করুন — খসড়া $_resumeNo'),
+                  ? context.l10n.counterConfirm
+                  : context.l10n.counterConfirmDraft('$_resumeNo')),
             ),
           ),
         ],
@@ -1581,7 +1579,7 @@ class _DraftsSheetState extends State<_DraftsSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'খসড়া আনা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।'));
+            fallback: context.l10n.counterDraftsLoadFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -1589,7 +1587,7 @@ class _DraftsSheetState extends State<_DraftsSheet> {
   }
 
   static String _second(CounterDraftSummary d) =>
-      [d.no, if (d.date != null) dayOf(d.date), '${d.lines}টি পণ্য'].join(' · ');
+      [d.no, if (d.date != null) dayOf(d.date), AppLocale.l10n.counterDraftLines(d.lines)].join(' · ');
 
   @override
   Widget build(BuildContext context) {
@@ -1601,7 +1599,7 @@ class _DraftsSheetState extends State<_DraftsSheet> {
           key: const ValueKey('counter-drafts'),
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text('খসড়া খুলুন', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.l10n.counterOpenDraft, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             if (_busy && list == null) const LoadingSkeleton(rows: 4),
             if (_error != null)
@@ -1610,14 +1608,14 @@ class _DraftsSheetState extends State<_DraftsSheet> {
               EmptyState(
                 key: const ValueKey('counter-drafts-empty'),
                 icon: Icons.edit_note,
-                title: 'রাখা কোনো খসড়া নেই',
-                message: 'কাউন্টারে "খসড়া রাখুন" চাপলে বিল এখানে আসে।',
+                title: context.l10n.counterDraftsEmpty,
+                message: context.l10n.counterDraftsEmptyHint,
                 action: FilledButton.icon(
                     key: const ValueKey('counter-drafts-new'),
                     style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(Icons.add),
-                    label: const Text('নতুন বিল লিখুন')),
+                    label: Text(context.l10n.counterNewBill)),
               ),
             for (final d in list ?? const <CounterDraftSummary>[])
               DesignListRow(

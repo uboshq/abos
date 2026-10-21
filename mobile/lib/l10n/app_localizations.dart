@@ -605,7 +605,7 @@ abstract class AppL10n {
   ///
   /// In bn, this message translates to:
   /// **'লট: {lot}'**
-  String counterReturnLot(String lot);
+  String counterLotNo(String lot);
 
   /// Sales return line: quantity sold times the rate (rate from Money.taka)
   ///
@@ -1386,6 +1386,378 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'পাঠানোর তারিখ: {date}'**
   String counterShipDate(String date);
+
+  /// Counter popup title: a kept draft could not be opened
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া খোলা গেল না'**
+  String get counterDraftOpenFailed;
+
+  /// Counter price check: the product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম দেখুন — পণ্য বাছুন'**
+  String get counterPriceCheckPick;
+
+  /// Counter price check: popup title when the price could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম আনা গেল না'**
+  String get counterPriceFailed;
+
+  /// Counter price check: the rate per unit (rate from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় দর: {rate} / {unit}'**
+  String counterPriceRate(String rate, String unit);
+
+  /// Counter price check: the person may not see stock
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই'**
+  String get counterPriceStockHidden;
+
+  /// Counter price check: the saleable stock
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়যোগ্য মজুদ: {qty} {unit}'**
+  String counterPriceStock(String qty, String unit);
+
+  /// Counter price check: a lot number
+  ///
+  /// In bn, this message translates to:
+  /// **'লট {no}'**
+  String counterPriceLot(String no);
+
+  /// Counter: the lot expiry date
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ {date}'**
+  String counterPriceExpiry(String date);
+
+  /// Counter: the quantity left in a lot
+  ///
+  /// In bn, this message translates to:
+  /// **'আছে {qty}'**
+  String counterPriceHave(String qty);
+
+  /// Counter: close a sheet or dialog without acting
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিরে যান'**
+  String get counterBack;
+
+  /// Counter price check: put the product in the entry row
+  ///
+  /// In bn, this message translates to:
+  /// **'বিলে তুলুন'**
+  String get counterPriceToBill;
+
+  /// Counter: print the last bill again (button and popup title)
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার ছাপা'**
+  String get counterReprint;
+
+  /// Counter: nothing to reprint yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এই কাউন্টারে এখনো কোনো বিল হয়নি। পুরনো বিল ছাপতে বিলের তালিকা থেকে খুলুন।'**
+  String get counterReprintNone;
+
+  /// Counter: title of the print sheet for the last bill
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল · {no}'**
+  String counterBillTitle(String no);
+
+  /// Counter: cancel the bill being written (button, dialog and popup title)
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল বাতিল'**
+  String get counterVoidBill;
+
+  /// Counter: the cart is empty and no draft is open
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল করার মতো কিছু নেই।'**
+  String get counterVoidNothing;
+
+  /// Counter cancel dialog: the reason
+  ///
+  /// In bn, this message translates to:
+  /// **'কেন বাতিল (বাধ্যতামূলক)'**
+  String get counterVoidReason;
+
+  /// Counter cancel dialog: the red button
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল করুন'**
+  String get counterVoidConfirm;
+
+  /// Counter popup title: the bill is cancelled
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল বাতিল হলো'**
+  String get counterVoided;
+
+  /// Counter popup: the cancel is recorded with the reason
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণসহ খাতায় লেখা থাকল।'**
+  String get counterVoidedNote;
+
+  /// Counter popup title: the cancel failed
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল হলো না'**
+  String get counterVoidFailed;
+
+  /// Counter: the server warns of a duplicate bill
+  ///
+  /// In bn, this message translates to:
+  /// **'একই বিল আগেই হয়েছে'**
+  String get counterRepeatTitle;
+
+  /// Counter duplicate dialog: the tick that allows a repeat
+  ///
+  /// In bn, this message translates to:
+  /// **'জেনেশুনে আবার একই বিল করছি'**
+  String get counterRepeatTick;
+
+  /// Counter duplicate dialog: send the same bill again
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার করুন'**
+  String get counterRepeatGo;
+
+  /// Counter screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'সরাসরি বিক্রয়'**
+  String get counterTitle;
+
+  /// Counter: a kept draft is open for editing
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া {no} খোলা আছে'**
+  String counterResumeBanner(String no);
+
+  /// Counter: confirming the open draft posts it (fe: পোস্ট, not পাকা)
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত করলে এই খসড়াটাই পোস্ট হবে, নতুন বিল নয়।'**
+  String get counterResumeNote;
+
+  /// Counter: the buyer row and the buyer picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা বাছুন'**
+  String get counterPickBuyerTitle;
+
+  /// Counter: the price check button
+  ///
+  /// In bn, this message translates to:
+  /// **'দাম দেখুন'**
+  String get counterPriceCheck;
+
+  /// Counter: the branch has no active warehouse
+  ///
+  /// In bn, this message translates to:
+  /// **'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'**
+  String get counterNoWarehouseBranch;
+
+  /// Counter: no warehouse chosen yet
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।'**
+  String get counterWarehouseNotSet;
+
+  /// Counter: the warehouse dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম'**
+  String get counterWarehouse;
+
+  /// Counter: the payment terms dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'শর্ত'**
+  String get counterTerm;
+
+  /// Counter: the product row and the product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন'**
+  String get counterPickProductTitle;
+
+  /// Counter: the lot dropdown
+  ///
+  /// In bn, this message translates to:
+  /// **'লট'**
+  String get counterLot;
+
+  /// Counter: the quantity box
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get counterQty;
+
+  /// Counter: the rate box
+  ///
+  /// In bn, this message translates to:
+  /// **'দর'**
+  String get counterRate;
+
+  /// Counter: the discount box; any discount needs the owner to sign
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড় % (দিলে মালিকের সই লাগবে)'**
+  String get counterDiscountLabel;
+
+  /// Counter: the free quantity box
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি'**
+  String get counterFree;
+
+  /// Counter: the free quantity box when a scheme caps it
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি (স্কিমে সর্বোচ্চ {max})'**
+  String counterFreeMaxLabel(String max);
+
+  /// Counter: put the entry row in the cart
+  ///
+  /// In bn, this message translates to:
+  /// **'কার্টে যোগ করুন'**
+  String get counterAddToCart;
+
+  /// Counter: save changes to a cart line
+  ///
+  /// In bn, this message translates to:
+  /// **'হালনাগাদ করুন'**
+  String get counterUpdate;
+
+  /// Counter cart line: its discount
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড়: {percent}%'**
+  String counterLineDiscount(String percent);
+
+  /// Counter cart line: its free quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি: {qty}'**
+  String counterLineFree(String qty);
+
+  /// Counter cart line: edit it
+  ///
+  /// In bn, this message translates to:
+  /// **'সম্পাদনা'**
+  String get counterEdit;
+
+  /// Counter: the cart total (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'চলতি মোট: {amount}'**
+  String counterRunningTotal(String amount);
+
+  /// Counter: the money taken so far (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'নেওয়া টাকা: {amount}'**
+  String counterMoneyTaken(String amount);
+
+  /// Counter: how the goods go, in one line
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারি: {mode}'**
+  String counterDeliverySummary(String mode);
+
+  /// Counter delivery line: sent later to an address on a date
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে পাঠানো — {to} · {date}'**
+  String counterDeliverySummarySend(String to, String date);
+
+  /// Counter delivery line: collected later
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্রেতা পরে নেবেন'**
+  String get counterDeliverySummaryPickup;
+
+  /// Counter delivery line: taken now
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনই নিয়ে যাবেন'**
+  String get counterDeliverySummaryNow;
+
+  /// Counter: the fare (from Money.taka)
+  ///
+  /// In bn, this message translates to:
+  /// **'ভাড়া: {amount}'**
+  String counterFareSummary(String amount);
+
+  /// Counter: the delivery button
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারি'**
+  String get counterDelivery;
+
+  /// Counter: the button that opens the sales return
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত'**
+  String get counterReturnButton;
+
+  /// Counter: keep the bill as a draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get counterKeepDraft;
+
+  /// Counter: open a kept draft (button and sheet title)
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া খুলুন'**
+  String get counterOpenDraft;
+
+  /// Counter: confirm the open draft
+  ///
+  /// In bn, this message translates to:
+  /// **'নিশ্চিত করুন — খসড়া {no}'**
+  String counterConfirmDraft(String no);
+
+  /// Counter drafts sheet: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া আনা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।'**
+  String get counterDraftsLoadFailed;
+
+  /// Counter drafts sheet: how many products a draft has
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টি পণ্য}}'**
+  String counterDraftLines(int count);
+
+  /// Counter drafts sheet: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'রাখা কোনো খসড়া নেই'**
+  String get counterDraftsEmpty;
+
+  /// Counter drafts sheet: empty state hint
+  ///
+  /// In bn, this message translates to:
+  /// **'কাউন্টারে \"খসড়া রাখুন\" চাপলে বিল এখানে আসে।'**
+  String get counterDraftsEmptyHint;
+
+  /// Counter drafts sheet: close it and write a new bill
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন বিল লিখুন'**
+  String get counterNewBill;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

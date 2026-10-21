@@ -253,7 +253,7 @@ class _ReturnScreenState extends State<ReturnScreen> {
                     children: [
                       Text(l.name,
                           style: const TextStyle(fontWeight: FontWeight.w700)),
-                      if (l.lotNo != null) Text(context.l10n.counterReturnLot('${l.lotNo}')),
+                      if (l.lotNo != null) Text(context.l10n.counterLotNo('${l.lotNo}')),
                       Text(context.l10n.counterReturnSold('${l.qty}', Money.taka(l.rate))),
                       TextField(
                         key: ValueKey('return-qty-${l.id}'),

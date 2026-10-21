@@ -324,7 +324,7 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String counterReturnLot(String lot) {
+  String counterLotNo(String lot) {
     return 'Lot: $lot';
   }
 
@@ -781,4 +781,238 @@ class AppL10nEn extends AppL10n {
   String counterShipDate(String date) {
     return 'Send date: $date';
   }
+
+  @override
+  String get counterDraftOpenFailed => 'Could not open the draft';
+
+  @override
+  String get counterPriceCheckPick => 'Check a price — choose a product';
+
+  @override
+  String get counterPriceFailed => 'Could not load the price';
+
+  @override
+  String counterPriceRate(String rate, String unit) {
+    return 'Sale rate: $rate / $unit';
+  }
+
+  @override
+  String get counterPriceStockHidden =>
+      'Saleable stock: no permission to see it';
+
+  @override
+  String counterPriceStock(String qty, String unit) {
+    return 'Saleable stock: $qty $unit';
+  }
+
+  @override
+  String counterPriceLot(String no) {
+    return 'Lot $no';
+  }
+
+  @override
+  String counterPriceExpiry(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String counterPriceHave(String qty) {
+    return 'In stock $qty';
+  }
+
+  @override
+  String get counterBack => 'Go back';
+
+  @override
+  String get counterPriceToBill => 'Put on the bill';
+
+  @override
+  String get counterReprint => 'Reprint';
+
+  @override
+  String get counterReprintNone =>
+      'No bill made at this counter yet. To print an old bill, open it from the bill list.';
+
+  @override
+  String counterBillTitle(String no) {
+    return 'Bill · $no';
+  }
+
+  @override
+  String get counterVoidBill => 'Cancel bill';
+
+  @override
+  String get counterVoidNothing => 'Nothing to cancel.';
+
+  @override
+  String get counterVoidReason => 'Why cancel (required)';
+
+  @override
+  String get counterVoidConfirm => 'Cancel it';
+
+  @override
+  String get counterVoided => 'Bill cancelled';
+
+  @override
+  String get counterVoidedNote => 'It stays in the books with its reason.';
+
+  @override
+  String get counterVoidFailed => 'Not cancelled';
+
+  @override
+  String get counterRepeatTitle => 'The same bill was already made';
+
+  @override
+  String get counterRepeatTick => 'I know, and I am making the same bill again';
+
+  @override
+  String get counterRepeatGo => 'Do it again';
+
+  @override
+  String get counterTitle => 'Direct sale';
+
+  @override
+  String counterResumeBanner(String no) {
+    return 'Draft $no is open';
+  }
+
+  @override
+  String get counterResumeNote =>
+      'Confirming posts this same draft, not a new bill.';
+
+  @override
+  String get counterPickBuyerTitle => 'Choose a buyer';
+
+  @override
+  String get counterPriceCheck => 'Check price';
+
+  @override
+  String get counterNoWarehouseBranch =>
+      'No active warehouse in this branch — without one no lots come and nothing can be sold. Tell the office.';
+
+  @override
+  String get counterWarehouseNotSet =>
+      'Warehouse not set — choose one below; lots need a warehouse.';
+
+  @override
+  String get counterWarehouse => 'Warehouse';
+
+  @override
+  String get counterTerm => 'Terms';
+
+  @override
+  String get counterPickProductTitle => 'Choose a product';
+
+  @override
+  String get counterLot => 'Lot';
+
+  @override
+  String get counterQty => 'Quantity';
+
+  @override
+  String get counterRate => 'Rate';
+
+  @override
+  String get counterDiscountLabel =>
+      'Discount % (needs the owner\'s signature)';
+
+  @override
+  String get counterFree => 'Free';
+
+  @override
+  String counterFreeMaxLabel(String max) {
+    return 'Free (scheme allows at most $max)';
+  }
+
+  @override
+  String get counterAddToCart => 'Add to cart';
+
+  @override
+  String get counterUpdate => 'Update';
+
+  @override
+  String counterLineDiscount(String percent) {
+    return 'Discount: $percent%';
+  }
+
+  @override
+  String counterLineFree(String qty) {
+    return 'Free: $qty';
+  }
+
+  @override
+  String get counterEdit => 'Edit';
+
+  @override
+  String counterRunningTotal(String amount) {
+    return 'Running total: $amount';
+  }
+
+  @override
+  String counterMoneyTaken(String amount) {
+    return 'Amount taken: $amount';
+  }
+
+  @override
+  String counterDeliverySummary(String mode) {
+    return 'Delivery: $mode';
+  }
+
+  @override
+  String counterDeliverySummarySend(String to, String date) {
+    return 'Sent later — $to · $date';
+  }
+
+  @override
+  String get counterDeliverySummaryPickup => 'The buyer collects later';
+
+  @override
+  String get counterDeliverySummaryNow => 'Taken now';
+
+  @override
+  String counterFareSummary(String amount) {
+    return 'Fare: $amount';
+  }
+
+  @override
+  String get counterDelivery => 'Delivery';
+
+  @override
+  String get counterReturnButton => 'Returns';
+
+  @override
+  String get counterKeepDraft => 'Keep as draft';
+
+  @override
+  String get counterOpenDraft => 'Open a draft';
+
+  @override
+  String counterConfirmDraft(String no) {
+    return 'Confirm — draft $no';
+  }
+
+  @override
+  String get counterDraftsLoadFailed =>
+      'Could not load the drafts. Check the connection and try again.';
+
+  @override
+  String counterDraftLines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count products',
+      one: '$count product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get counterDraftsEmpty => 'No kept drafts';
+
+  @override
+  String get counterDraftsEmptyHint =>
+      'Press \"Keep as draft\" at the counter and the bill shows here.';
+
+  @override
+  String get counterNewBill => 'Write a new bill';
 }

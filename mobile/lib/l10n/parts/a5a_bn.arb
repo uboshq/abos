@@ -281,8 +281,8 @@
       }
     }
   },
-  "counterReturnLot": "লট: {lot}",
-  "@counterReturnLot": {
+  "counterLotNo": "লট: {lot}",
+  "@counterLotNo": {
     "description": "Sales return line: the lot number",
     "placeholders": {
       "lot": {
@@ -932,5 +932,347 @@
         "type": "String"
       }
     }
+  },
+  "counterDraftOpenFailed": "খসড়া খোলা গেল না",
+  "@counterDraftOpenFailed": {
+    "description": "Counter popup title: a kept draft could not be opened"
+  },
+  "counterPriceCheckPick": "দাম দেখুন — পণ্য বাছুন",
+  "@counterPriceCheckPick": {
+    "description": "Counter price check: the product picker title"
+  },
+  "counterPriceFailed": "দাম আনা গেল না",
+  "@counterPriceFailed": {
+    "description": "Counter price check: popup title when the price could not be loaded"
+  },
+  "counterPriceRate": "বিক্রয় দর: {rate} / {unit}",
+  "@counterPriceRate": {
+    "description": "Counter price check: the rate per unit (rate from Money.taka)",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceStockHidden": "বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই",
+  "@counterPriceStockHidden": {
+    "description": "Counter price check: the person may not see stock"
+  },
+  "counterPriceStock": "বিক্রয়যোগ্য মজুদ: {qty} {unit}",
+  "@counterPriceStock": {
+    "description": "Counter price check: the saleable stock",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceLot": "লট {no}",
+  "@counterPriceLot": {
+    "description": "Counter price check: a lot number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceExpiry": "মেয়াদ {date}",
+  "@counterPriceExpiry": {
+    "description": "Counter: the lot expiry date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "counterPriceHave": "আছে {qty}",
+  "@counterPriceHave": {
+    "description": "Counter: the quantity left in a lot",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "counterBack": "ফিরে যান",
+  "@counterBack": {
+    "description": "Counter: close a sheet or dialog without acting"
+  },
+  "counterPriceToBill": "বিলে তুলুন",
+  "@counterPriceToBill": {
+    "description": "Counter price check: put the product in the entry row"
+  },
+  "counterReprint": "আবার ছাপা",
+  "@counterReprint": {
+    "description": "Counter: print the last bill again (button and popup title)"
+  },
+  "counterReprintNone": "এই কাউন্টারে এখনো কোনো বিল হয়নি। পুরনো বিল ছাপতে বিলের তালিকা থেকে খুলুন।",
+  "@counterReprintNone": {
+    "description": "Counter: nothing to reprint yet"
+  },
+  "counterBillTitle": "বিল · {no}",
+  "@counterBillTitle": {
+    "description": "Counter: title of the print sheet for the last bill",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterVoidBill": "বিল বাতিল",
+  "@counterVoidBill": {
+    "description": "Counter: cancel the bill being written (button, dialog and popup title)"
+  },
+  "counterVoidNothing": "বাতিল করার মতো কিছু নেই।",
+  "@counterVoidNothing": {
+    "description": "Counter: the cart is empty and no draft is open"
+  },
+  "counterVoidReason": "কেন বাতিল (বাধ্যতামূলক)",
+  "@counterVoidReason": {
+    "description": "Counter cancel dialog: the reason"
+  },
+  "counterVoidConfirm": "বাতিল করুন",
+  "@counterVoidConfirm": {
+    "description": "Counter cancel dialog: the red button"
+  },
+  "counterVoided": "বিল বাতিল হলো",
+  "@counterVoided": {
+    "description": "Counter popup title: the bill is cancelled"
+  },
+  "counterVoidedNote": "কারণসহ খাতায় লেখা থাকল।",
+  "@counterVoidedNote": {
+    "description": "Counter popup: the cancel is recorded with the reason"
+  },
+  "counterVoidFailed": "বাতিল হলো না",
+  "@counterVoidFailed": {
+    "description": "Counter popup title: the cancel failed"
+  },
+  "counterRepeatTitle": "একই বিল আগেই হয়েছে",
+  "@counterRepeatTitle": {
+    "description": "Counter: the server warns of a duplicate bill"
+  },
+  "counterRepeatTick": "জেনেশুনে আবার একই বিল করছি",
+  "@counterRepeatTick": {
+    "description": "Counter duplicate dialog: the tick that allows a repeat"
+  },
+  "counterRepeatGo": "আবার করুন",
+  "@counterRepeatGo": {
+    "description": "Counter duplicate dialog: send the same bill again"
+  },
+  "counterTitle": "সরাসরি বিক্রয়",
+  "@counterTitle": {
+    "description": "Counter screen title"
+  },
+  "counterResumeBanner": "খসড়া {no} খোলা আছে",
+  "@counterResumeBanner": {
+    "description": "Counter: a kept draft is open for editing",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterResumeNote": "নিশ্চিত করলে এই খসড়াটাই পোস্ট হবে, নতুন বিল নয়।",
+  "@counterResumeNote": {
+    "description": "Counter: confirming the open draft posts it (fe: পোস্ট, not পাকা)"
+  },
+  "counterPickBuyerTitle": "ক্রেতা বাছুন",
+  "@counterPickBuyerTitle": {
+    "description": "Counter: the buyer row and the buyer picker title"
+  },
+  "counterPriceCheck": "দাম দেখুন",
+  "@counterPriceCheck": {
+    "description": "Counter: the price check button"
+  },
+  "counterNoWarehouseBranch": "এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।",
+  "@counterNoWarehouseBranch": {
+    "description": "Counter: the branch has no active warehouse"
+  },
+  "counterWarehouseNotSet": "গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।",
+  "@counterWarehouseNotSet": {
+    "description": "Counter: no warehouse chosen yet"
+  },
+  "counterWarehouse": "গুদাম",
+  "@counterWarehouse": {
+    "description": "Counter: the warehouse dropdown"
+  },
+  "counterTerm": "শর্ত",
+  "@counterTerm": {
+    "description": "Counter: the payment terms dropdown"
+  },
+  "counterPickProductTitle": "পণ্য বাছুন",
+  "@counterPickProductTitle": {
+    "description": "Counter: the product row and the product picker title"
+  },
+  "counterLot": "লট",
+  "@counterLot": {
+    "description": "Counter: the lot dropdown"
+  },
+  "counterQty": "পরিমাণ",
+  "@counterQty": {
+    "description": "Counter: the quantity box"
+  },
+  "counterRate": "দর",
+  "@counterRate": {
+    "description": "Counter: the rate box"
+  },
+  "counterDiscountLabel": "ছাড় % (দিলে মালিকের সই লাগবে)",
+  "@counterDiscountLabel": {
+    "description": "Counter: the discount box; any discount needs the owner to sign"
+  },
+  "counterFree": "ফ্রি",
+  "@counterFree": {
+    "description": "Counter: the free quantity box"
+  },
+  "counterFreeMaxLabel": "ফ্রি (স্কিমে সর্বোচ্চ {max})",
+  "@counterFreeMaxLabel": {
+    "description": "Counter: the free quantity box when a scheme caps it",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "counterAddToCart": "কার্টে যোগ করুন",
+  "@counterAddToCart": {
+    "description": "Counter: put the entry row in the cart"
+  },
+  "counterUpdate": "হালনাগাদ করুন",
+  "@counterUpdate": {
+    "description": "Counter: save changes to a cart line"
+  },
+  "counterLineDiscount": "ছাড়: {percent}%",
+  "@counterLineDiscount": {
+    "description": "Counter cart line: its discount",
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "counterLineFree": "ফ্রি: {qty}",
+  "@counterLineFree": {
+    "description": "Counter cart line: its free quantity",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "counterEdit": "সম্পাদনা",
+  "@counterEdit": {
+    "description": "Counter cart line: edit it"
+  },
+  "counterRunningTotal": "চলতি মোট: {amount}",
+  "@counterRunningTotal": {
+    "description": "Counter: the cart total (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterMoneyTaken": "নেওয়া টাকা: {amount}",
+  "@counterMoneyTaken": {
+    "description": "Counter: the money taken so far (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDeliverySummary": "ডেলিভারি: {mode}",
+  "@counterDeliverySummary": {
+    "description": "Counter: how the goods go, in one line",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDeliverySummarySend": "পরে পাঠানো — {to} · {date}",
+  "@counterDeliverySummarySend": {
+    "description": "Counter delivery line: sent later to an address on a date",
+    "placeholders": {
+      "to": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDeliverySummaryPickup": "ক্রেতা পরে নেবেন",
+  "@counterDeliverySummaryPickup": {
+    "description": "Counter delivery line: collected later"
+  },
+  "counterDeliverySummaryNow": "এখনই নিয়ে যাবেন",
+  "@counterDeliverySummaryNow": {
+    "description": "Counter delivery line: taken now"
+  },
+  "counterFareSummary": "ভাড়া: {amount}",
+  "@counterFareSummary": {
+    "description": "Counter: the fare (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDelivery": "ডেলিভারি",
+  "@counterDelivery": {
+    "description": "Counter: the delivery button"
+  },
+  "counterReturnButton": "ফেরত",
+  "@counterReturnButton": {
+    "description": "Counter: the button that opens the sales return"
+  },
+  "counterKeepDraft": "খসড়া রাখুন",
+  "@counterKeepDraft": {
+    "description": "Counter: keep the bill as a draft"
+  },
+  "counterOpenDraft": "খসড়া খুলুন",
+  "@counterOpenDraft": {
+    "description": "Counter: open a kept draft (button and sheet title)"
+  },
+  "counterConfirmDraft": "নিশ্চিত করুন — খসড়া {no}",
+  "@counterConfirmDraft": {
+    "description": "Counter: confirm the open draft",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterDraftsLoadFailed": "খসড়া আনা গেল না। নেট আছে কি না দেখে আবার চেষ্টা করুন।",
+  "@counterDraftsLoadFailed": {
+    "description": "Counter drafts sheet: the list could not be loaded"
+  },
+  "counterDraftLines": "{count, plural, other{{count}টি পণ্য}}",
+  "@counterDraftLines": {
+    "description": "Counter drafts sheet: how many products a draft has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "counterDraftsEmpty": "রাখা কোনো খসড়া নেই",
+  "@counterDraftsEmpty": {
+    "description": "Counter drafts sheet: empty state title"
+  },
+  "counterDraftsEmptyHint": "কাউন্টারে \"খসড়া রাখুন\" চাপলে বিল এখানে আসে।",
+  "@counterDraftsEmptyHint": {
+    "description": "Counter drafts sheet: empty state hint"
+  },
+  "counterNewBill": "নতুন বিল লিখুন",
+  "@counterNewBill": {
+    "description": "Counter drafts sheet: close it and write a new bill"
   }
 }
