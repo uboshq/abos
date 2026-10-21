@@ -182,7 +182,7 @@ class AppL10nBn extends AppL10n {
   String get ordersListEmptyMessage => 'নিচে টেনে আবার চেষ্টা করুন।';
 
   @override
-  String get ordersListNewOrder => 'নতুন অর্ডার';
+  String get ordersNewOrder => 'নতুন অর্ডার';
 
   @override
   String ordersListPendingHeader(String count) {
@@ -227,7 +227,7 @@ class AppL10nBn extends AppL10n {
   String get ordersTrackingSearchHint => 'বিক্রয় নম্বর, ডিও বা দোকান';
 
   @override
-  String get ordersTrackingSearch => 'খুঁজুন';
+  String get ordersSearch => 'খুঁজুন';
 
   @override
   String get ordersTrackingAll => 'সব';
@@ -258,4 +258,323 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get ordersTrackingStoryWho => 'কে কখন কী করলেন';
+
+  @override
+  String get counterReturnLoadFailed =>
+      'ফেরতের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।';
+
+  @override
+  String get counterReturnBillFailed => 'বিল খোলা গেল না';
+
+  @override
+  String get counterTryAgain => 'আবার চেষ্টা করুন।';
+
+  @override
+  String get counterReturnQtyUnreadable =>
+      'ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।';
+
+  @override
+  String get counterReturnPickReason => 'কারণ বাছুন।';
+
+  @override
+  String get counterReturnNeedQty => 'অন্তত একটা মালের ফেরত পরিমাণ দিন।';
+
+  @override
+  String get counterReturnDraftKeptTitle => 'খসড়া ফেরত রাখা হলো';
+
+  @override
+  String get counterReturnDraftKeptText =>
+      'নিশ্চিত হয়নি — ওয়েবের ফেরতের তালিকায় খসড়া হয়ে আছে।';
+
+  @override
+  String get counterReturnDone => 'ফেরত হলো';
+
+  @override
+  String get counterAwaitingSignature => 'সইয়ের অপেক্ষায়';
+
+  @override
+  String get counterReturnFailed => 'ফেরত হলো না';
+
+  @override
+  String get counterOk => 'ঠিক আছে';
+
+  @override
+  String get counterReturnTitle => 'বিক্রি ফেরত';
+
+  @override
+  String get counterReturnWhichBill => 'কোন বিলের ফেরত';
+
+  @override
+  String get counterReturnEmptyTitle =>
+      'ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।';
+
+  @override
+  String get counterReturnEmptyHint => 'বিল পোস্ট হলে এখানে আসবে।';
+
+  @override
+  String get counterReload => 'নতুন করে দেখুন';
+
+  @override
+  String counterReturnBillNo(String no) {
+    return 'বিল $no';
+  }
+
+  @override
+  String counterReturnLot(String lot) {
+    return 'লট: $lot';
+  }
+
+  @override
+  String counterReturnSold(String qty, String rate) {
+    return 'বেচা: $qty × $rate';
+  }
+
+  @override
+  String get counterReturnQtyLabel => 'কত ফেরত';
+
+  @override
+  String get counterReturnReasonLabel => 'কেন ফেরত';
+
+  @override
+  String get counterNoteLabel => 'বিবরণ (ঐচ্ছিক)';
+
+  @override
+  String get counterConfirm => 'নিশ্চিত করুন';
+
+  @override
+  String get counterReturnOtherBill => 'অন্য বিল বাছুন';
+
+  @override
+  String get ordersFilter => 'ফিল্টার';
+
+  @override
+  String get ordersFilterOffer => 'অফার আছে';
+
+  @override
+  String get ordersFilterBoughtBefore => 'এই দোকান আগে নিয়েছে';
+
+  @override
+  String get ordersSale => 'বিক্রি';
+
+  @override
+  String get ordersFree => 'ফ্রি';
+
+  @override
+  String get ordersKeypadCarton => 'কার্টন';
+
+  @override
+  String ordersKeypadCartonFactor(String one, String carton, String factor) {
+    return '$one $carton = $factor পিস';
+  }
+
+  @override
+  String get ordersKeypadPieces => 'পিস';
+
+  @override
+  String get ordersKeypadTotalPieces => 'মোট পিস';
+
+  @override
+  String ordersKeypadLikeLast(String qty) {
+    return 'আগের মতো ($qty)';
+  }
+
+  @override
+  String get ordersKeypadBackspace => 'মুছুন';
+
+  @override
+  String get ordersKeypadAddToCart => 'ঝুড়িতে যোগ';
+
+  @override
+  String ordersKeypadLineAmount(String amount) {
+    return 'এই লাইনে $amount';
+  }
+
+  @override
+  String get ordersKeypadEitherUnit => 'কার্টন বা পিস যেটায় খুশি লিখুন';
+
+  @override
+  String get ordersSortCatalogue => 'তালিকার ক্রমে';
+
+  @override
+  String get ordersSortName => 'নাম ধরে';
+
+  @override
+  String get ordersSortPrice => 'দাম ধরে';
+
+  @override
+  String get ordersFilterClearAll => 'সব মুছুন';
+
+  @override
+  String get ordersFilterShowHeading => 'দেখান';
+
+  @override
+  String get ordersFilterSortHeading => 'সাজান';
+
+  @override
+  String ordersFilterApply(int n, String count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$countটা পণ্য দেখান',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ordersConfirmTitle => 'পাঠানোর আগে দেখে নিন';
+
+  @override
+  String get ordersConfirmStandingLoading => 'হিসাব আনা হচ্ছে…';
+
+  @override
+  String get ordersConfirmStandingOffline => 'নেট নেই — হিসাব পরে দেখা যাবে';
+
+  @override
+  String get ordersConfirmStandingFailed =>
+      'হিসাব এখন আনা গেল না — অর্ডার তবু যাবে, হিসাব পরে দেখা যাবে';
+
+  @override
+  String get ordersConfirmAdvance => 'জমা আছে';
+
+  @override
+  String get ordersConfirmPendingClaims => 'অনুমোদনের অপেক্ষায়';
+
+  @override
+  String get ordersConfirmToPay => 'দিতে হবে';
+
+  @override
+  String ordersConfirmOverLimit(String amount) {
+    return 'বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু $amount জমা না হলে ডেলিভারি হবে না। এই সীমা কেউ পার করাতে পারেন না, মালিকও না।';
+  }
+
+  @override
+  String get ordersConfirmColProduct => 'পণ্য';
+
+  @override
+  String get ordersConfirmColAmount => 'টাকা';
+
+  @override
+  String get ordersConfirmTotal => 'মোট';
+
+  @override
+  String get ordersConfirmRemarks => 'মন্তব্য (ঐচ্ছিক)';
+
+  @override
+  String get ordersConfirmSend => 'ঠিক আছে, পাঠান';
+
+  @override
+  String get ordersConfirmBack => 'ফিরে যান';
+
+  @override
+  String get ordersConfirmSoon => 'শীঘ্রই আসছে';
+
+  @override
+  String get ordersOk => 'ঠিক আছে';
+
+  @override
+  String get ordersConfirmBankSlip => 'ব্যাংক স্লিপ পাঠান';
+
+  @override
+  String get ordersNewNoBarcodeProduct => 'এই বারকোডে কোনো পণ্য নেই';
+
+  @override
+  String get ordersNewQueued =>
+      'অর্ডার লেখা হয়েছে। নম্বর সিঙ্কের পর আসবে — এখনই বলা যাবে না।';
+
+  @override
+  String get ordersNewPickCustomer => 'গ্রাহক বাছুন';
+
+  @override
+  String get ordersNewNoProductsTitle => 'পণ্যের তালিকা এখনো সিঙ্ক হয়নি';
+
+  @override
+  String get ordersNewNoProductsHint =>
+      'পণ্যের পর্দায় গিয়ে একবার নিচে টানুন, তারপর ফিরে আসুন।';
+
+  @override
+  String get ordersNewSearchHint => 'নাম বা কোড লিখুন';
+
+  @override
+  String get ordersNewScanBarcode => 'বারকোড স্ক্যান';
+
+  @override
+  String get ordersNewChipRemove => 'সরান';
+
+  @override
+  String get ordersNewNoMatch => 'কোনো মিল পাওয়া যায়নি';
+
+  @override
+  String get ordersNewInCart => '✓ ঝুড়িতে আছে';
+
+  @override
+  String get ordersNewNoRate => 'দর জানা নেই';
+
+  @override
+  String get ordersNewLess => 'কমান';
+
+  @override
+  String get ordersNewMore => 'বাড়ান';
+
+  @override
+  String get ordersNewQty => 'পরিমাণ';
+
+  @override
+  String get ordersNewQtyHint => 'সংখ্যা লিখুন';
+
+  @override
+  String ordersNewSaleAmount(String amount) {
+    return 'বিক্রি · $amount';
+  }
+
+  @override
+  String get ordersNewFreeAuto => 'ফ্রি · নিজে বসেছে';
+
+  @override
+  String ordersNewBarPieces(String sold, String free) {
+    return 'বিক্রি $sold পিস · ফ্রি $free';
+  }
+
+  @override
+  String get ordersNewSend => 'পাঠান';
+
+  @override
+  String get ordersNewBarcodeTitle => 'বারকোড';
+
+  @override
+  String get ordersNewBarcodeHint => 'স্ক্যান করুন বা লিখুন';
+
+  @override
+  String ordersNewDueLimit(String amount) {
+    return 'সীমা $amount';
+  }
+
+  @override
+  String ordersNewDueHeadroom(String amount) {
+    return 'বাকি $amount';
+  }
+
+  @override
+  String ordersNewDueDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days দিন',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ordersNewOverAlready(String amount) {
+    return 'সীমা আগেই পেরিয়ে আছে — এই অর্ডারে $amount যোগ হবে।';
+  }
+
+  @override
+  String ordersNewOverBy(String amount) {
+    return 'এই অর্ডারে সীমা $amount ছাড়িয়ে যাবে।';
+  }
+
+  @override
+  String ordersNewDueSynced(String when) {
+    return 'বকেয়ার তথ্য সিঙ্ক $when';
+  }
 }

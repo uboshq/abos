@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/order_api.dart';
 import '../../core/records/customer_record.dart';
@@ -269,7 +270,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     }
     if (found == null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('এই বারকোডে কোনো পণ্য নেই')));
+          .showSnackBar(SnackBar(content: Text(context.l10n.ordersNewNoBarcodeProduct)));
       return;
     }
     await _openKeypad(found);
@@ -349,8 +350,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         await SyncEngine.instance.markResolved(supersedes);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('অর্ডার লেখা হয়েছে। নম্বর সিঙ্কের পর আসবে — এখনই বলা যাবে না।'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n.ordersNewQueued),
       ));
       setState(() {
         _qty.clear();
@@ -382,8 +383,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › নতুন অর্ডার" (মালিকের নিয়ম: "প্রতিটা পাতায়, সবসময়"; ০.৪.৪১);
       // গ্রাহক বাছাই বারের ঠিক নিচে, পাতার রঙে — আগের মতোই এক চাপে
       appBar: AbosScreenBar(
-        title: 'নতুন অর্ডার',
-        module: 'বিক্রয়',
+        title: context.l10n.ordersNewOrder,
+        module: context.l10n.ordersModuleSales,
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(pickerHeight),
           child: Material(
@@ -398,7 +399,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   alignment: AlignmentDirectional.centerStart,
                   // ⭐ গ্রাহক "নাম · পয়েন্ট · শাখা" (আর ঠিকানা) — [CustomerLine]: এক লাইন, ছুঁয়ে ধরলে পুরোটা
                   child: customer == null
-                      ? Text('গ্রাহক বাছুন', style: TextStyle(fontSize: 15, color: o.brand, fontWeight: FontWeight.w700))
+                      ? Text(context.l10n.ordersNewPickCustomer, style: TextStyle(fontSize: 15, color: o.brand, fontWeight: FontWeight.w700))
                       : CustomerLine(
                           [customer.label, if (customer.address != null) customer.address!].join(' · '),
                           key: const ValueKey('order-customer-line'),
@@ -411,10 +412,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         ),
       ),
       body: noProducts
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.inventory_2_outlined,
-              title: 'পণ্যের তালিকা এখনো সিঙ্ক হয়নি',
-              message: 'পণ্যের পর্দায় গিয়ে একবার নিচে টানুন, তারপর ফিরে আসুন।',
+              title: context.l10n.ordersNewNoProductsTitle,
+              message: context.l10n.ordersNewNoProductsHint,
             )
           : Column(
               children: [
@@ -460,7 +461,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 onChanged: (value) => setState(() => _query = value),
                 style: const TextStyle(fontSize: 16),
                 decoration: InputDecoration(
-                  hintText: 'নাম বা কোড লিখুন',
+                  hintText: context.l10n.ordersNewSearchHint,
                   prefixIcon: Icon(Icons.search, color: o.muted),
                   filled: true,
                   fillColor: o.field,
@@ -474,7 +475,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           const SizedBox(width: 8),
           _iconBox(
             key: const ValueKey('order-barcode'),
-            label: 'বারকোড স্ক্যান',
+            label: context.l10n.ordersNewScanBarcode,
             fill: o.field,
             onTap: _scan,
             child: Icon(Icons.qr_code_scanner, color: o.ink),
@@ -482,7 +483,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           const SizedBox(width: 8),
           _iconBox(
             key: const ValueKey('order-filter'),
-            label: 'ফিল্টার',
+            label: context.l10n.ordersFilter,
             fill: o.brand,
             onTap: _openFilter,
             child: Badge(
@@ -508,7 +509,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             side: BorderSide.none,
             shape: const StadiumBorder(),
             deleteIconColor: o.onPill,
-            deleteButtonTooltipMessage: 'সরান',
+            deleteButtonTooltipMessage: context.l10n.ordersNewChipRemove,
             onDeleted: () => setState(() => _filter = without),
           ),
         );
@@ -518,8 +519,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          if (_filter.offerOnly) chip('অফার আছে', _filter.copyWith(offerOnly: false)),
-          if (_filter.boughtBefore) chip('এই দোকান আগে নিয়েছে', _filter.copyWith(boughtBefore: false)),
+          if (_filter.offerOnly) chip(context.l10n.ordersFilterOffer, _filter.copyWith(offerOnly: false)),
+          if (_filter.boughtBefore) chip(context.l10n.ordersFilterBoughtBefore, _filter.copyWith(boughtBefore: false)),
           if (_filter.sort != OrderSort.catalogue)
             chip(OrderFilter.sortLabel(_filter.sort), _filter.copyWith(sort: OrderSort.catalogue)),
         ],
@@ -530,7 +531,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   Widget _list() {
     final rows = _visible(_filter);
     if (rows.isEmpty) {
-      return const EmptyState(icon: Icons.search_off, title: 'কোনো মিল পাওয়া যায়নি');
+      return EmptyState(icon: Icons.search_off, title: context.l10n.ordersNewNoMatch);
     }
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
@@ -564,8 +565,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               const SizedBox(width: 8),
               Text(
                 [
-                  if (qty > 0) '✓ ঝুড়িতে আছে',
-                  rate == null ? 'দর জানা নেই' : bnTaka(rate),
+                  if (qty > 0) context.l10n.ordersNewInCart,
+                  rate == null ? context.l10n.ordersNewNoRate : bnTaka(rate),
                 ].join(' · '),
                 style: TextStyle(
                   fontSize: qty > 0 ? 13 : 14,
@@ -593,15 +594,15 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       decoration: BoxDecoration(color: o.pill, borderRadius: BorderRadius.circular(999)),
                       child: Row(
                         children: [
-                          _round('−', 'কমান', () => _setQty(product.id, (_qty[product.id] ?? 0) - 1),
+                          _round('−', context.l10n.ordersNewLess, () => _setQty(product.id, (_qty[product.id] ?? 0) - 1),
                               key: ValueKey('order-minus-${product.id}')),
                           // ⓘ অন্তত ৪৮ উঁচু, বাঁধা নয় (আগে ৩৮); নকশার নিয়ম ০.৪.৩৮ §২
                           Expanded(
                             child: Semantics(
                               button: true,
-                              label: 'পরিমাণ',
+                              label: context.l10n.ordersNewQty,
                               value: bnQty(qty),
-                              onTapHint: 'সংখ্যা লিখুন',
+                              onTapHint: context.l10n.ordersNewQtyHint,
                               child: InkWell(
                                 key: ValueKey('order-qty-${product.id}'),
                                 onTap: () => _openKeypad(product),
@@ -617,14 +618,14 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                               ),
                             ),
                           ),
-                          _round('+', 'বাড়ান', () => _setQty(product.id, (_qty[product.id] ?? 0) + 1),
+                          _round('+', context.l10n.ordersNewMore, () => _setQty(product.id, (_qty[product.id] ?? 0) + 1),
                               key: ValueKey('order-plus-${product.id}')),
                         ],
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      qty > 0 && rate != null ? 'বিক্রি · ${bnTaka(rate * qty)}' : 'বিক্রি',
+                      qty > 0 && rate != null ? context.l10n.ordersNewSaleAmount(bnTaka(rate * qty)) : context.l10n.ordersSale,
                       style: TextStyle(fontSize: 11, color: o.muted),
                     ),
                   ],
@@ -636,7 +637,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 child: Column(
                   children: [
                     Semantics(
-                      label: 'ফ্রি',
+                      label: context.l10n.ordersFree,
                       readOnly: true,
                       // ⓘ উচ্চতা অন্তত ৫৬ (ঘটির সারির সমান), বাঁধা নয় — বড় অক্ষরে অঙ্ক কাটে না (নকশার নিয়ম ০.৪.৩৮ §২)
                       child: Container(
@@ -657,7 +658,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(free > 0 ? 'ফ্রি · নিজে বসেছে' : 'ফ্রি',
+                    Text(free > 0 ? context.l10n.ordersNewFreeAuto : context.l10n.ordersFree,
                         style: TextStyle(fontSize: 11, color: o.muted)),
                   ],
                 ),
@@ -718,7 +719,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('বিক্রি ${bnQty(_pieces)} পিস · ফ্রি ${bnQty(_freePieces)}',
+                  Text(context.l10n.ordersNewBarPieces(bnQty(_pieces), bnQty(_freePieces)),
                       key: const ValueKey('order-bar-pieces'),
                       style: TextStyle(fontSize: 13, color: o.onBarSoft)),
                   Text(bnTaka(_total),
@@ -743,7 +744,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   ? SizedBox(
                       width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: o.onBrand))
                   : const Icon(Icons.send),
-              label: const Text('পাঠান'),
+              label: Text(context.l10n.ordersNewSend),
             ),
           ],
         ),
@@ -772,18 +773,18 @@ class _BarcodeDialogState extends State<_BarcodeDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('বারকোড'),
+        title: Text(context.l10n.ordersNewBarcodeTitle),
         content: TextField(
           key: const ValueKey('barcode-field'),
           controller: _controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'স্ক্যান করুন বা লিখুন'),
+          decoration: InputDecoration(hintText: context.l10n.ordersNewBarcodeHint),
           onSubmitted: (value) => Navigator.of(context).pop(value),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.commonCancel)),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(_controller.text), child: const Text('খুঁজুন')),
+              onPressed: () => Navigator.of(context).pop(_controller.text), child: Text(context.l10n.ordersSearch)),
         ],
       );
 }
@@ -891,10 +892,10 @@ class DueNotice extends StatelessWidget {
                     Text(
                       [
                         if (due.hasCreditLimit)
-                          'সীমা ${Money.taka(due.creditLimit)}',
+                          context.l10n.ordersNewDueLimit(Money.taka(due.creditLimit)),
                         if (due.hasCreditLimit && headroom > 0)
-                          'বাকি ${Money.taka(headroom)}',
-                        if (due.creditDays > 0) '${due.creditDays} দিন',
+                          context.l10n.ordersNewDueHeadroom(Money.taka(headroom)),
+                        if (due.creditDays > 0) context.l10n.ordersNewDueDays(due.creditDays),
                       ].join(' · '),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: ink),
                     ),
@@ -907,10 +908,8 @@ class DueNotice extends StatelessWidget {
                             // adds anything — a different sentence, because
                             // "over by" against a negative headroom reads as
                             // though the cart caused it.
-                            ? 'সীমা আগেই পেরিয়ে আছে — এই অর্ডারে '
-                                '${Money.taka(orderTotal)} যোগ হবে।'
-                            : 'এই অর্ডারে সীমা ${Money.taka(overBy)} '
-                                'ছাড়িয়ে যাবে।',
+                            ? context.l10n.ordersNewOverAlready(Money.taka(orderTotal))
+                            : context.l10n.ordersNewOverBy(Money.taka(overBy)),
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
@@ -920,7 +919,7 @@ class DueNotice extends StatelessWidget {
                     ),
                   if (willCross && syncedAt != null)
                     Text(
-                      'বকেয়ার তথ্য সিঙ্ক ${banglaStamp(syncedAt)}',
+                      context.l10n.ordersNewDueSynced(stampText(syncedAt)),
                       style: TextStyle(fontSize: 11, color: ink),
                     ),
                 ],
@@ -953,7 +952,7 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
         widget.items.where((customer) => customer.matches(_query)).toList();
 
     return _PickerScaffold(
-      hint: 'গ্রাহক বাছুন',
+      hint: context.l10n.ordersNewPickCustomer,
       onQueryChanged: (value) => setState(() => _query = value),
       itemCount: filtered.length,
       itemBuilder: (context, index) {
@@ -1017,8 +1016,8 @@ class _PickerScaffold extends StatelessWidget {
           ),
           Expanded(
             child: itemCount == 0
-                ? const EmptyState(
-                    icon: Icons.search_off, title: 'কোনো মিল পাওয়া যায়নি')
+                ? EmptyState(
+                    icon: Icons.search_off, title: context.l10n.ordersNewNoMatch)
                 : ListView.builder(
                     controller: scrollController,
                     itemCount: itemCount,

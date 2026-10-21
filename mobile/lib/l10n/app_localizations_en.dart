@@ -184,7 +184,7 @@ class AppL10nEn extends AppL10n {
   String get ordersListEmptyMessage => 'Pull down to try again.';
 
   @override
-  String get ordersListNewOrder => 'New order';
+  String get ordersNewOrder => 'New order';
 
   @override
   String ordersListPendingHeader(String count) {
@@ -229,7 +229,7 @@ class AppL10nEn extends AppL10n {
   String get ordersTrackingSearchHint => 'Sale number, DO or shop';
 
   @override
-  String get ordersTrackingSearch => 'Search';
+  String get ordersSearch => 'Search';
 
   @override
   String get ordersTrackingAll => 'All';
@@ -261,4 +261,328 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get ordersTrackingStoryWho => 'Who did what, and when';
+
+  @override
+  String get counterReturnLoadFailed =>
+      'Could not load the bills for returns. Check the connection and try again.';
+
+  @override
+  String get counterReturnBillFailed => 'Could not open the bill';
+
+  @override
+  String get counterTryAgain => 'Try again.';
+
+  @override
+  String get counterReturnQtyUnreadable =>
+      'Could not read the quantity returned — type numbers only.';
+
+  @override
+  String get counterReturnPickReason => 'Choose a reason.';
+
+  @override
+  String get counterReturnNeedQty =>
+      'Give a quantity returned for at least one item.';
+
+  @override
+  String get counterReturnDraftKeptTitle => 'Returns draft kept';
+
+  @override
+  String get counterReturnDraftKeptText =>
+      'Not confirmed — it stays as a draft in the web returns list.';
+
+  @override
+  String get counterReturnDone => 'Returned';
+
+  @override
+  String get counterAwaitingSignature => 'Awaiting signature';
+
+  @override
+  String get counterReturnFailed => 'Not returned';
+
+  @override
+  String get counterOk => 'OK';
+
+  @override
+  String get counterReturnTitle => 'Sales return';
+
+  @override
+  String get counterReturnWhichBill => 'Returns against which bill';
+
+  @override
+  String get counterReturnEmptyTitle =>
+      'No confirmed bill that can be returned.';
+
+  @override
+  String get counterReturnEmptyHint => 'A bill shows here once it is posted.';
+
+  @override
+  String get counterReload => 'Check again';
+
+  @override
+  String counterReturnBillNo(String no) {
+    return 'Bill $no';
+  }
+
+  @override
+  String counterReturnLot(String lot) {
+    return 'Lot: $lot';
+  }
+
+  @override
+  String counterReturnSold(String qty, String rate) {
+    return 'Sold: $qty × $rate';
+  }
+
+  @override
+  String get counterReturnQtyLabel => 'Quantity returned';
+
+  @override
+  String get counterReturnReasonLabel => 'Why returned';
+
+  @override
+  String get counterNoteLabel => 'Details (optional)';
+
+  @override
+  String get counterConfirm => 'Confirm';
+
+  @override
+  String get counterReturnOtherBill => 'Choose another bill';
+
+  @override
+  String get ordersFilter => 'Filter';
+
+  @override
+  String get ordersFilterOffer => 'Has an offer';
+
+  @override
+  String get ordersFilterBoughtBefore => 'This shop bought it before';
+
+  @override
+  String get ordersSale => 'Sale';
+
+  @override
+  String get ordersFree => 'Free';
+
+  @override
+  String get ordersKeypadCarton => 'Carton';
+
+  @override
+  String ordersKeypadCartonFactor(String one, String carton, String factor) {
+    return '$one $carton = $factor pcs';
+  }
+
+  @override
+  String get ordersKeypadPieces => 'Pieces';
+
+  @override
+  String get ordersKeypadTotalPieces => 'Total pieces';
+
+  @override
+  String ordersKeypadLikeLast(String qty) {
+    return 'Same as last time ($qty)';
+  }
+
+  @override
+  String get ordersKeypadBackspace => 'Delete';
+
+  @override
+  String get ordersKeypadAddToCart => 'Add to cart';
+
+  @override
+  String ordersKeypadLineAmount(String amount) {
+    return 'This line $amount';
+  }
+
+  @override
+  String get ordersKeypadEitherUnit =>
+      'Type cartons or pieces, whichever you like';
+
+  @override
+  String get ordersSortCatalogue => 'Catalogue order';
+
+  @override
+  String get ordersSortName => 'By name';
+
+  @override
+  String get ordersSortPrice => 'By price';
+
+  @override
+  String get ordersFilterClearAll => 'Clear all';
+
+  @override
+  String get ordersFilterShowHeading => 'Show';
+
+  @override
+  String get ordersFilterSortHeading => 'Sort';
+
+  @override
+  String ordersFilterApply(int n, String count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Show $count products',
+      one: 'Show $count product',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ordersConfirmTitle => 'Check before sending';
+
+  @override
+  String get ordersConfirmStandingLoading => 'Loading the account…';
+
+  @override
+  String get ordersConfirmStandingOffline =>
+      'No internet — the account can be seen later';
+
+  @override
+  String get ordersConfirmStandingFailed =>
+      'Could not load the account now — the order still goes; see the account later';
+
+  @override
+  String get ordersConfirmAdvance => 'In advance';
+
+  @override
+  String get ordersConfirmPendingClaims => 'Awaiting approval';
+
+  @override
+  String get ordersConfirmToPay => 'To pay';
+
+  @override
+  String ordersConfirmOverLimit(String amount) {
+    return 'Over the credit limit — the order goes, but it is not delivered until $amount is paid. No one can pass this limit, not even the owner.';
+  }
+
+  @override
+  String get ordersConfirmColProduct => 'Product';
+
+  @override
+  String get ordersConfirmColAmount => 'Amount';
+
+  @override
+  String get ordersConfirmTotal => 'Total';
+
+  @override
+  String get ordersConfirmRemarks => 'Remarks (optional)';
+
+  @override
+  String get ordersConfirmSend => 'OK, send';
+
+  @override
+  String get ordersConfirmBack => 'Go back';
+
+  @override
+  String get ordersConfirmSoon => 'Coming soon';
+
+  @override
+  String get ordersOk => 'OK';
+
+  @override
+  String get ordersConfirmBankSlip => 'Send bank slip';
+
+  @override
+  String get ordersNewNoBarcodeProduct => 'No product has this barcode';
+
+  @override
+  String get ordersNewQueued =>
+      'Order saved. Its number comes after sync — it cannot be told yet.';
+
+  @override
+  String get ordersNewPickCustomer => 'Choose a customer';
+
+  @override
+  String get ordersNewNoProductsTitle => 'The product list has not synced yet';
+
+  @override
+  String get ordersNewNoProductsHint =>
+      'Go to the products screen, pull down once, then come back.';
+
+  @override
+  String get ordersNewSearchHint => 'Type a name or code';
+
+  @override
+  String get ordersNewScanBarcode => 'Scan barcode';
+
+  @override
+  String get ordersNewChipRemove => 'Remove';
+
+  @override
+  String get ordersNewNoMatch => 'No match found';
+
+  @override
+  String get ordersNewInCart => '✓ In the cart';
+
+  @override
+  String get ordersNewNoRate => 'Price not known';
+
+  @override
+  String get ordersNewLess => 'Less';
+
+  @override
+  String get ordersNewMore => 'More';
+
+  @override
+  String get ordersNewQty => 'Quantity';
+
+  @override
+  String get ordersNewQtyHint => 'Type a number';
+
+  @override
+  String ordersNewSaleAmount(String amount) {
+    return 'Sale · $amount';
+  }
+
+  @override
+  String get ordersNewFreeAuto => 'Free · added by itself';
+
+  @override
+  String ordersNewBarPieces(String sold, String free) {
+    return 'Sale $sold pcs · Free $free';
+  }
+
+  @override
+  String get ordersNewSend => 'Send';
+
+  @override
+  String get ordersNewBarcodeTitle => 'Barcode';
+
+  @override
+  String get ordersNewBarcodeHint => 'Scan or type';
+
+  @override
+  String ordersNewDueLimit(String amount) {
+    return 'Limit $amount';
+  }
+
+  @override
+  String ordersNewDueHeadroom(String amount) {
+    return 'Left $amount';
+  }
+
+  @override
+  String ordersNewDueDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ordersNewOverAlready(String amount) {
+    return 'Already past the limit — this order adds $amount.';
+  }
+
+  @override
+  String ordersNewOverBy(String amount) {
+    return 'This order goes $amount over the limit.';
+  }
+
+  @override
+  String ordersNewDueSynced(String when) {
+    return 'Dues synced $when';
+  }
 }

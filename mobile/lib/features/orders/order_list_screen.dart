@@ -124,7 +124,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                         style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
                         onPressed: widget.onNewOrder ?? () => context.push('/home/new-order'),
                         icon: const Icon(Icons.add),
-                        label: Text(context.l10n.ordersListNewOrder),
+                        label: Text(context.l10n.ordersNewOrder),
                       ),
                     ),
                 ],

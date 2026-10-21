@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/order_api.dart';
 import '../../core/records/money.dart';
 import '../../core/widgets/customer_line.dart';
@@ -69,9 +71,10 @@ class OrderInk {
 }
 
 /// Western digits to Bangla ones — the order screen speaks in ০–৯, as the
-/// owner's samples do.
+/// owner's samples do. ⓘ ইংরেজিতে অঙ্ক যেমন আছে তেমন (0.4.43)।
 String bn(Object value) {
-  const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  if (AppLocale.isEnglish()) return value.toString();
+  const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']; // l10n-ok: বাংলা অঙ্কের ছাঁচ, কেবল বাংলায় খাটে
   return value.toString().replaceAllMapped(RegExp('[0-9]'), (m) => digits[int.parse(m[0]!)]);
 }
 
@@ -167,6 +170,9 @@ class QtyKeypadSheet extends StatefulWidget {
 
 class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
   static const _maxDigits = 6;
+
+  /// কার্টনের নাম — পণ্যের নিজের, না থাকলে এখনকার ভাষার "কার্টন"
+  String get _carton => widget.cartonName ?? context.l10n.ordersKeypadCarton;
 
   late int _cartons;
   late int _pieces;
@@ -363,7 +369,7 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
                   // ⓘ Flexible — বড় অক্ষরে (২০০%) সারি ছাপিয়ে যেত (নকশার নিয়ম ০.৪.৩৮ §২)
                   if (factor != null)
                     Flexible(
-                      child: Text('১ ${widget.cartonName ?? 'কার্টন'} = ${bn(factor)} পিস',
+                      child: Text(context.l10n.ordersKeypadCartonFactor(bn(1), _carton, bn(factor)),
                           textAlign: TextAlign.end, style: TextStyle(color: o.muted)),
                     ),
                 ],
@@ -376,14 +382,14 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
               Row(
                 children: [
                   if (factor != null) ...[
-                    _box(widget.cartonName ?? 'কার্টন', bn(_cartons),
+                    _box(_carton, bn(_cartons),
                         selects: true, key: const ValueKey('keypad-cartons')),
                     const SizedBox(width: 10),
                   ],
-                  _box('পিস', bn(_pieces), selects: false, key: const ValueKey('keypad-pieces')),
+                  _box(context.l10n.ordersKeypadPieces, bn(_pieces), selects: false, key: const ValueKey('keypad-pieces')),
                   if (factor != null) ...[
                     const SizedBox(width: 10),
-                    _box('মোট পিস', bnQty(_total)),
+                    _box(context.l10n.ordersKeypadTotalPieces, bnQty(_total)),
                   ],
                 ],
               ),
@@ -392,11 +398,11 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
                 runSpacing: 8,
                 children: [
                   if (factor != null) ...[
-                    _quick('+১ ${widget.cartonName ?? 'কার্টন'}', () => _addCartons(1)),
-                    _quick('+১০ ${widget.cartonName ?? 'কার্টন'}', () => _addCartons(10)),
+                    _quick('+${bn(1)} $_carton', () => _addCartons(1)),
+                    _quick('+${bn(10)} $_carton', () => _addCartons(10)),
                   ],
                   if ((widget.lastQty ?? 0) > 0)
-                    _quick('আগের মতো (${bnQty(widget.lastQty!)})', () => _setTotal(widget.lastQty!)),
+                    _quick(context.l10n.ordersKeypadLikeLast(bnQty(widget.lastQty!)), () => _setTotal(widget.lastQty!)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -407,16 +413,16 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
                     _key(bn(d), () => _digit(d), key: ValueKey('keypad-$d')),
                 ]),
               _keyRow([
-                _key('⌫', _back, semantics: 'মুছুন', key: const ValueKey('keypad-back')),
-                _key('০', () => _digit(0), key: const ValueKey('keypad-0')),
-                _key('ঝুড়িতে যোগ', () => Navigator.of(context).pop(_total),
+                _key('⌫', _back, semantics: context.l10n.ordersKeypadBackspace, key: const ValueKey('keypad-back')),
+                _key(bn(0), () => _digit(0), key: const ValueKey('keypad-0')),
+                _key(context.l10n.ordersKeypadAddToCart, () => Navigator.of(context).pop(_total),
                     primary: true, key: const ValueKey('keypad-add')),
               ]),
               const SizedBox(height: 2),
               Text(
                 [
-                  if (rate != null) 'এই লাইনে ${bnTaka(rate * _total)}',
-                  if (factor != null) 'কার্টন বা পিস যেটায় খুশি লিখুন',
+                  if (rate != null) context.l10n.ordersKeypadLineAmount(bnTaka(rate * _total)),
+                  if (factor != null) context.l10n.ordersKeypadEitherUnit,
                 ].join(' · '),
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: o.muted),
@@ -453,9 +459,9 @@ class OrderFilter {
       );
 
   static String sortLabel(OrderSort sort) => switch (sort) {
-        OrderSort.catalogue => 'তালিকার ক্রমে',
-        OrderSort.name => 'নাম ধরে',
-        OrderSort.price => 'দাম ধরে',
+        OrderSort.catalogue => AppLocale.l10n.ordersSortCatalogue,
+        OrderSort.name => AppLocale.l10n.ordersSortName,
+        OrderSort.price => AppLocale.l10n.ordersSortPrice,
       };
 }
 
@@ -528,23 +534,23 @@ class _OrderFilterSheetState extends State<OrderFilterSheet> {
             Center(child: _grabber(context)),
             Row(
               children: [
-                const Expanded(
-                    child: Text('ফিল্টার', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+                Expanded(
+                    child: Text(context.l10n.ordersFilter, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
                 TextButton(
                   onPressed: () => setState(() => _filter = const OrderFilter()),
-                  child: Text('সব মুছুন',
+                  child: Text(context.l10n.ordersFilterClearAll,
                       style: TextStyle(color: o.brand, fontWeight: FontWeight.w700)),
                 ),
               ],
             ),
-            _heading('দেখান'),
+            _heading(context.l10n.ordersFilterShowHeading),
             Wrap(children: [
-              _choice('অফার আছে', _filter.offerOnly,
+              _choice(context.l10n.ordersFilterOffer, _filter.offerOnly,
                   () => setState(() => _filter = _filter.copyWith(offerOnly: !_filter.offerOnly))),
-              _choice('এই দোকান আগে নিয়েছে', _filter.boughtBefore,
+              _choice(context.l10n.ordersFilterBoughtBefore, _filter.boughtBefore,
                   () => setState(() => _filter = _filter.copyWith(boughtBefore: !_filter.boughtBefore))),
             ]),
-            _heading('সাজান'),
+            _heading(context.l10n.ordersFilterSortHeading),
             Wrap(children: [
               for (final sort in OrderSort.values)
                 _choice(OrderFilter.sortLabel(sort), _filter.sort == sort,
@@ -562,7 +568,7 @@ class _OrderFilterSheetState extends State<OrderFilterSheet> {
                 textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
               ),
               onPressed: () => Navigator.of(context).pop(_filter),
-              child: Text('${bn(count)}টা পণ্য দেখান'),
+              child: Text(context.l10n.ordersFilterApply(count, bn(count))),
             ),
           ],
         ),
@@ -641,7 +647,7 @@ class OrderConfirmSheet extends StatelessWidget {
       return Row(children: [
         const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
         const SizedBox(width: 10),
-        Expanded(child: Text('হিসাব আনা হচ্ছে…', style: TextStyle(color: o.muted))),
+        Expanded(child: Text(context.l10n.ordersConfirmStandingLoading, style: TextStyle(color: o.muted))),
       ]);
     }
     if (snap.hasError || snap.data == null) {
@@ -651,7 +657,7 @@ class OrderConfirmSheet extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(color: o.field, borderRadius: BorderRadius.circular(14)),
         child: Text(
-          offline ? 'নেট নেই — হিসাব পরে দেখা যাবে' : 'হিসাব এখন আনা গেল না — অর্ডার তবু যাবে, হিসাব পরে দেখা যাবে',
+          offline ? context.l10n.ordersConfirmStandingOffline : context.l10n.ordersConfirmStandingFailed,
           style: TextStyle(fontSize: 14, color: o.muted),
         ),
       );
@@ -661,11 +667,11 @@ class OrderConfirmSheet extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: [
-          _tile('জমা আছে', s.advance, OrderPalette.free, OrderPalette.onFree),
+          _tile(context.l10n.ordersConfirmAdvance, s.advance, OrderPalette.free, OrderPalette.onFree),
           const SizedBox(width: 8),
-          _tile('অনুমোদনের অপেক্ষায়', s.pendingClaims, OrderPalette.waiting, OrderPalette.onWaiting),
+          _tile(context.l10n.ordersConfirmPendingClaims, s.pendingClaims, OrderPalette.waiting, OrderPalette.onWaiting),
           const SizedBox(width: 8),
-          _tile('দিতে হবে', s.toPay, OrderPalette.owe, OrderPalette.onOwe),
+          _tile(context.l10n.ordersConfirmToPay, s.toPay, OrderPalette.owe, OrderPalette.onOwe),
         ]),
         if (s.overLimit) ...[
           const SizedBox(height: 12),
@@ -674,8 +680,7 @@ class OrderConfirmSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(color: OrderPalette.warn, borderRadius: BorderRadius.circular(14)),
             child: Text(
-              'বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু ${bnTaka(s.toPay)} জমা না হলে ডেলিভারি হবে না। '
-              'এই সীমা কেউ পার করাতে পারেন না, মালিকও না।',
+              context.l10n.ordersConfirmOverLimit(bnTaka(s.toPay)),
               style: const TextStyle(fontSize: 14, color: OrderPalette.onOwe),
             ),
           ),
@@ -702,7 +707,7 @@ class OrderConfirmSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(child: _grabber(context)),
-              const Text('পাঠানোর আগে দেখে নিন', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              Text(context.l10n.ordersConfirmTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
               if (customer != null)
                 CustomerLine(customer!,
                     key: const ValueKey('confirm-customer'),
@@ -713,10 +718,10 @@ class OrderConfirmSheet extends StatelessWidget {
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
                   _row(context, [
-                    Text('পণ্য', style: head),
-                    Text('বিক্রি', style: head, textAlign: TextAlign.center),
-                    Text('ফ্রি', style: head, textAlign: TextAlign.center),
-                    Text('টাকা', style: head, textAlign: TextAlign.right),
+                    Text(context.l10n.ordersConfirmColProduct, style: head),
+                    Text(context.l10n.ordersSale, style: head, textAlign: TextAlign.center),
+                    Text(context.l10n.ordersFree, style: head, textAlign: TextAlign.center),
+                    Text(context.l10n.ordersConfirmColAmount, style: head, textAlign: TextAlign.right),
                   ]),
                   for (final l in lines)
                     _row(context, [
@@ -731,7 +736,7 @@ class OrderConfirmSheet extends StatelessWidget {
                       Text(Money.amount(l.taka), textAlign: TextAlign.right),
                     ]),
                   _row(context, [
-                    const Text('মোট', style: bold),
+                    Text(context.l10n.ordersConfirmTotal, style: bold),
                     Text(bnQty(qty), style: bold, textAlign: TextAlign.center),
                     Text(bnQty(free),
                         style: bold.copyWith(color: o.inCart), textAlign: TextAlign.center),
@@ -747,7 +752,7 @@ class OrderConfirmSheet extends StatelessWidget {
                   controller: note,
                   maxLines: 2,
                   decoration: InputDecoration(
-                    labelText: 'মন্তব্য (ঐচ্ছিক)',
+                    labelText: context.l10n.ordersConfirmRemarks,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
@@ -764,7 +769,7 @@ class OrderConfirmSheet extends StatelessWidget {
                   textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                 ),
                 onPressed: () => Navigator.of(context).pop(ConfirmChoice.send),
-                child: const Text('ঠিক আছে, পাঠান'),
+                child: Text(context.l10n.ordersConfirmSend),
               ),
               const SizedBox(height: 8),
               Row(
@@ -780,7 +785,7 @@ class OrderConfirmSheet extends StatelessWidget {
                         textStyle: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       onPressed: () => Navigator.of(context).pop(ConfirmChoice.back),
-                      child: const Text('ফিরে যান'),
+                      child: Text(context.l10n.ordersConfirmBack),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -799,16 +804,16 @@ class OrderConfirmSheet extends StatelessWidget {
                         onPressed: () => showDialog<void>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            content: const Text('শীঘ্রই আসছে'),
+                            content: Text(context.l10n.ordersConfirmSoon),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('ঠিক আছে'),
+                                child: Text(context.l10n.ordersOk),
                               ),
                             ],
                           ),
                         ),
-                        child: const Text('ব্যাংক স্লিপ পাঠান'),
+                        child: Text(context.l10n.ordersConfirmBankSlip),
                       ),
                     ),
                   ),

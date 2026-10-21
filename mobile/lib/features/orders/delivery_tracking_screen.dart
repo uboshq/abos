@@ -108,7 +108,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 hintText: context.l10n.ordersTrackingSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
-                    tooltip: context.l10n.ordersTrackingSearch, icon: const Icon(Icons.arrow_forward), onPressed: _load),
+                    tooltip: context.l10n.ordersSearch, icon: const Icon(Icons.arrow_forward), onPressed: _load),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -312,7 +312,7 @@ class _StoryScreenState extends State<_StoryScreen> {
                                   const TextStyle(fontWeight: FontWeight.w600)),
                           Text(
                             [
-                              if (e.at != null) banglaStamp(e.at!),
+                              if (e.at != null) stampText(e.at!),
                               if (e.by != null) e.by!
                             ].join(' · '),
                             style: TextStyle(
@@ -409,7 +409,7 @@ class _MilestoneRow extends StatelessWidget {
                   if (m.at != null || m.by != null)
                     Text(
                       [
-                        if (m.at != null) banglaStamp(m.at!),
+                        if (m.at != null) stampText(m.at!),
                         if (m.by != null) m.by!
                       ].join(' · '),
                       style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),

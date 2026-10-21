@@ -75,7 +75,7 @@ class RejectedOrderCard extends StatelessWidget {
                 style: TextStyle(color: context.palette.danger, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              banglaStamp(item.enqueuedAt),
+              stampText(item.enqueuedAt),
               style:
                   TextStyle(fontSize: 11, color: context.palette.onSurfaceMuted),
             ),

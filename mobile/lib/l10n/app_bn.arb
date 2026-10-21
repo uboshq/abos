@@ -210,8 +210,8 @@
   "@ordersListEmptyMessage": {
     "description": "Order list: empty state hint to pull down"
   },
-  "ordersListNewOrder": "নতুন অর্ডার",
-  "@ordersListNewOrder": {
+  "ordersNewOrder": "নতুন অর্ডার",
+  "@ordersNewOrder": {
     "description": "Order list: button to start a new order"
   },
   "ordersListPendingHeader": "অপেক্ষমাণ ({count})",
@@ -276,8 +276,8 @@
   "@ordersTrackingSearchHint": {
     "description": "Delivery tracking: search box hint"
   },
-  "ordersTrackingSearch": "খুঁজুন",
-  "@ordersTrackingSearch": {
+  "ordersSearch": "খুঁজুন",
+  "@ordersSearch": {
     "description": "Delivery tracking: tooltip of the search button"
   },
   "ordersTrackingAll": "সব",
@@ -319,5 +319,460 @@
   "ordersTrackingStoryWho": "কে কখন কী করলেন",
   "@ordersTrackingStoryWho": {
     "description": "Delivery tracking timeline: header over who did what and when"
+  },
+  "counterReturnLoadFailed": "ফেরতের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।",
+  "@counterReturnLoadFailed": {
+    "description": "Sales return: the bills to return against could not be loaded"
+  },
+  "counterReturnBillFailed": "বিল খোলা গেল না",
+  "@counterReturnBillFailed": {
+    "description": "Sales return: popup title when the chosen bill could not be opened"
+  },
+  "counterTryAgain": "আবার চেষ্টা করুন।",
+  "@counterTryAgain": {
+    "description": "Counter and sales return: fallback popup text when the server gave no reason"
+  },
+  "counterReturnQtyUnreadable": "ফেরতের পরিমাণ পড়া গেল না — কেবল সংখ্যা লিখুন।",
+  "@counterReturnQtyUnreadable": {
+    "description": "Sales return: a quantity box holds something that is not a number"
+  },
+  "counterReturnPickReason": "কারণ বাছুন।",
+  "@counterReturnPickReason": {
+    "description": "Sales return: no return reason chosen"
+  },
+  "counterReturnNeedQty": "অন্তত একটা মালের ফেরত পরিমাণ দিন।",
+  "@counterReturnNeedQty": {
+    "description": "Sales return: every quantity is empty"
+  },
+  "counterReturnDraftKeptTitle": "খসড়া ফেরত রাখা হলো",
+  "@counterReturnDraftKeptTitle": {
+    "description": "Sales return: popup title when the person backs out of the summary"
+  },
+  "counterReturnDraftKeptText": "নিশ্চিত হয়নি — ওয়েবের ফেরতের তালিকায় খসড়া হয়ে আছে।",
+  "@counterReturnDraftKeptText": {
+    "description": "Sales return: the draft stays on the web, unconfirmed"
+  },
+  "counterReturnDone": "ফেরত হলো",
+  "@counterReturnDone": {
+    "description": "Sales return: popup title after the return is confirmed"
+  },
+  "counterAwaitingSignature": "সইয়ের অপেক্ষায়",
+  "@counterAwaitingSignature": {
+    "description": "Counter and sales return: popup title when the paper waits for a signature"
+  },
+  "counterReturnFailed": "ফেরত হলো না",
+  "@counterReturnFailed": {
+    "description": "Sales return: popup title when the return could not be made"
+  },
+  "counterOk": "ঠিক আছে",
+  "@counterOk": {
+    "description": "Counter and sales return: popup button that closes it"
+  },
+  "counterReturnTitle": "বিক্রি ফেরত",
+  "@counterReturnTitle": {
+    "description": "Sales return screen title"
+  },
+  "counterReturnWhichBill": "কোন বিলের ফেরত",
+  "@counterReturnWhichBill": {
+    "description": "Sales return: heading over the bill list"
+  },
+  "counterReturnEmptyTitle": "ফেরত দেওয়ার মতো কোনো নিশ্চিত বিল নেই।",
+  "@counterReturnEmptyTitle": {
+    "description": "Sales return: empty state title"
+  },
+  "counterReturnEmptyHint": "বিল পোস্ট হলে এখানে আসবে।",
+  "@counterReturnEmptyHint": {
+    "description": "Sales return: empty state hint (fe: posted is পোস্ট, not পাকা)"
+  },
+  "counterReload": "নতুন করে দেখুন",
+  "@counterReload": {
+    "description": "Counter and sales return: load the list again"
+  },
+  "counterReturnBillNo": "বিল {no}",
+  "@counterReturnBillNo": {
+    "description": "Sales return: the chosen bill number",
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "counterReturnLot": "লট: {lot}",
+  "@counterReturnLot": {
+    "description": "Sales return line: the lot number",
+    "placeholders": {
+      "lot": {
+        "type": "String"
+      }
+    }
+  },
+  "counterReturnSold": "বেচা: {qty} × {rate}",
+  "@counterReturnSold": {
+    "description": "Sales return line: quantity sold times the rate (rate from Money.taka)",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "counterReturnQtyLabel": "কত ফেরত",
+  "@counterReturnQtyLabel": {
+    "description": "Sales return line: the quantity box label"
+  },
+  "counterReturnReasonLabel": "কেন ফেরত",
+  "@counterReturnReasonLabel": {
+    "description": "Sales return: the reason dropdown label"
+  },
+  "counterNoteLabel": "বিবরণ (ঐচ্ছিক)",
+  "@counterNoteLabel": {
+    "description": "Counter and sales return: the free-text note label"
+  },
+  "counterConfirm": "নিশ্চিত করুন",
+  "@counterConfirm": {
+    "description": "Counter and sales return: button that shows the summary before confirming"
+  },
+  "counterReturnOtherBill": "অন্য বিল বাছুন",
+  "@counterReturnOtherBill": {
+    "description": "Sales return: back to the bill list"
+  },
+  "ordersFilter": "ফিল্টার",
+  "@ordersFilter": {
+    "description": "New order: the filter button and the filter sheet title"
+  },
+  "ordersFilterOffer": "অফার আছে",
+  "@ordersFilterOffer": {
+    "description": "New order filter: only products with an offer"
+  },
+  "ordersFilterBoughtBefore": "এই দোকান আগে নিয়েছে",
+  "@ordersFilterBoughtBefore": {
+    "description": "New order filter: only products this shop bought before"
+  },
+  "ordersSale": "বিক্রি",
+  "@ordersSale": {
+    "description": "New order: the sold quantity (column head and the label under the quantity)"
+  },
+  "ordersFree": "ফ্রি",
+  "@ordersFree": {
+    "description": "New order: the free quantity (column head and the label under it)"
+  },
+  "ordersKeypadCarton": "কার্টন",
+  "@ordersKeypadCarton": {
+    "description": "Keypad: the carton unit when the product has no name for it"
+  },
+  "ordersKeypadCartonFactor": "{one} {carton} = {factor} পিস",
+  "@ordersKeypadCartonFactor": {
+    "description": "Keypad: how many pieces one carton holds; digits already written",
+    "placeholders": {
+      "one": {
+        "type": "String"
+      },
+      "carton": {
+        "type": "String"
+      },
+      "factor": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersKeypadPieces": "পিস",
+  "@ordersKeypadPieces": {
+    "description": "Keypad: the pieces box"
+  },
+  "ordersKeypadTotalPieces": "মোট পিস",
+  "@ordersKeypadTotalPieces": {
+    "description": "Keypad: the total pieces box"
+  },
+  "ordersKeypadLikeLast": "আগের মতো ({qty})",
+  "@ordersKeypadLikeLast": {
+    "description": "Keypad: quick button with the quantity of the last order",
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersKeypadBackspace": "মুছুন",
+  "@ordersKeypadBackspace": {
+    "description": "Keypad: screen reader name of the backspace key"
+  },
+  "ordersKeypadAddToCart": "ঝুড়িতে যোগ",
+  "@ordersKeypadAddToCart": {
+    "description": "Keypad: the button that puts the quantity in the cart"
+  },
+  "ordersKeypadLineAmount": "এই লাইনে {amount}",
+  "@ordersKeypadLineAmount": {
+    "description": "Keypad: what this line comes to (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersKeypadEitherUnit": "কার্টন বা পিস যেটায় খুশি লিখুন",
+  "@ordersKeypadEitherUnit": {
+    "description": "Keypad: hint under the keys"
+  },
+  "ordersSortCatalogue": "তালিকার ক্রমে",
+  "@ordersSortCatalogue": {
+    "description": "New order sort: as the catalogue lists them"
+  },
+  "ordersSortName": "নাম ধরে",
+  "@ordersSortName": {
+    "description": "New order sort: by name"
+  },
+  "ordersSortPrice": "দাম ধরে",
+  "@ordersSortPrice": {
+    "description": "New order sort: by price"
+  },
+  "ordersFilterClearAll": "সব মুছুন",
+  "@ordersFilterClearAll": {
+    "description": "Filter sheet: clear every choice"
+  },
+  "ordersFilterShowHeading": "দেখান",
+  "@ordersFilterShowHeading": {
+    "description": "Filter sheet: heading over the show-only choices"
+  },
+  "ordersFilterSortHeading": "সাজান",
+  "@ordersFilterSortHeading": {
+    "description": "Filter sheet: heading over the sort choices"
+  },
+  "ordersFilterApply": "{n, plural, other{{count}টা পণ্য দেখান}}",
+  "@ordersFilterApply": {
+    "description": "Filter sheet: apply button; n picks the form, count is n already written in the screen digits",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersConfirmTitle": "পাঠানোর আগে দেখে নিন",
+  "@ordersConfirmTitle": {
+    "description": "Order confirm sheet title"
+  },
+  "ordersConfirmStandingLoading": "হিসাব আনা হচ্ছে…",
+  "@ordersConfirmStandingLoading": {
+    "description": "Order confirm: the customer account is loading"
+  },
+  "ordersConfirmStandingOffline": "নেট নেই — হিসাব পরে দেখা যাবে",
+  "@ordersConfirmStandingOffline": {
+    "description": "Order confirm: offline, the account cannot be loaded"
+  },
+  "ordersConfirmStandingFailed": "হিসাব এখন আনা গেল না — অর্ডার তবু যাবে, হিসাব পরে দেখা যাবে",
+  "@ordersConfirmStandingFailed": {
+    "description": "Order confirm: the account could not be loaded"
+  },
+  "ordersConfirmAdvance": "জমা আছে",
+  "@ordersConfirmAdvance": {
+    "description": "Order confirm tile: money the customer has paid in advance"
+  },
+  "ordersConfirmPendingClaims": "অনুমোদনের অপেক্ষায়",
+  "@ordersConfirmPendingClaims": {
+    "description": "Order confirm tile: payments waiting for approval"
+  },
+  "ordersConfirmToPay": "দিতে হবে",
+  "@ordersConfirmToPay": {
+    "description": "Order confirm tile: what the customer must pay"
+  },
+  "ordersConfirmOverLimit": "বাকির সীমা পার হচ্ছে — অর্ডার যাবে, কিন্তু {amount} জমা না হলে ডেলিভারি হবে না। এই সীমা কেউ পার করাতে পারেন না, মালিকও না।",
+  "@ordersConfirmOverLimit": {
+    "description": "Order confirm: the order crosses the absolute credit limit (amount from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersConfirmColProduct": "পণ্য",
+  "@ordersConfirmColProduct": {
+    "description": "Order confirm table: product column"
+  },
+  "ordersConfirmColAmount": "টাকা",
+  "@ordersConfirmColAmount": {
+    "description": "Order confirm table: amount column"
+  },
+  "ordersConfirmTotal": "মোট",
+  "@ordersConfirmTotal": {
+    "description": "Order confirm table: total row"
+  },
+  "ordersConfirmRemarks": "মন্তব্য (ঐচ্ছিক)",
+  "@ordersConfirmRemarks": {
+    "description": "Order confirm: the note box label"
+  },
+  "ordersConfirmSend": "ঠিক আছে, পাঠান",
+  "@ordersConfirmSend": {
+    "description": "Order confirm: send the order"
+  },
+  "ordersConfirmBack": "ফিরে যান",
+  "@ordersConfirmBack": {
+    "description": "Order confirm: back to the cart"
+  },
+  "ordersConfirmSoon": "শীঘ্রই আসছে",
+  "@ordersConfirmSoon": {
+    "description": "Order confirm: the bank slip feature is not ready"
+  },
+  "ordersOk": "ঠিক আছে",
+  "@ordersOk": {
+    "description": "Order screens: button that closes a popup"
+  },
+  "ordersConfirmBankSlip": "ব্যাংক স্লিপ পাঠান",
+  "@ordersConfirmBankSlip": {
+    "description": "Order confirm: send a bank slip"
+  },
+  "ordersNewNoBarcodeProduct": "এই বারকোডে কোনো পণ্য নেই",
+  "@ordersNewNoBarcodeProduct": {
+    "description": "New order: the scanned barcode matched nothing"
+  },
+  "ordersNewQueued": "অর্ডার লেখা হয়েছে। নম্বর সিঙ্কের পর আসবে — এখনই বলা যাবে না।",
+  "@ordersNewQueued": {
+    "description": "New order: the order is queued on the phone"
+  },
+  "ordersNewPickCustomer": "গ্রাহক বাছুন",
+  "@ordersNewPickCustomer": {
+    "description": "New order: the customer picker and its search hint"
+  },
+  "ordersNewNoProductsTitle": "পণ্যের তালিকা এখনো সিঙ্ক হয়নি",
+  "@ordersNewNoProductsTitle": {
+    "description": "New order: no products on the phone"
+  },
+  "ordersNewNoProductsHint": "পণ্যের পর্দায় গিয়ে একবার নিচে টানুন, তারপর ফিরে আসুন।",
+  "@ordersNewNoProductsHint": {
+    "description": "New order: how to get the products"
+  },
+  "ordersNewSearchHint": "নাম বা কোড লিখুন",
+  "@ordersNewSearchHint": {
+    "description": "New order: product search hint"
+  },
+  "ordersNewScanBarcode": "বারকোড স্ক্যান",
+  "@ordersNewScanBarcode": {
+    "description": "New order: the barcode button"
+  },
+  "ordersNewChipRemove": "সরান",
+  "@ordersNewChipRemove": {
+    "description": "New order: tooltip that removes a filter chip"
+  },
+  "ordersNewNoMatch": "কোনো মিল পাওয়া যায়নি",
+  "@ordersNewNoMatch": {
+    "description": "New order: search found nothing"
+  },
+  "ordersNewInCart": "✓ ঝুড়িতে আছে",
+  "@ordersNewInCart": {
+    "description": "New order row: the product is in the cart"
+  },
+  "ordersNewNoRate": "দর জানা নেই",
+  "@ordersNewNoRate": {
+    "description": "New order row: no price for this product"
+  },
+  "ordersNewLess": "কমান",
+  "@ordersNewLess": {
+    "description": "New order row: screen reader name of the minus button"
+  },
+  "ordersNewMore": "বাড়ান",
+  "@ordersNewMore": {
+    "description": "New order row: screen reader name of the plus button"
+  },
+  "ordersNewQty": "পরিমাণ",
+  "@ordersNewQty": {
+    "description": "New order row: screen reader name of the quantity"
+  },
+  "ordersNewQtyHint": "সংখ্যা লিখুন",
+  "@ordersNewQtyHint": {
+    "description": "New order row: screen reader hint on the quantity"
+  },
+  "ordersNewSaleAmount": "বিক্রি · {amount}",
+  "@ordersNewSaleAmount": {
+    "description": "New order row: what the sold quantity comes to (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewFreeAuto": "ফ্রি · নিজে বসেছে",
+  "@ordersNewFreeAuto": {
+    "description": "New order row: the free quantity the offer put in"
+  },
+  "ordersNewBarPieces": "বিক্রি {sold} পিস · ফ্রি {free}",
+  "@ordersNewBarPieces": {
+    "description": "New order bottom bar: pieces sold and free; digits already written",
+    "placeholders": {
+      "sold": {
+        "type": "String"
+      },
+      "free": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewSend": "পাঠান",
+  "@ordersNewSend": {
+    "description": "New order bottom bar: send the order"
+  },
+  "ordersNewBarcodeTitle": "বারকোড",
+  "@ordersNewBarcodeTitle": {
+    "description": "Barcode dialog title"
+  },
+  "ordersNewBarcodeHint": "স্ক্যান করুন বা লিখুন",
+  "@ordersNewBarcodeHint": {
+    "description": "Barcode dialog: the field hint"
+  },
+  "ordersNewDueLimit": "সীমা {amount}",
+  "@ordersNewDueLimit": {
+    "description": "New order dues card: the credit limit (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewDueHeadroom": "বাকি {amount}",
+  "@ordersNewDueHeadroom": {
+    "description": "New order dues card: what is left under the limit (from Money.taka)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewDueDays": "{days, plural, other{{days} দিন}}",
+  "@ordersNewDueDays": {
+    "description": "New order dues card: the credit days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "ordersNewOverAlready": "সীমা আগেই পেরিয়ে আছে — এই অর্ডারে {amount} যোগ হবে।",
+  "@ordersNewOverAlready": {
+    "description": "New order dues card: the customer was over the limit before this order",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewOverBy": "এই অর্ডারে সীমা {amount} ছাড়িয়ে যাবে।",
+  "@ordersNewOverBy": {
+    "description": "New order dues card: this order crosses the limit by amount",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersNewDueSynced": "বকেয়ার তথ্য সিঙ্ক {when}",
+  "@ordersNewDueSynced": {
+    "description": "New order dues card: when the dues were last synced (from stampText)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
   }
 }
