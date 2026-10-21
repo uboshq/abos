@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/bar_fonts.dart';
@@ -16,7 +19,20 @@ final _bengali = RegExp('[ঀ-৲৴-৿]');
 /// সার্ভার থেকে আসা নাম — ইংরেজিতেও বাংলা থাকে
 const _serverWords = ['করিম স্টোর', 'ফুলপুর পয়েন্ট', 'ময়মনসিংহ', 'নগদ', 'ডাচ-বাংলা', 'bKash', 'পাওনা', 'পঁয়তাল্লিশ', 'প্রধান'];
 
-Future<void> _open(WidgetTester tester, {bool dark = false, Locale locale = AppLocale.locale, bool review = false}) async {
+/// ⓘ অবস্থার চিপের আইকন — material_symbols_icons-এর Rounded ফন্ট (a5-এর screens_0441 আর a6-এর paper_state ছবির একই পথ);
+/// না থাকলে চিপের আইকন ফাঁকা বাক্স
+Future<void> _loadRounded() async {
+  final config = File('.dart_tool/package_config.json').readAsStringSync();
+  final m = RegExp(r'"rootUri":\s*"([^"]*material_symbols_icons-[^"]*)"').firstMatch(config)!;
+  final root = Uri.parse(m.group(1)!).toFilePath(windows: Platform.isWindows);
+  final loader = FontLoader('packages/material_symbols_icons/MaterialSymbolsRounded')
+    ..addFont(Future.value(ByteData.view(Uint8List.fromList(File('$root/lib/fonts/MaterialSymbolsRounded.ttf').readAsBytesSync()).buffer)));
+  await loader.load();
+}
+
+/// [review]: পর্দা ২ খোলা; [posted]: তার পরে পোস্টও হয়ে গেছে
+Future<void> _open(WidgetTester tester,
+    {bool dark = false, Locale locale = AppLocale.locale, bool review = false, bool posted = false}) async {
   tester.view.physicalSize = Size(412, review ? 1400 : 1900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -60,6 +76,8 @@ Future<void> _open(WidgetTester tester, {bool dark = false, Locale locale = AppL
   if (review) {
     await tester.tap(find.byKey(const ValueKey('collect-post')));
     await tester.pumpAndSettle();
+  }
+  if (posted) {
     await tester.tap(find.byKey(const ValueKey('collect-check-post')));
     await tester.pumpAndSettle();
   }
@@ -71,15 +89,20 @@ List<String> _texts(WidgetTester tester) => [
     ];
 
 void main() {
-  setUpAll(loadBarFonts);
+  setUpAll(() async {
+    await loadBarFonts();
+    await _loadRounded();
+  });
 
-  // ⓘ পর্দা ২-এর ছবি পোস্টের পরের — নকশার মতো সারাংশ, খাতা, নিয়ন্ত্রণ আর "পোস্টের পরে" কার্ড একসাথে
-  for (final review in [false, true]) {
-    final name = review ? 'collect_review' : 'collect_screen';
-    final what = review ? 'screen 2 (পোস্টের আগে দেখুন)' : 'screen 1 (টাকা নেওয়া)';
+  // ⓘ তিন ছবি: পর্দা ১; পর্দা ২ পোস্টের আগে (সারাংশ, খাতা, নিয়ন্ত্রণ, নিচে "ফিরে যান" আর "পোস্ট" — নকশার মতো); পর্দা ২ পোস্টের পরে
+  for (final (name, what, review, posted) in [
+    ('collect_screen', 'screen 1 (টাকা নেওয়া)', false, false),
+    ('collect_review', 'screen 2 before posting (পোস্টের আগে দেখুন)', true, false),
+    ('collect_posted', 'screen 2 after posting (পোস্টের পরে)', true, true),
+  ]) {
     for (final dark in [false, true]) {
       testWidgets('20 · $what at 412dp, ${dark ? 'dark' : 'light'}, in Bengali', (tester) async {
-        await _open(tester, dark: dark, review: review);
+        await _open(tester, dark: dark, review: review, posted: posted);
         expect(tester.takeException(), isNull);
         await expectLater(
             find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/${name}_412_${dark ? 'dark' : 'light'}_bn.png'));
@@ -87,7 +110,7 @@ void main() {
     }
 
     testWidgets('19 · $what in English: no Bengali of the screen\'s own, only the server\'s names', (tester) async {
-      await _open(tester, locale: AppLocale.english, review: review);
+      await _open(tester, locale: AppLocale.english, review: review, posted: posted);
       final texts = _texts(tester);
       final own = texts.where((t) => _bengali.hasMatch(t) && !_serverWords.any(t.contains)).toList();
       expect(own, isEmpty, reason: 'ইংরেজিতে পর্দার নিজের বাংলা: $own');

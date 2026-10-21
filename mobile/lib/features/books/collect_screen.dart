@@ -97,8 +97,13 @@ class CollectScreen extends StatefulWidget {
   /// সার্ভারের ছবির সীমা — 5 MB
   static const slipLimit = 5 * 1024 * 1024;
 
-  /// রাউন্ডিংয়ের সীমা — ৳10, পয়সায়
+  /// ⭐ রাউন্ডিংয়ের তিন ধাপ (মালিকের নিয়ম, ২ অক্টোবর ২০২৬; fe, ২২ অক্টোবর ২০২৬) — পয়সায়, পূর্ণসংখ্যায় মাপা, তাই সীমায় ভুল নেই:
+  /// ৳0.50 পর্যন্ত সই ছাড়া; তার বেশি ৳10 পর্যন্ত মালিকের সই লাগে (আটকায় না); ৳10-এর বেশি ফোনেই আটকায়। আসল পাহারা সার্ভারের।
+  static const roundingFreeLimit = 50;
   static const roundingLimit = 1000;
+
+  /// রাউন্ডিংয়ে মালিকের সই লাগবে কি না
+  static bool roundingNeedsSign(int paisa) => paisa > roundingFreeLimit;
 
   /// ⭐ ওয়েবের পদ্ধতি, ক্রমে — টাকার-পদ্ধতির মডেলের `instrument` (a5, ২১ অক্টোবর ২০২৬)
   static const methods = ['cash', 'mfs', 'transfer', 'deposit', 'cheque'];
@@ -162,6 +167,9 @@ class _CollectScreenState extends State<CollectScreen> {
   bool _manual = false;
   String _differenceKind = 'discount';
 
+  /// পক্ষের ধরন — গ্রাহক ছাড়া বাছলে নিচে নোট আর পুরনো ফর্মের বোতাম; এই পাতা থেকে পাঠানো বন্ধ
+  String _party = 'customer';
+
   String? _slipPath;
   bool _busy = false;
   String? _error;
@@ -186,6 +194,10 @@ class _CollectScreenState extends State<CollectScreen> {
     for (final c in [_reference, _depositSlip, _charge, _narration]) {
       c.addListener(_textChanged);
     }
+    // ⭐ টাকার ঘর ছাড়লে টাকার রূপে ("45,000.00", ডানে) — লেখার সময় যেমন লেখা তেমন (চূড়ান্ত নকশা, পর্দা ১)
+    _amountFocus.addListener(() {
+      if (!_amountFocus.hasFocus) _formatAmount();
+    });
     _loadSetup();
   }
 
@@ -241,7 +253,27 @@ class _CollectScreenState extends State<CollectScreen> {
     ];
   }
 
+  /// লেখা টাকা টাকার রূপে — "45000" → "45,000.00"; পড়া না গেলে যেমন আছে (ভুলটা পাঠানোর সময় ধরা পড়ে)
+  void _formatAmount() {
+    final text = Money.typedText(_amount.text);
+    if (!_amountShape.hasMatch(text)) return;
+    final formatted = Money.amount(_received / 100);
+    if (_amount.text != formatted) _amount.text = formatted;
+  }
+
+  /// টাকার ঘরে একটা অঙ্ক, টাকার রূপে
+  void _setAmount(int paisa) => _amount.text = Money.amount(paisa / 100);
+
+  /// ⓘ অঙ্ক না বদলালে (যেমন কেবল টাকার রূপে সাজানো) বণ্টন যেমন ছিল তেমন — হাতে বদলানো বিল হারায় না
   void _figuresChanged() {
+    if (_plan.received == _received && _plan.difference == _differencePaisa && _plan.withheld == _withheldPaisa) {
+      setState(() {});
+      return;
+    }
+    _reallocate();
+  }
+
+  void _reallocate() {
     setState(() {
       _plan
         ..received = _received
@@ -316,7 +348,7 @@ class _CollectScreenState extends State<CollectScreen> {
         _billsState = _Bills.loaded;
         _plan = CollectionPlan(bills: bills.bills, credits: bills.credits);
       });
-      _figuresChanged();
+      _reallocate();
     } catch (_) {
       if (mounted && _customer?.id == picked.id) setState(() => _billsState = _Bills.failed);
     }
@@ -349,11 +381,12 @@ class _CollectScreenState extends State<CollectScreen> {
     });
   }
 
-  /// গ্রাহক ছাড়া অন্য পক্ষ — আদায়ের পাতা নয়, রসিদ ভাউচারের ফর্ম
-  Future<void> _chooseParty(String kind) async {
-    if (kind == 'customer') return;
-    await widget.otherParty(context, kind);
-  }
+  /// ⭐ গ্রাহক ছাড়া অন্য পক্ষ — চুপচাপ পুরনো ফর্ম নয়: নিচে নোট, আর বোতাম চাপলে তবেই রসিদ ভাউচারের ফর্ম (fe, ২১ অক্টোবর ২০২৬;
+  /// চার ধরনের এক পাতা পরে, সার্ভার তৈরি হলে)
+  void _chooseParty(String kind) => setState(() => _party = kind);
+
+  /// ⓘ রাউন্ডিং ৳10-এর বেশি — ফোনের আগাম সতর্কতা; আসল পাহারা সার্ভারের (ফেরালে তার কথাই দেখায়)
+  bool get _roundingTooBig => _differenceKind == 'rounding' && _differencePaisa > CollectScreen.roundingLimit;
 
   // ── বিল ──
 
@@ -404,7 +437,7 @@ class _CollectScreenState extends State<CollectScreen> {
     final credits = _plan.credits.where(chosen.contains).fold(0, (s, r) => s + r.item.open);
     var target = bills - credits - _differencePaisa - _withheldPaisa;
     if (target < 0) target = 0;
-    _amount.text = paisaText(target);
+    _setAmount(target);
     setState(() {
       _plan.received = target;
       for (final r in _rows) {
@@ -803,10 +836,30 @@ class _CollectScreenState extends State<CollectScreen> {
                 'staff' => w.collectPartyStaff,
                 _ => w.collectPartyOther,
               }),
-              selected: k == 'customer',
+              selected: _party == k,
               onSelected: _busy ? null : (_) => _chooseParty(k),
             ),
         ]),
+        if (_party != 'customer')
+          Container(
+            key: const ValueKey('collect-party-note'),
+            margin: const EdgeInsets.only(top: AppSpacing.xs),
+            padding: const EdgeInsetsDirectional.only(start: AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: context.palette.pendingSurface,
+              borderRadius: BorderRadius.circular(6),
+              border: BorderDirectional(start: BorderSide(color: context.palette.pending, width: 3)),
+            ),
+            child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Text(w.collectPartyOldNote, style: TextStyle(color: context.palette.onSurface, fontSize: 13)),
+              TextButton(
+                key: const ValueKey('collect-party-open-old'),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: () => widget.otherParty(context, _party),
+                child: Text(w.collectPartyOldOpen),
+              ),
+            ]),
+          ),
         const SizedBox(height: AppSpacing.sm),
         _Tappable(
           key: const ValueKey('collect-customer'),
@@ -839,7 +892,10 @@ class _CollectScreenState extends State<CollectScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textInputAction: TextInputAction.next,
-          onEditingComplete: () => _nextFrom(_amountFocus),
+          onEditingComplete: () {
+            _formatAmount();
+            _nextFrom(_amountFocus);
+          },
           decoration: InputDecoration(labelText: w.collectAmount, prefixText: '৳ '), // l10n-ok: the taka sign, the same in every language
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -847,7 +903,7 @@ class _CollectScreenState extends State<CollectScreen> {
           _TonalChip(
             key: const ValueKey('collect-full-due'),
             label: w.collectFullDue,
-            onPressed: due == null || due <= 0 || _busy ? null : () => _amount.text = paisaText(due),
+            onPressed: due == null || due <= 0 || _busy ? null : () => _setAmount(due),
           ),
           if (_newServer)
             _TonalChip(
@@ -1103,7 +1159,14 @@ class _CollectScreenState extends State<CollectScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(labelText: w.collectDifferenceAmount),
           ),
-          if (_differencePaisa > 0) _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
+          if (_differenceKind == 'discount' && _differencePaisa > 0)
+            _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
+          if (_differenceKind == 'rounding' && CollectScreen.roundingNeedsSign(_differencePaisa) && !_roundingTooBig)
+            _Note(
+                key: const ValueKey('collect-rounding-sign-1'),
+                text: w.collectRoundingSign(Money.taka(_differencePaisa / 100)),
+                tone: _Tone.info),
+          if (_roundingTooBig) _Note(key: const ValueKey('collect-rounding-warning'), text: w.collectRoundingTooBig, tone: _Tone.stop),
           const SizedBox(height: AppSpacing.sm),
           TextField(
             key: const ValueKey('collect-vds'),
@@ -1134,7 +1197,7 @@ class _CollectScreenState extends State<CollectScreen> {
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: _busy ? null : _saveDraft,
+            onPressed: _busy || _party != 'customer' ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
           ),
         ),
@@ -1144,7 +1207,7 @@ class _CollectScreenState extends State<CollectScreen> {
           child: FilledButton(
             key: const ValueKey('collect-post'),
             style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: _busy ? null : _review,
+            onPressed: _busy || _party != 'customer' || _roundingTooBig ? null : _review,
             child: Text(w.collectPost, textAlign: TextAlign.center),
           ),
         ),
@@ -1356,8 +1419,13 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
                 _Note(key: const ValueKey('collect-needs-signature'), text: w.collectControlSignature, tone: _Tone.info),
               if (p?.needsSignature == false)
                 _Note(key: const ValueKey('collect-no-signature'), text: w.collectControlNoSignature, tone: _Tone.info),
-              if (d.discount > 0 || d.rounding > 0)
+              if (d.discount > 0)
                 _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
+              if (CollectScreen.roundingNeedsSign(d.rounding))
+                _Note(
+                    key: const ValueKey('collect-rounding-sign'),
+                    text: w.collectRoundingSign(Money.taka(d.rounding / 100)),
+                    tone: _Tone.info),
               if (d.slipRequired) _Note(text: w.collectControlSlip, tone: _Tone.info),
               _Note(text: w.collectControlNoUndo, tone: _Tone.info),
               _Note(text: w.collectControlNet, tone: _Tone.warn),

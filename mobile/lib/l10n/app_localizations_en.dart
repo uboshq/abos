@@ -7829,6 +7829,18 @@ class AppL10nEn extends AppL10n {
   String get collectReceiptPrint => 'Print';
 
   @override
+  String get collectPartyOldNote =>
+      'This kind of collection uses the old form for now';
+
+  @override
+  String get collectPartyOldOpen => 'Open the old form';
+
+  @override
+  String collectRoundingSign(String amount) {
+    return 'Rounding $amount — posts after the owner\'s signature';
+  }
+
+  @override
   String get collectOtherIncome => 'Other income';
 
   @override

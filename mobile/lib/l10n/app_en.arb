@@ -2095,6 +2095,9 @@
   "collectAfterTitle": "After posting",
   "collectReceiptPdf": "Receipt PDF",
   "collectReceiptPrint": "Print",
+  "collectPartyOldNote": "This kind of collection uses the old form for now",
+  "collectPartyOldOpen": "Open the old form",
+  "collectRoundingSign": "Rounding {amount} — posts after the owner's signature",
   "collectOtherIncome": "Other income",
   "collectOtherIncomeHint": "From someone who is not a customer, such as rent",
   "collectFromCustomerHint": "From a customer — on one page"

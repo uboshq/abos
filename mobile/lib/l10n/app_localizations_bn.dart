@@ -7697,6 +7697,17 @@ class AppL10nBn extends AppL10n {
   String get collectReceiptPrint => 'ছাপুন';
 
   @override
+  String get collectPartyOldNote => 'এই ধরনের আদায় এখন পুরনো ফর্মে';
+
+  @override
+  String get collectPartyOldOpen => 'পুরনো ফর্ম খুলুন';
+
+  @override
+  String collectRoundingSign(String amount) {
+    return 'রাউন্ডিং $amount — মালিকের সইয়ের পর পোস্ট হবে';
+  }
+
+  @override
   String get collectOtherIncome => 'অন্য আয়';
 
   @override

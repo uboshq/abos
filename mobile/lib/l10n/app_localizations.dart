@@ -12667,6 +12667,24 @@ abstract class AppL10n {
   /// **'ছাপুন'**
   String get collectReceiptPrint;
 
+  /// Collection: a non-customer party type, interim note until one screen serves all four
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ধরনের আদায় এখন পুরনো ফর্মে'**
+  String get collectPartyOldNote;
+
+  /// Collection: opens the receipt voucher form for a non-customer party
+  ///
+  /// In bn, this message translates to:
+  /// **'পুরনো ফর্ম খুলুন'**
+  String get collectPartyOldOpen;
+
+  /// Collection control: rounding above Tk 0.50 and up to Tk 10 needs the owner's signature (owner, 2 Oct 2026)
+  ///
+  /// In bn, this message translates to:
+  /// **'রাউন্ডিং {amount} — মালিকের সইয়ের পর পোস্ট হবে'**
+  String collectRoundingSign(String amount);
+
   /// Voucher list: income from non-customers, a separate entry
   ///
   /// In bn, this message translates to:

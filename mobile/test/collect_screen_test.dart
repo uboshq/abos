@@ -130,7 +130,7 @@ void main() {
     await _pump(tester, _screen(FakeCollect()));
     await _pickShop(tester);
     await _tap(tester, 'collect-full-due');
-    expect(_field(tester, 'collect-amount'), '53200.00');
+    expect(_field(tester, 'collect-amount'), '53,200.00');
     expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳0.00');
   });
 
@@ -143,7 +143,7 @@ void main() {
       await _tap(tester, 'collect-tick-$no');
     }
     await _tap(tester, 'collect-selected-bills');
-    expect(_field(tester, 'collect-amount'), '21200.00', reason: '⛔ নির্বাচিত বিলের যোগফল নয় (15,200 + 8,000 − 2,000)');
+    expect(_field(tester, 'collect-amount'), '21,200.00', reason: '⛔ নির্বাচিত বিলের যোগফল নয় (15,200 + 8,000 − 2,000)');
     expect(_texts(tester, 'collect-row-amount-INV-0094'), '0.00', reason: '⛔ না-বাছা পুরনো বিলে বসল');
     expect(_texts(tester, 'collect-row-amount-INV-0101'), '15,200.00');
     expect(_texts(tester, 'collect-row-amount-INV-0112'), '8,000.00');
@@ -177,15 +177,62 @@ void main() {
     expect(find.text('করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ'), findsOneWidget);
   });
 
-  testWidgets('the party type: customer is this page; supplier, staff and other open the receipt voucher form', (tester) async {
+  testWidgets('the party type: picking সরবরাহকারী shows the note and opens the old form only on its button; posting is off meanwhile',
+      (tester) async {
     await _pump(tester, _screen(FakeCollect()));
     expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('collect-party-customer'))).selected, isTrue);
-    for (final k in ['supplier', 'staff', 'other']) {
+    expect(find.byKey(const ValueKey('collect-party-note')), findsNothing);
+
+    await _tap(tester, 'collect-party-supplier');
+    expect(find.text('এই ধরনের আদায় এখন পুরনো ফর্মে'), findsOneWidget, reason: '⛔ নোট নেই');
+    expect(_parties, isEmpty, reason: '⛔ চুপচাপ পুরনো ফর্ম খুলল');
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull,
+        reason: '⛔ সরবরাহকারী বেছেও গ্রাহকের আদায় পাঠানো যায়');
+    await _tap(tester, 'collect-party-open-old');
+    expect(_parties, ['supplier']);
+
+    for (final k in ['staff', 'other']) {
       await _tap(tester, 'collect-party-$k');
+      expect(find.byKey(const ValueKey('collect-party-note')), findsOneWidget);
     }
-    expect(_parties, ['supplier', 'staff', 'other'], reason: '⛔ অন্য পক্ষ আদায়ের পাতায় মিশে গেল');
     await _tap(tester, 'collect-party-customer');
-    expect(_parties, hasLength(3));
+    expect(find.byKey(const ValueKey('collect-party-note')), findsNothing);
+    expect(_parties, ['supplier']);
+  });
+
+  testWidgets('the amount reads as money (45,000.00) once the field is left, stays as typed while typing, and the exact decimal is sent',
+      (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await tester.tap(find.byKey(const ValueKey('collect-amount')));
+    await tester.enterText(find.byKey(const ValueKey('collect-amount')), '45000');
+    await tester.pumpAndSettle();
+    expect(_field(tester, 'collect-amount'), '45000', reason: '⛔ লেখার সময়েই সাজানো — লেখা ভাঙে');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(_field(tester, 'collect-amount'), '45,000.00', reason: '⛔ ঘর ছাড়ার পরে টাকার রূপে নয়');
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('collect-amount'))).textAlign, TextAlign.end);
+    expect(_texts(tester, 'collect-figure-this'), 'এই আদায় | ৳45,000.00');
+
+    await _type(tester, 'collect-amount', '1234567.5');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    expect(_field(tester, 'collect-amount'), '12,34,567.50', reason: 'লাখের ভাগে, ইংরেজি অঙ্ক');
+    await _post(tester);
+    expect(api.sent.single.toPayload()['amount'], '1234567.50', reason: '⛔ সাজানো লেখা (কমা) সার্ভারে গেল');
+  });
+
+  testWidgets('formatting the amount keeps hand-edited allocations', (tester) async {
+    await _pump(tester, _screen(FakeCollect()));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-item-INV-0094');
+    await _type(tester, 'collect-apply-INV-0094', '20000');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    expect(_field(tester, 'collect-amount'), '45,000.00');
+    expect(_texts(tester, 'collect-row-amount-INV-0094'), '20,000.00', reason: '⛔ সাজানোয় হাতে বদলানো বণ্টন মুছে গেল');
   });
 
   testWidgets('the account defaults to the person\'s own cash, ahead of the server\'s first cash', (tester) async {
@@ -409,7 +456,7 @@ void main() {
     expect(p['ait'], '200.00');
   });
 
-  testWidgets('4 · rounding is refused above Tk 10', (tester) async {
+  testWidgets('4 · rounding is refused above Tk 10 — an early warning on the phone that blocks "দেখে পোস্ট ›"', (tester) async {
     final api = FakeCollect();
     await _pump(tester, _screen(api));
     await _pickShop(tester);
@@ -417,9 +464,56 @@ void main() {
     await _tap(tester, 'collect-adjust');
     await _tap(tester, 'collect-difference-rounding');
     await _type(tester, 'collect-difference', '11');
-    await _review(tester);
     expect(find.text('রাউন্ডিং ৳10-এর বেশি হতে পারে না।'), findsOneWidget);
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull,
+        reason: '⛔ ৳10-এর বেশি রাউন্ডিংয়েও পোস্ট খোলা');
+    await _review(tester);
     expect(find.byType(CollectReviewScreen), findsNothing);
+    expect(api.sent, isEmpty);
+
+    await _type(tester, 'collect-difference', '10');
+    expect(find.byKey(const ValueKey('collect-rounding-warning')), findsNothing);
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNotNull);
+  });
+
+  for (final (typed, sign, blocked) in [('0.50', false, false), ('0.51', true, false), ('10.00', true, false), ('10.01', false, true)]) {
+    testWidgets('4 · rounding ৳$typed: ${blocked ? 'blocked on the phone' : sign ? 'allowed, posts after the owner\'s signature' : 'allowed, no signature'}',
+        (tester) async {
+      final api = FakeCollect();
+      await _pump(tester, _screen(api));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _tap(tester, 'collect-adjust');
+      await _tap(tester, 'collect-difference-rounding');
+      await _type(tester, 'collect-difference', typed);
+      final post = tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed;
+      expect(post == null, blocked, reason: blocked ? '⛔ ৳10-এর বেশি রাউন্ডিংয়েও পোস্ট খোলা' : '⛔ সীমার ভিতরের রাউন্ডিং আটকাল');
+      if (blocked) {
+        expect(find.byKey(const ValueKey('collect-rounding-warning')), findsOneWidget);
+        return;
+      }
+      await _review(tester);
+      expect(find.byType(CollectReviewScreen), findsOneWidget);
+      final amount = typed == '10.00' ? '৳10.00' : '৳$typed';
+      expect(find.text('রাউন্ডিং $amount — মালিকের সইয়ের পর পোস্ট হবে'), sign ? findsOneWidget : findsNothing,
+          reason: sign ? '⛔ ৳0.50-এর বেশি রাউন্ডিংয়ে সইয়ের কথা নেই' : '⛔ ৳0.50 পর্যন্ত রাউন্ডিংয়েও সই চাওয়া হলো');
+      await _post(tester);
+      expect(api.sent.single.toPayload()['difference'], {'kind': 'rounding', 'amount': typed});
+    });
+  }
+
+  testWidgets('4 · the server is the real gate: its 422 on rounding shows the server\'s own text', (tester) async {
+    final api = FakeCollect(refusal: 'রাউন্ডিং এই আদায়ে চলবে না — সার্ভারের সীমা ৳10, আর বিলে বাকি ৳0.40।');
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-adjust');
+    await _tap(tester, 'collect-difference-rounding');
+    await _type(tester, 'collect-difference', '5');
+    await _post(tester);
+    expect(find.text('রাউন্ডিং এই আদায়ে চলবে না — সার্ভারের সীমা ৳10, আর বিলে বাকি ৳0.40।'), findsOneWidget,
+        reason: '⛔ সার্ভারের কারণ দেখা গেল না');
+    expect(api.sent, isEmpty);
   });
 
   testWidgets('10 · 17 · 19 · "দেখে পোস্ট ›" opens screen 2, a full screen: summary, words, the journal, controls — nothing goes before the one tap',
@@ -479,7 +573,7 @@ void main() {
     ]);
     expect(p['difference'], {'kind': 'discount', 'amount': '1000.00'});
     expect(p['customerId'], 'cus-1');
-    expect(p['amount'], '44000');
+    expect(p['amount'], '44000.00', reason: 'টাকার রূপে সাজানো হলেও পাঠানো দশমিক, কমা ছাড়া');
   });
 
   testWidgets('everything unticked sends lines: [] — nothing applied, the whole amount stays as the customer\'s credit', (tester) async {

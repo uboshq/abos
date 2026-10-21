@@ -10504,6 +10504,23 @@
   "@collectReceiptPrint": {
     "description": "Collection: print the receipt"
   },
+  "collectPartyOldNote": "এই ধরনের আদায় এখন পুরনো ফর্মে",
+  "@collectPartyOldNote": {
+    "description": "Collection: a non-customer party type, interim note until one screen serves all four"
+  },
+  "collectPartyOldOpen": "পুরনো ফর্ম খুলুন",
+  "@collectPartyOldOpen": {
+    "description": "Collection: opens the receipt voucher form for a non-customer party"
+  },
+  "collectRoundingSign": "রাউন্ডিং {amount} — মালিকের সইয়ের পর পোস্ট হবে",
+  "@collectRoundingSign": {
+    "description": "Collection control: rounding above Tk 0.50 and up to Tk 10 needs the owner's signature (owner, 2 Oct 2026)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "collectOtherIncome": "অন্য আয়",
   "@collectOtherIncome": {
     "description": "Voucher list: income from non-customers, a separate entry"
