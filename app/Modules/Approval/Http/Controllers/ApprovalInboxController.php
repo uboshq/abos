@@ -341,7 +341,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * কখনো শেষ কথা নয়।
              */
             'bulkable' => $waiting->reject(
-                fn (Approval $a) => $this->bulk->movesMoney($a),
+                // ⛔ আর মডিউল যে কাজ একটা একটা করে চায় (`no_bulk`; fe, ২১ অক্টোবর ২০২৬)
+                fn (Approval $a) => $this->bulk->movesMoney($a) || $this->bulk->oneByOne($a),
             )->pluck('id')->all(),
         ]);
     }

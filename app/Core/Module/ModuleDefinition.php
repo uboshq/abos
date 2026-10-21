@@ -525,7 +525,7 @@ final class ModuleDefinition
          * ⭐ অনুমোদনের কাজ ধরে নিয়ম — সইকারীর চাবি (`signer_key`) আর ইনবক্সের সারির লেখা (`summary`); a6, ২১ অক্টোবর ২০২৬
          * (Hr §৮ ⚠️৫, fe-র উত্তর ২ ও ৪; [[ApprovalRules]])। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
          *
-         * @var array<string, array{signer_key?: string, amount_key?: string, second_hand?: list<string>, summary?: class-string<\App\Core\Contracts\SummarisesAnApproval>}>
+         * @var array<string, array{signer_key?: string, amount_key?: string, second_hand?: list<string>, no_bulk?: bool, summary?: class-string<\App\Core\Contracts\SummarisesAnApproval>}>
          */
         public readonly array $approvalRules = [],
     ) {}
@@ -797,6 +797,11 @@ final class ModuleDefinition
                 throw new InvalidArgumentException(
                     "{$path}: approval_rules.{$action}.second_hand must be a non-empty list of permissions this module declares."
                 );
+            }
+
+            // ⭐ `no_bulk` — একসাথে সইয়ে নয় ([[ApprovalRules::noBulk()]]); ⛔ বুলিয়ান ছাড়া কিছু ("yes", 1) বুটেই থামে, নীরবে উপেক্ষিত নয়
+            if (array_key_exists('no_bulk', $rule) && ! is_bool($rule['no_bulk'])) {
+                throw new InvalidArgumentException("{$path}: approval_rules.{$action}.no_bulk must be true or false.");
             }
 
             $summary = $rule['summary'] ?? null;

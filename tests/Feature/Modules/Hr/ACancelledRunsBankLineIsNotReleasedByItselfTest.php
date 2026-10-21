@@ -235,6 +235,38 @@ final class ACancelledRunsBankLineIsNotReleasedByItselfTest extends TestCase
         $this->assertNull($this->payment(), '⛔ আরেকজনের সইয়েও মজুরি ছাড়া পেল না।');
     }
 
+    /**
+     * ⛔ "ব্যাংক এই লাইন দেয়নি" একসাথে সইয়ে কখনো নয় — প্রতিটা নিজের পাতায় কারণ আর প্রমাণ দেখে (fe, ২১ অক্টোবর ২০২৬; module.php-র
+     * `no_bulk`, [[BulkApproval::oneByOne()]])। ইনবক্সে টিক-বাক্স নেই; সরাসরি পাঠালেও সই নয়, কারণ লেখা; একার পাতায় সই চলে।
+     */
+    public function test_a_bank_line_is_never_signed_in_bulk_but_its_own_page_signs_it(): void
+    {
+        $this->as($this->owner)->post(route('hr.payroll.cancel', $this->september->id), ['reason' => 'wrong month'])->assertSessionHasNoErrors();
+        $this->as($this->accountant)->post(route('hr.payroll.held.bank_unpaid', $this->payment()->id), ['reason' => 'Returned by the bank'])
+            ->assertSessionHasNoErrors();
+        $line = BankUnpaidLine::query()->sole();
+        $approval = app(HeldWages::class)->unpaidApprovalOf($line);
+        $this->assertTrue(app(ApprovalEngine::class)->canDecide($approval->fresh(), $this->checker->fresh()), 'প্রস্তুতি — দ্বিতীয় সইকারী সই দিতে পারেন না।');
+
+        // ── ইনবক্সে আছে, কিন্তু বাছাইয়ের ঘর নেই
+        $this->as($this->checker)->get(route('approval.inbox.index'))->assertOk()
+            ->assertSee(route('approval.inbox.show', $approval->id), false)
+            ->assertDontSee('name="ids[]" value="'.$approval->id.'"', false);
+
+        // ── সরাসরি একসাথে-সইয়ের দরজায় — সই নয়, কারণ লেখা
+        $reason = __('approval::message.bulk_skipped_one_by_one', ['count' => 1]);
+        $this->as($this->checker)->followingRedirects()->post(route('approval.inbox.bulk'), ['ids' => [$approval->id]])
+            ->assertOk()->assertSee($reason);
+        $this->assertSame(Approval::PENDING, (string) $approval->fresh()->status, '⛔ "ব্যাংক এই লাইন দেয়নি" একসাথে-সইয়ে পার হলো — না দেখে সই।');
+        $this->assertSame(BankUnpaidLine::PENDING, (string) $line->fresh()->status);
+        $this->assertNotNull($this->payment(), '⛔ একসাথে-সইয়ে মজুরি ছাড়া পেল।');
+
+        // ── নিজের পাতায় সই — চলে
+        $this->as($this->checker)->post(route('hr.payroll.held.bank_unpaid_sign', $line->id))->assertSessionHasNoErrors();
+        $this->assertSame(BankUnpaidLine::RELEASED, (string) $line->fresh()->status);
+        $this->assertNull($this->payment(), '⛔ একার পাতার সইয়েও মজুরি ছাড়া পেল না।');
+    }
+
     // ── যন্ত্রপাতি ──
 
     private function arrears(): string
