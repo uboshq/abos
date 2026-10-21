@@ -692,6 +692,9 @@ final class StandardChart implements ProvisionsCompany
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
         self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE,
         self::GRATUITY_EXPENSE, self::GRATUITY_LIABILITY,
+        // ⭐ WPPF-এর খরচ আর দেনা — বাকি আইনি বেতনের খাতের মতো সিস্টেমের: নিষ্ক্রিয় বা ধরন বদল নয়, [[WppfService]] কোড ধরে খোঁজে
+        // (fe-র সিদ্ধান্ত ৪, ২১ অক্টোবর ২০২৬; পুরনো কোম্পানিতে চিহ্ন বসায় [[HrLawAccounts]]; [[TheWppfAccountsAreSystemAccountsTest]])
+        self::WPPF_EXPENSE, self::WPPF_PAYABLE,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
