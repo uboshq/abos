@@ -56,8 +56,8 @@ final class APayrollRunOpensByReachTest extends TestCase
             Permission::findOrCreate($key, 'web');
         }
 
-        $this->branchless = $this->run(null, 'PRL-NONE');
-        $this->faraway = $this->run($this->netrokona, 'PRL-FAR');
+        $this->branchless = $this->makeRun(null, 'PRL-NONE');
+        $this->faraway = $this->makeRun($this->netrokona, 'PRL-FAR');
     }
 
     protected function tearDown(): void
@@ -108,7 +108,7 @@ final class APayrollRunOpensByReachTest extends TestCase
 
     // ── সাহায্যকারী ─────────────────────────────────────────────────────
 
-    private function run(?Branch $branch, string $no): PayrollRun
+    private function makeRun(?Branch $branch, string $no): PayrollRun
     {
         return PayrollRun::acrossBranches()->create([
             'company_id' => $this->company->id, 'branch_id' => $branch?->id, 'document_no' => $no,

@@ -114,10 +114,10 @@ final class TheHrReportsCountWhatTheHrScreensCountTest extends TestCase
         $this->leave($this->rahim, '2025-12-01', '2025-12-03', '3', LeaveApplication::APPROVED);
 
         // ⓘ সেপ্টেম্বরের নিশ্চিত রান; একই মাসের খসড়া, বাতিল আর মুছে ফেলা রান বেতনশিটে নয়
-        $this->run('PRL-SEP', '2026-09-01', DocumentStatus::CONFIRMED, [[$this->rahim, '98765.43', '1234.56', 'bank'], [$this->karim, '45678.91', '0', 'cash']]);
-        $this->run('PRL-SEPD', '2026-09-01', DocumentStatus::DRAFT, [[$this->rahim, '33333.33', '0', 'bank']]);
-        $this->run('PRL-SEPX', '2026-09-01', DocumentStatus::CANCELLED, [[$this->rahim, '22222.22', '0', 'bank']]);
-        $this->run('PRL-SEPZ', '2026-09-01', DocumentStatus::CONFIRMED, [[$this->rahim, '11111.11', '0', 'bank']])->delete();
+        $this->makeRun('PRL-SEP', '2026-09-01', DocumentStatus::CONFIRMED, [[$this->rahim, '98765.43', '1234.56', 'bank'], [$this->karim, '45678.91', '0', 'cash']]);
+        $this->makeRun('PRL-SEPD', '2026-09-01', DocumentStatus::DRAFT, [[$this->rahim, '33333.33', '0', 'bank']]);
+        $this->makeRun('PRL-SEPX', '2026-09-01', DocumentStatus::CANCELLED, [[$this->rahim, '22222.22', '0', 'bank']]);
+        $this->makeRun('PRL-SEPZ', '2026-09-01', DocumentStatus::CONFIRMED, [[$this->rahim, '11111.11', '0', 'bank']])->delete();
     }
 
     public function test_each_hr_report_opens_for_its_own_key_and_is_refused_without_it(): void
@@ -321,7 +321,7 @@ final class TheHrReportsCountWhatTheHrScreensCountTest extends TestCase
     }
 
     /** @param  list<array{0: Employee, 1: string, 2: string, 3: string}>  $slips */
-    private function run(string $no, string $month, string $status, array $slips): PayrollRun
+    private function makeRun(string $no, string $month, string $status, array $slips): PayrollRun
     {
         $run = PayrollRun::acrossBranches()->create([
             'company_id' => $this->company->id, 'branch_id' => $this->dhaka->id, 'document_no' => $no,

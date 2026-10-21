@@ -112,4 +112,8 @@ return [
     'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
     // ⭐ সই পেয়েও বেতনের বদল বসেনি — মাসটা ততক্ষণে দেওয়া (Hr §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
     'salary_change_late' => 'Signed salary change not applied',
+    // ⭐ the owner signed his own paper (fe, 21 Oct 2026) · salary change signed · login closed on leaving (a6)
+    'owner_self_signed' => 'Owner signed his own paper',
+    'salary_change_signed' => 'Salary change signed',
+    'leaver_login_closed' => 'Login closed on leaving',
 ];
