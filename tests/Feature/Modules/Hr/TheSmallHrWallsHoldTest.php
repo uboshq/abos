@@ -39,6 +39,7 @@ use Tests\TestCase;
 final class TheSmallHrWallsHoldTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -132,7 +133,7 @@ final class TheSmallHrWallsHoldTest extends TestCase
         $leave = app(LeaveService::class)->approve(app(LeaveService::class)->apply($employee,
             LeaveType::query()->where('code', 'CASUAL')->firstOrFail(), '2026-08-10', '2026-08-11', '2'), $this->owner);
 
-        $run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
         app()->setLocale('bn');
 
         $this->get(route('hr.payroll.show', $run))->assertOk()->assertSee('আগস্ট')->assertDontSee('August 2026');

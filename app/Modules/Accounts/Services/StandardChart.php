@@ -500,7 +500,17 @@ final class StandardChart implements ProvisionsCompany
     /** ⭐ HR-এর আইনি বেতনের খাত — বসানোর কমান্ড ([[HrLawAccounts]]) আর বেতনের রান এই তালিকাই দেখে */
     public const HR_LAW_CODES = [
         self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE, self::GRATUITY_EXPENSE, self::GRATUITY_LIABILITY,
+        // ⓘ WPPF-এর দুই খাতও — পুরনো কোম্পানিতে একই বসানোর কমান্ডে আসে (মেশানোর সময়, a6, ২১ অক্টোবর ২০২৬)
+        self::WPPF_EXPENSE, self::WPPF_PAYABLE,
     ];
+
+    /**
+     * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — বাংলাদেশ শ্রম আইন ২০০৬, অধ্যায় ১৫, ধারা ২৩৪ (২০১৩-র সংশোধনী): নিট মুনাফার ৫%,
+     * ৮০:১০:১০ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])। ⓘ খরচ ৫২২৩-এ, তিন তহবিলের দেনা একসাথে ২১৩৩-এ — ভাগ কাগজে আর পর্দায়।
+     */
+    public const WPPF_EXPENSE = '5223';
+
+    public const WPPF_PAYABLE = '2133';
 
     public const EMPLOYEE_ADVANCE = '1131';
 
@@ -1089,6 +1099,8 @@ final class StandardChart implements ProvisionsCompany
             ['2132', 'Tax Deducted at Source Payable — Salary', 'প্রদেয় উৎসে কর (বেতন)', $L, '2100', false, []],
             // ⭐ গ্র্যাচুইটির দায় — কর্মীদের জমে ওঠা পাওনা (a6, ২১ অক্টোবর ২০২৬; [[GRATUITY_LIABILITY]])
             ['2134', 'Gratuity Payable', 'প্রদেয় গ্র্যাচুইটি', $L, '2100', false, []],
+            // ⭐ WPPF ও কল্যাণ তহবিলের দেনা — শ্রম আইন ধারা ২৩৪ ([[WPPF_PAYABLE]]; a6, ২১ অক্টোবর ২০২৬)
+            ['2133', 'WPPF & Welfare Fund Payable', 'প্রদেয় মুনাফায় অংশগ্রহণ ও কল্যাণ তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
@@ -1335,6 +1347,8 @@ final class StandardChart implements ProvisionsCompany
             ['5226', 'Festival Bonus', 'উৎসব ভাতা', $X, '5200', false, []],
             // ⭐ গ্র্যাচুইটির খরচ (a6, ২১ অক্টোবর ২০২৬; [[GRATUITY_EXPENSE]])
             ['5227', 'Gratuity Expense', 'গ্র্যাচুইটি খরচ', $X, '5200', false, []],
+            // ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিলের খরচ — নিট মুনাফার ৫% ([[WPPF_EXPENSE]]; a6, ২১ অক্টোবর ২০২৬)
+            ['5223', 'Workers Profit Participation Fund', 'শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

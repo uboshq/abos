@@ -41,6 +41,8 @@
                 :columns="$columns"
                 :search-placeholder="__('hr::message.payroll_search')">
                 <x-slot:actions>
+                    {{-- ⭐ দেওয়ার অপেক্ষায় বকেয়া মজুরি (fe, ২১ অক্টোবর ২০২৬) --}}
+                    <x-ui.button :href="route('hr.payroll.held.index')">{{ __('hr::payroll.held_ready_title') }}</x-ui.button>
                     @can('hr.payroll.manage')
                         <x-ui.button tone="primary" icon="plus" :href="route('hr.payroll.create')">
                             {{ __('hr::action.new_run') }}

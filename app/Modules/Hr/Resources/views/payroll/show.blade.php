@@ -128,6 +128,34 @@
         @endcan
     </div>
 
+    {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে — কোন চাবি কাকে দিতে হবে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+    <x-ui.no-second-signer :approval="app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($run, 'payroll')" />
+
+    {{-- ⭐ ব্যাংক ফাইলে কারা নেই আর কেন — সই-না-পড়া হিসাবে বেতন আটকে (fe, ২১ অক্টোবর ২০২৬; [[PayrollService::heldReason()]]) --}}
+    @if (! empty($leftOut))
+        <section data-bank-left-out role="status" data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-ink) bg-(--color-badge-warning-bg) p-4 text-sm">
+            <p class="font-semibold text-(--color-badge-warning-ink)">{{ __('hr::payroll.left_out_title') }}</p>
+            <ul class="mt-2 list-inside list-disc">
+                @foreach ($leftOut as $row)
+                    {{-- ⛔ আইনের শেষ দিন (ধারা ১২৩) — পেরোলে লাল, যতক্ষণ না বকেয়া হয়ে কোনো ফাইলে যায় (fe, ২১ অক্টোবর ২০২৬) --}}
+                    <li data-left-out="{{ $row['code'] }}" @if ($row['late']) data-held-late class="font-semibold text-(--color-badge-danger-ink)" @endif>
+                        {{ $row['code'] }} · {{ $row['name'] }} — {{ $row['reason'] }}
+                        @unless ($row['paid'])
+                            · {{ __('hr::payroll.held_deadline', ['date' => \Illuminate\Support\Carbon::parse($row['deadline'])->format('d M Y')]) }}
+                            @if ($row['late']) · {{ __('hr::payroll.held_late') }} @endif
+                        @endunless
+                    </li>
+                @endforeach
+            </ul>
+            @if ($run->isConfirmed())
+                @can('hr.identity.view')
+                    <x-ui.button class="mt-3" :href="route('hr.payroll.bank_file_left_out', $run->id)">{{ __('hr::payroll.left_out_title') }} (CSV)</x-ui.button>
+                @endcan
+            @endif
+        </section>
+    @endif
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('hr::message.no_runs')"

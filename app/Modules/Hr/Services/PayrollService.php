@@ -19,6 +19,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\MaternityDelivery;
+use App\Modules\Hr\Models\HeldWagePayment;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
@@ -26,6 +27,7 @@ use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Support\AdvanceBalance;
 use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -429,6 +431,174 @@ final class PayrollService
      *
      * @return array{name: string, content: string, rows: int}
      */
+    /**
+     * ⛔ বেতনশিটের "আটকে" পথ — কর্মীর সারিতে পথ ব্যাংক বা MFS, অথচ সই-পড়া নম্বর নেই (fe, ২১ অক্টোবর ২০২৬; a6; [[PaymentChanges]])।
+     *
+     * ⓘ নিয়ম, সবচেয়ে নিরাপদ আর এক রকম: বেতন যায় কেবল সই-পড়া তথ্যে। ঠিকানা বদল অপেক্ষায় থাকলে কর্মীর সারিতে আগের, সই-পড়া
+     * তথ্যই থাকে — বেতন সেখানে যায় (আগের পথ)। আগের তথ্য না থাকলে (নতুন কর্মীর প্রথম নম্বর, বা খালি থেকে বসানো) বেতন
+     * **আটকে**: নগদেও নয় (নগদে দিলে সই ছাড়া পথ খুলত), ব্যাংক ফাইলে নাম থাকে না, রানের পাতা আর ফাইলের সঙ্গী-তালিকায় কারণ।
+     *
+     * ⛔ "আটকে" মানে কেবল "এই ব্যাংক ফাইলে নেই" — পাওনা নয় এমন নয় (fe, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা ১২৩: মজুরিকাল শেষের সাত
+     * কর্মদিবসের মধ্যে মজুরি)। রান পোস্ট হলে স্লিপের পুরো নিট প্রদেয় বেতনে বসে, আটকে হোক বা না হোক (IAS 19 accrual; [[ledgerLines()]]
+     * পথ দেখে না)। পোস্ট-হওয়া রান বদলায় না। সই পড়লে আটকে থাকা নিট **পরের ব্যাংক ফাইলে "বকেয়া মজুরি"** হয়ে একবারই যায়
+     * ([[arrearsFor()]], [[HeldWagePayment]]) — আবার বানানো লাগে না।
+     */
+    public const HELD = 'held';
+
+    /** @return string|null কারণের ভাষা-চাবি; `null` = আটকে নয় */
+    public static function heldReason(Employee $employee): ?string
+    {
+        $method = (string) $employee->payment_method;
+        $missing = ($method === 'bank' && blank($employee->bank_account_no)) || ($method === 'mfs' && blank($employee->mfs_number));
+
+        if (! $missing) {
+            return null;
+        }
+
+        return app(PaymentChanges::class)->pendingFor($employee) !== null ? 'hr::payroll.held_waiting' : 'hr::payroll.held_no_account';
+    }
+
+    /** ⓘ আইনের দিন গোনায় সাপ্তাহিক ছুটি — এই কোডে ছুটির পঞ্জিকা নেই, তাই কেবল শুক্রবার (fe, ২১ অক্টোবর ২০২৬) */
+    public const WAGE_DAYS = 7;
+
+    /**
+     * ⛔ মজুরি দেওয়ার শেষ দিন — মজুরিকাল (রানের মাস) শেষের পরে সাত কর্মদিবস, শ্রম আইন ২০০৬ ধারা ১২৩। ⓘ কর্মদিবস = শুক্রবার বাদে
+     * সব দিন; সরকারি ছুটির পঞ্জিকা এই কোডে নেই, তাই সেগুলো গোনা হয় না (খোলা প্রশ্ন)।
+     */
+    public static function wageDeadline(PayrollRun $run): Carbon
+    {
+        $day = $run->month->copy()->endOfMonth()->startOfDay();
+        $left = self::WAGE_DAYS;
+
+        while ($left > 0) {
+            $day->addDay();
+
+            if (! $day->isFriday()) {
+                $left--;
+            }
+        }
+
+        return $day;
+    }
+
+    /**
+     * ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা বাদ, কেন, আর আইনের শেষ দিন; পেরোলে লাল (fe, ২১ অক্টোবর ২০২৬)। ⓘ রানের পাতা আর
+     * `bank-file/left-out` ফাইল দুইটাই এটা পড়ে।
+     *
+     * @return list<array{code: string, name: string, reason: string, deadline: string, late: bool, paid: bool}>
+     */
+    public function leftOutOfTheBankFile(PayrollRun $run, ?User $user = null): array
+    {
+        $slips = ($user === null ? $run->payslips()->getQuery() : app(BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
+            ->with('employee')
+            ->where('payment_method', self::HELD)
+            ->get();
+
+        $deadline = self::wageDeadline($run);
+        $paid = HeldWagePayment::query()->whereIn('payslip_id', $slips->modelKeys())->with(['paidIn', 'voucher'])->get()->keyBy('payslip_id');
+
+        return $slips->map(function (Payslip $slip) use ($deadline, $paid): array {
+            $employee = $slip->employee;
+            $payment = $paid->get($slip->id);
+            $reason = $employee === null ? null : self::heldReason($employee);
+
+            return [
+                'code' => (string) $employee?->code,
+                'name' => (string) $employee?->name(),
+                'reason' => $payment !== null
+                    ? ($payment->paid_in_run_id === null
+                        // ⓘ বকেয়ার নিজের কাগজে, যেকোনো দিন ([[HeldWages::pay()]])
+                        ? (string) __('hr::payroll.held_paid_voucher', ['no' => (string) $payment->voucher?->document_no])
+                        : (string) __('hr::payroll.held_paid_later', ['no' => (string) $payment->paidIn?->document_no]))
+                    // ⓘ সই পড়ে গেছে — পরের ব্যাংক ফাইলে "বকেয়া মজুরি" হয়ে যাবে
+                    : (string) __($reason ?? 'hr::payroll.held_next_file'),
+                'deadline' => $deadline->toDateString(),
+                'late' => $payment === null && Carbon::today()->greaterThan($deadline),
+                'paid' => $payment !== null,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * ⭐ আটকে থাকা মজুরি, এখনো যা দেওয়া হয়নি — সব নিশ্চিত রান জুড়ে, HR-এর ড্যাশবোর্ডের তালিকা (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * @return Collection<int, array{employee: string, channel: ?string, run: string, deadline: string, late: bool}>
+     */
+    public function heldWagesOwed(?User $user = null): Collection
+    {
+        $query = Payslip::query()
+            ->where('payment_method', self::HELD)
+            ->whereDoesntHave('heldPayment')
+            ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED))
+            ->with(['employee', 'run']);
+
+        $query = $user === null ? $query : app(BranchReach::class)->throughEmployee($query, $user);
+
+        return $query->orderBy('id')->get()->map(function (Payslip $slip): array {
+            $deadline = self::wageDeadline($slip->run);
+
+            return [
+                'employee' => (string) $slip->employee?->name(),
+                // ⓘ সই-পড়া পথ — ব্যাংক বা MFS; না থাকলে `null` (হিসাব সইয়ের অপেক্ষায়) — fe, ২১ অক্টোবর ২০২৬
+                'channel' => $slip->employee === null ? null : HeldWages::channelOf($slip->employee),
+                'run' => (string) $slip->run?->document_no,
+                'deadline' => $deadline->toDateString(),
+                'late' => Carbon::today()->greaterThan($deadline),
+            ];
+        })->values();
+    }
+
+    /**
+     * ⭐ বকেয়া মজুরি — আগের নিশ্চিত রানের আটকে থাকা স্লিপ, যার হিসাব এখন সই-পড়া, এই রানের ব্যাংক ফাইলে (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⛔ একবারই: প্রথম যে পরের ফাইলে ঢোকে, সেটা [[HeldWagePayment]]-এ লেখা হয় (স্লিপ প্রতি একটা সারি, unique) — একই রানের ফাইল আবার
+     * নামালে আবার আসে (একই টাকা, একই ফাইল), কিন্তু তার পরের রানের ফাইলে আর নয়। ⓘ আগের রান ছোঁয়া হয় না।
+     *
+     * @return list<array{0: Payslip, 1: string}> স্লিপ আর ফাইলের রেফারেন্স
+     */
+    private function arrearsFor(PayrollRun $run, ?User $user): array
+    {
+        $query = Payslip::query()
+            ->where('payment_method', self::HELD)
+            ->where('payroll_run_id', '!=', $run->id)
+            ->where('net', '>', 0)
+            ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED)->where('month', '<', $run->month))
+            ->with(['employee', 'run']);
+
+        $query = $user === null ? $query : app(BranchReach::class)->throughEmployee($query, $user);
+        $out = [];
+
+        foreach ($query->orderBy('id')->get() as $slip) {
+            $employee = $slip->employee;
+
+            if ($employee === null || $employee->payment_method !== 'bank' || self::heldReason($employee) !== null) {
+                continue;
+            }
+
+            HeldWagePayment::query()->insertOrIgnore([[
+                'public_id' => (string) \Illuminate\Support\Str::uuid7(),
+                'company_id' => (int) $slip->company_id,
+                'payslip_id' => (int) $slip->id,
+                'payroll_run_id' => (int) $slip->payroll_run_id,
+                'paid_in_run_id' => (int) $run->id,
+                'amount' => (string) $slip->net,
+                'created_by' => auth()->id(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]]);
+
+            // ⓘ তালা নয়, unique — যে রান আগে লিখল, বকেয়াটা তারই; এই রানের না হলে বাদ
+            if ((int) HeldWagePayment::query()->where('payslip_id', $slip->id)->value('paid_in_run_id') !== (int) $run->id) {
+                continue;
+            }
+
+            $out[] = [$slip, (string) __('hr::payroll.arrears_reference', ['no' => (string) $slip->run?->document_no,
+                'month' => $slip->run?->month->format('M Y')])];
+        }
+
+        return $out;
+    }
+
     public function bankFile(PayrollRun $run, ?User $user = null): array
     {
         // ⓘ নাম ধরে কেউ চাইলে কেবল তাঁর নাগালের কর্মী ([[BranchReach]], অডিট HR ⛔২)
@@ -463,6 +633,21 @@ final class PayrollService
                 (string) $slip->bank_name,
                 (string) $slip->employee?->code,
                 $reference,
+            ];
+        }
+
+        // ⭐ বকেয়া মজুরি — আগের রানের আটকে থাকা, এখন সই-পড়া হিসাবে, একবারই ([[arrearsFor()]])
+        foreach ($this->arrearsFor($run, $user) as [$slip, $arrears]) {
+            $employee = $slip->employee;
+
+            $rows[] = [
+                (string) $employee->bank_account_no,
+                (string) ($employee->bank_account_name ?: $employee->name_en),
+                Money::round($slip->net, 2),
+                (string) $employee->bank_routing_no,
+                (string) $employee->bank_name,
+                (string) $employee->code,
+                $arrears,
             ];
         }
 
@@ -524,7 +709,8 @@ final class PayrollService
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
             'employee_id' => $employee->id,
-            'payment_method' => $employee->payment_method,
+            // ⛔ সই-না-পড়া প্রথম হিসাব — বেতন কোথাও যায় না, "আটকে" ([[heldReason()]]; fe, ২১ অক্টোবর ২০২৬)
+            'payment_method' => self::heldReason($employee) === null ? $employee->payment_method : self::HELD,
             'bank_name' => $employee->bank_name,
             'bank_account_name' => $employee->bank_account_name,
             'bank_account_no' => $employee->bank_account_no,

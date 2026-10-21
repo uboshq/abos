@@ -7,6 +7,7 @@ use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
 use App\Modules\Hr\Http\Controllers\HolidayController;
 use App\Modules\Hr\Http\Controllers\GratuityController;
+use App\Modules\Hr\Http\Controllers\HeldWageController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\OvertimeController;
@@ -16,6 +17,7 @@ use App\Modules\Hr\Http\Controllers\ProvidentFundController;
 use App\Modules\Hr\Http\Controllers\SalaryHeadController;
 use App\Modules\Hr\Http\Controllers\SalaryStructureController;
 use App\Modules\Hr\Http\Controllers\TaxCertificateController;
+use App\Modules\Hr\Http\Controllers\WppfController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,6 +48,12 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::get('/{employee}/edit', [EmployeeController::class, 'edit'])->whereNumber('employee')->name('edit');
         Route::put('/{employee}', [EmployeeController::class, 'update'])->whereNumber('employee')->name('update');
         Route::delete('/{employee}', [EmployeeController::class, 'destroy'])->whereNumber('employee')->name('destroy');
+
+        // ⭐ বেতনের ঠিকানার বদলে দ্বিতীয় সই — #৮, ২০ অক্টোবর ২০২৬ ([[PaymentChanges]])
+        Route::post('/{employee}/payment-change/{change}/approve', [EmployeeController::class, 'approvePaymentChange'])
+            ->whereNumber('employee')->whereNumber('change')->name('payment_change.approve');
+        Route::post('/{employee}/payment-change/{change}/reject', [EmployeeController::class, 'rejectPaymentChange'])
+            ->whereNumber('employee')->whereNumber('change')->name('payment_change.reject');
     });
 
     /*
@@ -78,6 +86,12 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::post('/{run}/confirm', [PayrollController::class, 'confirm'])->whereNumber('run')->name('confirm');
         Route::post('/{run}/cancel', [PayrollController::class, 'cancel'])->whereNumber('run')->name('cancel');
         Route::get('/{run}/bank-file', [PayrollController::class, 'bankFile'])->whereNumber('run')->name('bank_file');
+        // ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা বাদ আর কেন (fe, ২১ অক্টোবর ২০২৬)
+        Route::get('/{run}/bank-file/left-out', [PayrollController::class, 'leftOut'])->whereNumber('run')->name('bank_file_left_out');
+        // ⭐ দেওয়ার অপেক্ষায় বকেয়া মজুরি — যেকোনো দিন, ব্যাংক বা MFS (fe, ২১ অক্টোবর ২০২৬; [[HeldWageController]])
+        Route::get('/held', [HeldWageController::class, 'index'])->name('held.index');
+        Route::post('/held/pay/{channel}', [HeldWageController::class, 'pay'])->whereIn('channel', ['bank', 'mfs'])->name('held.pay');
+        Route::get('/held/paper/{voucher}', [HeldWageController::class, 'paper'])->whereNumber('voucher')->name('held.paper');
         Route::get('/{run}/payslips', [PayslipPrintController::class, 'all'])->whereNumber('run')->name('payslips');
     });
 
@@ -141,6 +155,13 @@ Route::middleware('auth')->prefix('hr')->group(function () {
      * ⓘ চাবি প্রতিটা স্লাগের নিজের, পদ্ধতির ভেতরে।
      */
     Route::get('/reports/{slug}', [HrReportController::class, 'show'])->name('report.show');
+
+    /*
+     * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল — বছরের হিসাব আর "সই দিন" (শ্রম আইন ২০০৬, অধ্যায় ১৫; a6, ২১ অক্টোবর ২০২৬; [[WppfController]])।
+     * ⛔ কোম্পানির সুইচ বন্ধ থাকলে দুইটাই ৪০৪।
+     */
+    Route::get('/wppf', [WppfController::class, 'show'])->name('wppf.show');
+    Route::post('/wppf/{year}/provision', [WppfController::class, 'provision'])->whereNumber('year')->name('wppf.provision');
 
     Route::prefix('salary-heads')->name('salary_head.')->group(function () {
         Route::get('/', [SalaryHeadController::class, 'index'])->name('index');

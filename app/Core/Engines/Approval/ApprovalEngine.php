@@ -39,6 +39,9 @@ use RuntimeException;
  */
 final class ApprovalEngine
 {
+    /** ⓘ সই দেওয়ার দরজার চাবি — ওয়েবের ইনবক্স আর ফোনের সই-পথ ([[secondHandFlow()]]) */
+    public const DECIDE_KEY = 'approval.decide';
+
     /**
      * কোম্পানির সব সক্রিয় ছক — এই অনুরোধে একবার তোলা।
      *
@@ -126,11 +129,17 @@ final class ApprovalEngine
          * ⛔ শর্তের তালিকা খালি হলে আচরণ **অবিকল আগের মতো** —
          * পুরনো প্রবাহগুলো কেবল অঙ্কটাই চেনে।
          */
-        if ($flow === null || ! $flow->catches($amount, $matchOn ?? $payload ?? [])) {
+        /*
+         * ⛔ দুই হাতের কাজে (বেতনের রান, কাঠামো, ব্যাংকের ঠিকানা) কোম্পানির ছকের সীমা বা শর্ত নিয়মটা নামাতে পারে না — fe, ২১ অক্টোবর
+         * ২০২৬ (a6; [[twoHands()]])। ⓘ ছক না ধরলেও (১ টাকার রান, সীমার নিচে) সেই ছকই খাটে, পুরো — ধাপ আর সইকারী কোম্পানির, কেবল
+         * "সই লাগবে না" উত্তরটা নয়। ছক না থাকলে [[flows()]]-এর যন্ত্রের "দ্বিতীয় সই"।
+         */
+        if ($flow === null || (! $flow->catches($amount, $matchOn ?? $payload ?? []) && ! $this->twoHands($module, $action))) {
             return null;
         }
 
-        if ($flow->steps()->count() === 0) {
+        // ⓘ জমানো ধাপ গোনা, কোয়েরি নয় — [[flows()]] ধাপসহ তোলে, আর "দ্বিতীয় সই" ছকের ধাপ ডাটাবেসে নেই
+        if ($flow->steps->isEmpty()) {
             throw new RuntimeException(
                 "Approval flow for {$module}.{$action} has no steps. "
                 .'A flow with nobody in it would leave every document waiting forever.'
@@ -214,7 +223,8 @@ final class ApprovalEngine
     {
         $flow = $this->flowFor($module, $action, $documentType);
 
-        return $flow !== null && $flow->catches($amount, $fields);
+        // ⓘ [[request()]]-এর হুবহু নিয়ম — দুই হাতের কাজে সীমা-শর্ত নিয়মটা নামায় না
+        return $flow !== null && ($flow->catches($amount, $fields) || $this->twoHands($module, $action));
     }
 
     /**
@@ -712,7 +722,11 @@ final class ApprovalEngine
 
             $locked->update(['status' => Approval::CANCELLED, 'decided_at' => now()]);
 
-            return $locked->fresh();
+            // ⭐ কাগজের মডিউলকে জানানো — পাকা হওয়ার পরে ([[ApprovalWithdrawn]]; a6, ২১ অক্টোবর ২০২৬)
+            $withdrawn = $locked->fresh();
+            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalWithdrawn::from($withdrawn)));
+
+            return $withdrawn;
         });
     }
 
@@ -983,6 +997,7 @@ final class ApprovalEngine
             });
 
         $this->exceptOwnBeyondLimit($query, $user);
+        $this->exceptOwnTwoHanded($query, $user);
 
         // পুরনোটা আগে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই কাউকে
         // সবচেয়ে বেশিক্ষণ আটকে রেখেছে
@@ -1303,6 +1318,15 @@ final class ApprovalEngine
         }
 
         /*
+         * ⛔ দুই হাতের কাজে যিনি চাইলেন তিনি কখনো সই দেন না — মালিকও নন, কোনো সীমার নিচেও নয় (fe, ২১ অক্টোবর ২০২৬; a6;
+         * [[twoHands()]])। ⓘ আগে মালিক নিজের বেতন-বদলে নিজে সই দিতেন, অডিটে `owner_self_signed` চিহ্নসহ — এখন সেই পথ নেই:
+         * অন্তত দুইজন আলাদা মানুষ, সবসময়। মালিক অন্যের চাওয়ায় দ্বিতীয় সইকারী হতে পারেন।
+         */
+        if ((int) $approval->requested_by === (int) $user->id && $this->twoHands((string) $approval->module, (string) $approval->action)) {
+            return false;
+        }
+
+        /*
          * ⭐ কর্তৃত্বের সীমা — ২৪ সেপ্টেম্বর ২০২৬।
          *
          * ⛔ আগে প্রবাহে একটা ধাপে *"বিক্রয় ব্যবস্থাপক"* লেখা
@@ -1330,6 +1354,11 @@ final class ApprovalEngine
             }
 
             if ((int) $approval->requested_by === (int) $for && ! $this->withinSelfLimit($approval) && ! $this->isSuperAdmin($from)) {
+                return false;
+            }
+
+            // ⛔ দুই হাতের কাজে অনুরোধকারীর হয়ে ভার নিয়েও নয় — নাহলে বন্ধুকে ভার দিয়ে নিজের রান পাশ ([[twoHands()]])
+            if ((int) $approval->requested_by === (int) $for && $this->twoHands((string) $approval->module, (string) $approval->action)) {
                 return false;
             }
         }
@@ -1380,6 +1409,68 @@ final class ApprovalEngine
      * চেয়েছেন আর কে দিয়েছেন দুইটাই থাকে, তাই নিরীক্ষায় নিজে-সই করা
      * কাগজ আলাদা করে দেখা যায়।
      */
+    /**
+     * ⛔ এই কাজে অন্তত দুইজন আলাদা মানুষ লাগে কি না — মডিউলের `second_hand` ঘোষণা (বেতনের রান, কাঠামো, ব্যাংকের ঠিকানা; fe, ২১ অক্টোবর
+     * ২০২৬; a6; [[ApprovalRules::secondHand()]])।
+     */
+    public function twoHands(string $module, string $action): bool
+    {
+        return app(ApprovalRules::class)->secondHand($module, $action) !== [];
+    }
+
+    /**
+     * ⛔ দুই হাতের অনুরোধে অনুরোধকারী ছাড়া সই দিতে পারেন এমন কেউ নেই — তবে বাংলায় বলা, কোন চাবিগুলো কাউকে দিতে হবে (cb-র রিভিউ,
+     * ২১ অক্টোবর ২০২৬; a6)। ⓘ UB-র মতো ছোট কোম্পানিতে মালিক নিজে রান চাইলে আর কারও হাতে চাবি না থাকলে অনুরোধটা নীরবে ঝুলত।
+     * ⓘ প্রশ্নটা [[canDecide()]]-কেই করা — ইনবক্স যাকে দেখায়, ঠিক তাঁরাই গোনা হন। চাবির নাম মডিউলের ঘোষণা থেকে, সাথে সইয়ের দরজা।
+     *
+     * @return string|null `null` = বলার কিছু নেই (অপেক্ষায় নয়, দুই হাতের কাজ নয়, বা কেউ আছেন)
+     */
+    public function noSecondSignerNote(Approval $approval): ?string
+    {
+        if (! $approval->isPending() || ! $this->twoHands((string) $approval->module, (string) $approval->action)) {
+            return null;
+        }
+
+        $someone = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey((int) $approval->company_id))
+            ->where('is_active', true)
+            ->when($approval->requested_by !== null, fn ($q) => $q->whereKeyNot((int) $approval->requested_by))
+            ->get()
+            ->contains(fn (User $user) => $this->canDecide($approval, $user));
+
+        if ($someone) {
+            return null;
+        }
+
+        $keys = array_values(array_unique([
+            ...app(ApprovalRules::class)->secondHand((string) $approval->module, (string) $approval->action),
+            self::DECIDE_KEY,
+        ]));
+
+        return (string) __('core.approval.no_second_signer', ['keys' => implode(', ', $keys)]);
+    }
+
+    /**
+     * ⓘ ইনবক্সে দুই হাতের কাজের নিজের অনুরোধ নয় — মালিকেরও না ([[canDecide()]]-এর একই নিয়ম, SQL-এ; [[TheInboxAgreesWithTheDecisionTest]])।
+     */
+    private function exceptOwnTwoHanded(Builder $query, User $user): void
+    {
+        $pairs = app(ApprovalRules::class)->secondHandActions();
+
+        if ($pairs === []) {
+            return;
+        }
+
+        $query->whereNot(function (Builder $own) use ($pairs, $user): void {
+            // ⓘ `whereNotNull` আগে — পোর্টালের অনুরোধে `requested_by` null, আর SQL-এ NOT(NULL …) সারিটা নীরবে ফেলে দিত
+            $own->whereNotNull('requested_by')->where('requested_by', $user->id)->where(function (Builder $any) use ($pairs): void {
+                foreach ($pairs as $pair) {
+                    $any->orWhere(fn (Builder $one) => $one->where('module', $pair['module'])->where('action', $pair['action']));
+                }
+            });
+        });
+    }
+
     private function isSuperAdmin(User $user): bool
     {
         return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
@@ -1445,7 +1536,61 @@ final class ApprovalEngine
             $flows[$flow->module.'|'.$flow->action.'|'.$flow->document_type] = $flow;
         }
 
+        /*
+         * ⛔ মালিকের একমাত্র ব্যতিক্রম — "সই বন্ধ মানে বন্ধ", কেবল বেতনের রান, বেতনের কাঠামো আর ব্যাংকের ঠিকানা ছাড়া (মালিক, ২১ অক্টোবর
+         * ২০২৬; a6; [[ApprovalRules::secondHand()]])। ⓘ এই কাজগুলোর "সব ধরনে" চালু ছক না থাকলে (UB-র মতো সব বন্ধ, বা কাজটার ছক মোছা)
+         * যন্ত্রের নিজের এক ধাপের ছক — "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, সীমা নেই, শর্ত নেই।
+         * ⭐ ডাটাবেসে বসে না: ছকের পর্দায় দেখা যায় না, বদলানো যায় না, আর [[MoneyFlowDefaults]] আগের মতোই কিছু বসায় না।
+         * ⓘ কোম্পানির নিজের চালু ছক থাকলে (যেকোনো সীমা-শর্তসহ) সেটাই খাটে — অবিকল আগের মতো।
+         */
+        foreach (app(ApprovalRules::class)->secondHandActions() as $rule) {
+            $slot = $rule['module'].'|'.$rule['action'].'|';
+
+            if (! isset($flows[$slot])) {
+                $flows[$slot] = $this->secondHandFlow($rule['module'], $rule['action'], $rule['keys']);
+            }
+        }
+
         return $this->flowCache = $flows;
+    }
+
+    /**
+     * ⭐ যন্ত্রের "দ্বিতীয় সই" ছক — সারি নয় (`exists` মিথ্যা), ধাপ আর শর্ত হাতে বসানো, যাতে কোনো প্রশ্ন ডাটাবেসে না যায়।
+     *
+     * @param  list<string>  $keys
+     */
+    private function secondHandFlow(string $module, string $action, array $keys): ApprovalFlow
+    {
+        $flow = new ApprovalFlow;
+        $flow->forceFill([
+            'company_id' => CompanyContext::id(),
+            'module' => $module,
+            'action' => $action,
+            'document_type' => '',
+            'threshold_amount' => null,
+            'is_active' => true,
+        ]);
+
+        $name = __('core.approval.second_hand');
+        /*
+         * ⓘ সাথে `approval.decide` — সইয়ের দুই দরজা (ওয়েবের ইনবক্স, ফোনের `approvals/{id}/approve`) এই চাবিতেই খোলে; ⛔ না থাকলে
+         * ইনবক্স আর ঘণ্টা তাঁকে "আপনার সই" দেখাত, অথচ দরজা ৪০৩ দিত।
+         */
+        $flow->setRelation('steps', new Collection([
+            ApprovalFlowStep::secondHand(array_values(array_unique([...$keys, self::DECIDE_KEY])),
+                is_string($name) && $name !== 'core.approval.second_hand' ? $name : 'দ্বিতীয় সই'),
+        ]));
+        $flow->setRelation('conditions', new Collection);
+
+        return $flow;
+    }
+
+    /** ⓘ এই অনুরোধ যন্ত্রের "দ্বিতীয় সই" ছকে চলছে কি না — পর্দা আর অডিট নাম ধরে বলতে পারে ([[secondHandFlow()]]) */
+    public function isSecondHand(Approval $approval): bool
+    {
+        $flow = $this->flowOf($approval);
+
+        return $flow !== null && ! $flow->exists;
     }
 
     /**
@@ -1615,9 +1760,12 @@ final class ApprovalEngine
         $levels = [];
 
         foreach ($flow->steps as $step) {
-            $mine = $step->approver_type === ApprovalFlowStep::BY_USER
-                ? (int) $step->approver_id === $user->id
-                : in_array((int) $step->approver_id, $roleIds, true);
+            // ⓘ চাবি ধরে ধাপ — কেবল যন্ত্রের "দ্বিতীয় সই" ছকে ([[secondHandFlow()]])
+            $mine = match ($step->approver_type) {
+                ApprovalFlowStep::BY_KEY => $step->heldBy($user),
+                ApprovalFlowStep::BY_USER => (int) $step->approver_id === $user->id,
+                default => in_array((int) $step->approver_id, $roleIds, true),
+            };
 
             if ($mine) {
                 $levels[] = (int) $step->level;

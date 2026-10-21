@@ -35,4 +35,6 @@ return [
     // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
     'run_salary' => 'Monthly salary',
     'run_bonus' => 'Festival bonus',
+    // ⓘ বেতনশিট আটকে — সই-না-পড়া হিসাব (fe, ২১ অক্টোবর ২০২৬)
+    'held' => 'Held — not signed',
 ];

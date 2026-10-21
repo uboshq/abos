@@ -31,6 +31,7 @@ use Tests\TestCase;
 final class TheSalaryIsBookedWhereThePersonWorksTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -55,7 +56,7 @@ final class TheSalaryIsBookedWhereThePersonWorksTest extends TestCase
     {
         $this->assertNotSame($this->branch('NTK')->id, $this->company->defaultBranch()?->id, 'দৃশ্যটা প্রধান শাখার বাইরে বসে চালানো');
 
-        $run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
         $this->assertSame($this->branch('NTK')->id, (int) $run->branch_id, 'রানের ছাপ কেরানির শাখা — সেটা বদলায় না');
 
         $mms = $this->branch('MMS')->id;

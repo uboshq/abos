@@ -5,9 +5,13 @@ declare(strict_types=1);
 use App\Core\Contracts\KnowsAUsersEmployee;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Events\ApprovalDecided;
+use App\Core\Events\ApprovalWithdrawn;
 use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
+use App\Modules\Hr\Listeners\CloseThePaymentChangeOnWithdrawal;
+use App\Modules\Hr\Listeners\ReleaseHeldWagesWhenTheVoucherFalls;
+use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
@@ -101,6 +105,12 @@ return [
                 'route_params' => ['slug' => 'provident-fund'], 'permission' => 'hr.salary.view'],
             // ⭐ গ্র্যাচুইটির দায় — বেতনের চাবিতে (fe, ২১ অক্টোবর ২০২৬, দফা ৮)
             ['label' => 'hr::menu.report_gratuity', 'icon' => 'wallet', 'route' => 'hr.gratuity.report', 'permission' => 'hr.salary.view'],
+            /*
+             * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+             * ⛔ সারিটা কোম্পানির সুইচে (`hr.wppf.enabled`, ডিফল্টে বন্ধ) — বন্ধে সারিও নেই, দরজাও ৪০৪ ([[WppfController]])।
+             */
+            ['label' => 'hr::menu.wppf', 'icon' => 'cash', 'route' => 'hr.wppf.show', 'permission' => 'hr.wppf.view',
+                'setting' => 'hr.wppf.enabled'],
         ],
     ],
 
@@ -184,6 +194,13 @@ return [
          */
         'hr.leave.self',
         'hr.payslip.self',
+
+        /*
+         * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল — দেখা আর জাবেদার "সই দিন" আলাদা (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+         * ⓘ কোনো রোলে ডিফল্টে নেই — মালিক (super admin) সব চাবি পান, কাকে দেবেন তিনিই ঠিক করেন।
+         */
+        'hr.wppf.view',
+        'hr.wppf.manage',
     ],
 
     /*
@@ -261,9 +278,16 @@ return [
         'cash_advance' => 'hr::approval.cash_advance',
         /*
          * ⭐ বেতনের কাঠামো বদল — §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬ ([[SalaryStructureService::change()]])। ⓘ ছক কেউ বসান না, কোম্পানি
-         * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না, তাই অনুমোদন বন্ধ রাখা কোম্পানিতে আচরণ অবিকল আগের মতো।
+         * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না। ⭐ ছক না থাকলেও দ্বিতীয় সই — নিচের `second_hand` (মালিক, ২১ অক্টোবর ২০২৬)।
          */
         'salary_change' => 'hr::approval.salary_change',
+        /*
+         * ⭐ কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল — cb-র অপেক্ষার বদল ([[PaymentChanges]], ee99f3eaa), সই এখন ইঞ্জিনে; ছক না থাকলেও
+         * দ্বিতীয় সই (নিচের `second_hand`; মালিক, a6, ২১ অক্টোবর ২০২৬)।
+         */
+        'payment_change' => 'hr::approval.payment_change',
+        // ⓘ WPPF-এর জাবেদা — কোম্পানি চাইলে ছক বসায়; না থাকলে "সই দিন" চাপা মানুষটিই সই ([[WppfService::provision()]])
+        'wppf_provision' => 'hr::approval.wppf_provision',
     ],
 
     /*
@@ -271,9 +295,17 @@ return [
      *  · `signer_key` — ছকের ধাপে বেতনের চাবি ছাড়া কাউকে (মানুষ বা রোল) বসানো যায় না; নাহলে অঙ্ক না দেখে সই ([[ApprovalFlowService]])।
      *  · `summary` — ইনবক্স আর একসাথে সইয়ের তালিকায় প্রতিটা সারিতে আগে → পরের অঙ্ক, চাবি না থাকলে ঢাকা ([[SalaryChangeSummary]])।
      */
+    /*
+     * ⛔ `second_hand` — মালিকের একমাত্র ব্যতিক্রম, ২১ অক্টোবর ২০২৬ (a6; [[ApprovalRules::secondHand()]]): "সই বন্ধ মানে বন্ধ", কেবল বেতনের
+     * রান নিশ্চিত, বেতনের কাঠামো বদল আর কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল ছাড়া। সব ছক বন্ধ থাকা কোম্পানিতেও (UB) এগুলোয়
+     * আরেকজনের "সই দিন" লাগে — যন্ত্রের নিজের এক ধাপ "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, যিনি চাইলেন তিনি নন — মালিকও নন
+     * (fe, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]]); কোম্পানির ছকের সীমা-শর্ত নিয়মটা নামাতে পারে না। ⓘ ছক বসানো হয় না ([[MoneyFlowDefaults]] আগের মতোই);
+     * কোম্পানির নিজের চালু ছক থাকলে সেটাই খাটে।
+     */
     'approval_rules' => [
         'salary_change' => [
             'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.salary.manage'],
             'summary' => \App\Modules\Hr\Services\SalaryChangeSummary::class,
         ],
         /*
@@ -286,8 +318,18 @@ return [
          */
         'payroll' => [
             'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.payroll.manage'],
             'amount_key' => 'hr.salary.view',
             'summary' => \App\Modules\Hr\Services\PayrollRunSummary::class,
+        ],
+        /*
+         * ⛔ বেতনের ঠিকানার বদল — সই দেন বদলটা লেখার চাবি থাকা আরেকজন (`hr.employee.manage` + `hr.identity.view`), যিনি চাইলেন তিনি নন।
+         * ⓘ পুরো নম্বর তাঁর চোখে খোলে (পরিচয়ের চাবি) — মিলিয়ে দেখে সই; চাবি ছাড়া কেউ ধাপে বসেন না (`signer_key`)।
+         */
+        'payment_change' => [
+            'signer_key' => 'hr.identity.view',
+            'second_hand' => ['hr.employee.manage'],
+            'summary' => \App\Modules\Hr\Services\PaymentChangeSummary::class,
         ],
     ],
 
@@ -444,6 +486,18 @@ return [
          * (সেবা স্তরেও দ্বিতীয় পাহারা আছে: যে দিনের সারি লেখা নেই সেটা
          * গোনাই হয় না। কিন্তু বেতনের মতো জায়গায় একটা পাহারা যথেষ্ট নয়।)
          */
+        /*
+         * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+         * ⛔ ডিফল্টে বন্ধ — আইনটা সব প্রতিষ্ঠানে খাটে না (ধারা ২৩২: পরিশোধিত মূলধন ≥ ১ কোটি বা স্থায়ী সম্পদ ≥ ২ কোটি), আর যন্ত্র
+         * সেটা আন্দাজ করে না। বন্ধ থাকলে কোথাও কিছু নেই।
+         */
+        [
+            'key' => 'hr.wppf.enabled',
+            'label' => 'hr::settings.wppf_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
         [
             'key' => 'hr.attendance_affects_salary',
             'label' => 'hr::settings.attendance_affects_salary',
@@ -680,7 +734,17 @@ return [
      */
     'listeners' => [
         // ⭐ বেতনের কাঠামো বদলের শেষ সই — তবে বসে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
-        ApprovalDecided::class => [FinishTheClaimOnTheLastSignature::class, FinishTheSalaryChangeOnTheLastSignature::class],
+        ApprovalDecided::class => [
+            FinishTheClaimOnTheLastSignature::class,
+            FinishTheSalaryChangeOnTheLastSignature::class,
+            FinishThePaymentChangeOnTheLastSignature::class,
+            // ⭐ বকেয়া মজুরির খসড়া ভাউচার সইয়ে "না" — মজুরি আবার দেওয়ার অপেক্ষায় (fe, ২১ অক্টোবর ২০২৬)
+            ReleaseHeldWagesWhenTheVoucherFalls::class,
+        ],
+        // ⭐ বকেয়া মজুরির খসড়া ভাউচার বাতিল — একই কথা ([[HeldWages::releaseFor()]])
+        \App\Modules\Accounts\Events\VoucherCancelled::class => [ReleaseHeldWagesWhenTheVoucherFalls::class],
+        // ⭐ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — বেতনের ঠিকানার অপেক্ষার বদলটাও বন্ধ (fe, ২১ অক্টোবর ২০২৬)
+        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class],
     ],
 
     'sensitive_fields' => [

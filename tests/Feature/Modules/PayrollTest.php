@@ -36,6 +36,7 @@ use Tests\TestCase;
 class PayrollTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -87,7 +88,7 @@ class PayrollTest extends TestCase
      */
     private function employeeWithSalary(array $overrides = [], string $code = 'EMP-001'): Employee
     {
-        $employee = app(EmployeeService::class)->create([
+        $employee = $this->employeeWithSignedDetails([
             'code' => $code,
             'name_en' => 'Rafiq Islam',
             'joining_date' => '2026-01-15',
@@ -209,7 +210,7 @@ class PayrollTest extends TestCase
     public function test_confirming_puts_the_salary_into_the_books(): void
     {
         $this->employeeWithSalary();
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $this->assertSame(DocumentStatus::CONFIRMED, $run->status);
 
@@ -231,7 +232,7 @@ class PayrollTest extends TestCase
     public function test_each_amount_lands_in_the_account_it_belongs_to(): void
     {
         $this->employeeWithSalary();
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $byCode = LedgerEntry::query()
             ->where('source_type', PayrollRun::SOURCE_TYPE)
@@ -250,7 +251,7 @@ class PayrollTest extends TestCase
     public function test_a_confirmed_run_cannot_be_rebuilt(): void
     {
         $this->employeeWithSalary();
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $this->expectException(ValidationException::class);
 
@@ -266,7 +267,7 @@ class PayrollTest extends TestCase
     public function test_cancelling_reverses_the_books_instead_of_erasing_them(): void
     {
         $this->employeeWithSalary();
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $this->payroll()->cancel($run, 'ভুল অঙ্ক');
 
@@ -302,7 +303,7 @@ class PayrollTest extends TestCase
         $this->employeeWithSalary(['payment_method' => 'cash', 'bank_account_no' => null,
             'name_en' => 'Cash Man'], 'EMP-002');
 
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
         $file = $this->payroll()->bankFile($run);
 
         $this->assertSame(1, $file['rows'], 'নগদের সারিটা ফাইলে থাকার কথা নয়');

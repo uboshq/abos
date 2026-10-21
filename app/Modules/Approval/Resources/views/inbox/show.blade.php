@@ -473,6 +473,9 @@
                 </p>
             @endif
 
+            {{-- ⛔ দুই হাতের অনুরোধে দ্বিতীয় সই দিতে পারেন এমন কেউ নেই — কোন চাবি কাকে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+            <x-ui.no-second-signer :approval="$approval" />
+
             @if ($approval->status === \App\Models\Approval::PENDING && $approval->requested_by === auth()->id())
                 <form method="POST" action="{{ route('approval.inbox.withdraw', $approval->id) }}">
                     @csrf

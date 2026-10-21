@@ -55,6 +55,8 @@
     @if ($waiting !== null)
         <div data-boxed data-salary-waiting
              class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+            <x-ui.no-second-signer :approval="$waiting['approval']" />
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="font-semibold">
                     {{ __('hr::message.salary_waiting_title', ['date' => \Illuminate\Support\Carbon::parse($waiting['effective_from'])->format('d M Y')]) }}
