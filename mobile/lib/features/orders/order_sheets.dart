@@ -70,16 +70,9 @@ class OrderInk {
   Color get inCart => _dark ? OrderPalette.freeBorder : OrderPalette.inCart;
 }
 
-/// Western digits to Bangla ones — the order screen speaks in ০–৯, as the
-/// owner's samples do. ⓘ ইংরেজিতে অঙ্ক যেমন আছে তেমন (0.4.43)।
-String bn(Object value) {
-  if (AppLocale.isEnglish()) return value.toString();
-  const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']; // l10n-ok: বাংলা অঙ্কের ছাঁচ, কেবল বাংলায় খাটে
-  return value.toString().replaceAllMapped(RegExp('[0-9]'), (m) => digits[int.parse(m[0]!)]);
-}
-
-/// A quantity in Bangla digits with thousands commas: 1500 → ১,৫০০.
-String bnQty(num value) => bn(Money.plain(value));
+/// ⭐ পরিমাণ — [Money.plain]: ইংরেজি অঙ্ক, হাজারের কমা (1500 → 1,500), দুই ভাষাতেই। ⛔ আগে এই পর্দায় বাংলা অঙ্ক (১,৫০০) —
+/// মালিকের স্থায়ী নিয়ম: অঙ্ক সবখানে ইংরেজি, কেবল মাসের নাম বাংলা (a4, 0.4.44)।
+String qtyText(num value) => Money.plain(value);
 
 /// ⭐ টাকা — [Money.taka]: ইংরেজি অঙ্ক, লাখের কমা, দুই দশমিক (৳2,820.00) — সবখানে এক রূপ (নকশার নিয়ম ০.৪.৩৮ §৩,
 /// মালিকের সিদ্ধান্ত খ)। ⛔ আগে এই পর্দায় বাংলা অঙ্কে (৳২,৮২০.০০) — বাকি অ্যাপের সাথে মিলত না।
@@ -369,7 +362,7 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
                   // ⓘ Flexible — বড় অক্ষরে (২০০%) সারি ছাপিয়ে যেত (নকশার নিয়ম ০.৪.৩৮ §২)
                   if (factor != null)
                     Flexible(
-                      child: Text(context.l10n.ordersKeypadCartonFactor(bn(1), _carton, bn(factor)),
+                      child: Text(context.l10n.ordersKeypadCartonFactor('1', _carton, '$factor'),
                           textAlign: TextAlign.end, style: TextStyle(color: o.muted)),
                     ),
                 ],
@@ -382,14 +375,14 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
               Row(
                 children: [
                   if (factor != null) ...[
-                    _box(_carton, bn(_cartons),
+                    _box(_carton, '$_cartons',
                         selects: true, key: const ValueKey('keypad-cartons')),
                     const SizedBox(width: 10),
                   ],
-                  _box(context.l10n.ordersKeypadPieces, bn(_pieces), selects: false, key: const ValueKey('keypad-pieces')),
+                  _box(context.l10n.ordersKeypadPieces, '$_pieces', selects: false, key: const ValueKey('keypad-pieces')),
                   if (factor != null) ...[
                     const SizedBox(width: 10),
-                    _box(context.l10n.ordersKeypadTotalPieces, bnQty(_total)),
+                    _box(context.l10n.ordersKeypadTotalPieces, qtyText(_total)),
                   ],
                 ],
               ),
@@ -398,11 +391,11 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
                 runSpacing: 8,
                 children: [
                   if (factor != null) ...[
-                    _quick('+${bn(1)} $_carton', () => _addCartons(1)),
-                    _quick('+${bn(10)} $_carton', () => _addCartons(10)),
+                    _quick('+1 $_carton', () => _addCartons(1)),
+                    _quick('+10 $_carton', () => _addCartons(10)),
                   ],
                   if ((widget.lastQty ?? 0) > 0)
-                    _quick(context.l10n.ordersKeypadLikeLast(bnQty(widget.lastQty!)), () => _setTotal(widget.lastQty!)),
+                    _quick(context.l10n.ordersKeypadLikeLast(qtyText(widget.lastQty!)), () => _setTotal(widget.lastQty!)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -410,11 +403,11 @@ class _QtyKeypadSheetState extends State<QtyKeypadSheet> {
               for (var r = 0; r < 3; r++)
                 _keyRow([
                   for (var d = r * 3 + 1; d <= r * 3 + 3; d++)
-                    _key(bn(d), () => _digit(d), key: ValueKey('keypad-$d')),
+                    _key('$d', () => _digit(d), key: ValueKey('keypad-$d')),
                 ]),
               _keyRow([
                 _key('⌫', _back, semantics: context.l10n.ordersKeypadBackspace, key: const ValueKey('keypad-back')),
-                _key(bn(0), () => _digit(0), key: const ValueKey('keypad-0')),
+                _key('0', () => _digit(0), key: const ValueKey('keypad-0')),
                 _key(context.l10n.ordersKeypadAddToCart, () => Navigator.of(context).pop(_total),
                     primary: true, key: const ValueKey('keypad-add')),
               ]),
@@ -568,7 +561,7 @@ class _OrderFilterSheetState extends State<OrderFilterSheet> {
                 textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
               ),
               onPressed: () => Navigator.of(context).pop(_filter),
-              child: Text(context.l10n.ordersFilterApply(count, bn(count))),
+              child: Text(context.l10n.ordersFilterApply(count, '$count')),
             ),
           ],
         ),
@@ -726,8 +719,8 @@ class OrderConfirmSheet extends StatelessWidget {
                   for (final l in lines)
                     _row(context, [
                       Text(l.name, style: const TextStyle(fontSize: 14)),
-                      Text(bnQty(l.qty), textAlign: TextAlign.center),
-                      Text(bnQty(l.free),
+                      Text(qtyText(l.qty), textAlign: TextAlign.center),
+                      Text(qtyText(l.free),
                           textAlign: TextAlign.center,
                           style: l.free > 0
                               ? TextStyle(fontWeight: FontWeight.w800, color: o.inCart)
@@ -737,8 +730,8 @@ class OrderConfirmSheet extends StatelessWidget {
                     ]),
                   _row(context, [
                     Text(context.l10n.ordersConfirmTotal, style: bold),
-                    Text(bnQty(qty), style: bold, textAlign: TextAlign.center),
-                    Text(bnQty(free),
+                    Text(qtyText(qty), style: bold, textAlign: TextAlign.center),
+                    Text(qtyText(free),
                         style: bold.copyWith(color: o.inCart), textAlign: TextAlign.center),
                     Text(Money.amount(taka), key: const ValueKey('confirm-total'), style: bold, textAlign: TextAlign.right),
                   ], last: true),

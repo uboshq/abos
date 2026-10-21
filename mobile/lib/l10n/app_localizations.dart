@@ -679,7 +679,7 @@ abstract class AppL10n {
   /// **'কার্টন'**
   String get ordersKeypadCarton;
 
-  /// Keypad: how many pieces one carton holds; digits already written
+  /// Keypad: how many pieces one carton holds; numbers as text, English digits
   ///
   /// In bn, this message translates to:
   /// **'{one} {carton} = {factor} পিস'**
@@ -763,7 +763,7 @@ abstract class AppL10n {
   /// **'সাজান'**
   String get ordersFilterSortHeading;
 
-  /// Filter sheet: apply button; n picks the form, count is n already written in the screen digits
+  /// Filter sheet: apply button; n picks the form, count is n as text (English digits in both languages)
   ///
   /// In bn, this message translates to:
   /// **'{n, plural, other{{count}টা পণ্য দেখান}}'**
@@ -973,7 +973,7 @@ abstract class AppL10n {
   /// **'ফ্রি · নিজে বসেছে'**
   String get ordersNewFreeAuto;
 
-  /// New order bottom bar: pieces sold and free; digits already written
+  /// New order bottom bar: pieces sold and free; numbers as text, English digits
   ///
   /// In bn, this message translates to:
   /// **'বিক্রি {sold} পিস · ফ্রি {free}'**

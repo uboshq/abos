@@ -490,7 +490,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               isLabelVisible: active > 0,
               backgroundColor: o.badge,
               textColor: o.onBadge,
-              label: Text(bn(active), key: const ValueKey('order-filter-badge')),
+              label: Text('$active', key: const ValueKey('order-filter-badge')),
               child: Icon(Icons.tune, color: o.onBrand),
             ),
           ),
@@ -601,7 +601,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                             child: Semantics(
                               button: true,
                               label: context.l10n.ordersNewQty,
-                              value: bnQty(qty),
+                              value: qtyText(qty),
                               onTapHint: context.l10n.ordersNewQtyHint,
                               child: InkWell(
                                 key: ValueKey('order-qty-${product.id}'),
@@ -610,7 +610,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                                   constraints: const BoxConstraints(minHeight: 48),
                                   child: Center(
                                     child: ExcludeSemantics(
-                                      child: Text(bnQty(qty),
+                                      child: Text(qtyText(qty),
                                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                                     ),
                                   ),
@@ -649,7 +649,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: free > 0 ? OrderPalette.freeBorder : o.blankBorder, width: 1.5),
                         ),
-                        child: Text(bnQty(free),
+                        child: Text(qtyText(free),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -719,7 +719,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.l10n.ordersNewBarPieces(bnQty(_pieces), bnQty(_freePieces)),
+                  Text(context.l10n.ordersNewBarPieces(qtyText(_pieces), qtyText(_freePieces)),
                       key: const ValueKey('order-bar-pieces'),
                       style: TextStyle(fontSize: 13, color: o.onBarSoft)),
                   Text(bnTaka(_total),

@@ -464,7 +464,7 @@
   },
   "ordersKeypadCartonFactor": "{one} {carton} = {factor} পিস",
   "@ordersKeypadCartonFactor": {
-    "description": "Keypad: how many pieces one carton holds; digits already written",
+    "description": "Keypad: how many pieces one carton holds; numbers as text, English digits",
     "placeholders": {
       "one": {
         "type": "String"
@@ -541,7 +541,7 @@
   },
   "ordersFilterApply": "{n, plural, other{{count}টা পণ্য দেখান}}",
   "@ordersFilterApply": {
-    "description": "Filter sheet: apply button; n picks the form, count is n already written in the screen digits",
+    "description": "Filter sheet: apply button; n picks the form, count is n as text (English digits in both languages)",
     "placeholders": {
       "n": {
         "type": "int"
@@ -699,7 +699,7 @@
   },
   "ordersNewBarPieces": "বিক্রি {sold} পিস · ফ্রি {free}",
   "@ordersNewBarPieces": {
-    "description": "New order bottom bar: pieces sold and free; digits already written",
+    "description": "New order bottom bar: pieces sold and free; numbers as text, English digits",
     "placeholders": {
       "sold": {
         "type": "String"
