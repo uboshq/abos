@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\OvertimeSheet;
 use App\Modules\Hr\Services\OvertimeService;
 use App\Modules\Hr\Support\BranchReach;
+use App\Modules\Hr\Support\LeaveSigner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -33,17 +34,30 @@ class OvertimeController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:hr.attendance.view', only: ['index']),
+            // ⓘ তালিকার দরজা নীতিতে ([[OvertimeSheetPolicy::viewAny()]]) — হাজিরার চাবি, বা নিজের দল থাকা ব্যবস্থাপক
             new Middleware('can:hr.attendance.manage', only: ['store']),
         ];
     }
 
+    /**
+     * ⭐ মাসের শিট — হাজিরার চাবি থাকলে দেখার শাখার সবার আর নিজের দলের; চাবি ছাড়া ব্যবস্থাপক কেবল নিজের দলের (ছুটির একই নিয়ম,
+     * [[LeaveSigner::listFor()]]; fe, ২১ অক্টোবর ২০২৬, দফা ৩)। ⛔ অন্য দলের শিট তাঁর তালিকায় নেই, আর তাতে সই ৪০৩।
+     */
     public function index(Request $request): View
     {
-        $month = $this->monthFrom((string) $request->query('month'));
+        $this->authorize('viewAny', OvertimeSheet::class);
 
-        $sheets = app(BranchReach::class)
-            ->throughEmployeeInView(OvertimeSheet::query(), $request->user())
+        $month = $this->monthFrom((string) $request->query('month'));
+        $user = $request->user();
+        $team = app(LeaveSigner::class)->teamOf($user);
+
+        $query = $user->can('hr.attendance.view')
+            ? OvertimeSheet::query()->where(fn ($q) => $q
+                ->whereIn('hr_overtime_sheets.id', app(BranchReach::class)->throughEmployeeInView(OvertimeSheet::query(), $user)->select('hr_overtime_sheets.id'))
+                ->when($team !== [], fn ($w) => $w->orWhereIn('hr_overtime_sheets.employee_id', $team)))
+            : OvertimeSheet::query()->whereIn('hr_overtime_sheets.employee_id', $team);
+
+        $sheets = $query
             ->with(['employee', 'signer'])
             ->whereDate('hr_overtime_sheets.month', $month->toDateString())
             ->orderBy('hr_overtime_sheets.id')

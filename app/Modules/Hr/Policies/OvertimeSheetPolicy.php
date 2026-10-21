@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Policies;
 use App\Models\User;
 use App\Modules\Hr\Models\OvertimeSheet;
 use App\Modules\Hr\Services\OvertimeService;
+use App\Modules\Hr\Support\LeaveSigner;
 
 /**
  * ⭐ অধিকালের শিটে "সই দিন" — কর্মীর নিজের ব্যবস্থাপক (নাগালে), বা মালিক; নিজের বা নিজে বানানো শিটে কেবল মালিক
@@ -17,6 +18,12 @@ use App\Modules\Hr\Services\OvertimeService;
  */
 class OvertimeSheetPolicy
 {
+    /** ⭐ তালিকা — হাজিরার চাবি, বা নিজের দল আছে এমন ব্যবস্থাপক (fe, ২১ অক্টোবর ২০২৬, দফা ৩; [[LeaveSigner::teamOf()]]) */
+    public function viewAny(User $user): bool
+    {
+        return $user->can('hr.attendance.view') || app(LeaveSigner::class)->teamOf($user) !== [];
+    }
+
     public function sign(User $user, OvertimeSheet $sheet): bool
     {
         return app(OvertimeService::class)->maySign($user, $sheet);
