@@ -390,3 +390,21 @@ P2.16 app/Modules/Hr/Models/Employee.php (GUARDED)
   old: 'surviving_children',
   new: (line deleted from GUARDED only)
   kill: K3::test_a_company_that_makes_it_unpaid_cuts_every_calendar_day_and_the_gender_hides_behind_the_identity_key (clerk sees the count)
+
+== P3 — paid months and approved papers are never rewritten ==
+K = tests/Feature/Modules/Hr/APaidMonthKeepsItsAmountsWhenTheRulesChangeTest.php
+
+P3.1 app/Modules/Hr/Services/PayrollService.php (rebuild, first line of the method)
+  old: $this->assertDraft($run);
+
+        return DB::transaction(function () use ($run) {
+  new: return DB::transaction(function () use ($run) {   (and the inner assertDraft after lockFresh deleted)
+  kill: K::test_a_confirmed_run_and_an_approved_leave_stay_as_they_were (rebuild rewrites the confirmed slip: gross 31000 under the new rules)
+
+P3.2 app/Modules/Hr/Services/LeaveService.php (cancel)
+  old: PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
+  new: (line deleted)
+  kill: K::test_a_confirmed_run_and_an_approved_leave_stay_as_they_were (withdrawal in a paid month passes)
+
+P3.3 app/Modules/Hr/Services/LeaveService.php (stampAttendance is only called on approve) — EQUIVALENT check not applicable:
+  no code recomputes approved leaves; the claim is that nothing does. A mutant that would rewrite them does not exist in the code to mutate.
