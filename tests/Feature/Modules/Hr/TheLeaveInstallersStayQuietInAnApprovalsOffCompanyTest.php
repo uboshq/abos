@@ -34,6 +34,10 @@ final class TheLeaveInstallersStayQuietInAnApprovalsOffCompanyTest extends TestC
         CompanyContext::forCompany($ub->id, fn () => ApprovalFlow::query()->create(['code' => 'PAY-OFF', 'module' => 'hr', 'action' => 'payroll',
             'threshold_amount' => 0, 'is_active' => false]));
 
+        // ⓘ কোম্পানি ইচ্ছে করে মুছে ফেলা প্রমিত ধরন — আবার জন্মায় না
+        CompanyContext::forCompany($ub->id, fn () => LeaveType::query()->create(['code' => 'SICK', 'name_en' => 'Sick',
+            'days_per_year' => '14', 'is_paid' => true, 'is_active' => true])->delete());
+
         CompanyContext::forCompany($ub->id, function (): void {
             app(LeaveTypeDefaults::class)->provisionCompany();
             app(LeaveTypeDefaults::class)->provisionCompany();
@@ -45,6 +49,8 @@ final class TheLeaveInstallersStayQuietInAnApprovalsOffCompanyTest extends TestC
 
         $codes = LeaveType::query()->withoutGlobalScopes()->withTrashed()->where('company_id', $ub->id)->pluck('code')->sort()->values()->all();
         $this->assertSame(['CASUAL', 'EARNED', 'MATERNITY', 'SICK', 'UNPAID'], $codes, '⛔ প্রমিত ধরন দুইবার বসল, বা কোনোটা বাকি');
+        $this->assertTrue(LeaveType::query()->withoutGlobalScopes()->withTrashed()->where('company_id', $ub->id)->where('code', 'SICK')->sole()->trashed(),
+            '⛔ মুছে ফেলা প্রমিত ধরন আবার বসল');
 
         $flows = ApprovalFlow::query()->withoutGlobalScopes()->where('company_id', $ub->id);
         $this->assertSame(0, (clone $flows)->where('is_active', true)->count(), '⛔ সই বন্ধ কোম্পানিতে চালু ছক জন্মাল');

@@ -483,8 +483,7 @@ K = tests/Feature/Modules/Hr/TheLeaveInstallersStayQuietInAnApprovalsOffCompanyT
 P8.1 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
   old: if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
   new: if (LeaveType::query()->where('code', $code)->exists()) {
-  kill: not by K (nothing trashed there) — EQUIVALENT under K; the trashed case is the M3.9 family. One-line proof: K creates no
-        soft-deleted type, so withTrashed() and the plain query see the same rows. (Kept honest; M3.9 kills the duplicate case.)
+  kill: K::test_five_types_once_and_no_live_approval_flow (the deliberately deleted SICK comes back: SICK twice)
 
 P8.2 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
   old: continue;
