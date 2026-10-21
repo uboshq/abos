@@ -114,7 +114,12 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         $phone = $this->phone();
         $branchListing = collect($phone->json('listings'))->firstWhere('label', __('sales::overview.panel.by_branch'));
         $this->assertNotNull($branchListing, 'প্রস্তুতিটাই ভুল — ফোনে শাখার তালিকা নেই।');
-        $this->assertSame(Money::format($after['net']), $branchListing['total']['net'] ?? null, '⛔ ফোনের শাখার তালিকার মোট নিট বিক্রি নয়।');
+        // ⓘ ফোনের যোগ = দেখানো সারিগুলোর (গোল করা) যোগ — পয়সার নিচের ভগ্নাংশ না থাকলে নিট বিক্রির কার্ডই
+        $netColumn = array_search('net', array_column($branchListing['columns'], 'key'), true);
+        $this->assertNotFalse($netColumn, '⛔ ফোনের শাখার তালিকায় নিট বিক্রির কলাম নেই।');
+        $phoneSum = array_reduce($branchListing['rows'], fn (string $s, array $r) => bcadd($s, str_replace(',', '', $r[$netColumn]), 4), '0.0000');
+        $this->assertSame(Money::format($phoneSum), $branchListing['total']['net'] ?? null, '⛔ ফোনের শাখার তালিকার মোট দেখানো সারিগুলোর যোগ নয়।');
+        $this->assertSame(0, bccomp(Money::round($after['net'], 2), $phoneSum, 2), '⛔ ফোনের শাখার তালিকার মোট নিট বিক্রি নয়।');
         $this->assertSame(__('sales::overview.total_all'), $branchListing['total']['name'] ?? null);
 
         // ⓘ নাম — "নিট বিক্রি (VAT ও ফেরত বাদে)"
@@ -194,14 +199,20 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         foreach ($listings as $label => $listing) {
             $keys = array_column($listing['columns'], 'key');
             $this->assertArrayHasKey('total', $listing, "⛔ {$label}: যোগ `listing.total`-এ নেই।");
-            $this->assertSame($keys, array_keys($listing['total']), "⛔ {$label}: যোগের চাবি কলামের চাবি নয়।");
+            $this->assertNotContains('amount', $keys, "⛔ {$label}: `amount` কলাম হিসেবে ঘোষিত — অ্যাপ নিট অঙ্ক দুইবার আঁকবে।");
+            $this->assertSame([...$keys, ...(in_array('net', $keys, true) ? ['amount'] : [])], array_keys($listing['total']),
+                "⛔ {$label}: যোগের চাবি কলামের চাবি (আর পুরনো `amount`) নয়।");
 
-            // ⓘ সারির সংখ্যা = তালিকার আসল সারি (দরজার সীমা ২০) — যোগের সারি সারিতে ঢোকেনি
-            $this->assertCount(min(count($expected[$label]), 20), $listing['rows'], "⛔ {$label}: সারির সংখ্যায় যোগের সারি ঢুকেছে, বা সারি বাদ পড়েছে।");
+            // ⓘ সারির সংখ্যা = তালিকার আসল সারি: পুরো তালিকা ("মোট") সবগুলো, প্রথম দশের তালিকা দরজার সীমায় — যোগের সারি সারিতে ঢোকেনি
+            $whole = $listing['total'][$keys[0]] === __('sales::overview.total_all');
+            $this->assertSame($whole, in_array($label, [__('sales::overview.panel.by_seller'), $territory, __('sales::overview.panel.by_branch')], true),
+                "⛔ {$label}: যোগের নাম তালিকার ধরনের সাথে মেলে না।");
+            $this->assertCount($whole ? count($expected[$label]) : min(count($expected[$label]), 20), $listing['rows'],
+                "⛔ {$label}: সারির সংখ্যায় যোগের সারি ঢুকেছে, বা সারি বাদ পড়েছে।");
             $this->assertNotContains($listing['total'][$keys[0]], array_column($listing['rows'], 0), "⛔ {$label}: যোগের সারি সাধারণ সারি হয়ে বসেছে।");
 
             $rows = array_map(fn (array $r) => array_combine($keys, $r), $listing['rows']);
-            foreach (array_intersect($keys, ['net', 'amount', 'revenue']) as $column) {
+            foreach (array_intersect($keys, ['net', 'revenue']) as $column) {
                 $sum = array_reduce($rows, fn (string $s, array $r) => bcadd($s, $money($r[$column]), 4), '0.0000');
                 $this->assertSame(Money::format($sum), $listing['total'][$column], "⛔ {$label}: যোগের {$column} সারিগুলোর bcmath যোগ নয়।");
             }
@@ -210,13 +221,12 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
                     "⛔ {$label}: বিলের সংখ্যার যোগ ভুল।");
             }
 
-            // ⓘ পুরনো অ্যাপের চাবি — যেখানে `net`, সেখানে `amount`-ও, প্রতিটা সারিতে আর যোগে একই নিট
+            // ⓘ পুরনো অ্যাপের চাবি — যোগে `amount` তথ্য হিসেবে, `net`-এর সমান; সারি ঘর-ক্রমের তালিকা, তাই সেখানে নামের চাবি নেই
             if (in_array('net', $keys, true)) {
-                $this->assertContains('amount', $keys, "⛔ {$label}: পুরনো চাবি `amount` নেই — অ্যাপ ০.৪.৪১ ভাঙবে।");
-                foreach ($rows as $r) {
-                    $this->assertSame($r['net'], $r['amount'], "⛔ {$label}: `amount` আর `net` দুই অঙ্ক।");
-                }
                 $this->assertSame($listing['total']['net'], $listing['total']['amount'], "⛔ {$label}: যোগে `amount` আর `net` দুই অঙ্ক।");
+                foreach ($listing['rows'] as $r) {
+                    $this->assertTrue(array_is_list($r), "⛔ {$label}: সারি আর ঘর-ক্রমের তালিকা নয় — দুই অ্যাপই ভাঙবে।");
+                }
             }
         }
     }
