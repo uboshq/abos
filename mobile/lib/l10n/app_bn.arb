@@ -10043,6 +10043,14 @@
   "@collectReference": {
     "description": "Collection: the reference or TrxID field"
   },
+  "collectDepositSlip": "জমার স্লিপ নম্বর *",
+  "@collectDepositSlip": {
+    "description": "Collection: the bank deposit slip number for a cash deposit"
+  },
+  "collectDepositSlipMissing": "জমার স্লিপ নম্বর দিন।",
+  "@collectDepositSlipMissing": {
+    "description": "Collection: deposit slip number required for a cash deposit"
+  },
   "collectValueDate": "মূল্য-তারিখ",
   "@collectValueDate": {
     "description": "Collection: bank value date"

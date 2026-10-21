@@ -7484,6 +7484,12 @@ class AppL10nEn extends AppL10n {
   String get collectReference => 'Reference / TrxID *';
 
   @override
+  String get collectDepositSlip => 'Deposit slip no *';
+
+  @override
+  String get collectDepositSlipMissing => 'Enter the deposit slip number.';
+
+  @override
   String get collectValueDate => 'Value date';
 
   @override

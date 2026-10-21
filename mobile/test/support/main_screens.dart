@@ -247,10 +247,10 @@ Widget newOrder({double textScale = 1}) => appFrame(
 
 class _Entry implements CollectionEntryApi {
   @override
-  Future<List<CollectionAccount>> accounts() async => const [
+  Future<CollectionSetup> setup() async => const CollectionSetup(accounts: [
         CollectionAccount(id: 'acc-cash', name: 'প্রধান নগদ', kind: 'cash'),
         CollectionAccount(id: 'acc-bkash', name: 'bKash মার্চেন্ট', kind: 'mfs'),
-      ];
+      ]);
 
   @override
   List<CustomerRecord> customers() =>

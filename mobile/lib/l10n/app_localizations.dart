@@ -12103,6 +12103,18 @@ abstract class AppL10n {
   /// **'রেফারেন্স / TrxID *'**
   String get collectReference;
 
+  /// Collection: the bank deposit slip number for a cash deposit
+  ///
+  /// In bn, this message translates to:
+  /// **'জমার স্লিপ নম্বর *'**
+  String get collectDepositSlip;
+
+  /// Collection: deposit slip number required for a cash deposit
+  ///
+  /// In bn, this message translates to:
+  /// **'জমার স্লিপ নম্বর দিন।'**
+  String get collectDepositSlipMissing;
+
   /// Collection: bank value date
   ///
   /// In bn, this message translates to:

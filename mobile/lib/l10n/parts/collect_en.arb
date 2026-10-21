@@ -28,6 +28,8 @@
   "collectAccountMine": "{name} · my own cash",
   "collectTransferMode": "Transfer mode",
   "collectReference": "Reference / TrxID *",
+  "collectDepositSlip": "Deposit slip no *",
+  "collectDepositSlipMissing": "Enter the deposit slip number.",
   "collectValueDate": "Value date",
   "collectChequeDate": "Cheque date",
   "collectBankCharge": "Bank charge (Tk)",

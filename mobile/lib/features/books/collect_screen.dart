@@ -87,11 +87,8 @@ class CollectScreen extends StatefulWidget {
   /// সার্ভারের ছবির সীমা — 5 MB
   static const slipLimit = 5 * 1024 * 1024;
 
-  /// ব্যাংক ট্রান্সফারের মোড — বাংলাদেশ ব্যাংকের নাম, সব ভাষায় একই
-  static const transferModes = ['NPSB', 'BEFTN', 'RTGS'];
-
-  /// ওয়েবের পদ্ধতি, ক্রমে
-  static const methods = ['cash', 'mfs', 'bank_transfer', 'cash_deposit', 'cheque'];
+  /// ⭐ ওয়েবের পদ্ধতি, ক্রমে — টাকার-পদ্ধতির মডেলের `instrument` (a5, ২১ অক্টোবর ২০২৬)
+  static const methods = ['cash', 'mfs', 'transfer', 'deposit', 'cheque'];
 
   @override
   State<CollectScreen> createState() => _CollectScreenState();
@@ -104,6 +101,7 @@ class _CollectScreenState extends State<CollectScreen> {
 
   final _amount = TextEditingController();
   final _reference = TextEditingController();
+  final _depositSlip = TextEditingController();
   final _charge = TextEditingController();
   final _difference = TextEditingController();
   final _vds = TextEditingController();
@@ -112,6 +110,7 @@ class _CollectScreenState extends State<CollectScreen> {
 
   final _amountFocus = FocusNode(debugLabel: 'amount');
   final _referenceFocus = FocusNode(debugLabel: 'reference');
+  final _depositSlipFocus = FocusNode(debugLabel: 'deposit-slip');
   final _chargeFocus = FocusNode(debugLabel: 'charge');
   final _differenceFocus = FocusNode(debugLabel: 'difference');
   final _vdsFocus = FocusNode(debugLabel: 'vds');
@@ -121,7 +120,9 @@ class _CollectScreenState extends State<CollectScreen> {
   List<CollectionAccount> _accounts = const [];
   CollectionAccount? _account;
   String _method = 'cash';
-  String _transferMode = CollectScreen.transferModes.first;
+  /// সেটআপের ট্রান্সফার মোড — ⓘ পুরনো সার্ভারে খালি, তখন বাছাইও নেই
+  List<TransferMode> _transferModes = const [];
+  String? _transferModeId;
   CustomerRecord? _customer;
   late DateTime _date;
   DateTime? _valueDate;
@@ -161,7 +162,7 @@ class _CollectScreenState extends State<CollectScreen> {
     for (final c in [_amount, _difference, _vds, _ait]) {
       c.addListener(_figuresChanged);
     }
-    for (final c in [_reference, _charge, _narration]) {
+    for (final c in [_reference, _depositSlip, _charge, _narration]) {
       c.addListener(_textChanged);
     }
     _loadAccounts();
@@ -170,10 +171,10 @@ class _CollectScreenState extends State<CollectScreen> {
   @override
   void dispose() {
     _previewTimer?.cancel();
-    for (final c in [_amount, _reference, _charge, _difference, _vds, _ait, _narration, ..._rowText.values]) {
+    for (final c in [_amount, _reference, _depositSlip, _charge, _difference, _vds, _ait, _narration, ..._rowText.values]) {
       c.dispose();
     }
-    for (final f in [_amountFocus, _referenceFocus, _chargeFocus, _differenceFocus, _vdsFocus, _aitFocus, _narrationFocus]) {
+    for (final f in [_amountFocus, _referenceFocus, _depositSlipFocus, _chargeFocus, _differenceFocus, _vdsFocus, _aitFocus, _narrationFocus]) {
       f.dispose();
     }
     super.dispose();
@@ -197,7 +198,9 @@ class _CollectScreenState extends State<CollectScreen> {
 
   bool get _newServer => _billsState == _Bills.loaded;
   String get _kind => switch (_method) { 'cash' => 'cash', 'mfs' => 'mfs', _ => 'bank' };
-  bool get _needsReference => _method != 'cash';
+  /// রেফারেন্স / TrxID — MFS, ট্রান্সফার আর চেকে (নগদে নয়; নগদ জমায় স্লিপ নম্বর)
+  bool get _needsReference => _method == 'mfs' || _method == 'transfer' || _method == 'cheque';
+  bool get _needsDepositSlip => _method == 'deposit';
   bool get _isBank => _kind == 'bank';
   bool get _slipAllowed => _newServer;
   bool get _slipRequired => _newServer && (_openBills?.attachmentRequired ?? false);
@@ -234,12 +237,15 @@ class _CollectScreenState extends State<CollectScreen> {
 
   Future<void> _loadAccounts() async {
     try {
-      final list = CollectionAccount.ownCashFirst(await widget.api.accounts());
+      final setup = await widget.api.setup();
+      final list = CollectionAccount.ownCashFirst(setup.accounts);
       if (!mounted) return;
       setState(() {
         _accounts = list;
+        _transferModes = setup.transferModes;
+        _transferModeId = _transferModes.firstOrNull?.id;
         _account = list.isEmpty ? null : list.first;
-        if (_account != null) _method = _account!.kind == 'cash' ? 'cash' : (_account!.kind == 'mfs' ? 'mfs' : 'bank_transfer');
+        if (_account != null) _method = _account!.kind == 'cash' ? 'cash' : (_account!.kind == 'mfs' ? 'mfs' : 'transfer');
       });
     } catch (e) {
       if (mounted) {
@@ -358,14 +364,11 @@ class _CollectScreenState extends State<CollectScreen> {
         amount: Money.typedText(_amount.text),
         date: _date,
         accountId: _account?.id,
-        method: _method,
-        // ⓘ পুরনো সার্ভারও `instrument` পড়ে — ট্রান্সফারে মোড, চেকে "cheque" (সার্ভার চেক চেনে এই লেখায়)
-        instrument: switch (_method) {
-          'cash' => null,
-          'bank_transfer' => _transferMode,
-          _ => _method,
-        },
+        // ⭐ পদ্ধতি = `instrument` (cash · mfs · transfer · deposit · cheque); মোড `transfer_mode_id`-এ, স্লিপ `deposit_slip_no`-এ
+        instrument: _method,
         instrumentNo: _needsReference ? _reference.text.trim() : null,
+        transferModeId: _method == 'transfer' ? _transferModeId : null,
+        depositSlipNo: _needsDepositSlip ? _depositSlip.text.trim() : null,
         valueDate: _isBank ? _valueDate : null,
         bankCharge: _isBank && _paisa(_charge.text) > 0 ? paisaText(_paisa(_charge.text)) : null,
         vds: _newServer && _paisa(_vds.text) > 0 ? paisaText(_paisa(_vds.text)) : null,
@@ -406,6 +409,7 @@ class _CollectScreenState extends State<CollectScreen> {
     if (!_amountValid) return w.booksCollectAmountWrong;
     if (_account == null) return w.booksCollectPickAccountError;
     if (_needsReference && _reference.text.trim().isEmpty) return w.collectReferenceMissing;
+    if (_needsDepositSlip && _depositSlip.text.trim().isEmpty) return w.collectDepositSlipMissing;
     if (_differencePaisa + _withheldPaisa > _received) return w.collectDifferenceTooBig;
     if (post && _slipRequired && _slipPath == null) return w.collectSlipMissing;
     return null;
@@ -523,6 +527,7 @@ class _CollectScreenState extends State<CollectScreen> {
     final order = [
       _amountFocus,
       if (_needsReference) _referenceFocus,
+      if (_needsDepositSlip) _depositSlipFocus,
       if (_isBank) _chargeFocus,
       if (_newServer) _differenceFocus,
       _narrationFocus,
@@ -715,14 +720,33 @@ class _CollectScreenState extends State<CollectScreen> {
                   _schedulePreview();
                 },
         ),
-        if (_method == 'bank_transfer') ...[
+        // ⓘ মোড সেটআপ থেকে — পুরনো সার্ভারে মোড নেই, বাছাইও নেই
+        if (_method == 'transfer' && _transferModes.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
           DropdownButtonFormField<String>(
             key: const ValueKey('collect-transfer-mode'),
-            initialValue: _transferMode,
+            initialValue: _transferModeId,
             decoration: InputDecoration(labelText: w.collectTransferMode),
-            items: [for (final m in CollectScreen.transferModes) DropdownMenuItem(value: m, child: Text(m))],
-            onChanged: _busy ? null : (m) => setState(() => _transferMode = m ?? _transferMode),
+            items: [for (final m in _transferModes) DropdownMenuItem(value: m.id, child: Text(m.name))],
+            onChanged: _busy
+                ? null
+                : (m) {
+                    setState(() => _transferModeId = m ?? _transferModeId);
+                    _schedulePreview();
+                  },
+          ),
+        ],
+        if (_needsDepositSlip) ...[
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: const ValueKey('collect-deposit-slip'),
+            controller: _depositSlip,
+            focusNode: _depositSlipFocus,
+            enabled: !_busy,
+            maxLength: 64,
+            textInputAction: TextInputAction.next,
+            onEditingComplete: () => _nextFrom(_depositSlipFocus),
+            decoration: InputDecoration(labelText: w.collectDepositSlip, counterText: ''),
           ),
         ],
         if (_needsReference) ...[
@@ -1046,8 +1070,8 @@ String _methodLabel(BuildContext context, String method) {
   return switch (method) {
     'cash' => w.collectMethodCash,
     'mfs' => 'MFS',
-    'bank_transfer' => w.collectMethodTransfer,
-    'cash_deposit' => w.collectMethodDeposit,
+    'transfer' => w.collectMethodTransfer,
+    'deposit' => w.collectMethodDeposit,
     _ => w.collectMethodCheque,
   };
 }

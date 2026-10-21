@@ -7356,6 +7356,12 @@ class AppL10nBn extends AppL10n {
   String get collectReference => 'রেফারেন্স / TrxID *';
 
   @override
+  String get collectDepositSlip => 'জমার স্লিপ নম্বর *';
+
+  @override
+  String get collectDepositSlipMissing => 'জমার স্লিপ নম্বর দিন।';
+
+  @override
   String get collectValueDate => 'মূল্য-তারিখ';
 
   @override

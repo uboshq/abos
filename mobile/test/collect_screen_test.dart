@@ -143,7 +143,7 @@ void main() {
     await _type(tester, 'collect-amount', '45000');
     await _post(tester);
     expect(api.sent.single.accountId, 'acc-own');
-    expect(api.sent.single.toPayload()['method'], 'cash');
+    expect(api.sent.single.toPayload()['instrument'], 'cash', reason: 'পদ্ধতি = instrument');
   });
 
   testWidgets('9 · the reference/TrxID shows only for MFS and bank; bank adds mode, value date and one bank-charge field', (tester) async {
@@ -156,7 +156,7 @@ void main() {
     expect(find.byKey(const ValueKey('collect-bank-charge')), findsNothing);
     expect(find.text('1105 · bKash মার্চেন্ট'), findsOneWidget, reason: 'MFS-এ MFS-এর খাত');
 
-    await _tap(tester, 'collect-method-bank_transfer');
+    await _tap(tester, 'collect-method-transfer');
     expect(find.byKey(const ValueKey('collect-reference')), findsOneWidget);
     expect(find.byKey(const ValueKey('collect-transfer-mode')), findsOneWidget);
     expect(find.byKey(const ValueKey('collect-value-date')), findsOneWidget);
@@ -181,6 +181,7 @@ void main() {
     await _tap(tester, 'collect-method-cash');
     await _post(tester);
     expect(api.sent, hasLength(1), reason: '⛔ নগদেও TrxID চাওয়া হলো — নগদ আদায় আটকে গেল');
+    expect(api.sent.single.toPayload().containsKey('instrument_no'), isFalse);
     expect(api.sent.single.toPayload().containsKey('reference'), isFalse);
   });
 
@@ -442,6 +443,100 @@ void main() {
     expect(find.byKey(const ValueKey('collect-slip-chosen')), findsNothing);
   });
 
+  // ── ⭐ টাকার-পদ্ধতির মডেল (a5-এর উত্তর, ২১ অক্টোবর ২০২৬) ──
+  testWidgets('a bank transfer sends instrument "transfer" and the chosen transfer_mode_id from setup, with the TrxID in instrument_no',
+      (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-method-transfer');
+    expect(find.text('NPSB'), findsOneWidget, reason: 'সেটআপের প্রথম মোড আগে থেকে বাছা');
+    await _tap(tester, 'collect-transfer-mode');
+    await tester.tap(find.text('BEFTN').last);
+    await tester.pumpAndSettle();
+    await _type(tester, 'collect-reference', 'BF26102100981');
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['instrument'], 'transfer');
+    expect(p['transfer_mode_id'], 'tm-beftn', reason: '⛔ ট্রান্সফার মোড গেল না');
+    expect(p['instrument_no'], 'BF26102100981');
+    expect(p['accountId'], 'acc-dbbl');
+    expect(p.containsKey('deposit_slip_no'), isFalse);
+  });
+
+  testWidgets('a cash deposit sends instrument "deposit" and deposit_slip_no, and refuses to post without the slip number', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-method-deposit');
+    expect(find.byKey(const ValueKey('collect-reference')), findsNothing, reason: 'নগদ জমায় TrxID নয়, স্লিপ নম্বর');
+    expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('collect-post')));
+    await tester.pumpAndSettle();
+    expect(find.text('জমার স্লিপ নম্বর দিন।'), findsOneWidget);
+    expect(api.sent, isEmpty);
+
+    await _type(tester, 'collect-deposit-slip', 'DS-551');
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['instrument'], 'deposit');
+    expect(p['deposit_slip_no'], 'DS-551', reason: '⛔ জমার স্লিপ নম্বর গেল না');
+    expect(p.containsKey('instrument_no'), isFalse);
+    expect(p.containsKey('transfer_mode_id'), isFalse);
+  });
+
+  testWidgets('everything unticked sends lines: [] — nothing applied, the whole amount stays as the customer\'s credit', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-bills-change');
+    for (final no in ['INV-0094', 'INV-0101', 'INV-0112', 'CN-0007']) {
+      await _tap(tester, 'collect-tick-$no');
+    }
+    expect(_figure(tester, 'collect-unapplied'), contains('৳45,000.00'));
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p.containsKey('lines'), isTrue, reason: '⛔ লাইন বাদ গেল — সার্ভার তখন পুরনো বিল আগে বসাত');
+    expect(p['lines'], isEmpty, reason: '⛔ কিছু না বসাতে চেয়েও লাইন গেল');
+  });
+
+  testWidgets('the fallback (open bills failed to load) omits lines, so the server applies oldest first', (tester) async {
+    final api = FakeCollect(billsFail: true);
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    expect(find.byKey(const ValueKey('collect-bills-failed')), findsOneWidget);
+    await _type(tester, 'collect-amount', '45000');
+    await _post(tester);
+    expect(api.sent.single.toPayload().containsKey('lines'), isFalse, reason: '⛔ বিল না জেনেও লাইন পাঠানো হলো');
+  });
+
+  testWidgets('own cash comes from mine: true; without it the first cash account is chosen', (tester) async {
+    final api = FakeCollect(accountList: const [bkash, cash, dbbl]);
+    await _pump(tester, _screen(api));
+    expect(find.text('1101 · প্রধান নগদ'), findsOneWidget, reason: '⛔ mine না থাকলে প্রথম নগদ নয়');
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _post(tester);
+    expect(api.sent.single.accountId, 'acc-cash');
+  });
+
+  testWidgets('old server without transfer_modes: no mode picker and no transfer_mode_id, the transfer still posts', (tester) async {
+    final api = FakeCollect(oldServer: true);
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-method-transfer');
+    expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
+    await _type(tester, 'collect-reference', 'BF1');
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['instrument'], 'transfer');
+    expect(p.containsKey('transfer_mode_id'), isFalse);
+  });
+
   group('⛔ old server (fe\'s rule)', () {
     testWidgets('open-bills 404/405: the screen still works, the bills read "নিজে থেকে: পুরনো বিল আগে" without a list, and no lines go',
         (tester) async {
@@ -551,10 +646,11 @@ void main() {
       expect(payload['amount'], '750.50');
       expect(payload['trxDate'], '2026-10-21');
       expect(payload['accountId'], 'acc-bkash');
-      expect(payload['method'], 'mfs');
-      expect(payload['instrument'], 'mfs');
+      expect(payload['instrument'], 'mfs', reason: 'পদ্ধতি = instrument');
+      expect(payload['instrument_no'], 'TRX-7781', reason: '⛔ TrxID instrument_no-তে নয়');
       expect(payload['instrumentNo'], 'TRX-7781', reason: 'পুরনো সার্ভার এই ঘর পড়ে');
-      expect(payload['reference'], 'TRX-7781');
+      expect(payload.containsKey('reference'), isFalse, reason: '⛔ পুরনো নাম reference');
+      expect(payload.containsKey('method'), isFalse);
       expect(payload['confirm'], true);
     });
 
@@ -623,12 +719,17 @@ void main() {
       expect(chip.state, PaperState.unsent);
     });
 
-    test('a cash account sends no instrument and no reference, and the payload stays what the server reads', () {
+    test('a cash collection sends instrument cash and no instrument_no, and the payload stays what the server reads', () {
+      // ⓘ টাকার-পদ্ধতির মডেলে (a5, ২১ অক্টোবর ২০২৬) নগদও নিজের পদ্ধতি পাঠায়; আগে খালি `instrument` বাদ পড়ত — সেটাও থাকে
       final payload = CollectionDraft(
-              customerId: 'cus-1', amount: '100', date: DateTime(2026, 10, 7), accountId: 'acc-cash', instrument: '')
+              customerId: 'cus-1', amount: '100', date: DateTime(2026, 10, 7), accountId: 'acc-cash', instrument: 'cash')
           .toPayload();
-      expect(payload.containsKey('instrument'), isFalse);
+      expect(payload['instrument'], 'cash');
+      expect(payload.containsKey('instrument_no'), isFalse);
       expect(payload.containsKey('reference'), isFalse);
+      expect(
+          CollectionDraft(customerId: 'cus-1', amount: '100', date: DateTime(2026, 10, 7), instrument: '').toPayload().containsKey('instrument'),
+          isFalse);
       expect(payload.containsKey('lines'), isFalse, reason: 'লাইন না দিলে সার্ভার পুরনো বিল আগে বসায়');
       expect(payload['confirm'], true);
       expect(payload['trxDate'], '2026-10-07');
@@ -649,7 +750,7 @@ void main() {
     await _pump(tester, _screen(FakeCollect()), size: const Size(412, 892));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
-    await _tap(tester, 'collect-method-bank_transfer');
+    await _tap(tester, 'collect-method-transfer');
 
     // ⓘ ওয়েবের লেখা (lang ফাইল) — অ্যাপের লেবেল হুবহু; লেবেলের "*" কেবল বাধ্যতামূলক বোঝায়
     const web = {
@@ -723,7 +824,7 @@ void main() {
         (tester) async {
       await _pump(tester, _screen(FakeCollect()));
       await _pickShop(tester);
-      await _tap(tester, 'collect-method-bank_transfer');
+      await _tap(tester, 'collect-method-transfer');
       await tester.tap(find.byKey(const ValueKey('collect-amount')));
       await tester.pumpAndSettle();
       const fields = ['collect-amount', 'collect-reference', 'collect-bank-charge', 'collect-difference', 'collect-narration'];
@@ -787,7 +888,7 @@ void main() {
         await _pump(tester, _screen(FakeCollect()), size: Size(width, 760), textScale: 2);
         await _pickShop(tester);
         await _type(tester, 'collect-amount', '45000');
-        await _tap(tester, 'collect-method-bank_transfer');
+        await _tap(tester, 'collect-method-transfer');
         await _tap(tester, 'collect-bills-change');
         expect(tester.takeException(), isNull);
         for (final k in ['collect-bills', 'collect-summary-card', 'collect-journal', 'collect-controls', 'collect-narration']) {

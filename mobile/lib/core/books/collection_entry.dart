@@ -271,9 +271,10 @@ class CollectionDraft {
     this.instrumentNo,
     this.narration,
     this.confirm = true,
-    this.method,
+    this.transferModeId,
     this.valueDate,
     this.bankCharge,
+    this.depositSlipNo,
     this.vds,
     this.ait,
     this.lines,
@@ -287,19 +288,22 @@ class CollectionDraft {
   final DateTime date;
   final String? accountId;
 
-  /// মাধ্যম — পুরনো সার্ভারও পড়ে (ট্রান্সফারে মোড, যেমন NPSB; চেকে "cheque")
+  /// ⭐ পদ্ধতি — টাকার-পদ্ধতির মডেলে `instrument` (a5, ২১ অক্টোবর ২০২৬): cash · mfs · transfer · deposit · cheque
   final String? instrument;
 
-  /// রেফারেন্স / TrxID — নতুন সার্ভারে `reference`, পুরনোতে `instrumentNo`; দুটোতেই একই লেখা
+  /// রেফারেন্স / TrxID (MFS, ট্রান্সফার, চেক) — `instrument_no`; ⓘ পুরনো সার্ভার একই লেখা `instrumentNo`-তে পড়ে, তাই সেখানেও
   final String? instrumentNo;
   final String? narration;
 
   /// "পোস্ট" (true) নাকি "খসড়া রাখুন" (false) — সই লাগলে সার্ভার সইয়ে পাঠায়, ওয়েবের একই নিয়মে
   final bool confirm;
 
-  /// cash · mfs · bank_transfer · cash_deposit · cheque — ওয়েবের পদ্ধতি
-  final String? method;
+  /// ট্রান্সফার মোড (NPSB · BEFTN · RTGS) — সেটআপের `transfer_modes`-এর আইডি
+  final String? transferModeId;
   final DateTime? valueDate;
+
+  /// নগদ জমার স্লিপ নম্বর — কেবল `deposit`-এ
+  final String? depositSlipNo;
 
   /// "0.00" ধরনের লেখা; খালি বা শূন্যে পাঠানো হয় না
   final String? bankCharge;
@@ -327,13 +331,14 @@ class CollectionDraft {
         if ((instrument ?? '').trim().isNotEmpty)
           'instrument': instrument!.trim(),
         if ((instrumentNo ?? '').trim().isNotEmpty) ...{
+          'instrument_no': instrumentNo!.trim(),
           'instrumentNo': instrumentNo!.trim(),
-          'reference': instrumentNo!.trim(),
         },
         if ((narration ?? '').trim().isNotEmpty) 'narration': narration!.trim(),
         'confirm': confirm,
-        if (method != null) 'method': method,
+        if ((transferModeId ?? '').isNotEmpty) 'transfer_mode_id': transferModeId,
         if (valueDate != null) 'value_date': _day(valueDate!),
+        if ((depositSlipNo ?? '').trim().isNotEmpty) 'deposit_slip_no': depositSlipNo!.trim(),
         if (_some(bankCharge)) 'bank_charge': bankCharge,
         if (_some(vds)) 'vds': vds,
         if (_some(ait)) 'ait': ait,
@@ -387,9 +392,46 @@ class CollectionSaved {
 bool isDoorMissing(Object error) =>
     error is DioException && const {404, 405}.contains(error.response?.statusCode);
 
+/// ট্রান্সফার মোড — সেটআপের `transfer_modes:[{id, name}]`
+class TransferMode {
+  const TransferMode({required this.id, required this.name});
+
+  final String id;
+  final String name;
+
+  factory TransferMode.fromJson(Map<String, dynamic> j) =>
+      TransferMode(id: j['id']?.toString() ?? '', name: j['name']?.toString() ?? '');
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+}
+
+/// `GET /sales/collections/setup` — টাকার খাত (`mine` সহ) আর ট্রান্সফার মোড; ⓘ পুরনো সার্ভারে মোড নেই (খালি)
+class CollectionSetup {
+  const CollectionSetup({this.accounts = const [], this.transferModes = const []});
+
+  final List<CollectionAccount> accounts;
+  final List<TransferMode> transferModes;
+
+  factory CollectionSetup.fromJson(Map<String, dynamic> j) => CollectionSetup(
+        accounts: [
+          for (final a in (j['accounts'] as List?) ?? const [])
+            if (a is Map) CollectionAccount.fromJson(Map<String, dynamic>.from(a)),
+        ],
+        transferModes: [
+          for (final m in (j['transfer_modes'] as List?) ?? const [])
+            if (m is Map) TransferMode.fromJson(Map<String, dynamic>.from(m)),
+        ],
+      );
+
+  Map<String, dynamic> toJson() => {
+        'accounts': [for (final a in accounts) a.toJson()],
+        'transfer_modes': [for (final m in transferModes) m.toJson()],
+      };
+}
+
 abstract class CollectionEntryApi {
-  /// সার্ভারের তালিকা; নেট না থাকলে শেষবার পাওয়া তালিকা
-  Future<List<CollectionAccount>> accounts();
+  /// সার্ভারের খাত আর ট্রান্সফার মোড; নেট না থাকলে শেষবার পাওয়া
+  Future<CollectionSetup> setup();
 
   /// ⭐ বিষয় ১৮ — যাঁদের কাছ থেকে নেওয়া যায়; SR-এর ফোনে কেবল তাঁর নিজের ডিলার (সার্ভারের দেয়াল, ফোনের ক্যাশে)
   List<CustomerRecord> customers();
@@ -414,33 +456,23 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
   static const _cacheId = 'accounts';
 
   @override
-  Future<List<CollectionAccount>> accounts() async {
+  Future<CollectionSetup> setup() async {
     await ReferenceCache.instance.init();
     try {
       final response = await ApiClient.dio
           .get<Map<String, dynamic>>('/sales/collections/setup');
-      final list = [
-        for (final a in (response.data?['accounts'] as List?) ?? const [])
-          if (a is Map)
-            CollectionAccount.fromJson(Map<String, dynamic>.from(a)),
-      ];
+      final setup = CollectionSetup.fromJson(response.data ?? const {});
       await ReferenceCache.instance.put(
         entityType: _cacheType,
         entityId: _cacheId,
-        payload: {
-          'accounts': [for (final a in list) a.toJson()]
-        },
+        payload: setup.toJson(),
         updatedAt: DateTime.now(),
       );
-      return list;
+      return setup;
     } catch (_) {
       final cached = ReferenceCache.instance.get(_cacheType, _cacheId);
       if (cached == null) rethrow;
-      return [
-        for (final a in (cached['accounts'] as List?) ?? const [])
-          if (a is Map)
-            CollectionAccount.fromJson(Map<String, dynamic>.from(a)),
-      ];
+      return CollectionSetup.fromJson(cached);
     }
   }
 

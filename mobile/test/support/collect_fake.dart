@@ -62,6 +62,12 @@ class FakeCollect implements CollectionEntryApi {
     this.refusal,
     this.offlineTimes = 0,
     this.slowTimes = 0,
+    this.billsFail = false,
+    this.transferModes = const [
+      {'id': 'tm-npsb', 'name': 'NPSB'},
+      {'id': 'tm-beftn', 'name': 'BEFTN'},
+      {'id': 'tm-rtgs', 'name': 'RTGS'},
+    ],
   })  : billsJson = bills ?? openBillsJson(),
         previewData = preview ?? previewJson(),
         savedDetails = saved ??
@@ -79,6 +85,12 @@ class FakeCollect implements CollectionEntryApi {
   final List<CustomerRecord> shops;
   final List<CollectionAccount> accountList;
   final Map<String, dynamic> billsJson;
+
+  /// খোলা বিল আনতে সার্ভার ভুল দিল (৫০০) — পর্দা সার্ভারকে বিল বসাতে দেয়
+  final bool billsFail;
+
+  /// সেটআপের `transfer_modes` — পুরনো সার্ভারে পাঠানো হয় না
+  final List<Map<String, dynamic>> transferModes;
 
   /// ⛔ পুরনো সার্ভার — খোলা বিল, প্রিভিউ আর স্লিপের দরজা নেই, সংরক্ষণে কেবল আইডি
   final bool oldServer;
@@ -100,13 +112,19 @@ class FakeCollect implements CollectionEntryApi {
   final Map<String, String> receipts = {};
 
   @override
-  Future<List<CollectionAccount>> accounts() async => accountList;
+  Future<CollectionSetup> setup() async => CollectionSetup.fromJson({
+        'accounts': [for (final a in accountList) a.toJson()],
+        if (!oldServer) 'transfer_modes': transferModes,
+      });
 
   @override
   List<CustomerRecord> customers() => shops;
 
   @override
-  Future<OpenBills?> openBills(String customerId) async => oldServer ? null : OpenBills.fromJson(billsJson);
+  Future<OpenBills?> openBills(String customerId) async {
+    if (billsFail) throw StateError('500');
+    return oldServer ? null : OpenBills.fromJson(billsJson);
+  }
 
   @override
   Future<CollectionPreview?> preview(CollectionDraft draft) async {
