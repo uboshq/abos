@@ -100,8 +100,38 @@ class AppL10nBn extends AppL10n {
   String get avatarMenuSignOut => 'বের হওয়া';
 
   @override
+  String get homeStockValue => 'মজুদের মূল্য';
+
+  @override
+  String get homeStockValueBasis => 'খরচ-দামে';
+
+  @override
+  String get homeStockValueOpenHint => 'মজুদের পাতা খুলুন';
+
+  @override
+  String get homeStockPageTitle => 'মজুদ';
+
+  @override
   String get approvalsRejectReasonRequired =>
       'প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক';
+
+  @override
+  String get approvalsSendBackReasonRequired =>
+      'সংশোধনে ফেরতের কারণ লেখা বাধ্যতামূলক';
+
+  @override
+  String get approvalsFinalRejectTitle => 'চূড়ান্ত প্রত্যাখ্যান?';
+
+  @override
+  String approvalsFinalRejectQuestion(String what) {
+    return '$what\n\nএটা চূড়ান্ত — আর ফেরানো যাবে না। লেখককে ঠিক করার সুযোগ দিতে চাইলে \"সংশোধনে ফেরত দিন\" বেছে নিন।';
+  }
+
+  @override
+  String get approvalsFinalRejectKeep => 'থাক';
+
+  @override
+  String get approvalsFinalRejectConfirm => 'হ্যাঁ, প্রত্যাখ্যান';
 
   @override
   String approvalsSheetTotalLine(String amounts) {
@@ -178,6 +208,9 @@ class AppL10nBn extends AppL10n {
   String get approvalsInboxRejected => 'প্রত্যাখ্যান করা হয়েছে।';
 
   @override
+  String get approvalsInboxSentBack => 'সংশোধনে ফেরত পাঠানো হলো।';
+
+  @override
   String get approvalsInboxAlreadyDecided =>
       'এটি ইতিমধ্যে নিষ্পত্তি হয়ে গেছে।';
 
@@ -208,7 +241,13 @@ class AppL10nBn extends AppL10n {
   String get approvalsInboxRejectTitle => 'প্রত্যাখ্যান করবেন?';
 
   @override
-  String get approvalsInboxRejectButton => 'প্রত্যাখ্যান';
+  String get approvalsInboxRejectButton => 'প্রত্যাখ্যান করুন';
+
+  @override
+  String get approvalsInboxSendBackTitle => 'সংশোধনে ফেরত দেবেন?';
+
+  @override
+  String get approvalsInboxSendBackButton => 'সংশোধনে ফেরত দিন';
 
   @override
   String get approvalsInboxLoadFailedTitle => 'তালিকা আনা গেল না';
@@ -398,22 +437,34 @@ class AppL10nBn extends AppL10n {
   String get approvalsQueueSignFailed => 'সই দেওয়া গেল না।';
 
   @override
-  String get approvalsQueueSendBackTitle => 'কেন সংশোধনে ফেরত দিচ্ছেন?';
+  String get approvalsQueueSendBackTitle => 'কী ঠিক করতে হবে? (সংশোধনে ফেরত)';
 
   @override
-  String get approvalsQueueSendBackDismiss => 'বাদ দিন';
+  String get approvalsQueueReasonDismiss => 'বাদ দিন';
+
+  @override
+  String get approvalsQueueReasonNeeded => 'কারণ লিখতে হবে।';
 
   @override
   String get approvalsQueueSendBack => 'সংশোধনে ফেরত দিন';
 
   @override
-  String get approvalsQueueSendBackReasonNeeded => 'ফেরতের কারণ লিখতে হবে।';
+  String get approvalsQueueSentBack => 'সংশোধনে ফেরত পাঠানো হলো।';
 
   @override
-  String get approvalsQueueSentBack => 'সংশোধনে ফেরত দেওয়া হলো।';
+  String get approvalsQueueSendBackFailed => 'সংশোধনে ফেরত পাঠানো গেল না।';
 
   @override
-  String get approvalsQueueSendBackFailed => 'সংশোধনে ফেরত দেওয়া গেল না।';
+  String get approvalsQueueRejectTitle => 'কেন প্রত্যাখ্যান করছেন?';
+
+  @override
+  String get approvalsQueueReject => 'প্রত্যাখ্যান করুন';
+
+  @override
+  String get approvalsQueueRejected => 'প্রত্যাখ্যান করা হয়েছে।';
+
+  @override
+  String get approvalsQueueRejectFailed => 'প্রত্যাখ্যান করা গেল না।';
 
   @override
   String approvalsQueueTotal(int count) {

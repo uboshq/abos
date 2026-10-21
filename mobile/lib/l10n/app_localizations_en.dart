@@ -101,7 +101,37 @@ class AppL10nEn extends AppL10n {
   String get avatarMenuSignOut => 'Sign out';
 
   @override
+  String get homeStockValue => 'Stock value';
+
+  @override
+  String get homeStockValueBasis => 'At cost';
+
+  @override
+  String get homeStockValueOpenHint => 'Open the stock page';
+
+  @override
+  String get homeStockPageTitle => 'Stock';
+
+  @override
   String get approvalsRejectReasonRequired => 'A reason is required to reject';
+
+  @override
+  String get approvalsSendBackReasonRequired =>
+      'A reason is required to send back for correction';
+
+  @override
+  String get approvalsFinalRejectTitle => 'Reject for good?';
+
+  @override
+  String approvalsFinalRejectQuestion(String what) {
+    return '$what\n\nThis is final and cannot be undone. To give the writer a chance to fix it, choose \"Send back for correction\".';
+  }
+
+  @override
+  String get approvalsFinalRejectKeep => 'No, keep it';
+
+  @override
+  String get approvalsFinalRejectConfirm => 'Yes, reject';
 
   @override
   String approvalsSheetTotalLine(String amounts) {
@@ -179,6 +209,9 @@ class AppL10nEn extends AppL10n {
   String get approvalsInboxRejected => 'Rejected.';
 
   @override
+  String get approvalsInboxSentBack => 'Sent back for correction.';
+
+  @override
   String get approvalsInboxAlreadyDecided => 'This has already been decided.';
 
   @override
@@ -209,6 +242,12 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsInboxRejectButton => 'Reject';
+
+  @override
+  String get approvalsInboxSendBackTitle => 'Send back for correction?';
+
+  @override
+  String get approvalsInboxSendBackButton => 'Send back for correction';
 
   @override
   String get approvalsInboxLoadFailedTitle => 'Could not load the list';
@@ -402,17 +441,17 @@ class AppL10nEn extends AppL10n {
   String get approvalsQueueSignFailed => 'Could not sign.';
 
   @override
-  String get approvalsQueueSendBackTitle => 'Why send back for correction?';
+  String get approvalsQueueSendBackTitle =>
+      'What needs correcting? (Send back for correction)';
 
   @override
-  String get approvalsQueueSendBackDismiss => 'Cancel';
+  String get approvalsQueueReasonDismiss => 'Cancel';
+
+  @override
+  String get approvalsQueueReasonNeeded => 'Write the reason.';
 
   @override
   String get approvalsQueueSendBack => 'Send back for correction';
-
-  @override
-  String get approvalsQueueSendBackReasonNeeded =>
-      'Write the reason for sending it back.';
 
   @override
   String get approvalsQueueSentBack => 'Sent back for correction.';
@@ -420,6 +459,18 @@ class AppL10nEn extends AppL10n {
   @override
   String get approvalsQueueSendBackFailed =>
       'Could not send back for correction.';
+
+  @override
+  String get approvalsQueueRejectTitle => 'Why reject it?';
+
+  @override
+  String get approvalsQueueReject => 'Reject';
+
+  @override
+  String get approvalsQueueRejected => 'Rejected.';
+
+  @override
+  String get approvalsQueueRejectFailed => 'Could not reject.';
 
   @override
   String approvalsQueueTotal(int count) {

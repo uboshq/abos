@@ -37,6 +37,7 @@ void main() {
     Future<ApprovalPage> Function()? load,
     Future<void> Function(String, String?)? approve,
     Future<void> Function(String, String)? reject,
+    Future<void> Function(String, String)? sendBack,
   }) =>
       MaterialApp(
         home: ApprovalInboxScreen(
@@ -44,6 +45,7 @@ void main() {
               () async => const ApprovalPage(rows: [ApprovalRecord(row)]),
           approve: approve ?? (_, __) async {},
           reject: reject ?? (_, __) async {},
+          sendBack: sendBack ?? (_, __) async {},
         ),
       );
 
@@ -134,7 +136,7 @@ void main() {
     await tester.pumpWidget(screen(reject: (_, r) async => sentReason = r));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(TextButton, 'প্রত্যাখ্যান'));
+    await tester.tap(find.widgetWithText(TextButton, 'প্রত্যাখ্যান করুন'));
     await tester.pumpAndSettle();
 
     // Dead until a reason is typed. ApprovalEngine::reject takes a non-null
@@ -143,7 +145,7 @@ void main() {
     // act on.
     final confirm = tester.widget<FilledButton>(find.descendant(
       of: find.byType(AlertDialog),
-      matching: find.widgetWithText(FilledButton, 'প্রত্যাখ্যান'),
+      matching: find.widgetWithText(FilledButton, 'প্রত্যাখ্যান করুন'),
     ));
     expect(confirm.onPressed, isNull);
 
@@ -153,11 +155,71 @@ void main() {
         'দর বেশি');
     await tester.pumpAndSettle();
 
-    await tester.tap(inDialog('প্রত্যাখ্যান'));
+    await tester.tap(inDialog('প্রত্যাখ্যান করুন'));
+    await tester.pumpAndSettle();
+    // ⭐ তারপর আলাদা শেষ প্রশ্ন — চূড়ান্ত
+    await tester.tap(find.byKey(const ValueKey('reject-final-confirm')));
     await tester.pumpAndSettle();
 
     expect(sentReason, 'দর বেশি');
     expect(find.text('PB-2609-0007'), findsNothing);
+  });
+
+  // ⛔ ০.৪.৪২-এর ভুল (a6, ২১ অক্টোবর ২০২৬): "সংশোধনে ফেরত" চাপলে চূড়ান্ত প্রত্যাখ্যান হত। এখন দুই আলাদা কাজ, দুই দরজা।
+  testWidgets('send back for correction calls send-back, never reject', (tester) async {
+    final sentBack = <String>[];
+    final rejected = <String>[];
+    await tester.pumpWidget(screen(
+      sendBack: (id, r) async => sentBack.add('$id:$r'),
+      reject: (id, r) async => rejected.add('$id:$r'),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('approval-send-back-${row['id']}')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'দর ঠিক করুন');
+    await tester.pumpAndSettle();
+    await tester.tap(inDialog('সংশোধনে ফেরত দিন'));
+    await tester.pumpAndSettle();
+
+    expect(sentBack, ['${row['id']}:দর ঠিক করুন']);
+    expect(rejected, isEmpty, reason: '⛔ সংশোধনে ফেরত চাপলে প্রত্যাখ্যান');
+    expect(find.byKey(const ValueKey('reject-final')), findsNothing, reason: 'ফেরতে চূড়ান্ত প্রশ্ন নয়');
+    expect(find.text('সংশোধনে ফেরত পাঠানো হলো।'), findsOneWidget);
+  });
+
+  testWidgets('a rejection goes only after the final question, and the cancel sends nothing', (tester) async {
+    final rejected = <String>[];
+    final sentBack = <String>[];
+    await tester.pumpWidget(screen(
+      reject: (id, r) async => rejected.add(r),
+      sendBack: (id, r) async => sentBack.add(r),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('approval-reject-${row['id']}')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'ভুয়া বিল');
+    await tester.pumpAndSettle();
+    await tester.tap(inDialog('প্রত্যাখ্যান করুন'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('reject-final')), findsOneWidget);
+    expect(find.textContaining('আর ফেরানো যাবে না'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('reject-final-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(rejected, isEmpty, reason: '⛔ শেষ প্রশ্নে থাক বললেও প্রত্যাখ্যান গেল');
+    expect(sentBack, isEmpty);
+    expect(find.text('PB-2609-0007'), findsOneWidget, reason: 'কাগজ তালিকাতেই থাকে');
+  });
+
+  testWidgets('the two declines read differently on the card', (tester) async {
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(Key('approval-reject-${row['id']}')), matching: find.text('প্রত্যাখ্যান করুন')),
+        findsOneWidget);
+    expect(find.descendant(of: find.byKey(Key('approval-send-back-${row['id']}')), matching: find.text('সংশোধনে ফেরত দিন')),
+        findsOneWidget);
   });
 
   testWidgets('a colleague deciding first is not an error', (tester) async {

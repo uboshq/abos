@@ -148,7 +148,8 @@ void main() {
         kind: PaperQueueKind.documents,
         api: api,
         approve: (id) async => signed.add(id),
-        reject: (id, reason) async => refused.add('$id:$reason'),
+        reject: (id, reason) async => refused.add('reject:$id:$reason'),
+        sendBack: (id, reason) async => refused.add('send-back:$id:$reason'),
       ),
     ));
     await tester.pumpAndSettle();
@@ -159,17 +160,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(signed, ['ap1']);
 
-    await tester.tap(find.byKey(const ValueKey('queue-refuse-ap1')));
+    // ⭐ সংশোধনে ফেরত — send-back, কারণ ছাড়া নয়
+    await tester.tap(find.byKey(const ValueKey('queue-send-back-ap1')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('queue-reason-send')));
     await tester.pumpAndSettle();
     expect(refused, isEmpty, reason: 'কারণ ছাড়া ফেরত নয়');
-    await tester.tap(find.byKey(const ValueKey('queue-refuse-ap1')));
+    await tester.tap(find.byKey(const ValueKey('queue-send-back-ap1')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('queue-reason')), 'সই নেই');
     await tester.tap(find.byKey(const ValueKey('queue-reason-send')));
     await tester.pumpAndSettle();
-    expect(refused, ['ap1:সই নেই']);
+    expect(refused, ['send-back:ap1:সই নেই'], reason: '⛔ সংশোধনে ফেরত চাপলে প্রত্যাখ্যান (০.৪.৪২-এর ভুল)');
+
+    // ⭐ প্রত্যাখ্যান — কারণ, তারপর শেষ প্রশ্ন; থাক বললে কিছু যায় না, হ্যাঁ বললে reject
+    await tester.tap(find.byKey(const ValueKey('queue-reject-ap1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('queue-reason')), 'ভুয়া');
+    await tester.tap(find.byKey(const ValueKey('queue-reason-send')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reject-final-cancel')));
+    await tester.pumpAndSettle();
+    expect(refused, ['send-back:ap1:সই নেই'], reason: '⛔ শেষ প্রশ্ন ছাড়া প্রত্যাখ্যান');
+    await tester.tap(find.byKey(const ValueKey('queue-reject-ap1')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('queue-reason')), 'ভুয়া');
+    await tester.tap(find.byKey(const ValueKey('queue-reason-send')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reject-final-confirm')));
+    await tester.pumpAndSettle();
+    expect(refused.last, 'reject:ap1:ভুয়া');
 
     await tester.tap(find.byKey(const ValueKey('queue-tab-mine')));
     await tester.pumpAndSettle();

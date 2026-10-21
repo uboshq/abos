@@ -96,6 +96,21 @@ class ApprovalsApi {
       data: {'remarks': reason},
     ));
   }
+
+  /// ⭐ সংশোধনে ফেরত — `POST /approvals/{id}/send-back` (কাগজ লেখকের কাছে ফেরে, ঠিক করে আবার পাঠানো যায়; RETURNED)।
+  /// ⛔ এটা প্রত্যাখ্যান নয়: ০.৪.৪২ পর্যন্ত "সংশোধনে ফেরত দিন" বোতাম ভুল করে [reject] ডাকত — চূড়ান্ত না (a6 ধরেছেন,
+  /// fe, ২১ অক্টোবর ২০২৬)। কারণ লেখা বাধ্যতামূলক — লেখককে জানতে হয় কী ঠিক করতে হবে।
+  static Future<void> sendBack(String id, {required String remarks}) async {
+    final reason = remarks.trim();
+    if (reason.isEmpty) {
+      throw ArgumentError(AppLocale.l10n.approvalsSendBackReasonRequired);
+    }
+
+    await OnceKey.of('approval-send-back:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>(
+      '/approvals/$id/send-back',
+      data: {'remarks': reason},
+    ));
+  }
 }
 
 class ApprovalSheet {

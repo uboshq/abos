@@ -10,6 +10,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/state_views.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ মালিকের হোম, ০.৪.৪১ — মালিকের অনুমোদিত পুরো-পাতার নমুনা (২০ অক্টোবর ২০২৬, পাতা ২: "ok ei planei kore felo")।
 /// ভিতরের কার্ড: টাকার বড় কার্ড (হাতে ও ব্যাংকে মোট · নগদ · MFS · ব্যাংক · পথে · আজ এসেছে · আজ গেছে · বকেয়া), সইয়ের
@@ -65,10 +66,13 @@ String figureSpoken(String label, double? value) => '$label, ${value == null ? '
 /// হাতে নগদ · MFS · ব্যাংকে · পথে — সবসময়, শূন্য হলে ৳0.00; তারপর একটা দাগ, আর আজ এসেছে · আজ গেছে · বাজারে বকেয়া।
 /// ⛔ মোট = নগদ + MFS + ব্যাংক, সার্ভারের `money.amount` — পথের টাকা মোটে যোগ হয় না (ওয়েবেও না)।
 class OwnerMoneyCard extends StatelessWidget {
-  const OwnerMoneyCard({super.key, required this.today, this.onTap});
+  const OwnerMoneyCard({super.key, required this.today, this.onTap, this.onOpenStock});
 
   final TodayRecord today;
   final VoidCallback? onTap;
+
+  /// মজুদের মূল্যে চাপলে মজুদের পাতা — মেনুতে যার সেই পাতা আছে কেবল তার; নইলে null, কেবল অঙ্ক
+  final VoidCallback? onOpenStock;
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +138,8 @@ class OwnerMoneyCard extends StatelessWidget {
       cell('bank', 'ব্যাংকে', money?.bank),
       cell('transit', 'পথে', money?.transit),
     ];
+    final stock = today.stockValue;
+    final l10n = context.l10n;
     final flows = [
       // ⓘ ইনফ্লোর নিচে তার আদায়ের ভাগ — ০.৪.৪০-এর "আদায় ৳…"
       cell('in', 'আজ এসেছে', cameIn,
@@ -145,6 +151,28 @@ class OwnerMoneyCard extends StatelessWidget {
       if (out != null) cell('out', 'আজ গেছে', out.amount, sign: (out.amount ?? 0) > 0 ? '-' : ''),
       cell('dues', 'বাজারে বকেয়া', duesFigure?.amount,
           under: duesFigure?.shops == null ? null : '${duesFigure!.shops} টি দোকান'),
+      // ⭐ বকেয়ার পাশে মজুদের মূল্য (মালিক, ২১ অক্টোবর ২০২৬) — সার্ভার না পাঠালে ঘরই নেই, "—"-ও নয়
+      if (stock != null)
+        onOpenStock == null
+            ? cell('stock', l10n.homeStockValue, stock.amount, under: l10n.homeStockValueBasis)
+            : Semantics(
+                key: const ValueKey('owner-money-stock'),
+                container: true,
+                button: true,
+                label: '${figureSpoken(l10n.homeStockValue, stock.amount)}, ${l10n.homeStockValueBasis}',
+                hint: l10n.homeStockValueOpenHint,
+                onTap: onOpenStock,
+                excludeSemantics: true,
+                child: InkWell(
+                  key: const ValueKey('owner-money-stock-tap'),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: onOpenStock,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                    child: figure('stock', l10n.homeStockValue, stock.amount, under: l10n.homeStockValueBasis),
+                  ),
+                ),
+              ),
     ];
     // ⓘ দুই কলাম; বড় অক্ষরে (১৫০%-এর বেশি) এক কলাম — অঙ্ক কাটে না
     final oneColumn = MediaQuery.textScalerOf(context).scale(10) > 15;
@@ -696,6 +724,7 @@ List<Widget> ownerHomeCards(
   VoidCallback? onOpenSales,
   VoidCallback? onOpenMoney,
   VoidCallback? onOpenPrincipals,
+  VoidCallback? onOpenStock,
 }) {
   final payable = today.payable;
   final principals = today.principals;
@@ -704,7 +733,7 @@ List<Widget> ownerHomeCards(
       ? null
       : PrincipalsHomeCard(lines: principals, total: today.principalsTotal, onOpenAll: onOpenPrincipals);
   return [
-    OwnerMoneyCard(today: today, onTap: onOpenMoney),
+    OwnerMoneyCard(today: today, onTap: onOpenMoney, onOpenStock: onOpenStock),
     WidePair(
       first: today.pendingApprovals == null ? null : _waitingCard(today, loadWaiting, onOpenApprovals),
       second: BranchSalesCard(today: today, onOpen: onOpenSales),

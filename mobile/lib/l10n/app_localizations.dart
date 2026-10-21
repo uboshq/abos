@@ -229,11 +229,65 @@ abstract class AppL10n {
   /// **'বের হওয়া'**
   String get avatarMenuSignOut;
 
+  /// Owner home: the stock value figure beside the dues (IAS 2, at cost)
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদের মূল্য'**
+  String get homeStockValue;
+
+  /// Owner home: small line under the stock value: valued at cost
+  ///
+  /// In bn, this message translates to:
+  /// **'খরচ-দামে'**
+  String get homeStockValueBasis;
+
+  /// Screen reader hint: tapping the stock value opens the stock page
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদের পাতা খুলুন'**
+  String get homeStockValueOpenHint;
+
+  /// Title of the stock page opened from the owner home
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদ'**
+  String get homeStockPageTitle;
+
   /// Approvals: error when a rejection is sent with no reason (the screen checks first)
   ///
   /// In bn, this message translates to:
   /// **'প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক'**
   String get approvalsRejectReasonRequired;
+
+  /// Approvals: error when a send-back is sent with no reason (the screen checks first)
+  ///
+  /// In bn, this message translates to:
+  /// **'সংশোধনে ফেরতের কারণ লেখা বাধ্যতামূলক'**
+  String get approvalsSendBackReasonRequired;
+
+  /// Approvals: title of the last question before a rejection is sent (inbox and signing queue)
+  ///
+  /// In bn, this message translates to:
+  /// **'চূড়ান্ত প্রত্যাখ্যান?'**
+  String get approvalsFinalRejectTitle;
+
+  /// Approvals: body of the last question before a rejection; {what} is the paper (type · number · amount). The quoted words are the send-back button
+  ///
+  /// In bn, this message translates to:
+  /// **'{what}\n\nএটা চূড়ান্ত — আর ফেরানো যাবে না। লেখককে ঠিক করার সুযোগ দিতে চাইলে \"সংশোধনে ফেরত দিন\" বেছে নিন।'**
+  String approvalsFinalRejectQuestion(String what);
+
+  /// Approvals: cancels the last question; nothing is sent and the paper stays waiting
+  ///
+  /// In bn, this message translates to:
+  /// **'থাক'**
+  String get approvalsFinalRejectKeep;
+
+  /// Approvals: confirms the rejection for good
+  ///
+  /// In bn, this message translates to:
+  /// **'হ্যাঁ, প্রত্যাখ্যান'**
+  String get approvalsFinalRejectConfirm;
 
   /// Approvals: the sheet's total line; amounts are server column labels with figures, joined by ' · '
   ///
@@ -373,6 +427,12 @@ abstract class AppL10n {
   /// **'প্রত্যাখ্যান করা হয়েছে।'**
   String get approvalsInboxRejected;
 
+  /// Approvals inbox: snack bar after sending a paper back to its writer for correction
+  ///
+  /// In bn, this message translates to:
+  /// **'সংশোধনে ফেরত পাঠানো হলো।'**
+  String get approvalsInboxSentBack;
+
   /// Approvals inbox: someone else decided this paper first
   ///
   /// In bn, this message translates to:
@@ -427,11 +487,23 @@ abstract class AppL10n {
   /// **'প্রত্যাখ্যান করবেন?'**
   String get approvalsInboxRejectTitle;
 
-  /// Approvals inbox: the button that rejects the paper
+  /// Approvals inbox: the reject button on the card and in its dialog (final; a last question follows)
   ///
   /// In bn, this message translates to:
-  /// **'প্রত্যাখ্যান'**
+  /// **'প্রত্যাখ্যান করুন'**
   String get approvalsInboxRejectButton;
+
+  /// Approvals inbox: title of the send-back dialog (the paper returns to its writer to fix; not a rejection)
+  ///
+  /// In bn, this message translates to:
+  /// **'সংশোধনে ফেরত দেবেন?'**
+  String get approvalsInboxSendBackTitle;
+
+  /// Approvals inbox: the send-back button on the card and in its dialog (fe 21 Oct: সংশোধনে ফেরত দিন)
+  ///
+  /// In bn, this message translates to:
+  /// **'সংশোধনে ফেরত দিন'**
+  String get approvalsInboxSendBackButton;
 
   /// Approvals inbox: title of the error state
   ///
@@ -763,41 +835,65 @@ abstract class AppL10n {
   /// **'সই দেওয়া গেল না।'**
   String get approvalsQueueSignFailed;
 
-  /// Signing queues: title of the send-back dialog (fe 21 Oct: 'সংশোধনে ফেরত', not 'ফেরত' alone)
+  /// Signing queues: title of the send-back dialog, asking what the writer must fix (fe 21 Oct: সংশোধনে ফেরত)
   ///
   /// In bn, this message translates to:
-  /// **'কেন সংশোধনে ফেরত দিচ্ছেন?'**
+  /// **'কী ঠিক করতে হবে? (সংশোধনে ফেরত)'**
   String get approvalsQueueSendBackTitle;
 
-  /// Signing queues: closes the send-back dialog without sending
+  /// Signing queues: closes the reason dialog (send back or reject) without sending
   ///
   /// In bn, this message translates to:
   /// **'বাদ দিন'**
-  String get approvalsQueueSendBackDismiss;
+  String get approvalsQueueReasonDismiss;
 
-  /// Signing queues: the send-back button (fe 21 Oct: 'সংশোধনে ফেরত দিন')
+  /// Signing queues: the reason dialog (send back or reject) was sent empty
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ লিখতে হবে।'**
+  String get approvalsQueueReasonNeeded;
+
+  /// Signing queues: the send-back button on a row and in its dialog; calls send-back, never reject (fe 21 Oct: সংশোধনে ফেরত দিন)
   ///
   /// In bn, this message translates to:
   /// **'সংশোধনে ফেরত দিন'**
   String get approvalsQueueSendBack;
 
-  /// Signing queues: no reason was written
-  ///
-  /// In bn, this message translates to:
-  /// **'ফেরতের কারণ লিখতে হবে।'**
-  String get approvalsQueueSendBackReasonNeeded;
-
   /// Signing queues: snack bar after sending back
   ///
   /// In bn, this message translates to:
-  /// **'সংশোধনে ফেরত দেওয়া হলো।'**
+  /// **'সংশোধনে ফেরত পাঠানো হলো।'**
   String get approvalsQueueSentBack;
 
   /// Signing queues: sending back failed
   ///
   /// In bn, this message translates to:
-  /// **'সংশোধনে ফেরত দেওয়া গেল না।'**
+  /// **'সংশোধনে ফেরত পাঠানো গেল না।'**
   String get approvalsQueueSendBackFailed;
+
+  /// Signing queues: title of the reject dialog that asks for the reason (a final refusal, unlike send back)
+  ///
+  /// In bn, this message translates to:
+  /// **'কেন প্রত্যাখ্যান করছেন?'**
+  String get approvalsQueueRejectTitle;
+
+  /// Signing queues: the reject button on a row and in its reason dialog (fe 21 Oct: প্রত্যাখ্যান; final, asks a last question)
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যান করুন'**
+  String get approvalsQueueReject;
+
+  /// Signing queues: snack bar after rejecting
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যান করা হয়েছে।'**
+  String get approvalsQueueRejected;
+
+  /// Signing queues: rejecting failed
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রত্যাখ্যান করা গেল না।'**
+  String get approvalsQueueRejectFailed;
 
   /// Signing queues: how many rows the server has
   ///

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../printing/document_actions_sheet.dart';
+import 'final_reject_confirm.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
@@ -32,6 +33,7 @@ class ApprovalInboxScreen extends StatefulWidget {
     this.loadPending,
     this.approve,
     this.reject,
+    this.sendBack,
     this.loadSheet,
     this.loadMore,
   });
@@ -44,6 +46,9 @@ class ApprovalInboxScreen extends StatefulWidget {
   final Future<ApprovalPage> Function()? loadPending;
   final Future<void> Function(String id, String? remarks)? approve;
   final Future<void> Function(String id, String remarks)? reject;
+
+  /// সংশোধনে ফেরত — না দিলে সার্ভার ([[ApprovalsApi.sendBack]])
+  final Future<void> Function(String id, String remarks)? sendBack;
 
   /// সইয়ের আগে বিস্তারিত — না দিলে সার্ভার ([[ApprovalsApi.sheet]])
   final Future<ApprovalSheet> Function(String id)? loadSheet;
@@ -120,23 +125,31 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
 
   Future<void> _decide(
     ApprovalRecord approval, {
-    required bool approved,
+    required _Decision decision,
     String? remarks,
   }) async {
     setState(() => _busy = true);
     try {
-      if (approved) {
-        await (widget.approve ??
-            (String id, String? note) =>
-                ApprovalsApi.approve(id, remarks: note, seenAmount: approval.rawAmount))(approval.id, remarks);
-      } else {
-        await (widget.reject ??
-            (String id, String note) =>
-                ApprovalsApi.reject(id, remarks: note))(approval.id, remarks!);
+      switch (decision) {
+        case _Decision.approve:
+          await (widget.approve ??
+              (String id, String? note) =>
+                  ApprovalsApi.approve(id, remarks: note, seenAmount: approval.rawAmount))(approval.id, remarks);
+        // ⭐ সংশোধনে ফেরত — send-back; প্রত্যাখ্যান নয় (০.৪.৪২-এর ভুল, ২১ অক্টোবর ২০২৬)
+        case _Decision.sendBack:
+          await (widget.sendBack ?? (String id, String note) => ApprovalsApi.sendBack(id, remarks: note))(
+              approval.id, remarks!);
+        case _Decision.reject:
+          await (widget.reject ?? (String id, String note) => ApprovalsApi.reject(id, remarks: note))(
+              approval.id, remarks!);
       }
       if (!mounted) return;
       _drop(approval.id);
-      _say(approved ? context.l10n.approvalsInboxSigned : context.l10n.approvalsInboxRejected);
+      _say(switch (decision) {
+        _Decision.approve => context.l10n.approvalsInboxSigned,
+        _Decision.sendBack => context.l10n.approvalsInboxSentBack,
+        _Decision.reject => context.l10n.approvalsInboxRejected,
+      });
     } catch (error) {
       if (!mounted) return;
       switch (approvalFailureOf(error)) {
@@ -197,9 +210,25 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       ),
     );
     if (remarks == null || !mounted) return;
-    await _decide(approval, approved: true, remarks: remarks);
+    await _decide(approval, decision: _Decision.approve, remarks: remarks);
   }
 
+  /// ⭐ সংশোধনে ফেরত — কারণ বাধ্যতামূলক, কাগজ লেখকের কাছে ফেরে
+  Future<void> _confirmSendBack(ApprovalRecord approval) async {
+    final remarks = await showDialog<String>(
+      context: context,
+      builder: (context) => _RemarksDialog(
+        title: context.l10n.approvalsInboxSendBackTitle,
+        subtitle: _describe(approval),
+        confirmLabel: context.l10n.approvalsInboxSendBackButton,
+        remarksRequired: true,
+      ),
+    );
+    if (remarks == null || !mounted) return;
+    await _decide(approval, decision: _Decision.sendBack, remarks: remarks);
+  }
+
+  /// ⭐ প্রত্যাখ্যান — কারণ বাধ্যতামূলক, তারপর আলাদা শেষ প্রশ্ন ("চূড়ান্ত — আর ফেরানো যাবে না"); না বললে কিছুই যায় না
   Future<void> _confirmReject(ApprovalRecord approval) async {
     final remarks = await showDialog<String>(
       context: context,
@@ -212,7 +241,8 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       ),
     );
     if (remarks == null || !mounted) return;
-    await _decide(approval, approved: false, remarks: remarks);
+    if (!await confirmFinalReject(context, what: _describe(approval)) || !mounted) return;
+    await _decide(approval, decision: _Decision.reject, remarks: remarks);
   }
 
   // ⓘ সইয়ের প্রশ্নে অঙ্কও — কোন অঙ্কে সই, তা দেখে
@@ -265,6 +295,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                               _busy ? null : () => _confirmApprove(approval),
                           onReject:
                               _busy ? null : () => _confirmReject(approval),
+                          onSendBack: _busy ? null : () => _confirmSendBack(approval),
                         )),
                   if (_error == null && rows != null && _next != null)
                     OutlinedButton(
@@ -287,6 +318,7 @@ class _ApprovalCard extends StatelessWidget {
     required this.approval,
     required this.onApprove,
     required this.onReject,
+    required this.onSendBack,
     required this.onDetails,
   });
 
@@ -294,6 +326,7 @@ class _ApprovalCard extends StatelessWidget {
   final VoidCallback onDetails;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
+  final VoidCallback? onSendBack;
 
   @override
   Widget build(BuildContext context) {
@@ -395,11 +428,18 @@ class _ApprovalCard extends StatelessWidget {
                   alignment: WrapAlignment.end,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
+                    // ⭐ দুই আলাদা কাজ, দুই আলাদা লেখা (ওয়েবের মতো): প্রত্যাখ্যান চূড়ান্ত, সংশোধনে ফেরত লেখকের কাছে
                     TextButton(
+                      key: Key('approval-reject-${approval.id}'),
                       onPressed: onReject,
                       style: TextButton.styleFrom(
                           foregroundColor: context.palette.danger),
                       child: Text(context.l10n.approvalsInboxRejectButton),
+                    ),
+                    OutlinedButton(
+                      key: Key('approval-send-back-${approval.id}'),
+                      onPressed: onSendBack,
+                      child: Text(context.l10n.approvalsInboxSendBackButton),
                     ),
                     FilledButton(
                       onPressed: onApprove,
@@ -551,3 +591,6 @@ class _ApprovalDetails extends StatelessWidget {
         ),
       );
 }
+
+/// ইনবক্সের তিন সিদ্ধান্ত — অনুমোদন, সংশোধনে ফেরত, প্রত্যাখ্যান (তিনটা আলাদা দরজা)
+enum _Decision { approve, sendBack, reject }

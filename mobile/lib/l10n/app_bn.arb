@@ -116,9 +116,50 @@
   "@avatarMenuSignOut": {
     "description": "Avatar menu row: sign out"
   },
+  "homeStockValue": "মজুদের মূল্য",
+  "@homeStockValue": {
+    "description": "Owner home: the stock value figure beside the dues (IAS 2, at cost)"
+  },
+  "homeStockValueBasis": "খরচ-দামে",
+  "@homeStockValueBasis": {
+    "description": "Owner home: small line under the stock value: valued at cost"
+  },
+  "homeStockValueOpenHint": "মজুদের পাতা খুলুন",
+  "@homeStockValueOpenHint": {
+    "description": "Screen reader hint: tapping the stock value opens the stock page"
+  },
+  "homeStockPageTitle": "মজুদ",
+  "@homeStockPageTitle": {
+    "description": "Title of the stock page opened from the owner home"
+  },
   "approvalsRejectReasonRequired": "প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক",
   "@approvalsRejectReasonRequired": {
     "description": "Approvals: error when a rejection is sent with no reason (the screen checks first)"
+  },
+  "approvalsSendBackReasonRequired": "সংশোধনে ফেরতের কারণ লেখা বাধ্যতামূলক",
+  "@approvalsSendBackReasonRequired": {
+    "description": "Approvals: error when a send-back is sent with no reason (the screen checks first)"
+  },
+  "approvalsFinalRejectTitle": "চূড়ান্ত প্রত্যাখ্যান?",
+  "@approvalsFinalRejectTitle": {
+    "description": "Approvals: title of the last question before a rejection is sent (inbox and signing queue)"
+  },
+  "approvalsFinalRejectQuestion": "{what}\n\nএটা চূড়ান্ত — আর ফেরানো যাবে না। লেখককে ঠিক করার সুযোগ দিতে চাইলে \"সংশোধনে ফেরত দিন\" বেছে নিন।",
+  "@approvalsFinalRejectQuestion": {
+    "description": "Approvals: body of the last question before a rejection; {what} is the paper (type · number · amount). The quoted words are the send-back button",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsFinalRejectKeep": "থাক",
+  "@approvalsFinalRejectKeep": {
+    "description": "Approvals: cancels the last question; nothing is sent and the paper stays waiting"
+  },
+  "approvalsFinalRejectConfirm": "হ্যাঁ, প্রত্যাখ্যান",
+  "@approvalsFinalRejectConfirm": {
+    "description": "Approvals: confirms the rejection for good"
   },
   "approvalsSheetTotalLine": "মোট — {amounts}",
   "@approvalsSheetTotalLine": {
@@ -217,6 +258,10 @@
   "@approvalsInboxRejected": {
     "description": "Approvals inbox: snack bar after rejecting"
   },
+  "approvalsInboxSentBack": "সংশোধনে ফেরত পাঠানো হলো।",
+  "@approvalsInboxSentBack": {
+    "description": "Approvals inbox: snack bar after sending a paper back to its writer for correction"
+  },
   "approvalsInboxAlreadyDecided": "এটি ইতিমধ্যে নিষ্পত্তি হয়ে গেছে।",
   "@approvalsInboxAlreadyDecided": {
     "description": "Approvals inbox: someone else decided this paper first"
@@ -253,9 +298,17 @@
   "@approvalsInboxRejectTitle": {
     "description": "Approvals inbox: title of the reject dialog"
   },
-  "approvalsInboxRejectButton": "প্রত্যাখ্যান",
+  "approvalsInboxRejectButton": "প্রত্যাখ্যান করুন",
   "@approvalsInboxRejectButton": {
-    "description": "Approvals inbox: the button that rejects the paper"
+    "description": "Approvals inbox: the reject button on the card and in its dialog (final; a last question follows)"
+  },
+  "approvalsInboxSendBackTitle": "সংশোধনে ফেরত দেবেন?",
+  "@approvalsInboxSendBackTitle": {
+    "description": "Approvals inbox: title of the send-back dialog (the paper returns to its writer to fix; not a rejection)"
+  },
+  "approvalsInboxSendBackButton": "সংশোধনে ফেরত দিন",
+  "@approvalsInboxSendBackButton": {
+    "description": "Approvals inbox: the send-back button on the card and in its dialog (fe 21 Oct: সংশোধনে ফেরত দিন)"
   },
   "approvalsInboxLoadFailedTitle": "তালিকা আনা গেল না",
   "@approvalsInboxLoadFailedTitle": {
@@ -518,29 +571,45 @@
   "@approvalsQueueSignFailed": {
     "description": "Signing queues: signing failed"
   },
-  "approvalsQueueSendBackTitle": "কেন সংশোধনে ফেরত দিচ্ছেন?",
+  "approvalsQueueSendBackTitle": "কী ঠিক করতে হবে? (সংশোধনে ফেরত)",
   "@approvalsQueueSendBackTitle": {
-    "description": "Signing queues: title of the send-back dialog (fe 21 Oct: 'সংশোধনে ফেরত', not 'ফেরত' alone)"
+    "description": "Signing queues: title of the send-back dialog, asking what the writer must fix (fe 21 Oct: সংশোধনে ফেরত)"
   },
-  "approvalsQueueSendBackDismiss": "বাদ দিন",
-  "@approvalsQueueSendBackDismiss": {
-    "description": "Signing queues: closes the send-back dialog without sending"
+  "approvalsQueueReasonDismiss": "বাদ দিন",
+  "@approvalsQueueReasonDismiss": {
+    "description": "Signing queues: closes the reason dialog (send back or reject) without sending"
+  },
+  "approvalsQueueReasonNeeded": "কারণ লিখতে হবে।",
+  "@approvalsQueueReasonNeeded": {
+    "description": "Signing queues: the reason dialog (send back or reject) was sent empty"
   },
   "approvalsQueueSendBack": "সংশোধনে ফেরত দিন",
   "@approvalsQueueSendBack": {
-    "description": "Signing queues: the send-back button (fe 21 Oct: 'সংশোধনে ফেরত দিন')"
+    "description": "Signing queues: the send-back button on a row and in its dialog; calls send-back, never reject (fe 21 Oct: সংশোধনে ফেরত দিন)"
   },
-  "approvalsQueueSendBackReasonNeeded": "ফেরতের কারণ লিখতে হবে।",
-  "@approvalsQueueSendBackReasonNeeded": {
-    "description": "Signing queues: no reason was written"
-  },
-  "approvalsQueueSentBack": "সংশোধনে ফেরত দেওয়া হলো।",
+  "approvalsQueueSentBack": "সংশোধনে ফেরত পাঠানো হলো।",
   "@approvalsQueueSentBack": {
     "description": "Signing queues: snack bar after sending back"
   },
-  "approvalsQueueSendBackFailed": "সংশোধনে ফেরত দেওয়া গেল না।",
+  "approvalsQueueSendBackFailed": "সংশোধনে ফেরত পাঠানো গেল না।",
   "@approvalsQueueSendBackFailed": {
     "description": "Signing queues: sending back failed"
+  },
+  "approvalsQueueRejectTitle": "কেন প্রত্যাখ্যান করছেন?",
+  "@approvalsQueueRejectTitle": {
+    "description": "Signing queues: title of the reject dialog that asks for the reason (a final refusal, unlike send back)"
+  },
+  "approvalsQueueReject": "প্রত্যাখ্যান করুন",
+  "@approvalsQueueReject": {
+    "description": "Signing queues: the reject button on a row and in its reason dialog (fe 21 Oct: প্রত্যাখ্যান; final, asks a last question)"
+  },
+  "approvalsQueueRejected": "প্রত্যাখ্যান করা হয়েছে।",
+  "@approvalsQueueRejected": {
+    "description": "Signing queues: snack bar after rejecting"
+  },
+  "approvalsQueueRejectFailed": "প্রত্যাখ্যান করা গেল না।",
+  "@approvalsQueueRejectFailed": {
+    "description": "Signing queues: rejecting failed"
   },
   "approvalsQueueTotal": "{count, plural, other{মোট {count} টি}}",
   "@approvalsQueueTotal": {
