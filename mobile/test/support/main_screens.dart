@@ -266,7 +266,7 @@ class _Entry implements CollectionEntryApi {
   Future<PushOutcome> send(CollectionDraft draft, String changeId) async => const PushOutcome(landedId: 'x');
 
   @override
-  Future<void> attachSlip(String collectionId, String path) async {}
+  Future<String?> attachSlip(String collectionId, String path) async => null;
 }
 
 class _Books implements BooksApi {

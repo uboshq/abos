@@ -131,6 +131,7 @@ String paisaText(int paisa) {
 class OpenBills {
   const OpenBills({
     this.label,
+    this.branch,
     required this.due,
     this.credit = 0,
     this.items = const [],
@@ -141,6 +142,9 @@ class OpenBills {
   });
 
   final String? label;
+
+  /// গ্রাহকের শাখা — আদায় এই শাখাতেই বসে (দফা ১৪; সার্ভারের `customer.branch`); না পাঠালে null
+  final String? branch;
 
   /// বকেয়া, পয়সায় — ওয়েবের একই বকেয়া (Customer::outstanding)
   final int due;
@@ -175,6 +179,7 @@ class OpenBills {
     ];
     return OpenBills(
       label: customer['label']?.toString(),
+      branch: (customer['branch']?.toString().trim() ?? '').isEmpty ? null : customer['branch'].toString().trim(),
       due: paisaOf(j['due']),
       credit: paisaOf(j['credit']),
       // ⓘ সার্ভার পুরনো আগে পাঠায় — ক্রম সার্ভারের, ফোনে আবার সাজানো নয়
@@ -365,6 +370,11 @@ class CollectionSaved {
   /// (নম্বর, পয়সা)
   final List<(String, int)> applied;
 
+  /// একই আদায়, নতুন অবস্থায় — স্লিপের উত্তরের পরে
+  CollectionSaved withState(String? next) => next == null
+      ? this
+      : CollectionSaved(id: id, no: no, state: next, amountWords: amountWords, receipt: receipt, applied: applied);
+
   /// ⓘ নম্বর আর অবস্থা দুটোই এলে নতুন পথ; নইলে আজকের মতো ([[MoneyInScreen]])
   bool get rich => (no ?? '').isNotEmpty && (state ?? '').isNotEmpty;
 
@@ -445,8 +455,9 @@ abstract class CollectionEntryApi {
   /// এখনই সার্ভারে — [changeId] একই কাজে একই থাকে। নেট না থাকলে [NoNetworkForThis]।
   Future<PushOutcome> send(CollectionDraft draft, String changeId);
 
-  /// স্লিপের ছবি, বসার পরে
-  Future<void> attachSlip(String collectionId, String path);
+  /// স্লিপের ছবি, বসার পরে — ⭐ উত্তরে আদায়ের নতুন অবস্থা (`state`): স্লিপ-বাধ্যতামূলক কোম্পানিতে "পোস্ট" চাওয়া আদায় প্রথমে খসড়া
+  /// থাকে, স্লিপ পৌঁছালে সার্ভার তখন পোস্ট করে (a6 d5cc9657f); উত্তরে অবস্থা না থাকলে null
+  Future<String?> attachSlip(String collectionId, String path);
 }
 
 class ServerCollectionEntryApi implements CollectionEntryApi {
@@ -513,10 +524,12 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
       );
 
   @override
-  Future<void> attachSlip(String collectionId, String path) async {
+  Future<String?> attachSlip(String collectionId, String path) async {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(path, filename: path.split(RegExp(r'[\\/]')).last),
     });
-    await ApiClient.dio.post<Map<String, dynamic>>('/sales/collections/$collectionId/attachment', data: form);
+    final response = await ApiClient.dio.post<Map<String, dynamic>>('/sales/collections/$collectionId/attachment', data: form);
+    final state = response.data?['state']?.toString().trim() ?? '';
+    return state.isEmpty ? null : state;
   }
 }

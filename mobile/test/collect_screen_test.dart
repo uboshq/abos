@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/books/collection_plan.dart';
+import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
 import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
@@ -272,7 +273,7 @@ void main() {
 
     await _tap(tester, 'collect-method-transfer');
     expect(find.byKey(const ValueKey('collect-reference')), findsOneWidget);
-    expect(find.text('মোড NPSB · মূল্য-তারিখ আজ · চার্জ 0'), findsOneWidget, reason: '⛔ ব্যাংকের এক লাইন নেই');
+    expect(find.text('মোড BEFTN · মূল্য-তারিখ আজ · চার্জ 0'), findsOneWidget, reason: '⛔ ব্যাংকের এক লাইন নেই (সার্ভারের প্রথম মোড)');
     expect(find.byKey(const ValueKey('collect-bank-charge')), findsNothing, reason: 'ঘরগুলো আগে থেকে খোলা নয়');
     expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
 
@@ -282,11 +283,11 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('collect-bank-charge')), '25');
     await tester.tap(find.byKey(const ValueKey('collect-transfer-mode')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('BEFTN').last);
+    await tester.tap(find.text('NPSB').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
     await tester.pumpAndSettle();
-    expect(find.text('মোড BEFTN · মূল্য-তারিখ আজ · চার্জ 25'), findsOneWidget, reason: '⛔ বদলানো লাইনে উঠল না');
+    expect(find.text('মোড NPSB · মূল্য-তারিখ আজ · চার্জ 25'), findsOneWidget, reason: '⛔ বদলানো লাইনে উঠল না');
 
     await _tap(tester, 'collect-method-cash');
     expect(find.byKey(const ValueKey('collect-reference')), findsNothing);
@@ -320,7 +321,7 @@ void main() {
     await _tap(tester, 'collect-bank-change');
     await tester.tap(find.byKey(const ValueKey('collect-transfer-mode')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('BEFTN').last);
+    await tester.tap(find.text('RTGS').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
     await tester.pumpAndSettle();
@@ -328,7 +329,7 @@ void main() {
     await _post(tester);
     final p = api.sent.single.toPayload();
     expect(p['instrument'], 'transfer');
-    expect(p['transfer_mode_id'], 'tm-beftn', reason: '⛔ ট্রান্সফার মোড গেল না');
+    expect(p['transfer_mode_id'], 'tm-rtgs', reason: '⛔ বাছা ট্রান্সফার মোড গেল না');
     expect(p['instrument_no'], 'BF26102100981');
     expect(p['accountId'], 'acc-dbbl');
     expect(p.containsKey('deposit_slip_no'), isFalse);
@@ -445,12 +446,13 @@ void main() {
     expect(_texts(tester, 'collect-sum-received'), 'পাওয়া টাকা | ৳40,000.00');
     expect(_texts(tester, 'collect-sum-withheld'), 'গ্রাহক কেটেছে (VDS/AIT) | ৳700.00');
     expect(_texts(tester, 'collect-sum-discount'), 'আদায়ে ছাড় (সই লাগবে) | ৳1,000.00');
-    expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳10 পর্যন্ত) | ৳0.00');
+    expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই) | ৳0.00');
     // ⓘ 40,000 + 1,000 + 700 + ক্রেডিট 2,000 = 43,700 বিলে; ক্রেডিট বাদে প্রয়োগ 41,700
     expect(_texts(tester, 'collect-net-applied'), 'বিলে প্রয়োগ | ৳41,700.00');
     expect(_texts(tester, 'collect-unapplied'), 'অপ্রয়োগকৃত | ৳0.00');
     expect(find.text('পাওয়া + কাটা + ছাড় = বিলে প্রয়োগ + অপ্রয়োগকৃত'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-difference-sign')), findsOneWidget, reason: 'নিয়ন্ত্রণে সইয়ের কথা');
+    expect(find.text('এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে'), findsOneWidget, reason: 'নিয়ন্ত্রণে সইয়ের কথা');
+    expect(find.text('সইয়ে পাঠান'), findsOneWidget, reason: '⛔ ছাড়ে সই লাগে, তবু বোতাম "পোস্ট"');
 
     await _post(tester);
     final p = api.sent.single.toPayload();
@@ -497,9 +499,11 @@ void main() {
       }
       await _review(tester);
       expect(find.byType(CollectReviewScreen), findsOneWidget);
-      final amount = typed == '10.00' ? '৳10.00' : '৳$typed';
-      expect(find.text('রাউন্ডিং $amount — মালিকের সইয়ের পর পোস্ট হবে'), sign ? findsOneWidget : findsNothing,
+      expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই) | ৳$typed');
+      expect(find.text('এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে'), sign ? findsOneWidget : findsNothing,
           reason: sign ? '⛔ ৳0.50-এর বেশি রাউন্ডিংয়ে সইয়ের কথা নেই' : '⛔ ৳0.50 পর্যন্ত রাউন্ডিংয়েও সই চাওয়া হলো');
+      expect(_texts(tester, 'collect-check-post'), sign ? 'সইয়ে পাঠান' : 'পোস্ট',
+          reason: sign ? '⛔ সই লাগে, তবু বোতাম "পোস্ট"' : '⛔ সই লাগে না, তবু বোতাম "সইয়ে পাঠান"');
       await _post(tester);
       expect(api.sent.single.toPayload()['difference'], {'kind': 'rounding', 'amount': typed});
     });
@@ -609,7 +613,8 @@ void main() {
       (tester) async {
     final api = FakeCollect(saved: const {
       'no': 'RCV-2610-0012',
-      'state': 'awaiting',
+      // ⓘ সার্ভারের আসল চাবি (a6 d5cc9657f): সইয়ের অপেক্ষা = `waiting`
+      'state': 'waiting',
       'amount_words': 'পঁয়তাল্লিশ হাজার টাকা মাত্র',
       'receipt_pdf': '/documents/Collection/col-1/receipt.pdf',
       'applied': [
@@ -707,6 +712,29 @@ void main() {
     expect(find.text('ছবি বাছা হয়েছে: slip-21.jpg'), findsOneWidget);
     await _post(tester);
     expect(api.slips, [('col-1', 'C:/slips/slip-21.jpg')]);
+  });
+
+  testWidgets('15 · a slip turns the server\'s draft into posted: the chip shows the attachment answer\'s state', (tester) async {
+    // ⓘ a6 d5cc9657f: স্লিপ-বাধ্যতামূলক কোম্পানিতে "পোস্ট" চাওয়া আদায় প্রথমে খসড়া; স্লিপ পৌঁছালে সার্ভার পোস্ট করে, উত্তরে `state`
+    final api = FakeCollect(
+      bills: openBillsJson(slipRequired: true),
+      saved: const {'no': 'RCV-2610-0014', 'state': 'draft', 'receipt_pdf': 'https://erp.test/sales/print/receipt/42'},
+      slipState: 'posted',
+    );
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-slip-camera');
+    await _post(tester);
+    expect(tester.widget<AppStatusChip>(find.byKey(const ValueKey('collect-review-state'))).state, PaperState.posted,
+        reason: '⛔ স্লিপের পরে পোস্ট হলো, অথচ চিপ বলছে খসড়া');
+  });
+
+  testWidgets('14 · the header\'s branch is the server\'s (open-bills customer.branch) when the phone\'s record has none', (tester) async {
+    const plain = CustomerRecord({'id': 'cus-1', 'nameBn': 'করিম স্টোর', 'pointName': 'ফুলপুর পয়েন্ট'});
+    await _pump(tester, _screen(FakeCollect(shops: const [plain])));
+    await _pickShop(tester);
+    expect(find.text('শাখা: গ্রাহকের শাখা (ময়মনসিংহ)'), findsOneWidget, reason: '⛔ সার্ভারের বলা শাখা মাথায় নেই');
   });
 
   testWidgets('15 · a slip over 5 MB is refused before it is kept', (tester) async {
@@ -975,15 +1003,49 @@ void main() {
       }
     }
 
-    testWidgets('every text on screen 1 and screen 2 is at least 12; amounts and body 14; the three figures 16', (tester) async {
+    /// ⭐ নিচের বোতামের লেখা Material 3-এর labelLarge: অন্তত 14, w600
+    void buttons(WidgetTester tester, {required String screen, required List<String> labels}) {
+      final seen = <String>[];
+      for (final type in [FilledButton, OutlinedButton]) {
+        for (final b in find.byWidgetPredicate((w) => w.runtimeType.toString().startsWith(type.toString())).evaluate()) {
+          for (final r in find.descendant(of: find.byWidget(b.widget), matching: find.byType(RichText)).evaluate()) {
+            final rich = r.widget as RichText;
+            final st = rich.text.style;
+            if (st == null || (st.fontFamily ?? '').contains('Material') || rich.text.toPlainText().trim().isEmpty) continue;
+            final text = rich.text.toPlainText();
+            seen.add(text);
+            expect(st.fontSize ?? 0, greaterThanOrEqualTo(14), reason: '⛔ $screen: বোতাম "$text" ${st.fontSize}');
+            expect(st.fontWeight, FontWeight.w600, reason: '⛔ $screen: বোতাম "$text" ${st.fontWeight}');
+          }
+        }
+      }
+      expect(seen, containsAll(labels), reason: '$screen-এর বোতাম মাপা হয়নি: $seen');
+    }
+
+    testWidgets('every text on screen 1 and screen 2 is at least 12; amounts and body 14; the three figures 16; buttons 14 w600',
+        (tester) async {
       await _pump(tester, _screen(FakeCollect(preview: previewJson(needsSignature: true))));
       await _pickShop(tester);
       await _type(tester, 'collect-amount', '45000');
       await _tap(tester, 'collect-item-INV-0094');
       await _tap(tester, 'collect-adjust');
       floor(tester, screen: 'পর্দা ১');
-      await _post(tester);
+      buttons(tester, screen: 'পর্দা ১', labels: ['খসড়া', 'দেখে পোস্ট ›']);
+      await _review(tester);
       floor(tester, screen: 'পর্দা ২');
+      buttons(tester, screen: 'পর্দা ২', labels: ['ফিরে যান', 'সইয়ে পাঠান']);
+      await tester.tap(find.byKey(const ValueKey('collect-check-post')));
+      await tester.pumpAndSettle();
+      floor(tester, screen: 'পর্দা ২, পোস্টের পরে');
+      buttons(tester, screen: 'পর্দা ২, পোস্টের পরে', labels: ['শেষ']);
+    });
+
+    testWidgets('screen 2 says "পোস্ট" when nobody needs to sign', (tester) async {
+      await _pump(tester, _screen(FakeCollect()));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _review(tester);
+      buttons(tester, screen: 'পর্দা ২', labels: ['ফিরে যান', 'পোস্ট']);
     });
 
     /// WCAG-এর আপেক্ষিক উজ্জ্বলতা আর অনুপাত

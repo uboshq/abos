@@ -10260,10 +10260,6 @@
   "@collectControlsTitle": {
     "description": "Collection: the control messages card"
   },
-  "collectControlSignature": "এই আদায়ে সই লাগবে — পোস্ট করলে সইয়ের অপেক্ষায় যাবে।",
-  "@collectControlSignature": {
-    "description": "Collection control: the server says it goes for signature (items 4 and 11)"
-  },
   "collectControlNoSignature": "এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।",
   "@collectControlNoSignature": {
     "description": "Collection control: no signature needed"
@@ -10391,9 +10387,9 @@
   "@collectSumDiscount": {
     "description": "Collection summary: the discount, which needs the owner's signature"
   },
-  "collectSumRounding": "রাউন্ডিং (৳10 পর্যন্ত)",
+  "collectSumRounding": "রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই)",
   "@collectSumRounding": {
-    "description": "Collection summary: rounding, at most Tk 10"
+    "description": "Collection summary: rounding; above Tk 0.50 the owner signs (owner, 2 Oct 2026), in the style of the discount line"
   },
   "collectRoundingTooBig": "রাউন্ডিং ৳10-এর বেশি হতে পারে না।",
   "@collectRoundingTooBig": {
@@ -10520,6 +10516,14 @@
         "type": "String"
       }
     }
+  },
+  "collectOwnerSign": "এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে",
+  "@collectOwnerSign": {
+    "description": "Collection screen 2 control: a discount, rounding above Tk 0.50 or the server says it needs the owner"
+  },
+  "collectSendForSign": "সইয়ে পাঠান",
+  "@collectSendForSign": {
+    "description": "Collection screen 2: the post button when the owner must sign first"
   },
   "collectOtherIncome": "অন্য আয়",
   "@collectOtherIncome": {

@@ -3,6 +3,9 @@ import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 
+/// ⓘ উত্তরগুলো a6-এর আসল সার্ভারের হুবহু আকারে (d5cc9657f: CollectionApiController::setup/answer/attachment,
+/// CollectionOpenItems::for, CollectionService::preview; tests/Feature/Api/CollectionAppContractTest আর CollectionSyncAnswerTest)।
+///
 /// ⭐ আদায়ের নকল সার্ভার — a5-এর চূড়ান্ত চুক্তির আকারে (খোলা বিল, প্রিভিউ, সংরক্ষণ, স্লিপ); JSON থেকে আসল পার্সার দিয়ে পড়া,
 /// তাই চুক্তির পড়াও পরীক্ষায় আসে। নমুনা অঙ্ক চূড়ান্ত নকশা ১০০-এর পাতা ১-এর হুবহু।
 const shop = CustomerRecord({
@@ -23,6 +26,7 @@ Map<String, dynamic> openBillsJson({bool monthOpen = true, bool slipRequired = f
         'label': 'করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ',
         'credit_limit': '100000.0000',
         'oldest_overdue_days': 49,
+        'branch': 'ময়মনসিংহ',
       },
       // ⓘ নকশার পাতা ৬-এর অঙ্ক: বকেয়া ৳51,200 = বিল 30,000 + 15,200 + 8,000 − ফেরত 2,000
       'due': '51200.0000',
@@ -30,10 +34,11 @@ Map<String, dynamic> openBillsJson({bool monthOpen = true, bool slipRequired = f
       'month_open': monthOpen,
       'attachment_required': slipRequired,
       'items': [
-        {'id': 'inv-94', 'kind': 'bill', 'no': 'INV-0094', 'date': '2026-10-02', 'due_date': '2026-10-17', 'amount': '30000.0000', 'open': '30000.0000', 'overdue_days': 8},
-        {'id': 'inv-101', 'kind': 'bill', 'no': 'INV-0101', 'date': '2026-10-09', 'due_date': '2026-10-24', 'amount': '25200.0000', 'open': '15200.0000', 'overdue_days': 0},
-        {'id': 'cn-7', 'kind': 'credit_note', 'no': 'CN-0007', 'date': '2026-10-12', 'amount': '-2000.0000', 'open': '-2000.0000'},
-        {'id': 'inv-112', 'kind': 'bill', 'no': 'INV-0112', 'date': '2026-10-18', 'due_date': '2026-11-02', 'amount': '8000.0000', 'open': '8000.0000'},
+        // ⓘ সার্ভারের সারি: দেরি না হলে `overdue_days: null`; নোট আর ক্রেডিটে `due_date: null`; পর্দার জন্য বাড়তি `url`
+        {'id': 'inv-94', 'kind': 'bill', 'no': 'INV-0094', 'date': '2026-10-02', 'due_date': '2026-10-17', 'amount': '30000.0000', 'open': '30000.0000', 'overdue_days': 8, 'url': 'https://erp.test/sales/invoices/94'},
+        {'id': 'inv-101', 'kind': 'bill', 'no': 'INV-0101', 'date': '2026-10-09', 'due_date': '2026-10-24', 'amount': '25200.0000', 'open': '15200.0000', 'overdue_days': null, 'url': 'https://erp.test/sales/invoices/101'},
+        {'id': 'cn-7', 'kind': 'credit_note', 'no': 'CN-0007', 'date': '2026-10-12', 'due_date': null, 'amount': '-2000.0000', 'open': '-2000.0000', 'overdue_days': null, 'url': 'https://erp.test/accounts/notes/7'},
+        {'id': 'inv-112', 'kind': 'bill', 'no': 'INV-0112', 'date': '2026-10-18', 'due_date': '2026-11-02', 'amount': '8000.0000', 'open': '8000.0000', 'overdue_days': null, 'url': 'https://erp.test/sales/invoices/112'},
       ],
     };
 
@@ -44,10 +49,26 @@ Map<String, dynamic> previewJson({List<String> stops = const [], bool needsSigna
       ],
       'total_dr': '45000.0000',
       'total_cr': '45000.0000',
-      'applied': '45000.0000',
+      // ⓘ সার্ভারের `applied` প্রিভিউতে তালিকা (কোন কাগজে কত), সারাংশে মোট
+      'applied': [
+        {'kind': 'bill', 'no': 'INV-0094', 'amount': '30000.0000'},
+        {'kind': 'bill', 'no': 'INV-0101', 'amount': '15200.0000'},
+        {'kind': 'bill', 'no': 'INV-0112', 'amount': '1800.0000'},
+        {'kind': 'credit_note', 'no': 'CN-0007', 'amount': '-2000.0000'},
+      ],
       'unapplied': '0.0000',
-      'summary': {'balanced': true, 'amount_words': 'পঁয়তাল্লিশ হাজার টাকা মাত্র'},
+      'summary': {
+        'received': '45000.0000',
+        'vds': '0.0000',
+        'ait': '0.0000',
+        'difference': '0.0000',
+        'applied': '45000.0000',
+        'unapplied': '0.0000',
+        'amount_words': 'পঁয়তাল্লিশ হাজার টাকা মাত্র',
+        'balanced': true,
+      },
       'needs_signature': needsSignature,
+      'reference_free': true,
       'stops': stops,
     };
 
@@ -64,10 +85,11 @@ class FakeCollect implements CollectionEntryApi {
     this.offlineTimes = 0,
     this.slowTimes = 0,
     this.billsFail = false,
+    this.slipState = 'posted',
     this.transferModes = const [
-      {'id': 'tm-npsb', 'name': 'NPSB'},
-      {'id': 'tm-beftn', 'name': 'BEFTN'},
-      {'id': 'tm-rtgs', 'name': 'RTGS'},
+      {'id': 'tm-beftn', 'code': 'BEFTN', 'name': 'BEFTN'},
+      {'id': 'tm-npsb', 'code': 'NPSB', 'name': 'NPSB'},
+      {'id': 'tm-rtgs', 'code': 'RTGS', 'name': 'RTGS'},
     ],
   })  : billsJson = bills ?? openBillsJson(),
         previewData = preview ?? previewJson(),
@@ -76,9 +98,13 @@ class FakeCollect implements CollectionEntryApi {
               'no': 'RCV-2610-0012',
               'state': 'posted',
               'amount_words': 'পঁয়তাল্লিশ হাজার টাকা মাত্র',
-              'receipt_pdf': '/documents/Collection/col-1/receipt.pdf',
+              // ⓘ সার্ভারের রসিদের ঠিকানা ওয়েবের পথ (route('sales.print.receipt'))
+              'receipt_pdf': 'https://erp.test/sales/print/receipt/41',
               'applied': [
                 {'kind': 'bill', 'no': 'INV-0094', 'amount': '30000.0000'},
+                {'kind': 'bill', 'no': 'INV-0101', 'amount': '15200.0000'},
+                {'kind': 'bill', 'no': 'INV-0112', 'amount': '1800.0000'},
+                {'kind': 'credit_note', 'no': 'CN-0007', 'amount': '-2000.0000'},
               ],
               'unapplied': '0.0000',
             };
@@ -92,6 +118,9 @@ class FakeCollect implements CollectionEntryApi {
 
   /// সেটআপের `transfer_modes` — পুরনো সার্ভারে পাঠানো হয় না
   final List<Map<String, dynamic>> transferModes;
+
+  /// স্লিপের উত্তরের `state` — "পোস্ট" চাওয়া খসড়া স্লিপ পেলে সার্ভার পোস্ট করে
+  final String slipState;
 
   /// ⛔ পুরনো সার্ভার — খোলা বিল, প্রিভিউ আর স্লিপের দরজা নেই, সংরক্ষণে কেবল আইডি
   final bool oldServer;
@@ -114,7 +143,11 @@ class FakeCollect implements CollectionEntryApi {
 
   @override
   Future<CollectionSetup> setup() async => CollectionSetup.fromJson({
-        'accounts': [for (final a in accountList) a.toJson()],
+        'today': '2026-10-21',
+        // ⓘ সার্ভার প্রতিটা খাতে `mine` পাঠায়, সত্য বা মিথ্যা (CollectionAppContractTest-এর দাবি); পুরনো সার্ভারে নেই
+        'accounts': [
+          for (final a in accountList) {'id': a.id, 'code': a.code, 'name': a.name, 'kind': a.kind, if (!oldServer) 'mine': a.mine},
+        ],
         if (!oldServer) 'transfer_modes': transferModes,
       });
 
@@ -150,13 +183,17 @@ class FakeCollect implements CollectionEntryApi {
       slowTimes--;
       throw const NoNetworkForThis(mayHaveLanded: true);
     }
-    return PushOutcome(landedId: id, details: oldServer ? {'changeId': changeId, 'status': 'APPLIED', 'entityId': id} : savedDetails);
+    // ⓘ সিঙ্কের উত্তর-সারি: চেনা তিন ঘরের সাথে আদায়ের উত্তর এক সারিতে (SyncService::withAnswer)
+    final row = {'changeId': changeId, 'status': 'APPLIED', 'entityId': id};
+    return PushOutcome(landedId: id, details: oldServer ? row : {...savedDetails, ...row});
   }
 
   @override
-  Future<void> attachSlip(String collectionId, String path) async {
+  Future<String?> attachSlip(String collectionId, String path) async {
     if (oldServer) throw StateError('no attachment door on an old server');
     slips.add((collectionId, path));
+    // ⓘ সার্ভারের উত্তর ২০১: {id, name, state}
+    return slipState;
   }
 }
 

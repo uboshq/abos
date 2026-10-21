@@ -583,10 +583,11 @@ class _CollectScreenState extends State<CollectScreen> {
         }
         return CollectPostResult(error: reason);
       }
-      final saved = CollectionSaved.of(landed, outcome.details);
+      var saved = CollectionSaved.of(landed, outcome.details);
       if (_slipPath != null && _slipAllowed) {
         try {
-          await widget.api.attachSlip(landed, _slipPath!);
+          // ⭐ স্লিপ পৌঁছালে সার্ভার "পোস্ট" চাওয়া খসড়াকে পোস্ট করে — চিপে সেই নতুন অবস্থা
+          saved = saved.withState(await widget.api.attachSlip(landed, _slipPath!));
         } catch (_) {
           _slipFailed = true;
         }
@@ -691,7 +692,7 @@ class _CollectScreenState extends State<CollectScreen> {
                 const SizedBox(height: AppSpacing.md),
                 FilledButton(
                   key: const ValueKey('collect-bank-done'),
-                  style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+                  style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
                   onPressed: () => Navigator.of(sheet).pop(),
                   child: Text(w.collectBankDone),
                 ),
@@ -759,7 +760,8 @@ class _CollectScreenState extends State<CollectScreen> {
   Widget _header(BuildContext context) {
     final w = context.l10n;
     final muted = TextStyle(color: context.palette.onSurfaceMuted, fontSize: 12.5);
-    final branch = _customer?.branchName;
+    // ⓘ সার্ভার যে শাখা বলে (খোলা বিলের `customer.branch`), নইলে ফোনে রাখা গ্রাহকের শাখা
+    final branch = _openBills?.branch ?? _customer?.branchName;
     final month = _openBills?.monthOpen;
     final no = _saved?.no;
     if (branch == null && month == null && no == null) return const SizedBox.shrink();
@@ -1196,7 +1198,7 @@ class _CollectScreenState extends State<CollectScreen> {
         Expanded(
           child: OutlinedButton(
             key: const ValueKey('collect-draft'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
             onPressed: _busy || _party != 'customer' ? null : _saveDraft,
             child: Text(w.collectDraft, textAlign: TextAlign.center),
           ),
@@ -1206,7 +1208,7 @@ class _CollectScreenState extends State<CollectScreen> {
           flex: 2,
           child: FilledButton(
             key: const ValueKey('collect-post'),
-            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
             onPressed: _busy || _party != 'customer' || _roundingTooBig ? null : _review,
             child: Text(w.collectPost, textAlign: TextAlign.center),
           ),
@@ -1215,7 +1217,7 @@ class _CollectScreenState extends State<CollectScreen> {
         Expanded(
           child: OutlinedButton(
             key: const ValueKey('collect-close'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
             onPressed: () => Navigator.of(context).maybePop(),
             child: Text(w.collectClose, textAlign: TextAlign.center),
           ),
@@ -1225,7 +1227,7 @@ class _CollectScreenState extends State<CollectScreen> {
           Expanded(
             child: FilledButton.icon(
               key: const ValueKey('collect-open-receipt'),
-              style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
               onPressed: () => widget.openReceipt(context, saved, ReceiptAction.pdf),
               icon: const Icon(Symbols.receipt_long),
               label: Text(w.collectOpenReceipt, textAlign: TextAlign.center),
@@ -1236,6 +1238,10 @@ class _CollectScreenState extends State<CollectScreen> {
     ]);
   }
 }
+
+/// ⭐ নিচের বোতামের লেখা — Material 3-এর labelLarge: 14, w600 (fe, ২২ অক্টোবর ২০২৬; থিমের মাপ নিচে নামলেও 14)
+TextStyle _buttonText(BuildContext context) =>
+    (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).copyWith(fontSize: 14, fontWeight: FontWeight.w600);
 
 String _dayText(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -1336,6 +1342,8 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
     final p = d.preview;
     final saved = _saved;
     final stops = p?.stops ?? const <String>[];
+    // ⭐ মালিকের সই লাগবে — ছাড় যেকোনো অঙ্কে, রাউন্ডিং ৳0.50-এর বেশি হলে (মালিক, ২ অক্টোবর ২০২৬), বা সার্ভারের প্রিভিউ বললে
+    final sign = d.discount > 0 || CollectScreen.roundingNeedsSign(d.rounding) || p?.needsSignature == true;
     return Scaffold(
       appBar: AbosScreenBar(title: w.collectCheckTitle),
       bottomNavigationBar: _BottomBar(children: [
@@ -1343,7 +1351,7 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: OutlinedButton(
               key: const ValueKey('collect-check-back'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
               onPressed: _busy ? null : () => Navigator.of(context).pop(),
               child: Text(w.collectCheckBack, textAlign: TextAlign.center),
             ),
@@ -1352,16 +1360,17 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
           Expanded(
             child: FilledButton(
               key: const ValueKey('collect-check-post'),
-              style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+              style: FilledButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
               onPressed: _busy || stops.isNotEmpty ? null : _post,
-              child: Text(w.collectCheckPost, textAlign: TextAlign.center),
+              // ⓘ সই লাগলে বোতামের কথাই বলে কী হবে — "সইয়ে পাঠান"
+              child: Text(sign ? w.collectSendForSign : w.collectCheckPost, textAlign: TextAlign.center),
             ),
           ),
         ] else
           Expanded(
             child: OutlinedButton(
               key: const ValueKey('collect-check-close'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48), textStyle: _buttonText(context)),
               onPressed: () => Navigator.of(context).pop(),
               child: Text(w.collectClose, textAlign: TextAlign.center),
             ),
@@ -1415,17 +1424,9 @@ class _CollectReviewScreenState extends State<CollectReviewScreen> {
               for (final (i, stop) in stops.indexed) _Note(key: ValueKey('collect-stop-$i'), text: stop, tone: _Tone.stop),
               if (stops.isNotEmpty) _Note(text: w.collectControlStops, tone: _Tone.stop),
               if (d.monthClosed) _Note(key: const ValueKey('collect-month-closed'), text: w.collectMonthClosed, tone: _Tone.stop),
-              if (p?.needsSignature == true)
-                _Note(key: const ValueKey('collect-needs-signature'), text: w.collectControlSignature, tone: _Tone.info),
-              if (p?.needsSignature == false)
+              if (sign) _Note(key: const ValueKey('collect-needs-signature'), text: w.collectOwnerSign, tone: _Tone.info),
+              if (!sign && p?.needsSignature == false)
                 _Note(key: const ValueKey('collect-no-signature'), text: w.collectControlNoSignature, tone: _Tone.info),
-              if (d.discount > 0)
-                _Note(key: const ValueKey('collect-difference-sign'), text: w.collectDifferenceSign, tone: _Tone.info),
-              if (CollectScreen.roundingNeedsSign(d.rounding))
-                _Note(
-                    key: const ValueKey('collect-rounding-sign'),
-                    text: w.collectRoundingSign(Money.taka(d.rounding / 100)),
-                    tone: _Tone.info),
               if (d.slipRequired) _Note(text: w.collectControlSlip, tone: _Tone.info),
               _Note(text: w.collectControlNoUndo, tone: _Tone.info),
               _Note(text: w.collectControlNet, tone: _Tone.warn),

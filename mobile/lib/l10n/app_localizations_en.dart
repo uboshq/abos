@@ -7644,10 +7644,6 @@ class AppL10nEn extends AppL10n {
   String get collectControlsTitle => 'Controls';
 
   @override
-  String get collectControlSignature =>
-      'Needs a signature — after posting it is awaiting signature.';
-
-  @override
   String get collectControlNoSignature =>
       'No signature needed — posting puts it in the books at once.';
 
@@ -7746,7 +7742,8 @@ class AppL10nEn extends AppL10n {
   String get collectSumDiscount => 'Discount on collection (needs a signature)';
 
   @override
-  String get collectSumRounding => 'Rounding (up to Tk 10)';
+  String get collectSumRounding =>
+      'Rounding (owner\'s signature above Tk 0.50)';
 
   @override
   String get collectRoundingTooBig => 'Rounding cannot be more than Tk 10.';
@@ -7839,6 +7836,13 @@ class AppL10nEn extends AppL10n {
   String collectRoundingSign(String amount) {
     return 'Rounding $amount — posts after the owner\'s signature';
   }
+
+  @override
+  String get collectOwnerSign =>
+      'This collection needs the owner\'s signature — it goes to the books after signing';
+
+  @override
+  String get collectSendForSign => 'Send for signature';
 
   @override
   String get collectOtherIncome => 'Other income';

@@ -12361,12 +12361,6 @@ abstract class AppL10n {
   /// **'নিয়ন্ত্রণ'**
   String get collectControlsTitle;
 
-  /// Collection control: the server says it goes for signature (items 4 and 11)
-  ///
-  /// In bn, this message translates to:
-  /// **'এই আদায়ে সই লাগবে — পোস্ট করলে সইয়ের অপেক্ষায় যাবে।'**
-  String get collectControlSignature;
-
   /// Collection control: no signature needed
   ///
   /// In bn, this message translates to:
@@ -12535,10 +12529,10 @@ abstract class AppL10n {
   /// **'আদায়ে ছাড় (সই লাগবে)'**
   String get collectSumDiscount;
 
-  /// Collection summary: rounding, at most Tk 10
+  /// Collection summary: rounding; above Tk 0.50 the owner signs (owner, 2 Oct 2026), in the style of the discount line
   ///
   /// In bn, this message translates to:
-  /// **'রাউন্ডিং (৳10 পর্যন্ত)'**
+  /// **'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই)'**
   String get collectSumRounding;
 
   /// Collection: rounding above the limit
@@ -12684,6 +12678,18 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'রাউন্ডিং {amount} — মালিকের সইয়ের পর পোস্ট হবে'**
   String collectRoundingSign(String amount);
+
+  /// Collection screen 2 control: a discount, rounding above Tk 0.50 or the server says it needs the owner
+  ///
+  /// In bn, this message translates to:
+  /// **'এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে'**
+  String get collectOwnerSign;
+
+  /// Collection screen 2: the post button when the owner must sign first
+  ///
+  /// In bn, this message translates to:
+  /// **'সইয়ে পাঠান'**
+  String get collectSendForSign;
 
   /// Voucher list: income from non-customers, a separate entry
   ///

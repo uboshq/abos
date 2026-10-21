@@ -32,7 +32,12 @@ Future<void> _loadRounded() async {
 
 /// [review]: পর্দা ২ খোলা; [posted]: তার পরে পোস্টও হয়ে গেছে
 Future<void> _open(WidgetTester tester,
-    {bool dark = false, Locale locale = AppLocale.locale, bool review = false, bool posted = false, double textScale = 1}) async {
+    {bool dark = false,
+    Locale locale = AppLocale.locale,
+    bool review = false,
+    bool posted = false,
+    double textScale = 1,
+    String? rounding}) async {
   tester.view.physicalSize = Size(412, (review ? 1400 : 1900) * (textScale > 1 ? 1.45 : 1));
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -50,7 +55,14 @@ Future<void> _open(WidgetTester tester,
       localizationsDelegates: AppLocale.delegates,
       builder: (context, child) => MediaQuery.withClampedTextScaling(minScaleFactor: textScale, maxScaleFactor: textScale, child: child!),
       home: CollectScreen(
-        api: FakeCollect(preview: previewJson(needsSignature: false)),
+        // ⓘ নকশার মতো NPSB আগে (সার্ভার কোড ধরে সাজায়; এখানে নকশার নমুনা)
+        api: FakeCollect(
+          preview: previewJson(needsSignature: rounding != null),
+          transferModes: const [
+            {'id': 'tm-npsb', 'code': 'NPSB', 'name': 'NPSB'},
+            {'id': 'tm-beftn', 'code': 'BEFTN', 'name': 'BEFTN'},
+          ],
+        ),
         books: FakeBooks(),
         newChangeId: () => 'k',
         today: DateTime(2026, 10, 21),
@@ -74,6 +86,17 @@ Future<void> _open(WidgetTester tester,
   await tester.pumpAndSettle();
   FocusManager.instance.primaryFocus?.unfocus();
   await tester.pumpAndSettle();
+  if (rounding != null) {
+    await tester.ensureVisible(find.byKey(const ValueKey('collect-adjust')));
+    await tester.tap(find.byKey(const ValueKey('collect-adjust')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('collect-difference-rounding')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('collect-difference')), rounding);
+    await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+  }
   if (review) {
     await tester.tap(find.byKey(const ValueKey('collect-post')));
     await tester.pumpAndSettle();
@@ -126,6 +149,15 @@ void main() {
       await _open(tester, review: review, textScale: 1.3);
       expect(tester.takeException(), isNull, reason: '⛔ ১৩০% লেখায় উপচে পড়ল');
       await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/${name}_412_light_bn_130.png'));
+    });
+  }
+
+  // ⓘ পর্দা ২, মালিকের সই লাগবে (রাউন্ডিং ৳0.51): নিয়ন্ত্রণের নোট আর "সইয়ে পাঠান"
+  for (final (locale, tag) in [(AppLocale.locale, 'bn'), (AppLocale.english, 'en')]) {
+    testWidgets('4 · screen 2 when the owner must sign (rounding ৳0.51), light, $tag', (tester) async {
+      await _open(tester, locale: locale, review: true, rounding: '0.51');
+      expect(find.text(tag == 'bn' ? 'সইয়ে পাঠান' : 'Send for signature'), findsOneWidget);
+      await expectLater(find.byKey(const ValueKey('shot')), matchesGoldenFile('goldens/collect/collect_review_sign_412_light_$tag.png'));
     });
   }
 

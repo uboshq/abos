@@ -60,7 +60,8 @@ enum PaperState {
   /// ⓘ [PaperState.unsent] সার্ভারের কোনো লেখা নয় — ফোনের সারিতে জমা থাকা কাগজ; পর্দা নিজেই বসায়।
   static PaperState? fromServer(String state) => switch (state.trim().toLowerCase()) {
         'draft' => PaperState.draft,
-        'awaiting' || 'awaiting_approval' || 'submitted' || 'pending' => PaperState.waiting,
+        // ⓘ `waiting` — এই অবস্থার নিজের চাবি; আদায়ের সিঙ্ক-উত্তর এটাই পাঠায় (a6 d5cc9657f, CollectionApiController::answer)
+        'waiting' || 'awaiting' || 'awaiting_approval' || 'submitted' || 'pending' => PaperState.waiting,
         'returned' || 'sent_back' => PaperState.sentBack,
         'posting' => PaperState.posting,
         'posted' || 'confirmed' || 'closed' || 'paid' => PaperState.posted,

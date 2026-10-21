@@ -7514,10 +7514,6 @@ class AppL10nBn extends AppL10n {
   String get collectControlsTitle => 'নিয়ন্ত্রণ';
 
   @override
-  String get collectControlSignature =>
-      'এই আদায়ে সই লাগবে — পোস্ট করলে সইয়ের অপেক্ষায় যাবে।';
-
-  @override
   String get collectControlNoSignature =>
       'এই আদায়ে সই লাগবে না — পোস্ট করলে সাথে সাথে খাতায় উঠবে।';
 
@@ -7615,7 +7611,7 @@ class AppL10nBn extends AppL10n {
   String get collectSumDiscount => 'আদায়ে ছাড় (সই লাগবে)';
 
   @override
-  String get collectSumRounding => 'রাউন্ডিং (৳10 পর্যন্ত)';
+  String get collectSumRounding => 'রাউন্ডিং (৳0.50-এর বেশি হলে মালিকের সই)';
 
   @override
   String get collectRoundingTooBig => 'রাউন্ডিং ৳10-এর বেশি হতে পারে না।';
@@ -7706,6 +7702,13 @@ class AppL10nBn extends AppL10n {
   String collectRoundingSign(String amount) {
     return 'রাউন্ডিং $amount — মালিকের সইয়ের পর পোস্ট হবে';
   }
+
+  @override
+  String get collectOwnerSign =>
+      'এই আদায়ে মালিকের সই লাগবে — সইয়ের পর খাতায় উঠবে';
+
+  @override
+  String get collectSendForSign => 'সইয়ে পাঠান';
 
   @override
   String get collectOtherIncome => 'অন্য আয়';
