@@ -45,7 +45,8 @@
     $branchLabel = $shell->branchLabel($user, $branch);
 @endphp
 
-<div x-data="{ open: false }" class="relative" data-company-branch
+{{-- ⓘ min-w-0 আর বোতামের max-w-full — ৩৭৫px-এ নামটা কেটে "…" হয়, পাশের "＋ তৈরি" বোতামের নিচে গড়িয়ে পড়ে না (লাইভ-পরখ, ২১ অক্টোবর ২০২৬) --}}
+<div x-data="{ open: false }" class="relative min-w-0" data-company-branch
      @open-company-switcher.window="open = true">
     <button type="button"
             @click="open = !open"
@@ -54,7 +55,7 @@
             aria-haspopup="menu"
             aria-label="{{ __('core.company.switch') }}"
             @class([
-                'flex min-h-(--spacing-touch) items-center gap-2 rounded-(--radius-field) px-2 transition-colors',
+                'flex min-h-(--spacing-touch) min-w-0 max-w-full items-center gap-2 rounded-(--radius-field) px-2 transition-colors',
                 'hover:bg-(--color-surface-hover)' => $canSwitch,
                 'cursor-default' => ! $canSwitch,
             ])
