@@ -174,6 +174,10 @@ final class AnAugustBillCancelledInOctoberLeavesAugustAloneTest extends TestCase
         Carbon::setTestNow(self::OCTOBER_DAY.' 10:00:00');
         $this->closeAugust();
         $this->signatureFlow();
+        // ⓘ ছকটা বিক্রির পরে বসল — আগে গড়া ইঞ্জিন পুরনো ছক মনে রাখলে সই চাওয়াই হত না
+        $this->app->forgetInstance(ApprovalEngine::class);
+        $this->app->forgetInstance(SalesInvoiceCancellationService::class);
+        $this->app->forgetScopedInstances();
         $clerk = $this->clerk(['sales.invoice.view', 'sales.invoice.cancellation']);
 
         // ⛔ কারণ ছাড়া নয় — সেবার নিজের দেয়াল (ফাঁকা জায়গাও ফাঁকা)
