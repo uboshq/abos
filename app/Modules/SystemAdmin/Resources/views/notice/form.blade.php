@@ -2,7 +2,7 @@
     নোটিশ লেখা বা বদলানো।
 
     ⚠️ দুইটা ঘরে আলাদা করে কারণ লেখা আছে: শ্রোতা খালি রাখলে **সবাই**
-    দেখেন, আর চলন্ত বারের টিকটা সব নোটিশে দেওয়ার জিনিস নয়।
+    দেখেন, আর "জরুরি" টিক দিলে নোটিশ উপরের স্থির ফিতায়, না দিলে নিচের চলন্ত বারে।
 --}}
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $notice->exists
@@ -132,17 +132,9 @@
                 <span>{{ __('system_admin::notice.is_active') }}</span>
             </label>
 
-            <label class="flex min-h-(--spacing-touch) items-start gap-2 text-sm">
-                <input type="checkbox" name="in_ticker" value="1"
-                       @checked(old('in_ticker', $notice->in_ticker)) class="mt-1 size-4">
-                <span>
-                    {{ __('system_admin::notice.in_ticker') }}
-                    <span class="block text-2xs text-(--color-ink-muted)">
-                        {{ __('system_admin::notice.ticker_hint') }}
-                    </span>
-                </span>
-            </label>
-
+            {{-- ⛔ "নিচের চলন্ত বারেও দেখান" টিকটা উঠে গেছে (fe, ২১ অক্টোবর ২০২৬; মালিকের নিয়ম: কিছুই না করা বোতাম থাকবে না) —
+                 ওটা কিছুই করত না, বারে ওঠা ঠিক করত অগ্রাধিকার। ⓘ এখন নিয়ম একটাই: জরুরি টিক → উপরের স্থির ফিতা, না দিলে
+                 নিচের চলন্ত বার, অগ্রাধিকারের ক্রমে ([[NoticeBoard::forTicker()]])। --}}
             {{-- ⭐ জরুরি — মালিক, ২১ অক্টোবর ২০২৬ (fe-র মাধ্যমে): *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*।
                  ⓘ টিক দিলে নোটিশটা উপরের স্থির ফিতায় ([[StatusNotices::forStrip()]]), নিচের চলন্ত বারে নয়; টিক বদলালে
                  নিরীক্ষায় আগে/পরে সহ বসে। ⛔ ফাঁকা টিক কিছু পাঠায় না — নিয়ন্ত্রক তাই মিথ্যা বসায় ([[NoticeController::validated()]])। --}}

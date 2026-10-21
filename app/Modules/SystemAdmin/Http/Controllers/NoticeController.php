@@ -237,7 +237,7 @@ class NoticeController extends Controller
     {
         return view('system_admin::notice.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'notice' => new Notice(['is_active' => true, 'in_ticker' => false, 'is_urgent' => false]),
+            'notice' => new Notice(['is_active' => true, 'is_urgent' => false]),
             'roles' => $this->roles(),
             'chosen' => [],
         ]);
@@ -338,7 +338,6 @@ class NoticeController extends Controller
             'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
 
             'is_active' => ['nullable', 'boolean'],
-            'in_ticker' => ['nullable', 'boolean'],
             'is_urgent' => ['nullable', 'boolean'],
             'roles' => ['array'],
             'roles.*' => ['string', 'max:125'],

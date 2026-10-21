@@ -15,14 +15,12 @@ return [
     'starts_on' => 'From',
     'ends_on' => 'Until',
     'is_active' => 'Active',
-    'in_ticker' => 'Also show in the ticker below',
     // ⭐ মালিক, ২১ অক্টোবর ২০২৬: *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*
     'is_urgent' => 'Urgent',
     'urgent_hint' => 'Ticked, the notice stands fixed in the strip at the top of the page, not in the moving bar below.',
     'roles' => 'Who sees it',
 
     'roles_hint' => 'Choose none and everyone in the company sees it.',
-    'ticker_hint' => 'Send every notice to the ticker and the urgent one is lost in the crowd.',
 
     'everyone' => 'Everyone',
     'author' => 'Written by',

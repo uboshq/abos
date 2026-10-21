@@ -92,16 +92,19 @@ final class NoticeBoard
         /*
          * ⭐ জরুরিটা এখানে নয় — মালিক, ২১ অক্টোবর ২০২৬: *"জরুরি সতর্কতা উপরে স্থির, ঘোষণা নিচে চলন্ত"*।
          * ⓘ জরুরি টিক দেওয়া নোটিশ উপরের স্থির ফিতায় ([[forStrip()]]); একই নোটিশ দুই জায়গায় কখনো নয়।
+         *
+         * ⭐ বাকি প্রতিটা প্রকাশিত ঘোষণা এখানে — সাধারণ অগ্রাধিকারেরও (fe, ২১ অক্টোবর ২০২৬; মালিকের নিয়ম: কিছুই না করা
+         * বোতাম থাকবে না)। ⛔ আগে বারে উঠত কেবল "গুরুত্বপূর্ণ" বা তার উপরে (`in_ticker`, অগ্রাধিকার দেখে বসানো), আর ফর্মের
+         * "নিচের চলন্ত বারেও দেখান" টিকটা কিছুই করত না — লেখক টিক দিতেন, নোটিশ বারে উঠত না। ⓘ টিক উঠে গেছে, ফটকও; ঘরটা
+         * টেবিলে রইল, কেউ পড়ে না। ভিড় সামলায় ক্রম (অগ্রাধিকার, তারপর নতুনটা) আর সীমা ([[howManyFitOnTheBar()]])।
          */
-        return $this->riding($this->forUser($user, $day)->where('in_ticker', true)->where('is_urgent', false), $user);
+        return $this->riding($this->forUser($user, $day)->where('is_urgent', false), $user);
     }
 
     /**
      * ⭐ উপরের স্থির ফিতায় যেগুলো যাবে — লেখক নিজে "জরুরি" টিক দিয়েছেন (মালিক, ২১ অক্টোবর ২০২৬)।
      *
-     * ⓘ বারের টিক (`in_ticker`) এখানে লাগে না: জরুরি টিকটাই বলে "সবার চোখের সামনে, উপরে"। ⚠️ বারের টিক চাইলে
-     * সাধারণ অগ্রাধিকারের জরুরি নোটিশ ([[NoticeLifecycle::draft()]] টিকটা অগ্রাধিকার ধরে বসায়) কোথাও উঠত না, আর লেখক
-     * ভাবতেন জানানো হয়েছে।
+     * ⓘ অগ্রাধিকার যা-ই হোক — জায়গা ঠিক করে কেবল লেখকের টিক।
      *
      * @return Collection<int, Notice>
      */
@@ -164,7 +167,8 @@ final class NoticeBoard
         return $wanted
             ->reject(fn (Notice $notice) => in_array($notice->id, $pushedAside, true)
                 && ($notice->priority?->canBeDismissed() ?? true))
-            ->sortByDesc(fn (Notice $notice) => $notice->priority?->rank() ?? 0)
+            // ⭐ অগ্রাধিকার আগে (বেশিটা আগে), তারপর নতুনটা আগে — সমান অগ্রাধিকারে নতুন লেখা পুরনোকে বার থেকে ঠেলে নামায়
+            ->sort(fn (Notice $a, Notice $b) => [$b->priority?->rank() ?? 0, $b->id] <=> [$a->priority?->rank() ?? 0, $a->id])
             ->take($this->howManyFitOnTheBar())
             ->values();
     }

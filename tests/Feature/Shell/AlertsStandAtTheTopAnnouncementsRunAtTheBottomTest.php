@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Shell;
 
 use App\Core\Services\NoticeBoard;
+use App\Core\Services\SettingsService;
 use App\Core\Services\StatusNotices;
 use App\Core\Support\CompanyContext;
 use App\Models\AuditTrail;
@@ -35,6 +36,8 @@ use Tests\TestCase;
  *  - কোনো ঘোষণা নেই → চলন্ত বারের কোনো মার্কআপই নেই, ফুটারে কেবল সংস্করণ · © · নাম।
  *  - ⏸ বোতামের নাম আছে (aria-label)।
  *  - মেয়াদ পেরোনো ঘোষণা কোথাও নেই — শেষ তারিখ পেরোলে বা মেয়াদের ঘড়ি পেরোলে।
+ *  - (fe, ২১ অক্টোবর ২০২৬) ফর্মে "নিচের চলন্ত বারেও দেখান" টিক নেই — কিছুই না করা বোতাম; সাধারণ অগ্রাধিকারের ঘোষণাও
+ *    চলন্ত বারে; ক্রম অগ্রাধিকার, তারপর নতুনটা; চলন্ত সারিতে কোনো ✕ নেই (উপরের ফিতার নিজের ✕ থাকে); ⏸/▶ আঁকা চিহ্ন।
  */
 final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
 {
@@ -120,8 +123,8 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
                 'title' => 'গুদামে পানি উঠেছে',
                 'body' => 'আজ কেউ নিচতলায় যাবেন না',
                 'is_active' => '1',
-                // ⓘ অগ্রাধিকার "গুরুত্বপূর্ণ" — নইলে নোটিশ কোনো বারেই ওঠে না ([[NoticeLifecycle::draft()]])
-                'priority' => 'important',
+                // ⭐ সাধারণ অগ্রাধিকার — ২১ অক্টোবর ২০২৬ থেকে এটাও চলন্ত বারে ওঠে (আগে "গুরুত্বপূর্ণ" না হলে কোথাও না)
+                'priority' => 'normal',
             ])
             ->assertRedirect();
 
@@ -131,7 +134,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
 
         $html = $this->dashboard();
         $this->assertStringContainsString('গুদামে পানি উঠেছে', $this->part($html, '<div data-ticker', '</footer>'),
-            '⛔ পরীক্ষার ভিত্তি নেই — টিক ছাড়া ঘোষণাটা চলন্ত বারে নেই।');
+            '⛔ সাধারণ অগ্রাধিকারের ঘোষণা, টিক ছাড়া — চলন্ত বারে নেই।');
 
         // ⭐ "জরুরি" টিক — আসল সম্পাদনার ফর্ম দিয়ে
         $this->actingAs($this->owner())
@@ -139,7 +142,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
                 'title' => 'গুদামে পানি উঠেছে',
                 'body' => 'আজ কেউ নিচতলায় যাবেন না',
                 'is_active' => '1',
-                'priority' => 'important',
+                'priority' => 'normal',
                 'is_urgent' => '1',
             ])
             ->assertRedirect();
@@ -165,7 +168,7 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
                 'title' => 'গুদামে পানি উঠেছে',
                 'body' => 'আজ কেউ নিচতলায় যাবেন না',
                 'is_active' => '1',
-                'priority' => 'important',
+                'priority' => 'normal',
             ])
             ->assertRedirect();
         Cache::flush();
@@ -213,6 +216,72 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $this->assertStringContainsString('@click="toggle"', $ticker, '⛔ ⏸ বোতাম কিছুই করে না।');
         $this->assertStringContainsString('group-data-[state=paused]:[animation-play-state:paused]', $ticker,
             '⛔ ⏸ চাপলেও লেখা চলতে থাকে।');
+
+        // ⭐ ⏸/▶ আঁকা চিহ্ন (x-ui.icon), লেখা নয় — fe, ২১ অক্টোবর ২০২৬: লেখার ⏸ বাংলা ফন্টে "॥" দেখাত
+        $button = $this->part($ticker, 'data-ticker-toggle', '</button>');
+        $this->assertMatchesRegularExpression('/<svg[^>]*viewBox="0 0 24 24"[^>]*data-ticker-icon="pause"[^>]*x-show="running"/s', $button,
+            '⛔ ⏸ আঁকা চিহ্ন নয়, বা চলার সময় দেখায় না।');
+        $this->assertMatchesRegularExpression('/<svg[^>]*viewBox="0 0 24 24"[^>]*data-ticker-icon="play"[^>]*x-show="paused"/s', $button,
+            '⛔ ▶ আঁকা চিহ্ন নয়, বা থামলে দেখায় না।');
+        foreach (["\u{23F8}", "\u{25B6}", '&#x23F8;', '&#x25B6;', '॥'] as $glyph) {
+            $this->assertStringNotContainsString($glyph, $button, "⛔ বোতামে লেখার চিহ্ন: {$glyph}");
+        }
+    }
+
+    public function test_the_form_has_no_dead_ticker_tick_only_the_urgent_one(): void
+    {
+        $notice = $this->announce('ফর্ম পরীক্ষা');
+
+        foreach ([route('system_admin.notice.create'), route('system_admin.notice.edit', $notice->id)] as $url) {
+            $form = $this->actingAs($this->owner())->get($url)->assertOk()->getContent();
+
+            $this->assertStringNotContainsString('name="in_ticker"', $form, "⛔ কিছুই না করা টিক ফিরে এসেছে: {$url}");
+            $this->assertStringNotContainsString('নিচের চলন্ত বারেও দেখান', $form, "⛔ পুরনো টিকের লেখা পাতায়: {$url}");
+            $this->assertStringContainsString('name="is_urgent"', $form, "⛔ জরুরি টিকটাই নেই: {$url}");
+        }
+    }
+
+    public function test_the_ticker_runs_by_priority_then_newest(): void
+    {
+        $settings = app(SettingsService::class);
+        $settings->set('notice.bar_max', 10);
+        $settings->flush();
+
+        // ⚠️ লেখার ক্রম ইচ্ছাকৃত এলোমেলো — বেশি জরুরিটা সবার আগে লেখা (সবচেয়ে পুরনো), তাই কেবল "নতুনটা আগে" সাজালে লাল হয়
+        $this->announce('বেশি-জরুরি ঘোষণা', priority: 'high');
+        $this->announce('কম-জরুরি ঘোষণা', priority: 'low');
+        $this->announce('পুরনো সাধারণ ঘোষণা', priority: 'normal');
+        $this->announce('নতুন সাধারণ ঘোষণা', priority: 'normal');
+
+        $first = $this->part($this->dashboard(), 'data-ticker-copy', 'aria-hidden="true"');
+        $at = fn (string $title): int|false => strpos($first, $title);
+
+        foreach (['বেশি-জরুরি ঘোষণা', 'নতুন সাধারণ ঘোষণা', 'পুরনো সাধারণ ঘোষণা', 'কম-জরুরি ঘোষণা'] as $title) {
+            $this->assertNotFalse($at($title), "⛔ ঘোষণাটা চলন্ত বারে নেই: {$title}");
+        }
+
+        $this->assertLessThan($at('নতুন সাধারণ ঘোষণা'), $at('বেশি-জরুরি ঘোষণা'), '⛔ বেশি জরুরিটা আগে নেই।');
+        $this->assertLessThan($at('পুরনো সাধারণ ঘোষণা'), $at('নতুন সাধারণ ঘোষণা'), '⛔ সমান অগ্রাধিকারে নতুনটা আগে নেই।');
+        $this->assertLessThan($at('কম-জরুরি ঘোষণা'), $at('পুরনো সাধারণ ঘোষণা'), '⛔ কম জরুরিটা পিছনে নেই।');
+    }
+
+    public function test_no_close_button_runs_in_the_ticker_but_the_strip_keeps_its_own(): void
+    {
+        $this->announce('চলন্ত ঘোষণা');
+        $this->announce('উপরের জরুরি', urgent: true);
+
+        $html = $this->dashboard();
+        $ticker = $this->part($html, '<div data-ticker', '</footer>');
+
+        // ⛔ চলন্ত ✕ চাপা যায় না, আর কী করে তাও অস্পষ্ট (fe, ২১ অক্টোবর ২০২৬) — থামাতে ⏸, সরাতে নোটিশের পাতা
+        $this->assertStringNotContainsString('<form', $ticker, '⛔ চলন্ত সারিতে একটা ফর্ম (✕) ফিরে এসেছে।');
+        $this->assertStringNotContainsString('/dismiss', $ticker, '⛔ চলন্ত সারিতে সরানোর পথ।');
+        $this->assertStringNotContainsString('&times;', $ticker, '⛔ চলন্ত সারিতে ✕।');
+        $this->assertStringNotContainsString(e(__('core.notice.dismiss')), $ticker, '⛔ চলন্ত সারিতে "সরান" বোতাম।');
+
+        // ⓘ উপরের ফিতার নিজের ✕ অক্ষত
+        $this->assertStringContainsString('data-strip-close', $this->part($html, '<div data-message-strips', '<aside'),
+            '⛔ উপরের ফিতার ✕ হারাল — ওটা ছোঁয়ার কথা ছিল না।');
     }
 
     public function test_an_expired_announcement_shows_nowhere(): void
@@ -251,10 +320,10 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         return $this->actingAs($this->owner())->get(route('dashboard'))->assertOk()->getContent();
     }
 
-    /** ⓘ প্রকাশিত একটা ঘোষণা, বারে টিক দেওয়া (`Notice::create` — অবস্থা কলামের ডিফল্টে প্রকাশিত) */
-    private function announce(string $title, ?\DateTimeInterface $ends = null, bool $urgent = false): Notice
+    /** ⓘ প্রকাশিত একটা ঘোষণা (`Notice::create` — অবস্থা কলামের ডিফল্টে প্রকাশিত); জরুরি টিক না দিলে চলন্ত বারে */
+    private function announce(string $title, ?\DateTimeInterface $ends = null, bool $urgent = false, string $priority = 'normal'): Notice
     {
-        $notice = Notice::create(['title' => $title, 'body' => $title, 'is_active' => true, 'in_ticker' => true,
+        $notice = Notice::create(['title' => $title, 'body' => $title, 'is_active' => true, 'priority' => $priority,
             'is_urgent' => $urgent, 'ends_on' => $ends, 'created_by' => $this->owner()->id]);
         Cache::flush();
 

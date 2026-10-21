@@ -99,7 +99,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
         // ⓘ "জরুরি" টিক — ২১ অক্টোবর ২০২৬ থেকে জরুরি নয় এমন ঘোষণা ফিতায় নয়, নিচের চলন্ত বারে
         // ([[AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest]])
         Notice::create(['title' => 'রবিবার থেকে দাম বাড়বে', 'body' => 'রবিবার থেকে দাম বাড়বে', 'is_active' => true,
-            'in_ticker' => true, 'is_urgent' => true, 'created_by' => $this->owner()->id]);
+            'is_urgent' => true, 'created_by' => $this->owner()->id]);
         Cache::flush();
 
         $html = $this->actingAs($this->owner())->get(route('dashboard'))->assertOk()->getContent();
@@ -131,7 +131,7 @@ final class NoticesStandInTheTopStripTest extends TestCase
     {
         foreach (['এক', 'দুই', 'তিন', 'চার'] as $word) {
             Notice::create(['title' => "নোটিশ {$word}", 'body' => "নোটিশ {$word}", 'is_active' => true,
-                'in_ticker' => true, 'is_urgent' => true, 'created_by' => $this->owner()->id]);
+                'is_urgent' => true, 'created_by' => $this->owner()->id]);
         }
         Cache::flush();
 

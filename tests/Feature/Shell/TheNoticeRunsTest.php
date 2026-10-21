@@ -62,7 +62,7 @@ class TheNoticeRunsTest extends TestCase
     {
         $this->actingAs($this->owner);
         $life = app(NoticeLifecycle::class);
-        // ⓘ "জরুরি" আর তার উপরে বারে যায় ([[NoticePriority::goesToTheBar()]])
+        // ⓘ জরুরি টিক ছাড়া প্রতিটা প্রকাশিত ঘোষণা চলন্ত বারে, অগ্রাধিকারের ক্রমে ([[NoticeBoard::forTicker()]], ২১ অক্টোবর ২০২৬)
         $notice = $life->draft(['title' => $text, 'body' => $text, 'priority' => NoticePriority::IMPORTANT->value]);
         $life->publish($life->approve($life->submit($notice)));
 

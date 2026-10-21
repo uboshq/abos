@@ -147,7 +147,7 @@
              (`min-w-[200%]`, বারের চওড়া জানা), আর প্রতিটা কপি সারির অর্ধেক (`min-w-1/2`) — অর্থাৎ অন্তত একটা গোটা বার।
            • দ্বিতীয় কপি `aria-hidden`, তার লিংক Tab-এ ধরা পড়ে না — পর্দা-পাঠক একবারই পড়ে
            • প্রতিটা ঘোষণা ক্লিক করলে পুরো নোটিশ খোলে (system_admin.notice.show); মেয়াদ পেরোলে নিজে থেকেই সরে
-             ([[NoticeBoard::forTicker()]])
+             ([[NoticeBoard::forTicker()]]); ক্রম অগ্রাধিকার ধরে, তারপর নতুনটা; চলন্ত সারিতে কোনো ✕ নেই
            • ছাপায় আসে না (`print-hide`); এক সারি, ৩৭৫px-এও (`whitespace-nowrap`, বাইরেটা `overflow-hidden`) --}}
     @if ($announcements !== [])
         <div data-ticker x-data="noticeTicker" :data-state="state" data-state="running"
@@ -181,17 +181,8 @@
                                         </span>
                                     @endif
 
-                                    {{-- ⓘ সরানোর ✕ — কেবল প্রথম কপিতে, আর কেবল যেটা সরানো যায় (১১ অক্টোবরের মতোই) --}}
-                                    @if ($copy === 0 && ($announcement['id'] ?? null) && ($announcement['can_dismiss'] ?? false)
-                                        && \Illuminate\Support\Facades\Route::has('system_admin.notice.dismiss'))
-                                        <form method="POST" action="{{ route('system_admin.notice.dismiss', $announcement['id']) }}" class="inline-flex">
-                                            @csrf
-                                            <button type="submit"
-                                                    title="{{ __('core.notice.dismiss') }}"
-                                                    aria-label="{{ __('core.notice.dismiss') }}: {{ $announcement['text'] }}"
-                                                    class="px-1 leading-none opacity-60 hover:opacity-100">&times;</button>
-                                        </form>
-                                    @endif
+                                    {{-- ⛔ সরানোর ✕ নেই (fe, ২১ অক্টোবর ২০২৬) — চলন্ত বোতাম চাপা যায় না, আর চাপলে কী হয় তাও
+                                         অস্পষ্ট ছিল। ⓘ থামাতে ⏸, পুরোটা পড়তে বা সরাতে নোটিশের পাতা; উপরের ফিতার নিজের ✕ যেমন ছিল। --}}
                                 </span>
                             @endforeach
                         </span>
@@ -205,8 +196,9 @@
                     aria-label="{{ __('core.notice.ticker_pause') }}" title="{{ __('core.notice.ticker_pause') }}"
                     class="grid size-6 shrink-0 place-items-center rounded-(--radius-field) text-(--color-ink-muted)
                            hover:bg-(--color-surface-hover) hover:text-(--color-ink) motion-reduce:hidden">
-                <span x-show="running" aria-hidden="true">&#x23F8;&#xFE0E;</span>
-                <span x-show="paused" x-cloak aria-hidden="true">&#x25B6;&#xFE0E;</span>
+                {{-- ⭐ আঁকা চিহ্ন, লেখা নয় (fe, ২১ অক্টোবর ২০২৬) — ⛔ ⏸ লেখাটা বাংলা ফন্টে "॥" দেখাত --}}
+                <x-ui.icon name="pause" :size="14" data-ticker-icon="pause" x-show="running" />
+                <x-ui.icon name="play" :size="14" data-ticker-icon="play" x-show="paused" x-cloak />
             </button>
         </div>
     @else

@@ -26,6 +26,8 @@ function ticker () {
         .replace(/@if \(\$copy === 0\) data-ticker-copy @else aria-hidden="true" @endif/g, 'data-ticker-copy')
         .replace(/^\s*@(for|endfor)\b.*$/gm, '')
         .replace(/\{\{\s*__\('([^']+)'\)\s*\}\}/g, '$1')
+        // ⓘ আঁকা চিহ্ন (x-ui.icon) সার্ভারে SVG হয় — এখানে একটা ফাঁকা svg, একই x-show সহ
+        .replace(/<x-ui\.icon name="(\w+)"[^>]*?(x-show="\w+")[^>]*\/>/g, '<svg data-ticker-icon="$1" $2></svg>')
 }
 
 const warnings = []
@@ -77,6 +79,7 @@ const tick = async () => {
 
 const bar = () => host.querySelector('[data-ticker]')
 const button = () => host.querySelector('[data-ticker-toggle]')
+const shown = (name) => host.querySelector(`[data-ticker-icon="${name}"]`).style.display !== 'none'
 
 describe('চলন্ত ঘোষণা — ⏸/▶ (WCAG 2.2.2)', () => {
     it('শুরুতে চলে, বোতামের নাম "থামান"', async () => {
@@ -84,6 +87,10 @@ describe('চলন্ত ঘোষণা — ⏸/▶ (WCAG 2.2.2)', () => {
 
         expect(bar().getAttribute('data-state')).toBe('running')
         expect(button().getAttribute('aria-label')).toBe('core.notice.ticker_pause')
+        // ⭐ আঁকা ⏸ দেখা যায়, ▶ লুকানো (fe, ২১ অক্টোবর ২০২৬: লেখার চিহ্ন বাংলা ফন্টে "॥" হত)
+        expect(shown('pause')).toBe(true)
+        expect(shown('play')).toBe(false)
+        expect(button().textContent.trim()).toBe('')
         expect(warnings).toEqual([])
     })
 
@@ -96,6 +103,8 @@ describe('চলন্ত ঘোষণা — ⏸/▶ (WCAG 2.2.2)', () => {
         expect(bar().getAttribute('data-state')).toBe('paused')
         expect(button().getAttribute('aria-label')).toBe('core.notice.ticker_play')
         expect(button().getAttribute('title')).toBe('core.notice.ticker_play')
+        expect(shown('play')).toBe(true)
+        expect(shown('pause')).toBe(false)
         expect(window.localStorage.getItem(TICKER_KEY)).toBe('1')
 
         // ⓘ ▶ চাপলে আবার চলে, আর মনে রাখা বাছাইটা মুছে যায়
@@ -103,6 +112,7 @@ describe('চলন্ত ঘোষণা — ⏸/▶ (WCAG 2.2.2)', () => {
         await tick()
 
         expect(bar().getAttribute('data-state')).toBe('running')
+        expect(shown('pause')).toBe(true)
         expect(window.localStorage.getItem(TICKER_KEY)).toBe(null)
         expect(warnings).toEqual([])
     })
