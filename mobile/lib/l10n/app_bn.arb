@@ -115,5 +115,209 @@
   "avatarMenuSignOut": "বের হওয়া",
   "@avatarMenuSignOut": {
     "description": "Avatar menu row: sign out"
+  },
+  "ordersModuleSales": "বিক্রয়",
+  "@ordersModuleSales": {
+    "description": "Screen bar: the module name above the title on the order and tracking screens"
+  },
+  "ordersUnknownCustomer": "অজানা গ্রাহক",
+  "@ordersUnknownCustomer": {
+    "description": "A queued order whose customer is no longer on this phone"
+  },
+  "ordersRejectedFailed": "ব্যর্থ",
+  "@ordersRejectedFailed": {
+    "description": "Rejected order card: the red pill"
+  },
+  "ordersRejectedItemCount": "{count, plural, other{{count}টা পণ্য}}",
+  "@ordersRejectedItemCount": {
+    "description": "Rejected order card: how many products the order had",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ordersRejectedDismiss": "বুঝেছি, সরিয়ে ফেলুন",
+  "@ordersRejectedDismiss": {
+    "description": "Rejected order card: tooltip of the close button that removes the card"
+  },
+  "ordersRejectedRewrite": "নতুন করে লিখুন",
+  "@ordersRejectedRewrite": {
+    "description": "Rejected order card: button that opens a new order filled from the rejected one"
+  },
+  "ordersDepositStatus": "{status, select, pending{পাঠানো} verifying{যাচাই চলছে} accepted{গৃহীত} rejected{প্রত্যাখ্যাত} other{যাচাই চলছে}}",
+  "@ordersDepositStatus": {
+    "description": "Payment advice: its state when the server sends no label of its own",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "ordersTrackingStepOrdered": "অর্ডার এসেছে",
+  "@ordersTrackingStepOrdered": {
+    "description": "Delivery tracking step: the order came in"
+  },
+  "ordersTrackingStepCreditHold": "বাকির সীমায় আটকে",
+  "@ordersTrackingStepCreditHold": {
+    "description": "Delivery tracking step: held because the customer is over the credit limit"
+  },
+  "ordersTrackingStepDraft": "খসড়া",
+  "@ordersTrackingStepDraft": {
+    "description": "Delivery tracking step: draft"
+  },
+  "ordersTrackingStepApproval": "অনুমোদনের অপেক্ষায়",
+  "@ordersTrackingStepApproval": {
+    "description": "Delivery tracking step: waiting for approval"
+  },
+  "ordersTrackingStepWarehouse": "গুদামে",
+  "@ordersTrackingStepWarehouse": {
+    "description": "Delivery tracking step: being picked in the warehouse"
+  },
+  "ordersTrackingStepGateOut": "গেট পেরিয়েছে",
+  "@ordersTrackingStepGateOut": {
+    "description": "Delivery tracking step: the goods left through the gate"
+  },
+  "ordersTrackingStepPartial": "কিছু পৌঁছেছে",
+  "@ordersTrackingStepPartial": {
+    "description": "Delivery tracking step: part of the goods delivered"
+  },
+  "ordersTrackingStepDelivered": "পৌঁছেছে",
+  "@ordersTrackingStepDelivered": {
+    "description": "Delivery tracking step: delivered"
+  },
+  "ordersTrackingStepCancelled": "বাতিল",
+  "@ordersTrackingStepCancelled": {
+    "description": "Delivery tracking step: cancelled"
+  },
+  "ordersTrackingStepBilled": "বিল হয়েছে",
+  "@ordersTrackingStepBilled": {
+    "description": "Delivery tracking step and chip: the sale has been billed"
+  },
+  "ordersListTitle": "অর্ডারের অবস্থা",
+  "@ordersListTitle": {
+    "description": "Order list screen title"
+  },
+  "ordersListLoadFailed": "অর্ডারের তালিকা আনা যায়নি",
+  "@ordersListLoadFailed": {
+    "description": "Order list: the last pull failed"
+  },
+  "ordersListEmptyTitle": "এখনো কোনো অর্ডার নেই",
+  "@ordersListEmptyTitle": {
+    "description": "Order list: empty state title"
+  },
+  "ordersListEmptyMessage": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@ordersListEmptyMessage": {
+    "description": "Order list: empty state hint to pull down"
+  },
+  "ordersListNewOrder": "নতুন অর্ডার",
+  "@ordersListNewOrder": {
+    "description": "Order list: button to start a new order"
+  },
+  "ordersListPendingHeader": "অপেক্ষমাণ ({count})",
+  "@ordersListPendingHeader": {
+    "description": "Order list: section header for orders waiting on this phone; count in English digits",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "ordersListPendingPill": "অপেক্ষমাণ",
+  "@ordersListPendingPill": {
+    "description": "Order list: pill on the waiting-orders card"
+  },
+  "ordersListPendingNote": "সংযোগ পেলেই পাঠানো হবে — অর্ডার এই ফোনেই আছে।",
+  "@ordersListPendingNote": {
+    "description": "Order list: the waiting orders go out once there is a connection"
+  },
+  "ordersListRejectedHeader": "যা যায়নি ({count})",
+  "@ordersListRejectedHeader": {
+    "description": "Order list: section header for orders the server refused",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "1"
+      }
+    }
+  },
+  "ordersListSyncedHeader": "সিঙ্ক হয়েছে ({count})",
+  "@ordersListSyncedHeader": {
+    "description": "Order list: section header for orders confirmed by the server",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "ordersListFilterEmpty": "এই ফিল্টারে কোনো অর্ডার নেই।",
+  "@ordersListFilterEmpty": {
+    "description": "Order list: nothing matches the chosen filter"
+  },
+  "ordersListNoNumber": "নম্বর নেই",
+  "@ordersListNoNumber": {
+    "description": "Order list: an order without its number yet"
+  },
+  "ordersTrackingLoadFailed": "তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@ordersTrackingLoadFailed": {
+    "description": "Delivery tracking: the list could not be loaded"
+  },
+  "ordersTrackingAbsent": "সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।",
+  "@ordersTrackingAbsent": {
+    "description": "Delivery tracking: the server does not have this feature yet"
+  },
+  "ordersTrackingTitle": "ডেলিভারি ট্র্যাকিং",
+  "@ordersTrackingTitle": {
+    "description": "Delivery tracking screen title"
+  },
+  "ordersTrackingSearchHint": "বিক্রয় নম্বর, ডিও বা দোকান",
+  "@ordersTrackingSearchHint": {
+    "description": "Delivery tracking: search box hint"
+  },
+  "ordersTrackingSearch": "খুঁজুন",
+  "@ordersTrackingSearch": {
+    "description": "Delivery tracking: tooltip of the search button"
+  },
+  "ordersTrackingAll": "সব",
+  "@ordersTrackingAll": {
+    "description": "Delivery tracking: the chip for every step"
+  },
+  "ordersTrackingEmptyTitle": "কোনো বিক্রি নেই।",
+  "@ordersTrackingEmptyTitle": {
+    "description": "Delivery tracking: empty state title"
+  },
+  "ordersTrackingEmptyFiltered": "এই ছাঁকনিতে কিছু নেই।",
+  "@ordersTrackingEmptyFiltered": {
+    "description": "Delivery tracking: nothing matches the filter"
+  },
+  "ordersTrackingEmptyHint": "গেট পাস হলে বিক্রি এখানে আসে।",
+  "@ordersTrackingEmptyHint": {
+    "description": "Delivery tracking: a sale appears here after its gate pass"
+  },
+  "ordersTrackingShowAll": "সব দেখুন",
+  "@ordersTrackingShowAll": {
+    "description": "Delivery tracking: clear the filter"
+  },
+  "ordersTrackingReload": "নতুন করে দেখুন",
+  "@ordersTrackingReload": {
+    "description": "Delivery tracking: load the list again"
+  },
+  "ordersTrackingNoCustomer": "গ্রাহক নেই",
+  "@ordersTrackingNoCustomer": {
+    "description": "Delivery tracking: a sale without a customer name"
+  },
+  "ordersTrackingBackOrder": "বাকি মাল পরে যাবে",
+  "@ordersTrackingBackOrder": {
+    "description": "Delivery tracking chip: the rest of the goods go later (back order)"
+  },
+  "ordersTrackingStoryFailed": "সময়রেখা আনা গেল না।",
+  "@ordersTrackingStoryFailed": {
+    "description": "Delivery tracking: the sale's timeline could not be loaded"
+  },
+  "ordersTrackingStoryWho": "কে কখন কী করলেন",
+  "@ordersTrackingStoryWho": {
+    "description": "Delivery tracking timeline: header over who did what and when"
   }
 }

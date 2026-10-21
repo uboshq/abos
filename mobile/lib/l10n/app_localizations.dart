@@ -228,6 +228,270 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'বের হওয়া'**
   String get avatarMenuSignOut;
+
+  /// Screen bar: the module name above the title on the order and tracking screens
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get ordersModuleSales;
+
+  /// A queued order whose customer is no longer on this phone
+  ///
+  /// In bn, this message translates to:
+  /// **'অজানা গ্রাহক'**
+  String get ordersUnknownCustomer;
+
+  /// Rejected order card: the red pill
+  ///
+  /// In bn, this message translates to:
+  /// **'ব্যর্থ'**
+  String get ordersRejectedFailed;
+
+  /// Rejected order card: how many products the order had
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা পণ্য}}'**
+  String ordersRejectedItemCount(int count);
+
+  /// Rejected order card: tooltip of the close button that removes the card
+  ///
+  /// In bn, this message translates to:
+  /// **'বুঝেছি, সরিয়ে ফেলুন'**
+  String get ordersRejectedDismiss;
+
+  /// Rejected order card: button that opens a new order filled from the rejected one
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে লিখুন'**
+  String get ordersRejectedRewrite;
+
+  /// Payment advice: its state when the server sends no label of its own
+  ///
+  /// In bn, this message translates to:
+  /// **'{status, select, pending{পাঠানো} verifying{যাচাই চলছে} accepted{গৃহীত} rejected{প্রত্যাখ্যাত} other{যাচাই চলছে}}'**
+  String ordersDepositStatus(String status);
+
+  /// Delivery tracking step: the order came in
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডার এসেছে'**
+  String get ordersTrackingStepOrdered;
+
+  /// Delivery tracking step: held because the customer is over the credit limit
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির সীমায় আটকে'**
+  String get ordersTrackingStepCreditHold;
+
+  /// Delivery tracking step: draft
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া'**
+  String get ordersTrackingStepDraft;
+
+  /// Delivery tracking step: waiting for approval
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদনের অপেক্ষায়'**
+  String get ordersTrackingStepApproval;
+
+  /// Delivery tracking step: being picked in the warehouse
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদামে'**
+  String get ordersTrackingStepWarehouse;
+
+  /// Delivery tracking step: the goods left through the gate
+  ///
+  /// In bn, this message translates to:
+  /// **'গেট পেরিয়েছে'**
+  String get ordersTrackingStepGateOut;
+
+  /// Delivery tracking step: part of the goods delivered
+  ///
+  /// In bn, this message translates to:
+  /// **'কিছু পৌঁছেছে'**
+  String get ordersTrackingStepPartial;
+
+  /// Delivery tracking step: delivered
+  ///
+  /// In bn, this message translates to:
+  /// **'পৌঁছেছে'**
+  String get ordersTrackingStepDelivered;
+
+  /// Delivery tracking step: cancelled
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get ordersTrackingStepCancelled;
+
+  /// Delivery tracking step and chip: the sale has been billed
+  ///
+  /// In bn, this message translates to:
+  /// **'বিল হয়েছে'**
+  String get ordersTrackingStepBilled;
+
+  /// Order list screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডারের অবস্থা'**
+  String get ordersListTitle;
+
+  /// Order list: the last pull failed
+  ///
+  /// In bn, this message translates to:
+  /// **'অর্ডারের তালিকা আনা যায়নি'**
+  String get ordersListLoadFailed;
+
+  /// Order list: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো কোনো অর্ডার নেই'**
+  String get ordersListEmptyTitle;
+
+  /// Order list: empty state hint to pull down
+  ///
+  /// In bn, this message translates to:
+  /// **'নিচে টেনে আবার চেষ্টা করুন।'**
+  String get ordersListEmptyMessage;
+
+  /// Order list: button to start a new order
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন অর্ডার'**
+  String get ordersListNewOrder;
+
+  /// Order list: section header for orders waiting on this phone; count in English digits
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষমাণ ({count})'**
+  String ordersListPendingHeader(String count);
+
+  /// Order list: pill on the waiting-orders card
+  ///
+  /// In bn, this message translates to:
+  /// **'অপেক্ষমাণ'**
+  String get ordersListPendingPill;
+
+  /// Order list: the waiting orders go out once there is a connection
+  ///
+  /// In bn, this message translates to:
+  /// **'সংযোগ পেলেই পাঠানো হবে — অর্ডার এই ফোনেই আছে।'**
+  String get ordersListPendingNote;
+
+  /// Order list: section header for orders the server refused
+  ///
+  /// In bn, this message translates to:
+  /// **'যা যায়নি ({count})'**
+  String ordersListRejectedHeader(String count);
+
+  /// Order list: section header for orders confirmed by the server
+  ///
+  /// In bn, this message translates to:
+  /// **'সিঙ্ক হয়েছে ({count})'**
+  String ordersListSyncedHeader(String count);
+
+  /// Order list: nothing matches the chosen filter
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ফিল্টারে কোনো অর্ডার নেই।'**
+  String get ordersListFilterEmpty;
+
+  /// Order list: an order without its number yet
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর নেই'**
+  String get ordersListNoNumber;
+
+  /// Delivery tracking: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get ordersTrackingLoadFailed;
+
+  /// Delivery tracking: the server does not have this feature yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।'**
+  String get ordersTrackingAbsent;
+
+  /// Delivery tracking screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারি ট্র্যাকিং'**
+  String get ordersTrackingTitle;
+
+  /// Delivery tracking: search box hint
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় নম্বর, ডিও বা দোকান'**
+  String get ordersTrackingSearchHint;
+
+  /// Delivery tracking: tooltip of the search button
+  ///
+  /// In bn, this message translates to:
+  /// **'খুঁজুন'**
+  String get ordersTrackingSearch;
+
+  /// Delivery tracking: the chip for every step
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get ordersTrackingAll;
+
+  /// Delivery tracking: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো বিক্রি নেই।'**
+  String get ordersTrackingEmptyTitle;
+
+  /// Delivery tracking: nothing matches the filter
+  ///
+  /// In bn, this message translates to:
+  /// **'এই ছাঁকনিতে কিছু নেই।'**
+  String get ordersTrackingEmptyFiltered;
+
+  /// Delivery tracking: a sale appears here after its gate pass
+  ///
+  /// In bn, this message translates to:
+  /// **'গেট পাস হলে বিক্রি এখানে আসে।'**
+  String get ordersTrackingEmptyHint;
+
+  /// Delivery tracking: clear the filter
+  ///
+  /// In bn, this message translates to:
+  /// **'সব দেখুন'**
+  String get ordersTrackingShowAll;
+
+  /// Delivery tracking: load the list again
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন করে দেখুন'**
+  String get ordersTrackingReload;
+
+  /// Delivery tracking: a sale without a customer name
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক নেই'**
+  String get ordersTrackingNoCustomer;
+
+  /// Delivery tracking chip: the rest of the goods go later (back order)
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি মাল পরে যাবে'**
+  String get ordersTrackingBackOrder;
+
+  /// Delivery tracking: the sale's timeline could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'সময়রেখা আনা গেল না।'**
+  String get ordersTrackingStoryFailed;
+
+  /// Delivery tracking timeline: header over who did what and when
+  ///
+  /// In bn, this message translates to:
+  /// **'কে কখন কী করলেন'**
+  String get ordersTrackingStoryWho;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/list_queries.dart';
 import '../../core/records/sales_order_record.dart';
@@ -77,7 +78,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         rejected.isEmpty && pendingCount == 0 && synced.isEmpty;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'অর্ডারের অবস্থা', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.ordersListTitle, module: context.l10n.ordersModuleSales),
       bottomNavigationBar: synced.isEmpty
           ? null
           : TotalsBar(pageCount: shown.length, pageSum: shownTotal, allCount: synced.length, allSum: allTotal),
@@ -107,7 +108,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   else if (trouble != null) ...[
                     ErrorState(
                         key: const ValueKey('orders-error'),
-                        message: 'অর্ডারের তালিকা আনা যায়নি',
+                        message: context.l10n.ordersListLoadFailed,
                         onRetry: _refresh),
                     // See CustomerListScreen's comment on the same line.
                     Text(trouble,
@@ -116,14 +117,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   ] else
                     EmptyState(
                       icon: Icons.receipt_long_outlined,
-                      title: 'এখনো কোনো অর্ডার নেই',
-                      message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                      title: context.l10n.ordersListEmptyTitle,
+                      message: context.l10n.ordersListEmptyMessage,
                       action: FilledButton.icon(
                         key: const ValueKey('orders-empty-new'),
                         style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
                         onPressed: widget.onNewOrder ?? () => context.push('/home/new-order'),
                         icon: const Icon(Icons.add),
-                        label: const Text('নতুন অর্ডার'),
+                        label: Text(context.l10n.ordersListNewOrder),
                       ),
                     ),
                 ],
@@ -136,18 +137,18 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 children: [
                   if (_refreshing) const LinearProgressIndicator(),
                   if (pendingCount > 0) ...[
-                    _SectionHeader('অপেক্ষমাণ ($pendingCount)'),
+                    _SectionHeader(context.l10n.ordersListPendingHeader('$pendingCount')),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.md),
                         child: Row(
                           children: [
-                            const AppStatusPill(
-                                label: 'অপেক্ষমাণ', kind: AppStatusKind.pending),
+                            AppStatusPill(
+                                label: context.l10n.ordersListPendingPill, kind: AppStatusKind.pending),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
-                                'সংযোগ পেলেই পাঠানো হবে — অর্ডার এই ফোনেই আছে।',
+                                context.l10n.ordersListPendingNote,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ),
@@ -157,14 +158,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     ),
                   ],
                   if (rejected.isNotEmpty) ...[
-                    _SectionHeader('যা যায়নি (${rejected.length})'),
+                    _SectionHeader(context.l10n.ordersListRejectedHeader('${rejected.length}')),
                     ...rejected.map((item) => RejectedOrderCard(
                           item: item,
                           onDismissed: () => setState(() {}),
                         )),
                   ],
                   if (synced.isNotEmpty) ...[
-                    _SectionHeader('সিঙ্ক হয়েছে (${synced.length})'),
+                    _SectionHeader(context.l10n.ordersListSyncedHeader('${synced.length}')),
                     ListControls(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       sortOptions: OrderListQuery.sortOptions,
@@ -175,9 +176,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
                       onFilters: (value) => setState(() => _filters = value),
                     ),
                     if (shown.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(AppSpacing.md),
-                        child: Text('এই ফিল্টারে কোনো অর্ডার নেই।',
+                      Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Text(context.l10n.ordersListFilterEmpty,
                             textAlign: TextAlign.center),
                       ),
                     // The number is what this section exists for — the rep
@@ -191,7 +192,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
                           key: ValueKey('order-row-${order.id}'),
                           icon: Icons.receipt_long_outlined,
                           party: order.customerName,
-                          number: order.documentNo ?? 'নম্বর নেই',
+                          number: order.documentNo ?? context.l10n.ordersListNoNumber,
                           detail: order.trxDate == null ? null : DateFormat('dd/MM/yyyy').format(order.trxDate!),
                           amount: order.total,
                           pill: AppStatusPill(label: order.statusLabel, kind: orderStatusKind(order.status ?? '')),
