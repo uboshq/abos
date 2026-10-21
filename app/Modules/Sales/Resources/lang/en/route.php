@@ -16,6 +16,10 @@ return [
     'opening' => 'Opening',
     'sales' => 'Sales',
     'returns' => 'Returns',
+    // ⭐ রুট ধরে রিপোর্ট — নিট বিক্রি আর খতিয়ানের ভ্যাটসহ ঘর (২১ অক্টোবর ২০২৬)
+    'net_sales' => 'Net sales (excl. VAT and returns)',
+    'ledger_billed' => 'Billed (incl. VAT, ledger)',
+    'ledger_returns' => 'Returns (incl. VAT, ledger)',
     'collections' => 'Collections',
     'other' => 'Other',
     'outstanding' => 'Outstanding',
