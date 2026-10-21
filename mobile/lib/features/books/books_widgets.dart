@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/locale/l10n.dart';
 
 /// টাকা আদায়, প্রিন্সিপাল আর ক্রয়ের পাতার একসাথের টুকরো — তারিখের পরিসর, মোটের পট্টি, ভুলের ঘর।
 
@@ -46,13 +47,13 @@ class DateRangeBar extends StatelessWidget {
       children: [
         ChoiceChip(
           key: const ValueKey('range-today'),
-          label: const Text('আজ'),
+          label: Text(context.l10n.booksRangeToday),
           selected: isToday,
           onSelected: (_) => onChanged(day, day),
         ),
         ChoiceChip(
           key: const ValueKey('range-month'),
-          label: const Text('এ মাস'),
+          label: Text(context.l10n.booksRangeMonth),
           selected: isMonth,
           onSelected: (_) => onChanged(monthStart, day),
         ),
@@ -108,7 +109,7 @@ class TotalStrip extends StatelessWidget {
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w800)),
                   if (count != null)
-                    Text('· $count টি',
+                    Text(context.l10n.booksTotalCount(count!),
                         style: TextStyle(color: context.palette.onSurfaceMuted)),
                 ],
               ),
@@ -174,7 +175,7 @@ class MoreButton extends StatelessWidget {
           key: const ValueKey('books-more'),
           onPressed: busy ? null : onPressed,
           icon: const Icon(Icons.expand_more),
-          label: const Text('আরও দেখুন'),
+          label: Text(context.l10n.booksMore),
         ),
       );
 }

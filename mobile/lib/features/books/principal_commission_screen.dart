@@ -13,6 +13,7 @@ import '../../core/widgets/design_list_row.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ সব মডিউল → সরবরাহকারী → "প্রিন্সিপালের কমিশন" (মালিকের আদেশ "app e dekhate hobe", fe-র মাধ্যমে; a4-এর নকশার নিয়ম ২;
 /// ২০ অক্টোবর ২০২৬)। ⓘ মালিকের হোমের কার্ডের (a4, ০.৪.৪২) "সব দেখুন"ও এই পর্দা খোলে — `/home/principal-commission`।
@@ -34,8 +35,6 @@ class PrincipalCommissionScreen extends StatefulWidget {
 
   /// শুরুর মাস ("2026-09") — ওয়েবের লিংক `?month=` থেকে; null = চলতি চক্র
   final String? month;
-
-  static const title = 'প্রিন্সিপালের কমিশন';
 
   @override
   State<PrincipalCommissionScreen> createState() => _PrincipalCommissionScreenState();
@@ -94,7 +93,7 @@ class _PrincipalCommissionScreenState extends State<PrincipalCommissionScreen> {
     final page = _page;
     final showRows = !_loading && _error == null && page != null && page.rows.isNotEmpty;
     return Scaffold(
-      appBar: const AbosScreenBar(title: PrincipalCommissionScreen.title, module: 'সরবরাহকারী'),
+      appBar: AbosScreenBar(title: context.l10n.booksPcTitle, module: context.l10n.booksModuleSupplier),
       bottomNavigationBar: showRows ? _totalsBar(page) : null,
       body: Column(children: [
         _MonthBar(
@@ -127,14 +126,14 @@ class _PrincipalCommissionScreenState extends State<PrincipalCommissionScreen> {
       return [
         ErrorState(
           key: const ValueKey('pc-error'),
-          title: _moduleOff(error) ? ModuleGate.offTitle : 'তথ্য আনা গেল না',
+          title: _moduleOff(error) ? ModuleGate.offTitle : context.l10n.booksPcLoadFailedTitle,
           // ⓘ ফোনে ক্রয়ের সুইচ বন্ধ → সার্ভারের ৪০৩ `module_off` — অন্য বন্ধ পর্দার একই কথা ([ModuleGate])
           message: _moduleOff(error)
               ? ModuleGate.offMessage
               : errorMessageFor(
             error,
-            fallback: 'প্রিন্সিপালের কমিশন আনা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে এই পাতা এখনো নেই, বা সরবরাহকারীর অংশ বন্ধ। সার্ভার হালনাগাদ হলে দেখা যাবে।',
+            fallback: context.l10n.booksPcLoadFailed,
+            whenAbsent: context.l10n.booksPcAbsent,
           ),
           onRetry: _load,
         ),
@@ -146,14 +145,14 @@ class _PrincipalCommissionScreenState extends State<PrincipalCommissionScreen> {
         EmptyState(
           key: const ValueKey('pc-empty'),
           icon: Symbols.percent,
-          title: 'এই চক্রে কোনো প্রিন্সিপালের কমিশন নেই',
-          message: 'কমিশনের নিয়ম দেওয়া প্রিন্সিপাল থাকলে এখানে দেখা যাবে।',
+          title: context.l10n.booksPcEmptyTitle,
+          message: context.l10n.booksPcEmptyHint,
           action: OutlinedButton.icon(
             key: const ValueKey('pc-empty-refresh'),
             style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
             onPressed: _load,
             icon: const Icon(Icons.refresh),
-            label: const Text('নতুন করে দেখুন'),
+            label: Text(context.l10n.booksRefresh),
           ),
         ),
       ];
@@ -176,7 +175,7 @@ class _PrincipalCommissionScreenState extends State<PrincipalCommissionScreen> {
     final total = page.total;
     return TotalsBar.grand(
       key: const ValueKey('pc-totals-bar'),
-      label: 'সর্বমোট · ${total.side.word} · ${page.rows.length} জন',
+      label: context.l10n.booksPcGrandTotal(page.rows.length, total.side.word),
       allSum: unsigned(total.balance) ?? '—',
     );
   }
@@ -205,14 +204,14 @@ class _MonthBar extends StatelessWidget {
       child: Row(children: [
         IconButton(
           key: const ValueKey('pc-month-prev'),
-          tooltip: 'আগের মাস',
+          tooltip: context.l10n.booksPcPrevMonth,
           constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
           onPressed: onPrev,
           icon: const Icon(Icons.chevron_left),
         ),
         Expanded(
           child: Text(
-            month == null ? 'চলতি চক্র' : monthLabel(month!),
+            month == null ? context.l10n.booksPcCurrentCycle : monthLabel(month!),
             key: const ValueKey('pc-month'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface),
@@ -220,7 +219,7 @@ class _MonthBar extends StatelessWidget {
         ),
         IconButton(
           key: const ValueKey('pc-month-next'),
-          tooltip: 'পরের মাস',
+          tooltip: context.l10n.booksPcNextMonth,
           constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
           onPressed: onNext,
           icon: const Icon(Icons.chevron_right),
@@ -230,7 +229,7 @@ class _MonthBar extends StatelessWidget {
             key: const ValueKey('pc-month-current'),
             style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
             onPressed: onCurrent,
-            child: const Text('চলতি'),
+            child: Text(context.l10n.booksPcCurrent),
           ),
       ]),
     );
@@ -259,9 +258,9 @@ class _TotalsCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
         // ⓘ Wrap — বড় অক্ষরে ঘর নিচে নামে, উপচে পড়ে না
         child: Wrap(children: [
-          cell('inflow', 'মোট এসেছে', Money.taka(total.inflow)),
-          cell('commission', 'কমিশন', total.commissionShown),
-          cell('paid', 'পাঠানো', Money.taka(total.paid)),
+          cell('inflow', context.l10n.booksPcTotalInflow, Money.taka(total.inflow)),
+          cell('commission', context.l10n.booksPcTotalCommission, total.commissionShown),
+          cell('paid', context.l10n.booksPcTotalSent, Money.taka(total.paid)),
         ]),
       ),
     );
@@ -279,9 +278,9 @@ class PrincipalCommissionTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final rate = row.basisRate;
     final second = [
-      'এসেছে ${Money.taka(row.inflow)}',
-      'কমিশন${rate == null ? '' : ' ($rate)'} ${row.commissionShown}',
-      'পাঠানো ${Money.taka(row.paid)}',
+      context.l10n.booksPcInflowLine(Money.taka(row.inflow)),
+      rate == null ? context.l10n.booksPcCommissionLine(row.commissionShown) : context.l10n.booksPcCommissionRateLine(rate, row.commissionShown),
+      context.l10n.booksPcSentLine(Money.taka(row.paid)),
     ].join(' · ');
     final tone = switch (row.side) {
       BalanceSide.pay => cs.error,
@@ -292,9 +291,9 @@ class PrincipalCommissionTile extends StatelessWidget {
       container: true,
       label: [
         row.label,
-        'এসেছে ${Money.spoken(row.inflow) ?? 'জানা নেই'}',
-        'কমিশন ${Money.speakable(row.commissionShown)}',
-        'পাঠানো ${Money.spoken(row.paid) ?? 'জানা নেই'}',
+        context.l10n.booksPcInflowLine(Money.spoken(row.inflow) ?? context.l10n.booksPcUnknown),
+        context.l10n.booksPcCommissionLine(Money.speakable(row.commissionShown)),
+        context.l10n.booksPcSentLine(Money.spoken(row.paid) ?? context.l10n.booksPcUnknown),
         '${row.side.sentence} ${Money.spoken(unsigned(row.balance)) ?? ''}',
       ].join(', '),
       excludeSemantics: true,
@@ -305,7 +304,7 @@ class PrincipalCommissionTile extends StatelessWidget {
         secondKey: ValueKey('pc-second-${row.supplierId}'),
         below: row.cycle == null
             ? null
-            : Text('চক্র: ${row.cycle}',
+            : Text(context.l10n.booksPcCycle(row.cycle!),
                 key: ValueKey('pc-cycle-${row.supplierId}'), style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
         // ⓘ টাকা লেখা হিসেবেই ([Money.taka] দশমিক-লেখা নেয়) — সারির ডানে, দিকের কথা তার নিচে
         pill: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [

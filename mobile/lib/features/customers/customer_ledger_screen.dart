@@ -9,6 +9,9 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
+import '../../core/widgets/day_part.dart';
 
 /// ⭐ দোকানের খাতা, সহজ করে — মালিক, ১২ অক্টোবর ২০২৬: *"app e customer list e Customar ledger zate dekha zay sohoze
 /// bujarmoto mobile vew sohoz kore koro"*।
@@ -59,7 +62,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(e, fallback: 'খাতা আনা গেল না।'));
+        setState(() => _error = errorMessageFor(e, fallback: AppLocale.l10n.customersLedgerFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -74,9 +77,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
       if (_error != null) BooksError(_error!),
       if (head != null) _DueHeader(head: head),
       if (head != null && _rows.isEmpty && !_busy)
-        const Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Center(child: Text('এই দোকানের খাতায় এখনো কোনো লেনদেন নেই।')),
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Center(child: Text(context.l10n.customersLedgerEmpty)),
         ),
     ];
 
@@ -101,13 +104,13 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
           key: const ValueKey('ledger-more'),
           onPressed: _busy ? null : () => _load(more: true),
           icon: const Icon(Icons.expand_more),
-          label: const Text('আরও আগের লেনদেন'),
+          label: Text(context.l10n.customersLedgerMore),
         ),
       ));
     }
 
     return Scaffold(
-      appBar: AbosScreenBar(title: head?.name ?? 'খাতা'),
+      appBar: AbosScreenBar(title: head?.name ?? context.l10n.customersLedgerTitle),
       body: RefreshIndicator(
         onRefresh: () => _load(),
         child: ListView(
@@ -130,10 +133,10 @@ class _DueHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final due = head.due;
     final (label, colour) = due > 0.004
-        ? ('বাকি আছে', context.palette.danger)
+        ? (context.l10n.customersLedgerHasDue, context.palette.danger)
         : due < -0.004
-            ? ('আগাম জমা আছে', context.palette.success)
-            : ('হিসাব মিলে আছে', context.palette.onSurface);
+            ? (context.l10n.customersLedgerHasAdvance, context.palette.success)
+            : (context.l10n.customersLedgerSettled, context.palette.onSurface);
 
     return Card(
       child: Padding(
@@ -148,16 +151,16 @@ class _DueHeader extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 26, fontWeight: FontWeight.w800, color: colour)),
             if (head.code.isNotEmpty)
-              Text('কোড ${head.code}',
+              Text(context.l10n.customersLedgerCode(head.code),
                   style: TextStyle(
                       fontSize: 12, color: context.palette.onSurfaceMuted)),
             // ⭐ হিসাব-বিবরণী — প্রারম্ভিক + মাল − টাকা = সমাপনী (পূর্ণ নিরীক্ষা §৯ ⚠️৭); পুরনো সার্ভার পাঠায় না, তখন নেই
             if (head.statement case final st?) ...[
               const Divider(height: AppSpacing.lg),
-              _StatementLine('শুরুর জের', _balanceWords(st.opening), key: const ValueKey('ledger-opening')),
-              _StatementLine('মোট মাল নিয়েছেন', Money.taka(st.debit), key: const ValueKey('ledger-debit')),
-              _StatementLine('মোট টাকা দিয়েছেন', Money.taka(st.credit), key: const ValueKey('ledger-credit')),
-              _StatementLine('শেষের জের', _balanceWords(st.closing), key: const ValueKey('ledger-closing'), bold: true),
+              _StatementLine(context.l10n.customersLedgerOpening, _balanceWords(st.opening), key: const ValueKey('ledger-opening')),
+              _StatementLine(context.l10n.customersLedgerGoodsTotal, Money.taka(st.debit), key: const ValueKey('ledger-debit')),
+              _StatementLine(context.l10n.customersLedgerPaidTotal, Money.taka(st.credit), key: const ValueKey('ledger-credit')),
+              _StatementLine(context.l10n.customersLedgerClosing, _balanceWords(st.closing), key: const ValueKey('ledger-closing'), bold: true),
             ],
           ],
         ),
@@ -205,7 +208,7 @@ class _Row extends StatelessWidget {
     // (ec, অ্যাপ এন্টারপ্রাইজ মান, ১৯ অক্টোবর ২০২৬)। ⛔ ২০০% লেখায় আগে অঙ্ক পুরো সারি খেয়ে ফেলত।
     final big = isLargeText(context);
     final amountText = Text('${took ? '+' : '−'}${Money.taka(amount)}',
-        semanticsLabel: '${took ? 'মাল' : 'জমা'} ${Money.spoken(amount)}',
+        semanticsLabel: took ? context.l10n.customersLedgerSpokenGoods('${Money.spoken(amount)}') : context.l10n.customersLedgerSpokenPaid('${Money.spoken(amount)}'),
         maxLines: 1,
         style: TextStyle(fontWeight: FontWeight.w700, color: colour));
     final balanceText = Text(dueWords(row.balance),
@@ -219,7 +222,7 @@ class _Row extends StatelessWidget {
           child: Icon(took ? Icons.shopping_bag_outlined : Icons.payments_outlined,
               color: colour, size: 20),
         ),
-        title: Text(took ? 'মাল নিয়েছেন' : 'টাকা দিয়েছেন',
+        title: Text(took ? context.l10n.customersLedgerTookGoods : context.l10n.customersLedgerPaidMoney,
             style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: big
             ? Column(
@@ -268,25 +271,18 @@ String _balanceWords(double balance) => balance.abs() < 0.005 ? Money.taka(0) : 
 
 /// সারির পরে কত দাঁড়াল — "বাকি ৳…" বা "জমা ৳…"
 String dueWords(double balance) {
-  if (balance.abs() < 0.005) return 'মিলে গেছে';
+  if (balance.abs() < 0.005) return AppLocale.l10n.customersLedgerRowSettled;
   return balance > 0
-      ? 'বাকি ${Money.taka(balance)}'
-      : 'জমা ${Money.taka(-balance)}';
+      ? AppLocale.l10n.customersLedgerRowDue(Money.taka(balance))
+      : AppLocale.l10n.customersLedgerRowCredit(Money.taka(-balance));
 }
 
-const _months = [
-  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-];
-
-const _digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-
-/// `2026-10-12` → "অক্টোবর ২০২৬"
-String monthOf(String? iso) {
+/// `2026-10-12` → "অক্টোবর 2026" (বাংলায়) বা "October 2026" (ইংরেজিতে) — মাসের নাম ভাষায়, অঙ্ক দুই ভাষাতেই ইংরেজি
+/// (মালিকের স্থায়ী নিয়ম; a4-এর সিদ্ধান্ত, ২১ অক্টোবর ২০২৬)। ⛔ আগে বছর বাংলা অঙ্কে ছিল ("অক্টোবর ২০২৬")।
+String monthOf(String? iso, [Locale? locale]) {
   final d = iso == null ? null : DateTime.tryParse(iso);
-  if (d == null) return 'তারিখ নেই';
-  final year = d.year.toString().split('').map((c) => _digits[int.parse(c)]).join();
-  return '${_months[d.month - 1]} $year';
+  if (d == null) return AppLocale.l10n.customersLedgerNoDate;
+  return monthText(d, locale);
 }
 
 class CustomerLedgerRow {

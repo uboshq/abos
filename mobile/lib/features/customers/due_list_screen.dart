@@ -12,6 +12,7 @@ import '../../core/widgets/list_controls.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
 import '../../core/widgets/design_list_row.dart';
+import '../../core/locale/l10n.dart';
 
 /// Who owes what — the whole round's debt on one page.
 ///
@@ -78,7 +79,7 @@ class _DueListScreenState extends State<DueListScreen> {
         filtered.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'বকেয়া তালিকা', module: 'গ্রাহক'),
+      appBar: AbosScreenBar(title: context.l10n.customersDueTitle, module: context.l10n.customersTitle),
       bottomNavigationBar: rows.isEmpty
           ? null
           : TotalsBar(pageCount: filtered.length, pageSum: shown, allCount: rows.length, allSum: total),
@@ -87,9 +88,9 @@ class _DueListScreenState extends State<DueListScreen> {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'নাম বা মোবাইল দিয়ে খুঁজুন',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: context.l10n.customersSearchHint,
+                prefixIcon: const Icon(Icons.search),
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
@@ -121,7 +122,7 @@ class _DueListScreenState extends State<DueListScreen> {
                           // a credit limit read as headroom. An empty list is only news when the list actually arrived.
                           ErrorState(
                               key: const ValueKey('due-error'),
-                              message: 'বকেয়ার তালিকা আনা যায়নি',
+                              message: context.l10n.customersDueListFailed,
                               onRetry: _refresh),
                           Text(trouble,
                               textAlign: TextAlign.center,
@@ -132,14 +133,14 @@ class _DueListScreenState extends State<DueListScreen> {
                           EmptyState(
                             key: const ValueKey('due-empty'),
                             icon: Icons.check_circle_outline,
-                            title: 'কারো কাছে বকেয়া নেই',
-                            message: 'সিঙ্ক হয়নি মনে হলে নতুন করে দেখুন।',
+                            title: context.l10n.customersDueNone,
+                            message: context.l10n.customersDueNoneHint,
                             action: OutlinedButton.icon(
                                 key: const ValueKey('due-empty-refresh'),
                                 style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
                                 onPressed: _refresh,
                                 icon: const Icon(Icons.refresh),
-                                label: const Text('নতুন করে দেখুন')),
+                                label: Text(context.l10n.customersRefresh)),
                           ),
                       ],
                     )
@@ -148,11 +149,11 @@ class _DueListScreenState extends State<DueListScreen> {
                           children: [
                             EmptyState(
                               icon: Icons.search_off,
-                              title: 'কোনো মিল পাওয়া যায়নি',
+                              title: context.l10n.customersNoMatch,
                               // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
                               message: _filters.isEmpty
                                   ? null
-                                  : 'ফিল্টার মুছে আবার দেখুন।',
+                                  : context.l10n.customersClearFilters,
                             ),
                           ],
                         )
@@ -216,7 +217,7 @@ class _DueTile extends StatelessWidget {
       icon: Icons.account_balance_wallet_outlined,
       tone: context.palette.danger,
       name: row.customer.label,
-      second: code == null ? 'বকেয়া' : '$code · বকেয়া',
+      second: code == null ? context.l10n.customersDueWord : context.l10n.customersDueWithCode(code),
       amount: row.due.outstandingInView,
       amountColor: Theme.of(context).colorScheme.error,
       onTap: () => context.push('/home/customers/${row.customer.id}'),

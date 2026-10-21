@@ -19,6 +19,8 @@ import '../home/owner_home_cards.dart';
 import '../printing/document_actions_sheet.dart';
 import 'books_widgets.dart';
 import 'collect_screen.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ টাকা আদায় (Payment received) — মালিক, ৬ অক্টোবর ২০২৬।
 ///
@@ -97,8 +99,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'আদায়ের তালিকা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে আদায়ের তালিকা এখনো আসেনি — অফিসে জানান।'));
+            fallback: AppLocale.l10n.booksMoneyInListFailed,
+            whenAbsent: AppLocale.l10n.booksMoneyInListAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -113,10 +115,10 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     final unsent = (widget.unsent ?? unsentCollections)();
     return Scaffold(
       // ⭐ ভেতরের পর্দার বার — "কোম্পানি · শাখা › বিক্রয় › আদায়" (০.৪.৪১ নমুনা, পাতা ২); অফলাইনের হলুদ পট্টি বার নিজে আঁকে
-      appBar: const AbosScreenBar(title: 'আদায়', module: 'বিক্রয়'),
+      appBar: AbosScreenBar(title: context.l10n.booksMoneyInTitle, module: context.l10n.booksModuleSales),
       // ⭐ "＋ নতুন আদায়" — সব পাতার একই [BarFab], কেবল আদায় নেওয়ার চাবি থাকলে
       floatingActionButton: widget.canCollect
-          ? BarFab(key: const ValueKey('money-in-new'), label: 'নতুন আদায়', onPressed: _collect)
+          ? BarFab(key: const ValueKey('money-in-new'), label: context.l10n.booksMoneyInNew, onPressed: _collect)
           : null,
       bottomNavigationBar: page == null || _rows.isEmpty
           ? null
@@ -143,16 +145,16 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
               key: const ValueKey('money-in-search'),
               controller: _search,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'গ্রাহক, দোকান বা নম্বর খুঁজুন'),
+              decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: context.l10n.booksMoneyInSearchHint),
               onSubmitted: (_) => _load(),
             ),
             const SizedBox(height: AppSpacing.xs),
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(
                 key: const ValueKey('method-all'),
-                label: const Text('সব'),
+                label: Text(context.l10n.booksMoneyInAllMethods),
                 selected: _method == null,
                 onSelected: (_) {
                   setState(() => _method = null);
@@ -180,8 +182,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
               EmptyState(
                 key: const ValueKey('money-in-empty'),
                 icon: Icons.savings_outlined,
-                title: 'এই সময়ে কোনো আদায় নেই',
-                message: 'তারিখ বা পদ্ধতি বদলে দেখুন।',
+                title: context.l10n.booksMoneyInEmptyTitle,
+                message: context.l10n.booksMoneyInEmptyHint,
                 // ⓘ অফিসের লোক সোজা আদায় নিতে পারেন; বাকিরা নতুন করে আনেন
                 action: widget.canCollect
                     ? FilledButton.icon(
@@ -189,19 +191,19 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
                         style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
                         onPressed: _collect,
                         icon: const Icon(Icons.add),
-                        label: const Text('আদায় নিন'))
+                        label: Text(context.l10n.booksMoneyInEmptyCollect))
                     : OutlinedButton.icon(
                         key: const ValueKey('money-in-empty-refresh'),
                         style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
                         onPressed: _load,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('নতুন করে দেখুন')),
+                        label: Text(context.l10n.booksRefresh)),
               ),
             // ⭐ ০.৪.৪১ নমুনা (a4: বাঁয়ে নম্বর · পক্ষ, ডানে টাকা আর চিপ) — এক কার্ডে; ফোনে আটকে থাকা আদায় আগে, "পাঠানো বাকি"
             if (_rows.isNotEmpty || unsent.isNotEmpty)
               HomeSectionCard(
                 key: const ValueKey('money-in-rows'),
-                title: _isToday ? 'আজকের আদায়' : 'আদায়',
+                title: _isToday ? context.l10n.booksMoneyInToday : context.l10n.booksMoneyInTitle,
                 children: [
                   for (final (i, u) in unsent.indexed)
                     PaperRow(
@@ -291,17 +293,17 @@ class ShopDuesCard extends StatelessWidget {
     final rest = dues.length - shown;
     return HomeSectionCard(
       key: const ValueKey('shop-dues'),
-      title: 'দোকানের বকেয়া',
+      title: context.l10n.booksShopDuesTitle,
       children: [
         for (final d in dues.take(shown)) AmountLine(label: d.label, amount: d.amount, labelIsName: true),
         if (rest > 0)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text('আরও $restটি দোকান', style: TextStyle(fontSize: 12.5, color: context.palette.onSurfaceMuted)),
+            child: Text(context.l10n.booksShopDuesMore(rest), style: TextStyle(fontSize: 12.5, color: context.palette.onSurfaceMuted)),
           ),
         AmountLine(
             key: const ValueKey('shop-dues-total'),
-            label: 'মোট · ${dues.length}টি দোকান',
+            label: context.l10n.booksShopDuesTotal(dues.length),
             amount: sumOf(dues.map((d) => d.amount)),
             total: true),
       ],
@@ -342,7 +344,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
     } catch (e) {
       if (mounted) {
         setState(
-            () => _error = errorMessageFor(e, fallback: 'আদায়টা আনা গেল না। নেট দেখে আবার চেষ্টা করুন।'));
+            () => _error = errorMessageFor(e, fallback: AppLocale.l10n.booksMoneyInFailed));
       }
     }
   }
@@ -351,15 +353,15 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
   Widget build(BuildContext context) {
     final d = _detail;
     return Scaffold(
-      appBar: AbosScreenBar(title: d?.row.no ?? 'আদায়', module: 'বিক্রয়', actions: [
+      appBar: AbosScreenBar(title: d?.row.no ?? context.l10n.booksMoneyInTitle, module: context.l10n.booksModuleSales, actions: [
         // ⭐ টাকার রসিদ ছাপা — নরমাল বা থার্মাল (মালিক, ১৪ অক্টোবর ২০২৬)
         if (d != null)
           IconButton(
             key: const ValueKey('money-in-print'),
-            tooltip: 'ছাপুন / পাঠান',
+            tooltip: context.l10n.booksPrintSend,
             icon: const Icon(Icons.print_outlined),
             onPressed: () => DocumentActionsSheet.show(context,
-                type: 'Collection', id: widget.id, title: 'টাকার রসিদ · ${d.row.no}', fileStem: d.row.no),
+                type: 'Collection', id: widget.id, title: context.l10n.booksMoneyInPrintTitle(d.row.no), fileStem: d.row.no),
           ),
       ]),
       body: ListView(
@@ -372,32 +374,32 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(children: [
-                  FactRow('গ্রাহক', d.row.customer),
-                  FactRow('তারিখ', dayOf(d.row.date)),
-                  FactRow('টাকা', Money.taka(d.row.amount)),
-                  if (d.statusLabel.isNotEmpty) FactRow('অবস্থা', d.statusLabel),
-                  FactRow('পদ্ধতি', MoneyInRow.methodLabel(d.row.method)),
-                  FactRow('খাত', d.row.account),
+                  FactRow(context.l10n.booksFactCustomer, d.row.customer),
+                  FactRow(context.l10n.booksFactDate, dayOf(d.row.date)),
+                  FactRow(context.l10n.booksFactAmount, Money.taka(d.row.amount)),
+                  if (d.statusLabel.isNotEmpty) FactRow(context.l10n.booksFactStatus, d.statusLabel),
+                  FactRow(context.l10n.booksFactMethod, MoneyInRow.methodLabel(d.row.method)),
+                  FactRow(context.l10n.booksFactAccount, d.row.account),
                   if (d.instrumentNo.isNotEmpty)
-                    FactRow('নম্বর', d.instrumentNo),
+                    FactRow(context.l10n.booksFactNumber, d.instrumentNo),
                   if (d.instrumentDate != null)
-                    FactRow('কাগজের তারিখ', dayOf(d.instrumentDate)),
-                  if (d.narration.isNotEmpty) FactRow('বিবরণ', d.narration),
-                  if (d.by.isNotEmpty) FactRow('লিখেছেন', d.by),
+                    FactRow(context.l10n.booksFactInstrumentDate, dayOf(d.instrumentDate)),
+                  if (d.narration.isNotEmpty) FactRow(context.l10n.booksFactNarration, d.narration),
+                  if (d.by.isNotEmpty) FactRow(context.l10n.booksFactWrittenBy, d.by),
                 ]),
               ),
             ),
             if (d.lines.isNotEmpty) ...[
-              const Padding(
+              Padding(
                 padding:
-                    EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
-                child: Text('কোন বিলে কত',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                    const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
+                child: Text(context.l10n.booksMoneyInLines,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
               for (final (invoice, amount) in d.lines)
                 Card(
                   child: ListTile(
-                    title: Text(invoice.isEmpty ? 'অগ্রিম' : invoice),
+                    title: Text(invoice.isEmpty ? context.l10n.booksMoneyInAdvance : invoice),
                     trailing: Text(Money.taka(amount)),
                   ),
                 ),
