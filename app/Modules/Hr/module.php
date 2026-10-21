@@ -72,8 +72,11 @@ return [
             ['label' => 'hr::menu.payroll', 'icon' => 'cash', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
             ['label' => 'hr::menu.attendance', 'icon' => 'calendar', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
             // ⭐ অধিকালের শিট — হাজিরা থেকে, ব্যবস্থাপকের সই (BLA ধারা ১০৮; a6, ২১ অক্টোবর ২০২৬)
-            ['label' => 'hr::menu.overtime', 'icon' => 'clock', 'route' => 'hr.overtime.index', 'permission' => 'hr.attendance.view'],
-            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
+            // ⭐ চাবি না থাকলেও পাতার নিজের নীতি — দল থাকা ব্যবস্থাপক সারি দেখেন আর পাতা খোলে (a6, ২১ অক্টোবর ২০২৬; [[MenuBuilder::pageLets()]])
+            ['label' => 'hr::menu.overtime', 'icon' => 'clock', 'route' => 'hr.overtime.index', 'permission' => 'hr.attendance.view',
+                'policy' => ['viewAny', \App\Modules\Hr\Models\OvertimeSheet::class]],
+            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view',
+                'policy' => ['viewAny', \App\Modules\Hr\Models\LeaveApplication::class]],
             // ⭐ খরচের দাবি আর অগ্রিম — কর্মী নিজে (মালিকের আদেশ, ৭ অক্টোবর ২০২৬; [[ExpenseClaimController]])
             ['label' => 'hr::menu.claims', 'icon' => 'wallet', 'route' => 'hr.claim.index', 'permission' => 'hr.claim.self'],
         ],
