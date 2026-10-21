@@ -118,7 +118,7 @@ return [
     'document_withdrawn' => 'ডকুমেন্টের অনুমোদন-অনুরোধ ফেরত',
     'document_published' => 'ডকুমেন্ট প্রকাশিত',
     'document_returned' => 'ডকুমেন্ট সংশোধনে ফেরত',
-    'document_rejected' => 'ডকুমেন্ট বাতিল',
+    'document_rejected' => 'ডকুমেন্ট প্রত্যাখ্যাত',
     'document_expired' => 'ডকুমেন্টের মেয়াদ শেষ',
     'document_renewed' => 'ডকুমেন্ট নবায়ন',
     'signature_requested' => 'ডকুমেন্টে সই চাওয়া',

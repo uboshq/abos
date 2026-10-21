@@ -225,6 +225,16 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
         $this->assertSame('1টা লটের মেয়াদ 7 দিনের মধ্যে শেষ', trans_choice('core.notice.expiring_batches', 1, ['count' => 1, 'days' => 7], 'bn'), '⛔ লটের ফিতা এখনো "একটি"।');
         $this->assertSame('4টা লটের মেয়াদ 7 দিনের মধ্যে শেষ', trans_choice('core.notice.expiring_batches', 4, ['count' => 4, 'days' => 7], 'bn'), '⛔ লটের ফিতা এখনো ":count টি"।');
 
+        // ⓘ fe, ২১ অক্টোবর ২০২৬ (a6-র paper_states): rejected = "প্রত্যাখ্যাত", cancelled = "বাতিল" — দুটো আলাদা অবস্থা, ওয়েবেও আলাদা লেখা
+        $rejected = $states['rejected']['label_bn'];
+        $this->assertSame('প্রত্যাখ্যাত', $rejected, '⛔ paper_states-এর rejected আর "প্রত্যাখ্যাত" নয়।');
+        $this->assertNotSame($states['cancelled']['label_bn'], $rejected, '⛔ rejected আর cancelled এক লেখা পেয়েছে।');
+        $this->assertSame($rejected, __('documents::catalog.status.rejected', [], 'bn'), '⛔ ডকুমেন্টের rejected অবস্থা এখনো "বাতিল"।');
+        $this->assertSame($rejected.': চুক্তি', __('documents::notice.rejected', ['name' => 'চুক্তি'], 'bn'), '⛔ ডকুমেন্টের rejected নোটিশ এখনো "বাতিল"।');
+        $this->assertSame('কেন '.$rejected.' হয়', __('approval::menu.report_why_rejected', [], 'bn'), '⛔ রিপোর্টের নাম এখনো "কেন বাতিল হয়"।');
+        $this->assertSame('ডকুমেন্ট '.$rejected, __('governance::action.document_rejected', [], 'bn'), '⛔ audit-এর লেখা এখনো "ডকুমেন্ট বাতিল"।');
+        $this->assertSame($rejected, __('governance::action.rejected', [], 'bn'));
+
         // ⓘ চিপ নিজেও ফাইলের লেখা আঁকে
         $this->assertSame($states['posted']['label_bn_short_without_level'], PaperStates::chip('posted')['label']);
         $this->assertSame($states['posted']['label_bn_stock'], PaperStates::chip('posted', kind: 'stock')['label']);
