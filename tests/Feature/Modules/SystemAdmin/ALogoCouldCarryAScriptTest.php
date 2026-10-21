@@ -124,6 +124,58 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         Storage::disk('public')->assertExists('logos/before.png');
     }
 
+    /**
+     * ⭐ ছবি ১২ MB পর্যন্ত নেওয়া হয় কারণ আমরা ছোট করি — কিন্তু রাখা ফাইল ৫০০KB-র নিচে, আর এখনো ছবি (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ৪০০০×৪০০০, ৪px-এর এলোমেলো রঙের খোপ — ফটোর মতো ঝিরঝিরে, সংকোচনে সবচেয়ে কঠিন। ⛔ আগে PNG ৮০০px-এ নামিয়ে পুরো রঙে
+     * রাখা হত — এই ছবিতে ~৬৩০KB; JPEG আগে থেকেই ছোট (~২১০KB), তবু দুইটাই দাবি। ⓘ ৪০০০² ছোট করতে GD-র ~১৬০ MB লাগে, তাই
+     * এই পরীক্ষায় স্মৃতির সীমা ১ GB (সার্ভারের সীমা আলাদা কথা — না কুলালে দরজা "প্রক্রিয়া হয়নি" বলে ফেরায়, কাঁচা রাখে না)।
+     */
+    public function test_a_large_photo_is_shrunk_and_stored_under_500_kb(): void
+    {
+        $limit = ini_set('memory_limit', '1G');
+
+        try {
+            foreach (['png', 'jpg'] as $type) {
+                $photo = $this->blockNoise(4000, 4000, $type);
+                $size = (int) filesize($photo);
+                $this->assertGreaterThan(1024 * 1024, $size, "প্রস্তুতিটাই ভুল — {$type} ছবিটা বড় নয়।");
+                $this->assertLessThan(12 * 1024 * 1024, $size, "প্রস্তুতিটাই ভুল — {$type} ছবিটা দরজার ১২ MB-র বেশি।");
+
+                $this->send($this->owner, new UploadedFile($photo, 'photo.'.$type, $type === 'png' ? 'image/png' : 'image/jpeg', null, true))
+                    ->assertSessionHasNoErrors()->assertRedirect();
+
+                $path = (string) $this->company->fresh()->logo_path;
+                $kept = (string) Storage::disk('public')->get($path);
+                $this->assertLessThan(500 * 1024, strlen($kept), sprintf('⛔ %s: রাখা লোগো %d KB — ৫০০KB-র নিচে নয়।', $type, intdiv(strlen($kept), 1024)));
+
+                $info = getimagesizefromstring($kept);
+                $this->assertNotFalse($info, "⛔ {$type}: রাখা ফাইলটা আর ছবি নয়।");
+                $this->assertContains($info['mime'], ['image/png', 'image/jpeg'], "⛔ {$type}: রাখা ফাইলটা PNG/JPEG নয়।");
+                @unlink($photo);
+            }
+        } finally {
+            ini_set('memory_limit', (string) $limit);
+        }
+    }
+
+    /** ৪px খোপের এলোমেলো রঙ — সংকোচনে কঠিন, তবু ১২ MB-র নিচে */
+    private function blockNoise(int $width, int $height, string $type): string
+    {
+        mt_srand(21);
+        $image = imagecreatetruecolor($width, $height);
+        for ($y = 0; $y < $height; $y += 4) {
+            for ($x = 0; $x < $width; $x += 4) {
+                imagefilledrectangle($image, $x, $y, $x + 3, $y + 3, imagecolorallocate($image, mt_rand(0, 255), mt_rand(0, 255), mt_rand(0, 255)));
+            }
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'logo').'.'.$type;
+        $type === 'png' ? imagepng($image, $path, 9) : imagejpeg($image, $path, 80);
+
+        return $path;
+    }
+
     private function send(User $who, UploadedFile $logo): \Illuminate\Testing\TestResponse
     {
         $this->app['auth']->forgetGuards();
