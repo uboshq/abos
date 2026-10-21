@@ -300,6 +300,57 @@ final class CollectionAppContractTest extends TestCase
         $this->assertArrayNotHasKey('lines', (array) $preview->json(), '⛔ দফা ১৮: অন্যের ডিলারের খাতার লাইন ফাঁস হলো');
     }
 
+    /**
+     * দফা ১৮ — নাগালের বাইরের গ্রাহক আর না-থাকা গ্রাহক একই উত্তর পান, open-bills-এ আর প্রিভিউতে (fe, ২২ অক্টোবর ২০২৬: কে আছেন
+     * সেটা জানা যাবে না)। ⓘ আজকের আচরণ বাঁধা, কিছু বদলায়নি:
+     *   · শাখায় বাঁধা অফিসের লোক — অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক: open-bills দুটোতেই ৪০৪, প্রিভিউ দুটোতেই একই ৪২২
+     *     ("গ্রাহক চেনা নেই", [[CollectionInput::fromPhone()]]); নিজের শাখার গ্রাহকে দুটোই ২০০ (দাবিটা কিছু মাপে)।
+     *   · দেয়ালের SR — অন্যের ডিলার আর না-থাকা গ্রাহক প্রতিটা দরজায় একই অবস্থা আর একই কথা, কোনোটাই খোলে না।
+     */
+    public function test_item_18_an_out_of_reach_customer_reads_exactly_like_one_that_does_not_exist(): void
+    {
+        $home = (int) $this->company->defaultBranch()->id;
+        $away = \App\Models\Branch::query()->create(['company_id' => $this->company->id, 'code' => 'APP-AWAY', 'name_en' => 'Away branch', 'is_active' => true]);
+        $mine = Customer::query()->create(['code' => 'APP-HOME', 'name_en' => 'Home Store', 'branch_id' => $home, 'is_active' => true]);
+        $there = Customer::query()->create(['code' => 'APP-AWAY', 'name_en' => 'Away Store', 'branch_id' => $away->id, 'is_active' => true]);
+        $missing = (string) \Illuminate\Support\Str::uuid7();
+        $this->assertFalse(Customer::query()->withoutGlobalScopes()->where('public_id', $missing)->exists(), 'না-থাকা গ্রাহক আছে — দাবিটা কিছু মাপছে না');
+
+        $openBills = fn (string $id) => $this->getJson('/api/v1/sales/collections/open-bills?customer='.$id);
+        $preview = fn (string $id) => $this->postJson('/api/v1/sales/collections/preview', [...$this->payload(['amount' => '100']), 'customerId' => $id]);
+        $said = fn ($response): array => [$response->status(), $response->json('message'), $response->json('errors')];
+
+        // ── শাখায় বাঁধা অফিসের লোক
+        $office = $this->person(['sales.collection.create', 'sales.collection.view', 'accounts.voucher.create']);
+        $office->forceFill(['current_branch_id' => $home, 'view_all_branches' => false])->save();
+        $this->phone($office);
+
+        $openBills((string) $mine->public_id)->assertOk();
+        $preview((string) $mine->public_id)->assertOk();
+
+        $this->assertSame(404, $openBills((string) $there->public_id)->status(), '⛔ দফা ১৮: অন্য শাখার গ্রাহকের খোলা বিল ৪০৪ নয়');
+        $this->assertSame($said($openBills($missing)), $said($openBills((string) $there->public_id)),
+            '⛔ দফা ১৮: open-bills-এ অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়');
+        $this->assertSame(422, $preview((string) $there->public_id)->status(), '⛔ দফা ১৮: অন্য শাখার গ্রাহকের প্রিভিউ "গ্রাহক চেনা নেই" নয়');
+        $this->assertSame($said($preview($missing)), $said($preview((string) $there->public_id)),
+            '⛔ দফা ১৮: প্রিভিউতে অন্য শাখার গ্রাহক আর না-থাকা গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়');
+
+        // ── দেয়ালের SR — নিজের ডিলার $mine, অন্যের ডিলার $this->dealer
+        app(\App\Core\Services\SettingsService::class)->set(\App\Core\Services\DealerScope::SWITCH, true);
+        $sr = $this->person(['sales.collection.create', 'sales.collection.view', \App\Core\Services\DealerScope::OWN]);
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $sr->id,
+            'customer_id' => $mine->id, 'starts_on' => now()->subDay()->toDateString(), 'created_by' => $this->owner->id]);
+        app(\App\Core\Services\DealerScope::class)->forget();
+        $this->phone($sr);
+
+        foreach (['open-bills' => $openBills, 'preview' => $preview] as $door => $ask) {
+            $walled = $said($ask((string) $this->dealer->public_id));
+            $this->assertGreaterThanOrEqual(400, $walled[0], "⛔ দফা ১৮: {$door}-এ অন্যের ডিলার খুলে গেল");
+            $this->assertSame($said($ask($missing)), $walled,
+                "⛔ দফা ১৮: {$door}-এ দেয়ালের ওপারের গ্রাহক আর না-থাকা গ্রাহক আলাদা উত্তর পান — কে আছেন জানা যায়");
+        }
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @param  array<string, mixed>  $extra @return array<string, mixed> — অ্যাপের `CollectionDraft.toPayload()`-এর আকারে */
