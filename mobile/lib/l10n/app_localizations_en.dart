@@ -256,10 +256,10 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get approvalsDelegationServerMissing =>
-      'Hand over from the phone is not on the server yet — tell the office.';
+      'Delegation from the phone is not on the server yet — tell the office.';
 
   @override
-  String get approvalsDelegationRevokeTitle => 'Revoke this hand over?';
+  String get approvalsDelegationRevokeTitle => 'Revoke this delegation?';
 
   @override
   String approvalsDelegationRevokeBody(String person) {
@@ -273,40 +273,42 @@ class AppL10nEn extends AppL10n {
   String get approvalsDelegationRevoke => 'Revoke';
 
   @override
-  String get approvalsDelegationRevoked => 'The hand over is revoked.';
+  String get approvalsDelegationRevoked => 'Delegation revoked.';
 
   @override
   String get approvalsDelegationRevokeFailed =>
-      'Could not revoke the hand over.';
+      'Could not revoke the delegation.';
 
   @override
-  String get approvalsDelegationNew => 'New hand over';
+  String get approvalsDelegationNew => 'New delegation';
 
   @override
   String get approvalsDelegationLoadFailedTitle => 'Could not load';
 
   @override
   String approvalsDelegationHeldHeading(int count) {
-    return 'Hand overs to me · $count';
+    return 'Delegated to me · $count';
   }
 
   @override
   String approvalsDelegationGivenHeading(int count) {
-    return 'Given by me · $count';
+    return 'Delegated by me · $count';
   }
 
   @override
-  String get approvalsDelegationNoneHeld => 'No hand over to you right now.';
+  String get approvalsDelegationNoneHeld =>
+      'No one has delegated to you right now.';
 
   @override
-  String get approvalsDelegationEmptyTitle => 'No hand overs';
+  String get approvalsDelegationEmptyTitle => 'No delegations';
 
   @override
   String get approvalsDelegationEmptyMessage =>
-      'Going on leave? Tap \"New hand over\" to let someone sign for you.';
+      'Going on leave? Tap \"New delegation\" to let someone sign for you.';
 
   @override
-  String get approvalsDelegationNoneGiven => 'You have not made any hand over.';
+  String get approvalsDelegationNoneGiven =>
+      'You have not delegated to anyone.';
 
   @override
   String get approvalsDelegationStateRevoked => 'Revoked';
@@ -326,13 +328,13 @@ class AppL10nEn extends AppL10n {
   String get approvalsDelegationAllWork => 'All work';
 
   @override
-  String get approvalsDelegationChooseWho => 'Choose who to hand over to.';
+  String get approvalsDelegationChooseWho => 'Choose who to delegate to.';
 
   @override
-  String get approvalsDelegationSaved => 'Hand over saved.';
+  String get approvalsDelegationSaved => 'Delegation saved.';
 
   @override
-  String get approvalsDelegationSaveFailed => 'Could not save the hand over.';
+  String get approvalsDelegationSaveFailed => 'Could not save the delegation.';
 
   @override
   String get approvalsDelegationTo => 'To whom';
@@ -361,7 +363,7 @@ class AppL10nEn extends AppL10n {
   String get approvalsDelegationSaving => 'Saving…';
 
   @override
-  String get approvalsDelegationSave => 'Hand over';
+  String get approvalsDelegationSave => 'Delegate';
 
   @override
   String get approvalsQueueTabToSign => 'Awaiting signature from me';
