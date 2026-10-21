@@ -408,3 +408,21 @@ P3.2 app/Modules/Hr/Services/LeaveService.php (cancel)
 
 P3.3 app/Modules/Hr/Services/LeaveService.php (stampAttendance is only called on approve) — EQUIVALENT check not applicable:
   no code recomputes approved leaves; the claim is that nothing does. A mutant that would rewrite them does not exist in the code to mutate.
+
+== P4 — EARNED days_per_year to 0 for existing companies (data command) ==
+K = tests/Feature/Modules/Hr/EarnedLeaveDaysGoToZeroOnceTest.php
+
+P4.1 app/Console/Commands/EarnedLeaveDaysToZero.php
+  old: if (! $dry) {
+  new: if (true) {
+  kill: K::test_dry_lists_then_the_real_run_writes_the_old_value_to_the_audit_once (--dry writes)
+
+P4.2 app/Console/Commands/EarnedLeaveDaysToZero.php
+  old: foreach (LeaveType::query()->where('code', LeaveType::EARNED)->where('days_per_year', '!=', 0)->get() as $type) {
+  new: foreach (LeaveType::query()->where('days_per_year', '!=', 0)->get() as $type) {
+  kill: K (CASUAL 10 becomes 0)
+
+P4.3 app/Console/Commands/EarnedLeaveDaysToZero.php
+  old: $type->forceFill(['days_per_year' => 0])->save();
+  new: LeaveType::query()->whereKey($type->id)->update(['days_per_year' => 0]);
+  kill: K (no audit row with the old value — a query update skips the model events)
