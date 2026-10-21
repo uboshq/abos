@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { amountOf, balanceOf, fillOldestFirst, rowOf, shortDate } from './collection-math.js'
+import { amountOf, balanceOf, fillOldestFirst, rowOf, shortDate, signedApply } from './collection-math.js'
 
 /*
  * ⭐ টাকা নেওয়ার পর্দার হিসাব — মালিকের নকশা ১০০, পাতা ২ (২১ অক্টোবর ২০২৬)।
@@ -33,6 +33,31 @@ describe('টাকা নেওয়া — দফা ৩: পুরনো আ
         expect(b.unapplied).toBe(0)
         expect(b.openTotal).toBe(51200)
         expect(b.balanced).toBe(true)
+    })
+
+    it('দফা ৩ — টাকা ফুরালে থামে: পুরনোটা পুরো, পরেরটা যতটুকু, বাকিগুলো টিকহীন (পুরনো invoiceCollection-এর দাবি)', () => {
+        const rows = fillOldestFirst([design()[0], design()[1], design()[3]], 35000)
+
+        expect(rows.map(r => [r.no, r.on, r.apply])).toEqual([
+            ['INV-0094', true, '30000.00'],
+            ['INV-0101', true, '5000.00'],
+            ['INV-0112', false, ''],
+        ])
+    })
+
+    it('দফা ৩ — টাকা না থাকলে কোনো বিলে বসে না', () => {
+        const rows = fillOldestFirst([design()[0], design()[1]], 0)
+
+        expect(rows.every(r => r.on === false && r.apply === '')).toBe(true)
+    })
+
+    it('দফা ৩ — সার্ভারে যায় ক্রেডিট ঋণাত্মক, বিল ধনাত্মক — হাতে "2000" লিখলেও (a4-এর প্রশ্ন ১)', () => {
+        const [bill, , cn] = design()
+
+        expect(signedApply({ ...cn, apply: '2000' })).toBe('-2000.00')
+        expect(signedApply({ ...cn, apply: '-2,000' })).toBe('-2000.00')
+        expect(signedApply({ ...bill, apply: '-30000' })).toBe('30000.00')
+        expect(signedApply({ ...bill, apply: '' })).toBe('0.00')
     })
 
     it('দফা ৩ — বিল না থাকলে ক্রেডিট বসে না (ক্রেডিট কেবল এই কাগজের বিলে)', () => {

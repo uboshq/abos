@@ -84,6 +84,16 @@ export function fillOldestFirst (rows, gross) {
 }
 
 /**
+ * সার্ভারে পাঠানোর অঙ্ক — ক্রেডিটের সারি ঋণাত্মক, বাকিগুলো ধনাত্মক (a4-এর প্রশ্ন ১-এর উত্তর; সার্ভার চিহ্ন না মিললে ফেরায়)।
+ * ⓘ ক্রেডিটের ঘরে কেউ হাতে "2000" লিখলেও "-2000.00" যায়; খালি বা শূন্য হলে "0.00"।
+ */
+export function signedApply (row) {
+    const n = Math.abs(amountOf(row.apply))
+
+    return (row.credit && n > 0 ? -n : n).toFixed(2)
+}
+
+/**
  * সারাংশের হিসাব — দফা ৪। প্রয়োগ = বাছা সারির যোগ (ক্রেডিট ঋণাত্মক), অপ্রয়োগকৃত = পাওনা থেকে যা কমবে − প্রয়োগ।
  */
 export function balanceOf ({ amount, vds, ait, discount, rounding }, rows) {

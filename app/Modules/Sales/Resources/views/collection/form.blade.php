@@ -9,7 +9,8 @@
 --}}
 @php
     $isNew = ! $collection->exists;
-    $money = fn ($v) => $v === null || $v === '' ? '' : number_format((float) $v, 2, '.', '');
+    // ⛔ টাকা কখনো float নয় — bcmath-এর গোল ([[MoneyIsNeverAFloatTest]]); কমা ছাড়া, ঘরে বসানোর লেখা
+    $money = fn ($v) => $v === null || $v === '' ? '' : \App\Core\Support\Money::round((string) $v, 2);
 
     // ⓘ টাকার খাতের ধরন — `data-kind`, cb-র পদ্ধতির ব্লক খাত দেখে পদ্ধতি সরায় ([[moneyMethod]])
     $kinds = $accounts->mapWithKeys(fn ($a) => [$a->id => in_array($a->money_kind, ['cash', 'bank', 'mfs'], true) ? $a->money_kind : 'cash'])->all();
@@ -75,6 +76,7 @@
         'rounding' => $differenceKind === 'rounding' ? (string) $differenceAmount : '',
         'method' => (string) old('instrument', $collection->instrument ?? 'cash'),
         'monthOpen' => (bool) $monthOpen,
+        'branch' => $branchName,
         'urls' => [
             'openItems' => route('sales.collection.open_items'),
             'preview' => route('sales.collection.preview'),
@@ -129,7 +131,7 @@
                 <p class="mt-1 text-sm text-(--color-ink-muted)" data-collection-facts>
                     {{ __('sales::collection_form.number') }}: {{ $isNew ? __('sales::collection_form.number_on_save') : $collection->document_no }}
                     · {{ __('sales::collection_form.made_by') }}: {{ $maker ?? '—' }}
-                    · {{ __('sales::collection_form.branch') }}: {{ __('sales::collection_form.customers_branch') }}@if ($branchName) ({{ $branchName }})@endif
+                    · {{ __('sales::collection_form.branch') }}: {{ __('sales::collection_form.customers_branch') }}<span data-customer-branch x-text="branchText">@if ($branchName) ({{ $branchName }})@endif</span>
                     · <span data-month-open x-show="monthOpen">{{ __('sales::collection_form.month_open') }}</span><span data-month-closed x-show="!monthOpen" x-cloak class="text-(--color-danger)">{{ __('sales::collection_form.month_closed') }}</span>
                 </p>
             </div>
@@ -262,7 +264,7 @@
                                                   class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)"></span>
                                             <input type="hidden" :name="'lines[' + i + '][kind]'" :value="row.kind" :disabled="!row.on">
                                             <input type="hidden" :name="'lines[' + i + '][id]'" :value="row.id" :disabled="!row.on">
-                                            <input type="hidden" :name="'lines[' + i + '][amount]'" :value="row.apply" :disabled="!row.on">
+                                            <input type="hidden" :name="'lines[' + i + '][amount]'" :value="sent(row)" :disabled="!row.on">
                                         </td>
                                         <td x-text="row.date"></td>
                                         <td x-text="row.dueDate"></td>
@@ -437,7 +439,10 @@
                     <p class="rounded-(--radius-field) border-s-4 border-(--color-brand-500) bg-(--color-badge-info-bg) px-3 py-2 text-sm text-(--color-badge-info-ink)">
                         {{ $collectionSigned ? __('sales::collection_form.controls_on') : __('sales::collection_form.controls_off') }}
                     </p>
-                    <p class="mt-2 text-sm">{{ __('sales::collection_form.controls_bounce') }}</p>
+                    <p class="mt-2 flex items-center gap-1.5 text-sm" data-controls-bounce>
+                        <x-ui.icon name="undo" :size="16" />
+                        <span>{{ __('sales::collection_form.controls_bounce') }}</span>
+                    </p>
                 </section>
             </div>
         </div>

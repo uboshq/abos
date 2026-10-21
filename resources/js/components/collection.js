@@ -7,7 +7,7 @@
  * প্রতিটা বদলে [[recalc]] সাধারণ ঘরগুলো নতুন করে লেখে।
  * ⓘ টাকা ইংরেজি অঙ্কে, লাখ-কোটির কমায় ([[taka]] — সার্ভারের Money::format-এর একই লেখা)।
  */
-import { amountOf, balanceOf, cents, fillOldestFirst, rowOf } from './collection-math.js'
+import { amountOf, balanceOf, cents, fillOldestFirst, rowOf, signedApply } from './collection-math.js'
 import { taka } from './money.js'
 
 export function collectionForm (config = {}) {
@@ -19,6 +19,8 @@ export function collectionForm (config = {}) {
         items: [],
         due: 0,
         facts: '',
+        // ⓘ মাথার "শাখা: গ্রাহকের শাখা (…)" — গ্রাহক বদলালে তাঁর শাখা (দফা ১৪)
+        branchText: config.branch ? ' (' + String(config.branch) + ')' : '',
         monthOpen: config.monthOpen !== false,
 
         amount: String(config.amount ?? ''),
@@ -66,6 +68,7 @@ export function collectionForm (config = {}) {
             this.due = open ? amountOf(open.due) : 0
             this.monthOpen = open ? open.month_open !== false : this.monthOpen
             this.facts = open ? this.factsOf(open.customer ?? {}) : ''
+            this.branchText = open && (open.customer ?? {}).branch ? ' (' + String(open.customer.branch) + ')' : ''
 
             for (const line of chosen) {
                 const row = this.items.find(r => r.id === String(line.id))
@@ -150,6 +153,11 @@ export function collectionForm (config = {}) {
         typed () {
             this.manual = true
             this.recalc()
+        },
+
+        /** সার্ভারে যা যায় — ক্রেডিটের সারি সবসময় ঋণাত্মক, বিল ধনাত্মক (সার্ভার চিহ্ন না মিললে ফেরায়; হাতে "2000" লিখলেও) */
+        sent (row) {
+            return signedApply(row)
         },
 
         /** "পুরো বকেয়া" — বকেয়াটাই টাকার ঘরে, তারপর পুরনো আগে */

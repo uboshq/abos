@@ -472,73 +472,11 @@ export function salesReturn (config = {}) {
     }
 }
 
-export function invoiceCollection (config = {}) {
-    return {
-                    /*
-                     * গ্রাহকের নম্বরটা এখানেই রাখা, বাইরের কোনো
-                     * `x-data` থেকে ধার করা নয়।
-                     *
-                     * Alpine-এ ভেতরের কম্পোনেন্ট বাইরেরটার ঘর পড়তে
-                     * পারে, কিন্তু সেটা নির্ভর করে স্কোপ-চেইনের উপর —
-                     * আর একদিন কেউ মাঝখানে আরেকটা `x-data` বসালে
-                     * তালিকাটা নীরবে খালি হয়ে যেত। ঘটনাটা নিজের সাথে
-                     * নম্বরটা বয়ে আনে, তাই মাঝখানে কী আছে তাতে কিছু
-                     * আসে যায় না।
-                     */
-                    customerId: config.customerId,
-                    rows: config.rows,
-                    open: config.open,
-                    add() { this.rows.push({ sales_invoice_id: '', amount: '' }); },
-                    remove(i) { this.rows.splice(i, 1); if (this.rows.length === 0) this.add(); },
-                    /* এই গ্রাহকের বিলগুলোই — গ্রাহক না বাছা থাকলে কিছুই নয়,
-                       কারণ কার টাকা তা না জেনে বিল বাছার কোনো মানে নেই। */
-                    get mine() {
-                        return this.customerId
-                            ? this.open.filter(o => o.customer_id === String(this.customerId))
-                            : [];
-                    },
-                    /* বিল বাছলে তার বকেয়াটাই বসে — মানুষ প্রায় সবসময়
-                       পুরোটাই নেন, আর টাইপ করা মানে টাইপের ভুল। */
-                    fillDue(row) {
-                        const found = this.open.find(o => o.id === String(row.sales_invoice_id));
-                        if (found) { row.amount = found.due; }
-                    },
-                    get allocated() {
-                        return this.rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-                    },
-
-        init() {
-            if (this.rows.length === 0) this.add();
-        },
-
-        /*
-         * ⭐ পুরনো বিল আগে — উপরের "টাকা" ঘরের অঙ্ক বয়সের ক্রমে, প্রতিটা বিলে যতটুকু বাকি ততটুকুই (Accounts-Finance অডিট
-         * ম১, ৫ অক্টোবর ২০২৬: এক টাকায় বহু বিল এখন কেবল এই পর্দায়, রসিদে একটাই বিল)। ⚠️ টাকা ফুরালে বাকি বিল বসে না —
-         * শূন্যের সারি "ভাগ হয়েছে" দেখাত অথচ কিছুই বসেনি। ⓘ আসল পাহারা সার্ভারে: বিলে বাকির বেশি নয়, মোটে টাকার বেশি নয়।
-         */
-        oldestFirst() {
-            let left = parseFloat(this.$root.closest('form')?.querySelector('[name="amount"]')?.value) || 0;
-            const bills = this.mine
-                .filter(o => (parseFloat(o.due) || 0) > 0)
-                .sort((a, b) => (a.date === b.date ? Number(a.id) - Number(b.id) : (a.date < b.date ? -1 : 1)));
-
-            this.rows = [];
-            for (const o of bills) {
-                if (left <= 0.0001) break;
-                const take = Math.min(left, parseFloat(o.due) || 0);
-                this.rows.push({ sales_invoice_id: o.id, amount: take.toFixed(2) });
-                left -= take;
-            }
-            if (this.rows.length === 0) this.add();
-        },
-
-        /* ক্রেতা বদলালে বাছা বিলগুলোও মোছে — অন্যের বিলে টাকা বসবে না */
-        pickCustomer(id) {
-            this.customerId = id;
-            this.rows.forEach(r => { r.sales_invoice_id = ''; r.amount = ''; });
-        },
-    }
-}
+/*
+ * ⓘ পুরনো আদায়-ফর্মের `invoiceCollection` ("লাইন / আরেকটা লাইন", পুরনো বিল আগে) সরানো হলো — a6, ২১ অক্টোবর ২০২৬।
+ * টাকা নেওয়ার নকশা ১০০-এর পর্দা নিজের মগজে ([[collectionForm]], collection.js; পুরনো আগে [[fillOldestFirst]], collection-math.js)।
+ * আর কোনো পর্দা এটা ডাকত না, তাই এটা অনাথ হ্যান্ডলার হয়ে থাকত ([[EveryAlpineHandlerIsActuallyWiredTest]])।
+ */
 
 export function bulkSheet (config = {}) {
     return {
