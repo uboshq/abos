@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -47,6 +48,8 @@ use Tests\TestCase;
 final class TaxIsDeductedAtSourceOnlyByTheSlabsTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private const SLABS = '350000:0, 100000:5, 400000:10, 500000:15, 500000:20, 2000000:25, *:30';
 
@@ -110,7 +113,7 @@ final class TaxIsDeductedAtSourceOnlyByTheSlabsTest extends TestCase
         $this->employee('TX-A', '61234.56');
         $this->employee('TX-B', '200000');
 
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $sum = $this->tdsLines($run)->reduce(fn ($c, $l) => bcadd($c, (string) $l->amount, 4), '0');
         $this->assertSame(0, bccomp($this->posted($run, StandardChart::TDS_PAYABLE, 'credit'), $sum, 4),
@@ -127,10 +130,10 @@ final class TaxIsDeductedAtSourceOnlyByTheSlabsTest extends TestCase
         $this->slabsOn();
         $a = $this->employee('TX-A', '61234.56');
 
-        $july = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
-        $august = $this->payroll()->confirm($this->payroll()->build('2026-08-01'));
+        $july = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
+        $august = $this->confirmedPayroll($this->payroll()->build('2026-08-01'));
         // ⓘ জুন আগের আয়ের বছরের — সনদে আসে না
-        $june = $this->payroll()->confirm($this->payroll()->build('2026-06-01'));
+        $june = $this->confirmedPayroll($this->payroll()->build('2026-06-01'));
 
         $certificate = app(SalaryTax::class)->certificate($a, 2026);
 

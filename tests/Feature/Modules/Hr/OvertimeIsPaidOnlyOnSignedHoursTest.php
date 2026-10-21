@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -45,6 +46,8 @@ use Tests\TestCase;
 final class OvertimeIsPaidOnlyOnSignedHoursTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private Company $company;
 
@@ -98,7 +101,7 @@ final class OvertimeIsPaidOnlyOnSignedHoursTest extends TestCase
         $slip = $run->payslips()->where('employee_id', $worker->id)->firstOrFail();
         $this->assertSame(0, bccomp((string) $slip->gross, '24528.12', 4), '⛔ মোট আয়ে অধিকাল নেই।');
 
-        $run = $this->payroll()->confirm($run);
+        $run = $this->confirmedPayroll($run);
         $earned = PayslipLine::query()->whereIn('payslip_id', $run->payslips()->select('id'))->where('kind', SalaryHead::EARNING)->sum('amount');
         $this->assertSame(0, bccomp($this->posted($run, StandardChart::SALARY_EXPENSE, 'debit'), bcadd((string) $earned, '0', 4), 4),
             '⛔ খাতার বেতন-খরচ বেতনের স্লিপের আয়ের সমান নয়।');

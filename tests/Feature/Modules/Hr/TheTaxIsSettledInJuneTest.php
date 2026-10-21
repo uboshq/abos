@@ -22,6 +22,7 @@ use App\Modules\MasterData\Services\MasterListService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -36,6 +37,8 @@ use Tests\TestCase;
 final class TheTaxIsSettledInJuneTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private const SLABS = '350000:0, 100000:5, 400000:10, 500000:15, 500000:20, 2000000:25, *:30';
 
@@ -73,17 +76,17 @@ final class TheTaxIsSettledInJuneTest extends TestCase
 
         // ⓘ জুন ২০২৫ আগের আয়ের বছরের — জুন ২০২৬-এর সমন্বয়ে আসবে না
         foreach (['2025-06', '2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12'] as $month) {
-            $payroll->confirm($payroll->build($month.'-01'));
+            $this->confirmedPayroll($payroll->build($month.'-01'));
         }
 
         app(SettingsService::class)->set(SalaryTax::SLABS, self::SLABS);
 
         foreach (['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'] as $month) {
-            $run = $payroll->confirm($payroll->build($month.'-01'));
+            $run = $this->confirmedPayroll($payroll->build($month.'-01'));
             $this->assertSame('3470.5100', $this->tdsOf($run), '⛔ মাসিক আনুমানিক ভাগ ৩৪৭০.৫১ নয়।');
         }
 
-        $payroll->confirm($payroll->buildBonus('2026-04-10'));
+        $this->confirmedPayroll($payroll->buildBonus('2026-04-10'));
 
         $june = $payroll->build('2026-06-01');
         $this->assertSame('20211.2300', $this->tdsOf($june), '⛔ জুনের সমন্বয় বছরের আসল আয়ের উপর নয়।');
@@ -102,7 +105,7 @@ final class TheTaxIsSettledInJuneTest extends TestCase
         app(SettingsService::class)->set(SalaryTax::SLABS, self::SLABS);
 
         foreach (['2025-07', '2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05'] as $month) {
-            $payroll->confirm($payroll->build($month.'-01'));
+            $this->confirmedPayroll($payroll->build($month.'-01'));
         }
 
         // ⓘ ভাতা ধরা হয়েছিল, দেওয়া হয়নি — ১১ × ৩৪৭০.৫১ = ৩৮১৭৫.৬১, বছরের কর ৩৩৪৮১.৪৭

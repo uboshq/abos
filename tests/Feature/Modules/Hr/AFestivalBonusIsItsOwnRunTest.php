@@ -22,6 +22,7 @@ use App\Modules\MasterData\Services\MasterListService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -38,6 +39,8 @@ use Tests\TestCase;
 final class AFestivalBonusIsItsOwnRunTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private Company $company;
 
@@ -145,7 +148,7 @@ final class AFestivalBonusIsItsOwnRunTest extends TestCase
         $this->employee('BN-A', '2025-03-01', '23456.78');
         $this->employee('BN-C', '2025-04-10', '30000.01');
 
-        $run = $this->payroll()->confirm($this->payroll()->buildBonus('2026-04-10'));
+        $run = $this->confirmedPayroll($this->payroll()->buildBonus('2026-04-10'));
 
         $slips = $run->payslips()->get();
         $gross = $slips->reduce(fn ($c, $s) => bcadd($c, (string) $s->gross, 4), '0');
@@ -166,7 +169,7 @@ final class AFestivalBonusIsItsOwnRunTest extends TestCase
     public function test_a_confirmed_bonus_does_not_close_the_months_attendance(): void
     {
         $a = $this->employee('BN-A', '2025-03-01', '23456.78');
-        $this->payroll()->confirm($this->payroll()->buildBonus('2026-04-10'));
+        $this->confirmedPayroll($this->payroll()->buildBonus('2026-04-10'));
 
         // ⓘ ভাতা হাজিরা পড়ে না — মাসের বেতন এখনো বাকি, তাই এপ্রিলের হাজিরা খোলা ([[PaidMonth]])
         $day = app(\App\Modules\Hr\Services\AttendanceService::class)->mark($a, '2026-04-15', 'present');

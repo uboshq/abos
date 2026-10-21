@@ -30,6 +30,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -47,6 +48,8 @@ use Tests\TestCase;
 final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private Company $company;
 
@@ -74,7 +77,7 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         $a = $this->employee('PF-A', '23456.78', '10');
         $b = $this->employee('PF-B', '17777.77', '7.5');
 
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $employer = $this->linesOf($run, PayslipLine::EMPLOYER);
         $this->assertCount(2, $employer, '⛔ প্রতিজনের প্রতিষ্ঠানের ভাগ একটা সারি হয়ে বসার কথা।');
@@ -105,7 +108,7 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
     {
         $this->employee('PF-A', '20000', '10');
 
-        $run = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $run = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $this->assertCount(0, $this->linesOf($run, PayslipLine::EMPLOYER), '⛔ সুইচ বন্ধ, অথচ প্রতিষ্ঠানের ভাগ বসল।');
         $this->assertSame(0, bccomp($this->posted($run, StandardChart::PF_EMPLOYER_EXPENSE, 'debit'), '0', 4));
@@ -187,8 +190,8 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         $this->fundOn();
         $member = $this->employee('PF-A', '23456.78', '8');
 
-        $july = $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
-        $august = $this->payroll()->confirm($this->payroll()->build('2026-08-01'));
+        $july = $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
+        $august = $this->confirmedPayroll($this->payroll()->build('2026-08-01'));
 
         $ledger = app(ProvidentFund::class)->ledgerOf($member);
         $this->assertCount(2, $ledger);
@@ -215,7 +218,7 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
     {
         $this->fundOn();
         $member = $this->employee('PF-A', '20000', '8');
-        $this->payroll()->confirm($this->payroll()->build('2026-07-01'));
+        $this->confirmedPayroll($this->payroll()->build('2026-07-01'));
 
         $clerk = $this->member(['hr.employee.view', 'hr.payroll.view']);
         $this->actingAs($clerk);

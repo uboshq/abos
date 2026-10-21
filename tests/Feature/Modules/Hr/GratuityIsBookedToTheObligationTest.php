@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -45,6 +46,8 @@ use Tests\TestCase;
 final class GratuityIsBookedToTheObligationTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private Company $company;
 
@@ -105,11 +108,11 @@ final class GratuityIsBookedToTheObligationTest extends TestCase
         $this->staff();
         $payroll = app(PayrollService::class);
 
-        $payroll->confirm($payroll->build('2026-06-01'));
+        $this->confirmedPayroll($payroll->build('2026-06-01'));
         $this->assertSame(0, GratuityProvision::query()->count(), '⛔ সুইচ বন্ধ, অথচ সঞ্চিতি বসল।');
 
         app(SettingsService::class)->set(Gratuity::ENABLED, true);
-        $payroll->confirm($payroll->build('2026-07-01'));
+        $this->confirmedPayroll($payroll->build('2026-07-01'));
         $this->assertSame(0, bccomp($this->liability(), $this->obligationOn('2026-07-31'), 4), '⛔ বেতন নিশ্চিত হলো, সঞ্চিতি বসেনি।');
     }
 

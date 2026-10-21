@@ -22,6 +22,7 @@ use App\Modules\Hr\Services\SalaryStructureService;
 use App\Modules\MasterData\Services\MasterListService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\SignsTheSecondHand;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,8 @@ use Tests\TestCase;
 final class EveryNewPayListEndsInATotalTest extends TestCase
 {
     use RefreshDatabase;
+    // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+    use SignsTheSecondHand;
 
     private Company $company;
 
@@ -75,8 +78,8 @@ final class EveryNewPayListEndsInATotalTest extends TestCase
         app(SettingsService::class)->set(ProvidentFund::ENABLED, true);
         $a = $this->employee('TT-A', '23456.78', '8');
         $payroll = app(PayrollService::class);
-        $payroll->confirm($payroll->build('2026-07-01'));
-        $payroll->confirm($payroll->build('2026-08-01'));
+        $this->confirmedPayroll($payroll->build('2026-07-01'));
+        $this->confirmedPayroll($payroll->build('2026-08-01'));
 
         // ⓘ দুই মাস × (১৮৭৬.৫৪ + ১৮৭৬.৫৪)
         $this->get(route('hr.employee.show', $a))->assertOk()
