@@ -89,7 +89,12 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         $bigSvg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/><desc>'.str_repeat('x', 1100 * 1024).'</desc></svg>';
         $refused = [
             'ছবি নয় (PDF)' => UploadedFile::fake()->create('logo.pdf', 20, 'application/pdf'),
-            'ছবি নয় (লেখা)' => UploadedFile::fake()->createWithContent('logo.png', 'just some text, not a picture'),
+            /*
+             * ⓘ আসল ফাইল, নকল (`fake()`) নয় — নকল ফাইল ধরন বলে নামের শেষাংশ দেখে ("logo.png" → image/png), ভেতর দেখে না; আসল
+             * ব্রাউজারের তোলা ফাইলের ধরন Laravel ভেতর পড়ে ঠিক করে (text/plain)। নকলে দরজার `image` নিয়মটাই এড়িয়ে যেত, আর
+             * মাপা হত না যা মানুষ পাঠায় (run e, ২২ অক্টোবর ২০২৬)।
+             */
+            'ছবি নয় (লেখা)' => $this->realUpload('logo.png', 'just some text, not a picture'),
             '১ MB-র বড় SVG' => UploadedFile::fake()->createWithContent('big.svg', $bigSvg),
             '১২ MB-র বড় ছবি' => UploadedFile::fake()->image('big.png', 200, 80)->size(13000),
             'SVG নামে অন্য জিনিস' => UploadedFile::fake()->createWithContent('page.svg', '<html><body><script>alert(1)</script></body></html>'),
@@ -207,6 +212,15 @@ final class ALogoCouldCarryAScriptTest extends TestCase
         $type === 'png' ? imagepng($image, $path, 9) : imagejpeg($image, $path, 80);
 
         return $path;
+    }
+
+    /** আসল একটা ফাইল তোলা — ধরন ঠিক হয় ভেতর পড়ে, যেমন ব্রাউজারের পাঠানো ফাইলে */
+    private function realUpload(string $name, string $content): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'logo');
+        file_put_contents($path, $content);
+
+        return new UploadedFile($path, $name, null, null, true);
     }
 
     private function send(User $who, UploadedFile $logo): \Illuminate\Testing\TestResponse
