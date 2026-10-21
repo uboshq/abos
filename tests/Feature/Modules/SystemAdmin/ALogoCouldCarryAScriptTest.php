@@ -103,7 +103,10 @@ final class ALogoCouldCarryAScriptTest extends TestCase
              * স্মৃতিতে এটা array, আসল অনুরোধে সবসময় ViewErrorBag (Mac-এ "has() on array", ২১ অক্টোবর ২০২৬)। দুই রূপই পড়া হয়।
              */
             $errors = session('errors');
-            $has = $errors instanceof \Illuminate\Support\ViewErrorBag ? $errors->has('logo') : array_key_exists('logo', (array) $errors);
+            // ⛔ array রূপে ঘরটা উপরের চাবি নয় — `['default' => ['format' => …, 'messages' => ['logo' => […]]]]` (run e-তে ধরা)
+            $has = $errors instanceof \Illuminate\Support\ViewErrorBag
+                ? $errors->has('logo')
+                : ! empty(((array) $errors)['default']['messages']['logo'] ?? null);
             $this->assertTrue($has, "⛔ {$what}: লোগোর ঘরে ভুলের বার্তা নেই — দরজা ফেরায়নি।");
 
             // ⭐ আর পাতাটা আবার খুললে ভুলসহ আঁকা হয়, ৫০০ নয় — Blade-এর `$errors` আসল থলে পায় (fe-র প্রশ্ন, ২১ অক্টোবর ২০২৬)
