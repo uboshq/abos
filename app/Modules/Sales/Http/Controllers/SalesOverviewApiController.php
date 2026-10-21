@@ -73,15 +73,15 @@ final class SalesOverviewApiController extends Controller implements HasMiddlewa
                 ) : null,
             ])),
             'listings' => array_values(array_filter([
-                isset($panels['top_customers']) ? $this->listing(__('sales::overview.panel.top_customers'), $panels['top_customers'], ['name', 'count', 'net', 'share'], $totals['top_customers'] ?? null) : null,
+                isset($panels['top_customers']) ? $this->listing(__('sales::overview.panel.top_customers'), $panels['top_customers'], ['name', 'count', 'net', 'amount', 'share'], $totals['top_customers'] ?? null) : null,
                 isset($panels['top_products']) ? $this->listing(__('sales::overview.panel.top_products'), $panels['top_products'], ['product', 'qty', 'revenue'], $totals['top_products'] ?? null) : null,
                 isset($panels['slow_products']) ? $this->listing(__('sales::overview.panel.slow_products'), $panels['slow_products'], ['product', 'qty', 'revenue'], $totals['slow_products'] ?? null) : null,
-                isset($panels['by_seller']) ? $this->listing(__('sales::overview.panel.by_seller'), $panels['by_seller'], ['name', 'count', 'net', 'share'], $totals['by_seller'] ?? null) : null,
+                isset($panels['by_seller']) ? $this->listing(__('sales::overview.panel.by_seller'), $panels['by_seller'], ['name', 'count', 'net', 'amount', 'share'], $totals['by_seller'] ?? null) : null,
                 isset($panels['by_territory']) ? $this->listing(
                     __('sales::overview.panel.by_territory', ['level' => __('master_data::level.'.$panels['by_territory']['level'])]),
-                    $panels['by_territory']['rows'], ['name', 'count', 'net', 'share'], $totals['by_territory'] ?? null,
+                    $panels['by_territory']['rows'], ['name', 'count', 'net', 'amount', 'share'], $totals['by_territory'] ?? null,
                 ) : null,
-                isset($panels['by_branch']) ? $this->listing(__('sales::overview.panel.by_branch'), $panels['by_branch'], ['name', 'count', 'net', 'share'], $totals['by_branch'] ?? null) : null,
+                isset($panels['by_branch']) ? $this->listing(__('sales::overview.panel.by_branch'), $panels['by_branch'], ['name', 'count', 'net', 'amount', 'share'], $totals['by_branch'] ?? null) : null,
             ])),
         ])->header('Cache-Control', 'no-store');
     }
@@ -142,7 +142,11 @@ final class SalesOverviewApiController extends Controller implements HasMiddlewa
         return [
             'label' => $label,
             'empty' => __('sales::overview.empty'),
-            'columns' => array_map(fn (string $c) => ['key' => $c, 'label' => __('sales::overview.col.'.$c)], $columns),
+            /*
+             * ⚠️ `amount` = `net`, একই নিট অঙ্ক — অ্যাপ ০.৪.৪১ পুরনো চাবি `amount` পড়ে, তাই দুইটাই যায় (fe, ২১ অক্টোবর ২০২৬);
+             * a4 ০.৪.৪৩-এ `amount` তুলে দেবে, তখন এখান থেকেও। ⓘ নামও একই — "নিট বিক্রি (VAT ও ফেরত বাদে)"।
+             */
+            'columns' => array_map(fn (string $c) => ['key' => $c, 'label' => __('sales::overview.col.'.($c === 'amount' && in_array('net', $columns, true) ? 'net' : $c))], $columns),
             'rows' => array_map(fn (array $row) => array_map(fn (string $c) => $value($row, $c), $columns),
                 array_slice($rows, 0, self::MAX_ROWS)),
             /*

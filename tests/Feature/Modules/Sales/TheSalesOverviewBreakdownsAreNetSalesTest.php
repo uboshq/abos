@@ -168,6 +168,59 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         $this->assertSame('Receivable rose this period', __('sales::overview.card.outstanding_up', [], 'en'));
     }
 
+    /**
+     * ⭐ ফোনের দরজা (fe আর a4, ২১ অক্টোবর ২০২৬): প্রতিটা তালিকার যোগ `listing.total`-এ (কলামের চাবি → লেখা), সারিতে নয়; টাকার
+     * প্রতিটা ঘর সারিগুলোর bcmath যোগ; আর অ্যাপ ০.৪.৪১-এর জন্য পুরনো চাবি `amount` নতুন `net`-এর পাশে, একই অঙ্কে।
+     */
+    public function test_the_phone_lists_carry_their_total_apart_and_keep_the_old_amount_key(): void
+    {
+        $this->fixture();
+        $this->web($this->owner);
+        $panels = $this->get(route('sales.overview', ['period' => 'today']))->assertOk()->viewData('panels');
+        $listings = collect($this->phone()->json('listings'))->keyBy('label');
+
+        $territory = __('sales::overview.panel.by_territory', ['level' => __('master_data::level.'.$panels['by_territory']['level'])]);
+        $expected = [
+            __('sales::overview.panel.top_customers') => $panels['top_customers'],
+            __('sales::overview.panel.top_products') => $panels['top_products'],
+            __('sales::overview.panel.slow_products') => $panels['slow_products'],
+            __('sales::overview.panel.by_seller') => $panels['by_seller'],
+            $territory => $panels['by_territory']['rows'],
+            __('sales::overview.panel.by_branch') => $panels['by_branch'],
+        ];
+        $this->assertSame(array_keys($expected), $listings->keys()->all(), 'প্রস্তুতিটাই ভুল — ফোনে ঠিক এই ছয়টা তালিকা নেই।');
+        $money = fn (string $text) => bcadd(str_replace(',', '', $text), '0', 4);
+
+        foreach ($listings as $label => $listing) {
+            $keys = array_column($listing['columns'], 'key');
+            $this->assertArrayHasKey('total', $listing, "⛔ {$label}: যোগ `listing.total`-এ নেই।");
+            $this->assertSame($keys, array_keys($listing['total']), "⛔ {$label}: যোগের চাবি কলামের চাবি নয়।");
+
+            // ⓘ সারির সংখ্যা = তালিকার আসল সারি (দরজার সীমা ২০) — যোগের সারি সারিতে ঢোকেনি
+            $this->assertCount(min(count($expected[$label]), 20), $listing['rows'], "⛔ {$label}: সারির সংখ্যায় যোগের সারি ঢুকেছে, বা সারি বাদ পড়েছে।");
+            $this->assertNotContains($listing['total'][$keys[0]], array_column($listing['rows'], 0), "⛔ {$label}: যোগের সারি সাধারণ সারি হয়ে বসেছে।");
+
+            $rows = array_map(fn (array $r) => array_combine($keys, $r), $listing['rows']);
+            foreach (array_intersect($keys, ['net', 'amount', 'revenue']) as $column) {
+                $sum = array_reduce($rows, fn (string $s, array $r) => bcadd($s, $money($r[$column]), 4), '0.0000');
+                $this->assertSame(Money::format($sum), $listing['total'][$column], "⛔ {$label}: যোগের {$column} সারিগুলোর bcmath যোগ নয়।");
+            }
+            if (in_array('count', $keys, true)) {
+                $this->assertSame((string) array_sum(array_map(fn (array $r) => (int) $r['count'], $rows)), $listing['total']['count'],
+                    "⛔ {$label}: বিলের সংখ্যার যোগ ভুল।");
+            }
+
+            // ⓘ পুরনো অ্যাপের চাবি — যেখানে `net`, সেখানে `amount`-ও, প্রতিটা সারিতে আর যোগে একই নিট
+            if (in_array('net', $keys, true)) {
+                $this->assertContains('amount', $keys, "⛔ {$label}: পুরনো চাবি `amount` নেই — অ্যাপ ০.৪.৪১ ভাঙবে।");
+                foreach ($rows as $r) {
+                    $this->assertSame($r['net'], $r['amount'], "⛔ {$label}: `amount` আর `net` দুই অঙ্ক।");
+                }
+                $this->assertSame($listing['total']['net'], $listing['total']['amount'], "⛔ {$label}: যোগে `amount` আর `net` দুই অঙ্ক।");
+            }
+        }
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
     /** @return array{0: SalesInvoice, 1: SalesReturn} বিল ১,১০,০০০ (VAT ১০,০০০) আর আংশিক ফেরত ১১,০০০ (VAT ১,০০০), দুইটাই আজ, খাতায় */
