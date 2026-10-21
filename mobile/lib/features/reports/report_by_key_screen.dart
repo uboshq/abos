@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/records/report_record.dart';
 import '../../core/widgets/empty_state.dart';
 import 'reports_screen.dart';
@@ -55,7 +57,7 @@ class _ReportByKeyScreenState extends State<ReportByKeyScreen> {
       });
     } catch (error) {
       if (mounted) {
-        setState(() => _error = errorMessageFor(error, fallback: 'রিপোর্ট আনা গেল না।'));
+        setState(() => _error = errorMessageFor(error, fallback: AppLocale.l10n.reportLoadFailed));
       }
     }
   }
@@ -68,7 +70,7 @@ class _ReportByKeyScreenState extends State<ReportByKeyScreen> {
     }
 
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.title.isEmpty ? 'রিপোর্ট' : widget.title),
+      appBar: AbosScreenBar(title: widget.title.isEmpty ? context.l10n.reportTitle : widget.title),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -77,15 +79,15 @@ class _ReportByKeyScreenState extends State<ReportByKeyScreen> {
               EmptyState(
                 key: const ValueKey('report-by-key-error'),
                 icon: Icons.cloud_off_outlined,
-                title: 'রিপোর্ট আনা গেল না',
+                title: context.l10n.reportLoadFailedTitle,
                 message: _error,
               )
             else if (_missing)
-              const EmptyState(
-                key: ValueKey('report-by-key-missing'),
+              EmptyState(
+                key: const ValueKey('report-by-key-missing'),
                 icon: Icons.lock_outline,
-                title: 'এই রিপোর্ট আপনার জন্য খোলা নেই',
-                message: 'রিপোর্টের চাবি নেই, অথবা এই মডিউল ফোনে বন্ধ। দরকার হলে অফিসে চাবি চেয়ে নিন।',
+                title: context.l10n.reportNotOpenForYou,
+                message: context.l10n.reportNotOpenHint,
               )
             else
               const Padding(

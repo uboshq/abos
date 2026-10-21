@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../api_client/api_client.dart';
 import '../api_client/network_errors.dart';
 import '../launcher_widgets/hub/widget_hub.dart';
+import '../locale/app_locale.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/reference_sync.dart';
@@ -100,11 +101,7 @@ class WorkspaceSwitcher {
     final movesWork = companyPublicId != currentCompanyPublicId || branch != allBranches;
     final pending = _pendingCount();
     if (movesWork && pending > 0) {
-      throw WorkspaceFailure(
-        'এই ফোনে $pending টি অর্ডার এখনো পাঠানো হয়নি। আগে ওগুলো পাঠান '
-        '(সিঙ্কের অবস্থা দেখুন), তারপর কোম্পানি বা শাখা বদলান — নইলে ওগুলো '
-        'নতুন জায়গার নামে বসবে।',
-      );
+      throw WorkspaceFailure(AppLocale.l10n.workspacePendingOrders(pending));
     }
 
     final Map<String, dynamic> body;
@@ -139,12 +136,11 @@ class WorkspaceSwitcher {
     final status = error.response?.statusCode;
     return errorMessageFor(
       error,
-      whenAbsent: 'সার্ভার এখনো অ্যাপ থেকে কোম্পানি বদলানো চেনে না। '
-          'সার্ভার হালনাগাদ হলে পারবেন; ততক্ষণ ওয়েব থেকে বদলান।',
+      whenAbsent: AppLocale.l10n.workspaceServerTooOld,
       fallback: switch (status) {
-        403 => 'এই কোম্পানিতে ঢোকার অনুমতি আপনার নেই।',
-        422 => 'এই শাখায় যাওয়া গেল না — শাখাটা আপনার নাগালে নেই, বা এই কোম্পানির নয়।',
-        _ => 'বদলানো গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+        403 => AppLocale.l10n.workspaceNoCompanyAccess,
+        422 => AppLocale.l10n.workspaceBranchOutOfReach,
+        _ => AppLocale.l10n.workspaceSwitchFailed,
       },
     );
   }

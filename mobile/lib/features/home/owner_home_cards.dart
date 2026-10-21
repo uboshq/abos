@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/approvals/approvals_api.dart';
+import '../../core/locale/app_locale.dart';
 import '../../core/records/approval_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/today_record.dart';
@@ -48,7 +49,7 @@ List<BranchSale>? branchSalesOf(TodayRecord today) {
 
 String _branchName(Map row) {
   final name = (row['branch'] ?? row['name'] ?? '').toString().trim();
-  return name.isEmpty ? 'শাখা নেই' : name;
+  return name.isEmpty ? AppLocale.l10n.homeNoBranch : name;
 }
 
 /// সারির যোগফল — পয়সায় গুনে, যাতে ভগ্নাংশের ভুল মোটে না জমে।
@@ -58,7 +59,7 @@ double sumOf(Iterable<double> values) => values.fold<int>(0, (sum, v) => sum + (
 String figureText(double? value) => value == null ? '—' : Money.taka(value);
 
 /// TalkBack-এর জন্য: "হাতে নগদ, ১২ হাজার টাকা"; না-আসা অঙ্কে "জানা নেই"।
-String figureSpoken(String label, double? value) => '$label, ${value == null ? 'জানা নেই' : Money.spoken(value)}';
+String figureSpoken(String label, double? value) => '$label, ${value == null ? AppLocale.l10n.homeNotKnown : Money.spoken(value)}';
 
 /// ── ১ · টাকার বড় কার্ড ──
 ///
@@ -114,7 +115,7 @@ class OwnerMoneyCard extends StatelessWidget {
             container: true,
             button: true,
             label: figureSpoken('MFS', money?.mfs),
-            hint: 'MFS খাতগুলো দেখুন',
+            hint: context.l10n.homeMfsAccountsHint,
             onTap: () => showMfsAccounts(context, mfsAccounts),
             excludeSemantics: true,
             child: InkWell(
@@ -133,24 +134,24 @@ class OwnerMoneyCard extends StatelessWidget {
           );
 
     final parts = [
-      cell('cash', 'হাতে নগদ', cash),
+      cell('cash', context.l10n.homeCashInHand, cash),
       mfsCell,
-      cell('bank', 'ব্যাংকে', money?.bank),
-      cell('transit', 'পথে', money?.transit),
+      cell('bank', context.l10n.homeInBank, money?.bank),
+      cell('transit', context.l10n.homeInTransit, money?.transit),
     ];
     final stock = today.stockValue;
     final l10n = context.l10n;
     final flows = [
       // ⓘ ইনফ্লোর নিচে তার আদায়ের ভাগ — ০.৪.৪০-এর "আদায় ৳…"
-      cell('in', 'আজ এসেছে', cameIn,
+      cell('in', l10n.homeCameInToday, cameIn,
           sign: cameIn != null && cameIn > 0 ? '+' : '',
           under: today.inflow != null && today.collections != null
-              ? 'আদায় ${figureText(today.collections!.amount)}'
+              ? l10n.homeCollectionAmount(figureText(today.collections!.amount))
               : null),
       // ⓘ নতুন অঙ্ক: পুরনো সার্ভার চাবিই পাঠায় না — তখন ঘরই নেই, "—" নয়
-      if (out != null) cell('out', 'আজ গেছে', out.amount, sign: (out.amount ?? 0) > 0 ? '-' : ''),
-      cell('dues', 'বাজারে বকেয়া', duesFigure?.amount,
-          under: duesFigure?.shops == null ? null : '${duesFigure!.shops} টি দোকান'),
+      if (out != null) cell('out', l10n.homeWentOutToday, out.amount, sign: (out.amount ?? 0) > 0 ? '-' : ''),
+      cell('dues', l10n.homeMarketDues, duesFigure?.amount,
+          under: duesFigure?.shops == null ? null : l10n.homeShopCount(duesFigure!.shops!)),
       // ⭐ বকেয়ার পাশে মজুদের মূল্য (মালিক, ২১ অক্টোবর ২০২৬) — সার্ভার না পাঠালে ঘরই নেই, "—"-ও নয়
       if (stock != null)
         onOpenStock == null
@@ -207,10 +208,10 @@ class OwnerMoneyCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Semantics(
                 container: true,
-                label: figureSpoken('হাতে ও ব্যাংকে মোট', money?.amount),
+                label: figureSpoken(context.l10n.homeCashAndBankTotal, money?.amount),
                 excludeSemantics: true,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('হাতে ও ব্যাংকে মোট', style: TextStyle(fontSize: 13, color: fg)),
+                  Text(context.l10n.homeCashAndBankTotal, style: TextStyle(fontSize: 13, color: fg)),
                   // ⓘ বড় অক্ষরে অঙ্ক মাঝখানে ভাঙে না — জায়গা না থাকলে কেবল এই এক লাইন ছোট হয়
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -247,7 +248,7 @@ Future<void> showMfsAccounts(BuildContext context, List<(String name, double? ba
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
             Semantics(
               header: true,
-              child: Text('MFS খাত',
+              child: Text(context.l10n.homeMfsAccounts,
                   style: TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
             ),
@@ -262,7 +263,7 @@ Future<void> showMfsAccounts(BuildContext context, List<(String name, double? ba
             Divider(height: 1, thickness: 2, color: context.palette.border),
             AmountLine(
                 key: const ValueKey('mfs-accounts-total'),
-                label: 'মোট',
+                label: context.l10n.todayTotal,
                 amount: sumOf([for (final a in accounts) if (a.$2 != null) a.$2!]),
                 total: true),
           ]),
@@ -404,8 +405,8 @@ class _WaitingPapersCardState extends State<WaitingPapersCard> {
     final count = widget.count;
     return HomeSectionCard(
       key: const ValueKey('waiting-papers'),
-      title: count == null ? 'সইয়ের অপেক্ষায়' : 'সইয়ের অপেক্ষায় · $countটি',
-      actionLabel: 'সব দেখুন',
+      title: count == null ? context.l10n.homeAwaitingSignature : context.l10n.homeAwaitingSignatureCount('$count'),
+      actionLabel: context.l10n.homeSeeAll,
       onAction: widget.onOpenAll,
       children: [
         FutureBuilder<ApprovalPage>(
@@ -413,13 +414,13 @@ class _WaitingPapersCardState extends State<WaitingPapersCard> {
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) return const LoadingSkeleton(rows: 2);
             if (snap.hasError) {
-              return ErrorState(message: 'সইয়ের কাগজ আনা গেল না। নেট দেখে আবার চেষ্টা করুন।', onRetry: _retry);
+              return ErrorState(message: context.l10n.homeWaitingLoadFailed, onRetry: _retry);
             }
             final rows = snap.data!.rows.take(widget.shown).toList();
             if (rows.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text('এখন কিছু সইয়ের অপেক্ষায় নেই।',
+                child: Text(context.l10n.homeNothingWaiting,
                     style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
               );
             }
@@ -565,17 +566,17 @@ class BranchSalesCard extends StatelessWidget {
       key: const ValueKey('branch-sales'),
       // ⓘ সার্ভার যা বলে তা-ই — নিট পাঠালে "নিট বিক্রি" (VAT আর ফেরত বাদে, IFRS 15); পুরনো সার্ভারের মোট বিল "আজ বিল হয়েছে"
       // ([TodayFigure.salesHeading]); নাম আর অঙ্ক কখনো আলাদা কথা বলে না
-      title: today.sales?.salesHeading ?? 'আজ বিল হয়েছে',
+      title: today.sales?.salesHeading ?? context.l10n.todayBilledToday,
       // ⭐ ০.৪.৪০-এর বিক্রির নিচের লাইন ফেরত — আজকের পাতার একই লেখা ([TodayFigure.salesDetail])
       subtitle: today.sales?.salesDetail,
       subtitleKey: const ValueKey('branch-sales-detail'),
-      actionLabel: 'বিস্তারিত',
+      actionLabel: context.l10n.homeDetails,
       onAction: onOpen,
       children: [
         for (final l in lines ?? const <BranchSale>[])
           AmountLine(
               key: ValueKey('branch-sale-${l.branch}'), label: l.branch.isEmpty ? '—' : l.branch, amount: l.amount),
-        AmountLine(key: const ValueKey('branch-sales-total'), label: 'মোট', amount: total, total: true),
+        AmountLine(key: const ValueKey('branch-sales-total'), label: context.l10n.todayTotal, amount: total, total: true),
       ],
     );
   }
@@ -592,14 +593,17 @@ class PayableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final loans = handLoans ?? 0;
-    final loansText = loans > 0 ? 'হাতধার ${Money.taka(loans)} সহ' : null;
+    final loansText = loans > 0 ? context.l10n.homeHandLoansIncluded(Money.taka(loans)) : null;
     return HomeSectionCard(
       key: const ValueKey('payable-card'),
-      title: 'দেনা',
+      title: context.l10n.homePayable,
       children: [
         Semantics(
           container: true,
-          label: [figureSpoken('দেনা', payable.amount), if (loans > 0) 'হাতধার ${Money.spoken(loans)} সহ'].join(', '),
+          label: [
+            figureSpoken(context.l10n.homePayable, payable.amount),
+            if (loans > 0) context.l10n.homeHandLoansIncluded('${Money.spoken(loans)}'),
+          ].join(', '),
           excludeSemantics: true,
           child: Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -652,11 +656,11 @@ class PrincipalsHomeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = topByBalance(lines, shown);
-    final sum = PrincipalLine(name: 'মোট', period: '', basisRate: '', balance: totalBalance(lines, total));
+    final sum = PrincipalLine(name: context.l10n.todayTotal, period: '', basisRate: '', balance: totalBalance(lines, total));
     return HomeSectionCard(
       key: const ValueKey('principals-card'),
-      title: 'প্রিন্সিপালের কমিশন',
-      actionLabel: 'সব দেখুন',
+      title: context.l10n.homePrincipalCommission,
+      actionLabel: context.l10n.homeSeeAll,
       onAction: onOpenAll,
       children: [
         for (var i = 0; i < rows.length; i++) _PrincipalRow(key: ValueKey('principal-row-$i'), line: rows[i]),
@@ -679,8 +683,8 @@ class _PrincipalRow extends StatelessWidget {
     // ⓘ ০.৪.৪০-এর কার্ডের রং: দিতে হবে লাল, পাব বা জের নেই সবুজ
     final colour = balance > 0 ? context.palette.danger : context.palette.success;
     final commission =
-        line.isLoss ? 'লোকসান ${Money.taka(-(line.commission ?? 0))}' : 'কমিশন ${figureText(line.commission)}';
-    final detail = total ? null : 'এসেছে ${figureText(line.inflow)} · $commission';
+        line.isLoss ? context.l10n.homeLossAmount(Money.taka(-(line.commission ?? 0))) : context.l10n.homeCommissionAmount(figureText(line.commission));
+    final detail = total ? null : context.l10n.homePrincipalDetail(figureText(line.inflow), commission);
     final name = line.name.isEmpty ? '—' : line.name;
     return Semantics(
       container: true,
@@ -784,8 +788,8 @@ Widget _waitingCard(TodayRecord today, Future<ApprovalPage> Function()? loadWait
         // ⓘ সারি আনার পথ না থাকলে কেবল সার্ভারের গোনা — নাম বানিয়ে নেওয়া হয় না
         ? HomeSectionCard(
           key: const ValueKey('waiting-papers'),
-          title: 'সইয়ের অপেক্ষায় · ${today.pendingApprovals}টি',
-          actionLabel: 'সব দেখুন',
+          title: AppLocale.l10n.homeAwaitingSignatureCount('${today.pendingApprovals}'),
+          actionLabel: AppLocale.l10n.homeSeeAll,
           onAction: onOpenApprovals,
           children: const [],
         )

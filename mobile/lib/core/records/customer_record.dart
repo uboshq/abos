@@ -1,3 +1,4 @@
+import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 import 'money.dart';
 
@@ -66,7 +67,7 @@ class CustomerRecord {
   /// this name is Bengali. English is the fallback rather than the other way
   /// round, and the code the fallback of last resort — a row with no name at
   /// all is still recognisable by the code the shop is billed under.
-  String get name => _text('nameBn') ?? _text('nameEn') ?? code ?? 'নাম নেই';
+  String get name => _text('nameBn') ?? _text('nameEn') ?? code ?? AppLocale.l10n.customerNoName;
 
   String? get ownerName => _text('ownerName');
 
@@ -194,9 +195,9 @@ class CustomerDueRecord {
   String get wholeOutstandingLabel => _label(outstanding);
 
   static String _label(double due) {
-    if (due == 0) return 'বকেয়া নেই';
-    if (due < 0) return 'অগ্রিম ${Money.taka(-due)}';
-    return 'বকেয়া ${Money.taka(due)}';
+    if (due == 0) return AppLocale.l10n.customerDueNone;
+    if (due < 0) return AppLocale.l10n.customerDueAdvance(Money.taka(-due));
+    return AppLocale.l10n.customerDueAmount(Money.taka(due));
   }
 
   static CustomerDueRecord? forCustomer(String customerId) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/nav_catalog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
@@ -65,12 +66,12 @@ class AllModulesPage extends StatelessWidget {
                     padding: EdgeInsets.all(AppSpacing.md),
                     child: LoadingSkeleton()))
           else if (modules.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
               child: EmptyState(
                 icon: Icons.lock_outline,
-                title: 'আপনার জন্য কোনো মেনু নেই',
-                message: 'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
+                title: context.l10n.homeNoMenu,
+                message: context.l10n.homeNoMenuHint,
               ),
             )
           else
@@ -160,7 +161,7 @@ class _ModuleTile extends StatelessWidget {
                     color: live ? context.palette.onSurface : context.palette.onSurfaceMuted),
               ),
               if (!live)
-                Text('শীঘ্রই আসছে',
+                Text(context.l10n.homeComingSoon,
                     style: TextStyle(fontSize: 10.5, color: context.palette.onSurfaceMuted)),
             ],
           ),
@@ -297,7 +298,7 @@ class _MenuRow extends StatelessWidget {
               fontSize: 14.5,
               color: muted ? context.palette.onSurfaceMuted : context.palette.onSurface)),
       subtitle: muted
-          ? const Text('শীঘ্রই আসছে', style: TextStyle(fontSize: 11.5))
+          ? Text(context.l10n.homeComingSoon, style: const TextStyle(fontSize: 11.5))
           : quiet == null
               ? null
               : Text(quiet!, style: TextStyle(fontSize: 11.5, color: context.palette.onSurfaceMuted)),

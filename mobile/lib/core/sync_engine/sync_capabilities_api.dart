@@ -1,4 +1,5 @@
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 
 /// `GET /sync/capabilities` — what this server can sync, **discovered rather
 /// than assumed**.
@@ -42,15 +43,16 @@ class SyncCapability {
 /// <p>Falls back to the raw name, so a module added on the server shows up as
 /// unfamiliar rather than absent.
 String syncModuleLabel(String module) {
-  const labels = {
-    'sales': 'বিক্রয়',
-    'purchase': 'ক্রয়',
-    'inventory': 'মজুদ',
-    'accounts': 'হিসাব',
-    'finance': 'অর্থ',
-    'customer': 'গ্রাহক',
-    'supplier': 'সরবরাহকারী',
-    'hr': 'জনবল',
+  final w = AppLocale.l10n;
+  final labels = {
+    'sales': w.syncModuleSales,
+    'purchase': w.syncModulePurchase,
+    'inventory': w.syncModuleInventory,
+    'accounts': w.syncModuleAccounts,
+    'finance': w.syncModuleFinance,
+    'customer': w.syncModuleCustomer,
+    'supplier': w.syncModuleSupplier,
+    'hr': w.syncModuleHr,
   };
   return labels[module] ?? module;
 }
@@ -63,15 +65,16 @@ String syncModuleLabel(String module) {
 /// returns once the server side exists, rather than guessed ahead of it. The
 /// fallback is what makes an unlisted name harmless in the meantime.
 String syncEntityLabel(String entityType) {
-  const labels = {
-    'Customer': 'গ্রাহক',
-    'Supplier': 'সরবরাহকারী',
-    'Product': 'পণ্য',
-    'ProductPrice': 'পণ্যের দাম',
-    'SalesOrder': 'অর্ডার',
-    'Collection': 'আদায়',
-    'CustomerDue': 'দোকানের বকেয়া',
-    'StockOnHand': 'হাতে থাকা মজুদ',
+  final w = AppLocale.l10n;
+  final labels = {
+    'Customer': w.syncEntityCustomer,
+    'Supplier': w.syncEntitySupplier,
+    'Product': w.syncEntityProduct,
+    'ProductPrice': w.syncEntityProductPrice,
+    'SalesOrder': w.syncEntitySalesOrder,
+    'Collection': w.syncEntityCollection,
+    'CustomerDue': w.syncEntityCustomerDue,
+    'StockOnHand': w.syncEntityStockOnHand,
   };
   return labels[entityType] ?? entityType;
 }

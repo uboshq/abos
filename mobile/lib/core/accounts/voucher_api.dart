@@ -1,5 +1,6 @@
 import '../../core/api_client/once_key.dart';
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 import '../records/money.dart';
 import '../sync_engine/sync_engine.dart';
 
@@ -21,11 +22,11 @@ class VoucherTypes {
   static const all = [receipt, payment, expense, journal, contra];
 
   static String label(String type) => switch (type) {
-        receipt => 'আদায় ভাউচার',
-        payment => 'পরিশোধ ভাউচার',
-        expense => 'খরচ ভাউচার',
-        journal => 'জাবেদা ভাউচার',
-        contra => 'কন্ট্রা ভাউচার',
+        receipt => AppLocale.l10n.voucherTypeReceipt,
+        payment => AppLocale.l10n.voucherTypePayment,
+        expense => AppLocale.l10n.voucherTypeExpense,
+        journal => AppLocale.l10n.voucherTypeJournal,
+        contra => AppLocale.l10n.voucherTypeContra,
         _ => type,
       };
 }
@@ -221,15 +222,15 @@ class VoucherRow {
       final from = _filled(fromAccount);
       final to = _filled(toAccount);
       if (from != null && to != null) return '$from → $to';
-      if (from != null) return 'থেকে: $from';
-      if (to != null) return 'জমা: $to';
+      if (from != null) return AppLocale.l10n.voucherLineFrom(from);
+      if (to != null) return AppLocale.l10n.voucherLineInto(to);
       return null;
     }
     final money = _filled(moneyAccount);
     if (money == null) return null;
     return switch (_role) {
-      'into' => 'জমা: $money',
-      'out_of' => 'থেকে: $money',
+      'into' => AppLocale.l10n.voucherLineInto(money),
+      'out_of' => AppLocale.l10n.voucherLineFrom(money),
       _ => null,
     };
   }
@@ -239,8 +240,8 @@ class VoucherRow {
   List<(String, String)> get moneyFacts {
     if (_role == 'contra') {
       return [
-        if (_filled(fromAccount) case final from?) (_filled(fromLabel) ?? 'কোথা থেকে', from),
-        if (_filled(toAccount) case final to?) (_filled(toLabel) ?? 'কোথায় গেল', to),
+        if (_filled(fromAccount) case final from?) (_filled(fromLabel) ?? AppLocale.l10n.voucherFactFrom, from),
+        if (_filled(toAccount) case final to?) (_filled(toLabel) ?? AppLocale.l10n.voucherFactTo, to),
       ];
     }
     final money = _filled(moneyAccount);
@@ -249,9 +250,9 @@ class VoucherRow {
       (
         _filled(moneyLabel) ??
             switch (_role) {
-              'into' => 'জমা হয়েছে',
-              'out_of' => 'যেখান থেকে দেওয়া',
-              _ => 'টাকার খাত',
+              'into' => AppLocale.l10n.voucherFactDepositedTo,
+              'out_of' => AppLocale.l10n.voucherFactPaidFrom,
+              _ => AppLocale.l10n.voucherFactMoneyAccount,
             },
         money,
       ),
@@ -263,9 +264,9 @@ class VoucherRow {
   String get partyWords => partyLabel.isNotEmpty
       ? partyLabel
       : switch (type) {
-          'receipt' => 'কার কাছ থেকে',
-          'payment' || 'expense' => 'কাকে',
-          _ => 'পক্ষ',
+          'receipt' => AppLocale.l10n.voucherPartyReceivedFrom,
+          'payment' || 'expense' => AppLocale.l10n.voucherPartyPaidTo,
+          _ => AppLocale.l10n.voucherPartyParty,
         };
 
   factory VoucherRow.fromJson(Map<String, dynamic> j) => VoucherRow(
@@ -296,15 +297,7 @@ class VoucherRow {
 
   String get kindLabel => typeLabel.isNotEmpty ? typeLabel : VoucherTypes.label(type);
 
-  String get stateWords => stateLabel.isNotEmpty
-      ? stateLabel
-      : switch (state) {
-          'draft' => 'খসড়া',
-          'awaiting' => 'সইয়ের অপেক্ষায়',
-          'posted' => 'পোস্ট হয়েছে',
-          'cancelled' => 'বাতিল',
-          _ => 'খসড়া',
-        };
+  String get stateWords => stateLabel.isNotEmpty ? stateLabel : AppLocale.l10n.voucherState(state);
 }
 
 /// সার্ভারের সংখ্যা → int; না এলে বা অচেনা হলে null (পুরনো সার্ভার এই ঘর পাঠায় না)
@@ -358,9 +351,9 @@ class VoucherPage {
   }
 
   static String _wordsFor(String type) => switch (type) {
-        'receipt' => 'জমা হয়েছে',
-        'payment' || 'expense' => 'যেখান থেকে দেওয়া',
-        _ => 'টাকার খাত',
+        'receipt' => AppLocale.l10n.voucherFactDepositedTo,
+        'payment' || 'expense' => AppLocale.l10n.voucherFactPaidFrom,
+        _ => AppLocale.l10n.voucherFactMoneyAccount,
       };
 
   factory VoucherPage.fromJson(Map<String, dynamic> j) => VoucherPage(
@@ -401,26 +394,44 @@ class VoucherListPage {
 /// নগদ রসিদের পরে MFS রসিদ, তারপর কন্ট্রা · জার্নাল · খরচ ([others])।
 /// নগদ রসিদ = টাকা নগদ বা ক্যাশ-বাক্সে জমা (`money=cash`), ব্যাংক রসিদ = টাকা ব্যাংকে (`money=bank`)।
 class VoucherView {
-  const VoucherView(this.key, this.label, {this.type, this.money});
+  const VoucherView(this.key, this._label, {this.type, this.money});
 
   final String key;
-  final String label;
+
+  /// ⓘ নিজের নাম না দিলে চাবি ধরে ARB থেকে, এখনকার ভাষায়
+  final String? _label;
+  String get label => _label ?? _labelOf(key);
+
+  static String _labelOf(String key) {
+    final w = AppLocale.l10n;
+    return switch (key) {
+      'cash-receipt' => w.voucherViewCashReceipts,
+      'bank-receipt' => w.voucherViewBankReceipts,
+      'payment' => w.voucherViewPayments,
+      'mfs-receipt' => w.voucherViewMfsReceipts,
+      'contra' => w.voucherViewContras,
+      'journal' => w.voucherViewJournals,
+      'expense' => w.voucherViewExpenses,
+      'receipt' => w.voucherViewAllReceipts,
+      _ => w.voucherViewAll,
+    };
+  }
   final String? type;
   final String? money;
 
-  static const all = VoucherView('all', 'সব');
-  static const cashReceipts = VoucherView('cash-receipt', 'নগদ রসিদ', type: 'receipt', money: 'cash');
-  static const bankReceipts = VoucherView('bank-receipt', 'ব্যাংক রসিদ', type: 'receipt', money: 'bank');
-  static const payments = VoucherView('payment', 'পেমেন্ট', type: 'payment');
+  static const all = VoucherView('all', null);
+  static const cashReceipts = VoucherView('cash-receipt', null, type: 'receipt', money: 'cash');
+  static const bankReceipts = VoucherView('bank-receipt', null, type: 'receipt', money: 'bank');
+  static const payments = VoucherView('payment', null, type: 'payment');
 
   static const top = [all, cashReceipts, mfsReceipts, bankReceipts, payments];
 
   // ── ⭐ প্রতিটা ধরন আলাদা — মালিক, ১৭ অক্টোবর ২০২৬: "receipt app e cash, mfs, bank, payment, contra, journal, expense
   // egulo alada alada asena eta tik korobe"। MFS রসিদ = টাকা বিকাশ/নগদ-এর মতো MFS খাতে (`money=mfs`)। ──
-  static const mfsReceipts = VoucherView('mfs-receipt', 'MFS রসিদ', type: 'receipt', money: 'mfs');
-  static const contras = VoucherView('contra', 'কন্ট্রা', type: 'contra');
-  static const journals = VoucherView('journal', 'জার্নাল', type: 'journal');
-  static const expenses = VoucherView('expense', 'খরচ', type: 'expense');
+  static const mfsReceipts = VoucherView('mfs-receipt', null, type: 'receipt', money: 'mfs');
+  static const contras = VoucherView('contra', null, type: 'contra');
+  static const journals = VoucherView('journal', null, type: 'journal');
+  static const expenses = VoucherView('expense', null, type: 'expense');
 
   /// বাকি ধরন, উপরের বোতামগুলোর পরে
   static const others = [contras, journals, expenses];
@@ -430,7 +441,7 @@ class VoucherView {
 
   /// ⭐ সব রসিদ একসাথে — ওয়েবের মেনুর "আদায়" সারি (`/accounts/vouchers/receipt`, মালিক, ১৭ অক্টোবর ২০২৬)। ⓘ পর্দার
   /// বোতামে নেই (নগদ/MFS/ব্যাংক আলাদা বোতাম আছে), কেবল ঐ সারি থেকে খোলে।
-  static const receipts = VoucherView('receipt', 'সব রসিদ', type: 'receipt');
+  static const receipts = VoucherView('receipt', null, type: 'receipt');
 
   /// মেনু বা পুরনো লিংকের চাবি থেকে — অচেনা বা খালি হলে null (তখন "সব")
   static VoucherView? byKey(String? key) {

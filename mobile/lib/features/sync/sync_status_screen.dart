@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/sync_engine/sync_capabilities_api.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/sync_engine/sync_history_api.dart';
@@ -89,7 +91,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
     final pendingCount = SyncEngine.instance.pendingCount;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'সিঙ্কের অবস্থা'),
+      appBar: AbosScreenBar(title: context.l10n.homeSyncStatus),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -113,7 +115,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                             ),
                           ),
                   ),
-                  const _SectionHeader('অপেক্ষমাণ'),
+                  _SectionHeader(context.l10n.syncScreenPending),
                   Card(
                     child: ListTile(
                       leading: AppStatusPill(
@@ -123,8 +125,8 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                             : AppStatusKind.pending,
                       ),
                       title: Text(pendingCount == 0
-                          ? 'সব পাঠানো হয়ে গেছে'
-                          : 'সংযোগের অপেক্ষায় — এই ফোনেই আছে'),
+                          ? context.l10n.syncScreenAllSent
+                          : context.l10n.syncScreenWaitingConnection),
                       // ⚠️ Why the last attempt did not go through, when
                       // there was one. "Waiting" and "refused outright" leave
                       // a queue looking identical, and only one of them is
@@ -145,13 +147,13 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  const _SectionHeader('যা যায়নি — কারণসহ'),
+                  _SectionHeader(context.l10n.syncScreenRejectedHeader),
                   if (rejected.isEmpty)
-                    const Card(
+                    Card(
                       child: ListTile(
-                        leading: AppStatusPill(
+                        leading: const AppStatusPill(
                             label: '✓', kind: AppStatusKind.success),
-                        title: Text('প্রত্যাখ্যাত কিছু নেই'),
+                        title: Text(context.l10n.syncScreenNothingRejected),
                       ),
                     )
                   else
@@ -160,11 +162,11 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                           onDismissed: () => setState(() {}),
                         )),
                   const SizedBox(height: AppSpacing.md),
-                  const _SectionHeader('শেষ সিঙ্ক'),
+                  _SectionHeader(context.l10n.syncScreenLastSync),
                   if (_lastSync.isEmpty)
-                    const EmptyState(
+                    EmptyState(
                       icon: Icons.sync_disabled,
-                      title: 'কোনো তথ্য পাওয়া যায়নি',
+                      title: context.l10n.syncScreenNoInfo,
                     )
                   else
                     ..._lastSync.map((status) => Card(
@@ -172,8 +174,8 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                             title: Text(syncModuleLabel(status.module)),
                             trailing: Text(
                               status.lastSyncedAt == null
-                                  ? 'কখনো না'
-                                  : banglaStamp(status.lastSyncedAt!),
+                                  ? context.l10n.syncScreenNever
+                                  : stampText(status.lastSyncedAt!),
                               style: TextStyle(
                                   color: context.palette.onSurfaceMuted, fontSize: 12),
                             ),
@@ -181,13 +183,13 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                         )),
                   if (_conflictsAllowed) ...[
                     const SizedBox(height: AppSpacing.md),
-                    const _SectionHeader('দ্বন্দ্ব'),
+                    _SectionHeader(context.l10n.syncScreenConflicts),
                     if (_conflicts.isEmpty)
-                      const Card(
+                      Card(
                         child: ListTile(
-                          leading: AppStatusPill(
+                          leading: const AppStatusPill(
                               label: '✓', kind: AppStatusKind.success),
-                          title: Text('কোনো দ্বন্দ্ব নেই'),
+                          title: Text(context.l10n.syncScreenNoConflicts),
                         ),
                       )
                     else
@@ -195,7 +197,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                             child: ListTile(
                               leading: AppStatusPill(
                                 label: conflict.needsResolution
-                                    ? 'সমাধান বাকি'
+                                    ? context.l10n.syncScreenNeedsResolution
                                     : conflict.status,
                                 kind: conflict.needsResolution
                                     ? AppStatusKind.warning
@@ -232,8 +234,8 @@ class _SectionHeader extends StatelessWidget {
 
 /// সারির বাক্সের সমস্যা, মানুষের ভাষায় — প্রতিটায় বলা "কিছুই মোছা হয়নি", কারণ ঠিক সেটাই আগে হত।
 String queueTroubleText(QueueTrouble trouble) => switch (trouble) {
-      QueueTrouble.busy => 'পেছনের সিঙ্ক এখন সারিটা পাঠাচ্ছে — একটু পরে এখানেও খুলবে। কিছুই মোছা হয়নি।',
-      QueueTrouble.keyUnavailable => 'ফোনের নিরাপদ ভাণ্ডার এখন খোলেনি — অপেক্ষমাণ অর্ডার ফোনেই রাখা আছে। অ্যাপ বন্ধ করে আবার খুলুন।',
-      QueueTrouble.quarantined => 'অপেক্ষমাণ সারির ফাইল খোলেনি — ফাইলটা আলাদা করে রাখা আছে, মোছা হয়নি। নতুন অর্ডার যাচ্ছে; আগেরগুলোর জন্য অফিসকে জানান।',
-      QueueTrouble.broken => 'অপেক্ষমাণ সারির ফাইল খোলেনি — ফাইল মোছা হয়নি, সিঙ্ক বন্ধ। অফিসকে জানান।',
+      QueueTrouble.busy => AppLocale.l10n.syncQueueBusy,
+      QueueTrouble.keyUnavailable => AppLocale.l10n.syncQueueKeyUnavailable,
+      QueueTrouble.quarantined => AppLocale.l10n.syncQueueQuarantined,
+      QueueTrouble.broken => AppLocale.l10n.syncQueueBroken,
     };

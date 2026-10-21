@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 import 'customer_record.dart';
 import 'money.dart';
@@ -36,7 +37,7 @@ class SalesOrderRecord {
   /// The name if this phone has the shop cached, the bare id if not: an order
   /// can outlive a customer dropping out of the local catalogue.
   String get customerName =>
-      CustomerRecord.byId(customerId)?.label ?? 'অজানা গ্রাহক';
+      CustomerRecord.byId(customerId)?.label ?? AppLocale.l10n.salesOrderUnknownCustomer;
 
   DateTime? get trxDate => _date('trxDate');
 
@@ -51,13 +52,7 @@ class SalesOrderRecord {
   /// `DocumentStatus`'s four constants, in the language the rest of this app
   /// speaks. An unknown value is shown as it came rather than hidden — a
   /// status this build has not heard of is information, not an error.
-  String get statusLabel => switch (status) {
-        'draft' => 'খসড়া',
-        'confirmed' => 'নিশ্চিত',
-        'cancelled' => 'বাতিল',
-        'closed' => 'বন্ধ',
-        _ => status ?? '—',
-      };
+  String get statusLabel => status == null ? '—' : AppLocale.l10n.salesOrderStatus(status!);
 
   String? _text(String key) {
     final value = payload[key];

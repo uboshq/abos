@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/records/today_record.dart';
 import 'today_panel.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -22,7 +23,7 @@ class TodayScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'আজকের হিসাব'),
+      appBar: AbosScreenBar(title: context.l10n.todayScreenTitle),
       body: TodayPanel(
         fetch: fetch,
         lastKnown: lastKnown,

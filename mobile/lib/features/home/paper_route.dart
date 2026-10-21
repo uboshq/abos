@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/auth/auth_state.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/navigation/paper_kinds.dart';
 import '../../core/navigation/recent_papers.dart';
@@ -61,12 +62,12 @@ class PaperRoute extends StatelessWidget {
       _ => null,
     };
     if (list == null || screen == null) {
-      return const Scaffold(
-        appBar: AbosScreenBar(title: 'কাগজ'),
+      return Scaffold(
+        appBar: AbosScreenBar(title: context.l10n.homePaper),
         body: EmptyState(
           icon: Icons.description_outlined,
-          title: 'এই কাগজটা এই অ্যাপে খোলা যায় না',
-          message: 'অ্যাপটা হালনাগাদ করে আবার চেষ্টা করুন।',
+          title: context.l10n.homePaperCannotOpen,
+          message: context.l10n.homeUpdateAndRetry,
         ),
       );
     }

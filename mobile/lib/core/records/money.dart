@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../locale/app_locale.dart';
+
 /// Money and quantity as they actually arrive over sync: decimal **strings**,
 /// never numbers.
 ///
@@ -70,7 +72,7 @@ class Money {
   }
 
   /// `1234567.5000` → `৳12,34,567.50` — ⛔ প্রতিটা মোটের পট্টি এটাই নেয়, সার্ভারের কাঁচা লেখা নয়
-  static String taka(dynamic value) => '৳${amount(value)}';
+  static String taka(dynamic value) => '৳${amount(value)}'; // l10n-ok: the taka sign is the currency itself, the same in every language
 
   /// দর বা হার — অন্তত দুই ঘর, দরকারে চার (`40` → `40.00`, `41.6667` থাকে) — সার্ভারের `decimal:4` না কেটে
   /// (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
@@ -105,19 +107,22 @@ class Money {
     final parts = <String>[];
     final crore = taka ~/ 10000000;
     taka %= 10000000;
-    if (crore > 0) parts.add('${_bnDigits(crore)} কোটি');
+    // ⓘ কথা এখনকার ভাষায় (ARB); বাংলায় অঙ্কও বাংলা — যন্ত্রের বাংলা গলা তবেই এক অঙ্ক পড়ে
+    final w = AppLocale.l10n;
+    final english = AppLocale.isEnglish();
+    String d(int n) => english ? '$n' : _bnDigits(n);
+    if (crore > 0) parts.add(w.moneySpokenCrore(d(crore)));
     final lakh = taka ~/ 100000;
     taka %= 100000;
-    if (lakh > 0) parts.add('${_bnDigits(lakh)} লাখ');
+    if (lakh > 0) parts.add(w.moneySpokenLakh(d(lakh)));
     final thousand = taka ~/ 1000;
     taka %= 1000;
-    if (thousand > 0) parts.add('${_bnDigits(thousand)} হাজার');
-    if (taka > 0) parts.add(_bnDigits(taka));
+    if (thousand > 0) parts.add(w.moneySpokenThousand(d(thousand)));
+    if (taka > 0) parts.add(d(taka));
     final words = [
-      if (parsed < 0 && paisaTotal > 0) 'ঋণাত্মক',
-      parts.isEmpty ? '০' : parts.join(' '),
-      'টাকা',
-      if (paisa > 0) '${_bnDigits(paisa)} পয়সা',
+      if (parsed < 0 && paisaTotal > 0) w.moneySpokenMinus,
+      w.moneySpokenTaka(parts.isEmpty ? d(0) : parts.join(' ')),
+      if (paisa > 0) w.moneySpokenPaisa(d(paisa)),
     ];
     return words.join(' ');
   }
@@ -125,7 +130,7 @@ class Money {
   /// লেখার ভিতরের প্রতিটা "৳…" অঙ্ক [spoken] রূপে — "বকেয়া ৳8,125.50" → "বকেয়া ৮ হাজার ১২৫ টাকা ৫০ পয়সা"।
   /// ⓘ পর্দার লেখা বদলায় না; এটা কেবল `semanticsLabel`-এর জন্য।
   static String speakable(String text) => text.replaceAllMapped(
-        RegExp(r'([-−]?)৳\s*([-−]?)([0-9০-৯][0-9০-৯,]*(?:\.[0-9০-৯]+)?)'),
+        RegExp(r'([-−]?)৳\s*([-−]?)([0-9০-৯][0-9০-৯,]*(?:\.[0-9০-৯]+)?)'), // l10n-ok: a pattern that finds the taka sign and Bengali digits, not text
         (m) {
           final negative = m[1]!.isNotEmpty || m[2]!.isNotEmpty;
           final said = spoken('${negative ? '-' : ''}${typedText(m[3]!)}');
@@ -134,13 +139,13 @@ class Money {
       );
 
   static String _bnDigits(int n) {
-    const bangla = '০১২৩৪৫৬৭৮৯';
+    const bangla = '০১২৩৪৫৬৭৮৯'; // l10n-ok: the Bengali digit table, not text
     return n.toString().split('').map((d) => bangla[int.parse(d)]).join();
   }
 
   /// একই লেখা পাঠানোর রূপে — বাংলা অঙ্ক ইংরেজিতে, কমা আর ফাঁকা বাদ
   static String typedText(String text) {
-    const bangla = '০১২৩৪৫৬৭৮৯';
+    const bangla = '০১২৩৪৫৬৭৮৯'; // l10n-ok: the Bengali digit table for reading typed digits, not text
     final out = StringBuffer();
     for (final ch in text.trim().split('')) {
       final i = bangla.indexOf(ch);

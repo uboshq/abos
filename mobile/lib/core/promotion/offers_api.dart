@@ -1,5 +1,6 @@
 import '../records/money.dart';
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ চলতি অফার, ফোনে — SR দোকানে দাঁড়িয়ে দেখেন কোন পণ্যে কী ছাড়, কী ফ্রি, কবে পর্যন্ত (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬;
 /// সার্ভার `PromotionApiController`)।
@@ -31,15 +32,16 @@ class OfferBenefit {
   /// "১০% ছাড়" নয় — "10% ছাড়": অঙ্ক যেমন সার্ভারে, কথা বাংলায়
   String get words {
     final a = amount ?? '';
+    final w = AppLocale.l10n;
     final base = switch (kind) {
-      'percent' => '$a% ছাড়',
-      'amount' => '${Money.taka(a)} ছাড়',
-      'goods' => gift == null ? '$aটা ফ্রি' : '$aটা $gift ফ্রি',
-      'credit' => '${Money.taka(a)} ফেরত (পরের কেনায়)',
-      'points' => '$a পয়েন্ট',
+      'percent' => w.offerBenefitPercent(a),
+      'amount' => w.offerBenefitAmount(Money.taka(a)),
+      'goods' => gift == null ? w.offerBenefitFree(a) : w.offerBenefitFreeGift(a, gift!),
+      'credit' => w.offerBenefitCredit(Money.taka(a)),
+      'points' => w.offerBenefitPoints(a),
       _ => a,
     };
-    return cap == null ? base : '$base (এক বিলে সর্বোচ্চ ${Money.taka(cap)})';
+    return cap == null ? base : w.offerBenefitCap(base, Money.taka(cap));
   }
 }
 
@@ -76,22 +78,23 @@ class OfferStep {
   /// শর্তটা কথায় — "১০টা বা বেশি কিনলে", "৳৫০০০ থেকে ৳৯৯৯৯ কিনলে"
   String get condition {
     // ⓘ "১০টা বা বেশি", "১০–২৪টা", "২৪টা পর্যন্ত" — এককটা সংখ্যার গায়ে
-    String range(String unit, {bool before = false}) {
+    final w = AppLocale.l10n;
+    String range({bool money = false}) {
       // ⓘ টাকার শর্ত টাকার ধরনে (লাখের ভাগ, দুই দশমিক — [[Money.taka]]); পরিমাণ নিজের এককে
-      String n(String v) => before ? Money.taka(v) : '$v$unit';
+      String n(String v) => money ? Money.taka(v) : w.offerQuantityUnit(v);
       return switch ((from, to)) {
         (final f?, final t?) => '${n(f)}–${n(t)}',
-        (final f?, null) => '${n(f)} বা বেশি',
-        (null, final t?) => '${n(t)} পর্যন্ত',
+        (final f?, null) => w.offerRangeOrMore(n(f)),
+        (null, final t?) => w.offerRangeUpTo(n(t)),
         _ => '',
       };
     }
 
     return switch (kind) {
-      'quantity' => from == null && to == null ? 'যেকোনো পরিমাণে' : '${range('টা')} কিনলে',
-      'value' => from == null && to == null ? 'যেকোনো অঙ্কে' : '${range('৳', before: true)} কিনলে',
-      'product' => product == null ? 'নির্দিষ্ট পণ্য কিনলে' : '$product কিনলে',
-      'time' => fromTime == null ? 'নির্দিষ্ট সময়ে' : '$fromTime–${toTime ?? ''} সময়ে কিনলে',
+      'quantity' => from == null && to == null ? w.offerAnyQuantity : w.offerWhenBuying(range()),
+      'value' => from == null && to == null ? w.offerAnyAmount : w.offerWhenBuying(range(money: true)),
+      'product' => product == null ? w.offerSetProduct : w.offerWhenBuying(product!),
+      'time' => fromTime == null ? w.offerSetTime : w.offerTimeWindow(fromTime!, toTime ?? ''),
       _ => '',
     };
   }
@@ -161,18 +164,18 @@ class Offer {
   String get goods {
     final parts = [
       ...products,
-      ...categories.map((c) => '$c (ধরন)'),
-      ...brands.map((b) => '$b (ব্র্যান্ড)'),
+      ...categories.map(AppLocale.l10n.offerGoodsCategory),
+      ...brands.map(AppLocale.l10n.offerGoodsBrand),
     ];
-    return parts.isEmpty ? 'সব মালে' : parts.join(', ');
+    return parts.isEmpty ? AppLocale.l10n.offerGoodsAll : parts.join(', ');
   }
 
   /// কার জন্য — নির্দিষ্ট দোকান, দোকানের ধরন, এলাকা; কিছুই না থাকলে সবার
   String? get forWhom {
     final parts = [
-      if (shops.isNotEmpty) 'দোকান: ${shops.join(', ')}',
-      if (partyTypes.isNotEmpty) 'ধরন: ${partyTypes.join(', ')}',
-      if (areas.isNotEmpty) 'এলাকা: ${areas.join(', ')}',
+      if (shops.isNotEmpty) AppLocale.l10n.offerForShops(shops.join(', ')),
+      if (partyTypes.isNotEmpty) AppLocale.l10n.offerForShopTypes(partyTypes.join(', ')),
+      if (areas.isNotEmpty) AppLocale.l10n.offerForAreas(areas.join(', ')),
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }

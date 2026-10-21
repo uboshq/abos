@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../locale/l10n.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_spacing.dart';
@@ -78,8 +79,8 @@ class ListControls extends StatelessWidget {
                       child: const Icon(Icons.filter_list, size: 20),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    const Flexible(
-                      child: Text('ফিল্টার',
+                    Flexible(
+                      child: Text(context.l10n.listFilter,
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ],
@@ -102,7 +103,7 @@ class ListControls extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('সাজান', maxLines: 1),
+                        Text(context.l10n.listSort, maxLines: 1),
                         Text(
                           _sortLabel,
                           key: const Key('list-controls-sort-label'),
@@ -134,7 +135,7 @@ class ListControls extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _SheetTitle('সাজান'),
+              _SheetTitle(sheet.l10n.listSort),
               for (final option in sortOptions)
                 _ChoiceLine(
                   key: Key('sort-option-${option.key}'),
@@ -166,7 +167,7 @@ class ListControls extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const _SheetTitle('ফিল্টার'),
+                _SheetTitle(sheet.l10n.listFilter),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
@@ -182,7 +183,7 @@ class ListControls extends StatelessWidget {
                           ),
                           _ChoiceLine(
                             key: Key('filter-${group.key}-all'),
-                            label: 'সব',
+                            label: sheet.l10n.listFilterAll,
                             selected: !draft.containsKey(group.key),
                             onTap: () =>
                                 setSheet(() => draft.remove(group.key)),
@@ -210,7 +211,7 @@ class ListControls extends StatelessWidget {
                           // মুছে সঙ্গে সঙ্গে প্রয়োগ — আরেকবার চাপতে হয় না।
                           onPressed: () =>
                               Navigator.of(sheet).pop(const <String, String>{}),
-                          child: const Text('সব মুছুন'),
+                          child: Text(sheet.l10n.listFilterClearAll),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -219,7 +220,7 @@ class ListControls extends StatelessWidget {
                           key: const Key('filter-apply'),
                           onPressed: () => Navigator.of(sheet)
                               .pop(Map<String, String>.unmodifiable(draft)),
-                          child: const Text('প্রয়োগ করুন'),
+                          child: Text(sheet.l10n.listFilterApply),
                         ),
                       ),
                     ],

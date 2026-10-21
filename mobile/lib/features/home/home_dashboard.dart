@@ -111,20 +111,20 @@ class HomeDashboard extends StatelessWidget {
       showOrigin: !headerNamesOrg,
       onRecord: onRecord,
       onPull: onPull,
-      onOpenSales: () => _go(context, 'orders', 'অর্ডারের অবস্থা'),
-      onOpenDues: () => _go(context, 'dues', 'বকেয়া তালিকা'),
-      onOpenApprovals: () => _go(context, 'approvals', 'অনুমোদন'),
+      onOpenSales: () => _go(context, 'orders', context.l10n.homeOrderStatus),
+      onOpenDues: () => _go(context, 'dues', context.l10n.homeDueList),
+      onOpenApprovals: () => _go(context, 'approvals', context.l10n.homeApprovals),
       // ⭐ মালিকের হোম, ০.৪.৪১ (মালিকের অনুমোদিত পুরো-পাতার নমুনা, ২০ অক্টোবর ২০২৬): টাকার কার্ড, সইয়ের অপেক্ষা, শাখার বিক্রি
       figures: (context, today) => isOwnersHome(today)
           ? ownerHomeCards(
               today,
               loadWaiting: loadWaiting,
-              onOpenApprovals: () => _go(context, 'approvals', 'অনুমোদন'),
-              onOpenSales: () => _go(context, 'orders', 'অর্ডারের অবস্থা'),
-              onOpenMoney: () => _go(context, 'dues', 'বকেয়া তালিকা'),
+              onOpenApprovals: () => _go(context, 'approvals', context.l10n.homeApprovals),
+              onOpenSales: () => _go(context, 'orders', context.l10n.homeOrderStatus),
+              onOpenMoney: () => _go(context, 'dues', context.l10n.homeDueList),
               // ⓘ প্রিন্সিপালের কমিশনের পাতা — পথটা অন্য একজন বানাচ্ছেন; ডাক এখানেই বাঁধা
               onOpenPrincipals: canOpenPrincipals(user, modulesOn)
-                  ? () => _go(context, 'principal-commission', 'প্রিন্সিপালের কমিশন')
+                  ? () => _go(context, 'principal-commission', context.l10n.homePrincipalCommission)
                   : null,
               onOpenStock: canOpenStock(user, modulesOn) ? () => _go(context, 'stock', context.l10n.homeStockPageTitle) : null,
             )
@@ -139,22 +139,21 @@ class HomeDashboard extends StatelessWidget {
             // ⭐ নকশার সারি (নকশা ৩, পাতা ৩): RowIcon ৪০dp · নাম 16 w600 · নিচে মলিন 13 · সারি অন্তত ৭২dp
             minTileHeight: 72,
             leading: const RowIcon(Icons.insights_outlined),
-            title: const Text('ব্যবসার ড্যাশবোর্ড',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            subtitle: Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা',
+            title: Text(context.l10n.homeDashboards,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            subtitle: Text(context.l10n.homeDashboardsHint,
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-            onTap: () => _go(context, 'dashboards', 'ব্যবসার ড্যাশবোর্ড'),
+            onTap: () => _go(context, 'dashboards', context.l10n.homeDashboards),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        const _SectionTitle('প্রিয়', icon: Icons.star_outline_rounded),
+        _SectionTitle(context.l10n.homeFavourites, icon: Icons.star_outline_rounded),
         if (favourites.isEmpty)
-          const Padding(
-            key: ValueKey('favourites-empty'),
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: _Muted(
-                'কোনো মডিউলের মেনুতে একটা সারি চেপে ধরে রাখুন — এখানে এসে বসবে (ছয়টা পর্যন্ত)।'),
+          Padding(
+            key: const ValueKey('favourites-empty'),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: _Muted(context.l10n.homeFavouritesEmpty),
           )
         else
           // ⭐ চারটা করে পাশাপাশি, কিন্তু ঘরের উচ্চতা বাঁধা নয় — বড় অক্ষরে (২০০%) নাম ভাঙে না, ঘর নিজের মাপে বাড়ে
@@ -184,7 +183,7 @@ class HomeDashboard extends StatelessWidget {
           ),
         if (recents.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          const _SectionTitle('সাম্প্রতিক'),
+          _SectionTitle(context.l10n.homeRecent),
           Card(
             key: const ValueKey('recents'),
             child: Column(children: [
@@ -219,7 +218,7 @@ class HomeDashboard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
         ],
         // ⓘ মাথার বারে কোম্পানি · শাখা থাকলে "আজ" সময়ের লাইনেই বসে ("আজ · হিসাব … পর্যন্ত", TodayPanel)
-        if (!headerNamesOrg) const _SectionTitle('আজ'),
+        if (!headerNamesOrg) _SectionTitle(context.l10n.homeToday),
       ],
     );
   }

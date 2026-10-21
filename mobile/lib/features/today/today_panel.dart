@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/records/money.dart';
 import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
@@ -118,12 +120,11 @@ class _TodayPanelState extends State<TodayPanel> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = errorMessageFor(error,
-          fallback: 'আজকের হিসাব আনা গেল না।',
+          fallback: AppLocale.l10n.todayLoadFailed,
           // See the approvals screen: a 404 on a route that names no row
           // means the server is older than this build, not that today has no
           // figures.
-          whenAbsent: 'আজকের হিসাব এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের '
-              'চেয়ে নতুন। অফিসে জানান।'));
+          whenAbsent: AppLocale.l10n.todayServerTooOld));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -136,8 +137,8 @@ class _TodayPanelState extends State<TodayPanel> {
         await pull();
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-              content: Text('সিঙ্ক হয়নি — সংযোগ দেখে আবার টানুন। ফোনের কাজ ফোনেই আছে।')));
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+              content: Text(AppLocale.l10n.todayPullFailed)));
         }
       }
     }
@@ -171,7 +172,7 @@ class _TodayPanelState extends State<TodayPanel> {
                     // out from a timestamp further down.
                     _Notice(
                       text: _stale
-                          ? '${_error!} নিচের সংখ্যাগুলো এই ফোনে রাখা ছিল।'
+                          ? context.l10n.todayStaleNotice(_error!)
                           : _error!,
                     ),
                   _OriginLine(today: today, showOrigin: widget.showOrigin),
@@ -207,7 +208,7 @@ class _TodayPanelState extends State<TodayPanel> {
                       ),
                     if (today.cashInHand != null)
                       _HeroCard(
-                        heading: 'হাতে নগদ',
+                        heading: context.l10n.homeCashInHand,
                         figure: today.cashInHand!,
                         colour: context.palette.onSurface,
                       ),
@@ -229,9 +230,6 @@ class _TodayPanelState extends State<TodayPanel> {
     );
   }
 
-  static String? _count(int? count, String unit) =>
-      count == null ? null : '$count $unit';
-
   /// Whether the server sent the owner's new blocks (6 Oct 2026).
   static bool _ownersHome(TodayRecord today) =>
       today.inflow != null || today.payable != null || today.money != null;
@@ -246,20 +244,20 @@ class _TodayPanelState extends State<TodayPanel> {
 
     final Widget? moneyIn = inflow != null
         ? _Stat(
-            label: 'আজকের ইনফ্লো/আদায়',
+            label: context.l10n.todayInflowCollections,
             value: Money.taka(inflow.amount),
             colour: context.palette.success,
             detail: collections == null
                 ? null
-                : 'আদায় ${Money.taka(collections.amount)}',
+                : context.l10n.homeCollectionAmount(Money.taka(collections.amount)),
           )
         : collections == null
             ? null
             : _Stat(
-                label: 'আজকের আদায়',
+                label: context.l10n.todayCollections,
                 value: Money.taka(collections.amount),
                 colour: context.palette.success,
-                detail: _count(collections.count, 'টি আদায়'),
+                detail: collections.count == null ? null : context.l10n.todayCollectionCount(collections.count!),
               );
 
     return [
@@ -282,19 +280,19 @@ class _TodayPanelState extends State<TodayPanel> {
           left: dues == null
               ? null
               : _Stat(
-                  label: 'পাওনা (Recoverable)',
+                  label: context.l10n.todayRecoverable,
                   value: Money.taka(dues.amount),
                   colour: context.palette.success,
-                  detail: dues.shops == null ? null : '${dues.shops} টি দোকান',
+                  detail: dues.shops == null ? null : context.l10n.homeShopCount(dues.shops!),
                 ),
           right: payable == null
               ? null
               : _Stat(
-                  label: 'দেনা (Payable)',
+                  label: context.l10n.todayPayable,
                   value: Money.taka(payable.amount),
                   colour: context.palette.danger,
                   detail: handLoans > 0
-                      ? 'হাতধার ${Money.taka(handLoans)} সহ'
+                      ? context.l10n.homeHandLoansIncluded(Money.taka(handLoans))
                       : null,
                 ),
         ),
@@ -302,7 +300,7 @@ class _TodayPanelState extends State<TodayPanel> {
         _MoneyBoxCard(box: today.money!)
       else if (today.cashInHand != null)
         _HeroCard(
-          heading: 'হাতে নগদ',
+          heading: context.l10n.homeCashInHand,
           figure: today.cashInHand!,
           colour: context.palette.onSurface,
         ),
@@ -333,7 +331,7 @@ class _NothingYet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            error ?? 'আনা হচ্ছে…',
+            error ?? context.l10n.todayFetching,
             textAlign: TextAlign.center,
             style: TextStyle(color: context.palette.onSurfaceMuted),
           ),
@@ -404,9 +402,9 @@ class _OriginLine extends StatelessWidget {
         key: const ValueKey('today-heading'),
         TextSpan(children: [
           TextSpan(
-              text: 'আজ',
+              text: context.l10n.homeToday,
               style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: context.palette.onSurface)),
-          if (asOf != null) TextSpan(text: ' · হিসাব ${banglaStamp(asOf)} পর্যন্ত', style: muted),
+          if (asOf != null) TextSpan(text: ' · ${context.l10n.todayFiguresAsOf(stampText(asOf))}', style: muted),
         ]),
       );
     }
@@ -426,7 +424,7 @@ class _OriginLine extends StatelessWidget {
         if (asOf != null)
           Flexible(
             child: Text(
-              'হিসাব ${banglaStamp(asOf)} পর্যন্ত',
+              context.l10n.todayFiguresAsOf(stampText(asOf)),
               textAlign: TextAlign.end,
               style:
                   TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted),
@@ -500,7 +498,7 @@ class _CollectionsDuesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardHeading('আদায় ও বকেয়া', onTap: onTap),
+          _CardHeading(context.l10n.todayCollectionsAndDues, onTap: onTap),
           const SizedBox(height: AppSpacing.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,22 +506,22 @@ class _CollectionsDuesCard extends StatelessWidget {
               if (collections != null)
                 Expanded(
                   child: _Stat(
-                    label: 'আজকের আদায়',
+                    label: context.l10n.todayCollections,
                     value: Money.taka(collections!.amount),
                     colour: context.palette.success,
                     detail: collections!.count == null
                         ? null
-                        : '${collections!.count} টি আদায়',
+                        : context.l10n.todayCollectionCount(collections!.count!),
                   ),
                 ),
               if (dues != null)
                 Expanded(
                   child: _Stat(
-                    label: 'মোট বকেয়া',
+                    label: context.l10n.todayTotalDues,
                     value: Money.taka(dues!.amount),
                     colour: context.palette.danger,
                     detail:
-                        dues!.shops == null ? null : '${dues!.shops} টি দোকান',
+                        dues!.shops == null ? null : context.l10n.homeShopCount(dues!.shops!),
                   ),
                 ),
             ],
@@ -590,7 +588,7 @@ class _MoneyBoxCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _CardHeading('হাতে ও ব্যাংকে মোট'),
+          _CardHeading(context.l10n.homeCashAndBankTotal),
           const SizedBox(height: AppSpacing.xs),
           _OneLine(Text(Money.taka(box.amount),
               maxLines: 1,
@@ -600,10 +598,10 @@ class _MoneyBoxCard extends StatelessWidget {
                   color: context.palette.onSurface))),
           const SizedBox(height: AppSpacing.sm),
           Row(children: [
-            part('নগদ', box.cash),
+            part(context.l10n.todayPartCash, box.cash),
             part('MFS', box.mfs),
-            part('ব্যাংক', box.bank),
-            part('পথে', box.transit),
+            part(context.l10n.todayPartBank, box.bank),
+            part(context.l10n.homeInTransit, box.transit),
           ]),
         ],
       ),
@@ -651,24 +649,24 @@ class _PrincipalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _CardHeading('প্রিন্সিপালের কমিশন'),
+          _CardHeading(context.l10n.homePrincipalCommission),
           for (final line in lines) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(line.name,
                 key: const ValueKey('principal-name'),
                 style:
                     const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-            Text('সময়কাল: ${line.periodLabel}',
+            Text(context.l10n.todayPeriod(line.periodLabel),
                 key: const ValueKey('principal-period'),
                 style: TextStyle(
                     fontSize: 12.5, color: context.palette.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.xs),
-            figure('মোট ইনফ্লো', Money.taka(line.inflow)),
+            figure(context.l10n.todayTotalInflow, Money.taka(line.inflow)),
             // ⭐ লোকসান কথায়, লাল — ওয়েবের বাক্সের মতো, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
-            figure('কমিশন (${line.basisRate})', line.commissionText,
+            figure(context.l10n.todayCommissionRate(line.basisRate), line.commissionText,
                 colour: line.isLoss ? context.palette.danger : null),
-            figure('প্রিন্সিপালকে পাঠানো', Money.taka(line.paid)),
-            figure('বাকি ইনফ্লো', line.balanceLabel,
+            figure(context.l10n.todaySentToPrincipal, Money.taka(line.paid)),
+            figure(context.l10n.todayInflowLeft, line.balanceLabel,
                 size: 16,
                 colour: (line.balance ?? 0) > 0
                     ? context.palette.danger
@@ -722,7 +720,7 @@ class _ApprovalsCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              '$count টি নথি আপনার সিদ্ধান্তের অপেক্ষায়',
+              context.l10n.todayDocumentsAwaitingDecision(count),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 
 /// One day's attendance, as `AttendanceSync` sends it — docs/Contract §৭.
@@ -42,13 +43,7 @@ class AttendanceRecord {
   /// the only thing that makes the claim checkable.
   String? get remarks => _text('remarks');
 
-  String get statusLabel => switch (status) {
-        'present' => 'উপস্থিত',
-        'absent' => 'অনুপস্থিত',
-        'leave' => 'ছুটি',
-        'holiday' => 'সরকারি ছুটি',
-        _ => status,
-      };
+  String get statusLabel => AppLocale.l10n.attendanceStatus(status);
 
   String? _text(String key) {
     final value = payload[key];

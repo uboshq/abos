@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import '../api_client/api_client.dart';
+import '../locale/app_locale.dart';
 import 'money.dart';
 
 /// One report this person may run — docs/Contract §৯.
@@ -110,10 +111,10 @@ class ReportPage {
 
   /// "৪১২টির মধ্যে ১–১০০" — so nobody reads one page as the whole thing.
   String get rangeSentence {
-    if (rows.isEmpty) return 'কোনো সারি নেই';
+    if (rows.isEmpty) return AppLocale.l10n.reportNoRows;
     final first = (page - 1) * (perPage == 0 ? rows.length : perPage) + 1;
     final last = first + rows.length - 1;
-    return '$totalRows টির মধ্যে $first–$last';
+    return AppLocale.l10n.reportRangeOf('$totalRows', '$first', '$last');
   }
 }
 

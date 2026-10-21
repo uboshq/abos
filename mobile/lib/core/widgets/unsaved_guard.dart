@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../locale/l10n.dart';
+
 /// ⭐ লেখা অবস্থায় "পিছনে" — জিজ্ঞেস করে, তারপর যায় (মোবাইলের নিরীক্ষা, ১৯ অক্টোবর ২০২৬; Material 3: Dialogs;
 /// Android: back navigation)।
 ///
@@ -70,18 +72,18 @@ Future<bool> confirmLeave(BuildContext context) async {
     builder: (ctx) => AlertDialog(
       key: const ValueKey('unsaved-guard'),
       icon: const Icon(Icons.edit_note_rounded),
-      title: const Text('লেখা ফেলে চলে যাবেন?'),
-      content: const Text('যা লিখেছেন তা এখনো পাঠানো হয়নি — চলে গেলে হারিয়ে যাবে।'),
+      title: Text(ctx.l10n.unsavedTitle),
+      content: Text(ctx.l10n.unsavedBody),
       actions: [
         TextButton(
           key: const ValueKey('unsaved-stay'),
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('থাকুন'),
+          child: Text(ctx.l10n.unsavedStay),
         ),
         FilledButton(
           key: const ValueKey('unsaved-leave'),
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('ফেলে যান'),
+          child: Text(ctx.l10n.unsavedLeave),
         ),
       ],
     ),
