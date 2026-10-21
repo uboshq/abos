@@ -1,0 +1,91 @@
+Mutants — Bangladesh leave law (a6/hr-law-leave, a6, 21 Oct 2026)
+Each: file · exact old → new · killing test. Run one at a time on the Mac, from the tested commit, restore with mtime = now.
+Status: listed, not yet run (Mac).
+
+== Item 1 — holiday calendar + weekly off ==
+K = tests/Feature/Modules/Hr/LeaveCountsOnlyWorkingDaysTest.php
+
+M1.1 app/Modules/Hr/Support/WorkCalendar.php
+  old: if (in_array($day->dayOfWeek, $this->weeklyOff(), true)) {
+  new: if (false) {
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (6 days pass)
+
+M1.2 app/Modules/Hr/Support/WorkCalendar.php
+  old: : $q->whereNull('branch_id')->orWhere('branch_id', $branchId))
+  new: : $q->whereNull('branch_id'))
+  kill: K::test_a_holiday_of_one_branch_does_not_shorten_another_branchs_leave (Dhaka employee gets 2 days)
+
+M1.3 app/Modules/Hr/Support/WorkCalendar.php
+  old: ? $q->whereNull('branch_id')
+  new: ? $q->whereNotNull('branch_id')->orWhereNull('branch_id')
+  kill: K::test_a_holiday_of_one_branch_does_not_shorten_another_branchs_leave (branchless employee refused)
+
+M1.4 app/Modules/Hr/Services/AttendanceService.php
+  old: if (! $calendar->isOffDay($row->work_date, $companyId, $branchId)) {
+  new: if (true) {
+  kill: K::test_absence_on_a_weekly_off_or_a_holiday_is_not_deducted (5.0, not 3.0)
+
+M1.5 app/Modules/Hr/Models/Attendance.php
+  old: if ($calendar->isOffDay($day, $companyId, $branchId)) {
+  new: if (false) {
+  kill: K::test_absence_on_a_weekly_off_or_a_holiday_is_not_deducted (legacy Friday LEAVE row cuts 1 → 4.0)
+
+M1.6 app/Modules/Hr/Models/Attendance.php
+  old: : (string) $calendar->workingDays($application->from_date, $day->copy()->subDay(), $companyId, $branchId);
+  new: : (string) $application->from_date->copy()->startOfDay()->diffInDays($day->copy()->startOfDay());
+  kill: K::test_absence_on_a_weekly_off_or_a_holiday_is_not_deducted (Saturday share 0 → 2.0)
+
+M1.7 app/Modules/Hr/Services/LeaveService.php (stampAttendance)
+  old: if ($calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+  new: if (false) {
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (rows on 16 and 18 Dec)
+
+M1.8 app/Modules/Hr/Services/LeaveService.php (apply)
+  old: $this->assertWithinWorkingDays($employee, $from, $to, $days);
+  new: (line deleted)
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (6 days pass)
+
+M1.9 app/Modules/Hr/Services/LeaveService.php (approve)
+  old: $this->assertWithinWorkingDays($employee, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
+  new: (line deleted)
+  kill: K::test_a_holiday_listed_after_the_application_is_measured_again_at_approval
+
+M1.10 app/Modules/Hr/Services/LeaveService.php (assertWithinWorkingDays)
+  old: if (bccomp($days, $working, 1) > 0) {
+  new: if (bccomp($days, $working, 1) > 1) {
+  kill: K::test_a_leave_over_a_friday_and_a_holiday_counts_only_the_working_days (bccomp returns 1 → never > 1, 6 passes)
+
+M1.11 app/Modules/Hr/Support/WorkCalendar.php (weeklyOffKey)
+  old: return array_key_exists($value, self::WEEKLY_OFF) ? $value : self::DEFAULT_WEEKLY_OFF;
+  new: return self::DEFAULT_WEEKLY_OFF;
+  kill: K::test_the_weekly_off_setting_decides_the_off_day
+
+M1.12 app/Modules/Hr/Http/Controllers/HolidayController.php (writable)
+  old: abort_unless($limited === null || ($row->branch_id !== null && in_array((int) $row->branch_id, $limited, true)), 403);
+  new: abort_unless(true, 403);
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (limited user deletes Netrokona row)
+
+M1.13 app/Modules/Hr/Http/Controllers/HolidayController.php (writable)
+  old: ($row->branch_id !== null && in_array((int) $row->branch_id, $limited, true))
+  new: ($row->branch_id === null || in_array((int) $row->branch_id, $limited, true))
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (limited user deletes the all-branch Victory Day)
+
+M1.14 app/Modules/Hr/Http/Controllers/HolidayController.php (validated)
+  old: Rule::requiredIf($limited !== null),
+  new: Rule::requiredIf(false),
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (limited user stores an all-branch holiday)
+
+M1.15 app/Modules/Hr/Http/Controllers/HolidayController.php (validated)
+  old: if ($twice) {
+  new: if (false) {
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (second row on 26 Mar)
+
+M1.16 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.manage', only: ['edit', 'store', 'update', 'destroy']),
+  new: new Middleware('can:hr.attendance.manage', only: ['edit', 'update', 'destroy']),
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (viewer stores Independence Day)
+
+M1.17 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
+  old: new Middleware('can:hr.attendance.view', only: ['index']),
+  new: (line deleted)
+  kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (stranger gets 200)

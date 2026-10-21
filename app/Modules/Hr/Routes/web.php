@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
+use App\Modules\Hr\Http\Controllers\HolidayController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
@@ -98,6 +99,18 @@ Route::middleware('auth')->prefix('hr')->group(function () {
             ->whereNumber('application')->name('reject');
         Route::post('/{application}/cancel', [LeaveController::class, 'cancel'])
             ->whereNumber('application')->name('cancel');
+    });
+
+    /*
+     * ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব, সব শাখার বা একটা শাখার (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ চাবি নিয়ামকে: দেখা `hr.attendance.view`, লেখা `hr.attendance.manage`; শাখার দেয়ালও সেখানে।
+     */
+    Route::prefix('holidays')->name('holiday.')->group(function () {
+        Route::get('/', [HolidayController::class, 'index'])->name('index');
+        Route::post('/', [HolidayController::class, 'store'])->name('store');
+        Route::get('/{holiday}/edit', [HolidayController::class, 'edit'])->whereNumber('holiday')->name('edit');
+        Route::put('/{holiday}', [HolidayController::class, 'update'])->whereNumber('holiday')->name('update');
+        Route::delete('/{holiday}', [HolidayController::class, 'destroy'])->whereNumber('holiday')->name('destroy');
     });
 
     Route::prefix('leave-types')->name('leave_type.')->group(function () {

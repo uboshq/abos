@@ -62,4 +62,9 @@ return [
     // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
     'salary_month_paid' => 'The :month payroll (:no) has already paid this employee. Changing the amount from that month or earlier would make the paid payslip and the structure disagree. Arrears pay is coming; until then, enter the new amount from the next month.',
     'salary_change_waiting' => 'Another salary change for this employee is still waiting for a signature. Let it be signed or rejected first, then enter the new change.',
+    // ⭐ working days only (labour law ss.115-118; a6, 21 Oct 2026; [[LeaveService::assertWithinWorkingDays()]])
+    'days_exceed_working' => 'Only :working working days fall in these dates — the weekly off and listed holidays are not leave days.',
+    'holiday_twice' => 'This date is already a holiday for this branch or for all branches.',
+    'holiday_branch_out_of_reach' => 'That branch is outside your reach.',
+    'holiday_branch_required' => 'Pick a branch — your reach is limited, so you cannot set a holiday for every branch.',
 ];

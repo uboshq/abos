@@ -64,6 +64,8 @@ return [
         'master' => [
             ['label' => 'hr::menu.employees', 'icon' => 'people', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.salary_heads', 'icon' => 'wallet', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
+            // ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.holidays', 'icon' => 'calendar', 'route' => 'hr.holiday.index', 'permission' => 'hr.attendance.view'],
         ],
 
         'transactions' => [
@@ -427,6 +429,21 @@ return [
             'label' => 'hr::settings.attendance_affects_salary',
             'type' => 'boolean',
             'default' => false,
+            'group' => 'entry',
+        ],
+        /*
+         * ⭐ সাপ্তাহিক ছুটি — ডিফল্ট শুক্রবার (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ শ্রম আইন ২০০৬ ধারা ১০৩; [[WorkCalendar]];
+         * a6, ২১ অক্টোবর ২০২৬)।
+         * ⓘ ছুটির আবেদনের দিন গোনায় এই দিনগুলো বাদ, আর এই দিনে লেখা "অনুপস্থিত" বেতন থেকে কাটে না। সরকারি ছুটি আর উৎসব আলাদা
+         * তালিকায় ([[HolidayController]])। ⛔ সপ্তাহের দিন সারি হয়ে বসে না — ৫২টা সারি ভুলে গেলে গোটা বছর কাজের দিন হত।
+         */
+        [
+            'key' => 'hr.weekly_off',
+            'label' => 'hr::settings.weekly_off',
+            'type' => 'choice',
+            'options' => array_keys(\App\Modules\Hr\Support\WorkCalendar::WEEKLY_OFF),
+            'option_label' => 'hr::settings.weekly_off_',
+            'default' => \App\Modules\Hr\Support\WorkCalendar::DEFAULT_WEEKLY_OFF,
             'group' => 'entry',
         ],
         [

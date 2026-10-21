@@ -83,4 +83,9 @@ return [
     'reports_to' => 'Reports To',
     'photo' => 'Photo',
     'photo_hint' => 'JPG, PNG or WebP — a large photo is made smaller. A new photo replaces the old one.',
+    // ⭐ public holidays (a6, 21 Oct 2026)
+    'holiday_date' => 'Date',
+    'holiday_name' => 'Holiday',
+    'all_branches' => 'All branches',
+    'year' => 'Year',
 ];

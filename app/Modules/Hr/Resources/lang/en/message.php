@@ -73,4 +73,10 @@ return [
     'owner_self_signed' => 'The owner signed a salary change he asked for himself — a self-approved change.',
     // ⭐ বেতনের রানের সইয়ের সারি — নিট চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬; [[PayrollRunSummary]])
     'payroll_signing_summary' => ':month payroll · :count people · net :net',
+    // ⭐ public holidays (a6, 21 Oct 2026; [[HolidayController]])
+    'holiday_saved' => 'Holiday added.',
+    'holiday_updated' => 'Holiday changed.',
+    'holiday_deleted' => 'Holiday removed.',
+    'no_holidays' => 'No holidays listed for this year.',
+    'holiday_note' => 'Leave days and salary cuts skip these days and the weekly off (:weekly). A holiday for all branches applies to staff with no branch too.',
 ];

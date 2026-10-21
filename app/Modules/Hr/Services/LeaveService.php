@@ -12,6 +12,7 @@ use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Support\LeaveSigner;
 use App\Modules\Hr\Support\PaidMonth;
+use App\Modules\Hr\Support\WorkCalendar;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -47,6 +48,7 @@ final class LeaveService
         $to = Carbon::parse($toDate);
 
         $this->assertDatesMakeSense($from, $to, $days);
+        $this->assertWithinWorkingDays($employee, $from, $to, $days);
         $this->assertEmployedThroughout($employee, $from, $to);
 
         return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason) {
@@ -105,6 +107,8 @@ final class LeaveService
 
             $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
             $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
+            // ⛔ আবেদনের পরে তালিকায় ছুটির দিন বসলে কাজের দিন কমে — আবার মাপা, নইলে কোটা বেশি কাটত ([[assertWithinWorkingDays()]])
+            $this->assertWithinWorkingDays($employee, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
             $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
 
             /*
@@ -270,13 +274,27 @@ final class LeaveService
     private function stampAttendance(LeaveApplication $application): void
     {
         $day = $application->from_date->copy();
+        $calendar = app(WorkCalendar::class);
+        $employee = Employee::query()->withoutGlobalScopes()->find($application->employee_id);
+        $application->setRelation('employee', $employee);
+        $branchId = $employee?->branch_id === null ? null : (int) $employee->branch_id;
 
         while ($day->lte($application->to_date)) {
+            /*
+             * ⭐ ছুটির দিনে "ছুটি"-র সারি বসে না — মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬ (শ্রম আইন ধারা ১১৮; [[WorkCalendar]]; a6)।
+             * ⓘ শুক্রবার বা তালিকার ছুটির দিন আবেদনের দিন নয়; সেদিনের সারি (থাকলে) যেমন আছে তেমন থাকে, না থাকলে খালি — "লেখা হয়নি"।
+             */
+            if ($calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+                $day->addDay();
+
+                continue;
+            }
+
             /*
              * ⛔ আধা দিন লেখা থাকে — একই পুনঃঅডিট (HR ৮)। ⓘ "১.৫ দিন" দুই তারিখে বসত দুইটা পুরো দিনের সারি হয়ে, আর বিনা বেতনের
              * ছুটিতে বেতন থেকে দুই দিন কাটত। দিনের ভাগটা [[Attendance::leaveShare()]] গোনে; এখানে কেবল পর্দার জন্য মন্তব্য।
              */
-            $share = Attendance::shareOf($application, $day);
+            $share = Attendance::shareOf($application, $day, $calendar);
 
             // ⓘ কর্মীর সারিতে তালা [[approve()]]-এ আগেই; একসাথে অফিসের পাতা বা ফোন একই দিন লিখলে ৫০০ নয় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬, ⓘ১২)
             Attendance::writeDay((int) $application->employee_id, $day->toDateString(), [
@@ -361,10 +379,30 @@ final class LeaveService
         }
 
         /*
-         * ⓘ তারিখের চেয়ে কম দিন এখনো চলে — মালিকের সিদ্ধান্তের অপেক্ষায় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⚠️ হাজিরায়
-         * দিনগুলো প্রথম তারিখ থেকে ভরে ([[Attendance::shareOf()]]), তাই "৬ তারিখে ২ দিন"-এ প্রথম দুইটা পুরো আর বাকিগুলো শূন্য দিনের
-         * "ছুটি" — অথচ আজ লোকে এভাবেই ছুটির মধ্যের শুক্রবার বাদ দেন। শুক্রবার আর ছুটির দিন গোনা হবে কি না, সেই উত্তরের পরে।
+         * ⓘ তারিখের চেয়ে কম দিন চলে — আধা দিন বা ছুটির শেষে আগে ফেরা। শুক্রবার আর ছুটির দিনের প্রশ্নের উত্তর মালিক দিয়েছেন
+         * (২১ অক্টোবর ২০২৬): গোনা হয় না — [[assertWithinWorkingDays()]]। হাজিরায় দিনগুলো প্রথম কাজের দিন থেকে ভরে
+         * ([[Attendance::shareOf()]]), ছুটির দিন বাদ দিয়ে।
          */
+    }
+
+    /**
+     * ⭐ ছুটির দিন কেবল কাজের দিন — সাপ্তাহিক ছুটি আর তালিকার ছুটি বাদ (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ শ্রম আইন ২০০৬
+     * ধারা ১১৫–১১৮; [[WorkCalendar]]; a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে সীমা ছিল ক্যালেন্ডারের দিন: শনি–বৃহস্পতি "৭ দিন" চাওয়া যেত, আর মাঝের শুক্রবারও কোটা থেকে কাটত; বিজয় দিবস পড়লে সেটাও।
+     * এখন চাওয়া দিন পরিসরের কাজের দিনের বেশি নয় — কর্মীর শাখার ছুটি ধরে। ⛔ পুরো পরিসর ছুটির দিন হলে (কেবল একটা শুক্রবার) কাজের
+     * দিন শূন্য, তাই কোনো দিনই চাওয়া যায় না — ছুটির দিনে ছুটির আবেদন অর্থহীন।
+     */
+    private function assertWithinWorkingDays(Employee $employee, Carbon $from, Carbon $to, string $days): void
+    {
+        $working = (string) app(WorkCalendar::class)->workingDays(
+            $from, $to, (int) $employee->company_id, $employee->branch_id === null ? null : (int) $employee->branch_id);
+
+        if (bccomp($days, $working, 1) > 0) {
+            throw ValidationException::withMessages([
+                'days' => __('hr::validation.days_exceed_working', ['working' => $working]),
+            ]);
+        }
     }
 
     private function assertEmployedThroughout(Employee $employee, Carbon $from, Carbon $to): void
