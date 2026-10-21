@@ -10,6 +10,7 @@ import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 import '../approvals/final_reject_confirm.dart';
 
 /// ⭐ সইয়ের ভার — আমি যাঁদের দিয়েছি আর আমার কাছে যাঁদের ভার; নতুন ভার আর ফেরানো (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage
@@ -48,8 +49,8 @@ class _DelegationScreenState extends State<DelegationScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ভারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের ভার দেওয়া এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.approvalsDelegationLoadFailed,
+            whenAbsent: context.l10n.approvalsDelegationServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -60,14 +61,14 @@ class _DelegationScreenState extends State<DelegationScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ভার ফেরাবেন?'),
-        content: Text('${d.person} আর আপনার হয়ে সই দিতে পারবেন না।'),
+        title: Text(context.l10n.approvalsDelegationRevokeTitle),
+        content: Text(context.l10n.approvalsDelegationRevokeBody(d.person)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('না')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(context.l10n.approvalsDelegationNo)),
           FilledButton(
               key: const ValueKey('delegation-revoke-yes'),
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('ফেরান')),
+              child: Text(context.l10n.approvalsDelegationRevoke)),
         ],
       ),
     );
@@ -75,12 +76,12 @@ class _DelegationScreenState extends State<DelegationScreen> {
     try {
       await widget.api.revoke(d.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ভার ফেরানো হলো।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.approvalsDelegationRevoked)));
       await _load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: 'ভার ফেরানো গেল না।'))));
+            .showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: context.l10n.approvalsDelegationRevokeFailed))));
       }
     }
   }
@@ -98,14 +99,14 @@ class _DelegationScreenState extends State<DelegationScreen> {
     final s = _setup;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'সইয়ের ভার'),
+      appBar: AbosScreenBar(title: context.l10n.approvalsDelegationTitle),
       floatingActionButton: s == null
           ? null
           : FloatingActionButton.extended(
               key: const ValueKey('delegation-new'),
               onPressed: _new,
               icon: const Icon(Icons.add),
-              label: const Text('নতুন ভার'),
+              label: Text(context.l10n.approvalsDelegationNew),
             ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -114,23 +115,23 @@ class _DelegationScreenState extends State<DelegationScreen> {
           children: [
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.approvalsDelegationLoadFailedTitle, message: _error)
             else if (s != null) ...[
-              _Heading('আমার কাছে যাঁদের ভার', s.held.length),
+              _Heading(context.l10n.approvalsDelegationHeldHeading(s.held.length)),
               if (s.held.isEmpty)
                 Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Text('এখন কেউ আপনাকে ভার দেননি।', style: TextStyle(color: context.palette.onSurfaceMuted))),
+                    child: Text(context.l10n.approvalsDelegationNoneHeld, style: TextStyle(color: context.palette.onSurfaceMuted))),
               for (final d in s.held) _DelegationCard(d: d),
               const SizedBox(height: AppSpacing.sm),
-              _Heading('আমি যাঁদের দিয়েছি', s.given.length),
+              _Heading(context.l10n.approvalsDelegationGivenHeading(s.given.length)),
               if (s.given.isEmpty && s.held.isEmpty)
-                const EmptyState(
+                EmptyState(
                     icon: Icons.handshake_outlined,
-                    title: 'কোনো ভার নেই',
-                    message: 'ছুটিতে গেলে "নতুন ভার" চেপে কাউকে আপনার হয়ে সই দিতে দিন।')
+                    title: context.l10n.approvalsDelegationEmptyTitle,
+                    message: context.l10n.approvalsDelegationEmptyMessage)
               else if (s.given.isEmpty)
-                Text('আপনি কাউকে ভার দেননি।', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                Text(context.l10n.approvalsDelegationNoneGiven, style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final d in s.given)
                 _DelegationCard(d: d, onRevoke: d.revoked ? null : () => _revoke(d)),
             ],
@@ -143,15 +144,15 @@ class _DelegationScreenState extends State<DelegationScreen> {
 }
 
 class _Heading extends StatelessWidget {
-  const _Heading(this.label, this.count);
+  const _Heading(this.text);
 
-  final String label;
-  final int count;
+  /// নাম আর কয়টা — এক বার্তায় (ARB)
+  final String text;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-        child: Text('$label · $count টি', style: const TextStyle(fontWeight: FontWeight.w700)),
+        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w700)),
       );
 }
 
@@ -163,7 +164,10 @@ class _DelegationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = d.revoked ? 'ফেরানো' : (d.active ? 'চালু' : 'সামনে বা শেষ');
+    final words = context.l10n;
+    final state = d.revoked
+        ? words.approvalsDelegationStateRevoked
+        : (d.active ? words.approvalsDelegationStateActive : words.approvalsDelegationStateOther);
 
     return Card(
       key: ValueKey('delegation-${d.id}'),
@@ -171,14 +175,14 @@ class _DelegationCard extends StatelessWidget {
       child: ListTile(
         title: Text(d.person, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('${d.startsOn} থেকে ${d.endsOn} · $state',
+          Text(words.approvalsDelegationPeriod(d.startsOn, d.endsOn, state),
               style: TextStyle(color: d.active ? context.palette.success : context.palette.onSurfaceMuted)),
-          Text(d.modules.isEmpty ? 'সব কাজে' : d.modules.join(', ')),
+          Text(d.modules.isEmpty ? words.approvalsDelegationAllWork : d.modules.join(', ')),
           if (d.reason.isNotEmpty) Text(d.reason, style: const TextStyle(fontSize: 13)),
         ]),
         trailing: onRevoke == null
             ? null
-            : TextButton(key: ValueKey('delegation-revoke-${d.id}'), onPressed: onRevoke, child: const Text('ফেরান')),
+            : TextButton(key: ValueKey('delegation-revoke-${d.id}'), onPressed: onRevoke, child: Text(words.approvalsDelegationRevoke)),
       ),
     );
   }
@@ -248,7 +252,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
 
   Future<void> _save() async {
     if (_to == null) {
-      setState(() => _error = 'কাকে ভার দেবেন, বাছুন।');
+      setState(() => _error = context.l10n.approvalsDelegationChooseWho);
       return;
     }
     setState(() {
@@ -264,10 +268,10 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
             reason: _reason.text,
           ));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ভার দেওয়া হলো।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.approvalsDelegationSaved)));
       Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ভার দেওয়া গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.approvalsDelegationSaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -279,7 +283,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'নতুন ভার'),
+      appBar: AbosScreenBar(title: context.l10n.approvalsDelegationNew),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -287,7 +291,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
             key: const ValueKey('delegation-to'),
             initialValue: _to,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'কার কাছে'),
+            decoration: InputDecoration(labelText: context.l10n.approvalsDelegationTo),
             items: [
               for (final (id, name) in widget.setup.people) DropdownMenuItem(value: id, child: Text(name)),
             ],
@@ -299,7 +303,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
               child: OutlinedButton.icon(
                 key: const ValueKey('delegation-from'),
                 icon: const Icon(Icons.event, size: 18),
-                label: Text('শুরু ${dayOf(isoOf(_from))}'),
+                label: Text(context.l10n.approvalsDelegationFrom(dayOf(isoOf(_from)))),
                 onPressed: () => _pick(true),
               ),
             ),
@@ -308,13 +312,13 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
               child: OutlinedButton.icon(
                 key: const ValueKey('delegation-until'),
                 icon: const Icon(Icons.event, size: 18),
-                label: Text('শেষ ${dayOf(isoOf(_until))}'),
+                label: Text(context.l10n.approvalsDelegationUntil(dayOf(isoOf(_until)))),
                 onPressed: () => _pick(false),
               ),
             ),
           ]),
           const SizedBox(height: AppSpacing.sm),
-          Text('কোন কাজে (কিছু না বাছলে সব কাজে)', style: TextStyle(color: context.palette.onSurfaceMuted)),
+          Text(context.l10n.approvalsDelegationWhichWork, style: TextStyle(color: context.palette.onSurfaceMuted)),
           Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
             for (final (code, label) in widget.setup.modules)
               FilterChip(
@@ -329,7 +333,8 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
             key: const ValueKey('delegation-reason'),
             controller: _reason,
             maxLength: 255,
-            decoration: const InputDecoration(labelText: 'কারণ (ঐচ্ছিক)', hintText: 'যেমন: ছুটিতে'),
+            decoration: InputDecoration(
+                labelText: context.l10n.approvalsDelegationReason, hintText: context.l10n.approvalsDelegationReasonHint),
           ),
           if (_error != null)
             Padding(
@@ -339,7 +344,7 @@ class _NewDelegationScreenState extends State<NewDelegationScreen> {
           FilledButton(
             key: const ValueKey('delegation-save'),
             onPressed: _busy ? null : _save,
-            child: Text(_busy ? 'দেওয়া হচ্ছে…' : 'ভার দিন'),
+            child: Text(_busy ? context.l10n.approvalsDelegationSaving : context.l10n.approvalsDelegationSave),
           ),
         ],
       ),
@@ -376,7 +381,7 @@ class PaperQueueScreen extends StatefulWidget {
 }
 
 class _PaperQueueScreenState extends State<PaperQueueScreen> {
-  late String _tab = _tabs.keys.first;
+  late String _tab = _tabs.first;
   final List<PaperQueueRow> _rows = [];
   PaperQueuePage? _page;
   String? _error;
@@ -391,11 +396,19 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
     super.dispose();
   }
 
-  Map<String, String> get _tabs => widget.kind == PaperQueueKind.documents
-      ? const {'to_sign': 'আমার সইয়ের অপেক্ষায়', 'mine': 'আমার পাঠানো'}
-      : const {'to_sign': 'আমার সইয়ের অপেক্ষায়', 'asked': 'আমার চাওয়া', 'signed': 'সইয়ের ইতিহাস'};
+  List<String> get _tabs =>
+      widget.kind == PaperQueueKind.documents ? const ['to_sign', 'mine'] : const ['to_sign', 'asked', 'signed'];
 
-  String get _title => widget.kind == PaperQueueKind.documents ? 'দলিলের অনুমোদন' : 'সই কেন্দ্র';
+  String _tabLabel(String tab) => switch (tab) {
+        'mine' => context.l10n.approvalsQueueTabMine,
+        'asked' => context.l10n.approvalsQueueTabAsked,
+        'signed' => context.l10n.approvalsQueueTabSigned,
+        _ => context.l10n.approvalsQueueTabToSign,
+      };
+
+  String get _title => widget.kind == PaperQueueKind.documents
+      ? context.l10n.approvalsQueueDocumentsTitle
+      : context.l10n.approvalsQueueSignaturesTitle;
 
   @override
   void initState() {
@@ -422,8 +435,10 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের $_title এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.approvalsQueueLoadFailed,
+            whenAbsent: widget.kind == PaperQueueKind.documents
+                ? context.l10n.approvalsQueueDocumentsServerMissing
+                : context.l10n.approvalsQueueSignaturesServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -434,11 +449,11 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
     try {
       await (widget.approve ?? (id) => ApprovalsApi.approve(id))(row.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('সই দেওয়া হলো।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.approvalsQueueSigned)));
       await _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: 'সই দেওয়া গেল না।'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: context.l10n.approvalsQueueSignFailed))));
       }
     }
   }
@@ -452,7 +467,7 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
         title: Text(title),
         content: TextField(key: const ValueKey('queue-reason'), controller: _reason, autofocus: true, maxLength: 255),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('বাদ দিন')),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.approvalsQueueReasonDismiss)),
           FilledButton(
               key: const ValueKey('queue-reason-send'),
               onPressed: () => Navigator.of(context).pop(_reason.text.trim()),
@@ -462,7 +477,7 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
     );
     if (text == null || !mounted) return null;
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('কারণ লিখতে হবে।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.approvalsQueueReasonNeeded)));
       return null;
     }
     return text;
@@ -470,20 +485,20 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
 
   /// ⭐ সংশোধনে ফেরত — send-back; কাগজ লেখকের কাছে ফেরে। ⛔ ০.৪.৪২ পর্যন্ত এই বোতাম ভুল করে প্রত্যাখ্যান করত
   Future<void> _sendBack(PaperQueueRow row) async {
-    final text = await _askReason(title: 'কী ঠিক করতে হবে? (সংশোধনে ফেরত)', send: 'সংশোধনে ফেরত দিন');
-    if (text == null) return;
+    final text = await _askReason(title: context.l10n.approvalsQueueSendBackTitle, send: context.l10n.approvalsQueueSendBack);
+    if (text == null || !mounted) return;
     await _act(() => (widget.sendBack ?? (id, r) => ApprovalsApi.sendBack(id, remarks: r))(row.id, text),
-        done: 'সংশোধনে ফেরত পাঠানো হলো।', failed: 'সংশোধনে ফেরত পাঠানো গেল না।');
+        done: context.l10n.approvalsQueueSentBack, failed: context.l10n.approvalsQueueSendBackFailed);
   }
 
   /// ⭐ প্রত্যাখ্যান — কারণ, তারপর আলাদা শেষ প্রশ্ন; না বললে কিছুই যায় না
   Future<void> _reject(PaperQueueRow row) async {
-    final text = await _askReason(title: 'কেন প্রত্যাখ্যান করছেন?', send: 'প্রত্যাখ্যান করুন');
+    final text = await _askReason(title: context.l10n.approvalsQueueRejectTitle, send: context.l10n.approvalsQueueReject);
     if (text == null || !mounted) return;
     final what = [if (row.documentNo.isNotEmpty) row.documentNo, row.name].join(' · ');
     if (!await confirmFinalReject(context, what: what) || !mounted) return;
     await _act(() => (widget.reject ?? (id, r) => ApprovalsApi.reject(id, remarks: r))(row.id, text),
-        done: 'প্রত্যাখ্যান করা হয়েছে।', failed: 'প্রত্যাখ্যান করা গেল না।');
+        done: context.l10n.approvalsQueueRejected, failed: context.l10n.approvalsQueueRejectFailed);
   }
 
   Future<void> _act(Future<void> Function() call, {required String done, required String failed}) async {
@@ -511,13 +526,13 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
-              for (final t in _tabs.entries)
+              for (final t in _tabs)
                 ChoiceChip(
-                  key: ValueKey('queue-tab-${t.key}'),
-                  label: Text(t.value),
-                  selected: _tab == t.key,
+                  key: ValueKey('queue-tab-$t'),
+                  label: Text(_tabLabel(t)),
+                  selected: _tab == t,
                   onSelected: (_) {
-                    setState(() => _tab = t.key);
+                    setState(() => _tab = t);
                     _load();
                   },
                 ),
@@ -526,14 +541,14 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
             if (_page != null && _rows.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Text('মোট ${_page!.count} টি',
+                child: Text(context.l10n.approvalsQueueTotal(_page!.count),
                     key: const ValueKey('queue-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.approvalsQueueLoadFailedTitle, message: _error)
             else if (_page != null && _rows.isEmpty && !_busy)
-              EmptyState(icon: Icons.task_alt_outlined, title: signed ? 'এখনো কোনো সই নেই' : 'কিছু অপেক্ষায় নেই'),
+              EmptyState(icon: Icons.task_alt_outlined, title: signed ? context.l10n.approvalsQueueNoSignatures : context.l10n.approvalsQueueNothingWaiting),
             for (final row in _rows)
               Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -543,13 +558,13 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
                     Text([if (row.documentNo.isNotEmpty) row.documentNo, row.name].join(' · '),
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     if (signed) ...[
-                      Text('সই: ${row.signer} · ${row.signedAt}'),
-                      Text([if (row.version.isNotEmpty) row.version, if (row.hash.isNotEmpty) 'ছাপ ${row.hash}…'].join(' · '),
+                      Text(context.l10n.approvalsQueueSignedBy(row.signer, row.signedAt)),
+                      Text([if (row.version.isNotEmpty) row.version, if (row.hash.isNotEmpty) context.l10n.approvalsQueueFingerprint(row.hash)].join(' · '),
                           style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
                     ] else ...[
-                      Text('চেয়েছেন: ${row.requester}'),
+                      Text(context.l10n.approvalsQueueRequestedBy(row.requester)),
                       if (row.dueAt.isNotEmpty)
-                        Text('শেষ সময়: ${row.dueAt}',
+                        Text(context.l10n.approvalsQueueDue(row.dueAt),
                             style: TextStyle(color: row.overdue ? context.palette.danger : context.palette.onSurfaceMuted)),
                       if (row.canDecide)
                         // ⭐ ইনবক্সের একই দুই কাজ, একই লেখা; মোড়ানো — ৩৬০dp-তে তিন বোতাম এক সারিতে না-ও ধরতে পারে
@@ -558,13 +573,13 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
                               key: ValueKey('queue-reject-${row.id}'),
                               style: TextButton.styleFrom(foregroundColor: context.palette.danger),
                               onPressed: () => _reject(row),
-                              child: const Text('প্রত্যাখ্যান করুন')),
+                              child: Text(context.l10n.approvalsQueueReject)),
                           OutlinedButton(
                               key: ValueKey('queue-send-back-${row.id}'),
                               onPressed: () => _sendBack(row),
-                              child: const Text('সংশোধনে ফেরত দিন')),
+                              child: Text(context.l10n.approvalsQueueSendBack)),
                           FilledButton(
-                              key: ValueKey('queue-sign-${row.id}'), onPressed: () => _sign(row), child: const Text('সই দিন')),
+                              key: ValueKey('queue-sign-${row.id}'), onPressed: () => _sign(row), child: Text(context.l10n.approvalsQueueSign)),
                         ]),
                     ],
                   ]),
@@ -574,7 +589,7 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
               OutlinedButton(
                   key: const ValueKey('queue-more'),
                   onPressed: _busy ? null : () => _load(more: true),
-                  child: const Text('আরও')),
+                  child: Text(context.l10n.approvalsQueueMore)),
           ],
         ),
       ),

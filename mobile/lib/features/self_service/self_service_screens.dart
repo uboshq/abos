@@ -13,6 +13,7 @@ import '../books/books_widgets.dart';
 import '../finance/finance_screens.dart' show monthWords;
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ নিজের ছুটি আর নিজের বেতনের স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
 ///
@@ -56,8 +57,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ছুটির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের ছুটি এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.hrLeaveLoadFailed,
+            whenAbsent: context.l10n.hrLeaveServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -69,7 +70,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
     final book = _book;
     final canApply = book != null && book.employee && book.types.isNotEmpty;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'আমার ছুটি'),
+      appBar: AbosScreenBar(title: context.l10n.hrLeaveTitle),
       floatingActionButton: canApply
           ? FloatingActionButton.extended(
               key: const ValueKey('leave-new'),
@@ -78,12 +79,12 @@ class _LeaveScreenState extends State<LeaveScreen> {
                     MaterialPageRoute(builder: (_) => NewLeaveScreen(api: widget.api, types: book.types)));
                 if (sent != null && context.mounted) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text('ছুটির আবেদন গেছে — অনুমোদনের অপেক্ষায়।')));
+                      .showSnackBar(SnackBar(content: Text(context.l10n.hrLeaveSent)));
                   await _load();
                 }
               },
               icon: const Icon(Icons.add),
-              label: const Text('ছুটির আবেদন'),
+              label: Text(context.l10n.hrLeaveApply),
             )
           : null,
       body: RefreshIndicator(
@@ -95,33 +96,33 @@ class _LeaveScreenState extends State<LeaveScreen> {
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) BooksError(_error!),
             if (book != null && !book.employee)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.badge_outlined,
-                title: 'আপনার নামে কর্মীর খাতা নেই',
-                message: 'ছুটির আবেদন করতে HR-কে বলুন আপনার লগইন কর্মীর খাতার সাথে জুড়ে দিতে।',
+                title: context.l10n.hrNoEmployeeRecord,
+                message: context.l10n.hrLeaveNoEmployeeMessage,
               ),
             if (book != null && book.employee) ...[
-              const SectionTitle('এ বছর কত বাকি'),
+              SectionTitle(context.l10n.hrLeaveLeftThisYear),
               if (book.types.isEmpty)
-                Text('এখনো কোনো ছুটির ধরন নেই — HR ঠিক করে দেবেন।', style: TextStyle(color: context.palette.onSurfaceMuted)),
+                Text(context.l10n.hrLeaveNoTypes, style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final t in book.types)
-                FactRow(t.name, t.left == null ? 'সীমা নেই · নেওয়া ${t.taken} দিন' : '${t.left} দিন বাকি · মোট ${t.allowed}',
+                FactRow(t.name, t.left == null ? context.l10n.hrLeaveNoLimit(t.taken) : context.l10n.hrLeaveBalance(t.left!, t.allowed),
                     key: ValueKey('leave-type-${t.id}')),
-              const SectionTitle('আমার আবেদন'),
+              SectionTitle(context.l10n.hrLeaveMyApplications),
               if (book.applications.isEmpty)
-                const EmptyState(icon: Icons.event_available_outlined, title: 'এখনো কোনো ছুটির আবেদন নেই'),
+                EmptyState(icon: Icons.event_available_outlined, title: context.l10n.hrLeaveNoApplications),
               for (final a in book.applications)
                 Card(
                   key: ValueKey('leave-${a.id}'),
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: ListTile(
-                    title: Text('${a.type} · ${a.days} দিন', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    title: Text(context.l10n.hrLeaveCardTitle(a.type, a.days), style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(a.fromDate == a.toDate ? dayOf(a.fromDate) : '${dayOf(a.fromDate)} – ${dayOf(a.toDate)}'),
                         if (a.reason.isNotEmpty) Text(a.reason, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        if (a.remarks.isNotEmpty) Text('অফিসের কথা: ${a.remarks}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                        if (a.remarks.isNotEmpty) Text(context.l10n.hrLeaveOfficeNote(a.remarks), maxLines: 2, overflow: TextOverflow.ellipsis),
                       ],
                     ),
                     trailing: Text(a.statusWords,
@@ -223,11 +224,11 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
   Future<void> _send() async {
     final days = _days.text.trim();
     final problem = _type == null
-        ? 'কোন ছুটি, বাছুন।'
+        ? context.l10n.hrLeaveChooseType
         : !_daysShape.hasMatch(days) || (double.tryParse(days) ?? 0) <= 0
-            ? 'দিনের সংখ্যা ঠিকভাবে লিখুন — যেমন ২ বা ১.৫।'
+            ? context.l10n.hrLeaveDaysShape
             : (double.tryParse(days) ?? 0) > _span
-                ? 'দিনের সংখ্যা তারিখের ঘরের চেয়ে বেশি — $_span দিনের বেশি নয়।'
+                ? context.l10n.hrLeaveDaysTooMany(_span)
                 : null;
     if (problem != null) {
       setState(() => _error = problem);
@@ -242,7 +243,7 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
           LeaveDraft(typeId: _type!, from: _from, to: _to, days: days, reason: _reason.text)));
       if (mounted) Navigator.of(context).pop(sent);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'আবেদন পাঠানো গেল না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.hrLeaveSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -253,11 +254,11 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
   Widget build(BuildContext context) => UnsavedGuard(dirty: _dirty, child: _screen(context));
 
   Widget _screen(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'ছুটির আবেদন'),
+        appBar: AbosScreenBar(title: context.l10n.hrLeaveApply),
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text('আবেদন যায় অফিসে; মঞ্জুর হলে দিনগুলো হাজিরায় "ছুটি" হয়ে বসে।',
+            Text(context.l10n.hrLeaveHowItWorks,
                 style: TextStyle(color: context.palette.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.sm),
             if (_busy) const LinearProgressIndicator(),
@@ -274,12 +275,12 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
               key: const ValueKey('leave-type'),
               initialValue: _type,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'কোন ছুটি'),
+              decoration: InputDecoration(labelText: context.l10n.hrLeaveTypeField),
               items: [
                 for (final t in widget.types)
                   DropdownMenuItem(
                     value: t.id,
-                    child: Text(t.left == null ? t.name : '${t.name} (${t.left} দিন বাকি)', overflow: TextOverflow.ellipsis),
+                    child: Text(t.left == null ? t.name : context.l10n.hrLeaveTypeWithLeft(t.name, t.left!), overflow: TextOverflow.ellipsis),
                   ),
               ],
               onChanged: (v) => setState(() => _type = v),
@@ -287,7 +288,7 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
             ListTile(
               key: const ValueKey('leave-from'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('কবে থেকে'),
+              title: Text(context.l10n.hrLeaveFrom),
               subtitle: Text('${_from.day}/${_from.month}/${_from.year}'),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: () => _pick(from: true),
@@ -295,7 +296,7 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
             ListTile(
               key: const ValueKey('leave-to'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('কবে পর্যন্ত'),
+              title: Text(context.l10n.hrLeaveUntil),
               subtitle: Text('${_to.day}/${_to.month}/${_to.year}'),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: () => _pick(from: false),
@@ -304,7 +305,7 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
               key: const ValueKey('leave-days'),
               controller: _days,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'কত দিন (আধা দিন হলে .৫)'),
+              decoration: InputDecoration(labelText: context.l10n.hrLeaveDaysField),
             ),
             TextField(
               key: const ValueKey('leave-reason'),
@@ -312,14 +313,14 @@ class _NewLeaveScreenState extends State<NewLeaveScreen> {
               maxLength: 500,
               maxLines: 3,
               minLines: 1,
-              decoration: const InputDecoration(labelText: 'কারণ'),
+              decoration: InputDecoration(labelText: context.l10n.hrLeaveReasonField),
             ),
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
               key: const ValueKey('leave-send'),
               onPressed: _busy ? null : _send,
               icon: const Icon(Icons.send_outlined),
-              label: const Text('পাঠান'),
+              label: Text(context.l10n.hrLeaveSend),
             ),
           ],
         ),
@@ -342,24 +343,28 @@ class _PayslipListScreenState extends State<PayslipListScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'আমার বেতনের স্লিপ'),
+        appBar: AbosScreenBar(title: context.l10n.hrPayslipListTitle),
         body: PagedList<Payslip>(
           load: (page) async {
             final p = await widget.api.payslips(page: page);
             if (mounted && p.employee != _employee) setState(() => _employee = p.employee);
             return (p.rows, p.nextPage);
           },
-          failed: 'স্লিপের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-          whenAbsent: 'সার্ভারে ফোনের বেতনের স্লিপ এখনো আসেনি — অফিসে জানান।',
+          failed: context.l10n.hrPayslipListFailed,
+          whenAbsent: context.l10n.hrPayslipServerMissing,
           emptyIcon: Icons.receipt_long_outlined,
-          emptyTitle: _employee ? 'এখনো কোনো পাকা বেতনের স্লিপ নেই' : 'আপনার নামে কর্মীর খাতা নেই',
-          emptyMessage: _employee ? 'বেতনের রান পাকা হলে স্লিপ এখানে আসে।' : 'HR-কে বলুন আপনার লগইন কর্মীর খাতার সাথে জুড়ে দিতে।',
+          emptyTitle: _employee ? context.l10n.hrPayslipEmptyTitle : context.l10n.hrNoEmployeeRecord,
+          emptyMessage: _employee ? context.l10n.hrPayslipEmptyMessage : context.l10n.hrPayslipNoEmployeeMessage,
           item: (context, s) => Card(
             margin: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: ListTile(
               key: ValueKey('payslip-${s.id}'),
               title: Text(monthWords(s.month), style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('আয় ${Money.taka(s.gross)} · কর্তন ${Money.taka(s.deductions)}'),
+              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // ⭐ উৎসব ভাতার স্লিপ চেনা যায় — কেবল run_type "bonus"-এ; বেতনের বা পুরনো সার্ভারের স্লিপ আগের মতোই
+                if (s.isFestivalBonus) _FestivalBonusLabel(key: ValueKey('payslip-bonus-${s.id}')),
+                Text(context.l10n.hrPayslipRowLine(Money.taka(s.gross), Money.taka(s.deductions))),
+              ]),
               trailing: Text(Money.taka(s.net), style: const TextStyle(fontWeight: FontWeight.w800)),
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute<void>(builder: (_) => PayslipScreen(id: s.id, api: widget.api))),
@@ -369,12 +374,7 @@ class _PayslipListScreenState extends State<PayslipListScreen> {
       );
 }
 
-String _paidBy(String method) => switch (method) {
-      'cash' => 'নগদ',
-      'bank' => 'ব্যাংক',
-      'mfs' => 'মোবাইল ব্যাংকিং',
-      _ => method,
-    };
+String _paidBy(BuildContext context, String method) => context.l10n.hrPayslipPaidBy(method);
 
 class PayslipScreen extends StatelessWidget {
   const PayslipScreen({super.key, required this.id, this.api = const ServerSelfServiceApi()});
@@ -384,22 +384,35 @@ class PayslipScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PaperPage<Payslip>(
-        title: 'বেতনের স্লিপ',
+        title: context.l10n.hrPayslipTitle,
         titleOf: (s) => monthWords(s.month),
         load: () => api.payslip(id),
-        failed: 'স্লিপটা আনা গেল না।',
+        failed: context.l10n.hrPayslipFailed,
         onLoaded: (s) => RecentPapers.note(kind: 'payslip', id: id, number: monthWords(s.month)),
         body: (context, s) => [
-          TotalStrip(label: 'নিট বেতন', value: Money.taka(s.net)),
-          if (s.name.isNotEmpty) FactRow('নাম', s.code.isEmpty ? s.name : '${s.name} (${s.code})'),
-          FactRow('মাস', monthWords(s.month)),
-          if (s.paymentMethod.isNotEmpty) FactRow('কীভাবে', _paidBy(s.paymentMethod)),
-          const SectionTitle('আয়'),
+          if (s.isFestivalBonus) const _FestivalBonusLabel(key: ValueKey('payslip-festival-bonus')),
+          TotalStrip(label: context.l10n.hrPayslipNet, value: Money.taka(s.net)),
+          if (s.name.isNotEmpty) FactRow(context.l10n.hrPayslipName, s.code.isEmpty ? s.name : '${s.name} (${s.code})'),
+          FactRow(context.l10n.hrPayslipMonth, monthWords(s.month)),
+          if (s.paymentMethod.isNotEmpty) FactRow(context.l10n.hrPayslipHow, _paidBy(context, s.paymentMethod)),
+          SectionTitle(context.l10n.hrPayslipEarnings),
           for (final l in s.lines.where((l) => l.earning)) FactRow(l.name, Money.taka(l.amount)),
-          FactRow('মোট আয়', Money.taka(s.gross), colour: context.palette.success),
-          const SectionTitle('কর্তন'),
+          FactRow(context.l10n.hrPayslipGross, Money.taka(s.gross), colour: context.palette.success),
+          SectionTitle(context.l10n.hrPayslipDeductions),
           for (final l in s.lines.where((l) => !l.earning)) FactRow(l.name, Money.taka(l.amount)),
-          FactRow('মোট কর্তন', Money.taka(s.deductions), colour: context.palette.danger),
+          FactRow(context.l10n.hrPayslipTotalDeductions, Money.taka(s.deductions), colour: context.palette.danger),
         ],
+      );
+}
+
+/// "উৎসব ভাতা" — বোনাসের রানের স্লিপের চিহ্ন (তালিকার সারি আর স্লিপের পাতা)
+class _FestivalBonusLabel extends StatelessWidget {
+  const _FestivalBonusLabel({super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Text(context.l10n.hrPayslipFestivalBonus,
+            style: TextStyle(color: context.palette.success, fontWeight: FontWeight.w700)),
       );
 }

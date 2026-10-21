@@ -8,6 +8,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// Marking your own day present — docs/Contract §৭.
 ///
@@ -102,8 +103,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ))(draft);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('হাজিরা তোলা হয়েছে। সংযোগ পেলে পাঠানো হবে।'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n.hrAttendanceMarkedQueued),
       ));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -116,7 +117,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ..sort((a, b) => (b.workDate ?? '').compareTo(a.workDate ?? ''));
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'হাজিরা'),
+      appBar: AbosScreenBar(title: context.l10n.hrAttendanceTitle),
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),
@@ -133,14 +134,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     onMark: _busy ? null : _mark,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  const Text('আগের দিনগুলো',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  Text(context.l10n.hrAttendanceEarlierDays,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: AppSpacing.sm),
                   if (history.isEmpty)
-                    const EmptyState(
+                    EmptyState(
                       icon: Icons.event_available_outlined,
-                      title: 'আগের কোনো হাজিরা সিঙ্ক হয়নি',
-                      message: 'নিচে টেনে আবার চেষ্টা করুন।',
+                      title: context.l10n.hrAttendanceNoHistoryTitle,
+                      message: context.l10n.hrAttendanceNoHistoryMessage,
                     )
                   else
                     ...history.map((row) => _DayTile(row: row)),
@@ -178,21 +179,21 @@ class _TodayCard extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 22, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.xs),
-            Text('আজ', style: Theme.of(context).textTheme.bodySmall),
+            Text(context.l10n.hrAttendanceToday, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: AppSpacing.lg),
             if (marked) ...[
               Icon(Icons.check_circle,
                   size: 48, color: context.palette.success),
               const SizedBox(height: AppSpacing.sm),
-              const Text('আজকের হাজিরা তোলা হয়েছে',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              Text(context.l10n.hrAttendanceTodayMarked,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
               if (waitingToSend) ...[
                 const SizedBox(height: AppSpacing.xs),
                 // Told plainly rather than hidden behind the tick: on a phone
                 // with no signal this is the honest state, and a person who
                 // believes it already reached the office has no reason to
                 // keep the app open until it does.
-                Text('সংযোগ পেলে পাঠানো হবে — এখনো এই ফোনেই আছে।',
+                Text(context.l10n.hrAttendanceWaitingToSend,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontSize: 12.5, color: context.palette.onSurfaceMuted)),
@@ -203,7 +204,7 @@ class _TodayCard extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onMark,
                   icon: const Icon(Icons.how_to_reg_outlined),
-                  label: const Text('আজকের হাজিরা দিন'),
+                  label: Text(context.l10n.hrAttendanceMarkToday),
                 ),
               ),
           ],
@@ -234,9 +235,9 @@ class _DayTile extends StatelessWidget {
             ? (row.workDate ?? '—')
             : DateFormat('dd/MM/yyyy').format(date)),
         subtitle: Text([
-          if (row.inTime != null) 'ঢুকেছেন ${row.inTime}',
-          if (row.outTime != null) 'বেরিয়েছেন ${row.outTime}',
-          if (row.isLate) 'দেরি',
+          if (row.inTime != null) context.l10n.hrAttendanceIn(row.inTime!),
+          if (row.outTime != null) context.l10n.hrAttendanceOut(row.outTime!),
+          if (row.isLate) context.l10n.hrAttendanceLate,
           // The server's own late-sync note, carried through untouched — see
           // AttendanceRecord.remarks for why a screen must not swallow it.
           if (row.remarks != null) row.remarks!,

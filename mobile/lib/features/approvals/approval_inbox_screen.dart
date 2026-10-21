@@ -13,6 +13,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
 import '../../core/widgets/day_part.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// What is waiting for this person's decision — docs/Contract §৫.
 ///
@@ -98,9 +99,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       // means this build is newer than the server it is talking to, which on
       // a fleet updated by hand from a link is an ordinary Tuesday.
       setState(() => _error = errorMessageFor(error,
-          fallback: 'তালিকা আনা গেল না। আবার চেষ্টা করুন।',
-          whenAbsent: 'অনুমোদনের সুবিধাটা এখনো এই সার্ভারে নেই — অ্যাপটা '
-              'সার্ভারের চেয়ে নতুন। অফিসে জানান।'));
+          fallback: context.l10n.approvalsInboxLoadFailed, whenAbsent: context.l10n.approvalsInboxServerMissing));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -147,9 +146,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       if (!mounted) return;
       _drop(approval.id);
       _say(switch (decision) {
-        _Decision.approve => 'অনুমোদন হয়েছে।',
-        _Decision.sendBack => 'সংশোধনে ফেরত পাঠানো হলো।',
-        _Decision.reject => 'প্রত্যাখ্যান করা হয়েছে।',
+        _Decision.approve => context.l10n.approvalsInboxSigned,
+        _Decision.sendBack => context.l10n.approvalsInboxSentBack,
+        _Decision.reject => context.l10n.approvalsInboxRejected,
       });
     } catch (error) {
       if (!mounted) return;
@@ -158,17 +157,17 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
           // Not an error. Two people can be looking at the same inbox, and
           // the second to tap is seeing that a colleague got there first.
           _drop(approval.id);
-          _say('এটি ইতিমধ্যে নিষ্পত্তি হয়ে গেছে।');
+          _say(context.l10n.approvalsInboxAlreadyDecided);
         case ApprovalFailure.notYours:
-          _say('এই সিদ্ধান্তটি আপনার নয়।');
+          _say(context.l10n.approvalsInboxNotYours);
         case ApprovalFailure.amountChanged:
           // ⛔ কার্ড খোলার পরে অঙ্ক বদলেছে — সই পড়েনি; তালিকা আবার, নতুন অঙ্ক দেখে আবার সই
-          _say('কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।');
+          _say(context.l10n.approvalsInboxAmountChanged);
           unawaited(_load());
         case ApprovalFailure.network:
-          _say('সংযোগ নেই। অনুমোদনের জন্য ইন্টারনেট লাগবে।');
+          _say(context.l10n.approvalsInboxOffline);
         case ApprovalFailure.other:
-          _say(errorMessageFor(error, fallback: 'কাজটি সম্পন্ন হয়নি।'));
+          _say(errorMessageFor(error, fallback: context.l10n.approvalsInboxActionFailed));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -188,7 +187,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
         _next = page.nextCursor;
       });
     } catch (error) {
-      if (mounted) _say(errorMessageFor(error, fallback: 'আরও আনা গেল না।'));
+      if (mounted) _say(errorMessageFor(error, fallback: context.l10n.approvalsInboxMoreFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -201,9 +200,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     final remarks = await showDialog<String>(
       context: context,
       builder: (context) => _RemarksDialog(
-        title: 'অনুমোদন করবেন?',
+        title: context.l10n.approvalsInboxSignTitle,
         subtitle: _describe(approval),
-        confirmLabel: 'অনুমোদন',
+        confirmLabel: context.l10n.approvalsInboxSignButton,
         // Saying yes needs no explanation; saying no does. The asymmetry is
         // the server's own (ApprovalEngine.approve takes ?string remarks,
         // reject takes string), kept rather than smoothed over.
@@ -219,9 +218,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     final remarks = await showDialog<String>(
       context: context,
       builder: (context) => _RemarksDialog(
-        title: 'সংশোধনে ফেরত দেবেন?',
+        title: context.l10n.approvalsInboxSendBackTitle,
         subtitle: _describe(approval),
-        confirmLabel: 'সংশোধনে ফেরত দিন',
+        confirmLabel: context.l10n.approvalsInboxSendBackButton,
         remarksRequired: true,
       ),
     );
@@ -234,9 +233,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     final remarks = await showDialog<String>(
       context: context,
       builder: (context) => _RemarksDialog(
-        title: 'প্রত্যাখ্যান করবেন?',
+        title: context.l10n.approvalsInboxRejectTitle,
         subtitle: _describe(approval),
-        confirmLabel: 'প্রত্যাখ্যান করুন',
+        confirmLabel: context.l10n.approvalsInboxRejectButton,
         destructive: true,
         remarksRequired: true,
       ),
@@ -258,7 +257,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
     final rows = _rows;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'অনুমোদন'),
+      appBar: AbosScreenBar(title: context.l10n.approvalsInboxTitle),
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),
@@ -275,17 +274,17 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                   if (_error != null)
                     EmptyState(
                       icon: Icons.cloud_off_outlined,
-                      title: 'তালিকা আনা গেল না',
+                      title: context.l10n.approvalsInboxLoadFailedTitle,
                       message: _error,
                     )
                   else if (rows == null)
                     const SizedBox(height: 200)
                   else if (rows.isEmpty)
-                    const EmptyState(
+                    EmptyState(
                       icon: Icons.inbox_outlined,
-                      title: 'কিছু অপেক্ষা করছে না',
+                      title: context.l10n.approvalsInboxEmptyTitle,
                       // Not an error screen — an empty inbox is good news.
-                      message: 'আপনার সিদ্ধান্তের জন্য কোনো নথি নেই।',
+                      message: context.l10n.approvalsInboxEmptyMessage,
                     )
                   else
                     ...rows.map((approval) => _ApprovalCard(
@@ -302,7 +301,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                     OutlinedButton(
                       key: const ValueKey('approvals-more'),
                       onPressed: _busy ? null : _more,
-                      child: const Text('আরও দেখুন'),
+                      child: Text(context.l10n.approvalsInboxShowMore),
                     ),
                 ],
               ),
@@ -375,8 +374,8 @@ class _ApprovalCard extends StatelessWidget {
               [
                 if (approval.requesterName != null) approval.requesterName!,
                 if (requestedAt != null)
-                  banglaStamp(requestedAt),
-                if (approval.currentLevel > 0) 'ধাপ ${approval.currentLevel}',
+                  stampText(requestedAt),
+                if (approval.currentLevel > 0) context.l10n.approvalsInboxStep(approval.currentLevel),
               ].join(' · '),
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -393,7 +392,7 @@ class _ApprovalCard extends StatelessWidget {
                 key: Key('approval-details-${approval.id}'),
                 onPressed: onDetails,
                 icon: const Icon(Icons.list_alt_outlined, size: 18),
-                label: const Text('বিস্তারিত'),
+                label: Text(context.l10n.approvalsInboxDetails),
               ),
             ),
             // ⛔ সারি নয়, মোড়ানো — ৩৬০ চওড়া ফোনে "কাগজ দেখুন · প্রত্যাখ্যান · অনুমোদন" এক সারিতে ধরত না, ডান দিকে উপচে
@@ -421,7 +420,7 @@ class _ApprovalCard extends StatelessWidget {
                       fileStem: approval.documentNo,
                     ),
                     icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                    label: const Text('কাগজ দেখুন'),
+                    label: Text(context.l10n.approvalsInboxViewPaper),
                   ),
                 Wrap(
                   spacing: AppSpacing.sm,
@@ -435,16 +434,16 @@ class _ApprovalCard extends StatelessWidget {
                       onPressed: onReject,
                       style: TextButton.styleFrom(
                           foregroundColor: context.palette.danger),
-                      child: const Text('প্রত্যাখ্যান করুন'),
+                      child: Text(context.l10n.approvalsInboxRejectButton),
                     ),
                     OutlinedButton(
                       key: Key('approval-send-back-${approval.id}'),
                       onPressed: onSendBack,
-                      child: const Text('সংশোধনে ফেরত দিন'),
+                      child: Text(context.l10n.approvalsInboxSendBackButton),
                     ),
                     FilledButton(
                       onPressed: onApprove,
-                      child: const Text('অনুমোদন'),
+                      child: Text(context.l10n.approvalsInboxSignButton),
                     ),
                   ],
                 ),
@@ -510,8 +509,8 @@ class _RemarksDialogState extends State<_RemarksDialog> {
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               labelText: widget.remarksRequired
-                  ? 'কারণ (বাধ্যতামূলক)'
-                  : 'মন্তব্য (ঐচ্ছিক)',
+                  ? context.l10n.approvalsInboxReasonRequired
+                  : context.l10n.approvalsInboxRemarksOptional,
             ),
           ),
         ],
@@ -519,7 +518,7 @@ class _RemarksDialogState extends State<_RemarksDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('বাতিল'),
+          child: Text(context.l10n.commonCancel),
         ),
         FilledButton(
           onPressed:
@@ -562,7 +561,7 @@ class _ApprovalDetails extends StatelessWidget {
               if (snap.hasError) {
                 return Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(errorMessageFor(snap.error!, fallback: 'বিস্তারিত আনা গেল না।'),
+                  child: Text(errorMessageFor(snap.error!, fallback: context.l10n.approvalsInboxDetailsFailed),
                       style: TextStyle(color: context.palette.danger)),
                 );
               }
@@ -584,7 +583,7 @@ class _ApprovalDetails extends StatelessWidget {
                   ],
                   if (s.totalLine != null) Text(s.totalLine!, style: const TextStyle(fontWeight: FontWeight.w700)),
                   if (s.facts.isEmpty && s.rows.isEmpty)
-                    const Text('এই কাগজের বিস্তারিত ফোনে নেই — "কাগজ দেখুন" চেপে পুরো কাগজটা দেখুন।'),
+                    Text(context.l10n.approvalsInboxNoDetails),
                 ],
               );
             },

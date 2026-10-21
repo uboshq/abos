@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/documents_library/library_api.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -20,34 +21,35 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 /// <p>⛔ ফোন কিছু ঠিক করে না: কে কোন কাগজ দেখেন, কে নামাতে পারেন, কে সই দেন — সব সার্ভারের উত্তর। "নামান" বোতাম কেবল
 /// নামানোর অধিকার থাকলে, "সই দিন" কেবল সার্ভার অনুমোদনের আইডি দিলে।
 
-String levelWords(String level) => switch (level) {
-      'public' => 'সবার জন্য',
-      'internal' => 'অভ্যন্তরীণ',
-      'confidential' => 'গোপন',
-      'highly_confidential' => 'অতি গোপন',
-      'restricted' => 'সংরক্ষিত',
+String levelWords(AppL10n w, String level) => switch (level) {
+      'public' => w.documentsLevelPublic,
+      'internal' => w.documentsLevelInternal,
+      'confidential' => w.documentsLevelConfidential,
+      'highly_confidential' => w.documentsLevelHighlyConfidential,
+      'restricted' => w.documentsLevelRestricted,
       _ => level,
     };
 
-String documentStatusWords(String status) => switch (status) {
-      'draft' => 'খসড়া',
-      'submitted' => 'জমা হয়েছে',
-      'under_review' => 'পর্যালোচনায়',
-      'changes_requested' => 'বদল চাওয়া হয়েছে',
-      'approved' => 'অনুমোদিত',
-      'rejected' => 'বাতিল',
-      'published' => 'প্রকাশিত',
-      'published_unapproved' => 'অনুমোদন ছাড়া প্রকাশিত',
-      'expired' => 'মেয়াদোত্তীর্ণ',
-      'archived' => 'আর্কাইভে',
+/// ⓘ "rejected" — fe-র শব্দ "প্রত্যাখ্যাত" (আগে "বাতিল", যা cancelled-এর শব্দ; শব্দকোষ, ২১ অক্টোবর ২০২৬)
+String documentStatusWords(AppL10n w, String status) => switch (status) {
+      'draft' => w.documentsStatusDraft,
+      'submitted' => w.documentsStatusSubmitted,
+      'under_review' => w.documentsStatusUnderReview,
+      'changes_requested' => w.documentsStatusChangesRequested,
+      'approved' => w.documentsStatusApproved,
+      'rejected' => w.documentsStatusRejected,
+      'published' => w.documentsStatusPublished,
+      'published_unapproved' => w.documentsStatusPublishedUnapproved,
+      'expired' => w.documentsStatusExpired,
+      'archived' => w.documentsStatusArchived,
       _ => status,
     };
 
-String signatureWords(String state) => switch (state) {
-      'pending' => 'সইয়ের অপেক্ষায়',
-      'signed' => 'সই হয়েছে — চলতি ভার্সনে',
-      'stale' => 'সই পুরনো ভার্সনে — চলতিটায় সই নেই',
-      _ => 'সই চাওয়া হয়নি',
+String signatureWords(AppL10n w, String state) => switch (state) {
+      'pending' => w.documentsSignaturePending,
+      'signed' => w.documentsSignatureSigned,
+      'stale' => w.documentsSignatureStale,
+      _ => w.documentsSignatureNone,
     };
 
 Color _levelColour(BuildContext context, String level) => switch (level) {
@@ -64,23 +66,25 @@ class DocumentListScreen extends StatefulWidget {
   final String initialView;
 
   /// ওয়েবের আটটা তালিকা, মেনুর ক্রমে
-  static const Map<String, String> views = {
-    'center': 'সব',
-    'mine': 'আমার',
-    'shared': 'আমার সাথে শেয়ার',
-    'recent': 'সাম্প্রতিক',
-    'expiry': 'মেয়াদ',
-    'archive': 'আর্কাইভ',
-    'recycle': 'রিসাইকেল বিন',
-    'search': 'খোঁজ (আর্কাইভসহ)',
-  };
+  static const List<String> viewKeys = ['center', 'mine', 'shared', 'recent', 'expiry', 'archive', 'recycle', 'search'];
+
+  static Map<String, String> viewsIn(AppL10n w) => {
+        'center': w.documentsViewAll,
+        'mine': w.documentsViewMine,
+        'shared': w.documentsViewShared,
+        'recent': w.documentsViewRecent,
+        'expiry': w.documentsViewExpiry,
+        'archive': w.documentsViewArchive,
+        'recycle': w.documentsViewRecycle,
+        'search': w.documentsViewSearch,
+      };
 
   @override
   State<DocumentListScreen> createState() => _DocumentListScreenState();
 }
 
 class _DocumentListScreenState extends State<DocumentListScreen> {
-  late String _view = DocumentListScreen.views.containsKey(widget.initialView) ? widget.initialView : 'center';
+  late String _view = DocumentListScreen.viewKeys.contains(widget.initialView) ? widget.initialView : 'center';
   String _q = '';
   final _search = TextEditingController();
 
@@ -95,8 +99,10 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'ডকুমেন্টস'),
+  Widget build(BuildContext context) {
+    final w = context.l10n;
+    return Scaffold(
+        appBar: AbosScreenBar(title: w.documentsTitle),
         body: PagedList<LibraryDocument>(
           reloadKey: '$_view/$_q',
           load: (page) async {
@@ -104,21 +110,21 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
             if (page == 1) _count.value = p.count;
             return (p.rows, p.nextPage);
           },
-          failed: 'কাগজের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-          whenAbsent: 'সার্ভারে ডকুমেন্টস এখনো আসেনি — অফিসে জানান।',
+          failed: w.documentsListFailed,
+          whenAbsent: w.documentsListAbsent,
           emptyIcon: Icons.folder_open_outlined,
-          emptyTitle: 'এখানে দেখার মতো কোনো কাগজ নেই',
+          emptyTitle: w.documentsListEmpty,
           header: [
             TextField(
               key: const ValueKey('doc-search'),
               controller: _search,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'নাম, নম্বর বা ট্যাগ'),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: w.documentsSearchHint),
               onSubmitted: (v) => setState(() => _q = v.trim()),
             ),
             const SizedBox(height: AppSpacing.sm),
             TabChips(
-              tabs: DocumentListScreen.views,
+              tabs: DocumentListScreen.viewsIn(w),
               selected: _view,
               onSelected: (v) => setState(() => _view = v),
             ),
@@ -128,7 +134,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
                   ? const SizedBox.shrink()
                   : Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.xs),
-                      child: Text('মোট $count টি কাগজ',
+                      child: Text(w.documentsCount(count),
                           key: const ValueKey('doc-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
             ),
@@ -145,11 +151,11 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
                   Text([d.no, if (d.typeName.isNotEmpty) d.typeName, if (d.folderName.isNotEmpty) d.folderName].join(' · '),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(
-                    [levelWords(d.level), if (d.expiryDate != null) 'মেয়াদ ${dayOf(d.expiryDate)}'].join(' · '),
+                    [levelWords(w, d.level), if (d.expiryDate != null) w.documentsExpires(dayOf(d.expiryDate))].join(' · '),
                     style: TextStyle(color: _levelColour(context, d.level)),
                   ),
                   if (d.deleted)
-                    Text('মোছা — ফেরানো ওয়েবে', style: TextStyle(color: context.palette.danger)),
+                    Text(w.documentsDeleted, style: TextStyle(color: context.palette.danger)),
                 ],
               ),
               // ⓘ বিনের কাগজ খোলা যায় না — সার্ভারের দরজা ৪০৪ দিত
@@ -161,6 +167,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
           ),
         ),
       );
+  }
 }
 
 /// ফাইলটা কীভাবে খোলা হবে — পরীক্ষায় বদলানো যায়
@@ -184,13 +191,14 @@ class _DocumentScreenState extends State<DocumentScreen> {
   Future<void> _open(LibraryDocument d, {required bool download}) async {
     final file = d.file;
     if (file == null) return;
+    final failed = context.l10n.documentsFileOpenFailed;
     setState(() => _busy = true);
     try {
       final bytes = await widget.api.file(d.id, download: download);
       if (!mounted) return;
       await (widget.opener ?? _defaultOpener)(context, file, bytes, d.name);
     } catch (e) {
-      _say(errorMessageFor(e, fallback: 'ফাইলটা খোলা গেল না।'));
+      _say(errorMessageFor(e, fallback: failed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -198,63 +206,66 @@ class _DocumentScreenState extends State<DocumentScreen> {
 
   Future<void> _sign(String approvalId) async {
     final remarks = TextEditingController();
+    final w = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('এই কাগজে সই দেবেন?'),
+        title: Text(w.documentsSignAsk),
         content: TextField(
           key: const ValueKey('sign-remarks'),
           controller: remarks,
-          decoration: const InputDecoration(labelText: 'মন্তব্য (ইচ্ছা হলে)'),
+          decoration: InputDecoration(labelText: w.documentsRemarksOptional),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('না')),
-          FilledButton(key: const ValueKey('sign-confirm'), onPressed: () => Navigator.pop(context, true), child: const Text('সই দিন')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(w.documentsNo)),
+          FilledButton(key: const ValueKey('sign-confirm'), onPressed: () => Navigator.pop(context, true), child: Text(w.documentsSign)),
         ],
       ),
     );
     if (ok != true) return;
     await _decide(() => widget.api.sign(approvalId, remarks: remarks.text.trim().isEmpty ? null : remarks.text.trim()),
-        done: 'সই দেওয়া হয়েছে।');
+        done: w.documentsSigned);
   }
 
   Future<void> _refuse(String approvalId) async {
     final reason = TextEditingController();
+    final w = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('সই দেবেন না?'),
+        title: Text(w.documentsRefuseAsk),
         content: TextField(
           key: const ValueKey('refuse-reason'),
           controller: reason,
-          decoration: const InputDecoration(labelText: 'কারণ লিখুন'),
+          decoration: InputDecoration(labelText: w.documentsReasonField),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ফিরে যান')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(w.documentsGoBack)),
           FilledButton(
               key: const ValueKey('refuse-confirm'),
               style: FilledButton.styleFrom(backgroundColor: context.palette.danger),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('সই দেব না')),
+              child: Text(w.documentsRefuse)),
         ],
       ),
     );
     if (ok != true) return;
     if (reason.text.trim().isEmpty) {
-      _say('সই না দেওয়ার কারণ লিখতে হবে।');
+      _say(w.documentsReasonNeeded);
       return;
     }
-    await _decide(() => widget.api.refuse(approvalId, remarks: reason.text.trim()), done: 'সই দেওয়া হয়নি — কারণসহ জানানো হয়েছে।');
+    await _decide(() => widget.api.refuse(approvalId, remarks: reason.text.trim()), done: w.documentsRefused);
   }
 
   Future<void> _decide(Future<void> Function() call, {required String done}) async {
+    final failed = context.l10n.documentsDecisionFailed;
     setState(() => _busy = true);
     try {
       await call();
       _say(done);
       if (mounted) setState(() => _reload++);
     } catch (e) {
-      _say(errorMessageFor(e, fallback: 'সিদ্ধান্তটা পাঠানো গেল না। আবার চেষ্টা করুন।'));
+      _say(errorMessageFor(e, fallback: failed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -266,34 +277,36 @@ class _DocumentScreenState extends State<DocumentScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => PaperPage<LibraryDocument>(
+  Widget build(BuildContext context) {
+    final w = context.l10n;
+    return PaperPage<LibraryDocument>(
         key: ValueKey(_reload),
-        title: 'কাগজ',
+        title: w.documentsPaper,
         titleOf: (d) => d.name,
         load: () => widget.api.one(widget.id),
-        failed: 'কাগজটা আনা গেল না।',
+        failed: w.documentsOneFailed,
         onLoaded: (d) => RecentPapers.note(kind: 'document', id: widget.id, number: d.no),
         body: (context, d) {
           final file = d.file;
           final sig = d.signature;
           return [
             if (_busy) const LinearProgressIndicator(),
-            FactRow('নম্বর', d.no),
-            if (d.typeName.isNotEmpty) FactRow('ধরন', d.typeName),
-            if (d.folderName.isNotEmpty) FactRow('ফোল্ডার', d.folderName),
-            FactRow('গোপনীয়তা', levelWords(d.level), colour: _levelColour(context, d.level)),
-            FactRow('অবস্থা', documentStatusWords(d.status)),
-            if (d.documentDate != null) FactRow('তারিখ', dayOf(d.documentDate)),
-            if (d.expiryDate != null) FactRow('মেয়াদ', dayOf(d.expiryDate)),
-            if (d.owner.isNotEmpty) FactRow('মালিক', d.owner),
-            if (d.tags.isNotEmpty) FactRow('ট্যাগ', d.tags.join(', ')),
-            if (d.description.isNotEmpty) FactRow('বিবরণ', d.description),
-            const SectionTitle('ফাইল'),
+            FactRow(w.documentsNumber, d.no),
+            if (d.typeName.isNotEmpty) FactRow(w.documentsType, d.typeName),
+            if (d.folderName.isNotEmpty) FactRow(w.documentsFolder, d.folderName),
+            FactRow(w.documentsLevel, levelWords(w, d.level), colour: _levelColour(context, d.level)),
+            FactRow(w.documentsStatus, documentStatusWords(w, d.status)),
+            if (d.documentDate != null) FactRow(w.documentsDate, dayOf(d.documentDate)),
+            if (d.expiryDate != null) FactRow(w.documentsExpiry, dayOf(d.expiryDate)),
+            if (d.owner.isNotEmpty) FactRow(w.documentsOwner, d.owner),
+            if (d.tags.isNotEmpty) FactRow(w.documentsTags, d.tags.join(', ')),
+            if (d.description.isNotEmpty) FactRow(w.documentsDescription, d.description),
+            SectionTitle(w.documentsFile),
             if (file == null)
-              Text('এই কাগজে এখনো কোনো ফাইল নেই।', style: TextStyle(color: context.palette.onSurfaceMuted))
+              Text(w.documentsNoFile, style: TextStyle(color: context.palette.onSurfaceMuted))
             else ...[
-              FactRow('নাম', file.name),
-              FactRow('ভার্সন', file.version),
+              FactRow(w.documentsFileName, file.name),
+              FactRow(w.documentsVersion, file.version),
               Wrap(
                 spacing: AppSpacing.sm,
                 children: [
@@ -302,27 +315,27 @@ class _DocumentScreenState extends State<DocumentScreen> {
                       key: const ValueKey('doc-view'),
                       onPressed: _busy ? null : () => _open(d, download: false),
                       icon: const Icon(Icons.visibility_outlined),
-                      label: const Text('দেখুন'),
+                      label: Text(w.documentsViewFile),
                     ),
                   if (file.download)
                     OutlinedButton.icon(
                       key: const ValueKey('doc-download'),
                       onPressed: _busy ? null : () => _open(d, download: true),
                       icon: const Icon(Icons.download_outlined),
-                      label: const Text('নামান / পাঠান'),
+                      label: Text(w.documentsDownload),
                     ),
                 ],
               ),
               if (!file.inline && !file.download)
-                Text('এই ফাইলটা ফোনে দেখা যায় না, আর নামানোর অধিকার আপনার নেই।',
+                Text(w.documentsCannotOpen,
                     style: TextStyle(color: context.palette.onSurfaceMuted)),
             ],
             if (sig != null) ...[
-              const SectionTitle('সই'),
-              FactRow('অবস্থা', signatureWords(sig.state),
+              SectionTitle(w.documentsSignature),
+              FactRow(w.documentsStatus, signatureWords(w, sig.state),
                   colour: sig.state == 'signed' ? context.palette.success : sig.state == 'pending' ? context.palette.warning : null),
               for (final s in sig.signed)
-                FactRow(s.by, '${dayOf(s.at)}${s.current ? '' : ' · পুরনো ভার্সনে'}'),
+                FactRow(s.by, s.current ? dayOf(s.at) : w.documentsSignedOld(dayOf(s.at))),
               if (sig.approvalId != null)
                 Card(
                   key: const ValueKey('doc-sign-card'),
@@ -332,19 +345,19 @@ class _DocumentScreenState extends State<DocumentScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text('এই কাগজে আপনার সই চাওয়া হয়েছে। ফাইলটা দেখে সই দিন।',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text(w.documentsSignWanted,
+                            style: const TextStyle(fontWeight: FontWeight.w600)),
                         const SizedBox(height: AppSpacing.sm),
                         FilledButton.icon(
                           key: const ValueKey('doc-sign'),
                           onPressed: _busy ? null : () => _sign(sig.approvalId!),
                           icon: const Icon(Icons.draw_outlined),
-                          label: const Text('সই দিন'),
+                          label: Text(w.documentsSign),
                         ),
                         TextButton(
                           key: const ValueKey('doc-refuse'),
                           onPressed: _busy ? null : () => _refuse(sig.approvalId!),
-                          child: const Text('সই দেব না'),
+                          child: Text(w.documentsRefuse),
                         ),
                       ],
                     ),
@@ -354,6 +367,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
           ];
         },
       );
+  }
 }
 
 /// PDF পাতার ভিতরে, ছবি পর্দায়, বাকি সব পাঠানোর শিটে

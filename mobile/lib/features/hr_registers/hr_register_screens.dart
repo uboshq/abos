@@ -7,6 +7,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ হাজিরার রেজিস্টার — একটা দিন বেছে নাগালের সব কর্মী, প্রত্যেকের অবস্থা, উপরে অবস্থা ধরে গোনা আর মোট (মালিক, ১৭ অক্টোবর ২০২৬)।
 /// ⓘ হাজিরা বসানো (বেতনের ভিত্তি) ওয়েবে — এখানে কেবল দেখা।
@@ -45,8 +46,8 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'হাজিরা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের হাজিরার রেজিস্টার এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.hrRegisterAttendanceLoadFailed,
+            whenAbsent: context.l10n.hrRegisterAttendanceServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -73,7 +74,7 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
     final p = _page;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'হাজিরার রেজিস্টার'),
+      appBar: AbosScreenBar(title: context.l10n.hrRegisterAttendanceTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -82,15 +83,15 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
             OutlinedButton.icon(
               key: const ValueKey('attendance-day'),
               icon: const Icon(Icons.event, size: 18),
-              label: Text('দিন: ${dayOf(isoOf(_day))}'),
+              label: Text(context.l10n.hrRegisterAttendanceDay(dayOf(isoOf(_day)))),
               onPressed: _pick,
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.hrRegisterLoadFailedTitle, message: _error)
             else if (p != null && p.rows('rows').isEmpty && !_busy)
-              const EmptyState(icon: Icons.people_outline, title: 'এই দিনে বেতনভুক্ত কোনো কর্মী নেই')
+              EmptyState(icon: Icons.people_outline, title: context.l10n.hrRegisterAttendanceNobody)
             else if (p != null) ...[
               Card(
                 key: const ValueKey('attendance-counts'),
@@ -98,11 +99,11 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('মোট ${p.number('count')} জন', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(context.l10n.hrRegisterAttendanceTotal(p.number('count')), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                     const SizedBox(height: AppSpacing.xs),
                     Wrap(spacing: AppSpacing.md, runSpacing: AppSpacing.xs, children: [
                       for (final c in p.rows('counts'))
-                        Text('${c.text('label')}: ${c.number('count')}',
+                        Text(context.l10n.hrRegisterAttendanceCount(c.text('label'), c.number('count')),
                             style: TextStyle(color: _tone(c.text('status')), fontWeight: FontWeight.w600)),
                     ]),
                   ]),
@@ -121,7 +122,7 @@ class _AttendanceRegisterScreenState extends State<AttendanceRegisterScreen> {
                       if (e.text('department').isNotEmpty) e.text('department'),
                       if (e.text('remarks').isNotEmpty) e.text('remarks'),
                     ].join(' · ')),
-                    trailing: Text(e.flag('late') ? '${e.text('status_label')} · দেরি' : e.text('status_label'),
+                    trailing: Text(e.flag('late') ? context.l10n.hrRegisterAttendanceLate(e.text('status_label')) : e.text('status_label'),
                         style: TextStyle(color: _tone(e.payload['status'] as String?), fontWeight: FontWeight.w700)),
                   ),
                 ),
@@ -180,8 +181,8 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ছুটির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ফোনের ছুটির রেজিস্টার এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.hrRegisterLeaveLoadFailed,
+            whenAbsent: context.l10n.hrRegisterLeaveServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -195,32 +196,32 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
       text = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('কেন ফেরত দিচ্ছেন?'),
+          title: Text(context.l10n.hrRegisterLeaveRejectTitle),
           content: TextField(key: const ValueKey('leave-reason'), controller: _reason, autofocus: true, maxLength: 500),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('বাদ দিন')),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.hrRegisterLeaveRejectDismiss)),
             FilledButton(
                 key: const ValueKey('leave-reason-send'),
                 onPressed: () => Navigator.of(context).pop(_reason.text.trim()),
-                child: const Text('ফেরত দিন')),
+                child: Text(context.l10n.hrRegisterLeaveRejectConfirm)),
           ],
         ),
       );
       if (text == null || !mounted) return;
       if (text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ফেরতের কারণ লিখতে হবে।')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.hrRegisterLeaveRejectReasonNeeded)));
         return;
       }
     }
     try {
       approve ? await widget.api.approve(row.text('id')) : await widget.api.reject(row.text('id'), remarks: text!);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'ছুটি মঞ্জুর হলো।' : 'ছুটি ফেরত দেওয়া হলো।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? context.l10n.hrRegisterLeaveSigned : context.l10n.hrRegisterLeaveRejected)));
       await _load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: approve ? 'মঞ্জুর করা গেল না।' : 'ফেরত দেওয়া গেল না।'))));
+            .showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: approve ? context.l10n.hrRegisterLeaveSignFailed : context.l10n.hrRegisterLeaveRejectFailed))));
       }
     }
   }
@@ -228,7 +229,7 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'ছুটির রেজিস্টার'),
+      appBar: AbosScreenBar(title: context.l10n.hrRegisterLeaveTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -237,7 +238,7 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(
                 key: const ValueKey('leave-pending'),
-                label: const Text('অপেক্ষায়'),
+                label: Text(context.l10n.hrRegisterLeavePending),
                 selected: _pending,
                 onSelected: (_) {
                   setState(() => _pending = true);
@@ -246,7 +247,7 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
               ),
               ChoiceChip(
                 key: const ValueKey('leave-all'),
-                label: const Text('সব'),
+                label: Text(context.l10n.hrRegisterLeaveAll),
                 selected: !_pending,
                 onSelected: (_) {
                   setState(() => _pending = false);
@@ -257,14 +258,14 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
             if (_page != null && _rows.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                child: Text('মোট ${_page!.number('count')} টি আবেদন',
+                child: Text(context.l10n.hrRegisterLeaveTotal(_page!.number('count')),
                     key: const ValueKey('leave-count'), style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.hrRegisterLoadFailedTitle, message: _error)
             else if (_page != null && _rows.isEmpty && !_busy)
-              EmptyState(icon: Icons.beach_access_outlined, title: _pending ? 'অপেক্ষায় কোনো আবেদন নেই' : 'কোনো আবেদন নেই'),
+              EmptyState(icon: Icons.beach_access_outlined, title: _pending ? context.l10n.hrRegisterLeaveNonePending : context.l10n.hrRegisterLeaveNone),
             for (final a in _rows)
               Card(
                 key: ValueKey('leave-${a.text('id')}'),
@@ -276,28 +277,28 @@ class _LeaveRegisterScreenState extends State<LeaveRegisterScreen> {
                       Expanded(child: Text(a.text('employee'), style: const TextStyle(fontWeight: FontWeight.w600))),
                       Text(a.text('status_label'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ]),
-                    Text('${a.text('type')} · ${a.text('from')} থেকে ${a.text('to')} · ${a.text('days')} দিন'),
+                    Text(context.l10n.hrRegisterLeaveLine(a.text('type'), a.text('from'), a.text('to'), num.tryParse(a.text('days')) ?? 0)),
                     if (a.text('reason').isNotEmpty)
                       Text(a.text('reason'), style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
                     if (a.text('decider').isNotEmpty)
-                      Text('সিদ্ধান্ত: ${a.text('decider')}', style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
+                      Text(context.l10n.hrRegisterLeaveDecider(a.text('decider')), style: TextStyle(fontSize: 13, color: context.palette.onSurfaceMuted)),
                     if (a.flag('can_decide'))
                       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                         TextButton(
                             key: ValueKey('leave-reject-${a.text('id')}'),
                             onPressed: () => _decide(a, false),
-                            child: const Text('ফেরত')),
+                            child: Text(context.l10n.hrRegisterLeaveReject)),
                         const SizedBox(width: AppSpacing.xs),
                         FilledButton(
                             key: ValueKey('leave-approve-${a.text('id')}'),
                             onPressed: () => _decide(a, true),
-                            child: const Text('মঞ্জুর')),
+                            child: Text(context.l10n.hrRegisterLeaveSign)),
                       ]),
                   ]),
                 ),
               ),
             if (_page?.nextPage != null)
-              OutlinedButton(onPressed: _busy ? null : () => _load(more: true), child: const Text('আরও')),
+              OutlinedButton(onPressed: _busy ? null : () => _load(more: true), child: Text(context.l10n.hrRegisterLeaveMore)),
           ],
         ),
       ),

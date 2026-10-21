@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ খরচের দাবি আর অগ্রিম অনুরোধ — `/hr/claims` (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; সার্ভার f727b846)।
 ///
@@ -67,17 +68,17 @@ class Claim {
 
   bool get isAdvance => kind == 'advance';
 
-  String get kindLabel => isAdvance ? 'অগ্রিম' : 'খরচের দাবি';
+  String get kindLabel => isAdvance ? AppLocale.l10n.claimsKindAdvance : AppLocale.l10n.claimsKindExpense;
 
   /// সার্ভারের নিজের লেখা আগে; না থাকলে চার অবস্থার নাম — কখনো কাঁচা চাবি নয়
   String get stateLabel => statusLabel.isNotEmpty
       ? statusLabel
       : switch (status) {
-          'submitted' => 'সইয়ের অপেক্ষায়',
-          'approved' => 'অনুমোদিত — টাকার অপেক্ষায়',
-          'paid' => 'পরিশোধিত',
-          'rejected' => 'প্রত্যাখ্যাত',
-          _ => 'অপেক্ষায়',
+          'submitted' => AppLocale.l10n.claimsStateSubmitted,
+          'approved' => AppLocale.l10n.claimsStateApproved,
+          'paid' => AppLocale.l10n.claimsStatePaid,
+          'rejected' => AppLocale.l10n.claimsStateRejected,
+          _ => AppLocale.l10n.claimsStateOther,
         };
 
   factory Claim.fromJson(Map<String, dynamic> j) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_palette.dart';
@@ -65,8 +66,8 @@ class _LeadListScreenState extends State<LeadListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'লিড আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে লিডের দরজা এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.leadsFailed,
+            whenAbsent: context.l10n.leadsAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -84,13 +85,14 @@ class _LeadListScreenState extends State<LeadListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final w = context.l10n;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'লিড'),
+      appBar: AbosScreenBar(title: w.leadsTitle),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('lead-new'),
         onPressed: () => _open(),
         icon: const Icon(Icons.add),
-        label: const Text('নতুন লিড'),
+        label: Text(w.leadsNew),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -102,12 +104,12 @@ class _LeadListScreenState extends State<LeadListScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _load(),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'নাম, ফোন বা নম্বর'),
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: w.leadsSearchHint),
             ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(spacing: AppSpacing.xs, children: [
               ChoiceChip(
-                label: const Text('সব'),
+                label: Text(w.leadsAll),
                 selected: _status == null,
                 onSelected: (_) {
                   setState(() => _status = null);
@@ -127,11 +129,11 @@ class _LeadListScreenState extends State<LeadListScreen> {
             ]),
             const SizedBox(height: AppSpacing.sm),
             // ⭐ গোটা ছাঁকনির গোনা — সার্ভারের, সব পাতার, খোঁজ আর অবস্থা মেনে; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)
-            if (_count != null && _rows.isNotEmpty) TotalStrip(label: 'মোট লিড', value: '$_count টি'),
+            if (_count != null && _rows.isNotEmpty) TotalStrip(label: w.leadsTotal, value: w.leadsCount(_count!)),
             if (_busy) const LinearProgressIndicator(),
-            if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
+            if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: w.leadsLoadFailed, message: _error),
             if (_loaded && _rows.isEmpty && _error == null)
-              const EmptyState(icon: Icons.person_search_outlined, title: 'কোনো লিড নেই'),
+              EmptyState(icon: Icons.person_search_outlined, title: w.leadsNone),
             for (final lead in _rows)
               Card(
                 child: ListTile(
@@ -153,7 +155,7 @@ class _LeadListScreenState extends State<LeadListScreen> {
               OutlinedButton(
                 key: const Key('lead-more'),
                 onPressed: _busy ? null : () => _load(more: true),
-                child: const Text('আরও লিড'),
+                child: Text(w.leadsMore),
               ),
           ],
         ),
@@ -222,7 +224,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty || _source == null) {
-      setState(() => _error = _name.text.trim().isEmpty ? 'দোকানের নাম লিখুন।' : 'কীভাবে খোঁজ পেলেন, বাছুন।');
+      setState(() => _error = _name.text.trim().isEmpty ? context.l10n.leadsNameNeeded : context.l10n.leadsSourceNeeded);
       return;
     }
     setState(() {
@@ -243,7 +245,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
       final saved = widget.lead == null ? await _once.send(() => widget.api.create(form)) : await widget.api.update(widget.lead!.id, form);
       if (mounted) Navigator.of(context).pop(saved);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'লিড রাখা গেল না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.leadsSaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -256,27 +258,28 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   Widget _screen(BuildContext context) {
     final lead = widget.lead;
     final statuses = widget.setup.statuses;
+    final w = context.l10n;
     return Scaffold(
-      appBar: AbosScreenBar(title: lead?.no ?? 'নতুন লিড'),
+      appBar: AbosScreenBar(title: lead?.no ?? w.leadsNew),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (lead != null) ...[
-            Text('অবস্থা: ${lead.statusLabel}', key: const Key('lead-status-now')),
-            if (lead.owner != null) Text('মালিক: ${lead.owner}'),
-            if (_readOnly) const Text('গ্রাহক হয়ে গেছেন — আর বদলানো যায় না।'),
+            Text(w.leadsStatusNow(lead.statusLabel), key: const Key('lead-status-now')),
+            if (lead.owner != null) Text(w.leadsOwner(lead.owner!)),
+            if (_readOnly) Text(w.leadsConverted),
             const SizedBox(height: AppSpacing.sm),
           ],
           TextField(key: const Key('lead-name'), controller: _name, enabled: !_readOnly,
-              decoration: const InputDecoration(labelText: 'দোকানের নাম')),
-          TextField(controller: _person, enabled: !_readOnly, decoration: const InputDecoration(labelText: 'যাঁর সাথে কথা')),
+              decoration: InputDecoration(labelText: w.leadsShopName)),
+          TextField(controller: _person, enabled: !_readOnly, decoration: InputDecoration(labelText: w.leadsContactPerson)),
           TextField(key: const Key('lead-phone'), controller: _phone, enabled: !_readOnly,
-              keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'ফোন')),
-          TextField(controller: _address, enabled: !_readOnly, decoration: const InputDecoration(labelText: 'ঠিকানা')),
+              keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: w.leadsPhone)),
+          TextField(controller: _address, enabled: !_readOnly, decoration: InputDecoration(labelText: w.leadsAddress)),
           DropdownButtonFormField<String>(
             key: const Key('lead-source'),
             initialValue: _source,
-            decoration: const InputDecoration(labelText: 'কীভাবে খোঁজ পেলেন'),
+            decoration: InputDecoration(labelText: w.leadsSource),
             items: [for (final s in widget.setup.sources) DropdownMenuItem(value: s.key, child: Text(s.label))],
             onChanged: _readOnly ? null : (v) => setState(() => _source = v),
           ),
@@ -284,14 +287,14 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
             DropdownButtonFormField<String>(
               key: const Key('lead-status'),
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'অবস্থা'),
+              decoration: InputDecoration(labelText: w.leadsStatus),
               items: [for (final s in statuses) DropdownMenuItem(value: s.key, child: Text(s.label))],
               onChanged: (v) => setState(() => _status = v),
             ),
           if (_status == 'lost')
             TextField(key: const Key('lead-lost-reason'), controller: _reason, enabled: !_readOnly,
-                decoration: const InputDecoration(labelText: 'কেন হারালাম')),
-          TextField(controller: _notes, enabled: !_readOnly, maxLines: 3, decoration: const InputDecoration(labelText: 'টুকিটাকি')),
+                decoration: InputDecoration(labelText: w.leadsLostReason)),
+          TextField(controller: _notes, enabled: !_readOnly, maxLines: 3, decoration: InputDecoration(labelText: w.leadsNotes)),
           const SizedBox(height: AppSpacing.md),
           if (_error != null)
             Card(
@@ -303,7 +306,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
             ),
           if (_busy) const LinearProgressIndicator(),
           if (!_readOnly)
-            FilledButton(key: const Key('lead-save'), onPressed: _busy ? null : _save, child: const Text('রাখুন')),
+            FilledButton(key: const Key('lead-save'), onPressed: _busy ? null : _save, child: Text(w.commonSave)),
         ],
       ),
     );

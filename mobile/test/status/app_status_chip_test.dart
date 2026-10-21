@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/locale/app_locale.dart';
 import 'package:abos_mobile/core/status/app_status_chip.dart';
 import 'package:abos_mobile/core/status/paper_state.dart';
 import 'package:abos_mobile/core/status/paper_state_icons.dart';
@@ -364,5 +365,36 @@ void main() {
     expect(find.byType(AppStatusChip), findsOneWidget);
     expect(_words('পোস্ট হয়েছে · খাতায় উঠেছে'), findsOneWidget);
     expect(find.text('নতুন কিছু'), findsOneWidget);
+  });
+
+  // ⭐ ভাষার সুইচ (0.4.43): অ্যাপ ইংরেজিতে চললে চিপ JSON-এর `_en` পড়ে — লেখা, TalkBack আর "পোস্ট হয়নি"-এর পাতা
+  testWidgets('in an English app the chip reads, speaks and explains in English', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      locale: AppLocale.english,
+      supportedLocales: AppLocale.supported,
+      localizationsDelegates: AppLocale.delegates,
+      theme: AppTheme.light(),
+      home: const Scaffold(
+        body: Column(children: [
+          AppStatusChip(state: PaperState.waiting, level: 1, levels: 2),
+          AppStatusChip.compact(state: PaperState.posted, kind: PaperKind.stock),
+          AppStatusChip(state: PaperState.notPosted),
+          PaperStateFact(chip: SizedBox()),
+        ]),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(_words('Awaiting signature · step 1 of 2'), findsOneWidget);
+    expect(_words('Posted'), findsOneWidget);
+    expect(find.bySemanticsLabel('Status: awaiting signature, step 1 of 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Status: posted, in stock'), findsOneWidget);
+    expect(find.text('Status'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('paper-state-not_posted-tap')));
+    await tester.pumpAndSettle();
+    expect(find.text('Why it was not posted'), findsOneWidget);
+    expect(find.text('The reason is not known — ask the accounts department.'), findsOneWidget);
+    expect(find.text('Close'), findsOneWidget);
+    handle.dispose();
   });
 }

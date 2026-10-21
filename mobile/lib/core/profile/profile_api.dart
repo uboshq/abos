@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
 import '../api_client/once_key.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ প্রোফাইল মেনুর সার্ভার-দরজা — নিজের ছবি আর নিজের ফোনগুলো (অ্যাপ ০.৪.৪১; a6, ২০ অক্টোবর ২০২৬)।
 ///
@@ -79,7 +80,7 @@ class MyPhone {
     if (id == null) return null;
     return MyPhone(
       id: id,
-      name: _text(raw['name']) ?? 'ফোন',
+      name: _text(raw['name']) ?? AppLocale.l10n.profilePhoneFallbackName,
       platform: _text(raw['platform']),
       appVersion: _text(raw['app_version']),
       lastUsedAt: DateTime.tryParse('${raw['last_used_at'] ?? ''}')?.toLocal(),
@@ -120,8 +121,8 @@ class PhotoRefused implements Exception {
 class ProfileDoorsMissing implements Exception {
   const ProfileDoorsMissing();
 
-  static const String title = 'এখনো এই সার্ভারে নেই';
-  static const String message = 'এখনো এই সার্ভারে নেই — সার্ভারের নতুন সংস্করণ এলে চালু হবে।';
+  static String get title => AppLocale.l10n.profileServerMissingTitle;
+  static String get message => AppLocale.l10n.profileServerMissingMessage;
 
   @override
   String toString() => message;
@@ -135,7 +136,7 @@ class ServerProfileApi implements ProfileApi {
 
   Dio get _dio => dio ?? ApiClient.dio;
 
-  static const String refusedFallback = 'ছবিটা নেওয়া গেল না — JPG বা PNG, ৫ MB-এর কম, আরেকটা দিয়ে চেষ্টা করুন।';
+  static String get refusedFallback => AppLocale.l10n.profilePhotoRefused;
 
   @override
   Future<PhotoChange> uploadPhoto(Uint8List jpeg, {void Function(double sent)? onProgress}) async {
@@ -172,19 +173,20 @@ class ServerProfileApi implements ProfileApi {
   static Object _photoError(DioException e) {
     final status = e.response?.statusCode;
     if (status == 404 || status == 405) return const ProfileDoorsMissing();
-    if (status == 413) return const PhotoRefused('ছবিটা খুব বড় — ৫ MB-এর কম একটা দিন।');
+    if (status == 413) return PhotoRefused(AppLocale.l10n.profilePhotoTooLarge);
     if (status == 422) return PhotoRefused(refusalOf(e.response?.data) ?? refusedFallback);
     return e;
   }
 
-  /// ৪২২-এর বাক্য — `errors.photo[0]`, না হলে `message`; ⛔ কেবল বাংলা (Laravel-এর ইংরেজি দোকানের ফোনে নয়)
+  /// ৪২২-এর বাক্য — `errors.photo[0]`, না হলে `message`; ⛔ বাংলায় চললে কেবল বাংলা বাক্য (Laravel-এর ইংরেজি দোকানের ফোনে নয়);
+  /// ইংরেজিতে চললে সার্ভারের যে কোনো বাক্য (Accept-Language-এ সার্ভার ইংরেজিতে বলে)
   static String? refusalOf(Object? body) {
     if (body is! Map) return null;
     final errors = body['errors'];
     final photo = errors is Map ? errors['photo'] : null;
     final first = photo is List && photo.isNotEmpty ? '${photo.first}'.trim() : null;
     for (final text in [first, _text(body['message'])]) {
-      if (text != null && text.isNotEmpty && text.runes.any((r) => r >= 0x0980 && r <= 0x09FF)) return text;
+      if (text != null && text.isNotEmpty && (AppLocale.isEnglish() || text.runes.any((r) => r >= 0x0980 && r <= 0x09FF))) return text;
     }
     return null;
   }

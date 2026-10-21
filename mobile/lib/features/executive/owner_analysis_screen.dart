@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/records/money.dart';
 import '../../core/records/report_record.dart';
 import '../../core/theme/app_palette.dart';
@@ -32,39 +33,44 @@ class OwnerAnalysisScreen extends StatefulWidget {
 class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
   String _period = 'month';
 
-  static const Map<String, String> _periods = {'month': 'এই মাস', 'three_months': 'গত তিন মাস', 'year': 'এই বছর'};
+  static Map<String, String> _periods(AppL10n w) =>
+      {'month': w.ownerPeriodMonth, 'three_months': w.ownerPeriodThreeMonths, 'year': w.ownerPeriodYear};
 
-  /// ওয়েবের `executive::analysis` — বাংলায়, ফোনের নিজের
-  static const Map<String, String> _lists = {
-    'customers': 'সেরা ১০ ক্রেতা',
-    'products': 'সেরা ১০ পণ্য',
-    'areas': 'সেরা ১০ রুট',
-    'salespeople': 'সেরা ১০ বিক্রয়কর্মী',
-    'losing': 'সবচেয়ে কম লাভের ক্রেতা',
-    'thin': 'সবচেয়ে কম মার্জিনের পণ্য',
-    'dead': 'অচল মাল (দাম ধরে)',
-  };
+  /// ওয়েবের `executive::analysis` — ফোনের নিজের নাম, ARB থেকে
+  static Map<String, String> _lists(AppL10n w) => {
+        'customers': w.ownerListTopCustomers(10),
+        'products': w.ownerListTopProducts(10),
+        'areas': w.ownerListTopAreas(10),
+        'salespeople': w.ownerListTopSalespeople(10),
+        'losing': w.ownerListLosing,
+        'thin': w.ownerListThin,
+        'dead': w.ownerListDead,
+      };
 
-  static const Map<String, String> _buckets = {
-    'bucket_current': 'চলতি বাকি',
-    'bucket_30': '৩০ দিনের বেশি',
-    'bucket_60': '৬০ দিনের বেশি',
-    'bucket_90': '৯০ দিনের বেশি',
-    'outstanding': 'মোট বাকি',
-  };
+  static Map<String, String> _bucketsIn(AppL10n w) => {
+        'bucket_current': w.ownerBucketCurrent,
+        'bucket_30': w.ownerBucketOver(30),
+        'bucket_60': w.ownerBucketOver(60),
+        'bucket_90': w.ownerBucketOver(90),
+        'outstanding': w.ownerOutstanding,
+      };
 
   @override
-  Widget build(BuildContext context) => OwnerPageFrame<OwnerAnalysis>(
-        title: 'বিশ্লেষণ',
-        failed: 'বিশ্লেষণের তালিকা আনা গেল না।',
+  Widget build(BuildContext context) {
+    final w = context.l10n;
+    final buckets = _bucketsIn(w);
+    final lists = _lists(w);
+    return OwnerPageFrame<OwnerAnalysis>(
+        title: w.ownerAnalysisTitle,
+        failed: w.ownerAnalysisFailed,
         reloadKey: _period,
         load: () => widget.api.analysis(_period),
         controls: [
-          OwnerChips(prefix: 'period', choices: _periods, selected: _period, onSelected: (p) => setState(() => _period = p)),
+          OwnerChips(prefix: 'period', choices: _periods(w), selected: _period, onSelected: (p) => setState(() => _period = p)),
         ],
         body: (context, data) => [
           OwnerNote(ownerRange(data.from, data.to)),
-          const SectionHeading('বাকির বয়স — সব কোম্পানি মিলিয়ে'),
+          SectionHeading(w.ownerAgeing),
           Card(
             key: const ValueKey('analysis-ageing'),
             child: Padding(
@@ -72,7 +78,7 @@ class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
               child: Column(
                 children: [
                   for (final b in data.buckets)
-                    if (b.key != 'outstanding') FactRow(_buckets[b.key] ?? b.label, Money.taka(b.value)),
+                    if (b.key != 'outstanding') FactRow(buckets[b.key] ?? b.label, Money.taka(b.value)),
                 ],
               ),
             ),
@@ -80,16 +86,16 @@ class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
           // ⭐ মোট বাকি — রিপোর্টের নিজের যোগফল, খোপগুলোর পাশে মোটের পট্টি
           for (final b in data.buckets)
             if (b.key == 'outstanding')
-              OwnerTotal(key: const ValueKey('analysis-outstanding'), label: _buckets[b.key] ?? b.label, value: Money.taka(b.value)),
-          if (data.ageingRefused.isNotEmpty) OwnerNote('দেখার অনুমতি নেই: ${data.ageingRefused.join(', ')}'),
+              OwnerTotal(key: const ValueKey('analysis-outstanding'), label: buckets[b.key] ?? b.label, value: Money.taka(b.value)),
+          if (data.ageingRefused.isNotEmpty) OwnerNote(w.ownerRefused(data.ageingRefused.join(', '))),
           for (final list in data.lists) ...[
-            SectionHeading(_lists[list.key] ?? list.label),
+            SectionHeading(lists[list.key] ?? list.label),
             Card(
               key: ValueKey('analysis-list-${list.key}'),
               child: Column(
                 children: [
                   if (list.rows.isEmpty)
-                    const Padding(padding: EdgeInsets.all(AppSpacing.md), child: Text('এই সময়ে কিছু নেই।')),
+                    Padding(padding: const EdgeInsets.all(AppSpacing.md), child: Text(w.ownerNothingInPeriod)),
                   for (final (i, row) in list.rows.indexed)
                     ListTile(
                       dense: true,
@@ -104,10 +110,10 @@ class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
                 ],
               ),
             ),
-            if (list.refused.isNotEmpty) OwnerNote('দেখার অনুমতি নেই: ${list.refused.join(', ')}'),
+            if (list.refused.isNotEmpty) OwnerNote(w.ownerRefused(list.refused.join(', '))),
           ],
           if (data.report != null) ...[
-            const SectionHeading('মালিকের কেন্দ্রের রিপোর্ট'),
+            SectionHeading(w.ownerReportsOwn),
             Card(
               child: ListTile(
                 key: const ValueKey('analysis-report'),
@@ -122,9 +128,10 @@ class _OwnerAnalysisScreenState extends State<OwnerAnalysisScreen> {
             ),
           ],
           if (!data.canSeeCost)
-            OwnerNote('খরচ দেখার অনুমতি নেই — লাভ আর মার্জিনের ঘর ঢাকা থাকবে।', colour: context.palette.warning),
+            OwnerNote(w.ownerNoCostKey, colour: context.palette.warning),
         ],
       );
+  }
 
   /// মার্জিন % — ঢাকা "••••", না থাকা "—"
   static String _percent(String? value) {

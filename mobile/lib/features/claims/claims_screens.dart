@@ -13,6 +13,7 @@ import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/permissions/camera_shot.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; সার্ভার f727b846)।
 ///
@@ -57,8 +58,8 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'দাবির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে খরচের দাবি এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.claimsLoadFailed,
+            whenAbsent: context.l10n.claimsServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -69,7 +70,7 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
   Widget build(BuildContext context) {
     final page = _page;
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'খরচের দাবি ও অগ্রিম'),
+      appBar: AbosScreenBar(title: context.l10n.claimsListTitle),
       floatingActionButton: FloatingActionButton.extended(
         key: const ValueKey('claim-new'),
         onPressed: () async {
@@ -78,7 +79,7 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
           if (sent != null && mounted) await _load();
         },
         icon: const Icon(Icons.add),
-        label: const Text('নতুন দাবি'),
+        label: Text(context.l10n.claimsNew),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -90,12 +91,12 @@ class _ClaimListScreenState extends State<ClaimListScreen> {
             if (page?.openAdvance != null)
               TotalStrip(
                   key: const ValueKey('claim-open-advance'),
-                  label: 'হাতে খোলা অগ্রিম',
+                  label: context.l10n.claimsOpenAdvance,
                   value: Money.taka(page!.openAdvance!)),
             if (page != null && page.claims.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Text('এখনো কোনো দাবি নেই।', textAlign: TextAlign.center),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(context.l10n.claimsEmpty, textAlign: TextAlign.center),
               ),
             for (final c in page?.claims ?? const <Claim>[])
               Card(
@@ -155,7 +156,7 @@ class _ClaimScreenState extends State<ClaimScreen> {
       // ⭐ খোলা কাগজ "সাম্প্রতিক"-এ (মালিক, ১২ অক্টোবর ২০২৬)
       RecentPapers.note(kind: 'claim', id: widget.id, number: c.number);
     }, onError: (Object e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'দাবিটা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.claimsOneFailed));
     });
   }
 
@@ -163,14 +164,14 @@ class _ClaimScreenState extends State<ClaimScreen> {
   Widget build(BuildContext context) {
     final c = _claim;
     return Scaffold(
-      appBar: AbosScreenBar(title: c?.number ?? 'দাবি'),
+      appBar: AbosScreenBar(title: c?.number ?? context.l10n.claimsOneTitle),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (_error != null) BooksError(_error!),
           if (c == null && _error == null) const LinearProgressIndicator(),
           if (c != null) ...[
-            FactRow('ধরন', c.kindLabel),
+            FactRow(context.l10n.claimsKind, c.kindLabel),
             PaperStateFact(
                 chip: AppStatusChip.forServer(c.status,
                     key: const ValueKey('claim-state'),
@@ -179,16 +180,16 @@ class _ClaimScreenState extends State<ClaimScreen> {
                     kind: PaperKind.claim,
                     level: c.approvalLevel,
                     levels: c.approvalLevels)),
-            FactRow('টাকা', Money.taka(c.amount)),
-            if (c.head != null) FactRow('খরচের খাত', c.head!),
-            if (c.spentOn != null) FactRow('খরচের তারিখ', dayOf(c.spentOn)),
-            if (!c.isAdvance && c.fromAdvance > 0) FactRow('অগ্রিম থেকে মিটেছে', Money.taka(c.fromAdvance)),
+            FactRow(context.l10n.claimsAmount, Money.taka(c.amount)),
+            if (c.head != null) FactRow(context.l10n.claimsHead, c.head!),
+            if (c.spentOn != null) FactRow(context.l10n.claimsSpentOn, dayOf(c.spentOn)),
+            if (!c.isAdvance && c.fromAdvance > 0) FactRow(context.l10n.claimsFromAdvance, Money.taka(c.fromAdvance)),
             if (!c.isAdvance && (c.status == 'approved' || c.status == 'paid'))
-              FactRow('নগদে পাবেন', Money.taka(c.cash)),
-            FactRow('কারণ', c.reason),
-            if (c.submittedAt != null) FactRow('পাঠানো', dayOf(c.submittedAt)),
-            if (c.decidedAt != null) FactRow(c.status == 'rejected' ? 'প্রত্যাখ্যান' : 'অনুমোদন', dayOf(c.decidedAt)),
-            if (c.paidAt != null) FactRow('টাকা দেওয়া', dayOf(c.paidAt)),
+              FactRow(context.l10n.claimsInCash, Money.taka(c.cash)),
+            FactRow(context.l10n.claimsReason, c.reason),
+            if (c.submittedAt != null) FactRow(context.l10n.claimsSentOn, dayOf(c.submittedAt)),
+            if (c.decidedAt != null) FactRow(c.status == 'rejected' ? context.l10n.claimsRejectedOn : context.l10n.claimsApprovedOn, dayOf(c.decidedAt)),
+            if (c.paidAt != null) FactRow(context.l10n.claimsPaidOn, dayOf(c.paidAt)),
           ],
         ],
       ),
@@ -238,7 +239,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
     widget.api.heads().then((h) {
       if (mounted) setState(() => _heads = h);
     }, onError: (Object e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'খরচের খাতের তালিকা আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.claimsHeadsFailed));
     });
   }
 
@@ -270,11 +271,11 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
     final amount = _amount.text.trim();
     final reason = _reason.text.trim();
     final problem = !_amountShape.hasMatch(amount) || (double.tryParse(amount) ?? 0) <= 0
-        ? 'টাকার অঙ্ক ঠিকভাবে লিখুন — যেমন ৫০০ বা ৭৫০.৫০।'
+        ? context.l10n.claimsAmountShape
         : _kind == 'expense' && _head == null
-            ? 'কোন খাতের খরচ, বাছুন।'
+            ? context.l10n.claimsChooseHead
             : reason.isEmpty
-                ? 'কারণ লিখুন।'
+                ? context.l10n.claimsWriteReason
                 : null;
     if (problem != null) {
       setState(() => _error = problem);
@@ -295,7 +296,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
       )));
       if (mounted) Navigator.of(context).pop(claim);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'পাঠানো যায়নি। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.claimsSendFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -315,11 +316,11 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
   Widget _screen(BuildContext context) {
     final expense = _kind == 'expense';
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'নতুন দাবি'),
+      appBar: AbosScreenBar(title: context.l10n.claimsNew),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          Text('সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।',
+          Text(context.l10n.claimsHowItWorks,
               style: TextStyle(color: context.palette.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.sm),
           if (_busy) const LinearProgressIndicator(),
@@ -334,9 +335,9 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
             ),
           SegmentedButton<String>(
             key: const ValueKey('claim-kind'),
-            segments: const [
-              ButtonSegment(value: 'expense', label: Text('খরচ হয়ে গেছে')),
-              ButtonSegment(value: 'advance', label: Text('অগ্রিম চাই')),
+            segments: [
+              ButtonSegment(value: 'expense', label: Text(context.l10n.claimsKindSpent)),
+              ButtonSegment(value: 'advance', label: Text(context.l10n.claimsKindAdvanceWanted)),
             ],
             selected: {_kind},
             onSelectionChanged: (s) => setState(() => _kind = s.first),
@@ -346,14 +347,14 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
             key: const ValueKey('claim-amount'),
             controller: _amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'টাকা'),
+            decoration: InputDecoration(labelText: context.l10n.claimsAmount),
           ),
           if (expense) ...[
             DropdownButtonFormField<int>(
               key: const ValueKey('claim-head'),
               initialValue: _head,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'খরচের খাত'),
+              decoration: InputDecoration(labelText: context.l10n.claimsHead),
               items: [
                 for (final h in _heads)
                   DropdownMenuItem(value: h.id, child: Text(h.name, overflow: TextOverflow.ellipsis)),
@@ -362,7 +363,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('খরচের তারিখ'),
+              title: Text(context.l10n.claimsSpentOn),
               subtitle: Text('${_spentOn.day}/${_spentOn.month}/${_spentOn.year}'),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: _pickDate,
@@ -374,7 +375,7 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
             maxLength: 500,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(labelText: 'কারণ'),
+            decoration: InputDecoration(labelText: context.l10n.claimsReason),
           ),
           if (expense)
             OutlinedButton.icon(
@@ -382,14 +383,14 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
               onPressed: _busy ? null : _pickReceipt,
               icon: Icon(_receipt == null ? Icons.photo_camera_outlined : Icons.check_circle,
                   color: _receipt == null ? null : context.palette.success),
-              label: Text(_receipt == null ? 'রসিদের ছবি তুলুন' : 'ছবি নেওয়া হয়েছে — আবার তুলুন'),
+              label: Text(_receipt == null ? context.l10n.claimsReceiptTake : context.l10n.claimsReceiptTaken),
             ),
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             key: const ValueKey('claim-send'),
             onPressed: _busy ? null : _send,
             icon: const Icon(Icons.send_outlined),
-            label: const Text('পাঠান'),
+            label: Text(context.l10n.claimsSend),
           ),
         ],
       ),

@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/day_part.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ নোটিশ বোর্ড, ফোনে — মালিক, ১৩ অক্টোবর ২০২৬: *"app e baki module & menu"*।
 ///
@@ -46,7 +47,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       if (!mounted) return;
       setState(() => _page = page);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'নোটিশ আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.noticesLoadFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -72,7 +73,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'নোটিশ বোর্ড'),
+      appBar: AbosScreenBar(title: context.l10n.noticesBoardTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -84,15 +85,15 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             if (page != null && page.unread > 0)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Text('${page.unread}টা নোটিশ এখনো পড়া হয়নি',
+                child: Text(context.l10n.noticesUnreadCount(page.unread),
                     key: const ValueKey('notices-unread'),
                     style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
               ),
             if (page != null && page.items.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.campaign_outlined,
-                title: 'এখন কোনো নোটিশ নেই',
-                message: 'প্রতিষ্ঠান নতুন কিছু জানালে এখানে দেখাবে।',
+                title: context.l10n.noticesEmptyTitle,
+                message: context.l10n.noticesEmptyMessage,
               ),
             if (page != null)
               for (final n in page.items)
@@ -112,8 +113,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       [
                         if (n.summary.isNotEmpty) n.summary,
                         [
-                          NoticeItem.priorityLabels[n.priority] ?? '',
-                          NoticeItem.standingLabels[n.standing] ?? '',
+                          NoticeItem.priorityLabel(context.l10n, n.priority),
+                          NoticeItem.standingLabel(context.l10n, n.standing),
                           if (n.publishedAt != null) _when(n.publishedAt),
                         ].where((s) => s.isNotEmpty).join(' · '),
                       ].join('\n'),
@@ -132,7 +133,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
 String _when(String? iso) {
   final at = iso == null ? null : DateTime.tryParse(iso)?.toLocal();
-  return at == null ? '' : banglaStamp(at);
+  return at == null ? '' : stampText(at);
 }
 
 /// একটা নোটিশ, পুরোটা — সই চাওয়া হলে নিচে "পড়েছি ও মানছি"
@@ -161,9 +162,9 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
       await _once.send(() => widget.api.acknowledge(widget.notice.id));
       if (!mounted) return;
       setState(() => _standing = 'acknowledged');
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('সই দেওয়া হলো।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.noticesSigned)));
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'সই দেওয়া গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.noticesSignFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -175,7 +176,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
     final signed = _standing == 'acknowledged';
 
     return Scaffold(
-      appBar: AbosScreenBar(title: n.no.isEmpty ? 'নোটিশ' : n.no),
+      appBar: AbosScreenBar(title: n.no.isEmpty ? context.l10n.noticesDetailTitle : n.no),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -183,7 +184,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
           const SizedBox(height: AppSpacing.xs),
           Text(
             [
-              NoticeItem.priorityLabels[n.priority] ?? '',
+              NoticeItem.priorityLabel(context.l10n, n.priority),
               if (n.author.isNotEmpty) n.author,
               if (n.publishedAt != null) _when(n.publishedAt),
             ].where((s) => s.isNotEmpty).join(' · '),
@@ -197,13 +198,13 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
           SelectableText(n.body),
           if (n.expiresAt != null) ...[
             const SizedBox(height: AppSpacing.md),
-            Text('মেয়াদ ${_when(n.expiresAt)} পর্যন্ত',
+            Text(context.l10n.noticesValidUntil(_when(n.expiresAt)),
                 style: TextStyle(fontSize: 12, color: context.palette.onSurfaceMuted)),
           ],
           if (n.ackRequired) ...[
             const Divider(height: AppSpacing.xl),
             if (n.ackDeadline != null && !signed)
-              Text('সইয়ের শেষ সময় ${_when(n.ackDeadline)}',
+              Text(context.l10n.noticesSignBy(_when(n.ackDeadline)),
                   style: TextStyle(color: _standing == 'overdue' || _standing == 'escalated' ? context.palette.danger : context.palette.warning)),
             if (signed)
               Row(
@@ -211,7 +212,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
                 children: [
                   Icon(Icons.verified_outlined, color: context.palette.success),
                   const SizedBox(width: AppSpacing.xs),
-                  Text('আপনি সই দিয়েছেন', style: TextStyle(color: context.palette.success, fontWeight: FontWeight.w700)),
+                  Text(context.l10n.noticesYouSigned, style: TextStyle(color: context.palette.success, fontWeight: FontWeight.w700)),
                 ],
               )
             else
@@ -219,7 +220,7 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
                 key: const ValueKey('notice-sign'),
                 onPressed: _busy ? null : _sign,
                 icon: const Icon(Icons.draw_outlined),
-                label: Text(_busy ? 'পাঠানো হচ্ছে…' : 'পড়েছি ও মানছি — সই দিন'),
+                label: Text(_busy ? context.l10n.noticesSending : context.l10n.noticesReadAndAgree),
               ),
             if (_error != null)
               Padding(
@@ -266,23 +267,12 @@ class NoticeItem {
 
   bool get owesSignature => ackRequired && standing != 'acknowledged';
 
-  static const Map<String, String> standingLabels = {
-    'unread': 'পড়া হয়নি',
-    'read': 'পড়া হয়েছে',
-    'acknowledged': 'সই দেওয়া',
-    'overdue': 'সইয়ের সময় পেরিয়েছে',
-    'escalated': 'উপরে জানানো হয়েছে',
-  };
+  /// অবস্থার কথা অ্যাপের ভাষায় — পড়েননি · পড়েছেন · মেনে নিয়েছেন (fe, ২১ অক্টোবর ২০২৬) · সইয়ের সময় পেরিয়েছে · উপরে জানানো
+  /// হয়েছে; অচেনা চাবিতে খালি
+  static String standingLabel(AppL10n words, String standing) => words.noticesStanding(standing);
 
-  /// ওয়েবের `core.notice.priority` — হুবহু
-  static const Map<String, String> priorityLabels = {
-    'low': 'কম জরুরি',
-    'normal': 'সাধারণ',
-    'important': 'গুরুত্বপূর্ণ',
-    'high': 'বেশি জরুরি',
-    'critical': 'অত্যন্ত জরুরি',
-    'emergency': 'জরুরি অবস্থা',
-  };
+  /// ওয়েবের `core.notice.priority` — হুবহু; অচেনা চাবিতে খালি
+  static String priorityLabel(AppL10n words, String priority) => words.noticesPriority(priority);
 
   factory NoticeItem.fromJson(Map<dynamic, dynamic> j) => NoticeItem(
         id: j['id']?.toString() ?? '',

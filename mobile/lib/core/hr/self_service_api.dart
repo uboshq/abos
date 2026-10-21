@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ নিজের ছুটি আর নিজের বেতনের স্লিপ — ফোনে (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬; সার্ভার `LeaveApiController`,
 /// `PayslipApiController`)।
@@ -63,10 +64,10 @@ class LeaveRequest {
   final String remarks;
 
   String get statusWords => switch (status) {
-        'pending' => 'অনুমোদনের অপেক্ষায়',
-        'approved' => 'মঞ্জুর',
-        'rejected' => 'নামঞ্জুর',
-        'cancelled' => 'প্রত্যাহৃত',
+        'pending' => AppLocale.l10n.hrLeaveStatePending,
+        'approved' => AppLocale.l10n.hrLeaveStateApproved,
+        'rejected' => AppLocale.l10n.hrLeaveStateRejected,
+        'cancelled' => AppLocale.l10n.hrLeaveStateCancelled,
         _ => status,
       };
 
@@ -121,6 +122,7 @@ class Payslip {
     this.code = '',
     this.paymentMethod = '',
     this.lines = const [],
+    this.runType,
   });
 
   final String id;
@@ -133,6 +135,12 @@ class Payslip {
   final String code;
   final String paymentMethod;
   final List<PayslipLineItem> lines;
+
+  /// বেতনের রানের ধরন — সার্ভারের `run_type`: "salary" বা "bonus"; পুরনো সার্ভার পাঠায় না, তখন null (a4, ২১ অক্টোবর ২০২৬)
+  final String? runType;
+
+  /// ⭐ উৎসব ভাতার স্লিপ — কেবল `run_type == "bonus"`; না এলে বা "salary" হলে সাধারণ বেতনের স্লিপ, আগের মতোই
+  bool get isFestivalBonus => runType == 'bonus';
 
   factory Payslip.fromJson(Map<String, dynamic> j) => Payslip(
         id: _s(j['id']),
@@ -148,6 +156,7 @@ class Payslip {
           for (final l in _maps(j['lines']))
             PayslipLineItem(name: _s(l['name']), earning: l['earning'] == true, amount: Money.valueOrZero(l['amount'])),
         ],
+        runType: _sn(j['run_type']),
       );
 }
 

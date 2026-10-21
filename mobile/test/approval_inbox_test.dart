@@ -119,11 +119,11 @@ void main() {
     await tester.pumpWidget(screen(approve: (id, _) async => approvedId = id));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'অনুমোদন'));
+    await tester.tap(find.widgetWithText(FilledButton, 'সই দিন'));
     await tester.pumpAndSettle();
 
     // The dialog's own confirm button, not the card's.
-    await tester.tap(inDialog('অনুমোদন'));
+    await tester.tap(inDialog('সই দিন'));
     await tester.pumpAndSettle();
 
     expect(approvedId, '01a0c3f0-0000-7000-8000-0000000000a1');
@@ -237,9 +237,9 @@ void main() {
     }));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'অনুমোদন'));
+    await tester.tap(find.widgetWithText(FilledButton, 'সই দিন'));
     await tester.pumpAndSettle();
-    await tester.tap(inDialog('অনুমোদন'));
+    await tester.tap(inDialog('সই দিন'));
     await tester.pumpAndSettle();
 
     expect(find.text('PB-2609-0007'), findsNothing);
@@ -263,10 +263,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'অনুমোদন'));
+    await tester.tap(find.widgetWithText(FilledButton, 'সই দিন'));
     await tester.pumpAndSettle();
     expect(find.textContaining('৳1,25,000.00', findRichText: true), findsWidgets, reason: 'সইয়ের প্রশ্নে অঙ্ক নেই');
-    await tester.tap(inDialog('অনুমোদন'));
+    await tester.tap(inDialog('সই দিন'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('অঙ্ক বদলেছে'), findsOneWidget, reason: '⛔ বদলানো অঙ্কের ফেরত "নিষ্পত্তি" বা কিছুই না বলে চুপ');

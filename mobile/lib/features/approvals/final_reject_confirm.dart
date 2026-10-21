@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 
 /// ⭐ প্রত্যাখ্যানের আগে শেষ প্রশ্ন — "চূড়ান্ত, আর ফেরানো যাবে না" (fe, ২১ অক্টোবর ২০২৬; ওয়েবের মতো দুই আলাদা কাজ)।
@@ -12,19 +13,19 @@ Future<bool> confirmFinalReject(BuildContext context, {required String what}) as
     builder: (context) => AlertDialog(
       key: const ValueKey('reject-final'),
       icon: Icon(Icons.block, color: context.palette.danger),
-      title: const Text('চূড়ান্ত প্রত্যাখ্যান?'),
-      content: Text('$what\n\nএটা চূড়ান্ত — আর ফেরানো যাবে না। লেখককে ঠিক করার সুযোগ দিতে চাইলে "সংশোধনে ফেরত দিন" বেছে নিন।'),
+      title: Text(context.l10n.approvalsFinalRejectTitle),
+      content: Text(context.l10n.approvalsFinalRejectQuestion(what)),
       actions: [
         TextButton(
           key: const ValueKey('reject-final-cancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('থাক'),
+          child: Text(context.l10n.approvalsFinalRejectKeep),
         ),
         FilledButton(
           key: const ValueKey('reject-final-confirm'),
           style: FilledButton.styleFrom(backgroundColor: context.palette.danger),
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('হ্যাঁ, প্রত্যাখ্যান'),
+          child: Text(context.l10n.approvalsFinalRejectConfirm),
         ),
       ],
     ),

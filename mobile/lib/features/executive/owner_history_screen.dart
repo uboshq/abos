@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -51,8 +52,8 @@ class _OwnerHistoryScreenState extends State<OwnerHistoryScreen> {
 
   @override
   Widget build(BuildContext context) => OwnerPageFrame<OwnerHistory>(
-        title: 'আগের দিনের হিসাব',
-        failed: 'আগের দিনের হিসাব আনা গেল না।',
+        title: context.l10n.ownerHistoryTitle,
+        failed: context.l10n.ownerHistoryFailed,
         reloadKey: (_date, _figure),
         load: _load,
         controls: [
@@ -60,27 +61,28 @@ class _OwnerHistoryScreenState extends State<OwnerHistoryScreen> {
             ActionChip(
               key: const ValueKey('history-day'),
               avatar: const Icon(Icons.event, size: 18),
-              label: Text('কোন দিন: ${dayOf(_shownDate ?? _date)}'),
+              label: Text(context.l10n.ownerHistoryDay(dayOf(_shownDate ?? _date))),
               onPressed: _pickDay,
             ),
           ]),
           OwnerChips(
             prefix: 'figure',
-            choices: ExecutiveToday.labels,
+            choices: ExecutiveToday.labelsIn(context.l10n),
             selected: _figure,
             onSelected: (f) => setState(() => _figure = f),
           ),
         ],
         body: (context, data) {
           final money = {for (final f in data.figures) f.key: f.money};
-          final label = ExecutiveToday.labels[data.figure] ?? data.figure;
+          final w = context.l10n;
+          final label = ExecutiveToday.labelsIn(w)[data.figure] ?? data.figure;
           return [
-            OwnerNote('${dayOf(data.date)} — ঐ দিন রাত ২৩:৫৫-এ পর্দায় যা ছিল, ঠিক তাই। আজকের খাতা থেকে নতুন করে গোনা নয়।'),
+            OwnerNote(w.ownerHistoryAsKept(dayOf(data.date), '23:55')),
             if (data.rows.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.history_toggle_off,
-                title: 'ঐ দিনের রাতের হিসাব নেই',
-                message: 'হিসাব রাখা শুরু হওয়ার আগের দিন, বা সেই রাতে লেখা হয়নি।',
+                title: w.ownerHistoryNoneTitle,
+                message: w.ownerHistoryNoneMessage,
               ),
             for (final row in data.rows) _RowCard(row: row, figure: data.figure, money: money),
             if (data.series.isNotEmpty)
@@ -88,13 +90,13 @@ class _OwnerHistoryScreenState extends State<OwnerHistoryScreen> {
                 key: const ValueKey('history-trend'),
                 margin: const EdgeInsets.only(top: AppSpacing.sm),
                 child: ExpansionTile(
-                  title: Text('$label — গত ৯০ দিন, রাতের হিসাব থেকে', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  title: Text(w.ownerHistoryTrend(label, 90), style: const TextStyle(fontWeight: FontWeight.w700)),
                   childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
                   children: [
                     // ⓘ নতুন দিন আগে — ফোনে নিচে নামলে পুরনো
                     OwnerBars(
                       firstLabel: label,
-                      secondLabel: 'গত মাসের একই দিন',
+                      secondLabel: w.ownerHistoryMonthBefore,
                       money: money[data.figure] ?? true,
                       rows: [
                         for (final p in data.series.reversed) (label: dayOf(p.day), first: p.value, second: p.monthBefore),
@@ -117,7 +119,9 @@ class _RowCard extends StatelessWidget {
   final Map<String, bool> money;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) {
+    final labels = ExecutiveToday.labelsIn(context.l10n);
+    return Card(
         key: ValueKey('history-row-${row.company}-${row.branch ?? 'whole'}'),
         color: row.whole ? context.palette.successSurface : null,
         margin: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -129,8 +133,9 @@ class _RowCard extends StatelessWidget {
           childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
           children: [
             for (final key in ExecutiveToday.keys)
-              FactRow(ExecutiveToday.labels[key] ?? key, ownerCell(row.values[key], money: money[key] ?? key != 'signatures')),
+              FactRow(labels[key] ?? key, ownerCell(row.values[key], money: money[key] ?? key != 'signatures')),
           ],
         ),
       );
+  }
 }

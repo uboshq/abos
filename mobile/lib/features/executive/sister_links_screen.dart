@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -55,8 +56,8 @@ class _SisterLinksScreenState extends State<SisterLinksScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'ভাই-কোম্পানির পক্ষের তালিকা আনা গেল না।',
-            whenAbsent: 'মালিকের কেন্দ্রের এই পাতা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন। অফিসে জানান।'));
+            fallback: context.l10n.ownerLinksFailed,
+            whenAbsent: context.l10n.ownerPageAbsent));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -64,26 +65,27 @@ class _SisterLinksScreenState extends State<SisterLinksScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: const AbosScreenBar(title: 'ভাই-কোম্পানির পক্ষ'),
+  Widget build(BuildContext context) {
+    final w = context.l10n;
+    return Scaffold(
+        appBar: AbosScreenBar(title: w.ownerLinksTitle),
         body: RefreshIndicator(
           onRefresh: _load,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
-              const OwnerNote('এক কোম্পানির কোনো ক্রেতা বা সরবরাহকারী যদি আসলে আমাদেরই আরেকটা কোম্পানি হয়, জোড়া থাকলে গ্রুপের মোট '
-                  'থেকে দুইয়ের মাঝের বিক্রি, পাওনা আর দেনা বাদ যায়। নাম মিলিয়ে কিছু আন্দাজ করা হয় না।'),
-              OwnerNote('জোড়া দেওয়া আর তোলা ওয়েবের পাতায় — এখানে কেবল দেখা।', colour: context.palette.warning),
+              OwnerNote(w.ownerLinksExplain),
+              OwnerNote(w.ownerLinksWebOnly, colour: context.palette.warning),
               // ⛔ পুরনো সার্ভার গোনা না পাঠালে পট্টিই নেই — এক পাতার গোনা দেখানো মিথ্যা মোট
-              if (_total != null) OwnerTotal(key: const ValueKey('links-total'), label: 'মোট জোড়া', value: '$_totalটা'),
+              if (_total != null) OwnerTotal(key: const ValueKey('links-total'), label: w.ownerLinksTotal, value: w.ownerCount(_total!)),
               if (_busy) const LinearProgressIndicator(),
               if (_error != null) BooksError(_error!),
               if (_loaded && _rows.isEmpty && _error == null)
-                const EmptyState(
+                EmptyState(
                   icon: Icons.link_off,
-                  title: 'কোনো জোড়া নেই',
-                  message: 'গ্রুপের মোট থেকে কিছু বাদ যাচ্ছে না।',
+                  title: w.ownerLinksNoneTitle,
+                  message: w.ownerLinksNoneMessage,
                 ),
               for (final link in _rows)
                 Card(
@@ -91,8 +93,8 @@ class _SisterLinksScreenState extends State<SisterLinksScreen> {
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: ListTile(
                     leading: Icon(link.type == 'supplier' ? Icons.local_shipping_outlined : Icons.storefront_outlined),
-                    title: Text('${link.party} · ${_type(link.type)}'),
-                    subtitle: Text('${link.company} → আসলে আমাদের ${link.sister}'),
+                    title: Text('${link.party} · ${_type(w, link.type)}'),
+                    subtitle: Text(w.ownerLinksIsSister(link.company, link.sister)),
                   ),
                 ),
               if (_next != null) MoreButton(busy: _busy, onPressed: () => _load(more: true)),
@@ -100,7 +102,8 @@ class _SisterLinksScreenState extends State<SisterLinksScreen> {
           ),
         ),
       );
+  }
 
-  /// ⓘ সার্ভারের `type_label` মানুষটার ভাষায় — ফোন নিজে বাংলায় বলে
-  static String _type(String type) => type == 'supplier' ? 'সরবরাহকারী' : 'ক্রেতা';
+  /// ⓘ সার্ভারের `type_label` মানুষটার ভাষায় — ফোন নিজে বলে, অ্যাপের ভাষায়
+  static String _type(AppL10n w, String type) => type == 'supplier' ? w.ownerPartySupplier : w.ownerPartyCustomer;
 }

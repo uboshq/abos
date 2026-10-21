@@ -11,7 +11,6 @@ import 'package:abos_mobile/core/theme/app_theme.dart';
 import '../support/bar_fonts.dart' show loadBarFonts;
 import '../support/main_screens.dart' show setScreenSize;
 import '../support/screens_0441.dart';
-import 'hard_coded_scan.dart' show readList;
 
 /// ⭐ মালিকের হোম ইংরেজিতে (ভাষার সুইচ 0.4.43, a4b-র ভাগ): অ্যাপের নিজের কোনো লেখায় বাংলা অক্ষর নেই — পর্দার লেখা আর
 /// পর্দা-পাঠকের কথা দুটোই। ⓘ বাংলা থাকে কেবল নমুনা তথ্যের নিজের নামে, নিচের [sampleData]-য় এক এক করে লেখা।
@@ -31,11 +30,6 @@ const sampleData = [
   'সব শাখা', // "আজ"-এর `branch`
   'আল-আমিন শুভ', // মালিকের নাম
 ];
-
-/// ⚠️ অন্যের ফাইলের লেখা, এখনো ARB-তে যায়নি: কাগজের অবস্থার চিপ (`lib/core/status/paper_state.dart`, তালিকায় আছে) — চোখের
-/// লেখা আর পর্দা-পাঠকের কথা। ⛔ ফাইলটা তালিকা থেকে উঠে গেলে নিচের পরীক্ষা লাল হয়, তখন এই ছাড় মুছতে হবে।
-const chipNotYetConverted = ['￼সইয়ের অপেক্ষায়', 'অবস্থা: সইয়ের অপেক্ষায়'];
-const chipFile = 'lib/core/status/paper_state.dart';
 
 Future<void> _load(String family, List<String> files) async {
   final loader = FontLoader(family);
@@ -131,11 +125,9 @@ void main() {
     expect(texts.join(' '), contains('Total in hand and bank'), reason: 'ইংরেজিতেই আঁকা');
     expect(texts.join(' '), contains('Awaiting signature'));
     expect(texts.join(' '), contains('Stock value'));
-    final left = bengaliLeft(texts).where((t) => !chipNotYetConverted.contains(t)).toList();
+    // ⓘ চিপও এখন ইংরেজিতে (a6, paper_states-এর label_en) — আর কোনো ছাড় নেই
+    final left = bengaliLeft(texts);
     expect(left, isEmpty, reason: 'অ্যাপের লেখায় বাংলা:\n${left.join('\n')}');
-    // ⓘ চিপের ছাড় কেবল যতক্ষণ তার ফাইল তালিকায় (হাতে-লেখা বাংলা নিয়ে) আছে
-    expect(readList().containsKey(chipFile), isTrue,
-        reason: '$chipFile ARB-তে গেছে — chipNotYetConverted ছাড় মুছে দিন, চিপও ইংরেজিতে পড়বে');
   });
 
   test('the check itself: an app word in Bengali is caught, a sample name is not', () {

@@ -138,37 +138,57 @@ const paperRoleSpecs = <PaperRole, PaperRoleSpec>{
   ),
 };
 
-/// এক অবস্থার সব — লেখা, TalkBack-এর কথা, আইকনের নাম, ভূমিকা, ধারের ধরন
+/// এক অবস্থার সব — লেখা (বাংলা আর ইংরেজি), TalkBack-এর কথা, আইকনের নাম, ভূমিকা, ধারের ধরন।
+///
+/// <p>⭐ দুই ভাষা পাশাপাশি, JSON-এর মতোই (`label_bn` · `label_en` …; ভাষার সুইচ 0.4.43)। `english: true` দিলে ইংরেজি, নইলে
+/// বাংলা — চিপ অ্যাপের ভাষা দেখে ঠিক করে ([AppStatusChip])।
 class PaperStateSpec {
   const PaperStateSpec({
     required this.labelBn,
+    required this.labelEn,
     required this.labelBnWithoutLevel,
+    required this.labelEnWithoutLevel,
     required this.semanticsBn,
+    required this.semanticsEn,
     required this.semanticsBnWithoutLevel,
+    required this.semanticsEnWithoutLevel,
     required this.labelBnShort,
+    required this.labelEnShort,
     required this.labelBnShortWithoutLevel,
+    required this.labelEnShortWithoutLevel,
     required this.icon,
     required this.role,
     this.dashed = false,
     this.tappable = false,
     this.semanticsHintBn,
+    this.semanticsHintEn,
     this.reasonTitleBn,
+    this.reasonTitleEn,
     this.reasonMissingBn,
+    this.reasonMissingEn,
     this.reasonCloseBn,
+    this.reasonCloseEn,
     this.appOnly = false,
     this.byKind = const {},
   });
 
   /// `{level}` · `{levels}` থাকলে ডেটার সংখ্যা বসে
   final String labelBn;
+  final String labelEn;
   final String labelBnWithoutLevel;
+  final String labelEnWithoutLevel;
   final String semanticsBn;
+  final String semanticsEn;
   final String semanticsBnWithoutLevel;
+  final String semanticsEnWithoutLevel;
 
   /// তালিকার সারির ছোট লেখা ([AppStatusChip.compact]) — যেমন "2-এর 1", "পোস্ট হয়েছে"
   final String labelBnShort;
+  final String labelEnShort;
   final String labelBnShortWithoutLevel;
+  final String labelEnShortWithoutLevel;
   final String? semanticsHintBn;
+  final String? semanticsHintEn;
 
   /// Material Symbols-এর নাম (paper_state_icons.dart এটা থেকে IconData দেয়)
   final String icon;
@@ -176,13 +196,16 @@ class PaperStateSpec {
   final bool dashed;
   final bool tappable;
   final String? reasonTitleBn;
+  final String? reasonTitleEn;
   final String? reasonMissingBn;
+  final String? reasonMissingEn;
   final String? reasonCloseBn;
+  final String? reasonCloseEn;
 
   /// কেবল অ্যাপের অবস্থা — ওয়েবে নেই
   final bool appOnly;
 
-  /// ধরনের নিজের কথা — JSON-এর চাবি হুবহু (`label_bn_stock`, `semantics_bn_claim` …)
+  /// ধরনের নিজের কথা — JSON-এর চাবি হুবহু (`label_bn_stock`, `label_en_stock`, `semantics_bn_claim` …)
   final Map<String, String> byKind;
 
   String _of(String key, String plain, PaperKind kind) =>
@@ -190,23 +213,32 @@ class PaperStateSpec {
 
   PaperRoleSpec get colours => paperRoleSpecs[role]!;
 
-  bool get _hasLevel => labelBn.contains('{level}');
-
-  /// পর্দার লেখা — ধাপ দুটোই জানা থাকলে "2-এর 1" অংশ, নইলে ছাড়া। ⛔ অঙ্ক ইংরেজিতে, টাকা আর তারিখের মতো
-  /// (fe, ২০ অক্টোবর ২০২৬); কেবল কথাগুলো বাংলা — কোনো চিপের লেখায় বা TalkBack-এর কথায় বাংলা অঙ্ক নয়
-  String label({int? level, int? levels, PaperKind kind = PaperKind.money}) =>
-      _fill(_of('label_bn', labelBn, kind), labelBnWithoutLevel, level, levels);
+  /// পর্দার লেখা — ধাপ দুটোই জানা থাকলে "2-এর 1" অংশ ("step 1 of 2"), নইলে ছাড়া। ⛔ অঙ্ক ইংরেজিতে, টাকা আর তারিখের মতো
+  /// (fe, ২০ অক্টোবর ২০২৬); কোনো চিপের লেখায় বা TalkBack-এর কথায় বাংলা অঙ্ক নয়
+  String label({int? level, int? levels, PaperKind kind = PaperKind.money, bool english = false}) => english
+      ? _fill(_of('label_en', labelEn, kind), labelEnWithoutLevel, level, levels)
+      : _fill(_of('label_bn', labelBn, kind), labelBnWithoutLevel, level, levels);
 
   /// তালিকার সারির ছোট লেখা
-  String shortLabel({int? level, int? levels, PaperKind kind = PaperKind.money}) =>
-      _fill(_of('label_bn_short', labelBnShort, kind), labelBnShortWithoutLevel, level, levels);
+  String shortLabel({int? level, int? levels, PaperKind kind = PaperKind.money, bool english = false}) => english
+      ? _fill(_of('label_en_short', labelEnShort, kind), labelEnShortWithoutLevel, level, levels)
+      : _fill(_of('label_bn_short', labelBnShort, kind), labelBnShortWithoutLevel, level, levels);
 
   /// TalkBack যা বলে — দুই মাপের চিপেই পুরো বাক্য
-  String semantics({int? level, int? levels, PaperKind kind = PaperKind.money}) =>
-      _fill(_of('semantics_bn', semanticsBn, kind), semanticsBnWithoutLevel, level, levels);
+  String semantics({int? level, int? levels, PaperKind kind = PaperKind.money, bool english = false}) => english
+      ? _fill(_of('semantics_en', semanticsEn, kind), semanticsEnWithoutLevel, level, levels)
+      : _fill(_of('semantics_bn', semanticsBn, kind), semanticsBnWithoutLevel, level, levels);
+
+  /// TalkBack-এর ইঙ্গিত (চাপা যায় এমন চিপে)
+  String? semanticsHint({bool english = false}) => english ? semanticsHintEn : semanticsHintBn;
+
+  /// "পোস্ট হয়নি"-এর নিচের পাতা: শিরোনাম, কারণ না জানলে লেখা, বন্ধের বোতাম
+  String? reasonTitle({bool english = false}) => english ? reasonTitleEn : reasonTitleBn;
+  String? reasonMissing({bool english = false}) => english ? reasonMissingEn : reasonMissingBn;
+  String? reasonClose({bool english = false}) => english ? reasonCloseEn : reasonCloseBn;
 
   String _fill(String withLevel, String without, int? level, int? levels) {
-    if (!_hasLevel) return withLevel;
+    if (!withLevel.contains('{level}')) return withLevel;
     if (level == null || levels == null || level < 1 || levels < level) return without;
     return withLevel.replaceAll('{levels}', '$levels').replaceAll('{level}', '$level');
   }
@@ -214,128 +246,203 @@ class PaperStateSpec {
 
 const paperStateSpecs = <PaperState, PaperStateSpec>{
   PaperState.draft: PaperStateSpec(
-    labelBn: 'খসড়া',
-    labelBnWithoutLevel: 'খসড়া',
-    semanticsBn: 'অবস্থা: খসড়া',
-    semanticsBnWithoutLevel: 'অবস্থা: খসড়া',
-    labelBnShort: 'খসড়া',
-    labelBnShortWithoutLevel: 'খসড়া',
+    labelBn: 'খসড়া', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Draft',
+    labelBnWithoutLevel: 'খসড়া', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Draft',
+    semanticsBn: 'অবস্থা: খসড়া', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: draft',
+    semanticsBnWithoutLevel: 'অবস্থা: খসড়া', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: draft',
+    labelBnShort: 'খসড়া', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Draft',
+    labelBnShortWithoutLevel: 'খসড়া', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Draft',
     icon: 'edit_note',
     role: PaperRole.neutral,
   ),
   PaperState.waiting: PaperStateSpec(
-    labelBn: 'সইয়ের অপেক্ষায় · {levels}-এর {level}',
-    labelBnWithoutLevel: 'সইয়ের অপেক্ষায়',
-    semanticsBn: 'অবস্থা: সইয়ের অপেক্ষায়, {levels}-এর {level}',
-    semanticsBnWithoutLevel: 'অবস্থা: সইয়ের অপেক্ষায়',
-    labelBnShort: '{levels}-এর {level}',
-    labelBnShortWithoutLevel: 'সইয়ের অপেক্ষায়',
+    labelBn: 'সইয়ের অপেক্ষায় · {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Awaiting signature · step {level} of {levels}',
+    labelBnWithoutLevel: 'সইয়ের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Awaiting signature',
+    semanticsBn: 'অবস্থা: সইয়ের অপেক্ষায়, {levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: awaiting signature, step {level} of {levels}',
+    semanticsBnWithoutLevel: 'অবস্থা: সইয়ের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: awaiting signature',
+    labelBnShort: '{levels}-এর {level}', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Step {level} of {levels}',
+    labelBnShortWithoutLevel: 'সইয়ের অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Awaiting signature',
     icon: 'hourglass_top',
     role: PaperRole.critical,
   ),
   PaperState.sentBack: PaperStateSpec(
-    labelBn: 'সংশোধনে ফেরত',
-    labelBnWithoutLevel: 'সংশোধনে ফেরত',
-    semanticsBn: 'অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান',
-    semanticsBnWithoutLevel: 'অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান',
-    labelBnShort: 'সংশোধনে ফেরত',
-    labelBnShortWithoutLevel: 'সংশোধনে ফেরত',
+    labelBn: 'সংশোধনে ফেরত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Sent back for correction',
+    labelBnWithoutLevel: 'সংশোধনে ফেরত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Sent back for correction',
+    semanticsBn: 'অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: sent back for correction, correct it and send it again',
+    semanticsBnWithoutLevel: 'অবস্থা: সংশোধনে ফেরত, ঠিক করে আবার পাঠান', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: sent back for correction, correct it and send it again',
+    labelBnShort: 'সংশোধনে ফেরত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Sent back for correction',
+    labelBnShortWithoutLevel: 'সংশোধনে ফেরত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Sent back for correction',
     icon: 'undo',
     role: PaperRole.critical,
   ),
   PaperState.posting: PaperStateSpec(
-    labelBn: 'সই শেষ · খাতায় উঠছে',
-    labelBnWithoutLevel: 'সই শেষ · খাতায় উঠছে',
-    semanticsBn: 'অবস্থা: সই শেষ, খাতায় উঠছে',
-    semanticsBnWithoutLevel: 'অবস্থা: সই শেষ, খাতায় উঠছে',
-    labelBnShort: 'খাতায় উঠছে',
-    labelBnShortWithoutLevel: 'খাতায় উঠছে',
+    labelBn: 'সই শেষ · খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Fully signed · posting to the books',
+    labelBnWithoutLevel: 'সই শেষ · খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Fully signed · posting to the books',
+    semanticsBn: 'অবস্থা: সই শেষ, খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: fully signed, posting to the books',
+    semanticsBnWithoutLevel: 'অবস্থা: সই শেষ, খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: fully signed, posting to the books',
+    labelBnShort: 'খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Posting to the books',
+    labelBnShortWithoutLevel: 'খাতায় উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Posting to the books',
     icon: 'draw',
     role: PaperRole.information,
     byKind: {
-      'label_bn_stock': 'সই শেষ · মজুদে উঠছে',
-      'semantics_bn_stock': 'অবস্থা: সই শেষ, মজুদে উঠছে',
-      'label_bn_short_stock': 'মজুদে উঠছে',
+      'label_bn_stock': 'সই শেষ · মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_stock': 'Fully signed · posting to stock',
+      'semantics_bn_stock': 'অবস্থা: সই শেষ, মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'semantics_en_stock': 'Status: fully signed, posting to stock',
+      'label_bn_short_stock': 'মজুদে উঠছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_short_stock': 'Posting to stock',
     },
   ),
   PaperState.posted: PaperStateSpec(
-    labelBn: 'পোস্ট হয়েছে · খাতায় উঠেছে',
-    labelBnWithoutLevel: 'পোস্ট হয়েছে · খাতায় উঠেছে',
-    semanticsBn: 'অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে',
-    semanticsBnWithoutLevel: 'অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে',
-    labelBnShort: 'পোস্ট হয়েছে',
-    labelBnShortWithoutLevel: 'পোস্ট হয়েছে',
+    labelBn: 'পোস্ট হয়েছে · খাতায় উঠেছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Posted · in the books',
+    labelBnWithoutLevel: 'পোস্ট হয়েছে · খাতায় উঠেছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Posted · in the books',
+    semanticsBn: 'অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: posted, in the books',
+    semanticsBnWithoutLevel: 'অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: posted, in the books',
+    labelBnShort: 'পোস্ট হয়েছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Posted',
+    labelBnShortWithoutLevel: 'পোস্ট হয়েছে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Posted',
     icon: 'check_circle',
     role: PaperRole.positive,
     byKind: {
-      'label_bn_stock': 'পোস্ট হয়েছে · মজুদে উঠেছে',
-      'semantics_bn_stock': 'অবস্থা: পোস্ট হয়েছে, মজুদে উঠেছে',
       // খরচের দাবি পোস্ট মানে টাকা দেওয়া — ক্যাশিয়ারের ভাউচার পোস্ট হয়েছে
-      'label_bn_claim': 'পরিশোধিত',
-      'semantics_bn_claim': 'অবস্থা: পরিশোধিত',
-      'label_bn_short_claim': 'পরিশোধিত',
+      'label_bn_stock': 'পোস্ট হয়েছে · মজুদে উঠেছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_stock': 'Posted · in stock',
+      'label_bn_claim': 'পরিশোধিত', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_claim': 'Paid',
+      'semantics_bn_stock': 'অবস্থা: পোস্ট হয়েছে, মজুদে উঠেছে', // l10n-ok: mirror of paper_states.json, English beside it
+      'semantics_en_stock': 'Status: posted, in stock',
+      'semantics_bn_claim': 'অবস্থা: পরিশোধিত', // l10n-ok: mirror of paper_states.json, English beside it
+      'semantics_en_claim': 'Status: paid',
+      'label_bn_short_claim': 'পরিশোধিত', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_short_claim': 'Paid',
     },
   ),
   PaperState.cancelled: PaperStateSpec(
-    labelBn: 'বাতিল',
-    labelBnWithoutLevel: 'বাতিল',
-    semanticsBn: 'অবস্থা: বাতিল',
-    semanticsBnWithoutLevel: 'অবস্থা: বাতিল',
-    labelBnShort: 'বাতিল',
-    labelBnShortWithoutLevel: 'বাতিল',
+    labelBn: 'বাতিল', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Cancelled',
+    labelBnWithoutLevel: 'বাতিল', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Cancelled',
+    semanticsBn: 'অবস্থা: বাতিল', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: cancelled',
+    semanticsBnWithoutLevel: 'অবস্থা: বাতিল', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: cancelled',
+    labelBnShort: 'বাতিল', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Cancelled',
+    labelBnShortWithoutLevel: 'বাতিল', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Cancelled',
     icon: 'do_not_disturb_on',
     role: PaperRole.negative,
   ),
   PaperState.notPosted: PaperStateSpec(
-    labelBn: 'পোস্ট হয়নি: কারণ দেখুন',
-    labelBnWithoutLevel: 'পোস্ট হয়নি: কারণ দেখুন',
-    semanticsBn: 'অবস্থা: পোস্ট হয়নি',
-    semanticsBnWithoutLevel: 'অবস্থা: পোস্ট হয়নি',
-    labelBnShort: 'পোস্ট হয়নি',
-    labelBnShortWithoutLevel: 'পোস্ট হয়নি',
-    semanticsHintBn: 'কারণ দেখতে চাপুন',
+    labelBn: 'পোস্ট হয়নি: কারণ দেখুন', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Not posted: see why',
+    labelBnWithoutLevel: 'পোস্ট হয়নি: কারণ দেখুন', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Not posted: see why',
+    semanticsBn: 'অবস্থা: পোস্ট হয়নি', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: not posted',
+    semanticsBnWithoutLevel: 'অবস্থা: পোস্ট হয়নি', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: not posted',
+    labelBnShort: 'পোস্ট হয়নি', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Not posted',
+    labelBnShortWithoutLevel: 'পোস্ট হয়নি', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Not posted',
     icon: 'warning',
     role: PaperRole.negative,
     dashed: true,
     tappable: true,
-    reasonTitleBn: 'কেন পোস্ট হয়নি',
-    reasonMissingBn: 'কারণ জানা যায়নি — হিসাব বিভাগে জিজ্ঞেস করুন।',
-    reasonCloseBn: 'বন্ধ করুন',
+    semanticsHintBn: 'কারণ দেখতে চাপুন', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsHintEn: 'Tap to see why',
+    reasonTitleBn: 'কেন পোস্ট হয়নি', // l10n-ok: mirror of paper_states.json, English beside it
+    reasonTitleEn: 'Why it was not posted',
+    reasonMissingBn: 'কারণ জানা যায়নি — হিসাব বিভাগে জিজ্ঞেস করুন।', // l10n-ok: mirror of paper_states.json, English beside it
+    reasonMissingEn: 'The reason is not known — ask the accounts department.',
+    reasonCloseBn: 'বন্ধ করুন', // l10n-ok: mirror of paper_states.json, English beside it
+    reasonCloseEn: 'Close',
   ),
   PaperState.unsent: PaperStateSpec(
-    labelBn: 'পাঠানো বাকি · নেট এলে নিজেই যাবে',
-    labelBnWithoutLevel: 'পাঠানো বাকি · নেট এলে নিজেই যাবে',
-    semanticsBn: 'অবস্থা: পাঠানো বাকি, নেট এলে নিজেই যাবে',
-    semanticsBnWithoutLevel: 'অবস্থা: পাঠানো বাকি, নেট এলে নিজেই যাবে',
-    labelBnShort: 'পাঠানো বাকি',
-    labelBnShortWithoutLevel: 'পাঠানো বাকি',
+    labelBn: 'পাঠানো বাকি · নেট এলে নিজেই যাবে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Not sent yet · goes by itself when online',
+    labelBnWithoutLevel: 'পাঠানো বাকি · নেট এলে নিজেই যাবে', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Not sent yet · goes by itself when online',
+    semanticsBn: 'অবস্থা: পাঠানো বাকি, নেট এলে নিজেই যাবে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: not sent yet, it goes by itself when the phone is online',
+    semanticsBnWithoutLevel: 'অবস্থা: পাঠানো বাকি, নেট এলে নিজেই যাবে', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: not sent yet, it goes by itself when the phone is online',
+    labelBnShort: 'পাঠানো বাকি', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Not sent yet',
+    labelBnShortWithoutLevel: 'পাঠানো বাকি', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Not sent yet',
     icon: 'cloud_upload',
     role: PaperRole.information,
     appOnly: true,
   ),
   PaperState.rejected: PaperStateSpec(
-    labelBn: 'প্রত্যাখ্যাত',
-    labelBnWithoutLevel: 'প্রত্যাখ্যাত',
-    semanticsBn: 'অবস্থা: প্রত্যাখ্যাত',
-    semanticsBnWithoutLevel: 'অবস্থা: প্রত্যাখ্যাত',
-    labelBnShort: 'প্রত্যাখ্যাত',
-    labelBnShortWithoutLevel: 'প্রত্যাখ্যাত',
+    labelBn: 'প্রত্যাখ্যাত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Rejected',
+    labelBnWithoutLevel: 'প্রত্যাখ্যাত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Rejected',
+    semanticsBn: 'অবস্থা: প্রত্যাখ্যাত', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: rejected',
+    semanticsBnWithoutLevel: 'অবস্থা: প্রত্যাখ্যাত', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: rejected',
+    labelBnShort: 'প্রত্যাখ্যাত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Rejected',
+    labelBnShortWithoutLevel: 'প্রত্যাখ্যাত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Rejected',
     icon: 'cancel',
     role: PaperRole.negative,
   ),
   PaperState.approved: PaperStateSpec(
-    labelBn: 'অনুমোদিত',
-    labelBnWithoutLevel: 'অনুমোদিত',
-    semanticsBn: 'অবস্থা: অনুমোদিত',
-    semanticsBnWithoutLevel: 'অবস্থা: অনুমোদিত',
-    labelBnShort: 'অনুমোদিত',
-    labelBnShortWithoutLevel: 'অনুমোদিত',
+    labelBn: 'অনুমোদিত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEn: 'Approved',
+    labelBnWithoutLevel: 'অনুমোদিত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnWithoutLevel: 'Approved',
+    semanticsBn: 'অবস্থা: অনুমোদিত', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEn: 'Status: approved',
+    semanticsBnWithoutLevel: 'অবস্থা: অনুমোদিত', // l10n-ok: mirror of paper_states.json, English beside it
+    semanticsEnWithoutLevel: 'Status: approved',
+    labelBnShort: 'অনুমোদিত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShort: 'Approved',
+    labelBnShortWithoutLevel: 'অনুমোদিত', // l10n-ok: mirror of paper_states.json, English beside it
+    labelEnShortWithoutLevel: 'Approved',
     icon: 'verified',
     role: PaperRole.information,
     byKind: {
-      'label_bn_claim': 'অনুমোদিত · টাকার অপেক্ষায়',
-      'semantics_bn_claim': 'অবস্থা: অনুমোদিত, টাকার অপেক্ষায়',
-      'label_bn_short_claim': 'অনুমোদিত · টাকার অপেক্ষায়',
+      'label_bn_claim': 'অনুমোদিত · টাকার অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_claim': 'Approved · awaiting payment',
+      'semantics_bn_claim': 'অবস্থা: অনুমোদিত, টাকার অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+      'semantics_en_claim': 'Status: approved, awaiting payment',
+      'label_bn_short_claim': 'অনুমোদিত · টাকার অপেক্ষায়', // l10n-ok: mirror of paper_states.json, English beside it
+      'label_en_short_claim': 'Approved · awaiting payment',
     },
   ),
 };

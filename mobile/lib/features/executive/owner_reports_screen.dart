@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/locale/l10n.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../reports/reports_screen.dart';
@@ -31,35 +32,35 @@ class OwnerReportsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OwnerPageFrame<OwnerReports>(
-        title: 'রিপোর্ট',
-        failed: 'রিপোর্টের পাতা আনা গেল না।',
+        title: context.l10n.ownerReportsTitle,
+        failed: context.l10n.ownerReportsFailed,
         load: api.reports,
         body: (context, data) => [
           Card(
             child: ListTile(
               key: const ValueKey('reports-centre'),
               leading: const Icon(Icons.library_books_outlined),
-              title: const Text('রিপোর্ট সেন্টার — সব রিপোর্ট'),
+              title: Text(context.l10n.ownerReportsCentre),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _open(context, centreScreen()),
             ),
           ),
-          const SectionHeading('মালিকের কেন্দ্রের রিপোর্ট'),
+          SectionHeading(context.l10n.ownerReportsOwn),
           for (final r in data.own)
             Card(
               child: ListTile(
                 key: ValueKey('reports-own-${r.key}'),
                 leading: const Icon(Icons.bar_chart_outlined),
                 title: Text(r.shownTitle),
-                subtitle: Text(r.allowed ? r.shownHint : 'এই রিপোর্ট দেখার অনুমতি নেই।'),
+                subtitle: Text(r.allowed ? r.shownHint : context.l10n.ownerReportNotAllowed),
                 trailing: r.allowed ? const Icon(Icons.chevron_right) : null,
                 onTap: r.allowed ? () => _open(context, reportScreen(r)) : null,
               ),
             ),
-          const OwnerNote('রিপোর্টের পাতায় তারিখ বাছা, PDF আর ভাগ করা যায়; প্রতিটা নামানো রপ্তানির খাতায় লেখা থাকে।'),
-          SectionHeading('আমার সংরক্ষিত দৃশ্য (${data.views.length}টা)'),
+          OwnerNote(context.l10n.ownerReportsExportNote),
+          SectionHeading(context.l10n.ownerSavedViews(data.views.length)),
           if (data.views.isEmpty)
-            const OwnerNote('কোনো সংরক্ষিত দৃশ্য নেই — রিপোর্টের পাতায় "দৃশ্য" থেকে রাখা যায়।')
+            OwnerNote(context.l10n.ownerNoSavedViews)
           else
             Card(
               key: const ValueKey('reports-views'),
@@ -75,16 +76,16 @@ class OwnerReportsScreen extends StatelessWidget {
                 ],
               ),
             ),
-          const SectionHeading('নির্ধারিত রিপোর্ট'),
+          SectionHeading(context.l10n.ownerScheduledReports),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              data.canSchedule ? 'সূচি বসানো আর বদলানো ওয়েবের পাতায়।' : 'নির্ধারিত রিপোর্ট বসানোর অনুমতি নেই।',
+              data.canSchedule ? context.l10n.ownerSchedulesOnWeb : context.l10n.ownerNoScheduleKey,
               key: const ValueKey('reports-schedule'),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          const OwnerNote('তৈরি হওয়া রিপোর্ট অ্যাপের ভিতরেই আসে, ই-মেইলে নয়।'),
+          OwnerNote(context.l10n.ownerReportsInAppOnly),
         ],
       );
 }
