@@ -93,4 +93,7 @@ return [
     // ⭐ maternity (s.46(3), s.47; a6, 21 Oct 2026)
     'surviving_children' => 'Surviving children',
     'expected_delivery_date' => 'Expected delivery date',
+    // ⭐ s.2(45) wages (a6, 21 Oct 2026)
+    'outside_wages' => 'Not wages under s.2(45)',
+    'outside_wages_hint' => 'Tick for bonus or festival allowance, the employer\'s provident fund contribution, travelling or special-expense allowance. These are left out of the daily rate for unused earned leave.',
 ];

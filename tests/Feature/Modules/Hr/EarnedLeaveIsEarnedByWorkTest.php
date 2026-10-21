@@ -227,6 +227,36 @@ final class EarnedLeaveIsEarnedByWorkTest extends TestCase
         $this->assertSame('0.00', $this->leave()->earnedLeaveEncashment($short, Carbon::parse('2026-09-30'))['amount']);
     }
 
+    /**
+     * ⭐ ধারা ২(৪৫)-এর মজুরি — মূল + বাড়িভাড়া; যাতায়াত আর উৎসব ভাতা বাদ (fe-র উত্তর ১, ২১ অক্টোবর ২০২৬; [[EarnedLeave::monthlyWages()]])।
+     */
+    public function test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival(): void
+    {
+        $head = fn (string $code, string $calculation, bool $basic, bool $outside) => SalaryHead::query()->create([
+            'company_id' => $this->company->id, 'code' => $code, 'name_en' => $code, 'kind' => SalaryHead::EARNING,
+            'calculation' => $calculation, 'is_basic' => $basic, 'prorated_by_attendance' => true, 'outside_wages' => $outside, 'is_active' => true]);
+
+        $leaver = $this->employee('E-W', '2024-01-01', null, '2026-09-30');
+        $structure = app(SalaryStructureService::class);
+        $structure->set($leaver, $head('BASIC', SalaryHead::FIXED, true, false), '2024-01-01', '20000');
+        $structure->set($leaver, $head('HRA', SalaryHead::PERCENT_OF_BASIC, false, false), '2024-01-01', '50');
+        $structure->set($leaver, $head('CONVEY', SalaryHead::FIXED, false, true), '2024-01-01', '3000');
+        $structure->set($leaver, $head('FESTIVAL', SalaryHead::FIXED, false, true), '2024-01-01', '5000');
+        // ⓘ ২০২৫-এ ৩৬ দিন কাজ — ২ দিন
+        $this->rows($leaver, '2025-01-01', 36, Attendance::PRESENT);
+
+        $this->assertSame(['days' => '2.0', 'monthly_wage' => '30000.00', 'daily_rate' => '1000.00', 'amount' => '2000.00'],
+            $this->leave()->earnedLeaveEncashment($leaver, Carbon::parse('2026-09-30')),
+            '⛔ দৈনিক হারে যাতায়াত বা উৎসব ভাতা ঢুকল (৩৮,০০০ ÷ ৩০), বা বাড়িভাড়া বাদ পড়ল');
+
+        // ⓘ যে পর্দা টাকাটা দেখায়, সেখানে নিয়মটা বাংলায় লেখা
+        $viewer = $this->user(['hr.employee.view', 'hr.salary.view', 'hr.leave.view']);
+        $this->as($viewer);
+        $this->get(route('hr.employee.show', $leaver))->assertOk()
+            ->assertSee('data-encashment', false)
+            ->assertSee(__('hr::profile.encashment_rule'));
+    }
+
     private function approved(Employee $employee, string $from, string $to, string $days): void
     {
         LeaveApplication::query()->create(['company_id' => $this->company->id, 'employee_id' => $employee->id,

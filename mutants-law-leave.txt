@@ -492,3 +492,39 @@ P8.2 app/Modules/Hr/Services/LeaveTypeDefaults.php (install)
 
 P8.3 approval flows: no file on a6/hr-law-leave writes approval_flows (grep ApprovalFlow over the branch diff: only this test).
   EQUIVALENT by absence — there is no write to mutate; K pins that none appears.
+
+== Phase 3 (fe's answers, 21 Oct 2026, second round) ==
+
+== Q1 — encashment rate on s.2(45) wages ==
+K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
+
+Q1.1 app/Modules/Hr/Services/EarnedLeave.php (monthlyWages)
+  old: if ($head->isEarning() && ! $head->outside_wages) {
+  new: if ($head->isEarning()) {
+  kill: K::test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival (38000, rate 1266.67)
+
+Q1.2 app/Modules/Hr/Services/EarnedLeave.php (monthlyWages)
+  old: if ($head->isEarning() && ! $head->outside_wages) {
+  new: if (! $head->outside_wages) {
+  kill: K::test_a_leaver_is_paid_the_unused_earned_leave_at_the_monthly_wage_over_thirty (PF deduction 2000 counted: 32000)
+
+Q1.3 app/Modules/Hr/Services/EarnedLeave.php (encashment)
+  old: $monthly = $this->monthlyWages($employee, $on);
+  new: $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['gross'];
+  kill: K::test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival
+
+Q1.4 app/Modules/Hr/Http/Controllers/SalaryHeadController.php
+  old: 'outside_wages' => $request->boolean('outside_wages'),
+  new: (line deleted)
+  kill: tests/Feature/Modules/Hr/ASalaryHeadSaysWhetherItIsWagesTest.php::test_the_standard_travel_allowance_is_outside_and_the_box_turns_it_on_and_off
+        (unticking keeps MEDICAL outside)
+
+Q1.5 app/Modules/Hr/Resources/views/employee/show.blade.php
+  old: @if ($encashment !== null)
+  new: @if (false)
+  kill: K::test_the_daily_rate_counts_basic_and_house_rent_but_not_travel_or_festival (no data-encashment / rule text)
+
+Q1.6 app/Modules/Hr/Services/SalaryHeadService.php (installDefaults)
+  old: 'outside_wages' => $code === 'CONVEY',
+  new: 'outside_wages' => false,
+  kill: tests/Feature/Modules/Hr/ASalaryHeadSaysWhetherItIsWagesTest.php::test_the_standard_travel_allowance_is_outside_and_the_box_turns_it_on_and_off

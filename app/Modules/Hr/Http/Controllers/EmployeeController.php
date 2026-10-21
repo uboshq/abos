@@ -182,6 +182,15 @@ class EmployeeController extends Controller implements HasMiddleware
                     ->all()
                 : null,
 
+            /*
+             * ⭐ চাকরি ছাড়লে না-নেওয়া অর্জিত ছুটির টাকা — বেতন আর ছুটির দুই চাবিতেই (টাকার অঙ্ক বেতনের চাবির পেছনে); ছাড়ার তারিখ বসানো থাকলে
+             * সেদিনের, নইলে আজকের ([[LeaveService::earnedLeaveEncashment()]]; ধারা ১১, ১১৭, ২(৪৫); a6, ২১ অক্টোবর ২০২৬)।
+             */
+            'encashment' => $seesSalary && $seesLeave
+                ? ['on' => ($employee->leaving_date ?? now())->toDateString()]
+                    + $this->leaves->earnedLeaveEncashment($employee, ($employee->leaving_date ?? now())->copy())
+                : null,
+
             // ⭐ চাকরির ইতিহাস — নিরীক্ষার খাতা থেকে ([[JobHistory]]); প্রোফাইল খোলার চাবিতেই, কারণ পদবি-বিভাগ এখানে আগে থেকেই খোলা
             'history' => app(JobHistory::class)->of($employee),
         ]);

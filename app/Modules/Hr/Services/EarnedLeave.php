@@ -34,7 +34,12 @@ use Illuminate\Support\Carbon;
  *    `hr.earned_leave_carry_cap`, ডিফল্ট ৪০) উপরে নয়; বছর শেষের ছবি ([[LeaveCarryForward]], [[carryForward()]])।
  *  · **চাকরি ছাড়লে (ধারা ১১):** না-নেওয়া দিন = (পাওনা + জের − নেওয়া, শূন্যের নিচে নয়) + ⌊চলতি বছরে ছাড়ার দিন পর্যন্ত কাজ ÷ ১৮⌋ —
  *    দ্বিতীয় ভাগটা অর্জিত, কিন্তু পরের বছরে পাওয়ার কথা ছিল; ছেড়ে গেলে সেটাও পাওনা। যোগ্যতার আগে ছাড়লে শূন্য ([[encashableDays()]])।
- *    টাকা = দিন × দৈনিক মজুরি; দৈনিক মজুরি = সেদিনের মাসিক মজুরি (কাঠামোর আয়ের খাতের যোগ, ধারা ২(৪৫)) ÷ ৩০ ([[encashment()]])।
+ *    টাকা = দিন × দৈনিক মজুরি; দৈনিক মজুরি = সেদিনের মাসিক মজুরি ÷ ৩০ ([[encashment()]])।
+ *
+ * ── ⭐ "মজুরি" কী — ধারা ২(৪৫) (fe-র উত্তর ১, ২১ অক্টোবর ২০২৬) ─────────────────────────
+ * কাঠামোর আয়ের খাতগুলোর যোগ — মূল বেতন আর ভাতা (বাড়িভাড়া, চিকিৎসা ইত্যাদি) সহ; ⛔ বাদ যা ধারা ২(৪৫) বাদ দেয়: বোনাস বা উৎসব ভাতা,
+ * মালিকের দেওয়া ভবিষ্য তহবিলের চাঁদা, যাতায়াত ভাতা বা বিশেষ খরচের ভাতা। কোন খাত বাদ তা খাতের নিজের ঘরে
+ * (`outside_wages`, বেতনের খাতের পর্দায় টিক) — নাম দেখে আন্দাজ নয়। কর্তনের খাত মজুরি কমায় না।
  */
 final class EarnedLeave
 {
@@ -156,7 +161,7 @@ final class EarnedLeave
     public function encashment(Employee $employee, Carbon $on): array
     {
         $days = $this->encashableDays($employee, $on);
-        $monthly = app(SalaryStructureService::class)->totalsOn($employee, $on)['gross'];
+        $monthly = $this->monthlyWages($employee, $on);
         $daily = bcdiv($monthly, (string) self::DAILY_RATE_DIVISOR, 10);
 
         return [
@@ -165,6 +170,24 @@ final class EarnedLeave
             'daily_rate' => \App\Core\Support\Money::round($daily, 2),
             'amount' => \App\Core\Support\Money::round(bcmul($daily, $days, 10), 2),
         ];
+    }
+
+    /**
+     * ⭐ ধারা ২(৪৫)-এর মাসিক মজুরি — কাঠামোর আয়ের খাত, `outside_wages` বাদ (উপরের নিয়ম)।
+     */
+    public function monthlyWages(Employee $employee, Carbon $on): string
+    {
+        $wages = '0';
+
+        foreach (app(SalaryStructureService::class)->componentsOn($employee, $on) as $component) {
+            $head = $component['head'];
+
+            if ($head->isEarning() && ! $head->outside_wages) {
+                $wages = bcadd($wages, $component['amount'], 4);
+            }
+        }
+
+        return $wages;
     }
 
     /**
