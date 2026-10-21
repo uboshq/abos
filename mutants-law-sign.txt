@@ -359,3 +359,45 @@ M74 app/Modules/Hr/Services/PayrollService.php
     old: "            ->whereDoesntHave('heldPayment')"
     new: ""
     kill: same test (after the arrears went out, heldWagesOwed() still lists it)
+
+== fe round 4 — held wages ready the day the account is signed, paid any day on bank or MFS, once (one ledger: hr_held_wage_payments) ==
+
+M75 app/Modules/Hr/Services/HeldWages.php
+    old: "            ->whereDoesntHave('heldPayment')"   (in ready())
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_an_mfs_employees_held_wage_is_ready_the_day_it_is_signed_and_is_paid_once (still listed after payment)
+
+M76 app/Modules/Hr/Services/HeldWages.php
+    old: "            'mfs' => filled($employee->mfs_number) ? 'mfs' : null,"
+    new: "            'mfs' => null,"
+    kill: same test (an MFS employee never becomes ready)
+
+M77 app/Modules/Hr/Services/HeldWages.php
+    old: "                if (HeldWagePayment::query()->where('payslip_id', $slip->id)->exists()) {"
+    new: "                if (false) {"
+    kill: same test (the second press is not refused with 'payslips'; the unique key then throws instead)
+
+M78 app/Modules/Hr/Services/HeldWages.php
+    old: "                ['account_id' => (int) $payable->id, 'debit' => $total, 'credit' => '0'],"
+    new: "                ['account_id' => (int) $money->id, 'debit' => $total, 'credit' => '0'],"
+    kill: same test (salary payable does not clear to zero)
+
+M79 app/Modules/Hr/Services/HeldWages.php
+    old: "                    'voucher_id' => (int) $voucher->id,"
+    new: "                    'voucher_id' => null,"
+    kill: TheSalaryWentWhereOneHandSaidTest::test_the_bank_arrears_file_carries_a_line_once_and_the_next_runs_file_skips_it (the paper cannot be downloaded again — 404) and the MFS test (voucher lookup)
+
+M80 app/Modules/Hr/Services/HeldWages.php
+    old: "            ? [(string) $employee?->mfs_number, (string) $employee?->name_en, $amount, $reference]"
+    new: "            ? [(string) $employee?->bank_account_no, (string) $employee?->name_en, $amount, $reference]"
+    kill: MFS test (the list has no wallet number)
+
+M81 app/Modules/Hr/Services/PayrollService.php
+    old: "            if ((int) HeldWagePayment::query()->where('payslip_id', $slip->id)->value('paid_in_run_id') !== (int) $run->id) {"
+    new: "            if (HeldWagePayment::query()->where('payslip_id', $slip->id)->whereNotNull('paid_in_run_id')->where('paid_in_run_id', '!=', $run->id)->exists()) {"
+    kill: bank arrears test (September's run file carries the line already paid on the arrears paper)
+
+M82 app/Modules/Hr/Http/Controllers/HeldWageController.php
+    old: "        abort_unless($kind === ($channel === 'mfs' ? Account::MFS : Account::BANK), 422);"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_an_mfs_employees_held_wage_is_ready_the_day_it_is_signed_and_is_paid_once (a bank-channel press with the MFS account must be refused 422 with nothing written)

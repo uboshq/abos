@@ -395,7 +395,7 @@ final class PayrollService
             ->get();
 
         $deadline = self::wageDeadline($run);
-        $paid = HeldWagePayment::query()->whereIn('payslip_id', $slips->modelKeys())->with('paidIn')->get()->keyBy('payslip_id');
+        $paid = HeldWagePayment::query()->whereIn('payslip_id', $slips->modelKeys())->with(['paidIn', 'voucher'])->get()->keyBy('payslip_id');
 
         return $slips->map(function (Payslip $slip) use ($deadline, $paid): array {
             $employee = $slip->employee;
@@ -406,7 +406,10 @@ final class PayrollService
                 'code' => (string) $employee?->code,
                 'name' => (string) $employee?->name(),
                 'reason' => $payment !== null
-                    ? (string) __('hr::payroll.held_paid_later', ['no' => (string) $payment->paidIn?->document_no])
+                    ? ($payment->paid_in_run_id === null
+                        // ⓘ বকেয়ার নিজের কাগজে, যেকোনো দিন ([[HeldWages::pay()]])
+                        ? (string) __('hr::payroll.held_paid_voucher', ['no' => (string) $payment->voucher?->document_no])
+                        : (string) __('hr::payroll.held_paid_later', ['no' => (string) $payment->paidIn?->document_no]))
                     // ⓘ সই পড়ে গেছে — পরের ব্যাংক ফাইলে "বকেয়া মজুরি" হয়ে যাবে
                     : (string) __($reason ?? 'hr::payroll.held_next_file'),
                 'deadline' => $deadline->toDateString(),
@@ -419,7 +422,7 @@ final class PayrollService
     /**
      * ⭐ আটকে থাকা মজুরি, এখনো যা দেওয়া হয়নি — সব নিশ্চিত রান জুড়ে, HR-এর ড্যাশবোর্ডের তালিকা (fe, ২১ অক্টোবর ২০২৬)।
      *
-     * @return Collection<int, array{employee: string, run: string, deadline: string, late: bool}>
+     * @return Collection<int, array{employee: string, channel: ?string, run: string, deadline: string, late: bool}>
      */
     public function heldWagesOwed(?User $user = null): Collection
     {
@@ -436,6 +439,8 @@ final class PayrollService
 
             return [
                 'employee' => (string) $slip->employee?->name(),
+                // ⓘ সই-পড়া পথ — ব্যাংক বা MFS; না থাকলে `null` (হিসাব সইয়ের অপেক্ষায়) — fe, ২১ অক্টোবর ২০২৬
+                'channel' => $slip->employee === null ? null : HeldWages::channelOf($slip->employee),
                 'run' => (string) $slip->run?->document_no,
                 'deadline' => $deadline->toDateString(),
                 'late' => Carbon::today()->greaterThan($deadline),

@@ -23,7 +23,10 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('payslip_id')->constrained('hr_payslips')->cascadeOnDelete();
             $table->foreignId('payroll_run_id')->constrained('hr_payroll_runs')->cascadeOnDelete();
-            $table->foreignId('paid_in_run_id')->constrained('hr_payroll_runs')->cascadeOnDelete();
+            // ⓘ দুই পথের একটা: পরের রানের ব্যাংক ফাইল (`paid_in_run_id`), বা বকেয়ার নিজের কাগজ — যেকোনো দিন, খসড়া পরিশোধ ভাউচারসহ (`voucher_id`)
+            $table->foreignId('paid_in_run_id')->nullable()->constrained('hr_payroll_runs')->cascadeOnDelete();
+            $table->foreignId('voucher_id')->nullable()->constrained('vouchers')->nullOnDelete();
+            $table->string('channel', 8)->default('bank');   // bank · mfs
             $table->decimal('amount', 18, 4);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

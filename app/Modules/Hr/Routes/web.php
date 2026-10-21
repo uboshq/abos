@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
+use App\Modules\Hr\Http\Controllers\HeldWageController;
 use App\Modules\Hr\Http\Controllers\HrReportController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
@@ -78,6 +79,10 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::get('/{run}/bank-file', [PayrollController::class, 'bankFile'])->whereNumber('run')->name('bank_file');
         // ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা বাদ আর কেন (fe, ২১ অক্টোবর ২০২৬)
         Route::get('/{run}/bank-file/left-out', [PayrollController::class, 'leftOut'])->whereNumber('run')->name('bank_file_left_out');
+        // ⭐ দেওয়ার অপেক্ষায় বকেয়া মজুরি — যেকোনো দিন, ব্যাংক বা MFS (fe, ২১ অক্টোবর ২০২৬; [[HeldWageController]])
+        Route::get('/held', [HeldWageController::class, 'index'])->name('held.index');
+        Route::post('/held/pay/{channel}', [HeldWageController::class, 'pay'])->whereIn('channel', ['bank', 'mfs'])->name('held.pay');
+        Route::get('/held/paper/{voucher}', [HeldWageController::class, 'paper'])->whereNumber('voucher')->name('held.paper');
         Route::get('/{run}/payslips', [PayslipPrintController::class, 'all'])->whereNumber('run')->name('payslips');
     });
 

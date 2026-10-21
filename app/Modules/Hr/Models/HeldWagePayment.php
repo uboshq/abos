@@ -22,7 +22,7 @@ class HeldWagePayment extends Model
 
     protected $table = 'hr_held_wage_payments';
 
-    protected $fillable = ['company_id', 'payslip_id', 'payroll_run_id', 'paid_in_run_id', 'amount', 'created_by'];
+    protected $fillable = ['company_id', 'payslip_id', 'payroll_run_id', 'paid_in_run_id', 'voucher_id', 'channel', 'amount', 'created_by'];
 
     protected function casts(): array
     {
@@ -37,5 +37,11 @@ class HeldWagePayment extends Model
     public function paidIn(): BelongsTo
     {
         return $this->belongsTo(PayrollRun::class, 'paid_in_run_id');
+    }
+
+    /** ⓘ বকেয়ার নিজের কাগজে দেওয়া হলে তার খসড়া পরিশোধ ভাউচার ([[HeldWages::pay()]]) */
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class);
     }
 }

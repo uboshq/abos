@@ -255,6 +255,125 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertStringNotContainsString($septemberArrears, $later, '⛔ বকেয়া মজুরি আবার পরের ফাইলে — দুইবার টাকা');
     }
 
+    /**
+     * ⭐ MFS-এর কর্মীর আটকে থাকা মজুরি — নম্বর সই পড়ার দিনই "দেওয়ার অপেক্ষায়", একবারই দেওয়া যায়, দ্বিতীয় চাপ ফেরে, আর ভাউচার পাকা
+     * হলে প্রদেয় বেতন পয়সায় পয়সায় শূন্য (fe, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা ১২৩; [[HeldWages]])।
+     */
+    public function test_an_mfs_employees_held_wage_is_ready_the_day_it_is_signed_and_is_paid_once(): void
+    {
+        $this->travelTo('2026-12-05 10:00:00');
+        $this->as($this->clerk);
+        $mfs = app(EmployeeService::class)->create([
+            'code' => 'EMP-MFS', 'name_en' => 'Wallet Worker', 'joining_date' => '2026-01-15',
+            'payment_method' => 'mfs', 'mfs_number' => '01712345678',
+        ]);
+        app(SalaryStructureService::class)->set($mfs, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '12000');
+
+        $this->as($this->owner);
+        $august = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
+        $held = $august->payslips()->where('employee_id', $mfs->id)->firstOrFail();
+        $this->assertSame(PayrollService::HELD, (string) $held->payment_method);
+        $this->assertCount(0, app(\App\Modules\Hr\Services\HeldWages::class)->ready(), '⛔ সই-না-পড়া নম্বরে দেওয়ার অপেক্ষায়');
+
+        // ── নম্বর সই পড়ল — সেদিনই তালিকায়, পথ MFS
+        $change = app(PaymentChanges::class)->pendingFor($mfs);
+        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$mfs, $change]))->assertSessionHasNoErrors();
+        $ready = app(\App\Modules\Hr\Services\HeldWages::class)->ready();
+        $this->assertCount(1, $ready, '⛔ সইয়ের দিনই বকেয়া দেওয়ার অপেক্ষায় নয়');
+        $this->assertSame('mfs', $ready->first()['channel']);
+        $this->as($this->owner)->get(route('hr.payroll.held.index'))->assertOk()
+            ->assertSee('data-held-line="EMP-MFS"', false)->assertSee(__('hr::kind.mfs'), false);
+        $this->as($this->owner)->get(route('module.dashboard', ['module' => 'hr']))->assertOk()
+            ->assertSee(__('hr::payroll.held_ready_on', ['way' => __('hr::kind.mfs')]), false);
+
+        // ── দেওয়া — MFS-এর খাত থেকে, খসড়া ভাউচার আর তালিকা
+        $wallet = (int) \App\Modules\Accounts\Models\Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1105-HLD', 'name_en' => 'bKash Payroll', 'name_bn' => 'বিকাশ বেতন',
+            'parent_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::MOBILE_MONEY)->id,
+            'type' => \App\Modules\Accounts\Models\Account::ASSET, 'nature' => \App\Modules\Accounts\Models\Account::DEBIT,
+            'money_kind' => \App\Modules\Accounts\Models\Account::MFS, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED,
+        ])->id;
+        // ⛔ ব্যাংকের পথে MFS খাত — ফেরে, কিছুই লেখা হয় না
+        $this->as($this->owner)->post(route('hr.payroll.held.pay', ['channel' => 'bank']), ['payslips' => [$held->id], 'account_id' => $wallet])
+            ->assertStatus(422);
+        $this->assertSame(0, \App\Modules\Hr\Models\HeldWagePayment::query()->count(), '⛔ ভুল পথের চাপে দেওয়া লেখা হলো');
+
+        $paper = $this->as($this->owner)->post(route('hr.payroll.held.pay', ['channel' => 'mfs']), ['payslips' => [$held->id], 'account_id' => $wallet])->assertOk();
+        $this->assertStringContainsString('01712345678', (string) $paper->getContent());
+        $this->assertStringContainsString(\App\Core\Support\Money::round((string) $held->net, 2), (string) $paper->getContent());
+
+        $payment = \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->sole();
+        $this->assertSame('mfs', (string) $payment->channel);
+        $this->assertNull($payment->paid_in_run_id);
+        $this->assertCount(0, app(\App\Modules\Hr\Services\HeldWages::class)->ready(), '⛔ দেওয়ার পরেও তালিকায়');
+
+        // ⛔ দ্বিতীয় চাপ — ফেরে, কিছুই লেখা হয় না
+        $this->as($this->owner)->from(route('hr.payroll.held.index'))
+            ->post(route('hr.payroll.held.pay', ['channel' => 'mfs']), ['payslips' => [$held->id], 'account_id' => $wallet])
+            ->assertSessionHasErrors('payslips');
+        $this->assertSame(1, \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->count());
+        $this->assertSame(1, \App\Modules\Accounts\Models\Voucher::query()->where('id', $payment->voucher_id)->count());
+
+        // ── ভাউচার পাকা (হিসাবের পথ) + আগস্টের ব্যাংক ফাইলের টাকা — প্রদেয় বেতন শূন্য
+        app(\App\Modules\Accounts\Services\VoucherService::class)->post(\App\Modules\Accounts\Models\Voucher::query()->findOrFail($payment->voucher_id));
+        $payable = (int) \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::SALARY_PAYABLE)->id;
+        $bankPaid = '0';
+        foreach (array_slice(array_values(array_filter(explode("\r\n", (string) app(PayrollService::class)->bankFile($august->fresh())['content']))), 1) as $line) {
+            $bankPaid = bcadd($bankPaid, (string) str_getcsv($line)[2], 4);
+        }
+        app(\App\Core\Engines\Posting\PostingEngine::class)->post(sourceType: 'test.salary_paid', sourceId: 2, trxDate: '2026-09-02', lines: [
+            ['account_id' => $payable, 'debit' => $bankPaid, 'credit' => '0'],
+            ['account_id' => (int) \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::OWNER_CAPITAL)->id, 'debit' => '0', 'credit' => $bankPaid],
+        ], documentNo: 'SAL-PAID-2', branchId: $this->company->defaultBranch()?->id);
+        $this->assertSame(0, bccomp('0', (string) DB::table('ledger_entries')->where('account_id', $payable)->sum(DB::raw('credit - debit')), 4),
+            '⛔ বকেয়া দিয়েও প্রদেয় বেতন শূন্য নয়');
+
+        $this->get(route('hr.payroll.show', $august->id))->assertOk()->assertDontSee('data-held-late', false);
+    }
+
+    /** ⭐ ব্যাংকের বকেয়া ফাইল যেকোনো দিন — লাইনটা একবার, আর পরের রানের ফাইল তখন সেটা বাদ দেয় */
+    public function test_the_bank_arrears_file_carries_a_line_once_and_the_next_runs_file_skips_it(): void
+    {
+        $this->travelTo('2026-12-05 10:00:00');
+        $this->as($this->clerk);
+        $fresh = app(EmployeeService::class)->create([
+            'code' => 'EMP-ARR', 'name_en' => 'Arrears Bank', 'joining_date' => '2026-01-15',
+            'payment_method' => 'bank', 'bank_account_no' => self::NEW, 'bank_name' => 'Sonali', 'bank_routing_no' => '200270001',
+        ]);
+        app(SalaryStructureService::class)->set($fresh, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '15000');
+
+        $this->as($this->owner);
+        $august = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
+        $held = $august->payslips()->where('employee_id', $fresh->id)->firstOrFail();
+        $change = app(PaymentChanges::class)->pendingFor($fresh);
+        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$fresh, $change]))->assertSessionHasNoErrors();
+
+        $bank = (int) \App\Modules\Accounts\Models\Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '1102-HLD', 'name_en' => 'Payroll Bank', 'name_bn' => 'বেতনের ব্যাংক',
+            'parent_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::BANK)->id,
+            'type' => \App\Modules\Accounts\Models\Account::ASSET, 'nature' => \App\Modules\Accounts\Models\Account::DEBIT,
+            'money_kind' => \App\Modules\Accounts\Models\Account::BANK, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED,
+        ])->id;
+        $arrears = (string) __('hr::payroll.arrears_reference', ['no' => $august->document_no, 'month' => 'Aug 2026']);
+
+        $this->as($this->owner);
+        $file = (string) $this->post(route('hr.payroll.held.pay', ['channel' => 'bank']), ['payslips' => [$held->id], 'account_id' => $bank])
+            ->assertOk()->getContent();
+        $this->assertSame(1, substr_count($file, $arrears), '⛔ বকেয়ার ফাইলে লাইনটা একবার নয়');
+        $this->assertStringContainsString(self::NEW, $file);
+
+        $payment = \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->sole();
+        $again = (string) $this->get(route('hr.payroll.held.paper', $payment->voucher_id))->assertOk()->getContent();
+        $this->assertSame(1, substr_count($again, $arrears), '⛔ আবার নামালে একই কাগজ নয়');
+
+        // ⛔ পরের রানের ফাইল আর বহন করে না — এক খাতা
+        $september = $this->confirmedPayroll(app(PayrollService::class)->build('2026-09-01'));
+        $this->assertStringNotContainsString($arrears, (string) app(PayrollService::class)->bankFile($september->fresh())['content'],
+            '⛔ বকেয়ার ফাইলে দেওয়া লাইন পরের রানের ফাইলেও — দুইবার টাকা');
+        $this->assertSame(1, \App\Modules\Hr\Models\HeldWagePayment::query()->count());
+        $this->assertNull($payment->fresh()->paid_in_run_id);
+    }
+
     /** ⛔ খালি থেকে ব্যাংক — আগের পথ (নগদ) চলে, ব্যাংকে নয়, সই না পড়া পর্যন্ত */
     public function test_bank_details_set_from_empty_fall_back_to_the_previous_method_until_signed(): void
     {
