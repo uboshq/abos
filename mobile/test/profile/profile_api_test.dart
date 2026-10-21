@@ -79,7 +79,7 @@ void main() {
 
     test('too large (413) says so in Bengali', () async {
       serve((o, _) => json(null, 413));
-      await expectLater(api.uploadPhoto(jpeg), throwsA(isA<PhotoRefused>().having((e) => e.message, 'm', contains('৫ MB'))));
+      await expectLater(api.uploadPhoto(jpeg), throwsA(isA<PhotoRefused>().having((e) => e.message, 'm', contains('5 MB'))));
     });
 
     test('removing is DELETE /me/photo; 204 is done', () async {

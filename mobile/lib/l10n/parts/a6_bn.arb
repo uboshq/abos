@@ -1,3 +1,1447 @@
 {
-  "@@locale": "bn"
+  "@@locale": "bn",
+  "approvalsRejectReasonRequired": "প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক",
+  "@approvalsRejectReasonRequired": {
+    "description": "Approvals: error when a rejection is sent with no reason (the screen checks first)"
+  },
+  "approvalsSheetTotalLine": "মোট — {amounts}",
+  "@approvalsSheetTotalLine": {
+    "description": "Approvals: the sheet's total line; amounts are server column labels with figures, joined by ' · '",
+    "placeholders": {
+      "amounts": {
+        "type": "String"
+      }
+    }
+  },
+  "claimsKindAdvance": "অগ্রিম",
+  "@claimsKindAdvance": {
+    "description": "Claims: the kind of a request — money asked for in advance"
+  },
+  "claimsKindExpense": "খরচের দাবি",
+  "@claimsKindExpense": {
+    "description": "Claims: the kind of a request — money already spent, with receipts"
+  },
+  "claimsStateSubmitted": "সইয়ের অপেক্ষায়",
+  "@claimsStateSubmitted": {
+    "description": "Claims: fallback state word when the server sends no label — submitted"
+  },
+  "claimsStateApproved": "অনুমোদিত — টাকার অপেক্ষায়",
+  "@claimsStateApproved": {
+    "description": "Claims: fallback state word — approved, the cashier has not paid yet"
+  },
+  "claimsStatePaid": "পরিশোধিত",
+  "@claimsStatePaid": {
+    "description": "Claims: fallback state word — paid"
+  },
+  "claimsStateRejected": "প্রত্যাখ্যাত",
+  "@claimsStateRejected": {
+    "description": "Claims: fallback state word — rejected"
+  },
+  "claimsStateOther": "অপেক্ষায়",
+  "@claimsStateOther": {
+    "description": "Claims: fallback state word for a state the app does not know"
+  },
+  "hrLeaveStatePending": "সইয়ের অপেক্ষায়",
+  "@hrLeaveStatePending": {
+    "description": "Leave: state of an application — waiting for its signature (fe 21 Oct: was 'অনুমোদনের অপেক্ষায়')"
+  },
+  "hrLeaveStateApproved": "অনুমোদিত",
+  "@hrLeaveStateApproved": {
+    "description": "Leave: state — approved (fe 21 Oct: 'অনুমোদিত', not 'মঞ্জুর')"
+  },
+  "hrLeaveStateRejected": "প্রত্যাখ্যাত",
+  "@hrLeaveStateRejected": {
+    "description": "Leave: state — rejected (fe 21 Oct: 'প্রত্যাখ্যাত', not 'নামঞ্জুর')"
+  },
+  "hrLeaveStateCancelled": "প্রত্যাহৃত",
+  "@hrLeaveStateCancelled": {
+    "description": "Leave: state — the employee withdrew the application"
+  },
+  "profilePhoneFallbackName": "ফোন",
+  "@profilePhoneFallbackName": {
+    "description": "My phones: name shown for a phone the server sent without a name"
+  },
+  "profileServerMissingTitle": "এখনো এই সার্ভারে নেই",
+  "@profileServerMissingTitle": {
+    "description": "Profile: title when the server is too old for the profile menu's doors"
+  },
+  "profileServerMissingMessage": "এখনো এই সার্ভারে নেই — সার্ভারের নতুন সংস্করণ এলে চালু হবে।",
+  "@profileServerMissingMessage": {
+    "description": "Profile: message when the server is too old for the profile menu's doors"
+  },
+  "profilePhotoRefused": "ছবিটা নেওয়া গেল না — JPG বা PNG, 5 MB-এর কম, আরেকটা দিয়ে চেষ্টা করুন।",
+  "@profilePhotoRefused": {
+    "description": "Profile: the server refused the photo and gave no sentence of its own"
+  },
+  "profilePhotoTooLarge": "ছবিটা খুব বড় — 5 MB-এর কম একটা দিন।",
+  "@profilePhotoTooLarge": {
+    "description": "Profile: the photo is over the server's size limit (413)"
+  },
+  "statusPaperFactLabel": "অবস্থা",
+  "@statusPaperFactLabel": {
+    "description": "Paper page: the label of the row that holds the state chip"
+  },
+  "approvalsInboxTitle": "অনুমোদন",
+  "@approvalsInboxTitle": {
+    "description": "Approvals inbox: screen title"
+  },
+  "approvalsInboxLoadFailed": "তালিকা আনা গেল না। আবার চেষ্টা করুন।",
+  "@approvalsInboxLoadFailed": {
+    "description": "Approvals inbox: the list did not load (fallback when the server gave no sentence)"
+  },
+  "approvalsInboxServerMissing": "অনুমোদনের সুবিধাটা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন। অফিসে জানান।",
+  "@approvalsInboxServerMissing": {
+    "description": "Approvals inbox: the server has no approvals door (404)"
+  },
+  "approvalsInboxSigned": "সই দেওয়া হলো।",
+  "@approvalsInboxSigned": {
+    "description": "Approvals inbox: snack bar after signing (fe 21 Oct: the act is 'সই দিন')"
+  },
+  "approvalsInboxRejected": "প্রত্যাখ্যান করা হয়েছে।",
+  "@approvalsInboxRejected": {
+    "description": "Approvals inbox: snack bar after rejecting"
+  },
+  "approvalsInboxAlreadyDecided": "এটি ইতিমধ্যে নিষ্পত্তি হয়ে গেছে।",
+  "@approvalsInboxAlreadyDecided": {
+    "description": "Approvals inbox: someone else decided this paper first"
+  },
+  "approvalsInboxNotYours": "এই সিদ্ধান্তটি আপনার নয়।",
+  "@approvalsInboxNotYours": {
+    "description": "Approvals inbox: the person may not decide this paper"
+  },
+  "approvalsInboxAmountChanged": "কার্ড খোলার পরে কাগজের অঙ্ক বদলেছে — নতুন অঙ্ক দেখে আবার সই দিন।",
+  "@approvalsInboxAmountChanged": {
+    "description": "Approvals inbox: the amount changed between opening and signing; nothing was signed"
+  },
+  "approvalsInboxOffline": "সংযোগ নেই। অনুমোদনের জন্য ইন্টারনেট লাগবে।",
+  "@approvalsInboxOffline": {
+    "description": "Approvals inbox: no network"
+  },
+  "approvalsInboxActionFailed": "কাজটি সম্পন্ন হয়নি।",
+  "@approvalsInboxActionFailed": {
+    "description": "Approvals inbox: the decision failed for another reason"
+  },
+  "approvalsInboxMoreFailed": "আরও আনা গেল না।",
+  "@approvalsInboxMoreFailed": {
+    "description": "Approvals inbox: the next page did not load"
+  },
+  "approvalsInboxSignTitle": "সই দেবেন?",
+  "@approvalsInboxSignTitle": {
+    "description": "Approvals inbox: title of the sign dialog (fe 21 Oct: was 'অনুমোদন করবেন?')"
+  },
+  "approvalsInboxSignButton": "সই দিন",
+  "@approvalsInboxSignButton": {
+    "description": "Approvals inbox: the button that signs the paper (fe 21 Oct: 'সই দিন', was 'অনুমোদন')"
+  },
+  "approvalsInboxRejectTitle": "প্রত্যাখ্যান করবেন?",
+  "@approvalsInboxRejectTitle": {
+    "description": "Approvals inbox: title of the reject dialog"
+  },
+  "approvalsInboxRejectButton": "প্রত্যাখ্যান",
+  "@approvalsInboxRejectButton": {
+    "description": "Approvals inbox: the button that rejects the paper"
+  },
+  "approvalsInboxLoadFailedTitle": "তালিকা আনা গেল না",
+  "@approvalsInboxLoadFailedTitle": {
+    "description": "Approvals inbox: title of the error state"
+  },
+  "approvalsInboxEmptyTitle": "কিছু অপেক্ষা করছে না",
+  "@approvalsInboxEmptyTitle": {
+    "description": "Approvals inbox: title when nothing waits for this person"
+  },
+  "approvalsInboxEmptyMessage": "আপনার সিদ্ধান্তের জন্য কোনো নথি নেই।",
+  "@approvalsInboxEmptyMessage": {
+    "description": "Approvals inbox: message when nothing waits"
+  },
+  "approvalsInboxShowMore": "আরও দেখুন",
+  "@approvalsInboxShowMore": {
+    "description": "Approvals inbox: load the next page"
+  },
+  "approvalsInboxStep": "ধাপ {level}",
+  "@approvalsInboxStep": {
+    "description": "Approvals inbox: the signing step this paper is at",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsInboxDetails": "বিস্তারিত",
+  "@approvalsInboxDetails": {
+    "description": "Approvals inbox: button that opens the paper's lines before signing"
+  },
+  "approvalsInboxViewPaper": "কাগজ দেখুন",
+  "@approvalsInboxViewPaper": {
+    "description": "Approvals inbox: button that opens the server's PDF of the paper"
+  },
+  "approvalsInboxReasonRequired": "কারণ (বাধ্যতামূলক)",
+  "@approvalsInboxReasonRequired": {
+    "description": "Approvals inbox: the reason field when rejecting"
+  },
+  "approvalsInboxRemarksOptional": "মন্তব্য (ঐচ্ছিক)",
+  "@approvalsInboxRemarksOptional": {
+    "description": "Approvals inbox: the remarks field when signing"
+  },
+  "approvalsInboxDetailsFailed": "বিস্তারিত আনা গেল না।",
+  "@approvalsInboxDetailsFailed": {
+    "description": "Approvals inbox: the details sheet did not load"
+  },
+  "approvalsInboxNoDetails": "এই কাগজের বিস্তারিত ফোনে নেই — \"কাগজ দেখুন\" চেপে পুরো কাগজটা দেখুন।",
+  "@approvalsInboxNoDetails": {
+    "description": "Approvals inbox: the server sent no lines for this paper"
+  },
+  "approvalsDelegationTitle": "সইয়ের ভার",
+  "@approvalsDelegationTitle": {
+    "description": "Delegation screen: title (signing handed to someone else for a while)"
+  },
+  "approvalsDelegationLoadFailed": "ভারের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@approvalsDelegationLoadFailed": {
+    "description": "Delegation: the list did not load"
+  },
+  "approvalsDelegationServerMissing": "সার্ভারে ফোনের ভার দেওয়া এখনো আসেনি — অফিসে জানান।",
+  "@approvalsDelegationServerMissing": {
+    "description": "Delegation: the server has no door for it (404)"
+  },
+  "approvalsDelegationRevokeTitle": "ভার ফেরাবেন?",
+  "@approvalsDelegationRevokeTitle": {
+    "description": "Delegation: title of the revoke dialog"
+  },
+  "approvalsDelegationRevokeBody": "{person} আর আপনার হয়ে সই দিতে পারবেন না।",
+  "@approvalsDelegationRevokeBody": {
+    "description": "Delegation: what revoking means; person is the delegate's name",
+    "placeholders": {
+      "person": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsDelegationNo": "না",
+  "@approvalsDelegationNo": {
+    "description": "Delegation: the 'no' button of the revoke dialog"
+  },
+  "approvalsDelegationRevoke": "ফেরান",
+  "@approvalsDelegationRevoke": {
+    "description": "Delegation: button that revokes a hand over"
+  },
+  "approvalsDelegationRevoked": "ভার ফেরানো হলো।",
+  "@approvalsDelegationRevoked": {
+    "description": "Delegation: snack bar after revoking"
+  },
+  "approvalsDelegationRevokeFailed": "ভার ফেরানো গেল না।",
+  "@approvalsDelegationRevokeFailed": {
+    "description": "Delegation: revoking failed"
+  },
+  "approvalsDelegationNew": "নতুন ভার",
+  "@approvalsDelegationNew": {
+    "description": "Delegation: button and screen title for a new hand over"
+  },
+  "approvalsDelegationLoadFailedTitle": "আনা গেল না",
+  "@approvalsDelegationLoadFailedTitle": {
+    "description": "Delegation: title of the error state"
+  },
+  "approvalsDelegationHeldHeading": "আমার কাছে যাঁদের ভার · {count} টি",
+  "@approvalsDelegationHeldHeading": {
+    "description": "Delegation: heading over the hand overs others gave me, with how many",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsDelegationGivenHeading": "আমি যাঁদের দিয়েছি · {count} টি",
+  "@approvalsDelegationGivenHeading": {
+    "description": "Delegation: heading over the hand overs I gave, with how many",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsDelegationNoneHeld": "এখন কেউ আপনাকে ভার দেননি।",
+  "@approvalsDelegationNoneHeld": {
+    "description": "Delegation: nobody has handed signing to me"
+  },
+  "approvalsDelegationEmptyTitle": "কোনো ভার নেই",
+  "@approvalsDelegationEmptyTitle": {
+    "description": "Delegation: empty state title"
+  },
+  "approvalsDelegationEmptyMessage": "ছুটিতে গেলে \"নতুন ভার\" চেপে কাউকে আপনার হয়ে সই দিতে দিন।",
+  "@approvalsDelegationEmptyMessage": {
+    "description": "Delegation: empty state message"
+  },
+  "approvalsDelegationNoneGiven": "আপনি কাউকে ভার দেননি।",
+  "@approvalsDelegationNoneGiven": {
+    "description": "Delegation: I have not handed signing to anyone"
+  },
+  "approvalsDelegationStateRevoked": "ফেরানো",
+  "@approvalsDelegationStateRevoked": {
+    "description": "Delegation card: state — revoked"
+  },
+  "approvalsDelegationStateActive": "চালু",
+  "@approvalsDelegationStateActive": {
+    "description": "Delegation card: state — active today"
+  },
+  "approvalsDelegationStateOther": "সামনে বা শেষ",
+  "@approvalsDelegationStateOther": {
+    "description": "Delegation card: state — not active today"
+  },
+  "approvalsDelegationPeriod": "{from} থেকে {until} · {state}",
+  "@approvalsDelegationPeriod": {
+    "description": "Delegation card: the dates and the state",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "until": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsDelegationAllWork": "সব কাজে",
+  "@approvalsDelegationAllWork": {
+    "description": "Delegation card: no module chosen means every kind of work"
+  },
+  "approvalsDelegationChooseWho": "কাকে ভার দেবেন, বাছুন।",
+  "@approvalsDelegationChooseWho": {
+    "description": "New hand over: no person chosen"
+  },
+  "approvalsDelegationSaved": "ভার দেওয়া হলো।",
+  "@approvalsDelegationSaved": {
+    "description": "New hand over: snack bar after saving"
+  },
+  "approvalsDelegationSaveFailed": "ভার দেওয়া গেল না।",
+  "@approvalsDelegationSaveFailed": {
+    "description": "New hand over: saving failed"
+  },
+  "approvalsDelegationTo": "কার কাছে",
+  "@approvalsDelegationTo": {
+    "description": "New hand over: the person field"
+  },
+  "approvalsDelegationFrom": "শুরু {date}",
+  "@approvalsDelegationFrom": {
+    "description": "New hand over: the start-date button",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsDelegationUntil": "শেষ {date}",
+  "@approvalsDelegationUntil": {
+    "description": "New hand over: the end-date button",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsDelegationWhichWork": "কোন কাজে (কিছু না বাছলে সব কাজে)",
+  "@approvalsDelegationWhichWork": {
+    "description": "New hand over: label over the module chips"
+  },
+  "approvalsDelegationReason": "কারণ (ঐচ্ছিক)",
+  "@approvalsDelegationReason": {
+    "description": "New hand over: the reason field"
+  },
+  "approvalsDelegationReasonHint": "যেমন: ছুটিতে",
+  "@approvalsDelegationReasonHint": {
+    "description": "New hand over: hint in the reason field"
+  },
+  "approvalsDelegationSaving": "দেওয়া হচ্ছে…",
+  "@approvalsDelegationSaving": {
+    "description": "New hand over: the save button while saving"
+  },
+  "approvalsDelegationSave": "ভার দিন",
+  "@approvalsDelegationSave": {
+    "description": "New hand over: the save button"
+  },
+  "approvalsQueueTabToSign": "আমার সইয়ের অপেক্ষায়",
+  "@approvalsQueueTabToSign": {
+    "description": "Signing queues: tab with the papers waiting for my signature (both queues)"
+  },
+  "approvalsQueueTabMine": "আমার পাঠানো",
+  "@approvalsQueueTabMine": {
+    "description": "Document approvals: tab with the papers I sent"
+  },
+  "approvalsQueueTabAsked": "আমার চাওয়া",
+  "@approvalsQueueTabAsked": {
+    "description": "Signing centre: tab with the signatures I asked for"
+  },
+  "approvalsQueueTabSigned": "সইয়ের ইতিহাস",
+  "@approvalsQueueTabSigned": {
+    "description": "Signing centre: tab with the signatures already given"
+  },
+  "approvalsQueueDocumentsTitle": "দলিলের অনুমোদন",
+  "@approvalsQueueDocumentsTitle": {
+    "description": "Document approvals queue: screen title"
+  },
+  "approvalsQueueSignaturesTitle": "সই কেন্দ্র",
+  "@approvalsQueueSignaturesTitle": {
+    "description": "Signing centre: screen title"
+  },
+  "approvalsQueueLoadFailed": "তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@approvalsQueueLoadFailed": {
+    "description": "Signing queues: the list did not load"
+  },
+  "approvalsQueueDocumentsServerMissing": "সার্ভারে ফোনের দলিলের অনুমোদন এখনো আসেনি — অফিসে জানান।",
+  "@approvalsQueueDocumentsServerMissing": {
+    "description": "Document approvals: the server has no door for it (404)"
+  },
+  "approvalsQueueSignaturesServerMissing": "সার্ভারে ফোনের সই কেন্দ্র এখনো আসেনি — অফিসে জানান।",
+  "@approvalsQueueSignaturesServerMissing": {
+    "description": "Signing centre: the server has no door for it (404)"
+  },
+  "approvalsQueueSigned": "সই দেওয়া হলো।",
+  "@approvalsQueueSigned": {
+    "description": "Signing queues: snack bar after signing"
+  },
+  "approvalsQueueSignFailed": "সই দেওয়া গেল না।",
+  "@approvalsQueueSignFailed": {
+    "description": "Signing queues: signing failed"
+  },
+  "approvalsQueueSendBackTitle": "কেন সংশোধনে ফেরত দিচ্ছেন?",
+  "@approvalsQueueSendBackTitle": {
+    "description": "Signing queues: title of the send-back dialog (fe 21 Oct: 'সংশোধনে ফেরত', not 'ফেরত' alone)"
+  },
+  "approvalsQueueSendBackDismiss": "বাদ দিন",
+  "@approvalsQueueSendBackDismiss": {
+    "description": "Signing queues: closes the send-back dialog without sending"
+  },
+  "approvalsQueueSendBack": "সংশোধনে ফেরত দিন",
+  "@approvalsQueueSendBack": {
+    "description": "Signing queues: the send-back button (fe 21 Oct: 'সংশোধনে ফেরত দিন')"
+  },
+  "approvalsQueueSendBackReasonNeeded": "ফেরতের কারণ লিখতে হবে।",
+  "@approvalsQueueSendBackReasonNeeded": {
+    "description": "Signing queues: no reason was written"
+  },
+  "approvalsQueueSentBack": "সংশোধনে ফেরত দেওয়া হলো।",
+  "@approvalsQueueSentBack": {
+    "description": "Signing queues: snack bar after sending back"
+  },
+  "approvalsQueueSendBackFailed": "সংশোধনে ফেরত দেওয়া গেল না।",
+  "@approvalsQueueSendBackFailed": {
+    "description": "Signing queues: sending back failed"
+  },
+  "approvalsQueueTotal": "{count, plural, other{মোট {count} টি}}",
+  "@approvalsQueueTotal": {
+    "description": "Signing queues: how many rows the server has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsQueueLoadFailedTitle": "আনা গেল না",
+  "@approvalsQueueLoadFailedTitle": {
+    "description": "Signing queues: title of the error state"
+  },
+  "approvalsQueueNoSignatures": "এখনো কোনো সই নেই",
+  "@approvalsQueueNoSignatures": {
+    "description": "Signing history: empty"
+  },
+  "approvalsQueueNothingWaiting": "কিছু অপেক্ষায় নেই",
+  "@approvalsQueueNothingWaiting": {
+    "description": "Signing queues: empty"
+  },
+  "approvalsQueueSignedBy": "সই: {signer} · {at}",
+  "@approvalsQueueSignedBy": {
+    "description": "Signing history row: who signed and when (server text)",
+    "placeholders": {
+      "signer": {
+        "type": "String"
+      },
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsQueueFingerprint": "ছাপ {hash}…",
+  "@approvalsQueueFingerprint": {
+    "description": "Signing history row: the start of the signed paper's hash",
+    "placeholders": {
+      "hash": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsQueueRequestedBy": "চেয়েছেন: {name}",
+  "@approvalsQueueRequestedBy": {
+    "description": "Signing queue row: who asked for the signature",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsQueueDue": "শেষ সময়: {due}",
+  "@approvalsQueueDue": {
+    "description": "Signing queue row: when the signature is due (server text)",
+    "placeholders": {
+      "due": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsQueueSign": "সই দিন",
+  "@approvalsQueueSign": {
+    "description": "Signing queue row: the sign button"
+  },
+  "approvalsQueueMore": "আরও",
+  "@approvalsQueueMore": {
+    "description": "Signing queues: load the next page"
+  },
+  "approvalsMyRequestsLoadFailed": "আমার অনুরোধের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@approvalsMyRequestsLoadFailed": {
+    "description": "My requests: the list did not load"
+  },
+  "approvalsMyRequestsServerMissing": "এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@approvalsMyRequestsServerMissing": {
+    "description": "My requests: the server has no door for it (404)"
+  },
+  "approvalsMyRequestsTitle": "আমার অনুরোধ",
+  "@approvalsMyRequestsTitle": {
+    "description": "My requests: screen title when the menu gives none"
+  },
+  "approvalsMyRequestsTotalLabel": "মোট অনুরোধ",
+  "@approvalsMyRequestsTotalLabel": {
+    "description": "My requests: label of the total strip"
+  },
+  "approvalsMyRequestsTotalValue": "{count, plural, other{{count} টি}}",
+  "@approvalsMyRequestsTotalValue": {
+    "description": "My requests: how many requests in all",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsMyRequestsPending": "{count, plural, other{এখনো সইয়ের অপেক্ষায়: {count} টি}}",
+  "@approvalsMyRequestsPending": {
+    "description": "My requests: how many still wait for a signature",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "approvalsMyRequestsEmptyTitle": "আপনার পাঠানো কোনো অনুরোধ নেই",
+  "@approvalsMyRequestsEmptyTitle": {
+    "description": "My requests: empty state title"
+  },
+  "approvalsMyRequestsEmptyMessage": "কোনো কাগজ সইয়ের জন্য পাঠালে এখানে দেখা যাবে।",
+  "@approvalsMyRequestsEmptyMessage": {
+    "description": "My requests: empty state message"
+  },
+  "approvalsMyRequestsMore": "আরও",
+  "@approvalsMyRequestsMore": {
+    "description": "My requests: load the next page"
+  },
+  "approvalsMyRequestsLastWord": "শেষ কথা: {said}",
+  "@approvalsMyRequestsLastWord": {
+    "description": "My requests card: the last decision and who made it (server text)",
+    "placeholders": {
+      "said": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalsMyRequestsReason": "কারণ: {remarks}",
+  "@approvalsMyRequestsReason": {
+    "description": "My requests card: the reason given with the last decision (server text)",
+    "placeholders": {
+      "remarks": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesTitle": "আমার ফোনগুলো",
+  "@profilePhonesTitle": {
+    "description": "My phones: screen title"
+  },
+  "profileModuleMe": "আমি",
+  "@profileModuleMe": {
+    "description": "Profile screens: the module name shown in the screen bar"
+  },
+  "profilePhonesLoadFailed": "ফোনের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@profilePhonesLoadFailed": {
+    "description": "My phones: the list did not load"
+  },
+  "profilePhonesSignOutHereTitle": "এই ফোন থেকেই বের হবেন?",
+  "@profilePhonesSignOutHereTitle": {
+    "description": "My phones: dialog title when the chosen phone is the one in hand"
+  },
+  "profilePhonesSignOutOtherTitle": "এই ফোন থেকে বের করে দেবেন?",
+  "@profilePhonesSignOutOtherTitle": {
+    "description": "My phones: dialog title for another phone"
+  },
+  "profilePhonesSignOutHereBody": "“{phone}” — এটা আপনার হাতের এই ফোনটাই। বের করলে এখনই লগইন পাতায় ফিরবেন; আবার ঢুকতে পাসওয়ার্ড লাগবে।",
+  "@profilePhonesSignOutHereBody": {
+    "description": "My phones: what signing out of this very phone means",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesSignOutOtherBody": "“{phone}” থেকে আপনার লগইন এখনই বন্ধ হবে। ঐ ফোনে আবার ঢুকতে পাসওয়ার্ড লাগবে।",
+  "@profilePhonesSignOutOtherBody": {
+    "description": "My phones: what signing another phone out means",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesKeep": "না, থাক",
+  "@profilePhonesKeep": {
+    "description": "My phones: dialog button that keeps the phone signed in"
+  },
+  "profilePhonesSignOut": "বের করে দিন",
+  "@profilePhonesSignOut": {
+    "description": "My phones: button that signs a phone out"
+  },
+  "profilePhonesSignOutNamed": "{phone} থেকে বের করে দিন",
+  "@profilePhonesSignOutNamed": {
+    "description": "My phones: what the screen reader says for the sign-out button, with the phone's name",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesAlreadyOut": "“{phone}” আগেই বের হয়ে গেছে — তালিকা নতুন করে আনা হলো।",
+  "@profilePhonesAlreadyOut": {
+    "description": "My phones: the phone was signed out elsewhere first",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesSignedOut": "“{phone}” থেকে বের করে দেওয়া হলো।",
+  "@profilePhonesSignedOut": {
+    "description": "My phones: snack bar after signing a phone out",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesSignOutFailed": "বের করা গেল না। একটু পরে আবার চেষ্টা করুন।",
+  "@profilePhonesSignOutFailed": {
+    "description": "My phones: signing out failed"
+  },
+  "profilePhonesServerOld": "আমার ফোনগুলো সার্ভারের নতুন সংস্করণ এলে চালু হবে।",
+  "@profilePhonesServerOld": {
+    "description": "My phones: the server is too old for this screen"
+  },
+  "profilePhonesEmptyTitle": "কোনো ফোনে ঢোকা নেই",
+  "@profilePhonesEmptyTitle": {
+    "description": "My phones: empty state title"
+  },
+  "profilePhonesEmptyMessage": "নতুন ফোনে লগইন করলে এখানে দেখাবে।",
+  "@profilePhonesEmptyMessage": {
+    "description": "My phones: empty state message"
+  },
+  "profilePhonesLastUsed": "শেষ ব্যবহার: {when}",
+  "@profilePhonesLastUsed": {
+    "description": "My phones row: when the phone was last used; when is a date and time, or the unknown word",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePhonesLastUsedUnknown": "জানা নেই",
+  "@profilePhonesLastUsedUnknown": {
+    "description": "My phones row: the last use is not known"
+  },
+  "profilePhonesThisPhone": "এই ফোন",
+  "@profilePhonesThisPhone": {
+    "description": "My phones row: badge on the phone in hand"
+  },
+  "profileTitlePhoto": "প্রোফাইল ও ছবি",
+  "@profileTitlePhoto": {
+    "description": "Profile: screen title when the server lets the person change the photo"
+  },
+  "profileTitlePlain": "আমার প্রোফাইল",
+  "@profileTitlePlain": {
+    "description": "Profile: screen title when the photo cannot be changed"
+  },
+  "profilePhotoUnreadable": "ছবিটা পড়া গেল না — আরেকটা ছবি বাছুন।",
+  "@profilePhotoUnreadable": {
+    "description": "Profile: the chosen picture could not be read on the phone"
+  },
+  "profilePhotoChanged": "ছবি বদলানো হলো — ওয়েবেও এই মুখ দেখাবে।",
+  "@profilePhotoChanged": {
+    "description": "Profile: snack bar after the photo is saved"
+  },
+  "profilePhotoUploadFailed": "ছবি পাঠানো গেল না। একটু পরে আবার চেষ্টা করুন।",
+  "@profilePhotoUploadFailed": {
+    "description": "Profile: uploading the photo failed"
+  },
+  "profilePhotoRemoveTitle": "ছবিটা সরাবেন?",
+  "@profilePhotoRemoveTitle": {
+    "description": "Profile: title of the remove dialog"
+  },
+  "profilePhotoRemoveBody": "সরালে আপনার মুখের জায়গায় নামের প্রথম অক্ষর দেখাবে — ফোনে আর ওয়েবে দুই জায়গাতেই।",
+  "@profilePhotoRemoveBody": {
+    "description": "Profile: what removing the photo means"
+  },
+  "profilePhotoKeep": "না, থাক",
+  "@profilePhotoKeep": {
+    "description": "Profile: dialog button that keeps the photo"
+  },
+  "profilePhotoRemoveConfirm": "সরান",
+  "@profilePhotoRemoveConfirm": {
+    "description": "Profile: dialog button that removes the photo"
+  },
+  "profilePhotoRemoved": "ছবি সরানো হলো।",
+  "@profilePhotoRemoved": {
+    "description": "Profile: snack bar after removing the photo"
+  },
+  "profilePhotoRemoveFailed": "ছবি সরানো গেল না। একটু পরে আবার চেষ্টা করুন।",
+  "@profilePhotoRemoveFailed": {
+    "description": "Profile: removing the photo failed"
+  },
+  "profilePhotoSendingSpoken": "ছবি পাঠানো হচ্ছে, {percent} শতাংশ",
+  "@profilePhotoSendingSpoken": {
+    "description": "Profile: what the screen reader says while the photo uploads",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePhotoSending": "ছবি পাঠানো হচ্ছে… {percent}%",
+  "@profilePhotoSending": {
+    "description": "Profile: the text under the upload bar",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePhotoCamera": "ক্যামেরায় তুলুন",
+  "@profilePhotoCamera": {
+    "description": "Profile: button that takes a new photo"
+  },
+  "profilePhotoGallery": "গ্যালারি থেকে",
+  "@profilePhotoGallery": {
+    "description": "Profile: button that picks a photo from the gallery"
+  },
+  "profilePhotoRemove": "ছবি সরান",
+  "@profilePhotoRemove": {
+    "description": "Profile: button that removes the photo"
+  },
+  "profilePhotoPrivacy": "ছবি মাঝখান থেকে বর্গ করে ছোট করা হয়, ছবির ভেতরের জায়গা-সময়ের তথ্য মুছে। কেবল আপনার কোম্পানির সহকর্মীরা দেখেন।",
+  "@profilePhotoPrivacy": {
+    "description": "Profile: what happens to the photo and who sees it"
+  },
+  "profilePhonesSubtitle": "কোন কোন ফোনে ঢোকা আছেন — হারানো ফোন দূর থেকে বের করে দিন",
+  "@profilePhonesSubtitle": {
+    "description": "Profile: the line under 'My phones'"
+  },
+  "profileFaceNone": "আপনার ছবি নেই — নামের প্রথম অক্ষর দেখানো হচ্ছে",
+  "@profileFaceNone": {
+    "description": "Profile: screen reader, the face circle without a photo"
+  },
+  "profileFace": "আপনার ছবি",
+  "@profileFace": {
+    "description": "Profile: screen reader, the face circle with a photo"
+  },
+  "hrAttendanceMarkedQueued": "হাজিরা তোলা হয়েছে। সংযোগ পেলে পাঠানো হবে।",
+  "@hrAttendanceMarkedQueued": {
+    "description": "Attendance: snack bar after marking; it is queued on the phone"
+  },
+  "hrAttendanceTitle": "হাজিরা",
+  "@hrAttendanceTitle": {
+    "description": "Attendance: screen title"
+  },
+  "hrAttendanceEarlierDays": "আগের দিনগুলো",
+  "@hrAttendanceEarlierDays": {
+    "description": "Attendance: heading over the past days"
+  },
+  "hrAttendanceNoHistoryTitle": "আগের কোনো হাজিরা সিঙ্ক হয়নি",
+  "@hrAttendanceNoHistoryTitle": {
+    "description": "Attendance: empty history title"
+  },
+  "hrAttendanceNoHistoryMessage": "নিচে টেনে আবার চেষ্টা করুন।",
+  "@hrAttendanceNoHistoryMessage": {
+    "description": "Attendance: empty history message"
+  },
+  "hrAttendanceToday": "আজ",
+  "@hrAttendanceToday": {
+    "description": "Attendance: under today's date"
+  },
+  "hrAttendanceTodayMarked": "আজকের হাজিরা তোলা হয়েছে",
+  "@hrAttendanceTodayMarked": {
+    "description": "Attendance: today is already marked"
+  },
+  "hrAttendanceWaitingToSend": "সংযোগ পেলে পাঠানো হবে — এখনো এই ফোনেই আছে।",
+  "@hrAttendanceWaitingToSend": {
+    "description": "Attendance: today's mark has not reached the office yet"
+  },
+  "hrAttendanceMarkToday": "আজকের হাজিরা দিন",
+  "@hrAttendanceMarkToday": {
+    "description": "Attendance: button that marks today"
+  },
+  "hrAttendanceIn": "ঢুকেছেন {time}",
+  "@hrAttendanceIn": {
+    "description": "Attendance day: the time the person came in (server text)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "hrAttendanceOut": "বেরিয়েছেন {time}",
+  "@hrAttendanceOut": {
+    "description": "Attendance day: the time the person left (server text)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "hrAttendanceLate": "দেরি",
+  "@hrAttendanceLate": {
+    "description": "Attendance day: the person came late"
+  },
+  "notificationsLoadFailed": "বিজ্ঞপ্তি আনা গেল না।",
+  "@notificationsLoadFailed": {
+    "description": "Notifications: the list did not load (fe 21 Oct: 'বিজ্ঞপ্তি', not 'নোটিফিকেশন')"
+  },
+  "notificationsServerMissing": "বিজ্ঞপ্তি এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।",
+  "@notificationsServerMissing": {
+    "description": "Notifications: the server has no door for them (404)"
+  },
+  "notificationsTitle": "বিজ্ঞপ্তি",
+  "@notificationsTitle": {
+    "description": "Notifications: screen title (fe 21 Oct: 'বিজ্ঞপ্তি')"
+  },
+  "notificationsMarkAllRead": "সব পড়া হয়েছে",
+  "@notificationsMarkAllRead": {
+    "description": "Notifications: button in the bar that marks every notification read"
+  },
+  "notificationsLoading": "আনা হচ্ছে…",
+  "@notificationsLoading": {
+    "description": "Notifications: the first load is running"
+  },
+  "notificationsEmptyTitle": "কোনো বিজ্ঞপ্তি নেই",
+  "@notificationsEmptyTitle": {
+    "description": "Notifications: empty state title"
+  },
+  "notificationsEmptyMessage": "নতুন কিছু এলে এখানে দেখাবে।",
+  "@notificationsEmptyMessage": {
+    "description": "Notifications: empty state message"
+  },
+  "noticesLoadFailed": "নোটিশ আনা গেল না।",
+  "@noticesLoadFailed": {
+    "description": "Notice board: the list did not load"
+  },
+  "noticesBoardTitle": "নোটিশ বোর্ড",
+  "@noticesBoardTitle": {
+    "description": "Notice board: screen title"
+  },
+  "noticesUnreadCount": "{count, plural, other{{count}টা নোটিশ এখনো পড়া হয়নি}}",
+  "@noticesUnreadCount": {
+    "description": "Notice board: how many notices the person has not opened",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noticesEmptyTitle": "এখন কোনো নোটিশ নেই",
+  "@noticesEmptyTitle": {
+    "description": "Notice board: empty state title"
+  },
+  "noticesEmptyMessage": "প্রতিষ্ঠান নতুন কিছু জানালে এখানে দেখাবে।",
+  "@noticesEmptyMessage": {
+    "description": "Notice board: empty state message"
+  },
+  "noticesSigned": "সই দেওয়া হলো।",
+  "@noticesSigned": {
+    "description": "Notice: snack bar after the person signs (acknowledges) the notice"
+  },
+  "noticesSignFailed": "সই দেওয়া গেল না।",
+  "@noticesSignFailed": {
+    "description": "Notice: signing failed"
+  },
+  "noticesDetailTitle": "নোটিশ",
+  "@noticesDetailTitle": {
+    "description": "Notice: screen title when the notice has no number"
+  },
+  "noticesValidUntil": "মেয়াদ {date} পর্যন্ত",
+  "@noticesValidUntil": {
+    "description": "Notice: when the notice stops applying; date is a date and time",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noticesSignBy": "সইয়ের শেষ সময় {date}",
+  "@noticesSignBy": {
+    "description": "Notice: the deadline for signing; date is a date and time",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noticesYouSigned": "আপনি সই দিয়েছেন",
+  "@noticesYouSigned": {
+    "description": "Notice: the person has signed it"
+  },
+  "noticesSending": "পাঠানো হচ্ছে…",
+  "@noticesSending": {
+    "description": "Notice: the sign button while sending"
+  },
+  "noticesReadAndAgree": "পড়েছি ও মানছি — সই দিন",
+  "@noticesReadAndAgree": {
+    "description": "Notice: the button that signs (acknowledges) the notice"
+  },
+  "noticesStanding": "{standing, select, unread{পড়েননি} read{পড়েছেন} acknowledged{মেনে নিয়েছেন} overdue{সইয়ের সময় পেরিয়েছে} escalated{উপরে জানানো হয়েছে} other{}}",
+  "@noticesStanding": {
+    "description": "Notice: where the person stands with it — the server's code picks the word (fe 21 Oct: 'পড়েছেন', 'মেনে নিয়েছেন')",
+    "placeholders": {
+      "standing": {
+        "type": "String"
+      }
+    }
+  },
+  "noticesPriority": "{priority, select, low{কম জরুরি} normal{সাধারণ} important{গুরুত্বপূর্ণ} high{বেশি জরুরি} critical{অত্যন্ত জরুরি} emergency{জরুরি অবস্থা} other{}}",
+  "@noticesPriority": {
+    "description": "Notice: the priority word, as the web's core.notice.priority — the server's code picks it",
+    "placeholders": {
+      "priority": {
+        "type": "String"
+      }
+    }
+  },
+  "hrRegisterAttendanceLoadFailed": "হাজিরা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@hrRegisterAttendanceLoadFailed": {
+    "description": "Attendance register: the day did not load"
+  },
+  "hrRegisterAttendanceServerMissing": "সার্ভারে ফোনের হাজিরার রেজিস্টার এখনো আসেনি — অফিসে জানান।",
+  "@hrRegisterAttendanceServerMissing": {
+    "description": "Attendance register: the server has no door for it (404)"
+  },
+  "hrRegisterAttendanceTitle": "হাজিরার রেজিস্টার",
+  "@hrRegisterAttendanceTitle": {
+    "description": "Attendance register: screen title"
+  },
+  "hrRegisterAttendanceDay": "দিন: {date}",
+  "@hrRegisterAttendanceDay": {
+    "description": "Attendance register: the day button",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "hrRegisterLoadFailedTitle": "আনা গেল না",
+  "@hrRegisterLoadFailedTitle": {
+    "description": "HR registers: title of the error state"
+  },
+  "hrRegisterAttendanceNobody": "এই দিনে বেতনভুক্ত কোনো কর্মী নেই",
+  "@hrRegisterAttendanceNobody": {
+    "description": "Attendance register: nobody to list for the day"
+  },
+  "hrRegisterAttendanceTotal": "{count, plural, other{মোট {count} জন}}",
+  "@hrRegisterAttendanceTotal": {
+    "description": "Attendance register: how many people the day lists",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hrRegisterAttendanceCount": "{label}: {count}",
+  "@hrRegisterAttendanceCount": {
+    "description": "Attendance register: one state and how many (label from the server)",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hrRegisterAttendanceLate": "{status} · দেরি",
+  "@hrRegisterAttendanceLate": {
+    "description": "Attendance register row: the server's state word and that the person came late",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "hrRegisterLeaveLoadFailed": "ছুটির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@hrRegisterLeaveLoadFailed": {
+    "description": "Leave register: the list did not load"
+  },
+  "hrRegisterLeaveServerMissing": "সার্ভারে ফোনের ছুটির রেজিস্টার এখনো আসেনি — অফিসে জানান।",
+  "@hrRegisterLeaveServerMissing": {
+    "description": "Leave register: the server has no door for it (404)"
+  },
+  "hrRegisterLeaveRejectTitle": "কেন প্রত্যাখ্যান করছেন?",
+  "@hrRegisterLeaveRejectTitle": {
+    "description": "Leave register: title of the reject dialog (fe 21 Oct: 'প্রত্যাখ্যান', the state is 'প্রত্যাখ্যাত')"
+  },
+  "hrRegisterLeaveRejectDismiss": "বাদ দিন",
+  "@hrRegisterLeaveRejectDismiss": {
+    "description": "Leave register: closes the reject dialog without rejecting"
+  },
+  "hrRegisterLeaveRejectConfirm": "প্রত্যাখ্যান করুন",
+  "@hrRegisterLeaveRejectConfirm": {
+    "description": "Leave register: the dialog button that rejects"
+  },
+  "hrRegisterLeaveRejectReasonNeeded": "প্রত্যাখ্যানের কারণ লিখতে হবে।",
+  "@hrRegisterLeaveRejectReasonNeeded": {
+    "description": "Leave register: no reason was written"
+  },
+  "hrRegisterLeaveSigned": "ছুটিতে সই দেওয়া হলো।",
+  "@hrRegisterLeaveSigned": {
+    "description": "Leave register: snack bar after signing (fe 21 Oct: 'সই দিন', not 'মঞ্জুর')"
+  },
+  "hrRegisterLeaveRejected": "ছুটি প্রত্যাখ্যান করা হলো।",
+  "@hrRegisterLeaveRejected": {
+    "description": "Leave register: snack bar after rejecting"
+  },
+  "hrRegisterLeaveSignFailed": "সই দেওয়া গেল না।",
+  "@hrRegisterLeaveSignFailed": {
+    "description": "Leave register: signing failed"
+  },
+  "hrRegisterLeaveRejectFailed": "প্রত্যাখ্যান করা গেল না।",
+  "@hrRegisterLeaveRejectFailed": {
+    "description": "Leave register: rejecting failed"
+  },
+  "hrRegisterLeaveTitle": "ছুটির রেজিস্টার",
+  "@hrRegisterLeaveTitle": {
+    "description": "Leave register: screen title"
+  },
+  "hrRegisterLeavePending": "অপেক্ষায়",
+  "@hrRegisterLeavePending": {
+    "description": "Leave register: filter chip — applications still waiting"
+  },
+  "hrRegisterLeaveAll": "সব",
+  "@hrRegisterLeaveAll": {
+    "description": "Leave register: filter chip — every application"
+  },
+  "hrRegisterLeaveTotal": "{count, plural, other{মোট {count} টি আবেদন}}",
+  "@hrRegisterLeaveTotal": {
+    "description": "Leave register: how many applications the server has",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hrRegisterLeaveNonePending": "অপেক্ষায় কোনো আবেদন নেই",
+  "@hrRegisterLeaveNonePending": {
+    "description": "Leave register: nothing waiting"
+  },
+  "hrRegisterLeaveNone": "কোনো আবেদন নেই",
+  "@hrRegisterLeaveNone": {
+    "description": "Leave register: no application at all"
+  },
+  "hrRegisterLeaveLine": "{type} · {from} থেকে {to} · {days} দিন",
+  "@hrRegisterLeaveLine": {
+    "description": "Leave register row: leave type (server), dates and number of days (server text, may be 1.5); days is a number (1.5 for a half day)",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "days": {
+        "type": "num"
+      }
+    }
+  },
+  "hrRegisterLeaveDecider": "সিদ্ধান্ত: {name}",
+  "@hrRegisterLeaveDecider": {
+    "description": "Leave register row: who decided (server text)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hrRegisterLeaveReject": "প্রত্যাখ্যান",
+  "@hrRegisterLeaveReject": {
+    "description": "Leave register row: the reject button (was 'ফেরত')"
+  },
+  "hrRegisterLeaveSign": "সই দিন",
+  "@hrRegisterLeaveSign": {
+    "description": "Leave register row: the sign button (fe 21 Oct: 'সই দিন', was 'মঞ্জুর')"
+  },
+  "hrRegisterLeaveMore": "আরও",
+  "@hrRegisterLeaveMore": {
+    "description": "Leave register: load the next page"
+  },
+  "hrLeaveLoadFailed": "ছুটির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@hrLeaveLoadFailed": {
+    "description": "My leave: the list did not load"
+  },
+  "hrLeaveServerMissing": "সার্ভারে ফোনের ছুটি এখনো আসেনি — অফিসে জানান।",
+  "@hrLeaveServerMissing": {
+    "description": "My leave: the server has no door for it (404)"
+  },
+  "hrLeaveTitle": "আমার ছুটি",
+  "@hrLeaveTitle": {
+    "description": "My leave: screen title"
+  },
+  "hrLeaveSent": "ছুটির আবেদন গেছে — সইয়ের অপেক্ষায়।",
+  "@hrLeaveSent": {
+    "description": "My leave: snack bar after applying (fe 21 Oct: 'সইয়ের অপেক্ষায়')"
+  },
+  "hrLeaveApply": "ছুটির আবেদন",
+  "@hrLeaveApply": {
+    "description": "My leave: the button and the screen title for a new application"
+  },
+  "hrNoEmployeeRecord": "আপনার নামে কর্মীর খাতা নেই",
+  "@hrNoEmployeeRecord": {
+    "description": "Self service: the login is not linked to an employee"
+  },
+  "hrLeaveNoEmployeeMessage": "ছুটির আবেদন করতে HR-কে বলুন আপনার লগইন কর্মীর খাতার সাথে জুড়ে দিতে।",
+  "@hrLeaveNoEmployeeMessage": {
+    "description": "My leave: what to do without an employee record"
+  },
+  "hrLeaveLeftThisYear": "এ বছর কত বাকি",
+  "@hrLeaveLeftThisYear": {
+    "description": "My leave: heading over the balance per leave type"
+  },
+  "hrLeaveNoTypes": "এখনো কোনো ছুটির ধরন নেই — HR ঠিক করে দেবেন।",
+  "@hrLeaveNoTypes": {
+    "description": "My leave: the company has no leave types"
+  },
+  "hrLeaveNoLimit": "সীমা নেই · নেওয়া {taken} দিন",
+  "@hrLeaveNoLimit": {
+    "description": "My leave: a leave type with no yearly limit; taken is the server's number of days",
+    "placeholders": {
+      "taken": {
+        "type": "String"
+      }
+    }
+  },
+  "hrLeaveBalance": "{left} দিন বাকি · মোট {allowed}",
+  "@hrLeaveBalance": {
+    "description": "My leave: days left of the yearly allowance (server numbers)",
+    "placeholders": {
+      "left": {
+        "type": "String"
+      },
+      "allowed": {
+        "type": "String"
+      }
+    }
+  },
+  "hrLeaveMyApplications": "আমার আবেদন",
+  "@hrLeaveMyApplications": {
+    "description": "My leave: heading over my applications"
+  },
+  "hrLeaveNoApplications": "এখনো কোনো ছুটির আবেদন নেই",
+  "@hrLeaveNoApplications": {
+    "description": "My leave: no application yet"
+  },
+  "hrLeaveCardTitle": "{type} · {days} দিন",
+  "@hrLeaveCardTitle": {
+    "description": "My leave card: the leave type (server) and the number of days (server text, may be 1.5)",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "hrLeaveOfficeNote": "অফিসের কথা: {remarks}",
+  "@hrLeaveOfficeNote": {
+    "description": "My leave card: what the office wrote (server text)",
+    "placeholders": {
+      "remarks": {
+        "type": "String"
+      }
+    }
+  },
+  "hrLeaveChooseType": "কোন ছুটি, বাছুন।",
+  "@hrLeaveChooseType": {
+    "description": "Apply for leave: no leave type chosen"
+  },
+  "hrLeaveDaysShape": "দিনের সংখ্যা ঠিকভাবে লিখুন — যেমন 2 বা 1.5।",
+  "@hrLeaveDaysShape": {
+    "description": "Apply for leave: the days field is not a number (English digits, owner's rule)"
+  },
+  "hrLeaveDaysTooMany": "{span, plural, other{দিনের সংখ্যা তারিখের ঘরের চেয়ে বেশি — {span} দিনের বেশি নয়।}}",
+  "@hrLeaveDaysTooMany": {
+    "description": "Apply for leave: more days than the chosen dates hold",
+    "placeholders": {
+      "span": {
+        "type": "int"
+      }
+    }
+  },
+  "hrLeaveSendFailed": "আবেদন পাঠানো গেল না। আবার চেষ্টা করুন।",
+  "@hrLeaveSendFailed": {
+    "description": "Apply for leave: sending failed"
+  },
+  "hrLeaveHowItWorks": "আবেদন যায় অফিসে; অনুমোদিত হলে দিনগুলো হাজিরায় \"ছুটি\" হয়ে বসে।",
+  "@hrLeaveHowItWorks": {
+    "description": "Apply for leave: what happens after sending (fe 21 Oct: 'অনুমোদিত', not 'মঞ্জুর')"
+  },
+  "hrLeaveTypeField": "কোন ছুটি",
+  "@hrLeaveTypeField": {
+    "description": "Apply for leave: the leave type field"
+  },
+  "hrLeaveTypeWithLeft": "{name} ({left} দিন বাকি)",
+  "@hrLeaveTypeWithLeft": {
+    "description": "Apply for leave: a leave type in the list with its days left",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      }
+    }
+  },
+  "hrLeaveFrom": "কবে থেকে",
+  "@hrLeaveFrom": {
+    "description": "Apply for leave: the first day"
+  },
+  "hrLeaveUntil": "কবে পর্যন্ত",
+  "@hrLeaveUntil": {
+    "description": "Apply for leave: the last day"
+  },
+  "hrLeaveDaysField": "কত দিন (আধা দিন হলে .5)",
+  "@hrLeaveDaysField": {
+    "description": "Apply for leave: the days field (English digits, owner's rule)"
+  },
+  "hrLeaveReasonField": "কারণ",
+  "@hrLeaveReasonField": {
+    "description": "Apply for leave: the reason field"
+  },
+  "hrLeaveSend": "পাঠান",
+  "@hrLeaveSend": {
+    "description": "Apply for leave: the send button"
+  },
+  "hrPayslipListTitle": "আমার বেতনের স্লিপ",
+  "@hrPayslipListTitle": {
+    "description": "Payslips: screen title (one person's slips — fe 21 Oct: 'বেতনের স্লিপ')"
+  },
+  "hrPayslipListFailed": "স্লিপের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@hrPayslipListFailed": {
+    "description": "Payslips: the list did not load"
+  },
+  "hrPayslipServerMissing": "সার্ভারে ফোনের বেতনের স্লিপ এখনো আসেনি — অফিসে জানান।",
+  "@hrPayslipServerMissing": {
+    "description": "Payslips: the server has no door for them (404)"
+  },
+  "hrPayslipEmptyTitle": "এখনো কোনো পোস্ট হওয়া বেতনের স্লিপ নেই",
+  "@hrPayslipEmptyTitle": {
+    "description": "Payslips: empty (fe 21 Oct: 'পোস্ট', not 'পাকা')"
+  },
+  "hrPayslipEmptyMessage": "বেতনের রান পোস্ট হলে স্লিপ এখানে আসে।",
+  "@hrPayslipEmptyMessage": {
+    "description": "Payslips: empty state message"
+  },
+  "hrPayslipNoEmployeeMessage": "HR-কে বলুন আপনার লগইন কর্মীর খাতার সাথে জুড়ে দিতে।",
+  "@hrPayslipNoEmployeeMessage": {
+    "description": "Payslips: what to do without an employee record"
+  },
+  "hrPayslipRowLine": "আয় {gross} · কর্তন {deductions}",
+  "@hrPayslipRowLine": {
+    "description": "Payslips row: gross and deductions (money already written)",
+    "placeholders": {
+      "gross": {
+        "type": "String"
+      },
+      "deductions": {
+        "type": "String"
+      }
+    }
+  },
+  "hrPayslipPaidBy": "{method, select, cash{নগদ} bank{ব্যাংক} mfs{মোবাইল ব্যাংকিং} other{{method}}}",
+  "@hrPayslipPaidBy": {
+    "description": "Payslip: how the salary was paid — the server's code picks the word; an unknown code shows as it came",
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "hrPayslipTitle": "বেতনের স্লিপ",
+  "@hrPayslipTitle": {
+    "description": "Payslip: screen title"
+  },
+  "hrPayslipFailed": "স্লিপটা আনা গেল না।",
+  "@hrPayslipFailed": {
+    "description": "Payslip: the slip did not load"
+  },
+  "hrPayslipNet": "নিট বেতন",
+  "@hrPayslipNet": {
+    "description": "Payslip: the net pay strip"
+  },
+  "hrPayslipName": "নাম",
+  "@hrPayslipName": {
+    "description": "Payslip: the employee's name"
+  },
+  "hrPayslipMonth": "মাস",
+  "@hrPayslipMonth": {
+    "description": "Payslip: the month"
+  },
+  "hrPayslipHow": "কীভাবে",
+  "@hrPayslipHow": {
+    "description": "Payslip: how it was paid"
+  },
+  "hrPayslipEarnings": "আয়",
+  "@hrPayslipEarnings": {
+    "description": "Payslip: heading over the earnings lines"
+  },
+  "hrPayslipGross": "মোট আয়",
+  "@hrPayslipGross": {
+    "description": "Payslip: total earnings"
+  },
+  "hrPayslipDeductions": "কর্তন",
+  "@hrPayslipDeductions": {
+    "description": "Payslip: heading over the deduction lines"
+  },
+  "hrPayslipTotalDeductions": "মোট কর্তন",
+  "@hrPayslipTotalDeductions": {
+    "description": "Payslip: total deductions"
+  },
+  "claimsLoadFailed": "দাবির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।",
+  "@claimsLoadFailed": {
+    "description": "Claims: the list did not load"
+  },
+  "claimsServerMissing": "সার্ভারে খরচের দাবি এখনো আসেনি — অফিসে জানান।",
+  "@claimsServerMissing": {
+    "description": "Claims: the server has no door for them (404)"
+  },
+  "claimsListTitle": "খরচের দাবি ও অগ্রিম",
+  "@claimsListTitle": {
+    "description": "Claims: screen title"
+  },
+  "claimsNew": "নতুন দাবি",
+  "@claimsNew": {
+    "description": "Claims: button and screen title for a new claim"
+  },
+  "claimsOpenAdvance": "হাতে খোলা অগ্রিম",
+  "@claimsOpenAdvance": {
+    "description": "Claims: the advance the person still holds"
+  },
+  "claimsEmpty": "এখনো কোনো দাবি নেই।",
+  "@claimsEmpty": {
+    "description": "Claims: empty list"
+  },
+  "claimsOneFailed": "দাবিটা আনা গেল না।",
+  "@claimsOneFailed": {
+    "description": "Claim: the claim did not load"
+  },
+  "claimsOneTitle": "দাবি",
+  "@claimsOneTitle": {
+    "description": "Claim: screen title before the number is known"
+  },
+  "claimsKind": "ধরন",
+  "@claimsKind": {
+    "description": "Claim: expense claim or advance"
+  },
+  "claimsAmount": "টাকা",
+  "@claimsAmount": {
+    "description": "Claim: the amount (row label and form field)"
+  },
+  "claimsHead": "খরচের খাত",
+  "@claimsHead": {
+    "description": "Claim: the expense head (row label and form field)"
+  },
+  "claimsSpentOn": "খরচের তারিখ",
+  "@claimsSpentOn": {
+    "description": "Claim: the day the money was spent (row label and form field)"
+  },
+  "claimsFromAdvance": "অগ্রিম থেকে মিটেছে",
+  "@claimsFromAdvance": {
+    "description": "Claim: the part settled from the open advance"
+  },
+  "claimsInCash": "নগদে পাবেন",
+  "@claimsInCash": {
+    "description": "Claim: the part paid in cash"
+  },
+  "claimsReason": "কারণ",
+  "@claimsReason": {
+    "description": "Claim: the reason (row label and form field)"
+  },
+  "claimsSentOn": "পাঠানো",
+  "@claimsSentOn": {
+    "description": "Claim: the day it was sent"
+  },
+  "claimsRejectedOn": "প্রত্যাখ্যান",
+  "@claimsRejectedOn": {
+    "description": "Claim: the day it was rejected"
+  },
+  "claimsApprovedOn": "অনুমোদন",
+  "@claimsApprovedOn": {
+    "description": "Claim: the day it was approved"
+  },
+  "claimsPaidOn": "টাকা দেওয়া",
+  "@claimsPaidOn": {
+    "description": "Claim: the day the cashier paid it"
+  },
+  "claimsHeadsFailed": "খরচের খাতের তালিকা আনা গেল না।",
+  "@claimsHeadsFailed": {
+    "description": "New claim: the expense heads did not load"
+  },
+  "claimsAmountShape": "টাকার অঙ্ক ঠিকভাবে লিখুন — যেমন 500 বা 750.50।",
+  "@claimsAmountShape": {
+    "description": "New claim: the amount is not a number (English digits, owner's rule)"
+  },
+  "claimsChooseHead": "কোন খাতের খরচ, বাছুন।",
+  "@claimsChooseHead": {
+    "description": "New claim: no expense head chosen"
+  },
+  "claimsWriteReason": "কারণ লিখুন।",
+  "@claimsWriteReason": {
+    "description": "New claim: no reason written"
+  },
+  "claimsSendFailed": "পাঠানো যায়নি। আবার চেষ্টা করুন।",
+  "@claimsSendFailed": {
+    "description": "New claim: sending failed"
+  },
+  "claimsHowItWorks": "সই আর ক্যাশিয়ারের পরে টাকা পাবেন। খরচ আগে মেটে হাতের অগ্রিম থেকে।",
+  "@claimsHowItWorks": {
+    "description": "New claim: what happens after sending"
+  },
+  "claimsKindSpent": "খরচ হয়ে গেছে",
+  "@claimsKindSpent": {
+    "description": "New claim: the money is already spent (expense claim)"
+  },
+  "claimsKindAdvanceWanted": "অগ্রিম চাই",
+  "@claimsKindAdvanceWanted": {
+    "description": "New claim: money wanted in advance"
+  },
+  "claimsReceiptTake": "রসিদের ছবি তুলুন",
+  "@claimsReceiptTake": {
+    "description": "New claim: button that takes the receipt photo"
+  },
+  "claimsReceiptTaken": "ছবি নেওয়া হয়েছে — আবার তুলুন",
+  "@claimsReceiptTaken": {
+    "description": "New claim: the receipt photo is taken"
+  },
+  "claimsSend": "পাঠান",
+  "@claimsSend": {
+    "description": "New claim: the send button"
+  }
 }

@@ -117,6 +117,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('কোনো নোটিফিকেশন নেই'), findsOneWidget);
+    expect(find.text('কোনো বিজ্ঞপ্তি নেই'), findsOneWidget);
   });
 }

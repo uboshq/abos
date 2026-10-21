@@ -19,6 +19,8 @@ import '../../core/profile/square_face.dart';
 import '../../core/router/profile_routes.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/locale/l10n.dart';
+import '../../core/locale/app_locale.dart';
 
 /// ⭐ "প্রোফাইল ও ছবি" — নিজের তথ্য আর নিজের মুখ বদল (ছবির মেনুর প্রথম সারি; মালিকের অনুমোদিত নমুনা, পাতা ২; অ্যাপ ০.৪.৪১,
 /// a6, ২০ অক্টোবর ২০২৬)।
@@ -55,8 +57,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
   /// "আমার ফোনগুলো" খোলা; না দিলে রাউটার
   final VoidCallback? openPhones;
 
-  static const String title = 'প্রোফাইল ও ছবি';
-  static const String plainTitle = 'আমার প্রোফাইল';
+  static String get title => AppLocale.l10n.profileTitlePhoto;
+  static String get plainTitle => AppLocale.l10n.profileTitlePlain;
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -78,7 +80,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       face = await widget.shrink(await shot.readAsBytes());
     } catch (_) {
-      if (mounted) setState(() => _error = 'ছবিটা পড়া গেল না — আরেকটা ছবি বাছুন।');
+      if (mounted) setState(() => _error = context.l10n.profilePhotoUnreadable);
       return;
     } finally {
       // ⛔ বাছা ছবি ফোনের ক্যাশে পড়ে থাকে না — বর্গ বানানো হলেই মোছা, পাঠানো সফল হোক বা না হোক
@@ -108,7 +110,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         if (mounted) setState(() => _progress = sent);
       });
       ref.read(myFaceProvider.notifier).state = change.photoUrl;
-      _say('ছবি বদলানো হলো — ওয়েবেও এই মুখ দেখাবে।');
+      if (mounted) _say(context.l10n.profilePhotoChanged);
     } on PhotoRefused catch (e) {
       if (mounted) setState(() => _error = e.message);
     } on ProfileDoorsMissing {
@@ -116,7 +118,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         setState(() => _error = ProfileDoorsMissing.message);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ছবি পাঠানো গেল না। একটু পরে আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.profilePhotoUploadFailed));
     } finally {
       if (mounted) {
         setState(() {
@@ -133,13 +135,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (dialog) => AlertDialog(
         key: const ValueKey('profile-remove-confirm'),
         icon: const Icon(Symbols.no_photography),
-        title: const Text('ছবিটা সরাবেন?'),
-        content: const Text('সরালে আপনার মুখের জায়গায় নামের প্রথম অক্ষর দেখাবে — ফোনে আর ওয়েবে দুই জায়গাতেই।'),
+        title: Text(dialog.l10n.profilePhotoRemoveTitle),
+        content: Text(dialog.l10n.profilePhotoRemoveBody),
         actions: [
           TextButton(
             key: const ValueKey('profile-remove-no'),
             onPressed: () => Navigator.of(dialog).pop(false),
-            child: const Text('না, থাক'),
+            child: Text(dialog.l10n.profilePhotoKeep),
           ),
           FilledButton(
             key: const ValueKey('profile-remove-yes'),
@@ -148,7 +150,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               foregroundColor: Theme.of(dialog).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(dialog).pop(true),
-            child: const Text('সরান'),
+            child: Text(dialog.l10n.profilePhotoRemoveConfirm),
           ),
         ],
       ),
@@ -161,13 +163,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       await widget.api.removePhoto();
       ref.read(myFaceProvider.notifier).state = null;
-      _say('ছবি সরানো হলো।');
+      if (mounted) _say(context.l10n.profilePhotoRemoved);
     } on ProfileDoorsMissing {
       if (mounted) {
         setState(() => _error = ProfileDoorsMissing.message);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ছবি সরানো গেল না। একটু পরে আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.profilePhotoRemoveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -202,7 +204,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       // ⓘ ছবি বদল না থাকলে নামেও তার প্রতিশ্রুতি নয়
-      appBar: AbosScreenBar(title: features.profilePhoto ? ProfileScreen.title : ProfileScreen.plainTitle, module: 'আমি'),
+      appBar: AbosScreenBar(
+          title: features.profilePhoto ? context.l10n.profileTitlePhoto : context.l10n.profileTitlePlain,
+          module: context.l10n.profileModuleMe),
       body: ListView(
         key: const ValueKey('profile-screen'),
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -227,14 +231,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Semantics(
                 key: const ValueKey('profile-progress'),
                 liveRegion: true,
-                label: 'ছবি পাঠানো হচ্ছে, $percent শতাংশ',
+                label: context.l10n.profilePhotoSendingSpoken(percent),
                 child: ExcludeSemantics(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       LinearProgressIndicator(value: _progress == 0 ? null : _progress),
                       const SizedBox(height: AppSpacing.xs),
-                      Text('ছবি পাঠানো হচ্ছে… $percent%', textAlign: TextAlign.center),
+                      Text(context.l10n.profilePhotoSending(percent), textAlign: TextAlign.center),
                     ]),
                   ),
                 ),
@@ -255,7 +259,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 key: const ValueKey('profile-camera'),
                 onPressed: _busy ? null : () => _take(ImageSource.camera),
                 icon: const Icon(Symbols.photo_camera),
-                label: const Text('ক্যামেরায় তুলুন'),
+                label: Text(context.l10n.profilePhotoCamera),
               ),
             ),
             _Wide(
@@ -263,7 +267,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 key: const ValueKey('profile-gallery'),
                 onPressed: _busy ? null : () => _take(ImageSource.gallery),
                 icon: const Icon(Symbols.photo_library),
-                label: const Text('গ্যালারি থেকে'),
+                label: Text(context.l10n.profilePhotoGallery),
               ),
             ),
             _Wide(
@@ -272,13 +276,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: OutlinedButton.styleFrom(foregroundColor: cs.error),
                 onPressed: _busy || url == null ? null : _remove,
                 icon: const Icon(Symbols.no_photography),
-                label: const Text('ছবি সরান'),
+                label: Text(context.l10n.profilePhotoRemove),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Text(
-                'ছবি মাঝখান থেকে বর্গ করে ছোট করা হয়, ছবির ভেতরের জায়গা-সময়ের তথ্য মুছে। কেবল আপনার কোম্পানির সহকর্মীরা দেখেন।',
+                context.l10n.profilePhotoPrivacy,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: p.onSurfaceMuted, fontSize: 13),
               ),
@@ -290,8 +294,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               key: const ValueKey('profile-phones'),
               minVerticalPadding: 12,
               leading: const Icon(Symbols.devices),
-              title: const Text('আমার ফোনগুলো'),
-              subtitle: const Text('কোন কোন ফোনে ঢোকা আছেন — হারানো ফোন দূর থেকে বের করে দিন'),
+              title: Text(context.l10n.profilePhonesTitle),
+              subtitle: Text(context.l10n.profilePhonesSubtitle),
               trailing: const Icon(Symbols.chevron_right),
               onTap: _openPhones,
             ),
@@ -326,7 +330,7 @@ class _Face extends StatelessWidget {
     return Semantics(
       key: const ValueKey('profile-face'),
       image: true,
-      label: image == null ? 'আপনার ছবি নেই — নামের প্রথম অক্ষর দেখানো হচ্ছে' : 'আপনার ছবি',
+      label: image == null ? context.l10n.profileFaceNone : context.l10n.profileFace,
       child: ExcludeSemantics(
         child: Container(
           width: size,

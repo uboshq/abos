@@ -68,7 +68,7 @@ void main() {
     expect(paragraph.didExceedMaxLines, isTrue, reason: '⛔ নামটা যথেষ্ট লম্বা নয় — দাবিটা কাটা মাপছে না');
     expect(find.byTooltip(long), findsOneWidget, reason: '⛔ পুরো নাম পড়ার পথ নেই');
     expect(tester.takeException(), isNull, reason: '⛔ কার্ডের কিছু ডানে উপচে কেটে গেছে');
-    for (final label in ['কাগজ দেখুন', 'প্রত্যাখ্যান', 'অনুমোদন']) {
+    for (final label in ['কাগজ দেখুন', 'প্রত্যাখ্যান', 'সই দিন']) {
       final box = tester.getRect(find.descendant(of: find.byType(Card), matching: find.text(label)));
       expect(box.right, lessThanOrEqualTo(width), reason: '⛔ "$label" পর্দার বাইরে');
     }

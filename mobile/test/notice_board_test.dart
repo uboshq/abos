@@ -55,8 +55,8 @@ void main() {
 
     expect(find.text('1টা নোটিশ এখনো পড়া হয়নি'), findsOneWidget);
     expect(find.text('নতুন হাজিরার নিয়ম'), findsOneWidget);
-    expect(find.textContaining('গুরুত্বপূর্ণ · পড়া হয়নি'), findsOneWidget);
-    expect(find.textContaining('সাধারণ · পড়া হয়েছে'), findsOneWidget);
+    expect(find.textContaining('গুরুত্বপূর্ণ · পড়েননি'), findsOneWidget);
+    expect(find.textContaining('সাধারণ · পড়েছেন'), findsOneWidget);
   });
 
   testWidgets('opening an unread notice marks it read and shows it whole; a read one is not marked again',

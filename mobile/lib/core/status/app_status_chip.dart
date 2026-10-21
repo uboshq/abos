@@ -2,13 +2,14 @@ import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 
+import '../locale/l10n.dart';
 import '../theme/app_palette.dart';
 import 'paper_state.dart';
 import 'paper_state_icons.dart';
 
 /// ⭐ কাগজের অবস্থার চিপ — অ্যাপের একটাই (মালিকের নকশা ৩, অংশ ৫, ২০ অক্টোবর ২০২৬; Material 3 + SAP Fiori + WCAG 2.2 AA)।
 ///
-/// <p>আইকন, রং আর বাংলা লেখা তিনটাই একসাথে; রং আলো/অন্ধকার দেখে [PaperStateSpec] থেকে। TalkBack বাংলায় বলে
+/// <p>আইকন, রং আর লেখা তিনটাই একসাথে; রং আলো/অন্ধকার দেখে [PaperStateSpec] থেকে, লেখা অ্যাপের ভাষায় (JSON-এর `_bn`/`_en`)। TalkBack বলে
 /// ("অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে")। "পোস্ট হয়নি" চাপা যায় (কমপক্ষে ৪৮dp): চাপলে বাংলায় কারণ — [reason] (সার্ভারের
 /// লেখা), বা [onReasonTap] দিলে সেটাই। বড় লেখায় (২০০%) লেখা ভাঙে না, নিচের লাইনে নামে।
 ///
@@ -67,10 +68,14 @@ class AppStatusChip extends StatelessWidget {
         null => Text(fallbackLabel, key: key, style: TextStyle(fontWeight: FontWeight.w600, color: fallbackColour)),
       };
 
-  /// চাপলে যে পাতা খোলে — কারণ বাংলায়, বন্ধের বোতাম
+  /// অ্যাপের ভাষা ইংরেজি কি না — চিপের লেখা JSON-এর `_en` না `_bn` থেকে
+  static bool englishIn(BuildContext context) => context.l10n.localeName == 'en';
+
+  /// চাপলে যে পাতা খোলে — কারণ অ্যাপের ভাষায়, বন্ধের বোতাম
   static Future<void> showReason(BuildContext context, String? reason) {
     final spec = PaperState.notPosted.spec;
-    final text = (reason ?? '').trim().isEmpty ? spec.reasonMissingBn! : reason!.trim();
+    final english = englishIn(context);
+    final text = (reason ?? '').trim().isEmpty ? spec.reasonMissing(english: english)! : reason!.trim();
     return showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -88,7 +93,7 @@ class AppStatusChip extends StatelessWidget {
                   Icon(paperStateIcon(PaperState.notPosted), color: c.foreground, size: 24),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(spec.reasonTitleBn!,
+                    child: Text(spec.reasonTitle(english: english)!,
                         key: const ValueKey('paper-reason-title'), style: Theme.of(sheet).textTheme.titleMedium),
                   ),
                 ]),
@@ -100,7 +105,7 @@ class AppStatusChip extends StatelessWidget {
                   child: FilledButton.tonal(
                     key: const ValueKey('paper-reason-close'),
                     onPressed: () => Navigator.of(sheet).pop(),
-                    child: Text(spec.reasonCloseBn!),
+                    child: Text(spec.reasonClose(english: english)!),
                   ),
                 ),
               ],
@@ -114,11 +119,12 @@ class AppStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spec = state.spec;
+    final english = englishIn(context);
     final colours = spec.colours.of(Theme.of(context).brightness);
     final base = Theme.of(context).textTheme.labelLarge ?? const TextStyle();
     final label = dense
-        ? spec.shortLabel(level: level, levels: levels, kind: kind)
-        : spec.label(level: level, levels: levels, kind: kind);
+        ? spec.shortLabel(level: level, levels: levels, kind: kind, english: english)
+        : spec.label(level: level, levels: levels, kind: kind, english: english);
     // পাতায়: Material 3 চিপ (কোণ 8, উচ্চতা 32, ধার); সারিতে: নমুনার `.st` (কোণ 12, প্যাড 9/2, লেখা 12, ধার নেই)
     final radius = BorderRadius.all(Radius.circular(dense ? 12 : 8));
 
@@ -153,7 +159,7 @@ class AppStatusChip extends StatelessWidget {
       chip = CustomPaint(foregroundPainter: _DashedBorder(colours.border, radius.topLeft.x), child: chip);
     }
 
-    final speak = spec.semantics(level: level, levels: levels, kind: kind);
+    final speak = spec.semantics(level: level, levels: levels, kind: kind, english: english);
     if (!spec.tappable) {
       return Semantics(container: true, label: speak, excludeSemantics: true, child: chip);
     }
@@ -163,7 +169,7 @@ class AppStatusChip extends StatelessWidget {
       container: true,
       button: true,
       label: speak,
-      hint: spec.semanticsHintBn,
+      hint: spec.semanticsHint(english: english),
       onTap: tap,
       excludeSemantics: true,
       child: Material(
@@ -213,9 +219,10 @@ class _DashedBorder extends CustomPainter {
 
 /// কাগজের পাতার "অবস্থা" সারি — বাঁয়ে নাম, ডানে চিপ (পাতার অন্য তথ্যের সারির মতো)
 class PaperStateFact extends StatelessWidget {
-  const PaperStateFact({super.key, required this.chip, this.label = 'অবস্থা'});
+  const PaperStateFact({super.key, required this.chip, this.label});
 
-  final String label;
+  /// না দিলে "অবস্থা" (অ্যাপের ভাষায়)
+  final String? label;
   final Widget chip;
 
   @override
@@ -224,7 +231,7 @@ class PaperStateFact extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Expanded(child: Text(label, style: TextStyle(color: context.palette.onSurfaceMuted))),
+            Expanded(child: Text(label ?? context.l10n.statusPaperFactLabel, style: TextStyle(color: context.palette.onSurfaceMuted))),
             const SizedBox(width: 8),
             Flexible(child: Align(alignment: AlignmentDirectional.centerEnd, child: chip)),
           ],

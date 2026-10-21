@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ নিজের ছুটি আর নিজের বেতনের স্লিপ — ফোনে (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬; সার্ভার `LeaveApiController`,
 /// `PayslipApiController`)।
@@ -63,10 +64,10 @@ class LeaveRequest {
   final String remarks;
 
   String get statusWords => switch (status) {
-        'pending' => 'অনুমোদনের অপেক্ষায়',
-        'approved' => 'মঞ্জুর',
-        'rejected' => 'নামঞ্জুর',
-        'cancelled' => 'প্রত্যাহৃত',
+        'pending' => AppLocale.l10n.hrLeaveStatePending,
+        'approved' => AppLocale.l10n.hrLeaveStateApproved,
+        'rejected' => AppLocale.l10n.hrLeaveStateRejected,
+        'cancelled' => AppLocale.l10n.hrLeaveStateCancelled,
         _ => status,
       };
 

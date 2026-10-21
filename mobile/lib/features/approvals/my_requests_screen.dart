@@ -10,6 +10,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
 import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../../core/locale/l10n.dart';
 
 /// ⭐ আমার অনুরোধ — যা আমি সইয়ের জন্য পাঠিয়েছি, কোথায় দাঁড়িয়ে আর কে কী বললেন (মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta
 /// mobile app style e zate bujazay sei vabe koro, direct webpage app e bujajayna"*)।
@@ -59,8 +60,8 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'আমার অনুরোধের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+            fallback: context.l10n.approvalsMyRequestsLoadFailed,
+            whenAbsent: context.l10n.approvalsMyRequestsServerMissing));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -72,7 +73,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AbosScreenBar(title: widget.title ?? 'আমার অনুরোধ'),
+      appBar: AbosScreenBar(title: widget.title ?? context.l10n.approvalsMyRequestsTitle),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -84,22 +85,22 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
             if (page != null && page.count != null && _rows.isNotEmpty)
               TotalStrip(
                 key: const ValueKey('my-requests-total'),
-                label: 'মোট অনুরোধ',
-                value: '${page.count} টি',
+                label: context.l10n.approvalsMyRequestsTotalLabel,
+                value: context.l10n.approvalsMyRequestsTotalValue(page.count!),
                 count: null,
               ),
             if (page != null && page.pendingCount != null && _rows.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Text('এখনো সইয়ের অপেক্ষায়: ${page.pendingCount} টি',
+                child: Text(context.l10n.approvalsMyRequestsPending(page.pendingCount!),
                     key: const ValueKey('my-requests-pending'),
                     style: TextStyle(color: context.palette.onSurfaceMuted)),
               ),
             if (page != null && _rows.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.outbox_outlined,
-                title: 'আপনার পাঠানো কোনো অনুরোধ নেই',
-                message: 'কোনো কাগজ সইয়ের জন্য পাঠালে এখানে দেখা যাবে।',
+                title: context.l10n.approvalsMyRequestsEmptyTitle,
+                message: context.l10n.approvalsMyRequestsEmptyMessage,
               ),
             for (final r in _rows) _RequestCard(r),
             if (page?.nextCursor != null)
@@ -108,7 +109,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                   key: const ValueKey('my-requests-more'),
                   onPressed: _busy ? null : () => _load(more: true),
                   icon: const Icon(Icons.expand_more),
-                  label: const Text('আরও'),
+                  label: Text(context.l10n.approvalsMyRequestsMore),
                 ),
               ),
           ],
@@ -176,9 +177,9 @@ class _RequestCard extends StatelessWidget {
               if (_day(r.requestedAt).isNotEmpty)
                 Text(_day(r.requestedAt), style: TextStyle(color: context.palette.onSurfaceMuted)),
             ]),
-            if (said.isNotEmpty) Text('শেষ কথা: $said', style: TextStyle(color: context.palette.onSurfaceMuted)),
+            if (said.isNotEmpty) Text(context.l10n.approvalsMyRequestsLastWord(said), style: TextStyle(color: context.palette.onSurfaceMuted)),
             if ((r.lastRemarks ?? '').isNotEmpty)
-              Text('কারণ: ${r.lastRemarks}', key: ValueKey('my-request-remarks-${r.id}')),
+              Text(context.l10n.approvalsMyRequestsReason(r.lastRemarks!), key: ValueKey('my-request-remarks-${r.id}')),
           ],
         ),
       ),

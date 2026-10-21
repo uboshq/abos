@@ -13,6 +13,8 @@ import '../../core/widgets/day_part.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/state_views.dart';
 import '../books/books_widgets.dart' show MoreButton;
+import '../../core/locale/l10n.dart';
+import '../../core/locale/app_locale.dart';
 
 /// ⭐ "আমার ফোনগুলো" — কোন কোন ফোনে আমি ঢোকা, আর একটা থেকে দূরে বসে বের করে দেওয়া (চুরি যাওয়া বা পুরনো ফোন; ছবির মেনু,
 /// মালিকের অনুমোদিত নমুনা পাতা ২; অ্যাপ ০.৪.৪১, a6, ২০ অক্টোবর ২০২৬)।
@@ -32,7 +34,7 @@ class MyPhonesScreen extends ConsumerStatefulWidget {
   /// এই ফোন বের হলে — না দিলে অ্যাপের নিজের ([AuthController.signOutHere])
   final Future<void> Function()? signOutHere;
 
-  static const String title = 'আমার ফোনগুলো';
+  static String get title => AppLocale.l10n.profilePhonesTitle;
 
   @override
   ConsumerState<MyPhonesScreen> createState() => _MyPhonesScreenState();
@@ -82,7 +84,7 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
     } on ProfileDoorsMissing {
       if (mounted) setState(() => _old = true);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'ফোনের তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.profilePhonesLoadFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -94,17 +96,17 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
       builder: (dialog) => AlertDialog(
         key: const ValueKey('phone-out-confirm'),
         icon: const Icon(Symbols.logout),
-        title: Text(phone.current ? 'এই ফোন থেকেই বের হবেন?' : 'এই ফোন থেকে বের করে দেবেন?'),
+        title: Text(phone.current ? dialog.l10n.profilePhonesSignOutHereTitle : dialog.l10n.profilePhonesSignOutOtherTitle),
         content: Text(
           phone.current
-              ? '“${phone.name}” — এটা আপনার হাতের এই ফোনটাই। বের করলে এখনই লগইন পাতায় ফিরবেন; আবার ঢুকতে পাসওয়ার্ড লাগবে।'
-              : '“${phone.name}” থেকে আপনার লগইন এখনই বন্ধ হবে। ঐ ফোনে আবার ঢুকতে পাসওয়ার্ড লাগবে।',
+              ? dialog.l10n.profilePhonesSignOutHereBody(phone.name)
+              : dialog.l10n.profilePhonesSignOutOtherBody(phone.name),
         ),
         actions: [
           TextButton(
             key: const ValueKey('phone-out-no'),
             onPressed: () => Navigator.of(dialog).pop(false),
-            child: const Text('না, থাক'),
+            child: Text(dialog.l10n.profilePhonesKeep),
           ),
           FilledButton(
             key: const ValueKey('phone-out-yes'),
@@ -113,7 +115,7 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
               foregroundColor: Theme.of(dialog).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(dialog).pop(true),
-            child: const Text('বের করে দিন'),
+            child: Text(dialog.l10n.profilePhonesSignOut),
           ),
         ],
       ),
@@ -124,7 +126,7 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
       final done = await widget.api.signOutPhone(phone.id);
       if (!mounted) return;
       if (!done) {
-        _say('“${phone.name}” আগেই বের হয়ে গেছে — তালিকা নতুন করে আনা হলো।');
+        _say(context.l10n.profilePhonesAlreadyOut(phone.name));
         await _load();
         return;
       }
@@ -134,9 +136,9 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
         await (widget.signOutHere ?? () => ref.read(authStateProvider.notifier).signOutHere())();
         return;
       }
-      _say('“${phone.name}” থেকে বের করে দেওয়া হলো।');
+      _say(context.l10n.profilePhonesSignedOut(phone.name));
     } catch (e) {
-      _say(errorMessageFor(e, fallback: 'বের করা গেল না। একটু পরে আবার চেষ্টা করুন।'));
+      _say(errorMessageFor(e, fallback: context.l10n.profilePhonesSignOutFailed));
     } finally {
       if (mounted) setState(() => _leaving = null);
     }
@@ -155,19 +157,20 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
       if (_busy && !_loaded) const LoadingSkeleton(rows: 3),
       if (_busy && _loaded) const LinearProgressIndicator(),
       if (_old)
-        const EmptyState(
-          key: ValueKey('phones-server-old'),
+        EmptyState(
+          key: const ValueKey('phones-server-old'),
           icon: Symbols.cloud_sync,
-          title: ProfileDoorsMissing.title,
-          message: 'আমার ফোনগুলো সার্ভারের নতুন সংস্করণ এলে চালু হবে।',
+          title: context.l10n.profileServerMissingTitle,
+          message: context.l10n.profilePhonesServerOld,
         ),
       if (_error != null) ErrorState(key: const ValueKey('phones-error'), message: _error!, onRetry: _busy ? null : _load),
       if (_loaded && _rows.isEmpty && _error == null && !_old)
-        const EmptyState(icon: Symbols.devices, title: 'কোনো ফোনে ঢোকা নেই', message: 'নতুন ফোনে লগইন করলে এখানে দেখাবে।'),
+        EmptyState(
+            icon: Symbols.devices, title: context.l10n.profilePhonesEmptyTitle, message: context.l10n.profilePhonesEmptyMessage),
     ];
     final more = _next != null && !_old;
     return Scaffold(
-      appBar: const AbosScreenBar(title: MyPhonesScreen.title, module: 'আমি'),
+      appBar: AbosScreenBar(title: context.l10n.profilePhonesTitle, module: context.l10n.profileModuleMe),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView.builder(
@@ -190,10 +193,11 @@ class _MyPhonesScreenState extends ConsumerState<MyPhonesScreen> {
   }
 }
 
-/// "শেষ ব্যবহার: 20/10/2026 সকাল 10:00"
+/// "শেষ ব্যবহার: 20/10/2026 সকাল 10:00" (ইংরেজিতে "Last used: 20/10/2026 10:00 AM") — অ্যাপের ভাষায়
 String lastUsedLine(MyPhone phone) {
   final when = phone.lastUsedAt;
-  return 'শেষ ব্যবহার: ${when == null ? 'জানা নেই' : banglaStamp(when)}';
+  final words = AppLocale.l10n;
+  return words.profilePhonesLastUsed(when == null ? words.profilePhonesLastUsedUnknown : stampText(when));
 }
 
 class _PhoneRow extends StatelessWidget {
@@ -217,7 +221,7 @@ class _PhoneRow extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           MergeSemantics(
             child: Semantics(
-              label: [phone.name, if (phone.current) 'এই ফোন', used].join(', '),
+              label: [phone.name, if (phone.current) context.l10n.profilePhonesThisPhone, used].join(', '),
               child: ExcludeSemantics(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Padding(
@@ -233,7 +237,7 @@ class _PhoneRow extends StatelessWidget {
                             key: const ValueKey('phone-current'),
                             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
                             decoration: BoxDecoration(color: p.successSurface, borderRadius: BorderRadius.circular(999)),
-                            child: Text('এই ফোন', style: TextStyle(color: p.success, fontWeight: FontWeight.w700, fontSize: 12.5)),
+                            child: Text(context.l10n.profilePhonesThisPhone, style: TextStyle(color: p.success, fontWeight: FontWeight.w700, fontSize: 12.5)),
                           ),
                       ]),
                       const SizedBox(height: 2),
@@ -254,7 +258,7 @@ class _PhoneRow extends StatelessWidget {
               icon: leaving
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Symbols.logout),
-              label: Text('বের করে দিন', semanticsLabel: '${phone.name} থেকে বের করে দিন'),
+              label: Text(context.l10n.profilePhonesSignOut, semanticsLabel: context.l10n.profilePhonesSignOutNamed(phone.name)),
             ),
           ),
         ]),

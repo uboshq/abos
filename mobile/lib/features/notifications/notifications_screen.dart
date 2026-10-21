@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/web_inside/web_inside.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/day_part.dart';
+import '../../core/locale/l10n.dart';
 
 /// The bell's page — this person's messages, newest first; a tap marks one
 /// read, and "সব পড়া হয়েছে" empties the bell (owner, 6 Oct 2026).
@@ -66,8 +67,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = errorMessageFor(error,
-          fallback: 'নোটিফিকেশন আনা গেল না।',
-          whenAbsent: 'নোটিফিকেশন এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'));
+          fallback: context.l10n.notificationsLoadFailed,
+          whenAbsent: context.l10n.notificationsServerMissing));
     }
   }
 
@@ -101,7 +102,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: FilledButton.icon(
                   key: const ValueKey('notification-open'),
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('খুলুন'),
+                  label: Text(context.l10n.commonOpen),
                   onPressed: () {
                     Navigator.of(context).pop();
                     (widget.openWeb ?? (c, p) => c.go('/home/${WebPaths.navPathFor(p)}'))(this.context, path);
@@ -128,13 +129,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Scaffold(
       appBar: AbosScreenBar(
-        title: 'নোটিফিকেশন',
+        title: context.l10n.notificationsTitle,
         actions: [
           if ((page?.unread ?? 0) > 0)
             TextButton(
               onPressed: _readAll,
               // ⓘ মাথার পট্টির লেখার রং — আলোতে সাদা (আগের মতো), অন্ধকারে থিমের
-              child: Text('সব পড়া হয়েছে',
+              child: Text(context.l10n.notificationsMarkAllRead,
                   style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onSurface)),
             ),
         ],
@@ -144,14 +145,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: page == null
             ? ListView(children: [
                 const SizedBox(height: AppSpacing.xxl),
-                Center(child: Text(_error ?? 'আনা হচ্ছে…')),
+                Center(child: Text(_error ?? context.l10n.notificationsLoading)),
               ])
             : page.items.isEmpty
-                ? ListView(children: const [
+                ? ListView(children: [
                     EmptyState(
                       icon: Icons.notifications_none,
-                      title: 'কোনো নোটিফিকেশন নেই',
-                      message: 'নতুন কিছু এলে এখানে দেখাবে।',
+                      title: context.l10n.notificationsEmptyTitle,
+                      message: context.l10n.notificationsEmptyMessage,
                     ),
                   ])
                 : ListView.separated(
@@ -171,7 +172,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         subtitle: Text(
                           [
                             if (item.body.isNotEmpty) item.body,
-                            if (item.at != null) banglaStamp(item.at!),
+                            if (item.at != null) stampText(item.at!),
                           ].join('\n'),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,

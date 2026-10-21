@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
 import '../records/approval_record.dart';
+import '../locale/app_locale.dart';
 
 /// The three doors of docs/Contract §৫ — the first thing this app does that
 /// is not sync.
@@ -87,7 +88,7 @@ class ApprovalsApi {
     // with no reason reaches the requester as a refusal they cannot act on,
     // and they will ask a person instead of reading the record.
     if (reason.isEmpty) {
-      throw ArgumentError('প্রত্যাখ্যানের কারণ লেখা বাধ্যতামূলক');
+      throw ArgumentError(AppLocale.l10n.approvalsRejectReasonRequired);
     }
 
     await OnceKey.of('approval-reject:$id').send(() => ApiClient.dio.post<Map<String, dynamic>>(
@@ -145,7 +146,7 @@ class ApprovalSheet {
       for (final c in columns)
         if (totals[c.$1] != null && totals[c.$1]!.trim().isNotEmpty) '${c.$2} ${totals[c.$1]}',
     ];
-    return parts.isEmpty ? null : 'মোট — ${parts.join(' · ')}';
+    return parts.isEmpty ? null : AppLocale.l10n.approvalsSheetTotalLine(parts.join(' · '));
   }
 }
 
