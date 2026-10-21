@@ -313,7 +313,14 @@ final class CollectionService
                         'narration' => __('sales::message.money_in', ['no' => $collection->document_no]),
                     ],
                     ...(bccomp($charge, '0', 4) > 0 ? [[
-                        'account_id' => $this->account(StandardChart::BANK_CHARGES)->id,
+                        /*
+                         * ⛔ MFS-এর চার্জ MFS-এর খাতে (৫২১১), ব্যাংকের নয় — নকশা #৯ (fe, ২১ অক্টোবর ২০২৬)। আগে সব চার্জ ৫২১০-এ যেত,
+                         * তাই বিকাশের খরচ "ব্যাংক চার্জ"-এ বসত আর দুই খরচের রিপোর্ট ([[BankCharges]]) ভুল ভাগ দেখাত। হিসাবের
+                         * ভাউচারের নিয়মটাই ([[VoucherService::chargeAccountFor()]]); পুরনো পোস্ট হওয়া সারি বদলায় না।
+                         */
+                        'account_id' => $this->account($collection->account?->isMfs() === true
+                            ? StandardChart::MFS_CHARGES
+                            : StandardChart::BANK_CHARGES)->id,
                         'debit' => $charge,
                         'narration' => __('sales::message.bank_charge_on', ['no' => $collection->document_no]),
                     ]] : []),

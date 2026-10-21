@@ -131,8 +131,19 @@ export function moneyMethod ({
             this.amount = raw === '' ? 0 : Number(raw)
         },
 
+        /*
+         * ⓘ বাইরের অংশের জন্য (আদায়ের সারাংশ, a5): পদ্ধতি বা চার্জ বদলালেই `money-method` ঘটনা, `detail = { method, charge }` —
+         * চার্জ কেবল যে পদ্ধতিতে চার্জের ঘর আছে, নইলে ০ ([[chargeNumber]])।
+         */
+        announce () {
+            this.$dispatch('money-method', { method: this.method, charge: this.chargeNumber })
+        },
+
         init () {
             this.readAmount()
+            this.$watch('method', () => this.announce())
+            this.$watch('charge', () => this.announce())
+            this.$nextTick(() => this.announce())
 
             const form = this.$el.closest('form')
 
