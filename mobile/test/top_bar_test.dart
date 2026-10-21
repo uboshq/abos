@@ -349,7 +349,13 @@ void main() {
 
     test('the version line reads the app constant, never a written number', () {
       final src = File('lib/core/navigation/top_bar/avatar_menu.dart').readAsStringSync();
-      expect(src, contains(r"'সেটিংস · সংস্করণ ${AppConfig.appVersion}'"));
+      // ⓘ লেখা এখন ARB-তে (0.4.43): "সেটিংস · সংস্করণ {version}" / "Settings · Version {version}" — সংখ্যাটা তবু ধ্রুবক থেকে
+      expect(src, contains('words.avatarMenuSettingsVersion(AppConfig.appVersion)'));
+      for (final arb in ['lib/l10n/app_bn.arb', 'lib/l10n/app_en.arb']) {
+        final text = File(arb).readAsStringSync();
+        expect(RegExp(r'"avatarMenuSettingsVersion": "[^"]*\{version\}"').hasMatch(text), isTrue, reason: arb);
+        expect(RegExp(r'(সংস্করণ|Version)\s*[0-9০-৯]').hasMatch(text), isFalse, reason: '⛔ সংস্করণ হাতে লেখা ($arb)');
+      }
       expect(RegExp(r'সংস্করণ\s*[0-9০-৯]').hasMatch(src), isFalse, reason: '⛔ সংস্করণ হাতে লেখা');
     });
 

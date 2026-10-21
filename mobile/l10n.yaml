@@ -1,0 +1,8 @@
+# ⭐ অ্যাপের ভাষা — বাংলা (মূল) আর ইংরেজি (0.4.43)। নির্দেশিকা: E:\ABOS\app-0443-ভাষা-নির্দেশিকা.md
+# `flutter gen-l10n` lib/l10n/-এ লেখে (সিন্থেটিক প্যাকেজ নয়); বানানো ফাইলগুলো রিপোতে থাকে।
+arb-dir: lib/l10n
+template-arb-file: app_bn.arb
+output-localization-file: app_localizations.dart
+output-class: AppL10n
+output-dir: lib/l10n
+nullable-getter: false

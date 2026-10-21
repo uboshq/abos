@@ -10,6 +10,7 @@ import 'core/sync_engine/live_sync.dart';
 import 'core/sync_engine/sync_status.dart';
 import 'core/auth/auth_controller.dart';
 import 'core/locale/app_locale.dart';
+import 'core/locale/locale_choice.dart';
 import 'core/auth/auth_state.dart';
 import 'core/crash/crash_reporter.dart';
 import 'core/auth/session_watch.dart';
@@ -63,6 +64,12 @@ Future<void> main() async {
       await LockDelay.instance.load();
       await ThemeChoices.instance.load();
       ThemeChoices.onChanged = (_) => WidgetHub.refresh();
+      // ⭐ ভাষার বাছাই (0.4.43) — উইজেট নতুন ভাষায়, আর সার্ভারে রাখা ([[saveLocale]]; পুরনো সার্ভারে চুপ)
+      await LocaleChoices.instance.load();
+      LocaleChoices.onChanged = (_) async {
+        unawaited(WidgetHub.refresh());
+        await saveLocale(AppLocale.code);
+      };
     },
     restoreSession: () async {
       await authController.restoreSession();
@@ -255,6 +262,8 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       _watched?.routerDelegate.removeListener(_noteScreen);
       _watched = router..routerDelegate.addListener(_noteScreen);
     }
+    // ⭐ মানুষের ভাষা — চাপ দিলেই পুরো অ্যাপ নতুন ভাষায় ([appLocaleProvider]; সুইচ বন্ধ থাকলে সবসময় বাংলা)
+    final locale = ref.watch(appLocaleProvider);
     // ⭐ মানুষের আলো/অন্ধকার বাছাই — চাপ দিলেই বদলায়, অ্যাপ আবার খুলতে হয় না ([ThemeChoices])
     return ValueListenableBuilder<ThemeChoice>(
       valueListenable: ThemeChoices.instance.current,
@@ -268,7 +277,7 @@ class _AbosAppState extends ConsumerState<AbosApp> {
          * ⭐ বাংলা — তারিখ বাছাই, OK/CANCEL, কপি-পেস্টের মেনু, "ফিরে যান" টিপ আর মাসের নাম (পূর্ণ নিরীক্ষা §৯ ⚠️৫, ১৮ অক্টোবর ২০২৬;
          * মালিক কেবল বাংলা পড়েন)। ⓘ টাকা আর তারিখের নিজের লেখা ধরন [[Money]]-তে, এখানে নয়।
          */
-        locale: AppLocale.locale,
+        locale: locale,
         supportedLocales: AppLocale.supported,
         localizationsDelegates: AppLocale.delegates,
         routerConfig: router,

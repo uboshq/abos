@@ -15,9 +15,13 @@ void main() {
     expect(banglaStamp(DateTime(2026, 10, 20, 10)), isNot(matches(RegExp('AM|PM'))));
   });
 
+  /// ⓘ ইংরেজি ভাষায় AM/PM-ই ঠিক (0.4.43) — সেটা কেবল day_part.dart-এ ([clockText], [stampText]); বাকি সবাই ওগুলো ডাকে
   test('no screen writes a time with the English AM/PM pattern', () {
     final offenders = <String>[];
-    for (final f in Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
+    for (final f in Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart') && !f.path.replaceAll(r'\', '/').endsWith('lib/core/widgets/day_part.dart'))) {
       final lines = f.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
@@ -27,6 +31,6 @@ void main() {
         }
       }
     }
-    expect(offenders, isEmpty, reason: '⛔ ইংরেজি AM/PM — banglaStamp বা banglaClock নাও');
+    expect(offenders, isEmpty, reason: '⛔ ইংরেজি AM/PM — stampText বা clockText নাও (ভাষা মেনে)');
   });
 }

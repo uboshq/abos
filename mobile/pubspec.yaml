@@ -145,6 +145,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # ⭐ lib/l10n/*.arb থেকে AppL10n (l10n.yaml)
+  generate: true
 
   # The login screen's brand (web public/brand/, copied as-is).
   assets:

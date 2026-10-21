@@ -1,4 +1,8 @@
+import 'dart:ui' show Locale;
+
 import 'package:intl/intl.dart';
+
+import '../locale/app_locale.dart';
 
 /// The greeting a depot actually says at this hour.
 ///
@@ -58,3 +62,32 @@ String banglaClock(DateTime when) {
 /// ⭐ "20/10/2026 সকাল 10:00" — তারিখ আর সময় এক লাইনে, সব পর্দায় এক নিয়মে: অঙ্ক ইংরেজিতে, শব্দ বাংলায় (fe, ২০ অক্টোবর ২০২৬:
 /// "ইংরেজি AM চলবে না")। ⛔ `DateFormat('… hh:mm a')` নয় — ওটা "AM/PM" লেখে।
 String banglaStamp(DateTime when) => '${DateFormat('dd/MM/yyyy').format(when)} ${banglaClock(when)}';
+
+/// ⭐ ঘড়ির লেখা মানুষের ভাষায় (0.4.43): বাংলায় [banglaClock] ("সকাল 10:00"), ইংরেজিতে "10:00 AM" — ইংরেজিতে AM/PM-ই ঠিক।
+/// [locale] না দিলে [AppLocale.current]। ⓘ অঙ্ক দুই ভাষাতেই ইংরেজি (মালিকের নিয়ম)।
+String clockText(DateTime when, [Locale? locale]) {
+  if (!AppLocale.isEnglish(locale)) return banglaClock(when);
+  final hour = when.hour % 12 == 0 ? 12 : when.hour % 12;
+  final minute = when.minute.toString().padLeft(2, '0');
+  return '$hour:$minute ${when.hour < 12 ? 'AM' : 'PM'}';
+}
+
+/// ⭐ তারিখ আর সময় এক লাইনে, মানুষের ভাষায়: বাংলায় [banglaStamp] ("20/10/2026 সকাল 10:00"), ইংরেজিতে "20/10/2026 10:00 AM"
+String stampText(DateTime when, [Locale? locale]) =>
+    AppLocale.isEnglish(locale) ? '${DateFormat('dd/MM/yyyy').format(when)} ${clockText(when, locale)}' : banglaStamp(when);
+
+/// বারো মাসের বাংলা নাম — জানুয়ারি থেকে
+const List<String> banglaMonths = [
+  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
+];
+
+/// বারো মাসের ইংরেজি নাম — জানুয়ারি থেকে
+const List<String> englishMonths = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/// ⭐ "সেপ্টেম্বর 2026" বা "September 2026" — মাস আর বছর মানুষের ভাষায় ([locale] না দিলে [AppLocale.current]); বছর ইংরেজি অঙ্কে
+String monthText(DateTime month, [Locale? locale]) =>
+    '${(AppLocale.isEnglish(locale) ? englishMonths : banglaMonths)[month.month - 1]} ${month.year}';

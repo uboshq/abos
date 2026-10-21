@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../config/app_config.dart';
+import '../../locale/app_locale.dart';
+import '../../../l10n/app_localizations.dart' show lookupAppL10n;
 import '../../sync_engine/sync_engine.dart';
 import '../../sync_engine/sync_status.dart';
 import '../../theme/bar_palette.dart';
@@ -114,9 +116,10 @@ enum TopBarLeading { menu, back }
 /// আসল খাতার সার্ভার `erp.adi.com.bd`; অন্য যেকোনো ঠিকানা ডেমো/পরীক্ষার
 bool isDemoServer([String? baseUrl]) => Uri.tryParse(baseUrl ?? AppConfig.apiBaseUrl)?.host != 'erp.adi.com.bd';
 
-/// বাংলা অঙ্ক
-String bnDigits(Object value) =>
-    value.toString().split('').map((c) => '0123456789'.contains(c) ? '০১২৩৪৫৬৭৮৯'['0123456789'.indexOf(c)] : c).join();
+/// বাংলা অঙ্ক — পর্দা-পাঠকের বাংলা বাক্যে; ইংরেজিতে ([locale] বা [AppLocale.current]) অঙ্ক যেমন আছে
+String bnDigits(Object value, [Locale? locale]) => AppLocale.isEnglish(locale)
+    ? value.toString()
+    : value.toString().split('').map((c) => '0123456789'.contains(c) ? '০১২৩৪৫৬৭৮৯'['0123456789'.indexOf(c)] : c).join();
 
 /// ঘণ্টার গোনা — ১ থেকে ৯৯, তার বেশি "99+"; ০ বা অজানা হলে null (Material 3 badge)।
 /// ⓘ অঙ্ক ইংরেজিতে — মালিকের অনুমোদিত পুরো-পাতার নমুনা ("21", "3"; ২০ অক্টোবর ২০২৬), টাকার অঙ্কের মতোই;
@@ -126,10 +129,11 @@ String? badgeText(int? count) {
   return count > 99 ? '99+' : '$count';
 }
 
-/// পর্দা-পাঠকের কথা: "বিজ্ঞপ্তি, ৩টা না-পড়া"
-String bellLabel(int? unread, {bool news = false}) {
-  if (unread != null && unread > 0) return 'বিজ্ঞপ্তি, ${bnDigits(unread)}টা না-পড়া';
-  return news ? 'বিজ্ঞপ্তি, নতুন খবর আছে' : 'বিজ্ঞপ্তি';
+/// পর্দা-পাঠকের কথা: "বিজ্ঞপ্তি, ৩টা না-পড়া" — ইংরেজিতে "Notifications, 3 unread" ([locale] না দিলে [AppLocale.current])
+String bellLabel(int? unread, {bool news = false, Locale? locale}) {
+  final words = lookupAppL10n(locale ?? AppLocale.current);
+  if (unread != null && unread > 0) return words.topBarBellUnread(bnDigits(unread, locale ?? AppLocale.current));
+  return news ? words.topBarBellNews : words.topBarBell;
 }
 
 /// পর্দা-পাঠকের কথা: "ADI Wholesale, ময়মনসিংহ শাখা, বিক্রয়"

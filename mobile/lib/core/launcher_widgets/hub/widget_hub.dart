@@ -11,6 +11,8 @@ import '../../privacy/phone_privacy.dart';
 import '../../profile/face_cache.dart';
 import '../kinds/all_kinds.dart';
 import '../../theme/theme_choice.dart';
+import '../../locale/app_locale.dart';
+import '../../locale/locale_choice.dart';
 import '../kit/widget_doc.dart';
 import '../kit/widget_kind.dart';
 import 'widget_summary_api.dart';
@@ -34,6 +36,9 @@ class WidgetHub {
 
   /// মানুষের আলো/অন্ধকার বাছাই — উইজেটও একই রঙে ([ThemeChoices]; "phone", "light", "dark")
   static const themeKey = 'widget_theme';
+
+  /// ⭐ মানুষের ভাষা — "bn" বা "en" ([LocaleChoices]; 0.4.43); Kotlin আঁকিয়ে নিজের লেখা (যেমন "কখনকার হিসাব") এতে বাছে
+  static const localeKey = 'widget_locale';
 
   static String docKey(String key) => 'doc_$key';
 
@@ -135,6 +140,9 @@ class WidgetHub {
     final generation = _generation;
     bool current() => generation == _generation;
     try {
+      // ⭐ ভাষা আগে — সারাংশের ডাকের `Accept-Language` আর প্রতিটা নথির লেখা [AppLocale.current] মানে; পেছনের isolate-এও
+      // ভাণ্ডার থেকে পড়া, যাতে ভুল করে বাংলা ধরে না নেয়
+      await LocaleChoices.instance.load();
       WidgetSummary? server;
       try {
         server = await fetch();
@@ -162,6 +170,7 @@ class WidgetHub {
       await ThemeChoices.instance.load();
       if (!current()) return;
       await _quiet(() => save(themeKey, ThemeChoices.instance.current.value.name), 'theme');
+      await _quiet(() => save(localeKey, AppLocale.code), 'locale');
 
       for (final kind in kinds()) {
         if (!current()) return;

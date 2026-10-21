@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../config/app_config.dart';
+import '../../locale/l10n.dart';
+import '../../locale/language_switch.dart';
+import '../../locale/locale_choice.dart';
 import '../../privacy/lock_delay.dart';
 import '../../router/profile_routes.dart';
 import '../../theme/bar_palette.dart';
@@ -26,7 +29,7 @@ Future<AvatarChoice?> showAvatarMenu(
     showGeneralDialog<AvatarChoice>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'মেনু বন্ধ',
+      barrierLabel: context.l10n.avatarMenuClose,
       // ⓘ আবছা কেবল বারের নিচে (নমুনা) — বার, কোম্পানি-শাখা আর ছবির কমলা দাগ পরিষ্কার থাকে; পর্দা নিচে [_Anchored]-এ
       barrierColor: const Color(0x00000000), // dark-ok
       transitionDuration: const Duration(milliseconds: 150),
@@ -117,6 +120,7 @@ class AvatarMenu extends StatelessWidget {
     final line = Divider(height: 1, thickness: 1, color: c.menuLine);
     // ⓘ সার্ভার কী পারে (/me features) — Riverpod না থাকলে (একা-চলা টেস্ট) কিছুই চালু ধরা হয় না
     final features = ProfileRoutes.featuresOf(context);
+    final words = context.l10n;
 
     return Material(
       key: const ValueKey('avatar-menu'),
@@ -161,20 +165,25 @@ class AvatarMenu extends StatelessWidget {
                 _Item(
                   key: const ValueKey('avatar-company'),
                   icon: Symbols.domain,
-                  title: 'কোম্পানি বদল',
+                  title: words.avatarMenuSwitchCompany,
                   onTap: () => pick(AvatarChoice.company),
                 ),
                 line,
               ],
               const _ThemeRow(),
               line,
+              // ⛔ ভাষার সারি লুকানো — সব লেখা ARB-তে না যাওয়া পর্যন্ত ([LanguageSwitch.ready])
+              if (LanguageSwitch.shown) ...[
+                const _LanguageRow(),
+                line,
+              ],
               ValueListenableBuilder<Duration>(
                 valueListenable: LockDelay.instance.current,
                 builder: (context, delay, _) => _Item(
                   key: const ValueKey('avatar-lock'),
                   icon: Symbols.lock,
-                  title: 'পিন ও আঙুলের ছাপ',
-                  hint: 'তালার সময়: ${LockDelay.label(delay.inMinutes)}',
+                  title: words.avatarMenuPinAndFingerprint,
+                  hint: words.avatarMenuLockAfter(LockDelay.label(delay.inMinutes)),
                   onTap: () => pick(AvatarChoice.lock),
                 ),
               ),
@@ -184,7 +193,7 @@ class AvatarMenu extends StatelessWidget {
                 _Item(
                   key: const ValueKey('avatar-devices'),
                   icon: Symbols.devices,
-                  title: 'আমার ফোনগুলো',
+                  title: words.avatarMenuMyPhones,
                   onTap: () => ProfileRoutes.openPhonesFromMenu(context),
                 ),
                 line,
@@ -193,14 +202,14 @@ class AvatarMenu extends StatelessWidget {
                 key: const ValueKey('avatar-settings'),
                 icon: Symbols.settings,
                 // ⓘ সংস্করণ অ্যাপের নিজের ধ্রুবক থেকে ([AppConfig.appVersion], pubspec-এর সাথে বাঁধা) — হাতে লেখা নয়
-                title: 'সেটিংস · সংস্করণ ${AppConfig.appVersion}',
+                title: words.avatarMenuSettingsVersion(AppConfig.appVersion),
                 onTap: () => pick(AvatarChoice.settings),
               ),
               line,
               _Item(
                 key: const ValueKey('avatar-logout'),
                 icon: Symbols.power_settings_new,
-                title: 'বের হওয়া',
+                title: words.avatarMenuSignOut,
                 color: c.danger,
                 onTap: () => pick(AvatarChoice.logout),
               ),
@@ -298,6 +307,12 @@ class _ThemeRow extends StatelessWidget {
     ThemeChoice.dark: Symbols.dark_mode,
   };
 
+  static String _label(BuildContext context, ThemeChoice t) => switch (t) {
+        ThemeChoice.phone => context.l10n.avatarMenuThemePhone,
+        ThemeChoice.light => context.l10n.avatarMenuThemeLight,
+        ThemeChoice.dark => context.l10n.avatarMenuThemeDark,
+      };
+
   @override
   Widget build(BuildContext context) {
     final c = context.bar;
@@ -311,7 +326,7 @@ class _ThemeRow extends StatelessWidget {
           Row(children: [
             Icon(Symbols.palette, color: c.menuInk, size: 20),
             const SizedBox(width: 10),
-            Text('রং', style: TextStyle(fontWeight: FontWeight.w700, color: c.menuInk)),
+            Text(context.l10n.avatarMenuColour, style: TextStyle(fontWeight: FontWeight.w700, color: c.menuInk)),
           ]),
           const SizedBox(height: 6),
           ValueListenableBuilder<ThemeChoice>(
@@ -342,12 +357,79 @@ class _ThemeRow extends StatelessWidget {
                     // ⓘ শব্দ মাঝখানে ভাঙে না — জায়গা কম হলে একটু ছোট হয় (বড় লেখায় তো ঘরগুলো একটার নিচে একটা)
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(t.label, key: ValueKey('theme-${t.name}'), maxLines: 1, softWrap: false),
+                      child: Text(_label(context, t), key: ValueKey('theme-${t.name}'), maxLines: 1, softWrap: false),
                     ),
                   ),
               ],
               selected: {choice},
               onSelectionChanged: (picked) => ThemeChoices.instance.choose(picked.single),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// ⭐ ভাষা: ফোনের মতো · বাংলা · English — চাপ দিলেই পুরো অ্যাপ বদলায় ([LocaleChoices]); [_ThemeRow]-এর হুবহু গড়ন।
+/// ⓘ ভাষার নাম নিজের লিপিতে ("বাংলা", "English") — যে ভাষাই চলুক, মানুষ নিজের ভাষার নাম চেনে (Android আর iOS-এর নিয়ম)।
+/// ⛔ সারিটা মেনুতে আসে কেবল [LanguageSwitch.shown] হলে।
+class _LanguageRow extends StatelessWidget {
+  const _LanguageRow();
+
+  static String _label(BuildContext context, LocaleChoice t) => switch (t) {
+        LocaleChoice.phone => context.l10n.avatarMenuLanguagePhone,
+        LocaleChoice.bn => 'বাংলা', // l10n-ok: ভাষার নাম নিজের লিপিতে, সব ভাষায় একই
+        LocaleChoice.en => 'English',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.bar;
+    final narrow = MediaQuery.textScalerOf(context).scale(14) > 14 * 1.3;
+    return ColoredBox(
+      key: const ValueKey('avatar-language'),
+      color: c.menuRow,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Icon(Symbols.translate, color: c.menuInk, size: 20),
+            const SizedBox(width: 10),
+            Text(context.l10n.avatarMenuLanguage, style: TextStyle(fontWeight: FontWeight.w700, color: c.menuInk)),
+          ]),
+          const SizedBox(height: 6),
+          ValueListenableBuilder<LocaleChoice>(
+            valueListenable: LocaleChoices.instance.current,
+            builder: (context, choice, _) => SegmentedButton<LocaleChoice>(
+              key: const ValueKey('me-language'),
+              direction: narrow ? Axis.vertical : Axis.horizontal,
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.standard,
+                tapTargetSize: MaterialTapTargetSize.padded,
+                minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+                padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 6)),
+                side: WidgetStatePropertyAll(BorderSide(color: c.menuLine)),
+                backgroundColor: WidgetStateProperty.resolveWith(
+                    (s) => s.contains(WidgetState.selected) ? c.selected : c.menu),
+                foregroundColor: WidgetStateProperty.resolveWith(
+                    (s) => s.contains(WidgetState.selected) ? c.onSelected : c.menuInk),
+                textStyle: WidgetStateProperty.resolveWith((s) => (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).copyWith(
+                    fontSize: 12.5, fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w400)),
+              ),
+              segments: [
+                for (final t in LocaleChoice.values)
+                  ButtonSegment(
+                    value: t,
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(_label(context, t), key: ValueKey('language-${t.name}'), maxLines: 1, softWrap: false),
+                    ),
+                  ),
+              ],
+              selected: {choice},
+              onSelectionChanged: (picked) => LocaleChoices.instance.choose(picked.single),
             ),
           ),
         ]),

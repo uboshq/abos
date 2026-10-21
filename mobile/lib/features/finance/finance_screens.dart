@@ -6,6 +6,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/day_part.dart' show monthText;
 import '../../core/widgets/paged_list.dart';
 import '../books/books_widgets.dart';
 import '../money/money_screens.dart';
@@ -431,15 +432,10 @@ class RentScreen extends StatelessWidget {
       );
 }
 
-const _months = [
-  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
-];
-
-/// `2026-09-01` → "সেপ্টেম্বর 2026"
-String monthWords(String? iso) {
+/// `2026-09-01` → "সেপ্টেম্বর 2026" (ইংরেজিতে "September 2026"; [monthText], [locale] না দিলে [AppLocale.current])
+String monthWords(String? iso, [Locale? locale]) {
   final d = iso == null ? null : DateTime.tryParse(iso);
-  return d == null ? '—' : '${_months[d.month - 1]} ${d.year}';
+  return d == null ? '—' : monthText(d, locale);
 }
 
 // ───────────────────────────── হাতধার ─────────────────────────────

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import '../auth/token_storage.dart';
 import '../config/app_config.dart';
+import '../locale/app_locale.dart';
 
 /// One Dio instance for the whole app — every feature's data layer imports
 /// this, never creates its own client. A second client would mean a second
@@ -80,6 +81,8 @@ class ApiClient {
           options.headers['X-Platform'] = defaultTargetPlatform == TargetPlatform.iOS
               ? 'ios'
               : 'android';
+          // ⭐ মানুষের ভাষা, প্রতিটা ডাকে — সার্ভারের বার্তা, ভুলের লেখা আর কাগজ একই ভাষায় (0.4.43; [[AppLocale.current]])
+          options.headers['Accept-Language'] = AppLocale.code;
 
           if (options.extra[_skipAuthRefreshKey] != true) {
             final token = TokenStorage.instance.cachedAccessToken ??
