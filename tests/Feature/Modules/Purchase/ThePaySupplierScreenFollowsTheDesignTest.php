@@ -366,6 +366,18 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
             '⛔ #১১: সই বন্ধ কোম্পানিতে মূল বোতাম "পোস্ট" নয়');
         $this->assertStringContainsString(e(__('money.screen.draft')), $html);
         $this->assertStringNotContainsString('data-pay-signer', $html, '⛔ #৪: সই বন্ধ, অথচ মাথায় "সই দেবেন" লেখা');
+        $this->assertSameVerdict(false);
+    }
+
+    /** ⭐ #৪ (fe): মাথার কথা আর পোস্টের আটকানো একই রায় — [[ApprovalEngine::firstSigner()]] আর [[ApprovalEngine::requires()]] */
+    private function assertSameVerdict(bool $expected): void
+    {
+        $engine = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $requires = $engine->requires('purchase', 'payment', null, class_basename(Payment::class));
+        $first = $engine->firstSigner('purchase', 'payment', null, class_basename(Payment::class));
+
+        $this->assertSame($expected, $requires, 'প্রস্তুতিটাই ভুল — সইয়ের ছক প্রত্যাশামতো নয়');
+        $this->assertSame($requires, $first !== null, '⛔ #৪: মাথা আর পোস্ট দুই রায় দিল — সই লাগে কি না');
     }
 
     /** ⭐ মিল-তালিকা #৪ — সই চালু থাকলে মাথায় প্রথম সইকারী আর মোট ধাপ, পোস্টের একই ছক থেকে */
@@ -389,6 +401,7 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
             '⛔ #৪: সই চালু, অথচ মাথায় "সই দেবেন: Payment manager (ধাপ 1/2)" নেই');
         $this->assertMatchesRegularExpression('/data-pay-primary[^>]*>\s*'.preg_quote(e(__('money.screen.send')), '/').'\s*</u', $html,
             '⛔ #৪: মাথা সই বলছে, অথচ বোতাম "পোস্ট"');
+        $this->assertSameVerdict(true);
     }
 
     public function test_item_24_the_paying_accounts_balance_is_on_the_screen(): void
