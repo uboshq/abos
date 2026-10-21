@@ -147,8 +147,9 @@ final class PaymentChanges
         $note = filled($note) ? mb_substr(trim((string) $note), 0, 500) : null;
 
         if ($own) {
-            $this->engine->cancel($approval, $by);
+            // ⓘ আগে সারি বন্ধ (লেখকের নোটসহ), তারপর অনুরোধ — ফেরানোর শ্রোতা তখন বন্ধ সারি দেখে কিছু করে না
             $this->close($change, PaymentChange::CANCELLED, $by, $note);
+            $this->engine->cancel($approval, $by);
 
             return $change->fresh();
         }
@@ -203,6 +204,23 @@ final class PaymentChanges
         } catch (ValidationException $e) {
             $this->close($change, PaymentChange::REJECTED, $signer, (string) collect($e->errors())->flatten()->first());
         }
+    }
+
+    /**
+     * ⭐ অনুমোদনের কেন্দ্রের সাধারণ "ফিরিয়ে নিন" — অপেক্ষার বদলটাও বন্ধ, অডিটে কারণসহ; কর্মীর সারিতে আগের তথ্যই
+     * ([[CloseThePaymentChangeOnWithdrawal]]; fe, ২১ অক্টোবর ২০২৬)।
+     */
+    public function closeWithdrawn(Approval $approval): void
+    {
+        $change = $approval->approvable;
+
+        if (! $change instanceof PaymentChange || ! $change->isPending()) {
+            return;
+        }
+
+        $by = $approval->requested_by === null ? null : User::query()->find((int) $approval->requested_by);
+        $this->close($change, PaymentChange::CANCELLED, $by, __('hr::payment_change.withdrawn_note'));
+        $change->auditAction('payment_change_withdrawn', __('hr::payment_change.withdrawn_note'));
     }
 
     public function pendingFor(Employee $employee): ?PaymentChange

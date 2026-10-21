@@ -722,7 +722,11 @@ final class ApprovalEngine
 
             $locked->update(['status' => Approval::CANCELLED, 'decided_at' => now()]);
 
-            return $locked->fresh();
+            // ⭐ কাগজের মডিউলকে জানানো — পাকা হওয়ার পরে ([[ApprovalWithdrawn]]; a6, ২১ অক্টোবর ২০২৬)
+            $withdrawn = $locked->fresh();
+            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalWithdrawn::from($withdrawn)));
+
+            return $withdrawn;
         });
     }
 

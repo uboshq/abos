@@ -5,9 +5,11 @@ declare(strict_types=1);
 use App\Core\Contracts\KnowsAUsersEmployee;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Events\ApprovalDecided;
+use App\Core\Events\ApprovalWithdrawn;
 use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
+use App\Modules\Hr\Listeners\CloseThePaymentChangeOnWithdrawal;
 use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
@@ -564,6 +566,8 @@ return [
             FinishTheSalaryChangeOnTheLastSignature::class,
             FinishThePaymentChangeOnTheLastSignature::class,
         ],
+        // ⭐ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — বেতনের ঠিকানার অপেক্ষার বদলটাও বন্ধ (fe, ২১ অক্টোবর ২০২৬)
+        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class],
     ],
 
     'sensitive_fields' => [

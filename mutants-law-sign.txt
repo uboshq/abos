@@ -277,3 +277,20 @@ M53 app/Modules/Hr/Services/PayrollService.php
     old: "            ->where('payment_method', self::HELD)"
     new: "            ->where('payment_method', 'none')"
     kill: same test (the left-out CSV lists EMP-NEW)
+
+== fe round 2, answer 3 — the approval centre's general withdraw closes the waiting bank change ==
+
+M54 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalWithdrawn::from($withdrawn)));"
+    new: ""
+    kill: TheSalaryWentWhereOneHandSaidTest::test_withdrawing_from_the_approval_centre_closes_the_waiting_change_too
+
+M55 app/Modules/Hr/Services/PaymentChanges.php
+    old: "        $this->close($change, PaymentChange::CANCELLED, $by, __('hr::payment_change.withdrawn_note'));"   (in closeWithdrawn)
+    new: ""
+    kill: same test (row stays pending)
+
+M56 app/Modules/Hr/Services/PaymentChanges.php
+    old: "        $change->auditAction('payment_change_withdrawn', __('hr::payment_change.withdrawn_note'));"
+    new: ""
+    kill: same test (no audit row)

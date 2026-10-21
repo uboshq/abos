@@ -144,6 +144,25 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertNull(PayrollService::heldReason($fresh->fresh()));
     }
 
+    /** ⭐ অনুমোদনের কেন্দ্রের সাধারণ "ফিরিয়ে নিন" — অপেক্ষার বদলটাও বন্ধ, অডিটে; আগের হিসাব থাকে (fe, ২১ অক্টোবর ২০২৬) */
+    public function test_withdrawing_from_the_approval_centre_closes_the_waiting_change_too(): void
+    {
+        $this->as($this->clerk)->put(route('hr.employee.update', $this->employee), $this->form(['bank_account_no' => self::NEW]));
+        $change = PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail();
+        $approval = app(PaymentChanges::class)->approvalOf($change);
+
+        $this->give($this->clerk, 'approval.view');
+        $this->as($this->clerk)->post(route('approval.inbox.withdraw', $approval->id))->assertRedirect();
+
+        $this->assertSame(Approval::CANCELLED, (string) $approval->fresh()->status);
+        $this->assertSame(PaymentChange::CANCELLED, $change->fresh()->status, '⛔ অনুরোধ ফিরল, অথচ বদলটা "অপেক্ষায়" রয়ে গেল');
+        $this->assertSame((string) __('hr::payment_change.withdrawn_note'), (string) $change->fresh()->note);
+        $this->assertTrue(AuditTrail::query()->forRecord(PaymentChange::class, (int) $change->id)
+            ->where('action', 'payment_change_withdrawn')->exists(), '⛔ ফেরানো অডিটে নেই');
+        $this->assertSame(self::OLD, (string) $this->employee->fresh()->bank_account_no, '⛔ ফেরানোর পরে হিসাব বদলাল');
+        $this->assertNull(app(PaymentChanges::class)->pendingFor($this->employee));
+    }
+
     /** ⛔ খালি থেকে ব্যাংক — আগের পথ (নগদ) চলে, ব্যাংকে নয়, সই না পড়া পর্যন্ত */
     public function test_bank_details_set_from_empty_fall_back_to_the_previous_method_until_signed(): void
     {

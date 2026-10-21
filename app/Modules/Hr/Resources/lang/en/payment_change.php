@@ -29,4 +29,5 @@ return [
     'summary' => ':employee — :lines',
     'signed_waiting' => 'Your signature is in. The change lands once the remaining signatures are given.',
     'asked_reason' => 'Change to where :employee\'s salary goes, waiting for a second signature.',
+    'withdrawn_note' => 'The request was withdrawn from the approval centre — the change did not land; the old account stays.',
 ];
