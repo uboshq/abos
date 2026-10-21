@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Core\Support\UserLocale;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,7 +21,12 @@ final class ApiLocaleFromHeader
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->is('api/*')) {
-            app()->setLocale(UserLocale::fromHeader($request->header('Accept-Language')));
+            // ⓘ ক্রম এখানেই ঠিক হয়, অন্য মিডলওয়্যারের সারির উপর ভরসা নয়: টোকেনে ঢোকা মানুষ থাকলে তাঁর ভাষা, নইলে হেডার।
+            // `user('sanctum')` টোকেনটা এখনই চেনে, আর একই guard পরে `auth:sanctum`-কে সেই মানুষটাই দেয় (দ্বিতীয় খোঁজ নয়)।
+            $user = $request->user('sanctum');
+            app()->setLocale($user instanceof User && in_array($user->locale, UserLocale::SUPPORTED, true)
+                ? $user->locale
+                : UserLocale::fromHeader($request->header('Accept-Language')));
         }
 
         return $next($request);

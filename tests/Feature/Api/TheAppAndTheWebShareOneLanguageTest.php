@@ -51,7 +51,7 @@ final class TheAppAndTheWebShareOneLanguageTest extends TestCase
         $this->api('PATCH', '/api/v1/me/locale', ['locale' => 'en'])->assertOk()->assertJsonPath('data.locale', 'en');
 
         $this->assertSame('en', $this->user->fresh()->locale);
-        $this->api('GET', '/api/v1/me')->assertOk()->assertJsonPath('data.locale', 'en');
+        $this->api('GET', '/api/v1/me')->assertOk()->assertJsonPath('user.locale', 'en');
     }
 
     public function test_only_bangla_or_english_and_a_wrong_one_changes_nothing(): void
@@ -90,7 +90,7 @@ final class TheAppAndTheWebShareOneLanguageTest extends TestCase
         $this->actingAs($this->user)->post(route('locale.switch'), ['locale' => 'en'])->assertRedirect();
         $this->app['auth']->forgetGuards();
 
-        $this->api('GET', '/api/v1/me')->assertOk()->assertJsonPath('data.locale', 'en');
+        $this->api('GET', '/api/v1/me')->assertOk()->assertJsonPath('user.locale', 'en');
     }
 
     public function test_the_change_is_written_once_in_the_audit_trail(): void
