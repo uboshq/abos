@@ -85,10 +85,14 @@ final class NoticeApiController extends Controller
         ]);
     }
 
-    /** ⓘ বারে যা যাবে — অগ্রাধিকার ধরে, সীমা মেনে। */
+    /**
+     * ⓘ বারে যা যাবে — অগ্রাধিকার ধরে, সীমা মেনে।
+     * ⓘ ওয়েবে জরুরিটা উপরের ফিতায়, বাকিগুলো নিচের চলন্ত বারে (মালিক, ২১ অক্টোবর ২০২৬); ফোনের লাইন একটাই, তাই দুইটাই — জরুরি আগে
+     * ([[NoticeBoard::onTheBars()]])। ⛔ কেবল চলন্তটা দিলে জরুরি নোটিশ ফোন থেকে হারাত।
+     */
     public function bar(Request $request): JsonResponse
     {
-        $notices = app(NoticeBoard::class)->forTicker($request->user())
+        $notices = app(NoticeBoard::class)->onTheBars($request->user())
             ->map(fn (Notice $notice) => [
                 'id' => $notice->public_id,
                 'title' => $notice->title,

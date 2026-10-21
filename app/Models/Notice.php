@@ -48,7 +48,7 @@ final class Notice extends Model
     protected $fillable = [
         'company_id', 'notice_category_id', 'type', 'priority',
         'title', 'summary', 'body',
-        'starts_on', 'ends_on', 'expires_at', 'is_active', 'in_ticker',
+        'starts_on', 'ends_on', 'expires_at', 'is_active', 'is_urgent',
         'read_required', 'ack_required', 'ack_deadline', 'created_by',
     ];
 
@@ -58,7 +58,9 @@ final class Notice extends Model
             'starts_on' => 'date',
             'ends_on' => 'date',
             'is_active' => 'boolean',
-            'in_ticker' => 'boolean',
+            // ⓘ `in_ticker` টেবিলে আছে, কিন্তু কেউ পড়ে না, লেখেও না (fe, ২১ অক্টোবর ২০২৬) — জরুরি নয় এমন প্রতিটা ঘোষণাই চলন্ত বারে
+            // ⭐ জরুরি — উপরের স্থির ফিতায়, নিচের চলন্ত বারে নয় (মালিক, ২১ অক্টোবর ২০২৬; [[StatusNotices::forStrip()]])
+            'is_urgent' => 'boolean',
             'read_required' => 'boolean',
             'ack_required' => 'boolean',
             'published_at' => 'datetime',

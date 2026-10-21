@@ -1065,6 +1065,10 @@ return [
         'details' => 'বিস্তারিত',
         'close' => 'সরান',
         'more_in_bell' => 'আরও :countটা নোটিশ ঘণ্টায়',
+        // ⭐ নিচের চলন্ত ঘোষণা ([[shell.statusbar]], মালিক, ২১ অক্টোবর ২০২৬)
+        'ticker_label' => 'ঘোষণা',
+        'ticker_pause' => 'ঘোষণা থামান',
+        'ticker_play' => 'ঘোষণা চালান',
         'awaiting_mine' => 'আপনার সিদ্ধান্তের অপেক্ষায়',
         'approvals_waiting' => 'অনুমোদন, :countটা অপেক্ষায়',
         'signed_unposted' => 'সই হয়েছে, পোস্ট হয়নি',
