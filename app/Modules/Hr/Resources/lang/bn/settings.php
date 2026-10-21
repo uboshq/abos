@@ -15,4 +15,6 @@ return [
     'weekly_off_sunday' => 'রবিবার',
     'weekly_off_friday_saturday' => 'শুক্র ও শনিবার',
     'weekly_off_saturday_sunday' => 'শনি ও রবিবার',
+    // ⭐ অর্জিত ছুটির জের (শ্রম আইন ধারা ১১৭; a6, ২১ অক্টোবর ২০২৬)
+    'earned_leave_carry_cap' => 'অর্জিত ছুটি: পরের বছরে বড়জোর কত দিন যায়',
 ];

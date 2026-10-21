@@ -63,6 +63,9 @@ final class LeaveApiController extends Controller implements HasMiddleware
                         'taken' => (string) $balance['taken'],
                         // ⓘ null = বছরে সীমা নেই
                         'left' => $balance['left'],
+                        // ⭐ অর্জিত ছুটিতে পাওনার ভাগ — এ বছর অর্জিত আর আগের বছরের জের; বাকি ধরনে null ([[EarnedLeave]], a6, ২১ অক্টোবর ২০২৬)
+                        'accrued' => $balance['accrued'],
+                        'carried' => $balance['carried'],
                     ];
                 })->values(),
             'applications' => $employee === null ? [] : LeaveApplication::query()

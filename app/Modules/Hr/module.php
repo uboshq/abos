@@ -446,6 +446,17 @@ return [
             'default' => \App\Modules\Hr\Support\WorkCalendar::DEFAULT_WEEKLY_OFF,
             'group' => 'entry',
         ],
+        /*
+         * ⭐ অর্জিত ছুটির জের — বছর শেষে বড়জোর কত দিন পরের বছরে যায়, ডিফল্ট ৪০ (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা
+         * ১১৭; [[EarnedLeave::closingOf()]]; a6, ২১ অক্টোবর ২০২৬)। ⓘ অর্জন নিজে আইনের হার — প্রতি ১৮ দিন কাজে ১ দিন — সেটিং নয়।
+         */
+        [
+            'key' => 'hr.earned_leave_carry_cap',
+            'label' => 'hr::settings.earned_leave_carry_cap',
+            'type' => 'integer',
+            'default' => \App\Modules\Hr\Services\EarnedLeave::DEFAULT_CARRY_CAP,
+            'group' => 'entry',
+        ],
         [
             'key' => 'hr.show_left_employees',
             'label' => 'hr::settings.show_left_employees',

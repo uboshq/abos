@@ -15,4 +15,6 @@ return [
     'weekly_off_sunday' => 'Sunday',
     'weekly_off_friday_saturday' => 'Friday and Saturday',
     'weekly_off_saturday_sunday' => 'Saturday and Sunday',
+    // ⭐ earned leave carry forward (labour law s.117; a6, 21 Oct 2026)
+    'earned_leave_carry_cap' => 'Earned leave: most days carried into the next year',
 ];

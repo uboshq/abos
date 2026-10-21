@@ -79,4 +79,6 @@ return [
     'holiday_deleted' => 'Holiday removed.',
     'no_holidays' => 'No holidays listed for this year.',
     'holiday_note' => 'Leave days and salary cuts skip these days and the weekly off (:weekly). A holiday for all branches applies to staff with no branch too.',
+    // ⭐ earned leave (labour law s.117; a6, 21 Oct 2026)
+    'earned_accrues' => '1 per :per days worked',
 ];

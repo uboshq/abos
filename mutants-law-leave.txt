@@ -89,3 +89,87 @@ M1.17 app/Modules/Hr/Http/Controllers/HolidayController.php (middleware)
   old: new Middleware('can:hr.attendance.view', only: ['index']),
   new: (line deleted)
   kill: K::test_the_holiday_screen_keeps_its_doors_and_writes_the_audit (stranger gets 200)
+
+== Item 2 — earned leave accrual + carry forward ==
+K = tests/Feature/Modules/Hr/EarnedLeaveIsEarnedByWorkTest.php
+
+M2.1 app/Modules/Hr/Services/EarnedLeave.php
+  old: public const WORKED_DAYS_PER_DAY = 18;
+  new: public const WORKED_DAYS_PER_DAY = 17;
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count (35/17 = 2, not 1)
+
+M2.2 app/Modules/Hr/Services/EarnedLeave.php (workedDays)
+  old: ->where('status', Attendance::PRESENT)
+  new: (line deleted)
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count (44 rows → 2)
+
+M2.3 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
+  old: return bccomp($open, $this->cap(), 1) > 0 ? bcadd($this->cap(), '0', 1) : $open;
+  new: return $open;
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (46.0)
+
+M2.4 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
+  old: $open = bcsub(bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1), $taken, 1);
+  new: $open = bcadd($this->carriedInto($employee, $type, $year), $this->accrued($employee, $end), 1);
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (E-2 gets 5.0, not 3.0)
+
+M2.5 app/Modules/Hr/Services/EarnedLeave.php (closingOf)
+  old: if (bccomp($open, '0', 1) < 0) {
+  new: if (false) {
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (E-3 carries -2.0, not 0.0)
+
+M2.6 app/Modules/Hr/Services/EarnedLeave.php (carryForward)
+  old: if (! $employee->wasEmployedOn($next)) {
+  new: if (false) {
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (3 rows, leaver carried)
+
+M2.7 app/Modules/Hr/Services/EarnedLeave.php (carriedInto)
+  old: ->where('year', $year)
+  new: (line deleted)
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (balance on 1 Jan 2026 reads the 2025 row, 30.0)
+
+M2.8 app/Modules/Hr/Services/LeaveService.php (balance)
+  old: if ($type->isEarned()) {
+  new: if (false) {
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count (allowed 15.0)
+
+M2.9 app/Modules/Hr/Services/LeaveService.php (balance)
+  old: $allowed = bcadd($accrued, $carried, 1);
+  new: $allowed = $accrued;
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (2.0, not 7.0)
+
+M2.10 app/Modules/Hr/Models/LeaveType.php (hasNoYearlyLimit)
+  old: return ! $this->isEarned() && bccomp((string) $this->days_per_year, '0', 1) <= 0;
+  new: return bccomp((string) $this->days_per_year, '0', 1) <= 0;
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (left null; 6 days pass with days_per_year 0)
+
+M2.11 app/Modules/Hr/Models/LeaveType.php (isEarned)
+  old: return $this->code === self::EARNED;
+  new: return false;
+  kill: K::test_thirty_six_worked_days_earn_two_days_and_only_present_days_count
+
+M2.12 app/Modules/Hr/Reports/HrReports.php (leaveBalance types)
+  old: ->where(fn ($q) => $q->where('hr_leave_types.days_per_year', '>', 0)->orWhere('hr_leave_types.code', LeaveType::EARNED))
+  new: ->where('hr_leave_types.days_per_year', '>', 0)
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (no EARNED row in the report)
+
+M2.13 app/Modules/Hr/Reports/HrReports.php (leaveBalance allowed)
+  old: .') + COALESCE(cf.days, 0)'
+  new: .')'
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (report allowed 2 vs 7)
+
+M2.14 app/Modules/Hr/Reports/HrReports.php (leaveBalance worked)
+  old: ->where('hr_attendance.status', Attendance::PRESENT)
+  new: (line deleted)
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (20 ABSENT rows → report allowed FLOOR(60/18)+5 = 8 vs 7)
+
+M2.15 app/Console/Commands/CarryEarnedLeave.php
+  old: if ($year < 2000 || $year >= (int) now()->year) {
+  new: if ($year < 2000 || $year > (int) now()->year) {
+  kill: K::test_the_year_end_carry_is_capped_at_forty_and_running_it_again_writes_the_same_row (--year=2026 succeeds)
+
+M2.16 app/Modules/Hr/Http/Controllers/LeaveApiController.php
+  old: 'carried' => $balance['carried'],
+  new: 'carried' => $balance['accrued'],
+  kill: K::test_the_balance_the_report_and_the_phone_say_the_same (phone carried 2.0)
+

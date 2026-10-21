@@ -232,21 +232,38 @@ final class LeaveService
      * ভুললে সংখ্যাটা চিরকাল ভুল থেকে যেত, আর কেউ ধরতে পারত না —
      * কারণ ভুলটা দেখতে একদম স্বাভাবিক।
      *
-     * @return array{allowed: string, taken: string, left: string|null}
+     * ⭐ অর্জিত ছুটিতে পাওনা = এ বছর অর্জিত (হাজিরা থেকে, `$on` পর্যন্ত) + আগের বছরের জের — বাঁধা কোটা নয় (শ্রম আইন ধারা ১১৭;
+     * [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)। বাকি ধরনে `accrued`/`carried` খালি।
+     *
+     * @return array{allowed: string, taken: string, left: string|null, accrued: string|null, carried: string|null}
      */
     public function balance(Employee $employee, LeaveType $type, ?Carbon $on = null): array
     {
-        $taken = self::takenInYear($on ?? now())
+        $on ??= now();
+
+        $taken = self::takenInYear($on)
             ->where('employee_id', $employee->id)
             ->where('leave_type_id', $type->id)
             ->get()
             ->reduce(fn (string $carry, LeaveApplication $a) => bcadd($carry, (string) $a->days, 1), '0');
+
+        if ($type->isEarned()) {
+            $earned = app(EarnedLeave::class);
+            $accrued = $earned->accrued($employee, $on);
+            $carried = $earned->carriedInto($employee, $type, $on->year);
+            $allowed = bcadd($accrued, $carried, 1);
+
+            return ['allowed' => $allowed, 'taken' => $taken, 'left' => bcsub($allowed, $taken, 1),
+                'accrued' => $accrued, 'carried' => $carried];
+        }
 
         return [
             'allowed' => (string) $type->days_per_year,
             'taken' => $taken,
             // সীমাহীন ছুটিতে "কত বাকি" প্রশ্নটারই মানে নেই
             'left' => $type->hasNoYearlyLimit() ? null : bcsub((string) $type->days_per_year, $taken, 1),
+            'accrued' => null,
+            'carried' => null,
         ];
     }
 

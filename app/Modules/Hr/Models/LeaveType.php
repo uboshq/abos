@@ -55,9 +55,20 @@ class LeaveType extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** সীমাহীন ছুটি — বিনা বেতনের ছুটিতে বছরের কোটা থাকে না। */
+    /**
+     * ⭐ অর্জিত ছুটির প্রমিত কোড — এর পাওনা বছরে বাঁধা দিন নয়, হাজিরা থেকে অর্জিত (শ্রম আইন ধারা ১১৭; [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ কোড দিয়ে চেনা, কারণ প্রমিত ধরনগুলো এই কোডেই বসে ([[LeaveController::installTypes()]]); অন্য কোডের ধরন আগের মতো `days_per_year` মানে।
+     */
+    public const EARNED = 'EARNED';
+
+    public function isEarned(): bool
+    {
+        return $this->code === self::EARNED;
+    }
+
+    /** সীমাহীন ছুটি — বিনা বেতনের ছুটিতে বছরের কোটা থাকে না। ⛔ অর্জিত ছুটি কখনো সীমাহীন নয় — সীমা অর্জনটাই। */
     public function hasNoYearlyLimit(): bool
     {
-        return bccomp((string) $this->days_per_year, '0', 1) <= 0;
+        return ! $this->isEarned() && bccomp((string) $this->days_per_year, '0', 1) <= 0;
     }
 }
