@@ -174,7 +174,25 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         $bill->forceFill(['withheld_at' => 'bill'])->save();
         $this->post(route('purchase.payment.confirm', $draft))->assertSessionHasErrors('lines');
         $this->assertSame(DocumentStatus::DRAFT, $draft->fresh()->status, '⛔ #৫: কর দুবার কাটা হল — বিলে আর পরিশোধে');
-        $this->assertStringContainsString($bill->document_no, (string) session('errors')?->first('lines'));
+        $this->assertStringContainsString($bill->document_no, $this->errorOn('lines'), '⛔ #৫: বার্তায় কোন বিলে আগেই কাটা তা নেই');
+    }
+
+    /** ⭐ #২৫: হার সরবরাহকারীর রেকর্ডে; হাতে বদলালে কারণ লাগে, আর নিরীক্ষায় আগে-পরে-কারণ থাকে */
+    public function test_item_25_a_rate_change_on_the_supplier_needs_a_reason_and_is_audited(): void
+    {
+        // ⓘ সম্পাদনার ফর্ম যা পাঠায় — সরবরাহকারীর নিজের মান, কেবল হার নতুন
+        $form = [...array_filter($this->supplier->only(['code', 'name_en', 'name_bn', 'party_type_id', 'branch_id', 'phone', 'bin', 'tin',
+            'credit_limit', 'credit_days']), fn ($v) => $v !== null), 'ait_rate' => '5'];
+
+        $this->from(route('supplier.edit', $this->supplier))->put(route('supplier.update', $this->supplier), $form)
+            ->assertSessionHasErrors('rate_reason');
+        $this->assertNull($this->supplier->fresh()->ait_rate, '⛔ #২৫: কারণ ছাড়াই উৎসে করের হার বদলে গেল');
+
+        $this->from(route('supplier.edit', $this->supplier))->put(route('supplier.update', $this->supplier), [...$form, 'rate_reason' => 'NBR circular 2026'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(0, bccomp((string) $this->supplier->fresh()->ait_rate, '5', 4), '⛔ #২৫: কারণসহও হার বসেনি');
+        $this->assertTrue(\App\Models\AuditTrail::query()->where('action', 'withholding_rate')->where('auditable_id', $this->supplier->id)
+            ->where('reason', 'like', '%NBR circular 2026%')->exists(), '⛔ #২৫: হার বদল নিরীক্ষার খাতায় কারণসহ নেই');
     }
 
     public function test_item_6_a_bank_payment_waits_until_the_suppliers_bank_is_signed_by_two(): void
@@ -256,6 +274,21 @@ final class ThePaySupplierScreenFollowsTheDesignTest extends TestCase
         ], [['product_id' => $this->product->id, 'qty' => '1', 'rate' => $rate, 'tax' => $tax]]);
 
         return $bills->confirm($bill->fresh())->fresh();
+    }
+
+    /**
+     * ⓘ সেশনের ভুলের প্রথম বার্তা — সেশন JSON-এ রাখা, তাই পরীক্ষার স্মৃতিতে থলেটা কখনো array
+     * ([[json-session-turns-errors-into-an-array-in-tests]]; দুই রূপই পড়া হয়)।
+     */
+    private function errorOn(string $field): string
+    {
+        $errors = session('errors');
+
+        if ($errors instanceof \Illuminate\Support\ViewErrorBag) {
+            return (string) $errors->first($field);
+        }
+
+        return (string) ($errors['default']['messages'][$field][0] ?? '');
     }
 
     private function till(): Account
