@@ -377,17 +377,54 @@ export function topnavMenu () {
 }
 
 /*
+ * ⊞ লঞ্চারের খোঁজা — টাইলের চাবিতে (বাংলা নাম · ইংরেজি নাম · কোড) লেখা প্রতিটা শব্দ আছে কি না।
+ *
+ * ⓘ দুই পাশই NFC আর ছোট হাতে: বাংলার "য়" একটা অক্ষরেও লেখা যায় (U+09DF), দুইটাতেও (য + ় ) — কীবোর্ড ভেদে দুই রকম আসে,
+ * আর না মেলালে "বিক্রয়" লিখে বিক্রয়ই পাওয়া যেত না। খালি খোঁজা মানে সব।
+ */
+export function launcherMatches (keys, q) {
+    const fold = (text) => String(text ?? '').normalize('NFC').toLowerCase()
+    const words = fold(q).split(/\s+/).filter(Boolean)
+    const hay = fold(keys)
+
+    return words.every(word => hay.includes(word))
+}
+
+/*
  * অ্যাপের পাতা — খোঁজার সাথে শিরোনামও মিলিয়ে রাখা।
  * ⓘ দলের একটা নামও না মিললে শিরোনামটা নিজেও সরে যায়।
+ *
+ * ── ⭐ বারের ⊞ সব মডিউলও এটাই, ২১ অক্টোবর ২০২৬ ([[shell.launcher]]) ──────
+ * ⓘ Odoo রূপের শিট `shows()`/`showsAny()` নেয় (টাইলপ্রতি অ্যাট্রিবিউট); বারের পাতা টাইলে কোনো এক্সপ্রেশন রাখে না —
+ * `q` বদলালে `filter()` প্রতিটা `[data-launcher-keys]` ঘর নিজেই লুকায় বা দেখায় (CSP-Alpine অ্যাট্রিবিউটে কেবল সরল ডাক)।
+ * ⓘ চাবি: Alt+M খোলে-বন্ধ করে, Esc বন্ধ করে (ফোকাস বোতামে ফেরে), তীর টাইলে টাইলে চলে, ↓ খোঁজা থেকে প্রথম টাইলে,
+ * ↵ খোঁজায় থাকলে প্রথম মেলা টাইলটা খোলে।
  */
 export function launcher () {
     return {
         open: false,
         q: '',
+        none: false,
+
+        init () {
+            this.$watch('q', () => this.filter())
+        },
+
+        get openFlag () {
+            return this.open ? 'true' : 'false'
+        },
 
         show () {
             this.open = true
             this.$nextTick(() => this.$refs.q?.focus())
+        },
+
+        close () {
+            if (! this.open) return
+
+            this.open = false
+            this.q = ''
+            this.$nextTick(() => this.$refs.button?.focus())
         },
 
         shows (name) {
@@ -396,6 +433,78 @@ export function launcher () {
 
         showsAny (names) {
             return ! this.q || names.some(n => n.includes(this.q.toLowerCase()))
+        },
+
+        /* ⓘ প্রতিটা টাইলের ঘর — খোঁজায় যেটা মেলে না সে `hidden` */
+        filter () {
+            let shown = 0
+
+            for (const cell of this.$root.querySelectorAll('[data-launcher-keys]')) {
+                const hit = launcherMatches(cell.dataset.launcherKeys, this.q)
+
+                cell.hidden = ! hit
+                shown += hit ? 1 : 0
+            }
+
+            this.none = shown === 0
+        },
+
+        tiles () {
+            return [...this.$root.querySelectorAll('[data-launcher-cell]:not([hidden]) [data-launcher-tile]')]
+        },
+
+        first () {
+            this.tiles()[0]?.focus()
+        },
+
+        openFirst () {
+            this.tiles()[0]?.click()
+        },
+
+        hotkey (event) {
+            if (event.code === 'KeyM' && event.altKey && ! event.ctrlKey && ! event.metaKey) {
+                event.preventDefault()
+
+                if (this.open) this.close()
+                else this.show()
+
+                return
+            }
+
+            if (event.key === 'Escape' && this.open) {
+                event.preventDefault()
+                this.close()
+            }
+        },
+
+        /*
+         * তীর-চাবি — চোখে যে সারি, সেই সারি ধরেই (কলাম পর্দার মাপে ৩ থেকে ৬)।
+         * ⓘ এক সারিতে কয়টা তা মাপা হয় প্রথম টাইলের সাথে একই উচ্চতায় কয়টা বসেছে দেখে; উপরের সারি থেকে ↑ খোঁজায় ফেরে।
+         */
+        move (event) {
+            const steps = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 'down', ArrowUp: 'up', Home: 'home', End: 'end' }
+            const step = steps[event.key]
+
+            if (step === undefined) return
+
+            const tiles = this.tiles()
+            const at = tiles.indexOf(document.activeElement)
+
+            if (at === -1) return
+
+            event.preventDefault()
+
+            const top = tiles[0].getBoundingClientRect().top
+            const columns = Math.max(1, tiles.filter(t => Math.abs(t.getBoundingClientRect().top - top) < 2).length)
+            const jumps = { down: columns, up: -columns, home: -at, end: tiles.length - 1 - at }
+            const next = at + (typeof step === 'number' ? step : jumps[step])
+
+            if (next < 0 && step === 'up') {
+                this.$refs.q?.focus()
+                return
+            }
+
+            tiles[Math.min(Math.max(next, 0), tiles.length - 1)]?.focus()
         },
     }
 }
@@ -965,4 +1074,85 @@ function send (url, el, body) {
 
         return response
     })
+}
+
+/*
+ * ⭐ নিচের চলন্ত ঘোষণা — থামানো/চালানোর বোতাম আর চলার গতি (মালিক, ২১ অক্টোবর ২০২৬, fe-র মাধ্যমে: *"জরুরি সতর্কতা উপরে
+ * স্থির, ঘোষণা নিচে চলন্ত"*; [[shell.statusbar]])।
+ *
+ * ⓘ চলাটা CSS-এর (`abos-ticker`, app.css) — JS ছাড়াও চলে, মাউস রাখলে বা Tab-এ ফোকাস এলে থামে, আর যিনি চলন্ত জিনিস বন্ধ
+ * রেখেছেন তাঁর পর্দায় নড়েই না (`motion-safe:`)। এই কম্পোনেন্ট কেবল দুইটা কাজ করে:
+ *   • ⏸/▶ — WCAG 2.2.2: নড়া লেখা থামানোর একটা পথ, আর বাছাইটা এই ব্রাউজারে মনে থাকে। ⓘ মনে রাখাটা সুবিধা, নিয়ম নয় —
+ *     localStorage না পেলে (গোপন জানালা, আটকানো সাইট-ডেটা) চুপচাপ চলন্তই থাকে, পাতা ভাঙে না।
+ *   • গতি লেখার দৈর্ঘ্য ধরে — সেকেন্ডে ~৪০px। ⛔ বাঁধা ৩০ সেকেন্ডে লম্বা ঘোষণা দৌড়াত আর ছোটটা হামাগুড়ি দিত; ধীর আর
+ *     সমান গতিই পড়া যায়।
+ */
+export const TICKER_KEY = 'abos.ticker.paused'
+export const TICKER_SPEED = 40
+
+/** এক কপির চওড়া (px) থেকে এক পাক কত সেকেন্ড — কখনো ২০-এর কম নয়, ছোট লেখা যেন ছুটে না পালায় */
+export function tickerSeconds (width) {
+    return Math.max(20, Math.round(width / TICKER_SPEED))
+}
+
+function tickerRemembered () {
+    try {
+        return window.localStorage.getItem(TICKER_KEY) === '1'
+    } catch {
+        return false
+    }
+}
+
+function tickerRemember (paused) {
+    try {
+        if (paused) {
+            window.localStorage.setItem(TICKER_KEY, '1')
+        } else {
+            window.localStorage.removeItem(TICKER_KEY)
+        }
+    } catch {
+        // ⓘ মনে না থাকলেও বোতামটা এই পাতায় কাজ করে
+    }
+}
+
+export function noticeTicker () {
+    return {
+        paused: false,
+        pauseLabel: '',
+        playLabel: '',
+
+        init () {
+            const el = this.$el
+
+            this.pauseLabel = el.dataset.pauseLabel || ''
+            this.playLabel = el.dataset.playLabel || ''
+            this.paused = tickerRemembered()
+
+            const copy = el.querySelector('[data-ticker-copy]')
+            const width = copy ? copy.offsetWidth : 0
+
+            if (width > 0) {
+                el.style.setProperty('--ticker-duration', tickerSeconds(width) + 's')
+            }
+        },
+
+        toggle () {
+            this.paused = ! this.paused
+            tickerRemember(this.paused)
+        },
+
+        /** `data-state` — CSS এটা দেখে চলা থামায় */
+        get state () {
+            return this.paused ? 'paused' : 'running'
+        },
+
+        get running () {
+            return ! this.paused
+        },
+
+        /** বোতামের নাম — এখন চাপলে কী হবে */
+        get label () {
+            return this.paused ? this.playLabel : this.pauseLabel
+        },
+    }
 }

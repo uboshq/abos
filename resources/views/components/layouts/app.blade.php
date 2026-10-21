@@ -236,7 +236,8 @@
          ⛔ আগে বারটা পাতার কলামের ভেতরে ছিল, তাই রেলের পাশে কাটা দেখাত আর লোগো দুই জায়গায় ভাগ হত। --}}
     @php $fullBar = $navPlacement === 'rail'; @endphp
     @if ($fullBar)
-        <x-shell.topbar :menu="$menu ?? []" />
+        {{-- ⓘ `over-rail` — "≡" রেলের কলামে, আর ⊞ সব মডিউল বারে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.topbar]]) --}}
+        <x-shell.topbar :menu="$menu ?? []" over-rail />
         {{-- সতর্কবাণীর ফিতা — বারের ঠিক নিচে, পুরো চওড়া (Fiori Message Strip; ভুল ৮) --}}
         <x-shell.notice-banner />
     @endif
@@ -495,7 +496,7 @@
 
     <x-shell.statusbar />
 
-    <x-shell.bottom-nav :menu="$menu ?? []" />
+    <x-shell.bottom-nav :menu="$menu ?? []" :launcher="$fullBar" />
 
     {{-- স্ক্রিনের নিজের স্ক্রিপ্ট — Alpine লোড হওয়ার পরে।
 

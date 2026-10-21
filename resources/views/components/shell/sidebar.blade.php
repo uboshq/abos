@@ -2,7 +2,7 @@
 
 @props([
     'menu' => [],
-    /** ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২): সাইডবার বারের নিচ থেকে শুরু, লোগো বারেই — রেলে আর নয় */
+    /** ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২): সাইডবার বারের নিচ থেকে শুরু; বারে গ্রাহকের লোগো, রেলের মাথায় ABOS = হোম (২১ অক্টোবর ২০২৬) */
     'underBar' => false,
 ])
 
@@ -234,19 +234,22 @@
                 @endphp
 
                 @if ($underBar)
-                    {{-- ⭐ পুরো চওড়া বারের নিচে (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬): লোগো বারে উঠেছে, তাই রেলের মাথায়
-                         মালিকের নমুনার ⌂ হোম — মডিউলের টাইলের একই মাপ ও একই "এখানে আছি" চিহ্ন। --}}
+                    {{-- ⭐ রেলের মাথায় ABOS-এর চিহ্ন — সেটাই হোমের বোতাম (মালিক, ২১ অক্টোবর ২০২৬: *"customer brand in the bar,
+                         ABOS logo on the rail"*)। বারের বাঁ কোণে এখন গ্রাহকের নিজের লোগো ([[shell.topbar]]), আর পণ্যের চিহ্ন এখানে।
+                         ⛔ আগে এখানে মালিকের নমুনার ⌂ ঘর ছিল — চিহ্নটা তার জায়গা নিল, পাশে আলাদা ⌂ আর নেই: একই গন্তব্যে দুইটা
+                         ঘর মানে প্রতিবার "কোনটা চাপব" ভাবা (এই ফাইলের ৩ সেপ্টেম্বরের নিয়ম)।
+                         ⓘ মডিউলের টাইলের একই মাপ ও একই "এখানে আছি" দাগ; চিহ্নটা সাদা পাতে (`--color-logo-plate`), কারণ সে সাদা
+                         জমিনের জন্য আঁকা — নেভি রেলে বা অন্ধকারে সরাসরি বসালে টিলটা মিলিয়ে যেত। --}}
                     <a href="{{ route('dashboard') }}" data-rail-home
                        class="relative flex h-8 w-full items-center justify-center
                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand-gold)"
                        @if ($onDashboard) aria-current="page" @endif
-                       aria-label="{{ __('core.menu.dashboard') }}"
-                       title="{{ __('core.menu.dashboard') }}">
-                        <span class="grid size-8 place-items-center" aria-hidden="true"
-                              style="background: {{ $onDashboard ? 'var(--rail-tile-on-bg, var(--rail-tile-bg))' : 'var(--rail-tile-bg)' }};
-                                     border-radius: var(--rail-tile-radius); color: var(--rail-tile-ink);
+                       aria-label="ABOS · {{ __('core.a11y.home') }}"
+                       title="{{ __('core.a11y.home') }}">
+                        <span class="grid size-8 place-items-center bg-(--color-logo-plate)" aria-hidden="true"
+                              style="border-radius: var(--rail-tile-radius);
                                      @if ($onDashboard) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif">
-                            <x-ui.icon name="home" :size="22" drawn />
+                            <img src="{{ asset('brand/abos-icon-64.png') }}" alt="" data-rail-abos class="size-[24px] object-contain">
                         </span>
                     </a>
                 @else

@@ -203,6 +203,15 @@ class Company extends Model
 
         $mime = Storage::disk('public')->mimeType($this->logo_path) ?: 'image/png';
 
+        /*
+         * ⛔ SVG ছাপায় যায় না (মালিক, fe-র মাধ্যমে, ২১ অক্টোবর ২০২৬) — mPDF-এর SVG-পড়া আংশিক (গ্রেডিয়েন্ট, ফন্ট, ক্লাস-স্টাইল
+         * ভাঙে বা ভুল আঁকে), আর বিল আইনি কাগজ। ⭐ বারে SVG লোগো থাকে ([[logoUrl()]]); ছাপায় শাখার নিজের বিলের লোগো
+         * ([[PrintEngine::withInvoiceLogo()]] পথটা বদলে দেয়, তাই এখানে PNG/JPG আসে) — সেটাও না থাকলে লোগো নেই, কেবল নাম।
+         */
+        if ($mime === 'image/svg+xml' || str_ends_with(strtolower((string) $this->logo_path), '.svg')) {
+            return null;
+        }
+
         return 'data:'.$mime.';base64,'.base64_encode($bytes);
     }
 

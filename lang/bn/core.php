@@ -578,6 +578,11 @@ return [
         'area_switch' => 'এলাকা বদলান',
         'launcher' => 'অ্যাপ বাছুন',
         'launcher_search' => 'অ্যাপ খুঁজুন…',
+        // ⭐ বারের ⊞ — সব মডিউল এক পাতায় (মালিক, ২১ অক্টোবর ২০২৬)
+        'all_modules' => 'সব মডিউল',
+        'all_modules_search' => 'মডিউল খুঁজুন — বাংলা বা ইংরেজি…',
+        'all_modules_none' => 'এই নামে কোনো মডিউল নেই',
+        'waiting_signature' => ':count টা সইয়ের অপেক্ষায়',
         'classic' => 'Classic',
         'classic_blurb' => 'উপরে টানা মেনু · ডোরাকাটা সারি · অ্যাম্বার · সবচেয়ে ঘন।',
         'tiles' => 'Tiles',
@@ -1065,6 +1070,10 @@ return [
         'details' => 'বিস্তারিত',
         'close' => 'সরান',
         'more_in_bell' => 'আরও :countটা নোটিশ ঘণ্টায়',
+        // ⭐ নিচের চলন্ত ঘোষণা ([[shell.statusbar]], মালিক, ২১ অক্টোবর ২০২৬)
+        'ticker_label' => 'ঘোষণা',
+        'ticker_pause' => 'ঘোষণা থামান',
+        'ticker_play' => 'ঘোষণা চালান',
         'awaiting_mine' => 'আপনার সিদ্ধান্তের অপেক্ষায়',
         'approvals_waiting' => 'অনুমোদন, :countটা অপেক্ষায়',
         'signed_unposted' => 'সই হয়েছে, পোস্ট হয়নি',
@@ -1322,6 +1331,9 @@ return [
         'main_navigation' => 'প্রধান মেনু',
         // পথের সারি — "হোম / মডিউল / পর্দা"
         'breadcrumb' => 'কোথায় আছেন',
+        // ⭐ বারের ≡ আর রেলের মাথার ABOS — মালিকের নাম, ২১ অক্টোবর ২০২৬
+        'menu' => 'মেনু',
+        'home' => 'হোম',
     ],
 
     'company' => [

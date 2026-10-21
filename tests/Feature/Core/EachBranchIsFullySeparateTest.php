@@ -6,6 +6,7 @@ namespace Tests\Feature\Core;
 
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
@@ -187,7 +188,8 @@ final class EachBranchIsFullySeparateTest extends TestCase
         $value = $this->actingAs($this->owner)->get(route('inventory.stock.overview'))->assertOk()->viewData('value');
         $ledger = StandardChart::find(StandardChart::INVENTORY)->balanceOn(null, $this->mymensingh->id);
 
-        $this->assertSame(bcadd($ledger, '0', 2), $value, '⛔ এক শাখা বেছে মজুদের মূল্য গোটা কোম্পানির দেখাল।');
+        // ⓘ দুই ঘরে গোল, কাটা নয় — [[StockFacts::value()]] এখন [[Money::round()]] (২১ অক্টোবর ২০২৬); যাচাই আগের মতোই হুবহু
+        $this->assertSame(Money::round($ledger), $value, '⛔ এক শাখা বেছে মজুদের মূল্য গোটা কোম্পানির দেখাল।');
     }
 
     public function test_a_transfer_between_branches_is_only_set_up_under_all_branches(): void

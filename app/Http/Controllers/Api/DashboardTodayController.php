@@ -18,6 +18,7 @@ use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\Inventory\Services\StockFacts;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Supplier\Services\PrincipalCommissionFigures;
@@ -54,6 +55,7 @@ use Illuminate\Support\Carbon;
  *   payable      accounts.view       ⭐ সব দায় + হাতধারে আমাদের দেনা (হাতধারের ভাগ কেবল finance.hand_loan.view-এ)
  *   principals   supplier.report     ⭐ প্রিন্সিপালের কমিশন — শতাংশ, দেওয়া, বাকি
  *   principalsTotal supplier.report  ⭐ একই সারির মোট — ওয়েবের বাক্সের সর্বমোট (২০ অক্টোবর ২০২৬)
+ *   stockValue   inventory.cost.view ⭐ মজুদের দাম, কেনা দরে, খাতা থেকে — ওয়েবের বাক্সের একই ঘর (২১ অক্টোবর ২০২৬)
  *
  * ── শাখা ─────────────────────────────────────────────────────────────
  * ⓘ বাছাই-করা শাখা নয় — ব্যবহারকারীর শাখা-সীমা ([[ScopedToUserBranch]]),
@@ -164,6 +166,20 @@ class DashboardTodayController extends Controller
 
         if ($on('customer') && $user->can('customer.report')) {
             $body['dues'] = $this->customers->dues($user, $today);
+        }
+
+        /*
+         * ⭐ মজুদের দাম — ওয়েবের হোমের টাকার বাক্সের "মজুদের মূল্য" ঘরের একই সংখ্যা, একই উৎস ([[StockFacts::value()]]: মজুদের
+         * খাত ১১২০-এর জের, কেনা দরে, হেডারে বাছা শাখা মেনে) — মালিক, fe-র মারফত, ২১ অক্টোবর ২০২৬; a4-এর সাথে চুক্তি:
+         * `stockValue: {amount, basis: "cost"}`, অ্যাপ ০.৪.৪৩-এ মালিকের হোমে।
+         * ⛔ চাবি (inventory.cost.view) না থাকলে ঘরটাই নেই — `null` বা `"0"` নয় (চুক্তির নিয়ম ক); বিক্রয়কর্মীর ফোনে মজুদের দাম নয়।
+         */
+        if ($on('inventory') && $user->can('inventory.cost.view')) {
+            $stock = app(StockFacts::class)->value();
+
+            if ($stock !== null) {
+                $body['stockValue'] = ['amount' => self::money($stock), 'basis' => 'cost'];
+            }
         }
 
         if ($on('approval') && $user->can('approval.decide')) {
