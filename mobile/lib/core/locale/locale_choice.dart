@@ -42,6 +42,11 @@ class LocaleChoices {
   /// বাছাই বদলালে আর কে জানবে — হোম-স্ক্রিনের উইজেট ([WidgetHub]) আর সার্ভার ([saveLocale])
   static Future<void> Function(LocaleChoice choice)? onChanged;
 
+  /// ⭐ ভাষা বদল সার্ভারে লেখা শেষ — প্রতিবার এক বাড়ে ([saveLocale]-এর পরে)। মেনুর নাম আসে `/me` থেকে, আর সার্ভার
+  /// সেগুলো মানুষের রাখা ভাষায় বলে; তাই হোম এটা শুনে মেনু আবার আনে, লেখার আগে নয় — নইলে নতুন ভাষার পর্দায় পুরনো
+  /// ভাষার মেনু থেকে যেত (a4, ২১ অক্টোবর ২০২৬)
+  static final ValueNotifier<int> savedOnServer = ValueNotifier(0);
+
   /// এখনকার বাছাই — [appLocaleProvider] এটা শোনে
   final ValueNotifier<LocaleChoice> current = ValueNotifier(LocaleChoice.phone);
 

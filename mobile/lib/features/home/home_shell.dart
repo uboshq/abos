@@ -40,6 +40,7 @@ import '../../core/workspace/workspace_switcher.dart';
 import '../printing/printer_settings_screen.dart';
 import '../../core/privacy/device_integrity.dart';
 import '../../core/privacy/lock_delay.dart';
+import '../../core/locale/locale_choice.dart';
 import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
@@ -220,6 +221,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _loadUnread();
     _loadPending();
     _loadPrefs();
+    // ⭐ ভাষা বদলের পরে মেনু আবার, সার্ভারে লেখা শেষ হলে — মেনুর নাম তৈরির সময় বাঁধা ([LocaleChoices.savedOnServer])
+    LocaleChoices.savedOnServer.addListener(_reloadForLanguage);
     RecentPapers.changes.addListener(_loadPrefs);
     // ⭐ root করা বা ছদ্ম-ফোন — একবার বলা, আটকানো নয় ([[DeviceIntegrity]])
     WidgetsBinding.instance.addPostFrameCallback((_) => _warnIfUnsafe());
@@ -242,6 +245,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   void dispose() {
+    LocaleChoices.savedOnServer.removeListener(_reloadForLanguage);
     RecentPapers.changes.removeListener(_loadPrefs);
     if (identical(RecentPapers.active, _prefs)) RecentPapers.active = null;
     super.dispose();
@@ -261,6 +265,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _favourites = favourites;
       _recents = recents;
     });
+  }
+
+  void _reloadForLanguage() {
+    if (mounted) _load();
   }
 
   Future<void> _load() async {

@@ -69,6 +69,8 @@ Future<void> main() async {
       LocaleChoices.onChanged = (_) async {
         unawaited(WidgetHub.refresh());
         await saveLocale(AppLocale.code);
+        // ⓘ লেখা শেষ (পুরনো সার্ভারে চুপ) — হোম এখন মেনু নতুন ভাষায় আনে
+        LocaleChoices.savedOnServer.value++;
       };
     },
     restoreSession: () async {

@@ -15,6 +15,7 @@ import 'package:abos_mobile/core/navigation/nav_prefs.dart';
 import 'package:abos_mobile/core/navigation/top_bar/abos_top_bar.dart';
 import 'package:abos_mobile/core/privacy/device_integrity.dart';
 import 'package:abos_mobile/core/records/notice_bar.dart';
+import 'package:abos_mobile/core/locale/locale_choice.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
 import 'package:abos_mobile/features/home/home_shell.dart';
@@ -117,6 +118,26 @@ void main() {
           ),
         ),
       );
+
+  // ⭐ ভাষা বদলালে মেনু আবার আনা — সার্ভারে লেখা শেষ হলে (মেনুর নাম তৈরির সময় বাঁধা; a4, ২১ অক্টোবর ২০২৬)
+  testWidgets('a language saved on the server makes the home load its menu again, and a closed home does not', (tester) async {
+    var loads = 0;
+    await tester.pumpWidget(shell(loadHome: (_) async {
+      loads++;
+      return menu;
+    }));
+    await tester.pumpAndSettle();
+    final first = loads;
+
+    LocaleChoices.savedOnServer.value++;
+    await tester.pumpAndSettle();
+    expect(loads, first + 1, reason: '⛔ নতুন ভাষায় পুরনো ভাষার মেনু থেকে গেল');
+
+    await tester.pumpWidget(const SizedBox());
+    LocaleChoices.savedOnServer.value++;
+    await tester.pumpAndSettle();
+    expect(loads, first + 1, reason: 'বন্ধ হোম আর শোনে না');
+  });
 
   testWidgets('the header names the company and branch, not the person',
       (tester) async {
