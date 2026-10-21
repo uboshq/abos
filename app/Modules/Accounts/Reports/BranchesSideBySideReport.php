@@ -21,7 +21,10 @@ use Illuminate\Support\Facades\DB;
  *
  * ── ⭐ সব সংখ্যা খাতা থেকে ─────────────────────────────────────────────
  * হিসাব কোনো মডিউলের ওপর নির্ভর করে না ([[accounts-depends-on-nothing-by-design]]), আর খাতাই সত্যের এক জায়গা:
- *   · বিক্রি = বিক্রির খাত (৪১০০), আয় = সব আয়ের খাত, খরচ = সব খরচের খাত (বিক্রিত মালের দামসহ), লাভ = আয় − খরচ —
+ *   · বিক্রি = **নিট** বিক্রি: বিক্রির খাত (৪১০০) − বিক্রয় ফেরতের খাত (৪১১০), দুইটারই জমা − খরচ (IFRS 15.51; fe, ২১ অক্টোবর ২০২৬)।
+ *     ⓘ খাতে বিক্রি আগেই ভ্যাট বাদে (ভ্যাট ২১২০-এ) আর বিলে যোগ করা ভাড়া বাদে (৪৩৬০-এ) — তাই এটাই হোম আর ফোনের "নিট বিক্রি"।
+ *     ⓘ ছাড়: চার্টে আলাদা বিক্রয়-ছাড়ের (আয়ের-বিপরীত) খাত নেই — বিলের ছাড় বিক্রির খাতে আগেই বাদ যায়, আর পরের ছাড় ৫৩০০
+ *     "প্রদত্ত ছাড়" খরচের ধরনের খাত, আয়ের নয়; তাই ওটা বিক্রি থেকে বাদ নয়, খরচ আর লাভে থাকে। আয় = সব আয়ের খাত, খরচ = সব খরচের খাত (বিক্রিত মালের দামসহ), লাভ = আয় − খরচ —
  *     কেবল বাছা সময়ে, বছর বন্ধের দাখিলা বাদ ([[YearEndService::closingSources()]])।
  *   · টাকা (নগদ + ব্যাংক + মোবাইল), পাওনা (১১১০), দেনা (২১১১), মজুদের মূল্য (১১২০) — শেষ দিন পর্যন্ত জমা অঙ্ক।
  *   · প্রতিটা কোড মানে খাতটা **আর তার নিচের সব উপ-খাত** ([[Account::selfAndDescendants()]])।
@@ -83,7 +86,8 @@ final class BranchesSideBySideReport
             ->select([
                 'le.branch_id',
                 DB::raw("COALESCE({$name}, ".$q((string) __('core.report.no_branch')).') as branch_name'),
-                DB::raw("SUM(CASE WHEN {$inPeriod} AND {$code(StandardChart::SALES)} THEN {$cr} ELSE 0 END) as sales"),
+                // ⭐ নিট বিক্রি — ৪১০০ আর ৪১১০ (বিক্রয় ফেরত, ডেবিট-ঝোঁকা) দুইটারই জমা − খরচ, তাই ফেরত বাদ যায় (২১ অক্টোবর ২০২৬)
+                DB::raw("SUM(CASE WHEN {$inPeriod} AND ({$code(StandardChart::SALES)} OR {$code(StandardChart::SALES_RETURN)}) THEN {$cr} ELSE 0 END) as sales"),
                 DB::raw("SUM(CASE WHEN {$inPeriod} AND a.type = {$q(Account::INCOME)} THEN {$cr} ELSE 0 END) as income"),
                 DB::raw("SUM(CASE WHEN {$inPeriod} AND a.type = {$q(Account::EXPENSE)} THEN {$dr} ELSE 0 END) as expense"),
                 DB::raw("SUM(CASE WHEN {$inPeriod} AND a.type = {$q(Account::INCOME)} THEN {$cr} WHEN {$inPeriod} AND a.type = {$q(Account::EXPENSE)} THEN -{$dr} ELSE 0 END) as profit"),
