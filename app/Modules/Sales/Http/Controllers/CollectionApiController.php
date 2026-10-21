@@ -220,7 +220,12 @@ class CollectionApiController extends Controller implements HasMiddleware
              * `UserLocale` এলে ভাষার নিয়ম সেখানে; এখানে কেবল app()->getLocale() পড়া, তাই কিছু সরাতে হবে না।
              */
             'amount_words' => AmountInWords::of(bcadd((string) $c->amount, '0', 4), app()->getLocale()),
-            'receipt_pdf' => route('sales.print.receipt', $c->id),
+            /*
+             * ⭐ রসিদের PDF ফোনের টোকেনেই খোলে (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬) — আগে ওয়েবের ছাপার ঠিকানা, যা ব্রাউজারের লগইন চাইত।
+             * ⓘ নতুন দরজা নয়: ফোনের নথির দরজা ([[DocumentApiController::pdf()]]) — ওয়েবের একই ছাপার রুট চালায়, একই চাবি
+             * (`sales.collection.view`), একই শাখা/ডিলারের দেয়াল; ধরন মডেলের নাম (`Collection`), id বাইরের (public_id)।
+             */
+            'receipt_pdf' => route('api.documents.pdf', ['type' => class_basename($c), 'id' => (string) $c->public_id]),
             'applied' => $applied,
             'unapplied' => Money::round($unapplied, 4),
         ];

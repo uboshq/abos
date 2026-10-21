@@ -102,7 +102,8 @@ final class CollectionSyncAnswerTest extends TestCase
         $this->assertSame($paper->document_no, $row['no'] ?? null, '⛔ দফা ১৭: উত্তরের সারিতে নম্বর নেই');
         $this->assertSame('posted', $row['state'] ?? null, '⛔ দফা ১৭: উত্তরের অবস্থা paper_states-এর `posted` নয়');
         $this->assertSame(AmountInWords::of('700.0000', 'bn'), $row['amount_words'] ?? null, '⛔ দফা ১৭: কথায় টাকা নেই বা ভুল');
-        $this->assertSame(route('sales.print.receipt', $paper->id), $row['receipt_pdf'] ?? null, '⛔ দফা ১৭: রসিদের ঠিকানা নেই');
+        $this->assertSame(route('api.documents.pdf', ['type' => 'Collection', 'id' => $paper->public_id]), $row['receipt_pdf'] ?? null,
+            '⛔ দফা ১৭: রসিদের ঠিকানা নেই, বা ফোনের টোকেনের দরজা নয়');
         $this->assertSame([
             ['kind' => 'bill', 'no' => 'INV-ANS-1', 'amount' => '1200.0000'],
             ['kind' => 'credit', 'no' => (string) $priorNo, 'amount' => '-500.0000'],
@@ -135,6 +136,40 @@ final class CollectionSyncAnswerTest extends TestCase
         $bangla = $this->rowOf($this->pushHttp([$this->change('lang-bn', ['amount' => '700', 'lines' => []])]), 'lang-bn');
 
         $this->assertSame(AmountInWords::of('700.0000', 'bn'), $bangla['amount_words'] ?? null, '⛔ বাংলার মানুষ কথায় টাকা বাংলায় পাননি');
+    }
+
+    /**
+     * দফা ১৭ — রসিদের PDF ফোন নিজের টোকেনেই খোলে (a4-এর অ্যাপ 5802d83c9, ২২ অক্টোবর ২০২৬): আগে ঠিকানাটা ওয়েবের ছাপার, ব্রাউজারের লগইন
+     * চাইত। ⓘ টোকেনে ২০০ আর আসল PDF; টোকেন ছাড়া ৪০১; আদায় দেখার চাবি নেই তো ৪০৩; অন্য কোম্পানির আদায় ৪০৪ ("আছে" বলাও খবর) —
+     * ফোনের নথির দরজার নিয়ম ([[DocumentApiController]])।
+     */
+    public function test_item_17_the_receipt_pdf_opens_with_the_phones_token_and_only_for_whom_it_may(): void
+    {
+        $row = $this->rowOf($this->pushHttp([$this->change('pdf-1', ['amount' => '640', 'lines' => []])]), 'pdf-1');
+        $url = (string) ($row['receipt_pdf'] ?? '');
+        $this->assertStringContainsString('/api/v1/documents/Collection/'.$row['entityId'].'/pdf', $url, '⛔ রসিদের ঠিকানা ফোনের দরজার নয়');
+
+        $this->phone();
+        $pdf = $this->get($url, ['Accept' => 'application/json'])->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', (string) $pdf->getContent(), '⛔ টোকেনে রসিদ এল না — PDF-এর বাইট নয়');
+
+        $this->app['auth']->forgetGuards();
+        $this->get($url, ['Accept' => 'application/json'])->assertUnauthorized();
+
+        $stranger = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $stranger->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany((int) $this->company->id, fn () => $stranger->givePermissionTo(
+            array_map(fn (string $k) => \Spatie\Permission\Models\Permission::findOrCreate($k, 'web'), ['sales.collection.create', 'accounts.voucher.create'])));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($stranger->fresh(), [AuthController::APP]);
+        $this->get($url, ['Accept' => 'application/json'])->assertForbidden();
+
+        $other = Company::query()->where('code', 'FMART')->firstOrFail();
+        \Illuminate\Support\Facades\DB::table('sal_collections')->where('public_id', $row['entityId'])->update(['company_id' => $other->id]);
+        $this->phone();
+        $gone = $this->get($url, ['Accept' => 'application/json'])->assertNotFound();
+        $this->assertStringStartsNotWith('%PDF', (string) $gone->getContent(), '⛔ অন্য কোম্পানির রসিদের বাইট এল');
     }
 
     /** দফা ৭ — নেট গেলে আবার চাপলে (একই changeId) একটাই আদায়, আর উত্তরে একই নম্বর ও রসিদ */
