@@ -75,6 +75,12 @@ final class CollectionService
     public const ROUNDING_LIMIT = '10';
 
     /**
+     * ⓘ সই ছাড়া রাউন্ডিং — ৳০.৫০ পর্যন্ত (মালিক, ১ অক্টোবর ২০২৬; বিলের একই সীমা, [[SalesInvoiceService::discountAwaitingSignature()]])।
+     * তার উপরে সীমা পর্যন্ত মালিকের সই, সীমার উপরে ফেরত (fe, ২২ অক্টোবর ২০২৬)।
+     */
+    public const ROUNDING_UNSIGNED = '0.50';
+
+    /**
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
@@ -482,7 +488,8 @@ final class CollectionService
                 'balanced' => $plan !== null && $lines !== [] && bccomp($totalDr, $totalCr, 4) === 0
                     && bccomp(bcadd($applied, $unapplied, 4), $plan['gross'], 4) === 0,
             ],
-            'needs_signature' => $in->differenceKind() === 'discount',
+            // ⓘ পোস্টের একই নিয়ম — ছাড় সবসময়, রাউন্ডিং ৳০.৫০-এর বেশি হলে ([[differenceNeedsOwner()]])
+            'needs_signature' => self::differenceNeedsOwner($in->differenceKind(), $in->differenceAmount()),
             'reference_free' => $referenceFree,
             'stops' => array_values(array_unique($stops)),
         ];
@@ -568,8 +575,9 @@ final class CollectionService
         if ($in->difference !== null) {
             if ($in->differenceKind() === 'rounding') {
                 /*
-                 * ⛔ রাউন্ডিং কেবল সীমার ভিতরে — fe-র D3 (২১ অক্টোবর ২০২৬): ডিফল্ট ৳১০, কোম্পানির সেটিং
-                 * `sales.collection.rounding_limit`। ⓘ উপরে গেলে এটা আর রাউন্ডিং নয়, ছাড় — তখন ছাড় হিসেবে মালিকের সইয়ে যায়।
+                 * ⛔ রাউন্ডিং কেবল সীমার ভিতরে — ডিফল্ট ৳১০, কোম্পানির সেটিং `sales.collection.rounding_limit`; উপরে গেলে
+                 * বাংলায় ফেরত (তখন সেটা ছাড়, "ছাড়" বেছে পাঠাতে হয়)। ⓘ সীমার ভিতরে ৳০.৫০-এর বেশি হলে মালিকের সই
+                 * ([[differenceNeedsOwner()]], পোস্টের সময়)।
                  */
                 $limit = $this->roundingLimit();
 
@@ -1013,13 +1021,15 @@ final class CollectionService
      * ⓘ বিলের ছাড়ের হুবহু পথ ([[SalesInvoiceService::assertDiscountApproved()]]): `sales.discount` ছক, একটাই ধাপ — মালিক
      * ([[OwnerSignsDiscounts]]); সই সেই অঙ্ক আর সেই কাগজের ছাপের ([[Approval::stillCovers()]]); ছক বন্ধ বা নেই মানে ছাড় যায় না
      * (fail-closed — অনুমোদন বন্ধ কোম্পানিতেও, বিলের মতোই)। যিনি বানালেন তিনি নিজে সই দিতে পারেন না ([[ApprovalEngine::canDecide()]])।
-     * ⓘ রাউন্ডিংয়ে সই লাগে না (fe-র D3) — সীমাটাই তার পাহারা।
+     * ⭐ রাউন্ডিংও, ৳০.৫০-এর বেশি হলে — মালিকের ১–২ অক্টোবরের নিয়ম ([[differenceNeedsOwner()]]; fe, ২২ অক্টোবর ২০২৬: D3-এর
+     * "রাউন্ডিংয়ে সই নেই" fe-র ভুল ছিল)। একই পথ, একই ছক, ঠিক সেই অঙ্কের সই; ছক বন্ধ বা নেই মানে ফেরত।
      */
     private function assertDiscountSigned(Collection $collection): void
     {
         $amount = bcadd((string) ($collection->difference_amount ?? '0'), '0', 4);
+        $rounding = $collection->difference_kind === 'rounding';
 
-        if ($collection->difference_kind !== 'discount' || bccomp($amount, '0', 4) <= 0) {
+        if (! self::differenceNeedsOwner($collection->difference_kind, $amount)) {
             return;
         }
 
@@ -1049,10 +1059,33 @@ final class CollectionService
         );
 
         if ($approval === null) {
-            throw ValidationException::withMessages(['difference' => __('sales::validation.discount_no_signer')]);
+            throw ValidationException::withMessages(['difference' => $rounding
+                ? __('sales::collection_rules.rounding_no_signer', ['amount' => Money::format($amount), 'free' => Money::format(self::ROUNDING_UNSIGNED)])
+                : __('sales::validation.discount_no_signer')]);
         }
 
-        throw HeldForApproval::on($collection, 'difference', __('sales::collection_rules.discount_awaiting'));
+        throw HeldForApproval::on($collection, 'difference', $rounding
+            ? __('sales::collection_rules.rounding_awaiting', ['amount' => Money::format($amount), 'free' => Money::format(self::ROUNDING_UNSIGNED)])
+            : __('sales::collection_rules.discount_awaiting'));
+    }
+
+    /**
+     * ⭐ পার্থক্যে মালিকের সই লাগবে কি না — ছাড় হলে সবসময়; রাউন্ডিং হলে কেবল ৳০.৫০-এর বেশি হলে (মালিক, ১ অক্টোবর ২০২৬:
+     * *"রাউন্ডিং 0.5 mane 50 poisa porzonto accept"* — বিলের একই নিয়ম, [[SalesInvoiceService::discountAwaitingSignature()]])।
+     * ⓘ পোস্ট ([[assertDiscountSigned()]]) আর প্রিভিউ (`needs_signature`) দুজনেই এটা ডাকে — দুই জায়গা আলাদা কথা বলতে পারে না।
+     * ⓘ সীমার (`sales.collection.rounding_limit`, ডিফল্ট ৳১০) উপরের রাউন্ডিং এখানে পৌঁছায় না — আগেই ফেরত ([[plan()]])।
+     */
+    public static function differenceNeedsOwner(?string $kind, string $amount): bool
+    {
+        if (bccomp($amount, '0', 4) <= 0) {
+            return false;
+        }
+
+        return match ($kind) {
+            'discount' => true,
+            'rounding' => bccomp($amount, self::ROUNDING_UNSIGNED, 4) > 0,
+            default => false,
+        };
     }
 
     /** ছাড়ের সইয়ের ছাপ — গ্রাহক, খাত, টাকা, কাটা, ছাড় আর প্রতিটা প্রয়োগ; বিবরণ বাদ */

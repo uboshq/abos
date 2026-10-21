@@ -93,6 +93,14 @@ export function signedApply (row) {
     return (row.credit && n > 0 ? -n : n).toFixed(2)
 }
 
+/** ⓘ সই ছাড়া রাউন্ডিং ৳0.50 পর্যন্ত — মালিকের ১ অক্টোবরের নিয়ম (সার্ভার: CollectionService::ROUNDING_UNSIGNED) */
+export const ROUNDING_UNSIGNED = 0.5
+
+/** রাউন্ডিংয়ে মালিকের সই লাগবে কি না — ৳0.50-এর বেশি হলে (পয়সায় গোল, তাই 0.50 নিজে সই চায় না) */
+export function roundingNeedsOwner (value) {
+    return cents(Math.abs(amountOf(value))) > ROUNDING_UNSIGNED
+}
+
 /**
  * সারাংশের হিসাব — দফা ৪। প্রয়োগ = বাছা সারির যোগ (ক্রেডিট ঋণাত্মক), অপ্রয়োগকৃত = পাওনা থেকে যা কমবে − প্রয়োগ।
  */

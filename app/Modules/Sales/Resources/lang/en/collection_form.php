@@ -73,6 +73,7 @@ return [
         'ait' => 'Withheld by the customer: income tax at source (AIT)',
         'discount' => 'Discount on collection (4120)',
         'owner_chip' => 'Owner signs',
+        'rounding_chip' => 'Above ৳0.50: owner signs',
         'rounding' => 'Rounding (5305, up to ৳:limit)',
         'applied' => 'Applied to bills',
         'unapplied' => 'Unapplied (credit in the customer\'s ledger)',
@@ -112,5 +113,5 @@ return [
     'dr' => 'Debit',
     'cr' => 'Credit',
     'unapplied' => 'Unapplied (credit in the customer\'s ledger)',
-    'owner_signs' => 'There is a discount — posting sends it for the owner\'s signature; press "Post" again once signed.',
+    'owner_signs' => 'There is a discount, or rounding above ৳0.50 — posting sends it for the owner\'s signature; press "Post" again once signed.',
 ];

@@ -7,7 +7,7 @@
  * প্রতিটা বদলে [[recalc]] সাধারণ ঘরগুলো নতুন করে লেখে।
  * ⓘ টাকা ইংরেজি অঙ্কে, লাখ-কোটির কমায় ([[taka]] — সার্ভারের Money::format-এর একই লেখা)।
  */
-import { amountOf, balanceOf, cents, fillOldestFirst, rowOf, signedApply } from './collection-math.js'
+import { amountOf, balanceOf, cents, fillOldestFirst, roundingNeedsOwner, rowOf, signedApply } from './collection-math.js'
 import { taka } from './money.js'
 
 export function collectionForm (config = {}) {
@@ -43,6 +43,8 @@ export function collectionForm (config = {}) {
         openTotalText: taka(0),
         balanced: false,
         both: false,
+        // ⓘ রাউন্ডিং ৳0.50-এর বেশি — মালিকের সই লাগবে (সার্ভারের CollectionService::differenceNeedsOwner()-এর একই সীমা)
+        roundingSigned: false,
         short: false,
         over: false,
         diffKind: '',
@@ -195,6 +197,7 @@ export function collectionForm (config = {}) {
             this.openTotalText = taka(b.openTotal)
             this.balanced = b.balanced
             this.both = b.both
+            this.roundingSigned = roundingNeedsOwner(this.rounding)
             this.short = b.unapplied < -0.004
             this.over = this.customerId !== '' && b.gross > this.due + 0.004
 

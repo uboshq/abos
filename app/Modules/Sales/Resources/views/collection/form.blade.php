@@ -351,7 +351,12 @@
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>
                         <div class="flex items-center justify-between gap-3">
-                            <dt><label for="cf-rounding">{{ __('sales::collection_form.summary.rounding', ['limit' => $roundingLimit]) }}</label></dt>
+                            <dt>
+                                <label for="cf-rounding">{{ __('sales::collection_form.summary.rounding', ['limit' => $roundingLimit]) }}</label>
+                                {{-- ⓘ ৳0.50-এর বেশি রাউন্ডিংয়ে মালিকের সই (মালিক, ১ অক্টোবর ২০২৬) — তবেই চিপ, নকশার লেবেল অক্ষত --}}
+                                <span x-show="roundingSigned" x-cloak data-rounding-signs
+                                      class="ms-1 rounded bg-(--color-badge-info-bg) px-1.5 text-2xs text-(--color-badge-info-ink)">{{ __('sales::collection_form.summary.rounding_chip') }}</span>
+                            </dt>
                             <dd><input id="cf-rounding" type="text" inputmode="decimal" x-model="rounding" @input="changed()" placeholder="0.00"
                                        class="num h-(--spacing-field-compact) w-28 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end"></dd>
                         </div>

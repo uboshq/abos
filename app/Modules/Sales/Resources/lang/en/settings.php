@@ -39,7 +39,7 @@ return [
     'commission_max_amount' => 'Highest commission in taka (0 = no limit)',
     'discount_cap_line_percent' => 'Highest manual discount per line, % (0 = no limit)',
     'discount_cap_bill_percent' => 'Highest manual discount per bill, % (0 = no limit)',
-    'collection_rounding_limit' => 'Largest rounding on a collection, taka (posts to 5305; above it is a discount and needs the owner)',
+    'collection_rounding_limit' => 'Largest rounding on a collection, taka (posts to 5305; above ৳0.50 it needs the owner\'s signature; above the limit it is refused)',
     'collection_attachment_required' => 'A collection must carry its slip, advice or screenshot',
     'pos_rounding' => 'Show the rounding field at the counter',
     'rounding_max' => 'Largest rounding in taka (0 = no limit)',

@@ -128,33 +128,98 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
     // ══ দফা ৪ — কম বা বেশি টাকা ═════════════════════════════════════════
 
-    /** দফা ৪ — রাউন্ডিং সীমার ভিতরে (৳১০) ৫৩০৫-এ, সই ছাড়াই পোস্ট */
-    public function test_item_4_rounding_within_the_limit_posts_to_5305_without_a_signature(): void
+    /**
+     * দফা ৪ — রাউন্ডিং ঠিক ৳০.৫০ ৫৩০৫-এ, সই ছাড়াই পোস্ট (মালিক, ১ অক্টোবর ২০২৬: "রাউন্ডিং 0.5 mane 50 poisa porzonto accept";
+     * fe, ২২ অক্টোবর ২০২৬)। ⓘ ছক চালু থাকলেও সই চাওয়া হয় না — সীমাটা ৳০.৫০ পর্যন্ত সই-মুক্ত।
+     */
+    public function test_item_4_rounding_of_fifty_paisa_posts_to_5305_without_a_signature(): void
     {
-        $bill = $this->bill('INV-CF-2', 10, '1010');
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+        $bill = $this->bill('INV-CF-2', 10, '1000.50');
 
-        $collection = $this->book(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '10'],
-            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1010']]]);
+        $collection = $this->book(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '0.50'],
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.50']]]);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: সীমার ভিতরের (৳১০) রাউন্ডিং সই ছাড়া পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
-        $this->assertSame('10.0000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: রাউন্ডিং ৫৩০৫-এ Dr হয়নি');
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: ৳০.৫০ রাউন্ডিং সই ছাড়া পোস্ট হয়নি — '.json_encode(session('errors')?->all()));
+        $this->assertSame(0, Approval::query()->where('action', 'discount')->count(), '⛔ দফা ৪: ৳০.৫০ রাউন্ডিংয়ে সই চাওয়া হলো — ৳০.৫০ পর্যন্ত সই-মুক্ত');
+        $this->assertSame('0.5000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: রাউন্ডিং ৫৩০৫-এ Dr হয়নি');
         $this->assertSame('0.0000', $this->dr(StandardChart::COLLECTION_DISCOUNT, $collection), '⛔ দফা ৪: রাউন্ডিং ছাড়ের খাতে (৪১২০) গেল');
-        $this->assertSame('1010.0000', $this->customerCr($collection), '⛔ দফা ৪: রাউন্ডিংসহ গ্রাহকের পাওনা কমেনি');
-        $this->assertSame(0, Approval::query()->where('action', 'discount')->count(), '⛔ দফা ৪: রাউন্ডিংয়ে সই চাওয়া হলো — fe-র D3-এ রাউন্ডিংয়ে সই নেই');
+        $this->assertSame('1000.5000', $this->customerCr($collection), '⛔ দফা ৪: রাউন্ডিংসহ গ্রাহকের পাওনা কমেনি');
         $this->balanced($collection);
     }
 
-    /** দফা ৪ — ৳১০-এর বেশি রাউন্ডিং ফেরত, বাংলায় সীমা বলে; কোনো কাগজ বা খাতার সারি বসে না */
+    /**
+     * দফা ৪ — ৳০.৫১ রাউন্ডিং মালিকের সই চায়, ছাড়ের একই পথে আর ঠিক সেই অঙ্কের: কর্তার "পোস্ট" খসড়ায় থামে, মালিক নন এমন কেউ সই দিতে
+     * পারেন না, কর্তা আবার চাপলেও থামে; মালিক সই দিলে ৫৩০৫-এ পোস্ট।
+     */
+    public function test_item_4_rounding_above_fifty_paisa_waits_for_the_owners_signature(): void
+    {
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+        $bill = $this->bill('INV-CF-R51', 10, '1000.51');
+
+        $collection = $this->bookAllowingStops(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '0.51'],
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]);
+
+        $this->assertSame(DocumentStatus::DRAFT, $collection->status, '⛔ দফা ৪: ৳০.৫১ রাউন্ডিং মালিকের সই ছাড়াই পোস্ট হলো');
+        $this->assertSame('0.0000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: সইয়ের আগেই রাউন্ডিং খাতায় উঠল');
+        $approval = Approval::query()->where('action', 'discount')->where('status', Approval::PENDING)->latest('id')->first();
+        $this->assertNotNull($approval, '⛔ দফা ৪: ৳০.৫১ রাউন্ডিংয়ে সইয়ের অনুরোধ যায়নি');
+        $this->assertSame(0, bccomp((string) $approval->amount, '0.51', 4), '⛔ দফা ৪: সইয়ের অনুরোধ রাউন্ডিংয়ের ঠিক অঙ্কের (৳০.৫১) নয়');
+        $this->assertSame(__('sales::collection_rules.rounding_awaiting', ['amount' => '0.51', 'free' => '0.50']), $this->said('difference'),
+            '⛔ দফা ৪: রাউন্ডিংয়ে মালিকের সই লাগবে — বাংলায় বলেনি');
+
+        $manager = $this->person(['approval.decide', 'approval.view', 'sales.collection.view']);
+        $refused = false;
+        try {
+            app(ApprovalEngine::class)->approve($approval->fresh(), $manager);
+        } catch (\RuntimeException) {
+            $refused = true;
+        }
+        $this->assertTrue($refused, '⛔ দফা ৪: মালিক নন এমন একজনের সইয়ে রাউন্ডিং পার হলো');
+        $this->assertSame(Approval::PENDING, $approval->fresh()->status, '⛔ দফা ৪: অন্যের সইয়ে রাউন্ডিংয়ের অনুরোধ মিটে গেল');
+
+        $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
+        $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ দফা ৪: কর্তা নিজে আবার চেপে সই ছাড়া রাউন্ডিং পার করলেন');
+
+        app(ApprovalEngine::class)->approve($approval->fresh(), $this->owner);
+        if ($collection->fresh()->status === DocumentStatus::DRAFT) {
+            $this->actingAs($this->maker)->post(route('sales.collection.confirm', $collection));
+        }
+
+        $collection = $collection->fresh();
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: মালিকের সইয়ের পরেও রাউন্ডিংয়ের আদায় পোস্ট হলো না');
+        $this->assertSame('0.5100', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: সইয়ের পরে রাউন্ডিং ৫৩০৫-এ Dr হয়নি');
+        $this->balanced($collection);
+    }
+
+    /** দফা ৪ — অনুমোদন বন্ধ কোম্পানিতে ৳০.৫১ রাউন্ডিং ফেরত (fail-closed, ছাড়ের মতোই): খসড়া, খাতায় কিছু নয়, বাংলায় কারণ */
+    public function test_item_4_rounding_above_fifty_paisa_with_approvals_off_is_refused(): void
+    {
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+        ApprovalFlow::query()->update(['is_active' => false]);
+        $bill = $this->bill('INV-CF-ROFF', 10, '1000.51');
+
+        $collection = $this->bookAllowingStops(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '0.51'],
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]);
+
+        $this->assertSame(DocumentStatus::DRAFT, $collection->status, '⛔ দফা ৪: অনুমোদন বন্ধে ৳০.৫১ রাউন্ডিং সই ছাড়াই পোস্ট হলো');
+        $this->assertSame(0, LedgerEntry::query()->where('source_type', Collection::drillSourceType())->where('source_id', $collection->id)->count(),
+            '⛔ দফা ৪: সই ছাড়া রাউন্ডিংয়ের আদায় খাতায় উঠল');
+        $this->assertSame(__('sales::collection_rules.rounding_no_signer', ['amount' => '0.51', 'free' => '0.50']), $this->said('difference'),
+            '⛔ দফা ৪: সই দেওয়ার কেউ নেই — রাউন্ডিংয়ের বাংলা কারণ বলেনি');
+    }
+
+    /** দফা ৪ — সীমার (৳১০) এক পয়সা বেশি রাউন্ডিং ফেরত, বাংলায় সীমা বলে; কোনো কাগজ বা খাতার সারি বসে না */
     public function test_item_4_rounding_above_the_limit_is_refused_in_bengali(): void
     {
-        $bill = $this->bill('INV-CF-3', 10, '1011');
+        $bill = $this->bill('INV-CF-3', 10, '1010.01');
         $before = Collection::query()->count();
 
-        $this->send(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '11'], 'post' => '1',
-            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1011']]]);
+        $this->send(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '10.01'], 'post' => '1',
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1010.01']]]);
 
-        $this->assertSame($before, Collection::query()->count(), '⛔ দফা ৪: সীমার বেশি (৳১১) রাউন্ডিং নিয়েও কাগজ বসল');
-        $this->assertSame(__('sales::collection_rules.rounding_over_limit', ['amount' => '11.00', 'limit' => '10.00']), $this->said('difference'),
+        $this->assertSame($before, Collection::query()->count(), '⛔ দফা ৪: সীমার বেশি (৳১০.০১) রাউন্ডিং নিয়েও কাগজ বসল');
+        $this->assertSame(__('sales::collection_rules.rounding_over_limit', ['amount' => '10.01', 'limit' => '10.00']), $this->said('difference'),
             '⛔ দফা ৪: সীমার বেশি রাউন্ডিংয়ের বাংলা কারণ (সীমা ৳১০) বলেনি');
     }
 
@@ -320,9 +385,10 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
     /** দফা ১০ — প্রিভিউর লাইন = পোস্টের লাইন: একই খাত, একই অঙ্ক, Dr = Cr, আর প্রিভিউ কিছুই লেখে না */
     public function test_item_10_the_preview_shows_exactly_the_lines_the_post_writes(): void
     {
-        $bill = $this->bill('INV-CF-6', 10, '2010');
-        $form = $this->form(['amount' => '1800', 'vds' => '150', 'ait' => '50', 'difference' => ['kind' => 'rounding', 'amount' => '10'],
-            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '2010']]]);
+        // ⓘ রাউন্ডিং ৳০.৫০ — সই-মুক্ত, তাই পোস্ট এক চাপেই খাতায়
+        $bill = $this->bill('INV-CF-6', 10, '2000.50');
+        $form = $this->form(['amount' => '1800', 'vds' => '150', 'ait' => '50', 'difference' => ['kind' => 'rounding', 'amount' => '0.50'],
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '2000.50']]]);
         $papers = Collection::query()->count();
         $rows = LedgerEntry::query()->count();
 
@@ -569,6 +635,75 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             ->assertJsonPath('customer.id', (string) $this->dealer->public_id);
         $this->getJson(route('sales.collection.open_items', ['customer' => $stranger->id]))
             ->assertNotFound();
+    }
+
+    /**
+     * দফা ১৮ — "গোপন অঙ্ক ঢাকা থাকে": বিক্রয়ের গোপন অঙ্ক বিলের ক্রয়মূল্য (`cost_of_goods`, [[FieldSecurity]]-এ `sales.cost.view`-এর
+     * পেছনে; গ্রাহক বা আদায়ের কোনো ঘর গোপন ঘোষিত নয়)। চাবিহীন কর্তার আদায়ের ছয় দরজার কোনোটায় বিলের ক্রয়মূল্য আসে না —
+     * পর্দা, খোলা কাগজ, ওয়েবের প্রিভিউ, ফোনের open-bills, সিঙ্কের উত্তর, আর টাকার রসিদ।
+     */
+    public function test_item_18_a_bills_hidden_cost_never_reaches_any_collection_door(): void
+    {
+        $bill = $this->bill('INV-CF-COST', 10, '9000');
+        $bill->forceFill(['cost_of_goods' => '4321.9876'])->save();
+        $this->assertFalse($this->maker->can('sales.cost.view'), 'প্রস্তুতিটাই ভুল — কর্তার ক্রয়মূল্যের চাবি আছে');
+        $line = ['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '9000'];
+
+        $doors = [
+            'পর্দা' => $this->actingAs($this->maker)->get(route('sales.collection.create', ['customer' => $this->dealer->id]))->assertOk()->getContent(),
+            'খোলা কাগজ' => $this->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->assertOk()->getContent(),
+            'ওয়েবের প্রিভিউ' => $this->postJson(route('sales.collection.preview'), $this->form(['amount' => '9000', 'lines' => [$line]]))->assertOk()->getContent(),
+        ];
+
+        $clerk = $this->person(['sales.collection.create', 'sales.collection.view', 'accounts.voucher.create']);
+        $this->app['auth']->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($clerk, [\App\Http\Controllers\Api\AuthController::APP]);
+        $doors['ফোনের open-bills'] = $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id)->assertOk()->getContent();
+        $doors['সিঙ্কের উত্তর'] = $this->postJson('/api/v1/sync/sales/push?deviceId=phone-cost', [[
+            'changeId' => 'cost-1', 'entityType' => 'Collection', 'entityId' => null, 'operation' => 'CREATE', 'clientVersion' => 1,
+            'payloadJson' => json_encode(['customerId' => (string) $this->dealer->public_id, 'trxDate' => now()->toDateString(),
+                'accountId' => (string) $this->bank->public_id, 'amount' => '9000', 'confirm' => true,
+                'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '9000.00']]]),
+        ]])->assertOk()->getContent();
+        $this->app['auth']->forgetGuards();
+
+        $paper = Collection::acrossBranches()->latest('id')->firstOrFail();
+        $seen = [];
+        View::composer('print.document', function ($view) use (&$seen) {
+            $seen = $view->getData();
+        });
+        $this->actingAs($this->maker)->get(route('sales.print.receipt', $paper));
+        $doors['টাকার রসিদ'] = $seen === [] ? '' : view('print.document', $seen)->render();
+
+        foreach ($doors as $door => $body) {
+            $this->assertNotSame('', $body, "প্রস্তুতিটাই ভুল — {$door} খোলেনি");
+            // ⓘ ঘরের নাম কেবল JSON আর রসিদে খোঁজা — পর্দার খোলসে অন্য কাজে শব্দটা থাকতে পারে; অঙ্ক সব দরজায়
+            $secrets = ['4321.98', '4,321.98', '4321.99', '4,321.99', ...($door === 'পর্দা' ? [] : ['cost_of_goods'])];
+            foreach ($secrets as $secret) {
+                $this->assertStringNotContainsString($secret, $body, "⛔ দফা ১৮: {$door}-এ বিলের ক্রয়মূল্য ({$secret}) ফাঁস — চাবি ছাড়া গোপন অঙ্ক দেখা গেল");
+            }
+        }
+    }
+
+    /** দফা ১৮ — "শুধু অনুমতি যাঁর আছে তিনি দেখেন": আদায়ের চাবি (`sales.collection.create`) ছাড়া পর্দা, খোলা কাগজ, প্রিভিউ আর ফোনের দুই দরজা ৪০৩ */
+    public function test_item_18_without_the_collection_key_no_collection_door_opens(): void
+    {
+        $this->bill('INV-CF-KEY', 10, '700');
+        $viewer = $this->person(['sales.collection.view']);
+
+        $this->actingAs($viewer);
+        $this->assertSame(403, $this->get(route('sales.collection.create'))->status(), '⛔ দফা ১৮: চাবি ছাড়া টাকা নেওয়ার পর্দা খুলল');
+        $this->assertSame(403, $this->getJson(route('sales.collection.open_items', ['customer' => $this->dealer->id]))->status(),
+            '⛔ দফা ১৮: চাবি ছাড়া গ্রাহকের খোলা বিল আর বকেয়া দেখা গেল');
+        $this->assertSame(403, $this->postJson(route('sales.collection.preview'), $this->form(['amount' => '700', 'lines_given' => '1']))->status(),
+            '⛔ দফা ১৮: চাবি ছাড়া খাতার প্রিভিউ খুলল');
+
+        $this->app['auth']->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($viewer, [\App\Http\Controllers\Api\AuthController::APP]);
+        $this->assertSame(403, $this->getJson('/api/v1/sales/collections/open-bills?customer='.$this->dealer->public_id)->status(),
+            '⛔ দফা ১৮: চাবি ছাড়া ফোনে খোলা বিল দেখা গেল');
+        $this->assertSame(403, $this->postJson('/api/v1/sales/collections/preview', ['customerId' => (string) $this->dealer->public_id,
+            'trxDate' => now()->toDateString(), 'amount' => '700'])->status(), '⛔ দফা ১৮: চাবি ছাড়া ফোনে প্রিভিউ খুলল');
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

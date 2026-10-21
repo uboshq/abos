@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { amountOf, balanceOf, fillOldestFirst, rowOf, shortDate, signedApply } from './collection-math.js'
+import { amountOf, balanceOf, fillOldestFirst, roundingNeedsOwner, rowOf, shortDate, signedApply } from './collection-math.js'
 
 /*
  * ⭐ টাকা নেওয়ার পর্দার হিসাব — মালিকের নকশা ১০০, পাতা ২ (২১ অক্টোবর ২০২৬)।
@@ -99,6 +99,13 @@ describe('টাকা নেওয়া — দফা ৪, ৫: সারা�
         expect(balanceOf({ amount: '20000' }, rows).unapplied).toBe(-10000)
         expect(balanceOf({ amount: '35000' }, rows).unapplied).toBe(5000)
         expect(balanceOf({ amount: '35000' }, rows).balanced).toBe(true)
+    })
+
+    it('দফা ৪ — রাউন্ডিং ৳0.50 পর্যন্ত সই ছাড়া, ৳0.51 থেকে মালিকের সই (চিপ দেখায়)', () => {
+        expect(roundingNeedsOwner('0.50')).toBe(false)
+        expect(roundingNeedsOwner('0.51')).toBe(true)
+        expect(roundingNeedsOwner('10')).toBe(true)
+        expect(roundingNeedsOwner('')).toBe(false)
     })
 
     it('দফা ৪ — ছাড় আর রাউন্ডিং একসাথে নয়', () => {
