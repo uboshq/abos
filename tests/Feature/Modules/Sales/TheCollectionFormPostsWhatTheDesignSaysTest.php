@@ -223,6 +223,41 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
             '⛔ দফা ৪: সীমার বেশি রাউন্ডিংয়ের বাংলা কারণ (সীমা ৳১০) বলেনি');
     }
 
+    /**
+     * দফা ৪ — পার্থক্যের চিহ্ন যাই আসুক, অঙ্কটাই মাপা হয় (fe, ২২ অক্টোবর ২০২৬; মালিকের নিয়ম: যেকোনো দিকে ৳০.৫০-এর বেশি হলে সই)।
+     * ⓘ অ্যাপ ক্রেডিট ঋণাত্মক পাঠায় — পার্থক্য −০.৫১ এলেও তা ০.৫১, মালিকের সইয়ের অপেক্ষায় ([[CollectionInput::difference()]]-এর abs)।
+     */
+    public function test_item_4_a_negative_rounding_of_fifty_one_paisa_still_waits_for_the_owner(): void
+    {
+        app(OwnerSignsDiscounts::class)->ensure($this->company);
+        $bill = $this->bill('INV-CF-RN51', 10, '1000.51');
+
+        $collection = $this->bookAllowingStops(['amount' => '1000', 'difference' => ['kind' => 'rounding', 'amount' => '-0.51'],
+            'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000.51']]]);
+
+        $this->assertSame(DocumentStatus::DRAFT, $collection->status, '⛔ দফা ৪: −৳০.৫১ রাউন্ডিং মালিকের সই ছাড়াই পোস্ট হলো — চিহ্ন বদলে নিয়ম এড়ানো গেল');
+        $this->assertSame('0.0000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: −৳০.৫১ সইয়ের আগেই খাতায় উঠল');
+        $approval = Approval::query()->where('action', 'discount')->where('status', Approval::PENDING)->latest('id')->first();
+        $this->assertNotNull($approval, '⛔ দফা ৪: −৳০.৫১ রাউন্ডিংয়ে সইয়ের অনুরোধ যায়নি');
+        $this->assertSame(0, bccomp((string) $approval->amount, '0.51', 4), '⛔ দফা ৪: −৳০.৫১-এর সইয়ের অনুরোধ ঠিক অঙ্কের (৳০.৫১) নয়');
+    }
+
+    /**
+     * দফা ৪ — গ্রাহক ৳৫ বেশি দিলেন: সেটা রাউন্ডিং নয়, খাতা থেকে মোছা হয় না — গ্রাহকের নিজের খাতায় Cr থাকে, তাই সইও লাগে না
+     * (fe-র প্রশ্ন, ২২ অক্টোবর ২০২৬)। ⓘ রাউন্ডিং কেবল কম পাওয়া টাকা মোছে (৫৩০৫ Dr); বাড়তি টাকা কখনো ৫৩০৫-এ যায় না।
+     */
+    public function test_item_4_five_taka_paid_extra_is_kept_as_credit_not_written_off(): void
+    {
+        $bill = $this->bill('INV-CF-X5', 10, '1000');
+
+        $collection = $this->book(['amount' => '1005', 'lines' => [['kind' => 'bill', 'id' => $bill->public_id, 'amount' => '1000']]]);
+
+        $this->assertSame(DocumentStatus::CONFIRMED, $collection->status, '⛔ দফা ৪: ৳৫ বেশি দেওয়া আদায় পোস্ট হলো না');
+        $this->assertSame(0, bccomp((string) $collection->unapplied, '5', 4), '⛔ দফা ৪: বাড়তি ৳৫ গ্রাহকের ক্রেডিট হিসেবে রইল না');
+        $this->assertSame('0.0000', $this->dr(StandardChart::ROUNDING_DIFFERENCE, $collection), '⛔ দফা ৪: বাড়তি ৳৫ রাউন্ডিং সেজে খাতা থেকে মুছে গেল');
+        $this->assertSame(0, Approval::query()->where('action', 'discount')->count(), '⛔ দফা ৪: বাড়তি টাকায় সইয়ের অনুরোধ গেল — মোছার কিছু নেই');
+    }
+
     /** দফা ৪ — বিলের চেয়ে বেশি টাকা: বাকিটা অপ্রয়োগকৃত, গ্রাহকের নিজের খাতায় Cr; অগ্রিমের কোনো খাতে নয় */
     public function test_item_4_an_overpayment_stays_unapplied_as_credit_on_the_customers_own_ledger(): void
     {
