@@ -267,8 +267,8 @@ return [
          *  · `amount_key` — অনুরোধের নিট `approvals.amount`-এ খোলা বসে না, এনক্রিপ্ট করা থাকে; ইনবক্স, সইয়ের পাতা, ফোন, খবর,
          *    রিপোর্ট, খোঁজা — সবখানে খালি ([[ApprovalRules::amountKey()]])।
          *  · `summary` — মাস, জন, নিট; নিট চাবি ছাড়া ঢাকা ([[PayrollRunSummary]])।
-         *  · `signer_key` — ছকের পর্দায় চাবি ছাড়া কেউ সইকারী নন ([[ApprovalFlowService]]; ⚠️ হিসাবরক্ষকের নিজে-বসানো ছক ব্যতিক্রম,
-         *    [[MoneyFlowDefaults]]-এর টীকা)।
+         *  · `signer_key` — চাবি ছাড়া কেউ সইকারী নন, ছকের পর্দায় আর নিজে-বসানো ছকেও ([[ApprovalFlowService]]); নিজে-বসানো ছকের
+         *    সইকারী মালিক বা চাবি থাকা রোল (HR-এর প্রধান), হিসাবরক্ষক কখনো নন ([[MoneyFlowDefaults::keyHolders()]]; fe, ২১ অক্টোবর ২০২৬)।
          */
         'payroll' => [
             'signer_key' => 'hr.salary.view',

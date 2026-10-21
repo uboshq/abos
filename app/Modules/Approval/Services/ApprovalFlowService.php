@@ -72,16 +72,13 @@ class ApprovalFlowService
     /**
      * @param  array<string, mixed>  $data
      * @param  list<array{level: mixed, approver_type: mixed, approver_id: mixed, requires_all?: mixed}>  $steps
-     * @param  bool  $signerKeys  ⓘ `false` কেবল হিসাবরক্ষকের নিজে-বসানো ছকে ([[MoneyFlowDefaults]]) — মানুষের পর্দা সবসময় `true`
      */
-    public function create(array $data, array $steps, array $conditions = [], bool $signerKeys = true): ApprovalFlow
+    public function create(array $data, array $steps, array $conditions = []): ApprovalFlow
     {
         $this->assertKnownAction((string) $data['module'], (string) $data['action']);
         $this->assertSteps($steps);
-
-        if ($signerKeys) {
-            $this->assertSignersHoldTheKey((string) $data['module'], (string) $data['action'], $steps);
-        }
+        // ⓘ নিজে-বসানো ছকও ([[MoneyFlowDefaults]]) — কোনো ব্যতিক্রম নেই (fe, ২১ অক্টোবর ২০২৬)
+        $this->assertSignersHoldTheKey((string) $data['module'], (string) $data['action'], $steps);
 
         $this->assertNotDuplicated($data);
 

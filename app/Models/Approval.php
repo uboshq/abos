@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 
 /** একটা অনুমোদনের অনুরোধ। polymorphic — যেকোনো ডকুমেন্টে বসে। */
-class Approval extends Model implements Drillable
+class Approval extends Model implements Drillable, \App\Core\Contracts\GuardsFieldsPerRow
 {
     use BelongsToCompany;
     use HasFactory;
@@ -96,6 +96,22 @@ class Approval extends Model implements Drillable
      * ⛔ কেবল ইঞ্জিনের হিসাবের জন্য (সই কোন অঙ্ক ঢাকে, কর্তৃত্বের সীমা) — পর্দায় ছাপার জন্য নয়: যে কাজের অঙ্ক চাবির পেছনে
      * ([[ApprovalRules::amountKey()]]), তার অঙ্ক কেবল মডিউলের সারাংশ দেখায়, চাবি মেনে।
      */
+    /**
+     * ⛔ অডিটে অনুরোধের অঙ্ক — যে কাজের অঙ্ক চাবির পেছনে ([[ApprovalRules::amountKey()]], বেতনের রান), তার সারিতে সেই চাবি; বাকিরা
+     * খোলা (fe-র উত্তর খ, a6, ২১ অক্টোবর ২০২৬; [[GuardsFieldsPerRow]])। ⓘ ঢাকনা পড়ার আগের অডিট-সারিতে নিট খোলা লেখা — পড়ার
+     * মুহূর্তে ঢাকা পড়ে। ⓘ কোম্পানির দেয়াল থাকে ([[BelongsToCompany]]); মুছে-যাওয়া বা অন্য কোম্পানির সারি = খোলা নিয়ম নেই।
+     */
+    public static function fieldPermissionFor(int $id, string $field): ?string
+    {
+        if ($field !== 'amount') {
+            return null;
+        }
+
+        $row = static::query()->find($id, ['id', 'module', 'action']);
+
+        return $row === null ? null : app(\App\Core\Engines\Approval\ApprovalRules::class)->amountKey((string) $row->module, (string) $row->action);
+    }
+
     public function signedAmount(): ?string
     {
         if ($this->amount !== null) {

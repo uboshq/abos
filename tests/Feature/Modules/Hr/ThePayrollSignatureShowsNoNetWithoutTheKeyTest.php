@@ -213,12 +213,66 @@ final class ThePayrollSignatureShowsNoNetWithoutTheKeyTest extends TestCase
             '⛔ চাবি ছাড়া সইকারী নিয়ে বেতনের রানের ছক বসল।');
     }
 
-    public function test_the_accountants_default_payroll_flow_is_still_seeded(): void
+    /**
+     * ⭐ নিজে-বসানো বেতনের রানের ছক — মালিক (super admin রোল) বা চাবি থাকা HR-এর প্রধান, হিসাবরক্ষক কখনো নন; বেতন পরিশোধের ভাউচারের
+     * ছক আগের মতোই হিসাবরক্ষকের (fe, ২১ অক্টোবর ২০২৬, a6; [[MoneyFlowDefaults::keyHolders()]])।
+     */
+    public function test_the_default_payroll_flow_is_signed_by_the_owner_or_an_hr_head_never_the_accountant(): void
     {
+        $head = CompanyContext::forCompany($this->company->id, function () {
+            $role = Role::query()->create(['name' => 'HR Head', 'guard_name' => 'web', 'company_id' => $this->company->id]);
+            $role->givePermissionTo(Permission::findOrCreate('hr.salary.view', 'web'));
+
+            return $role;
+        });
+        $blindHr = CompanyContext::forCompany($this->company->id, fn () => Role::query()->create(
+            ['name' => 'HR Clerk', 'guard_name' => 'web', 'company_id' => $this->company->id]));
+        $owner = Role::query()->where('company_id', $this->company->id)->where('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)->firstOrFail();
+        // ⓘ হিসাবরক্ষকের হাতে চাবি থাকলেও বেতনের রানের নিজে-বসানো সইকারী নন (fe: "never the Accountant")
+        CompanyContext::forCompany($this->company->id, fn () => $this->accountantRoleIn($this->company)
+            ->givePermissionTo(Permission::findOrCreate('hr.salary.view', 'web')));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $report = $this->moneyFlowsFor($this->company);
+        $accountant = (int) $report['role_id'];
+
+        $this->assertContains('hr.payroll', $report['created'], '⛔ বেতনের রানের ছক বসল না — রান কারো সই ছাড়াই চলত।');
+
+        $payroll = ApprovalFlow::query()->with('steps')->where('module', 'hr')->where('action', 'payroll')->firstOrFail();
+        $signers = $payroll->steps->pluck('approver_id')->map(fn ($id) => (int) $id)->all();
+
+        $this->assertNotContains($accountant, $signers, '⛔ বেতনের রানের নিজে-বসানো ছকে হিসাবরক্ষক।');
+        $this->assertContains((int) $owner->id, $signers, '⛔ বেতনের রানের ছকে মালিক নেই।');
+        $this->assertContains((int) $head->id, $signers, '⛔ চাবি থাকা HR-এর প্রধান ছকে নেই।');
+        $this->assertNotContains((int) $blindHr->id, $signers, '⛔ চাবি ছাড়া রোল বেতনের রানের সইকারী হলো।');
+        $this->assertSame([ApprovalFlowStep::BY_ROLE], $payroll->steps->pluck('approver_type')->unique()->values()->all());
+        $this->assertSame([1], $payroll->steps->pluck('level')->map(fn ($l) => (int) $l)->unique()->values()->all());
+
+        // ⓘ বেতন পরিশোধের ভাউচার (`accounts.payment`) আর বাকি প্রতিটা টাকার কাজ — আগের মতোই হিসাবরক্ষকের
+        $this->assertTrue(in_array('accounts.payment', $report['created'], true) || in_array('accounts.payment', $report['skipped'], true),
+            'প্রস্তুতি — পরিশোধের ভাউচারের ছক দেখাই হয়নি।');
+
+        foreach (array_diff($report['created'], ['hr.payroll']) as $key) {
+            [$module, $action] = explode('.', $key, 2);
+            $flow = ApprovalFlow::query()->with('steps')->where('module', $module)->where('action', $action)->firstOrFail();
+            $this->assertSame([$accountant], $flow->steps->pluck('approver_id')->map(fn ($id) => (int) $id)->all(),
+                "⛔ {$key}-এর ছক হিসাবরক্ষকের নয় — বেতন পরিশোধের ভাউচারসহ টাকার কাজ হিসাবরক্ষকেরই।");
+        }
+    }
+
+    public function test_where_every_approval_is_switched_off_nothing_is_seeded(): void
+    {
+        // ⓘ UB-র মতো — ছক আছে, একটাও চালু নয় (মালিক, ৩ অক্টোবর ২০২৬: সব সই বন্ধ)
+        ApprovalFlow::query()->update(['is_active' => false]);
+        ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'sales', 'action' => 'discount',
+            'document_type' => 'UBOFF', 'threshold_amount' => null, 'is_active' => false]);
+
         $report = $this->moneyFlowsFor($this->company);
 
-        $this->assertContains('hr.payroll', $report['created'],
-            '⛔ হিসাবরক্ষকের নিজে-বসানো বেতনের রানের ছক বসল না — বেতনের রান কারো সই ছাড়াই চলত (মালিকের ২৭ সেপ্টেম্বরের নিয়ম)।');
+        $this->assertSame([], $report['created'], '⛔ সব সই বন্ধ, তবু নতুন ছক বসল: '.implode(', ', $report['created']));
+        $this->assertContains('hr.payroll', $report['switched_off']);
+        $this->assertSame(0, ApprovalFlow::query()->where('module', 'hr')->where('action', 'payroll')->count(),
+            '⛔ অনুমোদন বন্ধ রাখা কোম্পানিতে বেতনের রানের ছক বসে গেল।');
     }
 
     // ── সাহায্যকারী ─────────────────────────────────────────────────────

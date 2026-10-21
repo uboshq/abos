@@ -232,7 +232,7 @@ final class TimeMachine
              * কেমন ছিল" প্রশ্নটা ঘরের পাহারা টপকে যাওয়ার একটা খোলা
              * দরজা হত ([[FieldSecurity]])।
              */
-            if ($certainty === self::KNOWN && ! FieldSecurity::visible($type, $field)) {
+            if ($certainty === self::KNOWN && ! FieldSecurity::visible($type, $field, $id)) {
                 $value = FieldSecurity::mask();
             }
 
