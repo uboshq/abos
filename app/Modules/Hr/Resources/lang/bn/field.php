@@ -115,4 +115,7 @@ return [
     'income_year' => 'আয়ের বছর',
     'tds_total' => 'উৎসে কাটা কর',
     'employer_signature' => 'নিয়োগকর্তার সই ও সিল',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_date' => 'ভাতার দিন',
+    'narration' => 'বিবরণ (যেমন ঈদুল ফিতর)',
 ];

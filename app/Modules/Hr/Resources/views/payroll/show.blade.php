@@ -15,7 +15,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="$run->month->locale(app()->getLocale())->translatedFormat('F Y')"
-            :subtitle="$run->document_no . ' · ' . __('core.status.' . $run->status)">
+            :subtitle="$run->document_no . ' · ' . __('hr::kind.run_' . ($run->run_type ?? 'salary')) . ' · ' . __('core.status.' . $run->status)">
             <x-slot:actions>
                 @can('hr.payroll.view')
                     <x-ui.button :href="route('hr.payroll.payslips', $run->id)">

@@ -28,4 +28,7 @@ return [
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
     'ot_signed' => 'অনুমোদিত',
     'ot_waiting' => 'সইয়ের অপেক্ষায়',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'run_salary' => 'মাসের বেতন',
+    'run_bonus' => 'উৎসব ভাতা',
 ];

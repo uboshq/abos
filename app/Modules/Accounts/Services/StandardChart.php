@@ -486,6 +486,9 @@ final class StandardChart implements ProvisionsCompany
      */
     public const TDS_PAYABLE = '2132';
 
+    /** ⭐ উৎসব ভাতা — বেতন থেকে আলাদা খরচ, বছরে দুই উৎসবের (শ্রম বিধিমালা ২০১৫ বিধি ১১১; a6, ২১ অক্টোবর ২০২৬) */
+    public const FESTIVAL_BONUS_EXPENSE = '5226';
+
     public const EMPLOYEE_ADVANCE = '1131';
 
     /**
@@ -664,7 +667,7 @@ final class StandardChart implements ProvisionsCompany
         self::INVENTORY_SHORTAGE_SURPLUS,
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
-        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE,
+        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
@@ -1298,6 +1301,8 @@ final class StandardChart implements ProvisionsCompany
             ['5222', 'Promotion Expense', 'প্রচারের খরচ', $X, '5200', false, []],
             // ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা (a6, ২১ অক্টোবর ২০২৬; [[PF_EMPLOYER_EXPENSE]])
             ['5225', 'Provident Fund — Employer Contribution', 'ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা', $X, '5200', false, []],
+            // ⭐ উৎসব ভাতা (a6, ২১ অক্টোবর ২০২৬; [[FESTIVAL_BONUS_EXPENSE]])
+            ['5226', 'Festival Bonus', 'উৎসব ভাতা', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

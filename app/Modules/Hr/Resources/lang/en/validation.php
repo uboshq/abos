@@ -73,4 +73,9 @@ return [
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'e_tin_shape' => 'An e-TIN is twelve digits — no spaces or dashes.',
     'tds_account_missing' => 'The tax-at-source account (2132) is missing — use "Install standard chart" in the chart of accounts.',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_month_already_run' => 'There is already a festival bonus run in :month — cancel it before making another.',
+    'bonus_limit_reached' => ':max festival bonuses were already run in :year — no more in a year.',
+    'nobody_due_a_bonus' => 'Nobody has a year of service on that day (or a basic set) — no one is due a festival bonus.',
+    'bonus_account_missing' => 'The festival bonus account (5226) is missing — use "Install standard chart" in the chart of accounts.',
 ];

@@ -36,6 +36,8 @@ final class PaidMonth
     {
         $paid = PayrollRun::acrossBranches()
             ->where('status', DocumentStatus::CONFIRMED)
+            // ⓘ কেবল মাসের বেতন — উৎসব ভাতা হাজিরা, ছুটি বা অধিকাল পড়ে না, তাই সেগুলো তার কারণে আটকায় না (a6, ২১ অক্টোবর ২০২৬)
+            ->ofType(PayrollRun::SALARY)
             ->whereDate('month', '>=', $from->copy()->startOfMonth()->toDateString())
             ->when($to !== null, fn ($q) => $q->whereDate('month', '<=', $to->copy()->startOfMonth()->toDateString()))
             ->when($employeeId !== null, fn ($q) => $q->whereHas('payslips', fn ($slips) => $slips->where('employee_id', $employeeId)))

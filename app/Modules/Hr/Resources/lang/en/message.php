@@ -91,4 +91,8 @@ return [
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'tax_slabs_missing' => 'No tax slabs are set — no tax was deducted at source in this run. Set HR\'s tax slabs in the control panel.',
     'tax_slabs_unreadable' => 'The tax slabs could not be read — write "width:rate" separated by commas; no tax was deducted at source in this run.',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_note' => 'Everyone with at least one year of service on that day gets the set percentage of basic (default one month\'s basic). At most two a year; signature and books as for salary, expense on "Festival Bonus".',
+    // ⭐ উৎসব ভাতার সইয়ের সারি (a6, ২১ অক্টোবর ২০২৬)
+    'bonus_signing_summary' => 'Festival bonus :month · :count people · net :net',
 ];

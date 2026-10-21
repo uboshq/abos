@@ -18,4 +18,6 @@ return [
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'tax_slabs' => 'Tax at source — slabs as "width:rate" separated by commas, the last may be "*:rate" (e.g. 350000:0, 100000:5, 400000:10, *:30); empty = nothing is deducted',
     'tax_exemption_cap' => 'Tax at source — salary exemption cap (one third or this amount, whichever is lower)',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_percent_of_basic' => 'Festival bonus — % of basic (100 = one month\'s basic; never more)',
 ];

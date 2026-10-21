@@ -100,4 +100,7 @@ return [
     'income_year' => 'Income year',
     'tds_total' => 'Tax deducted at source',
     'employer_signature' => 'Employer\'s signature and seal',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_date' => 'Bonus date',
+    'narration' => 'Narration (e.g. Eid-ul-Fitr)',
 ];

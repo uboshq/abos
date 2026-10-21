@@ -42,4 +42,6 @@ return [
     'ot_sign' => 'Sign',
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'tax_certificate' => 'Tax certificate',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'new_bonus_run' => 'New festival bonus run',
 ];
