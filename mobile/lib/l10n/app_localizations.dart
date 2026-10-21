@@ -504,6 +504,1062 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'সর্বমোট'**
   String get salesDashboardsGrandTotal;
+
+  /// Quotation compare: the list to pick from could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতির তালিকা আনা গেল না।'**
+  String get quotationsCompareListLoadFailed;
+
+  /// Quotation compare: the comparison could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'তুলনা আনা গেল না।'**
+  String get quotationsCompareLoadFailed;
+
+  /// Quotation compare: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'তুলনা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'**
+  String get quotationsCompareNotOnServer;
+
+  /// Quotation compare: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতির তুলনা'**
+  String get quotationsCompareTitle;
+
+  /// Quotation compare: tooltip of the button that goes back to the picker
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার বাছুন'**
+  String get quotationsCompareRepick;
+
+  /// Quotation compare: only one quotation came back
+  ///
+  /// In bn, this message translates to:
+  /// **'তুলনার জন্য অন্তত দুটো লাগে'**
+  String get quotationsCompareNeedTwoTitle;
+
+  /// Quotation compare: only one quotation came back, the hint
+  ///
+  /// In bn, this message translates to:
+  /// **'আরেকটা উদ্ধৃতি বাছুন।'**
+  String get quotationsCompareNeedTwoMessage;
+
+  /// Quotation compare: nothing to pick from
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছার মতো কোনো উদ্ধৃতি নেই'**
+  String get quotationsCompareNoChoices;
+
+  /// Quotation compare: the picker hint; max is the most that can be picked
+  ///
+  /// In bn, this message translates to:
+  /// **'দুই থেকে {max}টা উদ্ধৃতি বাছুন — প্রথমটা ভিত্তি'**
+  String quotationsComparePickHint(String max);
+
+  /// Quotation compare: the button, with how many are picked
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা তুলনা করুন}}'**
+  String quotationsCompareGo(int count);
+
+  /// Quotation compare: after the quotation number when it is a revision
+  ///
+  /// In bn, this message translates to:
+  /// **' (সং {revision})'**
+  String quotationsCompareRevision(String revision);
+
+  /// Quotation revisions: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'সংস্করণের তালিকা আনা গেল না।'**
+  String get quotationsRevisionsLoadFailed;
+
+  /// Quotation revisions: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'**
+  String get quotationsRevisionsNotOnServer;
+
+  /// Quotation revisions: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতির সংস্করণ'**
+  String get quotationsRevisionsTitle;
+
+  /// Quotation revisions: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর বা দোকানের নাম'**
+  String get quotationsRevisionsSearch;
+
+  /// Quotation revisions: empty state title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো উদ্ধৃতির সংস্করণ নেই'**
+  String get quotationsRevisionsEmptyTitle;
+
+  /// Quotation revisions: empty state message
+  ///
+  /// In bn, this message translates to:
+  /// **'নিচে টেনে আবার দেখুন।'**
+  String get quotationsRevisionsEmptyMessage;
+
+  /// Quotation revisions: how many revisions a family has
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা সংস্করণ}}'**
+  String quotationsRevisionsCount(int count);
+
+  /// Quotation revisions: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও'**
+  String get quotationsRevisionsMore;
+
+  /// Sales desk pages: the default empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কিছু নেই'**
+  String get salesDeskNothing;
+
+  /// Sales desk pages: the page could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get salesDeskLoadFailed;
+
+  /// Sales desk pages: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।'**
+  String get salesDeskNotOnServer;
+
+  /// Sales desk pages: error card title
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get salesDeskErrorTitle;
+
+  /// Depot check: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিপোর যাচাই'**
+  String get salesDeskDepotTitle;
+
+  /// Depot check: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'যাচাইয়ের অপেক্ষায় কিছু নেই'**
+  String get salesDeskDepotEmpty;
+
+  /// Depot check: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর, দোকানের নাম বা কোড'**
+  String get salesDeskDepotSearch;
+
+  /// Depot check: total strip label; DO is a delivery order
+  ///
+  /// In bn, this message translates to:
+  /// **'যাচাইয়ের অপেক্ষায় DO'**
+  String get salesDeskDepotTotal;
+
+  /// Depot check: note that the next step is on the web
+  ///
+  /// In bn, this message translates to:
+  /// **'ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।'**
+  String get salesDeskDepotWebNote;
+
+  /// Depot check: the second line of an order card; status comes from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'{date} · {lines, plural, other{{lines}টি পণ্য}} · {status}'**
+  String salesDeskDepotLine(String date, int lines, String status);
+
+  /// Depot check: heading of the held sales orders
+  ///
+  /// In bn, this message translates to:
+  /// **'ধরে রাখা বিক্রয় আদেশ'**
+  String get salesDeskDepotHeld;
+
+  /// Print queue: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'না ছাপা কাগজ'**
+  String get salesDeskPrintTitle;
+
+  /// Print queue: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'সব কাগজ ছাপা হয়েছে'**
+  String get salesDeskPrintEmpty;
+
+  /// Sales desk: how many rows in all
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count} টি'**
+  String salesDeskTotalCount(String count);
+
+  /// Print queue: which paper; paper comes from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ: {paper}'**
+  String salesDeskPrintPaper(String paper);
+
+  /// Print queue: why the print failed; reason comes from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'কারণ: {reason}'**
+  String salesDeskPrintReason(String reason);
+
+  /// Print queue: snack bar after marking a job printed by hand
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপা হয়েছে বলে সরানো হলো।'**
+  String get salesDeskPrintSettled;
+
+  /// Print queue: marking printed failed
+  ///
+  /// In bn, this message translates to:
+  /// **'সরানো গেল না।'**
+  String get salesDeskPrintSettleFailed;
+
+  /// Print queue: button that marks a job printed by hand
+  ///
+  /// In bn, this message translates to:
+  /// **'হাতে ছাপা হলো'**
+  String get salesDeskPrintSettle;
+
+  /// Delivery performance: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডেলিভারির কাজ'**
+  String get salesDeskDeliveryTitle;
+
+  /// Delivery performance: heading of the late challans, with their count
+  ///
+  /// In bn, this message translates to:
+  /// **'দেরির চালান · {count} টি'**
+  String salesDeskDeliveryLate(String count);
+
+  /// Delivery performance: how many days late
+  ///
+  /// In bn, this message translates to:
+  /// **'{days} দিন দেরি'**
+  String salesDeskDeliveryDaysLate(String days);
+
+  /// Delivery performance: the promised and the arrival date
+  ///
+  /// In bn, this message translates to:
+  /// **'কথা ছিল {promised} · পৌঁছেছে {arrived}'**
+  String salesDeskDeliveryPromised(String promised, String arrived);
+
+  /// Delivery performance: the order number of a late challan
+  ///
+  /// In bn, this message translates to:
+  /// **'আদেশ {no}'**
+  String salesDeskDeliveryOrder(String no);
+
+  /// Pipeline: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'পাইপলাইন'**
+  String get salesDeskPipelineTitle;
+
+  /// Pipeline: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো সম্ভাবনা নেই'**
+  String get salesDeskPipelineEmpty;
+
+  /// Pipeline: total strip of the open stages, weighted
+  ///
+  /// In bn, this message translates to:
+  /// **'চলমান সম্ভাবনা (ওজন-করা)'**
+  String get salesDeskPipelineOpen;
+
+  /// Pipeline: a stage and how many in it
+  ///
+  /// In bn, this message translates to:
+  /// **'{stage} · {count} টি'**
+  String salesDeskPipelineStage(String stage, String count);
+
+  /// Pipeline: a stage total and weighted total; amounts from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {total} · ওজন-করা {weighted}'**
+  String salesDeskPipelineTotals(String total, String weighted);
+
+  /// Pipeline: the expected close date of an opportunity
+  ///
+  /// In bn, this message translates to:
+  /// **'শেষ {date}'**
+  String salesDeskPipelineCloses(String date);
+
+  /// Document templates: screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'দলিলের ছাঁচ'**
+  String get salesDeskTemplatesTitle;
+
+  /// Document templates: empty title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো ছাঁচ নেই'**
+  String get salesDeskTemplatesEmpty;
+
+  /// Document templates: the count, and where to edit
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট {count} টি ছাঁচ · লেখা ও বদল ওয়েবে'**
+  String salesDeskTemplatesCount(String count);
+
+  /// Document templates: a template that is switched off
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ'**
+  String get salesDeskTemplatesInactive;
+
+  /// Sales papers: the name of the paper kind (invoice, or other = challan), used as a title
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{বিক্রয় বিল} other{চালান}}'**
+  String salesPapersKindTitle(String kind);
+
+  /// Sales papers: the list could not be loaded (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{বিক্রয় বিলের তালিকা আনা গেল না।} other{চালানের তালিকা আনা গেল না।}}'**
+  String salesPapersListLoadFailed(String kind);
+
+  /// Sales papers: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এই তালিকা এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের চেয়ে নতুন।'**
+  String get salesPapersNotOnServer;
+
+  /// Sales papers: search hint
+  ///
+  /// In bn, this message translates to:
+  /// **'নম্বর বা দোকানের নাম'**
+  String get salesPapersSearch;
+
+  /// Sales papers: total strip label (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{মোট বিক্রয় বিল} other{মোট চালান}}'**
+  String salesPapersTotal(String kind);
+
+  /// Sales papers: empty list title (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{এই সময়ে কোনো বিক্রয় বিল নেই} other{এই সময়ে কোনো চালান নেই}}'**
+  String salesPapersEmptyTitle(String kind);
+
+  /// Sales papers: empty list hint
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ বদলে বা নিচে টেনে আবার দেখুন।'**
+  String get salesPapersEmptyMessage;
+
+  /// Sales papers: what is still owed on an invoice; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি {amount}'**
+  String salesPapersDueAmount(String amount);
+
+  /// Sales papers: an invoice with nothing owed
+  ///
+  /// In bn, this message translates to:
+  /// **'শোধ'**
+  String get salesPapersPaid;
+
+  /// Sales papers: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও'**
+  String get salesPapersMore;
+
+  /// Sales paper: one paper could not be loaded (invoice, or other = challan)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, invoice{বিক্রয় বিলটা আনা গেল না।} other{চালানটা আনা গেল না।}}'**
+  String salesPapersLoadFailed(String kind);
+
+  /// Sales paper: tooltip of the print and share button
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপা / পাঠান'**
+  String get salesPapersPrint;
+
+  /// Sales paper: the date row
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ'**
+  String get salesPapersDate;
+
+  /// Sales paper: the sale number row
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রির নম্বর'**
+  String get salesPapersSaleNo;
+
+  /// Sales paper: the date the invoice falls due
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ'**
+  String get salesPapersDueOn;
+
+  /// Sales paper: the warehouse row
+  ///
+  /// In bn, this message translates to:
+  /// **'গুদাম'**
+  String get salesPapersWarehouse;
+
+  /// Sales paper: the vehicle row
+  ///
+  /// In bn, this message translates to:
+  /// **'গাড়ি'**
+  String get salesPapersVehicle;
+
+  /// Sales paper: who wrote the paper
+  ///
+  /// In bn, this message translates to:
+  /// **'লিখেছেন'**
+  String get salesPapersCreatedBy;
+
+  /// Sales paper: heading of the product lines
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য'**
+  String get salesPapersProducts;
+
+  /// Sales paper: free quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'ফ্রি {qty}'**
+  String salesPapersFreeQty(String qty);
+
+  /// Sales paper: discount on a line; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড় {amount}'**
+  String salesPapersLineDiscount(String amount);
+
+  /// Sales paper: the discount total row
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাড়'**
+  String get salesPapersDiscount;
+
+  /// Sales paper: the tax total row
+  ///
+  /// In bn, this message translates to:
+  /// **'কর'**
+  String get salesPapersTax;
+
+  /// Sales paper: the total row
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট'**
+  String get salesPapersGrandTotal;
+
+  /// Sales paper: what was collected on the invoice
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়'**
+  String get salesPapersCollected;
+
+  /// Sales paper: what is still owed on the invoice
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকি'**
+  String get salesPapersDue;
+
+  /// Sales paper: heading of the challans linked to an invoice
+  ///
+  /// In bn, this message translates to:
+  /// **'এই বিলের চালান'**
+  String get salesPapersInvoiceChallans;
+
+  /// Sales paper: heading of the invoices linked to a challan
+  ///
+  /// In bn, this message translates to:
+  /// **'এই চালানের বিল'**
+  String get salesPapersChallanInvoices;
+
+  /// Sales papers: the phone's own word for a paper's status; only these five are asked; other is a fallback
+  ///
+  /// In bn, this message translates to:
+  /// **'{status, select, draft{খসড়া} confirmed{নিশ্চিত} cancelled{বাতিল} closed{সম্পন্ন} awaiting_approval{অনুমোদনের অপেক্ষায়} other{অজানা}}'**
+  String salesPapersStatus(String status);
+
+  /// Quotations: the status filter chips (all, draft, approved, sent, accepted; other = converted)
+  ///
+  /// In bn, this message translates to:
+  /// **'{tab, select, all{সব} draft{খসড়া} approved{অনুমোদিত} sent{পাঠানো} accepted{গৃহীত} other{আদেশ হয়েছে}}'**
+  String quotationsListTab(String tab);
+
+  /// Quotations: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতি আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get quotationsListLoadFailed;
+
+  /// Quotations: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'সার্ভারে উদ্ধৃতির দরজা এখনো আসেনি — অফিসে জানান।'**
+  String get quotationsListNotOnServer;
+
+  /// Quotations: list screen title, and a quotation page title before it loads
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতি'**
+  String get quotationsListTitle;
+
+  /// Quotations: the button and the screen title for a new quotation
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন উদ্ধৃতি'**
+  String get quotationsListNew;
+
+  /// Quotations: total strip label (all pages)
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট উদ্ধৃতি'**
+  String get quotationsListTotal;
+
+  /// Quotations: error card title
+  ///
+  /// In bn, this message translates to:
+  /// **'আনা গেল না'**
+  String get quotationsListErrorTitle;
+
+  /// Quotations: empty list title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো উদ্ধৃতি নেই'**
+  String get quotationsListEmpty;
+
+  /// Quotations: load the next page
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও উদ্ধৃতি'**
+  String get quotationsListMore;
+
+  /// New quotation: product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন'**
+  String get quotationsNewPickProduct;
+
+  /// New quotation: saved without a shop
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান বাছুন।'**
+  String get quotationsNewNeedShop;
+
+  /// New quotation: saved without a product
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্তত একটা পণ্য দিন।'**
+  String get quotationsNewNeedLine;
+
+  /// New quotation: saving failed
+  ///
+  /// In bn, this message translates to:
+  /// **'উদ্ধৃতি রাখা গেল না। আবার চেষ্টা করুন।'**
+  String get quotationsNewSaveFailed;
+
+  /// New quotation: the shop row before a shop is picked, and the shop picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান বাছুন'**
+  String get quotationsNewPickShop;
+
+  /// Quotation: the quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ: {qty}'**
+  String quotationsQty(String qty);
+
+  /// Quotation: the rate on a line; rate is an amount from Money.taka or the product-price words
+  ///
+  /// In bn, this message translates to:
+  /// **'দর: {rate}'**
+  String quotationsRate(String rate);
+
+  /// New quotation: no rate typed, the product's own price is used
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্যের দাম'**
+  String get quotationsNewProductPrice;
+
+  /// New quotation: tooltip of the button that removes a line
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get quotationsNewRemoveLine;
+
+  /// New quotation: add a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য যোগ করুন'**
+  String get quotationsNewAddLine;
+
+  /// New quotation: the remarks field
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ঐচ্ছিক)'**
+  String get quotationsNewNote;
+
+  /// Quotation: the submit button
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা দিন'**
+  String get quotationsSubmit;
+
+  /// New quotation: save without submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get quotationsNewKeepDraft;
+
+  /// Quotation page: an action failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজটা হলো না। আবার চেষ্টা করুন।'**
+  String get quotationsActFailed;
+
+  /// Quotation page: the status; status is the server's label
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা: {status}'**
+  String quotationsStatus(String status);
+
+  /// Quotation page: the shop
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকান: {shop}'**
+  String quotationsShop(String shop);
+
+  /// Quotation page: the date
+  ///
+  /// In bn, this message translates to:
+  /// **'তারিখ: {date}'**
+  String quotationsDate(String date);
+
+  /// Quotation page: the date the quotation is valid until
+  ///
+  /// In bn, this message translates to:
+  /// **'মেয়াদ: {date}'**
+  String quotationsValidUntil(String date);
+
+  /// Quotation page: the total; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট: {amount}'**
+  String quotationsTotal(String amount);
+
+  /// Quotation page: the order made from it
+  ///
+  /// In bn, this message translates to:
+  /// **'আদেশ: {no}'**
+  String quotationsOrder(String no);
+
+  /// Quotation page: notice after submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা হলো।'**
+  String get quotationsSubmitted;
+
+  /// Quotation page: notice after sending
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানিকে পাঠানো হলো।'**
+  String get quotationsSentDone;
+
+  /// Quotation page: button that records it was sent to the shopkeeper
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানিকে পাঠানো হলো'**
+  String get quotationsSend;
+
+  /// Quotation page: notice after the shopkeeper accepted
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি — এখন আদেশ বানানো যায়।'**
+  String get quotationsAcceptedDone;
+
+  /// Quotation page: button that records the shopkeeper accepted
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি'**
+  String get quotationsAccept;
+
+  /// Quotation page: field for why the shopkeeper refused
+  ///
+  /// In bn, this message translates to:
+  /// **'রাজি না হওয়ার কারণ'**
+  String get quotationsRejectReason;
+
+  /// Quotation page: refused without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'রাজি না হওয়ার কারণ লিখুন।'**
+  String get quotationsRejectNeedReason;
+
+  /// Quotation page: notice after the shopkeeper refused
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি নন — লেখা হলো।'**
+  String get quotationsRejectedDone;
+
+  /// Quotation page: button that records the shopkeeper refused
+  ///
+  /// In bn, this message translates to:
+  /// **'দোকানি রাজি নন'**
+  String get quotationsReject;
+
+  /// Quotation page: notice after converting to a sales order
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় আদেশ হলো।'**
+  String get quotationsConvertedDone;
+
+  /// Quotation page: button that converts it to a sales order
+  ///
+  /// In bn, this message translates to:
+  /// **'আদেশ বানান'**
+  String get quotationsConvert;
+
+  /// Quotation line dialog: the quantity field
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get quotationsLineQty;
+
+  /// Quotation line dialog: the rate field
+  ///
+  /// In bn, this message translates to:
+  /// **'দর'**
+  String get quotationsLineRate;
+
+  /// Quotation line dialog: close without adding
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ'**
+  String get quotationsLineCancel;
+
+  /// Quotation line dialog: add the line
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get quotationsLineOk;
+
+  /// Delivery orders: the short paper name (order when the company works in sales orders, other = DO)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ} other{DO}}'**
+  String deliveryOrdersPaper(String kind);
+
+  /// Delivery orders: the screen title (order = sales orders, other = delivery orders)
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{বিক্রয় আদেশ} other{ডেলিভারি অর্ডার}}'**
+  String deliveryOrdersTitle(String kind);
+
+  /// Delivery orders: the list could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।'**
+  String get deliveryOrdersListLoadFailed;
+
+  /// Delivery orders: the server does not have this door yet
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{সার্ভারে বিক্রয় আদেশ এখনো আসেনি — অফিসে জানান।} other{সার্ভারে ডেলিভারি অর্ডার এখনো আসেনি — অফিসে জানান।}}'**
+  String deliveryOrdersNotOnServer(String kind);
+
+  /// Delivery orders: the module name in the bar crumbs
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয়'**
+  String get deliveryOrdersModule;
+
+  /// Delivery orders: the new button and the new screen title
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{নতুন আদেশ} other{নতুন DO}}'**
+  String deliveryOrdersNew(String kind);
+
+  /// Delivery orders: filter chip, every paper
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get deliveryOrdersFilterAll;
+
+  /// Delivery orders: filter chip, papers waiting for my signature
+  ///
+  /// In bn, this message translates to:
+  /// **'আমার সইয়ের অপেক্ষায়'**
+  String get deliveryOrdersFilterMine;
+
+  /// Delivery orders: empty list title
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{কোনো আদেশ নেই।} other{কোনো DO নেই।}}'**
+  String deliveryOrdersEmpty(String kind);
+
+  /// Delivery orders: empty list when filtered to my signature
+  ///
+  /// In bn, this message translates to:
+  /// **'এখন আপনার সইয়ের অপেক্ষায় কিছু নেই।'**
+  String get deliveryOrdersEmptyMine;
+
+  /// Delivery orders: a paper without a customer
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক নেই'**
+  String get deliveryOrdersNoCustomer;
+
+  /// New DO: product picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য বাছুন'**
+  String get deliveryOrdersPickProduct;
+
+  /// New DO: saved without a dealer
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার বাছুন।'**
+  String get deliveryOrdersNeedDealer;
+
+  /// New DO: saved without a product
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্তত একটা পণ্য দিন।'**
+  String get deliveryOrdersNeedLine;
+
+  /// New DO: saving failed
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ রাখা গেল না। আবার চেষ্টা করুন।} other{DO রাখা গেল না। আবার চেষ্টা করুন।}}'**
+  String deliveryOrdersSaveFailed(String kind);
+
+  /// New DO: the dealer row before one is picked, and the dealer picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'ডিলার বাছুন'**
+  String get deliveryOrdersPickDealer;
+
+  /// New DO: the quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ: {qty}'**
+  String deliveryOrdersQty(String qty);
+
+  /// New DO: tooltip of the button that removes a line
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ দিন'**
+  String get deliveryOrdersRemoveLine;
+
+  /// New DO: add a line
+  ///
+  /// In bn, this message translates to:
+  /// **'পণ্য যোগ করুন'**
+  String get deliveryOrdersAddLine;
+
+  /// New DO: the remarks field
+  ///
+  /// In bn, this message translates to:
+  /// **'মন্তব্য (ঐচ্ছিক)'**
+  String get deliveryOrdersNote;
+
+  /// Delivery orders: the submit button
+  ///
+  /// In bn, this message translates to:
+  /// **'জমা দিন'**
+  String get deliveryOrdersSubmit;
+
+  /// New DO: save without submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'খসড়া রাখুন'**
+  String get deliveryOrdersKeepDraft;
+
+  /// DO page: an action failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাজটা হলো না। আবার চেষ্টা করুন।'**
+  String get deliveryOrdersActFailed;
+
+  /// DO page: the paper could not be loaded
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ আনা গেল না।} other{DO আনা গেল না।}}'**
+  String deliveryOrdersLoadFailed(String kind);
+
+  /// DO page: tooltip of the print and share button
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপুন / পাঠান'**
+  String get deliveryOrdersPrint;
+
+  /// DO page: the print sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'বিক্রয় আদেশ · {no}'**
+  String deliveryOrdersPrintTitle(String no);
+
+  /// DO page: the status; status is the server's label
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থা: {status}'**
+  String deliveryOrdersStatus(String status);
+
+  /// DO page: the total; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট: {amount}'**
+  String deliveryOrdersTotal(String amount);
+
+  /// DO page: the order waits on the credit limit; amount from Money.taka
+  ///
+  /// In bn, this message translates to:
+  /// **'বাকির সীমায় আটকে — কম {amount}'**
+  String deliveryOrdersCreditShort(String amount);
+
+  /// DO page: the quantity asked on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'চাওয়া: {qty}'**
+  String deliveryOrdersAsked(String qty);
+
+  /// DO page: the field where the supervisor sets the approved quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদিত পরিমাণ'**
+  String get deliveryOrdersApprovedQtyField;
+
+  /// DO page: the approved quantity on a line
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদিত: {qty}'**
+  String deliveryOrdersApprovedQty(String qty);
+
+  /// DO page: notice after submitting
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ জমা হলো — সুপারভাইজার দেখবেন।} other{DO জমা হলো — সুপারভাইজার দেখবেন।}}'**
+  String deliveryOrdersSubmitted(String kind);
+
+  /// DO page: notice after saving the approved quantities
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদিত পরিমাণ রাখা হলো।'**
+  String get deliveryOrdersQtySaved;
+
+  /// DO page: button that saves the approved quantities
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ রাখুন'**
+  String get deliveryOrdersSaveQty;
+
+  /// DO page: notice after the supervisor approved
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন দেওয়া হলো।'**
+  String get deliveryOrdersApproved;
+
+  /// DO page: the supervisor approve button
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন দিন'**
+  String get deliveryOrdersApprove;
+
+  /// DO page: the field for why it is sent back
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের কারণ'**
+  String get deliveryOrdersRejectReason;
+
+  /// DO page: sent back without a reason
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরতের কারণ লিখুন।'**
+  String get deliveryOrdersRejectNeedReason;
+
+  /// DO page: notice after sending it back
+  ///
+  /// In bn, this message translates to:
+  /// **'{kind, select, order{আদেশ ফেরত পাঠানো হলো।} other{DO ফেরত পাঠানো হলো।}}'**
+  String deliveryOrdersRejected(String kind);
+
+  /// DO page: the send-back button
+  ///
+  /// In bn, this message translates to:
+  /// **'ফেরত পাঠান'**
+  String get deliveryOrdersReject;
+
+  /// DO quantity dialog: the field
+  ///
+  /// In bn, this message translates to:
+  /// **'পরিমাণ'**
+  String get deliveryOrdersDialogQty;
+
+  /// DO quantity dialog: close without a change
+  ///
+  /// In bn, this message translates to:
+  /// **'বাদ'**
+  String get deliveryOrdersDialogCancel;
+
+  /// DO quantity dialog: keep the quantity
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get deliveryOrdersDialogOk;
+
+  /// DO page: heading of the stock card
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদ এখন — ধরা হয়নি'**
+  String get deliveryOrdersStockTitle;
+
+  /// DO page: the note under the stock heading
+  ///
+  /// In bn, this message translates to:
+  /// **'মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।'**
+  String get deliveryOrdersStockNote;
+
+  /// DO page: stock on hand and wanted for a product
+  ///
+  /// In bn, this message translates to:
+  /// **'আছে {have} · চাই {want}'**
+  String deliveryOrdersStockHaveWant(String have, String want);
+
+  /// DO page: wanted for a product, stock unknown
+  ///
+  /// In bn, this message translates to:
+  /// **'চাই {want}'**
+  String deliveryOrdersStockWant(String want);
+
+  /// DO page: how much stock is short
+  ///
+  /// In bn, this message translates to:
+  /// **'কম {qty}'**
+  String deliveryOrdersStockShort(String qty);
+
+  /// DO page: stock is short, amount unknown
+  ///
+  /// In bn, this message translates to:
+  /// **'মজুদে কুলোয় না'**
+  String get deliveryOrdersStockNotEnough;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

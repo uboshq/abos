@@ -3,6 +3,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/sales_desk_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
@@ -23,7 +24,7 @@ class _DeskPage extends StatefulWidget {
     required this.body,
     this.header,
     this.isEmpty,
-    this.emptyTitle = 'কিছু নেই',
+    this.emptyTitle,
     this.reloadKey = '',
   });
 
@@ -32,7 +33,7 @@ class _DeskPage extends StatefulWidget {
   final List<Widget> Function(BuildContext context, DeskRow page, Future<void> Function() reload) body;
   final List<Widget> Function(BuildContext context, Future<void> Function() reload)? header;
   final bool Function(DeskRow page)? isEmpty;
-  final String emptyTitle;
+  final String? emptyTitle;
 
   /// বদলালে আবার আনে — বাছাই বদলের সময়
   final String reloadKey;
@@ -69,7 +70,7 @@ class _DeskPageState extends State<_DeskPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।', whenAbsent: 'সার্ভারে ফোনের এই পর্দা এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.salesDeskLoadFailed, whenAbsent: context.l10n.salesDeskNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -90,9 +91,9 @@ class _DeskPageState extends State<_DeskPage> {
             ...?widget.header?.call(context, _load),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
-              EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error)
+              EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.salesDeskErrorTitle, message: _error)
             else if (p != null && (widget.isEmpty?.call(p) ?? false) && !_busy)
-              EmptyState(icon: Icons.inbox_outlined, title: widget.emptyTitle)
+              EmptyState(icon: Icons.inbox_outlined, title: widget.emptyTitle ?? context.l10n.salesDeskNothing)
             else if (p != null)
               ...widget.body(context, p, _load),
             const SizedBox(height: AppSpacing.lg),
@@ -138,26 +139,26 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
 
   @override
   Widget build(BuildContext context) => _DeskPage(
-        title: 'ডিপোর যাচাই',
+        title: context.l10n.salesDeskDepotTitle,
         reloadKey: _q,
         load: () => widget.api.depotCheck(q: _q),
         isEmpty: (p) => p.rows('orders').isEmpty && p.rows('held').isEmpty,
-        emptyTitle: 'যাচাইয়ের অপেক্ষায় কিছু নেই',
+        emptyTitle: context.l10n.salesDeskDepotEmpty,
         header: (context, reload) => [
           TextField(
             key: const ValueKey('depot-search'),
             controller: _search,
             textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'নম্বর, দোকানের নাম বা কোড'),
+            decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.salesDeskDepotSearch),
             onSubmitted: (v) => setState(() => _q = v.trim()),
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
         body: (context, p, reload) => [
-          TotalStrip(label: 'যাচাইয়ের অপেক্ষায় DO', value: Money.taka(p.text('orders_total')), count: p.number('orders_count')),
+          TotalStrip(label: context.l10n.salesDeskDepotTotal, value: Money.taka(p.text('orders_total')), count: p.number('orders_count')),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-            child: Text('ⓘ যাচাই করে বিক্রয়ে খোলা এখনো ওয়েবের কাউন্টারে।', key: const ValueKey('depot-web-note'), style: _muted(context)),
+            child: Text(context.l10n.salesDeskDepotWebNote, key: const ValueKey('depot-web-note'), style: _muted(context)),
           ),
           for (final o in p.rows('orders'))
             _card(key: ValueKey('depot-${o.text('id')}'), children: [
@@ -165,13 +166,13 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
                 Expanded(child: NumberWithParty(number: o.text('document_no'), party: _customerOf(o), style: _bold)),
                 Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
               ]),
-              Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted(context)),
+              Text(context.l10n.salesDeskDepotLine(o.text('date'), o.number('lines'), o.text('status')), style: _muted(context)),
               for (final w in o.list('warnings')) Text('⚠ $w', style: TextStyle(fontSize: 13, color: context.palette.warning)),
             ]),
           if (p.rows('held').isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
-              child: Text('ধরে রাখা বিক্রয় আদেশ', style: TextStyle(fontWeight: FontWeight.w700)),
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
+              child: Text(context.l10n.salesDeskDepotHeld, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
             for (final o in p.rows('held'))
               _card(children: [
@@ -179,7 +180,7 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
                   Expanded(child: NumberWithParty(number: o.text('document_no'), party: _customerOf(o), style: _bold)),
                   Text(Money.taka(o.text('total')), style: const TextStyle(fontWeight: FontWeight.w700)),
                 ]),
-                Text('${o.text('date')} · ${o.number('lines')}টি পণ্য · ${o.text('status')}', style: _muted(context)),
+                Text(context.l10n.salesDeskDepotLine(o.text('date'), o.number('lines'), o.text('status')), style: _muted(context)),
               ]),
           ],
         ],
@@ -194,14 +195,14 @@ class PrintQueueScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _DeskPage(
-        title: 'না ছাপা কাগজ',
+        title: context.l10n.salesDeskPrintTitle,
         load: () => api.printQueue(),
         isEmpty: (p) => p.rows('jobs').isEmpty,
-        emptyTitle: 'সব কাগজ ছাপা হয়েছে',
+        emptyTitle: context.l10n.salesDeskPrintEmpty,
         body: (context, p, reload) => [
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text('মোট ${p.number('count')} টি', key: const ValueKey('print-count'), style: _bold),
+            child: Text(context.l10n.salesDeskTotalCount('${p.number('count')}'), key: const ValueKey('print-count'), style: _bold),
           ),
           for (final j in p.rows('jobs'))
             _card(key: ValueKey('print-${j.text('id')}'), children: [
@@ -210,8 +211,8 @@ class PrintQueueScreen extends StatelessWidget {
                 Text(j.text('status_label'),
                     style: TextStyle(color: j.flag('failed') ? context.palette.danger : context.palette.warning, fontWeight: FontWeight.w600)),
               ]),
-              if (j.text('paper').isNotEmpty) Text('কাগজ: ${j.text('paper')}', style: _muted(context)),
-              if (j.text('failure').isNotEmpty) Text('কারণ: ${j.text('failure')}', style: TextStyle(color: context.palette.danger)),
+              if (j.text('paper').isNotEmpty) Text(context.l10n.salesDeskPrintPaper(j.text('paper')), style: _muted(context)),
+              if (j.text('failure').isNotEmpty) Text(context.l10n.salesDeskPrintReason(j.text('failure')), style: TextStyle(color: context.palette.danger)),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -220,17 +221,17 @@ class PrintQueueScreen extends StatelessWidget {
                     try {
                       await api.settlePrint(j.text('id'));
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ছাপা হয়েছে বলে সরানো হলো।')));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.salesDeskPrintSettled)));
                       }
                       await reload();
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: 'সরানো গেল না।'))));
+                            .showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: context.l10n.salesDeskPrintSettleFailed))));
                       }
                     }
                   },
-                  child: const Text('হাতে ছাপা হলো'),
+                  child: Text(context.l10n.salesDeskPrintSettle),
                 ),
               ),
             ]),
@@ -263,7 +264,7 @@ class _DeliveryPerformanceScreenState extends State<DeliveryPerformanceScreen> {
 
   @override
   Widget build(BuildContext context) => _DeskPage(
-        title: 'ডেলিভারির কাজ',
+        title: context.l10n.salesDeskDeliveryTitle,
         reloadKey: '${isoOf(_from)}..${isoOf(_to)}',
         load: () => widget.api.deliveryPerformance(from: isoOf(_from), to: isoOf(_to)),
         header: (context, reload) => [
@@ -287,17 +288,17 @@ class _DeliveryPerformanceScreenState extends State<DeliveryPerformanceScreen> {
             ]),
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
-            child: Text('দেরির চালান · ${p.number('late_count')} টি',
+            child: Text(context.l10n.salesDeskDeliveryLate('${p.number('late_count')}'),
                 key: const ValueKey('late-count'), style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
           for (final d in p.rows('late'))
             _card(key: ValueKey('late-${d.text('id')}'), children: [
               Row(children: [
                 Expanded(child: NumberWithParty(number: d.text('document_no'), party: _customerOf(d), style: _bold)),
-                Text('${d.number('days_late')} দিন দেরি', style: TextStyle(color: context.palette.danger, fontWeight: FontWeight.w600)),
+                Text(context.l10n.salesDeskDeliveryDaysLate('${d.number('days_late')}'), style: TextStyle(color: context.palette.danger, fontWeight: FontWeight.w600)),
               ]),
-              Text('কথা ছিল ${d.text('promised_on')} · পৌঁছেছে ${d.text('arrived_on')}', style: _muted(context)),
-              Text([if (d.text('order_no').isNotEmpty) 'আদেশ ${d.text('order_no')}', d.text('stage')].join(' · '), style: _muted(context)),
+              Text(context.l10n.salesDeskDeliveryPromised(d.text('promised_on'), d.text('arrived_on')), style: _muted(context)),
+              Text([if (d.text('order_no').isNotEmpty) context.l10n.salesDeskDeliveryOrder(d.text('order_no')), d.text('stage')].join(' · '), style: _muted(context)),
             ]),
         ],
       );
@@ -311,20 +312,20 @@ class PipelineScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _DeskPage(
-        title: 'পাইপলাইন',
+        title: context.l10n.salesDeskPipelineTitle,
         load: api.pipeline,
         isEmpty: (p) => p.rows('stages').every((s) => s.number('count') == 0),
-        emptyTitle: 'কোনো সম্ভাবনা নেই',
+        emptyTitle: context.l10n.salesDeskPipelineEmpty,
         body: (context, p, reload) => [
-          TotalStrip(label: 'চলমান সম্ভাবনা (ওজন-করা)', value: Money.taka(p.text('open_weighted'))),
+          TotalStrip(label: context.l10n.salesDeskPipelineOpen, value: Money.taka(p.text('open_weighted'))),
           for (final s in p.rows('stages'))
             Card(
               key: ValueKey('stage-${s.text('name')}'),
               margin: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: ExpansionTile(
                 initiallyExpanded: s.number('count') > 0,
-                title: Text('${s.text('name')} · ${s.number('count')} টি', style: _bold),
-                subtitle: Text('মোট ${Money.taka(s.text('total'))} · ওজন-করা ${Money.taka(s.text('weighted'))}', style: _muted(context)),
+                title: Text(context.l10n.salesDeskPipelineStage(s.text('name'), '${s.number('count')}'), style: _bold),
+                subtitle: Text(context.l10n.salesDeskPipelineTotals(Money.taka(s.text('total')), Money.taka(s.text('weighted'))), style: _muted(context)),
                 children: [
                   for (final o in s.rows('rows'))
                     ListTile(
@@ -334,7 +335,7 @@ class PipelineScreen extends StatelessWidget {
                         o.text('party'),
                         Money.taka(o.text('value')),
                         '${o.number('probability')}%',
-                        if (o.text('close_on').isNotEmpty) 'শেষ ${o.text('close_on')}',
+                        if (o.text('close_on').isNotEmpty) context.l10n.salesDeskPipelineCloses(o.text('close_on')),
                         if (o.text('salesperson').isNotEmpty) o.text('salesperson'),
                       ].join(' · ')),
                     ),
@@ -353,14 +354,14 @@ class TemplateListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _DeskPage(
-        title: 'দলিলের ছাঁচ',
+        title: context.l10n.salesDeskTemplatesTitle,
         load: () => api.templates(),
         isEmpty: (p) => p.rows('rows').isEmpty,
-        emptyTitle: 'কোনো ছাঁচ নেই',
+        emptyTitle: context.l10n.salesDeskTemplatesEmpty,
         body: (context, p, reload) => [
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text('মোট ${p.number('count')} টি ছাঁচ · লেখা ও বদল ওয়েবে', key: const ValueKey('template-count'), style: _muted(context)),
+            child: Text(context.l10n.salesDeskTemplatesCount('${p.number('count')}'), key: const ValueKey('template-count'), style: _muted(context)),
           ),
           for (final t in p.rows('rows'))
             Card(
@@ -368,7 +369,8 @@ class TemplateListScreen extends StatelessWidget {
               child: ListTile(
                 key: ValueKey('template-${t.text('id')}'),
                 title: Text(t.text('title'), style: _bold),
-                subtitle: Text([t.text('code'), t.text('type'), t.text('folder'), if (!t.flag('active')) 'বন্ধ'].join(' · ')),
+                subtitle: Text([t.text('code'), t.text('type'), t.text('folder'), if (!t.flag('active')) context.l10n.salesDeskTemplatesInactive
+].join(' · ')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                   builder: (_) => TemplateScreen(id: t.text('id'), title: t.text('title'), api: api),

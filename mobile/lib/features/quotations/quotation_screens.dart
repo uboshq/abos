@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/navigation/recent_papers.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/api_client/once_key.dart';
+import '../../core/locale/l10n.dart';
 import '../../core/orders/quotation_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -29,14 +30,7 @@ class QuotationListScreen extends StatefulWidget {
 }
 
 class _QuotationListScreenState extends State<QuotationListScreen> {
-  static const _tabs = {
-    null: 'সব',
-    'draft': 'খসড়া',
-    'approved': 'অনুমোদিত',
-    'sent': 'পাঠানো',
-    'accepted': 'গৃহীত',
-    'converted': 'আদেশ হয়েছে',
-  };
+  static const _tabs = [null, 'draft', 'approved', 'sent', 'accepted', 'converted'];
 
   String? _status;
   final List<Quotation> _rows = [];
@@ -70,8 +64,8 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
-            fallback: 'উদ্ধৃতি আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে উদ্ধৃতির দরজা এখনো আসেনি — অফিসে জানান।'));
+            fallback: context.l10n.quotationsListLoadFailed,
+            whenAbsent: context.l10n.quotationsListNotOnServer));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -91,13 +85,13 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'উদ্ধৃতি'),
+      appBar: AbosScreenBar(title: context.l10n.quotationsListTitle),
       floatingActionButton: widget.canWrite
           ? FloatingActionButton.extended(
               key: const Key('quotation-new'),
               onPressed: _new,
               icon: const Icon(Icons.add),
-              label: const Text('নতুন উদ্ধৃতি'),
+              label: Text(context.l10n.quotationsListNew),
             )
           : null,
       body: RefreshIndicator(
@@ -106,13 +100,13 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Wrap(spacing: AppSpacing.xs, children: [
-              for (final tab in _tabs.entries)
+              for (final tab in _tabs)
                 ChoiceChip(
-                  key: Key('quotation-tab-${tab.key ?? 'all'}'),
-                  label: Text(tab.value),
-                  selected: _status == tab.key,
+                  key: Key('quotation-tab-${tab ?? 'all'}'),
+                  label: Text(context.l10n.quotationsListTab(tab ?? 'all')),
+                  selected: _status == tab,
                   onSelected: (_) {
-                    setState(() => _status = tab.key);
+                    setState(() => _status = tab);
                     _load();
                   },
                 ),
@@ -120,11 +114,11 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
             const SizedBox(height: AppSpacing.sm),
             // ⭐ ছাঁকা তালিকার মোট — সার্ভারের, সব পাতার; বাতিল, ফেরত আর পুরনো সংস্করণ বাদ (মালিক, ১৭ অক্টোবর ২০২৬)
             if (_total != null && _rows.isNotEmpty)
-              TotalStrip(label: 'মোট উদ্ধৃতি', value: Money.taka(_total!.sum), count: _total!.count),
+              TotalStrip(label: context.l10n.quotationsListTotal, value: Money.taka(_total!.sum), count: _total!.count),
             if (_busy) const LinearProgressIndicator(),
-            if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: 'আনা গেল না', message: _error),
+            if (_error != null) EmptyState(icon: Icons.cloud_off_outlined, title: context.l10n.quotationsListErrorTitle, message: _error),
             if (_loaded && _rows.isEmpty && _error == null)
-              const EmptyState(icon: Icons.request_quote_outlined, title: 'কোনো উদ্ধৃতি নেই'),
+              EmptyState(icon: Icons.request_quote_outlined, title: context.l10n.quotationsListEmpty),
             for (final q in _rows)
               Card(
                 child: ListTile(
@@ -145,7 +139,7 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
             if (_next != null)
               OutlinedButton(
                 onPressed: _busy ? null : () => _load(more: true),
-                child: const Text('আরও উদ্ধৃতি'),
+                child: Text(context.l10n.quotationsListMore),
               ),
           ],
         ),
@@ -193,7 +187,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
       );
 
   Future<void> _addLine() async {
-    final product = await _pick<ProductRecord>('পণ্য বাছুন', _products, (p) => p.name);
+    final product = await _pick<ProductRecord>(context.l10n.quotationsNewPickProduct, _products, (p) => p.name);
     if (product == null || !mounted) return;
     final answer = await showDialog<(int, double?)>(
       context: context,
@@ -209,7 +203,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
   Future<void> _save({required bool submit}) async {
     final customer = _customer;
     if (customer == null || _lines.isEmpty) {
-      setState(() => _error = customer == null ? 'দোকান বাছুন।' : 'অন্তত একটা পণ্য দিন।');
+      setState(() => _error = customer == null ? context.l10n.quotationsNewNeedShop : context.l10n.quotationsNewNeedLine);
       return;
     }
     setState(() {
@@ -225,7 +219,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
       ));
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'উদ্ধৃতি রাখা গেল না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.quotationsNewSaveFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -237,7 +231,7 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
 
   Widget _screen(BuildContext context) {
     return Scaffold(
-      appBar: const AbosScreenBar(title: 'নতুন উদ্ধৃতি'),
+      appBar: AbosScreenBar(title: context.l10n.quotationsListNew),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -245,10 +239,10 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
             child: ListTile(
               key: const Key('quotation-customer'),
               leading: const Icon(Icons.storefront_outlined),
-              title: Text(_customer?.label ?? 'দোকান বাছুন'),
+              title: Text(_customer?.label ?? context.l10n.quotationsNewPickShop),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
-                final picked = await _pick<CustomerRecord>('দোকান বাছুন', _customers, (c) => c.label);
+                final picked = await _pick<CustomerRecord>(context.l10n.quotationsNewPickShop, _customers, (c) => c.label);
                 if (picked != null) setState(() => _customer = picked);
               },
             ),
@@ -260,13 +254,13 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('পরিমাণ: ${line.$2}'),
-                    Text('দর: ${line.$3 == null ? 'পণ্যের দাম' : Money.taka(line.$3)}'),
+                    Text(context.l10n.quotationsQty('${line.$2}')),
+                    Text(context.l10n.quotationsRate(line.$3 == null ? context.l10n.quotationsNewProductPrice : Money.taka(line.$3))),
                   ],
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.close),
-                  tooltip: 'বাদ দিন',
+                  tooltip: context.l10n.quotationsNewRemoveLine,
                   onPressed: () => setState(() => _lines.remove(line)),
                 ),
               ),
@@ -275,26 +269,26 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
             key: const Key('quotation-add-line'),
             onPressed: _addLine,
             icon: const Icon(Icons.add),
-            label: const Text('পণ্য যোগ করুন'),
+            label: Text(context.l10n.quotationsNewAddLine),
           ),
           const SizedBox(height: AppSpacing.sm),
           TextField(
               controller: _note,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(labelText: 'মন্তব্য (ঐচ্ছিক)')),
+              decoration: InputDecoration(labelText: context.l10n.quotationsNewNote)),
           const SizedBox(height: AppSpacing.md),
           if (_error != null) _ErrorCard(_error!),
           if (_busy) const LinearProgressIndicator(),
           FilledButton(
             key: const Key('quotation-submit'),
             onPressed: _busy ? null : () => _save(submit: true),
-            child: const Text('জমা দিন'),
+            child: Text(context.l10n.quotationsSubmit),
           ),
           const SizedBox(height: AppSpacing.xs),
           OutlinedButton(
             key: const Key('quotation-keep-draft'),
             onPressed: _busy ? null : () => _save(submit: false),
-            child: const Text('খসড়া রাখুন'),
+            child: Text(context.l10n.quotationsNewKeepDraft),
           ),
         ],
       ),
@@ -349,7 +343,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
         RecentPapers.note(kind: 'quotation', id: widget.id, number: q.no, party: q.customer);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'কাজটা হলো না। আবার চেষ্টা করুন।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: context.l10n.quotationsActFailed));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -362,7 +356,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Widget build(BuildContext context) {
     final q = _q;
     return Scaffold(
-      appBar: AbosScreenBar(title: q?.no ?? 'উদ্ধৃতি'),
+      appBar: AbosScreenBar(title: q?.no ?? context.l10n.quotationsListTitle),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -375,12 +369,12 @@ class _QuotationScreenState extends State<QuotationScreen> {
             ),
           if (q != null) ...[
             Text(q.no, style: Theme.of(context).textTheme.titleLarge),
-            Text('অবস্থা: ${q.statusLabel}', key: const Key('quotation-status')),
-            if (q.customer != null) Text('দোকান: ${q.customer}'),
-            if (q.date != null) Text('তারিখ: ${q.date}'),
-            if (q.validUntil != null) Text('মেয়াদ: ${q.validUntil}'),
-            Text('মোট: ${Money.taka(q.total)}'),
-            if (q.orderNo != null) Text('আদেশ: ${q.orderNo}', key: const Key('quotation-order')),
+            Text(context.l10n.quotationsStatus(q.statusLabel), key: const Key('quotation-status')),
+            if (q.customer != null) Text(context.l10n.quotationsShop('${q.customer}')),
+            if (q.date != null) Text(context.l10n.quotationsDate('${q.date}')),
+            if (q.validUntil != null) Text(context.l10n.quotationsValidUntil('${q.validUntil}')),
+            Text(context.l10n.quotationsTotal(Money.taka(q.total))),
+            if (q.orderNo != null) Text(context.l10n.quotationsOrder('${q.orderNo}'), key: const Key('quotation-order')),
             const SizedBox(height: AppSpacing.md),
             for (final line in q.lines)
               Card(
@@ -390,8 +384,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(line.product, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text('পরিমাণ: ${line.qty == line.qty.roundToDouble() ? line.qty.toInt() : line.qty}'),
-                      Text('দর: ${Money.taka(line.rate)}'),
+                      Text(context.l10n.quotationsQty('${line.qty == line.qty.roundToDouble() ? line.qty.toInt() : line.qty}')),
+                      Text(context.l10n.quotationsRate(Money.taka(line.rate))),
                       Text(Money.taka(line.amount)),
                     ],
                   ),
@@ -400,26 +394,26 @@ class _QuotationScreenState extends State<QuotationScreen> {
             if (q.may('submit'))
               FilledButton(
                 key: const Key('quotation-do-submit'),
-                onPressed: _busy ? null : () => _act('submit', 'জমা হলো।'),
-                child: const Text('জমা দিন'),
+                onPressed: _busy ? null : () => _act('submit', context.l10n.quotationsSubmitted),
+                child: Text(context.l10n.quotationsSubmit),
               ),
             if (q.may('send'))
               FilledButton(
                 key: const Key('quotation-do-send'),
-                onPressed: _busy ? null : () => _act('send', 'দোকানিকে পাঠানো হলো।'),
-                child: const Text('দোকানিকে পাঠানো হলো'),
+                onPressed: _busy ? null : () => _act('send', context.l10n.quotationsSentDone),
+                child: Text(context.l10n.quotationsSend),
               ),
             if (q.may('answer')) ...[
               FilledButton(
                 key: const Key('quotation-do-accept'),
-                onPressed: _busy ? null : () => _act('accept', 'দোকানি রাজি — এখন আদেশ বানানো যায়।'),
-                child: const Text('দোকানি রাজি'),
+                onPressed: _busy ? null : () => _act('accept', context.l10n.quotationsAcceptedDone),
+                child: Text(context.l10n.quotationsAccept),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 key: const Key('quotation-reason'),
                 controller: _reason,
-                decoration: const InputDecoration(labelText: 'রাজি না হওয়ার কারণ'),
+                decoration: InputDecoration(labelText: context.l10n.quotationsRejectReason),
               ),
               OutlinedButton(
                 key: const Key('quotation-do-reject'),
@@ -428,19 +422,19 @@ class _QuotationScreenState extends State<QuotationScreen> {
                     ? null
                     : () {
                         if (_reason.text.trim().isEmpty) {
-                          setState(() => _error = 'রাজি না হওয়ার কারণ লিখুন।');
+                          setState(() => _error = context.l10n.quotationsRejectNeedReason);
                           return;
                         }
-                        _act('reject', 'দোকানি রাজি নন — লেখা হলো।', note: _reason.text);
+                        _act('reject', context.l10n.quotationsRejectedDone, note: _reason.text);
                       },
-                child: const Text('দোকানি রাজি নন'),
+                child: Text(context.l10n.quotationsReject),
               ),
             ],
             if (q.may('convert'))
               FilledButton(
                 key: const Key('quotation-do-convert'),
-                onPressed: _busy ? null : () => _act('convert', 'বিক্রয় আদেশ হলো।'),
-                child: const Text('আদেশ বানান'),
+                onPressed: _busy ? null : () => _act('convert', context.l10n.quotationsConvertedDone),
+                child: Text(context.l10n.quotationsConvert),
               ),
           ],
         ],
@@ -481,20 +475,21 @@ class _LineDialogState extends State<_LineDialog> {
             controller: _qty,
             autofocus: true,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'পরিমাণ'),
+            decoration: InputDecoration(labelText: context.l10n.quotationsLineQty),
           ),
           TextField(
             key: const Key('quotation-rate'),
             controller: _rate,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'দর'),
+            decoration: InputDecoration(labelText: context.l10n.quotationsLineRate),
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাদ')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.quotationsLineCancel)),
           FilledButton(
             onPressed: () => Navigator.pop(context, (int.tryParse(_qty.text.trim()) ?? 0, double.tryParse(_rate.text.trim()))),
-            child: const Text('ঠিক আছে'),
+            child: Text(context.l10n.quotationsLineOk),
+
           ),
         ],
       );
