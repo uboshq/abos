@@ -1992,6 +1992,12 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'পাঠান'**
   String get claimsSend;
+
+  /// Payslip: label on a slip from a bonus run (run_type 'bonus'); a salary slip has no label
+  ///
+  /// In bn, this message translates to:
+  /// **'উৎসব ভাতা'**
+  String get hrPayslipFestivalBonus;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

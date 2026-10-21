@@ -122,6 +122,7 @@ class Payslip {
     this.code = '',
     this.paymentMethod = '',
     this.lines = const [],
+    this.runType,
   });
 
   final String id;
@@ -134,6 +135,12 @@ class Payslip {
   final String code;
   final String paymentMethod;
   final List<PayslipLineItem> lines;
+
+  /// বেতনের রানের ধরন — সার্ভারের `run_type`: "salary" বা "bonus"; পুরনো সার্ভার পাঠায় না, তখন null (a4, ২১ অক্টোবর ২০২৬)
+  final String? runType;
+
+  /// ⭐ উৎসব ভাতার স্লিপ — কেবল `run_type == "bonus"`; না এলে বা "salary" হলে সাধারণ বেতনের স্লিপ, আগের মতোই
+  bool get isFestivalBonus => runType == 'bonus';
 
   factory Payslip.fromJson(Map<String, dynamic> j) => Payslip(
         id: _s(j['id']),
@@ -149,6 +156,7 @@ class Payslip {
           for (final l in _maps(j['lines']))
             PayslipLineItem(name: _s(l['name']), earning: l['earning'] == true, amount: Money.valueOrZero(l['amount'])),
         ],
+        runType: _sn(j['run_type']),
       );
 }
 

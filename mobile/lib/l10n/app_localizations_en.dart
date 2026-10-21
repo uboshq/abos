@@ -1208,4 +1208,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get claimsSend => 'Send';
+
+  @override
+  String get hrPayslipFestivalBonus => 'Festival bonus';
 }

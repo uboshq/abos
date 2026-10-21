@@ -360,7 +360,11 @@ class _PayslipListScreenState extends State<PayslipListScreen> {
             child: ListTile(
               key: ValueKey('payslip-${s.id}'),
               title: Text(monthWords(s.month), style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(context.l10n.hrPayslipRowLine(Money.taka(s.gross), Money.taka(s.deductions))),
+              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // ⭐ উৎসব ভাতার স্লিপ চেনা যায় — কেবল run_type "bonus"-এ; বেতনের বা পুরনো সার্ভারের স্লিপ আগের মতোই
+                if (s.isFestivalBonus) _FestivalBonusLabel(key: ValueKey('payslip-bonus-${s.id}')),
+                Text(context.l10n.hrPayslipRowLine(Money.taka(s.gross), Money.taka(s.deductions))),
+              ]),
               trailing: Text(Money.taka(s.net), style: const TextStyle(fontWeight: FontWeight.w800)),
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute<void>(builder: (_) => PayslipScreen(id: s.id, api: widget.api))),
@@ -386,6 +390,7 @@ class PayslipScreen extends StatelessWidget {
         failed: context.l10n.hrPayslipFailed,
         onLoaded: (s) => RecentPapers.note(kind: 'payslip', id: id, number: monthWords(s.month)),
         body: (context, s) => [
+          if (s.isFestivalBonus) const _FestivalBonusLabel(key: ValueKey('payslip-festival-bonus')),
           TotalStrip(label: context.l10n.hrPayslipNet, value: Money.taka(s.net)),
           if (s.name.isNotEmpty) FactRow(context.l10n.hrPayslipName, s.code.isEmpty ? s.name : '${s.name} (${s.code})'),
           FactRow(context.l10n.hrPayslipMonth, monthWords(s.month)),
@@ -397,5 +402,17 @@ class PayslipScreen extends StatelessWidget {
           for (final l in s.lines.where((l) => !l.earning)) FactRow(l.name, Money.taka(l.amount)),
           FactRow(context.l10n.hrPayslipTotalDeductions, Money.taka(s.deductions), colour: context.palette.danger),
         ],
+      );
+}
+
+/// "উৎসব ভাতা" — বোনাসের রানের স্লিপের চিহ্ন (তালিকার সারি আর স্লিপের পাতা)
+class _FestivalBonusLabel extends StatelessWidget {
+  const _FestivalBonusLabel({super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Text(context.l10n.hrPayslipFestivalBonus,
+            style: TextStyle(color: context.palette.success, fontWeight: FontWeight.w700)),
       );
 }

@@ -293,5 +293,6 @@
   "claimsKindAdvanceWanted": "Need an advance",
   "claimsReceiptTake": "Take a receipt photo",
   "claimsReceiptTaken": "Photo taken — take it again",
-  "claimsSend": "Send"
+  "claimsSend": "Send",
+  "hrPayslipFestivalBonus": "Festival bonus"
 }

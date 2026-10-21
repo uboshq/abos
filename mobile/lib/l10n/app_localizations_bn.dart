@@ -1187,4 +1187,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get claimsSend => 'পাঠান';
+
+  @override
+  String get hrPayslipFestivalBonus => 'উৎসব ভাতা';
 }

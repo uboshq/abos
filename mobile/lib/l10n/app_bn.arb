@@ -1559,5 +1559,9 @@
   "claimsSend": "পাঠান",
   "@claimsSend": {
     "description": "New claim: the send button"
+  },
+  "hrPayslipFestivalBonus": "উৎসব ভাতা",
+  "@hrPayslipFestivalBonus": {
+    "description": "Payslip: label on a slip from a bonus run (run_type 'bonus'); a salary slip has no label"
   }
 }
