@@ -207,3 +207,36 @@ M40 app/Modules/Hr/Services/WppfService.php
     old: "                    ['account_id' => (int) $expense->id, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch],"
     new: "                    ['account_id' => (int) $payable->id, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch],"
     kill: WorkersGetTheirShareOfTheProfitTest::test_the_signed_provision_books_the_fund_once_on_the_last_day_of_the_year
+
+== fe round 2, answer 1 — at least two different people, always; the maker never signs (owner included) ==
+(Supersedes M13, M14, M15 and M23: OwnerSelfSigned and the payroll mark listener are deleted, owner_self_signed no longer applies to the three actions.)
+
+M41 app/Core/Engines/Approval/ApprovalEngine.php — the maker signing their own (refused)
+    old: "        if ((int) $approval->requested_by === (int) $user->id && $this->twoHands((string) $approval->module, (string) $approval->action)) {"
+    new: "        if (false) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_owner_cannot_sign_his_own_run_but_may_sign_a_clerks (the owner, a super admin, signs his own run); ASalaryChangeIsSignedWithEyesOpenTest::test_the_owner_cannot_sign_his_own_change_even_when_the_flow_names_him
+
+M42 app/Core/Engines/Approval/ApprovalEngine.php — threshold flow lowering the rule
+    old: "        if ($flow === null || (! $flow->catches($amount, $matchOn ?? $payload ?? []) && ! $this->twoHands($module, $action))) {"
+    new: "        if ($flow === null || ! $flow->catches($amount, $matchOn ?? $payload ?? [])) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_one_taka_run_needs_two_people_with_approvals_off_and_with_a_threshold_flow
+
+M43 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "        return $flow !== null && ($flow->catches($amount, $fields) || $this->twoHands($module, $action));"
+    new: "        return $flow !== null && $flow->catches($amount, $fields);"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_a_one_taka_run_needs_two_people_with_approvals_off_and_with_a_threshold_flow (requires() assertion)
+
+M44 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "        $this->exceptOwnTwoHanded($query, $user);"
+    new: ""
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_owner_cannot_sign_his_own_run_but_may_sign_a_clerks (the owner's own run shows in his inbox)
+
+M45 app/Core/Engines/Approval/ApprovalEngine.php — one person signing twice to make "two" (refused)
+    old: "            ->where('decision', '!=', ApprovalDecision::FORWARDED)\n            ->where(fn ($q) => $q->whereIn('user_id', $ids)->orWhereIn('on_behalf_of', $ids))\n            ->exists();"  (end of canDecide)
+    new: "            ->where('decision', '!=', ApprovalDecision::FORWARDED)\n            ->where(fn ($q) => $q->whereIn('user_id', $ids)->orWhereIn('on_behalf_of', $ids))\n            ->exists() && false;"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_one_person_cannot_sign_twice_to_make_two
+
+M46 app/Core/Engines/Approval/ApprovalEngine.php
+    old: "            if ((int) $approval->requested_by === (int) $for && $this->twoHands((string) $approval->module, (string) $approval->action)) {"
+    new: "            if (false) {"
+    kill: APayrollRunNeedsASecondHandEvenWithApprovalsOffTest::test_the_maker_cannot_sign_through_a_stand_in (the owner's stand-in signs the owner's own run)

@@ -9,7 +9,6 @@ use App\Models\Approval;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Models\SalaryStructure;
-use App\Modules\Hr\Support\OwnerSelfSigned;
 use App\Modules\Hr\Support\PaidMonth;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Carbon;
@@ -33,8 +32,11 @@ final class SalaryStructureService
 
     public const ACTION_CHANGE = 'salary_change';
 
-    /** ⛔ অডিটের আলাদা চিহ্ন — মালিক নিজের চাওয়া বদলে নিজেই সই দিলেন (a5-এর অফারের একই নাম; ⚠️ কলাম ২৪ অক্ষরের) */
-    public const OWNER_SELF_SIGNED = OwnerSelfSigned::ACTION;
+    /**
+     * ⛔ পুরনো চিহ্ন — মালিক নিজের চাওয়া বদলে নিজে সই দিতেন (hr-gap-2c)। ⓘ fe, ২১ অক্টোবর ২০২৬: বেতনের তিন কাজে আর নয় — অনুরোধকারী
+     * কখনো সই দেন না, মালিকও নন ([[ApprovalEngine::twoHands()]]); নামটা রইল পুরনো অডিট-সারি খোঁজার জন্য।
+     */
+    public const OWNER_SELF_SIGNED = 'owner_self_signed';
 
     /**
      * এই তারিখে কার্যকর প্রতিটা খাত ও তার টাকার অঙ্ক।
@@ -259,27 +261,12 @@ final class SalaryStructureService
                     'date' => $proposal['effective_from'],
                     'approval' => $approval->id,
                 ]));
-                $this->markOwnerSelfSigned($approval, $employee);
             });
         } catch (ValidationException $e) {
             $employee->auditAction('salary_change_late', __('hr::message.salary_change_late', [
                 'reason' => (string) collect($e->errors())->flatten()->first(),
             ]));
         }
-    }
-
-    /**
-     * ⛔ মালিক নিজের চাওয়া বদলে নিজেই সই দিলেন — অডিটে আলাদা চিহ্ন `owner_self_signed` (fe-র উত্তর ১, a6, ২১ অক্টোবর ২০২৬)।
-     *
-     * ⓘ a5-এর অফারের সইয়ের অবিকল একই উপায় (`PromotionApprovalChain::OWNER_SELF_SIGNED`, b5f0971fa): কাগজের `auditAction()`,
-     * মডিউলের বাংলা কারণ, নতুন কলাম নয়। ⓘ ইঞ্জিন কেবল সুপার অ্যাডমিনকে নিজের অনুরোধে সই দিতে দেয় ([[ApprovalEngine::canDecide()]]);
-     * চিহ্নটা বসে যখন সই-দেওয়া মানুষটাই অনুরোধকারী আর তিনি এই কোম্পানির মালিক ([[Ownership::isOwnerIn()]])। SOX: শীর্ষ কর্তার
-     * নিজে-অনুমোদিত বদল আলাদা করে খোঁজা যায়।
-     */
-    private function markOwnerSelfSigned(Approval $approval, Employee $employee): void
-    {
-        // ⓘ তিন কাজের এক নিয়ম — বেতনের রান, কাঠামো, বেতনের ঠিকানা (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬)
-        OwnerSelfSigned::mark($approval, $employee, __('hr::message.owner_self_signed'));
     }
 
     /**

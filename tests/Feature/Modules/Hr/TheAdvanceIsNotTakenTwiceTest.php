@@ -145,16 +145,25 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
             ['account_id' => StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)->id, 'credit' => '2000', 'party_type' => 'employee', 'party_id' => $this->borrower->id],
         ], branchId: $this->company->defaultBranch()?->id);
 
+        // ⓘ বেতনের রান সবসময় দুই হাতে (fe, ২১ অক্টোবর ২০২৬) — খসড়ার net-এ প্রথম সই, তারপর বাড়া net-এ আবার
         try {
             app(PayrollService::class)->confirm($run->fresh());
-            $this->fail('⛔ net সীমা পার হল, তবু সই ছাড়া খাতায় বসল');
+            $this->fail('⛔ সই ছাড়া খাতায় বসল');
+        } catch (\Illuminate\Validation\ValidationException) {
+        }
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)
+            ->where('status', Approval::PENDING)->sole(), $signer->fresh());
+
+        try {
+            app(PayrollService::class)->confirm($run->fresh());
+            $this->fail('⛔ net সীমা পার হল, তবু পুরনো সইয়ে খাতায় বসল');
         } catch (\Illuminate\Validation\ValidationException) {
         }
 
         $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, $run->fresh()->status, '⛔ রান নিশ্চিত হয়ে গেল');
         $this->assertSame(0, LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->count(), '⛔ খাতায় বেতন বসল');
         $asked = Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)->where('status', Approval::PENDING)->sole();
-        $this->assertSame(0, bccomp((string) $asked->amount, bcadd($draftNet, '1000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
+        $this->assertSame(0, bccomp((string) $asked->signedAmount(), bcadd($draftNet, '1000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
         $this->assertSame('1000', $this->deducted($run), 'কিস্তি নতুন খোলায় ঠিক হয়ে খসড়ায় থাকে');
     }
 

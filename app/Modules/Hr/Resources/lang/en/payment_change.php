@@ -29,5 +29,4 @@ return [
     'summary' => ':employee — :lines',
     'signed_waiting' => 'Your signature is in. The change lands once the remaining signatures are given.',
     'asked_reason' => 'Change to where :employee\'s salary goes, waiting for a second signature.',
-    'owner_self_signed' => 'The owner signed a salary account change he asked for himself — self-approved.',
 ];

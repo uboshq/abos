@@ -129,7 +129,12 @@ final class ApprovalEngine
          * ⛔ শর্তের তালিকা খালি হলে আচরণ **অবিকল আগের মতো** —
          * পুরনো প্রবাহগুলো কেবল অঙ্কটাই চেনে।
          */
-        if ($flow === null || ! $flow->catches($amount, $matchOn ?? $payload ?? [])) {
+        /*
+         * ⛔ দুই হাতের কাজে (বেতনের রান, কাঠামো, ব্যাংকের ঠিকানা) কোম্পানির ছকের সীমা বা শর্ত নিয়মটা নামাতে পারে না — fe, ২১ অক্টোবর
+         * ২০২৬ (a6; [[twoHands()]])। ⓘ ছক না ধরলেও (১ টাকার রান, সীমার নিচে) সেই ছকই খাটে, পুরো — ধাপ আর সইকারী কোম্পানির, কেবল
+         * "সই লাগবে না" উত্তরটা নয়। ছক না থাকলে [[flows()]]-এর যন্ত্রের "দ্বিতীয় সই"।
+         */
+        if ($flow === null || (! $flow->catches($amount, $matchOn ?? $payload ?? []) && ! $this->twoHands($module, $action))) {
             return null;
         }
 
@@ -218,7 +223,8 @@ final class ApprovalEngine
     {
         $flow = $this->flowFor($module, $action, $documentType);
 
-        return $flow !== null && $flow->catches($amount, $fields);
+        // ⓘ [[request()]]-এর হুবহু নিয়ম — দুই হাতের কাজে সীমা-শর্ত নিয়মটা নামায় না
+        return $flow !== null && ($flow->catches($amount, $fields) || $this->twoHands($module, $action));
     }
 
     /**
@@ -987,6 +993,7 @@ final class ApprovalEngine
             });
 
         $this->exceptOwnBeyondLimit($query, $user);
+        $this->exceptOwnTwoHanded($query, $user);
 
         // পুরনোটা আগে — যেটা সবচেয়ে বেশিক্ষণ ঝুলে আছে সেটাই কাউকে
         // সবচেয়ে বেশিক্ষণ আটকে রেখেছে
@@ -1307,6 +1314,15 @@ final class ApprovalEngine
         }
 
         /*
+         * ⛔ দুই হাতের কাজে যিনি চাইলেন তিনি কখনো সই দেন না — মালিকও নন, কোনো সীমার নিচেও নয় (fe, ২১ অক্টোবর ২০২৬; a6;
+         * [[twoHands()]])। ⓘ আগে মালিক নিজের বেতন-বদলে নিজে সই দিতেন, অডিটে `owner_self_signed` চিহ্নসহ — এখন সেই পথ নেই:
+         * অন্তত দুইজন আলাদা মানুষ, সবসময়। মালিক অন্যের চাওয়ায় দ্বিতীয় সইকারী হতে পারেন।
+         */
+        if ((int) $approval->requested_by === (int) $user->id && $this->twoHands((string) $approval->module, (string) $approval->action)) {
+            return false;
+        }
+
+        /*
          * ⭐ কর্তৃত্বের সীমা — ২৪ সেপ্টেম্বর ২০২৬।
          *
          * ⛔ আগে প্রবাহে একটা ধাপে *"বিক্রয় ব্যবস্থাপক"* লেখা
@@ -1334,6 +1350,11 @@ final class ApprovalEngine
             }
 
             if ((int) $approval->requested_by === (int) $for && ! $this->withinSelfLimit($approval) && ! $this->isSuperAdmin($from)) {
+                return false;
+            }
+
+            // ⛔ দুই হাতের কাজে অনুরোধকারীর হয়ে ভার নিয়েও নয় — নাহলে বন্ধুকে ভার দিয়ে নিজের রান পাশ ([[twoHands()]])
+            if ((int) $approval->requested_by === (int) $for && $this->twoHands((string) $approval->module, (string) $approval->action)) {
                 return false;
             }
         }
@@ -1384,6 +1405,36 @@ final class ApprovalEngine
      * চেয়েছেন আর কে দিয়েছেন দুইটাই থাকে, তাই নিরীক্ষায় নিজে-সই করা
      * কাগজ আলাদা করে দেখা যায়।
      */
+    /**
+     * ⛔ এই কাজে অন্তত দুইজন আলাদা মানুষ লাগে কি না — মডিউলের `second_hand` ঘোষণা (বেতনের রান, কাঠামো, ব্যাংকের ঠিকানা; fe, ২১ অক্টোবর
+     * ২০২৬; a6; [[ApprovalRules::secondHand()]])।
+     */
+    public function twoHands(string $module, string $action): bool
+    {
+        return app(ApprovalRules::class)->secondHand($module, $action) !== [];
+    }
+
+    /**
+     * ⓘ ইনবক্সে দুই হাতের কাজের নিজের অনুরোধ নয় — মালিকেরও না ([[canDecide()]]-এর একই নিয়ম, SQL-এ; [[TheInboxAgreesWithTheDecisionTest]])।
+     */
+    private function exceptOwnTwoHanded(Builder $query, User $user): void
+    {
+        $pairs = app(ApprovalRules::class)->secondHandActions();
+
+        if ($pairs === []) {
+            return;
+        }
+
+        $query->whereNot(function (Builder $own) use ($pairs, $user): void {
+            // ⓘ `whereNotNull` আগে — পোর্টালের অনুরোধে `requested_by` null, আর SQL-এ NOT(NULL …) সারিটা নীরবে ফেলে দিত
+            $own->whereNotNull('requested_by')->where('requested_by', $user->id)->where(function (Builder $any) use ($pairs): void {
+                foreach ($pairs as $pair) {
+                    $any->orWhere(fn (Builder $one) => $one->where('module', $pair['module'])->where('action', $pair['action']));
+                }
+            });
+        });
+    }
+
     private function isSuperAdmin(User $user): bool
     {
         return $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);

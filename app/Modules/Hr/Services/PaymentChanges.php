@@ -12,7 +12,6 @@ use App\Models\ApprovalDecision;
 use App\Models\User;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\PaymentChange;
-use App\Modules\Hr\Support\OwnerSelfSigned;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -29,7 +28,7 @@ use Illuminate\Validation\ValidationException;
  *   · ⭐ সই সইয়ের ইঞ্জিনে, বেতনের রান আর কাঠামোর একই নিয়মে — মালিকের একমাত্র ব্যতিক্রম (a6, ২১ অক্টোবর ২০২৬;
  *     [[ApprovalRules::secondHand()]]): `hr` · `payment_change`, কোম্পানির ছক না থাকলে বা সব বন্ধ থাকলেও (UB) যন্ত্রের "দ্বিতীয় সই" —
  *     `hr.employee.manage` + `hr.identity.view` থাকা আরেকজন (যে চাবিতে বদলটা লেখা যায়), যিনি চাইলেন তিনি নন। ইনবক্স, ঘণ্টা আর
- *     কর্মীর পাতার বোতাম একই অনুরোধে। মালিক নিজের চাওয়ায় নিজে সই দিলে অডিটে `owner_self_signed`।
+ *     কর্মীর পাতার বোতাম একই অনুরোধে। ⛔ যিনি চাইলেন তিনি কখনো সই দেন না — মালিকও নন (fe, ২১ অক্টোবর ২০২৬)।
  *     ⛔ cb-র আগের দুই ছাড় আর নেই: মালিকের বদল সরাসরি বসত, আর একটা সেটিং গোটা নিয়মটা বন্ধ করত — মালিক বলেছেন "সবসময়"।
  *   · সই পড়ার মুহূর্তে আগের মান `previous`-এ — পুরনো আর নতুন দুটোই থাকে, ঢাকা; নিরীক্ষার খাতায় কেবল "ঢাকা"।
  *   · কর্মীকে খবর যায় — চাওয়ার সময়েই, আর বসলে বা না হলে: তাঁর অজান্তে কেউ ঠিকানা বদলাতে চাইলে তিনিই প্রথম জানেন।
@@ -200,7 +199,6 @@ final class PaymentChanges
 
                 $this->apply($fresh, $employee, $signer);
                 $approval->markUsed();
-                OwnerSelfSigned::mark($approval, $employee, __('hr::payment_change.owner_self_signed'));
             });
         } catch (ValidationException $e) {
             $this->close($change, PaymentChange::REJECTED, $signer, (string) collect($e->errors())->flatten()->first());

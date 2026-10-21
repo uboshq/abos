@@ -23,7 +23,6 @@ use App\Modules\Hr\Services\PaymentChanges;
 use App\Modules\Hr\Services\PayrollService;
 use App\Modules\Hr\Services\SalaryHeadService;
 use App\Modules\Hr\Services\SalaryStructureService;
-use App\Modules\Hr\Support\OwnerSelfSigned;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -179,7 +178,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertTrue($approval->fresh()->isUsed(), '⛔ সইটা খাটানো হয়েছে বলে লেখা নেই');
         $this->assertSame(1, $this->notices($this->worker, PaymentChanges::TOLD, 'applied'), '⛔ কর্মী জানলেন না যে ঠিকানা বদলেছে');
         $this->assertFalse(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
-            ->where('action', OwnerSelfSigned::ACTION)->exists(), '⛔ আরেকজনের সইয়ে মালিকের নিজে-সইয়ের চিহ্ন');
+            ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ আরেকজনের সইয়ে মালিকের নিজে-সইয়ের চিহ্ন');
 
         // ⛔ খোলা লেখা কোথাও নেই — অপেক্ষার সারিতে নয়, নিরীক্ষার খাতায়ও নয়
         $this->assertSame(0, DB::table('hr_payment_changes')->where('proposed', 'like', '%'.self::NEW.'%')
@@ -201,7 +200,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertSame(PaymentChange::APPLIED, $change->fresh()->status);
     }
 
-    public function test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_a_mark(): void
+    public function test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_cannot_sign_his_own(): void
     {
         $this->as($this->clerk)->put(route('hr.employee.update', $this->employee), $this->form(['bank_account_no' => self::NEW]));
         $first = PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail();
@@ -230,16 +229,19 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->as($this->clerk)->post(route('hr.employee.payment_change.reject',
             [$this->employee, PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail()]));
 
-        // ⛔ মালিক নিজে — এখন আর সরাসরি নয়: অপেক্ষায়, নিজে সই দিলে বসে, অডিটে চিহ্ন
+        // ⛔ মালিক নিজে — অপেক্ষায়, আর নিজে সই দিতে পারেন না (fe, ২১ অক্টোবর ২০২৬); আরেকজন দিলে বসে, "নিজে-সই" চিহ্ন নেই
         $this->as($this->owner)->put(route('hr.employee.update', $this->employee), $this->form(['bank_account_no' => self::NEW]))
             ->assertSessionHasNoErrors()->assertSessionHas('saved', __('hr::payment_change.waiting_saved'));
         $this->assertSame(self::OLD, (string) $this->employee->fresh()->bank_account_no, '⛔ মালিকের বদল সই ছাড়াই বসল');
         $own = PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail();
 
-        $this->as($this->owner)->post(route('hr.employee.payment_change.approve', [$this->employee, $own]))->assertSessionHasNoErrors();
-        $this->assertSame(self::NEW, (string) $this->employee->fresh()->bank_account_no, '⛔ মালিক নিজের বদলে সই দিতে পারলেন না');
-        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
-            ->where('action', OwnerSelfSigned::ACTION)->exists(), '⛔ মালিকের নিজে-সই অডিটে আলাদা চিহ্নে নেই');
+        $this->as($this->owner)->post(route('hr.employee.payment_change.approve', [$this->employee, $own]))
+            ->assertSessionHasErrors(['payment_change' => __('hr::payment_change.another_hand')]);
+        $this->assertSame(self::OLD, (string) $this->employee->fresh()->bank_account_no, '⛔ মালিক নিজের বদলে নিজেই সই দিলেন');
+        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$this->employee, $own]))->assertSessionHasNoErrors();
+        $this->assertSame(self::NEW, (string) $this->employee->fresh()->bank_account_no);
+        $this->assertFalse(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
+            ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ "নিজে-সই" চিহ্ন বসল');
 
         // ⛔ বন্ধের সুইচ নেই — মালিক বলেছেন "সবসময়"
         $this->assertNotContains('hr.payment_change_needs_second_hand',

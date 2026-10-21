@@ -10,7 +10,6 @@ use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
-use App\Modules\Hr\Listeners\MarkTheOwnersOwnPayrollSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
@@ -282,8 +281,8 @@ return [
     /*
      * ⛔ `second_hand` — মালিকের একমাত্র ব্যতিক্রম, ২১ অক্টোবর ২০২৬ (a6; [[ApprovalRules::secondHand()]]): "সই বন্ধ মানে বন্ধ", কেবল বেতনের
      * রান নিশ্চিত, বেতনের কাঠামো বদল আর কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল ছাড়া। সব ছক বন্ধ থাকা কোম্পানিতেও (UB) এগুলোয়
-     * আরেকজনের "সই দিন" লাগে — যন্ত্রের নিজের এক ধাপ "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, যিনি চাইলেন তিনি নন; মালিক নিজের
-     * চাওয়ায় নিজে দিলে অডিটে `owner_self_signed` ([[OwnerSelfSigned]])। ⓘ ছক বসানো হয় না ([[MoneyFlowDefaults]] আগের মতোই);
+     * আরেকজনের "সই দিন" লাগে — যন্ত্রের নিজের এক ধাপ "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, যিনি চাইলেন তিনি নন — মালিকও নন
+     * (fe, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]]); কোম্পানির ছকের সীমা-শর্ত নিয়মটা নামাতে পারে না। ⓘ ছক বসানো হয় না ([[MoneyFlowDefaults]] আগের মতোই);
      * কোম্পানির নিজের চালু ছক থাকলে সেটাই খাটে।
      */
     'approval_rules' => [
@@ -560,11 +559,9 @@ return [
      */
     'listeners' => [
         // ⭐ বেতনের কাঠামো বদলের শেষ সই — তবে বসে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
-        // ⓘ মালিক নিজের চাওয়া বেতনের রানে নিজে সই দিলে অডিটে চিহ্ন (a6, ২১ অক্টোবর ২০২৬; [[OwnerSelfSigned]])
         ApprovalDecided::class => [
             FinishTheClaimOnTheLastSignature::class,
             FinishTheSalaryChangeOnTheLastSignature::class,
-            MarkTheOwnersOwnPayrollSignature::class,
             FinishThePaymentChangeOnTheLastSignature::class,
         ],
     ],

@@ -71,7 +71,6 @@ return [
     'salary_change_summary' => 'From :date — :lines',
     'salary_change_signed' => 'Salary structure change from :date signed and applied (request #:approval).',
     'owner_self_signed' => 'The owner signed a salary change he asked for himself — a self-approved change.',
-    'owner_self_signed_payroll' => 'The owner signed a payroll run he asked for himself — self-approved.',
     // ⭐ বেতনের রানের সইয়ের সারি — নিট চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬; [[PayrollRunSummary]])
     'payroll_signing_summary' => ':month payroll · :count people · net :net',
 ];

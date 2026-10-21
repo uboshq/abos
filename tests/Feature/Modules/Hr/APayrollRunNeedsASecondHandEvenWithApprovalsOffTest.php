@@ -27,7 +27,6 @@ use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\PayrollService;
 use App\Modules\Hr\Services\SalaryHeadService;
 use App\Modules\Hr\Services\SalaryStructureService;
-use App\Modules\Hr\Support\OwnerSelfSigned;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -144,7 +143,7 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
         $this->as($maker)->post(route('hr.payroll.confirm', $run))->assertSessionHasNoErrors();
         $this->assertSame(DocumentStatus::CONFIRMED, (string) $run->fresh()->status, '⛔ সই পেয়েও রান নিশ্চিত হলো না।');
         $this->assertFalse(AuditTrail::query()->forRecord(PayrollRun::class, (int) $run->id)
-            ->where('action', OwnerSelfSigned::ACTION)->exists(), '⛔ আরেকজনের সইয়ে মালিকের নিজে-সইয়ের চিহ্ন।');
+            ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ আরেকজনের সইয়ে মালিকের নিজে-সইয়ের চিহ্ন।');
     }
 
     public function test_a_signer_without_every_key_is_no_signer_and_never_sees_it(): void
@@ -185,20 +184,126 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
         $this->assertSame(Approval::PENDING, (string) $approval->fresh()->status, '⛔ ফোনের সইয়ে অনুরোধ এগোল।');
     }
 
-    public function test_the_owner_may_sign_his_own_run_and_the_audit_marks_it(): void
+    /**
+     * ⛔ যিনি চাইলেন তিনি কখনো দ্বিতীয় সই নন — মালিকও নন (fe, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]])। ⓘ মালিক অন্যের চাওয়ায়
+     * দ্বিতীয় সইকারী হতে পারেন। ⛔ `owner_self_signed` এই তিন কাজে আর বসে না।
+     */
+    public function test_the_owner_cannot_sign_his_own_run_but_may_sign_a_clerks(): void
     {
         $run = app(PayrollService::class)->build('2026-08-01');
         $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
-        $approval = $this->pendingFor($run);
-        $this->assertSame((int) $this->owner->id, (int) $approval->requested_by);
+        $own = $this->pendingFor($run);
+        $this->assertSame((int) $this->owner->id, (int) $own->requested_by);
 
-        $this->as($this->owner)->post(route('approval.inbox.approve', $approval->id))->assertRedirect();
-        $this->assertSame(Approval::APPROVED, (string) $approval->fresh()->status, '⛔ মালিক নিজের রানে সই দিতে পারলেন না।');
+        $engine = app(ApprovalEngine::class);
+        $this->assertFalse($engine->canDecide($own->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের রানে নিজেই দ্বিতীয় সই।');
+        $this->assertFalse($engine->pendingQueryFor($this->owner->fresh())->whereKey($own->id)->exists(), '⛔ মালিকের নিজের রান তাঁর ইনবক্সে।');
+        $this->as($this->owner)->post(route('approval.inbox.approve', $own->id));
+        $this->assertSame(Approval::PENDING, (string) $own->fresh()->status, '⛔ মালিকের নিজের সই পড়ল।');
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $this->assertSame(DocumentStatus::DRAFT, (string) $run->fresh()->status);
 
-        $this->assertTrue(AuditTrail::query()->forRecord(PayrollRun::class, (int) $run->id)
-            ->where('action', OwnerSelfSigned::ACTION)->exists(), '⛔ মালিকের নিজে-সই রানের অডিটে আলাদা চিহ্নে নেই।');
+        // ⓘ মালিক ফিরিয়ে নিলেন; কেরানি চাইলেন — মালিক এবার দ্বিতীয় সই
+        $engine->cancel($own->fresh(), $this->owner->fresh());
+        $clerk = $this->payrollClerk();
+        $this->as($clerk);
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $asked = $this->pendingFor($run);
+        $this->assertSame((int) $clerk->id, (int) $asked->requested_by);
 
+        $this->as($this->owner)->post(route('approval.inbox.approve', $asked->id))->assertRedirect();
+        $this->assertSame(Approval::APPROVED, (string) $asked->fresh()->status, '⛔ অন্যের চাওয়ায় মালিক দ্বিতীয় সই দিতে পারলেন না।');
+        $this->assertFalse(AuditTrail::query()->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(),
+            '⛔ বেতনের তিন কাজে "নিজে-সই" চিহ্ন বসল — পথটাই থাকার কথা নয়।');
         $this->assertSame(DocumentStatus::CONFIRMED, (string) app(PayrollService::class)->confirm($run->fresh())->status);
+    }
+
+    /**
+     * ⛔ ১ টাকার রানও একজনে নয় — অনুমোদন বন্ধ কোম্পানিতে, আর কোম্পানির নিজের সীমার ছক (১ লাখের উপরে) থাকলেও; ছকের সীমা নিয়মটা
+     * নামায় না, ছকটা তবু খাটে (fe, ২১ অক্টোবর ২০২৬)।
+     */
+    public function test_a_one_taka_run_needs_two_people_with_approvals_off_and_with_a_threshold_flow(): void
+    {
+        app(SalaryStructureService::class)->set($this->employee, $this->basic, '2026-01-15', '1');
+        $maker = $this->payrollClerk();
+        $this->as($maker);
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $this->assertSame(-1, bccomp((string) $run->fresh()->net_total, '2', 4), 'প্রস্তুতি — রানটা ছোট নয়।');
+
+        // ── অনুমোদন বন্ধ
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $off = $this->pendingFor($run);
+        $this->assertTrue(app(ApprovalEngine::class)->isSecondHand($off));
+        app(ApprovalEngine::class)->cancel($off->fresh(), $maker->fresh());
+
+        // ── কোম্পানির নিজের ছক — ১ লাখের উপরে সই, নামধারী একজন
+        $named = $this->secondHandIn((int) $this->company->id, 'approval.decide', 'hr.salary.view');
+        $flow = ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'hr', 'action' => 'payroll',
+            'document_type' => '', 'threshold_amount' => '100000', 'is_active' => true]);
+        ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $named->id]);
+        $this->forgetTheEnginesFlows();
+        $this->assertTrue(app(ApprovalEngine::class)->requires('hr', 'payroll', '1', 'PayrollRun'), '⛔ সীমার নিচে বলে সই লাগে না বলল।');
+
+        $this->as($maker);
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $this->assertSame(DocumentStatus::DRAFT, (string) $run->fresh()->status, '⛔ সীমার নিচে বলে ১ টাকার রান একজনেই খাতায় বসল।');
+        $asked = $this->pendingFor($run);
+        $engine = app(ApprovalEngine::class);
+        $this->assertFalse($engine->isSecondHand($asked), '⛔ কোম্পানির ছক থাকতে যন্ত্রের ছক খাটল।');
+        $this->assertFalse($engine->canDecide($asked->fresh(), $maker->fresh()));
+        $this->assertTrue($engine->canDecide($asked->fresh(), $named->fresh()), '⛔ কোম্পানির ছকের সইকারী সই দিতে পারেন না।');
+
+        $engine->approve($asked->fresh(), $named->fresh());
+        $this->as($maker);
+        $this->assertSame(DocumentStatus::CONFIRMED, (string) app(PayrollService::class)->confirm($run->fresh())->status);
+    }
+
+    /** ⛔ নিজের রান বন্ধুকে ভার দিয়েও নয় — মালিক নিজের রানের সই কাউকে ভার দিলে সেই ভার এই অনুরোধে খাটে না */
+    public function test_the_maker_cannot_sign_through_a_stand_in(): void
+    {
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $own = $this->pendingFor($run);
+
+        $friend = $this->secondHandIn((int) $this->company->id, 'approval.decide');
+        app(\App\Core\Engines\Approval\DelegationService::class)->grant($this->owner->fresh(), $friend, '2026-09-01', '2026-09-30');
+
+        $this->assertFalse(app(ApprovalEngine::class)->canDecide($own->fresh(), $friend->fresh()),
+            '⛔ মালিকের ভারপ্রাপ্ত মালিকের নিজের রানে সই দিতে পারেন — দুই হাত আসলে একজনের।');
+    }
+
+    /** ⛔ একজন দুইবার সই দিয়ে "দুইজন" হন না — দুইজনের সই লাগে এমন ধাপে একই মানুষের দ্বিতীয় চাপ ফেরে */
+    public function test_one_person_cannot_sign_twice_to_make_two(): void
+    {
+        $a = $this->secondHandIn((int) $this->company->id, 'approval.decide', 'hr.salary.view');
+        $b = $this->secondHandIn((int) $this->company->id, 'approval.decide', 'hr.salary.view');
+        $flow = ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'hr', 'action' => 'payroll',
+            'document_type' => '', 'threshold_amount' => null, 'is_active' => true]);
+        foreach ([$a, $b] as $person) {
+            ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'min_approvals' => 2,
+                'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $person->id]);
+        }
+        $this->forgetTheEnginesFlows();
+
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
+        $asked = $this->pendingFor($run);
+        $engine = app(ApprovalEngine::class);
+
+        $engine->approve($asked->fresh(), $a->fresh());
+        $this->assertSame(Approval::PENDING, (string) $asked->fresh()->status);
+        $this->assertFalse($engine->canDecide($asked->fresh(), $a->fresh()), '⛔ একই মানুষ একই ধাপে দ্বিতীয়বার সই দিতে পারেন।');
+
+        try {
+            $engine->approve($asked->fresh(), $a->fresh());
+            $this->fail('⛔ একই মানুষের দ্বিতীয় সই পড়ল।');
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertSame(Approval::PENDING, (string) $asked->fresh()->status, '⛔ একজনের দুই চাপে "দুইজন" হলো।');
+        $engine->approve($asked->fresh(), $b->fresh());
+        $this->assertSame(Approval::APPROVED, (string) $asked->fresh()->status);
     }
 
     public function test_a_company_with_its_own_active_flow_keeps_using_it(): void
@@ -258,17 +363,26 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
         $this->assertSame((int) $maker->id, (int) $row->created_by, '⛔ সারিটা যিনি চেয়েছিলেন তাঁর নামে নয়।');
     }
 
-    public function test_the_owner_signing_his_own_structure_change_is_marked(): void
+    public function test_the_owner_cannot_sign_his_own_structure_change_but_may_sign_a_clerks(): void
     {
         $approval = app(SalaryStructureService::class)->change($this->employee, '2026-09-01', [$this->basic->id => self::RAISED]);
         $this->assertInstanceOf(Approval::class, $approval, '⛔ মালিকের বদলও সাথে সাথে বসল — দ্বিতীয় সই চাওয়াই হলো না।');
-        $this->assertFalse($this->landed());
 
-        $this->as($this->owner)->post(route('approval.inbox.approve', $approval->id))->assertRedirect();
+        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের বদলে নিজেই সই।');
+        $this->as($this->owner)->post(route('approval.inbox.approve', $approval->id));
+        $this->assertFalse($this->landed(), '⛔ মালিকের নিজের সইয়ে বদলটা বসল।');
 
-        $this->assertTrue($this->landed(), '⛔ মালিক নিজের বদলে সই দিতে পারলেন না।');
-        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
-            ->where('action', OwnerSelfSigned::ACTION)->exists(), '⛔ মালিকের নিজে-সই কর্মীর অডিটে আলাদা চিহ্নে নেই।');
+        app(ApprovalEngine::class)->cancel($approval->fresh(), $this->owner->fresh());
+        $clerk = $this->salaryClerk();
+        $this->as($clerk)->post(route('hr.employee.salary.store', $this->employee), [
+            'effective_from' => '2026-09-01', 'amounts' => [$this->basic->id => self::RAISED],
+        ])->assertSessionHasNoErrors();
+        $asked = app(SalaryStructureService::class)->waitingChange($this->employee);
+
+        $this->as($this->owner)->post(route('approval.inbox.approve', $asked->id))->assertRedirect();
+        $this->assertTrue($this->landed(), '⛔ কেরানির চাওয়ায় মালিক দ্বিতীয় সই দিতে পারলেন না।');
+        $this->assertFalse(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
+            ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ "নিজে-সই" চিহ্ন বসল।');
     }
 
     // ── মডিউলের ঘোষণা ─────────────────────────────────────────────────

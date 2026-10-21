@@ -71,7 +71,6 @@ return [
     'salary_change_summary' => ':date থেকে — :lines',
     'salary_change_signed' => ':date থেকে বেতনের কাঠামো বদল সই পেয়ে বসল (অনুরোধ #:approval)।',
     'owner_self_signed' => 'মালিক নিজের চাওয়া বেতন-বদলে নিজেই সই দিয়েছেন — নিজে-অনুমোদিত বদল।',
-    'owner_self_signed_payroll' => 'মালিক নিজের চাওয়া বেতনের রানে নিজেই সই দিয়েছেন — নিজে-অনুমোদিত।',
     // ⭐ বেতনের রানের সইয়ের সারি — নিট চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬; [[PayrollRunSummary]])
     'payroll_signing_summary' => ':month-এর বেতন · :count জন · নিট :net',
 ];
