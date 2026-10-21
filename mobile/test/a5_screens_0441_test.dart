@@ -178,14 +178,14 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('a chip on every row, read as "অবস্থা: পাকা"; the last row clears the FAB', (tester) async {
+    testWidgets('a chip on every row, read as "অবস্থা: পোস্ট হয়েছে" (chip v5, the word fe chose); the last row clears the FAB', (tester) async {
       final handle = tester.ensureSemantics();
       await pump(tester, srCollectBody());
       final chips = tester.widgetList<AppStatusChip>(find.byType(AppStatusChip)).toList();
       expect(chips, hasLength(3));
       expect(chips.every((c) => c.state == PaperState.posted && c.dense && c.kind == PaperKind.money), isTrue,
           reason: 'চিপ v4: আদায় টাকার কাগজ');
-      expect(find.bySemanticsLabel('অবস্থা: পাকা, খাতায় উঠেছে'), findsNWidgets(3));
+      expect(find.bySemanticsLabel('অবস্থা: পোস্ট হয়েছে, খাতায় উঠেছে'), findsNWidgets(3));
       final list = tester.widget<ListView>(find.byType(ListView).first);
       expect((list.padding! as EdgeInsets).bottom, greaterThanOrEqualTo(88), reason: 'FAB ৫৬dp + ফাঁক');
       handle.dispose();

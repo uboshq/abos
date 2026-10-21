@@ -91,7 +91,7 @@ class FakePcApi implements PrincipalCommissionApi {
 BigInt paisa(String decimal) {
   final neg = decimal.startsWith('-');
   final parts = (neg ? decimal.substring(1) : decimal).split('.');
-  final frac = ((parts.length > 1 ? parts[1] : '') + '0000').substring(0, 4);
+  final frac = '${parts.length > 1 ? parts[1] : ''}0000'.substring(0, 4);
   final v = BigInt.parse(parts[0]) * BigInt.from(10000) + BigInt.parse(frac);
   return neg ? -v : v;
 }
