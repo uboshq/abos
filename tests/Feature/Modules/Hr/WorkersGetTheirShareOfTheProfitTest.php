@@ -154,6 +154,41 @@ final class WorkersGetTheirShareOfTheProfitTest extends TestCase
         $this->assertSame(2, LedgerEntry::query()->where('source_type', WppfProvision::SOURCE_TYPE)->count(), '⛔ একই বছরের তহবিল দুইবার খরচে।');
     }
 
+    /**
+     * ⭐ লাভ-ক্ষতিতে তহবিল নিজের লাইনে, "কর-পূর্ব মুনাফা"-র ঠিক উপরে (IAS 19; fe, ২১ অক্টোবর ২০২৬); মোট পয়সায় পয়সায় মেলে।
+     */
+    public function test_the_profit_and_loss_shows_the_fund_on_its_own_line_above_profit_before_tax(): void
+    {
+        $page = fn () => (string) $this->get(route('accounts.report.show', ['slug' => 'profit-loss', 'from' => '2026-07-01', 'to' => '2027-06-30']))
+            ->assertOk()->getContent();
+
+        // ⓘ জাবেদার আগে — লাইন দুটো নেই, পর্দা আগের মতো
+        $this->assertStringNotContainsString((string) __('accounts::message.profit_before_tax'), $page());
+
+        $this->switchOn();
+        $this->post(route('hr.wppf.provision', ['year' => $this->year->id]))->assertSessionHasNoErrors();
+
+        $after = $page();
+        $wppf = strpos($after, __('accounts::message.pl_wppf_line').': ');
+        $pbt = strpos($after, __('accounts::message.profit_before_tax').': ');
+        $this->assertNotFalse($wppf, '⛔ লাভ-ক্ষতিতে তহবিলের লাইন নেই');
+        $this->assertNotFalse($pbt, '⛔ লাভ-ক্ষতিতে কর-পূর্ব মুনাফা নেই');
+        $this->assertLessThan($pbt, $wppf, '⛔ তহবিলের লাইন কর-পূর্ব মুনাফার উপরে নয়');
+        $this->assertStringContainsString(__('accounts::message.pl_wppf_line').': <span class="num tabular-nums">'.Money::format('6172.87'), $after);
+        $this->assertStringContainsString(__('accounts::message.profit_before_tax').': <span class="num tabular-nums">'.Money::format('117284.44'), $after);
+
+        // ⓘ মোট মেলে — রিপোর্টের ডেবিট-ক্রেডিট থেকে নিট = কর-পূর্ব মুনাফা, আর তহবিল + কর-পূর্ব = তহবিলের আগের মুনাফা
+        $pl = app(ReportEngine::class)->run('accounts.profit_loss', ['from' => '2026-07-01', 'to' => '2027-06-30', 'branch_id' => null]);
+        $this->assertSame('117284.4400', bcsub((string) $pl->totals['credit'], (string) $pl->totals['debit'], 4));
+        $lines = array_column(($pl->report->summary)($pl->totals, $pl->filters)['lines'], 'value', 'label');
+        $this->assertSame(0, bccomp('6172.87', (string) $lines[__('accounts::message.pl_wppf_line')], 4));
+        $this->assertSame(0, bccomp('123457.31', bcadd((string) $lines[__('accounts::message.pl_wppf_line')], (string) $lines[__('accounts::message.profit_before_tax')], 4), 4),
+            '⛔ তহবিল + কর-পূর্ব মুনাফা ≠ তহবিলের আগের মুনাফা — পয়সা হারাল');
+        $row = collect($pl->rows)->first(fn ($r) => (int) ((array) $r)['account_id'] === (int) StandardChart::find(StandardChart::WPPF_EXPENSE)->id);
+        $this->assertNotNull($row, '⛔ ৫২২৩-এর সারি লাভ-ক্ষতিতে নেই');
+        $this->assertSame((string) __('accounts::message.pl_wppf'), (string) ((array) $row)['section'], '⛔ ৫২২৩-এর সারি নিজের ভাগে নয়');
+    }
+
     public function test_a_loss_year_has_no_fund_and_no_journal(): void
     {
         $this->switchOn();
