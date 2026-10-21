@@ -63,13 +63,13 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         // ── মূল সূচক, মালিকের ক্রমে ──
         // ⭐ "বাজারে বকেয়া" এখন সূচকের সারিতে নয়, টাকার বাক্সের ঘরে — মালিকের অনুমোদিত নমুনা (ওয়েবের মান ধাপ ২, ২০ অক্টোবর ২০২৬)।
         //    জায়গা বদলেছে, যাচাই নয়: নিচে বাক্সের ঘর থেকে পড়া, একই উৎস, একই পয়সা, আর পাতায় ঠিক একবার।
+        // ⭐ "মজুদের মূল্য"-ও একই পথে বাক্সে, বকেয়ার পাশে (মালিক, fe-র মারফত, ২১ অক্টোবর ২০২৬) — যাচাই নিচে বাক্সের ঘর থেকে।
         $kpis = $this->kpis($page);
         $this->assertSame([
             __('sales::dashboard.sales_today'),
             __('sales::dashboard.collected_today'),
             __('purchase::widget.margin_this_month'),
             __('supplier::widget.owed_to_principals'),
-            __('inventory::overview.stock_value'),
             __('purchase::dashboard.purchases_today'),
             __('approval::dashboard.waiting_for_me'),
         ], array_keys($kpis), '⛔ মূল সূচকের ঘর বা ক্রম মালিকের পরিকল্পনা মতো নয়।');
@@ -79,6 +79,7 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
         $owedLabel = trim($page->query('.//p[1]', $owedTile->item(0))->item(0)?->textContent ?? '');
         $owedValue = trim($page->query('.//*[@data-money-tile-value]', $owedTile->item(0))->item(0)?->textContent ?? '');
         $this->assertSame(__('customer::dashboard.kpi_owed'), $owedLabel);
+        $stockValue = $this->stockTile($page);
         $tileLabels = array_map(fn ($n) => trim($page->query('.//p[1]', $n)->item(0)?->textContent ?? ''),
             iterator_to_array($page->query('//*[@data-money-tile]')));
 
@@ -111,15 +112,26 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
             ->selectRaw('COALESCE(SUM(GREATEST(s.billed, 0)), 0) + COALESCE(SUM(s.waiting), 0) as n')->value('n') ?? '0');
         $this->assertSame(Money::format($owed), $kpis[__('supplier::widget.owed_to_principals')], '⛔ কোম্পানির দেনা সরবরাহকারীর খতিয়ানের সাথে মেলে না।');
 
-        $this->assertSame(Money::format(app(StockFacts::class)->value()), $kpis[__('inventory::overview.stock_value')],
+        $this->assertSame(Money::format(app(StockFacts::class)->value()), $stockValue,
             '⛔ মজুদের মূল্য মজুদের খাতার সাথে মেলে না।');
 
         // ── সময় বদলালে প্রবাহ বদলায়, জের নয় ──
-        $month = $this->kpis($this->xpath($this->get(route('dashboard', ['period' => 'month']))->assertOk()->getContent()));
+        $monthPage = $this->xpath($this->get(route('dashboard', ['period' => 'month']))->assertOk()->getContent());
+        $month = $this->kpis($monthPage);
         $from = Carbon::today()->startOfMonth()->toDateString();
         $this->assertSame(Money::format(SalesMetrics::invoiceTotal($from, $today)), $month[__('sales::dashboard.sales_this_month')] ?? null,
             '⛔ "এ মাস" বাছলে বিক্রির ঘর মাসের মোট নয়।');
-        $this->assertSame($kpis[__('inventory::overview.stock_value')], $month[__('inventory::overview.stock_value')], '⛔ সময় বদলালে মজুদের জের বদলেছে।');
+        $this->assertSame($stockValue, $this->stockTile($monthPage), '⛔ সময় বদলালে মজুদের জের বদলেছে।');
+    }
+
+    /** ⭐ বাক্সের "মজুদের মূল্য" ঘর — ঠিক একবার, নিজের নামে; ফেরে দেখানো অঙ্ক */
+    private function stockTile(DOMXPath $page): string
+    {
+        $tile = $page->query('//*[@data-home-stock]');
+        $this->assertSame(1, $tile->length, '⛔ "মজুদের মূল্য" টাকার বাক্সে নেই, বা দুইবার।');
+        $this->assertSame(__('inventory::overview.stock_value'), trim($page->query('.//p[1]', $tile->item(0))->item(0)?->textContent ?? ''));
+
+        return trim($page->query('.//*[@data-money-tile-value]', $tile->item(0))->item(0)?->textContent ?? '');
     }
 
     /** @return array<string, string> নাম => মান, পাতার ক্রমে */
