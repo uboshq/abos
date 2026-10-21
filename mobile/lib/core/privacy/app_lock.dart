@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
+import '../locale/app_locale.dart';
+import '../locale/l10n.dart';
+import '../navigation/top_bar/abos_top_bar.dart' show bnDigits;
 import '../theme/app_colors.dart';
 import '../theme/app_palette.dart';
 import '../theme/app_spacing.dart';
@@ -108,8 +111,8 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   /// নতুন PIN — দুইবার একই; ভুল হলে কারণ, ঠিক হলে null
   Future<String?> setPin(String first, String again) async {
     final a = AppPin.normalise(first);
-    if (a == null) return 'PIN ৪ থেকে ৬টা অঙ্ক।';
-    if (a != AppPin.normalise(again)) return 'দুইবার একই PIN লিখুন।';
+    if (a == null) return AppLocale.l10n.lockScreenPinLength(bnDigits(4), bnDigits(6));
+    if (a != AppPin.normalise(again)) return AppLocale.l10n.lockScreenPinTwice;
     await _pin.set(a);
     _pinSet = true;
     notifyListeners();
@@ -128,9 +131,9 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
     if (left <= 0) {
       _tooMany = true;
       notifyListeners();
-      return 'পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।';
+      return AppLocale.l10n.lockScreenTooManyTries;
     }
-    return 'PIN মেলেনি — আর ${'$left'.split('').map((d) => '০১২৩৪৫৬৭৮৯'[int.parse(d)]).join()}বার চেষ্টা করা যাবে।';
+    return AppLocale.l10n.lockScreenPinWrong(left, bnDigits(left));
   }
 
   /// বেরোলে PIN-এর হিসাব ভোলা — ভাণ্ডারের PIN মোছে [[AuthController]] (বেরোনোর পথ একটাই)
@@ -188,9 +191,10 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   static Future<bool> _deviceHasALock() => LocalAuthentication().isDeviceSupported();
 
   static Future<bool> _deviceAuthenticate() => LocalAuthentication().authenticate(
-        localizedReason: 'ABOS খুলতে আঙুলের ছাপ বা ফোনের PIN দিন',
-        authMessages: const [
-          AndroidAuthMessages(signInTitle: 'ABOS খুলুন', cancelButton: 'থাক'),
+        localizedReason: AppLocale.l10n.lockScreenBiometricReason,
+        authMessages: [
+          AndroidAuthMessages(
+              signInTitle: AppLocale.l10n.lockScreenBiometricTitle, cancelButton: AppLocale.l10n.lockScreenBiometricCancel),
         ],
         persistAcrossBackgrounding: true,
       );
@@ -298,45 +302,43 @@ class _AppLockGateState extends State<AppLockGate> {
           _cover(key: const ValueKey('app-pin-enter'), children: [
             const Icon(Icons.lock_outline, size: 56, color: AppColors.primary),
             const SizedBox(height: AppSpacing.md),
-            const Text('অ্যাপের PIN দিন', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(context.l10n.lockScreenEnterPin, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.md),
             _pinBox(const ValueKey('app-pin-field'), _pinField, 'PIN'),
             if (_pinError != null)
               Text(_pinError!, key: const ValueKey('app-pin-error'), style: TextStyle(color: context.palette.danger)),
             const SizedBox(height: AppSpacing.md),
-            FilledButton(key: const ValueKey('app-pin-open'), onPressed: _enterPin, child: const Text('খুলুন')),
-            if (widget.onSignOut != null) TextButton(onPressed: widget.onSignOut, child: const Text('বেরিয়ে যান')),
+            FilledButton(key: const ValueKey('app-pin-open'), onPressed: _enterPin, child: Text(context.l10n.commonOpen)),
+            if (widget.onSignOut != null) TextButton(onPressed: widget.onSignOut, child: Text(context.l10n.lockScreenSignOut)),
           ]),
         // ⛔ ফোনে তালা নেই, PIN-ও নেই — আবার পাসওয়ার্ড
         if (lock.mustSignInAgain)
           _cover(key: const ValueKey('app-pin-sign-in-again'), children: [
             const Icon(Icons.lock_outline, size: 56, color: AppColors.primary),
             const SizedBox(height: AppSpacing.md),
-            const Text('আবার পাসওয়ার্ড দিয়ে ঢুকুন', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(context.l10n.lockScreenSignInAgainTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.sm),
-            const Text('এই ফোনে তালা নেই, আর অ্যাপের PIN-ও বসানো হয়নি — কে ধরে আছেন জানার উপায় নেই। ঢুকলেই PIN বসাতে বলা হবে।',
-                textAlign: TextAlign.center),
+            Text(context.l10n.lockScreenSignInAgainBody, textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.md),
             if (widget.onSignOut != null)
-              FilledButton(key: const ValueKey('app-pin-sign-out'), onPressed: widget.onSignOut, child: const Text('বেরিয়ে আবার ঢুকুন')),
+              FilledButton(key: const ValueKey('app-pin-sign-out'), onPressed: widget.onSignOut, child: Text(context.l10n.lockScreenSignOutAndIn)),
           ]),
         // ⭐ এইমাত্র ঢুকেছেন — PIN বসানো, তবেই কাজ
         if (lock.needsNewPin)
           _cover(key: const ValueKey('app-pin-new'), children: [
             const Icon(Icons.password, size: 56, color: AppColors.primary),
             const SizedBox(height: AppSpacing.md),
-            const Text('অ্যাপের PIN বসান', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(context.l10n.lockScreenSetPinTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.sm),
-            const Text('এই ফোনে তালা নেই। অনুমোদন আর টাকার অঙ্ক রক্ষায় ৪–৬ অঙ্কের একটা PIN বসান — ফিরে এলে এটাই চাওয়া হবে।',
-                textAlign: TextAlign.center),
+            Text(context.l10n.lockScreenSetPinBody(bnDigits(4), bnDigits(6)), textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.md),
-            _pinBox(const ValueKey('app-pin-new-field'), _pinField, 'নতুন PIN'),
-            _pinBox(const ValueKey('app-pin-new-again'), _pinAgain, 'আবার একই PIN'),
+            _pinBox(const ValueKey('app-pin-new-field'), _pinField, context.l10n.lockScreenNewPin),
+            _pinBox(const ValueKey('app-pin-new-again'), _pinAgain, context.l10n.lockScreenPinAgain),
             if (_pinError != null)
               Text(_pinError!, key: const ValueKey('app-pin-error'), style: TextStyle(color: context.palette.danger)),
             const SizedBox(height: AppSpacing.md),
-            FilledButton(key: const ValueKey('app-pin-save'), onPressed: _savePin, child: const Text('সংরক্ষণ')),
-            if (widget.onSignOut != null) TextButton(onPressed: widget.onSignOut, child: const Text('বেরিয়ে যান')),
+            FilledButton(key: const ValueKey('app-pin-save'), onPressed: _savePin, child: Text(context.l10n.lockScreenSave)),
+            if (widget.onSignOut != null) TextButton(onPressed: widget.onSignOut, child: Text(context.l10n.lockScreenSignOut)),
           ]),
         if (lock.locked && !lock.asksPin && !lock.mustSignInAgain)
           Positioned.fill(
@@ -352,18 +354,18 @@ class _AppLockGateState extends State<AppLockGate> {
                       children: [
                         const Icon(Icons.lock_outline, size: 56, color: AppColors.primary),
                         const SizedBox(height: AppSpacing.md),
-                        const Text('অ্যাপ তালাবদ্ধ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        Text(context.l10n.lockScreenLockedTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                         const SizedBox(height: AppSpacing.sm),
-                        const Text('আঙুলের ছাপ বা ফোনের PIN দিয়ে খুলুন।', textAlign: TextAlign.center),
+                        Text(context.l10n.lockScreenLockedBody, textAlign: TextAlign.center),
                         const SizedBox(height: AppSpacing.lg),
                         FilledButton.icon(
                           key: const ValueKey('app-lock-open'),
                           onPressed: lock.busy ? null : lock.unlock,
                           icon: const Icon(Icons.fingerprint),
-                          label: const Text('খুলুন'),
+                          label: Text(context.l10n.commonOpen),
                         ),
                         if (widget.onSignOut != null)
-                          TextButton(onPressed: widget.onSignOut, child: const Text('বেরিয়ে যান')),
+                          TextButton(onPressed: widget.onSignOut, child: Text(context.l10n.lockScreenSignOut)),
                       ],
                     ),
                   ),

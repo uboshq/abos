@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../locale/app_locale.dart';
+
 /// ফোনের অবস্থা — root করা কি না, আর আসল ফোন নাকি emulator
 class IntegrityReport {
   const IntegrityReport({required this.rooted, required this.emulator});
@@ -44,13 +46,13 @@ class DeviceIntegrity {
   /// মানুষের ভাষায় — কী পাওয়া গেল আর কী করবেন
   static String? messageFor(IntegrityReport report) {
     if (report.clean) return null;
+    final l = AppLocale.l10n;
     final what = report.rooted && report.emulator
-        ? 'এই ফোনটা root করা, আর আসল ফোন নয় (emulator) বলে মনে হচ্ছে'
+        ? l.deviceIntegrityRootedEmulator
         : report.rooted
-            ? 'এই ফোনটা root করা বলে মনে হচ্ছে'
-            : 'এটা আসল ফোন নয় (emulator) বলে মনে হচ্ছে';
-    return '$what। এমন ফোনে অন্য অ্যাপ ABOS-এর তথ্য পড়তে পারে — টাকার অঙ্ক আর গ্রাহকের তথ্য ঝুঁকিতে থাকে। '
-        'অ্যাপ চলবে, তবে অফিসকে জানান।';
+            ? l.deviceIntegrityRooted
+            : l.deviceIntegrityEmulator;
+    return l.deviceIntegrityWarning(what);
   }
 
   @visibleForTesting

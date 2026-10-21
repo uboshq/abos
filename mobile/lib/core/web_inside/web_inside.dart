@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../api_client/api_client.dart';
 import '../api_client/network_errors.dart';
 import '../config/app_config.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ অ্যাপের ভিতরে ওয়েবের পর্দা (মালিক, ১৩ অক্টোবর ২০২৬: *"web e na dhuke jar jar kaj 100% app ei korte pare"*)।
 ///
@@ -101,21 +102,20 @@ class WebHandoffApi {
       });
       final url = response.data?['url'];
       if (url is String && url.isNotEmpty) return WebKeyIssued(url);
-      return const WebKeyRefused('পাতাটা খোলা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+      return WebKeyRefused(AppLocale.l10n.webInsidePageFailed);
     } on DioException catch (error) {
       final body = error.response?.data;
       if (error.response?.statusCode == 409 && body is Map && body['needsCode'] == true) {
         return WebKeyNeedsCode(
           wasWrong: body['codeWasWrong'] == true,
           message: serverSentence(error) ??
-              (body['codeWasWrong'] == true ? 'কোডটা মেলেনি — আবার দিন।' : 'দুই ধাপের কোডটা দিন।'),
+              (body['codeWasWrong'] == true ? AppLocale.l10n.webInsideCodeWrong : AppLocale.l10n.webInsideCodeNeeded),
         );
       }
       return WebKeyRefused(errorMessageFor(error,
-          fallback: 'পাতাটা খোলা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।',
-          whenAbsent: 'সার্ভার এখনো এই সুবিধা পায়নি — অফিসকে সার্ভার হালনাগাদ করতে বলুন।'));
+          fallback: AppLocale.l10n.webInsidePageFailed, whenAbsent: AppLocale.l10n.webInsideServerTooOld));
     } catch (error) {
-      return WebKeyRefused(errorMessageFor(error, fallback: 'পাতাটা খোলা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।'));
+      return WebKeyRefused(errorMessageFor(error, fallback: AppLocale.l10n.webInsidePageFailed));
     }
   }
 }

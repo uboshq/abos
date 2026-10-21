@@ -39,7 +39,7 @@ class AppPin {
 
   /// ৪–৬টা অঙ্ক — বাংলা অঙ্কও চলে
   static String? normalise(String typed) {
-    const bangla = '০১২৩৪৫৬৭৮৯';
+    const bangla = '০১২৩৪৫৬৭৮৯'; // l10n-ok: reads Bengali digits typed into the PIN, not text
     final digits = typed.trim().split('').map((c) => bangla.contains(c) ? '${bangla.indexOf(c)}' : c).join();
     return RegExp(r'^\d{4,6}$').hasMatch(digits) ? digits : null;
   }

@@ -131,5 +131,1032 @@
   "homeStockPageTitle": "মজুদ",
   "@homeStockPageTitle": {
     "description": "Title of the stock page opened from the owner home"
+  },
+  "navModuleSales": "বিক্রয়",
+  "@navModuleSales": {
+    "description": "Module tile and bar crumb: sales"
+  },
+  "navModulePurchase": "ক্রয়",
+  "@navModulePurchase": {
+    "description": "Module tile and bar crumb: purchase"
+  },
+  "navModuleInventory": "মজুদ",
+  "@navModuleInventory": {
+    "description": "Module tile and bar crumb: inventory (stock)"
+  },
+  "navModuleAccounts": "হিসাব",
+  "@navModuleAccounts": {
+    "description": "Module tile and bar crumb: accounts"
+  },
+  "navModuleFinance": "অর্থ",
+  "@navModuleFinance": {
+    "description": "Module tile and bar crumb: finance (bank, deposits, loans)"
+  },
+  "navModuleCustomer": "গ্রাহক",
+  "@navModuleCustomer": {
+    "description": "Module tile and bar crumb: customers"
+  },
+  "navModuleSupplier": "সরবরাহকারী",
+  "@navModuleSupplier": {
+    "description": "Module tile and bar crumb: suppliers (principals)"
+  },
+  "navModuleApproval": "অনুমোদন",
+  "@navModuleApproval": {
+    "description": "Module tile and bar crumb: approvals"
+  },
+  "navModuleHr": "কর্মী",
+  "@navModuleHr": {
+    "description": "Module tile and bar crumb: staff (HR)"
+  },
+  "navModuleReports": "রিপোর্ট",
+  "@navModuleReports": {
+    "description": "Module tile and bar crumb: reports"
+  },
+  "navModuleDocuments": "নথি",
+  "@navModuleDocuments": {
+    "description": "Module tile and bar crumb: documents"
+  },
+  "navModuleExecutive": "মালিকের কেন্দ্র",
+  "@navModuleExecutive": {
+    "description": "Module tile and bar crumb: the owner's centre"
+  },
+  "navModulePromotion": "প্রমোশন",
+  "@navModulePromotion": {
+    "description": "Module tile and bar crumb: promotion (offers)"
+  },
+  "navModuleCreditControl": "বাকি নিয়ন্ত্রণ",
+  "@navModuleCreditControl": {
+    "description": "Module tile and bar crumb: credit control"
+  },
+  "navModuleNotification": "নোটিশ",
+  "@navModuleNotification": {
+    "description": "Module tile and bar crumb: notices"
+  },
+  "navGroupTransactions": "লেনদেন",
+  "@navGroupTransactions": {
+    "description": "Heading inside a module's menu: transactions"
+  },
+  "navGroupFieldWork": "মাঠের কাজ",
+  "@navGroupFieldWork": {
+    "description": "Heading inside a module's menu: field work"
+  },
+  "navGroupLists": "তালিকা",
+  "@navGroupLists": {
+    "description": "Heading inside a module's menu: lists (master data)"
+  },
+  "navGroupMyWork": "নিজের কাজ",
+  "@navGroupMyWork": {
+    "description": "Heading inside a module's menu: the person's own work"
+  },
+  "navGroupReports": "রিপোর্ট",
+  "@navGroupReports": {
+    "description": "Heading inside a module's menu: reports"
+  },
+  "navGroupDashboards": "ড্যাশবোর্ড",
+  "@navGroupDashboards": {
+    "description": "Heading inside a module's menu: dashboards"
+  },
+  "navGroupOther": "অন্যান্য",
+  "@navGroupOther": {
+    "description": "Heading inside a module's menu: anything else"
+  },
+  "navGroupApprovals": "অনুমোদন",
+  "@navGroupApprovals": {
+    "description": "Heading inside a module's menu: the web's approval screens"
+  },
+  "navGroupSettings": "সেটিংস",
+  "@navGroupSettings": {
+    "description": "Heading inside a module's menu: the web's settings screens"
+  },
+  "navGroupComingSoon": "শীঘ্রই আসছে",
+  "@navGroupComingSoon": {
+    "description": "Heading inside a module's menu: rows that are not built yet"
+  },
+  "navParentDelivery": "ডেলিভারি ও লোডিং",
+  "@navParentDelivery": {
+    "description": "Sales menu row that opens the delivery screens"
+  },
+  "navScreenNewOrder": "নতুন অর্ডার",
+  "@navScreenNewOrder": {
+    "description": "Menu row and bar crumb: write a new order"
+  },
+  "navScreenOrders": "অর্ডারের অবস্থা",
+  "@navScreenOrders": {
+    "description": "Menu row and bar crumb: the orders and where they stand"
+  },
+  "navScreenDeliveryOrders": "ডেলিভারি অর্ডার",
+  "@navScreenDeliveryOrders": {
+    "description": "Menu row and bar crumb: delivery orders (DO)"
+  },
+  "navScreenSalesOrders": "বিক্রয় আদেশ",
+  "@navScreenSalesOrders": {
+    "description": "Menu row: sales orders (the same tile when the company uses sales orders instead of DO)"
+  },
+  "navScreenCounter": "সরাসরি বিক্রয়",
+  "@navScreenCounter": {
+    "description": "Menu row and bar crumb: the counter (direct sale)"
+  },
+  "navScreenQuotations": "উদ্ধৃতি",
+  "@navScreenQuotations": {
+    "description": "Menu row and bar crumb: quotations"
+  },
+  "navScreenCollections": "টাকা আদায়",
+  "@navScreenCollections": {
+    "description": "Menu row and bar crumb: money collected from customers"
+  },
+  "navScreenDeliveries": "আজকের ডেলিভারি",
+  "@navScreenDeliveries": {
+    "description": "Menu row and bar crumb: today's deliveries"
+  },
+  "navScreenLoading": "লোডিং শিট",
+  "@navScreenLoading": {
+    "description": "Menu row and bar crumb: the loading sheet"
+  },
+  "navScreenTracking": "ডেলিভারি ট্র্যাকিং",
+  "@navScreenTracking": {
+    "description": "Menu row and bar crumb: delivery tracking"
+  },
+  "navScreenScan": "কাগজ স্ক্যান",
+  "@navScreenScan": {
+    "description": "Menu row and bar crumb: scan a paper's QR code"
+  },
+  "navScreenMyRoute": "আজকের রুট",
+  "@navScreenMyRoute": {
+    "description": "Menu row and bar crumb: today's route and its shops"
+  },
+  "navScreenLeads": "লিড",
+  "@navScreenLeads": {
+    "description": "Menu row and bar crumb: leads (new shops found in the field)"
+  },
+  "navScreenToday": "আজকের হিসাব",
+  "@navScreenToday": {
+    "description": "Menu row and bar crumb: today's sales figures"
+  },
+  "navScreenPurchases": "ক্রয়",
+  "@navScreenPurchases": {
+    "description": "Menu row and bar crumb: purchases"
+  },
+  "navScreenPrincipals": "প্রিন্সিপাল",
+  "@navScreenPrincipals": {
+    "description": "Menu row and bar crumb: principals (supplier companies)"
+  },
+  "navScreenPrincipalCommission": "প্রিন্সিপালের কমিশন",
+  "@navScreenPrincipalCommission": {
+    "description": "Menu row and bar crumb: the principals' commission"
+  },
+  "navScreenProducts": "পণ্যের তালিকা",
+  "@navScreenProducts": {
+    "description": "Menu row and bar crumb: the product list"
+  },
+  "navScreenStock": "হাতে থাকা মজুদ",
+  "@navScreenStock": {
+    "description": "Menu row and bar crumb: stock on hand"
+  },
+  "navScreenVouchers": "ভাউচার",
+  "@navScreenVouchers": {
+    "description": "Menu row and bar crumb: vouchers"
+  },
+  "navScreenAllVouchers": "সব ভাউচার",
+  "@navScreenAllVouchers": {
+    "description": "Menu tile: every voucher kind in one screen"
+  },
+  "navScreenCashReceipt": "নগদ রসিদ",
+  "@navScreenCashReceipt": {
+    "description": "Menu row and bar crumb: cash receipt voucher"
+  },
+  "navScreenMfsReceipt": "MFS রসিদ",
+  "@navScreenMfsReceipt": {
+    "description": "Menu row and bar crumb: mobile banking (MFS) receipt voucher"
+  },
+  "navScreenBankReceipt": "ব্যাংক রসিদ",
+  "@navScreenBankReceipt": {
+    "description": "Menu row and bar crumb: bank receipt voucher"
+  },
+  "navScreenPayment": "পেমেন্ট",
+  "@navScreenPayment": {
+    "description": "Menu row and bar crumb: payment voucher"
+  },
+  "navScreenContra": "কন্ট্রা",
+  "@navScreenContra": {
+    "description": "Menu row and bar crumb: contra voucher"
+  },
+  "navScreenJournal": "জার্নাল",
+  "@navScreenJournal": {
+    "description": "Menu row and bar crumb: journal voucher"
+  },
+  "navScreenExpense": "খরচ",
+  "@navScreenExpense": {
+    "description": "Menu row and bar crumb: expense voucher"
+  },
+  "navScreenCustomers": "গ্রাহক",
+  "@navScreenCustomers": {
+    "description": "Menu row and bar crumb: the customer list"
+  },
+  "navScreenDues": "বকেয়া তালিকা",
+  "@navScreenDues": {
+    "description": "Menu row and bar crumb: customers' dues"
+  },
+  "navScreenApprovals": "অনুমোদন",
+  "@navScreenApprovals": {
+    "description": "Menu row and bar crumb: the approvals inbox"
+  },
+  "navScreenAttendance": "হাজিরা",
+  "@navScreenAttendance": {
+    "description": "Menu row and bar crumb: the person's own attendance"
+  },
+  "navScreenClaims": "খরচের দাবি",
+  "@navScreenClaims": {
+    "description": "Menu row and bar crumb: the person's own expense claims"
+  },
+  "navScreenReports": "রিপোর্ট",
+  "@navScreenReports": {
+    "description": "Menu row and bar crumb: the reports list"
+  },
+  "navScreenDashboards": "ব্যবসার ড্যাশবোর্ড",
+  "@navScreenDashboards": {
+    "description": "Menu row and bar crumb: the business dashboards"
+  },
+  "navScreenDeposits": "জমা ও সঞ্চয়",
+  "@navScreenDeposits": {
+    "description": "Menu row and bar crumb: deposits (FDR, DPS)"
+  },
+  "navScreenBankLoans": "ব্যাংক ঋণ ও কিস্তি",
+  "@navScreenBankLoans": {
+    "description": "Menu row and bar crumb: bank loans and their instalments"
+  },
+  "navScreenRents": "ভাড়া",
+  "@navScreenRents": {
+    "description": "Menu row and bar crumb: rents (paid and received)"
+  },
+  "navScreenHandLoans": "হাতধার",
+  "@navScreenHandLoans": {
+    "description": "Menu row and bar crumb: hand loans (informal loans)"
+  },
+  "navScreenDocuments": "ডকুমেন্টস",
+  "@navScreenDocuments": {
+    "description": "Menu row and bar crumb: the document library"
+  },
+  "navScreenOffers": "চলতি অফার",
+  "@navScreenOffers": {
+    "description": "Menu row and bar crumb: the offers running now"
+  },
+  "navScreenLeave": "আমার ছুটি",
+  "@navScreenLeave": {
+    "description": "Menu row and bar crumb: the person's own leave"
+  },
+  "navScreenPayslips": "বেতনের স্লিপ",
+  "@navScreenPayslips": {
+    "description": "Menu row and bar crumb: the person's own payslips"
+  },
+  "navScreenInvoices": "বিক্রয় বিল",
+  "@navScreenInvoices": {
+    "description": "Menu row and bar crumb: sales invoices"
+  },
+  "navScreenCancelledInvoices": "বাতিল বিক্রয় বিল",
+  "@navScreenCancelledInvoices": {
+    "description": "Screen title: the cancelled sales invoices"
+  },
+  "navScreenChallans": "চালান",
+  "@navScreenChallans": {
+    "description": "Menu row and bar crumb: delivery challans"
+  },
+  "navScreenOwnerCentre": "আজ — গোটা গ্রুপ",
+  "@navScreenOwnerCentre": {
+    "description": "Menu row and bar crumb: the owner's view of today across every company"
+  },
+  "navScreenCredit": "বাকির হিসাব",
+  "@navScreenCredit": {
+    "description": "Menu row and bar crumb: the credit-control dashboard"
+  },
+  "navScreenNotices": "নোটিশ বোর্ড",
+  "@navScreenNotices": {
+    "description": "Menu row and bar crumb: the notice board"
+  },
+  "navScreenSyncStatus": "সিঙ্কের অবস্থা",
+  "@navScreenSyncStatus": {
+    "description": "Menu row and bar crumb: what this phone has and has not sent"
+  },
+  "navScreenNotifications": "বিজ্ঞপ্তি",
+  "@navScreenNotifications": {
+    "description": "Screen name: the notifications (bell)"
+  },
+  "paperKindPurchaseOrder": "ক্রয়াদেশ",
+  "@paperKindPurchaseOrder": {
+    "description": "Paper kind name: purchase order"
+  },
+  "paperKindPurchaseBill": "ক্রয় বিল",
+  "@paperKindPurchaseBill": {
+    "description": "Paper kind name: purchase bill"
+  },
+  "paperKindGoodsReceipt": "মাল গ্রহণ",
+  "@paperKindGoodsReceipt": {
+    "description": "Paper kind name: goods received note"
+  },
+  "paperKindPurchaseReturn": "ক্রয় ফেরত",
+  "@paperKindPurchaseReturn": {
+    "description": "Paper kind name: purchase return"
+  },
+  "paperKindRequisition": "ক্রয়ের চাহিদা",
+  "@paperKindRequisition": {
+    "description": "Paper kind name: purchase requisition"
+  },
+  "paperKindRfq": "দর চাওয়া",
+  "@paperKindRfq": {
+    "description": "Paper kind name: request for quotation (RFQ)"
+  },
+  "paperKindSupplyContract": "সরবরাহের চুক্তি",
+  "@paperKindSupplyContract": {
+    "description": "Paper kind name: supply contract"
+  },
+  "paperKindSalesReturn": "বিক্রয় ফেরত",
+  "@paperKindSalesReturn": {
+    "description": "Paper kind name: sales return"
+  },
+  "paperKindGatePass": "গেট পাস",
+  "@paperKindGatePass": {
+    "description": "Paper kind name: gate pass"
+  },
+  "paperKindTrip": "ট্রিপ",
+  "@paperKindTrip": {
+    "description": "Paper kind name: a delivery trip (shipment)"
+  },
+  "paperKindLoadingSheet": "লোডিং শিট",
+  "@paperKindLoadingSheet": {
+    "description": "Paper kind name: loading sheet"
+  },
+  "paperKindTransport": "পরিবহন",
+  "@paperKindTransport": {
+    "description": "Paper kind name: transport"
+  },
+  "paperKindPriceCustomer": "গ্রাহকভিত্তিক দাম",
+  "@paperKindPriceCustomer": {
+    "description": "Paper kind name: a price list for one customer"
+  },
+  "paperKindPriceTier": "ধরনভিত্তিক দাম",
+  "@paperKindPriceTier": {
+    "description": "Paper kind name: a price list for a customer tier"
+  },
+  "paperKindPriceTerritory": "এলাকাভিত্তিক দাম",
+  "@paperKindPriceTerritory": {
+    "description": "Paper kind name: a price list for a territory"
+  },
+  "paperKindPriceAll": "বিশেষ দাম — সবার জন্য",
+  "@paperKindPriceAll": {
+    "description": "Paper kind name: a special price list for every customer"
+  },
+  "paperKindStockTransfer": "মাল স্থানান্তর",
+  "@paperKindStockTransfer": {
+    "description": "Paper kind name: stock transfer"
+  },
+  "paperKindInterCompany": "আন্তঃকোম্পানি লেনদেন",
+  "@paperKindInterCompany": {
+    "description": "Paper kind name: inter-company transaction"
+  },
+  "paperKindCapital": "মূলধন",
+  "@paperKindCapital": {
+    "description": "Paper kind name: capital"
+  },
+  "paperKindInsurance": "বীমা পলিসি",
+  "@paperKindInsurance": {
+    "description": "Paper kind name: insurance policy"
+  },
+  "paperKindFallback": "কাগজ",
+  "@paperKindFallback": {
+    "description": "Paper kind name when the kind is unknown"
+  },
+  "paperKindDeliveryOrder": "ডেলিভারি অর্ডার",
+  "@paperKindDeliveryOrder": {
+    "description": "Recent papers: the kind of a delivery order"
+  },
+  "paperKindSalesOrder": "বিক্রয় আদেশ",
+  "@paperKindSalesOrder": {
+    "description": "Recent papers: the kind of a sales order"
+  },
+  "paperKindQuotation": "উদ্ধৃতি",
+  "@paperKindQuotation": {
+    "description": "Recent papers: the kind of a quotation"
+  },
+  "paperKindCollection": "টাকা আদায়",
+  "@paperKindCollection": {
+    "description": "Recent papers: the kind of a money collection"
+  },
+  "paperKindPurchase": "ক্রয়",
+  "@paperKindPurchase": {
+    "description": "Recent papers: the kind of a purchase"
+  },
+  "paperKindVoucher": "ভাউচার",
+  "@paperKindVoucher": {
+    "description": "Recent papers: the kind of a voucher"
+  },
+  "paperKindClaim": "খরচের দাবি",
+  "@paperKindClaim": {
+    "description": "Recent papers: the kind of an expense claim"
+  },
+  "paperKindDeposit": "জমা",
+  "@paperKindDeposit": {
+    "description": "Recent papers: the kind of a deposit"
+  },
+  "paperKindBankLoan": "ব্যাংক ঋণ",
+  "@paperKindBankLoan": {
+    "description": "Recent papers: the kind of a bank loan"
+  },
+  "paperKindRent": "ভাড়া",
+  "@paperKindRent": {
+    "description": "Recent papers: the kind of a rent"
+  },
+  "paperKindHandLoan": "হাতধার",
+  "@paperKindHandLoan": {
+    "description": "Recent papers: the kind of a hand loan"
+  },
+  "paperKindDocument": "ডকুমেন্ট",
+  "@paperKindDocument": {
+    "description": "Recent papers: the kind of a document"
+  },
+  "paperKindPayslip": "বেতনের স্লিপ",
+  "@paperKindPayslip": {
+    "description": "Recent papers: the kind of a payslip"
+  },
+  "paperKindInvoice": "বিক্রয় বিল",
+  "@paperKindInvoice": {
+    "description": "Recent papers: the kind of a sales invoice"
+  },
+  "paperKindChallan": "চালান",
+  "@paperKindChallan": {
+    "description": "Recent papers: the kind of a delivery challan"
+  },
+  "navTabHome": "হোম",
+  "@navTabHome": {
+    "description": "Bottom bar tab: home"
+  },
+  "navTabApprovals": "অনুমোদন",
+  "@navTabApprovals": {
+    "description": "Bottom bar tab: approvals"
+  },
+  "navTabReports": "রিপোর্ট",
+  "@navTabReports": {
+    "description": "Bottom bar tab: reports"
+  },
+  "navTabOrders": "অর্ডার",
+  "@navTabOrders": {
+    "description": "Bottom bar tab: orders"
+  },
+  "navTabCollections": "আদায়",
+  "@navTabCollections": {
+    "description": "Bottom bar tab: collections"
+  },
+  "navTabChallans": "চালান",
+  "@navTabChallans": {
+    "description": "Bottom bar tab: delivery challans"
+  },
+  "navTabStock": "মজুদ",
+  "@navTabStock": {
+    "description": "Bottom bar tab: stock"
+  },
+  "navTabVouchers": "ভাউচার",
+  "@navTabVouchers": {
+    "description": "Bottom bar tab: vouchers"
+  },
+  "navTabModules": "সব মডিউল",
+  "@navTabModules": {
+    "description": "Bottom bar tab: every module"
+  },
+  "navTabWaiting": "অপেক্ষায়",
+  "@navTabWaiting": {
+    "description": "Screen reader: the word after a tab's red count, as in 'Approvals, 5 waiting'"
+  },
+  "navTabSpokenNew": "{label}, নতুন {waiting}",
+  "@navTabSpokenNew": {
+    "description": "Screen reader: a tab with a dot (something new, count unknown)",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "waiting": {
+        "type": "String"
+      }
+    }
+  },
+  "navTabBadgeCount": "{shown}টা",
+  "@navTabBadgeCount": {
+    "description": "Screen reader: a tab's red count; shown is already written in the reader's digits",
+    "placeholders": {
+      "shown": {
+        "type": "String"
+      }
+    }
+  },
+  "navTabBadgeOver": "{shown}টার বেশি",
+  "@navTabBadgeOver": {
+    "description": "Screen reader: a tab's red count over the limit; shown is already written in the reader's digits",
+    "placeholders": {
+      "shown": {
+        "type": "String"
+      }
+    }
+  },
+  "navFabNew": "নতুন",
+  "@navFabNew": {
+    "description": "Home's + button: opens the list of things to create"
+  },
+  "navFabNewOrder": "নতুন অর্ডার",
+  "@navFabNewOrder": {
+    "description": "+ button: write a new order"
+  },
+  "navFabNewCollection": "নতুন আদায়",
+  "@navFabNewCollection": {
+    "description": "+ button: write a new collection"
+  },
+  "navFabNewClaim": "নতুন দাবি",
+  "@navFabNewClaim": {
+    "description": "+ button: write a new expense claim"
+  },
+  "navFabNewExpense": "নতুন খরচ",
+  "@navFabNewExpense": {
+    "description": "+ button: write a new expense voucher"
+  },
+  "navFabNewVoucher": "নতুন ভাউচার",
+  "@navFabNewVoucher": {
+    "description": "+ button: write a new voucher"
+  },
+  "navFabExpenseClaim": "খরচের দাবি",
+  "@navFabExpenseClaim": {
+    "description": "Home's + list: write an expense claim"
+  },
+  "topBarBack": "পিছনে",
+  "@topBarBack": {
+    "description": "Top bar: the back button"
+  },
+  "topBarFullMenu": "পুরো মেনু",
+  "@topBarFullMenu": {
+    "description": "Top bar: the button that opens the whole menu"
+  },
+  "topBarSearch": "খোঁজা",
+  "@topBarSearch": {
+    "description": "Top bar: the search button"
+  },
+  "topBarMyMenu": "আমার মেনু",
+  "@topBarMyMenu": {
+    "description": "Top bar: the person's own menu (avatar)"
+  },
+  "topBarSwitchBranch": "শাখা বদল",
+  "@topBarSwitchBranch": {
+    "description": "Screen reader: what tapping the company and branch title does"
+  },
+  "topBarDemo": "ডেমো",
+  "@topBarDemo": {
+    "description": "Top bar: the mark on a demo server"
+  },
+  "topBarMore": "আরও",
+  "@topBarMore": {
+    "description": "Top bar: the overflow menu of a screen's own buttons"
+  },
+  "topBarBranchSpoken": "{branch} শাখা",
+  "@topBarBranchSpoken": {
+    "description": "Screen reader: the branch's name in the title",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "topBarDemoSpoken": "ডেমো সার্ভার, আসল খাতা নয়",
+  "@topBarDemoSpoken": {
+    "description": "Screen reader: the title on a demo server"
+  },
+  "topBarOfflinePending": "{count, plural, other{অফলাইন: {shown}টা কাগজ পাঠানো বাকি, নেট এলে নিজেই যাবে}}",
+  "@topBarOfflinePending": {
+    "description": "Offline ribbon with papers waiting; shown is the count in the reader's digits",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "shown": {
+        "type": "String"
+      }
+    }
+  },
+  "topBarOfflineNoNet": "অফলাইন: নেট নেই, যা লিখবেন তা নেট এলে নিজেই যাবে",
+  "@topBarOfflineNoNet": {
+    "description": "Offline ribbon with nothing waiting"
+  },
+  "topBarUnsavedTitle": "না রেখে বদলাবেন?",
+  "@topBarUnsavedTitle": {
+    "description": "Dialog before switching branch or company with an unsaved form: title"
+  },
+  "topBarUnsavedBody": "একটা ফর্মে যা লিখেছেন তা এখনো রাখা হয়নি। শাখা বদলালে ওই লেখা হারিয়ে যাবে।",
+  "@topBarUnsavedBody": {
+    "description": "Dialog before switching branch with an unsaved form: body"
+  },
+  "topBarUnsavedStay": "থাকুন",
+  "@topBarUnsavedStay": {
+    "description": "Dialog before switching branch with an unsaved form: stay"
+  },
+  "topBarUnsavedGo": "না রেখে বদলান",
+  "@topBarUnsavedGo": {
+    "description": "Dialog before switching branch with an unsaved form: switch anyway"
+  },
+  "moduleGateOffTitle": "এই অংশটা এখন বন্ধ",
+  "@moduleGateOffTitle": {
+    "description": "A screen whose module the company switched off for the phone: title"
+  },
+  "moduleGateOffMessage": "আপনার কোম্পানি অ্যাপে এই অংশটা বন্ধ রেখেছে। দরকার হলে প্রশাসককে বলুন কন্ট্রোল প্যানেলের \"মোবাইল অ্যাপ\" ট্যাব থেকে চালু করতে।",
+  "@moduleGateOffMessage": {
+    "description": "A screen whose module the company switched off for the phone: what to do"
+  },
+  "permissionCameraTitle": "ক্যামেরার অনুমতি",
+  "@permissionCameraTitle": {
+    "description": "Before Android's own camera question: title"
+  },
+  "permissionCameraBody": "QR পড়তে, স্লিপ বা রসিদের ছবি আর নিজের প্রোফাইলের ছবি তুলতে ABOS ফোনের ক্যামেরা ব্যবহার করবে। এরপর ফোন ক্যামেরার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। আপনি না চাপলে ক্যামেরা চালু হয় না, আর কেবল আপনার পাঠানো ছবিটাই অফিসে যায়।",
+  "@permissionCameraBody": {
+    "description": "Before Android's own camera question: why"
+  },
+  "permissionNotificationsTitle": "বার্তার অনুমতি",
+  "@permissionNotificationsTitle": {
+    "description": "Before Android's own notification question: title"
+  },
+  "permissionNotificationsBody": "সই চাওয়া, অনুমোদন আর ডেলিভারির খবর অ্যাপ বন্ধ থাকলেও জানাতে ABOS বার্তা পাঠাবে। এরপর ফোন বার্তার অনুমতি চাইবে — \"অনুমতি দিন\" চাপুন। না দিলেও অ্যাপ চলবে, কেবল খবরগুলো অ্যাপ খুললে তবে দেখবেন।",
+  "@permissionNotificationsBody": {
+    "description": "Before Android's own notification question: why"
+  },
+  "permissionNotNow": "এখন না",
+  "@permissionNotNow": {
+    "description": "Permission explanation: do not ask now"
+  },
+  "permissionOk": "ঠিক আছে",
+  "@permissionOk": {
+    "description": "Permission explanation: go on to the phone's question"
+  },
+  "deviceIntegrityRootedEmulator": "এই ফোনটা root করা, আর আসল ফোন নয় (emulator) বলে মনে হচ্ছে",
+  "@deviceIntegrityRootedEmulator": {
+    "description": "Device check: rooted and an emulator"
+  },
+  "deviceIntegrityRooted": "এই ফোনটা root করা বলে মনে হচ্ছে",
+  "@deviceIntegrityRooted": {
+    "description": "Device check: rooted"
+  },
+  "deviceIntegrityEmulator": "এটা আসল ফোন নয় (emulator) বলে মনে হচ্ছে",
+  "@deviceIntegrityEmulator": {
+    "description": "Device check: an emulator"
+  },
+  "deviceIntegrityWarning": "{what}। এমন ফোনে অন্য অ্যাপ ABOS-এর তথ্য পড়তে পারে — টাকার অঙ্ক আর গ্রাহকের তথ্য ঝুঁকিতে থাকে। অ্যাপ চলবে, তবে অফিসকে জানান।",
+  "@deviceIntegrityWarning": {
+    "description": "Device check: the warning; what is one of the deviceIntegrity sentences",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "lockDelayNow": "সাথে সাথে",
+  "@lockDelayNow": {
+    "description": "App lock delay choice: lock at once"
+  },
+  "lockDelayMinutes": "{count, plural, other{{shown} মিনিট}}",
+  "@lockDelayMinutes": {
+    "description": "App lock delay choice in minutes; shown is the count in the reader's digits",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "shown": {
+        "type": "String"
+      }
+    }
+  },
+  "lockScreenPinLength": "PIN {min} থেকে {max}টা অঙ্ক।",
+  "@lockScreenPinLength": {
+    "description": "Setting a PIN: the PIN has the wrong length; min and max are in the reader's digits",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "lockScreenPinTwice": "দুইবার একই PIN লিখুন।",
+  "@lockScreenPinTwice": {
+    "description": "Setting a PIN: the two PINs differ"
+  },
+  "lockScreenTooManyTries": "পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।",
+  "@lockScreenTooManyTries": {
+    "description": "Lock screen: too many wrong PINs"
+  },
+  "lockScreenPinWrong": "{count, plural, other{PIN মেলেনি — আর {shown}বার চেষ্টা করা যাবে।}}",
+  "@lockScreenPinWrong": {
+    "description": "Lock screen: a wrong PIN and the tries left; shown is the count in the reader's digits",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "shown": {
+        "type": "String"
+      }
+    }
+  },
+  "lockScreenBiometricReason": "ABOS খুলতে আঙুলের ছাপ বা ফোনের PIN দিন",
+  "@lockScreenBiometricReason": {
+    "description": "The phone's own unlock prompt: why"
+  },
+  "lockScreenBiometricTitle": "ABOS খুলুন",
+  "@lockScreenBiometricTitle": {
+    "description": "The phone's own unlock prompt: title"
+  },
+  "lockScreenBiometricCancel": "থাক",
+  "@lockScreenBiometricCancel": {
+    "description": "The phone's own unlock prompt: cancel"
+  },
+  "lockScreenEnterPin": "অ্যাপের PIN দিন",
+  "@lockScreenEnterPin": {
+    "description": "Lock screen: enter the app PIN"
+  },
+  "lockScreenSignOut": "বেরিয়ে যান",
+  "@lockScreenSignOut": {
+    "description": "Lock screen: sign out"
+  },
+  "lockScreenSignInAgainTitle": "আবার পাসওয়ার্ড দিয়ে ঢুকুন",
+  "@lockScreenSignInAgainTitle": {
+    "description": "Lock screen with no phone lock and no app PIN: title"
+  },
+  "lockScreenSignInAgainBody": "এই ফোনে তালা নেই, আর অ্যাপের PIN-ও বসানো হয়নি — কে ধরে আছেন জানার উপায় নেই। ঢুকলেই PIN বসাতে বলা হবে।",
+  "@lockScreenSignInAgainBody": {
+    "description": "Lock screen with no phone lock and no app PIN: why"
+  },
+  "lockScreenSignOutAndIn": "বেরিয়ে আবার ঢুকুন",
+  "@lockScreenSignOutAndIn": {
+    "description": "Lock screen with no phone lock and no app PIN: button"
+  },
+  "lockScreenSetPinTitle": "অ্যাপের PIN বসান",
+  "@lockScreenSetPinTitle": {
+    "description": "Set a PIN after signing in on a phone with no lock: title"
+  },
+  "lockScreenSetPinBody": "এই ফোনে তালা নেই। অনুমোদন আর টাকার অঙ্ক রক্ষায় {min}–{max} অঙ্কের একটা PIN বসান — ফিরে এলে এটাই চাওয়া হবে।",
+  "@lockScreenSetPinBody": {
+    "description": "Set a PIN on a phone with no lock: why; min and max are in the reader's digits",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "lockScreenNewPin": "নতুন PIN",
+  "@lockScreenNewPin": {
+    "description": "Set a PIN: the first field"
+  },
+  "lockScreenPinAgain": "আবার একই PIN",
+  "@lockScreenPinAgain": {
+    "description": "Set a PIN: the second field"
+  },
+  "lockScreenSave": "সংরক্ষণ",
+  "@lockScreenSave": {
+    "description": "Set a PIN: save it"
+  },
+  "lockScreenLockedTitle": "অ্যাপ তালাবদ্ধ",
+  "@lockScreenLockedTitle": {
+    "description": "Lock screen: title"
+  },
+  "lockScreenLockedBody": "আঙুলের ছাপ বা ফোনের PIN দিয়ে খুলুন।",
+  "@lockScreenLockedBody": {
+    "description": "Lock screen: how to open"
+  },
+  "networkErrorNoConnection": "সংযোগ নেই। ইন্টারনেট চেক করে আবার চেষ্টা করুন।",
+  "@networkErrorNoConnection": {
+    "description": "Any request that failed for want of a network"
+  },
+  "authIncompleteAnswer": "সার্ভার থেকে অসম্পূর্ণ উত্তর এসেছে। আবার চেষ্টা করুন।",
+  "@authIncompleteAnswer": {
+    "description": "Sign-in: the server answered without the tokens"
+  },
+  "authSignInFailed": "ঢোকা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।",
+  "@authSignInFailed": {
+    "description": "Sign-in failed for another reason"
+  },
+  "authLoginGreetingMorning": "শুভ সকাল",
+  "@authLoginGreetingMorning": {
+    "description": "Sign-in screen greeting before noon (Dhaka time)"
+  },
+  "authLoginGreetingAfternoon": "শুভ দুপুর",
+  "@authLoginGreetingAfternoon": {
+    "description": "Sign-in screen greeting from noon to 5 pm (Dhaka time)"
+  },
+  "authLoginGreetingEvening": "শুভ সন্ধ্যা",
+  "@authLoginGreetingEvening": {
+    "description": "Sign-in screen greeting after 5 pm (Dhaka time)"
+  },
+  "authLoginSubtitle": "আজকের হিসাব আপনার অপেক্ষায়",
+  "@authLoginSubtitle": {
+    "description": "Sign-in screen: the line under the greeting"
+  },
+  "authLoginIdentifier": "লগইন আইডি (নাম বা ইমেইল)",
+  "@authLoginIdentifier": {
+    "description": "Sign-in screen: the identifier field"
+  },
+  "authLoginIdentifierMissing": "নাম বা ইমেইল দিন",
+  "@authLoginIdentifierMissing": {
+    "description": "Sign-in screen: the identifier is empty"
+  },
+  "authLoginPassword": "পাসওয়ার্ড",
+  "@authLoginPassword": {
+    "description": "Sign-in screen: the password field"
+  },
+  "authLoginPasswordMissing": "পাসওয়ার্ড দিন",
+  "@authLoginPasswordMissing": {
+    "description": "Sign-in screen: the password is empty"
+  },
+  "authLoginSignIn": "প্রবেশ করুন",
+  "@authLoginSignIn": {
+    "description": "Sign-in screen: the sign-in button"
+  },
+  "authLoginVerify": "যাচাই করুন",
+  "@authLoginVerify": {
+    "description": "Sign-in screen: the button that sends the MFA code"
+  },
+  "authLoginBack": "ফিরে যান",
+  "@authLoginBack": {
+    "description": "Sign-in screen: back from the MFA step"
+  },
+  "authLoginRemember": "মনে রাখুন",
+  "@authLoginRemember": {
+    "description": "Sign-in screen: remember the identifier"
+  },
+  "authLoginForgot": "পাসওয়ার্ড ভুলে গেছেন?",
+  "@authLoginForgot": {
+    "description": "Sign-in screen: forgot password link"
+  },
+  "authLoginForgotBody": "নিচের বোতাম চাপলে ব্রাউজারে পাসওয়ার্ড বদলের পাতা খুলবে — ইমেইল দিলে লিংক আসবে। ইমেইল না থাকলে কোম্পানির প্রশাসককে বলুন।",
+  "@authLoginForgotBody": {
+    "description": "Sign-in screen: forgot password dialog body"
+  },
+  "authLoginForgotOpen": "ইমেইলে লিংক নিন",
+  "@authLoginForgotOpen": {
+    "description": "Sign-in screen: forgot password dialog button"
+  },
+  "authLoginOk": "ঠিক আছে",
+  "@authLoginOk": {
+    "description": "Sign-in screen: close a dialog"
+  },
+  "authLoginMfaPrompt": "আপনার অথেনটিকেটর অ্যাপ থেকে {n}-সংখ্যার কোডটি দিন।",
+  "@authLoginMfaPrompt": {
+    "description": "Sign-in screen: the MFA step; n is the code's length in the reader's digits",
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "authLoginMfaWrong": "কোডটি ভুল ছিল — আবার চেষ্টা করুন।",
+  "@authLoginMfaWrong": {
+    "description": "Sign-in screen: the MFA code was wrong"
+  },
+  "authLoginMfaLabel": "এমএফএ কোড",
+  "@authLoginMfaLabel": {
+    "description": "Sign-in screen: the MFA code field"
+  },
+  "authLoginMfaMissing": "{n}-সংখ্যার কোডটি দিন",
+  "@authLoginMfaMissing": {
+    "description": "Sign-in screen: the MFA code is empty; n is the code's length in the reader's digits",
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "authLoginVersion": "সংস্করণ",
+  "@authLoginVersion": {
+    "description": "Sign-in screen footer: the app's version"
+  },
+  "authLoginHidePassword": "পাসওয়ার্ড লুকান",
+  "@authLoginHidePassword": {
+    "description": "Sign-in screen: hide the password"
+  },
+  "authLoginShowPassword": "পাসওয়ার্ড দেখুন",
+  "@authLoginShowPassword": {
+    "description": "Sign-in screen: show the password"
+  },
+  "profileMenuProfileAndPhoto": "প্রোফাইল ও ছবি বদল",
+  "@profileMenuProfileAndPhoto": {
+    "description": "Avatar menu's first row when the server can change the photo"
+  },
+  "profileMenuMyProfile": "আমার প্রোফাইল",
+  "@profileMenuMyProfile": {
+    "description": "Avatar menu's first row otherwise"
+  },
+  "webInsidePageFailed": "পাতাটা খোলা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।",
+  "@webInsidePageFailed": {
+    "description": "A web screen inside the app could not get its key"
+  },
+  "webInsideCodeWrong": "কোডটা মেলেনি — আবার দিন।",
+  "@webInsideCodeWrong": {
+    "description": "A web screen inside the app: the two-step code was wrong"
+  },
+  "webInsideCodeNeeded": "দুই ধাপের কোডটা দিন।",
+  "@webInsideCodeNeeded": {
+    "description": "A web screen inside the app needs the two-step code"
+  },
+  "webInsideServerTooOld": "সার্ভার এখনো এই সুবিধা পায়নি — অফিসকে সার্ভার হালনাগাদ করতে বলুন।",
+  "@webInsideServerTooOld": {
+    "description": "A web screen inside the app: the server is too old"
+  },
+  "webInsideBadAddress": "এই পর্দার ঠিকানাটা চেনা গেল না — মেনু থেকে আবার খুলুন।",
+  "@webInsideBadAddress": {
+    "description": "A web screen inside the app: unknown address"
+  },
+  "webInsideNeedsCode": "দুই ধাপের কোড ছাড়া ওয়েবের পর্দা খোলে না — ওয়েবের লগইনের মতোই।",
+  "@webInsideNeedsCode": {
+    "description": "A web screen inside the app: the code dialog was closed"
+  },
+  "webInsideCodeTitle": "দুই ধাপের কোড",
+  "@webInsideCodeTitle": {
+    "description": "A web screen inside the app: the code dialog title"
+  },
+  "webInsideCodeHint": "অথেনটিকেটর অ্যাপের {n} অঙ্ক",
+  "@webInsideCodeHint": {
+    "description": "A web screen inside the app: the code field hint; n is in the reader's digits",
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "webInsideLoadFailed": "পাতাটা আনা গেল না — সংযোগ দেখে আবার চেষ্টা করুন।",
+  "@webInsideLoadFailed": {
+    "description": "A web screen inside the app: the page failed to load"
+  },
+  "webInsideFileFetching": "ফাইল আনা হচ্ছে…",
+  "@webInsideFileFetching": {
+    "description": "A web screen inside the app: downloading a file"
+  },
+  "webInsideFileFetchFailed": "ফাইলটা আনা গেল না — আবার চেষ্টা করুন।",
+  "@webInsideFileFetchFailed": {
+    "description": "A web screen inside the app: download failed"
+  },
+  "webInsideFileSaveFailed": "ফাইলটা রাখা গেল না — ফোনে জায়গা আছে কি না দেখুন।",
+  "@webInsideFileSaveFailed": {
+    "description": "A web screen inside the app: the file could not be written"
+  },
+  "webInsideFileShare": "পাঠান বা সেভ করুন",
+  "@webInsideFileShare": {
+    "description": "A web screen inside the app: share or save a downloaded file"
+  },
+  "webInsidePrintFailed": "ছাপা গেল না — পাতাটা পুরো আসার পরে আবার চেষ্টা করুন।",
+  "@webInsidePrintFailed": {
+    "description": "A web screen inside the app: print failed"
+  },
+  "webInsideTakePhoto": "ছবি তুলুন",
+  "@webInsideTakePhoto": {
+    "description": "A web screen inside the app: attach a new photo"
+  },
+  "webInsideFromGallery": "গ্যালারি থেকে",
+  "@webInsideFromGallery": {
+    "description": "A web screen inside the app: attach a photo from the gallery"
+  },
+  "webInsidePickFile": "ফাইল বাছুন (PDF, এক্সেল…)",
+  "@webInsidePickFile": {
+    "description": "A web screen inside the app: attach a file"
+  },
+  "webInsideFile": "ফাইল",
+  "@webInsideFile": {
+    "description": "A web screen inside the app: a file's default name"
+  },
+  "webInsideFilePickFailed": "ফাইলটা নেওয়া গেল না — আবার চেষ্টা করুন।",
+  "@webInsideFilePickFailed": {
+    "description": "A web screen inside the app: attaching failed"
+  },
+  "webInsideOk": "ঠিক আছে",
+  "@webInsideOk": {
+    "description": "A web screen inside the app: the page's alert or prompt, OK"
+  },
+  "webInsideNo": "না",
+  "@webInsideNo": {
+    "description": "A web screen inside the app: the page's confirm, no"
+  },
+  "webInsideYes": "হ্যাঁ",
+  "@webInsideYes": {
+    "description": "A web screen inside the app: the page's confirm, yes"
+  },
+  "webInsideClose": "বন্ধ করুন",
+  "@webInsideClose": {
+    "description": "A web screen inside the app: close it"
+  },
+  "webInsidePrint": "ছাপুন বা PDF",
+  "@webInsidePrint": {
+    "description": "A web screen inside the app: print the page"
+  },
+  "webInsideReload": "নতুন করে আনুন",
+  "@webInsideReload": {
+    "description": "A web screen inside the app: reload the page"
+  },
+  "webInsideOpenFailedTitle": "পাতাটা খোলা গেল না",
+  "@webInsideOpenFailedTitle": {
+    "description": "A web screen inside the app: error title"
+  },
+  "webInsideCancel": "থাক",
+  "@webInsideCancel": {
+    "description": "A web screen inside the app: the page's prompt, cancel"
   }
 }

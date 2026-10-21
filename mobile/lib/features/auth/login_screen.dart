@@ -8,6 +8,9 @@ import '../../core/auth/auth_exceptions.dart';
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/remembered_login.dart';
 import '../../core/config/app_config.dart';
+import '../../core/locale/app_locale.dart';
+import '../../core/locale/l10n.dart';
+import '../../core/navigation/top_bar/abos_top_bar.dart' show bnDigits;
 
 /// Identifier + password, then a six-digit code if the account has MFA on —
 /// see docs/Contract, §১ for the 409 branch this screen's [_mfaStage] answers.
@@ -37,42 +40,43 @@ class LoginScreen extends ConsumerStatefulWidget {
 /// good evening at ten in the morning.
 String loginGreeting(DateTime instant, {required bool bangla}) {
   final hour = instant.toUtc().add(const Duration(hours: 6)).hour;
-  if (hour < 12) return bangla ? 'শুভ সকাল' : 'Good morning';
-  if (hour < 17) return bangla ? 'শুভ দুপুর' : 'Good afternoon';
-  return bangla ? 'শুভ সন্ধ্যা' : 'Good evening';
+  final words = lookupAppL10n(bangla ? AppLocale.locale : AppLocale.english);
+  if (hour < 12) return words.authLoginGreetingMorning;
+  if (hour < 17) return words.authLoginGreetingAfternoon;
+  return words.authLoginGreetingEvening;
 }
 
-/// Every sentence on this page in both languages. The footer's "বাংলা /
-/// English" switches between them for this page only — the rest of the app
-/// speaks Bangla.
+/// Every sentence on this page, from the ARB ([AppL10n]) in the page's own language. The footer's "বাংলা /
+/// English" switches between them for this page; it starts in the app's language.
 class _Words {
-  const _Words(this.bn);
+  _Words(bool bn)
+      : _l = lookupAppL10n(bn ? AppLocale.locale : AppLocale.english),
+        _locale = bn ? AppLocale.locale : AppLocale.english;
 
-  final bool bn;
+  final AppL10n _l;
+  final Locale _locale;
 
-  String get subtitle => bn ? 'আজকের হিসাব আপনার অপেক্ষায়' : "Today's books are waiting for you";
-  String get identifier => bn ? 'লগইন আইডি (নাম বা ইমেইল)' : 'Login ID (name or email)';
-  String get identifierMissing => bn ? 'নাম বা ইমেইল দিন' : 'Enter your name or email';
-  String get password => bn ? 'পাসওয়ার্ড' : 'Password';
-  String get passwordMissing => bn ? 'পাসওয়ার্ড দিন' : 'Enter your password';
-  String get signIn => bn ? 'প্রবেশ করুন' : 'Sign in';
-  String get verify => bn ? 'যাচাই করুন' : 'Verify';
-  String get back => bn ? 'ফিরে যান' : 'Go back';
-  String get remember => bn ? 'মনে রাখুন' : 'Remember me';
-  String get forgot => bn ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot password?';
+  String get subtitle => _l.authLoginSubtitle;
+  String get identifier => _l.authLoginIdentifier;
+  String get identifierMissing => _l.authLoginIdentifierMissing;
+  String get password => _l.authLoginPassword;
+  String get passwordMissing => _l.authLoginPasswordMissing;
+  String get signIn => _l.authLoginSignIn;
+  String get verify => _l.authLoginVerify;
+  String get back => _l.authLoginBack;
+  String get remember => _l.authLoginRemember;
+  String get forgot => _l.authLoginForgot;
   // ⭐ মালিক, ২ অক্টোবর ২০২৬: "forget passworads kaj korena app e" — আগে কেবল এই বাক্য ছিল, কোনো পথ নয়।
-  String get forgotBody => bn
-      ? 'নিচের বোতাম চাপলে ব্রাউজারে পাসওয়ার্ড বদলের পাতা খুলবে — ইমেইল দিলে লিংক আসবে। ইমেইল না থাকলে কোম্পানির প্রশাসককে বলুন।'
-      : "Tap below to open the reset page in your browser — enter your email and a link will arrive. No email? Ask your company's administrator.";
-  String get forgotOpen => bn ? 'ইমেইলে লিংক নিন' : 'Get a link by email';
-  String get ok => bn ? 'ঠিক আছে' : 'OK';
-  String get mfaPrompt => bn
-      ? 'আপনার অথেনটিকেটর অ্যাপ থেকে ৬-সংখ্যার কোডটি দিন।'
-      : 'Enter the 6-digit code from your authenticator app.';
-  String get mfaWrong => bn ? 'কোডটি ভুল ছিল — আবার চেষ্টা করুন।' : 'That code was wrong — try again.';
-  String get mfaLabel => bn ? 'এমএফএ কোড' : 'MFA code';
-  String get mfaMissing => bn ? '৬-সংখ্যার কোডটি দিন' : 'Enter the 6-digit code';
-  String get version => bn ? 'সংস্করণ' : 'Version';
+  String get forgotBody => _l.authLoginForgotBody;
+  String get forgotOpen => _l.authLoginForgotOpen;
+  String get ok => _l.authLoginOk;
+  String get mfaPrompt => _l.authLoginMfaPrompt(bnDigits(6, _locale));
+  String get mfaWrong => _l.authLoginMfaWrong;
+  String get mfaLabel => _l.authLoginMfaLabel;
+  String get mfaMissing => _l.authLoginMfaMissing(bnDigits(6, _locale));
+  String get version => _l.authLoginVersion;
+  String get hidePassword => _l.authLoginHidePassword;
+  String get showPassword => _l.authLoginShowPassword;
 }
 
 /// ⭐ মালিকের "মুক্তা সাদা" — পট আর কার্ড হুবহু; কেবল তিনটা লেখার রং সেই রঙেরই একটু গাঢ় সুর, যাতে পটে অন্তত ৪.৫:১
@@ -101,7 +105,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _mfaCodeWasWrong = false;
   bool _submitting = false;
   bool _remember = false;
-  bool _bangla = true;
+  /// The footer's choice; until one is made, the app's own language ([L10nContext.l10n]: the tree's, or
+  /// [AppLocale.current] where the tree has none)
+  bool? _banglaChosen;
+
+  bool get _bangla => _banglaChosen ?? context.l10n.localeName != AppLocale.english.languageCode;
   String? _error;
 
   _Words get _w => _Words(_bangla);
@@ -318,7 +326,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Icons.lock_outline,
                   suffix: IconButton(
                     key: const ValueKey('login-password-eye'),
-                    tooltip: _passwordVisible ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন',
+                    tooltip: _passwordVisible ? w.hidePassword : w.showPassword,
                     icon: Icon(
                       _passwordVisible
                           ? Icons.visibility_off_outlined
@@ -452,15 +460,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text('${w.version} ${AppConfig.appVersion} · ',
                     style: const TextStyle(fontSize: 12, color: _Palette.footer)),
                 _LanguageWord(
-                  label: 'বাংলা',
+                  label: 'বাংলা', // l10n-ok: the language's own name
                   selected: _bangla,
-                  onTap: () => setState(() => _bangla = true),
+                  onTap: () => setState(() => _banglaChosen = true),
                 ),
                 const Text(' / ', style: TextStyle(fontSize: 12, color: _Palette.footer)),
                 _LanguageWord(
                   label: 'English',
                   selected: !_bangla,
-                  onTap: () => setState(() => _bangla = false),
+                  onTap: () => setState(() => _banglaChosen = false),
                 ),
               ],
             ),

@@ -4,7 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../config/app_config.dart';
 import '../../locale/app_locale.dart';
-import '../../../l10n/app_localizations.dart' show lookupAppL10n;
+import '../../locale/l10n.dart';
 import '../../sync_engine/sync_engine.dart';
 import '../../sync_engine/sync_status.dart';
 import '../../theme/bar_palette.dart';
@@ -119,7 +119,7 @@ bool isDemoServer([String? baseUrl]) => Uri.tryParse(baseUrl ?? AppConfig.apiBas
 /// বাংলা অঙ্ক — পর্দা-পাঠকের বাংলা বাক্যে; ইংরেজিতে ([locale] বা [AppLocale.current]) অঙ্ক যেমন আছে
 String bnDigits(Object value, [Locale? locale]) => AppLocale.isEnglish(locale)
     ? value.toString()
-    : value.toString().split('').map((c) => '0123456789'.contains(c) ? '০১২৩৪৫৬৭৮৯'['0123456789'.indexOf(c)] : c).join();
+    : value.toString().split('').map((c) => '0123456789'.contains(c) ? '০১২৩৪৫৬৭৮৯'['0123456789'.indexOf(c)] : c).join(); // l10n-ok: the digit table itself
 
 /// ঘণ্টার গোনা — ১ থেকে ৯৯, তার বেশি "99+"; ০ বা অজানা হলে null (Material 3 badge)।
 /// ⓘ অঙ্ক ইংরেজিতে — মালিকের অনুমোদিত পুরো-পাতার নমুনা ("21", "3"; ২০ অক্টোবর ২০২৬), টাকার অঙ্কের মতোই;
@@ -139,18 +139,21 @@ String bellLabel(int? unread, {bool news = false, Locale? locale}) {
 /// পর্দা-পাঠকের কথা: "ADI Wholesale, ময়মনসিংহ শাখা, বিক্রয়"
 String titleLabel(String company, String branch, List<String> crumbs, {bool demo = false}) {
   final b = branch.trim();
+  final l = AppLocale.l10n;
+  // ⓘ সার্ভারের বাংলা নাম নিজেই "… শাখা" হলে আর জোড়া নয়
+  final saysBranch = b.endsWith('শাখা') || b.toLowerCase().endsWith('branch'); // l10n-ok: reads the server's branch name
   return [
     if (company.trim().isNotEmpty) company.trim(),
-    if (b.isNotEmpty) b.endsWith('শাখা') ? b : '$b শাখা',
+    if (b.isNotEmpty) saysBranch ? b : l.topBarBranchSpoken(b),
     ...crumbs,
-    if (demo) 'ডেমো সার্ভার, আসল খাতা নয়',
+    if (demo) l.topBarDemoSpoken,
   ].join(', ');
 }
 
 /// অফলাইনের ফিতার বাক্য
 String offlineSentence(int pending) => pending > 0
-    ? 'অফলাইন: ${bnDigits(pending)}টা কাগজ পাঠানো বাকি, নেট এলে নিজেই যাবে'
-    : 'অফলাইন: নেট নেই, যা লিখবেন তা নেট এলে নিজেই যাবে';
+    ? AppLocale.l10n.topBarOfflinePending(pending, bnDigits(pending))
+    : AppLocale.l10n.topBarOfflineNoNet;
 
 /// ⭐ শাখা বা কোম্পানি বদলের আগে — কোথাও আধা-লেখা ফর্ম থাকলে আগে জিজ্ঞেস ([UnsavedGuard.anyDirty])।
 /// `true` হলে বদলানো চলে।
@@ -161,18 +164,18 @@ Future<bool> mayLeaveUnsaved(BuildContext context) async {
     builder: (ctx) => AlertDialog(
       key: const ValueKey('top-unsaved'),
       icon: const Icon(Symbols.edit_note),
-      title: const Text('না রেখে বদলাবেন?'),
-      content: const Text('একটা ফর্মে যা লিখেছেন তা এখনো রাখা হয়নি। শাখা বদলালে ওই লেখা হারিয়ে যাবে।'),
+      title: Text(ctx.l10n.topBarUnsavedTitle),
+      content: Text(ctx.l10n.topBarUnsavedBody),
       actions: [
         TextButton(
           key: const ValueKey('top-unsaved-stay'),
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('থাকুন'),
+          child: Text(ctx.l10n.topBarUnsavedStay),
         ),
         FilledButton(
           key: const ValueKey('top-unsaved-go'),
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('না রেখে বদলান'),
+          child: Text(ctx.l10n.topBarUnsavedGo),
         ),
       ],
     ),
@@ -273,7 +276,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
             child: LayoutBuilder(builder: (context, box) {
               final leading = IconButton(
                 key: const ValueKey('top-leading'),
-                tooltip: widget.leading == TopBarLeading.menu ? 'পুরো মেনু' : 'পিছনে',
+                tooltip: widget.leading == TopBarLeading.menu ? context.l10n.topBarFullMenu : context.l10n.topBarBack,
                 color: fg,
                 onPressed: widget.onLeading,
                 icon: Icon(widget.leading == TopBarLeading.menu ? Symbols.menu : Symbols.arrow_back),
@@ -292,7 +295,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
               final actions = [
                 IconButton(
                   key: const ValueKey('top-search'),
-                  tooltip: 'খোঁজা',
+                  tooltip: context.l10n.topBarSearch,
                   color: fg,
                   onPressed: widget.onSearch,
                   icon: const Icon(Symbols.search),
@@ -300,7 +303,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
                 _Bell(unread: widget.unread, news: widget.news, onTap: widget.onBell, color: fg),
                 IconButton(
                   key: const ValueKey('header-avatar'),
-                  tooltip: 'আমার মেনু',
+                  tooltip: context.l10n.topBarMyMenu,
                   padding: EdgeInsets.zero,
                   onPressed: _tapAvatar,
                   icon: AvatarDisc(name: widget.avatarName, image: widget.avatar, size: 36, ring: widget.menuOpen),
@@ -486,7 +489,7 @@ class _Title extends StatelessWidget {
       label: label.isEmpty ? fallback : label,
       button: onTap != null,
       onTap: onTap,
-      onTapHint: onTap == null ? null : 'শাখা বদল',
+      onTapHint: onTap == null ? null : context.l10n.topBarSwitchBranch,
       excludeSemantics: true,
       child: Tooltip(
         message: full,
@@ -530,7 +533,7 @@ class _Crumbs extends StatelessWidget {
               decoration: BoxDecoration(color: colors.pill, borderRadius: BorderRadius.circular(6)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text('ডেমো',
+                child: Text(context.l10n.topBarDemo,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.onPill, height: 1.3)),
               ),
             ),
@@ -569,7 +572,7 @@ class ScreenActionsRow extends StatelessWidget {
       if (spill.isNotEmpty)
         PopupMenuButton<int>(
           key: const ValueKey('top-overflow'),
-          tooltip: 'আরও',
+          tooltip: context.l10n.topBarMore,
           icon: Icon(Symbols.more_vert, color: color),
           itemBuilder: (_) => [
             for (var i = 0; i < spill.length; i++)

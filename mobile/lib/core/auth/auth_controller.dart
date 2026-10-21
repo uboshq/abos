@@ -11,6 +11,7 @@ import '../push/push_service.dart';
 import '../privacy/phone_privacy.dart';
 import '../api_client/api_client.dart';
 import '../config/app_config.dart';
+import '../locale/app_locale.dart';
 import '../api_client/network_errors.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/reference_sync.dart';
@@ -91,7 +92,7 @@ class AuthController extends StateNotifier<AuthState> {
       final refreshToken = body['refreshToken'] as String?;
       final userJson = body['user'] as Map<String, dynamic>?;
       if (accessToken == null || refreshToken == null || userJson == null) {
-        throw const AuthFailure('সার্ভার থেকে অসম্পূর্ণ উত্তর এসেছে। আবার চেষ্টা করুন।');
+        throw AuthFailure(AppLocale.l10n.authIncompleteAnswer);
       }
 
       await TokenStorage.instance
@@ -117,7 +118,7 @@ class AuthController extends StateNotifier<AuthState> {
         throw MfaRequiredException(codeWasWrong: codeWasWrong);
       }
       throw AuthFailure(errorMessageFor(error,
-          fallback: 'ঢোকা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।'));
+          fallback: AppLocale.l10n.authSignInFailed));
     }
   }
 

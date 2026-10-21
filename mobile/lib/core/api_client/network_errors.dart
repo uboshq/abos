@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../locale/app_locale.dart';
+
 /// Whether a caught error is the connection's fault -- unreachable host, timed
 /// out, no signal -- rather than the server having an opinion about what was
 /// sent.
@@ -46,7 +48,7 @@ String errorMessageFor(
   String? whenAbsent,
 }) {
   if (isNetworkError(error)) {
-    return 'সংযোগ নেই। ইন্টারনেট চেক করে আবার চেষ্টা করুন।';
+    return AppLocale.l10n.networkErrorNoConnection;
   }
   if (whenAbsent != null && isRouteAbsent(error)) {
     // Ahead of any server sentence: Laravel's own 404 body ("Route [x] not

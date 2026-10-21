@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../auth/auth_user.dart';
 import '../auth/session_profile.dart';
+import '../locale/app_locale.dart';
 import 'me_api.dart';
 import 'menu_item.dart';
 import 'menu_module.dart';
@@ -221,14 +222,14 @@ class MenuRepository {
   }
 
   /// ⭐ ভাউচারের আলাদা ঘর, পর্দার বোতামের ক্রমে — চাবিগুলো [VoucherView.kinds]-এর (মালিক, ১৭ অক্টোবর ২০২৬)
-  static const List<(String, String, IconData)> _voucherKinds = [
-    ('cash-receipt', 'নগদ রসিদ', Icons.payments_outlined),
-    ('mfs-receipt', 'MFS রসিদ', Icons.phone_android_outlined),
-    ('bank-receipt', 'ব্যাংক রসিদ', Icons.account_balance_outlined),
-    ('payment', 'পেমেন্ট', Icons.outbox_outlined),
-    ('contra', 'কন্ট্রা', Icons.swap_horiz_outlined),
-    ('journal', 'জার্নাল', Icons.menu_book_outlined),
-    ('expense', 'খরচ', Icons.shopping_bag_outlined),
+  static List<(String, String, IconData)> get _voucherKinds => [
+    ('cash-receipt', AppLocale.l10n.navScreenCashReceipt, Icons.payments_outlined),
+    ('mfs-receipt', AppLocale.l10n.navScreenMfsReceipt, Icons.phone_android_outlined),
+    ('bank-receipt', AppLocale.l10n.navScreenBankReceipt, Icons.account_balance_outlined),
+    ('payment', AppLocale.l10n.navScreenPayment, Icons.outbox_outlined),
+    ('contra', AppLocale.l10n.navScreenContra, Icons.swap_horiz_outlined),
+    ('journal', AppLocale.l10n.navScreenJournal, Icons.menu_book_outlined),
+    ('expense', AppLocale.l10n.navScreenExpense, Icons.shopping_bag_outlined),
   ];
 
   /// Server routes this app answers natively under another key — the same screen, so not a second web row.
@@ -236,20 +237,20 @@ class MenuRepository {
 
   List<MenuItem> _localFallback(AuthUser user) {
     final items = <MenuItem>[];
-    const localLabels = {
-      'customer.index': ('গ্রাহক', 'customer.view', Icons.people_alt_outlined),
+    final localLabels = {
+      'customer.index': (AppLocale.l10n.navScreenCustomers, 'customer.view', Icons.people_alt_outlined),
       'sales.order.index': (
-        'অর্ডারের অবস্থা',
+        AppLocale.l10n.navScreenOrders,
         'sales.order.view',
         Icons.receipt_long_outlined
       ),
       'inventory.product.index': (
-        'পণ্যের তালিকা',
+        AppLocale.l10n.navScreenProducts,
         'inventory.product.view',
         Icons.inventory_2_outlined
       ),
       'inventory.stock.index': (
-        'হাতে থাকা মজুদ',
+        AppLocale.l10n.navScreenStock,
         'inventory.stock.view',
         Icons.warehouse_outlined
       ),
@@ -299,97 +300,97 @@ class MenuRepository {
           [bool ordersReplaceDo = false]) =>
       [
         if (user.can(_newOrderPermission))
-          const MenuItem(
+          MenuItem(
             key: 'sales.order.create',
-            label: 'নতুন অর্ডার',
+            label: AppLocale.l10n.navScreenNewOrder,
             icon: Icons.add_shopping_cart_outlined,
             routeName: 'new-order',
           ),
         // ⭐ ডেলিভারি ট্র্যাকিং (0.4.6, মালিক ২ অক্টোবর ২০২৬) — SR-এর অর্ডার দেখার চাবি, বা গুদাম/ডেলিভারির চাবি।
         // মেনু-সারি নয়: ওয়েবের সারিটা `sales.screen_orders`-এর পেছনে, আর গুদামের মানুষ ওটা পান না।
         if (user.can('sales.order.view') || user.can('sales.delivery.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.tracking',
-            label: 'ডেলিভারি ট্র্যাকিং',
+            label: AppLocale.l10n.navScreenTracking,
             icon: Icons.local_shipping_outlined,
             routeName: 'tracking',
           ),
         // ⭐ আজকের রুট — ছকে আজ যে রুট আর তার দোকান; মাঠের মানুষের আদেশ দেখার চাবিতে (সমন্বয়কের ক্রম "ঘ")
         if (user.can('sales.order.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.my_route',
-            label: 'আজকের রুট',
+            label: AppLocale.l10n.navScreenMyRoute,
             icon: Icons.route_outlined,
             routeName: 'my-route',
           ),
         // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ, ওয়েবের লিডের একই চাবি
         if (user.can('sales.lead.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.lead',
-            label: 'লিড',
+            label: AppLocale.l10n.navScreenLeads,
             icon: Icons.person_search_outlined,
             routeName: 'leads',
           ),
         // ⭐ উদ্ধৃতি — ওয়েবের উদ্ধৃতির একই চাবি
         if (user.can('sales.quotation.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.quotation',
-            label: 'উদ্ধৃতি',
+            label: AppLocale.l10n.navScreenQuotations,
             icon: Icons.request_quote_outlined,
             routeName: 'quotations',
           ),
         // ⭐ আজকের ডেলিভারি — যিনি পৌঁছানো লিখতে পারেন (ধাপ ৭, ৬ অক্টোবর ২০২৬)
         if (user.can('sales.delivery.update'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.deliveries',
-            label: 'আজকের ডেলিভারি',
+            label: AppLocale.l10n.navScreenDeliveries,
             icon: Icons.local_shipping_outlined,
             routeName: 'deliveries',
           ),
         // ⭐ লোডিং শিট — পণ্য ধরে কত, চালান ধরে কার জন্য, "প্যাক হয়েছে" (ধাপ ৪, ৬ অক্টোবর ২০২৬); দেখা ট্রিপের চাবিতে
         if (user.can('sales.shipment.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.loading',
-            label: 'লোডিং শিট',
+            label: AppLocale.l10n.navScreenLoading,
             icon: Icons.inventory_2_outlined,
             routeName: 'loading',
           ),
         // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া, ওয়েবের দেখার চাবিতে (মালিক, ৬ অক্টোবর ২০২৬)
         if (user.can('sales.collection.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.collections',
-            label: 'টাকা আদায়',
+            label: AppLocale.l10n.navScreenCollections,
             icon: Icons.payments_outlined,
             routeName: 'collections',
           ),
         if (user.can('supplier.view'))
-          const MenuItem(
+          MenuItem(
             key: 'purchase.principals',
-            label: 'প্রিন্সিপাল',
+            label: AppLocale.l10n.navScreenPrincipals,
             icon: Icons.business_outlined,
             routeName: 'principals',
           ),
         // ⭐ প্রিন্সিপালের কমিশন — ওয়েবের রিপোর্টের একই চাবি `supplier.report` (মালিকের আদেশ "app e dekhate hobe", fe-র
         // মাধ্যমে; ২০ অক্টোবর ২০২৬)। ⓘ ওয়েবের মেনু-সারিটা ([NativeForWeb.twinOf]) এই ঘরেরই যমজ — দুবার নয়
         if (user.can('supplier.report'))
-          const MenuItem(
+          MenuItem(
             key: 'supplier.principal_commission',
-            label: 'প্রিন্সিপালের কমিশন',
+            label: AppLocale.l10n.navScreenPrincipalCommission,
             icon: Symbols.percent,
             routeName: 'principal-commission',
           ),
         if (user.can('purchase.bill.view'))
-          const MenuItem(
+          MenuItem(
             key: 'purchase.purchases',
-            label: 'ক্রয়',
+            label: AppLocale.l10n.navScreenPurchases,
             icon: Icons.shopping_cart_outlined,
             routeName: 'purchases',
           ),
         // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
         if (user.can('sales.challan.create'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.direct',
-            label: 'সরাসরি বিক্রয়',
+            label: AppLocale.l10n.navScreenCounter,
             icon: Icons.point_of_sale_outlined,
             routeName: 'counter',
           ),
@@ -400,16 +401,16 @@ class MenuRepository {
             : user.can('sales.do.view'))
           MenuItem(
             key: 'sales.delivery_order',
-            label: ordersReplaceDo ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার',
+            label: ordersReplaceDo ? AppLocale.l10n.navScreenSalesOrders : AppLocale.l10n.navScreenDeliveryOrders,
             icon: Icons.assignment_outlined,
             routeName: 'delivery-orders',
           ),
         // First tile on the grid for whoever can see the day's sales — it is
         // the question asked most often and from the furthest away.
         if (user.can('sales.order.view'))
-          const MenuItem(
+          MenuItem(
             key: 'dashboard.today',
-            label: 'আজকের হিসাব',
+            label: AppLocale.l10n.navScreenToday,
             icon: Icons.insights_outlined,
             routeName: 'today',
           ),
@@ -417,31 +418,31 @@ class MenuRepository {
         // docs/Contract §৯. Which ones those are is the server's answer, not
         // a list kept here; the tile only opens the door.
         if (user.can('sales.order.view') || user.can('customer.view'))
-          const MenuItem(
+          MenuItem(
             key: 'reports',
-            label: 'রিপোর্ট',
+            label: AppLocale.l10n.navScreenReports,
             icon: Icons.bar_chart_outlined,
             routeName: 'reports',
           ),
         if (user.can(_dueListPermission))
-          const MenuItem(
+          MenuItem(
             key: 'customer.dues',
-            label: 'বকেয়া তালিকা',
+            label: AppLocale.l10n.navScreenDues,
             icon: Icons.account_balance_wallet_outlined,
             routeName: 'dues',
           ),
         if (user.can(_ownAttendancePermission))
-          const MenuItem(
+          MenuItem(
             key: 'hr.attendance.self',
-            label: 'হাজিরা',
+            label: AppLocale.l10n.navScreenAttendance,
             icon: Icons.how_to_reg_outlined,
             routeName: 'attendance',
           ),
         // ⭐ অফিসের লোকের ভাউচার — ওয়েবের লেখার চাবি (মালিক, ৭ অক্টোবর ২০২৬: "সব ভাউচার দেওয়ার কথা ছিল")
         if (user.can('accounts.voucher.create'))
-          const MenuItem(
+          MenuItem(
             key: 'accounts.voucher.create',
-            label: 'সব ভাউচার',
+            label: AppLocale.l10n.navScreenAllVouchers,
             icon: Icons.receipt_long_outlined,
             routeName: 'vouchers',
           ),
@@ -457,57 +458,57 @@ class MenuRepository {
             ),
         // ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; ওয়েবের একই চাবি)
         if (user.can('hr.claim.self'))
-          const MenuItem(
+          MenuItem(
             key: 'hr.claim.self',
-            label: 'খরচের দাবি',
+            label: AppLocale.l10n.navScreenClaims,
             icon: Icons.request_quote_outlined,
             routeName: 'claims',
           ),
         // ⭐ বিক্রয় বিল আর চালান — ওয়েবের তালিকার দেখার চাবি (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na")
         if (user.can('sales.invoice.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.invoice.index',
-            label: 'বিক্রয় বিল',
+            label: AppLocale.l10n.navScreenInvoices,
             icon: Icons.receipt_long_outlined,
             routeName: 'invoices',
           ),
         if (user.can('sales.challan.view'))
-          const MenuItem(
+          MenuItem(
             key: 'sales.challan.index',
-            label: 'চালান',
+            label: AppLocale.l10n.navScreenChallans,
             icon: Icons.local_shipping_outlined,
             routeName: 'challans',
           ),
         // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
         // মালিকের কেন্দ্র — ওয়েবের "আজ" পাতার চাবি; কোম্পানির ফোন-সুইচ [[ModuleGate]]-এ
         if (user.can('executive.view'))
-          const MenuItem(
+          MenuItem(
             key: 'executive.today',
-            label: 'আজ — গোটা গ্রুপ',
+            label: AppLocale.l10n.navScreenOwnerCentre,
             icon: Icons.speed_outlined,
             routeName: 'owner-centre',
           ),
         // বাকি নিয়ন্ত্রণ — ওয়েবের বাকির ড্যাশবোর্ডের চাবি (মেনু-সারি নয়: ওর রুট `module.dashboard`, সব মডিউলের এক নাম)
         if (user.can('credit_control.view'))
-          const MenuItem(
+          MenuItem(
             key: 'credit_control.dashboard',
-            label: 'বাকির হিসাব',
+            label: AppLocale.l10n.navScreenCredit,
             icon: Icons.credit_score_outlined,
             routeName: 'credit',
           ),
         // নোটিশ বোর্ড — সবার; কে কোনটা পাবেন সার্ভার বলে ([[NoticeAudience]]), চাবি নেই ওয়েবের মতোই
-        const MenuItem(
+        MenuItem(
           key: 'notices',
-          label: 'নোটিশ বোর্ড',
+          label: AppLocale.l10n.navScreenNotices,
           icon: Icons.campaign_outlined,
           routeName: 'notices',
         ),
         // What this device has and has not sent is a fact about the phone,
         // not a business permission — every signed-in role can open it, live
         // menu or fallback alike.
-        const MenuItem(
+        MenuItem(
           key: 'sync_status',
-          label: 'সিঙ্কের অবস্থা',
+          label: AppLocale.l10n.navScreenSyncStatus,
           icon: Icons.sync_outlined,
           routeName: 'sync-status',
         ),
@@ -520,30 +521,30 @@ class MenuRepository {
   /// ৪০৩-এর দরজায় নিয়ে যায় না। ফোনে মডিউল বন্ধ থাকলে [ModuleGate] লুকায়।
   List<MenuItem> _moreModuleTiles(AuthUser user) => [
         if (user.can('finance.deposit.view'))
-          const MenuItem(
-              key: 'finance.deposits', label: 'জমা ও সঞ্চয়', icon: Icons.savings_outlined, routeName: 'deposits'),
+          MenuItem(
+              key: 'finance.deposits', label: AppLocale.l10n.navScreenDeposits, icon: Icons.savings_outlined, routeName: 'deposits'),
         if (user.can('finance.bank_facility.view'))
-          const MenuItem(
+          MenuItem(
               key: 'finance.bank_loans',
-              label: 'ব্যাংক ঋণ ও কিস্তি',
+              label: AppLocale.l10n.navScreenBankLoans,
               icon: Icons.account_balance_outlined,
               routeName: 'bank-loans'),
         if (user.can('finance.rental.view'))
-          const MenuItem(key: 'finance.rents', label: 'ভাড়া', icon: Icons.home_work_outlined, routeName: 'rents'),
+          MenuItem(key: 'finance.rents', label: AppLocale.l10n.navScreenRents, icon: Icons.home_work_outlined, routeName: 'rents'),
         if (user.can('finance.hand_loan.view'))
-          const MenuItem(
-              key: 'finance.hand_loans', label: 'হাতধার', icon: Icons.handshake_outlined, routeName: 'hand-loans'),
+          MenuItem(
+              key: 'finance.hand_loans', label: AppLocale.l10n.navScreenHandLoans, icon: Icons.handshake_outlined, routeName: 'hand-loans'),
         if (user.can('documents.view'))
-          const MenuItem(
-              key: 'documents.library', label: 'ডকুমেন্টস', icon: Icons.folder_open_outlined, routeName: 'documents'),
+          MenuItem(
+              key: 'documents.library', label: AppLocale.l10n.navScreenDocuments, icon: Icons.folder_open_outlined, routeName: 'documents'),
         if (user.can('promotion.view'))
-          const MenuItem(
-              key: 'promotion.offers', label: 'চলতি অফার', icon: Icons.local_offer_outlined, routeName: 'offers'),
+          MenuItem(
+              key: 'promotion.offers', label: AppLocale.l10n.navScreenOffers, icon: Icons.local_offer_outlined, routeName: 'offers'),
         if (user.can('hr.leave.self'))
-          const MenuItem(
-              key: 'hr.leave.self', label: 'আমার ছুটি', icon: Icons.event_available_outlined, routeName: 'leave'),
+          MenuItem(
+              key: 'hr.leave.self', label: AppLocale.l10n.navScreenLeave, icon: Icons.event_available_outlined, routeName: 'leave'),
         if (user.can('hr.payslip.self'))
-          const MenuItem(
-              key: 'hr.payslip.self', label: 'বেতনের স্লিপ', icon: Icons.receipt_long_outlined, routeName: 'payslips'),
+          MenuItem(
+              key: 'hr.payslip.self', label: AppLocale.l10n.navScreenPayslips, icon: Icons.receipt_long_outlined, routeName: 'payslips'),
       ];
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../auth/auth_state.dart';
+import '../../locale/l10n.dart';
 import '../nav_state.dart';
 import 'abos_top_bar.dart';
 import 'top_bar_context.dart';
@@ -70,7 +71,7 @@ class AbosScreenBar extends StatelessWidget implements PreferredSizeWidget {
       bottom: bottom,
       leading: onBack == null
           ? null
-          : IconButton(tooltip: 'পিছনে', onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
+          : IconButton(tooltip: context.l10n.topBarBack, onPressed: onBack, icon: const Icon(Symbols.arrow_back)),
     );
     return Align(
       alignment: Alignment.topCenter,

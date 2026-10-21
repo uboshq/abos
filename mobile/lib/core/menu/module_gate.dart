@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../locale/app_locale.dart';
 import '../widgets/empty_state.dart';
 import 'menu_item.dart';
 import '../navigation/top_bar/abos_screen_bar.dart';
@@ -75,10 +76,8 @@ class ModuleGate {
   };
 
   /// The message a switched-off screen shows — the owner's own words.
-  static const String offTitle = 'এই অংশটা এখন বন্ধ';
-  static const String offMessage =
-      'আপনার কোম্পানি অ্যাপে এই অংশটা বন্ধ রেখেছে। দরকার হলে প্রশাসককে '
-      'বলুন কন্ট্রোল প্যানেলের "মোবাইল অ্যাপ" ট্যাব থেকে চালু করতে।';
+  static String get offTitle => AppLocale.l10n.moduleGateOffTitle;
+  static String get offMessage => AppLocale.l10n.moduleGateOffMessage;
 
   /// Whether the screen at [appPath] may open, given [on].
   static bool allows(Set<String>? on, String appPath) {
@@ -108,7 +107,7 @@ class ModuleGateView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final on = ref.watch(phoneModulesProvider);
     if (ModuleGate.allows(on, path)) return child;
-    return const Scaffold(
+    return Scaffold(
       appBar: AbosScreenBar(title: ModuleGate.offTitle),
       body: EmptyState(
         icon: Icons.block_outlined,

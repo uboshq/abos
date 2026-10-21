@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../locale/app_locale.dart';
+import '../locale/l10n.dart';
 import '../menu/menu_item.dart';
 import '../theme/app_colors.dart';
 
@@ -141,436 +143,453 @@ class NavModule {
 class NavCatalog {
   const NavCatalog._();
 
-  static const String plannedGroup = 'শীঘ্রই আসছে';
+  /// The words of the person's language now ([AppLocale.current]).
+  static AppL10n get _l => AppLocale.l10n;
+
+  /// ⓘ The lists below are words, so they are built in the person's language — once per language, not per call
+  /// ([NavTree.from] sorts by [screens] many times over).
+  static final Map<String, Object> _built = {};
+  static String? _builtFor;
+
+  static T _once<T extends Object>(String name, T Function() build) {
+    if (_builtFor != AppLocale.code) {
+      _built.clear();
+      _builtFor = AppLocale.code;
+    }
+    return _built.putIfAbsent(name, build) as T;
+  }
+
+  static String get plannedGroup => _l.navGroupComingSoon;
 
   /// The order the tiles stand in — the owner's mockup (skin 1, picture 2).
-  static const List<NavModuleDef> modules = [
+  static List<NavModuleDef> get modules => _once('modules', () => [
     // ⓘ ওয়েবের মডিউলের একই নাম ("বিক্রয়", Sales lang/bn/route.php) আর মালিকের অনুমোদিত নমুনার — বারের "› বিক্রয় › …"
     // আর মডিউলের ঘর এক নামে (a5, ২০ অক্টোবর ২০২৬); "বিক্রি" খোঁজায় থাকে
-    NavModuleDef('sales', 'বিক্রয়', Icons.shopping_cart_outlined,
-        ['বিক্রি', 'sales', 'sale']),
-    NavModuleDef('purchase', 'ক্রয়', Icons.archive_outlined,
-        ['কেনা', 'purchase']),
-    NavModuleDef('inventory', 'মজুদ', Icons.view_in_ar_outlined,
-        ['স্টক', 'inventory', 'stock']),
-    NavModuleDef('accounts', 'হিসাব', Icons.description_outlined,
-        ['accounts', 'হিসাব']),
-    NavModuleDef('finance', 'অর্থ', Icons.account_balance_outlined,
-        ['finance', 'ব্যাংক']),
-    NavModuleDef('customer', 'গ্রাহক', Icons.person_outline,
-        ['customer', 'দোকান']),
-    NavModuleDef('supplier', 'সরবরাহকারী', Icons.local_shipping_outlined,
-        ['supplier', 'প্রিন্সিপাল']),
-    NavModuleDef('approval', 'অনুমোদন', Icons.check_rounded,
-        ['approval', 'সই']),
-    NavModuleDef('hr', 'কর্মী', Icons.people_outline, ['hr', 'staff']),
-    NavModuleDef('reports', 'রিপোর্ট', Icons.bar_chart_rounded,
-        ['report', 'reports']),
-    NavModuleDef('documents', 'নথি', Icons.folder_outlined,
-        ['documents', 'ডকুমেন্ট']),
-    NavModuleDef('executive', 'মালিকের কেন্দ্র', Icons.speed_outlined,
-        ['executive', 'command']),
+    NavModuleDef('sales', _l.navModuleSales, Icons.shopping_cart_outlined,
+        ['বিক্রি', 'sales', 'sale', 'বিক্রয়']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('purchase', _l.navModulePurchase, Icons.archive_outlined,
+        ['কেনা', 'purchase', 'ক্রয়']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('inventory', _l.navModuleInventory, Icons.view_in_ar_outlined,
+        ['স্টক', 'inventory', 'stock', 'মজুদ']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('accounts', _l.navModuleAccounts, Icons.description_outlined,
+        ['accounts', 'হিসাব']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('finance', _l.navModuleFinance, Icons.account_balance_outlined,
+        ['finance', 'ব্যাংক', 'অর্থ']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('customer', _l.navModuleCustomer, Icons.person_outline,
+        ['customer', 'দোকান', 'customers', 'গ্রাহক']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('supplier', _l.navModuleSupplier, Icons.local_shipping_outlined,
+        ['supplier', 'প্রিন্সিপাল', 'suppliers', 'সরবরাহকারী']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('approval', _l.navModuleApproval, Icons.check_rounded,
+        ['approval', 'সই', 'approvals', 'অনুমোদন']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('hr', _l.navModuleHr, Icons.people_outline,
+        ['hr', 'staff', 'কর্মী']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('reports', _l.navModuleReports, Icons.bar_chart_rounded,
+        ['report', 'reports', 'রিপোর্ট']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('documents', _l.navModuleDocuments, Icons.folder_outlined,
+        ['documents', 'ডকুমেন্ট', 'নথি']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('executive', _l.navModuleExecutive, Icons.speed_outlined,
+        ['executive', 'command', 'owner\'s centre', 'মালিকের কেন্দ্র']),  // l10n-ok: search aliases in both languages
     // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
-    NavModuleDef('promotion', 'প্রমোশন', Icons.local_offer_outlined,
-        ['promotion', 'offer', 'অফার']),
+    NavModuleDef('promotion', _l.navModulePromotion, Icons.local_offer_outlined,
+        ['promotion', 'offer', 'অফার', 'প্রমোশন']),  // l10n-ok: search aliases in both languages
     // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
-    NavModuleDef('credit_control', 'বাকি নিয়ন্ত্রণ', Icons.credit_score_outlined,
-        ['credit', 'বাকি', 'সীমা', 'limit']),
-    NavModuleDef('notification', 'নোটিশ', Icons.campaign_outlined,
-        ['notice', 'নোটিশ', 'বিজ্ঞপ্তি']),
-  ];
+    NavModuleDef('credit_control', _l.navModuleCreditControl, Icons.credit_score_outlined,
+        ['credit', 'বাকি', 'সীমা', 'limit', 'credit control', 'বাকি নিয়ন্ত্রণ']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('notification', _l.navModuleNotification, Icons.campaign_outlined,
+        ['notice', 'নোটিশ', 'বিজ্ঞপ্তি', 'notices']),  // l10n-ok: search aliases in both languages
+      ]);
 
   /// The order the headings stand in, inside any module.
-  static const List<String> groupOrder = [
-    'লেনদেন',
-    'মাঠের কাজ',
-    'তালিকা',
-    'নিজের কাজ',
-    'রিপোর্ট',
-    'ড্যাশবোর্ড',
-    'অন্যান্য',
+  static List<String> get groupOrder => _once('groupOrder', () => [
+    _l.navGroupTransactions,
+    _l.navGroupFieldWork,
+    _l.navGroupLists,
+    _l.navGroupMyWork,
+    _l.navGroupReports,
+    _l.navGroupDashboards,
+    _l.navGroupOther,
     // ── ⭐ ওয়েবের দলগুলো, অ্যাপের ভিতরে (১৩ অক্টোবর ২০২৬) — [webGroupTitle] ──
-    'অনুমোদন',
-    'সেটিংস',
+    _l.navGroupApprovals,
+    _l.navGroupSettings,
     plannedGroup,
-  ];
+      ]);
 
-  static const List<NavParentDef> parents = [
+  static List<NavParentDef> get parents => _once('parents', () => [
     NavParentDef(
       id: 'delivery',
       module: 'sales',
-      group: 'লেনদেন',
-      label: 'ডেলিভারি ও লোডিং',
+      group: _l.navGroupTransactions,
+      label: _l.navParentDelivery,
       icon: Icons.local_shipping_outlined,
     ),
-  ];
+      ]);
 
   /// ⚠️ Every `/home/<path>` the router has a screen for must stand here —
   /// `test/nav_catalog_test.dart` reads the router's source and holds the two
   /// together, so a new screen cannot be added and forgotten by the menu.
-  static const List<NavScreenDef> screens = [
+  static List<NavScreenDef> get screens => _once('screens', () => [
     // ── বিক্রি ──
     NavScreenDef(
         path: 'new-order',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'নতুন অর্ডার',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenNewOrder,
         icon: Icons.add_shopping_cart_outlined,
-        aliases: ['অর্ডার', 'order', 'new order', 'so']),
+        aliases: ['অর্ডার', 'order', 'new order', 'so', 'নতুন অর্ডার']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'orders',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'অর্ডারের অবস্থা',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenOrders,
         icon: Icons.receipt_long_outlined,
-        aliases: ['অর্ডার', 'order', 'orders', 'so', 'বিক্রয় আদেশ']),
+        aliases: ['অর্ডার', 'order', 'orders', 'so', 'বিক্রয় আদেশ', 'order status', 'অর্ডারের অবস্থা']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'delivery-orders',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'ডেলিভারি অর্ডার',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenDeliveryOrders,
         icon: Icons.assignment_outlined,
-        aliases: ['do', 'ডিও', 'delivery order', 'অর্ডার', 'আদেশ']),
+        aliases: ['do', 'ডিও', 'delivery order', 'অর্ডার', 'আদেশ', 'delivery orders', 'ডেলিভারি অর্ডার']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'counter',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'সরাসরি বিক্রয়',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenCounter,
         icon: Icons.point_of_sale_outlined,
-        aliases: ['কাউন্টার', 'counter', 'direct sale', 'বিক্রি', 'চালান', 'বিল', 'invoice']),
+        aliases: ['কাউন্টার', 'counter', 'direct sale', 'বিক্রি', 'চালান', 'বিল', 'invoice', 'সরাসরি বিক্রয়']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'quotations',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'উদ্ধৃতি',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenQuotations,
         icon: Icons.request_quote_outlined,
-        aliases: ['quotation', 'কোটেশন', 'দাম']),
+        aliases: ['quotation', 'কোটেশন', 'দাম', 'quotations', 'উদ্ধৃতি']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'collections',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'টাকা আদায়',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenCollections,
         icon: Icons.payments_outlined,
-        aliases: ['আদায়', 'collection', 'টাকা', 'জমা', 'money', 'receipt']),
+        aliases: ['আদায়', 'collection', 'টাকা', 'জমা', 'money', 'receipt', 'collections', 'টাকা আদায়']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'deliveries',
         module: 'sales',
-        group: 'লেনদেন',
+        group: _l.navGroupTransactions,
         parent: 'delivery',
-        label: 'আজকের ডেলিভারি',
+        label: _l.navScreenDeliveries,
         icon: Icons.local_shipping_outlined,
-        aliases: ['চালান', 'challan', 'delivery', 'ডেলিভারি']),
+        aliases: ['চালান', 'challan', 'delivery', 'ডেলিভারি', 'today\'s deliveries', 'আজকের ডেলিভারি']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'loading',
         module: 'sales',
-        group: 'লেনদেন',
+        group: _l.navGroupTransactions,
         parent: 'delivery',
-        label: 'লোডিং শিট',
+        label: _l.navScreenLoading,
         icon: Icons.inventory_2_outlined,
-        aliases: ['loading', 'লোড', 'trip', 'ট্রিপ']),
+        aliases: ['loading', 'লোড', 'trip', 'ট্রিপ', 'loading sheet', 'লোডিং শিট']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'tracking',
         module: 'sales',
-        group: 'লেনদেন',
+        group: _l.navGroupTransactions,
         parent: 'delivery',
-        label: 'ডেলিভারি ট্র্যাকিং',
+        label: _l.navScreenTracking,
         icon: Icons.near_me_outlined,
-        aliases: ['tracking', 'ট্র্যাক', 'চালান', 'ডেলিভারি']),
+        aliases: ['tracking', 'ট্র্যাক', 'চালান', 'ডেলিভারি', 'delivery tracking', 'ডেলিভারি ট্র্যাকিং']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'scan',
         module: 'sales',
-        group: 'লেনদেন',
+        group: _l.navGroupTransactions,
         parent: 'delivery',
-        label: 'কাগজ স্ক্যান',
+        label: _l.navScreenScan,
         icon: Icons.qr_code_scanner_outlined,
-        aliases: ['scan', 'qr', 'স্ক্যান', 'চালান', 'কাগজ']),
+        aliases: ['scan', 'qr', 'স্ক্যান', 'চালান', 'কাগজ', 'scan a paper', 'কাগজ স্ক্যান']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'my-route',
         module: 'sales',
-        group: 'মাঠের কাজ',
-        label: 'আজকের রুট',
+        group: _l.navGroupFieldWork,
+        label: _l.navScreenMyRoute,
         icon: Icons.route_outlined,
-        aliases: ['route', 'রুট', 'দোকান']),
+        aliases: ['route', 'রুট', 'দোকান', 'today\'s route', 'আজকের রুট']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'leads',
         module: 'sales',
-        group: 'মাঠের কাজ',
-        label: 'লিড',
+        group: _l.navGroupFieldWork,
+        label: _l.navScreenLeads,
         icon: Icons.person_search_outlined,
-        aliases: ['lead', 'নতুন দোকান']),
+        aliases: ['lead', 'নতুন দোকান', 'leads', 'লিড']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'today',
         module: 'sales',
-        group: 'রিপোর্ট',
-        label: 'আজকের হিসাব',
+        group: _l.navGroupReports,
+        label: _l.navScreenToday,
         icon: Icons.insights_outlined,
-        aliases: ['today', 'আজ', 'বিক্রি', 'হিসাব']),
+        aliases: ['today', 'আজ', 'বিক্রি', 'হিসাব', 'today\'s figures', 'আজকের হিসাব']),  // l10n-ok: search aliases in both languages
     // ── ক্রয় ──
     NavScreenDef(
         path: 'purchases',
         module: 'purchase',
-        group: 'লেনদেন',
-        label: 'ক্রয়',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenPurchases,
         icon: Icons.shopping_cart_outlined,
-        aliases: ['purchase', 'কেনা', 'বিল', 'grn', 'মাল গ্রহণ']),
+        aliases: ['purchase', 'কেনা', 'বিল', 'grn', 'মাল গ্রহণ', 'purchases', 'ক্রয়']),  // l10n-ok: search aliases in both languages
     // ⭐ প্রিন্সিপাল ক্রয়ের ভিতরে, আলাদা টাইল নয় (মালিক, ১২ অক্টোবর ২০২৬); দরজা ক্রয়ের সুইচেই ([[ModuleGate]])
     NavScreenDef(
         path: 'principals',
         module: 'purchase',
-        group: 'তালিকা',
-        label: 'প্রিন্সিপাল',
+        group: _l.navGroupLists,
+        label: _l.navScreenPrincipals,
         icon: Icons.business_outlined,
-        aliases: ['principal', 'supplier', 'সরবরাহকারী', 'কোম্পানি']),
+        aliases: ['principal', 'supplier', 'সরবরাহকারী', 'কোম্পানি', 'principals', 'প্রিন্সিপাল']),  // l10n-ok: search aliases in both languages
     // ── ⭐ সরবরাহকারী — প্রিন্সিপালের কমিশন (মালিকের আদেশ "app e dekhate hobe", fe-র মাধ্যমে; a4-এর নকশার নিয়ম ২;
     // ২০ অক্টোবর ২০২৬)। চাবি সার্ভারের একই `supplier.report` ([MenuRepository]); দরজা ক্রয়ের ফোন-সুইচে, সার্ভারের মতো ([ModuleGate]) ──
     NavScreenDef(
         path: 'principal-commission',
         module: 'supplier',
-        group: 'রিপোর্ট',
-        label: 'প্রিন্সিপালের কমিশন',
+        group: _l.navGroupReports,
+        label: _l.navScreenPrincipalCommission,
         icon: Symbols.percent,
-        aliases: ['principal commission', 'commission', 'কমিশন', 'প্রিন্সিপাল', 'দেনা', 'পাওনা']),
+        aliases: ['principal commission', 'commission', 'কমিশন', 'প্রিন্সিপাল', 'দেনা', 'পাওনা', 'প্রিন্সিপালের কমিশন']),  // l10n-ok: search aliases in both languages
     // ── মজুদ ──
     NavScreenDef(
         path: 'products',
         module: 'inventory',
-        group: 'তালিকা',
-        label: 'পণ্যের তালিকা',
+        group: _l.navGroupLists,
+        label: _l.navScreenProducts,
         icon: Icons.inventory_2_outlined,
-        aliases: ['product', 'পণ্য', 'মাল', 'দাম', 'price']),
+        aliases: ['product', 'পণ্য', 'মাল', 'দাম', 'price', 'products', 'পণ্যের তালিকা']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'stock',
         module: 'inventory',
-        group: 'তালিকা',
-        label: 'হাতে থাকা মজুদ',
+        group: _l.navGroupLists,
+        label: _l.navScreenStock,
         icon: Icons.warehouse_outlined,
-        aliases: ['stock', 'মজুদ', 'স্টক']),
+        aliases: ['stock', 'মজুদ', 'স্টক', 'stock on hand', 'হাতে থাকা মজুদ']),  // l10n-ok: search aliases in both languages
     // ── হিসাব ──
     NavScreenDef(
         path: 'vouchers',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'ভাউচার',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenVouchers,
         icon: Icons.receipt_outlined,
-        aliases: ['voucher', 'খরচ', 'হিসাব']),
+        aliases: ['voucher', 'খরচ', 'হিসাব', 'vouchers', 'ভাউচার']),  // l10n-ok: search aliases in both languages
     // ── ⭐ প্রতিটা ভাউচার-ধরন আলাদা (মালিক, ১৭ অক্টোবর ২০২৬: "cash, mfs, bank, payment, contra, journal, expense egulo
     // alada alada asena") — একই হিসাব মডিউল, একই দলে; `/home/vouchers/<ধরন>` ([VoucherView.kinds]) ──
     NavScreenDef(
         path: 'vouchers/cash-receipt',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'নগদ রসিদ',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenCashReceipt,
         icon: Icons.payments_outlined,
-        aliases: ['cash', 'receipt', 'রসিদ', 'আদায়', 'নগদ']),
+        aliases: ['cash', 'receipt', 'রসিদ', 'আদায়', 'নগদ', 'cash receipt', 'নগদ রসিদ']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'vouchers/mfs-receipt',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'MFS রসিদ',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenMfsReceipt,
         icon: Icons.phone_android_outlined,
-        aliases: ['mfs', 'bkash', 'nagad', 'বিকাশ', 'রসিদ', 'আদায়']),
+        aliases: ['mfs', 'bkash', 'nagad', 'বিকাশ', 'রসিদ', 'আদায়', 'mfs receipt', 'MFS রসিদ']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'vouchers/bank-receipt',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'ব্যাংক রসিদ',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenBankReceipt,
         icon: Icons.account_balance_outlined,
-        aliases: ['bank', 'receipt', 'ব্যাংক', 'রসিদ', 'আদায়']),
+        aliases: ['bank', 'receipt', 'ব্যাংক', 'রসিদ', 'আদায়', 'bank receipt', 'ব্যাংক রসিদ']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'vouchers/payment',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'পেমেন্ট',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenPayment,
         icon: Icons.outbox_outlined,
-        aliases: ['payment', 'পরিশোধ', 'পেমেন্ট']),
+        aliases: ['payment', 'পরিশোধ', 'পেমেন্ট']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'vouchers/contra',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'কন্ট্রা',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenContra,
         icon: Icons.swap_horiz_outlined,
-        aliases: ['contra', 'কন্ট্রা', 'স্থানান্তর']),
+        aliases: ['contra', 'কন্ট্রা', 'স্থানান্তর']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'vouchers/journal',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'জার্নাল',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenJournal,
         icon: Icons.menu_book_outlined,
-        aliases: ['journal', 'জাবেদা', 'জার্নাল']),
+        aliases: ['journal', 'জাবেদা', 'জার্নাল']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'vouchers/expense',
         module: 'accounts',
-        group: 'লেনদেন',
-        label: 'খরচ',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenExpense,
         icon: Icons.shopping_bag_outlined,
-        aliases: ['expense', 'খরচ', 'ব্যয়']),
+        aliases: ['expense', 'খরচ', 'ব্যয়']),  // l10n-ok: search aliases in both languages
     // ── গ্রাহক ──
     NavScreenDef(
         path: 'customers',
         module: 'customer',
-        group: 'তালিকা',
-        label: 'গ্রাহক',
+        group: _l.navGroupLists,
+        label: _l.navScreenCustomers,
         icon: Icons.people_alt_outlined,
-        aliases: ['customer', 'দোকান', 'shop', 'dealer', 'ডিলার']),
+        aliases: ['customer', 'দোকান', 'shop', 'dealer', 'ডিলার', 'customers', 'গ্রাহক']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'dues',
         module: 'customer',
-        group: 'রিপোর্ট',
-        label: 'বকেয়া তালিকা',
+        group: _l.navGroupReports,
+        label: _l.navScreenDues,
         icon: Icons.account_balance_wallet_outlined,
-        aliases: ['due', 'dues', 'বাকি', 'বকেয়া', 'পাওনা']),
+        aliases: ['due', 'dues', 'বাকি', 'বকেয়া', 'পাওনা', 'dues list', 'বকেয়া তালিকা']),  // l10n-ok: search aliases in both languages
     // ── অনুমোদন ──
     NavScreenDef(
         path: 'approvals',
         module: 'approval',
-        group: 'লেনদেন',
-        label: 'অনুমোদন',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenApprovals,
         icon: Icons.fact_check_outlined,
-        aliases: ['approval', 'সই', 'অপেক্ষা']),
+        aliases: ['approval', 'সই', 'অপেক্ষা', 'approvals', 'অনুমোদন']),  // l10n-ok: search aliases in both languages
     // ── কর্মী ──
     NavScreenDef(
         path: 'attendance',
         module: 'hr',
-        group: 'নিজের কাজ',
-        label: 'হাজিরা',
+        group: _l.navGroupMyWork,
+        label: _l.navScreenAttendance,
         icon: Icons.how_to_reg_outlined,
-        aliases: ['attendance', 'উপস্থিতি']),
+        aliases: ['attendance', 'উপস্থিতি', 'হাজিরা']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'claims',
         module: 'hr',
-        group: 'নিজের কাজ',
-        label: 'খরচের দাবি',
+        group: _l.navGroupMyWork,
+        label: _l.navScreenClaims,
         icon: Icons.request_quote_outlined,
-        aliases: ['claim', 'অগ্রিম', 'advance', 'খরচ']),
+        aliases: ['claim', 'অগ্রিম', 'advance', 'খরচ', 'expense claims', 'খরচের দাবি']),  // l10n-ok: search aliases in both languages
     // ── রিপোর্ট ──
     NavScreenDef(
         path: 'reports',
         module: 'reports',
-        group: 'রিপোর্ট',
-        label: 'রিপোর্ট',
+        group: _l.navGroupReports,
+        label: _l.navScreenReports,
         icon: Icons.bar_chart_outlined,
-        aliases: ['report', 'রিপোর্ট']),
+        aliases: ['report', 'রিপোর্ট', 'reports']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'dashboards',
         module: 'reports',
-        group: 'ড্যাশবোর্ড',
-        label: 'ব্যবসার ড্যাশবোর্ড',
+        group: _l.navGroupDashboards,
+        label: _l.navScreenDashboards,
         icon: Icons.insights_outlined,
-        aliases: ['dashboard', 'ড্যাশবোর্ড']),
+        aliases: ['dashboard', 'ড্যাশবোর্ড', 'business dashboards', 'ব্যবসার ড্যাশবোর্ড']),  // l10n-ok: search aliases in both languages
     // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ — অর্থ, ডকুমেন্টস, প্রমোশন, নিজের ছুটি ও স্লিপ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
     NavScreenDef(
         path: 'deposits',
         module: 'finance',
-        group: 'তালিকা',
-        label: 'জমা ও সঞ্চয়',
+        group: _l.navGroupLists,
+        label: _l.navScreenDeposits,
         icon: Icons.savings_outlined,
-        aliases: ['deposit', 'fdr', 'dps', 'আমানত', 'সঞ্চয়পত্র', 'মেয়াদ']),
+        aliases: ['deposit', 'fdr', 'dps', 'আমানত', 'সঞ্চয়পত্র', 'মেয়াদ', 'deposits and savings', 'জমা ও সঞ্চয়']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'bank-loans',
         module: 'finance',
-        group: 'তালিকা',
-        label: 'ব্যাংক ঋণ ও কিস্তি',
+        group: _l.navGroupLists,
+        label: _l.navScreenBankLoans,
         icon: Icons.account_balance_outlined,
-        aliases: ['loan', 'ঋণ', 'কিস্তি', 'cc', 'bank', 'instalment']),
+        aliases: ['loan', 'ঋণ', 'কিস্তি', 'cc', 'bank', 'instalment', 'bank loans and instalments', 'ব্যাংক ঋণ ও কিস্তি']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'rents',
         module: 'finance',
-        group: 'তালিকা',
-        label: 'ভাড়া',
+        group: _l.navGroupLists,
+        label: _l.navScreenRents,
         icon: Icons.home_work_outlined,
-        aliases: ['rent', 'ভাড়া', 'গুদাম', 'tenant', 'ভাড়াটে']),
+        aliases: ['rent', 'ভাড়া', 'গুদাম', 'tenant', 'ভাড়াটে']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'hand-loans',
         module: 'finance',
-        group: 'তালিকা',
-        label: 'হাতধার',
+        group: _l.navGroupLists,
+        label: _l.navScreenHandLoans,
         icon: Icons.handshake_outlined,
-        aliases: ['hand loan', 'ধার', 'হাওলাত', 'loan']),
+        aliases: ['hand loan', 'ধার', 'হাওলাত', 'loan', 'hand loans', 'হাতধার']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'documents',
         module: 'documents',
-        group: 'তালিকা',
-        label: 'ডকুমেন্টস',
+        group: _l.navGroupLists,
+        label: _l.navScreenDocuments,
         icon: Icons.folder_open_outlined,
-        aliases: ['document', 'নথি', 'কাগজ', 'সই', 'signature', 'file']),
+        aliases: ['document', 'নথি', 'কাগজ', 'সই', 'signature', 'file', 'documents', 'ডকুমেন্টস']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'offers',
         module: 'promotion',
-        group: 'তালিকা',
-        label: 'চলতি অফার',
+        group: _l.navGroupLists,
+        label: _l.navScreenOffers,
         icon: Icons.local_offer_outlined,
-        aliases: ['offer', 'অফার', 'ছাড়', 'ফ্রি', 'discount', 'free', 'প্রমোশন']),
+        aliases: ['offer', 'অফার', 'ছাড়', 'ফ্রি', 'discount', 'free', 'প্রমোশন', 'current offers', 'চলতি অফার']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'leave',
         module: 'hr',
-        group: 'নিজের কাজ',
-        label: 'আমার ছুটি',
+        group: _l.navGroupMyWork,
+        label: _l.navScreenLeave,
         icon: Icons.event_available_outlined,
-        aliases: ['leave', 'ছুটি', 'অবকাশ']),
+        aliases: ['leave', 'ছুটি', 'অবকাশ', 'my leave', 'আমার ছুটি']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'payslips',
         module: 'hr',
-        group: 'নিজের কাজ',
-        label: 'বেতনের স্লিপ',
+        group: _l.navGroupMyWork,
+        label: _l.navScreenPayslips,
         icon: Icons.receipt_long_outlined,
-        aliases: ['payslip', 'salary', 'বেতন', 'স্লিপ']),
+        aliases: ['payslip', 'salary', 'বেতন', 'স্লিপ', 'payslips', 'বেতনের স্লিপ']),  // l10n-ok: search aliases in both languages
     // ── ⭐ বিক্রয় বিল আর চালান (মালিক, ১৩ অক্টোবর ২০২৬: "kono kichuri list show korche na") ──
     NavScreenDef(
         path: 'invoices',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'বিক্রয় বিল',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenInvoices,
         icon: Icons.receipt_long_outlined,
-        aliases: ['invoice', 'বিল', 'ইনভয়েস', 'বিক্রি', 'inv']),
+        aliases: ['invoice', 'বিল', 'ইনভয়েস', 'বিক্রি', 'inv', 'sales invoices', 'বিক্রয় বিল']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'challans',
         module: 'sales',
-        group: 'লেনদেন',
-        label: 'চালান',
+        group: _l.navGroupTransactions,
+        label: _l.navScreenChallans,
         icon: Icons.local_shipping_outlined,
-        aliases: ['challan', 'চালান', 'gate pass', 'cha']),
+        aliases: ['challan', 'চালান', 'gate pass', 'cha', 'delivery challans']),  // l10n-ok: search aliases in both languages
     // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
     NavScreenDef(
         path: 'owner-centre',
         module: 'executive',
-        group: 'ড্যাশবোর্ড',
-        label: 'আজ — গোটা গ্রুপ',
+        group: _l.navGroupDashboards,
+        label: _l.navScreenOwnerCentre,
         icon: Icons.speed_outlined,
-        aliases: ['owner', 'মালিক', 'আজ', 'গ্রুপ', 'কোম্পানি', 'executive']),
+        aliases: ['owner', 'মালিক', 'আজ', 'গ্রুপ', 'কোম্পানি', 'executive', 'today — the whole group', 'আজ — গোটা গ্রুপ']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'credit',
         module: 'credit_control',
-        group: 'ড্যাশবোর্ড',
-        label: 'বাকির হিসাব',
+        group: _l.navGroupDashboards,
+        label: _l.navScreenCredit,
         icon: Icons.credit_score_outlined,
-        aliases: ['credit', 'বাকি', 'সীমা', 'ঝুঁকি', 'মেয়াদ', 'overdue', 'risk']),
+        aliases: ['credit', 'বাকি', 'সীমা', 'ঝুঁকি', 'মেয়াদ', 'overdue', 'risk', 'credit overview', 'বাকির হিসাব']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'notices',
         module: 'notification',
-        group: 'তালিকা',
-        label: 'নোটিশ বোর্ড',
+        group: _l.navGroupLists,
+        label: _l.navScreenNotices,
         icon: Icons.campaign_outlined,
-        aliases: ['notice', 'নোটিশ', 'সই', 'বিজ্ঞপ্তি']),
-  ];
+        aliases: ['notice', 'নোটিশ', 'সই', 'বিজ্ঞপ্তি', 'notice board', 'নোটিশ বোর্ড']),  // l10n-ok: search aliases in both languages
+      ]);
 
   /// Screens that hang on no module: the bottom bar and the "আমি" page reach
   /// them; the search still finds them.
-  static const List<NavScreenDef> outside = [
+  static List<NavScreenDef> get outside => _once('outside', () => [
     NavScreenDef(
         path: 'sync-status',
         module: '',
         group: '',
-        label: 'সিঙ্কের অবস্থা',
+        label: _l.navScreenSyncStatus,
         icon: Icons.sync_outlined,
-        aliases: ['sync', 'সিঙ্ক', 'পাঠানো']),
+        aliases: ['sync', 'সিঙ্ক', 'পাঠানো', 'sync status', 'সিঙ্কের অবস্থা']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'notifications',
         module: '',
         group: '',
-        label: 'বিজ্ঞপ্তি',
+        label: _l.navScreenNotifications,
         icon: Icons.notifications_outlined,
-        aliases: ['notification', 'নোটিফিকেশন', 'বার্তা']),
-  ];
+        aliases: ['notification', 'নোটিফিকেশন', 'বার্তা', 'notifications', 'বিজ্ঞপ্তি']),  // l10n-ok: search aliases in both languages
+      ]);
 
   static NavModuleDef? moduleDef(String code) {
     for (final m in modules) {
@@ -592,13 +611,13 @@ class NavCatalog {
   /// ⭐ The heading a web menu group stands under — the web's six fixed groups in the phone's words
   /// (`ModuleDefinition::MENU_GROUPS`).
   static String webGroupTitle(String? group) => switch (group) {
-        'dashboard' => 'ড্যাশবোর্ড',
-        'master' => 'তালিকা',
-        'transactions' => 'লেনদেন',
-        'approval' => 'অনুমোদন',
-        'reports' => 'রিপোর্ট',
-        'settings' => 'সেটিংস',
-        _ => 'অন্যান্য',
+        'dashboard' => _l.navGroupDashboards,
+        'master' => _l.navGroupLists,
+        'transactions' => _l.navGroupTransactions,
+        'approval' => _l.navGroupApprovals,
+        'reports' => _l.navGroupReports,
+        'settings' => _l.navGroupSettings,
+        _ => _l.navGroupOther,
       };
 
   /// ⭐ A tile for a server module this catalogue has no place for (system admin, master data, governance, …) — the
@@ -693,7 +712,7 @@ class NavTree {
           aliases: def?.aliases ?? const [],
         );
         if (def == null) {
-          place('reports', 'অন্যান্য', row);
+          place('reports', NavCatalog._l.navGroupOther, row);
         } else {
           extra.add(row);
         }

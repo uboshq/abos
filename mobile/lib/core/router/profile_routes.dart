@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/me_features.dart';
+import '../locale/app_locale.dart';
 
 /// ⭐ প্রোফাইল মেনুর দুই পর্দার পথ (অ্যাপ ০.৪.৪১; মালিকের অনুমোদিত পুরো-পাতার নমুনা, পাতা ২: ছবির মেনুতে
 /// "প্রোফাইল ও ছবি বদল" আর "আমার ফোনগুলো"; a6, ২০ অক্টোবর ২০২৬)।
@@ -23,7 +24,8 @@ class ProfileRoutes {
   }
 
   /// মেনুর প্রথম সারির নাম — ছবি বদল থাকলে "প্রোফাইল ও ছবি বদল", নইলে "আমার প্রোফাইল" (কোনো প্রতিশ্রুতি নয়)
-  static String profileTitle(MeFeatures features) => features.profilePhoto ? 'প্রোফাইল ও ছবি বদল' : 'আমার প্রোফাইল';
+  static String profileTitle(MeFeatures features) =>
+      features.profilePhoto ? AppLocale.l10n.profileMenuProfileAndPhoto : AppLocale.l10n.profileMenuMyProfile;
 
   /// "আমার ফোনগুলো" সারি দেখাবে কি না
   static bool showsPhones(MeFeatures features) => features.myPhones;
