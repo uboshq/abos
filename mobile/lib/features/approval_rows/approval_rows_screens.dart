@@ -10,6 +10,7 @@ import '../../core/widgets/empty_state.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
+import '../approvals/final_reject_confirm.dart';
 
 /// ⭐ সইয়ের ভার — আমি যাঁদের দিয়েছি আর আমার কাছে যাঁদের ভার; নতুন ভার আর ফেরানো (মালিক, ১৭ অক্টোবর ২০২৬: *"direct webpage
 /// app e bujajayna"*)। ⓘ নিয়ম সব সার্ভারের — নিজেকে নয়, গতকাল থেকে নয়, কেবল এই কোম্পানির মানুষ; পর্দা কেবল উত্তরটা বলে।
@@ -357,6 +358,7 @@ class PaperQueueScreen extends StatefulWidget {
     this.api = const ServerApprovalRowsApi(),
     this.approve,
     this.reject,
+    this.sendBack,
   });
 
   final PaperQueueKind kind;
@@ -365,6 +367,9 @@ class PaperQueueScreen extends StatefulWidget {
   /// পরীক্ষার জন্য — না দিলে ফোনের অনুমোদন-দরজা
   final Future<void> Function(String id)? approve;
   final Future<void> Function(String id, String reason)? reject;
+
+  /// সংশোধনে ফেরত — না দিলে ফোনের send-back দরজা ([[ApprovalsApi.sendBack]])
+  final Future<void> Function(String id, String reason)? sendBack;
 
   @override
   State<PaperQueueScreen> createState() => _PaperQueueScreenState();
@@ -438,35 +443,58 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
     }
   }
 
-  Future<void> _refuse(PaperQueueRow row) async {
+  /// কারণ চাওয়া — দুই কাজেই বাধ্যতামূলক
+  Future<String?> _askReason({required String title, required String send}) async {
     _reason.clear();
     final text = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('কেন ফেরত দিচ্ছেন?'),
+        title: Text(title),
         content: TextField(key: const ValueKey('queue-reason'), controller: _reason, autofocus: true, maxLength: 255),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('বাদ দিন')),
           FilledButton(
               key: const ValueKey('queue-reason-send'),
               onPressed: () => Navigator.of(context).pop(_reason.text.trim()),
-              child: const Text('ফেরত দিন')),
+              child: Text(send)),
         ],
       ),
     );
-    if (text == null || !mounted) return;
+    if (text == null || !mounted) return null;
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ফেরতের কারণ লিখতে হবে।')));
-      return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('কারণ লিখতে হবে।')));
+      return null;
     }
+    return text;
+  }
+
+  /// ⭐ সংশোধনে ফেরত — send-back; কাগজ লেখকের কাছে ফেরে। ⛔ ০.৪.৪২ পর্যন্ত এই বোতাম ভুল করে প্রত্যাখ্যান করত
+  Future<void> _sendBack(PaperQueueRow row) async {
+    final text = await _askReason(title: 'কী ঠিক করতে হবে? (সংশোধনে ফেরত)', send: 'সংশোধনে ফেরত দিন');
+    if (text == null) return;
+    await _act(() => (widget.sendBack ?? (id, r) => ApprovalsApi.sendBack(id, remarks: r))(row.id, text),
+        done: 'সংশোধনে ফেরত পাঠানো হলো।', failed: 'সংশোধনে ফেরত পাঠানো গেল না।');
+  }
+
+  /// ⭐ প্রত্যাখ্যান — কারণ, তারপর আলাদা শেষ প্রশ্ন; না বললে কিছুই যায় না
+  Future<void> _reject(PaperQueueRow row) async {
+    final text = await _askReason(title: 'কেন প্রত্যাখ্যান করছেন?', send: 'প্রত্যাখ্যান করুন');
+    if (text == null || !mounted) return;
+    final what = [if (row.documentNo.isNotEmpty) row.documentNo, row.name].join(' · ');
+    if (!await confirmFinalReject(context, what: what) || !mounted) return;
+    await _act(() => (widget.reject ?? (id, r) => ApprovalsApi.reject(id, remarks: r))(row.id, text),
+        done: 'প্রত্যাখ্যান করা হয়েছে।', failed: 'প্রত্যাখ্যান করা গেল না।');
+  }
+
+  Future<void> _act(Future<void> Function() call, {required String done, required String failed}) async {
     try {
-      await (widget.reject ?? (id, r) => ApprovalsApi.reject(id, remarks: r))(row.id, text);
+      await call();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ফেরত দেওয়া হলো।')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(done)));
       await _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: 'ফেরত দেওয়া গেল না।'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessageFor(e, fallback: failed))));
       }
     }
   }
@@ -524,12 +552,17 @@ class _PaperQueueScreenState extends State<PaperQueueScreen> {
                         Text('শেষ সময়: ${row.dueAt}',
                             style: TextStyle(color: row.overdue ? context.palette.danger : context.palette.onSurfaceMuted)),
                       if (row.canDecide)
-                        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                        // ⭐ ইনবক্সের একই দুই কাজ, একই লেখা; মোড়ানো — ৩৬০dp-তে তিন বোতাম এক সারিতে না-ও ধরতে পারে
+                        Wrap(alignment: WrapAlignment.end, spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
                           TextButton(
-                              key: ValueKey('queue-refuse-${row.id}'),
-                              onPressed: () => _refuse(row),
-                              child: const Text('ফেরত')),
-                          const SizedBox(width: AppSpacing.xs),
+                              key: ValueKey('queue-reject-${row.id}'),
+                              style: TextButton.styleFrom(foregroundColor: context.palette.danger),
+                              onPressed: () => _reject(row),
+                              child: const Text('প্রত্যাখ্যান করুন')),
+                          OutlinedButton(
+                              key: ValueKey('queue-send-back-${row.id}'),
+                              onPressed: () => _sendBack(row),
+                              child: const Text('সংশোধনে ফেরত দিন')),
                           FilledButton(
                               key: ValueKey('queue-sign-${row.id}'), onPressed: () => _sign(row), child: const Text('সই দিন')),
                         ]),
