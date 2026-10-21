@@ -110,4 +110,6 @@ return [
     'document_from_template' => 'Document made from a template',
     'document_retained' => 'Document moved to the bin by a retention rule',
     'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
+    // ⭐ সই পেয়েও বেতনের বদল বসেনি — মাসটা ততক্ষণে দেওয়া (Hr §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
+    'salary_change_late' => 'Signed salary change not applied',
 ];

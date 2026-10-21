@@ -32,4 +32,6 @@ return [
     'install_leave_types' => 'Install the standard leave types',
     'add_type' => 'Add type',
     'mark_all_present' => 'All present',
+    // ⭐ সইয়ের অপেক্ষায় থাকা বেতন-বদলের অনুরোধ খোলা (§৮ ⚠️৫)
+    'open_signature' => 'Signature page',
 ];

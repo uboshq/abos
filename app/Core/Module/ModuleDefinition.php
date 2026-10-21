@@ -520,6 +520,14 @@ final class ModuleDefinition
          * @var list<class-string<WidgetSummary>>
          */
         public readonly array $phoneWidgets = [],
+
+        /**
+         * ⭐ অনুমোদনের কাজ ধরে নিয়ম — সইকারীর চাবি (`signer_key`) আর ইনবক্সের সারির লেখা (`summary`); a6, ২১ অক্টোবর ২০২৬
+         * (Hr §৮ ⚠️৫, fe-র উত্তর ২ ও ৪; [[ApprovalRules]])। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<string, array{signer_key?: string, summary?: class-string<\App\Core\Contracts\SummarisesAnApproval>}>
+         */
+        public readonly array $approvalRules = [],
     ) {}
 
     /**
@@ -732,7 +740,51 @@ final class ModuleDefinition
                 $path,
             ),
             phoneWidgets: self::validatePhoneWidgets($raw['phone_widgets'] ?? [], $path),
+            approvalRules: self::validateApprovalRules(
+                $raw['approval_rules'] ?? [],
+                $raw['approvals'] ?? [],
+                $raw['permissions'] ?? [],
+                $path,
+            ),
         );
+    }
+
+    /**
+     * ⛔ অচেনা কাজ, এই মডিউলের নয় এমন চাবি, বা চুক্তি না মানা ক্লাস — বুটেই ভাঙে; নীরবে কাজ না করা নিয়ম পাহারা নয়।
+     *
+     * @param  array<mixed>  $rules
+     * @param  array<mixed>  $approvals
+     * @param  array<mixed>  $permissions
+     * @return array<string, array{signer_key?: string, summary?: string}>
+     */
+    private static function validateApprovalRules(array $rules, array $approvals, array $permissions, string $path): array
+    {
+        foreach ($rules as $action => $rule) {
+            if (! is_string($action) || ! array_key_exists($action, $approvals) || ! is_array($rule)) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules names '".(is_string($action) ? $action : gettype($action))
+                    ."', which is not one of this module's approval actions (or its rule is not a map)."
+                );
+            }
+
+            $key = $rule['signer_key'] ?? null;
+
+            if ($key !== null && (! is_string($key) || ! in_array($key, $permissions, true))) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules.{$action}.signer_key must be a permission this module declares."
+                );
+            }
+
+            $summary = $rule['summary'] ?? null;
+
+            if ($summary !== null && (! is_string($summary) || ! is_subclass_of($summary, \App\Core\Contracts\SummarisesAnApproval::class))) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules.{$action}.summary must be a class implementing SummarisesAnApproval."
+                );
+            }
+        }
+
+        return $rules;
     }
 
     /**

@@ -59,4 +59,7 @@ return [
     // ⭐ segregation of duties (fe, 21 Oct 2026)
     'leave_entered_by_you' => 'You entered this leave for someone else, so you cannot sign or refuse it. Ask another HR signer or the owner.',
     'leave_owner_self_signed' => 'The owner signed a leave he entered himself.',
+    // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
+    'salary_month_paid' => 'The :month payroll (:no) has already paid this employee. Changing the amount from that month or earlier would make the paid payslip and the structure disagree. Arrears pay is coming; until then, enter the new amount from the next month.',
+    'salary_change_waiting' => 'Another salary change for this employee is still waiting for a signature. Let it be signed or rejected first, then enter the new change.',
 ];

@@ -61,4 +61,14 @@ return [
     'payroll_viewed' => ':viewer opened the payroll run.',
     // ⭐ the employee is outside the manager's branch reach — HR signs (fe, 21 Oct 2026)
     'leave_falls_to_hr' => 'This leave has gone to HR, because it is outside your reach',
+    // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
+    'salary_change_waiting' => 'The change is waiting for a signature. It takes effect only when someone else presses "Sign"; until then the old amounts stay.',
+    'salary_change_asked' => 'Salary structure change from :date, waiting for a signature.',
+    'salary_change_late' => 'The signed salary structure change was not applied: :reason',
+    'salary_waiting_title' => 'Change from :date, waiting for a signature',
+    'salary_waiting_note' => 'These amounts are not in effect yet. The person who asked cannot sign it themselves (the owner can, marked separately in the audit); once signed it is entered in their name, and if it is rejected nothing changes.',
+    // ⭐ fe-র উত্তর ১ ও ৪ (a6, ২১ অক্টোবর ২০২৬) — ইনবক্সের সারি, প্রতিটা সইয়ের অডিট, মালিকের নিজের সই
+    'salary_change_summary' => 'From :date — :lines',
+    'salary_change_signed' => 'Salary structure change from :date signed and applied (request #:approval).',
+    'owner_self_signed' => 'The owner signed a salary change he asked for himself — a self-approved change.',
 ];

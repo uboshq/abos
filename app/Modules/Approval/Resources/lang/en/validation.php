@@ -13,4 +13,6 @@ return [
     'flow_has_pending' => ':count request(s) are still waiting on this rule. Decide those first — deleting the rule would leave them with no approver.',
     'flow_change_strands' => 'This rule still has :count waiting request(s) — their levels cannot be removed, nor the action changed or the rule switched off, or nobody could sign them. Decide them first, or keep their levels in the change.',
     'limit_action_not_in_module' => 'That action does not belong to that module — the two must match, or the limit will never apply.',
+    // ⭐ সইকারীর চাবি — a6, ২১ অক্টোবর ২০২৬ (Hr §৮ ⚠️৫; [[ApprovalFlowService]])
+    'signer_lacks_key' => ':who does not hold the ":key" key. Signing this action means reading the amounts, so nobody without that key can be a signer. Give the key first, or choose someone else.',
 ];

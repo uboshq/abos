@@ -8,6 +8,7 @@ use App\Core\Events\ApprovalDecided;
 use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
@@ -244,6 +245,23 @@ return [
         // ⭐ কর্মীর খরচের দাবি আর অগ্রিম — আলাদা কাজ, যাতে দুইটার আলাদা সীমা বসানো যায় (মালিকের আদেশ, ৭ অক্টোবর ২০২৬)
         'expense_claim' => 'hr::approval.expense_claim',
         'cash_advance' => 'hr::approval.cash_advance',
+        /*
+         * ⭐ বেতনের কাঠামো বদল — §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬ ([[SalaryStructureService::change()]])। ⓘ ছক কেউ বসান না, কোম্পানি
+         * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না, তাই অনুমোদন বন্ধ রাখা কোম্পানিতে আচরণ অবিকল আগের মতো।
+         */
+        'salary_change' => 'hr::approval.salary_change',
+    ],
+
+    /*
+     * ⭐ বেতন-বদলের সইয়ের নিয়ম — fe-র উত্তর ২ ও ৪, a6, ২১ অক্টোবর ২০২৬ ([[ApprovalRules]])।
+     *  · `signer_key` — ছকের ধাপে বেতনের চাবি ছাড়া কাউকে (মানুষ বা রোল) বসানো যায় না; নাহলে অঙ্ক না দেখে সই ([[ApprovalFlowService]])।
+     *  · `summary` — ইনবক্স আর একসাথে সইয়ের তালিকায় প্রতিটা সারিতে আগে → পরের অঙ্ক, চাবি না থাকলে ঢাকা ([[SalaryChangeSummary]])।
+     */
+    'approval_rules' => [
+        'salary_change' => [
+            'signer_key' => 'hr.salary.view',
+            'summary' => \App\Modules\Hr\Services\SalaryChangeSummary::class,
+        ],
     ],
 
     /*
@@ -256,6 +274,11 @@ return [
      *
      * ⚠️ নামগুলো `approvals`-এ থাকতেই হবে — [[ModuleDefinition]]
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ ঢুকিয়ে দিত।
+     */
+    /*
+     * ⛔ `salary_change` এখানে নেই, ইচ্ছে করে — a6, ২১ অক্টোবর ২০২৬ (§৮ ⚠️৫)। এই তালিকার প্রতিটা কাজে [[MoneyFlowDefaults]]
+     * প্রতিটা কোম্পানিতে একটা ছক **বসিয়ে দেয়** (হিসাবরক্ষকের সই); বেতন-বদলের সই কোম্পানির নিজের সিদ্ধান্ত, কোডের নয়।
+     * ⓘ ফলে ইনবক্সে একসাথে সই দেওয়া যায় — মালিক চাইলে আলাদা প্রশ্ন।
      */
     'moves_money' => ['payroll', 'expense_claim', 'cash_advance'],
 
@@ -471,7 +494,8 @@ return [
      * ⭐ খরচের দাবি বা অগ্রিমের শেষ সই — অনুমোদিত আর খসড়া ভাউচার; "না" হলে ফেরানো ([[FinishTheClaimOnTheLastSignature]])।
      */
     'listeners' => [
-        ApprovalDecided::class => [FinishTheClaimOnTheLastSignature::class],
+        // ⭐ বেতনের কাঠামো বদলের শেষ সই — তবে বসে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
+        ApprovalDecided::class => [FinishTheClaimOnTheLastSignature::class, FinishTheSalaryChangeOnTheLastSignature::class],
     ],
 
     'sensitive_fields' => [
