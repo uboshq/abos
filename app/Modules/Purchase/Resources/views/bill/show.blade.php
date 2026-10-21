@@ -176,12 +176,17 @@
 
             @if ($showsPrice)
             <div class="flex border-t border-(--color-border) p-4">
-                <x-purchase::totals :rows="[
+                {{-- ⭐ উৎসে কর্তন থাকলে — মোট, কর্তন, আর সরবরাহকারীর নিট পাওনা (হিসাব #১; [[PurchaseBill::withheldAmount()]]) --}}
+                <x-purchase::totals :rows="array_merge([
                     'purchase::field.subtotal' => $bill->subtotal,
                     'purchase::field.discount' => $bill->discount,
                     'purchase::field.tax' => $bill->tax,
                     'purchase::field.total' => $bill->total,
-                ]" />
+                ], bccomp($bill->withheldAmount(), '0', 4) > 0 ? [
+                    'purchase::field.ait_amount' => $bill->ait_amount,
+                    'purchase::field.vds_amount' => $bill->vds_amount,
+                    'purchase::field.payable_net' => bcsub((string) $bill->total, $bill->withheldAmount(), 4),
+                ] : [])" />
             </div>
             @endif
         </section>

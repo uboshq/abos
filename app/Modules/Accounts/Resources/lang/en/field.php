@@ -346,4 +346,7 @@ return [
     'inter_company_reverse_reason' => 'Reason',
     'inter_company_reversed' => 'Reversed',
     'widget_other_heads' => 'All the rest',
+
+    'withheld_ait' => 'Income tax withheld at source (AIT)',
+    'withheld_vds' => 'VAT withheld at source (VDS)',
 ];
