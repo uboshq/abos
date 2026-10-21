@@ -7380,10 +7380,7 @@ class AppL10nEn extends AppL10n {
   String get papersSign => 'Sign';
 
   @override
-  String get collectTitle => 'Collection';
-
-  @override
-  String get collectNoLater => 'Number: given on saving';
+  String get collectTitle => 'Receive money';
 
   @override
   String collectNumber(String no) {
@@ -7402,7 +7399,7 @@ class AppL10nEn extends AppL10n {
   String get collectMonthClosed => 'Month closed — posting is refused';
 
   @override
-  String get collectFigureDue => 'Customer\'s due';
+  String get collectFigureDue => 'Due';
 
   @override
   String get collectFigureThis => 'This collection';
@@ -7461,7 +7458,7 @@ class AppL10nEn extends AppL10n {
   String get collectMethodCash => 'Cash';
 
   @override
-  String get collectMethodTransfer => 'Bank transfer';
+  String get collectMethodTransfer => 'Bank';
 
   @override
   String get collectMethodDeposit => 'Cash deposit';
@@ -7517,13 +7514,6 @@ class AppL10nEn extends AppL10n {
   String get collectBillsChange => 'Change';
 
   @override
-  String get collectBillsFold => 'Fold';
-
-  @override
-  String get collectBillsHint =>
-      'Oldest first, set automatically · tick or change an amount to adjust';
-
-  @override
   String get collectBillsOldestFirst => 'Oldest invoices first';
 
   @override
@@ -7565,9 +7555,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get collectItemApply => 'Apply now';
-
-  @override
   String collectItemApplyOf(String no) {
     return '$no — apply now';
   }
@@ -7581,7 +7568,7 @@ class AppL10nEn extends AppL10n {
   String get collectItemCredit => 'Credit';
 
   @override
-  String get collectItemCreditNote => 'Credit note';
+  String get collectItemCreditNote => 'Returned';
 
   @override
   String get collectItemDebitNote => 'Debit note';
@@ -7615,7 +7602,7 @@ class AppL10nEn extends AppL10n {
       'Needs the owner\'s signature — posting sends it for signing.';
 
   @override
-  String get collectWithheldTitle => 'Withheld at source (optional)';
+  String get collectWithheldTitle => 'Withholding and discount';
 
   @override
   String get collectVds => 'Withheld by the customer: VAT at source (VDS)';
@@ -7633,30 +7620,15 @@ class AppL10nEn extends AppL10n {
   String get collectSumApplied => 'Applied to invoices';
 
   @override
-  String get collectSumUnapplied =>
-      'Unapplied (credit in the customer\'s ledger)';
+  String get collectSumUnapplied => 'Unapplied';
 
   @override
-  String get collectSumBalanced =>
-      'Balanced: received + withheld + discount = applied + unapplied';
+  String collectSumBalanced(String words) {
+    return 'Balanced · $words';
+  }
 
   @override
   String get collectJournalTitle => 'What goes to the books';
-
-  @override
-  String get collectJournalHint => 'See before posting';
-
-  @override
-  String get collectJournalAccount => 'Account';
-
-  @override
-  String get collectJournalBranch => 'Branch';
-
-  @override
-  String get collectJournalDr => 'Debit';
-
-  @override
-  String get collectJournalCr => 'Credit';
 
   @override
   String get collectJournalTotal => 'Total';
@@ -7684,7 +7656,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get collectControlNoUndo =>
-      'A posted collection cannot be edited; to correct it, reverse it with a reason (a second person signs).';
+      'A posted collection cannot be edited; to correct it, write the reason and reverse it (a second signature).';
 
   @override
   String get collectControlStops =>
@@ -7694,13 +7666,7 @@ class AppL10nEn extends AppL10n {
   String get collectAttachTitle => 'Attachment and narration';
 
   @override
-  String get collectSlip => 'Slip photo';
-
-  @override
   String get collectSlipNeeded => 'Slip photo *';
-
-  @override
-  String get collectSlipCamera => 'Camera';
 
   @override
   String get collectSlipGallery => 'Gallery';
@@ -7726,13 +7692,13 @@ class AppL10nEn extends AppL10n {
       'The collection is saved, but the slip photo could not be sent — add it again from the receipt.';
 
   @override
-  String get collectNarration => 'Narration (optional)';
+  String get collectNarration => 'Narration';
 
   @override
-  String get collectDraft => 'Save draft';
+  String get collectDraft => 'Draft';
 
   @override
-  String get collectPost => 'Post';
+  String get collectPost => 'Review and post ›';
 
   @override
   String get collectReferenceMissing => 'Enter the reference / TrxID.';
@@ -7745,25 +7711,10 @@ class AppL10nEn extends AppL10n {
   String get collectCheckTitle => 'Check before posting';
 
   @override
-  String get collectCheckCustomer => 'Customer';
-
-  @override
-  String get collectCheckAmount => 'Amount';
-
-  @override
-  String get collectCheckWords => 'In words';
-
-  @override
-  String get collectCheckAccount => 'Received into';
-
-  @override
-  String get collectCheckBills => 'Applied to';
-
-  @override
   String get collectCheckBack => 'Go back';
 
   @override
-  String get collectCheckPost => 'Post now';
+  String get collectCheckPost => 'Post';
 
   @override
   String collectDone(String no) {
@@ -7779,14 +7730,103 @@ class AppL10nEn extends AppL10n {
   String get collectOpenReceipt => 'Open the receipt';
 
   @override
-  String get collectReceiptHint =>
-      'After posting: the receipt (amount in words) · PDF · WhatsApp or email';
-
-  @override
-  String get collectNewOne => 'New collection';
-
-  @override
   String get collectClose => 'Done';
+
+  @override
+  String get collectSumBalancedPlain => 'Balanced';
+
+  @override
+  String get collectSumFormula =>
+      'received + withheld + discount = applied to invoices + unapplied';
+
+  @override
+  String get collectSumWithheld => 'Withheld by the customer (VDS/AIT)';
+
+  @override
+  String get collectSumDiscount => 'Discount on collection (needs a signature)';
+
+  @override
+  String get collectSumRounding => 'Rounding (up to Tk 10)';
+
+  @override
+  String get collectRoundingTooBig => 'Rounding cannot be more than Tk 10.';
+
+  @override
+  String get collectControlNet =>
+      'Without the network nothing is saved; pressing again still makes only one receipt.';
+
+  @override
+  String get collectGeneralTitle => 'General information';
+
+  @override
+  String get collectPartyKind => 'Party type *';
+
+  @override
+  String get collectPartyCustomer => 'Customer';
+
+  @override
+  String get collectPartySupplier => 'Supplier';
+
+  @override
+  String get collectPartyStaff => 'Staff';
+
+  @override
+  String get collectPartyOther => 'Other';
+
+  @override
+  String get collectSelectedBills => 'Selected invoices';
+
+  @override
+  String collectBankMode(String mode) {
+    return 'Mode $mode';
+  }
+
+  @override
+  String collectBankValueDate(String date) {
+    return 'Value date $date';
+  }
+
+  @override
+  String collectBankChequeDate(String date) {
+    return 'Cheque date $date';
+  }
+
+  @override
+  String collectBankChargeShort(String amount) {
+    return 'Charge $amount';
+  }
+
+  @override
+  String get collectToday => 'today';
+
+  @override
+  String get collectBankEditorTitle => 'Mode, value date and charge';
+
+  @override
+  String get collectBankDone => 'Done';
+
+  @override
+  String collectBillsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count · oldest first',
+      one: '$count · oldest first',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectSlipTake => 'Take the slip photo';
+
+  @override
+  String get collectAfterTitle => 'After posting';
+
+  @override
+  String get collectReceiptPdf => 'Receipt PDF';
+
+  @override
+  String get collectReceiptPrint => 'Print';
 
   @override
   String get collectOtherIncome => 'Other income';

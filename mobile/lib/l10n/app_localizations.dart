@@ -11935,17 +11935,11 @@ abstract class AppL10n {
   /// **'সই দিন'**
   String get papersSign;
 
-  /// Collection screen: the bar title (the web menu name)
+  /// Collection screen 1: the bar title, the web's page name
   ///
   /// In bn, this message translates to:
-  /// **'আদায়'**
+  /// **'টাকা নেওয়া'**
   String get collectTitle;
-
-  /// Collection header: before saving there is no number yet
-  ///
-  /// In bn, this message translates to:
-  /// **'নম্বর: সংরক্ষণ করলে বসবে'**
-  String get collectNoLater;
 
   /// Collection header: the saved paper number
   ///
@@ -11974,7 +11968,7 @@ abstract class AppL10n {
   /// Collection: top figure 1, what the customer owes
   ///
   /// In bn, this message translates to:
-  /// **'গ্রাহকের বকেয়া'**
+  /// **'বকেয়া'**
   String get collectFigureDue;
 
   /// Collection: top figure 2, the amount being collected
@@ -12013,16 +12007,16 @@ abstract class AppL10n {
   /// **'বকেয়া {amount}'**
   String collectDue(String amount);
 
-  /// Collection: the customer's credit limit (item 1)
+  /// Collection: the customer's credit limit under the name (item 1)
   ///
   /// In bn, this message translates to:
-  /// **'বাকির সীমা {amount}'**
+  /// **'সীমা {amount}'**
   String collectCreditLimit(String amount);
 
   /// Collection: days since the oldest unpaid invoice fell due (item 1)
   ///
   /// In bn, this message translates to:
-  /// **'{days, plural, other{সবচেয়ে পুরনো বাকি {days} দিন}}'**
+  /// **'{days, plural, other{পুরনো বাকি {days} দিন}}'**
   String collectOldestOverdue(int days);
 
   /// Collection: date field label
@@ -12061,10 +12055,10 @@ abstract class AppL10n {
   /// **'নগদ'**
   String get collectMethodCash;
 
-  /// Collection method: bank transfer
+  /// Collection method: bank transfer, shown as bank
   ///
   /// In bn, this message translates to:
-  /// **'ব্যাংক ট্রান্সফার'**
+  /// **'ব্যাংক'**
   String get collectMethodTransfer;
 
   /// Collection method: cash deposited into the bank
@@ -12079,10 +12073,10 @@ abstract class AppL10n {
   /// **'চেক'**
   String get collectMethodCheque;
 
-  /// Collection: the money account (web sales::field.account)
+  /// Collection: the money account (web accounts::field.paid_into)
   ///
   /// In bn, this message translates to:
-  /// **'যে খাতে জমা হলো *'**
+  /// **'যে খাতে জমা *'**
   String get collectAccount;
 
   /// Collection: the person's own cash account in the list
@@ -12163,18 +12157,6 @@ abstract class AppL10n {
   /// **'বদলান'**
   String get collectBillsChange;
 
-  /// Collection: fold the bills table
-  ///
-  /// In bn, this message translates to:
-  /// **'গুটিয়ে নিন'**
-  String get collectBillsFold;
-
-  /// Collection: bills table hint
-  ///
-  /// In bn, this message translates to:
-  /// **'পুরনো আগে নিজে বসেছে · টিক বা অঙ্ক বদলে ঠিক করুন'**
-  String get collectBillsHint;
-
   /// Collection: button that re-applies oldest first (web sales::action.oldest_bills_first)
   ///
   /// In bn, this message translates to:
@@ -12223,12 +12205,6 @@ abstract class AppL10n {
   /// **'মূল টাকা {amount}'**
   String collectItemOriginal(String amount);
 
-  /// Collection: the amount applied now
-  ///
-  /// In bn, this message translates to:
-  /// **'এখন প্রয়োগ'**
-  String get collectItemApply;
-
   /// Collection: screen reader label of a row's amount field
   ///
   /// In bn, this message translates to:
@@ -12247,10 +12223,10 @@ abstract class AppL10n {
   /// **'ক্রেডিট'**
   String get collectItemCredit;
 
-  /// Collection: tag of a credit note
+  /// Collection: tag of a credit note (a sales return)
   ///
   /// In bn, this message translates to:
-  /// **'ক্রেডিট নোট'**
+  /// **'ফেরত'**
   String get collectItemCreditNote;
 
   /// Collection: tag of a debit note
@@ -12307,10 +12283,10 @@ abstract class AppL10n {
   /// **'মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।'**
   String get collectDifferenceSign;
 
-  /// Collection: VAT or tax the customer withheld
+  /// Collection: the folded card with discount, rounding, VDS and AIT
   ///
   /// In bn, this message translates to:
-  /// **'উৎসে কাটা (ঐচ্ছিক)'**
+  /// **'কাটা ও ছাড়'**
   String get collectWithheldTitle;
 
   /// Collection: VAT deducted at source by the customer
@@ -12343,53 +12319,23 @@ abstract class AppL10n {
   /// **'বিলে প্রয়োগ'**
   String get collectSumApplied;
 
-  /// Collection summary: what is left unapplied (item 4)
+  /// Collection summary: what is left unapplied, the customer's credit (item 4)
   ///
   /// In bn, this message translates to:
-  /// **'অপ্রয়োগকৃত (গ্রাহকের খাতায় জমা)'**
+  /// **'অপ্রয়োগকৃত'**
   String get collectSumUnapplied;
 
-  /// Collection summary: the check line
+  /// Collection summary: the check banner with the amount in words
   ///
   /// In bn, this message translates to:
-  /// **'মিলেছে: পাওয়া + কাটা + ছাড় = প্রয়োগ + অপ্রয়োগকৃত'**
-  String get collectSumBalanced;
+  /// **'মিলেছে · {words}'**
+  String collectSumBalanced(String words);
 
   /// Collection: the journal preview (item 10)
   ///
   /// In bn, this message translates to:
   /// **'খাতায় যা যাবে'**
   String get collectJournalTitle;
-
-  /// Collection: journal preview hint
-  ///
-  /// In bn, this message translates to:
-  /// **'পোস্টের আগে দেখুন'**
-  String get collectJournalHint;
-
-  /// Collection journal column: account
-  ///
-  /// In bn, this message translates to:
-  /// **'খাত'**
-  String get collectJournalAccount;
-
-  /// Collection journal column: branch
-  ///
-  /// In bn, this message translates to:
-  /// **'শাখা'**
-  String get collectJournalBranch;
-
-  /// Collection journal column: debit
-  ///
-  /// In bn, this message translates to:
-  /// **'ডেবিট'**
-  String get collectJournalDr;
-
-  /// Collection journal column: credit
-  ///
-  /// In bn, this message translates to:
-  /// **'ক্রেডিট'**
-  String get collectJournalCr;
 
   /// Collection journal: total row
   ///
@@ -12436,7 +12382,7 @@ abstract class AppL10n {
   /// Collection control: posted papers are immutable
   ///
   /// In bn, this message translates to:
-  /// **'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে উল্টাতে হয় (দ্বিতীয় জনের সই)।'**
+  /// **'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় সই)।'**
   String get collectControlNoUndo;
 
   /// Collection control: the server's stops block posting
@@ -12451,23 +12397,11 @@ abstract class AppL10n {
   /// **'সংযুক্তি ও বিবরণ'**
   String get collectAttachTitle;
 
-  /// Collection: slip photo, optional
-  ///
-  /// In bn, this message translates to:
-  /// **'স্লিপের ছবি'**
-  String get collectSlip;
-
   /// Collection: slip photo, required (item 15)
   ///
   /// In bn, this message translates to:
   /// **'স্লিপের ছবি *'**
   String get collectSlipNeeded;
-
-  /// Collection: take the slip photo
-  ///
-  /// In bn, this message translates to:
-  /// **'ক্যামেরা'**
-  String get collectSlipCamera;
 
   /// Collection: pick the slip photo
   ///
@@ -12508,19 +12442,19 @@ abstract class AppL10n {
   /// Collection: narration (web sales::field.narration)
   ///
   /// In bn, this message translates to:
-  /// **'বিবরণ (ঐচ্ছিক)'**
+  /// **'বিবরণ'**
   String get collectNarration;
 
   /// Collection: bottom button, keep as draft
   ///
   /// In bn, this message translates to:
-  /// **'খসড়া রাখুন'**
+  /// **'খসড়া'**
   String get collectDraft;
 
-  /// Collection: bottom button, post
+  /// Collection: bottom button, opens screen 2 to check before posting
   ///
   /// In bn, this message translates to:
-  /// **'পোস্ট'**
+  /// **'দেখে পোস্ট ›'**
   String get collectPost;
 
   /// Collection: reference required for MFS and bank
@@ -12535,41 +12469,11 @@ abstract class AppL10n {
   /// **'ছাড় / রাউন্ডিং পাওয়া টাকার চেয়ে বেশি হতে পারে না।'**
   String get collectDifferenceTooBig;
 
-  /// Collection summary sheet title (item 10)
+  /// Collection screen 2: the bar title (item 10)
   ///
   /// In bn, this message translates to:
-  /// **'পোস্টের আগে দেখে নিন'**
+  /// **'পোস্টের আগে দেখুন'**
   String get collectCheckTitle;
-
-  /// Collection summary sheet: customer
-  ///
-  /// In bn, this message translates to:
-  /// **'গ্রাহক'**
-  String get collectCheckCustomer;
-
-  /// Collection summary sheet: amount
-  ///
-  /// In bn, this message translates to:
-  /// **'টাকা'**
-  String get collectCheckAmount;
-
-  /// Collection summary sheet: the amount in words
-  ///
-  /// In bn, this message translates to:
-  /// **'কথায়'**
-  String get collectCheckWords;
-
-  /// Collection summary sheet: account
-  ///
-  /// In bn, this message translates to:
-  /// **'যে খাতে জমা হলো'**
-  String get collectCheckAccount;
-
-  /// Collection summary sheet: which invoices
-  ///
-  /// In bn, this message translates to:
-  /// **'কোন বিলে বসবে'**
-  String get collectCheckBills;
 
   /// Collection summary sheet: back to the form
   ///
@@ -12577,10 +12481,10 @@ abstract class AppL10n {
   /// **'ফিরে যান'**
   String get collectCheckBack;
 
-  /// Collection summary sheet: the one tap that posts
+  /// Collection screen 2: the one tap that posts
   ///
   /// In bn, this message translates to:
-  /// **'পোস্ট করুন'**
+  /// **'পোস্ট'**
   String get collectCheckPost;
 
   /// Collection: saved, with its number
@@ -12601,23 +12505,167 @@ abstract class AppL10n {
   /// **'রসিদ খুলুন'**
   String get collectOpenReceipt;
 
-  /// Collection: what happens after posting (item 17)
-  ///
-  /// In bn, this message translates to:
-  /// **'পোস্টের পরে: টাকার রসিদ (টাকা কথায়) · PDF · WhatsApp বা ইমেইল'**
-  String get collectReceiptHint;
-
-  /// Collection: start another one
-  ///
-  /// In bn, this message translates to:
-  /// **'নতুন আদায়'**
-  String get collectNewOne;
-
   /// Collection: close after saving
   ///
   /// In bn, this message translates to:
   /// **'শেষ'**
   String get collectClose;
+
+  /// Collection summary: the check banner without words
+  ///
+  /// In bn, this message translates to:
+  /// **'মিলেছে'**
+  String get collectSumBalancedPlain;
+
+  /// Collection summary: the identity the banner checks
+  ///
+  /// In bn, this message translates to:
+  /// **'পাওয়া + কাটা + ছাড় = বিলে প্রয়োগ + অপ্রয়োগকৃত'**
+  String get collectSumFormula;
+
+  /// Collection summary: VAT and tax withheld by the customer
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক কেটেছে (VDS/AIT)'**
+  String get collectSumWithheld;
+
+  /// Collection summary: the discount, which needs the owner's signature
+  ///
+  /// In bn, this message translates to:
+  /// **'আদায়ে ছাড় (সই লাগবে)'**
+  String get collectSumDiscount;
+
+  /// Collection summary: rounding, at most Tk 10
+  ///
+  /// In bn, this message translates to:
+  /// **'রাউন্ডিং (৳10 পর্যন্ত)'**
+  String get collectSumRounding;
+
+  /// Collection: rounding above the limit
+  ///
+  /// In bn, this message translates to:
+  /// **'রাউন্ডিং ৳10-এর বেশি হতে পারে না।'**
+  String get collectRoundingTooBig;
+
+  /// Collection control: online only, idempotent
+  ///
+  /// In bn, this message translates to:
+  /// **'নেট না থাকলে জমা হবে না; আবার চাপলে একটাই রসিদ হবে।'**
+  String get collectControlNet;
+
+  /// Collection: the first card
+  ///
+  /// In bn, this message translates to:
+  /// **'সাধারণ তথ্য'**
+  String get collectGeneralTitle;
+
+  /// Collection: who the money is from
+  ///
+  /// In bn, this message translates to:
+  /// **'পক্ষের ধরন *'**
+  String get collectPartyKind;
+
+  /// Collection party type: customer
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রাহক'**
+  String get collectPartyCustomer;
+
+  /// Collection party type: supplier
+  ///
+  /// In bn, this message translates to:
+  /// **'সরবরাহকারী'**
+  String get collectPartySupplier;
+
+  /// Collection party type: staff
+  ///
+  /// In bn, this message translates to:
+  /// **'কর্মী'**
+  String get collectPartyStaff;
+
+  /// Collection party type: anyone else
+  ///
+  /// In bn, this message translates to:
+  /// **'অন্য'**
+  String get collectPartyOther;
+
+  /// Collection: chip that fills the amount with the ticked invoices
+  ///
+  /// In bn, this message translates to:
+  /// **'নির্বাচিত বিল'**
+  String get collectSelectedBills;
+
+  /// Collection bank line: the transfer mode
+  ///
+  /// In bn, this message translates to:
+  /// **'মোড {mode}'**
+  String collectBankMode(String mode);
+
+  /// Collection bank line: the value date
+  ///
+  /// In bn, this message translates to:
+  /// **'মূল্য-তারিখ {date}'**
+  String collectBankValueDate(String date);
+
+  /// Collection bank line: the cheque date
+  ///
+  /// In bn, this message translates to:
+  /// **'চেকের তারিখ {date}'**
+  String collectBankChequeDate(String date);
+
+  /// Collection bank line: the bank charge
+  ///
+  /// In bn, this message translates to:
+  /// **'চার্জ {amount}'**
+  String collectBankChargeShort(String amount);
+
+  /// Collection bank line: the value date is today
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ'**
+  String get collectToday;
+
+  /// Collection: the bank details editor
+  ///
+  /// In bn, this message translates to:
+  /// **'মোড, মূল্য-তারিখ আর চার্জ'**
+  String get collectBankEditorTitle;
+
+  /// Collection: close the bank details editor
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get collectBankDone;
+
+  /// Collection: the bills card fold, how many and the order
+  ///
+  /// In bn, this message translates to:
+  /// **'{count, plural, other{{count}টা · পুরনো আগে}}'**
+  String collectBillsCount(int count);
+
+  /// Collection: the dashed box, camera half
+  ///
+  /// In bn, this message translates to:
+  /// **'স্লিপের ছবি তুলুন'**
+  String get collectSlipTake;
+
+  /// Collection screen 2: the card after posting
+  ///
+  /// In bn, this message translates to:
+  /// **'পোস্টের পরে'**
+  String get collectAfterTitle;
+
+  /// Collection: open the receipt PDF (item 17)
+  ///
+  /// In bn, this message translates to:
+  /// **'রসিদ PDF'**
+  String get collectReceiptPdf;
+
+  /// Collection: print the receipt
+  ///
+  /// In bn, this message translates to:
+  /// **'ছাপুন'**
+  String get collectReceiptPrint;
 
   /// Voucher list: income from non-customers, a separate entry
   ///

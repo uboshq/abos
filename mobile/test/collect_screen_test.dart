@@ -12,13 +12,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/collect_fake.dart';
 
-/// ⭐ আদায়ের এক পাতা (০.৪.৪৫) — মালিক, ২১ অক্টোবর ২০২৬: "ok ekoni kaj kore live e daw"; চূড়ান্ত নকশা ১০০ (পাতা ১, বিষয়ের
-/// তালিকা পাতা ৫)। প্রতিটা দাবির নামে বিষয়ের নম্বর। সব নকল সার্ভারে (a5-এর চূড়ান্ত চুক্তির আকার), নেট নয়।
+/// ⭐ টাকা নেওয়া — এক পথ, দুই পর্দা (০.৪.৪৫) — মালিক, ২১ অক্টোবর ২০২৬: "ok ekoni kaj kore live e daw", "100% quality";
+/// চূড়ান্ত নকশা ১০০ (পাতা ৫ বিষয়ের তালিকা, পাতা ৬ অ্যাপের ছবি: পর্দা ১ আর ২)। প্রতিটা দাবির নামে বিষয়ের নম্বর। সব নকল
+/// সার্ভারে (a5-এর চূড়ান্ত চুক্তির আকার), নেট নয়।
 var _seq = 0;
 String _key() => 'key-${_seq++}';
 
-final List<CollectionSaved> _opened = [];
-Future<void> _receipt(BuildContext context, CollectionSaved saved) async => _opened.add(saved);
+final List<(CollectionSaved, ReceiptAction)> _opened = [];
+Future<void> _receipt(BuildContext context, CollectionSaved saved, ReceiptAction action) async => _opened.add((saved, action));
+
+final List<String> _parties = [];
+Future<void> _party(BuildContext context, String kind) async => _parties.add(kind);
 
 Future<String?> Function(BuildContext, {required bool camera}) _picker(String? path) =>
     (context, {required camera}) async => path;
@@ -28,8 +32,8 @@ CollectScreen _screen(FakeCollect api, {int slipBytes = 1000}) => CollectScreen(
       books: FakeBooks(),
       newChangeId: _key,
       today: DateTime(2026, 10, 21),
-      previewDelay: Duration.zero,
       openReceipt: _receipt,
+      otherParty: _party,
       pickSlip: _picker('C:/slips/slip-21.jpg'),
       slipSize: (_) async => slipBytes,
     );
@@ -40,11 +44,7 @@ Future<void> _pump(WidgetTester tester, Widget screen, {Size size = const Size(4
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
-    home: MediaQuery.withClampedTextScaling(
-      minScaleFactor: textScale,
-      maxScaleFactor: textScale,
-      child: screen,
-    ),
+    home: MediaQuery.withClampedTextScaling(minScaleFactor: textScale, maxScaleFactor: textScale, child: screen),
   ));
   await tester.pumpAndSettle();
 }
@@ -70,40 +70,60 @@ Future<void> _pickShop(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-String _figure(WidgetTester tester, String key) => tester
-    .widgetList<Text>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(Text)))
-    .map((t) => t.data)
-    .join(' | ');
+String _texts(WidgetTester tester, String key) {
+  final f = find.byKey(ValueKey(key));
+  if (tester.widget(f) case final Text t) return t.data ?? '';
+  return tester.widgetList<Text>(find.descendant(of: f, matching: find.byType(Text))).map((t) => t.data).join(' | ');
+}
 
 String _field(WidgetTester tester, String key) => tester.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
 
-/// পোস্ট → সারাংশ → এক চাপ
-Future<void> _post(WidgetTester tester) async {
+bool _shown(String key) => find.byKey(ValueKey(key)).evaluate().isNotEmpty;
+
+/// পর্দা ১-এর "দেখে পোস্ট ›" → পর্দা ২
+Future<void> _review(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('collect-post')));
   await tester.pumpAndSettle();
+}
+
+/// পোস্ট — পর্দা ১ থেকে পর্দা ২ খুলে, অথবা পর্দা ২-এ থাকলে সেখানেই, এক চাপ
+Future<void> _post(WidgetTester tester) async {
+  if (!_shown('collect-check-post')) await _review(tester);
   await tester.tap(find.byKey(const ValueKey('collect-check-post')));
   await tester.pumpAndSettle();
 }
 
-void main() {
-  setUp(_opened.clear);
+/// পর্দা ২ থেকে ফিরে পর্দা ১-এ
+Future<void> _back(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('collect-check-back')));
+  await tester.pumpAndSettle();
+}
 
-  testWidgets('1 · 13 · 14 · the three figures, the party "name · point · branch" with due, credit limit and oldest days, the month and the branch',
+void main() {
+  setUp(() {
+    _opened.clear();
+    _parties.clear();
+  });
+
+  testWidgets('1 · 13 · 14 · the three figures, the party "name · point · branch" with limit and oldest days, the month and the branch',
       (tester) async {
     await _pump(tester, _screen(FakeCollect()));
+    expect(find.text('টাকা নেওয়া'), findsOneWidget, reason: 'ওয়েবের পাতার নাম');
+    expect(find.byKey(const ValueKey('collect-state-draft')), findsOneWidget, reason: 'বসার আগে বারে "খসড়া"');
     await _pickShop(tester);
 
     expect(find.text('করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ'), findsOneWidget, reason: '⛔ গ্রাহকের নাম · পয়েন্ট · শাখা নয়');
-    expect(find.text('বকেয়া ৳53,200.00 · বাকির সীমা ৳1,00,000.00 · সবচেয়ে পুরনো বাকি 49 দিন'), findsOneWidget);
+    expect(find.text('সীমা ৳1,00,000.00 · পুরনো বাকি 49 দিন'), findsOneWidget);
     expect(find.text('শাখা: গ্রাহকের শাখা (ময়মনসিংহ)'), findsOneWidget, reason: 'বিষয় ১৪: শাখা গ্রাহকের');
     expect(find.text('মাস খোলা'), findsOneWidget, reason: 'বিষয় ১৩');
-    expect(find.text('নম্বর: সংরক্ষণ করলে বসবে'), findsOneWidget);
 
     await _type(tester, 'collect-amount', '45000');
-    expect(_figure(tester, 'collect-figure-due'), 'গ্রাহকের বকেয়া | ৳53,200.00');
-    expect(_figure(tester, 'collect-figure-this'), 'এই আদায় | ৳45,000.00');
-    expect(_figure(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳8,200.00', reason: '⛔ বকেয়া − এই আদায় ভুল');
+    expect(_texts(tester, 'collect-figure-due'), 'বকেয়া | ৳53,200.00');
+    expect(_texts(tester, 'collect-figure-this'), 'এই আদায় | ৳45,000.00');
+    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳8,200.00', reason: '⛔ বকেয়া − এই আদায় ভুল');
     expect(find.byKey(const ValueKey('collect-over-due')), findsNothing);
+    final ys = [for (final k in ['collect-figure-due', 'collect-figure-this', 'collect-figure-left']) tester.getTopLeft(find.byKey(ValueKey(k))).dy];
+    expect(ys.toSet(), hasLength(1), reason: 'তিন অঙ্ক এক সারিতে');
   });
 
   testWidgets('"পুরো বকেয়া" fills the due in one tap', (tester) async {
@@ -111,7 +131,28 @@ void main() {
     await _pickShop(tester);
     await _tap(tester, 'collect-full-due');
     expect(_field(tester, 'collect-amount'), '53200.00');
-    expect(_figure(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳0.00');
+    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳0.00');
+  });
+
+  testWidgets('"নির্বাচিত বিল" fills the amount with the ticked invoices (less the ticked credit) and applies exactly them', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    // ⓘ টাকা লেখার আগে টিক — দুটো নতুন বিল আর ক্রেডিট নোট, পুরনোটা নয়
+    for (final no in ['INV-0101', 'INV-0112', 'CN-0007']) {
+      await _tap(tester, 'collect-tick-$no');
+    }
+    await _tap(tester, 'collect-selected-bills');
+    expect(_field(tester, 'collect-amount'), '21200.00', reason: '⛔ নির্বাচিত বিলের যোগফল নয় (15,200 + 8,000 − 2,000)');
+    expect(_texts(tester, 'collect-row-amount-INV-0094'), '0.00', reason: '⛔ না-বাছা পুরনো বিলে বসল');
+    expect(_texts(tester, 'collect-row-amount-INV-0101'), '15,200.00');
+    expect(_texts(tester, 'collect-row-amount-INV-0112'), '8,000.00');
+    await _post(tester);
+    expect(api.sent.single.toPayload()['lines'], [
+      {'kind': 'bill', 'id': 'inv-101', 'amount': '15200.00'},
+      {'kind': 'bill', 'id': 'inv-112', 'amount': '8000.00'},
+      {'kind': 'credit_note', 'id': 'cn-7', 'amount': '-2000.00'},
+    ]);
   });
 
   testWidgets('4 · more than the due warns, and the extra shows as the customer\'s credit (Cr) and as unapplied', (tester) async {
@@ -121,9 +162,10 @@ void main() {
 
     expect(find.text('বকেয়ার চেয়ে ৳6,800.00 বেশি — বাড়তি টাকা গ্রাহকের খাতায় জমা (Cr) থাকবে।'), findsOneWidget,
         reason: '⛔ বকেয়ার বেশি টাকায় সতর্কতা নেই');
-    expect(_figure(tester, 'collect-figure-left'), 'গ্রাহকের খাতায় জমা থাকবে | ৳6,800.00');
+    expect(_texts(tester, 'collect-figure-left'), 'গ্রাহকের খাতায় জমা থাকবে | ৳6,800.00');
     // ⓘ 60,000 + ক্রেডিট নোট 2,000 = 62,000 হাতে; বিল 53,200 — বাকি 8,800 অপ্রয়োগকৃত, গ্রাহকের খাতায়
-    expect(_figure(tester, 'collect-unapplied'), contains('৳8,800.00'));
+    await _review(tester);
+    expect(_texts(tester, 'collect-unapplied'), contains('৳8,800.00'));
     expect(find.byKey(const ValueKey('collect-balanced')), findsOneWidget);
   });
 
@@ -133,6 +175,17 @@ void main() {
     expect(find.byType(ListTile), findsOneWidget, reason: '⛔ সার্ভারের দেওয়া দোকানের বাইরে কেউ দেখা গেল');
     expect(find.byKey(const ValueKey('collect-pick-cus-1')), findsOneWidget);
     expect(find.text('করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ'), findsOneWidget);
+  });
+
+  testWidgets('the party type: customer is this page; supplier, staff and other open the receipt voucher form', (tester) async {
+    await _pump(tester, _screen(FakeCollect()));
+    expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('collect-party-customer'))).selected, isTrue);
+    for (final k in ['supplier', 'staff', 'other']) {
+      await _tap(tester, 'collect-party-$k');
+    }
+    expect(_parties, ['supplier', 'staff', 'other'], reason: '⛔ অন্য পক্ষ আদায়ের পাতায় মিশে গেল');
+    await _tap(tester, 'collect-party-customer');
+    expect(_parties, hasLength(3));
   });
 
   testWidgets('the account defaults to the person\'s own cash, ahead of the server\'s first cash', (tester) async {
@@ -146,21 +199,44 @@ void main() {
     expect(api.sent.single.toPayload()['instrument'], 'cash', reason: 'পদ্ধতি = instrument');
   });
 
-  testWidgets('9 · the reference/TrxID shows only for MFS and bank; bank adds mode, value date and one bank-charge field', (tester) async {
+  testWidgets('own cash comes from mine: true; without it the first cash account is chosen', (tester) async {
+    final api = FakeCollect(accountList: const [bkash, cash, dbbl]);
+    await _pump(tester, _screen(api));
+    expect(find.text('1101 · প্রধান নগদ'), findsOneWidget, reason: '⛔ mine না থাকলে প্রথম নগদ নয়');
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _post(tester);
+    expect(api.sent.single.accountId, 'acc-cash');
+  });
+
+  testWidgets('9 · the reference/TrxID shows only for MFS and bank; bank shows one compact line, and "বদলান" opens mode, value date and charge',
+      (tester) async {
     await _pump(tester, _screen(FakeCollect()));
     expect(find.byKey(const ValueKey('collect-reference')), findsNothing, reason: '⛔ নগদে TrxID চাওয়া হলো');
-    expect(find.byKey(const ValueKey('collect-bank-charge')), findsNothing);
+    expect(find.byKey(const ValueKey('collect-bank-line')), findsNothing);
 
     await _tap(tester, 'collect-method-mfs');
     expect(find.byKey(const ValueKey('collect-reference')), findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-bank-charge')), findsNothing);
+    expect(find.byKey(const ValueKey('collect-bank-line')), findsNothing);
     expect(find.text('1105 · bKash মার্চেন্ট'), findsOneWidget, reason: 'MFS-এ MFS-এর খাত');
 
     await _tap(tester, 'collect-method-transfer');
     expect(find.byKey(const ValueKey('collect-reference')), findsOneWidget);
+    expect(find.text('মোড NPSB · মূল্য-তারিখ আজ · চার্জ 0'), findsOneWidget, reason: '⛔ ব্যাংকের এক লাইন নেই');
+    expect(find.byKey(const ValueKey('collect-bank-charge')), findsNothing, reason: 'ঘরগুলো আগে থেকে খোলা নয়');
+    expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
+
+    await _tap(tester, 'collect-bank-change');
     expect(find.byKey(const ValueKey('collect-transfer-mode')), findsOneWidget);
     expect(find.byKey(const ValueKey('collect-value-date')), findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-bank-charge')), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('collect-bank-charge')), '25');
+    await tester.tap(find.byKey(const ValueKey('collect-transfer-mode')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('BEFTN').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+    await tester.pumpAndSettle();
+    expect(find.text('মোড BEFTN · মূল্য-তারিখ আজ · চার্জ 25'), findsOneWidget, reason: '⛔ বদলানো লাইনে উঠল না');
 
     await _tap(tester, 'collect-method-cash');
     expect(find.byKey(const ValueKey('collect-reference')), findsNothing);
@@ -172,10 +248,9 @@ void main() {
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
     await _tap(tester, 'collect-method-mfs');
-    await tester.tap(find.byKey(const ValueKey('collect-post')));
-    await tester.pumpAndSettle();
+    await _review(tester);
     expect(find.text('রেফারেন্স / TrxID দিন।'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-summary')), findsNothing);
+    expect(find.byType(CollectReviewScreen), findsNothing);
     expect(api.sent, isEmpty);
 
     await _tap(tester, 'collect-method-cash');
@@ -185,53 +260,101 @@ void main() {
     expect(api.sent.single.toPayload().containsKey('reference'), isFalse);
   });
 
-  testWidgets('3 · open bills, credits and notes in one table, oldest first, with overdue days; the credit is used first',
+  testWidgets('a bank transfer sends instrument "transfer" and the chosen transfer_mode_id from setup, with the TrxID in instrument_no',
+      (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-method-transfer');
+    await _tap(tester, 'collect-bank-change');
+    await tester.tap(find.byKey(const ValueKey('collect-transfer-mode')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('BEFTN').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+    await tester.pumpAndSettle();
+    await _type(tester, 'collect-reference', 'BF26102100981');
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['instrument'], 'transfer');
+    expect(p['transfer_mode_id'], 'tm-beftn', reason: '⛔ ট্রান্সফার মোড গেল না');
+    expect(p['instrument_no'], 'BF26102100981');
+    expect(p['accountId'], 'acc-dbbl');
+    expect(p.containsKey('deposit_slip_no'), isFalse);
+  });
+
+  testWidgets('a cash deposit sends instrument "deposit" and deposit_slip_no, and refuses to post without the slip number', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-method-deposit');
+    expect(find.byKey(const ValueKey('collect-reference')), findsNothing, reason: 'নগদ জমায় TrxID নয়, স্লিপ নম্বর');
+    await _review(tester);
+    expect(find.text('জমার স্লিপ নম্বর দিন।'), findsOneWidget);
+    expect(api.sent, isEmpty);
+
+    await _type(tester, 'collect-deposit-slip', 'DS-551');
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p['instrument'], 'deposit');
+    expect(p['deposit_slip_no'], 'DS-551', reason: '⛔ জমার স্লিপ নম্বর গেল না');
+    expect(p.containsKey('instrument_no'), isFalse);
+    expect(p.containsKey('transfer_mode_id'), isFalse);
+  });
+
+  testWidgets('3 · open bills, credits and notes in one compact table, oldest first, overdue days in red; the fold shows one line',
       (tester) async {
     await _pump(tester, _screen(FakeCollect()));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
 
-    // ⓘ গুটানো: এক লাইনের সারাংশ
-    expect(find.text('নিজে থেকে: পুরনো বিল আগে — INV-0094 ৳30,000.00 · INV-0101 ৳15,200.00 · CN-0007 ৳-2,000.00 · INV-0112 ৳1,800.00'),
-        findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-apply-INV-0094')), findsNothing, reason: 'টেবিল আগে থেকেই খোলা — গুটানো থাকার কথা');
-
-    await _tap(tester, 'collect-bills-change');
-    expect(_field(tester, 'collect-apply-INV-0094'), '30000.00', reason: '⛔ পুরনো বিল আগে নয়');
-    expect(_field(tester, 'collect-apply-INV-0101'), '15200.00');
-    expect(_field(tester, 'collect-apply-CN-0007'), '2000.00', reason: '⛔ খোলা ক্রেডিট নোট কাজে লাগেনি');
-    expect(_field(tester, 'collect-apply-INV-0112'), '1800.00', reason: '⛔ সবচেয়ে নতুন বিলে আগে বসেছে');
-    expect(find.text('ক্রেডিট নোট'), findsOneWidget);
+    expect(find.text('4টা · পুরনো আগে'), findsOneWidget);
+    expect(_texts(tester, 'collect-row-amount-INV-0094'), '30,000.00', reason: '⛔ পুরনো বিল আগে নয়');
+    expect(_texts(tester, 'collect-row-amount-INV-0101'), '15,200.00');
+    expect(_texts(tester, 'collect-row-amount-CN-0007'), '-2,000.00', reason: '⛔ খোলা ক্রেডিট নোট কাজে লাগেনি');
+    expect(_texts(tester, 'collect-row-amount-INV-0112'), '1,800.00', reason: '⛔ সবচেয়ে নতুন বিলে আগে বসেছে');
+    expect(find.text('ফেরত'), findsOneWidget, reason: 'ক্রেডিট নোটের পাশে "ফেরত"');
     expect(find.text('8 দিন দেরি'), findsOneWidget, reason: 'দেরির দিন নেই');
-    expect(_figure(tester, 'collect-applied-total'), 'মোট প্রয়োগ | ৳45,000.00');
+    expect(find.byKey(const ValueKey('collect-apply-INV-0094')), findsNothing, reason: 'সারিতে আগে থেকে ঘর — তালিকা পরিষ্কার থাকার কথা');
+    expect(_texts(tester, 'collect-applied-total'), 'মোট প্রয়োগ | ৳45,000.00');
 
-    // ⓘ টেবিলের ক্রম সার্ভারের (পুরনো আগে) — ক্রেডিট নোট তার তারিখের জায়গায়
     final ys = [
       for (final no in ['INV-0094', 'INV-0101', 'CN-0007', 'INV-0112']) tester.getTopLeft(find.byKey(ValueKey('collect-item-$no'))).dy,
     ];
-    expect([...ys]..sort(), ys);
+    expect([...ys]..sort(), ys, reason: 'টেবিলের ক্রম সার্ভারের (পুরনো আগে)');
+
+    await _tap(tester, 'collect-bills-change');
+    expect(find.text('নিজে থেকে: পুরনো বিল আগে — INV-0094 ৳30,000.00 · INV-0101 ৳15,200.00 · CN-0007 ৳-2,000.00 · INV-0112 ৳1,800.00'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('collect-item-INV-0094')), findsNothing);
   });
 
-  testWidgets('3 · editing an allocation keeps the total and refuses over-allocation', (tester) async {
+  testWidgets('3 · tapping a row opens its amount; editing keeps the total and refuses over-allocation', (tester) async {
     await _pump(tester, _screen(FakeCollect()));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
-    await _tap(tester, 'collect-bills-change');
-
+    await _tap(tester, 'collect-item-INV-0112');
     await _type(tester, 'collect-apply-INV-0112', '5000');
     expect(_field(tester, 'collect-apply-INV-0112'), '1800.00', reason: '⛔ হাতের টাকার বেশি বসানো গেল');
     expect(find.text('এর বেশি বসানো যায় না — সর্বোচ্চ ৳1,800.00।'), findsOneWidget);
-    expect(_figure(tester, 'collect-applied-total'), 'মোট প্রয়োগ | ৳45,000.00', reason: '⛔ মোট বদলে গেল');
+    expect(_texts(tester, 'collect-applied-total'), 'মোট প্রয়োগ | ৳45,000.00', reason: '⛔ মোট বদলে গেল');
 
+    await _tap(tester, 'collect-item-INV-0094');
     await _type(tester, 'collect-apply-INV-0094', '20000');
-    expect(_figure(tester, 'collect-applied-total'), 'মোট প্রয়োগ | ৳35,000.00');
-    expect(_figure(tester, 'collect-unapplied'), contains('৳10,000.00'), reason: 'না-বসানো টাকা গ্রাহকের খাতায়');
-    expect(find.byKey(const ValueKey('collect-balanced')), findsOneWidget);
+    expect(_texts(tester, 'collect-applied-total'), 'মোট প্রয়োগ | ৳35,000.00');
 
     await _tap(tester, 'collect-tick-INV-0112');
-    expect(_field(tester, 'collect-apply-INV-0112'), '', reason: 'টিক তুললে শূন্য');
+    expect(_texts(tester, 'collect-row-amount-INV-0112'), '0.00', reason: 'টিক তুললে শূন্য');
     await _tap(tester, 'collect-oldest-first');
-    expect(_field(tester, 'collect-apply-INV-0094'), '30000.00', reason: '"পুরনো বিল আগে" আবার বসায়');
+    expect(_texts(tester, 'collect-row-amount-INV-0094'), '30,000.00', reason: '"পুরনো বিল আগে" আবার বসায়');
+
+    await _tap(tester, 'collect-item-INV-0094');
+    await _type(tester, 'collect-apply-INV-0094', '20000');
+    await _review(tester);
+    expect(_texts(tester, 'collect-unapplied'), contains('৳10,000.00'), reason: 'না-বসানো টাকা গ্রাহকের খাতায়');
+    expect(find.byKey(const ValueKey('collect-balanced')), findsOneWidget);
   });
 
   test('3 · the plan never puts more on the invoices than the money in hand, and always balances', () {
@@ -254,23 +377,30 @@ void main() {
     }
   });
 
-  testWidgets('4 · a discount or rounding goes for the owner\'s signature; VDS and AIT count as settled; the summary balances',
+  testWidgets('4 · discount and rounding (folded card) go for the owner\'s signature; VDS and AIT count as settled; the summary lines and banner',
       (tester) async {
     final api = FakeCollect();
     await _pump(tester, _screen(api));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '40000');
+    expect(find.byKey(const ValueKey('collect-difference')), findsNothing, reason: 'কাটা ও ছাড় গুটানো থাকার কথা');
+    await _tap(tester, 'collect-adjust');
     await _type(tester, 'collect-difference', '1000');
     expect(find.byKey(const ValueKey('collect-difference-sign')), findsOneWidget, reason: '⛔ ছাড়ে মালিকের সইয়ের কথা নেই');
-    await _tap(tester, 'collect-withheld');
     await _type(tester, 'collect-vds', '500');
     await _type(tester, 'collect-ait', '200');
+    expect(_texts(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳11,500.00', reason: 'বকেয়া − আদায় − ছাড় − কাটা');
 
+    await _review(tester);
+    expect(_texts(tester, 'collect-sum-received'), 'পাওয়া টাকা | ৳40,000.00');
+    expect(_texts(tester, 'collect-sum-withheld'), 'গ্রাহক কেটেছে (VDS/AIT) | ৳700.00');
+    expect(_texts(tester, 'collect-sum-discount'), 'আদায়ে ছাড় (সই লাগবে) | ৳1,000.00');
+    expect(_texts(tester, 'collect-sum-rounding'), 'রাউন্ডিং (৳10 পর্যন্ত) | ৳0.00');
     // ⓘ 40,000 + 1,000 + 700 + ক্রেডিট 2,000 = 43,700 বিলে; ক্রেডিট বাদে প্রয়োগ 41,700
-    expect(_figure(tester, 'collect-net-applied'), 'বিলে প্রয়োগ | ৳41,700.00');
-    expect(_figure(tester, 'collect-unapplied'), contains('৳0.00'));
-    expect(_figure(tester, 'collect-figure-left'), 'বাকি থাকবে | ৳11,500.00', reason: 'বকেয়া − আদায় − ছাড় − কাটা');
-    expect(find.byKey(const ValueKey('collect-balanced')), findsOneWidget);
+    expect(_texts(tester, 'collect-net-applied'), 'বিলে প্রয়োগ | ৳41,700.00');
+    expect(_texts(tester, 'collect-unapplied'), 'অপ্রয়োগকৃত | ৳0.00');
+    expect(find.text('পাওয়া + কাটা + ছাড় = বিলে প্রয়োগ + অপ্রয়োগকৃত'), findsOneWidget);
+    expect(find.byKey(const ValueKey('collect-difference-sign')), findsOneWidget, reason: 'নিয়ন্ত্রণে সইয়ের কথা');
 
     await _post(tester);
     final p = api.sent.single.toPayload();
@@ -279,35 +409,44 @@ void main() {
     expect(p['ait'], '200.00');
   });
 
-  testWidgets('10 · 17 · "পোস্ট" shows the summary first — customer, amount, words, account, bills, the journal — and nothing goes before the one tap',
+  testWidgets('4 · rounding is refused above Tk 10', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    await _tap(tester, 'collect-adjust');
+    await _tap(tester, 'collect-difference-rounding');
+    await _type(tester, 'collect-difference', '11');
+    await _review(tester);
+    expect(find.text('রাউন্ডিং ৳10-এর বেশি হতে পারে না।'), findsOneWidget);
+    expect(find.byType(CollectReviewScreen), findsNothing);
+  });
+
+  testWidgets('10 · 17 · 19 · "দেখে পোস্ট ›" opens screen 2, a full screen: summary, words, the journal, controls — nothing goes before the one tap',
       (tester) async {
     final api = FakeCollect(preview: previewJson(needsSignature: true));
     await _pump(tester, _screen(api));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
 
-    // ⓘ পাতাতেও খাতায় যা যাবে, মোট মেলে
-    expect(find.byKey(const ValueKey('collect-journal')), findsOneWidget);
+    await _review(tester);
+    expect(find.byType(CollectReviewScreen), findsOneWidget, reason: '⛔ পর্দা ২ খোলেনি');
+    expect(find.byType(BottomSheet), findsNothing, reason: 'পর্দা ২ আলাদা পর্দা, নিচের পাতা নয়');
+    expect(find.text('পোস্টের আগে দেখুন'), findsOneWidget);
+    expect(api.sent, isEmpty, reason: '⛔ এক চাপের আগেই পাঠানো হলো');
+    expect(find.textContaining('করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ · নগদ · 1101-07 · আল-আমিনের নগদ'), findsOneWidget);
+    expect(_texts(tester, 'collect-sum-received'), 'পাওয়া টাকা | ৳45,000.00');
+    expect(find.text('মিলেছে · পঁয়তাল্লিশ হাজার টাকা মাত্র'), findsOneWidget, reason: '⛔ কথায় টাকা সার্ভারের (রসিদের হুবহু) নয়');
+    expect(find.textContaining('INV-0094 30,000.00'), findsOneWidget);
+    expect(find.text('খাতায় যা যাবে'), findsOneWidget);
+    expect(find.text('Dr 1102 ডাচ-বাংলা ব্যাংক · ময়মনসিংহ'), findsOneWidget);
+    expect(find.text('Cr 1130 পাওনা · করিম স্টোর · ময়মনসিংহ'), findsOneWidget);
     expect(find.text('মোট মিলেছে'), findsOneWidget);
     expect(find.byKey(const ValueKey('collect-needs-signature')), findsOneWidget, reason: 'বিষয় ৪/১১: সইয়ে যাবে বলা নেই');
+    expect(find.text('নেট না থাকলে জমা হবে না; আবার চাপলে একটাই রসিদ হবে।'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('collect-post')));
-    await tester.pumpAndSettle();
-    final sheet = find.byKey(const ValueKey('collect-summary'));
-    expect(sheet, findsOneWidget, reason: '⛔ সারাংশ ছাড়াই পোস্ট');
-    expect(api.sent, isEmpty, reason: '⛔ এক চাপের আগেই পাঠানো হলো');
-    Finder inSheet(String text) => find.descendant(of: sheet, matching: find.text(text));
-    expect(inSheet('করিম স্টোর · ফুলপুর পয়েন্ট · ময়মনসিংহ'), findsOneWidget);
-    expect(inSheet('৳45,000.00'), findsOneWidget);
-    expect(inSheet('পঁয়তাল্লিশ হাজার টাকা মাত্র'), findsOneWidget, reason: '⛔ কথায় টাকা সার্ভারের (রসিদের হুবহু) নয়');
-    expect(inSheet('নগদ · 1101-07 · আল-আমিনের নগদ'), findsOneWidget);
-    expect(inSheet('INV-0094'), findsOneWidget);
-    expect(inSheet('খাতায় যা যাবে'), findsOneWidget);
-    expect(inSheet('1102 ডাচ-বাংলা ব্যাংক'), findsOneWidget);
-    expect(inSheet('1130 পাওনা · করিম স্টোর'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('collect-check-back')));
-    await tester.pumpAndSettle();
+    await _back(tester);
+    expect(find.byType(CollectReviewScreen), findsNothing);
     expect(api.sent, isEmpty, reason: '⛔ "ফিরে যান"-এও পাঠানো হলো');
 
     await _post(tester);
@@ -321,6 +460,7 @@ void main() {
     await _pump(tester, _screen(api));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '44000');
+    await _tap(tester, 'collect-adjust');
     await _type(tester, 'collect-difference', '1000');
     await _post(tester);
     expect(find.textContaining('নেট লাগবে'), findsOneWidget);
@@ -342,7 +482,33 @@ void main() {
     expect(p['amount'], '44000');
   });
 
-  testWidgets('17 · after posting: the number and the state chip in the header, the amount in words, and the receipt opens',
+  testWidgets('everything unticked sends lines: [] — nothing applied, the whole amount stays as the customer\'s credit', (tester) async {
+    final api = FakeCollect();
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    await _type(tester, 'collect-amount', '45000');
+    for (final no in ['INV-0094', 'INV-0101', 'INV-0112', 'CN-0007']) {
+      await _tap(tester, 'collect-tick-$no');
+    }
+    await _review(tester);
+    expect(_texts(tester, 'collect-unapplied'), contains('৳45,000.00'));
+    await _post(tester);
+    final p = api.sent.single.toPayload();
+    expect(p.containsKey('lines'), isTrue, reason: '⛔ লাইন বাদ গেল — সার্ভার তখন পুরনো বিল আগে বসাত');
+    expect(p['lines'], isEmpty, reason: '⛔ কিছু না বসাতে চেয়েও লাইন গেল');
+  });
+
+  testWidgets('the fallback (open bills failed to load) omits lines, so the server applies oldest first', (tester) async {
+    final api = FakeCollect(billsFail: true);
+    await _pump(tester, _screen(api));
+    await _pickShop(tester);
+    expect(find.byKey(const ValueKey('collect-bills-failed')), findsOneWidget);
+    await _type(tester, 'collect-amount', '45000');
+    await _post(tester);
+    expect(api.sent.single.toPayload().containsKey('lines'), isFalse, reason: '⛔ বিল না জেনেও লাইন পাঠানো হলো');
+  });
+
+  testWidgets('17 · after posting, on screen 2: the number, the state and the four receipt chips; the bar of screen 1 shows them too',
       (tester) async {
     final api = FakeCollect(saved: const {
       'no': 'RCV-2610-0012',
@@ -359,20 +525,28 @@ void main() {
     await _type(tester, 'collect-amount', '45000');
     await _post(tester);
 
-    expect(find.text('নম্বর: RCV-2610-0012'), findsOneWidget);
-    final chip = tester.widget<AppStatusChip>(find.byKey(const ValueKey('collect-state')));
-    expect(chip.state, PaperState.waiting, reason: '⛔ সার্ভারের অবস্থা চিপে নেই');
+    expect(find.byKey(const ValueKey('collect-after')), findsOneWidget, reason: '⛔ "পোস্টের পরে" কার্ড নেই');
+    expect(find.text('RCV-2610-0012'), findsOneWidget);
+    expect(tester.widget<AppStatusChip>(find.byKey(const ValueKey('collect-review-state'))).state, PaperState.waiting,
+        reason: '⛔ সার্ভারের অবস্থা চিপে নেই');
     expect(find.text('কথায়: পঁয়তাল্লিশ হাজার টাকা মাত্র'), findsOneWidget);
-    expect(_opened, hasLength(1), reason: '⛔ পোস্টের পরে রসিদ খোলেনি');
-    expect(_opened.single.id, 'col-1');
-    expect(_opened.single.receipt, '/documents/Collection/col-1/receipt.pdf');
+    expect(_opened.map((o) => o.$2), [ReceiptAction.pdf], reason: '⛔ পোস্টের পরে রসিদ খোলেনি');
+    expect(_opened.single.$1.receipt, '/documents/Collection/col-1/receipt.pdf');
 
-    await tester.tap(find.byKey(const ValueKey('collect-open-receipt')));
-    await tester.pumpAndSettle();
-    expect(_opened, hasLength(2));
+    for (final a in ['pdf', 'whatsapp', 'sms', 'print']) {
+      await _tap(tester, 'collect-receipt-$a');
+    }
+    expect(_opened.skip(1).map((o) => o.$2), ReceiptAction.values, reason: '⛔ রসিদের চার চিপের কোনোটা কাজ করে না');
+    expect(find.text('WhatsApp'), findsOneWidget);
+    expect(find.text('SMS'), findsOneWidget);
+
+    await _tap(tester, 'collect-check-close');
+    expect(find.byType(CollectReviewScreen), findsNothing);
+    expect(find.text('নম্বর: RCV-2610-0012'), findsOneWidget, reason: 'পর্দা ১-এ নম্বর');
+    expect(tester.widget<AppStatusChip>(find.byKey(const ValueKey('collect-state'))).state, PaperState.waiting);
   });
 
-  testWidgets('"খসড়া রাখুন" saves without the summary and without confirming; the old "এখনই নিশ্চিত" switch is gone', (tester) async {
+  testWidgets('"খসড়া" saves without screen 2 and without confirming; the old "এখনই নিশ্চিত" switch is gone', (tester) async {
     final api = FakeCollect(saved: const {'no': 'RCV-2610-0013', 'state': 'draft'});
     await _pump(tester, _screen(api));
     expect(find.text('এখনই নিশ্চিত'), findsNothing);
@@ -381,6 +555,7 @@ void main() {
     await _type(tester, 'collect-amount', '45000');
     await tester.tap(find.byKey(const ValueKey('collect-draft')));
     await tester.pumpAndSettle();
+    expect(find.byType(CollectReviewScreen), findsNothing);
     expect(api.sent.single.confirm, isFalse);
     expect(tester.widget<AppStatusChip>(find.byKey(const ValueKey('collect-state'))).state, PaperState.draft);
     expect(_opened, isEmpty, reason: 'খসড়ায় রসিদ নয়');
@@ -395,16 +570,18 @@ void main() {
     await _type(tester, 'collect-reference', 'BK7781');
     await _post(tester);
     expect(find.text('এই TrxID এই খাতে আগে RCV-2610-0003-এ নেওয়া হয়েছে।'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collect-done')), findsNothing);
+    expect(find.byKey(const ValueKey('collect-after')), findsNothing);
 
-    // ⓘ ঠিক করে আবার — নতুন চাবি (ফেরানো চাবি আবার পাঠালে আবার ফেরে)
+    // ⓘ ফিরে গিয়ে ঠিক করে আবার — নতুন চাবি (ফেরানো চাবি আবার পাঠালে আবার ফেরে)
     api.refusal = null;
+    await _back(tester);
+    expect(find.text('এই TrxID এই খাতে আগে RCV-2610-0003-এ নেওয়া হয়েছে।'), findsOneWidget, reason: 'পর্দা ১-এও কারণ');
     await _type(tester, 'collect-reference', 'BK7782');
     await _post(tester);
     expect(api.keys[1], isNot(api.keys[0]));
   });
 
-  testWidgets('13 · the server\'s stops block posting and are shown; a closed month says so in the header', (tester) async {
+  testWidgets('13 · the server\'s stops block posting on screen 2 and are shown; a closed month says so in the header', (tester) async {
     final api = FakeCollect(
       bills: openBillsJson(monthOpen: false),
       preview: previewJson(stops: ['অক্টোবর 2026 মাস বন্ধ — এই তারিখে পোস্ট হবে না।']),
@@ -412,9 +589,10 @@ void main() {
     await _pump(tester, _screen(api));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
-    expect(find.text('মাস বন্ধ — পোস্ট হবে না'), findsWidgets);
+    expect(find.text('মাস বন্ধ — পোস্ট হবে না'), findsOneWidget);
+    await _review(tester);
     expect(find.text('অক্টোবর 2026 মাস বন্ধ — এই তারিখে পোস্ট হবে না।'), findsOneWidget);
-    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-post'))).onPressed, isNull,
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('collect-check-post'))).onPressed, isNull,
         reason: '⛔ বাধা থাকতেও পোস্ট খোলা');
   });
 
@@ -424,8 +602,7 @@ void main() {
     await _pickShop(tester);
     expect(find.text('স্লিপের ছবি *'), findsOneWidget);
     await _type(tester, 'collect-amount', '45000');
-    await tester.tap(find.byKey(const ValueKey('collect-post')));
-    await tester.pumpAndSettle();
+    await _review(tester);
     expect(find.text('স্লিপের ছবি দিন — এই কোম্পানিতে বাধ্যতামূলক।'), findsOneWidget);
     expect(api.sent, isEmpty);
 
@@ -443,100 +620,6 @@ void main() {
     expect(find.byKey(const ValueKey('collect-slip-chosen')), findsNothing);
   });
 
-  // ── ⭐ টাকার-পদ্ধতির মডেল (a5-এর উত্তর, ২১ অক্টোবর ২০২৬) ──
-  testWidgets('a bank transfer sends instrument "transfer" and the chosen transfer_mode_id from setup, with the TrxID in instrument_no',
-      (tester) async {
-    final api = FakeCollect();
-    await _pump(tester, _screen(api));
-    await _pickShop(tester);
-    await _type(tester, 'collect-amount', '45000');
-    await _tap(tester, 'collect-method-transfer');
-    expect(find.text('NPSB'), findsOneWidget, reason: 'সেটআপের প্রথম মোড আগে থেকে বাছা');
-    await _tap(tester, 'collect-transfer-mode');
-    await tester.tap(find.text('BEFTN').last);
-    await tester.pumpAndSettle();
-    await _type(tester, 'collect-reference', 'BF26102100981');
-    await _post(tester);
-    final p = api.sent.single.toPayload();
-    expect(p['instrument'], 'transfer');
-    expect(p['transfer_mode_id'], 'tm-beftn', reason: '⛔ ট্রান্সফার মোড গেল না');
-    expect(p['instrument_no'], 'BF26102100981');
-    expect(p['accountId'], 'acc-dbbl');
-    expect(p.containsKey('deposit_slip_no'), isFalse);
-  });
-
-  testWidgets('a cash deposit sends instrument "deposit" and deposit_slip_no, and refuses to post without the slip number', (tester) async {
-    final api = FakeCollect();
-    await _pump(tester, _screen(api));
-    await _pickShop(tester);
-    await _type(tester, 'collect-amount', '45000');
-    await _tap(tester, 'collect-method-deposit');
-    expect(find.byKey(const ValueKey('collect-reference')), findsNothing, reason: 'নগদ জমায় TrxID নয়, স্লিপ নম্বর');
-    expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('collect-post')));
-    await tester.pumpAndSettle();
-    expect(find.text('জমার স্লিপ নম্বর দিন।'), findsOneWidget);
-    expect(api.sent, isEmpty);
-
-    await _type(tester, 'collect-deposit-slip', 'DS-551');
-    await _post(tester);
-    final p = api.sent.single.toPayload();
-    expect(p['instrument'], 'deposit');
-    expect(p['deposit_slip_no'], 'DS-551', reason: '⛔ জমার স্লিপ নম্বর গেল না');
-    expect(p.containsKey('instrument_no'), isFalse);
-    expect(p.containsKey('transfer_mode_id'), isFalse);
-  });
-
-  testWidgets('everything unticked sends lines: [] — nothing applied, the whole amount stays as the customer\'s credit', (tester) async {
-    final api = FakeCollect();
-    await _pump(tester, _screen(api));
-    await _pickShop(tester);
-    await _type(tester, 'collect-amount', '45000');
-    await _tap(tester, 'collect-bills-change');
-    for (final no in ['INV-0094', 'INV-0101', 'INV-0112', 'CN-0007']) {
-      await _tap(tester, 'collect-tick-$no');
-    }
-    expect(_figure(tester, 'collect-unapplied'), contains('৳45,000.00'));
-    await _post(tester);
-    final p = api.sent.single.toPayload();
-    expect(p.containsKey('lines'), isTrue, reason: '⛔ লাইন বাদ গেল — সার্ভার তখন পুরনো বিল আগে বসাত');
-    expect(p['lines'], isEmpty, reason: '⛔ কিছু না বসাতে চেয়েও লাইন গেল');
-  });
-
-  testWidgets('the fallback (open bills failed to load) omits lines, so the server applies oldest first', (tester) async {
-    final api = FakeCollect(billsFail: true);
-    await _pump(tester, _screen(api));
-    await _pickShop(tester);
-    expect(find.byKey(const ValueKey('collect-bills-failed')), findsOneWidget);
-    await _type(tester, 'collect-amount', '45000');
-    await _post(tester);
-    expect(api.sent.single.toPayload().containsKey('lines'), isFalse, reason: '⛔ বিল না জেনেও লাইন পাঠানো হলো');
-  });
-
-  testWidgets('own cash comes from mine: true; without it the first cash account is chosen', (tester) async {
-    final api = FakeCollect(accountList: const [bkash, cash, dbbl]);
-    await _pump(tester, _screen(api));
-    expect(find.text('1101 · প্রধান নগদ'), findsOneWidget, reason: '⛔ mine না থাকলে প্রথম নগদ নয়');
-    await _pickShop(tester);
-    await _type(tester, 'collect-amount', '45000');
-    await _post(tester);
-    expect(api.sent.single.accountId, 'acc-cash');
-  });
-
-  testWidgets('old server without transfer_modes: no mode picker and no transfer_mode_id, the transfer still posts', (tester) async {
-    final api = FakeCollect(oldServer: true);
-    await _pump(tester, _screen(api));
-    await _pickShop(tester);
-    await _type(tester, 'collect-amount', '45000');
-    await _tap(tester, 'collect-method-transfer');
-    expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
-    await _type(tester, 'collect-reference', 'BF1');
-    await _post(tester);
-    final p = api.sent.single.toPayload();
-    expect(p['instrument'], 'transfer');
-    expect(p.containsKey('transfer_mode_id'), isFalse);
-  });
-
   group('⛔ old server (fe\'s rule)', () {
     testWidgets('open-bills 404/405: the screen still works, the bills read "নিজে থেকে: পুরনো বিল আগে" without a list, and no lines go',
         (tester) async {
@@ -545,7 +628,8 @@ void main() {
       await _pickShop(tester);
       expect(find.text('নিজে থেকে: পুরনো বিল আগে'), findsOneWidget);
       expect(find.byKey(const ValueKey('collect-bills-change')), findsNothing);
-      expect(find.byKey(const ValueKey('collect-difference')), findsNothing, reason: 'পুরনো সার্ভার ছাড় পড়ে না — নীরবে বাদ যেত');
+      expect(find.byKey(const ValueKey('collect-adjust')), findsNothing, reason: 'পুরনো সার্ভার ছাড় পড়ে না — নীরবে বাদ যেত');
+      expect(find.byKey(const ValueKey('collect-selected-bills')), findsNothing);
       await _type(tester, 'collect-amount', '45000');
       await _post(tester);
       final p = api.sent.single.toPayload();
@@ -553,17 +637,15 @@ void main() {
       expect(p.containsKey('difference'), isFalse);
     });
 
-    testWidgets('no preview: the summary shows without "খাতায় যা যাবে", and the words come from the app', (tester) async {
+    testWidgets('no preview: screen 2 shows without "খাতায় যা যাবে", and the words come from the app', (tester) async {
       final api = FakeCollect(noPreview: true);
       await _pump(tester, _screen(api));
       await _pickShop(tester);
       await _type(tester, 'collect-amount', '45200');
+      await _review(tester);
+      expect(find.byType(CollectReviewScreen), findsOneWidget);
       expect(find.byKey(const ValueKey('collect-journal')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('collect-post')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('collect-summary')), findsOneWidget);
-      expect(find.byKey(const ValueKey('collect-summary-journal')), findsNothing);
-      expect(find.text('45 হাজার 200 টাকা'), findsOneWidget, reason: 'অ্যাপের কথায় টাকা, ইংরেজি অঙ্কে');
+      expect(find.text('মিলেছে · 45 হাজার 200 টাকা'), findsOneWidget, reason: 'অ্যাপের কথায় টাকা, ইংরেজি অঙ্কে');
       await tester.tap(find.byKey(const ValueKey('collect-check-post')));
       await tester.pumpAndSettle();
       expect(api.sent, hasLength(1));
@@ -583,8 +665,28 @@ void main() {
       await _type(tester, 'collect-amount', '45000');
       await _post(tester);
       expect(find.byType(MoneyInScreen), findsOneWidget, reason: '⛔ পুরনো সার্ভারে বসার পরে কিছুই খুলল না');
+      expect(find.byType(CollectReviewScreen), findsNothing);
       expect(find.text('COL-0042'), findsWidgets);
       expect(_opened, isEmpty);
+    });
+
+    testWidgets('old server without transfer_modes: no mode in the line or the editor, no transfer_mode_id, the transfer still posts',
+        (tester) async {
+      final api = FakeCollect(oldServer: true);
+      await _pump(tester, _screen(api));
+      await _pickShop(tester);
+      await _type(tester, 'collect-amount', '45000');
+      await _tap(tester, 'collect-method-transfer');
+      expect(find.text('মূল্য-তারিখ আজ · চার্জ 0'), findsOneWidget);
+      await _tap(tester, 'collect-bank-change');
+      expect(find.byKey(const ValueKey('collect-transfer-mode')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+      await tester.pumpAndSettle();
+      await _type(tester, 'collect-reference', 'BF1');
+      await _post(tester);
+      final p = api.sent.single.toPayload();
+      expect(p['instrument'], 'transfer');
+      expect(p.containsKey('transfer_mode_id'), isFalse);
     });
   });
 
@@ -606,17 +708,15 @@ void main() {
       final api = FakeCollect();
       await _pump(tester, _screen(api));
       await _type(tester, 'collect-amount', '500');
-      await tester.tap(find.byKey(const ValueKey('collect-post')));
-      await tester.pumpAndSettle();
+      await _review(tester);
       expect(find.text('গ্রাহক বাছুন।'), findsOneWidget);
 
       await _pickShop(tester);
       for (final bad in ['1e5', '0', '12.345', 'abc']) {
         await _type(tester, 'collect-amount', bad);
-        await tester.tap(find.byKey(const ValueKey('collect-post')));
-        await tester.pumpAndSettle();
+        await _review(tester);
         expect(find.byKey(const ValueKey('collect-error')), findsOneWidget, reason: '"$bad"');
-        expect(find.byKey(const ValueKey('collect-summary')), findsNothing);
+        expect(find.byType(CollectReviewScreen), findsNothing);
       }
       await tester.tap(find.byKey(const ValueKey('collect-draft')));
       await tester.pumpAndSettle();
@@ -669,7 +769,7 @@ void main() {
       expect(api.keys, hasLength(2));
       expect(api.keys[0], api.keys[1], reason: '⛔ নেট ফেরার পরে নতুন চাবি — দুবার চাপলে দুটো আদায় বসতে পারত');
       expect(api.receipts, hasLength(1));
-      expect(find.byKey(const ValueKey('collect-done')), findsOneWidget, reason: 'বসে গেলে রসিদ');
+      expect(find.byKey(const ValueKey('collect-after')), findsOneWidget, reason: 'বসে গেলে রসিদ');
       expect(_opened, hasLength(1));
     });
 
@@ -746,7 +846,8 @@ void main() {
     expect(find.byType(CollectScreen), findsOneWidget);
   });
 
-  testWidgets('19 · the same fields, names and order as the web, in one column, with the buttons fixed at the bottom', (tester) async {
+  testWidgets('19 · the same fields, names and order as the web and the design, two screens, one column, buttons fixed at the bottom',
+      (tester) async {
     await _pump(tester, _screen(FakeCollect()), size: const Size(412, 892));
     await _pickShop(tester);
     await _type(tester, 'collect-amount', '45000');
@@ -757,7 +858,7 @@ void main() {
       'sales::field.customer': 'গ্রাহক',
       'sales::field.date': 'তারিখ',
       'sales::field.amount': 'টাকা',
-      'sales::field.account': 'যে খাতে জমা হলো',
+      'accounts::field.paid_into': 'যে খাতে জমা',
       'sales::field.narration': 'বিবরণ',
       'sales::field.bank_charge': 'ব্যাংক চার্জ',
       'sales::field.instrument_date': 'চেকের তারিখ',
@@ -773,41 +874,64 @@ void main() {
         expect(php, contains("'$key' => '${e.value}'"), reason: 'ওয়েবের লেখা বদলেছে: ${e.key}');
       }
     }
-    final labels = [
-      for (final d in tester.widgetList<InputDecorator>(find.byType(InputDecorator))) d.decoration.labelText ?? '',
-      for (final t in tester.widgetList<Text>(find.byType(Text))) t.data ?? '',
-    ];
-    bool shown(String w) => labels.any((l) => l == w || l == '$w *' || l.startsWith('$w ('));
-    for (final w in ['গ্রাহক', 'তারিখ', 'টাকা', 'যে খাতে জমা হলো', 'ব্যাংক চার্জ', 'ট্রান্সফার মোড', 'বিবরণ']) {
-      expect(shown(w), isTrue, reason: '⛔ ওয়েবের ঘর "$w" পাতায় নেই বা অন্য নামে');
+    List<String> labels() => [
+          for (final d in tester.widgetList<InputDecorator>(find.byType(InputDecorator))) d.decoration.labelText ?? '',
+          for (final t in tester.widgetList<Text>(find.byType(Text))) t.data ?? '',
+        ];
+    bool shown(List<String> all, String w) => all.any((l) => l == w || l == '$w *' || l.startsWith('$w ('));
+    final screen1 = labels();
+    for (final w in ['গ্রাহক', 'তারিখ', 'টাকা', 'যে খাতে জমা', 'বিবরণ']) {
+      expect(shown(screen1, w), isTrue, reason: '⛔ ওয়েবের ঘর "$w" পাতায় নেই বা অন্য নামে');
     }
-    for (final w in ['গ্রাহকের বকেয়া', 'এই আদায়', 'বাকি থাকবে', 'খোলা বিল ও ক্রেডিট', 'হিসাবের সারাংশ', 'খাতায় যা যাবে', 'নিয়ন্ত্রণ', 'খসড়া রাখুন', 'পোস্ট']) {
+    for (final w in ['টাকা নেওয়া', 'বকেয়া', 'এই আদায়', 'বাকি থাকবে', 'সাধারণ তথ্য', 'পক্ষের ধরন *', 'পদ্ধতি', 'ব্যাংক',
+      'খোলা বিল ও ক্রেডিট', 'মোট প্রয়োগ', 'সংযুক্তি ও বিবরণ', 'খসড়া', 'দেখে পোস্ট ›', 'নির্বাচিত বিল', 'পুরো বকেয়া']) {
       expect(find.text(w), findsWidgets, reason: '⛔ নকশার "$w" নেই');
     }
-    for (final old in ['অঙ্ক (টাকা)', 'কোন খাতে', 'মন্তব্য (ঐচ্ছিক)', 'এখনই নিশ্চিত']) {
-      expect(labels.contains(old), isFalse, reason: '⛔ পুরনো নাম "$old" রয়ে গেল');
+    for (final old in ['অঙ্ক (টাকা)', 'কোন খাতে', 'মন্তব্য (ঐচ্ছিক)', 'এখনই নিশ্চিত', 'ব্যাংক ট্রান্সফার']) {
+      expect(screen1.contains(old), isFalse, reason: '⛔ পুরনো নাম "$old" রয়ে গেল');
     }
+    await _tap(tester, 'collect-bank-change');
+    final editor = labels();
+    for (final w in ['ব্যাংক চার্জ', 'ট্রান্সফার মোড', 'মূল্য-তারিখ']) {
+      expect(shown(editor, w), isTrue, reason: '⛔ ব্যাংকের ঘর "$w" নেই');
+    }
+    await tester.tap(find.byKey(const ValueKey('collect-bank-done')));
+    await tester.pumpAndSettle();
 
-    // ⓘ ওয়েবের ক্রম: গ্রাহক → তারিখ → টাকা → পদ্ধতি → খাত → রেফারেন্স → বিল → … → বিবরণ
+    // ⓘ নকশার ক্রম: পক্ষের ধরন → গ্রাহক → টাকা → যে খাতে জমা → পদ্ধতি → রেফারেন্স → ব্যাংকের লাইন → বিল → কাটা ও ছাড় → সংযুক্তি
     double y(String key) => tester.getTopLeft(find.byKey(ValueKey(key))).dy;
     final order = [
-      'collect-customer', 'collect-date', 'collect-amount', 'collect-method-cash', 'collect-account-bank', 'collect-reference',
-      'collect-bank-charge', 'collect-bills', 'collect-difference', 'collect-summary-card', 'collect-journal', 'collect-controls',
-      'collect-narration',
+      'collect-party-customer', 'collect-customer', 'collect-amount', 'collect-account', 'collect-method-cash', 'collect-reference',
+      'collect-bank-line', 'collect-bills', 'collect-adjust', 'collect-narration',
     ];
     final ys = [for (final k in order) y(k)];
-    expect([...ys]..sort(), ys, reason: '⛔ ঘরের ক্রম ওয়েবের মতো নয়');
+    expect([...ys]..sort(), ys, reason: '⛔ ঘরের ক্রম নকশার মতো নয়');
 
     // ⓘ এক কলাম — প্রতিটা অংশ একই বাঁ ধারে, একই চওড়ায়
-    final cards = ['collect-bills', 'collect-summary-card', 'collect-journal', 'collect-controls'];
-    expect({for (final k in cards) tester.getTopLeft(find.byKey(ValueKey(k))).dx}, hasLength(1));
-    expect({for (final k in cards) tester.getSize(find.byKey(ValueKey(k))).width}, hasLength(1));
+    final cardOf = [
+      find.descendant(of: find.byKey(const ValueKey('collect-bills')), matching: find.byType(Card)).first,
+      find.ancestor(of: find.byKey(const ValueKey('collect-adjust')), matching: find.byType(Card)).first,
+    ];
+    expect({for (final c in cardOf) tester.getTopLeft(c).dx}, hasLength(1));
+    expect({for (final c in cardOf) tester.getSize(c).width}, hasLength(1));
 
     // ⓘ নিচের বোতাম স্থির — পাতা গড়ালেও একই জায়গায়
     final before = tester.getRect(find.byKey(const ValueKey('collect-post')));
     await tester.drag(find.byKey(const ValueKey('collect-list')), const Offset(0, -600));
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const ValueKey('collect-post'))), before, reason: '⛔ বোতাম পাতার সাথে সরে গেল');
+
+    // ⓘ দুই পর্দা: পর্দা ২ আলাদা, তার বোতামও নিচে স্থির
+    await _type(tester, 'collect-reference', 'NP1');
+    await _review(tester);
+    expect(find.byType(CollectReviewScreen), findsOneWidget);
+    for (final w in ['হিসাবের সারাংশ', 'খাতায় যা যাবে', 'নিয়ন্ত্রণ', 'ফিরে যান', 'পোস্ট']) {
+      expect(find.text(w), findsWidgets, reason: '⛔ পর্দা ২-এর "$w" নেই');
+    }
+    final post = tester.getRect(find.byKey(const ValueKey('collect-check-post')));
+    await tester.drag(find.byKey(const ValueKey('collect-review-list')), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const ValueKey('collect-check-post'))), post);
 
     // ⓘ একই হিসাব: নকশার নমুনা (45,000 → 30,000 · 15,200 · −2,000 · 1,800; অপ্রয়োগকৃত 0)
     final b = OpenBills.fromJson(openBillsJson());
@@ -820,14 +944,13 @@ void main() {
   });
 
   group('20 · easy to use', () {
-    testWidgets('20 · the keyboard "next" walks the fields in order: amount → reference → bank charge → discount → narration',
-        (tester) async {
+    testWidgets('20 · the keyboard "next" walks the fields in order: amount → reference → narration', (tester) async {
       await _pump(tester, _screen(FakeCollect()));
       await _pickShop(tester);
       await _tap(tester, 'collect-method-transfer');
       await tester.tap(find.byKey(const ValueKey('collect-amount')));
       await tester.pumpAndSettle();
-      const fields = ['collect-amount', 'collect-reference', 'collect-bank-charge', 'collect-difference', 'collect-narration'];
+      const fields = ['collect-amount', 'collect-reference', 'collect-narration'];
       String focused() {
         final node = FocusManager.instance.primaryFocus;
         for (final k in fields) {
@@ -837,7 +960,7 @@ void main() {
       }
 
       final walked = [focused()];
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 2; i++) {
         await tester.testTextInput.receiveAction(TextInputAction.next);
         await tester.pumpAndSettle();
         walked.add(focused());
@@ -869,38 +992,50 @@ void main() {
       expect(steps, greaterThan(3));
     });
 
-    testWidgets('20 · every control has a screen-reader label and a 48dp target', (tester) async {
+    testWidgets('20 · every control has a screen-reader label and a 48dp target, on both screens', (tester) async {
       final handle = tester.ensureSemantics();
       await _pump(tester, _screen(FakeCollect()), size: const Size(412, 892));
       await _pickShop(tester);
       await _type(tester, 'collect-amount', '45000');
-      await _tap(tester, 'collect-bills-change');
+      await _tap(tester, 'collect-item-INV-0094');
       await tester.drag(find.byKey(const ValueKey('collect-list')), const Offset(0, 3000));
       await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await _review(tester);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       handle.dispose();
     });
 
     for (final width in [360.0, 412.0]) {
-      testWidgets('20 · ${width.toInt()}dp at 200% text: nothing overflows, all reachable by scrolling, the fixed buttons never cover the last field',
+      testWidgets('20 · ${width.toInt()}dp at 200% text: nothing overflows on either screen, all reachable, the fixed buttons never cover the last field',
           (tester) async {
-        await _pump(tester, _screen(FakeCollect()), size: Size(width, 760), textScale: 2);
+        await _pump(tester, _screen(FakeCollect(preview: previewJson(needsSignature: true))), size: Size(width, 760), textScale: 2);
         await _pickShop(tester);
         await _type(tester, 'collect-amount', '45000');
         await _tap(tester, 'collect-method-transfer');
-        await _tap(tester, 'collect-bills-change');
+        await _tap(tester, 'collect-item-INV-0094');
+        await _tap(tester, 'collect-adjust');
         expect(tester.takeException(), isNull);
-        for (final k in ['collect-bills', 'collect-summary-card', 'collect-journal', 'collect-controls', 'collect-narration']) {
+        for (final k in ['collect-bills', 'collect-adjust', 'collect-narration']) {
           await tester.ensureVisible(find.byKey(ValueKey(k)));
           await tester.pumpAndSettle();
         }
         await tester.drag(find.byKey(const ValueKey('collect-list')), const Offset(0, -20000));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: '⛔ 200% লেখায় উপচে পড়ল');
+        expect(tester.takeException(), isNull, reason: '⛔ 200% লেখায় পর্দা ১ উপচে পড়ল');
         final last = tester.getRect(find.byKey(const ValueKey('collect-narration')));
         final bar = tester.getRect(find.byKey(const ValueKey('collect-post')));
         expect(last.bottom <= bar.top, isTrue, reason: '⛔ স্থির বোতাম শেষ ঘর ঢেকে দিল');
+
+        await _type(tester, 'collect-reference', 'NP1');
+        await _review(tester);
+        await tester.drag(find.byKey(const ValueKey('collect-review-list')), const Offset(0, -20000));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '⛔ 200% লেখায় পর্দা ২ উপচে পড়ল');
+        final lastCard = tester.getRect(find.byKey(const ValueKey('collect-controls')));
+        expect(lastCard.bottom <= tester.getRect(find.byKey(const ValueKey('collect-check-post'))).top, isTrue);
       });
     }
   });

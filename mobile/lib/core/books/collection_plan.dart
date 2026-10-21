@@ -44,7 +44,8 @@ class CollectionPlan {
   /// ⭐ নিজে থেকে: পুরনো আগে — আগে ক্রেডিট (খোলা বিলের মোট পর্যন্ত), তারপর বিল পুরনো থেকে নতুন, হাতের টাকা যতদূর যায়
   void autoAllocate() {
     final billsOpen = bills.fold(0, (s, r) => s + r.item.open);
-    var room = billsOpen;
+    // ⓘ টাকা নেই তো কিছুই বসে না — ক্রেডিটও নয় (টিক তখন মানুষের হাতে, "নির্বাচিত বিল"-এর জন্য)
+    var room = received + difference + withheld > 0 ? billsOpen : 0;
     for (final c in credits) {
       c.applied = c.item.open < room ? c.item.open : room;
       room -= c.applied;
@@ -53,6 +54,9 @@ class CollectionPlan {
     for (final b in bills) {
       b.applied = b.item.open < left ? b.item.open : left;
       left -= b.applied;
+    }
+    for (final r in [...bills, ...credits]) {
+      r.selected = r.applied > 0;
     }
   }
 
@@ -99,5 +103,6 @@ class PlanRow {
   /// বসানো, পয়সায়
   int applied = 0;
 
-  bool get ticked => applied > 0;
+  /// টিক — মানুষ এই কাগজটা বেছেছে; বসানো টাকা হাতে না থাকলে শূন্যও হতে পারে ("নির্বাচিত বিল" এই টিক ধরেই অঙ্ক বসায়)
+  bool selected = false;
 }

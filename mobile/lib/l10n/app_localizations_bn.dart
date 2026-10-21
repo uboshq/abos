@@ -7253,10 +7253,7 @@ class AppL10nBn extends AppL10n {
   String get papersSign => 'সই দিন';
 
   @override
-  String get collectTitle => 'আদায়';
-
-  @override
-  String get collectNoLater => 'নম্বর: সংরক্ষণ করলে বসবে';
+  String get collectTitle => 'টাকা নেওয়া';
 
   @override
   String collectNumber(String no) {
@@ -7275,7 +7272,7 @@ class AppL10nBn extends AppL10n {
   String get collectMonthClosed => 'মাস বন্ধ — পোস্ট হবে না';
 
   @override
-  String get collectFigureDue => 'গ্রাহকের বকেয়া';
+  String get collectFigureDue => 'বকেয়া';
 
   @override
   String get collectFigureThis => 'এই আদায়';
@@ -7299,7 +7296,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String collectCreditLimit(String amount) {
-    return 'বাকির সীমা $amount';
+    return 'সীমা $amount';
   }
 
   @override
@@ -7307,7 +7304,7 @@ class AppL10nBn extends AppL10n {
     String _temp0 = intl.Intl.pluralLogic(
       days,
       locale: localeName,
-      other: 'সবচেয়ে পুরনো বাকি $days দিন',
+      other: 'পুরনো বাকি $days দিন',
     );
     return '$_temp0';
   }
@@ -7333,7 +7330,7 @@ class AppL10nBn extends AppL10n {
   String get collectMethodCash => 'নগদ';
 
   @override
-  String get collectMethodTransfer => 'ব্যাংক ট্রান্সফার';
+  String get collectMethodTransfer => 'ব্যাংক';
 
   @override
   String get collectMethodDeposit => 'নগদ জমা';
@@ -7342,7 +7339,7 @@ class AppL10nBn extends AppL10n {
   String get collectMethodCheque => 'চেক';
 
   @override
-  String get collectAccount => 'যে খাতে জমা হলো *';
+  String get collectAccount => 'যে খাতে জমা *';
 
   @override
   String collectAccountMine(String name) {
@@ -7389,13 +7386,6 @@ class AppL10nBn extends AppL10n {
   String get collectBillsChange => 'বদলান';
 
   @override
-  String get collectBillsFold => 'গুটিয়ে নিন';
-
-  @override
-  String get collectBillsHint =>
-      'পুরনো আগে নিজে বসেছে · টিক বা অঙ্ক বদলে ঠিক করুন';
-
-  @override
   String get collectBillsOldestFirst => 'পুরনো বিল আগে';
 
   @override
@@ -7435,9 +7425,6 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
-  String get collectItemApply => 'এখন প্রয়োগ';
-
-  @override
   String collectItemApplyOf(String no) {
     return '$no — এখন প্রয়োগ';
   }
@@ -7451,7 +7438,7 @@ class AppL10nBn extends AppL10n {
   String get collectItemCredit => 'ক্রেডিট';
 
   @override
-  String get collectItemCreditNote => 'ক্রেডিট নোট';
+  String get collectItemCreditNote => 'ফেরত';
 
   @override
   String get collectItemDebitNote => 'ডেবিট নোট';
@@ -7485,7 +7472,7 @@ class AppL10nBn extends AppL10n {
       'মালিকের সই লাগবে — পোস্ট করলে সইয়ে যাবে।';
 
   @override
-  String get collectWithheldTitle => 'উৎসে কাটা (ঐচ্ছিক)';
+  String get collectWithheldTitle => 'কাটা ও ছাড়';
 
   @override
   String get collectVds => 'গ্রাহক কেটে রেখেছে: উৎসে ভ্যাট (VDS)';
@@ -7503,29 +7490,15 @@ class AppL10nBn extends AppL10n {
   String get collectSumApplied => 'বিলে প্রয়োগ';
 
   @override
-  String get collectSumUnapplied => 'অপ্রয়োগকৃত (গ্রাহকের খাতায় জমা)';
+  String get collectSumUnapplied => 'অপ্রয়োগকৃত';
 
   @override
-  String get collectSumBalanced =>
-      'মিলেছে: পাওয়া + কাটা + ছাড় = প্রয়োগ + অপ্রয়োগকৃত';
+  String collectSumBalanced(String words) {
+    return 'মিলেছে · $words';
+  }
 
   @override
   String get collectJournalTitle => 'খাতায় যা যাবে';
-
-  @override
-  String get collectJournalHint => 'পোস্টের আগে দেখুন';
-
-  @override
-  String get collectJournalAccount => 'খাত';
-
-  @override
-  String get collectJournalBranch => 'শাখা';
-
-  @override
-  String get collectJournalDr => 'ডেবিট';
-
-  @override
-  String get collectJournalCr => 'ক্রেডিট';
 
   @override
   String get collectJournalTotal => 'মোট';
@@ -7553,7 +7526,7 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get collectControlNoUndo =>
-      'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে উল্টাতে হয় (দ্বিতীয় জনের সই)।';
+      'পোস্টের পরে বদলানো যায় না; ভুল হলে কারণ লিখে \"উল্টান\" (দ্বিতীয় সই)।';
 
   @override
   String get collectControlStops =>
@@ -7563,13 +7536,7 @@ class AppL10nBn extends AppL10n {
   String get collectAttachTitle => 'সংযুক্তি ও বিবরণ';
 
   @override
-  String get collectSlip => 'স্লিপের ছবি';
-
-  @override
   String get collectSlipNeeded => 'স্লিপের ছবি *';
-
-  @override
-  String get collectSlipCamera => 'ক্যামেরা';
 
   @override
   String get collectSlipGallery => 'গ্যালারি';
@@ -7594,13 +7561,13 @@ class AppL10nBn extends AppL10n {
       'আদায় বসেছে, কিন্তু স্লিপের ছবি পাঠানো গেল না — রসিদের পাতা থেকে আবার দিন।';
 
   @override
-  String get collectNarration => 'বিবরণ (ঐচ্ছিক)';
+  String get collectNarration => 'বিবরণ';
 
   @override
-  String get collectDraft => 'খসড়া রাখুন';
+  String get collectDraft => 'খসড়া';
 
   @override
-  String get collectPost => 'পোস্ট';
+  String get collectPost => 'দেখে পোস্ট ›';
 
   @override
   String get collectReferenceMissing => 'রেফারেন্স / TrxID দিন।';
@@ -7610,28 +7577,13 @@ class AppL10nBn extends AppL10n {
       'ছাড় / রাউন্ডিং পাওয়া টাকার চেয়ে বেশি হতে পারে না।';
 
   @override
-  String get collectCheckTitle => 'পোস্টের আগে দেখে নিন';
-
-  @override
-  String get collectCheckCustomer => 'গ্রাহক';
-
-  @override
-  String get collectCheckAmount => 'টাকা';
-
-  @override
-  String get collectCheckWords => 'কথায়';
-
-  @override
-  String get collectCheckAccount => 'যে খাতে জমা হলো';
-
-  @override
-  String get collectCheckBills => 'কোন বিলে বসবে';
+  String get collectCheckTitle => 'পোস্টের আগে দেখুন';
 
   @override
   String get collectCheckBack => 'ফিরে যান';
 
   @override
-  String get collectCheckPost => 'পোস্ট করুন';
+  String get collectCheckPost => 'পোস্ট';
 
   @override
   String collectDone(String no) {
@@ -7647,14 +7599,102 @@ class AppL10nBn extends AppL10n {
   String get collectOpenReceipt => 'রসিদ খুলুন';
 
   @override
-  String get collectReceiptHint =>
-      'পোস্টের পরে: টাকার রসিদ (টাকা কথায়) · PDF · WhatsApp বা ইমেইল';
-
-  @override
-  String get collectNewOne => 'নতুন আদায়';
-
-  @override
   String get collectClose => 'শেষ';
+
+  @override
+  String get collectSumBalancedPlain => 'মিলেছে';
+
+  @override
+  String get collectSumFormula =>
+      'পাওয়া + কাটা + ছাড় = বিলে প্রয়োগ + অপ্রয়োগকৃত';
+
+  @override
+  String get collectSumWithheld => 'গ্রাহক কেটেছে (VDS/AIT)';
+
+  @override
+  String get collectSumDiscount => 'আদায়ে ছাড় (সই লাগবে)';
+
+  @override
+  String get collectSumRounding => 'রাউন্ডিং (৳10 পর্যন্ত)';
+
+  @override
+  String get collectRoundingTooBig => 'রাউন্ডিং ৳10-এর বেশি হতে পারে না।';
+
+  @override
+  String get collectControlNet =>
+      'নেট না থাকলে জমা হবে না; আবার চাপলে একটাই রসিদ হবে।';
+
+  @override
+  String get collectGeneralTitle => 'সাধারণ তথ্য';
+
+  @override
+  String get collectPartyKind => 'পক্ষের ধরন *';
+
+  @override
+  String get collectPartyCustomer => 'গ্রাহক';
+
+  @override
+  String get collectPartySupplier => 'সরবরাহকারী';
+
+  @override
+  String get collectPartyStaff => 'কর্মী';
+
+  @override
+  String get collectPartyOther => 'অন্য';
+
+  @override
+  String get collectSelectedBills => 'নির্বাচিত বিল';
+
+  @override
+  String collectBankMode(String mode) {
+    return 'মোড $mode';
+  }
+
+  @override
+  String collectBankValueDate(String date) {
+    return 'মূল্য-তারিখ $date';
+  }
+
+  @override
+  String collectBankChequeDate(String date) {
+    return 'চেকের তারিখ $date';
+  }
+
+  @override
+  String collectBankChargeShort(String amount) {
+    return 'চার্জ $amount';
+  }
+
+  @override
+  String get collectToday => 'আজ';
+
+  @override
+  String get collectBankEditorTitle => 'মোড, মূল্য-তারিখ আর চার্জ';
+
+  @override
+  String get collectBankDone => 'ঠিক আছে';
+
+  @override
+  String collectBillsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countটা · পুরনো আগে',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectSlipTake => 'স্লিপের ছবি তুলুন';
+
+  @override
+  String get collectAfterTitle => 'পোস্টের পরে';
+
+  @override
+  String get collectReceiptPdf => 'রসিদ PDF';
+
+  @override
+  String get collectReceiptPrint => 'ছাপুন';
 
   @override
   String get collectOtherIncome => 'অন্য আয়';
