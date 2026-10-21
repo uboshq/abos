@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\OwnedSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingOptions;
@@ -310,6 +311,11 @@ class ControlPanelController extends Controller implements HasMiddleware
          * @var array<string, true> $scope
          */
         $scope = array_fill_keys(array_map('strval', (array) $request->input('scope', [])), true);
+
+        // ⛔ নিজের পর্দায় বদলানো সেটিং (`owned_by`) — `scope[]` বা `settings[]`-এ এলে পুরো অনুরোধ ফেরে, কোথায় বদলায় তা লিখে ([[OwnedSettings]])
+        if (($refusal = OwnedSettings::refusal($this->settings->definitions(), [...array_keys($scope), ...array_keys($submitted)])) !== null) {
+            return back()->withInput()->withErrors(['settings' => $refusal]);
+        }
 
         $changed = 0;
         $refused = [];

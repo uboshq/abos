@@ -21,7 +21,8 @@ use Tests\TestCase;
  * [[HolidayController::storeWeeklyOff()]], `owned_by`; a6)।
  *
  * ── দাবি ───────────────────────────────────────────────────────────────
- *  · সেটিংসের পাতা আর কন্ট্রোল প্যানেলে ঘরটা নেই, আর হাতে পাঠালেও কোনোটা থেকে বদলায় না।
+ *  · সেটিংসের পাতা আর কন্ট্রোল প্যানেলে ঘরটা নেই; হাতে পাঠালে পুরো অনুরোধ ফেরে, কোথায় বদলায় তা বাংলায় লিখে, আর কিছুই বসে না।
+ *  · সাধারণ চাবি (ছেড়ে যাওয়া কর্মী দেখানো) দুই পাতাতেই আগের মতো বসে।
  *  · কার্ড থেকে কোম্পানির ডিফল্ট বদলায় (hr.attendance.manage); শাখায় সীমিত মানুষ পারেন না; দেখার চাবিতে ৪০৩।
  */
 final class TheWeeklyOffHasOneHomeTest extends TestCase
@@ -45,12 +46,34 @@ final class TheWeeklyOffHasOneHomeTest extends TestCase
         };
 
         $this->get(route('system_admin.settings'))->assertOk()->assertDontSee('settings[hr.weekly_off]', false);
-        $this->put(route('system_admin.settings.update'), ['settings' => ['hr.weekly_off' => 'sunday']]);
+        // ⛔ হাতে বানানো ফর্মে চাবিটা — নীরবে বাদ নয়, স্পষ্ট "না", কোথায় বদলায় তা লিখে; সেই অনুরোধ থেকে কিছুই বসে না
+        $where = __('hr::settings.weekly_off_owned');
+        $this->put(route('system_admin.settings.update'), ['settings' => ['hr.weekly_off' => 'sunday', 'hr.show_left_employees' => '1']])
+            ->assertSessionHasErrors('settings');
+        $this->assertStringContainsString($where, (string) session('errors')->first('settings'), '⛔ ফেরার কারণে জায়গার নাম নেই');
         $this->assertSame('friday', $value(), '⛔ সেটিংসের পাতা থেকে সাপ্তাহিক ছুটি বদলাল');
+        $this->assertFalse((bool) app(SettingsService::class)->get('hr.show_left_employees'), '⛔ ফেরানো অনুরোধের অন্য ঘর বসল');
+
+        // ⓘ সাধারণ চাবি আগের মতোই বসে — একই অনুরোধের আকারে
+        $this->put(route('system_admin.settings.update'), ['settings' => ['hr.show_left_employees' => '1']])->assertSessionHasNoErrors();
+        $this->assertSame('friday', $value());
+        $this->assertTrue((bool) app(SettingsService::class)->get('hr.show_left_employees'), '⛔ সেটিংসের পাতায় সাধারণ চাবি বসল না');
 
         $this->get(route('system_admin.control-panel', ['tab' => 'hr']))->assertOk()->assertDontSee('settings[hr.weekly_off]', false);
-        $this->put(route('system_admin.control-panel.update'), ['scope' => ['hr.weekly_off'], 'settings' => ['hr.weekly_off' => 'sunday']]);
+        $this->put(route('system_admin.control-panel.update'), ['scope' => ['hr.weekly_off', 'hr.show_left_employees'],
+            'settings' => ['hr.weekly_off' => 'sunday']])->assertSessionHasErrors('settings');
+        $this->assertStringContainsString($where, (string) session('errors')->first('settings'));
         $this->assertSame('friday', $value(), '⛔ কন্ট্রোল প্যানেল থেকে সাপ্তাহিক ছুটি বদলাল');
+        $this->assertTrue((bool) app(SettingsService::class)->get('hr.show_left_employees'), '⛔ ফেরানো অনুরোধে অন্য ঘর বন্ধ হল');
+
+        // ⓘ কেবল settings[]-এ এলেও ফেরে
+        $this->put(route('system_admin.control-panel.update'), ['scope' => ['hr.show_left_employees'],
+            'settings' => ['hr.weekly_off' => 'sunday']])->assertSessionHasErrors('settings');
+
+        // ⓘ সাধারণ চাবি আগের মতোই — scope-এ আছে, ঘর নেই = বন্ধ
+        $this->put(route('system_admin.control-panel.update'), ['scope' => ['hr.show_left_employees'], 'settings' => []])->assertSessionHasNoErrors();
+        $this->assertSame('friday', $value());
+        $this->assertFalse((bool) app(SettingsService::class)->get('hr.show_left_employees'), '⛔ কন্ট্রোল প্যানেলে সাধারণ চাবি বসল না');
 
         $this->get(route('hr.holiday.index'))->assertOk()->assertSee('data-weekly-off-company', false);
         $this->post(route('hr.holiday.weekly_off.store'), ['branch_id' => '', 'weekly_off' => 'saturday'])->assertSessionHasNoErrors();

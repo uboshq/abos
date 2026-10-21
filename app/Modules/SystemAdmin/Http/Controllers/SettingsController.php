@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\OwnedSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
@@ -115,6 +116,11 @@ class SettingsController extends Controller implements HasMiddleware
          * @var array<string, mixed> $submitted
          */
         $submitted = (array) $request->input('settings', []);
+
+        // ⛔ নিজের পর্দায় বদলানো সেটিং (`owned_by`) এখানে এলে পুরো অনুরোধ ফেরে, কোথায় বদলায় তা লিখে — নীরবে বাদ নয় ([[OwnedSettings]])
+        if (($refusal = OwnedSettings::refusal($this->settings->definitions(), array_keys($submitted))) !== null) {
+            return back()->withInput()->withErrors(['settings' => $refusal]);
+        }
 
         $changed = 0;
 

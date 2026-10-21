@@ -620,3 +620,26 @@ Q4.6 app/Modules/Hr/module.php
   old: 'owned_by' => 'hr.holiday.index',
   new: (line deleted)
   kill: K (both other screens show and change it)
+
+== R — an owned_by key sent to the Settings page or the Control Panel is refused with a clear error ==
+K = tests/Feature/Modules/Hr/TheWeeklyOffHasOneHomeTest.php (test_the_company_weekly_off_changes_only_on_the_holiday_card)
+
+R.1 app/Modules/SystemAdmin/Http/Controllers/SettingsController.php (update)
+  old: if (($refusal = OwnedSettings::refusal($this->settings->definitions(), array_keys($submitted))) !== null) {
+  new: if (false) {
+  kill: K (no session error; hr.show_left_employees saves from the refused request)
+
+R.2 app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php (update)
+  old: [...array_keys($scope), ...array_keys($submitted)]
+  new: array_keys($scope)
+  kill: K (the key only in settings[] is not refused)
+
+R.3 app/Core/Services/OwnedSettings.php (refusal)
+  old: $messages[] = __((string) ($definition['label'] ?? $key)).' — '.(isset($definition['owned_where'])
+  new: $messages[] = __((string) ($definition['label'] ?? $key)).' — '.(false
+  kill: K (the error does not name the weekly off card)
+
+R.4 app/Core/Services/OwnedSettings.php (refusal)
+  old: if ($definition === null || ! isset($definition['owned_by'])) {
+  new: if ($definition === null) {
+  kill: K (the ordinary key hr.show_left_employees is refused on both pages)

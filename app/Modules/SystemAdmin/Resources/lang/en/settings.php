@@ -98,4 +98,6 @@ return [
     'super_admin_only' => 'Only a super admin can change this',
     'owner_title_bn' => "Owner's title (Bengali) — same in every company",
     'owner_title_en' => "Owner's title (English) — same in every company",
+    // ⓘ a setting with its own screen (owned_by) — a6, 21 Oct 2026
+    'owned_elsewhere' => 'This setting is changed on its own screen, not here.',
 ];
