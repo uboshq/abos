@@ -240,6 +240,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
     {
         return bcadd((string) (DB::table('sal_collection_applications as a')
             ->join('sal_collections as c', 'c.id', '=', 'a.collection_id')
+            // ⛔ কাঁচা প্রশ্নে কোম্পানির নাম নিজে — বিলের নিজের কোম্পানি ([[EveryRawQueryNamesItsCompanyTest]])
+            ->where('c.company_id', (int) $this->company_id)
             ->where('a.target_invoice_id', $this->getKey())
             ->whereNull('c.deleted_at')
             ->whereIn('c.status', DocumentStatus::POSTED)

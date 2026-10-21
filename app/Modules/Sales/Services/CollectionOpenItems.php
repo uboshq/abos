@@ -120,6 +120,8 @@ final class CollectionOpenItems
     {
         return bcadd((string) (DB::table('sal_collection_applications as a')
             ->join('sal_collections as c', 'c.id', '=', 'a.collection_id')
+            // ⛔ কাঁচা প্রশ্নে কোম্পানির নাম নিজে ([[EveryRawQueryNamesItsCompanyTest]])
+            ->where('c.company_id', \App\Core\Support\CompanyContext::id())
             ->where('a.kind', $kind)
             ->where('a.source_id', $sourceId)
             ->whereNull('c.deleted_at')

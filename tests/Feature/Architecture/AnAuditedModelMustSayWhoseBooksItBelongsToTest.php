@@ -95,6 +95,8 @@ class AnAuditedModelMustSayWhoseBooksItBelongsToTest extends TestCase
         'App\Modules\Sales\Models\DeliveryChallanGiftLine' => 'চালানের উপহার-সারি — একই চালানের ভেতরে',
         'App\Modules\Sales\Models\SalesInvoiceLine' => 'বিক্রয় বিলের সারি — বিলটা নিজে কোম্পানি জানে',
         'App\Modules\Sales\Models\CollectionLine' => 'আদায়ের সারি — আদায়টা নিজে কোম্পানি জানে',
+        // ⓘ টাকা নেওয়ার নকশা ১০০ (a6, ২১ অক্টোবর ২০২৬) — ক্রেডিটের প্রয়োগও আদায়েরই সারি
+        'App\Modules\Sales\Models\CollectionApplication' => 'আদায়ের প্রয়োগ-সারি (ক্রেডিট বিলে, ডেবিট নোট শোধ) — আদায়টা নিজে কোম্পানি জানে',
     ];
 
     /**
