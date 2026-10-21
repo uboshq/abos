@@ -39,7 +39,7 @@ return [
     'not_pending' => 'This change is no longer awaiting a signature.',
     'account_no_invalid' => 'The account number must be 6 to 34 characters — digits or English letters only.',
 
-    'unsigned_blocks_payment' => 'The payee\'s bank details have no second signature yet — a bank payment cannot be made.',
+    'unsigned_blocks_payment' => 'The payee\'s bank details have no second signature yet — a bank payment cannot be made. Next: enter the bank details on the supplier\'s page → a second person signs them. Cash, MFS or cheque can be paid now.',
     'payee_none' => 'No payee bank details',
     'waiting_title' => ':supplier — bank details change awaits signature',
 ];
